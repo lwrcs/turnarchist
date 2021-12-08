@@ -7,6 +7,7 @@ import { Door } from "../tile/door";
 import { BottomDoor } from "../tile/bottomDoor";
 import { GenericParticle } from "../particle/genericParticle";
 import { GameConstants } from "../gameConstants";
+import { SideDoor } from "../tile/sidedoor";
 
 export enum ChargeEnemyState {
   IDLE,
@@ -50,7 +51,7 @@ export class ChargeEnemy extends Enemy {
       if (e !== this && x === e.x && y === e.y) return false;
     }
     let t = this.level.levelArray[x][y];
-    return !(t.isSolid() || (t instanceof Door || t instanceof BottomDoor));
+    return !(t.isSolid() || (t instanceof Door || t instanceof SideDoor || t instanceof BottomDoor));
   };
 
   tick = () => {
