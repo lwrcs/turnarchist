@@ -32,7 +32,7 @@ export class KnightEnemy extends Enemy {
     if (drop) this.drop = drop;
     else {
       let dropProb = rand();
-      if (dropProb < 0.005) this.drop = new DualDagger(this.level, 0, 0);
+      if (dropProb < 0.025) this.drop = new DualDagger(this.level, 0, 0);
       else this.drop = new Coin(this.level, 0, 0);
     }
   }

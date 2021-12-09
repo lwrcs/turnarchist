@@ -326,7 +326,7 @@ let loadEnemy = (es: EnemyState, game: Game): Enemy => {
       if (!enemy.targetPlayer) enemy.targetPlayer = game.offlinePlayers[es.targetPlayerID];
     }
   }
-  if (es.type === EnemyType.PLANT) enemy = new PottedPlant(level, game, es.x, es.y);
+  if (es.type === EnemyType.PLANT) enemy = new PottedPlant(level, game, es.x, es.y, Random.rand);
   if (es.type === EnemyType.PLANT) enemy = new Pot(level, game, es.x, es.y);
   if (es.type === EnemyType.SKULL) {
     enemy = new SkullEnemy(level, game, es.x, es.y, Random.rand);

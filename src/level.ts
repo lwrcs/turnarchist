@@ -357,11 +357,13 @@ export class Level {
       let x = t.x;
       let y = t.y;
 
-      let pp = Game.randTable([1,2], rand);
-        if (pp == 1)
-          this.enemies.push(new PottedPlant(this, this.game, x, y));
-        else 
-          this.enemies.push(new Pot(this, this.game, x, y));
+      let r = rand();
+      if (r >= 0.3)
+        this.enemies.push(new PottedPlant(this, this.game, x, y, Random.rand));
+      else if (r >= 0.9) 
+        this.enemies.push(new Pot(this, this.game, x, y));
+      else
+        this.enemies.push(new Chest(this, this.game, x, y, rand));
     }
   }
 
