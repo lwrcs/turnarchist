@@ -9,6 +9,7 @@ import { Enemy, EnemyDirection } from "./enemy/enemy";
 import { GoldResource } from "./enemy/goldResource";
 import { KnightEnemy } from "./enemy/knightEnemy";
 import { PottedPlant } from "./enemy/pottedPlant";
+import { Pot } from "./enemy/pot";
 import { SkullEnemy } from "./enemy/skullEnemy";
 import { SlimeEnemy } from "./enemy/slimeEnemy";
 import { Spawner } from "./enemy/spawner";
@@ -225,6 +226,7 @@ export class EnemyState {
       }
     }
     if (enemy instanceof PottedPlant) this.type = EnemyType.PLANT;
+    if (enemy instanceof Pot) this.type = EnemyType.PLANT;
     if (enemy instanceof SkullEnemy) {
       this.type = EnemyType.SKULL;
       this.ticks = enemy.ticks;
@@ -325,6 +327,7 @@ let loadEnemy = (es: EnemyState, game: Game): Enemy => {
     }
   }
   if (es.type === EnemyType.PLANT) enemy = new PottedPlant(level, game, es.x, es.y);
+  if (es.type === EnemyType.PLANT) enemy = new Pot(level, game, es.x, es.y);
   if (es.type === EnemyType.SKULL) {
     enemy = new SkullEnemy(level, game, es.x, es.y, Random.rand);
     enemy.ticks = es.ticks;

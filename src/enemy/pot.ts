@@ -5,12 +5,12 @@ import { Heart } from "../item/heart";
 import { LevelConstants } from "../levelConstants";
 import { GenericParticle } from "../particle/genericParticle";
 
-export class PottedPlant extends Enemy {
+export class Pot extends Enemy {
   constructor(level: Level, game: Game, x: number, y: number) {
     super(level, game, x, y);
     this.level = level;
-    this.health = 2;
-    this.tileX = 3;
+    this.health = 1;
+    this.tileX = 11;
     this.tileY = 0;
     this.hasShadow = false;
     this.chainPushable = false;
@@ -30,9 +30,6 @@ export class PottedPlant extends Enemy {
     if (!this.dead) {
       this.drawX += -0.5 * this.drawX;
       this.drawY += -0.5 * this.drawY;
-    if (this.health <= 1) 
-      this.tileX = 2;
-      this.tileY = 0;
       Game.drawObj(
         this.tileX,
         this.tileY,

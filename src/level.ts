@@ -54,6 +54,7 @@ import { BigSkullEnemy } from "./enemy/bigSkullEnemy";
 import { Random } from "./random";
 import { Lantern } from "./item/lantern";
 import { DualDagger } from "./weapon/dualdagger";
+import { Pot } from "./enemy/pot";
 
 export enum RoomType {
   START,
@@ -356,9 +357,14 @@ export class Level {
       let x = t.x;
       let y = t.y;
 
-      this.enemies.push(new PottedPlant(this, this.game, x, y));
+      let pp = Game.randTable([1,2], rand);
+        if (pp == 1)
+          this.enemies.push(new PottedPlant(this, this.game, x, y));
+        else 
+          this.enemies.push(new Pot(this, this.game, x, y));
     }
   }
+
 
   private addResources(numResources: number, rand: () => number) {
     let tiles = this.getEmptyTiles();
