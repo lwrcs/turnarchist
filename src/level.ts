@@ -273,10 +273,13 @@ export class Level {
       let tables = {
         0: [1, 2],
         1: [1, 2, 3],
-        2: [1, 2, 3, 4, 5],
-        3: [1, 2, 3, 4, 5, 6, 7, 8]
+        2: [1, 2, 3, 4],
+        3: [1, 2, 3, 4, 5],
+        4: [1, 2, 3, 4, 5, 6],
+        5: [1, 2, 3, 4, 5, 6, 7],
+        6: [1, 2, 3, 4, 5, 6, 7, 8]
       };
-      let max_depth_table = 3;
+      let max_depth_table = 6;
       let d = Math.min(this.depth, max_depth_table);
       if (tables[d] && tables[d].length > 0) {
         let addEnemy = (enemy: Enemy): boolean => { // adds an enemy if it doesn't overlap any other enemies
@@ -358,12 +361,11 @@ export class Level {
       let y = t.y;
 
       let r = rand();
-      if (r >= 0.3)
+      if (r <= 0.6)
         this.enemies.push(new PottedPlant(this, this.game, x, y, Random.rand));
-      else if (r >= 0.9) 
+      else if (r <= 0.97) 
         this.enemies.push(new Pot(this, this.game, x, y));
-      else
-        this.enemies.push(new Chest(this, this.game, x, y, rand));
+      else this.enemies.push(new Chest(this, this.game, x, y, rand));
     }
   }
 
