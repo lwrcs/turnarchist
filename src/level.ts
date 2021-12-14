@@ -58,6 +58,7 @@ import { Pot } from "./enemy/pot";
 import { BishopEnemy } from "./enemy/bishopEnemy";
 import { Rook } from "./enemy/rook";
 import { Rock } from "./enemy/rockResource";
+import { Mushrooms } from "./enemy/mushrooms";
 
 export enum RoomType {
   START,
@@ -371,12 +372,14 @@ export class Level {
       let y = t.y;
 
       let r = rand();
-      if (r <= 0.6)
+      if (r <= 0.45)
         this.enemies.push(new PottedPlant(this, this.game, x, y, Random.rand));
-      else if (r <= 0.75) 
+      else if (r <= 0.65) 
         this.enemies.push(new Pot(this, this.game, x, y));
-      else if (r <= 0.97) 
+      else if (r <= 0.75) 
         this.enemies.push(new Rock(this, this.game, x, y));
+      else if (r <= 0.97) 
+        this.enemies.push(new Mushrooms(this, this.game, x, y));
       else this.enemies.push(new Chest(this, this.game, x, y, rand));
     }
   }
