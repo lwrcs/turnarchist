@@ -71,7 +71,7 @@ export class Inventory {
 
     a(new Dagger({ game: this.game } as Level, 0, 0));
     a(new Torch({ game: this.game } as Level, 0, 0));
-    //a(new Shotgun({ game: this.game } as Level, 0, 0));
+    a(new Pickaxe({ game: this.game } as Level, 0, 0));
     //a(new Lantern({ game: this.game } as Level, 0, 0));
     //a(new Spear({ game: this.game } as Level, 0, 0));
   }

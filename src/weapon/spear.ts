@@ -22,14 +22,14 @@ export class Spear extends Weapon {
     for (let e of this.game.levels[this.wielder.levelID].enemies) {
       if (e.destroyable) {
         if (e.pointIn(newX, newY)) {
-          if (e instanceof Crate || e instanceof Barrel) return true;
+          if (e.pushable) return true;
           else {
             e.hurt(this.wielder, 1);
             flag = true;
           }
         }
         if (e.pointIn(newX2, newY2) && !this.game.levels[this.wielder.levelID].levelArray[newX][newY].isSolid()) {
-          if (!(e instanceof Crate || e instanceof Barrel)) enemyHitCandidates.push(e);
+          if (!e.pushable) enemyHitCandidates.push(e);
         }
       }
     }

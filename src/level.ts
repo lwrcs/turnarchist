@@ -349,7 +349,7 @@ export class Level {
       if (tiles.length == 0) return;
       let x = t.x;
       let y = t.y;
-      switch (Game.randTable([1, 1, 1, 1, 2, 2, 2, 3], rand)) {
+      switch (Game.randTable([1, 1, 1, 1, 2, 2, 2,], rand)) {
         case 1:
           this.enemies.push(new Crate(this, this.game, x, y));
           break;

@@ -12,7 +12,7 @@ export class Mushrooms extends Enemy {
     this.level = level;
     this.health = 1;
     this.tileX = 9;
-    this.tileY = 4;
+    this.tileY = 2;
     this.hasShadow = false;
     this.chainPushable = false;
   }
