@@ -55,6 +55,9 @@ import { Random } from "./random";
 import { Lantern } from "./item/lantern";
 import { DualDagger } from "./weapon/dualdagger";
 import { Pot } from "./enemy/pot";
+import { BishopEnemy } from "./enemy/bishopEnemy";
+import { Rook } from "./enemy/rook";
+import { Rock } from "./enemy/rockResource";
 
 export enum RoomType {
   START,
@@ -271,15 +274,16 @@ export class Level {
       let x = t.x;
       let y = t.y;
       let tables = {
-        0: [1, 2],
-        1: [1, 2, 3],
-        2: [1, 2, 3, 4],
-        3: [1, 2, 3, 4, 5],
-        4: [1, 2, 3, 4, 5, 6],
+        0: [1],
+        1: [1, 2],
+        2: [1, 2, 3],
+        3: [1, 2, 3, 4, 5, 6, 7],
+        4: [1, 2, 3, 4, 5, 6, 7],
         5: [1, 2, 3, 4, 5, 6, 7],
-        6: [1, 2, 3, 4, 5, 6, 7, 8]
+        6: [1, 2, 3, 4, 5, 6, 7],
+        7: [1, 2, 3, 4, 5, 6, 7]
       };
-      let max_depth_table = 6;
+      let max_depth_table = 7;
       let d = Math.min(this.depth, max_depth_table);
       if (tables[d] && tables[d].length > 0) {
         let addEnemy = (enemy: Enemy): boolean => { // adds an enemy if it doesn't overlap any other enemies
@@ -319,6 +323,9 @@ export class Level {
             addEnemy(new Spawner(this, this.game, x, y, rand));
             break;
           case 8:
+            addEnemy(new BishopEnemy(this, this.game, x, y, rand));
+            break;
+          case 9:
             if (addEnemy(new BigSkullEnemy(this, this.game, x, y, rand))) {
               // clear out some space
               for (let xx = 0; xx < 2; xx++) {
@@ -341,12 +348,15 @@ export class Level {
       if (tiles.length == 0) return;
       let x = t.x;
       let y = t.y;
-      switch (Game.randTable([1, 1, 2], rand)) {
+      switch (Game.randTable([1, 1, 1, 1, 2, 2, 2, 3], rand)) {
         case 1:
           this.enemies.push(new Crate(this, this.game, x, y));
           break;
         case 2:
           this.enemies.push(new Barrel(this, this.game, x, y));
+          break;
+        case 3:
+          this.enemies.push(new Rook(this, this.game, x, y));
           break;
       }
     }
@@ -363,8 +373,10 @@ export class Level {
       let r = rand();
       if (r <= 0.6)
         this.enemies.push(new PottedPlant(this, this.game, x, y, Random.rand));
-      else if (r <= 0.97) 
+      else if (r <= 0.75) 
         this.enemies.push(new Pot(this, this.game, x, y));
+      else if (r <= 0.97) 
+        this.enemies.push(new Rock(this, this.game, x, y));
       else this.enemies.push(new Chest(this, this.game, x, y, rand));
     }
   }

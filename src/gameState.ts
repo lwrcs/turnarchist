@@ -46,6 +46,7 @@ import { DualDagger } from "./weapon/dualdagger";
 import { Shotgun } from "./weapon/shotgun";
 import { Spear } from "./weapon/spear";
 import { Weapon } from "./weapon/weapon";
+import { Pickaxe } from "./weapon/pickaxe";
 
 export class HitWarningState {
   x: number;
@@ -445,7 +446,8 @@ export enum ItemType {
   DAGGER,
   DUALDAGGER,
   SHOTGUN,
-  SPEAR
+  SPEAR,
+  PICKAXE
 }
 
 export class ItemState {
@@ -475,6 +477,7 @@ export class ItemState {
     if (item instanceof DualDagger) this.type = ItemType.DUALDAGGER;
     if (item instanceof Shotgun) this.type = ItemType.SHOTGUN;
     if (item instanceof Spear) this.type = ItemType.SPEAR;
+    if (item instanceof Pickaxe) this.type = ItemType.PICKAXE;
     this.equipped = item instanceof Equippable && item.equipped;
     this.x = item.x;
     this.y = item.y;
