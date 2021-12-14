@@ -7,8 +7,9 @@ import { GenericParticle } from "../particle/genericParticle";
 import { Player } from "../player";
 import { Sound } from "../sound";
 import { Stone } from "../item/stone";
+import { Resource } from "./resource";
 
-export class Rock extends Enemy {
+export class Rock extends Resource {
   constructor(level: Level, game: Game, x: number, y: number) {
     super(level, game, x, y);
     this.level = level;
@@ -18,14 +19,6 @@ export class Rock extends Enemy {
     this.hasShadow = false;
     this.chainPushable = false;
   }
-
-  hurt = (playerHitBy: Player, damage: number) => {
-    this.healthBar.hurt();
-
-    this.health -= damage;
-    if (this.health <= 0) this.kill();
-    else this.hurtCallback();
-  };
 
   hurtCallback = () => {
     GenericParticle.spawnCluster(this.level, this.x + 0.5, this.y + 0.5, "#ffffff");

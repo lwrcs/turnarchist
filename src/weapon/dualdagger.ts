@@ -26,7 +26,7 @@ export class DualDagger extends Weapon {
     for (let e of this.game.levels[this.wielder.levelID].enemies) {
       if (
         e.destroyable &&
-        !(e instanceof Crate || e instanceof Barrel) &&
+        !e.pushable &&
         e.pointIn(newX, newY)
       ) {
         e.hurt(this.wielder, 1);

@@ -7,6 +7,8 @@ import { Armor } from "../item/armor";
 import { Enemy } from "./enemy";
 import { LevelConstants } from "../levelConstants";
 import { GreenGem } from "../item/greengem";
+import { Player } from "../player";
+import { Pickaxe } from "../weapon/pickaxe";
 
 export class Resource extends Enemy {
   constructor(level: Level, game: Game, x: number, y: number) {
@@ -17,6 +19,16 @@ export class Resource extends Enemy {
     this.health = 1;
     this.chainPushable = false;
   }
+
+  hurt = (playerHitBy: Player, damage: number) => {
+    if (!(playerHitBy.inventory.getWeapon() instanceof Pickaxe)) return;
+
+    this.healthBar.hurt();
+
+    this.health -= damage;
+    if (this.health <= 0) this.kill();
+    else this.hurtCallback();
+  };
 
   kill = () => {
     this.dead = true;

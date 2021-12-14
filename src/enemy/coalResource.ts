@@ -14,7 +14,6 @@ import { Sound } from "../sound";
 import { Inventory } from "../inventory";
 import { Weapon } from "../weapon/weapon";
 import { Pickaxe } from "../weapon/pickaxe";
-import { Equippable } from "c:/Users/harri/Documents/GitHub/witch-roguelike/src/item/equippable";
 import { Player } from "../player";
 import { ItemState, ItemType } from "../gameState";
 
@@ -26,14 +25,6 @@ export class CoalResource extends Resource {
     this.tileY = 0;
     this.health = 1;
   }
-
-  hurt = (playerHitBy: Player, damage: number) => {
-    this.healthBar.hurt();
-
-    this.health -= damage;
-    if (this.health <= 0) this.kill();
-    else this.hurtCallback();
-  };
 
   hurtCallback = () => {
     GenericParticle.spawnCluster(this.level, this.x + 0.5, this.y + 0.5, "#ffffff");

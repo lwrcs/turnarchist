@@ -5,11 +5,14 @@ import { Player } from "../player";
 
 export class Weapon extends Equippable {
   game: Game;
+  canMine: boolean;
 
   constructor(level: Level, x: number, y: number) {
     super(level, x, y);
 
     if (level) this.game = level.game;
+
+    this.canMine = false
   }
 
   coEquippable = (other: Equippable): boolean => {
