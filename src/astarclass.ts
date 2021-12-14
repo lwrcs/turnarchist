@@ -24,7 +24,7 @@ export namespace astar {
 
   let getTileCost = tile => {
     if (tile)
-      return tile.isSolid() ? 99999999 : 1;
+      return (tile.isSolid() || tile.isDoor) ? 99999999 : 1;
     else
       return 99999999;
   };

@@ -12,6 +12,7 @@ export class BottomDoor extends Tile {
   constructor(level: Level, game: Game, x: number, y: number) {
     super(level, x, y);
     this.game = game;
+    this.isDoor = true;
   }
 
   link = (other: Door) => {

@@ -14,6 +14,7 @@ export class Tile extends Drawable {
   y: number;
   level: Level;
   skin: SkinType;
+  isDoor: boolean;
 
   constructor(level: Level, x: number, y: number) {
     super();
@@ -22,6 +23,7 @@ export class Tile extends Drawable {
     this.x = x;
     this.y = y;
     this.drawableY = y;
+    this.isDoor = false;
   }
 
   shadeAmount = () => {

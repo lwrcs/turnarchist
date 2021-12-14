@@ -14,6 +14,7 @@ export class Door extends Tile {
     super(level, x, y);
     this.game = game;
     this.opened = false;
+    this.isDoor = true;
   }
 
   link = (other: BottomDoor) => {
