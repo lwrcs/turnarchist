@@ -263,9 +263,10 @@ export namespace astar {
           if (this.grid[x][y].org == org) return this.grid[x][y];
     }
 
-    _search(start: any, end: any, diagonal?: boolean, heuristic?: Function) {
+    _search(start: any, end: any, diagonal?: boolean, diagonalsOnly?: boolean, heuristic?: Function) {
       heuristic = heuristic || this.manhattan;
       diagonal = !!diagonal;
+      diagonalsOnly = !!diagonalsOnly;
 
       var openHeap = this.heap();
 
@@ -299,7 +300,7 @@ export namespace astar {
         currentNode.closed = true;
 
         // Find all neighbors for the current node. Optionally find diagonal neighbors as well (false by default).
-        var neighbors = this.neighbors(currentNode, diagonal);
+        var neighbors = this.neighbors(currentNode, diagonal, diagonalsOnly);
 
         for (var i = 0, il = neighbors.length; i < il; i++) {
           var neighbor = neighbors[i];
@@ -343,10 +344,11 @@ export namespace astar {
       end: any,
       disablePoints?: Position[],
       diagonal?: boolean,
+      diagonalsOnly?: boolean,
       heuristic?: Function
     ) {
       var astar = new AStar(grid, disablePoints);
-      return astar._search(start, end, diagonal, heuristic);
+      return astar._search(start, end, diagonal, diagonalsOnly, heuristic);
     }
 
     manhattan(pos0: Position, pos1: Position): number {
@@ -357,30 +359,32 @@ export namespace astar {
       return d1 + d2;
     }
 
-    neighbors(node: AStarData, diagonals?: boolean): AStarData[] {
+    neighbors(node: AStarData, diagonals?: boolean, diagonalsOnly?: boolean): AStarData[] {
       var grid = this.grid;
       var ret = [];
       var x = node.pos.x;
       var y = node.pos.y;
 
-      // West
-      if (grid[x - 1] && grid[x - 1][y]) {
-        ret.push(grid[x - 1][y]);
-      }
+      if (!diagonalsOnly) {
+        // West
+        if (grid[x - 1] && grid[x - 1][y]) {
+          ret.push(grid[x - 1][y]);
+        }
 
-      // East
-      if (grid[x + 1] && grid[x + 1][y]) {
-        ret.push(grid[x + 1][y]);
-      }
+        // East
+        if (grid[x + 1] && grid[x + 1][y]) {
+          ret.push(grid[x + 1][y]);
+        }
 
-      // South
-      if (grid[x] && grid[x][y - 1]) {
-        ret.push(grid[x][y - 1]);
-      }
+        // South
+        if (grid[x] && grid[x][y - 1]) {
+          ret.push(grid[x][y - 1]);
+        }
 
-      // North
-      if (grid[x] && grid[x][y + 1]) {
-        ret.push(grid[x][y + 1]);
+        // North
+        if (grid[x] && grid[x][y + 1]) {
+          ret.push(grid[x][y + 1]);
+        }
       }
 
       if (diagonals) {

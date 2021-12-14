@@ -374,11 +374,11 @@ export class Level {
       let r = rand();
       if (r <= 0.45)
         this.enemies.push(new PottedPlant(this, this.game, x, y, Random.rand));
-      else if (r <= 0.65) 
+      else if (r <= 0.65)
         this.enemies.push(new Pot(this, this.game, x, y));
-      else if (r <= 0.75) 
+      else if (r <= 0.75)
         this.enemies.push(new Rock(this, this.game, x, y));
-      else if (r <= 0.97) 
+      else if (r <= 0.97)
         this.enemies.push(new Mushrooms(this, this.game, x, y));
       else this.enemies.push(new Chest(this, this.game, x, y, rand));
     }
@@ -1034,7 +1034,7 @@ export class Level {
     }
 
     for (const h of this.hitwarnings) {
-      if (this.levelArray[h.x][h.y].isSolid()) h.dead = true;
+      if (!this.levelArray[h.x] || !this.levelArray[h.x][h.y] || this.levelArray[h.x][h.y].isSolid()) h.dead = true;
     }
 
     for (const p of this.projectiles) {

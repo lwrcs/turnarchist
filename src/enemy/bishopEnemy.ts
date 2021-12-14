@@ -79,10 +79,10 @@ export class BishopEnemy extends Enemy {
             this.facePlayer(player);
             this.seenPlayer = true;
             if (player === this.game.players[this.game.localPlayerID]) this.alertTicks = 1;
-            this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
-            this.level.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y));
-            this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1));
-            this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1));
+            this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y - 1));
+            this.level.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y + 1));
+            this.level.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y - 1));
+            this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y + 1));
           }
         }
       }
@@ -123,7 +123,9 @@ export class BishopEnemy extends Enemy {
             grid,
             this,
             this.targetPlayer,
-            disablePositions
+            disablePositions,
+            true,
+            true
           );
           if (moves.length > 0) {
             let moveX = moves[0].pos.x;
@@ -150,10 +152,10 @@ export class BishopEnemy extends Enemy {
             }
           }
 
-          this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
-          this.level.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y));
-          this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1));
-          this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1));
+          this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y - 1));
+          this.level.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y + 1));
+          this.level.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y - 1));
+          this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y + 1));
         }
 
         let targetPlayerOffline = Object.values(this.game.offlinePlayers).indexOf(this.targetPlayer) !== -1;
@@ -166,10 +168,10 @@ export class BishopEnemy extends Enemy {
                 this.targetPlayer = player;
                 this.facePlayer(player);
                 if (player === this.game.players[this.game.localPlayerID]) this.alertTicks = 1;
-                this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
-                this.level.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y));
-                this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1));
-                this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1));
+                this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y - 1));
+                this.level.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y + 1));
+                this.level.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y - 1));
+                this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y + 1));
               }
             }
           }
