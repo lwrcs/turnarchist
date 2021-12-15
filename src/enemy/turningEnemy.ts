@@ -13,9 +13,8 @@ import { GreenGem } from "../item/greengem";
 import { Random } from "../random";
 import { astar } from "../astarclass";
 import { SpikeTrap } from "../tile/spiketrap";
-import { Candle } from "../item/candle";
 
-export class BishopEnemy extends Enemy {
+export class TurningEnemy extends Enemy {
   frame: number;
   ticks: number;
   seenPlayer: boolean;
@@ -29,7 +28,7 @@ export class BishopEnemy extends Enemy {
     this.frame = 0;
     this.health = 1;
     this.maxHealth = 1;
-    this.tileX = 23;
+    this.tileX = 17;
     this.tileY = 8;
     this.seenPlayer = false;
     this.aggro = false;
@@ -38,7 +37,7 @@ export class BishopEnemy extends Enemy {
     if (drop) this.drop = drop;
     else {
       let dropProb = Random.rand();
-      if (dropProb < 0.005) this.drop = new Candle(this.level, 0, 0);
+      if (dropProb < 0.005) this.drop = new DualDagger(this.level, 0, 0);
       else if (dropProb < 0.04) this.drop = new GreenGem(this.level, 0, 0);
       else this.drop = new Coin(this.level, 0, 0);
     }
@@ -80,10 +79,10 @@ export class BishopEnemy extends Enemy {
             this.facePlayer(player);
             this.seenPlayer = true;
             if (player === this.game.players[this.game.localPlayerID]) this.alertTicks = 1;
-            this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y - 1));
-            this.level.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y + 1));
-            this.level.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y - 1));
-            this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y + 1));
+            this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
+            this.level.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y));
+            this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1));
+            this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1));
           }
         }
       }
@@ -110,6 +109,7 @@ export class BishopEnemy extends Enemy {
               }
             }
           }
+          
           let grid = [];
           for (let x = 0; x < this.level.roomX + this.level.width; x++) {
             grid[x] = [];
@@ -124,9 +124,7 @@ export class BishopEnemy extends Enemy {
             grid,
             this,
             this.targetPlayer,
-            disablePositions,
-            true,
-            true
+            disablePositions
           );
           if (moves.length > 0) {
             let moveX = moves[0].pos.x;
@@ -143,21 +141,46 @@ export class BishopEnemy extends Enemy {
               }
             }
             if (!hitPlayer) {
-              this.tryMove(moveX, moveY);
-              this.drawX = this.x - oldX;
-              this.drawY = this.y - oldY;
+              let oldDir = this.direction
+              let player = this.targetPlayer
+              this.facePlayer(player)
+              /**if (this.x > oldX) this.direction = EnemyDirection.RIGHT;
+              else if (this.x < oldX) this.direction = EnemyDirection.LEFT;
+              else if (this.y > oldY) this.direction = EnemyDirection.DOWN;
+              else if (this.y < oldY) this.direction = EnemyDirection.UP;*/
+              if (oldDir == this.direction){
+                this.tryMove(moveX, moveY);
+                this.drawX = this.x - oldX;
+                this.drawY = this.y - oldY;
               if (this.x > oldX) this.direction = EnemyDirection.RIGHT;
               else if (this.x < oldX) this.direction = EnemyDirection.LEFT;
               else if (this.y > oldY) this.direction = EnemyDirection.DOWN;
               else if (this.y < oldY) this.direction = EnemyDirection.UP;
-            }
+              }
+            };
           }
-
-          this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y - 1));
-          this.level.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y + 1));
-          this.level.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y - 1));
-          this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y + 1));
+        
+        if (this.direction == EnemyDirection.LEFT){
+          this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y))
+          disablePositions.push({ x: this.x, y: this.y + 1 } as astar.Position)
+          disablePositions.push({ x: this.x, y: this.y - 1 } as astar.Position)
+          }
+        if (this.direction == EnemyDirection.RIGHT){
+          this.level.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y))
+          disablePositions.push({ x: this.x, y: this.y + 1 } as astar.Position)
+          disablePositions.push({ x: this.x, y: this.y - 1 } as astar.Position)
+          }
+        if (this.direction == EnemyDirection.DOWN){
+          this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1))
+          disablePositions.push({ x: this.x + 1, y: this.y } as astar.Position)
+          disablePositions.push({ x: this.x - 1, y: this.y } as astar.Position)
+          }
+        if (this.direction == EnemyDirection.UP){
+          this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1))
+          disablePositions.push({ x: this.x + 1, y: this.y } as astar.Position)
+          disablePositions.push({ x: this.x - 1, y: this.y } as astar.Position)
         }
+      }
 
         let targetPlayerOffline = Object.values(this.game.offlinePlayers).indexOf(this.targetPlayer) !== -1;
         if (!this.aggro || targetPlayerOffline) {
@@ -169,10 +192,18 @@ export class BishopEnemy extends Enemy {
                 this.targetPlayer = player;
                 this.facePlayer(player);
                 if (player === this.game.players[this.game.localPlayerID]) this.alertTicks = 1;
-                this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y - 1));
-                this.level.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y + 1));
-                this.level.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y - 1));
-                this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y + 1));
+                if (this.direction == EnemyDirection.LEFT){
+                  this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y))
+                  }
+                if (this.direction == EnemyDirection.RIGHT){
+                  this.level.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y))
+                  }
+                if (this.direction == EnemyDirection.DOWN){
+                  this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1))
+                  }
+                if (this.direction == EnemyDirection.UP){
+                  this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1))
+                }
               }
             }
           }
