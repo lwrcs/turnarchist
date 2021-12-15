@@ -314,7 +314,7 @@ export namespace astar {
           // The g score is the shortest distance from start to current node.
           // We need to check if the path we have arrived at this neighbor is the shortest one we have seen yet.
 
-          var isTurn = (currentNode.parent.pos.x === currentNode.pos.x && currentNode.pos.x === neighbor.pos.x) || (currentNode.parent.pos.y === currentNode.pos.y && currentNode.pos.y === neighbor.pos.y);
+          var isTurn = !((currentNode.parent.pos.x === currentNode.pos.x && currentNode.pos.x === neighbor.pos.x) || (currentNode.parent.pos.y === currentNode.pos.y && currentNode.pos.y === neighbor.pos.y));
           var gScore = currentNode.g + neighbor.cost;
           if (isTurn && turnCostsExtra) gScore++;
           var beenVisited = neighbor.visited;
