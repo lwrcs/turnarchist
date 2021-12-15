@@ -1,3 +1,4 @@
+import { EnemyDirection } from "./enemy/enemy";
 import { SpikeTrap } from "./tile/spiketrap";
 import { Wall } from "./tile/wall";
 
@@ -263,7 +264,7 @@ export namespace astar {
           if (this.grid[x][y].org == org) return this.grid[x][y];
     }
 
-    _search(start: any, end: any, diagonal?: boolean, diagonalsOnly?: boolean, turnCostsExtra?: boolean, heuristic?: Function) {
+    _search(start: any, end: any, diagonal?: boolean, diagonalsOnly?: boolean, turnCostsExtra?: boolean, turnDirection?: EnemyDirection, heuristic?: Function) {
       heuristic = heuristic || this.manhattan;
       diagonal = !!diagonal;
       diagonalsOnly = !!diagonalsOnly;
@@ -314,11 +315,20 @@ export namespace astar {
           // The g score is the shortest distance from start to current node.
           // We need to check if the path we have arrived at this neighbor is the shortest one we have seen yet.
 
-          var isTurn = false;
-          if (currentNode.parent)
-            isTurn = !((currentNode.parent.pos.x === currentNode.pos.x && currentNode.pos.x === neighbor.pos.x) || (currentNode.parent.pos.y === currentNode.pos.y && currentNode.pos.y === neighbor.pos.y));
           var gScore = currentNode.g + neighbor.cost;
-          if (isTurn && turnCostsExtra) gScore++;
+          if (turnCostsExtra) {
+            var isTurn = false;
+            if (currentNode.parent)
+              isTurn = !((currentNode.parent.pos.x === currentNode.pos.x && currentNode.pos.x === neighbor.pos.x) || (currentNode.parent.pos.y === currentNode.pos.y && currentNode.pos.y === neighbor.pos.y));
+            else { // initial step
+              isTurn = true;
+              if (neighbor.pos.x - currentNode.pos.x === 0 && neighbor.pos.y - currentNode.pos.y === -1 && turnDirection === EnemyDirection.UP) isTurn = false;
+              if (neighbor.pos.x - currentNode.pos.x === 0 && neighbor.pos.y - currentNode.pos.y === 1 && turnDirection === EnemyDirection.DOWN) isTurn = false;
+              if (neighbor.pos.x - currentNode.pos.x === 1 && neighbor.pos.y - currentNode.pos.y === 0 && turnDirection === EnemyDirection.RIGHT) isTurn = false;
+              if (neighbor.pos.x - currentNode.pos.x === -1 && neighbor.pos.y - currentNode.pos.y === 0 && turnDirection === EnemyDirection.LEFT) isTurn = false;
+            }
+            if (isTurn) gScore++;
+          }
           var beenVisited = neighbor.visited;
 
           if (!beenVisited || gScore < neighbor.g) {
@@ -352,10 +362,11 @@ export namespace astar {
       diagonal?: boolean,
       diagonalsOnly?: boolean,
       turnCostsExtra?: boolean,
+      turnDirection?: EnemyDirection,
       heuristic?: Function
     ) {
       var astar = new AStar(grid, disablePoints);
-      return astar._search(start, end, diagonal, diagonalsOnly, turnCostsExtra, heuristic);
+      return astar._search(start, end, diagonal, diagonalsOnly, turnCostsExtra, turnDirection, heuristic);
     }
 
     manhattan(pos0: Position, pos1: Position): number {

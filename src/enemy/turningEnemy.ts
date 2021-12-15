@@ -124,7 +124,11 @@ export class TurningEnemy extends Enemy {
             grid,
             this,
             this.targetPlayer,
-            disablePositions
+            disablePositions,
+            false,
+            false,
+            true,
+            this.direction
           );
           if (moves.length > 0) {
             let moveX = moves[0].pos.x;
@@ -137,7 +141,6 @@ export class TurningEnemy extends Enemy {
             else if (moveY > oldY) this.direction = EnemyDirection.DOWN;
             else if (moveY < oldY) this.direction = EnemyDirection.UP;
             if (oldDir == this.direction) {
-
               let hitPlayer = false;
               for (const i in this.game.players) {
                 if (this.game.levels[this.game.players[i].levelID] === this.level && this.game.players[i].x === moveX && this.game.players[i].y === moveY) {
