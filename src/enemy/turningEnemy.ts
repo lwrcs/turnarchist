@@ -109,7 +109,7 @@ export class TurningEnemy extends Enemy {
               }
             }
           }
-          
+
           let grid = [];
           for (let x = 0; x < this.level.roomX + this.level.width; x++) {
             grid[x] = [];
@@ -129,58 +129,58 @@ export class TurningEnemy extends Enemy {
           if (moves.length > 0) {
             let moveX = moves[0].pos.x;
             let moveY = moves[0].pos.y;
+            let oldDir = this.direction;
+            let player = this.targetPlayer;
+            this.facePlayer(player);
+            if (moveX > oldX) this.direction = EnemyDirection.RIGHT;
+            else if (moveX < oldX) this.direction = EnemyDirection.LEFT;
+            else if (moveY > oldY) this.direction = EnemyDirection.DOWN;
+            else if (moveY < oldY) this.direction = EnemyDirection.UP;
+            if (oldDir == this.direction) {
 
-            let hitPlayer = false;
-            for (const i in this.game.players) {
-              if (this.game.levels[this.game.players[i].levelID] === this.level && this.game.players[i].x === moveX && this.game.players[i].y === moveY) {
-                this.game.players[i].hurt(this.hit());
-                this.drawX = 0.5 * (this.x - this.game.players[i].x);
-                this.drawY = 0.5 * (this.y - this.game.players[i].y);
-                if (this.game.players[i] === this.game.players[this.game.localPlayerID])
-                  this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+              let hitPlayer = false;
+              for (const i in this.game.players) {
+                if (this.game.levels[this.game.players[i].levelID] === this.level && this.game.players[i].x === moveX && this.game.players[i].y === moveY) {
+                  this.game.players[i].hurt(this.hit());
+                  this.drawX = 0.5 * (this.x - this.game.players[i].x);
+                  this.drawY = 0.5 * (this.y - this.game.players[i].y);
+                  if (this.game.players[i] === this.game.players[this.game.localPlayerID])
+                    this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                }
               }
-            }
-            if (!hitPlayer) {
-              let oldDir = this.direction
-              let player = this.targetPlayer
-              this.facePlayer(player)
-              /**if (this.x > oldX) this.direction = EnemyDirection.RIGHT;
-              else if (this.x < oldX) this.direction = EnemyDirection.LEFT;
-              else if (this.y > oldY) this.direction = EnemyDirection.DOWN;
-              else if (this.y < oldY) this.direction = EnemyDirection.UP;*/
-              if (oldDir == this.direction){
+              if (!hitPlayer) {
                 this.tryMove(moveX, moveY);
                 this.drawX = this.x - oldX;
                 this.drawY = this.y - oldY;
-              if (this.x > oldX) this.direction = EnemyDirection.RIGHT;
-              else if (this.x < oldX) this.direction = EnemyDirection.LEFT;
-              else if (this.y > oldY) this.direction = EnemyDirection.DOWN;
-              else if (this.y < oldY) this.direction = EnemyDirection.UP;
+                if (this.x > oldX) this.direction = EnemyDirection.RIGHT;
+                else if (this.x < oldX) this.direction = EnemyDirection.LEFT;
+                else if (this.y > oldY) this.direction = EnemyDirection.DOWN;
+                else if (this.y < oldY) this.direction = EnemyDirection.UP;
               }
-            };
+            }
           }
-        
-        if (this.direction == EnemyDirection.LEFT){
-          this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y))
-          disablePositions.push({ x: this.x, y: this.y + 1 } as astar.Position)
-          disablePositions.push({ x: this.x, y: this.y - 1 } as astar.Position)
+
+          if (this.direction == EnemyDirection.LEFT) {
+            this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
+            disablePositions.push({ x: this.x, y: this.y + 1 } as astar.Position);
+            disablePositions.push({ x: this.x, y: this.y - 1 } as astar.Position);
           }
-        if (this.direction == EnemyDirection.RIGHT){
-          this.level.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y))
-          disablePositions.push({ x: this.x, y: this.y + 1 } as astar.Position)
-          disablePositions.push({ x: this.x, y: this.y - 1 } as astar.Position)
+          if (this.direction == EnemyDirection.RIGHT) {
+            this.level.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y));
+            disablePositions.push({ x: this.x, y: this.y + 1 } as astar.Position);
+            disablePositions.push({ x: this.x, y: this.y - 1 } as astar.Position);
           }
-        if (this.direction == EnemyDirection.DOWN){
-          this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1))
-          disablePositions.push({ x: this.x + 1, y: this.y } as astar.Position)
-          disablePositions.push({ x: this.x - 1, y: this.y } as astar.Position)
+          if (this.direction == EnemyDirection.DOWN) {
+            this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1));
+            disablePositions.push({ x: this.x + 1, y: this.y } as astar.Position);
+            disablePositions.push({ x: this.x - 1, y: this.y } as astar.Position);
           }
-        if (this.direction == EnemyDirection.UP){
-          this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1))
-          disablePositions.push({ x: this.x + 1, y: this.y } as astar.Position)
-          disablePositions.push({ x: this.x - 1, y: this.y } as astar.Position)
+          if (this.direction == EnemyDirection.UP) {
+            this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1));
+            disablePositions.push({ x: this.x + 1, y: this.y } as astar.Position);
+            disablePositions.push({ x: this.x - 1, y: this.y } as astar.Position);
+          }
         }
-      }
 
         let targetPlayerOffline = Object.values(this.game.offlinePlayers).indexOf(this.targetPlayer) !== -1;
         if (!this.aggro || targetPlayerOffline) {
@@ -192,17 +192,17 @@ export class TurningEnemy extends Enemy {
                 this.targetPlayer = player;
                 this.facePlayer(player);
                 if (player === this.game.players[this.game.localPlayerID]) this.alertTicks = 1;
-                if (this.direction == EnemyDirection.LEFT){
-                  this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y))
-                  }
-                if (this.direction == EnemyDirection.RIGHT){
-                  this.level.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y))
-                  }
-                if (this.direction == EnemyDirection.DOWN){
-                  this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1))
-                  }
-                if (this.direction == EnemyDirection.UP){
-                  this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1))
+                if (this.direction == EnemyDirection.LEFT) {
+                  this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
+                }
+                if (this.direction == EnemyDirection.RIGHT) {
+                  this.level.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y));
+                }
+                if (this.direction == EnemyDirection.DOWN) {
+                  this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1));
+                }
+                if (this.direction == EnemyDirection.UP) {
+                  this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1));
                 }
               }
             }
