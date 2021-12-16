@@ -15,7 +15,7 @@ import { astar } from "../astarclass";
 import { SpikeTrap } from "../tile/spiketrap";
 import { Pickaxe } from "../weapon/pickaxe";
 
-export class ZombieEnemy extends Enemy {
+export class ArmoredzombieEnemy extends Enemy {
   frame: number;
   ticks: number;
   seenPlayer: boolean;
@@ -27,7 +27,7 @@ export class ZombieEnemy extends Enemy {
     super(level, game, x, y);
     this.ticks = 0;
     this.frame = 0;
-    this.health = 1;
+    this.health = 2;
     this.maxHealth = 1;
     this.tileX = 17;
     this.tileY = 8;
@@ -218,6 +218,12 @@ export class ZombieEnemy extends Enemy {
 
   draw = (delta: number) => {
     if (!this.dead) {
+      this.tileX = 27;
+      this.tileY = 8;
+      if (this.health <= 1) {
+        this.tileX = 17;
+        this.tileY = 8;
+      }
       this.frame += 0.1 * delta;
       if (this.frame >= 4) this.frame = 0;
 
@@ -235,7 +241,7 @@ export class ZombieEnemy extends Enemy {
           this.shadeAmount()
         );
       Game.drawMob(
-        this.tileX + Math.floor(this.frame),
+        this.tileX + (this.tileX === 5 ? Math.floor(this.frame) : 0),
         this.tileY + this.direction * 2,
         1,
         2,

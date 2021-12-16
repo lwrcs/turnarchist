@@ -12,7 +12,7 @@ export class Weapon extends Equippable {
 
     if (level) this.game = level.game;
 
-    this.canMine = false
+    this.canMine = false;
   }
 
   coEquippable = (other: Equippable): boolean => {

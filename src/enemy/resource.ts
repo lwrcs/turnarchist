@@ -9,6 +9,7 @@ import { LevelConstants } from "../levelConstants";
 import { GreenGem } from "../item/greengem";
 import { Player } from "../player";
 import { Pickaxe } from "../weapon/pickaxe";
+import { Spellbook } from "../weapon/spellbook";
 
 export class Resource extends Enemy {
   constructor(level: Level, game: Game, x: number, y: number) {
@@ -21,7 +22,7 @@ export class Resource extends Enemy {
   }
 
   hurt = (playerHitBy: Player, damage: number) => {
-    if (!(playerHitBy.inventory.getWeapon() instanceof Pickaxe)) return;
+    if (!(playerHitBy.inventory.getWeapon() instanceof Pickaxe) && !(playerHitBy.inventory.getWeapon() instanceof Spellbook)) return;
 
     this.healthBar.hurt();
 

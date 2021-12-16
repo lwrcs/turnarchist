@@ -12,7 +12,9 @@ export class Pickaxe extends Weapon {
 
     this.tileX = 30;
     this.tileY = 0;
+    this.canMine = true
   }
+
 
   weaponMove = (newX: number, newY: number): boolean => {
     let flag = false;

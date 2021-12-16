@@ -23,6 +23,8 @@ import { Lantern } from "./item/lantern";
 import { Player } from "./player";
 import { Spear } from "./weapon/spear";
 import { Pickaxe } from "./weapon/pickaxe";
+import { Spellbook } from "./weapon/spellbook";
+import { Backpack } from "./item/backpack";
 
 let OPEN_TIME = 100; // milliseconds
 let FILL_COLOR = "#5a595b";
@@ -66,14 +68,16 @@ export class Inventory {
         i.toggleEquip();
         this.weapon = i;
       }
+
       this.addItem(i);
     };
 
     a(new Dagger({ game: this.game } as Level, 0, 0));
     a(new Torch({ game: this.game } as Level, 0, 0));
-    //a(new Pickaxe({ game: this.game } as Level, 0, 0));
-    //a(new DualDagger({ game: this.game } as Level, 0, 0));
-    //a(new Spear({ game: this.game } as Level, 0, 0));
+    a(new Spellbook({ game: this.game } as Level, 0, 0));
+    a(new Pickaxe({ game: this.game } as Level, 0, 0));
+    a(new Backpack({ game: this.game } as Level, 0, 0));
+
   }
 
   clear = () => {

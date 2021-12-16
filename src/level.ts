@@ -60,6 +60,7 @@ import { Rook } from "./enemy/rook";
 import { Rock } from "./enemy/rockResource";
 import { Mushrooms } from "./enemy/mushrooms";
 import { TurningEnemy } from "./enemy/turningEnemy";
+import { ArmoredzombieEnemy } from "./enemy/armoredzombieEnemy";
 
 export enum RoomType {
   START,
@@ -276,10 +277,10 @@ export class Level {
       let x = t.x;
       let y = t.y;
       let tables = {
-        0: [9],
-        1: [1, 2],
-        2: [1, 2, 3],
-        3: [1, 2, 3, 4, 5, 6, 7],
+        0: [9, 9, 1, 3, 3, 2],
+        1: [1, 1, 3, 3, 3, 2, 2],
+        2: [1, 1, 2, 2, 3, 3, 4],
+        3: [1, 1, 1, 2, 3, 3, 3, 4, 4, 5],
         4: [1, 2, 3, 4, 5, 6, 7],
         5: [1, 2, 3, 4, 5, 6, 7],
         6: [1, 2, 3, 4, 5, 6, 7],
@@ -328,7 +329,7 @@ export class Level {
             addEnemy(new BishopEnemy(this, this.game, x, y, rand));
             break;
           case 9:
-            addEnemy(new TurningEnemy(this, this.game, x, y, rand));
+            addEnemy(new ArmoredzombieEnemy(this, this.game, x, y, rand));
             break;
           case 10:
             if (addEnemy(new BigSkullEnemy(this, this.game, x, y, rand))) {
