@@ -61,6 +61,7 @@ import { Rock } from "./enemy/rockResource";
 import { Mushrooms } from "./enemy/mushrooms";
 import { TurningEnemy } from "./enemy/turningEnemy";
 import { ArmoredzombieEnemy } from "./enemy/armoredzombieEnemy";
+import { Backpack } from "./item/backpack";
 
 export enum RoomType {
   START,

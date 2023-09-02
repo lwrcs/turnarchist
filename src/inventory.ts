@@ -45,8 +45,10 @@ export class Inventory {
   coins: number;
   equipAnimAmount: Array<number>;
   weapon: Weapon;
+  expansion: 0;
 
   constructor(game: Game, player: Player) {
+    //this.rows = 2 + this.expansion;
     this.game = game;
     this.player = player;
     this.items = new Array<Item>();
@@ -74,8 +76,8 @@ export class Inventory {
 
     a(new Dagger({ game: this.game } as Level, 0, 0));
     a(new Torch({ game: this.game } as Level, 0, 0));
-    a(new Spellbook({ game: this.game } as Level, 0, 0));
-    a(new Pickaxe({ game: this.game } as Level, 0, 0));
+    //a(new Spellbook({ game: this.game } as Level, 0, 0));
+    //a(new Pickaxe({ game: this.game } as Level, 0, 0));
     a(new Backpack({ game: this.game } as Level, 0, 0));
 
   }
@@ -246,7 +248,7 @@ export class Inventory {
       i.tickInInventory();
     }
   };
-
+  
   textWrap = (text: string, x: number, y: number, maxWidth: number): number => {
     // returns y value for next line
     let words = text.split(" ");
@@ -490,4 +492,9 @@ export class Inventory {
       }
     }
   };
+
+  updateCapacity = () => {
+    this.expansion += 1;
+  };
+
 }

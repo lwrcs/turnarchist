@@ -3,12 +3,12 @@ import { LevelConstants } from "./levelConstants";
 export class GameConstants {
   static readonly VERSION = "v0.6.3";
 
-  static readonly FPS = 60;
+  static readonly FPS = 120;
   static readonly ALPHA_ENABLED = true;
   static readonly SHADE_LEVELS = 10;
 
   static readonly TILESIZE = 16;
-  static readonly SCALE = 2;
+  static readonly SCALE = 1;
 
   static readonly SWIPE_THRESH = 50 ** 2; // (size of swipe threshold circle)^2
 
