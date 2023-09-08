@@ -92,6 +92,8 @@ export class BigSkullEnemy extends Enemy {
   };
 
   tick = () => {
+    this.lastX = this.x;
+    this.lastY = this.y;
     if (!this.dead) {
       if (this.skipNextTurns > 0) {
         this.skipNextTurns--;

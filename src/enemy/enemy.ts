@@ -46,6 +46,8 @@ export class Enemy extends Drawable {
   sleepingZFrame = 0;
   alertTicks: number;
   exclamationFrame: number;
+  lastX: number;
+  lastY: number;
 
   constructor(level: Level, game: Game, x: number, y: number) {
     super();
@@ -73,6 +75,8 @@ export class Enemy extends Drawable {
     this.healthBar = new HealthBar();
     this.alertTicks = 0;
     this.exclamationFrame = 0;
+    this.lastX = x;
+    this.lastY = y;
   }
 
   tryMove = (x: number, y: number) => {
@@ -132,7 +136,18 @@ export class Enemy extends Drawable {
 
   interact = (player: Player) => { };
 
-  dropLoot = () => { };
+  dropLoot = () => { 
+    this.drop.level = this.level;
+    if (!this.level.levelArray[this.x][this.y].isSolid()) {
+    this.drop.x = this.x;
+    this.drop.y = this.y;
+    }
+    else if (this.level.levelArray[this.x][this.y].isSolid()) {
+      this.drop.x = this.lastX;
+      this.drop.y = this.lastY;
+    }
+    this.level.items.push(this.drop);
+  };
 
   kill = () => {
     if (this.level.levelArray[this.x][this.y] instanceof Floor) {
@@ -228,7 +243,10 @@ export class Enemy extends Drawable {
       );
     }
   };
-  tick = () => { };
+
+  tick = () => {
+   };
+   
   drawTopLayer = (delta: number) => {
     this.drawableY = this.y - this.drawY;
 

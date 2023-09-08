@@ -55,6 +55,8 @@ export class ChargeEnemy extends Enemy {
   };
 
   tick = () => {
+    this.lastX = this.x;
+    this.lastY = this.y;
     if (!this.dead) {
       if (this.skipNextTurns > 0) {
         this.skipNextTurns--;
@@ -238,7 +240,4 @@ export class ChargeEnemy extends Enemy {
     }
   }
 
-  dropLoot = () => {
-    this.level.items.push(new Coin(this.level, this.x, this.y));
-  };
 }

@@ -28,6 +28,8 @@ export class KnightEnemy extends Enemy {
     this.seenPlayer = false;
     this.aggro = false;
     this.deathParticleColor = "#ffffff";
+    this.lastX = this.x;
+    this.lastY = this.y;
 
     if (drop) this.drop = drop;
     else {
@@ -56,6 +58,8 @@ export class KnightEnemy extends Enemy {
   };
 
   tick = () => {
+    this.lastX = this.x;
+    this.lastY = this.y;
     if (!this.dead) {
       if (this.skipNextTurns > 0) {
         this.skipNextTurns--;
@@ -219,12 +223,5 @@ export class KnightEnemy extends Enemy {
     if (this.alertTicks > 0) {
       this.drawExclamation(delta);
     }
-  };
-
-  dropLoot = () => {
-    this.drop.level = this.level;
-    this.drop.x = this.x;
-    this.drop.y = this.y;
-    this.level.items.push(this.drop);
   };
 }

@@ -52,7 +52,7 @@ export class ArmoredzombieEnemy extends Enemy {
     if (playerHitBy) {
       this.aggro = true;
       this.targetPlayer = playerHitBy;
-      this.facePlayer(playerHitBy);
+      //this.facePlayer(playerHitBy); // 
       if (playerHitBy === this.game.players[this.game.localPlayerID]) this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
     }
     this.health -= damage;
@@ -65,6 +65,8 @@ export class ArmoredzombieEnemy extends Enemy {
   };
 
   tick = () => {
+    this.lastX = this.x;
+    this.lastY = this.y;
     if (!this.dead) {
       if (this.skipNextTurns > 0) {
         this.skipNextTurns--;
@@ -80,10 +82,10 @@ export class ArmoredzombieEnemy extends Enemy {
             this.facePlayer(player);
             this.seenPlayer = true;
             if (player === this.game.players[this.game.localPlayerID]) this.alertTicks = 1;
-            this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
+            /*this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
             this.level.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y));
             this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1));
-            this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1));
+            this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1));*/
           }
         }
       }
@@ -144,7 +146,7 @@ export class ArmoredzombieEnemy extends Enemy {
             if (oldDir == this.direction) {
               let hitPlayer = false;
               for (const i in this.game.players) {
-                if (this.game.levels[this.game.players[i].levelID] === this.level && this.game.players[i].x === moveX && this.game.players[i].y === moveY && (oldDir !== this.direction)) {
+                if (this.game.levels[this.game.players[i].levelID] === this.level && this.game.players[i].x === moveX && this.game.players[i].y === moveY && (oldDir == this.direction)) {
                   this.game.players[i].hurt(this.hit());
                   this.drawX = 0.5 * (this.x - this.game.players[i].x);
                   this.drawY = 0.5 * (this.y - this.game.players[i].y);
@@ -259,12 +261,5 @@ export class ArmoredzombieEnemy extends Enemy {
     if (this.alertTicks > 0) {
       this.drawExclamation(delta);
     }
-  };
-
-  dropLoot = () => {
-    this.drop.level = this.level;
-    this.drop.x = this.x;
-    this.drop.y = this.y;
-    this.level.items.push(this.drop);
   };
 }

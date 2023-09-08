@@ -65,6 +65,8 @@ export class ZombieEnemy extends Enemy {
   };
 
   tick = () => {
+    this.lastX = this.x;
+    this.lastY = this.y;
     if (!this.dead) {
       if (this.skipNextTurns > 0) {
         this.skipNextTurns--;
@@ -80,10 +82,10 @@ export class ZombieEnemy extends Enemy {
             this.facePlayer(player);
             this.seenPlayer = true;
             if (player === this.game.players[this.game.localPlayerID]) this.alertTicks = 1;
-            this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
+            /*this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
             this.level.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y));
             this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1));
-            this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1));
+            this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1));*/
           }
         }
       }
@@ -255,10 +257,4 @@ export class ZombieEnemy extends Enemy {
     }
   };
 
-  dropLoot = () => {
-    this.drop.level = this.level;
-    this.drop.x = this.x;
-    this.drop.y = this.y;
-    this.level.items.push(this.drop);
-  };
 }
