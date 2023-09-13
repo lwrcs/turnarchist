@@ -24,8 +24,8 @@ export class GameConstants {
   static scrolling = true;
 
   static readonly SCRIPT_FONT_SIZE = 16;
-  static readonly FONT_SIZE = 10;
-  static readonly BIG_FONT_SIZE = 20;
+  static readonly FONT_SIZE = 7;
+  static readonly BIG_FONT_SIZE = 15;
 
   static readonly RED = "#ac3232";
   static readonly WARNING_RED = "#ff0000";
