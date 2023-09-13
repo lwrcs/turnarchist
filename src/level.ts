@@ -788,19 +788,19 @@ export class Level {
   addDoor = (x: number, y: number) => {
     let d;
     if (x === this.roomX) {
-      d = new SideDoor(this, this.game, x, y);
+      d = new Door(this, this.game, x, y, 1);
       this.levelArray[x + 1][y] = new SpawnFloor(this, x + 1, y);
     }
     else if (x === this.roomX + this.width - 1) {
-      d = new SideDoor(this, this.game, x, y);
+      d = new Door(this, this.game, x, y, 3);
       this.levelArray[x - 1][y] = new SpawnFloor(this, x - 1, y);
     }
     else if (y === this.roomY) {
-      d = new Door(this, this.game, x, y);
+      d = new Door(this, this.game, x, y, 0);
       this.levelArray[x][y + 1] = new SpawnFloor(this, x, y + 1);
     }
     else if (y === this.roomY + this.height - 1) {
-      d = new BottomDoor(this, this.game, x, y);
+      d = new Door(this, this.game, x, y, 2);
       this.levelArray[x][y - 1] = new SpawnFloor(this, x, y - 1);
     }
 
@@ -833,12 +833,12 @@ export class Level {
   };
 
   enterLevelThroughDoor = (player: Player, door: any, side?: number) => {
-    if (door instanceof Door) {
+    if (door instanceof Door && door.doorDir === 0) {//if top door
       (door as Door).opened = true;
       player.moveNoSmooth(door.x, door.y + 1);
-    } else if (door instanceof BottomDoor) {
+    } else if (door instanceof Door && door.doorDir === 2) {//if bottom door
       player.moveNoSmooth(door.x, door.y - 1);
-    } else if (door instanceof SideDoor) {
+    } else if (door instanceof Door && ([1 , 3].includes(door.doorDir))) {// if side door
       player.moveNoSmooth(door.x + side, door.y);
     }
 

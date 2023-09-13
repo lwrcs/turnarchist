@@ -503,8 +503,8 @@ export class Game {
       this.upwardTransition = false;
       this.sideTransition = false;
       this.sideTransitionDirection = side;
-      if (door instanceof SideDoor) this.sideTransition = true;
-      else if (door instanceof BottomDoor) this.upwardTransition = true;
+      if (door instanceof Door && ([1 , 3].includes(door.doorDir))) this.sideTransition = true;
+      else if (door instanceof Door && door.doorDir === 2) this.upwardTransition = true;
     } else {
       door.level.enterLevelThroughDoor(player, door, side);
     }
