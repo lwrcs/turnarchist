@@ -32,14 +32,14 @@ export class Sound {
     [1, 2, 3, 4].forEach(i =>
       Sound.hitSounds.push(new Audio("res/SFX/attacks/swing" + i + ".wav"))
     );
-    for (let f of Sound.hitSounds) f.volume = 1.0;
+    for (let f of Sound.hitSounds) f.volume = .2;
 
     Sound.enemySpawnSound = new Audio("res/SFX/attacks/enemyspawn.wav");
-    Sound.enemySpawnSound.volume = 1.0;
+    Sound.enemySpawnSound.volume = .7;
 
     Sound.chestSounds = new Array<HTMLAudioElement>();
     [1, 2, 3].forEach(i => Sound.chestSounds.push(new Audio("res/SFX/chest/chest" + i + ".wav")));
-    for (let f of Sound.chestSounds) f.volume = 1.0;
+    for (let f of Sound.chestSounds) f.volume = .7;
 
     Sound.coinPickupSounds = new Array<HTMLAudioElement>();
     [1, 2, 3, 4].forEach(i =>
@@ -51,11 +51,11 @@ export class Sound {
     [1, 2, 3, 4].forEach(i =>
       Sound.miningSounds.push(new Audio("res/SFX/resources/Pickaxe" + i + ".wav"))
     );
-    for (let f of Sound.miningSounds) f.volume = 1.0;
+    for (let f of Sound.miningSounds) f.volume = .7;
 
     Sound.hurtSounds = new Array<HTMLAudioElement>();
     [1].forEach(i => Sound.hurtSounds.push(new Audio("res/SFX/attacks/hit.wav")));
-    for (let f of Sound.hurtSounds) f.volume = 1.0;
+    for (let f of Sound.hurtSounds) f.volume = .7;
 
     Sound.genericPickupSound = new Audio("res/SFX/items/pickup.wav");
     Sound.genericPickupSound.volume = 1.0;

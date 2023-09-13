@@ -264,11 +264,12 @@ export namespace astar {
           if (this.grid[x][y].org == org) return this.grid[x][y];
     }
 
-    _search(start: any, end: any, diagonal?: boolean, diagonalsOnly?: boolean, turnCostsExtra?: boolean, turnDirection?: EnemyDirection, heuristic?: Function) {
+    _search(start: any, end: any, diagonal?: boolean, diagonalsOnly?: boolean, turnCostsExtra?: boolean, turnDirection?: EnemyDirection, heuristic?: Function, diagonalsOmni?: boolean) {
       heuristic = heuristic || this.manhattan;
       diagonal = !!diagonal;
       diagonalsOnly = !!diagonalsOnly;
       turnCostsExtra = !!turnCostsExtra;
+      diagonalsOmni = !!diagonalsOmni;
 
       var openHeap = this.heap();
 
@@ -302,7 +303,7 @@ export namespace astar {
         currentNode.closed = true;
 
         // Find all neighbors for the current node. Optionally find diagonal neighbors as well (false by default).
-        var neighbors = this.neighbors(currentNode, diagonal, diagonalsOnly);
+        var neighbors = this.neighbors(currentNode, diagonal, diagonalsOnly, diagonalsOmni);
 
         for (var i = 0, il = neighbors.length; i < il; i++) {
           var neighbor = neighbors[i];
@@ -363,10 +364,11 @@ export namespace astar {
       diagonalsOnly?: boolean,
       turnCostsExtra?: boolean,
       turnDirection?: EnemyDirection,
-      heuristic?: Function
+      heuristic?: Function,
+      diagonalsOmni?: boolean
     ) {
       var astar = new AStar(grid, disablePoints);
-      return astar._search(start, end, diagonal, diagonalsOnly, turnCostsExtra, turnDirection, heuristic);
+      return astar._search(start, end, diagonal, diagonalsOnly, turnCostsExtra, turnDirection, heuristic, diagonalsOmni);
     }
 
     manhattan(pos0: Position, pos1: Position): number {
@@ -377,7 +379,7 @@ export namespace astar {
       return d1 + d2;
     }
 
-    neighbors(node: AStarData, diagonals?: boolean, diagonalsOnly?: boolean): AStarData[] {
+    neighbors(node: AStarData, diagonals?: boolean, diagonalsOnly?: boolean, diagonalsOmni?: boolean): AStarData[] {
       var grid = this.grid;
       var ret = [];
       var x = node.pos.x;
@@ -426,6 +428,56 @@ export namespace astar {
           ret.push(grid[x + 1][y + 1]);
         }
       }
+      function getRandomBoolean(): boolean {
+        return Math.random() < 0.5;
+    }
+      if (diagonalsOmni) {
+        const randomBool: boolean = getRandomBoolean();
+        // West
+        if (grid[x - 1] && grid[x - 1][y]) {
+          // Instead of pushing West, choose between Southwest and Northwest
+          if (randomBool == true) {
+            ret.push(grid[x - 1][y - 1]), console.log("Southwest");
+            return;
+          } else {
+            ret.push(grid[x - 1][y + 1]), console.log("Northwest");
+            return;
+          }
+        }
+        // East
+        if (grid[x + 1] && grid[x + 1][y]) {
+          if (randomBool == true) {
+            ret.push(grid[x + 1][y - 1]), console.log("Southeast");
+            return;
+          } else {
+            ret.push(grid[x + 1][y + 1]), console.log("Northeast");
+            return;
+          }
+        }
+        // South
+        if (grid[x] && grid[x][y - 1]) {
+          if (randomBool == true) {
+            ret.push(grid[x - 1][y - 1]), console.log("Southwest");
+            return;
+          } else {
+            ret.push(grid[x + 1][y - 1]), console.log("Southeast");
+            return;
+          }
+        }
+        // North
+        if (grid[x] && grid[x][y + 1]) {
+          if (randomBool == true) {
+            ret.push(grid[x - 1][y + 1]), console.log("Northwest");
+            return;
+          } else {
+            ret.push(grid[x + 1][y + 1]), console.log("Northeast");
+            return;
+          }
+        } else {
+          return;
+        }
+      }
+    
 
       return ret;
     }

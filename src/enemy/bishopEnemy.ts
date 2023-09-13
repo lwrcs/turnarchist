@@ -23,7 +23,14 @@ export class BishopEnemy extends Enemy {
   targetPlayer: Player;
   drop: Item;
 
-  constructor(level: Level, game: Game, x: number, y: number, rand: () => number, drop?: Item) {
+  constructor(
+    level: Level,
+    game: Game,
+    x: number,
+    y: number,
+    rand: () => number,
+    drop?: Item
+  ) {
     super(level, game, x, y);
     this.ticks = 0;
     this.frame = 0;
@@ -44,6 +51,44 @@ export class BishopEnemy extends Enemy {
     }
   }
 
+  tryMove = (x: number, y: number) => {
+    let pointWouldBeIn = (someX: number, someY: number): boolean => {
+      return (
+        someX >= x && someX < x + this.w && someY >= y && someY < y + this.h
+      );
+    };
+    let enemyCollide = (enemy: Enemy): boolean => {
+      if (enemy.x >= x + this.w || enemy.x + enemy.w <= x) return false;
+      if (enemy.y >= y + this.h || enemy.y + enemy.h <= y) return false;
+      return true;
+    };
+    for (const e of this.level.enemies) {
+      if (e !== this && enemyCollide(e)) {
+        return;
+      }
+    }
+    for (const i in this.game.players) {
+      if (pointWouldBeIn(this.game.players[i].x, this.game.players[i].y)) {
+        return;
+      }
+    }
+    let tiles = [];
+    for (let xx = 0; xx < this.w; xx++) {
+      for (let yy = 0; yy < this.h; yy++) {
+        if (!this.level.levelArray[x + xx][y + yy].isSolid()) {
+          tiles.push(this.level.levelArray[x + xx][y + yy]);
+        } else {
+          return;
+        }
+      }
+    }
+    for (let tile of tiles) {
+      tile.onCollideEnemy(this);
+    }
+    this.x = x;
+    this.y = y;
+  };
+
   hit = (): number => {
     return 1;
   };
@@ -53,18 +98,26 @@ export class BishopEnemy extends Enemy {
       this.aggro = true;
       this.targetPlayer = playerHitBy;
       this.facePlayer(playerHitBy);
-      if (playerHitBy === this.game.players[this.game.localPlayerID]) this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
+      if (playerHitBy === this.game.players[this.game.localPlayerID])
+        this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
     }
     this.health -= damage;
     this.healthBar.hurt();
     if (this.health <= 0) {
       this.kill();
     } else {
-      GenericParticle.spawnCluster(this.level, this.x + 0.5, this.y + 0.5, this.deathParticleColor);
+      GenericParticle.spawnCluster(
+        this.level,
+        this.x + 0.5,
+        this.y + 0.5,
+        this.deathParticleColor
+      );
     }
   };
 
   tick = () => {
+    this.lastX = this.x;
+    this.lastY = this.y;
     if (!this.dead) {
       if (this.skipNextTurns > 0) {
         this.skipNextTurns--;
@@ -79,15 +132,23 @@ export class BishopEnemy extends Enemy {
             this.targetPlayer = player;
             this.facePlayer(player);
             this.seenPlayer = true;
-            if (player === this.game.players[this.game.localPlayerID]) this.alertTicks = 1;
-            this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y - 1));
-            this.level.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y + 1));
-            this.level.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y - 1));
-            this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y + 1));
+            if (player === this.game.players[this.game.localPlayerID])
+              this.alertTicks = 1;
+            this.level.hitwarnings.push(
+              new HitWarning(this.game, this.x - 1, this.y - 1)
+            );
+            this.level.hitwarnings.push(
+              new HitWarning(this.game, this.x + 1, this.y + 1)
+            );
+            this.level.hitwarnings.push(
+              new HitWarning(this.game, this.x + 1, this.y - 1)
+            );
+            this.level.hitwarnings.push(
+              new HitWarning(this.game, this.x - 1, this.y + 1)
+            );
           }
         }
-      }
-      else if (this.seenPlayer) {
+      } else if (this.seenPlayer) {
         if (this.level.playerTicked === this.targetPlayer) {
           this.alertTicks = Math.max(0, this.alertTicks - 1);
           let oldX = this.x;
@@ -98,6 +159,10 @@ export class BishopEnemy extends Enemy {
             if (e !== this) {
               disablePositions.push({ x: e.x, y: e.y } as astar.Position);
             }
+            /*disablePositions.push({ x: oldX + 1, y: oldY } as astar.Position);
+          disablePositions.push({ x: oldX - 1, y: oldY } as astar.Position);
+          disablePositions.push({ x: oldX, y: oldY + 1 } as astar.Position);
+          disablePositions.push({ x: oldX, y: oldY - 1} as astar.Position);*/
           }
           for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
             for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
@@ -116,8 +181,7 @@ export class BishopEnemy extends Enemy {
             for (let y = 0; y < this.level.roomY + this.level.height; y++) {
               if (this.level.levelArray[x] && this.level.levelArray[x][y])
                 grid[x][y] = this.level.levelArray[x][y];
-              else
-                grid[x][y] = false;
+              else grid[x][y] = false;
             }
           }
           let moves = astar.AStar.search(
@@ -125,54 +189,93 @@ export class BishopEnemy extends Enemy {
             this,
             this.targetPlayer,
             disablePositions,
-            true,
-            true
+            true, //diagonals
+            true, //diagonalsOnly
+            undefined,
+            undefined,
+            undefined,
+            false //diagonalsOmni
           );
           if (moves.length > 0) {
+            disablePositions.push({ x: oldX + 1, y: oldY } as astar.Position);
+            disablePositions.push({ x: oldX - 1, y: oldY } as astar.Position);
+            disablePositions.push({ x: oldX, y: oldY + 1 } as astar.Position);
+            disablePositions.push({ x: oldX, y: oldY - 1 } as astar.Position);
             let moveX = moves[0].pos.x;
             let moveY = moves[0].pos.y;
 
             let hitPlayer = false;
             for (const i in this.game.players) {
-              if (this.game.levels[this.game.players[i].levelID] === this.level && this.game.players[i].x === moveX && this.game.players[i].y === moveY) {
+              if (
+                this.game.levels[this.game.players[i].levelID] === this.level &&
+                this.game.players[i].x === moveX &&
+                this.game.players[i].y === moveY
+              ) {
                 this.game.players[i].hurt(this.hit());
                 this.drawX = 0.5 * (this.x - this.game.players[i].x);
                 this.drawY = 0.5 * (this.y - this.game.players[i].y);
-                if (this.game.players[i] === this.game.players[this.game.localPlayerID])
+                if (
+                  this.game.players[i] ===
+                  this.game.players[this.game.localPlayerID]
+                )
                   this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
               }
             }
             if (!hitPlayer) {
+              //if ()
               this.tryMove(moveX, moveY);
               this.drawX = this.x - oldX;
               this.drawY = this.y - oldY;
-              if (this.x > oldX) this.direction = EnemyDirection.RIGHT;
+              /*if (this.x > oldX) this.direction = EnemyDirection.RIGHT;
               else if (this.x < oldX) this.direction = EnemyDirection.LEFT;
               else if (this.y > oldY) this.direction = EnemyDirection.DOWN;
-              else if (this.y < oldY) this.direction = EnemyDirection.UP;
+              else if (this.y < oldY) this.direction = EnemyDirection.UP;*/
             }
           }
 
-          this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y - 1));
-          this.level.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y + 1));
-          this.level.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y - 1));
-          this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y + 1));
+          this.level.hitwarnings.push(
+            new HitWarning(this.game, this.x - 1, this.y - 1)
+          );
+          this.level.hitwarnings.push(
+            new HitWarning(this.game, this.x + 1, this.y + 1)
+          );
+          this.level.hitwarnings.push(
+            new HitWarning(this.game, this.x + 1, this.y - 1)
+          );
+          this.level.hitwarnings.push(
+            new HitWarning(this.game, this.x - 1, this.y + 1)
+          );
         }
 
-        let targetPlayerOffline = Object.values(this.game.offlinePlayers).indexOf(this.targetPlayer) !== -1;
+        let targetPlayerOffline =
+          Object.values(this.game.offlinePlayers).indexOf(this.targetPlayer) !==
+          -1;
         if (!this.aggro || targetPlayerOffline) {
           let p = this.nearestPlayer();
           if (p !== false) {
             let [distance, player] = p;
-            if (distance <= 4 && (targetPlayerOffline || distance < this.playerDistance(this.targetPlayer))) {
+            if (
+              distance <= 4 &&
+              (targetPlayerOffline ||
+                distance < this.playerDistance(this.targetPlayer))
+            ) {
               if (player !== this.targetPlayer) {
                 this.targetPlayer = player;
                 this.facePlayer(player);
-                if (player === this.game.players[this.game.localPlayerID]) this.alertTicks = 1;
-                this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y - 1));
-                this.level.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y + 1));
-                this.level.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y - 1));
-                this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y + 1));
+                if (player === this.game.players[this.game.localPlayerID])
+                  this.alertTicks = 1;
+                this.level.hitwarnings.push(
+                  new HitWarning(this.game, this.x - 1, this.y - 1)
+                );
+                this.level.hitwarnings.push(
+                  new HitWarning(this.game, this.x + 1, this.y + 1)
+                );
+                this.level.hitwarnings.push(
+                  new HitWarning(this.game, this.x + 1, this.y - 1)
+                );
+                this.level.hitwarnings.push(
+                  new HitWarning(this.game, this.x - 1, this.y + 1)
+                );
               }
             }
           }
@@ -218,12 +321,5 @@ export class BishopEnemy extends Enemy {
     if (this.alertTicks > 0) {
       this.drawExclamation(delta);
     }
-  };
-
-  dropLoot = () => {
-    this.drop.level = this.level;
-    this.drop.x = this.x;
-    this.drop.y = this.y;
-    this.level.items.push(this.drop);
   };
 }
