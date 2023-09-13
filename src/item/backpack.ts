@@ -6,21 +6,27 @@ import { Level } from "../level";
 import { Usable } from "./usable";
 import { Inventory } from "../inventory";
 
-export class Backpack extends Item {
+export class Backpack extends Usable {
   constructor(level: Level, x: number, y: number) {
     super(level, x, y);
+
     this.tileX = 4;
     this.tileY = 0;
+    this.offsetY = 0;
   }
 
   onUse = (player: Player) => {
-   player.inventory.updateCapacity();
-    this.level.items = this.level.items.filter(x => x !== this); // removes itself from the level
+    if (this.level.game.levels[player.levelID] === this.level.game.level)
+      Sound.heal();
+    let b = player.inventory.hasItem(Backpack);
+    if (b !== null) {
+      // remove backpack
+      player.inventory.removeItem(b);
+    }
+    player.inventory.expansion += 1;
+    //this.level.items = this.level.items.filter((x) => x !== this); // removes itself from the level
   };
-
-  getDescription = (): string => {
-    return (
-      "BACKPACK\nA normal looking backpack. Increases the amount you can carry. "
-    );
+  getDescription = () => {
+    return "BACKPACK\nA normal looking backpack. Increases the amount you can carry. ";
   };
 }

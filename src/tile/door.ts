@@ -10,6 +10,7 @@ export class Door extends Tile {
   game: Game;
   opened: boolean;
   doorDir: number;
+  locked: boolean;
 
   constructor(level: Level, game: Game, x: number, y: number, dir: number) {
     super(level, x, y);
@@ -17,19 +18,31 @@ export class Door extends Tile {
     this.opened = false;
     this.isDoor = true;
     this.doorDir = dir;
+    this.locked = false;
   }
 
   link = (other: Door) => {
     this.linkedDoor = other;
   };
 
+  isLocked = (): boolean => {
+    return this.locked;
+  };
+
   canCrushEnemy = (): boolean => {
     return true;
   };
 
+  getDoorDir = (): string => {
+    const dirDict = ["north", "east", "south", "west"];
+    return dirDict[this.doorDir];
+  };
+
   onCollide = (player: Player) => {
     this.opened = true;
-    if (this.doorDir === 0 || this.doorDir === 2) {
+    const stringDir = this.getDoorDir();
+    //if (this.doorDir === 0 || this.doorDir === 2) {
+    if (stringDir === "north" || stringDir === "south") {
       this.game.changeLevelThroughDoor(player, this.linkedDoor);
     } else
       this.game.changeLevelThroughDoor(

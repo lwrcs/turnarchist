@@ -45,10 +45,10 @@ export class Inventory {
   coins: number;
   equipAnimAmount: Array<number>;
   weapon: Weapon;
-  expansion: 0;
+  expansion: number = 0;
 
   constructor(game: Game, player: Player) {
-    //this.rows = 2 + this.expansion;
+    
     this.game = game;
     this.player = player;
     this.items = new Array<Item>();
@@ -59,8 +59,8 @@ export class Inventory {
     //Input.mouseLeftClickListeners.push(this.mouseLeftClickListener);
     this.coins = 0;
     this.openTime = Date.now();
-
     this.weapon = null;
+    this.expansion = 0;
 
     let a = (i: Item) => {
       if (i instanceof Equippable) {
@@ -84,7 +84,7 @@ export class Inventory {
 
   clear = () => {
     this.items = [];
-    for (let i = 0; i < this.rows * this.cols; i++) this.equipAnimAmount[i] = 0;
+    for (let i = 0; i < (this.rows + this.expansion) * this.cols; i++) this.equipAnimAmount[i] = 0;
   }
 
   open = () => {
@@ -110,7 +110,7 @@ export class Inventory {
   };
   down = () => {
     this.selY++;
-    if (this.selY > this.rows - 1) this.selY = this.rows - 1;
+    if (this.selY > (this.rows + this.expansion) - 1) this.selY = (this.rows + this.expansion) - 1;
   };
   space = () => {
     let i = this.selX + this.selY * this.cols;
@@ -136,6 +136,7 @@ export class Inventory {
       }
     }
   };
+
   drop = () => {
     let i = this.selX + this.selY * this.cols;
     if (i < this.items.length) {
@@ -193,7 +194,7 @@ export class Inventory {
   };
 
   isFull = (): boolean => {
-    return this.items.length >= this.rows * this.cols;
+    return this.items.length >= (this.rows + this.expansion) * this.cols;
   };
 
   addItem = (item: Item): boolean => {
@@ -224,7 +225,7 @@ export class Inventory {
   removeItem = (item: Item) => {
     let i = this.items.indexOf(item);
     if (i !== -1) {
-      this.items.splice(i, 1);
+      this.items.splice(i, 0);
     }
   };
 
@@ -297,7 +298,7 @@ export class Inventory {
     let hg = 3 + Math.round(0.5 * Math.sin(Date.now() * 0.01) + 0.5); // highlighted growth
     let ob = 1; // outer border
     let width = this.cols * (s + 2 * b + g) - g;
-    let height = this.rows * (s + 2 * b + g) - g;
+    let height = (this.rows + this.expansion) * (s + 2 * b + g) - g;
 
     return (x >= Math.round(0.5 * GameConstants.WIDTH - 0.5 * width) - ob &&
       x <= Math.round(0.5 * GameConstants.WIDTH - 0.5 * width) - ob + Math.round(width + 2 * ob) &&
@@ -332,7 +333,7 @@ export class Inventory {
       let hg = 3 + Math.round(0.5 * Math.sin(Date.now() * 0.01) + 0.5); // highlighted growth
       let ob = 1; // outer border
       let width = this.cols * (s + 2 * b + g) - g;
-      let height = this.rows * (s + 2 * b + g) - g;
+      let height = (this.rows + this.expansion) * (s + 2 * b + g) - g;
 
       Game.ctx.fillStyle = FULL_OUTLINE;
       Game.ctx.fillRect(
@@ -351,7 +352,7 @@ export class Inventory {
       );
 
       for (let x = 0; x < this.cols; x++) {
-        for (let y = 0; y < this.rows; y++) {
+        for (let y = 0; y < (this.rows + this.expansion); y++) {
           Game.ctx.fillStyle = OUTLINE_COLOR;
           Game.ctx.fillRect(
             Math.round(0.5 * GameConstants.WIDTH - 0.5 * width + x * (s + 2 * b + g)),
@@ -484,17 +485,13 @@ export class Inventory {
 
         let lines = this.items[i].getDescription().split("\n");
         let nextY = Math.round(
-          0.5 * GameConstants.HEIGHT - 0.5 * height + this.rows * (s + 2 * b + g) + b + 5
+          0.5 * GameConstants.HEIGHT - 0.5 * height + (this.rows + this.expansion) * (s + 2 * b + g) + b + 5
         );
         for (let j = 0; j < lines.length; j++) {
           nextY = this.textWrap(lines[j], 5, nextY, GameConstants.WIDTH - 10);
         }
       }
     }
-  };
-
-  updateCapacity = () => {
-    this.expansion += 1;
   };
 
 }

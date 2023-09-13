@@ -47,6 +47,7 @@ import { Shotgun } from "./weapon/shotgun";
 import { Spear } from "./weapon/spear";
 import { Weapon } from "./weapon/weapon";
 import { Pickaxe } from "./weapon/pickaxe";
+import { Backpack } from "./item/backpack";
 
 export class HitWarningState {
   x: number;
@@ -447,7 +448,8 @@ export enum ItemType {
   DUALDAGGER,
   SHOTGUN,
   SPEAR,
-  PICKAXE
+  PICKAXE,
+  BACKPACK
 }
 
 export class ItemState {
@@ -478,6 +480,8 @@ export class ItemState {
     if (item instanceof Shotgun) this.type = ItemType.SHOTGUN;
     if (item instanceof Spear) this.type = ItemType.SPEAR;
     if (item instanceof Pickaxe) this.type = ItemType.PICKAXE;
+    if (item instanceof Backpack) this.type = ItemType.BACKPACK;
+
     this.equipped = item instanceof Equippable && item.equipped;
     this.x = item.x;
     this.y = item.y;
@@ -508,6 +512,8 @@ let loadItem = (i: ItemState, game: Game, player?: Player): Item => {
   if (i.type === ItemType.DUALDAGGER) { item = new DualDagger(level, i.x, i.y); }
   if (i.type === ItemType.SHOTGUN) { item = new Shotgun(level, i.x, i.y); }
   if (i.type === ItemType.SPEAR) { item = new Spear(level, i.x, i.y); }
+  if (i.type === ItemType.PICKAXE) { item = new Pickaxe(level, i.x, i.y); }
+  if (i.type === ItemType.BACKPACK) { item = new Backpack(level, i.x, i.y); }
   if (i.equipped) item.equipped = true;
   if (item instanceof Equippable) item.setWielder(player);
   item.stackCount = i.stackCount;
