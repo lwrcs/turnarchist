@@ -5,20 +5,26 @@ import { BottomDoor } from "./bottomDoor";
 import { GameConstants } from "../gameConstants";
 import { SkinType, Tile } from "./tile";
 
+export enum DoorDir {
+  North,
+  East,
+  South,
+  West,
+}
+
 export class Door extends Tile {
   linkedDoor: Door;
   game: Game;
   opened: boolean;
-  doorDir: number;
+  doorDir: DoorDir;
   locked: boolean;
 
   constructor(level: Level, game: Game, x: number, y: number, dir: number) {
     super(level, x, y);
     this.game = game;
     this.opened = false;
-    this.isDoor = true;
-    this.doorDir = dir;
     this.locked = false;
+    this.doorDir = dir
   }
 
   link = (other: Door) => {
@@ -33,16 +39,10 @@ export class Door extends Tile {
     return true;
   };
 
-  getDoorDir = (): string => {
-    const dirDict = ["north", "east", "south", "west"];
-    return dirDict[this.doorDir];
-  };
-
   onCollide = (player: Player) => {
     this.opened = true;
-    const stringDir = this.getDoorDir();
-    //if (this.doorDir === 0 || this.doorDir === 2) {
-    if (stringDir === "north" || stringDir === "south") {
+    this.linkedDoor.opened = true;
+    if (this.doorDir === DoorDir.North || this.doorDir === DoorDir.South) {
       this.game.changeLevelThroughDoor(player, this.linkedDoor);
     } else
       this.game.changeLevelThroughDoor(
@@ -53,7 +53,7 @@ export class Door extends Tile {
   };
 
   draw = (delta: number) => {
-    if (this.doorDir === 0) {
+    if (this.doorDir === DoorDir.North) {
       //if top door
       if (this.opened)
         Game.drawTile(
@@ -82,7 +82,7 @@ export class Door extends Tile {
           this.shadeAmount()
         );
     }
-    if (this.doorDir !== 0)
+    if (this.doorDir !== DoorDir.North)
       //if not top door
       Game.drawTile(
         1,
@@ -99,7 +99,7 @@ export class Door extends Tile {
   };
 
   drawAbovePlayer = (delta: number) => {
-    if (this.doorDir === 0) {
+    if (this.doorDir === DoorDir.North) {
       //if top door
       if (!this.opened)
         Game.drawTile(
@@ -128,12 +128,12 @@ export class Door extends Tile {
           this.shadeAmount()
         );
     }
-    if (this.doorDir !== 0) {
+    if (this.doorDir !== DoorDir.North) {
     }
   };
 
   drawAboveShading = (delta: number) => {
-    if (this.doorDir === 0) {
+    if (this.doorDir === DoorDir.North) {
       //if top door
       Game.drawFX(
         2,

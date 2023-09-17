@@ -50,8 +50,14 @@ export class Player extends Drawable {
   map: Map;
   openVendingMachine: VendingMachine;
   isLocalPlayer: boolean;
+  mapToggled: boolean;
 
-  constructor(game: Game, x: number, y: number, isLocalPlayer: boolean) {
+  constructor(
+    game: Game,
+    x: number,
+    y: number,
+    isLocalPlayer: boolean,
+  ) {
     super();
 
     this.game = game;
@@ -82,12 +88,10 @@ export class Player extends Drawable {
           } else {
             this.inputHandler(InputEnum.I);
           }
-        }
-        else
-          this.inputHandler(InputEnum.I);
-      }
+        } else this.inputHandler(InputEnum.I);
+      };
     }
-
+    this.mapToggled = true;
     this.health = 2;
     this.maxHealth = 2;
     this.healthBar = new HealthBar();
@@ -135,14 +139,20 @@ export class Player extends Drawable {
     }
   };
   ignoreDirectionInput = (): boolean => {
-    return !this.inventory.isOpen && (this.dead || this.game.levelState !== LevelState.IN_LEVEL);
+    return (
+      !this.inventory.isOpen &&
+      (this.dead || this.game.levelState !== LevelState.IN_LEVEL)
+    );
   };
   leftListener = (isLocal: boolean): boolean => {
     if (this.inventory.isOpen) {
       this.inventory.left();
       return true;
     }
-    if (!this.dead && (!isLocal || this.game.levelState === LevelState.IN_LEVEL)) {
+    if (
+      !this.dead &&
+      (!isLocal || this.game.levelState === LevelState.IN_LEVEL)
+    ) {
       this.left();
       return true;
     }
@@ -154,7 +164,10 @@ export class Player extends Drawable {
       this.inventory.right();
       return true;
     }
-    if (!this.dead && (!isLocal || this.game.levelState === LevelState.IN_LEVEL)) {
+    if (
+      !this.dead &&
+      (!isLocal || this.game.levelState === LevelState.IN_LEVEL)
+    ) {
       this.right();
       return true;
     }
@@ -166,7 +179,10 @@ export class Player extends Drawable {
       this.inventory.up();
       return true;
     }
-    if (!this.dead && (!isLocal || this.game.levelState === LevelState.IN_LEVEL)) {
+    if (
+      !this.dead &&
+      (!isLocal || this.game.levelState === LevelState.IN_LEVEL)
+    ) {
       this.up();
       return true;
     }
@@ -178,7 +194,10 @@ export class Player extends Drawable {
       this.inventory.down();
       return true;
     }
-    if (!this.dead && (!isLocal || this.game.levelState === LevelState.IN_LEVEL)) {
+    if (
+      !this.dead &&
+      (!isLocal || this.game.levelState === LevelState.IN_LEVEL)
+    ) {
       this.down();
       return true;
     }
@@ -227,7 +246,10 @@ export class Player extends Drawable {
 
     if (this.dead) return;
 
-    if (this.inventory.hasWeapon() && !this.inventory.getWeapon().weaponMove(x, y)) {
+    if (
+      this.inventory.hasWeapon() &&
+      !this.inventory.getWeapon().weaponMove(x, y)
+    ) {
       return;
     }
 
@@ -265,20 +287,27 @@ export class Player extends Drawable {
           // here, (nextX, nextY) is the position immediately after the end of the train
           if (
             pushedEnemies.length === 0 &&
-            (this.game.levels[this.levelID].levelArray[nextX][nextY].canCrushEnemy() || enemyEnd)
+            (this.game.levels[this.levelID].levelArray[nextX][
+              nextY
+            ].canCrushEnemy() ||
+              enemyEnd)
           ) {
             if (e.destroyable) {
               e.kill();
-              if (this.game.levels[this.levelID] === this.game.level) Sound.hit();
+              if (this.game.levels[this.levelID] === this.game.level)
+                Sound.hit();
               this.drawX = 0.5 * (this.x - e.x);
               this.drawY = 0.5 * (this.y - e.y);
-              this.game.levels[this.levelID].particles.push(new SlashParticle(e.x, e.y));
+              this.game.levels[this.levelID].particles.push(
+                new SlashParticle(e.x, e.y)
+              );
               this.game.levels[this.levelID].tick(this);
               this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
               return;
             }
           } else {
-            if (this.game.levels[this.levelID] === this.game.level) Sound.push();
+            if (this.game.levels[this.levelID] === this.game.level)
+              Sound.push();
             // here pushedEnemies may still be []
             for (const f of pushedEnemies) {
               f.x += dx;
@@ -287,9 +316,15 @@ export class Player extends Drawable {
               f.drawY = dy;
               f.skipNextTurns = 1; // skip next turn, so they don't move while we're pushing them
             }
-            if (this.game.levels[this.levelID].levelArray[nextX][nextY].canCrushEnemy() || enemyEnd) {
+            if (
+              this.game.levels[this.levelID].levelArray[nextX][
+                nextY
+              ].canCrushEnemy() ||
+              enemyEnd
+            ) {
               pushedEnemies[pushedEnemies.length - 1].killNoBones();
-              if (this.game.levels[this.levelID] === this.game.level) Sound.hit();
+              if (this.game.levels[this.levelID] === this.game.level)
+                Sound.hit();
             }
             e.x += dx;
             e.y += dy;
@@ -365,7 +400,8 @@ export class Player extends Drawable {
   };
 
   move = (x: number, y: number) => {
-    if (this.game.levels[this.levelID] === this.game.level) Sound.playerStoneFootstep();
+    if (this.game.levels[this.levelID] === this.game.level)
+      Sound.playerStoneFootstep();
 
     if (this.openVendingMachine) this.openVendingMachine.close();
 
@@ -397,7 +433,7 @@ export class Player extends Drawable {
     this.drawY = 0;
   };
 
-  update = () => { };
+  update = () => {};
 
   finishTick = () => {
     this.inventory.tick();
@@ -432,7 +468,7 @@ export class Player extends Drawable {
   draw = (delta: number) => {
     this.drawableY = this.y;
 
-    this.flashingFrame += delta * 12 / GameConstants.FPS;
+    this.flashingFrame += (delta * 12) / GameConstants.FPS;
     if (!this.dead) {
       Game.drawMob(0, 0, 1, 1, this.x - this.drawX, this.y - this.drawY, 1, 1);
       if (!this.flashing || Math.floor(this.flashingFrame) % 2 === 0) {
@@ -443,6 +479,10 @@ export class Player extends Drawable {
 
   heartbeat = () => {
     this.guiHeartFrame = 1;
+  };
+
+  tapHoldHandler = () => {
+    this.mapToggled = !this.mapToggled;
   };
 
   drawTopLayer = (delta: number) => {
@@ -474,9 +514,11 @@ export class Player extends Drawable {
           } else {
             Game.drawFX(3, 2, 1, 1, i, LevelConstants.SCREEN_H - 1, 1, 1);
           }
-        } else Game.drawFX(frame, 2, 1, 1, i, LevelConstants.SCREEN_H - 1, 1, 1);
+        } else
+          Game.drawFX(frame, 2, 1, 1, i, LevelConstants.SCREEN_H - 1, 1, 1);
       }
-      if (this.inventory.getArmor()) this.inventory.getArmor().drawGUI(delta, this.maxHealth);
+      if (this.inventory.getArmor())
+        this.inventory.getArmor().drawGUI(delta, this.maxHealth);
     } else {
       Game.ctx.fillStyle = LevelConstants.LEVEL_TEXT_COLOR;
       let gameOverString = "Game Over";
@@ -486,9 +528,10 @@ export class Player extends Drawable {
         GameConstants.HEIGHT / 2 - Game.letter_height + 2
       );
     }
-    if ((Input.isDown(Input.M) || Input.isTapHold) && !this.game.chatOpen) {
-      this.map.draw(delta);
-    }
+    /*if ((Input.isDown(Input.M) || Input.isTapHold) && !this.game.chatOpen) {
+      this.tapHoldHandler();
+    }*/
+    if (this.mapToggled === true) this.map.draw(delta);
   };
 
   updateDrawXY = (delta: number) => {

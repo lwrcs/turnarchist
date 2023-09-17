@@ -122,6 +122,7 @@ export class Level {
   entered: boolean; // has the player entered this level
   lightSources: Array<LightSource>;
   shadeColor = "black";
+  //levelObjects: Array<LevelObject>;
 
   private pointInside(
     x: number,

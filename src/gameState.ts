@@ -116,6 +116,12 @@ let loadProjectile = (ps: ProjectileState, game: Game): Projectile => {
   }
 }
 
+export enum EntityType {
+  Enemy,
+  Object,
+  Special
+}
+
 export enum EnemyType {
   BARREL,
   BIGSKULL,

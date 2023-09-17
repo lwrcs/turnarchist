@@ -14,7 +14,6 @@ export class SideDoor extends Tile {
     super(level, x, y);
     this.game = game;
     this.opened = false;
-    this.isDoor = true;
   }
 
   link = (other: SideDoor) => {

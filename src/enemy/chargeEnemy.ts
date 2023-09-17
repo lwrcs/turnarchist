@@ -38,6 +38,8 @@ export class ChargeEnemy extends Enemy {
     this.trailFrame = 0;
     this.alertTicks = 0;
     this.deathParticleColor = "#ffffff";
+    this.lastX = this.x;
+    this.lastY = this.y;
 
     this.state = ChargeEnemyState.IDLE;
   }
@@ -51,7 +53,12 @@ export class ChargeEnemy extends Enemy {
       if (e !== this && x === e.x && y === e.y) return false;
     }
     let t = this.level.levelArray[x][y];
-    return !(t.isSolid() || (t instanceof Door || t instanceof SideDoor || t instanceof BottomDoor));
+    return !(
+      t.isSolid() ||
+      t instanceof Door ||
+      t instanceof SideDoor ||
+      t instanceof BottomDoor
+    );
   };
 
   tick = () => {
@@ -89,13 +96,20 @@ export class ChargeEnemy extends Enemy {
               this.targetX += dx;
               this.targetY += dy;
               if (
-                (this.targetX === this.game.players[i].x && this.targetY === this.game.players[i].y) ||
-                (this.targetX === this.game.players[i].x - 1 && this.targetY === this.game.players[i].y) ||
-                (this.targetX === this.game.players[i].x + 1 && this.targetY === this.game.players[i].y) ||
-                (this.targetX === this.game.players[i].x && this.targetY === this.game.players[i].y - 1) ||
-                (this.targetX === this.game.players[i].x && this.targetY === this.game.players[i].y + 1)
+                (this.targetX === this.game.players[i].x &&
+                  this.targetY === this.game.players[i].y) ||
+                (this.targetX === this.game.players[i].x - 1 &&
+                  this.targetY === this.game.players[i].y) ||
+                (this.targetX === this.game.players[i].x + 1 &&
+                  this.targetY === this.game.players[i].y) ||
+                (this.targetX === this.game.players[i].x &&
+                  this.targetY === this.game.players[i].y - 1) ||
+                (this.targetX === this.game.players[i].x &&
+                  this.targetY === this.game.players[i].y + 1)
               )
-                this.level.hitwarnings.push(new HitWarning(this.game, this.targetX, this.targetY));
+                this.level.hitwarnings.push(
+                  new HitWarning(this.game, this.targetX, this.targetY)
+                );
             }
             this.visualTargetX = this.targetX + 0.5 * dx;
             this.visualTargetY = this.targetY + 0.5 * dy;
@@ -114,11 +128,15 @@ export class ChargeEnemy extends Enemy {
         for (const i in this.game.players) {
           if (
             (this.y === this.game.players[i].y &&
-              ((this.x < this.game.players[i].x && this.game.players[i].x <= this.targetX) ||
-                (this.targetX <= this.game.players[i].x && this.game.players[i].x < this.x))) ||
+              ((this.x < this.game.players[i].x &&
+                this.game.players[i].x <= this.targetX) ||
+                (this.targetX <= this.game.players[i].x &&
+                  this.game.players[i].x < this.x))) ||
             (this.x === this.game.players[i].x &&
-              ((this.y < this.game.players[i].y && this.game.players[i].y <= this.targetY) ||
-                (this.targetY <= this.game.players[i].y && this.game.players[i].y < this.y)))
+              ((this.y < this.game.players[i].y &&
+                this.game.players[i].y <= this.targetY) ||
+                (this.targetY <= this.game.players[i].y &&
+                  this.game.players[i].y < this.y)))
           ) {
             this.game.players[i].hurt(this.hit());
           }
@@ -142,7 +160,8 @@ export class ChargeEnemy extends Enemy {
       if (this.frame >= 4) this.frame = 0;
 
       if (
-        (this.state === ChargeEnemyState.CHARGING && Math.abs(this.drawX) > 0.1) ||
+        (this.state === ChargeEnemyState.CHARGING &&
+          Math.abs(this.drawX) > 0.1) ||
         Math.abs(this.drawY) > 0.1
       ) {
         GenericParticle.spawnCluster(
@@ -168,9 +187,15 @@ export class ChargeEnemy extends Enemy {
           if (GameConstants.ALPHA_ENABLED) Game.ctx.globalAlpha = 1 - t;
           Game.ctx.lineWidth = GameConstants.TILESIZE * 0.25;
           Game.ctx.beginPath();
-          Game.ctx.moveTo((this.startX + 0.5) * GameConstants.TILESIZE, (this.startY + 0.5) * GameConstants.TILESIZE);
+          Game.ctx.moveTo(
+            (this.startX + 0.5) * GameConstants.TILESIZE,
+            (this.startY + 0.5) * GameConstants.TILESIZE
+          );
           Game.ctx.lineCap = "round";
-          Game.ctx.lineTo((this.x - this.drawX + 0.5) * GameConstants.TILESIZE, (this.y - this.drawY + 0.5) * GameConstants.TILESIZE);
+          Game.ctx.lineTo(
+            (this.x - this.drawX + 0.5) * GameConstants.TILESIZE,
+            (this.y - this.drawY + 0.5) * GameConstants.TILESIZE
+          );
           Game.ctx.stroke();
           Game.ctx.globalAlpha = 1;
         }
@@ -203,8 +228,7 @@ export class ChargeEnemy extends Enemy {
       );
       if (this.state === ChargeEnemyState.IDLE) {
         this.drawSleepingZs(delta);
-      }
-      else if (this.state === ChargeEnemyState.ALERTED) {
+      } else if (this.state === ChargeEnemyState.ALERTED) {
         this.drawExclamation(delta);
       }
     }
@@ -213,7 +237,14 @@ export class ChargeEnemy extends Enemy {
   drawTopLayer = (delta: number) => {
     this.drawableY = this.y;
 
-    this.healthBar.draw(delta, this.health, this.maxHealth, this.x, this.y, true);
+    this.healthBar.draw(
+      delta,
+      this.health,
+      this.maxHealth,
+      this.x,
+      this.y,
+      true
+    );
     this.drawX += -0.5 * this.drawX;
     this.drawY += -0.5 * this.drawY;
 
@@ -233,11 +264,13 @@ export class ChargeEnemy extends Enemy {
         Game.ctx.beginPath();
         Game.ctx.moveTo(Math.round(startX), Math.round(startY));
         Game.ctx.lineCap = "round";
-        Game.ctx.lineTo(Math.round((this.visualTargetX + 0.5) * GameConstants.TILESIZE), Math.round((this.visualTargetY - 0.25) * GameConstants.TILESIZE));
+        Game.ctx.lineTo(
+          Math.round((this.visualTargetX + 0.5) * GameConstants.TILESIZE),
+          Math.round((this.visualTargetY - 0.25) * GameConstants.TILESIZE)
+        );
         Game.ctx.stroke();
         Game.ctx.globalAlpha = 1;
       }
     }
-  }
-
+  };
 }

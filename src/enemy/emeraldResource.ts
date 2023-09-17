@@ -10,6 +10,7 @@ import { GreenGem } from "../item/greengem";
 import { Resource } from "./resource";
 import { GenericParticle } from "../particle/genericParticle";
 import { Sound } from "../sound";
+import { GameState } from "../gameState";
 
 export class EmeraldResource extends Resource {
   constructor(level: Level, game: Game, x: number, y: number) {

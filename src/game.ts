@@ -14,6 +14,7 @@ import { ServerAddress } from "./serverAddress";
 import { TextBox } from "./textbox";
 import { createGameState, GameState, loadGameState } from "./gameState";
 import { Random } from "./random";
+import { DoorDir } from "./tile/door";
 
 export enum LevelState {
   IN_LEVEL,
@@ -503,8 +504,8 @@ export class Game {
       this.upwardTransition = false;
       this.sideTransition = false;
       this.sideTransitionDirection = side;
-      if (door instanceof Door && ([1 , 3].includes(door.doorDir))) this.sideTransition = true;
-      else if (door instanceof Door && door.doorDir === 2) this.upwardTransition = true;
+      if (door instanceof Door && ([DoorDir.East , DoorDir.West].includes(door.doorDir))) this.sideTransition = true;
+      else if (door instanceof Door && door.doorDir === DoorDir.South) this.upwardTransition = true;
     } else {
       door.level.enterLevelThroughDoor(player, door, side);
     }

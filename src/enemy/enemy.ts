@@ -10,6 +10,7 @@ import { HealthBar } from "../healthbar";
 import { Drawable } from "../drawable";
 import { Item } from "../item/item";
 import { GameConstants } from "../gameConstants";
+import { EntityType } from "../gameState";
 
 export enum EnemyDirection {
   DOWN = 0,
@@ -48,6 +49,7 @@ export class Enemy extends Drawable {
   exclamationFrame: number;
   lastX: number;
   lastY: number;
+  //entityType: EntityType;
 
   constructor(level: Level, game: Game, x: number, y: number) {
     super();
@@ -77,6 +79,7 @@ export class Enemy extends Drawable {
     this.exclamationFrame = 0;
     this.lastX = x;
     this.lastY = y;
+    //this.entityType = EntityType.Enemy;
   }
 
   tryMove = (x: number, y: number) => {

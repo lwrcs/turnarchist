@@ -420,7 +420,7 @@ export class LevelGenerator {
       levels.push(level);
     }
 
-    let doors_added: Array<Door | BottomDoor | SideDoor> = [];
+    let doors_added: Array<Door> = [];
 
     for (let i = 0; i < partitions.length; i++) {
       for (const connection of partitions[i].connections) {

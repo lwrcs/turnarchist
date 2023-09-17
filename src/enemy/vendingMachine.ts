@@ -18,6 +18,8 @@ import { BlueGem } from "../item/bluegem";
 import { DualDagger } from "../weapon/dualdagger";
 import { Lantern } from "../item/lantern";
 import { RedGem } from "../item/redgem";
+import { EntityType } from "../gameState";
+
 
 let OPEN_TIME = 150;
 let FILL_COLOR = "#5a595b";
@@ -46,6 +48,7 @@ export class VendingMachine extends Enemy {
     this.interactable = true;
 
     this.costItems = [];
+    //this.entityType = EntityType.Object
 
     this.item = item;
     if (this.item instanceof Shotgun) {

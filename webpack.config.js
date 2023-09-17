@@ -17,4 +17,5 @@ module.exports = {
       { test: /\.tsx?$/, use: { loader: "ts-loader", options: {} }, exclude: /node_modules/ },
     ],
   },
+  devtool: 'source-map',
 };
