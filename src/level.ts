@@ -62,6 +62,7 @@ import { Mushrooms } from "./enemy/mushrooms";
 import { TurningEnemy } from "./enemy/turningEnemy";
 import { ArmoredzombieEnemy } from "./enemy/armoredzombieEnemy";
 import { Backpack } from "./item/backpack";
+import { DoorDir } from "./tile/door";
 
 export enum RoomType {
   START,
@@ -122,7 +123,7 @@ export class Level {
   entered: boolean; // has the player entered this level
   lightSources: Array<LightSource>;
   shadeColor = "black";
-  //levelObjects: Array<LevelObject>;
+  walls: Array<Wall>;
 
   private pointInside(
     x: number,
@@ -150,6 +151,7 @@ export class Level {
         }
         else {
           this.levelArray[x][y] = new Wall(this, x, y);
+          this.walls.push
         }
       }
     }
@@ -171,7 +173,9 @@ export class Level {
 
       for (let xx = x; xx < x + blockW; xx++) {
         for (let yy = y; yy < y + blockH; yy++) {
-          this.levelArray[xx][yy] = new Wall(this, xx, yy);
+          let w = new Wall(this, xx, yy);
+          this.levelArray[xx][yy] = w;
+          this.walls.push(w);
         }
       }
     }
@@ -765,6 +769,7 @@ export class Level {
     this.doors = Array<Door>();
     this.enemies = Array<Enemy>();
     this.lightSources = Array<LightSource>();
+    this.walls = Array<Wall>();
 
     this.levelArray = [];
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
@@ -834,12 +839,12 @@ export class Level {
   };
 
   enterLevelThroughDoor = (player: Player, door: any, side?: number) => {
-    if (door instanceof Door && door.doorDir === 0) {//if top door
+    if (door instanceof Door && door.doorDir === DoorDir.North) {//if top door
       (door as Door).opened = true;
       player.moveNoSmooth(door.x, door.y + 1);
-    } else if (door instanceof Door && door.doorDir === 2) {//if bottom door
+    } else if (door instanceof Door && door.doorDir === DoorDir.South) {//if bottom door
       player.moveNoSmooth(door.x, door.y - 1);
-    } else if (door instanceof Door && ([1 , 3].includes(door.doorDir))) {// if side door
+    } else if (door instanceof Door && ([DoorDir.East , DoorDir.West].includes(door.doorDir))) {// if side door
       player.moveNoSmooth(door.x + side, door.y);
     }
 
