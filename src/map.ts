@@ -59,10 +59,14 @@ export class Map {
           Game.ctx.fillStyle = "yellow";
           Game.ctx.fillRect(enemy.x * s, enemy.y * s, 1 * s, 1 * s)
         }
+        for (const item of level.items) {
+          Game.ctx.fillStyle = "red";
+          Game.ctx.fillRect(item.x * s, item.y * s, 1 * s, 1 * s)
+        }
       }
     }
       for (const i in this.game.players) {
-        Game.ctx.fillStyle = GameConstants.RED;
+        Game.ctx.fillStyle = "white";
         if (
           this.game.levels[this.game.players[i].levelID].mapGroup ===
           this.game.level.mapGroup

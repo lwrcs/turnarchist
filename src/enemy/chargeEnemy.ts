@@ -8,6 +8,10 @@ import { BottomDoor } from "../tile/bottomDoor";
 import { GenericParticle } from "../particle/genericParticle";
 import { GameConstants } from "../gameConstants";
 import { SideDoor } from "../tile/sidedoor";
+import { Random } from "../random";
+import { Pickaxe } from "../weapon/pickaxe";
+import { GreenGem } from "../item/greengem";
+import { Item } from "../item/item";
 
 export enum ChargeEnemyState {
   IDLE,
@@ -26,8 +30,9 @@ export class ChargeEnemy extends Enemy {
   frame: number;
   state: ChargeEnemyState;
   trailFrame: number;
+  drop: Item;
 
-  constructor(level: Level, game: Game, x: number, y: number) {
+  constructor(level: Level, game: Game, x: number, y: number, drop?: Item) {
     super(level, game, x, y);
     this.ticks = 0;
     this.frame = 0;
@@ -42,8 +47,14 @@ export class ChargeEnemy extends Enemy {
     this.lastY = this.y;
 
     this.state = ChargeEnemyState.IDLE;
+    if (drop) this.drop = drop;
+    else {
+      let dropProb = Random.rand();
+      if (dropProb < 0.025) this.drop = new Pickaxe(this.level, 0, 0);
+      else if (dropProb < 0.02) this.drop = new GreenGem(this.level, 0, 0);
+      else this.drop = new Coin(this.level, 0, 0);
+    }
   }
-
   hit = (): number => {
     return 1;
   };
@@ -53,12 +64,7 @@ export class ChargeEnemy extends Enemy {
       if (e !== this && x === e.x && y === e.y) return false;
     }
     let t = this.level.levelArray[x][y];
-    return !(
-      t.isSolid() ||
-      t instanceof Door ||
-      t instanceof SideDoor ||
-      t instanceof BottomDoor
-    );
+    return !(t.isSolid() || t instanceof Door);
   };
 
   tick = () => {
