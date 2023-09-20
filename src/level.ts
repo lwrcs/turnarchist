@@ -63,6 +63,7 @@ import { TurningEnemy } from "./enemy/turningEnemy";
 import { ArmoredzombieEnemy } from "./enemy/armoredzombieEnemy";
 import { Backpack } from "./item/backpack";
 import { DoorDir } from "./tile/door";
+import { ActionState, ActionTab } from "./actionTab";
 
 export enum RoomType {
   START,
@@ -124,6 +125,7 @@ export class Level {
   lightSources: Array<LightSource>;
   shadeColor = "black";
   walls: Array<Wall>;
+  actionTab: ActionTab
 
   private pointInside(
     x: number,
@@ -283,7 +285,7 @@ export class Level {
       let x = t.x;
       let y = t.y;
       let tables = {
-        0: [1, 1, 1, 3, 3, 2],
+        0: [1 /*2, 3, 4, 5, 6, 7, 8, 9, 10*/],
         1: [1, 1, 3, 3, 3, 2, 2],
         2: [1, 1, 2, 2, 3, 3, 4],
         3: [1, 1, 1, 2, 3, 3, 3, 4, 4, 5],
@@ -460,7 +462,7 @@ export class Level {
     this.addPlants(numPlants, rand);
     this.addObstacles(numObstacles, rand);
     let numEnemies = Math.ceil(
-      (numEmptyTiles - numTotalObstacles) * Math.min(this.depth * 0.01 + 0.1, 0.35)
+      (numEmptyTiles - numTotalObstacles) * Math.min(this.depth * 0.1 + 0.1, 0.35) //this.depth * 0.01 is starting value 
     );
     this.addEnemies(numEnemies, rand);
 
@@ -747,7 +749,7 @@ export class Level {
     type: RoomType,
     depth: number,
     mapGroup: number,
-    rand = Random.rand
+    rand = Random.rand,
   ) {
     this.game = game;
     this.roomX = x; //Math.floor(- this.width / 2);
@@ -1016,6 +1018,8 @@ export class Level {
     }
 
     this.turn = TurnState.computerTurn;
+    player.actionTab.actionState = ActionState.Ready;
+    //sets the action tab state to Ready
     this.playerTurnTime = Date.now();
     this.playerTicked = player;
   };
@@ -1074,6 +1078,7 @@ export class Level {
 
     this.playerTicked.finishTick();
     this.turn = TurnState.playerTurn;
+
   };
 
   draw = (delta: number) => {

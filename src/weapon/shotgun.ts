@@ -21,7 +21,10 @@ export class Shotgun extends Weapon {
     let newX3 = 3 * newX - 2 * this.wielder.x;
     let newY3 = 3 * newY - 2 * this.wielder.y;
     let range = 3;
-    if (!this.game.levels[this.wielder.levelID].tileInside(newX, newY) || this.game.levels[this.wielder.levelID].levelArray[newX][newY].isSolid())
+    if (
+      !this.game.levels[this.wielder.levelID].tileInside(newX, newY) ||
+      this.game.levels[this.wielder.levelID].levelArray[newX][newY].isSolid()
+    )
       return true;
     else if (
       !this.game.levels[this.wielder.levelID].tileInside(newX2, newY2) ||
@@ -76,7 +79,10 @@ export class Shotgun extends Weapon {
     }
     let targetX = newX3;
     let targetY = newY3;
-    if (firstNonDestroyable < firstNonPushable && firstNonDestroyable < firstPushable) {
+    if (
+      firstNonDestroyable < firstNonPushable &&
+      firstNonDestroyable < firstPushable
+    ) {
       return true;
     }
     if (firstNonPushable <= firstPushable) {
@@ -87,7 +93,11 @@ export class Shotgun extends Weapon {
         else e.hurt(this.wielder, 1);
       }
 
-      if (this.wielder.game.levels[this.wielder.levelID] === this.wielder.game.level) Sound.hit();
+      if (
+        this.wielder.game.levels[this.wielder.levelID] ===
+        this.wielder.game.level
+      )
+        Sound.hit();
       this.wielder.drawX = 0.5 * (this.wielder.x - newX);
       this.wielder.drawY = 0.5 * (this.wielder.y - newY);
       GenericParticle.shotgun(

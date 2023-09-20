@@ -16,6 +16,7 @@ import { SideDoor } from "./tile/sidedoor";
 import { Drawable } from "./drawable";
 import { Random } from "./random";
 import { GenericParticle } from "./particle/genericParticle";
+import { ActionState, ActionTab } from "./actionTab";
 
 export enum PlayerDirection {
   DOWN = 0,
@@ -51,13 +52,9 @@ export class Player extends Drawable {
   openVendingMachine: VendingMachine;
   isLocalPlayer: boolean;
   mapToggled: boolean;
+  actionTab: ActionTab;
 
-  constructor(
-    game: Game,
-    x: number,
-    y: number,
-    isLocalPlayer: boolean,
-  ) {
+  constructor(game: Game, x: number, y: number, isLocalPlayer: boolean) {
     super();
 
     this.game = game;
@@ -92,8 +89,8 @@ export class Player extends Drawable {
       };
     }
     this.mapToggled = true;
-    this.health = 2;
-    this.maxHealth = 2;
+    this.health = 10;
+    this.maxHealth = 10;
     this.healthBar = new HealthBar();
     this.dead = false;
     this.flashing = false;
@@ -109,6 +106,7 @@ export class Player extends Drawable {
     this.sightRadius = this.defaultSightRadius;
 
     this.map = new Map(this.game);
+    this.actionTab = new ActionTab(this.inventory, this.game);
   }
 
   inputHandler = (input: InputEnum) => {
@@ -338,6 +336,8 @@ export class Player extends Drawable {
           // if we're trying to hit an enemy, check if it's destroyable
           if (!e.dead) {
             if (e.interactable) e.interact(this);
+            this.actionTab.actionState = ActionState.Attack;
+            //sets the action tab state to Attack
             return;
           }
         }
@@ -445,6 +445,8 @@ export class Player extends Drawable {
     if (totalHealthDiff < 0) {
       this.flashing = true;
     }
+    this.actionTab.actionState = ActionState.Wait;
+    //Sets the action tab state to Wait (during enemy turn)
   };
 
   drawPlayerSprite = (delta: number) => {
@@ -532,6 +534,8 @@ export class Player extends Drawable {
       this.tapHoldHandler();
     }*/
     if (this.mapToggled === true) this.map.draw(delta);
+    //this.actionTab.draw(this, this.inventory);
+    //render the action tab
   };
 
   updateDrawXY = (delta: number) => {
