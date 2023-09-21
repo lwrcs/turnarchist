@@ -17,6 +17,7 @@ import { Drawable } from "./drawable";
 import { Random } from "./random";
 import { GenericParticle } from "./particle/genericParticle";
 import { ActionState, ActionTab } from "./actionTab";
+import { HitWarning } from "./hitWarning";
 
 export enum PlayerDirection {
   DOWN = 0,
@@ -239,17 +240,22 @@ export class Player extends Drawable {
   };
 
   tryMove = (x: number, y: number) => {
+    let newMove = { x: x, y: y };
     // TODO don't move if hit by enemy
     this.game.levels[this.levelID].catchUp();
 
     if (this.dead) return;
 
-    if (
-      this.inventory.hasWeapon() &&
-      !this.inventory.getWeapon().weaponMove(x, y)
-    ) {
-      return;
-    }
+    for (let i = 0; i < 2; i++)
+      if (
+        this.inventory.hasWeapon() &&
+        !this.inventory.getWeapon().weaponMove(x, y)
+      ) {
+        //for (let h of this.game.levels[this.levelID].hitwarnings) {
+          //if (newMove instanceof HitWarning) 
+          return;
+        //}
+      }
 
     for (let e of this.game.levels[this.levelID].enemies) {
       if (this.tryCollide(e, x, y)) {
