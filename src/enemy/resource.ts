@@ -24,8 +24,10 @@ export class Resource extends Enemy {
   }
 
   hurt = (playerHitBy: Player, damage: number) => {
-    if (!(playerHitBy.inventory.getWeapon() instanceof Pickaxe) && !(playerHitBy.inventory.getWeapon() instanceof Spellbook)) return;
-
+    if (
+      (playerHitBy.inventory.getWeapon().canMine = false)
+    )
+      return;
     this.healthBar.hurt();
 
     this.health -= damage;
