@@ -1,7 +1,7 @@
 import { Game } from "./game";
 import { GameConstants } from "./gameConstants";
 import { RoomType } from "./level";
-import { EntityType } from "./gameState";
+import { EntityType } from "./enemy/enemy";
 import { Wall } from "./tile/wall";
 
 export class Map {
@@ -57,13 +57,25 @@ export class Map {
               Game.ctx.fillRect(door.x * s, door.y * s, 1 * s, 1 * s);
         }
         for (const enemy of level.enemies) {
-          Game.ctx.fillStyle = "yellow";
+          if (enemy.entityType === EntityType.Enemy) {
+            Game.ctx.fillStyle = "yellow";
+          }
+          if (enemy.entityType === EntityType.Prop) {
+            Game.ctx.fillStyle = "#847e87";
+          }
+          if (enemy.entityType === EntityType.Resource) {
+            Game.ctx.fillStyle = "#5a595b";
+          }
+          if (enemy.entityType === EntityType.Friendly) {
+            Game.ctx.fillStyle = "cyan";
+          }
+
           Game.ctx.fillRect(enemy.x * s, enemy.y * s, 1 * s, 1 * s);
         }
         for (const item of level.items) {
           let x = item.x;
           let y = item.y;
-          Game.ctx.fillStyle = "red";
+          Game.ctx.fillStyle = "#ac3232";
           if (!item.pickedUp) {
             Game.ctx.fillRect(item.x * s, item.y * s, 1 * s, 1 * s);
           }

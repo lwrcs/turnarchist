@@ -6,7 +6,7 @@ import { LevelConstants } from "../levelConstants";
 import { GenericParticle } from "../particle/genericParticle";
 import { Item } from "../item/item";
 import { Coin } from "../item/coin";
-import { EntityType } from "../gameState";
+import { EntityType } from "./enemy";
 
 export class PottedPlant extends Enemy {
   drop: Item;
@@ -18,7 +18,7 @@ export class PottedPlant extends Enemy {
     this.tileY = 0;
     this.hasShadow = false;
     this.chainPushable = false;
-    //this.entityType = EntityType.Object
+    this.entityType = EntityType.Prop
     if (drop) this.drop = drop;
     
     else {

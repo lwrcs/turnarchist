@@ -18,7 +18,7 @@ import { BlueGem } from "../item/bluegem";
 import { DualDagger } from "../weapon/dualdagger";
 import { Lantern } from "../item/lantern";
 import { RedGem } from "../item/redgem";
-import { EntityType } from "../gameState";
+import { EntityType } from "./enemy";
 
 
 let OPEN_TIME = 150;
@@ -48,7 +48,7 @@ export class VendingMachine extends Enemy {
     this.interactable = true;
 
     this.costItems = [];
-    //this.entityType = EntityType.Object
+    this.entityType = EntityType.Friendly
 
     this.item = item;
     if (this.item instanceof Shotgun) {

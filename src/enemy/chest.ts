@@ -13,7 +13,7 @@ import { Sound } from "../sound";
 import { RedGem } from "../item/redgem";
 import { BlueGem } from "../item/bluegem";
 import { GameState } from "../gameState";
-import { EntityType } from "../gameState";
+import { EntityType } from "./enemy";
 
 export class Chest extends Enemy {
   constructor(level: Level, game: Game, x: number, y: number, rand: () => number) {
@@ -22,7 +22,7 @@ export class Chest extends Enemy {
     this.tileX = 4;
     this.tileY = 0;
     this.health = 1;
-    //this.entityType = EntityType.Special;
+    this.entityType = EntityType.Chest;
 
     let drop = Game.randTable([1, 1, 1, 1, 1, 1, 1, 2, 3, 4], rand);
 

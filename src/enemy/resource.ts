@@ -10,7 +10,7 @@ import { GreenGem } from "../item/greengem";
 import { Player } from "../player";
 import { Pickaxe } from "../weapon/pickaxe";
 import { Spellbook } from "../weapon/spellbook";
-import { EntityType } from "../gameState";
+import { EntityType } from "./enemy";
 
 export class Resource extends Enemy {
   constructor(level: Level, game: Game, x: number, y: number) {
@@ -20,7 +20,7 @@ export class Resource extends Enemy {
     this.tileY = 0;
     this.health = 1;
     this.chainPushable = false;
-    //this.entityType = EntityType.Object
+    this.entityType = EntityType.Resource
   }
 
   hurt = (playerHitBy: Player, damage: number) => {

@@ -4,7 +4,7 @@ import { Game } from "../game";
 import { Heart } from "../item/heart";
 import { LevelConstants } from "../levelConstants";
 import { GenericParticle } from "../particle/genericParticle";
-import { EntityType } from "../gameState";
+import { EntityType } from "./enemy";
 
 export class Crate extends Enemy {
   constructor(level: Level, game: Game, x: number, y: number) {
@@ -16,7 +16,7 @@ export class Crate extends Enemy {
     this.tileY = 0;
     this.hasShadow = false;
     this.pushable = true;
-    //this.entityType = EntityType.Object
+    this.entityType = EntityType.Prop
   }
 
   kill = () => {
