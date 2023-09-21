@@ -20,7 +20,8 @@ export class Map {
     Game.ctx.translate(
       0.75 * GameConstants.WIDTH -
         this.game.level.roomX -
-        Math.floor(0.5 * this.game.level.width) + 20,
+        Math.floor(0.5 * this.game.level.width) +
+        20,
       0.25 * GameConstants.HEIGHT -
         this.game.level.roomY -
         Math.floor(0.5 * this.game.level.height)
@@ -57,29 +58,32 @@ export class Map {
         }
         for (const enemy of level.enemies) {
           Game.ctx.fillStyle = "yellow";
-          Game.ctx.fillRect(enemy.x * s, enemy.y * s, 1 * s, 1 * s)
+          Game.ctx.fillRect(enemy.x * s, enemy.y * s, 1 * s, 1 * s);
         }
         for (const item of level.items) {
+          let x = item.x;
+          let y = item.y;
           Game.ctx.fillStyle = "red";
-          Game.ctx.fillRect(item.x * s, item.y * s, 1 * s, 1 * s)
+          if (!item.pickedUp) {
+            Game.ctx.fillRect(item.x * s, item.y * s, 1 * s, 1 * s);
+          }
         }
       }
     }
-      for (const i in this.game.players) {
-        Game.ctx.fillStyle = "white";
-        if (
-          this.game.levels[this.game.players[i].levelID].mapGroup ===
-          this.game.level.mapGroup
-        ) {
-          Game.ctx.fillRect(
-            this.game.players[i].x * s,
-            this.game.players[i].y * s,
-            1 * s,
-            1 * s
-          );
-        }
+    for (const i in this.game.players) {
+      Game.ctx.fillStyle = "white";
+      if (
+        this.game.levels[this.game.players[i].levelID].mapGroup ===
+        this.game.level.mapGroup
+      ) {
+        Game.ctx.fillRect(
+          this.game.players[i].x * s,
+          this.game.players[i].y * s,
+          1 * s,
+          1 * s
+        );
       }
-      Game.ctx.setTransform(1, 0, 0, 1, 0, 0);
-    
+    }
+    Game.ctx.setTransform(1, 0, 0, 1, 0, 0);
   };
 }
