@@ -5,7 +5,7 @@ import { Door } from "./tile/door";
 import { BottomDoor } from "./tile/bottomDoor";
 import { Trapdoor } from "./tile/trapdoor";
 import { Inventory } from "./inventory";
-import { LockedDoor } from "./tile/lockedDoor";
+import { DoorLocked } from "./tile/doorLocked";
 import { Sound } from "./sound";
 import { LevelConstants } from "./levelConstants";
 import { Map } from "./map";
@@ -363,7 +363,7 @@ export class Player extends Drawable {
       )
         this.game.levels[this.levelID].tick(this);
     } else {
-      if (other instanceof LockedDoor) {
+      if (other instanceof DoorLocked) {
         this.drawX = (this.x - x) * 0.5;
         this.drawY = (this.y - y) * 0.5;
         other.unlock(this);

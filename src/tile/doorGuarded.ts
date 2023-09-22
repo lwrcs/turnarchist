@@ -4,30 +4,35 @@ import { Level } from "../level";
 import { BottomDoor } from "./bottomDoor";
 import { GameConstants } from "../gameConstants";
 import { SkinType, Tile } from "./tile";
+import { Door } from "./door";
+import { DoorDir } from "./door";
+import { Key } from "../item/key";
 
-export enum DoorDir {
-  North,
-  East,
-  South,
-  West,
-}
-
-export class Door extends Tile {
+export class DoorGuarded extends Door {
   linkedDoor: Door;
   game: Game;
   opened: boolean;
   doorDir: DoorDir;
   locked: boolean;
-  guarded: boolean;
+  unlockedDoor: Door;
 
   constructor(level: Level, game: Game, x: number, y: number, dir: number) {
-    super(level, x, y);
+    super(level, game, x, y, dir);
     this.game = game;
     this.opened = false;
-    this.locked = false;
+    this.locked = true;
     this.doorDir = dir;
   }
-  unlock = (player: Player) => {};
+
+  unlock = (player: Player) => {
+    let k = player.inventory.hasItem(Key);
+    if (k !== null) {
+      // remove key
+      player.inventory.removeItem(k);
+      this.level.levelArray[this.x][this.y] = this.unlockedDoor; // replace this door in level
+      this.level.doors.push(this.unlockedDoor); // add it to the door list so it can get rendered on the map
+    }
+  };
 
   link = (other: Door) => {
     this.linkedDoor = other;
