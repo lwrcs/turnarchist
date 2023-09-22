@@ -23,7 +23,7 @@ export enum EntityType {
   Friendly,
   Resource,
   Prop,
-  Chest
+  Chest,
 }
 
 export class Enemy extends Drawable {
@@ -91,7 +91,9 @@ export class Enemy extends Drawable {
 
   tryMove = (x: number, y: number) => {
     let pointWouldBeIn = (someX: number, someY: number): boolean => {
-      return someX >= x && someX < x + this.w && someY >= y && someY < y + this.h;
+      return (
+        someX >= x && someX < x + this.w && someY >= y && someY < y + this.h
+      );
     };
     let enemyCollide = (enemy: Enemy): boolean => {
       if (enemy.x >= x + this.w || enemy.x + enemy.w <= x) return false;
@@ -113,8 +115,7 @@ export class Enemy extends Drawable {
       for (let yy = 0; yy < this.h; yy++) {
         if (!this.level.levelArray[x + xx][y + yy].isSolid()) {
           tiles.push(this.level.levelArray[x + xx][y + yy]);
-        }
-        else {
+        } else {
           return;
         }
       }
@@ -130,11 +131,13 @@ export class Enemy extends Drawable {
     return 0;
   };
 
-  hurtCallback = () => { };
+  hurtCallback = () => {};
 
   pointIn = (x: number, y: number): boolean => {
-    return x >= this.x && x < this.x + this.w && y >= this.y && y < this.y + this.h;
-  }
+    return (
+      x >= this.x && x < this.x + this.w && y >= this.y && y < this.y + this.h
+    );
+  };
 
   hurt = (playerHitBy: Player, damage: number) => {
     this.healthBar.hurt();
@@ -144,19 +147,19 @@ export class Enemy extends Drawable {
     else this.hurtCallback();
   };
 
-  interact = (player: Player) => { };
+  interact = (player: Player) => {};
 
-  dropLoot = () => { 
+  dropLoot = () => {
     this.drop.level = this.level;
     if (!this.level.levelArray[this.x][this.y].isSolid()) {
-    this.drop.x = this.x;
-    this.drop.y = this.y;
-    }
-    else if (this.level.levelArray[this.x][this.y].isSolid()) {
+      this.drop.x = this.x;
+      this.drop.y = this.y;
+    } else if (this.level.levelArray[this.x][this.y].isSolid()) {
       this.drop.x = this.lastX;
       this.drop.y = this.lastY;
     }
     this.level.items.push(this.drop);
+    this.drop.onDrop();
   };
 
   kill = () => {
@@ -171,7 +174,12 @@ export class Enemy extends Drawable {
 
   killNoBones = () => {
     this.dead = true;
-    GenericParticle.spawnCluster(this.level, this.x + 0.5, this.y + 0.5, this.deathParticleColor);
+    GenericParticle.spawnCluster(
+      this.level,
+      this.x + 0.5,
+      this.y + 0.5,
+      this.deathParticleColor
+    );
     this.level.particles.push(new DeathParticle(this.x, this.y));
 
     this.dropLoot();
@@ -200,15 +208,13 @@ export class Enemy extends Drawable {
       }
     }
 
-    if (closestDistance === maxDistance)
-      return false;
-    else
-      return [closestDistance, closestPlayer];
+    if (closestDistance === maxDistance) return false;
+    else return [closestDistance, closestPlayer];
   };
 
   playerDistance = (player: Player): number => {
     return Math.max(Math.abs(this.x - player.x), Math.abs(this.y - player.y));
-  }
+  };
 
   facePlayer = (player: Player) => {
     let dx = player.x - this.x;
@@ -254,13 +260,19 @@ export class Enemy extends Drawable {
     }
   };
 
-  tick = () => {
-   };
-   
+  tick = () => {};
+
   drawTopLayer = (delta: number) => {
     this.drawableY = this.y - this.drawY;
 
-    this.healthBar.draw(delta, this.health, this.maxHealth, this.x, this.y, true);
+    this.healthBar.draw(
+      delta,
+      this.health,
+      this.maxHealth,
+      this.x,
+      this.y,
+      true
+    );
     this.drawX += -0.5 * this.drawX;
     this.drawY += -0.5 * this.drawY;
   };
@@ -269,22 +281,22 @@ export class Enemy extends Drawable {
     this.sleepingZFrame += delta;
 
     let numZs = 2;
-    let t = (this.sleepingZFrame) * 0.01; // 0 <= t < 1
+    let t = this.sleepingZFrame * 0.01; // 0 <= t < 1
     t -= Math.floor(t);
     //let whichway = Math.floor(this.sleepingZFrame * 0.02 / numZs) % 2;
     for (let off = numZs - 1; off >= 0; off--) {
       let yoff = (t + off) * 7;
-      let alpha = Math.min(1 - (t + off) / numZs, 2 * (t + off) / numZs);
+      let alpha = Math.min(1 - (t + off) / numZs, (2 * (t + off)) / numZs);
 
       let xoff = 0;
       if (off === 0) xoff = 1;
       if (t >= 0.33 && t < 0.66) xoff = off;
       if (t >= 0.33 && t < 0.66) xoff = off;
 
-      let width = Game.measureText('Z').width;
+      let width = Game.measureText("Z").width;
       if (GameConstants.ALPHA_ENABLED) Game.ctx.globalAlpha = alpha;
       Game.fillTextOutline(
-        'Z',
+        "Z",
         (this.x + 0.5) * GameConstants.TILESIZE - width / 2 + xoff + offsetX,
         (this.y - 0.6) * GameConstants.TILESIZE - yoff + offsetY,
         GameConstants.OUTLINE,
@@ -292,7 +304,7 @@ export class Enemy extends Drawable {
       );
       Game.ctx.globalAlpha = 1;
     }
-  }
+  };
 
   drawExclamation = (delta: number, offsetX = 0, offsetY = 0) => {
     this.exclamationFrame += delta;
@@ -302,16 +314,16 @@ export class Enemy extends Drawable {
     if (this.exclamationFrame > yoffs.length) yoff = yoffs[yoffs.length - 1];
     else yoff = yoffs[this.exclamationFrame];
 
-    let width = Game.measureText('!').width;
+    let width = Game.measureText("!").width;
     Game.ctx.globalAlpha = 1;
     if (yoff !== false) {
       Game.fillTextOutline(
-        '!',
+        "!",
         (this.x + 0.5) * GameConstants.TILESIZE - width / 2 + offsetX,
         (this.y - 0.75) * GameConstants.TILESIZE + yoff + offsetY,
         GameConstants.OUTLINE,
         GameConstants.WARNING_RED
       );
     }
-  }
+  };
 }

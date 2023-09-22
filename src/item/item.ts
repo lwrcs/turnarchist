@@ -42,8 +42,8 @@ export class Item extends Drawable {
     this.offsetY = -0.25;
   }
 
-  tick = () => { };
-  tickInInventory = () => { }; // different tick behavior for when we have the item in our inventory
+  tick = () => {};
+  tickInInventory = () => {}; // different tick behavior for when we have the item in our inventory
 
   getDescription = (): string => {
     return "";
@@ -52,6 +52,8 @@ export class Item extends Drawable {
   pickupSound = () => {
     if (this.level === this.level.game.level) Sound.genericPickup();
   };
+
+  onDrop = () => {}
 
   onPickup = (player: Player) => {
     if (!this.pickedUp) {
@@ -72,7 +74,7 @@ export class Item extends Drawable {
       else this.scaleFactor = 1;
 
       Game.drawItem(0, 0, 1, 1, this.x, this.y, 1, 1);
-      this.frame += delta * (Math.PI * 2) / 60;
+      this.frame += (delta * (Math.PI * 2)) / 60;
       Game.drawItem(
         this.tileX,
         this.tileY,
@@ -80,10 +82,10 @@ export class Item extends Drawable {
         2,
         this.x + this.w * (this.scaleFactor * -0.5 + 0.5),
         this.y +
-        Math.sin(this.frame) * 0.07 -
-        1 +
-        this.offsetY +
-        this.h * (this.scaleFactor * -0.5 + 0.5),
+          Math.sin(this.frame) * 0.07 -
+          1 +
+          this.offsetY +
+          this.h * (this.scaleFactor * -0.5 + 0.5),
         this.w * this.scaleFactor,
         this.h * this.scaleFactor,
         this.level.shadeColor,
@@ -95,11 +97,22 @@ export class Item extends Drawable {
     if (this.pickedUp) {
       this.y -= 0.125;
       this.alpha -= 0.03;
-      if (this.y < -1) this.level.items = this.level.items.filter(x => x !== this); // removes itself from the level
+      if (this.y < -1)
+        this.level.items = this.level.items.filter((x) => x !== this); // removes itself from the level
 
-      if (GameConstants.ALPHA_ENABLED) Game.ctx.globalAlpha = Math.max(0, this.alpha);
+      if (GameConstants.ALPHA_ENABLED)
+        Game.ctx.globalAlpha = Math.max(0, this.alpha);
 
-      Game.drawItem(this.tileX, this.tileY, 1, 2, this.x, this.y - 1, this.w, this.h);
+      Game.drawItem(
+        this.tileX,
+        this.tileY,
+        1,
+        2,
+        this.x,
+        this.y - 1,
+        this.w,
+        this.h
+      );
 
       Game.ctx.globalAlpha = 1.0;
     }

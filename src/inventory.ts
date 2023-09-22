@@ -75,7 +75,7 @@ export class Inventory {
       this.addItem(i);
     };
 
-    a(new Pickaxe({ game: this.game } as Level, 0, 0));
+    a(new Slingshot({ game: this.game } as Level, 0, 0));
     a(new Lantern({ game: this.game } as Level, 0, 0));
     //a(new Spellbook({ game: this.game } as Level, 0, 0));
     //a(new Slingshot({ game: this.game } as Level, 0, 0));
@@ -203,7 +203,7 @@ export class Inventory {
 
   addItem = (item: Item): boolean => {
     if (item instanceof Coin) {
-      this.coins += 1;
+      this.coins += item.stack;
       return true;
     }
     if (item instanceof Equippable) {
