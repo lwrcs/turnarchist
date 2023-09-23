@@ -16,7 +16,6 @@ export class Slingshot extends Weapon {
   }
 
   weaponMove = (newX: number, newY: number): boolean => {
-    console.log(`Current Position: (${this.wielder.x},${this.wielder.y})`);
     let nextX = [newX];
     let nextY = [newY];
     //define arrays for coords beginning with function arguments
@@ -33,7 +32,6 @@ export class Slingshot extends Weapon {
       if (newY === this.wielder.y) {
         nextX.push(nextX[l] + (newX - this.wielder.x)), nextY.push(newY);
       }
-      //console.log(`Iteration ${i}: nextX = ${nextX}, nextY = ${nextY}`);
       // push nex coordinates to array of possible moves
       l++;
     }
@@ -61,7 +59,6 @@ export class Slingshot extends Weapon {
       c++;
       //increase the range each loop until
     }
-    //console.log(`range = ${range}`)
     //range = 15;
     let enemyHitCandidates = [];
     let firstPushable = range + 1;
@@ -113,10 +110,6 @@ export class Slingshot extends Weapon {
     }
     //enemyHitCandidates.splice(1, enemyHitCandidates.length - 1);
 
-    console.log("first pushable " + firstPushable);
-    console.log("first nonpushable " + firstNonPushable);
-    console.log("first nondestroyable " + firstNonDestroyable);
-    console.log("hitCandidates ", enemyHitCandidates);
     let targetX = newX; //nextX[range];
     let targetY = newY; //nextY[range];
 
@@ -137,15 +130,9 @@ export class Slingshot extends Weapon {
             } else return minEnemy;
           }
         );
-        console.log(`closestEnemy = ${closestEnemy}`)
         closestEnemy.enemy.hurt(this.wielder, 3);
       }
-      //for (const c of enemyHitCandidates) {
-      //let e = c.enemy;
-      //let d = c.dist;
-      //if (d === 1) e.hurt(this.wielder, 0.5);
 
-      //}
       //finally bro
       //for the array c of enemyHitCandidates if the enemy distance is 3 only do .5 damage
       //if they're closer do the usual damage

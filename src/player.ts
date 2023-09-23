@@ -1,11 +1,10 @@
 import { Input, InputEnum } from "./input";
 import { GameConstants } from "./gameConstants";
 import { Game, LevelState } from "./game";
-import { Door } from "./tile/door";
+import { Door, DoorType } from "./tile/door";
 import { BottomDoor } from "./tile/bottomDoor";
 import { Trapdoor } from "./tile/trapdoor";
 import { Inventory } from "./inventory";
-import { DoorLocked } from "./tile/doorLocked";
 import { Sound } from "./sound";
 import { LevelConstants } from "./levelConstants";
 import { Map } from "./map";
@@ -252,8 +251,8 @@ export class Player extends Drawable {
         !this.inventory.getWeapon().weaponMove(x, y)
       ) {
         //for (let h of this.game.levels[this.levelID].hitwarnings) {
-          //if (newMove instanceof HitWarning) 
-          return;
+        //if (newMove instanceof HitWarning)
+        return;
         //}
       }
 
@@ -363,7 +362,7 @@ export class Player extends Drawable {
       )
         this.game.levels[this.levelID].tick(this);
     } else {
-      if (other instanceof DoorLocked) {
+      if (other instanceof Door) {
         this.drawX = (this.x - x) * 0.5;
         this.drawY = (this.y - y) * 0.5;
         other.unlock(this);

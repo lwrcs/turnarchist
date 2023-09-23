@@ -4,6 +4,8 @@ import { Level } from "../level";
 import { BottomDoor } from "./bottomDoor";
 import { GameConstants } from "../gameConstants";
 import { SkinType, Tile } from "./tile";
+import { EntityType } from "../enemy/enemy";
+import { Key } from "../item/key";
 
 export enum DoorDir {
   North,
@@ -12,31 +14,77 @@ export enum DoorDir {
   West,
 }
 
+export enum DoorType {
+  Door,
+  LockedDoor,
+  GuardedDoor,
+}
+
 export class Door extends Tile {
   linkedDoor: Door;
   game: Game;
   opened: boolean;
   doorDir: DoorDir;
-  locked: boolean;
   guarded: boolean;
+  DoorType: DoorType;
+  locked: boolean;
 
-  constructor(level: Level, game: Game, x: number, y: number, dir: number) {
+  constructor(
+    level: Level,
+    game: Game,
+    x: number,
+    y: number,
+    dir: number,
+    doorType: DoorType
+  ) {
     super(level, x, y);
     this.game = game;
     this.opened = false;
-    this.locked = false;
     this.doorDir = dir;
+    this.DoorType = doorType;
+    this.locked = false;
+
+      switch (this.DoorType) {
+        case DoorType.Door:
+        case DoorType.LockedDoor:
+          this.locked = true;
+        case DoorType.GuardedDoor:
+          this.locked = true;
+    }
   }
-  unlock = (player: Player) => {};
+  getDoorType = () => {
+    return this.DoorType;
+  };
+  unlock = (player: Player) => {
+    switch (this.DoorType) {
+      case DoorType.Door: {}
+      case DoorType.LockedDoor: {
+        let k = player.inventory.hasItem(Key);
+        if (k !== null) {
+          // remove key
+          player.inventory.removeItem(k);
+        }
+      }
+      case DoorType.GuardedDoor: {
+        const inRoom = this.game.level.enemies.filter(
+          (enemy) => enemy.entityType === EntityType.Enemy
+        );
+        console.log(inRoom);
+        if (inRoom.length === 0) this.locked = false;
+      }
+    }
+  };
 
   link = (other: Door) => {
     this.linkedDoor = other;
   };
 
-  isLocked = (): boolean => {
-    return this.locked;
+  isSolid = (): boolean => {
+    console.log(this.DoorType)
+    if (this.locked) {
+      return true;
+    } else false;
   };
-
   canCrushEnemy = (): boolean => {
     return true;
   };
@@ -52,6 +100,8 @@ export class Door extends Tile {
         this.linkedDoor,
         this.linkedDoor.level.roomX - this.level.roomX > 0 ? 1 : -1
       );
+      this.linkedDoor.locked = false;
+      this.locked = false;
   };
 
   draw = (delta: number) => {

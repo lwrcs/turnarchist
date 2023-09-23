@@ -5,7 +5,6 @@ import { Door } from "./door";
 import { Key } from "../item/key";
 import { GoldenKey } from "../item/goldenKey";
 import { Tile } from "./tile";
-import { DoorLocked } from "./doorLocked";
 
 export class GoldenDoor extends Tile {/*
   unlock = (player: Player) => {

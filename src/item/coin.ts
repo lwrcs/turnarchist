@@ -22,7 +22,6 @@ export class Coin extends Item {
     for (const item of this.level.items) {
       if (item instanceof Coin) coinList.push(item);
     }
-    console.log(coinList);
       for (const otherCoin of coinList) {
         if (
           this !== otherCoin &&

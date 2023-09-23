@@ -2,7 +2,7 @@ import { Wall } from "./tile/wall";
 import { LevelConstants } from "./levelConstants";
 import { Floor } from "./tile/floor";
 import { Game, LevelState } from "./game";
-import { Door } from "./tile/door";
+import { Door, DoorType } from "./tile/door";
 import { BottomDoor } from "./tile/bottomDoor";
 import { Tile, SkinType } from "./tile/tile";
 import { Trapdoor } from "./tile/trapdoor";
@@ -12,7 +12,6 @@ import { Chest } from "./enemy/chest";
 import { Item } from "./item/item";
 import { GoldenKey } from "./item/goldenKey";
 import { SpawnFloor } from "./tile/spawnfloor";
-import { DoorLocked } from "./tile/doorLocked";
 //import { GoldenDoor } from "./tile/goldenDoor";
 import { Spike } from "./tile/spike";
 import { GameConstants } from "./gameConstants";
@@ -795,20 +794,21 @@ export class Level {
 
   addDoor = (x: number, y: number) => {
     let d;
+    let t = DoorType.Door
     if (x === this.roomX) {
-      d = new Door(this, this.game, x, y, 1);
+      d = new Door(this, this.game, x, y, 1, t);//last argument, enum 0 is for locked 
       this.levelArray[x + 1][y] = new SpawnFloor(this, x + 1, y);
     }
     else if (x === this.roomX + this.width - 1) {
-      d = new Door(this, this.game, x, y, 3);
+      d = new Door(this, this.game, x, y, 3, t);
       this.levelArray[x - 1][y] = new SpawnFloor(this, x - 1, y);
     }
     else if (y === this.roomY) {
-      d = new Door(this, this.game, x, y, 0);
+      d = new Door(this, this.game, x, y, 0, t);
       this.levelArray[x][y + 1] = new SpawnFloor(this, x, y + 1);
     }
     else if (y === this.roomY + this.height - 1) {
-      d = new Door(this, this.game, x, y, 2);
+      d = new Door(this, this.game, x, y, 2, t);
       this.levelArray[x][y - 1] = new SpawnFloor(this, x, y - 1);
     }
 
