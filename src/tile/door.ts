@@ -15,9 +15,9 @@ export enum DoorDir {
 }
 
 export enum DoorType {
-  Door,
-  LockedDoor,
-  GuardedDoor,
+  DOOR,
+  LOCKEDDOOR,
+  GUARDEDDOOR,
 }
 
 export class Door extends Tile {
@@ -44,34 +44,57 @@ export class Door extends Tile {
     this.DoorType = doorType;
     this.locked = false;
 
-      switch (this.DoorType) {
-        case DoorType.Door:
-        case DoorType.LockedDoor:
-          this.locked = true;
-        case DoorType.GuardedDoor:
-          this.locked = true;
+    if (this.DoorType === DoorType.GUARDEDDOOR) {
+      this.locked = true;
+    }
+    if (this.DoorType === DoorType.LOCKEDDOOR) {
+      this.locked = true;
     }
   }
-  getDoorType = () => {
-    return this.DoorType;
+  canUnlock = (player: Player) => {
+    if (this.DoorType === DoorType.LOCKEDDOOR) {
+      let k = player.inventory.hasItem(Key);
+      if (k !== null) {
+        this.game.pushMessage("You use the key to unlock the door.");
+        return true;
+      } else
+        this.game.pushMessage("The door is locked tightly and won't budge.");
+      return false;
+    }
+
+    if (this.DoorType === DoorType.GUARDEDDOOR) {
+      const inRoom = this.game.level.enemies.filter(
+        (enemy) => enemy.entityType === EntityType.Enemy
+      );
+      if (inRoom.length === 0) {
+        this.game.pushMessage(
+          "The foes have been slain and the door allows you passage."
+        );
+        return true;
+      } else
+        this.game.pushMessage(
+          "There are still remaining foes guarding this door..."
+        );
+
+      return false;
+    }
   };
   unlock = (player: Player) => {
-    switch (this.DoorType) {
-      case DoorType.Door: {}
-      case DoorType.LockedDoor: {
-        let k = player.inventory.hasItem(Key);
-        if (k !== null) {
-          // remove key
-          player.inventory.removeItem(k);
-        }
+    if (this.DoorType === DoorType.LOCKEDDOOR) {
+      let k = player.inventory.hasItem(Key);
+      if (k !== null) {
+        // remove key
+        player.inventory.removeItem(k);
+        this.locked = false;
+        this.DoorType = DoorType.DOOR;
       }
-      case DoorType.GuardedDoor: {
-        const inRoom = this.game.level.enemies.filter(
-          (enemy) => enemy.entityType === EntityType.Enemy
-        );
-        console.log(inRoom);
-        if (inRoom.length === 0) this.locked = false;
+    }
+    if (this.DoorType === DoorType.GUARDEDDOOR) {
+      this.locked = false;
+      for (let door of this.level.doors) {
+        door.DoorType = DoorType.DOOR;
       }
+    } else {
     }
   };
 
@@ -80,7 +103,7 @@ export class Door extends Tile {
   };
 
   isSolid = (): boolean => {
-    console.log(this.DoorType)
+    console.log(this.DoorType);
     if (this.locked) {
       return true;
     } else false;
@@ -100,8 +123,8 @@ export class Door extends Tile {
         this.linkedDoor,
         this.linkedDoor.level.roomX - this.level.roomX > 0 ? 1 : -1
       );
-      this.linkedDoor.locked = false;
-      this.locked = false;
+    this.linkedDoor.locked = false;
+    this.linkedDoor.DoorType = DoorType.DOOR;
   };
 
   draw = (delta: number) => {
@@ -185,25 +208,30 @@ export class Door extends Tile {
   };
 
   drawAboveShading = (delta: number) => {
+    let icon = 2;
+    let xOffset = 0;
+    if (this.DoorType === DoorType.GUARDEDDOOR) (icon = 9), (xOffset = 1 / 32);
+    if (this.DoorType === DoorType.LOCKEDDOOR) (icon = 10), (xOffset = 1 / 32);
+
     if (this.doorDir === DoorDir.North) {
       //if top door
       Game.drawFX(
-        2,
+        icon,
         2,
         1,
         1,
-        this.x,
+        this.x + xOffset,
         this.y - 1.25 + 0.125 * Math.sin(0.006 * Date.now()),
         1,
         1
       );
     } else {
       Game.drawFX(
-        2,
+        icon,
         2,
         1,
         1,
-        this.x,
+        this.x + xOffset,
         this.y - 1.25 + 0.125 * Math.sin(0.006 * Date.now()),
         1,
         1

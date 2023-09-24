@@ -5,10 +5,11 @@ import { GameConstants } from "./gameConstants";
 import { Player } from "./player";
 
 export enum ActionState {
-  Ready,
-  Attack,
-  Wait,
-  halfAttack,
+  READY,
+  ATTACK,
+  WAIT,
+  HALFATTACK,
+  MOVE
 }
 
 export class ActionTab {
@@ -22,24 +23,43 @@ export class ActionTab {
   }
 
   tick = () => {};
-  
-  draw = (player: Player, inventory: Inventory) => {
-    //need block of code to draw outline
-    //location on screen etc
-    const w = inventory.weapon;
-    let action = player.actionTab.actionState
 
-    //play ready animation
-    switch (action) {
+  getWeapon = (player: Player) => {
+    this.weapon = player.inventory.weapon;
+  };
+  setState = (state: ActionState) => {
+    this.actionState = state;
+  };
+
+  draw = (delta: number) => {
+    let tabX = LevelConstants.SCREEN_W / 2;
+    let tabY = LevelConstants.SCREEN_H - 1;
+
+    let action = this.actionState;
+    const actionString: string = "" + ActionState[action]
+    let width = Game.measureText(actionString).width;
+    let actionX = 4 - width/2;
+    let actionY = -1;
+
+    Game.fillTextOutline(
+      actionString,
+      tabX * GameConstants.TILESIZE + actionX,
+      tabY * GameConstants.TILESIZE + actionY,
+      GameConstants.OUTLINE,
+      "white"
+    );
+  };
+  /*
+    switch (this.actionState) {
       case ActionState.Ready: {
         Game.ctx.fillStyle = "green";
         Game.ctx.fillRect(1, 1, 4, 4);
       }
       case ActionState.Attack: {
         //if (w == ) {
-          Game.ctx.fillStyle = "red";
-          Game.ctx.fillRect(1, 1, 4, 4);
-         //first slash
+        Game.ctx.fillStyle = "red";
+        Game.ctx.fillRect(1, 1, 4, 4);
+        //first slash
         //if (w == this.weapon.dualdagger); /* same attack anim for now...
         //first slash of slash animation
       }
@@ -54,6 +74,5 @@ export class ActionTab {
         Game.ctx.fillRect(1, 1, 4, 4);
         //render waiting animation}
       }
-    }
-  };
+    }*/
 }

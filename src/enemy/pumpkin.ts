@@ -1,47 +1,40 @@
-import { Item } from "../item/item";
-import { Game } from "../game";
-import { Key } from "../item/key";
-import { Level } from "../level";
-import { Heart } from "../item/heart";
-import { Armor } from "../item/armor";
 import { Enemy } from "./enemy";
+import { Level } from "../level";
+import { Game } from "../game";
+import { Heart } from "../item/heart";
 import { LevelConstants } from "../levelConstants";
-import { GreenGem } from "../item/greengem";
-import { Player } from "../player";
-import { Pickaxe } from "../weapon/pickaxe";
-import { Spellbook } from "../weapon/spellbook";
+import { GenericParticle } from "../particle/genericParticle";
+import { Shrooms } from "../item/shrooms";
 import { EntityType } from "./enemy";
 
-export class Resource extends Enemy {
+export class Pumpkin extends Enemy {
   constructor(level: Level, game: Game, x: number, y: number) {
     super(level, game, x, y);
-
-    this.tileX = 12;
-    this.tileY = 0;
+    this.level = level;
     this.health = 1;
+    this.tileX = 13;
+    this.tileY = 2;
+    this.hasShadow = false;
     this.chainPushable = false;
-    this.entityType = EntityType.Resource;
+    this.entityType = EntityType.Prop
   }
-
-  hurt = (playerHitBy: Player, damage: number) => {
-    if (playerHitBy.inventory.getWeapon().canMine === true) {
-      this.healthBar.hurt();
-      this.health -= damage;
-      if (this.health <= 0) this.kill();
-      else this.hurtCallback();
-    }
-    else return;
-  };
 
   kill = () => {
     this.dead = true;
+
+    GenericParticle.spawnCluster(this.level, this.x + 0.5, this.y + 0.5, "#ac3232");
+
+    this.level.items.push(new Shrooms(this.level, this.x, this.y));
   };
   killNoBones = () => {
     this.kill();
   };
 
   draw = (delta: number) => {
+    // not inherited because it doesn't have the 0.5 offset
     if (!this.dead) {
+      this.drawX += -0.5 * this.drawX;
+      this.drawY += -0.5 * this.drawY;
       Game.drawObj(
         this.tileX,
         this.tileY,

@@ -89,8 +89,8 @@ export class Player extends Drawable {
       };
     }
     this.mapToggled = true;
-    this.health = 10;
-    this.maxHealth = 10;
+    this.health = 2;
+    this.maxHealth = 2;
     this.healthBar = new HealthBar();
     this.dead = false;
     this.flashing = false;
@@ -341,7 +341,7 @@ export class Player extends Drawable {
           // if we're trying to hit an enemy, check if it's destroyable
           if (!e.dead) {
             if (e.interactable) e.interact(this);
-            this.actionTab.actionState = ActionState.Attack;
+            this.actionTab.actionState = ActionState.ATTACK;
             //sets the action tab state to Attack
             return;
           }
@@ -365,7 +365,7 @@ export class Player extends Drawable {
       if (other instanceof Door) {
         this.drawX = (this.x - x) * 0.5;
         this.drawY = (this.y - y) * 0.5;
-        other.unlock(this);
+        if (other.canUnlock(this)) other.unlock(this);
       }
     }
   };
@@ -405,6 +405,7 @@ export class Player extends Drawable {
   };
 
   move = (x: number, y: number) => {
+    this.actionTab.setState(ActionState.MOVE)
     if (this.game.levels[this.levelID] === this.game.level)
       Sound.playerStoneFootstep();
 
@@ -450,7 +451,7 @@ export class Player extends Drawable {
     if (totalHealthDiff < 0) {
       this.flashing = true;
     }
-    this.actionTab.actionState = ActionState.Wait;
+    this.actionTab.actionState = ActionState.READY;
     //Sets the action tab state to Wait (during enemy turn)
   };
 
@@ -506,6 +507,7 @@ export class Player extends Drawable {
   drawGUI = (delta: number) => {
     if (!this.dead) {
       this.inventory.draw(delta);
+      this.actionTab.draw(delta);
 
       if (this.guiHeartFrame > 0) this.guiHeartFrame += delta;
       if (this.guiHeartFrame > 5) {
