@@ -25,6 +25,10 @@ export class Tile extends Drawable {
     this.drawableY = y;
     this.isDoor = false;
   }
+  hasPlayer = (player: Player) => {
+    if (player.x === this.x && player.y === this.y) return true;
+    else return false;
+  };
 
   shadeAmount = () => {
     return this.level.softVis[this.x][this.y];
@@ -39,13 +43,13 @@ export class Tile extends Drawable {
   isOpaque = (): boolean => {
     return false;
   };
-  onCollide = (player: Player) => { };
-  onCollideEnemy = (enemy: Enemy) => { };
-  tick = () => { };
-  tickEnd = () => { };
+  onCollide = (player: Player) => {};
+  onCollideEnemy = (enemy: Enemy) => {};
+  tick = () => {};
+  tickEnd = () => {};
 
-  draw = (delta: number) => { };
-  drawUnderPlayer = (delta: number) => { };
-  drawAbovePlayer = (delta: number) => { };
-  drawAboveShading = (delta: number) => { };
+  draw = (delta: number) => {};
+  drawUnderPlayer = (delta: number) => {};
+  drawAbovePlayer = (delta: number) => {};
+  drawAboveShading = (delta: number) => {};
 }

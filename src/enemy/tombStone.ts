@@ -8,6 +8,9 @@ import { EntityType } from "./enemy";
 import { SkullEnemy } from "./skullEnemy";
 import { Random } from "../random";
 import { EnemySpawnAnimation } from "../projectile/enemySpawnAnimation";
+import { Player } from "../player";
+import { Item } from "../item/item";
+import { Spellbook } from "../weapon/spellbook";
 
 export class TombStone extends Enemy {
   skinType: number;
@@ -19,13 +22,14 @@ export class TombStone extends Enemy {
     x: number,
     y: number,
     skinType: number,
-    rand: () => number
+    rand: () => number,
+    drop?: Item
   ) {
     super(level, game, x, y);
     this.skinType = skinType;
     this.level = level;
-    this.health = 1;
-    this.maxHealth = 1;
+    this.health = 2;
+    this.maxHealth = 2;
     this.tileX = 11 + this.skinType;
     this.tileY = 2;
     this.hasShadow = false;
@@ -35,41 +39,59 @@ export class TombStone extends Enemy {
     this.skinType = skinType;
     this.rand = rand;
     this.chainPushable = false;
+
+    let dropProb = Random.rand();
+    if (dropProb < 0.025) this.drop = new Spellbook(this.level, 0, 0);
   }
 
   kill = () => {
     this.dead = true;
-    const positions = this.level
-      .getEmptyTiles()
-      .filter(
-        (t) => Math.abs(t.x - this.x) <= 1 && Math.abs(t.y - this.y) <= 1
-      );
-    if (positions.length > 0) {
-      for (let i = 0; i < 3; i += 1) {
-        let position = Game.randTable(positions, this.rand);
-        let spawned = new SkullEnemy(
-          this.level,
-          this.game,
-          position.x,
-          position.y,
-          Random.rand
-        );
-        this.level.enemies.push(spawned);
-        //this.level.projectiles.push(
-          //new EnemySpawnAnimation(this.level, spawned, position.x, position.y)
-        //);
-      }
-    }
-
     GenericParticle.spawnCluster(
       this.level,
       this.x + 0.5,
       this.y + 0.5,
       "#d9a066"
     );
+    this.dropLoot();
   };
-  killNoBones = () => {
-    this.kill();
+
+  hurt = (playerHitBy: Player, damage: number) => {
+    this.healthBar.hurt();
+
+    this.health -= damage;
+    if (this.health === 1) {
+      const positions = this.level
+        .getEmptyTiles()
+        .filter(
+          (t) => Math.abs(t.x - this.x) <= 1 && Math.abs(t.y - this.y) <= 1
+        );
+      if (positions.length > 0) {
+        for (let position of positions) {
+          for (const i in this.game.players) {
+            const playerX = this.game.players[i].x;
+            const playerY = this.game.players[i].y;
+            if (
+              (playerX !== position.x && playerY === position.y) ||
+              (playerX === position.x && playerY !== position.y)
+            ) {
+              this.level.enemies.push(
+                new SkullEnemy(
+                  this.level,
+                  this.game,
+                  position.x,
+                  position.y,
+                  Random.rand
+                )
+              );
+            }
+          }
+        }
+      }
+      this.tileX += 2;
+      //draw half broken tombstone based on skintype after it takes one damage
+    }
+    if (this.health <= 0) this.kill();
+    else this.hurtCallback();
   };
 
   draw = (delta: number) => {

@@ -150,16 +150,18 @@ export class Enemy extends Drawable {
   interact = (player: Player) => {};
 
   dropLoot = () => {
-    this.drop.level = this.level;
-    if (!this.level.levelArray[this.x][this.y].isSolid()) {
-      this.drop.x = this.x;
-      this.drop.y = this.y;
-    } else if (this.level.levelArray[this.x][this.y].isSolid()) {
-      this.drop.x = this.lastX;
-      this.drop.y = this.lastY;
+    if (this.drop) {
+      this.drop.level = this.level;
+      if (!this.level.levelArray[this.x][this.y].isSolid()) {
+        this.drop.x = this.x;
+        this.drop.y = this.y;
+      } else if (this.level.levelArray[this.x][this.y].isSolid()) {
+        this.drop.x = this.lastX;
+        this.drop.y = this.lastY;
+      }
+      this.level.items.push(this.drop);
+      this.drop.onDrop();
     }
-    this.level.items.push(this.drop);
-    this.drop.onDrop();
   };
 
   kill = () => {
