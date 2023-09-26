@@ -1099,6 +1099,8 @@ export class Level {
         }
       }
     }*/
+    Game.ctx.globalCompositeOperation = "multiply"
+    Game.ctx.fillStyle = "red"
   };
 
   castShadowsAtAngle = (
@@ -1176,6 +1178,7 @@ export class Level {
   tick = (player: Player) => {
     this.enemies = this.enemies.filter((e) => !e.dead);
     this.updateLighting();
+    
 
     for (const h of this.hitwarnings) {
       h.tick();
@@ -1356,6 +1359,8 @@ export class Level {
     );
     if (GameConstants.ALPHA_ENABLED) {
       Game.ctx.globalAlpha = shadingAlpha;
+      //Game.ctx.globalCompositeOperation = "lighten"
+      //Game.ctx.globalCompositeOperation = "overlay"
       //Game.ctx.fillStyle = "#400a0e";
       Game.ctx.fillStyle = this.shadeColor;
       Game.ctx.fillRect(

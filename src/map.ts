@@ -13,9 +13,12 @@ export class Map {
 
   draw = (delta: number) => {
     const s = 2;
-    if (GameConstants.ALPHA_ENABLED) Game.ctx.globalAlpha = 0;
-    Game.ctx.fillStyle = "white";
+    if (GameConstants.ALPHA_ENABLED) Game.ctx.globalAlpha = .2;
+    Game.ctx.fillStyle = "#006A6E";
+    const x = Game.ctx.globalCompositeOperation
+    Game.ctx.globalCompositeOperation = "screen"
     Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
+    Game.ctx.globalCompositeOperation = x
 
     Game.ctx.translate(
       0.75 * GameConstants.WIDTH -
