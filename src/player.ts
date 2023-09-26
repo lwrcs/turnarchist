@@ -17,6 +17,8 @@ import { Random } from "./random";
 import { GenericParticle } from "./particle/genericParticle";
 import { ActionState, ActionTab } from "./actionTab";
 import { HitWarning } from "./hitWarning";
+import { Enemy } from "./enemy/enemy";
+import { ZombieEnemy } from "./enemy/zombieEnemy";
 
 export enum PlayerDirection {
   DOWN = 0,
@@ -53,6 +55,7 @@ export class Player extends Drawable {
   isLocalPlayer: boolean;
   mapToggled: boolean;
   actionTab: ActionTab;
+  lastHitBy: string;
 
   constructor(game: Game, x: number, y: number, isLocalPlayer: boolean) {
     super();
@@ -370,12 +373,14 @@ export class Player extends Drawable {
     }
   };
 
-  hurt = (damage: number) => {
+  hurt = (damage: number, enemy: string) => {
     if (this.game.levels[this.levelID] === this.game.level) Sound.hurt();
 
     if (this.inventory.getArmor() && this.inventory.getArmor().health > 0) {
       this.inventory.getArmor().hurt(damage);
     } else {
+      this.lastHitBy = enemy;
+      console.log("Last Hit by: ", enemy);
       this.healthBar.hurt();
       this.flashing = true;
       this.health -= damage;
@@ -405,7 +410,7 @@ export class Player extends Drawable {
   };
 
   move = (x: number, y: number) => {
-    this.actionTab.setState(ActionState.MOVE)
+    this.actionTab.setState(ActionState.MOVE);
     if (this.game.levels[this.levelID] === this.game.level)
       Sound.playerStoneFootstep();
 
@@ -531,6 +536,10 @@ export class Player extends Drawable {
     } else {
       Game.ctx.fillStyle = LevelConstants.LEVEL_TEXT_COLOR;
       let gameOverString = "Game Over";
+      if (this.lastHitBy !== "enemy") {
+        gameOverString = `You were slain by ${this.lastHitBy}.`;
+      }
+
       Game.fillText(
         gameOverString,
         GameConstants.WIDTH / 2 - Game.measureText(gameOverString).width / 2,

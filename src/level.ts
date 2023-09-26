@@ -395,7 +395,7 @@ export class Level {
       if (tiles.length == 0) return;
       let x = t.x;
       let y = t.y;
-      switch (Game.randTable([/*1, 1, 1, 1, 2, 2, 2, 3, */3, 4], rand)) {
+      switch (Game.randTable([1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 4], rand)) {
         case 1:
           this.enemies.push(new Crate(this, this.game, x, y));
           break;
@@ -937,7 +937,7 @@ export class Level {
   addDoor = (x: number, y: number) => {
     let d;
     let t = DoorType.DOOR;
-    if (this.type === RoomType.BOSS) t = DoorType.LOCKEDDOOR;
+    if (this.type === RoomType.BOSS) t = DoorType.GUARDEDDOOR;
     if (this.type === RoomType.KEYROOM) t = DoorType.LOCKEDDOOR;
     if (x === this.roomX) {
       d = new Door(this, this.game, x, y, 1, t); //last argument, enum 0 is for locked

@@ -144,7 +144,7 @@ export class ChargeEnemy extends Enemy {
                 (this.targetY <= this.game.players[i].y &&
                   this.game.players[i].y < this.y)))
           ) {
-            this.game.players[i].hurt(this.hit());
+            this.game.players[i].hurt(this.hit(), "charge knight");
           }
         }
 

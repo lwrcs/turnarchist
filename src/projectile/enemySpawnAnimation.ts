@@ -28,7 +28,7 @@ export class EnemySpawnAnimation extends Projectile {
     let hitPlayer = false;
     for (const i in this.level.game.players) {
       if (this.level.game.players[i].x === this.x && this.level.game.players[i].y === this.y) {
-        this.level.game.players[i].hurt(0.5);
+        this.level.game.players[i].hurt(0.5, "reaper");
         hitPlayer = true;
       }
     }

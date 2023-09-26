@@ -31,7 +31,7 @@ export class SpikeTrap extends Tile {
     if (this.on) {
       for (const i in this.level.game.players) {
         if (this.level === this.level.game.levels[this.level.game.players[i].levelID] && this.level.game.players[i].x === this.x && this.level.game.players[i].y === this.y)
-          this.level.game.players[i].hurt(1);
+          this.level.game.players[i].hurt(1, "spike trap");
       }
     }
 

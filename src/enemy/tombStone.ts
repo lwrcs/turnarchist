@@ -41,7 +41,7 @@ export class TombStone extends Enemy {
     this.chainPushable = false;
 
     let dropProb = Random.rand();
-    if (dropProb < 0.025) this.drop = new Spellbook(this.level, 0, 0);
+    if (dropProb < 0.05) this.drop = new Spellbook(this.level, 0, 0);
   }
 
   kill = () => {

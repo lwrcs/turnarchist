@@ -12,7 +12,7 @@ import { astar } from "../astarclass";
 import { SpikeTrap } from "../tile/spiketrap";
 import { DeathParticle } from "../particle/deathParticle";
 
-export class SkullEnemy extends Enemy {
+export class GoldSkullEnemy extends Enemy {
   frame: number;
   ticks: number;
   seenPlayer: boolean;
@@ -144,7 +144,7 @@ export class SkullEnemy extends Enemy {
               let hitPlayer = false;
               for (const i in this.game.players) {
                 if (this.game.levels[this.game.players[i].levelID] === this.level && this.game.players[i].x === moveX && this.game.players[i].y === moveY) {
-                  this.game.players[i].hurt(this.hit());
+                  this.game.players[i].hurt(this.hit(), "golden skeleton");
                   this.drawX = 0.5 * (this.x - this.game.players[i].x);
                   this.drawY = 0.5 * (this.y - this.game.players[i].y);
                   if (this.game.players[i] === this.game.players[this.game.localPlayerID])

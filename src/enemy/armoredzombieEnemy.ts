@@ -147,7 +147,7 @@ export class ArmoredzombieEnemy extends Enemy {
               let hitPlayer = false;
               for (const i in this.game.players) {
                 if (this.game.levels[this.game.players[i].levelID] === this.level && this.game.players[i].x === moveX && this.game.players[i].y === moveY && (oldDir == this.direction)) {
-                  this.game.players[i].hurt(this.hit());
+                  this.game.players[i].hurt(this.hit(), "armored zombie");
                   this.drawX = 0.5 * (this.x - this.game.players[i].x);
                   this.drawY = 0.5 * (this.y - this.game.players[i].y);
                   if (this.game.players[i] === this.game.players[this.game.localPlayerID])

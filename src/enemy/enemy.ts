@@ -133,6 +133,10 @@ export class Enemy extends Drawable {
 
   hurtCallback = () => {};
 
+  playerKilledBy = (enemy: Enemy) => {
+    return enemy;
+  }
+
   pointIn = (x: number, y: number): boolean => {
     return (
       x >= this.x && x < this.x + this.w && y >= this.y && y < this.y + this.h

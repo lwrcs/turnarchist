@@ -4,7 +4,7 @@ import { Tile } from "./tile";
 
 export class Spike extends Tile {
   onCollide = (player: Player) => {
-    player.hurt(1);
+    player.hurt(1, "spike");
   };
 
   draw = (delta: number) => {

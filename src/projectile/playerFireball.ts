@@ -12,16 +12,14 @@ export class PlayerFireball extends Projectile {
   constructor(x: number, y: number) {
     super(x, y);
     this.state = 0;
-    this.frame = 0;
+    this.frame = 6;
   }
-  draw = (delta: number) => {
-    if (this.delay > 0) {
-      this.delay--;
-      return;
-    }
-    this.frame += 0.3 * delta;
-    if (this.frame > 12) this.dead = true;
-    Game.drawFX(Math.floor(this.frame), 6, 1, 2, this.x, this.y - 1, 1, 2);
-  }
-};
+  drawTopLayer = (delta: number) => {
+    if (this.dead) return;
 
+    this.frame += 0.25 * delta;
+
+    if (this.frame > 17) this.dead = true;
+    Game.drawFX(Math.floor(this.frame), 6, 1, 2, this.x, this.y - 1, 1, 2);
+  };
+}

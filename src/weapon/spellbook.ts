@@ -16,48 +16,37 @@ export class Spellbook extends Weapon {
 
     this.tileX = 25;
     this.tileY = 0;
-    this.canMine = true
+    this.canMine = true;
   }
 
   weaponMove = (newX: number, newY: number): boolean => {
     let flag = false;
+    let difX = newX - this.x;
+    let difY = newY - this.y;
+
     for (let e of this.game.levels[this.wielder.levelID].enemies) {
       if (
-        (e.destroyable ||
-          e.pushable) &&
-        (e.pointIn(this.wielder.x, this.wielder.y + 1) ||
-          e.pointIn(this.wielder.x, this.wielder.y - 1) ||
-          e.pointIn(this.wielder.x + 1, this.wielder.y) ||
-          e.pointIn(this.wielder.x - 1, this.wielder.y) ||
-          e.pointIn(this.wielder.x + 1, this.wielder.y + 1) ||
-          e.pointIn(this.wielder.x - 1, this.wielder.y + 1) ||
-          e.pointIn(this.wielder.x + 1, this.wielder.y - 1) ||
-          e.pointIn(this.wielder.x - 1, this.wielder.y - 1))
+        (e.destroyable || e.pushable) &&
+        e.pointIn(newX, newY) &&
+        !this.game.levels[this.wielder.levelID].levelArray[e.x][e.y].isSolid()
       ) {
-        e.hurt(this.wielder, 2);
+        e.hurt(this.wielder, 1);
+        this.game.levels[this.wielder.levelID].particles.push(
+          new PlayerFireball(e.x, e.y)
+        );
         flag = true;
       }
     }
+
     if (flag) {
-      if (this.wielder.game.levels[this.wielder.levelID] === this.wielder.game.level) Sound.hit();
+      if (
+        this.wielder.game.levels[this.wielder.levelID] ===
+        this.wielder.game.level
+      )
+        Sound.hit();
       this.wielder.drawX = 0.5 * (this.wielder.x - newX);
       this.wielder.drawY = 0.5 * (this.wielder.y - newY);
-      this.game.levels[this.wielder.levelID].particles.push
-        (new PlayerFireball(this.wielder.x, this.wielder.y + 1));
-      this.game.levels[this.wielder.levelID].particles.push
-        (new PlayerFireball(this.wielder.x, this.wielder.y - 1));
-      this.game.levels[this.wielder.levelID].particles.push
-        (new PlayerFireball(this.wielder.x + 1, this.wielder.y));
-      this.game.levels[this.wielder.levelID].particles.push
-        (new PlayerFireball(this.wielder.x - 1, this.wielder.y));
-      this.game.levels[this.wielder.levelID].particles.push
-        (new PlayerFireball(this.wielder.x + 1, this.wielder.y + 1));
-      this.game.levels[this.wielder.levelID].particles.push
-        (new PlayerFireball(this.wielder.x - 1, this.wielder.y + 1));
-      this.game.levels[this.wielder.levelID].particles.push
-        (new PlayerFireball(this.wielder.x + 1, this.wielder.y - 1));
-      this.game.levels[this.wielder.levelID].particles.push
-        (new PlayerFireball(this.wielder.x - 1, this.wielder.y - 1));
+
       this.game.levels[this.wielder.levelID].tick(this.wielder);
       if (this.wielder === this.game.players[this.game.localPlayerID])
         this.game.shakeScreen(10 * this.wielder.drawX, 10 * this.wielder.drawY);

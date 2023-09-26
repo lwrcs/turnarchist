@@ -24,7 +24,13 @@ export class Spawner extends Enemy {
   enemySpawnType: number;
   rand: () => number;
 
-  constructor(level: Level, game: Game, x: number, y: number, rand: () => number) {
+  constructor(
+    level: Level,
+    game: Game,
+    x: number,
+    y: number,
+    rand: () => number
+  ) {
     super(level, game, x, y);
     this.ticks = 0;
     this.health = 4;
@@ -52,7 +58,11 @@ export class Spawner extends Enemy {
       }
       this.tileX = 6;
       if (this.ticks % 8 === 0) {
-        const positions = this.level.getEmptyTiles().filter(t => Math.abs(t.x - this.x) <= 1 && Math.abs(t.y - this.y) <= 1);
+        const positions = this.level
+          .getEmptyTiles()
+          .filter(
+            (t) => Math.abs(t.x - this.x) <= 1 && Math.abs(t.y - this.y) <= 1
+          );
         if (positions.length > 0) {
           this.tileX = 7;
 
@@ -61,19 +71,39 @@ export class Spawner extends Enemy {
           let spawned;
           switch (this.enemySpawnType) {
             case 1:
-              spawned = new KnightEnemy(this.level, this.game, position.x, position.y, this.rand);
+              spawned = new KnightEnemy(
+                this.level,
+                this.game,
+                position.x,
+                position.y,
+                this.rand
+              );
               break;
             case 2:
-              spawned = new SkullEnemy(this.level, this.game, position.x, position.y, this.rand);
+              spawned = new SkullEnemy(
+                this.level,
+                this.game,
+                position.x,
+                position.y,
+                this.rand
+              );
               break;
             case 3:
-              spawned = new WizardEnemy(this.level, this.game, position.x, position.y, this.rand);
+              spawned = new WizardEnemy(
+                this.level,
+                this.game,
+                position.x,
+                position.y,
+                this.rand
+              );
               break;
           }
           this.level.projectiles.push(
             new EnemySpawnAnimation(this.level, spawned, position.x, position.y)
           );
-          this.level.hitwarnings.push(new HitWarning(this.game, position.x, position.y));
+          this.level.hitwarnings.push(
+            new HitWarning(this.game, position.x, position.y)
+          );
         }
       }
       this.ticks++;
