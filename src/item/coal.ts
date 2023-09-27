@@ -21,6 +21,10 @@ export class Coal extends Usable {
       if (l.fuel <= l.fuelCap - 50) {
         l.addFuel(50);
         player.game.pushMessage("You add some fuel to your lantern.");
+        this.stackCount -= 1;
+        if (this.stackCount <= 0) {
+          player.inventory.removeItem(this);
+        }
       }
     }
   };

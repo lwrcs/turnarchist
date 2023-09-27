@@ -33,8 +33,9 @@ export class Lantern extends Equippable {
     );
   };
   ignite = () => {
-    if (this.fuel > 0 && this.equipped) this.lit = true;
-    else this.lit = false;
+    if (this.fuel > 0 && this.equipped) {
+      return true;
+    } else return false;
   };
 
   tickInInventory = () => {
@@ -42,9 +43,7 @@ export class Lantern extends Equippable {
       this.equipped = false;
       this.wielder.game.pushMessage("Your lantern runs out of fuel.");
     }
-    this.ignite();
-
-    if (this.lit) {
+    if (this.ignite()) {
       this.fuel -= 1;
       this.wielder.sightRadius = Math.min(this.fuel / 4 + 3, 7);
     } else this.wielder.sightRadius = 3;
@@ -54,16 +53,18 @@ export class Lantern extends Equippable {
   toggleEquip = () => {
     if (this.fuel > 0) {
       this.equipped = !this.equipped;
-      this.ignite();
-      if (this.lit) this.wielder.sightRadius = Math.min(this.fuel / 4 + 3, 7);
-      else this.wielder.sightRadius = 3;
-    }
-    else this.wielder.game.pushMessage("I'll need some fuel before I can use this");
+      if (this.ignite()) {
+        this.wielder.sightRadius = Math.min(this.fuel / 4 + 3, 7);
+      } else this.wielder.sightRadius = 3;
+    } else
+      this.wielder.game.pushMessage(
+        "I'll need some fuel before I can use this"
+      );
     //Math.max(this.wielder.defaultSightRadius, this.fuel / 25)}
   };
 
   getDescription = () => {
-    const percentage = (this.fuel / 50) * 100;
+    const percentage = Math.round((this.fuel / this.fuelCap) * 100);
     return `LANTERN - Fuel: ${percentage}%, Capacity: ${this.fuelCap / 50}`;
   };
 }
