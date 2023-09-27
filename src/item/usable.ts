@@ -5,6 +5,13 @@ import { Sound } from "../sound";
 import { Level } from "../level";
 
 export class Usable extends Item {
-  onUse = (player: Player) => {
+  user: Player;
+  constructor(level: Level, x: number, y: number) {
+    super(level, x, y);
+  }
+  onUse = (player: Player) => {};
+
+  setUser = (user: Player) => {
+    this.user = user;
   };
 }

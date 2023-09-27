@@ -16,11 +16,11 @@ export class Coal extends Usable {
     this.stackable = true;
   }
   onUse = (player: Player) => {
-    let l = player.inventory;
-    for (let item of player.inventory.items) {
-      if (item instanceof Lantern) {
-        item.fuel += 50;
-        console.log("filled lantern");
+    let l = player.inventory.hasItem(Lantern);
+    if (l instanceof Lantern) {
+      if (l.fuel <= l.fuelCap - 50) {
+        l.addFuel(50);
+        player.game.pushMessage("You add some fuel to your lantern.");
       }
     }
   };

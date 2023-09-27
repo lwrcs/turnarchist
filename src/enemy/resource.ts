@@ -28,9 +28,11 @@ export class Resource extends Enemy {
       this.healthBar.hurt();
       this.health -= damage;
       if (this.health <= 0) this.kill();
-      else this.hurtCallback();
-    }
-    else return;
+      else {
+        this.game.pushMessage("Your weapon fails to damage the rock.");
+        this.hurtCallback();
+      }
+    } else return;
   };
 
   kill = () => {

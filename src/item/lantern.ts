@@ -10,6 +10,7 @@ export class Lantern extends Equippable {
   fuel: number;
   coal: number;
   lit: boolean;
+  fuelCap: number;
 
   constructor(level: Level, x: number, y: number) {
     super(level, x, y);
@@ -18,7 +19,11 @@ export class Lantern extends Equippable {
     this.lit = false;
     this.tileX = 29;
     this.tileY = 0;
+    this.fuelCap = 250;
   }
+  addFuel = (amount: number) => {
+    this.fuel += amount;
+  };
 
   coEquippable = (other: Equippable): boolean => {
     return !(
@@ -33,24 +38,32 @@ export class Lantern extends Equippable {
   };
 
   tickInInventory = () => {
+    if (this.fuel === 0 && this.equipped) {
+      this.equipped = false;
+      this.wielder.game.pushMessage("Your lantern runs out of fuel.");
+    }
     this.ignite();
+
     if (this.lit) {
       this.fuel -= 1;
-      this.wielder.sightRadius = Math.min(this.fuel / 3 + 3, 20);
-      this.ignite();
+      this.wielder.sightRadius = Math.min(this.fuel / 4 + 3, 7);
     } else this.wielder.sightRadius = 3;
     console.log("fuel:" + this.fuel);
   };
 
   toggleEquip = () => {
-    this.equipped = !this.equipped;
-    this.ignite();
-    if (this.lit) this.wielder.sightRadius = Math.min(this.fuel / 2 + 4, 20);
-    else this.wielder.sightRadius = 3;
+    if (this.fuel > 0) {
+      this.equipped = !this.equipped;
+      this.ignite();
+      if (this.lit) this.wielder.sightRadius = Math.min(this.fuel / 4 + 3, 7);
+      else this.wielder.sightRadius = 3;
+    }
+    else this.wielder.game.pushMessage("I'll need some fuel before I can use this");
     //Math.max(this.wielder.defaultSightRadius, this.fuel / 25)}
   };
 
   getDescription = () => {
-    return `LANTERN - Fuel: ${this.fuel}`;
+    const percentage = (this.fuel / 50) * 100;
+    return `LANTERN - Fuel: ${percentage}%, Capacity: ${this.fuelCap / 50}`;
   };
 }
