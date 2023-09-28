@@ -303,6 +303,15 @@ export class Inventory {
       coinY * GameConstants.TILESIZE + countY,
       GameConstants.OUTLINE,
       "white"
+    )
+
+    let turnCountText = this.player.turnCount.toString()
+    Game.fillTextOutline(
+      turnCountText,
+      coinX * GameConstants.TILESIZE + countX,
+      coinY * GameConstants.TILESIZE + countY - 15,
+      GameConstants.OUTLINE,
+      "white"
     );
   };
 

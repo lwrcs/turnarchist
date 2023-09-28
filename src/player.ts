@@ -19,6 +19,7 @@ import { ActionState, ActionTab } from "./actionTab";
 import { HitWarning } from "./hitWarning";
 import { Enemy } from "./enemy/enemy";
 import { ZombieEnemy } from "./enemy/zombieEnemy";
+import { Item } from "./item/item";
 
 export enum PlayerDirection {
   DOWN = 0,
@@ -56,6 +57,7 @@ export class Player extends Drawable {
   mapToggled: boolean;
   actionTab: ActionTab;
   lastHitBy: string;
+  turnCount: number;
 
   constructor(game: Game, x: number, y: number, isLocalPlayer: boolean) {
     super();
@@ -110,6 +112,7 @@ export class Player extends Drawable {
 
     this.map = new Map(this.game);
     this.actionTab = new ActionTab(this.inventory, this.game);
+    this.turnCount = 0
   }
 
   inputHandler = (input: InputEnum) => {
@@ -447,6 +450,7 @@ export class Player extends Drawable {
   update = () => {};
 
   finishTick = () => {
+    this.turnCount +=1;
     this.inventory.tick();
 
     this.flashing = false;
