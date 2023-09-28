@@ -11,6 +11,7 @@ import { Spear } from "../weapon/spear";
 import { astar } from "../astarclass";
 import { SpikeTrap } from "../tile/spiketrap";
 import { DeathParticle } from "../particle/deathParticle";
+import { Candle } from "../item/candle";
 
 export class SkullEnemy extends Enemy {
   frame: number;
@@ -42,6 +43,8 @@ export class SkullEnemy extends Enemy {
       let dropProb = rand();
       if (dropProb < 0.005) this.drop = new Spear(this.level, 0, 0);
       else if (dropProb < 0.04) this.drop = new RedGem(this.level, 0, 0);
+      else if (dropProb <0.2) this.drop = new Candle(this.level, 0, 0)
+
       else this.drop = new Coin(this.level, 0, 0);
     }
   }
@@ -70,6 +73,7 @@ export class SkullEnemy extends Enemy {
   tick = () => {
     this.lastX = this.x;
     this.lastY = this.y;
+    //set last positions
     if (!this.dead) {
       if (this.skipNextTurns > 0) {
         this.skipNextTurns--;
