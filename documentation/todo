@@ -1,51 +1,78 @@
-dog runs off the edge of the world
-dog runs into an old abandoned castle
 
-****
-BUGS
-****
+# To-Do
 
-sometimes rooms can have inaccessible portions due to sideways fingers
+## Core Gameplay
 
-***********
-NEEDS JUICE
-***********
-general movement
-getting hit
-getting hit with armor on
-hitting mobs
-opening chests
+### Implement tutorial first level
+- Predetermined layout
+- Each rooms doors are guarded
+- Dying resets to the beginning of the level automatically
 
-****
-TODO
-****
+### Expand core game loop
 
-mob spawners
-level progression
-items, inventory, gems, shops
-puzzle rooms
-mobs
-decorations
-bosses
-story
-tutorial level + intro
+- Tune distribution of necessary items
+    - when are items needed?
+    - how are they obtained?
+    - are necessary resources a chore to maintain?
 
-enemy attack animations
-ripple effect ground smash
-mages have a rare drop (or boss drop): spell item, lets you use spell
-progression
-add indication of who's attacking you
-draw enemies' moves after player's
-add a proper inventory, so you can equip equippables and use usables
-add a bunch more items, and make the monsters drop them
-add stairs
-add fountain functionality
-add a bunch more monsters
+### Create more level variation
+- Expand depth of procedural generation
 
-***************
-LONG TERM GOALS
-***************
+***
+## Housekeeping
 
-inventory screen with more detailed pictures for items
-dungeon sub dungeon catacombs/mines (rand-gen, infinite)
-draw adjacent levels in shadow?
+- Establish standards for class structure
+    - What classes should handle which pieces of data?
+    - What should we avoid?
+
+- Restructuring
+    
+    - The LevelGenerator class is pretty messy. The goal for now is not to overhaul it entirely but to do the best to make it more modular. **Adding new roomtypes, items, monsters, objects, etc. should require as little tweaking as possible to the generator code.** 
+
+        - Keep in mind the LevelGenerator creates levels, but the Level class handles distribution of enemies and objects.
+
+        - We'll also need an efficient way to implement broader logic to the levels.
+            - How will a key be obtainable in one room that is needed to unlock a door in another?
+
+## Specific features
+
+### Re-enable the ability to backtrack to different floors through stairs
+- Previous versions this was possible, but it may not be easy to re-implement
+    - Where is previous level data stored once you move to the next?
+
+
+
+## Brainstorm
+
+### Novel method for level expansion during gameplay
+#### Proposition:
+- Level generator will
+    - checks walls with empty space behind
+    - add cracked walls to those spaces and push them to the level array
+    - player can use a pickaxe on cracked walls
+    - cracked wall will be replaced with Door of DoorType.PASSAGE
+        - a new room will be created and pushed to the level array
+        - shape will be based on available space and specifications of the type of room
+    - The player can then enter the new room, which may have cracked walls there as well to further expand.
+
+#### Why is this advantageous?
+- The primary advantage of this type of generation is the ability to make levels infinite. 
+- In theory this takes care of items which are necessary to exit the level being unobtainable.
+    - Bad RNG causes level to be unfinishable? You'd better explore more. 
+
+#### More ideas
+- There is a LOT of room for creativity
+    - The moment that cracked walls are broken and a new room is generated is very important. 
+    - ***What is the probability of the new room...***
+        - being a specific type
+            - variance in skin, room shape, etc.
+        - having one or more cracked walls, or being a dead end
+
+    - What 
+
+         
+         
+
+
+
+
