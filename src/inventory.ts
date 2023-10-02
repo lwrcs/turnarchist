@@ -122,16 +122,15 @@ export class Inventory {
       this.selY = this.rows + this.expansion - 1;
   };
   space = () => {
-    let a = 0 
     let i = this.selX + this.selY * this.cols;
 
     if (this.items[i] instanceof Usable) {
       (this.items[i] as Usable).onUse(this.player);
-      this.items.splice(i, 0);
-      a++
+      //this.items.splice(i, 0);
+      
     }
 
-    if (this.items[i] instanceof Equippable && a === 0) {
+    else if (this.items[i] instanceof Equippable) {
       //dont equip on the same tick as using an item
       let e = this.items[i] as Equippable;
       e.toggleEquip();
@@ -302,6 +301,15 @@ export class Inventory {
       countText,
       coinX * GameConstants.TILESIZE + countX,
       coinY * GameConstants.TILESIZE + countY,
+      GameConstants.OUTLINE,
+      "white"
+    )
+
+    let turnCountText = this.player.turnCount.toString()
+    Game.fillTextOutline(
+      turnCountText,
+      coinX * GameConstants.TILESIZE + countX,
+      coinY * GameConstants.TILESIZE + countY - 15,
       GameConstants.OUTLINE,
       "white"
     );

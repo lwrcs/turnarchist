@@ -13,7 +13,7 @@ export class Candle extends Equippable {
   lit: boolean;
   constructor(level: Level, x: number, y: number) {
     super(level, x, y);
-    this.fuel = 50;
+    this.fuel = 100; //how many turns before it burns out
     this.lit = false;
     this.tileX = 27;
     this.tileY = 0;
@@ -28,7 +28,7 @@ export class Candle extends Equippable {
   };
 
   ignite = () => {
-    if (this.fuel > 0 && this.equipped) this.lit = true;
+    if (this.fuel > 0 && this.equipped) this.lit = true; //if has fuel and is equipped set as lit
     else this.lit = false;
   };
 
@@ -40,7 +40,7 @@ export class Candle extends Equippable {
     }
     if (this.lit) {
       this.fuel -= 1;
-      this.wielder.sightRadius = Math.min(this.fuel / 5 + 2, 5);
+      this.wielder.sightRadius = Math.min(this.fuel / 5 + 2, 4);
       this.ignite();
     } else this.wielder.sightRadius = 3;
     console.log("fuel:" + this.fuel);
@@ -49,7 +49,7 @@ export class Candle extends Equippable {
   toggleEquip = () => {
     this.equipped = !this.equipped;
     this.ignite();
-    if (this.lit) this.wielder.sightRadius = Math.min(this.fuel / 5 + 2, 5);
+    if (this.lit) this.wielder.sightRadius = Math.min(this.fuel / 5 + 2, 4);
     else this.wielder.sightRadius = 3;
     //Math.max(this.wielder.defaultSightRadius, this.fuel / 25)}
   };
