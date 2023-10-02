@@ -11,7 +11,4 @@ export class Usable extends Item {
   }
   onUse = (player: Player) => {};
 
-  setUser = (user: Player) => {
-    this.user = user;
-  };
 }

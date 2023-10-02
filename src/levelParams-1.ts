@@ -23,5 +23,5 @@ export class LevelParams {
   lightLevel: number;
   bossDoorType: DoorType;
   challengeDoors: [{door: DoorType, count: number}]
-
+  
 }

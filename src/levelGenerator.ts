@@ -77,9 +77,8 @@ class Partition {
     return (
       x >= this.x && x < this.x + this.w && y >= this.y && y < this.y + this.h
     );
-    //condition for true:
-    //input x must be greater than the partitions x
-    //x must be less than the partitions x + partitions y
+    
+    //only return true if both input x and input y are within the partitions x and y
   };
 
   point_next_to = (x: number, y: number): boolean => {
@@ -93,10 +92,12 @@ class Partition {
         y >= this.y - 1 &&
         y < this.y + this.h + 1)
     );
+    //return true if the input x and y are next to any point of the partition
   };
 
   area = (): number => {
     return this.w * this.h;
+    //return the damn area
   };
 
   overlaps = (other: Partition): boolean => {
@@ -106,28 +107,34 @@ class Partition {
       other.y < this.y + this.h + 1 &&
       other.y + other.h > this.y - 1
     );
+    //takes another partition instance as argument
+    //returns true if any points of each overlap
   };
 
   get_branch_point = (): { x: number; y: number } => {
     let points = [];
     for (let x = this.x; x < this.x + this.w; x++) {
-      points.push({ x: x, y: this.y - 1 });
-      points.push({ x: x, y: this.y + this.h });
-    }
+      //count up from the partitions x to it's width
+      points.push({ x: x, y: this.y - 1 /*one row above partition*/ });
+      points.push({ x: x, y: this.y + this.h /*one row below partition*/ });
+    }// pushes the points above and below the partition
     for (let y = this.y; y < this.y + this.h; y++) {
       points.push({ x: this.x - 1, y: y });
       points.push({ x: this.x + this.w, y: y });
-    }
+    }//pushes points to left an right of the partition
     points = points.filter(
       (p) =>
         !this.connections.some(
           (c) => Math.abs(c.x - p.x) + Math.abs(c.y - p.y) <= 1
+          
         )
+        //if the sum of the distance between the input x and y values and the partitions x and y values is > 1
+        //delete those from the points array
     );
     points.sort(() => 0.5 - Random.rand());
-    return points[0];
+    return points[0];//return first or last object of x y points in array points
   };
-}
+}//end of Partition class
 
 let split_partitions = (
   partitions: Array<Partition>,
@@ -140,6 +147,7 @@ let split_partitions = (
     }
   }
   return partitions;
+  //takes input partitions array, randomly removes partitions and adds splits, output modified partitions array
 };
 
 let remove_wall_rooms = (
@@ -153,11 +161,13 @@ let remove_wall_rooms = (
       partition.y === 0 ||
       partition.x + partition.w === w ||
       partition.y + partition.h === h
+      //delete any partition where the x or y is zero
     ) {
       partitions = partitions.filter((p) => p != partition);
     }
   }
   return partitions;
+  //return partitions array with no wall rooms
 };
 
 let populate_grid = (
@@ -166,8 +176,8 @@ let populate_grid = (
   w: number,
   h: number
 ): Array<Array<Partition | false>> => {
-  for (let x = 0; x < w; x++) {
-    grid[x] = [];
+  for (let x = 0; x < w; x++) {//loop through the horizontal tiles
+    grid[x] = []; //empty array at x index
     for (let y = 0; y < h; y++) {
       grid[x][y] = false;
       for (const partition of partitions) {
@@ -176,6 +186,8 @@ let populate_grid = (
     }
   }
   return grid;
+  //input grid array, partitions array and width and height
+  //output grid array that indicates which cells are in which partition
 };
 
 let generate_dungeon_candidate = (
@@ -184,18 +196,23 @@ let generate_dungeon_candidate = (
 ): Array<Partition> => {
   let partitions = [new Partition(0, 0, map_w, map_h)];
   let grid = [];
+  //add a new partition and define grid as empty array
 
   for (let i = 0; i < 3; i++) partitions = split_partitions(partitions, 0.75);
   for (let i = 0; i < 3; i++) partitions = split_partitions(partitions, 1);
   for (let i = 0; i < 3; i++) partitions = split_partitions(partitions, 0.5);
+  //split partitions 3 times with different probabilities
   partitions = remove_wall_rooms(partitions, map_w, map_h);
   grid = populate_grid(partitions, grid, map_w, map_h);
-
+//remove wall rooms and populate dat grid
   partitions.sort((a, b) => a.area() - b.area());
-
+//sort the partitions list by ... area? I think?
   let spawn = partitions[0];
+  //spawn is the first Partition instance
   spawn.type = RoomType.START;
+  //set the roomtype for the partition accordingly
   partitions[partitions.length - 1].type = RoomType.BOSS;
+  //set the largest room as boss room?
 
   let connected = [spawn];
   let frontier = [spawn];

@@ -123,7 +123,7 @@ export class Game {
     window.addEventListener("load", () => {
       this.socket = io(ServerAddress.address, { transports: ["websocket"] });
       this.socket.on("new connect", () => {
-        if (this.menuState !== MenuState.LOADING)
+        if (this.menuState !== MenuState.LOADING) //what sets the menu state??
           this.loginMessage = "disconnected";
         this.menuState = MenuState.LOGIN_USERNAME;
       });

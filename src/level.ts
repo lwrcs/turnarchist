@@ -1099,8 +1099,7 @@ export class Level {
         }
       }
     }*/
-    Game.ctx.globalCompositeOperation = "multiply"
-    Game.ctx.fillStyle = "red"
+
   };
 
   castShadowsAtAngle = (
