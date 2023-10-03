@@ -1,7 +1,6 @@
 import { Player } from "../player";
 import { Game } from "../game";
 import { Level } from "../level";
-import { BottomDoor } from "./bottomDoor";
 import { GameConstants } from "../gameConstants";
 import { SkinType, Tile } from "./tile";
 import { DownLadder } from "./downLadder";

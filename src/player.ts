@@ -2,7 +2,6 @@ import { Input, InputEnum } from "./input";
 import { GameConstants } from "./gameConstants";
 import { Game, LevelState } from "./game";
 import { Door, DoorType } from "./tile/door";
-import { BottomDoor } from "./tile/bottomDoor";
 import { Trapdoor } from "./tile/trapdoor";
 import { Inventory } from "./inventory";
 import { Sound } from "./sound";
@@ -11,7 +10,6 @@ import { Map } from "./map";
 import { SlashParticle } from "./particle/slashParticle";
 import { HealthBar } from "./healthbar";
 import { VendingMachine } from "./enemy/vendingMachine";
-import { SideDoor } from "./tile/sidedoor";
 import { Drawable } from "./drawable";
 import { Random } from "./random";
 import { GenericParticle } from "./particle/genericParticle";
@@ -361,9 +359,7 @@ export class Player extends Drawable {
       if (
         !(
           other instanceof Door ||
-          other instanceof BottomDoor ||
-          other instanceof Trapdoor ||
-          other instanceof SideDoor
+          other instanceof Trapdoor
         )
       )
         this.game.levels[this.levelID].tick(this);

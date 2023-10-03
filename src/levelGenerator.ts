@@ -1,11 +1,9 @@
 import { Game } from "./game";
 import { Level, RoomType } from "./level";
 import { Door } from "./tile/door";
-import { BottomDoor } from "./tile/bottomDoor";
 import { LevelConstants } from "./levelConstants";
 import { Random } from "./random";
 import { DownLadder } from "./tile/downLadder";
-import { SideDoor } from "./tile/sidedoor";
 //Goal: CRACK THE LEVEL GENERATOR
 class PartitionConnection {
   x: number;
@@ -504,7 +502,7 @@ let generate_cave = (map_w: number, map_h: number): Array<Partition> => {
   let partitions;
 
   while (!passes_checks) {
-    const NUM_ROOMS = 5;
+    const NUM_ROOMS = 100;
     partitions = generate_cave_candidate(map_w, map_h, NUM_ROOMS);
 
     passes_checks = true;
