@@ -5,18 +5,13 @@ import { Equippable } from "./equippable";
 import { Candle } from "./candle";
 import { Torch } from "./torch";
 import { Coal } from "./coal";
+import { Light } from "./light";
 
-export class Lantern extends Equippable {
-  fuel: number;
-  coal: number;
-  lit: boolean;
+export class Lantern extends Light {
   fuelCap: number;
-
   constructor(level: Level, x: number, y: number) {
     super(level, x, y);
-    this.coal = 0;
     this.fuel = 0;
-    this.lit = false;
     this.tileX = 29;
     this.tileY = 0;
     this.fuelCap = 250;
@@ -24,18 +19,13 @@ export class Lantern extends Equippable {
   addFuel = (amount: number) => {
     this.fuel += amount;
   };
-
-  coEquippable = (other: Equippable): boolean => {
+  
+  coEquippable = (other: Light): boolean => {
     return !(
       other instanceof Candle ||
       other instanceof Torch ||
       other instanceof Lantern
     );
-  };
-  ignite = () => {
-    if (this.fuel > 0 && this.equipped) {
-      return true;
-    } else return false;
   };
 
   tickInInventory = () => {
@@ -46,7 +36,8 @@ export class Lantern extends Equippable {
     if (this.ignite()) {
       this.fuel -= 1;
       this.wielder.sightRadius = Math.min(this.fuel / 4 + 3, 7);
-    } else this.wielder.sightRadius = 3;
+      console.log("sight radius:" + this.wielder.sightRadius);
+    }
     console.log("fuel:" + this.fuel);
   };
 
@@ -55,7 +46,7 @@ export class Lantern extends Equippable {
       this.equipped = !this.equipped;
       if (this.ignite()) {
         this.wielder.sightRadius = Math.min(this.fuel / 4 + 3, 7);
-      } else this.wielder.sightRadius = 3;
+      } //else this.wielder.sightRadius = 3;
     } else
       this.wielder.game.pushMessage(
         "I'll need some fuel before I can use this"
