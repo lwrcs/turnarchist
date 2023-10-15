@@ -18,14 +18,6 @@ export class Light extends Equippable {
     this.fuelCap = 250;
   }
 
-  coEquippable = (other: Equippable): boolean => {
-    return !(
-      other instanceof Candle ||
-      other instanceof Torch ||
-      other instanceof Lantern
-    );
-  };
-
   ignite = () => {
     if (this.fuel > 0 && this.equipped) {
       return true;

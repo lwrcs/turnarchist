@@ -11682,18 +11682,10 @@ var __extends = (this && this.__extends) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Light = void 0;
 var equippable_1 = __webpack_require__(/*! ./equippable */ "./src/item/equippable.ts");
-var candle_1 = __webpack_require__(/*! ./candle */ "./src/item/candle.ts");
-var lantern_1 = __webpack_require__(/*! ./lantern */ "./src/item/lantern.ts");
-var torch_1 = __webpack_require__(/*! ./torch */ "./src/item/torch.ts");
 var Light = /** @class */ (function (_super) {
     __extends(Light, _super);
     function Light(level, x, y) {
         var _this = _super.call(this, level, x, y) || this;
-        _this.coEquippable = function (other) {
-            return !(other instanceof candle_1.Candle ||
-                other instanceof torch_1.Torch ||
-                other instanceof lantern_1.Lantern);
-        };
         _this.ignite = function () {
             if (_this.fuel > 0 && _this.equipped) {
                 return true;
@@ -12327,15 +12319,15 @@ var Level = /** @class */ (function () {
                 _this.levelArray[x + 1][y] = new spawnfloor_1.SpawnFloor(_this, x + 1, y);
             }
             else if (x === _this.roomX + _this.width - 1) {
-                d = new door_1.Door(_this, _this.game, x, y, 3, t);
+                d = new door_1.Door(_this, _this.game, x, y, 3, door_1.DoorType.DOOR);
                 _this.levelArray[x - 1][y] = new spawnfloor_1.SpawnFloor(_this, x - 1, y);
             }
             else if (y === _this.roomY) {
-                d = new door_1.Door(_this, _this.game, x, y, 0, t);
+                d = new door_1.Door(_this, _this.game, x, y, 0, door_1.DoorType.DOOR);
                 _this.levelArray[x][y + 1] = new spawnfloor_1.SpawnFloor(_this, x, y + 1);
             }
             else if (y === _this.roomY + _this.height - 1) {
-                d = new door_1.Door(_this, _this.game, x, y, 2, t);
+                d = new door_1.Door(_this, _this.game, x, y, 2, door_1.DoorType.DOOR);
                 _this.levelArray[x][y - 1] = new spawnfloor_1.SpawnFloor(_this, x, y - 1);
             }
             _this.doors.push(d);

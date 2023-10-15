@@ -941,13 +941,13 @@ export class Level {
       d = new Door(this, this.game, x, y, 1, t); //last argument, enum 0 is for locked
       this.levelArray[x + 1][y] = new SpawnFloor(this, x + 1, y);
     } else if (x === this.roomX + this.width - 1) {
-      d = new Door(this, this.game, x, y, 3, t);
+      d = new Door(this, this.game, x, y, 3, DoorType.DOOR);
       this.levelArray[x - 1][y] = new SpawnFloor(this, x - 1, y);
     } else if (y === this.roomY) {
-      d = new Door(this, this.game, x, y, 0, t);
+      d = new Door(this, this.game, x, y, 0, DoorType.DOOR);
       this.levelArray[x][y + 1] = new SpawnFloor(this, x, y + 1);
     } else if (y === this.roomY + this.height - 1) {
-      d = new Door(this, this.game, x, y, 2, t);
+      d = new Door(this, this.game, x, y, 2, DoorType.DOOR);
       this.levelArray[x][y - 1] = new SpawnFloor(this, x, y - 1);
     }
 
