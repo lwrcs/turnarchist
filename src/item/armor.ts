@@ -2,7 +2,7 @@ import { Item } from "./item";
 import { Game } from "../game";
 import { LevelConstants } from "../levelConstants";
 import { Player } from "../player";
-import { Level } from "../level";
+import { Room } from "../room";
 import { TextParticle } from "../particle/textParticle";
 import { GameConstants } from "../gameConstants";
 import { Equippable } from "./equippable";
@@ -12,7 +12,7 @@ export class Armor extends Equippable {
   rechargeTurnCounter: number;
   readonly RECHARGE_TURNS = 15;
 
-  constructor(level: Level, x: number, y: number) {
+  constructor(level: Room, x: number, y: number) {
     super(level, x, y);
     this.health = 1;
     this.rechargeTurnCounter = -1;

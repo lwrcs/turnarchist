@@ -1,5 +1,5 @@
 import { Player } from "../player";
-import { Level } from "../level";
+import { Room } from "../room";
 import { Game } from "../game";
 import { Door } from "./door";
 import { Key } from "../item/key";

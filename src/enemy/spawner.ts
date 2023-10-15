@@ -1,7 +1,7 @@
 import { Enemy, EnemyDirection } from "./enemy";
 import { LevelConstants } from "../levelConstants";
 import { Game } from "../game";
-import { Level } from "../level";
+import { Room } from "../room";
 import { astar } from "../astarclass";
 import { Heart } from "../item/heart";
 import { Floor } from "../tile/floor";
@@ -25,7 +25,7 @@ export class Spawner extends Enemy {
   rand: () => number;
 
   constructor(
-    level: Level,
+    level: Room,
     game: Game,
     x: number,
     y: number,

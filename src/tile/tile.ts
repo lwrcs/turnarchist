@@ -1,4 +1,4 @@
-import { Level } from "../level";
+import { Room } from "../room";
 import { LevelConstants } from "../levelConstants";
 import { Player } from "../player";
 import { Enemy } from "../enemy/enemy";
@@ -12,11 +12,11 @@ export enum SkinType {
 export class Tile extends Drawable {
   x: number;
   y: number;
-  level: Level;
+  level: Room;
   skin: SkinType;
   isDoor: boolean;
 
-  constructor(level: Level, x: number, y: number) {
+  constructor(level: Room, x: number, y: number) {
     super();
     this.skin = level.skin;
     this.level = level;

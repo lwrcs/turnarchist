@@ -1,5 +1,5 @@
 import { Enemy } from "./enemy";
-import { Level } from "../level";
+import { Room } from "../room";
 import { Game } from "../game";
 import { Heart } from "../item/heart";
 import { LevelConstants } from "../levelConstants";
@@ -10,7 +10,7 @@ import { EntityType } from "./enemy";
 
 export class PottedPlant extends Enemy {
   drop: Item;
-  constructor(level: Level, game: Game, x: number, y: number, rand: () => number, drop?: Item) {
+  constructor(level: Room, game: Game, x: number, y: number, rand: () => number, drop?: Item) {
     super(level, game, x, y);
     this.level = level;
     this.health = 2;

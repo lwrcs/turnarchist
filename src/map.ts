@@ -1,6 +1,6 @@
 import { Game } from "./game";
 import { GameConstants } from "./gameConstants";
-import { RoomType } from "./level";
+import { RoomType } from "./room";
 import { EntityType } from "./enemy/enemy";
 import { Wall } from "./tile/wall";
 
@@ -31,7 +31,7 @@ export class Map {
     );
 
     Game.ctx.globalAlpha = 1;
-    for (const level of this.game.levels) {
+    for (const level of this.game.rooms) {
       if (this.game.level.mapGroup === level.mapGroup && level.entered) {
         Game.ctx.fillStyle = "#5A5A5A";
         Game.ctx.fillRect(
@@ -88,7 +88,7 @@ export class Map {
     for (const i in this.game.players) {
       Game.ctx.fillStyle = "white";
       if (
-        this.game.levels[this.game.players[i].levelID].mapGroup ===
+        this.game.rooms[this.game.players[i].levelID].mapGroup ===
         this.game.level.mapGroup
       ) {
         Game.ctx.fillRect(
@@ -102,3 +102,4 @@ export class Map {
     Game.ctx.setTransform(1, 0, 0, 1, 0, 0);
   };
 }
+

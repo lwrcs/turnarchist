@@ -1,5 +1,5 @@
 import { Enemy } from "./enemy";
-import { Level } from "../level";
+import { Room } from "../room";
 import { Game } from "../game";
 import { Heart } from "../item/heart";
 import { LevelConstants } from "../levelConstants";
@@ -7,7 +7,7 @@ import { GenericParticle } from "../particle/genericParticle";
 import { EntityType } from "./enemy";
 
 export class Crate extends Enemy {
-  constructor(level: Level, game: Game, x: number, y: number) {
+  constructor(level: Room, game: Game, x: number, y: number) {
     super(level, game, x, y);
     this.level = level;
     this.health = 1;

@@ -1,6 +1,6 @@
 import { Player } from "../player";
 import { Game } from "../game";
-import { Level } from "../level";
+import { Room } from "../room";
 import { GameConstants } from "../gameConstants";
 import { SkinType, Tile } from "./tile";
 import { EntityType } from "../enemy/enemy";
@@ -29,7 +29,7 @@ export class Door extends Tile {
   locked: boolean;
 
   constructor(
-    level: Level,
+    level: Room,
     game: Game,
     x: number,
     y: number,
@@ -90,9 +90,10 @@ export class Door extends Tile {
     }
     if (this.DoorType === DoorType.GUARDEDDOOR) {
       this.locked = false;
-      for (let door of this.level.doors) {
+      this.level.doors.forEach((door) => {
         door.DoorType = DoorType.DOOR;
-      }
+        door.locked = false;
+      });
     } else {
     }
   };

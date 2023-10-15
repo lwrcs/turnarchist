@@ -1,6 +1,6 @@
 import { Item } from "./item";
 import { Game } from "../game";
-import { Level } from "../level";
+import { Room } from "../room";
 import { Equippable } from "./equippable";
 import { Torch } from "./torch";
 import { Lantern } from "./lantern";
@@ -9,7 +9,7 @@ import { Player } from "../player";
 import { Light } from "./light";
 
 export class Candle extends Light {
-  constructor(level: Level, x: number, y: number) {
+  constructor(level: Room, x: number, y: number) {
     super(level, x, y);
     this.fuel = 100; //how many turns before it burns out
     this.tileX = 27;

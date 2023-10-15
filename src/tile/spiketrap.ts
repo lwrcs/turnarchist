@@ -1,6 +1,6 @@
 import { Player } from "../player";
 import { Game } from "../game";
-import { Level } from "../level";
+import { Room } from "../room";
 import { LevelConstants } from "../levelConstants";
 import { Tile } from "./tile";
 import { Enemy } from "../enemy/enemy";
@@ -14,7 +14,7 @@ export class SpikeTrap extends Tile {
   frame: number;
   t: number;
 
-  constructor(level: Level, x: number, y: number, tickCount?: number) {
+  constructor(level: Room, x: number, y: number, tickCount?: number) {
     super(level, x, y);
     if (tickCount) this.tickCount = tickCount;
     else this.tickCount = 0;
@@ -30,7 +30,7 @@ export class SpikeTrap extends Tile {
 
     if (this.on) {
       for (const i in this.level.game.players) {
-        if (this.level === this.level.game.levels[this.level.game.players[i].levelID] && this.level.game.players[i].x === this.x && this.level.game.players[i].y === this.y)
+        if (this.level === this.level.game.rooms[this.level.game.players[i].levelID] && this.level.game.players[i].x === this.x && this.level.game.players[i].y === this.y)
           this.level.game.players[i].hurt(1, "spike trap");
       }
     }

@@ -2,12 +2,12 @@ import { Item } from "./item";
 import { Player } from "../player";
 import { Game } from "../game";
 import { Sound } from "../sound";
-import { Level } from "../level";
+import { Room } from "../room";
 import { Usable } from "./usable";
 import { Inventory } from "../inventory";
 
 export class Backpack extends Usable {
-  constructor(level: Level, x: number, y: number) {
+  constructor(level: Room, x: number, y: number) {
     super(level, x, y);
 
     this.tileX = 4;
@@ -16,7 +16,7 @@ export class Backpack extends Usable {
   }
 
   onUse = (player: Player) => {
-    if (this.level.game.levels[player.levelID] === this.level.game.level)
+    if (this.level.game.rooms[player.levelID] === this.level.game.level)
       Sound.heal();
    
 

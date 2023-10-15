@@ -1,12 +1,12 @@
 import { Game } from "../game";
 import { Tile, SkinType } from "./tile";
-import { Level } from "../level";
+import { Room } from "../room";
 
 export class SpawnFloor extends Tile {
   // all are in grid units
   variation: number;
 
-  constructor(level: Level, x: number, y: number) {
+  constructor(level: Room, x: number, y: number) {
     super(level, x, y);
     this.variation = 1;
     if (this.skin == SkinType.DUNGEON)

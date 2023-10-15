@@ -1,6 +1,6 @@
 import { Player } from "../player";
 import { Game } from "../game";
-import { Level } from "../level";
+import { Room } from "../room";
 import { GameConstants } from "../gameConstants";
 import { SkinType, Tile } from "./tile";
 
@@ -8,7 +8,7 @@ export class InsideLevelDoor extends Tile {
   game: Game;
   opened: boolean;
 
-  constructor(level: Level, game: Game, x: number, y: number) {
+  constructor(level: Room, game: Game, x: number, y: number) {
     super(level, x, y);
     this.game = game;
     this.opened = false;

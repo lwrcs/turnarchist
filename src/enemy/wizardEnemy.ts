@@ -1,7 +1,7 @@
 import { Enemy } from "./enemy";
 import { LevelConstants } from "../levelConstants";
 import { Game } from "../game";
-import { Level } from "../level";
+import { Room } from "../room";
 import { astar } from "../astarclass";
 import { Heart } from "../item/heart";
 import { Floor } from "../tile/floor";
@@ -32,7 +32,7 @@ export class WizardEnemy extends Enemy {
   rand: () => number;
   readonly ATTACK_RADIUS = 5;
 
-  constructor(level: Level, game: Game, x: number, y: number, rand: () => number, drop?: Item) {
+  constructor(level: Room, game: Game, x: number, y: number, rand: () => number, drop?: Item) {
     super(level, game, x, y);
     this.ticks = 0;
     this.health = 1;
@@ -100,27 +100,27 @@ export class WizardEnemy extends Enemy {
         this.alertTicks = Math.max(0, this.alertTicks - 1);
         switch (this.state) {
           case WizardState.attack:
-            if (this.level.getTile(this.x - 1, this.y) && !this.level.levelArray[this.x - 1][this.y].isSolid()) {
+            if (this.level.getTile(this.x - 1, this.y) && !this.level.roomArray[this.x - 1][this.y].isSolid()) {
               this.level.projectiles.push(new WizardFireball(this, this.x - 1, this.y));
-              if (this.level.getTile(this.x - 2, this.y) && !this.level.levelArray[this.x - 2][this.y].isSolid()) {
+              if (this.level.getTile(this.x - 2, this.y) && !this.level.roomArray[this.x - 2][this.y].isSolid()) {
                 this.level.projectiles.push(new WizardFireball(this, this.x - 2, this.y));
               }
             }
-            if (this.level.getTile(this.x + 1, this.y) && !this.level.levelArray[this.x + 1][this.y].isSolid()) {
+            if (this.level.getTile(this.x + 1, this.y) && !this.level.roomArray[this.x + 1][this.y].isSolid()) {
               this.level.projectiles.push(new WizardFireball(this, this.x + 1, this.y));
-              if (this.level.getTile(this.x + 2, this.y) && !this.level.levelArray[this.x + 2][this.y].isSolid()) {
+              if (this.level.getTile(this.x + 2, this.y) && !this.level.roomArray[this.x + 2][this.y].isSolid()) {
                 this.level.projectiles.push(new WizardFireball(this, this.x + 2, this.y));
               }
             }
-            if (this.level.getTile(this.x, this.y - 1) && !this.level.levelArray[this.x][this.y - 1].isSolid()) {
+            if (this.level.getTile(this.x, this.y - 1) && !this.level.roomArray[this.x][this.y - 1].isSolid()) {
               this.level.projectiles.push(new WizardFireball(this, this.x, this.y - 1));
-              if (this.level.getTile(this.x, this.y - 2) && !this.level.levelArray[this.x][this.y - 2].isSolid()) {
+              if (this.level.getTile(this.x, this.y - 2) && !this.level.roomArray[this.x][this.y - 2].isSolid()) {
                 this.level.projectiles.push(new WizardFireball(this, this.x, this.y - 2));
               }
             }
-            if (this.level.getTile(this.x, this.y + 1) && !this.level.levelArray[this.x][this.y + 1].isSolid()) {
+            if (this.level.getTile(this.x, this.y + 1) && !this.level.roomArray[this.x][this.y + 1].isSolid()) {
               this.level.projectiles.push(new WizardFireball(this, this.x, this.y + 1));
-              if (this.level.getTile(this.x, this.y + 2) && !this.level.levelArray[this.x][this.y + 2].isSolid()) {
+              if (this.level.getTile(this.x, this.y + 2) && !this.level.roomArray[this.x][this.y + 2].isSolid()) {
                 this.level.projectiles.push(new WizardFireball(this, this.x, this.y + 2));
               }
             }
@@ -225,10 +225,10 @@ export class WizardEnemy extends Enemy {
   };
 
   kill = () => {
-    if (this.level.levelArray[this.x][this.y] instanceof Floor) {
+    if (this.level.roomArray[this.x][this.y] instanceof Floor) {
       let b = new Bones(this.level, this.x, this.y);
-      b.skin = this.level.levelArray[this.x][this.y].skin;
-      this.level.levelArray[this.x][this.y] = b;
+      b.skin = this.level.roomArray[this.x][this.y].skin;
+      this.level.roomArray[this.x][this.y] = b;
     }
 
     this.dead = true;

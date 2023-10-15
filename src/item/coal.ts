@@ -1,14 +1,14 @@
 import { Item } from "./item";
 import { Player } from "../player";
 import { Game } from "../game";
-import { Level } from "../level";
+import { Room } from "../room";
 import { TextParticle } from "../particle/textParticle";
 import { GameConstants } from "../gameConstants";
 import { Usable } from "./usable";
 import { Lantern } from "./lantern";
 
 export class Coal extends Usable {
-  constructor(level: Level, x: number, y: number) {
+  constructor(level: Room, x: number, y: number) {
     super(level, x, y);
 
     this.tileX = 17;

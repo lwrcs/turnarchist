@@ -1,6 +1,6 @@
 import { Enemy, EnemyDirection } from "./enemy";
 import { Game } from "../game";
-import { Level } from "../level";
+import { Room } from "../room";
 import { Player } from "../player";
 import { HitWarning } from "../hitWarning";
 import { GenericParticle } from "../particle/genericParticle";
@@ -22,7 +22,7 @@ export class BigSkullEnemy extends Enemy {
   readonly REGEN_TICKS = 5;
   drops: Array<Item>;
 
-  constructor(level: Level, game: Game, x: number, y: number, rand: () => number, drop?: Item) {
+  constructor(level: Room, game: Game, x: number, y: number, rand: () => number, drop?: Item) {
     super(level, game, x, y);
     this.w = 2;
     this.h = 2;
@@ -145,7 +145,7 @@ export class BigSkullEnemy extends Enemy {
                 return player.x >= moveX && player.x < moveX + this.w && player.y >= moveY && player.y < moveY + this.h;
               };
               for (const i in this.game.players) {
-                if (this.game.levels[this.game.players[i].levelID] === this.level && wouldHit(this.game.players[i], moveX, moveY)) {
+                if (this.game.rooms[this.game.players[i].levelID] === this.level && wouldHit(this.game.players[i], moveX, moveY)) {
                   this.game.players[i].hurt(this.hit(), "big skeleton");
                   this.drawX = 0.5 * (this.x - this.game.players[i].x);
                   this.drawY = 0.5 * (this.y - this.game.players[i].y);

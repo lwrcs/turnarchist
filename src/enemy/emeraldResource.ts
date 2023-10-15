@@ -1,7 +1,7 @@
 import { Item } from "../item/item";
 import { Game } from "../game";
 import { Key } from "../item/key";
-import { Level } from "../level";
+import { Room } from "../room";
 import { Heart } from "../item/heart";
 import { Armor } from "../item/armor";
 import { Enemy } from "./enemy";
@@ -13,7 +13,7 @@ import { Sound } from "../sound";
 import { GameState } from "../gameState";
 
 export class EmeraldResource extends Resource {
-  constructor(level: Level, game: Game, x: number, y: number) {
+  constructor(level: Room, game: Game, x: number, y: number) {
     super(level, game, x, y);
 
     this.tileX = 14;

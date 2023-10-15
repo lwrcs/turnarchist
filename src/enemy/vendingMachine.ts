@@ -1,6 +1,6 @@
 import { Player } from "../player";
 import { Game } from "../game";
-import { Level } from "../level";
+import { Room } from "../room";
 import { Enemy } from "./enemy";
 import { Item } from "../item/item";
 import { Key } from "../item/key";
@@ -37,7 +37,7 @@ export class VendingMachine extends Enemy {
   buyAnimAmount = 0;
   rand: () => number;
 
-  constructor(level: Level, game: Game, x: number, y: number, item: Item, rand: () => number) {
+  constructor(level: Room, game: Game, x: number, y: number, item: Item, rand: () => number) {
     super(level, game, x, y);
 
     this.rand = rand;
@@ -111,7 +111,7 @@ export class VendingMachine extends Enemy {
       do {
         x = Game.rand(this.x - 1, this.x + 1, this.rand);
         y = Game.rand(this.y - 1, this.y + 1, this.rand);
-      } while ((x === this.x && y === this.y) || this.level.levelArray[x][y].isSolid() || this.level.enemies.some(e => e.x === x && e.y === y));
+      } while ((x === this.x && y === this.y) || this.level.roomArray[x][y].isSolid() || this.level.enemies.some(e => e.x === x && e.y === y));
 
       let newItem = new (this.item.constructor as { new(): Item })();
       newItem = newItem.constructor(this.level, x, y);

@@ -1,12 +1,12 @@
 import { Game } from "../game";
 import { Tile } from "./tile";
-import { Level } from "../level";
+import { Room } from "../room";
 import { LightSource } from "../lightSource";
 
 export class WallTorch extends Tile {
   frame: number;
 
-  constructor(level: Level, x: number, y: number) {
+  constructor(level: Room, x: number, y: number) {
     super(level, x, y);
     this.level.lightSources.push(new LightSource(this.x + 0.5, this.y + 0.5, 3));
     this.frame = Math.random() * 12;

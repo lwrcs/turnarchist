@@ -1,5 +1,5 @@
 import { Enemy } from "./enemy";
-import { Level } from "../level";
+import { Room } from "../room";
 import { Game } from "../game";
 import { Heart } from "../item/heart";
 import { LevelConstants } from "../levelConstants";
@@ -17,7 +17,7 @@ export class TombStone extends Enemy {
   rand: () => number;
 
   constructor(
-    level: Level,
+    level: Room,
     game: Game,
     x: number,
     y: number,

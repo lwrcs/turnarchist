@@ -1,6 +1,6 @@
 import { Enemy, EnemyDirection } from "./enemy";
 import { Game } from "../game";
-import { Level } from "../level";
+import { Room } from "../room";
 import { Player } from "../player";
 import { HitWarning } from "../hitWarning";
 import { GenericParticle } from "../particle/genericParticle";
@@ -22,7 +22,7 @@ export class TurningEnemy extends Enemy {
   targetPlayer: Player;
   drop: Item;
 
-  constructor(level: Level, game: Game, x: number, y: number, rand: () => number, drop?: Item) {
+  constructor(level: Room, game: Game, x: number, y: number, rand: () => number, drop?: Item) {
     super(level, game, x, y);
     this.ticks = 0;
     this.frame = 0;
@@ -103,8 +103,8 @@ export class TurningEnemy extends Enemy {
           for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
             for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
               if (
-                this.level.levelArray[xx][yy] instanceof SpikeTrap &&
-                (this.level.levelArray[xx][yy] as SpikeTrap).on
+                this.level.roomArray[xx][yy] instanceof SpikeTrap &&
+                (this.level.roomArray[xx][yy] as SpikeTrap).on
               ) {
                 // don't walk on active spiketraps
                 disablePositions.push({ x: xx, y: yy } as astar.Position);
@@ -116,8 +116,8 @@ export class TurningEnemy extends Enemy {
           for (let x = 0; x < this.level.roomX + this.level.width; x++) {
             grid[x] = [];
             for (let y = 0; y < this.level.roomY + this.level.height; y++) {
-              if (this.level.levelArray[x] && this.level.levelArray[x][y])
-                grid[x][y] = this.level.levelArray[x][y];
+              if (this.level.roomArray[x] && this.level.roomArray[x][y])
+                grid[x][y] = this.level.roomArray[x][y];
               else
                 grid[x][y] = false;
             }
@@ -145,7 +145,7 @@ export class TurningEnemy extends Enemy {
             if (oldDir == this.direction) {
               let hitPlayer = false;
               for (const i in this.game.players) {
-                if (this.game.levels[this.game.players[i].levelID] === this.level && this.game.players[i].x === moveX && this.game.players[i].y === moveY) {
+                if (this.game.rooms[this.game.players[i].levelID] === this.level && this.game.players[i].x === moveX && this.game.players[i].y === moveY) {
                   this.game.players[i].hurt(this.hit(), "zombie");
                   this.drawX = 0.5 * (this.x - this.game.players[i].x);
                   this.drawY = 0.5 * (this.y - this.game.players[i].y);

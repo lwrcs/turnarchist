@@ -1,4 +1,4 @@
-import { Level } from "../level";
+import { Room } from "../room";
 import { Game } from "../game";
 import { Tile } from "./tile";
 
@@ -8,7 +8,7 @@ export class Chasm extends Tile {
   topEdge: boolean;
 
   constructor(
-    level: Level,
+    level: Room,
     x: number,
     y: number,
     leftEdge: boolean,

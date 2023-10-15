@@ -1,5 +1,5 @@
 import { Game } from "./game";
-import { Level, RoomType } from "./level";
+import { Room, RoomType } from "./room";
 import { Door } from "./tile/door";
 import { LevelConstants } from "./levelConstants";
 import { Random } from "./random";
@@ -522,11 +522,11 @@ export class LevelGenerator {
     partitions: Array<Partition>,
     depth: number,
     mapGroup: number
-  ): Array<Level> => {
-    let levels: Array<Level> = [];
+  ): Array<Room> => {
+    let levels: Array<Room> = [];
 
     for (let i = 0; i < partitions.length; i++) {
-      let level = new Level(
+      let level = new Room(
         this.game,
         partitions[i].x - 1,
         partitions[i].y - 1,
@@ -565,7 +565,7 @@ export class LevelGenerator {
     this.seed = seed;
   };
 
-  generate = (game: Game, depth: number, cave = false): Level => {
+  generate = (game: Game, depth: number, cave = false): Room => {
     console.assert(
       cave || this.depthReached === 0 || depth === this.depthReached + 1
     );
@@ -576,17 +576,17 @@ export class LevelGenerator {
     this.game = game;
 
     let mapGroup = 0;
-    if (this.game.levels.length > 0)
-      mapGroup = this.game.levels[this.game.levels.length - 1].mapGroup + 1;
+    if (this.game.rooms.length > 0)
+      mapGroup = this.game.rooms[this.game.rooms.length - 1].mapGroup + 1;
 
     let partitions;
     if (cave) partitions = generate_cave(20, 20);
     else partitions = generate_dungeon(35, 35);
     let levels = this.getLevels(partitions, depth, mapGroup);
 
-    let numExistingLevels = this.game.levels.length;
+    let numExistingLevels = this.game.rooms.length;
     if (!cave) this.currentFloorFirstLevelID = numExistingLevels;
-    this.game.levels = this.game.levels.concat(levels);
+    this.game.rooms = this.game.rooms.concat(levels);
 
     for (
       let i = numExistingLevels;
@@ -594,18 +594,18 @@ export class LevelGenerator {
       i++
     ) {
       let found = false;
-      if (this.game.levels[i].type === RoomType.ROPEHOLE) {
+      if (this.game.rooms[i].type === RoomType.ROPEHOLE) {
         for (
-          let x = this.game.levels[i].roomX;
-          x < this.game.levels[i].roomX + this.game.levels[i].width;
+          let x = this.game.rooms[i].roomX;
+          x < this.game.rooms[i].roomX + this.game.rooms[i].width;
           x++
         ) {
           for (
-            let y = this.game.levels[i].roomY;
-            y < this.game.levels[i].roomY + this.game.levels[i].height;
+            let y = this.game.rooms[i].roomY;
+            y < this.game.rooms[i].roomY + this.game.rooms[i].height;
             y++
           ) {
-            let tile = this.game.levels[i].levelArray[x][y];
+            let tile = this.game.rooms[i].roomArray[x][y];
             if (tile instanceof DownLadder && tile.isRope) {
               tile.generate();
               found = true;
@@ -624,19 +624,19 @@ export class LevelGenerator {
     this.generate(game, 0, false);
     for (let i = 0; i < numFloors; i++) {
       let found = false;
-      for (let j = this.game.levels.length - 1; j >= 0; j--) {
-        if (this.game.levels[j].type === RoomType.DOWNLADDER) {
+      for (let j = this.game.rooms.length - 1; j >= 0; j--) {
+        if (this.game.rooms[j].type === RoomType.DOWNLADDER) {
           for (
-            let x = this.game.levels[j].roomX;
-            x < this.game.levels[j].roomX + this.game.levels[j].width;
+            let x = this.game.rooms[j].roomX;
+            x < this.game.rooms[j].roomX + this.game.rooms[j].width;
             x++
           ) {
             for (
-              let y = this.game.levels[j].roomY;
-              y < this.game.levels[j].roomY + this.game.levels[j].height;
+              let y = this.game.rooms[j].roomY;
+              y < this.game.rooms[j].roomY + this.game.rooms[j].height;
               y++
             ) {
-              let tile = this.game.levels[j].levelArray[x][y];
+              let tile = this.game.rooms[j].roomArray[x][y];
               if (tile instanceof DownLadder) {
                 tile.generate();
                 found = true;

@@ -1,6 +1,6 @@
 import { Game } from "../game";
 import { Weapon } from "./weapon";
-import { Level } from "../level";
+import { Room } from "../room";
 import { Sound } from "../sound";
 import { SlashParticle } from "../particle/slashParticle";
 import { Crate } from "../enemy/crate";
@@ -8,7 +8,7 @@ import { Barrel } from "../enemy/barrel";
 import { GenericParticle } from "../particle/genericParticle";
 
 export class Slingshot extends Weapon {
-  constructor(level: Level, x: number, y: number) {
+  constructor(level: Room, x: number, y: number) {
     super(level, x, y);
 
     this.tileX = 26;
@@ -36,8 +36,8 @@ export class Slingshot extends Weapon {
       l++;
     }
     if (
-      !this.game.levels[this.wielder.levelID].tileInside(newX, newY) ||
-      this.game.levels[this.wielder.levelID].levelArray[newX][newY].isSolid()
+      !this.game.rooms[this.wielder.levelID].tileInside(newX, newY) ||
+      this.game.rooms[this.wielder.levelID].roomArray[newX][newY].isSolid()
     ) {
       //if current position is inside new position OR is solid
       return true;
@@ -45,11 +45,11 @@ export class Slingshot extends Weapon {
     let c = 1;
     for (let i = 0; i < 15; i++) {
       if (
-        !this.game.levels[this.wielder.levelID].tileInside(
+        !this.game.rooms[this.wielder.levelID].tileInside(
           nextX[c],
           nextY[c]
         ) ||
-        this.game.levels[this.wielder.levelID].levelArray[nextX[c]][
+        this.game.rooms[this.wielder.levelID].roomArray[nextX[c]][
           nextY[c]
         ].isSolid()
       ) {
@@ -64,7 +64,7 @@ export class Slingshot extends Weapon {
     let firstPushable = range + 1;
     let firstNonPushable = range + 2;
     let firstNonDestroyable = range + 2;
-    for (let e of this.game.levels[this.wielder.levelID].enemies) {
+    for (let e of this.game.rooms[this.wielder.levelID].enemies) {
       //loop through enemies in this weapons wielders level
       if (e.pushable) {
         let p = 2;
@@ -139,14 +139,14 @@ export class Slingshot extends Weapon {
       //hits all candidates in enemyHitCandidates
 
       if (
-        this.wielder.game.levels[this.wielder.levelID] ===
+        this.wielder.game.rooms[this.wielder.levelID] ===
         this.wielder.game.level
       )
         Sound.hit();
       this.wielder.drawX = 0.5 * (this.wielder.x - newX);
       this.wielder.drawY = 0.5 * (this.wielder.y - newY);
       GenericParticle.shotgun(
-        this.game.levels[this.wielder.levelID],
+        this.game.rooms[this.wielder.levelID],
         this.wielder.x + 0.5,
         this.wielder.y,
         targetX + 0.5,
@@ -154,7 +154,7 @@ export class Slingshot extends Weapon {
         "black"
       );
       GenericParticle.shotgun(
-        this.game.levels[this.wielder.levelID],
+        this.game.rooms[this.wielder.levelID],
         this.wielder.x + 0.5,
         this.wielder.y,
         targetX + 0.5,
@@ -162,7 +162,7 @@ export class Slingshot extends Weapon {
         "#ffddff"
       );
       let gp = new GenericParticle(
-        this.game.levels[this.wielder.levelID],
+        this.game.rooms[this.wielder.levelID],
         0.5 * (newX + this.wielder.x) + 0.5,
         0.5 * (newY + this.wielder.y),
         0,
@@ -174,11 +174,11 @@ export class Slingshot extends Weapon {
         0
       );
       gp.expirationTimer = 10;
-      this.game.levels[this.wielder.levelID].particles.push(gp);
+      this.game.rooms[this.wielder.levelID].particles.push(gp);
       //this.game.levels[this.wielder.levelID].particles.push(new SlashParticle(newX, newY));
       //this.game.levels[this.wielder.levelID].particles.push(new SlashParticle(newX2, newY2));
       //this.game.levels[this.wielder.levelID].particles.push(new SlashParticle(newX3, newY3));
-      this.game.levels[this.wielder.levelID].tick(this.wielder);
+      this.game.rooms[this.wielder.levelID].tick(this.wielder);
       if (this.wielder === this.game.players[this.game.localPlayerID])
         this.game.shakeScreen(10 * this.wielder.drawX, 10 * this.wielder.drawY);
 

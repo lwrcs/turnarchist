@@ -34,7 +34,7 @@ import { Key } from "./item/key";
 import { Lantern } from "./item/lantern";
 import { RedGem } from "./item/redgem";
 import { Torch } from "./item/torch";
-import { Level } from "./level";
+import { Room } from "./room";
 import { LevelGenerator } from "./levelGenerator";
 import { Player, PlayerDirection } from "./player";
 import { EnemySpawnAnimation } from "./projectile/enemySpawnAnimation";
@@ -88,13 +88,13 @@ export class ProjectileState {
     this.dead = projectile.dead;
     if (projectile instanceof EnemySpawnAnimation) {
       this.type = ProjectileType.SPAWN;
-      this.levelID = game.levels.indexOf(projectile.level);
+      this.levelID = game.rooms.indexOf(projectile.level);
       this.enemySpawn = new EnemyState(projectile.enemy, game);
     }
     if (projectile instanceof WizardFireball) {
       this.type = ProjectileType.WIZARD;
       this.wizardState = projectile.state;
-      this.levelID = game.levels.indexOf(projectile.parent.level);
+      this.levelID = game.rooms.indexOf(projectile.parent.level);
       this.wizardParentID = projectile.parent.level.enemies.indexOf(projectile.parent);
     }
   }
@@ -102,14 +102,14 @@ export class ProjectileState {
 
 let loadProjectile = (ps: ProjectileState, game: Game): Projectile => {
   if (ps.type === ProjectileType.SPAWN) {
-    let level = game.levels[ps.levelID];
+    let level = game.rooms[ps.levelID];
     let enemy = loadEnemy(ps.enemySpawn, game);
     let p = new EnemySpawnAnimation(level, enemy, ps.x, ps.y);
     p.dead = ps.dead;
     return p;
   }
   if (ps.type === ProjectileType.WIZARD) {
-    let wizard = (game.levels[ps.levelID].enemies[ps.wizardParentID] as WizardEnemy);
+    let wizard = (game.rooms[ps.levelID].enemies[ps.wizardParentID] as WizardEnemy);
     let p = new WizardFireball(wizard, ps.x, ps.y);
     p.state = ps.wizardState;
     return p;
@@ -176,7 +176,7 @@ export class EnemyState {
   wizardState: WizardState;
 
   constructor(enemy: Enemy, game: Game) {
-    this.levelID = game.levels.indexOf(enemy.level);
+    this.levelID = game.rooms.indexOf(enemy.level);
     this.x = enemy.x;
     this.y = enemy.y;
     this.health = enemy.health;
@@ -289,7 +289,7 @@ export class EnemyState {
 
 let loadEnemy = (es: EnemyState, game: Game): Enemy => {
   let enemy;
-  let level = game.levels[es.levelID];
+  let level = game.rooms[es.levelID];
   if (es.type === EnemyType.BARREL) enemy = new Barrel(level, game, es.x, es.y);
   if (es.type === EnemyType.BIGSKULL) {
     enemy = new BigSkullEnemy(level, game, es.x, es.y, Random.rand);
@@ -404,8 +404,8 @@ export class LevelState {
   projectiles: Array<ProjectileState>;
   hitwarnings: Array<HitWarningState>;
 
-  constructor(level: Level, game: Game) {
-    this.levelID = game.levels.indexOf(level);
+  constructor(level: Room, game: Game) {
+    this.levelID = game.rooms.indexOf(level);
     this.entered = level.entered;
     this.enemies = [];
     this.items = [];
@@ -418,7 +418,7 @@ export class LevelState {
   }
 }
 
-let loadLevel = (level: Level, levelState: LevelState, game: Game) => {
+let loadLevel = (level: Room, levelState: LevelState, game: Game) => {
   level.entered = levelState.entered;
   level.enemies = [];
   level.items = [];
@@ -485,7 +485,7 @@ export class ItemState {
     this.equipped = item instanceof Equippable && item.equipped;
     this.x = item.x;
     this.y = item.y;
-    this.levelID = game.levels.indexOf(item.level);
+    this.levelID = game.rooms.indexOf(item.level);
     if (this.levelID === -1) this.levelID = 0;
     this.stackCount = item.stackCount;
     this.pickedUp = item.pickedUp;
@@ -493,7 +493,7 @@ export class ItemState {
 }
 
 let loadItem = (i: ItemState, game: Game, player?: Player): Item => {
-  let level = game.levels[i.levelID];
+  let level = game.rooms[i.levelID];
   let item;
   if (i.type === ItemType.ARMOR) item = new Armor(level, i.x, i.y);
   if (i.type === ItemType.BLUEGEM) item = new BlueGem(level, i.x, i.y);
@@ -595,7 +595,7 @@ export class PlayerState {
     this.hasOpenVendingMachine = false;
     if (player.openVendingMachine) {
       this.hasOpenVendingMachine = true;
-      this.openVendingMachineLevelID = game.levels.indexOf(player.openVendingMachine.level);
+      this.openVendingMachineLevelID = game.rooms.indexOf(player.openVendingMachine.level);
       this.openVendingMachineID = player.openVendingMachine.level.enemies.indexOf(player.openVendingMachine);
     }
     this.sightRadius = player.sightRadius
@@ -609,8 +609,8 @@ let loadPlayer = (id: string, p: PlayerState, game: Game): Player => {
   player.levelID = p.levelID;
   if (player.levelID < game.levelgen.currentFloorFirstLevelID) { // catch up to the current level
     player.levelID = game.levelgen.currentFloorFirstLevelID;
-    player.x = game.levels[player.levelID].roomX + Math.floor(game.levels[player.levelID].width / 2);
-    player.y = game.levels[player.levelID].roomY + Math.floor(game.levels[player.levelID].height / 2);
+    player.x = game.rooms[player.levelID].roomX + Math.floor(game.rooms[player.levelID].width / 2);
+    player.y = game.rooms[player.levelID].roomY + Math.floor(game.rooms[player.levelID].height / 2);
   }
   player.direction = p.direction;
   player.health = p.health;
@@ -618,7 +618,7 @@ let loadPlayer = (id: string, p: PlayerState, game: Game): Player => {
   player.lastTickHealth = p.lastTickHealth;
   loadInventory(player.inventory, p.inventory, game);
   if (p.hasOpenVendingMachine) {
-    player.openVendingMachine = (game.levels[p.openVendingMachineLevelID].enemies[p.openVendingMachineID] as VendingMachine);
+    player.openVendingMachine = (game.rooms[p.openVendingMachineLevelID].enemies[p.openVendingMachineID] as VendingMachine);
   }
   player.sightRadius = p.sightRadius;
 
@@ -653,7 +653,7 @@ export const createGameState = (game: Game): GameState => {
   for (const i in game.offlinePlayers) {
     gs.offlinePlayers[i] = new PlayerState(game.offlinePlayers[i], game);
   }
-  for (let level of game.levels) {
+  for (let level of game.rooms) {
     level.catchUp();
     gs.levels.push(new LevelState(level, game));
   }
@@ -661,7 +661,7 @@ export const createGameState = (game: Game): GameState => {
 }
 
 export const loadGameState = (game: Game, activeUsernames: Array<string>, gameState: GameState) => {
-  game.levels = Array<Level>();
+  game.rooms = Array<Room>();
   game.levelgen = new LevelGenerator();
   game.levelgen.setSeed(gameState.seed);
   if ((gameState as any).init_state) gameState.depth = 0;
@@ -685,27 +685,27 @@ export const loadGameState = (game: Game, activeUsernames: Array<string>, gameSt
       }
     }
     for (let levelState of gameState.levels) {
-      for (let i = 0; i < game.levels.length; i++) {
+      for (let i = 0; i < game.rooms.length; i++) {
         if (i === levelState.levelID) {
-          loadLevel(game.levels[i], levelState, game);
+          loadLevel(game.rooms[i], levelState, game);
         }
       }
     }
     if (!(game.localPlayerID in gameState.players) && !(game.localPlayerID in gameState.offlinePlayers)) { // we're not in the gamestate, create a new player
       game.players[game.localPlayerID] = new Player(game, 0, 0, true);
       game.players[game.localPlayerID].levelID = game.levelgen.currentFloorFirstLevelID;
-      game.players[game.localPlayerID].x = game.levels[game.levelgen.currentFloorFirstLevelID].roomX + Math.floor(game.levels[game.levelgen.currentFloorFirstLevelID].width / 2);
-      game.players[game.localPlayerID].y = game.levels[game.levelgen.currentFloorFirstLevelID].roomY + Math.floor(game.levels[game.levelgen.currentFloorFirstLevelID].height / 2);
-      game.level = game.levels[game.levelgen.currentFloorFirstLevelID];
+      game.players[game.localPlayerID].x = game.rooms[game.levelgen.currentFloorFirstLevelID].roomX + Math.floor(game.rooms[game.levelgen.currentFloorFirstLevelID].width / 2);
+      game.players[game.localPlayerID].y = game.rooms[game.levelgen.currentFloorFirstLevelID].roomY + Math.floor(game.rooms[game.levelgen.currentFloorFirstLevelID].height / 2);
+      game.level = game.rooms[game.levelgen.currentFloorFirstLevelID];
       game.level.enterLevel(game.players[game.localPlayerID]);
     }
     else {
-      game.level = game.levels[game.players[game.localPlayerID].levelID];
+      game.level = game.rooms[game.players[game.localPlayerID].levelID];
     }
   }
   else { // stub game state, start a new world
     game.players[game.localPlayerID] = new Player(game, 0, 0, true);
-    game.level = game.levels[game.players[game.localPlayerID].levelID];
+    game.level = game.rooms[game.players[game.localPlayerID].levelID];
     game.level.enterLevel(game.players[game.localPlayerID]);
   }
   Random.setState(gameState.randomState);

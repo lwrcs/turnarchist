@@ -1,5 +1,5 @@
 import { Game } from "../game";
-import { Level } from "../level";
+import { Room } from "../room";
 import { Bones } from "../tile/bones";
 import { LevelConstants } from "../levelConstants";
 import { Player } from "../player";
@@ -27,7 +27,7 @@ export enum EntityType {
 }
 
 export class Enemy extends Drawable {
-  level: Level;
+  level: Room;
   x: number;
   y: number;
   w: number;
@@ -58,7 +58,7 @@ export class Enemy extends Drawable {
   lastY: number;
   entityType: EntityType;
 
-  constructor(level: Level, game: Game, x: number, y: number) {
+  constructor(level: Room, game: Game, x: number, y: number) {
     super();
 
     this.level = level;
@@ -113,8 +113,8 @@ export class Enemy extends Drawable {
     let tiles = [];
     for (let xx = 0; xx < this.w; xx++) {
       for (let yy = 0; yy < this.h; yy++) {
-        if (!this.level.levelArray[x + xx][y + yy].isSolid()) {
-          tiles.push(this.level.levelArray[x + xx][y + yy]);
+        if (!this.level.roomArray[x + xx][y + yy].isSolid()) {
+          tiles.push(this.level.roomArray[x + xx][y + yy]);
         } else {
           return;
         }
@@ -156,10 +156,10 @@ export class Enemy extends Drawable {
   dropLoot = () => {
     if (this.drop) {
       this.drop.level = this.level;
-      if (!this.level.levelArray[this.x][this.y].isSolid()) {
+      if (!this.level.roomArray[this.x][this.y].isSolid()) {
         this.drop.x = this.x;
         this.drop.y = this.y;
-      } else if (this.level.levelArray[this.x][this.y].isSolid()) {
+      } else if (this.level.roomArray[this.x][this.y].isSolid()) {
         this.drop.x = this.lastX;
         this.drop.y = this.lastY;
       }
@@ -169,10 +169,10 @@ export class Enemy extends Drawable {
   };
 
   kill = () => {
-    if (this.level.levelArray[this.x][this.y] instanceof Floor) {
+    if (this.level.roomArray[this.x][this.y] instanceof Floor) {
       let b = new Bones(this.level, this.x, this.y);
-      b.skin = this.level.levelArray[this.x][this.y].skin;
-      this.level.levelArray[this.x][this.y] = b;
+      b.skin = this.level.roomArray[this.x][this.y].skin;
+      this.level.roomArray[this.x][this.y] = b;
     }
 
     this.killNoBones();
@@ -205,7 +205,7 @@ export class Enemy extends Drawable {
     let closestDistance = maxDistance;
     let closestPlayer = null;
     for (const i in this.game.players) {
-      if (this.game.levels[this.game.players[i].levelID] === this.level) {
+      if (this.game.rooms[this.game.players[i].levelID] === this.level) {
         let distance = this.playerDistance(this.game.players[i]);
         if (distance < closestDistance) {
           closestDistance = distance;

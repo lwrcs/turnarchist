@@ -3,7 +3,7 @@ import { Game } from "../game";
 import { WizardEnemy } from "../enemy/wizardEnemy";
 import { Player } from "../player";
 import { Enemy } from "../enemy/enemy";
-import { Level } from "../level";
+import { Room } from "../room";
 import { GenericParticle } from "../particle/genericParticle";
 import { Sound } from "../sound";
 import { HitWarning } from "../hitWarning";
@@ -11,11 +11,11 @@ import { HitWarning } from "../hitWarning";
 export class EnemySpawnAnimation extends Projectile {
   readonly ANIM_COUNT = 3;
 
-  level: Level;
+  level: Room;
   enemy: Enemy;
   frame: number;
 
-  constructor(level: Level, enemy: Enemy, x: number, y: number) {
+  constructor(level: Room, enemy: Enemy, x: number, y: number) {
     super(x, y);
     this.level = level;
     this.enemy = enemy;

@@ -1,7 +1,7 @@
 import { Item } from "../item/item";
 import { Game } from "../game";
 import { Key } from "../item/key";
-import { Level } from "../level";
+import { Room } from "../room";
 import { Heart } from "../item/heart";
 import { Armor } from "../item/armor";
 import { Enemy } from "./enemy";
@@ -16,7 +16,7 @@ import { GameState } from "../gameState";
 import { EntityType } from "./enemy";
 
 export class Chest extends Enemy {
-  constructor(level: Level, game: Game, x: number, y: number, rand: () => number) {
+  constructor(level: Room, game: Game, x: number, y: number, rand: () => number) {
     super(level, game, x, y);
 
     this.tileX = 4;

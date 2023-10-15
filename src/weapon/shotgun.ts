@@ -1,6 +1,6 @@
 import { Game } from "../game";
 import { Weapon } from "./weapon";
-import { Level } from "../level";
+import { Room } from "../room";
 import { Sound } from "../sound";
 import { SlashParticle } from "../particle/slashParticle";
 import { Crate } from "../enemy/crate";
@@ -8,7 +8,7 @@ import { Barrel } from "../enemy/barrel";
 import { GenericParticle } from "../particle/genericParticle";
 
 export class Shotgun extends Weapon {
-  constructor(level: Level, x: number, y: number) {
+  constructor(level: Room, x: number, y: number) {
     super(level, x, y);
 
     this.tileX = 26;
@@ -22,21 +22,21 @@ export class Shotgun extends Weapon {
     let newY3 = 3 * newY - 2 * this.wielder.y;
     let range = 3;
     if (
-      !this.game.levels[this.wielder.levelID].tileInside(newX, newY) ||
-      this.game.levels[this.wielder.levelID].levelArray[newX][newY].isSolid()
+      !this.game.rooms[this.wielder.levelID].tileInside(newX, newY) ||
+      this.game.rooms[this.wielder.levelID].roomArray[newX][newY].isSolid()
     )
       //if current position is inside new position OR is solid
       return true;
     else if (
-      !this.game.levels[this.wielder.levelID].tileInside(newX2, newY2) ||
-      this.game.levels[this.wielder.levelID].levelArray[newX2][newY2].isSolid()
+      !this.game.rooms[this.wielder.levelID].tileInside(newX2, newY2) ||
+      this.game.rooms[this.wielder.levelID].roomArray[newX2][newY2].isSolid()
     )
       //if current position is inside new position 2 OR is solid
       //set range as one
       range = 1;
     else if (
-      !this.game.levels[this.wielder.levelID].tileInside(newX3, newY3) ||
-      this.game.levels[this.wielder.levelID].levelArray[newX3][newY3].isSolid()
+      !this.game.rooms[this.wielder.levelID].tileInside(newX3, newY3) ||
+      this.game.rooms[this.wielder.levelID].roomArray[newX3][newY3].isSolid()
     )
       //if current position is inside new position 3 OR is solid
       //set range as two
@@ -46,7 +46,7 @@ export class Shotgun extends Weapon {
     let firstPushable = 4;
     let firstNonPushable = 5;
     let firstNonDestroyable = 5;
-    for (let e of this.game.levels[this.wielder.levelID].enemies) {
+    for (let e of this.game.rooms[this.wielder.levelID].enemies) {
       //loop through enemies in this weapons wielders level
       if (e.pushable) {
         //case for pushables
@@ -118,14 +118,14 @@ export class Shotgun extends Weapon {
       //hits all candidates in enemyHitCandidates
 
       if (
-        this.wielder.game.levels[this.wielder.levelID] ===
+        this.wielder.game.rooms[this.wielder.levelID] ===
         this.wielder.game.level
       )
         Sound.hit();
       this.wielder.drawX = 0.5 * (this.wielder.x - newX);
       this.wielder.drawY = 0.5 * (this.wielder.y - newY);
       GenericParticle.shotgun(
-        this.game.levels[this.wielder.levelID],
+        this.game.rooms[this.wielder.levelID],
         this.wielder.x + 0.5,
         this.wielder.y,
         targetX + 0.5,
@@ -133,7 +133,7 @@ export class Shotgun extends Weapon {
         "black"
       );
       GenericParticle.shotgun(
-        this.game.levels[this.wielder.levelID],
+        this.game.rooms[this.wielder.levelID],
         this.wielder.x + 0.5,
         this.wielder.y,
         targetX + 0.5,
@@ -141,7 +141,7 @@ export class Shotgun extends Weapon {
         "#ffddff"
       );
       let gp = new GenericParticle(
-        this.game.levels[this.wielder.levelID],
+        this.game.rooms[this.wielder.levelID],
         0.5 * (newX + this.wielder.x) + 0.5,
         0.5 * (newY + this.wielder.y),
         0,
@@ -153,11 +153,11 @@ export class Shotgun extends Weapon {
         0
       );
       gp.expirationTimer = 10;
-      this.game.levels[this.wielder.levelID].particles.push(gp);
+      this.game.rooms[this.wielder.levelID].particles.push(gp);
       //this.game.levels[this.wielder.levelID].particles.push(new SlashParticle(newX, newY));
       //this.game.levels[this.wielder.levelID].particles.push(new SlashParticle(newX2, newY2));
       //this.game.levels[this.wielder.levelID].particles.push(new SlashParticle(newX3, newY3));
-      this.game.levels[this.wielder.levelID].tick(this.wielder);
+      this.game.rooms[this.wielder.levelID].tick(this.wielder);
       if (this.wielder === this.game.players[this.game.localPlayerID])
         this.game.shakeScreen(10 * this.wielder.drawX, 10 * this.wielder.drawY);
 

@@ -1,6 +1,6 @@
 import { Enemy, EnemyDirection } from "./enemy";
 import { Game } from "../game";
-import { Level } from "../level";
+import { Room } from "../room";
 import { HitWarning } from "../hitWarning";
 import { Coin } from "../item/coin";
 import { Door } from "../tile/door";
@@ -30,7 +30,7 @@ export class ChargeEnemy extends Enemy {
   trailFrame: number;
   drop: Item;
 
-  constructor(level: Level, game: Game, x: number, y: number, drop?: Item) {
+  constructor(level: Room, game: Game, x: number, y: number, drop?: Item) {
     super(level, game, x, y);
     this.ticks = 0;
     this.frame = 0;
@@ -61,7 +61,7 @@ export class ChargeEnemy extends Enemy {
     for (const e of this.level.enemies) {
       if (e !== this && x === e.x && y === e.y) return false;
     }
-    let t = this.level.levelArray[x][y];
+    let t = this.level.roomArray[x][y];
     return !(t.isSolid() || t instanceof Door);
   };
 

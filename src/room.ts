@@ -94,10 +94,10 @@ export enum TurnState {
   computerTurn,
 }
 
-export class Level {
+export class Room {
   x: number;
   y: number;
-  levelArray: Tile[][];
+  roomArray: Tile[][];
   softVis: number[][]; // this is the one we use for drawing (includes smoothing)
   vis: number[][]; // visibility ranges from 0 (fully visible) to 1 (fully black)
   enemies: Array<Enemy>;
@@ -164,9 +164,9 @@ export class Level {
             this.height - 2
           )
         ) {
-          this.levelArray[x][y] = new Floor(this, x, y);
+          this.roomArray[x][y] = new Floor(this, x, y);
         } else {
-          this.levelArray[x][y] = new Wall(this, x, y);
+          this.roomArray[x][y] = new Wall(this, x, y);
           this.walls.push;
         }
       }
@@ -197,7 +197,7 @@ export class Level {
       for (let xx = x; xx < x + blockW; xx++) {
         for (let yy = y; yy < y + blockH; yy++) {
           let w = new Wall(this, xx, yy);
-          this.levelArray[xx][yy] = w;
+          this.roomArray[xx][yy] = w;
           this.walls.push(w);
         }
       }
@@ -211,10 +211,10 @@ export class Level {
     for (let xx = this.roomX + 1; xx < this.roomX + this.width - 2; xx++) {
       for (let yy = this.roomY; yy < this.roomY + this.height - 1; yy++) {
         if (
-          this.levelArray[xx][yy] instanceof Wall &&
-          !(this.levelArray[xx][yy + 1] instanceof Wall)
+          this.roomArray[xx][yy] instanceof Wall &&
+          !(this.roomArray[xx][yy + 1] instanceof Wall)
         ) {
-          walls.push(this.levelArray[xx][yy]);
+          walls.push(this.roomArray[xx][yy]);
         }
       }
     }
@@ -224,7 +224,7 @@ export class Level {
       t = walls.splice(Game.rand(0, walls.length - 1, rand), 1)[0];
       x = t.x;
       y = t.y;
-      this.levelArray[x][y] = new WallTorch(this, x, y);
+      this.roomArray[x][y] = new WallTorch(this, x, y);
     }
   }
 
@@ -244,10 +244,10 @@ export class Level {
       for (let yy = y - 1; yy < y + h + 1; yy++) {
         // add a floor border
         if (xx === x - 1 || xx === x + w || yy === y - 1 || yy === y + h) {
-          if (!(this.levelArray[xx][yy] instanceof SpawnFloor))
-            this.levelArray[xx][yy] = new Floor(this, xx, yy);
+          if (!(this.roomArray[xx][yy] instanceof SpawnFloor))
+            this.roomArray[xx][yy] = new Floor(this, xx, yy);
         } else
-          this.levelArray[xx][yy] = new Chasm(
+          this.roomArray[xx][yy] = new Chasm(
             this,
             xx,
             yy,
@@ -282,7 +282,7 @@ export class Level {
       let x = t.x;
       let y = t.y;
 
-      this.levelArray[x][y] = new SpikeTrap(this, x, y);
+      this.roomArray[x][y] = new SpikeTrap(this, x, y);
     }
   }
 
@@ -295,7 +295,7 @@ export class Level {
       let x = t.x;
       let y = t.y;
 
-      this.levelArray[x][y] = new Spike(this, x, y);
+      this.roomArray[x][y] = new Spike(this, x, y);
     }
   }
 
@@ -371,7 +371,7 @@ export class Level {
               // clear out some space
               for (let xx = 0; xx < 2; xx++) {
                 for (let yy = 0; yy < 2; yy++) {
-                  this.levelArray[x + xx][y + yy] = new Floor(
+                  this.roomArray[x + xx][y + yy] = new Floor(
                     this,
                     x + xx,
                     y + yy
@@ -606,7 +606,7 @@ export class Level {
     let centerY = Math.floor(this.roomY + this.height / 2);
     for (let x = centerX - 1; x <= centerX + 1; x++) {
       for (let y = centerY - 1; y <= centerY + 1; y++) {
-        this.levelArray[x][y] = new FountainTile(
+        this.roomArray[x][y] = new FountainTile(
           this,
           x,
           y,
@@ -619,8 +619,8 @@ export class Level {
     this.addPlants(Game.randTable([0, 0, 1, 2], rand), rand);
   };
   placeCoffin = (x: number, y: number) => {
-    this.levelArray[x][y] = new CoffinTile(this, x, y, 0);
-    this.levelArray[x][y + 1] = new CoffinTile(this, x, y + 1, 1);
+    this.roomArray[x][y] = new CoffinTile(this, x, y, 0);
+    this.roomArray[x][y + 1] = new CoffinTile(this, x, y + 1, 1);
   };
   populateCoffin = (rand: () => number) => {
     this.addTorches(Game.randTable([0, 0, 0, 1, 1, 2, 2, 3, 4], rand), rand);
@@ -645,9 +645,9 @@ export class Level {
       let y = this.roomY + Math.floor(this.height / 2);
       if (x === this.roomX + Math.floor(this.width / 2)) {
         d = new InsideLevelDoor(this, this.game, x, y + 1);
-        this.levelArray[x][y + 1] = d;
+        this.roomArray[x][y + 1] = d;
       } else {
-        this.levelArray[x][y] = new Wall(this, x, y);
+        this.roomArray[x][y] = new Wall(this, x, y);
       }
     }
 
@@ -658,7 +658,7 @@ export class Level {
       rand
     );
 
-    this.levelArray[x][y] = new Button(this, x, y, d);
+    this.roomArray[x][y] = new Button(this, x, y, d);
 
     let crateTiles = this.getEmptyTiles().filter(
       (t) =>
@@ -685,7 +685,7 @@ export class Level {
   populateSpikeCorridor = (rand: () => number) => {
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY + 1; y < this.roomY + this.height - 1; y++) {
-        this.levelArray[x][y] = new SpikeTrap(
+        this.roomArray[x][y] = new SpikeTrap(
           this,
           x,
           y,
@@ -731,7 +731,7 @@ export class Level {
 
     let cX = Math.floor(this.roomX + this.width / 2);
     let cY = Math.floor(this.roomY + this.height / 2);
-    this.levelArray[cX][cY] = new DownLadder(this, this.game, cX, cY);
+    this.roomArray[cX][cY] = new DownLadder(this, this.game, cX, cY);
   };
   populateRopeHole = (rand: () => number) => {
     this.addTorches(Game.randTable([0, 0, 0, 1, 1, 2, 2], rand), rand);
@@ -740,14 +740,14 @@ export class Level {
     let cY = Math.floor(this.roomY + this.height / 2);
     let d = new DownLadder(this, this.game, cX, cY);
     d.isRope = true;
-    this.levelArray[cX][cY] = d;
+    this.roomArray[cX][cY] = d;
   };
   populateRopeCave = (rand: () => number) => {
     let cX = Math.floor(this.roomX + this.width / 2);
     let cY = Math.floor(this.roomY + this.height / 2);
     let upLadder = new UpLadder(this, this.game, cX, cY);
     upLadder.isRope = true;
-    this.levelArray[cX][cY] = upLadder;
+    this.roomArray[cX][cY] = upLadder;
   };
   populateShop = (rand: () => number) => {
     this.addTorches(2, rand);
@@ -911,9 +911,9 @@ export class Level {
     this.lightSources = Array<LightSource>();
     this.walls = Array<Wall>();
 
-    this.levelArray = [];
+    this.roomArray = [];
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
-      this.levelArray[x] = [];
+      this.roomArray[x] = [];
     }
     this.vis = [];
     this.softVis = [];
@@ -939,31 +939,31 @@ export class Level {
     if (this.type === RoomType.KEYROOM) t = DoorType.LOCKEDDOOR;
     if (x === this.roomX) {
       d = new Door(this, this.game, x, y, 1, t); //last argument, enum 0 is for locked
-      this.levelArray[x + 1][y] = new SpawnFloor(this, x + 1, y);
+      this.roomArray[x + 1][y] = new SpawnFloor(this, x + 1, y);
     } else if (x === this.roomX + this.width - 1) {
-      d = new Door(this, this.game, x, y, 3, DoorType.DOOR);
-      this.levelArray[x - 1][y] = new SpawnFloor(this, x - 1, y);
+      d = new Door(this, this.game, x, y, 3, t);
+      this.roomArray[x - 1][y] = new SpawnFloor(this, x - 1, y);
     } else if (y === this.roomY) {
-      d = new Door(this, this.game, x, y, 0, DoorType.DOOR);
-      this.levelArray[x][y + 1] = new SpawnFloor(this, x, y + 1);
+      d = new Door(this, this.game, x, y, 0, t);
+      this.roomArray[x][y + 1] = new SpawnFloor(this, x, y + 1);
     } else if (y === this.roomY + this.height - 1) {
-      d = new Door(this, this.game, x, y, 2, DoorType.DOOR);
-      this.levelArray[x][y - 1] = new SpawnFloor(this, x, y - 1);
+      d = new Door(this, this.game, x, y, 2, t);
+      this.roomArray[x][y - 1] = new SpawnFloor(this, x, y - 1);
     }
 
     this.doors.push(d);
-    if (this.levelArray[d.x] == undefined) {
+    if (this.roomArray[d.x] == undefined) {
       console.log(
         "UNDEFINED at " +
           d.x +
           " levelArray.length was " +
-          this.levelArray.length
+          this.roomArray.length
       );
       console.log("location " + location);
       console.log(this.roomX, this.roomY);
       console.log(this.width, this.height);
     }
-    this.levelArray[d.x][d.y] = d;
+    this.roomArray[d.x][d.y] = d;
 
     return d;
   };
@@ -1020,11 +1020,11 @@ export class Level {
     for (let x = this.roomX + 1; x < this.roomX + this.width - 1; x++) {
       for (let y = this.roomY + 1; y < this.roomY + this.height - 1; y++) {
         if (
-          !this.levelArray[x][y].isSolid() &&
-          !(this.levelArray[x][y] instanceof SpikeTrap) &&
-          !(this.levelArray[x][y] instanceof SpawnFloor)
+          !this.roomArray[x][y].isSolid() &&
+          !(this.roomArray[x][y] instanceof SpikeTrap) &&
+          !(this.roomArray[x][y] instanceof SpawnFloor)
         ) {
-          returnVal.push(this.levelArray[x][y]);
+          returnVal.push(this.roomArray[x][y]);
         }
       }
     }
@@ -1035,7 +1035,7 @@ export class Level {
   };
 
   getTile = (x: number, y: number) => {
-    if (this.levelArray[x]) return this.levelArray[x][y];
+    if (this.roomArray[x]) return this.roomArray[x][y];
     else return undefined;
   };
 
@@ -1064,7 +1064,7 @@ export class Level {
       }
     }
     for (const p in this.game.players) {
-      if (this === this.game.levels[this.game.players[p].levelID]) {
+      if (this === this.game.rooms[this.game.players[p].levelID]) {
         for (let i = 0; i < 360; i += LevelConstants.LIGHTING_ANGLE_STEP) {
           this.castShadowsAtAngle(
             i,
@@ -1118,7 +1118,7 @@ export class Level {
       )
         return; // we're outside the level
 
-      let tile = this.levelArray[Math.floor(px)][Math.floor(py)];
+      let tile = this.roomArray[Math.floor(px)][Math.floor(py)];
       if (tile.isOpaque()) {
         if (i > 0) onOpaqueSection = true;
       } else if (onOpaqueSection) {
@@ -1187,7 +1187,7 @@ export class Level {
 
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
-        this.levelArray[x][y].tick();
+        this.roomArray[x][y].tick();
       }
     }
 
@@ -1228,18 +1228,18 @@ export class Level {
 
     for (const h of this.hitwarnings) {
       if (
-        !this.levelArray[h.x] ||
-        !this.levelArray[h.x][h.y] ||
-        this.levelArray[h.x][h.y].isSolid()
+        !this.roomArray[h.x] ||
+        !this.roomArray[h.x][h.y] ||
+        this.roomArray[h.x][h.y].isSolid()
       )
         h.dead = true;
     }
 
     for (const p of this.projectiles) {
-      if (this.levelArray[p.x][p.y].isSolid()) p.dead = true;
+      if (this.roomArray[p.x][p.y].isSolid()) p.dead = true;
       for (const i in this.game.players) {
         if (
-          this.game.levels[this.game.players[i].levelID] === this &&
+          this.game.rooms[this.game.players[i].levelID] === this &&
           p.x === this.game.players[i].x &&
           p.y === this.game.players[i].y
         ) {
@@ -1255,7 +1255,7 @@ export class Level {
 
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
-        this.levelArray[x][y].tickEnd();
+        this.roomArray[x][y].tickEnd();
       }
     }
     this.enemies = this.enemies.filter((e) => !e.dead); // enemies may be killed by spiketrap
@@ -1277,8 +1277,8 @@ export class Level {
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
         if (this.softVis[x][y] < 1)
-          this.levelArray[x][y].drawUnderPlayer(delta);
-        tiles.push(this.levelArray[x][y]);
+          this.roomArray[x][y].drawUnderPlayer(delta);
+        tiles.push(this.roomArray[x][y]);
       }
     }
 
@@ -1293,7 +1293,7 @@ export class Level {
       this.items
     );
     for (const i in this.game.players) {
-      if (this.game.levels[this.game.players[i].levelID] === this) {
+      if (this.game.rooms[this.game.players[i].levelID] === this) {
         if (
           !(
             skipLocalPlayer &&
@@ -1331,7 +1331,7 @@ export class Level {
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
         if (this.softVis[x][y] < 1)
-          this.levelArray[x][y].drawAbovePlayer(delta);
+          this.roomArray[x][y].drawAbovePlayer(delta);
       }
     }
 
@@ -1344,7 +1344,7 @@ export class Level {
     let bestSightRadius = 0;
     for (const p in this.game.players) {
       if (
-        this.game.levels[this.game.players[p].levelID] === this &&
+        this.game.rooms[this.game.players[p].levelID] === this &&
         this.game.players[p].sightRadius > bestSightRadius
       ) {
         bestSightRadius = this.game.players[p].sightRadius;
@@ -1387,7 +1387,7 @@ export class Level {
     // draw over dithered shading
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
-        this.levelArray[x][y].drawAboveShading(delta);
+        this.roomArray[x][y].drawAboveShading(delta);
       }
     }
   };

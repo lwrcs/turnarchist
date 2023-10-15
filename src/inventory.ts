@@ -13,7 +13,7 @@ import { GreenGem } from "./item/greengem";
 import { Coal } from "./item/coal";
 import { Weapon } from "./weapon/weapon";
 import { Dagger } from "./weapon/dagger";
-import { Level } from "./level";
+import { Room } from "./room";
 import { Usable } from "./item/usable";
 import { Shotgun } from "./weapon/shotgun";
 import { DualDagger } from "./weapon/dualdagger";
@@ -75,18 +75,18 @@ export class Inventory {
       this.addItem(i);
     };
 
-    a(new Dagger({ game: this.game } as Level, 0, 0));
-    a(new Coal({ game: this.game } as Level, 0, 0));
-    a(new Coal({ game: this.game } as Level, 0, 0));
-    a(new Coal({ game: this.game } as Level, 0, 0));
-    a(new Coal({ game: this.game } as Level, 0, 0));
-    a(new Coal({ game: this.game } as Level, 0, 0));
+    a(new Dagger({ game: this.game } as Room, 0, 0));
+    a(new Coal({ game: this.game } as Room, 0, 0));
+    a(new Coal({ game: this.game } as Room, 0, 0));
+    a(new Coal({ game: this.game } as Room, 0, 0));
+    a(new Coal({ game: this.game } as Room, 0, 0));
+    a(new Coal({ game: this.game } as Room, 0, 0));
 
-    a(new Lantern({ game: this.game } as Level, 0, 0));
-    a(new Candle({ game: this.game } as Level, 0, 0));
-    a(new Backpack({ game: this.game } as Level, 0, 0));
-    a(new Heart({ game: this.game } as Level, 0, 0));
-    a(new Armor({ game: this.game } as Level, 0, 0));
+    a(new Lantern({ game: this.game } as Room, 0, 0));
+    a(new Candle({ game: this.game } as Room, 0, 0));
+    a(new Backpack({ game: this.game } as Room, 0, 0));
+    a(new Heart({ game: this.game } as Room, 0, 0));
+    a(new Armor({ game: this.game } as Room, 0, 0));
   }
 
   clear = () => {
@@ -153,12 +153,12 @@ export class Inventory {
     if (i < this.items.length) {
       if (this.items[i] instanceof Equippable)
         (this.items[i] as Equippable).equipped = false;
-      this.items[i].level = this.game.levels[this.player.levelID];
+      this.items[i].level = this.game.rooms[this.player.levelID];
       this.items[i].x = this.player.x;
       this.items[i].y = this.player.y;
       this.items[i].pickedUp = false;
       this.equipAnimAmount[i] = 0;
-      this.game.levels[this.player.levelID].items.push(this.items[i]);
+      this.game.rooms[this.player.levelID].items.push(this.items[i]);
       this.items.splice(i, 1);
     }
   };

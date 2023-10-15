@@ -1,6 +1,6 @@
 import { Game } from "../game";
 import { Tile, SkinType } from "./tile";
-import { Level } from "../level";
+import { Room } from "../room";
 import { Player } from "../player";
 import { InsideLevelDoor } from "./insideLevelDoor";
 import { Enemy } from "../enemy/enemy";
@@ -13,7 +13,7 @@ export class Button extends Tile {
   turnsSincePressed: number;
   linkedDoor: InsideLevelDoor;
 
-  constructor(level: Level, x: number, y: number, linkedDoor: InsideLevelDoor) {
+  constructor(level: Room, x: number, y: number, linkedDoor: InsideLevelDoor) {
     super(level, x, y);
     this.w = 1;
     this.h = 1;

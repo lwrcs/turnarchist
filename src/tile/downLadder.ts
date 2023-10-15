@@ -1,16 +1,16 @@
 import { Player } from "../player";
 import { ChatMessage, Game } from "../game";
-import { Level } from "../level";
+import { Room } from "../room";
 import { GameConstants } from "../gameConstants";
 import { SkinType, Tile } from "./tile";
 import { UpLadder } from "./upLadder";
 
 export class DownLadder extends Tile {
-  linkedLevel: Level;
+  linkedLevel: Room;
   game: Game;
   isRope = false;
 
-  constructor(level: Level, game: Game, x: number, y: number) {
+  constructor(level: Room, game: Game, x: number, y: number) {
     super(level, x, y);
     this.game = game;
     this.linkedLevel = null;
@@ -26,7 +26,7 @@ export class DownLadder extends Tile {
       );
       for (let x = this.linkedLevel.roomX; x < this.linkedLevel.roomX + this.linkedLevel.width; x++) {
         for (let y = this.linkedLevel.roomY; y < this.linkedLevel.roomY + this.linkedLevel.height; y++) {
-          let tile = this.linkedLevel.levelArray[x][y];
+          let tile = this.linkedLevel.roomArray[x][y];
           if (tile instanceof UpLadder && tile.isRope)
             tile.linkedLevel = this.level;
         }
@@ -39,7 +39,7 @@ export class DownLadder extends Tile {
     else {
       let allPlayersHere = true;
       for (const i in this.game.players) {
-        if (this.game.levels[this.game.players[i].levelID] !== this.level || this.game.players[i].x !== this.x || this.game.players[i].y !== this.y) {
+        if (this.game.rooms[this.game.players[i].levelID] !== this.level || this.game.players[i].x !== this.x || this.game.players[i].y !== this.y) {
           allPlayersHere = false;
         }
       }

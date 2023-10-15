@@ -1,10 +1,10 @@
-import { Level } from "../level";
+import { Room } from "../room";
 import { Particle } from "./particle";
 import { Game } from "../game";
 import { GameConstants } from "../gameConstants";
 
 export class GenericParticle extends Particle {
-  level: Level;
+  level: Room;
   x: number;
   y: number;
   z: number;
@@ -21,7 +21,7 @@ export class GenericParticle extends Particle {
   expirationTimer: number;
 
   static shotgun = (
-    level: Level,
+    level: Room,
     cx: number,
     cy: number,
     tx: number,
@@ -50,7 +50,7 @@ export class GenericParticle extends Particle {
     }
   };
 
-  static spawnCluster = (level: Level, cx: number, cy: number, color: string) => {
+  static spawnCluster = (level: Room, cx: number, cy: number, color: string) => {
     for (let i = 0; i < 4; i++) {
       level.particles.push(
         new GenericParticle(
@@ -70,7 +70,7 @@ export class GenericParticle extends Particle {
   };
 
   constructor(
-    level: Level,
+    level: Room,
     x: number,
     y: number,
     z: number,

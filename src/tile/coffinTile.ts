@@ -1,11 +1,11 @@
-import { Level } from "../level";
+import { Room } from "../room";
 import { Game } from "../game";
 import { Tile } from "./tile";
 
 export class CoffinTile extends Tile {
   subTileY: number; // each coffin is 1x2, this is the sub-tile coordinate
 
-  constructor(level: Level, x: number, y: number, subTileY: number) {
+  constructor(level: Room, x: number, y: number, subTileY: number) {
     super(level, x, y);
     this.subTileY = subTileY;
   }

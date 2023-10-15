@@ -1,5 +1,5 @@
 import { GameConstants } from "./gameConstants";
-import { Level } from "./level";
+import { Room } from "./room";
 import { Player } from "./player";
 import { Door } from "./tile/door";
 import { Sound } from "./sound";
@@ -55,9 +55,9 @@ let fps;
 export class Game {
   static ctx: CanvasRenderingContext2D;
   static shade_canvases: Record<string, HTMLCanvasElement>;
-  prevLevel: Level; // for transitions
-  level: Level;
-  levels: Array<Level>;
+  prevLevel: Room; // for transitions
+  level: Room;
+  rooms: Array<Room>;
   levelgen: LevelGenerator;
   localPlayerID: string;
   players: Record<string, Player>;
@@ -196,14 +196,14 @@ export class Game {
             this.players[this.localPlayerID].levelID =
               this.levelgen.currentFloorFirstLevelID;
             this.players[this.localPlayerID].x =
-              this.levels[this.levelgen.currentFloorFirstLevelID].roomX +
+              this.rooms[this.levelgen.currentFloorFirstLevelID].roomX +
               Math.floor(
-                this.levels[this.levelgen.currentFloorFirstLevelID].width / 2
+                this.rooms[this.levelgen.currentFloorFirstLevelID].width / 2
               );
             this.players[this.localPlayerID].y =
-              this.levels[this.levelgen.currentFloorFirstLevelID].roomY +
+              this.rooms[this.levelgen.currentFloorFirstLevelID].roomY +
               Math.floor(
-                this.levels[this.levelgen.currentFloorFirstLevelID].height / 2
+                this.rooms[this.levelgen.currentFloorFirstLevelID].height / 2
               );
           }
           if (tickPlayerID in this.offlinePlayers) {
@@ -256,14 +256,14 @@ export class Game {
             this.players[connectedPlayerID].levelID =
               this.levelgen.currentFloorFirstLevelID;
             this.players[connectedPlayerID].x =
-              this.levels[this.levelgen.currentFloorFirstLevelID].roomX +
+              this.rooms[this.levelgen.currentFloorFirstLevelID].roomX +
               Math.floor(
-                this.levels[this.levelgen.currentFloorFirstLevelID].width / 2
+                this.rooms[this.levelgen.currentFloorFirstLevelID].width / 2
               );
             this.players[connectedPlayerID].y =
-              this.levels[this.levelgen.currentFloorFirstLevelID].roomY +
+              this.rooms[this.levelgen.currentFloorFirstLevelID].roomY +
               Math.floor(
-                this.levels[this.levelgen.currentFloorFirstLevelID].height / 2
+                this.rooms[this.levelgen.currentFloorFirstLevelID].height / 2
               );
           }
           delete this.offlinePlayers[connectedPlayerID];
@@ -273,14 +273,14 @@ export class Game {
           this.players[connectedPlayerID].levelID =
             this.levelgen.currentFloorFirstLevelID;
           this.players[connectedPlayerID].x =
-            this.levels[this.levelgen.currentFloorFirstLevelID].roomX +
+            this.rooms[this.levelgen.currentFloorFirstLevelID].roomX +
             Math.floor(
-              this.levels[this.levelgen.currentFloorFirstLevelID].width / 2
+              this.rooms[this.levelgen.currentFloorFirstLevelID].width / 2
             );
           this.players[connectedPlayerID].y =
-            this.levels[this.levelgen.currentFloorFirstLevelID].roomY +
+            this.rooms[this.levelgen.currentFloorFirstLevelID].roomY +
             Math.floor(
-              this.levels[this.levelgen.currentFloorFirstLevelID].height / 2
+              this.rooms[this.levelgen.currentFloorFirstLevelID].height / 2
             );
         }
       });
@@ -307,7 +307,7 @@ export class Game {
             this.menuState = MenuState.LOGIN_USERNAME;
             this.usernameTextBox.clear();
             this.passwordTextBox.clear();
-            this.levels = [];
+            this.rooms = [];
             this.players = {};
             this.offlinePlayers = {};
           } else if (this.chatTextBox.text === "/leave") {
@@ -315,7 +315,7 @@ export class Game {
             this.socket.emit("leave world");
             this.socket.emit("get available worlds");
             this.menuState = MenuState.SELECT_WORLD;
-            this.levels = [];
+            this.rooms = [];
             this.players = {};
             this.offlinePlayers = {};
           } else if (this.chatTextBox.text === "/save") {
@@ -519,8 +519,8 @@ export class Game {
     }
   };
 
-  changeLevel = (player: Player, newLevel: Level) => {
-    player.levelID = this.levels.indexOf(newLevel);
+  changeLevel = (player: Player, newLevel: Room) => {
+    player.levelID = this.rooms.indexOf(newLevel);
     if (this.players[this.localPlayerID] === player) {
       //this.level.exitLevel();
       this.level = newLevel;
@@ -529,7 +529,7 @@ export class Game {
   };
 
   changeLevelThroughLadder = (player: Player, ladder: any) => {
-    player.levelID = this.levels.indexOf(ladder.linkedLevel);
+    player.levelID = this.rooms.indexOf(ladder.linkedLevel);
 
     if (ladder instanceof DownLadder) ladder.generate();
 
@@ -543,7 +543,7 @@ export class Game {
   };
 
   changeLevelThroughDoor = (player: Player, door: any, side?: number) => {
-    player.levelID = this.levels.indexOf(door.level);
+    player.levelID = this.rooms.indexOf(door.level);
 
     if (this.players[this.localPlayerID] === player) {
       this.levelState = LevelState.TRANSITIONING;
@@ -630,7 +630,7 @@ export class Game {
 
       for (const i in this.players) {
         this.players[i].update();
-        this.levels[this.players[i].levelID].update();
+        this.rooms[this.players[i].levelID].update();
 
         if (this.players[i].dead) {
           for (const j in this.players) {

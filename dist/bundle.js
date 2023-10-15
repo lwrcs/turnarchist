@@ -4554,8 +4554,8 @@ var ArmoredzombieEnemy = /** @class */ (function (_super) {
                         }
                         for (var xx = _this.x - 1; xx <= _this.x + 1; xx++) {
                             for (var yy = _this.y - 1; yy <= _this.y + 1; yy++) {
-                                if (_this.level.levelArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
-                                    _this.level.levelArray[xx][yy].on) {
+                                if (_this.level.roomArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
+                                    _this.level.roomArray[xx][yy].on) {
                                     // don't walk on active spiketraps
                                     disablePositions.push({ x: xx, y: yy });
                                 }
@@ -4565,8 +4565,8 @@ var ArmoredzombieEnemy = /** @class */ (function (_super) {
                         for (var x = 0; x < _this.level.roomX + _this.level.width; x++) {
                             grid[x] = [];
                             for (var y = 0; y < _this.level.roomY + _this.level.height; y++) {
-                                if (_this.level.levelArray[x] && _this.level.levelArray[x][y])
-                                    grid[x][y] = _this.level.levelArray[x][y];
+                                if (_this.level.roomArray[x] && _this.level.roomArray[x][y])
+                                    grid[x][y] = _this.level.roomArray[x][y];
                                 else
                                     grid[x][y] = false;
                             }
@@ -4589,7 +4589,7 @@ var ArmoredzombieEnemy = /** @class */ (function (_super) {
                             if (oldDir == _this.direction) {
                                 var hitPlayer = false;
                                 for (var i in _this.game.players) {
-                                    if (_this.game.levels[_this.game.players[i].levelID] === _this.level && _this.game.players[i].x === moveX && _this.game.players[i].y === moveY && (oldDir == _this.direction)) {
+                                    if (_this.game.rooms[_this.game.players[i].levelID] === _this.level && _this.game.players[i].x === moveX && _this.game.players[i].y === moveY && (oldDir == _this.direction)) {
                                         _this.game.players[i].hurt(_this.hit(), "armored zombie");
                                         _this.drawX = 0.5 * (_this.x - _this.game.players[i].x);
                                         _this.drawY = 0.5 * (_this.y - _this.game.players[i].y);
@@ -4922,7 +4922,7 @@ var BigSkullEnemy = /** @class */ (function (_super) {
                                     return player.x >= moveX && player.x < moveX + _this.w && player.y >= moveY && player.y < moveY + _this.h;
                                 };
                                 for (var i in _this.game.players) {
-                                    if (_this.game.levels[_this.game.players[i].levelID] === _this.level && wouldHit(_this.game.players[i], moveX, moveY)) {
+                                    if (_this.game.rooms[_this.game.players[i].levelID] === _this.level && wouldHit(_this.game.players[i], moveX, moveY)) {
                                         _this.game.players[i].hurt(_this.hit(), "big skeleton");
                                         _this.drawX = 0.5 * (_this.x - _this.game.players[i].x);
                                         _this.drawY = 0.5 * (_this.y - _this.game.players[i].y);
@@ -5146,8 +5146,8 @@ var BishopEnemy = /** @class */ (function (_super) {
             var tiles = [];
             for (var xx = 0; xx < _this.w; xx++) {
                 for (var yy = 0; yy < _this.h; yy++) {
-                    if (!_this.level.levelArray[x + xx][y + yy].isSolid()) {
-                        tiles.push(_this.level.levelArray[x + xx][y + yy]);
+                    if (!_this.level.roomArray[x + xx][y + yy].isSolid()) {
+                        tiles.push(_this.level.roomArray[x + xx][y + yy]);
                     }
                     else {
                         return;
@@ -5225,8 +5225,8 @@ var BishopEnemy = /** @class */ (function (_super) {
                         }
                         for (var xx = _this.x - 1; xx <= _this.x + 1; xx++) {
                             for (var yy = _this.y - 1; yy <= _this.y + 1; yy++) {
-                                if (_this.level.levelArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
-                                    _this.level.levelArray[xx][yy].on) {
+                                if (_this.level.roomArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
+                                    _this.level.roomArray[xx][yy].on) {
                                     // don't walk on active spiketraps
                                     disablePositions.push({ x: xx, y: yy });
                                 }
@@ -5236,8 +5236,8 @@ var BishopEnemy = /** @class */ (function (_super) {
                         for (var x = 0; x < _this.level.roomX + _this.level.width; x++) {
                             grid[x] = [];
                             for (var y = 0; y < _this.level.roomY + _this.level.height; y++) {
-                                if (_this.level.levelArray[x] && _this.level.levelArray[x][y])
-                                    grid[x][y] = _this.level.levelArray[x][y];
+                                if (_this.level.roomArray[x] && _this.level.roomArray[x][y])
+                                    grid[x][y] = _this.level.roomArray[x][y];
                                 else
                                     grid[x][y] = false;
                             }
@@ -5255,7 +5255,7 @@ var BishopEnemy = /** @class */ (function (_super) {
                             var moveY = moves[0].pos.y;
                             var hitPlayer = false;
                             for (var i in _this.game.players) {
-                                if (_this.game.levels[_this.game.players[i].levelID] === _this.level &&
+                                if (_this.game.rooms[_this.game.players[i].levelID] === _this.level &&
                                     _this.game.players[i].x === moveX &&
                                     _this.game.players[i].y === moveY) {
                                     _this.game.players[i].hurt(_this.hit(), "bishop");
@@ -5406,7 +5406,7 @@ var ChargeEnemy = /** @class */ (function (_super) {
                 if (e !== _this && x === e.x && y === e.y)
                     return false;
             }
-            var t = _this.level.levelArray[x][y];
+            var t = _this.level.roomArray[x][y];
             return !(t.isSolid() || t instanceof door_1.Door);
         };
         _this.tick = function () {
@@ -5968,8 +5968,8 @@ var Enemy = /** @class */ (function (_super) {
             var tiles = [];
             for (var xx = 0; xx < _this.w; xx++) {
                 for (var yy = 0; yy < _this.h; yy++) {
-                    if (!_this.level.levelArray[x + xx][y + yy].isSolid()) {
-                        tiles.push(_this.level.levelArray[x + xx][y + yy]);
+                    if (!_this.level.roomArray[x + xx][y + yy].isSolid()) {
+                        tiles.push(_this.level.roomArray[x + xx][y + yy]);
                     }
                     else {
                         return;
@@ -6005,11 +6005,11 @@ var Enemy = /** @class */ (function (_super) {
         _this.dropLoot = function () {
             if (_this.drop) {
                 _this.drop.level = _this.level;
-                if (!_this.level.levelArray[_this.x][_this.y].isSolid()) {
+                if (!_this.level.roomArray[_this.x][_this.y].isSolid()) {
                     _this.drop.x = _this.x;
                     _this.drop.y = _this.y;
                 }
-                else if (_this.level.levelArray[_this.x][_this.y].isSolid()) {
+                else if (_this.level.roomArray[_this.x][_this.y].isSolid()) {
                     _this.drop.x = _this.lastX;
                     _this.drop.y = _this.lastY;
                 }
@@ -6018,10 +6018,10 @@ var Enemy = /** @class */ (function (_super) {
             }
         };
         _this.kill = function () {
-            if (_this.level.levelArray[_this.x][_this.y] instanceof floor_1.Floor) {
+            if (_this.level.roomArray[_this.x][_this.y] instanceof floor_1.Floor) {
                 var b = new bones_1.Bones(_this.level, _this.x, _this.y);
-                b.skin = _this.level.levelArray[_this.x][_this.y].skin;
-                _this.level.levelArray[_this.x][_this.y] = b;
+                b.skin = _this.level.roomArray[_this.x][_this.y].skin;
+                _this.level.roomArray[_this.x][_this.y] = b;
             }
             _this.killNoBones();
         };
@@ -6043,7 +6043,7 @@ var Enemy = /** @class */ (function (_super) {
             var closestDistance = maxDistance;
             var closestPlayer = null;
             for (var i in _this.game.players) {
-                if (_this.game.levels[_this.game.players[i].levelID] === _this.level) {
+                if (_this.game.rooms[_this.game.players[i].levelID] === _this.level) {
                     var distance = _this.playerDistance(_this.game.players[i]);
                     if (distance < closestDistance) {
                         closestDistance = distance;
@@ -6325,8 +6325,8 @@ var KnightEnemy = /** @class */ (function (_super) {
                             }
                             for (var xx = _this.x - 1; xx <= _this.x + 1; xx++) {
                                 for (var yy = _this.y - 1; yy <= _this.y + 1; yy++) {
-                                    if (_this.level.levelArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
-                                        _this.level.levelArray[xx][yy].on) {
+                                    if (_this.level.roomArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
+                                        _this.level.roomArray[xx][yy].on) {
                                         // don't walk on active spiketraps
                                         disablePositions.push({ x: xx, y: yy });
                                     }
@@ -6336,8 +6336,8 @@ var KnightEnemy = /** @class */ (function (_super) {
                             for (var x = 0; x < _this.level.roomX + _this.level.width; x++) {
                                 grid[x] = [];
                                 for (var y = 0; y < _this.level.roomY + _this.level.height; y++) {
-                                    if (_this.level.levelArray[x] && _this.level.levelArray[x][y])
-                                        grid[x][y] = _this.level.levelArray[x][y];
+                                    if (_this.level.roomArray[x] && _this.level.roomArray[x][y])
+                                        grid[x][y] = _this.level.roomArray[x][y];
                                     else
                                         grid[x][y] = false;
                                 }
@@ -6346,7 +6346,7 @@ var KnightEnemy = /** @class */ (function (_super) {
                             if (moves.length > 0) {
                                 var hitPlayer = false;
                                 for (var i in _this.game.players) {
-                                    if (_this.game.levels[_this.game.players[i].levelID] === _this.level &&
+                                    if (_this.game.rooms[_this.game.players[i].levelID] === _this.level &&
                                         _this.game.players[i].x === moves[0].pos.x &&
                                         _this.game.players[i].y === moves[0].pos.y) {
                                         _this.game.players[i].hurt(_this.hit(), "burrow knight");
@@ -6941,8 +6941,8 @@ var SkullEnemy = /** @class */ (function (_super) {
                             }
                             for (var xx = _this.x - 1; xx <= _this.x + 1; xx++) {
                                 for (var yy = _this.y - 1; yy <= _this.y + 1; yy++) {
-                                    if (_this.level.levelArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
-                                        _this.level.levelArray[xx][yy].on) {
+                                    if (_this.level.roomArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
+                                        _this.level.roomArray[xx][yy].on) {
                                         // don't walk on active spiketraps
                                         disablePositions.push({ x: xx, y: yy });
                                     }
@@ -6952,8 +6952,8 @@ var SkullEnemy = /** @class */ (function (_super) {
                             for (var x = 0; x < _this.level.roomX + _this.level.width; x++) {
                                 grid[x] = [];
                                 for (var y = 0; y < _this.level.roomY + _this.level.height; y++) {
-                                    if (_this.level.levelArray[x] && _this.level.levelArray[x][y])
-                                        grid[x][y] = _this.level.levelArray[x][y];
+                                    if (_this.level.roomArray[x] && _this.level.roomArray[x][y])
+                                        grid[x][y] = _this.level.roomArray[x][y];
                                     else
                                         grid[x][y] = false;
                                 }
@@ -6964,7 +6964,7 @@ var SkullEnemy = /** @class */ (function (_super) {
                                 var moveY = moves[0].pos.y;
                                 var hitPlayer = false;
                                 for (var i in _this.game.players) {
-                                    if (_this.game.levels[_this.game.players[i].levelID] === _this.level && _this.game.players[i].x === moveX && _this.game.players[i].y === moveY) {
+                                    if (_this.game.rooms[_this.game.players[i].levelID] === _this.level && _this.game.players[i].x === moveX && _this.game.players[i].y === moveY) {
                                         _this.game.players[i].hurt(_this.hit(), "skeleton");
                                         _this.drawX = 0.5 * (_this.x - _this.game.players[i].x);
                                         _this.drawY = 0.5 * (_this.y - _this.game.players[i].y);
@@ -7170,8 +7170,8 @@ var SlimeEnemy = /** @class */ (function (_super) {
                             }
                             for (var xx = _this.x - 1; xx <= _this.x + 1; xx++) {
                                 for (var yy = _this.y - 1; yy <= _this.y + 1; yy++) {
-                                    if (_this.level.levelArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
-                                        _this.level.levelArray[xx][yy].on) {
+                                    if (_this.level.roomArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
+                                        _this.level.roomArray[xx][yy].on) {
                                         // don't walk on active spiketraps
                                         disablePositions.push({ x: xx, y: yy });
                                     }
@@ -7181,8 +7181,8 @@ var SlimeEnemy = /** @class */ (function (_super) {
                             for (var x = 0; x < _this.level.roomX + _this.level.width; x++) {
                                 grid[x] = [];
                                 for (var y = 0; y < _this.level.roomY + _this.level.height; y++) {
-                                    if (_this.level.levelArray[x] && _this.level.levelArray[x][y])
-                                        grid[x][y] = _this.level.levelArray[x][y];
+                                    if (_this.level.roomArray[x] && _this.level.roomArray[x][y])
+                                        grid[x][y] = _this.level.roomArray[x][y];
                                     else
                                         grid[x][y] = false;
                                 }
@@ -7191,7 +7191,7 @@ var SlimeEnemy = /** @class */ (function (_super) {
                             if (moves.length > 0) {
                                 var hitPlayer = false;
                                 for (var i in _this.game.players) {
-                                    if (_this.game.levels[_this.game.players[i].levelID] === _this.level &&
+                                    if (_this.game.rooms[_this.game.players[i].levelID] === _this.level &&
                                         _this.game.players[i].x === moves[0].pos.x &&
                                         _this.game.players[i].y === moves[0].pos.y) {
                                         _this.game.players[i].hurt(_this.hit(), "crab");
@@ -7582,7 +7582,7 @@ var VendingMachine = /** @class */ (function (_super) {
                 do {
                     x_1 = game_1.Game.rand(_this.x - 1, _this.x + 1, _this.rand);
                     y_1 = game_1.Game.rand(_this.y - 1, _this.y + 1, _this.rand);
-                } while ((x_1 === _this.x && y_1 === _this.y) || _this.level.levelArray[x_1][y_1].isSolid() || _this.level.enemies.some(function (e) { return e.x === x_1 && e.y === y_1; }));
+                } while ((x_1 === _this.x && y_1 === _this.y) || _this.level.roomArray[x_1][y_1].isSolid() || _this.level.enemies.some(function (e) { return e.x === x_1 && e.y === y_1; }));
                 var newItem = new _this.item.constructor();
                 newItem = newItem.constructor(_this.level, x_1, y_1);
                 _this.level.items.push(newItem);
@@ -7797,27 +7797,27 @@ var WizardEnemy = /** @class */ (function (_super) {
                     _this.alertTicks = Math.max(0, _this.alertTicks - 1);
                     switch (_this.state) {
                         case WizardState.attack:
-                            if (_this.level.getTile(_this.x - 1, _this.y) && !_this.level.levelArray[_this.x - 1][_this.y].isSolid()) {
+                            if (_this.level.getTile(_this.x - 1, _this.y) && !_this.level.roomArray[_this.x - 1][_this.y].isSolid()) {
                                 _this.level.projectiles.push(new wizardFireball_1.WizardFireball(_this, _this.x - 1, _this.y));
-                                if (_this.level.getTile(_this.x - 2, _this.y) && !_this.level.levelArray[_this.x - 2][_this.y].isSolid()) {
+                                if (_this.level.getTile(_this.x - 2, _this.y) && !_this.level.roomArray[_this.x - 2][_this.y].isSolid()) {
                                     _this.level.projectiles.push(new wizardFireball_1.WizardFireball(_this, _this.x - 2, _this.y));
                                 }
                             }
-                            if (_this.level.getTile(_this.x + 1, _this.y) && !_this.level.levelArray[_this.x + 1][_this.y].isSolid()) {
+                            if (_this.level.getTile(_this.x + 1, _this.y) && !_this.level.roomArray[_this.x + 1][_this.y].isSolid()) {
                                 _this.level.projectiles.push(new wizardFireball_1.WizardFireball(_this, _this.x + 1, _this.y));
-                                if (_this.level.getTile(_this.x + 2, _this.y) && !_this.level.levelArray[_this.x + 2][_this.y].isSolid()) {
+                                if (_this.level.getTile(_this.x + 2, _this.y) && !_this.level.roomArray[_this.x + 2][_this.y].isSolid()) {
                                     _this.level.projectiles.push(new wizardFireball_1.WizardFireball(_this, _this.x + 2, _this.y));
                                 }
                             }
-                            if (_this.level.getTile(_this.x, _this.y - 1) && !_this.level.levelArray[_this.x][_this.y - 1].isSolid()) {
+                            if (_this.level.getTile(_this.x, _this.y - 1) && !_this.level.roomArray[_this.x][_this.y - 1].isSolid()) {
                                 _this.level.projectiles.push(new wizardFireball_1.WizardFireball(_this, _this.x, _this.y - 1));
-                                if (_this.level.getTile(_this.x, _this.y - 2) && !_this.level.levelArray[_this.x][_this.y - 2].isSolid()) {
+                                if (_this.level.getTile(_this.x, _this.y - 2) && !_this.level.roomArray[_this.x][_this.y - 2].isSolid()) {
                                     _this.level.projectiles.push(new wizardFireball_1.WizardFireball(_this, _this.x, _this.y - 2));
                                 }
                             }
-                            if (_this.level.getTile(_this.x, _this.y + 1) && !_this.level.levelArray[_this.x][_this.y + 1].isSolid()) {
+                            if (_this.level.getTile(_this.x, _this.y + 1) && !_this.level.roomArray[_this.x][_this.y + 1].isSolid()) {
                                 _this.level.projectiles.push(new wizardFireball_1.WizardFireball(_this, _this.x, _this.y + 1));
-                                if (_this.level.getTile(_this.x, _this.y + 2) && !_this.level.levelArray[_this.x][_this.y + 2].isSolid()) {
+                                if (_this.level.getTile(_this.x, _this.y + 2) && !_this.level.roomArray[_this.x][_this.y + 2].isSolid()) {
                                     _this.level.projectiles.push(new wizardFireball_1.WizardFireball(_this, _this.x, _this.y + 2));
                                 }
                             }
@@ -7892,10 +7892,10 @@ var WizardEnemy = /** @class */ (function (_super) {
             }
         };
         _this.kill = function () {
-            if (_this.level.levelArray[_this.x][_this.y] instanceof floor_1.Floor) {
+            if (_this.level.roomArray[_this.x][_this.y] instanceof floor_1.Floor) {
                 var b = new bones_1.Bones(_this.level, _this.x, _this.y);
-                b.skin = _this.level.levelArray[_this.x][_this.y].skin;
-                _this.level.levelArray[_this.x][_this.y] = b;
+                b.skin = _this.level.roomArray[_this.x][_this.y].skin;
+                _this.level.roomArray[_this.x][_this.y] = b;
             }
             _this.dead = true;
             _this.level.particles.push(new deathParticle_1.DeathParticle(_this.x, _this.y));
@@ -8027,8 +8027,8 @@ var ZombieEnemy = /** @class */ (function (_super) {
                         }
                         for (var xx = _this.x - 1; xx <= _this.x + 1; xx++) {
                             for (var yy = _this.y - 1; yy <= _this.y + 1; yy++) {
-                                if (_this.level.levelArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
-                                    _this.level.levelArray[xx][yy].on) {
+                                if (_this.level.roomArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
+                                    _this.level.roomArray[xx][yy].on) {
                                     // don't walk on active spiketraps
                                     disablePositions.push({ x: xx, y: yy });
                                 }
@@ -8038,8 +8038,8 @@ var ZombieEnemy = /** @class */ (function (_super) {
                         for (var x = 0; x < _this.level.roomX + _this.level.width; x++) {
                             grid[x] = [];
                             for (var y = 0; y < _this.level.roomY + _this.level.height; y++) {
-                                if (_this.level.levelArray[x] && _this.level.levelArray[x][y])
-                                    grid[x][y] = _this.level.levelArray[x][y];
+                                if (_this.level.roomArray[x] && _this.level.roomArray[x][y])
+                                    grid[x][y] = _this.level.roomArray[x][y];
                                 else
                                     grid[x][y] = false;
                             }
@@ -8062,7 +8062,7 @@ var ZombieEnemy = /** @class */ (function (_super) {
                             if (oldDir == _this.direction) {
                                 var hitPlayer = false;
                                 for (var i in _this.game.players) {
-                                    if (_this.game.levels[_this.game.players[i].levelID] === _this.level && _this.game.players[i].x === moveX && _this.game.players[i].y === moveY) {
+                                    if (_this.game.rooms[_this.game.players[i].levelID] === _this.level && _this.game.players[i].x === moveX && _this.game.players[i].y === moveY) {
                                         _this.game.players[i].hurt(_this.hit(), "zombie");
                                         _this.drawX = 0.5 * (_this.x - _this.game.players[i].x);
                                         _this.drawY = 0.5 * (_this.y - _this.game.players[i].y);
@@ -8313,7 +8313,7 @@ var Game = /** @class */ (function () {
             }
         };
         this.changeLevel = function (player, newLevel) {
-            player.levelID = _this.levels.indexOf(newLevel);
+            player.levelID = _this.rooms.indexOf(newLevel);
             if (_this.players[_this.localPlayerID] === player) {
                 //this.level.exitLevel();
                 _this.level = newLevel;
@@ -8321,7 +8321,7 @@ var Game = /** @class */ (function () {
             newLevel.enterLevel(player);
         };
         this.changeLevelThroughLadder = function (player, ladder) {
-            player.levelID = _this.levels.indexOf(ladder.linkedLevel);
+            player.levelID = _this.rooms.indexOf(ladder.linkedLevel);
             if (ladder instanceof downLadder_1.DownLadder)
                 ladder.generate();
             if (_this.players[_this.localPlayerID] === player) {
@@ -8334,7 +8334,7 @@ var Game = /** @class */ (function () {
             }
         };
         this.changeLevelThroughDoor = function (player, door, side) {
-            player.levelID = _this.levels.indexOf(door.level);
+            player.levelID = _this.rooms.indexOf(door.level);
             if (_this.players[_this.localPlayerID] === player) {
                 _this.levelState = LevelState.TRANSITIONING;
                 _this.transitionStartTime = Date.now();
@@ -8400,7 +8400,7 @@ var Game = /** @class */ (function () {
                 }
                 for (var i in _this.players) {
                     _this.players[i].update();
-                    _this.levels[_this.players[i].levelID].update();
+                    _this.rooms[_this.players[i].levelID].update();
                     if (_this.players[i].dead) {
                         for (var j in _this.players) {
                             _this.players[j].dead = true;
@@ -8781,11 +8781,11 @@ var Game = /** @class */ (function () {
                     _this.players[_this.localPlayerID].levelID =
                         _this.levelgen.currentFloorFirstLevelID;
                     _this.players[_this.localPlayerID].x =
-                        _this.levels[_this.levelgen.currentFloorFirstLevelID].roomX +
-                            Math.floor(_this.levels[_this.levelgen.currentFloorFirstLevelID].width / 2);
+                        _this.rooms[_this.levelgen.currentFloorFirstLevelID].roomX +
+                            Math.floor(_this.rooms[_this.levelgen.currentFloorFirstLevelID].width / 2);
                     _this.players[_this.localPlayerID].y =
-                        _this.levels[_this.levelgen.currentFloorFirstLevelID].roomY +
-                            Math.floor(_this.levels[_this.levelgen.currentFloorFirstLevelID].height / 2);
+                        _this.rooms[_this.levelgen.currentFloorFirstLevelID].roomY +
+                            Math.floor(_this.rooms[_this.levelgen.currentFloorFirstLevelID].height / 2);
                 }
                 if (tickPlayerID in _this.offlinePlayers) {
                     // old player rejoining
@@ -8833,11 +8833,11 @@ var Game = /** @class */ (function () {
                         _this.players[connectedPlayerID].levelID =
                             _this.levelgen.currentFloorFirstLevelID;
                         _this.players[connectedPlayerID].x =
-                            _this.levels[_this.levelgen.currentFloorFirstLevelID].roomX +
-                                Math.floor(_this.levels[_this.levelgen.currentFloorFirstLevelID].width / 2);
+                            _this.rooms[_this.levelgen.currentFloorFirstLevelID].roomX +
+                                Math.floor(_this.rooms[_this.levelgen.currentFloorFirstLevelID].width / 2);
                         _this.players[connectedPlayerID].y =
-                            _this.levels[_this.levelgen.currentFloorFirstLevelID].roomY +
-                                Math.floor(_this.levels[_this.levelgen.currentFloorFirstLevelID].height / 2);
+                            _this.rooms[_this.levelgen.currentFloorFirstLevelID].roomY +
+                                Math.floor(_this.rooms[_this.levelgen.currentFloorFirstLevelID].height / 2);
                     }
                     delete _this.offlinePlayers[connectedPlayerID];
                 }
@@ -8847,11 +8847,11 @@ var Game = /** @class */ (function () {
                     _this.players[connectedPlayerID].levelID =
                         _this.levelgen.currentFloorFirstLevelID;
                     _this.players[connectedPlayerID].x =
-                        _this.levels[_this.levelgen.currentFloorFirstLevelID].roomX +
-                            Math.floor(_this.levels[_this.levelgen.currentFloorFirstLevelID].width / 2);
+                        _this.rooms[_this.levelgen.currentFloorFirstLevelID].roomX +
+                            Math.floor(_this.rooms[_this.levelgen.currentFloorFirstLevelID].width / 2);
                     _this.players[connectedPlayerID].y =
-                        _this.levels[_this.levelgen.currentFloorFirstLevelID].roomY +
-                            Math.floor(_this.levels[_this.levelgen.currentFloorFirstLevelID].height / 2);
+                        _this.rooms[_this.levelgen.currentFloorFirstLevelID].roomY +
+                            Math.floor(_this.rooms[_this.levelgen.currentFloorFirstLevelID].height / 2);
                 }
             });
             _this.socket.on("player left", function (disconnectPlayerID) {
@@ -8875,7 +8875,7 @@ var Game = /** @class */ (function () {
                         _this.menuState = MenuState.LOGIN_USERNAME;
                         _this.usernameTextBox.clear();
                         _this.passwordTextBox.clear();
-                        _this.levels = [];
+                        _this.rooms = [];
                         _this.players = {};
                         _this.offlinePlayers = {};
                     }
@@ -8884,7 +8884,7 @@ var Game = /** @class */ (function () {
                         _this.socket.emit("leave world");
                         _this.socket.emit("get available worlds");
                         _this.menuState = MenuState.SELECT_WORLD;
-                        _this.levels = [];
+                        _this.rooms = [];
                         _this.players = {};
                         _this.offlinePlayers = {};
                     }
@@ -9284,13 +9284,13 @@ var ProjectileState = /** @class */ (function () {
         this.dead = projectile.dead;
         if (projectile instanceof enemySpawnAnimation_1.EnemySpawnAnimation) {
             this.type = ProjectileType.SPAWN;
-            this.levelID = game.levels.indexOf(projectile.level);
+            this.levelID = game.rooms.indexOf(projectile.level);
             this.enemySpawn = new EnemyState(projectile.enemy, game);
         }
         if (projectile instanceof wizardFireball_1.WizardFireball) {
             this.type = ProjectileType.WIZARD;
             this.wizardState = projectile.state;
-            this.levelID = game.levels.indexOf(projectile.parent.level);
+            this.levelID = game.rooms.indexOf(projectile.parent.level);
             this.wizardParentID = projectile.parent.level.enemies.indexOf(projectile.parent);
         }
     }
@@ -9299,14 +9299,14 @@ var ProjectileState = /** @class */ (function () {
 exports.ProjectileState = ProjectileState;
 var loadProjectile = function (ps, game) {
     if (ps.type === ProjectileType.SPAWN) {
-        var level = game.levels[ps.levelID];
+        var level = game.rooms[ps.levelID];
         var enemy = loadEnemy(ps.enemySpawn, game);
         var p = new enemySpawnAnimation_1.EnemySpawnAnimation(level, enemy, ps.x, ps.y);
         p.dead = ps.dead;
         return p;
     }
     if (ps.type === ProjectileType.WIZARD) {
-        var wizard = game.levels[ps.levelID].enemies[ps.wizardParentID];
+        var wizard = game.rooms[ps.levelID].enemies[ps.wizardParentID];
         var p = new wizardFireball_1.WizardFireball(wizard, ps.x, ps.y);
         p.state = ps.wizardState;
         return p;
@@ -9333,7 +9333,7 @@ var EnemyType;
 })(EnemyType = exports.EnemyType || (exports.EnemyType = {}));
 var EnemyState = /** @class */ (function () {
     function EnemyState(enemy, game) {
-        this.levelID = game.levels.indexOf(enemy.level);
+        this.levelID = game.rooms.indexOf(enemy.level);
         this.x = enemy.x;
         this.y = enemy.y;
         this.health = enemy.health;
@@ -9467,7 +9467,7 @@ var EnemyState = /** @class */ (function () {
 exports.EnemyState = EnemyState;
 var loadEnemy = function (es, game) {
     var enemy;
-    var level = game.levels[es.levelID];
+    var level = game.rooms[es.levelID];
     if (es.type === EnemyType.BARREL)
         enemy = new barrel_1.Barrel(level, game, es.x, es.y);
     if (es.type === EnemyType.BIGSKULL) {
@@ -9594,7 +9594,7 @@ var loadEnemy = function (es, game) {
 };
 var LevelState = /** @class */ (function () {
     function LevelState(level, game) {
-        this.levelID = game.levels.indexOf(level);
+        this.levelID = game.rooms.indexOf(level);
         this.entered = level.entered;
         this.enemies = [];
         this.items = [];
@@ -9708,7 +9708,7 @@ var ItemState = /** @class */ (function () {
         this.equipped = item instanceof equippable_1.Equippable && item.equipped;
         this.x = item.x;
         this.y = item.y;
-        this.levelID = game.levels.indexOf(item.level);
+        this.levelID = game.rooms.indexOf(item.level);
         if (this.levelID === -1)
             this.levelID = 0;
         this.stackCount = item.stackCount;
@@ -9718,7 +9718,7 @@ var ItemState = /** @class */ (function () {
 }());
 exports.ItemState = ItemState;
 var loadItem = function (i, game, player) {
-    var level = game.levels[i.levelID];
+    var level = game.rooms[i.levelID];
     var item;
     if (i.type === ItemType.ARMOR)
         item = new armor_1.Armor(level, i.x, i.y);
@@ -9825,7 +9825,7 @@ var PlayerState = /** @class */ (function () {
         this.hasOpenVendingMachine = false;
         if (player.openVendingMachine) {
             this.hasOpenVendingMachine = true;
-            this.openVendingMachineLevelID = game.levels.indexOf(player.openVendingMachine.level);
+            this.openVendingMachineLevelID = game.rooms.indexOf(player.openVendingMachine.level);
             this.openVendingMachineID = player.openVendingMachine.level.enemies.indexOf(player.openVendingMachine);
         }
         this.sightRadius = player.sightRadius;
@@ -9839,8 +9839,8 @@ var loadPlayer = function (id, p, game) {
     player.levelID = p.levelID;
     if (player.levelID < game.levelgen.currentFloorFirstLevelID) { // catch up to the current level
         player.levelID = game.levelgen.currentFloorFirstLevelID;
-        player.x = game.levels[player.levelID].roomX + Math.floor(game.levels[player.levelID].width / 2);
-        player.y = game.levels[player.levelID].roomY + Math.floor(game.levels[player.levelID].height / 2);
+        player.x = game.rooms[player.levelID].roomX + Math.floor(game.rooms[player.levelID].width / 2);
+        player.y = game.rooms[player.levelID].roomY + Math.floor(game.rooms[player.levelID].height / 2);
     }
     player.direction = p.direction;
     player.health = p.health;
@@ -9848,7 +9848,7 @@ var loadPlayer = function (id, p, game) {
     player.lastTickHealth = p.lastTickHealth;
     loadInventory(player.inventory, p.inventory, game);
     if (p.hasOpenVendingMachine) {
-        player.openVendingMachine = game.levels[p.openVendingMachineLevelID].enemies[p.openVendingMachineID];
+        player.openVendingMachine = game.rooms[p.openVendingMachineLevelID].enemies[p.openVendingMachineID];
     }
     player.sightRadius = p.sightRadius;
     return player;
@@ -9875,7 +9875,7 @@ var createGameState = function (game) {
     for (var i in game.offlinePlayers) {
         gs.offlinePlayers[i] = new PlayerState(game.offlinePlayers[i], game);
     }
-    for (var _i = 0, _a = game.levels; _i < _a.length; _i++) {
+    for (var _i = 0, _a = game.rooms; _i < _a.length; _i++) {
         var level = _a[_i];
         level.catchUp();
         gs.levels.push(new LevelState(level, game));
@@ -9884,7 +9884,7 @@ var createGameState = function (game) {
 };
 exports.createGameState = createGameState;
 var loadGameState = function (game, activeUsernames, gameState) {
-    game.levels = Array();
+    game.rooms = Array();
     game.levelgen = new levelGenerator_1.LevelGenerator();
     game.levelgen.setSeed(gameState.seed);
     if (gameState.init_state)
@@ -9911,27 +9911,27 @@ var loadGameState = function (game, activeUsernames, gameState) {
         }
         for (var _i = 0, _a = gameState.levels; _i < _a.length; _i++) {
             var levelState = _a[_i];
-            for (var i = 0; i < game.levels.length; i++) {
+            for (var i = 0; i < game.rooms.length; i++) {
                 if (i === levelState.levelID) {
-                    loadLevel(game.levels[i], levelState, game);
+                    loadLevel(game.rooms[i], levelState, game);
                 }
             }
         }
         if (!(game.localPlayerID in gameState.players) && !(game.localPlayerID in gameState.offlinePlayers)) { // we're not in the gamestate, create a new player
             game.players[game.localPlayerID] = new player_1.Player(game, 0, 0, true);
             game.players[game.localPlayerID].levelID = game.levelgen.currentFloorFirstLevelID;
-            game.players[game.localPlayerID].x = game.levels[game.levelgen.currentFloorFirstLevelID].roomX + Math.floor(game.levels[game.levelgen.currentFloorFirstLevelID].width / 2);
-            game.players[game.localPlayerID].y = game.levels[game.levelgen.currentFloorFirstLevelID].roomY + Math.floor(game.levels[game.levelgen.currentFloorFirstLevelID].height / 2);
-            game.level = game.levels[game.levelgen.currentFloorFirstLevelID];
+            game.players[game.localPlayerID].x = game.rooms[game.levelgen.currentFloorFirstLevelID].roomX + Math.floor(game.rooms[game.levelgen.currentFloorFirstLevelID].width / 2);
+            game.players[game.localPlayerID].y = game.rooms[game.levelgen.currentFloorFirstLevelID].roomY + Math.floor(game.rooms[game.levelgen.currentFloorFirstLevelID].height / 2);
+            game.level = game.rooms[game.levelgen.currentFloorFirstLevelID];
             game.level.enterLevel(game.players[game.localPlayerID]);
         }
         else {
-            game.level = game.levels[game.players[game.localPlayerID].levelID];
+            game.level = game.rooms[game.players[game.localPlayerID].levelID];
         }
     }
     else { // stub game state, start a new world
         game.players[game.localPlayerID] = new player_1.Player(game, 0, 0, true);
-        game.level = game.levels[game.players[game.localPlayerID].levelID];
+        game.level = game.rooms[game.players[game.localPlayerID].levelID];
         game.level.enterLevel(game.players[game.localPlayerID]);
     }
     random_1.Random.setState(gameState.randomState);
@@ -10423,12 +10423,12 @@ var Inventory = /** @class */ (function () {
             if (i < _this.items.length) {
                 if (_this.items[i] instanceof equippable_1.Equippable)
                     _this.items[i].equipped = false;
-                _this.items[i].level = _this.game.levels[_this.player.levelID];
+                _this.items[i].level = _this.game.rooms[_this.player.levelID];
                 _this.items[i].x = _this.player.x;
                 _this.items[i].y = _this.player.y;
                 _this.items[i].pickedUp = false;
                 _this.equipAnimAmount[i] = 0;
-                _this.game.levels[_this.player.levelID].items.push(_this.items[i]);
+                _this.game.rooms[_this.player.levelID].items.push(_this.items[i]);
                 _this.items.splice(i, 1);
             }
         };
@@ -10890,7 +10890,7 @@ var Backpack = /** @class */ (function (_super) {
     function Backpack(level, x, y) {
         var _this = _super.call(this, level, x, y) || this;
         _this.onUse = function (player) {
-            if (_this.level.game.levels[player.levelID] === _this.level.game.level)
+            if (_this.level.game.rooms[player.levelID] === _this.level.game.level)
                 sound_1.Sound.heal();
             player.inventory.expansion += 1;
             //this.level.items = this.level.items.filter((x) => x !== this); // removes itself from the level
@@ -11395,7 +11395,7 @@ var Heart = /** @class */ (function (_super) {
         var _this = _super.call(this, level, x, y) || this;
         _this.onUse = function (player) {
             player.health = Math.min(player.maxHealth, player.health + 1);
-            if (_this.level.game.levels[player.levelID] === _this.level.game.level)
+            if (_this.level.game.rooms[player.levelID] === _this.level.game.level)
                 sound_1.Sound.heal();
             player.inventory.removeItem(_this);
             //this.level.items = this.level.items.filter((x) => x !== this); // removes itself from the level
@@ -11444,20 +11444,28 @@ var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
 var sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
 var drawable_1 = __webpack_require__(/*! ../drawable */ "./src/drawable.ts");
+// Item class extends Drawable class and represents an item in the game
 var Item = /** @class */ (function (_super) {
     __extends(Item, _super);
+    // Constructor for the Item class
     function Item(level, x, y) {
         var _this = _super.call(this) || this;
+        // Empty tick function to be overridden by subclasses
         _this.tick = function () { };
-        _this.tickInInventory = function () { }; // different tick behavior for when we have the item in our inventory
+        // Empty tick function for inventory behavior to be overridden by subclasses
+        _this.tickInInventory = function () { };
+        // Function to get description of the item, to be overridden by subclasses
         _this.getDescription = function () {
             return "";
         };
+        // Function to play sound when item is picked up
         _this.pickupSound = function () {
             if (_this.level === _this.level.game.level)
                 sound_1.Sound.genericPickup();
         };
+        // Empty function to be called when item is dropped, to be overridden by subclasses
         _this.onDrop = function () { };
+        // Function to be called when item is picked up
         _this.onPickup = function (player) {
             if (!_this.pickedUp) {
                 _this.pickedUp = player.inventory.addItem(_this);
@@ -11465,9 +11473,11 @@ var Item = /** @class */ (function (_super) {
                     _this.pickupSound();
             }
         };
+        // Function to get the amount of shade at the item's location
         _this.shadeAmount = function () {
             return _this.level.softVis[_this.x][_this.y];
         };
+        // Function to draw the item
         _this.draw = function (delta) {
             if (!_this.pickedUp) {
                 _this.drawableY = _this.y;
@@ -11484,6 +11494,7 @@ var Item = /** @class */ (function (_super) {
                     _this.h * (_this.scaleFactor * -0.5 + 0.5), _this.w * _this.scaleFactor, _this.h * _this.scaleFactor, _this.level.shadeColor, _this.shadeAmount());
             }
         };
+        // Function to draw the top layer of the item
         _this.drawTopLayer = function (delta) {
             if (_this.pickedUp) {
                 _this.y -= 0.125;
@@ -11496,6 +11507,7 @@ var Item = /** @class */ (function (_super) {
                 game_1.Game.ctx.globalAlpha = 1.0;
             }
         };
+        // Function to draw the item's icon
         _this.drawIcon = function (delta, x, y, opacity) {
             if (opacity === void 0) { opacity = 1; }
             if (gameConstants_1.GameConstants.ALPHA_ENABLED)
@@ -11508,6 +11520,7 @@ var Item = /** @class */ (function (_super) {
             var countY = 10;
             game_1.Game.fillTextOutline(countText, x * gameConstants_1.GameConstants.TILESIZE + countX, y * gameConstants_1.GameConstants.TILESIZE + countY, gameConstants_1.GameConstants.OUTLINE, "white");
         };
+        // Initialize properties
         _this.level = level;
         _this.x = x;
         _this.y = y;
@@ -11951,1117 +11964,6 @@ exports.Usable = Usable;
 
 /***/ }),
 
-/***/ "./src/level.ts":
-/*!**********************!*\
-  !*** ./src/level.ts ***!
-  \**********************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Level = exports.TurnState = exports.RoomType = void 0;
-var wall_1 = __webpack_require__(/*! ./tile/wall */ "./src/tile/wall.ts");
-var levelConstants_1 = __webpack_require__(/*! ./levelConstants */ "./src/levelConstants.ts");
-var floor_1 = __webpack_require__(/*! ./tile/floor */ "./src/tile/floor.ts");
-var game_1 = __webpack_require__(/*! ./game */ "./src/game.ts");
-var door_1 = __webpack_require__(/*! ./tile/door */ "./src/tile/door.ts");
-var tile_1 = __webpack_require__(/*! ./tile/tile */ "./src/tile/tile.ts");
-var knightEnemy_1 = __webpack_require__(/*! ./enemy/knightEnemy */ "./src/enemy/knightEnemy.ts");
-var enemy_1 = __webpack_require__(/*! ./enemy/enemy */ "./src/enemy/enemy.ts");
-var chest_1 = __webpack_require__(/*! ./enemy/chest */ "./src/enemy/chest.ts");
-var goldenKey_1 = __webpack_require__(/*! ./item/goldenKey */ "./src/item/goldenKey.ts");
-var spawnfloor_1 = __webpack_require__(/*! ./tile/spawnfloor */ "./src/tile/spawnfloor.ts");
-//import { GoldenDoor } from "./tile/goldenDoor";
-var spike_1 = __webpack_require__(/*! ./tile/spike */ "./src/tile/spike.ts");
-var gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/gameConstants.ts");
-var wizardEnemy_1 = __webpack_require__(/*! ./enemy/wizardEnemy */ "./src/enemy/wizardEnemy.ts");
-var skullEnemy_1 = __webpack_require__(/*! ./enemy/skullEnemy */ "./src/enemy/skullEnemy.ts");
-var barrel_1 = __webpack_require__(/*! ./enemy/barrel */ "./src/enemy/barrel.ts");
-var crate_1 = __webpack_require__(/*! ./enemy/crate */ "./src/enemy/crate.ts");
-var armor_1 = __webpack_require__(/*! ./item/armor */ "./src/item/armor.ts");
-var spiketrap_1 = __webpack_require__(/*! ./tile/spiketrap */ "./src/tile/spiketrap.ts");
-var fountainTile_1 = __webpack_require__(/*! ./tile/fountainTile */ "./src/tile/fountainTile.ts");
-var coffinTile_1 = __webpack_require__(/*! ./tile/coffinTile */ "./src/tile/coffinTile.ts");
-var pottedPlant_1 = __webpack_require__(/*! ./enemy/pottedPlant */ "./src/enemy/pottedPlant.ts");
-var insideLevelDoor_1 = __webpack_require__(/*! ./tile/insideLevelDoor */ "./src/tile/insideLevelDoor.ts");
-var button_1 = __webpack_require__(/*! ./tile/button */ "./src/tile/button.ts");
-var hitWarning_1 = __webpack_require__(/*! ./hitWarning */ "./src/hitWarning.ts");
-var upLadder_1 = __webpack_require__(/*! ./tile/upLadder */ "./src/tile/upLadder.ts");
-var downLadder_1 = __webpack_require__(/*! ./tile/downLadder */ "./src/tile/downLadder.ts");
-var coalResource_1 = __webpack_require__(/*! ./enemy/coalResource */ "./src/enemy/coalResource.ts");
-var goldResource_1 = __webpack_require__(/*! ./enemy/goldResource */ "./src/enemy/goldResource.ts");
-var emeraldResource_1 = __webpack_require__(/*! ./enemy/emeraldResource */ "./src/enemy/emeraldResource.ts");
-var chasm_1 = __webpack_require__(/*! ./tile/chasm */ "./src/tile/chasm.ts");
-var spawner_1 = __webpack_require__(/*! ./enemy/spawner */ "./src/enemy/spawner.ts");
-var vendingMachine_1 = __webpack_require__(/*! ./enemy/vendingMachine */ "./src/enemy/vendingMachine.ts");
-var wallTorch_1 = __webpack_require__(/*! ./tile/wallTorch */ "./src/tile/wallTorch.ts");
-var chargeEnemy_1 = __webpack_require__(/*! ./enemy/chargeEnemy */ "./src/enemy/chargeEnemy.ts");
-var shotgun_1 = __webpack_require__(/*! ./weapon/shotgun */ "./src/weapon/shotgun.ts");
-var heart_1 = __webpack_require__(/*! ./item/heart */ "./src/item/heart.ts");
-var spear_1 = __webpack_require__(/*! ./weapon/spear */ "./src/weapon/spear.ts");
-var player_1 = __webpack_require__(/*! ./player */ "./src/player.ts");
-var slimeEnemy_1 = __webpack_require__(/*! ./enemy/slimeEnemy */ "./src/enemy/slimeEnemy.ts");
-var zombieEnemy_1 = __webpack_require__(/*! ./enemy/zombieEnemy */ "./src/enemy/zombieEnemy.ts");
-var bigSkullEnemy_1 = __webpack_require__(/*! ./enemy/bigSkullEnemy */ "./src/enemy/bigSkullEnemy.ts");
-var random_1 = __webpack_require__(/*! ./random */ "./src/random.ts");
-var lantern_1 = __webpack_require__(/*! ./item/lantern */ "./src/item/lantern.ts");
-var dualdagger_1 = __webpack_require__(/*! ./weapon/dualdagger */ "./src/weapon/dualdagger.ts");
-var pot_1 = __webpack_require__(/*! ./enemy/pot */ "./src/enemy/pot.ts");
-var bishopEnemy_1 = __webpack_require__(/*! ./enemy/bishopEnemy */ "./src/enemy/bishopEnemy.ts");
-var rockResource_1 = __webpack_require__(/*! ./enemy/rockResource */ "./src/enemy/rockResource.ts");
-var mushrooms_1 = __webpack_require__(/*! ./enemy/mushrooms */ "./src/enemy/mushrooms.ts");
-var armoredzombieEnemy_1 = __webpack_require__(/*! ./enemy/armoredzombieEnemy */ "./src/enemy/armoredzombieEnemy.ts");
-var door_2 = __webpack_require__(/*! ./tile/door */ "./src/tile/door.ts");
-var actionTab_1 = __webpack_require__(/*! ./actionTab */ "./src/actionTab.ts");
-var tombStone_1 = __webpack_require__(/*! ./enemy/tombStone */ "./src/enemy/tombStone.ts");
-var RoomType;
-(function (RoomType) {
-    RoomType[RoomType["START"] = 0] = "START";
-    RoomType[RoomType["DUNGEON"] = 1] = "DUNGEON";
-    RoomType[RoomType["BOSS"] = 2] = "BOSS";
-    RoomType[RoomType["BIGDUNGEON"] = 3] = "BIGDUNGEON";
-    RoomType[RoomType["TREASURE"] = 4] = "TREASURE";
-    RoomType[RoomType["FOUNTAIN"] = 5] = "FOUNTAIN";
-    RoomType[RoomType["COFFIN"] = 6] = "COFFIN";
-    RoomType[RoomType["GRASS"] = 7] = "GRASS";
-    RoomType[RoomType["PUZZLE"] = 8] = "PUZZLE";
-    RoomType[RoomType["KEYROOM"] = 9] = "KEYROOM";
-    RoomType[RoomType["CHESSBOARD"] = 10] = "CHESSBOARD";
-    RoomType[RoomType["MAZE"] = 11] = "MAZE";
-    RoomType[RoomType["CORRIDOR"] = 12] = "CORRIDOR";
-    RoomType[RoomType["SPIKECORRIDOR"] = 13] = "SPIKECORRIDOR";
-    RoomType[RoomType["UPLADDER"] = 14] = "UPLADDER";
-    RoomType[RoomType["DOWNLADDER"] = 15] = "DOWNLADDER";
-    RoomType[RoomType["SHOP"] = 16] = "SHOP";
-    RoomType[RoomType["BIGCAVE"] = 17] = "BIGCAVE";
-    RoomType[RoomType["CAVE"] = 18] = "CAVE";
-    RoomType[RoomType["SPAWNER"] = 19] = "SPAWNER";
-    RoomType[RoomType["ROPEHOLE"] = 20] = "ROPEHOLE";
-    RoomType[RoomType["ROPECAVE"] = 21] = "ROPECAVE";
-})(RoomType = exports.RoomType || (exports.RoomType = {}));
-var TurnState;
-(function (TurnState) {
-    TurnState[TurnState["playerTurn"] = 0] = "playerTurn";
-    TurnState[TurnState["computerTurn"] = 1] = "computerTurn";
-})(TurnState = exports.TurnState || (exports.TurnState = {}));
-var Level = /** @class */ (function () {
-    function Level(game, x, y, w, h, type, depth, mapGroup, rand) {
-        if (rand === void 0) { rand = random_1.Random.rand; }
-        var _this = this;
-        this.shadeColor = "black";
-        this.tileInside = function (tileX, tileY) {
-            return _this.pointInside(tileX, tileY, _this.roomX, _this.roomY, _this.width, _this.height);
-        };
-        this.populateEmpty = function (rand) {
-            _this.addTorches(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 2, 3, 4], rand), rand);
-        };
-        this.populateDungeon = function (rand) {
-            var factor = game_1.Game.rand(1, 36, rand);
-            if (factor < 30)
-                _this.addWallBlocks(rand);
-            if (factor < 26)
-                _this.addFingers(rand);
-            if (factor % 4 === 0)
-                _this.addChasms(rand);
-            _this.addTorches(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 2, 3, 4], rand), rand);
-            if (factor > 15)
-                _this.addSpikeTraps(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 5], rand), rand);
-            var numEmptyTiles = _this.getEmptyTiles().length;
-            var numTotalObstacles = Math.floor(numEmptyTiles * 0.35 * rand());
-            var numPlants = Math.ceil(numTotalObstacles * rand());
-            var numObstacles = numTotalObstacles - numPlants;
-            _this.addPlants(numPlants, rand);
-            _this.addObstacles(numObstacles, rand);
-            var numEnemies = Math.ceil((numEmptyTiles - numTotalObstacles) *
-                Math.min(_this.depth * 0.1 + 0.1, 0.35) //this.depth * 0.01 is starting value
-            );
-            _this.addEnemies(numEnemies, rand);
-            if (factor <= 6)
-                _this.addVendingMachine(rand);
-        };
-        this.populateBoss = function (rand) {
-            _this.addTorches(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 2, 3, 4], rand), rand);
-            _this.addSpikeTraps(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 5], rand), rand);
-            var numEmptyTiles = _this.getEmptyTiles().length;
-            var numTotalObstacles = Math.floor(numEmptyTiles * 0.2);
-            var numPlants = Math.floor(numTotalObstacles * rand());
-            var numObstacles = numTotalObstacles - numPlants;
-            _this.addPlants(numPlants, rand);
-            _this.addObstacles(numObstacles, rand);
-            var numEnemies = Math.ceil((numEmptyTiles - numTotalObstacles) *
-                Math.min(_this.depth * 0.05 + 0.2, 0.5));
-            _this.addEnemies(numEnemies, rand);
-        };
-        this.populateBigDungeon = function (rand) {
-            if (game_1.Game.rand(1, 4, rand) === 1)
-                _this.addChasms(rand);
-            _this.addTorches(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 2, 3, 4], rand), rand);
-            if (game_1.Game.rand(1, 4, rand) === 1)
-                _this.addPlants(game_1.Game.randTable([0, 0, 0, 0, 0, 1, 1, 2, 2, 3, 4], rand), rand);
-            if (game_1.Game.rand(1, 3, rand) === 1)
-                _this.addSpikeTraps(game_1.Game.randTable([3, 5, 7, 8], rand), rand);
-            var numEmptyTiles = _this.getEmptyTiles().length;
-            var numEnemies = Math.ceil(numEmptyTiles *
-                (_this.depth * 0.5 + 0.5) *
-                game_1.Game.randTable([0.05, 0.05, 0.06, 0.07, 0.1], rand));
-            _this.addEnemies(numEnemies, rand);
-            if (numEnemies > 0)
-                _this.addObstacles(numEnemies / game_1.Game.rand(1, 2, rand), rand);
-            else
-                _this.addObstacles(game_1.Game.randTable([0, 0, 1, 1, 2, 3, 5], rand), rand);
-        };
-        this.populateSpawner = function (rand) {
-            _this.addTorches(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 2, 3, 4], rand), rand);
-            _this.enemies.push(new spawner_1.Spawner(_this, _this.game, Math.floor(_this.roomX + _this.width / 2), Math.floor(_this.roomY + _this.height / 2), rand));
-        };
-        this.populateKeyRoom = function (rand) {
-            _this.addTorches(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 2, 3, 4], rand), rand);
-            _this.items.push(new goldenKey_1.GoldenKey(_this, Math.floor(_this.roomX + _this.width / 2), Math.floor(_this.roomY + _this.height / 2)));
-        };
-        this.populateFountain = function (rand) {
-            _this.addTorches(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 2, 3, 4], rand), rand);
-            var centerX = Math.floor(_this.roomX + _this.width / 2);
-            var centerY = Math.floor(_this.roomY + _this.height / 2);
-            for (var x = centerX - 1; x <= centerX + 1; x++) {
-                for (var y = centerY - 1; y <= centerY + 1; y++) {
-                    _this.levelArray[x][y] = new fountainTile_1.FountainTile(_this, x, y, x - (centerX - 1), y - (centerY - 1));
-                }
-            }
-            _this.addPlants(game_1.Game.randTable([0, 0, 1, 2], rand), rand);
-        };
-        this.placeCoffin = function (x, y) {
-            _this.levelArray[x][y] = new coffinTile_1.CoffinTile(_this, x, y, 0);
-            _this.levelArray[x][y + 1] = new coffinTile_1.CoffinTile(_this, x, y + 1, 1);
-        };
-        this.populateCoffin = function (rand) {
-            _this.addTorches(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 2, 3, 4], rand), rand);
-            _this.placeCoffin(Math.floor(_this.roomX + _this.width / 2 - 2), Math.floor(_this.roomY + _this.height / 2));
-            _this.placeCoffin(Math.floor(_this.roomX + _this.width / 2), Math.floor(_this.roomY + _this.height / 2));
-            _this.placeCoffin(Math.floor(_this.roomX + _this.width / 2) + 2, Math.floor(_this.roomY + _this.height / 2));
-        };
-        this.populatePuzzle = function (rand) {
-            var d;
-            for (var x_1 = _this.roomX; x_1 < _this.roomX + _this.width; x_1++) {
-                var y_1 = _this.roomY + Math.floor(_this.height / 2);
-                if (x_1 === _this.roomX + Math.floor(_this.width / 2)) {
-                    d = new insideLevelDoor_1.InsideLevelDoor(_this, _this.game, x_1, y_1 + 1);
-                    _this.levelArray[x_1][y_1 + 1] = d;
-                }
-                else {
-                    _this.levelArray[x_1][y_1] = new wall_1.Wall(_this, x_1, y_1);
-                }
-            }
-            var x = game_1.Game.rand(_this.roomX, _this.roomX + _this.width - 1, rand);
-            var y = game_1.Game.rand(_this.roomY + Math.floor(_this.height / 2) + 3, _this.roomY + _this.height - 2, rand);
-            _this.levelArray[x][y] = new button_1.Button(_this, x, y, d);
-            var crateTiles = _this.getEmptyTiles().filter(function (t) {
-                return t.x >= _this.roomX + 1 &&
-                    t.x <= _this.roomX + _this.width - 2 &&
-                    t.y >= _this.roomY + Math.floor(_this.height / 2) + 3 &&
-                    t.y <= _this.roomY + _this.height - 2;
-            });
-            var numCrates = game_1.Game.randTable([1, 2, 2, 3, 4], rand);
-            for (var i = 0; i < numCrates; i++) {
-                var t = crateTiles.splice(game_1.Game.rand(0, crateTiles.length - 1, rand), 1)[0];
-                _this.enemies.push(new crate_1.Crate(_this, _this.game, t.x, t.y));
-            }
-            _this.addPlants(game_1.Game.randTable([0, 0, 0, 0, 0, 1, 1, 2, 2, 3, 4], rand), rand);
-        };
-        this.populateSpikeCorridor = function (rand) {
-            for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
-                for (var y = _this.roomY + 1; y < _this.roomY + _this.height - 1; y++) {
-                    _this.levelArray[x][y] = new spiketrap_1.SpikeTrap(_this, x, y, game_1.Game.rand(0, 3, rand));
-                }
-            }
-            _this.addTorches(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 2, 3, 4], rand), rand);
-        };
-        this.populateTreasure = function (rand) {
-            _this.addTorches(game_1.Game.randTable([0, 1, 1, 2, 2, 3, 4], rand), rand);
-            _this.addChests(game_1.Game.randTable([4, 4, 5, 5, 5, 6, 8], rand), rand);
-            _this.addPlants(game_1.Game.randTable([0, 1, 2, 4, 5, 6], rand), rand);
-        };
-        this.populateChessboard = function (rand) { };
-        this.populateCave = function (rand) {
-            var factor = game_1.Game.rand(1, 36, rand);
-            _this.addWallBlocks(rand);
-            if (factor > 15)
-                _this.addSpikeTraps(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 5], rand), rand);
-            var numEmptyTiles = _this.getEmptyTiles().length;
-            var numEnemies = Math.ceil(numEmptyTiles * game_1.Game.randTable([0.25, 0.3, 0.35], rand));
-            _this.addEnemies(numEnemies, rand);
-            _this.addResources((numEmptyTiles - numEnemies) * game_1.Game.randTable([0.5, 0.6, 0.7, 0.8], rand), rand);
-        };
-        this.populateUpLadder = function (rand) {
-            _this.addTorches(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 2], rand), rand);
-            var cX = Math.floor(_this.roomX + _this.width / 2);
-            var cY = Math.floor(_this.roomY + _this.height / 2);
-        };
-        this.populateDownLadder = function (rand) {
-            _this.addTorches(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 2], rand), rand);
-            var cX = Math.floor(_this.roomX + _this.width / 2);
-            var cY = Math.floor(_this.roomY + _this.height / 2);
-            _this.levelArray[cX][cY] = new downLadder_1.DownLadder(_this, _this.game, cX, cY);
-        };
-        this.populateRopeHole = function (rand) {
-            _this.addTorches(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 2], rand), rand);
-            var cX = Math.floor(_this.roomX + _this.width / 2);
-            var cY = Math.floor(_this.roomY + _this.height / 2);
-            var d = new downLadder_1.DownLadder(_this, _this.game, cX, cY);
-            d.isRope = true;
-            _this.levelArray[cX][cY] = d;
-        };
-        this.populateRopeCave = function (rand) {
-            var cX = Math.floor(_this.roomX + _this.width / 2);
-            var cY = Math.floor(_this.roomY + _this.height / 2);
-            var upLadder = new upLadder_1.UpLadder(_this, _this.game, cX, cY);
-            upLadder.isRope = true;
-            _this.levelArray[cX][cY] = upLadder;
-        };
-        this.populateShop = function (rand) {
-            _this.addTorches(2, rand);
-            var cX = Math.floor(_this.roomX + _this.width / 2);
-            var cY = Math.floor(_this.roomY + _this.height / 2);
-            _this.enemies.push(new vendingMachine_1.VendingMachine(_this, _this.game, cX - 2, cY - 1, new shotgun_1.Shotgun(_this, 0, 0), rand));
-            _this.enemies.push(new vendingMachine_1.VendingMachine(_this, _this.game, cX + 2, cY - 1, new heart_1.Heart(_this, 0, 0), rand));
-            _this.enemies.push(new vendingMachine_1.VendingMachine(_this, _this.game, cX - 2, cY + 2, new armor_1.Armor(_this, 0, 0), rand));
-            _this.enemies.push(new vendingMachine_1.VendingMachine(_this, _this.game, cX + 2, cY + 2, new spear_1.Spear(_this, 0, 0), rand));
-        };
-        this.populate = function (rand) {
-            _this.name = "";
-            switch (_this.type) {
-                case RoomType.START:
-                    _this.populateEmpty(rand);
-                    _this.name = "FLOOR " + -_this.depth;
-                    break;
-                case RoomType.BOSS:
-                    _this.populateBoss(rand);
-                    _this.name = "BOSS";
-                    break;
-                case RoomType.DUNGEON:
-                    _this.populateDungeon(rand);
-                    break;
-                case RoomType.BIGDUNGEON:
-                    _this.populateBigDungeon(rand);
-                    break;
-                case RoomType.FOUNTAIN:
-                    _this.populateFountain(rand);
-                    break;
-                case RoomType.COFFIN:
-                    _this.populateCoffin(rand);
-                    break;
-                case RoomType.PUZZLE:
-                    _this.populatePuzzle(rand);
-                    break;
-                case RoomType.SPIKECORRIDOR:
-                    _this.populateSpikeCorridor(rand);
-                    break;
-                case RoomType.TREASURE:
-                    _this.populateTreasure(rand);
-                    break;
-                case RoomType.CHESSBOARD: // TODO
-                    _this.populateChessboard(rand);
-                    break;
-                case RoomType.KEYROOM:
-                    _this.populateKeyRoom(rand);
-                    break;
-                case RoomType.GRASS:
-                    _this.populateDungeon(rand);
-                    break;
-                case RoomType.BIGCAVE:
-                    _this.populateCave(rand);
-                case RoomType.CAVE:
-                    _this.populateCave(rand);
-                    break;
-                case RoomType.UPLADDER:
-                    _this.populateUpLadder(rand);
-                    _this.name = "FLOOR " + -_this.depth;
-                    break;
-                case RoomType.DOWNLADDER:
-                    _this.populateDownLadder(rand);
-                    _this.name = "FLOOR " + -_this.depth;
-                    break;
-                case RoomType.ROPEHOLE:
-                    _this.populateRopeHole(rand);
-                    break;
-                case RoomType.ROPECAVE:
-                    _this.populateRopeCave(rand);
-                    break;
-                case RoomType.SHOP:
-                    /* shop rates:
-                     * 10 coal for an gold coin
-                     * 1 gold for 10 coins
-                     * 1 emerald for 100 coins
-                     *
-                     * shop items:
-                     * 1 empty heart   4 ^ (maxHealth + maxHealth ^ 1.05 ^ maxHealth - 2.05) coins
-                     * fill all hearts  1 coin
-                     * better torch    5 ^ (torchLevel + 1.05 ^ torchLevel - 2.05) coins
-                     * weapons
-                     */
-                    _this.populateShop(rand);
-                    break;
-                case RoomType.SPAWNER:
-                    _this.populateSpawner(rand);
-                    break;
-            }
-            _this.message = _this.name;
-        };
-        this.addDoor = function (x, y) {
-            var d;
-            var t = door_1.DoorType.DOOR;
-            if (_this.type === RoomType.BOSS)
-                t = door_1.DoorType.GUARDEDDOOR;
-            if (_this.type === RoomType.KEYROOM)
-                t = door_1.DoorType.LOCKEDDOOR;
-            if (x === _this.roomX) {
-                d = new door_1.Door(_this, _this.game, x, y, 1, t); //last argument, enum 0 is for locked
-                _this.levelArray[x + 1][y] = new spawnfloor_1.SpawnFloor(_this, x + 1, y);
-            }
-            else if (x === _this.roomX + _this.width - 1) {
-                d = new door_1.Door(_this, _this.game, x, y, 3, door_1.DoorType.DOOR);
-                _this.levelArray[x - 1][y] = new spawnfloor_1.SpawnFloor(_this, x - 1, y);
-            }
-            else if (y === _this.roomY) {
-                d = new door_1.Door(_this, _this.game, x, y, 0, door_1.DoorType.DOOR);
-                _this.levelArray[x][y + 1] = new spawnfloor_1.SpawnFloor(_this, x, y + 1);
-            }
-            else if (y === _this.roomY + _this.height - 1) {
-                d = new door_1.Door(_this, _this.game, x, y, 2, door_1.DoorType.DOOR);
-                _this.levelArray[x][y - 1] = new spawnfloor_1.SpawnFloor(_this, x, y - 1);
-            }
-            _this.doors.push(d);
-            if (_this.levelArray[d.x] == undefined) {
-                console.log("UNDEFINED at " +
-                    d.x +
-                    " levelArray.length was " +
-                    _this.levelArray.length);
-                console.log("location " + location);
-                console.log(_this.roomX, _this.roomY);
-                console.log(_this.width, _this.height);
-            }
-            _this.levelArray[d.x][d.y] = d;
-            return d;
-        };
-        this.exitLevel = function () {
-            _this.particles.splice(0, _this.particles.length);
-        };
-        this.enterLevel = function (player) {
-            player.moveSnap(_this.roomX + Math.floor(_this.width / 2), _this.roomY + Math.floor(_this.height / 2));
-            _this.clearDeadStuff();
-            _this.updateLighting();
-            _this.entered = true;
-            _this.message = _this.name;
-        };
-        this.enterLevelThroughDoor = function (player, door, side) {
-            if (door instanceof door_1.Door && door.doorDir === door_2.DoorDir.North) {
-                //if top door
-                door.opened = true;
-                player.moveNoSmooth(door.x, door.y + 1);
-            }
-            else if (door instanceof door_1.Door && door.doorDir === door_2.DoorDir.South) {
-                //if bottom door
-                player.moveNoSmooth(door.x, door.y - 1);
-            }
-            else if (door instanceof door_1.Door &&
-                [door_2.DoorDir.East, door_2.DoorDir.West].includes(door.doorDir)) {
-                // if side door
-                player.moveNoSmooth(door.x + side, door.y);
-            }
-            _this.clearDeadStuff();
-            _this.updateLighting();
-            _this.entered = true;
-            _this.message = _this.name;
-        };
-        this.enterLevelThroughLadder = function (player, ladder) {
-            player.moveSnap(ladder.x, ladder.y + 1);
-            _this.clearDeadStuff();
-            _this.updateLighting();
-            _this.entered = true;
-            _this.message = _this.name;
-        };
-        this.getEmptyTiles = function () {
-            var returnVal = [];
-            for (var x = _this.roomX + 1; x < _this.roomX + _this.width - 1; x++) {
-                for (var y = _this.roomY + 1; y < _this.roomY + _this.height - 1; y++) {
-                    if (!_this.levelArray[x][y].isSolid() &&
-                        !(_this.levelArray[x][y] instanceof spiketrap_1.SpikeTrap) &&
-                        !(_this.levelArray[x][y] instanceof spawnfloor_1.SpawnFloor)) {
-                        returnVal.push(_this.levelArray[x][y]);
-                    }
-                }
-            }
-            var _loop_1 = function (e) {
-                returnVal = returnVal.filter(function (t) { return !e.pointIn(t.x, t.y); });
-            };
-            for (var _i = 0, _a = _this.enemies; _i < _a.length; _i++) {
-                var e = _a[_i];
-                _loop_1(e);
-            }
-            return returnVal;
-        };
-        this.getTile = function (x, y) {
-            if (_this.levelArray[x])
-                return _this.levelArray[x][y];
-            else
-                return undefined;
-        };
-        this.fadeLighting = function () {
-            for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
-                for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
-                    if (Math.abs(_this.softVis[x][y] - _this.vis[x][y]) >= 0.02) {
-                        if (_this.softVis[x][y] < _this.vis[x][y])
-                            _this.softVis[x][y] += 0.02;
-                        else if (_this.softVis[x][y] > _this.vis[x][y])
-                            _this.softVis[x][y] -= 0.02;
-                    }
-                    //if (this.softVis[x][y] < 0.05) this.softVis[x][y] = 0;
-                }
-            }
-        };
-        this.updateLighting = function () {
-            var oldVis = [];
-            for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
-                oldVis[x] = [];
-                for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
-                    oldVis[x][y] = _this.vis[x][y];
-                    _this.vis[x][y] = 1;
-                    //if (this.visibilityArray[x][y] > LevelConstants.MIN_VISIBILITY)
-                    //  this.visibilityArray[x][y] = 0;
-                }
-            }
-            for (var p in _this.game.players) {
-                if (_this === _this.game.levels[_this.game.players[p].levelID]) {
-                    for (var i = 0; i < 360; i += levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP) {
-                        _this.castShadowsAtAngle(i, _this.game.players[p].x + 0.5, _this.game.players[p].y + 0.5, _this.game.players[p].sightRadius - _this.depth);
-                    }
-                }
-            }
-            for (var _i = 0, _a = _this.lightSources; _i < _a.length; _i++) {
-                var l = _a[_i];
-                for (var i = 0; i < 360; i += levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP) {
-                    _this.castShadowsAtAngle(i, l.x, l.y, l.r);
-                }
-            }
-            if (levelConstants_1.LevelConstants.SMOOTH_LIGHTING)
-                _this.vis = _this.blur3x3(_this.vis, [
-                    [1, 2, 1],
-                    [2, 8, 2],
-                    [1, 2, 1],
-                ]);
-            /*for (let x = 0; x < this.visibilityArray.length; x++) {
-              for (let y = 0; y < this.visibilityArray[0].length; y++) {
-                if (this.visibilityArray[x][y] < oldVisibilityArray[x][y]) {
-                  this.visibilityArray[x][y] = Math.min(
-                    oldVisibilityArray[x][y],
-                    LevelConstants.MIN_VISIBILITY
-                  );
-                }
-              }
-            }*/
-        };
-        this.castShadowsAtAngle = function (angle, px, py, radius) {
-            var dx = Math.cos((angle * Math.PI) / 180);
-            var dy = Math.sin((angle * Math.PI) / 180);
-            var onOpaqueSection = false;
-            for (var i = 0; i < radius; i++) {
-                if (Math.floor(px) < _this.roomX ||
-                    Math.floor(px) >= _this.roomX + _this.width ||
-                    Math.floor(py) < _this.roomY ||
-                    Math.floor(py) >= _this.roomY + _this.height)
-                    return; // we're outside the level
-                var tile = _this.levelArray[Math.floor(px)][Math.floor(py)];
-                if (tile.isOpaque()) {
-                    if (i > 0)
-                        onOpaqueSection = true;
-                }
-                else if (onOpaqueSection) {
-                    return;
-                }
-                _this.vis[Math.floor(px)][Math.floor(py)] = Math.min(_this.vis[Math.floor(px)][Math.floor(py)], Math.min(i / radius, 1));
-                px += dx;
-                py += dy;
-            }
-        };
-        this.blur3x3 = function (array, weights) {
-            var blurredArray = [];
-            for (var x = 0; x < array.length; x++) {
-                blurredArray[x] = [];
-                for (var y = 0; y < array[0].length; y++) {
-                    if (array[x][y] === 0) {
-                        blurredArray[x][y] = 0;
-                        continue;
-                    }
-                    var total = 0;
-                    var totalWeights = 0;
-                    for (var xx = -1; xx <= 1; xx++) {
-                        for (var yy = -1; yy <= 1; yy++) {
-                            if (x + xx >= 0 &&
-                                x + xx < array.length &&
-                                y + yy >= 0 &&
-                                y + yy < array[0].length) {
-                                total += array[x + xx][y + yy] * weights[xx + 1][yy + 1];
-                                totalWeights += weights[xx + 1][yy + 1];
-                            }
-                        }
-                    }
-                    blurredArray[x][y] = total / totalWeights;
-                }
-            }
-            return blurredArray;
-        };
-        this.catchUp = function () {
-            if (_this.turn === TurnState.computerTurn)
-                _this.computerTurn(); // player skipped computer's turn, catch up
-        };
-        this.tick = function (player) {
-            _this.enemies = _this.enemies.filter(function (e) { return !e.dead; });
-            _this.updateLighting();
-            for (var _i = 0, _a = _this.hitwarnings; _i < _a.length; _i++) {
-                var h = _a[_i];
-                h.tick();
-            }
-            for (var _b = 0, _c = _this.projectiles; _b < _c.length; _b++) {
-                var p = _c[_b];
-                p.tick();
-            }
-            for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
-                for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
-                    _this.levelArray[x][y].tick();
-                }
-            }
-            _this.turn = TurnState.computerTurn;
-            player.actionTab.setState(actionTab_1.ActionState.WAIT);
-            //sets the action tab state to Ready
-            _this.playerTurnTime = Date.now();
-            _this.playerTicked = player;
-        };
-        this.update = function () {
-            if (_this.turn == TurnState.computerTurn) {
-                if (Date.now() - _this.playerTurnTime >=
-                    levelConstants_1.LevelConstants.COMPUTER_TURN_DELAY) {
-                    _this.computerTurn();
-                }
-            }
-        };
-        this.clearDeadStuff = function () {
-            _this.enemies = _this.enemies.filter(function (e) { return !e.dead; });
-            _this.projectiles = _this.projectiles.filter(function (p) { return !p.dead; });
-            _this.hitwarnings = _this.hitwarnings.filter(function (h) { return !h.dead; });
-            _this.particles = _this.particles.filter(function (p) { return !p.dead; });
-        };
-        this.computerTurn = function () {
-            // take computer turn
-            for (var _i = 0, _a = _this.enemies; _i < _a.length; _i++) {
-                var e = _a[_i];
-                e.tick();
-            }
-            _this.enemies = _this.enemies.filter(function (e) { return !e.dead; });
-            for (var _b = 0, _c = _this.items; _b < _c.length; _b++) {
-                var i = _c[_b];
-                i.tick();
-            }
-            for (var _d = 0, _e = _this.hitwarnings; _d < _e.length; _d++) {
-                var h = _e[_d];
-                if (!_this.levelArray[h.x] ||
-                    !_this.levelArray[h.x][h.y] ||
-                    _this.levelArray[h.x][h.y].isSolid())
-                    h.dead = true;
-            }
-            for (var _f = 0, _g = _this.projectiles; _f < _g.length; _f++) {
-                var p = _g[_f];
-                if (_this.levelArray[p.x][p.y].isSolid())
-                    p.dead = true;
-                for (var i in _this.game.players) {
-                    if (_this.game.levels[_this.game.players[i].levelID] === _this &&
-                        p.x === _this.game.players[i].x &&
-                        p.y === _this.game.players[i].y) {
-                        p.hitPlayer(_this.game.players[i]);
-                    }
-                }
-                for (var _h = 0, _j = _this.enemies; _h < _j.length; _h++) {
-                    var e = _j[_h];
-                    if (p.x === e.x && p.y === e.y) {
-                        p.hitEnemy(e);
-                    }
-                }
-            }
-            for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
-                for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
-                    _this.levelArray[x][y].tickEnd();
-                }
-            }
-            _this.enemies = _this.enemies.filter(function (e) { return !e.dead; }); // enemies may be killed by spiketrap
-            _this.clearDeadStuff();
-            _this.playerTicked.finishTick();
-            _this.turn = TurnState.playerTurn;
-        };
-        this.draw = function (delta) {
-            hitWarning_1.HitWarning.updateFrame(delta);
-            _this.fadeLighting();
-        };
-        this.drawEntities = function (delta, skipLocalPlayer) {
-            var tiles = [];
-            for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
-                for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
-                    if (_this.softVis[x][y] < 1)
-                        _this.levelArray[x][y].drawUnderPlayer(delta);
-                    tiles.push(_this.levelArray[x][y]);
-                }
-            }
-            var drawables = new Array();
-            drawables = drawables.concat(tiles, _this.enemies, _this.hitwarnings, _this.projectiles, _this.particles, _this.items);
-            for (var i in _this.game.players) {
-                if (_this.game.levels[_this.game.players[i].levelID] === _this) {
-                    if (!(skipLocalPlayer &&
-                        _this.game.players[i] === _this.game.players[_this.game.localPlayerID]))
-                        drawables.push(_this.game.players[i]);
-                }
-            }
-            drawables.sort(function (a, b) {
-                if (a instanceof floor_1.Floor) {
-                    return -1;
-                }
-                else if (b instanceof floor_1.Floor) {
-                    return 1;
-                }
-                if (Math.abs(a.drawableY - b.drawableY) < 0.1) {
-                    if (a instanceof player_1.Player) {
-                        return 1;
-                    }
-                    else if (b instanceof player_1.Player) {
-                        return -1;
-                    }
-                    else if (a instanceof enemy_1.Enemy) {
-                        return 1;
-                    }
-                    else if (b instanceof enemy_1.Enemy) {
-                        return -1;
-                    }
-                    else
-                        return 0;
-                }
-                else {
-                    return a.drawableY - b.drawableY;
-                }
-            });
-            for (var _i = 0, drawables_1 = drawables; _i < drawables_1.length; _i++) {
-                var d = drawables_1[_i];
-                d.draw(delta);
-            }
-            for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
-                for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
-                    if (_this.softVis[x][y] < 1)
-                        _this.levelArray[x][y].drawAbovePlayer(delta);
-                }
-            }
-            for (var _a = 0, _b = _this.items; _a < _b.length; _a++) {
-                var i = _b[_a];
-                i.drawTopLayer(delta);
-            }
-        };
-        this.drawShade = function (delta) {
-            var bestSightRadius = 0;
-            for (var p in _this.game.players) {
-                if (_this.game.levels[_this.game.players[p].levelID] === _this &&
-                    _this.game.players[p].sightRadius > bestSightRadius) {
-                    bestSightRadius = _this.game.players[p].sightRadius;
-                }
-            }
-            var shadingAlpha = Math.max(0, Math.min(0.8, (2 * _this.depth) / bestSightRadius));
-            if (gameConstants_1.GameConstants.ALPHA_ENABLED) {
-                game_1.Game.ctx.globalAlpha = shadingAlpha;
-                //Game.ctx.globalCompositeOperation = "lighten"
-                //Game.ctx.globalCompositeOperation = "overlay"
-                //Game.ctx.fillStyle = "#400a0e";
-                game_1.Game.ctx.fillStyle = _this.shadeColor;
-                game_1.Game.ctx.fillRect((_this.roomX - levelConstants_1.LevelConstants.SCREEN_W) * gameConstants_1.GameConstants.TILESIZE, (_this.roomY - levelConstants_1.LevelConstants.SCREEN_H) * gameConstants_1.GameConstants.TILESIZE, (_this.width + 2 * levelConstants_1.LevelConstants.SCREEN_W) * gameConstants_1.GameConstants.TILESIZE, (_this.height + 2 * levelConstants_1.LevelConstants.SCREEN_H) * gameConstants_1.GameConstants.TILESIZE);
-                game_1.Game.ctx.globalAlpha = 1.0;
-                game_1.Game.ctx.globalCompositeOperation = "source-over";
-            }
-        };
-        this.drawOverShade = function (delta) {
-            for (var _i = 0, _a = _this.enemies; _i < _a.length; _i++) {
-                var e = _a[_i];
-                e.drawTopLayer(delta); // health bars
-            }
-            for (var _b = 0, _c = _this.projectiles; _b < _c.length; _b++) {
-                var p = _c[_b];
-                p.drawTopLayer(delta);
-            }
-            for (var _d = 0, _e = _this.hitwarnings; _d < _e.length; _d++) {
-                var h = _e[_d];
-                h.drawTopLayer(delta);
-            }
-            // draw over dithered shading
-            for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
-                for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
-                    _this.levelArray[x][y].drawAboveShading(delta);
-                }
-            }
-        };
-        // for stuff rendered on top of the player
-        this.drawTopLayer = function (delta) {
-            // gui stuff
-            // room name
-            var old = game_1.Game.ctx.font;
-            game_1.Game.ctx.font = gameConstants_1.GameConstants.SCRIPT_FONT_SIZE + "px Script";
-            game_1.Game.ctx.fillStyle = levelConstants_1.LevelConstants.LEVEL_TEXT_COLOR;
-            game_1.Game.fillText(_this.message, gameConstants_1.GameConstants.WIDTH / 2 - game_1.Game.measureText(_this.name).width / 2, 5);
-            game_1.Game.ctx.font = old;
-        };
-        this.game = game;
-        this.roomX = x; //Math.floor(- this.width / 2);
-        this.roomY = y; //Math.floor(- this.height / 2);
-        this.width = w;
-        this.height = h;
-        this.type = type;
-        this.depth = depth;
-        this.mapGroup = mapGroup;
-        this.entered = false;
-        this.turn = TurnState.playerTurn;
-        this.playerTurnTime = Date.now();
-        this.items = Array();
-        this.projectiles = Array();
-        this.hitwarnings = Array();
-        this.particles = Array();
-        this.doors = Array();
-        this.enemies = Array();
-        this.lightSources = Array();
-        this.walls = Array();
-        this.levelArray = [];
-        for (var x_2 = this.roomX; x_2 < this.roomX + this.width; x_2++) {
-            this.levelArray[x_2] = [];
-        }
-        this.vis = [];
-        this.softVis = [];
-        for (var x_3 = this.roomX; x_3 < this.roomX + this.width; x_3++) {
-            this.vis[x_3] = [];
-            this.softVis[x_3] = [];
-            for (var y_2 = this.roomY; y_2 < this.roomY + this.height; y_2++) {
-                this.vis[x_3][y_2] = 1;
-                this.softVis[x_3][y_2] = 1;
-            }
-        }
-        this.skin = tile_1.SkinType.DUNGEON;
-        if (this.type === RoomType.ROPECAVE || this.type === RoomType.CAVE)
-            this.skin = tile_1.SkinType.CAVE;
-        this.buildEmptyRoom();
-    }
-    Level.prototype.pointInside = function (x, y, rX, rY, rW, rH) {
-        if (x < rX || x >= rX + rW)
-            return false;
-        if (y < rY || y >= rY + rH)
-            return false;
-        return true;
-    };
-    Level.prototype.buildEmptyRoom = function () {
-        // fill in wall and floor
-        for (var x = this.roomX; x < this.roomX + this.width; x++) {
-            for (var y = this.roomY; y < this.roomY + this.height; y++) {
-                if (this.pointInside(x, y, this.roomX + 1, this.roomY + 1, this.width - 2, this.height - 2)) {
-                    this.levelArray[x][y] = new floor_1.Floor(this, x, y);
-                }
-                else {
-                    this.levelArray[x][y] = new wall_1.Wall(this, x, y);
-                    this.walls.push;
-                }
-            }
-        }
-    };
-    Level.prototype.addWallBlocks = function (rand) {
-        var numBlocks = game_1.Game.randTable([0, 0, 1, 1, 2, 2, 2, 2, 3], rand);
-        if (this.width > 8 && rand() > 0.5)
-            numBlocks *= 4;
-        for (var i = 0; i < numBlocks; i++) {
-            var blockW = Math.min(game_1.Game.randTable([2, 2, 2, 2, 2, 2, 3, 3, 3, 4, 5], rand), this.width - 4);
-            var blockH = Math.min(blockW + game_1.Game.rand(-2, 2, rand), this.height - 4);
-            var x = game_1.Game.rand(this.roomX + 2, this.roomX + this.width - blockW - 2, rand);
-            var y = game_1.Game.rand(this.roomY + 2, this.roomY + this.height - blockH - 2, rand);
-            for (var xx = x; xx < x + blockW; xx++) {
-                for (var yy = y; yy < y + blockH; yy++) {
-                    var w = new wall_1.Wall(this, xx, yy);
-                    this.levelArray[xx][yy] = w;
-                    this.walls.push(w);
-                }
-            }
-        }
-    };
-    Level.prototype.addFingers = function (rand) { };
-    Level.prototype.addTorches = function (numTorches, rand) {
-        var walls = [];
-        for (var xx = this.roomX + 1; xx < this.roomX + this.width - 2; xx++) {
-            for (var yy = this.roomY; yy < this.roomY + this.height - 1; yy++) {
-                if (this.levelArray[xx][yy] instanceof wall_1.Wall &&
-                    !(this.levelArray[xx][yy + 1] instanceof wall_1.Wall)) {
-                    walls.push(this.levelArray[xx][yy]);
-                }
-            }
-        }
-        for (var i = 0; i < numTorches; i++) {
-            var t = void 0, x = void 0, y = void 0;
-            if (walls.length == 0)
-                return;
-            t = walls.splice(game_1.Game.rand(0, walls.length - 1, rand), 1)[0];
-            x = t.x;
-            y = t.y;
-            this.levelArray[x][y] = new wallTorch_1.WallTorch(this, x, y);
-        }
-    };
-    Level.prototype.addChasms = function (rand) {
-        // add chasms
-        var w = game_1.Game.rand(2, 4, rand);
-        var h = game_1.Game.rand(2, 4, rand);
-        var xmin = this.roomX + 2;
-        var xmax = this.roomX + this.width - w - 2;
-        var ymin = this.roomY + 2;
-        var ymax = this.roomY + this.height - h - 2;
-        if (xmax < xmin || ymax < ymin)
-            return;
-        var x = game_1.Game.rand(xmin, xmax, rand);
-        var y = game_1.Game.rand(ymin, ymax, rand);
-        for (var xx = x - 1; xx < x + w + 1; xx++) {
-            for (var yy = y - 1; yy < y + h + 1; yy++) {
-                // add a floor border
-                if (xx === x - 1 || xx === x + w || yy === y - 1 || yy === y + h) {
-                    if (!(this.levelArray[xx][yy] instanceof spawnfloor_1.SpawnFloor))
-                        this.levelArray[xx][yy] = new floor_1.Floor(this, xx, yy);
-                }
-                else
-                    this.levelArray[xx][yy] = new chasm_1.Chasm(this, xx, yy, xx === x, xx === x + w - 1, yy === y, yy === y + h - 1);
-            }
-        }
-    };
-    Level.prototype.addChests = function (numChests, rand) {
-        // add chests
-        var tiles = this.getEmptyTiles();
-        for (var i = 0; i < numChests; i++) {
-            var t = void 0, x = void 0, y = void 0;
-            if (tiles.length == 0)
-                return;
-            t = tiles.splice(game_1.Game.rand(0, tiles.length - 1, rand), 1)[0];
-            x = t.x;
-            y = t.y;
-            this.enemies.push(new chest_1.Chest(this, this.game, x, y, rand));
-        }
-    };
-    Level.prototype.addSpikeTraps = function (numSpikes, rand) {
-        // add spikes
-        var tiles = this.getEmptyTiles();
-        for (var i = 0; i < numSpikes; i++) {
-            var t = tiles.splice(game_1.Game.rand(0, tiles.length - 1, rand), 1)[0];
-            if (tiles.length == 0)
-                return;
-            var x = t.x;
-            var y = t.y;
-            this.levelArray[x][y] = new spiketrap_1.SpikeTrap(this, x, y);
-        }
-    };
-    Level.prototype.addSpikes = function (numSpikes, rand) {
-        // add spikes
-        var tiles = this.getEmptyTiles();
-        for (var i = 0; i < numSpikes; i++) {
-            var t = tiles.splice(game_1.Game.rand(0, tiles.length - 1, rand), 1)[0];
-            if (tiles.length == 0)
-                return;
-            var x = t.x;
-            var y = t.y;
-            this.levelArray[x][y] = new spike_1.Spike(this, x, y);
-        }
-    };
-    Level.prototype.addEnemies = function (numEnemies, rand) {
-        var _this = this;
-        var tiles = this.getEmptyTiles();
-        var _loop_2 = function (i) {
-            var t = tiles.splice(game_1.Game.rand(0, tiles.length - 1, rand), 1)[0];
-            if (tiles.length == 0)
-                return { value: void 0 };
-            var x = t.x;
-            var y = t.y;
-            var tables = {
-                0: [1, 2, 3, 3, 4],
-                1: [1, 1, 3, 3, 3, 2, 2],
-                2: [1, 1, 2, 2, 3, 3, 4],
-                3: [1, 1, 1, 2, 3, 3, 3, 4, 4, 5],
-                4: [1, 2, 3, 4, 5, 6, 7],
-                5: [1, 2, 3, 4, 5, 6, 7, 8],
-                6: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-                7: [1, 2, 3, 4, 5, 6, 7],
-            };
-            var max_depth_table = 7;
-            var d = Math.min(this_1.depth, max_depth_table);
-            if (tables[d] && tables[d].length > 0) {
-                var addEnemy = function (enemy) {
-                    var _loop_3 = function (xx) {
-                        var _loop_4 = function (yy) {
-                            if (!_this.getEmptyTiles().some(function (tt) { return tt.x === x + xx && tt.y === y + yy; })) {
-                                numEnemies++; // extra loop iteration since we're throwing out this point
-                                return { value: false };
-                            }
-                        };
-                        for (var yy = 0; yy < enemy.h; yy++) {
-                            var state_3 = _loop_4(yy);
-                            if (typeof state_3 === "object")
-                                return state_3;
-                        }
-                    };
-                    // adds an enemy if it doesn't overlap any other enemies
-                    for (var xx = 0; xx < enemy.w; xx++) {
-                        var state_2 = _loop_3(xx);
-                        if (typeof state_2 === "object")
-                            return state_2.value;
-                    }
-                    _this.enemies.push(enemy);
-                    return true;
-                };
-                var type = game_1.Game.randTable(tables[d], rand);
-                switch (type) {
-                    case 1:
-                        addEnemy(new slimeEnemy_1.SlimeEnemy(this_1, this_1.game, x, y, rand));
-                        break;
-                    case 2:
-                        addEnemy(new knightEnemy_1.KnightEnemy(this_1, this_1.game, x, y, rand));
-                        break;
-                    case 3:
-                        addEnemy(new zombieEnemy_1.ZombieEnemy(this_1, this_1.game, x, y, rand));
-                        break;
-                    case 4:
-                        addEnemy(new skullEnemy_1.SkullEnemy(this_1, this_1.game, x, y, rand));
-                        break;
-                    case 5:
-                        addEnemy(new wizardEnemy_1.WizardEnemy(this_1, this_1.game, x, y, rand));
-                        break;
-                    case 6:
-                        addEnemy(new chargeEnemy_1.ChargeEnemy(this_1, this_1.game, x, y));
-                        break;
-                    case 7:
-                        addEnemy(new spawner_1.Spawner(this_1, this_1.game, x, y, rand));
-                        break;
-                    case 8:
-                        addEnemy(new bishopEnemy_1.BishopEnemy(this_1, this_1.game, x, y, rand));
-                        break;
-                    case 9:
-                        addEnemy(new armoredzombieEnemy_1.ArmoredzombieEnemy(this_1, this_1.game, x, y, rand));
-                        break;
-                    case 10:
-                        if (addEnemy(new bigSkullEnemy_1.BigSkullEnemy(this_1, this_1.game, x, y, rand))) {
-                            // clear out some space
-                            for (var xx = 0; xx < 2; xx++) {
-                                for (var yy = 0; yy < 2; yy++) {
-                                    this_1.levelArray[x + xx][y + yy] = new floor_1.Floor(this_1, x + xx, y + yy); // remove any walls
-                                }
-                            }
-                        }
-                        break;
-                }
-            }
-        };
-        var this_1 = this;
-        for (var i = 0; i < numEnemies; i++) {
-            var state_1 = _loop_2(i);
-            if (typeof state_1 === "object")
-                return state_1.value;
-        }
-    };
-    Level.prototype.addObstacles = function (numObstacles, rand) {
-        // add crates/barrels
-        var tiles = this.getEmptyTiles();
-        for (var i = 0; i < numObstacles; i++) {
-            var t = tiles.splice(game_1.Game.rand(0, tiles.length - 1, rand), 1)[0];
-            if (tiles.length == 0)
-                return;
-            var x = t.x;
-            var y = t.y;
-            switch (game_1.Game.randTable([1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 4], rand)) {
-                case 1:
-                    this.enemies.push(new crate_1.Crate(this, this.game, x, y));
-                    break;
-                case 2:
-                    this.enemies.push(new barrel_1.Barrel(this, this.game, x, y));
-                    break;
-                case 3:
-                    this.enemies.push(new tombStone_1.TombStone(this, this.game, x, y, 1, rand));
-                    break;
-                case 4:
-                    this.enemies.push(new tombStone_1.TombStone(this, this.game, x, y, 0, rand));
-                    break;
-                //case 5:
-                //this.enemies.push(new TombStone(this, this.game, x, y));
-                //break;
-            }
-        }
-    };
-    Level.prototype.addPlants = function (numPlants, rand) {
-        var tiles = this.getEmptyTiles();
-        for (var i = 0; i < numPlants; i++) {
-            var t = tiles.splice(game_1.Game.rand(0, tiles.length - 1, rand), 1)[0];
-            if (tiles.length == 0)
-                return;
-            var x = t.x;
-            var y = t.y;
-            var r = rand();
-            if (r <= 0.45)
-                this.enemies.push(new pottedPlant_1.PottedPlant(this, this.game, x, y, random_1.Random.rand));
-            else if (r <= 0.65)
-                this.enemies.push(new pot_1.Pot(this, this.game, x, y));
-            else if (r <= 0.75)
-                this.enemies.push(new rockResource_1.Rock(this, this.game, x, y));
-            else if (r <= 0.97)
-                this.enemies.push(new mushrooms_1.Mushrooms(this, this.game, x, y));
-            else
-                this.enemies.push(new chest_1.Chest(this, this.game, x, y, rand));
-        }
-    };
-    Level.prototype.addResources = function (numResources, rand) {
-        var tiles = this.getEmptyTiles();
-        for (var i = 0; i < numResources; i++) {
-            var t = tiles.splice(game_1.Game.rand(0, tiles.length - 1, rand), 1)[0];
-            if (tiles.length == 0)
-                return;
-            var x = t.x;
-            var y = t.y;
-            var r = rand();
-            if (r <= (10 - Math.pow(this.depth, 3)) / 10)
-                this.enemies.push(new coalResource_1.CoalResource(this, this.game, x, y));
-            else if (r <= (10 - Math.pow((this.depth - 2), 3)) / 10)
-                this.enemies.push(new goldResource_1.GoldResource(this, this.game, x, y));
-            else
-                this.enemies.push(new emeraldResource_1.EmeraldResource(this, this.game, x, y));
-        }
-    };
-    Level.prototype.addVendingMachine = function (rand) {
-        var t = this.getEmptyTiles().sort(function () { return 0.5 - random_1.Random.rand(); })[0];
-        var x = t.x;
-        var y = t.y;
-        var type = game_1.Game.randTable([1, 1, 1, 1, 1, 1, 1, 2, 3, 4, 5, 6], rand);
-        switch (type) {
-            case 1:
-                this.enemies.push(new vendingMachine_1.VendingMachine(this, this.game, x, y, new heart_1.Heart(this, 0, 0), rand));
-                break;
-            case 2:
-                this.enemies.push(new vendingMachine_1.VendingMachine(this, this.game, x, y, new lantern_1.Lantern(this, 0, 0), rand));
-                break;
-            case 3:
-                this.enemies.push(new vendingMachine_1.VendingMachine(this, this.game, x, y, new armor_1.Armor(this, 0, 0), rand));
-                break;
-            case 4:
-                this.enemies.push(new vendingMachine_1.VendingMachine(this, this.game, x, y, new dualdagger_1.DualDagger(this, 0, 0), rand));
-                break;
-            case 5:
-                this.enemies.push(new vendingMachine_1.VendingMachine(this, this.game, x, y, new spear_1.Spear(this, 0, 0), rand));
-                break;
-            case 6:
-                this.enemies.push(new vendingMachine_1.VendingMachine(this, this.game, x, y, new shotgun_1.Shotgun(this, 0, 0), rand));
-                break;
-        }
-    };
-    return Level;
-}());
-exports.Level = Level;
-
-
-/***/ }),
-
 /***/ "./src/levelConstants.ts":
 /*!*******************************!*\
   !*** ./src/levelConstants.ts ***!
@@ -13108,7 +12010,7 @@ exports.LevelConstants = LevelConstants;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.LevelGenerator = void 0;
 var game_1 = __webpack_require__(/*! ./game */ "./src/game.ts");
-var level_1 = __webpack_require__(/*! ./level */ "./src/level.ts");
+var room_1 = __webpack_require__(/*! ./room */ "./src/room.ts");
 var random_1 = __webpack_require__(/*! ./random */ "./src/random.ts");
 var downLadder_1 = __webpack_require__(/*! ./tile/downLadder */ "./src/tile/downLadder.ts");
 //Goal: CRACK THE LEVEL GENERATOR
@@ -13209,7 +12111,7 @@ var Partition = /** @class */ (function () {
         this.y = y;
         this.w = w;
         this.h = h;
-        this.type = level_1.RoomType.DUNGEON;
+        this.type = room_1.RoomType.DUNGEON;
         this.connections = [];
         this.distance = 1000;
     }
@@ -13281,9 +12183,9 @@ var generate_dungeon_candidate = function (map_w, map_h) {
     //sort the partitions list by ... area? I think?
     var spawn = partitions[0];
     //spawn is the first Partition instance
-    spawn.type = level_1.RoomType.START;
+    spawn.type = room_1.RoomType.START;
     //set the roomtype for the partition accordingly
-    partitions[partitions.length - 1].type = level_1.RoomType.BOSS;
+    partitions[partitions.length - 1].type = room_1.RoomType.BOSS;
     //set the largest room as boss room?
     var connected = [spawn];
     var frontier = [spawn];
@@ -13308,7 +12210,7 @@ var generate_dungeon_candidate = function (map_w, map_h) {
                     frontier.push(p);
                     connected.push(p);
                     doors_found++;
-                    if (p.type === level_1.RoomType.BOSS)
+                    if (p.type === room_1.RoomType.BOSS)
                         found_boss = true;
                     break;
                 }
@@ -13357,14 +12259,14 @@ var generate_dungeon_candidate = function (map_w, map_h) {
         _loop_4(i);
     }
     // add stair room
-    if (!partitions.some(function (p) { return p.type === level_1.RoomType.BOSS; }))
+    if (!partitions.some(function (p) { return p.type === room_1.RoomType.BOSS; }))
         return [];
-    var boss = partitions.find(function (p) { return p.type === level_1.RoomType.BOSS; });
+    var boss = partitions.find(function (p) { return p.type === room_1.RoomType.BOSS; });
     var found_stair = false;
     var max_stair_tries = 100;
     var _loop_5 = function (stair_tries) {
         var stair = new Partition(game_1.Game.rand(boss.x - 1, boss.x + boss.w - 2, random_1.Random.rand), boss.y - 4, 3, 3);
-        stair.type = level_1.RoomType.DOWNLADDER;
+        stair.type = room_1.RoomType.DOWNLADDER;
         if (!partitions.some(function (p) { return p.overlaps(stair); })) {
             found_stair = true;
             partitions.push(stair);
@@ -13400,15 +12302,15 @@ var generate_dungeon_candidate = function (map_w, map_h) {
     var added_rope_hole = false;
     for (var _d = 0, partitions_6 = partitions; _d < partitions_6.length; _d++) {
         var p = partitions_6[_d];
-        if (p.type === level_1.RoomType.DUNGEON) {
+        if (p.type === room_1.RoomType.DUNGEON) {
             if (p.distance > 4 && p.area() <= 30 && random_1.Random.rand() < 0.1) {
-                p.type = level_1.RoomType.TREASURE;
+                p.type = room_1.RoomType.TREASURE;
             }
             else if (!added_rope_hole &&
                 p.distance > 3 &&
                 p.area() <= 20 &&
                 random_1.Random.rand() < 0.5) {
-                p.type = level_1.RoomType.ROPEHOLE;
+                p.type = room_1.RoomType.ROPEHOLE;
                 added_rope_hole = true;
             }
         }
@@ -13424,9 +12326,9 @@ var generate_dungeon = function (map_w, map_h) {
         passes_checks = true;
         if (partitions.length < 6)
             passes_checks = false;
-        if (!partitions.some(function (p) { return p.type === level_1.RoomType.BOSS; }))
+        if (!partitions.some(function (p) { return p.type === room_1.RoomType.BOSS; }))
             passes_checks = false;
-        else if (partitions.find(function (p) { return p.type === level_1.RoomType.BOSS; }).distance < 3)
+        else if (partitions.find(function (p) { return p.type === room_1.RoomType.BOSS; }).distance < 3)
             passes_checks = false;
         tries++;
         if (tries > 100)
@@ -13446,9 +12348,9 @@ var generate_cave_candidate = function (map_w, map_h, num_rooms) {
     grid = populate_grid(partitions, grid, map_w, map_h);
     partitions.sort(function (a, b) { return a.area() - b.area(); });
     var spawn = partitions[0];
-    spawn.type = level_1.RoomType.ROPECAVE;
+    spawn.type = room_1.RoomType.ROPECAVE;
     for (var i = 1; i < partitions.length; i++)
-        partitions[i].type = level_1.RoomType.CAVE;
+        partitions[i].type = room_1.RoomType.CAVE;
     var connected = [spawn];
     var frontier = [spawn];
     // connect rooms until we find the boss
@@ -13557,7 +12459,7 @@ var LevelGenerator = /** @class */ (function () {
         this.getLevels = function (partitions, depth, mapGroup) {
             var levels = [];
             for (var i = 0; i < partitions.length; i++) {
-                var level = new level_1.Level(_this.game, partitions[i].x - 1, partitions[i].y - 1, partitions[i].w + 2, partitions[i].h + 2, partitions[i].type, depth, mapGroup, random_1.Random.rand);
+                var level = new room_1.Room(_this.game, partitions[i].x - 1, partitions[i].y - 1, partitions[i].w + 2, partitions[i].h + 2, partitions[i].type, depth, mapGroup, random_1.Random.rand);
                 levels.push(level);
             }
             var doors_added = [];
@@ -13592,24 +12494,24 @@ var LevelGenerator = /** @class */ (function () {
             random_1.Random.setState(_this.seed + depth);
             _this.game = game;
             var mapGroup = 0;
-            if (_this.game.levels.length > 0)
-                mapGroup = _this.game.levels[_this.game.levels.length - 1].mapGroup + 1;
+            if (_this.game.rooms.length > 0)
+                mapGroup = _this.game.rooms[_this.game.rooms.length - 1].mapGroup + 1;
             var partitions;
             if (cave)
                 partitions = generate_cave(20, 20);
             else
                 partitions = generate_dungeon(35, 35);
             var levels = _this.getLevels(partitions, depth, mapGroup);
-            var numExistingLevels = _this.game.levels.length;
+            var numExistingLevels = _this.game.rooms.length;
             if (!cave)
                 _this.currentFloorFirstLevelID = numExistingLevels;
-            _this.game.levels = _this.game.levels.concat(levels);
+            _this.game.rooms = _this.game.rooms.concat(levels);
             for (var i = numExistingLevels; i < numExistingLevels + levels.length; i++) {
                 var found = false;
-                if (_this.game.levels[i].type === level_1.RoomType.ROPEHOLE) {
-                    for (var x = _this.game.levels[i].roomX; x < _this.game.levels[i].roomX + _this.game.levels[i].width; x++) {
-                        for (var y = _this.game.levels[i].roomY; y < _this.game.levels[i].roomY + _this.game.levels[i].height; y++) {
-                            var tile = _this.game.levels[i].levelArray[x][y];
+                if (_this.game.rooms[i].type === room_1.RoomType.ROPEHOLE) {
+                    for (var x = _this.game.rooms[i].roomX; x < _this.game.rooms[i].roomX + _this.game.rooms[i].width; x++) {
+                        for (var y = _this.game.rooms[i].roomY; y < _this.game.rooms[i].roomY + _this.game.rooms[i].height; y++) {
+                            var tile = _this.game.rooms[i].roomArray[x][y];
                             if (tile instanceof downLadder_1.DownLadder && tile.isRope) {
                                 tile.generate();
                                 found = true;
@@ -13621,19 +12523,19 @@ var LevelGenerator = /** @class */ (function () {
                     break;
             }
             if (cave)
-                return levels.find(function (l) { return l.type === level_1.RoomType.ROPECAVE; });
+                return levels.find(function (l) { return l.type === room_1.RoomType.ROPECAVE; });
             else
-                return levels.find(function (l) { return l.type === level_1.RoomType.START; });
+                return levels.find(function (l) { return l.type === room_1.RoomType.START; });
         };
         this.generateFirstNFloors = function (game, numFloors) {
             _this.generate(game, 0, false);
             for (var i = 0; i < numFloors; i++) {
                 var found = false;
-                for (var j = _this.game.levels.length - 1; j >= 0; j--) {
-                    if (_this.game.levels[j].type === level_1.RoomType.DOWNLADDER) {
-                        for (var x = _this.game.levels[j].roomX; x < _this.game.levels[j].roomX + _this.game.levels[j].width; x++) {
-                            for (var y = _this.game.levels[j].roomY; y < _this.game.levels[j].roomY + _this.game.levels[j].height; y++) {
-                                var tile = _this.game.levels[j].levelArray[x][y];
+                for (var j = _this.game.rooms.length - 1; j >= 0; j--) {
+                    if (_this.game.rooms[j].type === room_1.RoomType.DOWNLADDER) {
+                        for (var x = _this.game.rooms[j].roomX; x < _this.game.rooms[j].roomX + _this.game.rooms[j].width; x++) {
+                            for (var y = _this.game.rooms[j].roomY; y < _this.game.rooms[j].roomY + _this.game.rooms[j].height; y++) {
+                                var tile = _this.game.rooms[j].roomArray[x][y];
                                 if (tile instanceof downLadder_1.DownLadder) {
                                     tile.generate();
                                     found = true;
@@ -13689,7 +12591,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Map = void 0;
 var game_1 = __webpack_require__(/*! ./game */ "./src/game.ts");
 var gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/gameConstants.ts");
-var level_1 = __webpack_require__(/*! ./level */ "./src/level.ts");
+var room_1 = __webpack_require__(/*! ./room */ "./src/room.ts");
 var enemy_1 = __webpack_require__(/*! ./enemy/enemy */ "./src/enemy/enemy.ts");
 var Map = /** @class */ (function () {
     function Map(game) {
@@ -13710,14 +12612,14 @@ var Map = /** @class */ (function () {
                 _this.game.level.roomY -
                 Math.floor(0.5 * _this.game.level.height));
             game_1.Game.ctx.globalAlpha = 1;
-            for (var _i = 0, _a = _this.game.levels; _i < _a.length; _i++) {
+            for (var _i = 0, _a = _this.game.rooms; _i < _a.length; _i++) {
                 var level = _a[_i];
                 if (_this.game.level.mapGroup === level.mapGroup && level.entered) {
                     game_1.Game.ctx.fillStyle = "#5A5A5A";
                     game_1.Game.ctx.fillRect(level.roomX * s + 0, level.roomY * s + 0, level.width * s - 0, level.height * s - 0);
-                    if (level.type === level_1.RoomType.UPLADDER)
+                    if (level.type === room_1.RoomType.UPLADDER)
                         game_1.Game.ctx.fillStyle = "#101460";
-                    if (level.type === level_1.RoomType.DOWNLADDER)
+                    if (level.type === room_1.RoomType.DOWNLADDER)
                         game_1.Game.ctx.fillStyle = "#601410";
                     game_1.Game.ctx.fillStyle = "black";
                     game_1.Game.ctx.fillRect(level.roomX * s + 1, level.roomY * s + 1, level.width * s - 2, level.height * s - 2);
@@ -13763,7 +12665,7 @@ var Map = /** @class */ (function () {
             }
             for (var i in _this.game.players) {
                 game_1.Game.ctx.fillStyle = "white";
-                if (_this.game.levels[_this.game.players[i].levelID].mapGroup ===
+                if (_this.game.rooms[_this.game.players[i].levelID].mapGroup ===
                     _this.game.level.mapGroup) {
                     game_1.Game.ctx.fillRect(_this.game.players[i].x * s, _this.game.players[i].y * s, 1 * s, 1 * s);
                 }
@@ -14264,7 +13166,7 @@ var Player = /** @class */ (function (_super) {
         _this.tryMove = function (x, y) {
             var newMove = { x: x, y: y };
             // TODO don't move if hit by enemy
-            _this.game.levels[_this.levelID].catchUp();
+            _this.game.rooms[_this.levelID].catchUp();
             if (_this.dead)
                 return;
             for (var i = 0; i < 2; i++)
@@ -14275,7 +13177,7 @@ var Player = /** @class */ (function (_super) {
                     return;
                     //}
                 }
-            for (var _i = 0, _a = _this.game.levels[_this.levelID].enemies; _i < _a.length; _i++) {
+            for (var _i = 0, _a = _this.game.rooms[_this.levelID].enemies; _i < _a.length; _i++) {
                 var e = _a[_i];
                 if (_this.tryCollide(e, x, y)) {
                     if (e.pushable) {
@@ -14289,7 +13191,7 @@ var Player = /** @class */ (function (_super) {
                         var pushedEnemies = [];
                         while (true) {
                             foundEnd = true;
-                            for (var _b = 0, _c = _this.game.levels[_this.levelID].enemies; _b < _c.length; _b++) {
+                            for (var _b = 0, _c = _this.game.rooms[_this.levelID].enemies; _b < _c.length; _b++) {
                                 var f = _c[_b];
                                 if (f.pointIn(nextX, nextY)) {
                                     if (!f.chainPushable) {
@@ -14311,22 +13213,22 @@ var Player = /** @class */ (function (_super) {
                         otherwise, push everything, killing last enemy if there is a wall */
                         // here, (nextX, nextY) is the position immediately after the end of the train
                         if (pushedEnemies.length === 0 &&
-                            (_this.game.levels[_this.levelID].levelArray[nextX][nextY].canCrushEnemy() ||
+                            (_this.game.rooms[_this.levelID].roomArray[nextX][nextY].canCrushEnemy() ||
                                 enemyEnd)) {
                             if (e.destroyable) {
                                 e.kill();
-                                if (_this.game.levels[_this.levelID] === _this.game.level)
+                                if (_this.game.rooms[_this.levelID] === _this.game.level)
                                     sound_1.Sound.hit();
                                 _this.drawX = 0.5 * (_this.x - e.x);
                                 _this.drawY = 0.5 * (_this.y - e.y);
-                                _this.game.levels[_this.levelID].particles.push(new slashParticle_1.SlashParticle(e.x, e.y));
-                                _this.game.levels[_this.levelID].tick(_this);
+                                _this.game.rooms[_this.levelID].particles.push(new slashParticle_1.SlashParticle(e.x, e.y));
+                                _this.game.rooms[_this.levelID].tick(_this);
                                 _this.game.shakeScreen(10 * _this.drawX, 10 * _this.drawY);
                                 return;
                             }
                         }
                         else {
-                            if (_this.game.levels[_this.levelID] === _this.game.level)
+                            if (_this.game.rooms[_this.levelID] === _this.game.level)
                                 sound_1.Sound.push();
                             // here pushedEnemies may still be []
                             for (var _d = 0, pushedEnemies_1 = pushedEnemies; _d < pushedEnemies_1.length; _d++) {
@@ -14337,10 +13239,10 @@ var Player = /** @class */ (function (_super) {
                                 f.drawY = dy;
                                 f.skipNextTurns = 1; // skip next turn, so they don't move while we're pushing them
                             }
-                            if (_this.game.levels[_this.levelID].levelArray[nextX][nextY].canCrushEnemy() ||
+                            if (_this.game.rooms[_this.levelID].roomArray[nextX][nextY].canCrushEnemy() ||
                                 enemyEnd) {
                                 pushedEnemies[pushedEnemies.length - 1].killNoBones();
-                                if (_this.game.levels[_this.levelID] === _this.game.level)
+                                if (_this.game.rooms[_this.levelID] === _this.game.level)
                                     sound_1.Sound.hit();
                             }
                             e.x += dx;
@@ -14348,7 +13250,7 @@ var Player = /** @class */ (function (_super) {
                             e.drawX = dx;
                             e.drawY = dy;
                             _this.move(x, y);
-                            _this.game.levels[_this.levelID].tick(_this);
+                            _this.game.rooms[_this.levelID].tick(_this);
                             return;
                         }
                     }
@@ -14364,13 +13266,13 @@ var Player = /** @class */ (function (_super) {
                     }
                 }
             }
-            var other = _this.game.levels[_this.levelID].levelArray[x][y];
+            var other = _this.game.rooms[_this.levelID].roomArray[x][y];
             if (!other.isSolid()) {
                 _this.move(x, y);
                 other.onCollide(_this);
                 if (!(other instanceof door_1.Door ||
                     other instanceof trapdoor_1.Trapdoor))
-                    _this.game.levels[_this.levelID].tick(_this);
+                    _this.game.rooms[_this.levelID].tick(_this);
             }
             else {
                 if (other instanceof door_1.Door) {
@@ -14382,7 +13284,7 @@ var Player = /** @class */ (function (_super) {
             }
         };
         _this.hurt = function (damage, enemy) {
-            if (_this.game.levels[_this.levelID] === _this.game.level)
+            if (_this.game.rooms[_this.levelID] === _this.game.level)
                 sound_1.Sound.hurt();
             if (_this.inventory.getArmor() && _this.inventory.getArmor().health > 0) {
                 _this.inventory.getArmor().hurt(damage);
@@ -14402,13 +13304,13 @@ var Player = /** @class */ (function (_super) {
         _this.dashMove = function (x, y) {
             _this.x = x;
             _this.y = y;
-            for (var _i = 0, _a = _this.game.levels[_this.levelID].items; _i < _a.length; _i++) {
+            for (var _i = 0, _a = _this.game.rooms[_this.levelID].items; _i < _a.length; _i++) {
                 var i = _a[_i];
                 if (i.x === x && i.y === y) {
                     i.onPickup(_this);
                 }
             }
-            _this.game.levels[_this.levelID].updateLighting();
+            _this.game.rooms[_this.levelID].updateLighting();
         };
         _this.doneMoving = function () {
             var EPSILON = 0.01;
@@ -14416,7 +13318,7 @@ var Player = /** @class */ (function (_super) {
         };
         _this.move = function (x, y) {
             _this.actionTab.setState(actionTab_1.ActionState.MOVE);
-            if (_this.game.levels[_this.levelID] === _this.game.level)
+            if (_this.game.rooms[_this.levelID] === _this.game.level)
                 sound_1.Sound.playerStoneFootstep();
             if (_this.openVendingMachine)
                 _this.openVendingMachine.close();
@@ -14424,13 +13326,13 @@ var Player = /** @class */ (function (_super) {
             _this.drawY = y - _this.y;
             _this.x = x;
             _this.y = y;
-            for (var _i = 0, _a = _this.game.levels[_this.levelID].items; _i < _a.length; _i++) {
+            for (var _i = 0, _a = _this.game.rooms[_this.levelID].items; _i < _a.length; _i++) {
                 var i = _a[_i];
                 if (i.x === x && i.y === y) {
                     i.onPickup(_this);
                 }
             }
-            _this.game.levels[_this.levelID].updateLighting();
+            _this.game.rooms[_this.levelID].updateLighting();
         };
         _this.moveNoSmooth = function (x, y) {
             // doesn't touch smoothing
@@ -14879,6 +13781,1117 @@ exports.Random = Random;
 // copy and paste into browser console
 // let state;
 // let rand = () => { state ^= (state << 21); state ^= (state >>> 35); state ^= (state << 4); return (state >>> 0) / 4294967296; }
+
+
+/***/ }),
+
+/***/ "./src/room.ts":
+/*!*********************!*\
+  !*** ./src/room.ts ***!
+  \*********************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Room = exports.TurnState = exports.RoomType = void 0;
+var wall_1 = __webpack_require__(/*! ./tile/wall */ "./src/tile/wall.ts");
+var levelConstants_1 = __webpack_require__(/*! ./levelConstants */ "./src/levelConstants.ts");
+var floor_1 = __webpack_require__(/*! ./tile/floor */ "./src/tile/floor.ts");
+var game_1 = __webpack_require__(/*! ./game */ "./src/game.ts");
+var door_1 = __webpack_require__(/*! ./tile/door */ "./src/tile/door.ts");
+var tile_1 = __webpack_require__(/*! ./tile/tile */ "./src/tile/tile.ts");
+var knightEnemy_1 = __webpack_require__(/*! ./enemy/knightEnemy */ "./src/enemy/knightEnemy.ts");
+var enemy_1 = __webpack_require__(/*! ./enemy/enemy */ "./src/enemy/enemy.ts");
+var chest_1 = __webpack_require__(/*! ./enemy/chest */ "./src/enemy/chest.ts");
+var goldenKey_1 = __webpack_require__(/*! ./item/goldenKey */ "./src/item/goldenKey.ts");
+var spawnfloor_1 = __webpack_require__(/*! ./tile/spawnfloor */ "./src/tile/spawnfloor.ts");
+//import { GoldenDoor } from "./tile/goldenDoor";
+var spike_1 = __webpack_require__(/*! ./tile/spike */ "./src/tile/spike.ts");
+var gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/gameConstants.ts");
+var wizardEnemy_1 = __webpack_require__(/*! ./enemy/wizardEnemy */ "./src/enemy/wizardEnemy.ts");
+var skullEnemy_1 = __webpack_require__(/*! ./enemy/skullEnemy */ "./src/enemy/skullEnemy.ts");
+var barrel_1 = __webpack_require__(/*! ./enemy/barrel */ "./src/enemy/barrel.ts");
+var crate_1 = __webpack_require__(/*! ./enemy/crate */ "./src/enemy/crate.ts");
+var armor_1 = __webpack_require__(/*! ./item/armor */ "./src/item/armor.ts");
+var spiketrap_1 = __webpack_require__(/*! ./tile/spiketrap */ "./src/tile/spiketrap.ts");
+var fountainTile_1 = __webpack_require__(/*! ./tile/fountainTile */ "./src/tile/fountainTile.ts");
+var coffinTile_1 = __webpack_require__(/*! ./tile/coffinTile */ "./src/tile/coffinTile.ts");
+var pottedPlant_1 = __webpack_require__(/*! ./enemy/pottedPlant */ "./src/enemy/pottedPlant.ts");
+var insideLevelDoor_1 = __webpack_require__(/*! ./tile/insideLevelDoor */ "./src/tile/insideLevelDoor.ts");
+var button_1 = __webpack_require__(/*! ./tile/button */ "./src/tile/button.ts");
+var hitWarning_1 = __webpack_require__(/*! ./hitWarning */ "./src/hitWarning.ts");
+var upLadder_1 = __webpack_require__(/*! ./tile/upLadder */ "./src/tile/upLadder.ts");
+var downLadder_1 = __webpack_require__(/*! ./tile/downLadder */ "./src/tile/downLadder.ts");
+var coalResource_1 = __webpack_require__(/*! ./enemy/coalResource */ "./src/enemy/coalResource.ts");
+var goldResource_1 = __webpack_require__(/*! ./enemy/goldResource */ "./src/enemy/goldResource.ts");
+var emeraldResource_1 = __webpack_require__(/*! ./enemy/emeraldResource */ "./src/enemy/emeraldResource.ts");
+var chasm_1 = __webpack_require__(/*! ./tile/chasm */ "./src/tile/chasm.ts");
+var spawner_1 = __webpack_require__(/*! ./enemy/spawner */ "./src/enemy/spawner.ts");
+var vendingMachine_1 = __webpack_require__(/*! ./enemy/vendingMachine */ "./src/enemy/vendingMachine.ts");
+var wallTorch_1 = __webpack_require__(/*! ./tile/wallTorch */ "./src/tile/wallTorch.ts");
+var chargeEnemy_1 = __webpack_require__(/*! ./enemy/chargeEnemy */ "./src/enemy/chargeEnemy.ts");
+var shotgun_1 = __webpack_require__(/*! ./weapon/shotgun */ "./src/weapon/shotgun.ts");
+var heart_1 = __webpack_require__(/*! ./item/heart */ "./src/item/heart.ts");
+var spear_1 = __webpack_require__(/*! ./weapon/spear */ "./src/weapon/spear.ts");
+var player_1 = __webpack_require__(/*! ./player */ "./src/player.ts");
+var slimeEnemy_1 = __webpack_require__(/*! ./enemy/slimeEnemy */ "./src/enemy/slimeEnemy.ts");
+var zombieEnemy_1 = __webpack_require__(/*! ./enemy/zombieEnemy */ "./src/enemy/zombieEnemy.ts");
+var bigSkullEnemy_1 = __webpack_require__(/*! ./enemy/bigSkullEnemy */ "./src/enemy/bigSkullEnemy.ts");
+var random_1 = __webpack_require__(/*! ./random */ "./src/random.ts");
+var lantern_1 = __webpack_require__(/*! ./item/lantern */ "./src/item/lantern.ts");
+var dualdagger_1 = __webpack_require__(/*! ./weapon/dualdagger */ "./src/weapon/dualdagger.ts");
+var pot_1 = __webpack_require__(/*! ./enemy/pot */ "./src/enemy/pot.ts");
+var bishopEnemy_1 = __webpack_require__(/*! ./enemy/bishopEnemy */ "./src/enemy/bishopEnemy.ts");
+var rockResource_1 = __webpack_require__(/*! ./enemy/rockResource */ "./src/enemy/rockResource.ts");
+var mushrooms_1 = __webpack_require__(/*! ./enemy/mushrooms */ "./src/enemy/mushrooms.ts");
+var armoredzombieEnemy_1 = __webpack_require__(/*! ./enemy/armoredzombieEnemy */ "./src/enemy/armoredzombieEnemy.ts");
+var door_2 = __webpack_require__(/*! ./tile/door */ "./src/tile/door.ts");
+var actionTab_1 = __webpack_require__(/*! ./actionTab */ "./src/actionTab.ts");
+var tombStone_1 = __webpack_require__(/*! ./enemy/tombStone */ "./src/enemy/tombStone.ts");
+var RoomType;
+(function (RoomType) {
+    RoomType[RoomType["START"] = 0] = "START";
+    RoomType[RoomType["DUNGEON"] = 1] = "DUNGEON";
+    RoomType[RoomType["BOSS"] = 2] = "BOSS";
+    RoomType[RoomType["BIGDUNGEON"] = 3] = "BIGDUNGEON";
+    RoomType[RoomType["TREASURE"] = 4] = "TREASURE";
+    RoomType[RoomType["FOUNTAIN"] = 5] = "FOUNTAIN";
+    RoomType[RoomType["COFFIN"] = 6] = "COFFIN";
+    RoomType[RoomType["GRASS"] = 7] = "GRASS";
+    RoomType[RoomType["PUZZLE"] = 8] = "PUZZLE";
+    RoomType[RoomType["KEYROOM"] = 9] = "KEYROOM";
+    RoomType[RoomType["CHESSBOARD"] = 10] = "CHESSBOARD";
+    RoomType[RoomType["MAZE"] = 11] = "MAZE";
+    RoomType[RoomType["CORRIDOR"] = 12] = "CORRIDOR";
+    RoomType[RoomType["SPIKECORRIDOR"] = 13] = "SPIKECORRIDOR";
+    RoomType[RoomType["UPLADDER"] = 14] = "UPLADDER";
+    RoomType[RoomType["DOWNLADDER"] = 15] = "DOWNLADDER";
+    RoomType[RoomType["SHOP"] = 16] = "SHOP";
+    RoomType[RoomType["BIGCAVE"] = 17] = "BIGCAVE";
+    RoomType[RoomType["CAVE"] = 18] = "CAVE";
+    RoomType[RoomType["SPAWNER"] = 19] = "SPAWNER";
+    RoomType[RoomType["ROPEHOLE"] = 20] = "ROPEHOLE";
+    RoomType[RoomType["ROPECAVE"] = 21] = "ROPECAVE";
+})(RoomType = exports.RoomType || (exports.RoomType = {}));
+var TurnState;
+(function (TurnState) {
+    TurnState[TurnState["playerTurn"] = 0] = "playerTurn";
+    TurnState[TurnState["computerTurn"] = 1] = "computerTurn";
+})(TurnState = exports.TurnState || (exports.TurnState = {}));
+var Room = /** @class */ (function () {
+    function Room(game, x, y, w, h, type, depth, mapGroup, rand) {
+        if (rand === void 0) { rand = random_1.Random.rand; }
+        var _this = this;
+        this.shadeColor = "black";
+        this.tileInside = function (tileX, tileY) {
+            return _this.pointInside(tileX, tileY, _this.roomX, _this.roomY, _this.width, _this.height);
+        };
+        this.populateEmpty = function (rand) {
+            _this.addTorches(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 2, 3, 4], rand), rand);
+        };
+        this.populateDungeon = function (rand) {
+            var factor = game_1.Game.rand(1, 36, rand);
+            if (factor < 30)
+                _this.addWallBlocks(rand);
+            if (factor < 26)
+                _this.addFingers(rand);
+            if (factor % 4 === 0)
+                _this.addChasms(rand);
+            _this.addTorches(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 2, 3, 4], rand), rand);
+            if (factor > 15)
+                _this.addSpikeTraps(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 5], rand), rand);
+            var numEmptyTiles = _this.getEmptyTiles().length;
+            var numTotalObstacles = Math.floor(numEmptyTiles * 0.35 * rand());
+            var numPlants = Math.ceil(numTotalObstacles * rand());
+            var numObstacles = numTotalObstacles - numPlants;
+            _this.addPlants(numPlants, rand);
+            _this.addObstacles(numObstacles, rand);
+            var numEnemies = Math.ceil((numEmptyTiles - numTotalObstacles) *
+                Math.min(_this.depth * 0.1 + 0.1, 0.35) //this.depth * 0.01 is starting value
+            );
+            _this.addEnemies(numEnemies, rand);
+            if (factor <= 6)
+                _this.addVendingMachine(rand);
+        };
+        this.populateBoss = function (rand) {
+            _this.addTorches(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 2, 3, 4], rand), rand);
+            _this.addSpikeTraps(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 5], rand), rand);
+            var numEmptyTiles = _this.getEmptyTiles().length;
+            var numTotalObstacles = Math.floor(numEmptyTiles * 0.2);
+            var numPlants = Math.floor(numTotalObstacles * rand());
+            var numObstacles = numTotalObstacles - numPlants;
+            _this.addPlants(numPlants, rand);
+            _this.addObstacles(numObstacles, rand);
+            var numEnemies = Math.ceil((numEmptyTiles - numTotalObstacles) *
+                Math.min(_this.depth * 0.05 + 0.2, 0.5));
+            _this.addEnemies(numEnemies, rand);
+        };
+        this.populateBigDungeon = function (rand) {
+            if (game_1.Game.rand(1, 4, rand) === 1)
+                _this.addChasms(rand);
+            _this.addTorches(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 2, 3, 4], rand), rand);
+            if (game_1.Game.rand(1, 4, rand) === 1)
+                _this.addPlants(game_1.Game.randTable([0, 0, 0, 0, 0, 1, 1, 2, 2, 3, 4], rand), rand);
+            if (game_1.Game.rand(1, 3, rand) === 1)
+                _this.addSpikeTraps(game_1.Game.randTable([3, 5, 7, 8], rand), rand);
+            var numEmptyTiles = _this.getEmptyTiles().length;
+            var numEnemies = Math.ceil(numEmptyTiles *
+                (_this.depth * 0.5 + 0.5) *
+                game_1.Game.randTable([0.05, 0.05, 0.06, 0.07, 0.1], rand));
+            _this.addEnemies(numEnemies, rand);
+            if (numEnemies > 0)
+                _this.addObstacles(numEnemies / game_1.Game.rand(1, 2, rand), rand);
+            else
+                _this.addObstacles(game_1.Game.randTable([0, 0, 1, 1, 2, 3, 5], rand), rand);
+        };
+        this.populateSpawner = function (rand) {
+            _this.addTorches(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 2, 3, 4], rand), rand);
+            _this.enemies.push(new spawner_1.Spawner(_this, _this.game, Math.floor(_this.roomX + _this.width / 2), Math.floor(_this.roomY + _this.height / 2), rand));
+        };
+        this.populateKeyRoom = function (rand) {
+            _this.addTorches(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 2, 3, 4], rand), rand);
+            _this.items.push(new goldenKey_1.GoldenKey(_this, Math.floor(_this.roomX + _this.width / 2), Math.floor(_this.roomY + _this.height / 2)));
+        };
+        this.populateFountain = function (rand) {
+            _this.addTorches(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 2, 3, 4], rand), rand);
+            var centerX = Math.floor(_this.roomX + _this.width / 2);
+            var centerY = Math.floor(_this.roomY + _this.height / 2);
+            for (var x = centerX - 1; x <= centerX + 1; x++) {
+                for (var y = centerY - 1; y <= centerY + 1; y++) {
+                    _this.roomArray[x][y] = new fountainTile_1.FountainTile(_this, x, y, x - (centerX - 1), y - (centerY - 1));
+                }
+            }
+            _this.addPlants(game_1.Game.randTable([0, 0, 1, 2], rand), rand);
+        };
+        this.placeCoffin = function (x, y) {
+            _this.roomArray[x][y] = new coffinTile_1.CoffinTile(_this, x, y, 0);
+            _this.roomArray[x][y + 1] = new coffinTile_1.CoffinTile(_this, x, y + 1, 1);
+        };
+        this.populateCoffin = function (rand) {
+            _this.addTorches(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 2, 3, 4], rand), rand);
+            _this.placeCoffin(Math.floor(_this.roomX + _this.width / 2 - 2), Math.floor(_this.roomY + _this.height / 2));
+            _this.placeCoffin(Math.floor(_this.roomX + _this.width / 2), Math.floor(_this.roomY + _this.height / 2));
+            _this.placeCoffin(Math.floor(_this.roomX + _this.width / 2) + 2, Math.floor(_this.roomY + _this.height / 2));
+        };
+        this.populatePuzzle = function (rand) {
+            var d;
+            for (var x_1 = _this.roomX; x_1 < _this.roomX + _this.width; x_1++) {
+                var y_1 = _this.roomY + Math.floor(_this.height / 2);
+                if (x_1 === _this.roomX + Math.floor(_this.width / 2)) {
+                    d = new insideLevelDoor_1.InsideLevelDoor(_this, _this.game, x_1, y_1 + 1);
+                    _this.roomArray[x_1][y_1 + 1] = d;
+                }
+                else {
+                    _this.roomArray[x_1][y_1] = new wall_1.Wall(_this, x_1, y_1);
+                }
+            }
+            var x = game_1.Game.rand(_this.roomX, _this.roomX + _this.width - 1, rand);
+            var y = game_1.Game.rand(_this.roomY + Math.floor(_this.height / 2) + 3, _this.roomY + _this.height - 2, rand);
+            _this.roomArray[x][y] = new button_1.Button(_this, x, y, d);
+            var crateTiles = _this.getEmptyTiles().filter(function (t) {
+                return t.x >= _this.roomX + 1 &&
+                    t.x <= _this.roomX + _this.width - 2 &&
+                    t.y >= _this.roomY + Math.floor(_this.height / 2) + 3 &&
+                    t.y <= _this.roomY + _this.height - 2;
+            });
+            var numCrates = game_1.Game.randTable([1, 2, 2, 3, 4], rand);
+            for (var i = 0; i < numCrates; i++) {
+                var t = crateTiles.splice(game_1.Game.rand(0, crateTiles.length - 1, rand), 1)[0];
+                _this.enemies.push(new crate_1.Crate(_this, _this.game, t.x, t.y));
+            }
+            _this.addPlants(game_1.Game.randTable([0, 0, 0, 0, 0, 1, 1, 2, 2, 3, 4], rand), rand);
+        };
+        this.populateSpikeCorridor = function (rand) {
+            for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
+                for (var y = _this.roomY + 1; y < _this.roomY + _this.height - 1; y++) {
+                    _this.roomArray[x][y] = new spiketrap_1.SpikeTrap(_this, x, y, game_1.Game.rand(0, 3, rand));
+                }
+            }
+            _this.addTorches(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 2, 3, 4], rand), rand);
+        };
+        this.populateTreasure = function (rand) {
+            _this.addTorches(game_1.Game.randTable([0, 1, 1, 2, 2, 3, 4], rand), rand);
+            _this.addChests(game_1.Game.randTable([4, 4, 5, 5, 5, 6, 8], rand), rand);
+            _this.addPlants(game_1.Game.randTable([0, 1, 2, 4, 5, 6], rand), rand);
+        };
+        this.populateChessboard = function (rand) { };
+        this.populateCave = function (rand) {
+            var factor = game_1.Game.rand(1, 36, rand);
+            _this.addWallBlocks(rand);
+            if (factor > 15)
+                _this.addSpikeTraps(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 5], rand), rand);
+            var numEmptyTiles = _this.getEmptyTiles().length;
+            var numEnemies = Math.ceil(numEmptyTiles * game_1.Game.randTable([0.25, 0.3, 0.35], rand));
+            _this.addEnemies(numEnemies, rand);
+            _this.addResources((numEmptyTiles - numEnemies) * game_1.Game.randTable([0.5, 0.6, 0.7, 0.8], rand), rand);
+        };
+        this.populateUpLadder = function (rand) {
+            _this.addTorches(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 2], rand), rand);
+            var cX = Math.floor(_this.roomX + _this.width / 2);
+            var cY = Math.floor(_this.roomY + _this.height / 2);
+        };
+        this.populateDownLadder = function (rand) {
+            _this.addTorches(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 2], rand), rand);
+            var cX = Math.floor(_this.roomX + _this.width / 2);
+            var cY = Math.floor(_this.roomY + _this.height / 2);
+            _this.roomArray[cX][cY] = new downLadder_1.DownLadder(_this, _this.game, cX, cY);
+        };
+        this.populateRopeHole = function (rand) {
+            _this.addTorches(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 2], rand), rand);
+            var cX = Math.floor(_this.roomX + _this.width / 2);
+            var cY = Math.floor(_this.roomY + _this.height / 2);
+            var d = new downLadder_1.DownLadder(_this, _this.game, cX, cY);
+            d.isRope = true;
+            _this.roomArray[cX][cY] = d;
+        };
+        this.populateRopeCave = function (rand) {
+            var cX = Math.floor(_this.roomX + _this.width / 2);
+            var cY = Math.floor(_this.roomY + _this.height / 2);
+            var upLadder = new upLadder_1.UpLadder(_this, _this.game, cX, cY);
+            upLadder.isRope = true;
+            _this.roomArray[cX][cY] = upLadder;
+        };
+        this.populateShop = function (rand) {
+            _this.addTorches(2, rand);
+            var cX = Math.floor(_this.roomX + _this.width / 2);
+            var cY = Math.floor(_this.roomY + _this.height / 2);
+            _this.enemies.push(new vendingMachine_1.VendingMachine(_this, _this.game, cX - 2, cY - 1, new shotgun_1.Shotgun(_this, 0, 0), rand));
+            _this.enemies.push(new vendingMachine_1.VendingMachine(_this, _this.game, cX + 2, cY - 1, new heart_1.Heart(_this, 0, 0), rand));
+            _this.enemies.push(new vendingMachine_1.VendingMachine(_this, _this.game, cX - 2, cY + 2, new armor_1.Armor(_this, 0, 0), rand));
+            _this.enemies.push(new vendingMachine_1.VendingMachine(_this, _this.game, cX + 2, cY + 2, new spear_1.Spear(_this, 0, 0), rand));
+        };
+        this.populate = function (rand) {
+            _this.name = "";
+            switch (_this.type) {
+                case RoomType.START:
+                    _this.populateEmpty(rand);
+                    _this.name = "FLOOR " + -_this.depth;
+                    break;
+                case RoomType.BOSS:
+                    _this.populateBoss(rand);
+                    _this.name = "BOSS";
+                    break;
+                case RoomType.DUNGEON:
+                    _this.populateDungeon(rand);
+                    break;
+                case RoomType.BIGDUNGEON:
+                    _this.populateBigDungeon(rand);
+                    break;
+                case RoomType.FOUNTAIN:
+                    _this.populateFountain(rand);
+                    break;
+                case RoomType.COFFIN:
+                    _this.populateCoffin(rand);
+                    break;
+                case RoomType.PUZZLE:
+                    _this.populatePuzzle(rand);
+                    break;
+                case RoomType.SPIKECORRIDOR:
+                    _this.populateSpikeCorridor(rand);
+                    break;
+                case RoomType.TREASURE:
+                    _this.populateTreasure(rand);
+                    break;
+                case RoomType.CHESSBOARD: // TODO
+                    _this.populateChessboard(rand);
+                    break;
+                case RoomType.KEYROOM:
+                    _this.populateKeyRoom(rand);
+                    break;
+                case RoomType.GRASS:
+                    _this.populateDungeon(rand);
+                    break;
+                case RoomType.BIGCAVE:
+                    _this.populateCave(rand);
+                case RoomType.CAVE:
+                    _this.populateCave(rand);
+                    break;
+                case RoomType.UPLADDER:
+                    _this.populateUpLadder(rand);
+                    _this.name = "FLOOR " + -_this.depth;
+                    break;
+                case RoomType.DOWNLADDER:
+                    _this.populateDownLadder(rand);
+                    _this.name = "FLOOR " + -_this.depth;
+                    break;
+                case RoomType.ROPEHOLE:
+                    _this.populateRopeHole(rand);
+                    break;
+                case RoomType.ROPECAVE:
+                    _this.populateRopeCave(rand);
+                    break;
+                case RoomType.SHOP:
+                    /* shop rates:
+                     * 10 coal for an gold coin
+                     * 1 gold for 10 coins
+                     * 1 emerald for 100 coins
+                     *
+                     * shop items:
+                     * 1 empty heart   4 ^ (maxHealth + maxHealth ^ 1.05 ^ maxHealth - 2.05) coins
+                     * fill all hearts  1 coin
+                     * better torch    5 ^ (torchLevel + 1.05 ^ torchLevel - 2.05) coins
+                     * weapons
+                     */
+                    _this.populateShop(rand);
+                    break;
+                case RoomType.SPAWNER:
+                    _this.populateSpawner(rand);
+                    break;
+            }
+            _this.message = _this.name;
+        };
+        this.addDoor = function (x, y) {
+            var d;
+            var t = door_1.DoorType.DOOR;
+            if (_this.type === RoomType.BOSS)
+                t = door_1.DoorType.GUARDEDDOOR;
+            if (_this.type === RoomType.KEYROOM)
+                t = door_1.DoorType.LOCKEDDOOR;
+            if (x === _this.roomX) {
+                d = new door_1.Door(_this, _this.game, x, y, 1, t); //last argument, enum 0 is for locked
+                _this.roomArray[x + 1][y] = new spawnfloor_1.SpawnFloor(_this, x + 1, y);
+            }
+            else if (x === _this.roomX + _this.width - 1) {
+                d = new door_1.Door(_this, _this.game, x, y, 3, t);
+                _this.roomArray[x - 1][y] = new spawnfloor_1.SpawnFloor(_this, x - 1, y);
+            }
+            else if (y === _this.roomY) {
+                d = new door_1.Door(_this, _this.game, x, y, 0, t);
+                _this.roomArray[x][y + 1] = new spawnfloor_1.SpawnFloor(_this, x, y + 1);
+            }
+            else if (y === _this.roomY + _this.height - 1) {
+                d = new door_1.Door(_this, _this.game, x, y, 2, t);
+                _this.roomArray[x][y - 1] = new spawnfloor_1.SpawnFloor(_this, x, y - 1);
+            }
+            _this.doors.push(d);
+            if (_this.roomArray[d.x] == undefined) {
+                console.log("UNDEFINED at " +
+                    d.x +
+                    " levelArray.length was " +
+                    _this.roomArray.length);
+                console.log("location " + location);
+                console.log(_this.roomX, _this.roomY);
+                console.log(_this.width, _this.height);
+            }
+            _this.roomArray[d.x][d.y] = d;
+            return d;
+        };
+        this.exitLevel = function () {
+            _this.particles.splice(0, _this.particles.length);
+        };
+        this.enterLevel = function (player) {
+            player.moveSnap(_this.roomX + Math.floor(_this.width / 2), _this.roomY + Math.floor(_this.height / 2));
+            _this.clearDeadStuff();
+            _this.updateLighting();
+            _this.entered = true;
+            _this.message = _this.name;
+        };
+        this.enterLevelThroughDoor = function (player, door, side) {
+            if (door instanceof door_1.Door && door.doorDir === door_2.DoorDir.North) {
+                //if top door
+                door.opened = true;
+                player.moveNoSmooth(door.x, door.y + 1);
+            }
+            else if (door instanceof door_1.Door && door.doorDir === door_2.DoorDir.South) {
+                //if bottom door
+                player.moveNoSmooth(door.x, door.y - 1);
+            }
+            else if (door instanceof door_1.Door &&
+                [door_2.DoorDir.East, door_2.DoorDir.West].includes(door.doorDir)) {
+                // if side door
+                player.moveNoSmooth(door.x + side, door.y);
+            }
+            _this.clearDeadStuff();
+            _this.updateLighting();
+            _this.entered = true;
+            _this.message = _this.name;
+        };
+        this.enterLevelThroughLadder = function (player, ladder) {
+            player.moveSnap(ladder.x, ladder.y + 1);
+            _this.clearDeadStuff();
+            _this.updateLighting();
+            _this.entered = true;
+            _this.message = _this.name;
+        };
+        this.getEmptyTiles = function () {
+            var returnVal = [];
+            for (var x = _this.roomX + 1; x < _this.roomX + _this.width - 1; x++) {
+                for (var y = _this.roomY + 1; y < _this.roomY + _this.height - 1; y++) {
+                    if (!_this.roomArray[x][y].isSolid() &&
+                        !(_this.roomArray[x][y] instanceof spiketrap_1.SpikeTrap) &&
+                        !(_this.roomArray[x][y] instanceof spawnfloor_1.SpawnFloor)) {
+                        returnVal.push(_this.roomArray[x][y]);
+                    }
+                }
+            }
+            var _loop_1 = function (e) {
+                returnVal = returnVal.filter(function (t) { return !e.pointIn(t.x, t.y); });
+            };
+            for (var _i = 0, _a = _this.enemies; _i < _a.length; _i++) {
+                var e = _a[_i];
+                _loop_1(e);
+            }
+            return returnVal;
+        };
+        this.getTile = function (x, y) {
+            if (_this.roomArray[x])
+                return _this.roomArray[x][y];
+            else
+                return undefined;
+        };
+        this.fadeLighting = function () {
+            for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
+                for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
+                    if (Math.abs(_this.softVis[x][y] - _this.vis[x][y]) >= 0.02) {
+                        if (_this.softVis[x][y] < _this.vis[x][y])
+                            _this.softVis[x][y] += 0.02;
+                        else if (_this.softVis[x][y] > _this.vis[x][y])
+                            _this.softVis[x][y] -= 0.02;
+                    }
+                    //if (this.softVis[x][y] < 0.05) this.softVis[x][y] = 0;
+                }
+            }
+        };
+        this.updateLighting = function () {
+            var oldVis = [];
+            for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
+                oldVis[x] = [];
+                for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
+                    oldVis[x][y] = _this.vis[x][y];
+                    _this.vis[x][y] = 1;
+                    //if (this.visibilityArray[x][y] > LevelConstants.MIN_VISIBILITY)
+                    //  this.visibilityArray[x][y] = 0;
+                }
+            }
+            for (var p in _this.game.players) {
+                if (_this === _this.game.rooms[_this.game.players[p].levelID]) {
+                    for (var i = 0; i < 360; i += levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP) {
+                        _this.castShadowsAtAngle(i, _this.game.players[p].x + 0.5, _this.game.players[p].y + 0.5, _this.game.players[p].sightRadius - _this.depth);
+                    }
+                }
+            }
+            for (var _i = 0, _a = _this.lightSources; _i < _a.length; _i++) {
+                var l = _a[_i];
+                for (var i = 0; i < 360; i += levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP) {
+                    _this.castShadowsAtAngle(i, l.x, l.y, l.r);
+                }
+            }
+            if (levelConstants_1.LevelConstants.SMOOTH_LIGHTING)
+                _this.vis = _this.blur3x3(_this.vis, [
+                    [1, 2, 1],
+                    [2, 8, 2],
+                    [1, 2, 1],
+                ]);
+            /*for (let x = 0; x < this.visibilityArray.length; x++) {
+              for (let y = 0; y < this.visibilityArray[0].length; y++) {
+                if (this.visibilityArray[x][y] < oldVisibilityArray[x][y]) {
+                  this.visibilityArray[x][y] = Math.min(
+                    oldVisibilityArray[x][y],
+                    LevelConstants.MIN_VISIBILITY
+                  );
+                }
+              }
+            }*/
+        };
+        this.castShadowsAtAngle = function (angle, px, py, radius) {
+            var dx = Math.cos((angle * Math.PI) / 180);
+            var dy = Math.sin((angle * Math.PI) / 180);
+            var onOpaqueSection = false;
+            for (var i = 0; i < radius; i++) {
+                if (Math.floor(px) < _this.roomX ||
+                    Math.floor(px) >= _this.roomX + _this.width ||
+                    Math.floor(py) < _this.roomY ||
+                    Math.floor(py) >= _this.roomY + _this.height)
+                    return; // we're outside the level
+                var tile = _this.roomArray[Math.floor(px)][Math.floor(py)];
+                if (tile.isOpaque()) {
+                    if (i > 0)
+                        onOpaqueSection = true;
+                }
+                else if (onOpaqueSection) {
+                    return;
+                }
+                _this.vis[Math.floor(px)][Math.floor(py)] = Math.min(_this.vis[Math.floor(px)][Math.floor(py)], Math.min(i / radius, 1));
+                px += dx;
+                py += dy;
+            }
+        };
+        this.blur3x3 = function (array, weights) {
+            var blurredArray = [];
+            for (var x = 0; x < array.length; x++) {
+                blurredArray[x] = [];
+                for (var y = 0; y < array[0].length; y++) {
+                    if (array[x][y] === 0) {
+                        blurredArray[x][y] = 0;
+                        continue;
+                    }
+                    var total = 0;
+                    var totalWeights = 0;
+                    for (var xx = -1; xx <= 1; xx++) {
+                        for (var yy = -1; yy <= 1; yy++) {
+                            if (x + xx >= 0 &&
+                                x + xx < array.length &&
+                                y + yy >= 0 &&
+                                y + yy < array[0].length) {
+                                total += array[x + xx][y + yy] * weights[xx + 1][yy + 1];
+                                totalWeights += weights[xx + 1][yy + 1];
+                            }
+                        }
+                    }
+                    blurredArray[x][y] = total / totalWeights;
+                }
+            }
+            return blurredArray;
+        };
+        this.catchUp = function () {
+            if (_this.turn === TurnState.computerTurn)
+                _this.computerTurn(); // player skipped computer's turn, catch up
+        };
+        this.tick = function (player) {
+            _this.enemies = _this.enemies.filter(function (e) { return !e.dead; });
+            _this.updateLighting();
+            for (var _i = 0, _a = _this.hitwarnings; _i < _a.length; _i++) {
+                var h = _a[_i];
+                h.tick();
+            }
+            for (var _b = 0, _c = _this.projectiles; _b < _c.length; _b++) {
+                var p = _c[_b];
+                p.tick();
+            }
+            for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
+                for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
+                    _this.roomArray[x][y].tick();
+                }
+            }
+            _this.turn = TurnState.computerTurn;
+            player.actionTab.setState(actionTab_1.ActionState.WAIT);
+            //sets the action tab state to Ready
+            _this.playerTurnTime = Date.now();
+            _this.playerTicked = player;
+        };
+        this.update = function () {
+            if (_this.turn == TurnState.computerTurn) {
+                if (Date.now() - _this.playerTurnTime >=
+                    levelConstants_1.LevelConstants.COMPUTER_TURN_DELAY) {
+                    _this.computerTurn();
+                }
+            }
+        };
+        this.clearDeadStuff = function () {
+            _this.enemies = _this.enemies.filter(function (e) { return !e.dead; });
+            _this.projectiles = _this.projectiles.filter(function (p) { return !p.dead; });
+            _this.hitwarnings = _this.hitwarnings.filter(function (h) { return !h.dead; });
+            _this.particles = _this.particles.filter(function (p) { return !p.dead; });
+        };
+        this.computerTurn = function () {
+            // take computer turn
+            for (var _i = 0, _a = _this.enemies; _i < _a.length; _i++) {
+                var e = _a[_i];
+                e.tick();
+            }
+            _this.enemies = _this.enemies.filter(function (e) { return !e.dead; });
+            for (var _b = 0, _c = _this.items; _b < _c.length; _b++) {
+                var i = _c[_b];
+                i.tick();
+            }
+            for (var _d = 0, _e = _this.hitwarnings; _d < _e.length; _d++) {
+                var h = _e[_d];
+                if (!_this.roomArray[h.x] ||
+                    !_this.roomArray[h.x][h.y] ||
+                    _this.roomArray[h.x][h.y].isSolid())
+                    h.dead = true;
+            }
+            for (var _f = 0, _g = _this.projectiles; _f < _g.length; _f++) {
+                var p = _g[_f];
+                if (_this.roomArray[p.x][p.y].isSolid())
+                    p.dead = true;
+                for (var i in _this.game.players) {
+                    if (_this.game.rooms[_this.game.players[i].levelID] === _this &&
+                        p.x === _this.game.players[i].x &&
+                        p.y === _this.game.players[i].y) {
+                        p.hitPlayer(_this.game.players[i]);
+                    }
+                }
+                for (var _h = 0, _j = _this.enemies; _h < _j.length; _h++) {
+                    var e = _j[_h];
+                    if (p.x === e.x && p.y === e.y) {
+                        p.hitEnemy(e);
+                    }
+                }
+            }
+            for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
+                for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
+                    _this.roomArray[x][y].tickEnd();
+                }
+            }
+            _this.enemies = _this.enemies.filter(function (e) { return !e.dead; }); // enemies may be killed by spiketrap
+            _this.clearDeadStuff();
+            _this.playerTicked.finishTick();
+            _this.turn = TurnState.playerTurn;
+        };
+        this.draw = function (delta) {
+            hitWarning_1.HitWarning.updateFrame(delta);
+            _this.fadeLighting();
+        };
+        this.drawEntities = function (delta, skipLocalPlayer) {
+            var tiles = [];
+            for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
+                for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
+                    if (_this.softVis[x][y] < 1)
+                        _this.roomArray[x][y].drawUnderPlayer(delta);
+                    tiles.push(_this.roomArray[x][y]);
+                }
+            }
+            var drawables = new Array();
+            drawables = drawables.concat(tiles, _this.enemies, _this.hitwarnings, _this.projectiles, _this.particles, _this.items);
+            for (var i in _this.game.players) {
+                if (_this.game.rooms[_this.game.players[i].levelID] === _this) {
+                    if (!(skipLocalPlayer &&
+                        _this.game.players[i] === _this.game.players[_this.game.localPlayerID]))
+                        drawables.push(_this.game.players[i]);
+                }
+            }
+            drawables.sort(function (a, b) {
+                if (a instanceof floor_1.Floor) {
+                    return -1;
+                }
+                else if (b instanceof floor_1.Floor) {
+                    return 1;
+                }
+                if (Math.abs(a.drawableY - b.drawableY) < 0.1) {
+                    if (a instanceof player_1.Player) {
+                        return 1;
+                    }
+                    else if (b instanceof player_1.Player) {
+                        return -1;
+                    }
+                    else if (a instanceof enemy_1.Enemy) {
+                        return 1;
+                    }
+                    else if (b instanceof enemy_1.Enemy) {
+                        return -1;
+                    }
+                    else
+                        return 0;
+                }
+                else {
+                    return a.drawableY - b.drawableY;
+                }
+            });
+            for (var _i = 0, drawables_1 = drawables; _i < drawables_1.length; _i++) {
+                var d = drawables_1[_i];
+                d.draw(delta);
+            }
+            for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
+                for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
+                    if (_this.softVis[x][y] < 1)
+                        _this.roomArray[x][y].drawAbovePlayer(delta);
+                }
+            }
+            for (var _a = 0, _b = _this.items; _a < _b.length; _a++) {
+                var i = _b[_a];
+                i.drawTopLayer(delta);
+            }
+        };
+        this.drawShade = function (delta) {
+            var bestSightRadius = 0;
+            for (var p in _this.game.players) {
+                if (_this.game.rooms[_this.game.players[p].levelID] === _this &&
+                    _this.game.players[p].sightRadius > bestSightRadius) {
+                    bestSightRadius = _this.game.players[p].sightRadius;
+                }
+            }
+            var shadingAlpha = Math.max(0, Math.min(0.8, (2 * _this.depth) / bestSightRadius));
+            if (gameConstants_1.GameConstants.ALPHA_ENABLED) {
+                game_1.Game.ctx.globalAlpha = shadingAlpha;
+                //Game.ctx.globalCompositeOperation = "lighten"
+                //Game.ctx.globalCompositeOperation = "overlay"
+                //Game.ctx.fillStyle = "#400a0e";
+                game_1.Game.ctx.fillStyle = _this.shadeColor;
+                game_1.Game.ctx.fillRect((_this.roomX - levelConstants_1.LevelConstants.SCREEN_W) * gameConstants_1.GameConstants.TILESIZE, (_this.roomY - levelConstants_1.LevelConstants.SCREEN_H) * gameConstants_1.GameConstants.TILESIZE, (_this.width + 2 * levelConstants_1.LevelConstants.SCREEN_W) * gameConstants_1.GameConstants.TILESIZE, (_this.height + 2 * levelConstants_1.LevelConstants.SCREEN_H) * gameConstants_1.GameConstants.TILESIZE);
+                game_1.Game.ctx.globalAlpha = 1.0;
+                game_1.Game.ctx.globalCompositeOperation = "source-over";
+            }
+        };
+        this.drawOverShade = function (delta) {
+            for (var _i = 0, _a = _this.enemies; _i < _a.length; _i++) {
+                var e = _a[_i];
+                e.drawTopLayer(delta); // health bars
+            }
+            for (var _b = 0, _c = _this.projectiles; _b < _c.length; _b++) {
+                var p = _c[_b];
+                p.drawTopLayer(delta);
+            }
+            for (var _d = 0, _e = _this.hitwarnings; _d < _e.length; _d++) {
+                var h = _e[_d];
+                h.drawTopLayer(delta);
+            }
+            // draw over dithered shading
+            for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
+                for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
+                    _this.roomArray[x][y].drawAboveShading(delta);
+                }
+            }
+        };
+        // for stuff rendered on top of the player
+        this.drawTopLayer = function (delta) {
+            // gui stuff
+            // room name
+            var old = game_1.Game.ctx.font;
+            game_1.Game.ctx.font = gameConstants_1.GameConstants.SCRIPT_FONT_SIZE + "px Script";
+            game_1.Game.ctx.fillStyle = levelConstants_1.LevelConstants.LEVEL_TEXT_COLOR;
+            game_1.Game.fillText(_this.message, gameConstants_1.GameConstants.WIDTH / 2 - game_1.Game.measureText(_this.name).width / 2, 5);
+            game_1.Game.ctx.font = old;
+        };
+        this.game = game;
+        this.roomX = x; //Math.floor(- this.width / 2);
+        this.roomY = y; //Math.floor(- this.height / 2);
+        this.width = w;
+        this.height = h;
+        this.type = type;
+        this.depth = depth;
+        this.mapGroup = mapGroup;
+        this.entered = false;
+        this.turn = TurnState.playerTurn;
+        this.playerTurnTime = Date.now();
+        this.items = Array();
+        this.projectiles = Array();
+        this.hitwarnings = Array();
+        this.particles = Array();
+        this.doors = Array();
+        this.enemies = Array();
+        this.lightSources = Array();
+        this.walls = Array();
+        this.roomArray = [];
+        for (var x_2 = this.roomX; x_2 < this.roomX + this.width; x_2++) {
+            this.roomArray[x_2] = [];
+        }
+        this.vis = [];
+        this.softVis = [];
+        for (var x_3 = this.roomX; x_3 < this.roomX + this.width; x_3++) {
+            this.vis[x_3] = [];
+            this.softVis[x_3] = [];
+            for (var y_2 = this.roomY; y_2 < this.roomY + this.height; y_2++) {
+                this.vis[x_3][y_2] = 1;
+                this.softVis[x_3][y_2] = 1;
+            }
+        }
+        this.skin = tile_1.SkinType.DUNGEON;
+        if (this.type === RoomType.ROPECAVE || this.type === RoomType.CAVE)
+            this.skin = tile_1.SkinType.CAVE;
+        this.buildEmptyRoom();
+    }
+    Room.prototype.pointInside = function (x, y, rX, rY, rW, rH) {
+        if (x < rX || x >= rX + rW)
+            return false;
+        if (y < rY || y >= rY + rH)
+            return false;
+        return true;
+    };
+    Room.prototype.buildEmptyRoom = function () {
+        // fill in wall and floor
+        for (var x = this.roomX; x < this.roomX + this.width; x++) {
+            for (var y = this.roomY; y < this.roomY + this.height; y++) {
+                if (this.pointInside(x, y, this.roomX + 1, this.roomY + 1, this.width - 2, this.height - 2)) {
+                    this.roomArray[x][y] = new floor_1.Floor(this, x, y);
+                }
+                else {
+                    this.roomArray[x][y] = new wall_1.Wall(this, x, y);
+                    this.walls.push;
+                }
+            }
+        }
+    };
+    Room.prototype.addWallBlocks = function (rand) {
+        var numBlocks = game_1.Game.randTable([0, 0, 1, 1, 2, 2, 2, 2, 3], rand);
+        if (this.width > 8 && rand() > 0.5)
+            numBlocks *= 4;
+        for (var i = 0; i < numBlocks; i++) {
+            var blockW = Math.min(game_1.Game.randTable([2, 2, 2, 2, 2, 2, 3, 3, 3, 4, 5], rand), this.width - 4);
+            var blockH = Math.min(blockW + game_1.Game.rand(-2, 2, rand), this.height - 4);
+            var x = game_1.Game.rand(this.roomX + 2, this.roomX + this.width - blockW - 2, rand);
+            var y = game_1.Game.rand(this.roomY + 2, this.roomY + this.height - blockH - 2, rand);
+            for (var xx = x; xx < x + blockW; xx++) {
+                for (var yy = y; yy < y + blockH; yy++) {
+                    var w = new wall_1.Wall(this, xx, yy);
+                    this.roomArray[xx][yy] = w;
+                    this.walls.push(w);
+                }
+            }
+        }
+    };
+    Room.prototype.addFingers = function (rand) { };
+    Room.prototype.addTorches = function (numTorches, rand) {
+        var walls = [];
+        for (var xx = this.roomX + 1; xx < this.roomX + this.width - 2; xx++) {
+            for (var yy = this.roomY; yy < this.roomY + this.height - 1; yy++) {
+                if (this.roomArray[xx][yy] instanceof wall_1.Wall &&
+                    !(this.roomArray[xx][yy + 1] instanceof wall_1.Wall)) {
+                    walls.push(this.roomArray[xx][yy]);
+                }
+            }
+        }
+        for (var i = 0; i < numTorches; i++) {
+            var t = void 0, x = void 0, y = void 0;
+            if (walls.length == 0)
+                return;
+            t = walls.splice(game_1.Game.rand(0, walls.length - 1, rand), 1)[0];
+            x = t.x;
+            y = t.y;
+            this.roomArray[x][y] = new wallTorch_1.WallTorch(this, x, y);
+        }
+    };
+    Room.prototype.addChasms = function (rand) {
+        // add chasms
+        var w = game_1.Game.rand(2, 4, rand);
+        var h = game_1.Game.rand(2, 4, rand);
+        var xmin = this.roomX + 2;
+        var xmax = this.roomX + this.width - w - 2;
+        var ymin = this.roomY + 2;
+        var ymax = this.roomY + this.height - h - 2;
+        if (xmax < xmin || ymax < ymin)
+            return;
+        var x = game_1.Game.rand(xmin, xmax, rand);
+        var y = game_1.Game.rand(ymin, ymax, rand);
+        for (var xx = x - 1; xx < x + w + 1; xx++) {
+            for (var yy = y - 1; yy < y + h + 1; yy++) {
+                // add a floor border
+                if (xx === x - 1 || xx === x + w || yy === y - 1 || yy === y + h) {
+                    if (!(this.roomArray[xx][yy] instanceof spawnfloor_1.SpawnFloor))
+                        this.roomArray[xx][yy] = new floor_1.Floor(this, xx, yy);
+                }
+                else
+                    this.roomArray[xx][yy] = new chasm_1.Chasm(this, xx, yy, xx === x, xx === x + w - 1, yy === y, yy === y + h - 1);
+            }
+        }
+    };
+    Room.prototype.addChests = function (numChests, rand) {
+        // add chests
+        var tiles = this.getEmptyTiles();
+        for (var i = 0; i < numChests; i++) {
+            var t = void 0, x = void 0, y = void 0;
+            if (tiles.length == 0)
+                return;
+            t = tiles.splice(game_1.Game.rand(0, tiles.length - 1, rand), 1)[0];
+            x = t.x;
+            y = t.y;
+            this.enemies.push(new chest_1.Chest(this, this.game, x, y, rand));
+        }
+    };
+    Room.prototype.addSpikeTraps = function (numSpikes, rand) {
+        // add spikes
+        var tiles = this.getEmptyTiles();
+        for (var i = 0; i < numSpikes; i++) {
+            var t = tiles.splice(game_1.Game.rand(0, tiles.length - 1, rand), 1)[0];
+            if (tiles.length == 0)
+                return;
+            var x = t.x;
+            var y = t.y;
+            this.roomArray[x][y] = new spiketrap_1.SpikeTrap(this, x, y);
+        }
+    };
+    Room.prototype.addSpikes = function (numSpikes, rand) {
+        // add spikes
+        var tiles = this.getEmptyTiles();
+        for (var i = 0; i < numSpikes; i++) {
+            var t = tiles.splice(game_1.Game.rand(0, tiles.length - 1, rand), 1)[0];
+            if (tiles.length == 0)
+                return;
+            var x = t.x;
+            var y = t.y;
+            this.roomArray[x][y] = new spike_1.Spike(this, x, y);
+        }
+    };
+    Room.prototype.addEnemies = function (numEnemies, rand) {
+        var _this = this;
+        var tiles = this.getEmptyTiles();
+        var _loop_2 = function (i) {
+            var t = tiles.splice(game_1.Game.rand(0, tiles.length - 1, rand), 1)[0];
+            if (tiles.length == 0)
+                return { value: void 0 };
+            var x = t.x;
+            var y = t.y;
+            var tables = {
+                0: [1, 2, 3, 3, 4],
+                1: [1, 1, 3, 3, 3, 2, 2],
+                2: [1, 1, 2, 2, 3, 3, 4],
+                3: [1, 1, 1, 2, 3, 3, 3, 4, 4, 5],
+                4: [1, 2, 3, 4, 5, 6, 7],
+                5: [1, 2, 3, 4, 5, 6, 7, 8],
+                6: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                7: [1, 2, 3, 4, 5, 6, 7],
+            };
+            var max_depth_table = 7;
+            var d = Math.min(this_1.depth, max_depth_table);
+            if (tables[d] && tables[d].length > 0) {
+                var addEnemy = function (enemy) {
+                    var _loop_3 = function (xx) {
+                        var _loop_4 = function (yy) {
+                            if (!_this.getEmptyTiles().some(function (tt) { return tt.x === x + xx && tt.y === y + yy; })) {
+                                numEnemies++; // extra loop iteration since we're throwing out this point
+                                return { value: false };
+                            }
+                        };
+                        for (var yy = 0; yy < enemy.h; yy++) {
+                            var state_3 = _loop_4(yy);
+                            if (typeof state_3 === "object")
+                                return state_3;
+                        }
+                    };
+                    // adds an enemy if it doesn't overlap any other enemies
+                    for (var xx = 0; xx < enemy.w; xx++) {
+                        var state_2 = _loop_3(xx);
+                        if (typeof state_2 === "object")
+                            return state_2.value;
+                    }
+                    _this.enemies.push(enemy);
+                    return true;
+                };
+                var type = game_1.Game.randTable(tables[d], rand);
+                switch (type) {
+                    case 1:
+                        addEnemy(new slimeEnemy_1.SlimeEnemy(this_1, this_1.game, x, y, rand));
+                        break;
+                    case 2:
+                        addEnemy(new knightEnemy_1.KnightEnemy(this_1, this_1.game, x, y, rand));
+                        break;
+                    case 3:
+                        addEnemy(new zombieEnemy_1.ZombieEnemy(this_1, this_1.game, x, y, rand));
+                        break;
+                    case 4:
+                        addEnemy(new skullEnemy_1.SkullEnemy(this_1, this_1.game, x, y, rand));
+                        break;
+                    case 5:
+                        addEnemy(new wizardEnemy_1.WizardEnemy(this_1, this_1.game, x, y, rand));
+                        break;
+                    case 6:
+                        addEnemy(new chargeEnemy_1.ChargeEnemy(this_1, this_1.game, x, y));
+                        break;
+                    case 7:
+                        addEnemy(new spawner_1.Spawner(this_1, this_1.game, x, y, rand));
+                        break;
+                    case 8:
+                        addEnemy(new bishopEnemy_1.BishopEnemy(this_1, this_1.game, x, y, rand));
+                        break;
+                    case 9:
+                        addEnemy(new armoredzombieEnemy_1.ArmoredzombieEnemy(this_1, this_1.game, x, y, rand));
+                        break;
+                    case 10:
+                        if (addEnemy(new bigSkullEnemy_1.BigSkullEnemy(this_1, this_1.game, x, y, rand))) {
+                            // clear out some space
+                            for (var xx = 0; xx < 2; xx++) {
+                                for (var yy = 0; yy < 2; yy++) {
+                                    this_1.roomArray[x + xx][y + yy] = new floor_1.Floor(this_1, x + xx, y + yy); // remove any walls
+                                }
+                            }
+                        }
+                        break;
+                }
+            }
+        };
+        var this_1 = this;
+        for (var i = 0; i < numEnemies; i++) {
+            var state_1 = _loop_2(i);
+            if (typeof state_1 === "object")
+                return state_1.value;
+        }
+    };
+    Room.prototype.addObstacles = function (numObstacles, rand) {
+        // add crates/barrels
+        var tiles = this.getEmptyTiles();
+        for (var i = 0; i < numObstacles; i++) {
+            var t = tiles.splice(game_1.Game.rand(0, tiles.length - 1, rand), 1)[0];
+            if (tiles.length == 0)
+                return;
+            var x = t.x;
+            var y = t.y;
+            switch (game_1.Game.randTable([1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 4], rand)) {
+                case 1:
+                    this.enemies.push(new crate_1.Crate(this, this.game, x, y));
+                    break;
+                case 2:
+                    this.enemies.push(new barrel_1.Barrel(this, this.game, x, y));
+                    break;
+                case 3:
+                    this.enemies.push(new tombStone_1.TombStone(this, this.game, x, y, 1, rand));
+                    break;
+                case 4:
+                    this.enemies.push(new tombStone_1.TombStone(this, this.game, x, y, 0, rand));
+                    break;
+                //case 5:
+                //this.enemies.push(new TombStone(this, this.game, x, y));
+                //break;
+            }
+        }
+    };
+    Room.prototype.addPlants = function (numPlants, rand) {
+        var tiles = this.getEmptyTiles();
+        for (var i = 0; i < numPlants; i++) {
+            var t = tiles.splice(game_1.Game.rand(0, tiles.length - 1, rand), 1)[0];
+            if (tiles.length == 0)
+                return;
+            var x = t.x;
+            var y = t.y;
+            var r = rand();
+            if (r <= 0.45)
+                this.enemies.push(new pottedPlant_1.PottedPlant(this, this.game, x, y, random_1.Random.rand));
+            else if (r <= 0.65)
+                this.enemies.push(new pot_1.Pot(this, this.game, x, y));
+            else if (r <= 0.75)
+                this.enemies.push(new rockResource_1.Rock(this, this.game, x, y));
+            else if (r <= 0.97)
+                this.enemies.push(new mushrooms_1.Mushrooms(this, this.game, x, y));
+            else
+                this.enemies.push(new chest_1.Chest(this, this.game, x, y, rand));
+        }
+    };
+    Room.prototype.addResources = function (numResources, rand) {
+        var tiles = this.getEmptyTiles();
+        for (var i = 0; i < numResources; i++) {
+            var t = tiles.splice(game_1.Game.rand(0, tiles.length - 1, rand), 1)[0];
+            if (tiles.length == 0)
+                return;
+            var x = t.x;
+            var y = t.y;
+            var r = rand();
+            if (r <= (10 - Math.pow(this.depth, 3)) / 10)
+                this.enemies.push(new coalResource_1.CoalResource(this, this.game, x, y));
+            else if (r <= (10 - Math.pow((this.depth - 2), 3)) / 10)
+                this.enemies.push(new goldResource_1.GoldResource(this, this.game, x, y));
+            else
+                this.enemies.push(new emeraldResource_1.EmeraldResource(this, this.game, x, y));
+        }
+    };
+    Room.prototype.addVendingMachine = function (rand) {
+        var t = this.getEmptyTiles().sort(function () { return 0.5 - random_1.Random.rand(); })[0];
+        var x = t.x;
+        var y = t.y;
+        var type = game_1.Game.randTable([1, 1, 1, 1, 1, 1, 1, 2, 3, 4, 5, 6], rand);
+        switch (type) {
+            case 1:
+                this.enemies.push(new vendingMachine_1.VendingMachine(this, this.game, x, y, new heart_1.Heart(this, 0, 0), rand));
+                break;
+            case 2:
+                this.enemies.push(new vendingMachine_1.VendingMachine(this, this.game, x, y, new lantern_1.Lantern(this, 0, 0), rand));
+                break;
+            case 3:
+                this.enemies.push(new vendingMachine_1.VendingMachine(this, this.game, x, y, new armor_1.Armor(this, 0, 0), rand));
+                break;
+            case 4:
+                this.enemies.push(new vendingMachine_1.VendingMachine(this, this.game, x, y, new dualdagger_1.DualDagger(this, 0, 0), rand));
+                break;
+            case 5:
+                this.enemies.push(new vendingMachine_1.VendingMachine(this, this.game, x, y, new spear_1.Spear(this, 0, 0), rand));
+                break;
+            case 6:
+                this.enemies.push(new vendingMachine_1.VendingMachine(this, this.game, x, y, new shotgun_1.Shotgun(this, 0, 0), rand));
+                break;
+        }
+    };
+    return Room;
+}());
+exports.Room = Room;
 
 
 /***/ }),
@@ -15472,10 +15485,10 @@ var Door = /** @class */ (function (_super) {
             }
             if (_this.DoorType === DoorType.GUARDEDDOOR) {
                 _this.locked = false;
-                for (var _i = 0, _a = _this.level.doors; _i < _a.length; _i++) {
-                    var door = _a[_i];
+                _this.level.doors.forEach(function (door) {
                     door.DoorType = DoorType.DOOR;
-                }
+                    door.locked = false;
+                });
             }
             else {
             }
@@ -15602,7 +15615,7 @@ var DownLadder = /** @class */ (function (_super) {
                 _this.linkedLevel = _this.game.levelgen.generate(_this.game, _this.level.depth + (_this.isRope ? 0 : 1), _this.isRope);
                 for (var x = _this.linkedLevel.roomX; x < _this.linkedLevel.roomX + _this.linkedLevel.width; x++) {
                     for (var y = _this.linkedLevel.roomY; y < _this.linkedLevel.roomY + _this.linkedLevel.height; y++) {
-                        var tile = _this.linkedLevel.levelArray[x][y];
+                        var tile = _this.linkedLevel.roomArray[x][y];
                         if (tile instanceof upLadder_1.UpLadder && tile.isRope)
                             tile.linkedLevel = _this.level;
                     }
@@ -15615,7 +15628,7 @@ var DownLadder = /** @class */ (function (_super) {
             else {
                 var allPlayersHere = true;
                 for (var i in _this.game.players) {
-                    if (_this.game.levels[_this.game.players[i].levelID] !== _this.level || _this.game.players[i].x !== _this.x || _this.game.players[i].y !== _this.y) {
+                    if (_this.game.rooms[_this.game.players[i].levelID] !== _this.level || _this.game.players[i].x !== _this.x || _this.game.players[i].y !== _this.y) {
                         allPlayersHere = false;
                     }
                 }
@@ -15951,7 +15964,7 @@ var SpikeTrap = /** @class */ (function (_super) {
             _this.on = _this.tickCount === 0;
             if (_this.on) {
                 for (var i in _this.level.game.players) {
-                    if (_this.level === _this.level.game.levels[_this.level.game.players[i].levelID] && _this.level.game.players[i].x === _this.x && _this.level.game.players[i].y === _this.y)
+                    if (_this.level === _this.level.game.rooms[_this.level.game.players[i].levelID] && _this.level.game.players[i].x === _this.x && _this.level.game.players[i].y === _this.y)
                         _this.level.game.players[i].hurt(1, "spike trap");
                 }
             }
@@ -16345,7 +16358,7 @@ var Dagger = /** @class */ (function (_super) {
         var _this = _super.call(this, level, x, y) || this;
         _this.weaponMove = function (newX, newY) {
             var flag = false;
-            for (var _i = 0, _a = _this.game.levels[_this.wielder.levelID].enemies; _i < _a.length; _i++) {
+            for (var _i = 0, _a = _this.game.rooms[_this.wielder.levelID].enemies; _i < _a.length; _i++) {
                 var e = _a[_i];
                 if (e.destroyable &&
                     !e.pushable &&
@@ -16355,12 +16368,12 @@ var Dagger = /** @class */ (function (_super) {
                 }
             }
             if (flag) {
-                if (_this.wielder.game.levels[_this.wielder.levelID] === _this.wielder.game.level)
+                if (_this.wielder.game.rooms[_this.wielder.levelID] === _this.wielder.game.level)
                     sound_1.Sound.hit();
                 _this.wielder.drawX = 0.5 * (_this.wielder.x - newX);
                 _this.wielder.drawY = 0.5 * (_this.wielder.y - newY);
-                _this.game.levels[_this.wielder.levelID].particles.push(new slashParticle_1.SlashParticle(newX, newY));
-                _this.game.levels[_this.wielder.levelID].tick(_this.wielder);
+                _this.game.rooms[_this.wielder.levelID].particles.push(new slashParticle_1.SlashParticle(newX, newY));
+                _this.game.rooms[_this.wielder.levelID].tick(_this.wielder);
                 if (_this.wielder === _this.game.players[_this.game.localPlayerID])
                     _this.game.shakeScreen(10 * _this.wielder.drawX, 10 * _this.wielder.drawY);
             }
@@ -16417,7 +16430,7 @@ var DualDagger = /** @class */ (function (_super) {
         };
         _this.weaponMove = function (newX, newY) {
             var flag = false;
-            for (var _i = 0, _a = _this.game.levels[_this.wielder.levelID].enemies; _i < _a.length; _i++) {
+            for (var _i = 0, _a = _this.game.rooms[_this.wielder.levelID].enemies; _i < _a.length; _i++) {
                 var e = _a[_i];
                 if (e.destroyable &&
                     !e.pushable &&
@@ -16427,15 +16440,15 @@ var DualDagger = /** @class */ (function (_super) {
                 }
             }
             if (flag) {
-                if (_this.wielder.game.levels[_this.wielder.levelID] === _this.wielder.game.level)
+                if (_this.wielder.game.rooms[_this.wielder.levelID] === _this.wielder.game.level)
                     sound_1.Sound.hit();
                 _this.wielder.drawX = 0.5 * (_this.wielder.x - newX);
                 _this.wielder.drawY = 0.5 * (_this.wielder.y - newY);
-                _this.game.levels[_this.wielder.levelID].particles.push(new slashParticle_1.SlashParticle(newX, newY));
+                _this.game.rooms[_this.wielder.levelID].particles.push(new slashParticle_1.SlashParticle(newX, newY));
                 if (_this.firstAttack)
-                    _this.game.levels[_this.wielder.levelID].enemies = _this.game.levels[_this.wielder.levelID].enemies.filter(function (e) { return !e.dead; });
+                    _this.game.rooms[_this.wielder.levelID].enemies = _this.game.rooms[_this.wielder.levelID].enemies.filter(function (e) { return !e.dead; });
                 else
-                    _this.game.levels[_this.wielder.levelID].tick(_this.wielder);
+                    _this.game.rooms[_this.wielder.levelID].tick(_this.wielder);
                 if (_this.wielder === _this.game.players[_this.game.localPlayerID])
                     _this.game.shakeScreen(10 * _this.wielder.drawX, 10 * _this.wielder.drawY);
                 if (_this.firstAttack)
@@ -16492,7 +16505,7 @@ var Pickaxe = /** @class */ (function (_super) {
         var _this = _super.call(this, level, x, y) || this;
         _this.weaponMove = function (newX, newY) {
             var flag = false;
-            for (var _i = 0, _a = _this.game.levels[_this.wielder.levelID].enemies; _i < _a.length; _i++) {
+            for (var _i = 0, _a = _this.game.rooms[_this.wielder.levelID].enemies; _i < _a.length; _i++) {
                 var e = _a[_i];
                 if (e.destroyable &&
                     !e.pushable &&
@@ -16502,12 +16515,12 @@ var Pickaxe = /** @class */ (function (_super) {
                 }
             }
             if (flag) {
-                if (_this.wielder.game.levels[_this.wielder.levelID] === _this.wielder.game.level)
+                if (_this.wielder.game.rooms[_this.wielder.levelID] === _this.wielder.game.level)
                     sound_1.Sound.hit();
                 _this.wielder.drawX = 0.5 * (_this.wielder.x - newX);
                 _this.wielder.drawY = 0.5 * (_this.wielder.y - newY);
-                _this.game.levels[_this.wielder.levelID].particles.push(new slashParticle_1.SlashParticle(newX, newY));
-                _this.game.levels[_this.wielder.levelID].tick(_this.wielder);
+                _this.game.rooms[_this.wielder.levelID].particles.push(new slashParticle_1.SlashParticle(newX, newY));
+                _this.game.rooms[_this.wielder.levelID].tick(_this.wielder);
                 if (_this.wielder === _this.game.players[_this.game.localPlayerID])
                     _this.game.shakeScreen(10 * _this.wielder.drawX, 10 * _this.wielder.drawY);
             }
@@ -16566,17 +16579,17 @@ var Shotgun = /** @class */ (function (_super) {
             var newX3 = 3 * newX - 2 * _this.wielder.x;
             var newY3 = 3 * newY - 2 * _this.wielder.y;
             var range = 3;
-            if (!_this.game.levels[_this.wielder.levelID].tileInside(newX, newY) ||
-                _this.game.levels[_this.wielder.levelID].levelArray[newX][newY].isSolid())
+            if (!_this.game.rooms[_this.wielder.levelID].tileInside(newX, newY) ||
+                _this.game.rooms[_this.wielder.levelID].roomArray[newX][newY].isSolid())
                 //if current position is inside new position OR is solid
                 return true;
-            else if (!_this.game.levels[_this.wielder.levelID].tileInside(newX2, newY2) ||
-                _this.game.levels[_this.wielder.levelID].levelArray[newX2][newY2].isSolid())
+            else if (!_this.game.rooms[_this.wielder.levelID].tileInside(newX2, newY2) ||
+                _this.game.rooms[_this.wielder.levelID].roomArray[newX2][newY2].isSolid())
                 //if current position is inside new position 2 OR is solid
                 //set range as one
                 range = 1;
-            else if (!_this.game.levels[_this.wielder.levelID].tileInside(newX3, newY3) ||
-                _this.game.levels[_this.wielder.levelID].levelArray[newX3][newY3].isSolid())
+            else if (!_this.game.rooms[_this.wielder.levelID].tileInside(newX3, newY3) ||
+                _this.game.rooms[_this.wielder.levelID].roomArray[newX3][newY3].isSolid())
                 //if current position is inside new position 3 OR is solid
                 //set range as two
                 range = 2;
@@ -16584,7 +16597,7 @@ var Shotgun = /** @class */ (function (_super) {
             var firstPushable = 4;
             var firstNonPushable = 5;
             var firstNonDestroyable = 5;
-            for (var _i = 0, _a = _this.game.levels[_this.wielder.levelID].enemies; _i < _a.length; _i++) {
+            for (var _i = 0, _a = _this.game.rooms[_this.wielder.levelID].enemies; _i < _a.length; _i++) {
                 var e = _a[_i];
                 //loop through enemies in this weapons wielders level
                 if (e.pushable) {
@@ -16659,20 +16672,20 @@ var Shotgun = /** @class */ (function (_super) {
                 //for the array c of enemyHitCandidates if the enemy distance is 3 only do .5 damage
                 //if they're closer do the usual damage
                 //hits all candidates in enemyHitCandidates
-                if (_this.wielder.game.levels[_this.wielder.levelID] ===
+                if (_this.wielder.game.rooms[_this.wielder.levelID] ===
                     _this.wielder.game.level)
                     sound_1.Sound.hit();
                 _this.wielder.drawX = 0.5 * (_this.wielder.x - newX);
                 _this.wielder.drawY = 0.5 * (_this.wielder.y - newY);
-                genericParticle_1.GenericParticle.shotgun(_this.game.levels[_this.wielder.levelID], _this.wielder.x + 0.5, _this.wielder.y, targetX + 0.5, targetY, "black");
-                genericParticle_1.GenericParticle.shotgun(_this.game.levels[_this.wielder.levelID], _this.wielder.x + 0.5, _this.wielder.y, targetX + 0.5, targetY, "#ffddff");
-                var gp = new genericParticle_1.GenericParticle(_this.game.levels[_this.wielder.levelID], 0.5 * (newX + _this.wielder.x) + 0.5, 0.5 * (newY + _this.wielder.y), 0, 1, 0, 0, 0, "white", 0);
+                genericParticle_1.GenericParticle.shotgun(_this.game.rooms[_this.wielder.levelID], _this.wielder.x + 0.5, _this.wielder.y, targetX + 0.5, targetY, "black");
+                genericParticle_1.GenericParticle.shotgun(_this.game.rooms[_this.wielder.levelID], _this.wielder.x + 0.5, _this.wielder.y, targetX + 0.5, targetY, "#ffddff");
+                var gp = new genericParticle_1.GenericParticle(_this.game.rooms[_this.wielder.levelID], 0.5 * (newX + _this.wielder.x) + 0.5, 0.5 * (newY + _this.wielder.y), 0, 1, 0, 0, 0, "white", 0);
                 gp.expirationTimer = 10;
-                _this.game.levels[_this.wielder.levelID].particles.push(gp);
+                _this.game.rooms[_this.wielder.levelID].particles.push(gp);
                 //this.game.levels[this.wielder.levelID].particles.push(new SlashParticle(newX, newY));
                 //this.game.levels[this.wielder.levelID].particles.push(new SlashParticle(newX2, newY2));
                 //this.game.levels[this.wielder.levelID].particles.push(new SlashParticle(newX3, newY3));
-                _this.game.levels[_this.wielder.levelID].tick(_this.wielder);
+                _this.game.rooms[_this.wielder.levelID].tick(_this.wielder);
                 if (_this.wielder === _this.game.players[_this.game.localPlayerID])
                     _this.game.shakeScreen(10 * _this.wielder.drawX, 10 * _this.wielder.drawY);
                 return false;
@@ -16730,7 +16743,7 @@ var Spear = /** @class */ (function (_super) {
             var newY2 = 2 * newY - _this.wielder.y;
             var flag = false;
             var enemyHitCandidates = [];
-            for (var _i = 0, _a = _this.game.levels[_this.wielder.levelID].enemies; _i < _a.length; _i++) {
+            for (var _i = 0, _a = _this.game.rooms[_this.wielder.levelID].enemies; _i < _a.length; _i++) {
                 var e = _a[_i];
                 if (e.destroyable) {
                     if (e.pointIn(newX, newY)) {
@@ -16741,7 +16754,7 @@ var Spear = /** @class */ (function (_super) {
                             flag = true;
                         }
                     }
-                    if (e.pointIn(newX2, newY2) && !_this.game.levels[_this.wielder.levelID].levelArray[newX][newY].isSolid()) {
+                    if (e.pointIn(newX2, newY2) && !_this.game.rooms[_this.wielder.levelID].roomArray[newX][newY].isSolid()) {
                         if (!e.pushable)
                             enemyHitCandidates.push(e);
                     }
@@ -16752,24 +16765,24 @@ var Spear = /** @class */ (function (_super) {
                     var e = enemyHitCandidates_1[_b];
                     e.hurt(_this.wielder, 1);
                 }
-                if (_this.wielder.game.level === _this.wielder.game.levels[_this.wielder.levelID])
+                if (_this.wielder.game.level === _this.wielder.game.rooms[_this.wielder.levelID])
                     sound_1.Sound.hit();
                 _this.wielder.drawX = 0.5 * (_this.wielder.x - newX);
                 _this.wielder.drawY = 0.5 * (_this.wielder.y - newY);
-                _this.game.levels[_this.wielder.levelID].particles.push(new slashParticle_1.SlashParticle(newX, newY));
-                _this.game.levels[_this.wielder.levelID].particles.push(new slashParticle_1.SlashParticle(newX2, newY2));
-                _this.game.levels[_this.wielder.levelID].tick(_this.wielder);
+                _this.game.rooms[_this.wielder.levelID].particles.push(new slashParticle_1.SlashParticle(newX, newY));
+                _this.game.rooms[_this.wielder.levelID].particles.push(new slashParticle_1.SlashParticle(newX2, newY2));
+                _this.game.rooms[_this.wielder.levelID].tick(_this.wielder);
                 if (_this.wielder === _this.game.players[_this.game.localPlayerID])
                     _this.game.shakeScreen(10 * _this.wielder.drawX, 10 * _this.wielder.drawY);
                 return false;
             }
             if (flag) {
-                if (_this.wielder.game.level === _this.wielder.game.levels[_this.wielder.levelID])
+                if (_this.wielder.game.level === _this.wielder.game.rooms[_this.wielder.levelID])
                     sound_1.Sound.hit();
                 _this.wielder.drawX = 0.5 * (_this.wielder.x - newX);
                 _this.wielder.drawY = 0.5 * (_this.wielder.y - newY);
-                _this.game.levels[_this.wielder.levelID].particles.push(new slashParticle_1.SlashParticle(newX, newY));
-                _this.game.levels[_this.wielder.levelID].tick(_this.wielder);
+                _this.game.rooms[_this.wielder.levelID].particles.push(new slashParticle_1.SlashParticle(newX, newY));
+                _this.game.rooms[_this.wielder.levelID].tick(_this.wielder);
                 if (_this.wielder === _this.game.players[_this.game.localPlayerID])
                     _this.game.shakeScreen(10 * _this.wielder.drawX, 10 * _this.wielder.drawY);
             }
@@ -16825,23 +16838,23 @@ var Spellbook = /** @class */ (function (_super) {
             var flag = false;
             var difX = newX - _this.x;
             var difY = newY - _this.y;
-            for (var _i = 0, _a = _this.game.levels[_this.wielder.levelID].enemies; _i < _a.length; _i++) {
+            for (var _i = 0, _a = _this.game.rooms[_this.wielder.levelID].enemies; _i < _a.length; _i++) {
                 var e = _a[_i];
                 if ((e.destroyable || e.pushable) &&
                     e.pointIn(newX, newY) &&
-                    !_this.game.levels[_this.wielder.levelID].levelArray[e.x][e.y].isSolid()) {
+                    !_this.game.rooms[_this.wielder.levelID].roomArray[e.x][e.y].isSolid()) {
                     e.hurt(_this.wielder, 1);
-                    _this.game.levels[_this.wielder.levelID].particles.push(new playerFireball_1.PlayerFireball(e.x, e.y));
+                    _this.game.rooms[_this.wielder.levelID].particles.push(new playerFireball_1.PlayerFireball(e.x, e.y));
                     flag = true;
                 }
             }
             if (flag) {
-                if (_this.wielder.game.levels[_this.wielder.levelID] ===
+                if (_this.wielder.game.rooms[_this.wielder.levelID] ===
                     _this.wielder.game.level)
                     sound_1.Sound.hit();
                 _this.wielder.drawX = 0.5 * (_this.wielder.x - newX);
                 _this.wielder.drawY = 0.5 * (_this.wielder.y - newY);
-                _this.game.levels[_this.wielder.levelID].tick(_this.wielder);
+                _this.game.rooms[_this.wielder.levelID].tick(_this.wielder);
                 if (_this.wielder === _this.game.players[_this.game.localPlayerID])
                     _this.game.shakeScreen(10 * _this.wielder.drawX, 10 * _this.wielder.drawY);
             }

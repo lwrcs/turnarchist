@@ -1,6 +1,6 @@
 import { Item } from "./item";
 import { Game } from "../game";
-import { Level } from "../level";
+import { Room } from "../room";
 import { Equippable } from "./equippable";
 import { Candle } from "./candle";
 import { Lantern } from "./lantern";
@@ -9,7 +9,7 @@ import { Torch } from "./torch";
 export class Light extends Equippable {
     fuel: number;
   fuelCap: number;
-  constructor(level: Level, x: number, y: number) {
+  constructor(level: Room, x: number, y: number) {
     super(level, x, y);
 
     this.tileX = 28;
