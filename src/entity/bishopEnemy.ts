@@ -1,4 +1,4 @@
-import { Enemy, EnemyDirection } from "./enemy";
+import { Entity, EntityDirection } from "./entity";
 import { Game } from "../game";
 import { Room } from "../room";
 import { Player } from "../player";
@@ -15,7 +15,7 @@ import { astar } from "../astarclass";
 import { SpikeTrap } from "../tile/spiketrap";
 import { Candle } from "../item/candle";
 
-export class BishopEnemy extends Enemy {
+export class BishopEnemy extends Entity {
   frame: number;
   ticks: number;
   seenPlayer: boolean;
@@ -57,12 +57,12 @@ export class BishopEnemy extends Enemy {
         someX >= x && someX < x + this.w && someY >= y && someY < y + this.h
       );
     };
-    let enemyCollide = (enemy: Enemy): boolean => {
+    let enemyCollide = (enemy: Entity): boolean => {
       if (enemy.x >= x + this.w || enemy.x + enemy.w <= x) return false;
       if (enemy.y >= y + this.h || enemy.y + enemy.h <= y) return false;
       return true;
     };
-    for (const e of this.level.enemies) {
+    for (const e of this.level.entities) {
       if (e !== this && enemyCollide(e)) {
         return;
       }
@@ -155,7 +155,7 @@ export class BishopEnemy extends Enemy {
           let oldY = this.y;
 
           let disablePositions = Array<astar.Position>();
-          for (const e of this.level.enemies) {
+          for (const e of this.level.entities) {
             if (e !== this) {
               disablePositions.push({ x: e.x, y: e.y } as astar.Position);
             }

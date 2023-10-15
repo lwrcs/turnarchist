@@ -3,7 +3,7 @@ import { Game } from "../game";
 import { Room } from "../room";
 import { GameConstants } from "../gameConstants";
 import { SkinType, Tile } from "./tile";
-import { EntityType } from "../enemy/enemy";
+import { EntityType } from "../entity/entity";
 import { Key } from "../item/key";
 
 export enum DoorDir {
@@ -62,7 +62,7 @@ export class Door extends Tile {
     }
 
     if (this.DoorType === DoorType.GUARDEDDOOR) {
-      const inRoom = this.game.level.enemies.filter(
+      const inRoom = this.game.level.entities.filter(
         (enemy) => enemy.entityType === EntityType.Enemy
       );
       if (inRoom.length === 0) {

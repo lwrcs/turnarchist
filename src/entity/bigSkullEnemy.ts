@@ -1,4 +1,4 @@
-import { Enemy, EnemyDirection } from "./enemy";
+import { Entity, EntityDirection } from "./entity";
 import { Game } from "../game";
 import { Room } from "../room";
 import { Player } from "../player";
@@ -11,7 +11,7 @@ import { Spear } from "../weapon/spear";
 import { GameConstants } from "../gameConstants";
 import { DeathParticle } from "../particle/deathParticle";
 
-export class BigSkullEnemy extends Enemy {
+export class BigSkullEnemy extends Entity {
   frame: number;
   ticks: number;
   seenPlayer: boolean;
@@ -158,10 +158,10 @@ export class BigSkullEnemy extends Enemy {
               this.tryMove(moveX, moveY);
               this.drawX = this.x - oldX;
               this.drawY = this.y - oldY;
-              if (this.x > oldX) this.direction = EnemyDirection.RIGHT;
-              else if (this.x < oldX) this.direction = EnemyDirection.LEFT;
-              else if (this.y > oldY) this.direction = EnemyDirection.DOWN;
-              else if (this.y < oldY) this.direction = EnemyDirection.UP;
+              if (this.x > oldX) this.direction = EntityDirection.RIGHT;
+              else if (this.x < oldX) this.direction = EntityDirection.LEFT;
+              else if (this.y > oldY) this.direction = EntityDirection.DOWN;
+              else if (this.y < oldY) this.direction = EntityDirection.UP;
             }
 
             if (this.health < this.maxHealth) {

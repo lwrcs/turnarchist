@@ -4020,7 +4020,7 @@ exports.ActionTab = ActionTab;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.astar = void 0;
-var enemy_1 = __webpack_require__(/*! ./enemy/enemy */ "./src/enemy/enemy.ts");
+var entity_1 = __webpack_require__(/*! ./entity/entity */ "./src/entity/entity.ts");
 var astar;
 (function (astar_1) {
     //================== start graph js
@@ -4283,13 +4283,13 @@ var astar;
                             isTurn = !((currentNode.parent.pos.x === currentNode.pos.x && currentNode.pos.x === neighbor.pos.x) || (currentNode.parent.pos.y === currentNode.pos.y && currentNode.pos.y === neighbor.pos.y));
                         else { // initial step
                             isTurn = true;
-                            if (neighbor.pos.x - currentNode.pos.x === 0 && neighbor.pos.y - currentNode.pos.y === -1 && turnDirection === enemy_1.EnemyDirection.UP)
+                            if (neighbor.pos.x - currentNode.pos.x === 0 && neighbor.pos.y - currentNode.pos.y === -1 && turnDirection === entity_1.EntityDirection.UP)
                                 isTurn = false;
-                            if (neighbor.pos.x - currentNode.pos.x === 0 && neighbor.pos.y - currentNode.pos.y === 1 && turnDirection === enemy_1.EnemyDirection.DOWN)
+                            if (neighbor.pos.x - currentNode.pos.x === 0 && neighbor.pos.y - currentNode.pos.y === 1 && turnDirection === entity_1.EntityDirection.DOWN)
                                 isTurn = false;
-                            if (neighbor.pos.x - currentNode.pos.x === 1 && neighbor.pos.y - currentNode.pos.y === 0 && turnDirection === enemy_1.EnemyDirection.RIGHT)
+                            if (neighbor.pos.x - currentNode.pos.x === 1 && neighbor.pos.y - currentNode.pos.y === 0 && turnDirection === entity_1.EntityDirection.RIGHT)
                                 isTurn = false;
-                            if (neighbor.pos.x - currentNode.pos.x === -1 && neighbor.pos.y - currentNode.pos.y === 0 && turnDirection === enemy_1.EnemyDirection.LEFT)
+                            if (neighbor.pos.x - currentNode.pos.x === -1 && neighbor.pos.y - currentNode.pos.y === 0 && turnDirection === entity_1.EntityDirection.LEFT)
                                 isTurn = false;
                         }
                         if (isTurn)
@@ -4455,10 +4455,10 @@ exports.Drawable = Drawable;
 
 /***/ }),
 
-/***/ "./src/enemy/armoredzombieEnemy.ts":
-/*!*****************************************!*\
-  !*** ./src/enemy/armoredzombieEnemy.ts ***!
-  \*****************************************/
+/***/ "./src/entity/armoredzombieEnemy.ts":
+/*!******************************************!*\
+  !*** ./src/entity/armoredzombieEnemy.ts ***!
+  \******************************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -4480,7 +4480,7 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ArmoredzombieEnemy = void 0;
-var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/enemy/enemy.ts");
+var entity_1 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var hitWarning_1 = __webpack_require__(/*! ../hitWarning */ "./src/hitWarning.ts");
 var genericParticle_1 = __webpack_require__(/*! ../particle/genericParticle */ "./src/particle/genericParticle.ts");
@@ -4546,7 +4546,7 @@ var ArmoredzombieEnemy = /** @class */ (function (_super) {
                         var oldX = _this.x;
                         var oldY = _this.y;
                         var disablePositions = Array();
-                        for (var _i = 0, _a = _this.level.enemies; _i < _a.length; _i++) {
+                        for (var _i = 0, _a = _this.level.entities; _i < _a.length; _i++) {
                             var e = _a[_i];
                             if (e !== _this) {
                                 disablePositions.push({ x: e.x, y: e.y });
@@ -4579,13 +4579,13 @@ var ArmoredzombieEnemy = /** @class */ (function (_super) {
                             var player = _this.targetPlayer;
                             _this.facePlayer(player);
                             if (moveX > oldX)
-                                _this.direction = enemy_1.EnemyDirection.RIGHT;
+                                _this.direction = entity_1.EntityDirection.RIGHT;
                             else if (moveX < oldX)
-                                _this.direction = enemy_1.EnemyDirection.LEFT;
+                                _this.direction = entity_1.EntityDirection.LEFT;
                             else if (moveY > oldY)
-                                _this.direction = enemy_1.EnemyDirection.DOWN;
+                                _this.direction = entity_1.EntityDirection.DOWN;
                             else if (moveY < oldY)
-                                _this.direction = enemy_1.EnemyDirection.UP;
+                                _this.direction = entity_1.EntityDirection.UP;
                             if (oldDir == _this.direction) {
                                 var hitPlayer = false;
                                 for (var i in _this.game.players) {
@@ -4602,32 +4602,32 @@ var ArmoredzombieEnemy = /** @class */ (function (_super) {
                                     _this.drawX = _this.x - oldX;
                                     _this.drawY = _this.y - oldY;
                                     if (_this.x > oldX)
-                                        _this.direction = enemy_1.EnemyDirection.RIGHT;
+                                        _this.direction = entity_1.EntityDirection.RIGHT;
                                     else if (_this.x < oldX)
-                                        _this.direction = enemy_1.EnemyDirection.LEFT;
+                                        _this.direction = entity_1.EntityDirection.LEFT;
                                     else if (_this.y > oldY)
-                                        _this.direction = enemy_1.EnemyDirection.DOWN;
+                                        _this.direction = entity_1.EntityDirection.DOWN;
                                     else if (_this.y < oldY)
-                                        _this.direction = enemy_1.EnemyDirection.UP;
+                                        _this.direction = entity_1.EntityDirection.UP;
                                 }
                             }
                         }
-                        if (_this.direction == enemy_1.EnemyDirection.LEFT) {
+                        if (_this.direction == entity_1.EntityDirection.LEFT) {
                             _this.level.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y));
                             disablePositions.push({ x: _this.x, y: _this.y + 1 });
                             disablePositions.push({ x: _this.x, y: _this.y - 1 });
                         }
-                        if (_this.direction == enemy_1.EnemyDirection.RIGHT) {
+                        if (_this.direction == entity_1.EntityDirection.RIGHT) {
                             _this.level.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y));
                             disablePositions.push({ x: _this.x, y: _this.y + 1 });
                             disablePositions.push({ x: _this.x, y: _this.y - 1 });
                         }
-                        if (_this.direction == enemy_1.EnemyDirection.DOWN) {
+                        if (_this.direction == entity_1.EntityDirection.DOWN) {
                             _this.level.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y + 1));
                             disablePositions.push({ x: _this.x + 1, y: _this.y });
                             disablePositions.push({ x: _this.x - 1, y: _this.y });
                         }
-                        if (_this.direction == enemy_1.EnemyDirection.UP) {
+                        if (_this.direction == entity_1.EntityDirection.UP) {
                             _this.level.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y - 1));
                             disablePositions.push({ x: _this.x + 1, y: _this.y });
                             disablePositions.push({ x: _this.x - 1, y: _this.y });
@@ -4644,16 +4644,16 @@ var ArmoredzombieEnemy = /** @class */ (function (_super) {
                                     _this.facePlayer(player);
                                     if (player === _this.game.players[_this.game.localPlayerID])
                                         _this.alertTicks = 1;
-                                    if (_this.direction == enemy_1.EnemyDirection.LEFT) {
+                                    if (_this.direction == entity_1.EntityDirection.LEFT) {
                                         _this.level.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y));
                                     }
-                                    if (_this.direction == enemy_1.EnemyDirection.RIGHT) {
+                                    if (_this.direction == entity_1.EntityDirection.RIGHT) {
                                         _this.level.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y));
                                     }
-                                    if (_this.direction == enemy_1.EnemyDirection.DOWN) {
+                                    if (_this.direction == entity_1.EntityDirection.DOWN) {
                                         _this.level.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y + 1));
                                     }
-                                    if (_this.direction == enemy_1.EnemyDirection.UP) {
+                                    if (_this.direction == entity_1.EntityDirection.UP) {
                                         _this.level.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y - 1));
                                     }
                                 }
@@ -4708,16 +4708,16 @@ var ArmoredzombieEnemy = /** @class */ (function (_super) {
         return _this;
     }
     return ArmoredzombieEnemy;
-}(enemy_1.Enemy));
+}(entity_1.Entity));
 exports.ArmoredzombieEnemy = ArmoredzombieEnemy;
 
 
 /***/ }),
 
-/***/ "./src/enemy/barrel.ts":
-/*!*****************************!*\
-  !*** ./src/enemy/barrel.ts ***!
-  \*****************************/
+/***/ "./src/entity/barrel.ts":
+/*!******************************!*\
+  !*** ./src/entity/barrel.ts ***!
+  \******************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -4739,10 +4739,10 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Barrel = void 0;
-var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/enemy/enemy.ts");
+var entity_1 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var genericParticle_1 = __webpack_require__(/*! ../particle/genericParticle */ "./src/particle/genericParticle.ts");
-var enemy_2 = __webpack_require__(/*! ./enemy */ "./src/enemy/enemy.ts");
+var entity_2 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var Barrel = /** @class */ (function (_super) {
     __extends(Barrel, _super);
     function Barrel(level, game, x, y) {
@@ -4771,20 +4771,20 @@ var Barrel = /** @class */ (function (_super) {
         _this.tileY = 0;
         _this.hasShadow = false;
         _this.pushable = true;
-        _this.entityType = enemy_2.EntityType.Prop;
+        _this.entityType = entity_2.EntityType.Prop;
         return _this;
     }
     return Barrel;
-}(enemy_1.Enemy));
+}(entity_1.Entity));
 exports.Barrel = Barrel;
 
 
 /***/ }),
 
-/***/ "./src/enemy/bigSkullEnemy.ts":
-/*!************************************!*\
-  !*** ./src/enemy/bigSkullEnemy.ts ***!
-  \************************************/
+/***/ "./src/entity/bigSkullEnemy.ts":
+/*!*************************************!*\
+  !*** ./src/entity/bigSkullEnemy.ts ***!
+  \*************************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -4806,7 +4806,7 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BigSkullEnemy = void 0;
-var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/enemy/enemy.ts");
+var entity_1 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var hitWarning_1 = __webpack_require__(/*! ../hitWarning */ "./src/hitWarning.ts");
 var genericParticle_1 = __webpack_require__(/*! ../particle/genericParticle */ "./src/particle/genericParticle.ts");
@@ -4936,13 +4936,13 @@ var BigSkullEnemy = /** @class */ (function (_super) {
                                 _this.drawX = _this.x - oldX;
                                 _this.drawY = _this.y - oldY;
                                 if (_this.x > oldX)
-                                    _this.direction = enemy_1.EnemyDirection.RIGHT;
+                                    _this.direction = entity_1.EntityDirection.RIGHT;
                                 else if (_this.x < oldX)
-                                    _this.direction = enemy_1.EnemyDirection.LEFT;
+                                    _this.direction = entity_1.EntityDirection.LEFT;
                                 else if (_this.y > oldY)
-                                    _this.direction = enemy_1.EnemyDirection.DOWN;
+                                    _this.direction = entity_1.EntityDirection.DOWN;
                                 else if (_this.y < oldY)
-                                    _this.direction = enemy_1.EnemyDirection.UP;
+                                    _this.direction = entity_1.EntityDirection.UP;
                             }
                             if (_this.health < _this.maxHealth) {
                                 _this.ticksSinceFirstHit++;
@@ -5076,16 +5076,16 @@ var BigSkullEnemy = /** @class */ (function (_super) {
         return _this;
     }
     return BigSkullEnemy;
-}(enemy_1.Enemy));
+}(entity_1.Entity));
 exports.BigSkullEnemy = BigSkullEnemy;
 
 
 /***/ }),
 
-/***/ "./src/enemy/bishopEnemy.ts":
-/*!**********************************!*\
-  !*** ./src/enemy/bishopEnemy.ts ***!
-  \**********************************/
+/***/ "./src/entity/bishopEnemy.ts":
+/*!***********************************!*\
+  !*** ./src/entity/bishopEnemy.ts ***!
+  \***********************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -5107,7 +5107,7 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BishopEnemy = void 0;
-var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/enemy/enemy.ts");
+var entity_1 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var hitWarning_1 = __webpack_require__(/*! ../hitWarning */ "./src/hitWarning.ts");
 var genericParticle_1 = __webpack_require__(/*! ../particle/genericParticle */ "./src/particle/genericParticle.ts");
@@ -5132,7 +5132,7 @@ var BishopEnemy = /** @class */ (function (_super) {
                     return false;
                 return true;
             };
-            for (var _i = 0, _a = _this.level.enemies; _i < _a.length; _i++) {
+            for (var _i = 0, _a = _this.level.entities; _i < _a.length; _i++) {
                 var e = _a[_i];
                 if (e !== _this && enemyCollide(e)) {
                     return;
@@ -5213,7 +5213,7 @@ var BishopEnemy = /** @class */ (function (_super) {
                         var oldX = _this.x;
                         var oldY = _this.y;
                         var disablePositions = Array();
-                        for (var _i = 0, _a = _this.level.enemies; _i < _a.length; _i++) {
+                        for (var _i = 0, _a = _this.level.entities; _i < _a.length; _i++) {
                             var e = _a[_i];
                             if (e !== _this) {
                                 disablePositions.push({ x: e.x, y: e.y });
@@ -5346,16 +5346,16 @@ var BishopEnemy = /** @class */ (function (_super) {
         return _this;
     }
     return BishopEnemy;
-}(enemy_1.Enemy));
+}(entity_1.Entity));
 exports.BishopEnemy = BishopEnemy;
 
 
 /***/ }),
 
-/***/ "./src/enemy/chargeEnemy.ts":
-/*!**********************************!*\
-  !*** ./src/enemy/chargeEnemy.ts ***!
-  \**********************************/
+/***/ "./src/entity/chargeEnemy.ts":
+/*!***********************************!*\
+  !*** ./src/entity/chargeEnemy.ts ***!
+  \***********************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -5377,7 +5377,7 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ChargeEnemy = exports.ChargeEnemyState = void 0;
-var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/enemy/enemy.ts");
+var entity_1 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var hitWarning_1 = __webpack_require__(/*! ../hitWarning */ "./src/hitWarning.ts");
 var coin_1 = __webpack_require__(/*! ../item/coin */ "./src/item/coin.ts");
@@ -5401,7 +5401,7 @@ var ChargeEnemy = /** @class */ (function (_super) {
             return 1;
         };
         _this.canMoveOver = function (x, y) {
-            for (var _i = 0, _a = _this.level.enemies; _i < _a.length; _i++) {
+            for (var _i = 0, _a = _this.level.entities; _i < _a.length; _i++) {
                 var e = _a[_i];
                 if (e !== _this && x === e.x && y === e.y)
                     return false;
@@ -5467,13 +5467,13 @@ var ChargeEnemy = /** @class */ (function (_super) {
                             if (dy === 1)
                                 _this.visualTargetY += 0.65;
                             if (dx > 0)
-                                _this.direction = enemy_1.EnemyDirection.RIGHT;
+                                _this.direction = entity_1.EntityDirection.RIGHT;
                             else if (dx < 0)
-                                _this.direction = enemy_1.EnemyDirection.LEFT;
+                                _this.direction = entity_1.EntityDirection.LEFT;
                             else if (dy < 0)
-                                _this.direction = enemy_1.EnemyDirection.UP;
+                                _this.direction = entity_1.EntityDirection.UP;
                             else if (dy > 0)
-                                _this.direction = enemy_1.EnemyDirection.DOWN;
+                                _this.direction = entity_1.EntityDirection.DOWN;
                             break;
                         }
                     }
@@ -5555,13 +5555,13 @@ var ChargeEnemy = /** @class */ (function (_super) {
                 if (Math.floor(_this.trailFrame) % 2 === 0) {
                     var startX = (_this.x + 0.5) * gameConstants_1.GameConstants.TILESIZE;
                     var startY = (_this.y - 0.25) * gameConstants_1.GameConstants.TILESIZE;
-                    if (_this.direction === enemy_1.EnemyDirection.LEFT)
+                    if (_this.direction === entity_1.EntityDirection.LEFT)
                         startX -= 3;
-                    else if (_this.direction === enemy_1.EnemyDirection.RIGHT)
+                    else if (_this.direction === entity_1.EntityDirection.RIGHT)
                         startX += 3;
-                    else if (_this.direction === enemy_1.EnemyDirection.DOWN)
+                    else if (_this.direction === entity_1.EntityDirection.DOWN)
                         startY += 2;
-                    else if (_this.direction === enemy_1.EnemyDirection.UP)
+                    else if (_this.direction === entity_1.EntityDirection.UP)
                         startY -= 8;
                     game_1.Game.ctx.strokeStyle = "white";
                     game_1.Game.ctx.lineWidth = gameConstants_1.GameConstants.TILESIZE * 0.25;
@@ -5600,16 +5600,16 @@ var ChargeEnemy = /** @class */ (function (_super) {
         return _this;
     }
     return ChargeEnemy;
-}(enemy_1.Enemy));
+}(entity_1.Entity));
 exports.ChargeEnemy = ChargeEnemy;
 
 
 /***/ }),
 
-/***/ "./src/enemy/chest.ts":
-/*!****************************!*\
-  !*** ./src/enemy/chest.ts ***!
-  \****************************/
+/***/ "./src/entity/chest.ts":
+/*!*****************************!*\
+  !*** ./src/entity/chest.ts ***!
+  \*****************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -5635,13 +5635,13 @@ var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var key_1 = __webpack_require__(/*! ../item/key */ "./src/item/key.ts");
 var heart_1 = __webpack_require__(/*! ../item/heart */ "./src/item/heart.ts");
 var armor_1 = __webpack_require__(/*! ../item/armor */ "./src/item/armor.ts");
-var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/enemy/enemy.ts");
+var entity_1 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var greengem_1 = __webpack_require__(/*! ../item/greengem */ "./src/item/greengem.ts");
 var genericParticle_1 = __webpack_require__(/*! ../particle/genericParticle */ "./src/particle/genericParticle.ts");
 var sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
 var redgem_1 = __webpack_require__(/*! ../item/redgem */ "./src/item/redgem.ts");
 var bluegem_1 = __webpack_require__(/*! ../item/bluegem */ "./src/item/bluegem.ts");
-var enemy_2 = __webpack_require__(/*! ./enemy */ "./src/enemy/enemy.ts");
+var entity_2 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var Chest = /** @class */ (function (_super) {
     __extends(Chest, _super);
     function Chest(level, game, x, y, rand) {
@@ -5667,7 +5667,7 @@ var Chest = /** @class */ (function (_super) {
         _this.tileX = 4;
         _this.tileY = 0;
         _this.health = 1;
-        _this.entityType = enemy_2.EntityType.Chest;
+        _this.entityType = entity_2.EntityType.Chest;
         var drop = game_1.Game.randTable([1, 1, 1, 1, 1, 1, 1, 2, 3, 4], rand);
         switch (drop) {
             case 1:
@@ -5692,16 +5692,16 @@ var Chest = /** @class */ (function (_super) {
         return _this;
     }
     return Chest;
-}(enemy_1.Enemy));
+}(entity_1.Entity));
 exports.Chest = Chest;
 
 
 /***/ }),
 
-/***/ "./src/enemy/coalResource.ts":
-/*!***********************************!*\
-  !*** ./src/enemy/coalResource.ts ***!
-  \***********************************/
+/***/ "./src/entity/coalResource.ts":
+/*!************************************!*\
+  !*** ./src/entity/coalResource.ts ***!
+  \************************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -5723,7 +5723,7 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CoalResource = void 0;
-var resource_1 = __webpack_require__(/*! ./resource */ "./src/enemy/resource.ts");
+var resource_1 = __webpack_require__(/*! ./resource */ "./src/entity/resource.ts");
 var genericParticle_1 = __webpack_require__(/*! ../particle/genericParticle */ "./src/particle/genericParticle.ts");
 var coal_1 = __webpack_require__(/*! ../item/coal */ "./src/item/coal.ts");
 var sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
@@ -5760,10 +5760,10 @@ exports.CoalResource = CoalResource;
 
 /***/ }),
 
-/***/ "./src/enemy/crate.ts":
-/*!****************************!*\
-  !*** ./src/enemy/crate.ts ***!
-  \****************************/
+/***/ "./src/entity/crate.ts":
+/*!*****************************!*\
+  !*** ./src/entity/crate.ts ***!
+  \*****************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -5785,10 +5785,10 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Crate = void 0;
-var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/enemy/enemy.ts");
+var entity_1 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var genericParticle_1 = __webpack_require__(/*! ../particle/genericParticle */ "./src/particle/genericParticle.ts");
-var enemy_2 = __webpack_require__(/*! ./enemy */ "./src/enemy/enemy.ts");
+var entity_2 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var Crate = /** @class */ (function (_super) {
     __extends(Crate, _super);
     function Crate(level, game, x, y) {
@@ -5818,20 +5818,20 @@ var Crate = /** @class */ (function (_super) {
         _this.tileY = 0;
         _this.hasShadow = false;
         _this.pushable = true;
-        _this.entityType = enemy_2.EntityType.Prop;
+        _this.entityType = entity_2.EntityType.Prop;
         return _this;
     }
     return Crate;
-}(enemy_1.Enemy));
+}(entity_1.Entity));
 exports.Crate = Crate;
 
 
 /***/ }),
 
-/***/ "./src/enemy/emeraldResource.ts":
-/*!**************************************!*\
-  !*** ./src/enemy/emeraldResource.ts ***!
-  \**************************************/
+/***/ "./src/entity/emeraldResource.ts":
+/*!***************************************!*\
+  !*** ./src/entity/emeraldResource.ts ***!
+  \***************************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -5854,7 +5854,7 @@ var __extends = (this && this.__extends) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.EmeraldResource = void 0;
 var greengem_1 = __webpack_require__(/*! ../item/greengem */ "./src/item/greengem.ts");
-var resource_1 = __webpack_require__(/*! ./resource */ "./src/enemy/resource.ts");
+var resource_1 = __webpack_require__(/*! ./resource */ "./src/entity/resource.ts");
 var genericParticle_1 = __webpack_require__(/*! ../particle/genericParticle */ "./src/particle/genericParticle.ts");
 var sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
 var EmeraldResource = /** @class */ (function (_super) {
@@ -5890,10 +5890,10 @@ exports.EmeraldResource = EmeraldResource;
 
 /***/ }),
 
-/***/ "./src/enemy/enemy.ts":
-/*!****************************!*\
-  !*** ./src/enemy/enemy.ts ***!
-  \****************************/
+/***/ "./src/entity/entity.ts":
+/*!******************************!*\
+  !*** ./src/entity/entity.ts ***!
+  \******************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -5914,7 +5914,7 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Enemy = exports.EntityType = exports.EnemyDirection = void 0;
+exports.Entity = exports.EntityType = exports.EntityDirection = void 0;
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var bones_1 = __webpack_require__(/*! ../tile/bones */ "./src/tile/bones.ts");
 var deathParticle_1 = __webpack_require__(/*! ../particle/deathParticle */ "./src/particle/deathParticle.ts");
@@ -5923,13 +5923,13 @@ var genericParticle_1 = __webpack_require__(/*! ../particle/genericParticle */ "
 var healthbar_1 = __webpack_require__(/*! ../healthbar */ "./src/healthbar.ts");
 var drawable_1 = __webpack_require__(/*! ../drawable */ "./src/drawable.ts");
 var gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
-var EnemyDirection;
-(function (EnemyDirection) {
-    EnemyDirection[EnemyDirection["DOWN"] = 0] = "DOWN";
-    EnemyDirection[EnemyDirection["UP"] = 1] = "UP";
-    EnemyDirection[EnemyDirection["RIGHT"] = 2] = "RIGHT";
-    EnemyDirection[EnemyDirection["LEFT"] = 3] = "LEFT";
-})(EnemyDirection = exports.EnemyDirection || (exports.EnemyDirection = {}));
+var EntityDirection;
+(function (EntityDirection) {
+    EntityDirection[EntityDirection["DOWN"] = 0] = "DOWN";
+    EntityDirection[EntityDirection["UP"] = 1] = "UP";
+    EntityDirection[EntityDirection["RIGHT"] = 2] = "RIGHT";
+    EntityDirection[EntityDirection["LEFT"] = 3] = "LEFT";
+})(EntityDirection = exports.EntityDirection || (exports.EntityDirection = {}));
 var EntityType;
 (function (EntityType) {
     EntityType[EntityType["Enemy"] = 0] = "Enemy";
@@ -5938,25 +5938,25 @@ var EntityType;
     EntityType[EntityType["Prop"] = 3] = "Prop";
     EntityType[EntityType["Chest"] = 4] = "Chest";
 })(EntityType = exports.EntityType || (exports.EntityType = {}));
-var Enemy = /** @class */ (function (_super) {
-    __extends(Enemy, _super);
-    function Enemy(level, game, x, y) {
+var Entity = /** @class */ (function (_super) {
+    __extends(Entity, _super);
+    function Entity(level, game, x, y) {
         var _this = _super.call(this) || this;
         _this.sleepingZFrame = 0;
         _this.tryMove = function (x, y) {
             var pointWouldBeIn = function (someX, someY) {
                 return (someX >= x && someX < x + _this.w && someY >= y && someY < y + _this.h);
             };
-            var enemyCollide = function (enemy) {
-                if (enemy.x >= x + _this.w || enemy.x + enemy.w <= x)
+            var entityCollide = function (entity) {
+                if (entity.x >= x + _this.w || entity.x + entity.w <= x)
                     return false;
-                if (enemy.y >= y + _this.h || enemy.y + enemy.h <= y)
+                if (entity.y >= y + _this.h || entity.y + entity.h <= y)
                     return false;
                 return true;
             };
-            for (var _i = 0, _a = _this.level.enemies; _i < _a.length; _i++) {
+            for (var _i = 0, _a = _this.level.entities; _i < _a.length; _i++) {
                 var e = _a[_i];
-                if (e !== _this && enemyCollide(e)) {
+                if (e !== _this && entityCollide(e)) {
                     return;
                 }
             }
@@ -6067,15 +6067,15 @@ var Enemy = /** @class */ (function (_super) {
             }
             else if (Math.abs(dx) > Math.abs(dy)) {
                 if (dx > 0)
-                    _this.direction = EnemyDirection.RIGHT;
+                    _this.direction = EntityDirection.RIGHT;
                 if (dx < 0)
-                    _this.direction = EnemyDirection.LEFT;
+                    _this.direction = EntityDirection.LEFT;
             }
             else {
                 if (dy > 0)
-                    _this.direction = EnemyDirection.DOWN;
+                    _this.direction = EntityDirection.DOWN;
                 if (dy < 0)
-                    _this.direction = EnemyDirection.UP;
+                    _this.direction = EntityDirection.UP;
             }
         };
         _this.draw = function (delta) {
@@ -6147,7 +6147,7 @@ var Enemy = /** @class */ (function (_super) {
         _this.tileY = 0;
         _this.hasShadow = true;
         _this.skipNextTurns = 0;
-        _this.direction = EnemyDirection.DOWN;
+        _this.direction = EntityDirection.DOWN;
         _this.destroyable = true;
         _this.pushable = false;
         _this.chainPushable = true;
@@ -6161,17 +6161,17 @@ var Enemy = /** @class */ (function (_super) {
         _this.entityType = EntityType.Enemy;
         return _this;
     }
-    return Enemy;
+    return Entity;
 }(drawable_1.Drawable));
-exports.Enemy = Enemy;
+exports.Entity = Entity;
 
 
 /***/ }),
 
-/***/ "./src/enemy/goldResource.ts":
-/*!***********************************!*\
-  !*** ./src/enemy/goldResource.ts ***!
-  \***********************************/
+/***/ "./src/entity/goldResource.ts":
+/*!************************************!*\
+  !*** ./src/entity/goldResource.ts ***!
+  \************************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -6193,7 +6193,7 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GoldResource = void 0;
-var resource_1 = __webpack_require__(/*! ./resource */ "./src/enemy/resource.ts");
+var resource_1 = __webpack_require__(/*! ./resource */ "./src/entity/resource.ts");
 var genericParticle_1 = __webpack_require__(/*! ../particle/genericParticle */ "./src/particle/genericParticle.ts");
 var gold_1 = __webpack_require__(/*! ../item/gold */ "./src/item/gold.ts");
 var sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
@@ -6230,10 +6230,10 @@ exports.GoldResource = GoldResource;
 
 /***/ }),
 
-/***/ "./src/enemy/knightEnemy.ts":
-/*!**********************************!*\
-  !*** ./src/enemy/knightEnemy.ts ***!
-  \**********************************/
+/***/ "./src/entity/knightEnemy.ts":
+/*!***********************************!*\
+  !*** ./src/entity/knightEnemy.ts ***!
+  \***********************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -6255,7 +6255,7 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.KnightEnemy = void 0;
-var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/enemy/enemy.ts");
+var entity_1 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var astarclass_1 = __webpack_require__(/*! ../astarclass */ "./src/astarclass.ts");
 var hitWarning_1 = __webpack_require__(/*! ../hitWarning */ "./src/hitWarning.ts");
@@ -6317,7 +6317,7 @@ var KnightEnemy = /** @class */ (function (_super) {
                             var oldX = _this.x;
                             var oldY = _this.y;
                             var disablePositions = Array();
-                            for (var _i = 0, _a = _this.level.enemies; _i < _a.length; _i++) {
+                            for (var _i = 0, _a = _this.level.entities; _i < _a.length; _i++) {
                                 var e = _a[_i];
                                 if (e !== _this) {
                                     disablePositions.push({ x: e.x, y: e.y });
@@ -6362,13 +6362,13 @@ var KnightEnemy = /** @class */ (function (_super) {
                                     _this.drawX = _this.x - oldX;
                                     _this.drawY = _this.y - oldY;
                                     if (_this.x > oldX)
-                                        _this.direction = enemy_1.EnemyDirection.RIGHT;
+                                        _this.direction = entity_1.EntityDirection.RIGHT;
                                     else if (_this.x < oldX)
-                                        _this.direction = enemy_1.EnemyDirection.LEFT;
+                                        _this.direction = entity_1.EntityDirection.LEFT;
                                     else if (_this.y > oldY)
-                                        _this.direction = enemy_1.EnemyDirection.DOWN;
+                                        _this.direction = entity_1.EntityDirection.DOWN;
                                     else if (_this.y < oldY)
-                                        _this.direction = enemy_1.EnemyDirection.UP;
+                                        _this.direction = entity_1.EntityDirection.UP;
                                 }
                             }
                         }
@@ -6450,16 +6450,16 @@ var KnightEnemy = /** @class */ (function (_super) {
         return _this;
     }
     return KnightEnemy;
-}(enemy_1.Enemy));
+}(entity_1.Entity));
 exports.KnightEnemy = KnightEnemy;
 
 
 /***/ }),
 
-/***/ "./src/enemy/mushrooms.ts":
-/*!********************************!*\
-  !*** ./src/enemy/mushrooms.ts ***!
-  \********************************/
+/***/ "./src/entity/mushrooms.ts":
+/*!*********************************!*\
+  !*** ./src/entity/mushrooms.ts ***!
+  \*********************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -6481,11 +6481,11 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Mushrooms = void 0;
-var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/enemy/enemy.ts");
+var entity_1 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var genericParticle_1 = __webpack_require__(/*! ../particle/genericParticle */ "./src/particle/genericParticle.ts");
 var shrooms_1 = __webpack_require__(/*! ../item/shrooms */ "./src/item/shrooms.ts");
-var enemy_2 = __webpack_require__(/*! ./enemy */ "./src/enemy/enemy.ts");
+var entity_2 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var Mushrooms = /** @class */ (function (_super) {
     __extends(Mushrooms, _super);
     function Mushrooms(level, game, x, y) {
@@ -6515,20 +6515,20 @@ var Mushrooms = /** @class */ (function (_super) {
         _this.tileY = 2;
         _this.hasShadow = false;
         _this.chainPushable = false;
-        _this.entityType = enemy_2.EntityType.Prop;
+        _this.entityType = entity_2.EntityType.Prop;
         return _this;
     }
     return Mushrooms;
-}(enemy_1.Enemy));
+}(entity_1.Entity));
 exports.Mushrooms = Mushrooms;
 
 
 /***/ }),
 
-/***/ "./src/enemy/pot.ts":
-/*!**************************!*\
-  !*** ./src/enemy/pot.ts ***!
-  \**************************/
+/***/ "./src/entity/pot.ts":
+/*!***************************!*\
+  !*** ./src/entity/pot.ts ***!
+  \***************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -6550,10 +6550,10 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Pot = void 0;
-var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/enemy/enemy.ts");
+var entity_1 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var genericParticle_1 = __webpack_require__(/*! ../particle/genericParticle */ "./src/particle/genericParticle.ts");
-var enemy_2 = __webpack_require__(/*! ./enemy */ "./src/enemy/enemy.ts");
+var entity_2 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var Pot = /** @class */ (function (_super) {
     __extends(Pot, _super);
     function Pot(level, game, x, y) {
@@ -6582,20 +6582,20 @@ var Pot = /** @class */ (function (_super) {
         _this.tileY = 0;
         _this.hasShadow = false;
         _this.chainPushable = false;
-        _this.entityType = enemy_2.EntityType.Prop;
+        _this.entityType = entity_2.EntityType.Prop;
         return _this;
     }
     return Pot;
-}(enemy_1.Enemy));
+}(entity_1.Entity));
 exports.Pot = Pot;
 
 
 /***/ }),
 
-/***/ "./src/enemy/pottedPlant.ts":
-/*!**********************************!*\
-  !*** ./src/enemy/pottedPlant.ts ***!
-  \**********************************/
+/***/ "./src/entity/pottedPlant.ts":
+/*!***********************************!*\
+  !*** ./src/entity/pottedPlant.ts ***!
+  \***********************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -6617,12 +6617,12 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PottedPlant = void 0;
-var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/enemy/enemy.ts");
+var entity_1 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var heart_1 = __webpack_require__(/*! ../item/heart */ "./src/item/heart.ts");
 var genericParticle_1 = __webpack_require__(/*! ../particle/genericParticle */ "./src/particle/genericParticle.ts");
 var coin_1 = __webpack_require__(/*! ../item/coin */ "./src/item/coin.ts");
-var enemy_2 = __webpack_require__(/*! ./enemy */ "./src/enemy/enemy.ts");
+var entity_2 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var PottedPlant = /** @class */ (function (_super) {
     __extends(PottedPlant, _super);
     function PottedPlant(level, game, x, y, rand, drop) {
@@ -6664,7 +6664,7 @@ var PottedPlant = /** @class */ (function (_super) {
         _this.tileY = 0;
         _this.hasShadow = false;
         _this.chainPushable = false;
-        _this.entityType = enemy_2.EntityType.Prop;
+        _this.entityType = entity_2.EntityType.Prop;
         if (drop)
             _this.drop = drop;
         else {
@@ -6677,16 +6677,16 @@ var PottedPlant = /** @class */ (function (_super) {
         return _this;
     }
     return PottedPlant;
-}(enemy_1.Enemy));
+}(entity_1.Entity));
 exports.PottedPlant = PottedPlant;
 
 
 /***/ }),
 
-/***/ "./src/enemy/resource.ts":
-/*!*******************************!*\
-  !*** ./src/enemy/resource.ts ***!
-  \*******************************/
+/***/ "./src/entity/resource.ts":
+/*!********************************!*\
+  !*** ./src/entity/resource.ts ***!
+  \********************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -6709,8 +6709,8 @@ var __extends = (this && this.__extends) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Resource = void 0;
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/enemy/enemy.ts");
-var enemy_2 = __webpack_require__(/*! ./enemy */ "./src/enemy/enemy.ts");
+var entity_1 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
+var entity_2 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var Resource = /** @class */ (function (_super) {
     __extends(Resource, _super);
     function Resource(level, game, x, y) {
@@ -6747,20 +6747,20 @@ var Resource = /** @class */ (function (_super) {
         _this.tileY = 0;
         _this.health = 1;
         _this.chainPushable = false;
-        _this.entityType = enemy_2.EntityType.Resource;
+        _this.entityType = entity_2.EntityType.Resource;
         return _this;
     }
     return Resource;
-}(enemy_1.Enemy));
+}(entity_1.Entity));
 exports.Resource = Resource;
 
 
 /***/ }),
 
-/***/ "./src/enemy/rockResource.ts":
-/*!***********************************!*\
-  !*** ./src/enemy/rockResource.ts ***!
-  \***********************************/
+/***/ "./src/entity/rockResource.ts":
+/*!************************************!*\
+  !*** ./src/entity/rockResource.ts ***!
+  \************************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -6786,7 +6786,7 @@ var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var genericParticle_1 = __webpack_require__(/*! ../particle/genericParticle */ "./src/particle/genericParticle.ts");
 var sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
 var stone_1 = __webpack_require__(/*! ../item/stone */ "./src/item/stone.ts");
-var resource_1 = __webpack_require__(/*! ./resource */ "./src/enemy/resource.ts");
+var resource_1 = __webpack_require__(/*! ./resource */ "./src/entity/resource.ts");
 var Rock = /** @class */ (function (_super) {
     __extends(Rock, _super);
     function Rock(level, game, x, y) {
@@ -6832,10 +6832,10 @@ exports.Rock = Rock;
 
 /***/ }),
 
-/***/ "./src/enemy/skullEnemy.ts":
-/*!*********************************!*\
-  !*** ./src/enemy/skullEnemy.ts ***!
-  \*********************************/
+/***/ "./src/entity/skullEnemy.ts":
+/*!**********************************!*\
+  !*** ./src/entity/skullEnemy.ts ***!
+  \**********************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -6857,7 +6857,7 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SkullEnemy = void 0;
-var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/enemy/enemy.ts");
+var entity_1 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var hitWarning_1 = __webpack_require__(/*! ../hitWarning */ "./src/hitWarning.ts");
 var genericParticle_1 = __webpack_require__(/*! ../particle/genericParticle */ "./src/particle/genericParticle.ts");
@@ -6933,7 +6933,7 @@ var SkullEnemy = /** @class */ (function (_super) {
                             var oldX = _this.x;
                             var oldY = _this.y;
                             var disablePositions = Array();
-                            for (var _i = 0, _a = _this.level.enemies; _i < _a.length; _i++) {
+                            for (var _i = 0, _a = _this.level.entities; _i < _a.length; _i++) {
                                 var e = _a[_i];
                                 if (e !== _this) {
                                     disablePositions.push({ x: e.x, y: e.y });
@@ -6977,13 +6977,13 @@ var SkullEnemy = /** @class */ (function (_super) {
                                     _this.drawX = _this.x - oldX;
                                     _this.drawY = _this.y - oldY;
                                     if (_this.x > oldX)
-                                        _this.direction = enemy_1.EnemyDirection.RIGHT;
+                                        _this.direction = entity_1.EntityDirection.RIGHT;
                                     else if (_this.x < oldX)
-                                        _this.direction = enemy_1.EnemyDirection.LEFT;
+                                        _this.direction = entity_1.EntityDirection.LEFT;
                                     else if (_this.y > oldY)
-                                        _this.direction = enemy_1.EnemyDirection.DOWN;
+                                        _this.direction = entity_1.EntityDirection.DOWN;
                                     else if (_this.y < oldY)
-                                        _this.direction = enemy_1.EnemyDirection.UP;
+                                        _this.direction = entity_1.EntityDirection.UP;
                                 }
                             }
                             _this.level.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y));
@@ -7069,16 +7069,16 @@ var SkullEnemy = /** @class */ (function (_super) {
         return _this;
     }
     return SkullEnemy;
-}(enemy_1.Enemy));
+}(entity_1.Entity));
 exports.SkullEnemy = SkullEnemy;
 
 
 /***/ }),
 
-/***/ "./src/enemy/slimeEnemy.ts":
-/*!*********************************!*\
-  !*** ./src/enemy/slimeEnemy.ts ***!
-  \*********************************/
+/***/ "./src/entity/slimeEnemy.ts":
+/*!**********************************!*\
+  !*** ./src/entity/slimeEnemy.ts ***!
+  \**********************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -7100,7 +7100,7 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SlimeEnemy = void 0;
-var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/enemy/enemy.ts");
+var entity_1 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var astarclass_1 = __webpack_require__(/*! ../astarclass */ "./src/astarclass.ts");
 var hitWarning_1 = __webpack_require__(/*! ../hitWarning */ "./src/hitWarning.ts");
@@ -7162,7 +7162,7 @@ var SlimeEnemy = /** @class */ (function (_super) {
                             var oldX = _this.x;
                             var oldY = _this.y;
                             var disablePositions = Array();
-                            for (var _i = 0, _a = _this.level.enemies; _i < _a.length; _i++) {
+                            for (var _i = 0, _a = _this.level.entities; _i < _a.length; _i++) {
                                 var e = _a[_i];
                                 if (e !== _this) {
                                     disablePositions.push({ x: e.x, y: e.y });
@@ -7207,13 +7207,13 @@ var SlimeEnemy = /** @class */ (function (_super) {
                                     _this.drawX = _this.x - oldX;
                                     _this.drawY = _this.y - oldY;
                                     if (_this.x > oldX)
-                                        _this.direction = enemy_1.EnemyDirection.RIGHT;
+                                        _this.direction = entity_1.EntityDirection.RIGHT;
                                     else if (_this.x < oldX)
-                                        _this.direction = enemy_1.EnemyDirection.LEFT;
+                                        _this.direction = entity_1.EntityDirection.LEFT;
                                     else if (_this.y > oldY)
-                                        _this.direction = enemy_1.EnemyDirection.DOWN;
+                                        _this.direction = entity_1.EntityDirection.DOWN;
                                     else if (_this.y < oldY)
-                                        _this.direction = enemy_1.EnemyDirection.UP;
+                                        _this.direction = entity_1.EntityDirection.UP;
                                 }
                             }
                         }
@@ -7289,16 +7289,16 @@ var SlimeEnemy = /** @class */ (function (_super) {
         return _this;
     }
     return SlimeEnemy;
-}(enemy_1.Enemy));
+}(entity_1.Entity));
 exports.SlimeEnemy = SlimeEnemy;
 
 
 /***/ }),
 
-/***/ "./src/enemy/spawner.ts":
-/*!******************************!*\
-  !*** ./src/enemy/spawner.ts ***!
-  \******************************/
+/***/ "./src/entity/spawner.ts":
+/*!*******************************!*\
+  !*** ./src/entity/spawner.ts ***!
+  \*******************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -7320,14 +7320,14 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Spawner = void 0;
-var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/enemy/enemy.ts");
+var entity_1 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var hitWarning_1 = __webpack_require__(/*! ../hitWarning */ "./src/hitWarning.ts");
-var skullEnemy_1 = __webpack_require__(/*! ./skullEnemy */ "./src/enemy/skullEnemy.ts");
+var skullEnemy_1 = __webpack_require__(/*! ./skullEnemy */ "./src/entity/skullEnemy.ts");
 var enemySpawnAnimation_1 = __webpack_require__(/*! ../projectile/enemySpawnAnimation */ "./src/projectile/enemySpawnAnimation.ts");
 var bluegem_1 = __webpack_require__(/*! ../item/bluegem */ "./src/item/bluegem.ts");
-var knightEnemy_1 = __webpack_require__(/*! ./knightEnemy */ "./src/enemy/knightEnemy.ts");
-var wizardEnemy_1 = __webpack_require__(/*! ./wizardEnemy */ "./src/enemy/wizardEnemy.ts");
+var knightEnemy_1 = __webpack_require__(/*! ./knightEnemy */ "./src/entity/knightEnemy.ts");
+var wizardEnemy_1 = __webpack_require__(/*! ./wizardEnemy */ "./src/entity/wizardEnemy.ts");
 var Spawner = /** @class */ (function (_super) {
     __extends(Spawner, _super);
     function Spawner(level, game, x, y, rand) {
@@ -7385,16 +7385,16 @@ var Spawner = /** @class */ (function (_super) {
         return _this;
     }
     return Spawner;
-}(enemy_1.Enemy));
+}(entity_1.Entity));
 exports.Spawner = Spawner;
 
 
 /***/ }),
 
-/***/ "./src/enemy/tombStone.ts":
-/*!********************************!*\
-  !*** ./src/enemy/tombStone.ts ***!
-  \********************************/
+/***/ "./src/entity/tombStone.ts":
+/*!*********************************!*\
+  !*** ./src/entity/tombStone.ts ***!
+  \*********************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -7416,11 +7416,11 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.TombStone = void 0;
-var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/enemy/enemy.ts");
+var entity_1 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var genericParticle_1 = __webpack_require__(/*! ../particle/genericParticle */ "./src/particle/genericParticle.ts");
-var enemy_2 = __webpack_require__(/*! ./enemy */ "./src/enemy/enemy.ts");
-var skullEnemy_1 = __webpack_require__(/*! ./skullEnemy */ "./src/enemy/skullEnemy.ts");
+var entity_2 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
+var skullEnemy_1 = __webpack_require__(/*! ./skullEnemy */ "./src/entity/skullEnemy.ts");
 var random_1 = __webpack_require__(/*! ../random */ "./src/random.ts");
 var spellbook_1 = __webpack_require__(/*! ../weapon/spellbook */ "./src/weapon/spellbook.ts");
 var TombStone = /** @class */ (function (_super) {
@@ -7447,7 +7447,7 @@ var TombStone = /** @class */ (function (_super) {
                             var playerY = _this.game.players[i].y;
                             if ((playerX !== position.x && playerY === position.y) ||
                                 (playerX === position.x && playerY !== position.y)) {
-                                _this.level.enemies.push(new skullEnemy_1.SkullEnemy(_this.level, _this.game, position.x, position.y, random_1.Random.rand));
+                                _this.level.entities.push(new skullEnemy_1.SkullEnemy(_this.level, _this.game, position.x, position.y, random_1.Random.rand));
                             }
                         }
                     }
@@ -7479,7 +7479,7 @@ var TombStone = /** @class */ (function (_super) {
         _this.tileY = 2;
         _this.hasShadow = false;
         _this.pushable = false;
-        _this.entityType = enemy_2.EntityType.Prop;
+        _this.entityType = entity_2.EntityType.Prop;
         _this.destroyable = true;
         _this.skinType = skinType;
         _this.rand = rand;
@@ -7490,16 +7490,16 @@ var TombStone = /** @class */ (function (_super) {
         return _this;
     }
     return TombStone;
-}(enemy_1.Enemy));
+}(entity_1.Entity));
 exports.TombStone = TombStone;
 
 
 /***/ }),
 
-/***/ "./src/enemy/vendingMachine.ts":
-/*!*************************************!*\
-  !*** ./src/enemy/vendingMachine.ts ***!
-  \*************************************/
+/***/ "./src/entity/vendingMachine.ts":
+/*!**************************************!*\
+  !*** ./src/entity/vendingMachine.ts ***!
+  \**************************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -7522,7 +7522,7 @@ var __extends = (this && this.__extends) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.VendingMachine = void 0;
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/enemy/enemy.ts");
+var entity_1 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var coin_1 = __webpack_require__(/*! ../item/coin */ "./src/item/coin.ts");
 var coal_1 = __webpack_require__(/*! ../item/coal */ "./src/item/coal.ts");
 var greengem_1 = __webpack_require__(/*! ../item/greengem */ "./src/item/greengem.ts");
@@ -7536,7 +7536,7 @@ var bluegem_1 = __webpack_require__(/*! ../item/bluegem */ "./src/item/bluegem.t
 var dualdagger_1 = __webpack_require__(/*! ../weapon/dualdagger */ "./src/weapon/dualdagger.ts");
 var lantern_1 = __webpack_require__(/*! ../item/lantern */ "./src/item/lantern.ts");
 var redgem_1 = __webpack_require__(/*! ../item/redgem */ "./src/item/redgem.ts");
-var enemy_2 = __webpack_require__(/*! ./enemy */ "./src/enemy/enemy.ts");
+var entity_2 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var OPEN_TIME = 150;
 var FILL_COLOR = "#5a595b";
 var OUTLINE_COLOR = "#292c36";
@@ -7582,7 +7582,7 @@ var VendingMachine = /** @class */ (function (_super) {
                 do {
                     x_1 = game_1.Game.rand(_this.x - 1, _this.x + 1, _this.rand);
                     y_1 = game_1.Game.rand(_this.y - 1, _this.y + 1, _this.rand);
-                } while ((x_1 === _this.x && y_1 === _this.y) || _this.level.roomArray[x_1][y_1].isSolid() || _this.level.enemies.some(function (e) { return e.x === x_1 && e.y === y_1; }));
+                } while ((x_1 === _this.x && y_1 === _this.y) || _this.level.roomArray[x_1][y_1].isSolid() || _this.level.entities.some(function (e) { return e.x === x_1 && e.y === y_1; }));
                 var newItem = new _this.item.constructor();
                 newItem = newItem.constructor(_this.level, x_1, y_1);
                 _this.level.items.push(newItem);
@@ -7663,7 +7663,7 @@ var VendingMachine = /** @class */ (function (_super) {
         _this.chainPushable = false;
         _this.interactable = true;
         _this.costItems = [];
-        _this.entityType = enemy_2.EntityType.Friendly;
+        _this.entityType = entity_2.EntityType.Friendly;
         _this.item = item;
         if (_this.item instanceof shotgun_1.Shotgun) {
             var g = new bluegem_1.BlueGem(level, 0, 0);
@@ -7699,16 +7699,16 @@ var VendingMachine = /** @class */ (function (_super) {
         return _this;
     }
     return VendingMachine;
-}(enemy_1.Enemy));
+}(entity_1.Entity));
 exports.VendingMachine = VendingMachine;
 
 
 /***/ }),
 
-/***/ "./src/enemy/wizardEnemy.ts":
-/*!**********************************!*\
-  !*** ./src/enemy/wizardEnemy.ts ***!
-  \**********************************/
+/***/ "./src/entity/wizardEnemy.ts":
+/*!***********************************!*\
+  !*** ./src/entity/wizardEnemy.ts ***!
+  \***********************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -7730,7 +7730,7 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.WizardEnemy = exports.WizardState = void 0;
-var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/enemy/enemy.ts");
+var entity_1 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var floor_1 = __webpack_require__(/*! ../tile/floor */ "./src/tile/floor.ts");
 var bones_1 = __webpack_require__(/*! ../tile/bones */ "./src/tile/bones.ts");
@@ -7922,16 +7922,16 @@ var WizardEnemy = /** @class */ (function (_super) {
         return _this;
     }
     return WizardEnemy;
-}(enemy_1.Enemy));
+}(entity_1.Entity));
 exports.WizardEnemy = WizardEnemy;
 
 
 /***/ }),
 
-/***/ "./src/enemy/zombieEnemy.ts":
-/*!**********************************!*\
-  !*** ./src/enemy/zombieEnemy.ts ***!
-  \**********************************/
+/***/ "./src/entity/zombieEnemy.ts":
+/*!***********************************!*\
+  !*** ./src/entity/zombieEnemy.ts ***!
+  \***********************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -7953,7 +7953,7 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ZombieEnemy = void 0;
-var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/enemy/enemy.ts");
+var entity_1 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var hitWarning_1 = __webpack_require__(/*! ../hitWarning */ "./src/hitWarning.ts");
 var genericParticle_1 = __webpack_require__(/*! ../particle/genericParticle */ "./src/particle/genericParticle.ts");
@@ -8019,7 +8019,7 @@ var ZombieEnemy = /** @class */ (function (_super) {
                         var oldX = _this.x;
                         var oldY = _this.y;
                         var disablePositions = Array();
-                        for (var _i = 0, _a = _this.level.enemies; _i < _a.length; _i++) {
+                        for (var _i = 0, _a = _this.level.entities; _i < _a.length; _i++) {
                             var e = _a[_i];
                             if (e !== _this) {
                                 disablePositions.push({ x: e.x, y: e.y });
@@ -8052,13 +8052,13 @@ var ZombieEnemy = /** @class */ (function (_super) {
                             var player = _this.targetPlayer;
                             _this.facePlayer(player);
                             if (moveX > oldX)
-                                _this.direction = enemy_1.EnemyDirection.RIGHT;
+                                _this.direction = entity_1.EntityDirection.RIGHT;
                             else if (moveX < oldX)
-                                _this.direction = enemy_1.EnemyDirection.LEFT;
+                                _this.direction = entity_1.EntityDirection.LEFT;
                             else if (moveY > oldY)
-                                _this.direction = enemy_1.EnemyDirection.DOWN;
+                                _this.direction = entity_1.EntityDirection.DOWN;
                             else if (moveY < oldY)
-                                _this.direction = enemy_1.EnemyDirection.UP;
+                                _this.direction = entity_1.EntityDirection.UP;
                             if (oldDir == _this.direction) {
                                 var hitPlayer = false;
                                 for (var i in _this.game.players) {
@@ -8075,32 +8075,32 @@ var ZombieEnemy = /** @class */ (function (_super) {
                                     _this.drawX = _this.x - oldX;
                                     _this.drawY = _this.y - oldY;
                                     if (_this.x > oldX)
-                                        _this.direction = enemy_1.EnemyDirection.RIGHT;
+                                        _this.direction = entity_1.EntityDirection.RIGHT;
                                     else if (_this.x < oldX)
-                                        _this.direction = enemy_1.EnemyDirection.LEFT;
+                                        _this.direction = entity_1.EntityDirection.LEFT;
                                     else if (_this.y > oldY)
-                                        _this.direction = enemy_1.EnemyDirection.DOWN;
+                                        _this.direction = entity_1.EntityDirection.DOWN;
                                     else if (_this.y < oldY)
-                                        _this.direction = enemy_1.EnemyDirection.UP;
+                                        _this.direction = entity_1.EntityDirection.UP;
                                 }
                             }
                         }
-                        if (_this.direction == enemy_1.EnemyDirection.LEFT) {
+                        if (_this.direction == entity_1.EntityDirection.LEFT) {
                             _this.level.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y));
                             disablePositions.push({ x: _this.x, y: _this.y + 1 });
                             disablePositions.push({ x: _this.x, y: _this.y - 1 });
                         }
-                        if (_this.direction == enemy_1.EnemyDirection.RIGHT) {
+                        if (_this.direction == entity_1.EntityDirection.RIGHT) {
                             _this.level.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y));
                             disablePositions.push({ x: _this.x, y: _this.y + 1 });
                             disablePositions.push({ x: _this.x, y: _this.y - 1 });
                         }
-                        if (_this.direction == enemy_1.EnemyDirection.DOWN) {
+                        if (_this.direction == entity_1.EntityDirection.DOWN) {
                             _this.level.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y + 1));
                             disablePositions.push({ x: _this.x + 1, y: _this.y });
                             disablePositions.push({ x: _this.x - 1, y: _this.y });
                         }
-                        if (_this.direction == enemy_1.EnemyDirection.UP) {
+                        if (_this.direction == entity_1.EntityDirection.UP) {
                             _this.level.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y - 1));
                             disablePositions.push({ x: _this.x + 1, y: _this.y });
                             disablePositions.push({ x: _this.x - 1, y: _this.y });
@@ -8117,16 +8117,16 @@ var ZombieEnemy = /** @class */ (function (_super) {
                                     _this.facePlayer(player);
                                     if (player === _this.game.players[_this.game.localPlayerID])
                                         _this.alertTicks = 1;
-                                    if (_this.direction == enemy_1.EnemyDirection.LEFT) {
+                                    if (_this.direction == entity_1.EntityDirection.LEFT) {
                                         _this.level.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y));
                                     }
-                                    if (_this.direction == enemy_1.EnemyDirection.RIGHT) {
+                                    if (_this.direction == entity_1.EntityDirection.RIGHT) {
                                         _this.level.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y));
                                     }
-                                    if (_this.direction == enemy_1.EnemyDirection.DOWN) {
+                                    if (_this.direction == entity_1.EntityDirection.DOWN) {
                                         _this.level.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y + 1));
                                     }
-                                    if (_this.direction == enemy_1.EnemyDirection.UP) {
+                                    if (_this.direction == entity_1.EntityDirection.UP) {
                                         _this.level.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y - 1));
                                     }
                                 }
@@ -8175,7 +8175,7 @@ var ZombieEnemy = /** @class */ (function (_super) {
         return _this;
     }
     return ZombieEnemy;
-}(enemy_1.Enemy));
+}(entity_1.Entity));
 exports.ZombieEnemy = ZombieEnemy;
 
 
@@ -9215,23 +9215,23 @@ exports.GameConstants = GameConstants;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.loadGameState = exports.createGameState = exports.GameState = exports.PlayerState = exports.InventoryState = exports.ItemState = exports.ItemType = exports.LevelState = exports.EnemyState = exports.EnemyType = exports.ProjectileState = exports.ProjectileType = exports.HitWarningState = void 0;
-var barrel_1 = __webpack_require__(/*! ./enemy/barrel */ "./src/enemy/barrel.ts");
-var bigSkullEnemy_1 = __webpack_require__(/*! ./enemy/bigSkullEnemy */ "./src/enemy/bigSkullEnemy.ts");
-var chargeEnemy_1 = __webpack_require__(/*! ./enemy/chargeEnemy */ "./src/enemy/chargeEnemy.ts");
-var chest_1 = __webpack_require__(/*! ./enemy/chest */ "./src/enemy/chest.ts");
-var coalResource_1 = __webpack_require__(/*! ./enemy/coalResource */ "./src/enemy/coalResource.ts");
-var crate_1 = __webpack_require__(/*! ./enemy/crate */ "./src/enemy/crate.ts");
-var emeraldResource_1 = __webpack_require__(/*! ./enemy/emeraldResource */ "./src/enemy/emeraldResource.ts");
-var goldResource_1 = __webpack_require__(/*! ./enemy/goldResource */ "./src/enemy/goldResource.ts");
-var knightEnemy_1 = __webpack_require__(/*! ./enemy/knightEnemy */ "./src/enemy/knightEnemy.ts");
-var pottedPlant_1 = __webpack_require__(/*! ./enemy/pottedPlant */ "./src/enemy/pottedPlant.ts");
-var pot_1 = __webpack_require__(/*! ./enemy/pot */ "./src/enemy/pot.ts");
-var skullEnemy_1 = __webpack_require__(/*! ./enemy/skullEnemy */ "./src/enemy/skullEnemy.ts");
-var slimeEnemy_1 = __webpack_require__(/*! ./enemy/slimeEnemy */ "./src/enemy/slimeEnemy.ts");
-var spawner_1 = __webpack_require__(/*! ./enemy/spawner */ "./src/enemy/spawner.ts");
-var vendingMachine_1 = __webpack_require__(/*! ./enemy/vendingMachine */ "./src/enemy/vendingMachine.ts");
-var wizardEnemy_1 = __webpack_require__(/*! ./enemy/wizardEnemy */ "./src/enemy/wizardEnemy.ts");
-var zombieEnemy_1 = __webpack_require__(/*! ./enemy/zombieEnemy */ "./src/enemy/zombieEnemy.ts");
+var barrel_1 = __webpack_require__(/*! ./entity/barrel */ "./src/entity/barrel.ts");
+var bigSkullEnemy_1 = __webpack_require__(/*! ./entity/bigSkullEnemy */ "./src/entity/bigSkullEnemy.ts");
+var chargeEnemy_1 = __webpack_require__(/*! ./entity/chargeEnemy */ "./src/entity/chargeEnemy.ts");
+var chest_1 = __webpack_require__(/*! ./entity/chest */ "./src/entity/chest.ts");
+var coalResource_1 = __webpack_require__(/*! ./entity/coalResource */ "./src/entity/coalResource.ts");
+var crate_1 = __webpack_require__(/*! ./entity/crate */ "./src/entity/crate.ts");
+var emeraldResource_1 = __webpack_require__(/*! ./entity/emeraldResource */ "./src/entity/emeraldResource.ts");
+var goldResource_1 = __webpack_require__(/*! ./entity/goldResource */ "./src/entity/goldResource.ts");
+var knightEnemy_1 = __webpack_require__(/*! ./entity/knightEnemy */ "./src/entity/knightEnemy.ts");
+var pottedPlant_1 = __webpack_require__(/*! ./entity/pottedPlant */ "./src/entity/pottedPlant.ts");
+var pot_1 = __webpack_require__(/*! ./entity/pot */ "./src/entity/pot.ts");
+var skullEnemy_1 = __webpack_require__(/*! ./entity/skullEnemy */ "./src/entity/skullEnemy.ts");
+var slimeEnemy_1 = __webpack_require__(/*! ./entity/slimeEnemy */ "./src/entity/slimeEnemy.ts");
+var spawner_1 = __webpack_require__(/*! ./entity/spawner */ "./src/entity/spawner.ts");
+var vendingMachine_1 = __webpack_require__(/*! ./entity/vendingMachine */ "./src/entity/vendingMachine.ts");
+var wizardEnemy_1 = __webpack_require__(/*! ./entity/wizardEnemy */ "./src/entity/wizardEnemy.ts");
+var zombieEnemy_1 = __webpack_require__(/*! ./entity/zombieEnemy */ "./src/entity/zombieEnemy.ts");
 var hitWarning_1 = __webpack_require__(/*! ./hitWarning */ "./src/hitWarning.ts");
 var armor_1 = __webpack_require__(/*! ./item/armor */ "./src/item/armor.ts");
 var bluegem_1 = __webpack_require__(/*! ./item/bluegem */ "./src/item/bluegem.ts");
@@ -9291,7 +9291,7 @@ var ProjectileState = /** @class */ (function () {
             this.type = ProjectileType.WIZARD;
             this.wizardState = projectile.state;
             this.levelID = game.rooms.indexOf(projectile.parent.level);
-            this.wizardParentID = projectile.parent.level.enemies.indexOf(projectile.parent);
+            this.wizardParentID = projectile.parent.level.entities.indexOf(projectile.parent);
         }
     }
     return ProjectileState;
@@ -9306,7 +9306,7 @@ var loadProjectile = function (ps, game) {
         return p;
     }
     if (ps.type === ProjectileType.WIZARD) {
-        var wizard = game.rooms[ps.levelID].enemies[ps.wizardParentID];
+        var wizard = game.rooms[ps.levelID].entities[ps.wizardParentID];
         var p = new wizardFireball_1.WizardFireball(wizard, ps.x, ps.y);
         p.state = ps.wizardState;
         return p;
@@ -9600,7 +9600,7 @@ var LevelState = /** @class */ (function () {
         this.items = [];
         this.projectiles = [];
         this.hitwarnings = [];
-        for (var _i = 0, _a = level.enemies; _i < _a.length; _i++) {
+        for (var _i = 0, _a = level.entities; _i < _a.length; _i++) {
             var enemy = _a[_i];
             this.enemies.push(new EnemyState(enemy, game));
         }
@@ -9622,13 +9622,13 @@ var LevelState = /** @class */ (function () {
 exports.LevelState = LevelState;
 var loadLevel = function (level, levelState, game) {
     level.entered = levelState.entered;
-    level.enemies = [];
+    level.entities = [];
     level.items = [];
     level.projectiles = [];
     level.hitwarnings = [];
     for (var _i = 0, _a = levelState.enemies; _i < _a.length; _i++) {
         var enemy = _a[_i];
-        level.enemies.push(loadEnemy(enemy, game));
+        level.entities.push(loadEnemy(enemy, game));
     }
     for (var _b = 0, _c = levelState.items; _b < _c.length; _b++) {
         var item = _c[_b];
@@ -9826,7 +9826,7 @@ var PlayerState = /** @class */ (function () {
         if (player.openVendingMachine) {
             this.hasOpenVendingMachine = true;
             this.openVendingMachineLevelID = game.rooms.indexOf(player.openVendingMachine.level);
-            this.openVendingMachineID = player.openVendingMachine.level.enemies.indexOf(player.openVendingMachine);
+            this.openVendingMachineID = player.openVendingMachine.level.entities.indexOf(player.openVendingMachine);
         }
         this.sightRadius = player.sightRadius;
     }
@@ -9848,7 +9848,7 @@ var loadPlayer = function (id, p, game) {
     player.lastTickHealth = p.lastTickHealth;
     loadInventory(player.inventory, p.inventory, game);
     if (p.hasOpenVendingMachine) {
-        player.openVendingMachine = game.rooms[p.openVendingMachineLevelID].enemies[p.openVendingMachineID];
+        player.openVendingMachine = game.rooms[p.openVendingMachineLevelID].entities[p.openVendingMachineID];
     }
     player.sightRadius = p.sightRadius;
     return player;
@@ -12592,7 +12592,7 @@ exports.Map = void 0;
 var game_1 = __webpack_require__(/*! ./game */ "./src/game.ts");
 var gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/gameConstants.ts");
 var room_1 = __webpack_require__(/*! ./room */ "./src/room.ts");
-var enemy_1 = __webpack_require__(/*! ./enemy/enemy */ "./src/enemy/enemy.ts");
+var entity_1 = __webpack_require__(/*! ./entity/entity */ "./src/entity/entity.ts");
 var Map = /** @class */ (function () {
     function Map(game) {
         var _this = this;
@@ -12636,18 +12636,18 @@ var Map = /** @class */ (function () {
                             (game_1.Game.ctx.fillStyle = "black"),
                                 game_1.Game.ctx.fillRect(door.x * s, door.y * s, 1 * s, 1 * s);
                     }
-                    for (var _f = 0, _g = level.enemies; _f < _g.length; _f++) {
+                    for (var _f = 0, _g = level.entities; _f < _g.length; _f++) {
                         var enemy = _g[_f];
-                        if (enemy.entityType === enemy_1.EntityType.Enemy) {
+                        if (enemy.entityType === entity_1.EntityType.Enemy) {
                             game_1.Game.ctx.fillStyle = "yellow";
                         }
-                        if (enemy.entityType === enemy_1.EntityType.Prop) {
+                        if (enemy.entityType === entity_1.EntityType.Prop) {
                             game_1.Game.ctx.fillStyle = "#847e87";
                         }
-                        if (enemy.entityType === enemy_1.EntityType.Resource) {
+                        if (enemy.entityType === entity_1.EntityType.Resource) {
                             game_1.Game.ctx.fillStyle = "#5a595b";
                         }
-                        if (enemy.entityType === enemy_1.EntityType.Friendly) {
+                        if (enemy.entityType === entity_1.EntityType.Friendly) {
                             game_1.Game.ctx.fillStyle = "cyan";
                         }
                         game_1.Game.ctx.fillRect(enemy.x * s, enemy.y * s, 1 * s, 1 * s);
@@ -13177,7 +13177,7 @@ var Player = /** @class */ (function (_super) {
                     return;
                     //}
                 }
-            for (var _i = 0, _a = _this.game.rooms[_this.levelID].enemies; _i < _a.length; _i++) {
+            for (var _i = 0, _a = _this.game.rooms[_this.levelID].entities; _i < _a.length; _i++) {
                 var e = _a[_i];
                 if (_this.tryCollide(e, x, y)) {
                     if (e.pushable) {
@@ -13191,7 +13191,7 @@ var Player = /** @class */ (function (_super) {
                         var pushedEnemies = [];
                         while (true) {
                             foundEnd = true;
-                            for (var _b = 0, _c = _this.game.rooms[_this.levelID].enemies; _b < _c.length; _b++) {
+                            for (var _b = 0, _c = _this.game.rooms[_this.levelID].entities; _b < _c.length; _b++) {
                                 var f = _c[_b];
                                 if (f.pointIn(nextX, nextY)) {
                                     if (!f.chainPushable) {
@@ -13535,7 +13535,7 @@ var EnemySpawnAnimation = /** @class */ (function (_super) {
             if (!hitPlayer) {
                 _this.dead = true;
                 _this.enemy.skipNextTurns = 1;
-                _this.level.enemies.push(_this.enemy);
+                _this.level.entities.push(_this.enemy);
                 genericParticle_1.GenericParticle.spawnCluster(_this.level, _this.x + 0.5, _this.y + 0.5, "#ffffff");
                 genericParticle_1.GenericParticle.spawnCluster(_this.level, _this.x + 0.5, _this.y + 0.5, "#ffffff");
             }
@@ -13801,54 +13801,54 @@ var floor_1 = __webpack_require__(/*! ./tile/floor */ "./src/tile/floor.ts");
 var game_1 = __webpack_require__(/*! ./game */ "./src/game.ts");
 var door_1 = __webpack_require__(/*! ./tile/door */ "./src/tile/door.ts");
 var tile_1 = __webpack_require__(/*! ./tile/tile */ "./src/tile/tile.ts");
-var knightEnemy_1 = __webpack_require__(/*! ./enemy/knightEnemy */ "./src/enemy/knightEnemy.ts");
-var enemy_1 = __webpack_require__(/*! ./enemy/enemy */ "./src/enemy/enemy.ts");
-var chest_1 = __webpack_require__(/*! ./enemy/chest */ "./src/enemy/chest.ts");
+var knightEnemy_1 = __webpack_require__(/*! ./entity/knightEnemy */ "./src/entity/knightEnemy.ts");
+var entity_1 = __webpack_require__(/*! ./entity/entity */ "./src/entity/entity.ts");
+var chest_1 = __webpack_require__(/*! ./entity/chest */ "./src/entity/chest.ts");
 var goldenKey_1 = __webpack_require__(/*! ./item/goldenKey */ "./src/item/goldenKey.ts");
 var spawnfloor_1 = __webpack_require__(/*! ./tile/spawnfloor */ "./src/tile/spawnfloor.ts");
 //import { GoldenDoor } from "./tile/goldenDoor";
 var spike_1 = __webpack_require__(/*! ./tile/spike */ "./src/tile/spike.ts");
 var gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/gameConstants.ts");
-var wizardEnemy_1 = __webpack_require__(/*! ./enemy/wizardEnemy */ "./src/enemy/wizardEnemy.ts");
-var skullEnemy_1 = __webpack_require__(/*! ./enemy/skullEnemy */ "./src/enemy/skullEnemy.ts");
-var barrel_1 = __webpack_require__(/*! ./enemy/barrel */ "./src/enemy/barrel.ts");
-var crate_1 = __webpack_require__(/*! ./enemy/crate */ "./src/enemy/crate.ts");
+var wizardEnemy_1 = __webpack_require__(/*! ./entity/wizardEnemy */ "./src/entity/wizardEnemy.ts");
+var skullEnemy_1 = __webpack_require__(/*! ./entity/skullEnemy */ "./src/entity/skullEnemy.ts");
+var barrel_1 = __webpack_require__(/*! ./entity/barrel */ "./src/entity/barrel.ts");
+var crate_1 = __webpack_require__(/*! ./entity/crate */ "./src/entity/crate.ts");
 var armor_1 = __webpack_require__(/*! ./item/armor */ "./src/item/armor.ts");
 var spiketrap_1 = __webpack_require__(/*! ./tile/spiketrap */ "./src/tile/spiketrap.ts");
 var fountainTile_1 = __webpack_require__(/*! ./tile/fountainTile */ "./src/tile/fountainTile.ts");
 var coffinTile_1 = __webpack_require__(/*! ./tile/coffinTile */ "./src/tile/coffinTile.ts");
-var pottedPlant_1 = __webpack_require__(/*! ./enemy/pottedPlant */ "./src/enemy/pottedPlant.ts");
+var pottedPlant_1 = __webpack_require__(/*! ./entity/pottedPlant */ "./src/entity/pottedPlant.ts");
 var insideLevelDoor_1 = __webpack_require__(/*! ./tile/insideLevelDoor */ "./src/tile/insideLevelDoor.ts");
 var button_1 = __webpack_require__(/*! ./tile/button */ "./src/tile/button.ts");
 var hitWarning_1 = __webpack_require__(/*! ./hitWarning */ "./src/hitWarning.ts");
 var upLadder_1 = __webpack_require__(/*! ./tile/upLadder */ "./src/tile/upLadder.ts");
 var downLadder_1 = __webpack_require__(/*! ./tile/downLadder */ "./src/tile/downLadder.ts");
-var coalResource_1 = __webpack_require__(/*! ./enemy/coalResource */ "./src/enemy/coalResource.ts");
-var goldResource_1 = __webpack_require__(/*! ./enemy/goldResource */ "./src/enemy/goldResource.ts");
-var emeraldResource_1 = __webpack_require__(/*! ./enemy/emeraldResource */ "./src/enemy/emeraldResource.ts");
+var coalResource_1 = __webpack_require__(/*! ./entity/coalResource */ "./src/entity/coalResource.ts");
+var goldResource_1 = __webpack_require__(/*! ./entity/goldResource */ "./src/entity/goldResource.ts");
+var emeraldResource_1 = __webpack_require__(/*! ./entity/emeraldResource */ "./src/entity/emeraldResource.ts");
 var chasm_1 = __webpack_require__(/*! ./tile/chasm */ "./src/tile/chasm.ts");
-var spawner_1 = __webpack_require__(/*! ./enemy/spawner */ "./src/enemy/spawner.ts");
-var vendingMachine_1 = __webpack_require__(/*! ./enemy/vendingMachine */ "./src/enemy/vendingMachine.ts");
+var spawner_1 = __webpack_require__(/*! ./entity/spawner */ "./src/entity/spawner.ts");
+var vendingMachine_1 = __webpack_require__(/*! ./entity/vendingMachine */ "./src/entity/vendingMachine.ts");
 var wallTorch_1 = __webpack_require__(/*! ./tile/wallTorch */ "./src/tile/wallTorch.ts");
-var chargeEnemy_1 = __webpack_require__(/*! ./enemy/chargeEnemy */ "./src/enemy/chargeEnemy.ts");
+var chargeEnemy_1 = __webpack_require__(/*! ./entity/chargeEnemy */ "./src/entity/chargeEnemy.ts");
 var shotgun_1 = __webpack_require__(/*! ./weapon/shotgun */ "./src/weapon/shotgun.ts");
 var heart_1 = __webpack_require__(/*! ./item/heart */ "./src/item/heart.ts");
 var spear_1 = __webpack_require__(/*! ./weapon/spear */ "./src/weapon/spear.ts");
 var player_1 = __webpack_require__(/*! ./player */ "./src/player.ts");
-var slimeEnemy_1 = __webpack_require__(/*! ./enemy/slimeEnemy */ "./src/enemy/slimeEnemy.ts");
-var zombieEnemy_1 = __webpack_require__(/*! ./enemy/zombieEnemy */ "./src/enemy/zombieEnemy.ts");
-var bigSkullEnemy_1 = __webpack_require__(/*! ./enemy/bigSkullEnemy */ "./src/enemy/bigSkullEnemy.ts");
+var slimeEnemy_1 = __webpack_require__(/*! ./entity/slimeEnemy */ "./src/entity/slimeEnemy.ts");
+var zombieEnemy_1 = __webpack_require__(/*! ./entity/zombieEnemy */ "./src/entity/zombieEnemy.ts");
+var bigSkullEnemy_1 = __webpack_require__(/*! ./entity/bigSkullEnemy */ "./src/entity/bigSkullEnemy.ts");
 var random_1 = __webpack_require__(/*! ./random */ "./src/random.ts");
 var lantern_1 = __webpack_require__(/*! ./item/lantern */ "./src/item/lantern.ts");
 var dualdagger_1 = __webpack_require__(/*! ./weapon/dualdagger */ "./src/weapon/dualdagger.ts");
-var pot_1 = __webpack_require__(/*! ./enemy/pot */ "./src/enemy/pot.ts");
-var bishopEnemy_1 = __webpack_require__(/*! ./enemy/bishopEnemy */ "./src/enemy/bishopEnemy.ts");
-var rockResource_1 = __webpack_require__(/*! ./enemy/rockResource */ "./src/enemy/rockResource.ts");
-var mushrooms_1 = __webpack_require__(/*! ./enemy/mushrooms */ "./src/enemy/mushrooms.ts");
-var armoredzombieEnemy_1 = __webpack_require__(/*! ./enemy/armoredzombieEnemy */ "./src/enemy/armoredzombieEnemy.ts");
+var pot_1 = __webpack_require__(/*! ./entity/pot */ "./src/entity/pot.ts");
+var bishopEnemy_1 = __webpack_require__(/*! ./entity/bishopEnemy */ "./src/entity/bishopEnemy.ts");
+var rockResource_1 = __webpack_require__(/*! ./entity/rockResource */ "./src/entity/rockResource.ts");
+var mushrooms_1 = __webpack_require__(/*! ./entity/mushrooms */ "./src/entity/mushrooms.ts");
+var armoredzombieEnemy_1 = __webpack_require__(/*! ./entity/armoredzombieEnemy */ "./src/entity/armoredzombieEnemy.ts");
 var door_2 = __webpack_require__(/*! ./tile/door */ "./src/tile/door.ts");
 var actionTab_1 = __webpack_require__(/*! ./actionTab */ "./src/actionTab.ts");
-var tombStone_1 = __webpack_require__(/*! ./enemy/tombStone */ "./src/enemy/tombStone.ts");
+var tombStone_1 = __webpack_require__(/*! ./entity/tombStone */ "./src/entity/tombStone.ts");
 var RoomType;
 (function (RoomType) {
     RoomType[RoomType["START"] = 0] = "START";
@@ -13947,7 +13947,7 @@ var Room = /** @class */ (function () {
         };
         this.populateSpawner = function (rand) {
             _this.addTorches(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 2, 3, 4], rand), rand);
-            _this.enemies.push(new spawner_1.Spawner(_this, _this.game, Math.floor(_this.roomX + _this.width / 2), Math.floor(_this.roomY + _this.height / 2), rand));
+            _this.entities.push(new spawner_1.Spawner(_this, _this.game, Math.floor(_this.roomX + _this.width / 2), Math.floor(_this.roomY + _this.height / 2), rand));
         };
         this.populateKeyRoom = function (rand) {
             _this.addTorches(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 2, 3, 4], rand), rand);
@@ -13998,7 +13998,7 @@ var Room = /** @class */ (function () {
             var numCrates = game_1.Game.randTable([1, 2, 2, 3, 4], rand);
             for (var i = 0; i < numCrates; i++) {
                 var t = crateTiles.splice(game_1.Game.rand(0, crateTiles.length - 1, rand), 1)[0];
-                _this.enemies.push(new crate_1.Crate(_this, _this.game, t.x, t.y));
+                _this.entities.push(new crate_1.Crate(_this, _this.game, t.x, t.y));
             }
             _this.addPlants(game_1.Game.randTable([0, 0, 0, 0, 0, 1, 1, 2, 2, 3, 4], rand), rand);
         };
@@ -14056,10 +14056,10 @@ var Room = /** @class */ (function () {
             _this.addTorches(2, rand);
             var cX = Math.floor(_this.roomX + _this.width / 2);
             var cY = Math.floor(_this.roomY + _this.height / 2);
-            _this.enemies.push(new vendingMachine_1.VendingMachine(_this, _this.game, cX - 2, cY - 1, new shotgun_1.Shotgun(_this, 0, 0), rand));
-            _this.enemies.push(new vendingMachine_1.VendingMachine(_this, _this.game, cX + 2, cY - 1, new heart_1.Heart(_this, 0, 0), rand));
-            _this.enemies.push(new vendingMachine_1.VendingMachine(_this, _this.game, cX - 2, cY + 2, new armor_1.Armor(_this, 0, 0), rand));
-            _this.enemies.push(new vendingMachine_1.VendingMachine(_this, _this.game, cX + 2, cY + 2, new spear_1.Spear(_this, 0, 0), rand));
+            _this.entities.push(new vendingMachine_1.VendingMachine(_this, _this.game, cX - 2, cY - 1, new shotgun_1.Shotgun(_this, 0, 0), rand));
+            _this.entities.push(new vendingMachine_1.VendingMachine(_this, _this.game, cX + 2, cY - 1, new heart_1.Heart(_this, 0, 0), rand));
+            _this.entities.push(new vendingMachine_1.VendingMachine(_this, _this.game, cX - 2, cY + 2, new armor_1.Armor(_this, 0, 0), rand));
+            _this.entities.push(new vendingMachine_1.VendingMachine(_this, _this.game, cX + 2, cY + 2, new spear_1.Spear(_this, 0, 0), rand));
         };
         this.populate = function (rand) {
             _this.name = "";
@@ -14228,7 +14228,7 @@ var Room = /** @class */ (function () {
             var _loop_1 = function (e) {
                 returnVal = returnVal.filter(function (t) { return !e.pointIn(t.x, t.y); });
             };
-            for (var _i = 0, _a = _this.enemies; _i < _a.length; _i++) {
+            for (var _i = 0, _a = _this.entities; _i < _a.length; _i++) {
                 var e = _a[_i];
                 _loop_1(e);
             }
@@ -14349,7 +14349,7 @@ var Room = /** @class */ (function () {
                 _this.computerTurn(); // player skipped computer's turn, catch up
         };
         this.tick = function (player) {
-            _this.enemies = _this.enemies.filter(function (e) { return !e.dead; });
+            _this.entities = _this.entities.filter(function (e) { return !e.dead; });
             _this.updateLighting();
             for (var _i = 0, _a = _this.hitwarnings; _i < _a.length; _i++) {
                 var h = _a[_i];
@@ -14379,18 +14379,18 @@ var Room = /** @class */ (function () {
             }
         };
         this.clearDeadStuff = function () {
-            _this.enemies = _this.enemies.filter(function (e) { return !e.dead; });
+            _this.entities = _this.entities.filter(function (e) { return !e.dead; });
             _this.projectiles = _this.projectiles.filter(function (p) { return !p.dead; });
             _this.hitwarnings = _this.hitwarnings.filter(function (h) { return !h.dead; });
             _this.particles = _this.particles.filter(function (p) { return !p.dead; });
         };
         this.computerTurn = function () {
             // take computer turn
-            for (var _i = 0, _a = _this.enemies; _i < _a.length; _i++) {
+            for (var _i = 0, _a = _this.entities; _i < _a.length; _i++) {
                 var e = _a[_i];
                 e.tick();
             }
-            _this.enemies = _this.enemies.filter(function (e) { return !e.dead; });
+            _this.entities = _this.entities.filter(function (e) { return !e.dead; });
             for (var _b = 0, _c = _this.items; _b < _c.length; _b++) {
                 var i = _c[_b];
                 i.tick();
@@ -14413,7 +14413,7 @@ var Room = /** @class */ (function () {
                         p.hitPlayer(_this.game.players[i]);
                     }
                 }
-                for (var _h = 0, _j = _this.enemies; _h < _j.length; _h++) {
+                for (var _h = 0, _j = _this.entities; _h < _j.length; _h++) {
                     var e = _j[_h];
                     if (p.x === e.x && p.y === e.y) {
                         p.hitEnemy(e);
@@ -14425,7 +14425,7 @@ var Room = /** @class */ (function () {
                     _this.roomArray[x][y].tickEnd();
                 }
             }
-            _this.enemies = _this.enemies.filter(function (e) { return !e.dead; }); // enemies may be killed by spiketrap
+            _this.entities = _this.entities.filter(function (e) { return !e.dead; }); // enemies may be killed by spiketrap
             _this.clearDeadStuff();
             _this.playerTicked.finishTick();
             _this.turn = TurnState.playerTurn;
@@ -14444,7 +14444,7 @@ var Room = /** @class */ (function () {
                 }
             }
             var drawables = new Array();
-            drawables = drawables.concat(tiles, _this.enemies, _this.hitwarnings, _this.projectiles, _this.particles, _this.items);
+            drawables = drawables.concat(tiles, _this.entities, _this.hitwarnings, _this.projectiles, _this.particles, _this.items);
             for (var i in _this.game.players) {
                 if (_this.game.rooms[_this.game.players[i].levelID] === _this) {
                     if (!(skipLocalPlayer &&
@@ -14466,10 +14466,10 @@ var Room = /** @class */ (function () {
                     else if (b instanceof player_1.Player) {
                         return -1;
                     }
-                    else if (a instanceof enemy_1.Enemy) {
+                    else if (a instanceof entity_1.Entity) {
                         return 1;
                     }
-                    else if (b instanceof enemy_1.Enemy) {
+                    else if (b instanceof entity_1.Entity) {
                         return -1;
                     }
                     else
@@ -14515,7 +14515,7 @@ var Room = /** @class */ (function () {
             }
         };
         this.drawOverShade = function (delta) {
-            for (var _i = 0, _a = _this.enemies; _i < _a.length; _i++) {
+            for (var _i = 0, _a = _this.entities; _i < _a.length; _i++) {
                 var e = _a[_i];
                 e.drawTopLayer(delta); // health bars
             }
@@ -14560,7 +14560,7 @@ var Room = /** @class */ (function () {
         this.hitwarnings = Array();
         this.particles = Array();
         this.doors = Array();
-        this.enemies = Array();
+        this.entities = Array();
         this.lightSources = Array();
         this.walls = Array();
         this.roomArray = [];
@@ -14676,7 +14676,7 @@ var Room = /** @class */ (function () {
             t = tiles.splice(game_1.Game.rand(0, tiles.length - 1, rand), 1)[0];
             x = t.x;
             y = t.y;
-            this.enemies.push(new chest_1.Chest(this, this.game, x, y, rand));
+            this.entities.push(new chest_1.Chest(this, this.game, x, y, rand));
         }
     };
     Room.prototype.addSpikeTraps = function (numSpikes, rand) {
@@ -14745,7 +14745,7 @@ var Room = /** @class */ (function () {
                         if (typeof state_2 === "object")
                             return state_2.value;
                     }
-                    _this.enemies.push(enemy);
+                    _this.entities.push(enemy);
                     return true;
                 };
                 var type = game_1.Game.randTable(tables[d], rand);
@@ -14808,16 +14808,16 @@ var Room = /** @class */ (function () {
             var y = t.y;
             switch (game_1.Game.randTable([1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 4], rand)) {
                 case 1:
-                    this.enemies.push(new crate_1.Crate(this, this.game, x, y));
+                    this.entities.push(new crate_1.Crate(this, this.game, x, y));
                     break;
                 case 2:
-                    this.enemies.push(new barrel_1.Barrel(this, this.game, x, y));
+                    this.entities.push(new barrel_1.Barrel(this, this.game, x, y));
                     break;
                 case 3:
-                    this.enemies.push(new tombStone_1.TombStone(this, this.game, x, y, 1, rand));
+                    this.entities.push(new tombStone_1.TombStone(this, this.game, x, y, 1, rand));
                     break;
                 case 4:
-                    this.enemies.push(new tombStone_1.TombStone(this, this.game, x, y, 0, rand));
+                    this.entities.push(new tombStone_1.TombStone(this, this.game, x, y, 0, rand));
                     break;
                 //case 5:
                 //this.enemies.push(new TombStone(this, this.game, x, y));
@@ -14835,15 +14835,15 @@ var Room = /** @class */ (function () {
             var y = t.y;
             var r = rand();
             if (r <= 0.45)
-                this.enemies.push(new pottedPlant_1.PottedPlant(this, this.game, x, y, random_1.Random.rand));
+                this.entities.push(new pottedPlant_1.PottedPlant(this, this.game, x, y, random_1.Random.rand));
             else if (r <= 0.65)
-                this.enemies.push(new pot_1.Pot(this, this.game, x, y));
+                this.entities.push(new pot_1.Pot(this, this.game, x, y));
             else if (r <= 0.75)
-                this.enemies.push(new rockResource_1.Rock(this, this.game, x, y));
+                this.entities.push(new rockResource_1.Rock(this, this.game, x, y));
             else if (r <= 0.97)
-                this.enemies.push(new mushrooms_1.Mushrooms(this, this.game, x, y));
+                this.entities.push(new mushrooms_1.Mushrooms(this, this.game, x, y));
             else
-                this.enemies.push(new chest_1.Chest(this, this.game, x, y, rand));
+                this.entities.push(new chest_1.Chest(this, this.game, x, y, rand));
         }
     };
     Room.prototype.addResources = function (numResources, rand) {
@@ -14856,11 +14856,11 @@ var Room = /** @class */ (function () {
             var y = t.y;
             var r = rand();
             if (r <= (10 - Math.pow(this.depth, 3)) / 10)
-                this.enemies.push(new coalResource_1.CoalResource(this, this.game, x, y));
+                this.entities.push(new coalResource_1.CoalResource(this, this.game, x, y));
             else if (r <= (10 - Math.pow((this.depth - 2), 3)) / 10)
-                this.enemies.push(new goldResource_1.GoldResource(this, this.game, x, y));
+                this.entities.push(new goldResource_1.GoldResource(this, this.game, x, y));
             else
-                this.enemies.push(new emeraldResource_1.EmeraldResource(this, this.game, x, y));
+                this.entities.push(new emeraldResource_1.EmeraldResource(this, this.game, x, y));
         }
     };
     Room.prototype.addVendingMachine = function (rand) {
@@ -14870,22 +14870,22 @@ var Room = /** @class */ (function () {
         var type = game_1.Game.randTable([1, 1, 1, 1, 1, 1, 1, 2, 3, 4, 5, 6], rand);
         switch (type) {
             case 1:
-                this.enemies.push(new vendingMachine_1.VendingMachine(this, this.game, x, y, new heart_1.Heart(this, 0, 0), rand));
+                this.entities.push(new vendingMachine_1.VendingMachine(this, this.game, x, y, new heart_1.Heart(this, 0, 0), rand));
                 break;
             case 2:
-                this.enemies.push(new vendingMachine_1.VendingMachine(this, this.game, x, y, new lantern_1.Lantern(this, 0, 0), rand));
+                this.entities.push(new vendingMachine_1.VendingMachine(this, this.game, x, y, new lantern_1.Lantern(this, 0, 0), rand));
                 break;
             case 3:
-                this.enemies.push(new vendingMachine_1.VendingMachine(this, this.game, x, y, new armor_1.Armor(this, 0, 0), rand));
+                this.entities.push(new vendingMachine_1.VendingMachine(this, this.game, x, y, new armor_1.Armor(this, 0, 0), rand));
                 break;
             case 4:
-                this.enemies.push(new vendingMachine_1.VendingMachine(this, this.game, x, y, new dualdagger_1.DualDagger(this, 0, 0), rand));
+                this.entities.push(new vendingMachine_1.VendingMachine(this, this.game, x, y, new dualdagger_1.DualDagger(this, 0, 0), rand));
                 break;
             case 5:
-                this.enemies.push(new vendingMachine_1.VendingMachine(this, this.game, x, y, new spear_1.Spear(this, 0, 0), rand));
+                this.entities.push(new vendingMachine_1.VendingMachine(this, this.game, x, y, new spear_1.Spear(this, 0, 0), rand));
                 break;
             case 6:
-                this.enemies.push(new vendingMachine_1.VendingMachine(this, this.game, x, y, new shotgun_1.Shotgun(this, 0, 0), rand));
+                this.entities.push(new vendingMachine_1.VendingMachine(this, this.game, x, y, new shotgun_1.Shotgun(this, 0, 0), rand));
                 break;
         }
     };
@@ -15254,7 +15254,7 @@ var Button = /** @class */ (function (_super) {
                 if (_this.level.game.players[i].x === _this.x && _this.level.game.players[i].y === _this.y)
                     _this.press();
             }
-            for (var _i = 0, _a = _this.level.enemies; _i < _a.length; _i++) {
+            for (var _i = 0, _a = _this.level.entities; _i < _a.length; _i++) {
                 var e = _a[_i];
                 if (e.x === _this.x && e.y === _this.y)
                     _this.press();
@@ -15432,7 +15432,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Door = exports.DoorType = exports.DoorDir = void 0;
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var tile_1 = __webpack_require__(/*! ./tile */ "./src/tile/tile.ts");
-var enemy_1 = __webpack_require__(/*! ../enemy/enemy */ "./src/enemy/enemy.ts");
+var entity_1 = __webpack_require__(/*! ../entity/entity */ "./src/entity/entity.ts");
 var key_1 = __webpack_require__(/*! ../item/key */ "./src/item/key.ts");
 var DoorDir;
 (function (DoorDir) {
@@ -15463,7 +15463,7 @@ var Door = /** @class */ (function (_super) {
                 return false;
             }
             if (_this.DoorType === DoorType.GUARDEDDOOR) {
-                var inRoom = _this.game.level.enemies.filter(function (enemy) { return enemy.entityType === enemy_1.EntityType.Enemy; });
+                var inRoom = _this.game.level.entities.filter(function (enemy) { return enemy.entityType === entity_1.EntityType.Enemy; });
                 if (inRoom.length === 0) {
                     _this.game.pushMessage("The foes have been slain and the door allows you passage.");
                     return true;
@@ -15950,8 +15950,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SpikeTrap = void 0;
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var tile_1 = __webpack_require__(/*! ./tile */ "./src/tile/tile.ts");
-var crate_1 = __webpack_require__(/*! ../enemy/crate */ "./src/enemy/crate.ts");
-var barrel_1 = __webpack_require__(/*! ../enemy/barrel */ "./src/enemy/barrel.ts");
+var crate_1 = __webpack_require__(/*! ../entity/crate */ "./src/entity/crate.ts");
+var barrel_1 = __webpack_require__(/*! ../entity/barrel */ "./src/entity/barrel.ts");
 var hitWarning_1 = __webpack_require__(/*! ../hitWarning */ "./src/hitWarning.ts");
 var SpikeTrap = /** @class */ (function (_super) {
     __extends(SpikeTrap, _super);
@@ -15973,7 +15973,7 @@ var SpikeTrap = /** @class */ (function (_super) {
         };
         _this.tickEnd = function () {
             if (_this.on) {
-                for (var _i = 0, _a = _this.level.enemies; _i < _a.length; _i++) {
+                for (var _i = 0, _a = _this.level.entities; _i < _a.length; _i++) {
                     var e = _a[_i];
                     if (e.x === _this.x && e.y === _this.y) {
                         e.hurt(null, 1);
@@ -16358,7 +16358,7 @@ var Dagger = /** @class */ (function (_super) {
         var _this = _super.call(this, level, x, y) || this;
         _this.weaponMove = function (newX, newY) {
             var flag = false;
-            for (var _i = 0, _a = _this.game.rooms[_this.wielder.levelID].enemies; _i < _a.length; _i++) {
+            for (var _i = 0, _a = _this.game.rooms[_this.wielder.levelID].entities; _i < _a.length; _i++) {
                 var e = _a[_i];
                 if (e.destroyable &&
                     !e.pushable &&
@@ -16430,7 +16430,7 @@ var DualDagger = /** @class */ (function (_super) {
         };
         _this.weaponMove = function (newX, newY) {
             var flag = false;
-            for (var _i = 0, _a = _this.game.rooms[_this.wielder.levelID].enemies; _i < _a.length; _i++) {
+            for (var _i = 0, _a = _this.game.rooms[_this.wielder.levelID].entities; _i < _a.length; _i++) {
                 var e = _a[_i];
                 if (e.destroyable &&
                     !e.pushable &&
@@ -16446,7 +16446,7 @@ var DualDagger = /** @class */ (function (_super) {
                 _this.wielder.drawY = 0.5 * (_this.wielder.y - newY);
                 _this.game.rooms[_this.wielder.levelID].particles.push(new slashParticle_1.SlashParticle(newX, newY));
                 if (_this.firstAttack)
-                    _this.game.rooms[_this.wielder.levelID].enemies = _this.game.rooms[_this.wielder.levelID].enemies.filter(function (e) { return !e.dead; });
+                    _this.game.rooms[_this.wielder.levelID].entities = _this.game.rooms[_this.wielder.levelID].entities.filter(function (e) { return !e.dead; });
                 else
                     _this.game.rooms[_this.wielder.levelID].tick(_this.wielder);
                 if (_this.wielder === _this.game.players[_this.game.localPlayerID])
@@ -16505,7 +16505,7 @@ var Pickaxe = /** @class */ (function (_super) {
         var _this = _super.call(this, level, x, y) || this;
         _this.weaponMove = function (newX, newY) {
             var flag = false;
-            for (var _i = 0, _a = _this.game.rooms[_this.wielder.levelID].enemies; _i < _a.length; _i++) {
+            for (var _i = 0, _a = _this.game.rooms[_this.wielder.levelID].entities; _i < _a.length; _i++) {
                 var e = _a[_i];
                 if (e.destroyable &&
                     !e.pushable &&
@@ -16597,7 +16597,7 @@ var Shotgun = /** @class */ (function (_super) {
             var firstPushable = 4;
             var firstNonPushable = 5;
             var firstNonDestroyable = 5;
-            for (var _i = 0, _a = _this.game.rooms[_this.wielder.levelID].enemies; _i < _a.length; _i++) {
+            for (var _i = 0, _a = _this.game.rooms[_this.wielder.levelID].entities; _i < _a.length; _i++) {
                 var e = _a[_i];
                 //loop through enemies in this weapons wielders level
                 if (e.pushable) {
@@ -16743,7 +16743,7 @@ var Spear = /** @class */ (function (_super) {
             var newY2 = 2 * newY - _this.wielder.y;
             var flag = false;
             var enemyHitCandidates = [];
-            for (var _i = 0, _a = _this.game.rooms[_this.wielder.levelID].enemies; _i < _a.length; _i++) {
+            for (var _i = 0, _a = _this.game.rooms[_this.wielder.levelID].entities; _i < _a.length; _i++) {
                 var e = _a[_i];
                 if (e.destroyable) {
                     if (e.pointIn(newX, newY)) {
@@ -16838,7 +16838,7 @@ var Spellbook = /** @class */ (function (_super) {
             var flag = false;
             var difX = newX - _this.x;
             var difY = newY - _this.y;
-            for (var _i = 0, _a = _this.game.rooms[_this.wielder.levelID].enemies; _i < _a.length; _i++) {
+            for (var _i = 0, _a = _this.game.rooms[_this.wielder.levelID].entities; _i < _a.length; _i++) {
                 var e = _a[_i];
                 if ((e.destroyable || e.pushable) &&
                     e.pointIn(newX, newY) &&

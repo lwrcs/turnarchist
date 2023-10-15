@@ -3,8 +3,8 @@ import { Weapon } from "./weapon";
 import { Room } from "../room";
 import { Sound } from "../sound";
 import { SlashParticle } from "../particle/slashParticle";
-import { Crate } from "../enemy/crate";
-import { Barrel } from "../enemy/barrel";
+import { Crate } from "../entity/crate";
+import { Barrel } from "../entity/barrel";
 import { GenericParticle } from "../particle/genericParticle";
 
 export class Shotgun extends Weapon {
@@ -46,7 +46,7 @@ export class Shotgun extends Weapon {
     let firstPushable = 4;
     let firstNonPushable = 5;
     let firstNonDestroyable = 5;
-    for (let e of this.game.rooms[this.wielder.levelID].enemies) {
+    for (let e of this.game.rooms[this.wielder.levelID].entities) {
       //loop through enemies in this weapons wielders level
       if (e.pushable) {
         //case for pushables

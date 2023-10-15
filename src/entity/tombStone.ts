@@ -1,10 +1,10 @@
-import { Enemy } from "./enemy";
+import { Entity } from "./entity";
 import { Room } from "../room";
 import { Game } from "../game";
 import { Heart } from "../item/heart";
 import { LevelConstants } from "../levelConstants";
 import { GenericParticle } from "../particle/genericParticle";
-import { EntityType } from "./enemy";
+import { EntityType } from "./entity";
 import { SkullEnemy } from "./skullEnemy";
 import { Random } from "../random";
 import { EnemySpawnAnimation } from "../projectile/enemySpawnAnimation";
@@ -12,7 +12,7 @@ import { Player } from "../player";
 import { Item } from "../item/item";
 import { Spellbook } from "../weapon/spellbook";
 
-export class TombStone extends Enemy {
+export class TombStone extends Entity {
   skinType: number;
   rand: () => number;
 
@@ -74,7 +74,7 @@ export class TombStone extends Enemy {
               (playerX !== position.x && playerY === position.y) ||
               (playerX === position.x && playerY !== position.y)
             ) {
-              this.level.enemies.push(
+              this.level.entities.push(
                 new SkullEnemy(
                   this.level,
                   this.game,

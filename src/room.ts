@@ -5,19 +5,19 @@ import { Game, LevelState } from "./game";
 import { Door, DoorType } from "./tile/door";
 import { Tile, SkinType } from "./tile/tile";
 import { Trapdoor } from "./tile/trapdoor";
-import { KnightEnemy } from "./enemy/knightEnemy";
-import { Enemy } from "./enemy/enemy";
-import { Chest } from "./enemy/chest";
+import { KnightEnemy } from "./entity/knightEnemy";
+import { Entity } from "./entity/entity";
+import { Chest } from "./entity/chest";
 import { Item } from "./item/item";
 import { GoldenKey } from "./item/goldenKey";
 import { SpawnFloor } from "./tile/spawnfloor";
 //import { GoldenDoor } from "./tile/goldenDoor";
 import { Spike } from "./tile/spike";
 import { GameConstants } from "./gameConstants";
-import { WizardEnemy } from "./enemy/wizardEnemy";
-import { SkullEnemy } from "./enemy/skullEnemy";
-import { Barrel } from "./enemy/barrel";
-import { Crate } from "./enemy/crate";
+import { WizardEnemy } from "./entity/wizardEnemy";
+import { SkullEnemy } from "./entity/skullEnemy";
+import { Barrel } from "./entity/barrel";
+import { Crate } from "./entity/crate";
 import { Input } from "./input";
 import { Armor } from "./item/armor";
 import { Particle } from "./particle/particle";
@@ -25,44 +25,44 @@ import { Projectile } from "./projectile/projectile";
 import { SpikeTrap } from "./tile/spiketrap";
 import { FountainTile } from "./tile/fountainTile";
 import { CoffinTile } from "./tile/coffinTile";
-import { PottedPlant } from "./enemy/pottedPlant";
+import { PottedPlant } from "./entity/pottedPlant";
 import { InsideLevelDoor } from "./tile/insideLevelDoor";
 import { Button } from "./tile/button";
 import { HitWarning } from "./hitWarning";
 import { UpLadder } from "./tile/upLadder";
 import { DownLadder } from "./tile/downLadder";
-import { CoalResource } from "./enemy/coalResource";
-import { GoldResource } from "./enemy/goldResource";
-import { EmeraldResource } from "./enemy/emeraldResource";
+import { CoalResource } from "./entity/coalResource";
+import { GoldResource } from "./entity/goldResource";
+import { EmeraldResource } from "./entity/emeraldResource";
 import { Chasm } from "./tile/chasm";
-import { Spawner } from "./enemy/spawner";
-import { VendingMachine } from "./enemy/vendingMachine";
+import { Spawner } from "./entity/spawner";
+import { VendingMachine } from "./entity/vendingMachine";
 import { WallTorch } from "./tile/wallTorch";
 import { LightSource } from "./lightSource";
-import { ChargeEnemy } from "./enemy/chargeEnemy";
+import { ChargeEnemy } from "./entity/chargeEnemy";
 import { Shotgun } from "./weapon/shotgun";
 import { Heart } from "./item/heart";
 import { Spear } from "./weapon/spear";
 import { Drawable } from "./drawable";
 import { Player } from "./player";
-import { SlimeEnemy } from "./enemy/slimeEnemy";
-import { ZombieEnemy } from "./enemy/zombieEnemy";
-import { BigSkullEnemy } from "./enemy/bigSkullEnemy";
+import { SlimeEnemy } from "./entity/slimeEnemy";
+import { ZombieEnemy } from "./entity/zombieEnemy";
+import { BigSkullEnemy } from "./entity/bigSkullEnemy";
 import { Random } from "./random";
 import { Lantern } from "./item/lantern";
 import { DualDagger } from "./weapon/dualdagger";
-import { Pot } from "./enemy/pot";
-import { BishopEnemy } from "./enemy/bishopEnemy";
-import { Rook } from "./enemy/rook";
-import { Rock } from "./enemy/rockResource";
-import { Mushrooms } from "./enemy/mushrooms";
-import { TurningEnemy } from "./enemy/turningEnemy";
-import { ArmoredzombieEnemy } from "./enemy/armoredzombieEnemy";
+import { Pot } from "./entity/pot";
+import { BishopEnemy } from "./entity/bishopEnemy";
+import { Rook } from "./entity/rook";
+import { Rock } from "./entity/rockResource";
+import { Mushrooms } from "./entity/mushrooms";
+import { TurningEnemy } from "./entity/turningEnemy";
+import { ArmoredzombieEnemy } from "./entity/armoredzombieEnemy";
 import { Backpack } from "./item/backpack";
 import { DoorDir } from "./tile/door";
 import { ActionState, ActionTab } from "./actionTab";
-import { TombStone } from "./enemy/tombStone";
-import { Pumpkin } from "./enemy/pumpkin";
+import { TombStone } from "./entity/tombStone";
+import { Pumpkin } from "./entity/pumpkin";
 
 export enum RoomType {
   START,
@@ -100,7 +100,7 @@ export class Room {
   roomArray: Tile[][];
   softVis: number[][]; // this is the one we use for drawing (includes smoothing)
   vis: number[][]; // visibility ranges from 0 (fully visible) to 1 (fully black)
-  enemies: Array<Enemy>;
+  entities: Array<Entity>;
   items: Array<Item>;
   doors: Array<any>; // (Door | BottomDoor) just a reference for mapping, still access through levelArray
   projectiles: Array<Projectile>;
@@ -269,7 +269,7 @@ export class Room {
       t = tiles.splice(Game.rand(0, tiles.length - 1, rand), 1)[0];
       x = t.x;
       y = t.y;
-      this.enemies.push(new Chest(this, this.game, x, y, rand));
+      this.entities.push(new Chest(this, this.game, x, y, rand));
     }
   }
 
@@ -319,7 +319,7 @@ export class Room {
       let max_depth_table = 7;
       let d = Math.min(this.depth, max_depth_table);
       if (tables[d] && tables[d].length > 0) {
-        let addEnemy = (enemy: Enemy): boolean => {
+        let addEnemy = (enemy: Entity): boolean => {
           // adds an enemy if it doesn't overlap any other enemies
           for (let xx = 0; xx < enemy.w; xx++) {
             for (let yy = 0; yy < enemy.h; yy++) {
@@ -333,7 +333,7 @@ export class Room {
               }
             }
           }
-          this.enemies.push(enemy);
+          this.entities.push(enemy);
           return true;
         };
 
@@ -395,16 +395,16 @@ export class Room {
       let y = t.y;
       switch (Game.randTable([1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 4], rand)) {
         case 1:
-          this.enemies.push(new Crate(this, this.game, x, y));
+          this.entities.push(new Crate(this, this.game, x, y));
           break;
         case 2:
-          this.enemies.push(new Barrel(this, this.game, x, y));
+          this.entities.push(new Barrel(this, this.game, x, y));
           break;
         case 3:
-          this.enemies.push(new TombStone(this, this.game, x, y, 1, rand));
+          this.entities.push(new TombStone(this, this.game, x, y, 1, rand));
           break;
         case 4:
-          this.enemies.push(new TombStone(this, this.game, x, y, 0, rand));
+          this.entities.push(new TombStone(this, this.game, x, y, 0, rand));
           break;
         //case 5:
         //this.enemies.push(new TombStone(this, this.game, x, y));
@@ -423,12 +423,12 @@ export class Room {
 
       let r = rand();
       if (r <= 0.45)
-        this.enemies.push(new PottedPlant(this, this.game, x, y, Random.rand));
-      else if (r <= 0.65) this.enemies.push(new Pot(this, this.game, x, y));
-      else if (r <= 0.75) this.enemies.push(new Rock(this, this.game, x, y));
+        this.entities.push(new PottedPlant(this, this.game, x, y, Random.rand));
+      else if (r <= 0.65) this.entities.push(new Pot(this, this.game, x, y));
+      else if (r <= 0.75) this.entities.push(new Rock(this, this.game, x, y));
       else if (r <= 0.97)
-        this.enemies.push(new Mushrooms(this, this.game, x, y));
-      else this.enemies.push(new Chest(this, this.game, x, y, rand));
+        this.entities.push(new Mushrooms(this, this.game, x, y));
+      else this.entities.push(new Chest(this, this.game, x, y, rand));
     }
   }
 
@@ -442,10 +442,10 @@ export class Room {
 
       let r = rand();
       if (r <= (10 - this.depth ** 3) / 10)
-        this.enemies.push(new CoalResource(this, this.game, x, y));
+        this.entities.push(new CoalResource(this, this.game, x, y));
       else if (r <= (10 - (this.depth - 2) ** 3) / 10)
-        this.enemies.push(new GoldResource(this, this.game, x, y));
-      else this.enemies.push(new EmeraldResource(this, this.game, x, y));
+        this.entities.push(new GoldResource(this, this.game, x, y));
+      else this.entities.push(new EmeraldResource(this, this.game, x, y));
     }
   }
 
@@ -456,12 +456,12 @@ export class Room {
     let type = Game.randTable([1, 1, 1, 1, 1, 1, 1, 2, 3, 4, 5, 6], rand);
     switch (type) {
       case 1:
-        this.enemies.push(
+        this.entities.push(
           new VendingMachine(this, this.game, x, y, new Heart(this, 0, 0), rand)
         );
         break;
       case 2:
-        this.enemies.push(
+        this.entities.push(
           new VendingMachine(
             this,
             this.game,
@@ -473,12 +473,12 @@ export class Room {
         );
         break;
       case 3:
-        this.enemies.push(
+        this.entities.push(
           new VendingMachine(this, this.game, x, y, new Armor(this, 0, 0), rand)
         );
         break;
       case 4:
-        this.enemies.push(
+        this.entities.push(
           new VendingMachine(
             this,
             this.game,
@@ -490,12 +490,12 @@ export class Room {
         );
         break;
       case 5:
-        this.enemies.push(
+        this.entities.push(
           new VendingMachine(this, this.game, x, y, new Spear(this, 0, 0), rand)
         );
         break;
       case 6:
-        this.enemies.push(
+        this.entities.push(
           new VendingMachine(
             this,
             this.game,
@@ -578,7 +578,7 @@ export class Room {
   populateSpawner = (rand: () => number) => {
     this.addTorches(Game.randTable([0, 0, 0, 1, 1, 2, 2, 3, 4], rand), rand);
 
-    this.enemies.push(
+    this.entities.push(
       new Spawner(
         this,
         this.game,
@@ -675,7 +675,7 @@ export class Room {
         1
       )[0];
 
-      this.enemies.push(new Crate(this, this.game, t.x, t.y));
+      this.entities.push(new Crate(this, this.game, t.x, t.y));
     }
     this.addPlants(
       Game.randTable([0, 0, 0, 0, 0, 1, 1, 2, 2, 3, 4], rand),
@@ -754,7 +754,7 @@ export class Room {
 
     let cX = Math.floor(this.roomX + this.width / 2);
     let cY = Math.floor(this.roomY + this.height / 2);
-    this.enemies.push(
+    this.entities.push(
       new VendingMachine(
         this,
         this.game,
@@ -764,7 +764,7 @@ export class Room {
         rand
       )
     );
-    this.enemies.push(
+    this.entities.push(
       new VendingMachine(
         this,
         this.game,
@@ -774,7 +774,7 @@ export class Room {
         rand
       )
     );
-    this.enemies.push(
+    this.entities.push(
       new VendingMachine(
         this,
         this.game,
@@ -784,7 +784,7 @@ export class Room {
         rand
       )
     );
-    this.enemies.push(
+    this.entities.push(
       new VendingMachine(
         this,
         this.game,
@@ -907,7 +907,7 @@ export class Room {
     this.hitwarnings = Array<HitWarning>();
     this.particles = Array<Particle>();
     this.doors = Array<Door>();
-    this.enemies = Array<Enemy>();
+    this.entities = Array<Entity>();
     this.lightSources = Array<LightSource>();
     this.walls = Array<Wall>();
 
@@ -1028,7 +1028,7 @@ export class Room {
         }
       }
     }
-    for (const e of this.enemies) {
+    for (const e of this.entities) {
       returnVal = returnVal.filter((t) => !e.pointIn(t.x, t.y));
     }
     return returnVal;
@@ -1173,7 +1173,7 @@ export class Room {
   };
 
   tick = (player: Player) => {
-    this.enemies = this.enemies.filter((e) => !e.dead);
+    this.entities = this.entities.filter((e) => !e.dead);
     this.updateLighting();
     
 
@@ -1210,7 +1210,7 @@ export class Room {
   };
 
   clearDeadStuff = () => {
-    this.enemies = this.enemies.filter((e) => !e.dead);
+    this.entities = this.entities.filter((e) => !e.dead);
     this.projectiles = this.projectiles.filter((p) => !p.dead);
     this.hitwarnings = this.hitwarnings.filter((h) => !h.dead);
     this.particles = this.particles.filter((p) => !p.dead);
@@ -1218,10 +1218,10 @@ export class Room {
 
   computerTurn = () => {
     // take computer turn
-    for (const e of this.enemies) {
+    for (const e of this.entities) {
       e.tick();
     }
-    this.enemies = this.enemies.filter((e) => !e.dead);
+    this.entities = this.entities.filter((e) => !e.dead);
     for (const i of this.items) {
       i.tick();
     }
@@ -1246,7 +1246,7 @@ export class Room {
           p.hitPlayer(this.game.players[i]);
         }
       }
-      for (const e of this.enemies) {
+      for (const e of this.entities) {
         if (p.x === e.x && p.y === e.y) {
           p.hitEnemy(e);
         }
@@ -1258,7 +1258,7 @@ export class Room {
         this.roomArray[x][y].tickEnd();
       }
     }
-    this.enemies = this.enemies.filter((e) => !e.dead); // enemies may be killed by spiketrap
+    this.entities = this.entities.filter((e) => !e.dead); // enemies may be killed by spiketrap
 
     this.clearDeadStuff();
 
@@ -1286,7 +1286,7 @@ export class Room {
 
     drawables = drawables.concat(
       tiles,
-      this.enemies,
+      this.entities,
       this.hitwarnings,
       this.projectiles,
       this.particles,
@@ -1314,9 +1314,9 @@ export class Room {
           return 1;
         } else if (b instanceof Player) {
           return -1;
-        } else if (a instanceof Enemy) {
+        } else if (a instanceof Entity) {
           return 1;
-        } else if (b instanceof Enemy) {
+        } else if (b instanceof Entity) {
           return -1;
         } else return 0;
       } else {
@@ -1372,7 +1372,7 @@ export class Room {
   };
 
   drawOverShade = (delta: number) => {
-    for (const e of this.enemies) {
+    for (const e of this.entities) {
       e.drawTopLayer(delta); // health bars
     }
 

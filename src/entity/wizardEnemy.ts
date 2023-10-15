@@ -1,4 +1,4 @@
-import { Enemy } from "./enemy";
+import { Entity } from "./entity";
 import { LevelConstants } from "../levelConstants";
 import { Game } from "../game";
 import { Room } from "../room";
@@ -24,7 +24,7 @@ export enum WizardState {
   teleport,
 }
 
-export class WizardEnemy extends Enemy {
+export class WizardEnemy extends Entity {
   ticks: number;
   state: WizardState;
   frame: number;

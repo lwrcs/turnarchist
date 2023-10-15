@@ -11,7 +11,7 @@ import { Drawable } from "../drawable";
 import { Item } from "../item/item";
 import { GameConstants } from "../gameConstants";
 
-export enum EnemyDirection {
+export enum EntityDirection {
   DOWN = 0,
   UP = 1,
   RIGHT = 2,
@@ -26,13 +26,13 @@ export enum EntityType {
   Chest,
 }
 
-export class Enemy extends Drawable {
+export class Entity extends Drawable {
   level: Room;
   x: number;
   y: number;
   w: number;
   h: number;
-  direction: EnemyDirection;
+  direction: EntityDirection;
   drawX: number;
   drawY: number;
   dead: boolean;
@@ -75,7 +75,7 @@ export class Enemy extends Drawable {
     this.tileY = 0;
     this.hasShadow = true;
     this.skipNextTurns = 0;
-    this.direction = EnemyDirection.DOWN;
+    this.direction = EntityDirection.DOWN;
     this.destroyable = true;
     this.pushable = false;
     this.chainPushable = true;
@@ -95,13 +95,13 @@ export class Enemy extends Drawable {
         someX >= x && someX < x + this.w && someY >= y && someY < y + this.h
       );
     };
-    let enemyCollide = (enemy: Enemy): boolean => {
-      if (enemy.x >= x + this.w || enemy.x + enemy.w <= x) return false;
-      if (enemy.y >= y + this.h || enemy.y + enemy.h <= y) return false;
+    let entityCollide = (entity: Entity): boolean => {
+      if (entity.x >= x + this.w || entity.x + entity.w <= x) return false;
+      if (entity.y >= y + this.h || entity.y + entity.h <= y) return false;
       return true;
     };
-    for (const e of this.level.enemies) {
-      if (e !== this && enemyCollide(e)) {
+    for (const e of this.level.entities) {
+      if (e !== this && entityCollide(e)) {
         return;
       }
     }
@@ -133,7 +133,7 @@ export class Enemy extends Drawable {
 
   hurtCallback = () => {};
 
-  playerKilledBy = (enemy: Enemy) => {
+  playerKilledBy = (enemy: Entity) => {
     return enemy;
   }
 
@@ -228,11 +228,11 @@ export class Enemy extends Drawable {
     if (Math.abs(dx) === Math.abs(dy)) {
       // just moved, already facing player
     } else if (Math.abs(dx) > Math.abs(dy)) {
-      if (dx > 0) this.direction = EnemyDirection.RIGHT;
-      if (dx < 0) this.direction = EnemyDirection.LEFT;
+      if (dx > 0) this.direction = EntityDirection.RIGHT;
+      if (dx < 0) this.direction = EntityDirection.LEFT;
     } else {
-      if (dy > 0) this.direction = EnemyDirection.DOWN;
-      if (dy < 0) this.direction = EnemyDirection.UP;
+      if (dy > 0) this.direction = EntityDirection.DOWN;
+      if (dy < 0) this.direction = EntityDirection.UP;
     }
   };
 

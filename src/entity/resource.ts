@@ -4,15 +4,15 @@ import { Key } from "../item/key";
 import { Room } from "../room";
 import { Heart } from "../item/heart";
 import { Armor } from "../item/armor";
-import { Enemy } from "./enemy";
+import { Entity } from "./entity";
 import { LevelConstants } from "../levelConstants";
 import { GreenGem } from "../item/greengem";
 import { Player } from "../player";
 import { Pickaxe } from "../weapon/pickaxe";
 import { Spellbook } from "../weapon/spellbook";
-import { EntityType } from "./enemy";
+import { EntityType } from "./entity";
 
-export class Resource extends Enemy {
+export class Resource extends Entity {
   constructor(level: Room, game: Game, x: number, y: number) {
     super(level, game, x, y);
 

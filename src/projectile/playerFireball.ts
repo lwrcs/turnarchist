@@ -1,6 +1,6 @@
 import { Projectile } from "./projectile";
 import { Game } from "../game";
-import { WizardEnemy } from "../enemy/wizardEnemy";
+import { WizardEnemy } from "../entity/wizardEnemy";
 import { Player } from "../player";
 import { HitWarning } from "../hitWarning";
 

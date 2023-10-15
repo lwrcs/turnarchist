@@ -1,4 +1,4 @@
-import { Enemy, EnemyDirection } from "./enemy";
+import { Entity, EntityDirection } from "./entity";
 import { LevelConstants } from "../levelConstants";
 import { Game } from "../game";
 import { Room } from "../room";
@@ -18,7 +18,7 @@ import { BlueGem } from "../item/bluegem";
 import { KnightEnemy } from "./knightEnemy";
 import { WizardEnemy } from "./wizardEnemy";
 
-export class Spawner extends Enemy {
+export class Spawner extends Entity {
   ticks: number;
   seenPlayer: boolean;
   enemySpawnType: number;

@@ -1,27 +1,26 @@
-import { Enemy } from "./enemy";
+import { Entity } from "./entity";
 import { Room } from "../room";
 import { Game } from "../game";
 import { Heart } from "../item/heart";
 import { LevelConstants } from "../levelConstants";
 import { GenericParticle } from "../particle/genericParticle";
-import { EntityType } from "./enemy";
 
-export class Pot extends Enemy {
+export class Rook extends Entity {
   constructor(level: Room, game: Game, x: number, y: number) {
     super(level, game, x, y);
     this.level = level;
     this.health = 1;
-    this.tileX = 11;
-    this.tileY = 0;
+    this.maxHealth = 1;
+    this.tileX = 14;
+    this.tileY = 2;
     this.hasShadow = false;
-    this.chainPushable = false;
-    this.entityType = EntityType.Prop
+    this.pushable = true;
   }
 
   kill = () => {
     this.dead = true;
 
-    GenericParticle.spawnCluster(this.level, this.x + 0.5, this.y + 0.5, "#ce736a");
+    GenericParticle.spawnCluster(this.level, this.x + 0.5, this.y + 0.5, "#d9a066");
   };
   killNoBones = () => {
     this.kill();
@@ -30,8 +29,6 @@ export class Pot extends Enemy {
   draw = (delta: number) => {
     // not inherited because it doesn't have the 0.5 offset
     if (!this.dead) {
-      this.drawX += -0.5 * this.drawX;
-      this.drawY += -0.5 * this.drawY;
       Game.drawObj(
         this.tileX,
         this.tileY,
@@ -49,5 +46,8 @@ export class Pot extends Enemy {
 
   drawTopLayer = (delta: number) => {
     this.drawableY = this.y;
+
+    this.drawX += -0.5 * this.drawX;
+    this.drawY += -0.5 * this.drawY;
   };
 }

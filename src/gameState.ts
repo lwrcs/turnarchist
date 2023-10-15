@@ -1,21 +1,21 @@
-import { Barrel } from "./enemy/barrel";
-import { BigSkullEnemy } from "./enemy/bigSkullEnemy";
-import { ChargeEnemy, ChargeEnemyState } from "./enemy/chargeEnemy";
-import { Chest } from "./enemy/chest";
-import { CoalResource } from "./enemy/coalResource";
-import { Crate } from "./enemy/crate";
-import { EmeraldResource } from "./enemy/emeraldResource";
-import { Enemy, EnemyDirection } from "./enemy/enemy";
-import { GoldResource } from "./enemy/goldResource";
-import { KnightEnemy } from "./enemy/knightEnemy";
-import { PottedPlant } from "./enemy/pottedPlant";
-import { Pot } from "./enemy/pot";
-import { SkullEnemy } from "./enemy/skullEnemy";
-import { SlimeEnemy } from "./enemy/slimeEnemy";
-import { Spawner } from "./enemy/spawner";
-import { VendingMachine } from "./enemy/vendingMachine";
-import { WizardEnemy, WizardState } from "./enemy/wizardEnemy";
-import { ZombieEnemy } from "./enemy/zombieEnemy";
+import { Barrel } from "./entity/barrel";
+import { BigSkullEnemy } from "./entity/bigSkullEnemy";
+import { ChargeEnemy, ChargeEnemyState } from "./entity/chargeEnemy";
+import { Chest } from "./entity/chest";
+import { CoalResource } from "./entity/coalResource";
+import { Crate } from "./entity/crate";
+import { EmeraldResource } from "./entity/emeraldResource";
+import { Entity, EntityDirection } from "./entity/entity";
+import { GoldResource } from "./entity/goldResource";
+import { KnightEnemy } from "./entity/knightEnemy";
+import { PottedPlant } from "./entity/pottedPlant";
+import { Pot } from "./entity/pot";
+import { SkullEnemy } from "./entity/skullEnemy";
+import { SlimeEnemy } from "./entity/slimeEnemy";
+import { Spawner } from "./entity/spawner";
+import { VendingMachine } from "./entity/vendingMachine";
+import { WizardEnemy, WizardState } from "./entity/wizardEnemy";
+import { ZombieEnemy } from "./entity/zombieEnemy";
 import { Game } from "./game";
 import { HitWarning } from "./hitWarning";
 import { Inventory } from "./inventory";
@@ -95,7 +95,7 @@ export class ProjectileState {
       this.type = ProjectileType.WIZARD;
       this.wizardState = projectile.state;
       this.levelID = game.rooms.indexOf(projectile.parent.level);
-      this.wizardParentID = projectile.parent.level.enemies.indexOf(projectile.parent);
+      this.wizardParentID = projectile.parent.level.entities.indexOf(projectile.parent);
     }
   }
 }
@@ -109,7 +109,7 @@ let loadProjectile = (ps: ProjectileState, game: Game): Projectile => {
     return p;
   }
   if (ps.type === ProjectileType.WIZARD) {
-    let wizard = (game.rooms[ps.levelID].enemies[ps.wizardParentID] as WizardEnemy);
+    let wizard = (game.rooms[ps.levelID].entities[ps.wizardParentID] as WizardEnemy);
     let p = new WizardFireball(wizard, ps.x, ps.y);
     p.state = ps.wizardState;
     return p;
@@ -141,7 +141,7 @@ export class EnemyState {
   x: number;
   y: number;
   health: number;
-  direction: EnemyDirection;
+  direction: EntityDirection;
   dead: boolean;
   skipNextTurns: number;
   hasDrop: boolean;
@@ -175,7 +175,7 @@ export class EnemyState {
   // wizard
   wizardState: WizardState;
 
-  constructor(enemy: Enemy, game: Game) {
+  constructor(enemy: Entity, game: Game) {
     this.levelID = game.rooms.indexOf(enemy.level);
     this.x = enemy.x;
     this.y = enemy.y;
@@ -287,7 +287,7 @@ export class EnemyState {
   }
 }
 
-let loadEnemy = (es: EnemyState, game: Game): Enemy => {
+let loadEnemy = (es: EnemyState, game: Game): Entity => {
   let enemy;
   let level = game.rooms[es.levelID];
   if (es.type === EnemyType.BARREL) enemy = new Barrel(level, game, es.x, es.y);
@@ -411,7 +411,7 @@ export class LevelState {
     this.items = [];
     this.projectiles = [];
     this.hitwarnings = [];
-    for (const enemy of level.enemies) this.enemies.push(new EnemyState(enemy, game));
+    for (const enemy of level.entities) this.enemies.push(new EnemyState(enemy, game));
     for (const item of level.items) this.items.push(new ItemState(item, game));
     for (const projectile of level.projectiles) this.projectiles.push(new ProjectileState(projectile, game));
     for (const hw of level.hitwarnings) this.hitwarnings.push(new HitWarningState(hw));
@@ -420,11 +420,11 @@ export class LevelState {
 
 let loadLevel = (level: Room, levelState: LevelState, game: Game) => {
   level.entered = levelState.entered;
-  level.enemies = [];
+  level.entities = [];
   level.items = [];
   level.projectiles = [];
   level.hitwarnings = [];
-  for (const enemy of levelState.enemies) level.enemies.push(loadEnemy(enemy, game));
+  for (const enemy of levelState.enemies) level.entities.push(loadEnemy(enemy, game));
   for (const item of levelState.items) level.items.push(loadItem(item, game));
   for (const projectile of levelState.projectiles) level.projectiles.push(loadProjectile(projectile, game));
   for (const hw of levelState.hitwarnings) level.hitwarnings.push(loadHitWarning(hw, game));
@@ -596,7 +596,7 @@ export class PlayerState {
     if (player.openVendingMachine) {
       this.hasOpenVendingMachine = true;
       this.openVendingMachineLevelID = game.rooms.indexOf(player.openVendingMachine.level);
-      this.openVendingMachineID = player.openVendingMachine.level.enemies.indexOf(player.openVendingMachine);
+      this.openVendingMachineID = player.openVendingMachine.level.entities.indexOf(player.openVendingMachine);
     }
     this.sightRadius = player.sightRadius
   }
@@ -618,7 +618,7 @@ let loadPlayer = (id: string, p: PlayerState, game: Game): Player => {
   player.lastTickHealth = p.lastTickHealth;
   loadInventory(player.inventory, p.inventory, game);
   if (p.hasOpenVendingMachine) {
-    player.openVendingMachine = (game.rooms[p.openVendingMachineLevelID].enemies[p.openVendingMachineID] as VendingMachine);
+    player.openVendingMachine = (game.rooms[p.openVendingMachineLevelID].entities[p.openVendingMachineID] as VendingMachine);
   }
   player.sightRadius = p.sightRadius;
 

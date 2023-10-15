@@ -4,7 +4,7 @@ import { Key } from "../item/key";
 import { Room } from "../room";
 import { Heart } from "../item/heart";
 import { Armor } from "../item/armor";
-import { Enemy } from "./enemy";
+import { Entity } from "./entity";
 import { LevelConstants } from "../levelConstants";
 import { GreenGem } from "../item/greengem";
 import { GenericParticle } from "../particle/genericParticle";
@@ -13,9 +13,9 @@ import { Sound } from "../sound";
 import { RedGem } from "../item/redgem";
 import { BlueGem } from "../item/bluegem";
 import { GameState } from "../gameState";
-import { EntityType } from "./enemy";
+import { EntityType } from "./entity";
 
-export class Chest extends Enemy {
+export class Chest extends Entity {
   constructor(level: Room, game: Game, x: number, y: number, rand: () => number) {
     super(level, game, x, y);
 

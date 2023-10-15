@@ -3,8 +3,8 @@ import { Weapon } from "./weapon";
 import { Room } from "../room";
 import { Sound } from "../sound";
 import { SlashParticle } from "../particle/slashParticle";
-import { Crate } from "../enemy/crate";
-import { Barrel } from "../enemy/barrel";
+import { Crate } from "../entity/crate";
+import { Barrel } from "../entity/barrel";
 
 export class Spear extends Weapon {
   constructor(level: Room, x: number, y: number) {
@@ -19,7 +19,7 @@ export class Spear extends Weapon {
     let newY2 = 2 * newY - this.wielder.y;
     let flag = false;
     let enemyHitCandidates = [];
-    for (let e of this.game.rooms[this.wielder.levelID].enemies) {
+    for (let e of this.game.rooms[this.wielder.levelID].entities) {
       if (e.destroyable) {
         if (e.pointIn(newX, newY)) {
           if (e.pushable) return true;

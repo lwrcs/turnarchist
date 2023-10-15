@@ -1,4 +1,4 @@
-import { EnemyDirection } from "./enemy/enemy";
+import { EntityDirection } from "./entity/entity";
 import { SpikeTrap } from "./tile/spiketrap";
 import { Wall } from "./tile/wall";
 
@@ -264,7 +264,7 @@ export namespace astar {
           if (this.grid[x][y].org == org) return this.grid[x][y];
     }
 
-    _search(start: any, end: any, diagonal?: boolean, diagonalsOnly?: boolean, turnCostsExtra?: boolean, turnDirection?: EnemyDirection, heuristic?: Function, diagonalsOmni?: boolean) {
+    _search(start: any, end: any, diagonal?: boolean, diagonalsOnly?: boolean, turnCostsExtra?: boolean, turnDirection?: EntityDirection, heuristic?: Function, diagonalsOmni?: boolean) {
       heuristic = heuristic || this.manhattan;
       diagonal = !!diagonal;
       diagonalsOnly = !!diagonalsOnly;
@@ -323,10 +323,10 @@ export namespace astar {
               isTurn = !((currentNode.parent.pos.x === currentNode.pos.x && currentNode.pos.x === neighbor.pos.x) || (currentNode.parent.pos.y === currentNode.pos.y && currentNode.pos.y === neighbor.pos.y));
             else { // initial step
               isTurn = true;
-              if (neighbor.pos.x - currentNode.pos.x === 0 && neighbor.pos.y - currentNode.pos.y === -1 && turnDirection === EnemyDirection.UP) isTurn = false;
-              if (neighbor.pos.x - currentNode.pos.x === 0 && neighbor.pos.y - currentNode.pos.y === 1 && turnDirection === EnemyDirection.DOWN) isTurn = false;
-              if (neighbor.pos.x - currentNode.pos.x === 1 && neighbor.pos.y - currentNode.pos.y === 0 && turnDirection === EnemyDirection.RIGHT) isTurn = false;
-              if (neighbor.pos.x - currentNode.pos.x === -1 && neighbor.pos.y - currentNode.pos.y === 0 && turnDirection === EnemyDirection.LEFT) isTurn = false;
+              if (neighbor.pos.x - currentNode.pos.x === 0 && neighbor.pos.y - currentNode.pos.y === -1 && turnDirection === EntityDirection.UP) isTurn = false;
+              if (neighbor.pos.x - currentNode.pos.x === 0 && neighbor.pos.y - currentNode.pos.y === 1 && turnDirection === EntityDirection.DOWN) isTurn = false;
+              if (neighbor.pos.x - currentNode.pos.x === 1 && neighbor.pos.y - currentNode.pos.y === 0 && turnDirection === EntityDirection.RIGHT) isTurn = false;
+              if (neighbor.pos.x - currentNode.pos.x === -1 && neighbor.pos.y - currentNode.pos.y === 0 && turnDirection === EntityDirection.LEFT) isTurn = false;
             }
             if (isTurn) gScore++;
           }
@@ -363,7 +363,7 @@ export namespace astar {
       diagonal?: boolean,
       diagonalsOnly?: boolean,
       turnCostsExtra?: boolean,
-      turnDirection?: EnemyDirection,
+      turnDirection?: EntityDirection,
       heuristic?: Function,
       diagonalsOmni?: boolean
     ) {

@@ -3,8 +3,8 @@ import { Weapon } from "./weapon";
 import { Room } from "../room";
 import { Sound } from "../sound";
 import { SlashParticle } from "../particle/slashParticle";
-import { Crate } from "../enemy/crate";
-import { Barrel } from "../enemy/barrel";
+import { Crate } from "../entity/crate";
+import { Barrel } from "../entity/barrel";
 
 export class Pickaxe extends Weapon {
   constructor(level: Room, x: number, y: number) {
@@ -18,7 +18,7 @@ export class Pickaxe extends Weapon {
 
   weaponMove = (newX: number, newY: number): boolean => {
     let flag = false;
-    for (let e of this.game.rooms[this.wielder.levelID].enemies) {
+    for (let e of this.game.rooms[this.wielder.levelID].entities) {
       if (
         e.destroyable &&
         !e.pushable &&

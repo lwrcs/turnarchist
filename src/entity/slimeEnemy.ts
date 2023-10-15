@@ -1,4 +1,4 @@
-import { Enemy, EnemyDirection } from "./enemy";
+import { Entity, EntityDirection } from "./entity";
 import { Game } from "../game";
 import { Room } from "../room";
 import { astar } from "../astarclass";
@@ -10,7 +10,7 @@ import { DualDagger } from "../weapon/dualdagger";
 import { Item } from "../item/item";
 import { GameConstants } from "../gameConstants";
 
-export class SlimeEnemy extends Enemy {
+export class SlimeEnemy extends Entity {
   ticks: number;
   frame: number;
   seenPlayer: boolean;
@@ -86,7 +86,7 @@ export class SlimeEnemy extends Enemy {
             let oldX = this.x;
             let oldY = this.y;
             let disablePositions = Array<astar.Position>();
-            for (const e of this.level.enemies) {
+            for (const e of this.level.entities) {
               if (e !== this) {
                 disablePositions.push({ x: e.x, y: e.y } as astar.Position);
               }
@@ -138,10 +138,10 @@ export class SlimeEnemy extends Enemy {
                 this.tryMove(moves[0].pos.x, moves[0].pos.y);
                 this.drawX = this.x - oldX;
                 this.drawY = this.y - oldY;
-                if (this.x > oldX) this.direction = EnemyDirection.RIGHT;
-                else if (this.x < oldX) this.direction = EnemyDirection.LEFT;
-                else if (this.y > oldY) this.direction = EnemyDirection.DOWN;
-                else if (this.y < oldY) this.direction = EnemyDirection.UP;
+                if (this.x > oldX) this.direction = EntityDirection.RIGHT;
+                else if (this.x < oldX) this.direction = EntityDirection.LEFT;
+                else if (this.y > oldY) this.direction = EntityDirection.DOWN;
+                else if (this.y < oldY) this.direction = EntityDirection.UP;
               }
             }
           } else {

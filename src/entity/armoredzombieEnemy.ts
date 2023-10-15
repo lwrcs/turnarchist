@@ -1,4 +1,4 @@
-import { Enemy, EnemyDirection } from "./enemy";
+import { Entity, EntityDirection } from "./entity";
 import { Game } from "../game";
 import { Room } from "../room";
 import { Player } from "../player";
@@ -13,8 +13,9 @@ import { GreenGem } from "../item/greengem";
 import { Random } from "../random";
 import { astar } from "../astarclass";
 import { SpikeTrap } from "../tile/spiketrap";
+import { Pickaxe } from "../weapon/pickaxe";
 
-export class TurningEnemy extends Enemy {
+export class ArmoredzombieEnemy extends Entity {
   frame: number;
   ticks: number;
   seenPlayer: boolean;
@@ -26,7 +27,7 @@ export class TurningEnemy extends Enemy {
     super(level, game, x, y);
     this.ticks = 0;
     this.frame = 0;
-    this.health = 1;
+    this.health = 2;
     this.maxHealth = 1;
     this.tileX = 17;
     this.tileY = 8;
@@ -37,8 +38,8 @@ export class TurningEnemy extends Enemy {
     if (drop) this.drop = drop;
     else {
       let dropProb = Random.rand();
-      if (dropProb < 0.005) this.drop = new DualDagger(this.level, 0, 0);
-      else if (dropProb < 0.04) this.drop = new GreenGem(this.level, 0, 0);
+      if (dropProb < 0.025) this.drop = new Pickaxe(this.level, 0, 0);
+      else if (dropProb < 0.02) this.drop = new GreenGem(this.level, 0, 0);
       else this.drop = new Coin(this.level, 0, 0);
     }
   }
@@ -51,7 +52,7 @@ export class TurningEnemy extends Enemy {
     if (playerHitBy) {
       this.aggro = true;
       this.targetPlayer = playerHitBy;
-      this.facePlayer(playerHitBy);
+      //this.facePlayer(playerHitBy); // 
       if (playerHitBy === this.game.players[this.game.localPlayerID]) this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
     }
     this.health -= damage;
@@ -81,10 +82,10 @@ export class TurningEnemy extends Enemy {
             this.facePlayer(player);
             this.seenPlayer = true;
             if (player === this.game.players[this.game.localPlayerID]) this.alertTicks = 1;
-            this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
+            /*this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
             this.level.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y));
             this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1));
-            this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1));
+            this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1));*/
           }
         }
       }
@@ -95,7 +96,7 @@ export class TurningEnemy extends Enemy {
           let oldY = this.y;
 
           let disablePositions = Array<astar.Position>();
-          for (const e of this.level.enemies) {
+          for (const e of this.level.entities) {
             if (e !== this) {
               disablePositions.push({ x: e.x, y: e.y } as astar.Position);
             }
@@ -138,15 +139,15 @@ export class TurningEnemy extends Enemy {
             let oldDir = this.direction;
             let player = this.targetPlayer;
             this.facePlayer(player);
-            if (moveX > oldX) this.direction = EnemyDirection.RIGHT;
-            else if (moveX < oldX) this.direction = EnemyDirection.LEFT;
-            else if (moveY > oldY) this.direction = EnemyDirection.DOWN;
-            else if (moveY < oldY) this.direction = EnemyDirection.UP;
+            if (moveX > oldX) this.direction = EntityDirection.RIGHT;
+            else if (moveX < oldX) this.direction = EntityDirection.LEFT;
+            else if (moveY > oldY) this.direction = EntityDirection.DOWN;
+            else if (moveY < oldY) this.direction = EntityDirection.UP;
             if (oldDir == this.direction) {
               let hitPlayer = false;
               for (const i in this.game.players) {
-                if (this.game.rooms[this.game.players[i].levelID] === this.level && this.game.players[i].x === moveX && this.game.players[i].y === moveY) {
-                  this.game.players[i].hurt(this.hit(), "zombie");
+                if (this.game.rooms[this.game.players[i].levelID] === this.level && this.game.players[i].x === moveX && this.game.players[i].y === moveY && (oldDir == this.direction)) {
+                  this.game.players[i].hurt(this.hit(), "armored zombie");
                   this.drawX = 0.5 * (this.x - this.game.players[i].x);
                   this.drawY = 0.5 * (this.y - this.game.players[i].y);
                   if (this.game.players[i] === this.game.players[this.game.localPlayerID])
@@ -157,30 +158,30 @@ export class TurningEnemy extends Enemy {
                 this.tryMove(moveX, moveY);
                 this.drawX = this.x - oldX;
                 this.drawY = this.y - oldY;
-                if (this.x > oldX) this.direction = EnemyDirection.RIGHT;
-                else if (this.x < oldX) this.direction = EnemyDirection.LEFT;
-                else if (this.y > oldY) this.direction = EnemyDirection.DOWN;
-                else if (this.y < oldY) this.direction = EnemyDirection.UP;
+                if (this.x > oldX) this.direction = EntityDirection.RIGHT;
+                else if (this.x < oldX) this.direction = EntityDirection.LEFT;
+                else if (this.y > oldY) this.direction = EntityDirection.DOWN;
+                else if (this.y < oldY) this.direction = EntityDirection.UP;
               }
             }
           }
 
-          if (this.direction == EnemyDirection.LEFT) {
+          if (this.direction == EntityDirection.LEFT) {
             this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
             disablePositions.push({ x: this.x, y: this.y + 1 } as astar.Position);
             disablePositions.push({ x: this.x, y: this.y - 1 } as astar.Position);
           }
-          if (this.direction == EnemyDirection.RIGHT) {
+          if (this.direction == EntityDirection.RIGHT) {
             this.level.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y));
             disablePositions.push({ x: this.x, y: this.y + 1 } as astar.Position);
             disablePositions.push({ x: this.x, y: this.y - 1 } as astar.Position);
           }
-          if (this.direction == EnemyDirection.DOWN) {
+          if (this.direction == EntityDirection.DOWN) {
             this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1));
             disablePositions.push({ x: this.x + 1, y: this.y } as astar.Position);
             disablePositions.push({ x: this.x - 1, y: this.y } as astar.Position);
           }
-          if (this.direction == EnemyDirection.UP) {
+          if (this.direction == EntityDirection.UP) {
             this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1));
             disablePositions.push({ x: this.x + 1, y: this.y } as astar.Position);
             disablePositions.push({ x: this.x - 1, y: this.y } as astar.Position);
@@ -197,16 +198,16 @@ export class TurningEnemy extends Enemy {
                 this.targetPlayer = player;
                 this.facePlayer(player);
                 if (player === this.game.players[this.game.localPlayerID]) this.alertTicks = 1;
-                if (this.direction == EnemyDirection.LEFT) {
+                if (this.direction == EntityDirection.LEFT) {
                   this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
                 }
-                if (this.direction == EnemyDirection.RIGHT) {
+                if (this.direction == EntityDirection.RIGHT) {
                   this.level.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y));
                 }
-                if (this.direction == EnemyDirection.DOWN) {
+                if (this.direction == EntityDirection.DOWN) {
                   this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1));
                 }
-                if (this.direction == EnemyDirection.UP) {
+                if (this.direction == EntityDirection.UP) {
                   this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1));
                 }
               }
@@ -219,6 +220,12 @@ export class TurningEnemy extends Enemy {
 
   draw = (delta: number) => {
     if (!this.dead) {
+      this.tileX = 27;
+      this.tileY = 8;
+      if (this.health <= 1) {
+        this.tileX = 17;
+        this.tileY = 8;
+      }
       this.frame += 0.1 * delta;
       if (this.frame >= 4) this.frame = 0;
 
@@ -236,7 +243,7 @@ export class TurningEnemy extends Enemy {
           this.shadeAmount()
         );
       Game.drawMob(
-        this.tileX + Math.floor(this.frame),
+        this.tileX + (this.tileX === 5 ? Math.floor(this.frame) : 0),
         this.tileY + this.direction * 2,
         1,
         2,
@@ -255,5 +262,4 @@ export class TurningEnemy extends Enemy {
       this.drawExclamation(delta);
     }
   };
-
 }

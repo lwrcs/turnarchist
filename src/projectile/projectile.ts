@@ -1,5 +1,5 @@
 import { Player } from "../player";
-import { Enemy } from "../enemy/enemy";
+import { Entity } from "../entity/entity";
 import { Drawable } from "../drawable";
 
 export class Projectile extends Drawable {
@@ -18,7 +18,7 @@ export class Projectile extends Drawable {
   }
 
   hitPlayer = (player: Player) => { };
-  hitEnemy = (enemy: Enemy) => { };
+  hitEnemy = (enemy: Entity) => { };
 
   tick = () => { };
   draw = (delta: number) => { };

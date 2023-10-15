@@ -9,14 +9,14 @@ import { LevelConstants } from "./levelConstants";
 import { Map } from "./map";
 import { SlashParticle } from "./particle/slashParticle";
 import { HealthBar } from "./healthbar";
-import { VendingMachine } from "./enemy/vendingMachine";
+import { VendingMachine } from "./entity/vendingMachine";
 import { Drawable } from "./drawable";
 import { Random } from "./random";
 import { GenericParticle } from "./particle/genericParticle";
 import { ActionState, ActionTab } from "./actionTab";
 import { HitWarning } from "./hitWarning";
-import { Enemy } from "./enemy/enemy";
-import { ZombieEnemy } from "./enemy/zombieEnemy";
+import { Entity } from "./entity/entity";
+import { ZombieEnemy } from "./entity/zombieEnemy";
 import { Item } from "./item/item";
 
 export enum PlayerDirection {
@@ -260,7 +260,7 @@ export class Player extends Drawable {
         //}
       }
 
-    for (let e of this.game.rooms[this.levelID].enemies) {
+    for (let e of this.game.rooms[this.levelID].entities) {
       if (this.tryCollide(e, x, y)) {
         if (e.pushable) {
           // pushing a crate or barrel
@@ -273,7 +273,7 @@ export class Player extends Drawable {
           let pushedEnemies = [];
           while (true) {
             foundEnd = true;
-            for (const f of this.game.rooms[this.levelID].enemies) {
+            for (const f of this.game.rooms[this.levelID].entities) {
               if (f.pointIn(nextX, nextY)) {
                 if (!f.chainPushable) {
                   enemyEnd = true;

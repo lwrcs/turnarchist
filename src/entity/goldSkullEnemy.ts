@@ -1,4 +1,4 @@
-import { Enemy, EnemyDirection } from "./enemy";
+import { Entity, EntityDirection } from "./entity";
 import { Game } from "../game";
 import { Room } from "../room";
 import { Player } from "../player";
@@ -11,9 +11,8 @@ import { Spear } from "../weapon/spear";
 import { astar } from "../astarclass";
 import { SpikeTrap } from "../tile/spiketrap";
 import { DeathParticle } from "../particle/deathParticle";
-import { Candle } from "../item/candle";
 
-export class SkullEnemy extends Enemy {
+export class GoldSkullEnemy extends Entity {
   frame: number;
   ticks: number;
   seenPlayer: boolean;
@@ -43,8 +42,6 @@ export class SkullEnemy extends Enemy {
       let dropProb = rand();
       if (dropProb < 0.005) this.drop = new Spear(this.level, 0, 0);
       else if (dropProb < 0.04) this.drop = new RedGem(this.level, 0, 0);
-      else if (dropProb <0.2) this.drop = new Candle(this.level, 0, 0)
-
       else this.drop = new Coin(this.level, 0, 0);
     }
   }
@@ -73,7 +70,6 @@ export class SkullEnemy extends Enemy {
   tick = () => {
     this.lastX = this.x;
     this.lastY = this.y;
-    //set last positions
     if (!this.dead) {
       if (this.skipNextTurns > 0) {
         this.skipNextTurns--;
@@ -109,7 +105,7 @@ export class SkullEnemy extends Enemy {
             let oldY = this.y;
 
             let disablePositions = Array<astar.Position>();
-            for (const e of this.level.enemies) {
+            for (const e of this.level.entities) {
               if (e !== this) {
                 disablePositions.push({ x: e.x, y: e.y } as astar.Position);
               }
@@ -148,7 +144,7 @@ export class SkullEnemy extends Enemy {
               let hitPlayer = false;
               for (const i in this.game.players) {
                 if (this.game.rooms[this.game.players[i].levelID] === this.level && this.game.players[i].x === moveX && this.game.players[i].y === moveY) {
-                  this.game.players[i].hurt(this.hit(), "skeleton");
+                  this.game.players[i].hurt(this.hit(), "golden skeleton");
                   this.drawX = 0.5 * (this.x - this.game.players[i].x);
                   this.drawY = 0.5 * (this.y - this.game.players[i].y);
                   if (this.game.players[i] === this.game.players[this.game.localPlayerID])
@@ -159,10 +155,10 @@ export class SkullEnemy extends Enemy {
                 this.tryMove(moveX, moveY);
                 this.drawX = this.x - oldX;
                 this.drawY = this.y - oldY;
-                if (this.x > oldX) this.direction = EnemyDirection.RIGHT;
-                else if (this.x < oldX) this.direction = EnemyDirection.LEFT;
-                else if (this.y > oldY) this.direction = EnemyDirection.DOWN;
-                else if (this.y < oldY) this.direction = EnemyDirection.UP;
+                if (this.x > oldX) this.direction = EntityDirection.RIGHT;
+                else if (this.x < oldX) this.direction = EntityDirection.LEFT;
+                else if (this.y > oldY) this.direction = EntityDirection.DOWN;
+                else if (this.y < oldY) this.direction = EntityDirection.UP;
               }
             }
 

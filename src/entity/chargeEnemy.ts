@@ -1,4 +1,4 @@
-import { Enemy, EnemyDirection } from "./enemy";
+import { Entity, EntityDirection } from "./entity";
 import { Game } from "../game";
 import { Room } from "../room";
 import { HitWarning } from "../hitWarning";
@@ -17,7 +17,7 @@ export enum ChargeEnemyState {
   CHARGING,
 }
 
-export class ChargeEnemy extends Enemy {
+export class ChargeEnemy extends Entity {
   startX: number;
   startY: number;
   targetX: number;
@@ -58,7 +58,7 @@ export class ChargeEnemy extends Enemy {
   };
 
   canMoveOver = (x: number, y: number): boolean => {
-    for (const e of this.level.enemies) {
+    for (const e of this.level.entities) {
       if (e !== this && x === e.x && y === e.y) return false;
     }
     let t = this.level.roomArray[x][y];
@@ -118,10 +118,10 @@ export class ChargeEnemy extends Enemy {
             this.visualTargetX = this.targetX + 0.5 * dx;
             this.visualTargetY = this.targetY + 0.5 * dy;
             if (dy === 1) this.visualTargetY += 0.65;
-            if (dx > 0) this.direction = EnemyDirection.RIGHT;
-            else if (dx < 0) this.direction = EnemyDirection.LEFT;
-            else if (dy < 0) this.direction = EnemyDirection.UP;
-            else if (dy > 0) this.direction = EnemyDirection.DOWN;
+            if (dx > 0) this.direction = EntityDirection.RIGHT;
+            else if (dx < 0) this.direction = EntityDirection.LEFT;
+            else if (dy < 0) this.direction = EntityDirection.UP;
+            else if (dy > 0) this.direction = EntityDirection.DOWN;
             break;
           }
         }
@@ -258,10 +258,10 @@ export class ChargeEnemy extends Enemy {
       if (Math.floor(this.trailFrame) % 2 === 0) {
         let startX = (this.x + 0.5) * GameConstants.TILESIZE;
         let startY = (this.y - 0.25) * GameConstants.TILESIZE;
-        if (this.direction === EnemyDirection.LEFT) startX -= 3;
-        else if (this.direction === EnemyDirection.RIGHT) startX += 3;
-        else if (this.direction === EnemyDirection.DOWN) startY += 2;
-        else if (this.direction === EnemyDirection.UP) startY -= 8;
+        if (this.direction === EntityDirection.LEFT) startX -= 3;
+        else if (this.direction === EntityDirection.RIGHT) startX += 3;
+        else if (this.direction === EntityDirection.DOWN) startY += 2;
+        else if (this.direction === EntityDirection.UP) startY -= 8;
 
         Game.ctx.strokeStyle = "white";
         Game.ctx.lineWidth = GameConstants.TILESIZE * 0.25;

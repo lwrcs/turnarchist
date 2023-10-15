@@ -1,30 +1,27 @@
-import { Enemy } from "./enemy";
+import { Entity } from "./entity";
 import { Room } from "../room";
 import { Game } from "../game";
 import { Heart } from "../item/heart";
 import { LevelConstants } from "../levelConstants";
 import { GenericParticle } from "../particle/genericParticle";
-import { Shrooms } from "../item/shrooms";
-import { EntityType } from "./enemy";
+import { EntityType } from "./entity";
 
-export class Pumpkin extends Enemy {
+export class Barrel extends Entity {
   constructor(level: Room, game: Game, x: number, y: number) {
     super(level, game, x, y);
     this.level = level;
     this.health = 1;
-    this.tileX = 13;
-    this.tileY = 2;
+    this.tileX = 1;
+    this.tileY = 0;
     this.hasShadow = false;
-    this.chainPushable = false;
-    this.entityType = EntityType.Prop
+    this.pushable = true;
+    this.entityType = EntityType.Prop;
   }
 
   kill = () => {
     this.dead = true;
 
-    GenericParticle.spawnCluster(this.level, this.x + 0.5, this.y + 0.5, "#ac3232");
-
-    this.level.items.push(new Shrooms(this.level, this.x, this.y));
+    GenericParticle.spawnCluster(this.level, this.x + 0.5, this.y + 0.5, "#9badb7");
   };
   killNoBones = () => {
     this.kill();
@@ -33,8 +30,6 @@ export class Pumpkin extends Enemy {
   draw = (delta: number) => {
     // not inherited because it doesn't have the 0.5 offset
     if (!this.dead) {
-      this.drawX += -0.5 * this.drawX;
-      this.drawY += -0.5 * this.drawY;
       Game.drawObj(
         this.tileX,
         this.tileY,
@@ -52,5 +47,8 @@ export class Pumpkin extends Enemy {
 
   drawTopLayer = (delta: number) => {
     this.drawableY = this.y;
+
+    this.drawX += -0.5 * this.drawX;
+    this.drawY += -0.5 * this.drawY;
   };
 }

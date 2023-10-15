@@ -1,7 +1,7 @@
 import { Game } from "./game";
 import { GameConstants } from "./gameConstants";
 import { RoomType } from "./room";
-import { EntityType } from "./enemy/enemy";
+import { EntityType } from "./entity/entity";
 import { Wall } from "./tile/wall";
 
 export class Map {
@@ -59,7 +59,7 @@ export class Map {
             (Game.ctx.fillStyle = "black"),
               Game.ctx.fillRect(door.x * s, door.y * s, 1 * s, 1 * s);
         }
-        for (const enemy of level.enemies) {
+        for (const enemy of level.entities) {
           if (enemy.entityType === EntityType.Enemy) {
             Game.ctx.fillStyle = "yellow";
           }

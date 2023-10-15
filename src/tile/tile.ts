@@ -1,7 +1,7 @@
 import { Room } from "../room";
 import { LevelConstants } from "../levelConstants";
 import { Player } from "../player";
-import { Enemy } from "../enemy/enemy";
+import { Entity } from "../entity/entity";
 import { Drawable } from "../drawable";
 
 export enum SkinType {
@@ -44,7 +44,7 @@ export class Tile extends Drawable {
     return false;
   };
   onCollide = (player: Player) => {};
-  onCollideEnemy = (enemy: Enemy) => {};
+  onCollideEnemy = (enemy: Entity) => {};
   tick = () => {};
   tickEnd = () => {};
 

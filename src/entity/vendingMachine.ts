@@ -1,7 +1,7 @@
 import { Player } from "../player";
 import { Game } from "../game";
 import { Room } from "../room";
-import { Enemy } from "./enemy";
+import { Entity } from "./entity";
 import { Item } from "../item/item";
 import { Key } from "../item/key";
 import { Coin } from "../item/coin";
@@ -18,7 +18,7 @@ import { BlueGem } from "../item/bluegem";
 import { DualDagger } from "../weapon/dualdagger";
 import { Lantern } from "../item/lantern";
 import { RedGem } from "../item/redgem";
-import { EntityType } from "./enemy";
+import { EntityType } from "./entity";
 
 
 let OPEN_TIME = 150;
@@ -26,7 +26,7 @@ let FILL_COLOR = "#5a595b";
 let OUTLINE_COLOR = "#292c36";
 let FULL_OUTLINE = "white";
 
-export class VendingMachine extends Enemy {
+export class VendingMachine extends Entity {
   playerOpened: Player;
   open = false;
   openTime = 0;
@@ -111,7 +111,7 @@ export class VendingMachine extends Enemy {
       do {
         x = Game.rand(this.x - 1, this.x + 1, this.rand);
         y = Game.rand(this.y - 1, this.y + 1, this.rand);
-      } while ((x === this.x && y === this.y) || this.level.roomArray[x][y].isSolid() || this.level.enemies.some(e => e.x === x && e.y === y));
+      } while ((x === this.x && y === this.y) || this.level.roomArray[x][y].isSolid() || this.level.entities.some(e => e.x === x && e.y === y));
 
       let newItem = new (this.item.constructor as { new(): Item })();
       newItem = newItem.constructor(this.level, x, y);

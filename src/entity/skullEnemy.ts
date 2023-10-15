@@ -1,20 +1,27 @@
-import { Enemy, EnemyDirection } from "./enemy";
+import { Entity, EntityDirection } from "./entity";
 import { Game } from "../game";
 import { Room } from "../room";
-import { astar } from "../astarclass";
-import { HitWarning } from "../hitWarning";
-import { SpikeTrap } from "../tile/spiketrap";
-import { Coin } from "../item/coin";
 import { Player } from "../player";
-import { DualDagger } from "../weapon/dualdagger";
+import { HitWarning } from "../hitWarning";
+import { GenericParticle } from "../particle/genericParticle";
+import { Coin } from "../item/coin";
+import { RedGem } from "../item/redgem";
 import { Item } from "../item/item";
+import { Spear } from "../weapon/spear";
+import { astar } from "../astarclass";
+import { SpikeTrap } from "../tile/spiketrap";
+import { DeathParticle } from "../particle/deathParticle";
+import { Candle } from "../item/candle";
 
-export class KnightEnemy extends Enemy {
-  ticks: number;
+export class SkullEnemy extends Entity {
   frame: number;
+  ticks: number;
   seenPlayer: boolean;
-  targetPlayer: Player;
   aggro: boolean;
+  ticksSinceFirstHit: number;
+  flashingFrame: number;
+  targetPlayer: Player;
+  readonly REGEN_TICKS = 5;
   drop: Item;
 
   constructor(level: Room, game: Game, x: number, y: number, rand: () => number, drop?: Item) {
@@ -23,21 +30,28 @@ export class KnightEnemy extends Enemy {
     this.frame = 0;
     this.health = 2;
     this.maxHealth = 2;
-    this.tileX = 9;
+    this.tileX = 5;
     this.tileY = 8;
     this.seenPlayer = false;
     this.aggro = false;
+    this.ticksSinceFirstHit = 0;
+    this.flashingFrame = 0;
     this.deathParticleColor = "#ffffff";
-    this.lastX = this.x;
-    this.lastY = this.y;
 
     if (drop) this.drop = drop;
     else {
       let dropProb = rand();
-      if (dropProb < 0.025) this.drop = new DualDagger(this.level, 0, 0);
+      if (dropProb < 0.005) this.drop = new Spear(this.level, 0, 0);
+      else if (dropProb < 0.04) this.drop = new RedGem(this.level, 0, 0);
+      else if (dropProb <0.2) this.drop = new Candle(this.level, 0, 0)
+
       else this.drop = new Coin(this.level, 0, 0);
     }
   }
+
+  hit = (): number => {
+    return 1;
+  };
 
   hurt = (playerHitBy: Player, damage: number) => {
     if (playerHitBy) {
@@ -46,50 +60,56 @@ export class KnightEnemy extends Enemy {
       this.facePlayer(playerHitBy);
       if (playerHitBy === this.game.players[this.game.localPlayerID]) this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
     }
-    this.healthBar.hurt();
-
+    this.ticksSinceFirstHit = 0;
     this.health -= damage;
-    if (this.health <= 0) this.kill();
-    else this.hurtCallback();
-  };
-
-  hit = (): number => {
-    return 1;
+    this.healthBar.hurt();
+    if (this.health <= 0) {
+      this.kill();
+    } else {
+      GenericParticle.spawnCluster(this.level, this.x + 0.5, this.y + 0.5, this.deathParticleColor);
+    }
   };
 
   tick = () => {
     this.lastX = this.x;
     this.lastY = this.y;
+    //set last positions
     if (!this.dead) {
       if (this.skipNextTurns > 0) {
         this.skipNextTurns--;
         return;
       }
-      if (!this.seenPlayer) {
-        const result = this.nearestPlayer();
-        if (result !== false) {
-          let [distance, p] = result;
-          if (distance < 4) {
-            this.seenPlayer = true;
-            this.targetPlayer = p;
-            this.facePlayer(p);
-            if (p === this.game.players[this.game.localPlayerID]) this.alertTicks = 1;
-            this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
-            this.level.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y));
-            this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1));
-            this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1));
+      if (this.health <= 1) {
+        this.ticksSinceFirstHit++;
+        if (this.ticksSinceFirstHit >= this.REGEN_TICKS) {
+          this.health = 2;
+        }
+      } else {
+        this.ticks++;
+        if (!this.seenPlayer) {
+          let p = this.nearestPlayer();
+          if (p !== false) {
+            let [distance, player] = p;
+            if (distance <= 4) {
+              this.targetPlayer = player;
+              this.facePlayer(player);
+              this.seenPlayer = true;
+              if (player === this.game.players[this.game.localPlayerID]) this.alertTicks = 1;
+              this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
+              this.level.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y));
+              this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1));
+              this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1));
+            }
           }
         }
-      }
-      else if (this.seenPlayer) {
-        if (this.level.playerTicked === this.targetPlayer) {
-          this.alertTicks = Math.max(0, this.alertTicks - 1);
-          this.ticks++;
-          if (this.ticks % 2 === 1) {
+        else if (this.seenPlayer) {
+          if (this.level.playerTicked === this.targetPlayer) {
+            this.alertTicks = Math.max(0, this.alertTicks - 1);
             let oldX = this.x;
             let oldY = this.y;
+
             let disablePositions = Array<astar.Position>();
-            for (const e of this.level.enemies) {
+            for (const e of this.level.entities) {
               if (e !== this) {
                 disablePositions.push({ x: e.x, y: e.y } as astar.Position);
               }
@@ -122,50 +142,46 @@ export class KnightEnemy extends Enemy {
               disablePositions
             );
             if (moves.length > 0) {
+              let moveX = moves[0].pos.x;
+              let moveY = moves[0].pos.y;
+
               let hitPlayer = false;
               for (const i in this.game.players) {
-                if (
-                  this.game.rooms[this.game.players[i].levelID] === this.level &&
-                  this.game.players[i].x === moves[0].pos.x &&
-                  this.game.players[i].y === moves[0].pos.y
-                ) {
-                  this.game.players[i].hurt(this.hit(), "burrow knight");
+                if (this.game.rooms[this.game.players[i].levelID] === this.level && this.game.players[i].x === moveX && this.game.players[i].y === moveY) {
+                  this.game.players[i].hurt(this.hit(), "skeleton");
                   this.drawX = 0.5 * (this.x - this.game.players[i].x);
                   this.drawY = 0.5 * (this.y - this.game.players[i].y);
                   if (this.game.players[i] === this.game.players[this.game.localPlayerID])
                     this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
-                  hitPlayer = true;
                 }
               }
               if (!hitPlayer) {
-                this.tryMove(moves[0].pos.x, moves[0].pos.y);
+                this.tryMove(moveX, moveY);
                 this.drawX = this.x - oldX;
                 this.drawY = this.y - oldY;
-                if (this.x > oldX) this.direction = EnemyDirection.RIGHT;
-                else if (this.x < oldX) this.direction = EnemyDirection.LEFT;
-                else if (this.y > oldY) this.direction = EnemyDirection.DOWN;
-                else if (this.y < oldY) this.direction = EnemyDirection.UP;
+                if (this.x > oldX) this.direction = EntityDirection.RIGHT;
+                else if (this.x < oldX) this.direction = EntityDirection.LEFT;
+                else if (this.y > oldY) this.direction = EntityDirection.DOWN;
+                else if (this.y < oldY) this.direction = EntityDirection.UP;
               }
             }
-          } else {
+
             this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
             this.level.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y));
             this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1));
             this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1));
           }
-        }
 
-        let targetPlayerOffline = Object.values(this.game.offlinePlayers).indexOf(this.targetPlayer) !== -1;
-        if (!this.aggro || targetPlayerOffline) {
-          let p = this.nearestPlayer();
-          if (p !== false) {
-            let [distance, player] = p;
-            if (distance <= 4 && (targetPlayerOffline || distance < this.playerDistance(this.targetPlayer))) {
-              if (player !== this.targetPlayer) {
-                this.targetPlayer = player;
-                this.facePlayer(player);
-                if (player === this.game.players[this.game.localPlayerID]) this.alertTicks = 1;
-                if (this.ticks % 2 === 0) {
+          let targetPlayerOffline = Object.values(this.game.offlinePlayers).indexOf(this.targetPlayer) !== -1;
+          if (!this.aggro || targetPlayerOffline) {
+            let p = this.nearestPlayer();
+            if (p !== false) {
+              let [distance, player] = p;
+              if (distance <= 4 && (targetPlayerOffline || distance < this.playerDistance(this.targetPlayer))) {
+                if (player !== this.targetPlayer) {
+                  this.targetPlayer = player;
+                  this.facePlayer(player);
+                  if (player === this.game.players[this.game.localPlayerID]) this.alertTicks = 1;
                   this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
                   this.level.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y));
                   this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1));
@@ -181,16 +197,22 @@ export class KnightEnemy extends Enemy {
 
   draw = (delta: number) => {
     if (!this.dead) {
-      if (this.ticks % 2 === 0) {
-        this.tileX = 9;
-        this.tileY = 8;
-      } else {
-        this.tileX = 4;
+      this.tileX = 5;
+      this.tileY = 8;
+      if (this.health <= 1) {
+        this.tileX = 3;
         this.tileY = 0;
+        if (this.ticksSinceFirstHit >= 3) {
+          this.flashingFrame += 0.1 * delta;
+          if (Math.floor(this.flashingFrame) % 2 === 0) {
+            this.tileX = 2;
+          }
+        }
       }
 
       this.frame += 0.1 * delta;
       if (this.frame >= 4) this.frame = 0;
+
       if (this.hasShadow)
         Game.drawMob(
           0,
@@ -205,12 +227,12 @@ export class KnightEnemy extends Enemy {
           this.shadeAmount()
         );
       Game.drawMob(
-        this.tileX + (this.tileX === 4 ? 0 : Math.floor(this.frame)),
+        this.tileX + (this.tileX === 5 ? Math.floor(this.frame) : 0),
         this.tileY + this.direction * 2,
         1,
         2,
         this.x - this.drawX,
-        this.y - 1.5 - this.drawY + (this.tileX === 4 ? 0.1875 : 0),
+        this.y - 1.5 - this.drawY,
         1,
         2,
         this.level.shadeColor,
@@ -224,4 +246,5 @@ export class KnightEnemy extends Enemy {
       this.drawExclamation(delta);
     }
   };
+
 }

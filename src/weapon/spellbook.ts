@@ -3,8 +3,8 @@ import { Weapon } from "./weapon";
 import { Room } from "../room";
 import { Sound } from "../sound";
 import { SlashParticle } from "../particle/slashParticle";
-import { Crate } from "../enemy/crate";
-import { Barrel } from "../enemy/barrel";
+import { Crate } from "../entity/crate";
+import { Barrel } from "../entity/barrel";
 import { Player } from "../player";
 import { Inventory } from "../inventory";
 import { WizardFireball } from "../projectile/wizardFireball";
@@ -24,7 +24,7 @@ export class Spellbook extends Weapon {
     let difX = newX - this.x;
     let difY = newY - this.y;
 
-    for (let e of this.game.rooms[this.wielder.levelID].enemies) {
+    for (let e of this.game.rooms[this.wielder.levelID].entities) {
       if (
         (e.destroyable || e.pushable) &&
         e.pointIn(newX, newY) &&

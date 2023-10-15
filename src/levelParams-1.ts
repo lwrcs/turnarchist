@@ -1,4 +1,4 @@
-import { Enemy, EntityType } from "./enemy/enemy";
+import { Entity, EntityType } from "./entity/entity";
 import { Item } from "./item/item";
 import { DoorType } from "./tile/door";
 
@@ -12,7 +12,7 @@ export class LevelParams {
   roomCountRange: { min: number; max: number };
   entities: [
     {
-      entity: Enemy;
+      entity: Entity;
       type: EntityType;
       spawnProb: number;
       bossProb: number;

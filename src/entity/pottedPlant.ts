@@ -1,4 +1,4 @@
-import { Enemy } from "./enemy";
+import { Entity } from "./entity";
 import { Room } from "../room";
 import { Game } from "../game";
 import { Heart } from "../item/heart";
@@ -6,9 +6,9 @@ import { LevelConstants } from "../levelConstants";
 import { GenericParticle } from "../particle/genericParticle";
 import { Item } from "../item/item";
 import { Coin } from "../item/coin";
-import { EntityType } from "./enemy";
+import { EntityType } from "./entity";
 
-export class PottedPlant extends Enemy {
+export class PottedPlant extends Entity {
   drop: Item;
   constructor(level: Room, game: Game, x: number, y: number, rand: () => number, drop?: Item) {
     super(level, game, x, y);

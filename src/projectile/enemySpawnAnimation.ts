@@ -1,8 +1,8 @@
 import { Projectile } from "./projectile";
 import { Game } from "../game";
-import { WizardEnemy } from "../enemy/wizardEnemy";
+import { WizardEnemy } from "../entity/wizardEnemy";
 import { Player } from "../player";
-import { Enemy } from "../enemy/enemy";
+import { Entity } from "../entity/entity";
 import { Room } from "../room";
 import { GenericParticle } from "../particle/genericParticle";
 import { Sound } from "../sound";
@@ -12,10 +12,10 @@ export class EnemySpawnAnimation extends Projectile {
   readonly ANIM_COUNT = 3;
 
   level: Room;
-  enemy: Enemy;
+  enemy: Entity;
   frame: number;
 
-  constructor(level: Room, enemy: Enemy, x: number, y: number) {
+  constructor(level: Room, enemy: Entity, x: number, y: number) {
     super(x, y);
     this.level = level;
     this.enemy = enemy;
@@ -35,7 +35,7 @@ export class EnemySpawnAnimation extends Projectile {
     if (!hitPlayer) {
       this.dead = true;
       this.enemy.skipNextTurns = 1;
-      this.level.enemies.push(this.enemy);
+      this.level.entities.push(this.enemy);
       GenericParticle.spawnCluster(this.level, this.x + 0.5, this.y + 0.5, "#ffffff");
       GenericParticle.spawnCluster(this.level, this.x + 0.5, this.y + 0.5, "#ffffff");
     } else {

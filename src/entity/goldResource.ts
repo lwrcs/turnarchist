@@ -4,26 +4,23 @@ import { Key } from "../item/key";
 import { Room } from "../room";
 import { Heart } from "../item/heart";
 import { Armor } from "../item/armor";
-import { Enemy } from "./enemy";
+import { Entity } from "./entity";
 import { LevelConstants } from "../levelConstants";
-import { GreenGem } from "../item/greengem";
 import { Resource } from "./resource";
 import { GenericParticle } from "../particle/genericParticle";
+import { Gold } from "../item/gold";
 import { Sound } from "../sound";
-import { GameState } from "../gameState";
 
-export class EmeraldResource extends Resource {
+export class GoldResource extends Resource {
   constructor(level: Room, game: Game, x: number, y: number) {
     super(level, game, x, y);
 
-    this.tileX = 14;
+    this.tileX = 13;
     this.tileY = 0;
-    this.health = 3;
+    this.health = 2;
   }
 
   hurtCallback = () => {
-    GenericParticle.spawnCluster(this.level, this.x + 0.5, this.y + 0.5, "#fbf236");
-
     if (this.level === this.game.level) Sound.mine();
   };
 
@@ -32,7 +29,9 @@ export class EmeraldResource extends Resource {
 
     this.dead = true;
 
-    this.level.items.push(new GreenGem(this.level, this.x, this.y));
+    this.level.items.push(new Gold(this.level, this.x, this.y));
+
+    GenericParticle.spawnCluster(this.level, this.x + 0.5, this.y + 0.5, "#fbf236");
   };
   killNoBones = () => {
     this.kill();

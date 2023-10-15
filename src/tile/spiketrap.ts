@@ -3,9 +3,9 @@ import { Game } from "../game";
 import { Room } from "../room";
 import { LevelConstants } from "../levelConstants";
 import { Tile } from "./tile";
-import { Enemy } from "../enemy/enemy";
-import { Crate } from "../enemy/crate";
-import { Barrel } from "../enemy/barrel";
+import { Entity } from "../entity/entity";
+import { Crate } from "../entity/crate";
+import { Barrel } from "../entity/barrel";
 import { HitWarning } from "../hitWarning";
 
 export class SpikeTrap extends Tile {
@@ -41,7 +41,7 @@ export class SpikeTrap extends Tile {
 
   tickEnd = () => {
     if (this.on) {
-      for (const e of this.level.enemies) {
+      for (const e of this.level.entities) {
         if (e.x === this.x && e.y === this.y) {
           e.hurt(null, 1);
         }
@@ -49,7 +49,7 @@ export class SpikeTrap extends Tile {
     }
   };
 
-  onCollideEnemy = (enemy: Enemy) => {
+  onCollideEnemy = (enemy: Entity) => {
     if (this.on && !(enemy instanceof Crate || enemy instanceof Barrel)) enemy.hurt(null, 1);
   };
 

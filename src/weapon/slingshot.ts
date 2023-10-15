@@ -3,8 +3,8 @@ import { Weapon } from "./weapon";
 import { Room } from "../room";
 import { Sound } from "../sound";
 import { SlashParticle } from "../particle/slashParticle";
-import { Crate } from "../enemy/crate";
-import { Barrel } from "../enemy/barrel";
+import { Crate } from "../entity/crate";
+import { Barrel } from "../entity/barrel";
 import { GenericParticle } from "../particle/genericParticle";
 
 export class Slingshot extends Weapon {
@@ -64,7 +64,7 @@ export class Slingshot extends Weapon {
     let firstPushable = range + 1;
     let firstNonPushable = range + 2;
     let firstNonDestroyable = range + 2;
-    for (let e of this.game.rooms[this.wielder.levelID].enemies) {
+    for (let e of this.game.rooms[this.wielder.levelID].entities) {
       //loop through enemies in this weapons wielders level
       if (e.pushable) {
         let p = 2;

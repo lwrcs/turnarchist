@@ -3,7 +3,7 @@ import { Tile, SkinType } from "./tile";
 import { Room } from "../room";
 import { Player } from "../player";
 import { InsideLevelDoor } from "./insideLevelDoor";
-import { Enemy } from "../enemy/enemy";
+import { Entity } from "../entity/entity";
 
 export class Button extends Tile {
   // all are in grid units
@@ -47,7 +47,7 @@ export class Button extends Tile {
     for (const i in this.level.game.players) {
       if (this.level.game.players[i].x === this.x && this.level.game.players[i].y === this.y) this.press();
     }
-    for (const e of this.level.enemies) {
+    for (const e of this.level.entities) {
       if (e.x === this.x && e.y === this.y) this.press();
     }
   };

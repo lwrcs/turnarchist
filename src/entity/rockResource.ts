@@ -1,4 +1,4 @@
-import { Enemy } from "./enemy";
+import { Entity } from "./entity";
 import { Room } from "../room";
 import { Game } from "../game";
 import { Heart } from "../item/heart";
