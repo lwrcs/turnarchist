@@ -18,7 +18,7 @@ export class PottedPlant extends Entity {
     this.tileY = 0;
     this.hasShadow = false;
     this.chainPushable = false;
-    this.entityType = EntityType.Prop
+    this.entityType = EntityType.PROP
     if (drop) this.drop = drop;
     
     else {

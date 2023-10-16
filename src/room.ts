@@ -299,13 +299,20 @@ export class Room {
     }
   }
 
+  // Function to add enemies to the room
   private addEnemies(numEnemies: number, rand: () => number) {
+    // Get all empty tiles in the room
     let tiles = this.getEmptyTiles();
+    // Loop through the number of enemies to be added
     for (let i = 0; i < numEnemies; i++) {
+      // Randomly select a tile and remove it from the list
       let t = tiles.splice(Game.rand(0, tiles.length - 1, rand), 1)[0];
+      // If there are no more tiles, return
       if (tiles.length == 0) return;
+      // Get the x and y coordinates of the selected tile
       let x = t.x;
       let y = t.y;
+      // Define the enemy tables for each depth level
       let tables = {
         0: [1, 2, 3, 3, 4],
         1: [1, 1, 3, 3, 3, 2, 2],
@@ -316,11 +323,15 @@ export class Room {
         6: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
         7: [1, 2, 3, 4, 5, 6, 7],
       };
+      // Define the maximum depth level
       let max_depth_table = 7;
+      // Get the current depth level, capped at the maximum
       let d = Math.min(this.depth, max_depth_table);
+      // If there is a table for the current depth level
       if (tables[d] && tables[d].length > 0) {
+        // Function to add an enemy to the room
         let addEnemy = (enemy: Entity): boolean => {
-          // adds an enemy if it doesn't overlap any other enemies
+          // Check if the enemy overlaps with any other enemies
           for (let xx = 0; xx < enemy.w; xx++) {
             for (let yy = 0; yy < enemy.h; yy++) {
               if (
@@ -328,16 +339,20 @@ export class Room {
                   (tt) => tt.x === x + xx && tt.y === y + yy
                 )
               ) {
-                numEnemies++; // extra loop iteration since we're throwing out this point
-                return false; // throw out point if it overlaps an enemy
+                // If it does, increment the enemy count and return false
+                numEnemies++;
+                return false;
               }
             }
           }
+          // If it doesn't, add the enemy to the room and return true
           this.entities.push(enemy);
           return true;
         };
 
+        // Randomly select an enemy type from the table
         let type = Game.randTable(tables[d], rand);
+        // Add the selected enemy type to the room
         switch (type) {
           case 1:
             addEnemy(new SlimeEnemy(this, this.game, x, y, rand));
@@ -366,7 +381,7 @@ export class Room {
           case 9:
             addEnemy(new ArmoredzombieEnemy(this, this.game, x, y, rand));
             break;
-          case 10:
+          /*case 10:
             if (addEnemy(new BigSkullEnemy(this, this.game, x, y, rand))) {
               // clear out some space
               for (let xx = 0; xx < 2; xx++) {
@@ -379,7 +394,7 @@ export class Room {
                 }
               }
             }
-            break;
+            break;/=*/
         }
       }
     }
@@ -938,7 +953,7 @@ export class Room {
     if (this.type === RoomType.BOSS) t = DoorType.GUARDEDDOOR;
     if (this.type === RoomType.KEYROOM) t = DoorType.LOCKEDDOOR;
     if (x === this.roomX) {
-      d = new Door(this, this.game, x, y, 1, t); //last argument, enum 0 is for locked
+      d = new Door(this, this.game, x, y, 1, t);
       this.roomArray[x + 1][y] = new SpawnFloor(this, x + 1, y);
     } else if (x === this.roomX + this.width - 1) {
       d = new Door(this, this.game, x, y, 3, t);

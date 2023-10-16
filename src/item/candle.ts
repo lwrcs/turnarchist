@@ -19,13 +19,12 @@ export class Candle extends Light {
   tickInInventory = () => {
     if (this.fuel <= 0) {
       this.wielder.game.pushMessage("Your candle burns out.");
-      this.wielder.inventory.subtractItemCount(this);
-    }
-    if (this.ignite()) {
-      this.fuel -= 1;
+      this.wielder.inventory.removeItem(this);
+    } else if (this.ignite()) {
+      this.fuel--;
       this.wielder.sightRadius = Math.min(this.fuel / 5 + 2, 4);
     }
-    console.log("fuel:" + this.fuel);
+    console.log(`fuel: ${this.fuel}`);
   };
 
   coEquippable = (other: Light): boolean => {

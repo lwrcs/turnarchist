@@ -1,7 +1,7 @@
 import { Game } from "./game";
 import { GameConstants } from "./gameConstants";
 import { RoomType } from "./room";
-import { EntityType } from "./entity/entity";
+import { Entity, EntityType } from "./entity/entity";
 import { Wall } from "./tile/wall";
 
 export class Map {
@@ -12,14 +12,23 @@ export class Map {
   }
 
   draw = (delta: number) => {
-    const s = 2;
-    if (GameConstants.ALPHA_ENABLED) Game.ctx.globalAlpha = .2;
-    Game.ctx.fillStyle = "#006A6E";
-    const x = Game.ctx.globalCompositeOperation
-    Game.ctx.globalCompositeOperation = "screen"
-    Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
-    Game.ctx.globalCompositeOperation = x
+    this.setInitialCanvasSettings();
+    this.translateCanvas();
+    this.drawRooms();
+    this.resetCanvasTransform();
+  };
 
+  setInitialCanvasSettings = () => {
+    const s = 2;
+    if (GameConstants.ALPHA_ENABLED) Game.ctx.globalAlpha = 0.2;
+    Game.ctx.fillStyle = "#006A6E";
+    const x = Game.ctx.globalCompositeOperation;
+    Game.ctx.globalCompositeOperation = "screen";
+    Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
+    Game.ctx.globalCompositeOperation = x;
+  };
+
+  translateCanvas = () => {
     Game.ctx.translate(
       0.75 * GameConstants.WIDTH -
         this.game.level.roomX -
@@ -29,62 +38,66 @@ export class Map {
         this.game.level.roomY -
         Math.floor(0.5 * this.game.level.height)
     );
+  };
 
+  drawRooms = () => {
     Game.ctx.globalAlpha = 1;
     for (const level of this.game.rooms) {
       if (this.game.level.mapGroup === level.mapGroup && level.entered) {
-        Game.ctx.fillStyle = "#5A5A5A";
-        Game.ctx.fillRect(
-          level.roomX * s + 0,
-          level.roomY * s + 0,
-          level.width * s - 0,
-          level.height * s - 0
-        );
-        if (level.type === RoomType.UPLADDER) Game.ctx.fillStyle = "#101460";
-        if (level.type === RoomType.DOWNLADDER) Game.ctx.fillStyle = "#601410";
-        Game.ctx.fillStyle = "black";
-        Game.ctx.fillRect(
-          level.roomX * s + 1,
-          level.roomY * s + 1,
-          level.width * s - 2,
-          level.height * s - 2
-        );
-        for (const wall of level.walls) {
-          Game.ctx.fillStyle = "#404040";
-          Game.ctx.fillRect(wall.x * s, wall.y * s, 1 * s, 1 * s);
-        }
-        for (const door of level.doors) {
-          if (door.opened === false) Game.ctx.fillStyle = "#5A5A5A";
-          if (door.opened === true)
-            (Game.ctx.fillStyle = "black"),
-              Game.ctx.fillRect(door.x * s, door.y * s, 1 * s, 1 * s);
-        }
-        for (const enemy of level.entities) {
-          if (enemy.entityType === EntityType.Enemy) {
-            Game.ctx.fillStyle = "yellow";
-          }
-          if (enemy.entityType === EntityType.Prop) {
-            Game.ctx.fillStyle = "#847e87";
-          }
-          if (enemy.entityType === EntityType.Resource) {
-            Game.ctx.fillStyle = "#5a595b";
-          }
-          if (enemy.entityType === EntityType.Friendly) {
-            Game.ctx.fillStyle = "cyan";
-          }
-
-          Game.ctx.fillRect(enemy.x * s, enemy.y * s, 1 * s, 1 * s);
-        }
-        for (const item of level.items) {
-          let x = item.x;
-          let y = item.y;
-          Game.ctx.fillStyle = "#ac3232";
-          if (!item.pickedUp) {
-            Game.ctx.fillRect(item.x * s, item.y * s, 1 * s, 1 * s);
-          }
-        }
+        this.drawRoom(level);
       }
     }
+  };
+
+  drawRoom = (level) => {
+    this.drawRoomOutline(level);
+    this.drawRoomWalls(level);
+    this.drawRoomDoors(level);
+    this.drawRoomEntities(level);
+    this.drawRoomItems(level);
+    this.drawRoomPlayers();
+  };
+
+  drawRoomOutline = (level) => {
+    const s = 2;
+    Game.ctx.fillStyle = "#5A5A5A";
+    Game.ctx.fillRect(
+      level.roomX * s + 0,
+      level.roomY * s + 0,
+      level.width * s - 0,
+      level.height * s - 0
+    );
+    if (level.type === RoomType.UPLADDER) Game.ctx.fillStyle = "#101460";
+    if (level.type === RoomType.DOWNLADDER) Game.ctx.fillStyle = "#601410";
+    Game.ctx.fillStyle = "black";
+    Game.ctx.fillRect(
+      level.roomX * s + 1,
+      level.roomY * s + 1,
+      level.width * s - 2,
+      level.height * s - 2
+    );
+  };
+
+  drawRoomWalls = (level) => {
+    const s = 2;
+    for (const wall of level.walls) {
+      Game.ctx.fillStyle = "#404040";
+      Game.ctx.fillRect(wall.x * s, wall.y * s, 1 * s, 1 * s);
+    }
+  };
+
+  drawRoomDoors = (level) => {
+    const s = 2;
+    for (const door of level.doors) {
+      if (door.opened === false) Game.ctx.fillStyle = "#5A5A5A";
+      if (door.opened === true)
+        (Game.ctx.fillStyle = "black"),
+          Game.ctx.fillRect(door.x * s, door.y * s, 1 * s, 1 * s);
+    }
+  };
+
+  drawRoomPlayers = () => {
+    const s = 2;
     for (const i in this.game.players) {
       Game.ctx.fillStyle = "white";
       if (
@@ -99,7 +112,44 @@ export class Map {
         );
       }
     }
+  };
+
+  drawRoomEntities = (level) => {
+    const s = 2;
+    for (const enemy of level.entities) {
+      this.setEntityColor(enemy);
+      Game.ctx.fillRect(enemy.x * s, enemy.y * s, 1 * s, 1 * s);
+    }
+  };
+
+  setEntityColor = (enemy) => {
+    if (enemy.entityType === EntityType.ENEMY) {
+      Game.ctx.fillStyle = "yellow";
+    }
+    if (enemy.entityType === EntityType.PROP) {
+      Game.ctx.fillStyle = "#847e87";
+    }
+    if (enemy.entityType === EntityType.RESOURCE) {
+      Game.ctx.fillStyle = "#5a595b";
+    }
+    if (enemy.entityType === EntityType.FRIENDLY) {
+      Game.ctx.fillStyle = "cyan";
+    }
+  };
+
+  drawRoomItems = (level) => {
+    const s = 2;
+    for (const item of level.items) {
+      let x = item.x;
+      let y = item.y;
+      Game.ctx.fillStyle = "#ac3232";
+      if (!item.pickedUp) {
+        Game.ctx.fillRect(item.x * s, item.y * s, 1 * s, 1 * s);
+      }
+    }
+  };
+
+  resetCanvasTransform = () => {
     Game.ctx.setTransform(1, 0, 0, 1, 0, 0);
   };
 }
-

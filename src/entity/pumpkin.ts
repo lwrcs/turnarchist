@@ -16,7 +16,7 @@ export class Pumpkin extends Entity {
     this.tileY = 2;
     this.hasShadow = false;
     this.chainPushable = false;
-    this.entityType = EntityType.Prop
+    this.entityType = EntityType.PROP
   }
 
   kill = () => {

@@ -74,19 +74,10 @@ export class Inventory {
 
       this.addItem(i);
     };
-
-    a(new Dagger({ game: this.game } as Room, 0, 0));
-    a(new Coal({ game: this.game } as Room, 0, 0));
-    a(new Coal({ game: this.game } as Room, 0, 0));
-    a(new Coal({ game: this.game } as Room, 0, 0));
-    a(new Coal({ game: this.game } as Room, 0, 0));
-    a(new Coal({ game: this.game } as Room, 0, 0));
-
-    a(new Lantern({ game: this.game } as Room, 0, 0));
-    a(new Candle({ game: this.game } as Room, 0, 0));
-    a(new Backpack({ game: this.game } as Room, 0, 0));
-    a(new Heart({ game: this.game } as Room, 0, 0));
-    a(new Armor({ game: this.game } as Room, 0, 0));
+    const startingInv = [Dagger, Coal, Lantern, Key, Backpack];
+    startingInv.forEach((item) => {
+      a(new item({ game: this.game } as Room, 0, 0));
+    });
   }
 
   clear = () => {
@@ -127,10 +118,7 @@ export class Inventory {
     if (this.items[i] instanceof Usable) {
       (this.items[i] as Usable).onUse(this.player);
       //this.items.splice(i, 0);
-      
-    }
-
-    else if (this.items[i] instanceof Equippable) {
+    } else if (this.items[i] instanceof Equippable) {
       //dont equip on the same tick as using an item
       let e = this.items[i] as Equippable;
       e.toggleEquip();
@@ -303,9 +291,9 @@ export class Inventory {
       coinY * GameConstants.TILESIZE + countY,
       GameConstants.OUTLINE,
       "white"
-    )
+    );
 
-    let turnCountText = this.player.turnCount.toString()
+    let turnCountText = this.player.turnCount.toString();
     Game.fillTextOutline(
       turnCountText,
       coinX * GameConstants.TILESIZE + countX,

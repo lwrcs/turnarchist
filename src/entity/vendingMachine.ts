@@ -48,7 +48,7 @@ export class VendingMachine extends Entity {
     this.interactable = true;
 
     this.costItems = [];
-    this.entityType = EntityType.Friendly
+    this.entityType = EntityType.FRIENDLY
 
     this.item = item;
     if (this.item instanceof Shotgun) {

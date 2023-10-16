@@ -12,18 +12,18 @@ import { Item } from "../item/item";
 import { GameConstants } from "../gameConstants";
 
 export enum EntityDirection {
-  DOWN = 0,
-  UP = 1,
-  RIGHT = 2,
-  LEFT = 3,
+  DOWN,
+  UP,
+  RIGHT,
+  LEFT,
 }
 
 export enum EntityType {
-  Enemy,
-  Friendly,
-  Resource,
-  Prop,
-  Chest,
+  ENEMY,
+  FRIENDLY,
+  RESOURCE,
+  PROP,
+  CHEST,
 }
 
 export class Entity extends Drawable {
@@ -86,7 +86,7 @@ export class Entity extends Drawable {
     this.exclamationFrame = 0;
     this.lastX = x;
     this.lastY = y;
-    this.entityType = EntityType.Enemy;
+    this.entityType = EntityType.ENEMY;
   }
 
   tryMove = (x: number, y: number) => {
@@ -133,9 +133,11 @@ export class Entity extends Drawable {
 
   hurtCallback = () => {};
 
+  isType = () => {};
+
   playerKilledBy = (enemy: Entity) => {
     return enemy;
-  }
+  };
 
   pointIn = (x: number, y: number): boolean => {
     return (

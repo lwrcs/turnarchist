@@ -4771,7 +4771,7 @@ var Barrel = /** @class */ (function (_super) {
         _this.tileY = 0;
         _this.hasShadow = false;
         _this.pushable = true;
-        _this.entityType = entity_2.EntityType.Prop;
+        _this.entityType = entity_2.EntityType.PROP;
         return _this;
     }
     return Barrel;
@@ -5667,7 +5667,7 @@ var Chest = /** @class */ (function (_super) {
         _this.tileX = 4;
         _this.tileY = 0;
         _this.health = 1;
-        _this.entityType = entity_2.EntityType.Chest;
+        _this.entityType = entity_2.EntityType.CHEST;
         var drop = game_1.Game.randTable([1, 1, 1, 1, 1, 1, 1, 2, 3, 4], rand);
         switch (drop) {
             case 1:
@@ -5818,7 +5818,7 @@ var Crate = /** @class */ (function (_super) {
         _this.tileY = 0;
         _this.hasShadow = false;
         _this.pushable = true;
-        _this.entityType = entity_2.EntityType.Prop;
+        _this.entityType = entity_2.EntityType.PROP;
         return _this;
     }
     return Crate;
@@ -5932,11 +5932,11 @@ var EntityDirection;
 })(EntityDirection = exports.EntityDirection || (exports.EntityDirection = {}));
 var EntityType;
 (function (EntityType) {
-    EntityType[EntityType["Enemy"] = 0] = "Enemy";
-    EntityType[EntityType["Friendly"] = 1] = "Friendly";
-    EntityType[EntityType["Resource"] = 2] = "Resource";
-    EntityType[EntityType["Prop"] = 3] = "Prop";
-    EntityType[EntityType["Chest"] = 4] = "Chest";
+    EntityType[EntityType["ENEMY"] = 0] = "ENEMY";
+    EntityType[EntityType["FRIENDLY"] = 1] = "FRIENDLY";
+    EntityType[EntityType["RESOURCE"] = 2] = "RESOURCE";
+    EntityType[EntityType["PROP"] = 3] = "PROP";
+    EntityType[EntityType["CHEST"] = 4] = "CHEST";
 })(EntityType = exports.EntityType || (exports.EntityType = {}));
 var Entity = /** @class */ (function (_super) {
     __extends(Entity, _super);
@@ -5987,6 +5987,7 @@ var Entity = /** @class */ (function (_super) {
             return 0;
         };
         _this.hurtCallback = function () { };
+        _this.isType = function () { };
         _this.playerKilledBy = function (enemy) {
             return enemy;
         };
@@ -6158,7 +6159,7 @@ var Entity = /** @class */ (function (_super) {
         _this.exclamationFrame = 0;
         _this.lastX = x;
         _this.lastY = y;
-        _this.entityType = EntityType.Enemy;
+        _this.entityType = EntityType.ENEMY;
         return _this;
     }
     return Entity;
@@ -6515,7 +6516,7 @@ var Mushrooms = /** @class */ (function (_super) {
         _this.tileY = 2;
         _this.hasShadow = false;
         _this.chainPushable = false;
-        _this.entityType = entity_2.EntityType.Prop;
+        _this.entityType = entity_2.EntityType.PROP;
         return _this;
     }
     return Mushrooms;
@@ -6582,7 +6583,7 @@ var Pot = /** @class */ (function (_super) {
         _this.tileY = 0;
         _this.hasShadow = false;
         _this.chainPushable = false;
-        _this.entityType = entity_2.EntityType.Prop;
+        _this.entityType = entity_2.EntityType.PROP;
         return _this;
     }
     return Pot;
@@ -6664,7 +6665,7 @@ var PottedPlant = /** @class */ (function (_super) {
         _this.tileY = 0;
         _this.hasShadow = false;
         _this.chainPushable = false;
-        _this.entityType = entity_2.EntityType.Prop;
+        _this.entityType = entity_2.EntityType.PROP;
         if (drop)
             _this.drop = drop;
         else {
@@ -6747,7 +6748,7 @@ var Resource = /** @class */ (function (_super) {
         _this.tileY = 0;
         _this.health = 1;
         _this.chainPushable = false;
-        _this.entityType = entity_2.EntityType.Resource;
+        _this.entityType = entity_2.EntityType.RESOURCE;
         return _this;
     }
     return Resource;
@@ -7479,7 +7480,7 @@ var TombStone = /** @class */ (function (_super) {
         _this.tileY = 2;
         _this.hasShadow = false;
         _this.pushable = false;
-        _this.entityType = entity_2.EntityType.Prop;
+        _this.entityType = entity_2.EntityType.PROP;
         _this.destroyable = true;
         _this.skinType = skinType;
         _this.rand = rand;
@@ -7663,7 +7664,7 @@ var VendingMachine = /** @class */ (function (_super) {
         _this.chainPushable = false;
         _this.interactable = true;
         _this.costItems = [];
-        _this.entityType = entity_2.EntityType.Friendly;
+        _this.entityType = entity_2.EntityType.FRIENDLY;
         _this.item = item;
         if (_this.item instanceof shotgun_1.Shotgun) {
             var g = new bluegem_1.BlueGem(level, 0, 0);
@@ -10334,6 +10335,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Inventory = void 0;
 var levelConstants_1 = __webpack_require__(/*! ./levelConstants */ "./src/levelConstants.ts");
 var game_1 = __webpack_require__(/*! ./game */ "./src/game.ts");
+var key_1 = __webpack_require__(/*! ./item/key */ "./src/item/key.ts");
 var gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/gameConstants.ts");
 var equippable_1 = __webpack_require__(/*! ./item/equippable */ "./src/item/equippable.ts");
 var armor_1 = __webpack_require__(/*! ./item/armor */ "./src/item/armor.ts");
@@ -10342,10 +10344,8 @@ var coal_1 = __webpack_require__(/*! ./item/coal */ "./src/item/coal.ts");
 var weapon_1 = __webpack_require__(/*! ./weapon/weapon */ "./src/weapon/weapon.ts");
 var dagger_1 = __webpack_require__(/*! ./weapon/dagger */ "./src/weapon/dagger.ts");
 var usable_1 = __webpack_require__(/*! ./item/usable */ "./src/item/usable.ts");
-var candle_1 = __webpack_require__(/*! ./item/candle */ "./src/item/candle.ts");
 var lantern_1 = __webpack_require__(/*! ./item/lantern */ "./src/item/lantern.ts");
 var backpack_1 = __webpack_require__(/*! ./item/backpack */ "./src/item/backpack.ts");
-var heart_1 = __webpack_require__(/*! ./item/heart */ "./src/item/heart.ts");
 var OPEN_TIME = 100; // milliseconds
 var FILL_COLOR = "#5a595b";
 var OUTLINE_COLOR = "#292c36";
@@ -10757,17 +10757,10 @@ var Inventory = /** @class */ (function () {
             }
             _this.addItem(i);
         };
-        a(new dagger_1.Dagger({ game: this.game }, 0, 0));
-        a(new coal_1.Coal({ game: this.game }, 0, 0));
-        a(new coal_1.Coal({ game: this.game }, 0, 0));
-        a(new coal_1.Coal({ game: this.game }, 0, 0));
-        a(new coal_1.Coal({ game: this.game }, 0, 0));
-        a(new coal_1.Coal({ game: this.game }, 0, 0));
-        a(new lantern_1.Lantern({ game: this.game }, 0, 0));
-        a(new candle_1.Candle({ game: this.game }, 0, 0));
-        a(new backpack_1.Backpack({ game: this.game }, 0, 0));
-        a(new heart_1.Heart({ game: this.game }, 0, 0));
-        a(new armor_1.Armor({ game: this.game }, 0, 0));
+        var startingInv = [dagger_1.Dagger, coal_1.Coal, lantern_1.Lantern, key_1.Key, backpack_1.Backpack];
+        startingInv.forEach(function (item) {
+            a(new item({ game: _this.game }, 0, 0));
+        });
     }
     return Inventory;
 }());
@@ -10990,13 +10983,13 @@ var Candle = /** @class */ (function (_super) {
         _this.tickInInventory = function () {
             if (_this.fuel <= 0) {
                 _this.wielder.game.pushMessage("Your candle burns out.");
-                _this.wielder.inventory.subtractItemCount(_this);
+                _this.wielder.inventory.removeItem(_this);
             }
-            if (_this.ignite()) {
-                _this.fuel -= 1;
+            else if (_this.ignite()) {
+                _this.fuel--;
                 _this.wielder.sightRadius = Math.min(_this.fuel / 5 + 2, 4);
             }
-            console.log("fuel:" + _this.fuel);
+            console.log("fuel: ".concat(_this.fuel));
         };
         _this.coEquippable = function (other) {
             return !(other instanceof Candle ||
@@ -12597,72 +12590,78 @@ var Map = /** @class */ (function () {
     function Map(game) {
         var _this = this;
         this.draw = function (delta) {
+            _this.setInitialCanvasSettings();
+            _this.translateCanvas();
+            _this.drawRooms();
+            _this.resetCanvasTransform();
+        };
+        this.setInitialCanvasSettings = function () {
             var s = 2;
             if (gameConstants_1.GameConstants.ALPHA_ENABLED)
-                game_1.Game.ctx.globalAlpha = .2;
+                game_1.Game.ctx.globalAlpha = 0.2;
             game_1.Game.ctx.fillStyle = "#006A6E";
             var x = game_1.Game.ctx.globalCompositeOperation;
             game_1.Game.ctx.globalCompositeOperation = "screen";
             game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
             game_1.Game.ctx.globalCompositeOperation = x;
+        };
+        this.translateCanvas = function () {
             game_1.Game.ctx.translate(0.75 * gameConstants_1.GameConstants.WIDTH -
                 _this.game.level.roomX -
                 Math.floor(0.5 * _this.game.level.width) +
                 20, 0.25 * gameConstants_1.GameConstants.HEIGHT -
                 _this.game.level.roomY -
                 Math.floor(0.5 * _this.game.level.height));
+        };
+        this.drawRooms = function () {
             game_1.Game.ctx.globalAlpha = 1;
             for (var _i = 0, _a = _this.game.rooms; _i < _a.length; _i++) {
                 var level = _a[_i];
                 if (_this.game.level.mapGroup === level.mapGroup && level.entered) {
-                    game_1.Game.ctx.fillStyle = "#5A5A5A";
-                    game_1.Game.ctx.fillRect(level.roomX * s + 0, level.roomY * s + 0, level.width * s - 0, level.height * s - 0);
-                    if (level.type === room_1.RoomType.UPLADDER)
-                        game_1.Game.ctx.fillStyle = "#101460";
-                    if (level.type === room_1.RoomType.DOWNLADDER)
-                        game_1.Game.ctx.fillStyle = "#601410";
-                    game_1.Game.ctx.fillStyle = "black";
-                    game_1.Game.ctx.fillRect(level.roomX * s + 1, level.roomY * s + 1, level.width * s - 2, level.height * s - 2);
-                    for (var _b = 0, _c = level.walls; _b < _c.length; _b++) {
-                        var wall = _c[_b];
-                        game_1.Game.ctx.fillStyle = "#404040";
-                        game_1.Game.ctx.fillRect(wall.x * s, wall.y * s, 1 * s, 1 * s);
-                    }
-                    for (var _d = 0, _e = level.doors; _d < _e.length; _d++) {
-                        var door = _e[_d];
-                        if (door.opened === false)
-                            game_1.Game.ctx.fillStyle = "#5A5A5A";
-                        if (door.opened === true)
-                            (game_1.Game.ctx.fillStyle = "black"),
-                                game_1.Game.ctx.fillRect(door.x * s, door.y * s, 1 * s, 1 * s);
-                    }
-                    for (var _f = 0, _g = level.entities; _f < _g.length; _f++) {
-                        var enemy = _g[_f];
-                        if (enemy.entityType === entity_1.EntityType.Enemy) {
-                            game_1.Game.ctx.fillStyle = "yellow";
-                        }
-                        if (enemy.entityType === entity_1.EntityType.Prop) {
-                            game_1.Game.ctx.fillStyle = "#847e87";
-                        }
-                        if (enemy.entityType === entity_1.EntityType.Resource) {
-                            game_1.Game.ctx.fillStyle = "#5a595b";
-                        }
-                        if (enemy.entityType === entity_1.EntityType.Friendly) {
-                            game_1.Game.ctx.fillStyle = "cyan";
-                        }
-                        game_1.Game.ctx.fillRect(enemy.x * s, enemy.y * s, 1 * s, 1 * s);
-                    }
-                    for (var _h = 0, _j = level.items; _h < _j.length; _h++) {
-                        var item = _j[_h];
-                        var x_1 = item.x;
-                        var y = item.y;
-                        game_1.Game.ctx.fillStyle = "#ac3232";
-                        if (!item.pickedUp) {
-                            game_1.Game.ctx.fillRect(item.x * s, item.y * s, 1 * s, 1 * s);
-                        }
-                    }
+                    _this.drawRoom(level);
                 }
             }
+        };
+        this.drawRoom = function (level) {
+            _this.drawRoomOutline(level);
+            _this.drawRoomWalls(level);
+            _this.drawRoomDoors(level);
+            _this.drawRoomEntities(level);
+            _this.drawRoomItems(level);
+            _this.drawRoomPlayers();
+        };
+        this.drawRoomOutline = function (level) {
+            var s = 2;
+            game_1.Game.ctx.fillStyle = "#5A5A5A";
+            game_1.Game.ctx.fillRect(level.roomX * s + 0, level.roomY * s + 0, level.width * s - 0, level.height * s - 0);
+            if (level.type === room_1.RoomType.UPLADDER)
+                game_1.Game.ctx.fillStyle = "#101460";
+            if (level.type === room_1.RoomType.DOWNLADDER)
+                game_1.Game.ctx.fillStyle = "#601410";
+            game_1.Game.ctx.fillStyle = "black";
+            game_1.Game.ctx.fillRect(level.roomX * s + 1, level.roomY * s + 1, level.width * s - 2, level.height * s - 2);
+        };
+        this.drawRoomWalls = function (level) {
+            var s = 2;
+            for (var _i = 0, _a = level.walls; _i < _a.length; _i++) {
+                var wall = _a[_i];
+                game_1.Game.ctx.fillStyle = "#404040";
+                game_1.Game.ctx.fillRect(wall.x * s, wall.y * s, 1 * s, 1 * s);
+            }
+        };
+        this.drawRoomDoors = function (level) {
+            var s = 2;
+            for (var _i = 0, _a = level.doors; _i < _a.length; _i++) {
+                var door = _a[_i];
+                if (door.opened === false)
+                    game_1.Game.ctx.fillStyle = "#5A5A5A";
+                if (door.opened === true)
+                    (game_1.Game.ctx.fillStyle = "black"),
+                        game_1.Game.ctx.fillRect(door.x * s, door.y * s, 1 * s, 1 * s);
+            }
+        };
+        this.drawRoomPlayers = function () {
+            var s = 2;
             for (var i in _this.game.players) {
                 game_1.Game.ctx.fillStyle = "white";
                 if (_this.game.rooms[_this.game.players[i].levelID].mapGroup ===
@@ -12670,6 +12669,42 @@ var Map = /** @class */ (function () {
                     game_1.Game.ctx.fillRect(_this.game.players[i].x * s, _this.game.players[i].y * s, 1 * s, 1 * s);
                 }
             }
+        };
+        this.drawRoomEntities = function (level) {
+            var s = 2;
+            for (var _i = 0, _a = level.entities; _i < _a.length; _i++) {
+                var enemy = _a[_i];
+                _this.setEntityColor(enemy);
+                game_1.Game.ctx.fillRect(enemy.x * s, enemy.y * s, 1 * s, 1 * s);
+            }
+        };
+        this.setEntityColor = function (enemy) {
+            if (enemy.entityType === entity_1.EntityType.ENEMY) {
+                game_1.Game.ctx.fillStyle = "yellow";
+            }
+            if (enemy.entityType === entity_1.EntityType.PROP) {
+                game_1.Game.ctx.fillStyle = "#847e87";
+            }
+            if (enemy.entityType === entity_1.EntityType.RESOURCE) {
+                game_1.Game.ctx.fillStyle = "#5a595b";
+            }
+            if (enemy.entityType === entity_1.EntityType.FRIENDLY) {
+                game_1.Game.ctx.fillStyle = "cyan";
+            }
+        };
+        this.drawRoomItems = function (level) {
+            var s = 2;
+            for (var _i = 0, _a = level.items; _i < _a.length; _i++) {
+                var item = _a[_i];
+                var x = item.x;
+                var y = item.y;
+                game_1.Game.ctx.fillStyle = "#ac3232";
+                if (!item.pickedUp) {
+                    game_1.Game.ctx.fillRect(item.x * s, item.y * s, 1 * s, 1 * s);
+                }
+            }
+        };
+        this.resetCanvasTransform = function () {
             game_1.Game.ctx.setTransform(1, 0, 0, 1, 0, 0);
         };
         this.game = game;
@@ -13837,7 +13872,6 @@ var spear_1 = __webpack_require__(/*! ./weapon/spear */ "./src/weapon/spear.ts")
 var player_1 = __webpack_require__(/*! ./player */ "./src/player.ts");
 var slimeEnemy_1 = __webpack_require__(/*! ./entity/slimeEnemy */ "./src/entity/slimeEnemy.ts");
 var zombieEnemy_1 = __webpack_require__(/*! ./entity/zombieEnemy */ "./src/entity/zombieEnemy.ts");
-var bigSkullEnemy_1 = __webpack_require__(/*! ./entity/bigSkullEnemy */ "./src/entity/bigSkullEnemy.ts");
 var random_1 = __webpack_require__(/*! ./random */ "./src/random.ts");
 var lantern_1 = __webpack_require__(/*! ./item/lantern */ "./src/item/lantern.ts");
 var dualdagger_1 = __webpack_require__(/*! ./weapon/dualdagger */ "./src/weapon/dualdagger.ts");
@@ -14149,7 +14183,7 @@ var Room = /** @class */ (function () {
             if (_this.type === RoomType.KEYROOM)
                 t = door_1.DoorType.LOCKEDDOOR;
             if (x === _this.roomX) {
-                d = new door_1.Door(_this, _this.game, x, y, 1, t); //last argument, enum 0 is for locked
+                d = new door_1.Door(_this, _this.game, x, y, 1, t);
                 _this.roomArray[x + 1][y] = new spawnfloor_1.SpawnFloor(_this, x + 1, y);
             }
             else if (x === _this.roomX + _this.width - 1) {
@@ -14703,15 +14737,21 @@ var Room = /** @class */ (function () {
             this.roomArray[x][y] = new spike_1.Spike(this, x, y);
         }
     };
+    // Function to add enemies to the room
     Room.prototype.addEnemies = function (numEnemies, rand) {
         var _this = this;
+        // Get all empty tiles in the room
         var tiles = this.getEmptyTiles();
         var _loop_2 = function (i) {
+            // Randomly select a tile and remove it from the list
             var t = tiles.splice(game_1.Game.rand(0, tiles.length - 1, rand), 1)[0];
+            // If there are no more tiles, return
             if (tiles.length == 0)
                 return { value: void 0 };
+            // Get the x and y coordinates of the selected tile
             var x = t.x;
             var y = t.y;
+            // Define the enemy tables for each depth level
             var tables = {
                 0: [1, 2, 3, 3, 4],
                 1: [1, 1, 3, 3, 3, 2, 2],
@@ -14722,14 +14762,19 @@ var Room = /** @class */ (function () {
                 6: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
                 7: [1, 2, 3, 4, 5, 6, 7],
             };
+            // Define the maximum depth level
             var max_depth_table = 7;
+            // Get the current depth level, capped at the maximum
             var d = Math.min(this_1.depth, max_depth_table);
+            // If there is a table for the current depth level
             if (tables[d] && tables[d].length > 0) {
+                // Function to add an enemy to the room
                 var addEnemy = function (enemy) {
                     var _loop_3 = function (xx) {
                         var _loop_4 = function (yy) {
                             if (!_this.getEmptyTiles().some(function (tt) { return tt.x === x + xx && tt.y === y + yy; })) {
-                                numEnemies++; // extra loop iteration since we're throwing out this point
+                                // If it does, increment the enemy count and return false
+                                numEnemies++;
                                 return { value: false };
                             }
                         };
@@ -14739,16 +14784,19 @@ var Room = /** @class */ (function () {
                                 return state_3;
                         }
                     };
-                    // adds an enemy if it doesn't overlap any other enemies
+                    // Check if the enemy overlaps with any other enemies
                     for (var xx = 0; xx < enemy.w; xx++) {
                         var state_2 = _loop_3(xx);
                         if (typeof state_2 === "object")
                             return state_2.value;
                     }
+                    // If it doesn't, add the enemy to the room and return true
                     _this.entities.push(enemy);
                     return true;
                 };
+                // Randomly select an enemy type from the table
                 var type = game_1.Game.randTable(tables[d], rand);
+                // Add the selected enemy type to the room
                 switch (type) {
                     case 1:
                         addEnemy(new slimeEnemy_1.SlimeEnemy(this_1, this_1.game, x, y, rand));
@@ -14777,20 +14825,25 @@ var Room = /** @class */ (function () {
                     case 9:
                         addEnemy(new armoredzombieEnemy_1.ArmoredzombieEnemy(this_1, this_1.game, x, y, rand));
                         break;
-                    case 10:
-                        if (addEnemy(new bigSkullEnemy_1.BigSkullEnemy(this_1, this_1.game, x, y, rand))) {
-                            // clear out some space
-                            for (var xx = 0; xx < 2; xx++) {
-                                for (var yy = 0; yy < 2; yy++) {
-                                    this_1.roomArray[x + xx][y + yy] = new floor_1.Floor(this_1, x + xx, y + yy); // remove any walls
-                                }
-                            }
+                    /*case 10:
+                      if (addEnemy(new BigSkullEnemy(this, this.game, x, y, rand))) {
+                        // clear out some space
+                        for (let xx = 0; xx < 2; xx++) {
+                          for (let yy = 0; yy < 2; yy++) {
+                            this.roomArray[x + xx][y + yy] = new Floor(
+                              this,
+                              x + xx,
+                              y + yy
+                            ); // remove any walls
+                          }
                         }
-                        break;
+                      }
+                      break;/=*/
                 }
             }
         };
         var this_1 = this;
+        // Loop through the number of enemies to be added
         for (var i = 0; i < numEnemies; i++) {
             var state_1 = _loop_2(i);
             if (typeof state_1 === "object")
@@ -15463,7 +15516,7 @@ var Door = /** @class */ (function (_super) {
                 return false;
             }
             if (_this.DoorType === DoorType.GUARDEDDOOR) {
-                var inRoom = _this.game.level.entities.filter(function (enemy) { return enemy.entityType === entity_1.EntityType.Enemy; });
+                var inRoom = _this.game.level.entities.filter(function (enemy) { return enemy.entityType === entity_1.EntityType.ENEMY; });
                 if (inRoom.length === 0) {
                     _this.game.pushMessage("The foes have been slain and the door allows you passage.");
                     return true;

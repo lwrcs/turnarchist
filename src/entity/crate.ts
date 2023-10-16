@@ -16,7 +16,7 @@ export class Crate extends Entity {
     this.tileY = 0;
     this.hasShadow = false;
     this.pushable = true;
-    this.entityType = EntityType.Prop
+    this.entityType = EntityType.PROP
   }
 
   kill = () => {
