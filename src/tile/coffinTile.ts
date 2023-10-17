@@ -5,8 +5,8 @@ import { Tile } from "./tile";
 export class CoffinTile extends Tile {
   subTileY: number; // each coffin is 1x2, this is the sub-tile coordinate
 
-  constructor(level: Room, x: number, y: number, subTileY: number) {
-    super(level, x, y);
+  constructor(room: Room, x: number, y: number, subTileY: number) {
+    super(room, x, y);
     this.subTileY = subTileY;
   }
 
@@ -28,7 +28,7 @@ export class CoffinTile extends Tile {
         this.y - 1,
         1,
         1,
-        this.level.shadeColor,
+        this.room.shadeColor,
         this.shadeAmount()
       );
       Game.drawTile(
@@ -40,7 +40,7 @@ export class CoffinTile extends Tile {
         this.y - 1,
         1,
         1,
-        this.level.shadeColor,
+        this.room.shadeColor,
         this.shadeAmount()
       );
       Game.drawTile(
@@ -52,7 +52,7 @@ export class CoffinTile extends Tile {
         this.y - 1,
         1,
         1,
-        this.level.shadeColor,
+        this.room.shadeColor,
         this.shadeAmount()
       );
       Game.drawTile(
@@ -64,10 +64,10 @@ export class CoffinTile extends Tile {
         this.y,
         1,
         1,
-        this.level.shadeColor,
+        this.room.shadeColor,
         this.shadeAmount()
       );
-      Game.drawTile(1, 6, 1, 1, this.x, this.y, 1, 1, this.level.shadeColor, this.shadeAmount());
+      Game.drawTile(1, 6, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
       Game.drawTile(
         2,
         6,
@@ -77,7 +77,7 @@ export class CoffinTile extends Tile {
         this.y,
         1,
         1,
-        this.level.shadeColor,
+        this.room.shadeColor,
         this.shadeAmount()
       );
     } else {
@@ -90,10 +90,10 @@ export class CoffinTile extends Tile {
         this.y,
         1,
         1,
-        this.level.shadeColor,
+        this.room.shadeColor,
         this.shadeAmount()
       );
-      Game.drawTile(1, 7, 1, 1, this.x, this.y, 1, 1, this.level.shadeColor, this.shadeAmount());
+      Game.drawTile(1, 7, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
       Game.drawTile(
         2,
         7,
@@ -103,7 +103,7 @@ export class CoffinTile extends Tile {
         this.y,
         1,
         1,
-        this.level.shadeColor,
+        this.room.shadeColor,
         this.shadeAmount()
       );
     }

@@ -13,8 +13,8 @@ export class Button extends Tile {
   turnsSincePressed: number;
   linkedDoor: InsideLevelDoor;
 
-  constructor(level: Room, x: number, y: number, linkedDoor: InsideLevelDoor) {
-    super(level, x, y);
+  constructor(room: Room, x: number, y: number, linkedDoor: InsideLevelDoor) {
+    super(room, x, y);
     this.w = 1;
     this.h = 1;
 
@@ -44,16 +44,16 @@ export class Button extends Tile {
 
   tickEnd = () => {
     this.unpress();
-    for (const i in this.level.game.players) {
-      if (this.level.game.players[i].x === this.x && this.level.game.players[i].y === this.y) this.press();
+    for (const i in this.room.game.players) {
+      if (this.room.game.players[i].x === this.x && this.room.game.players[i].y === this.y) this.press();
     }
-    for (const e of this.level.entities) {
+    for (const e of this.room.entities) {
       if (e.x === this.x && e.y === this.y) this.press();
     }
   };
 
   draw = (delta: number) => {
-    Game.drawTile(1, 0, 1, 1, this.x, this.y, 1, 1, this.level.shadeColor, this.shadeAmount());
+    Game.drawTile(1, 0, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
     if (this.pressed)
       Game.drawTile(
         18,
@@ -64,7 +64,7 @@ export class Button extends Tile {
         this.y,
         this.w,
         this.h,
-        this.level.shadeColor,
+        this.room.shadeColor,
         this.shadeAmount()
       );
     else
@@ -77,7 +77,7 @@ export class Button extends Tile {
         this.y,
         this.w,
         this.h,
-        this.level.shadeColor,
+        this.room.shadeColor,
         this.shadeAmount()
       );
   };

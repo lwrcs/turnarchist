@@ -63,6 +63,6 @@ export class Coin extends Item {
     }
   };
   pickupSound = () => {
-    if (this.level === this.level.game.level) Sound.pickupCoin();
+    if (this.level === this.level.game.room) Sound.pickupCoin();
   };
 }

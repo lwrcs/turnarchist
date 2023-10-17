@@ -58,7 +58,7 @@ export class Spawner extends Entity {
       }
       this.tileX = 6;
       if (this.ticks % 8 === 0) {
-        const positions = this.level
+        const positions = this.room
           .getEmptyTiles()
           .filter(
             (t) => Math.abs(t.x - this.x) <= 1 && Math.abs(t.y - this.y) <= 1
@@ -72,7 +72,7 @@ export class Spawner extends Entity {
           switch (this.enemySpawnType) {
             case 1:
               spawned = new KnightEnemy(
-                this.level,
+                this.room,
                 this.game,
                 position.x,
                 position.y,
@@ -81,7 +81,7 @@ export class Spawner extends Entity {
               break;
             case 2:
               spawned = new SkullEnemy(
-                this.level,
+                this.room,
                 this.game,
                 position.x,
                 position.y,
@@ -90,7 +90,7 @@ export class Spawner extends Entity {
               break;
             case 3:
               spawned = new WizardEnemy(
-                this.level,
+                this.room,
                 this.game,
                 position.x,
                 position.y,
@@ -98,10 +98,10 @@ export class Spawner extends Entity {
               );
               break;
           }
-          this.level.projectiles.push(
-            new EnemySpawnAnimation(this.level, spawned, position.x, position.y)
+          this.room.projectiles.push(
+            new EnemySpawnAnimation(this.room, spawned, position.x, position.y)
           );
-          this.level.hitwarnings.push(
+          this.room.hitwarnings.push(
             new HitWarning(this.game, position.x, position.y)
           );
         }
@@ -111,6 +111,6 @@ export class Spawner extends Entity {
   };
 
   dropLoot = () => {
-    this.level.items.push(new BlueGem(this.level, this.x, this.y));
+    this.room.items.push(new BlueGem(this.room, this.x, this.y));
   };
 }

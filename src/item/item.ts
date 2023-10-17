@@ -58,7 +58,7 @@ export class Item extends Drawable {
 
   // Function to play sound when item is picked up
   pickupSound = () => {
-    if (this.level === this.level.game.level) Sound.genericPickup();
+    if (this.level === this.level.game.room) Sound.genericPickup();
   };
 
   // Empty function to be called when item is dropped, to be overridden by subclasses

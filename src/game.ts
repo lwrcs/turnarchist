@@ -13,6 +13,7 @@ import { TextBox } from "./textbox";
 import { createGameState, GameState, loadGameState } from "./gameState";
 import { Random } from "./random";
 import { DoorDir } from "./tile/door";
+import { Level } from "./level";
 
 export enum LevelState {
   IN_LEVEL,
@@ -56,7 +57,7 @@ export class Game {
   static ctx: CanvasRenderingContext2D;
   static shade_canvases: Record<string, HTMLCanvasElement>;
   prevLevel: Room; // for transitions
-  level: Room;
+  room: Room;
   rooms: Array<Room>;
   levelgen: LevelGenerator;
   localPlayerID: string;
@@ -121,7 +122,8 @@ export class Game {
     window.addEventListener("load", () => {
       this.socket = io(ServerAddress.address, { transports: ["websocket"] });
       this.socket.on("new connect", () => {
-        if (this.menuState !== MenuState.LOADING) //what sets the menu state??
+        if (this.menuState !== MenuState.LOADING)
+          //what sets the menu state??
           this.loginMessage = "disconnected";
         this.menuState = MenuState.LOGIN_USERNAME;
       });
@@ -523,7 +525,7 @@ export class Game {
     player.levelID = this.rooms.indexOf(newLevel);
     if (this.players[this.localPlayerID] === player) {
       //this.level.exitLevel();
-      this.level = newLevel;
+      this.room = newLevel;
     }
     newLevel.enterLevel(player);
   };
@@ -531,7 +533,12 @@ export class Game {
   changeLevelThroughLadder = (player: Player, ladder: any) => {
     player.levelID = this.rooms.indexOf(ladder.linkedLevel);
 
-    if (ladder instanceof DownLadder) ladder.generate();
+    if (ladder instanceof DownLadder) {
+      player.map.saveOldMap();
+      player.map.saveMapData();
+      ladder.generate();
+      //let newLevel = new Level(1);
+    }
 
     if (this.players[this.localPlayerID] === player) {
       this.levelState = LevelState.TRANSITIONING_LADDER;
@@ -543,7 +550,7 @@ export class Game {
   };
 
   changeLevelThroughDoor = (player: Player, door: any, side?: number) => {
-    player.levelID = this.rooms.indexOf(door.level);
+    player.levelID = this.rooms.indexOf(door.room);
 
     if (this.players[this.localPlayerID] === player) {
       this.levelState = LevelState.TRANSITIONING;
@@ -552,10 +559,10 @@ export class Game {
       let oldX = this.players[this.localPlayerID].x;
       let oldY = this.players[this.localPlayerID].y;
 
-      this.prevLevel = this.level;
+      this.prevLevel = this.room;
       //this.level.exitLevel();
-      this.level = door.level;
-      door.level.enterLevelThroughDoor(player, door, side);
+      this.room = door.room;
+      door.room.enterLevelThroughDoor(player, door, side);
 
       this.transitionX =
         (this.players[this.localPlayerID].x - oldX) * GameConstants.TILESIZE;
@@ -573,7 +580,7 @@ export class Game {
       else if (door instanceof Door && door.doorDir === DoorDir.South)
         this.upwardTransition = true;
     } else {
-      door.level.enterLevelThroughDoor(player, door, side);
+      door.room.enterLevelThroughDoor(player, door, side);
     }
   };
 
@@ -793,7 +800,7 @@ export class Game {
     Game.ctx.globalAlpha = 1;
     Game.ctx.fillStyle = "black";
     if (this.menuState === MenuState.IN_GAME)
-      Game.ctx.fillStyle = this.level.shadeColor;
+      Game.ctx.fillStyle = this.room.shadeColor;
     Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
 
     if (this.menuState === MenuState.LOADING) {
@@ -989,16 +996,16 @@ export class Game {
         Game.ctx.translate(-levelOffsetX, -levelOffsetY);
 
         Game.ctx.translate(newLevelOffsetX, newLevelOffsetY);
-        this.level.draw(delta);
-        this.level.drawEntities(delta, true);
+        this.room.draw(delta);
+        this.room.drawEntities(delta, true);
         for (
-          let x = this.level.roomX - 1;
-          x <= this.level.roomX + this.level.width;
+          let x = this.room.roomX - 1;
+          x <= this.room.roomX + this.room.width;
           x++
         ) {
           for (
-            let y = this.level.roomY - 1;
-            y <= this.level.roomY + this.level.height;
+            let y = this.room.roomY - 1;
+            y <= this.room.roomY + this.room.height;
             y++
           ) {
             Game.drawFX(ditherFrame, 10, 1, 1, x, y, 1, 1);
@@ -1011,8 +1018,8 @@ export class Game {
         Game.ctx.translate(-playerOffsetX, -playerOffsetY);
 
         Game.ctx.translate(newLevelOffsetX, newLevelOffsetY);
-        this.level.drawShade(delta);
-        this.level.drawOverShade(delta);
+        this.room.drawShade(delta);
+        this.room.drawOverShade(delta);
         Game.ctx.translate(-newLevelOffsetX, -newLevelOffsetY);
 
         Game.ctx.translate(
@@ -1046,19 +1053,19 @@ export class Game {
         );
 
         if (ditherFrame < 7) {
-          this.level.draw(delta);
-          this.level.drawEntities(delta);
-          this.level.drawShade(delta);
-          this.level.drawOverShade(delta);
+          this.room.draw(delta);
+          this.room.drawEntities(delta);
+          this.room.drawShade(delta);
+          this.room.drawOverShade(delta);
 
           for (
-            let x = this.level.roomX - 1;
-            x <= this.level.roomX + this.level.width;
+            let x = this.room.roomX - 1;
+            x <= this.room.roomX + this.room.width;
             x++
           ) {
             for (
-              let y = this.level.roomY - 1;
-              y <= this.level.roomY + this.level.height;
+              let y = this.room.roomY - 1;
+              y <= this.room.roomY + this.room.height;
               y++
             ) {
               Game.drawFX(7 - ditherFrame, 10, 1, 1, x, y, 1, 1);
@@ -1066,26 +1073,26 @@ export class Game {
           }
         } else if (ditherFrame >= 7 + deadFrames) {
           if (this.transitioningLadder) {
-            this.prevLevel = this.level;
-            this.level.exitLevel();
-            this.level = this.transitioningLadder.linkedLevel;
+            this.prevLevel = this.room;
+            this.room.exitLevel();
+            this.room = this.transitioningLadder.linkedLevel;
 
-            this.level.enterLevel(this.players[this.localPlayerID]);
+            this.room.enterLevel(this.players[this.localPlayerID]);
             this.transitioningLadder = null;
           }
 
-          this.level.draw(delta);
-          this.level.drawEntities(delta);
-          this.level.drawShade(delta);
-          this.level.drawOverShade(delta);
+          this.room.draw(delta);
+          this.room.drawEntities(delta);
+          this.room.drawShade(delta);
+          this.room.drawOverShade(delta);
           for (
-            let x = this.level.roomX - 1;
-            x <= this.level.roomX + this.level.width;
+            let x = this.room.roomX - 1;
+            x <= this.room.roomX + this.room.width;
             x++
           ) {
             for (
-              let y = this.level.roomY - 1;
-              y <= this.level.roomY + this.level.height;
+              let y = this.room.roomY - 1;
+              y <= this.room.roomY + this.room.height;
               y++
             ) {
               Game.drawFX(ditherFrame - (7 + deadFrames), 10, 1, 1, x, y, 1, 1);
@@ -1120,18 +1127,17 @@ export class Game {
         );
 
         Game.ctx.translate(-cameraX, -cameraY);
-        this.level.draw(delta);
-        this.level.drawEntities(delta);
-        this.level.drawShade(delta);
-        this.level.drawOverShade(delta);
+        this.room.draw(delta);
+        this.room.drawEntities(delta);
+        this.room.drawShade(delta);
+        this.room.drawOverShade(delta);
         this.players[this.localPlayerID].drawTopLayer(delta);
         Game.ctx.translate(cameraX, cameraY);
 
-        this.level.drawTopLayer(delta);
+        this.room.drawTopLayer(delta);
         this.players[this.localPlayerID].drawGUI(delta);
         for (const i in this.players) this.players[i].updateDrawXY(delta);
       }
-
       // draw chat
       let CHAT_X = 10;
       let CHAT_BOTTOM_Y = GameConstants.HEIGHT - Game.letter_height - 14;

@@ -27,7 +27,7 @@ export class Dagger extends Weapon {
       }
     }
     if (flag) {
-      if (this.wielder.game.rooms[this.wielder.levelID] === this.wielder.game.level) Sound.hit();
+      if (this.wielder.game.rooms[this.wielder.levelID] === this.wielder.game.room) Sound.hit();
       this.wielder.drawX = 0.5 * (this.wielder.x - newX);
       this.wielder.drawY = 0.5 * (this.wielder.y - newY);
       this.game.rooms[this.wielder.levelID].particles.push(new SlashParticle(newX, newY));

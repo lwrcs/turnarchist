@@ -140,7 +140,7 @@ export class Slingshot extends Weapon {
 
       if (
         this.wielder.game.rooms[this.wielder.levelID] ===
-        this.wielder.game.level
+        this.wielder.game.room
       )
         Sound.hit();
       this.wielder.drawX = 0.5 * (this.wielder.x - newX);

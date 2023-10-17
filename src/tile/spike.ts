@@ -8,6 +8,6 @@ export class Spike extends Tile {
   };
 
   draw = (delta: number) => {
-    Game.drawTile(11, 0, 1, 1, this.x, this.y, 1, 1, this.level.shadeColor, this.shadeAmount());
+    Game.drawTile(11, 0, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
   };
 }

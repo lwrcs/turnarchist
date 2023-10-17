@@ -28,34 +28,34 @@ export class Chest extends Entity {
 
     switch (drop) {
       case 1:
-        this.drop = new Heart(this.level, this.x, this.y);
+        this.drop = new Heart(this.room, this.x, this.y);
         break;
       case 2:
-        this.drop = new GreenGem(this.level, this.x, this.y);
+        this.drop = new GreenGem(this.room, this.x, this.y);
         break;
       case 3:
-        this.drop = new RedGem(this.level, this.x, this.y);
+        this.drop = new RedGem(this.room, this.x, this.y);
         break;
       case 4:
-        this.drop = new BlueGem(this.level, this.x, this.y);
+        this.drop = new BlueGem(this.room, this.x, this.y);
         break;
       case 5:
-        this.drop = new Key(this.level, this.x, this.y);
+        this.drop = new Key(this.room, this.x, this.y);
         break;
       case 6:
-        this.drop = new Armor(this.level, this.x, this.y);
+        this.drop = new Armor(this.room, this.x, this.y);
         break;
     }
   }
 
   kill = () => {
-    if (this.level === this.game.level) Sound.chest();
+    if (this.room === this.game.room) Sound.chest();
 
     this.dead = true;
 
-    GenericParticle.spawnCluster(this.level, this.x + 0.5, this.y + 0.5, "#fbf236");
+    GenericParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, "#fbf236");
 
-    this.level.items.push(this.drop);
+    this.room.items.push(this.drop);
   };
   killNoBones = () => {
     this.kill();
@@ -72,7 +72,7 @@ export class Chest extends Entity {
         this.y - 1 - this.drawY,
         1,
         2,
-        this.level.shadeColor,
+        this.room.shadeColor,
         this.shadeAmount()
       );
     }

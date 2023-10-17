@@ -10,8 +10,8 @@ export class UpLadder extends Tile {
   game: Game;
   isRope = false;
 
-  constructor(level: Room, game: Game, x: number, y: number) {
-    super(level, x, y);
+  constructor(room: Room, game: Game, x: number, y: number) {
+    super(room, x, y);
     this.game = game;
   }
 
@@ -36,7 +36,7 @@ export class UpLadder extends Tile {
       this.y,
       1,
       1,
-      this.level.shadeColor,
+      this.room.shadeColor,
       this.shadeAmount()
     );
     if (!this.isRope)
@@ -49,7 +49,7 @@ export class UpLadder extends Tile {
         this.y - 1,
         1,
         1,
-        this.level.shadeColor,
+        this.room.shadeColor,
         this.shadeAmount()
       );
     Game.drawTile(
@@ -61,7 +61,7 @@ export class UpLadder extends Tile {
       this.y,
       1,
       1,
-      this.level.shadeColor,
+      this.room.shadeColor,
       this.shadeAmount()
     );
   };
@@ -77,7 +77,7 @@ export class UpLadder extends Tile {
         this.y - 1,
         1,
         1,
-        this.level.shadeColor,
+        this.room.shadeColor,
         this.shadeAmount()
       );
   };

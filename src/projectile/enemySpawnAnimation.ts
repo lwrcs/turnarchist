@@ -11,35 +11,35 @@ import { HitWarning } from "../hitWarning";
 export class EnemySpawnAnimation extends Projectile {
   readonly ANIM_COUNT = 3;
 
-  level: Room;
+  room: Room;
   enemy: Entity;
   frame: number;
 
-  constructor(level: Room, enemy: Entity, x: number, y: number) {
+  constructor(room: Room, enemy: Entity, x: number, y: number) {
     super(x, y);
-    this.level = level;
+    this.room = room;
     this.enemy = enemy;
     this.frame = 0;
   }
 
   tick = () => {
-    if (this.level === this.level.game.level) Sound.enemySpawn();
+    if (this.room === this.room.game.room) Sound.enemySpawn();
 
     let hitPlayer = false;
-    for (const i in this.level.game.players) {
-      if (this.level.game.players[i].x === this.x && this.level.game.players[i].y === this.y) {
-        this.level.game.players[i].hurt(0.5, "reaper");
+    for (const i in this.room.game.players) {
+      if (this.room.game.players[i].x === this.x && this.room.game.players[i].y === this.y) {
+        this.room.game.players[i].hurt(0.5, "reaper");
         hitPlayer = true;
       }
     }
     if (!hitPlayer) {
       this.dead = true;
       this.enemy.skipNextTurns = 1;
-      this.level.entities.push(this.enemy);
-      GenericParticle.spawnCluster(this.level, this.x + 0.5, this.y + 0.5, "#ffffff");
-      GenericParticle.spawnCluster(this.level, this.x + 0.5, this.y + 0.5, "#ffffff");
+      this.room.entities.push(this.enemy);
+      GenericParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, "#ffffff");
+      GenericParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, "#ffffff");
     } else {
-      this.level.hitwarnings.push(new HitWarning(this.level.game, this.x, this.y));
+      this.room.hitwarnings.push(new HitWarning(this.room.game, this.x, this.y));
     }
   };
 
@@ -62,9 +62,9 @@ export class EnemySpawnAnimation extends Projectile {
       );
     }
     if (Math.floor(this.frame * 4) % 2 == 0)
-      this.level.particles.push(
+      this.room.particles.push(
         new GenericParticle(
-          this.level,
+          this.room,
           this.x + 0.5 + Math.random() * 0.05 - 0.025,
           this.y + Math.random() * 0.05 - 0.025,
           0.25,

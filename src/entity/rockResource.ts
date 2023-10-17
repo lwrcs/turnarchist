@@ -12,7 +12,7 @@ import { Resource } from "./resource";
 export class Rock extends Resource {
   constructor(level: Room, game: Game, x: number, y: number) {
     super(level, game, x, y);
-    this.level = level;
+    this.room = level;
     this.health = 2;
     this.tileX = 8;
     this.tileY = 2;
@@ -21,19 +21,19 @@ export class Rock extends Resource {
   }
 
   hurtCallback = () => {
-    GenericParticle.spawnCluster(this.level, this.x + 0.5, this.y + 0.5, "#ffffff");
+    GenericParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, "#ffffff");
 
-    if (this.level === this.game.level) Sound.mine();
+    if (this.room === this.game.room) Sound.mine();
   };
 
   kill = () => {
-    if (this.level === this.game.level) Sound.breakRock();
+    if (this.room === this.game.room) Sound.breakRock();
 
     this.dead = true;
 
-    GenericParticle.spawnCluster(this.level, this.x + 0.5, this.y + 0.5, "#9badb7");
+    GenericParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, "#9badb7");
 
-    this.level.items.push(new Stone(this.level, this.x, this.y));
+    this.room.items.push(new Stone(this.room, this.x, this.y));
   };
   killNoBones = () => {
     this.kill();
@@ -53,7 +53,7 @@ export class Rock extends Resource {
         this.y - 1 - this.drawY,
         1,
         2,
-        this.level.shadeColor,
+        this.room.shadeColor,
         this.shadeAmount()
       );
     }

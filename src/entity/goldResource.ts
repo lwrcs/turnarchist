@@ -21,17 +21,17 @@ export class GoldResource extends Resource {
   }
 
   hurtCallback = () => {
-    if (this.level === this.game.level) Sound.mine();
+    if (this.room === this.game.room) Sound.mine();
   };
 
   kill = () => {
-    if (this.level === this.game.level) Sound.breakRock();
+    if (this.room === this.game.room) Sound.breakRock();
 
     this.dead = true;
 
-    this.level.items.push(new Gold(this.level, this.x, this.y));
+    this.room.items.push(new Gold(this.room, this.x, this.y));
 
-    GenericParticle.spawnCluster(this.level, this.x + 0.5, this.y + 0.5, "#fbf236");
+    GenericParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, "#fbf236");
   };
   killNoBones = () => {
     this.kill();

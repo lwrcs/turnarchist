@@ -43,23 +43,23 @@ export class BigSkullEnemy extends Entity {
     if (drop) this.drops.push(drop);
     while (this.drops.length < 4) {
       let dropProb = rand();
-      if (dropProb < 0.005) this.drops.push(new Spear(this.level, 0, 0));
-      else if (dropProb < 0.04) this.drops.push(new RedGem(this.level, 0, 0));
-      else if (dropProb < 0.075) this.drops.push(new RedGem(this.level, 0, 0));
-      else if (dropProb < 0.1) this.drops.push(new RedGem(this.level, 0, 0));
-      else this.drops.push(new Coin(this.level, 0, 0));
+      if (dropProb < 0.005) this.drops.push(new Spear(this.room, 0, 0));
+      else if (dropProb < 0.04) this.drops.push(new RedGem(this.room, 0, 0));
+      else if (dropProb < 0.075) this.drops.push(new RedGem(this.room, 0, 0));
+      else if (dropProb < 0.1) this.drops.push(new RedGem(this.room, 0, 0));
+      else this.drops.push(new Coin(this.room, 0, 0));
     }
   }
 
   addHitWarnings = () => {
-    this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
-    this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y + 1));
-    this.level.hitwarnings.push(new HitWarning(this.game, this.x + 2, this.y));
-    this.level.hitwarnings.push(new HitWarning(this.game, this.x + 2, this.y + 1));
-    this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1));
-    this.level.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y - 1));
-    this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 2));
-    this.level.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y + 2));
+    this.room.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
+    this.room.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y + 1));
+    this.room.hitwarnings.push(new HitWarning(this.game, this.x + 2, this.y));
+    this.room.hitwarnings.push(new HitWarning(this.game, this.x + 2, this.y + 1));
+    this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1));
+    this.room.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y - 1));
+    this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 2));
+    this.room.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y + 2));
   };
 
   hit = (): number => {
@@ -79,14 +79,14 @@ export class BigSkullEnemy extends Entity {
     if (this.health <= 0) {
       this.kill();
     } else {
-      GenericParticle.spawnCluster(this.level, this.x + 1, this.y + 1, this.deathParticleColor);
+      GenericParticle.spawnCluster(this.room, this.x + 1, this.y + 1, this.deathParticleColor);
     }
   };
 
   killNoBones = () => {
     this.dead = true;
-    GenericParticle.spawnCluster(this.level, this.x + 1, this.y + 1, this.deathParticleColor);
-    this.level.particles.push(new DeathParticle(this.x + 0.5, this.y + 0.5));
+    GenericParticle.spawnCluster(this.room, this.x + 1, this.y + 1, this.deathParticleColor);
+    this.room.particles.push(new DeathParticle(this.x + 0.5, this.y + 0.5));
 
     this.dropLoot();
   };
@@ -121,7 +121,7 @@ export class BigSkullEnemy extends Entity {
           }
         }
         else if (this.seenPlayer) {
-          if (this.level.playerTicked === this.targetPlayer) {
+          if (this.room.playerTicked === this.targetPlayer) {
             this.alertTicks = Math.max(0, this.alertTicks - 1);
             let oldX = this.x;
             let oldY = this.y;
@@ -145,7 +145,7 @@ export class BigSkullEnemy extends Entity {
                 return player.x >= moveX && player.x < moveX + this.w && player.y >= moveY && player.y < moveY + this.h;
               };
               for (const i in this.game.players) {
-                if (this.game.rooms[this.game.players[i].levelID] === this.level && wouldHit(this.game.players[i], moveX, moveY)) {
+                if (this.game.rooms[this.game.players[i].levelID] === this.room && wouldHit(this.game.players[i], moveX, moveY)) {
                   this.game.players[i].hurt(this.hit(), "big skeleton");
                   this.drawX = 0.5 * (this.x - this.game.players[i].x);
                   this.drawY = 0.5 * (this.y - this.game.players[i].y);
@@ -243,7 +243,7 @@ export class BigSkullEnemy extends Entity {
           this.y - this.drawY,
           2,
           2,
-          this.level.shadeColor,
+          this.room.shadeColor,
           this.shadeAmount()
         );
       Game.drawMob(
@@ -255,7 +255,7 @@ export class BigSkullEnemy extends Entity {
         this.y - 2.5 - this.drawY,
         2,
         4,
-        this.level.shadeColor,
+        this.room.shadeColor,
         this.shadeAmount()
       );
     }
@@ -283,10 +283,10 @@ export class BigSkullEnemy extends Entity {
       { x: 1, y: 1 },
     ];
     for (let i = 0; i < this.drops.length; i++) {
-      this.drops[i].level = this.level;
+      this.drops[i].level = this.room;
       this.drops[i].x = this.x + dropOffsets[i].x;
       this.drops[i].y = this.y + dropOffsets[i].y;
-      this.level.items.push(this.drops[i]);
+      this.room.items.push(this.drops[i]);
     }
   };
 }

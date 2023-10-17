@@ -10,25 +10,26 @@ export class DownLadder extends Tile {
   game: Game;
   isRope = false;
 
-  constructor(level: Room, game: Game, x: number, y: number) {
-    super(level, x, y);
+  constructor(room: Room, game: Game, x: number, y: number) {
+    super(room, x, y);
     this.game = game;
     this.linkedLevel = null;
   }
 
   generate = () => {
+
     // called by Game during transition
     if (!this.linkedLevel) {
       this.linkedLevel = this.game.levelgen.generate(
         this.game,
-        this.level.depth + (this.isRope ? 0 : 1),
+        this.room.depth + (this.isRope ? 0 : 1),
         this.isRope
       );
       for (let x = this.linkedLevel.roomX; x < this.linkedLevel.roomX + this.linkedLevel.width; x++) {
         for (let y = this.linkedLevel.roomY; y < this.linkedLevel.roomY + this.linkedLevel.height; y++) {
           let tile = this.linkedLevel.roomArray[x][y];
           if (tile instanceof UpLadder && tile.isRope)
-            tile.linkedLevel = this.level;
+            tile.linkedLevel = this.room;
         }
       }
     }
@@ -39,7 +40,7 @@ export class DownLadder extends Tile {
     else {
       let allPlayersHere = true;
       for (const i in this.game.players) {
-        if (this.game.rooms[this.game.players[i].levelID] !== this.level || this.game.players[i].x !== this.x || this.game.players[i].y !== this.y) {
+        if (this.game.rooms[this.game.players[i].levelID] !== this.room || this.game.players[i].x !== this.x || this.game.players[i].y !== this.y) {
           allPlayersHere = false;
         }
       }
@@ -67,7 +68,7 @@ export class DownLadder extends Tile {
       this.y,
       1,
       1,
-      this.level.shadeColor,
+      this.room.shadeColor,
       this.shadeAmount()
     );
     Game.drawTile(
@@ -79,7 +80,7 @@ export class DownLadder extends Tile {
       this.y,
       1,
       1,
-      this.level.shadeColor,
+      this.room.shadeColor,
       this.shadeAmount()
     );
   };

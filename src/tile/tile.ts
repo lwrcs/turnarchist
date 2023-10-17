@@ -12,14 +12,14 @@ export enum SkinType {
 export class Tile extends Drawable {
   x: number;
   y: number;
-  level: Room;
+  room: Room;
   skin: SkinType;
   isDoor: boolean;
 
-  constructor(level: Room, x: number, y: number) {
+  constructor(room: Room, x: number, y: number) {
     super();
-    this.skin = level.skin;
-    this.level = level;
+    this.skin = room.skin;
+    this.room = room;
     this.x = x;
     this.y = y;
     this.drawableY = y;
@@ -31,7 +31,7 @@ export class Tile extends Drawable {
   };
 
   shadeAmount = () => {
-    return this.level.softVis[this.x][this.y];
+    return this.room.softVis[this.x][this.y];
   };
 
   isSolid = (): boolean => {

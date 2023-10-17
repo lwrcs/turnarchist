@@ -18,6 +18,7 @@ import { HitWarning } from "./hitWarning";
 import { Entity } from "./entity/entity";
 import { ZombieEnemy } from "./entity/zombieEnemy";
 import { Item } from "./item/item";
+import { PostProcessor } from "./postProcess";
 
 export enum PlayerDirection {
   DOWN = 0,
@@ -108,7 +109,7 @@ export class Player extends Drawable {
     this.defaultSightRadius = 6;
     this.sightRadius = this.defaultSightRadius;
 
-    this.map = new Map(this.game);
+    this.map = new Map(this.game, this);
     this.actionTab = new ActionTab(this.inventory, this.game);
     this.turnCount = 0
   }
@@ -301,7 +302,7 @@ export class Player extends Drawable {
           ) {
             if (e.destroyable) {
               e.kill();
-              if (this.game.rooms[this.levelID] === this.game.level)
+              if (this.game.rooms[this.levelID] === this.game.room)
                 Sound.hit();
               this.drawX = 0.5 * (this.x - e.x);
               this.drawY = 0.5 * (this.y - e.y);
@@ -313,7 +314,7 @@ export class Player extends Drawable {
               return;
             }
           } else {
-            if (this.game.rooms[this.levelID] === this.game.level)
+            if (this.game.rooms[this.levelID] === this.game.room)
               Sound.push();
             // here pushedEnemies may still be []
             for (const f of pushedEnemies) {
@@ -330,7 +331,7 @@ export class Player extends Drawable {
               enemyEnd
             ) {
               pushedEnemies[pushedEnemies.length - 1].killNoBones();
-              if (this.game.rooms[this.levelID] === this.game.level)
+              if (this.game.rooms[this.levelID] === this.game.room)
                 Sound.hit();
             }
             e.x += dx;
@@ -373,7 +374,7 @@ export class Player extends Drawable {
   };
 
   hurt = (damage: number, enemy: string) => {
-    if (this.game.rooms[this.levelID] === this.game.level) Sound.hurt();
+    if (this.game.rooms[this.levelID] === this.game.room) Sound.hurt();
 
     if (this.inventory.getArmor() && this.inventory.getArmor().health > 0) {
       this.inventory.getArmor().hurt(damage);
@@ -410,7 +411,7 @@ export class Player extends Drawable {
 
   move = (x: number, y: number) => {
     this.actionTab.setState(ActionState.MOVE);
-    if (this.game.rooms[this.levelID] === this.game.level)
+    if (this.game.rooms[this.levelID] === this.game.room)
       Sound.playerStoneFootstep();
 
     if (this.openVendingMachine) this.openVendingMachine.close();
@@ -546,12 +547,8 @@ export class Player extends Drawable {
         GameConstants.HEIGHT / 2 - Game.letter_height + 2
       );
     }
-    /*if ((Input.isDown(Input.M) || Input.isTapHold) && !this.game.chatOpen) {
-      this.tapHoldHandler();
-    }*/
+    PostProcessor.draw(delta)
     if (this.mapToggled === true) this.map.draw(delta);
-    //this.actionTab.draw(this, this.inventory);
-    //render the action tab
   };
 
   updateDrawXY = (delta: number) => {

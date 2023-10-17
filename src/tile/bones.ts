@@ -12,7 +12,7 @@ export class Bones extends Floor {
       this.y,
       1,
       1,
-      this.level.shadeColor,
+      this.room.shadeColor,
       this.shadeAmount()
     );
   };

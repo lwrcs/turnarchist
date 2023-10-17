@@ -6,9 +6,9 @@ import { LightSource } from "../lightSource";
 export class WallTorch extends Tile {
   frame: number;
 
-  constructor(level: Room, x: number, y: number) {
-    super(level, x, y);
-    this.level.lightSources.push(new LightSource(this.x + 0.5, this.y + 0.5, 3));
+  constructor(room: Room, x: number, y: number) {
+    super(room, x, y);
+    this.room.lightSources.push(new LightSource(this.x + 0.5, this.y + 0.5, 3));
     this.frame = Math.random() * 12;
   }
 
@@ -35,7 +35,7 @@ export class WallTorch extends Tile {
       this.y,
       1,
       1,
-      this.level.shadeColor,
+      this.room.shadeColor,
       this.shadeAmount()
     );
 
@@ -48,7 +48,7 @@ export class WallTorch extends Tile {
       this.y - 0.5,
       1,
       1,
-      this.level.shadeColor,
+      this.room.shadeColor,
       this.shadeAmount()
     );
 

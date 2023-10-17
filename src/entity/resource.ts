@@ -53,7 +53,7 @@ export class Resource extends Entity {
         this.y - 1 - this.drawY,
         1,
         2,
-        this.level.shadeColor,
+        this.room.shadeColor,
         this.shadeAmount()
       );
     }

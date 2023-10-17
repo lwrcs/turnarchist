@@ -47,8 +47,8 @@ export class WizardEnemy extends Entity {
 
     if (drop) this.drop = drop;
     else {
-      if (this.rand() < 0.02) this.drop = new BlueGem(this.level, this.x, this.y);
-      else this.drop = new Coin(this.level, this.x, this.y);
+      if (this.rand() < 0.02) this.drop = new BlueGem(this.room, this.x, this.y);
+      else this.drop = new Coin(this.room, this.x, this.y);
     }
   }
 
@@ -100,28 +100,28 @@ export class WizardEnemy extends Entity {
         this.alertTicks = Math.max(0, this.alertTicks - 1);
         switch (this.state) {
           case WizardState.attack:
-            if (this.level.getTile(this.x - 1, this.y) && !this.level.roomArray[this.x - 1][this.y].isSolid()) {
-              this.level.projectiles.push(new WizardFireball(this, this.x - 1, this.y));
-              if (this.level.getTile(this.x - 2, this.y) && !this.level.roomArray[this.x - 2][this.y].isSolid()) {
-                this.level.projectiles.push(new WizardFireball(this, this.x - 2, this.y));
+            if (this.room.getTile(this.x - 1, this.y) && !this.room.roomArray[this.x - 1][this.y].isSolid()) {
+              this.room.projectiles.push(new WizardFireball(this, this.x - 1, this.y));
+              if (this.room.getTile(this.x - 2, this.y) && !this.room.roomArray[this.x - 2][this.y].isSolid()) {
+                this.room.projectiles.push(new WizardFireball(this, this.x - 2, this.y));
               }
             }
-            if (this.level.getTile(this.x + 1, this.y) && !this.level.roomArray[this.x + 1][this.y].isSolid()) {
-              this.level.projectiles.push(new WizardFireball(this, this.x + 1, this.y));
-              if (this.level.getTile(this.x + 2, this.y) && !this.level.roomArray[this.x + 2][this.y].isSolid()) {
-                this.level.projectiles.push(new WizardFireball(this, this.x + 2, this.y));
+            if (this.room.getTile(this.x + 1, this.y) && !this.room.roomArray[this.x + 1][this.y].isSolid()) {
+              this.room.projectiles.push(new WizardFireball(this, this.x + 1, this.y));
+              if (this.room.getTile(this.x + 2, this.y) && !this.room.roomArray[this.x + 2][this.y].isSolid()) {
+                this.room.projectiles.push(new WizardFireball(this, this.x + 2, this.y));
               }
             }
-            if (this.level.getTile(this.x, this.y - 1) && !this.level.roomArray[this.x][this.y - 1].isSolid()) {
-              this.level.projectiles.push(new WizardFireball(this, this.x, this.y - 1));
-              if (this.level.getTile(this.x, this.y - 2) && !this.level.roomArray[this.x][this.y - 2].isSolid()) {
-                this.level.projectiles.push(new WizardFireball(this, this.x, this.y - 2));
+            if (this.room.getTile(this.x, this.y - 1) && !this.room.roomArray[this.x][this.y - 1].isSolid()) {
+              this.room.projectiles.push(new WizardFireball(this, this.x, this.y - 1));
+              if (this.room.getTile(this.x, this.y - 2) && !this.room.roomArray[this.x][this.y - 2].isSolid()) {
+                this.room.projectiles.push(new WizardFireball(this, this.x, this.y - 2));
               }
             }
-            if (this.level.getTile(this.x, this.y + 1) && !this.level.roomArray[this.x][this.y + 1].isSolid()) {
-              this.level.projectiles.push(new WizardFireball(this, this.x, this.y + 1));
-              if (this.level.getTile(this.x, this.y + 2) && !this.level.roomArray[this.x][this.y + 2].isSolid()) {
-                this.level.projectiles.push(new WizardFireball(this, this.x, this.y + 2));
+            if (this.room.getTile(this.x, this.y + 1) && !this.room.roomArray[this.x][this.y + 1].isSolid()) {
+              this.room.projectiles.push(new WizardFireball(this, this.x, this.y + 1));
+              if (this.room.getTile(this.x, this.y + 2) && !this.room.roomArray[this.x][this.y + 2].isSolid()) {
+                this.room.projectiles.push(new WizardFireball(this, this.x, this.y + 2));
               }
             }
             this.state = WizardState.justAttacked;
@@ -134,7 +134,7 @@ export class WizardEnemy extends Entity {
             let oldY = this.y;
             let min = 100000;
             let bestPos;
-            let emptyTiles = this.shuffle(this.level.getEmptyTiles());
+            let emptyTiles = this.shuffle(this.room.getEmptyTiles());
             let optimalDist = Game.randTable([2, 2, 3, 3, 3, 3, 3], Random.rand);
             // pick a random player to target
             let player_ids = [];
@@ -153,7 +153,7 @@ export class WizardEnemy extends Entity {
             this.drawX = this.x - oldX;
             this.drawY = this.y - oldY;
             this.frame = 0; // trigger teleport animation
-            this.level.particles.push(new WizardTeleportParticle(oldX, oldY));
+            this.room.particles.push(new WizardTeleportParticle(oldX, oldY));
             if (this.withinAttackingRangeOfPlayer()) {
               this.state = WizardState.attack;
             } else {
@@ -183,7 +183,7 @@ export class WizardEnemy extends Entity {
           this.y - this.drawY,
           1,
           1,
-          this.level.shadeColor,
+          this.room.shadeColor,
           this.shadeAmount()
         );
       if (this.frame >= 0) {
@@ -196,7 +196,7 @@ export class WizardEnemy extends Entity {
           this.y - 1.5,
           1,
           2,
-          this.level.shadeColor,
+          this.room.shadeColor,
           this.shadeAmount()
         );
         this.frame += 0.4 * delta;
@@ -211,7 +211,7 @@ export class WizardEnemy extends Entity {
           this.y - 1.5 - this.drawY,
           1,
           2,
-          this.level.shadeColor,
+          this.room.shadeColor,
           this.shadeAmount()
         );
       }
@@ -225,14 +225,14 @@ export class WizardEnemy extends Entity {
   };
 
   kill = () => {
-    if (this.level.roomArray[this.x][this.y] instanceof Floor) {
-      let b = new Bones(this.level, this.x, this.y);
-      b.skin = this.level.roomArray[this.x][this.y].skin;
-      this.level.roomArray[this.x][this.y] = b;
+    if (this.room.roomArray[this.x][this.y] instanceof Floor) {
+      let b = new Bones(this.room, this.x, this.y);
+      b.skin = this.room.roomArray[this.x][this.y].skin;
+      this.room.roomArray[this.x][this.y] = b;
     }
 
     this.dead = true;
-    this.level.particles.push(new DeathParticle(this.x, this.y));
+    this.room.particles.push(new DeathParticle(this.x, this.y));
 
     this.dropLoot();
   };

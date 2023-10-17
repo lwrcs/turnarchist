@@ -15,7 +15,7 @@ export class Heart extends Usable {
 
   onUse = (player: Player) => {
     player.health = Math.min(player.maxHealth, player.health + 1);
-    if (this.level.game.rooms[player.levelID] === this.level.game.level)
+    if (this.level.game.rooms[player.levelID] === this.level.game.room)
       Sound.heal();
     player.inventory.removeItem(this);
 

@@ -27,7 +27,7 @@ export enum EntityType {
 }
 
 export class Entity extends Drawable {
-  level: Room;
+  room: Room;
   x: number;
   y: number;
   w: number;
@@ -61,7 +61,7 @@ export class Entity extends Drawable {
   constructor(level: Room, game: Game, x: number, y: number) {
     super();
 
-    this.level = level;
+    this.room = level;
     this.x = x;
     this.y = y;
     this.w = 1;
@@ -100,7 +100,7 @@ export class Entity extends Drawable {
       if (entity.y >= y + this.h || entity.y + entity.h <= y) return false;
       return true;
     };
-    for (const e of this.level.entities) {
+    for (const e of this.room.entities) {
       if (e !== this && entityCollide(e)) {
         return;
       }
@@ -113,8 +113,8 @@ export class Entity extends Drawable {
     let tiles = [];
     for (let xx = 0; xx < this.w; xx++) {
       for (let yy = 0; yy < this.h; yy++) {
-        if (!this.level.roomArray[x + xx][y + yy].isSolid()) {
-          tiles.push(this.level.roomArray[x + xx][y + yy]);
+        if (!this.room.roomArray[x + xx][y + yy].isSolid()) {
+          tiles.push(this.room.roomArray[x + xx][y + yy]);
         } else {
           return;
         }
@@ -157,24 +157,24 @@ export class Entity extends Drawable {
 
   dropLoot = () => {
     if (this.drop) {
-      this.drop.level = this.level;
-      if (!this.level.roomArray[this.x][this.y].isSolid()) {
+      this.drop.level = this.room;
+      if (!this.room.roomArray[this.x][this.y].isSolid()) {
         this.drop.x = this.x;
         this.drop.y = this.y;
-      } else if (this.level.roomArray[this.x][this.y].isSolid()) {
+      } else if (this.room.roomArray[this.x][this.y].isSolid()) {
         this.drop.x = this.lastX;
         this.drop.y = this.lastY;
       }
-      this.level.items.push(this.drop);
+      this.room.items.push(this.drop);
       this.drop.onDrop();
     }
   };
 
   kill = () => {
-    if (this.level.roomArray[this.x][this.y] instanceof Floor) {
-      let b = new Bones(this.level, this.x, this.y);
-      b.skin = this.level.roomArray[this.x][this.y].skin;
-      this.level.roomArray[this.x][this.y] = b;
+    if (this.room.roomArray[this.x][this.y] instanceof Floor) {
+      let b = new Bones(this.room, this.x, this.y);
+      b.skin = this.room.roomArray[this.x][this.y].skin;
+      this.room.roomArray[this.x][this.y] = b;
     }
 
     this.killNoBones();
@@ -183,18 +183,18 @@ export class Entity extends Drawable {
   killNoBones = () => {
     this.dead = true;
     GenericParticle.spawnCluster(
-      this.level,
+      this.room,
       this.x + 0.5,
       this.y + 0.5,
       this.deathParticleColor
     );
-    this.level.particles.push(new DeathParticle(this.x, this.y));
+    this.room.particles.push(new DeathParticle(this.x, this.y));
 
     this.dropLoot();
   };
 
   shadeAmount = () => {
-    return this.level.softVis[this.x][this.y];
+    return this.room.softVis[this.x][this.y];
   };
 
   doneMoving = (): boolean => {
@@ -207,7 +207,7 @@ export class Entity extends Drawable {
     let closestDistance = maxDistance;
     let closestPlayer = null;
     for (const i in this.game.players) {
-      if (this.game.rooms[this.game.players[i].levelID] === this.level) {
+      if (this.game.rooms[this.game.players[i].levelID] === this.room) {
         let distance = this.playerDistance(this.game.players[i]);
         if (distance < closestDistance) {
           closestDistance = distance;
@@ -250,7 +250,7 @@ export class Entity extends Drawable {
           this.y - this.drawY,
           1,
           1,
-          this.level.shadeColor,
+          this.room.shadeColor,
           this.shadeAmount()
         );
       Game.drawMob(
@@ -262,7 +262,7 @@ export class Entity extends Drawable {
         this.y - 1.5 - this.drawY,
         1,
         2,
-        this.level.shadeColor,
+        this.room.shadeColor,
         this.shadeAmount()
       );
     }

@@ -14,8 +14,8 @@ export class SpikeTrap extends Tile {
   frame: number;
   t: number;
 
-  constructor(level: Room, x: number, y: number, tickCount?: number) {
-    super(level, x, y);
+  constructor(room: Room, x: number, y: number, tickCount?: number) {
+    super(room, x, y);
     if (tickCount) this.tickCount = tickCount;
     else this.tickCount = 0;
     this.on = false;
@@ -29,19 +29,19 @@ export class SpikeTrap extends Tile {
     this.on = this.tickCount === 0;
 
     if (this.on) {
-      for (const i in this.level.game.players) {
-        if (this.level === this.level.game.rooms[this.level.game.players[i].levelID] && this.level.game.players[i].x === this.x && this.level.game.players[i].y === this.y)
-          this.level.game.players[i].hurt(1, "spike trap");
+      for (const i in this.room.game.players) {
+        if (this.room === this.room.game.rooms[this.room.game.players[i].levelID] && this.room.game.players[i].x === this.x && this.room.game.players[i].y === this.y)
+          this.room.game.players[i].hurt(1, "spike trap");
       }
     }
 
     if (this.tickCount === 3)
-      this.level.hitwarnings.push(new HitWarning(this.level.game, this.x, this.y));
+      this.room.hitwarnings.push(new HitWarning(this.room.game, this.x, this.y));
   };
 
   tickEnd = () => {
     if (this.on) {
-      for (const e of this.level.entities) {
+      for (const e of this.room.entities) {
         if (e.x === this.x && e.y === this.y) {
           e.hurt(null, 1);
         }
@@ -63,7 +63,7 @@ export class SpikeTrap extends Tile {
       this.y,
       1,
       1,
-      this.level.shadeColor,
+      this.room.shadeColor,
       this.shadeAmount()
     );
 
@@ -87,7 +87,7 @@ export class SpikeTrap extends Tile {
       this.y - 1,
       1,
       2,
-      this.level.shadeColor,
+      this.room.shadeColor,
       this.shadeAmount()
     );
     if (this.on && this.frame < frames.length - 1) {

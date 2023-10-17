@@ -8,7 +8,7 @@ import { GenericParticle } from "../particle/genericParticle";
 export class Rook extends Entity {
   constructor(level: Room, game: Game, x: number, y: number) {
     super(level, game, x, y);
-    this.level = level;
+    this.room = level;
     this.health = 1;
     this.maxHealth = 1;
     this.tileX = 14;
@@ -20,7 +20,7 @@ export class Rook extends Entity {
   kill = () => {
     this.dead = true;
 
-    GenericParticle.spawnCluster(this.level, this.x + 0.5, this.y + 0.5, "#d9a066");
+    GenericParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, "#d9a066");
   };
   killNoBones = () => {
     this.kill();
@@ -38,7 +38,7 @@ export class Rook extends Entity {
         this.y - 1 - this.drawY,
         1,
         2,
-        this.level.shadeColor,
+        this.room.shadeColor,
         this.shadeAmount()
       );
     }

@@ -35,7 +35,7 @@ export class Spear extends Weapon {
     }
     if (!flag && enemyHitCandidates.length > 0) {
       for (const e of enemyHitCandidates) e.hurt(this.wielder, 1);
-      if (this.wielder.game.level === this.wielder.game.rooms[this.wielder.levelID]) Sound.hit();
+      if (this.wielder.game.room === this.wielder.game.rooms[this.wielder.levelID]) Sound.hit();
       this.wielder.drawX = 0.5 * (this.wielder.x - newX);
       this.wielder.drawY = 0.5 * (this.wielder.y - newY);
       this.game.rooms[this.wielder.levelID].particles.push(new SlashParticle(newX, newY));
@@ -46,7 +46,7 @@ export class Spear extends Weapon {
       return false;
     }
     if (flag) {
-      if (this.wielder.game.level === this.wielder.game.rooms[this.wielder.levelID]) Sound.hit();
+      if (this.wielder.game.room === this.wielder.game.rooms[this.wielder.levelID]) Sound.hit();
       this.wielder.drawX = 0.5 * (this.wielder.x - newX);
       this.wielder.drawY = 0.5 * (this.wielder.y - newY);
       this.game.rooms[this.wielder.levelID].particles.push(new SlashParticle(newX, newY));

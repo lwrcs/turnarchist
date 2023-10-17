@@ -1,65 +1,88 @@
 import { Game } from "./game";
 import { GameConstants } from "./gameConstants";
-import { RoomType } from "./room";
+import { Room, RoomType } from "./room";
 import { Entity, EntityType } from "./entity/entity";
 import { Wall } from "./tile/wall";
+import { Player } from "./player";
 
 export class Map {
   game: Game;
+  mapData: any[] = [];
+  oldMapData: any[] = [];
+  depth: number;
+  scale: number;
 
-  constructor(game: Game) {
+  constructor(game: Game, player: Player) {
     this.game = game;
+    this.scale = 2
+    //this.depth = player.game.level.depth
   }
 
-  draw = (delta: number) => {
-    this.setInitialCanvasSettings();
-    this.translateCanvas();
-    this.drawRooms();
-    this.resetCanvasTransform();
-  };
-
-  setInitialCanvasSettings = () => {
-    const s = 2;
-    if (GameConstants.ALPHA_ENABLED) Game.ctx.globalAlpha = 0.2;
-    Game.ctx.fillStyle = "#006A6E";
-    const x = Game.ctx.globalCompositeOperation;
-    Game.ctx.globalCompositeOperation = "screen";
-    Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
-    Game.ctx.globalCompositeOperation = x;
-  };
-
-  translateCanvas = () => {
-    Game.ctx.translate(
-      0.75 * GameConstants.WIDTH -
-        this.game.level.roomX -
-        Math.floor(0.5 * this.game.level.width) +
-        20,
-      0.25 * GameConstants.HEIGHT -
-        this.game.level.roomY -
-        Math.floor(0.5 * this.game.level.height)
-    );
-  };
-
-  drawRooms = () => {
-    Game.ctx.globalAlpha = 1;
+  saveMapData = () => {
+    this.mapData = [];
     for (const level of this.game.rooms) {
-      if (this.game.level.mapGroup === level.mapGroup && level.entered) {
-        this.drawRoom(level);
+      if (this.game.room.mapGroup === level.mapGroup && level.entered) {
+        this.mapData.push({
+          room: level,
+          walls: level.walls,
+          doors: level.doors,
+          entities: level.entities,
+          items: level.items,
+          players: this.game.players,
+        });
       }
     }
   };
 
-  drawRoom = (level) => {
-    this.drawRoomOutline(level);
-    this.drawRoomWalls(level);
-    this.drawRoomDoors(level);
-    this.drawRoomEntities(level);
-    this.drawRoomItems(level);
-    this.drawRoomPlayers();
+  saveOldMap = () => {
+    this.oldMapData = [...this.mapData];
+  }
+
+  renderMap = () => {
+    this.setInitialCanvasSettings(1);
+    this.translateCanvas(0);
+    for (const data of this.mapData) {
+      this.drawRoom(data);
+    }
+    for (const data of this.oldMapData) {
+      this.drawRoom(data);
+    }
+    this.resetCanvasTransform();
+  };
+
+  draw = (delta: number) => {
+    this.saveMapData();
+    this.renderMap();
+  };
+
+  setInitialCanvasSettings = (alpha: number) => {
+    Game.ctx.globalAlpha = alpha;
+    Game.ctx.globalCompositeOperation = "source-over";
+  };
+
+  translateCanvas = (offset: number) => {
+    Game.ctx.translate(
+      0.75 * GameConstants.WIDTH -
+        this.game.room.roomX -
+        Math.floor(0.5 * this.game.room.width) +
+        20,
+      0.25 * GameConstants.HEIGHT -
+        this.game.room.roomY -
+        Math.floor(0.5 * this.game.room.height) - offset
+    );
+  };
+
+  drawRoom = (data) => {
+    this.drawRoomOutline(data.room);
+    this.drawRoomWalls(data.walls);
+    this.drawRoomDoors(data.doors);
+    this.drawRoomEntities(data.entities);
+    this.drawRoomItems(data.items);
+    this.drawRoomPlayers(data.players);
   };
 
   drawRoomOutline = (level) => {
-    const s = 2;
+    const s = this.scale
     Game.ctx.fillStyle = "#5A5A5A";
     Game.ctx.fillRect(
       level.roomX * s + 0,
@@ -78,17 +101,17 @@ export class Map {
     );
   };
 
-  drawRoomWalls = (level) => {
-    const s = 2;
-    for (const wall of level.walls) {
+  drawRoomWalls = (walls) => {
+    const s = this.scale;
+    for (const wall of walls) {
       Game.ctx.fillStyle = "#404040";
       Game.ctx.fillRect(wall.x * s, wall.y * s, 1 * s, 1 * s);
     }
   };
 
-  drawRoomDoors = (level) => {
-    const s = 2;
-    for (const door of level.doors) {
+  drawRoomDoors = (doors) => {
+    const s = this.scale;
+    for (const door of doors) {
       if (door.opened === false) Game.ctx.fillStyle = "#5A5A5A";
       if (door.opened === true)
         (Game.ctx.fillStyle = "black"),
@@ -96,17 +119,17 @@ export class Map {
     }
   };
 
-  drawRoomPlayers = () => {
-    const s = 2;
-    for (const i in this.game.players) {
+  drawRoomPlayers = (players) => {
+    const s = this.scale;
+    for (const i in players) {
       Game.ctx.fillStyle = "white";
       if (
-        this.game.rooms[this.game.players[i].levelID].mapGroup ===
-        this.game.level.mapGroup
+        this.game.rooms[players[i].levelID].mapGroup ===
+        this.game.room.mapGroup
       ) {
         Game.ctx.fillRect(
-          this.game.players[i].x * s,
-          this.game.players[i].y * s,
+          players[i].x * s,
+          players[i].y * s,
           1 * s,
           1 * s
         );
@@ -114,9 +137,9 @@ export class Map {
     }
   };
 
-  drawRoomEntities = (level) => {
-    const s = 2;
-    for (const enemy of level.entities) {
+  drawRoomEntities = (entities) => {
+    const s = this.scale;
+    for (const enemy of entities) {
       this.setEntityColor(enemy);
       Game.ctx.fillRect(enemy.x * s, enemy.y * s, 1 * s, 1 * s);
     }
@@ -137,9 +160,9 @@ export class Map {
     }
   };
 
-  drawRoomItems = (level) => {
-    const s = 2;
-    for (const item of level.items) {
+  drawRoomItems = (items) => {
+    const s = this.scale;
+    for (const item of items) {
       let x = item.x;
       let y = item.y;
       Game.ctx.fillStyle = "#ac3232";

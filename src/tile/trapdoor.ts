@@ -7,8 +7,8 @@ import { Tile } from "./tile";
 export class Trapdoor extends Tile {
   game: Game;
 
-  constructor(level: Room, game: Game, x: number, y: number) {
-    super(level, x, y);
+  constructor(room: Room, game: Game, x: number, y: number) {
+    super(room, x, y);
     this.game = game;
   }
 
@@ -22,7 +22,7 @@ export class Trapdoor extends Tile {
       this.y,
       1,
       1,
-      this.level.shadeColor,
+      this.room.shadeColor,
       this.shadeAmount()
     );
   };

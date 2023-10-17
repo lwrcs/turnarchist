@@ -41,11 +41,11 @@ export class SkullEnemy extends Entity {
     if (drop) this.drop = drop;
     else {
       let dropProb = rand();
-      if (dropProb < 0.005) this.drop = new Spear(this.level, 0, 0);
-      else if (dropProb < 0.04) this.drop = new RedGem(this.level, 0, 0);
-      else if (dropProb <0.2) this.drop = new Candle(this.level, 0, 0)
+      if (dropProb < 0.005) this.drop = new Spear(this.room, 0, 0);
+      else if (dropProb < 0.04) this.drop = new RedGem(this.room, 0, 0);
+      else if (dropProb <0.2) this.drop = new Candle(this.room, 0, 0)
 
-      else this.drop = new Coin(this.level, 0, 0);
+      else this.drop = new Coin(this.room, 0, 0);
     }
   }
 
@@ -66,7 +66,7 @@ export class SkullEnemy extends Entity {
     if (this.health <= 0) {
       this.kill();
     } else {
-      GenericParticle.spawnCluster(this.level, this.x + 0.5, this.y + 0.5, this.deathParticleColor);
+      GenericParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, this.deathParticleColor);
     }
   };
 
@@ -95,21 +95,21 @@ export class SkullEnemy extends Entity {
               this.facePlayer(player);
               this.seenPlayer = true;
               if (player === this.game.players[this.game.localPlayerID]) this.alertTicks = 1;
-              this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
-              this.level.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y));
-              this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1));
-              this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1));
+              this.room.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
+              this.room.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y));
+              this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1));
+              this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1));
             }
           }
         }
         else if (this.seenPlayer) {
-          if (this.level.playerTicked === this.targetPlayer) {
+          if (this.room.playerTicked === this.targetPlayer) {
             this.alertTicks = Math.max(0, this.alertTicks - 1);
             let oldX = this.x;
             let oldY = this.y;
 
             let disablePositions = Array<astar.Position>();
-            for (const e of this.level.entities) {
+            for (const e of this.room.entities) {
               if (e !== this) {
                 disablePositions.push({ x: e.x, y: e.y } as astar.Position);
               }
@@ -117,8 +117,8 @@ export class SkullEnemy extends Entity {
             for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
               for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
                 if (
-                  this.level.roomArray[xx][yy] instanceof SpikeTrap &&
-                  (this.level.roomArray[xx][yy] as SpikeTrap).on
+                  this.room.roomArray[xx][yy] instanceof SpikeTrap &&
+                  (this.room.roomArray[xx][yy] as SpikeTrap).on
                 ) {
                   // don't walk on active spiketraps
                   disablePositions.push({ x: xx, y: yy } as astar.Position);
@@ -126,11 +126,11 @@ export class SkullEnemy extends Entity {
               }
             }
             let grid = [];
-            for (let x = 0; x < this.level.roomX + this.level.width; x++) {
+            for (let x = 0; x < this.room.roomX + this.room.width; x++) {
               grid[x] = [];
-              for (let y = 0; y < this.level.roomY + this.level.height; y++) {
-                if (this.level.roomArray[x] && this.level.roomArray[x][y])
-                  grid[x][y] = this.level.roomArray[x][y];
+              for (let y = 0; y < this.room.roomY + this.room.height; y++) {
+                if (this.room.roomArray[x] && this.room.roomArray[x][y])
+                  grid[x][y] = this.room.roomArray[x][y];
                 else
                   grid[x][y] = false;
               }
@@ -147,7 +147,7 @@ export class SkullEnemy extends Entity {
 
               let hitPlayer = false;
               for (const i in this.game.players) {
-                if (this.game.rooms[this.game.players[i].levelID] === this.level && this.game.players[i].x === moveX && this.game.players[i].y === moveY) {
+                if (this.game.rooms[this.game.players[i].levelID] === this.room && this.game.players[i].x === moveX && this.game.players[i].y === moveY) {
                   this.game.players[i].hurt(this.hit(), "skeleton");
                   this.drawX = 0.5 * (this.x - this.game.players[i].x);
                   this.drawY = 0.5 * (this.y - this.game.players[i].y);
@@ -166,10 +166,10 @@ export class SkullEnemy extends Entity {
               }
             }
 
-            this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
-            this.level.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y));
-            this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1));
-            this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1));
+            this.room.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
+            this.room.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y));
+            this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1));
+            this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1));
           }
 
           let targetPlayerOffline = Object.values(this.game.offlinePlayers).indexOf(this.targetPlayer) !== -1;
@@ -182,10 +182,10 @@ export class SkullEnemy extends Entity {
                   this.targetPlayer = player;
                   this.facePlayer(player);
                   if (player === this.game.players[this.game.localPlayerID]) this.alertTicks = 1;
-                  this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
-                  this.level.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y));
-                  this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1));
-                  this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1));
+                  this.room.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
+                  this.room.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y));
+                  this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1));
+                  this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1));
                 }
               }
             }
@@ -223,7 +223,7 @@ export class SkullEnemy extends Entity {
           this.y - this.drawY,
           1,
           1,
-          this.level.shadeColor,
+          this.room.shadeColor,
           this.shadeAmount()
         );
       Game.drawMob(
@@ -235,7 +235,7 @@ export class SkullEnemy extends Entity {
         this.y - 1.5 - this.drawY,
         1,
         2,
-        this.level.shadeColor,
+        this.room.shadeColor,
         this.shadeAmount()
       );
     }

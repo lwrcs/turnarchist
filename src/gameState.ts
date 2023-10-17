@@ -88,14 +88,14 @@ export class ProjectileState {
     this.dead = projectile.dead;
     if (projectile instanceof EnemySpawnAnimation) {
       this.type = ProjectileType.SPAWN;
-      this.levelID = game.rooms.indexOf(projectile.level);
+      this.levelID = game.rooms.indexOf(projectile.room);
       this.enemySpawn = new EnemyState(projectile.enemy, game);
     }
     if (projectile instanceof WizardFireball) {
       this.type = ProjectileType.WIZARD;
       this.wizardState = projectile.state;
-      this.levelID = game.rooms.indexOf(projectile.parent.level);
-      this.wizardParentID = projectile.parent.level.entities.indexOf(projectile.parent);
+      this.levelID = game.rooms.indexOf(projectile.parent.room);
+      this.wizardParentID = projectile.parent.room.entities.indexOf(projectile.parent);
     }
   }
 }
@@ -176,7 +176,7 @@ export class EnemyState {
   wizardState: WizardState;
 
   constructor(enemy: Entity, game: Game) {
-    this.levelID = game.rooms.indexOf(enemy.level);
+    this.levelID = game.rooms.indexOf(enemy.room);
     this.x = enemy.x;
     this.y = enemy.y;
     this.health = enemy.health;
@@ -595,8 +595,8 @@ export class PlayerState {
     this.hasOpenVendingMachine = false;
     if (player.openVendingMachine) {
       this.hasOpenVendingMachine = true;
-      this.openVendingMachineLevelID = game.rooms.indexOf(player.openVendingMachine.level);
-      this.openVendingMachineID = player.openVendingMachine.level.entities.indexOf(player.openVendingMachine);
+      this.openVendingMachineLevelID = game.rooms.indexOf(player.openVendingMachine.room);
+      this.openVendingMachineID = player.openVendingMachine.room.entities.indexOf(player.openVendingMachine);
     }
     this.sightRadius = player.sightRadius
   }
@@ -696,20 +696,20 @@ export const loadGameState = (game: Game, activeUsernames: Array<string>, gameSt
       game.players[game.localPlayerID].levelID = game.levelgen.currentFloorFirstLevelID;
       game.players[game.localPlayerID].x = game.rooms[game.levelgen.currentFloorFirstLevelID].roomX + Math.floor(game.rooms[game.levelgen.currentFloorFirstLevelID].width / 2);
       game.players[game.localPlayerID].y = game.rooms[game.levelgen.currentFloorFirstLevelID].roomY + Math.floor(game.rooms[game.levelgen.currentFloorFirstLevelID].height / 2);
-      game.level = game.rooms[game.levelgen.currentFloorFirstLevelID];
-      game.level.enterLevel(game.players[game.localPlayerID]);
+      game.room = game.rooms[game.levelgen.currentFloorFirstLevelID];
+      game.room.enterLevel(game.players[game.localPlayerID]);
     }
     else {
-      game.level = game.rooms[game.players[game.localPlayerID].levelID];
+      game.room = game.rooms[game.players[game.localPlayerID].levelID];
     }
   }
   else { // stub game state, start a new world
     game.players[game.localPlayerID] = new Player(game, 0, 0, true);
-    game.level = game.rooms[game.players[game.localPlayerID].levelID];
-    game.level.enterLevel(game.players[game.localPlayerID]);
+    game.room = game.rooms[game.players[game.localPlayerID].levelID];
+    game.room.enterLevel(game.players[game.localPlayerID]);
   }
   Random.setState(gameState.randomState);
-  game.level.updateLighting();
+  game.room.updateLighting();
 
   game.chat = [];
 }

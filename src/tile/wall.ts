@@ -13,7 +13,7 @@ export class Wall extends Tile {
   };
 
   draw = (delta: number) => {
-    if (this.y < this.level.roomY + this.level.height - 1)
+    if (this.y < this.room.roomY + this.room.height - 1)
       Game.drawTile(
         0,
         this.skin,
@@ -23,8 +23,8 @@ export class Wall extends Tile {
         this.y,
         1,
         1,
-        this.level.shadeColor,
-        this.level.softVis[this.x][this.y + 1]
+        this.room.shadeColor,
+        this.room.softVis[this.x][this.y + 1]
       );
 
     Game.drawTile(
@@ -36,7 +36,7 @@ export class Wall extends Tile {
       this.y - 0.5,
       1,
       1,
-      this.level.shadeColor,
+      this.room.shadeColor,
       this.shadeAmount()
     );
   };

@@ -29,14 +29,14 @@ export class Door extends Tile {
   locked: boolean;
 
   constructor(
-    level: Room,
+    room: Room,
     game: Game,
     x: number,
     y: number,
     dir: number,
     doorType: DoorType
   ) {
-    super(level, x, y);
+    super(room, x, y);
     this.game = game;
     this.opened = false;
     this.doorDir = dir;
@@ -62,7 +62,7 @@ export class Door extends Tile {
     }
 
     if (this.DoorType === DoorType.GUARDEDDOOR) {
-      const inRoom = this.game.level.entities.filter(
+      const inRoom = this.game.room.entities.filter(
         (enemy) => enemy.entityType === EntityType.ENEMY
       );
       if (inRoom.length === 0) {
@@ -90,7 +90,7 @@ export class Door extends Tile {
     }
     if (this.DoorType === DoorType.GUARDEDDOOR) {
       this.locked = false;
-      this.level.doors.forEach((door) => {
+      this.room.doors.forEach((door) => {
         door.DoorType = DoorType.DOOR;
         door.locked = false;
       });
@@ -121,7 +121,7 @@ export class Door extends Tile {
       this.game.changeLevelThroughDoor(
         player,
         this.linkedDoor,
-        this.linkedDoor.level.roomX - this.level.roomX > 0 ? 1 : -1
+        this.linkedDoor.room.roomX - this.room.roomX > 0 ? 1 : -1
       );
     this.linkedDoor.locked = false;
     this.linkedDoor.DoorType = DoorType.DOOR;
@@ -140,7 +140,7 @@ export class Door extends Tile {
           this.y,
           1,
           1,
-          this.level.shadeColor,
+          this.room.shadeColor,
           this.shadeAmount()
         );
       else
@@ -153,7 +153,7 @@ export class Door extends Tile {
           this.y,
           1,
           1,
-          this.level.shadeColor,
+          this.room.shadeColor,
           this.shadeAmount()
         );
     }
@@ -168,7 +168,7 @@ export class Door extends Tile {
         this.y,
         1,
         1,
-        this.level.shadeColor,
+        this.room.shadeColor,
         this.shadeAmount()
       );
   };
@@ -186,7 +186,7 @@ export class Door extends Tile {
           this.y - 1,
           1,
           1,
-          this.level.shadeColor,
+          this.room.shadeColor,
           this.shadeAmount()
         );
       else
@@ -199,7 +199,7 @@ export class Door extends Tile {
           this.y - 1,
           1,
           1,
-          this.level.shadeColor,
+          this.room.shadeColor,
           this.shadeAmount()
         );
     }

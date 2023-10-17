@@ -9,7 +9,7 @@ import { EntityType } from "./entity";
 export class Crate extends Entity {
   constructor(level: Room, game: Game, x: number, y: number) {
     super(level, game, x, y);
-    this.level = level;
+    this.room = level;
     this.health = 1;
     this.maxHealth = 1;
     this.tileX = 0;
@@ -22,7 +22,7 @@ export class Crate extends Entity {
   kill = () => {
     this.dead = true;
 
-    GenericParticle.spawnCluster(this.level, this.x + 0.5, this.y + 0.5, "#d9a066");
+    GenericParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, "#d9a066");
   };
   killNoBones = () => {
     this.kill();
@@ -40,7 +40,7 @@ export class Crate extends Entity {
         this.y - 1 - this.drawY,
         1,
         2,
-        this.level.shadeColor,
+        this.room.shadeColor,
         this.shadeAmount()
       );
     }

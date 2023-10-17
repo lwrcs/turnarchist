@@ -12,7 +12,7 @@ export class PottedPlant extends Entity {
   drop: Item;
   constructor(level: Room, game: Game, x: number, y: number, rand: () => number, drop?: Item) {
     super(level, game, x, y);
-    this.level = level;
+    this.room = level;
     this.health = 2;
     this.tileX = 3;
     this.tileY = 0;
@@ -23,20 +23,20 @@ export class PottedPlant extends Entity {
     
     else {
       let dropProb = rand();
-      if (dropProb < 0.025) this.drop = new Heart(this.level, 0, 0);
-      else this.drop = new Coin(this.level, 0, 0);
+      if (dropProb < 0.025) this.drop = new Heart(this.room, 0, 0);
+      else this.drop = new Coin(this.room, 0, 0);
     }
   }
 
   hurtCallback = () => {
-    GenericParticle.spawnCluster(this.level, this.x + 0.5, this.y + 0.5, "#5d9250");
+    GenericParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, "#5d9250");
   };
 
   kill = () => {
     this.dead = true;
     this.killNoBones();
 
-    GenericParticle.spawnCluster(this.level, this.x + 0.5, this.y + 0.5, "#ce736a");
+    GenericParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, "#ce736a");
   };
   killNoBones = () => {
     this.dead = true;
@@ -59,7 +59,7 @@ export class PottedPlant extends Entity {
         this.y - 1 - this.drawY,
         1,
         2,
-        this.level.shadeColor,
+        this.room.shadeColor,
         this.shadeAmount()
       );
     }
@@ -70,9 +70,9 @@ export class PottedPlant extends Entity {
   };
 
   dropLoot = () => {
-    this.drop.level = this.level;
+    this.drop.level = this.room;
     this.drop.x = this.x;
     this.drop.y = this.y;
-    this.level.items.push(this.drop);
+    this.room.items.push(this.drop);
   };
 }

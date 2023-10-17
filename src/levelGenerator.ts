@@ -37,13 +37,31 @@ class Partition {
   }
 
   split = () => {
+    // This function generates a random number around the center (0.5) within a certain width (0.6).
+    // It uses the Random.rand() function to generate a random number between 0 and 1, subtracts 0.5 to center it around 0,
+    // multiplies it by the width to scale it, and then adds the center (0.5) to shift it back to being between 0 and 1.
     let rand_mid = () => {
       let center = 0.5;
       let width = 0.6;
       return (Random.rand() - 0.5) * width + center;
     };
 
-    let MIN_SIZE = 3;
+    
+    let sizeRange = () => {
+      let sizes = [
+        { size: 1, probability: 0.2 },
+        { size: 3, probability: 0.6 },
+        { size: 10, probability: 0.2 }
+      ];
+      let rand = Random.rand();
+      let sum = 0;
+      for (let size of sizes) {
+        sum += size.probability;
+        if (rand <= sum) return size.size;
+      }
+      return sizes[sizes.length - 1].size;
+    };
+    let MIN_SIZE = 3
 
     if (this.w > this.h) {
       //if the partitions width is greater than its height
@@ -198,7 +216,7 @@ let generate_dungeon_candidate = (
 
   for (let i = 0; i < 3; i++) partitions = split_partitions(partitions, 0.75);
   for (let i = 0; i < 3; i++) partitions = split_partitions(partitions, 1);
-  for (let i = 0; i < 3; i++) partitions = split_partitions(partitions, 0.5);
+  for (let i = 0; i < 3; i++) partitions = split_partitions(partitions, 0.25);
   //split partitions 3 times with different probabilities
   partitions = remove_wall_rooms(partitions, map_w, map_h);
   grid = populate_grid(partitions, grid, map_w, map_h);
@@ -226,7 +244,7 @@ let generate_dungeon_candidate = (
     const num_doors = Math.floor(Random.rand() * 2 + 1);
 
     let tries = 0;
-    const max_tries = 100;
+    const max_tries = 2000;
 
     while (doors_found < num_doors && tries < max_tries) {
       let point = room.get_branch_point();
@@ -497,17 +515,13 @@ let generate_cave_candidate = (
   return partitions;
 };
 
-let generate_cave = (map_w: number, map_h: number): Array<Partition> => {
-  let passes_checks = false;
-  let partitions;
+let generate_cave = (mapWidth: number, mapHeight: number): Array<Partition> => {
+  let partitions: Array<Partition>;
+  const numberOfRooms = 100;
 
-  while (!passes_checks) {
-    const NUM_ROOMS = 100;
-    partitions = generate_cave_candidate(map_w, map_h, NUM_ROOMS);
-
-    passes_checks = true;
-    if (partitions.length < NUM_ROOMS) passes_checks = false;
-  }
+  do {
+    partitions = generate_cave_candidate(mapWidth, mapHeight, numberOfRooms);
+  } while (partitions.length < numberOfRooms);
 
   return partitions;
 };
@@ -542,17 +556,17 @@ export class LevelGenerator {
 
     let doors_added: Array<Door> = [];
 
-    for (let i = 0; i < partitions.length; i++) {
-      for (const connection of partitions[i].connections) {
-        let d = levels[i].addDoor(connection.x, connection.y);
-        let existing_door = doors_added.find((e) => e.x === d.x && e.y === d.y);
-        if (existing_door) {
-          existing_door.link(d);
-          d.link(existing_door);
+    partitions.forEach((partition, index) => {
+      partition.connections.forEach(connection => {
+        let door = levels[index].addDoor(connection.x, connection.y);
+        let existingDoor = doors_added.find(existing => existing.x === door.x && existing.y === door.y);
+        if (existingDoor) {
+          existingDoor.link(door);
+          door.link(existingDoor);
         }
-        doors_added.push(d);
-      }
-    }
+        doors_added.push(door);
+      });
+    });
 
     for (let level of levels) {
       level.populate(Random.rand);
@@ -566,86 +580,69 @@ export class LevelGenerator {
   };
 
   generate = (game: Game, depth: number, cave = false): Room => {
+    // Assert that the depth is correct
     console.assert(
       cave || this.depthReached === 0 || depth === this.depthReached + 1
     );
     this.depthReached = depth;
 
+    // Set the random state based on the seed and depth
     Random.setState(this.seed + depth);
 
     this.game = game;
 
-    let mapGroup = 0;
-    if (this.game.rooms.length > 0)
-      mapGroup = this.game.rooms[this.game.rooms.length - 1].mapGroup + 1;
+    // Determine the map group
+    let mapGroup = this.game.rooms.length > 0 ? this.game.rooms[this.game.rooms.length - 1].mapGroup + 1 : 0;
 
-    let partitions;
-    if (cave) partitions = generate_cave(20, 20);
-    else partitions = generate_dungeon(35, 35);
+    // Generate partitions based on whether it's a cave or a dungeon
+    let partitions = cave ? generate_cave(20, 20) : generate_dungeon(35, 35);
+
+    // Get the levels based on the partitions
     let levels = this.getLevels(partitions, depth, mapGroup);
 
-    let numExistingLevels = this.game.rooms.length;
-    if (!cave) this.currentFloorFirstLevelID = numExistingLevels;
-    this.game.rooms = this.game.rooms.concat(levels);
+    // Update the current floor first level ID if it's not a cave
+    if (!cave) this.currentFloorFirstLevelID = this.game.rooms.length;
 
-    for (
-      let i = numExistingLevels;
-      i < numExistingLevels + levels.length;
-      i++
-    ) {
-      let found = false;
-      if (this.game.rooms[i].type === RoomType.ROPEHOLE) {
-        for (
-          let x = this.game.rooms[i].roomX;
-          x < this.game.rooms[i].roomX + this.game.rooms[i].width;
-          x++
-        ) {
-          for (
-            let y = this.game.rooms[i].roomY;
-            y < this.game.rooms[i].roomY + this.game.rooms[i].height;
-            y++
-          ) {
-            let tile = this.game.rooms[i].roomArray[x][y];
+    // Add the new levels to the game rooms
+    this.game.rooms = [...this.game.rooms, ...levels];
+
+    // Generate the rope hole if it exists
+    for (let room of levels) {
+      if (room.type === RoomType.ROPEHOLE) {
+        for (let x = room.roomX; x < room.roomX + room.width; x++) {
+          for (let y = room.roomY; y < room.roomY + room.height; y++) {
+            let tile = room.roomArray[x][y];
             if (tile instanceof DownLadder && tile.isRope) {
               tile.generate();
-              found = true;
+              return cave ? levels.find((l) => l.type === RoomType.ROPECAVE) : levels.find((l) => l.type === RoomType.START);
             }
           }
         }
       }
-      if (found) break;
     }
 
-    if (cave) return levels.find((l) => l.type === RoomType.ROPECAVE);
-    else return levels.find((l) => l.type === RoomType.START);
+    // Return the start room or the rope cave room
+    return cave ? levels.find((l) => l.type === RoomType.ROPECAVE) : levels.find((l) => l.type === RoomType.START);
   };
 
   generateFirstNFloors = (game, numFloors) => {
     this.generate(game, 0, false);
     for (let i = 0; i < numFloors; i++) {
-      let found = false;
-      for (let j = this.game.rooms.length - 1; j >= 0; j--) {
-        if (this.game.rooms[j].type === RoomType.DOWNLADDER) {
-          for (
-            let x = this.game.rooms[j].roomX;
-            x < this.game.rooms[j].roomX + this.game.rooms[j].width;
-            x++
-          ) {
-            for (
-              let y = this.game.rooms[j].roomY;
-              y < this.game.rooms[j].roomY + this.game.rooms[j].height;
-              y++
-            ) {
-              let tile = this.game.rooms[j].roomArray[x][y];
-              if (tile instanceof DownLadder) {
-                tile.generate();
-                found = true;
-              }
+      let foundRoom = this.game.rooms
+        .slice()
+        .reverse()
+        .find((room) => room.type === RoomType.DOWNLADDER);
+
+      if (foundRoom) {
+        for (let x = foundRoom.roomX; x < foundRoom.roomX + foundRoom.width; x++) {
+          for (let y = foundRoom.roomY; y < foundRoom.roomY + foundRoom.height; y++) {
+            let tile = foundRoom.roomArray[x][y];
+            if (tile instanceof DownLadder) {
+              tile.generate();
+              break;
             }
           }
         }
-
-        if (found) break;
       }
     }
   };

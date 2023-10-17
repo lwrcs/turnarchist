@@ -111,11 +111,11 @@ export class VendingMachine extends Entity {
       do {
         x = Game.rand(this.x - 1, this.x + 1, this.rand);
         y = Game.rand(this.y - 1, this.y + 1, this.rand);
-      } while ((x === this.x && y === this.y) || this.level.roomArray[x][y].isSolid() || this.level.entities.some(e => e.x === x && e.y === y));
+      } while ((x === this.x && y === this.y) || this.room.roomArray[x][y].isSolid() || this.room.entities.some(e => e.x === x && e.y === y));
 
       let newItem = new (this.item.constructor as { new(): Item })();
-      newItem = newItem.constructor(this.level, x, y);
-      this.level.items.push(newItem);
+      newItem = newItem.constructor(this.room, x, y);
+      this.room.items.push(newItem);
 
       if (!this.isInf) {
         this.quantity--;
@@ -139,7 +139,7 @@ export class VendingMachine extends Entity {
       this.y - 1,
       1,
       2,
-      this.level.shadeColor,
+      this.room.shadeColor,
       this.shadeAmount()
     );
   };

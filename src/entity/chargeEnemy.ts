@@ -48,9 +48,9 @@ export class ChargeEnemy extends Entity {
     if (drop) this.drop = drop;
     else {
       let dropProb = Random.rand();
-      if (dropProb < 0.025) this.drop = new Pickaxe(this.level, 0, 0);
-      else if (dropProb < 0.02) this.drop = new GreenGem(this.level, 0, 0);
-      else this.drop = new Coin(this.level, 0, 0);
+      if (dropProb < 0.025) this.drop = new Pickaxe(this.room, 0, 0);
+      else if (dropProb < 0.02) this.drop = new GreenGem(this.room, 0, 0);
+      else this.drop = new Coin(this.room, 0, 0);
     }
   }
   hit = (): number => {
@@ -58,10 +58,10 @@ export class ChargeEnemy extends Entity {
   };
 
   canMoveOver = (x: number, y: number): boolean => {
-    for (const e of this.level.entities) {
+    for (const e of this.room.entities) {
       if (e !== this && x === e.x && y === e.y) return false;
     }
-    let t = this.level.roomArray[x][y];
+    let t = this.room.roomArray[x][y];
     return !(t.isSolid() || t instanceof Door);
   };
 
@@ -111,7 +111,7 @@ export class ChargeEnemy extends Entity {
                 (this.targetX === this.game.players[i].x &&
                   this.targetY === this.game.players[i].y + 1)
               )
-                this.level.hitwarnings.push(
+                this.room.hitwarnings.push(
                   new HitWarning(this.game, this.targetX, this.targetY)
                 );
             }
@@ -169,13 +169,13 @@ export class ChargeEnemy extends Entity {
         Math.abs(this.drawY) > 0.1
       ) {
         GenericParticle.spawnCluster(
-          this.level,
+          this.room,
           this.x - this.drawX + 0.5,
           this.y - this.drawY + 0.5,
           "black"
         );
         GenericParticle.spawnCluster(
-          this.level,
+          this.room,
           this.x - this.drawX + 0.5,
           this.y - this.drawY + 0.5,
           "white"
@@ -215,7 +215,7 @@ export class ChargeEnemy extends Entity {
           this.y - this.drawY,
           1,
           1,
-          this.level.shadeColor,
+          this.room.shadeColor,
           this.shadeAmount()
         );
       Game.drawMob(
@@ -227,7 +227,7 @@ export class ChargeEnemy extends Entity {
         this.y - 1.5 - this.drawY,
         1,
         2,
-        this.level.shadeColor,
+        this.room.shadeColor,
         this.shadeAmount()
       );
       if (this.state === ChargeEnemyState.IDLE) {

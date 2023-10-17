@@ -32,7 +32,7 @@ export class SlimeEnemy extends Entity {
 
     if (drop) this.drop = drop;
     else {
-      this.drop = new Coin(this.level, 0, 0);
+      this.drop = new Coin(this.room, 0, 0);
     }
   }
 
@@ -71,22 +71,22 @@ export class SlimeEnemy extends Entity {
             this.targetPlayer = p;
             this.facePlayer(p);
             if (p === this.game.players[this.game.localPlayerID]) this.alertTicks = 1;
-            this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
-            this.level.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y));
-            this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1));
-            this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1));
+            this.room.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
+            this.room.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y));
+            this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1));
+            this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1));
           }
         }
       }
       else if (this.seenPlayer) {
-        if (this.level.playerTicked === this.targetPlayer) {
+        if (this.room.playerTicked === this.targetPlayer) {
           this.alertTicks = Math.max(0, this.alertTicks - 1);
           this.ticks++;
           if (this.ticks % 2 === 1) {
             let oldX = this.x;
             let oldY = this.y;
             let disablePositions = Array<astar.Position>();
-            for (const e of this.level.entities) {
+            for (const e of this.room.entities) {
               if (e !== this) {
                 disablePositions.push({ x: e.x, y: e.y } as astar.Position);
               }
@@ -94,8 +94,8 @@ export class SlimeEnemy extends Entity {
             for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
               for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
                 if (
-                  this.level.roomArray[xx][yy] instanceof SpikeTrap &&
-                  (this.level.roomArray[xx][yy] as SpikeTrap).on
+                  this.room.roomArray[xx][yy] instanceof SpikeTrap &&
+                  (this.room.roomArray[xx][yy] as SpikeTrap).on
                 ) {
                   // don't walk on active spiketraps
                   disablePositions.push({ x: xx, y: yy } as astar.Position);
@@ -103,11 +103,11 @@ export class SlimeEnemy extends Entity {
               }
             }
             let grid = [];
-            for (let x = 0; x < this.level.roomX + this.level.width; x++) {
+            for (let x = 0; x < this.room.roomX + this.room.width; x++) {
               grid[x] = [];
-              for (let y = 0; y < this.level.roomY + this.level.height; y++) {
-                if (this.level.roomArray[x] && this.level.roomArray[x][y])
-                  grid[x][y] = this.level.roomArray[x][y];
+              for (let y = 0; y < this.room.roomY + this.room.height; y++) {
+                if (this.room.roomArray[x] && this.room.roomArray[x][y])
+                  grid[x][y] = this.room.roomArray[x][y];
                 else
                   grid[x][y] = false;
               }
@@ -122,7 +122,7 @@ export class SlimeEnemy extends Entity {
               let hitPlayer = false;
               for (const i in this.game.players) {
                 if (
-                  this.game.rooms[this.game.players[i].levelID] === this.level &&
+                  this.game.rooms[this.game.players[i].levelID] === this.room &&
                   this.game.players[i].x === moves[0].pos.x &&
                   this.game.players[i].y === moves[0].pos.y
                 ) {
@@ -145,10 +145,10 @@ export class SlimeEnemy extends Entity {
               }
             }
           } else {
-            this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
-            this.level.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y));
-            this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1));
-            this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1));
+            this.room.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
+            this.room.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y));
+            this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1));
+            this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1));
           }
         }
 
@@ -163,10 +163,10 @@ export class SlimeEnemy extends Entity {
                 this.facePlayer(player);
                 if (player === this.game.players[this.game.localPlayerID]) this.alertTicks = 1;
                 if (this.ticks % 2 === 0) {
-                  this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
-                  this.level.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y));
-                  this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1));
-                  this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1));
+                  this.room.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
+                  this.room.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y));
+                  this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1));
+                  this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1));
                 }
               }
             }
@@ -198,7 +198,7 @@ export class SlimeEnemy extends Entity {
           this.y - this.drawY,
           1,
           1,
-          this.level.shadeColor,
+          this.room.shadeColor,
           this.shadeAmount()
         );
       Game.drawMob(
@@ -210,7 +210,7 @@ export class SlimeEnemy extends Entity {
         this.y - this.drawY,
         1,
         1,
-        this.level.shadeColor,
+        this.room.shadeColor,
         this.shadeAmount()
       );
     }

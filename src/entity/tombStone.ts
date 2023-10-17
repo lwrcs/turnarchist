@@ -27,7 +27,7 @@ export class TombStone extends Entity {
   ) {
     super(level, game, x, y);
     this.skinType = skinType;
-    this.level = level;
+    this.room = level;
     this.health = 2;
     this.maxHealth = 2;
     this.tileX = 11 + this.skinType;
@@ -41,13 +41,13 @@ export class TombStone extends Entity {
     this.chainPushable = false;
 
     let dropProb = Random.rand();
-    if (dropProb < 0.05) this.drop = new Spellbook(this.level, 0, 0);
+    if (dropProb < 0.05) this.drop = new Spellbook(this.room, 0, 0);
   }
 
   kill = () => {
     this.dead = true;
     GenericParticle.spawnCluster(
-      this.level,
+      this.room,
       this.x + 0.5,
       this.y + 0.5,
       "#d9a066"
@@ -60,7 +60,7 @@ export class TombStone extends Entity {
 
     this.health -= damage;
     if (this.health === 1) {
-      const positions = this.level
+      const positions = this.room
         .getEmptyTiles()
         .filter(
           (t) => Math.abs(t.x - this.x) <= 1 && Math.abs(t.y - this.y) <= 1
@@ -74,9 +74,9 @@ export class TombStone extends Entity {
               (playerX !== position.x && playerY === position.y) ||
               (playerX === position.x && playerY !== position.y)
             ) {
-              this.level.entities.push(
+              this.room.entities.push(
                 new SkullEnemy(
-                  this.level,
+                  this.room,
                   this.game,
                   position.x,
                   position.y,
@@ -106,7 +106,7 @@ export class TombStone extends Entity {
         this.y - 1 - this.drawY,
         1,
         2,
-        this.level.shadeColor,
+        this.room.shadeColor,
         this.shadeAmount()
       );
     }
