@@ -70,11 +70,12 @@ export class Inventory {
       if (i instanceof Weapon) {
         i.toggleEquip();
         this.weapon = i;
+        //this.player.weapon = this.weapon;
       }
 
       this.addItem(i);
     };
-    const startingInv = [Dagger, Coal, Lantern, Key, Backpack];
+    const startingInv = [Dagger, Key, Backpack];
     startingInv.forEach((item) => {
       a(new item({ game: this.game } as Room, 0, 0));
     });

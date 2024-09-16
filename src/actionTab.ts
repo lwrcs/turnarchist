@@ -49,30 +49,4 @@ export class ActionTab {
       "white"
     );
   };
-  /*
-    switch (this.actionState) {
-      case ActionState.Ready: {
-        Game.ctx.fillStyle = "green";
-        Game.ctx.fillRect(1, 1, 4, 4);
-      }
-      case ActionState.Attack: {
-        //if (w == ) {
-        Game.ctx.fillStyle = "red";
-        Game.ctx.fillRect(1, 1, 4, 4);
-        //first slash
-        //if (w == this.weapon.dualdagger); /* same attack anim for now...
-        //first slash of slash animation
-      }
-      case ActionState.halfAttack: {
-        Game.ctx.fillStyle = "orange";
-        Game.ctx.fillRect(1, 1, 4, 4);
-        //if (w == this.weapon.dualdagger);
-        //render second of two slash animations
-      }
-      case ActionState.Wait: {
-        Game.ctx.fillStyle = "blue";
-        Game.ctx.fillRect(1, 1, 4, 4);
-        //render waiting animation}
-      }
-    }*/
 }

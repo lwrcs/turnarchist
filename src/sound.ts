@@ -14,6 +14,7 @@ export class Sound {
   static pushSounds: Array<HTMLAudioElement>;
   static healSound: HTMLAudioElement;
   static music: HTMLAudioElement;
+  static graveSound: HTMLAudioElement;
 
   static loadSounds = () => {
     Sound.playerStoneFootsteps = new Array<HTMLAudioElement>();
@@ -47,7 +48,7 @@ export class Sound {
     [1, 2, 3].forEach((i) =>
       Sound.chestSounds.push(new Audio("res/SFX/chest/chest" + i + ".wav"))
     );
-    for (let f of Sound.chestSounds) f.volume = 0.7;
+    for (let f of Sound.chestSounds) f.volume = 0.5;
 
     Sound.coinPickupSounds = new Array<HTMLAudioElement>();
     [1, 2, 3, 4].forEach((i) =>
@@ -61,13 +62,13 @@ export class Sound {
         new Audio("res/SFX/resources/Pickaxe" + i + ".wav")
       )
     );
-    for (let f of Sound.miningSounds) f.volume = 0.7;
+    for (let f of Sound.miningSounds) f.volume = 0.3;
 
     Sound.hurtSounds = new Array<HTMLAudioElement>();
     [1].forEach((i) =>
       Sound.hurtSounds.push(new Audio("res/SFX/attacks/hit.wav"))
     );
-    for (let f of Sound.hurtSounds) f.volume = 0.7;
+    for (let f of Sound.hurtSounds) f.volume = 0.3;
 
     Sound.genericPickupSound = new Audio("res/SFX/items/pickup.wav");
     Sound.genericPickupSound.volume = 1.0;
@@ -85,6 +86,7 @@ export class Sound {
     Sound.healSound.volume = 0.5;
 
     Sound.music = new Audio("res/bewitched.mp3");
+    Sound.graveSound = new Audio("res/SFX/attacks/skelespawn.wav")
   };
 
   static playerStoneFootstep = () => {
@@ -158,6 +160,11 @@ export class Sound {
     let f = Game.randTable(Sound.pushSounds, Math.random);
     f.play();
     f.currentTime = 0;
+  };
+
+  static skeleSpawn = () => {
+    Sound.graveSound.play();
+    Sound.graveSound.currentTime = 0;
   };
 
   static playMusic = () => {

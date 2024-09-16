@@ -63,6 +63,8 @@ import { DoorDir } from "./tile/door";
 import { ActionState, ActionTab } from "./actionTab";
 import { TombStone } from "./entity/tombStone";
 import { Pumpkin } from "./entity/pumpkin";
+import { QueenEnemy } from "./entity/queenEnemy";
+import { FrogEnemy } from "./entity/frogEnemy";
 
 export enum RoomType {
   START,
@@ -314,7 +316,7 @@ export class Room {
       let y = t.y;
       // Define the enemy tables for each depth level
       let tables = {
-        0: [1, 2, 3, 3, 4],
+        0: [12],
         1: [1, 1, 3, 3, 3, 2, 2],
         2: [1, 1, 2, 2, 3, 3, 4],
         3: [1, 1, 1, 2, 3, 3, 3, 4, 4, 5],
@@ -381,7 +383,7 @@ export class Room {
           case 9:
             addEnemy(new ArmoredzombieEnemy(this, this.game, x, y, rand));
             break;
-          /*case 10:
+          case 10:
             if (addEnemy(new BigSkullEnemy(this, this.game, x, y, rand))) {
               // clear out some space
               for (let xx = 0; xx < 2; xx++) {
@@ -394,7 +396,13 @@ export class Room {
                 }
               }
             }
-            break;/=*/
+            break;
+            case 11:
+              addEnemy(new QueenEnemy(this, this.game, x, y, rand));
+            break;
+            case 12:
+              addEnemy(new FrogEnemy(this, this.game, x, y, rand));
+            break;
         }
       }
     }
@@ -408,7 +416,7 @@ export class Room {
       if (tiles.length == 0) return;
       let x = t.x;
       let y = t.y;
-      switch (Game.randTable([1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 4], rand)) {
+      switch (Game.randTable([1, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4], rand)) {
         case 1:
           this.entities.push(new Crate(this, this.game, x, y));
           break;

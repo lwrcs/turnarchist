@@ -23,7 +23,7 @@ export class Slingshot extends Weapon {
     let l = 0;
     for (
       let i = 0;
-      i < 15;
+      i < 5;
       i++ //loop through range
     ) {
       if (newX === this.wielder.x) {
@@ -43,7 +43,7 @@ export class Slingshot extends Weapon {
       return true;
     }
     let c = 1;
-    for (let i = 0; i < 15; i++) {
+    for (let i = 0; i < 5; i++) {
       if (
         !this.game.rooms[this.wielder.levelID].tileInside(
           nextX[c],
@@ -130,7 +130,7 @@ export class Slingshot extends Weapon {
             } else return minEnemy;
           }
         );
-        closestEnemy.enemy.hurt(this.wielder, 3);
+        closestEnemy.enemy.hurt(this.wielder, 1);
       }
 
       //finally bro
@@ -187,6 +187,6 @@ export class Slingshot extends Weapon {
     return true;
   };
   getDescription = (): string => {
-    return "SLINGSHOT\nRange 15";
+    return "SLINGSHOT\nRange 5";
   };
 }

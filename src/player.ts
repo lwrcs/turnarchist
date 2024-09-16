@@ -19,6 +19,8 @@ import { Entity } from "./entity/entity";
 import { ZombieEnemy } from "./entity/zombieEnemy";
 import { Item } from "./item/item";
 import { PostProcessor } from "./postProcess";
+import { Weapon } from "./weapon/weapon";
+import { Room } from "./room";
 
 export enum PlayerDirection {
   DOWN = 0,
@@ -46,7 +48,6 @@ export class Player extends Drawable {
   dead: boolean;
   lastTickHealth: number;
   inventory: Inventory;
-  missProb: number;
   sightRadius: number;
   defaultSightRadius: number;
   guiHeartFrame: number;
@@ -103,8 +104,6 @@ export class Player extends Drawable {
     this.guiHeartFrame = 0;
 
     this.inventory = new Inventory(game, this);
-
-    this.missProb = 0.1;
 
     this.defaultSightRadius = 6;
     this.sightRadius = this.defaultSightRadius;

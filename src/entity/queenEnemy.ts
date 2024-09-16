@@ -15,7 +15,7 @@ import { astar } from "../astarclass";
 import { SpikeTrap } from "../tile/spiketrap";
 import { Candle } from "../item/candle";
 
-export class BishopEnemy extends Entity {
+export class QueenEnemy extends Entity {
   frame: number;
   ticks: number;
   seenPlayer: boolean;
@@ -211,7 +211,7 @@ export class BishopEnemy extends Entity {
                 this.game.players[i].x === moveX &&
                 this.game.players[i].y === moveY
               ) {
-                this.game.players[i].hurt(this.hit(), "bishop");
+                this.game.players[i].hurt(this.hit(), "queen");
                 this.drawX = 0.5 * (this.x - this.game.players[i].x);
                 this.drawY = 0.5 * (this.y - this.game.players[i].y);
                 if (

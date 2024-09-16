@@ -11,6 +11,7 @@ import { EnemySpawnAnimation } from "../projectile/enemySpawnAnimation";
 import { Player } from "../player";
 import { Item } from "../item/item";
 import { Spellbook } from "../weapon/spellbook";
+import { Sound } from "../sound";
 
 export class TombStone extends Entity {
   skinType: number;
@@ -86,11 +87,12 @@ export class TombStone extends Entity {
             }
           }
         }
+        Sound.skeleSpawn()
       }
       this.tileX += 2;
       //draw half broken tombstone based on skintype after it takes one damage
     }
-    if (this.health <= 0) this.kill();
+    if (this.health <= 0) this.kill(), Sound.breakRock();
     else this.hurtCallback();
   };
 
