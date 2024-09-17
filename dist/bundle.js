@@ -6258,7 +6258,7 @@ var FrogEnemy = /** @class */ (function (_super) {
                     if (_this.room.playerTicked === _this.targetPlayer) {
                         _this.alertTicks = Math.max(0, _this.alertTicks - 1);
                         _this.ticks++;
-                        if (_this.ticks % 1 === 0) {
+                        if (_this.ticks % 2 === 1) {
                             var oldX = _this.x;
                             var oldY = _this.y;
                             var disablePositions = Array();
@@ -6277,14 +6277,6 @@ var FrogEnemy = /** @class */ (function (_super) {
                                     }
                                 }
                             }
-                            /*disablePositions.push({ x: this.x + 1, y: this.y } as astar.Position);
-                            disablePositions.push({ x: this.x, y: this.y + 1 } as astar.Position);
-                            disablePositions.push({ x: this.x - 1, y: this.y } as astar.Position);
-                            disablePositions.push({ x: this.x, y: this.y - 1 } as astar.Position);
-                            disablePositions.push({ x: this.x + 1, y: this.y + 1 } as astar.Position);
-                            disablePositions.push({ x: this.x - 1, y: this.y - 1 } as astar.Position);
-                            disablePositions.push({ x: this.x - 1, y: this.y + 1 } as astar.Position);
-                            disablePositions.push({ x: this.x + 1, y: this.y - 1 } as astar.Position);*/
                             var grid = [];
                             for (var x = 0; x < _this.room.roomX + _this.room.width; x++) {
                                 grid[x] = [];
@@ -6305,13 +6297,27 @@ var FrogEnemy = /** @class */ (function (_super) {
                                         _this.game.players[i].hurt(_this.hit(), "frog");
                                         _this.drawX = 0.5 * (_this.x - _this.game.players[i].x);
                                         _this.drawY = 0.5 * (_this.y - _this.game.players[i].y);
-                                        if (_this.game.players[i] === _this.game.players[_this.game.localPlayerID])
+                                        if (_this.game.players[i] ===
+                                            _this.game.players[_this.game.localPlayerID])
                                             _this.game.shakeScreen(10 * _this.drawX, 10 * _this.drawY);
                                         hitPlayer = true;
+                                        break;
                                     }
                                 }
                                 if (!hitPlayer) {
+                                    oldX = _this.x;
+                                    oldY = _this.y;
+                                    var tryX = _this.x;
+                                    var tryY = _this.y;
                                     _this.tryMove(moves[0].pos.x, moves[0].pos.y);
+                                    moves = astarclass_1.astar.AStar.search(grid, _this, _this.targetPlayer, disablePositions);
+                                    tryX = _this.x;
+                                    tryY = _this.y;
+                                    _this.tryMove(moves[0].pos.x, moves[0].pos.y);
+                                    if (_this.x != oldX && _this.y != oldY) {
+                                        _this.x = tryX;
+                                        _this.y = tryY;
+                                    }
                                     _this.jump();
                                     _this.drawX = _this.x - oldX;
                                     _this.drawY = _this.y - oldY;
@@ -6337,12 +6343,15 @@ var FrogEnemy = /** @class */ (function (_super) {
                             _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y + 1));
                         }
                     }
-                    var targetPlayerOffline = Object.values(_this.game.offlinePlayers).indexOf(_this.targetPlayer) !== -1;
+                    var targetPlayerOffline = Object.values(_this.game.offlinePlayers).indexOf(_this.targetPlayer) !==
+                        -1;
                     if (!_this.aggro || targetPlayerOffline) {
                         var p = _this.nearestPlayer();
                         if (p !== false) {
                             var distance = p[0], player = p[1];
-                            if (distance <= 4 && (targetPlayerOffline || distance < _this.playerDistance(_this.targetPlayer))) {
+                            if (distance <= 4 &&
+                                (targetPlayerOffline ||
+                                    distance < _this.playerDistance(_this.targetPlayer))) {
                                 if (player !== _this.targetPlayer) {
                                     _this.targetPlayer = player;
                                     _this.facePlayer(player);
@@ -6367,7 +6376,7 @@ var FrogEnemy = /** @class */ (function (_super) {
                 _this.tileY = 16;
                 _this.frame += _this.animationSpeed * delta;
                 if (_this.frame >= _this.frameLength)
-                    _this.frame = 0, _this.frameLength = 3, _this.animationSpeed = 0.1;
+                    (_this.frame = 0), (_this.frameLength = 3), (_this.animationSpeed = 0.1);
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
                 game_1.Game.drawMob(_this.tileX + (_this.tileX === 1 ? Math.floor(_this.frame) : 0), _this.tileY /*+ this.direction * 2,*/, 1, 2, _this.x - _this.drawX, _this.y - 1.5 - _this.drawY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
@@ -6391,6 +6400,7 @@ var FrogEnemy = /** @class */ (function (_super) {
         _this.frameLength = 3;
         _this.startFrame = 0;
         _this.animationSpeed = 0.1;
+        _this.tickCount = 0;
         if (drop)
             _this.drop = drop;
         else {
