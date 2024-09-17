@@ -5117,6 +5117,7 @@ var random_1 = __webpack_require__(/*! ../random */ "./src/random.ts");
 var astarclass_1 = __webpack_require__(/*! ../astarclass */ "./src/astarclass.ts");
 var spiketrap_1 = __webpack_require__(/*! ../tile/spiketrap */ "./src/tile/spiketrap.ts");
 var candle_1 = __webpack_require__(/*! ../item/candle */ "./src/item/candle.ts");
+var door_1 = __webpack_require__(/*! ../tile/door */ "./src/tile/door.ts");
 var BishopEnemy = /** @class */ (function (_super) {
     __extends(BishopEnemy, _super);
     function BishopEnemy(level, game, x, y, rand, drop) {
@@ -5182,8 +5183,6 @@ var BishopEnemy = /** @class */ (function (_super) {
             }
         };
         _this.tick = function () {
-            _this.lastX = _this.x;
-            _this.lastY = _this.y;
             if (!_this.dead) {
                 if (_this.skipNextTurns > 0) {
                     _this.skipNextTurns--;
@@ -5218,16 +5217,16 @@ var BishopEnemy = /** @class */ (function (_super) {
                             if (e !== _this) {
                                 disablePositions.push({ x: e.x, y: e.y });
                             }
-                            /*disablePositions.push({ x: oldX + 1, y: oldY } as astar.Position);
-                          disablePositions.push({ x: oldX - 1, y: oldY } as astar.Position);
-                          disablePositions.push({ x: oldX, y: oldY + 1 } as astar.Position);
-                          disablePositions.push({ x: oldX, y: oldY - 1} as astar.Position);*/
                         }
                         for (var xx = _this.x - 1; xx <= _this.x + 1; xx++) {
                             for (var yy = _this.y - 1; yy <= _this.y + 1; yy++) {
                                 if (_this.room.roomArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
                                     _this.room.roomArray[xx][yy].on) {
                                     // don't walk on active spiketraps
+                                    disablePositions.push({ x: xx, y: yy });
+                                }
+                                if (_this.room.roomArray[xx][yy] instanceof door_1.Door) {
+                                    // don't walk into doorways (normally wouldn't be an issue without diagonals)
                                     disablePositions.push({ x: xx, y: yy });
                                 }
                             }
@@ -5242,15 +5241,18 @@ var BishopEnemy = /** @class */ (function (_super) {
                                     grid[x][y] = false;
                             }
                         }
-                        var moves = astarclass_1.astar.AStar.search(grid, _this, _this.targetPlayer, disablePositions, true, //diagonals
-                        false, //diagonalsOnly
-                        undefined, undefined, undefined, false //diagonalsOmni
+                        disablePositions.push({ x: _this.x + 1, y: _this.y });
+                        disablePositions.push({ x: _this.x - 1, y: _this.y });
+                        disablePositions.push({ x: _this.x, y: _this.y + 1 });
+                        disablePositions.push({ x: _this.x, y: _this.y - 1 });
+                        var moves = astarclass_1.astar.AStar.search(grid, _this, _this.targetPlayer, disablePositions, true //diagonals
                         );
+                        moves = moves.filter(function (move) {
+                            var dx = Math.abs(move.pos.x - _this.x);
+                            var dy = Math.abs(move.pos.y - _this.y);
+                            return dx === 1 && dy === 1;
+                        });
                         if (moves.length > 0) {
-                            disablePositions.push({ x: oldX + 1, y: oldY });
-                            disablePositions.push({ x: oldX - 1, y: oldY });
-                            disablePositions.push({ x: oldX, y: oldY + 1 });
-                            disablePositions.push({ x: oldX, y: oldY - 1 });
                             var moveX = moves[0].pos.x;
                             var moveY = moves[0].pos.y;
                             var hitPlayer = false;
@@ -5261,20 +5263,16 @@ var BishopEnemy = /** @class */ (function (_super) {
                                     _this.game.players[i].hurt(_this.hit(), "bishop");
                                     _this.drawX = 0.5 * (_this.x - _this.game.players[i].x);
                                     _this.drawY = 0.5 * (_this.y - _this.game.players[i].y);
+                                    hitPlayer = true;
                                     if (_this.game.players[i] ===
                                         _this.game.players[_this.game.localPlayerID])
                                         _this.game.shakeScreen(10 * _this.drawX, 10 * _this.drawY);
                                 }
                             }
                             if (!hitPlayer) {
-                                //if ()
                                 _this.tryMove(moveX, moveY);
                                 _this.drawX = _this.x - oldX;
                                 _this.drawY = _this.y - oldY;
-                                /*if (this.x > oldX) this.direction = EnemyDirection.RIGHT;
-                                else if (this.x < oldX) this.direction = EnemyDirection.LEFT;
-                                else if (this.y > oldY) this.direction = EnemyDirection.DOWN;
-                                else if (this.y < oldY) this.direction = EnemyDirection.UP;*/
                             }
                         }
                         _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y - 1));
@@ -5314,7 +5312,7 @@ var BishopEnemy = /** @class */ (function (_super) {
                     _this.frame = 0;
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
-                game_1.Game.drawMob(_this.tileX + Math.floor(_this.frame), _this.tileY + _this.direction * 2, 1, 2, _this.x - _this.drawX, _this.y - 1.5 - _this.drawY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
+                game_1.Game.drawMob(_this.tileX + Math.floor(_this.frame), _this.tileY, 1, 2, _this.x - _this.drawX, _this.y - 1.5 - _this.drawY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
             }
             if (!_this.seenPlayer) {
                 _this.drawSleepingZs(delta);
@@ -5327,7 +5325,7 @@ var BishopEnemy = /** @class */ (function (_super) {
         _this.frame = 0;
         _this.health = 1;
         _this.maxHealth = 1;
-        _this.tileX = 23;
+        _this.tileX = 31;
         _this.tileY = 8;
         _this.seenPlayer = false;
         _this.aggro = false;
@@ -14061,8 +14059,8 @@ var Player = /** @class */ (function (_super) {
             };
         }
         _this.mapToggled = true;
-        _this.health = 2;
-        _this.maxHealth = 2;
+        _this.health = 10;
+        _this.maxHealth = 10;
         _this.healthBar = new healthbar_1.HealthBar();
         _this.dead = false;
         _this.flashing = false;
@@ -15129,7 +15127,7 @@ var Room = /** @class */ (function () {
                     bestSightRadius = _this.game.players[p].sightRadius;
                 }
             }
-            var shadingAlpha = Math.max(0, Math.min(0.8, (2 * _this.depth) / bestSightRadius));
+            var shadingAlpha = Math.max(0, Math.min(0.8, (2) / bestSightRadius));
             if (gameConstants_1.GameConstants.ALPHA_ENABLED) {
                 game_1.Game.ctx.globalAlpha = shadingAlpha;
                 //Game.ctx.globalCompositeOperation = "lighten"
@@ -15346,7 +15344,7 @@ var Room = /** @class */ (function () {
             var y = t.y;
             // Define the enemy tables for each depth level
             var tables = {
-                0: [12],
+                0: [1, 1, 2, 3, 3, 3, 2, 2, 4, 4, 5, 5, 6, 6, 7, 8, 8, 8, 9, 9, 9, 10, 11, 12, 12, 12, 12, 12],
                 1: [1, 1, 3, 3, 3, 2, 2],
                 2: [1, 1, 2, 2, 3, 3, 4],
                 3: [1, 1, 1, 2, 3, 3, 3, 4, 4, 5],

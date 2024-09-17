@@ -14,6 +14,7 @@ import { Random } from "../random";
 import { astar } from "../astarclass";
 import { SpikeTrap } from "../tile/spiketrap";
 import { Candle } from "../item/candle";
+import { Door } from "../tile/door";
 
 export class BishopEnemy extends Entity {
   frame: number;
@@ -36,7 +37,7 @@ export class BishopEnemy extends Entity {
     this.frame = 0;
     this.health = 1;
     this.maxHealth = 1;
-    this.tileX = 23;
+    this.tileX = 31;
     this.tileY = 8;
     this.seenPlayer = false;
     this.aggro = false;
@@ -116,8 +117,6 @@ export class BishopEnemy extends Entity {
   };
 
   tick = () => {
-    this.lastX = this.x;
-    this.lastY = this.y;
     if (!this.dead) {
       if (this.skipNextTurns > 0) {
         this.skipNextTurns--;
@@ -159,10 +158,6 @@ export class BishopEnemy extends Entity {
             if (e !== this) {
               disablePositions.push({ x: e.x, y: e.y } as astar.Position);
             }
-            /*disablePositions.push({ x: oldX + 1, y: oldY } as astar.Position);
-          disablePositions.push({ x: oldX - 1, y: oldY } as astar.Position);
-          disablePositions.push({ x: oldX, y: oldY + 1 } as astar.Position);
-          disablePositions.push({ x: oldX, y: oldY - 1} as astar.Position);*/
           }
           for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
             for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
@@ -171,6 +166,10 @@ export class BishopEnemy extends Entity {
                 (this.room.roomArray[xx][yy] as SpikeTrap).on
               ) {
                 // don't walk on active spiketraps
+                disablePositions.push({ x: xx, y: yy } as astar.Position);
+              }
+              if (this.room.roomArray[xx][yy] instanceof Door) {
+                // don't walk into doorways (normally wouldn't be an issue without diagonals)
                 disablePositions.push({ x: xx, y: yy } as astar.Position);
               }
             }
@@ -184,26 +183,25 @@ export class BishopEnemy extends Entity {
               else grid[x][y] = false;
             }
           }
+          disablePositions.push({ x: this.x + 1, y: this.y } as astar.Position);
+          disablePositions.push({ x: this.x - 1, y: this.y } as astar.Position);
+          disablePositions.push({ x: this.x, y: this.y + 1 } as astar.Position);
+          disablePositions.push({ x: this.x, y: this.y - 1 } as astar.Position);
           let moves = astar.AStar.search(
             grid,
             this,
             this.targetPlayer,
             disablePositions,
-            true, //diagonals
-            false, //diagonalsOnly
-            undefined,
-            undefined,
-            undefined,
-            false //diagonalsOmni
+            true //diagonals
           );
+          moves = moves.filter((move) => {
+            const dx = Math.abs(move.pos.x - this.x);
+            const dy = Math.abs(move.pos.y - this.y);
+            return dx === 1 && dy === 1;
+          });
           if (moves.length > 0) {
-            disablePositions.push({ x: oldX + 1, y: oldY } as astar.Position);
-            disablePositions.push({ x: oldX - 1, y: oldY } as astar.Position);
-            disablePositions.push({ x: oldX, y: oldY + 1 } as astar.Position);
-            disablePositions.push({ x: oldX, y: oldY - 1 } as astar.Position);
             let moveX = moves[0].pos.x;
             let moveY = moves[0].pos.y;
-
             let hitPlayer = false;
             for (const i in this.game.players) {
               if (
@@ -214,6 +212,7 @@ export class BishopEnemy extends Entity {
                 this.game.players[i].hurt(this.hit(), "bishop");
                 this.drawX = 0.5 * (this.x - this.game.players[i].x);
                 this.drawY = 0.5 * (this.y - this.game.players[i].y);
+                hitPlayer = true;
                 if (
                   this.game.players[i] ===
                   this.game.players[this.game.localPlayerID]
@@ -222,14 +221,9 @@ export class BishopEnemy extends Entity {
               }
             }
             if (!hitPlayer) {
-              //if ()
               this.tryMove(moveX, moveY);
               this.drawX = this.x - oldX;
               this.drawY = this.y - oldY;
-              /*if (this.x > oldX) this.direction = EnemyDirection.RIGHT;
-              else if (this.x < oldX) this.direction = EnemyDirection.LEFT;
-              else if (this.y > oldY) this.direction = EnemyDirection.DOWN;
-              else if (this.y < oldY) this.direction = EnemyDirection.UP;*/
             }
           }
 
@@ -304,7 +298,7 @@ export class BishopEnemy extends Entity {
         );
       Game.drawMob(
         this.tileX + Math.floor(this.frame),
-        this.tileY + this.direction * 2,
+        this.tileY,
         1,
         2,
         this.x - this.drawX,

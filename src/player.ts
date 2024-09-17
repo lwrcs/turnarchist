@@ -94,8 +94,8 @@ export class Player extends Drawable {
       };
     }
     this.mapToggled = true;
-    this.health = 2;
-    this.maxHealth = 2;
+    this.health = 10;
+    this.maxHealth = 10;
     this.healthBar = new HealthBar();
     this.dead = false;
     this.flashing = false;
