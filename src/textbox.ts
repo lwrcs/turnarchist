@@ -4,12 +4,16 @@ export class TextBox {
   enterCallback;
   escapeCallback;
   allowedCharacters = "all";
+  element: HTMLElement;
 
-  constructor() {
+
+  constructor(element: HTMLElement) {
     this.text = "";
     this.cursor = 0;
     this.enterCallback = () => {};
     this.escapeCallback = () => {};
+    this.element = element;
+    this.element.addEventListener("touchstart", this.handleTouchStart);
   }
 
   setEnterCallback = (callback) => {
@@ -71,5 +75,24 @@ export class TextBox {
           break;
       }
     }
+  };
+
+  handleTouchStart = (e: TouchEvent) => {
+    this.focus();
+    e.preventDefault();
+  };
+
+  focus = () => {
+    // Create a temporary input element to trigger the on-screen keyboard
+    const tempInput = document.createElement("input");
+    tempInput.type = "text";
+    tempInput.style.position = "absolute";
+    tempInput.style.opacity = "0";
+    tempInput.style.zIndex = "-1"; // Ensure it doesn't interfere with the game UI
+    document.body.appendChild(tempInput);
+    tempInput.focus();
+    tempInput.addEventListener("blur", () => {
+      document.body.removeChild(tempInput);
+    });
   };
 }

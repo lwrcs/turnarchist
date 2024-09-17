@@ -109,7 +109,7 @@ export class Sound {
     f.volume = 0.5;
     f.play();
     f.currentTime = 0;
-    f.volume = 1.0;
+    f.volume = 0.4;
   };
 
   static hurt = () => {
@@ -165,6 +165,7 @@ export class Sound {
   static skeleSpawn = () => {
     Sound.graveSound.play();
     Sound.graveSound.currentTime = 0;
+    Sound.graveSound.volume = 0.3;
   };
 
   static playMusic = () => {

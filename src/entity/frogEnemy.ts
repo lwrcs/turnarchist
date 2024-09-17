@@ -270,9 +270,14 @@ export class FrogEnemy extends Entity {
     if (!this.dead) {
       this.tileX = 1;
       this.tileY = 16;
+      
       this.frame += this.animationSpeed * delta;
-      if (this.frame >= this.frameLength)
-        (this.frame = 0), (this.frameLength = 3), (this.animationSpeed = 0.1);
+      if (this.frame >= this.frameLength){
+        (this.frame = 0, this.frameLength = 3, this.animationSpeed = 0.1);
+      }
+      if (this.ticks % 2 === 0) {
+      } else {
+      }
 
       if (this.hasShadow)
         Game.drawMob(

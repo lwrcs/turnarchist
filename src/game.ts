@@ -297,8 +297,16 @@ export class Game {
         alpha: false,
       }) as CanvasRenderingContext2D;
 
+      // Create TextBox instances and associate them with HTML elements
+      const usernameElement = document.createElement("div");
+      const passwordElement = document.createElement("div");
+      const chatElement = document.createElement("div");
+      document.body.appendChild(usernameElement);
+      document.body.appendChild(passwordElement);
+      document.body.appendChild(chatElement);
+
       this.chat = [];
-      this.chatTextBox = new TextBox();
+      this.chatTextBox = new TextBox(chatElement);
       this.chatTextBox.setEnterCallback(() => {
         if (this.chatTextBox.text.length > 0) {
           this.socket.emit("chat message", this.chatTextBox.text);
@@ -343,7 +351,7 @@ export class Game {
       });
       this.chatOpen = false;
 
-      this.usernameTextBox = new TextBox();
+      this.usernameTextBox = new TextBox(usernameElement);
       this.usernameTextBox.allowedCharacters =
         "abcdefghijklmnopqrstuvwxyz1234567890 ,.!?:'()[]%-";
       this.usernameTextBox.setEnterCallback(() => {
@@ -354,7 +362,7 @@ export class Game {
           this.menuState = MenuState.LOGIN_PASSWORD;
         }
       });
-      this.passwordTextBox = new TextBox();
+      this.passwordTextBox = new TextBox(passwordElement);
       this.passwordTextBox.allowedCharacters =
         "abcdefghijklmnopqrstuvwxyz1234567890 ,.!?:'()[]%-";
       this.passwordTextBox.setEnterCallback(() => {

@@ -6373,8 +6373,13 @@ var FrogEnemy = /** @class */ (function (_super) {
                 _this.tileX = 1;
                 _this.tileY = 16;
                 _this.frame += _this.animationSpeed * delta;
-                if (_this.frame >= _this.frameLength)
-                    (_this.frame = 0), (_this.frameLength = 3), (_this.animationSpeed = 0.1);
+                if (_this.frame >= _this.frameLength) {
+                    (_this.frame = 0, _this.frameLength = 3, _this.animationSpeed = 0.1);
+                }
+                if (_this.ticks % 2 === 0) {
+                }
+                else {
+                }
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
                 game_1.Game.drawMob(_this.tileX + (_this.tileX === 1 ? Math.floor(_this.frame) : 0), _this.tileY /*+ this.direction * 2,*/, 1, 2, _this.x - _this.drawX, _this.y - 1.5 - _this.drawY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
@@ -9385,8 +9390,15 @@ var Game = /** @class */ (function () {
             Game.ctx = canvas.getContext("2d", {
                 alpha: false,
             });
+            // Create TextBox instances and associate them with HTML elements
+            var usernameElement = document.createElement("div");
+            var passwordElement = document.createElement("div");
+            var chatElement = document.createElement("div");
+            document.body.appendChild(usernameElement);
+            document.body.appendChild(passwordElement);
+            document.body.appendChild(chatElement);
             _this.chat = [];
-            _this.chatTextBox = new textbox_1.TextBox();
+            _this.chatTextBox = new textbox_1.TextBox(chatElement);
             _this.chatTextBox.setEnterCallback(function () {
                 if (_this.chatTextBox.text.length > 0) {
                     _this.socket.emit("chat message", _this.chatTextBox.text);
@@ -9436,7 +9448,7 @@ var Game = /** @class */ (function () {
                 _this.chatOpen = false;
             });
             _this.chatOpen = false;
-            _this.usernameTextBox = new textbox_1.TextBox();
+            _this.usernameTextBox = new textbox_1.TextBox(usernameElement);
             _this.usernameTextBox.allowedCharacters =
                 "abcdefghijklmnopqrstuvwxyz1234567890 ,.!?:'()[]%-";
             _this.usernameTextBox.setEnterCallback(function () {
@@ -9448,7 +9460,7 @@ var Game = /** @class */ (function () {
                     _this.menuState = MenuState.LOGIN_PASSWORD;
                 }
             });
-            _this.passwordTextBox = new textbox_1.TextBox();
+            _this.passwordTextBox = new textbox_1.TextBox(passwordElement);
             _this.passwordTextBox.allowedCharacters =
                 "abcdefghijklmnopqrstuvwxyz1234567890 ,.!?:'()[]%-";
             _this.passwordTextBox.setEnterCallback(function () {
@@ -15344,7 +15356,7 @@ var Room = /** @class */ (function () {
             var y = t.y;
             // Define the enemy tables for each depth level
             var tables = {
-                0: [1, 1, 2, 3, 3, 3, 2, 2, 4, 4, 5, 5, 6, 6, 7, 8, 8, 8, 9, 9, 9, 10, 11, 12, 12, 12, 12, 12],
+                0: [12 /*1, 1, 2, 3, 3, 3, 2, 2, 4, 4, 5, 5, 6, 6, 7, 8, 8, 8, 9, 9, 9, 10, 11, 12, 12, 12, 12, 12*/],
                 1: [1, 1, 3, 3, 3, 2, 2],
                 2: [1, 1, 2, 2, 3, 3, 4],
                 3: [1, 1, 1, 2, 3, 3, 3, 4, 4, 5],
@@ -15669,7 +15681,7 @@ var Sound = /** @class */ (function () {
         f.volume = 0.5;
         f.play();
         f.currentTime = 0;
-        f.volume = 1.0;
+        f.volume = 0.4;
     };
     Sound.hurt = function () {
         var f = game_1.Game.randTable(Sound.hurtSounds, Math.random);
@@ -15715,6 +15727,7 @@ var Sound = /** @class */ (function () {
     Sound.skeleSpawn = function () {
         Sound.graveSound.play();
         Sound.graveSound.currentTime = 0;
+        Sound.graveSound.volume = 0.3;
     };
     Sound.playMusic = function () {
         Sound.music.addEventListener("ended", function () {
@@ -15741,7 +15754,7 @@ exports.Sound = Sound;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.TextBox = void 0;
 var TextBox = /** @class */ (function () {
-    function TextBox() {
+    function TextBox(element) {
         var _this = this;
         this.allowedCharacters = "all";
         this.setEnterCallback = function (callback) {
@@ -15798,10 +15811,29 @@ var TextBox = /** @class */ (function () {
                 }
             }
         };
+        this.handleTouchStart = function (e) {
+            _this.focus();
+            e.preventDefault();
+        };
+        this.focus = function () {
+            // Create a temporary input element to trigger the on-screen keyboard
+            var tempInput = document.createElement("input");
+            tempInput.type = "text";
+            tempInput.style.position = "absolute";
+            tempInput.style.opacity = "0";
+            tempInput.style.zIndex = "-1"; // Ensure it doesn't interfere with the game UI
+            document.body.appendChild(tempInput);
+            tempInput.focus();
+            tempInput.addEventListener("blur", function () {
+                document.body.removeChild(tempInput);
+            });
+        };
         this.text = "";
         this.cursor = 0;
         this.enterCallback = function () { };
         this.escapeCallback = function () { };
+        this.element = element;
+        this.element.addEventListener("touchstart", this.handleTouchStart);
     }
     return TextBox;
 }());
