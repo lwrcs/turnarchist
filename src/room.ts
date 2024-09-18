@@ -65,6 +65,7 @@ import { TombStone } from "./entity/tombStone";
 import { Pumpkin } from "./entity/pumpkin";
 import { QueenEnemy } from "./entity/queenEnemy";
 import { FrogEnemy } from "./entity/frogEnemy";
+import { BigKnightEnemy } from "./entity/bigKnightEnemy";
 
 export enum RoomType {
   START,
@@ -316,7 +317,7 @@ export class Room {
       let y = t.y;
       // Define the enemy tables for each depth level
       let tables = {
-        0: [12/*1, 1, 2, 3, 3, 3, 2, 2, 4, 4, 5, 5, 6, 6, 7, 8, 8, 8, 9, 9, 9, 10, 11, 12, 12, 12, 12, 12*/],
+        0: [13],
         1: [1, 1, 3, 3, 3, 2, 2],
         2: [1, 1, 2, 2, 3, 3, 4],
         3: [1, 1, 1, 2, 3, 3, 3, 4, 4, 5],
@@ -360,7 +361,7 @@ export class Room {
             addEnemy(new SlimeEnemy(this, this.game, x, y, rand));
             break;
           case 2:
-            addEnemy(new KnightEnemy(this, this.game, x, y, rand));
+            addEnemy(new FrogEnemy(this, this.game, x, y, rand));
             break;
           case 3:
             addEnemy(new ZombieEnemy(this, this.game, x, y, rand));
@@ -401,7 +402,21 @@ export class Room {
               addEnemy(new QueenEnemy(this, this.game, x, y, rand));
             break;
             case 12:
-              addEnemy(new FrogEnemy(this, this.game, x, y, rand));
+              addEnemy(new KnightEnemy(this, this.game, x, y, rand));
+            break;
+            case 13:
+            if (addEnemy(new BigKnightEnemy(this, this.game, x, y, rand))) {
+              // clear out some space
+              for (let xx = 0; xx < 2; xx++) {
+                for (let yy = 0; yy < 2; yy++) {
+                  this.roomArray[x + xx][y + yy] = new Floor(
+                    this,
+                    x + xx,
+                    y + yy
+                  ); // remove any walls
+                }
+              }
+            }
             break;
         }
       }
