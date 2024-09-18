@@ -298,12 +298,35 @@ export class Game {
       }) as CanvasRenderingContext2D;
 
       // Create TextBox instances and associate them with HTML elements
-      const usernameElement = document.createElement("div");
-      const passwordElement = document.createElement("div");
-      const chatElement = document.createElement("div");
-      document.body.appendChild(usernameElement);
-      document.body.appendChild(passwordElement);
-      document.body.appendChild(chatElement);
+      const usernameElement = document.createElement("input");
+    usernameElement.type = "text";
+    usernameElement.autocomplete = "off";
+    usernameElement.autocapitalize = "off";
+    usernameElement.style.position = "absolute";
+    usernameElement.style.left = "-1000px";  // Position off-screen
+    const passwordElement = document.createElement("input");
+    passwordElement.type = "password";
+    passwordElement.style.position = "absolute";
+    passwordElement.style.left = "-1000px";  // Position off-screen
+    const chatElement = document.createElement("input");
+    chatElement.type = "text";
+    chatElement.style.position = "absolute";
+    chatElement.style.left = "-1000px";  // Position off-screen
+    document.body.appendChild(usernameElement);
+    document.body.appendChild(passwordElement);
+    document.body.appendChild(chatElement);
+
+      document.addEventListener("click", () => {
+        usernameElement.focus();
+      }, { once: true });
+
+      document.addEventListener("touchstart", () => {
+        if (this.menuState === MenuState.LOGIN_USERNAME) {
+          usernameElement.focus();
+        } else if (this.menuState === MenuState.LOGIN_PASSWORD) {
+          passwordElement.focus();
+        }
+      });
 
       this.chat = [];
       this.chatTextBox = new TextBox(chatElement);
@@ -360,6 +383,7 @@ export class Game {
         } else {
           this.loginMessage = "";
           this.menuState = MenuState.LOGIN_PASSWORD;
+          passwordElement.focus(); // Focus the password input element
         }
       });
       this.passwordTextBox = new TextBox(passwordElement);
@@ -454,7 +478,9 @@ export class Game {
   keyDownListener = (key: string) => {
     if (this.menuState === MenuState.LOGIN_USERNAME) {
       this.usernameTextBox.handleKeyPress(key);
+      (document.querySelector('input[type="text"]') as HTMLInputElement).focus();
     } else if (this.menuState === MenuState.LOGIN_PASSWORD) {
+      (document.querySelector('input[type="password"]') as HTMLInputElement).focus();
       this.passwordTextBox.handleKeyPress(key);
     } else if (this.menuState === MenuState.SELECT_WORLD) {
       switch (key) {
