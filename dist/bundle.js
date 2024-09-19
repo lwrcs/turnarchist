@@ -6598,10 +6598,6 @@ var FrogEnemy = /** @class */ (function (_super) {
                                         _this.direction = entity_1.EntityDirection.UP;
                                 }
                             }
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y));
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y));
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y - 1));
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y + 1));
                         }
                         else {
                             _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y));
@@ -6625,10 +6621,6 @@ var FrogEnemy = /** @class */ (function (_super) {
                                     if (player === _this.game.players[_this.game.localPlayerID])
                                         _this.alertTicks = 1;
                                     if (_this.ticks % 2 === 0) {
-                                        _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y));
-                                        _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y));
-                                        _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y - 1));
-                                        _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y + 1));
                                     }
                                 }
                             }
@@ -6643,11 +6635,15 @@ var FrogEnemy = /** @class */ (function (_super) {
                 _this.tileY = 16;
                 _this.frame += _this.animationSpeed * delta;
                 if (_this.frame >= _this.frameLength) {
-                    (_this.frame = 0, _this.frameLength = 3, _this.animationSpeed = 0.1);
+                    (_this.frame = 0, _this.frameLength = 3, _this.animationSpeed = 0.1, _this.tileX = 1);
                 }
                 if (_this.ticks % 2 === 0) {
                 }
                 else {
+                    _this.tileX = 12;
+                }
+                if (!_this.seenPlayer) {
+                    _this.tileX = 12;
                 }
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
@@ -6664,7 +6660,7 @@ var FrogEnemy = /** @class */ (function (_super) {
         _this.frame = 0;
         _this.health = 1;
         _this.maxHealth = 1;
-        _this.tileX = 1;
+        _this.tileX = 12;
         _this.tileY = 16;
         _this.seenPlayer = false;
         _this.aggro = false;
@@ -15651,7 +15647,7 @@ var Room = /** @class */ (function () {
             var y = t.y;
             // Define the enemy tables for each depth level
             var tables = {
-                0: [13],
+                0: [2],
                 1: [1, 1, 3, 3, 3, 2, 2],
                 2: [1, 1, 2, 2, 3, 3, 4],
                 3: [1, 1, 1, 2, 3, 3, 3, 4, 4, 5],

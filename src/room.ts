@@ -317,7 +317,7 @@ export class Room {
       let y = t.y;
       // Define the enemy tables for each depth level
       let tables = {
-        0: [13],
+        0: [2],
         1: [1, 1, 3, 3, 3, 2, 2],
         2: [1, 1, 2, 2, 3, 3, 4],
         3: [1, 1, 1, 2, 3, 3, 3, 4, 4, 5],

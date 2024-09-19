@@ -35,7 +35,7 @@ export class FrogEnemy extends Entity {
     this.frame = 0;
     this.health = 1;
     this.maxHealth = 1;
-    this.tileX = 1;
+    this.tileX = 12;
     this.tileY = 16;
     this.seenPlayer = false;
     this.aggro = false;
@@ -199,18 +199,7 @@ export class FrogEnemy extends Entity {
                 else if (this.y < oldY) this.direction = EntityDirection.UP;
               }
             }
-            this.room.hitwarnings.push(
-              new HitWarning(this.game, this.x - 1, this.y)
-            );
-            this.room.hitwarnings.push(
-              new HitWarning(this.game, this.x + 1, this.y)
-            );
-            this.room.hitwarnings.push(
-              new HitWarning(this.game, this.x, this.y - 1)
-            );
-            this.room.hitwarnings.push(
-              new HitWarning(this.game, this.x, this.y + 1)
-            );
+            
           } else {
             this.room.hitwarnings.push(
               new HitWarning(this.game, this.x - 1, this.y)
@@ -245,18 +234,7 @@ export class FrogEnemy extends Entity {
                 if (player === this.game.players[this.game.localPlayerID])
                   this.alertTicks = 1;
                 if (this.ticks % 2 === 0) {
-                  this.room.hitwarnings.push(
-                    new HitWarning(this.game, this.x - 1, this.y)
-                  );
-                  this.room.hitwarnings.push(
-                    new HitWarning(this.game, this.x + 1, this.y)
-                  );
-                  this.room.hitwarnings.push(
-                    new HitWarning(this.game, this.x, this.y - 1)
-                  );
-                  this.room.hitwarnings.push(
-                    new HitWarning(this.game, this.x, this.y + 1)
-                  );
+                  
                 }
               }
             }
@@ -267,16 +245,20 @@ export class FrogEnemy extends Entity {
   };
 
   draw = (delta: number) => {
+    
     if (!this.dead) {
       this.tileX = 1;
       this.tileY = 16;
       
       this.frame += this.animationSpeed * delta;
       if (this.frame >= this.frameLength){
-        (this.frame = 0, this.frameLength = 3, this.animationSpeed = 0.1);
+        (this.frame = 0, this.frameLength = 3, this.animationSpeed = 0.1, this.tileX = 1);
       }
       if (this.ticks % 2 === 0) {
-      } else {
+      } else {this.tileX = 12
+      }
+      if (!this.seenPlayer) {
+        this.tileX = 12;
       }
 
       if (this.hasShadow)
