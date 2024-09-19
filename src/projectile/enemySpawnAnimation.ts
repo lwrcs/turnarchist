@@ -39,7 +39,7 @@ export class EnemySpawnAnimation extends Projectile {
       GenericParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, "#ffffff");
       GenericParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, "#ffffff");
     } else {
-      this.room.hitwarnings.push(new HitWarning(this.room.game, this.x, this.y));
+      this.room.hitwarnings.push(new HitWarning(this.room.game, this.x, this.y, this.x, this.y));
     }
   };
 

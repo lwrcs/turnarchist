@@ -36,7 +36,7 @@ export class SpikeTrap extends Tile {
     }
 
     if (this.tickCount === 3)
-      this.room.hitwarnings.push(new HitWarning(this.room.game, this.x, this.y));
+      this.room.hitwarnings.push(new HitWarning(this.room.game, this.x, this.y, this.x, this.y));
   };
 
   tickEnd = () => {

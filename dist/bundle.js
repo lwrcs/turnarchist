@@ -4482,7 +4482,6 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ArmoredzombieEnemy = void 0;
 var entity_1 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-var hitWarning_1 = __webpack_require__(/*! ../hitWarning */ "./src/hitWarning.ts");
 var genericParticle_1 = __webpack_require__(/*! ../particle/genericParticle */ "./src/particle/genericParticle.ts");
 var coin_1 = __webpack_require__(/*! ../item/coin */ "./src/item/coin.ts");
 var greengem_1 = __webpack_require__(/*! ../item/greengem */ "./src/item/greengem.ts");
@@ -4533,10 +4532,6 @@ var ArmoredzombieEnemy = /** @class */ (function (_super) {
                             _this.seenPlayer = true;
                             if (player === _this.game.players[_this.game.localPlayerID])
                                 _this.alertTicks = 1;
-                            /*this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
-                            this.level.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y));
-                            this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1));
-                            this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1));*/
                         }
                     }
                 }
@@ -4613,25 +4608,22 @@ var ArmoredzombieEnemy = /** @class */ (function (_super) {
                             }
                         }
                         if (_this.direction == entity_1.EntityDirection.LEFT) {
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y));
                             disablePositions.push({ x: _this.x, y: _this.y + 1 });
                             disablePositions.push({ x: _this.x, y: _this.y - 1 });
                         }
                         if (_this.direction == entity_1.EntityDirection.RIGHT) {
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y));
                             disablePositions.push({ x: _this.x, y: _this.y + 1 });
                             disablePositions.push({ x: _this.x, y: _this.y - 1 });
                         }
                         if (_this.direction == entity_1.EntityDirection.DOWN) {
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y + 1));
                             disablePositions.push({ x: _this.x + 1, y: _this.y });
                             disablePositions.push({ x: _this.x - 1, y: _this.y });
                         }
                         if (_this.direction == entity_1.EntityDirection.UP) {
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y - 1));
                             disablePositions.push({ x: _this.x + 1, y: _this.y });
                             disablePositions.push({ x: _this.x - 1, y: _this.y });
                         }
+                        _this.makeHitWarnings(false, false, true, _this.direction);
                     }
                     var targetPlayerOffline = Object.values(_this.game.offlinePlayers).indexOf(_this.targetPlayer) !== -1;
                     if (!_this.aggro || targetPlayerOffline) {
@@ -4644,18 +4636,7 @@ var ArmoredzombieEnemy = /** @class */ (function (_super) {
                                     _this.facePlayer(player);
                                     if (player === _this.game.players[_this.game.localPlayerID])
                                         _this.alertTicks = 1;
-                                    if (_this.direction == entity_1.EntityDirection.LEFT) {
-                                        _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y));
-                                    }
-                                    if (_this.direction == entity_1.EntityDirection.RIGHT) {
-                                        _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y));
-                                    }
-                                    if (_this.direction == entity_1.EntityDirection.DOWN) {
-                                        _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y + 1));
-                                    }
-                                    if (_this.direction == entity_1.EntityDirection.UP) {
-                                        _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y - 1));
-                                    }
+                                    _this.makeHitWarnings(false, false, true, _this.direction);
                                 }
                             }
                         }
@@ -4821,14 +4802,14 @@ var BigKnightEnemy = /** @class */ (function (_super) {
         var _this = _super.call(this, level, game, x, y) || this;
         _this.REGEN_TICKS = 5;
         _this.addHitWarnings = function () {
-            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y));
-            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y + 1));
-            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 2, _this.y));
-            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 2, _this.y + 1));
-            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y - 1));
-            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y - 1));
-            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y + 2));
-            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y + 2));
+            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y, _this.x, _this.y));
+            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y + 1, _this.x, _this.y));
+            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 2, _this.y, _this.x, _this.y));
+            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 2, _this.y + 1, _this.x, _this.y));
+            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y - 1, _this.x, _this.y));
+            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y - 1, _this.x, _this.y));
+            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y + 2, _this.x, _this.y));
+            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y + 2, _this.x, _this.y));
         };
         _this.hit = function () {
             return 1;
@@ -5090,14 +5071,14 @@ var BigSkullEnemy = /** @class */ (function (_super) {
         var _this = _super.call(this, level, game, x, y) || this;
         _this.REGEN_TICKS = 5;
         _this.addHitWarnings = function () {
-            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y));
-            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y + 1));
-            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 2, _this.y));
-            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 2, _this.y + 1));
-            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y - 1));
-            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y - 1));
-            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y + 2));
-            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y + 2));
+            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y, _this.x, _this.y));
+            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y + 1, _this.x, _this.y));
+            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 2, _this.y, _this.x, _this.y));
+            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 2, _this.y + 1, _this.x, _this.y));
+            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y - 1, _this.x, _this.y));
+            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y - 1, _this.x, _this.y));
+            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y + 2, _this.x, _this.y));
+            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y + 2, _this.x, _this.y));
         };
         _this.hit = function () {
             return 1;
@@ -5378,7 +5359,6 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BishopEnemy = void 0;
 var entity_1 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-var hitWarning_1 = __webpack_require__(/*! ../hitWarning */ "./src/hitWarning.ts");
 var genericParticle_1 = __webpack_require__(/*! ../particle/genericParticle */ "./src/particle/genericParticle.ts");
 var coin_1 = __webpack_require__(/*! ../item/coin */ "./src/item/coin.ts");
 var greengem_1 = __webpack_require__(/*! ../item/greengem */ "./src/item/greengem.ts");
@@ -5468,10 +5448,7 @@ var BishopEnemy = /** @class */ (function (_super) {
                             _this.seenPlayer = true;
                             if (player === _this.game.players[_this.game.localPlayerID])
                                 _this.alertTicks = 1;
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y - 1));
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y + 1));
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y - 1));
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y + 1));
+                            _this.makeHitWarnings(false, true, false, _this.direction);
                         }
                     }
                 }
@@ -5544,10 +5521,7 @@ var BishopEnemy = /** @class */ (function (_super) {
                                 _this.drawY = _this.y - oldY;
                             }
                         }
-                        _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y - 1));
-                        _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y + 1));
-                        _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y - 1));
-                        _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y + 1));
+                        _this.makeHitWarnings(false, true, false, _this.direction);
                     }
                     var targetPlayerOffline = Object.values(_this.game.offlinePlayers).indexOf(_this.targetPlayer) !==
                         -1;
@@ -5563,10 +5537,7 @@ var BishopEnemy = /** @class */ (function (_super) {
                                     _this.facePlayer(player);
                                     if (player === _this.game.players[_this.game.localPlayerID])
                                         _this.alertTicks = 1;
-                                    _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y - 1));
-                                    _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y + 1));
-                                    _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y - 1));
-                                    _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y + 1));
+                                    _this.makeHitWarnings(false, true, false, _this.direction);
                                 }
                             }
                         }
@@ -5727,7 +5698,7 @@ var ChargeEnemy = /** @class */ (function (_super) {
                                         _this.targetY === _this.game.players[i].y - 1) ||
                                     (_this.targetX === _this.game.players[i].x &&
                                         _this.targetY === _this.game.players[i].y + 1))
-                                    _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.targetX, _this.targetY));
+                                    _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.targetX, _this.targetY, _this.x, _this.y));
                             }
                             _this.visualTargetX = _this.targetX + 0.5 * dx;
                             _this.visualTargetY = _this.targetY + 0.5 * dy;
@@ -6190,6 +6161,7 @@ var genericParticle_1 = __webpack_require__(/*! ../particle/genericParticle */ "
 var healthbar_1 = __webpack_require__(/*! ../healthbar */ "./src/healthbar.ts");
 var drawable_1 = __webpack_require__(/*! ../drawable */ "./src/drawable.ts");
 var gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
+var hitWarning_1 = __webpack_require__(/*! ../hitWarning */ "./src/hitWarning.ts");
 var EntityDirection;
 (function (EntityDirection) {
     EntityDirection[EntityDirection["DOWN"] = 0] = "DOWN";
@@ -6401,6 +6373,34 @@ var Entity = /** @class */ (function (_super) {
                 game_1.Game.fillTextOutline("!", (_this.x + 0.5) * gameConstants_1.GameConstants.TILESIZE - width / 2 + offsetX, (_this.y - 0.75) * gameConstants_1.GameConstants.TILESIZE + yoff + offsetY, gameConstants_1.GameConstants.OUTLINE, gameConstants_1.GameConstants.WARNING_RED);
             }
         };
+        _this.makeHitWarnings = function (orthogonal, diagonal, forwardOnly, direction) {
+            if (orthogonal && !forwardOnly) {
+                _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y, _this.x, _this.y));
+                _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y, _this.x, _this.y));
+                _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y - 1, _this.x, _this.y));
+                _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y + 1, _this.x, _this.y));
+            }
+            if (diagonal && !forwardOnly) {
+                _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y - 1, _this.x, _this.y));
+                _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y + 1, _this.x, _this.y));
+                _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y - 1, _this.x, _this.y));
+                _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y + 1, _this.x, _this.y));
+            }
+            if (forwardOnly) {
+                if (direction == EntityDirection.LEFT) {
+                    _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y, _this.x, _this.y));
+                }
+                if (direction == EntityDirection.RIGHT) {
+                    _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y, _this.x, _this.y));
+                }
+                if (direction == EntityDirection.UP) {
+                    _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y - 1, _this.x, _this.y));
+                }
+                if (direction == EntityDirection.DOWN) {
+                    _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y + 1, _this.x, _this.y));
+                }
+            }
+        };
         _this.room = level;
         _this.x = x;
         _this.y = y;
@@ -6464,7 +6464,6 @@ exports.FrogEnemy = void 0;
 var entity_1 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var astarclass_1 = __webpack_require__(/*! ../astarclass */ "./src/astarclass.ts");
-var hitWarning_1 = __webpack_require__(/*! ../hitWarning */ "./src/hitWarning.ts");
 var spiketrap_1 = __webpack_require__(/*! ../tile/spiketrap */ "./src/tile/spiketrap.ts");
 var coin_1 = __webpack_require__(/*! ../item/coin */ "./src/item/coin.ts");
 var FrogEnemy = /** @class */ (function (_super) {
@@ -6514,10 +6513,7 @@ var FrogEnemy = /** @class */ (function (_super) {
                             _this.facePlayer(p);
                             if (p === _this.game.players[_this.game.localPlayerID])
                                 _this.alertTicks = 1;
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y));
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y));
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y - 1));
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y + 1));
+                            _this.makeHitWarnings(true, false, false, _this.direction);
                         }
                     }
                 }
@@ -6600,10 +6596,7 @@ var FrogEnemy = /** @class */ (function (_super) {
                             }
                         }
                         else {
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y));
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y));
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y - 1));
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y + 1));
+                            _this.makeHitWarnings(true, false, false, _this.direction);
                         }
                     }
                     var targetPlayerOffline = Object.values(_this.game.offlinePlayers).indexOf(_this.targetPlayer) !==
@@ -6773,7 +6766,6 @@ exports.KnightEnemy = void 0;
 var entity_1 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var astarclass_1 = __webpack_require__(/*! ../astarclass */ "./src/astarclass.ts");
-var hitWarning_1 = __webpack_require__(/*! ../hitWarning */ "./src/hitWarning.ts");
 var spiketrap_1 = __webpack_require__(/*! ../tile/spiketrap */ "./src/tile/spiketrap.ts");
 var coin_1 = __webpack_require__(/*! ../item/coin */ "./src/item/coin.ts");
 var dualdagger_1 = __webpack_require__(/*! ../weapon/dualdagger */ "./src/weapon/dualdagger.ts");
@@ -6817,10 +6809,7 @@ var KnightEnemy = /** @class */ (function (_super) {
                             _this.facePlayer(p);
                             if (p === _this.game.players[_this.game.localPlayerID])
                                 _this.alertTicks = 1;
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y));
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y));
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y - 1));
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y + 1));
+                            _this.makeHitWarnings(true, false, false, _this.direction);
                         }
                     }
                 }
@@ -6888,10 +6877,7 @@ var KnightEnemy = /** @class */ (function (_super) {
                             }
                         }
                         else {
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y));
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y));
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y - 1));
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y + 1));
+                            _this.makeHitWarnings(true, false, false, _this.direction);
                         }
                     }
                     var targetPlayerOffline = Object.values(_this.game.offlinePlayers).indexOf(_this.targetPlayer) !== -1;
@@ -6906,10 +6892,7 @@ var KnightEnemy = /** @class */ (function (_super) {
                                     if (player === _this.game.players[_this.game.localPlayerID])
                                         _this.alertTicks = 1;
                                     if (_this.ticks % 2 === 0) {
-                                        _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y));
-                                        _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y));
-                                        _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y - 1));
-                                        _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y + 1));
+                                        _this.makeHitWarnings(true, false, false, _this.direction);
                                     }
                                 }
                             }
@@ -7225,7 +7208,6 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.QueenEnemy = void 0;
 var entity_1 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-var hitWarning_1 = __webpack_require__(/*! ../hitWarning */ "./src/hitWarning.ts");
 var genericParticle_1 = __webpack_require__(/*! ../particle/genericParticle */ "./src/particle/genericParticle.ts");
 var coin_1 = __webpack_require__(/*! ../item/coin */ "./src/item/coin.ts");
 var greengem_1 = __webpack_require__(/*! ../item/greengem */ "./src/item/greengem.ts");
@@ -7316,10 +7298,7 @@ var QueenEnemy = /** @class */ (function (_super) {
                             _this.seenPlayer = true;
                             if (player === _this.game.players[_this.game.localPlayerID])
                                 _this.alertTicks = 1;
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y - 1));
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y + 1));
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y - 1));
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y + 1));
+                            _this.makeHitWarnings(true, true, false, _this.direction);
                         }
                     }
                 }
@@ -7334,10 +7313,6 @@ var QueenEnemy = /** @class */ (function (_super) {
                             if (e !== _this) {
                                 disablePositions.push({ x: e.x, y: e.y });
                             }
-                            /*disablePositions.push({ x: oldX + 1, y: oldY } as astar.Position);
-                          disablePositions.push({ x: oldX - 1, y: oldY } as astar.Position);
-                          disablePositions.push({ x: oldX, y: oldY + 1 } as astar.Position);
-                          disablePositions.push({ x: oldX, y: oldY - 1} as astar.Position);*/
                         }
                         for (var xx = _this.x - 1; xx <= _this.x + 1; xx++) {
                             for (var yy = _this.y - 1; yy <= _this.y + 1; yy++) {
@@ -7387,16 +7362,9 @@ var QueenEnemy = /** @class */ (function (_super) {
                                 _this.tryMove(moveX, moveY);
                                 _this.drawX = _this.x - oldX;
                                 _this.drawY = _this.y - oldY;
-                                /*if (this.x > oldX) this.direction = EnemyDirection.RIGHT;
-                                else if (this.x < oldX) this.direction = EnemyDirection.LEFT;
-                                else if (this.y > oldY) this.direction = EnemyDirection.DOWN;
-                                else if (this.y < oldY) this.direction = EnemyDirection.UP;*/
                             }
                         }
-                        _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y - 1));
-                        _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y + 1));
-                        _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y - 1));
-                        _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y + 1));
+                        _this.makeHitWarnings(true, true, false, _this.direction);
                     }
                     var targetPlayerOffline = Object.values(_this.game.offlinePlayers).indexOf(_this.targetPlayer) !==
                         -1;
@@ -7412,10 +7380,7 @@ var QueenEnemy = /** @class */ (function (_super) {
                                     _this.facePlayer(player);
                                     if (player === _this.game.players[_this.game.localPlayerID])
                                         _this.alertTicks = 1;
-                                    _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y - 1));
-                                    _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y + 1));
-                                    _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y - 1));
-                                    _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y + 1));
+                                    _this.makeHitWarnings(true, true, false, _this.direction);
                                 }
                             }
                         }
@@ -7644,7 +7609,6 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SkullEnemy = void 0;
 var entity_1 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-var hitWarning_1 = __webpack_require__(/*! ../hitWarning */ "./src/hitWarning.ts");
 var genericParticle_1 = __webpack_require__(/*! ../particle/genericParticle */ "./src/particle/genericParticle.ts");
 var coin_1 = __webpack_require__(/*! ../item/coin */ "./src/item/coin.ts");
 var redgem_1 = __webpack_require__(/*! ../item/redgem */ "./src/item/redgem.ts");
@@ -7705,10 +7669,7 @@ var SkullEnemy = /** @class */ (function (_super) {
                                 _this.seenPlayer = true;
                                 if (player === _this.game.players[_this.game.localPlayerID])
                                     _this.alertTicks = 1;
-                                _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y));
-                                _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y));
-                                _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y - 1));
-                                _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y + 1));
+                                _this.makeHitWarnings(true, false, false, _this.direction);
                             }
                         }
                     }
@@ -7771,10 +7732,7 @@ var SkullEnemy = /** @class */ (function (_super) {
                                         _this.direction = entity_1.EntityDirection.UP;
                                 }
                             }
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y));
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y));
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y - 1));
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y + 1));
+                            _this.makeHitWarnings(true, false, false, _this.direction);
                         }
                         var targetPlayerOffline = Object.values(_this.game.offlinePlayers).indexOf(_this.targetPlayer) !== -1;
                         if (!_this.aggro || targetPlayerOffline) {
@@ -7787,10 +7745,7 @@ var SkullEnemy = /** @class */ (function (_super) {
                                         _this.facePlayer(player);
                                         if (player === _this.game.players[_this.game.localPlayerID])
                                             _this.alertTicks = 1;
-                                        _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y));
-                                        _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y));
-                                        _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y - 1));
-                                        _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y + 1));
+                                        _this.makeHitWarnings(true, false, false, _this.direction);
                                     }
                                 }
                             }
@@ -7888,7 +7843,6 @@ exports.SlimeEnemy = void 0;
 var entity_1 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var astarclass_1 = __webpack_require__(/*! ../astarclass */ "./src/astarclass.ts");
-var hitWarning_1 = __webpack_require__(/*! ../hitWarning */ "./src/hitWarning.ts");
 var spiketrap_1 = __webpack_require__(/*! ../tile/spiketrap */ "./src/tile/spiketrap.ts");
 var coin_1 = __webpack_require__(/*! ../item/coin */ "./src/item/coin.ts");
 var gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
@@ -7932,10 +7886,7 @@ var SlimeEnemy = /** @class */ (function (_super) {
                             _this.facePlayer(p);
                             if (p === _this.game.players[_this.game.localPlayerID])
                                 _this.alertTicks = 1;
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y));
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y));
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y - 1));
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y + 1));
+                            _this.makeHitWarnings(true, false, false, _this.direction);
                         }
                     }
                 }
@@ -8003,10 +7954,7 @@ var SlimeEnemy = /** @class */ (function (_super) {
                             }
                         }
                         else {
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y));
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y));
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y - 1));
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y + 1));
+                            _this.makeHitWarnings(true, false, false, _this.direction);
                         }
                     }
                     var targetPlayerOffline = Object.values(_this.game.offlinePlayers).indexOf(_this.targetPlayer) !== -1;
@@ -8021,10 +7969,7 @@ var SlimeEnemy = /** @class */ (function (_super) {
                                     if (player === _this.game.players[_this.game.localPlayerID])
                                         _this.alertTicks = 1;
                                     if (_this.ticks % 2 === 0) {
-                                        _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y));
-                                        _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y));
-                                        _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y - 1));
-                                        _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y + 1));
+                                        _this.makeHitWarnings(true, false, false, _this.direction);
                                     }
                                 }
                             }
@@ -8149,7 +8094,7 @@ var Spawner = /** @class */ (function (_super) {
                                 break;
                         }
                         _this.room.projectiles.push(new enemySpawnAnimation_1.EnemySpawnAnimation(_this.room, spawned, position.x, position.y));
-                        _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, position.x, position.y));
+                        _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, position.x, position.y, _this.x, _this.y));
                     }
                 }
                 _this.ticks++;
@@ -8742,7 +8687,6 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ZombieEnemy = void 0;
 var entity_1 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-var hitWarning_1 = __webpack_require__(/*! ../hitWarning */ "./src/hitWarning.ts");
 var genericParticle_1 = __webpack_require__(/*! ../particle/genericParticle */ "./src/particle/genericParticle.ts");
 var coin_1 = __webpack_require__(/*! ../item/coin */ "./src/item/coin.ts");
 var greengem_1 = __webpack_require__(/*! ../item/greengem */ "./src/item/greengem.ts");
@@ -8793,10 +8737,6 @@ var ZombieEnemy = /** @class */ (function (_super) {
                             _this.seenPlayer = true;
                             if (player === _this.game.players[_this.game.localPlayerID])
                                 _this.alertTicks = 1;
-                            /*this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
-                            this.level.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y));
-                            this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1));
-                            this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1));*/
                         }
                     }
                 }
@@ -8873,25 +8813,22 @@ var ZombieEnemy = /** @class */ (function (_super) {
                             }
                         }
                         if (_this.direction == entity_1.EntityDirection.LEFT) {
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y));
                             disablePositions.push({ x: _this.x, y: _this.y + 1 });
                             disablePositions.push({ x: _this.x, y: _this.y - 1 });
                         }
                         if (_this.direction == entity_1.EntityDirection.RIGHT) {
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y));
                             disablePositions.push({ x: _this.x, y: _this.y + 1 });
                             disablePositions.push({ x: _this.x, y: _this.y - 1 });
                         }
                         if (_this.direction == entity_1.EntityDirection.DOWN) {
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y + 1));
                             disablePositions.push({ x: _this.x + 1, y: _this.y });
                             disablePositions.push({ x: _this.x - 1, y: _this.y });
                         }
                         if (_this.direction == entity_1.EntityDirection.UP) {
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y - 1));
                             disablePositions.push({ x: _this.x + 1, y: _this.y });
                             disablePositions.push({ x: _this.x - 1, y: _this.y });
                         }
+                        _this.makeHitWarnings(false, false, true, _this.direction);
                     }
                     var targetPlayerOffline = Object.values(_this.game.offlinePlayers).indexOf(_this.targetPlayer) !== -1;
                     if (!_this.aggro || targetPlayerOffline) {
@@ -8904,18 +8841,7 @@ var ZombieEnemy = /** @class */ (function (_super) {
                                     _this.facePlayer(player);
                                     if (player === _this.game.players[_this.game.localPlayerID])
                                         _this.alertTicks = 1;
-                                    if (_this.direction == entity_1.EntityDirection.LEFT) {
-                                        _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y));
-                                    }
-                                    if (_this.direction == entity_1.EntityDirection.RIGHT) {
-                                        _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y));
-                                    }
-                                    if (_this.direction == entity_1.EntityDirection.DOWN) {
-                                        _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y + 1));
-                                    }
-                                    if (_this.direction == entity_1.EntityDirection.UP) {
-                                        _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y - 1));
-                                    }
+                                    _this.makeHitWarnings(false, false, true, _this.direction);
                                 }
                             }
                         }
@@ -10092,7 +10018,7 @@ var HitWarningState = /** @class */ (function () {
 }());
 exports.HitWarningState = HitWarningState;
 var loadHitWarning = function (hws, game) {
-    var hw = new hitWarning_1.HitWarning(game, hws.x, hws.y);
+    var hw = new hitWarning_1.HitWarning(game, hws.x, hws.y, hws.x, hws.y);
     hw.dead = hws.dead;
     return hw;
 };
@@ -10864,28 +10790,72 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.HitWarning = void 0;
 var game_1 = __webpack_require__(/*! ./game */ "./src/game.ts");
 var drawable_1 = __webpack_require__(/*! ./drawable */ "./src/drawable.ts");
+var Direction;
+(function (Direction) {
+    Direction[Direction["North"] = 0] = "North";
+    Direction[Direction["NorthEast"] = 1] = "NorthEast";
+    Direction[Direction["East"] = 2] = "East";
+    Direction[Direction["SouthEast"] = 3] = "SouthEast";
+    Direction[Direction["South"] = 4] = "South";
+    Direction[Direction["SouthWest"] = 5] = "SouthWest";
+    Direction[Direction["West"] = 6] = "West";
+    Direction[Direction["NorthWest"] = 7] = "NorthWest";
+})(Direction || (Direction = {}));
 var HitWarning = /** @class */ (function (_super) {
     __extends(HitWarning, _super);
-    function HitWarning(game, x, y) {
+    function HitWarning(game, x, y, eX, eY) {
         var _this = _super.call(this) || this;
         _this.tick = function () {
             _this.dead = true;
         };
+        _this.setPointerDir = function () {
+            var dx = _this.eX - _this.x;
+            var dy = _this.eY - _this.y;
+            if (dx === 0 && dy === 0) {
+                _this.tileX = 18;
+                _this.tileY = 5;
+            }
+            else {
+                if (dx === 0) {
+                    _this.dir = dy < 0 ? Direction.South : Direction.North;
+                }
+                else if (dy === 0) {
+                    _this.dir = dx < 0 ? Direction.East : Direction.West;
+                }
+                else if (dx < 0) {
+                    _this.dir = dy < 0 ? Direction.SouthEast : Direction.NorthEast;
+                }
+                else {
+                    _this.dir = dy < 0 ? Direction.SouthWest : Direction.NorthWest;
+                }
+                _this.tileX = 0 + (4 * _this.dir);
+                console.log(_this.tileX);
+                console.log(_this.dir);
+            }
+            ;
+        };
         _this.draw = function (delta) {
+            _this.setPointerDir();
             if ((_this.x === _this.game.players[_this.game.localPlayerID].x && Math.abs(_this.y - _this.game.players[_this.game.localPlayerID].y) <= 1) ||
                 (_this.y === _this.game.players[_this.game.localPlayerID].y && Math.abs(_this.x - _this.game.players[_this.game.localPlayerID].x) <= 1))
-                game_1.Game.drawFX(18 + Math.floor(HitWarning.frame), 6, 1, 1, _this.x, _this.y, 1, 1);
+                game_1.Game.drawFX(_this.tileX + Math.floor(HitWarning.frame), _this.tileY, 1, 1, _this.x, _this.y - 0.45, 1, 1);
         };
         _this.drawTopLayer = function (delta) {
+            _this.setPointerDir();
             _this.drawableY = _this.y;
             if ((_this.x === _this.game.players[_this.game.localPlayerID].x && Math.abs(_this.y - _this.game.players[_this.game.localPlayerID].y) <= 1) ||
                 (_this.y === _this.game.players[_this.game.localPlayerID].y && Math.abs(_this.x - _this.game.players[_this.game.localPlayerID].x) <= 1))
-                game_1.Game.drawFX(18 + Math.floor(HitWarning.frame), 5, 1, 1, _this.x, _this.y, 1, 1);
+                game_1.Game.drawFX(_this.tileX + Math.floor(HitWarning.frame), _this.tileY + 1, 1, 1, _this.x, _this.y - 0.45, 1, 1);
         };
         _this.x = x;
         _this.y = y;
         _this.dead = false;
         _this.game = game;
+        _this.dir = Direction.North;
+        _this.tileX = 0;
+        _this.tileY = 0;
+        _this.eX = eX;
+        _this.eY = eY;
         return _this;
     }
     HitWarning.frame = 0;
@@ -14465,7 +14435,7 @@ var EnemySpawnAnimation = /** @class */ (function (_super) {
                 genericParticle_1.GenericParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, "#ffffff");
             }
             else {
-                _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.room.game, _this.x, _this.y));
+                _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.room.game, _this.x, _this.y, _this.x, _this.y));
             }
         };
         _this.drawTopLayer = function (delta) {
@@ -14628,7 +14598,7 @@ var WizardFireball = /** @class */ (function (_super) {
                 _this.dead = true;
             _this.state++;
             if (_this.state === 1) {
-                _this.parent.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.parent.game, _this.x, _this.y));
+                _this.parent.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.parent.game, _this.x, _this.y, _this.x, _this.y));
             }
             if (_this.state === 2) {
                 _this.frame = 0;
@@ -15647,7 +15617,7 @@ var Room = /** @class */ (function () {
             var y = t.y;
             // Define the enemy tables for each depth level
             var tables = {
-                0: [2],
+                0: [1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12],
                 1: [1, 1, 3, 3, 3, 2, 2],
                 2: [1, 1, 2, 2, 3, 3, 4],
                 3: [1, 1, 1, 2, 3, 3, 3, 4, 4, 5],
@@ -16953,7 +16923,7 @@ var SpikeTrap = /** @class */ (function (_super) {
                 }
             }
             if (_this.tickCount === 3)
-                _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.room.game, _this.x, _this.y));
+                _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.room.game, _this.x, _this.y, _this.x, _this.y));
         };
         _this.tickEnd = function () {
             if (_this.on) {

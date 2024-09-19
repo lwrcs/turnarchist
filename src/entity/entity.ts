@@ -10,6 +10,7 @@ import { HealthBar } from "../healthbar";
 import { Drawable } from "../drawable";
 import { Item } from "../item/item";
 import { GameConstants } from "../gameConstants";
+import { HitWarning } from "../hitWarning";
 
 export enum EntityDirection {
   DOWN,
@@ -334,4 +335,51 @@ export class Entity extends Drawable {
       );
     }
   };
-}
+  makeHitWarnings = (orthogonal: Boolean, diagonal: Boolean, forwardOnly: Boolean, direction: EntityDirection) => {
+    if (orthogonal && !forwardOnly){
+    this.room.hitwarnings.push(
+      new HitWarning(this.game, this.x - 1, this.y, this.x, this.y)
+    );
+    this.room.hitwarnings.push(
+      new HitWarning(this.game, this.x + 1, this.y, this.x, this.y)
+    );
+    this.room.hitwarnings.push(
+      new HitWarning(this.game, this.x, this.y - 1, this.x, this.y)
+    );
+    this.room.hitwarnings.push(
+      new HitWarning(this.game, this.x, this.y + 1, this.x, this.y)
+    );
+  }
+    if (diagonal && !forwardOnly){
+    this.room.hitwarnings.push(
+      new HitWarning(this.game, this.x - 1, this.y - 1, this.x, this.y)
+    );
+    this.room.hitwarnings.push(
+      new HitWarning(this.game, this.x + 1, this.y + 1, this.x, this.y)
+    );
+    this.room.hitwarnings.push(
+      new HitWarning(this.game, this.x + 1, this.y - 1, this.x, this.y)
+    );
+    this.room.hitwarnings.push(
+      new HitWarning(this.game, this.x - 1, this.y + 1, this.x, this.y)
+    );
+  }
+  if (forwardOnly){
+    if (direction == EntityDirection.LEFT){
+    this.room.hitwarnings.push(
+      new HitWarning(this.game, this.x - 1, this.y, this.x, this.y)
+    );}
+    if (direction == EntityDirection.RIGHT){
+    this.room.hitwarnings.push(
+      new HitWarning(this.game, this.x + 1, this.y, this.x, this.y)
+    );}
+    if (direction == EntityDirection.UP){
+    this.room.hitwarnings.push(
+      new HitWarning(this.game, this.x, this.y - 1, this.x, this.y)
+    );}
+    if (direction == EntityDirection.DOWN){
+    this.room.hitwarnings.push(
+      new HitWarning(this.game, this.x, this.y + 1, this.x, this.y)
+    );}
+  }
+}}

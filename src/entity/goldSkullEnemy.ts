@@ -91,10 +91,10 @@ export class GoldSkullEnemy extends Entity {
               this.facePlayer(player);
               this.seenPlayer = true;
               if (player === this.game.players[this.game.localPlayerID]) this.alertTicks = 1;
-              this.room.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
-              this.room.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y));
-              this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1));
-              this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1));
+              this.room.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y, this.x, this.y));
+              this.room.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y, this.x, this.y));
+              this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1, this.x, this.y));
+              this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1, this.x, this.y));
             }
           }
         }
@@ -162,10 +162,10 @@ export class GoldSkullEnemy extends Entity {
               }
             }
 
-            this.room.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
-            this.room.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y));
-            this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1));
-            this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1));
+            this.room.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y, this.x, this.y));
+            this.room.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y, this.x, this.y));
+            this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1, this.x, this.y));
+            this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1, this.x, this.y));
           }
 
           let targetPlayerOffline = Object.values(this.game.offlinePlayers).indexOf(this.targetPlayer) !== -1;
@@ -178,10 +178,10 @@ export class GoldSkullEnemy extends Entity {
                   this.targetPlayer = player;
                   this.facePlayer(player);
                   if (player === this.game.players[this.game.localPlayerID]) this.alertTicks = 1;
-                  this.room.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
-                  this.room.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y));
-                  this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1));
-                  this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1));
+                  this.room.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y, this.x, this.y));
+                  this.room.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y, this.x, this.y));
+                  this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1, this.x, this.y));
+                  this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1, this.x, this.y));
                 }
               }
             }

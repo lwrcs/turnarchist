@@ -71,10 +71,7 @@ export class SlimeEnemy extends Entity {
             this.targetPlayer = p;
             this.facePlayer(p);
             if (p === this.game.players[this.game.localPlayerID]) this.alertTicks = 1;
-            this.room.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
-            this.room.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y));
-            this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1));
-            this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1));
+            this.makeHitWarnings(true, false, false, this.direction)
           }
         }
       }
@@ -145,10 +142,7 @@ export class SlimeEnemy extends Entity {
               }
             }
           } else {
-            this.room.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
-            this.room.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y));
-            this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1));
-            this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1));
+            this.makeHitWarnings(true, false, false, this.direction)
           }
         }
 
@@ -163,10 +157,7 @@ export class SlimeEnemy extends Entity {
                 this.facePlayer(player);
                 if (player === this.game.players[this.game.localPlayerID]) this.alertTicks = 1;
                 if (this.ticks % 2 === 0) {
-                  this.room.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
-                  this.room.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y));
-                  this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1));
-                  this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1));
+                  this.makeHitWarnings(true, false, false, this.direction)
                 }
               }
             }

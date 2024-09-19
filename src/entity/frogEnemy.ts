@@ -9,6 +9,7 @@ import { Player } from "../player";
 import { DualDagger } from "../weapon/dualdagger";
 import { Item } from "../item/item";
 import { GameConstants } from "../gameConstants";
+import { HitPointer } from "../hitPointer";
 
 export class FrogEnemy extends Entity {
   ticks: number;
@@ -97,18 +98,7 @@ export class FrogEnemy extends Entity {
             this.facePlayer(p);
             if (p === this.game.players[this.game.localPlayerID])
               this.alertTicks = 1;
-            this.room.hitwarnings.push(
-              new HitWarning(this.game, this.x - 1, this.y)
-            );
-            this.room.hitwarnings.push(
-              new HitWarning(this.game, this.x + 1, this.y)
-            );
-            this.room.hitwarnings.push(
-              new HitWarning(this.game, this.x, this.y - 1)
-            );
-            this.room.hitwarnings.push(
-              new HitWarning(this.game, this.x, this.y + 1)
-            );
+            this.makeHitWarnings(true, false, false, this.direction)
           }
         }
       } else if (this.seenPlayer) {
@@ -201,18 +191,8 @@ export class FrogEnemy extends Entity {
             }
             
           } else {
-            this.room.hitwarnings.push(
-              new HitWarning(this.game, this.x - 1, this.y)
-            );
-            this.room.hitwarnings.push(
-              new HitWarning(this.game, this.x + 1, this.y)
-            );
-            this.room.hitwarnings.push(
-              new HitWarning(this.game, this.x, this.y - 1)
-            );
-            this.room.hitwarnings.push(
-              new HitWarning(this.game, this.x, this.y + 1)
-            );
+            this.makeHitWarnings(true, false, false, this.direction)
+
           }
         }
 

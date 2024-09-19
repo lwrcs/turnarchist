@@ -133,18 +133,8 @@ export class BishopEnemy extends Entity {
             this.seenPlayer = true;
             if (player === this.game.players[this.game.localPlayerID])
               this.alertTicks = 1;
-            this.room.hitwarnings.push(
-              new HitWarning(this.game, this.x - 1, this.y - 1)
-            );
-            this.room.hitwarnings.push(
-              new HitWarning(this.game, this.x + 1, this.y + 1)
-            );
-            this.room.hitwarnings.push(
-              new HitWarning(this.game, this.x + 1, this.y - 1)
-            );
-            this.room.hitwarnings.push(
-              new HitWarning(this.game, this.x - 1, this.y + 1)
-            );
+            this.makeHitWarnings(false, true, false, this.direction)
+
           }
         }
       } else if (this.seenPlayer) {
@@ -226,19 +216,7 @@ export class BishopEnemy extends Entity {
               this.drawY = this.y - oldY;
             }
           }
-
-          this.room.hitwarnings.push(
-            new HitWarning(this.game, this.x - 1, this.y - 1)
-          );
-          this.room.hitwarnings.push(
-            new HitWarning(this.game, this.x + 1, this.y + 1)
-          );
-          this.room.hitwarnings.push(
-            new HitWarning(this.game, this.x + 1, this.y - 1)
-          );
-          this.room.hitwarnings.push(
-            new HitWarning(this.game, this.x - 1, this.y + 1)
-          );
+          this.makeHitWarnings(false, true, false, this.direction)
         }
 
         let targetPlayerOffline =
@@ -258,18 +236,7 @@ export class BishopEnemy extends Entity {
                 this.facePlayer(player);
                 if (player === this.game.players[this.game.localPlayerID])
                   this.alertTicks = 1;
-                this.room.hitwarnings.push(
-                  new HitWarning(this.game, this.x - 1, this.y - 1)
-                );
-                this.room.hitwarnings.push(
-                  new HitWarning(this.game, this.x + 1, this.y + 1)
-                );
-                this.room.hitwarnings.push(
-                  new HitWarning(this.game, this.x + 1, this.y - 1)
-                );
-                this.room.hitwarnings.push(
-                  new HitWarning(this.game, this.x - 1, this.y + 1)
-                );
+                this.makeHitWarnings(false, true, false, this.direction)
               }
             }
           }

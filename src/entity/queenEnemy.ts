@@ -134,18 +134,7 @@ export class QueenEnemy extends Entity {
             this.seenPlayer = true;
             if (player === this.game.players[this.game.localPlayerID])
               this.alertTicks = 1;
-            this.room.hitwarnings.push(
-              new HitWarning(this.game, this.x - 1, this.y - 1)
-            );
-            this.room.hitwarnings.push(
-              new HitWarning(this.game, this.x + 1, this.y + 1)
-            );
-            this.room.hitwarnings.push(
-              new HitWarning(this.game, this.x + 1, this.y - 1)
-            );
-            this.room.hitwarnings.push(
-              new HitWarning(this.game, this.x - 1, this.y + 1)
-            );
+            this.makeHitWarnings(true, true, false, this.direction)
           }
         }
       } else if (this.seenPlayer) {
@@ -159,10 +148,6 @@ export class QueenEnemy extends Entity {
             if (e !== this) {
               disablePositions.push({ x: e.x, y: e.y } as astar.Position);
             }
-            /*disablePositions.push({ x: oldX + 1, y: oldY } as astar.Position);
-          disablePositions.push({ x: oldX - 1, y: oldY } as astar.Position);
-          disablePositions.push({ x: oldX, y: oldY + 1 } as astar.Position);
-          disablePositions.push({ x: oldX, y: oldY - 1} as astar.Position);*/
           }
           for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
             for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
@@ -226,25 +211,9 @@ export class QueenEnemy extends Entity {
               this.tryMove(moveX, moveY);
               this.drawX = this.x - oldX;
               this.drawY = this.y - oldY;
-              /*if (this.x > oldX) this.direction = EnemyDirection.RIGHT;
-              else if (this.x < oldX) this.direction = EnemyDirection.LEFT;
-              else if (this.y > oldY) this.direction = EnemyDirection.DOWN;
-              else if (this.y < oldY) this.direction = EnemyDirection.UP;*/
             }
           }
-
-          this.room.hitwarnings.push(
-            new HitWarning(this.game, this.x - 1, this.y - 1)
-          );
-          this.room.hitwarnings.push(
-            new HitWarning(this.game, this.x + 1, this.y + 1)
-          );
-          this.room.hitwarnings.push(
-            new HitWarning(this.game, this.x + 1, this.y - 1)
-          );
-          this.room.hitwarnings.push(
-            new HitWarning(this.game, this.x - 1, this.y + 1)
-          );
+          this.makeHitWarnings(true, true, false, this.direction)
         }
 
         let targetPlayerOffline =
@@ -264,18 +233,7 @@ export class QueenEnemy extends Entity {
                 this.facePlayer(player);
                 if (player === this.game.players[this.game.localPlayerID])
                   this.alertTicks = 1;
-                this.room.hitwarnings.push(
-                  new HitWarning(this.game, this.x - 1, this.y - 1)
-                );
-                this.room.hitwarnings.push(
-                  new HitWarning(this.game, this.x + 1, this.y + 1)
-                );
-                this.room.hitwarnings.push(
-                  new HitWarning(this.game, this.x + 1, this.y - 1)
-                );
-                this.room.hitwarnings.push(
-                  new HitWarning(this.game, this.x - 1, this.y + 1)
-                );
+                this.makeHitWarnings(true, true, false, this.direction)
               }
             }
           }

@@ -52,14 +52,14 @@ export class BigSkullEnemy extends Entity {
   }
 
   addHitWarnings = () => {
-    this.room.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
-    this.room.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y + 1));
-    this.room.hitwarnings.push(new HitWarning(this.game, this.x + 2, this.y));
-    this.room.hitwarnings.push(new HitWarning(this.game, this.x + 2, this.y + 1));
-    this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1));
-    this.room.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y - 1));
-    this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 2));
-    this.room.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y + 2));
+    this.room.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y, this.x, this.y));
+    this.room.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y + 1, this.x, this.y));
+    this.room.hitwarnings.push(new HitWarning(this.game, this.x + 2, this.y, this.x, this.y));
+    this.room.hitwarnings.push(new HitWarning(this.game, this.x + 2, this.y + 1, this.x, this.y));
+    this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1, this.x, this.y));
+    this.room.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y - 1, this.x, this.y));
+    this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 2, this.x, this.y));
+    this.room.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y + 2, this.x, this.y));
   };
 
   hit = (): number => {

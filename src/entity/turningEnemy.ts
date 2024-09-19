@@ -81,10 +81,10 @@ export class TurningEnemy extends Entity {
             this.facePlayer(player);
             this.seenPlayer = true;
             if (player === this.game.players[this.game.localPlayerID]) this.alertTicks = 1;
-            this.room.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
-            this.room.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y));
-            this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1));
-            this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1));
+            this.room.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y, this.x, this.y));
+            this.room.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y, this.x, this.y));
+            this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1, this.x, this.y));
+            this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1, this.x, this.y));
           }
         }
       }
@@ -166,22 +166,22 @@ export class TurningEnemy extends Entity {
           }
 
           if (this.direction == EntityDirection.LEFT) {
-            this.room.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
+            this.room.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y, this.x, this.y));
             disablePositions.push({ x: this.x, y: this.y + 1 } as astar.Position);
             disablePositions.push({ x: this.x, y: this.y - 1 } as astar.Position);
           }
           if (this.direction == EntityDirection.RIGHT) {
-            this.room.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y));
+            this.room.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y, this.x, this.y));
             disablePositions.push({ x: this.x, y: this.y + 1 } as astar.Position);
             disablePositions.push({ x: this.x, y: this.y - 1 } as astar.Position);
           }
           if (this.direction == EntityDirection.DOWN) {
-            this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1));
+            this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1, this.x, this.y));
             disablePositions.push({ x: this.x + 1, y: this.y } as astar.Position);
             disablePositions.push({ x: this.x - 1, y: this.y } as astar.Position);
           }
           if (this.direction == EntityDirection.UP) {
-            this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1));
+            this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1, this.x, this.y));
             disablePositions.push({ x: this.x + 1, y: this.y } as astar.Position);
             disablePositions.push({ x: this.x - 1, y: this.y } as astar.Position);
           }
@@ -198,16 +198,16 @@ export class TurningEnemy extends Entity {
                 this.facePlayer(player);
                 if (player === this.game.players[this.game.localPlayerID]) this.alertTicks = 1;
                 if (this.direction == EntityDirection.LEFT) {
-                  this.room.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
+                  this.room.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y, this.x, this.y));
                 }
                 if (this.direction == EntityDirection.RIGHT) {
-                  this.room.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y));
+                  this.room.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y, this.x, this.y));
                 }
                 if (this.direction == EntityDirection.DOWN) {
-                  this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1));
+                  this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1, this.x, this.y));
                 }
                 if (this.direction == EntityDirection.UP) {
-                  this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1));
+                  this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1, this.x, this.y));
                 }
               }
             }

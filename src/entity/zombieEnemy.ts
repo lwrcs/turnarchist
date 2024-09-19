@@ -82,10 +82,6 @@ export class ZombieEnemy extends Entity {
             this.facePlayer(player);
             this.seenPlayer = true;
             if (player === this.game.players[this.game.localPlayerID]) this.alertTicks = 1;
-            /*this.level.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
-            this.level.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y));
-            this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1));
-            this.level.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1));*/
           }
         }
       }
@@ -167,25 +163,23 @@ export class ZombieEnemy extends Entity {
           }
 
           if (this.direction == EntityDirection.LEFT) {
-            this.room.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
             disablePositions.push({ x: this.x, y: this.y + 1 } as astar.Position);
             disablePositions.push({ x: this.x, y: this.y - 1 } as astar.Position);
           }
           if (this.direction == EntityDirection.RIGHT) {
-            this.room.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y));
             disablePositions.push({ x: this.x, y: this.y + 1 } as astar.Position);
             disablePositions.push({ x: this.x, y: this.y - 1 } as astar.Position);
           }
           if (this.direction == EntityDirection.DOWN) {
-            this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1));
             disablePositions.push({ x: this.x + 1, y: this.y } as astar.Position);
             disablePositions.push({ x: this.x - 1, y: this.y } as astar.Position);
           }
           if (this.direction == EntityDirection.UP) {
-            this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1));
             disablePositions.push({ x: this.x + 1, y: this.y } as astar.Position);
             disablePositions.push({ x: this.x - 1, y: this.y } as astar.Position);
           }
+          this.makeHitWarnings(false, false, true, this.direction)
+
         }
 
         let targetPlayerOffline = Object.values(this.game.offlinePlayers).indexOf(this.targetPlayer) !== -1;
@@ -198,18 +192,7 @@ export class ZombieEnemy extends Entity {
                 this.targetPlayer = player;
                 this.facePlayer(player);
                 if (player === this.game.players[this.game.localPlayerID]) this.alertTicks = 1;
-                if (this.direction == EntityDirection.LEFT) {
-                  this.room.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
-                }
-                if (this.direction == EntityDirection.RIGHT) {
-                  this.room.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y));
-                }
-                if (this.direction == EntityDirection.DOWN) {
-                  this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1));
-                }
-                if (this.direction == EntityDirection.UP) {
-                  this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1));
-                }
+                this.makeHitWarnings(false, false, true, this.direction)
               }
             }
           }

@@ -62,7 +62,7 @@ export class HitWarningState {
 }
 
 let loadHitWarning = (hws: HitWarningState, game: Game): HitWarning => {
-  let hw = new HitWarning(game, hws.x, hws.y);
+  let hw = new HitWarning(game, hws.x, hws.y, hws.x, hws.y);
   hw.dead = hws.dead;
   return hw;
 }

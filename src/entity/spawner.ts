@@ -102,7 +102,7 @@ export class Spawner extends Entity {
             new EnemySpawnAnimation(this.room, spawned, position.x, position.y)
           );
           this.room.hitwarnings.push(
-            new HitWarning(this.game, position.x, position.y)
+            new HitWarning(this.game, position.x, position.y, this.x, this.y)
           );
         }
       }

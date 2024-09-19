@@ -112,7 +112,7 @@ export class ChargeEnemy extends Entity {
                   this.targetY === this.game.players[i].y + 1)
               )
                 this.room.hitwarnings.push(
-                  new HitWarning(this.game, this.targetX, this.targetY)
+                  new HitWarning(this.game, this.targetX, this.targetY, this.x, this.y)
                 );
             }
             this.visualTargetX = this.targetX + 0.5 * dx;

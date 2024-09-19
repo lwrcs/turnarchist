@@ -66,6 +66,7 @@ import { Pumpkin } from "./entity/pumpkin";
 import { QueenEnemy } from "./entity/queenEnemy";
 import { FrogEnemy } from "./entity/frogEnemy";
 import { BigKnightEnemy } from "./entity/bigKnightEnemy";
+import { HitPointer } from "./hitPointer";
 
 export enum RoomType {
   START,
@@ -317,7 +318,7 @@ export class Room {
       let y = t.y;
       // Define the enemy tables for each depth level
       let tables = {
-        0: [2],
+        0: [1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12],
         1: [1, 1, 3, 3, 3, 2, 2],
         2: [1, 1, 2, 2, 3, 3, 4],
         3: [1, 1, 1, 2, 3, 3, 3, 4, 4, 5],
@@ -1306,7 +1307,6 @@ export class Room {
 
   draw = (delta: number) => {
     HitWarning.updateFrame(delta);
-
     this.fadeLighting();
   };
 

@@ -95,10 +95,7 @@ export class SkullEnemy extends Entity {
               this.facePlayer(player);
               this.seenPlayer = true;
               if (player === this.game.players[this.game.localPlayerID]) this.alertTicks = 1;
-              this.room.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
-              this.room.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y));
-              this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1));
-              this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1));
+              this.makeHitWarnings(true, false, false, this.direction)
             }
           }
         }
@@ -165,11 +162,7 @@ export class SkullEnemy extends Entity {
                 else if (this.y < oldY) this.direction = EntityDirection.UP;
               }
             }
-
-            this.room.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
-            this.room.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y));
-            this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1));
-            this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1));
+            this.makeHitWarnings(true, false, false, this.direction)
           }
 
           let targetPlayerOffline = Object.values(this.game.offlinePlayers).indexOf(this.targetPlayer) !== -1;
@@ -182,10 +175,7 @@ export class SkullEnemy extends Entity {
                   this.targetPlayer = player;
                   this.facePlayer(player);
                   if (player === this.game.players[this.game.localPlayerID]) this.alertTicks = 1;
-                  this.room.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y));
-                  this.room.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y));
-                  this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1));
-                  this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 1));
+                  this.makeHitWarnings(true, false, false, this.direction)
                 }
               }
             }
