@@ -66,7 +66,6 @@ import { Pumpkin } from "./entity/pumpkin";
 import { QueenEnemy } from "./entity/queenEnemy";
 import { FrogEnemy } from "./entity/frogEnemy";
 import { BigKnightEnemy } from "./entity/bigKnightEnemy";
-import { HitPointer } from "./hitPointer";
 
 export enum RoomType {
   START,
@@ -303,6 +302,17 @@ export class Room {
     }
   }
 
+  generateLevelTable = (rand: () => number) => {
+    let table: number[] = []
+    let e: number;
+    for (let i = 0; i <= Game.rand(2, 5, rand); i++){
+      e = Game.rand(1,12, rand)
+      table.push(e)
+    }
+    console.log(table)
+    return table;
+  }
+
   // Function to add enemies to the room
   private addEnemies(numEnemies: number, rand: () => number) {
     // Get all empty tiles in the room
@@ -317,8 +327,10 @@ export class Room {
       let x = t.x;
       let y = t.y;
       // Define the enemy tables for each depth level
+      
+
       let tables = {
-        0: [1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12],
+        0: this.generateLevelTable(rand),
         1: [1, 1, 3, 3, 3, 2, 2],
         2: [1, 1, 2, 2, 3, 3, 4],
         3: [1, 1, 1, 2, 3, 3, 3, 4, 4, 5],

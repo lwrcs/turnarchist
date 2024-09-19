@@ -9,7 +9,6 @@ import { Player } from "../player";
 import { DualDagger } from "../weapon/dualdagger";
 import { Item } from "../item/item";
 import { GameConstants } from "../gameConstants";
-import { HitPointer } from "../hitPointer";
 
 export class FrogEnemy extends Entity {
   ticks: number;

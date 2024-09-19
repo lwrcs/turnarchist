@@ -11,7 +11,8 @@ enum Direction {
   South,
   SouthWest,
   West,
-  NorthWest
+  NorthWest,
+  Center
 }
 
 export class HitWarning extends Drawable {
@@ -26,6 +27,7 @@ export class HitWarning extends Drawable {
   tileY: number;
   eX: number;
   eY: number;
+  offsetY: number;
 
   constructor(game: Game, x: number, y: number, eX: number, eY: number) {
     super();
@@ -38,6 +40,10 @@ export class HitWarning extends Drawable {
     this.tileY = 0;
     this.eX = eX
     this.eY = eY
+    this.offsetY = 0;
+
+    this.setPointerDir()
+
 
   }
 
@@ -57,6 +63,7 @@ export class HitWarning extends Drawable {
     if (dx === 0 && dy === 0) {
       this.tileX = 18
       this.tileY = 5
+      this.offsetY = 0
     } 
     else 
     {if (dx === 0) {
@@ -69,26 +76,25 @@ export class HitWarning extends Drawable {
       this.dir = dy < 0 ? Direction.SouthWest : Direction.NorthWest;
     }
     this.tileX = 0 + (4 * this.dir);
+    this.offsetY = 0.4
     console.log(this.tileX)
     console.log(this.dir)
   };
   }
   draw = (delta: number) => {
-    this.setPointerDir()
     if (
       (this.x === this.game.players[this.game.localPlayerID].x && Math.abs(this.y - this.game.players[this.game.localPlayerID].y) <= 1) ||
       (this.y === this.game.players[this.game.localPlayerID].y && Math.abs(this.x - this.game.players[this.game.localPlayerID].x) <= 1)
     )
-      Game.drawFX(this.tileX + Math.floor(HitWarning.frame), this.tileY, 1, 1, this.x, this.y - 0.45, 1, 1);
+      Game.drawFX(this.tileX + Math.floor(HitWarning.frame), this.tileY, 1, 1, this.x, this.y - this.offsetY, 1, 1);
   };
 
   drawTopLayer = (delta: number) => {
-    this.setPointerDir()
     this.drawableY = this.y;
     if (
       (this.x === this.game.players[this.game.localPlayerID].x && Math.abs(this.y - this.game.players[this.game.localPlayerID].y) <= 1) ||
       (this.y === this.game.players[this.game.localPlayerID].y && Math.abs(this.x - this.game.players[this.game.localPlayerID].x) <= 1)
     )
-      Game.drawFX(this.tileX + Math.floor(HitWarning.frame), this.tileY + 1 , 1, 1, this.x, this.y - 0.45, 1, 1);
+      Game.drawFX(this.tileX + Math.floor(HitWarning.frame), this.tileY + 1 , 1, 1, this.x, this.y - this.offsetY, 1, 1);
   };
 }

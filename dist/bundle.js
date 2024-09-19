@@ -7992,8 +7992,8 @@ var SlimeEnemy = /** @class */ (function (_super) {
                 if (_this.frame >= 4)
                     _this.frame = 0;
                 if (_this.hasShadow)
-                    game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
-                game_1.Game.drawMob(_this.tileX, _this.tileY + _this.direction, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
+                    game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - 0.25 - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
+                game_1.Game.drawMob(_this.tileX, _this.tileY + _this.direction, 1, 1, _this.x - _this.drawX, _this.y - 0.25 - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
             }
             if (!_this.seenPlayer) {
                 _this.drawSleepingZs(delta, 0, 0.75 * gameConstants_1.GameConstants.TILESIZE);
@@ -10800,6 +10800,7 @@ var Direction;
     Direction[Direction["SouthWest"] = 5] = "SouthWest";
     Direction[Direction["West"] = 6] = "West";
     Direction[Direction["NorthWest"] = 7] = "NorthWest";
+    Direction[Direction["Center"] = 8] = "Center";
 })(Direction || (Direction = {}));
 var HitWarning = /** @class */ (function (_super) {
     __extends(HitWarning, _super);
@@ -10814,6 +10815,7 @@ var HitWarning = /** @class */ (function (_super) {
             if (dx === 0 && dy === 0) {
                 _this.tileX = 18;
                 _this.tileY = 5;
+                _this.offsetY = 0;
             }
             else {
                 if (dx === 0) {
@@ -10829,23 +10831,22 @@ var HitWarning = /** @class */ (function (_super) {
                     _this.dir = dy < 0 ? Direction.SouthWest : Direction.NorthWest;
                 }
                 _this.tileX = 0 + (4 * _this.dir);
+                _this.offsetY = 0.4;
                 console.log(_this.tileX);
                 console.log(_this.dir);
             }
             ;
         };
         _this.draw = function (delta) {
-            _this.setPointerDir();
             if ((_this.x === _this.game.players[_this.game.localPlayerID].x && Math.abs(_this.y - _this.game.players[_this.game.localPlayerID].y) <= 1) ||
                 (_this.y === _this.game.players[_this.game.localPlayerID].y && Math.abs(_this.x - _this.game.players[_this.game.localPlayerID].x) <= 1))
-                game_1.Game.drawFX(_this.tileX + Math.floor(HitWarning.frame), _this.tileY, 1, 1, _this.x, _this.y - 0.45, 1, 1);
+                game_1.Game.drawFX(_this.tileX + Math.floor(HitWarning.frame), _this.tileY, 1, 1, _this.x, _this.y - _this.offsetY, 1, 1);
         };
         _this.drawTopLayer = function (delta) {
-            _this.setPointerDir();
             _this.drawableY = _this.y;
             if ((_this.x === _this.game.players[_this.game.localPlayerID].x && Math.abs(_this.y - _this.game.players[_this.game.localPlayerID].y) <= 1) ||
                 (_this.y === _this.game.players[_this.game.localPlayerID].y && Math.abs(_this.x - _this.game.players[_this.game.localPlayerID].x) <= 1))
-                game_1.Game.drawFX(_this.tileX + Math.floor(HitWarning.frame), _this.tileY + 1, 1, 1, _this.x, _this.y - 0.45, 1, 1);
+                game_1.Game.drawFX(_this.tileX + Math.floor(HitWarning.frame), _this.tileY + 1, 1, 1, _this.x, _this.y - _this.offsetY, 1, 1);
         };
         _this.x = x;
         _this.y = y;
@@ -10856,6 +10857,8 @@ var HitWarning = /** @class */ (function (_super) {
         _this.tileY = 0;
         _this.eX = eX;
         _this.eY = eY;
+        _this.offsetY = 0;
+        _this.setPointerDir();
         return _this;
     }
     HitWarning.frame = 0;
@@ -14785,6 +14788,16 @@ var Room = /** @class */ (function () {
         this.tileInside = function (tileX, tileY) {
             return _this.pointInside(tileX, tileY, _this.roomX, _this.roomY, _this.width, _this.height);
         };
+        this.generateLevelTable = function (rand) {
+            var table = [];
+            var e;
+            for (var i = 0; i <= game_1.Game.rand(2, 5, rand); i++) {
+                e = game_1.Game.rand(1, 12, rand);
+                table.push(e);
+            }
+            console.log(table);
+            return table;
+        };
         this.populateEmpty = function (rand) {
             _this.addTorches(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 2, 3, 4], rand), rand);
         };
@@ -15617,7 +15630,7 @@ var Room = /** @class */ (function () {
             var y = t.y;
             // Define the enemy tables for each depth level
             var tables = {
-                0: [1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12],
+                0: this_1.generateLevelTable(rand),
                 1: [1, 1, 3, 3, 3, 2, 2],
                 2: [1, 1, 2, 2, 3, 3, 4],
                 3: [1, 1, 1, 2, 3, 3, 3, 4, 4, 5],
