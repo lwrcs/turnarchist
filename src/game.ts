@@ -54,6 +54,7 @@ const times = [];
 let fps;
 
 export class Game {
+  private static instance: Game;
   static ctx: CanvasRenderingContext2D;
   static shade_canvases: Record<string, HTMLCanvasElement>;
   prevLevel: Room; // for transitions
@@ -299,26 +300,30 @@ export class Game {
 
       // Create TextBox instances and associate them with HTML elements
       const usernameElement = document.createElement("input");
-    usernameElement.type = "text";
-    usernameElement.autocomplete = "off";
-    usernameElement.autocapitalize = "off";
-    usernameElement.style.position = "absolute";
-    usernameElement.style.left = "-1000px";  // Position off-screen
-    const passwordElement = document.createElement("input");
-    passwordElement.type = "password";
-    passwordElement.style.position = "absolute";
-    passwordElement.style.left = "-1000px";  // Position off-screen
-    const chatElement = document.createElement("input");
-    chatElement.type = "text";
-    chatElement.style.position = "absolute";
-    chatElement.style.left = "-1000px";  // Position off-screen
-    document.body.appendChild(usernameElement);
-    document.body.appendChild(passwordElement);
-    document.body.appendChild(chatElement);
+      usernameElement.type = "text";
+      usernameElement.autocomplete = "off";
+      usernameElement.autocapitalize = "off";
+      usernameElement.style.position = "absolute";
+      usernameElement.style.left = "-1000px"; // Position off-screen
+      const passwordElement = document.createElement("input");
+      passwordElement.type = "password";
+      passwordElement.style.position = "absolute";
+      passwordElement.style.left = "-1000px"; // Position off-screen
+      const chatElement = document.createElement("input");
+      chatElement.type = "text";
+      chatElement.style.position = "absolute";
+      chatElement.style.left = "-1000px"; // Position off-screen
+      document.body.appendChild(usernameElement);
+      document.body.appendChild(passwordElement);
+      document.body.appendChild(chatElement);
 
-      document.addEventListener("click", () => {
-        usernameElement.focus();
-      }, { once: true });
+      document.addEventListener(
+        "click",
+        () => {
+          usernameElement.focus();
+        },
+        { once: true }
+      );
 
       document.addEventListener("touchstart", () => {
         if (this.menuState === MenuState.LOGIN_USERNAME) {
@@ -478,9 +483,13 @@ export class Game {
   keyDownListener = (key: string) => {
     if (this.menuState === MenuState.LOGIN_USERNAME) {
       this.usernameTextBox.handleKeyPress(key);
-      (document.querySelector('input[type="text"]') as HTMLInputElement).focus();
+      (
+        document.querySelector('input[type="text"]') as HTMLInputElement
+      ).focus();
     } else if (this.menuState === MenuState.LOGIN_PASSWORD) {
-      (document.querySelector('input[type="password"]') as HTMLInputElement).focus();
+      (
+        document.querySelector('input[type="password"]') as HTMLInputElement
+      ).focus();
       this.passwordTextBox.handleKeyPress(key);
     } else if (this.menuState === MenuState.SELECT_WORLD) {
       switch (key) {
@@ -618,6 +627,23 @@ export class Game {
     }
   };
 
+  static getInstance(): Game {
+    if (!Game.instance) {
+      Game.instance = new Game();
+    }
+    return Game.instance;
+  }
+
+  leaveGame = () => {
+    this.socket.emit("game state", createGameState(this));
+    this.socket.emit("leave world");
+    this.socket.emit("get available worlds");
+    this.menuState = MenuState.SELECT_WORLD;
+    this.rooms = [];
+    this.players = {};
+    this.offlinePlayers = {};
+  };
+
   run = (timestamp: number) => {
     if (!this.previousFrameTimestamp)
       this.previousFrameTimestamp = timestamp - 1000.0 / GameConstants.FPS;
@@ -688,7 +714,6 @@ export class Game {
 
   pushMessage = (message: string) => {
     this.chat.push(new ChatMessage(message));
-
   };
   onResize = () => {
     let maxWidthScale = Math.floor(

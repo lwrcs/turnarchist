@@ -21,7 +21,7 @@ export class WizardFireball extends Projectile {
     if (this.parent.dead) this.dead = true;
     this.state++;
     if (this.state === 1) {
-      this.parent.room.hitwarnings.push(new HitWarning(this.parent.game, this.x, this.y, this.x, this.y));
+      this.parent.room.hitwarnings.push(new HitWarning(this.parent.game, this.x, this.y, this.x, this.y, false));
     }
     if (this.state === 2) {
       this.frame = 0;

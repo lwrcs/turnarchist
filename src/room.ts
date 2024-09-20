@@ -309,7 +309,6 @@ export class Room {
       e = Game.rand(1,12, rand)
       table.push(e)
     }
-    console.log(table)
     return table;
   }
 
@@ -1010,9 +1009,6 @@ export class Room {
           " levelArray.length was " +
           this.roomArray.length
       );
-      console.log("location " + location);
-      console.log(this.roomX, this.roomY);
-      console.log(this.width, this.height);
     }
     this.roomArray[d.x][d.y] = d;
 
@@ -1282,8 +1278,10 @@ export class Room {
         !this.roomArray[h.x] ||
         !this.roomArray[h.x][h.y] ||
         this.roomArray[h.x][h.y].isSolid()
-      )
-        h.dead = true;
+      ){
+        h.dead = true;}
+        h.removeOverlapping();
+
     }
 
     for (const p of this.projectiles) {

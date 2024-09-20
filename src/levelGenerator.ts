@@ -46,12 +46,11 @@ class Partition {
       return (Random.rand() - 0.5) * width + center;
     };
 
-    
     let sizeRange = () => {
       let sizes = [
         { size: 1, probability: 0.2 },
         { size: 3, probability: 0.6 },
-        { size: 10, probability: 0.2 }
+        { size: 10, probability: 0.2 },
       ];
       let rand = Random.rand();
       let sum = 0;
@@ -61,7 +60,7 @@ class Partition {
       }
       return sizes[sizes.length - 1].size;
     };
-    let MIN_SIZE = 3
+    let MIN_SIZE = 3;
 
     if (this.w > this.h) {
       //if the partitions width is greater than its height
@@ -93,7 +92,7 @@ class Partition {
     return (
       x >= this.x && x < this.x + this.w && y >= this.y && y < this.y + this.h
     );
-    
+
     //only return true if both input x and input y are within the partitions x and y
   };
 
@@ -133,24 +132,23 @@ class Partition {
       //count up from the partitions x to it's width
       points.push({ x: x, y: this.y - 1 /*one row above partition*/ });
       points.push({ x: x, y: this.y + this.h /*one row below partition*/ });
-    }// pushes the points above and below the partition
+    } // pushes the points above and below the partition
     for (let y = this.y; y < this.y + this.h; y++) {
       points.push({ x: this.x - 1, y: y });
       points.push({ x: this.x + this.w, y: y });
-    }//pushes points to left an right of the partition
+    } //pushes points to left an right of the partition
     points = points.filter(
       (p) =>
         !this.connections.some(
           (c) => Math.abs(c.x - p.x) + Math.abs(c.y - p.y) <= 1
-          
         )
-        //if the sum of the distance between the input x and y values and the partitions x and y values is > 1
-        //delete those from the points array
+      //if the sum of the distance between the input x and y values and the partitions x and y values is > 1
+      //delete those from the points array
     );
     points.sort(() => 0.5 - Random.rand());
-    return points[0];//return first or last object of x y points in array points
+    return points[0]; //return first or last object of x y points in array points
   };
-}//end of Partition class
+} //end of Partition class
 
 let split_partitions = (
   partitions: Array<Partition>,
@@ -192,7 +190,8 @@ let populate_grid = (
   w: number,
   h: number
 ): Array<Array<Partition | false>> => {
-  for (let x = 0; x < w; x++) {//loop through the horizontal tiles
+  for (let x = 0; x < w; x++) {
+    //loop through the horizontal tiles
     grid[x] = []; //empty array at x index
     for (let y = 0; y < h; y++) {
       grid[x][y] = false;
@@ -220,9 +219,9 @@ let generate_dungeon_candidate = (
   //split partitions 3 times with different probabilities
   partitions = remove_wall_rooms(partitions, map_w, map_h);
   grid = populate_grid(partitions, grid, map_w, map_h);
-//remove wall rooms and populate dat grid
+  //remove wall rooms and populate dat grid
   partitions.sort((a, b) => a.area() - b.area());
-//sort the partitions list by ... area? I think?
+  //sort the partitions list by ... area? I think?
   let spawn = partitions[0];
   //spawn is the first Partition instance
   spawn.type = RoomType.START;
@@ -244,7 +243,7 @@ let generate_dungeon_candidate = (
     const num_doors = Math.floor(Random.rand() * 2 + 1);
 
     let tries = 0;
-    const max_tries = 2000;
+    const max_tries = 1000;
 
     while (doors_found < num_doors && tries < max_tries) {
       let point = room.get_branch_point();
@@ -260,6 +259,7 @@ let generate_dungeon_candidate = (
           connected.push(p);
           doors_found++;
           if (p.type === RoomType.BOSS) found_boss = true;
+          console.log(`Door Tries: ${tries}`);
           break;
         }
       }
@@ -288,7 +288,7 @@ let generate_dungeon_candidate = (
     let found_door = false;
 
     let tries = 0;
-    const max_tries = 100;
+    const max_tries = 10;
 
     let not_already_connected = partitions.filter(
       (p) => !room.connections.some((c) => c.other === p)
@@ -301,6 +301,7 @@ let generate_dungeon_candidate = (
           room.connections.push(new PartitionConnection(point.x, point.y, p));
           p.connections.push(new PartitionConnection(point.x, point.y, room));
           found_door = true;
+          console.log(`Door Tries: ${tries}`);
           break;
         }
       }
@@ -375,7 +376,7 @@ let generate_dungeon_candidate = (
 
 let generate_dungeon = (map_w: number, map_h: number): Array<Partition> => {
   let passes_checks = false;
-  let partitions;
+  let partitions: Array<Partition>;
 
   let tries = 0;
 
@@ -390,7 +391,7 @@ let generate_dungeon = (map_w: number, map_h: number): Array<Partition> => {
       passes_checks = false;
 
     tries++;
-    if (tries > 100) break;
+    //if (tries > 100) break;
   }
 
   return partitions;
@@ -411,6 +412,10 @@ let generate_cave_candidate = (
 
   partitions.sort((a, b) => a.area() - b.area());
 
+  if (partitions.length === 0) {
+    throw new Error("No partitions generated."); // Throw an error if no partitions
+  }
+
   let spawn = partitions[0];
   spawn.type = RoomType.ROPECAVE;
   for (let i = 1; i < partitions.length; i++)
@@ -428,7 +433,7 @@ let generate_cave_candidate = (
     const num_doors = Math.floor(Random.rand() * 2 + 1);
 
     let tries = 0;
-    const max_tries = 100;
+    const max_tries = 1000;
 
     while (
       doors_found < num_doors &&
@@ -436,6 +441,9 @@ let generate_cave_candidate = (
       connected.length < num_rooms
     ) {
       let point = room.get_branch_point();
+      if (!point) {
+      }
+
       for (const p of partitions) {
         if (
           p !== room &&
@@ -455,15 +463,15 @@ let generate_cave_candidate = (
   }
 
   // remove rooms we haven't connected to yet
-  for (const partition of partitions) {
-    if (partition.connections.length === 0)
-      partitions = partitions.filter((p) => p !== partition);
-  }
+  // remove rooms we haven't connected to yet
+  partitions = partitions.filter(
+    (partition) => partition.connections.length > 0
+  );
   grid = populate_grid(partitions, grid, map_w, map_h); // recalculate with removed rooms
 
   // make sure we haven't removed all the rooms
   if (partitions.length === 0) {
-    return []; // for now just return an empty list so we can retry
+    throw new Error("No valid rooms after filtering."); // Throw an error if no valid rooms
   }
 
   // make some loops
@@ -483,6 +491,13 @@ let generate_cave_candidate = (
 
     while (!found_door && tries < max_tries) {
       let point = room.get_branch_point();
+      if (!point) {
+        console.warn(
+          "No valid branch point found for room during loop creation:"
+        );
+        break; // Skip if no valid branch point found
+      }
+
       for (const p of not_already_connected) {
         if (p !== room && p.point_next_to(point.x, point.y)) {
           room.connections.push(new PartitionConnection(point.x, point.y, p));
@@ -557,9 +572,11 @@ export class LevelGenerator {
     let doors_added: Array<Door> = [];
 
     partitions.forEach((partition, index) => {
-      partition.connections.forEach(connection => {
+      partition.connections.forEach((connection) => {
         let door = levels[index].addDoor(connection.x, connection.y);
-        let existingDoor = doors_added.find(existing => existing.x === door.x && existing.y === door.y);
+        let existingDoor = doors_added.find(
+          (existing) => existing.x === door.x && existing.y === door.y
+        );
         if (existingDoor) {
           existingDoor.link(door);
           door.link(existingDoor);
@@ -592,7 +609,10 @@ export class LevelGenerator {
     this.game = game;
 
     // Determine the map group
-    let mapGroup = this.game.rooms.length > 0 ? this.game.rooms[this.game.rooms.length - 1].mapGroup + 1 : 0;
+    let mapGroup =
+      this.game.rooms.length > 0
+        ? this.game.rooms[this.game.rooms.length - 1].mapGroup + 1
+        : 0;
 
     // Generate partitions based on whether it's a cave or a dungeon
     let partitions = cave ? generate_cave(20, 20) : generate_dungeon(35, 35);
@@ -614,7 +634,9 @@ export class LevelGenerator {
             let tile = room.roomArray[x][y];
             if (tile instanceof DownLadder && tile.isRope) {
               tile.generate();
-              return cave ? levels.find((l) => l.type === RoomType.ROPECAVE) : levels.find((l) => l.type === RoomType.START);
+              return cave
+                ? levels.find((l) => l.type === RoomType.ROPECAVE)
+                : levels.find((l) => l.type === RoomType.START);
             }
           }
         }
@@ -622,7 +644,9 @@ export class LevelGenerator {
     }
 
     // Return the start room or the rope cave room
-    return cave ? levels.find((l) => l.type === RoomType.ROPECAVE) : levels.find((l) => l.type === RoomType.START);
+    return cave
+      ? levels.find((l) => l.type === RoomType.ROPECAVE)
+      : levels.find((l) => l.type === RoomType.START);
   };
 
   generateFirstNFloors = (game, numFloors) => {
@@ -634,8 +658,16 @@ export class LevelGenerator {
         .find((room) => room.type === RoomType.DOWNLADDER);
 
       if (foundRoom) {
-        for (let x = foundRoom.roomX; x < foundRoom.roomX + foundRoom.width; x++) {
-          for (let y = foundRoom.roomY; y < foundRoom.roomY + foundRoom.height; y++) {
+        for (
+          let x = foundRoom.roomX;
+          x < foundRoom.roomX + foundRoom.width;
+          x++
+        ) {
+          for (
+            let y = foundRoom.roomY;
+            y < foundRoom.roomY + foundRoom.height;
+            y++
+          ) {
             let tile = foundRoom.roomArray[x][y];
             if (tile instanceof DownLadder) {
               tile.generate();

@@ -9080,6 +9080,15 @@ var Game = /** @class */ (function () {
                 door.room.enterLevelThroughDoor(player, door, side);
             }
         };
+        this.leaveGame = function () {
+            _this.socket.emit("game state", (0, gameState_1.createGameState)(_this));
+            _this.socket.emit("leave world");
+            _this.socket.emit("get available worlds");
+            _this.menuState = MenuState.SELECT_WORLD;
+            _this.rooms = [];
+            _this.players = {};
+            _this.offlinePlayers = {};
+        };
         this.run = function (timestamp) {
             if (!_this.previousFrameTimestamp)
                 _this.previousFrameTimestamp = timestamp - 1000.0 / gameConstants_1.GameConstants.FPS;
@@ -9740,6 +9749,12 @@ var Game = /** @class */ (function () {
             window.addEventListener("resize", _this.onResize);
         });
     }
+    Game.getInstance = function () {
+        if (!Game.instance) {
+            Game.instance = new Game();
+        }
+        return Game.instance;
+    };
     Game.letters = "abcdefghijklmnopqrstuvwxyz1234567890,.!?:'()[]%-/";
     Game.letter_widths = [
         4, 4, 4, 4, 3, 3, 4, 4, 1, 4, 4, 3, 5, 5, 4, 4, 4, 4, 4, 3, 4, 5, 5, 5, 5,
@@ -10804,18 +10819,31 @@ var Direction;
 })(Direction || (Direction = {}));
 var HitWarning = /** @class */ (function (_super) {
     __extends(HitWarning, _super);
-    function HitWarning(game, x, y, eX, eY) {
+    function HitWarning(game, x, y, eX, eY, isEnemy) {
         var _this = _super.call(this) || this;
         _this.tick = function () {
             _this.dead = true;
+        };
+        _this.removeOverlapping = function () {
+            for (var _i = 0, _a = _this.game.room.entities; _i < _a.length; _i++) {
+                var entity = _a[_i];
+                if (entity.x === _this.x && entity.y === _this.y) {
+                    _this.dead = true;
+                    break;
+                }
+            }
+            /*for (const door of this.game.room.doors) {
+              if (door.x === this.x && door.y === this.y) {
+                this.dead = true;
+                break;
+              }
+            }*/
         };
         _this.setPointerDir = function () {
             var dx = _this.eX - _this.x;
             var dy = _this.eY - _this.y;
             if (dx === 0 && dy === 0) {
-                _this.tileX = 18;
-                _this.tileY = 5;
-                _this.offsetY = 0;
+                _this.dir = Direction.Center;
             }
             else {
                 if (dx === 0) {
@@ -10830,23 +10858,45 @@ var HitWarning = /** @class */ (function (_super) {
                 else {
                     _this.dir = dy < 0 ? Direction.SouthWest : Direction.NorthWest;
                 }
-                _this.tileX = 0 + (4 * _this.dir);
-                _this.offsetY = 0.4;
+                _this.tileX = 0 + 2 * _this.dir;
                 console.log(_this.tileX);
                 console.log(_this.dir);
             }
-            ;
+        };
+        _this.setPointerOffset = function () {
+            var _a;
+            var offsets = (_a = {},
+                _a[Direction.North] = { x: 0, y: 0.4 },
+                _a[Direction.South] = { x: 0, y: -0.6 },
+                _a[Direction.West] = { x: 0.6, y: 0 },
+                _a[Direction.East] = { x: -0.6, y: 0 },
+                _a[Direction.NorthEast] = { x: -0.5, y: 0.5 },
+                _a[Direction.NorthWest] = { x: 0.5, y: 0.5 },
+                _a[Direction.SouthEast] = { x: -0.5, y: -0.5 },
+                _a[Direction.SouthWest] = { x: 0.5, y: -0.5 },
+                _a[Direction.Center] = { x: 0, y: -0.25 },
+                _a);
+            var offset = offsets[_this.dir];
+            _this.pointerOffsetX = offset.x;
+            _this.pointerOffsetY = offset.y;
         };
         _this.draw = function (delta) {
-            if ((_this.x === _this.game.players[_this.game.localPlayerID].x && Math.abs(_this.y - _this.game.players[_this.game.localPlayerID].y) <= 1) ||
-                (_this.y === _this.game.players[_this.game.localPlayerID].y && Math.abs(_this.x - _this.game.players[_this.game.localPlayerID].x) <= 1))
-                game_1.Game.drawFX(_this.tileX + Math.floor(HitWarning.frame), _this.tileY, 1, 1, _this.x, _this.y - _this.offsetY, 1, 1);
+            if (Math.abs(_this.x - _this.game.players[_this.game.localPlayerID].x) <= 1 &&
+                Math.abs(_this.y - _this.game.players[_this.game.localPlayerID].y) <= 1) {
+                if (_this.isEnemy) {
+                    game_1.Game.drawFX(_this.tileX + Math.floor(HitWarning.frame), _this.tileY, 1, 1, _this.x + _this.pointerOffsetX, _this.y + _this.pointerOffsetY - _this.offsetY, 1, 1);
+                }
+                game_1.Game.drawFX(18 + Math.floor(HitWarning.frame), 5, 1, 1, _this.x, _this.y - _this.offsetY, 1, 1);
+            }
         };
         _this.drawTopLayer = function (delta) {
-            _this.drawableY = _this.y;
-            if ((_this.x === _this.game.players[_this.game.localPlayerID].x && Math.abs(_this.y - _this.game.players[_this.game.localPlayerID].y) <= 1) ||
-                (_this.y === _this.game.players[_this.game.localPlayerID].y && Math.abs(_this.x - _this.game.players[_this.game.localPlayerID].x) <= 1))
-                game_1.Game.drawFX(_this.tileX + Math.floor(HitWarning.frame), _this.tileY + 1, 1, 1, _this.x, _this.y - _this.offsetY, 1, 1);
+            if (_this.isEnemy) {
+                game_1.Game.drawFX(_this.tileX + Math.floor(HitWarning.frame), _this.tileY + 1, 1, 1, _this.x + _this.pointerOffsetX, _this.y + _this.pointerOffsetY - _this.offsetY, 1, 1);
+            }
+            if (Math.abs(_this.x - _this.game.players[_this.game.localPlayerID].x) <= 1 &&
+                Math.abs(_this.y - _this.game.players[_this.game.localPlayerID].y) <= 1) {
+                game_1.Game.drawFX(18 + Math.floor(HitWarning.frame), 6, 1, 1, _this.x, _this.y - _this.offsetY, 1, 1);
+            }
         };
         _this.x = x;
         _this.y = y;
@@ -10854,17 +10904,22 @@ var HitWarning = /** @class */ (function (_super) {
         _this.game = game;
         _this.dir = Direction.North;
         _this.tileX = 0;
-        _this.tileY = 0;
+        _this.tileY = 22;
         _this.eX = eX;
         _this.eY = eY;
-        _this.offsetY = 0;
+        _this.offsetY = 0.2;
+        _this.pointerOffsetX = 0;
+        _this.pointerOffsetY = 0;
+        _this.isEnemy = isEnemy !== undefined ? isEnemy : true;
         _this.setPointerDir();
+        _this.setPointerOffset();
+        _this.removeOverlapping();
         return _this;
     }
     HitWarning.frame = 0;
     HitWarning.updateFrame = function (delta) {
         HitWarning.frame += 0.125 * delta;
-        if (HitWarning.frame >= 4)
+        if (HitWarning.frame >= 2)
             HitWarning.frame = 0;
     };
     return HitWarning;
@@ -12835,7 +12890,7 @@ var Partition = /** @class */ (function () {
                 var sizes = [
                     { size: 1, probability: 0.2 },
                     { size: 3, probability: 0.6 },
-                    { size: 10, probability: 0.2 }
+                    { size: 10, probability: 0.2 },
                 ];
                 var rand = random_1.Random.rand();
                 var sum = 0;
@@ -12966,7 +13021,8 @@ var remove_wall_rooms = function (partitions, w, h) {
     //return partitions array with no wall rooms
 };
 var populate_grid = function (partitions, grid, w, h) {
-    for (var x = 0; x < w; x++) { //loop through the horizontal tiles
+    for (var x = 0; x < w; x++) {
+        //loop through the horizontal tiles
         grid[x] = []; //empty array at x index
         for (var y = 0; y < h; y++) {
             grid[x][y] = false;
@@ -13013,7 +13069,7 @@ var generate_dungeon_candidate = function (map_w, map_h) {
         var doors_found = 0;
         var num_doors = Math.floor(random_1.Random.rand() * 2 + 1);
         var tries = 0;
-        var max_tries = 2000;
+        var max_tries = 1000;
         while (doors_found < num_doors && tries < max_tries) {
             var point = room.get_branch_point();
             for (var _i = 0, partitions_4 = partitions; _i < partitions_4.length; _i++) {
@@ -13028,6 +13084,7 @@ var generate_dungeon_candidate = function (map_w, map_h) {
                     doors_found++;
                     if (p.type === room_1.RoomType.BOSS)
                         found_boss = true;
+                    console.log("Door Tries: ".concat(tries));
                     break;
                 }
             }
@@ -13055,7 +13112,7 @@ var generate_dungeon_candidate = function (map_w, map_h) {
         var room = partitions[roomIndex];
         var found_door = false;
         var tries = 0;
-        var max_tries = 100;
+        var max_tries = 10;
         var not_already_connected = partitions.filter(function (p) { return !room.connections.some(function (c) { return c.other === p; }); });
         while (!found_door && tries < max_tries) {
             var point = room.get_branch_point();
@@ -13065,6 +13122,7 @@ var generate_dungeon_candidate = function (map_w, map_h) {
                     room.connections.push(new PartitionConnection(point.x, point.y, p));
                     p.connections.push(new PartitionConnection(point.x, point.y, room));
                     found_door = true;
+                    console.log("Door Tries: ".concat(tries));
                     break;
                 }
             }
@@ -13147,8 +13205,7 @@ var generate_dungeon = function (map_w, map_h) {
         else if (partitions.find(function (p) { return p.type === room_1.RoomType.BOSS; }).distance < 3)
             passes_checks = false;
         tries++;
-        if (tries > 100)
-            break;
+        //if (tries > 100) break;
     }
     return partitions;
 };
@@ -13163,6 +13220,9 @@ var generate_cave_candidate = function (map_w, map_h, num_rooms) {
         partitions = split_partitions(partitions, 0.5);
     grid = populate_grid(partitions, grid, map_w, map_h);
     partitions.sort(function (a, b) { return a.area() - b.area(); });
+    if (partitions.length === 0) {
+        throw new Error("No partitions generated."); // Throw an error if no partitions
+    }
     var spawn = partitions[0];
     spawn.type = room_1.RoomType.ROPECAVE;
     for (var i = 1; i < partitions.length; i++)
@@ -13176,11 +13236,13 @@ var generate_cave_candidate = function (map_w, map_h, num_rooms) {
         var doors_found = 0;
         var num_doors = Math.floor(random_1.Random.rand() * 2 + 1);
         var tries = 0;
-        var max_tries = 100;
+        var max_tries = 1000;
         while (doors_found < num_doors &&
             tries < max_tries &&
             connected.length < num_rooms) {
             var point = room.get_branch_point();
+            if (!point) {
+            }
             for (var _i = 0, partitions_7 = partitions; _i < partitions_7.length; _i++) {
                 var p = partitions_7[_i];
                 if (p !== room &&
@@ -13197,23 +13259,17 @@ var generate_cave_candidate = function (map_w, map_h, num_rooms) {
             tries++;
         }
     }
-    var _loop_6 = function (partition) {
-        if (partition.connections.length === 0)
-            partitions = partitions.filter(function (p) { return p !== partition; });
-    };
     // remove rooms we haven't connected to yet
-    for (var _a = 0, partitions_8 = partitions; _a < partitions_8.length; _a++) {
-        var partition = partitions_8[_a];
-        _loop_6(partition);
-    }
+    // remove rooms we haven't connected to yet
+    partitions = partitions.filter(function (partition) { return partition.connections.length > 0; });
     grid = populate_grid(partitions, grid, map_w, map_h); // recalculate with removed rooms
     // make sure we haven't removed all the rooms
     if (partitions.length === 0) {
-        return []; // for now just return an empty list so we can retry
+        throw new Error("No valid rooms after filtering."); // Throw an error if no valid rooms
     }
     // make some loops
     var num_loop_doors = Math.floor(random_1.Random.rand() * 4 + 4);
-    var _loop_7 = function (i) {
+    var _loop_6 = function (i) {
         var roomIndex = Math.floor(random_1.Random.rand() * partitions.length);
         var room = partitions[roomIndex];
         var found_door = false;
@@ -13222,8 +13278,12 @@ var generate_cave_candidate = function (map_w, map_h, num_rooms) {
         var not_already_connected = partitions.filter(function (p) { return !room.connections.some(function (c) { return c.other === p; }); });
         while (!found_door && tries < max_tries) {
             var point = room.get_branch_point();
-            for (var _d = 0, not_already_connected_2 = not_already_connected; _d < not_already_connected_2.length; _d++) {
-                var p = not_already_connected_2[_d];
+            if (!point) {
+                console.warn("No valid branch point found for room during loop creation:");
+                break; // Skip if no valid branch point found
+            }
+            for (var _c = 0, not_already_connected_2 = not_already_connected; _c < not_already_connected_2.length; _c++) {
+                var p = not_already_connected_2[_c];
                 if (p !== room && p.point_next_to(point.x, point.y)) {
                     room.connections.push(new PartitionConnection(point.x, point.y, p));
                     p.connections.push(new PartitionConnection(point.x, point.y, room));
@@ -13235,7 +13295,7 @@ var generate_cave_candidate = function (map_w, map_h, num_rooms) {
         }
     };
     for (var i = 0; i < num_loop_doors; i++) {
-        _loop_7(i);
+        _loop_6(i);
     }
     // calculate room distances
     frontier = [spawn];
@@ -13245,8 +13305,8 @@ var generate_cave_candidate = function (map_w, map_h, num_rooms) {
         var room = frontier[0];
         frontier.splice(0, 1);
         seen.push(room);
-        for (var _b = 0, _c = room.connections; _b < _c.length; _b++) {
-            var c = _c[_b];
+        for (var _a = 0, _b = room.connections; _a < _b.length; _a++) {
+            var c = _b[_a];
             var other = c.other;
             other.distance = Math.min(other.distance, room.distance + 1);
             if (seen.indexOf(other) === -1)
@@ -13304,7 +13364,9 @@ var LevelGenerator = /** @class */ (function () {
             random_1.Random.setState(_this.seed + depth);
             _this.game = game;
             // Determine the map group
-            var mapGroup = _this.game.rooms.length > 0 ? _this.game.rooms[_this.game.rooms.length - 1].mapGroup + 1 : 0;
+            var mapGroup = _this.game.rooms.length > 0
+                ? _this.game.rooms[_this.game.rooms.length - 1].mapGroup + 1
+                : 0;
             // Generate partitions based on whether it's a cave or a dungeon
             var partitions = cave ? generate_cave(20, 20) : generate_dungeon(35, 35);
             // Get the levels based on the partitions
@@ -13323,14 +13385,18 @@ var LevelGenerator = /** @class */ (function () {
                             var tile = room.roomArray[x][y];
                             if (tile instanceof downLadder_1.DownLadder && tile.isRope) {
                                 tile.generate();
-                                return cave ? levels.find(function (l) { return l.type === room_1.RoomType.ROPECAVE; }) : levels.find(function (l) { return l.type === room_1.RoomType.START; });
+                                return cave
+                                    ? levels.find(function (l) { return l.type === room_1.RoomType.ROPECAVE; })
+                                    : levels.find(function (l) { return l.type === room_1.RoomType.START; });
                             }
                         }
                     }
                 }
             }
             // Return the start room or the rope cave room
-            return cave ? levels.find(function (l) { return l.type === room_1.RoomType.ROPECAVE; }) : levels.find(function (l) { return l.type === room_1.RoomType.START; });
+            return cave
+                ? levels.find(function (l) { return l.type === room_1.RoomType.ROPECAVE; })
+                : levels.find(function (l) { return l.type === room_1.RoomType.START; });
         };
         this.generateFirstNFloors = function (game, numFloors) {
             _this.generate(game, 0, false);
@@ -14601,7 +14667,7 @@ var WizardFireball = /** @class */ (function (_super) {
                 _this.dead = true;
             _this.state++;
             if (_this.state === 1) {
-                _this.parent.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.parent.game, _this.x, _this.y, _this.x, _this.y));
+                _this.parent.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.parent.game, _this.x, _this.y, _this.x, _this.y, false));
             }
             if (_this.state === 2) {
                 _this.frame = 0;
@@ -14795,7 +14861,6 @@ var Room = /** @class */ (function () {
                 e = game_1.Game.rand(1, 12, rand);
                 table.push(e);
             }
-            console.log(table);
             return table;
         };
         this.populateEmpty = function (rand) {
@@ -15081,9 +15146,6 @@ var Room = /** @class */ (function () {
                     d.x +
                     " levelArray.length was " +
                     _this.roomArray.length);
-                console.log("location " + location);
-                console.log(_this.roomX, _this.roomY);
-                console.log(_this.width, _this.height);
             }
             _this.roomArray[d.x][d.y] = d;
             return d;
@@ -15310,8 +15372,10 @@ var Room = /** @class */ (function () {
                 var h = _e[_d];
                 if (!_this.roomArray[h.x] ||
                     !_this.roomArray[h.x][h.y] ||
-                    _this.roomArray[h.x][h.y].isSolid())
+                    _this.roomArray[h.x][h.y].isSolid()) {
                     h.dead = true;
+                }
+                h.removeOverlapping();
             }
             for (var _f = 0, _g = _this.projectiles; _f < _g.length; _f++) {
                 var p = _g[_f];
@@ -16931,12 +16995,15 @@ var SpikeTrap = /** @class */ (function (_super) {
             _this.on = _this.tickCount === 0;
             if (_this.on) {
                 for (var i in _this.room.game.players) {
-                    if (_this.room === _this.room.game.rooms[_this.room.game.players[i].levelID] && _this.room.game.players[i].x === _this.x && _this.room.game.players[i].y === _this.y)
+                    if (_this.room ===
+                        _this.room.game.rooms[_this.room.game.players[i].levelID] &&
+                        _this.room.game.players[i].x === _this.x &&
+                        _this.room.game.players[i].y === _this.y)
                         _this.room.game.players[i].hurt(1, "spike trap");
                 }
             }
             if (_this.tickCount === 3)
-                _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.room.game, _this.x, _this.y, _this.x, _this.y));
+                _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.room.game, _this.x, _this.y, _this.x, _this.y, false));
         };
         _this.tickEnd = function () {
             if (_this.on) {
@@ -16964,7 +17031,8 @@ var SpikeTrap = /** @class */ (function (_super) {
             }
             var frames = [0, 1, 2, 3, 3, 4, 2, 0];
             var f = 6 + frames[Math.floor(_this.frame)];
-            if (_this.tickCount === 1 || (_this.tickCount === 0 && frames[Math.floor(_this.frame)] === 0)) {
+            if (_this.tickCount === 1 ||
+                (_this.tickCount === 0 && frames[Math.floor(_this.frame)] === 0)) {
                 f = 5;
             }
             game_1.Game.drawObj(f, 0, 1, 2, _this.x + rumbleOffsetX, _this.y - 1, 1, 2, _this.room.shadeColor, _this.shadeAmount());

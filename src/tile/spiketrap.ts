@@ -30,13 +30,20 @@ export class SpikeTrap extends Tile {
 
     if (this.on) {
       for (const i in this.room.game.players) {
-        if (this.room === this.room.game.rooms[this.room.game.players[i].levelID] && this.room.game.players[i].x === this.x && this.room.game.players[i].y === this.y)
+        if (
+          this.room ===
+            this.room.game.rooms[this.room.game.players[i].levelID] &&
+          this.room.game.players[i].x === this.x &&
+          this.room.game.players[i].y === this.y
+        )
           this.room.game.players[i].hurt(1, "spike trap");
       }
     }
 
     if (this.tickCount === 3)
-      this.room.hitwarnings.push(new HitWarning(this.room.game, this.x, this.y, this.x, this.y));
+      this.room.hitwarnings.push(
+        new HitWarning(this.room.game, this.x, this.y, this.x, this.y, false)
+      );
   };
 
   tickEnd = () => {
@@ -50,7 +57,8 @@ export class SpikeTrap extends Tile {
   };
 
   onCollideEnemy = (enemy: Entity) => {
-    if (this.on && !(enemy instanceof Crate || enemy instanceof Barrel)) enemy.hurt(null, 1);
+    if (this.on && !(enemy instanceof Crate || enemy instanceof Barrel))
+      enemy.hurt(null, 1);
   };
 
   draw = (delta: number) => {
@@ -75,7 +83,10 @@ export class SpikeTrap extends Tile {
     }
     let frames = [0, 1, 2, 3, 3, 4, 2, 0];
     let f = 6 + frames[Math.floor(this.frame)];
-    if (this.tickCount === 1 || (this.tickCount === 0 && frames[Math.floor(this.frame)] === 0)) {
+    if (
+      this.tickCount === 1 ||
+      (this.tickCount === 0 && frames[Math.floor(this.frame)] === 0)
+    ) {
       f = 5;
     }
     Game.drawObj(
