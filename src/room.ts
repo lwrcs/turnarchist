@@ -306,7 +306,7 @@ export class Room {
     let table: number[] = []
     let e: number;
     for (let i = 0; i <= Game.rand(2, 5, rand); i++){
-      e = Game.rand(1,12, rand)
+      e = Game.rand(1,2, rand)
       table.push(e)
     }
     return table;
@@ -443,7 +443,7 @@ export class Room {
       if (tiles.length == 0) return;
       let x = t.x;
       let y = t.y;
-      switch (Game.randTable([1, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4], rand)) {
+      switch (Game.randTable([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4], rand)) {
         case 1:
           this.entities.push(new Crate(this, this.game, x, y));
           break;
@@ -1243,6 +1243,7 @@ export class Room {
     //sets the action tab state to Ready
     this.playerTurnTime = Date.now();
     this.playerTicked = player;
+    player.map.saveMapData();
   };
 
   update = () => {

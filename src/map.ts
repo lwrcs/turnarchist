@@ -38,21 +38,20 @@ export class Map {
     this.oldMapData = [...this.mapData];
   }
 
-  renderMap = () => {
+  renderMap = (delta: number) => {
     this.setInitialCanvasSettings(1);
     this.translateCanvas(0);
     for (const data of this.mapData) {
-      this.drawRoom(data);
+      this.drawRoom(data, delta);
     }
-    for (const data of this.oldMapData) {
+    /*for (const data of this.oldMapData) {
       this.drawRoom(data);
-    }
+    }*/ 
     this.resetCanvasTransform();
   };
 
   draw = (delta: number) => {
-    this.saveMapData();
-    this.renderMap();
+    this.renderMap(delta);
   };
 
   setInitialCanvasSettings = (alpha: number) => {
@@ -72,13 +71,13 @@ export class Map {
     );
   };
 
-  drawRoom = (data) => {
+  drawRoom = (data, delta: number) => {
     this.drawRoomOutline(data.room);
     this.drawRoomWalls(data.walls);
     this.drawRoomDoors(data.doors);
     this.drawRoomEntities(data.entities);
     this.drawRoomItems(data.items);
-    this.drawRoomPlayers(data.players);
+    this.drawRoomPlayers(data.players, delta);
   };
 
   drawRoomOutline = (level) => {
@@ -119,7 +118,7 @@ export class Map {
     }
   };
 
-  drawRoomPlayers = (players) => {
+  drawRoomPlayers = (players, delta: number) => {
     const s = this.scale;
     for (const i in players) {
       Game.ctx.fillStyle = "white";

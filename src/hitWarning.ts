@@ -109,7 +109,7 @@ export class HitWarning extends Drawable {
 
   setPointerOffset = () => {
     const offsets = {
-      [Direction.North]: { x: 0, y: 0.4 },
+      [Direction.North]: { x: 0, y: 0.5 },
       [Direction.South]: { x: 0, y: -0.6 },
       [Direction.West]: { x: 0.6, y: 0 },
       [Direction.East]: { x: -0.6, y: 0 },

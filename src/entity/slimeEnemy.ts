@@ -199,11 +199,13 @@ export class SlimeEnemy extends Entity {
         1,
         this.x - this.drawX,
         this.y - 0.25 - this.drawY,
-        1,
-        1,
+        1 * this.crushX,
+        1 * this.crushY,
         this.room.shadeColor,
         this.shadeAmount()
       );
+      if (this.crushed){this.crushAnim(delta)}
+
     }
     if (!this.seenPlayer) {
       this.drawSleepingZs(delta, 0, 0.75 * GameConstants.TILESIZE);

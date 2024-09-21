@@ -6322,7 +6322,10 @@ var Entity = /** @class */ (function (_super) {
             if (!_this.dead) {
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
-                game_1.Game.drawMob(_this.tileX, _this.tileY + _this.direction * 2, 1, 2, _this.x - _this.drawX, _this.y - 1.5 - _this.drawY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
+                game_1.Game.drawMob(_this.tileX, _this.tileY + _this.direction * 2, 1, 2, _this.x - _this.drawX, _this.y - 1.5 - _this.drawY, 1 * _this.crushX, 2 * _this.crushY, _this.room.shadeColor, _this.shadeAmount());
+            }
+            if (_this.crushed) {
+                _this.crushAnim(delta);
             }
         };
         _this.tick = function () { };
@@ -6371,6 +6374,26 @@ var Entity = /** @class */ (function (_super) {
             game_1.Game.ctx.globalAlpha = 1;
             if (yoff !== false) {
                 game_1.Game.fillTextOutline("!", (_this.x + 0.5) * gameConstants_1.GameConstants.TILESIZE - width / 2 + offsetX, (_this.y - 0.75) * gameConstants_1.GameConstants.TILESIZE + yoff + offsetY, gameConstants_1.GameConstants.OUTLINE, gameConstants_1.GameConstants.WARNING_RED);
+            }
+        };
+        _this.crush = function () {
+            var player;
+            for (var i in _this.game.players) {
+                player = _this.game.players[i];
+            }
+            if (_this.x == player.x) {
+                _this.crushVertical = true;
+            }
+            if (_this.y == player.y) {
+                _this.crushVertical = false;
+            }
+        };
+        _this.crushAnim = function (delta) {
+            if (_this.crushVertical && _this.crushX >= 0) {
+                _this.crushX -= delta * 0.125;
+            }
+            else if (_this.crushY >= 0) {
+                _this.crushY -= delta * 0.125;
             }
         };
         _this.makeHitWarnings = function (orthogonal, diagonal, forwardOnly, direction) {
@@ -6427,6 +6450,10 @@ var Entity = /** @class */ (function (_super) {
         _this.lastX = x;
         _this.lastY = y;
         _this.entityType = EntityType.ENEMY;
+        _this.crushX = 1;
+        _this.crushY = 1;
+        _this.crushed = false;
+        _this.crushVertical = false;
         return _this;
     }
     return Entity;
@@ -7993,7 +8020,10 @@ var SlimeEnemy = /** @class */ (function (_super) {
                     _this.frame = 0;
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - 0.25 - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
-                game_1.Game.drawMob(_this.tileX, _this.tileY + _this.direction, 1, 1, _this.x - _this.drawX, _this.y - 0.25 - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
+                game_1.Game.drawMob(_this.tileX, _this.tileY + _this.direction, 1, 1, _this.x - _this.drawX, _this.y - 0.25 - _this.drawY, 1 * _this.crushX, 1 * _this.crushY, _this.room.shadeColor, _this.shadeAmount());
+                if (_this.crushed) {
+                    _this.crushAnim(delta);
+                }
             }
             if (!_this.seenPlayer) {
                 _this.drawSleepingZs(delta, 0, 0.75 * gameConstants_1.GameConstants.TILESIZE);
@@ -10866,7 +10896,7 @@ var HitWarning = /** @class */ (function (_super) {
         _this.setPointerOffset = function () {
             var _a;
             var offsets = (_a = {},
-                _a[Direction.North] = { x: 0, y: 0.4 },
+                _a[Direction.North] = { x: 0, y: 0.5 },
                 _a[Direction.South] = { x: 0, y: -0.6 },
                 _a[Direction.West] = { x: 0.6, y: 0 },
                 _a[Direction.East] = { x: -0.6, y: 0 },
@@ -13496,22 +13526,20 @@ var Map = /** @class */ (function () {
         this.saveOldMap = function () {
             _this.oldMapData = __spreadArray([], _this.mapData, true);
         };
-        this.renderMap = function () {
+        this.renderMap = function (delta) {
             _this.setInitialCanvasSettings(1);
             _this.translateCanvas(0);
             for (var _i = 0, _a = _this.mapData; _i < _a.length; _i++) {
                 var data = _a[_i];
-                _this.drawRoom(data);
+                _this.drawRoom(data, delta);
             }
-            for (var _b = 0, _c = _this.oldMapData; _b < _c.length; _b++) {
-                var data = _c[_b];
-                _this.drawRoom(data);
-            }
+            /*for (const data of this.oldMapData) {
+              this.drawRoom(data);
+            }*/
             _this.resetCanvasTransform();
         };
         this.draw = function (delta) {
-            _this.saveMapData();
-            _this.renderMap();
+            _this.renderMap(delta);
         };
         this.setInitialCanvasSettings = function (alpha) {
             game_1.Game.ctx.globalAlpha = alpha;
@@ -13525,13 +13553,13 @@ var Map = /** @class */ (function () {
                 _this.game.room.roomY -
                 Math.floor(0.5 * _this.game.room.height) - offset);
         };
-        this.drawRoom = function (data) {
+        this.drawRoom = function (data, delta) {
             _this.drawRoomOutline(data.room);
             _this.drawRoomWalls(data.walls);
             _this.drawRoomDoors(data.doors);
             _this.drawRoomEntities(data.entities);
             _this.drawRoomItems(data.items);
-            _this.drawRoomPlayers(data.players);
+            _this.drawRoomPlayers(data.players, delta);
         };
         this.drawRoomOutline = function (level) {
             var s = _this.scale;
@@ -13563,7 +13591,7 @@ var Map = /** @class */ (function () {
                         game_1.Game.ctx.fillRect(door.x * s, door.y * s, 1 * s, 1 * s);
             }
         };
-        this.drawRoomPlayers = function (players) {
+        this.drawRoomPlayers = function (players, delta) {
             var s = _this.scale;
             for (var i in players) {
                 game_1.Game.ctx.fillStyle = "white";
@@ -14182,6 +14210,7 @@ var Player = /** @class */ (function (_super) {
                             }
                             if (_this.game.rooms[_this.levelID].roomArray[nextX][nextY].canCrushEnemy() ||
                                 enemyEnd) {
+                                pushedEnemies[pushedEnemies.length - 1].crush();
                                 pushedEnemies[pushedEnemies.length - 1].killNoBones();
                                 if (_this.game.rooms[_this.levelID] === _this.game.room)
                                     sound_1.Sound.hit();
@@ -14858,7 +14887,7 @@ var Room = /** @class */ (function () {
             var table = [];
             var e;
             for (var i = 0; i <= game_1.Game.rand(2, 5, rand); i++) {
-                e = game_1.Game.rand(1, 12, rand);
+                e = game_1.Game.rand(1, 2, rand);
                 table.push(e);
             }
             return table;
@@ -15342,6 +15371,7 @@ var Room = /** @class */ (function () {
             //sets the action tab state to Ready
             _this.playerTurnTime = Date.now();
             _this.playerTicked = player;
+            player.map.saveMapData();
         };
         this.update = function () {
             if (_this.turn == TurnState.computerTurn) {
@@ -15812,7 +15842,7 @@ var Room = /** @class */ (function () {
                 return;
             var x = t.x;
             var y = t.y;
-            switch (game_1.Game.randTable([1, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4], rand)) {
+            switch (game_1.Game.randTable([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4], rand)) {
                 case 1:
                     this.entities.push(new crate_1.Crate(this, this.game, x, y));
                     break;

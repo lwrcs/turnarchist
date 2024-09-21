@@ -58,6 +58,10 @@ export class Entity extends Drawable {
   lastX: number;
   lastY: number;
   entityType: EntityType;
+  crushX: number;
+  crushY: number;
+  crushed: Boolean;
+  crushVertical: Boolean;
 
   constructor(level: Room, game: Game, x: number, y: number) {
     super();
@@ -88,6 +92,10 @@ export class Entity extends Drawable {
     this.lastX = x;
     this.lastY = y;
     this.entityType = EntityType.ENEMY;
+    this.crushX = 1;
+    this.crushY = 1;
+    this.crushed = false;
+    this.crushVertical = false;
   }
 
   tryMove = (x: number, y: number) => {
@@ -261,12 +269,13 @@ export class Entity extends Drawable {
         2,
         this.x - this.drawX,
         this.y - 1.5 - this.drawY,
-        1,
-        2,
+        1 * this.crushX,
+        2 * this.crushY,
         this.room.shadeColor,
         this.shadeAmount()
       );
     }
+    if (this.crushed){this.crushAnim(delta)}
   };
 
   tick = () => {};
@@ -335,51 +344,81 @@ export class Entity extends Drawable {
       );
     }
   };
-  makeHitWarnings = (orthogonal: Boolean, diagonal: Boolean, forwardOnly: Boolean, direction: EntityDirection) => {
-    if (orthogonal && !forwardOnly){
-    this.room.hitwarnings.push(
-      new HitWarning(this.game, this.x - 1, this.y, this.x, this.y)
-    );
-    this.room.hitwarnings.push(
-      new HitWarning(this.game, this.x + 1, this.y, this.x, this.y)
-    );
-    this.room.hitwarnings.push(
-      new HitWarning(this.game, this.x, this.y - 1, this.x, this.y)
-    );
-    this.room.hitwarnings.push(
-      new HitWarning(this.game, this.x, this.y + 1, this.x, this.y)
-    );
-  }
-    if (diagonal && !forwardOnly){
-    this.room.hitwarnings.push(
-      new HitWarning(this.game, this.x - 1, this.y - 1, this.x, this.y)
-    );
-    this.room.hitwarnings.push(
-      new HitWarning(this.game, this.x + 1, this.y + 1, this.x, this.y)
-    );
-    this.room.hitwarnings.push(
-      new HitWarning(this.game, this.x + 1, this.y - 1, this.x, this.y)
-    );
-    this.room.hitwarnings.push(
-      new HitWarning(this.game, this.x - 1, this.y + 1, this.x, this.y)
-    );
-  }
-  if (forwardOnly){
-    if (direction == EntityDirection.LEFT){
-    this.room.hitwarnings.push(
-      new HitWarning(this.game, this.x - 1, this.y, this.x, this.y)
-    );}
-    if (direction == EntityDirection.RIGHT){
-    this.room.hitwarnings.push(
-      new HitWarning(this.game, this.x + 1, this.y, this.x, this.y)
-    );}
-    if (direction == EntityDirection.UP){
-    this.room.hitwarnings.push(
-      new HitWarning(this.game, this.x, this.y - 1, this.x, this.y)
-    );}
-    if (direction == EntityDirection.DOWN){
-    this.room.hitwarnings.push(
-      new HitWarning(this.game, this.x, this.y + 1, this.x, this.y)
-    );}
-  }
-}}
+  crush = () => {
+    let player: Player;
+    for (let i in this.game.players) {
+      player = this.game.players[i];
+    }
+    if (this.x == player.x) {
+      this.crushVertical = true;
+    }
+    if (this.y == player.y) {
+      this.crushVertical = false;
+    }
+  };
+  crushAnim = (delta: number) => {
+    if (this.crushVertical && this.crushX >= 0) {
+      this.crushX -= delta * 0.125;
+    } else if (this.crushY >= 0) {
+      this.crushY -= delta * 0.125;
+    }
+  };
+
+  makeHitWarnings = (
+    orthogonal: Boolean,
+    diagonal: Boolean,
+    forwardOnly: Boolean,
+    direction: EntityDirection
+  ) => {
+    if (orthogonal && !forwardOnly) {
+      this.room.hitwarnings.push(
+        new HitWarning(this.game, this.x - 1, this.y, this.x, this.y)
+      );
+      this.room.hitwarnings.push(
+        new HitWarning(this.game, this.x + 1, this.y, this.x, this.y)
+      );
+      this.room.hitwarnings.push(
+        new HitWarning(this.game, this.x, this.y - 1, this.x, this.y)
+      );
+      this.room.hitwarnings.push(
+        new HitWarning(this.game, this.x, this.y + 1, this.x, this.y)
+      );
+    }
+    if (diagonal && !forwardOnly) {
+      this.room.hitwarnings.push(
+        new HitWarning(this.game, this.x - 1, this.y - 1, this.x, this.y)
+      );
+      this.room.hitwarnings.push(
+        new HitWarning(this.game, this.x + 1, this.y + 1, this.x, this.y)
+      );
+      this.room.hitwarnings.push(
+        new HitWarning(this.game, this.x + 1, this.y - 1, this.x, this.y)
+      );
+      this.room.hitwarnings.push(
+        new HitWarning(this.game, this.x - 1, this.y + 1, this.x, this.y)
+      );
+    }
+    if (forwardOnly) {
+      if (direction == EntityDirection.LEFT) {
+        this.room.hitwarnings.push(
+          new HitWarning(this.game, this.x - 1, this.y, this.x, this.y)
+        );
+      }
+      if (direction == EntityDirection.RIGHT) {
+        this.room.hitwarnings.push(
+          new HitWarning(this.game, this.x + 1, this.y, this.x, this.y)
+        );
+      }
+      if (direction == EntityDirection.UP) {
+        this.room.hitwarnings.push(
+          new HitWarning(this.game, this.x, this.y - 1, this.x, this.y)
+        );
+      }
+      if (direction == EntityDirection.DOWN) {
+        this.room.hitwarnings.push(
+          new HitWarning(this.game, this.x, this.y + 1, this.x, this.y)
+        );
+      }
+    }
+  };
+}
