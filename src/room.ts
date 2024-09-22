@@ -66,6 +66,7 @@ import { Pumpkin } from "./entity/pumpkin";
 import { QueenEnemy } from "./entity/queenEnemy";
 import { FrogEnemy } from "./entity/frogEnemy";
 import { BigKnightEnemy } from "./entity/bigKnightEnemy";
+import { SniperEnemy } from "./entity/sniperEnemy";
 
 export enum RoomType {
   START,
@@ -329,7 +330,7 @@ export class Room {
       
 
       let tables = {
-        0: this.generateLevelTable(rand),
+        0: [14],//this.generateLevelTable(rand),
         1: [1, 1, 3, 3, 3, 2, 2],
         2: [1, 1, 2, 2, 3, 3, 4],
         3: [1, 1, 1, 2, 3, 3, 3, 4, 4, 5],
@@ -429,6 +430,9 @@ export class Room {
                 }
               }
             }
+            break;
+            case 14:
+              addEnemy(new SniperEnemy(this, this.game, x, y, rand));
             break;
         }
       }
@@ -1405,9 +1409,6 @@ export class Room {
     );
     if (GameConstants.ALPHA_ENABLED) {
       Game.ctx.globalAlpha = shadingAlpha;
-      //Game.ctx.globalCompositeOperation = "lighten"
-      //Game.ctx.globalCompositeOperation = "overlay"
-      //Game.ctx.fillStyle = "#400a0e";
       Game.ctx.fillStyle = this.shadeColor;
       Game.ctx.fillRect(
         (this.roomX - LevelConstants.SCREEN_W) * GameConstants.TILESIZE,

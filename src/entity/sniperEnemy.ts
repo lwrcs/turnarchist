@@ -15,15 +15,14 @@ import { astar } from "../astarclass";
 import { SpikeTrap } from "../tile/spiketrap";
 import { Pickaxe } from "../weapon/pickaxe";
 
-
-export class ZombieEnemy extends Entity {
+export class SniperEnemy extends Entity {
   frame: number;
   ticks: number;
   seenPlayer: boolean;
   aggro: boolean;
   targetPlayer: Player;
   drop: Item;
-  dir: Direction
+  dir: Direction;
 
   constructor(level: Room, game: Game, x: number, y: number, rand: () => number, drop?: Item) {
     super(level, game, x, y);
@@ -31,8 +30,8 @@ export class ZombieEnemy extends Entity {
     this.frame = 0;
     this.health = 1;
     this.maxHealth = 1;
-    this.tileX = 17;
-    this.tileY = 8;
+    this.tileX = 1;
+    this.tileY = 22;
     this.seenPlayer = false;
     this.aggro = false;
     this.deathParticleColor = "#ffffff";
@@ -49,6 +48,27 @@ export class ZombieEnemy extends Entity {
 
   hit = (): number => {
     return 1;
+  };
+
+  facePlayer = (player: Player) => {
+    let dx = player.x - this.x;
+    let dy = player.y - this.y;
+
+    // Calculate angle to player in radians
+    let angle = Math.atan2(dy, dx); // Angle in radians
+    const angleStep = Math.PI / 8; // Simplified constant for angle thresholds
+
+    // Determine direction based on angle
+    if (angle >= -angleStep && angle < angleStep) this.dir = Direction.East; // Right
+    else if (angle >= angleStep && angle < 3 * angleStep) this.dir = Direction.SouthEast; // Down-Right
+    else if (angle >= 3 * angleStep && angle < 5 * angleStep) this.dir = Direction.South; // Down
+    else if (angle >= 5 * angleStep && angle < 7 * angleStep) this.dir = Direction.SouthWest; // Down-Left
+    else if (angle >= 7 * angleStep || angle < -7 * angleStep) this.dir = Direction.West; // Left
+    else if (angle >= -7 * angleStep && angle < -5 * angleStep) this.dir = Direction.NorthWest; // Up-Left
+    else if (angle >= -5 * angleStep && angle < -3 * angleStep) this.dir = Direction.North; // Up
+    else if (angle >= -3 * angleStep && angle < -angleStep) this.dir = Direction.NorthEast; // Up-Right
+
+    console.log(this.dir.toString());
   };
 
   hurt = (playerHitBy: Player, damage: number) => {
@@ -206,8 +226,9 @@ export class ZombieEnemy extends Entity {
 
   draw = (delta: number) => {
     if (!this.dead) {
+      this.tileY = 20 + (this.dir * 2)
       this.frame += 0.1 * delta;
-      if (this.frame >= 4) this.frame = 0;
+      if (this.frame >= 1) this.frame = 0;
 
       if (this.hasShadow)
         Game.drawMob(
@@ -224,7 +245,7 @@ export class ZombieEnemy extends Entity {
         );
       Game.drawMob(
         this.tileX + Math.floor(this.frame),
-        this.tileY + this.direction * 2,
+        this.tileY,
         1,
         2,
         this.x - this.drawX,

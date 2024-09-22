@@ -21,6 +21,18 @@ export enum LevelState {
   TRANSITIONING_LADDER,
 }
 
+export enum Direction {
+  North,
+  NorthEast,
+  East,
+  SouthEast,
+  South,
+  SouthWest,
+  West,
+  NorthWest,
+  Center,
+}
+
 export class ChatMessage {
   message: string;
   timestamp: number;
@@ -54,7 +66,6 @@ const times = [];
 let fps;
 
 export class Game {
-  private static instance: Game;
   static ctx: CanvasRenderingContext2D;
   static shade_canvases: Record<string, HTMLCanvasElement>;
   prevLevel: Room; // for transitions
@@ -627,12 +638,6 @@ export class Game {
     }
   };
 
-  static getInstance(): Game {
-    if (!Game.instance) {
-      Game.instance = new Game();
-    }
-    return Game.instance;
-  }
 
   leaveGame = () => {
     this.socket.emit("game state", createGameState(this));
