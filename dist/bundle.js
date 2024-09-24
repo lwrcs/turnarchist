@@ -9263,6 +9263,15 @@ var Game = /** @class */ (function () {
             else if (_this.menuState === MenuState.LOGIN_PASSWORD) {
                 document.querySelector('input[type="password"]').focus();
                 _this.passwordTextBox.handleKeyPress(key);
+                input_1.Input.upSwipeListener = function () {
+                    _this.keyDownListener("ArrowDown");
+                };
+                input_1.Input.downSwipeListener = function () {
+                    _this.keyDownListener("ArrowUp");
+                };
+                input_1.Input.tapListener = function () {
+                    _this.keyDownListener("Enter");
+                };
             }
             else if (_this.menuState === MenuState.SELECT_WORLD) {
                 switch (key) {
@@ -15990,7 +15999,7 @@ var Room = /** @class */ (function () {
             var y = t.y;
             // Define the enemy tables for each depth level
             var tables = {
-                0: [14],
+                0: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
                 1: [1, 1, 3, 3, 3, 2, 2],
                 2: [1, 1, 2, 2, 3, 3, 4],
                 3: [1, 1, 1, 2, 3, 3, 3, 4, 4, 5],

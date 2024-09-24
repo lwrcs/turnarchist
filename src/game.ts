@@ -336,6 +336,7 @@ export class Game {
         { once: true }
       );
 
+
       document.addEventListener("touchstart", () => {
         if (this.menuState === MenuState.LOGIN_USERNAME) {
           usernameElement.focus();
@@ -478,10 +479,12 @@ export class Game {
       document.addEventListener("touchend", Input.handleTouchEnd, {
         passive: false,
       });
+    
 
       Input.keyDownListener = (key: string) => {
         this.keyDownListener(key);
       };
+      
 
       this.menuState = MenuState.LOADING;
 
@@ -502,7 +505,17 @@ export class Game {
         document.querySelector('input[type="password"]') as HTMLInputElement
       ).focus();
       this.passwordTextBox.handleKeyPress(key);
+      Input.upSwipeListener = () => {
+        this.keyDownListener("ArrowDown")
+      };
+      Input.downSwipeListener = () => {
+        this.keyDownListener("ArrowUp")
+      };
+      Input.tapListener = () => {
+        this.keyDownListener("Enter")
+      };
     } else if (this.menuState === MenuState.SELECT_WORLD) {
+      
       switch (key) {
         case "ArrowUp":
           this.selectedWorldCode = Math.max(0, this.selectedWorldCode - 1);
@@ -525,6 +538,7 @@ export class Game {
             );
           break;
       }
+      
     } else if (this.menuState === MenuState.IN_GAME) {
       if (!this.chatOpen) {
         switch (key.toUpperCase()) {
