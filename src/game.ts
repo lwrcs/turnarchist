@@ -603,7 +603,6 @@ export class Game {
 
     if (ladder instanceof DownLadder) {
       player.map.saveOldMap();
-      player.map.saveMapData();
       ladder.generate();
       //let newLevel = new Level(1);
     }
@@ -615,6 +614,8 @@ export class Game {
     } else {
       ladder.linkedLevel.enterLevel(player, ladder.linkedLevel); // since it's not a local player, don't wait for transition
     }
+    player.map.saveMapData();
+
   };
 
   changeLevelThroughDoor = (player: Player, door: any, side?: number) => {
@@ -650,6 +651,7 @@ export class Game {
     } else {
       door.room.enterLevelThroughDoor(player, door, side);
     }
+    player.map.saveMapData();
   };
 
 
@@ -741,6 +743,17 @@ export class Game {
     let maxHeightScale = Math.floor(
       window.innerHeight / GameConstants.DEFAULTHEIGHT
     );
+
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+    if (isMobile) {
+      game.pushMessage("mobile detected")
+      // Adjust scale for mobile devices
+      Game.scale = 2; // Example: limit scale to 2 for mobile
+    } else {
+      Game.scale = Math.min(maxWidthScale, maxHeightScale);
+    }
+
     Game.scale = Math.min(maxWidthScale, maxHeightScale);
     if (Game.scale === 0) {
       maxWidthScale = window.innerWidth / GameConstants.DEFAULTWIDTH;

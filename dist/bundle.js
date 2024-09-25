@@ -9352,7 +9352,6 @@ var Game = /** @class */ (function () {
             player.levelID = _this.rooms.indexOf(ladder.linkedLevel);
             if (ladder instanceof downLadder_1.DownLadder) {
                 player.map.saveOldMap();
-                player.map.saveMapData();
                 ladder.generate();
                 //let newLevel = new Level(1);
             }
@@ -9364,6 +9363,7 @@ var Game = /** @class */ (function () {
             else {
                 ladder.linkedLevel.enterLevel(player, ladder.linkedLevel); // since it's not a local player, don't wait for transition
             }
+            player.map.saveMapData();
         };
         this.changeLevelThroughDoor = function (player, door, side) {
             player.levelID = _this.rooms.indexOf(door.room);
@@ -9392,6 +9392,7 @@ var Game = /** @class */ (function () {
             else {
                 door.room.enterLevelThroughDoor(player, door, side);
             }
+            player.map.saveMapData();
         };
         this.leaveGame = function () {
             _this.socket.emit("game state", (0, gameState_1.createGameState)(_this));
@@ -9459,6 +9460,15 @@ var Game = /** @class */ (function () {
         this.onResize = function () {
             var maxWidthScale = Math.floor(window.innerWidth / gameConstants_1.GameConstants.DEFAULTWIDTH);
             var maxHeightScale = Math.floor(window.innerHeight / gameConstants_1.GameConstants.DEFAULTHEIGHT);
+            var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+            if (isMobile) {
+                game.pushMessage("mobile detected");
+                // Adjust scale for mobile devices
+                Game.scale = 2; // Example: limit scale to 2 for mobile
+            }
+            else {
+                Game.scale = Math.min(maxWidthScale, maxHeightScale);
+            }
             Game.scale = Math.min(maxWidthScale, maxHeightScale);
             if (Game.scale === 0) {
                 maxWidthScale = window.innerWidth / gameConstants_1.GameConstants.DEFAULTWIDTH;
@@ -10247,14 +10257,14 @@ var GameConstants = /** @class */ (function () {
     GameConstants.VERSION = "v0.6.3";
     GameConstants.FPS = 120;
     GameConstants.ALPHA_ENABLED = true;
-    GameConstants.SHADE_LEVELS = 10;
+    GameConstants.SHADE_LEVELS = 50;
     GameConstants.TILESIZE = 16;
     GameConstants.SCALE = 1;
-    GameConstants.SWIPE_THRESH = Math.pow(50, 2); // (size of swipe threshold circle)^2
+    GameConstants.SWIPE_THRESH = Math.pow(25, 2); // (size of swipe threshold circle)^2
     GameConstants.KEY_REPEAT_TIME = 300; // millseconds
     GameConstants.CHAT_APPEAR_TIME = 10000;
     GameConstants.CHAT_FADE_TIME = 1000;
-    GameConstants.DEFAULTWIDTH = 12 * GameConstants.TILESIZE;
+    GameConstants.DEFAULTWIDTH = 6 * GameConstants.TILESIZE;
     GameConstants.DEFAULTHEIGHT = 12 * GameConstants.TILESIZE;
     GameConstants.WIDTH = levelConstants_1.LevelConstants.SCREEN_W * GameConstants.TILESIZE;
     GameConstants.HEIGHT = levelConstants_1.LevelConstants.SCREEN_H * GameConstants.TILESIZE;
@@ -14022,6 +14032,7 @@ var GenericParticle = /** @class */ (function (_super) {
             var halfS = 0.5 * scaledS;
             var oldFillStyle = game_1.Game.ctx.fillStyle;
             game_1.Game.ctx.fillStyle = _this.color;
+            game_1.Game.ctx.imageSmoothingEnabled = false;
             game_1.Game.ctx.beginPath();
             game_1.Game.ctx.arc(Math.round(_this.x * scale), Math.round((_this.y - _this.z) * scale), Math.round(halfS * scale), 0, 2 * Math.PI, false);
             game_1.Game.ctx.fill();

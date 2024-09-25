@@ -110,6 +110,7 @@ export class GenericParticle extends Particle {
     let halfS = 0.5 * scaledS;
     let oldFillStyle = Game.ctx.fillStyle;
     Game.ctx.fillStyle = this.color;
+    Game.ctx.imageSmoothingEnabled = false;
 
     Game.ctx.beginPath();
     Game.ctx.arc(
