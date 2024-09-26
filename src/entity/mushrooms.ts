@@ -6,6 +6,7 @@ import { LevelConstants } from "../levelConstants";
 import { GenericParticle } from "../particle/genericParticle";
 import { Shrooms } from "../item/shrooms";
 import { EntityType } from "./entity";
+import { ImageParticle } from "../particle/imageParticle";
 
 export class Mushrooms extends Entity {
   constructor(level: Room, game: Game, x: number, y: number) {
@@ -22,7 +23,7 @@ export class Mushrooms extends Entity {
   kill = () => {
     this.dead = true;
 
-    GenericParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, "#ac3232");
+    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 30, "#5d9250");
 
     this.room.items.push(new Shrooms(this.room, this.x, this.y));
   };

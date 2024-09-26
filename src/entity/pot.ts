@@ -5,6 +5,7 @@ import { Heart } from "../item/heart";
 import { LevelConstants } from "../levelConstants";
 import { GenericParticle } from "../particle/genericParticle";
 import { EntityType } from "./entity";
+import { ImageParticle } from "../particle/imageParticle";
 
 export class Pot extends Entity {
   constructor(level: Room, game: Game, x: number, y: number) {
@@ -21,7 +22,7 @@ export class Pot extends Entity {
   kill = () => {
     this.dead = true;
 
-    GenericParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, "#ce736a");
+    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 29, "#5d9250");
   };
   killNoBones = () => {
     this.kill();

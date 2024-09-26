@@ -11,6 +11,7 @@ import { Drawable } from "../drawable";
 import { Item } from "../item/item";
 import { GameConstants } from "../gameConstants";
 import { HitWarning } from "../hitWarning";
+import { Sound } from "../sound";
 
 export enum EntityDirection {
   DOWN,
@@ -191,14 +192,14 @@ export class Entity extends Drawable {
 
   killNoBones = () => {
     this.dead = true;
-    GenericParticle.spawnCluster(
+    /*GenericParticle.spawnCluster(
       this.room,
       this.x + 0.5,
       this.y + 0.5,
       this.deathParticleColor
     );
     this.room.particles.push(new DeathParticle(this.x, this.y));
-
+*/
     this.dropLoot();
   };
 

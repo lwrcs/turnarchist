@@ -30,14 +30,16 @@ export class PottedPlant extends Entity {
   }
 
   hurtCallback = () => {
-    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 25, "#5d9250");
+    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 28, "#5d9250");
   };
 
   kill = () => {
     this.dead = true;
     this.killNoBones();
 
-    GenericParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, "#ce736a");
+    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 29, "#5d9250");
+    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 28, "#5d9250");
+
   };
   killNoBones = () => {
     this.dead = true;

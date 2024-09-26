@@ -14,6 +14,7 @@ import { Random } from "../random";
 import { astar } from "../astarclass";
 import { SpikeTrap } from "../tile/spiketrap";
 import { Pickaxe } from "../weapon/pickaxe";
+import { ImageParticle } from "../particle/imageParticle";
 
 
 export class ZombieEnemy extends Entity {
@@ -59,11 +60,12 @@ export class ZombieEnemy extends Entity {
       if (playerHitBy === this.game.players[this.game.localPlayerID]) this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
     }
     this.health -= damage;
+    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 26, this.deathParticleColor);
     this.healthBar.hurt();
     if (this.health <= 0) {
       this.kill();
     } else {
-      GenericParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, this.deathParticleColor);
+      
     }
   };
 

@@ -12,6 +12,7 @@ import { astar } from "../astarclass";
 import { SpikeTrap } from "../tile/spiketrap";
 import { DeathParticle } from "../particle/deathParticle";
 import { Candle } from "../item/candle";
+import { ImageParticle } from "../particle/imageParticle";
 
 export class SkullEnemy extends Entity {
   frame: number;
@@ -64,9 +65,9 @@ export class SkullEnemy extends Entity {
     this.health -= damage;
     this.healthBar.hurt();
     if (this.health <= 0) {
+      ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 24, this.deathParticleColor);
       this.kill();
     } else {
-      GenericParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, this.deathParticleColor);
     }
   };
 

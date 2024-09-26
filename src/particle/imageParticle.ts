@@ -58,22 +58,29 @@ export class ImageParticle extends Particle {
     }
   };
 
-  static spawnCluster = (level: Room, cx: number, cy: number, tileX: number, tileY: number, color: string) => {
-    for (let i = 0; i < 4; i++) {
+  static spawnCluster = (
+    level: Room,
+    cx: number,
+    cy: number,
+    tileX: number,
+    tileY: number,
+    color: string
+  ) => {
+    for (let i = Math.floor(Math.random() * 3); i < 5; i++) {
       level.particles.push(
         new ImageParticle(
           level,
           cx + Math.random() * 0.05 - 0.025, // x
           cy + Math.random() * 0.05 - 0.025, // y
-          Math.random() * 0.5,               // z
-          0.0625 * (i + 8),                  // s
-          0.025 * (Math.random() * 2 - 1),   //dx
-          0.025 * (Math.random() * 2 - 1),   //dy
-          0.2 * (Math.random() - 1),         //dz
+          Math.random() * 0.5, // z
+          0.0625 * (i + 8), // s
+          0.025 * (Math.random() * 2 - 1), //dx
+          0.025 * (Math.random() * 2 - 1), //dy
+          0.2 * (Math.random() - 1), //dz
           tileX,
           tileY,
           color,
-          Math.random(),
+          [2, 1, 0, 1, 2, 2, 2][i],
           0
         )
       );
@@ -97,7 +104,7 @@ export class ImageParticle extends Particle {
     expirationTimer?: number,
     targetX?: number,
     targetY?: number,
-    targetZ?: number,
+    targetZ?: number
   ) {
     super();
     this.level = level;
@@ -110,7 +117,7 @@ export class ImageParticle extends Particle {
     this.dz = dz;
     this.tileX = tileX;
     this.tileY = tileY;
-    this.size = size
+    this.size = size;
     this.color = color;
     this.alpha = 1.0;
     if (delay !== undefined) this.delay = delay;
@@ -127,8 +134,17 @@ export class ImageParticle extends Particle {
     let frame = this.s > 0.5 ? 1 : 0; // Placeholder frames for large and small particles
     Game.ctx.imageSmoothingEnabled = false;
 
-    let adjustedTileX = this.tileX + Math.floor(this.size * 3);
-    Game.drawFX(adjustedTileX, this.tileY, 1, 1, (this.x - (this.alpha / 2)), this.y - this.z - (this.alpha / 2), this.alpha, this.alpha);
+    let adjustedTileX = this.tileX + this.size;
+    Game.drawFX(
+      adjustedTileX,
+      this.tileY,
+      1,
+      1,
+      this.x - this.alpha / 2,
+      this.y - this.z - this.alpha / 2,
+      this.alpha,
+      this.alpha
+    );
   };
 
   draw = (delta: number) => {
@@ -150,7 +166,7 @@ export class ImageParticle extends Particle {
 
     // apply gravity
     this.dz -= 0.01;
-/*
+    /*
     if (this.alpha < 0.2) this.alpha -= ((0.01 * this.size) + 0.005);
     else this.alpha -= ((0.005 * this.size) + 0.005);
     if (this.alpha <= 0.6) this.dead = true;

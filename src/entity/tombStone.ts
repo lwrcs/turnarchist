@@ -48,14 +48,6 @@ export class TombStone extends Entity {
 
   kill = () => {
     this.dead = true;
-    ImageParticle.spawnCluster(
-      this.room,
-      this.x + 0.5,
-      this.y + 0.5,
-      0,
-      25,
-      "#d9a066"
-    );
     this.dropLoot();
   };
 
@@ -69,6 +61,10 @@ export class TombStone extends Entity {
       25,
       "#d9a066"
     );
+
+    setTimeout(() => {
+      Sound.hurt();
+    }, 100);
 
     this.health -= damage;
     if (this.health === 1) {
@@ -104,7 +100,8 @@ export class TombStone extends Entity {
       //draw half broken tombstone based on skintype after it takes one damage
     }
     if (this.health <= 0) this.kill(), Sound.breakRock();
-    else this.hurtCallback();
+    else this.hurtCallback(), Sound.hit();
+
   };
 
   draw = (delta: number) => {

@@ -66,7 +66,7 @@ export class Sound {
 
     Sound.hurtSounds = new Array<HTMLAudioElement>();
     [1].forEach((i) =>
-      Sound.hurtSounds.push(new Audio("res/SFX/attacks/hit.wav"))
+      Sound.hurtSounds.push(new Audio("res/SFX/attacks/hurt1.wav"))
     );
     for (let f of Sound.hurtSounds) f.volume = 0.3;
 
@@ -86,7 +86,7 @@ export class Sound {
     Sound.healSound.volume = 0.5;
 
     Sound.music = new Audio("res/bewitched.mp3");
-    Sound.graveSound = new Audio("res/SFX/attacks/skelespawn.wav")
+    Sound.graveSound = new Audio("res/SFX/attacks/skelespawn.wav");
   };
 
   static playerStoneFootstep = () => {
@@ -105,10 +105,14 @@ export class Sound {
     let f = Game.randTable(Sound.hitSounds, Math.random);
     f.play();
     f.currentTime = 0;
-    f = Game.randTable(Sound.hurtSounds, Math.random);
-    f.volume = 0.5;
-    f.play();
-    f.currentTime = 0;
+
+    setTimeout(() => {
+      Sound.hurt();
+    }, 100);
+    //f = Game.randTable(Sound.hurtSounds, Math.random);
+    //f.volume = 0.1;
+    //f.play();
+    //f.currentTime = 0;
     f.volume = 0.4;
   };
 
@@ -142,7 +146,9 @@ export class Sound {
   };
 
   static breakRock = () => {
-    Sound.breakRockSound.play();
+    setTimeout(() => {
+      Sound.breakRockSound.play();
+    }, 100);
     Sound.breakRockSound.currentTime = 0;
   };
 

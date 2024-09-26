@@ -6155,9 +6155,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Entity = exports.EntityType = exports.EntityDirection = void 0;
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var bones_1 = __webpack_require__(/*! ../tile/bones */ "./src/tile/bones.ts");
-var deathParticle_1 = __webpack_require__(/*! ../particle/deathParticle */ "./src/particle/deathParticle.ts");
 var floor_1 = __webpack_require__(/*! ../tile/floor */ "./src/tile/floor.ts");
-var genericParticle_1 = __webpack_require__(/*! ../particle/genericParticle */ "./src/particle/genericParticle.ts");
 var healthbar_1 = __webpack_require__(/*! ../healthbar */ "./src/healthbar.ts");
 var drawable_1 = __webpack_require__(/*! ../drawable */ "./src/drawable.ts");
 var gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
@@ -6267,8 +6265,14 @@ var Entity = /** @class */ (function (_super) {
         };
         _this.killNoBones = function () {
             _this.dead = true;
-            genericParticle_1.GenericParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, _this.deathParticleColor);
-            _this.room.particles.push(new deathParticle_1.DeathParticle(_this.x, _this.y));
+            /*GenericParticle.spawnCluster(
+              this.room,
+              this.x + 0.5,
+              this.y + 0.5,
+              this.deathParticleColor
+            );
+            this.room.particles.push(new DeathParticle(this.x, this.y));
+        */
             _this.dropLoot();
         };
         _this.shadeAmount = function () {
@@ -7008,16 +7012,16 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Mushrooms = void 0;
 var entity_1 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-var genericParticle_1 = __webpack_require__(/*! ../particle/genericParticle */ "./src/particle/genericParticle.ts");
 var shrooms_1 = __webpack_require__(/*! ../item/shrooms */ "./src/item/shrooms.ts");
 var entity_2 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
+var imageParticle_1 = __webpack_require__(/*! ../particle/imageParticle */ "./src/particle/imageParticle.ts");
 var Mushrooms = /** @class */ (function (_super) {
     __extends(Mushrooms, _super);
     function Mushrooms(level, game, x, y) {
         var _this = _super.call(this, level, game, x, y) || this;
         _this.kill = function () {
             _this.dead = true;
-            genericParticle_1.GenericParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, "#ac3232");
+            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 30, "#5d9250");
             _this.room.items.push(new shrooms_1.Shrooms(_this.room, _this.x, _this.y));
         };
         _this.killNoBones = function () {
@@ -7077,15 +7081,15 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Pot = void 0;
 var entity_1 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-var genericParticle_1 = __webpack_require__(/*! ../particle/genericParticle */ "./src/particle/genericParticle.ts");
 var entity_2 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
+var imageParticle_1 = __webpack_require__(/*! ../particle/imageParticle */ "./src/particle/imageParticle.ts");
 var Pot = /** @class */ (function (_super) {
     __extends(Pot, _super);
     function Pot(level, game, x, y) {
         var _this = _super.call(this, level, game, x, y) || this;
         _this.kill = function () {
             _this.dead = true;
-            genericParticle_1.GenericParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, "#ce736a");
+            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 29, "#5d9250");
         };
         _this.killNoBones = function () {
             _this.kill();
@@ -7145,7 +7149,6 @@ exports.PottedPlant = void 0;
 var entity_1 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var heart_1 = __webpack_require__(/*! ../item/heart */ "./src/item/heart.ts");
-var genericParticle_1 = __webpack_require__(/*! ../particle/genericParticle */ "./src/particle/genericParticle.ts");
 var coin_1 = __webpack_require__(/*! ../item/coin */ "./src/item/coin.ts");
 var entity_2 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var imageParticle_1 = __webpack_require__(/*! ../particle/imageParticle */ "./src/particle/imageParticle.ts");
@@ -7154,12 +7157,13 @@ var PottedPlant = /** @class */ (function (_super) {
     function PottedPlant(level, game, x, y, rand, drop) {
         var _this = _super.call(this, level, game, x, y) || this;
         _this.hurtCallback = function () {
-            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 25, "#5d9250");
+            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 28, "#5d9250");
         };
         _this.kill = function () {
             _this.dead = true;
             _this.killNoBones();
-            genericParticle_1.GenericParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, "#ce736a");
+            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 29, "#5d9250");
+            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 28, "#5d9250");
         };
         _this.killNoBones = function () {
             _this.dead = true;
@@ -7638,13 +7642,13 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SkullEnemy = void 0;
 var entity_1 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-var genericParticle_1 = __webpack_require__(/*! ../particle/genericParticle */ "./src/particle/genericParticle.ts");
 var coin_1 = __webpack_require__(/*! ../item/coin */ "./src/item/coin.ts");
 var redgem_1 = __webpack_require__(/*! ../item/redgem */ "./src/item/redgem.ts");
 var spear_1 = __webpack_require__(/*! ../weapon/spear */ "./src/weapon/spear.ts");
 var astarclass_1 = __webpack_require__(/*! ../astarclass */ "./src/astarclass.ts");
 var spiketrap_1 = __webpack_require__(/*! ../tile/spiketrap */ "./src/tile/spiketrap.ts");
 var candle_1 = __webpack_require__(/*! ../item/candle */ "./src/item/candle.ts");
+var imageParticle_1 = __webpack_require__(/*! ../particle/imageParticle */ "./src/particle/imageParticle.ts");
 var SkullEnemy = /** @class */ (function (_super) {
     __extends(SkullEnemy, _super);
     function SkullEnemy(level, game, x, y, rand, drop) {
@@ -7665,10 +7669,10 @@ var SkullEnemy = /** @class */ (function (_super) {
             _this.health -= damage;
             _this.healthBar.hurt();
             if (_this.health <= 0) {
+                imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 24, _this.deathParticleColor);
                 _this.kill();
             }
             else {
-                genericParticle_1.GenericParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, _this.deathParticleColor);
             }
         };
         _this.tick = function () {
@@ -8453,12 +8457,14 @@ var TombStone = /** @class */ (function (_super) {
         var _this = _super.call(this, level, game, x, y) || this;
         _this.kill = function () {
             _this.dead = true;
-            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 25, "#d9a066");
             _this.dropLoot();
         };
         _this.hurt = function (playerHitBy, damage) {
             _this.healthBar.hurt();
             imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 25, "#d9a066");
+            setTimeout(function () {
+                sound_1.Sound.hurt();
+            }, 100);
             _this.health -= damage;
             if (_this.health === 1) {
                 var positions = _this.room
@@ -8484,7 +8490,7 @@ var TombStone = /** @class */ (function (_super) {
             if (_this.health <= 0)
                 _this.kill(), sound_1.Sound.breakRock();
             else
-                _this.hurtCallback();
+                _this.hurtCallback(), sound_1.Sound.hit();
         };
         _this.draw = function (delta) {
             // not inherited because it doesn't have the 0.5 offset
@@ -8981,13 +8987,13 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ZombieEnemy = void 0;
 var entity_1 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-var genericParticle_1 = __webpack_require__(/*! ../particle/genericParticle */ "./src/particle/genericParticle.ts");
 var coin_1 = __webpack_require__(/*! ../item/coin */ "./src/item/coin.ts");
 var greengem_1 = __webpack_require__(/*! ../item/greengem */ "./src/item/greengem.ts");
 var random_1 = __webpack_require__(/*! ../random */ "./src/random.ts");
 var astarclass_1 = __webpack_require__(/*! ../astarclass */ "./src/astarclass.ts");
 var spiketrap_1 = __webpack_require__(/*! ../tile/spiketrap */ "./src/tile/spiketrap.ts");
 var pickaxe_1 = __webpack_require__(/*! ../weapon/pickaxe */ "./src/weapon/pickaxe.ts");
+var imageParticle_1 = __webpack_require__(/*! ../particle/imageParticle */ "./src/particle/imageParticle.ts");
 var ZombieEnemy = /** @class */ (function (_super) {
     __extends(ZombieEnemy, _super);
     function ZombieEnemy(level, game, x, y, rand, drop) {
@@ -9004,12 +9010,12 @@ var ZombieEnemy = /** @class */ (function (_super) {
                     _this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
             }
             _this.health -= damage;
+            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 26, _this.deathParticleColor);
             _this.healthBar.hurt();
             if (_this.health <= 0) {
                 _this.kill();
             }
             else {
-                genericParticle_1.GenericParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, _this.deathParticleColor);
             }
         };
         _this.tick = function () {
@@ -14156,8 +14162,8 @@ var ImageParticle = /** @class */ (function (_super) {
             var yOffset = _this.z * scale;
             var frame = _this.s > 0.5 ? 1 : 0; // Placeholder frames for large and small particles
             game_1.Game.ctx.imageSmoothingEnabled = false;
-            var adjustedTileX = _this.tileX + Math.floor(_this.size * 3);
-            game_1.Game.drawFX(adjustedTileX, _this.tileY, 1, 1, (_this.x - (_this.alpha / 2)), _this.y - _this.z - (_this.alpha / 2), _this.alpha, _this.alpha);
+            var adjustedTileX = _this.tileX + _this.size;
+            game_1.Game.drawFX(adjustedTileX, _this.tileY, 1, 1, _this.x - _this.alpha / 2, _this.y - _this.z - _this.alpha / 2, _this.alpha, _this.alpha);
         };
         _this.draw = function (delta) {
             game_1.Game.ctx.imageSmoothingEnabled = false;
@@ -14182,10 +14188,10 @@ var ImageParticle = /** @class */ (function (_super) {
             // apply gravity
             _this.dz -= 0.01;
             /*
-                if (this.alpha < 0.2) this.alpha -= ((0.01 * this.size) + 0.005);
-                else this.alpha -= ((0.005 * this.size) + 0.005);
-                if (this.alpha <= 0.6) this.dead = true;
-                */
+            if (this.alpha < 0.2) this.alpha -= ((0.01 * this.size) + 0.005);
+            else this.alpha -= ((0.005 * this.size) + 0.005);
+            if (this.alpha <= 0.6) this.dead = true;
+            */
             _this.expirationTimer--;
             if (_this.expirationTimer <= 0)
                 _this.dead = true;
@@ -14223,7 +14229,7 @@ var ImageParticle = /** @class */ (function (_super) {
         }
     };
     ImageParticle.spawnCluster = function (level, cx, cy, tileX, tileY, color) {
-        for (var i = 0; i < 4; i++) {
+        for (var i = Math.floor(Math.random() * 3); i < 5; i++) {
             level.particles.push(new ImageParticle(level, cx + Math.random() * 0.05 - 0.025, // x
             cy + Math.random() * 0.05 - 0.025, // y
             Math.random() * 0.5, // z
@@ -14231,7 +14237,7 @@ var ImageParticle = /** @class */ (function (_super) {
             0.025 * (Math.random() * 2 - 1), //dx
             0.025 * (Math.random() * 2 - 1), //dy
             0.2 * (Math.random() - 1), //dz
-            tileX, tileY, color, Math.random(), 0));
+            tileX, tileY, color, [2, 1, 0, 1, 2, 2, 2][i], 0));
         }
     };
     return ImageParticle;
@@ -16147,7 +16153,7 @@ var Room = /** @class */ (function () {
             var y = t.y;
             // Define the enemy tables for each depth level
             var tables = {
-                0: [ /*1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13*/],
+                0: [4, 3 /*1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13*/],
                 1: [1, 1, 3, 3, 3, 2, 2],
                 2: [1, 1, 2, 2, 3, 3, 4],
                 3: [1, 1, 1, 2, 3, 3, 3, 4, 4, 5],
@@ -16444,7 +16450,7 @@ var Sound = /** @class */ (function () {
         }
         Sound.hurtSounds = new Array();
         [1].forEach(function (i) {
-            return Sound.hurtSounds.push(new Audio("res/SFX/attacks/hit.wav"));
+            return Sound.hurtSounds.push(new Audio("res/SFX/attacks/hurt1.wav"));
         });
         for (var _m = 0, _o = Sound.hurtSounds; _m < _o.length; _m++) {
             var f = _o[_m];
@@ -16481,10 +16487,13 @@ var Sound = /** @class */ (function () {
         var f = game_1.Game.randTable(Sound.hitSounds, Math.random);
         f.play();
         f.currentTime = 0;
-        f = game_1.Game.randTable(Sound.hurtSounds, Math.random);
-        f.volume = 0.5;
-        f.play();
-        f.currentTime = 0;
+        setTimeout(function () {
+            Sound.hurt();
+        }, 100);
+        //f = Game.randTable(Sound.hurtSounds, Math.random);
+        //f.volume = 0.1;
+        //f.play();
+        //f.currentTime = 0;
         f.volume = 0.4;
     };
     Sound.hurt = function () {
@@ -16512,7 +16521,9 @@ var Sound = /** @class */ (function () {
         f.currentTime = 0;
     };
     Sound.breakRock = function () {
-        Sound.breakRockSound.play();
+        setTimeout(function () {
+            Sound.breakRockSound.play();
+        }, 100);
         Sound.breakRockSound.currentTime = 0;
     };
     Sound.heal = function () {
