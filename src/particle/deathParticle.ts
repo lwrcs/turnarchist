@@ -15,7 +15,7 @@ export class DeathParticle extends Particle {
     this.frame = 0;
   }
 
-  draw = (delta: number) => {
+  drawTopLayer = (delta: number) => {
     if (this.dead) return;
 
     let yOffset = Math.max(0, ((this.frame - 3) * 3) / GameConstants.TILESIZE);

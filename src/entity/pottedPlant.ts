@@ -7,6 +7,7 @@ import { GenericParticle } from "../particle/genericParticle";
 import { Item } from "../item/item";
 import { Coin } from "../item/coin";
 import { EntityType } from "./entity";
+import { ImageParticle } from "../particle/imageParticle";
 
 export class PottedPlant extends Entity {
   drop: Item;
@@ -29,7 +30,7 @@ export class PottedPlant extends Entity {
   }
 
   hurtCallback = () => {
-    GenericParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, "#5d9250");
+    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 25, "#5d9250");
   };
 
   kill = () => {

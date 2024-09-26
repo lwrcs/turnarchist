@@ -8,6 +8,7 @@ import { Player } from "../player";
 import { Sound } from "../sound";
 import { Stone } from "../item/stone";
 import { Resource } from "./resource";
+import { ImageParticle } from "../particle/imageParticle";
 
 export class Rock extends Resource {
   constructor(level: Room, game: Game, x: number, y: number) {
@@ -21,7 +22,7 @@ export class Rock extends Resource {
   }
 
   hurtCallback = () => {
-    GenericParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, "#ffffff");
+    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 24, "#9badb7"); //rock particle coord 0, 24
 
     if (this.room === this.game.room) Sound.mine();
   };

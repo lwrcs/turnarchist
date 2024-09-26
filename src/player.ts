@@ -21,6 +21,7 @@ import { Item } from "./item/item";
 import { PostProcessor } from "./postProcess";
 import { Weapon } from "./weapon/weapon";
 import { Room } from "./room";
+import { ImageParticle } from "./particle/imageParticle";
 
 export enum PlayerDirection {
   DOWN = 0,
@@ -231,6 +232,7 @@ export class Player extends Drawable {
     this.tryMove(this.x, this.y + 1);
     this.direction = PlayerDirection.DOWN;
   };
+
 
   hit = (): number => {
     return 1;

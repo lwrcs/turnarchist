@@ -75,7 +75,7 @@ export class Inventory {
 
       this.addItem(i);
     };
-    const startingInv = [Dagger, Key, Backpack];
+    const startingInv = [Dagger, Key, Backpack, Shotgun, Spear];
     startingInv.forEach((item) => {
       a(new item({ game: this.game } as Room, 0, 0));
     });

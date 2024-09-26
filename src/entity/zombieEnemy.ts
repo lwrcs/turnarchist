@@ -84,7 +84,9 @@ export class ZombieEnemy extends Entity {
             this.targetPlayer = player;
             this.facePlayer(player);
             this.seenPlayer = true;
-            if (player === this.game.players[this.game.localPlayerID]) this.alertTicks = 1;
+            if (player === this.game.players[this.game.localPlayerID]) 
+              this.alertTicks = 1;
+              this.makeHitWarnings(false, false, true, this.direction);
           }
         }
       }

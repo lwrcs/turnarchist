@@ -12,6 +12,7 @@ import { Player } from "../player";
 import { Item } from "../item/item";
 import { Spellbook } from "../weapon/spellbook";
 import { Sound } from "../sound";
+import { ImageParticle } from "../particle/imageParticle";
 
 export class TombStone extends Entity {
   skinType: number;
@@ -47,10 +48,12 @@ export class TombStone extends Entity {
 
   kill = () => {
     this.dead = true;
-    GenericParticle.spawnCluster(
+    ImageParticle.spawnCluster(
       this.room,
       this.x + 0.5,
       this.y + 0.5,
+      0,
+      25,
       "#d9a066"
     );
     this.dropLoot();
@@ -58,6 +61,14 @@ export class TombStone extends Entity {
 
   hurt = (playerHitBy: Player, damage: number) => {
     this.healthBar.hurt();
+    ImageParticle.spawnCluster(
+      this.room,
+      this.x + 0.5,
+      this.y + 0.5,
+      0,
+      25,
+      "#d9a066"
+    );
 
     this.health -= damage;
     if (this.health === 1) {

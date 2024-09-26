@@ -19,7 +19,7 @@ export class Map {
   }
 
   saveMapData = () => {
-    this.mapData = [];
+    this.clearMap();
     for (const level of this.game.rooms) {
       if (this.game.room.mapGroup === level.mapGroup && level.entered) {
         this.mapData.push({
@@ -33,6 +33,10 @@ export class Map {
       }
     }
   };
+
+  clearMap = () => {
+    this.mapData = [];
+  }
 
   saveOldMap = () => {
     this.oldMapData = [...this.mapData];

@@ -5,7 +5,7 @@ export class GameConstants {
 
   static readonly FPS = 120;
   static readonly ALPHA_ENABLED = true;
-  static readonly SHADE_LEVELS = 50;
+  static readonly SHADE_LEVELS = 25;
 
   static readonly TILESIZE = 16;
   static readonly SCALE = 1;

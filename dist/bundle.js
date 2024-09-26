@@ -7148,12 +7148,13 @@ var heart_1 = __webpack_require__(/*! ../item/heart */ "./src/item/heart.ts");
 var genericParticle_1 = __webpack_require__(/*! ../particle/genericParticle */ "./src/particle/genericParticle.ts");
 var coin_1 = __webpack_require__(/*! ../item/coin */ "./src/item/coin.ts");
 var entity_2 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
+var imageParticle_1 = __webpack_require__(/*! ../particle/imageParticle */ "./src/particle/imageParticle.ts");
 var PottedPlant = /** @class */ (function (_super) {
     __extends(PottedPlant, _super);
     function PottedPlant(level, game, x, y, rand, drop) {
         var _this = _super.call(this, level, game, x, y) || this;
         _this.hurtCallback = function () {
-            genericParticle_1.GenericParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, "#5d9250");
+            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 25, "#5d9250");
         };
         _this.kill = function () {
             _this.dead = true;
@@ -7564,12 +7565,13 @@ var genericParticle_1 = __webpack_require__(/*! ../particle/genericParticle */ "
 var sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
 var stone_1 = __webpack_require__(/*! ../item/stone */ "./src/item/stone.ts");
 var resource_1 = __webpack_require__(/*! ./resource */ "./src/entity/resource.ts");
+var imageParticle_1 = __webpack_require__(/*! ../particle/imageParticle */ "./src/particle/imageParticle.ts");
 var Rock = /** @class */ (function (_super) {
     __extends(Rock, _super);
     function Rock(level, game, x, y) {
         var _this = _super.call(this, level, game, x, y) || this;
         _this.hurtCallback = function () {
-            genericParticle_1.GenericParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, "#ffffff");
+            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 24, "#9badb7"); //rock particle coord 0, 24
             if (_this.room === _this.game.room)
                 sound_1.Sound.mine();
         };
@@ -8439,23 +8441,24 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.TombStone = void 0;
 var entity_1 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-var genericParticle_1 = __webpack_require__(/*! ../particle/genericParticle */ "./src/particle/genericParticle.ts");
 var entity_2 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var skullEnemy_1 = __webpack_require__(/*! ./skullEnemy */ "./src/entity/skullEnemy.ts");
 var random_1 = __webpack_require__(/*! ../random */ "./src/random.ts");
 var spellbook_1 = __webpack_require__(/*! ../weapon/spellbook */ "./src/weapon/spellbook.ts");
 var sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
+var imageParticle_1 = __webpack_require__(/*! ../particle/imageParticle */ "./src/particle/imageParticle.ts");
 var TombStone = /** @class */ (function (_super) {
     __extends(TombStone, _super);
     function TombStone(level, game, x, y, skinType, rand, drop) {
         var _this = _super.call(this, level, game, x, y) || this;
         _this.kill = function () {
             _this.dead = true;
-            genericParticle_1.GenericParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, "#d9a066");
+            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 25, "#d9a066");
             _this.dropLoot();
         };
         _this.hurt = function (playerHitBy, damage) {
             _this.healthBar.hurt();
+            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 25, "#d9a066");
             _this.health -= damage;
             if (_this.health === 1) {
                 var positions = _this.room
@@ -9028,6 +9031,7 @@ var ZombieEnemy = /** @class */ (function (_super) {
                             _this.seenPlayer = true;
                             if (player === _this.game.players[_this.game.localPlayerID])
                                 _this.alertTicks = 1;
+                            _this.makeHitWarnings(false, false, true, _this.direction);
                         }
                     }
                 }
@@ -10257,7 +10261,7 @@ var GameConstants = /** @class */ (function () {
     GameConstants.VERSION = "v0.6.3";
     GameConstants.FPS = 120;
     GameConstants.ALPHA_ENABLED = true;
-    GameConstants.SHADE_LEVELS = 50;
+    GameConstants.SHADE_LEVELS = 25;
     GameConstants.TILESIZE = 16;
     GameConstants.SCALE = 1;
     GameConstants.SWIPE_THRESH = Math.pow(25, 2); // (size of swipe threshold circle)^2
@@ -11511,6 +11515,8 @@ var coin_1 = __webpack_require__(/*! ./item/coin */ "./src/item/coin.ts");
 var weapon_1 = __webpack_require__(/*! ./weapon/weapon */ "./src/weapon/weapon.ts");
 var dagger_1 = __webpack_require__(/*! ./weapon/dagger */ "./src/weapon/dagger.ts");
 var usable_1 = __webpack_require__(/*! ./item/usable */ "./src/item/usable.ts");
+var shotgun_1 = __webpack_require__(/*! ./weapon/shotgun */ "./src/weapon/shotgun.ts");
+var spear_1 = __webpack_require__(/*! ./weapon/spear */ "./src/weapon/spear.ts");
 var backpack_1 = __webpack_require__(/*! ./item/backpack */ "./src/item/backpack.ts");
 var OPEN_TIME = 100; // milliseconds
 var FILL_COLOR = "#5a595b";
@@ -11924,7 +11930,7 @@ var Inventory = /** @class */ (function () {
             }
             _this.addItem(i);
         };
-        var startingInv = [dagger_1.Dagger, key_1.Key, backpack_1.Backpack];
+        var startingInv = [dagger_1.Dagger, key_1.Key, backpack_1.Backpack, shotgun_1.Shotgun, spear_1.Spear];
         startingInv.forEach(function (item) {
             a(new item({ game: _this.game }, 0, 0));
         });
@@ -13143,14 +13149,14 @@ var LevelConstants = /** @class */ (function () {
     LevelConstants.TURN_TIME = 1000; // milliseconds
     LevelConstants.LEVEL_TRANSITION_TIME = 300; // milliseconds
     LevelConstants.LEVEL_TRANSITION_TIME_LADDER = 1000; // milliseconds
-    LevelConstants.ROOM_COUNT = 15;
+    LevelConstants.ROOM_COUNT = 50;
     LevelConstants.HEALTH_BAR_FADEIN = 100;
     LevelConstants.HEALTH_BAR_FADEOUT = 100;
-    LevelConstants.HEALTH_BAR_TOTALTIME = 2500;
+    LevelConstants.HEALTH_BAR_TOTALTIME = 1000;
     LevelConstants.SHADED_TILE_CUTOFF = 1;
     LevelConstants.SMOOTH_LIGHTING = false; //doesn't work
-    LevelConstants.MIN_VISIBILITY = 2.0; // visibility level of places you've already seen
-    LevelConstants.LIGHTING_ANGLE_STEP = 5; // how many degrees between each ray
+    LevelConstants.MIN_VISIBILITY = 0; // visibility level of places you've already seen
+    LevelConstants.LIGHTING_ANGLE_STEP = 3; // how many degrees between each ray, previously 5
     LevelConstants.LEVEL_TEXT_COLOR = "yellow";
     return LevelConstants;
 }());
@@ -13795,7 +13801,7 @@ var Map = /** @class */ (function () {
         this.mapData = [];
         this.oldMapData = [];
         this.saveMapData = function () {
-            _this.mapData = [];
+            _this.clearMap();
             for (var _i = 0, _a = _this.game.rooms; _i < _a.length; _i++) {
                 var level = _a[_i];
                 if (_this.game.room.mapGroup === level.mapGroup && level.entered) {
@@ -13809,6 +13815,9 @@ var Map = /** @class */ (function () {
                     });
                 }
             }
+        };
+        this.clearMap = function () {
+            _this.mapData = [];
         };
         this.saveOldMap = function () {
             _this.oldMapData = __spreadArray([], _this.mapData, true);
@@ -13968,7 +13977,7 @@ var DeathParticle = /** @class */ (function (_super) {
     __extends(DeathParticle, _super);
     function DeathParticle(x, y) {
         var _this = _super.call(this) || this;
-        _this.draw = function (delta) {
+        _this.drawTopLayer = function (delta) {
             if (_this.dead)
                 return;
             var yOffset = Math.max(0, ((_this.frame - 3) * 3) / gameConstants_1.GameConstants.TILESIZE);
@@ -14110,6 +14119,128 @@ exports.GenericParticle = GenericParticle;
 
 /***/ }),
 
+/***/ "./src/particle/imageParticle.ts":
+/*!***************************************!*\
+  !*** ./src/particle/imageParticle.ts ***!
+  \***************************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+"use strict";
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ImageParticle = void 0;
+var particle_1 = __webpack_require__(/*! ./particle */ "./src/particle/particle.ts");
+var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+var gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
+var ImageParticle = /** @class */ (function (_super) {
+    __extends(ImageParticle, _super);
+    function ImageParticle(level, x, y, z, s, dx, dy, dz, tileX, tileY, color, size, delay, expirationTimer, targetX, targetY, targetZ) {
+        var _this = _super.call(this) || this;
+        _this.render = function () {
+            var scale = gameConstants_1.GameConstants.TILESIZE;
+            var yOffset = _this.z * scale;
+            var frame = _this.s > 0.5 ? 1 : 0; // Placeholder frames for large and small particles
+            game_1.Game.ctx.imageSmoothingEnabled = false;
+            var adjustedTileX = _this.tileX + Math.floor(_this.size * 3);
+            game_1.Game.drawFX(adjustedTileX, _this.tileY, 1, 1, (_this.x - (_this.alpha / 2)), _this.y - _this.z - (_this.alpha / 2), _this.alpha, _this.alpha);
+        };
+        _this.draw = function (delta) {
+            game_1.Game.ctx.imageSmoothingEnabled = false;
+            if (_this.targetX)
+                _this.x += 0.2 * (_this.targetX - _this.x);
+            else
+                _this.x += _this.dx;
+            if (_this.targetY)
+                _this.y += 0.2 * (_this.targetY - _this.y);
+            else
+                _this.y += _this.dy;
+            if (_this.targetZ)
+                _this.z += 0.2 * (_this.targetZ - _this.z);
+            else
+                _this.z += _this.dz;
+            _this.dx *= 0.97;
+            _this.dy *= 0.97;
+            if (_this.z <= 0) {
+                _this.z = 0;
+                _this.dz *= -0.8;
+            }
+            // apply gravity
+            _this.dz -= 0.01;
+            /*
+                if (this.alpha < 0.2) this.alpha -= ((0.01 * this.size) + 0.005);
+                else this.alpha -= ((0.005 * this.size) + 0.005);
+                if (this.alpha <= 0.6) this.dead = true;
+                */
+            _this.expirationTimer--;
+            if (_this.expirationTimer <= 0)
+                _this.dead = true;
+            if (_this.dead)
+                return;
+            _this.drawableY = _this.y;
+            _this.render();
+        };
+        _this.level = level;
+        _this.x = x;
+        _this.y = y;
+        _this.z = z; // Use provided height
+        _this.s = s;
+        _this.dx = dx;
+        _this.dy = dy;
+        _this.dz = dz;
+        _this.tileX = tileX;
+        _this.tileY = tileY;
+        _this.size = size;
+        _this.color = color;
+        _this.alpha = 1.0;
+        if (delay !== undefined)
+            _this.delay = delay;
+        _this.targetX = targetX;
+        _this.targetY = targetY;
+        _this.targetZ = targetZ;
+        _this.expirationTimer = 100; // Increased life duration
+        if (expirationTimer !== undefined)
+            _this.expirationTimer = expirationTimer;
+        return _this;
+    }
+    ImageParticle.shotgun = function (level, cx, cy, tx, ty, tileX, tileY, color) {
+        for (var i = 0; i < 4; i++) {
+            level.particles.push(new ImageParticle(level, cx, cy, 0, Math.random() * 0.5 + 0.3, 0, 0, 0, tileX, tileY, color, 0, 100000000, tx + Math.random() - 0.5, ty + Math.random() - 0.5, 0));
+        }
+    };
+    ImageParticle.spawnCluster = function (level, cx, cy, tileX, tileY, color) {
+        for (var i = 0; i < 4; i++) {
+            level.particles.push(new ImageParticle(level, cx + Math.random() * 0.05 - 0.025, // x
+            cy + Math.random() * 0.05 - 0.025, // y
+            Math.random() * 0.5, // z
+            0.0625 * (i + 8), // s
+            0.025 * (Math.random() * 2 - 1), //dx
+            0.025 * (Math.random() * 2 - 1), //dy
+            0.2 * (Math.random() - 1), //dz
+            tileX, tileY, color, Math.random(), 0));
+        }
+    };
+    return ImageParticle;
+}(particle_1.Particle));
+exports.ImageParticle = ImageParticle;
+
+
+/***/ }),
+
 /***/ "./src/particle/particle.ts":
 /*!**********************************!*\
   !*** ./src/particle/particle.ts ***!
@@ -14139,7 +14270,9 @@ var drawable_1 = __webpack_require__(/*! ../drawable */ "./src/drawable.ts");
 var Particle = /** @class */ (function (_super) {
     __extends(Particle, _super);
     function Particle() {
-        return _super !== null && _super.apply(this, arguments) || this;
+        var _this = _super !== null && _super.apply(this, arguments) || this;
+        _this.drawTopLayer = function (delta) { };
+        return _this;
     }
     return Particle;
 }(drawable_1.Drawable));
@@ -14756,7 +14889,7 @@ var PostProcessor = /** @class */ (function () {
     function PostProcessor() {
     }
     PostProcessor.draw = function (delta) {
-        game_1.Game.ctx.globalAlpha = 0.2;
+        game_1.Game.ctx.globalAlpha = 0.15;
         game_1.Game.ctx.fillStyle = "#006A6E";
         game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
         game_1.Game.ctx.globalCompositeOperation = "screen";
@@ -15818,6 +15951,10 @@ var Room = /** @class */ (function () {
                 var h = _e[_d];
                 h.drawTopLayer(delta);
             }
+            for (var _f = 0, _g = _this.particles; _f < _g.length; _f++) {
+                var s = _g[_f];
+                s.drawTopLayer(delta);
+            }
             // draw over dithered shading
             for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
                 for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
@@ -16010,7 +16147,7 @@ var Room = /** @class */ (function () {
             var y = t.y;
             // Define the enemy tables for each depth level
             var tables = {
-                0: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+                0: [ /*1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13*/],
                 1: [1, 1, 3, 3, 3, 2, 2],
                 2: [1, 1, 2, 2, 3, 3, 4],
                 3: [1, 1, 1, 2, 3, 3, 3, 4, 4, 5],

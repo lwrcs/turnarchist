@@ -8,16 +8,16 @@ export class LevelConstants {
   static readonly TURN_TIME = 1000; // milliseconds
   static readonly LEVEL_TRANSITION_TIME = 300; // milliseconds
   static readonly LEVEL_TRANSITION_TIME_LADDER = 1000; // milliseconds
-  static readonly ROOM_COUNT = 15;
+  static readonly ROOM_COUNT = 50;
 
   static readonly HEALTH_BAR_FADEIN = 100;
   static readonly HEALTH_BAR_FADEOUT = 100;
-  static readonly HEALTH_BAR_TOTALTIME = 2500;
+  static readonly HEALTH_BAR_TOTALTIME = 1000;
 
   static readonly SHADED_TILE_CUTOFF = 1;
   static SMOOTH_LIGHTING = false; //doesn't work
-  static readonly MIN_VISIBILITY = 2.0; // visibility level of places you've already seen
-  static readonly LIGHTING_ANGLE_STEP = 5; // how many degrees between each ray
+  static readonly MIN_VISIBILITY = 0; // visibility level of places you've already seen
+  static readonly LIGHTING_ANGLE_STEP = 3; // how many degrees between each ray, previously 5
 
   static readonly LEVEL_TEXT_COLOR = "yellow";
 }
