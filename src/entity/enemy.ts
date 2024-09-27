@@ -15,10 +15,10 @@ import { Candle } from "../item/candle";
 import { EntityType } from "./entity";
 
 export class Enemy extends Entity {
-
   constructor(level: Room, game: Game, x: number, y: number) {
     super(level, game, x, y);
   }
-  isType = () => {return EntityType.ENEMY};
-
+  isType = () => {
+    return EntityType.ENEMY;
+  };
 }

@@ -30,6 +30,8 @@ export class DualDagger extends Weapon {
         e.pointIn(newX, newY)
       ) {
         e.hurt(this.wielder, 1);
+
+
         flag = true;
       }
     }

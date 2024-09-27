@@ -31,6 +31,8 @@ export class Spellbook extends Weapon {
         !this.game.rooms[this.wielder.levelID].roomArray[e.x][e.y].isSolid()
       ) {
         e.hurt(this.wielder, 1);
+
+
         this.game.rooms[this.wielder.levelID].particles.push(
           new PlayerFireball(e.x, e.y)
         );

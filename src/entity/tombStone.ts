@@ -58,9 +58,7 @@ export class TombStone extends Entity {
       this.x + 0.5,
       this.y + 0.5,
       0,
-      25,
-      "#d9a066"
-    );
+      25    );
 
     setTimeout(() => {
       Sound.hurt();

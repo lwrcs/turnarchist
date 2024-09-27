@@ -17,13 +17,19 @@ export class Mushrooms extends Entity {
     this.tileY = 2;
     this.hasShadow = false;
     this.chainPushable = false;
-    this.entityType = EntityType.PROP
+    this.entityType = EntityType.PROP;
   }
 
   kill = () => {
     this.dead = true;
 
-    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 30, "#5d9250");
+    ImageParticle.spawnCluster(
+      this.room,
+      this.x + 0.5,
+      this.y + 0.5,
+      0,
+      30,
+    );
 
     this.room.items.push(new Shrooms(this.room, this.x, this.y));
   };

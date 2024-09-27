@@ -97,7 +97,7 @@ export class FrogEnemy extends Entity {
             this.facePlayer(p);
             if (p === this.game.players[this.game.localPlayerID])
               this.alertTicks = 1;
-            this.makeHitWarnings(true, false, false, this.direction)
+            this.makeHitWarnings(true, false, false, this.direction);
           }
         }
       } else if (this.seenPlayer) {
@@ -175,7 +175,7 @@ export class FrogEnemy extends Entity {
                 tryX = this.x;
                 tryY = this.y;
                 this.tryMove(moves[0].pos.x, moves[0].pos.y);
-                if (this.x != oldX && this.y != oldY){
+                if (this.x != oldX && this.y != oldY) {
                   this.x = tryX;
                   this.y = tryY;
                 }
@@ -188,10 +188,8 @@ export class FrogEnemy extends Entity {
                 else if (this.y < oldY) this.direction = EntityDirection.UP;
               }
             }
-            
           } else {
-            this.makeHitWarnings(true, false, false, this.direction)
-
+            this.makeHitWarnings(true, false, false, this.direction);
           }
         }
 
@@ -213,7 +211,6 @@ export class FrogEnemy extends Entity {
                 if (player === this.game.players[this.game.localPlayerID])
                   this.alertTicks = 1;
                 if (this.ticks % 2 === 0) {
-                  
                 }
               }
             }
@@ -224,17 +221,20 @@ export class FrogEnemy extends Entity {
   };
 
   draw = (delta: number) => {
-    
     if (!this.dead) {
       this.tileX = 1;
       this.tileY = 16;
-      
+
       this.frame += this.animationSpeed * delta;
-      if (this.frame >= this.frameLength){
-        (this.frame = 0, this.frameLength = 3, this.animationSpeed = 0.1, this.tileX = 1);
+      if (this.frame >= this.frameLength) {
+        (this.frame = 0),
+          (this.frameLength = 3),
+          (this.animationSpeed = 0.1),
+          (this.tileX = 1);
       }
       if (this.ticks % 2 === 0) {
-      } else {this.tileX = 12
+      } else {
+        this.tileX = 12;
       }
       if (!this.seenPlayer) {
         this.tileX = 12;

@@ -16,7 +16,13 @@ import { GameState } from "../gameState";
 import { EntityType } from "./entity";
 
 export class Chest extends Entity {
-  constructor(level: Room, game: Game, x: number, y: number, rand: () => number) {
+  constructor(
+    level: Room,
+    game: Game,
+    x: number,
+    y: number,
+    rand: () => number
+  ) {
     super(level, game, x, y);
 
     this.tileX = 4;
@@ -53,7 +59,12 @@ export class Chest extends Entity {
 
     this.dead = true;
 
-    GenericParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, "#fbf236");
+    GenericParticle.spawnCluster(
+      this.room,
+      this.x + 0.5,
+      this.y + 0.5,
+      "#fbf236"
+    );
 
     this.room.items.push(this.drop);
   };

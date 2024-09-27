@@ -11,7 +11,14 @@ import { ImageParticle } from "../particle/imageParticle";
 
 export class PottedPlant extends Entity {
   drop: Item;
-  constructor(level: Room, game: Game, x: number, y: number, rand: () => number, drop?: Item) {
+  constructor(
+    level: Room,
+    game: Game,
+    x: number,
+    y: number,
+    rand: () => number,
+    drop?: Item
+  ) {
     super(level, game, x, y);
     this.room = level;
     this.health = 2;
@@ -19,9 +26,8 @@ export class PottedPlant extends Entity {
     this.tileY = 0;
     this.hasShadow = false;
     this.chainPushable = false;
-    this.entityType = EntityType.PROP
+    this.entityType = EntityType.PROP;
     if (drop) this.drop = drop;
-    
     else {
       let dropProb = rand();
       if (dropProb < 0.025) this.drop = new Heart(this.room, 0, 0);
@@ -30,29 +36,45 @@ export class PottedPlant extends Entity {
   }
 
   hurtCallback = () => {
-    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 28, "#5d9250");
+    ImageParticle.spawnCluster(
+      this.room,
+      this.x + 0.5,
+      this.y + 0.5,
+      0,
+      28,
+    );
   };
 
   kill = () => {
     this.dead = true;
     this.killNoBones();
 
-    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 29, "#5d9250");
-    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 28, "#5d9250");
-
+    ImageParticle.spawnCluster(
+      this.room,
+      this.x + 0.5,
+      this.y + 0.5,
+      0,
+      29,
+    );
+    ImageParticle.spawnCluster(
+      this.room,
+      this.x + 0.5,
+      this.y + 0.5,
+      0,
+      28,
+    );
   };
   killNoBones = () => {
     this.dead = true;
     this.dropLoot();
   };
-  
+
   draw = (delta: number) => {
     // not inherited because it doesn't have the 0.5 offset
     if (!this.dead) {
       this.drawX += -0.5 * this.drawX;
       this.drawY += -0.5 * this.drawY;
-      if (this.health <= 1) 
-        this.tileX = 2;
+      if (this.health <= 1) this.tileX = 2;
       Game.drawObj(
         this.tileX,
         this.tileY,

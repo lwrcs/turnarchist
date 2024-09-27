@@ -22,7 +22,13 @@ export class Rock extends Resource {
   }
 
   hurtCallback = () => {
-    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 24, "#9badb7"); //rock particle coord 0, 24
+    ImageParticle.spawnCluster(
+      this.room,
+      this.x + 0.5,
+      this.y + 0.5,
+      0,
+      24
+    ); //rock particle coord 0, 24
 
     if (this.room === this.game.room) Sound.mine();
   };
@@ -32,7 +38,12 @@ export class Rock extends Resource {
 
     this.dead = true;
 
-    GenericParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, "#9badb7");
+    GenericParticle.spawnCluster(
+      this.room,
+      this.x + 0.5,
+      this.y + 0.5,
+      "#9badb7"
+    );
 
     this.room.items.push(new Stone(this.room, this.x, this.y));
   };

@@ -4500,7 +4500,7 @@ var ArmoredzombieEnemy = /** @class */ (function (_super) {
             if (playerHitBy) {
                 _this.aggro = true;
                 _this.targetPlayer = playerHitBy;
-                //this.facePlayer(playerHitBy); // 
+                //this.facePlayer(playerHitBy); //
                 if (playerHitBy === _this.game.players[_this.game.localPlayerID])
                     _this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
             }
@@ -4584,11 +4584,15 @@ var ArmoredzombieEnemy = /** @class */ (function (_super) {
                             if (oldDir == _this.direction) {
                                 var hitPlayer = false;
                                 for (var i in _this.game.players) {
-                                    if (_this.game.rooms[_this.game.players[i].levelID] === _this.room && _this.game.players[i].x === moveX && _this.game.players[i].y === moveY && (oldDir == _this.direction)) {
+                                    if (_this.game.rooms[_this.game.players[i].levelID] === _this.room &&
+                                        _this.game.players[i].x === moveX &&
+                                        _this.game.players[i].y === moveY &&
+                                        oldDir == _this.direction) {
                                         _this.game.players[i].hurt(_this.hit(), "armored zombie");
                                         _this.drawX = 0.5 * (_this.x - _this.game.players[i].x);
                                         _this.drawY = 0.5 * (_this.y - _this.game.players[i].y);
-                                        if (_this.game.players[i] === _this.game.players[_this.game.localPlayerID])
+                                        if (_this.game.players[i] ===
+                                            _this.game.players[_this.game.localPlayerID])
                                             _this.game.shakeScreen(10 * _this.drawX, 10 * _this.drawY);
                                     }
                                 }
@@ -4608,29 +4612,56 @@ var ArmoredzombieEnemy = /** @class */ (function (_super) {
                             }
                         }
                         if (_this.direction == entity_1.EntityDirection.LEFT) {
-                            disablePositions.push({ x: _this.x, y: _this.y + 1 });
-                            disablePositions.push({ x: _this.x, y: _this.y - 1 });
+                            disablePositions.push({
+                                x: _this.x,
+                                y: _this.y + 1,
+                            });
+                            disablePositions.push({
+                                x: _this.x,
+                                y: _this.y - 1,
+                            });
                         }
                         if (_this.direction == entity_1.EntityDirection.RIGHT) {
-                            disablePositions.push({ x: _this.x, y: _this.y + 1 });
-                            disablePositions.push({ x: _this.x, y: _this.y - 1 });
+                            disablePositions.push({
+                                x: _this.x,
+                                y: _this.y + 1,
+                            });
+                            disablePositions.push({
+                                x: _this.x,
+                                y: _this.y - 1,
+                            });
                         }
                         if (_this.direction == entity_1.EntityDirection.DOWN) {
-                            disablePositions.push({ x: _this.x + 1, y: _this.y });
-                            disablePositions.push({ x: _this.x - 1, y: _this.y });
+                            disablePositions.push({
+                                x: _this.x + 1,
+                                y: _this.y,
+                            });
+                            disablePositions.push({
+                                x: _this.x - 1,
+                                y: _this.y,
+                            });
                         }
                         if (_this.direction == entity_1.EntityDirection.UP) {
-                            disablePositions.push({ x: _this.x + 1, y: _this.y });
-                            disablePositions.push({ x: _this.x - 1, y: _this.y });
+                            disablePositions.push({
+                                x: _this.x + 1,
+                                y: _this.y,
+                            });
+                            disablePositions.push({
+                                x: _this.x - 1,
+                                y: _this.y,
+                            });
                         }
                         _this.makeHitWarnings(false, false, true, _this.direction);
                     }
-                    var targetPlayerOffline = Object.values(_this.game.offlinePlayers).indexOf(_this.targetPlayer) !== -1;
+                    var targetPlayerOffline = Object.values(_this.game.offlinePlayers).indexOf(_this.targetPlayer) !==
+                        -1;
                     if (!_this.aggro || targetPlayerOffline) {
                         var p = _this.nearestPlayer();
                         if (p !== false) {
                             var distance = p[0], player = p[1];
-                            if (distance <= 4 && (targetPlayerOffline || distance < _this.playerDistance(_this.targetPlayer))) {
+                            if (distance <= 4 &&
+                                (targetPlayerOffline ||
+                                    distance < _this.playerDistance(_this.targetPlayer))) {
                                 if (player !== _this.targetPlayer) {
                                     _this.targetPlayer = player;
                                     _this.facePlayer(player);
@@ -4877,7 +4908,8 @@ var BigKnightEnemy = /** @class */ (function (_super) {
                             var oldY = _this.y;
                             var moveX = _this.x;
                             var moveY = _this.y;
-                            if (_this.ticks % 2 === 0) { // horizontal preference
+                            if (_this.ticks % 2 === 0) {
+                                // horizontal preference
                                 if (_this.targetPlayer.x >= _this.x + _this.w)
                                     moveX++;
                                 else if (_this.targetPlayer.x < _this.x)
@@ -4887,7 +4919,8 @@ var BigKnightEnemy = /** @class */ (function (_super) {
                                 else if (_this.targetPlayer.y < _this.y)
                                     moveY--;
                             }
-                            else { // vertical preference
+                            else {
+                                // vertical preference
                                 if (_this.targetPlayer.y >= _this.y + _this.h)
                                     moveY++;
                                 else if (_this.targetPlayer.y < _this.y)
@@ -4900,14 +4933,19 @@ var BigKnightEnemy = /** @class */ (function (_super) {
                             var hitPlayer = false;
                             if (_this.health >= 3) {
                                 var wouldHit = function (player, moveX, moveY) {
-                                    return player.x >= moveX && player.x < moveX + _this.w && player.y >= moveY && player.y < moveY + _this.h;
+                                    return (player.x >= moveX &&
+                                        player.x < moveX + _this.w &&
+                                        player.y >= moveY &&
+                                        player.y < moveY + _this.h);
                                 };
                                 for (var i in _this.game.players) {
-                                    if (_this.game.rooms[_this.game.players[i].levelID] === _this.room && wouldHit(_this.game.players[i], moveX, moveY)) {
+                                    if (_this.game.rooms[_this.game.players[i].levelID] === _this.room &&
+                                        wouldHit(_this.game.players[i], moveX, moveY)) {
                                         _this.game.players[i].hurt(_this.hit(), "big knight");
                                         _this.drawX = 0.5 * (_this.x - _this.game.players[i].x);
                                         _this.drawY = 0.5 * (_this.y - _this.game.players[i].y);
-                                        if (_this.game.players[i] === _this.game.players[_this.game.localPlayerID])
+                                        if (_this.game.players[i] ===
+                                            _this.game.players[_this.game.localPlayerID])
                                             _this.game.shakeScreen(10 * _this.drawX, 10 * _this.drawY);
                                     }
                                 }
@@ -4940,7 +4978,9 @@ var BigKnightEnemy = /** @class */ (function (_super) {
                             var p = _this.nearestPlayer();
                             if (p !== false) {
                                 var distance = p[0], player = p[1];
-                                if (distance <= 4 && (targetPlayerOffline || distance < _this.playerDistance(_this.targetPlayer))) {
+                                if (distance <= 4 &&
+                                    (targetPlayerOffline ||
+                                        distance < _this.playerDistance(_this.targetPlayer))) {
                                     if (player !== _this.targetPlayer) {
                                         _this.targetPlayer = player;
                                         _this.facePlayer(player);
@@ -5146,7 +5186,8 @@ var BigSkullEnemy = /** @class */ (function (_super) {
                             var oldY = _this.y;
                             var moveX = _this.x;
                             var moveY = _this.y;
-                            if (_this.ticks % 2 === 0) { // horizontal preference
+                            if (_this.ticks % 2 === 0) {
+                                // horizontal preference
                                 if (_this.targetPlayer.x >= _this.x + _this.w)
                                     moveX++;
                                 else if (_this.targetPlayer.x < _this.x)
@@ -5156,7 +5197,8 @@ var BigSkullEnemy = /** @class */ (function (_super) {
                                 else if (_this.targetPlayer.y < _this.y)
                                     moveY--;
                             }
-                            else { // vertical preference
+                            else {
+                                // vertical preference
                                 if (_this.targetPlayer.y >= _this.y + _this.h)
                                     moveY++;
                                 else if (_this.targetPlayer.y < _this.y)
@@ -5169,14 +5211,19 @@ var BigSkullEnemy = /** @class */ (function (_super) {
                             var hitPlayer = false;
                             if (_this.health >= 3) {
                                 var wouldHit = function (player, moveX, moveY) {
-                                    return player.x >= moveX && player.x < moveX + _this.w && player.y >= moveY && player.y < moveY + _this.h;
+                                    return (player.x >= moveX &&
+                                        player.x < moveX + _this.w &&
+                                        player.y >= moveY &&
+                                        player.y < moveY + _this.h);
                                 };
                                 for (var i in _this.game.players) {
-                                    if (_this.game.rooms[_this.game.players[i].levelID] === _this.room && wouldHit(_this.game.players[i], moveX, moveY)) {
+                                    if (_this.game.rooms[_this.game.players[i].levelID] === _this.room &&
+                                        wouldHit(_this.game.players[i], moveX, moveY)) {
                                         _this.game.players[i].hurt(_this.hit(), "big skeleton");
                                         _this.drawX = 0.5 * (_this.x - _this.game.players[i].x);
                                         _this.drawY = 0.5 * (_this.y - _this.game.players[i].y);
-                                        if (_this.game.players[i] === _this.game.players[_this.game.localPlayerID])
+                                        if (_this.game.players[i] ===
+                                            _this.game.players[_this.game.localPlayerID])
                                             _this.game.shakeScreen(10 * _this.drawX, 10 * _this.drawY);
                                     }
                                 }
@@ -5209,7 +5256,9 @@ var BigSkullEnemy = /** @class */ (function (_super) {
                             var p = _this.nearestPlayer();
                             if (p !== false) {
                                 var distance = p[0], player = p[1];
-                                if (distance <= 4 && (targetPlayerOffline || distance < _this.playerDistance(_this.targetPlayer))) {
+                                if (distance <= 4 &&
+                                    (targetPlayerOffline ||
+                                        distance < _this.playerDistance(_this.targetPlayer))) {
                                     if (player !== _this.targetPlayer) {
                                         _this.targetPlayer = player;
                                         _this.facePlayer(player);
@@ -6231,6 +6280,28 @@ var Entity = /** @class */ (function (_super) {
         _this.pointIn = function (x, y) {
             return (x >= _this.x && x < _this.x + _this.w && y >= _this.y && y < _this.y + _this.h);
         };
+        _this.getPlayer = function () {
+            var maxDistance = 138291380921; // pulled this straight outta my ass
+            var closestDistance = maxDistance;
+            var closestPlayer = null;
+            for (var i in _this.game.players) {
+                if (_this.game.rooms[_this.game.players[i].levelID] === _this.room) {
+                    var distance = _this.playerDistance(_this.game.players[i]);
+                    if (distance < closestDistance) {
+                        closestDistance = distance;
+                        closestPlayer = _this.game.players[i];
+                    }
+                }
+            }
+            if (closestDistance === maxDistance)
+                return false;
+            else
+                return closestPlayer;
+        };
+        _this.lastHitBy = function (player) {
+            _this.hitBy = player;
+            _this.game.pushMessage("".concat(_this.hitBy));
+        };
         _this.hurt = function (playerHitBy, damage) {
             _this.healthBar.hurt();
             _this.health -= damage;
@@ -6458,6 +6529,7 @@ var Entity = /** @class */ (function (_super) {
         _this.crushY = 1;
         _this.crushed = false;
         _this.crushVertical = false;
+        _this.hitBy = _this.getPlayer();
         return _this;
     }
     return Entity;
@@ -6659,7 +6731,10 @@ var FrogEnemy = /** @class */ (function (_super) {
                 _this.tileY = 16;
                 _this.frame += _this.animationSpeed * delta;
                 if (_this.frame >= _this.frameLength) {
-                    (_this.frame = 0, _this.frameLength = 3, _this.animationSpeed = 0.1, _this.tileX = 1);
+                    (_this.frame = 0),
+                        (_this.frameLength = 3),
+                        (_this.animationSpeed = 0.1),
+                        (_this.tileX = 1);
                 }
                 if (_this.ticks % 2 === 0) {
                 }
@@ -7021,7 +7096,7 @@ var Mushrooms = /** @class */ (function (_super) {
         var _this = _super.call(this, level, game, x, y) || this;
         _this.kill = function () {
             _this.dead = true;
-            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 30, "#5d9250");
+            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 30);
             _this.room.items.push(new shrooms_1.Shrooms(_this.room, _this.x, _this.y));
         };
         _this.killNoBones = function () {
@@ -7089,7 +7164,7 @@ var Pot = /** @class */ (function (_super) {
         var _this = _super.call(this, level, game, x, y) || this;
         _this.kill = function () {
             _this.dead = true;
-            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 29, "#5d9250");
+            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 29);
         };
         _this.killNoBones = function () {
             _this.kill();
@@ -7157,13 +7232,13 @@ var PottedPlant = /** @class */ (function (_super) {
     function PottedPlant(level, game, x, y, rand, drop) {
         var _this = _super.call(this, level, game, x, y) || this;
         _this.hurtCallback = function () {
-            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 28, "#5d9250");
+            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 28);
         };
         _this.kill = function () {
             _this.dead = true;
             _this.killNoBones();
-            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 29, "#5d9250");
-            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 28, "#5d9250");
+            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 29);
+            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 28);
         };
         _this.killNoBones = function () {
             _this.dead = true;
@@ -7575,7 +7650,7 @@ var Rock = /** @class */ (function (_super) {
     function Rock(level, game, x, y) {
         var _this = _super.call(this, level, game, x, y) || this;
         _this.hurtCallback = function () {
-            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 24, "#9badb7"); //rock particle coord 0, 24
+            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 24); //rock particle coord 0, 24
             if (_this.room === _this.game.room)
                 sound_1.Sound.mine();
         };
@@ -7669,7 +7744,7 @@ var SkullEnemy = /** @class */ (function (_super) {
             _this.health -= damage;
             _this.healthBar.hurt();
             if (_this.health <= 0) {
-                imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 24, _this.deathParticleColor);
+                imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 24);
                 _this.kill();
             }
             else {
@@ -7743,11 +7818,14 @@ var SkullEnemy = /** @class */ (function (_super) {
                                 var moveY = moves[0].pos.y;
                                 var hitPlayer = false;
                                 for (var i in _this.game.players) {
-                                    if (_this.game.rooms[_this.game.players[i].levelID] === _this.room && _this.game.players[i].x === moveX && _this.game.players[i].y === moveY) {
+                                    if (_this.game.rooms[_this.game.players[i].levelID] === _this.room &&
+                                        _this.game.players[i].x === moveX &&
+                                        _this.game.players[i].y === moveY) {
                                         _this.game.players[i].hurt(_this.hit(), "skeleton");
                                         _this.drawX = 0.5 * (_this.x - _this.game.players[i].x);
                                         _this.drawY = 0.5 * (_this.y - _this.game.players[i].y);
-                                        if (_this.game.players[i] === _this.game.players[_this.game.localPlayerID])
+                                        if (_this.game.players[i] ===
+                                            _this.game.players[_this.game.localPlayerID])
                                             _this.game.shakeScreen(10 * _this.drawX, 10 * _this.drawY);
                                     }
                                 }
@@ -7772,7 +7850,9 @@ var SkullEnemy = /** @class */ (function (_super) {
                             var p = _this.nearestPlayer();
                             if (p !== false) {
                                 var distance = p[0], player = p[1];
-                                if (distance <= 4 && (targetPlayerOffline || distance < _this.playerDistance(_this.targetPlayer))) {
+                                if (distance <= 4 &&
+                                    (targetPlayerOffline ||
+                                        distance < _this.playerDistance(_this.targetPlayer))) {
                                     if (player !== _this.targetPlayer) {
                                         _this.targetPlayer = player;
                                         _this.facePlayer(player);
@@ -8461,7 +8541,7 @@ var TombStone = /** @class */ (function (_super) {
         };
         _this.hurt = function (playerHitBy, damage) {
             _this.healthBar.hurt();
-            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 25, "#d9a066");
+            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 25);
             setTimeout(function () {
                 sound_1.Sound.hurt();
             }, 100);
@@ -9010,7 +9090,7 @@ var ZombieEnemy = /** @class */ (function (_super) {
                     _this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
             }
             _this.health -= damage;
-            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 26, _this.deathParticleColor);
+            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 26);
             _this.healthBar.hurt();
             if (_this.health <= 0) {
                 _this.kill();
@@ -9699,7 +9779,7 @@ var Game = /** @class */ (function () {
                     Game.ctx.translate(-cameraX, -cameraY);
                     _this.room.draw(delta);
                     _this.room.drawEntities(delta);
-                    _this.room.drawShade(delta);
+                    //this.room.drawShade(delta);
                     _this.room.drawOverShade(delta);
                     _this.players[_this.localPlayerID].drawTopLayer(delta);
                     Game.ctx.translate(cameraX, cameraY);
@@ -14155,7 +14235,7 @@ var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
 var ImageParticle = /** @class */ (function (_super) {
     __extends(ImageParticle, _super);
-    function ImageParticle(level, x, y, z, s, dx, dy, dz, tileX, tileY, color, size, delay, expirationTimer, targetX, targetY, targetZ) {
+    function ImageParticle(level, x, y, z, s, dx, dy, dz, tileX, tileY, size, delay, expirationTimer, targetX, targetY, targetZ) {
         var _this = _super.call(this) || this;
         _this.render = function () {
             var scale = gameConstants_1.GameConstants.TILESIZE;
@@ -14211,7 +14291,6 @@ var ImageParticle = /** @class */ (function (_super) {
         _this.tileX = tileX;
         _this.tileY = tileY;
         _this.size = size;
-        _this.color = color;
         _this.alpha = 1.0;
         if (delay !== undefined)
             _this.delay = delay;
@@ -14223,12 +14302,13 @@ var ImageParticle = /** @class */ (function (_super) {
             _this.expirationTimer = expirationTimer;
         return _this;
     }
-    ImageParticle.shotgun = function (level, cx, cy, tx, ty, tileX, tileY, color) {
+    ImageParticle.shotgun = function (level, cx, cy, tx, ty, tileX, tileY) {
         for (var i = 0; i < 4; i++) {
-            level.particles.push(new ImageParticle(level, cx, cy, 0, Math.random() * 0.5 + 0.3, 0, 0, 0, tileX, tileY, color, 0, 100000000, tx + Math.random() - 0.5, ty + Math.random() - 0.5, 0));
+            level.particles.push(new ImageParticle(level, cx, cy, 0, Math.random() * 0.5 + 0.3, 0, 0, 0, tileX, tileY, 0 //size
+            ));
         }
     };
-    ImageParticle.spawnCluster = function (level, cx, cy, tileX, tileY, color) {
+    ImageParticle.spawnCluster = function (level, cx, cy, tileX, tileY) {
         for (var i = Math.floor(Math.random() * 3); i < 5; i++) {
             level.particles.push(new ImageParticle(level, cx + Math.random() * 0.05 - 0.025, // x
             cy + Math.random() * 0.05 - 0.025, // y
@@ -14237,7 +14317,8 @@ var ImageParticle = /** @class */ (function (_super) {
             0.025 * (Math.random() * 2 - 1), //dx
             0.025 * (Math.random() * 2 - 1), //dy
             0.2 * (Math.random() - 1), //dz
-            tileX, tileY, color, [2, 1, 0, 1, 2, 2, 2][i], 0));
+            tileX, tileY, [2, 1, 0, 1, 2, 2, 2][i] //size
+            ));
         }
     };
     return ImageParticle;
@@ -14895,7 +14976,7 @@ var PostProcessor = /** @class */ (function () {
     function PostProcessor() {
     }
     PostProcessor.draw = function (delta) {
-        game_1.Game.ctx.globalAlpha = 0.15;
+        game_1.Game.ctx.globalAlpha = 0.2;
         game_1.Game.ctx.fillStyle = "#006A6E";
         game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
         game_1.Game.ctx.globalCompositeOperation = "screen";
@@ -15940,8 +16021,8 @@ var Room = /** @class */ (function () {
                 game_1.Game.ctx.globalAlpha = shadingAlpha;
                 game_1.Game.ctx.fillStyle = _this.shadeColor;
                 game_1.Game.ctx.fillRect((_this.roomX - levelConstants_1.LevelConstants.SCREEN_W) * gameConstants_1.GameConstants.TILESIZE, (_this.roomY - levelConstants_1.LevelConstants.SCREEN_H) * gameConstants_1.GameConstants.TILESIZE, (_this.width + 2 * levelConstants_1.LevelConstants.SCREEN_W) * gameConstants_1.GameConstants.TILESIZE, (_this.height + 2 * levelConstants_1.LevelConstants.SCREEN_H) * gameConstants_1.GameConstants.TILESIZE);
-                game_1.Game.ctx.globalAlpha = 1.0;
-                game_1.Game.ctx.globalCompositeOperation = "source-over";
+                game_1.Game.ctx.globalAlpha = 1;
+                game_1.Game.ctx.globalCompositeOperation = "screen";
             }
         };
         this.drawOverShade = function (delta) {

@@ -23,7 +23,14 @@ export class ArmoredzombieEnemy extends Entity {
   targetPlayer: Player;
   drop: Item;
 
-  constructor(level: Room, game: Game, x: number, y: number, rand: () => number, drop?: Item) {
+  constructor(
+    level: Room,
+    game: Game,
+    x: number,
+    y: number,
+    rand: () => number,
+    drop?: Item
+  ) {
     super(level, game, x, y);
     this.ticks = 0;
     this.frame = 0;
@@ -52,15 +59,21 @@ export class ArmoredzombieEnemy extends Entity {
     if (playerHitBy) {
       this.aggro = true;
       this.targetPlayer = playerHitBy;
-      //this.facePlayer(playerHitBy); // 
-      if (playerHitBy === this.game.players[this.game.localPlayerID]) this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
+      //this.facePlayer(playerHitBy); //
+      if (playerHitBy === this.game.players[this.game.localPlayerID])
+        this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
     }
     this.health -= damage;
     this.healthBar.hurt();
     if (this.health <= 0) {
       this.kill();
     } else {
-      GenericParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, this.deathParticleColor);
+      GenericParticle.spawnCluster(
+        this.room,
+        this.x + 0.5,
+        this.y + 0.5,
+        this.deathParticleColor
+      );
     }
   };
 
@@ -81,11 +94,11 @@ export class ArmoredzombieEnemy extends Entity {
             this.targetPlayer = player;
             this.facePlayer(player);
             this.seenPlayer = true;
-            if (player === this.game.players[this.game.localPlayerID]) this.alertTicks = 1;
+            if (player === this.game.players[this.game.localPlayerID])
+              this.alertTicks = 1;
           }
         }
-      }
-      else if (this.seenPlayer) {
+      } else if (this.seenPlayer) {
         if (this.room.playerTicked === this.targetPlayer) {
           this.alertTicks = Math.max(0, this.alertTicks - 1);
           let oldX = this.x;
@@ -115,8 +128,7 @@ export class ArmoredzombieEnemy extends Entity {
             for (let y = 0; y < this.room.roomY + this.room.height; y++) {
               if (this.room.roomArray[x] && this.room.roomArray[x][y])
                 grid[x][y] = this.room.roomArray[x][y];
-              else
-                grid[x][y] = false;
+              else grid[x][y] = false;
             }
           }
           let moves = astar.AStar.search(
@@ -142,11 +154,19 @@ export class ArmoredzombieEnemy extends Entity {
             if (oldDir == this.direction) {
               let hitPlayer = false;
               for (const i in this.game.players) {
-                if (this.game.rooms[this.game.players[i].levelID] === this.room && this.game.players[i].x === moveX && this.game.players[i].y === moveY && (oldDir == this.direction)) {
+                if (
+                  this.game.rooms[this.game.players[i].levelID] === this.room &&
+                  this.game.players[i].x === moveX &&
+                  this.game.players[i].y === moveY &&
+                  oldDir == this.direction
+                ) {
                   this.game.players[i].hurt(this.hit(), "armored zombie");
                   this.drawX = 0.5 * (this.x - this.game.players[i].x);
                   this.drawY = 0.5 * (this.y - this.game.players[i].y);
-                  if (this.game.players[i] === this.game.players[this.game.localPlayerID])
+                  if (
+                    this.game.players[i] ===
+                    this.game.players[this.game.localPlayerID]
+                  )
                     this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
                 }
               }
@@ -163,35 +183,66 @@ export class ArmoredzombieEnemy extends Entity {
           }
 
           if (this.direction == EntityDirection.LEFT) {
-            disablePositions.push({ x: this.x, y: this.y + 1 } as astar.Position);
-            disablePositions.push({ x: this.x, y: this.y - 1 } as astar.Position);
+            disablePositions.push({
+              x: this.x,
+              y: this.y + 1,
+            } as astar.Position);
+            disablePositions.push({
+              x: this.x,
+              y: this.y - 1,
+            } as astar.Position);
           }
           if (this.direction == EntityDirection.RIGHT) {
-            disablePositions.push({ x: this.x, y: this.y + 1 } as astar.Position);
-            disablePositions.push({ x: this.x, y: this.y - 1 } as astar.Position);
+            disablePositions.push({
+              x: this.x,
+              y: this.y + 1,
+            } as astar.Position);
+            disablePositions.push({
+              x: this.x,
+              y: this.y - 1,
+            } as astar.Position);
           }
           if (this.direction == EntityDirection.DOWN) {
-            disablePositions.push({ x: this.x + 1, y: this.y } as astar.Position);
-            disablePositions.push({ x: this.x - 1, y: this.y } as astar.Position);
+            disablePositions.push({
+              x: this.x + 1,
+              y: this.y,
+            } as astar.Position);
+            disablePositions.push({
+              x: this.x - 1,
+              y: this.y,
+            } as astar.Position);
           }
           if (this.direction == EntityDirection.UP) {
-            disablePositions.push({ x: this.x + 1, y: this.y } as astar.Position);
-            disablePositions.push({ x: this.x - 1, y: this.y } as astar.Position);
+            disablePositions.push({
+              x: this.x + 1,
+              y: this.y,
+            } as astar.Position);
+            disablePositions.push({
+              x: this.x - 1,
+              y: this.y,
+            } as astar.Position);
           }
-          this.makeHitWarnings(false, false, true, this.direction)
+          this.makeHitWarnings(false, false, true, this.direction);
         }
 
-        let targetPlayerOffline = Object.values(this.game.offlinePlayers).indexOf(this.targetPlayer) !== -1;
+        let targetPlayerOffline =
+          Object.values(this.game.offlinePlayers).indexOf(this.targetPlayer) !==
+          -1;
         if (!this.aggro || targetPlayerOffline) {
           let p = this.nearestPlayer();
           if (p !== false) {
             let [distance, player] = p;
-            if (distance <= 4 && (targetPlayerOffline || distance < this.playerDistance(this.targetPlayer))) {
+            if (
+              distance <= 4 &&
+              (targetPlayerOffline ||
+                distance < this.playerDistance(this.targetPlayer))
+            ) {
               if (player !== this.targetPlayer) {
                 this.targetPlayer = player;
                 this.facePlayer(player);
-                if (player === this.game.players[this.game.localPlayerID]) this.alertTicks = 1;
-                this.makeHitWarnings(false, false, true, this.direction)
+                if (player === this.game.players[this.game.localPlayerID])
+                  this.alertTicks = 1;
+                this.makeHitWarnings(false, false, true, this.direction);
               }
             }
           }

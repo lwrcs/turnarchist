@@ -22,7 +22,14 @@ export class BigSkullEnemy extends Entity {
   readonly REGEN_TICKS = 5;
   drops: Array<Item>;
 
-  constructor(level: Room, game: Game, x: number, y: number, rand: () => number, drop?: Item) {
+  constructor(
+    level: Room,
+    game: Game,
+    x: number,
+    y: number,
+    rand: () => number,
+    drop?: Item
+  ) {
     super(level, game, x, y);
     this.w = 2;
     this.h = 2;
@@ -52,14 +59,30 @@ export class BigSkullEnemy extends Entity {
   }
 
   addHitWarnings = () => {
-    this.room.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y, this.x, this.y));
-    this.room.hitwarnings.push(new HitWarning(this.game, this.x - 1, this.y + 1, this.x, this.y));
-    this.room.hitwarnings.push(new HitWarning(this.game, this.x + 2, this.y, this.x, this.y));
-    this.room.hitwarnings.push(new HitWarning(this.game, this.x + 2, this.y + 1, this.x, this.y));
-    this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y - 1, this.x, this.y));
-    this.room.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y - 1, this.x, this.y));
-    this.room.hitwarnings.push(new HitWarning(this.game, this.x, this.y + 2, this.x, this.y));
-    this.room.hitwarnings.push(new HitWarning(this.game, this.x + 1, this.y + 2, this.x, this.y));
+    this.room.hitwarnings.push(
+      new HitWarning(this.game, this.x - 1, this.y, this.x, this.y)
+    );
+    this.room.hitwarnings.push(
+      new HitWarning(this.game, this.x - 1, this.y + 1, this.x, this.y)
+    );
+    this.room.hitwarnings.push(
+      new HitWarning(this.game, this.x + 2, this.y, this.x, this.y)
+    );
+    this.room.hitwarnings.push(
+      new HitWarning(this.game, this.x + 2, this.y + 1, this.x, this.y)
+    );
+    this.room.hitwarnings.push(
+      new HitWarning(this.game, this.x, this.y - 1, this.x, this.y)
+    );
+    this.room.hitwarnings.push(
+      new HitWarning(this.game, this.x + 1, this.y - 1, this.x, this.y)
+    );
+    this.room.hitwarnings.push(
+      new HitWarning(this.game, this.x, this.y + 2, this.x, this.y)
+    );
+    this.room.hitwarnings.push(
+      new HitWarning(this.game, this.x + 1, this.y + 2, this.x, this.y)
+    );
   };
 
   hit = (): number => {
@@ -71,7 +94,8 @@ export class BigSkullEnemy extends Entity {
       this.aggro = true;
       this.targetPlayer = playerHitBy;
       this.facePlayer(playerHitBy);
-      if (playerHitBy === this.game.players[this.game.localPlayerID]) this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
+      if (playerHitBy === this.game.players[this.game.localPlayerID])
+        this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
     }
     this.ticksSinceFirstHit = 0;
     this.health -= damage;
@@ -79,13 +103,23 @@ export class BigSkullEnemy extends Entity {
     if (this.health <= 0) {
       this.kill();
     } else {
-      GenericParticle.spawnCluster(this.room, this.x + 1, this.y + 1, this.deathParticleColor);
+      GenericParticle.spawnCluster(
+        this.room,
+        this.x + 1,
+        this.y + 1,
+        this.deathParticleColor
+      );
     }
   };
 
   killNoBones = () => {
     this.dead = true;
-    GenericParticle.spawnCluster(this.room, this.x + 1, this.y + 1, this.deathParticleColor);
+    GenericParticle.spawnCluster(
+      this.room,
+      this.x + 1,
+      this.y + 1,
+      this.deathParticleColor
+    );
     this.room.particles.push(new DeathParticle(this.x + 0.5, this.y + 0.5));
 
     this.dropLoot();
@@ -115,24 +149,26 @@ export class BigSkullEnemy extends Entity {
               this.targetPlayer = player;
               this.facePlayer(player);
               this.seenPlayer = true;
-              if (player === this.game.players[this.game.localPlayerID]) this.alertTicks = 1;
+              if (player === this.game.players[this.game.localPlayerID])
+                this.alertTicks = 1;
               if (this.health >= 3) this.addHitWarnings();
             }
           }
-        }
-        else if (this.seenPlayer) {
+        } else if (this.seenPlayer) {
           if (this.room.playerTicked === this.targetPlayer) {
             this.alertTicks = Math.max(0, this.alertTicks - 1);
             let oldX = this.x;
             let oldY = this.y;
             let moveX = this.x;
             let moveY = this.y;
-            if (this.ticks % 2 === 0) { // horizontal preference
+            if (this.ticks % 2 === 0) {
+              // horizontal preference
               if (this.targetPlayer.x >= this.x + this.w) moveX++;
               else if (this.targetPlayer.x < this.x) moveX--;
               else if (this.targetPlayer.y >= this.y + this.h) moveY++;
               else if (this.targetPlayer.y < this.y) moveY--;
-            } else { // vertical preference
+            } else {
+              // vertical preference
               if (this.targetPlayer.y >= this.y + this.h) moveY++;
               else if (this.targetPlayer.y < this.y) moveY--;
               else if (this.targetPlayer.x >= this.x + this.w) moveX++;
@@ -142,14 +178,25 @@ export class BigSkullEnemy extends Entity {
             let hitPlayer = false;
             if (this.health >= 3) {
               let wouldHit = (player: Player, moveX: number, moveY: number) => {
-                return player.x >= moveX && player.x < moveX + this.w && player.y >= moveY && player.y < moveY + this.h;
+                return (
+                  player.x >= moveX &&
+                  player.x < moveX + this.w &&
+                  player.y >= moveY &&
+                  player.y < moveY + this.h
+                );
               };
               for (const i in this.game.players) {
-                if (this.game.rooms[this.game.players[i].levelID] === this.room && wouldHit(this.game.players[i], moveX, moveY)) {
+                if (
+                  this.game.rooms[this.game.players[i].levelID] === this.room &&
+                  wouldHit(this.game.players[i], moveX, moveY)
+                ) {
                   this.game.players[i].hurt(this.hit(), "big skeleton");
                   this.drawX = 0.5 * (this.x - this.game.players[i].x);
                   this.drawY = 0.5 * (this.y - this.game.players[i].y);
-                  if (this.game.players[i] === this.game.players[this.game.localPlayerID])
+                  if (
+                    this.game.players[i] ===
+                    this.game.players[this.game.localPlayerID]
+                  )
                     this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
                 }
               }
@@ -175,16 +222,24 @@ export class BigSkullEnemy extends Entity {
             if (this.health >= 3) this.addHitWarnings();
           }
 
-          let targetPlayerOffline = Object.values(this.game.offlinePlayers).indexOf(this.targetPlayer) !== -1;
+          let targetPlayerOffline =
+            Object.values(this.game.offlinePlayers).indexOf(
+              this.targetPlayer
+            ) !== -1;
           if (!this.aggro || targetPlayerOffline) {
             let p = this.nearestPlayer();
             if (p !== false) {
               let [distance, player] = p;
-              if (distance <= 4 && (targetPlayerOffline || distance < this.playerDistance(this.targetPlayer))) {
+              if (
+                distance <= 4 &&
+                (targetPlayerOffline ||
+                  distance < this.playerDistance(this.targetPlayer))
+              ) {
                 if (player !== this.targetPlayer) {
                   this.targetPlayer = player;
                   this.facePlayer(player);
-                  if (player === this.game.players[this.game.localPlayerID]) this.alertTicks = 1;
+                  if (player === this.game.players[this.game.localPlayerID])
+                    this.alertTicks = 1;
                   if (this.health >= 3) this.addHitWarnings();
                 }
               }
@@ -208,8 +263,7 @@ export class BigSkullEnemy extends Entity {
             this.tileY = 0;
           }
         }
-      }
-      else if (this.health === 2) {
+      } else if (this.health === 2) {
         this.tileX = 21;
         this.tileY = 8;
         if (this.ticksSinceFirstHit >= 3) {
@@ -218,8 +272,7 @@ export class BigSkullEnemy extends Entity {
             this.tileY = 4;
           }
         }
-      }
-      else if (this.health === 1) {
+      } else if (this.health === 1) {
         this.tileX = 21;
         this.tileY = 12;
         if (this.ticksSinceFirstHit >= 3) {
@@ -260,17 +313,32 @@ export class BigSkullEnemy extends Entity {
       );
     }
     if (!this.seenPlayer) {
-      this.drawSleepingZs(delta, GameConstants.TILESIZE * 0.5, GameConstants.TILESIZE * -1);
+      this.drawSleepingZs(
+        delta,
+        GameConstants.TILESIZE * 0.5,
+        GameConstants.TILESIZE * -1
+      );
     }
     if (this.alertTicks > 0) {
-      this.drawExclamation(delta, GameConstants.TILESIZE * 0.5, GameConstants.TILESIZE * -1);
+      this.drawExclamation(
+        delta,
+        GameConstants.TILESIZE * 0.5,
+        GameConstants.TILESIZE * -1
+      );
     }
   };
 
   drawTopLayer = (delta: number) => {
     this.drawableY = this.y;
 
-    this.healthBar.draw(delta, this.health, this.maxHealth, this.x + 0.5, this.y, true);
+    this.healthBar.draw(
+      delta,
+      this.health,
+      this.maxHealth,
+      this.x + 0.5,
+      this.y,
+      true
+    );
     this.drawX += -0.5 * this.drawX;
     this.drawY += -0.5 * this.drawY;
   };

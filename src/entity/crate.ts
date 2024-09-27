@@ -16,13 +16,18 @@ export class Crate extends Entity {
     this.tileY = 0;
     this.hasShadow = false;
     this.pushable = true;
-    this.entityType = EntityType.PROP
+    this.entityType = EntityType.PROP;
   }
 
   kill = () => {
     this.dead = true;
 
-    GenericParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, "#d9a066");
+    GenericParticle.spawnCluster(
+      this.room,
+      this.x + 0.5,
+      this.y + 0.5,
+      "#d9a066"
+    );
   };
   killNoBones = () => {
     this.kill();

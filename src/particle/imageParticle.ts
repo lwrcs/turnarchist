@@ -1,8 +1,9 @@
 import { Room } from "../room";
 import { Particle } from "./particle";
-import { Game } from "../game";
+import { Direction, Game } from "../game";
 import { GameConstants } from "../gameConstants";
 import { Random } from "../random";
+import { Player, PlayerDirection } from "../player";
 
 export class ImageParticle extends Particle {
   level: Room;
@@ -31,8 +32,7 @@ export class ImageParticle extends Particle {
     tx: number,
     ty: number,
     tileX: number,
-    tileY: number,
-    color: string
+    tileY: number
   ) => {
     for (let i = 0; i < 4; i++) {
       level.particles.push(
@@ -47,12 +47,7 @@ export class ImageParticle extends Particle {
           0,
           tileX,
           tileY,
-          color,
-          0,
-          100000000,
-          tx + Math.random() - 0.5,
-          ty + Math.random() - 0.5,
-          0
+          0 //size
         )
       );
     }
@@ -64,8 +59,8 @@ export class ImageParticle extends Particle {
     cy: number,
     tileX: number,
     tileY: number,
-    color: string
   ) => {
+
     for (let i = Math.floor(Math.random() * 3); i < 5; i++) {
       level.particles.push(
         new ImageParticle(
@@ -79,9 +74,7 @@ export class ImageParticle extends Particle {
           0.2 * (Math.random() - 1), //dz
           tileX,
           tileY,
-          color,
-          [2, 1, 0, 1, 2, 2, 2][i],
-          0
+          [2, 1, 0, 1, 2, 2, 2][i] //size
         )
       );
     }
@@ -98,7 +91,6 @@ export class ImageParticle extends Particle {
     dz: number,
     tileX: number,
     tileY: number,
-    color: string,
     size: number,
     delay?: number,
     expirationTimer?: number,
@@ -118,7 +110,6 @@ export class ImageParticle extends Particle {
     this.tileX = tileX;
     this.tileY = tileY;
     this.size = size;
-    this.color = color;
     this.alpha = 1.0;
     if (delay !== undefined) this.delay = delay;
     this.targetX = targetX;
@@ -127,7 +118,7 @@ export class ImageParticle extends Particle {
     this.expirationTimer = 100; // Increased life duration
     if (expirationTimer !== undefined) this.expirationTimer = expirationTimer;
   }
-
+  
   render = () => {
     let scale = GameConstants.TILESIZE;
     let yOffset = this.z * scale;
@@ -149,7 +140,7 @@ export class ImageParticle extends Particle {
 
   draw = (delta: number) => {
     Game.ctx.imageSmoothingEnabled = false;
-
+    
     if (this.targetX) this.x += 0.2 * (this.targetX - this.x);
     else this.x += this.dx;
     if (this.targetY) this.y += 0.2 * (this.targetY - this.y);

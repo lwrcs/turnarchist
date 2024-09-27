@@ -63,6 +63,7 @@ export class Entity extends Drawable {
   crushY: number;
   crushed: Boolean;
   crushVertical: Boolean;
+  hitBy: Player;
 
   constructor(level: Room, game: Game, x: number, y: number) {
     super();
@@ -97,6 +98,7 @@ export class Entity extends Drawable {
     this.crushY = 1;
     this.crushed = false;
     this.crushVertical = false;
+    this.hitBy = this.getPlayer();
   }
 
   tryMove = (x: number, y: number) => {
@@ -154,6 +156,28 @@ export class Entity extends Drawable {
       x >= this.x && x < this.x + this.w && y >= this.y && y < this.y + this.h
     );
   };
+  
+  getPlayer = () => {
+    const maxDistance = 138291380921; // pulled this straight outta my ass
+    let closestDistance = maxDistance;
+    let closestPlayer = null;
+    for (const i in this.game.players) {
+      if (this.game.rooms[this.game.players[i].levelID] === this.room) {
+        let distance = this.playerDistance(this.game.players[i]);
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          closestPlayer = this.game.players[i];
+        }
+      }
+    }
+
+    if (closestDistance === maxDistance) return false;
+    else return closestPlayer;  }
+
+  lastHitBy = (player: Player) => {
+    this.hitBy = player;
+    this.game.pushMessage(`${this.hitBy}`)
+  }
 
   hurt = (playerHitBy: Player, damage: number) => {
     this.healthBar.hurt();

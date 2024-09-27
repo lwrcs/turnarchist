@@ -18,11 +18,15 @@ export class Barrel extends Entity {
     this.entityType = EntityType.PROP;
   }
 
-
   kill = () => {
     this.dead = true;
 
-    GenericParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, "#9badb7");
+    GenericParticle.spawnCluster(
+      this.room,
+      this.x + 0.5,
+      this.y + 0.5,
+      "#9badb7"
+    );
   };
   killNoBones = () => {
     this.kill();

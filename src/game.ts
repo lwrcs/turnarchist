@@ -1220,7 +1220,7 @@ export class Game {
         Game.ctx.translate(-cameraX, -cameraY);
         this.room.draw(delta);
         this.room.drawEntities(delta);
-        this.room.drawShade(delta);
+        //this.room.drawShade(delta);
         this.room.drawOverShade(delta);
         this.players[this.localPlayerID].drawTopLayer(delta);
         Game.ctx.translate(cameraX, cameraY);

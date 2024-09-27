@@ -25,6 +25,7 @@ export class Spear extends Weapon {
           if (e.pushable) return true;
           else {
             e.hurt(this.wielder, 1);
+
             flag = true;
           }
         }

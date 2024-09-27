@@ -23,11 +23,16 @@ export class CoalResource extends Resource {
 
     this.tileX = 12;
     this.tileY = 0;
-    this.health = 1;    
+    this.health = 1;
   }
 
   hurtCallback = () => {
-    GenericParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, "#ffffff");
+    GenericParticle.spawnCluster(
+      this.room,
+      this.x + 0.5,
+      this.y + 0.5,
+      "#ffffff"
+    );
 
     if (this.room === this.game.room) Sound.mine();
   };
