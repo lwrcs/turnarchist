@@ -5,6 +5,7 @@ import { Heart } from "../item/heart";
 import { LevelConstants } from "../levelConstants";
 import { GenericParticle } from "../particle/genericParticle";
 import { EntityType } from "./entity";
+import { ImageParticle } from "../particle/imageParticle";
 
 export class Crate extends Entity {
   constructor(level: Room, game: Game, x: number, y: number) {
@@ -20,14 +21,8 @@ export class Crate extends Entity {
   }
 
   kill = () => {
+    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 3, 26);
     this.dead = true;
-
-    GenericParticle.spawnCluster(
-      this.room,
-      this.x + 0.5,
-      this.y + 0.5,
-      "#d9a066"
-    );
   };
   killNoBones = () => {
     this.kill();

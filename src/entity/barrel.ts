@@ -5,6 +5,7 @@ import { Heart } from "../item/heart";
 import { LevelConstants } from "../levelConstants";
 import { GenericParticle } from "../particle/genericParticle";
 import { EntityType } from "./entity";
+import { ImageParticle } from "../particle/imageParticle";
 
 export class Barrel extends Entity {
   constructor(level: Room, game: Game, x: number, y: number) {
@@ -19,14 +20,9 @@ export class Barrel extends Entity {
   }
 
   kill = () => {
-    this.dead = true;
+    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 3, 25);
 
-    GenericParticle.spawnCluster(
-      this.room,
-      this.x + 0.5,
-      this.y + 0.5,
-      "#9badb7"
-    );
+    this.dead = true;
   };
   killNoBones = () => {
     this.kill();

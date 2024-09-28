@@ -9,6 +9,7 @@ import { Player } from "../player";
 import { DualDagger } from "../weapon/dualdagger";
 import { Item } from "../item/item";
 import { GameConstants } from "../gameConstants";
+import { ImageParticle } from "../particle/imageParticle";
 
 export class SlimeEnemy extends Entity {
   ticks: number;
@@ -18,7 +19,14 @@ export class SlimeEnemy extends Entity {
   targetPlayer: Player;
   drop: Item;
 
-  constructor(level: Room, game: Game, x: number, y: number, rand: () => number, drop?: Item) {
+  constructor(
+    level: Room,
+    game: Game,
+    x: number,
+    y: number,
+    rand: () => number,
+    drop?: Item
+  ) {
     super(level, game, x, y);
     this.ticks = 0;
     this.frame = 0;
@@ -41,9 +49,11 @@ export class SlimeEnemy extends Entity {
       this.aggro = true;
       this.targetPlayer = playerHitBy;
       this.facePlayer(playerHitBy);
-      if (playerHitBy === this.game.players[this.game.localPlayerID]) this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
+      if (playerHitBy === this.game.players[this.game.localPlayerID])
+        this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
     }
     this.healthBar.hurt();
+    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 3, 29);
 
     this.health -= damage;
     if (this.health <= 0) this.kill();
@@ -70,12 +80,12 @@ export class SlimeEnemy extends Entity {
             this.seenPlayer = true;
             this.targetPlayer = p;
             this.facePlayer(p);
-            if (p === this.game.players[this.game.localPlayerID]) this.alertTicks = 1;
-            this.makeHitWarnings(true, false, false, this.direction)
+            if (p === this.game.players[this.game.localPlayerID])
+              this.alertTicks = 1;
+            this.makeHitWarnings(true, false, false, this.direction);
           }
         }
-      }
-      else if (this.seenPlayer) {
+      } else if (this.seenPlayer) {
         if (this.room.playerTicked === this.targetPlayer) {
           this.alertTicks = Math.max(0, this.alertTicks - 1);
           this.ticks++;
@@ -105,8 +115,7 @@ export class SlimeEnemy extends Entity {
               for (let y = 0; y < this.room.roomY + this.room.height; y++) {
                 if (this.room.roomArray[x] && this.room.roomArray[x][y])
                   grid[x][y] = this.room.roomArray[x][y];
-                else
-                  grid[x][y] = false;
+                else grid[x][y] = false;
               }
             }
             let moves = astar.AStar.search(
@@ -126,7 +135,10 @@ export class SlimeEnemy extends Entity {
                   this.game.players[i].hurt(this.hit(), "crab");
                   this.drawX = 0.5 * (this.x - this.game.players[i].x);
                   this.drawY = 0.5 * (this.y - this.game.players[i].y);
-                  if (this.game.players[i] === this.game.players[this.game.localPlayerID])
+                  if (
+                    this.game.players[i] ===
+                    this.game.players[this.game.localPlayerID]
+                  )
                     this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
                   hitPlayer = true;
                 }
@@ -142,22 +154,29 @@ export class SlimeEnemy extends Entity {
               }
             }
           } else {
-            this.makeHitWarnings(true, false, false, this.direction)
+            this.makeHitWarnings(true, false, false, this.direction);
           }
         }
 
-        let targetPlayerOffline = Object.values(this.game.offlinePlayers).indexOf(this.targetPlayer) !== -1;
+        let targetPlayerOffline =
+          Object.values(this.game.offlinePlayers).indexOf(this.targetPlayer) !==
+          -1;
         if (!this.aggro || targetPlayerOffline) {
           let p = this.nearestPlayer();
           if (p !== false) {
             let [distance, player] = p;
-            if (distance <= 4 && (targetPlayerOffline || distance < this.playerDistance(this.targetPlayer))) {
+            if (
+              distance <= 4 &&
+              (targetPlayerOffline ||
+                distance < this.playerDistance(this.targetPlayer))
+            ) {
               if (player !== this.targetPlayer) {
                 this.targetPlayer = player;
                 this.facePlayer(player);
-                if (player === this.game.players[this.game.localPlayerID]) this.alertTicks = 1;
+                if (player === this.game.players[this.game.localPlayerID])
+                  this.alertTicks = 1;
                 if (this.ticks % 2 === 0) {
-                  this.makeHitWarnings(true, false, false, this.direction)
+                  this.makeHitWarnings(true, false, false, this.direction);
                 }
               }
             }
@@ -204,8 +223,9 @@ export class SlimeEnemy extends Entity {
         this.room.shadeColor,
         this.shadeAmount()
       );
-      if (this.crushed){this.crushAnim(delta)}
-
+      if (this.crushed) {
+        this.crushAnim(delta);
+      }
     }
     if (!this.seenPlayer) {
       this.drawSleepingZs(delta, 0, 0.75 * GameConstants.TILESIZE);
@@ -214,5 +234,4 @@ export class SlimeEnemy extends Entity {
       this.drawExclamation(delta, 0, 0.75 * GameConstants.TILESIZE);
     }
   };
-
 }

@@ -304,14 +304,14 @@ export class Room {
   }
 
   generateLevelTable = (rand: () => number) => {
-    let table: number[] = []
+    let table: number[] = [];
     let e: number;
-    for (let i = 0; i <= Game.rand(2, 5, rand); i++){
-      e = Game.rand(1,2, rand)
-      table.push(e)
+    for (let i = 0; i <= Game.rand(2, 5, rand); i++) {
+      e = Game.rand(1, 2, rand);
+      table.push(e);
     }
     return table;
-  }
+  };
 
   // Function to add enemies to the room
   private addEnemies(numEnemies: number, rand: () => number) {
@@ -327,12 +327,11 @@ export class Room {
       let x = t.x;
       let y = t.y;
       // Define the enemy tables for each depth level
-      
 
       let tables = {
-        0: [4, 3/*1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13*/],//this.generateLevelTable(rand),
-        1: [1, 1, 3, 3, 3, 2, 2],
-        2: [1, 1, 2, 2, 3, 3, 4],
+        0: [1, 2, 3 /*, 5, 6, 7, 8, 9, 10, 11, 12, 13*/], //this.generateLevelTable(rand),
+        1: [3, 4, 5, 6],
+        2: [3, 4, 5, 7, 8, 9, 10, 11, 12, 13],
         3: [1, 1, 1, 2, 3, 3, 3, 4, 4, 5],
         4: [1, 2, 3, 4, 5, 6, 7],
         5: [1, 2, 3, 4, 5, 6, 7, 8],
@@ -411,13 +410,13 @@ export class Room {
               }
             }
             break;
-            case 11:
-              addEnemy(new QueenEnemy(this, this.game, x, y, rand));
+          case 11:
+            addEnemy(new QueenEnemy(this, this.game, x, y, rand));
             break;
-            case 12:
-              addEnemy(new KnightEnemy(this, this.game, x, y, rand));
+          case 12:
+            addEnemy(new KnightEnemy(this, this.game, x, y, rand));
             break;
-            case 13:
+          case 13:
             if (addEnemy(new BigKnightEnemy(this, this.game, x, y, rand))) {
               // clear out some space
               for (let xx = 0; xx < 2; xx++) {
@@ -431,8 +430,8 @@ export class Room {
               }
             }
             break;
-            case 14:
-              addEnemy(new SniperEnemy(this, this.game, x, y, rand));
+          case 14:
+            addEnemy(new SniperEnemy(this, this.game, x, y, rand));
             break;
         }
       }
@@ -447,7 +446,12 @@ export class Room {
       if (tiles.length == 0) return;
       let x = t.x;
       let y = t.y;
-      switch (Game.randTable([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4], rand)) {
+      switch (
+        Game.randTable(
+          [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4],
+          rand
+        )
+      ) {
         case 1:
           this.entities.push(new Crate(this, this.game, x, y));
           break;
@@ -739,12 +743,7 @@ export class Room {
   populateSpikeCorridor = (rand: () => number) => {
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY + 1; y < this.roomY + this.height - 1; y++) {
-        this.roomArray[x][y] = new SpikeTrap(
-          this,
-          x,
-          y,
-          Game.rand(0, 3, rand)
-        );
+        this.roomArray[x][y] = new SpikeTrap(this, x, y, Game.rand(0, 3, rand));
       }
     }
 
@@ -1148,7 +1147,6 @@ export class Room {
         }
       }
     }*/
-
   };
 
   castShadowsAtAngle = (
@@ -1226,7 +1224,6 @@ export class Room {
   tick = (player: Player) => {
     this.entities = this.entities.filter((e) => !e.dead);
     this.updateLighting();
-    
 
     for (const h of this.hitwarnings) {
       h.tick();
@@ -1248,7 +1245,6 @@ export class Room {
     this.playerTurnTime = Date.now();
     this.playerTicked = player;
     player.map.saveMapData();
-
   };
 
   update = () => {
@@ -1284,10 +1280,10 @@ export class Room {
         !this.roomArray[h.x] ||
         !this.roomArray[h.x][h.y] ||
         this.roomArray[h.x][h.y].isSolid()
-      ){
-        h.dead = true;}
-        h.removeOverlapping();
-
+      ) {
+        h.dead = true;
+      }
+      h.removeOverlapping();
     }
 
     for (const p of this.projectiles) {
@@ -1330,8 +1326,7 @@ export class Room {
     let tiles = [];
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
-        if (this.softVis[x][y] < 1)
-          this.roomArray[x][y].drawUnderPlayer(delta);
+        if (this.softVis[x][y] < 1) this.roomArray[x][y].drawUnderPlayer(delta);
         tiles.push(this.roomArray[x][y]);
       }
     }
@@ -1384,8 +1379,7 @@ export class Room {
 
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
-        if (this.softVis[x][y] < 1)
-          this.roomArray[x][y].drawAbovePlayer(delta);
+        if (this.softVis[x][y] < 1) this.roomArray[x][y].drawAbovePlayer(delta);
       }
     }
 
@@ -1404,10 +1398,7 @@ export class Room {
         bestSightRadius = this.game.players[p].sightRadius;
       }
     }
-    let shadingAlpha = Math.max(
-      0,
-      Math.min(0.8, (2) / bestSightRadius)
-    );
+    let shadingAlpha = Math.max(0, Math.min(0.8, 2 / bestSightRadius));
     if (GameConstants.ALPHA_ENABLED) {
       Game.ctx.globalAlpha = shadingAlpha;
       Game.ctx.fillStyle = this.shadeColor;

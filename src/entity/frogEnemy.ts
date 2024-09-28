@@ -9,6 +9,7 @@ import { Player } from "../player";
 import { DualDagger } from "../weapon/dualdagger";
 import { Item } from "../item/item";
 import { GameConstants } from "../gameConstants";
+import { ImageParticle } from "../particle/imageParticle";
 
 export class FrogEnemy extends Entity {
   ticks: number;
@@ -60,6 +61,7 @@ export class FrogEnemy extends Entity {
         this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
     }
     this.healthBar.hurt();
+    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 3, 30);
 
     this.health -= damage;
     if (this.health <= 0) this.kill();

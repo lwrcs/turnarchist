@@ -95,8 +95,8 @@ export class Player extends Drawable {
       };
     }
     this.mapToggled = true;
-    this.health = 10;
-    this.maxHealth = 10;
+    this.health = 1;
+    this.maxHealth = 2;
     this.healthBar = new HealthBar();
     this.dead = false;
     this.flashing = false;
@@ -111,7 +111,7 @@ export class Player extends Drawable {
 
     this.map = new Map(this.game, this);
     this.actionTab = new ActionTab(this.inventory, this.game);
-    this.turnCount = 0
+    this.turnCount = 0;
   }
 
   inputHandler = (input: InputEnum) => {
@@ -233,7 +233,6 @@ export class Player extends Drawable {
     this.direction = PlayerDirection.DOWN;
   };
 
-
   hit = (): number => {
     return 1;
   };
@@ -303,8 +302,7 @@ export class Player extends Drawable {
           ) {
             if (e.destroyable) {
               e.kill();
-              if (this.game.rooms[this.levelID] === this.game.room)
-                Sound.hit();
+              if (this.game.rooms[this.levelID] === this.game.room) Sound.hit();
               this.drawX = 0.5 * (this.x - e.x);
               this.drawY = 0.5 * (this.y - e.y);
               this.game.rooms[this.levelID].particles.push(
@@ -315,8 +313,7 @@ export class Player extends Drawable {
               return;
             }
           } else {
-            if (this.game.rooms[this.levelID] === this.game.room)
-              Sound.push();
+            if (this.game.rooms[this.levelID] === this.game.room) Sound.push();
             // here pushedEnemies may still be []
             for (const f of pushedEnemies) {
               f.x += dx;
@@ -333,8 +330,7 @@ export class Player extends Drawable {
             ) {
               pushedEnemies[pushedEnemies.length - 1].crush();
               pushedEnemies[pushedEnemies.length - 1].killNoBones();
-              if (this.game.rooms[this.levelID] === this.game.room)
-                Sound.hit();
+              if (this.game.rooms[this.levelID] === this.game.room) Sound.hit();
             }
             e.x += dx;
             e.y += dy;
@@ -359,12 +355,7 @@ export class Player extends Drawable {
     if (!other.isSolid()) {
       this.move(x, y);
       other.onCollide(this);
-      if (
-        !(
-          other instanceof Door ||
-          other instanceof Trapdoor
-        )
-      )
+      if (!(other instanceof Door || other instanceof Trapdoor))
         this.game.rooms[this.levelID].tick(this);
     } else {
       if (other instanceof Door) {
@@ -449,7 +440,7 @@ export class Player extends Drawable {
   update = () => {};
 
   finishTick = () => {
-    this.turnCount +=1;
+    this.turnCount += 1;
     this.inventory.tick();
 
     this.flashing = false;
@@ -549,7 +540,7 @@ export class Player extends Drawable {
         GameConstants.HEIGHT / 2 - Game.letter_height + 2
       );
     }
-    PostProcessor.draw(delta)
+    PostProcessor.draw(delta);
     if (this.mapToggled === true) this.map.draw(delta);
   };
 

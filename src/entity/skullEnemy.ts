@@ -70,7 +70,9 @@ export class SkullEnemy extends Entity {
     }
     this.ticksSinceFirstHit = 0;
     this.health -= damage;
-    this.healthBar.hurt();
+    if (this.health == 1) {
+      ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 3, 28);
+    } else this.healthBar.hurt();
     if (this.health <= 0) {
       ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 24);
       this.kill();
