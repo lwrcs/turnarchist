@@ -27,7 +27,10 @@ export class EnemySpawnAnimation extends Projectile {
 
     let hitPlayer = false;
     for (const i in this.room.game.players) {
-      if (this.room.game.players[i].x === this.x && this.room.game.players[i].y === this.y) {
+      if (
+        this.room.game.players[i].x === this.x &&
+        this.room.game.players[i].y === this.y
+      ) {
         this.room.game.players[i].hurt(0.5, "reaper");
         hitPlayer = true;
       }
@@ -36,10 +39,22 @@ export class EnemySpawnAnimation extends Projectile {
       this.dead = true;
       this.enemy.skipNextTurns = 1;
       this.room.entities.push(this.enemy);
-      GenericParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, "#ffffff");
-      GenericParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, "#ffffff");
+      GenericParticle.spawnCluster(
+        this.room,
+        this.x + 0.5,
+        this.y + 0.5,
+        "#ffffff"
+      );
+      GenericParticle.spawnCluster(
+        this.room,
+        this.x + 0.5,
+        this.y + 0.5,
+        "#ffffff"
+      );
     } else {
-      this.room.hitwarnings.push(new HitWarning(this.room.game, this.x, this.y, this.x, this.y));
+      this.room.hitwarnings.push(
+        new HitWarning(this.room.game, this.x, this.y, this.x, this.y)
+      );
     }
   };
 
@@ -52,13 +67,13 @@ export class EnemySpawnAnimation extends Projectile {
       let offsetX = 0;
       Game.drawFX(
         Math.floor(this.frame),
-        26,
+        27,
         1,
-        2,
+        1,
         this.x + Math.round(offsetX) / 16.0,
-        this.y - 1.5,
+        this.y - 0.5,
         1,
-        2
+        1
       );
     }
     if (Math.floor(this.frame * 4) % 2 == 0)

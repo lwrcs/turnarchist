@@ -11,7 +11,7 @@ import { KnightEnemy } from "./entity/knightEnemy";
 import { PottedPlant } from "./entity/pottedPlant";
 import { Pot } from "./entity/pot";
 import { SkullEnemy } from "./entity/skullEnemy";
-import { SlimeEnemy } from "./entity/slimeEnemy";
+import { CrabEnemy } from "./entity/crabEnemy";
 import { Spawner } from "./entity/spawner";
 import { VendingMachine } from "./entity/vendingMachine";
 import { WizardEnemy, WizardState } from "./entity/wizardEnemy";
@@ -65,11 +65,11 @@ let loadHitWarning = (hws: HitWarningState, game: Game): HitWarning => {
   let hw = new HitWarning(game, hws.x, hws.y, hws.x, hws.y);
   hw.dead = hws.dead;
   return hw;
-}
+};
 
 export enum ProjectileType {
   SPAWN,
-  WIZARD
+  WIZARD,
 }
 
 export class ProjectileState {
@@ -95,7 +95,9 @@ export class ProjectileState {
       this.type = ProjectileType.WIZARD;
       this.wizardState = projectile.state;
       this.levelID = game.rooms.indexOf(projectile.parent.room);
-      this.wizardParentID = projectile.parent.room.entities.indexOf(projectile.parent);
+      this.wizardParentID = projectile.parent.room.entities.indexOf(
+        projectile.parent
+      );
     }
   }
 }
@@ -109,12 +111,14 @@ let loadProjectile = (ps: ProjectileState, game: Game): Projectile => {
     return p;
   }
   if (ps.type === ProjectileType.WIZARD) {
-    let wizard = (game.rooms[ps.levelID].entities[ps.wizardParentID] as WizardEnemy);
+    let wizard = game.rooms[ps.levelID].entities[
+      ps.wizardParentID
+    ] as WizardEnemy;
     let p = new WizardFireball(wizard, ps.x, ps.y);
     p.state = ps.wizardState;
     return p;
   }
-}
+};
 
 export enum EnemyType {
   BARREL,
@@ -128,11 +132,11 @@ export enum EnemyType {
   KNIGHT,
   PLANT,
   SKULL,
-  SLIME,
+  CRAB,
   SPAWNER,
   VENDINGMACHINE,
   WIZARD,
-  ZOMBIE
+  ZOMBIE,
 }
 
 export class EnemyState {
@@ -196,8 +200,13 @@ export class EnemyState {
       this.ticksSinceFirstHit = enemy.ticksSinceFirstHit;
       this.seenPlayer = enemy.seenPlayer;
       if (enemy.seenPlayer) {
-        this.targetPlayerID = Object.keys(game.players).find(key => game.players[key] === enemy.targetPlayer);
-        if (!this.targetPlayerID) this.targetPlayerID = Object.keys(game.offlinePlayers).find(key => game.offlinePlayers[key] === enemy.targetPlayer);
+        this.targetPlayerID = Object.keys(game.players).find(
+          (key) => game.players[key] === enemy.targetPlayer
+        );
+        if (!this.targetPlayerID)
+          this.targetPlayerID = Object.keys(game.offlinePlayers).find(
+            (key) => game.offlinePlayers[key] === enemy.targetPlayer
+          );
       }
       this.drops = [];
       for (const d of enemy.drops) this.drops.push(new ItemState(d, game));
@@ -223,8 +232,13 @@ export class EnemyState {
       this.ticks = enemy.ticks;
       this.seenPlayer = enemy.seenPlayer;
       if (enemy.seenPlayer) {
-        this.targetPlayerID = Object.keys(game.players).find(key => game.players[key] === enemy.targetPlayer);
-        if (!this.targetPlayerID) this.targetPlayerID = Object.keys(game.offlinePlayers).find(key => game.offlinePlayers[key] === enemy.targetPlayer);
+        this.targetPlayerID = Object.keys(game.players).find(
+          (key) => game.players[key] === enemy.targetPlayer
+        );
+        if (!this.targetPlayerID)
+          this.targetPlayerID = Object.keys(game.offlinePlayers).find(
+            (key) => game.offlinePlayers[key] === enemy.targetPlayer
+          );
       }
     }
     if (enemy instanceof PottedPlant) this.type = EnemyType.PLANT;
@@ -235,17 +249,27 @@ export class EnemyState {
       this.ticksSinceFirstHit = enemy.ticksSinceFirstHit;
       this.seenPlayer = enemy.seenPlayer;
       if (enemy.seenPlayer) {
-        this.targetPlayerID = Object.keys(game.players).find(key => game.players[key] === enemy.targetPlayer);
-        if (!this.targetPlayerID) this.targetPlayerID = Object.keys(game.offlinePlayers).find(key => game.offlinePlayers[key] === enemy.targetPlayer);
+        this.targetPlayerID = Object.keys(game.players).find(
+          (key) => game.players[key] === enemy.targetPlayer
+        );
+        if (!this.targetPlayerID)
+          this.targetPlayerID = Object.keys(game.offlinePlayers).find(
+            (key) => game.offlinePlayers[key] === enemy.targetPlayer
+          );
       }
     }
-    if (enemy instanceof SlimeEnemy) {
-      this.type = EnemyType.SLIME;
+    if (enemy instanceof CrabEnemy) {
+      this.type = EnemyType.CRAB;
       this.ticks = enemy.ticks;
       this.seenPlayer = enemy.seenPlayer;
       if (enemy.seenPlayer) {
-        this.targetPlayerID = Object.keys(game.players).find(key => game.players[key] === enemy.targetPlayer);
-        if (!this.targetPlayerID) this.targetPlayerID = Object.keys(game.offlinePlayers).find(key => game.offlinePlayers[key] === enemy.targetPlayer);
+        this.targetPlayerID = Object.keys(game.players).find(
+          (key) => game.players[key] === enemy.targetPlayer
+        );
+        if (!this.targetPlayerID)
+          this.targetPlayerID = Object.keys(game.offlinePlayers).find(
+            (key) => game.offlinePlayers[key] === enemy.targetPlayer
+          );
       }
     }
     if (enemy instanceof Spawner) {
@@ -259,12 +283,18 @@ export class EnemyState {
       this.isPlayerOpened = false;
       if (enemy.playerOpened) {
         this.isPlayerOpened = true;
-        this.playerOpenedID = Object.keys(game.players).find(key => game.players[key] === enemy.playerOpened);
-        if (!this.playerOpenedID) this.playerOpenedID = Object.keys(game.offlinePlayers).find(key => game.offlinePlayers[key] === enemy.playerOpened);
+        this.playerOpenedID = Object.keys(game.players).find(
+          (key) => game.players[key] === enemy.playerOpened
+        );
+        if (!this.playerOpenedID)
+          this.playerOpenedID = Object.keys(game.offlinePlayers).find(
+            (key) => game.offlinePlayers[key] === enemy.playerOpened
+          );
       }
       this.open = enemy.open;
       this.costItems = [];
-      for (const item of enemy.costItems) this.costItems.push(new ItemState(item, game));
+      for (const item of enemy.costItems)
+        this.costItems.push(new ItemState(item, game));
       this.item = new ItemState(enemy.item, game);
       this.isInf = enemy.isInf;
       this.quantity = enemy.quantity;
@@ -280,8 +310,13 @@ export class EnemyState {
       this.ticks = enemy.ticks;
       this.seenPlayer = enemy.seenPlayer;
       if (enemy.seenPlayer) {
-        this.targetPlayerID = Object.keys(game.players).find(key => game.players[key] === enemy.targetPlayer);
-        if (!this.targetPlayerID) this.targetPlayerID = Object.keys(game.offlinePlayers).find(key => game.offlinePlayers[key] === enemy.targetPlayer);
+        this.targetPlayerID = Object.keys(game.players).find(
+          (key) => game.players[key] === enemy.targetPlayer
+        );
+        if (!this.targetPlayerID)
+          this.targetPlayerID = Object.keys(game.offlinePlayers).find(
+            (key) => game.offlinePlayers[key] === enemy.targetPlayer
+          );
       }
     }
   }
@@ -298,7 +333,8 @@ let loadEnemy = (es: EnemyState, game: Game): Entity => {
     enemy.seenPlayer = es.seenPlayer;
     if (es.seenPlayer) {
       enemy.targetPlayer = game.players[es.targetPlayerID];
-      if (!enemy.targetPlayer) enemy.targetPlayer = game.offlinePlayers[es.targetPlayerID];
+      if (!enemy.targetPlayer)
+        enemy.targetPlayer = game.offlinePlayers[es.targetPlayerID];
     }
     enemy.drops = [];
     for (const d of es.drops) enemy.drops.push(loadItem(d, game));
@@ -314,21 +350,27 @@ let loadEnemy = (es: EnemyState, game: Game): Entity => {
     enemy.visualTargetX = es.visualTargetX;
     enemy.visualTargetY = es.visualTargetY;
   }
-  if (es.type === EnemyType.CHEST) enemy = new Chest(level, game, es.x, es.y, Random.rand);
-  if (es.type === EnemyType.COAL) enemy = new CoalResource(level, game, es.x, es.y);
+  if (es.type === EnemyType.CHEST)
+    enemy = new Chest(level, game, es.x, es.y, Random.rand);
+  if (es.type === EnemyType.COAL)
+    enemy = new CoalResource(level, game, es.x, es.y);
   if (es.type === EnemyType.CRATE) enemy = new Crate(level, game, es.x, es.y);
-  if (es.type === EnemyType.EMERALD) enemy = new EmeraldResource(level, game, es.x, es.y);
-  if (es.type === EnemyType.GOLD) enemy = new GoldResource(level, game, es.x, es.y);
+  if (es.type === EnemyType.EMERALD)
+    enemy = new EmeraldResource(level, game, es.x, es.y);
+  if (es.type === EnemyType.GOLD)
+    enemy = new GoldResource(level, game, es.x, es.y);
   if (es.type === EnemyType.KNIGHT) {
     enemy = new KnightEnemy(level, game, es.x, es.y, Random.rand);
     enemy.ticks = es.ticks;
     enemy.seenPlayer = es.seenPlayer;
     if (es.seenPlayer) {
       enemy.targetPlayer = game.players[es.targetPlayerID];
-      if (!enemy.targetPlayer) enemy.targetPlayer = game.offlinePlayers[es.targetPlayerID];
+      if (!enemy.targetPlayer)
+        enemy.targetPlayer = game.offlinePlayers[es.targetPlayerID];
     }
   }
-  if (es.type === EnemyType.PLANT) enemy = new PottedPlant(level, game, es.x, es.y, Random.rand);
+  if (es.type === EnemyType.PLANT)
+    enemy = new PottedPlant(level, game, es.x, es.y, Random.rand);
   if (es.type === EnemyType.PLANT) enemy = new Pot(level, game, es.x, es.y);
   if (es.type === EnemyType.SKULL) {
     enemy = new SkullEnemy(level, game, es.x, es.y, Random.rand);
@@ -337,16 +379,18 @@ let loadEnemy = (es: EnemyState, game: Game): Entity => {
     enemy.seenPlayer = es.seenPlayer;
     if (es.seenPlayer) {
       enemy.targetPlayer = game.players[es.targetPlayerID];
-      if (!enemy.targetPlayer) enemy.targetPlayer = game.offlinePlayers[es.targetPlayerID];
+      if (!enemy.targetPlayer)
+        enemy.targetPlayer = game.offlinePlayers[es.targetPlayerID];
     }
   }
-  if (es.type === EnemyType.SLIME) {
-    enemy = new SlimeEnemy(level, game, es.x, es.y, Random.rand);
+  if (es.type === EnemyType.CRAB) {
+    enemy = new CrabEnemy(level, game, es.x, es.y, Random.rand);
     enemy.ticks = es.ticks;
     enemy.seenPlayer = es.seenPlayer;
     if (es.seenPlayer) {
       enemy.targetPlayer = game.players[es.targetPlayerID];
-      if (!enemy.targetPlayer) enemy.targetPlayer = game.offlinePlayers[es.targetPlayerID];
+      if (!enemy.targetPlayer)
+        enemy.targetPlayer = game.offlinePlayers[es.targetPlayerID];
     }
   }
   if (es.type === EnemyType.SPAWNER) {
@@ -360,7 +404,8 @@ let loadEnemy = (es: EnemyState, game: Game): Entity => {
     enemy = new VendingMachine(level, game, es.x, es.y, item, Random.rand);
     if (es.isPlayerOpened) {
       enemy.playerOpened = game.players[es.playerOpenedID];
-      if (!enemy.playerOpened) enemy.playerOpened = game.offlinePlayers[es.playerOpenedID];
+      if (!enemy.playerOpened)
+        enemy.playerOpened = game.offlinePlayers[es.playerOpenedID];
     }
     enemy.open = es.open;
     enemy.costItems = [];
@@ -380,7 +425,8 @@ let loadEnemy = (es: EnemyState, game: Game): Entity => {
     enemy.seenPlayer = es.seenPlayer;
     if (es.seenPlayer) {
       enemy.targetPlayer = game.players[es.targetPlayerID];
-      if (!enemy.targetPlayer) enemy.targetPlayer = game.offlinePlayers[es.targetPlayerID];
+      if (!enemy.targetPlayer)
+        enemy.targetPlayer = game.offlinePlayers[es.targetPlayerID];
     }
   }
 
@@ -394,7 +440,7 @@ let loadEnemy = (es: EnemyState, game: Game): Entity => {
   enemy.alertTicks = es.alertTicks;
 
   return enemy;
-}
+};
 
 export class LevelState {
   levelID: number;
@@ -411,10 +457,13 @@ export class LevelState {
     this.items = [];
     this.projectiles = [];
     this.hitwarnings = [];
-    for (const enemy of level.entities) this.enemies.push(new EnemyState(enemy, game));
+    for (const enemy of level.entities)
+      this.enemies.push(new EnemyState(enemy, game));
     for (const item of level.items) this.items.push(new ItemState(item, game));
-    for (const projectile of level.projectiles) this.projectiles.push(new ProjectileState(projectile, game));
-    for (const hw of level.hitwarnings) this.hitwarnings.push(new HitWarningState(hw));
+    for (const projectile of level.projectiles)
+      this.projectiles.push(new ProjectileState(projectile, game));
+    for (const hw of level.hitwarnings)
+      this.hitwarnings.push(new HitWarningState(hw));
   }
 }
 
@@ -424,11 +473,14 @@ let loadLevel = (level: Room, levelState: LevelState, game: Game) => {
   level.items = [];
   level.projectiles = [];
   level.hitwarnings = [];
-  for (const enemy of levelState.enemies) level.entities.push(loadEnemy(enemy, game));
+  for (const enemy of levelState.enemies)
+    level.entities.push(loadEnemy(enemy, game));
   for (const item of levelState.items) level.items.push(loadItem(item, game));
-  for (const projectile of levelState.projectiles) level.projectiles.push(loadProjectile(projectile, game));
-  for (const hw of levelState.hitwarnings) level.hitwarnings.push(loadHitWarning(hw, game));
-}
+  for (const projectile of levelState.projectiles)
+    level.projectiles.push(loadProjectile(projectile, game));
+  for (const hw of levelState.hitwarnings)
+    level.hitwarnings.push(loadHitWarning(hw, game));
+};
 
 export enum ItemType {
   ARMOR,
@@ -449,7 +501,7 @@ export enum ItemType {
   SHOTGUN,
   SPEAR,
   PICKAXE,
-  BACKPACK
+  BACKPACK,
 }
 
 export class ItemState {
@@ -508,18 +560,30 @@ let loadItem = (i: ItemState, game: Game, player?: Player): Item => {
   if (i.type === ItemType.LANTERN) item = new Lantern(level, i.x, i.y);
   if (i.type === ItemType.REDGEM) item = new RedGem(level, i.x, i.y);
   if (i.type === ItemType.TORCH) item = new Torch(level, i.x, i.y);
-  if (i.type === ItemType.DAGGER) { item = new Dagger(level, i.x, i.y); }
-  if (i.type === ItemType.DUALDAGGER) { item = new DualDagger(level, i.x, i.y); }
-  if (i.type === ItemType.SHOTGUN) { item = new Shotgun(level, i.x, i.y); }
-  if (i.type === ItemType.SPEAR) { item = new Spear(level, i.x, i.y); }
-  if (i.type === ItemType.PICKAXE) { item = new Pickaxe(level, i.x, i.y); }
-  if (i.type === ItemType.BACKPACK) { item = new Backpack(level, i.x, i.y); }
+  if (i.type === ItemType.DAGGER) {
+    item = new Dagger(level, i.x, i.y);
+  }
+  if (i.type === ItemType.DUALDAGGER) {
+    item = new DualDagger(level, i.x, i.y);
+  }
+  if (i.type === ItemType.SHOTGUN) {
+    item = new Shotgun(level, i.x, i.y);
+  }
+  if (i.type === ItemType.SPEAR) {
+    item = new Spear(level, i.x, i.y);
+  }
+  if (i.type === ItemType.PICKAXE) {
+    item = new Pickaxe(level, i.x, i.y);
+  }
+  if (i.type === ItemType.BACKPACK) {
+    item = new Backpack(level, i.x, i.y);
+  }
   if (i.equipped) item.equipped = true;
   if (item instanceof Equippable) item.setWielder(player);
   item.stackCount = i.stackCount;
   item.pickedUp = i.pickedUp;
   return item;
-}
+};
 
 export class InventoryState {
   isOpen: boolean;
@@ -537,7 +601,7 @@ export class InventoryState {
     this.isOpen = inventory.isOpen;
     this.cols = inventory.cols;
     this.rows = inventory.rows;
-    this.equipAnimAmount = inventory.equipAnimAmount.map(x => x);
+    this.equipAnimAmount = inventory.equipAnimAmount.map((x) => x);
     this.isWeaponEquipped = false;
     if (inventory.weapon) {
       this.isWeaponEquipped = true;
@@ -560,12 +624,14 @@ let loadInventory = (inventory: Inventory, i: InventoryState, game: Game) => {
   inventory.rows = i.rows;
   inventory.selX = i.selX;
   inventory.selY = i.selY;
-  inventory.equipAnimAmount = i.equipAnimAmount.map(x => x);
+  inventory.equipAnimAmount = i.equipAnimAmount.map((x) => x);
   inventory.coins = i.coins;
-  for (const item of i.items) inventory.items.push(loadItem(item, game, inventory.player));
+  for (const item of i.items)
+    inventory.items.push(loadItem(item, game, inventory.player));
 
-  if (i.isWeaponEquipped) inventory.weapon = (inventory.items[i.weaponI] as Weapon);
-}
+  if (i.isWeaponEquipped)
+    inventory.weapon = inventory.items[i.weaponI] as Weapon;
+};
 
 export class PlayerState {
   x: number;
@@ -595,10 +661,15 @@ export class PlayerState {
     this.hasOpenVendingMachine = false;
     if (player.openVendingMachine) {
       this.hasOpenVendingMachine = true;
-      this.openVendingMachineLevelID = game.rooms.indexOf(player.openVendingMachine.room);
-      this.openVendingMachineID = player.openVendingMachine.room.entities.indexOf(player.openVendingMachine);
+      this.openVendingMachineLevelID = game.rooms.indexOf(
+        player.openVendingMachine.room
+      );
+      this.openVendingMachineID =
+        player.openVendingMachine.room.entities.indexOf(
+          player.openVendingMachine
+        );
     }
-    this.sightRadius = player.sightRadius
+    this.sightRadius = player.sightRadius;
   }
 }
 
@@ -607,10 +678,15 @@ let loadPlayer = (id: string, p: PlayerState, game: Game): Player => {
   player.dead = p.dead;
 
   player.levelID = p.levelID;
-  if (player.levelID < game.levelgen.currentFloorFirstLevelID) { // catch up to the current level
+  if (player.levelID < game.levelgen.currentFloorFirstLevelID) {
+    // catch up to the current level
     player.levelID = game.levelgen.currentFloorFirstLevelID;
-    player.x = game.rooms[player.levelID].roomX + Math.floor(game.rooms[player.levelID].width / 2);
-    player.y = game.rooms[player.levelID].roomY + Math.floor(game.rooms[player.levelID].height / 2);
+    player.x =
+      game.rooms[player.levelID].roomX +
+      Math.floor(game.rooms[player.levelID].width / 2);
+    player.y =
+      game.rooms[player.levelID].roomY +
+      Math.floor(game.rooms[player.levelID].height / 2);
   }
   player.direction = p.direction;
   player.health = p.health;
@@ -618,12 +694,13 @@ let loadPlayer = (id: string, p: PlayerState, game: Game): Player => {
   player.lastTickHealth = p.lastTickHealth;
   loadInventory(player.inventory, p.inventory, game);
   if (p.hasOpenVendingMachine) {
-    player.openVendingMachine = (game.rooms[p.openVendingMachineLevelID].entities[p.openVendingMachineID] as VendingMachine);
+    player.openVendingMachine = game.rooms[p.openVendingMachineLevelID]
+      .entities[p.openVendingMachineID] as VendingMachine;
   }
   player.sightRadius = p.sightRadius;
 
   return player;
-}
+};
 
 export class GameState {
   seed: number;
@@ -658,9 +735,13 @@ export const createGameState = (game: Game): GameState => {
     gs.levels.push(new LevelState(level, game));
   }
   return gs;
-}
+};
 
-export const loadGameState = (game: Game, activeUsernames: Array<string>, gameState: GameState) => {
+export const loadGameState = (
+  game: Game,
+  activeUsernames: Array<string>,
+  gameState: GameState
+) => {
   game.rooms = Array<Room>();
   game.levelgen = new LevelGenerator();
   game.levelgen.setSeed(gameState.seed);
@@ -670,7 +751,8 @@ export const loadGameState = (game: Game, activeUsernames: Array<string>, gameSt
   if (!(gameState as any).init_state) {
     if (gameState.players) {
       for (const i in gameState.players) {
-        if (activeUsernames.includes(i)) game.players[i] = loadPlayer(i, gameState.players[i], game);
+        if (activeUsernames.includes(i))
+          game.players[i] = loadPlayer(i, gameState.players[i], game);
         else game.offlinePlayers[i] = loadPlayer(i, gameState.players[i], game);
       }
     }
@@ -681,7 +763,11 @@ export const loadGameState = (game: Game, activeUsernames: Array<string>, gameSt
         else if (activeUsernames.includes(i))
           game.players[i] = loadPlayer(i, gameState.offlinePlayers[i], game);
         else
-          game.offlinePlayers[i] = loadPlayer(i, gameState.offlinePlayers[i], game);
+          game.offlinePlayers[i] = loadPlayer(
+            i,
+            gameState.offlinePlayers[i],
+            game
+          );
       }
     }
     for (let levelState of gameState.levels) {
@@ -691,19 +777,31 @@ export const loadGameState = (game: Game, activeUsernames: Array<string>, gameSt
         }
       }
     }
-    if (!(game.localPlayerID in gameState.players) && !(game.localPlayerID in gameState.offlinePlayers)) { // we're not in the gamestate, create a new player
+    if (
+      !(game.localPlayerID in gameState.players) &&
+      !(game.localPlayerID in gameState.offlinePlayers)
+    ) {
+      // we're not in the gamestate, create a new player
       game.players[game.localPlayerID] = new Player(game, 0, 0, true);
-      game.players[game.localPlayerID].levelID = game.levelgen.currentFloorFirstLevelID;
-      game.players[game.localPlayerID].x = game.rooms[game.levelgen.currentFloorFirstLevelID].roomX + Math.floor(game.rooms[game.levelgen.currentFloorFirstLevelID].width / 2);
-      game.players[game.localPlayerID].y = game.rooms[game.levelgen.currentFloorFirstLevelID].roomY + Math.floor(game.rooms[game.levelgen.currentFloorFirstLevelID].height / 2);
+      game.players[game.localPlayerID].levelID =
+        game.levelgen.currentFloorFirstLevelID;
+      game.players[game.localPlayerID].x =
+        game.rooms[game.levelgen.currentFloorFirstLevelID].roomX +
+        Math.floor(
+          game.rooms[game.levelgen.currentFloorFirstLevelID].width / 2
+        );
+      game.players[game.localPlayerID].y =
+        game.rooms[game.levelgen.currentFloorFirstLevelID].roomY +
+        Math.floor(
+          game.rooms[game.levelgen.currentFloorFirstLevelID].height / 2
+        );
       game.room = game.rooms[game.levelgen.currentFloorFirstLevelID];
       game.room.enterLevel(game.players[game.localPlayerID]);
-    }
-    else {
+    } else {
       game.room = game.rooms[game.players[game.localPlayerID].levelID];
     }
-  }
-  else { // stub game state, start a new world
+  } else {
+    // stub game state, start a new world
     game.players[game.localPlayerID] = new Player(game, 0, 0, true);
     game.room = game.rooms[game.players[game.localPlayerID].levelID];
     game.room.enterLevel(game.players[game.localPlayerID]);
@@ -712,4 +810,4 @@ export const loadGameState = (game: Game, activeUsernames: Array<string>, gameSt
   game.room.updateLighting();
 
   game.chat = [];
-}
+};

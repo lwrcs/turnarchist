@@ -11,7 +11,7 @@ import { Item } from "../item/item";
 import { GameConstants } from "../gameConstants";
 import { ImageParticle } from "../particle/imageParticle";
 
-export class SlimeEnemy extends Entity {
+export class CrabEnemy extends Entity {
   ticks: number;
   frame: number;
   seenPlayer: boolean;
@@ -53,7 +53,7 @@ export class SlimeEnemy extends Entity {
         this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
     }
     this.healthBar.hurt();
-    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 3, 29);
+    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 3, 24);
 
     this.health -= damage;
     if (this.health <= 0) this.kill();

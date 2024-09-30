@@ -50,7 +50,12 @@ export class GenericParticle extends Particle {
     }
   };
 
-  static spawnCluster = (level: Room, cx: number, cy: number, color: string) => {
+  static spawnCluster = (
+    level: Room,
+    cx: number,
+    cy: number,
+    color: string
+  ) => {
     for (let i = 0; i < 4; i++) {
       level.particles.push(
         new GenericParticle(

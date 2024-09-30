@@ -6047,6 +6047,225 @@ exports.CoalResource = CoalResource;
 
 /***/ }),
 
+/***/ "./src/entity/crabEnemy.ts":
+/*!*********************************!*\
+  !*** ./src/entity/crabEnemy.ts ***!
+  \*********************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+"use strict";
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CrabEnemy = void 0;
+var entity_1 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
+var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+var astarclass_1 = __webpack_require__(/*! ../astarclass */ "./src/astarclass.ts");
+var spiketrap_1 = __webpack_require__(/*! ../tile/spiketrap */ "./src/tile/spiketrap.ts");
+var coin_1 = __webpack_require__(/*! ../item/coin */ "./src/item/coin.ts");
+var gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
+var imageParticle_1 = __webpack_require__(/*! ../particle/imageParticle */ "./src/particle/imageParticle.ts");
+var CrabEnemy = /** @class */ (function (_super) {
+    __extends(CrabEnemy, _super);
+    function CrabEnemy(level, game, x, y, rand, drop) {
+        var _this = _super.call(this, level, game, x, y) || this;
+        _this.hurt = function (playerHitBy, damage) {
+            if (playerHitBy) {
+                _this.aggro = true;
+                _this.targetPlayer = playerHitBy;
+                _this.facePlayer(playerHitBy);
+                if (playerHitBy === _this.game.players[_this.game.localPlayerID])
+                    _this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
+            }
+            _this.healthBar.hurt();
+            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 3, 24);
+            _this.health -= damage;
+            if (_this.health <= 0)
+                _this.kill();
+            else
+                _this.hurtCallback();
+        };
+        _this.hit = function () {
+            return 1;
+        };
+        _this.tick = function () {
+            _this.lastX = _this.x;
+            _this.lastY = _this.y;
+            if (!_this.dead) {
+                if (_this.skipNextTurns > 0) {
+                    _this.skipNextTurns--;
+                    return;
+                }
+                if (!_this.seenPlayer) {
+                    var result = _this.nearestPlayer();
+                    if (result !== false) {
+                        var distance = result[0], p = result[1];
+                        if (distance < 4) {
+                            _this.seenPlayer = true;
+                            _this.targetPlayer = p;
+                            _this.facePlayer(p);
+                            if (p === _this.game.players[_this.game.localPlayerID])
+                                _this.alertTicks = 1;
+                            _this.makeHitWarnings(true, false, false, _this.direction);
+                        }
+                    }
+                }
+                else if (_this.seenPlayer) {
+                    if (_this.room.playerTicked === _this.targetPlayer) {
+                        _this.alertTicks = Math.max(0, _this.alertTicks - 1);
+                        _this.ticks++;
+                        if (_this.ticks % 2 === 1) {
+                            var oldX = _this.x;
+                            var oldY = _this.y;
+                            var disablePositions = Array();
+                            for (var _i = 0, _a = _this.room.entities; _i < _a.length; _i++) {
+                                var e = _a[_i];
+                                if (e !== _this) {
+                                    disablePositions.push({ x: e.x, y: e.y });
+                                }
+                            }
+                            for (var xx = _this.x - 1; xx <= _this.x + 1; xx++) {
+                                for (var yy = _this.y - 1; yy <= _this.y + 1; yy++) {
+                                    if (_this.room.roomArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
+                                        _this.room.roomArray[xx][yy].on) {
+                                        // don't walk on active spiketraps
+                                        disablePositions.push({ x: xx, y: yy });
+                                    }
+                                }
+                            }
+                            var grid = [];
+                            for (var x = 0; x < _this.room.roomX + _this.room.width; x++) {
+                                grid[x] = [];
+                                for (var y = 0; y < _this.room.roomY + _this.room.height; y++) {
+                                    if (_this.room.roomArray[x] && _this.room.roomArray[x][y])
+                                        grid[x][y] = _this.room.roomArray[x][y];
+                                    else
+                                        grid[x][y] = false;
+                                }
+                            }
+                            var moves = astarclass_1.astar.AStar.search(grid, _this, _this.targetPlayer, disablePositions);
+                            if (moves.length > 0) {
+                                var hitPlayer = false;
+                                for (var i in _this.game.players) {
+                                    if (_this.game.rooms[_this.game.players[i].levelID] === _this.room &&
+                                        _this.game.players[i].x === moves[0].pos.x &&
+                                        _this.game.players[i].y === moves[0].pos.y) {
+                                        _this.game.players[i].hurt(_this.hit(), "crab");
+                                        _this.drawX = 0.5 * (_this.x - _this.game.players[i].x);
+                                        _this.drawY = 0.5 * (_this.y - _this.game.players[i].y);
+                                        if (_this.game.players[i] ===
+                                            _this.game.players[_this.game.localPlayerID])
+                                            _this.game.shakeScreen(10 * _this.drawX, 10 * _this.drawY);
+                                        hitPlayer = true;
+                                    }
+                                }
+                                if (!hitPlayer) {
+                                    _this.tryMove(moves[0].pos.x, moves[0].pos.y);
+                                    _this.drawX = _this.x - oldX;
+                                    _this.drawY = _this.y - oldY;
+                                    if (_this.x > oldX)
+                                        _this.direction = entity_1.EntityDirection.RIGHT;
+                                    else if (_this.x < oldX)
+                                        _this.direction = entity_1.EntityDirection.LEFT;
+                                    else if (_this.y > oldY)
+                                        _this.direction = entity_1.EntityDirection.DOWN;
+                                    else if (_this.y < oldY)
+                                        _this.direction = entity_1.EntityDirection.UP;
+                                }
+                            }
+                        }
+                        else {
+                            _this.makeHitWarnings(true, false, false, _this.direction);
+                        }
+                    }
+                    var targetPlayerOffline = Object.values(_this.game.offlinePlayers).indexOf(_this.targetPlayer) !==
+                        -1;
+                    if (!_this.aggro || targetPlayerOffline) {
+                        var p = _this.nearestPlayer();
+                        if (p !== false) {
+                            var distance = p[0], player = p[1];
+                            if (distance <= 4 &&
+                                (targetPlayerOffline ||
+                                    distance < _this.playerDistance(_this.targetPlayer))) {
+                                if (player !== _this.targetPlayer) {
+                                    _this.targetPlayer = player;
+                                    _this.facePlayer(player);
+                                    if (player === _this.game.players[_this.game.localPlayerID])
+                                        _this.alertTicks = 1;
+                                    if (_this.ticks % 2 === 0) {
+                                        _this.makeHitWarnings(true, false, false, _this.direction);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        };
+        _this.draw = function (delta) {
+            if (!_this.dead) {
+                if (_this.ticks % 2 === 0) {
+                    _this.tileX = 9;
+                    _this.tileY = 4;
+                }
+                else {
+                    _this.tileX = 8;
+                    _this.tileY = 4;
+                }
+                _this.frame += 0.1 * delta;
+                if (_this.frame >= 4)
+                    _this.frame = 0;
+                if (_this.hasShadow)
+                    game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - 0.25 - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
+                game_1.Game.drawMob(_this.tileX, _this.tileY + _this.direction, 1, 1, _this.x - _this.drawX, _this.y - 0.25 - _this.drawY, 1 * _this.crushX, 1 * _this.crushY, _this.room.shadeColor, _this.shadeAmount());
+                if (_this.crushed) {
+                    _this.crushAnim(delta);
+                }
+            }
+            if (!_this.seenPlayer) {
+                _this.drawSleepingZs(delta, 0, 0.75 * gameConstants_1.GameConstants.TILESIZE);
+            }
+            if (_this.alertTicks > 0) {
+                _this.drawExclamation(delta, 0, 0.75 * gameConstants_1.GameConstants.TILESIZE);
+            }
+        };
+        _this.ticks = 0;
+        _this.frame = 0;
+        _this.health = 1;
+        _this.maxHealth = 1;
+        _this.tileX = 8;
+        _this.tileY = 4;
+        _this.seenPlayer = false;
+        _this.aggro = false;
+        _this.deathParticleColor = "#ffffff";
+        if (drop)
+            _this.drop = drop;
+        else {
+            _this.drop = new coin_1.Coin(_this.room, 0, 0);
+        }
+        return _this;
+    }
+    return CrabEnemy;
+}(entity_1.Entity));
+exports.CrabEnemy = CrabEnemy;
+
+
+/***/ }),
+
 /***/ "./src/entity/crate.ts":
 /*!*****************************!*\
   !*** ./src/entity/crate.ts ***!
@@ -7936,225 +8155,6 @@ var SkullEnemy = /** @class */ (function (_super) {
     return SkullEnemy;
 }(entity_1.Entity));
 exports.SkullEnemy = SkullEnemy;
-
-
-/***/ }),
-
-/***/ "./src/entity/slimeEnemy.ts":
-/*!**********************************!*\
-  !*** ./src/entity/slimeEnemy.ts ***!
-  \**********************************/
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-"use strict";
-
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        if (typeof b !== "function" && b !== null)
-            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.SlimeEnemy = void 0;
-var entity_1 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
-var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-var astarclass_1 = __webpack_require__(/*! ../astarclass */ "./src/astarclass.ts");
-var spiketrap_1 = __webpack_require__(/*! ../tile/spiketrap */ "./src/tile/spiketrap.ts");
-var coin_1 = __webpack_require__(/*! ../item/coin */ "./src/item/coin.ts");
-var gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
-var imageParticle_1 = __webpack_require__(/*! ../particle/imageParticle */ "./src/particle/imageParticle.ts");
-var SlimeEnemy = /** @class */ (function (_super) {
-    __extends(SlimeEnemy, _super);
-    function SlimeEnemy(level, game, x, y, rand, drop) {
-        var _this = _super.call(this, level, game, x, y) || this;
-        _this.hurt = function (playerHitBy, damage) {
-            if (playerHitBy) {
-                _this.aggro = true;
-                _this.targetPlayer = playerHitBy;
-                _this.facePlayer(playerHitBy);
-                if (playerHitBy === _this.game.players[_this.game.localPlayerID])
-                    _this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
-            }
-            _this.healthBar.hurt();
-            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 3, 29);
-            _this.health -= damage;
-            if (_this.health <= 0)
-                _this.kill();
-            else
-                _this.hurtCallback();
-        };
-        _this.hit = function () {
-            return 1;
-        };
-        _this.tick = function () {
-            _this.lastX = _this.x;
-            _this.lastY = _this.y;
-            if (!_this.dead) {
-                if (_this.skipNextTurns > 0) {
-                    _this.skipNextTurns--;
-                    return;
-                }
-                if (!_this.seenPlayer) {
-                    var result = _this.nearestPlayer();
-                    if (result !== false) {
-                        var distance = result[0], p = result[1];
-                        if (distance < 4) {
-                            _this.seenPlayer = true;
-                            _this.targetPlayer = p;
-                            _this.facePlayer(p);
-                            if (p === _this.game.players[_this.game.localPlayerID])
-                                _this.alertTicks = 1;
-                            _this.makeHitWarnings(true, false, false, _this.direction);
-                        }
-                    }
-                }
-                else if (_this.seenPlayer) {
-                    if (_this.room.playerTicked === _this.targetPlayer) {
-                        _this.alertTicks = Math.max(0, _this.alertTicks - 1);
-                        _this.ticks++;
-                        if (_this.ticks % 2 === 1) {
-                            var oldX = _this.x;
-                            var oldY = _this.y;
-                            var disablePositions = Array();
-                            for (var _i = 0, _a = _this.room.entities; _i < _a.length; _i++) {
-                                var e = _a[_i];
-                                if (e !== _this) {
-                                    disablePositions.push({ x: e.x, y: e.y });
-                                }
-                            }
-                            for (var xx = _this.x - 1; xx <= _this.x + 1; xx++) {
-                                for (var yy = _this.y - 1; yy <= _this.y + 1; yy++) {
-                                    if (_this.room.roomArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
-                                        _this.room.roomArray[xx][yy].on) {
-                                        // don't walk on active spiketraps
-                                        disablePositions.push({ x: xx, y: yy });
-                                    }
-                                }
-                            }
-                            var grid = [];
-                            for (var x = 0; x < _this.room.roomX + _this.room.width; x++) {
-                                grid[x] = [];
-                                for (var y = 0; y < _this.room.roomY + _this.room.height; y++) {
-                                    if (_this.room.roomArray[x] && _this.room.roomArray[x][y])
-                                        grid[x][y] = _this.room.roomArray[x][y];
-                                    else
-                                        grid[x][y] = false;
-                                }
-                            }
-                            var moves = astarclass_1.astar.AStar.search(grid, _this, _this.targetPlayer, disablePositions);
-                            if (moves.length > 0) {
-                                var hitPlayer = false;
-                                for (var i in _this.game.players) {
-                                    if (_this.game.rooms[_this.game.players[i].levelID] === _this.room &&
-                                        _this.game.players[i].x === moves[0].pos.x &&
-                                        _this.game.players[i].y === moves[0].pos.y) {
-                                        _this.game.players[i].hurt(_this.hit(), "crab");
-                                        _this.drawX = 0.5 * (_this.x - _this.game.players[i].x);
-                                        _this.drawY = 0.5 * (_this.y - _this.game.players[i].y);
-                                        if (_this.game.players[i] ===
-                                            _this.game.players[_this.game.localPlayerID])
-                                            _this.game.shakeScreen(10 * _this.drawX, 10 * _this.drawY);
-                                        hitPlayer = true;
-                                    }
-                                }
-                                if (!hitPlayer) {
-                                    _this.tryMove(moves[0].pos.x, moves[0].pos.y);
-                                    _this.drawX = _this.x - oldX;
-                                    _this.drawY = _this.y - oldY;
-                                    if (_this.x > oldX)
-                                        _this.direction = entity_1.EntityDirection.RIGHT;
-                                    else if (_this.x < oldX)
-                                        _this.direction = entity_1.EntityDirection.LEFT;
-                                    else if (_this.y > oldY)
-                                        _this.direction = entity_1.EntityDirection.DOWN;
-                                    else if (_this.y < oldY)
-                                        _this.direction = entity_1.EntityDirection.UP;
-                                }
-                            }
-                        }
-                        else {
-                            _this.makeHitWarnings(true, false, false, _this.direction);
-                        }
-                    }
-                    var targetPlayerOffline = Object.values(_this.game.offlinePlayers).indexOf(_this.targetPlayer) !==
-                        -1;
-                    if (!_this.aggro || targetPlayerOffline) {
-                        var p = _this.nearestPlayer();
-                        if (p !== false) {
-                            var distance = p[0], player = p[1];
-                            if (distance <= 4 &&
-                                (targetPlayerOffline ||
-                                    distance < _this.playerDistance(_this.targetPlayer))) {
-                                if (player !== _this.targetPlayer) {
-                                    _this.targetPlayer = player;
-                                    _this.facePlayer(player);
-                                    if (player === _this.game.players[_this.game.localPlayerID])
-                                        _this.alertTicks = 1;
-                                    if (_this.ticks % 2 === 0) {
-                                        _this.makeHitWarnings(true, false, false, _this.direction);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        };
-        _this.draw = function (delta) {
-            if (!_this.dead) {
-                if (_this.ticks % 2 === 0) {
-                    _this.tileX = 9;
-                    _this.tileY = 4;
-                }
-                else {
-                    _this.tileX = 8;
-                    _this.tileY = 4;
-                }
-                _this.frame += 0.1 * delta;
-                if (_this.frame >= 4)
-                    _this.frame = 0;
-                if (_this.hasShadow)
-                    game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - 0.25 - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
-                game_1.Game.drawMob(_this.tileX, _this.tileY + _this.direction, 1, 1, _this.x - _this.drawX, _this.y - 0.25 - _this.drawY, 1 * _this.crushX, 1 * _this.crushY, _this.room.shadeColor, _this.shadeAmount());
-                if (_this.crushed) {
-                    _this.crushAnim(delta);
-                }
-            }
-            if (!_this.seenPlayer) {
-                _this.drawSleepingZs(delta, 0, 0.75 * gameConstants_1.GameConstants.TILESIZE);
-            }
-            if (_this.alertTicks > 0) {
-                _this.drawExclamation(delta, 0, 0.75 * gameConstants_1.GameConstants.TILESIZE);
-            }
-        };
-        _this.ticks = 0;
-        _this.frame = 0;
-        _this.health = 1;
-        _this.maxHealth = 1;
-        _this.tileX = 8;
-        _this.tileY = 4;
-        _this.seenPlayer = false;
-        _this.aggro = false;
-        _this.deathParticleColor = "#ffffff";
-        if (drop)
-            _this.drop = drop;
-        else {
-            _this.drop = new coin_1.Coin(_this.room, 0, 0);
-        }
-        return _this;
-    }
-    return SlimeEnemy;
-}(entity_1.Entity));
-exports.SlimeEnemy = SlimeEnemy;
 
 
 /***/ }),
@@ -10417,7 +10417,7 @@ var knightEnemy_1 = __webpack_require__(/*! ./entity/knightEnemy */ "./src/entit
 var pottedPlant_1 = __webpack_require__(/*! ./entity/pottedPlant */ "./src/entity/pottedPlant.ts");
 var pot_1 = __webpack_require__(/*! ./entity/pot */ "./src/entity/pot.ts");
 var skullEnemy_1 = __webpack_require__(/*! ./entity/skullEnemy */ "./src/entity/skullEnemy.ts");
-var slimeEnemy_1 = __webpack_require__(/*! ./entity/slimeEnemy */ "./src/entity/slimeEnemy.ts");
+var crabEnemy_1 = __webpack_require__(/*! ./entity/crabEnemy */ "./src/entity/crabEnemy.ts");
 var spawner_1 = __webpack_require__(/*! ./entity/spawner */ "./src/entity/spawner.ts");
 var vendingMachine_1 = __webpack_require__(/*! ./entity/vendingMachine */ "./src/entity/vendingMachine.ts");
 var wizardEnemy_1 = __webpack_require__(/*! ./entity/wizardEnemy */ "./src/entity/wizardEnemy.ts");
@@ -10515,7 +10515,7 @@ var EnemyType;
     EnemyType[EnemyType["KNIGHT"] = 8] = "KNIGHT";
     EnemyType[EnemyType["PLANT"] = 9] = "PLANT";
     EnemyType[EnemyType["SKULL"] = 10] = "SKULL";
-    EnemyType[EnemyType["SLIME"] = 11] = "SLIME";
+    EnemyType[EnemyType["CRAB"] = 11] = "CRAB";
     EnemyType[EnemyType["SPAWNER"] = 12] = "SPAWNER";
     EnemyType[EnemyType["VENDINGMACHINE"] = 13] = "VENDINGMACHINE";
     EnemyType[EnemyType["WIZARD"] = 14] = "WIZARD";
@@ -10600,8 +10600,8 @@ var EnemyState = /** @class */ (function () {
                     this.targetPlayerID = Object.keys(game.offlinePlayers).find(function (key) { return game.offlinePlayers[key] === enemy.targetPlayer; });
             }
         }
-        if (enemy instanceof slimeEnemy_1.SlimeEnemy) {
-            this.type = EnemyType.SLIME;
+        if (enemy instanceof crabEnemy_1.CrabEnemy) {
+            this.type = EnemyType.CRAB;
             this.ticks = enemy.ticks;
             this.seenPlayer = enemy.seenPlayer;
             if (enemy.seenPlayer) {
@@ -10722,8 +10722,8 @@ var loadEnemy = function (es, game) {
                 enemy.targetPlayer = game.offlinePlayers[es.targetPlayerID];
         }
     }
-    if (es.type === EnemyType.SLIME) {
-        enemy = new slimeEnemy_1.SlimeEnemy(level, game, es.x, es.y, random_1.Random.rand);
+    if (es.type === EnemyType.CRAB) {
+        enemy = new crabEnemy_1.CrabEnemy(level, game, es.x, es.y, random_1.Random.rand);
         enemy.ticks = es.ticks;
         enemy.seenPlayer = es.seenPlayer;
         if (es.seenPlayer) {
@@ -11016,7 +11016,8 @@ var PlayerState = /** @class */ (function () {
         if (player.openVendingMachine) {
             this.hasOpenVendingMachine = true;
             this.openVendingMachineLevelID = game.rooms.indexOf(player.openVendingMachine.room);
-            this.openVendingMachineID = player.openVendingMachine.room.entities.indexOf(player.openVendingMachine);
+            this.openVendingMachineID =
+                player.openVendingMachine.room.entities.indexOf(player.openVendingMachine);
         }
         this.sightRadius = player.sightRadius;
     }
@@ -11027,10 +11028,15 @@ var loadPlayer = function (id, p, game) {
     var player = new player_1.Player(game, p.x, p.y, id === game.localPlayerID);
     player.dead = p.dead;
     player.levelID = p.levelID;
-    if (player.levelID < game.levelgen.currentFloorFirstLevelID) { // catch up to the current level
+    if (player.levelID < game.levelgen.currentFloorFirstLevelID) {
+        // catch up to the current level
         player.levelID = game.levelgen.currentFloorFirstLevelID;
-        player.x = game.rooms[player.levelID].roomX + Math.floor(game.rooms[player.levelID].width / 2);
-        player.y = game.rooms[player.levelID].roomY + Math.floor(game.rooms[player.levelID].height / 2);
+        player.x =
+            game.rooms[player.levelID].roomX +
+                Math.floor(game.rooms[player.levelID].width / 2);
+        player.y =
+            game.rooms[player.levelID].roomY +
+                Math.floor(game.rooms[player.levelID].height / 2);
     }
     player.direction = p.direction;
     player.health = p.health;
@@ -11038,7 +11044,8 @@ var loadPlayer = function (id, p, game) {
     player.lastTickHealth = p.lastTickHealth;
     loadInventory(player.inventory, p.inventory, game);
     if (p.hasOpenVendingMachine) {
-        player.openVendingMachine = game.rooms[p.openVendingMachineLevelID].entities[p.openVendingMachineID];
+        player.openVendingMachine = game.rooms[p.openVendingMachineLevelID]
+            .entities[p.openVendingMachineID];
     }
     player.sightRadius = p.sightRadius;
     return player;
@@ -11107,11 +11114,18 @@ var loadGameState = function (game, activeUsernames, gameState) {
                 }
             }
         }
-        if (!(game.localPlayerID in gameState.players) && !(game.localPlayerID in gameState.offlinePlayers)) { // we're not in the gamestate, create a new player
+        if (!(game.localPlayerID in gameState.players) &&
+            !(game.localPlayerID in gameState.offlinePlayers)) {
+            // we're not in the gamestate, create a new player
             game.players[game.localPlayerID] = new player_1.Player(game, 0, 0, true);
-            game.players[game.localPlayerID].levelID = game.levelgen.currentFloorFirstLevelID;
-            game.players[game.localPlayerID].x = game.rooms[game.levelgen.currentFloorFirstLevelID].roomX + Math.floor(game.rooms[game.levelgen.currentFloorFirstLevelID].width / 2);
-            game.players[game.localPlayerID].y = game.rooms[game.levelgen.currentFloorFirstLevelID].roomY + Math.floor(game.rooms[game.levelgen.currentFloorFirstLevelID].height / 2);
+            game.players[game.localPlayerID].levelID =
+                game.levelgen.currentFloorFirstLevelID;
+            game.players[game.localPlayerID].x =
+                game.rooms[game.levelgen.currentFloorFirstLevelID].roomX +
+                    Math.floor(game.rooms[game.levelgen.currentFloorFirstLevelID].width / 2);
+            game.players[game.localPlayerID].y =
+                game.rooms[game.levelgen.currentFloorFirstLevelID].roomY +
+                    Math.floor(game.rooms[game.levelgen.currentFloorFirstLevelID].height / 2);
             game.room = game.rooms[game.levelgen.currentFloorFirstLevelID];
             game.room.enterLevel(game.players[game.localPlayerID]);
         }
@@ -11119,7 +11133,8 @@ var loadGameState = function (game, activeUsernames, gameState) {
             game.room = game.rooms[game.players[game.localPlayerID].levelID];
         }
     }
-    else { // stub game state, start a new world
+    else {
+        // stub game state, start a new world
         game.players[game.localPlayerID] = new player_1.Player(game, 0, 0, true);
         game.room = game.rooms[game.players[game.localPlayerID].levelID];
         game.room.enterLevel(game.players[game.localPlayerID]);
@@ -15042,7 +15057,8 @@ var EnemySpawnAnimation = /** @class */ (function (_super) {
                 sound_1.Sound.enemySpawn();
             var hitPlayer = false;
             for (var i in _this.room.game.players) {
-                if (_this.room.game.players[i].x === _this.x && _this.room.game.players[i].y === _this.y) {
+                if (_this.room.game.players[i].x === _this.x &&
+                    _this.room.game.players[i].y === _this.y) {
                     _this.room.game.players[i].hurt(0.5, "reaper");
                     hitPlayer = true;
                 }
@@ -15066,7 +15082,7 @@ var EnemySpawnAnimation = /** @class */ (function (_super) {
                 _this.frame = 0;
             for (var i = 0; i < _this.ANIM_COUNT; i++) {
                 var offsetX = 0;
-                game_1.Game.drawFX(Math.floor(_this.frame), 26, 1, 2, _this.x + Math.round(offsetX) / 16.0, _this.y - 1.5, 1, 2);
+                game_1.Game.drawFX(Math.floor(_this.frame), 27, 1, 1, _this.x + Math.round(offsetX) / 16.0, _this.y - 0.5, 1, 1);
             }
             if (Math.floor(_this.frame * 4) % 2 == 0)
                 _this.room.particles.push(new genericParticle_1.GenericParticle(_this.room, _this.x + 0.5 + Math.random() * 0.05 - 0.025, _this.y + Math.random() * 0.05 - 0.025, 0.25, Math.random() * 0.5, 0.025 * (Math.random() * 1 - 0.5), 0.025 * (Math.random() * 1 - 0.5), 0.2 * (Math.random() - 1), "#ffffff", 0));
@@ -15350,7 +15366,7 @@ var shotgun_1 = __webpack_require__(/*! ./weapon/shotgun */ "./src/weapon/shotgu
 var heart_1 = __webpack_require__(/*! ./item/heart */ "./src/item/heart.ts");
 var spear_1 = __webpack_require__(/*! ./weapon/spear */ "./src/weapon/spear.ts");
 var player_1 = __webpack_require__(/*! ./player */ "./src/player.ts");
-var slimeEnemy_1 = __webpack_require__(/*! ./entity/slimeEnemy */ "./src/entity/slimeEnemy.ts");
+var crabEnemy_1 = __webpack_require__(/*! ./entity/crabEnemy */ "./src/entity/crabEnemy.ts");
 var zombieEnemy_1 = __webpack_require__(/*! ./entity/zombieEnemy */ "./src/entity/zombieEnemy.ts");
 var bigSkullEnemy_1 = __webpack_require__(/*! ./entity/bigSkullEnemy */ "./src/entity/bigSkullEnemy.ts");
 var random_1 = __webpack_require__(/*! ./random */ "./src/random.ts");
@@ -16248,7 +16264,7 @@ var Room = /** @class */ (function () {
             var y = t.y;
             // Define the enemy tables for each depth level
             var tables = {
-                0: [1, 2, 3 /*, 5, 6, 7, 8, 9, 10, 11, 12, 13*/],
+                0: [1, 2, 3, 7 /*, 5, 6, 7, 8, 9, 10, 11, 12, 13*/],
                 1: [3, 4, 5, 6],
                 2: [3, 4, 5, 7, 8, 9, 10, 11, 12, 13],
                 3: [1, 1, 1, 2, 3, 3, 3, 4, 4, 5],
@@ -16294,7 +16310,7 @@ var Room = /** @class */ (function () {
                 // Add the selected enemy type to the room
                 switch (type) {
                     case 1:
-                        addEnemy(new slimeEnemy_1.SlimeEnemy(this_1, this_1.game, x, y, rand));
+                        addEnemy(new crabEnemy_1.CrabEnemy(this_1, this_1.game, x, y, rand));
                         break;
                     case 2:
                         addEnemy(new frogEnemy_1.FrogEnemy(this_1, this_1.game, x, y, rand));
