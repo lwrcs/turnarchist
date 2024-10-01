@@ -8,21 +8,30 @@ import { Shrooms } from "../item/shrooms";
 import { EntityType } from "./entity";
 
 export class Pumpkin extends Entity {
-  constructor(level: Room, game: Game, x: number, y: number) {
-    super(level, game, x, y);
-    this.room = level;
+  constructor(room: Room, game: Game, x: number, y: number) {
+    super(room, game, x, y);
+    this.room = room;
     this.health = 1;
     this.tileX = 13;
     this.tileY = 2;
     this.hasShadow = false;
     this.chainPushable = false;
-    this.entityType = EntityType.PROP
+    this.entityType = EntityType.PROP;
+  }
+
+  get name() {
+    return "pumpkin";
   }
 
   kill = () => {
     this.dead = true;
 
-    GenericParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, "#ac3232");
+    GenericParticle.spawnCluster(
+      this.room,
+      this.x + 0.5,
+      this.y + 0.5,
+      "#ac3232"
+    );
 
     this.room.items.push(new Shrooms(this.room, this.x, this.y));
   };

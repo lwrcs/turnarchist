@@ -30,8 +30,8 @@ export class ChargeEnemy extends Entity {
   trailFrame: number;
   drop: Item;
 
-  constructor(level: Room, game: Game, x: number, y: number, drop?: Item) {
-    super(level, game, x, y);
+  constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
+    super(room, game, x, y);
     this.ticks = 0;
     this.frame = 0;
     this.health = 1;
@@ -52,6 +52,10 @@ export class ChargeEnemy extends Entity {
       else if (dropProb < 0.02) this.drop = new GreenGem(this.room, 0, 0);
       else this.drop = new Coin(this.room, 0, 0);
     }
+  }
+
+  get name() {
+    return "charge knight";
   }
   hit = (): number => {
     return 1;
@@ -148,7 +152,7 @@ export class ChargeEnemy extends Entity {
                 (this.targetY <= this.game.players[i].y &&
                   this.game.players[i].y < this.y)))
           ) {
-            this.game.players[i].hurt(this.hit(), "charge knight");
+            this.game.players[i].hurt(this.hit(), this.name);
           }
         }
 

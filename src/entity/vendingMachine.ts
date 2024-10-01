@@ -20,7 +20,6 @@ import { Lantern } from "../item/lantern";
 import { RedGem } from "../item/redgem";
 import { EntityType } from "./entity";
 
-
 let OPEN_TIME = 150;
 let FILL_COLOR = "#5a595b";
 let OUTLINE_COLOR = "#292c36";
@@ -37,8 +36,15 @@ export class VendingMachine extends Entity {
   buyAnimAmount = 0;
   rand: () => number;
 
-  constructor(level: Room, game: Game, x: number, y: number, item: Item, rand: () => number) {
-    super(level, game, x, y);
+  constructor(
+    room: Room,
+    game: Game,
+    x: number,
+    y: number,
+    item: Item,
+    rand: () => number
+  ) {
+    super(room, game, x, y);
 
     this.rand = rand;
 
@@ -48,35 +54,39 @@ export class VendingMachine extends Entity {
     this.interactable = true;
 
     this.costItems = [];
-    this.entityType = EntityType.FRIENDLY
+    this.entityType = EntityType.FRIENDLY;
 
     this.item = item;
     if (this.item instanceof Shotgun) {
-      let g = new BlueGem(level, 0, 0);
+      let g = new BlueGem(room, 0, 0);
       g.stackCount = Game.randTable([5, 5, 6, 7], this.rand);
       this.costItems = [g];
     } else if (this.item instanceof Heart) {
-      let c = new Coin(level, 0, 0);
+      let c = new Coin(room, 0, 0);
       c.stackCount = 10;
       this.costItems = [c];
       this.isInf = true;
     } else if (this.item instanceof Spear) {
-      let g = new GreenGem(level, 0, 0);
+      let g = new GreenGem(room, 0, 0);
       g.stackCount = Game.randTable([5, 5, 6, 7], this.rand);
       this.costItems = [g];
     } else if (this.item instanceof Armor) {
-      let g = new Gold(level, 0, 0);
+      let g = new Gold(room, 0, 0);
       g.stackCount = Game.randTable([5, 5, 6, 7], this.rand);
       this.costItems = [g];
     } else if (this.item instanceof DualDagger) {
-      let g = new RedGem(level, 0, 0);
+      let g = new RedGem(room, 0, 0);
       g.stackCount = Game.randTable([5, 5, 6, 7], this.rand);
       this.costItems = [g];
     } else if (this.item instanceof Lantern) {
-      let g = new Coal(level, 0, 0);
+      let g = new Coal(room, 0, 0);
       g.stackCount = Game.randTable([25, 26, 27, 28], this.rand);
       this.costItems = [g];
     }
+  }
+
+  get name() {
+    return "shop";
   }
 
   interact = (player: Player) => {
@@ -85,7 +95,10 @@ export class VendingMachine extends Entity {
       this.open = true;
       this.playerOpened = player;
       this.openTime = Date.now();
-      if (this.playerOpened.openVendingMachine && this.playerOpened.openVendingMachine !== this)
+      if (
+        this.playerOpened.openVendingMachine &&
+        this.playerOpened.openVendingMachine !== this
+      )
         this.playerOpened.openVendingMachine.close();
       this.playerOpened.openVendingMachine = this;
     }
@@ -111,9 +124,13 @@ export class VendingMachine extends Entity {
       do {
         x = Game.rand(this.x - 1, this.x + 1, this.rand);
         y = Game.rand(this.y - 1, this.y + 1, this.rand);
-      } while ((x === this.x && y === this.y) || this.room.roomArray[x][y].isSolid() || this.room.entities.some(e => e.x === x && e.y === y));
+      } while (
+        (x === this.x && y === this.y) ||
+        this.room.roomArray[x][y].isSolid() ||
+        this.room.entities.some((e) => e.x === x && e.y === y)
+      );
 
-      let newItem = new (this.item.constructor as { new(): Item })();
+      let newItem = new (this.item.constructor as { new (): Item })();
       newItem = newItem.constructor(this.room, x, y);
       this.room.items.push(newItem);
 
@@ -123,7 +140,8 @@ export class VendingMachine extends Entity {
       }
 
       this.buyAnimAmount = 0.99;
-      if (this.playerOpened === this.game.players[this.game.localPlayerID]) this.game.shakeScreen(0, 4);
+      if (this.playerOpened === this.game.players[this.game.localPlayerID])
+        this.game.shakeScreen(0, 4);
     }
   };
 
@@ -147,7 +165,10 @@ export class VendingMachine extends Entity {
   drawTopLayer = (delta: number) => {
     this.drawableY = this.y;
 
-    if (this.open && this.playerOpened === this.game.players[this.game.localPlayerID]) {
+    if (
+      this.open &&
+      this.playerOpened === this.game.players[this.game.localPlayerID]
+    ) {
       let s = Math.min(18, (18 * (Date.now() - this.openTime)) / OPEN_TIME); // size of box
       let b = 2; // border
       let g = -2; // gap
@@ -189,14 +210,18 @@ export class VendingMachine extends Entity {
         for (let i = 0; i < this.costItems.length + 2; i++) {
           let drawX = Math.round(
             cx -
-            0.5 * width +
-            i * (s + 2 * b + g) +
-            b +
-            Math.floor(0.5 * s) -
-            0.5 * GameConstants.TILESIZE
+              0.5 * width +
+              i * (s + 2 * b + g) +
+              b +
+              Math.floor(0.5 * s) -
+              0.5 * GameConstants.TILESIZE
           );
           let drawY = Math.round(
-            cy - 0.5 * height + b + Math.floor(0.5 * s) - 0.5 * GameConstants.TILESIZE
+            cy -
+              0.5 * height +
+              b +
+              Math.floor(0.5 * s) -
+              0.5 * GameConstants.TILESIZE
           );
 
           let drawXScaled = drawX / GameConstants.TILESIZE;
@@ -204,7 +229,8 @@ export class VendingMachine extends Entity {
 
           if (i < this.costItems.length) {
             let a = 1;
-            if (!this.playerOpened.inventory.hasItemCount(this.costItems[i])) a = 0.15;
+            if (!this.playerOpened.inventory.hasItemCount(this.costItems[i]))
+              a = 0.15;
             this.costItems[i].drawIcon(delta, drawXScaled, drawYScaled, a);
           } else if (i === this.costItems.length) {
             Game.drawFX(0, 1, 1, 1, drawXScaled, drawYScaled, 1, 1);
@@ -214,7 +240,8 @@ export class VendingMachine extends Entity {
         }
       }
       this.buyAnimAmount *= this.buyAnimAmount;
-      if (GameConstants.ALPHA_ENABLED) Game.ctx.globalAlpha = this.buyAnimAmount;
+      if (GameConstants.ALPHA_ENABLED)
+        Game.ctx.globalAlpha = this.buyAnimAmount;
       Game.ctx.fillStyle = FULL_OUTLINE;
       Game.ctx.fillRect(
         Math.round(cx - 0.5 * width) - ob,

@@ -11,9 +11,9 @@ import { Resource } from "./resource";
 import { ImageParticle } from "../particle/imageParticle";
 
 export class Rock extends Resource {
-  constructor(level: Room, game: Game, x: number, y: number) {
-    super(level, game, x, y);
-    this.room = level;
+  constructor(room: Room, game: Game, x: number, y: number) {
+    super(room, game, x, y);
+    this.room = room;
     this.health = 2;
     this.tileX = 8;
     this.tileY = 2;
@@ -21,14 +21,12 @@ export class Rock extends Resource {
     this.chainPushable = false;
   }
 
+  get name() {
+    return "rock";
+  }
+
   hurtCallback = () => {
-    ImageParticle.spawnCluster(
-      this.room,
-      this.x + 0.5,
-      this.y + 0.5,
-      0,
-      24
-    ); //rock particle coord 0, 24
+    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 24); //rock particle coord 0, 24
 
     if (this.room === this.game.room) Sound.mine();
   };

@@ -8,9 +8,9 @@ import { EntityType } from "./entity";
 import { ImageParticle } from "../particle/imageParticle";
 
 export class Pot extends Entity {
-  constructor(level: Room, game: Game, x: number, y: number) {
-    super(level, game, x, y);
-    this.room = level;
+  constructor(room: Room, game: Game, x: number, y: number) {
+    super(room, game, x, y);
+    this.room = room;
     this.health = 1;
     this.tileX = 11;
     this.tileY = 0;
@@ -19,16 +19,14 @@ export class Pot extends Entity {
     this.entityType = EntityType.PROP;
   }
 
+  get name() {
+    return "pot";
+  }
+
   kill = () => {
     this.dead = true;
 
-    ImageParticle.spawnCluster(
-      this.room,
-      this.x + 0.5,
-      this.y + 0.5,
-      0,
-      29,
-    );
+    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 29);
   };
   killNoBones = () => {
     this.kill();

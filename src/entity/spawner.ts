@@ -25,13 +25,13 @@ export class Spawner extends Entity {
   rand: () => number;
 
   constructor(
-    level: Room,
+    room: Room,
     game: Game,
     x: number,
     y: number,
     rand: () => number
   ) {
-    super(level, game, x, y);
+    super(room, game, x, y);
     this.ticks = 0;
     this.health = 4;
     this.maxHealth = 4;
@@ -42,6 +42,10 @@ export class Spawner extends Entity {
     this.deathParticleColor = "#ffffff";
 
     this.rand = rand;
+  }
+
+  get name() {
+    return "reaper";
   }
 
   hit = (): number => {

@@ -18,12 +18,16 @@ import { Player } from "../player";
 import { ItemState, ItemType } from "../gameState";
 
 export class CoalResource extends Resource {
-  constructor(level: Room, game: Game, x: number, y: number) {
-    super(level, game, x, y);
+  constructor(room: Room, game: Game, x: number, y: number) {
+    super(room, game, x, y);
 
     this.tileX = 12;
     this.tileY = 0;
     this.health = 1;
+  }
+
+  get name() {
+    return "coal";
   }
 
   hurtCallback = () => {

@@ -13,14 +13,18 @@ import { Spellbook } from "../weapon/spellbook";
 import { EntityType } from "./entity";
 
 export class Resource extends Entity {
-  constructor(level: Room, game: Game, x: number, y: number) {
-    super(level, game, x, y);
+  constructor(room: Room, game: Game, x: number, y: number) {
+    super(room, game, x, y);
 
     this.tileX = 12;
     this.tileY = 0;
     this.health = 1;
     this.chainPushable = false;
     this.entityType = EntityType.RESOURCE;
+  }
+
+  get name() {
+    return "resource";
   }
 
   hurt = (playerHitBy: Player, damage: number) => {

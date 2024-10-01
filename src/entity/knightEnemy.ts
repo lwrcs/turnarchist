@@ -19,14 +19,14 @@ export class KnightEnemy extends Entity {
   drop: Item;
 
   constructor(
-    level: Room,
+    room: Room,
     game: Game,
     x: number,
     y: number,
     rand: () => number,
     drop?: Item
   ) {
-    super(level, game, x, y);
+    super(room, game, x, y);
     this.ticks = 0;
     this.frame = 0;
     this.health = 2;
@@ -45,6 +45,9 @@ export class KnightEnemy extends Entity {
       if (dropProb < 0.025) this.drop = new DualDagger(this.room, 0, 0);
       else this.drop = new Coin(this.room, 0, 0);
     }
+  }
+  get name() {
+    return "burrow knight";
   }
 
   hurt = (playerHitBy: Player, damage: number) => {
@@ -135,7 +138,7 @@ export class KnightEnemy extends Entity {
                   this.game.players[i].x === moves[0].pos.x &&
                   this.game.players[i].y === moves[0].pos.y
                 ) {
-                  this.game.players[i].hurt(this.hit(), "burrow knight");
+                  this.game.players[i].hurt(this.hit(), this.name);
                   this.drawX = 0.5 * (this.x - this.game.players[i].x);
                   this.drawY = 0.5 * (this.y - this.game.players[i].y);
                   if (

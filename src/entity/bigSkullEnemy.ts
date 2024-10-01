@@ -23,14 +23,14 @@ export class BigSkullEnemy extends Entity {
   drops: Array<Item>;
 
   constructor(
-    level: Room,
+    room: Room,
     game: Game,
     x: number,
     y: number,
     rand: () => number,
     drop?: Item
   ) {
-    super(level, game, x, y);
+    super(room, game, x, y);
     this.w = 2;
     this.h = 2;
     this.ticks = 0;
@@ -56,6 +56,10 @@ export class BigSkullEnemy extends Entity {
       else if (dropProb < 0.1) this.drops.push(new RedGem(this.room, 0, 0));
       else this.drops.push(new Coin(this.room, 0, 0));
     }
+  }
+
+  get name() {
+    return "giant skeleton";
   }
 
   addHitWarnings = () => {
@@ -190,7 +194,7 @@ export class BigSkullEnemy extends Entity {
                   this.game.rooms[this.game.players[i].levelID] === this.room &&
                   wouldHit(this.game.players[i], moveX, moveY)
                 ) {
-                  this.game.players[i].hurt(this.hit(), "big skeleton");
+                  this.game.players[i].hurt(this.hit(), this.name);
                   this.drawX = 0.5 * (this.x - this.game.players[i].x);
                   this.drawY = 0.5 * (this.y - this.game.players[i].y);
                   if (

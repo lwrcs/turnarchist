@@ -19,7 +19,7 @@ export class TombStone extends Entity {
   rand: () => number;
 
   constructor(
-    level: Room,
+    room: Room,
     game: Game,
     x: number,
     y: number,
@@ -27,9 +27,9 @@ export class TombStone extends Entity {
     rand: () => number,
     drop?: Item
   ) {
-    super(level, game, x, y);
+    super(room, game, x, y);
     this.skinType = skinType;
-    this.room = level;
+    this.room = room;
     this.health = 2;
     this.maxHealth = 2;
     this.tileX = 11 + this.skinType;
@@ -46,6 +46,10 @@ export class TombStone extends Entity {
     if (dropProb < 0.05) this.drop = new Spellbook(this.room, 0, 0);
   }
 
+  get name() {
+    return "tombstone";
+  }
+
   kill = () => {
     this.dead = true;
     this.dropLoot();
@@ -53,12 +57,7 @@ export class TombStone extends Entity {
 
   hurt = (playerHitBy: Player, damage: number) => {
     this.healthBar.hurt();
-    ImageParticle.spawnCluster(
-      this.room,
-      this.x + 0.5,
-      this.y + 0.5,
-      0,
-      25    );
+    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 25);
 
     setTimeout(() => {
       Sound.hurt();
@@ -92,14 +91,13 @@ export class TombStone extends Entity {
             }
           }
         }
-        Sound.skeleSpawn()
+        Sound.skeleSpawn();
       }
       this.tileX += 2;
       //draw half broken tombstone based on skintype after it takes one damage
     }
     if (this.health <= 0) this.kill(), Sound.breakRock();
     else this.hurtCallback(), Sound.hit();
-
   };
 
   draw = (delta: number) => {

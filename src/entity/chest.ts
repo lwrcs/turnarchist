@@ -17,13 +17,13 @@ import { EntityType } from "./entity";
 
 export class Chest extends Entity {
   constructor(
-    level: Room,
+    room: Room,
     game: Game,
     x: number,
     y: number,
     rand: () => number
   ) {
-    super(level, game, x, y);
+    super(room, game, x, y);
 
     this.tileX = 4;
     this.tileY = 0;
@@ -52,6 +52,10 @@ export class Chest extends Entity {
         this.drop = new Armor(this.room, this.x, this.y);
         break;
     }
+  }
+
+  get name() {
+    return "chest";
   }
 
   kill = () => {

@@ -247,7 +247,7 @@ export class Player extends Drawable {
     let newMove = { x: x, y: y };
     // TODO don't move if hit by enemy
     this.game.rooms[this.levelID].catchUp();
-
+    //if (this.wouldHurt(x, y)) return;
     if (this.dead) return;
 
     for (let i = 0; i < 2; i++)
@@ -362,6 +362,15 @@ export class Player extends Drawable {
         this.drawX = (this.x - x) * 0.5;
         this.drawY = (this.y - y) * 0.5;
         if (other.canUnlock(this)) other.unlock(this);
+      }
+    }
+  };
+
+  wouldHurt = (x: number, y: number) => {
+    for (let h of this.game.rooms[this.levelID].hitwarnings) {
+      if (h instanceof HitWarning && h.x == x && h.y == y) return true;
+      else {
+        return false;
       }
     }
   };

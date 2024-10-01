@@ -13,12 +13,16 @@ import { Sound } from "../sound";
 import { GameState } from "../gameState";
 
 export class EmeraldResource extends Resource {
-  constructor(level: Room, game: Game, x: number, y: number) {
-    super(level, game, x, y);
+  constructor(room: Room, game: Game, x: number, y: number) {
+    super(room, game, x, y);
 
     this.tileX = 14;
     this.tileY = 0;
     this.health = 3;
+  }
+
+  get name() {
+    return "emerald";
   }
 
   hurtCallback = () => {

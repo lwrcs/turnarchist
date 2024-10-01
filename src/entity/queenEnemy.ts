@@ -24,14 +24,14 @@ export class QueenEnemy extends Entity {
   drop: Item;
 
   constructor(
-    level: Room,
+    room: Room,
     game: Game,
     x: number,
     y: number,
     rand: () => number,
     drop?: Item
   ) {
-    super(level, game, x, y);
+    super(room, game, x, y);
     this.ticks = 0;
     this.frame = 0;
     this.health = 1;
@@ -40,7 +40,6 @@ export class QueenEnemy extends Entity {
     this.tileY = 8;
     this.seenPlayer = false;
     this.aggro = false;
-    this.deathParticleColor = "#ffffff";
 
     if (drop) this.drop = drop;
     else {
@@ -49,6 +48,10 @@ export class QueenEnemy extends Entity {
       else if (dropProb < 0.04) this.drop = new GreenGem(this.room, 0, 0);
       else this.drop = new Coin(this.room, 0, 0);
     }
+  }
+
+  get name() {
+    return "queen";
   }
 
   tryMove = (x: number, y: number) => {
@@ -134,7 +137,7 @@ export class QueenEnemy extends Entity {
             this.seenPlayer = true;
             if (player === this.game.players[this.game.localPlayerID])
               this.alertTicks = 1;
-            this.makeHitWarnings(true, true, false, this.direction)
+            this.makeHitWarnings(true, true, false, this.direction);
           }
         }
       } else if (this.seenPlayer) {
@@ -196,7 +199,7 @@ export class QueenEnemy extends Entity {
                 this.game.players[i].x === moveX &&
                 this.game.players[i].y === moveY
               ) {
-                this.game.players[i].hurt(this.hit(), "queen");
+                this.game.players[i].hurt(this.hit(), this.name);
                 this.drawX = 0.5 * (this.x - this.game.players[i].x);
                 this.drawY = 0.5 * (this.y - this.game.players[i].y);
                 if (
@@ -213,7 +216,7 @@ export class QueenEnemy extends Entity {
               this.drawY = this.y - oldY;
             }
           }
-          this.makeHitWarnings(true, true, false, this.direction)
+          this.makeHitWarnings(true, true, false, this.direction);
         }
 
         let targetPlayerOffline =
@@ -233,7 +236,7 @@ export class QueenEnemy extends Entity {
                 this.facePlayer(player);
                 if (player === this.game.players[this.game.localPlayerID])
                   this.alertTicks = 1;
-                this.makeHitWarnings(true, true, false, this.direction)
+                this.makeHitWarnings(true, true, false, this.direction);
               }
             }
           }

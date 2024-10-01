@@ -25,14 +25,14 @@ export class BishopEnemy extends Entity {
   drop: Item;
 
   constructor(
-    level: Room,
+    room: Room,
     game: Game,
     x: number,
     y: number,
     rand: () => number,
     drop?: Item
   ) {
-    super(level, game, x, y);
+    super(room, game, x, y);
     this.ticks = 0;
     this.frame = 0;
     this.health = 1;
@@ -41,7 +41,6 @@ export class BishopEnemy extends Entity {
     this.tileY = 8;
     this.seenPlayer = false;
     this.aggro = false;
-    this.deathParticleColor = "#ffffff";
 
     if (drop) this.drop = drop;
     else {
@@ -50,6 +49,10 @@ export class BishopEnemy extends Entity {
       else if (dropProb < 0.04) this.drop = new GreenGem(this.room, 0, 0);
       else this.drop = new Coin(this.room, 0, 0);
     }
+  }
+
+  get name() {
+    return "bishop";
   }
 
   tryMove = (x: number, y: number) => {
@@ -198,7 +201,7 @@ export class BishopEnemy extends Entity {
                 this.game.players[i].x === moveX &&
                 this.game.players[i].y === moveY
               ) {
-                this.game.players[i].hurt(this.hit(), "bishop");
+                this.game.players[i].hurt(this.hit(), this.name);
                 this.drawX = 0.5 * (this.x - this.game.players[i].x);
                 this.drawY = 0.5 * (this.y - this.game.players[i].y);
                 hitPlayer = true;

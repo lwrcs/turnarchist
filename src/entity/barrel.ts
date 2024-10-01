@@ -8,15 +8,19 @@ import { EntityType } from "./entity";
 import { ImageParticle } from "../particle/imageParticle";
 
 export class Barrel extends Entity {
-  constructor(level: Room, game: Game, x: number, y: number) {
-    super(level, game, x, y);
-    this.room = level;
+  constructor(room: Room, game: Game, x: number, y: number) {
+    super(room, game, x, y);
+    this.room = room;
     this.health = 1;
     this.tileX = 1;
     this.tileY = 0;
     this.hasShadow = false;
     this.pushable = true;
     this.entityType = EntityType.PROP;
+  }
+
+  get name() {
+    return "barrel";
   }
 
   kill = () => {

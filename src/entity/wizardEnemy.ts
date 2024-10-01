@@ -32,8 +32,15 @@ export class WizardEnemy extends Entity {
   rand: () => number;
   readonly ATTACK_RADIUS = 5;
 
-  constructor(level: Room, game: Game, x: number, y: number, rand: () => number, drop?: Item) {
-    super(level, game, x, y);
+  constructor(
+    room: Room,
+    game: Game,
+    x: number,
+    y: number,
+    rand: () => number,
+    drop?: Item
+  ) {
+    super(room, game, x, y);
     this.ticks = 0;
     this.health = 1;
     this.tileX = 6;
@@ -42,14 +49,18 @@ export class WizardEnemy extends Entity {
     this.state = WizardState.attack;
     this.seenPlayer = false;
     this.alertTicks = 0;
-    this.deathParticleColor = "#ffffff";
     this.rand = rand;
 
     if (drop) this.drop = drop;
     else {
-      if (this.rand() < 0.02) this.drop = new BlueGem(this.room, this.x, this.y);
+      if (this.rand() < 0.02)
+        this.drop = new BlueGem(this.room, this.x, this.y);
       else this.drop = new Coin(this.room, this.x, this.y);
     }
+  }
+
+  get name() {
+    return "wizard bomber";
   }
 
   hit = (): number => {
@@ -59,15 +70,18 @@ export class WizardEnemy extends Entity {
   withinAttackingRangeOfPlayer = (): boolean => {
     let withinRange = false;
     for (const i in this.game.players) {
-      if ((this.x - this.game.players[i].x) ** 2 + (this.y - this.game.players[i].y) ** 2 <=
-        this.ATTACK_RADIUS ** 2) {
+      if (
+        (this.x - this.game.players[i].x) ** 2 +
+          (this.y - this.game.players[i].y) ** 2 <=
+        this.ATTACK_RADIUS ** 2
+      ) {
         withinRange = true;
       }
     }
     return withinRange;
   };
 
-  shuffle = a => {
+  shuffle = (a) => {
     let j, x, i;
     for (i = a.length - 1; i > 0; i--) {
       j = Math.floor(Random.rand() * (i + 1));
@@ -95,33 +109,72 @@ export class WizardEnemy extends Entity {
             this.alertTicks = 1;
           }
         }
-      }
-      else if (this.seenPlayer) {
+      } else if (this.seenPlayer) {
         this.alertTicks = Math.max(0, this.alertTicks - 1);
         switch (this.state) {
           case WizardState.attack:
-            if (this.room.getTile(this.x - 1, this.y) && !this.room.roomArray[this.x - 1][this.y].isSolid()) {
-              this.room.projectiles.push(new WizardFireball(this, this.x - 1, this.y));
-              if (this.room.getTile(this.x - 2, this.y) && !this.room.roomArray[this.x - 2][this.y].isSolid()) {
-                this.room.projectiles.push(new WizardFireball(this, this.x - 2, this.y));
+            if (
+              this.room.getTile(this.x - 1, this.y) &&
+              !this.room.roomArray[this.x - 1][this.y].isSolid()
+            ) {
+              this.room.projectiles.push(
+                new WizardFireball(this, this.x - 1, this.y)
+              );
+              if (
+                this.room.getTile(this.x - 2, this.y) &&
+                !this.room.roomArray[this.x - 2][this.y].isSolid()
+              ) {
+                this.room.projectiles.push(
+                  new WizardFireball(this, this.x - 2, this.y)
+                );
               }
             }
-            if (this.room.getTile(this.x + 1, this.y) && !this.room.roomArray[this.x + 1][this.y].isSolid()) {
-              this.room.projectiles.push(new WizardFireball(this, this.x + 1, this.y));
-              if (this.room.getTile(this.x + 2, this.y) && !this.room.roomArray[this.x + 2][this.y].isSolid()) {
-                this.room.projectiles.push(new WizardFireball(this, this.x + 2, this.y));
+            if (
+              this.room.getTile(this.x + 1, this.y) &&
+              !this.room.roomArray[this.x + 1][this.y].isSolid()
+            ) {
+              this.room.projectiles.push(
+                new WizardFireball(this, this.x + 1, this.y)
+              );
+              if (
+                this.room.getTile(this.x + 2, this.y) &&
+                !this.room.roomArray[this.x + 2][this.y].isSolid()
+              ) {
+                this.room.projectiles.push(
+                  new WizardFireball(this, this.x + 2, this.y)
+                );
               }
             }
-            if (this.room.getTile(this.x, this.y - 1) && !this.room.roomArray[this.x][this.y - 1].isSolid()) {
-              this.room.projectiles.push(new WizardFireball(this, this.x, this.y - 1));
-              if (this.room.getTile(this.x, this.y - 2) && !this.room.roomArray[this.x][this.y - 2].isSolid()) {
-                this.room.projectiles.push(new WizardFireball(this, this.x, this.y - 2));
+            if (
+              this.room.getTile(this.x, this.y - 1) &&
+              !this.room.roomArray[this.x][this.y - 1].isSolid()
+            ) {
+              this.room.projectiles.push(
+                new WizardFireball(this, this.x, this.y - 1)
+              );
+              if (
+                this.room.getTile(this.x, this.y - 2) &&
+                !this.room.roomArray[this.x][this.y - 2].isSolid()
+              ) {
+                this.room.projectiles.push(
+                  new WizardFireball(this, this.x, this.y - 2)
+                );
               }
             }
-            if (this.room.getTile(this.x, this.y + 1) && !this.room.roomArray[this.x][this.y + 1].isSolid()) {
-              this.room.projectiles.push(new WizardFireball(this, this.x, this.y + 1));
-              if (this.room.getTile(this.x, this.y + 2) && !this.room.roomArray[this.x][this.y + 2].isSolid()) {
-                this.room.projectiles.push(new WizardFireball(this, this.x, this.y + 2));
+            if (
+              this.room.getTile(this.x, this.y + 1) &&
+              !this.room.roomArray[this.x][this.y + 1].isSolid()
+            ) {
+              this.room.projectiles.push(
+                new WizardFireball(this, this.x, this.y + 1)
+              );
+              if (
+                this.room.getTile(this.x, this.y + 2) &&
+                !this.room.roomArray[this.x][this.y + 2].isSolid()
+              ) {
+                this.room.projectiles.push(
+                  new WizardFireball(this, this.x, this.y + 2)
+                );
               }
             }
             this.state = WizardState.justAttacked;
@@ -135,7 +188,10 @@ export class WizardEnemy extends Entity {
             let min = 100000;
             let bestPos;
             let emptyTiles = this.shuffle(this.room.getEmptyTiles());
-            let optimalDist = Game.randTable([2, 2, 3, 3, 3, 3, 3], Random.rand);
+            let optimalDist = Game.randTable(
+              [2, 2, 3, 3, 3, 3, 3],
+              Random.rand
+            );
             // pick a random player to target
             let player_ids = [];
             for (const i in this.game.players) player_ids.push(i);
@@ -143,7 +199,8 @@ export class WizardEnemy extends Entity {
             for (let t of emptyTiles) {
               let newPos = t;
               let dist =
-                Math.abs(newPos.x - this.game.players[target_player_id].x) + Math.abs(newPos.y - this.game.players[target_player_id].y);
+                Math.abs(newPos.x - this.game.players[target_player_id].x) +
+                Math.abs(newPos.y - this.game.players[target_player_id].y);
               if (Math.abs(dist - optimalDist) < Math.abs(min - optimalDist)) {
                 min = dist;
                 bestPos = newPos;
@@ -236,5 +293,4 @@ export class WizardEnemy extends Entity {
 
     this.dropLoot();
   };
-
 }

@@ -52,7 +52,6 @@ export class Entity extends Drawable {
   interactable: boolean; // can the player interact
   deathParticleColor: string;
   healthBar: HealthBar;
-  drop: Item;
   sleepingZFrame = 0;
   alertTicks: number;
   exclamationFrame: number;
@@ -64,11 +63,12 @@ export class Entity extends Drawable {
   crushed: Boolean;
   crushVertical: Boolean;
   hitBy: Player;
+  drop: Item;
 
-  constructor(level: Room, game: Game, x: number, y: number) {
+  constructor(room: Room, game: Game, x: number, y: number) {
     super();
 
-    this.room = level;
+    this.room = room;
     this.x = x;
     this.y = y;
     this.w = 1;
@@ -87,17 +87,12 @@ export class Entity extends Drawable {
     this.pushable = false;
     this.chainPushable = true;
     this.interactable = false;
-    this.deathParticleColor = "#ff00ff";
     this.healthBar = new HealthBar();
     this.alertTicks = 0;
     this.exclamationFrame = 0;
     this.lastX = x;
     this.lastY = y;
     this.entityType = EntityType.ENEMY;
-    this.crushX = 1;
-    this.crushY = 1;
-    this.crushed = false;
-    this.crushVertical = false;
     this.hitBy = this.getPlayer();
   }
 
@@ -156,7 +151,7 @@ export class Entity extends Drawable {
       x >= this.x && x < this.x + this.w && y >= this.y && y < this.y + this.h
     );
   };
-  
+
   getPlayer = () => {
     const maxDistance = 138291380921; // pulled this straight outta my ass
     let closestDistance = maxDistance;
@@ -172,12 +167,13 @@ export class Entity extends Drawable {
     }
 
     if (closestDistance === maxDistance) return false;
-    else return closestPlayer;  }
+    else return closestPlayer;
+  };
 
   lastHitBy = (player: Player) => {
     this.hitBy = player;
-    this.game.pushMessage(`${this.hitBy}`)
-  }
+    this.game.pushMessage(`${this.hitBy}`);
+  };
 
   hurt = (playerHitBy: Player, damage: number) => {
     this.healthBar.hurt();
@@ -300,7 +296,9 @@ export class Entity extends Drawable {
         this.shadeAmount()
       );
     }
-    if (this.crushed){this.crushAnim(delta)}
+    if (this.crushed) {
+      this.crushAnim(delta);
+    }
   };
 
   tick = () => {};

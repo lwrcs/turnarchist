@@ -4491,8 +4491,8 @@ var spiketrap_1 = __webpack_require__(/*! ../tile/spiketrap */ "./src/tile/spike
 var pickaxe_1 = __webpack_require__(/*! ../weapon/pickaxe */ "./src/weapon/pickaxe.ts");
 var ArmoredzombieEnemy = /** @class */ (function (_super) {
     __extends(ArmoredzombieEnemy, _super);
-    function ArmoredzombieEnemy(level, game, x, y, rand, drop) {
-        var _this = _super.call(this, level, game, x, y) || this;
+    function ArmoredzombieEnemy(room, game, x, y, rand, drop) {
+        var _this = _super.call(this, room, game, x, y) || this;
         _this.hit = function () {
             return 1;
         };
@@ -4588,7 +4588,7 @@ var ArmoredzombieEnemy = /** @class */ (function (_super) {
                                         _this.game.players[i].x === moveX &&
                                         _this.game.players[i].y === moveY &&
                                         oldDir == _this.direction) {
-                                        _this.game.players[i].hurt(_this.hit(), "armored zombie");
+                                        _this.game.players[i].hurt(_this.hit(), _this.name);
                                         _this.drawX = 0.5 * (_this.x - _this.game.players[i].x);
                                         _this.drawY = 0.5 * (_this.y - _this.game.players[i].y);
                                         if (_this.game.players[i] ===
@@ -4719,6 +4719,13 @@ var ArmoredzombieEnemy = /** @class */ (function (_super) {
         }
         return _this;
     }
+    Object.defineProperty(ArmoredzombieEnemy.prototype, "name", {
+        get: function () {
+            return "zombie";
+        },
+        enumerable: false,
+        configurable: true
+    });
     return ArmoredzombieEnemy;
 }(entity_1.Entity));
 exports.ArmoredzombieEnemy = ArmoredzombieEnemy;
@@ -4757,8 +4764,8 @@ var entity_2 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var imageParticle_1 = __webpack_require__(/*! ../particle/imageParticle */ "./src/particle/imageParticle.ts");
 var Barrel = /** @class */ (function (_super) {
     __extends(Barrel, _super);
-    function Barrel(level, game, x, y) {
-        var _this = _super.call(this, level, game, x, y) || this;
+    function Barrel(room, game, x, y) {
+        var _this = _super.call(this, room, game, x, y) || this;
         _this.kill = function () {
             imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 3, 25);
             _this.dead = true;
@@ -4777,7 +4784,7 @@ var Barrel = /** @class */ (function (_super) {
             _this.drawX += -0.5 * _this.drawX;
             _this.drawY += -0.5 * _this.drawY;
         };
-        _this.room = level;
+        _this.room = room;
         _this.health = 1;
         _this.tileX = 1;
         _this.tileY = 0;
@@ -4786,6 +4793,13 @@ var Barrel = /** @class */ (function (_super) {
         _this.entityType = entity_2.EntityType.PROP;
         return _this;
     }
+    Object.defineProperty(Barrel.prototype, "name", {
+        get: function () {
+            return "barrel";
+        },
+        enumerable: false,
+        configurable: true
+    });
     return Barrel;
 }(entity_1.Entity));
 exports.Barrel = Barrel;
@@ -4829,8 +4843,8 @@ var gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameCon
 var deathParticle_1 = __webpack_require__(/*! ../particle/deathParticle */ "./src/particle/deathParticle.ts");
 var BigKnightEnemy = /** @class */ (function (_super) {
     __extends(BigKnightEnemy, _super);
-    function BigKnightEnemy(level, game, x, y, rand, drop) {
-        var _this = _super.call(this, level, game, x, y) || this;
+    function BigKnightEnemy(room, game, x, y, rand, drop) {
+        var _this = _super.call(this, room, game, x, y) || this;
         _this.REGEN_TICKS = 5;
         _this.addHitWarnings = function () {
             _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y, _this.x, _this.y));
@@ -4941,7 +4955,7 @@ var BigKnightEnemy = /** @class */ (function (_super) {
                                 for (var i in _this.game.players) {
                                     if (_this.game.rooms[_this.game.players[i].levelID] === _this.room &&
                                         wouldHit(_this.game.players[i], moveX, moveY)) {
-                                        _this.game.players[i].hurt(_this.hit(), "big knight");
+                                        _this.game.players[i].hurt(_this.hit(), _this.name);
                                         _this.drawX = 0.5 * (_this.x - _this.game.players[i].x);
                                         _this.drawY = 0.5 * (_this.y - _this.game.players[i].y);
                                         if (_this.game.players[i] ===
@@ -5064,6 +5078,13 @@ var BigKnightEnemy = /** @class */ (function (_super) {
         }
         return _this;
     }
+    Object.defineProperty(BigKnightEnemy.prototype, "name", {
+        get: function () {
+            return "giant knight";
+        },
+        enumerable: false,
+        configurable: true
+    });
     return BigKnightEnemy;
 }(entity_1.Entity));
 exports.BigKnightEnemy = BigKnightEnemy;
@@ -5107,8 +5128,8 @@ var gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameCon
 var deathParticle_1 = __webpack_require__(/*! ../particle/deathParticle */ "./src/particle/deathParticle.ts");
 var BigSkullEnemy = /** @class */ (function (_super) {
     __extends(BigSkullEnemy, _super);
-    function BigSkullEnemy(level, game, x, y, rand, drop) {
-        var _this = _super.call(this, level, game, x, y) || this;
+    function BigSkullEnemy(room, game, x, y, rand, drop) {
+        var _this = _super.call(this, room, game, x, y) || this;
         _this.REGEN_TICKS = 5;
         _this.addHitWarnings = function () {
             _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y, _this.x, _this.y));
@@ -5219,7 +5240,7 @@ var BigSkullEnemy = /** @class */ (function (_super) {
                                 for (var i in _this.game.players) {
                                     if (_this.game.rooms[_this.game.players[i].levelID] === _this.room &&
                                         wouldHit(_this.game.players[i], moveX, moveY)) {
-                                        _this.game.players[i].hurt(_this.hit(), "big skeleton");
+                                        _this.game.players[i].hurt(_this.hit(), _this.name);
                                         _this.drawX = 0.5 * (_this.x - _this.game.players[i].x);
                                         _this.drawY = 0.5 * (_this.y - _this.game.players[i].y);
                                         if (_this.game.players[i] ===
@@ -5374,6 +5395,13 @@ var BigSkullEnemy = /** @class */ (function (_super) {
         }
         return _this;
     }
+    Object.defineProperty(BigSkullEnemy.prototype, "name", {
+        get: function () {
+            return "giant skeleton";
+        },
+        enumerable: false,
+        configurable: true
+    });
     return BigSkullEnemy;
 }(entity_1.Entity));
 exports.BigSkullEnemy = BigSkullEnemy;
@@ -5418,8 +5446,8 @@ var candle_1 = __webpack_require__(/*! ../item/candle */ "./src/item/candle.ts")
 var door_1 = __webpack_require__(/*! ../tile/door */ "./src/tile/door.ts");
 var BishopEnemy = /** @class */ (function (_super) {
     __extends(BishopEnemy, _super);
-    function BishopEnemy(level, game, x, y, rand, drop) {
-        var _this = _super.call(this, level, game, x, y) || this;
+    function BishopEnemy(room, game, x, y, rand, drop) {
+        var _this = _super.call(this, room, game, x, y) || this;
         _this.tryMove = function (x, y) {
             var pointWouldBeIn = function (someX, someY) {
                 return (someX >= x && someX < x + _this.w && someY >= y && someY < y + _this.h);
@@ -5555,7 +5583,7 @@ var BishopEnemy = /** @class */ (function (_super) {
                                 if (_this.game.rooms[_this.game.players[i].levelID] === _this.room &&
                                     _this.game.players[i].x === moveX &&
                                     _this.game.players[i].y === moveY) {
-                                    _this.game.players[i].hurt(_this.hit(), "bishop");
+                                    _this.game.players[i].hurt(_this.hit(), _this.name);
                                     _this.drawX = 0.5 * (_this.x - _this.game.players[i].x);
                                     _this.drawY = 0.5 * (_this.y - _this.game.players[i].y);
                                     hitPlayer = true;
@@ -5618,7 +5646,6 @@ var BishopEnemy = /** @class */ (function (_super) {
         _this.tileY = 8;
         _this.seenPlayer = false;
         _this.aggro = false;
-        _this.deathParticleColor = "#ffffff";
         if (drop)
             _this.drop = drop;
         else {
@@ -5632,6 +5659,13 @@ var BishopEnemy = /** @class */ (function (_super) {
         }
         return _this;
     }
+    Object.defineProperty(BishopEnemy.prototype, "name", {
+        get: function () {
+            return "bishop";
+        },
+        enumerable: false,
+        configurable: true
+    });
     return BishopEnemy;
 }(entity_1.Entity));
 exports.BishopEnemy = BishopEnemy;
@@ -5682,8 +5716,8 @@ var ChargeEnemyState;
 })(ChargeEnemyState = exports.ChargeEnemyState || (exports.ChargeEnemyState = {}));
 var ChargeEnemy = /** @class */ (function (_super) {
     __extends(ChargeEnemy, _super);
-    function ChargeEnemy(level, game, x, y, drop) {
-        var _this = _super.call(this, level, game, x, y) || this;
+    function ChargeEnemy(room, game, x, y, drop) {
+        var _this = _super.call(this, room, game, x, y) || this;
         _this.hit = function () {
             return 1;
         };
@@ -5779,7 +5813,7 @@ var ChargeEnemy = /** @class */ (function (_super) {
                                     _this.game.players[i].y <= _this.targetY) ||
                                     (_this.targetY <= _this.game.players[i].y &&
                                         _this.game.players[i].y < _this.y)))) {
-                            _this.game.players[i].hurt(_this.hit(), "charge knight");
+                            _this.game.players[i].hurt(_this.hit(), _this.name);
                         }
                     }
                     _this.startX = _this.x;
@@ -5886,6 +5920,13 @@ var ChargeEnemy = /** @class */ (function (_super) {
         }
         return _this;
     }
+    Object.defineProperty(ChargeEnemy.prototype, "name", {
+        get: function () {
+            return "charge knight";
+        },
+        enumerable: false,
+        configurable: true
+    });
     return ChargeEnemy;
 }(entity_1.Entity));
 exports.ChargeEnemy = ChargeEnemy;
@@ -5931,8 +5972,8 @@ var bluegem_1 = __webpack_require__(/*! ../item/bluegem */ "./src/item/bluegem.t
 var entity_2 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var Chest = /** @class */ (function (_super) {
     __extends(Chest, _super);
-    function Chest(level, game, x, y, rand) {
-        var _this = _super.call(this, level, game, x, y) || this;
+    function Chest(room, game, x, y, rand) {
+        var _this = _super.call(this, room, game, x, y) || this;
         _this.kill = function () {
             if (_this.room === _this.game.room)
                 sound_1.Sound.chest();
@@ -5978,6 +6019,13 @@ var Chest = /** @class */ (function (_super) {
         }
         return _this;
     }
+    Object.defineProperty(Chest.prototype, "name", {
+        get: function () {
+            return "chest";
+        },
+        enumerable: false,
+        configurable: true
+    });
     return Chest;
 }(entity_1.Entity));
 exports.Chest = Chest;
@@ -6016,8 +6064,8 @@ var coal_1 = __webpack_require__(/*! ../item/coal */ "./src/item/coal.ts");
 var sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
 var CoalResource = /** @class */ (function (_super) {
     __extends(CoalResource, _super);
-    function CoalResource(level, game, x, y) {
-        var _this = _super.call(this, level, game, x, y) || this;
+    function CoalResource(room, game, x, y) {
+        var _this = _super.call(this, room, game, x, y) || this;
         _this.hurtCallback = function () {
             genericParticle_1.GenericParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, "#ffffff");
             if (_this.room === _this.game.room)
@@ -6040,6 +6088,13 @@ var CoalResource = /** @class */ (function (_super) {
         _this.health = 1;
         return _this;
     }
+    Object.defineProperty(CoalResource.prototype, "name", {
+        get: function () {
+            return "coal";
+        },
+        enumerable: false,
+        configurable: true
+    });
     return CoalResource;
 }(resource_1.Resource));
 exports.CoalResource = CoalResource;
@@ -6081,8 +6136,8 @@ var gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameCon
 var imageParticle_1 = __webpack_require__(/*! ../particle/imageParticle */ "./src/particle/imageParticle.ts");
 var CrabEnemy = /** @class */ (function (_super) {
     __extends(CrabEnemy, _super);
-    function CrabEnemy(level, game, x, y, rand, drop) {
-        var _this = _super.call(this, level, game, x, y) || this;
+    function CrabEnemy(room, game, x, y, rand, drop) {
+        var _this = _super.call(this, room, game, x, y) || this;
         _this.hurt = function (playerHitBy, damage) {
             if (playerHitBy) {
                 _this.aggro = true;
@@ -6164,7 +6219,7 @@ var CrabEnemy = /** @class */ (function (_super) {
                                     if (_this.game.rooms[_this.game.players[i].levelID] === _this.room &&
                                         _this.game.players[i].x === moves[0].pos.x &&
                                         _this.game.players[i].y === moves[0].pos.y) {
-                                        _this.game.players[i].hurt(_this.hit(), "crab");
+                                        _this.game.players[i].hurt(_this.hit(), _this.name);
                                         _this.drawX = 0.5 * (_this.x - _this.game.players[i].x);
                                         _this.drawY = 0.5 * (_this.y - _this.game.players[i].y);
                                         if (_this.game.players[i] ===
@@ -6259,6 +6314,13 @@ var CrabEnemy = /** @class */ (function (_super) {
         }
         return _this;
     }
+    Object.defineProperty(CrabEnemy.prototype, "name", {
+        get: function () {
+            return "crab";
+        },
+        enumerable: false,
+        configurable: true
+    });
     return CrabEnemy;
 }(entity_1.Entity));
 exports.CrabEnemy = CrabEnemy;
@@ -6297,8 +6359,8 @@ var entity_2 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var imageParticle_1 = __webpack_require__(/*! ../particle/imageParticle */ "./src/particle/imageParticle.ts");
 var Crate = /** @class */ (function (_super) {
     __extends(Crate, _super);
-    function Crate(level, game, x, y) {
-        var _this = _super.call(this, level, game, x, y) || this;
+    function Crate(room, game, x, y) {
+        var _this = _super.call(this, room, game, x, y) || this;
         _this.kill = function () {
             imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 3, 26);
             _this.dead = true;
@@ -6317,7 +6379,7 @@ var Crate = /** @class */ (function (_super) {
             _this.drawX += -0.5 * _this.drawX;
             _this.drawY += -0.5 * _this.drawY;
         };
-        _this.room = level;
+        _this.room = room;
         _this.health = 1;
         _this.maxHealth = 1;
         _this.tileX = 0;
@@ -6327,6 +6389,13 @@ var Crate = /** @class */ (function (_super) {
         _this.entityType = entity_2.EntityType.PROP;
         return _this;
     }
+    Object.defineProperty(Crate.prototype, "name", {
+        get: function () {
+            return "crate";
+        },
+        enumerable: false,
+        configurable: true
+    });
     return Crate;
 }(entity_1.Entity));
 exports.Crate = Crate;
@@ -6365,8 +6434,8 @@ var genericParticle_1 = __webpack_require__(/*! ../particle/genericParticle */ "
 var sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
 var EmeraldResource = /** @class */ (function (_super) {
     __extends(EmeraldResource, _super);
-    function EmeraldResource(level, game, x, y) {
-        var _this = _super.call(this, level, game, x, y) || this;
+    function EmeraldResource(room, game, x, y) {
+        var _this = _super.call(this, room, game, x, y) || this;
         _this.hurtCallback = function () {
             genericParticle_1.GenericParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, "#fbf236");
             if (_this.room === _this.game.room)
@@ -6389,6 +6458,13 @@ var EmeraldResource = /** @class */ (function (_super) {
         _this.health = 3;
         return _this;
     }
+    Object.defineProperty(EmeraldResource.prototype, "name", {
+        get: function () {
+            return "emerald";
+        },
+        enumerable: false,
+        configurable: true
+    });
     return EmeraldResource;
 }(resource_1.Resource));
 exports.EmeraldResource = EmeraldResource;
@@ -6445,7 +6521,7 @@ var EntityType;
 })(EntityType = exports.EntityType || (exports.EntityType = {}));
 var Entity = /** @class */ (function (_super) {
     __extends(Entity, _super);
-    function Entity(level, game, x, y) {
+    function Entity(room, game, x, y) {
         var _this = _super.call(this) || this;
         _this.sleepingZFrame = 0;
         _this.tryMove = function (x, y) {
@@ -6718,7 +6794,7 @@ var Entity = /** @class */ (function (_super) {
                 }
             }
         };
-        _this.room = level;
+        _this.room = room;
         _this.x = x;
         _this.y = y;
         _this.w = 1;
@@ -6737,17 +6813,12 @@ var Entity = /** @class */ (function (_super) {
         _this.pushable = false;
         _this.chainPushable = true;
         _this.interactable = false;
-        _this.deathParticleColor = "#ff00ff";
         _this.healthBar = new healthbar_1.HealthBar();
         _this.alertTicks = 0;
         _this.exclamationFrame = 0;
         _this.lastX = x;
         _this.lastY = y;
         _this.entityType = EntityType.ENEMY;
-        _this.crushX = 1;
-        _this.crushY = 1;
-        _this.crushed = false;
-        _this.crushVertical = false;
         _this.hitBy = _this.getPlayer();
         return _this;
     }
@@ -6791,8 +6862,8 @@ var coin_1 = __webpack_require__(/*! ../item/coin */ "./src/item/coin.ts");
 var imageParticle_1 = __webpack_require__(/*! ../particle/imageParticle */ "./src/particle/imageParticle.ts");
 var FrogEnemy = /** @class */ (function (_super) {
     __extends(FrogEnemy, _super);
-    function FrogEnemy(level, game, x, y, rand, drop) {
-        var _this = _super.call(this, level, game, x, y) || this;
+    function FrogEnemy(room, game, x, y, rand, drop) {
+        var _this = _super.call(this, room, game, x, y) || this;
         _this.hurt = function (playerHitBy, damage) {
             if (playerHitBy) {
                 _this.aggro = true;
@@ -6881,7 +6952,7 @@ var FrogEnemy = /** @class */ (function (_super) {
                                     if (_this.game.rooms[_this.game.players[i].levelID] === _this.room &&
                                         _this.game.players[i].x === moves[0].pos.x &&
                                         _this.game.players[i].y === moves[0].pos.y) {
-                                        _this.game.players[i].hurt(_this.hit(), "frog");
+                                        _this.game.players[i].hurt(_this.hit(), _this.name);
                                         _this.drawX = 0.5 * (_this.x - _this.game.players[i].x);
                                         _this.drawY = 0.5 * (_this.y - _this.game.players[i].y);
                                         if (_this.game.players[i] ===
@@ -6996,6 +7067,13 @@ var FrogEnemy = /** @class */ (function (_super) {
         }
         return _this;
     }
+    Object.defineProperty(FrogEnemy.prototype, "name", {
+        get: function () {
+            return "frog";
+        },
+        enumerable: false,
+        configurable: true
+    });
     return FrogEnemy;
 }(entity_1.Entity));
 exports.FrogEnemy = FrogEnemy;
@@ -7034,8 +7112,8 @@ var gold_1 = __webpack_require__(/*! ../item/gold */ "./src/item/gold.ts");
 var sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
 var GoldResource = /** @class */ (function (_super) {
     __extends(GoldResource, _super);
-    function GoldResource(level, game, x, y) {
-        var _this = _super.call(this, level, game, x, y) || this;
+    function GoldResource(room, game, x, y) {
+        var _this = _super.call(this, room, game, x, y) || this;
         _this.hurtCallback = function () {
             if (_this.room === _this.game.room)
                 sound_1.Sound.mine();
@@ -7058,6 +7136,13 @@ var GoldResource = /** @class */ (function (_super) {
         _this.health = 2;
         return _this;
     }
+    Object.defineProperty(GoldResource.prototype, "name", {
+        get: function () {
+            return "gold";
+        },
+        enumerable: false,
+        configurable: true
+    });
     return GoldResource;
 }(resource_1.Resource));
 exports.GoldResource = GoldResource;
@@ -7099,8 +7184,8 @@ var dualdagger_1 = __webpack_require__(/*! ../weapon/dualdagger */ "./src/weapon
 var imageParticle_1 = __webpack_require__(/*! ../particle/imageParticle */ "./src/particle/imageParticle.ts");
 var KnightEnemy = /** @class */ (function (_super) {
     __extends(KnightEnemy, _super);
-    function KnightEnemy(level, game, x, y, rand, drop) {
-        var _this = _super.call(this, level, game, x, y) || this;
+    function KnightEnemy(room, game, x, y, rand, drop) {
+        var _this = _super.call(this, room, game, x, y) || this;
         _this.hurt = function (playerHitBy, damage) {
             if (playerHitBy) {
                 _this.aggro = true;
@@ -7182,7 +7267,7 @@ var KnightEnemy = /** @class */ (function (_super) {
                                     if (_this.game.rooms[_this.game.players[i].levelID] === _this.room &&
                                         _this.game.players[i].x === moves[0].pos.x &&
                                         _this.game.players[i].y === moves[0].pos.y) {
-                                        _this.game.players[i].hurt(_this.hit(), "burrow knight");
+                                        _this.game.players[i].hurt(_this.hit(), _this.name);
                                         _this.drawX = 0.5 * (_this.x - _this.game.players[i].x);
                                         _this.drawY = 0.5 * (_this.y - _this.game.players[i].y);
                                         if (_this.game.players[i] ===
@@ -7280,6 +7365,13 @@ var KnightEnemy = /** @class */ (function (_super) {
         }
         return _this;
     }
+    Object.defineProperty(KnightEnemy.prototype, "name", {
+        get: function () {
+            return "burrow knight";
+        },
+        enumerable: false,
+        configurable: true
+    });
     return KnightEnemy;
 }(entity_1.Entity));
 exports.KnightEnemy = KnightEnemy;
@@ -7319,8 +7411,8 @@ var entity_2 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var imageParticle_1 = __webpack_require__(/*! ../particle/imageParticle */ "./src/particle/imageParticle.ts");
 var Mushrooms = /** @class */ (function (_super) {
     __extends(Mushrooms, _super);
-    function Mushrooms(level, game, x, y) {
-        var _this = _super.call(this, level, game, x, y) || this;
+    function Mushrooms(room, game, x, y) {
+        var _this = _super.call(this, room, game, x, y) || this;
         _this.kill = function () {
             _this.dead = true;
             imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 30);
@@ -7340,7 +7432,7 @@ var Mushrooms = /** @class */ (function (_super) {
         _this.drawTopLayer = function (delta) {
             _this.drawableY = _this.y;
         };
-        _this.room = level;
+        _this.room = room;
         _this.health = 1;
         _this.tileX = 9;
         _this.tileY = 2;
@@ -7349,6 +7441,13 @@ var Mushrooms = /** @class */ (function (_super) {
         _this.entityType = entity_2.EntityType.PROP;
         return _this;
     }
+    Object.defineProperty(Mushrooms.prototype, "name", {
+        get: function () {
+            return "mushrooms";
+        },
+        enumerable: false,
+        configurable: true
+    });
     return Mushrooms;
 }(entity_1.Entity));
 exports.Mushrooms = Mushrooms;
@@ -7387,8 +7486,8 @@ var entity_2 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var imageParticle_1 = __webpack_require__(/*! ../particle/imageParticle */ "./src/particle/imageParticle.ts");
 var Pot = /** @class */ (function (_super) {
     __extends(Pot, _super);
-    function Pot(level, game, x, y) {
-        var _this = _super.call(this, level, game, x, y) || this;
+    function Pot(room, game, x, y) {
+        var _this = _super.call(this, room, game, x, y) || this;
         _this.kill = function () {
             _this.dead = true;
             imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 29);
@@ -7407,7 +7506,7 @@ var Pot = /** @class */ (function (_super) {
         _this.drawTopLayer = function (delta) {
             _this.drawableY = _this.y;
         };
-        _this.room = level;
+        _this.room = room;
         _this.health = 1;
         _this.tileX = 11;
         _this.tileY = 0;
@@ -7416,6 +7515,13 @@ var Pot = /** @class */ (function (_super) {
         _this.entityType = entity_2.EntityType.PROP;
         return _this;
     }
+    Object.defineProperty(Pot.prototype, "name", {
+        get: function () {
+            return "pot";
+        },
+        enumerable: false,
+        configurable: true
+    });
     return Pot;
 }(entity_1.Entity));
 exports.Pot = Pot;
@@ -7456,8 +7562,8 @@ var entity_2 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var imageParticle_1 = __webpack_require__(/*! ../particle/imageParticle */ "./src/particle/imageParticle.ts");
 var PottedPlant = /** @class */ (function (_super) {
     __extends(PottedPlant, _super);
-    function PottedPlant(level, game, x, y, rand, drop) {
-        var _this = _super.call(this, level, game, x, y) || this;
+    function PottedPlant(room, game, x, y, rand, drop) {
+        var _this = _super.call(this, room, game, x, y) || this;
         _this.hurtCallback = function () {
             imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 28);
         };
@@ -7490,7 +7596,7 @@ var PottedPlant = /** @class */ (function (_super) {
             _this.drop.y = _this.y;
             _this.room.items.push(_this.drop);
         };
-        _this.room = level;
+        _this.room = room;
         _this.health = 2;
         _this.tileX = 3;
         _this.tileY = 0;
@@ -7508,6 +7614,13 @@ var PottedPlant = /** @class */ (function (_super) {
         }
         return _this;
     }
+    Object.defineProperty(PottedPlant.prototype, "name", {
+        get: function () {
+            return "plant";
+        },
+        enumerable: false,
+        configurable: true
+    });
     return PottedPlant;
 }(entity_1.Entity));
 exports.PottedPlant = PottedPlant;
@@ -7551,8 +7664,8 @@ var spiketrap_1 = __webpack_require__(/*! ../tile/spiketrap */ "./src/tile/spike
 var candle_1 = __webpack_require__(/*! ../item/candle */ "./src/item/candle.ts");
 var QueenEnemy = /** @class */ (function (_super) {
     __extends(QueenEnemy, _super);
-    function QueenEnemy(level, game, x, y, rand, drop) {
-        var _this = _super.call(this, level, game, x, y) || this;
+    function QueenEnemy(room, game, x, y, rand, drop) {
+        var _this = _super.call(this, room, game, x, y) || this;
         _this.tryMove = function (x, y) {
             var pointWouldBeIn = function (someX, someY) {
                 return (someX >= x && someX < x + _this.w && someY >= y && someY < y + _this.h);
@@ -7683,7 +7796,7 @@ var QueenEnemy = /** @class */ (function (_super) {
                                 if (_this.game.rooms[_this.game.players[i].levelID] === _this.room &&
                                     _this.game.players[i].x === moveX &&
                                     _this.game.players[i].y === moveY) {
-                                    _this.game.players[i].hurt(_this.hit(), "queen");
+                                    _this.game.players[i].hurt(_this.hit(), _this.name);
                                     _this.drawX = 0.5 * (_this.x - _this.game.players[i].x);
                                     _this.drawY = 0.5 * (_this.y - _this.game.players[i].y);
                                     if (_this.game.players[i] ===
@@ -7746,7 +7859,6 @@ var QueenEnemy = /** @class */ (function (_super) {
         _this.tileY = 8;
         _this.seenPlayer = false;
         _this.aggro = false;
-        _this.deathParticleColor = "#ffffff";
         if (drop)
             _this.drop = drop;
         else {
@@ -7760,6 +7872,13 @@ var QueenEnemy = /** @class */ (function (_super) {
         }
         return _this;
     }
+    Object.defineProperty(QueenEnemy.prototype, "name", {
+        get: function () {
+            return "queen";
+        },
+        enumerable: false,
+        configurable: true
+    });
     return QueenEnemy;
 }(entity_1.Entity));
 exports.QueenEnemy = QueenEnemy;
@@ -7797,8 +7916,8 @@ var entity_1 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var entity_2 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 var Resource = /** @class */ (function (_super) {
     __extends(Resource, _super);
-    function Resource(level, game, x, y) {
-        var _this = _super.call(this, level, game, x, y) || this;
+    function Resource(room, game, x, y) {
+        var _this = _super.call(this, room, game, x, y) || this;
         _this.hurt = function (playerHitBy, damage) {
             if (playerHitBy.inventory.getWeapon().canMine === true) {
                 _this.healthBar.hurt();
@@ -7834,6 +7953,13 @@ var Resource = /** @class */ (function (_super) {
         _this.entityType = entity_2.EntityType.RESOURCE;
         return _this;
     }
+    Object.defineProperty(Resource.prototype, "name", {
+        get: function () {
+            return "resource";
+        },
+        enumerable: false,
+        configurable: true
+    });
     return Resource;
 }(entity_1.Entity));
 exports.Resource = Resource;
@@ -7874,8 +8000,8 @@ var resource_1 = __webpack_require__(/*! ./resource */ "./src/entity/resource.ts
 var imageParticle_1 = __webpack_require__(/*! ../particle/imageParticle */ "./src/particle/imageParticle.ts");
 var Rock = /** @class */ (function (_super) {
     __extends(Rock, _super);
-    function Rock(level, game, x, y) {
-        var _this = _super.call(this, level, game, x, y) || this;
+    function Rock(room, game, x, y) {
+        var _this = _super.call(this, room, game, x, y) || this;
         _this.hurtCallback = function () {
             imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 24); //rock particle coord 0, 24
             if (_this.room === _this.game.room)
@@ -7902,7 +8028,7 @@ var Rock = /** @class */ (function (_super) {
         _this.drawTopLayer = function (delta) {
             _this.drawableY = _this.y;
         };
-        _this.room = level;
+        _this.room = room;
         _this.health = 2;
         _this.tileX = 8;
         _this.tileY = 2;
@@ -7910,6 +8036,13 @@ var Rock = /** @class */ (function (_super) {
         _this.chainPushable = false;
         return _this;
     }
+    Object.defineProperty(Rock.prototype, "name", {
+        get: function () {
+            return "rock";
+        },
+        enumerable: false,
+        configurable: true
+    });
     return Rock;
 }(resource_1.Resource));
 exports.Rock = Rock;
@@ -7953,8 +8086,8 @@ var candle_1 = __webpack_require__(/*! ../item/candle */ "./src/item/candle.ts")
 var imageParticle_1 = __webpack_require__(/*! ../particle/imageParticle */ "./src/particle/imageParticle.ts");
 var SkullEnemy = /** @class */ (function (_super) {
     __extends(SkullEnemy, _super);
-    function SkullEnemy(level, game, x, y, rand, drop) {
-        var _this = _super.call(this, level, game, x, y) || this;
+    function SkullEnemy(room, game, x, y, rand, drop) {
+        var _this = _super.call(this, room, game, x, y) || this;
         _this.REGEN_TICKS = 5;
         _this.hit = function () {
             return 1;
@@ -8052,7 +8185,7 @@ var SkullEnemy = /** @class */ (function (_super) {
                                     if (_this.game.rooms[_this.game.players[i].levelID] === _this.room &&
                                         _this.game.players[i].x === moveX &&
                                         _this.game.players[i].y === moveY) {
-                                        _this.game.players[i].hurt(_this.hit(), "skeleton");
+                                        _this.game.players[i].hurt(_this.hit(), _this.name);
                                         _this.drawX = 0.5 * (_this.x - _this.game.players[i].x);
                                         _this.drawY = 0.5 * (_this.y - _this.game.players[i].y);
                                         if (_this.game.players[i] ===
@@ -8152,6 +8285,13 @@ var SkullEnemy = /** @class */ (function (_super) {
         }
         return _this;
     }
+    Object.defineProperty(SkullEnemy.prototype, "name", {
+        get: function () {
+            return "skeleton";
+        },
+        enumerable: false,
+        configurable: true
+    });
     return SkullEnemy;
 }(entity_1.Entity));
 exports.SkullEnemy = SkullEnemy;
@@ -8195,8 +8335,8 @@ var spiketrap_1 = __webpack_require__(/*! ../tile/spiketrap */ "./src/tile/spike
 var pickaxe_1 = __webpack_require__(/*! ../weapon/pickaxe */ "./src/weapon/pickaxe.ts");
 var SniperEnemy = /** @class */ (function (_super) {
     __extends(SniperEnemy, _super);
-    function SniperEnemy(level, game, x, y, rand, drop) {
-        var _this = _super.call(this, level, game, x, y) || this;
+    function SniperEnemy(room, game, x, y, rand, drop) {
+        var _this = _super.call(this, room, game, x, y) || this;
         _this.hit = function () {
             return 1;
         };
@@ -8313,11 +8453,14 @@ var SniperEnemy = /** @class */ (function (_super) {
                             if (oldDir == _this.direction) {
                                 var hitPlayer = false;
                                 for (var i in _this.game.players) {
-                                    if (_this.game.rooms[_this.game.players[i].levelID] === _this.room && _this.game.players[i].x === moveX && _this.game.players[i].y === moveY) {
-                                        _this.game.players[i].hurt(_this.hit(), "zombie");
+                                    if (_this.game.rooms[_this.game.players[i].levelID] === _this.room &&
+                                        _this.game.players[i].x === moveX &&
+                                        _this.game.players[i].y === moveY) {
+                                        _this.game.players[i].hurt(_this.hit(), _this.name);
                                         _this.drawX = 0.5 * (_this.x - _this.game.players[i].x);
                                         _this.drawY = 0.5 * (_this.y - _this.game.players[i].y);
-                                        if (_this.game.players[i] === _this.game.players[_this.game.localPlayerID])
+                                        if (_this.game.players[i] ===
+                                            _this.game.players[_this.game.localPlayerID])
                                             _this.game.shakeScreen(10 * _this.drawX, 10 * _this.drawY);
                                     }
                                 }
@@ -8337,29 +8480,56 @@ var SniperEnemy = /** @class */ (function (_super) {
                             }
                         }
                         if (_this.direction == entity_1.EntityDirection.LEFT) {
-                            disablePositions.push({ x: _this.x, y: _this.y + 1 });
-                            disablePositions.push({ x: _this.x, y: _this.y - 1 });
+                            disablePositions.push({
+                                x: _this.x,
+                                y: _this.y + 1,
+                            });
+                            disablePositions.push({
+                                x: _this.x,
+                                y: _this.y - 1,
+                            });
                         }
                         if (_this.direction == entity_1.EntityDirection.RIGHT) {
-                            disablePositions.push({ x: _this.x, y: _this.y + 1 });
-                            disablePositions.push({ x: _this.x, y: _this.y - 1 });
+                            disablePositions.push({
+                                x: _this.x,
+                                y: _this.y + 1,
+                            });
+                            disablePositions.push({
+                                x: _this.x,
+                                y: _this.y - 1,
+                            });
                         }
                         if (_this.direction == entity_1.EntityDirection.DOWN) {
-                            disablePositions.push({ x: _this.x + 1, y: _this.y });
-                            disablePositions.push({ x: _this.x - 1, y: _this.y });
+                            disablePositions.push({
+                                x: _this.x + 1,
+                                y: _this.y,
+                            });
+                            disablePositions.push({
+                                x: _this.x - 1,
+                                y: _this.y,
+                            });
                         }
                         if (_this.direction == entity_1.EntityDirection.UP) {
-                            disablePositions.push({ x: _this.x + 1, y: _this.y });
-                            disablePositions.push({ x: _this.x - 1, y: _this.y });
+                            disablePositions.push({
+                                x: _this.x + 1,
+                                y: _this.y,
+                            });
+                            disablePositions.push({
+                                x: _this.x - 1,
+                                y: _this.y,
+                            });
                         }
                         _this.makeHitWarnings(false, false, true, _this.direction);
                     }
-                    var targetPlayerOffline = Object.values(_this.game.offlinePlayers).indexOf(_this.targetPlayer) !== -1;
+                    var targetPlayerOffline = Object.values(_this.game.offlinePlayers).indexOf(_this.targetPlayer) !==
+                        -1;
                     if (!_this.aggro || targetPlayerOffline) {
                         var p = _this.nearestPlayer();
                         if (p !== false) {
                             var distance = p[0], player = p[1];
-                            if (distance <= 4 && (targetPlayerOffline || distance < _this.playerDistance(_this.targetPlayer))) {
+                            if (distance <= 4 &&
+                                (targetPlayerOffline ||
+                                    distance < _this.playerDistance(_this.targetPlayer))) {
                                 if (player !== _this.targetPlayer) {
                                     _this.targetPlayer = player;
                                     _this.facePlayer(player);
@@ -8375,7 +8545,7 @@ var SniperEnemy = /** @class */ (function (_super) {
         };
         _this.draw = function (delta) {
             if (!_this.dead) {
-                _this.tileY = 20 + (_this.dir * 2);
+                _this.tileY = 20 + _this.dir * 2;
                 _this.frame += 0.1 * delta;
                 if (_this.frame >= 1)
                     _this.frame = 0;
@@ -8413,6 +8583,13 @@ var SniperEnemy = /** @class */ (function (_super) {
         }
         return _this;
     }
+    Object.defineProperty(SniperEnemy.prototype, "name", {
+        get: function () {
+            return "sniper";
+        },
+        enumerable: false,
+        configurable: true
+    });
     return SniperEnemy;
 }(entity_1.Entity));
 exports.SniperEnemy = SniperEnemy;
@@ -8455,8 +8632,8 @@ var knightEnemy_1 = __webpack_require__(/*! ./knightEnemy */ "./src/entity/knigh
 var wizardEnemy_1 = __webpack_require__(/*! ./wizardEnemy */ "./src/entity/wizardEnemy.ts");
 var Spawner = /** @class */ (function (_super) {
     __extends(Spawner, _super);
-    function Spawner(level, game, x, y, rand) {
-        var _this = _super.call(this, level, game, x, y) || this;
+    function Spawner(room, game, x, y, rand) {
+        var _this = _super.call(this, room, game, x, y) || this;
         _this.hit = function () {
             return 1;
         };
@@ -8509,6 +8686,13 @@ var Spawner = /** @class */ (function (_super) {
         _this.rand = rand;
         return _this;
     }
+    Object.defineProperty(Spawner.prototype, "name", {
+        get: function () {
+            return "reaper";
+        },
+        enumerable: false,
+        configurable: true
+    });
     return Spawner;
 }(entity_1.Entity));
 exports.Spawner = Spawner;
@@ -8551,8 +8735,8 @@ var sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
 var imageParticle_1 = __webpack_require__(/*! ../particle/imageParticle */ "./src/particle/imageParticle.ts");
 var TombStone = /** @class */ (function (_super) {
     __extends(TombStone, _super);
-    function TombStone(level, game, x, y, skinType, rand, drop) {
-        var _this = _super.call(this, level, game, x, y) || this;
+    function TombStone(room, game, x, y, skinType, rand, drop) {
+        var _this = _super.call(this, room, game, x, y) || this;
         _this.kill = function () {
             _this.dead = true;
             _this.dropLoot();
@@ -8602,7 +8786,7 @@ var TombStone = /** @class */ (function (_super) {
             _this.drawY += -0.5 * _this.drawY;
         };
         _this.skinType = skinType;
-        _this.room = level;
+        _this.room = room;
         _this.health = 2;
         _this.maxHealth = 2;
         _this.tileX = 11 + _this.skinType;
@@ -8619,6 +8803,13 @@ var TombStone = /** @class */ (function (_super) {
             _this.drop = new spellbook_1.Spellbook(_this.room, 0, 0);
         return _this;
     }
+    Object.defineProperty(TombStone.prototype, "name", {
+        get: function () {
+            return "tombstone";
+        },
+        enumerable: false,
+        configurable: true
+    });
     return TombStone;
 }(entity_1.Entity));
 exports.TombStone = TombStone;
@@ -8673,8 +8864,8 @@ var OUTLINE_COLOR = "#292c36";
 var FULL_OUTLINE = "white";
 var VendingMachine = /** @class */ (function (_super) {
     __extends(VendingMachine, _super);
-    function VendingMachine(level, game, x, y, item, rand) {
-        var _this = _super.call(this, level, game, x, y) || this;
+    function VendingMachine(room, game, x, y, item, rand) {
+        var _this = _super.call(this, room, game, x, y) || this;
         _this.open = false;
         _this.openTime = 0;
         _this.isInf = false;
@@ -8687,7 +8878,8 @@ var VendingMachine = /** @class */ (function (_super) {
                 _this.open = true;
                 _this.playerOpened = player;
                 _this.openTime = Date.now();
-                if (_this.playerOpened.openVendingMachine && _this.playerOpened.openVendingMachine !== _this)
+                if (_this.playerOpened.openVendingMachine &&
+                    _this.playerOpened.openVendingMachine !== _this)
                     _this.playerOpened.openVendingMachine.close();
                 _this.playerOpened.openVendingMachine = _this;
             }
@@ -8712,7 +8904,9 @@ var VendingMachine = /** @class */ (function (_super) {
                 do {
                     x_1 = game_1.Game.rand(_this.x - 1, _this.x + 1, _this.rand);
                     y_1 = game_1.Game.rand(_this.y - 1, _this.y + 1, _this.rand);
-                } while ((x_1 === _this.x && y_1 === _this.y) || _this.room.roomArray[x_1][y_1].isSolid() || _this.room.entities.some(function (e) { return e.x === x_1 && e.y === y_1; }));
+                } while ((x_1 === _this.x && y_1 === _this.y) ||
+                    _this.room.roomArray[x_1][y_1].isSolid() ||
+                    _this.room.entities.some(function (e) { return e.x === x_1 && e.y === y_1; }));
                 var newItem = new _this.item.constructor();
                 newItem = newItem.constructor(_this.room, x_1, y_1);
                 _this.room.items.push(newItem);
@@ -8734,7 +8928,8 @@ var VendingMachine = /** @class */ (function (_super) {
         };
         _this.drawTopLayer = function (delta) {
             _this.drawableY = _this.y;
-            if (_this.open && _this.playerOpened === _this.game.players[_this.game.localPlayerID]) {
+            if (_this.open &&
+                _this.playerOpened === _this.game.players[_this.game.localPlayerID]) {
                 var s = Math.min(18, (18 * (Date.now() - _this.openTime)) / OPEN_TIME); // size of box
                 var b = 2; // border
                 var g = -2; // gap
@@ -8762,7 +8957,11 @@ var VendingMachine = /** @class */ (function (_super) {
                             b +
                             Math.floor(0.5 * s) -
                             0.5 * gameConstants_1.GameConstants.TILESIZE);
-                        var drawY = Math.round(cy - 0.5 * height + b + Math.floor(0.5 * s) - 0.5 * gameConstants_1.GameConstants.TILESIZE);
+                        var drawY = Math.round(cy -
+                            0.5 * height +
+                            b +
+                            Math.floor(0.5 * s) -
+                            0.5 * gameConstants_1.GameConstants.TILESIZE);
                         var drawXScaled = drawX / gameConstants_1.GameConstants.TILESIZE;
                         var drawYScaled = drawY / gameConstants_1.GameConstants.TILESIZE;
                         if (i < _this.costItems.length) {
@@ -8796,38 +8995,45 @@ var VendingMachine = /** @class */ (function (_super) {
         _this.entityType = entity_2.EntityType.FRIENDLY;
         _this.item = item;
         if (_this.item instanceof shotgun_1.Shotgun) {
-            var g = new bluegem_1.BlueGem(level, 0, 0);
+            var g = new bluegem_1.BlueGem(room, 0, 0);
             g.stackCount = game_1.Game.randTable([5, 5, 6, 7], _this.rand);
             _this.costItems = [g];
         }
         else if (_this.item instanceof heart_1.Heart) {
-            var c = new coin_1.Coin(level, 0, 0);
+            var c = new coin_1.Coin(room, 0, 0);
             c.stackCount = 10;
             _this.costItems = [c];
             _this.isInf = true;
         }
         else if (_this.item instanceof spear_1.Spear) {
-            var g = new greengem_1.GreenGem(level, 0, 0);
+            var g = new greengem_1.GreenGem(room, 0, 0);
             g.stackCount = game_1.Game.randTable([5, 5, 6, 7], _this.rand);
             _this.costItems = [g];
         }
         else if (_this.item instanceof armor_1.Armor) {
-            var g = new gold_1.Gold(level, 0, 0);
+            var g = new gold_1.Gold(room, 0, 0);
             g.stackCount = game_1.Game.randTable([5, 5, 6, 7], _this.rand);
             _this.costItems = [g];
         }
         else if (_this.item instanceof dualdagger_1.DualDagger) {
-            var g = new redgem_1.RedGem(level, 0, 0);
+            var g = new redgem_1.RedGem(room, 0, 0);
             g.stackCount = game_1.Game.randTable([5, 5, 6, 7], _this.rand);
             _this.costItems = [g];
         }
         else if (_this.item instanceof lantern_1.Lantern) {
-            var g = new coal_1.Coal(level, 0, 0);
+            var g = new coal_1.Coal(room, 0, 0);
             g.stackCount = game_1.Game.randTable([25, 26, 27, 28], _this.rand);
             _this.costItems = [g];
         }
         return _this;
     }
+    Object.defineProperty(VendingMachine.prototype, "name", {
+        get: function () {
+            return "shop";
+        },
+        enumerable: false,
+        configurable: true
+    });
     return VendingMachine;
 }(entity_1.Entity));
 exports.VendingMachine = VendingMachine;
@@ -8879,8 +9085,8 @@ var WizardState;
 })(WizardState = exports.WizardState || (exports.WizardState = {}));
 var WizardEnemy = /** @class */ (function (_super) {
     __extends(WizardEnemy, _super);
-    function WizardEnemy(level, game, x, y, rand, drop) {
-        var _this = _super.call(this, level, game, x, y) || this;
+    function WizardEnemy(room, game, x, y, rand, drop) {
+        var _this = _super.call(this, room, game, x, y) || this;
         _this.ATTACK_RADIUS = 5;
         _this.hit = function () {
             return 1;
@@ -8888,7 +9094,8 @@ var WizardEnemy = /** @class */ (function (_super) {
         _this.withinAttackingRangeOfPlayer = function () {
             var withinRange = false;
             for (var i in _this.game.players) {
-                if (Math.pow((_this.x - _this.game.players[i].x), 2) + Math.pow((_this.y - _this.game.players[i].y), 2) <=
+                if (Math.pow((_this.x - _this.game.players[i].x), 2) +
+                    Math.pow((_this.y - _this.game.players[i].y), 2) <=
                     Math.pow(_this.ATTACK_RADIUS, 2)) {
                     withinRange = true;
                 }
@@ -8927,27 +9134,35 @@ var WizardEnemy = /** @class */ (function (_super) {
                     _this.alertTicks = Math.max(0, _this.alertTicks - 1);
                     switch (_this.state) {
                         case WizardState.attack:
-                            if (_this.room.getTile(_this.x - 1, _this.y) && !_this.room.roomArray[_this.x - 1][_this.y].isSolid()) {
+                            if (_this.room.getTile(_this.x - 1, _this.y) &&
+                                !_this.room.roomArray[_this.x - 1][_this.y].isSolid()) {
                                 _this.room.projectiles.push(new wizardFireball_1.WizardFireball(_this, _this.x - 1, _this.y));
-                                if (_this.room.getTile(_this.x - 2, _this.y) && !_this.room.roomArray[_this.x - 2][_this.y].isSolid()) {
+                                if (_this.room.getTile(_this.x - 2, _this.y) &&
+                                    !_this.room.roomArray[_this.x - 2][_this.y].isSolid()) {
                                     _this.room.projectiles.push(new wizardFireball_1.WizardFireball(_this, _this.x - 2, _this.y));
                                 }
                             }
-                            if (_this.room.getTile(_this.x + 1, _this.y) && !_this.room.roomArray[_this.x + 1][_this.y].isSolid()) {
+                            if (_this.room.getTile(_this.x + 1, _this.y) &&
+                                !_this.room.roomArray[_this.x + 1][_this.y].isSolid()) {
                                 _this.room.projectiles.push(new wizardFireball_1.WizardFireball(_this, _this.x + 1, _this.y));
-                                if (_this.room.getTile(_this.x + 2, _this.y) && !_this.room.roomArray[_this.x + 2][_this.y].isSolid()) {
+                                if (_this.room.getTile(_this.x + 2, _this.y) &&
+                                    !_this.room.roomArray[_this.x + 2][_this.y].isSolid()) {
                                     _this.room.projectiles.push(new wizardFireball_1.WizardFireball(_this, _this.x + 2, _this.y));
                                 }
                             }
-                            if (_this.room.getTile(_this.x, _this.y - 1) && !_this.room.roomArray[_this.x][_this.y - 1].isSolid()) {
+                            if (_this.room.getTile(_this.x, _this.y - 1) &&
+                                !_this.room.roomArray[_this.x][_this.y - 1].isSolid()) {
                                 _this.room.projectiles.push(new wizardFireball_1.WizardFireball(_this, _this.x, _this.y - 1));
-                                if (_this.room.getTile(_this.x, _this.y - 2) && !_this.room.roomArray[_this.x][_this.y - 2].isSolid()) {
+                                if (_this.room.getTile(_this.x, _this.y - 2) &&
+                                    !_this.room.roomArray[_this.x][_this.y - 2].isSolid()) {
                                     _this.room.projectiles.push(new wizardFireball_1.WizardFireball(_this, _this.x, _this.y - 2));
                                 }
                             }
-                            if (_this.room.getTile(_this.x, _this.y + 1) && !_this.room.roomArray[_this.x][_this.y + 1].isSolid()) {
+                            if (_this.room.getTile(_this.x, _this.y + 1) &&
+                                !_this.room.roomArray[_this.x][_this.y + 1].isSolid()) {
                                 _this.room.projectiles.push(new wizardFireball_1.WizardFireball(_this, _this.x, _this.y + 1));
-                                if (_this.room.getTile(_this.x, _this.y + 2) && !_this.room.roomArray[_this.x][_this.y + 2].isSolid()) {
+                                if (_this.room.getTile(_this.x, _this.y + 2) &&
+                                    !_this.room.roomArray[_this.x][_this.y + 2].isSolid()) {
                                     _this.room.projectiles.push(new wizardFireball_1.WizardFireball(_this, _this.x, _this.y + 2));
                                 }
                             }
@@ -8971,7 +9186,8 @@ var WizardEnemy = /** @class */ (function (_super) {
                             for (var _i = 0, emptyTiles_1 = emptyTiles; _i < emptyTiles_1.length; _i++) {
                                 var t = emptyTiles_1[_i];
                                 var newPos = t;
-                                var dist = Math.abs(newPos.x - _this.game.players[target_player_id].x) + Math.abs(newPos.y - _this.game.players[target_player_id].y);
+                                var dist = Math.abs(newPos.x - _this.game.players[target_player_id].x) +
+                                    Math.abs(newPos.y - _this.game.players[target_player_id].y);
                                 if (Math.abs(dist - optimalDist) < Math.abs(min - optimalDist)) {
                                     min = dist;
                                     bestPos = newPos;
@@ -9039,7 +9255,6 @@ var WizardEnemy = /** @class */ (function (_super) {
         _this.state = WizardState.attack;
         _this.seenPlayer = false;
         _this.alertTicks = 0;
-        _this.deathParticleColor = "#ffffff";
         _this.rand = rand;
         if (drop)
             _this.drop = drop;
@@ -9051,6 +9266,13 @@ var WizardEnemy = /** @class */ (function (_super) {
         }
         return _this;
     }
+    Object.defineProperty(WizardEnemy.prototype, "name", {
+        get: function () {
+            return "wizard bomber";
+        },
+        enumerable: false,
+        configurable: true
+    });
     return WizardEnemy;
 }(entity_1.Entity));
 exports.WizardEnemy = WizardEnemy;
@@ -9094,8 +9316,8 @@ var pickaxe_1 = __webpack_require__(/*! ../weapon/pickaxe */ "./src/weapon/picka
 var imageParticle_1 = __webpack_require__(/*! ../particle/imageParticle */ "./src/particle/imageParticle.ts");
 var ZombieEnemy = /** @class */ (function (_super) {
     __extends(ZombieEnemy, _super);
-    function ZombieEnemy(level, game, x, y, rand, drop) {
-        var _this = _super.call(this, level, game, x, y) || this;
+    function ZombieEnemy(room, game, x, y, rand, drop) {
+        var _this = _super.call(this, room, game, x, y) || this;
         _this.hit = function () {
             return 1;
         };
@@ -9188,11 +9410,14 @@ var ZombieEnemy = /** @class */ (function (_super) {
                             if (oldDir == _this.direction) {
                                 var hitPlayer = false;
                                 for (var i in _this.game.players) {
-                                    if (_this.game.rooms[_this.game.players[i].levelID] === _this.room && _this.game.players[i].x === moveX && _this.game.players[i].y === moveY) {
-                                        _this.game.players[i].hurt(_this.hit(), "zombie");
+                                    if (_this.game.rooms[_this.game.players[i].levelID] === _this.room &&
+                                        _this.game.players[i].x === moveX &&
+                                        _this.game.players[i].y === moveY) {
+                                        _this.game.players[i].hurt(_this.hit(), _this.name);
                                         _this.drawX = 0.5 * (_this.x - _this.game.players[i].x);
                                         _this.drawY = 0.5 * (_this.y - _this.game.players[i].y);
-                                        if (_this.game.players[i] === _this.game.players[_this.game.localPlayerID])
+                                        if (_this.game.players[i] ===
+                                            _this.game.players[_this.game.localPlayerID])
                                             _this.game.shakeScreen(10 * _this.drawX, 10 * _this.drawY);
                                     }
                                 }
@@ -9212,29 +9437,56 @@ var ZombieEnemy = /** @class */ (function (_super) {
                             }
                         }
                         if (_this.direction == entity_1.EntityDirection.LEFT) {
-                            disablePositions.push({ x: _this.x, y: _this.y + 1 });
-                            disablePositions.push({ x: _this.x, y: _this.y - 1 });
+                            disablePositions.push({
+                                x: _this.x,
+                                y: _this.y + 1,
+                            });
+                            disablePositions.push({
+                                x: _this.x,
+                                y: _this.y - 1,
+                            });
                         }
                         if (_this.direction == entity_1.EntityDirection.RIGHT) {
-                            disablePositions.push({ x: _this.x, y: _this.y + 1 });
-                            disablePositions.push({ x: _this.x, y: _this.y - 1 });
+                            disablePositions.push({
+                                x: _this.x,
+                                y: _this.y + 1,
+                            });
+                            disablePositions.push({
+                                x: _this.x,
+                                y: _this.y - 1,
+                            });
                         }
                         if (_this.direction == entity_1.EntityDirection.DOWN) {
-                            disablePositions.push({ x: _this.x + 1, y: _this.y });
-                            disablePositions.push({ x: _this.x - 1, y: _this.y });
+                            disablePositions.push({
+                                x: _this.x + 1,
+                                y: _this.y,
+                            });
+                            disablePositions.push({
+                                x: _this.x - 1,
+                                y: _this.y,
+                            });
                         }
                         if (_this.direction == entity_1.EntityDirection.UP) {
-                            disablePositions.push({ x: _this.x + 1, y: _this.y });
-                            disablePositions.push({ x: _this.x - 1, y: _this.y });
+                            disablePositions.push({
+                                x: _this.x + 1,
+                                y: _this.y,
+                            });
+                            disablePositions.push({
+                                x: _this.x - 1,
+                                y: _this.y,
+                            });
                         }
                         _this.makeHitWarnings(false, false, true, _this.direction);
                     }
-                    var targetPlayerOffline = Object.values(_this.game.offlinePlayers).indexOf(_this.targetPlayer) !== -1;
+                    var targetPlayerOffline = Object.values(_this.game.offlinePlayers).indexOf(_this.targetPlayer) !==
+                        -1;
                     if (!_this.aggro || targetPlayerOffline) {
                         var p = _this.nearestPlayer();
                         if (p !== false) {
                             var distance = p[0], player = p[1];
-                            if (distance <= 4 && (targetPlayerOffline || distance < _this.playerDistance(_this.targetPlayer))) {
+                            if (distance <= 4 &&
+                                (targetPlayerOffline ||
+                                    distance < _this.playerDistance(_this.targetPlayer))) {
                                 if (player !== _this.targetPlayer) {
                                     _this.targetPlayer = player;
                                     _this.facePlayer(player);
@@ -9272,7 +9524,6 @@ var ZombieEnemy = /** @class */ (function (_super) {
         _this.tileY = 8;
         _this.seenPlayer = false;
         _this.aggro = false;
-        _this.deathParticleColor = "#ffffff";
         _this.dir = game_1.Direction.South;
         if (drop)
             _this.drop = drop;
@@ -9287,6 +9538,13 @@ var ZombieEnemy = /** @class */ (function (_super) {
         }
         return _this;
     }
+    Object.defineProperty(ZombieEnemy.prototype, "name", {
+        get: function () {
+            return "zombie";
+        },
+        enumerable: false,
+        configurable: true
+    });
     return ZombieEnemy;
 }(entity_1.Entity));
 exports.ZombieEnemy = ZombieEnemy;
@@ -14544,6 +14802,7 @@ var slashParticle_1 = __webpack_require__(/*! ./particle/slashParticle */ "./src
 var healthbar_1 = __webpack_require__(/*! ./healthbar */ "./src/healthbar.ts");
 var drawable_1 = __webpack_require__(/*! ./drawable */ "./src/drawable.ts");
 var actionTab_1 = __webpack_require__(/*! ./actionTab */ "./src/actionTab.ts");
+var hitWarning_1 = __webpack_require__(/*! ./hitWarning */ "./src/hitWarning.ts");
 var postProcess_1 = __webpack_require__(/*! ./postProcess */ "./src/postProcess.ts");
 var PlayerDirection;
 (function (PlayerDirection) {
@@ -14674,6 +14933,7 @@ var Player = /** @class */ (function (_super) {
             var newMove = { x: x, y: y };
             // TODO don't move if hit by enemy
             _this.game.rooms[_this.levelID].catchUp();
+            //if (this.wouldHurt(x, y)) return;
             if (_this.dead)
                 return;
             for (var i = 0; i < 2; i++)
@@ -14787,6 +15047,16 @@ var Player = /** @class */ (function (_super) {
                     _this.drawY = (_this.y - y) * 0.5;
                     if (other.canUnlock(_this))
                         other.unlock(_this);
+                }
+            }
+        };
+        _this.wouldHurt = function (x, y) {
+            for (var _i = 0, _a = _this.game.rooms[_this.levelID].hitwarnings; _i < _a.length; _i++) {
+                var h = _a[_i];
+                if (h instanceof hitWarning_1.HitWarning && h.x == x && h.y == y)
+                    return true;
+                else {
+                    return false;
                 }
             }
         };

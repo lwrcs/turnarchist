@@ -6,9 +6,9 @@ import { LevelConstants } from "../levelConstants";
 import { GenericParticle } from "../particle/genericParticle";
 
 export class Rook extends Entity {
-  constructor(level: Room, game: Game, x: number, y: number) {
-    super(level, game, x, y);
-    this.room = level;
+  constructor(room: Room, game: Game, x: number, y: number) {
+    super(room, game, x, y);
+    this.room = room;
     this.health = 1;
     this.maxHealth = 1;
     this.tileX = 14;
@@ -17,10 +17,19 @@ export class Rook extends Entity {
     this.pushable = true;
   }
 
+  get name() {
+    return "rook";
+  }
+
   kill = () => {
     this.dead = true;
 
-    GenericParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, "#d9a066");
+    GenericParticle.spawnCluster(
+      this.room,
+      this.x + 0.5,
+      this.y + 0.5,
+      "#d9a066"
+    );
   };
   killNoBones = () => {
     this.kill();

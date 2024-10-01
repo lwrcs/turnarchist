@@ -12,15 +12,15 @@ import { ImageParticle } from "../particle/imageParticle";
 export class PottedPlant extends Entity {
   drop: Item;
   constructor(
-    level: Room,
+    room: Room,
     game: Game,
     x: number,
     y: number,
     rand: () => number,
     drop?: Item
   ) {
-    super(level, game, x, y);
-    this.room = level;
+    super(room, game, x, y);
+    this.room = room;
     this.health = 2;
     this.tileX = 3;
     this.tileY = 0;
@@ -35,34 +35,20 @@ export class PottedPlant extends Entity {
     }
   }
 
+  get name() {
+    return "plant";
+  }
+
   hurtCallback = () => {
-    ImageParticle.spawnCluster(
-      this.room,
-      this.x + 0.5,
-      this.y + 0.5,
-      0,
-      28,
-    );
+    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 28);
   };
 
   kill = () => {
     this.dead = true;
     this.killNoBones();
 
-    ImageParticle.spawnCluster(
-      this.room,
-      this.x + 0.5,
-      this.y + 0.5,
-      0,
-      29,
-    );
-    ImageParticle.spawnCluster(
-      this.room,
-      this.x + 0.5,
-      this.y + 0.5,
-      0,
-      28,
-    );
+    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 29);
+    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 28);
   };
   killNoBones = () => {
     this.dead = true;

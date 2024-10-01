@@ -12,12 +12,16 @@ import { Gold } from "../item/gold";
 import { Sound } from "../sound";
 
 export class GoldResource extends Resource {
-  constructor(level: Room, game: Game, x: number, y: number) {
-    super(level, game, x, y);
+  constructor(room: Room, game: Game, x: number, y: number) {
+    super(room, game, x, y);
 
     this.tileX = 13;
     this.tileY = 0;
     this.health = 2;
+  }
+
+  get name() {
+    return "gold";
   }
 
   hurtCallback = () => {

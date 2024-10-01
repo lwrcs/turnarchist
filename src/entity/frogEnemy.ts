@@ -24,14 +24,14 @@ export class FrogEnemy extends Entity {
   tickCount: number;
 
   constructor(
-    level: Room,
+    room: Room,
     game: Game,
     x: number,
     y: number,
     rand: () => number,
     drop?: Item
   ) {
-    super(level, game, x, y);
+    super(room, game, x, y);
     this.ticks = 0;
     this.frame = 0;
     this.health = 1;
@@ -50,6 +50,10 @@ export class FrogEnemy extends Entity {
     else {
       this.drop = new Coin(this.room, 0, 0);
     }
+  }
+
+  get name() {
+    return "frog";
   }
 
   hurt = (playerHitBy: Player, damage: number) => {
@@ -150,7 +154,7 @@ export class FrogEnemy extends Entity {
                   this.game.players[i].x === moves[0].pos.x &&
                   this.game.players[i].y === moves[0].pos.y
                 ) {
-                  this.game.players[i].hurt(this.hit(), "frog");
+                  this.game.players[i].hurt(this.hit(), this.name);
                   this.drawX = 0.5 * (this.x - this.game.players[i].x);
                   this.drawY = 0.5 * (this.y - this.game.players[i].y);
                   if (

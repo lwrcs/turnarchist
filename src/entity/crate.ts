@@ -8,9 +8,9 @@ import { EntityType } from "./entity";
 import { ImageParticle } from "../particle/imageParticle";
 
 export class Crate extends Entity {
-  constructor(level: Room, game: Game, x: number, y: number) {
-    super(level, game, x, y);
-    this.room = level;
+  constructor(room: Room, game: Game, x: number, y: number) {
+    super(room, game, x, y);
+    this.room = room;
     this.health = 1;
     this.maxHealth = 1;
     this.tileX = 0;
@@ -18,6 +18,10 @@ export class Crate extends Entity {
     this.hasShadow = false;
     this.pushable = true;
     this.entityType = EntityType.PROP;
+  }
+
+  get name() {
+    return "crate";
   }
 
   kill = () => {

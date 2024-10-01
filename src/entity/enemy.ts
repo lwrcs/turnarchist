@@ -13,12 +13,17 @@ import { SpikeTrap } from "../tile/spiketrap";
 import { DeathParticle } from "../particle/deathParticle";
 import { Candle } from "../item/candle";
 import { EntityType } from "./entity";
+import { ItemType } from "../gameState";
 
 export class Enemy extends Entity {
-  constructor(level: Room, game: Game, x: number, y: number) {
-    super(level, game, x, y);
+  constructor(room: Room, game: Game, x: number, y: number) {
+    super(room, game, x, y);
   }
   isType = () => {
     return EntityType.ENEMY;
   };
+
+  get name() {
+    return "enemy";
+  }
 }
