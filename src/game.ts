@@ -336,7 +336,6 @@ export class Game {
         { once: true }
       );
 
-
       document.addEventListener("touchstart", () => {
         if (this.menuState === MenuState.LOGIN_USERNAME) {
           usernameElement.focus();
@@ -479,12 +478,10 @@ export class Game {
       document.addEventListener("touchend", Input.handleTouchEnd, {
         passive: false,
       });
-    
 
       Input.keyDownListener = (key: string) => {
         this.keyDownListener(key);
       };
-      
 
       this.menuState = MenuState.LOADING;
 
@@ -506,16 +503,15 @@ export class Game {
       ).focus();
       this.passwordTextBox.handleKeyPress(key);
       Input.upSwipeListener = () => {
-        this.keyDownListener("ArrowDown")
+        this.keyDownListener("ArrowDown");
       };
       Input.downSwipeListener = () => {
-        this.keyDownListener("ArrowUp")
+        this.keyDownListener("ArrowUp");
       };
       Input.tapListener = () => {
-        this.keyDownListener("Enter")
+        this.keyDownListener("Enter");
       };
     } else if (this.menuState === MenuState.SELECT_WORLD) {
-      
       switch (key) {
         case "ArrowUp":
           this.selectedWorldCode = Math.max(0, this.selectedWorldCode - 1);
@@ -538,7 +534,6 @@ export class Game {
             );
           break;
       }
-      
     } else if (this.menuState === MenuState.IN_GAME) {
       if (!this.chatOpen) {
         switch (key.toUpperCase()) {
@@ -615,7 +610,6 @@ export class Game {
       ladder.linkedLevel.enterLevel(player, ladder.linkedLevel); // since it's not a local player, don't wait for transition
     }
     player.map.saveMapData();
-
   };
 
   changeLevelThroughDoor = (player: Player, door: any, side?: number) => {
@@ -653,7 +647,6 @@ export class Game {
     }
     player.map.saveMapData();
   };
-
 
   leaveGame = () => {
     this.socket.emit("game state", createGameState(this));
@@ -747,7 +740,7 @@ export class Game {
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
     if (isMobile) {
-      game.pushMessage("mobile detected")
+      game.pushMessage("mobile detected");
       // Adjust scale for mobile devices
       Game.scale = 2; // Example: limit scale to 2 for mobile
     } else {

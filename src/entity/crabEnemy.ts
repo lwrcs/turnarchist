@@ -36,7 +36,6 @@ export class CrabEnemy extends Entity {
     this.tileY = 4;
     this.seenPlayer = false;
     this.aggro = false;
-    this.deathParticleColor = "#ffffff";
 
     if (drop) this.drop = drop;
     else {
@@ -222,14 +221,14 @@ export class CrabEnemy extends Entity {
         1,
         this.x - this.drawX,
         this.y - 0.25 - this.drawY,
-        1 * this.crushX,
-        1 * this.crushY,
+        1,
+        1,
         this.room.shadeColor,
         this.shadeAmount()
       );
-      if (this.crushed) {
+      /*if (this.crushed) {
         this.crushAnim(delta);
-      }
+      }*/
     }
     if (!this.seenPlayer) {
       this.drawSleepingZs(delta, 0, 0.75 * GameConstants.TILESIZE);

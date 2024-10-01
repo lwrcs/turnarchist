@@ -6286,10 +6286,10 @@ var CrabEnemy = /** @class */ (function (_super) {
                     _this.frame = 0;
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - 0.25 - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
-                game_1.Game.drawMob(_this.tileX, _this.tileY + _this.direction, 1, 1, _this.x - _this.drawX, _this.y - 0.25 - _this.drawY, 1 * _this.crushX, 1 * _this.crushY, _this.room.shadeColor, _this.shadeAmount());
-                if (_this.crushed) {
-                    _this.crushAnim(delta);
-                }
+                game_1.Game.drawMob(_this.tileX, _this.tileY + _this.direction, 1, 1, _this.x - _this.drawX, _this.y - 0.25 - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
+                /*if (this.crushed) {
+                  this.crushAnim(delta);
+                }*/
             }
             if (!_this.seenPlayer) {
                 _this.drawSleepingZs(delta, 0, 0.75 * gameConstants_1.GameConstants.TILESIZE);
@@ -6306,7 +6306,6 @@ var CrabEnemy = /** @class */ (function (_super) {
         _this.tileY = 4;
         _this.seenPlayer = false;
         _this.aggro = false;
-        _this.deathParticleColor = "#ffffff";
         if (drop)
             _this.drop = drop;
         else {
@@ -6692,11 +6691,11 @@ var Entity = /** @class */ (function (_super) {
             if (!_this.dead) {
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
-                game_1.Game.drawMob(_this.tileX, _this.tileY + _this.direction * 2, 1, 2, _this.x - _this.drawX, _this.y - 1.5 - _this.drawY, 1 * _this.crushX, 2 * _this.crushY, _this.room.shadeColor, _this.shadeAmount());
+                game_1.Game.drawMob(_this.tileX, _this.tileY + _this.direction * 2, 1, 2, _this.x - _this.drawX, _this.y - 1.5 - _this.drawY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
             }
-            if (_this.crushed) {
-                _this.crushAnim(delta);
-            }
+            /*if (this.crushed) {
+              this.crushAnim(delta);
+            }*/
         };
         _this.tick = function () { };
         _this.drawTopLayer = function (delta) {
@@ -6746,26 +6745,26 @@ var Entity = /** @class */ (function (_super) {
                 game_1.Game.fillTextOutline("!", (_this.x + 0.5) * gameConstants_1.GameConstants.TILESIZE - width / 2 + offsetX, (_this.y - 0.75) * gameConstants_1.GameConstants.TILESIZE + yoff + offsetY, gameConstants_1.GameConstants.OUTLINE, gameConstants_1.GameConstants.WARNING_RED);
             }
         };
-        _this.crush = function () {
-            var player;
-            for (var i in _this.game.players) {
-                player = _this.game.players[i];
-            }
-            if (_this.x == player.x) {
-                _this.crushVertical = true;
-            }
-            if (_this.y == player.y) {
-                _this.crushVertical = false;
-            }
+        /*crush = () => {
+          let player: Player;
+          for (let i in this.game.players) {
+            player = this.game.players[i];
+          }
+          if (this.x == player.x) {
+            this.crushVertical = true;
+          }
+          if (this.y == player.y) {
+            this.crushVertical = false;
+          }
         };
-        _this.crushAnim = function (delta) {
-            if (_this.crushVertical && _this.crushX >= 0) {
-                _this.crushX -= delta * 0.125;
-            }
-            else if (_this.crushY >= 0) {
-                _this.crushY -= delta * 0.125;
-            }
+        crushAnim = (delta: number) => {
+          if (this.crushVertical && this.crushX >= 0) {
+            this.crushX -= delta * 0.125;
+          } else if (this.crushY >= 0) {
+            this.crushY -= delta * 0.125;
+          }
         };
+      */
         _this.makeHitWarnings = function (orthogonal, diagonal, forwardOnly, direction) {
             if (orthogonal && !forwardOnly) {
                 _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y, _this.x, _this.y));
@@ -8682,7 +8681,6 @@ var Spawner = /** @class */ (function (_super) {
         _this.tileY = 4;
         _this.seenPlayer = true;
         _this.enemySpawnType = game_1.Game.randTable([1, 2, 2, 2, 2, 3], rand);
-        _this.deathParticleColor = "#ffffff";
         _this.rand = rand;
         return _this;
     }

@@ -52,18 +52,14 @@ export class Entity extends Drawable {
   interactable: boolean; // can the player interact
   deathParticleColor: string;
   healthBar: HealthBar;
+  drop: Item;
   sleepingZFrame = 0;
   alertTicks: number;
   exclamationFrame: number;
   lastX: number;
   lastY: number;
   entityType: EntityType;
-  crushX: number;
-  crushY: number;
-  crushed: Boolean;
-  crushVertical: Boolean;
   hitBy: Player;
-  drop: Item;
 
   constructor(room: Room, game: Game, x: number, y: number) {
     super();
@@ -290,15 +286,15 @@ export class Entity extends Drawable {
         2,
         this.x - this.drawX,
         this.y - 1.5 - this.drawY,
-        1 * this.crushX,
-        2 * this.crushY,
+        1,
+        2,
         this.room.shadeColor,
         this.shadeAmount()
       );
     }
-    if (this.crushed) {
+    /*if (this.crushed) {
       this.crushAnim(delta);
-    }
+    }*/
   };
 
   tick = () => {};
@@ -367,7 +363,7 @@ export class Entity extends Drawable {
       );
     }
   };
-  crush = () => {
+  /*crush = () => {
     let player: Player;
     for (let i in this.game.players) {
       player = this.game.players[i];
@@ -386,7 +382,7 @@ export class Entity extends Drawable {
       this.crushY -= delta * 0.125;
     }
   };
-
+*/
   makeHitWarnings = (
     orthogonal: Boolean,
     diagonal: Boolean,
