@@ -15006,7 +15006,6 @@ var Player = /** @class */ (function (_super) {
                             }
                             if (_this.game.rooms[_this.levelID].roomArray[nextX][nextY].canCrushEnemy() ||
                                 enemyEnd) {
-                                pushedEnemies[pushedEnemies.length - 1].crush();
                                 pushedEnemies[pushedEnemies.length - 1].killNoBones();
                                 if (_this.game.rooms[_this.levelID] === _this.game.room)
                                     sound_1.Sound.hit();
