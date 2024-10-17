@@ -9383,7 +9383,6 @@ var generate_dungeon_candidate = function (map_w, map_h) {
     for (var i = 0; i < 3; i++)
         partitions = split_partitions(partitions, 0.25);
     //split partitions 3 times with different probabilities
-    partitions = remove_wall_rooms(partitions, map_w, map_h);
     grid = populate_grid(partitions, grid, map_w, map_h);
     //remove wall rooms and populate dat grid
     partitions.sort(function (a, b) { return a.area() - b.area(); });
@@ -9564,7 +9563,7 @@ var generate_cave_candidate = function (map_w, map_h, num_rooms) {
         partitions[i].type = room_1.RoomType.CAVE;
     var connected = [spawn];
     var frontier = [spawn];
-    // connect rooms until we find the boss
+    // connect rooms until we hit num_rooms
     while (frontier.length > 0 && connected.length < num_rooms) {
         var room = frontier[0];
         frontier.splice(0, 1);
@@ -9652,7 +9651,7 @@ var generate_cave_candidate = function (map_w, map_h, num_rooms) {
 };
 var generate_cave = function (mapWidth, mapHeight) {
     var partitions;
-    var numberOfRooms = 5;
+    var numberOfRooms = 5; // don't set this too high or cave generation will time out
     do {
         partitions = generate_cave_candidate(mapWidth, mapHeight, numberOfRooms);
     } while (partitions.length < numberOfRooms);

@@ -217,7 +217,6 @@ let generate_dungeon_candidate = (
   for (let i = 0; i < 3; i++) partitions = split_partitions(partitions, 1);
   for (let i = 0; i < 3; i++) partitions = split_partitions(partitions, 0.25);
   //split partitions 3 times with different probabilities
-  partitions = remove_wall_rooms(partitions, map_w, map_h);
   grid = populate_grid(partitions, grid, map_w, map_h);
   //remove wall rooms and populate dat grid
   partitions.sort((a, b) => a.area() - b.area());
@@ -424,7 +423,7 @@ let generate_cave_candidate = (
   let connected = [spawn];
   let frontier = [spawn];
 
-  // connect rooms until we find the boss
+  // connect rooms until we hit num_rooms
   while (frontier.length > 0 && connected.length < num_rooms) {
     let room = frontier[0];
     frontier.splice(0, 1);
@@ -532,7 +531,7 @@ let generate_cave_candidate = (
 
 let generate_cave = (mapWidth: number, mapHeight: number): Array<Partition> => {
   let partitions: Array<Partition>;
-  const numberOfRooms = 5;
+  const numberOfRooms = 5; // don't set this too high or cave generation will time out
 
   do {
     partitions = generate_cave_candidate(mapWidth, mapHeight, numberOfRooms);
