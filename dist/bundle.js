@@ -6092,6 +6092,12 @@ var Game = /** @class */ (function () {
             window.requestAnimationFrame(_this.run);
             _this.onResize();
             window.addEventListener("resize", _this.onResize);
+            _this.players = {};
+            _this.offlinePlayers = {};
+            _this.chatOpen = false;
+            _this.screenShakeX = 0;
+            _this.screenShakeY = 0;
+            _this.levelState = LevelState.IN_LEVEL;
             var gs = new gameState_1.GameState();
             gs.seed = (Math.random() * 4294967296) >>> 0;
             gs.randomState = (Math.random() * 4294967296) >>> 0;

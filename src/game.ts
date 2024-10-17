@@ -234,6 +234,15 @@ export class Game {
       this.onResize();
       window.addEventListener("resize", this.onResize);
 
+      this.players = {};
+      this.offlinePlayers = {};
+      this.chatOpen = false;
+
+      this.screenShakeX = 0;
+      this.screenShakeY = 0;
+
+      this.levelState = LevelState.IN_LEVEL;
+
       let gs = new GameState();
       gs.seed = (Math.random() * 4294967296) >>> 0;
       gs.randomState = (Math.random() * 4294967296) >>> 0;
