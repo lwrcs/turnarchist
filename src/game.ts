@@ -170,83 +170,103 @@ export class Game {
       Game.shade_canvases = {};
       Game.text_rendering_canvases = {};
 
+      let resourcesLoaded = 0;
+      const NUM_RESOURCES = 6;
+
       Game.tileset = new Image();
+      Game.tileset.onload = () => { resourcesLoaded++; }
       Game.tileset.src = "res/tileset.png";
       Game.objset = new Image();
+      Game.objset.onload = () => { resourcesLoaded++; }
       Game.objset.src = "res/objset.png";
       Game.mobset = new Image();
+      Game.mobset.onload = () => { resourcesLoaded++; }
       Game.mobset.src = "res/mobset.png";
       Game.itemset = new Image();
+      Game.itemset.onload = () => { resourcesLoaded++; }
       Game.itemset.src = "res/itemset.png";
       Game.fxset = new Image();
+      Game.fxset.onload = () => { resourcesLoaded++; }
       Game.fxset.src = "res/fxset.png";
       Game.fontsheet = new Image();
+      Game.fontsheet.onload = () => { resourcesLoaded++; }
       Game.fontsheet.src = "res/font.png";
 
-      Game.scale = 1;
+      let checkResourcesLoaded = () => {
+        if (resourcesLoaded < NUM_RESOURCES) {
+          window.setTimeout(checkResourcesLoaded, 500);
+        } else {
+          console.log("loaded all images");
 
-      Sound.loadSounds();
-      Sound.playMusic(); // loops forever
+          // proceed with constructor
 
-      document.addEventListener(
-        "touchstart",
-        function (e) {
-          if (e.target == canvas) {
-            e.preventDefault();
-          }
-        },
-        false
-      );
-      document.addEventListener(
-        "touchend",
-        function (e) {
-          if (e.target == canvas) {
-            e.preventDefault();
-          }
-        },
-        false
-      );
-      document.addEventListener(
-        "touchmove",
-        function (e) {
-          if (e.target == canvas) {
-            e.preventDefault();
-          }
-        },
-        false
-      );
+          Game.scale = 1;
 
-      document.addEventListener("touchstart", Input.handleTouchStart, {
-        passive: false,
-      });
-      document.addEventListener("touchmove", Input.handleTouchMove, {
-        passive: false,
-      });
-      document.addEventListener("touchend", Input.handleTouchEnd, {
-        passive: false,
-      });
+          Sound.loadSounds();
+          Sound.playMusic(); // loops forever
 
-      Input.keyDownListener = (key: string) => {
-        this.keyDownListener(key);
-      };
+          document.addEventListener(
+            "touchstart",
+            function (e) {
+              if (e.target == canvas) {
+                e.preventDefault();
+              }
+            },
+            false
+          );
+          document.addEventListener(
+            "touchend",
+            function (e) {
+              if (e.target == canvas) {
+                e.preventDefault();
+              }
+            },
+            false
+          );
+          document.addEventListener(
+            "touchmove",
+            function (e) {
+              if (e.target == canvas) {
+                e.preventDefault();
+              }
+            },
+            false
+          );
 
-      window.requestAnimationFrame(this.run);
-      this.onResize();
-      window.addEventListener("resize", this.onResize);
+          document.addEventListener("touchstart", Input.handleTouchStart, {
+            passive: false,
+          });
+          document.addEventListener("touchmove", Input.handleTouchMove, {
+            passive: false,
+          });
+          document.addEventListener("touchend", Input.handleTouchEnd, {
+            passive: false,
+          });
 
-      this.players = {};
-      this.offlinePlayers = {};
-      this.chatOpen = false;
+          Input.keyDownListener = (key: string) => {
+            this.keyDownListener(key);
+          };
 
-      this.screenShakeX = 0;
-      this.screenShakeY = 0;
+          window.requestAnimationFrame(this.run);
+          this.onResize();
+          window.addEventListener("resize", this.onResize);
 
-      this.levelState = LevelState.IN_LEVEL;
+          this.players = {};
+          this.offlinePlayers = {};
+          this.chatOpen = false;
 
-      let gs = new GameState();
-      gs.seed = (Math.random() * 4294967296) >>> 0;
-      gs.randomState = (Math.random() * 4294967296) >>> 0;
-      loadGameState(this, [this.localPlayerID], gs, true);
+          this.screenShakeX = 0;
+          this.screenShakeY = 0;
+
+          this.levelState = LevelState.IN_LEVEL;
+
+          let gs = new GameState();
+          gs.seed = (Math.random() * 4294967296) >>> 0;
+          gs.randomState = (Math.random() * 4294967296) >>> 0;
+          loadGameState(this, [this.localPlayerID], gs, true);
+        }
+      }
+      checkResourcesLoaded();
     });
   }
 

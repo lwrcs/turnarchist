@@ -6047,61 +6047,79 @@ var Game = /** @class */ (function () {
             _this.selectedWorldCode = 0;
             Game.shade_canvases = {};
             Game.text_rendering_canvases = {};
+            var resourcesLoaded = 0;
+            var NUM_RESOURCES = 6;
             Game.tileset = new Image();
+            Game.tileset.onload = function () { resourcesLoaded++; };
             Game.tileset.src = "res/tileset.png";
             Game.objset = new Image();
+            Game.objset.onload = function () { resourcesLoaded++; };
             Game.objset.src = "res/objset.png";
             Game.mobset = new Image();
+            Game.mobset.onload = function () { resourcesLoaded++; };
             Game.mobset.src = "res/mobset.png";
             Game.itemset = new Image();
+            Game.itemset.onload = function () { resourcesLoaded++; };
             Game.itemset.src = "res/itemset.png";
             Game.fxset = new Image();
+            Game.fxset.onload = function () { resourcesLoaded++; };
             Game.fxset.src = "res/fxset.png";
             Game.fontsheet = new Image();
+            Game.fontsheet.onload = function () { resourcesLoaded++; };
             Game.fontsheet.src = "res/font.png";
-            Game.scale = 1;
-            sound_1.Sound.loadSounds();
-            sound_1.Sound.playMusic(); // loops forever
-            document.addEventListener("touchstart", function (e) {
-                if (e.target == canvas) {
-                    e.preventDefault();
+            var checkResourcesLoaded = function () {
+                if (resourcesLoaded < NUM_RESOURCES) {
+                    window.setTimeout(checkResourcesLoaded, 500);
                 }
-            }, false);
-            document.addEventListener("touchend", function (e) {
-                if (e.target == canvas) {
-                    e.preventDefault();
+                else {
+                    console.log("loaded all images");
+                    // proceed with constructor
+                    Game.scale = 1;
+                    sound_1.Sound.loadSounds();
+                    sound_1.Sound.playMusic(); // loops forever
+                    document.addEventListener("touchstart", function (e) {
+                        if (e.target == canvas) {
+                            e.preventDefault();
+                        }
+                    }, false);
+                    document.addEventListener("touchend", function (e) {
+                        if (e.target == canvas) {
+                            e.preventDefault();
+                        }
+                    }, false);
+                    document.addEventListener("touchmove", function (e) {
+                        if (e.target == canvas) {
+                            e.preventDefault();
+                        }
+                    }, false);
+                    document.addEventListener("touchstart", input_1.Input.handleTouchStart, {
+                        passive: false,
+                    });
+                    document.addEventListener("touchmove", input_1.Input.handleTouchMove, {
+                        passive: false,
+                    });
+                    document.addEventListener("touchend", input_1.Input.handleTouchEnd, {
+                        passive: false,
+                    });
+                    input_1.Input.keyDownListener = function (key) {
+                        _this.keyDownListener(key);
+                    };
+                    window.requestAnimationFrame(_this.run);
+                    _this.onResize();
+                    window.addEventListener("resize", _this.onResize);
+                    _this.players = {};
+                    _this.offlinePlayers = {};
+                    _this.chatOpen = false;
+                    _this.screenShakeX = 0;
+                    _this.screenShakeY = 0;
+                    _this.levelState = LevelState.IN_LEVEL;
+                    var gs = new gameState_1.GameState();
+                    gs.seed = (Math.random() * 4294967296) >>> 0;
+                    gs.randomState = (Math.random() * 4294967296) >>> 0;
+                    (0, gameState_1.loadGameState)(_this, [_this.localPlayerID], gs, true);
                 }
-            }, false);
-            document.addEventListener("touchmove", function (e) {
-                if (e.target == canvas) {
-                    e.preventDefault();
-                }
-            }, false);
-            document.addEventListener("touchstart", input_1.Input.handleTouchStart, {
-                passive: false,
-            });
-            document.addEventListener("touchmove", input_1.Input.handleTouchMove, {
-                passive: false,
-            });
-            document.addEventListener("touchend", input_1.Input.handleTouchEnd, {
-                passive: false,
-            });
-            input_1.Input.keyDownListener = function (key) {
-                _this.keyDownListener(key);
             };
-            window.requestAnimationFrame(_this.run);
-            _this.onResize();
-            window.addEventListener("resize", _this.onResize);
-            _this.players = {};
-            _this.offlinePlayers = {};
-            _this.chatOpen = false;
-            _this.screenShakeX = 0;
-            _this.screenShakeY = 0;
-            _this.levelState = LevelState.IN_LEVEL;
-            var gs = new gameState_1.GameState();
-            gs.seed = (Math.random() * 4294967296) >>> 0;
-            gs.randomState = (Math.random() * 4294967296) >>> 0;
-            (0, gameState_1.loadGameState)(_this, [_this.localPlayerID], gs, true);
+            checkResourcesLoaded();
         });
     }
     Game.letters = "abcdefghijklmnopqrstuvwxyz1234567890,.!?:'()[]%-/";
