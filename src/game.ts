@@ -7,7 +7,6 @@ import { LevelConstants } from "./levelConstants";
 import { LevelGenerator } from "./levelGenerator";
 import { Input, InputEnum } from "./input";
 import { DownLadder } from "./tile/downLadder";
-import { io } from "socket.io-client";
 import { ServerAddress } from "./serverAddress";
 import { TextBox } from "./textbox";
 import { createGameState, GameState, loadGameState } from "./gameState";
@@ -53,14 +52,6 @@ let getShadeCanvasKey = (
   return set.src + "," + sx + "," + sy + "," + sw + "," + sh + "," + opacity;
 };
 
-export enum MenuState {
-  LOADING,
-  LOGIN_USERNAME,
-  LOGIN_PASSWORD,
-  SELECT_WORLD,
-  IN_GAME,
-}
-
 // fps counter
 const times = [];
 let fps;
@@ -72,10 +63,9 @@ export class Game {
   room: Room;
   rooms: Array<Room>;
   levelgen: LevelGenerator;
-  localPlayerID: string;
+  localPlayerID = "localplayer";
   players: Record<string, Player>;
   offlinePlayers: Record<string, Player>;
-  menuState: MenuState;
   levelState: LevelState;
   transitionStartTime: number;
   transitionX: number;
@@ -86,13 +76,10 @@ export class Game {
   transitioningLadder: any;
   screenShakeX: number;
   screenShakeY: number;
-  socket;
   chat: Array<ChatMessage>;
   chatOpen: boolean;
   chatTextBox: TextBox;
   previousFrameTimestamp: number;
-
-  input_history = [];
 
   mostRecentInputReceived = true;
 
@@ -132,178 +119,6 @@ export class Game {
 
   constructor() {
     window.addEventListener("load", () => {
-      this.socket = io(ServerAddress.address, { transports: ["websocket"] });
-      this.socket.on("new connect", () => {
-        if (this.menuState !== MenuState.LOADING)
-          //what sets the menu state??
-          this.loginMessage = "disconnected";
-        this.menuState = MenuState.LOGIN_USERNAME;
-      });
-      this.socket.on("unrecognized session", () => {
-        this.loginMessage = "unrecognized session";
-        this.menuState = MenuState.LOGIN_USERNAME;
-      });
-      this.socket.on("incorrect password", () => {
-        this.passwordTextBox.clear();
-        this.loginMessage = "incorrect password, try again";
-        this.menuState = MenuState.LOGIN_USERNAME;
-      });
-      this.socket.on("login already active", () => {
-        this.usernameTextBox.clear();
-        this.passwordTextBox.clear();
-        this.loginMessage = "account currently logged in";
-        this.menuState = MenuState.LOGIN_USERNAME;
-      });
-      this.socket.on("logged in", () => {
-        this.socket.emit("get available worlds");
-        this.menuState = MenuState.SELECT_WORLD;
-      });
-      this.socket.on("world codes", (codes) => {
-        this.worldCodes = codes;
-        this.selectedWorldCode = 0;
-      });
-      this.socket.on(
-        "welcome",
-        (activeUsernames: Array<string>, state: GameState) => {
-          this.players = {};
-          this.offlinePlayers = {};
-          loadGameState(this, activeUsernames, state);
-          this.chatOpen = false;
-
-          this.screenShakeX = 0;
-          this.screenShakeY = 0;
-
-          this.menuState = MenuState.IN_GAME;
-          this.levelState = LevelState.IN_LEVEL;
-        }
-      );
-      this.socket.on("get state", () => {
-        this.socket.emit("game state", createGameState(this));
-      });
-      this.socket.on(
-        "input",
-        (tickPlayerID: string, input: InputEnum, randState: number) => {
-          if (Random.state !== randState) {
-            this.chat.push(new ChatMessage("RAND STATES OUT OF SYNC"));
-            this.chat.push(new ChatMessage("Received " + randState));
-            this.chat.push(new ChatMessage("Current " + Random.state));
-          }
-
-          let decode_input = (input: InputEnum): string => {
-            if (input === InputEnum.I) return "I";
-            if (input === InputEnum.Q) return "Q";
-            if (input === InputEnum.LEFT) return "LEFT";
-            if (input === InputEnum.RIGHT) return "RIGHT";
-            if (input === InputEnum.UP) return "UP";
-            if (input === InputEnum.DOWN) return "DOWN";
-            if (input === InputEnum.SPACE) return "SPACE";
-          };
-
-          this.input_history.push(tickPlayerID + ", " + decode_input(input));
-          // make sure player exists
-          if (
-            !(tickPlayerID in this.players) &&
-            !(tickPlayerID in this.offlinePlayers)
-          ) {
-            // new player
-            this.players[this.localPlayerID] = new Player(this, 0, 0, true);
-            this.players[this.localPlayerID].levelID =
-              this.levelgen.currentFloorFirstLevelID;
-            this.players[this.localPlayerID].x =
-              this.rooms[this.levelgen.currentFloorFirstLevelID].roomX +
-              Math.floor(
-                this.rooms[this.levelgen.currentFloorFirstLevelID].width / 2
-              );
-            this.players[this.localPlayerID].y =
-              this.rooms[this.levelgen.currentFloorFirstLevelID].roomY +
-              Math.floor(
-                this.rooms[this.levelgen.currentFloorFirstLevelID].height / 2
-              );
-          }
-          if (tickPlayerID in this.offlinePlayers) {
-            // old player rejoining
-            this.players[tickPlayerID] = this.offlinePlayers[tickPlayerID];
-            delete this.offlinePlayers[tickPlayerID];
-          }
-          // process input
-          switch (input) {
-            case InputEnum.I:
-              this.players[tickPlayerID].iListener();
-              break;
-            case InputEnum.Q:
-              this.players[tickPlayerID].qListener();
-              break;
-            case InputEnum.LEFT:
-              this.players[tickPlayerID].leftListener(false);
-              break;
-            case InputEnum.RIGHT:
-              this.players[tickPlayerID].rightListener(false);
-              break;
-            case InputEnum.UP:
-              this.players[tickPlayerID].upListener(false);
-              break;
-            case InputEnum.DOWN:
-              this.players[tickPlayerID].downListener(false);
-              break;
-            case InputEnum.SPACE:
-              this.players[tickPlayerID].spaceListener();
-              break;
-          }
-
-          if (tickPlayerID === this.localPlayerID) {
-            this.mostRecentInputReceived = true;
-          }
-        }
-      );
-      this.socket.on("chat message", (message: string) => {
-        this.chat.push(new ChatMessage(message));
-      });
-      this.socket.on("player joined", (connectedPlayerID: string) => {
-        if (connectedPlayerID in this.offlinePlayers) {
-          // old player reconnecting
-          this.players[connectedPlayerID] =
-            this.offlinePlayers[connectedPlayerID];
-          if (
-            this.players[connectedPlayerID].levelID <
-            this.levelgen.currentFloorFirstLevelID
-          ) {
-            this.players[connectedPlayerID].levelID =
-              this.levelgen.currentFloorFirstLevelID;
-            this.players[connectedPlayerID].x =
-              this.rooms[this.levelgen.currentFloorFirstLevelID].roomX +
-              Math.floor(
-                this.rooms[this.levelgen.currentFloorFirstLevelID].width / 2
-              );
-            this.players[connectedPlayerID].y =
-              this.rooms[this.levelgen.currentFloorFirstLevelID].roomY +
-              Math.floor(
-                this.rooms[this.levelgen.currentFloorFirstLevelID].height / 2
-              );
-          }
-          delete this.offlinePlayers[connectedPlayerID];
-        } else if (!(connectedPlayerID in this.players)) {
-          // new player connecting
-          this.players[connectedPlayerID] = new Player(this, 0, 0, false);
-          this.players[connectedPlayerID].levelID =
-            this.levelgen.currentFloorFirstLevelID;
-          this.players[connectedPlayerID].x =
-            this.rooms[this.levelgen.currentFloorFirstLevelID].roomX +
-            Math.floor(
-              this.rooms[this.levelgen.currentFloorFirstLevelID].width / 2
-            );
-          this.players[connectedPlayerID].y =
-            this.rooms[this.levelgen.currentFloorFirstLevelID].roomY +
-            Math.floor(
-              this.rooms[this.levelgen.currentFloorFirstLevelID].height / 2
-            );
-        }
-      });
-      this.socket.on("player left", (disconnectPlayerID: string) => {
-        this.offlinePlayers[disconnectPlayerID] =
-          this.players[disconnectPlayerID];
-        delete this.players[disconnectPlayerID];
-      });
-
       let canvas = document.getElementById("gameCanvas");
       Game.ctx = (canvas as HTMLCanvasElement).getContext("2d", {
         alpha: false,
@@ -336,50 +151,11 @@ export class Game {
         { once: true }
       );
 
-      document.addEventListener("touchstart", () => {
-        if (this.menuState === MenuState.LOGIN_USERNAME) {
-          usernameElement.focus();
-        } else if (this.menuState === MenuState.LOGIN_PASSWORD) {
-          passwordElement.focus();
-        }
-      });
-
       this.chat = [];
       this.chatTextBox = new TextBox(chatElement);
       this.chatTextBox.setEnterCallback(() => {
         if (this.chatTextBox.text.length > 0) {
-          this.socket.emit("chat message", this.chatTextBox.text);
-          // chat commands
-          if (this.chatTextBox.text === "/logout") {
-            this.socket.emit("game state", createGameState(this));
-            this.socket.emit("logout");
-            this.menuState = MenuState.LOGIN_USERNAME;
-            this.usernameTextBox.clear();
-            this.passwordTextBox.clear();
-            this.rooms = [];
-            this.players = {};
-            this.offlinePlayers = {};
-          } else if (this.chatTextBox.text === "/leave") {
-            this.socket.emit("game state", createGameState(this));
-            this.socket.emit("leave world");
-            this.socket.emit("get available worlds");
-            this.menuState = MenuState.SELECT_WORLD;
-            this.rooms = [];
-            this.players = {};
-            this.offlinePlayers = {};
-          } else if (this.chatTextBox.text === "/save") {
-            this.socket.emit("game state", createGameState(this));
-          } else if (this.chatTextBox.text === "/r") {
-            console.log(Random.state);
-          } else if (this.chatTextBox.text === "/seed") {
-            console.log(this.levelgen.seed);
-          } else if (this.chatTextBox.text === "/i") {
-            for (let i = 0; i < this.input_history.length; i++) {
-              console.log(i + ": " + this.input_history[i]);
-            }
-          } else if (this.chatTextBox.text.substring(0, 8) === "/invite ")
-            this.socket.emit("invite", this.chatTextBox.text.substring(8));
-
+          this.chat.push(new ChatMessage(this.chatTextBox.text));
           this.chatTextBox.clear();
         } else {
           this.chatOpen = false;
@@ -387,35 +163,6 @@ export class Game {
       });
       this.chatTextBox.setEscapeCallback(() => {
         this.chatOpen = false;
-      });
-      this.chatOpen = false;
-
-      this.usernameTextBox = new TextBox(usernameElement);
-      this.usernameTextBox.allowedCharacters =
-        "abcdefghijklmnopqrstuvwxyz1234567890 ,.!?:'()[]%-";
-      this.usernameTextBox.setEnterCallback(() => {
-        if (this.usernameTextBox.text.length < 1) {
-          this.loginMessage = "username too short";
-        } else {
-          this.loginMessage = "";
-          this.menuState = MenuState.LOGIN_PASSWORD;
-          passwordElement.focus(); // Focus the password input element
-        }
-      });
-      this.passwordTextBox = new TextBox(passwordElement);
-      this.passwordTextBox.allowedCharacters =
-        "abcdefghijklmnopqrstuvwxyz1234567890 ,.!?:'()[]%-";
-      this.passwordTextBox.setEnterCallback(() => {
-        if (this.passwordTextBox.text.length < 8) {
-          this.loginMessage = "password too short";
-        } else {
-          this.localPlayerID = this.usernameTextBox.text;
-          this.socket.emit(
-            "login",
-            this.localPlayerID,
-            this.passwordTextBox.text
-          );
-        }
       });
       this.worldCodes = [];
       this.selectedWorldCode = 0;
@@ -483,104 +230,56 @@ export class Game {
         this.keyDownListener(key);
       };
 
-      this.menuState = MenuState.LOADING;
-
       window.requestAnimationFrame(this.run);
       this.onResize();
       window.addEventListener("resize", this.onResize);
+
+      let gs = new GameState();
+      gs.seed = (Math.random() * 4294967296) >>> 0;
+      gs.randomState = (Math.random() * 4294967296) >>> 0;
+      loadGameState(this, [this.localPlayerID], gs, true);
     });
   }
 
   keyDownListener = (key: string) => {
-    if (this.menuState === MenuState.LOGIN_USERNAME) {
-      this.usernameTextBox.handleKeyPress(key);
-      (
-        document.querySelector('input[type="text"]') as HTMLInputElement
-      ).focus();
-    } else if (this.menuState === MenuState.LOGIN_PASSWORD) {
-      (
-        document.querySelector('input[type="password"]') as HTMLInputElement
-      ).focus();
-      this.passwordTextBox.handleKeyPress(key);
-      Input.upSwipeListener = () => {
-        this.keyDownListener("ArrowDown");
-      };
-      Input.downSwipeListener = () => {
-        this.keyDownListener("ArrowUp");
-      };
-      Input.tapListener = () => {
-        this.keyDownListener("Enter");
-      };
-    } else if (this.menuState === MenuState.SELECT_WORLD) {
-      switch (key) {
-        case "ArrowUp":
-          this.selectedWorldCode = Math.max(0, this.selectedWorldCode - 1);
+    if (!this.chatOpen) {
+      switch (key.toUpperCase()) {
+        case "C":
+          this.chatOpen = true;
           break;
-        case "ArrowDown":
-          this.selectedWorldCode = Math.min(
-            this.worldCodes.length + 1,
-            this.selectedWorldCode + 1
-          );
+        case "/":
+          this.chatOpen = true;
+          this.chatTextBox.clear();
+          this.chatTextBox.handleKeyPress(key);
           break;
-        case "Enter":
-          if (this.selectedWorldCode === 0)
-            this.socket.emit("get available worlds");
-          else if (this.selectedWorldCode === 1)
-            this.socket.emit("join new world");
-          else if (this.worldCodes[this.selectedWorldCode - 2])
-            this.socket.emit(
-              "join world",
-              this.worldCodes[this.selectedWorldCode - 2]
-            );
+        case "A":
+        case "ARROWLEFT":
+          this.players[this.localPlayerID].inputHandler(InputEnum.LEFT);
+          break;
+        case "D":
+        case "ARROWRIGHT":
+          this.players[this.localPlayerID].inputHandler(InputEnum.RIGHT);
+          break;
+        case "W":
+        case "ARROWUP":
+          this.players[this.localPlayerID].inputHandler(InputEnum.UP);
+          break;
+        case "S":
+        case "ARROWDOWN":
+          this.players[this.localPlayerID].inputHandler(InputEnum.DOWN);
+          break;
+        case " ":
+          this.players[this.localPlayerID].inputHandler(InputEnum.SPACE);
+          break;
+        case "I":
+          this.players[this.localPlayerID].inputHandler(InputEnum.I);
+          break;
+        case "Q":
+          this.players[this.localPlayerID].inputHandler(InputEnum.Q);
           break;
       }
-    } else if (this.menuState === MenuState.IN_GAME) {
-      if (!this.chatOpen) {
-        switch (key.toUpperCase()) {
-          case "C":
-            this.chatOpen = true;
-            break;
-          case "/":
-            this.chatOpen = true;
-            this.chatTextBox.clear();
-            this.chatTextBox.handleKeyPress(key);
-            break;
-          case "A":
-          case "ARROWLEFT":
-            this.players[this.localPlayerID].inputHandler(InputEnum.LEFT);
-            break;
-          case "D":
-          case "ARROWRIGHT":
-            this.players[this.localPlayerID].inputHandler(InputEnum.RIGHT);
-            break;
-          case "W":
-          case "ARROWUP":
-            this.players[this.localPlayerID].inputHandler(InputEnum.UP);
-            break;
-          case "S":
-          case "ARROWDOWN":
-            this.players[this.localPlayerID].inputHandler(InputEnum.DOWN);
-            break;
-          case " ":
-            this.players[this.localPlayerID].inputHandler(InputEnum.SPACE);
-            break;
-          case "I":
-            this.players[this.localPlayerID].inputHandler(InputEnum.I);
-            break;
-          case "Q":
-            this.players[this.localPlayerID].inputHandler(InputEnum.Q);
-            break;
-        }
-      } else {
-        this.chatTextBox.handleKeyPress(key);
-      }
-    }
-  };
-
-  sendInput = (input: InputEnum) => {
-    if (this.mostRecentInputReceived) {
-      this.mostRecentInputReceived = false;
-      this.socket.emit("input", this.localPlayerID, input, Random.state);
+    } else {
+      this.chatTextBox.handleKeyPress(key);
     }
   };
 
@@ -648,16 +347,6 @@ export class Game {
     player.map.saveMapData();
   };
 
-  leaveGame = () => {
-    this.socket.emit("game state", createGameState(this));
-    this.socket.emit("leave world");
-    this.socket.emit("get available worlds");
-    this.menuState = MenuState.SELECT_WORLD;
-    this.rooms = [];
-    this.players = {};
-    this.offlinePlayers = {};
-  };
-
   run = (timestamp: number) => {
     if (!this.previousFrameTimestamp)
       this.previousFrameTimestamp = timestamp - 1000.0 / GameConstants.FPS;
@@ -691,32 +380,30 @@ export class Game {
       } as KeyboardEvent);
     }
 
-    if (this.menuState === MenuState.IN_GAME) {
-      if (this.levelState === LevelState.TRANSITIONING) {
-        if (
-          Date.now() - this.transitionStartTime >=
-          LevelConstants.LEVEL_TRANSITION_TIME
-        ) {
-          this.levelState = LevelState.IN_LEVEL;
-        }
+    if (this.levelState === LevelState.TRANSITIONING) {
+      if (
+        Date.now() - this.transitionStartTime >=
+        LevelConstants.LEVEL_TRANSITION_TIME
+      ) {
+        this.levelState = LevelState.IN_LEVEL;
       }
-      if (this.levelState === LevelState.TRANSITIONING_LADDER) {
-        if (
-          Date.now() - this.transitionStartTime >=
-          LevelConstants.LEVEL_TRANSITION_TIME_LADDER
-        ) {
-          this.levelState = LevelState.IN_LEVEL;
-        }
+    }
+    if (this.levelState === LevelState.TRANSITIONING_LADDER) {
+      if (
+        Date.now() - this.transitionStartTime >=
+        LevelConstants.LEVEL_TRANSITION_TIME_LADDER
+      ) {
+        this.levelState = LevelState.IN_LEVEL;
       }
+    }
 
-      for (const i in this.players) {
-        this.players[i].update();
-        this.rooms[this.players[i].levelID].update();
+    for (const i in this.players) {
+      this.players[i].update();
+      this.rooms[this.players[i].levelID].update();
 
-        if (this.players[i].dead) {
-          for (const j in this.players) {
-            this.players[j].dead = true;
-          }
+      if (this.players[i].dead) {
+        for (const j in this.players) {
+          this.players[j].dead = true;
         }
       }
     }
@@ -766,8 +453,7 @@ export class Game {
     Game.ctx.canvas.setAttribute("height", `${GameConstants.HEIGHT}`);
     Game.ctx.canvas.setAttribute(
       "style",
-      `width: ${GameConstants.WIDTH * Game.scale}px; height: ${
-        GameConstants.HEIGHT * Game.scale
+      `width: ${GameConstants.WIDTH * Game.scale}px; height: ${GameConstants.HEIGHT * Game.scale
       }px;
     display: block;
     margin: 0 auto;
@@ -882,206 +568,159 @@ export class Game {
 
   draw = (delta: number) => {
     Game.ctx.globalAlpha = 1;
-    Game.ctx.fillStyle = "black";
-    if (this.menuState === MenuState.IN_GAME)
-      Game.ctx.fillStyle = this.room.shadeColor;
+    Game.ctx.fillStyle = this.room.shadeColor;
     Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
 
-    if (this.menuState === MenuState.LOADING) {
-      Game.ctx.fillStyle = "white";
-      let loadingString = "loading...";
-      Game.fillText(
-        loadingString,
-        GameConstants.WIDTH * 0.5 - Game.measureText(loadingString).width * 0.5,
-        GameConstants.HEIGHT * 0.5 - Game.letter_height * 0.5
+    if (this.levelState === LevelState.TRANSITIONING) {
+      let levelOffsetX = Math.floor(
+        this.lerp(
+          (Date.now() - this.transitionStartTime) /
+          LevelConstants.LEVEL_TRANSITION_TIME,
+          0,
+          -this.transitionX
+        )
       );
-    } else if (this.menuState === MenuState.LOGIN_USERNAME) {
-      Game.ctx.fillStyle = "white";
-      Game.fillText(
-        this.loginMessage,
-        GameConstants.WIDTH * 0.5 -
-          Game.measureText(this.loginMessage).width * 0.5,
-        GameConstants.HEIGHT * 0.5 - Game.letter_height * 3
+      let levelOffsetY = Math.floor(
+        this.lerp(
+          (Date.now() - this.transitionStartTime) /
+          LevelConstants.LEVEL_TRANSITION_TIME,
+          0,
+          -this.transitionY
+        )
       );
+      let playerOffsetX = levelOffsetX - this.transitionX;
+      let playerOffsetY = levelOffsetY - this.transitionY;
 
-      let prompt = "username: ";
-      let usernameString = prompt + this.usernameTextBox.text;
-      Game.fillText(
-        usernameString,
-        GameConstants.WIDTH * 0.5 -
-          Game.measureText(usernameString).width * 0.5,
-        GameConstants.HEIGHT * 0.5 - Game.letter_height * 0.5
-      );
+      let playerCX =
+        (this.players[this.localPlayerID].x -
+          this.players[this.localPlayerID].drawX +
+          0.5) *
+        GameConstants.TILESIZE;
+      let playerCY =
+        (this.players[this.localPlayerID].y -
+          this.players[this.localPlayerID].drawY +
+          0.5) *
+        GameConstants.TILESIZE;
 
-      let cursorX = Game.measureText(
-        usernameString.substring(0, prompt.length + this.usernameTextBox.cursor)
-      ).width;
-      Game.ctx.fillRect(
-        Math.round(
-          GameConstants.WIDTH * 0.5 -
-            Game.measureText(usernameString).width * 0.5 +
-            cursorX
-        ),
-        Math.round(GameConstants.HEIGHT * 0.5 - Game.letter_height * 0.5),
-        1,
-        Game.letter_height
+      Game.ctx.translate(
+        -Math.round(playerCX + playerOffsetX - 0.5 * GameConstants.WIDTH),
+        -Math.round(playerCY + playerOffsetY - 0.5 * GameConstants.HEIGHT)
       );
 
-      prompt = "password: ";
-      let passwordString = prompt;
-      for (const i of this.passwordTextBox.text) passwordString += "-";
-      Game.fillText(
-        passwordString,
-        GameConstants.WIDTH * 0.5 -
-          Game.measureText(passwordString).width * 0.5,
-        GameConstants.HEIGHT * 0.5 + Game.letter_height * 0.5
-      );
-    } else if (this.menuState === MenuState.LOGIN_PASSWORD) {
-      Game.ctx.fillStyle = "white";
-      Game.fillText(
-        this.loginMessage,
-        GameConstants.WIDTH * 0.5 -
-          Game.measureText(this.loginMessage).width * 0.5,
-        GameConstants.HEIGHT * 0.5 - Game.letter_height * 3
+      let extraTileLerp = Math.floor(
+        this.lerp(
+          (Date.now() - this.transitionStartTime) /
+          LevelConstants.LEVEL_TRANSITION_TIME,
+          0,
+          GameConstants.TILESIZE
+        )
       );
 
-      let prompt = "username: ";
-      let usernameString = prompt + this.usernameTextBox.text;
-      Game.fillText(
-        usernameString,
-        GameConstants.WIDTH * 0.5 -
-          Game.measureText(usernameString).width * 0.5,
-        GameConstants.HEIGHT * 0.5 - Game.letter_height * 0.5
-      );
+      let newLevelOffsetX = playerOffsetX;
+      let newLevelOffsetY = playerOffsetY;
 
-      prompt = "password: ";
-      let passwordString = prompt;
-      for (const i of this.passwordTextBox.text) passwordString += "-";
-      Game.fillText(
-        passwordString,
-        GameConstants.WIDTH * 0.5 -
-          Game.measureText(passwordString).width * 0.5,
-        GameConstants.HEIGHT * 0.5 + Game.letter_height * 0.5
-      );
-      let cursorX = Game.measureText(
-        passwordString.substring(0, prompt.length + this.passwordTextBox.cursor)
-      ).width;
-      Game.ctx.fillRect(
-        Math.round(
-          GameConstants.WIDTH * 0.5 -
-            Game.measureText(passwordString).width * 0.5 +
-            cursorX
-        ),
-        Math.round(GameConstants.HEIGHT * 0.5 + Game.letter_height * 0.5),
-        1,
-        Game.letter_height
-      );
-    } else if (this.menuState === MenuState.SELECT_WORLD) {
-      let c = ["refresh", "new world"];
-      c = c.concat(this.worldCodes);
-      c[this.selectedWorldCode] = "[ " + c[this.selectedWorldCode] + " ]";
-      for (let i = 0; i < c.length; i++) {
-        let ind = i - this.selectedWorldCode;
-        let spacing = Game.letter_height + 2;
-        Game.ctx.fillStyle = "grey";
-        if (ind === 0) Game.ctx.fillStyle = "white";
-        Game.fillText(
-          c[i],
-          GameConstants.WIDTH * 0.5 - Game.measureText(c[i]).width * 0.5,
-          GameConstants.HEIGHT * 0.5 - Game.letter_height * 0.5 + ind * spacing
-        );
-      }
-    } else if (this.menuState === MenuState.IN_GAME) {
-      if (this.levelState === LevelState.TRANSITIONING) {
-        let levelOffsetX = Math.floor(
-          this.lerp(
-            (Date.now() - this.transitionStartTime) /
-              LevelConstants.LEVEL_TRANSITION_TIME,
-            0,
-            -this.transitionX
-          )
-        );
-        let levelOffsetY = Math.floor(
-          this.lerp(
-            (Date.now() - this.transitionStartTime) /
-              LevelConstants.LEVEL_TRANSITION_TIME,
-            0,
-            -this.transitionY
-          )
-        );
-        let playerOffsetX = levelOffsetX - this.transitionX;
-        let playerOffsetY = levelOffsetY - this.transitionY;
-
-        let playerCX =
-          (this.players[this.localPlayerID].x -
-            this.players[this.localPlayerID].drawX +
-            0.5) *
-          GameConstants.TILESIZE;
-        let playerCY =
-          (this.players[this.localPlayerID].y -
-            this.players[this.localPlayerID].drawY +
-            0.5) *
-          GameConstants.TILESIZE;
-
-        Game.ctx.translate(
-          -Math.round(playerCX + playerOffsetX - 0.5 * GameConstants.WIDTH),
-          -Math.round(playerCY + playerOffsetY - 0.5 * GameConstants.HEIGHT)
-        );
-
-        let extraTileLerp = Math.floor(
-          this.lerp(
-            (Date.now() - this.transitionStartTime) /
-              LevelConstants.LEVEL_TRANSITION_TIME,
-            0,
-            GameConstants.TILESIZE
-          )
-        );
-
-        let newLevelOffsetX = playerOffsetX;
-        let newLevelOffsetY = playerOffsetY;
-
-        if (this.sideTransition) {
-          if (this.sideTransitionDirection > 0) {
-            levelOffsetX += extraTileLerp;
-            newLevelOffsetX += extraTileLerp + GameConstants.TILESIZE;
-          } else {
-            levelOffsetX -= extraTileLerp;
-            newLevelOffsetX -= extraTileLerp + GameConstants.TILESIZE;
-          }
-        } else if (this.upwardTransition) {
-          levelOffsetY -= extraTileLerp;
-          newLevelOffsetY -= extraTileLerp + GameConstants.TILESIZE;
+      if (this.sideTransition) {
+        if (this.sideTransitionDirection > 0) {
+          levelOffsetX += extraTileLerp;
+          newLevelOffsetX += extraTileLerp + GameConstants.TILESIZE;
         } else {
-          levelOffsetY += extraTileLerp;
-          newLevelOffsetY += extraTileLerp + GameConstants.TILESIZE;
+          levelOffsetX -= extraTileLerp;
+          newLevelOffsetX -= extraTileLerp + GameConstants.TILESIZE;
         }
+      } else if (this.upwardTransition) {
+        levelOffsetY -= extraTileLerp;
+        newLevelOffsetY -= extraTileLerp + GameConstants.TILESIZE;
+      } else {
+        levelOffsetY += extraTileLerp;
+        newLevelOffsetY += extraTileLerp + GameConstants.TILESIZE;
+      }
 
-        let ditherFrame = Math.floor(
-          (7 * (Date.now() - this.transitionStartTime)) /
-            LevelConstants.LEVEL_TRANSITION_TIME
-        );
+      let ditherFrame = Math.floor(
+        (7 * (Date.now() - this.transitionStartTime)) /
+        LevelConstants.LEVEL_TRANSITION_TIME
+      );
 
-        Game.ctx.translate(levelOffsetX, levelOffsetY);
-        this.prevLevel.draw(delta);
-        this.prevLevel.drawEntities(delta);
+      Game.ctx.translate(levelOffsetX, levelOffsetY);
+      this.prevLevel.draw(delta);
+      this.prevLevel.drawEntities(delta);
+      for (
+        let x = this.prevLevel.roomX - 1;
+        x <= this.prevLevel.roomX + this.prevLevel.width;
+        x++
+      ) {
         for (
-          let x = this.prevLevel.roomX - 1;
-          x <= this.prevLevel.roomX + this.prevLevel.width;
-          x++
+          let y = this.prevLevel.roomY - 1;
+          y <= this.prevLevel.roomY + this.prevLevel.height;
+          y++
         ) {
-          for (
-            let y = this.prevLevel.roomY - 1;
-            y <= this.prevLevel.roomY + this.prevLevel.height;
-            y++
-          ) {
-            Game.drawFX(7 - ditherFrame, 10, 1, 1, x, y, 1, 1);
-          }
+          Game.drawFX(7 - ditherFrame, 10, 1, 1, x, y, 1, 1);
         }
-        Game.ctx.translate(-levelOffsetX, -levelOffsetY);
+      }
+      Game.ctx.translate(-levelOffsetX, -levelOffsetY);
 
-        Game.ctx.translate(newLevelOffsetX, newLevelOffsetY);
+      Game.ctx.translate(newLevelOffsetX, newLevelOffsetY);
+      this.room.draw(delta);
+      this.room.drawEntities(delta, true);
+      for (
+        let x = this.room.roomX - 1;
+        x <= this.room.roomX + this.room.width;
+        x++
+      ) {
+        for (
+          let y = this.room.roomY - 1;
+          y <= this.room.roomY + this.room.height;
+          y++
+        ) {
+          Game.drawFX(ditherFrame, 10, 1, 1, x, y, 1, 1);
+        }
+      }
+      Game.ctx.translate(-newLevelOffsetX, -newLevelOffsetY);
+
+      Game.ctx.translate(playerOffsetX, playerOffsetY);
+      this.players[this.localPlayerID].draw(delta);
+      Game.ctx.translate(-playerOffsetX, -playerOffsetY);
+
+      Game.ctx.translate(newLevelOffsetX, newLevelOffsetY);
+      this.room.drawShade(delta);
+      this.room.drawOverShade(delta);
+      Game.ctx.translate(-newLevelOffsetX, -newLevelOffsetY);
+
+      Game.ctx.translate(
+        Math.round(playerCX + playerOffsetX - 0.5 * GameConstants.WIDTH),
+        Math.round(playerCY + playerOffsetY - 0.5 * GameConstants.HEIGHT)
+      );
+
+      this.players[this.localPlayerID].drawGUI(delta);
+      for (const i in this.players) this.players[i].updateDrawXY(delta);
+    } else if (this.levelState === LevelState.TRANSITIONING_LADDER) {
+      let playerCX =
+        (this.players[this.localPlayerID].x -
+          this.players[this.localPlayerID].drawX +
+          0.5) *
+        GameConstants.TILESIZE;
+      let playerCY =
+        (this.players[this.localPlayerID].y -
+          this.players[this.localPlayerID].drawY +
+          0.5) *
+        GameConstants.TILESIZE;
+
+      Game.ctx.translate(
+        -Math.round(playerCX - 0.5 * GameConstants.WIDTH),
+        -Math.round(playerCY - 0.5 * GameConstants.HEIGHT)
+      );
+
+      let deadFrames = 6;
+      let ditherFrame = Math.floor(
+        ((7 * 2 + deadFrames) * (Date.now() - this.transitionStartTime)) /
+        LevelConstants.LEVEL_TRANSITION_TIME_LADDER
+      );
+
+      if (ditherFrame < 7) {
         this.room.draw(delta);
-        this.room.drawEntities(delta, true);
+        this.room.drawEntities(delta);
+        this.room.drawShade(delta);
+        this.room.drawOverShade(delta);
+
         for (
           let x = this.room.roomX - 1;
           x <= this.room.roomX + this.room.width;
@@ -1092,188 +731,127 @@ export class Game {
             y <= this.room.roomY + this.room.height;
             y++
           ) {
-            Game.drawFX(ditherFrame, 10, 1, 1, x, y, 1, 1);
+            Game.drawFX(7 - ditherFrame, 10, 1, 1, x, y, 1, 1);
           }
         }
-        Game.ctx.translate(-newLevelOffsetX, -newLevelOffsetY);
+      } else if (ditherFrame >= 7 + deadFrames) {
+        if (this.transitioningLadder) {
+          this.prevLevel = this.room;
+          this.room.exitLevel();
+          this.room = this.transitioningLadder.linkedLevel;
 
-        Game.ctx.translate(playerOffsetX, playerOffsetY);
-        this.players[this.localPlayerID].draw(delta);
-        Game.ctx.translate(-playerOffsetX, -playerOffsetY);
-
-        Game.ctx.translate(newLevelOffsetX, newLevelOffsetY);
-        this.room.drawShade(delta);
-        this.room.drawOverShade(delta);
-        Game.ctx.translate(-newLevelOffsetX, -newLevelOffsetY);
-
-        Game.ctx.translate(
-          Math.round(playerCX + playerOffsetX - 0.5 * GameConstants.WIDTH),
-          Math.round(playerCY + playerOffsetY - 0.5 * GameConstants.HEIGHT)
-        );
-
-        this.players[this.localPlayerID].drawGUI(delta);
-        for (const i in this.players) this.players[i].updateDrawXY(delta);
-      } else if (this.levelState === LevelState.TRANSITIONING_LADDER) {
-        let playerCX =
-          (this.players[this.localPlayerID].x -
-            this.players[this.localPlayerID].drawX +
-            0.5) *
-          GameConstants.TILESIZE;
-        let playerCY =
-          (this.players[this.localPlayerID].y -
-            this.players[this.localPlayerID].drawY +
-            0.5) *
-          GameConstants.TILESIZE;
-
-        Game.ctx.translate(
-          -Math.round(playerCX - 0.5 * GameConstants.WIDTH),
-          -Math.round(playerCY - 0.5 * GameConstants.HEIGHT)
-        );
-
-        let deadFrames = 6;
-        let ditherFrame = Math.floor(
-          ((7 * 2 + deadFrames) * (Date.now() - this.transitionStartTime)) /
-            LevelConstants.LEVEL_TRANSITION_TIME_LADDER
-        );
-
-        if (ditherFrame < 7) {
-          this.room.draw(delta);
-          this.room.drawEntities(delta);
-          this.room.drawShade(delta);
-          this.room.drawOverShade(delta);
-
-          for (
-            let x = this.room.roomX - 1;
-            x <= this.room.roomX + this.room.width;
-            x++
-          ) {
-            for (
-              let y = this.room.roomY - 1;
-              y <= this.room.roomY + this.room.height;
-              y++
-            ) {
-              Game.drawFX(7 - ditherFrame, 10, 1, 1, x, y, 1, 1);
-            }
-          }
-        } else if (ditherFrame >= 7 + deadFrames) {
-          if (this.transitioningLadder) {
-            this.prevLevel = this.room;
-            this.room.exitLevel();
-            this.room = this.transitioningLadder.linkedLevel;
-
-            this.room.enterLevel(this.players[this.localPlayerID]);
-            this.transitioningLadder = null;
-          }
-
-          this.room.draw(delta);
-          this.room.drawEntities(delta);
-          this.room.drawShade(delta);
-          this.room.drawOverShade(delta);
-          for (
-            let x = this.room.roomX - 1;
-            x <= this.room.roomX + this.room.width;
-            x++
-          ) {
-            for (
-              let y = this.room.roomY - 1;
-              y <= this.room.roomY + this.room.height;
-              y++
-            ) {
-              Game.drawFX(ditherFrame - (7 + deadFrames), 10, 1, 1, x, y, 1, 1);
-            }
-          }
+          this.room.enterLevel(this.players[this.localPlayerID]);
+          this.transitioningLadder = null;
         }
-        Game.ctx.translate(
-          Math.round(playerCX - 0.5 * GameConstants.WIDTH),
-          Math.round(playerCY - 0.5 * GameConstants.HEIGHT)
-        );
 
-        this.players[this.localPlayerID].drawGUI(delta);
-        for (const i in this.players) this.players[i].updateDrawXY(delta);
-      } else {
-        this.screenShakeX *= -0.8;
-        this.screenShakeY *= -0.8;
-
-        let playerDrawX = this.players[this.localPlayerID].drawX;
-        let playerDrawY = this.players[this.localPlayerID].drawY;
-
-        let cameraX = Math.round(
-          (this.players[this.localPlayerID].x - playerDrawX + 0.5) *
-            GameConstants.TILESIZE -
-            0.5 * GameConstants.WIDTH -
-            this.screenShakeX
-        );
-        let cameraY = Math.round(
-          (this.players[this.localPlayerID].y - playerDrawY + 0.5) *
-            GameConstants.TILESIZE -
-            0.5 * GameConstants.HEIGHT -
-            this.screenShakeY
-        );
-
-        Game.ctx.translate(-cameraX, -cameraY);
         this.room.draw(delta);
         this.room.drawEntities(delta);
-        //this.room.drawShade(delta);
+        this.room.drawShade(delta);
         this.room.drawOverShade(delta);
-        this.players[this.localPlayerID].drawTopLayer(delta);
-        Game.ctx.translate(cameraX, cameraY);
-
-        this.room.drawTopLayer(delta);
-        this.players[this.localPlayerID].drawGUI(delta);
-        for (const i in this.players) this.players[i].updateDrawXY(delta);
-      }
-      // draw chat
-      let CHAT_X = 10;
-      let CHAT_BOTTOM_Y = GameConstants.HEIGHT - Game.letter_height - 14;
-      let CHAT_OPACITY = 0.5;
-      if (this.chatOpen) {
-        Game.ctx.fillStyle = "black";
-        if (GameConstants.ALPHA_ENABLED) Game.ctx.globalAlpha = 0.75;
-        Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
-
-        Game.ctx.globalAlpha = 1;
-        Game.ctx.fillStyle = "white";
-        Game.fillText(this.chatTextBox.text, CHAT_X, CHAT_BOTTOM_Y);
-        let cursorX = Game.measureText(
-          this.chatTextBox.text.substring(0, this.chatTextBox.cursor)
-        ).width;
-        Game.ctx.fillRect(
-          CHAT_X + cursorX,
-          CHAT_BOTTOM_Y,
-          1,
-          Game.letter_height
-        );
-      }
-      for (let i = 0; i < this.chat.length; i++) {
-        Game.ctx.fillStyle = "white";
-        if (this.chat[i][0] === "/") Game.ctx.fillStyle = GameConstants.GREEN;
-        let y =
-          CHAT_BOTTOM_Y - (this.chat.length - 1 - i) * (Game.letter_height + 1);
-        if (this.chatOpen) y -= Game.letter_height + 1;
-
-        let age = Date.now() - this.chat[i].timestamp;
-        if (this.chatOpen) {
-          Game.ctx.globalAlpha = 1;
-        } else {
-          if (age <= GameConstants.CHAT_APPEAR_TIME) {
-            if (GameConstants.ALPHA_ENABLED)
-              Game.ctx.globalAlpha = CHAT_OPACITY;
-          } else if (
-            age <=
-            GameConstants.CHAT_APPEAR_TIME + GameConstants.CHAT_FADE_TIME
+        for (
+          let x = this.room.roomX - 1;
+          x <= this.room.roomX + this.room.width;
+          x++
+        ) {
+          for (
+            let y = this.room.roomY - 1;
+            y <= this.room.roomY + this.room.height;
+            y++
           ) {
-            if (GameConstants.ALPHA_ENABLED)
-              Game.ctx.globalAlpha =
-                CHAT_OPACITY *
-                (1 -
-                  (age - GameConstants.CHAT_APPEAR_TIME) /
-                    GameConstants.CHAT_FADE_TIME);
-          } else {
-            Game.ctx.globalAlpha = 0;
+            Game.drawFX(ditherFrame - (7 + deadFrames), 10, 1, 1, x, y, 1, 1);
           }
         }
-        Game.fillText(this.chat[i].message, CHAT_X, y);
       }
+      Game.ctx.translate(
+        Math.round(playerCX - 0.5 * GameConstants.WIDTH),
+        Math.round(playerCY - 0.5 * GameConstants.HEIGHT)
+      );
+
+      this.players[this.localPlayerID].drawGUI(delta);
+      for (const i in this.players) this.players[i].updateDrawXY(delta);
+    } else {
+      this.screenShakeX *= -0.8;
+      this.screenShakeY *= -0.8;
+
+      let playerDrawX = this.players[this.localPlayerID].drawX;
+      let playerDrawY = this.players[this.localPlayerID].drawY;
+
+      let cameraX = Math.round(
+        (this.players[this.localPlayerID].x - playerDrawX + 0.5) *
+        GameConstants.TILESIZE -
+        0.5 * GameConstants.WIDTH -
+        this.screenShakeX
+      );
+      let cameraY = Math.round(
+        (this.players[this.localPlayerID].y - playerDrawY + 0.5) *
+        GameConstants.TILESIZE -
+        0.5 * GameConstants.HEIGHT -
+        this.screenShakeY
+      );
+
+      Game.ctx.translate(-cameraX, -cameraY);
+      this.room.draw(delta);
+      this.room.drawEntities(delta);
+      //this.room.drawShade(delta);
+      this.room.drawOverShade(delta);
+      this.players[this.localPlayerID].drawTopLayer(delta);
+      Game.ctx.translate(cameraX, cameraY);
+
+      this.room.drawTopLayer(delta);
+      this.players[this.localPlayerID].drawGUI(delta);
+      for (const i in this.players) this.players[i].updateDrawXY(delta);
+    }
+    // draw chat
+    let CHAT_X = 10;
+    let CHAT_BOTTOM_Y = GameConstants.HEIGHT - Game.letter_height - 14;
+    let CHAT_OPACITY = 0.5;
+    if (this.chatOpen) {
+      Game.ctx.fillStyle = "black";
+      if (GameConstants.ALPHA_ENABLED) Game.ctx.globalAlpha = 0.75;
+      Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
+
+      Game.ctx.globalAlpha = 1;
+      Game.ctx.fillStyle = "white";
+      Game.fillText(this.chatTextBox.text, CHAT_X, CHAT_BOTTOM_Y);
+      let cursorX = Game.measureText(
+        this.chatTextBox.text.substring(0, this.chatTextBox.cursor)
+      ).width;
+      Game.ctx.fillRect(
+        CHAT_X + cursorX,
+        CHAT_BOTTOM_Y,
+        1,
+        Game.letter_height
+      );
+    }
+    for (let i = 0; i < this.chat.length; i++) {
+      Game.ctx.fillStyle = "white";
+      if (this.chat[i][0] === "/") Game.ctx.fillStyle = GameConstants.GREEN;
+      let y =
+        CHAT_BOTTOM_Y - (this.chat.length - 1 - i) * (Game.letter_height + 1);
+      if (this.chatOpen) y -= Game.letter_height + 1;
+
+      let age = Date.now() - this.chat[i].timestamp;
+      if (this.chatOpen) {
+        Game.ctx.globalAlpha = 1;
+      } else {
+        if (age <= GameConstants.CHAT_APPEAR_TIME) {
+          if (GameConstants.ALPHA_ENABLED)
+            Game.ctx.globalAlpha = CHAT_OPACITY;
+        } else if (
+          age <=
+          GameConstants.CHAT_APPEAR_TIME + GameConstants.CHAT_FADE_TIME
+        ) {
+          if (GameConstants.ALPHA_ENABLED)
+            Game.ctx.globalAlpha =
+              CHAT_OPACITY *
+              (1 -
+                (age - GameConstants.CHAT_APPEAR_TIME) /
+                GameConstants.CHAT_FADE_TIME);
+        } else {
+          Game.ctx.globalAlpha = 0;
+        }
+      }
+      Game.fillText(this.chat[i].message, CHAT_X, y);
     }
 
     // game version

@@ -740,15 +740,16 @@ export const createGameState = (game: Game): GameState => {
 export const loadGameState = (
   game: Game,
   activeUsernames: Array<string>,
-  gameState: GameState
+  gameState: GameState,
+  newWorld: boolean
 ) => {
   game.rooms = Array<Room>();
   game.levelgen = new LevelGenerator();
   game.levelgen.setSeed(gameState.seed);
-  if ((gameState as any).init_state) gameState.depth = 0;
+  if (newWorld) gameState.depth = 0;
   game.levelgen.generateFirstNFloors(game, gameState.depth);
 
-  if (!(gameState as any).init_state) {
+  if (!newWorld) {
     if (gameState.players) {
       for (const i in gameState.players) {
         if (activeUsernames.includes(i))

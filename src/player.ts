@@ -116,16 +116,26 @@ export class Player extends Drawable {
 
   inputHandler = (input: InputEnum) => {
     switch (input) {
-      case InputEnum.LEFT:
-      case InputEnum.RIGHT:
-      case InputEnum.UP:
-      case InputEnum.DOWN:
-        if (!this.ignoreDirectionInput()) this.game.sendInput(input);
-        break;
       case InputEnum.I:
+        this.iListener();
+        break;
       case InputEnum.Q:
+        this.qListener();
+        break;
+      case InputEnum.LEFT:
+        if (!this.ignoreDirectionInput()) this.leftListener(false);
+        break;
+      case InputEnum.RIGHT:
+        if (!this.ignoreDirectionInput()) this.rightListener(false);
+        break;
+      case InputEnum.UP:
+        if (!this.ignoreDirectionInput()) this.upListener(false);
+        break;
+      case InputEnum.DOWN:
+        if (!this.ignoreDirectionInput()) this.downListener(false);
+        break;
       case InputEnum.SPACE:
-        this.game.sendInput(input);
+        this.spaceListener();
         break;
     }
   };
@@ -445,7 +455,7 @@ export class Player extends Drawable {
     this.drawY = 0;
   };
 
-  update = () => {};
+  update = () => { };
 
   finishTick = () => {
     this.turnCount += 1;
