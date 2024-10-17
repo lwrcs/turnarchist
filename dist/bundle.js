@@ -9652,7 +9652,7 @@ var generate_cave_candidate = function (map_w, map_h, num_rooms) {
 };
 var generate_cave = function (mapWidth, mapHeight) {
     var partitions;
-    var numberOfRooms = 100;
+    var numberOfRooms = 5;
     do {
         partitions = generate_cave_candidate(mapWidth, mapHeight, numberOfRooms);
     } while (partitions.length < numberOfRooms);

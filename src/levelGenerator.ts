@@ -532,7 +532,7 @@ let generate_cave_candidate = (
 
 let generate_cave = (mapWidth: number, mapHeight: number): Array<Partition> => {
   let partitions: Array<Partition>;
-  const numberOfRooms = 100;
+  const numberOfRooms = 5;
 
   do {
     partitions = generate_cave_candidate(mapWidth, mapHeight, numberOfRooms);
