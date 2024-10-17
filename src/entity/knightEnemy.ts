@@ -9,6 +9,7 @@ import { Player } from "../player";
 import { DualDagger } from "../weapon/dualdagger";
 import { Item } from "../item/item";
 import { ImageParticle } from "../particle/imageParticle";
+import { Armor } from "../item/armor";
 
 export class KnightEnemy extends Entity {
   ticks: number;
@@ -42,7 +43,8 @@ export class KnightEnemy extends Entity {
     if (drop) this.drop = drop;
     else {
       let dropProb = rand();
-      if (dropProb < 0.025) this.drop = new DualDagger(this.room, 0, 0);
+      if (dropProb < 0.05) this.drop = new DualDagger(this.room, 0, 0);
+      else if (dropProb < 0.01) this.drop = new DualDagger(this.room, 0, 0);
       else this.drop = new Coin(this.room, 0, 0);
     }
   }

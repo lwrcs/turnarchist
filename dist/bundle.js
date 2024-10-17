@@ -4488,7 +4488,7 @@ var greengem_1 = __webpack_require__(/*! ../item/greengem */ "./src/item/greenge
 var random_1 = __webpack_require__(/*! ../random */ "./src/random.ts");
 var astarclass_1 = __webpack_require__(/*! ../astarclass */ "./src/astarclass.ts");
 var spiketrap_1 = __webpack_require__(/*! ../tile/spiketrap */ "./src/tile/spiketrap.ts");
-var pickaxe_1 = __webpack_require__(/*! ../weapon/pickaxe */ "./src/weapon/pickaxe.ts");
+var armor_1 = __webpack_require__(/*! ../item/armor */ "./src/item/armor.ts");
 var ArmoredzombieEnemy = /** @class */ (function (_super) {
     __extends(ArmoredzombieEnemy, _super);
     function ArmoredzombieEnemy(room, game, x, y, rand, drop) {
@@ -4710,9 +4710,9 @@ var ArmoredzombieEnemy = /** @class */ (function (_super) {
             _this.drop = drop;
         else {
             var dropProb = random_1.Random.rand();
-            if (dropProb < 0.025)
-                _this.drop = new pickaxe_1.Pickaxe(_this.room, 0, 0);
-            else if (dropProb < 0.02)
+            if (dropProb < 0.05)
+                _this.drop = new armor_1.Armor(_this.room, 0, 0);
+            else if (dropProb < 0.01)
                 _this.drop = new greengem_1.GreenGem(_this.room, 0, 0);
             else
                 _this.drop = new coin_1.Coin(_this.room, 0, 0);
@@ -7357,7 +7357,9 @@ var KnightEnemy = /** @class */ (function (_super) {
             _this.drop = drop;
         else {
             var dropProb = rand();
-            if (dropProb < 0.025)
+            if (dropProb < 0.05)
+                _this.drop = new dualdagger_1.DualDagger(_this.room, 0, 0);
+            else if (dropProb < 0.01)
                 _this.drop = new dualdagger_1.DualDagger(_this.room, 0, 0);
             else
                 _this.drop = new coin_1.Coin(_this.room, 0, 0);
@@ -8081,7 +8083,6 @@ var redgem_1 = __webpack_require__(/*! ../item/redgem */ "./src/item/redgem.ts")
 var spear_1 = __webpack_require__(/*! ../weapon/spear */ "./src/weapon/spear.ts");
 var astarclass_1 = __webpack_require__(/*! ../astarclass */ "./src/astarclass.ts");
 var spiketrap_1 = __webpack_require__(/*! ../tile/spiketrap */ "./src/tile/spiketrap.ts");
-var candle_1 = __webpack_require__(/*! ../item/candle */ "./src/item/candle.ts");
 var imageParticle_1 = __webpack_require__(/*! ../particle/imageParticle */ "./src/particle/imageParticle.ts");
 var SkullEnemy = /** @class */ (function (_super) {
     __extends(SkullEnemy, _super);
@@ -8273,12 +8274,11 @@ var SkullEnemy = /** @class */ (function (_super) {
             _this.drop = drop;
         else {
             var dropProb = rand();
-            if (dropProb < 0.005)
+            if (dropProb < 0.05)
                 _this.drop = new spear_1.Spear(_this.room, 0, 0);
-            else if (dropProb < 0.04)
+            else if (dropProb < 0.01)
                 _this.drop = new redgem_1.RedGem(_this.room, 0, 0);
-            else if (dropProb < 0.2)
-                _this.drop = new candle_1.Candle(_this.room, 0, 0);
+            //else if (dropProb < 0.2) this.drop = new Candle(this.room, 0, 0);
             else
                 _this.drop = new coin_1.Coin(_this.room, 0, 0);
         }
@@ -15233,7 +15233,7 @@ var Player = /** @class */ (function (_super) {
             };
         }
         _this.mapToggled = true;
-        _this.health = 1;
+        _this.health = 2;
         _this.maxHealth = 2;
         _this.healthBar = new healthbar_1.HealthBar();
         _this.dead = false;
@@ -16531,14 +16531,14 @@ var Room = /** @class */ (function () {
             var y = t.y;
             // Define the enemy tables for each depth level
             var tables = {
-                0: [1, 2, 3, 7 /*, 5, 6, 7, 8, 9, 10, 11, 12, 13*/],
-                1: [3, 4, 5, 6],
-                2: [3, 4, 5, 7, 8, 9, 10, 11, 12, 13],
-                3: [1, 1, 1, 2, 3, 3, 3, 4, 4, 5],
-                4: [1, 2, 3, 4, 5, 6, 7],
-                5: [1, 2, 3, 4, 5, 6, 7, 8],
-                6: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-                7: [1, 2, 3, 4, 5, 6, 7],
+                0: [1, 2, 3 /*, 5, 6, 7, 8, 9, 10, 11, 12, 13*/],
+                1: [3, 4, 5, 9, 7],
+                2: [3, 4, 5, 7, 8, 9, 12],
+                3: [1, 2, 3, 5, 6, 7, 8, 9, 10],
+                4: [4, 5, 6, 7, 8, 9, 10, 11, 12],
+                5: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+                6: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+                7: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
             };
             // Define the maximum depth level
             var max_depth_table = 7;
