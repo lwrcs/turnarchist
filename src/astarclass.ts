@@ -247,8 +247,11 @@ export namespace astar {
         }
       }
       if (disablePoints !== undefined) {
-        for (var i = 0; i < disablePoints.length; i++)
-          this.grid[disablePoints[i].x][disablePoints[i].y].cost = 99999999;
+        for (var i = 0; i < disablePoints.length; i++) {
+          if (disablePoints[i].x >= 0 && disablePoints[i].x < this.grid.length &&
+            disablePoints[i].y >= 0 && disablePoints[i].y < this.grid[0].length)
+            this.grid[disablePoints[i].x][disablePoints[i].y].cost = 99999999;
+        }
       }
     }
 
@@ -430,7 +433,7 @@ export namespace astar {
       }
       function getRandomBoolean(): boolean {
         return Math.random() < 0.5;
-    }
+      }
       if (diagonalsOmni) {
         const randomBool: boolean = getRandomBoolean();
         // West
@@ -477,7 +480,7 @@ export namespace astar {
           return;
         }
       }
-    
+
 
       return ret;
     }
