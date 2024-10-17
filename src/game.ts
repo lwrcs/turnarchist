@@ -337,7 +337,6 @@ export class Game {
     } else {
       ladder.linkedLevel.enterLevel(player, ladder.linkedLevel); // since it's not a local player, don't wait for transition
     }
-    player.map.saveMapData();
   };
 
   changeLevelThroughDoor = (player: Player, door: any, side?: number) => {
@@ -423,6 +422,7 @@ export class Game {
         LevelConstants.LEVEL_TRANSITION_TIME_LADDER
       ) {
         this.levelState = LevelState.IN_LEVEL;
+        this.players[this.localPlayerID].map.saveMapData();
       }
     }
 

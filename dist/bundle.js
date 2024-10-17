@@ -5683,7 +5683,6 @@ var Game = /** @class */ (function () {
             else {
                 ladder.linkedLevel.enterLevel(player, ladder.linkedLevel); // since it's not a local player, don't wait for transition
             }
-            player.map.saveMapData();
         };
         this.changeLevelThroughDoor = function (player, door, side) {
             player.levelID = _this.rooms.indexOf(door.room);
@@ -5748,6 +5747,7 @@ var Game = /** @class */ (function () {
                 if (Date.now() - _this.transitionStartTime >=
                     levelConstants_1.LevelConstants.LEVEL_TRANSITION_TIME_LADDER) {
                     _this.levelState = LevelState.IN_LEVEL;
+                    _this.players[_this.localPlayerID].map.saveMapData();
                 }
             }
             for (var i in _this.players) {
