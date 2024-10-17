@@ -5734,7 +5734,7 @@ var Game = /** @class */ (function () {
                 Date.now() - input_1.Input.lastPressTime > gameConstants_1.GameConstants.KEY_REPEAT_TIME) {
                 input_1.Input.onKeydown({
                     repeat: false,
-                    code: input_1.Input.lastPressKeyCode,
+                    key: input_1.Input.lastPressKey,
                 });
             }
             if (_this.levelState === LevelState.TRANSITIONING) {
@@ -7362,7 +7362,7 @@ exports.Input = {
     mouseX: 0,
     mouseY: 0,
     lastPressTime: 0,
-    lastPressKeyCode: "",
+    lastPressKey: "",
     SPACE: "Space",
     LEFT: "ArrowLeft",
     UP: "ArrowUp",
@@ -7380,14 +7380,14 @@ exports.Input = {
         return this._pressed[keyCode];
     },
     onKeydown: function (event) {
+        if (event.repeat)
+            return; // ignore repeat keypresses
         if (event.key)
             exports.Input.keyDownListener(event.key);
         if (event.cancelable && event.key != "F12" && event.key != "F5")
             event.preventDefault();
-        if (event.repeat)
-            return; // ignore repeat keypresses
         exports.Input.lastPressTime = Date.now();
-        exports.Input.lastPressKeyCode = event.code;
+        exports.Input.lastPressKey = event.key;
         exports.Input._pressed[event.code] = true;
         switch (event.code) {
             case exports.Input.LEFT:
@@ -7430,9 +7430,9 @@ exports.Input = {
     },
     onKeyup: function (event) {
         delete this._pressed[event.code];
-        if (event.code === this.lastPressKeyCode) {
+        if (event.key === this.lastPressKey) {
             this.lastPressTime = 0;
-            this.lastPressKeyCode = 0;
+            this.lastPressKey = 0;
         }
         if (event.code === exports.Input.M)
             exports.Input.mUpListener();

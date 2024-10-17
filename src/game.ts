@@ -404,7 +404,7 @@ export class Game {
     ) {
       Input.onKeydown({
         repeat: false,
-        code: Input.lastPressKeyCode,
+        key: Input.lastPressKey,
       } as KeyboardEvent);
     }
 

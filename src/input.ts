@@ -50,7 +50,7 @@ export const Input = {
   mouseY: 0,
 
   lastPressTime: 0,
-  lastPressKeyCode: "",
+  lastPressKey: "",
 
   SPACE: "Space",
   LEFT: "ArrowLeft",
@@ -71,11 +71,11 @@ export const Input = {
   },
 
   onKeydown: (event: KeyboardEvent) => {
+    if (event.repeat) return; // ignore repeat keypresses
     if (event.key) Input.keyDownListener(event.key);
     if (event.cancelable && event.key != "F12" && event.key != "F5") event.preventDefault();
-    if (event.repeat) return; // ignore repeat keypresses
     Input.lastPressTime = Date.now();
-    Input.lastPressKeyCode = event.code;
+    Input.lastPressKey = event.key;
     Input._pressed[event.code] = true;
     switch (event.code) {
       case Input.LEFT:
@@ -119,9 +119,9 @@ export const Input = {
 
   onKeyup: function (event: KeyboardEvent) {
     delete this._pressed[event.code];
-    if (event.code === this.lastPressKeyCode) {
+    if (event.key === this.lastPressKey) {
       this.lastPressTime = 0;
-      this.lastPressKeyCode = 0;
+      this.lastPressKey = 0;
     }
     if (event.code === Input.M) Input.mUpListener();
   },
