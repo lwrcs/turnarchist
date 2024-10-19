@@ -20,11 +20,14 @@ export class Resource extends Entity {
     this.tileY = 0;
     this.health = 1;
     this.chainPushable = false;
-    this.entityType = EntityType.RESOURCE;
   }
 
   get name() {
     return "resource";
+  }
+
+  get type() {
+    return EntityType.RESOURCE;
   }
 
   hurt = (playerHitBy: Player, damage: number) => {

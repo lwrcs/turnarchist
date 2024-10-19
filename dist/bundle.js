@@ -2198,11 +2198,15 @@ var Enemy = /** @class */ (function (_super) {
             _this.x = x;
             _this.y = y;
         };
-        _this.isType = function () {
-            return entity_2.EntityType.ENEMY;
-        };
         return _this;
     }
+    Object.defineProperty(Enemy.prototype, "type", {
+        get: function () {
+            return entity_2.EntityType.ENEMY;
+        },
+        enumerable: false,
+        configurable: true
+    });
     Object.defineProperty(Enemy.prototype, "name", {
         get: function () {
             return "enemy";
@@ -4205,7 +4209,6 @@ var Entity = /** @class */ (function (_super) {
             return 0;
         };
         _this.hurtCallback = function () { };
-        _this.isType = function () { };
         _this.playerKilledBy = function (enemy) {
             return enemy;
         };
@@ -4455,10 +4458,16 @@ var Entity = /** @class */ (function (_super) {
         _this.exclamationFrame = 0;
         _this.lastX = x;
         _this.lastY = y;
-        _this.entityType = EntityType.ENEMY;
         _this.hitBy = _this.getPlayer();
         return _this;
     }
+    Object.defineProperty(Entity.prototype, "type", {
+        get: function () {
+            return EntityType.ENEMY;
+        },
+        enumerable: false,
+        configurable: true
+    });
     return Entity;
 }(drawable_1.Drawable));
 exports.Entity = Entity;
@@ -4522,12 +4531,18 @@ var Barrel = /** @class */ (function (_super) {
         _this.tileY = 0;
         _this.hasShadow = false;
         _this.pushable = true;
-        _this.entityType = entity_2.EntityType.PROP;
         return _this;
     }
     Object.defineProperty(Barrel.prototype, "name", {
         get: function () {
             return "barrel";
+        },
+        enumerable: false,
+        configurable: true
+    });
+    Object.defineProperty(Barrel.prototype, "type", {
+        get: function () {
+            return entity_2.EntityType.PROP;
         },
         enumerable: false,
         configurable: true
@@ -4599,7 +4614,6 @@ var Chest = /** @class */ (function (_super) {
         _this.tileX = 4;
         _this.tileY = 0;
         _this.health = 1;
-        _this.entityType = entity_2.EntityType.CHEST;
         var drop = game_1.Game.randTable([1, 1, 1, 1, 1, 1, 1, 2, 3, 4], rand);
         switch (drop) {
             case 1:
@@ -4626,6 +4640,13 @@ var Chest = /** @class */ (function (_super) {
     Object.defineProperty(Chest.prototype, "name", {
         get: function () {
             return "chest";
+        },
+        enumerable: false,
+        configurable: true
+    });
+    Object.defineProperty(Chest.prototype, "type", {
+        get: function () {
+            return entity_2.EntityType.CHEST;
         },
         enumerable: false,
         configurable: true
@@ -4694,12 +4715,18 @@ var Crate = /** @class */ (function (_super) {
         _this.tileY = 0;
         _this.hasShadow = false;
         _this.pushable = true;
-        _this.entityType = entity_2.EntityType.PROP;
         return _this;
     }
     Object.defineProperty(Crate.prototype, "name", {
         get: function () {
             return "crate";
+        },
+        enumerable: false,
+        configurable: true
+    });
+    Object.defineProperty(Crate.prototype, "type", {
+        get: function () {
+            return entity_2.EntityType.PROP;
         },
         enumerable: false,
         configurable: true
@@ -4769,12 +4796,18 @@ var Mushrooms = /** @class */ (function (_super) {
         _this.tileY = 2;
         _this.hasShadow = false;
         _this.chainPushable = false;
-        _this.entityType = entity_2.EntityType.PROP;
         return _this;
     }
     Object.defineProperty(Mushrooms.prototype, "name", {
         get: function () {
             return "mushrooms";
+        },
+        enumerable: false,
+        configurable: true
+    });
+    Object.defineProperty(Mushrooms.prototype, "type", {
+        get: function () {
+            return entity_2.EntityType.PROP;
         },
         enumerable: false,
         configurable: true
@@ -4842,12 +4875,18 @@ var Pot = /** @class */ (function (_super) {
         _this.tileY = 0;
         _this.hasShadow = false;
         _this.chainPushable = false;
-        _this.entityType = entity_2.EntityType.PROP;
         return _this;
     }
     Object.defineProperty(Pot.prototype, "name", {
         get: function () {
             return "pot";
+        },
+        enumerable: false,
+        configurable: true
+    });
+    Object.defineProperty(Pot.prototype, "type", {
+        get: function () {
+            return entity_2.EntityType.PROP;
         },
         enumerable: false,
         configurable: true
@@ -4931,7 +4970,6 @@ var PottedPlant = /** @class */ (function (_super) {
         _this.tileY = 0;
         _this.hasShadow = false;
         _this.chainPushable = false;
-        _this.entityType = entity_2.EntityType.PROP;
         if (drop)
             _this.drop = drop;
         else {
@@ -4946,6 +4984,13 @@ var PottedPlant = /** @class */ (function (_super) {
     Object.defineProperty(PottedPlant.prototype, "name", {
         get: function () {
             return "plant";
+        },
+        enumerable: false,
+        configurable: true
+    });
+    Object.defineProperty(PottedPlant.prototype, "type", {
+        get: function () {
+            return entity_2.EntityType.PROP;
         },
         enumerable: false,
         configurable: true
@@ -5062,6 +5107,13 @@ var TombStone = /** @class */ (function (_super) {
     Object.defineProperty(TombStone.prototype, "name", {
         get: function () {
             return "tombstone";
+        },
+        enumerable: false,
+        configurable: true
+    });
+    Object.defineProperty(TombStone.prototype, "type", {
+        get: function () {
+            return entity_2.EntityType.PROP;
         },
         enumerable: false,
         configurable: true
@@ -5247,7 +5299,6 @@ var VendingMachine = /** @class */ (function (_super) {
         _this.chainPushable = false;
         _this.interactable = true;
         _this.costItems = [];
-        _this.entityType = entity_2.EntityType.FRIENDLY;
         _this.item = item;
         if (_this.item instanceof shotgun_1.Shotgun) {
             var g = new bluegem_1.BlueGem(room, 0, 0);
@@ -5285,6 +5336,13 @@ var VendingMachine = /** @class */ (function (_super) {
     Object.defineProperty(VendingMachine.prototype, "name", {
         get: function () {
             return "shop";
+        },
+        enumerable: false,
+        configurable: true
+    });
+    Object.defineProperty(VendingMachine.prototype, "type", {
+        get: function () {
+            return entity_2.EntityType.PROP;
         },
         enumerable: false,
         configurable: true
@@ -5353,6 +5411,13 @@ var CoalResource = /** @class */ (function (_super) {
     Object.defineProperty(CoalResource.prototype, "name", {
         get: function () {
             return "coal";
+        },
+        enumerable: false,
+        configurable: true
+    });
+    Object.defineProperty(CoalResource.prototype, "type", {
+        get: function () {
+            return EntityType.RESOURCE;
         },
         enumerable: false,
         configurable: true
@@ -5563,12 +5628,18 @@ var Resource = /** @class */ (function (_super) {
         _this.tileY = 0;
         _this.health = 1;
         _this.chainPushable = false;
-        _this.entityType = entity_2.EntityType.RESOURCE;
         return _this;
     }
     Object.defineProperty(Resource.prototype, "name", {
         get: function () {
             return "resource";
+        },
+        enumerable: false,
+        configurable: true
+    });
+    Object.defineProperty(Resource.prototype, "type", {
+        get: function () {
+            return entity_2.EntityType.RESOURCE;
         },
         enumerable: false,
         configurable: true
@@ -9984,7 +10055,8 @@ var Map = /** @class */ (function () {
                 Math.floor(0.5 * _this.game.room.width) +
                 20, 0.25 * gameConstants_1.GameConstants.HEIGHT -
                 _this.game.room.roomY -
-                Math.floor(0.5 * _this.game.room.height) - offset);
+                Math.floor(0.5 * _this.game.room.height) -
+                offset);
         };
         this.drawRoom = function (data, delta) {
             _this.drawRoomOutline(data.room);
@@ -10028,8 +10100,7 @@ var Map = /** @class */ (function () {
             var s = _this.scale;
             for (var i in players) {
                 game_1.Game.ctx.fillStyle = "white";
-                if (_this.game.rooms[players[i].levelID].mapGroup ===
-                    _this.game.room.mapGroup) {
+                if (_this.game.rooms[players[i].levelID].mapGroup === _this.game.room.mapGroup) {
                     game_1.Game.ctx.fillRect(players[i].x * s, players[i].y * s, 1 * s, 1 * s);
                 }
             }
@@ -10043,16 +10114,16 @@ var Map = /** @class */ (function () {
             }
         };
         this.setEntityColor = function (enemy) {
-            if (enemy.entityType === entity_1.EntityType.ENEMY) {
+            if (enemy.type === entity_1.EntityType.ENEMY) {
                 game_1.Game.ctx.fillStyle = "yellow";
             }
-            if (enemy.entityType === entity_1.EntityType.PROP) {
+            if (enemy.type === entity_1.EntityType.PROP) {
                 game_1.Game.ctx.fillStyle = "#847e87";
             }
-            if (enemy.entityType === entity_1.EntityType.RESOURCE) {
+            if (enemy.type === entity_1.EntityType.RESOURCE) {
                 game_1.Game.ctx.fillStyle = "#5a595b";
             }
-            if (enemy.entityType === entity_1.EntityType.FRIENDLY) {
+            if (enemy.type === entity_1.EntityType.FRIENDLY) {
                 game_1.Game.ctx.fillStyle = "cyan";
             }
         };

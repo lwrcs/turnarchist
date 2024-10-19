@@ -50,6 +50,10 @@ export class TombStone extends Entity {
     return "tombstone";
   }
 
+  get type() {
+    return EntityType.PROP;
+  }
+
   kill = () => {
     this.dead = true;
     this.dropLoot();

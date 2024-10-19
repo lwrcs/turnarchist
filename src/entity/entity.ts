@@ -58,7 +58,6 @@ export class Entity extends Drawable {
   exclamationFrame: number;
   lastX: number;
   lastY: number;
-  entityType: EntityType;
   hitBy: Player;
 
   constructor(room: Room, game: Game, x: number, y: number) {
@@ -88,7 +87,6 @@ export class Entity extends Drawable {
     this.exclamationFrame = 0;
     this.lastX = x;
     this.lastY = y;
-    this.entityType = EntityType.ENEMY;
     this.hitBy = this.getPlayer();
   }
 
@@ -98,7 +96,9 @@ export class Entity extends Drawable {
 
   hurtCallback = () => {};
 
-  isType = () => {};
+  get type() {
+    return EntityType.ENEMY;
+  }
 
   playerKilledBy = (enemy: Entity) => {
     return enemy;

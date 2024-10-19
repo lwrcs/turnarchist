@@ -16,11 +16,14 @@ export class Barrel extends Entity {
     this.tileY = 0;
     this.hasShadow = false;
     this.pushable = true;
-    this.entityType = EntityType.PROP;
   }
 
   get name() {
     return "barrel";
+  }
+
+  get type() {
+    return EntityType.PROP;
   }
 
   kill = () => {

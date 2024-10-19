@@ -58,9 +58,9 @@ export class Enemy extends Entity {
     this.y = y;
   };
 
-  isType = () => {
+  get type() {
     return EntityType.ENEMY;
-  };
+  }
 
   get name() {
     return "enemy";

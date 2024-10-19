@@ -14,7 +14,7 @@ export class Map {
 
   constructor(game: Game, player: Player) {
     this.game = game;
-    this.scale = 2
+    this.scale = 2;
     //this.depth = player.game.level.depth
   }
 
@@ -36,11 +36,11 @@ export class Map {
 
   clearMap = () => {
     this.mapData = [];
-  }
+  };
 
   saveOldMap = () => {
     this.oldMapData = [...this.mapData];
-  }
+  };
 
   renderMap = (delta: number) => {
     this.setInitialCanvasSettings(1);
@@ -50,7 +50,7 @@ export class Map {
     }
     /*for (const data of this.oldMapData) {
       this.drawRoom(data);
-    }*/ 
+    }*/
     this.resetCanvasTransform();
   };
 
@@ -71,7 +71,8 @@ export class Map {
         20,
       0.25 * GameConstants.HEIGHT -
         this.game.room.roomY -
-        Math.floor(0.5 * this.game.room.height) - offset
+        Math.floor(0.5 * this.game.room.height) -
+        offset
     );
   };
 
@@ -85,7 +86,7 @@ export class Map {
   };
 
   drawRoomOutline = (level) => {
-    const s = this.scale
+    const s = this.scale;
     Game.ctx.fillStyle = "#5A5A5A";
     Game.ctx.fillRect(
       level.roomX * s + 0,
@@ -127,15 +128,9 @@ export class Map {
     for (const i in players) {
       Game.ctx.fillStyle = "white";
       if (
-        this.game.rooms[players[i].levelID].mapGroup ===
-        this.game.room.mapGroup
+        this.game.rooms[players[i].levelID].mapGroup === this.game.room.mapGroup
       ) {
-        Game.ctx.fillRect(
-          players[i].x * s,
-          players[i].y * s,
-          1 * s,
-          1 * s
-        );
+        Game.ctx.fillRect(players[i].x * s, players[i].y * s, 1 * s, 1 * s);
       }
     }
   };
@@ -149,16 +144,16 @@ export class Map {
   };
 
   setEntityColor = (enemy) => {
-    if (enemy.entityType === EntityType.ENEMY) {
+    if (enemy.type === EntityType.ENEMY) {
       Game.ctx.fillStyle = "yellow";
     }
-    if (enemy.entityType === EntityType.PROP) {
+    if (enemy.type === EntityType.PROP) {
       Game.ctx.fillStyle = "#847e87";
     }
-    if (enemy.entityType === EntityType.RESOURCE) {
+    if (enemy.type === EntityType.RESOURCE) {
       Game.ctx.fillStyle = "#5a595b";
     }
-    if (enemy.entityType === EntityType.FRIENDLY) {
+    if (enemy.type === EntityType.FRIENDLY) {
       Game.ctx.fillStyle = "cyan";
     }
   };

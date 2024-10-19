@@ -27,6 +27,10 @@ export class CoalResource extends Resource {
     return "coal";
   }
 
+  get type() {
+    return EntityType.RESOURCE;
+  }
+
   hurtCallback = () => {
     GenericParticle.spawnCluster(
       this.room,

@@ -16,11 +16,14 @@ export class Pumpkin extends Entity {
     this.tileY = 2;
     this.hasShadow = false;
     this.chainPushable = false;
-    this.entityType = EntityType.PROP;
   }
 
   get name() {
     return "pumpkin";
+  }
+
+  get type() {
+    return EntityType.PROP;
   }
 
   kill = () => {

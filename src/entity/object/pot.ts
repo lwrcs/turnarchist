@@ -16,11 +16,14 @@ export class Pot extends Entity {
     this.tileY = 0;
     this.hasShadow = false;
     this.chainPushable = false;
-    this.entityType = EntityType.PROP;
   }
 
   get name() {
     return "pot";
+  }
+
+  get type() {
+    return EntityType.PROP;
   }
 
   kill = () => {

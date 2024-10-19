@@ -17,11 +17,14 @@ export class Mushrooms extends Entity {
     this.tileY = 2;
     this.hasShadow = false;
     this.chainPushable = false;
-    this.entityType = EntityType.PROP;
   }
 
   get name() {
     return "mushrooms";
+  }
+
+  get type() {
+    return EntityType.PROP;
   }
 
   kill = () => {

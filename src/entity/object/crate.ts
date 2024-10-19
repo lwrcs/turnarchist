@@ -17,11 +17,14 @@ export class Crate extends Entity {
     this.tileY = 0;
     this.hasShadow = false;
     this.pushable = true;
-    this.entityType = EntityType.PROP;
   }
 
   get name() {
     return "crate";
+  }
+
+  get type() {
+    return EntityType.PROP;
   }
 
   kill = () => {
