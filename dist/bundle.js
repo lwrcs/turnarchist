@@ -2912,16 +2912,13 @@ var FrogEnemy = /** @class */ (function (_super) {
         _this.hit = function () {
             return 0.5;
         };
-        _this.jump = function () {
-            if (_this.lastX !== _this.x || _this.lastY !== _this.y) {
-                _this.frameLength = 9;
-                _this.frame = 2;
-                _this.animationSpeed = 0.3;
-            }
-        };
         _this.tick = function () {
             _this.lastX = _this.x;
             _this.lastY = _this.y;
+            _this.rumble = false;
+            _this.tileX = 1;
+            _this.frameLength = 3;
+            _this.animationSpeed = 0.1;
             if (!_this.dead) {
                 if (_this.skipNextTurns > 0) {
                     _this.skipNextTurns--;
@@ -2942,6 +2939,7 @@ var FrogEnemy = /** @class */ (function (_super) {
                     }
                 }
                 else if (_this.seenPlayer) {
+                    _this.tileX = 1;
                     if (_this.room.playerTicked === _this.targetPlayer) {
                         _this.alertTicks = Math.max(0, _this.alertTicks - 1);
                         _this.ticks++;
@@ -3005,7 +3003,9 @@ var FrogEnemy = /** @class */ (function (_super) {
                                         _this.x = tryX;
                                         _this.y = tryY;
                                     }
-                                    _this.jump();
+                                    if (_this.x !== oldX || _this.y !== oldY) {
+                                        _this.jump();
+                                    }
                                     _this.drawX = _this.x - oldX;
                                     _this.drawY = _this.y - oldY;
                                     if (_this.x > oldX)
@@ -3021,6 +3021,11 @@ var FrogEnemy = /** @class */ (function (_super) {
                         }
                         else {
                             _this.makeHitWarnings(true, false, false, _this.direction);
+                            _this.rumble = true;
+                            _this.tileX = 2;
+                            _this.frame = 0;
+                            _this.frameLength = 2;
+                            _this.animationSpeed = 0.2;
                         }
                     }
                     var targetPlayerOffline = Object.values(_this.game.offlinePlayers).indexOf(_this.targetPlayer) !==
@@ -3046,28 +3051,34 @@ var FrogEnemy = /** @class */ (function (_super) {
                 }
             }
         };
-        _this.draw = function (delta) {
-            if (!_this.dead) {
+        _this.jump = function () {
+            _this.frameLength = 9;
+            _this.frame = 2;
+            _this.animationSpeed = 0.3;
+            setTimeout(function () {
                 _this.tileX = 1;
-                _this.tileY = 16;
+                _this.frameLength = 3;
+                _this.animationSpeed = 0.1;
+            }, 300);
+        };
+        _this.draw = function (delta) {
+            console.log(delta);
+            var rumbleOffsetX = 0;
+            if (_this.rumble) {
+                if (Math.floor(_this.frame) % 2 === 1)
+                    rumbleOffsetX = 0.0325;
+                if (Math.floor(_this.frame) % 2 === 0)
+                    rumbleOffsetX = 0;
+            }
+            if (!_this.dead) {
                 _this.frame += _this.animationSpeed * delta;
                 if (_this.frame >= _this.frameLength) {
-                    (_this.frame = 0),
-                        (_this.frameLength = 3),
-                        (_this.animationSpeed = 0.1),
-                        (_this.tileX = 1);
-                }
-                if (_this.ticks % 2 === 0) {
-                }
-                else {
-                    _this.tileX = 12;
-                }
-                if (!_this.seenPlayer) {
-                    _this.tileX = 12;
+                    _this.frame = 0;
                 }
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
-                game_1.Game.drawMob(_this.tileX + (_this.tileX === 1 ? Math.floor(_this.frame) : 0), _this.tileY /*+ this.direction * 2,*/, 1, 2, _this.x - _this.drawX, _this.y - 1.5 - _this.drawY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
+                game_1.Game.drawMob(_this.tileX +
+                    (_this.tileX !== 12 && !_this.rumble ? Math.floor(_this.frame) : 0), _this.tileY /*+ this.direction * 2,*/, 1, 2, _this.rumble ? _this.x + rumbleOffsetX - _this.drawX : _this.x - _this.drawX, _this.y - 1.5 - _this.drawY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
             }
             if (!_this.seenPlayer) {
                 _this.drawSleepingZs(delta);
@@ -3089,6 +3100,7 @@ var FrogEnemy = /** @class */ (function (_super) {
         _this.startFrame = 0;
         _this.animationSpeed = 0.1;
         _this.tickCount = 0;
+        _this.rumble = false;
         if (drop)
             _this.drop = drop;
         else {

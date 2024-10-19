@@ -22,6 +22,7 @@ export class FrogEnemy extends Entity {
   startFrame: number;
   animationSpeed: number;
   tickCount: number;
+  rumble: boolean;
 
   constructor(
     room: Room,
@@ -45,7 +46,7 @@ export class FrogEnemy extends Entity {
     this.startFrame = 0;
     this.animationSpeed = 0.1;
     this.tickCount = 0;
-
+    this.rumble = false;
     if (drop) this.drop = drop;
     else {
       this.drop = new Coin(this.room, 0, 0);
@@ -76,17 +77,13 @@ export class FrogEnemy extends Entity {
     return 0.5;
   };
 
-  jump = () => {
-    if (this.lastX !== this.x || this.lastY !== this.y) {
-      this.frameLength = 9;
-      this.frame = 2;
-      this.animationSpeed = 0.3;
-    }
-  };
-
   tick = () => {
     this.lastX = this.x;
     this.lastY = this.y;
+    this.rumble = false;
+    this.tileX = 1;
+    this.frameLength = 3;
+    this.animationSpeed = 0.1;
 
     if (!this.dead) {
       if (this.skipNextTurns > 0) {
@@ -107,6 +104,7 @@ export class FrogEnemy extends Entity {
           }
         }
       } else if (this.seenPlayer) {
+        this.tileX = 1;
         if (this.room.playerTicked === this.targetPlayer) {
           this.alertTicks = Math.max(0, this.alertTicks - 1);
           this.ticks++;
@@ -185,7 +183,10 @@ export class FrogEnemy extends Entity {
                   this.x = tryX;
                   this.y = tryY;
                 }
-                this.jump();
+                if (this.x !== oldX || this.y !== oldY) {
+                  this.jump();
+                }
+
                 this.drawX = this.x - oldX;
                 this.drawY = this.y - oldY;
                 if (this.x > oldX) this.direction = EntityDirection.RIGHT;
@@ -196,6 +197,11 @@ export class FrogEnemy extends Entity {
             }
           } else {
             this.makeHitWarnings(true, false, false, this.direction);
+            this.rumble = true;
+            this.tileX = 2;
+            this.frame = 0;
+            this.frameLength = 2;
+            this.animationSpeed = 0.2;
           }
         }
 
@@ -226,24 +232,29 @@ export class FrogEnemy extends Entity {
     }
   };
 
-  draw = (delta: number) => {
-    if (!this.dead) {
-      this.tileX = 1;
-      this.tileY = 16;
+  jump = () => {
+    this.frameLength = 9;
+    this.frame = 2;
+    this.animationSpeed = 0.3;
 
+    setTimeout(() => {
+      this.tileX = 1;
+      this.frameLength = 3;
+      this.animationSpeed = 0.1;
+    }, 300);
+  };
+
+  draw = (delta: number) => {
+    console.log(delta);
+    let rumbleOffsetX = 0;
+    if (this.rumble) {
+      if (Math.floor(this.frame) % 2 === 1) rumbleOffsetX = 0.0325;
+      if (Math.floor(this.frame) % 2 === 0) rumbleOffsetX = 0;
+    }
+    if (!this.dead) {
       this.frame += this.animationSpeed * delta;
       if (this.frame >= this.frameLength) {
-        (this.frame = 0),
-          (this.frameLength = 3),
-          (this.animationSpeed = 0.1),
-          (this.tileX = 1);
-      }
-      if (this.ticks % 2 === 0) {
-      } else {
-        this.tileX = 12;
-      }
-      if (!this.seenPlayer) {
-        this.tileX = 12;
+        this.frame = 0;
       }
 
       if (this.hasShadow)
@@ -260,11 +271,12 @@ export class FrogEnemy extends Entity {
           this.shadeAmount()
         );
       Game.drawMob(
-        this.tileX + (this.tileX === 1 ? Math.floor(this.frame) : 0),
+        this.tileX +
+          (this.tileX !== 12 && !this.rumble ? Math.floor(this.frame) : 0),
         this.tileY /*+ this.direction * 2,*/,
         1,
         2,
-        this.x - this.drawX,
+        this.rumble ? this.x + rumbleOffsetX - this.drawX : this.x - this.drawX,
         this.y - 1.5 - this.drawY,
         1,
         2,
