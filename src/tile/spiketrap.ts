@@ -4,8 +4,8 @@ import { Room } from "../room";
 import { LevelConstants } from "../levelConstants";
 import { Tile } from "./tile";
 import { Entity } from "../entity/entity";
-import { Crate } from "../entity/crate";
-import { Barrel } from "../entity/barrel";
+import { Crate } from "../entity/object/crate";
+import { Barrel } from "../entity/object/barrel";
 import { HitWarning } from "../hitWarning";
 
 export class SpikeTrap extends Tile {

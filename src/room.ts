@@ -5,19 +5,19 @@ import { Game, LevelState } from "./game";
 import { Door, DoorType } from "./tile/door";
 import { Tile, SkinType } from "./tile/tile";
 import { Trapdoor } from "./tile/trapdoor";
-import { KnightEnemy } from "./entity/knightEnemy";
+import { KnightEnemy } from "./entity/enemy/knightEnemy";
 import { Entity } from "./entity/entity";
-import { Chest } from "./entity/chest";
+import { Chest } from "./entity/object/chest";
 import { Item } from "./item/item";
 import { GoldenKey } from "./item/goldenKey";
 import { SpawnFloor } from "./tile/spawnfloor";
 //import { GoldenDoor } from "./tile/goldenDoor";
 import { Spike } from "./tile/spike";
 import { GameConstants } from "./gameConstants";
-import { WizardEnemy } from "./entity/wizardEnemy";
-import { SkullEnemy } from "./entity/skullEnemy";
-import { Barrel } from "./entity/barrel";
-import { Crate } from "./entity/crate";
+import { WizardEnemy } from "./entity/enemy/wizardEnemy";
+import { SkullEnemy } from "./entity/enemy/skullEnemy";
+import { Barrel } from "./entity/object/barrel";
+import { Crate } from "./entity/object/crate";
 import { Input } from "./input";
 import { Armor } from "./item/armor";
 import { Particle } from "./particle/particle";
@@ -25,48 +25,48 @@ import { Projectile } from "./projectile/projectile";
 import { SpikeTrap } from "./tile/spiketrap";
 import { FountainTile } from "./tile/fountainTile";
 import { CoffinTile } from "./tile/coffinTile";
-import { PottedPlant } from "./entity/pottedPlant";
+import { PottedPlant } from "./entity/object/pottedPlant";
 import { InsideLevelDoor } from "./tile/insideLevelDoor";
 import { Button } from "./tile/button";
 import { HitWarning } from "./hitWarning";
 import { UpLadder } from "./tile/upLadder";
 import { DownLadder } from "./tile/downLadder";
-import { CoalResource } from "./entity/coalResource";
-import { GoldResource } from "./entity/goldResource";
-import { EmeraldResource } from "./entity/emeraldResource";
+import { CoalResource } from "./entity/resource/coalResource";
+import { GoldResource } from "./entity/resource/goldResource";
+import { EmeraldResource } from "./entity/resource/emeraldResource";
 import { Chasm } from "./tile/chasm";
-import { Spawner } from "./entity/spawner";
-import { VendingMachine } from "./entity/vendingMachine";
+import { Spawner } from "./entity/enemy/spawner";
+import { VendingMachine } from "./entity/object/vendingMachine";
 import { WallTorch } from "./tile/wallTorch";
 import { LightSource } from "./lightSource";
-import { ChargeEnemy } from "./entity/chargeEnemy";
+import { ChargeEnemy } from "./entity/enemy/chargeEnemy";
 import { Shotgun } from "./weapon/shotgun";
 import { Heart } from "./item/heart";
 import { Spear } from "./weapon/spear";
 import { Drawable } from "./drawable";
 import { Player } from "./player";
-import { CrabEnemy } from "./entity/crabEnemy";
-import { ZombieEnemy } from "./entity/zombieEnemy";
-import { BigSkullEnemy } from "./entity/bigSkullEnemy";
+import { CrabEnemy } from "./entity/enemy/crabEnemy";
+import { ZombieEnemy } from "./entity/enemy/zombieEnemy";
+import { BigSkullEnemy } from "./entity/enemy/bigSkullEnemy";
 import { Random } from "./random";
 import { Lantern } from "./item/lantern";
 import { DualDagger } from "./weapon/dualdagger";
-import { Pot } from "./entity/pot";
-import { BishopEnemy } from "./entity/bishopEnemy";
-import { Rook } from "./entity/rook";
-import { Rock } from "./entity/rockResource";
-import { Mushrooms } from "./entity/mushrooms";
-import { TurningEnemy } from "./entity/turningEnemy";
-import { ArmoredzombieEnemy } from "./entity/armoredzombieEnemy";
+import { Pot } from "./entity/object/pot";
+import { BishopEnemy } from "./entity/enemy/bishopEnemy";
+import { Rook } from "./entity/enemy/rook";
+import { Rock } from "./entity/resource/rockResource";
+import { Mushrooms } from "./entity/object/mushrooms";
+import { TurningEnemy } from "./entity/enemy/turningEnemy";
+import { ArmoredzombieEnemy } from "./entity/enemy/armoredzombieEnemy";
 import { Backpack } from "./item/backpack";
 import { DoorDir } from "./tile/door";
 import { ActionState, ActionTab } from "./actionTab";
-import { TombStone } from "./entity/tombStone";
-import { Pumpkin } from "./entity/pumpkin";
-import { QueenEnemy } from "./entity/queenEnemy";
-import { FrogEnemy } from "./entity/frogEnemy";
-import { BigKnightEnemy } from "./entity/bigKnightEnemy";
-import { SniperEnemy } from "./entity/sniperEnemy";
+import { TombStone } from "./entity/object/tombStone";
+import { Pumpkin } from "./entity/object/pumpkin";
+import { QueenEnemy } from "./entity/enemy/queenEnemy";
+import { FrogEnemy } from "./entity/enemy/frogEnemy";
+import { BigKnightEnemy } from "./entity/enemy/bigKnightEnemy";
+import { SniperEnemy } from "./entity/enemy/sniperEnemy";
 
 export enum RoomType {
   START,
@@ -329,7 +329,7 @@ export class Room {
       // Define the enemy tables for each depth level
 
       let tables = {
-        0: [1, 2, 3 /*, 5, 6, 7, 8, 9, 10, 11, 12, 13*/], //this.generateLevelTable(rand),
+        0: [1, 2, 3, 4], //this.generateLevelTable(rand),
         1: [3, 4, 5, 9, 7],
         2: [3, 4, 5, 7, 8, 9, 12],
         3: [1, 2, 3, 5, 6, 7, 8, 9, 10],

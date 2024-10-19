@@ -3,8 +3,6 @@ import { Weapon } from "./weapon";
 import { Room } from "../room";
 import { Sound } from "../sound";
 import { SlashParticle } from "../particle/slashParticle";
-import { Crate } from "../entity/crate";
-import { Barrel } from "../entity/barrel";
 import { GenericParticle } from "../particle/genericParticle";
 
 export class Slingshot extends Weapon {
@@ -45,10 +43,7 @@ export class Slingshot extends Weapon {
     let c = 1;
     for (let i = 0; i < 5; i++) {
       if (
-        !this.game.rooms[this.wielder.levelID].tileInside(
-          nextX[c],
-          nextY[c]
-        ) ||
+        !this.game.rooms[this.wielder.levelID].tileInside(nextX[c], nextY[c]) ||
         this.game.rooms[this.wielder.levelID].roomArray[nextX[c]][
           nextY[c]
         ].isSolid()
@@ -139,8 +134,7 @@ export class Slingshot extends Weapon {
       //hits all candidates in enemyHitCandidates
 
       if (
-        this.wielder.game.rooms[this.wielder.levelID] ===
-        this.wielder.game.room
+        this.wielder.game.rooms[this.wielder.levelID] === this.wielder.game.room
       )
         Sound.hit();
       this.wielder.drawX = 0.5 * (this.wielder.x - newX);

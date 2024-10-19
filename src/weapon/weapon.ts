@@ -20,7 +20,7 @@ export class Weapon extends Equippable {
     return true;
   };
 
-  tick = () => { };
+  tick = () => {};
 
   // returns true if nothing was hit, false if the player should move
   weaponMove = (newX: number, newY: number): boolean => {

@@ -3,8 +3,8 @@ import { Weapon } from "./weapon";
 import { Room } from "../room";
 import { Sound } from "../sound";
 import { SlashParticle } from "../particle/slashParticle";
-import { Crate } from "../entity/crate";
-import { Barrel } from "../entity/barrel";
+import { Crate } from "../entity/object/crate";
+import { Barrel } from "../entity/object/barrel";
 import { GenericParticle } from "../particle/genericParticle";
 
 export class Shotgun extends Weapon {
@@ -118,8 +118,7 @@ export class Shotgun extends Weapon {
       //hits all candidates in enemyHitCandidates
 
       if (
-        this.wielder.game.rooms[this.wielder.levelID] ===
-        this.wielder.game.room
+        this.wielder.game.rooms[this.wielder.levelID] === this.wielder.game.room
       )
         Sound.hit();
       this.wielder.drawX = 0.5 * (this.wielder.x - newX);

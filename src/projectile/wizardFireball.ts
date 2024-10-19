@@ -1,6 +1,6 @@
 import { Projectile } from "./projectile";
 import { Game } from "../game";
-import { WizardEnemy } from "../entity/wizardEnemy";
+import { WizardEnemy } from "../entity/enemy/wizardEnemy";
 import { Player } from "../player";
 import { HitWarning } from "../hitWarning";
 
@@ -21,7 +21,9 @@ export class WizardFireball extends Projectile {
     if (this.parent.dead) this.dead = true;
     this.state++;
     if (this.state === 1) {
-      this.parent.room.hitwarnings.push(new HitWarning(this.parent.game, this.x, this.y, this.x, this.y, false));
+      this.parent.room.hitwarnings.push(
+        new HitWarning(this.parent.game, this.x, this.y, this.x, this.y, false)
+      );
     }
     if (this.state === 2) {
       this.frame = 0;

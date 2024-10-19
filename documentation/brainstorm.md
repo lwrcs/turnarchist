@@ -1,58 +1,49 @@
 ## Specific features
 
-### Re-enable the ability to backtrack to different floors through stairs
+### Re-enable backtracking through stairs
 
-- Previous versions this was possible, but it may not be easy to re-implement
+- Previous versions allowed this, but re-implementation may be challenging
   - Where is previous level data stored once you move to the next?
 
 ## Brainstorm
 
-### Novel method for level expansion during gameplay
+### Level Expansion During Gameplay
 
 #### Proposition:
 
-- Level generator will
-  - checks walls with empty space behind
-  - add cracked walls to those spaces and push them to the level array
-  - player can use a pickaxe on cracked walls
-  - cracked wall will be replaced with Door of DoorType.PASSAGE
-    - a new room will be created and pushed to the level array
-    - shape will be based on available space and specifications of the type of room
-  - The player can then enter the new room, which may have cracked walls there as well to further expand.
+- Level generator will:
+  - Check walls with empty space behind
+  - Add cracked walls to those spaces and push them to the level array
+  - Player can use a pickaxe on cracked walls
+  - Cracked wall will be replaced with Door of DoorType.PASSAGE
+    - A new room will be created and pushed to the level array
+    - Shape will be based on available space and room specifications
+  - Player can enter the new room, which may have more cracked walls for further expansion
 
-#### Why is this advantageous?
+#### Advantages:
 
-- The primary advantage of this type of generation is the ability to make levels infinite.
-- In theory this takes care of items which are necessary to exit the level being unobtainable.
-  - Bad RNG causes level to be unfinishable? You'd better explore more.
+- Allows for infinite levels
+- Ensures necessary items to exit the level are obtainable
+  - Bad RNG? Explore more to find what you need
 
-#### More ideas
+#### Additional Ideas:
 
-- There is a LOT of room for creativity
-
-  - The moment that cracked walls are broken and a new room is generated is very important.
-  - **_What is the probability of the new room..._**
-
-    - being a specific type
-      - variance in skin, room shape, etc.
-    - having one or more cracked walls, or being a dead end
-
-  - What
+- Room for creativity:
+  - Probability of new room:
+    - Being a specific type (variance in skin, room shape, etc.)
+    - Having one or more cracked walls, or being a dead end
 
 ---
 
 ## Housekeeping
 
-- Establish standards for class structure
-
-  - What classes should handle which pieces of data?
+- Establish standards for class structure:
+  - What classes should handle which data?
   - What should we avoid?
 
-- Restructuring
-
-  - The LevelGenerator class is pretty messy. The goal for now is not to overhaul it entirely but to do the best to make it more modular. **Adding new roomtypes, items, monsters, objects, etc. should require as little tweaking as possible to the generator code.**
-
-    - Keep in mind the LevelGenerator creates levels, but the Level class handles distribution of enemies and objects.
-
-    - We'll also need an efficient way to implement broader logic to the levels.
-      - How will a key be obtainable in one room that is needed to unlock a door in another?
+- Restructuring:
+  - Make the LevelGenerator class more modular without a complete overhaul
+    - Adding new room types, items, monsters, objects, etc. should require minimal changes to the generator code
+    - LevelGenerator creates levels, but the Level class handles distribution of enemies and objects
+    - Implement broader logic efficiently
+      - How will a key in one room unlock a door in another?

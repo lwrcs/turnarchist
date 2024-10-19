@@ -92,44 +92,6 @@ export class Entity extends Drawable {
     this.hitBy = this.getPlayer();
   }
 
-  tryMove = (x: number, y: number) => {
-    let pointWouldBeIn = (someX: number, someY: number): boolean => {
-      return (
-        someX >= x && someX < x + this.w && someY >= y && someY < y + this.h
-      );
-    };
-    let entityCollide = (entity: Entity): boolean => {
-      if (entity.x >= x + this.w || entity.x + entity.w <= x) return false;
-      if (entity.y >= y + this.h || entity.y + entity.h <= y) return false;
-      return true;
-    };
-    for (const e of this.room.entities) {
-      if (e !== this && entityCollide(e)) {
-        return;
-      }
-    }
-    for (const i in this.game.players) {
-      if (pointWouldBeIn(this.game.players[i].x, this.game.players[i].y)) {
-        return;
-      }
-    }
-    let tiles = [];
-    for (let xx = 0; xx < this.w; xx++) {
-      for (let yy = 0; yy < this.h; yy++) {
-        if (!this.room.roomArray[x + xx][y + yy].isSolid()) {
-          tiles.push(this.room.roomArray[x + xx][y + yy]);
-        } else {
-          return;
-        }
-      }
-    }
-    for (let tile of tiles) {
-      tile.onCollideEnemy(this);
-    }
-    this.x = x;
-    this.y = y;
-  };
-
   hit = (): number => {
     return 0;
   };
@@ -148,7 +110,7 @@ export class Entity extends Drawable {
     );
   };
 
-  getPlayer = () => {
+  readonly getPlayer = () => {
     const maxDistance = 138291380921; // pulled this straight outta my ass
     let closestDistance = maxDistance;
     let closestPlayer = null;
@@ -166,12 +128,12 @@ export class Entity extends Drawable {
     else return closestPlayer;
   };
 
-  lastHitBy = (player: Player) => {
+  readonly lastHitBy = (player: Player) => {
     this.hitBy = player;
     this.game.pushMessage(`${this.hitBy}`);
   };
 
-  hurt = (playerHitBy: Player, damage: number) => {
+  readonly hurt = (playerHitBy: Player, damage: number) => {
     this.healthBar.hurt();
 
     this.health -= damage;
@@ -181,7 +143,7 @@ export class Entity extends Drawable {
 
   interact = (player: Player) => {};
 
-  dropLoot = () => {
+  readonly dropLoot = () => {
     if (this.drop) {
       this.drop.level = this.room;
       if (!this.room.roomArray[this.x][this.y].isSolid()) {

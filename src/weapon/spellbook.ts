@@ -3,8 +3,8 @@ import { Weapon } from "./weapon";
 import { Room } from "../room";
 import { Sound } from "../sound";
 import { SlashParticle } from "../particle/slashParticle";
-import { Crate } from "../entity/crate";
-import { Barrel } from "../entity/barrel";
+import { Crate } from "../entity/object/crate";
+import { Barrel } from "../entity/object/barrel";
 import { Player } from "../player";
 import { Inventory } from "../inventory";
 import { WizardFireball } from "../projectile/wizardFireball";
@@ -32,7 +32,6 @@ export class Spellbook extends Weapon {
       ) {
         e.hurt(this.wielder, 1);
 
-
         this.game.rooms[this.wielder.levelID].particles.push(
           new PlayerFireball(e.x, e.y)
         );
@@ -42,8 +41,7 @@ export class Spellbook extends Weapon {
 
     if (flag) {
       if (
-        this.wielder.game.rooms[this.wielder.levelID] ===
-        this.wielder.game.room
+        this.wielder.game.rooms[this.wielder.levelID] === this.wielder.game.room
       )
         Sound.hit();
       this.wielder.drawX = 0.5 * (this.wielder.x - newX);

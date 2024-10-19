@@ -9,14 +9,14 @@ import { LevelConstants } from "./levelConstants";
 import { Map } from "./map";
 import { SlashParticle } from "./particle/slashParticle";
 import { HealthBar } from "./healthbar";
-import { VendingMachine } from "./entity/vendingMachine";
+import { VendingMachine } from "./entity/object/vendingMachine";
 import { Drawable } from "./drawable";
 import { Random } from "./random";
 import { GenericParticle } from "./particle/genericParticle";
 import { ActionState, ActionTab } from "./actionTab";
 import { HitWarning } from "./hitWarning";
 import { Entity } from "./entity/entity";
-import { ZombieEnemy } from "./entity/zombieEnemy";
+import { ZombieEnemy } from "./entity/enemy/zombieEnemy";
 import { Item } from "./item/item";
 import { PostProcessor } from "./postProcess";
 import { Weapon } from "./weapon/weapon";
@@ -257,7 +257,7 @@ export class Player extends Drawable {
     let newMove = { x: x, y: y };
     // TODO don't move if hit by enemy
     this.game.rooms[this.levelID].catchUp();
-    //if (this.wouldHurt(x, y)) return;
+    if (this.wouldHurt(x, y) || this.wouldHurt(this.x, this.y)) return;
     if (this.dead) return;
 
     for (let i = 0; i < 2; i++)
@@ -375,6 +375,8 @@ export class Player extends Drawable {
     }
   };
 
+  //get cancelHoldMove = () => {};
+
   wouldHurt = (x: number, y: number) => {
     for (let h of this.game.rooms[this.levelID].hitwarnings) {
       if (h instanceof HitWarning && h.x == x && h.y == y) return true;
@@ -455,7 +457,7 @@ export class Player extends Drawable {
     this.drawY = 0;
   };
 
-  update = () => { };
+  update = () => {};
 
   finishTick = () => {
     this.turnCount += 1;
