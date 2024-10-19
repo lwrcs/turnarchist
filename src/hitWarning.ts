@@ -102,8 +102,6 @@ export class HitWarning extends Drawable {
       }
 
       this.tileX = 0 + 2 * this.dir;
-      console.log(this.tileX);
-      console.log(this.dir);
     }
   };
 

@@ -310,8 +310,8 @@ export class Entity extends Drawable {
       this.y,
       true
     );
-    this.drawX += -0.5 * this.drawX;
-    this.drawY += -0.5 * this.drawY;
+    this.drawX += -0.3 * this.drawX;
+    this.drawY += -0.3 * this.drawY;
   };
 
   drawSleepingZs = (delta: number, offsetX = 0, offsetY = 0) => {

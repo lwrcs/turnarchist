@@ -174,22 +174,34 @@ export class Game {
       const NUM_RESOURCES = 6;
 
       Game.tileset = new Image();
-      Game.tileset.onload = () => { resourcesLoaded++; }
+      Game.tileset.onload = () => {
+        resourcesLoaded++;
+      };
       Game.tileset.src = "res/tileset.png";
       Game.objset = new Image();
-      Game.objset.onload = () => { resourcesLoaded++; }
+      Game.objset.onload = () => {
+        resourcesLoaded++;
+      };
       Game.objset.src = "res/objset.png";
       Game.mobset = new Image();
-      Game.mobset.onload = () => { resourcesLoaded++; }
+      Game.mobset.onload = () => {
+        resourcesLoaded++;
+      };
       Game.mobset.src = "res/mobset.png";
       Game.itemset = new Image();
-      Game.itemset.onload = () => { resourcesLoaded++; }
+      Game.itemset.onload = () => {
+        resourcesLoaded++;
+      };
       Game.itemset.src = "res/itemset.png";
       Game.fxset = new Image();
-      Game.fxset.onload = () => { resourcesLoaded++; }
+      Game.fxset.onload = () => {
+        resourcesLoaded++;
+      };
       Game.fxset.src = "res/fxset.png";
       Game.fontsheet = new Image();
-      Game.fontsheet.onload = () => { resourcesLoaded++; }
+      Game.fontsheet.onload = () => {
+        resourcesLoaded++;
+      };
       Game.fontsheet.src = "res/font.png";
 
       let checkResourcesLoaded = () => {
@@ -265,7 +277,7 @@ export class Game {
           gs.randomState = (Math.random() * 4294967296) >>> 0;
           loadGameState(this, [this.localPlayerID], gs, true);
         }
-      }
+      };
       checkResourcesLoaded();
     });
   }
@@ -380,7 +392,7 @@ export class Game {
       this.previousFrameTimestamp = timestamp - 1000.0 / GameConstants.FPS;
 
     // normalized so 1.0 = 60fps
-    let delta = ((timestamp - this.previousFrameTimestamp) * 60.0) / 1000.0;
+    let delta = ((timestamp - this.previousFrameTimestamp) * 60) / 1000.0;
 
     while (times.length > 0 && times[0] <= timestamp - 1000) {
       times.shift();
@@ -482,7 +494,8 @@ export class Game {
     Game.ctx.canvas.setAttribute("height", `${GameConstants.HEIGHT}`);
     Game.ctx.canvas.setAttribute(
       "style",
-      `width: ${GameConstants.WIDTH * Game.scale}px; height: ${GameConstants.HEIGHT * Game.scale
+      `width: ${GameConstants.WIDTH * Game.scale}px; height: ${
+        GameConstants.HEIGHT * Game.scale
       }px;
     display: block;
     margin: 0 auto;
@@ -604,7 +617,7 @@ export class Game {
       let levelOffsetX = Math.floor(
         this.lerp(
           (Date.now() - this.transitionStartTime) /
-          LevelConstants.LEVEL_TRANSITION_TIME,
+            LevelConstants.LEVEL_TRANSITION_TIME,
           0,
           -this.transitionX
         )
@@ -612,7 +625,7 @@ export class Game {
       let levelOffsetY = Math.floor(
         this.lerp(
           (Date.now() - this.transitionStartTime) /
-          LevelConstants.LEVEL_TRANSITION_TIME,
+            LevelConstants.LEVEL_TRANSITION_TIME,
           0,
           -this.transitionY
         )
@@ -639,7 +652,7 @@ export class Game {
       let extraTileLerp = Math.floor(
         this.lerp(
           (Date.now() - this.transitionStartTime) /
-          LevelConstants.LEVEL_TRANSITION_TIME,
+            LevelConstants.LEVEL_TRANSITION_TIME,
           0,
           GameConstants.TILESIZE
         )
@@ -666,7 +679,7 @@ export class Game {
 
       let ditherFrame = Math.floor(
         (7 * (Date.now() - this.transitionStartTime)) /
-        LevelConstants.LEVEL_TRANSITION_TIME
+          LevelConstants.LEVEL_TRANSITION_TIME
       );
 
       Game.ctx.translate(levelOffsetX, levelOffsetY);
@@ -741,7 +754,7 @@ export class Game {
       let deadFrames = 6;
       let ditherFrame = Math.floor(
         ((7 * 2 + deadFrames) * (Date.now() - this.transitionStartTime)) /
-        LevelConstants.LEVEL_TRANSITION_TIME_LADDER
+          LevelConstants.LEVEL_TRANSITION_TIME_LADDER
       );
 
       if (ditherFrame < 7) {
@@ -807,15 +820,15 @@ export class Game {
 
       let cameraX = Math.round(
         (this.players[this.localPlayerID].x - playerDrawX + 0.5) *
-        GameConstants.TILESIZE -
-        0.5 * GameConstants.WIDTH -
-        this.screenShakeX
+          GameConstants.TILESIZE -
+          0.5 * GameConstants.WIDTH -
+          this.screenShakeX
       );
       let cameraY = Math.round(
         (this.players[this.localPlayerID].y - playerDrawY + 0.5) *
-        GameConstants.TILESIZE -
-        0.5 * GameConstants.HEIGHT -
-        this.screenShakeY
+          GameConstants.TILESIZE -
+          0.5 * GameConstants.HEIGHT -
+          this.screenShakeY
       );
 
       Game.ctx.translate(-cameraX, -cameraY);
@@ -845,12 +858,7 @@ export class Game {
       let cursorX = Game.measureText(
         this.chatTextBox.text.substring(0, this.chatTextBox.cursor)
       ).width;
-      Game.ctx.fillRect(
-        CHAT_X + cursorX,
-        CHAT_BOTTOM_Y,
-        1,
-        Game.letter_height
-      );
+      Game.ctx.fillRect(CHAT_X + cursorX, CHAT_BOTTOM_Y, 1, Game.letter_height);
     }
     for (let i = 0; i < this.chat.length; i++) {
       Game.ctx.fillStyle = "white";
@@ -864,8 +872,7 @@ export class Game {
         Game.ctx.globalAlpha = 1;
       } else {
         if (age <= GameConstants.CHAT_APPEAR_TIME) {
-          if (GameConstants.ALPHA_ENABLED)
-            Game.ctx.globalAlpha = CHAT_OPACITY;
+          if (GameConstants.ALPHA_ENABLED) Game.ctx.globalAlpha = CHAT_OPACITY;
         } else if (
           age <=
           GameConstants.CHAT_APPEAR_TIME + GameConstants.CHAT_FADE_TIME
@@ -875,7 +882,7 @@ export class Game {
               CHAT_OPACITY *
               (1 -
                 (age - GameConstants.CHAT_APPEAR_TIME) /
-                GameConstants.CHAT_FADE_TIME);
+                  GameConstants.CHAT_FADE_TIME);
         } else {
           Game.ctx.globalAlpha = 0;
         }

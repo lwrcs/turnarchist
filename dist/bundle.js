@@ -2732,8 +2732,8 @@ var Entity = /** @class */ (function (_super) {
         _this.drawTopLayer = function (delta) {
             _this.drawableY = _this.y - _this.drawY;
             _this.healthBar.draw(delta, _this.health, _this.maxHealth, _this.x, _this.y, true);
-            _this.drawX += -0.5 * _this.drawX;
-            _this.drawY += -0.5 * _this.drawY;
+            _this.drawX += -0.3 * _this.drawX;
+            _this.drawY += -0.3 * _this.drawY;
         };
         _this.drawSleepingZs = function (delta, offsetX, offsetY) {
             if (offsetX === void 0) { offsetX = 0; }
@@ -2912,6 +2912,47 @@ var FrogEnemy = /** @class */ (function (_super) {
         _this.hit = function () {
             return 0.5;
         };
+        _this.tryMove = function (x, y, collide) {
+            if (collide === void 0) { collide = true; }
+            var pointWouldBeIn = function (someX, someY) {
+                return (someX >= x && someX < x + _this.w && someY >= y && someY < y + _this.h);
+            };
+            var entityCollide = function (entity) {
+                if (entity.x >= x + _this.w || entity.x + entity.w <= x)
+                    return false;
+                if (entity.y >= y + _this.h || entity.y + entity.h <= y)
+                    return false;
+                return true;
+            };
+            for (var _i = 0, _a = _this.room.entities; _i < _a.length; _i++) {
+                var e = _a[_i];
+                if (e !== _this && entityCollide(e) && collide) {
+                    return;
+                }
+            }
+            for (var i in _this.game.players) {
+                if (pointWouldBeIn(_this.game.players[i].x, _this.game.players[i].y)) {
+                    return;
+                }
+            }
+            var tiles = [];
+            for (var xx = 0; xx < _this.w; xx++) {
+                for (var yy = 0; yy < _this.h; yy++) {
+                    if (!_this.room.roomArray[x + xx][y + yy].isSolid()) {
+                        tiles.push(_this.room.roomArray[x + xx][y + yy]);
+                    }
+                    else {
+                        return;
+                    }
+                }
+            }
+            for (var _b = 0, tiles_1 = tiles; _b < tiles_1.length; _b++) {
+                var tile = tiles_1[_b];
+                tile.onCollideEnemy(_this);
+            }
+            _this.x = x;
+            _this.y = y;
+        };
         _this.tick = function () {
             _this.lastX = _this.x;
             _this.lastY = _this.y;
@@ -2925,6 +2966,7 @@ var FrogEnemy = /** @class */ (function (_super) {
                     return;
                 }
                 if (!_this.seenPlayer) {
+                    _this.tileX = 12;
                     var result = _this.nearestPlayer();
                     if (result !== false) {
                         var distance = result[0], p = result[1];
@@ -2947,12 +2989,6 @@ var FrogEnemy = /** @class */ (function (_super) {
                             var oldX = _this.x;
                             var oldY = _this.y;
                             var disablePositions = Array();
-                            for (var _i = 0, _a = _this.room.entities; _i < _a.length; _i++) {
-                                var e = _a[_i];
-                                if (e !== _this) {
-                                    disablePositions.push({ x: e.x, y: e.y });
-                                }
-                            }
                             for (var xx = _this.x - 1; xx <= _this.x + 1; xx++) {
                                 for (var yy = _this.y - 1; yy <= _this.y + 1; yy++) {
                                     if (_this.room.roomArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
@@ -2994,20 +3030,41 @@ var FrogEnemy = /** @class */ (function (_super) {
                                     oldY = _this.y;
                                     var tryX = _this.x;
                                     var tryY = _this.y;
-                                    _this.tryMove(moves[0].pos.x, moves[0].pos.y);
+                                    _this.tryMove(moves[0].pos.x, moves[0].pos.y, false);
                                     moves = astarclass_1.astar.AStar.search(grid, _this, _this.targetPlayer, disablePositions);
                                     tryX = _this.x;
                                     tryY = _this.y;
                                     _this.tryMove(moves[0].pos.x, moves[0].pos.y);
-                                    if (_this.x != oldX && _this.y != oldY) {
-                                        _this.x = tryX;
-                                        _this.y = tryY;
+                                    /*
+                                    if (this.x != oldX && this.y != oldY) {
+                                      // if we've moved diagonally, we need to move back to the original position
+                                      this.x = tryX;
+                                      this.y = tryY;
+                                    }
+                    */
+                                    if (Math.abs(_this.x - oldX) + Math.abs(_this.y - oldY) < 2) {
+                                        _this.x = oldX;
+                                        _this.y = oldY;
+                                        moves = astarclass_1.astar.AStar.search(grid, _this, _this.targetPlayer, disablePositions);
+                                        _this.tryMove(moves[0].pos.x, moves[0].pos.y);
                                     }
                                     if (_this.x !== oldX || _this.y !== oldY) {
                                         _this.jump();
+                                        _this.drawX = _this.x - oldX;
+                                        _this.drawY = _this.y - oldY;
+                                        if (Math.abs(_this.x - oldX) > 1 ||
+                                            Math.abs(_this.y - oldY) > 1 ||
+                                            (_this.x !== oldX && _this.y !== oldY)) {
+                                            _this.jumpDistance = 2;
+                                        }
+                                        else {
+                                            _this.x = tryX;
+                                            _this.y = tryY;
+                                            _this.jumpDistance = 1.3;
+                                        }
                                     }
-                                    _this.drawX = _this.x - oldX;
-                                    _this.drawY = _this.y - oldY;
+                                    console.log("this.x", _this.x, "oldX", oldX);
+                                    console.log("this.y", _this.y, "oldY", oldY);
                                     if (_this.x > oldX)
                                         _this.direction = entity_1.EntityDirection.RIGHT;
                                     else if (_this.x < oldX)
@@ -3022,7 +3079,7 @@ var FrogEnemy = /** @class */ (function (_super) {
                         else {
                             _this.makeHitWarnings(true, false, false, _this.direction);
                             _this.rumble = true;
-                            _this.tileX = 2;
+                            _this.tileX = 3;
                             _this.frame = 0;
                             _this.frameLength = 2;
                             _this.animationSpeed = 0.2;
@@ -3055,14 +3112,19 @@ var FrogEnemy = /** @class */ (function (_super) {
             _this.frameLength = 9;
             _this.frame = 2;
             _this.animationSpeed = 0.3;
+            _this.jumping = true;
             setTimeout(function () {
                 _this.tileX = 1;
                 _this.frameLength = 3;
                 _this.animationSpeed = 0.1;
+                _this.jumping = false;
             }, 300);
         };
         _this.draw = function (delta) {
-            console.log(delta);
+            var jumpHeight = 0;
+            if (_this.jumping)
+                jumpHeight =
+                    Math.sin(((_this.frame - 2) / ((_this.jumpDistance + 1.825) * 1.475)) * Math.PI) * 0.75;
             var rumbleOffsetX = 0;
             if (_this.rumble) {
                 if (Math.floor(_this.frame) % 2 === 1)
@@ -3078,7 +3140,7 @@ var FrogEnemy = /** @class */ (function (_super) {
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
                 game_1.Game.drawMob(_this.tileX +
-                    (_this.tileX !== 12 && !_this.rumble ? Math.floor(_this.frame) : 0), _this.tileY /*+ this.direction * 2,*/, 1, 2, _this.rumble ? _this.x + rumbleOffsetX - _this.drawX : _this.x - _this.drawX, _this.y - 1.5 - _this.drawY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
+                    (_this.tileX !== 12 && !_this.rumble ? Math.floor(_this.frame) : 0), _this.tileY /*+ this.direction * 2,*/, 1, 2, _this.rumble ? _this.x + rumbleOffsetX - _this.drawX : _this.x - _this.drawX, _this.y - 1.5 - _this.drawY - jumpHeight, 1, 2, _this.room.shadeColor, _this.shadeAmount());
             }
             if (!_this.seenPlayer) {
                 _this.drawSleepingZs(delta);
@@ -3086,6 +3148,12 @@ var FrogEnemy = /** @class */ (function (_super) {
             if (_this.alertTicks > 0) {
                 _this.drawExclamation(delta);
             }
+        };
+        _this.drawTopLayer = function (delta) {
+            _this.drawableY = _this.y - _this.drawY;
+            _this.healthBar.draw(delta, _this.health, _this.maxHealth, _this.x, _this.y, true);
+            _this.drawX += -(0.25 / _this.jumpDistance) * _this.drawX;
+            _this.drawY += -(0.25 / _this.jumpDistance) * _this.drawY;
         };
         _this.ticks = 0;
         _this.frame = 0;
@@ -3101,11 +3169,9 @@ var FrogEnemy = /** @class */ (function (_super) {
         _this.animationSpeed = 0.1;
         _this.tickCount = 0;
         _this.rumble = false;
-        if (drop)
-            _this.drop = drop;
-        else {
-            _this.drop = new coin_1.Coin(_this.room, 0, 0);
-        }
+        _this.jumping = false;
+        _this.jumpDistance = 1;
+        _this.drop = drop ? drop : new coin_1.Coin(_this.room, 0, 0);
         return _this;
     }
     Object.defineProperty(FrogEnemy.prototype, "name", {
@@ -5732,7 +5798,7 @@ var Game = /** @class */ (function () {
             if (!_this.previousFrameTimestamp)
                 _this.previousFrameTimestamp = timestamp - 1000.0 / gameConstants_1.GameConstants.FPS;
             // normalized so 1.0 = 60fps
-            var delta = ((timestamp - _this.previousFrameTimestamp) * 60.0) / 1000.0;
+            var delta = ((timestamp - _this.previousFrameTimestamp) * 60) / 1000.0;
             while (times.length > 0 && times[0] <= timestamp - 1000) {
                 times.shift();
             }
@@ -6065,22 +6131,34 @@ var Game = /** @class */ (function () {
             var resourcesLoaded = 0;
             var NUM_RESOURCES = 6;
             Game.tileset = new Image();
-            Game.tileset.onload = function () { resourcesLoaded++; };
+            Game.tileset.onload = function () {
+                resourcesLoaded++;
+            };
             Game.tileset.src = "res/tileset.png";
             Game.objset = new Image();
-            Game.objset.onload = function () { resourcesLoaded++; };
+            Game.objset.onload = function () {
+                resourcesLoaded++;
+            };
             Game.objset.src = "res/objset.png";
             Game.mobset = new Image();
-            Game.mobset.onload = function () { resourcesLoaded++; };
+            Game.mobset.onload = function () {
+                resourcesLoaded++;
+            };
             Game.mobset.src = "res/mobset.png";
             Game.itemset = new Image();
-            Game.itemset.onload = function () { resourcesLoaded++; };
+            Game.itemset.onload = function () {
+                resourcesLoaded++;
+            };
             Game.itemset.src = "res/itemset.png";
             Game.fxset = new Image();
-            Game.fxset.onload = function () { resourcesLoaded++; };
+            Game.fxset.onload = function () {
+                resourcesLoaded++;
+            };
             Game.fxset.src = "res/fxset.png";
             Game.fontsheet = new Image();
-            Game.fontsheet.onload = function () { resourcesLoaded++; };
+            Game.fontsheet.onload = function () {
+                resourcesLoaded++;
+            };
             Game.fontsheet.src = "res/font.png";
             var checkResourcesLoaded = function () {
                 if (resourcesLoaded < NUM_RESOURCES) {
@@ -7252,8 +7330,6 @@ var HitWarning = /** @class */ (function (_super) {
                     _this.dir = dy < 0 ? Direction.SouthWest : Direction.NorthWest;
                 }
                 _this.tileX = 0 + 2 * _this.dir;
-                console.log(_this.tileX);
-                console.log(_this.dir);
             }
         };
         _this.setPointerOffset = function () {

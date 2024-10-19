@@ -23,6 +23,8 @@ export class FrogEnemy extends Entity {
   animationSpeed: number;
   tickCount: number;
   rumble: boolean;
+  jumping: boolean;
+  jumpDistance: number;
 
   constructor(
     room: Room,
@@ -47,10 +49,9 @@ export class FrogEnemy extends Entity {
     this.animationSpeed = 0.1;
     this.tickCount = 0;
     this.rumble = false;
-    if (drop) this.drop = drop;
-    else {
-      this.drop = new Coin(this.room, 0, 0);
-    }
+    this.jumping = false;
+    this.jumpDistance = 1;
+    this.drop = drop ? drop : new Coin(this.room, 0, 0);
   }
 
   get name() {
@@ -77,6 +78,44 @@ export class FrogEnemy extends Entity {
     return 0.5;
   };
 
+  tryMove = (x: number, y: number, collide: boolean = true) => {
+    let pointWouldBeIn = (someX: number, someY: number): boolean => {
+      return (
+        someX >= x && someX < x + this.w && someY >= y && someY < y + this.h
+      );
+    };
+    let entityCollide = (entity: Entity): boolean => {
+      if (entity.x >= x + this.w || entity.x + entity.w <= x) return false;
+      if (entity.y >= y + this.h || entity.y + entity.h <= y) return false;
+      return true;
+    };
+    for (const e of this.room.entities) {
+      if (e !== this && entityCollide(e) && collide) {
+        return;
+      }
+    }
+    for (const i in this.game.players) {
+      if (pointWouldBeIn(this.game.players[i].x, this.game.players[i].y)) {
+        return;
+      }
+    }
+    let tiles = [];
+    for (let xx = 0; xx < this.w; xx++) {
+      for (let yy = 0; yy < this.h; yy++) {
+        if (!this.room.roomArray[x + xx][y + yy].isSolid()) {
+          tiles.push(this.room.roomArray[x + xx][y + yy]);
+        } else {
+          return;
+        }
+      }
+    }
+    for (let tile of tiles) {
+      tile.onCollideEnemy(this);
+    }
+    this.x = x;
+    this.y = y;
+  };
+
   tick = () => {
     this.lastX = this.x;
     this.lastY = this.y;
@@ -91,6 +130,7 @@ export class FrogEnemy extends Entity {
         return;
       }
       if (!this.seenPlayer) {
+        this.tileX = 12;
         const result = this.nearestPlayer();
         if (result !== false) {
           let [distance, p] = result;
@@ -112,11 +152,7 @@ export class FrogEnemy extends Entity {
             let oldX = this.x;
             let oldY = this.y;
             let disablePositions = Array<astar.Position>();
-            for (const e of this.room.entities) {
-              if (e !== this) {
-                disablePositions.push({ x: e.x, y: e.y } as astar.Position);
-              }
-            }
+
             for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
               for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
                 if (
@@ -169,7 +205,7 @@ export class FrogEnemy extends Entity {
                 oldY = this.y;
                 let tryX = this.x;
                 let tryY = this.y;
-                this.tryMove(moves[0].pos.x, moves[0].pos.y);
+                this.tryMove(moves[0].pos.x, moves[0].pos.y, false);
                 moves = astar.AStar.search(
                   grid,
                   this,
@@ -179,16 +215,42 @@ export class FrogEnemy extends Entity {
                 tryX = this.x;
                 tryY = this.y;
                 this.tryMove(moves[0].pos.x, moves[0].pos.y);
+                /*
                 if (this.x != oldX && this.y != oldY) {
+                  // if we've moved diagonally, we need to move back to the original position
                   this.x = tryX;
                   this.y = tryY;
                 }
+*/
+                if (Math.abs(this.x - oldX) + Math.abs(this.y - oldY) < 2) {
+                  this.x = oldX;
+                  this.y = oldY;
+                  moves = astar.AStar.search(
+                    grid,
+                    this,
+                    this.targetPlayer,
+                    disablePositions
+                  );
+                  this.tryMove(moves[0].pos.x, moves[0].pos.y);
+                }
                 if (this.x !== oldX || this.y !== oldY) {
                   this.jump();
+                  this.drawX = this.x - oldX;
+                  this.drawY = this.y - oldY;
+                  if (
+                    Math.abs(this.x - oldX) > 1 ||
+                    Math.abs(this.y - oldY) > 1 ||
+                    (this.x !== oldX && this.y !== oldY)
+                  ) {
+                    this.jumpDistance = 2;
+                  } else {
+                    this.x = tryX;
+                    this.y = tryY;
+                    this.jumpDistance = 1.3;
+                  }
                 }
-
-                this.drawX = this.x - oldX;
-                this.drawY = this.y - oldY;
+                console.log("this.x", this.x, "oldX", oldX);
+                console.log("this.y", this.y, "oldY", oldY);
                 if (this.x > oldX) this.direction = EntityDirection.RIGHT;
                 else if (this.x < oldX) this.direction = EntityDirection.LEFT;
                 else if (this.y > oldY) this.direction = EntityDirection.DOWN;
@@ -198,7 +260,7 @@ export class FrogEnemy extends Entity {
           } else {
             this.makeHitWarnings(true, false, false, this.direction);
             this.rumble = true;
-            this.tileX = 2;
+            this.tileX = 3;
             this.frame = 0;
             this.frameLength = 2;
             this.animationSpeed = 0.2;
@@ -236,16 +298,23 @@ export class FrogEnemy extends Entity {
     this.frameLength = 9;
     this.frame = 2;
     this.animationSpeed = 0.3;
+    this.jumping = true;
 
     setTimeout(() => {
       this.tileX = 1;
       this.frameLength = 3;
       this.animationSpeed = 0.1;
+      this.jumping = false;
     }, 300);
   };
 
   draw = (delta: number) => {
-    console.log(delta);
+    let jumpHeight = 0;
+    if (this.jumping)
+      jumpHeight =
+        Math.sin(
+          ((this.frame - 2) / ((this.jumpDistance + 1.825) * 1.475)) * Math.PI
+        ) * 0.75;
     let rumbleOffsetX = 0;
     if (this.rumble) {
       if (Math.floor(this.frame) % 2 === 1) rumbleOffsetX = 0.0325;
@@ -277,7 +346,7 @@ export class FrogEnemy extends Entity {
         1,
         2,
         this.rumble ? this.x + rumbleOffsetX - this.drawX : this.x - this.drawX,
-        this.y - 1.5 - this.drawY,
+        this.y - 1.5 - this.drawY - jumpHeight,
         1,
         2,
         this.room.shadeColor,
@@ -290,5 +359,20 @@ export class FrogEnemy extends Entity {
     if (this.alertTicks > 0) {
       this.drawExclamation(delta);
     }
+  };
+
+  drawTopLayer = (delta: number) => {
+    this.drawableY = this.y - this.drawY;
+
+    this.healthBar.draw(
+      delta,
+      this.health,
+      this.maxHealth,
+      this.x,
+      this.y,
+      true
+    );
+    this.drawX += -(0.25 / this.jumpDistance) * this.drawX;
+    this.drawY += -(0.25 / this.jumpDistance) * this.drawY;
   };
 }
