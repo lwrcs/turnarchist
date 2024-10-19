@@ -36,7 +36,6 @@ export class TombStone extends Entity {
     this.tileY = 2;
     this.hasShadow = false;
     this.pushable = false;
-    this.entityType = EntityType.PROP;
     this.destroyable = true;
     this.skinType = skinType;
     this.rand = rand;

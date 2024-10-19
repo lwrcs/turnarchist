@@ -47,7 +47,12 @@ export class CrabEnemy extends Enemy {
   get name() {
     return "crab";
   }
-
+  get alertText() {
+    return `New Enemy Spotted: Crab 
+    Health: ${this.health}
+    Attack Pattern: Omnidirectional
+    Moves every other turn`;
+  }
   hurt = (playerHitBy: Player, damage: number) => {
     if (playerHitBy) {
       this.aggro = true;

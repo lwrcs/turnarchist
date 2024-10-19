@@ -63,7 +63,7 @@ export class Door extends Tile {
 
     if (this.DoorType === DoorType.GUARDEDDOOR) {
       const inRoom = this.game.room.entities.filter(
-        (enemy) => enemy.entityType === EntityType.ENEMY
+        (enemy) => enemy.type === EntityType.ENEMY
       );
       if (inRoom.length === 0) {
         this.game.pushMessage(

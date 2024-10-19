@@ -2120,6 +2120,13 @@ var CrabEnemy = /** @class */ (function (_super) {
         enumerable: false,
         configurable: true
     });
+    Object.defineProperty(CrabEnemy.prototype, "alertText", {
+        get: function () {
+            return "New Enemy Spotted: Crab \n    Health: ".concat(this.health, "\n    Attack Pattern: Omnidirectional\n    Moves every other turn");
+        },
+        enumerable: false,
+        configurable: true
+    });
     return CrabEnemy;
 }(enemy_1.Enemy));
 exports.CrabEnemy = CrabEnemy;
@@ -5094,7 +5101,6 @@ var TombStone = /** @class */ (function (_super) {
         _this.tileY = 2;
         _this.hasShadow = false;
         _this.pushable = false;
-        _this.entityType = entity_2.EntityType.PROP;
         _this.destroyable = true;
         _this.skinType = skinType;
         _this.rand = rand;
@@ -5411,13 +5417,6 @@ var CoalResource = /** @class */ (function (_super) {
     Object.defineProperty(CoalResource.prototype, "name", {
         get: function () {
             return "coal";
-        },
-        enumerable: false,
-        configurable: true
-    });
-    Object.defineProperty(CoalResource.prototype, "type", {
-        get: function () {
-            return EntityType.RESOURCE;
         },
         enumerable: false,
         configurable: true
@@ -10773,10 +10772,21 @@ var Player = /** @class */ (function (_super) {
             var newMove = { x: x, y: y };
             // TODO don't move if hit by enemy
             _this.game.rooms[_this.levelID].catchUp();
-            if (_this.wouldHurt(x, y) || _this.wouldHurt(_this.x, _this.y))
-                return;
+            if (!_this.triedMove) {
+                if (_this.wouldHurt(x, y)) {
+                    _this.drawX = 0.2 * (_this.x - x);
+                    _this.drawY = 0.2 * (_this.y - y);
+                    _this.game.pushMessage("Moving there would hurt you, are you sure?");
+                    _this.triedMove = true;
+                    return;
+                }
+            }
+            else {
+                _this.triedMove = false;
+            }
             if (_this.dead)
                 return;
+            _this.triedMove = false;
             for (var i = 0; i < 2; i++)
                 if (_this.inventory.hasWeapon() &&
                     !_this.inventory.getWeapon().weaponMove(x, y)) {
@@ -11091,6 +11101,7 @@ var Player = /** @class */ (function (_super) {
         _this.map = new map_1.Map(_this.game, _this);
         _this.actionTab = new actionTab_1.ActionTab(_this.inventory, _this.game);
         _this.turnCount = 0;
+        _this.triedMove = false;
         return _this;
     }
     return Player;
@@ -13151,7 +13162,7 @@ var Door = /** @class */ (function (_super) {
                 return false;
             }
             if (_this.DoorType === DoorType.GUARDEDDOOR) {
-                var inRoom = _this.game.room.entities.filter(function (enemy) { return enemy.entityType === entity_1.EntityType.ENEMY; });
+                var inRoom = _this.game.room.entities.filter(function (enemy) { return enemy.type === entity_1.EntityType.ENEMY; });
                 if (inRoom.length === 0) {
                     _this.game.pushMessage("The foes have been slain and the door allows you passage.");
                     return true;

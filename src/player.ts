@@ -1,6 +1,6 @@
 import { Input, InputEnum } from "./input";
 import { GameConstants } from "./gameConstants";
-import { Game, LevelState } from "./game";
+import { ChatMessage, Game, LevelState } from "./game";
 import { Door, DoorType } from "./tile/door";
 import { Trapdoor } from "./tile/trapdoor";
 import { Inventory } from "./inventory";
@@ -15,7 +15,7 @@ import { Random } from "./random";
 import { GenericParticle } from "./particle/genericParticle";
 import { ActionState, ActionTab } from "./actionTab";
 import { HitWarning } from "./hitWarning";
-import { Entity } from "./entity/entity";
+import { Entity, EntityType } from "./entity/entity";
 import { ZombieEnemy } from "./entity/enemy/zombieEnemy";
 import { Item } from "./item/item";
 import { PostProcessor } from "./postProcess";
@@ -59,6 +59,7 @@ export class Player extends Drawable {
   actionTab: ActionTab;
   lastHitBy: string;
   turnCount: number;
+  triedMove: boolean;
 
   constructor(game: Game, x: number, y: number, isLocalPlayer: boolean) {
     super();
@@ -112,6 +113,7 @@ export class Player extends Drawable {
     this.map = new Map(this.game, this);
     this.actionTab = new ActionTab(this.inventory, this.game);
     this.turnCount = 0;
+    this.triedMove = false;
   }
 
   inputHandler = (input: InputEnum) => {
@@ -257,8 +259,19 @@ export class Player extends Drawable {
     let newMove = { x: x, y: y };
     // TODO don't move if hit by enemy
     this.game.rooms[this.levelID].catchUp();
-    if (this.wouldHurt(x, y) || this.wouldHurt(this.x, this.y)) return;
+    if (!this.triedMove) {
+      if (this.wouldHurt(x, y)) {
+        this.drawX = 0.2 * (this.x - x);
+        this.drawY = 0.2 * (this.y - y);
+        this.game.pushMessage("Moving there would hurt you, are you sure?");
+        this.triedMove = true;
+        return;
+      }
+    } else {
+      this.triedMove = false;
+    }
     if (this.dead) return;
+    this.triedMove = false;
 
     for (let i = 0; i < 2; i++)
       if (
