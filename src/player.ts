@@ -259,19 +259,19 @@ export class Player extends Drawable {
     let newMove = { x: x, y: y };
     // TODO don't move if hit by enemy
     this.game.rooms[this.levelID].catchUp();
+    /*
     if (!this.triedMove) {
       if (this.wouldHurt(x, y)) {
-        this.drawX = 0.2 * (this.x - x);
-        this.drawY = 0.2 * (this.y - y);
+        this.drawY = 0.2 * (this.x - x);
+        this.drawX = 0.2 * (this.y - y);
         this.game.pushMessage("Moving there would hurt you, are you sure?");
         this.triedMove = true;
         return;
       }
-    } else {
       this.triedMove = false;
     }
+      */
     if (this.dead) return;
-    this.triedMove = false;
 
     for (let i = 0; i < 2; i++)
       if (
@@ -392,6 +392,7 @@ export class Player extends Drawable {
 
   wouldHurt = (x: number, y: number) => {
     for (let h of this.game.rooms[this.levelID].hitwarnings) {
+      console.log(`hitwarning: ${h}`);
       if (h instanceof HitWarning && h.x == x && h.y == y) return true;
       else {
         return false;

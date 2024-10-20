@@ -10772,21 +10772,20 @@ var Player = /** @class */ (function (_super) {
             var newMove = { x: x, y: y };
             // TODO don't move if hit by enemy
             _this.game.rooms[_this.levelID].catchUp();
-            if (!_this.triedMove) {
-                if (_this.wouldHurt(x, y)) {
-                    _this.drawX = 0.2 * (_this.x - x);
-                    _this.drawY = 0.2 * (_this.y - y);
-                    _this.game.pushMessage("Moving there would hurt you, are you sure?");
-                    _this.triedMove = true;
-                    return;
-                }
+            /*
+            if (!this.triedMove) {
+              if (this.wouldHurt(x, y)) {
+                this.drawY = 0.2 * (this.x - x);
+                this.drawX = 0.2 * (this.y - y);
+                this.game.pushMessage("Moving there would hurt you, are you sure?");
+                this.triedMove = true;
+                return;
+              }
+              this.triedMove = false;
             }
-            else {
-                _this.triedMove = false;
-            }
+              */
             if (_this.dead)
                 return;
-            _this.triedMove = false;
             for (var i = 0; i < 2; i++)
                 if (_this.inventory.hasWeapon() &&
                     !_this.inventory.getWeapon().weaponMove(x, y)) {
@@ -10904,6 +10903,7 @@ var Player = /** @class */ (function (_super) {
         _this.wouldHurt = function (x, y) {
             for (var _i = 0, _a = _this.game.rooms[_this.levelID].hitwarnings; _i < _a.length; _i++) {
                 var h = _a[_i];
+                console.log("hitwarning: ".concat(h));
                 if (h instanceof hitWarning_1.HitWarning && h.x == x && h.y == y)
                     return true;
                 else {
