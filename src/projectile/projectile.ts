@@ -18,22 +18,11 @@ export class Projectile extends Drawable {
     this.dead = false;
     this.parent = parent;
     this.drawableY = y;
-    this.setDirection();
   }
 
   get distanceToParent() {
     return Math.abs(this.x - this.parent.x) + Math.abs(this.y - this.parent.y);
   }
-
-  setDirection = () => {
-    const { dir } = HitWarning.setPointerDir(
-      this.x,
-      this.y,
-      this.parent.x,
-      this.parent.y
-    );
-    this.dir = dir;
-  };
 
   hitPlayer = (player: Player) => {};
   hitEnemy = (enemy: Entity) => {};

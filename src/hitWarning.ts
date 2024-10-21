@@ -56,14 +56,13 @@ export class HitWarning extends Drawable {
     this.offsetY = 0.2;
     this.pointerOffsetX = 0;
     this.pointerOffsetY = 0;
-    this.isEnemy = isEnemy !== undefined ? isEnemy : true;
-    const { dir, tileX } = HitWarning.setPointerDir(x, y, eX, eY);
-    this.tileX = tileX;
-    const pointerOffset = HitWarning.setPointerOffset(dir);
-    this.pointerOffsetX = pointerOffset.x;
-    this.pointerOffsetY = pointerOffset.y;
-    this.removeOverlapping();
+    this.setPointerDir();
+    this.setPointerOffset();
     this.dirOnly = dirOnly;
+
+    this.isEnemy = isEnemy !== undefined ? isEnemy : true;
+
+    this.removeOverlapping();
   }
 
   tick = () => {
@@ -90,32 +89,28 @@ export class HitWarning extends Drawable {
     }*/
   };
 
-  static setPointerDir = (x: number, y: number, eX: number, eY: number) => {
-    const dx = eX - x;
-    const dy = eY - y;
-
-    let dir: Direction;
-    let tileX: number;
+  setPointerDir = () => {
+    const dx = this.eX - this.x;
+    const dy = this.eY - this.y;
 
     if (dx === 0 && dy === 0) {
-      dir = Direction.Center;
+      this.dir = Direction.Center;
     } else {
       if (dx === 0) {
-        dir = dy < 0 ? Direction.South : Direction.North;
+        this.dir = dy < 0 ? Direction.South : Direction.North;
       } else if (dy === 0) {
-        dir = dx < 0 ? Direction.East : Direction.West;
+        this.dir = dx < 0 ? Direction.East : Direction.West;
       } else if (dx < 0) {
-        dir = dy < 0 ? Direction.SouthEast : Direction.NorthEast;
+        this.dir = dy < 0 ? Direction.SouthEast : Direction.NorthEast;
       } else {
-        dir = dy < 0 ? Direction.SouthWest : Direction.NorthWest;
+        this.dir = dy < 0 ? Direction.SouthWest : Direction.NorthWest;
       }
 
-      tileX = 0 + 2 * dir;
-      return { dir, tileX };
+      this.tileX = 0 + 2 * this.dir;
     }
   };
 
-  static setPointerOffset = (dir: Direction) => {
+  setPointerOffset = () => {
     const offsets = {
       [Direction.North]: { x: 0, y: 0.5 },
       [Direction.South]: { x: 0, y: -0.6 },
@@ -128,8 +123,9 @@ export class HitWarning extends Drawable {
       [Direction.Center]: { x: 0, y: -0.25 },
     };
 
-    const offset = offsets[dir];
-    return offset;
+    const offset = offsets[this.dir];
+    this.pointerOffsetX = offset.x;
+    this.pointerOffsetY = offset.y;
   };
 
   draw = (delta: number) => {

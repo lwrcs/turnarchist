@@ -7525,6 +7525,45 @@ var HitWarning = /** @class */ (function (_super) {
               }
             }*/
         };
+        _this.setPointerDir = function () {
+            var dx = _this.eX - _this.x;
+            var dy = _this.eY - _this.y;
+            if (dx === 0 && dy === 0) {
+                _this.dir = Direction.Center;
+            }
+            else {
+                if (dx === 0) {
+                    _this.dir = dy < 0 ? Direction.South : Direction.North;
+                }
+                else if (dy === 0) {
+                    _this.dir = dx < 0 ? Direction.East : Direction.West;
+                }
+                else if (dx < 0) {
+                    _this.dir = dy < 0 ? Direction.SouthEast : Direction.NorthEast;
+                }
+                else {
+                    _this.dir = dy < 0 ? Direction.SouthWest : Direction.NorthWest;
+                }
+                _this.tileX = 0 + 2 * _this.dir;
+            }
+        };
+        _this.setPointerOffset = function () {
+            var _a;
+            var offsets = (_a = {},
+                _a[Direction.North] = { x: 0, y: 0.5 },
+                _a[Direction.South] = { x: 0, y: -0.6 },
+                _a[Direction.West] = { x: 0.6, y: 0 },
+                _a[Direction.East] = { x: -0.6, y: 0 },
+                _a[Direction.NorthEast] = { x: -0.5, y: 0.5 },
+                _a[Direction.NorthWest] = { x: 0.5, y: 0.5 },
+                _a[Direction.SouthEast] = { x: -0.5, y: -0.5 },
+                _a[Direction.SouthWest] = { x: 0.5, y: -0.5 },
+                _a[Direction.Center] = { x: 0, y: -0.25 },
+                _a);
+            var offset = offsets[_this.dir];
+            _this.pointerOffsetX = offset.x;
+            _this.pointerOffsetY = offset.y;
+        };
         _this.draw = function (delta) {
             if (Math.abs(_this.x - _this.game.players[_this.game.localPlayerID].x) <= 1 &&
                 Math.abs(_this.y - _this.game.players[_this.game.localPlayerID].y) <= 1) {
@@ -7559,14 +7598,11 @@ var HitWarning = /** @class */ (function (_super) {
         _this.offsetY = 0.2;
         _this.pointerOffsetX = 0;
         _this.pointerOffsetY = 0;
-        _this.isEnemy = isEnemy !== undefined ? isEnemy : true;
-        var _a = HitWarning.setPointerDir(x, y, eX, eY), dir = _a.dir, tileX = _a.tileX;
-        _this.tileX = tileX;
-        var pointerOffset = HitWarning.setPointerOffset(dir);
-        _this.pointerOffsetX = pointerOffset.x;
-        _this.pointerOffsetY = pointerOffset.y;
-        _this.removeOverlapping();
+        _this.setPointerDir();
+        _this.setPointerOffset();
         _this.dirOnly = dirOnly;
+        _this.isEnemy = isEnemy !== undefined ? isEnemy : true;
+        _this.removeOverlapping();
         return _this;
     }
     HitWarning.frame = 0;
@@ -7574,47 +7610,6 @@ var HitWarning = /** @class */ (function (_super) {
         HitWarning.frame += 0.125 * delta;
         if (HitWarning.frame >= 2)
             HitWarning.frame = 0;
-    };
-    HitWarning.setPointerDir = function (x, y, eX, eY) {
-        var dx = eX - x;
-        var dy = eY - y;
-        var dir;
-        var tileX;
-        if (dx === 0 && dy === 0) {
-            dir = Direction.Center;
-        }
-        else {
-            if (dx === 0) {
-                dir = dy < 0 ? Direction.South : Direction.North;
-            }
-            else if (dy === 0) {
-                dir = dx < 0 ? Direction.East : Direction.West;
-            }
-            else if (dx < 0) {
-                dir = dy < 0 ? Direction.SouthEast : Direction.NorthEast;
-            }
-            else {
-                dir = dy < 0 ? Direction.SouthWest : Direction.NorthWest;
-            }
-            tileX = 0 + 2 * dir;
-            return { dir: dir, tileX: tileX };
-        }
-    };
-    HitWarning.setPointerOffset = function (dir) {
-        var _a;
-        var offsets = (_a = {},
-            _a[Direction.North] = { x: 0, y: 0.5 },
-            _a[Direction.South] = { x: 0, y: -0.6 },
-            _a[Direction.West] = { x: 0.6, y: 0 },
-            _a[Direction.East] = { x: -0.6, y: 0 },
-            _a[Direction.NorthEast] = { x: -0.5, y: 0.5 },
-            _a[Direction.NorthWest] = { x: 0.5, y: 0.5 },
-            _a[Direction.SouthEast] = { x: -0.5, y: -0.5 },
-            _a[Direction.SouthWest] = { x: 0.5, y: -0.5 },
-            _a[Direction.Center] = { x: 0, y: -0.25 },
-            _a);
-        var offset = offsets[dir];
-        return offset;
     };
     return HitWarning;
 }(drawable_1.Drawable));
@@ -11424,15 +11419,10 @@ var __extends = (this && this.__extends) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Projectile = void 0;
 var drawable_1 = __webpack_require__(/*! ../drawable */ "./src/drawable.ts");
-var hitWarning_1 = __webpack_require__(/*! ../hitWarning */ "./src/hitWarning.ts");
 var Projectile = /** @class */ (function (_super) {
     __extends(Projectile, _super);
     function Projectile(parent, x, y) {
         var _this = _super.call(this) || this;
-        _this.setDirection = function () {
-            var dir = hitWarning_1.HitWarning.setPointerDir(_this.x, _this.y, _this.parent.x, _this.parent.y).dir;
-            _this.dir = dir;
-        };
         _this.hitPlayer = function (player) { };
         _this.hitEnemy = function (enemy) { };
         _this.tick = function () { };
@@ -11443,7 +11433,6 @@ var Projectile = /** @class */ (function (_super) {
         _this.dead = false;
         _this.parent = parent;
         _this.drawableY = y;
-        _this.setDirection();
         return _this;
     }
     Object.defineProperty(Projectile.prototype, "distanceToParent", {
@@ -12554,7 +12543,7 @@ var Room = /** @class */ (function () {
             var y = t.y;
             // Define the enemy tables for each depth level
             var tables = {
-                0: [/*1, 2, 3,*/ 5],
+                0: [1, 2, 3, 5],
                 1: [3, 4, 5, 9, 7],
                 2: [3, 4, 5, 7, 8, 9, 12],
                 3: [1, 2, 3, 5, 6, 7, 8, 9, 10],
