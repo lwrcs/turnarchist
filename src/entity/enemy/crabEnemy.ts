@@ -231,7 +231,7 @@ export class CrabEnemy extends Enemy {
         1,
         1,
         this.x - this.drawX + rumbleX,
-        this.y - this.drawYOffset - this.drawY + rumbleY,
+        this.y - this.drawYOffset - this.drawY + rumbleY + 1.25,
         1 * this.crushX,
         1 * this.crushY,
         this.room.shadeColor,

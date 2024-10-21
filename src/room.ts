@@ -106,6 +106,7 @@ interface WallInfo {
   isInnerWall: boolean;
   isBelowDoorWall: boolean;
   isDoorWall: boolean;
+  innerWallType: string | null;
   shouldDrawBottom: boolean;
 }
 
@@ -1491,6 +1492,22 @@ export class Room {
           const isDoorWall =
             y < this.roomY + this.height && this.getTile(x, y + 1)?.isDoor;
 
+          let innerWallType = null;
+          if (isInnerWall) {
+            const hasWallAbove = this.getTile(x, y - 1) instanceof Wall;
+            const hasWallBelow = this.getTile(x, y + 1) instanceof Wall;
+
+            if (!hasWallAbove && hasWallBelow) {
+              innerWallType = "topInner";
+            } else if (hasWallAbove && !hasWallBelow) {
+              innerWallType = "bottomInner";
+            } else if (hasWallAbove && hasWallBelow) {
+              innerWallType = "surroundedInner";
+            } else {
+              innerWallType = "isolatedInner";
+            }
+          }
+
           this.wallInfo.set(`${x},${y}`, {
             isTopWall,
             isBottomWall,
@@ -1499,6 +1516,7 @@ export class Room {
             isInnerWall,
             isBelowDoorWall,
             isDoorWall,
+            innerWallType,
             shouldDrawBottom:
               isDoorWall ||
               isBelowDoorWall ||

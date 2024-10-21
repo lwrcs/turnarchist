@@ -4,9 +4,12 @@ import { Door } from "./door";
 import { Tile } from "./tile";
 
 export class Wall extends Tile {
+  private tileYOffset: number;
+
   constructor(room: Room, x: number, y: number) {
     super(room, x, y);
     this.isDoor = false;
+    this.tileYOffset = 6;
   }
 
   isSolid = (): boolean => {
@@ -22,6 +25,13 @@ export class Wall extends Tile {
   draw = (delta: number) => {
     const wallInfo = this.room.wallInfo.get(`${this.x},${this.y}`);
     if (!wallInfo) return;
+
+    // Set tileYOffset based on inner wall type
+    this.tileYOffset =
+      wallInfo.innerWallType === "bottomInner" ||
+      wallInfo.innerWallType === "surroundedInner"
+        ? 0
+        : 6;
 
     // Only draw the bottom part of the wall if it's not at the bottom edge of the room
     if (
@@ -45,7 +55,7 @@ export class Wall extends Tile {
 
     Game.drawTile(
       2,
-      this.skin + 6,
+      this.skin + this.tileYOffset,
       1,
       1,
       this.x,

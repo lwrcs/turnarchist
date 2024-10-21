@@ -95,8 +95,6 @@ export class WizardEnemy extends Enemy {
     return a;
   };
 
-  private;
-
   tick = () => {
     this.lastX = this.x;
     this.lastY = this.y;
@@ -121,7 +119,7 @@ export class WizardEnemy extends Enemy {
             const nearestPlayerInfo = this.nearestPlayer();
             if (nearestPlayerInfo !== false) {
               const [distance, targetPlayer] = nearestPlayerInfo;
-              const attackLength = distance;
+              const attackLength = 20;
 
               const offsets = this.calculateProjectileOffsets(
                 targetPlayer.x,
@@ -129,7 +127,24 @@ export class WizardEnemy extends Enemy {
                 10
               );
 
-              this.attemptProjectilePlacement(offsets, WizardFireball, true);
+              this.attemptProjectilePlacement(
+                [
+                  { x: -1, y: 0 },
+                  { x: -2, y: 0 },
+                  { x: 1, y: 0 },
+                  { x: 2, y: 0 },
+                  { x: 0, y: -1 },
+                  { x: 0, y: -2 },
+                  { x: 0, y: 1 },
+                  { x: 0, y: 2 },
+                  { x: 0, y: 3 },
+                  { x: 0, y: -3 },
+                  { x: 3, y: 0 },
+                  { x: -3, y: 0 },
+                ],
+                WizardFireball,
+                false
+              );
             }
             this.state = WizardState.justAttacked;
             break;
