@@ -12,6 +12,7 @@ import { Item } from "../item/item";
 import { GameConstants } from "../gameConstants";
 import { HitWarning } from "../hitWarning";
 import { Sound } from "../sound";
+import { Projectile } from "../projectile/projectile";
 
 export enum EntityDirection {
   DOWN,
@@ -391,6 +392,50 @@ export class Entity extends Drawable {
   get crushYoffset() {
     return this.crushY;
   }
+
+  attemptProjectilePlacement = (
+    offsets: { x: number; y: number }[],
+    projectileClass: new (parent: Entity, x: number, y: number) => Projectile,
+    collide: boolean
+  ) => {
+    for (const offset of offsets) {
+      const targetX = this.x + offset.x;
+      const targetY = this.y + offset.y;
+
+      if (collide) {
+        const pathClear = this.isPathClear(this.x, this.y, targetX, targetY);
+        if (!pathClear) continue;
+      }
+
+      if (
+        this.room.getTile(targetX, targetY) &&
+        !this.room.roomArray[targetX][targetY].isSolid()
+      ) {
+        this.room.projectiles.push(new projectileClass(this, targetX, targetY));
+      }
+    }
+  };
+
+  isPathClear = (
+    startX: number,
+    startY: number,
+    endX: number,
+    endY: number
+  ): boolean => {
+    const dx = Math.sign(endX - startX);
+    const dy = Math.sign(endY - startY);
+    let x = startX + dx;
+    let y = startY + dy;
+
+    while (x !== endX || y !== endY) {
+      if (this.room.roomArray[x][y].isSolid()) {
+        return false;
+      }
+      if (x !== endX) x += dx;
+      if (y !== endY) y += dy;
+    }
+    return true;
+  };
 
   makeHitWarnings = (
     orthogonal: Boolean,

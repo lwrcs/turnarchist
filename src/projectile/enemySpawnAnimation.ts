@@ -16,7 +16,7 @@ export class EnemySpawnAnimation extends Projectile {
   frame: number;
 
   constructor(room: Room, enemy: Entity, x: number, y: number) {
-    super(x, y);
+    super(enemy, x, y);
     this.room = room;
     this.enemy = enemy;
     this.frame = 0;

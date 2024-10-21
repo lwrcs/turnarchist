@@ -3723,38 +3723,20 @@ var WizardEnemy = /** @class */ (function (_super) {
                     _this.alertTicks = Math.max(0, _this.alertTicks - 1);
                     switch (_this.state) {
                         case WizardState.attack:
-                            if (_this.room.getTile(_this.x - 1, _this.y) &&
-                                !_this.room.roomArray[_this.x - 1][_this.y].isSolid()) {
-                                _this.room.projectiles.push(new wizardFireball_1.WizardFireball(_this, _this.x - 1, _this.y));
-                                if (_this.room.getTile(_this.x - 2, _this.y) &&
-                                    !_this.room.roomArray[_this.x - 2][_this.y].isSolid()) {
-                                    _this.room.projectiles.push(new wizardFireball_1.WizardFireball(_this, _this.x - 2, _this.y));
-                                }
-                            }
-                            if (_this.room.getTile(_this.x + 1, _this.y) &&
-                                !_this.room.roomArray[_this.x + 1][_this.y].isSolid()) {
-                                _this.room.projectiles.push(new wizardFireball_1.WizardFireball(_this, _this.x + 1, _this.y));
-                                if (_this.room.getTile(_this.x + 2, _this.y) &&
-                                    !_this.room.roomArray[_this.x + 2][_this.y].isSolid()) {
-                                    _this.room.projectiles.push(new wizardFireball_1.WizardFireball(_this, _this.x + 2, _this.y));
-                                }
-                            }
-                            if (_this.room.getTile(_this.x, _this.y - 1) &&
-                                !_this.room.roomArray[_this.x][_this.y - 1].isSolid()) {
-                                _this.room.projectiles.push(new wizardFireball_1.WizardFireball(_this, _this.x, _this.y - 1));
-                                if (_this.room.getTile(_this.x, _this.y - 2) &&
-                                    !_this.room.roomArray[_this.x][_this.y - 2].isSolid()) {
-                                    _this.room.projectiles.push(new wizardFireball_1.WizardFireball(_this, _this.x, _this.y - 2));
-                                }
-                            }
-                            if (_this.room.getTile(_this.x, _this.y + 1) &&
-                                !_this.room.roomArray[_this.x][_this.y + 1].isSolid()) {
-                                _this.room.projectiles.push(new wizardFireball_1.WizardFireball(_this, _this.x, _this.y + 1));
-                                if (_this.room.getTile(_this.x, _this.y + 2) &&
-                                    !_this.room.roomArray[_this.x][_this.y + 2].isSolid()) {
-                                    _this.room.projectiles.push(new wizardFireball_1.WizardFireball(_this, _this.x, _this.y + 2));
-                                }
-                            }
+                            _this.attemptProjectilePlacement([
+                                { x: -1, y: 0 },
+                                { x: -2, y: 0 },
+                                { x: 1, y: 0 },
+                                { x: 2, y: 0 },
+                                { x: 0, y: -1 },
+                                { x: 0, y: -2 },
+                                { x: 0, y: 1 },
+                                { x: 0, y: 2 },
+                                { x: 0, y: 3 },
+                                { x: 0, y: -3 },
+                                { x: 3, y: 0 },
+                                { x: -3, y: 0 },
+                            ], wizardFireball_1.WizardFireball, true);
                             _this.state = WizardState.justAttacked;
                             break;
                         case WizardState.justAttacked:
@@ -4439,6 +4421,38 @@ var Entity = /** @class */ (function (_super) {
                 _this.animationSpeed = 0.2;
             }
             return rumbleOffset;
+        };
+        _this.attemptProjectilePlacement = function (offsets, projectileClass, collide) {
+            for (var _i = 0, offsets_1 = offsets; _i < offsets_1.length; _i++) {
+                var offset = offsets_1[_i];
+                var targetX = _this.x + offset.x;
+                var targetY = _this.y + offset.y;
+                if (collide) {
+                    var pathClear = _this.isPathClear(_this.x, _this.y, targetX, targetY);
+                    if (!pathClear)
+                        continue;
+                }
+                if (_this.room.getTile(targetX, targetY) &&
+                    !_this.room.roomArray[targetX][targetY].isSolid()) {
+                    _this.room.projectiles.push(new projectileClass(_this, targetX, targetY));
+                }
+            }
+        };
+        _this.isPathClear = function (startX, startY, endX, endY) {
+            var dx = Math.sign(endX - startX);
+            var dy = Math.sign(endY - startY);
+            var x = startX + dx;
+            var y = startY + dy;
+            while (x !== endX || y !== endY) {
+                if (_this.room.roomArray[x][y].isSolid()) {
+                    return false;
+                }
+                if (x !== endX)
+                    x += dx;
+                if (y !== endY)
+                    y += dy;
+            }
+            return true;
         };
         _this.makeHitWarnings = function (orthogonal, diagonal, forwardOnly, direction) {
             if (orthogonal && !forwardOnly) {
@@ -11212,7 +11226,7 @@ var hitWarning_1 = __webpack_require__(/*! ../hitWarning */ "./src/hitWarning.ts
 var EnemySpawnAnimation = /** @class */ (function (_super) {
     __extends(EnemySpawnAnimation, _super);
     function EnemySpawnAnimation(room, enemy, x, y) {
-        var _this = _super.call(this, x, y) || this;
+        var _this = _super.call(this, enemy, x, y) || this;
         _this.ANIM_COUNT = 3;
         _this.tick = function () {
             if (_this.room === _this.room.game.room)
@@ -11289,8 +11303,8 @@ var projectile_1 = __webpack_require__(/*! ./projectile */ "./src/projectile/pro
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var PlayerFireball = /** @class */ (function (_super) {
     __extends(PlayerFireball, _super);
-    function PlayerFireball(x, y) {
-        var _this = _super.call(this, x, y) || this;
+    function PlayerFireball(parent, x, y) {
+        var _this = _super.call(this, parent, x, y) || this;
         _this.drawTopLayer = function (delta) {
             if (_this.dead)
                 return;
@@ -11337,7 +11351,7 @@ exports.Projectile = void 0;
 var drawable_1 = __webpack_require__(/*! ../drawable */ "./src/drawable.ts");
 var Projectile = /** @class */ (function (_super) {
     __extends(Projectile, _super);
-    function Projectile(x, y) {
+    function Projectile(parent, x, y) {
         var _this = _super.call(this) || this;
         _this.hitPlayer = function (player) { };
         _this.hitEnemy = function (enemy) { };
@@ -11347,9 +11361,17 @@ var Projectile = /** @class */ (function (_super) {
         _this.x = x;
         _this.y = y;
         _this.dead = false;
+        _this.parent = parent;
         _this.drawableY = y;
         return _this;
     }
+    Object.defineProperty(Projectile.prototype, "distanceToParent", {
+        get: function () {
+            return Math.sqrt(Math.pow((this.x - this.parent.x), 2) + Math.pow((this.y - this.parent.y), 2));
+        },
+        enumerable: false,
+        configurable: true
+    });
     return Projectile;
 }(drawable_1.Drawable));
 exports.Projectile = Projectile;
@@ -11387,8 +11409,9 @@ var hitWarning_1 = __webpack_require__(/*! ../hitWarning */ "./src/hitWarning.ts
 var WizardFireball = /** @class */ (function (_super) {
     __extends(WizardFireball, _super);
     function WizardFireball(parent, x, y) {
-        var _this = _super.call(this, x, y) || this;
+        var _this = _super.call(this, parent, x, y) || this;
         _this.tick = function () {
+            console.log("state: ".concat(_this.state));
             if (_this.parent.dead)
                 _this.dead = true;
             _this.state++;
@@ -11408,32 +11431,41 @@ var WizardFireball = /** @class */ (function (_super) {
         _this.draw = function (delta) {
             if (_this.dead)
                 return;
-            if (_this.state === 0) {
-                _this.frame += 0.25 * delta;
-                if (_this.frame >= 4)
-                    _this.frame = 0;
-                game_1.Game.drawFX(22 + Math.floor(_this.frame), 7, 1, 1, _this.x, _this.y, 1, 1);
-            }
-            else if (_this.state === 1) {
-                _this.frame += 0.25 * delta;
-                if (_this.frame >= 4)
-                    _this.frame = 0;
-                game_1.Game.drawFX(18 + Math.floor(_this.frame), 7, 1, 1, _this.x, _this.y, 1, 1);
-            }
-            else {
-                if (_this.delay > 0) {
-                    _this.delay--;
-                    return;
+            game_1.Game.ctx.globalCompositeOperation = "overlay";
+            game_1.Game.ctx.fillRect(_this.x, _this.y, 16, 16);
+            game_1.Game.ctx.fillStyle = "red";
+            game_1.Game.ctx.globalAlpha = 0.5;
+            game_1.Game.ctx.globalCompositeOperation = "source-over";
+            game_1.Game.ctx.globalAlpha = 1;
+            if (_this.state >= 0) {
+                if (_this.state === 0) {
+                    _this.frame += 0.25 * delta;
+                    if (_this.frame >= 4)
+                        _this.frame = 0;
+                    game_1.Game.drawFX(22 + Math.floor(_this.frame), 7, 1, 1, _this.x, _this.y, 1, 1);
                 }
-                _this.frame += 0.3 * delta;
-                if (_this.frame > 17)
-                    _this.dead = true;
-                game_1.Game.drawFX(Math.floor(_this.frame), 6, 1, 2, _this.x, _this.y - 1, 1, 2);
+                else if (_this.state === 1) {
+                    _this.frame += 0.25 * delta;
+                    if (_this.frame >= 4)
+                        _this.frame = 0;
+                    game_1.Game.drawFX(18 + Math.floor(_this.frame), 7, 1, 1, _this.x, _this.y, 1, 1);
+                }
+                else {
+                    if (_this.delay > 0) {
+                        _this.delay--;
+                        return;
+                    }
+                    _this.frame += 0.3 * delta;
+                    if (_this.frame > 17)
+                        _this.dead = true;
+                    game_1.Game.drawFX(Math.floor(_this.frame), 6, 1, 2, _this.x, _this.y - 1, 1, 2);
+                }
             }
         };
         _this.parent = parent;
-        _this.state = 0;
         _this.frame = 0;
+        _this.frameOffset = 0;
+        _this.state = 1 - _this.distanceToParent;
         return _this;
     }
     return WizardFireball;
@@ -14564,7 +14596,7 @@ var Spellbook = /** @class */ (function (_super) {
                     e.pointIn(newX, newY) &&
                     !_this.game.rooms[_this.wielder.levelID].roomArray[e.x][e.y].isSolid()) {
                     e.hurt(_this.wielder, 1);
-                    _this.game.rooms[_this.wielder.levelID].particles.push(new playerFireball_1.PlayerFireball(e.x, e.y));
+                    _this.game.rooms[_this.wielder.levelID].particles.push(new playerFireball_1.PlayerFireball(_this.wielder, e.x, e.y));
                     flag = true;
                 }
             }

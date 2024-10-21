@@ -9,8 +9,8 @@ export class PlayerFireball extends Projectile {
   frame: number;
   delay: number;
 
-  constructor(x: number, y: number) {
-    super(x, y);
+  constructor(parent: Player, x: number, y: number) {
+    super(parent, x, y);
     this.state = 0;
     this.frame = 6;
   }

@@ -93,6 +93,8 @@ export class WizardEnemy extends Enemy {
     return a;
   };
 
+  private;
+
   tick = () => {
     this.lastX = this.x;
     this.lastY = this.y;
@@ -114,70 +116,24 @@ export class WizardEnemy extends Enemy {
         this.alertTicks = Math.max(0, this.alertTicks - 1);
         switch (this.state) {
           case WizardState.attack:
-            if (
-              this.room.getTile(this.x - 1, this.y) &&
-              !this.room.roomArray[this.x - 1][this.y].isSolid()
-            ) {
-              this.room.projectiles.push(
-                new WizardFireball(this, this.x - 1, this.y)
-              );
-              if (
-                this.room.getTile(this.x - 2, this.y) &&
-                !this.room.roomArray[this.x - 2][this.y].isSolid()
-              ) {
-                this.room.projectiles.push(
-                  new WizardFireball(this, this.x - 2, this.y)
-                );
-              }
-            }
-            if (
-              this.room.getTile(this.x + 1, this.y) &&
-              !this.room.roomArray[this.x + 1][this.y].isSolid()
-            ) {
-              this.room.projectiles.push(
-                new WizardFireball(this, this.x + 1, this.y)
-              );
-              if (
-                this.room.getTile(this.x + 2, this.y) &&
-                !this.room.roomArray[this.x + 2][this.y].isSolid()
-              ) {
-                this.room.projectiles.push(
-                  new WizardFireball(this, this.x + 2, this.y)
-                );
-              }
-            }
-            if (
-              this.room.getTile(this.x, this.y - 1) &&
-              !this.room.roomArray[this.x][this.y - 1].isSolid()
-            ) {
-              this.room.projectiles.push(
-                new WizardFireball(this, this.x, this.y - 1)
-              );
-              if (
-                this.room.getTile(this.x, this.y - 2) &&
-                !this.room.roomArray[this.x][this.y - 2].isSolid()
-              ) {
-                this.room.projectiles.push(
-                  new WizardFireball(this, this.x, this.y - 2)
-                );
-              }
-            }
-            if (
-              this.room.getTile(this.x, this.y + 1) &&
-              !this.room.roomArray[this.x][this.y + 1].isSolid()
-            ) {
-              this.room.projectiles.push(
-                new WizardFireball(this, this.x, this.y + 1)
-              );
-              if (
-                this.room.getTile(this.x, this.y + 2) &&
-                !this.room.roomArray[this.x][this.y + 2].isSolid()
-              ) {
-                this.room.projectiles.push(
-                  new WizardFireball(this, this.x, this.y + 2)
-                );
-              }
-            }
+            this.attemptProjectilePlacement(
+              [
+                { x: -1, y: 0 },
+                { x: -2, y: 0 },
+                { x: 1, y: 0 },
+                { x: 2, y: 0 },
+                { x: 0, y: -1 },
+                { x: 0, y: -2 },
+                { x: 0, y: 1 },
+                { x: 0, y: 2 },
+                { x: 0, y: 3 },
+                { x: 0, y: -3 },
+                { x: 3, y: 0 },
+                { x: -3, y: 0 },
+              ],
+              WizardFireball,
+              true
+            );
             this.state = WizardState.justAttacked;
             break;
           case WizardState.justAttacked:
