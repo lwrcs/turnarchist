@@ -5,11 +5,13 @@ import { LightSource } from "../lightSource";
 
 export class WallTorch extends Tile {
   frame: number;
+  private tileYOffset: number;
 
   constructor(room: Room, x: number, y: number) {
     super(room, x, y);
     this.room.lightSources.push(new LightSource(this.x + 0.5, this.y + 0.5, 3));
     this.frame = Math.random() * 12;
+    this.tileYOffset = 6;
   }
 
   isSolid = (): boolean => {
@@ -23,8 +25,16 @@ export class WallTorch extends Tile {
   };
 
   draw = (delta: number) => {
+    const wallInfo = this.room.wallInfo.get(`${this.x},${this.y}`);
+    if (!wallInfo) this.tileYOffset = 6;
     this.frame += 0.3 * delta;
     if (this.frame >= 12) this.frame = 0;
+
+    this.tileYOffset =
+      wallInfo.innerWallType === "bottomInner" ||
+      wallInfo.innerWallType === "surroundedInner"
+        ? 0
+        : 6;
 
     Game.drawTile(
       0,

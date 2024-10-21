@@ -1480,7 +1480,7 @@ export class Room {
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
         const tile = this.getTile(x, y);
-        if (tile instanceof Wall) {
+        if (tile instanceof Wall || tile instanceof WallTorch) {
           const isTopWall = y === this.roomY;
           const isBottomWall = y === this.roomY + this.height - 1;
           const isLeftWall = x === this.roomX;

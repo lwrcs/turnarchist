@@ -12762,7 +12762,7 @@ var Room = /** @class */ (function () {
         for (var x = this.roomX; x < this.roomX + this.width; x++) {
             for (var y = this.roomY; y < this.roomY + this.height; y++) {
                 var tile = this.getTile(x, y);
-                if (tile instanceof wall_1.Wall) {
+                if (tile instanceof wall_1.Wall || tile instanceof wallTorch_1.WallTorch) {
                     var isTopWall = y === this.roomY;
                     var isBottomWall = y === this.roomY + this.height - 1;
                     var isLeftWall = x === this.roomX;
@@ -14234,15 +14234,24 @@ var WallTorch = /** @class */ (function (_super) {
             return true;
         };
         _this.draw = function (delta) {
+            var wallInfo = _this.room.wallInfo.get("".concat(_this.x, ",").concat(_this.y));
+            if (!wallInfo)
+                _this.tileYOffset = 6;
             _this.frame += 0.3 * delta;
             if (_this.frame >= 12)
                 _this.frame = 0;
+            _this.tileYOffset =
+                wallInfo.innerWallType === "bottomInner" ||
+                    wallInfo.innerWallType === "surroundedInner"
+                    ? 0
+                    : 6;
             game_1.Game.drawTile(0, _this.skin, 1, 1, _this.x, _this.y, 1, 1, _this.room.shadeColor, _this.shadeAmount());
             game_1.Game.drawTile(2, _this.skin, 1, 1, _this.x, _this.y - 1, 1, 1, _this.room.shadeColor, _this.shadeAmount());
             game_1.Game.drawFX(Math.floor(_this.frame), 32, 1, 2, _this.x, _this.y - 1, 1, 2);
         };
         _this.room.lightSources.push(new lightSource_1.LightSource(_this.x + 0.5, _this.y + 0.5, 3));
         _this.frame = Math.random() * 12;
+        _this.tileYOffset = 6;
         return _this;
     }
     return WallTorch;
