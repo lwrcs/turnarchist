@@ -11392,10 +11392,10 @@ var WizardFireball = /** @class */ (function (_super) {
             if (_this.parent.dead)
                 _this.dead = true;
             _this.state++;
-            if (_this.state === 1) {
+            if (_this.state === 1 && !_this.dead) {
                 _this.parent.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.parent.game, _this.x, _this.y, _this.x, _this.y, false));
             }
-            if (_this.state === 2) {
+            if (_this.state === 2 && !_this.dead) {
                 _this.frame = 0;
                 _this.delay = game_1.Game.rand(0, 10, Math.random);
             }
@@ -12421,7 +12421,7 @@ var Room = /** @class */ (function () {
             var y = t.y;
             // Define the enemy tables for each depth level
             var tables = {
-                0: [/*1, 2, 3,*/ 12],
+                0: [/*1, 2, 3,*/ 5],
                 1: [3, 4, 5, 9, 7],
                 2: [3, 4, 5, 7, 8, 9, 12],
                 3: [1, 2, 3, 5, 6, 7, 8, 9, 10],

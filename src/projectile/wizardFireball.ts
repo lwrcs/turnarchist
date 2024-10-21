@@ -20,12 +20,12 @@ export class WizardFireball extends Projectile {
   tick = () => {
     if (this.parent.dead) this.dead = true;
     this.state++;
-    if (this.state === 1) {
+    if (this.state === 1 && !this.dead) {
       this.parent.room.hitwarnings.push(
         new HitWarning(this.parent.game, this.x, this.y, this.x, this.y, false)
       );
     }
-    if (this.state === 2) {
+    if (this.state === 2 && !this.dead) {
       this.frame = 0;
       this.delay = Game.rand(0, 10, Math.random);
     }
