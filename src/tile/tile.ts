@@ -14,6 +14,7 @@ export class Tile extends Drawable {
   y: number;
   room: Room;
   skin: SkinType;
+  isDoor: boolean;
 
   constructor(room: Room, x: number, y: number) {
     super();
@@ -22,10 +23,7 @@ export class Tile extends Drawable {
     this.x = x;
     this.y = y;
     this.drawableY = y;
-  }
-
-  get isDoor() {
-    return false;
+    this.isDoor = false;
   }
 
   hasPlayer = (player: Player) => {

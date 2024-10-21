@@ -4480,31 +4480,45 @@ var Entity = /** @class */ (function (_super) {
             return true;
         };
         _this.makeHitWarnings = function (orthogonal, diagonal, forwardOnly, direction) {
-            if (orthogonal && !forwardOnly) {
-                _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y, _this.x, _this.y));
-                _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y, _this.x, _this.y));
-                _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y - 1, _this.x, _this.y));
-                _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y + 1, _this.x, _this.y));
+            var _a;
+            var addWarning = function (dx, dy) {
+                _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + dx, _this.y + dy, _this.x, _this.y));
+            };
+            var orthogonalOffsets = [
+                [-1, 0],
+                [1, 0],
+                [0, -1],
+                [0, 1],
+            ];
+            var diagonalOffsets = [
+                [-1, -1],
+                [1, 1],
+                [1, -1],
+                [-1, 1],
+            ];
+            var directionOffsets = (_a = {},
+                _a[EntityDirection.LEFT] = [-1, 0],
+                _a[EntityDirection.RIGHT] = [1, 0],
+                _a[EntityDirection.UP] = [0, -1],
+                _a[EntityDirection.DOWN] = [0, 1],
+                _a);
+            if (!forwardOnly) {
+                if (orthogonal) {
+                    orthogonalOffsets.forEach(function (_a) {
+                        var dx = _a[0], dy = _a[1];
+                        return addWarning(dx, dy);
+                    });
+                }
+                if (diagonal) {
+                    diagonalOffsets.forEach(function (_a) {
+                        var dx = _a[0], dy = _a[1];
+                        return addWarning(dx, dy);
+                    });
+                }
             }
-            if (diagonal && !forwardOnly) {
-                _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y - 1, _this.x, _this.y));
-                _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y + 1, _this.x, _this.y));
-                _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y - 1, _this.x, _this.y));
-                _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y + 1, _this.x, _this.y));
-            }
-            if (forwardOnly) {
-                if (direction == EntityDirection.LEFT) {
-                    _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y, _this.x, _this.y));
-                }
-                if (direction == EntityDirection.RIGHT) {
-                    _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + 1, _this.y, _this.x, _this.y));
-                }
-                if (direction == EntityDirection.UP) {
-                    _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y - 1, _this.x, _this.y));
-                }
-                if (direction == EntityDirection.DOWN) {
-                    _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x, _this.y + 1, _this.x, _this.y));
-                }
+            else {
+                var _b = directionOffsets[direction], dx = _b[0], dy = _b[1];
+                addWarning(dx, dy);
             }
         };
         _this.isWithinRoomBounds = function (x, y) {
@@ -13384,6 +13398,7 @@ var Door = /** @class */ (function (_super) {
         _this.doorDir = dir;
         _this.DoorType = doorType;
         _this.locked = false;
+        _this.isDoor = true;
         if (_this.DoorType === DoorType.GUARDEDDOOR) {
             _this.locked = true;
         }
@@ -13392,13 +13407,6 @@ var Door = /** @class */ (function (_super) {
         }
         return _this;
     }
-    Object.defineProperty(Door.prototype, "isDoor", {
-        get: function () {
-            return true;
-        },
-        enumerable: false,
-        configurable: true
-    });
     return Door;
 }(tile_1.Tile));
 exports.Door = Door;
@@ -13918,15 +13926,9 @@ var Tile = /** @class */ (function (_super) {
         _this.x = x;
         _this.y = y;
         _this.drawableY = y;
+        _this.isDoor = false;
         return _this;
     }
-    Object.defineProperty(Tile.prototype, "isDoor", {
-        get: function () {
-            return false;
-        },
-        enumerable: false,
-        configurable: true
-    });
     return Tile;
 }(drawable_1.Drawable));
 exports.Tile = Tile;
@@ -14068,8 +14070,8 @@ var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var tile_1 = __webpack_require__(/*! ./tile */ "./src/tile/tile.ts");
 var Wall = /** @class */ (function (_super) {
     __extends(Wall, _super);
-    function Wall() {
-        var _this = _super !== null && _super.apply(this, arguments) || this;
+    function Wall(room, x, y) {
+        var _this = _super.call(this, room, x, y) || this;
         _this.isSolid = function () {
             return true;
         };
@@ -14080,10 +14082,29 @@ var Wall = /** @class */ (function (_super) {
             return true;
         };
         _this.draw = function (delta) {
+            var _a;
+            // Only draw the bottom part of the wall if it's not at the bottom edge of the room
             if (_this.y < _this.room.roomY + _this.room.height - 1)
                 game_1.Game.drawTile(0, _this.skin, 1, 1, _this.x, _this.y, 1, 1, _this.room.shadeColor, _this.room.softVis[_this.x][_this.y + 1]);
-            game_1.Game.drawTile(2, _this.skin, 1, 1, _this.x, _this.y - 0.5, 1, 1, _this.room.shadeColor, _this.shadeAmount());
+            var isTopWall = _this.y === _this.room.roomY;
+            var isBottomWall = _this.y === _this.room.roomY + _this.room.height - 1;
+            var isLeftWall = _this.x === _this.room.roomX;
+            var isRightWall = _this.x === _this.room.roomX + _this.room.width - 1;
+            var isTopCornerWall = isTopWall && (isLeftWall || isRightWall);
+            var isInnerWall = !isTopWall && !isBottomWall && !isLeftWall && !isRightWall;
+            var isBelowDoorWall = _this.y < _this.room.roomY + _this.room.height - 1 &&
+                ((_a = _this.room.getTile(_this.x, _this.y + 1)) === null || _a === void 0 ? void 0 : _a.isDoor);
+            var useFullOffset = isInnerWall || // All inner walls
+                isTopWall || // All bottom walls (visually at the bottom)
+                isBelowDoorWall || // Walls below doors
+                isTopCornerWall; // Top corner walls
+            var useHalfOffset = isBottomWall || // All bottom walls
+                (isLeftWall && !isTopWall) || // All left walls
+                (isRightWall && !isTopWall); // All right walls
+            var yOffset = useFullOffset ? 1 : useHalfOffset ? 0.5 : 1; // Default to full offset if neither condition is met
+            game_1.Game.drawTile(2, _this.skin, 1, 1, _this.x, _this.y - 1, 1, 1, _this.room.shadeColor, _this.shadeAmount());
         };
+        _this.isDoor = false;
         return _this;
     }
     return Wall;
@@ -14138,7 +14159,7 @@ var WallTorch = /** @class */ (function (_super) {
             if (_this.frame >= 12)
                 _this.frame = 0;
             game_1.Game.drawTile(0, _this.skin, 1, 1, _this.x, _this.y, 1, 1, _this.room.shadeColor, _this.shadeAmount());
-            game_1.Game.drawTile(2, _this.skin, 1, 1, _this.x, _this.y - 0.5, 1, 1, _this.room.shadeColor, _this.shadeAmount());
+            game_1.Game.drawTile(2, _this.skin, 1, 1, _this.x, _this.y - 1, 1, 1, _this.room.shadeColor, _this.shadeAmount());
             game_1.Game.drawFX(Math.floor(_this.frame), 32, 1, 2, _this.x, _this.y - 1, 1, 2);
         };
         _this.room.lightSources.push(new lightSource_1.LightSource(_this.x + 0.5, _this.y + 0.5, 3));

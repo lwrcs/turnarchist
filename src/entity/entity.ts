@@ -501,60 +501,46 @@ export class Entity extends Drawable {
   }
 
   makeHitWarnings = (
-    orthogonal: Boolean,
-    diagonal: Boolean,
-    forwardOnly: Boolean,
+    orthogonal: boolean,
+    diagonal: boolean,
+    forwardOnly: boolean,
     direction: EntityDirection
   ) => {
-    if (orthogonal && !forwardOnly) {
+    const addWarning = (dx: number, dy: number) => {
       this.room.hitwarnings.push(
-        new HitWarning(this.game, this.x - 1, this.y, this.x, this.y)
+        new HitWarning(this.game, this.x + dx, this.y + dy, this.x, this.y)
       );
-      this.room.hitwarnings.push(
-        new HitWarning(this.game, this.x + 1, this.y, this.x, this.y)
-      );
-      this.room.hitwarnings.push(
-        new HitWarning(this.game, this.x, this.y - 1, this.x, this.y)
-      );
-      this.room.hitwarnings.push(
-        new HitWarning(this.game, this.x, this.y + 1, this.x, this.y)
-      );
-    }
-    if (diagonal && !forwardOnly) {
-      this.room.hitwarnings.push(
-        new HitWarning(this.game, this.x - 1, this.y - 1, this.x, this.y)
-      );
-      this.room.hitwarnings.push(
-        new HitWarning(this.game, this.x + 1, this.y + 1, this.x, this.y)
-      );
-      this.room.hitwarnings.push(
-        new HitWarning(this.game, this.x + 1, this.y - 1, this.x, this.y)
-      );
-      this.room.hitwarnings.push(
-        new HitWarning(this.game, this.x - 1, this.y + 1, this.x, this.y)
-      );
-    }
-    if (forwardOnly) {
-      if (direction == EntityDirection.LEFT) {
-        this.room.hitwarnings.push(
-          new HitWarning(this.game, this.x - 1, this.y, this.x, this.y)
-        );
+    };
+
+    const orthogonalOffsets = [
+      [-1, 0],
+      [1, 0],
+      [0, -1],
+      [0, 1],
+    ];
+    const diagonalOffsets = [
+      [-1, -1],
+      [1, 1],
+      [1, -1],
+      [-1, 1],
+    ];
+    const directionOffsets = {
+      [EntityDirection.LEFT]: [-1, 0],
+      [EntityDirection.RIGHT]: [1, 0],
+      [EntityDirection.UP]: [0, -1],
+      [EntityDirection.DOWN]: [0, 1],
+    };
+
+    if (!forwardOnly) {
+      if (orthogonal) {
+        orthogonalOffsets.forEach(([dx, dy]) => addWarning(dx, dy));
       }
-      if (direction == EntityDirection.RIGHT) {
-        this.room.hitwarnings.push(
-          new HitWarning(this.game, this.x + 1, this.y, this.x, this.y)
-        );
+      if (diagonal) {
+        diagonalOffsets.forEach(([dx, dy]) => addWarning(dx, dy));
       }
-      if (direction == EntityDirection.UP) {
-        this.room.hitwarnings.push(
-          new HitWarning(this.game, this.x, this.y - 1, this.x, this.y)
-        );
-      }
-      if (direction == EntityDirection.DOWN) {
-        this.room.hitwarnings.push(
-          new HitWarning(this.game, this.x, this.y + 1, this.x, this.y)
-        );
-      }
+    } else {
+      const [dx, dy] = directionOffsets[direction];
+      addWarning(dx, dy);
     }
   };
 

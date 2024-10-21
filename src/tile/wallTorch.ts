@@ -45,7 +45,7 @@ export class WallTorch extends Tile {
       1,
       1,
       this.x,
-      this.y - 0.5,
+      this.y - 1,
       1,
       1,
       this.room.shadeColor,

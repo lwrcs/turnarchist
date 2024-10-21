@@ -42,6 +42,7 @@ export class Door extends Tile {
     this.doorDir = dir;
     this.DoorType = doorType;
     this.locked = false;
+    this.isDoor = true;
 
     if (this.DoorType === DoorType.GUARDEDDOOR) {
       this.locked = true;
@@ -49,10 +50,6 @@ export class Door extends Tile {
     if (this.DoorType === DoorType.LOCKEDDOOR) {
       this.locked = true;
     }
-  }
-
-  get isDoor() {
-    return true;
   }
 
   canUnlock = (player: Player) => {
