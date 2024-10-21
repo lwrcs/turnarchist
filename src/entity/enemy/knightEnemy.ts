@@ -233,7 +233,10 @@ export class KnightEnemy extends Enemy {
         1,
         2,
         this.x - this.drawX + rumbleX,
-        this.y - 1.5 - this.drawY + (this.tileX === 4 ? 0.1875 : 0),
+        this.y -
+          this.drawYOffset -
+          this.drawY +
+          (this.tileX === 4 ? 0.1875 : 0),
         1,
         2,
         this.room.shadeColor,

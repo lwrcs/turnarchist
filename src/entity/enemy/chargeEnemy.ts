@@ -235,7 +235,7 @@ export class ChargeEnemy extends Enemy {
         1,
         2,
         this.x - this.drawX,
-        this.y - 1.5 - this.drawY,
+        this.y - this.drawYOffset - this.drawY,
         1,
         2,
         this.room.shadeColor,

@@ -18,6 +18,7 @@ import { ItemType } from "../../gameState";
 export class Enemy extends Entity {
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
+    this.drawYOffset = 1.5;
   }
 
   readonly tryMove = (x: number, y: number, collide: boolean = true) => {

@@ -497,7 +497,7 @@ export class Player extends Drawable {
       1,
       2,
       this.x - this.drawX,
-      this.y - 1.5 - this.drawY,
+      this.y - 1.45 - this.drawY,
       1,
       2
     );

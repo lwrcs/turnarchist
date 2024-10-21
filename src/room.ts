@@ -1035,6 +1035,7 @@ export class Room {
   };
 
   enterLevelThroughDoor = (player: Player, door: any, side?: number) => {
+    console.log("Room Array:", this.roomArray);
     if (door instanceof Door && door.doorDir === DoorDir.North) {
       //if top door
       (door as Door).opened = true;

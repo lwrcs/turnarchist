@@ -19,9 +19,7 @@ export class Projectile extends Drawable {
   }
 
   get distanceToParent() {
-    return Math.sqrt(
-      (this.x - this.parent.x) ** 2 + (this.y - this.parent.y) ** 2
-    );
+    return Math.abs(this.x - this.parent.x) + Math.abs(this.y - this.parent.y);
   }
 
   hitPlayer = (player: Player) => {};

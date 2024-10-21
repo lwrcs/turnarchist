@@ -66,6 +66,7 @@ export class Entity extends Drawable {
   crushed: boolean;
   rumbling: boolean;
   animationSpeed: number;
+  drawYOffset: number;
   constructor(room: Room, game: Game, x: number, y: number) {
     super();
 
@@ -100,6 +101,7 @@ export class Entity extends Drawable {
     this.crushed = false;
     this.rumbling = false;
     this.animationSpeed = 0.1;
+    this.drawYOffset = 1.15;
   }
 
   hit = (): number => {
@@ -259,7 +261,7 @@ export class Entity extends Drawable {
         1,
         2,
         this.x - this.drawX,
-        this.y - 1.5 - this.drawY,
+        this.y - this.drawYOffset - this.drawY,
         1,
         2,
         this.room.shadeColor,
@@ -398,20 +400,44 @@ export class Entity extends Drawable {
     projectileClass: new (parent: Entity, x: number, y: number) => Projectile,
     collide: boolean
   ) => {
+    console.log(
+      `Attempting projectile placement with ${offsets.length} offsets`
+    );
     for (const offset of offsets) {
       const targetX = this.x + offset.x;
       const targetY = this.y + offset.y;
 
-      if (collide) {
-        const pathClear = this.isPathClear(this.x, this.y, targetX, targetY);
-        if (!pathClear) continue;
+      console.log(`Checking target position: (${targetX}, ${targetY})`);
+
+      // Check if the target is within room bounds
+      if (!this.isWithinRoomBounds(targetX, targetY)) {
+        console.log(
+          `Target position (${targetX}, ${targetY}) is out of bounds`
+        );
+        break; // Stop at room boundary
       }
 
-      if (
-        this.room.getTile(targetX, targetY) &&
-        !this.room.roomArray[targetX][targetY].isSolid()
-      ) {
+      if (collide && !this.isPathClear(this.x, this.y, targetX, targetY)) {
+        console.log(`Path to (${targetX}, ${targetY}) is not clear`);
+        break; // Stop at obstacles
+      }
+
+      const isEntityColliding = this.room.entities.some(
+        (entity) => entity.x === targetX && entity.y === targetY
+      );
+
+      if (isEntityColliding) {
+        console.log(`Entity collision at (${targetX}, ${targetY})`);
+        break; // Stop at entity collisions
+      }
+
+      const targetTile = this.room.roomArray[targetX][targetY];
+      if (targetTile && !targetTile.isSolid() && !targetTile.isDoor) {
+        console.log(`Placing projectile at (${targetX}, ${targetY})`);
         this.room.projectiles.push(new projectileClass(this, targetX, targetY));
+      } else {
+        console.log(`Invalid target tile at (${targetX}, ${targetY})`);
+        break; // Stop at invalid tiles
       }
     }
   };
@@ -424,18 +450,55 @@ export class Entity extends Drawable {
   ): boolean => {
     const dx = Math.sign(endX - startX);
     const dy = Math.sign(endY - startY);
-    let x = startX + dx;
-    let y = startY + dy;
+    let x = startX;
+    let y = startY;
 
     while (x !== endX || y !== endY) {
-      if (this.room.roomArray[x][y].isSolid()) {
+      x += dx;
+      y += dy;
+      if (
+        !this.isWithinRoomBounds(x, y) ||
+        this.room.roomArray[x][y]?.isSolid()
+      ) {
+        console.log(`Path blocked at (${x}, ${y})`);
         return false;
       }
-      if (x !== endX) x += dx;
-      if (y !== endY) y += dy;
     }
+
+    console.log(`Path to (${endX}, ${endY}) is clear`);
     return true;
   };
+
+  calculateProjectileOffsets(
+    targetX: number,
+    targetY: number,
+    attackLength: number
+  ): { x: number; y: number }[] {
+    const dx = targetX - this.x;
+    const dy = targetY - this.y;
+    let offsets = [];
+
+    console.log(
+      `Calculating offsets: dx=${dx}, dy=${dy}, attackLength=${attackLength}`
+    );
+    console.log(
+      `Current position: (${this.x}, ${this.y}), Target: (${targetX}, ${targetY})`
+    );
+
+    // Normalize the direction
+    const stepX = dx !== 0 ? Math.sign(dx) : 0;
+    const stepY = dy !== 0 ? Math.sign(dy) : 0;
+
+    // Calculate the number of steps
+    const steps = Math.max(Math.abs(dx), Math.abs(dy));
+
+    for (let i = 1; i <= Math.min(steps, attackLength); i++) {
+      offsets.push({ x: i * stepX, y: i * stepY });
+    }
+
+    console.log("Calculated offsets:", offsets);
+    return offsets;
+  }
 
   makeHitWarnings = (
     orthogonal: Boolean,
@@ -493,5 +556,23 @@ export class Entity extends Drawable {
         );
       }
     }
+  };
+
+  isWithinRoomBounds = (x: number, y: number): boolean => {
+    const xInBounds =
+      x >= this.room.roomX && x < this.room.roomX + this.room.width;
+    const yInBounds =
+      y >= this.room.roomY && y < this.room.roomY + this.room.height;
+    const tileExists =
+      this.room.roomArray[x] && this.room.roomArray[x][y] !== undefined;
+
+    console.log(
+      `Checking bounds for (${x}, ${y}):`,
+      `xInBounds: ${xInBounds},`,
+      `yInBounds: ${yInBounds},`,
+      `tileExists: ${tileExists}`
+    );
+
+    return xInBounds && yInBounds && tileExists;
   };
 }

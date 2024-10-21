@@ -306,7 +306,7 @@ export class FrogEnemy extends Enemy {
         1,
         2,
         this.x + rumbleX - this.drawX,
-        this.y - 1.5 - this.drawY - jumpHeight,
+        this.y - this.drawYOffset - this.drawY - jumpHeight,
         1,
         2,
         this.room.shadeColor,

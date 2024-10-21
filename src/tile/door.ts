@@ -50,6 +50,11 @@ export class Door extends Tile {
       this.locked = true;
     }
   }
+
+  get isDoor() {
+    return true;
+  }
+
   canUnlock = (player: Player) => {
     if (this.DoorType === DoorType.LOCKEDDOOR) {
       let k = player.inventory.hasItem(Key);

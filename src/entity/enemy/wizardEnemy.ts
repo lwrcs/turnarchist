@@ -17,6 +17,7 @@ import { BlueGem } from "../../item/bluegem";
 import { Random } from "../../random";
 import { Item } from "../../item/item";
 import { Enemy } from "./enemy";
+import { SpikeTrap } from "../../tile/spiketrap";
 
 export enum WizardState {
   idle,
@@ -116,24 +117,19 @@ export class WizardEnemy extends Enemy {
         this.alertTicks = Math.max(0, this.alertTicks - 1);
         switch (this.state) {
           case WizardState.attack:
-            this.attemptProjectilePlacement(
-              [
-                { x: -1, y: 0 },
-                { x: -2, y: 0 },
-                { x: 1, y: 0 },
-                { x: 2, y: 0 },
-                { x: 0, y: -1 },
-                { x: 0, y: -2 },
-                { x: 0, y: 1 },
-                { x: 0, y: 2 },
-                { x: 0, y: 3 },
-                { x: 0, y: -3 },
-                { x: 3, y: 0 },
-                { x: -3, y: 0 },
-              ],
-              WizardFireball,
-              true
-            );
+            const nearestPlayerInfo = this.nearestPlayer();
+            if (nearestPlayerInfo !== false) {
+              const [distance, targetPlayer] = nearestPlayerInfo;
+              const attackLength = Math.min(this.ATTACK_RADIUS, distance);
+
+              const offsets = this.calculateProjectileOffsets(
+                targetPlayer.x,
+                targetPlayer.y,
+                attackLength
+              );
+
+              this.attemptProjectilePlacement(offsets, WizardFireball, true);
+            }
             this.state = WizardState.justAttacked;
             break;
           case WizardState.justAttacked:
@@ -145,6 +141,14 @@ export class WizardEnemy extends Enemy {
             let min = 100000;
             let bestPos;
             let emptyTiles = this.shuffle(this.room.getEmptyTiles());
+            emptyTiles = emptyTiles.filter(
+              (tile) =>
+                !this.room.projectiles.some(
+                  (projectile) =>
+                    projectile.x === tile.x && projectile.y === tile.y
+                )
+            );
+
             let optimalDist = Game.randTable(
               [2, 2, 3, 3, 3, 3, 3],
               Random.rand
@@ -222,7 +226,7 @@ export class WizardEnemy extends Enemy {
           1,
           2,
           this.x - this.drawX,
-          this.y - 1.5 - this.drawY,
+          this.y - 1.3 - this.drawY,
           1,
           2,
           this.room.shadeColor,
