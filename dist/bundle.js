@@ -3730,8 +3730,8 @@ var WizardEnemy = /** @class */ (function (_super) {
                             var nearestPlayerInfo = _this.nearestPlayer();
                             if (nearestPlayerInfo !== false) {
                                 var distance = nearestPlayerInfo[0], targetPlayer = nearestPlayerInfo[1];
-                                var attackLength = Math.min(_this.ATTACK_RADIUS, distance);
-                                var offsets = _this.calculateProjectileOffsets(targetPlayer.x, targetPlayer.y, attackLength);
+                                var attackLength = distance;
+                                var offsets = _this.calculateProjectileOffsets(targetPlayer.x, targetPlayer.y, 10);
                                 _this.attemptProjectilePlacement(offsets, wizardFireball_1.WizardFireball, true);
                             }
                             _this.state = WizardState.justAttacked;
@@ -7504,7 +7504,8 @@ var Direction;
 })(Direction || (Direction = {}));
 var HitWarning = /** @class */ (function (_super) {
     __extends(HitWarning, _super);
-    function HitWarning(game, x, y, eX, eY, isEnemy) {
+    function HitWarning(game, x, y, eX, eY, isEnemy, dirOnly) {
+        if (dirOnly === void 0) { dirOnly = false; }
         var _this = _super.call(this) || this;
         _this.tick = function () {
             _this.dead = true;
@@ -7524,52 +7525,15 @@ var HitWarning = /** @class */ (function (_super) {
               }
             }*/
         };
-        _this.setPointerDir = function () {
-            var dx = _this.eX - _this.x;
-            var dy = _this.eY - _this.y;
-            if (dx === 0 && dy === 0) {
-                _this.dir = Direction.Center;
-            }
-            else {
-                if (dx === 0) {
-                    _this.dir = dy < 0 ? Direction.South : Direction.North;
-                }
-                else if (dy === 0) {
-                    _this.dir = dx < 0 ? Direction.East : Direction.West;
-                }
-                else if (dx < 0) {
-                    _this.dir = dy < 0 ? Direction.SouthEast : Direction.NorthEast;
-                }
-                else {
-                    _this.dir = dy < 0 ? Direction.SouthWest : Direction.NorthWest;
-                }
-                _this.tileX = 0 + 2 * _this.dir;
-            }
-        };
-        _this.setPointerOffset = function () {
-            var _a;
-            var offsets = (_a = {},
-                _a[Direction.North] = { x: 0, y: 0.5 },
-                _a[Direction.South] = { x: 0, y: -0.6 },
-                _a[Direction.West] = { x: 0.6, y: 0 },
-                _a[Direction.East] = { x: -0.6, y: 0 },
-                _a[Direction.NorthEast] = { x: -0.5, y: 0.5 },
-                _a[Direction.NorthWest] = { x: 0.5, y: 0.5 },
-                _a[Direction.SouthEast] = { x: -0.5, y: -0.5 },
-                _a[Direction.SouthWest] = { x: 0.5, y: -0.5 },
-                _a[Direction.Center] = { x: 0, y: -0.25 },
-                _a);
-            var offset = offsets[_this.dir];
-            _this.pointerOffsetX = offset.x;
-            _this.pointerOffsetY = offset.y;
-        };
         _this.draw = function (delta) {
             if (Math.abs(_this.x - _this.game.players[_this.game.localPlayerID].x) <= 1 &&
                 Math.abs(_this.y - _this.game.players[_this.game.localPlayerID].y) <= 1) {
                 if (_this.isEnemy) {
                     game_1.Game.drawFX(_this.tileX + Math.floor(HitWarning.frame), _this.tileY, 1, 1, _this.x + _this.pointerOffsetX, _this.y + _this.pointerOffsetY - _this.offsetY, 1, 1);
                 }
-                game_1.Game.drawFX(18 + Math.floor(HitWarning.frame), 5, 1, 1, _this.x, _this.y - _this.offsetY, 1, 1);
+                if (!_this.dirOnly) {
+                    game_1.Game.drawFX(18 + Math.floor(HitWarning.frame), 5, 1, 1, _this.x, _this.y - _this.offsetY, 1, 1);
+                }
             }
         };
         _this.drawTopLayer = function (delta) {
@@ -7578,7 +7542,9 @@ var HitWarning = /** @class */ (function (_super) {
             }
             if (Math.abs(_this.x - _this.game.players[_this.game.localPlayerID].x) <= 1 &&
                 Math.abs(_this.y - _this.game.players[_this.game.localPlayerID].y) <= 1) {
-                game_1.Game.drawFX(18 + Math.floor(HitWarning.frame), 6, 1, 1, _this.x, _this.y - _this.offsetY, 1, 1);
+                if (!_this.dirOnly) {
+                    game_1.Game.drawFX(18 + Math.floor(HitWarning.frame), 6, 1, 1, _this.x, _this.y - _this.offsetY, 1, 1);
+                }
             }
         };
         _this.x = x;
@@ -7594,9 +7560,13 @@ var HitWarning = /** @class */ (function (_super) {
         _this.pointerOffsetX = 0;
         _this.pointerOffsetY = 0;
         _this.isEnemy = isEnemy !== undefined ? isEnemy : true;
-        _this.setPointerDir();
-        _this.setPointerOffset();
+        var _a = HitWarning.setPointerDir(x, y, eX, eY), dir = _a.dir, tileX = _a.tileX;
+        _this.tileX = tileX;
+        var pointerOffset = HitWarning.setPointerOffset(dir);
+        _this.pointerOffsetX = pointerOffset.x;
+        _this.pointerOffsetY = pointerOffset.y;
         _this.removeOverlapping();
+        _this.dirOnly = dirOnly;
         return _this;
     }
     HitWarning.frame = 0;
@@ -7604,6 +7574,47 @@ var HitWarning = /** @class */ (function (_super) {
         HitWarning.frame += 0.125 * delta;
         if (HitWarning.frame >= 2)
             HitWarning.frame = 0;
+    };
+    HitWarning.setPointerDir = function (x, y, eX, eY) {
+        var dx = eX - x;
+        var dy = eY - y;
+        var dir;
+        var tileX;
+        if (dx === 0 && dy === 0) {
+            dir = Direction.Center;
+        }
+        else {
+            if (dx === 0) {
+                dir = dy < 0 ? Direction.South : Direction.North;
+            }
+            else if (dy === 0) {
+                dir = dx < 0 ? Direction.East : Direction.West;
+            }
+            else if (dx < 0) {
+                dir = dy < 0 ? Direction.SouthEast : Direction.NorthEast;
+            }
+            else {
+                dir = dy < 0 ? Direction.SouthWest : Direction.NorthWest;
+            }
+            tileX = 0 + 2 * dir;
+            return { dir: dir, tileX: tileX };
+        }
+    };
+    HitWarning.setPointerOffset = function (dir) {
+        var _a;
+        var offsets = (_a = {},
+            _a[Direction.North] = { x: 0, y: 0.5 },
+            _a[Direction.South] = { x: 0, y: -0.6 },
+            _a[Direction.West] = { x: 0.6, y: 0 },
+            _a[Direction.East] = { x: -0.6, y: 0 },
+            _a[Direction.NorthEast] = { x: -0.5, y: 0.5 },
+            _a[Direction.NorthWest] = { x: 0.5, y: 0.5 },
+            _a[Direction.SouthEast] = { x: -0.5, y: -0.5 },
+            _a[Direction.SouthWest] = { x: 0.5, y: -0.5 },
+            _a[Direction.Center] = { x: 0, y: -0.25 },
+            _a);
+        var offset = offsets[dir];
+        return offset;
     };
     return HitWarning;
 }(drawable_1.Drawable));
@@ -11413,10 +11424,15 @@ var __extends = (this && this.__extends) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Projectile = void 0;
 var drawable_1 = __webpack_require__(/*! ../drawable */ "./src/drawable.ts");
+var hitWarning_1 = __webpack_require__(/*! ../hitWarning */ "./src/hitWarning.ts");
 var Projectile = /** @class */ (function (_super) {
     __extends(Projectile, _super);
     function Projectile(parent, x, y) {
         var _this = _super.call(this) || this;
+        _this.setDirection = function () {
+            var dir = hitWarning_1.HitWarning.setPointerDir(_this.x, _this.y, _this.parent.x, _this.parent.y).dir;
+            _this.dir = dir;
+        };
         _this.hitPlayer = function (player) { };
         _this.hitEnemy = function (enemy) { };
         _this.tick = function () { };
@@ -11427,6 +11443,7 @@ var Projectile = /** @class */ (function (_super) {
         _this.dead = false;
         _this.parent = parent;
         _this.drawableY = y;
+        _this.setDirection();
         return _this;
     }
     Object.defineProperty(Projectile.prototype, "distanceToParent", {
@@ -11474,33 +11491,44 @@ var WizardFireball = /** @class */ (function (_super) {
     __extends(WizardFireball, _super);
     function WizardFireball(parent, x, y) {
         var _this = _super.call(this, parent, x, y) || this;
+        _this.setMarkerFrame = function () {
+            // Calculate offsetX based on direction
+            _this.offsetX = Math.floor(((_this.dir + 1) % 8) / 2);
+        };
         _this.tick = function () {
-            console.log("state: ".concat(_this.state));
-            if (_this.parent.dead)
+            if (_this.parent.dead || _this.state === 3) {
                 _this.dead = true;
-            _this.state++;
-            if (_this.state === 1 && !_this.dead) {
-                _this.parent.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.parent.game, _this.x, _this.y, _this.x, _this.y, false));
             }
-            if (_this.state === 2 && !_this.dead) {
+            console.log("state: ".concat(_this.state));
+            if (!_this.dead && _this.state === 0) {
+            }
+            _this.state++;
+            if (!_this.dead && _this.state === 1) {
+                _this.parent.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.parent.game, _this.x, _this.y, _this.parent.x, _this.parent.y, true));
+            }
+            if (!_this.dead && _this.state === 2) {
                 _this.frame = 0;
                 _this.delay = game_1.Game.rand(0, 10, Math.random);
             }
         };
         _this.hitPlayer = function (player) {
-            if (_this.state === 2 && !_this.dead) {
+            if (!_this.dead && _this.state === 2) {
                 player.hurt(1, "wizard");
             }
         };
         _this.draw = function (delta) {
             if (_this.dead)
                 return;
-            game_1.Game.ctx.globalCompositeOperation = "overlay";
-            game_1.Game.ctx.fillRect(_this.x, _this.y, 16, 16);
-            game_1.Game.ctx.fillStyle = "red";
-            game_1.Game.ctx.globalAlpha = 0.5;
-            game_1.Game.ctx.globalCompositeOperation = "source-over";
-            game_1.Game.ctx.globalAlpha = 1;
+            /*Game.drawFX(
+              18 + this.offsetX, //+ Math.floor(HitWarning.frame),
+              4,
+              1,
+              1,
+              this.x,
+              this.y,
+              1,
+              1
+            );*/
             if (_this.state >= 0) {
                 if (_this.state === 0) {
                     _this.frame += 0.25 * delta;
@@ -11528,7 +11556,6 @@ var WizardFireball = /** @class */ (function (_super) {
         };
         _this.parent = parent;
         _this.frame = 0;
-        _this.frameOffset = 0;
         _this.state = 1 - _this.distanceToParent;
         return _this;
     }
@@ -11672,6 +11699,7 @@ var Room = /** @class */ (function () {
         if (rand === void 0) { rand = random_1.Random.rand; }
         var _this = this;
         this.shadeColor = "black";
+        this.wallInfo = new Map();
         this.tileInside = function (tileX, tileY) {
             return _this.pointInside(tileX, tileY, _this.roomX, _this.roomY, _this.width, _this.height);
         };
@@ -11979,6 +12007,7 @@ var Room = /** @class */ (function () {
             _this.clearDeadStuff();
             _this.updateLighting();
             _this.entered = true;
+            _this.calculateWallInfo();
             _this.message = _this.name;
         };
         this.enterLevelThroughDoor = function (player, door, side) {
@@ -12000,6 +12029,7 @@ var Room = /** @class */ (function () {
             _this.clearDeadStuff();
             _this.updateLighting();
             _this.entered = true;
+            _this.calculateWallInfo();
             _this.message = _this.name;
         };
         this.enterLevelThroughLadder = function (player, ladder) {
@@ -12007,6 +12037,7 @@ var Room = /** @class */ (function () {
             _this.clearDeadStuff();
             _this.updateLighting();
             _this.entered = true;
+            _this.calculateWallInfo();
             _this.message = _this.name;
         };
         this.getEmptyTiles = function () {
@@ -12144,8 +12175,6 @@ var Room = /** @class */ (function () {
                 _this.computerTurn(); // player skipped computer's turn, catch up
         };
         this.tick = function (player) {
-            _this.entities = _this.entities.filter(function (e) { return !e.dead; });
-            _this.updateLighting();
             for (var _i = 0, _a = _this.hitwarnings; _i < _a.length; _i++) {
                 var h = _a[_i];
                 h.tick();
@@ -12154,6 +12183,10 @@ var Room = /** @class */ (function () {
                 var p = _c[_b];
                 p.tick();
             }
+            _this.clearDeadStuff();
+            _this.calculateWallInfo();
+            _this.entities = _this.entities.filter(function (e) { return !e.dead; });
+            _this.updateLighting();
             for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
                 for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
                     _this.roomArray[x][y].tick();
@@ -12165,6 +12198,7 @@ var Room = /** @class */ (function () {
             _this.playerTurnTime = Date.now();
             _this.playerTicked = player;
             player.map.saveMapData();
+            _this.clearDeadStuff();
         };
         this.update = function () {
             if (_this.turn == TurnState.computerTurn) {
@@ -12318,10 +12352,12 @@ var Room = /** @class */ (function () {
                 var p = _c[_b];
                 p.drawTopLayer(delta);
             }
+            game_1.Game.ctx.globalCompositeOperation = "overlay";
             for (var _d = 0, _e = _this.hitwarnings; _d < _e.length; _d++) {
                 var h = _e[_d];
                 h.drawTopLayer(delta);
             }
+            game_1.Game.ctx.globalCompositeOperation = "source-over";
             for (var _f = 0, _g = _this.particles; _f < _g.length; _f++) {
                 var s = _g[_f];
                 s.drawTopLayer(delta);
@@ -12720,6 +12756,37 @@ var Room = /** @class */ (function () {
             case 6:
                 this.entities.push(new vendingMachine_1.VendingMachine(this, this.game, x, y, new shotgun_1.Shotgun(this, 0, 0), rand));
                 break;
+        }
+    };
+    Room.prototype.calculateWallInfo = function () {
+        var _a, _b;
+        this.wallInfo.clear();
+        for (var x = this.roomX; x < this.roomX + this.width; x++) {
+            for (var y = this.roomY; y < this.roomY + this.height; y++) {
+                var tile = this.getTile(x, y);
+                if (tile instanceof wall_1.Wall) {
+                    var isTopWall = y === this.roomY;
+                    var isBottomWall = y === this.roomY + this.height - 1;
+                    var isLeftWall = x === this.roomX;
+                    var isRightWall = x === this.roomX + this.width - 1;
+                    var isInnerWall = !isTopWall && !isBottomWall && !isLeftWall && !isRightWall;
+                    var isBelowDoorWall = y < this.roomY + this.height - 1 && ((_a = this.getTile(x, y + 1)) === null || _a === void 0 ? void 0 : _a.isDoor);
+                    var isDoorWall = y < this.roomY + this.height && ((_b = this.getTile(x, y + 1)) === null || _b === void 0 ? void 0 : _b.isDoor);
+                    this.wallInfo.set("".concat(x, ",").concat(y), {
+                        isTopWall: isTopWall,
+                        isBottomWall: isBottomWall,
+                        isLeftWall: isLeftWall,
+                        isRightWall: isRightWall,
+                        isInnerWall: isInnerWall,
+                        isBelowDoorWall: isBelowDoorWall,
+                        isDoorWall: isDoorWall,
+                        shouldDrawBottom: isDoorWall ||
+                            isBelowDoorWall ||
+                            (isTopWall && !isLeftWall && !isRightWall) ||
+                            isInnerWall,
+                    });
+                }
+            }
         }
     };
     return Room;
@@ -14082,27 +14149,16 @@ var Wall = /** @class */ (function (_super) {
             return true;
         };
         _this.draw = function (delta) {
-            var _a;
+            var wallInfo = _this.room.wallInfo.get("".concat(_this.x, ",").concat(_this.y));
+            if (!wallInfo)
+                return;
             // Only draw the bottom part of the wall if it's not at the bottom edge of the room
-            if (_this.y < _this.room.roomY + _this.room.height - 1)
+            if (wallInfo.isDoorWall ||
+                wallInfo.isBelowDoorWall ||
+                (wallInfo.isTopWall && !wallInfo.isLeftWall && !wallInfo.isRightWall) ||
+                wallInfo.isInnerWall)
                 game_1.Game.drawTile(0, _this.skin, 1, 1, _this.x, _this.y, 1, 1, _this.room.shadeColor, _this.room.softVis[_this.x][_this.y + 1]);
-            var isTopWall = _this.y === _this.room.roomY;
-            var isBottomWall = _this.y === _this.room.roomY + _this.room.height - 1;
-            var isLeftWall = _this.x === _this.room.roomX;
-            var isRightWall = _this.x === _this.room.roomX + _this.room.width - 1;
-            var isTopCornerWall = isTopWall && (isLeftWall || isRightWall);
-            var isInnerWall = !isTopWall && !isBottomWall && !isLeftWall && !isRightWall;
-            var isBelowDoorWall = _this.y < _this.room.roomY + _this.room.height - 1 &&
-                ((_a = _this.room.getTile(_this.x, _this.y + 1)) === null || _a === void 0 ? void 0 : _a.isDoor);
-            var useFullOffset = isInnerWall || // All inner walls
-                isTopWall || // All bottom walls (visually at the bottom)
-                isBelowDoorWall || // Walls below doors
-                isTopCornerWall; // Top corner walls
-            var useHalfOffset = isBottomWall || // All bottom walls
-                (isLeftWall && !isTopWall) || // All left walls
-                (isRightWall && !isTopWall); // All right walls
-            var yOffset = useFullOffset ? 1 : useHalfOffset ? 0.5 : 1; // Default to full offset if neither condition is met
-            game_1.Game.drawTile(2, _this.skin, 1, 1, _this.x, _this.y - 1, 1, 1, _this.room.shadeColor, _this.shadeAmount());
+            game_1.Game.drawTile(2, _this.skin + 6, 1, 1, _this.x, _this.y - 1, 1, 1, _this.room.shadeColor, _this.shadeAmount());
         };
         _this.isDoor = false;
         return _this;
@@ -14159,7 +14215,7 @@ var WallTorch = /** @class */ (function (_super) {
             if (_this.frame >= 12)
                 _this.frame = 0;
             game_1.Game.drawTile(0, _this.skin, 1, 1, _this.x, _this.y, 1, 1, _this.room.shadeColor, _this.shadeAmount());
-            game_1.Game.drawTile(2, _this.skin, 1, 1, _this.x, _this.y - 1, 1, 1, _this.room.shadeColor, _this.shadeAmount());
+            game_1.Game.drawTile(2, _this.skin + 6, 1, 1, _this.x, _this.y - 1, 1, 1, _this.room.shadeColor, _this.shadeAmount());
             game_1.Game.drawFX(Math.floor(_this.frame), 32, 1, 2, _this.x, _this.y - 1, 1, 2);
         };
         _this.room.lightSources.push(new lightSource_1.LightSource(_this.x + 0.5, _this.y + 0.5, 3));

@@ -18,6 +18,7 @@ import { Random } from "../../random";
 import { Item } from "../../item/item";
 import { Enemy } from "./enemy";
 import { SpikeTrap } from "../../tile/spiketrap";
+import { HitWarning } from "../../hitWarning";
 
 export enum WizardState {
   idle,
@@ -120,12 +121,12 @@ export class WizardEnemy extends Enemy {
             const nearestPlayerInfo = this.nearestPlayer();
             if (nearestPlayerInfo !== false) {
               const [distance, targetPlayer] = nearestPlayerInfo;
-              const attackLength = Math.min(this.ATTACK_RADIUS, distance);
+              const attackLength = distance;
 
               const offsets = this.calculateProjectileOffsets(
                 targetPlayer.x,
                 targetPlayer.y,
-                attackLength
+                10
               );
 
               this.attemptProjectilePlacement(offsets, WizardFireball, true);

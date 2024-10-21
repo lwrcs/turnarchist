@@ -98,6 +98,17 @@ export enum TurnState {
   computerTurn,
 }
 
+interface WallInfo {
+  isTopWall: boolean;
+  isBottomWall: boolean;
+  isLeftWall: boolean;
+  isRightWall: boolean;
+  isInnerWall: boolean;
+  isBelowDoorWall: boolean;
+  isDoorWall: boolean;
+  shouldDrawBottom: boolean;
+}
+
 export class Room {
   x: number;
   y: number;
@@ -129,6 +140,7 @@ export class Room {
   shadeColor = "black";
   walls: Array<Wall>;
   actionTab: ActionTab;
+  wallInfo: Map<string, WallInfo> = new Map();
 
   private pointInside(
     x: number,
@@ -1031,6 +1043,7 @@ export class Room {
     this.clearDeadStuff();
     this.updateLighting();
     this.entered = true;
+    this.calculateWallInfo();
     this.message = this.name;
   };
 
@@ -1054,6 +1067,7 @@ export class Room {
     this.clearDeadStuff();
     this.updateLighting();
     this.entered = true;
+    this.calculateWallInfo();
     this.message = this.name;
   };
 
@@ -1063,6 +1077,7 @@ export class Room {
     this.clearDeadStuff();
     this.updateLighting();
     this.entered = true;
+    this.calculateWallInfo();
     this.message = this.name;
   };
 
@@ -1223,16 +1238,18 @@ export class Room {
   };
 
   tick = (player: Player) => {
-    this.entities = this.entities.filter((e) => !e.dead);
-    this.updateLighting();
-
     for (const h of this.hitwarnings) {
       h.tick();
     }
-
     for (const p of this.projectiles) {
       p.tick();
     }
+
+    this.clearDeadStuff();
+
+    this.calculateWallInfo();
+    this.entities = this.entities.filter((e) => !e.dead);
+    this.updateLighting();
 
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
@@ -1246,6 +1263,7 @@ export class Room {
     this.playerTurnTime = Date.now();
     this.playerTicked = player;
     player.map.saveMapData();
+    this.clearDeadStuff();
   };
 
   update = () => {
@@ -1422,10 +1440,11 @@ export class Room {
     for (const p of this.projectiles) {
       p.drawTopLayer(delta);
     }
-
+    Game.ctx.globalCompositeOperation = "overlay";
     for (const h of this.hitwarnings) {
       h.drawTopLayer(delta);
     }
+    Game.ctx.globalCompositeOperation = "source-over";
 
     for (const s of this.particles) {
       s.drawTopLayer(delta);
@@ -1454,4 +1473,40 @@ export class Room {
     );
     Game.ctx.font = old;
   };
+
+  calculateWallInfo() {
+    this.wallInfo.clear();
+    for (let x = this.roomX; x < this.roomX + this.width; x++) {
+      for (let y = this.roomY; y < this.roomY + this.height; y++) {
+        const tile = this.getTile(x, y);
+        if (tile instanceof Wall) {
+          const isTopWall = y === this.roomY;
+          const isBottomWall = y === this.roomY + this.height - 1;
+          const isLeftWall = x === this.roomX;
+          const isRightWall = x === this.roomX + this.width - 1;
+          const isInnerWall =
+            !isTopWall && !isBottomWall && !isLeftWall && !isRightWall;
+          const isBelowDoorWall =
+            y < this.roomY + this.height - 1 && this.getTile(x, y + 1)?.isDoor;
+          const isDoorWall =
+            y < this.roomY + this.height && this.getTile(x, y + 1)?.isDoor;
+
+          this.wallInfo.set(`${x},${y}`, {
+            isTopWall,
+            isBottomWall,
+            isLeftWall,
+            isRightWall,
+            isInnerWall,
+            isBelowDoorWall,
+            isDoorWall,
+            shouldDrawBottom:
+              isDoorWall ||
+              isBelowDoorWall ||
+              (isTopWall && !isLeftWall && !isRightWall) ||
+              isInnerWall,
+          });
+        }
+      }
+    }
+  }
 }

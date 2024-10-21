@@ -32,6 +32,7 @@ export class HitWarning extends Drawable {
   pointerOffsetY: number;
   animLength: number;
   isEnemy: Boolean;
+  dirOnly: Boolean;
 
   constructor(
     game: Game,
@@ -39,7 +40,8 @@ export class HitWarning extends Drawable {
     y: number,
     eX?: number,
     eY?: number,
-    isEnemy?: Boolean
+    isEnemy?: Boolean,
+    dirOnly: Boolean = false
   ) {
     super();
     this.x = x;
@@ -55,9 +57,13 @@ export class HitWarning extends Drawable {
     this.pointerOffsetX = 0;
     this.pointerOffsetY = 0;
     this.isEnemy = isEnemy !== undefined ? isEnemy : true;
-    this.setPointerDir();
-    this.setPointerOffset();
+    const { dir, tileX } = HitWarning.setPointerDir(x, y, eX, eY);
+    this.tileX = tileX;
+    const pointerOffset = HitWarning.setPointerOffset(dir);
+    this.pointerOffsetX = pointerOffset.x;
+    this.pointerOffsetY = pointerOffset.y;
     this.removeOverlapping();
+    this.dirOnly = dirOnly;
   }
 
   tick = () => {
@@ -84,28 +90,32 @@ export class HitWarning extends Drawable {
     }*/
   };
 
-  setPointerDir = () => {
-    const dx = this.eX - this.x;
-    const dy = this.eY - this.y;
+  static setPointerDir = (x: number, y: number, eX: number, eY: number) => {
+    const dx = eX - x;
+    const dy = eY - y;
+
+    let dir: Direction;
+    let tileX: number;
 
     if (dx === 0 && dy === 0) {
-      this.dir = Direction.Center;
+      dir = Direction.Center;
     } else {
       if (dx === 0) {
-        this.dir = dy < 0 ? Direction.South : Direction.North;
+        dir = dy < 0 ? Direction.South : Direction.North;
       } else if (dy === 0) {
-        this.dir = dx < 0 ? Direction.East : Direction.West;
+        dir = dx < 0 ? Direction.East : Direction.West;
       } else if (dx < 0) {
-        this.dir = dy < 0 ? Direction.SouthEast : Direction.NorthEast;
+        dir = dy < 0 ? Direction.SouthEast : Direction.NorthEast;
       } else {
-        this.dir = dy < 0 ? Direction.SouthWest : Direction.NorthWest;
+        dir = dy < 0 ? Direction.SouthWest : Direction.NorthWest;
       }
 
-      this.tileX = 0 + 2 * this.dir;
+      tileX = 0 + 2 * dir;
+      return { dir, tileX };
     }
   };
 
-  setPointerOffset = () => {
+  static setPointerOffset = (dir: Direction) => {
     const offsets = {
       [Direction.North]: { x: 0, y: 0.5 },
       [Direction.South]: { x: 0, y: -0.6 },
@@ -118,9 +128,8 @@ export class HitWarning extends Drawable {
       [Direction.Center]: { x: 0, y: -0.25 },
     };
 
-    const offset = offsets[this.dir];
-    this.pointerOffsetX = offset.x;
-    this.pointerOffsetY = offset.y;
+    const offset = offsets[dir];
+    return offset;
   };
 
   draw = (delta: number) => {
@@ -140,16 +149,18 @@ export class HitWarning extends Drawable {
           1
         );
       }
-      Game.drawFX(
-        18 + Math.floor(HitWarning.frame),
-        5,
-        1,
-        1,
-        this.x,
-        this.y - this.offsetY,
-        1,
-        1
-      );
+      if (!this.dirOnly) {
+        Game.drawFX(
+          18 + Math.floor(HitWarning.frame),
+          5,
+          1,
+          1,
+          this.x,
+          this.y - this.offsetY,
+          1,
+          1
+        );
+      }
     }
   };
 
@@ -170,16 +181,18 @@ export class HitWarning extends Drawable {
       Math.abs(this.x - this.game.players[this.game.localPlayerID].x) <= 1 &&
       Math.abs(this.y - this.game.players[this.game.localPlayerID].y) <= 1
     ) {
-      Game.drawFX(
-        18 + Math.floor(HitWarning.frame),
-        6,
-        1,
-        1,
-        this.x,
-        this.y - this.offsetY,
-        1,
-        1
-      );
+      if (!this.dirOnly) {
+        Game.drawFX(
+          18 + Math.floor(HitWarning.frame),
+          6,
+          1,
+          1,
+          this.x,
+          this.y - this.offsetY,
+          1,
+          1
+        );
+      }
     }
   };
 }

@@ -12,44 +12,67 @@ export class WizardFireball extends Projectile {
   parent: Entity;
   delay: number;
   frameOffset: number;
+  offsetX: number;
+  hitWarning: HitWarning;
+  tileX: number;
+
   constructor(parent: Entity, x: number, y: number) {
     super(parent, x, y);
     this.parent = parent;
     this.frame = 0;
-    this.frameOffset = 0;
     this.state = 1 - this.distanceToParent;
   }
+  setMarkerFrame = () => {
+    // Calculate offsetX based on direction
+    this.offsetX = Math.floor(((this.dir + 1) % 8) / 2);
+  };
 
   tick = () => {
+    if (this.parent.dead || this.state === 3) {
+      this.dead = true;
+    }
+
     console.log(`state: ${this.state}`);
-    if (this.parent.dead) this.dead = true;
+    if (!this.dead && this.state === 0) {
+    }
 
     this.state++;
-    if (this.state === 1 && !this.dead) {
+    if (!this.dead && this.state === 1) {
       this.parent.room.hitwarnings.push(
-        new HitWarning(this.parent.game, this.x, this.y, this.x, this.y, false)
+        new HitWarning(
+          this.parent.game,
+          this.x,
+          this.y,
+          this.parent.x,
+          this.parent.y,
+          true
+        )
       );
     }
-    if (this.state === 2 && !this.dead) {
+    if (!this.dead && this.state === 2) {
       this.frame = 0;
       this.delay = Game.rand(0, 10, Math.random);
     }
   };
 
   hitPlayer = (player: Player) => {
-    if (this.state === 2 && !this.dead) {
+    if (!this.dead && this.state === 2) {
       player.hurt(1, "wizard");
     }
   };
 
   draw = (delta: number) => {
     if (this.dead) return;
-    Game.ctx.globalCompositeOperation = "overlay";
-    Game.ctx.fillRect(this.x, this.y, 16, 16);
-    Game.ctx.fillStyle = "red";
-    Game.ctx.globalAlpha = 0.5;
-    Game.ctx.globalCompositeOperation = "source-over";
-    Game.ctx.globalAlpha = 1;
+    /*Game.drawFX(
+      18 + this.offsetX, //+ Math.floor(HitWarning.frame),
+      4,
+      1,
+      1,
+      this.x,
+      this.y,
+      1,
+      1
+    );*/
 
     if (this.state >= 0) {
       if (this.state === 0) {

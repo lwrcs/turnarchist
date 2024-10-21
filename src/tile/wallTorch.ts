@@ -41,7 +41,7 @@ export class WallTorch extends Tile {
 
     Game.drawTile(
       2,
-      this.skin,
+      this.skin + 6,
       1,
       1,
       this.x,
