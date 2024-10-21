@@ -59,7 +59,12 @@ export class Entity extends Drawable {
   lastX: number;
   lastY: number;
   hitBy: Player;
-
+  crushX: number;
+  crushY: number;
+  crushVertical: boolean;
+  crushed: boolean;
+  rumbling: boolean;
+  animationSpeed: number;
   constructor(room: Room, game: Game, x: number, y: number) {
     super();
 
@@ -88,6 +93,12 @@ export class Entity extends Drawable {
     this.lastX = x;
     this.lastY = y;
     this.hitBy = this.getPlayer();
+    this.crushX = 1;
+    this.crushY = 1;
+    this.crushVertical = false;
+    this.crushed = false;
+    this.rumbling = false;
+    this.animationSpeed = 0.1;
   }
 
   hit = (): number => {
@@ -325,7 +336,9 @@ export class Entity extends Drawable {
       );
     }
   };
-  /*crush = () => {
+
+  crush = () => {
+    this.crushed = true;
     let player: Player;
     for (let i in this.game.players) {
       player = this.game.players[i];
@@ -333,18 +346,52 @@ export class Entity extends Drawable {
     if (this.x == player.x) {
       this.crushVertical = true;
     }
-    if (this.y == player.y) {
-      this.crushVertical = false;
-    }
+    this.kill();
   };
+
   crushAnim = (delta: number) => {
-    if (this.crushVertical && this.crushX >= 0) {
-      this.crushX -= delta * 0.125;
-    } else if (this.crushY >= 0) {
-      this.crushY -= delta * 0.125;
+    if (this.crushVertical && this.crushY >= 0) {
+      this.crushY *= 0.95;
+    } else if (this.crushX >= 0) {
+      this.crushX *= 0.95;
     }
   };
-*/
+  //set rumbling in the tick function for the enemies
+  //create variables for the rumbling x and y offsets
+  //return the rumbling x and y offsets
+  //add the rumbling x and y offsets to the enemy's x and y in the draw function
+  rumble = (rumbling: boolean, frame: number, direction?: EntityDirection) => {
+    let rumbleOffset = { x: 0, y: 0 };
+
+    if (rumbling) {
+      const isOddFrame = Math.floor(frame) % 2 === 1;
+      const offset = isOddFrame ? 0.0325 : 0;
+
+      if (
+        direction === EntityDirection.LEFT ||
+        direction === EntityDirection.RIGHT
+      ) {
+        rumbleOffset.y = offset;
+      } else if (
+        direction === EntityDirection.UP ||
+        direction === EntityDirection.DOWN ||
+        !direction
+      ) {
+        rumbleOffset.x = offset;
+      }
+      this.animationSpeed = 0.2;
+    }
+    return rumbleOffset;
+  };
+
+  get crushXoffset() {
+    return this.crushX;
+  }
+
+  get crushYoffset() {
+    return this.crushY;
+  }
+
   makeHitWarnings = (
     orthogonal: Boolean,
     diagonal: Boolean,

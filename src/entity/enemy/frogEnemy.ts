@@ -23,7 +23,7 @@ export class FrogEnemy extends Enemy {
   startFrame: number;
   animationSpeed: number;
   tickCount: number;
-  rumble: boolean;
+  rumbling: boolean;
   jumping: boolean;
   jumpDistance: number;
 
@@ -49,7 +49,7 @@ export class FrogEnemy extends Enemy {
     this.startFrame = 0;
     this.animationSpeed = 0.1;
     this.tickCount = 0;
-    this.rumble = false;
+    this.rumbling = false;
     this.jumping = false;
     this.jumpDistance = 1;
     this.drop = drop ? drop : new Coin(this.room, 0, 0);
@@ -82,7 +82,7 @@ export class FrogEnemy extends Enemy {
   tick = () => {
     this.lastX = this.x;
     this.lastY = this.y;
-    this.rumble = false;
+    this.rumbling = false;
     this.tileX = 1;
     this.frameLength = 3;
     this.animationSpeed = 0.1;
@@ -222,7 +222,7 @@ export class FrogEnemy extends Enemy {
             }
           } else {
             this.makeHitWarnings(true, false, false, this.direction);
-            this.rumble = true;
+            this.rumbling = true;
             this.tileX = 3;
             this.frame = 0;
             this.frameLength = 2;
@@ -278,11 +278,8 @@ export class FrogEnemy extends Enemy {
         Math.sin(
           ((this.frame - 2) / ((this.jumpDistance + 1.825) * 1.475)) * Math.PI
         ) * 0.75;
-    let rumbleOffsetX = 0;
-    if (this.rumble) {
-      if (Math.floor(this.frame) % 2 === 1) rumbleOffsetX = 0.0325;
-      if (Math.floor(this.frame) % 2 === 0) rumbleOffsetX = 0;
-    }
+    let rumbleX = this.rumble(this.rumbling, this.frame).x;
+
     if (!this.dead) {
       this.frame += this.animationSpeed * delta;
       if (this.frame >= this.frameLength) {
@@ -304,11 +301,11 @@ export class FrogEnemy extends Enemy {
         );
       Game.drawMob(
         this.tileX +
-          (this.tileX !== 12 && !this.rumble ? Math.floor(this.frame) : 0),
+          (this.tileX !== 12 && !this.rumbling ? Math.floor(this.frame) : 0),
         this.tileY /*+ this.direction * 2,*/,
         1,
         2,
-        this.rumble ? this.x + rumbleOffsetX - this.drawX : this.x - this.drawX,
+        this.x + rumbleX - this.drawX,
         this.y - 1.5 - this.drawY - jumpHeight,
         1,
         2,

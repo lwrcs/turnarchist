@@ -351,7 +351,7 @@ export class Player extends Drawable {
               ].canCrushEnemy() ||
               enemyEnd
             ) {
-              pushedEnemies[pushedEnemies.length - 1].killNoBones();
+              pushedEnemies[pushedEnemies.length - 1].crush();
               if (this.game.rooms[this.levelID] === this.game.room) Sound.hit();
             }
             e.x += dx;

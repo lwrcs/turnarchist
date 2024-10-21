@@ -131,16 +131,16 @@ export class Game {
       usernameElement.autocapitalize = "off";
       usernameElement.style.position = "absolute";
       usernameElement.style.left = "-1000px"; // Position off-screen
-      const passwordElement = document.createElement("input");
-      passwordElement.type = "password";
-      passwordElement.style.position = "absolute";
-      passwordElement.style.left = "-1000px"; // Position off-screen
+      //const passwordElement = document.createElement("input");
+      //passwordElement.type = "password";
+      //passwordElement.style.position = "absolute";
+      //passwordElement.style.left = "-1000px"; // Position off-screen
       const chatElement = document.createElement("input");
       chatElement.type = "text";
       chatElement.style.position = "absolute";
       chatElement.style.left = "-1000px"; // Position off-screen
-      document.body.appendChild(usernameElement);
-      document.body.appendChild(passwordElement);
+      //document.body.appendChild(usernameElement);
+      //document.body.appendChild(passwordElement);
       document.body.appendChild(chatElement);
 
       document.addEventListener(

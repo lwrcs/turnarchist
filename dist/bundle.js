@@ -1984,6 +1984,7 @@ var CrabEnemy = /** @class */ (function (_super) {
                         _this.alertTicks = Math.max(0, _this.alertTicks - 1);
                         _this.ticks++;
                         if (_this.ticks % 2 === 1) {
+                            _this.rumbling = true;
                             var oldX = _this.x;
                             var oldY = _this.y;
                             var disablePositions = Array();
@@ -2042,8 +2043,10 @@ var CrabEnemy = /** @class */ (function (_super) {
                                         _this.direction = entity_1.EntityDirection.UP;
                                 }
                             }
+                            _this.rumbling = false;
                         }
                         else {
+                            _this.rumbling = true;
                             _this.makeHitWarnings(true, false, false, _this.direction);
                         }
                     }
@@ -2081,15 +2084,17 @@ var CrabEnemy = /** @class */ (function (_super) {
                     _this.tileX = 8;
                     _this.tileY = 4;
                 }
+                var rumbleX = _this.rumble(_this.rumbling, _this.frame, _this.direction).x;
+                var rumbleY = _this.rumble(_this.rumbling, _this.frame, _this.direction).y;
                 _this.frame += 0.1 * delta;
                 if (_this.frame >= 4)
                     _this.frame = 0;
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - 0.25 - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
-                game_1.Game.drawMob(_this.tileX, _this.tileY + _this.direction, 1, 1, _this.x - _this.drawX, _this.y - 0.25 - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
-                /*if (this.crushed) {
-                  this.crushAnim(delta);
-                }*/
+                game_1.Game.drawMob(_this.tileX, _this.tileY + _this.direction, 1, 1, _this.x - _this.drawX + rumbleX, _this.y - 0.25 - _this.drawY + rumbleY, 1 * _this.crushX, 1 * _this.crushY, _this.room.shadeColor, _this.shadeAmount());
+                if (_this.crushed) {
+                    _this.crushAnim(delta);
+                }
             }
             if (!_this.seenPlayer) {
                 _this.drawSleepingZs(delta, 0, 0.75 * gameConstants_1.GameConstants.TILESIZE);
@@ -2285,7 +2290,7 @@ var FrogEnemy = /** @class */ (function (_super) {
         _this.tick = function () {
             _this.lastX = _this.x;
             _this.lastY = _this.y;
-            _this.rumble = false;
+            _this.rumbling = false;
             _this.tileX = 1;
             _this.frameLength = 3;
             _this.animationSpeed = 0.1;
@@ -2407,7 +2412,7 @@ var FrogEnemy = /** @class */ (function (_super) {
                         }
                         else {
                             _this.makeHitWarnings(true, false, false, _this.direction);
-                            _this.rumble = true;
+                            _this.rumbling = true;
                             _this.tileX = 3;
                             _this.frame = 0;
                             _this.frameLength = 2;
@@ -2454,13 +2459,7 @@ var FrogEnemy = /** @class */ (function (_super) {
             if (_this.jumping)
                 jumpHeight =
                     Math.sin(((_this.frame - 2) / ((_this.jumpDistance + 1.825) * 1.475)) * Math.PI) * 0.75;
-            var rumbleOffsetX = 0;
-            if (_this.rumble) {
-                if (Math.floor(_this.frame) % 2 === 1)
-                    rumbleOffsetX = 0.0325;
-                if (Math.floor(_this.frame) % 2 === 0)
-                    rumbleOffsetX = 0;
-            }
+            var rumbleX = _this.rumble(_this.rumbling, _this.frame).x;
             if (!_this.dead) {
                 _this.frame += _this.animationSpeed * delta;
                 if (_this.frame >= _this.frameLength) {
@@ -2469,7 +2468,7 @@ var FrogEnemy = /** @class */ (function (_super) {
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
                 game_1.Game.drawMob(_this.tileX +
-                    (_this.tileX !== 12 && !_this.rumble ? Math.floor(_this.frame) : 0), _this.tileY /*+ this.direction * 2,*/, 1, 2, _this.rumble ? _this.x + rumbleOffsetX - _this.drawX : _this.x - _this.drawX, _this.y - 1.5 - _this.drawY - jumpHeight, 1, 2, _this.room.shadeColor, _this.shadeAmount());
+                    (_this.tileX !== 12 && !_this.rumbling ? Math.floor(_this.frame) : 0), _this.tileY /*+ this.direction * 2,*/, 1, 2, _this.x + rumbleX - _this.drawX, _this.y - 1.5 - _this.drawY - jumpHeight, 1, 2, _this.room.shadeColor, _this.shadeAmount());
             }
             if (!_this.seenPlayer) {
                 _this.drawSleepingZs(delta);
@@ -2497,7 +2496,7 @@ var FrogEnemy = /** @class */ (function (_super) {
         _this.startFrame = 0;
         _this.animationSpeed = 0.1;
         _this.tickCount = 0;
-        _this.rumble = false;
+        _this.rumbling = false;
         _this.jumping = false;
         _this.jumpDistance = 1;
         _this.drop = drop ? drop : new coin_1.Coin(_this.room, 0, 0);
@@ -2585,6 +2584,7 @@ var KnightEnemy = /** @class */ (function (_super) {
                     if (result !== false) {
                         var distance = result[0], p = result[1];
                         if (distance < 4) {
+                            _this.rumbling = true;
                             _this.seenPlayer = true;
                             _this.targetPlayer = p;
                             _this.facePlayer(p);
@@ -2599,6 +2599,7 @@ var KnightEnemy = /** @class */ (function (_super) {
                         _this.alertTicks = Math.max(0, _this.alertTicks - 1);
                         _this.ticks++;
                         if (_this.ticks % 2 === 1) {
+                            _this.rumbling = true;
                             var oldX = _this.x;
                             var oldY = _this.y;
                             var disablePositions = Array();
@@ -2657,8 +2658,10 @@ var KnightEnemy = /** @class */ (function (_super) {
                                         _this.direction = entity_1.EntityDirection.UP;
                                 }
                             }
+                            _this.rumbling = false;
                         }
                         else {
+                            _this.rumbling = true;
                             _this.makeHitWarnings(true, false, false, _this.direction);
                         }
                     }
@@ -2677,6 +2680,7 @@ var KnightEnemy = /** @class */ (function (_super) {
                                     if (player === _this.game.players[_this.game.localPlayerID])
                                         _this.alertTicks = 1;
                                     if (_this.ticks % 2 === 0) {
+                                        _this.rumbling = true;
                                         _this.makeHitWarnings(true, false, false, _this.direction);
                                     }
                                 }
@@ -2687,6 +2691,8 @@ var KnightEnemy = /** @class */ (function (_super) {
             }
         };
         _this.draw = function (delta) {
+            var rumbleX = _this.rumble(_this.rumbling, _this.frame).x;
+            var rumbleY = _this.rumble(_this.rumbling, _this.frame, _this.direction).y;
             if (!_this.dead) {
                 if (_this.ticks % 2 === 0) {
                     _this.tileX = 9;
@@ -2701,7 +2707,7 @@ var KnightEnemy = /** @class */ (function (_super) {
                     _this.frame = 0;
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
-                game_1.Game.drawMob(_this.tileX + (_this.tileX === 4 ? 0 : Math.floor(_this.frame)), _this.tileY + _this.direction * 2, 1, 2, _this.x - _this.drawX, _this.y - 1.5 - _this.drawY + (_this.tileX === 4 ? 0.1875 : 0), 1, 2, _this.room.shadeColor, _this.shadeAmount());
+                game_1.Game.drawMob(_this.tileX + (_this.tileX === 4 ? 0 : Math.floor(_this.frame)), _this.tileY + _this.direction * 2, 1, 2, _this.x - _this.drawX + rumbleX, _this.y - 1.5 - _this.drawY + (_this.tileX === 4 ? 0.1875 : 0), 1, 2, _this.room.shadeColor, _this.shadeAmount());
             }
             if (!_this.seenPlayer) {
                 _this.drawSleepingZs(delta);
@@ -4393,26 +4399,47 @@ var Entity = /** @class */ (function (_super) {
                 game_1.Game.fillTextOutline("!", (_this.x + 0.5) * gameConstants_1.GameConstants.TILESIZE - width / 2 + offsetX, (_this.y - 0.75) * gameConstants_1.GameConstants.TILESIZE + yoff + offsetY, gameConstants_1.GameConstants.OUTLINE, gameConstants_1.GameConstants.WARNING_RED);
             }
         };
-        /*crush = () => {
-          let player: Player;
-          for (let i in this.game.players) {
-            player = this.game.players[i];
-          }
-          if (this.x == player.x) {
-            this.crushVertical = true;
-          }
-          if (this.y == player.y) {
-            this.crushVertical = false;
-          }
+        _this.crush = function () {
+            _this.crushed = true;
+            var player;
+            for (var i in _this.game.players) {
+                player = _this.game.players[i];
+            }
+            if (_this.x == player.x) {
+                _this.crushVertical = true;
+            }
+            _this.kill();
         };
-        crushAnim = (delta: number) => {
-          if (this.crushVertical && this.crushX >= 0) {
-            this.crushX -= delta * 0.125;
-          } else if (this.crushY >= 0) {
-            this.crushY -= delta * 0.125;
-          }
+        _this.crushAnim = function (delta) {
+            if (_this.crushVertical && _this.crushY >= 0) {
+                _this.crushY *= 0.95;
+            }
+            else if (_this.crushX >= 0) {
+                _this.crushX *= 0.95;
+            }
         };
-      */
+        //set rumbling in the tick function for the enemies
+        //create variables for the rumbling x and y offsets
+        //return the rumbling x and y offsets
+        //add the rumbling x and y offsets to the enemy's x and y in the draw function
+        _this.rumble = function (rumbling, frame, direction) {
+            var rumbleOffset = { x: 0, y: 0 };
+            if (rumbling) {
+                var isOddFrame = Math.floor(frame) % 2 === 1;
+                var offset = isOddFrame ? 0.0325 : 0;
+                if (direction === EntityDirection.LEFT ||
+                    direction === EntityDirection.RIGHT) {
+                    rumbleOffset.y = offset;
+                }
+                else if (direction === EntityDirection.UP ||
+                    direction === EntityDirection.DOWN ||
+                    !direction) {
+                    rumbleOffset.x = offset;
+                }
+                _this.animationSpeed = 0.2;
+            }
+            return rumbleOffset;
+        };
         _this.makeHitWarnings = function (orthogonal, diagonal, forwardOnly, direction) {
             if (orthogonal && !forwardOnly) {
                 _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y, _this.x, _this.y));
@@ -4466,11 +4493,31 @@ var Entity = /** @class */ (function (_super) {
         _this.lastX = x;
         _this.lastY = y;
         _this.hitBy = _this.getPlayer();
+        _this.crushX = 1;
+        _this.crushY = 1;
+        _this.crushVertical = false;
+        _this.crushed = false;
+        _this.rumbling = false;
+        _this.animationSpeed = 0.1;
         return _this;
     }
     Object.defineProperty(Entity.prototype, "type", {
         get: function () {
             return EntityType.ENEMY;
+        },
+        enumerable: false,
+        configurable: true
+    });
+    Object.defineProperty(Entity.prototype, "crushXoffset", {
+        get: function () {
+            return this.crushX;
+        },
+        enumerable: false,
+        configurable: true
+    });
+    Object.defineProperty(Entity.prototype, "crushYoffset", {
+        get: function () {
+            return this.crushY;
         },
         enumerable: false,
         configurable: true
@@ -6185,16 +6232,16 @@ var Game = /** @class */ (function () {
             usernameElement.autocapitalize = "off";
             usernameElement.style.position = "absolute";
             usernameElement.style.left = "-1000px"; // Position off-screen
-            var passwordElement = document.createElement("input");
-            passwordElement.type = "password";
-            passwordElement.style.position = "absolute";
-            passwordElement.style.left = "-1000px"; // Position off-screen
+            //const passwordElement = document.createElement("input");
+            //passwordElement.type = "password";
+            //passwordElement.style.position = "absolute";
+            //passwordElement.style.left = "-1000px"; // Position off-screen
             var chatElement = document.createElement("input");
             chatElement.type = "text";
             chatElement.style.position = "absolute";
             chatElement.style.left = "-1000px"; // Position off-screen
-            document.body.appendChild(usernameElement);
-            document.body.appendChild(passwordElement);
+            //document.body.appendChild(usernameElement);
+            //document.body.appendChild(passwordElement);
             document.body.appendChild(chatElement);
             document.addEventListener("click", function () {
                 usernameElement.focus();
@@ -9616,7 +9663,6 @@ var generate_dungeon_candidate = function (map_w, map_h) {
                     doors_found++;
                     if (p.type === room_1.RoomType.BOSS)
                         found_boss = true;
-                    console.log("Door Tries: ".concat(tries));
                     break;
                 }
             }
@@ -9654,7 +9700,6 @@ var generate_dungeon_candidate = function (map_w, map_h) {
                     room.connections.push(new PartitionConnection(point.x, point.y, p));
                     p.connections.push(new PartitionConnection(point.x, point.y, room));
                     found_door = true;
-                    console.log("Door Tries: ".concat(tries));
                     break;
                 }
             }
@@ -9811,7 +9856,6 @@ var generate_cave_candidate = function (map_w, map_h, num_rooms) {
         while (!found_door && tries < max_tries) {
             var point = room.get_branch_point();
             if (!point) {
-                console.warn("No valid branch point found for room during loop creation:");
                 break; // Skip if no valid branch point found
             }
             for (var _c = 0, not_already_connected_2 = not_already_connected; _c < not_already_connected_2.length; _c++) {
@@ -9889,8 +9933,6 @@ var LevelGenerator = /** @class */ (function () {
         };
         this.generate = function (game, depth, cave) {
             if (cave === void 0) { cave = false; }
-            // Assert that the depth is correct
-            console.assert(cave || _this.depthReached === 0 || depth === _this.depthReached + 1);
             _this.depthReached = depth;
             // Set the random state based on the seed and depth
             random_1.Random.setState(_this.seed + depth);
@@ -10858,7 +10900,7 @@ var Player = /** @class */ (function (_super) {
                             }
                             if (_this.game.rooms[_this.levelID].roomArray[nextX][nextY].canCrushEnemy() ||
                                 enemyEnd) {
-                                pushedEnemies[pushedEnemies.length - 1].killNoBones();
+                                pushedEnemies[pushedEnemies.length - 1].crush();
                                 if (_this.game.rooms[_this.levelID] === _this.game.room)
                                     sound_1.Sound.hit();
                             }
@@ -12379,7 +12421,7 @@ var Room = /** @class */ (function () {
             var y = t.y;
             // Define the enemy tables for each depth level
             var tables = {
-                0: [1, 2, 3, 4],
+                0: [/*1, 2, 3,*/ 12],
                 1: [3, 4, 5, 9, 7],
                 2: [3, 4, 5, 7, 8, 9, 12],
                 3: [1, 2, 3, 5, 6, 7, 8, 9, 10],
@@ -13196,7 +13238,6 @@ var Door = /** @class */ (function (_super) {
             _this.linkedDoor = other;
         };
         _this.isSolid = function () {
-            console.log(_this.DoorType);
             if (_this.locked) {
                 return true;
             }
@@ -13228,8 +13269,7 @@ var Door = /** @class */ (function (_super) {
             if (_this.doorDir !== DoorDir.North)
                 //if not top door
                 game_1.Game.drawTile(1, _this.skin, 1, 1, _this.x, _this.y, 1, 1, _this.room.shadeColor, _this.shadeAmount());
-        };
-        _this.drawAbovePlayer = function (delta) {
+            //the following used to be in the drawaboveplayer function
             if (_this.doorDir === DoorDir.North) {
                 //if top door
                 if (!_this.opened)
@@ -13240,6 +13280,7 @@ var Door = /** @class */ (function (_super) {
             if (_this.doorDir !== DoorDir.North) {
             }
         };
+        _this.drawAbovePlayer = function (delta) { };
         _this.drawAboveShading = function (delta) {
             var icon = 2;
             var xOffset = 0;

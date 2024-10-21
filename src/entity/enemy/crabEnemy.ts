@@ -99,6 +99,7 @@ export class CrabEnemy extends Enemy {
           this.alertTicks = Math.max(0, this.alertTicks - 1);
           this.ticks++;
           if (this.ticks % 2 === 1) {
+            this.rumbling = true;
             let oldX = this.x;
             let oldY = this.y;
             let disablePositions = Array<astar.Position>();
@@ -152,6 +153,7 @@ export class CrabEnemy extends Enemy {
                   hitPlayer = true;
                 }
               }
+
               if (!hitPlayer) {
                 this.tryMove(moves[0].pos.x, moves[0].pos.y);
                 this.drawX = this.x - oldX;
@@ -162,7 +164,9 @@ export class CrabEnemy extends Enemy {
                 else if (this.y < oldY) this.direction = EntityDirection.UP;
               }
             }
+            this.rumbling = false;
           } else {
+            this.rumbling = true;
             this.makeHitWarnings(true, false, false, this.direction);
           }
         }
@@ -204,7 +208,8 @@ export class CrabEnemy extends Enemy {
         this.tileX = 8;
         this.tileY = 4;
       }
-
+      let rumbleX = this.rumble(this.rumbling, this.frame, this.direction).x;
+      let rumbleY = this.rumble(this.rumbling, this.frame, this.direction).y;
       this.frame += 0.1 * delta;
       if (this.frame >= 4) this.frame = 0;
       if (this.hasShadow)
@@ -225,16 +230,16 @@ export class CrabEnemy extends Enemy {
         this.tileY + this.direction,
         1,
         1,
-        this.x - this.drawX,
-        this.y - 0.25 - this.drawY,
-        1,
-        1,
+        this.x - this.drawX + rumbleX,
+        this.y - 0.25 - this.drawY + rumbleY,
+        1 * this.crushX,
+        1 * this.crushY,
         this.room.shadeColor,
         this.shadeAmount()
       );
-      /*if (this.crushed) {
+      if (this.crushed) {
         this.crushAnim(delta);
-      }*/
+      }
     }
     if (!this.seenPlayer) {
       this.drawSleepingZs(delta, 0, 0.75 * GameConstants.TILESIZE);

@@ -258,7 +258,6 @@ let generate_dungeon_candidate = (
           connected.push(p);
           doors_found++;
           if (p.type === RoomType.BOSS) found_boss = true;
-          console.log(`Door Tries: ${tries}`);
           break;
         }
       }
@@ -300,7 +299,6 @@ let generate_dungeon_candidate = (
           room.connections.push(new PartitionConnection(point.x, point.y, p));
           p.connections.push(new PartitionConnection(point.x, point.y, room));
           found_door = true;
-          console.log(`Door Tries: ${tries}`);
           break;
         }
       }
@@ -491,9 +489,6 @@ let generate_cave_candidate = (
     while (!found_door && tries < max_tries) {
       let point = room.get_branch_point();
       if (!point) {
-        console.warn(
-          "No valid branch point found for room during loop creation:"
-        );
         break; // Skip if no valid branch point found
       }
 
@@ -596,10 +591,6 @@ export class LevelGenerator {
   };
 
   generate = (game: Game, depth: number, cave = false): Room => {
-    // Assert that the depth is correct
-    console.assert(
-      cave || this.depthReached === 0 || depth === this.depthReached + 1
-    );
     this.depthReached = depth;
 
     // Set the random state based on the seed and depth

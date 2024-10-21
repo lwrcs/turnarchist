@@ -103,7 +103,6 @@ export class Door extends Tile {
   };
 
   isSolid = (): boolean => {
-    console.log(this.DoorType);
     if (this.locked) {
       return true;
     } else false;
@@ -171,9 +170,7 @@ export class Door extends Tile {
         this.room.shadeColor,
         this.shadeAmount()
       );
-  };
-
-  drawAbovePlayer = (delta: number) => {
+    //the following used to be in the drawaboveplayer function
     if (this.doorDir === DoorDir.North) {
       //if top door
       if (!this.opened)
@@ -206,6 +203,8 @@ export class Door extends Tile {
     if (this.doorDir !== DoorDir.North) {
     }
   };
+
+  drawAbovePlayer = (delta: number) => {};
 
   drawAboveShading = (delta: number) => {
     let icon = 2;

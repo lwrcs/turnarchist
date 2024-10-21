@@ -86,6 +86,7 @@ export class KnightEnemy extends Enemy {
         if (result !== false) {
           let [distance, p] = result;
           if (distance < 4) {
+            this.rumbling = true;
             this.seenPlayer = true;
             this.targetPlayer = p;
             this.facePlayer(p);
@@ -99,6 +100,7 @@ export class KnightEnemy extends Enemy {
           this.alertTicks = Math.max(0, this.alertTicks - 1);
           this.ticks++;
           if (this.ticks % 2 === 1) {
+            this.rumbling = true;
             let oldX = this.x;
             let oldY = this.y;
             let disablePositions = Array<astar.Position>();
@@ -162,7 +164,9 @@ export class KnightEnemy extends Enemy {
                 else if (this.y < oldY) this.direction = EntityDirection.UP;
               }
             }
+            this.rumbling = false;
           } else {
+            this.rumbling = true;
             this.makeHitWarnings(true, false, false, this.direction);
           }
         }
@@ -185,6 +189,7 @@ export class KnightEnemy extends Enemy {
                 if (player === this.game.players[this.game.localPlayerID])
                   this.alertTicks = 1;
                 if (this.ticks % 2 === 0) {
+                  this.rumbling = true;
                   this.makeHitWarnings(true, false, false, this.direction);
                 }
               }
@@ -196,6 +201,8 @@ export class KnightEnemy extends Enemy {
   };
 
   draw = (delta: number) => {
+    let rumbleX = this.rumble(this.rumbling, this.frame).x;
+    let rumbleY = this.rumble(this.rumbling, this.frame, this.direction).y;
     if (!this.dead) {
       if (this.ticks % 2 === 0) {
         this.tileX = 9;
@@ -225,7 +232,7 @@ export class KnightEnemy extends Enemy {
         this.tileY + this.direction * 2,
         1,
         2,
-        this.x - this.drawX,
+        this.x - this.drawX + rumbleX,
         this.y - 1.5 - this.drawY + (this.tileX === 4 ? 0.1875 : 0),
         1,
         2,
