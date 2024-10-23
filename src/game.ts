@@ -117,6 +117,10 @@ export class Game {
     return table[Game.rand(0, table.length - 1, rand)];
   };
 
+  static getPlayerId = (): string => {
+    return Math.random().toString(36).substring(2, 15);
+  };
+
   constructor() {
     window.addEventListener("load", () => {
       let canvas = document.getElementById("gameCanvas");
@@ -834,7 +838,7 @@ export class Game {
       Game.ctx.translate(-cameraX, -cameraY);
       this.room.draw(delta);
       this.room.drawEntities(delta);
-      //this.room.drawShade(delta);
+      this.room.drawShade(delta);
       this.room.drawOverShade(delta);
       this.players[this.localPlayerID].drawTopLayer(delta);
       Game.ctx.translate(cameraX, cameraY);

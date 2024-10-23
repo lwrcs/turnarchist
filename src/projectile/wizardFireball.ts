@@ -82,7 +82,16 @@ export class WizardFireball extends Projectile {
       } else if (this.state === 1) {
         this.frame += 0.25 * delta;
         if (this.frame >= 4) this.frame = 0;
-        Game.drawFX(18 + Math.floor(this.frame), 7, 1, 1, this.x, this.y, 1, 1);
+        Game.drawFX(
+          18 + Math.floor(this.frame),
+          7,
+          1,
+          1,
+          this.x,
+          this.y - 0.2,
+          1,
+          1
+        );
       } else {
         if (this.delay > 0) {
           this.delay--;

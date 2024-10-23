@@ -507,7 +507,9 @@ export class Entity extends Drawable {
     orthogonal: boolean,
     diagonal: boolean,
     forwardOnly: boolean,
-    direction: EntityDirection
+    direction: EntityDirection,
+    orthoRange: number = 1,
+    diagRange: number = 1
   ) => {
     const addWarning = (dx: number, dy: number) => {
       this.room.hitwarnings.push(
@@ -515,18 +517,35 @@ export class Entity extends Drawable {
       );
     };
 
-    const orthogonalOffsets = [
-      [-1, 0],
-      [1, 0],
-      [0, -1],
-      [0, 1],
-    ];
-    const diagonalOffsets = [
-      [-1, -1],
-      [1, 1],
-      [1, -1],
-      [-1, 1],
-    ];
+    const generateOffsets = (baseOffsets: number[][], range: number) => {
+      let extendedOffsets: number[][] = [];
+      for (let i = 1; i <= range; i++) {
+        baseOffsets.forEach(([dx, dy]) => {
+          extendedOffsets.push([dx * i, dy * i]);
+        });
+      }
+      return extendedOffsets;
+    };
+
+    const orthogonalOffsets = generateOffsets(
+      [
+        [-1, 0],
+        [1, 0],
+        [0, -1],
+        [0, 1],
+      ],
+      orthoRange
+    );
+    const diagonalOffsets = generateOffsets(
+      [
+        [-1, -1],
+        [1, 1],
+        [1, -1],
+        [-1, 1],
+      ],
+      diagRange
+    );
+
     const directionOffsets = {
       [EntityDirection.LEFT]: [-1, 0],
       [EntityDirection.RIGHT]: [1, 0],
@@ -543,7 +562,9 @@ export class Entity extends Drawable {
       }
     } else {
       const [dx, dy] = directionOffsets[direction];
-      addWarning(dx, dy);
+      for (let i = 1; i <= orthoRange; i++) {
+        addWarning(dx * i, dy * i);
+      }
     }
   };
 

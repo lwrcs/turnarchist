@@ -2311,7 +2311,7 @@ var FrogEnemy = /** @class */ (function (_super) {
                             _this.facePlayer(p);
                             if (p === _this.game.players[_this.game.localPlayerID])
                                 _this.alertTicks = 1;
-                            _this.makeHitWarnings(true, false, false, _this.direction);
+                            _this.makeHitWarnings(true, true, false, _this.direction, 2);
                         }
                     }
                 }
@@ -2412,7 +2412,7 @@ var FrogEnemy = /** @class */ (function (_super) {
                             }
                         }
                         else {
-                            _this.makeHitWarnings(true, false, false, _this.direction);
+                            _this.makeHitWarnings(true, true, false, _this.direction, 2);
                             _this.rumbling = true;
                             _this.tileX = 3;
                             _this.frame = 0;
@@ -4489,23 +4489,38 @@ var Entity = /** @class */ (function (_super) {
             console.log("Path to (".concat(endX, ", ").concat(endY, ") is clear"));
             return true;
         };
-        _this.makeHitWarnings = function (orthogonal, diagonal, forwardOnly, direction) {
+        _this.makeHitWarnings = function (orthogonal, diagonal, forwardOnly, direction, orthoRange, diagRange) {
             var _a;
+            if (orthoRange === void 0) { orthoRange = 1; }
+            if (diagRange === void 0) { diagRange = 1; }
             var addWarning = function (dx, dy) {
                 _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + dx, _this.y + dy, _this.x, _this.y));
             };
-            var orthogonalOffsets = [
+            var generateOffsets = function (baseOffsets, range) {
+                var extendedOffsets = [];
+                var _loop_1 = function (i) {
+                    baseOffsets.forEach(function (_a) {
+                        var dx = _a[0], dy = _a[1];
+                        extendedOffsets.push([dx * i, dy * i]);
+                    });
+                };
+                for (var i = 1; i <= range; i++) {
+                    _loop_1(i);
+                }
+                return extendedOffsets;
+            };
+            var orthogonalOffsets = generateOffsets([
                 [-1, 0],
                 [1, 0],
                 [0, -1],
                 [0, 1],
-            ];
-            var diagonalOffsets = [
+            ], orthoRange);
+            var diagonalOffsets = generateOffsets([
                 [-1, -1],
                 [1, 1],
                 [1, -1],
                 [-1, 1],
-            ];
+            ], diagRange);
             var directionOffsets = (_a = {},
                 _a[EntityDirection.LEFT] = [-1, 0],
                 _a[EntityDirection.RIGHT] = [1, 0],
@@ -4528,7 +4543,9 @@ var Entity = /** @class */ (function (_super) {
             }
             else {
                 var _b = directionOffsets[direction], dx = _b[0], dy = _b[1];
-                addWarning(dx, dy);
+                for (var i = 1; i <= orthoRange; i++) {
+                    addWarning(dx * i, dy * i);
+                }
             }
         };
         _this.isWithinRoomBounds = function (x, y) {
@@ -5866,6 +5883,90 @@ exports.Rock = Rock;
 
 /***/ }),
 
+/***/ "./src/eventEmitter.ts":
+/*!*****************************!*\
+  !*** ./src/eventEmitter.ts ***!
+  \*****************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.EventEmitter = void 0;
+var EventEmitter = /** @class */ (function () {
+    function EventEmitter() {
+        this.events = {};
+    }
+    EventEmitter.prototype.on = function (event, listener) {
+        if (!this.events[event]) {
+            this.events[event] = [];
+        }
+        this.events[event].push(listener);
+    };
+    EventEmitter.prototype.off = function (event, listener) {
+        if (!this.events[event])
+            return;
+        this.events[event] = this.events[event].filter(function (l) { return l !== listener; });
+    };
+    EventEmitter.prototype.emit = function (event) {
+        var args = [];
+        for (var _i = 1; _i < arguments.length; _i++) {
+            args[_i - 1] = arguments[_i];
+        }
+        if (!this.events[event])
+            return;
+        this.events[event].forEach(function (listener) { return listener.apply(void 0, args); });
+    };
+    return EventEmitter;
+}());
+exports.EventEmitter = EventEmitter;
+
+
+/***/ }),
+
+/***/ "./src/eventManager.ts":
+/*!*****************************!*\
+  !*** ./src/eventManager.ts ***!
+  \*****************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.gameEvents = exports.GameEvent = void 0;
+var eventEmitter_1 = __webpack_require__(/*! ./eventEmitter */ "./src/eventEmitter.ts");
+var GameEvent;
+(function (GameEvent) {
+    GameEvent["PLAYER_MOVE"] = "PLAYER_MOVE";
+    GameEvent["ROOM_CHANGE"] = "ROOM_CHANGE";
+    GameEvent["ENTITY_INTERACT"] = "ENTITY_INTERACT";
+    // Add more events as needed
+})(GameEvent = exports.GameEvent || (exports.GameEvent = {}));
+var EventManager = /** @class */ (function (_super) {
+    __extends(EventManager, _super);
+    function EventManager() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    return EventManager;
+}(eventEmitter_1.EventEmitter));
+exports.gameEvents = new EventManager();
+
+
+/***/ }),
+
 /***/ "./src/game.ts":
 /*!*********************!*\
   !*** ./src/game.ts ***!
@@ -6239,7 +6340,7 @@ var Game = /** @class */ (function () {
                 Game.ctx.translate(-cameraX, -cameraY);
                 _this.room.draw(delta);
                 _this.room.drawEntities(delta);
-                //this.room.drawShade(delta);
+                _this.room.drawShade(delta);
                 _this.room.drawOverShade(delta);
                 _this.players[_this.localPlayerID].drawTopLayer(delta);
                 Game.ctx.translate(cameraX, cameraY);
@@ -6453,6 +6554,9 @@ var Game = /** @class */ (function () {
     };
     Game.randTable = function (table, rand) {
         return table[Game.rand(0, table.length - 1, rand)];
+    };
+    Game.getPlayerId = function () {
+        return Math.random().toString(36).substring(2, 15);
     };
     Game.measureText = function (text) {
         var w = 0;
@@ -7516,6 +7620,8 @@ var HitWarning = /** @class */ (function (_super) {
     function HitWarning(game, x, y, eX, eY, isEnemy, dirOnly) {
         if (dirOnly === void 0) { dirOnly = false; }
         var _this = _super.call(this) || this;
+        _this._pointerDir = null;
+        _this._pointerOffset = null;
         _this.tick = function () {
             _this.dead = true;
         };
@@ -7534,30 +7640,70 @@ var HitWarning = /** @class */ (function (_super) {
               }
             }*/
         };
-        _this.setPointerDir = function () {
-            var dx = _this.eX - _this.x;
-            var dy = _this.eY - _this.y;
-            if (dx === 0 && dy === 0) {
-                _this.dir = Direction.Center;
-            }
-            else {
-                if (dx === 0) {
-                    _this.dir = dy < 0 ? Direction.South : Direction.North;
+        _this.draw = function (delta) {
+            if (Math.abs(_this.x - _this.game.players[_this.game.localPlayerID].x) <= 1 &&
+                Math.abs(_this.y - _this.game.players[_this.game.localPlayerID].y) <= 1) {
+                if (_this.isEnemy) {
+                    var offset = _this.getPointerOffset();
+                    game_1.Game.drawFX(_this.tileX + Math.floor(HitWarning.frame), _this.tileY, 1, 1, _this.x + offset.x, _this.y + offset.y - _this.offsetY, 1, 1);
                 }
-                else if (dy === 0) {
-                    _this.dir = dx < 0 ? Direction.East : Direction.West;
+                if (!_this.dirOnly) {
+                    game_1.Game.drawFX(18 + Math.floor(HitWarning.frame), 5, 1, 1, _this.x, _this.y - _this.offsetY + 0, 1, 1);
                 }
-                else if (dx < 0) {
-                    _this.dir = dy < 0 ? Direction.SouthEast : Direction.NorthEast;
-                }
-                else {
-                    _this.dir = dy < 0 ? Direction.SouthWest : Direction.NorthWest;
-                }
-                _this.tileX = 0 + 2 * _this.dir;
             }
         };
-        _this.setPointerOffset = function () {
-            var _a;
+        _this.drawTopLayer = function (delta) {
+            if (_this.isEnemy) {
+                var offset = _this.getPointerOffset();
+                game_1.Game.drawFX(_this.tileX + Math.floor(HitWarning.frame), _this.tileY + 1, 1, 1, _this.x + offset.x, _this.y + offset.y - _this.offsetY, 1, 1);
+            }
+            if (Math.abs(_this.x - _this.game.players[_this.game.localPlayerID].x) <= 1 &&
+                Math.abs(_this.y - _this.game.players[_this.game.localPlayerID].y) <= 1) {
+                if (!_this.dirOnly) {
+                    game_1.Game.drawFX(18 + Math.floor(HitWarning.frame), 6, 1, 1, _this.x, _this.y - _this.offsetY + 0, 1, 1);
+                }
+            }
+        };
+        _this.x = x;
+        _this.y = y;
+        _this.dead = false;
+        _this.game = game;
+        _this.tileX = 0;
+        _this.tileY = 22;
+        _this.eX = eX;
+        _this.eY = eY;
+        _this.offsetY = 0.2;
+        _this.dirOnly = dirOnly;
+        _this.isEnemy = isEnemy !== undefined ? isEnemy : true;
+        _this.removeOverlapping();
+        return _this;
+    }
+    HitWarning.prototype.getPointerDir = function () {
+        if (this._pointerDir === null) {
+            var dx = this.eX - this.x;
+            var dy = this.eY - this.y;
+            if (dx === 0 && dy === 0) {
+                this._pointerDir = Direction.Center;
+            }
+            else if (dx === 0) {
+                this._pointerDir = dy < 0 ? Direction.South : Direction.North;
+            }
+            else if (dy === 0) {
+                this._pointerDir = dx < 0 ? Direction.East : Direction.West;
+            }
+            else if (dx < 0) {
+                this._pointerDir = dy < 0 ? Direction.SouthEast : Direction.NorthEast;
+            }
+            else {
+                this._pointerDir = dy < 0 ? Direction.SouthWest : Direction.NorthWest;
+            }
+            this.tileX = 0 + 2 * this._pointerDir;
+        }
+        return this._pointerDir;
+    };
+    HitWarning.prototype.getPointerOffset = function () {
+        var _a;
+        if (this._pointerOffset === null) {
             var offsets = (_a = {},
                 _a[Direction.North] = { x: 0, y: 0.5 },
                 _a[Direction.South] = { x: 0, y: -0.6 },
@@ -7569,51 +7715,10 @@ var HitWarning = /** @class */ (function (_super) {
                 _a[Direction.SouthWest] = { x: 0.5, y: -0.5 },
                 _a[Direction.Center] = { x: 0, y: -0.25 },
                 _a);
-            var offset = offsets[_this.dir];
-            _this.pointerOffsetX = offset.x;
-            _this.pointerOffsetY = offset.y;
-        };
-        _this.draw = function (delta) {
-            if (Math.abs(_this.x - _this.game.players[_this.game.localPlayerID].x) <= 1 &&
-                Math.abs(_this.y - _this.game.players[_this.game.localPlayerID].y) <= 1) {
-                if (_this.isEnemy) {
-                    game_1.Game.drawFX(_this.tileX + Math.floor(HitWarning.frame), _this.tileY, 1, 1, _this.x + _this.pointerOffsetX, _this.y + _this.pointerOffsetY - _this.offsetY, 1, 1);
-                }
-                if (!_this.dirOnly) {
-                    game_1.Game.drawFX(18 + Math.floor(HitWarning.frame), 5, 1, 1, _this.x, _this.y - _this.offsetY, 1, 1);
-                }
-            }
-        };
-        _this.drawTopLayer = function (delta) {
-            if (_this.isEnemy) {
-                game_1.Game.drawFX(_this.tileX + Math.floor(HitWarning.frame), _this.tileY + 1, 1, 1, _this.x + _this.pointerOffsetX, _this.y + _this.pointerOffsetY - _this.offsetY, 1, 1);
-            }
-            if (Math.abs(_this.x - _this.game.players[_this.game.localPlayerID].x) <= 1 &&
-                Math.abs(_this.y - _this.game.players[_this.game.localPlayerID].y) <= 1) {
-                if (!_this.dirOnly) {
-                    game_1.Game.drawFX(18 + Math.floor(HitWarning.frame), 6, 1, 1, _this.x, _this.y - _this.offsetY, 1, 1);
-                }
-            }
-        };
-        _this.x = x;
-        _this.y = y;
-        _this.dead = false;
-        _this.game = game;
-        _this.dir = Direction.North;
-        _this.tileX = 0;
-        _this.tileY = 22;
-        _this.eX = eX;
-        _this.eY = eY;
-        _this.offsetY = 0.2;
-        _this.pointerOffsetX = 0;
-        _this.pointerOffsetY = 0;
-        _this.setPointerDir();
-        _this.setPointerOffset();
-        _this.dirOnly = dirOnly;
-        _this.isEnemy = isEnemy !== undefined ? isEnemy : true;
-        _this.removeOverlapping();
-        return _this;
-    }
+            this._pointerOffset = offsets[this.getPointerDir()];
+        }
+        return this._pointerOffset;
+    };
     HitWarning.frame = 0;
     HitWarning.updateFrame = function (delta) {
         HitWarning.frame += 0.125 * delta;
@@ -10765,6 +10870,7 @@ var drawable_1 = __webpack_require__(/*! ./drawable */ "./src/drawable.ts");
 var actionTab_1 = __webpack_require__(/*! ./actionTab */ "./src/actionTab.ts");
 var hitWarning_1 = __webpack_require__(/*! ./hitWarning */ "./src/hitWarning.ts");
 var postProcess_1 = __webpack_require__(/*! ./postProcess */ "./src/postProcess.ts");
+var eventManager_1 = __webpack_require__(/*! ./eventManager */ "./src/eventManager.ts");
 var PlayerDirection;
 (function (PlayerDirection) {
     PlayerDirection[PlayerDirection["DOWN"] = 0] = "DOWN";
@@ -11096,6 +11202,14 @@ var Player = /** @class */ (function (_super) {
                 }
             }
             _this.game.rooms[_this.levelID].updateLighting();
+            // Add event emission
+            var moveData = {
+                playerId: _this.id,
+                newX: _this.x,
+                newY: _this.y,
+            };
+            eventManager_1.gameEvents.emit(eventManager_1.GameEvent.PLAYER_MOVE, moveData);
+            console.log("Player move event emitted");
         };
         _this.moveNoSmooth = function (x, y) {
             // doesn't touch smoothing
@@ -11237,8 +11351,21 @@ var Player = /** @class */ (function (_super) {
         _this.actionTab = new actionTab_1.ActionTab(_this.inventory, _this.game);
         _this.turnCount = 0;
         _this.triedMove = false;
+        _this.id = game_1.Game.getPlayerId();
         return _this;
     }
+    Player.prototype.changeRoom = function (newRoomId) {
+        var oldRoomId = this.levelID.toString();
+        // Existing room change logic
+        this.levelID = parseInt(newRoomId);
+        // Add event emission
+        var roomChangeData = {
+            playerId: this.id,
+            oldRoomId: oldRoomId,
+            newRoomId: newRoomId,
+        };
+        eventManager_1.gameEvents.emit(eventManager_1.GameEvent.ROOM_CHANGE, roomChangeData);
+    };
     return Player;
 }(drawable_1.Drawable));
 exports.Player = Player;
@@ -11538,7 +11665,7 @@ var WizardFireball = /** @class */ (function (_super) {
                     _this.frame += 0.25 * delta;
                     if (_this.frame >= 4)
                         _this.frame = 0;
-                    game_1.Game.drawFX(18 + Math.floor(_this.frame), 7, 1, 1, _this.x, _this.y, 1, 1);
+                    game_1.Game.drawFX(18 + Math.floor(_this.frame), 7, 1, 1, _this.x, _this.y - 0.2, 1, 1);
                 }
                 else {
                     if (_this.delay > 0) {
@@ -12350,12 +12477,12 @@ var Room = /** @class */ (function () {
                 var p = _c[_b];
                 p.drawTopLayer(delta);
             }
-            game_1.Game.ctx.globalCompositeOperation = "overlay";
+            //Game.ctx.globalCompositeOperation = "overlay";
             for (var _d = 0, _e = _this.hitwarnings; _d < _e.length; _d++) {
                 var h = _e[_d];
                 h.drawTopLayer(delta);
             }
-            game_1.Game.ctx.globalCompositeOperation = "source-over";
+            //Game.ctx.globalCompositeOperation = "source-over";
             for (var _f = 0, _g = _this.particles; _f < _g.length; _f++) {
                 var s = _g[_f];
                 s.drawTopLayer(delta);

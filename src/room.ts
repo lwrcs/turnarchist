@@ -1441,11 +1441,11 @@ export class Room {
     for (const p of this.projectiles) {
       p.drawTopLayer(delta);
     }
-    Game.ctx.globalCompositeOperation = "overlay";
+    //Game.ctx.globalCompositeOperation = "overlay";
     for (const h of this.hitwarnings) {
       h.drawTopLayer(delta);
     }
-    Game.ctx.globalCompositeOperation = "source-over";
+    //Game.ctx.globalCompositeOperation = "source-over";
 
     for (const s of this.particles) {
       s.drawTopLayer(delta);

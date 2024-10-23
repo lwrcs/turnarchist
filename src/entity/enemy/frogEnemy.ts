@@ -103,7 +103,7 @@ export class FrogEnemy extends Enemy {
             this.facePlayer(p);
             if (p === this.game.players[this.game.localPlayerID])
               this.alertTicks = 1;
-            this.makeHitWarnings(true, false, false, this.direction);
+            this.makeHitWarnings(true, true, false, this.direction, 2);
           }
         }
       } else if (this.seenPlayer) {
@@ -221,7 +221,7 @@ export class FrogEnemy extends Enemy {
               }
             }
           } else {
-            this.makeHitWarnings(true, false, false, this.direction);
+            this.makeHitWarnings(true, true, false, this.direction, 2);
             this.rumbling = true;
             this.tileX = 3;
             this.frame = 0;
