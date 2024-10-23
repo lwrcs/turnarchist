@@ -16,9 +16,13 @@ import { EntityType } from "../entity";
 import { ItemType } from "../../gameState";
 
 export class Enemy extends Entity {
+  seenPlayer: boolean;
+
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
     this.drawYOffset = 1.5;
+    this.name = "";
+    this.seenPlayer = false;
   }
 
   readonly tryMove = (x: number, y: number, collide: boolean = true) => {
@@ -61,9 +65,5 @@ export class Enemy extends Entity {
 
   get type() {
     return EntityType.ENEMY;
-  }
-
-  get name() {
-    return "enemy";
   }
 }

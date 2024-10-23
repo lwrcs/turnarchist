@@ -56,6 +56,7 @@ export class VendingMachine extends Entity {
     this.costItems = [];
 
     this.item = item;
+    this.name = "vending machine";
     if (this.item instanceof Shotgun) {
       let g = new BlueGem(room, 0, 0);
       g.stackCount = Game.randTable([5, 5, 6, 7], this.rand);
@@ -82,10 +83,6 @@ export class VendingMachine extends Entity {
       g.stackCount = Game.randTable([25, 26, 27, 28], this.rand);
       this.costItems = [g];
     }
-  }
-
-  get name() {
-    return "shop";
   }
 
   get type() {

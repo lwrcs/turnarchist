@@ -17,10 +17,7 @@ export class Crate extends Entity {
     this.tileY = 0;
     this.hasShadow = false;
     this.pushable = true;
-  }
-
-  get name() {
-    return "crate";
+    this.name = "crate";
   }
 
   get type() {

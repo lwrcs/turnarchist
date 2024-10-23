@@ -749,6 +749,7 @@ var ArmoredzombieEnemy = /** @class */ (function (_super) {
         _this.seenPlayer = false;
         _this.aggro = false;
         _this.deathParticleColor = "#ffffff";
+        _this.name = "armored zombie";
         if (drop)
             _this.drop = drop;
         else {
@@ -762,13 +763,6 @@ var ArmoredzombieEnemy = /** @class */ (function (_super) {
         }
         return _this;
     }
-    Object.defineProperty(ArmoredzombieEnemy.prototype, "name", {
-        get: function () {
-            return "zombie";
-        },
-        enumerable: false,
-        configurable: true
-    });
     return ArmoredzombieEnemy;
 }(enemy_1.Enemy));
 exports.ArmoredzombieEnemy = ArmoredzombieEnemy;
@@ -1029,6 +1023,7 @@ var BigKnightEnemy = /** @class */ (function (_super) {
         _this.flashingFrame = 0;
         _this.deathParticleColor = "#ffffff";
         _this.chainPushable = false;
+        _this.name = "giant knight";
         _this.drops = [];
         if (drop)
             _this.drops.push(drop);
@@ -1047,13 +1042,6 @@ var BigKnightEnemy = /** @class */ (function (_super) {
         }
         return _this;
     }
-    Object.defineProperty(BigKnightEnemy.prototype, "name", {
-        get: function () {
-            return "giant knight";
-        },
-        enumerable: false,
-        configurable: true
-    });
     return BigKnightEnemy;
 }(enemy_1.Enemy));
 exports.BigKnightEnemy = BigKnightEnemy;
@@ -1346,6 +1334,7 @@ var BigSkullEnemy = /** @class */ (function (_super) {
         _this.flashingFrame = 0;
         _this.deathParticleColor = "#ffffff";
         _this.chainPushable = false;
+        _this.name = "giant skeleton";
         _this.drops = [];
         if (drop)
             _this.drops.push(drop);
@@ -1364,13 +1353,6 @@ var BigSkullEnemy = /** @class */ (function (_super) {
         }
         return _this;
     }
-    Object.defineProperty(BigSkullEnemy.prototype, "name", {
-        get: function () {
-            return "giant skeleton";
-        },
-        enumerable: false,
-        configurable: true
-    });
     return BigSkullEnemy;
 }(enemy_1.Enemy));
 exports.BigSkullEnemy = BigSkullEnemy;
@@ -1614,6 +1596,7 @@ var BishopEnemy = /** @class */ (function (_super) {
         _this.tileY = 8;
         _this.seenPlayer = false;
         _this.aggro = false;
+        _this.name = "bishop";
         if (drop)
             _this.drop = drop;
         else {
@@ -1627,13 +1610,6 @@ var BishopEnemy = /** @class */ (function (_super) {
         }
         return _this;
     }
-    Object.defineProperty(BishopEnemy.prototype, "name", {
-        get: function () {
-            return "bishop";
-        },
-        enumerable: false,
-        configurable: true
-    });
     return BishopEnemy;
 }(enemy_1.Enemy));
 exports.BishopEnemy = BishopEnemy;
@@ -1874,6 +1850,7 @@ var ChargeEnemy = /** @class */ (function (_super) {
         _this.deathParticleColor = "#ffffff";
         _this.lastX = _this.x;
         _this.lastY = _this.y;
+        _this.name = "charge knight";
         _this.state = ChargeEnemyState.IDLE;
         if (drop)
             _this.drop = drop;
@@ -1888,13 +1865,6 @@ var ChargeEnemy = /** @class */ (function (_super) {
         }
         return _this;
     }
-    Object.defineProperty(ChargeEnemy.prototype, "name", {
-        get: function () {
-            return "charge knight";
-        },
-        enumerable: false,
-        configurable: true
-    });
     return ChargeEnemy;
 }(enemy_1.Enemy));
 exports.ChargeEnemy = ChargeEnemy;
@@ -2111,6 +2081,7 @@ var CrabEnemy = /** @class */ (function (_super) {
         _this.tileY = 4;
         _this.seenPlayer = false;
         _this.aggro = false;
+        _this.name = "crab";
         if (drop)
             _this.drop = drop;
         else {
@@ -2118,13 +2089,6 @@ var CrabEnemy = /** @class */ (function (_super) {
         }
         return _this;
     }
-    Object.defineProperty(CrabEnemy.prototype, "name", {
-        get: function () {
-            return "crab";
-        },
-        enumerable: false,
-        configurable: true
-    });
     Object.defineProperty(CrabEnemy.prototype, "alertText", {
         get: function () {
             return "New Enemy Spotted: Crab \n    Health: ".concat(this.health, "\n    Attack Pattern: Omnidirectional\n    Moves every other turn");
@@ -2211,18 +2175,13 @@ var Enemy = /** @class */ (function (_super) {
             _this.y = y;
         };
         _this.drawYOffset = 1.5;
+        _this.name = "";
+        _this.seenPlayer = false;
         return _this;
     }
     Object.defineProperty(Enemy.prototype, "type", {
         get: function () {
             return entity_2.EntityType.ENEMY;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    Object.defineProperty(Enemy.prototype, "name", {
-        get: function () {
-            return "enemy";
         },
         enumerable: false,
         configurable: true
@@ -2501,15 +2460,9 @@ var FrogEnemy = /** @class */ (function (_super) {
         _this.jumping = false;
         _this.jumpDistance = 1;
         _this.drop = drop ? drop : new coin_1.Coin(_this.room, 0, 0);
+        _this.name = "frog";
         return _this;
     }
-    Object.defineProperty(FrogEnemy.prototype, "name", {
-        get: function () {
-            return "frog";
-        },
-        enumerable: false,
-        configurable: true
-    });
     return FrogEnemy;
 }(enemy_1.Enemy));
 exports.FrogEnemy = FrogEnemy;
@@ -2731,6 +2684,7 @@ var KnightEnemy = /** @class */ (function (_super) {
         _this.deathParticleColor = "#ffffff";
         _this.lastX = _this.x;
         _this.lastY = _this.y;
+        _this.name = "burrow knight";
         if (drop)
             _this.drop = drop;
         else {
@@ -2744,13 +2698,6 @@ var KnightEnemy = /** @class */ (function (_super) {
         }
         return _this;
     }
-    Object.defineProperty(KnightEnemy.prototype, "name", {
-        get: function () {
-            return "burrow knight";
-        },
-        enumerable: false,
-        configurable: true
-    });
     return KnightEnemy;
 }(enemy_1.Enemy));
 exports.KnightEnemy = KnightEnemy;
@@ -2948,6 +2895,7 @@ var QueenEnemy = /** @class */ (function (_super) {
         _this.tileY = 8;
         _this.seenPlayer = false;
         _this.aggro = false;
+        _this.name = "queen";
         if (drop)
             _this.drop = drop;
         else {
@@ -2961,13 +2909,6 @@ var QueenEnemy = /** @class */ (function (_super) {
         }
         return _this;
     }
-    Object.defineProperty(QueenEnemy.prototype, "name", {
-        get: function () {
-            return "queen";
-        },
-        enumerable: false,
-        configurable: true
-    });
     return QueenEnemy;
 }(enemy_1.Enemy));
 exports.QueenEnemy = QueenEnemy;
@@ -3208,6 +3149,7 @@ var SkullEnemy = /** @class */ (function (_super) {
         _this.ticksSinceFirstHit = 0;
         _this.flashingFrame = 0;
         _this.deathParticleColor = "#ffffff";
+        _this.name = "skeleton";
         if (drop)
             _this.drop = drop;
         else {
@@ -3222,13 +3164,6 @@ var SkullEnemy = /** @class */ (function (_super) {
         }
         return _this;
     }
-    Object.defineProperty(SkullEnemy.prototype, "name", {
-        get: function () {
-            return "skeleton";
-        },
-        enumerable: false,
-        configurable: true
-    });
     return SkullEnemy;
 }(enemy_1.Enemy));
 exports.SkullEnemy = SkullEnemy;
@@ -3507,6 +3442,7 @@ var SniperEnemy = /** @class */ (function (_super) {
         _this.aggro = false;
         _this.deathParticleColor = "#ffffff";
         _this.dir = game_1.Direction.South;
+        _this.name = "sniper";
         if (drop)
             _this.drop = drop;
         else {
@@ -3520,13 +3456,6 @@ var SniperEnemy = /** @class */ (function (_super) {
         }
         return _this;
     }
-    Object.defineProperty(SniperEnemy.prototype, "name", {
-        get: function () {
-            return "sniper";
-        },
-        enumerable: false,
-        configurable: true
-    });
     return SniperEnemy;
 }(enemy_1.Enemy));
 exports.SniperEnemy = SniperEnemy;
@@ -3619,15 +3548,9 @@ var Spawner = /** @class */ (function (_super) {
         _this.seenPlayer = true;
         _this.enemySpawnType = game_1.Game.randTable([1, 2, 2, 2, 2, 3], rand);
         _this.rand = rand;
+        _this.name = "reaper";
         return _this;
     }
-    Object.defineProperty(Spawner.prototype, "name", {
-        get: function () {
-            return "reaper";
-        },
-        enumerable: false,
-        configurable: true
-    });
     return Spawner;
 }(enemy_1.Enemy));
 exports.Spawner = Spawner;
@@ -3842,6 +3765,7 @@ var WizardEnemy = /** @class */ (function (_super) {
         _this.seenPlayer = false;
         _this.alertTicks = 0;
         _this.rand = rand;
+        _this.name = "wizard bomber";
         if (drop)
             _this.drop = drop;
         else {
@@ -3852,13 +3776,6 @@ var WizardEnemy = /** @class */ (function (_super) {
         }
         return _this;
     }
-    Object.defineProperty(WizardEnemy.prototype, "name", {
-        get: function () {
-            return "wizard bomber";
-        },
-        enumerable: false,
-        configurable: true
-    });
     return WizardEnemy;
 }(enemy_1.Enemy));
 exports.WizardEnemy = WizardEnemy;
@@ -4137,6 +4054,7 @@ var ZombieEnemy = /** @class */ (function (_super) {
         _this.seenPlayer = false;
         _this.aggro = false;
         _this.dir = game_1.Direction.South;
+        _this.name = "zombie";
         if (drop)
             _this.drop = drop;
         else {
@@ -4150,13 +4068,6 @@ var ZombieEnemy = /** @class */ (function (_super) {
         }
         return _this;
     }
-    Object.defineProperty(ZombieEnemy.prototype, "name", {
-        get: function () {
-            return "zombie";
-        },
-        enumerable: false,
-        configurable: true
-    });
     return ZombieEnemy;
 }(enemy_1.Enemy));
 exports.ZombieEnemy = ZombieEnemy;
@@ -4689,15 +4600,9 @@ var Barrel = /** @class */ (function (_super) {
         _this.tileY = 0;
         _this.hasShadow = false;
         _this.pushable = true;
+        _this.name = "barrel";
         return _this;
     }
-    Object.defineProperty(Barrel.prototype, "name", {
-        get: function () {
-            return "barrel";
-        },
-        enumerable: false,
-        configurable: true
-    });
     Object.defineProperty(Barrel.prototype, "type", {
         get: function () {
             return entity_2.EntityType.PROP;
@@ -4772,6 +4677,7 @@ var Chest = /** @class */ (function (_super) {
         _this.tileX = 4;
         _this.tileY = 0;
         _this.health = 1;
+        _this.name = "chest";
         var drop = game_1.Game.randTable([1, 1, 1, 1, 1, 1, 1, 2, 3, 4], rand);
         switch (drop) {
             case 1:
@@ -4795,13 +4701,6 @@ var Chest = /** @class */ (function (_super) {
         }
         return _this;
     }
-    Object.defineProperty(Chest.prototype, "name", {
-        get: function () {
-            return "chest";
-        },
-        enumerable: false,
-        configurable: true
-    });
     Object.defineProperty(Chest.prototype, "type", {
         get: function () {
             return entity_2.EntityType.CHEST;
@@ -4873,15 +4772,9 @@ var Crate = /** @class */ (function (_super) {
         _this.tileY = 0;
         _this.hasShadow = false;
         _this.pushable = true;
+        _this.name = "crate";
         return _this;
     }
-    Object.defineProperty(Crate.prototype, "name", {
-        get: function () {
-            return "crate";
-        },
-        enumerable: false,
-        configurable: true
-    });
     Object.defineProperty(Crate.prototype, "type", {
         get: function () {
             return entity_2.EntityType.PROP;
@@ -4954,15 +4847,9 @@ var Mushrooms = /** @class */ (function (_super) {
         _this.tileY = 2;
         _this.hasShadow = false;
         _this.chainPushable = false;
+        _this.name = "mushrooms";
         return _this;
     }
-    Object.defineProperty(Mushrooms.prototype, "name", {
-        get: function () {
-            return "mushrooms";
-        },
-        enumerable: false,
-        configurable: true
-    });
     Object.defineProperty(Mushrooms.prototype, "type", {
         get: function () {
             return entity_2.EntityType.PROP;
@@ -5033,15 +4920,9 @@ var Pot = /** @class */ (function (_super) {
         _this.tileY = 0;
         _this.hasShadow = false;
         _this.chainPushable = false;
+        _this.name = "pot";
         return _this;
     }
-    Object.defineProperty(Pot.prototype, "name", {
-        get: function () {
-            return "pot";
-        },
-        enumerable: false,
-        configurable: true
-    });
     Object.defineProperty(Pot.prototype, "type", {
         get: function () {
             return entity_2.EntityType.PROP;
@@ -5128,6 +5009,7 @@ var PottedPlant = /** @class */ (function (_super) {
         _this.tileY = 0;
         _this.hasShadow = false;
         _this.chainPushable = false;
+        _this.name = "plant";
         if (drop)
             _this.drop = drop;
         else {
@@ -5139,13 +5021,6 @@ var PottedPlant = /** @class */ (function (_super) {
         }
         return _this;
     }
-    Object.defineProperty(PottedPlant.prototype, "name", {
-        get: function () {
-            return "plant";
-        },
-        enumerable: false,
-        configurable: true
-    });
     Object.defineProperty(PottedPlant.prototype, "type", {
         get: function () {
             return entity_2.EntityType.PROP;
@@ -5256,18 +5131,12 @@ var TombStone = /** @class */ (function (_super) {
         _this.skinType = skinType;
         _this.rand = rand;
         _this.chainPushable = false;
+        _this.name = "tombstone";
         var dropProb = random_1.Random.rand();
         if (dropProb < 0.05)
             _this.drop = new spellbook_1.Spellbook(_this.room, 0, 0);
         return _this;
     }
-    Object.defineProperty(TombStone.prototype, "name", {
-        get: function () {
-            return "tombstone";
-        },
-        enumerable: false,
-        configurable: true
-    });
     Object.defineProperty(TombStone.prototype, "type", {
         get: function () {
             return entity_2.EntityType.PROP;
@@ -5457,6 +5326,7 @@ var VendingMachine = /** @class */ (function (_super) {
         _this.interactable = true;
         _this.costItems = [];
         _this.item = item;
+        _this.name = "vending machine";
         if (_this.item instanceof shotgun_1.Shotgun) {
             var g = new bluegem_1.BlueGem(room, 0, 0);
             g.stackCount = game_1.Game.randTable([5, 5, 6, 7], _this.rand);
@@ -5490,13 +5360,6 @@ var VendingMachine = /** @class */ (function (_super) {
         }
         return _this;
     }
-    Object.defineProperty(VendingMachine.prototype, "name", {
-        get: function () {
-            return "shop";
-        },
-        enumerable: false,
-        configurable: true
-    });
     Object.defineProperty(VendingMachine.prototype, "type", {
         get: function () {
             return entity_2.EntityType.PROP;
@@ -5563,15 +5426,9 @@ var CoalResource = /** @class */ (function (_super) {
         _this.tileX = 12;
         _this.tileY = 0;
         _this.health = 1;
+        _this.name = "coal";
         return _this;
     }
-    Object.defineProperty(CoalResource.prototype, "name", {
-        get: function () {
-            return "coal";
-        },
-        enumerable: false,
-        configurable: true
-    });
     return CoalResource;
 }(resource_1.Resource));
 exports.CoalResource = CoalResource;
@@ -5631,15 +5488,9 @@ var EmeraldResource = /** @class */ (function (_super) {
         _this.tileX = 14;
         _this.tileY = 0;
         _this.health = 3;
+        _this.name = "emerald";
         return _this;
     }
-    Object.defineProperty(EmeraldResource.prototype, "name", {
-        get: function () {
-            return "emerald";
-        },
-        enumerable: false,
-        configurable: true
-    });
     return EmeraldResource;
 }(resource_1.Resource));
 exports.EmeraldResource = EmeraldResource;
@@ -5699,15 +5550,9 @@ var GoldResource = /** @class */ (function (_super) {
         _this.tileX = 13;
         _this.tileY = 0;
         _this.health = 2;
+        _this.name = "gold";
         return _this;
     }
-    Object.defineProperty(GoldResource.prototype, "name", {
-        get: function () {
-            return "gold";
-        },
-        enumerable: false,
-        configurable: true
-    });
     return GoldResource;
 }(resource_1.Resource));
 exports.GoldResource = GoldResource;
@@ -5778,15 +5623,9 @@ var Resource = /** @class */ (function (_super) {
         _this.tileY = 0;
         _this.health = 1;
         _this.chainPushable = false;
+        _this.name = "resource";
         return _this;
     }
-    Object.defineProperty(Resource.prototype, "name", {
-        get: function () {
-            return "resource";
-        },
-        enumerable: false,
-        configurable: true
-    });
     Object.defineProperty(Resource.prototype, "type", {
         get: function () {
             return entity_2.EntityType.RESOURCE;
@@ -5867,102 +5706,12 @@ var Rock = /** @class */ (function (_super) {
         _this.tileY = 2;
         _this.hasShadow = false;
         _this.chainPushable = false;
+        _this.name = "rock";
         return _this;
     }
-    Object.defineProperty(Rock.prototype, "name", {
-        get: function () {
-            return "rock";
-        },
-        enumerable: false,
-        configurable: true
-    });
     return Rock;
 }(resource_1.Resource));
 exports.Rock = Rock;
-
-
-/***/ }),
-
-/***/ "./src/eventEmitter.ts":
-/*!*****************************!*\
-  !*** ./src/eventEmitter.ts ***!
-  \*****************************/
-/***/ ((__unused_webpack_module, exports) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.EventEmitter = void 0;
-var EventEmitter = /** @class */ (function () {
-    function EventEmitter() {
-        this.events = {};
-    }
-    EventEmitter.prototype.on = function (event, listener) {
-        if (!this.events[event]) {
-            this.events[event] = [];
-        }
-        this.events[event].push(listener);
-    };
-    EventEmitter.prototype.off = function (event, listener) {
-        if (!this.events[event])
-            return;
-        this.events[event] = this.events[event].filter(function (l) { return l !== listener; });
-    };
-    EventEmitter.prototype.emit = function (event) {
-        var args = [];
-        for (var _i = 1; _i < arguments.length; _i++) {
-            args[_i - 1] = arguments[_i];
-        }
-        if (!this.events[event])
-            return;
-        this.events[event].forEach(function (listener) { return listener.apply(void 0, args); });
-    };
-    return EventEmitter;
-}());
-exports.EventEmitter = EventEmitter;
-
-
-/***/ }),
-
-/***/ "./src/eventManager.ts":
-/*!*****************************!*\
-  !*** ./src/eventManager.ts ***!
-  \*****************************/
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        if (typeof b !== "function" && b !== null)
-            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.gameEvents = exports.GameEvent = void 0;
-var eventEmitter_1 = __webpack_require__(/*! ./eventEmitter */ "./src/eventEmitter.ts");
-var GameEvent;
-(function (GameEvent) {
-    GameEvent["PLAYER_MOVE"] = "PLAYER_MOVE";
-    GameEvent["ROOM_CHANGE"] = "ROOM_CHANGE";
-    GameEvent["ENTITY_INTERACT"] = "ENTITY_INTERACT";
-    // Add more events as needed
-})(GameEvent = exports.GameEvent || (exports.GameEvent = {}));
-var EventManager = /** @class */ (function (_super) {
-    __extends(EventManager, _super);
-    function EventManager() {
-        return _super !== null && _super.apply(this, arguments) || this;
-    }
-    return EventManager;
-}(eventEmitter_1.EventEmitter));
-exports.gameEvents = new EventManager();
 
 
 /***/ }),
@@ -6340,7 +6089,7 @@ var Game = /** @class */ (function () {
                 Game.ctx.translate(-cameraX, -cameraY);
                 _this.room.draw(delta);
                 _this.room.drawEntities(delta);
-                _this.room.drawShade(delta);
+                //this.room.drawShade(delta);
                 _this.room.drawOverShade(delta);
                 _this.players[_this.localPlayerID].drawTopLayer(delta);
                 Game.ctx.translate(cameraX, cameraY);
@@ -6554,9 +6303,6 @@ var Game = /** @class */ (function () {
     };
     Game.randTable = function (table, rand) {
         return table[Game.rand(0, table.length - 1, rand)];
-    };
-    Game.getPlayerId = function () {
-        return Math.random().toString(36).substring(2, 15);
     };
     Game.measureText = function (text) {
         var w = 0;
@@ -10097,6 +9843,14 @@ var generate_cave = function (mapWidth, mapHeight) {
     } while (partitions.length < numberOfRooms);
     return partitions;
 };
+var generate_tutorial = function (height, width) {
+    if (height === void 0) { height = 7; }
+    if (width === void 0) { width = 7; }
+    var partitions;
+    partitions = [new Partition(0, 0, height, width)];
+    partitions[0].type = room_1.RoomType.TUTORIAL;
+    return partitions;
+};
 var LevelGenerator = /** @class */ (function () {
     function LevelGenerator() {
         var _this = this;
@@ -10870,7 +10624,6 @@ var drawable_1 = __webpack_require__(/*! ./drawable */ "./src/drawable.ts");
 var actionTab_1 = __webpack_require__(/*! ./actionTab */ "./src/actionTab.ts");
 var hitWarning_1 = __webpack_require__(/*! ./hitWarning */ "./src/hitWarning.ts");
 var postProcess_1 = __webpack_require__(/*! ./postProcess */ "./src/postProcess.ts");
-var eventManager_1 = __webpack_require__(/*! ./eventManager */ "./src/eventManager.ts");
 var PlayerDirection;
 (function (PlayerDirection) {
     PlayerDirection[PlayerDirection["DOWN"] = 0] = "DOWN";
@@ -11202,14 +10955,6 @@ var Player = /** @class */ (function (_super) {
                 }
             }
             _this.game.rooms[_this.levelID].updateLighting();
-            // Add event emission
-            var moveData = {
-                playerId: _this.id,
-                newX: _this.x,
-                newY: _this.y,
-            };
-            eventManager_1.gameEvents.emit(eventManager_1.GameEvent.PLAYER_MOVE, moveData);
-            console.log("Player move event emitted");
         };
         _this.moveNoSmooth = function (x, y) {
             // doesn't touch smoothing
@@ -11351,21 +11096,8 @@ var Player = /** @class */ (function (_super) {
         _this.actionTab = new actionTab_1.ActionTab(_this.inventory, _this.game);
         _this.turnCount = 0;
         _this.triedMove = false;
-        _this.id = game_1.Game.getPlayerId();
         return _this;
     }
-    Player.prototype.changeRoom = function (newRoomId) {
-        var oldRoomId = this.levelID.toString();
-        // Existing room change logic
-        this.levelID = parseInt(newRoomId);
-        // Add event emission
-        var roomChangeData = {
-            playerId: this.id,
-            oldRoomId: oldRoomId,
-            newRoomId: newRoomId,
-        };
-        eventManager_1.gameEvents.emit(eventManager_1.GameEvent.ROOM_CHANGE, roomChangeData);
-    };
     return Player;
 }(drawable_1.Drawable));
 exports.Player = Player;
@@ -11681,7 +11413,7 @@ var WizardFireball = /** @class */ (function (_super) {
         };
         _this.parent = parent;
         _this.frame = 0;
-        _this.state = 1 - _this.distanceToParent;
+        _this.state = 0; //- this.distanceToParent;
         return _this;
     }
     return WizardFireball;
@@ -11813,6 +11545,7 @@ var RoomType;
     RoomType[RoomType["SPAWNER"] = 19] = "SPAWNER";
     RoomType[RoomType["ROPEHOLE"] = 20] = "ROPEHOLE";
     RoomType[RoomType["ROPECAVE"] = 21] = "ROPECAVE";
+    RoomType[RoomType["TUTORIAL"] = 22] = "TUTORIAL";
 })(RoomType = exports.RoomType || (exports.RoomType = {}));
 var TurnState;
 (function (TurnState) {

@@ -25,7 +25,6 @@ export class SkullEnemy extends Enemy {
   targetPlayer: Player;
   readonly REGEN_TICKS = 5;
   drop: Item;
-
   constructor(
     room: Room,
     game: Game,
@@ -46,7 +45,7 @@ export class SkullEnemy extends Enemy {
     this.ticksSinceFirstHit = 0;
     this.flashingFrame = 0;
     this.deathParticleColor = "#ffffff";
-
+    this.name = "skeleton";
     if (drop) this.drop = drop;
     else {
       let dropProb = rand();
@@ -55,10 +54,6 @@ export class SkullEnemy extends Enemy {
       //else if (dropProb < 0.2) this.drop = new Candle(this.room, 0, 0);
       else this.drop = new Coin(this.room, 0, 0);
     }
-  }
-
-  get name() {
-    return "skeleton";
   }
 
   hit = (): number => {

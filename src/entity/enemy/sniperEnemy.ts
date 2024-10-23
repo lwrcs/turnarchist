@@ -44,6 +44,7 @@ export class SniperEnemy extends Enemy {
     this.aggro = false;
     this.deathParticleColor = "#ffffff";
     this.dir = Direction.South;
+    this.name = "sniper";
 
     if (drop) this.drop = drop;
     else {
@@ -52,10 +53,6 @@ export class SniperEnemy extends Enemy {
       else if (dropProb < 0.02) this.drop = new GreenGem(this.room, 0, 0);
       else this.drop = new Coin(this.room, 0, 0);
     }
-  }
-
-  get name() {
-    return "sniper";
   }
 
   hit = (): number => {

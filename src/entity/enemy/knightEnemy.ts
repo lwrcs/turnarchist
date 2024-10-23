@@ -40,6 +40,7 @@ export class KnightEnemy extends Enemy {
     this.deathParticleColor = "#ffffff";
     this.lastX = this.x;
     this.lastY = this.y;
+    this.name = "burrow knight";
 
     if (drop) this.drop = drop;
     else {
@@ -48,9 +49,6 @@ export class KnightEnemy extends Enemy {
       else if (dropProb < 0.01) this.drop = new DualDagger(this.room, 0, 0);
       else this.drop = new Coin(this.room, 0, 0);
     }
-  }
-  get name() {
-    return "burrow knight";
   }
 
   hurt = (playerHitBy: Player, damage: number) => {

@@ -37,6 +37,7 @@ export class CrabEnemy extends Enemy {
     this.tileY = 4;
     this.seenPlayer = false;
     this.aggro = false;
+    this.name = "crab";
 
     if (drop) this.drop = drop;
     else {
@@ -44,9 +45,6 @@ export class CrabEnemy extends Enemy {
     }
   }
 
-  get name() {
-    return "crab";
-  }
   get alertText() {
     return `New Enemy Spotted: Crab 
     Health: ${this.health}

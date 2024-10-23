@@ -20,10 +20,7 @@ export class Resource extends Entity {
     this.tileY = 0;
     this.health = 1;
     this.chainPushable = false;
-  }
-
-  get name() {
-    return "resource";
+    this.name = "resource";
   }
 
   get type() {

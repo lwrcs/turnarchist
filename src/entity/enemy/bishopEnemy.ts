@@ -42,7 +42,7 @@ export class BishopEnemy extends Enemy {
     this.tileY = 8;
     this.seenPlayer = false;
     this.aggro = false;
-
+    this.name = "bishop";
     if (drop) this.drop = drop;
     else {
       let dropProb = Random.rand();
@@ -50,10 +50,6 @@ export class BishopEnemy extends Enemy {
       else if (dropProb < 0.04) this.drop = new GreenGem(this.room, 0, 0);
       else this.drop = new Coin(this.room, 0, 0);
     }
-  }
-
-  get name() {
-    return "bishop";
   }
 
   tryMove = (x: number, y: number) => {

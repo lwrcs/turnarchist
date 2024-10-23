@@ -44,6 +44,7 @@ export class ChargeEnemy extends Enemy {
     this.deathParticleColor = "#ffffff";
     this.lastX = this.x;
     this.lastY = this.y;
+    this.name = "charge knight";
 
     this.state = ChargeEnemyState.IDLE;
     if (drop) this.drop = drop;
@@ -55,9 +56,6 @@ export class ChargeEnemy extends Enemy {
     }
   }
 
-  get name() {
-    return "charge knight";
-  }
   hit = (): number => {
     return 1;
   };

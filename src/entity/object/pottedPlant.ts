@@ -26,16 +26,13 @@ export class PottedPlant extends Entity {
     this.tileY = 0;
     this.hasShadow = false;
     this.chainPushable = false;
+    this.name = "plant";
     if (drop) this.drop = drop;
     else {
       let dropProb = rand();
       if (dropProb < 0.025) this.drop = new Heart(this.room, 0, 0);
       else this.drop = new Coin(this.room, 0, 0);
     }
-  }
-
-  get name() {
-    return "plant";
   }
 
   get type() {

@@ -16,10 +16,7 @@ export class Pumpkin extends Entity {
     this.tileY = 2;
     this.hasShadow = false;
     this.chainPushable = false;
-  }
-
-  get name() {
-    return "pumpkin";
+    this.name = "pumpkin";
   }
 
   get type() {

@@ -41,7 +41,7 @@ export class QueenEnemy extends Enemy {
     this.tileY = 8;
     this.seenPlayer = false;
     this.aggro = false;
-
+    this.name = "queen";
     if (drop) this.drop = drop;
     else {
       let dropProb = Random.rand();
@@ -49,10 +49,6 @@ export class QueenEnemy extends Enemy {
       else if (dropProb < 0.04) this.drop = new GreenGem(this.room, 0, 0);
       else this.drop = new Coin(this.room, 0, 0);
     }
-  }
-
-  get name() {
-    return "queen";
   }
 
   hit = (): number => {

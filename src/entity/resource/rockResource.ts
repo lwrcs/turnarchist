@@ -18,10 +18,7 @@ export class Rock extends Resource {
     this.tileY = 2;
     this.hasShadow = false;
     this.chainPushable = false;
-  }
-
-  get name() {
-    return "rock";
+    this.name = "rock";
   }
 
   hurtCallback = () => {

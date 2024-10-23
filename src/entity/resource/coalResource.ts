@@ -21,10 +21,7 @@ export class CoalResource extends Resource {
     this.tileX = 12;
     this.tileY = 0;
     this.health = 1;
-  }
-
-  get name() {
-    return "coal";
+    this.name = "coal";
   }
 
   hurtCallback = () => {

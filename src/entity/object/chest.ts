@@ -27,6 +27,7 @@ export class Chest extends Entity {
     this.tileX = 4;
     this.tileY = 0;
     this.health = 1;
+    this.name = "chest";
 
     let drop = Game.randTable([1, 1, 1, 1, 1, 1, 1, 2, 3, 4], rand);
 
@@ -50,10 +51,6 @@ export class Chest extends Entity {
         this.drop = new Armor(this.room, this.x, this.y);
         break;
     }
-  }
-
-  get name() {
-    return "chest";
   }
 
   get type() {

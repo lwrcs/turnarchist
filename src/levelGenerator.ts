@@ -535,6 +535,18 @@ let generate_cave = (mapWidth: number, mapHeight: number): Array<Partition> => {
   return partitions;
 };
 
+let generate_tutorial = (
+  height: number = 7,
+  width: number = 7
+): Array<Partition> => {
+  let partitions: Array<Partition>;
+
+  partitions = [new Partition(0, 0, height, width)];
+  partitions[0].type = RoomType.TUTORIAL;
+
+  return partitions;
+};
+
 export class LevelGenerator {
   game: Game;
   seed: number;

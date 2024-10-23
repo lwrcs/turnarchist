@@ -16,10 +16,7 @@ export class GoldResource extends Resource {
     this.tileX = 13;
     this.tileY = 0;
     this.health = 2;
-  }
-
-  get name() {
-    return "gold";
+    this.name = "gold";
   }
 
   hurtCallback = () => {

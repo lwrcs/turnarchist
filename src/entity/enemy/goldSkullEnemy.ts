@@ -44,6 +44,7 @@ export class GoldSkullEnemy extends Enemy {
     this.ticksSinceFirstHit = 0;
     this.flashingFrame = 0;
     this.deathParticleColor = "#ffffff";
+    this.name = "gold skull";
 
     if (drop) this.drop = drop;
     else {

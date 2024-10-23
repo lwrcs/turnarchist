@@ -6,7 +6,7 @@ import { Door, DoorType } from "./tile/door";
 import { Tile, SkinType } from "./tile/tile";
 import { Trapdoor } from "./tile/trapdoor";
 import { KnightEnemy } from "./entity/enemy/knightEnemy";
-import { Entity } from "./entity/entity";
+import { Entity, EntityType } from "./entity/entity";
 import { Chest } from "./entity/object/chest";
 import { Item } from "./item/item";
 import { GoldenKey } from "./item/goldenKey";
@@ -67,6 +67,8 @@ import { QueenEnemy } from "./entity/enemy/queenEnemy";
 import { FrogEnemy } from "./entity/enemy/frogEnemy";
 import { BigKnightEnemy } from "./entity/enemy/bigKnightEnemy";
 import { SniperEnemy } from "./entity/enemy/sniperEnemy";
+import { EventEmitter } from "./eventEmitter";
+import { Enemy } from "./entity/enemy/enemy";
 
 export enum RoomType {
   START,
@@ -91,6 +93,7 @@ export enum RoomType {
   SPAWNER,
   ROPEHOLE,
   ROPECAVE,
+  TUTORIAL,
 }
 
 export enum TurnState {
@@ -142,6 +145,7 @@ export class Room {
   walls: Array<Wall>;
   actionTab: ActionTab;
   wallInfo: Map<string, WallInfo> = new Map();
+  private eventEmitter: EventEmitter;
 
   private pointInside(
     x: number,

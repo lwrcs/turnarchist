@@ -67,6 +67,7 @@ export class Entity extends Drawable {
   rumbling: boolean;
   animationSpeed: number;
   drawYOffset: number;
+  name: string;
   constructor(room: Room, game: Game, x: number, y: number) {
     super();
 

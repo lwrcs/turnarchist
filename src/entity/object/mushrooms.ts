@@ -17,10 +17,7 @@ export class Mushrooms extends Entity {
     this.tileY = 2;
     this.hasShadow = false;
     this.chainPushable = false;
-  }
-
-  get name() {
-    return "mushrooms";
+    this.name = "mushrooms";
   }
 
   get type() {

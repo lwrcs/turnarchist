@@ -13,6 +13,8 @@ import { createGameState, GameState, loadGameState } from "./gameState";
 import { Random } from "./random";
 import { DoorDir } from "./tile/door";
 import { Level } from "./level";
+import { EventEmitter } from "./eventEmitter";
+import { TutorialListener } from "./tutorialListener";
 
 export enum LevelState {
   IN_LEVEL,
@@ -115,10 +117,6 @@ export class Game {
 
   static randTable = (table: any[], rand): any => {
     return table[Game.rand(0, table.length - 1, rand)];
-  };
-
-  static getPlayerId = (): string => {
-    return Math.random().toString(36).substring(2, 15);
   };
 
   constructor() {
@@ -838,7 +836,7 @@ export class Game {
       Game.ctx.translate(-cameraX, -cameraY);
       this.room.draw(delta);
       this.room.drawEntities(delta);
-      this.room.drawShade(delta);
+      //this.room.drawShade(delta);
       this.room.drawOverShade(delta);
       this.players[this.localPlayerID].drawTopLayer(delta);
       Game.ctx.translate(cameraX, cameraY);

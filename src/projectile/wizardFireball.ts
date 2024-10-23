@@ -20,7 +20,7 @@ export class WizardFireball extends Projectile {
     super(parent, x, y);
     this.parent = parent;
     this.frame = 0;
-    this.state = 1 - this.distanceToParent;
+    this.state = 0; //- this.distanceToParent;
   }
   setMarkerFrame = () => {
     // Calculate offsetX based on direction

@@ -53,17 +53,13 @@ export class WizardEnemy extends Enemy {
     this.seenPlayer = false;
     this.alertTicks = 0;
     this.rand = rand;
-
+    this.name = "wizard bomber";
     if (drop) this.drop = drop;
     else {
       if (this.rand() < 0.02)
         this.drop = new BlueGem(this.room, this.x, this.y);
       else this.drop = new Coin(this.room, this.x, this.y);
     }
-  }
-
-  get name() {
-    return "wizard bomber";
   }
 
   hit = (): number => {

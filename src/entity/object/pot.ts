@@ -16,10 +16,7 @@ export class Pot extends Entity {
     this.tileY = 0;
     this.hasShadow = false;
     this.chainPushable = false;
-  }
-
-  get name() {
-    return "pot";
+    this.name = "pot";
   }
 
   get type() {

@@ -40,13 +40,9 @@ export class TombStone extends Entity {
     this.skinType = skinType;
     this.rand = rand;
     this.chainPushable = false;
-
+    this.name = "tombstone";
     let dropProb = Random.rand();
     if (dropProb < 0.05) this.drop = new Spellbook(this.room, 0, 0);
-  }
-
-  get name() {
-    return "tombstone";
   }
 
   get type() {

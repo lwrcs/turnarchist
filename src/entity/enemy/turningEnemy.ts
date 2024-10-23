@@ -40,6 +40,7 @@ export class TurningEnemy extends Enemy {
     this.tileY = 8;
     this.seenPlayer = false;
     this.aggro = false;
+    this.name = "turning knight";
 
     if (drop) this.drop = drop;
     else {

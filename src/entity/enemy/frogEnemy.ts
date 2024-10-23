@@ -53,10 +53,7 @@ export class FrogEnemy extends Enemy {
     this.jumping = false;
     this.jumpDistance = 1;
     this.drop = drop ? drop : new Coin(this.room, 0, 0);
-  }
-
-  get name() {
-    return "frog";
+    this.name = "frog";
   }
 
   hurt = (playerHitBy: Player, damage: number) => {

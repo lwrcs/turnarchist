@@ -46,6 +46,7 @@ export class BigSkullEnemy extends Enemy {
     this.flashingFrame = 0;
     this.deathParticleColor = "#ffffff";
     this.chainPushable = false;
+    this.name = "giant skeleton";
 
     this.drops = [];
     if (drop) this.drops.push(drop);
@@ -57,10 +58,6 @@ export class BigSkullEnemy extends Enemy {
       else if (dropProb < 0.1) this.drops.push(new RedGem(this.room, 0, 0));
       else this.drops.push(new Coin(this.room, 0, 0));
     }
-  }
-
-  get name() {
-    return "giant skeleton";
   }
 
   addHitWarnings = () => {

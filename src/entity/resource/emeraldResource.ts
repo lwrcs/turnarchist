@@ -16,10 +16,7 @@ export class EmeraldResource extends Resource {
     this.tileX = 14;
     this.tileY = 0;
     this.health = 3;
-  }
-
-  get name() {
-    return "emerald";
+    this.name = "emerald";
   }
 
   hurtCallback = () => {

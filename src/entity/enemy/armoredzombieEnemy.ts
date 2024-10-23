@@ -43,6 +43,7 @@ export class ArmoredzombieEnemy extends Enemy {
     this.seenPlayer = false;
     this.aggro = false;
     this.deathParticleColor = "#ffffff";
+    this.name = "armored zombie";
 
     if (drop) this.drop = drop;
     else {
@@ -51,10 +52,6 @@ export class ArmoredzombieEnemy extends Enemy {
       else if (dropProb < 0.01) this.drop = new GreenGem(this.room, 0, 0);
       else this.drop = new Coin(this.room, 0, 0);
     }
-  }
-
-  get name() {
-    return "zombie";
   }
 
   hit = (): number => {

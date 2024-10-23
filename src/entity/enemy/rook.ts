@@ -16,10 +16,7 @@ export class Rook extends Enemy {
     this.tileY = 2;
     this.hasShadow = false;
     this.pushable = true;
-  }
-
-  get name() {
-    return "rook";
+    this.name = "rook";
   }
 
   kill = () => {

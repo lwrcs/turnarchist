@@ -1,24 +1,27 @@
-type EventCallback = (...args: any[]) => void;
+type EventCallback<T = any> = (data: T) => void;
 
 export class EventEmitter {
   private events: Record<string, EventCallback[]> = {};
 
-  on(event: string, listener: EventCallback) {
+  on<T>(event: string, listener: EventCallback<T>): void {
     if (!this.events[event]) {
       this.events[event] = [];
     }
     this.events[event].push(listener);
   }
 
-  off(event: string, listener: EventCallback) {
+  off<T>(event: string, listener: EventCallback<T>): void {
     if (!this.events[event]) return;
-
     this.events[event] = this.events[event].filter((l) => l !== listener);
   }
 
-  emit(event: string, ...args: any[]) {
+  emit<T>(event: string, data: T): void {
     if (!this.events[event]) return;
+    this.events[event].forEach((listener) => listener(data));
+  }
 
-    this.events[event].forEach((listener) => listener(...args));
+  // New method to remove all listeners for an event
+  removeAllListeners(event: string): void {
+    delete this.events[event];
   }
 }

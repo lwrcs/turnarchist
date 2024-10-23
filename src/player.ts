@@ -22,12 +22,6 @@ import { PostProcessor } from "./postProcess";
 import { Weapon } from "./weapon/weapon";
 import { Room } from "./room";
 import { ImageParticle } from "./particle/imageParticle";
-import {
-  gameEvents,
-  GameEvent,
-  PlayerMoveData,
-  RoomChangeData,
-} from "./eventManager";
 
 export enum PlayerDirection {
   DOWN = 0,
@@ -121,7 +115,6 @@ export class Player extends Drawable {
     this.actionTab = new ActionTab(this.inventory, this.game);
     this.turnCount = 0;
     this.triedMove = false;
-    this.id = Game.getPlayerId();
   }
 
   inputHandler = (input: InputEnum) => {
@@ -463,15 +456,6 @@ export class Player extends Drawable {
     }
 
     this.game.rooms[this.levelID].updateLighting();
-
-    // Add event emission
-    const moveData: PlayerMoveData = {
-      playerId: this.id,
-      newX: this.x,
-      newY: this.y,
-    };
-    gameEvents.emit(GameEvent.PLAYER_MOVE, moveData);
-    console.log("Player move event emitted");
   };
 
   moveNoSmooth = (x: number, y: number) => {
@@ -599,18 +583,4 @@ export class Player extends Drawable {
     this.drawX += -0.5 * this.drawX;
     this.drawY += -0.5 * this.drawY;
   };
-
-  changeRoom(newRoomId: string): void {
-    const oldRoomId = this.levelID.toString();
-    // Existing room change logic
-    this.levelID = parseInt(newRoomId);
-
-    // Add event emission
-    const roomChangeData: RoomChangeData = {
-      playerId: this.id,
-      oldRoomId: oldRoomId,
-      newRoomId: newRoomId,
-    };
-    gameEvents.emit(GameEvent.ROOM_CHANGE, roomChangeData);
-  }
 }

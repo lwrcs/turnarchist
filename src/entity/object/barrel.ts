@@ -16,10 +16,7 @@ export class Barrel extends Entity {
     this.tileY = 0;
     this.hasShadow = false;
     this.pushable = true;
-  }
-
-  get name() {
-    return "barrel";
+    this.name = "barrel";
   }
 
   get type() {
