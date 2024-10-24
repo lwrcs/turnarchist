@@ -7657,6 +7657,20 @@ var loadGameState = function (game, activeUsernames, gameState, newWorld) {
     }
     random_1.Random.setState(gameState.randomState);
     game.room.updateLighting();
+    var p = game.players[game.localPlayerID];
+    game.room.items.push(new dagger_1.Dagger(game.room, p.x, p.y - 1));
+    setTimeout(function () {
+        game.pushMessage("Welcome to Turnarchist");
+    }, 500);
+    setTimeout(function () {
+        game.pushMessage("Movement: arrow keys");
+    }, 1500);
+    setTimeout(function () {
+        game.pushMessage("Inventory: I, Equip: space bar");
+    }, 2500);
+    setTimeout(function () {
+        game.pushMessage("type /h for a list of commands (not implemented)");
+    }, 3500);
     game.chat = [];
 };
 exports.loadGameState = loadGameState;
@@ -8148,9 +8162,7 @@ var equippable_1 = __webpack_require__(/*! ./item/equippable */ "./src/item/equi
 var armor_1 = __webpack_require__(/*! ./item/armor */ "./src/item/armor.ts");
 var coin_1 = __webpack_require__(/*! ./item/coin */ "./src/item/coin.ts");
 var weapon_1 = __webpack_require__(/*! ./weapon/weapon */ "./src/weapon/weapon.ts");
-var dagger_1 = __webpack_require__(/*! ./weapon/dagger */ "./src/weapon/dagger.ts");
 var usable_1 = __webpack_require__(/*! ./item/usable */ "./src/item/usable.ts");
-var heart_1 = __webpack_require__(/*! ./item/heart */ "./src/item/heart.ts");
 var OPEN_TIME = 100; // milliseconds
 var FILL_COLOR = "#5a595b";
 var OUTLINE_COLOR = "#292c36";
@@ -8563,7 +8575,7 @@ var Inventory = /** @class */ (function () {
             }
             _this.addItem(i);
         };
-        var startingInv = [dagger_1.Dagger, heart_1.Heart];
+        var startingInv = [];
         startingInv.forEach(function (item) {
             a(new item({ game: _this.game }, 0, 0));
         });
@@ -9262,7 +9274,10 @@ var Item = /** @class */ (function (_super) {
         };
         // Function to get the amount of shade at the item's location
         _this.shadeAmount = function () {
-            return _this.level.softVis[_this.x][_this.y];
+            if (!_this.x || !_this.y)
+                return 0;
+            else
+                return _this.level.softVis[_this.x][_this.y];
         };
         // Function to draw the item
         _this.draw = function (delta) {

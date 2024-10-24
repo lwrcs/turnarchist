@@ -797,6 +797,7 @@ export const loadGameState = (
           game.rooms[game.levelgen.currentFloorFirstLevelID].height / 2
         );
       game.room = game.rooms[game.levelgen.currentFloorFirstLevelID];
+
       game.room.enterLevel(game.players[game.localPlayerID]);
     } else {
       game.room = game.rooms[game.players[game.localPlayerID].levelID];
@@ -809,6 +810,21 @@ export const loadGameState = (
   }
   Random.setState(gameState.randomState);
   game.room.updateLighting();
+  let p = game.players[game.localPlayerID];
+  game.room.items.push(new Dagger(game.room, p.x, p.y - 1));
+
+  setTimeout(() => {
+    game.pushMessage("Welcome to Turnarchist");
+  }, 500);
+  setTimeout(() => {
+    game.pushMessage("Movement: arrow keys");
+  }, 1500);
+  setTimeout(() => {
+    game.pushMessage("Inventory: I, Equip: space bar");
+  }, 2500);
+  setTimeout(() => {
+    game.pushMessage("type /h for a list of commands (not implemented)");
+  }, 3500);
 
   game.chat = [];
 };

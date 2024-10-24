@@ -62,7 +62,7 @@ export class Item extends Drawable {
   };
 
   // Empty function to be called when item is dropped, to be overridden by subclasses
-  onDrop = () => {}
+  onDrop = () => {};
 
   // Function to be called when item is picked up
   onPickup = (player: Player) => {
@@ -74,7 +74,8 @@ export class Item extends Drawable {
 
   // Function to get the amount of shade at the item's location
   shadeAmount = () => {
-    return this.level.softVis[this.x][this.y];
+    if (!this.x || !this.y) return 0;
+    else return this.level.softVis[this.x][this.y];
   };
 
   // Function to draw the item

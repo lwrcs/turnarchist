@@ -61,7 +61,6 @@ export class Player extends Drawable {
   lastHitBy: string;
   turnCount: number;
   triedMove: boolean;
-
   constructor(game: Game, x: number, y: number, isLocalPlayer: boolean) {
     super();
 

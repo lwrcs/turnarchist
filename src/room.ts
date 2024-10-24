@@ -69,6 +69,7 @@ import { SniperEnemy } from "./entity/enemy/sniperEnemy";
 import { EventEmitter } from "./eventEmitter";
 import { Enemy } from "./entity/enemy/enemy";
 import { fireWizardEnemy } from "./entity/enemy/fireWizard";
+import { Dagger } from "./weapon/dagger";
 
 export enum RoomType {
   START,
