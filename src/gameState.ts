@@ -340,7 +340,7 @@ let loadEnemy = (es: EnemyState, game: Game): Entity => {
     for (const d of es.drops) enemy.drops.push(loadItem(d, game));
   }
   if (es.type === EnemyType.CHARGE) {
-    enemy = new ChargeEnemy(level, game, es.x, es.y);
+    enemy = new ChargeEnemy(level, game, es.x, es.y, Random.rand);
     enemy.ticks = es.ticks;
     enemy.state = es.chargeEnemyState;
     enemy.startX = es.startX;

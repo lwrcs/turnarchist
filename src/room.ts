@@ -56,7 +56,6 @@ import { BishopEnemy } from "./entity/enemy/bishopEnemy";
 import { Rook } from "./entity/enemy/rook";
 import { Rock } from "./entity/resource/rockResource";
 import { Mushrooms } from "./entity/object/mushrooms";
-import { TurningEnemy } from "./entity/enemy/turningEnemy";
 import { ArmoredzombieEnemy } from "./entity/enemy/armoredzombieEnemy";
 import { Backpack } from "./item/backpack";
 import { DoorDir } from "./tile/door";
@@ -69,6 +68,7 @@ import { BigKnightEnemy } from "./entity/enemy/bigKnightEnemy";
 import { SniperEnemy } from "./entity/enemy/sniperEnemy";
 import { EventEmitter } from "./eventEmitter";
 import { Enemy } from "./entity/enemy/enemy";
+import { fireWizardEnemy } from "./entity/enemy/fireWizard";
 
 export enum RoomType {
   START,
@@ -346,7 +346,7 @@ export class Room {
       // Define the enemy tables for each depth level
 
       let tables = {
-        0: [1, 2, 3, 5], //this.generateLevelTable(rand),
+        0: [16], //this.generateLevelTable(rand),
         1: [3, 4, 5, 9, 7],
         2: [3, 4, 5, 7, 8, 9, 12],
         3: [1, 2, 3, 5, 6, 7, 8, 9, 10],
@@ -402,7 +402,7 @@ export class Room {
             addEnemy(new WizardEnemy(this, this.game, x, y, rand));
             break;
           case 6:
-            addEnemy(new ChargeEnemy(this, this.game, x, y));
+            addEnemy(new ChargeEnemy(this, this.game, x, y, rand));
             break;
           case 7:
             addEnemy(new Spawner(this, this.game, x, y, rand));
@@ -449,6 +449,12 @@ export class Room {
             break;
           case 14:
             addEnemy(new SniperEnemy(this, this.game, x, y, rand));
+            break;
+          case 15:
+            addEnemy(new Enemy(this, this.game, x, y, rand));
+            break;
+          case 16:
+            addEnemy(new fireWizardEnemy(this, this.game, x, y, rand));
             break;
         }
       }

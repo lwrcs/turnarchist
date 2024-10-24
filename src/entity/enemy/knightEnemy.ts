@@ -28,7 +28,7 @@ export class KnightEnemy extends Enemy {
     rand: () => number,
     drop?: Item
   ) {
-    super(room, game, x, y);
+    super(room, game, x, y, rand);
     this.ticks = 0;
     this.frame = 0;
     this.health = 2;

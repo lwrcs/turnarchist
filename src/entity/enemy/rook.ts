@@ -7,8 +7,14 @@ import { GenericParticle } from "../../particle/genericParticle";
 import { Enemy } from "./enemy";
 
 export class Rook extends Enemy {
-  constructor(room: Room, game: Game, x: number, y: number) {
-    super(room, game, x, y);
+  constructor(
+    room: Room,
+    game: Game,
+    x: number,
+    y: number,
+    rand: () => number
+  ) {
+    super(room, game, x, y, rand);
     this.room = room;
     this.health = 1;
     this.maxHealth = 1;

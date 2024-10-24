@@ -19,6 +19,7 @@ import { Item } from "../../item/item";
 import { Enemy } from "./enemy";
 import { SpikeTrap } from "../../tile/spiketrap";
 import { HitWarning } from "../../hitWarning";
+import { WizardBomb } from "../../projectile/wizardBomb";
 
 export enum WizardState {
   idle,
@@ -27,7 +28,7 @@ export enum WizardState {
   teleport,
 }
 
-export class WizardEnemy extends Enemy {
+export class fireWizardEnemy extends Enemy {
   ticks: number;
   state: WizardState;
   frame: number;
@@ -46,14 +47,14 @@ export class WizardEnemy extends Enemy {
     super(room, game, x, y, rand);
     this.ticks = 0;
     this.health = 1;
-    this.tileX = 6;
-    this.tileY = 0;
+    this.tileX = 35;
+    this.tileY = 8;
     this.frame = 0;
     this.state = WizardState.attack;
     this.seenPlayer = false;
     this.alertTicks = 0;
     this.rand = rand;
-    this.name = "wizard bomber";
+    this.name = "fire wizard";
     if (drop) this.drop = drop;
     else {
       if (this.rand() < 0.02)
@@ -138,7 +139,7 @@ export class WizardEnemy extends Enemy {
                   { x: 3, y: 0 },
                   { x: -3, y: 0 },
                 ],
-                WizardFireball,
+                WizardBomb,
                 false
               );
             }
@@ -199,10 +200,9 @@ export class WizardEnemy extends Enemy {
   };
 
   draw = (delta: number) => {
+    this.frame += 0.1 * delta;
+    if (this.frame >= 4) this.frame = 0;
     if (!this.dead) {
-      if (this.state === WizardState.attack) this.tileX = 7;
-      else this.tileX = 6;
-
       if (this.hasShadow)
         Game.drawMob(
           0,
@@ -218,8 +218,8 @@ export class WizardEnemy extends Enemy {
         );
       if (this.frame >= 0) {
         Game.drawMob(
-          Math.floor(this.frame) + 6,
-          2,
+          this.tileX + Math.floor(this.frame),
+          this.tileY,
           1,
           2,
           this.x,
@@ -229,8 +229,6 @@ export class WizardEnemy extends Enemy {
           this.room.shadeColor,
           this.shadeAmount()
         );
-        this.frame += 0.4 * delta;
-        if (this.frame > 11) this.frame = -1;
       } else {
         Game.drawMob(
           this.tileX,

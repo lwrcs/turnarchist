@@ -32,7 +32,7 @@ export class Spawner extends Enemy {
     y: number,
     rand: () => number
   ) {
-    super(room, game, x, y);
+    super(room, game, x, y, rand);
     this.ticks = 0;
     this.health = 4;
     this.maxHealth = 4;

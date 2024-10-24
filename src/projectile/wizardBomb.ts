@@ -6,7 +6,7 @@ import { HitWarning } from "../hitWarning";
 import { Entity } from "../entity/entity";
 import { Enemy } from "../entity/enemy/enemy";
 
-export class WizardFireball extends Projectile {
+export class WizardBomb extends Projectile {
   state: number;
   frame: number;
   parent: Entity;
@@ -78,13 +78,13 @@ export class WizardFireball extends Projectile {
       if (this.state === 0) {
         this.frame += 0.25 * delta;
         if (this.frame >= 4) this.frame = 0;
-        Game.drawFX(22 + Math.floor(this.frame), 7, 1, 1, this.x, this.y, 1, 1);
+        Game.drawFX(22 + Math.floor(this.frame), 8, 1, 1, this.x, this.y, 1, 1);
       } else if (this.state === 1) {
         this.frame += 0.25 * delta;
         if (this.frame >= 4) this.frame = 0;
         Game.drawFX(
           18 + Math.floor(this.frame),
-          7,
+          8,
           1,
           1,
           this.x,

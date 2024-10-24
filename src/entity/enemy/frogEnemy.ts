@@ -35,7 +35,7 @@ export class FrogEnemy extends Enemy {
     rand: () => number,
     drop?: Item
   ) {
-    super(room, game, x, y);
+    super(room, game, x, y, rand);
     this.ticks = 0;
     this.frame = 0;
     this.health = 1;
@@ -218,7 +218,7 @@ export class FrogEnemy extends Enemy {
               }
             }
           } else {
-            this.makeHitWarnings(true, true, false, this.direction, 2);
+            this.makeHitWarnings(true, true, false, this.direction, 1);
             this.rumbling = true;
             this.tileX = 3;
             this.frame = 0;
