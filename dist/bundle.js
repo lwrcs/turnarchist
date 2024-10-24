@@ -2487,10 +2487,6 @@ var fireWizardEnemy = /** @class */ (function (_super) {
                                     { x: 0, y: -2 },
                                     { x: 0, y: 1 },
                                     { x: 0, y: 2 },
-                                    { x: 0, y: 3 },
-                                    { x: 0, y: -3 },
-                                    { x: 3, y: 0 },
-                                    { x: -3, y: 0 },
                                 ], wizardBomb_1.WizardBomb, false);
                             }
                             _this.state = WizardState.justAttacked;
@@ -2552,7 +2548,7 @@ var fireWizardEnemy = /** @class */ (function (_super) {
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
                 if (_this.frame >= 0) {
-                    game_1.Game.drawMob(_this.tileX + Math.floor(_this.frame), _this.tileY, 1, 2, _this.x, _this.y - 1.5, 1, 2, _this.room.shadeColor, _this.shadeAmount());
+                    game_1.Game.drawMob(_this.tileX + Math.floor(_this.frame), _this.tileY, 1, 2, _this.x, _this.y - 1.3, 1, 2, _this.room.shadeColor, _this.shadeAmount());
                 }
                 else {
                     game_1.Game.drawMob(_this.tileX, _this.tileY, 1, 2, _this.x - _this.drawX, _this.y - 1.3 - _this.drawY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
@@ -4073,10 +4069,6 @@ var WizardEnemy = /** @class */ (function (_super) {
                                     { x: 0, y: -2 },
                                     { x: 0, y: 1 },
                                     { x: 0, y: 2 },
-                                    { x: 0, y: 3 },
-                                    { x: 0, y: -3 },
-                                    { x: 3, y: 0 },
-                                    { x: -3, y: 0 },
                                 ], wizardFireball_1.WizardFireball, false);
                             }
                             _this.state = WizardState.justAttacked;
@@ -12938,7 +12930,7 @@ var Room = /** @class */ (function () {
             var y = t.y;
             // Define the enemy tables for each depth level
             var tables = {
-                0: [16],
+                0: [16, 5],
                 1: [3, 4, 5, 9, 7],
                 2: [3, 4, 5, 7, 8, 9, 12],
                 3: [1, 2, 3, 5, 6, 7, 8, 9, 10],
