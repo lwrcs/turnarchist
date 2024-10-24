@@ -13,6 +13,7 @@ import { GameConstants } from "../gameConstants";
 import { HitWarning } from "../hitWarning";
 import { Sound } from "../sound";
 import { Projectile } from "../projectile/projectile";
+import { Utils } from "../utils";
 
 export enum EntityDirection {
   DOWN,
@@ -512,40 +513,31 @@ export class Entity extends Drawable {
     orthoRange: number = 1,
     diagRange: number = 1
   ) => {
-    const addWarning = (dx: number, dy: number) => {
-      this.room.hitwarnings.push(
-        new HitWarning(this.game, this.x + dx, this.y + dy, this.x, this.y)
+    const cullFactor = 0.25;
+    const player: Player = this.getPlayer();
+    console.log(`player.x: ${player.x}, player.y: ${player.y}`);
+
+    const generateOffsets = (
+      isOrthogonal: boolean,
+      range: number
+    ): number[][] => {
+      const baseOffsets = isOrthogonal
+        ? [
+            [-1, 0],
+            [1, 0],
+            [0, -1],
+            [0, 1],
+          ]
+        : [
+            [-1, -1],
+            [1, 1],
+            [1, -1],
+            [-1, 1],
+          ];
+      return baseOffsets.flatMap(([dx, dy]) =>
+        Array.from({ length: range }, (_, i) => [(i + 1) * dx, (i + 1) * dy])
       );
     };
-
-    const generateOffsets = (baseOffsets: number[][], range: number) => {
-      let extendedOffsets: number[][] = [];
-      for (let i = 1; i <= range; i++) {
-        baseOffsets.forEach(([dx, dy]) => {
-          extendedOffsets.push([dx * i, dy * i]);
-        });
-      }
-      return extendedOffsets;
-    };
-
-    const orthogonalOffsets = generateOffsets(
-      [
-        [-1, 0],
-        [1, 0],
-        [0, -1],
-        [0, 1],
-      ],
-      orthoRange
-    );
-    const diagonalOffsets = generateOffsets(
-      [
-        [-1, -1],
-        [1, 1],
-        [1, -1],
-        [-1, 1],
-      ],
-      diagRange
-    );
 
     const directionOffsets = {
       [EntityDirection.LEFT]: [-1, 0],
@@ -554,19 +546,38 @@ export class Entity extends Drawable {
       [EntityDirection.DOWN]: [0, 1],
     };
 
-    if (!forwardOnly) {
-      if (orthogonal) {
-        orthogonalOffsets.forEach(([dx, dy]) => addWarning(dx, dy));
-      }
-      if (diagonal) {
-        diagonalOffsets.forEach(([dx, dy]) => addWarning(dx, dy));
-      }
-    } else {
+    let offsets: number[][] = [];
+    if (forwardOnly) {
       const [dx, dy] = directionOffsets[direction];
-      for (let i = 1; i <= orthoRange; i++) {
-        addWarning(dx * i, dy * i);
-      }
+      offsets = Array.from({ length: orthoRange }, (_, i) => [
+        (i + 1) * dx,
+        (i + 1) * dy,
+      ]);
+    } else {
+      if (orthogonal) offsets.push(...generateOffsets(true, orthoRange));
+      if (diagonal) offsets.push(...generateOffsets(false, diagRange));
     }
+
+    const warningCoordinates = offsets
+      .map(([dx, dy]) => ({
+        x: dx,
+        y: dy,
+        distance: Utils.distance(dx, dy, player.x - this.x, player.y - this.y),
+      }))
+      .sort((a, b) => a.distance - b.distance);
+
+    const keepCount = Math.ceil(warningCoordinates.length * (1 - cullFactor));
+    const culledWarnings = warningCoordinates.slice(0, keepCount);
+
+    culledWarnings.forEach(({ x, y }) => {
+      const targetX = this.x + x;
+      const targetY = this.y + y;
+      if (this.isWithinRoomBounds(targetX, targetY)) {
+        this.room.hitwarnings.push(
+          new HitWarning(this.game, targetX, targetY, this.x, this.y)
+        );
+      }
+    });
   };
 
   isWithinRoomBounds = (x: number, y: number): boolean => {

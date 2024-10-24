@@ -2,56 +2,6 @@
 /******/ 	"use strict";
 /******/ 	var __webpack_modules__ = ({
 
-/***/ "./src/actionTab.ts":
-/*!**************************!*\
-  !*** ./src/actionTab.ts ***!
-  \**************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ActionTab = exports.ActionState = void 0;
-var game_1 = __webpack_require__(/*! ./game */ "./src/game.ts");
-var levelConstants_1 = __webpack_require__(/*! ./levelConstants */ "./src/levelConstants.ts");
-var gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/gameConstants.ts");
-var ActionState;
-(function (ActionState) {
-    ActionState[ActionState["READY"] = 0] = "READY";
-    ActionState[ActionState["ATTACK"] = 1] = "ATTACK";
-    ActionState[ActionState["WAIT"] = 2] = "WAIT";
-    ActionState[ActionState["HALFATTACK"] = 3] = "HALFATTACK";
-    ActionState[ActionState["MOVE"] = 4] = "MOVE";
-})(ActionState = exports.ActionState || (exports.ActionState = {}));
-var ActionTab = /** @class */ (function () {
-    function ActionTab(inventory, game) {
-        var _this = this;
-        this.tick = function () { };
-        this.getWeapon = function (player) {
-            _this.weapon = player.inventory.weapon;
-        };
-        this.setState = function (state) {
-            _this.actionState = state;
-        };
-        this.draw = function (delta) {
-            var tabX = levelConstants_1.LevelConstants.SCREEN_W / 2;
-            var tabY = levelConstants_1.LevelConstants.SCREEN_H - 1;
-            var action = _this.actionState;
-            var actionString = "" + ActionState[action];
-            var width = game_1.Game.measureText(actionString).width;
-            var actionX = 4 - width / 2;
-            var actionY = -1;
-            game_1.Game.fillTextOutline(actionString, tabX * gameConstants_1.GameConstants.TILESIZE + actionX, tabY * gameConstants_1.GameConstants.TILESIZE + actionY, gameConstants_1.GameConstants.OUTLINE, "white");
-        };
-        this.weapon = inventory.weapon;
-        this.game = game;
-    }
-    return ActionTab;
-}());
-exports.ActionTab = ActionTab;
-
-
-/***/ }),
-
 /***/ "./src/astarclass.ts":
 /*!***************************!*\
   !*** ./src/astarclass.ts ***!
@@ -4106,6 +4056,7 @@ var healthbar_1 = __webpack_require__(/*! ../healthbar */ "./src/healthbar.ts");
 var drawable_1 = __webpack_require__(/*! ../drawable */ "./src/drawable.ts");
 var gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
 var hitWarning_1 = __webpack_require__(/*! ../hitWarning */ "./src/hitWarning.ts");
+var utils_1 = __webpack_require__(/*! ../utils */ "./src/utils.ts");
 var EntityDirection;
 (function (EntityDirection) {
     EntityDirection[EntityDirection["DOWN"] = 0] = "DOWN";
@@ -4404,60 +4355,68 @@ var Entity = /** @class */ (function (_super) {
             var _a;
             if (orthoRange === void 0) { orthoRange = 1; }
             if (diagRange === void 0) { diagRange = 1; }
-            var addWarning = function (dx, dy) {
-                _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x + dx, _this.y + dy, _this.x, _this.y));
+            var cullFactor = 0.25;
+            var player = _this.getPlayer();
+            console.log("player.x: ".concat(player.x, ", player.y: ").concat(player.y));
+            var generateOffsets = function (isOrthogonal, range) {
+                var baseOffsets = isOrthogonal
+                    ? [
+                        [-1, 0],
+                        [1, 0],
+                        [0, -1],
+                        [0, 1],
+                    ]
+                    : [
+                        [-1, -1],
+                        [1, 1],
+                        [1, -1],
+                        [-1, 1],
+                    ];
+                return baseOffsets.flatMap(function (_a) {
+                    var dx = _a[0], dy = _a[1];
+                    return Array.from({ length: range }, function (_, i) { return [(i + 1) * dx, (i + 1) * dy]; });
+                });
             };
-            var generateOffsets = function (baseOffsets, range) {
-                var extendedOffsets = [];
-                var _loop_1 = function (i) {
-                    baseOffsets.forEach(function (_a) {
-                        var dx = _a[0], dy = _a[1];
-                        extendedOffsets.push([dx * i, dy * i]);
-                    });
-                };
-                for (var i = 1; i <= range; i++) {
-                    _loop_1(i);
-                }
-                return extendedOffsets;
-            };
-            var orthogonalOffsets = generateOffsets([
-                [-1, 0],
-                [1, 0],
-                [0, -1],
-                [0, 1],
-            ], orthoRange);
-            var diagonalOffsets = generateOffsets([
-                [-1, -1],
-                [1, 1],
-                [1, -1],
-                [-1, 1],
-            ], diagRange);
             var directionOffsets = (_a = {},
                 _a[EntityDirection.LEFT] = [-1, 0],
                 _a[EntityDirection.RIGHT] = [1, 0],
                 _a[EntityDirection.UP] = [0, -1],
                 _a[EntityDirection.DOWN] = [0, 1],
                 _a);
-            if (!forwardOnly) {
-                if (orthogonal) {
-                    orthogonalOffsets.forEach(function (_a) {
-                        var dx = _a[0], dy = _a[1];
-                        return addWarning(dx, dy);
-                    });
-                }
-                if (diagonal) {
-                    diagonalOffsets.forEach(function (_a) {
-                        var dx = _a[0], dy = _a[1];
-                        return addWarning(dx, dy);
-                    });
-                }
+            var offsets = [];
+            if (forwardOnly) {
+                var _b = directionOffsets[direction], dx_1 = _b[0], dy_1 = _b[1];
+                offsets = Array.from({ length: orthoRange }, function (_, i) { return [
+                    (i + 1) * dx_1,
+                    (i + 1) * dy_1,
+                ]; });
             }
             else {
-                var _b = directionOffsets[direction], dx = _b[0], dy = _b[1];
-                for (var i = 1; i <= orthoRange; i++) {
-                    addWarning(dx * i, dy * i);
-                }
+                if (orthogonal)
+                    offsets.push.apply(offsets, generateOffsets(true, orthoRange));
+                if (diagonal)
+                    offsets.push.apply(offsets, generateOffsets(false, diagRange));
             }
+            var warningCoordinates = offsets
+                .map(function (_a) {
+                var dx = _a[0], dy = _a[1];
+                return ({
+                    x: dx,
+                    y: dy,
+                    distance: utils_1.Utils.distance(dx, dy, player.x - _this.x, player.y - _this.y),
+                });
+            })
+                .sort(function (a, b) { return a.distance - b.distance; });
+            var keepCount = Math.ceil(warningCoordinates.length * (1 - cullFactor));
+            var culledWarnings = warningCoordinates.slice(0, keepCount);
+            culledWarnings.forEach(function (_a) {
+                var x = _a.x, y = _a.y;
+                var targetX = _this.x + x;
+                var targetY = _this.y + y;
+                if (_this.isWithinRoomBounds(targetX, targetY)) {
+                    _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, targetX, targetY, _this.x, _this.y));
+                }
+            });
         };
         _this.isWithinRoomBounds = function (x, y) {
             var xInBounds = x >= _this.room.roomX && x < _this.room.roomX + _this.room.width;
@@ -7379,19 +7338,19 @@ var HitWarning = /** @class */ (function (_super) {
                     break;
                 }
             }
-            /*for (const door of this.game.room.doors) {
-              if (door.x === this.x && door.y === this.y) {
-                this.dead = true;
-                break;
-              }
-            }*/
+            for (var _b = 0, _c = _this.game.room.doors; _b < _c.length; _b++) {
+                var door = _c[_b];
+                if (door.x === _this.x && door.y === _this.y) {
+                    _this.dead = true;
+                    break;
+                }
+            }
         };
         _this.draw = function (delta) {
             if (Math.abs(_this.x - _this.game.players[_this.game.localPlayerID].x) <= 1 &&
                 Math.abs(_this.y - _this.game.players[_this.game.localPlayerID].y) <= 1) {
                 if (_this.isEnemy) {
-                    var offset = _this.getPointerOffset();
-                    game_1.Game.drawFX(_this.tileX + Math.floor(HitWarning.frame), _this.tileY, 1, 1, _this.x + offset.x, _this.y + offset.y - _this.offsetY, 1, 1);
+                    game_1.Game.drawFX(_this.tileX + Math.floor(HitWarning.frame), _this.tileY, 1, 1, _this.x + _this.pointerOffset.x, _this.y + _this.pointerOffset.y - _this.offsetY, 1, 1);
                 }
                 if (!_this.dirOnly) {
                     game_1.Game.drawFX(18 + Math.floor(HitWarning.frame), 5, 1, 1, _this.x, _this.y - _this.offsetY + 0, 1, 1);
@@ -7400,8 +7359,7 @@ var HitWarning = /** @class */ (function (_super) {
         };
         _this.drawTopLayer = function (delta) {
             if (_this.isEnemy) {
-                var offset = _this.getPointerOffset();
-                game_1.Game.drawFX(_this.tileX + Math.floor(HitWarning.frame), _this.tileY + 1, 1, 1, _this.x + offset.x, _this.y + offset.y - _this.offsetY, 1, 1);
+                game_1.Game.drawFX(_this.tileX + Math.floor(HitWarning.frame), _this.tileY + 1, 1, 1, _this.x + _this.pointerOffset.x, _this.y + _this.pointerOffset.y - _this.offsetY, 1, 1);
             }
             if (Math.abs(_this.x - _this.game.players[_this.game.localPlayerID].x) <= 1 &&
                 Math.abs(_this.y - _this.game.players[_this.game.localPlayerID].y) <= 1) {
@@ -7421,6 +7379,7 @@ var HitWarning = /** @class */ (function (_super) {
         _this.offsetY = 0.2;
         _this.dirOnly = dirOnly;
         _this.isEnemy = isEnemy !== undefined ? isEnemy : true;
+        _this.pointerOffset = _this.getPointerOffset();
         _this.removeOverlapping();
         return _this;
     }
@@ -10621,7 +10580,6 @@ var map_1 = __webpack_require__(/*! ./map */ "./src/map.ts");
 var slashParticle_1 = __webpack_require__(/*! ./particle/slashParticle */ "./src/particle/slashParticle.ts");
 var healthbar_1 = __webpack_require__(/*! ./healthbar */ "./src/healthbar.ts");
 var drawable_1 = __webpack_require__(/*! ./drawable */ "./src/drawable.ts");
-var actionTab_1 = __webpack_require__(/*! ./actionTab */ "./src/actionTab.ts");
 var hitWarning_1 = __webpack_require__(/*! ./hitWarning */ "./src/hitWarning.ts");
 var postProcess_1 = __webpack_require__(/*! ./postProcess */ "./src/postProcess.ts");
 var PlayerDirection;
@@ -10870,7 +10828,7 @@ var Player = /** @class */ (function (_super) {
                         if (!e.dead) {
                             if (e.interactable)
                                 e.interact(_this);
-                            _this.actionTab.actionState = actionTab_1.ActionState.ATTACK;
+                            //this.actionTab.actionState = ActionState.ATTACK;
                             //sets the action tab state to Attack
                             return;
                         }
@@ -10939,7 +10897,7 @@ var Player = /** @class */ (function (_super) {
             return Math.abs(_this.drawX) < EPSILON && Math.abs(_this.drawY) < EPSILON;
         };
         _this.move = function (x, y) {
-            _this.actionTab.setState(actionTab_1.ActionState.MOVE);
+            //this.actionTab.setState(ActionState.MOVE);
             if (_this.game.rooms[_this.levelID] === _this.game.room)
                 sound_1.Sound.playerStoneFootstep();
             if (_this.openVendingMachine)
@@ -10978,7 +10936,7 @@ var Player = /** @class */ (function (_super) {
             if (totalHealthDiff < 0) {
                 _this.flashing = true;
             }
-            _this.actionTab.actionState = actionTab_1.ActionState.READY;
+            //this.actionTab.actionState = ActionState.READY;
             //Sets the action tab state to Wait (during enemy turn)
         };
         _this.drawPlayerSprite = function (delta) {
@@ -11012,7 +10970,7 @@ var Player = /** @class */ (function (_super) {
         _this.drawGUI = function (delta) {
             if (!_this.dead) {
                 _this.inventory.draw(delta);
-                _this.actionTab.draw(delta);
+                //this.actionTab.draw(delta);
                 if (_this.guiHeartFrame > 0)
                     _this.guiHeartFrame += delta;
                 if (_this.guiHeartFrame > 5) {
@@ -11093,7 +11051,7 @@ var Player = /** @class */ (function (_super) {
         _this.defaultSightRadius = 6;
         _this.sightRadius = _this.defaultSightRadius;
         _this.map = new map_1.Map(_this.game, _this);
-        _this.actionTab = new actionTab_1.ActionTab(_this.inventory, _this.game);
+        //this.actionTab = new ActionTab(this.inventory, this.game);
         _this.turnCount = 0;
         _this.triedMove = false;
         return _this;
@@ -11515,7 +11473,7 @@ var rockResource_1 = __webpack_require__(/*! ./entity/resource/rockResource */ "
 var mushrooms_1 = __webpack_require__(/*! ./entity/object/mushrooms */ "./src/entity/object/mushrooms.ts");
 var armoredzombieEnemy_1 = __webpack_require__(/*! ./entity/enemy/armoredzombieEnemy */ "./src/entity/enemy/armoredzombieEnemy.ts");
 var door_2 = __webpack_require__(/*! ./tile/door */ "./src/tile/door.ts");
-var actionTab_1 = __webpack_require__(/*! ./actionTab */ "./src/actionTab.ts");
+//import { ActionState, ActionTab } from "./actionTab";
 var tombStone_1 = __webpack_require__(/*! ./entity/object/tombStone */ "./src/entity/object/tombStone.ts");
 var queenEnemy_1 = __webpack_require__(/*! ./entity/enemy/queenEnemy */ "./src/entity/enemy/queenEnemy.ts");
 var frogEnemy_1 = __webpack_require__(/*! ./entity/enemy/frogEnemy */ "./src/entity/enemy/frogEnemy.ts");
@@ -11557,6 +11515,7 @@ var Room = /** @class */ (function () {
         if (rand === void 0) { rand = random_1.Random.rand; }
         var _this = this;
         this.shadeColor = "black";
+        //actionTab: ActionTab;
         this.wallInfo = new Map();
         this.tileInside = function (tileX, tileY) {
             return _this.pointInside(tileX, tileY, _this.roomX, _this.roomY, _this.width, _this.height);
@@ -12051,7 +12010,7 @@ var Room = /** @class */ (function () {
                 }
             }
             _this.turn = TurnState.computerTurn;
-            player.actionTab.setState(actionTab_1.ActionState.WAIT);
+            //player.actionTab.setState(ActionState.WAIT);
             //sets the action tab state to Ready
             _this.playerTurnTime = Date.now();
             _this.playerTicked = player;
@@ -14117,6 +14076,28 @@ var WallTorch = /** @class */ (function (_super) {
     return WallTorch;
 }(tile_1.Tile));
 exports.WallTorch = WallTorch;
+
+
+/***/ }),
+
+/***/ "./src/utils.ts":
+/*!**********************!*\
+  !*** ./src/utils.ts ***!
+  \**********************/
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Utils = void 0;
+var Utils = /** @class */ (function () {
+    function Utils() {
+    }
+    Utils.distance = function (startX, startY, endX, endY) {
+        return Math.sqrt(Math.pow((endX - startX), 2) + Math.pow((endY - startY), 2));
+    };
+    return Utils;
+}());
+exports.Utils = Utils;
 
 
 /***/ }),

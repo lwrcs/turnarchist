@@ -29,9 +29,7 @@ export class HitWarning extends Drawable {
   private eX: number;
   private eY: number;
   private offsetY: number;
-  private pointerOffsetX: number;
-  private pointerOffsetY: number;
-  private animLength: number;
+  private pointerOffset: { x: number; y: number };
   private isEnemy: Boolean;
   private dirOnly: Boolean;
 
@@ -57,7 +55,7 @@ export class HitWarning extends Drawable {
     this.dirOnly = dirOnly;
 
     this.isEnemy = isEnemy !== undefined ? isEnemy : true;
-
+    this.pointerOffset = this.getPointerOffset();
     this.removeOverlapping();
   }
 
@@ -77,12 +75,12 @@ export class HitWarning extends Drawable {
         break;
       }
     }
-    /*for (const door of this.game.room.doors) {
+    for (const door of this.game.room.doors) {
       if (door.x === this.x && door.y === this.y) {
         this.dead = true;
         break;
       }
-    }*/
+    }
   };
 
   private getPointerDir(): Direction {
@@ -132,14 +130,13 @@ export class HitWarning extends Drawable {
       Math.abs(this.y - this.game.players[this.game.localPlayerID].y) <= 1
     ) {
       if (this.isEnemy) {
-        const offset = this.getPointerOffset();
         Game.drawFX(
           this.tileX + Math.floor(HitWarning.frame),
           this.tileY,
           1,
           1,
-          this.x + offset.x,
-          this.y + offset.y - this.offsetY,
+          this.x + this.pointerOffset.x,
+          this.y + this.pointerOffset.y - this.offsetY,
           1,
           1
         );
@@ -161,14 +158,13 @@ export class HitWarning extends Drawable {
 
   drawTopLayer = (delta: number) => {
     if (this.isEnemy) {
-      const offset = this.getPointerOffset();
       Game.drawFX(
         this.tileX + Math.floor(HitWarning.frame),
         this.tileY + 1,
         1,
         1,
-        this.x + offset.x,
-        this.y + offset.y - this.offsetY,
+        this.x + this.pointerOffset.x,
+        this.y + this.pointerOffset.y - this.offsetY,
         1,
         1
       );

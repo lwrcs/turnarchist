@@ -60,7 +60,7 @@ import { TurningEnemy } from "./entity/enemy/turningEnemy";
 import { ArmoredzombieEnemy } from "./entity/enemy/armoredzombieEnemy";
 import { Backpack } from "./item/backpack";
 import { DoorDir } from "./tile/door";
-import { ActionState, ActionTab } from "./actionTab";
+//import { ActionState, ActionTab } from "./actionTab";
 import { TombStone } from "./entity/object/tombStone";
 import { Pumpkin } from "./entity/object/pumpkin";
 import { QueenEnemy } from "./entity/enemy/queenEnemy";
@@ -143,7 +143,7 @@ export class Room {
   lightSources: Array<LightSource>;
   shadeColor = "black";
   walls: Array<Wall>;
-  actionTab: ActionTab;
+  //actionTab: ActionTab;
   wallInfo: Map<string, WallInfo> = new Map();
   private eventEmitter: EventEmitter;
 
@@ -1263,7 +1263,7 @@ export class Room {
     }
 
     this.turn = TurnState.computerTurn;
-    player.actionTab.setState(ActionState.WAIT);
+    //player.actionTab.setState(ActionState.WAIT);
     //sets the action tab state to Ready
     this.playerTurnTime = Date.now();
     this.playerTicked = player;
