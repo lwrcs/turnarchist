@@ -6,7 +6,6 @@ export class TextBox {
   allowedCharacters = "all";
   element: HTMLElement;
 
-
   constructor(element: HTMLElement) {
     this.text = "";
     this.cursor = 0;
@@ -47,7 +46,7 @@ export class TextBox {
           this.cursor += 1;
         }
       }
-      return
+      return;
     } else {
       switch (key) {
         case "Backspace":

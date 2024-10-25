@@ -22,6 +22,7 @@ import { PostProcessor } from "./postProcess";
 import { Weapon } from "./weapon/weapon";
 import { Room } from "./room";
 import { ImageParticle } from "./particle/imageParticle";
+import { Tutorial } from "./tutorialListener";
 
 export enum PlayerDirection {
   DOWN = 0,
@@ -61,6 +62,7 @@ export class Player extends Drawable {
   lastHitBy: string;
   turnCount: number;
   triedMove: boolean;
+  tutorial: Tutorial;
   constructor(game: Game, x: number, y: number, isLocalPlayer: boolean) {
     super();
 
@@ -106,7 +108,7 @@ export class Player extends Drawable {
     this.guiHeartFrame = 0;
 
     this.inventory = new Inventory(game, this);
-
+    this.tutorial = new Tutorial();
     this.defaultSightRadius = 6;
     this.sightRadius = this.defaultSightRadius;
 

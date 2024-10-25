@@ -42,7 +42,6 @@ export class Enemy extends Entity {
     this.maxHealth = 1;
     this.tileX = 17;
     this.tileY = 8;
-    this.seenPlayer = false;
     this.aggro = false;
     this.dir = Direction.South;
     this.name = "generic enemy";

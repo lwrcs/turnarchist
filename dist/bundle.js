@@ -2361,7 +2361,6 @@ var Enemy = /** @class */ (function (_super) {
         _this.maxHealth = 1;
         _this.tileX = 17;
         _this.tileY = 8;
-        _this.seenPlayer = false;
         _this.aggro = false;
         _this.dir = game_1.Direction.South;
         _this.name = "generic enemy";
@@ -11048,6 +11047,7 @@ var healthbar_1 = __webpack_require__(/*! ./healthbar */ "./src/healthbar.ts");
 var drawable_1 = __webpack_require__(/*! ./drawable */ "./src/drawable.ts");
 var hitWarning_1 = __webpack_require__(/*! ./hitWarning */ "./src/hitWarning.ts");
 var postProcess_1 = __webpack_require__(/*! ./postProcess */ "./src/postProcess.ts");
+var tutorialListener_1 = __webpack_require__(/*! ./tutorialListener */ "./src/tutorialListener.ts");
 var PlayerDirection;
 (function (PlayerDirection) {
     PlayerDirection[PlayerDirection["DOWN"] = 0] = "DOWN";
@@ -11514,6 +11514,7 @@ var Player = /** @class */ (function (_super) {
         _this.lastTickHealth = _this.health;
         _this.guiHeartFrame = 0;
         _this.inventory = new inventory_1.Inventory(game, _this);
+        _this.tutorial = new tutorialListener_1.Tutorial();
         _this.defaultSightRadius = 6;
         _this.sightRadius = _this.defaultSightRadius;
         _this.map = new map_1.Map(_this.game, _this);
@@ -14656,6 +14657,48 @@ var WallTorch = /** @class */ (function (_super) {
     return WallTorch;
 }(tile_1.Tile));
 exports.WallTorch = WallTorch;
+
+
+/***/ }),
+
+/***/ "./src/tutorialListener.ts":
+/*!*********************************!*\
+  !*** ./src/tutorialListener.ts ***!
+  \*********************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Tutorial = void 0;
+var Tutorial = /** @class */ (function () {
+    function Tutorial() {
+        this.seenEnemies = new Set();
+    }
+    Tutorial.prototype.handleEntityPresent = function (enemyName) {
+        if (!this.hasSeenEnemy(enemyName)) {
+            this.addSeenEnemy(enemyName);
+            this.createTutorialRoom(enemyName);
+        }
+    };
+    Tutorial.prototype.createTutorialRoom = function (enemyName) {
+        // This function is blank for now, but will be implemented later
+        console.log("Creating tutorial room for new enemy: ".concat(enemyName));
+    };
+    // Method to check if an enemy has been seen before
+    Tutorial.prototype.hasSeenEnemy = function (enemyName) {
+        return this.seenEnemies.has(enemyName);
+    };
+    // Method to manually add an enemy to the seen list (useful for testing or manual control)
+    Tutorial.prototype.addSeenEnemy = function (enemyName) {
+        this.seenEnemies.add(enemyName);
+    };
+    // Method to reset the seen enemies list (useful for testing or game resets)
+    Tutorial.prototype.resetSeenEnemies = function () {
+        this.seenEnemies.clear();
+    };
+    return Tutorial;
+}());
+exports.Tutorial = Tutorial;
 
 
 /***/ }),

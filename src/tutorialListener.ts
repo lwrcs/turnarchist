@@ -1,19 +1,14 @@
 import { EventEmitter } from "./eventEmitter";
+import { Room } from "./room";
 
-export class TutorialListener {
+export class Tutorial {
   private seenEnemies: Set<string> = new Set();
 
-  constructor(private eventEmitter: EventEmitter) {
-    this.setupListeners();
-  }
-
-  private setupListeners(): void {
-    this.eventEmitter.on("entityPresent", this.handleEntityPresent.bind(this));
-  }
+  constructor() {}
 
   private handleEntityPresent(enemyName: string): void {
-    if (!this.seenEnemies.has(enemyName)) {
-      this.seenEnemies.add(enemyName);
+    if (!this.hasSeenEnemy(enemyName)) {
+      this.addSeenEnemy(enemyName);
       this.createTutorialRoom(enemyName);
     }
   }
