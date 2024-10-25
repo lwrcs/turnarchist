@@ -71,7 +71,7 @@ export class CrabEnemy extends Enemy {
     return 1;
   };
 
-  tick = () => {
+  behavior = () => {
     this.lastX = this.x;
     this.lastY = this.y;
     if (!this.dead) {
@@ -79,20 +79,8 @@ export class CrabEnemy extends Enemy {
         this.skipNextTurns--;
         return;
       }
-      if (!this.seenPlayer) {
-        const result = this.nearestPlayer();
-        if (result !== false) {
-          let [distance, p] = result;
-          if (distance < 4) {
-            this.seenPlayer = true;
-            this.targetPlayer = p;
-            this.facePlayer(p);
-            if (p === this.game.players[this.game.localPlayerID])
-              this.alertTicks = 1;
-            this.makeHitWarnings(true, false, false, this.direction);
-          }
-        }
-      } else if (this.seenPlayer) {
+      if (!this.seenPlayer) this.lookForPlayer();
+      else if (this.seenPlayer) {
         if (this.room.playerTicked === this.targetPlayer) {
           this.alertTicks = Math.max(0, this.alertTicks - 1);
           this.ticks++;
@@ -165,7 +153,7 @@ export class CrabEnemy extends Enemy {
             this.rumbling = false;
           } else {
             this.rumbling = true;
-            this.makeHitWarnings(true, false, false, this.direction);
+            this.makeHitWarnings();
           }
         }
 
@@ -187,7 +175,7 @@ export class CrabEnemy extends Enemy {
                 if (player === this.game.players[this.game.localPlayerID])
                   this.alertTicks = 1;
                 if (this.ticks % 2 === 0) {
-                  this.makeHitWarnings(true, false, false, this.direction);
+                  this.makeHitWarnings();
                 }
               }
             }

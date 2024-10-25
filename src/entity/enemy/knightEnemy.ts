@@ -71,7 +71,7 @@ export class KnightEnemy extends Enemy {
     return 1;
   };
 
-  tick = () => {
+  behavior = () => {
     this.lastX = this.x;
     this.lastY = this.y;
     if (!this.dead) {
@@ -90,7 +90,7 @@ export class KnightEnemy extends Enemy {
             this.facePlayer(p);
             if (p === this.game.players[this.game.localPlayerID])
               this.alertTicks = 1;
-            this.makeHitWarnings(true, false, false, this.direction);
+            this.makeHitWarnings();
           }
         }
       } else if (this.seenPlayer) {
@@ -165,7 +165,7 @@ export class KnightEnemy extends Enemy {
             this.rumbling = false;
           } else {
             this.rumbling = true;
-            this.makeHitWarnings(true, false, false, this.direction);
+            this.makeHitWarnings();
           }
         }
 
@@ -188,7 +188,7 @@ export class KnightEnemy extends Enemy {
                   this.alertTicks = 1;
                 if (this.ticks % 2 === 0) {
                   this.rumbling = true;
-                  this.makeHitWarnings(true, false, false, this.direction);
+                  this.makeHitWarnings();
                 }
               }
             }

@@ -49,7 +49,7 @@ export class Spawner extends Enemy {
     return 1;
   };
 
-  tick = () => {
+  behavior = () => {
     this.lastX = this.x;
     this.lastY = this.y;
     if (!this.dead) {

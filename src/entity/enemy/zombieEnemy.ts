@@ -45,6 +45,7 @@ export class ZombieEnemy extends Enemy {
     this.aggro = false;
     this.dir = Direction.South;
     this.name = "zombie";
+    this.forwardOnlyAttack = true;
 
     if (drop) this.drop = drop;
     else {
@@ -76,7 +77,7 @@ export class ZombieEnemy extends Enemy {
     }
   };
 
-  tick = () => {
+  behavior = () => {
     // Store the current position
     this.lastX = this.x;
     this.lastY = this.y;
@@ -93,25 +94,8 @@ export class ZombieEnemy extends Enemy {
       this.ticks++;
 
       // If the enemy has not seen the player yet
-      if (!this.seenPlayer) {
-        // Find the nearest player
-        let p = this.nearestPlayer();
-        if (p !== false) {
-          let [distance, player] = p;
-          // If the player is within a distance of 4
-          if (distance <= 4) {
-            // Set the target player and face them
-            this.targetPlayer = player;
-            this.facePlayer(player);
-            this.seenPlayer = true;
-            // If the player is the local player, set alert ticks
-            if (player === this.game.players[this.game.localPlayerID])
-              this.alertTicks = 1;
-            // Make hit warnings
-            this.makeHitWarnings(false, false, true, this.direction);
-          }
-        }
-      } else if (this.seenPlayer) {
+      if (!this.seenPlayer) this.lookForPlayer();
+      else if (this.seenPlayer) {
         // If the target player has taken their turn
         if (this.room.playerTicked === this.targetPlayer) {
           // Decrement alert ticks
@@ -254,7 +238,7 @@ export class ZombieEnemy extends Enemy {
             } as astar.Position);
           }
           // Make hit warnings
-          this.makeHitWarnings(false, false, true, this.direction);
+          this.makeHitWarnings();
         }
 
         // Check if the target player is offline
@@ -276,7 +260,7 @@ export class ZombieEnemy extends Enemy {
                 this.facePlayer(player);
                 if (player === this.game.players[this.game.localPlayerID])
                   this.alertTicks = 1;
-                this.makeHitWarnings(false, false, true, this.direction);
+                this.makeHitWarnings();
               }
             }
           }

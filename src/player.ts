@@ -23,6 +23,7 @@ import { Weapon } from "./weapon/weapon";
 import { Room } from "./room";
 import { ImageParticle } from "./particle/imageParticle";
 import { Tutorial } from "./tutorialListener";
+import { Enemy } from "./entity/enemy/enemy";
 
 export enum PlayerDirection {
   DOWN = 0,
@@ -62,7 +63,6 @@ export class Player extends Drawable {
   lastHitBy: string;
   turnCount: number;
   triedMove: boolean;
-  tutorial: Tutorial;
   constructor(game: Game, x: number, y: number, isLocalPlayer: boolean) {
     super();
 
@@ -108,7 +108,6 @@ export class Player extends Drawable {
     this.guiHeartFrame = 0;
 
     this.inventory = new Inventory(game, this);
-    this.tutorial = new Tutorial();
     this.defaultSightRadius = 6;
     this.sightRadius = this.defaultSightRadius;
 
@@ -394,7 +393,6 @@ export class Player extends Drawable {
 
   wouldHurt = (x: number, y: number) => {
     for (let h of this.game.rooms[this.levelID].hitwarnings) {
-      console.log(`hitwarning: ${h}`);
       if (h instanceof HitWarning && h.x == x && h.y == y) return true;
       else {
         return false;
@@ -409,7 +407,7 @@ export class Player extends Drawable {
       this.inventory.getArmor().hurt(damage);
     } else {
       this.lastHitBy = enemy;
-      console.log("Last Hit by: ", enemy);
+      //console.log("Last Hit by: ", enemy);
       this.healthBar.hurt();
       this.flashing = true;
       this.health -= damage;

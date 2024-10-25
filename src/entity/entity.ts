@@ -69,6 +69,11 @@ export class Entity extends Drawable {
   animationSpeed: number;
   drawYOffset: number;
   name: string;
+  orthogonalAttack: boolean;
+  diagonalAttack: boolean;
+  forwardOnlyAttack: boolean;
+  attackRange: number;
+  diagonalAttackRange: number;
   constructor(room: Room, game: Game, x: number, y: number) {
     super();
 
@@ -104,7 +109,15 @@ export class Entity extends Drawable {
     this.rumbling = false;
     this.animationSpeed = 0.1;
     this.drawYOffset = 1.175;
+
+    this.orthogonalAttack = false;
+    this.diagonalAttack = false;
+    this.forwardOnlyAttack = false;
+    this.attackRange = 1;
+    this.diagonalAttackRange = 1;
   }
+
+  behavior = () => {};
 
   hit = (): number => {
     return 0;
@@ -275,7 +288,9 @@ export class Entity extends Drawable {
     }*/
   };
 
-  tick = () => {};
+  tick = () => {
+    this.behavior();
+  };
 
   drawTopLayer = (delta: number) => {
     this.drawableY = this.y - this.drawY;
@@ -467,12 +482,11 @@ export class Entity extends Drawable {
         !this.isWithinRoomBounds(x, y) ||
         this.room.roomArray[x][y]?.isSolid()
       ) {
-        console.log(`Path blocked at (${x}, ${y})`);
+        //console.log(`Path blocked at (${x}, ${y})`);
         return false;
       }
     }
 
-    console.log(`Path to (${endX}, ${endY}) is clear`);
     return true;
   };
 
@@ -485,13 +499,6 @@ export class Entity extends Drawable {
     const dy = targetY - this.y;
     let offsets = [];
 
-    console.log(
-      `Calculating offsets: dx=${dx}, dy=${dy}, attackLength=${attackLength}`
-    );
-    console.log(
-      `Current position: (${this.x}, ${this.y}), Target: (${targetX}, ${targetY})`
-    );
-
     // Normalize the direction
     const stepX = dx !== 0 ? Math.sign(dx) : 0;
     const stepY = dy !== 0 ? Math.sign(dy) : 0;
@@ -501,21 +508,18 @@ export class Entity extends Drawable {
       offsets.push({ x: i * stepX, y: i * stepY });
     }
 
-    console.log("Calculated offsets:", offsets);
     return offsets;
   }
 
-  makeHitWarnings = (
-    orthogonal: boolean,
-    diagonal: boolean,
-    forwardOnly: boolean,
-    direction: EntityDirection,
-    orthoRange: number = 1,
-    diagRange: number = 1
-  ) => {
+  makeHitWarnings = () => {
     const cullFactor = 0.25;
     const player: Player = this.getPlayer();
-    console.log(`player.x: ${player.x}, player.y: ${player.y}`);
+    const orthogonal = this.orthogonalAttack;
+    const diagonal = this.diagonalAttack;
+    const forwardOnly = this.forwardOnlyAttack;
+    const direction = this.direction;
+    const orthoRange = this.attackRange;
+    const diagRange = this.diagonalAttackRange;
 
     const generateOffsets = (
       isOrthogonal: boolean,
@@ -587,13 +591,6 @@ export class Entity extends Drawable {
       y >= this.room.roomY && y < this.room.roomY + this.room.height;
     const tileExists =
       this.room.roomArray[x] && this.room.roomArray[x][y] !== undefined;
-
-    console.log(
-      `Checking bounds for (${x}, ${y}):`,
-      `xInBounds: ${xInBounds},`,
-      `yInBounds: ${yInBounds},`,
-      `tileExists: ${tileExists}`
-    );
 
     return xInBounds && yInBounds && tileExists;
   };

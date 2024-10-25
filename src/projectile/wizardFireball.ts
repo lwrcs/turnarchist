@@ -32,7 +32,6 @@ export class WizardFireball extends Projectile {
       this.dead = true;
     }
 
-    console.log(`state: ${this.state}`);
     if (!this.dead && this.state === 0) {
     }
 

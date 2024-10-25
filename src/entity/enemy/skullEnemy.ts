@@ -46,6 +46,7 @@ export class SkullEnemy extends Enemy {
     this.flashingFrame = 0;
     this.deathParticleColor = "#ffffff";
     this.name = "skeleton";
+    this.forwardOnlyAttack = true;
     if (drop) this.drop = drop;
     else {
       let dropProb = rand();
@@ -80,7 +81,7 @@ export class SkullEnemy extends Enemy {
     }
   };
 
-  tick = () => {
+  behavior = () => {
     this.lastX = this.x;
     this.lastY = this.y;
     //set last positions
@@ -97,18 +98,7 @@ export class SkullEnemy extends Enemy {
       } else {
         this.ticks++;
         if (!this.seenPlayer) {
-          let p = this.nearestPlayer();
-          if (p !== false) {
-            let [distance, player] = p;
-            if (distance <= 4) {
-              this.targetPlayer = player;
-              this.facePlayer(player);
-              this.seenPlayer = true;
-              if (player === this.game.players[this.game.localPlayerID])
-                this.alertTicks = 1;
-              this.makeHitWarnings(true, false, true, this.direction);
-            }
-          }
+          this.lookForPlayer();
         } else if (this.seenPlayer) {
           if (this.room.playerTicked === this.targetPlayer) {
             this.alertTicks = Math.max(0, this.alertTicks - 1);
@@ -190,7 +180,7 @@ export class SkullEnemy extends Enemy {
                 else if (this.y < oldY) this.direction = EntityDirection.UP;
               }
             }
-            this.makeHitWarnings(true, false, true, this.direction);
+            this.makeHitWarnings();
           }
 
           let targetPlayerOffline =
@@ -211,7 +201,7 @@ export class SkullEnemy extends Enemy {
                   this.facePlayer(player);
                   if (player === this.game.players[this.game.localPlayerID])
                     this.alertTicks = 1;
-                  this.makeHitWarnings(true, false, true, this.direction);
+                  this.makeHitWarnings();
                 }
               }
             }

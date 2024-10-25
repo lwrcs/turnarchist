@@ -75,7 +75,7 @@ export class ChargeEnemy extends Enemy {
     return !(t.isSolid() || t instanceof Door);
   };
 
-  tick = () => {
+  behavior = () => {
     this.lastX = this.x;
     this.lastY = this.y;
     if (!this.dead) {

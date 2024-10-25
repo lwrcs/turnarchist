@@ -77,7 +77,7 @@ export class QueenEnemy extends Enemy {
     }
   };
 
-  tick = () => {
+  behavior = () => {
     this.lastX = this.x;
     this.lastY = this.y;
     if (!this.dead) {
@@ -96,7 +96,7 @@ export class QueenEnemy extends Enemy {
             this.seenPlayer = true;
             if (player === this.game.players[this.game.localPlayerID])
               this.alertTicks = 1;
-            this.makeHitWarnings(true, true, false, this.direction);
+            this.makeHitWarnings();
           }
         }
       } else if (this.seenPlayer) {
@@ -175,7 +175,7 @@ export class QueenEnemy extends Enemy {
               this.drawY = this.y - oldY;
             }
           }
-          this.makeHitWarnings(true, true, false, this.direction);
+          this.makeHitWarnings();
         }
 
         let targetPlayerOffline =
@@ -195,7 +195,7 @@ export class QueenEnemy extends Enemy {
                 this.facePlayer(player);
                 if (player === this.game.players[this.game.localPlayerID])
                   this.alertTicks = 1;
-                this.makeHitWarnings(true, true, false, this.direction);
+                this.makeHitWarnings();
               }
             }
           }

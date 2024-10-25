@@ -116,27 +116,15 @@ export class BishopEnemy extends Enemy {
     }
   };
 
-  tick = () => {
+  behavior = () => {
     if (!this.dead) {
       if (this.skipNextTurns > 0) {
         this.skipNextTurns--;
         return;
       }
       this.ticks++;
-      if (!this.seenPlayer) {
-        let p = this.nearestPlayer();
-        if (p !== false) {
-          let [distance, player] = p;
-          if (distance <= 4) {
-            this.targetPlayer = player;
-            this.facePlayer(player);
-            this.seenPlayer = true;
-            if (player === this.game.players[this.game.localPlayerID])
-              this.alertTicks = 1;
-            this.makeHitWarnings(false, true, false, this.direction);
-          }
-        }
-      } else if (this.seenPlayer) {
+      if (!this.seenPlayer) this.lookForPlayer();
+      else if (this.seenPlayer) {
         if (this.room.playerTicked === this.targetPlayer) {
           this.alertTicks = Math.max(0, this.alertTicks - 1);
           let oldX = this.x;
@@ -215,7 +203,7 @@ export class BishopEnemy extends Enemy {
               this.drawY = this.y - oldY;
             }
           }
-          this.makeHitWarnings(false, true, false, this.direction);
+          this.makeHitWarnings();
         }
 
         let targetPlayerOffline =
@@ -235,7 +223,7 @@ export class BishopEnemy extends Enemy {
                 this.facePlayer(player);
                 if (player === this.game.players[this.game.localPlayerID])
                   this.alertTicks = 1;
-                this.makeHitWarnings(false, true, false, this.direction);
+                this.makeHitWarnings();
               }
             }
           }

@@ -76,7 +76,7 @@ export class FrogEnemy extends Enemy {
     return 0.5;
   };
 
-  tick = () => {
+  behavior = () => {
     this.lastX = this.x;
     this.lastY = this.y;
     this.rumbling = false;
@@ -100,7 +100,7 @@ export class FrogEnemy extends Enemy {
             this.facePlayer(p);
             if (p === this.game.players[this.game.localPlayerID])
               this.alertTicks = 1;
-            this.makeHitWarnings(true, true, false, this.direction, 2);
+            this.makeHitWarnings();
           }
         }
       } else if (this.seenPlayer) {
@@ -209,8 +209,6 @@ export class FrogEnemy extends Enemy {
                     this.jumpDistance = 1.3;
                   }
                 }
-                console.log("this.x", this.x, "oldX", oldX);
-                console.log("this.y", this.y, "oldY", oldY);
                 if (this.x > oldX) this.direction = EntityDirection.RIGHT;
                 else if (this.x < oldX) this.direction = EntityDirection.LEFT;
                 else if (this.y > oldY) this.direction = EntityDirection.DOWN;
@@ -218,7 +216,7 @@ export class FrogEnemy extends Enemy {
               }
             }
           } else {
-            this.makeHitWarnings(true, true, false, this.direction, 1);
+            this.makeHitWarnings();
             this.rumbling = true;
             this.tileX = 3;
             this.frame = 0;

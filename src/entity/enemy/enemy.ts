@@ -15,6 +15,15 @@ import { Candle } from "../../item/candle";
 import { EntityType } from "../entity";
 import { ItemType } from "../../gameState";
 import { ImageParticle } from "../../particle/imageParticle";
+import { EventEmitter } from "../../eventEmitter";
+
+enum EnemyState {
+  SLEEP,
+  AGGRO,
+  ATTACK,
+  DEAD,
+  IDLE,
+}
 
 export class Enemy extends Entity {
   seenPlayer: boolean;
@@ -24,6 +33,7 @@ export class Enemy extends Entity {
   targetPlayer: Player;
   drop: Item;
   dir: Direction;
+  eventEmitter: EventEmitter;
 
   constructor(
     room: Room,
@@ -45,7 +55,15 @@ export class Enemy extends Entity {
     this.aggro = false;
     this.dir = Direction.South;
     this.name = "generic enemy";
+    this.eventEmitter = new EventEmitter();
+    // Add a listener for the event
+    this.eventEmitter.on(this.name, this.onEnemySeenPlayer);
   }
+
+  // Add this method to the Enemy class
+  private onEnemySeenPlayer = (enemy: typeof Enemy) => {
+    return enemy;
+  };
 
   readonly tryMove = (x: number, y: number, collide: boolean = true) => {
     let pointWouldBeIn = (someX: number, someY: number): boolean => {
@@ -106,7 +124,96 @@ export class Enemy extends Entity {
     }
   };
 
+  emit = (event: string, data: any) => {
+    console.log(`Attempting to emit event '${event}'`);
+    this.eventEmitter.emit(event, data);
+  };
+
   tick = () => {
+    this.behavior();
+  };
+
+  lookForPlayer = () => {
+    let p = this.nearestPlayer();
+    if (p !== false) {
+      let [distance, player] = p;
+      if (distance <= 4) {
+        this.targetPlayer = player;
+        this.facePlayer(player);
+        this.seenPlayer = true;
+        this.eventEmitter.emit("SeenPlayer", this.constructor);
+        console.log(this.constructor.name);
+        if (player === this.game.players[this.game.localPlayerID])
+          this.alertTicks = 1;
+        this.makeHitWarnings();
+      }
+    }
+  };
+
+  getDisablePositions = (): Array<astar.Position> => {
+    let disablePositions = Array<astar.Position>();
+    for (const e of this.room.entities) {
+      if (e !== this) {
+        disablePositions.push({ x: e.x, y: e.y } as astar.Position);
+      }
+    }
+    for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
+      for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
+        if (
+          this.room.roomArray[xx][yy] instanceof SpikeTrap &&
+          (this.room.roomArray[xx][yy] as SpikeTrap).on
+        ) {
+          // Don't walk on active spike traps
+          disablePositions.push({ x: xx, y: yy } as astar.Position);
+        }
+      }
+    }
+    return disablePositions;
+  };
+
+  findPath = () => {
+    let disablePositions = Array<astar.Position>();
+    for (const e of this.room.entities) {
+      if (e !== this) {
+        disablePositions.push({ x: e.x, y: e.y } as astar.Position);
+      }
+    }
+    for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
+      for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
+        if (
+          this.room.roomArray[xx][yy] instanceof SpikeTrap &&
+          (this.room.roomArray[xx][yy] as SpikeTrap).on
+        ) {
+          // Don't walk on active spike traps
+          disablePositions.push({ x: xx, y: yy } as astar.Position);
+        }
+      }
+    }
+    // Create a grid of the room
+    let grid = [];
+    for (let x = 0; x < this.room.roomX + this.room.width; x++) {
+      grid[x] = [];
+      for (let y = 0; y < this.room.roomY + this.room.height; y++) {
+        if (this.room.roomArray[x] && this.room.roomArray[x][y])
+          grid[x][y] = this.room.roomArray[x][y];
+        else grid[x][y] = false;
+      }
+    }
+
+    // Find a path to the target player
+    let moves = astar.AStar.search(
+      grid,
+      this,
+      this.targetPlayer,
+      disablePositions,
+      false,
+      false,
+      true,
+      this.direction
+    );
+  };
+
+  behavior = () => {
     // Store the current position
     this.lastX = this.x;
     this.lastY = this.y;
@@ -123,25 +230,8 @@ export class Enemy extends Entity {
       this.ticks++;
 
       // If the enemy has not seen the player yet
-      if (!this.seenPlayer) {
-        // Find the nearest player
-        let p = this.nearestPlayer();
-        if (p !== false) {
-          let [distance, player] = p;
-          // If the player is within a distance of 4
-          if (distance <= 4) {
-            // Set the target player and face them
-            this.targetPlayer = player;
-            this.facePlayer(player);
-            this.seenPlayer = true;
-            // If the player is the local player, set alert ticks
-            if (player === this.game.players[this.game.localPlayerID])
-              this.alertTicks = 1;
-            // Make hit warnings
-            this.makeHitWarnings(false, false, true, this.direction);
-          }
-        }
-      } else if (this.seenPlayer) {
+      if (!this.seenPlayer) this.lookForPlayer();
+      else if (this.seenPlayer) {
         // If the target player has taken their turn
         if (this.room.playerTicked === this.targetPlayer) {
           // Decrement alert ticks
@@ -169,7 +259,6 @@ export class Enemy extends Entity {
               }
             }
           }
-
           // Create a grid of the room
           let grid = [];
           for (let x = 0; x < this.room.roomX + this.room.width; x++) {
@@ -284,7 +373,7 @@ export class Enemy extends Entity {
             } as astar.Position);
           }
           // Make hit warnings
-          this.makeHitWarnings(false, false, true, this.direction);
+          this.makeHitWarnings();
         }
 
         // Check if the target player is offline
@@ -306,7 +395,7 @@ export class Enemy extends Entity {
                 this.facePlayer(player);
                 if (player === this.game.players[this.game.localPlayerID])
                   this.alertTicks = 1;
-                this.makeHitWarnings(false, false, true, this.direction);
+                this.makeHitWarnings();
               }
             }
           }

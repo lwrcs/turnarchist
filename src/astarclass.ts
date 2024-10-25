@@ -23,11 +23,9 @@ export namespace astar {
     OPEN,
   }
 
-  let getTileCost = tile => {
-    if (tile)
-      return (tile.isSolid() || tile.isDoor) ? 99999999 : 1;
-    else
-      return 99999999;
+  let getTileCost = (tile) => {
+    if (tile) return tile.isSolid() || tile.isDoor ? 99999999 : 1;
+    else return 99999999;
   };
 
   export class Graph {
@@ -55,10 +53,10 @@ export namespace astar {
       var graphString = "\n";
       var nodes = this.nodes;
       var rowDebug: string, row: GraphNode[], y: number, l: number;
-      for (var x = 0, len = nodes.length; x < len;) {
+      for (var x = 0, len = nodes.length; x < len; ) {
         rowDebug = "";
         row = nodes[x++];
-        for (y = 0, l = row.length; y < l;) {
+        for (y = 0, l = row.length; y < l; ) {
           rowDebug += row[y++].type + " ";
         }
         graphString = graphString + rowDebug + "\n";
@@ -129,7 +127,8 @@ export namespace astar {
       var end = this.content.pop();
       if (i !== this.content.length - 1) {
         this.content[i] = end;
-        if (this.scoreFunction(end) < this.scoreFunction(node)) this.sinkDown(i);
+        if (this.scoreFunction(end) < this.scoreFunction(node))
+          this.sinkDown(i);
         else this.bubbleUp(i);
       }
     }
@@ -188,7 +187,8 @@ export namespace astar {
         if (child2N < length) {
           var child2 = this.content[child2N],
             child2Score = this.scoreFunction(child2);
-          if (child2Score < (swap === null ? elemScore : child1Score)) swap = child2N;
+          if (child2Score < (swap === null ? elemScore : child1Score))
+            swap = child2N;
         }
 
         // If the element needs to be moved, swap it, and continue.
@@ -224,7 +224,11 @@ export namespace astar {
   export class AStar {
     static NO_CHECK_START_POINT: boolean = false;
     grid: AStarData[][];
-    constructor(grid: any[][], disablePoints?: Position[], enableCost?: boolean) {
+    constructor(
+      grid: any[][],
+      disablePoints?: Position[],
+      enableCost?: boolean
+    ) {
       this.grid = [];
       for (var x = 0, xl = grid.length; x < xl; x++) {
         this.grid[x] = [];
@@ -248,8 +252,12 @@ export namespace astar {
       }
       if (disablePoints !== undefined) {
         for (var i = 0; i < disablePoints.length; i++) {
-          if (disablePoints[i].x >= 0 && disablePoints[i].x < this.grid.length &&
-            disablePoints[i].y >= 0 && disablePoints[i].y < this.grid[0].length)
+          if (
+            disablePoints[i].x >= 0 &&
+            disablePoints[i].x < this.grid.length &&
+            disablePoints[i].y >= 0 &&
+            disablePoints[i].y < this.grid[0].length
+          )
             this.grid[disablePoints[i].x][disablePoints[i].y].cost = 99999999;
         }
       }
@@ -267,7 +275,16 @@ export namespace astar {
           if (this.grid[x][y].org == org) return this.grid[x][y];
     }
 
-    _search(start: any, end: any, diagonal?: boolean, diagonalsOnly?: boolean, turnCostsExtra?: boolean, turnDirection?: EntityDirection, heuristic?: Function, diagonalsOmni?: boolean) {
+    _search(
+      start: any,
+      end: any,
+      diagonal?: boolean,
+      diagonalsOnly?: boolean,
+      turnCostsExtra?: boolean,
+      turnDirection?: EntityDirection,
+      heuristic?: Function,
+      diagonalsOmni?: boolean
+    ) {
       heuristic = heuristic || this.manhattan;
       diagonal = !!diagonal;
       diagonalsOnly = !!diagonalsOnly;
@@ -277,10 +294,12 @@ export namespace astar {
       var openHeap = this.heap();
 
       var _start: AStarData, _end: AStarData;
-      if (start.x !== undefined && start.y !== undefined) _start = this.grid[start.x][start.y];
+      if (start.x !== undefined && start.y !== undefined)
+        _start = this.grid[start.x][start.y];
       else _start = this._find(start);
 
-      if (end.x !== undefined && end.y !== undefined) _end = this.grid[end.x][end.y];
+      if (end.x !== undefined && end.y !== undefined)
+        _end = this.grid[end.x][end.y];
       else _end = this._find(end);
 
       if (AStar.NO_CHECK_START_POINT == false && _start.cost <= 0) return [];
@@ -306,7 +325,12 @@ export namespace astar {
         currentNode.closed = true;
 
         // Find all neighbors for the current node. Optionally find diagonal neighbors as well (false by default).
-        var neighbors = this.neighbors(currentNode, diagonal, diagonalsOnly, diagonalsOmni);
+        var neighbors = this.neighbors(
+          currentNode,
+          diagonal,
+          diagonalsOnly,
+          diagonalsOmni
+        );
 
         for (var i = 0, il = neighbors.length; i < il; i++) {
           var neighbor = neighbors[i];
@@ -323,13 +347,39 @@ export namespace astar {
           if (turnCostsExtra) {
             var isTurn = false;
             if (currentNode.parent)
-              isTurn = !((currentNode.parent.pos.x === currentNode.pos.x && currentNode.pos.x === neighbor.pos.x) || (currentNode.parent.pos.y === currentNode.pos.y && currentNode.pos.y === neighbor.pos.y));
-            else { // initial step
+              isTurn = !(
+                (currentNode.parent.pos.x === currentNode.pos.x &&
+                  currentNode.pos.x === neighbor.pos.x) ||
+                (currentNode.parent.pos.y === currentNode.pos.y &&
+                  currentNode.pos.y === neighbor.pos.y)
+              );
+            else {
+              // initial step
               isTurn = true;
-              if (neighbor.pos.x - currentNode.pos.x === 0 && neighbor.pos.y - currentNode.pos.y === -1 && turnDirection === EntityDirection.UP) isTurn = false;
-              if (neighbor.pos.x - currentNode.pos.x === 0 && neighbor.pos.y - currentNode.pos.y === 1 && turnDirection === EntityDirection.DOWN) isTurn = false;
-              if (neighbor.pos.x - currentNode.pos.x === 1 && neighbor.pos.y - currentNode.pos.y === 0 && turnDirection === EntityDirection.RIGHT) isTurn = false;
-              if (neighbor.pos.x - currentNode.pos.x === -1 && neighbor.pos.y - currentNode.pos.y === 0 && turnDirection === EntityDirection.LEFT) isTurn = false;
+              if (
+                neighbor.pos.x - currentNode.pos.x === 0 &&
+                neighbor.pos.y - currentNode.pos.y === -1 &&
+                turnDirection === EntityDirection.UP
+              )
+                isTurn = false;
+              if (
+                neighbor.pos.x - currentNode.pos.x === 0 &&
+                neighbor.pos.y - currentNode.pos.y === 1 &&
+                turnDirection === EntityDirection.DOWN
+              )
+                isTurn = false;
+              if (
+                neighbor.pos.x - currentNode.pos.x === 1 &&
+                neighbor.pos.y - currentNode.pos.y === 0 &&
+                turnDirection === EntityDirection.RIGHT
+              )
+                isTurn = false;
+              if (
+                neighbor.pos.x - currentNode.pos.x === -1 &&
+                neighbor.pos.y - currentNode.pos.y === 0 &&
+                turnDirection === EntityDirection.LEFT
+              )
+                isTurn = false;
             }
             if (isTurn) gScore++;
           }
@@ -371,7 +421,16 @@ export namespace astar {
       diagonalsOmni?: boolean
     ) {
       var astar = new AStar(grid, disablePoints);
-      return astar._search(start, end, diagonal, diagonalsOnly, turnCostsExtra, turnDirection, heuristic, diagonalsOmni);
+      return astar._search(
+        start,
+        end,
+        diagonal,
+        diagonalsOnly,
+        turnCostsExtra,
+        turnDirection,
+        heuristic,
+        diagonalsOmni
+      );
     }
 
     manhattan(pos0: Position, pos1: Position): number {
@@ -382,7 +441,12 @@ export namespace astar {
       return d1 + d2;
     }
 
-    neighbors(node: AStarData, diagonals?: boolean, diagonalsOnly?: boolean, diagonalsOmni?: boolean): AStarData[] {
+    neighbors(
+      node: AStarData,
+      diagonals?: boolean,
+      diagonalsOnly?: boolean,
+      diagonalsOmni?: boolean
+    ): AStarData[] {
       var grid = this.grid;
       var ret = [];
       var x = node.pos.x;
@@ -440,47 +504,46 @@ export namespace astar {
         if (grid[x - 1] && grid[x - 1][y]) {
           // Instead of pushing West, choose between Southwest and Northwest
           if (randomBool == true) {
-            ret.push(grid[x - 1][y - 1]), console.log("Southwest");
+            ret.push(grid[x - 1][y - 1]);
             return;
           } else {
-            ret.push(grid[x - 1][y + 1]), console.log("Northwest");
+            ret.push(grid[x - 1][y + 1]);
             return;
           }
         }
         // East
         if (grid[x + 1] && grid[x + 1][y]) {
           if (randomBool == true) {
-            ret.push(grid[x + 1][y - 1]), console.log("Southeast");
+            ret.push(grid[x + 1][y - 1]);
             return;
           } else {
-            ret.push(grid[x + 1][y + 1]), console.log("Northeast");
+            ret.push(grid[x + 1][y + 1]);
             return;
           }
         }
         // South
         if (grid[x] && grid[x][y - 1]) {
           if (randomBool == true) {
-            ret.push(grid[x - 1][y - 1]), console.log("Southwest");
+            ret.push(grid[x - 1][y - 1]);
             return;
           } else {
-            ret.push(grid[x + 1][y - 1]), console.log("Southeast");
+            ret.push(grid[x + 1][y - 1]);
             return;
           }
         }
         // North
         if (grid[x] && grid[x][y + 1]) {
           if (randomBool == true) {
-            ret.push(grid[x - 1][y + 1]), console.log("Northwest");
+            ret.push(grid[x - 1][y + 1]);
             return;
           } else {
-            ret.push(grid[x + 1][y + 1]), console.log("Northeast");
+            ret.push(grid[x + 1][y + 1]);
             return;
           }
         } else {
           return;
         }
       }
-
 
       return ret;
     }

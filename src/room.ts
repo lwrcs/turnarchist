@@ -68,7 +68,7 @@ import { BigKnightEnemy } from "./entity/enemy/bigKnightEnemy";
 import { SniperEnemy } from "./entity/enemy/sniperEnemy";
 import { EventEmitter } from "./eventEmitter";
 import { Enemy } from "./entity/enemy/enemy";
-import { fireWizardEnemy } from "./entity/enemy/fireWizard";
+import { FireWizardEnemy } from "./entity/enemy/fireWizard";
 import { Dagger } from "./weapon/dagger";
 
 export enum RoomType {
@@ -455,7 +455,7 @@ export class Room {
             addEnemy(new Enemy(this, this.game, x, y, rand));
             break;
           case 16:
-            addEnemy(new fireWizardEnemy(this, this.game, x, y, rand));
+            addEnemy(new FireWizardEnemy(this, this.game, x, y, rand));
             break;
         }
       }
@@ -1030,12 +1030,6 @@ export class Room {
 
     this.doors.push(d);
     if (this.roomArray[d.x] == undefined) {
-      console.log(
-        "UNDEFINED at " +
-          d.x +
-          " levelArray.length was " +
-          this.roomArray.length
-      );
     }
     this.roomArray[d.x][d.y] = d;
 
@@ -1060,7 +1054,6 @@ export class Room {
   };
 
   enterLevelThroughDoor = (player: Player, door: any, side?: number) => {
-    console.log("Room Array:", this.roomArray);
     if (door instanceof Door && door.doorDir === DoorDir.North) {
       //if top door
       (door as Door).opened = true;

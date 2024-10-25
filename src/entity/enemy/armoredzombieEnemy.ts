@@ -80,7 +80,7 @@ export class ArmoredzombieEnemy extends Enemy {
     }
   };
 
-  tick = () => {
+  behavior = () => {
     this.lastX = this.x;
     this.lastY = this.y;
     if (!this.dead) {
@@ -89,19 +89,8 @@ export class ArmoredzombieEnemy extends Enemy {
         return;
       }
       this.ticks++;
-      if (!this.seenPlayer) {
-        let p = this.nearestPlayer();
-        if (p !== false) {
-          let [distance, player] = p;
-          if (distance <= 4) {
-            this.targetPlayer = player;
-            this.facePlayer(player);
-            this.seenPlayer = true;
-            if (player === this.game.players[this.game.localPlayerID])
-              this.alertTicks = 1;
-          }
-        }
-      } else if (this.seenPlayer) {
+      if (!this.seenPlayer) this.lookForPlayer();
+      else if (this.seenPlayer) {
         if (this.room.playerTicked === this.targetPlayer) {
           this.alertTicks = Math.max(0, this.alertTicks - 1);
           let oldX = this.x;
@@ -225,7 +214,7 @@ export class ArmoredzombieEnemy extends Enemy {
               y: this.y,
             } as astar.Position);
           }
-          this.makeHitWarnings(false, false, true, this.direction);
+          this.makeHitWarnings();
         }
 
         let targetPlayerOffline =
@@ -245,7 +234,7 @@ export class ArmoredzombieEnemy extends Enemy {
                 this.facePlayer(player);
                 if (player === this.game.players[this.game.localPlayerID])
                   this.alertTicks = 1;
-                this.makeHitWarnings(false, false, true, this.direction);
+                this.makeHitWarnings();
               }
             }
           }

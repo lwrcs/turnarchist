@@ -91,7 +91,7 @@ export class WizardEnemy extends Enemy {
     return a;
   };
 
-  tick = () => {
+  behavior = () => {
     this.lastX = this.x;
     this.lastY = this.y;
     if (!this.dead) {
@@ -99,16 +99,8 @@ export class WizardEnemy extends Enemy {
         this.skipNextTurns--;
         return;
       }
-      if (!this.seenPlayer) {
-        let p = this.nearestPlayer();
-        if (p !== false) {
-          let [distance, player] = p;
-          if (distance <= 4) {
-            this.seenPlayer = true;
-            this.alertTicks = 1;
-          }
-        }
-      } else if (this.seenPlayer) {
+      if (!this.seenPlayer) this.lookForPlayer();
+      else if (this.seenPlayer) {
         this.alertTicks = Math.max(0, this.alertTicks - 1);
         switch (this.state) {
           case WizardState.attack:

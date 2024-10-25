@@ -110,7 +110,7 @@ export class SniperEnemy extends Enemy {
     }
   };
 
-  tick = () => {
+  behavior = () => {
     this.lastX = this.x;
     this.lastY = this.y;
     if (!this.dead) {
@@ -254,7 +254,7 @@ export class SniperEnemy extends Enemy {
               y: this.y,
             } as astar.Position);
           }
-          this.makeHitWarnings(false, false, true, this.direction);
+          this.makeHitWarnings();
         }
 
         let targetPlayerOffline =
@@ -274,7 +274,7 @@ export class SniperEnemy extends Enemy {
                 this.facePlayer(player);
                 if (player === this.game.players[this.game.localPlayerID])
                   this.alertTicks = 1;
-                this.makeHitWarnings(false, false, true, this.direction);
+                this.makeHitWarnings();
               }
             }
           }

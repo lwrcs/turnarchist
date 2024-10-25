@@ -127,7 +127,7 @@ export class BigSkullEnemy extends Enemy {
     this.dropLoot();
   };
 
-  tick = () => {
+  behavior = () => {
     this.lastX = this.x;
     this.lastY = this.y;
     if (!this.dead) {
