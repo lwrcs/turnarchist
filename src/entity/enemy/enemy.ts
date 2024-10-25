@@ -15,7 +15,7 @@ import { Candle } from "../../item/candle";
 import { EntityType } from "../entity";
 import { ItemType } from "../../gameState";
 import { ImageParticle } from "../../particle/imageParticle";
-import { EventEmitter } from "../../eventEmitter";
+import { globalEventBus } from "../../eventBus";
 
 enum EnemyState {
   SLEEP,
@@ -33,7 +33,6 @@ export class Enemy extends Entity {
   targetPlayer: Player;
   drop: Item;
   dir: Direction;
-  eventEmitter: EventEmitter;
 
   constructor(
     room: Room,
@@ -55,15 +54,7 @@ export class Enemy extends Entity {
     this.aggro = false;
     this.dir = Direction.South;
     this.name = "generic enemy";
-    this.eventEmitter = new EventEmitter();
-    // Add a listener for the event
-    this.eventEmitter.on(this.name, this.onEnemySeenPlayer);
   }
-
-  // Add this method to the Enemy class
-  private onEnemySeenPlayer = (enemy: typeof Enemy) => {
-    return enemy;
-  };
 
   readonly tryMove = (x: number, y: number, collide: boolean = true) => {
     let pointWouldBeIn = (someX: number, someY: number): boolean => {
@@ -124,11 +115,6 @@ export class Enemy extends Entity {
     }
   };
 
-  emit = (event: string, data: any) => {
-    console.log(`Attempting to emit event '${event}'`);
-    this.eventEmitter.emit(event, data);
-  };
-
   tick = () => {
     this.behavior();
   };
@@ -141,7 +127,10 @@ export class Enemy extends Entity {
         this.targetPlayer = player;
         this.facePlayer(player);
         this.seenPlayer = true;
-        this.eventEmitter.emit("SeenPlayer", this.constructor);
+        let type = this.constructor;
+        globalEventBus.emit("EnemySeenPlayer", {
+          enemyType: this.constructor.name,
+        });
         console.log(this.constructor.name);
         if (player === this.game.players[this.game.localPlayerID])
           this.alertTicks = 1;

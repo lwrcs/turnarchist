@@ -1,5 +1,5 @@
 import { GameConstants } from "./gameConstants";
-import { Room } from "./room";
+import { Room, RoomType } from "./room";
 import { Player } from "./player";
 import { Door } from "./tile/door";
 import { Sound } from "./sound";
@@ -10,6 +10,8 @@ import { DownLadder } from "./tile/downLadder";
 import { TextBox } from "./textbox";
 import { GameState, loadGameState } from "./gameState";
 import { DoorDir } from "./tile/door";
+import { Enemy } from "./entity/enemy/enemy";
+import { TutorialListener } from "./tutorialListener";
 
 export enum LevelState {
   IN_LEVEL,
@@ -86,7 +88,7 @@ export class Game {
   passwordTextBox: TextBox;
   worldCodes: Array<string>;
   selectedWorldCode: number;
-
+  tutorialActive: boolean;
   static scale;
   static tileset: HTMLImageElement;
   static objset: HTMLImageElement;
@@ -113,6 +115,7 @@ export class Game {
   static randTable = (table: any[], rand): any => {
     return table[Game.rand(0, table.length - 1, rand)];
   };
+  tutorialListener: TutorialListener;
 
   constructor() {
     window.addEventListener("load", () => {
@@ -268,7 +271,7 @@ export class Game {
           this.screenShakeY = 0;
 
           this.levelState = LevelState.IN_LEVEL;
-
+          this.tutorialActive = false;
           let gs = new GameState();
           gs.seed = (Math.random() * 4294967296) >>> 0;
           gs.randomState = (Math.random() * 4294967296) >>> 0;
@@ -277,6 +280,7 @@ export class Game {
       };
       checkResourcesLoaded();
     });
+    this.tutorialListener = new TutorialListener(this);
   }
 
   keyDownListener = (key: string) => {

@@ -70,6 +70,7 @@ import { EventEmitter } from "./eventEmitter";
 import { Enemy } from "./entity/enemy/enemy";
 import { FireWizardEnemy } from "./entity/enemy/fireWizard";
 import { Dagger } from "./weapon/dagger";
+import { TutorialListener } from "./tutorialListener";
 
 export enum RoomType {
   START,
@@ -122,7 +123,7 @@ export class Room {
   vis: number[][]; // visibility ranges from 0 (fully visible) to 1 (fully black)
   entities: Array<Entity>;
   items: Array<Item>;
-  doors: Array<any>; // (Door | BottomDoor) just a reference for mapping, still access through levelArray
+  doors: Array<Door>; // (Door | BottomDoor) just a reference for mapping, still access through levelArray
   projectiles: Array<Projectile>;
   particles: Array<Particle>;
   hitwarnings: Array<HitWarning>;
@@ -146,8 +147,7 @@ export class Room {
   walls: Array<Wall>;
   //actionTab: ActionTab;
   wallInfo: Map<string, WallInfo> = new Map();
-  private eventEmitter: EventEmitter;
-
+  savePoint: Room;
   private pointInside(
     x: number,
     y: number,
@@ -319,6 +319,15 @@ export class Room {
 
       this.roomArray[x][y] = new Spike(this, x, y);
     }
+  }
+
+  hasPlayer(player: Player): boolean {
+    for (let tile of this.roomArray) {
+      if (tile instanceof Player) {
+        return true;
+      }
+    }
+    return false;
   }
 
   generateLevelTable = (rand: () => number) => {
@@ -590,7 +599,19 @@ export class Room {
         break;
     }
   }
-
+  createSavePoint = () => {
+    //duplicate of the instance of the room exactly with json parsing but no circular references
+    let saveRoom = JSON.parse(JSON.stringify(this));
+    this.game.rooms.push(saveRoom);
+    this.savePoint = saveRoom;
+  };
+  loadSavePoint = () => {
+    //load the save point
+    let saveRoom = this.game.rooms.find((r) => r.savePoint);
+    if (saveRoom) {
+      this.game.changeLevel(this.game.players[0], saveRoom);
+    }
+  };
   populateEmpty = (rand: () => number) => {
     this.addTorches(Game.randTable([0, 0, 0, 1, 1, 2, 2, 3, 4], rand), rand);
   };

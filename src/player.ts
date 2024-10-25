@@ -22,7 +22,6 @@ import { PostProcessor } from "./postProcess";
 import { Weapon } from "./weapon/weapon";
 import { Room } from "./room";
 import { ImageParticle } from "./particle/imageParticle";
-import { Tutorial } from "./tutorialListener";
 import { Enemy } from "./entity/enemy/enemy";
 
 export enum PlayerDirection {
@@ -63,6 +62,7 @@ export class Player extends Drawable {
   lastHitBy: string;
   turnCount: number;
   triedMove: boolean;
+  tutorialRoom: boolean;
   constructor(game: Game, x: number, y: number, isLocalPlayer: boolean) {
     super();
 
@@ -115,6 +115,7 @@ export class Player extends Drawable {
     //this.actionTab = new ActionTab(this.inventory, this.game);
     this.turnCount = 0;
     this.triedMove = false;
+    this.tutorialRoom = false;
   }
 
   inputHandler = (input: InputEnum) => {
@@ -413,7 +414,12 @@ export class Player extends Drawable {
       this.health -= damage;
       if (this.health <= 0) {
         this.health = 0;
-        this.dead = true;
+        if (!this.game.tutorialActive) {
+          this.dead = true;
+        } else {
+          this.health = 2;
+          this.game.pushMessage("You are dead, but you can try again!");
+        }
       }
     }
   };

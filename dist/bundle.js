@@ -2062,7 +2062,7 @@ var astarclass_1 = __webpack_require__(/*! ../../astarclass */ "./src/astarclass
 var spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 var entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 var imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ "./src/particle/imageParticle.ts");
-var eventEmitter_1 = __webpack_require__(/*! ../../eventEmitter */ "./src/eventEmitter.ts");
+var eventBus_1 = __webpack_require__(/*! ../../eventBus */ "./src/eventBus.ts");
 var EnemyState;
 (function (EnemyState) {
     EnemyState[EnemyState["SLEEP"] = 0] = "SLEEP";
@@ -2075,10 +2075,6 @@ var Enemy = /** @class */ (function (_super) {
     __extends(Enemy, _super);
     function Enemy(room, game, x, y, rand) {
         var _this = _super.call(this, room, game, x, y) || this;
-        // Add this method to the Enemy class
-        _this.onEnemySeenPlayer = function (enemy) {
-            return enemy;
-        };
         _this.tryMove = function (x, y, collide) {
             if (collide === void 0) { collide = true; }
             var pointWouldBeIn = function (someX, someY) {
@@ -2140,10 +2136,6 @@ var Enemy = /** @class */ (function (_super) {
             else {
             }
         };
-        _this.emit = function (event, data) {
-            console.log("Attempting to emit event '".concat(event, "'"));
-            _this.eventEmitter.emit(event, data);
-        };
         _this.tick = function () {
             _this.behavior();
         };
@@ -2155,7 +2147,10 @@ var Enemy = /** @class */ (function (_super) {
                     _this.targetPlayer = player;
                     _this.facePlayer(player);
                     _this.seenPlayer = true;
-                    _this.eventEmitter.emit("SeenPlayer", _this.constructor);
+                    var type = _this.constructor;
+                    eventBus_1.globalEventBus.emit("EnemySeenPlayer", {
+                        enemyType: _this.constructor.name,
+                    });
                     console.log(_this.constructor.name);
                     if (player === _this.game.players[_this.game.localPlayerID])
                         _this.alertTicks = 1;
@@ -2412,9 +2407,6 @@ var Enemy = /** @class */ (function (_super) {
         _this.aggro = false;
         _this.dir = game_1.Direction.South;
         _this.name = "generic enemy";
-        _this.eventEmitter = new eventEmitter_1.EventEmitter();
-        // Add a listener for the event
-        _this.eventEmitter.on(_this.name, _this.onEnemySeenPlayer);
         return _this;
     }
     Object.defineProperty(Enemy.prototype, "type", {
@@ -6138,6 +6130,42 @@ exports.Rock = Rock;
 
 /***/ }),
 
+/***/ "./src/eventBus.ts":
+/*!*************************!*\
+  !*** ./src/eventBus.ts ***!
+  \*************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.globalEventBus = void 0;
+var eventEmitter_1 = __webpack_require__(/*! ./eventEmitter */ "./src/eventEmitter.ts");
+var EventBus = /** @class */ (function () {
+    function EventBus() {
+        this.eventEmitter = new eventEmitter_1.EventEmitter();
+    }
+    EventBus.getInstance = function () {
+        if (!EventBus.instance) {
+            EventBus.instance = new EventBus();
+        }
+        return EventBus.instance;
+    };
+    EventBus.prototype.emit = function (event, data) {
+        this.eventEmitter.emit(event, data);
+    };
+    EventBus.prototype.on = function (event, callback) {
+        this.eventEmitter.on(event, callback);
+    };
+    EventBus.prototype.off = function (event, callback) {
+        this.eventEmitter.off(event, callback);
+    };
+    return EventBus;
+}());
+exports.globalEventBus = EventBus.getInstance();
+
+
+/***/ }),
+
 /***/ "./src/eventEmitter.ts":
 /*!*****************************!*\
   !*** ./src/eventEmitter.ts ***!
@@ -6196,6 +6224,7 @@ var downLadder_1 = __webpack_require__(/*! ./tile/downLadder */ "./src/tile/down
 var textbox_1 = __webpack_require__(/*! ./textbox */ "./src/textbox.ts");
 var gameState_1 = __webpack_require__(/*! ./gameState */ "./src/gameState.ts");
 var door_2 = __webpack_require__(/*! ./tile/door */ "./src/tile/door.ts");
+var tutorialListener_1 = __webpack_require__(/*! ./tutorialListener */ "./src/tutorialListener.ts");
 var LevelState;
 (function (LevelState) {
     LevelState[LevelState["IN_LEVEL"] = 0] = "IN_LEVEL";
@@ -6741,6 +6770,7 @@ var Game = /** @class */ (function () {
                     _this.screenShakeX = 0;
                     _this.screenShakeY = 0;
                     _this.levelState = LevelState.IN_LEVEL;
+                    _this.tutorialActive = false;
                     var gs = new gameState_1.GameState();
                     gs.seed = (Math.random() * 4294967296) >>> 0;
                     gs.randomState = (Math.random() * 4294967296) >>> 0;
@@ -6749,6 +6779,7 @@ var Game = /** @class */ (function () {
             };
             checkResourcesLoaded();
         });
+        this.tutorialListener = new tutorialListener_1.TutorialListener(this);
     }
     Game.letters = "abcdefghijklmnopqrstuvwxyz1234567890,.!?:'()[]%-/";
     Game.letter_widths = [
@@ -11394,7 +11425,13 @@ var Player = /** @class */ (function (_super) {
                 _this.health -= damage;
                 if (_this.health <= 0) {
                     _this.health = 0;
-                    _this.dead = true;
+                    if (!_this.game.tutorialActive) {
+                        _this.dead = true;
+                    }
+                    else {
+                        _this.health = 2;
+                        _this.game.pushMessage("You are dead, but you can try again!");
+                    }
                 }
             }
         };
@@ -11571,6 +11608,7 @@ var Player = /** @class */ (function (_super) {
         //this.actionTab = new ActionTab(this.inventory, this.game);
         _this.turnCount = 0;
         _this.triedMove = false;
+        _this.tutorialRoom = false;
         return _this;
     }
     return Player;
@@ -12151,6 +12189,19 @@ var Room = /** @class */ (function () {
                 table.push(e);
             }
             return table;
+        };
+        this.createSavePoint = function () {
+            //duplicate of the instance of the room exactly with json parsing but no circular references
+            var saveRoom = JSON.parse(JSON.stringify(_this));
+            _this.game.rooms.push(saveRoom);
+            _this.savePoint = saveRoom;
+        };
+        this.loadSavePoint = function () {
+            //load the save point
+            var saveRoom = _this.game.rooms.find(function (r) { return r.savePoint; });
+            if (saveRoom) {
+                _this.game.changeLevel(_this.game.players[0], saveRoom);
+            }
         };
         this.populateEmpty = function (rand) {
             _this.addTorches(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 2, 3, 4], rand), rand);
@@ -12972,6 +13023,15 @@ var Room = /** @class */ (function () {
             var y = t.y;
             this.roomArray[x][y] = new spike_1.Spike(this, x, y);
         }
+    };
+    Room.prototype.hasPlayer = function (player) {
+        for (var _i = 0, _a = this.roomArray; _i < _a.length; _i++) {
+            var tile = _a[_i];
+            if (tile instanceof player_1.Player) {
+                return true;
+            }
+        }
+        return false;
     };
     // Function to add enemies to the room
     Room.prototype.addEnemies = function (numEnemies, rand) {
@@ -13815,6 +13875,10 @@ var Door = /** @class */ (function (_super) {
     __extends(Door, _super);
     function Door(room, game, x, y, dir, doorType) {
         var _this = _super.call(this, room, x, y) || this;
+        _this.guard = function () {
+            _this.DoorType = DoorType.GUARDEDDOOR;
+            _this.locked = true;
+        };
         _this.canUnlock = function (player) {
             if (_this.DoorType === DoorType.LOCKEDDOOR) {
                 var k = player.inventory.hasItem(key_1.Key);
@@ -13849,6 +13913,7 @@ var Door = /** @class */ (function (_super) {
             }
             if (_this.DoorType === DoorType.GUARDEDDOOR) {
                 _this.locked = false;
+                _this.game.tutorialActive = false;
                 _this.room.doors.forEach(function (door) {
                     door.DoorType = DoorType.DOOR;
                     door.locked = false;
@@ -13925,6 +13990,7 @@ var Door = /** @class */ (function (_super) {
         _this.DoorType = doorType;
         _this.locked = false;
         _this.isDoor = true;
+        _this.DoorType = doorType;
         if (_this.DoorType === DoorType.GUARDEDDOOR) {
             _this.locked = true;
         }
@@ -14700,6 +14766,86 @@ var WallTorch = /** @class */ (function (_super) {
     return WallTorch;
 }(tile_1.Tile));
 exports.WallTorch = WallTorch;
+
+
+/***/ }),
+
+/***/ "./src/tutorialListener.ts":
+/*!*********************************!*\
+  !*** ./src/tutorialListener.ts ***!
+  \*********************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.TutorialListener = void 0;
+var eventBus_1 = __webpack_require__(/*! ./eventBus */ "./src/eventBus.ts");
+var TutorialListener = /** @class */ (function () {
+    function TutorialListener(game) {
+        this.seenEnemies = new Set();
+        this.pendingNewEnemies = new Set();
+        this.tutorialCreationTimeout = null;
+        //console.log("Tutorial constructor called");
+        this.setupEventListeners();
+        console.log("TutorialListener constructor called for room: ".concat(game));
+        this.game = game;
+    }
+    TutorialListener.prototype.setupEventListeners = function () {
+        //console.log("Setting up event listeners");
+        eventBus_1.globalEventBus.on("EnemySeenPlayer", this.handleEnemySeen.bind(this));
+    };
+    TutorialListener.prototype.handleEnemySeen = function (data) {
+        console.log("handleEnemySeen called with enemy: ".concat(data.enemyType));
+        if (!this.hasSeenEnemy(data.enemyType)) {
+            console.log("New enemy encountered: ".concat(data.enemyType));
+            this.addSeenEnemy(data.enemyType);
+            this.pendingNewEnemies.add(data.enemyType);
+            this.scheduleTutorialCreation();
+        }
+        else {
+            console.log("Enemy already seen: ".concat(data.enemyType));
+        }
+    };
+    TutorialListener.prototype.scheduleTutorialCreation = function () {
+        var _this = this;
+        if (this.tutorialCreationTimeout === null) {
+            this.tutorialCreationTimeout = setTimeout(function () {
+                _this.createTutorialRoom(Array.from(_this.pendingNewEnemies));
+                _this.pendingNewEnemies.clear();
+                _this.tutorialCreationTimeout = null;
+            }, 100); // Wait 100ms to collect all new enemies
+        }
+    };
+    TutorialListener.prototype.createTutorialRoom = function (enemyTypes) {
+        this.game.tutorialActive = true;
+        this.game.room.doors.forEach(function (door) {
+            door.guard();
+        });
+        console.log("Creating tutorial room for new enemies: ".concat(enemyTypes.join(", ")));
+    };
+    // Method to check if an enemy has been seen before
+    TutorialListener.prototype.hasSeenEnemy = function (enemyType) {
+        //console.log(`Checking if enemy has been seen: ${enemyType}`);
+        return this.seenEnemies.has(enemyType);
+    };
+    // Method to manually add an enemy to the seen list (useful for testing or manual control)
+    TutorialListener.prototype.addSeenEnemy = function (enemyType) {
+        //console.log(`Adding enemy to seen list: ${enemyType}`);
+        this.seenEnemies.add(enemyType);
+    };
+    // Method to reset the seen enemies list (useful for testing or game resets)
+    TutorialListener.prototype.resetSeenEnemies = function () {
+        //console.log("Resetting seen enemies list");
+        this.seenEnemies.clear();
+    };
+    // Method to clean up event listeners when needed
+    TutorialListener.prototype.cleanup = function () {
+        //console.log("Cleaning up event listeners");
+        eventBus_1.globalEventBus.off("EnemySeenPlayer", this.handleEnemySeen.bind(this));
+    };
+    return TutorialListener;
+}());
+exports.TutorialListener = TutorialListener;
 
 
 /***/ }),

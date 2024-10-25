@@ -43,7 +43,7 @@ export class Door extends Tile {
     this.DoorType = doorType;
     this.locked = false;
     this.isDoor = true;
-
+    this.DoorType = doorType;
     if (this.DoorType === DoorType.GUARDEDDOOR) {
       this.locked = true;
     }
@@ -51,6 +51,11 @@ export class Door extends Tile {
       this.locked = true;
     }
   }
+
+  guard = () => {
+    this.DoorType = DoorType.GUARDEDDOOR;
+    this.locked = true;
+  };
 
   canUnlock = (player: Player) => {
     if (this.DoorType === DoorType.LOCKEDDOOR) {
@@ -92,6 +97,7 @@ export class Door extends Tile {
     }
     if (this.DoorType === DoorType.GUARDEDDOOR) {
       this.locked = false;
+      this.game.tutorialActive = false;
       this.room.doors.forEach((door) => {
         door.DoorType = DoorType.DOOR;
         door.locked = false;

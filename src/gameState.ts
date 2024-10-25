@@ -48,6 +48,7 @@ import { Spear } from "./weapon/spear";
 import { Weapon } from "./weapon/weapon";
 import { Pickaxe } from "./weapon/pickaxe";
 import { Backpack } from "./item/backpack";
+import { TutorialListener } from "./tutorialListener";
 
 export class HitWarningState {
   x: number;
