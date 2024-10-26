@@ -10,7 +10,7 @@ export class Heart extends Usable {
     super(level, x, y);
     this.tileX = 8;
     this.tileY = 0;
-    this.offsetY = 0;
+    this.offsetY = -0.3;
   }
 
   onUse = (player: Player) => {

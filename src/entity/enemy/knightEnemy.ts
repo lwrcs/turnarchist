@@ -11,6 +11,7 @@ import { Item } from "../../item/item";
 import { ImageParticle } from "../../particle/imageParticle";
 import { Armor } from "../../item/armor";
 import { Enemy } from "./enemy";
+import { Random } from "../../random";
 
 export class KnightEnemy extends Enemy {
   ticks: number;
@@ -20,15 +21,8 @@ export class KnightEnemy extends Enemy {
   aggro: boolean;
   drop: Item;
 
-  constructor(
-    room: Room,
-    game: Game,
-    x: number,
-    y: number,
-    rand: () => number,
-    drop?: Item
-  ) {
-    super(room, game, x, y, rand);
+  constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
+    super(room, game, x, y);
     this.ticks = 0;
     this.frame = 0;
     this.health = 2;
@@ -45,7 +39,7 @@ export class KnightEnemy extends Enemy {
 
     if (drop) this.drop = drop;
     else {
-      let dropProb = rand();
+      let dropProb = Random.rand();
       if (dropProb < 0.05) this.drop = new DualDagger(this.room, 0, 0);
       else if (dropProb < 0.01) this.drop = new DualDagger(this.room, 0, 0);
       else this.drop = new Coin(this.room, 0, 0);

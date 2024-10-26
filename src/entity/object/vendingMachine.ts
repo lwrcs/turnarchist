@@ -19,6 +19,7 @@ import { DualDagger } from "../../weapon/dualdagger";
 import { Lantern } from "../../item/lantern";
 import { RedGem } from "../../item/redgem";
 import { EntityType } from "../entity";
+import { Random } from "../../random";
 
 let OPEN_TIME = 150;
 let FILL_COLOR = "#5a595b";
@@ -34,19 +35,9 @@ export class VendingMachine extends Entity {
   isInf = false;
   quantity = 1;
   buyAnimAmount = 0;
-  rand: () => number;
 
-  constructor(
-    room: Room,
-    game: Game,
-    x: number,
-    y: number,
-    item: Item,
-    rand: () => number
-  ) {
+  constructor(room: Room, game: Game, x: number, y: number, item: Item) {
     super(room, game, x, y);
-
-    this.rand = rand;
 
     this.destroyable = false;
     this.pushable = false;
@@ -59,7 +50,7 @@ export class VendingMachine extends Entity {
     this.name = "vending machine";
     if (this.item instanceof Shotgun) {
       let g = new BlueGem(room, 0, 0);
-      g.stackCount = Game.randTable([5, 5, 6, 7], this.rand);
+      g.stackCount = Game.randTable([5, 5, 6, 7], Random.rand);
       this.costItems = [g];
     } else if (this.item instanceof Heart) {
       let c = new Coin(room, 0, 0);
@@ -68,19 +59,19 @@ export class VendingMachine extends Entity {
       this.isInf = true;
     } else if (this.item instanceof Spear) {
       let g = new GreenGem(room, 0, 0);
-      g.stackCount = Game.randTable([5, 5, 6, 7], this.rand);
+      g.stackCount = Game.randTable([5, 5, 6, 7], Random.rand);
       this.costItems = [g];
     } else if (this.item instanceof Armor) {
       let g = new Gold(room, 0, 0);
-      g.stackCount = Game.randTable([5, 5, 6, 7], this.rand);
+      g.stackCount = Game.randTable([5, 5, 6, 7], Random.rand);
       this.costItems = [g];
     } else if (this.item instanceof DualDagger) {
       let g = new RedGem(room, 0, 0);
-      g.stackCount = Game.randTable([5, 5, 6, 7], this.rand);
+      g.stackCount = Game.randTable([5, 5, 6, 7], Random.rand);
       this.costItems = [g];
     } else if (this.item instanceof Lantern) {
       let g = new Coal(room, 0, 0);
-      g.stackCount = Game.randTable([25, 26, 27, 28], this.rand);
+      g.stackCount = Game.randTable([25, 26, 27, 28], Random.rand);
       this.costItems = [g];
     }
   }
@@ -122,8 +113,8 @@ export class VendingMachine extends Entity {
 
       let x, y;
       do {
-        x = Game.rand(this.x - 1, this.x + 1, this.rand);
-        y = Game.rand(this.y - 1, this.y + 1, this.rand);
+        x = Game.rand(this.x - 1, this.x + 1, Random.rand);
+        y = Game.rand(this.y - 1, this.y + 1, Random.rand);
       } while (
         (x === this.x && y === this.y) ||
         this.room.roomArray[x][y].isSolid() ||

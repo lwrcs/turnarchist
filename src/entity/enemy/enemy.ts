@@ -32,15 +32,9 @@ export class Enemy extends Entity {
   aggro: boolean;
   targetPlayer: Player;
   drop: Item;
-  dir: Direction;
+  //dir: Direction;
 
-  constructor(
-    room: Room,
-    game: Game,
-    x: number,
-    y: number,
-    rand: () => number
-  ) {
+  constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
     this.drawYOffset = 1.5;
     this.name = "";
@@ -52,7 +46,7 @@ export class Enemy extends Entity {
     this.tileX = 17;
     this.tileY = 8;
     this.aggro = false;
-    this.dir = Direction.South;
+    //this.dir = Direction.South;
     this.name = "generic enemy";
   }
 
@@ -117,8 +111,10 @@ export class Enemy extends Entity {
 
   tick = () => {
     this.behavior();
+    if (this.x !== this.lastX || this.y !== this.lastY) {
+      this.emitEntityData();
+    }
   };
-
   lookForPlayer = () => {
     let p = this.nearestPlayer();
     if (p !== false) {
@@ -130,6 +126,7 @@ export class Enemy extends Entity {
         let type = this.constructor;
         globalEventBus.emit("EnemySeenPlayer", {
           enemyType: this.constructor.name,
+          enemyName: this.name,
         });
         console.log(this.constructor.name);
         if (player === this.game.players[this.game.localPlayerID])

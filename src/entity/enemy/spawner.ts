@@ -18,30 +18,23 @@ import { BlueGem } from "../../item/bluegem";
 import { KnightEnemy } from "./knightEnemy";
 import { WizardEnemy } from "./wizardEnemy";
 import { Enemy } from "./enemy";
+import { Random } from "../../random";
 
 export class Spawner extends Enemy {
   ticks: number;
   seenPlayer: boolean;
   enemySpawnType: number;
-  rand: () => number;
 
-  constructor(
-    room: Room,
-    game: Game,
-    x: number,
-    y: number,
-    rand: () => number
-  ) {
-    super(room, game, x, y, rand);
+  constructor(room: Room, game: Game, x: number, y: number) {
+    super(room, game, x, y);
     this.ticks = 0;
     this.health = 4;
     this.maxHealth = 4;
     this.tileX = 6;
     this.tileY = 4;
     this.seenPlayer = true;
-    this.enemySpawnType = Game.randTable([1, 2, 2, 2, 2, 3], rand);
+    this.enemySpawnType = Game.randTable([1, 2, 2, 2, 2, 3], Random.rand);
 
-    this.rand = rand;
     this.name = "reaper";
   }
 
@@ -67,7 +60,7 @@ export class Spawner extends Enemy {
         if (positions.length > 0) {
           this.tileX = 7;
 
-          const position = Game.randTable(positions, this.rand);
+          const position = Game.randTable(positions, Random.rand);
 
           let spawned;
           switch (this.enemySpawnType) {
@@ -76,8 +69,7 @@ export class Spawner extends Enemy {
                 this.room,
                 this.game,
                 position.x,
-                position.y,
-                this.rand
+                position.y
               );
               break;
             case 2:
@@ -85,8 +77,7 @@ export class Spawner extends Enemy {
                 this.room,
                 this.game,
                 position.x,
-                position.y,
-                this.rand
+                position.y
               );
               break;
             case 3:
@@ -94,8 +85,7 @@ export class Spawner extends Enemy {
                 this.room,
                 this.game,
                 position.x,
-                position.y,
-                this.rand
+                position.y
               );
               break;
           }
@@ -108,6 +98,45 @@ export class Spawner extends Enemy {
         }
       }
       this.ticks++;
+    }
+  };
+
+  draw = (delta: number) => {
+    if (!this.dead) {
+      this.frame += 0.1 * delta;
+      if (this.frame >= 4) this.frame = 0;
+
+      if (this.hasShadow)
+        Game.drawMob(
+          0,
+          0,
+          1,
+          1,
+          this.x - this.drawX,
+          this.y - this.drawY,
+          1,
+          1,
+          this.room.shadeColor,
+          this.shadeAmount()
+        );
+      Game.drawMob(
+        this.tileX,
+        this.tileY,
+        1,
+        2,
+        this.x - this.drawX,
+        this.y - this.drawYOffset - this.drawY,
+        1,
+        2,
+        this.room.shadeColor,
+        this.shadeAmount()
+      );
+    }
+    if (!this.seenPlayer) {
+      this.drawSleepingZs(delta);
+    }
+    if (this.alertTicks > 0) {
+      this.drawExclamation(delta);
     }
   };
 

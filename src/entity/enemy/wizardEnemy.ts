@@ -32,18 +32,10 @@ export class WizardEnemy extends Enemy {
   state: WizardState;
   frame: number;
   seenPlayer: boolean;
-  rand: () => number;
   readonly ATTACK_RADIUS = 5;
 
-  constructor(
-    room: Room,
-    game: Game,
-    x: number,
-    y: number,
-    rand: () => number,
-    drop?: Item
-  ) {
-    super(room, game, x, y, rand);
+  constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
+    super(room, game, x, y);
     this.ticks = 0;
     this.health = 1;
     this.tileX = 6;
@@ -52,11 +44,10 @@ export class WizardEnemy extends Enemy {
     this.state = WizardState.attack;
     this.seenPlayer = false;
     this.alertTicks = 0;
-    this.rand = rand;
     this.name = "wizard bomber";
     if (drop) this.drop = drop;
     else {
-      if (this.rand() < 0.02)
+      if (Random.rand() < 0.02)
         this.drop = new BlueGem(this.room, this.x, this.y);
       else this.drop = new Coin(this.room, this.x, this.y);
     }

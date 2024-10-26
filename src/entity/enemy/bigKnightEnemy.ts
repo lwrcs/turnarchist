@@ -11,6 +11,7 @@ import { Spear } from "../../weapon/spear";
 import { GameConstants } from "../../gameConstants";
 import { DeathParticle } from "../../particle/deathParticle";
 import { Enemy } from "./enemy";
+import { Random } from "../../random";
 
 export class BigKnightEnemy extends Enemy {
   frame: number;
@@ -23,15 +24,8 @@ export class BigKnightEnemy extends Enemy {
   readonly REGEN_TICKS = 5;
   drops: Array<Item>;
 
-  constructor(
-    room: Room,
-    game: Game,
-    x: number,
-    y: number,
-    rand: () => number,
-    drop?: Item
-  ) {
-    super(room, game, x, y, rand);
+  constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
+    super(room, game, x, y);
     this.w = 2;
     this.h = 2;
     this.ticks = 0;
@@ -51,7 +45,7 @@ export class BigKnightEnemy extends Enemy {
     this.drops = [];
     if (drop) this.drops.push(drop);
     while (this.drops.length < 4) {
-      let dropProb = rand();
+      let dropProb = Random.rand();
       if (dropProb < 0.005) this.drops.push(new Spear(this.room, 0, 0));
       else if (dropProb < 0.04) this.drops.push(new RedGem(this.room, 0, 0));
       else if (dropProb < 0.075) this.drops.push(new RedGem(this.room, 0, 0));

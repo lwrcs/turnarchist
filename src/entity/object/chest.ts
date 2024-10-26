@@ -13,15 +13,10 @@ import { Sound } from "../../sound";
 import { RedGem } from "../../item/redgem";
 import { BlueGem } from "../../item/bluegem";
 import { EntityType } from "../entity";
+import { Random } from "../../random";
 
 export class Chest extends Entity {
-  constructor(
-    room: Room,
-    game: Game,
-    x: number,
-    y: number,
-    rand: () => number
-  ) {
+  constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
 
     this.tileX = 4;
@@ -29,7 +24,7 @@ export class Chest extends Entity {
     this.health = 1;
     this.name = "chest";
 
-    let drop = Game.randTable([1, 1, 1, 1, 1, 1, 1, 2, 3, 4], rand);
+    let drop = Game.randTable([1, 1, 1, 1, 1, 1, 1, 2, 3, 4], Random.rand);
 
     switch (drop) {
       case 1:

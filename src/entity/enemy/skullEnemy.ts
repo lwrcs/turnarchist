@@ -14,6 +14,7 @@ import { DeathParticle } from "../../particle/deathParticle";
 import { Candle } from "../../item/candle";
 import { ImageParticle } from "../../particle/imageParticle";
 import { Enemy } from "./enemy";
+import { Random } from "../../random";
 
 export class SkullEnemy extends Enemy {
   frame: number;
@@ -25,15 +26,8 @@ export class SkullEnemy extends Enemy {
   targetPlayer: Player;
   readonly REGEN_TICKS = 5;
   drop: Item;
-  constructor(
-    room: Room,
-    game: Game,
-    x: number,
-    y: number,
-    rand: () => number,
-    drop?: Item
-  ) {
-    super(room, game, x, y, rand);
+  constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
+    super(room, game, x, y);
     this.ticks = 0;
     this.frame = 0;
     this.health = 2;
@@ -49,7 +43,7 @@ export class SkullEnemy extends Enemy {
     this.forwardOnlyAttack = true;
     if (drop) this.drop = drop;
     else {
-      let dropProb = rand();
+      let dropProb = Random.rand();
       if (dropProb < 0.05) this.drop = new Spear(this.room, 0, 0);
       else if (dropProb < 0.01) this.drop = new RedGem(this.room, 0, 0);
       //else if (dropProb < 0.2) this.drop = new Candle(this.room, 0, 0);

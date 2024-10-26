@@ -332,7 +332,7 @@ let loadEnemy = (es: EnemyState, game: Game): Entity => {
   let level = game.rooms[es.levelID];
   if (es.type === EnemyType.BARREL) enemy = new Barrel(level, game, es.x, es.y);
   if (es.type === EnemyType.BIGSKULL) {
-    enemy = new BigSkullEnemy(level, game, es.x, es.y, Random.rand);
+    enemy = new BigSkullEnemy(level, game, es.x, es.y);
     enemy.ticks = es.ticks;
     enemy.ticksSinceFirstHit = es.ticksSinceFirstHit;
     enemy.seenPlayer = es.seenPlayer;
@@ -345,7 +345,7 @@ let loadEnemy = (es: EnemyState, game: Game): Entity => {
     for (const d of es.drops) enemy.drops.push(loadItem(d, game));
   }
   if (es.type === EnemyType.CHARGE) {
-    enemy = new ChargeEnemy(level, game, es.x, es.y, Random.rand);
+    enemy = new ChargeEnemy(level, game, es.x, es.y);
     enemy.ticks = es.ticks;
     enemy.state = es.chargeEnemyState;
     enemy.startX = es.startX;
@@ -355,8 +355,7 @@ let loadEnemy = (es: EnemyState, game: Game): Entity => {
     enemy.visualTargetX = es.visualTargetX;
     enemy.visualTargetY = es.visualTargetY;
   }
-  if (es.type === EnemyType.CHEST)
-    enemy = new Chest(level, game, es.x, es.y, Random.rand);
+  if (es.type === EnemyType.CHEST) enemy = new Chest(level, game, es.x, es.y);
   if (es.type === EnemyType.COAL)
     enemy = new CoalResource(level, game, es.x, es.y);
   if (es.type === EnemyType.CRATE) enemy = new Crate(level, game, es.x, es.y);
@@ -365,7 +364,7 @@ let loadEnemy = (es: EnemyState, game: Game): Entity => {
   if (es.type === EnemyType.GOLD)
     enemy = new GoldResource(level, game, es.x, es.y);
   if (es.type === EnemyType.KNIGHT) {
-    enemy = new KnightEnemy(level, game, es.x, es.y, Random.rand);
+    enemy = new KnightEnemy(level, game, es.x, es.y);
     enemy.ticks = es.ticks;
     enemy.seenPlayer = es.seenPlayer;
     if (es.seenPlayer) {
@@ -375,10 +374,10 @@ let loadEnemy = (es: EnemyState, game: Game): Entity => {
     }
   }
   if (es.type === EnemyType.PLANT)
-    enemy = new PottedPlant(level, game, es.x, es.y, Random.rand);
+    enemy = new PottedPlant(level, game, es.x, es.y);
   if (es.type === EnemyType.PLANT) enemy = new Pot(level, game, es.x, es.y);
   if (es.type === EnemyType.SKULL) {
-    enemy = new SkullEnemy(level, game, es.x, es.y, Random.rand);
+    enemy = new SkullEnemy(level, game, es.x, es.y);
     enemy.ticks = es.ticks;
     enemy.ticksSinceFirstHit = es.ticksSinceFirstHit;
     enemy.seenPlayer = es.seenPlayer;
@@ -389,7 +388,7 @@ let loadEnemy = (es: EnemyState, game: Game): Entity => {
     }
   }
   if (es.type === EnemyType.CRAB) {
-    enemy = new CrabEnemy(level, game, es.x, es.y, Random.rand);
+    enemy = new CrabEnemy(level, game, es.x, es.y);
     enemy.ticks = es.ticks;
     enemy.seenPlayer = es.seenPlayer;
     if (es.seenPlayer) {
@@ -399,14 +398,14 @@ let loadEnemy = (es: EnemyState, game: Game): Entity => {
     }
   }
   if (es.type === EnemyType.SPAWNER) {
-    enemy = new Spawner(level, game, es.x, es.y, Random.rand);
+    enemy = new Spawner(level, game, es.x, es.y);
     enemy.ticks = es.ticks;
     enemy.seenPlayer = es.seenPlayer;
     enemy.enemySpawnType = es.enemySpawnType;
   }
   if (es.type === EnemyType.VENDINGMACHINE) {
     let item = loadItem(es.item, game);
-    enemy = new VendingMachine(level, game, es.x, es.y, item, Random.rand);
+    enemy = new VendingMachine(level, game, es.x, es.y, item);
     if (es.isPlayerOpened) {
       enemy.playerOpened = game.players[es.playerOpenedID];
       if (!enemy.playerOpened)
@@ -419,13 +418,13 @@ let loadEnemy = (es: EnemyState, game: Game): Entity => {
     enemy.quantity = es.quantity;
   }
   if (es.type === EnemyType.WIZARD) {
-    enemy = new WizardEnemy(level, game, es.x, es.y, Random.rand);
+    enemy = new WizardEnemy(level, game, es.x, es.y);
     enemy.ticks = es.ticks;
     enemy.state = es.wizardState;
     enemy.seenPlayer = es.seenPlayer;
   }
   if (es.type === EnemyType.ZOMBIE) {
-    enemy = new ZombieEnemy(level, game, es.x, es.y, Random.rand);
+    enemy = new ZombieEnemy(level, game, es.x, es.y);
     enemy.ticks = es.ticks;
     enemy.seenPlayer = es.seenPlayer;
     if (es.seenPlayer) {
@@ -831,8 +830,7 @@ export const loadGameState = (
     new Block(game.room, game, p.x, p.y + 1)
   );
   game.room.doors.forEach((door) => {
-    door.DoorType = DoorType.LOCKEDDOOR;
-    door.locked = true;
+    door.lock();
   });
 
   setTimeout(() => {

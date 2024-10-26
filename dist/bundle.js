@@ -498,8 +498,8 @@ var armor_1 = __webpack_require__(/*! ../../item/armor */ "./src/item/armor.ts")
 var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 var ArmoredzombieEnemy = /** @class */ (function (_super) {
     __extends(ArmoredzombieEnemy, _super);
-    function ArmoredzombieEnemy(room, game, x, y, rand, drop) {
-        var _this = _super.call(this, room, game, x, y, rand) || this;
+    function ArmoredzombieEnemy(room, game, x, y, drop) {
+        var _this = _super.call(this, room, game, x, y) || this;
         _this.hit = function () {
             return 1;
         };
@@ -758,10 +758,11 @@ var spear_1 = __webpack_require__(/*! ../../weapon/spear */ "./src/weapon/spear.
 var gameConstants_1 = __webpack_require__(/*! ../../gameConstants */ "./src/gameConstants.ts");
 var deathParticle_1 = __webpack_require__(/*! ../../particle/deathParticle */ "./src/particle/deathParticle.ts");
 var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
+var random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
 var BigKnightEnemy = /** @class */ (function (_super) {
     __extends(BigKnightEnemy, _super);
-    function BigKnightEnemy(room, game, x, y, rand, drop) {
-        var _this = _super.call(this, room, game, x, y, rand) || this;
+    function BigKnightEnemy(room, game, x, y, drop) {
+        var _this = _super.call(this, room, game, x, y) || this;
         _this.REGEN_TICKS = 5;
         _this.addHitWarnings = function () {
             _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y, _this.x, _this.y));
@@ -982,7 +983,7 @@ var BigKnightEnemy = /** @class */ (function (_super) {
         if (drop)
             _this.drops.push(drop);
         while (_this.drops.length < 4) {
-            var dropProb = rand();
+            var dropProb = random_1.Random.rand();
             if (dropProb < 0.005)
                 _this.drops.push(new spear_1.Spear(_this.room, 0, 0));
             else if (dropProb < 0.04)
@@ -1037,10 +1038,11 @@ var spear_1 = __webpack_require__(/*! ../../weapon/spear */ "./src/weapon/spear.
 var gameConstants_1 = __webpack_require__(/*! ../../gameConstants */ "./src/gameConstants.ts");
 var deathParticle_1 = __webpack_require__(/*! ../../particle/deathParticle */ "./src/particle/deathParticle.ts");
 var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
+var random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
 var BigSkullEnemy = /** @class */ (function (_super) {
     __extends(BigSkullEnemy, _super);
-    function BigSkullEnemy(room, game, x, y, rand, drop) {
-        var _this = _super.call(this, room, game, x, y, rand) || this;
+    function BigSkullEnemy(room, game, x, y, drop) {
+        var _this = _super.call(this, room, game, x, y) || this;
         _this.REGEN_TICKS = 5;
         _this.addHitWarnings = function () {
             _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, _this.x - 1, _this.y, _this.x, _this.y));
@@ -1293,7 +1295,7 @@ var BigSkullEnemy = /** @class */ (function (_super) {
         if (drop)
             _this.drops.push(drop);
         while (_this.drops.length < 4) {
-            var dropProb = rand();
+            var dropProb = random_1.Random.rand();
             if (dropProb < 0.005)
                 _this.drops.push(new spear_1.Spear(_this.room, 0, 0));
             else if (dropProb < 0.04)
@@ -1350,8 +1352,8 @@ var door_1 = __webpack_require__(/*! ../../tile/door */ "./src/tile/door.ts");
 var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 var BishopEnemy = /** @class */ (function (_super) {
     __extends(BishopEnemy, _super);
-    function BishopEnemy(room, game, x, y, rand, drop) {
-        var _this = _super.call(this, room, game, x, y, rand) || this;
+    function BishopEnemy(room, game, x, y, drop) {
+        var _this = _super.call(this, room, game, x, y) || this;
         _this.tryMove = function (x, y) {
             var pointWouldBeIn = function (someX, someY) {
                 return (someX >= x && someX < x + _this.w && someY >= y && someY < y + _this.h);
@@ -1602,8 +1604,8 @@ var ChargeEnemyState;
 })(ChargeEnemyState = exports.ChargeEnemyState || (exports.ChargeEnemyState = {}));
 var ChargeEnemy = /** @class */ (function (_super) {
     __extends(ChargeEnemy, _super);
-    function ChargeEnemy(room, game, x, y, rand, drop) {
-        var _this = _super.call(this, room, game, x, y, rand) || this;
+    function ChargeEnemy(room, game, x, y, drop) {
+        var _this = _super.call(this, room, game, x, y) || this;
         _this.hit = function () {
             return 1;
         };
@@ -1848,8 +1850,8 @@ var imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ ".
 var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 var CrabEnemy = /** @class */ (function (_super) {
     __extends(CrabEnemy, _super);
-    function CrabEnemy(room, game, x, y, rand, drop) {
-        var _this = _super.call(this, room, game, x, y, rand) || this;
+    function CrabEnemy(room, game, x, y, drop) {
+        var _this = _super.call(this, room, game, x, y) || this;
         _this.hurt = function (playerHitBy, damage) {
             if (playerHitBy) {
                 _this.aggro = true;
@@ -2075,7 +2077,8 @@ var EnemyState;
 })(EnemyState || (EnemyState = {}));
 var Enemy = /** @class */ (function (_super) {
     __extends(Enemy, _super);
-    function Enemy(room, game, x, y, rand) {
+    //dir: Direction;
+    function Enemy(room, game, x, y) {
         var _this = _super.call(this, room, game, x, y) || this;
         _this.tryMove = function (x, y, collide) {
             if (collide === void 0) { collide = true; }
@@ -2140,6 +2143,9 @@ var Enemy = /** @class */ (function (_super) {
         };
         _this.tick = function () {
             _this.behavior();
+            if (_this.x !== _this.lastX || _this.y !== _this.lastY) {
+                _this.emitEntityData();
+            }
         };
         _this.lookForPlayer = function () {
             var p = _this.nearestPlayer();
@@ -2152,6 +2158,7 @@ var Enemy = /** @class */ (function (_super) {
                     var type = _this.constructor;
                     eventBus_1.globalEventBus.emit("EnemySeenPlayer", {
                         enemyType: _this.constructor.name,
+                        enemyName: _this.name,
                     });
                     console.log(_this.constructor.name);
                     if (player === _this.game.players[_this.game.localPlayerID])
@@ -2407,7 +2414,7 @@ var Enemy = /** @class */ (function (_super) {
         _this.tileX = 17;
         _this.tileY = 8;
         _this.aggro = false;
-        _this.dir = game_1.Direction.South;
+        //this.dir = Direction.South;
         _this.name = "generic enemy";
         return _this;
     }
@@ -2468,8 +2475,8 @@ var WizardState;
 })(WizardState = exports.WizardState || (exports.WizardState = {}));
 var FireWizardEnemy = /** @class */ (function (_super) {
     __extends(FireWizardEnemy, _super);
-    function FireWizardEnemy(room, game, x, y, rand, drop) {
-        var _this = _super.call(this, room, game, x, y, rand) || this;
+    function FireWizardEnemy(room, game, x, y, drop) {
+        var _this = _super.call(this, room, game, x, y) || this;
         _this.ATTACK_RADIUS = 5;
         _this.hit = function () {
             return 1;
@@ -2615,12 +2622,11 @@ var FireWizardEnemy = /** @class */ (function (_super) {
         _this.state = WizardState.attack;
         _this.seenPlayer = false;
         _this.alertTicks = 0;
-        _this.rand = rand;
         _this.name = "fire wizard";
         if (drop)
             _this.drop = drop;
         else {
-            if (_this.rand() < 0.02)
+            if (random_1.Random.rand() < 0.02)
                 _this.drop = new bluegem_1.BlueGem(_this.room, _this.x, _this.y);
             else
                 _this.drop = new coin_1.Coin(_this.room, _this.x, _this.y);
@@ -2667,8 +2673,8 @@ var imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ ".
 var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 var FrogEnemy = /** @class */ (function (_super) {
     __extends(FrogEnemy, _super);
-    function FrogEnemy(room, game, x, y, rand, drop) {
-        var _this = _super.call(this, room, game, x, y, rand) || this;
+    function FrogEnemy(room, game, x, y, drop) {
+        var _this = _super.call(this, room, game, x, y) || this;
         _this.hurt = function (playerHitBy, damage) {
             if (playerHitBy) {
                 _this.aggro = true;
@@ -2932,10 +2938,11 @@ var coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
 var dualdagger_1 = __webpack_require__(/*! ../../weapon/dualdagger */ "./src/weapon/dualdagger.ts");
 var imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ "./src/particle/imageParticle.ts");
 var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
+var random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
 var KnightEnemy = /** @class */ (function (_super) {
     __extends(KnightEnemy, _super);
-    function KnightEnemy(room, game, x, y, rand, drop) {
-        var _this = _super.call(this, room, game, x, y, rand) || this;
+    function KnightEnemy(room, game, x, y, drop) {
+        var _this = _super.call(this, room, game, x, y) || this;
         _this.hurt = function (playerHitBy, damage) {
             if (playerHitBy) {
                 _this.aggro = true;
@@ -3119,7 +3126,7 @@ var KnightEnemy = /** @class */ (function (_super) {
         if (drop)
             _this.drop = drop;
         else {
-            var dropProb = rand();
+            var dropProb = random_1.Random.rand();
             if (dropProb < 0.05)
                 _this.drop = new dualdagger_1.DualDagger(_this.room, 0, 0);
             else if (dropProb < 0.01)
@@ -3171,8 +3178,8 @@ var candle_1 = __webpack_require__(/*! ../../item/candle */ "./src/item/candle.t
 var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 var QueenEnemy = /** @class */ (function (_super) {
     __extends(QueenEnemy, _super);
-    function QueenEnemy(room, game, x, y, rand, drop) {
-        var _this = _super.call(this, room, game, x, y, rand) || this;
+    function QueenEnemy(room, game, x, y, drop) {
+        var _this = _super.call(this, room, game, x, y) || this;
         _this.hit = function () {
             return 1;
         };
@@ -3382,10 +3389,11 @@ var astarclass_1 = __webpack_require__(/*! ../../astarclass */ "./src/astarclass
 var spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 var imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ "./src/particle/imageParticle.ts");
 var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
+var random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
 var SkullEnemy = /** @class */ (function (_super) {
     __extends(SkullEnemy, _super);
-    function SkullEnemy(room, game, x, y, rand, drop) {
-        var _this = _super.call(this, room, game, x, y, rand) || this;
+    function SkullEnemy(room, game, x, y, drop) {
+        var _this = _super.call(this, room, game, x, y) || this;
         _this.REGEN_TICKS = 5;
         _this.hit = function () {
             return 1;
@@ -3576,7 +3584,7 @@ var SkullEnemy = /** @class */ (function (_super) {
         if (drop)
             _this.drop = drop;
         else {
-            var dropProb = rand();
+            var dropProb = random_1.Random.rand();
             if (dropProb < 0.05)
                 _this.drop = new spear_1.Spear(_this.room, 0, 0);
             else if (dropProb < 0.01)
@@ -3630,8 +3638,8 @@ var pickaxe_1 = __webpack_require__(/*! ../../weapon/pickaxe */ "./src/weapon/pi
 var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 var SniperEnemy = /** @class */ (function (_super) {
     __extends(SniperEnemy, _super);
-    function SniperEnemy(room, game, x, y, rand, drop) {
-        var _this = _super.call(this, room, game, x, y, rand) || this;
+    function SniperEnemy(room, game, x, y, drop) {
+        var _this = _super.call(this, room, game, x, y) || this;
         _this.hit = function () {
             return 1;
         };
@@ -3918,10 +3926,11 @@ var bluegem_1 = __webpack_require__(/*! ../../item/bluegem */ "./src/item/bluege
 var knightEnemy_1 = __webpack_require__(/*! ./knightEnemy */ "./src/entity/enemy/knightEnemy.ts");
 var wizardEnemy_1 = __webpack_require__(/*! ./wizardEnemy */ "./src/entity/enemy/wizardEnemy.ts");
 var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
+var random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
 var Spawner = /** @class */ (function (_super) {
     __extends(Spawner, _super);
-    function Spawner(room, game, x, y, rand) {
-        var _this = _super.call(this, room, game, x, y, rand) || this;
+    function Spawner(room, game, x, y) {
+        var _this = _super.call(this, room, game, x, y) || this;
         _this.hit = function () {
             return 1;
         };
@@ -3940,17 +3949,17 @@ var Spawner = /** @class */ (function (_super) {
                         .filter(function (t) { return Math.abs(t.x - _this.x) <= 1 && Math.abs(t.y - _this.y) <= 1; });
                     if (positions.length > 0) {
                         _this.tileX = 7;
-                        var position = game_1.Game.randTable(positions, _this.rand);
+                        var position = game_1.Game.randTable(positions, random_1.Random.rand);
                         var spawned = void 0;
                         switch (_this.enemySpawnType) {
                             case 1:
-                                spawned = new knightEnemy_1.KnightEnemy(_this.room, _this.game, position.x, position.y, _this.rand);
+                                spawned = new knightEnemy_1.KnightEnemy(_this.room, _this.game, position.x, position.y);
                                 break;
                             case 2:
-                                spawned = new skullEnemy_1.SkullEnemy(_this.room, _this.game, position.x, position.y, _this.rand);
+                                spawned = new skullEnemy_1.SkullEnemy(_this.room, _this.game, position.x, position.y);
                                 break;
                             case 3:
-                                spawned = new wizardEnemy_1.WizardEnemy(_this.room, _this.game, position.x, position.y, _this.rand);
+                                spawned = new wizardEnemy_1.WizardEnemy(_this.room, _this.game, position.x, position.y);
                                 break;
                         }
                         _this.room.projectiles.push(new enemySpawnAnimation_1.EnemySpawnAnimation(_this.room, spawned, position.x, position.y));
@@ -3958,6 +3967,22 @@ var Spawner = /** @class */ (function (_super) {
                     }
                 }
                 _this.ticks++;
+            }
+        };
+        _this.draw = function (delta) {
+            if (!_this.dead) {
+                _this.frame += 0.1 * delta;
+                if (_this.frame >= 4)
+                    _this.frame = 0;
+                if (_this.hasShadow)
+                    game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
+                game_1.Game.drawMob(_this.tileX, _this.tileY, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
+            }
+            if (!_this.seenPlayer) {
+                _this.drawSleepingZs(delta);
+            }
+            if (_this.alertTicks > 0) {
+                _this.drawExclamation(delta);
             }
         };
         _this.dropLoot = function () {
@@ -3969,8 +3994,7 @@ var Spawner = /** @class */ (function (_super) {
         _this.tileX = 6;
         _this.tileY = 4;
         _this.seenPlayer = true;
-        _this.enemySpawnType = game_1.Game.randTable([1, 2, 2, 2, 2, 3], rand);
-        _this.rand = rand;
+        _this.enemySpawnType = game_1.Game.randTable([1, 2, 2, 2, 2, 3], random_1.Random.rand);
         _this.name = "reaper";
         return _this;
     }
@@ -4024,8 +4048,8 @@ var WizardState;
 })(WizardState = exports.WizardState || (exports.WizardState = {}));
 var WizardEnemy = /** @class */ (function (_super) {
     __extends(WizardEnemy, _super);
-    function WizardEnemy(room, game, x, y, rand, drop) {
-        var _this = _super.call(this, room, game, x, y, rand) || this;
+    function WizardEnemy(room, game, x, y, drop) {
+        var _this = _super.call(this, room, game, x, y) || this;
         _this.ATTACK_RADIUS = 5;
         _this.hit = function () {
             return 1;
@@ -4175,12 +4199,11 @@ var WizardEnemy = /** @class */ (function (_super) {
         _this.state = WizardState.attack;
         _this.seenPlayer = false;
         _this.alertTicks = 0;
-        _this.rand = rand;
         _this.name = "wizard bomber";
         if (drop)
             _this.drop = drop;
         else {
-            if (_this.rand() < 0.02)
+            if (random_1.Random.rand() < 0.02)
                 _this.drop = new bluegem_1.BlueGem(_this.room, _this.x, _this.y);
             else
                 _this.drop = new coin_1.Coin(_this.room, _this.x, _this.y);
@@ -4230,8 +4253,8 @@ var imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ ".
 var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 var ZombieEnemy = /** @class */ (function (_super) {
     __extends(ZombieEnemy, _super);
-    function ZombieEnemy(room, game, x, y, rand, drop) {
-        var _this = _super.call(this, room, game, x, y, rand) || this;
+    function ZombieEnemy(room, game, x, y, drop) {
+        var _this = _super.call(this, room, game, x, y) || this;
         _this.hit = function () {
             return 1;
         };
@@ -4502,6 +4525,7 @@ var drawable_1 = __webpack_require__(/*! ../drawable */ "./src/drawable.ts");
 var gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
 var hitWarning_1 = __webpack_require__(/*! ../hitWarning */ "./src/hitWarning.ts");
 var utils_1 = __webpack_require__(/*! ../utils */ "./src/utils.ts");
+var eventBus_1 = __webpack_require__(/*! ../eventBus */ "./src/eventBus.ts");
 var EntityDirection;
 (function (EntityDirection) {
     EntityDirection[EntityDirection["DOWN"] = 0] = "DOWN";
@@ -4658,6 +4682,13 @@ var Entity = /** @class */ (function (_super) {
         };
         _this.tick = function () {
             _this.behavior();
+        };
+        _this.emitEntityData = function () {
+            eventBus_1.globalEventBus.emit("EntityData", {
+                name: _this.name,
+                location: { x: _this.x, y: _this.y },
+            });
+            console.log("Emitting entity data for ".concat(_this.name));
         };
         _this.drawTopLayer = function (delta) {
             _this.drawableY = _this.y - _this.drawY;
@@ -5135,9 +5166,10 @@ var sound_1 = __webpack_require__(/*! ../../sound */ "./src/sound.ts");
 var redgem_1 = __webpack_require__(/*! ../../item/redgem */ "./src/item/redgem.ts");
 var bluegem_1 = __webpack_require__(/*! ../../item/bluegem */ "./src/item/bluegem.ts");
 var entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+var random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
 var Chest = /** @class */ (function (_super) {
     __extends(Chest, _super);
-    function Chest(room, game, x, y, rand) {
+    function Chest(room, game, x, y) {
         var _this = _super.call(this, room, game, x, y) || this;
         _this.kill = function () {
             if (_this.room === _this.game.room)
@@ -5161,7 +5193,7 @@ var Chest = /** @class */ (function (_super) {
         _this.tileY = 0;
         _this.health = 1;
         _this.name = "chest";
-        var drop = game_1.Game.randTable([1, 1, 1, 1, 1, 1, 1, 2, 3, 4], rand);
+        var drop = game_1.Game.randTable([1, 1, 1, 1, 1, 1, 1, 2, 3, 4], random_1.Random.rand);
         switch (drop) {
             case 1:
                 _this.drop = new heart_1.Heart(_this.room, _this.x, _this.y);
@@ -5450,9 +5482,10 @@ var heart_1 = __webpack_require__(/*! ../../item/heart */ "./src/item/heart.ts")
 var coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
 var entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 var imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ "./src/particle/imageParticle.ts");
+var random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
 var PottedPlant = /** @class */ (function (_super) {
     __extends(PottedPlant, _super);
-    function PottedPlant(room, game, x, y, rand, drop) {
+    function PottedPlant(room, game, x, y, drop) {
         var _this = _super.call(this, room, game, x, y) || this;
         _this.hurtCallback = function () {
             imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 28);
@@ -5496,7 +5529,7 @@ var PottedPlant = /** @class */ (function (_super) {
         if (drop)
             _this.drop = drop;
         else {
-            var dropProb = rand();
+            var dropProb = random_1.Random.rand();
             if (dropProb < 0.025)
                 _this.drop = new heart_1.Heart(_this.room, 0, 0);
             else
@@ -5552,7 +5585,7 @@ var sound_1 = __webpack_require__(/*! ../../sound */ "./src/sound.ts");
 var imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ "./src/particle/imageParticle.ts");
 var TombStone = /** @class */ (function (_super) {
     __extends(TombStone, _super);
-    function TombStone(room, game, x, y, skinType, rand, drop) {
+    function TombStone(room, game, x, y, skinType, drop) {
         var _this = _super.call(this, room, game, x, y) || this;
         _this.kill = function () {
             _this.dead = true;
@@ -5577,7 +5610,7 @@ var TombStone = /** @class */ (function (_super) {
                             var playerY = _this.game.players[i].y;
                             if ((playerX !== position.x && playerY === position.y) ||
                                 (playerX === position.x && playerY !== position.y)) {
-                                _this.room.entities.push(new skullEnemy_1.SkullEnemy(_this.room, _this.game, position.x, position.y, random_1.Random.rand));
+                                _this.room.entities.push(new skullEnemy_1.SkullEnemy(_this.room, _this.game, position.x, position.y));
                             }
                         }
                     }
@@ -5612,7 +5645,6 @@ var TombStone = /** @class */ (function (_super) {
         _this.pushable = false;
         _this.destroyable = true;
         _this.skinType = skinType;
-        _this.rand = rand;
         _this.chainPushable = false;
         _this.name = "tombstone";
         var dropProb = random_1.Random.rand();
@@ -5674,13 +5706,14 @@ var dualdagger_1 = __webpack_require__(/*! ../../weapon/dualdagger */ "./src/wea
 var lantern_1 = __webpack_require__(/*! ../../item/lantern */ "./src/item/lantern.ts");
 var redgem_1 = __webpack_require__(/*! ../../item/redgem */ "./src/item/redgem.ts");
 var entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+var random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
 var OPEN_TIME = 150;
 var FILL_COLOR = "#5a595b";
 var OUTLINE_COLOR = "#292c36";
 var FULL_OUTLINE = "white";
 var VendingMachine = /** @class */ (function (_super) {
     __extends(VendingMachine, _super);
-    function VendingMachine(room, game, x, y, item, rand) {
+    function VendingMachine(room, game, x, y, item) {
         var _this = _super.call(this, room, game, x, y) || this;
         _this.open = false;
         _this.openTime = 0;
@@ -5718,8 +5751,8 @@ var VendingMachine = /** @class */ (function (_super) {
                 }
                 var x_1, y_1;
                 do {
-                    x_1 = game_1.Game.rand(_this.x - 1, _this.x + 1, _this.rand);
-                    y_1 = game_1.Game.rand(_this.y - 1, _this.y + 1, _this.rand);
+                    x_1 = game_1.Game.rand(_this.x - 1, _this.x + 1, random_1.Random.rand);
+                    y_1 = game_1.Game.rand(_this.y - 1, _this.y + 1, random_1.Random.rand);
                 } while ((x_1 === _this.x && y_1 === _this.y) ||
                     _this.room.roomArray[x_1][y_1].isSolid() ||
                     _this.room.entities.some(function (e) { return e.x === x_1 && e.y === y_1; }));
@@ -5802,7 +5835,6 @@ var VendingMachine = /** @class */ (function (_super) {
                 game_1.Game.ctx.globalAlpha = 1.0;
             }
         };
-        _this.rand = rand;
         _this.destroyable = false;
         _this.pushable = false;
         _this.chainPushable = false;
@@ -5812,7 +5844,7 @@ var VendingMachine = /** @class */ (function (_super) {
         _this.name = "vending machine";
         if (_this.item instanceof shotgun_1.Shotgun) {
             var g = new bluegem_1.BlueGem(room, 0, 0);
-            g.stackCount = game_1.Game.randTable([5, 5, 6, 7], _this.rand);
+            g.stackCount = game_1.Game.randTable([5, 5, 6, 7], random_1.Random.rand);
             _this.costItems = [g];
         }
         else if (_this.item instanceof heart_1.Heart) {
@@ -5823,22 +5855,22 @@ var VendingMachine = /** @class */ (function (_super) {
         }
         else if (_this.item instanceof spear_1.Spear) {
             var g = new greengem_1.GreenGem(room, 0, 0);
-            g.stackCount = game_1.Game.randTable([5, 5, 6, 7], _this.rand);
+            g.stackCount = game_1.Game.randTable([5, 5, 6, 7], random_1.Random.rand);
             _this.costItems = [g];
         }
         else if (_this.item instanceof armor_1.Armor) {
             var g = new gold_1.Gold(room, 0, 0);
-            g.stackCount = game_1.Game.randTable([5, 5, 6, 7], _this.rand);
+            g.stackCount = game_1.Game.randTable([5, 5, 6, 7], random_1.Random.rand);
             _this.costItems = [g];
         }
         else if (_this.item instanceof dualdagger_1.DualDagger) {
             var g = new redgem_1.RedGem(room, 0, 0);
-            g.stackCount = game_1.Game.randTable([5, 5, 6, 7], _this.rand);
+            g.stackCount = game_1.Game.randTable([5, 5, 6, 7], random_1.Random.rand);
             _this.costItems = [g];
         }
         else if (_this.item instanceof lantern_1.Lantern) {
             var g = new coal_1.Coal(room, 0, 0);
-            g.stackCount = game_1.Game.randTable([25, 26, 27, 28], _this.rand);
+            g.stackCount = game_1.Game.randTable([25, 26, 27, 28], random_1.Random.rand);
             _this.costItems = [g];
         }
         return _this;
@@ -7116,7 +7148,6 @@ var shotgun_1 = __webpack_require__(/*! ./weapon/shotgun */ "./src/weapon/shotgu
 var spear_1 = __webpack_require__(/*! ./weapon/spear */ "./src/weapon/spear.ts");
 var pickaxe_1 = __webpack_require__(/*! ./weapon/pickaxe */ "./src/weapon/pickaxe.ts");
 var backpack_1 = __webpack_require__(/*! ./item/backpack */ "./src/item/backpack.ts");
-var door_1 = __webpack_require__(/*! ./tile/door */ "./src/tile/door.ts");
 var block_1 = __webpack_require__(/*! ./entity/object/block */ "./src/entity/object/block.ts");
 var HitWarningState = /** @class */ (function () {
     function HitWarningState(hw) {
@@ -7331,7 +7362,7 @@ var loadEnemy = function (es, game) {
     if (es.type === EnemyType.BARREL)
         enemy = new barrel_1.Barrel(level, game, es.x, es.y);
     if (es.type === EnemyType.BIGSKULL) {
-        enemy = new bigSkullEnemy_1.BigSkullEnemy(level, game, es.x, es.y, random_1.Random.rand);
+        enemy = new bigSkullEnemy_1.BigSkullEnemy(level, game, es.x, es.y);
         enemy.ticks = es.ticks;
         enemy.ticksSinceFirstHit = es.ticksSinceFirstHit;
         enemy.seenPlayer = es.seenPlayer;
@@ -7347,7 +7378,7 @@ var loadEnemy = function (es, game) {
         }
     }
     if (es.type === EnemyType.CHARGE) {
-        enemy = new chargeEnemy_1.ChargeEnemy(level, game, es.x, es.y, random_1.Random.rand);
+        enemy = new chargeEnemy_1.ChargeEnemy(level, game, es.x, es.y);
         enemy.ticks = es.ticks;
         enemy.state = es.chargeEnemyState;
         enemy.startX = es.startX;
@@ -7358,7 +7389,7 @@ var loadEnemy = function (es, game) {
         enemy.visualTargetY = es.visualTargetY;
     }
     if (es.type === EnemyType.CHEST)
-        enemy = new chest_1.Chest(level, game, es.x, es.y, random_1.Random.rand);
+        enemy = new chest_1.Chest(level, game, es.x, es.y);
     if (es.type === EnemyType.COAL)
         enemy = new coalResource_1.CoalResource(level, game, es.x, es.y);
     if (es.type === EnemyType.CRATE)
@@ -7368,7 +7399,7 @@ var loadEnemy = function (es, game) {
     if (es.type === EnemyType.GOLD)
         enemy = new goldResource_1.GoldResource(level, game, es.x, es.y);
     if (es.type === EnemyType.KNIGHT) {
-        enemy = new knightEnemy_1.KnightEnemy(level, game, es.x, es.y, random_1.Random.rand);
+        enemy = new knightEnemy_1.KnightEnemy(level, game, es.x, es.y);
         enemy.ticks = es.ticks;
         enemy.seenPlayer = es.seenPlayer;
         if (es.seenPlayer) {
@@ -7378,11 +7409,11 @@ var loadEnemy = function (es, game) {
         }
     }
     if (es.type === EnemyType.PLANT)
-        enemy = new pottedPlant_1.PottedPlant(level, game, es.x, es.y, random_1.Random.rand);
+        enemy = new pottedPlant_1.PottedPlant(level, game, es.x, es.y);
     if (es.type === EnemyType.PLANT)
         enemy = new pot_1.Pot(level, game, es.x, es.y);
     if (es.type === EnemyType.SKULL) {
-        enemy = new skullEnemy_1.SkullEnemy(level, game, es.x, es.y, random_1.Random.rand);
+        enemy = new skullEnemy_1.SkullEnemy(level, game, es.x, es.y);
         enemy.ticks = es.ticks;
         enemy.ticksSinceFirstHit = es.ticksSinceFirstHit;
         enemy.seenPlayer = es.seenPlayer;
@@ -7393,7 +7424,7 @@ var loadEnemy = function (es, game) {
         }
     }
     if (es.type === EnemyType.CRAB) {
-        enemy = new crabEnemy_1.CrabEnemy(level, game, es.x, es.y, random_1.Random.rand);
+        enemy = new crabEnemy_1.CrabEnemy(level, game, es.x, es.y);
         enemy.ticks = es.ticks;
         enemy.seenPlayer = es.seenPlayer;
         if (es.seenPlayer) {
@@ -7403,14 +7434,14 @@ var loadEnemy = function (es, game) {
         }
     }
     if (es.type === EnemyType.SPAWNER) {
-        enemy = new spawner_1.Spawner(level, game, es.x, es.y, random_1.Random.rand);
+        enemy = new spawner_1.Spawner(level, game, es.x, es.y);
         enemy.ticks = es.ticks;
         enemy.seenPlayer = es.seenPlayer;
         enemy.enemySpawnType = es.enemySpawnType;
     }
     if (es.type === EnemyType.VENDINGMACHINE) {
         var item = loadItem(es.item, game);
-        enemy = new vendingMachine_1.VendingMachine(level, game, es.x, es.y, item, random_1.Random.rand);
+        enemy = new vendingMachine_1.VendingMachine(level, game, es.x, es.y, item);
         if (es.isPlayerOpened) {
             enemy.playerOpened = game.players[es.playerOpenedID];
             if (!enemy.playerOpened)
@@ -7426,13 +7457,13 @@ var loadEnemy = function (es, game) {
         enemy.quantity = es.quantity;
     }
     if (es.type === EnemyType.WIZARD) {
-        enemy = new wizardEnemy_1.WizardEnemy(level, game, es.x, es.y, random_1.Random.rand);
+        enemy = new wizardEnemy_1.WizardEnemy(level, game, es.x, es.y);
         enemy.ticks = es.ticks;
         enemy.state = es.wizardState;
         enemy.seenPlayer = es.seenPlayer;
     }
     if (es.type === EnemyType.ZOMBIE) {
-        enemy = new zombieEnemy_1.ZombieEnemy(level, game, es.x, es.y, random_1.Random.rand);
+        enemy = new zombieEnemy_1.ZombieEnemy(level, game, es.x, es.y);
         enemy.ticks = es.ticks;
         enemy.seenPlayer = es.seenPlayer;
         if (es.seenPlayer) {
@@ -7819,8 +7850,7 @@ var loadGameState = function (game, activeUsernames, gameState, newWorld) {
     game.room.items.push(new key_1.Key(game.room, p.x - 1, p.y - 2));
     game.room.entities.push(new block_1.Block(game.room, game, p.x, p.y - 2), new block_1.Block(game.room, game, p.x + 1, p.y), new block_1.Block(game.room, game, p.x - 1, p.y - 1), new block_1.Block(game.room, game, p.x + 1, p.y - 1), new block_1.Block(game.room, game, p.x - 1, p.y), new block_1.Block(game.room, game, p.x, p.y + 1));
     game.room.doors.forEach(function (door) {
-        door.DoorType = door_1.DoorType.LOCKEDDOOR;
-        door.locked = true;
+        door.lock();
     });
     setTimeout(function () {
         game.pushMessage("Welcome to Turnarchist");
@@ -9361,7 +9391,7 @@ var Heart = /** @class */ (function (_super) {
         };
         _this.tileX = 8;
         _this.tileY = 0;
-        _this.offsetY = 0;
+        _this.offsetY = -0.3;
         return _this;
     }
     return Heart;
@@ -12336,7 +12366,7 @@ var Room = /** @class */ (function () {
         };
         this.populateSpawner = function (rand) {
             _this.addTorches(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 2, 3, 4], rand), rand);
-            _this.entities.push(new spawner_1.Spawner(_this, _this.game, Math.floor(_this.roomX + _this.width / 2), Math.floor(_this.roomY + _this.height / 2), rand));
+            _this.entities.push(new spawner_1.Spawner(_this, _this.game, Math.floor(_this.roomX + _this.width / 2), Math.floor(_this.roomY + _this.height / 2)));
         };
         this.populateKeyRoom = function (rand) {
             _this.addTorches(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 2, 3, 4], rand), rand);
@@ -12445,10 +12475,10 @@ var Room = /** @class */ (function () {
             _this.addTorches(2, rand);
             var cX = Math.floor(_this.roomX + _this.width / 2);
             var cY = Math.floor(_this.roomY + _this.height / 2);
-            _this.entities.push(new vendingMachine_1.VendingMachine(_this, _this.game, cX - 2, cY - 1, new shotgun_1.Shotgun(_this, 0, 0), rand));
-            _this.entities.push(new vendingMachine_1.VendingMachine(_this, _this.game, cX + 2, cY - 1, new heart_1.Heart(_this, 0, 0), rand));
-            _this.entities.push(new vendingMachine_1.VendingMachine(_this, _this.game, cX - 2, cY + 2, new armor_1.Armor(_this, 0, 0), rand));
-            _this.entities.push(new vendingMachine_1.VendingMachine(_this, _this.game, cX + 2, cY + 2, new spear_1.Spear(_this, 0, 0), rand));
+            _this.entities.push(new vendingMachine_1.VendingMachine(_this, _this.game, cX - 2, cY - 1, new shotgun_1.Shotgun(_this, 0, 0)));
+            _this.entities.push(new vendingMachine_1.VendingMachine(_this, _this.game, cX + 2, cY - 1, new heart_1.Heart(_this, 0, 0)));
+            _this.entities.push(new vendingMachine_1.VendingMachine(_this, _this.game, cX - 2, cY + 2, new armor_1.Armor(_this, 0, 0)));
+            _this.entities.push(new vendingMachine_1.VendingMachine(_this, _this.game, cX + 2, cY + 2, new spear_1.Spear(_this, 0, 0)));
         };
         this.populate = function (rand) {
             _this.name = "";
@@ -12734,6 +12764,7 @@ var Room = /** @class */ (function () {
                 _this.computerTurn(); // player skipped computer's turn, catch up
         };
         this.tick = function (player) {
+            _this.lastEnemyCount = _this.entities.filter(function (e) { return e instanceof enemy_1.Enemy; }).length;
             for (var _i = 0, _a = _this.hitwarnings; _i < _a.length; _i++) {
                 var h = _a[_i];
                 h.tick();
@@ -12819,7 +12850,19 @@ var Room = /** @class */ (function () {
             _this.entities = _this.entities.filter(function (e) { return !e.dead; }); // enemies may be killed by spiketrap
             _this.clearDeadStuff();
             _this.playerTicked.finishTick();
+            _this.checkForNoEnemies();
             _this.turn = TurnState.playerTurn;
+        };
+        this.checkForNoEnemies = function () {
+            var enemies = _this.entities.filter(function (e) { return e instanceof enemy_1.Enemy; });
+            if (enemies.length === 0 && _this.lastEnemyCount > 0) {
+                if (_this.doors[0].type === door_1.DoorType.GUARDEDDOOR) {
+                    _this.doors.forEach(function (d) {
+                        d.unGuard();
+                    });
+                    _this.game.pushMessage("The foes have been slain and the door allows you passage.");
+                }
+            }
         };
         this.draw = function (delta) {
             hitWarning_1.HitWarning.updateFrame(delta);
@@ -13070,7 +13113,7 @@ var Room = /** @class */ (function () {
             t = tiles.splice(game_1.Game.rand(0, tiles.length - 1, rand), 1)[0];
             x = t.x;
             y = t.y;
-            this.entities.push(new chest_1.Chest(this, this.game, x, y, rand));
+            this.entities.push(new chest_1.Chest(this, this.game, x, y));
         }
     };
     Room.prototype.addSpikeTraps = function (numSpikes, rand) {
@@ -13168,34 +13211,34 @@ var Room = /** @class */ (function () {
                 // Add the selected enemy type to the room
                 switch (type) {
                     case 1:
-                        addEnemy(new crabEnemy_1.CrabEnemy(this_1, this_1.game, x, y, rand));
+                        addEnemy(new crabEnemy_1.CrabEnemy(this_1, this_1.game, x, y));
                         break;
                     case 2:
-                        addEnemy(new frogEnemy_1.FrogEnemy(this_1, this_1.game, x, y, rand));
+                        addEnemy(new frogEnemy_1.FrogEnemy(this_1, this_1.game, x, y));
                         break;
                     case 3:
-                        addEnemy(new zombieEnemy_1.ZombieEnemy(this_1, this_1.game, x, y, rand));
+                        addEnemy(new zombieEnemy_1.ZombieEnemy(this_1, this_1.game, x, y));
                         break;
                     case 4:
-                        addEnemy(new skullEnemy_1.SkullEnemy(this_1, this_1.game, x, y, rand));
+                        addEnemy(new skullEnemy_1.SkullEnemy(this_1, this_1.game, x, y));
                         break;
                     case 5:
-                        addEnemy(new wizardEnemy_1.WizardEnemy(this_1, this_1.game, x, y, rand));
+                        addEnemy(new wizardEnemy_1.WizardEnemy(this_1, this_1.game, x, y));
                         break;
                     case 6:
-                        addEnemy(new chargeEnemy_1.ChargeEnemy(this_1, this_1.game, x, y, rand));
+                        addEnemy(new chargeEnemy_1.ChargeEnemy(this_1, this_1.game, x, y));
                         break;
                     case 7:
-                        addEnemy(new spawner_1.Spawner(this_1, this_1.game, x, y, rand));
+                        addEnemy(new spawner_1.Spawner(this_1, this_1.game, x, y));
                         break;
                     case 8:
-                        addEnemy(new bishopEnemy_1.BishopEnemy(this_1, this_1.game, x, y, rand));
+                        addEnemy(new bishopEnemy_1.BishopEnemy(this_1, this_1.game, x, y));
                         break;
                     case 9:
-                        addEnemy(new armoredzombieEnemy_1.ArmoredzombieEnemy(this_1, this_1.game, x, y, rand));
+                        addEnemy(new armoredzombieEnemy_1.ArmoredzombieEnemy(this_1, this_1.game, x, y));
                         break;
                     case 10:
-                        if (addEnemy(new bigSkullEnemy_1.BigSkullEnemy(this_1, this_1.game, x, y, rand))) {
+                        if (addEnemy(new bigSkullEnemy_1.BigSkullEnemy(this_1, this_1.game, x, y))) {
                             // clear out some space
                             for (var xx = 0; xx < 2; xx++) {
                                 for (var yy = 0; yy < 2; yy++) {
@@ -13205,13 +13248,13 @@ var Room = /** @class */ (function () {
                         }
                         break;
                     case 11:
-                        addEnemy(new queenEnemy_1.QueenEnemy(this_1, this_1.game, x, y, rand));
+                        addEnemy(new queenEnemy_1.QueenEnemy(this_1, this_1.game, x, y));
                         break;
                     case 12:
-                        addEnemy(new knightEnemy_1.KnightEnemy(this_1, this_1.game, x, y, rand));
+                        addEnemy(new knightEnemy_1.KnightEnemy(this_1, this_1.game, x, y));
                         break;
                     case 13:
-                        if (addEnemy(new bigKnightEnemy_1.BigKnightEnemy(this_1, this_1.game, x, y, rand))) {
+                        if (addEnemy(new bigKnightEnemy_1.BigKnightEnemy(this_1, this_1.game, x, y))) {
                             // clear out some space
                             for (var xx = 0; xx < 2; xx++) {
                                 for (var yy = 0; yy < 2; yy++) {
@@ -13221,13 +13264,13 @@ var Room = /** @class */ (function () {
                         }
                         break;
                     case 14:
-                        addEnemy(new sniperEnemy_1.SniperEnemy(this_1, this_1.game, x, y, rand));
+                        addEnemy(new sniperEnemy_1.SniperEnemy(this_1, this_1.game, x, y));
                         break;
                     case 15:
-                        addEnemy(new enemy_1.Enemy(this_1, this_1.game, x, y, rand));
+                        addEnemy(new enemy_1.Enemy(this_1, this_1.game, x, y));
                         break;
                     case 16:
-                        addEnemy(new fireWizard_1.FireWizardEnemy(this_1, this_1.game, x, y, rand));
+                        addEnemy(new fireWizard_1.FireWizardEnemy(this_1, this_1.game, x, y));
                         break;
                 }
             }
@@ -13257,10 +13300,10 @@ var Room = /** @class */ (function () {
                     this.entities.push(new barrel_1.Barrel(this, this.game, x, y));
                     break;
                 case 3:
-                    this.entities.push(new tombStone_1.TombStone(this, this.game, x, y, 1, rand));
+                    this.entities.push(new tombStone_1.TombStone(this, this.game, x, y, 1));
                     break;
                 case 4:
-                    this.entities.push(new tombStone_1.TombStone(this, this.game, x, y, 0, rand));
+                    this.entities.push(new tombStone_1.TombStone(this, this.game, x, y, 0));
                     break;
                 //case 5:
                 //this.enemies.push(new TombStone(this, this.game, x, y));
@@ -13278,7 +13321,7 @@ var Room = /** @class */ (function () {
             var y = t.y;
             var r = rand();
             if (r <= 0.45)
-                this.entities.push(new pottedPlant_1.PottedPlant(this, this.game, x, y, random_1.Random.rand));
+                this.entities.push(new pottedPlant_1.PottedPlant(this, this.game, x, y));
             else if (r <= 0.65)
                 this.entities.push(new pot_1.Pot(this, this.game, x, y));
             else if (r <= 0.75)
@@ -13286,7 +13329,7 @@ var Room = /** @class */ (function () {
             else if (r <= 0.97)
                 this.entities.push(new mushrooms_1.Mushrooms(this, this.game, x, y));
             else
-                this.entities.push(new chest_1.Chest(this, this.game, x, y, rand));
+                this.entities.push(new chest_1.Chest(this, this.game, x, y));
         }
     };
     Room.prototype.addResources = function (numResources, rand) {
@@ -13313,22 +13356,22 @@ var Room = /** @class */ (function () {
         var type = game_1.Game.randTable([1, 1, 1, 1, 1, 1, 1, 2, 3, 4, 5, 6], rand);
         switch (type) {
             case 1:
-                this.entities.push(new vendingMachine_1.VendingMachine(this, this.game, x, y, new heart_1.Heart(this, 0, 0), rand));
+                this.entities.push(new vendingMachine_1.VendingMachine(this, this.game, x, y, new heart_1.Heart(this, 0, 0)));
                 break;
             case 2:
-                this.entities.push(new vendingMachine_1.VendingMachine(this, this.game, x, y, new lantern_1.Lantern(this, 0, 0), rand));
+                this.entities.push(new vendingMachine_1.VendingMachine(this, this.game, x, y, new lantern_1.Lantern(this, 0, 0)));
                 break;
             case 3:
-                this.entities.push(new vendingMachine_1.VendingMachine(this, this.game, x, y, new armor_1.Armor(this, 0, 0), rand));
+                this.entities.push(new vendingMachine_1.VendingMachine(this, this.game, x, y, new armor_1.Armor(this, 0, 0)));
                 break;
             case 4:
-                this.entities.push(new vendingMachine_1.VendingMachine(this, this.game, x, y, new dualdagger_1.DualDagger(this, 0, 0), rand));
+                this.entities.push(new vendingMachine_1.VendingMachine(this, this.game, x, y, new dualdagger_1.DualDagger(this, 0, 0)));
                 break;
             case 5:
-                this.entities.push(new vendingMachine_1.VendingMachine(this, this.game, x, y, new spear_1.Spear(this, 0, 0), rand));
+                this.entities.push(new vendingMachine_1.VendingMachine(this, this.game, x, y, new spear_1.Spear(this, 0, 0)));
                 break;
             case 6:
-                this.entities.push(new vendingMachine_1.VendingMachine(this, this.game, x, y, new shotgun_1.Shotgun(this, 0, 0), rand));
+                this.entities.push(new vendingMachine_1.VendingMachine(this, this.game, x, y, new shotgun_1.Shotgun(this, 0, 0)));
                 break;
         }
     };
@@ -13929,7 +13972,6 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Door = exports.DoorType = exports.DoorDir = void 0;
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var tile_1 = __webpack_require__(/*! ./tile */ "./src/tile/tile.ts");
-var entity_1 = __webpack_require__(/*! ../entity/entity */ "./src/entity/entity.ts");
 var key_1 = __webpack_require__(/*! ../item/key */ "./src/item/key.ts");
 var DoorDir;
 (function (DoorDir) {
@@ -13949,11 +13991,25 @@ var Door = /** @class */ (function (_super) {
     function Door(room, game, x, y, dir, doorType) {
         var _this = _super.call(this, room, x, y) || this;
         _this.guard = function () {
-            _this.DoorType = DoorType.GUARDEDDOOR;
+            _this.type = DoorType.GUARDEDDOOR;
             _this.locked = true;
+            _this.iconTileX = 9;
+            _this.iconXOffset = 1 / 32;
+        };
+        _this.lock = function () {
+            _this.type = DoorType.LOCKEDDOOR;
+            _this.locked = true;
+            _this.iconTileX = 10;
+            _this.iconXOffset = 1 / 32;
+        };
+        _this.removeLock = function () {
+            _this.type = DoorType.DOOR;
+            _this.locked = false;
+            _this.iconTileX = 2;
+            _this.iconXOffset = 0;
         };
         _this.canUnlock = function (player) {
-            if (_this.DoorType === DoorType.LOCKEDDOOR) {
+            if (_this.type === DoorType.LOCKEDDOOR) {
                 var k = player.inventory.hasItem(key_1.Key);
                 if (k !== null) {
                     _this.game.pushMessage("You use the key to unlock the door.");
@@ -13963,36 +14019,25 @@ var Door = /** @class */ (function (_super) {
                     _this.game.pushMessage("The door is locked tightly and won't budge.");
                 return false;
             }
-            if (_this.DoorType === DoorType.GUARDEDDOOR) {
-                var inRoom = _this.game.room.entities.filter(function (enemy) { return enemy.type === entity_1.EntityType.ENEMY; });
-                if (inRoom.length === 0) {
-                    _this.game.pushMessage("The foes have been slain and the door allows you passage.");
-                    return true;
-                }
-                else
-                    _this.game.pushMessage("There are still remaining foes guarding this door...");
+            if (_this.type === DoorType.GUARDEDDOOR) {
+                _this.game.pushMessage("There are still remaining foes guarding this door...");
                 return false;
             }
         };
         _this.unlock = function (player) {
-            if (_this.DoorType === DoorType.LOCKEDDOOR) {
+            if (_this.type === DoorType.LOCKEDDOOR) {
                 var k = player.inventory.hasItem(key_1.Key);
                 if (k !== null) {
                     // remove key
                     player.inventory.removeItem(k);
-                    _this.DoorType = DoorType.DOOR;
-                    _this.locked = false;
+                    _this.removeLock();
                 }
             }
-            if (_this.DoorType === DoorType.GUARDEDDOOR) {
-                _this.locked = false;
+        };
+        _this.unGuard = function () {
+            if (_this.type === DoorType.GUARDEDDOOR) {
+                _this.removeLock();
                 _this.game.tutorialActive = false;
-                _this.room.doors.forEach(function (door) {
-                    door.DoorType = DoorType.DOOR;
-                    door.locked = false;
-                });
-            }
-            else {
             }
         };
         _this.link = function (other) {
@@ -14017,7 +14062,7 @@ var Door = /** @class */ (function (_super) {
             else
                 _this.game.changeLevelThroughDoor(player, _this.linkedDoor, _this.linkedDoor.room.roomX - _this.room.roomX > 0 ? 1 : -1);
             _this.linkedDoor.locked = false;
-            _this.linkedDoor.DoorType = DoorType.DOOR;
+            _this.linkedDoor.type = DoorType.DOOR;
         };
         _this.draw = function (delta) {
             if (_this.doorDir === DoorDir.North) {
@@ -14038,37 +14083,38 @@ var Door = /** @class */ (function (_super) {
                 else
                     game_1.Game.drawTile(14, 0, 1, 1, _this.x, _this.y - 1, 1, 1, _this.room.shadeColor, _this.shadeAmount());
             }
-            if (_this.doorDir !== DoorDir.North) {
-            }
         };
         _this.drawAbovePlayer = function (delta) { };
         _this.drawAboveShading = function (delta) {
-            var icon = 2;
-            var xOffset = 0;
-            if (_this.DoorType === DoorType.GUARDEDDOOR)
-                (icon = 9), (xOffset = 1 / 32);
-            if (_this.DoorType === DoorType.LOCKEDDOOR)
-                (icon = 10), (xOffset = 1 / 32);
             if (_this.doorDir === DoorDir.North) {
                 //if top door
-                game_1.Game.drawFX(icon, 2, 1, 1, _this.x + xOffset, _this.y - 1.25 + 0.125 * Math.sin(0.006 * Date.now()), 1, 1);
+                game_1.Game.drawFX(_this.iconTileX, 2, 1, 1, _this.x + _this.iconXOffset, _this.y - 1.25 + 0.125 * Math.sin(0.006 * Date.now()), 1, 1);
             }
             else {
-                game_1.Game.drawFX(icon, 2, 1, 1, _this.x + xOffset, _this.y - 1.25 + 0.125 * Math.sin(0.006 * Date.now()), 1, 1); //if not top door
+                game_1.Game.drawFX(_this.iconTileX, 2, 1, 1, _this.x + _this.iconXOffset, _this.y - 1.25 + 0.125 * Math.sin(0.006 * Date.now()), 1, 1); //if not top door
             }
         };
         _this.game = game;
         _this.opened = false;
         _this.doorDir = dir;
-        _this.DoorType = doorType;
         _this.locked = false;
         _this.isDoor = true;
-        _this.DoorType = doorType;
-        if (_this.DoorType === DoorType.GUARDEDDOOR) {
-            _this.locked = true;
-        }
-        if (_this.DoorType === DoorType.LOCKEDDOOR) {
-            _this.locked = true;
+        _this.type = doorType;
+        _this.iconTileX = 2;
+        _this.iconXOffset = 0;
+        switch (_this.type) {
+            case DoorType.GUARDEDDOOR:
+                _this.guard();
+                console.log("guarded");
+                break;
+            case DoorType.LOCKEDDOOR:
+                _this.lock();
+                console.log("locked");
+                break;
+            case DoorType.DOOR:
+                _this.removeLock();
+                console.log("unlocked");
+                break;
         }
         return _this;
     }
@@ -14870,7 +14916,7 @@ var TutorialListener = /** @class */ (function () {
     TutorialListener.prototype.handleEnemySeen = function (data) {
         console.log("handleEnemySeen called with enemy: ".concat(data.enemyType));
         if (!this.hasSeenEnemy(data.enemyType)) {
-            console.log("New enemy encountered: ".concat(data.enemyType));
+            this.game.pushMessage("New enemy encountered: ".concat(data.enemyName));
             this.addSeenEnemy(data.enemyType);
             this.pendingNewEnemies.add(data.enemyType);
             this.scheduleTutorialCreation();
@@ -14884,6 +14930,7 @@ var TutorialListener = /** @class */ (function () {
         if (this.tutorialCreationTimeout === null) {
             this.tutorialCreationTimeout = setTimeout(function () {
                 _this.createTutorialRoom(Array.from(_this.pendingNewEnemies));
+                _this.game.pushMessage("Defeat the enemies guarding the exits.");
                 _this.pendingNewEnemies.clear();
                 _this.tutorialCreationTimeout = null;
             }, 100); // Wait 100ms to collect all new enemies

@@ -8,17 +8,11 @@ import { Item } from "../../item/item";
 import { Coin } from "../../item/coin";
 import { EntityType } from "../entity";
 import { ImageParticle } from "../../particle/imageParticle";
+import { Random } from "../../random";
 
 export class PottedPlant extends Entity {
   drop: Item;
-  constructor(
-    room: Room,
-    game: Game,
-    x: number,
-    y: number,
-    rand: () => number,
-    drop?: Item
-  ) {
+  constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
     super(room, game, x, y);
     this.room = room;
     this.health = 2;
@@ -29,7 +23,7 @@ export class PottedPlant extends Entity {
     this.name = "plant";
     if (drop) this.drop = drop;
     else {
-      let dropProb = rand();
+      let dropProb = Random.rand();
       if (dropProb < 0.025) this.drop = new Heart(this.room, 0, 0);
       else this.drop = new Coin(this.room, 0, 0);
     }

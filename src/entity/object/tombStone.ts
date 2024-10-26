@@ -16,7 +16,6 @@ import { ImageParticle } from "../../particle/imageParticle";
 
 export class TombStone extends Entity {
   skinType: number;
-  rand: () => number;
 
   constructor(
     room: Room,
@@ -24,7 +23,6 @@ export class TombStone extends Entity {
     x: number,
     y: number,
     skinType: number,
-    rand: () => number,
     drop?: Item
   ) {
     super(room, game, x, y);
@@ -38,7 +36,6 @@ export class TombStone extends Entity {
     this.pushable = false;
     this.destroyable = true;
     this.skinType = skinType;
-    this.rand = rand;
     this.chainPushable = false;
     this.name = "tombstone";
     let dropProb = Random.rand();
@@ -79,13 +76,7 @@ export class TombStone extends Entity {
               (playerX === position.x && playerY !== position.y)
             ) {
               this.room.entities.push(
-                new SkullEnemy(
-                  this.room,
-                  this.game,
-                  position.x,
-                  position.y,
-                  Random.rand
-                )
+                new SkullEnemy(this.room, this.game, position.x, position.y)
               );
             }
           }

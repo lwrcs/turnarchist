@@ -458,6 +458,7 @@ export class Game {
   pushMessage = (message: string) => {
     this.chat.push(new ChatMessage(message));
   };
+
   onResize = () => {
     let maxWidthScale = Math.floor(
       window.innerWidth / GameConstants.DEFAULTWIDTH

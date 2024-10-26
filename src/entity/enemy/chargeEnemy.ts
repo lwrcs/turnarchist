@@ -31,15 +31,8 @@ export class ChargeEnemy extends Enemy {
   trailFrame: number;
   drop: Item;
 
-  constructor(
-    room: Room,
-    game: Game,
-    x: number,
-    y: number,
-    rand: () => number,
-    drop?: Item
-  ) {
-    super(room, game, x, y, rand);
+  constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
+    super(room, game, x, y);
     this.ticks = 0;
     this.frame = 0;
     this.health = 1;

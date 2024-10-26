@@ -71,6 +71,7 @@ import { Enemy } from "./entity/enemy/enemy";
 import { FireWizardEnemy } from "./entity/enemy/fireWizard";
 import { Dagger } from "./weapon/dagger";
 import { TutorialListener } from "./tutorialListener";
+import { globalEventBus } from "./eventBus";
 
 export enum RoomType {
   START,
@@ -148,6 +149,7 @@ export class Room {
   //actionTab: ActionTab;
   wallInfo: Map<string, WallInfo> = new Map();
   savePoint: Room;
+  lastEnemyCount: number;
   private pointInside(
     x: number,
     y: number,
@@ -291,7 +293,7 @@ export class Room {
       t = tiles.splice(Game.rand(0, tiles.length - 1, rand), 1)[0];
       x = t.x;
       y = t.y;
-      this.entities.push(new Chest(this, this.game, x, y, rand));
+      this.entities.push(new Chest(this, this.game, x, y));
     }
   }
 
@@ -397,34 +399,34 @@ export class Room {
         // Add the selected enemy type to the room
         switch (type) {
           case 1:
-            addEnemy(new CrabEnemy(this, this.game, x, y, rand));
+            addEnemy(new CrabEnemy(this, this.game, x, y));
             break;
           case 2:
-            addEnemy(new FrogEnemy(this, this.game, x, y, rand));
+            addEnemy(new FrogEnemy(this, this.game, x, y));
             break;
           case 3:
-            addEnemy(new ZombieEnemy(this, this.game, x, y, rand));
+            addEnemy(new ZombieEnemy(this, this.game, x, y));
             break;
           case 4:
-            addEnemy(new SkullEnemy(this, this.game, x, y, rand));
+            addEnemy(new SkullEnemy(this, this.game, x, y));
             break;
           case 5:
-            addEnemy(new WizardEnemy(this, this.game, x, y, rand));
+            addEnemy(new WizardEnemy(this, this.game, x, y));
             break;
           case 6:
-            addEnemy(new ChargeEnemy(this, this.game, x, y, rand));
+            addEnemy(new ChargeEnemy(this, this.game, x, y));
             break;
           case 7:
-            addEnemy(new Spawner(this, this.game, x, y, rand));
+            addEnemy(new Spawner(this, this.game, x, y));
             break;
           case 8:
-            addEnemy(new BishopEnemy(this, this.game, x, y, rand));
+            addEnemy(new BishopEnemy(this, this.game, x, y));
             break;
           case 9:
-            addEnemy(new ArmoredzombieEnemy(this, this.game, x, y, rand));
+            addEnemy(new ArmoredzombieEnemy(this, this.game, x, y));
             break;
           case 10:
-            if (addEnemy(new BigSkullEnemy(this, this.game, x, y, rand))) {
+            if (addEnemy(new BigSkullEnemy(this, this.game, x, y))) {
               // clear out some space
               for (let xx = 0; xx < 2; xx++) {
                 for (let yy = 0; yy < 2; yy++) {
@@ -438,13 +440,13 @@ export class Room {
             }
             break;
           case 11:
-            addEnemy(new QueenEnemy(this, this.game, x, y, rand));
+            addEnemy(new QueenEnemy(this, this.game, x, y));
             break;
           case 12:
-            addEnemy(new KnightEnemy(this, this.game, x, y, rand));
+            addEnemy(new KnightEnemy(this, this.game, x, y));
             break;
           case 13:
-            if (addEnemy(new BigKnightEnemy(this, this.game, x, y, rand))) {
+            if (addEnemy(new BigKnightEnemy(this, this.game, x, y))) {
               // clear out some space
               for (let xx = 0; xx < 2; xx++) {
                 for (let yy = 0; yy < 2; yy++) {
@@ -458,13 +460,13 @@ export class Room {
             }
             break;
           case 14:
-            addEnemy(new SniperEnemy(this, this.game, x, y, rand));
+            addEnemy(new SniperEnemy(this, this.game, x, y));
             break;
           case 15:
-            addEnemy(new Enemy(this, this.game, x, y, rand));
+            addEnemy(new Enemy(this, this.game, x, y));
             break;
           case 16:
-            addEnemy(new FireWizardEnemy(this, this.game, x, y, rand));
+            addEnemy(new FireWizardEnemy(this, this.game, x, y));
             break;
         }
       }
@@ -492,10 +494,10 @@ export class Room {
           this.entities.push(new Barrel(this, this.game, x, y));
           break;
         case 3:
-          this.entities.push(new TombStone(this, this.game, x, y, 1, rand));
+          this.entities.push(new TombStone(this, this.game, x, y, 1));
           break;
         case 4:
-          this.entities.push(new TombStone(this, this.game, x, y, 0, rand));
+          this.entities.push(new TombStone(this, this.game, x, y, 0));
           break;
         //case 5:
         //this.enemies.push(new TombStone(this, this.game, x, y));
@@ -513,13 +515,12 @@ export class Room {
       let y = t.y;
 
       let r = rand();
-      if (r <= 0.45)
-        this.entities.push(new PottedPlant(this, this.game, x, y, Random.rand));
+      if (r <= 0.45) this.entities.push(new PottedPlant(this, this.game, x, y));
       else if (r <= 0.65) this.entities.push(new Pot(this, this.game, x, y));
       else if (r <= 0.75) this.entities.push(new Rock(this, this.game, x, y));
       else if (r <= 0.97)
         this.entities.push(new Mushrooms(this, this.game, x, y));
-      else this.entities.push(new Chest(this, this.game, x, y, rand));
+      else this.entities.push(new Chest(this, this.game, x, y));
     }
   }
 
@@ -548,53 +549,32 @@ export class Room {
     switch (type) {
       case 1:
         this.entities.push(
-          new VendingMachine(this, this.game, x, y, new Heart(this, 0, 0), rand)
+          new VendingMachine(this, this.game, x, y, new Heart(this, 0, 0))
         );
         break;
       case 2:
         this.entities.push(
-          new VendingMachine(
-            this,
-            this.game,
-            x,
-            y,
-            new Lantern(this, 0, 0),
-            rand
-          )
+          new VendingMachine(this, this.game, x, y, new Lantern(this, 0, 0))
         );
         break;
       case 3:
         this.entities.push(
-          new VendingMachine(this, this.game, x, y, new Armor(this, 0, 0), rand)
+          new VendingMachine(this, this.game, x, y, new Armor(this, 0, 0))
         );
         break;
       case 4:
         this.entities.push(
-          new VendingMachine(
-            this,
-            this.game,
-            x,
-            y,
-            new DualDagger(this, 0, 0),
-            rand
-          )
+          new VendingMachine(this, this.game, x, y, new DualDagger(this, 0, 0))
         );
         break;
       case 5:
         this.entities.push(
-          new VendingMachine(this, this.game, x, y, new Spear(this, 0, 0), rand)
+          new VendingMachine(this, this.game, x, y, new Spear(this, 0, 0))
         );
         break;
       case 6:
         this.entities.push(
-          new VendingMachine(
-            this,
-            this.game,
-            x,
-            y,
-            new Shotgun(this, 0, 0),
-            rand
-          )
+          new VendingMachine(this, this.game, x, y, new Shotgun(this, 0, 0))
         );
         break;
     }
@@ -686,8 +666,7 @@ export class Room {
         this,
         this.game,
         Math.floor(this.roomX + this.width / 2),
-        Math.floor(this.roomY + this.height / 2),
-        rand
+        Math.floor(this.roomY + this.height / 2)
       )
     );
   };
@@ -858,39 +837,17 @@ export class Room {
         this.game,
         cX - 2,
         cY - 1,
-        new Shotgun(this, 0, 0),
-        rand
+        new Shotgun(this, 0, 0)
       )
     );
     this.entities.push(
-      new VendingMachine(
-        this,
-        this.game,
-        cX + 2,
-        cY - 1,
-        new Heart(this, 0, 0),
-        rand
-      )
+      new VendingMachine(this, this.game, cX + 2, cY - 1, new Heart(this, 0, 0))
     );
     this.entities.push(
-      new VendingMachine(
-        this,
-        this.game,
-        cX - 2,
-        cY + 2,
-        new Armor(this, 0, 0),
-        rand
-      )
+      new VendingMachine(this, this.game, cX - 2, cY + 2, new Armor(this, 0, 0))
     );
     this.entities.push(
-      new VendingMachine(
-        this,
-        this.game,
-        cX + 2,
-        cY + 2,
-        new Spear(this, 0, 0),
-        rand
-      )
+      new VendingMachine(this, this.game, cX + 2, cY + 2, new Spear(this, 0, 0))
     );
   };
 
@@ -1264,6 +1221,9 @@ export class Room {
   };
 
   tick = (player: Player) => {
+    this.lastEnemyCount = this.entities.filter(
+      (e) => e instanceof Enemy
+    ).length;
     for (const h of this.hitwarnings) {
       h.tick();
     }
@@ -1359,7 +1319,24 @@ export class Room {
     this.clearDeadStuff();
 
     this.playerTicked.finishTick();
+
+    this.checkForNoEnemies();
+
     this.turn = TurnState.playerTurn;
+  };
+
+  private checkForNoEnemies = () => {
+    let enemies = this.entities.filter((e) => e instanceof Enemy);
+    if (enemies.length === 0 && this.lastEnemyCount > 0) {
+      if (this.doors[0].type === DoorType.GUARDEDDOOR) {
+        this.doors.forEach((d) => {
+          d.unGuard();
+        });
+        this.game.pushMessage(
+          "The foes have been slain and the door allows you passage."
+        );
+      }
+    }
   };
 
   draw = (delta: number) => {

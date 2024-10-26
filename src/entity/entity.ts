@@ -14,6 +14,7 @@ import { HitWarning } from "../hitWarning";
 import { Sound } from "../sound";
 import { Projectile } from "../projectile/projectile";
 import { Utils } from "../utils";
+import { globalEventBus } from "../eventBus";
 
 export enum EntityDirection {
   DOWN,
@@ -28,6 +29,11 @@ export enum EntityType {
   RESOURCE,
   PROP,
   CHEST,
+}
+
+export interface entityData {
+  name: string;
+  location: { x: number; y: number };
 }
 
 export class Entity extends Drawable {
@@ -290,6 +296,14 @@ export class Entity extends Drawable {
 
   tick = () => {
     this.behavior();
+  };
+
+  emitEntityData = (): void => {
+    globalEventBus.emit("EntityData", {
+      name: this.name,
+      location: { x: this.x, y: this.y },
+    });
+    console.log(`Emitting entity data for ${this.name}`);
   };
 
   drawTopLayer = (delta: number) => {
