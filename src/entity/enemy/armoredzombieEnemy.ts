@@ -37,7 +37,7 @@ export class ArmoredzombieEnemy extends Enemy {
     this.aggro = false;
     this.deathParticleColor = "#ffffff";
     this.name = "armored zombie";
-    this.orthogonalAttack = true;
+    this.forwardOnlyAttack = true;
 
     if (drop) this.drop = drop;
     else {

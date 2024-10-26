@@ -14,36 +14,44 @@ import { RedGem } from "../../item/redgem";
 import { BlueGem } from "../../item/bluegem";
 import { EntityType } from "../entity";
 import { Random } from "../../random";
+import { Player } from "../../player";
 
 export class Chest extends Entity {
+  frame: number;
+  opening: boolean;
+  dropX: number;
+  dropY: number;
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
 
     this.tileX = 4;
     this.tileY = 0;
-    this.health = 1;
+    this.health = 2;
     this.name = "chest";
-
+    this.frame = 0;
+    this.opening = false;
+    this.dropX = 0;
+    this.dropY = 0;
     let drop = Game.randTable([1, 1, 1, 1, 1, 1, 1, 2, 3, 4], Random.rand);
 
     switch (drop) {
       case 1:
-        this.drop = new Heart(this.room, this.x, this.y);
+        this.drop = new Heart(this.room, this.dropX, this.dropY);
         break;
       case 2:
-        this.drop = new GreenGem(this.room, this.x, this.y);
+        this.drop = new GreenGem(this.room, this.dropX, this.dropY);
         break;
       case 3:
-        this.drop = new RedGem(this.room, this.x, this.y);
+        this.drop = new RedGem(this.room, this.dropX, this.dropY);
         break;
       case 4:
-        this.drop = new BlueGem(this.room, this.x, this.y);
+        this.drop = new BlueGem(this.room, this.dropX, this.dropY);
         break;
       case 5:
-        this.drop = new Key(this.room, this.x, this.y);
+        this.drop = new Key(this.room, this.dropX, this.dropY);
         break;
       case 6:
-        this.drop = new Armor(this.room, this.x, this.y);
+        this.drop = new Armor(this.room, this.dropX, this.dropY);
         break;
     }
   }
@@ -52,9 +60,28 @@ export class Chest extends Entity {
     return EntityType.CHEST;
   }
 
-  kill = () => {
-    if (this.room === this.game.room) Sound.chest();
+  readonly hurt = (playerHitBy: Player, damage: number) => {
+    this.healthBar.hurt();
 
+    this.health -= damage;
+    if (this.health <= 1) this.startOpening();
+    if (this.health <= 0) this.kill();
+    else this.hurtCallback();
+  };
+
+  private open = () => {
+    this.opening = false;
+    const [openX, openY] = this.getOpenTile();
+    this.dropX = openX + 0.5;
+    this.dropY = openY + 0.5;
+  };
+
+  startOpening = () => {
+    this.tileX = 0;
+    this.opening = true;
+  };
+
+  kill = () => {
     this.dead = true;
 
     GenericParticle.spawnCluster(
@@ -70,11 +97,26 @@ export class Chest extends Entity {
     this.kill();
   };
 
+  getOpenTile = () => {
+    for (let i = 0; i < 3; i++) {
+      for (let j = 0; j < 3; j++) {
+        if (!this.room.roomArray[this.x + i][this.y + j].isSolid())
+          return [this.x + i, this.y + j];
+      }
+    }
+    return [this.x, this.y];
+  };
+
   draw = (delta: number) => {
+    if (this.opening) {
+      this.tileX += 0.05;
+      this.tileY = 2;
+      if (this.tileX > 6) this.open();
+    }
     if (!this.dead) {
       Game.drawObj(
-        this.tileX,
-        this.tileY,
+        Math.floor(this.tileX),
+        Math.floor(this.tileY),
         1,
         2,
         this.x - this.drawX,

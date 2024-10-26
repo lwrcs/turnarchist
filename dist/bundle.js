@@ -703,7 +703,7 @@ var ArmoredzombieEnemy = /** @class */ (function (_super) {
         _this.aggro = false;
         _this.deathParticleColor = "#ffffff";
         _this.name = "armored zombie";
-        _this.orthogonalAttack = true;
+        _this.forwardOnlyAttack = true;
         if (drop)
             _this.drop = drop;
         else {
@@ -5162,7 +5162,6 @@ var armor_1 = __webpack_require__(/*! ../../item/armor */ "./src/item/armor.ts")
 var entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 var greengem_1 = __webpack_require__(/*! ../../item/greengem */ "./src/item/greengem.ts");
 var genericParticle_1 = __webpack_require__(/*! ../../particle/genericParticle */ "./src/particle/genericParticle.ts");
-var sound_1 = __webpack_require__(/*! ../../sound */ "./src/sound.ts");
 var redgem_1 = __webpack_require__(/*! ../../item/redgem */ "./src/item/redgem.ts");
 var bluegem_1 = __webpack_require__(/*! ../../item/bluegem */ "./src/item/bluegem.ts");
 var entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
@@ -5171,9 +5170,27 @@ var Chest = /** @class */ (function (_super) {
     __extends(Chest, _super);
     function Chest(room, game, x, y) {
         var _this = _super.call(this, room, game, x, y) || this;
+        _this.hurt = function (playerHitBy, damage) {
+            _this.healthBar.hurt();
+            _this.health -= damage;
+            if (_this.health <= 1)
+                _this.startOpening();
+            if (_this.health <= 0)
+                _this.kill();
+            else
+                _this.hurtCallback();
+        };
+        _this.open = function () {
+            _this.opening = false;
+            var _a = _this.getOpenTile(), openX = _a[0], openY = _a[1];
+            _this.dropX = openX + 0.5;
+            _this.dropY = openY + 0.5;
+        };
+        _this.startOpening = function () {
+            _this.tileX = 0;
+            _this.opening = true;
+        };
         _this.kill = function () {
-            if (_this.room === _this.game.room)
-                sound_1.Sound.chest();
             _this.dead = true;
             genericParticle_1.GenericParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, "#fbf236");
             _this.room.items.push(_this.drop);
@@ -5181,9 +5198,24 @@ var Chest = /** @class */ (function (_super) {
         _this.killNoBones = function () {
             _this.kill();
         };
+        _this.getOpenTile = function () {
+            for (var i = 0; i < 3; i++) {
+                for (var j = 0; j < 3; j++) {
+                    if (!_this.room.roomArray[_this.x + i][_this.y + j].isSolid())
+                        return [_this.x + i, _this.y + j];
+                }
+            }
+            return [_this.x, _this.y];
+        };
         _this.draw = function (delta) {
+            if (_this.opening) {
+                _this.tileX += 0.05;
+                _this.tileY = 2;
+                if (_this.tileX > 6)
+                    _this.open();
+            }
             if (!_this.dead) {
-                game_1.Game.drawObj(_this.tileX, _this.tileY, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
+                game_1.Game.drawObj(Math.floor(_this.tileX), Math.floor(_this.tileY), 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
             }
         };
         _this.drawTopLayer = function (delta) {
@@ -5191,27 +5223,31 @@ var Chest = /** @class */ (function (_super) {
         };
         _this.tileX = 4;
         _this.tileY = 0;
-        _this.health = 1;
+        _this.health = 2;
         _this.name = "chest";
+        _this.frame = 0;
+        _this.opening = false;
+        _this.dropX = 0;
+        _this.dropY = 0;
         var drop = game_1.Game.randTable([1, 1, 1, 1, 1, 1, 1, 2, 3, 4], random_1.Random.rand);
         switch (drop) {
             case 1:
-                _this.drop = new heart_1.Heart(_this.room, _this.x, _this.y);
+                _this.drop = new heart_1.Heart(_this.room, _this.dropX, _this.dropY);
                 break;
             case 2:
-                _this.drop = new greengem_1.GreenGem(_this.room, _this.x, _this.y);
+                _this.drop = new greengem_1.GreenGem(_this.room, _this.dropX, _this.dropY);
                 break;
             case 3:
-                _this.drop = new redgem_1.RedGem(_this.room, _this.x, _this.y);
+                _this.drop = new redgem_1.RedGem(_this.room, _this.dropX, _this.dropY);
                 break;
             case 4:
-                _this.drop = new bluegem_1.BlueGem(_this.room, _this.x, _this.y);
+                _this.drop = new bluegem_1.BlueGem(_this.room, _this.dropX, _this.dropY);
                 break;
             case 5:
-                _this.drop = new key_1.Key(_this.room, _this.x, _this.y);
+                _this.drop = new key_1.Key(_this.room, _this.dropX, _this.dropY);
                 break;
             case 6:
-                _this.drop = new armor_1.Armor(_this.room, _this.x, _this.y);
+                _this.drop = new armor_1.Armor(_this.room, _this.dropX, _this.dropY);
                 break;
         }
         return _this;
@@ -13106,7 +13142,7 @@ var Room = /** @class */ (function () {
     Room.prototype.addChests = function (numChests, rand) {
         // add chests
         var tiles = this.getEmptyTiles();
-        for (var i = 0; i < numChests; i++) {
+        for (var i = 0; i < 10000; i++) {
             var t = void 0, x = void 0, y = void 0;
             if (tiles.length == 0)
                 return;
