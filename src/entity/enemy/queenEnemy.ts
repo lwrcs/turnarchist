@@ -42,6 +42,8 @@ export class QueenEnemy extends Enemy {
     this.seenPlayer = false;
     this.aggro = false;
     this.name = "queen";
+    this.orthogonalAttack = true;
+    this.diagonalAttack = true;
     if (drop) this.drop = drop;
     else {
       let dropProb = Random.rand();

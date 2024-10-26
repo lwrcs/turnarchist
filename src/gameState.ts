@@ -49,6 +49,10 @@ import { Weapon } from "./weapon/weapon";
 import { Pickaxe } from "./weapon/pickaxe";
 import { Backpack } from "./item/backpack";
 import { TutorialListener } from "./tutorialListener";
+import { DoorType } from "./tile/door";
+import { Mushrooms } from "./entity/object/mushrooms";
+import { Pumpkin } from "./entity/object/pumpkin";
+import { Block } from "./entity/object/block";
 
 export class HitWarningState {
   x: number;
@@ -813,19 +817,29 @@ export const loadGameState = (
   game.room.updateLighting();
   let p = game.players[game.localPlayerID];
   game.room.items.push(new Dagger(game.room, p.x, p.y - 1));
+  game.room.items.push(new Key(game.room, p.x - 1, p.y + 1));
+  game.room.items.push(new Key(game.room, p.x + 1, p.y + 1));
+  game.room.items.push(new Key(game.room, p.x + 1, p.y - 2));
+  game.room.items.push(new Key(game.room, p.x - 1, p.y - 2));
+
+  game.room.entities.push(
+    new Block(game.room, game, p.x, p.y - 2),
+    new Block(game.room, game, p.x + 1, p.y),
+    new Block(game.room, game, p.x - 1, p.y - 1),
+    new Block(game.room, game, p.x + 1, p.y - 1),
+    new Block(game.room, game, p.x - 1, p.y),
+    new Block(game.room, game, p.x, p.y + 1)
+  );
+  game.room.doors.forEach((door) => {
+    door.DoorType = DoorType.LOCKEDDOOR;
+    door.locked = true;
+  });
 
   setTimeout(() => {
     game.pushMessage("Welcome to Turnarchist");
-  }, 500);
-  setTimeout(() => {
     game.pushMessage("Movement: arrow keys");
-  }, 1500);
-  setTimeout(() => {
     game.pushMessage("Inventory: I, Equip: space bar");
-  }, 2500);
-  setTimeout(() => {
-    game.pushMessage("type /h for a list of commands (not implemented)");
-  }, 3500);
+  }, 500);
 
   game.chat = [];
 };

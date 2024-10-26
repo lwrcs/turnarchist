@@ -54,6 +54,8 @@ export class FrogEnemy extends Enemy {
     this.jumpDistance = 1;
     this.drop = drop ? drop : new Coin(this.room, 0, 0);
     this.name = "frog";
+    this.orthogonalAttack = true;
+    this.diagonalAttack = true;
   }
 
   hurt = (playerHitBy: Player, damage: number) => {
@@ -91,18 +93,7 @@ export class FrogEnemy extends Enemy {
       }
       if (!this.seenPlayer) {
         this.tileX = 12;
-        const result = this.nearestPlayer();
-        if (result !== false) {
-          let [distance, p] = result;
-          if (distance < 4) {
-            this.seenPlayer = true;
-            this.targetPlayer = p;
-            this.facePlayer(p);
-            if (p === this.game.players[this.game.localPlayerID])
-              this.alertTicks = 1;
-            this.makeHitWarnings();
-          }
-        }
+        this.lookForPlayer();
       } else if (this.seenPlayer) {
         this.tileX = 1;
         if (this.room.playerTicked === this.targetPlayer) {

@@ -38,6 +38,7 @@ export class CrabEnemy extends Enemy {
     this.seenPlayer = false;
     this.aggro = false;
     this.name = "crab";
+    this.orthogonalAttack = true;
 
     if (drop) this.drop = drop;
     else {

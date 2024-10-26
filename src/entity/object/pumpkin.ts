@@ -12,7 +12,7 @@ export class Pumpkin extends Entity {
     super(room, game, x, y);
     this.room = room;
     this.health = 1;
-    this.tileX = 13;
+    this.tileX = 15;
     this.tileY = 2;
     this.hasShadow = false;
     this.chainPushable = false;
@@ -33,7 +33,7 @@ export class Pumpkin extends Entity {
       "#ac3232"
     );
 
-    this.room.items.push(new Shrooms(this.room, this.x, this.y));
+    //this.room.items.push(new Shrooms(this.room, this.x, this.y));
   };
   killNoBones = () => {
     this.kill();

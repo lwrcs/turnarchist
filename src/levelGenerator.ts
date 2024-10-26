@@ -60,7 +60,7 @@ class Partition {
       }
       return sizes[sizes.length - 1].size;
     };
-    let MIN_SIZE = 3;
+    let MIN_SIZE = 4;
 
     if (this.w > this.h) {
       //if the partitions width is greater than its height

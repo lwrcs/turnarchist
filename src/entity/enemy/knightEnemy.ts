@@ -41,6 +41,7 @@ export class KnightEnemy extends Enemy {
     this.lastX = this.x;
     this.lastY = this.y;
     this.name = "burrow knight";
+    this.orthogonalAttack = true;
 
     if (drop) this.drop = drop;
     else {

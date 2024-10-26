@@ -91,8 +91,8 @@ export class Door extends Tile {
       if (k !== null) {
         // remove key
         player.inventory.removeItem(k);
-        this.locked = false;
         this.DoorType = DoorType.DOOR;
+        this.locked = false;
       }
     }
     if (this.DoorType === DoorType.GUARDEDDOOR) {

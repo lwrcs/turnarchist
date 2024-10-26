@@ -703,6 +703,7 @@ var ArmoredzombieEnemy = /** @class */ (function (_super) {
         _this.aggro = false;
         _this.deathParticleColor = "#ffffff";
         _this.name = "armored zombie";
+        _this.orthogonalAttack = true;
         if (drop)
             _this.drop = drop;
         else {
@@ -2011,6 +2012,7 @@ var CrabEnemy = /** @class */ (function (_super) {
         _this.seenPlayer = false;
         _this.aggro = false;
         _this.name = "crab";
+        _this.orthogonalAttack = true;
         if (drop)
             _this.drop = drop;
         else {
@@ -2700,18 +2702,7 @@ var FrogEnemy = /** @class */ (function (_super) {
                 }
                 if (!_this.seenPlayer) {
                     _this.tileX = 12;
-                    var result = _this.nearestPlayer();
-                    if (result !== false) {
-                        var distance = result[0], p = result[1];
-                        if (distance < 4) {
-                            _this.seenPlayer = true;
-                            _this.targetPlayer = p;
-                            _this.facePlayer(p);
-                            if (p === _this.game.players[_this.game.localPlayerID])
-                                _this.alertTicks = 1;
-                            _this.makeHitWarnings();
-                        }
-                    }
+                    _this.lookForPlayer();
                 }
                 else if (_this.seenPlayer) {
                     _this.tileX = 1;
@@ -2898,6 +2889,8 @@ var FrogEnemy = /** @class */ (function (_super) {
         _this.jumpDistance = 1;
         _this.drop = drop ? drop : new coin_1.Coin(_this.room, 0, 0);
         _this.name = "frog";
+        _this.orthogonalAttack = true;
+        _this.diagonalAttack = true;
         return _this;
     }
     return FrogEnemy;
@@ -3122,6 +3115,7 @@ var KnightEnemy = /** @class */ (function (_super) {
         _this.lastX = _this.x;
         _this.lastY = _this.y;
         _this.name = "burrow knight";
+        _this.orthogonalAttack = true;
         if (drop)
             _this.drop = drop;
         else {
@@ -3333,6 +3327,8 @@ var QueenEnemy = /** @class */ (function (_super) {
         _this.seenPlayer = false;
         _this.aggro = false;
         _this.name = "queen";
+        _this.orthogonalAttack = true;
+        _this.diagonalAttack = true;
         if (drop)
             _this.drop = drop;
         else {
@@ -5027,6 +5023,79 @@ var Barrel = /** @class */ (function (_super) {
     return Barrel;
 }(entity_1.Entity));
 exports.Barrel = Barrel;
+
+
+/***/ }),
+
+/***/ "./src/entity/object/block.ts":
+/*!************************************!*\
+  !*** ./src/entity/object/block.ts ***!
+  \************************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Block = void 0;
+var entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+var game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+var entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+var imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ "./src/particle/imageParticle.ts");
+var Block = /** @class */ (function (_super) {
+    __extends(Block, _super);
+    function Block(room, game, x, y) {
+        var _this = _super.call(this, room, game, x, y) || this;
+        _this.kill = function () {
+            _this.dead = true;
+            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 29);
+        };
+        _this.killNoBones = function () {
+            _this.kill();
+        };
+        _this.draw = function (delta) {
+            // not inherited because it doesn't have the 0.5 offset
+            if (!_this.dead) {
+                _this.drawX += -0.5 * _this.drawX;
+                _this.drawY += -0.5 * _this.drawY;
+                game_1.Game.drawObj(_this.tileX, _this.tileY, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
+            }
+        };
+        _this.drawTopLayer = function (delta) {
+            _this.drawableY = _this.y;
+        };
+        _this.room = room;
+        _this.health = 1;
+        _this.tileX = 10;
+        _this.tileY = 2;
+        _this.hasShadow = false;
+        _this.chainPushable = false;
+        _this.name = "block";
+        return _this;
+    }
+    Object.defineProperty(Block.prototype, "type", {
+        get: function () {
+            return entity_2.EntityType.PROP;
+        },
+        enumerable: false,
+        configurable: true
+    });
+    return Block;
+}(entity_1.Entity));
+exports.Block = Block;
 
 
 /***/ }),
@@ -6970,7 +7039,7 @@ var GameConstants = /** @class */ (function () {
     GameConstants.SCALE = 1;
     GameConstants.SWIPE_THRESH = Math.pow(25, 2); // (size of swipe threshold circle)^2
     GameConstants.KEY_REPEAT_TIME = 300; // millseconds
-    GameConstants.CHAT_APPEAR_TIME = 10000;
+    GameConstants.CHAT_APPEAR_TIME = 5000;
     GameConstants.CHAT_FADE_TIME = 1000;
     GameConstants.DEFAULTWIDTH = 6 * GameConstants.TILESIZE;
     GameConstants.DEFAULTHEIGHT = 12 * GameConstants.TILESIZE;
@@ -7047,6 +7116,8 @@ var shotgun_1 = __webpack_require__(/*! ./weapon/shotgun */ "./src/weapon/shotgu
 var spear_1 = __webpack_require__(/*! ./weapon/spear */ "./src/weapon/spear.ts");
 var pickaxe_1 = __webpack_require__(/*! ./weapon/pickaxe */ "./src/weapon/pickaxe.ts");
 var backpack_1 = __webpack_require__(/*! ./item/backpack */ "./src/item/backpack.ts");
+var door_1 = __webpack_require__(/*! ./tile/door */ "./src/tile/door.ts");
+var block_1 = __webpack_require__(/*! ./entity/object/block */ "./src/entity/object/block.ts");
 var HitWarningState = /** @class */ (function () {
     function HitWarningState(hw) {
         this.x = hw.x;
@@ -7742,18 +7813,20 @@ var loadGameState = function (game, activeUsernames, gameState, newWorld) {
     game.room.updateLighting();
     var p = game.players[game.localPlayerID];
     game.room.items.push(new dagger_1.Dagger(game.room, p.x, p.y - 1));
+    game.room.items.push(new key_1.Key(game.room, p.x - 1, p.y + 1));
+    game.room.items.push(new key_1.Key(game.room, p.x + 1, p.y + 1));
+    game.room.items.push(new key_1.Key(game.room, p.x + 1, p.y - 2));
+    game.room.items.push(new key_1.Key(game.room, p.x - 1, p.y - 2));
+    game.room.entities.push(new block_1.Block(game.room, game, p.x, p.y - 2), new block_1.Block(game.room, game, p.x + 1, p.y), new block_1.Block(game.room, game, p.x - 1, p.y - 1), new block_1.Block(game.room, game, p.x + 1, p.y - 1), new block_1.Block(game.room, game, p.x - 1, p.y), new block_1.Block(game.room, game, p.x, p.y + 1));
+    game.room.doors.forEach(function (door) {
+        door.DoorType = door_1.DoorType.LOCKEDDOOR;
+        door.locked = true;
+    });
     setTimeout(function () {
         game.pushMessage("Welcome to Turnarchist");
-    }, 500);
-    setTimeout(function () {
         game.pushMessage("Movement: arrow keys");
-    }, 1500);
-    setTimeout(function () {
         game.pushMessage("Inventory: I, Equip: space bar");
-    }, 2500);
-    setTimeout(function () {
-        game.pushMessage("type /h for a list of commands (not implemented)");
-    }, 3500);
+    }, 500);
     game.chat = [];
 };
 exports.loadGameState = loadGameState;
@@ -9454,7 +9527,7 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Key = void 0;
-var equippable_1 = __webpack_require__(/*! ./equippable */ "./src/item/equippable.ts");
+var item_1 = __webpack_require__(/*! ./item */ "./src/item/item.ts");
 var Key = /** @class */ (function (_super) {
     __extends(Key, _super);
     function Key(level, x, y) {
@@ -9467,7 +9540,7 @@ var Key = /** @class */ (function (_super) {
         return _this;
     }
     return Key;
-}(equippable_1.Equippable));
+}(item_1.Item));
 exports.Key = Key;
 
 
@@ -9866,7 +9939,7 @@ var LevelConstants = /** @class */ (function () {
     LevelConstants.SHADED_TILE_CUTOFF = 1;
     LevelConstants.SMOOTH_LIGHTING = false; //doesn't work
     LevelConstants.MIN_VISIBILITY = 0; // visibility level of places you've already seen
-    LevelConstants.LIGHTING_ANGLE_STEP = 3; // how many degrees between each ray, previously 5
+    LevelConstants.LIGHTING_ANGLE_STEP = 5; // how many degrees between each ray, previously 5
     LevelConstants.LEVEL_TEXT_COLOR = "yellow";
     return LevelConstants;
 }());
@@ -9934,7 +10007,7 @@ var Partition = /** @class */ (function () {
                 }
                 return sizes[sizes.length - 1].size;
             };
-            var MIN_SIZE = 3;
+            var MIN_SIZE = 4;
             if (_this.w > _this.h) {
                 //if the partitions width is greater than its height
                 var w1 = Math.floor(rand_mid() * _this.w);
@@ -13049,7 +13122,7 @@ var Room = /** @class */ (function () {
             var y = t.y;
             // Define the enemy tables for each depth level
             var tables = {
-                0: [16, 5],
+                0: [1, 2, 3],
                 1: [3, 4, 5, 9, 7],
                 2: [3, 4, 5, 7, 8, 9, 12],
                 3: [1, 2, 3, 5, 6, 7, 8, 9, 10],
@@ -13907,8 +13980,8 @@ var Door = /** @class */ (function (_super) {
                 if (k !== null) {
                     // remove key
                     player.inventory.removeItem(k);
-                    _this.locked = false;
                     _this.DoorType = DoorType.DOOR;
+                    _this.locked = false;
                 }
             }
             if (_this.DoorType === DoorType.GUARDEDDOOR) {
