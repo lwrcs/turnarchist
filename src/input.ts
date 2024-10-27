@@ -10,7 +10,7 @@ export enum InputEnum {
   RIGHT,
   UP,
   DOWN,
-  SPACE
+  SPACE,
 }
 
 export const Input = {
@@ -19,25 +19,33 @@ export const Input = {
   isTapHold: false,
   tapStartTime: null,
   IS_TAP_HOLD_THRESH: 300,
-  keyDownListener: function (key: string) { },
-  iListener: function () { },
-  mListener: function () { },
-  mUpListener: function () { },
-  qListener: function () { },
-  leftListener: function () { },
-  rightListener: function () { },
-  upListener: function () { },
-  downListener: function () { },
-  aListener: function () { Input.leftListener(); },
-  dListener: function () { Input.rightListener(); },
-  wListener: function () { Input.upListener(); },
-  sListener: function () { Input.downListener(); },
-  spaceListener: function () { },
-  leftSwipeListener: function () { },
-  rightSwipeListener: function () { },
-  upSwipeListener: function () { },
-  downSwipeListener: function () { },
-  tapListener: function () { },
+  keyDownListener: function (key: string) {},
+  iListener: function () {},
+  mListener: function () {},
+  mUpListener: function () {},
+  qListener: function () {},
+  leftListener: function () {},
+  rightListener: function () {},
+  upListener: function () {},
+  downListener: function () {},
+  aListener: function () {
+    Input.leftListener();
+  },
+  dListener: function () {
+    Input.rightListener();
+  },
+  wListener: function () {
+    Input.upListener();
+  },
+  sListener: function () {
+    Input.downListener();
+  },
+  spaceListener: function () {},
+  leftSwipeListener: function () {},
+  rightSwipeListener: function () {},
+  upSwipeListener: function () {},
+  downSwipeListener: function () {},
+  tapListener: function () {},
 
   mouseLeftClickListeners: [],
 
@@ -73,7 +81,8 @@ export const Input = {
   onKeydown: (event: KeyboardEvent) => {
     if (event.repeat) return; // ignore repeat keypresses
     if (event.key) Input.keyDownListener(event.key);
-    if (event.cancelable && event.key != "F12" && event.key != "F5") event.preventDefault();
+    if (event.cancelable && event.key != "F12" && event.key != "F5")
+      event.preventDefault();
     Input.lastPressTime = Date.now();
     Input.lastPressKey = event.key;
     Input._pressed[event.code] = true;
@@ -128,15 +137,22 @@ export const Input = {
 
   mouseClickListener: function (event: MouseEvent) {
     if (event.button === 0) {
-      let rect = window.document.getElementById("gameCanvas").getBoundingClientRect();
+      let rect = window.document
+        .getElementById("gameCanvas")
+        .getBoundingClientRect();
       let x = event.clientX - rect.left;
       let y = event.clientY - rect.top;
-      Input.mouseLeftClickListener(Math.floor(x / Game.scale), Math.floor(y / Game.scale));
+      Input.mouseLeftClickListener(
+        Math.floor(x / Game.scale),
+        Math.floor(y / Game.scale)
+      );
     }
   },
 
   updateMousePos: function (event: MouseEvent) {
-    let rect = window.document.getElementById("gameCanvas").getBoundingClientRect();
+    let rect = window.document
+      .getElementById("gameCanvas")
+      .getBoundingClientRect();
     let x = event.clientX - rect.left;
     let y = event.clientY - rect.top;
 
@@ -235,7 +251,10 @@ export const Input = {
   },
 
   checkIsTapHold: function () {
-    if (Input.tapStartTime !== null && Date.now() >= Input.tapStartTime + Input.IS_TAP_HOLD_THRESH)
+    if (
+      Input.tapStartTime !== null &&
+      Date.now() >= Input.tapStartTime + Input.IS_TAP_HOLD_THRESH
+    )
       Input.isTapHold = true;
   },
 };
@@ -255,7 +274,7 @@ window.addEventListener(
 );
 window.document
   .getElementById("gameCanvas")
-  .addEventListener("click", event => Input.mouseClickListener(event), false);
+  .addEventListener("click", (event) => Input.mouseClickListener(event), false);
 window.document
   .getElementById("gameCanvas")
-  .addEventListener("mousemove", event => Input.updateMousePos(event));
+  .addEventListener("mousemove", (event) => Input.updateMousePos(event));

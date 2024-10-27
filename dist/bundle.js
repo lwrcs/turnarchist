@@ -7106,7 +7106,8 @@ var GameConstants = /** @class */ (function () {
     GameConstants.TILESIZE = 16;
     GameConstants.SCALE = 1;
     GameConstants.SWIPE_THRESH = Math.pow(25, 2); // (size of swipe threshold circle)^2
-    GameConstants.KEY_REPEAT_TIME = 300; // millseconds
+    GameConstants.KEY_REPEAT_TIME = 200; // millseconds
+    GameConstants.MOVEMENT_COOLDOWN = 100; // milliseconds
     GameConstants.CHAT_APPEAR_TIME = 5000;
     GameConstants.CHAT_FADE_TIME = 1000;
     GameConstants.DEFAULTWIDTH = 6 * GameConstants.TILESIZE;
@@ -8161,10 +8162,18 @@ exports.Input = {
     rightListener: function () { },
     upListener: function () { },
     downListener: function () { },
-    aListener: function () { exports.Input.leftListener(); },
-    dListener: function () { exports.Input.rightListener(); },
-    wListener: function () { exports.Input.upListener(); },
-    sListener: function () { exports.Input.downListener(); },
+    aListener: function () {
+        exports.Input.leftListener();
+    },
+    dListener: function () {
+        exports.Input.rightListener();
+    },
+    wListener: function () {
+        exports.Input.upListener();
+    },
+    sListener: function () {
+        exports.Input.downListener();
+    },
     spaceListener: function () { },
     leftSwipeListener: function () { },
     rightSwipeListener: function () { },
@@ -8256,14 +8265,18 @@ exports.Input = {
     },
     mouseClickListener: function (event) {
         if (event.button === 0) {
-            var rect = window.document.getElementById("gameCanvas").getBoundingClientRect();
+            var rect = window.document
+                .getElementById("gameCanvas")
+                .getBoundingClientRect();
             var x = event.clientX - rect.left;
             var y = event.clientY - rect.top;
             exports.Input.mouseLeftClickListener(Math.floor(x / game_1.Game.scale), Math.floor(y / game_1.Game.scale));
         }
     },
     updateMousePos: function (event) {
-        var rect = window.document.getElementById("gameCanvas").getBoundingClientRect();
+        var rect = window.document
+            .getElementById("gameCanvas")
+            .getBoundingClientRect();
         var x = event.clientX - rect.left;
         var y = event.clientY - rect.top;
         exports.Input.mouseX = Math.floor(x / game_1.Game.scale);
@@ -8348,7 +8361,8 @@ exports.Input = {
         });
     },
     checkIsTapHold: function () {
-        if (exports.Input.tapStartTime !== null && Date.now() >= exports.Input.tapStartTime + exports.Input.IS_TAP_HOLD_THRESH)
+        if (exports.Input.tapStartTime !== null &&
+            Date.now() >= exports.Input.tapStartTime + exports.Input.IS_TAP_HOLD_THRESH)
             exports.Input.isTapHold = true;
     },
 };
@@ -10783,7 +10797,7 @@ var Map = /** @class */ (function () {
             game_1.Game.ctx.setTransform(1, 0, 0, 1, 0, 0);
         };
         this.game = game;
-        this.scale = 2;
+        this.scale = 1;
         //this.depth = player.game.level.depth
     }
     return Map;
@@ -11383,20 +11397,28 @@ var Player = /** @class */ (function (_super) {
             }
         };
         _this.left = function () {
-            _this.tryMove(_this.x - 1, _this.y);
-            _this.direction = PlayerDirection.LEFT;
+            if (_this.canMove()) {
+                _this.tryMove(_this.x - 1, _this.y);
+                _this.direction = PlayerDirection.LEFT;
+            }
         };
         _this.right = function () {
-            _this.tryMove(_this.x + 1, _this.y);
-            _this.direction = PlayerDirection.RIGHT;
+            if (_this.canMove()) {
+                _this.tryMove(_this.x + 1, _this.y);
+                _this.direction = PlayerDirection.RIGHT;
+            }
         };
         _this.up = function () {
-            _this.tryMove(_this.x, _this.y - 1);
-            _this.direction = PlayerDirection.UP;
+            if (_this.canMove()) {
+                _this.tryMove(_this.x, _this.y - 1);
+                _this.direction = PlayerDirection.UP;
+            }
         };
         _this.down = function () {
-            _this.tryMove(_this.x, _this.y + 1);
-            _this.direction = PlayerDirection.DOWN;
+            if (_this.canMove()) {
+                _this.tryMove(_this.x, _this.y + 1);
+                _this.direction = PlayerDirection.DOWN;
+            }
         };
         _this.hit = function () {
             return 1;
@@ -11748,8 +11770,18 @@ var Player = /** @class */ (function (_super) {
         _this.turnCount = 0;
         _this.triedMove = false;
         _this.tutorialRoom = false;
+        _this.lastMoveTime = 0;
+        _this.moveCooldown = 100; // Cooldown in milliseconds (adjust as needed)
         return _this;
     }
+    Player.prototype.canMove = function () {
+        var currentTime = Date.now();
+        if (currentTime - this.lastMoveTime >= gameConstants_1.GameConstants.MOVEMENT_COOLDOWN) {
+            this.lastMoveTime = currentTime;
+            return true;
+        }
+        return false;
+    };
     return Player;
 }(drawable_1.Drawable));
 exports.Player = Player;
@@ -12625,6 +12657,13 @@ var Room = /** @class */ (function () {
             _this.roomArray[d.x][d.y] = d;
             return d;
         };
+        this.alertEnemiesOnEntry = function () {
+            for (var _i = 0, _a = _this.entities; _i < _a.length; _i++) {
+                var e = _a[_i];
+                if (e instanceof enemy_1.Enemy)
+                    e.lookForPlayer();
+            }
+        };
         this.exitLevel = function () {
             _this.particles.splice(0, _this.particles.length);
         };
@@ -12635,6 +12674,7 @@ var Room = /** @class */ (function () {
             _this.entered = true;
             _this.calculateWallInfo();
             _this.message = _this.name;
+            player.map.saveMapData();
         };
         this.enterLevelThroughDoor = function (player, door, side) {
             if (door instanceof door_1.Door && door.doorDir === door_2.DoorDir.North) {
@@ -12655,7 +12695,9 @@ var Room = /** @class */ (function () {
             _this.updateLighting();
             _this.entered = true;
             _this.calculateWallInfo();
+            _this.alertEnemiesOnEntry();
             _this.message = _this.name;
+            player.map.saveMapData();
         };
         this.enterLevelThroughLadder = function (player, ladder) {
             player.moveSnap(ladder.x, ladder.y + 1);
@@ -12664,6 +12706,7 @@ var Room = /** @class */ (function () {
             _this.entered = true;
             _this.calculateWallInfo();
             _this.message = _this.name;
+            player.map.saveMapData();
         };
         this.getEmptyTiles = function () {
             var returnVal = [];

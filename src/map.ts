@@ -4,6 +4,7 @@ import { Room, RoomType } from "./room";
 import { Entity, EntityType } from "./entity/entity";
 import { Wall } from "./tile/wall";
 import { Player } from "./player";
+import { LevelConstants } from "./levelConstants";
 
 export class Map {
   game: Game;
@@ -14,7 +15,7 @@ export class Map {
 
   constructor(game: Game, player: Player) {
     this.game = game;
-    this.scale = 2;
+    this.scale = 1;
     //this.depth = player.game.level.depth
   }
 

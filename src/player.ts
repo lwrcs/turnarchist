@@ -63,6 +63,9 @@ export class Player extends Drawable {
   turnCount: number;
   triedMove: boolean;
   tutorialRoom: boolean;
+  private lastMoveTime: number;
+  private moveCooldown: number;
+
   constructor(game: Game, x: number, y: number, isLocalPlayer: boolean) {
     super();
 
@@ -116,6 +119,8 @@ export class Player extends Drawable {
     this.turnCount = 0;
     this.triedMove = false;
     this.tutorialRoom = false;
+    this.lastMoveTime = 0;
+    this.moveCooldown = 100; // Cooldown in milliseconds (adjust as needed)
   }
 
   inputHandler = (input: InputEnum) => {
@@ -231,20 +236,28 @@ export class Player extends Drawable {
     }
   };
   left = () => {
-    this.tryMove(this.x - 1, this.y);
-    this.direction = PlayerDirection.LEFT;
+    if (this.canMove()) {
+      this.tryMove(this.x - 1, this.y);
+      this.direction = PlayerDirection.LEFT;
+    }
   };
   right = () => {
-    this.tryMove(this.x + 1, this.y);
-    this.direction = PlayerDirection.RIGHT;
+    if (this.canMove()) {
+      this.tryMove(this.x + 1, this.y);
+      this.direction = PlayerDirection.RIGHT;
+    }
   };
   up = () => {
-    this.tryMove(this.x, this.y - 1);
-    this.direction = PlayerDirection.UP;
+    if (this.canMove()) {
+      this.tryMove(this.x, this.y - 1);
+      this.direction = PlayerDirection.UP;
+    }
   };
   down = () => {
-    this.tryMove(this.x, this.y + 1);
-    this.direction = PlayerDirection.DOWN;
+    if (this.canMove()) {
+      this.tryMove(this.x, this.y + 1);
+      this.direction = PlayerDirection.DOWN;
+    }
   };
 
   hit = (): number => {
@@ -588,4 +601,13 @@ export class Player extends Drawable {
     this.drawX += -0.5 * this.drawX;
     this.drawY += -0.5 * this.drawY;
   };
+
+  private canMove(): boolean {
+    const currentTime = Date.now();
+    if (currentTime - this.lastMoveTime >= GameConstants.MOVEMENT_COOLDOWN) {
+      this.lastMoveTime = currentTime;
+      return true;
+    }
+    return false;
+  }
 }

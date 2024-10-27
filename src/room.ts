@@ -1014,6 +1014,12 @@ export class Room {
     return d;
   };
 
+  alertEnemiesOnEntry = () => {
+    for (const e of this.entities) {
+      if (e instanceof Enemy) e.lookForPlayer();
+    }
+  };
+
   exitLevel = () => {
     this.particles.splice(0, this.particles.length);
   };
@@ -1029,6 +1035,7 @@ export class Room {
     this.entered = true;
     this.calculateWallInfo();
     this.message = this.name;
+    player.map.saveMapData();
   };
 
   enterLevelThroughDoor = (player: Player, door: any, side?: number) => {
@@ -1051,7 +1058,9 @@ export class Room {
     this.updateLighting();
     this.entered = true;
     this.calculateWallInfo();
+    this.alertEnemiesOnEntry();
     this.message = this.name;
+    player.map.saveMapData();
   };
 
   enterLevelThroughLadder = (player: Player, ladder: any) => {
@@ -1062,6 +1071,7 @@ export class Room {
     this.entered = true;
     this.calculateWallInfo();
     this.message = this.name;
+    player.map.saveMapData();
   };
 
   getEmptyTiles = (): Tile[] => {
