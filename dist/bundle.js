@@ -5182,9 +5182,30 @@ var Chest = /** @class */ (function (_super) {
         };
         _this.open = function () {
             _this.opening = false;
-            var _a = _this.getOpenTile(), openX = _a[0], openY = _a[1];
-            _this.dropX = openX + 0.5;
-            _this.dropY = openY + 0.5;
+            var _a = _this.getOpenTile(), x = _a.x, y = _a.y;
+            switch (_this.rollDrop()) {
+                case 1:
+                    _this.drop = new heart_1.Heart(_this.room, x, y);
+                    break;
+                case 2:
+                    _this.drop = new greengem_1.GreenGem(_this.room, x, y);
+                    break;
+                case 3:
+                    _this.drop = new redgem_1.RedGem(_this.room, x, y);
+                    break;
+                case 4:
+                    _this.drop = new bluegem_1.BlueGem(_this.room, x, y);
+                    break;
+                case 5:
+                    _this.drop = new key_1.Key(_this.room, x, y);
+                    break;
+                case 6:
+                    _this.drop = new armor_1.Armor(_this.room, x, y);
+                    break;
+            }
+        };
+        _this.rollDrop = function () {
+            return game_1.Game.randTable([1, 1, 1, 1, 1, 1, 1, 2, 3, 4], random_1.Random.rand);
         };
         _this.startOpening = function () {
             _this.tileX = 0;
@@ -5202,14 +5223,14 @@ var Chest = /** @class */ (function (_super) {
             for (var i = 0; i < 3; i++) {
                 for (var j = 0; j < 3; j++) {
                     if (!_this.room.roomArray[_this.x + i][_this.y + j].isSolid())
-                        return [_this.x + i, _this.y + j];
+                        return { x: _this.x + i, y: _this.y + j };
                 }
             }
-            return [_this.x, _this.y];
+            return { x: _this.x, y: _this.y };
         };
         _this.draw = function (delta) {
             if (_this.opening) {
-                _this.tileX += 0.05;
+                _this.tileX += 0.15;
                 _this.tileY = 2;
                 if (_this.tileX > 6)
                     _this.open();
@@ -5229,27 +5250,6 @@ var Chest = /** @class */ (function (_super) {
         _this.opening = false;
         _this.dropX = 0;
         _this.dropY = 0;
-        var drop = game_1.Game.randTable([1, 1, 1, 1, 1, 1, 1, 2, 3, 4], random_1.Random.rand);
-        switch (drop) {
-            case 1:
-                _this.drop = new heart_1.Heart(_this.room, _this.dropX, _this.dropY);
-                break;
-            case 2:
-                _this.drop = new greengem_1.GreenGem(_this.room, _this.dropX, _this.dropY);
-                break;
-            case 3:
-                _this.drop = new redgem_1.RedGem(_this.room, _this.dropX, _this.dropY);
-                break;
-            case 4:
-                _this.drop = new bluegem_1.BlueGem(_this.room, _this.dropX, _this.dropY);
-                break;
-            case 5:
-                _this.drop = new key_1.Key(_this.room, _this.dropX, _this.dropY);
-                break;
-            case 6:
-                _this.drop = new armor_1.Armor(_this.room, _this.dropX, _this.dropY);
-                break;
-        }
         return _this;
     }
     Object.defineProperty(Chest.prototype, "type", {

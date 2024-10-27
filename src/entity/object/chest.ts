@@ -32,28 +32,6 @@ export class Chest extends Entity {
     this.opening = false;
     this.dropX = 0;
     this.dropY = 0;
-    let drop = Game.randTable([1, 1, 1, 1, 1, 1, 1, 2, 3, 4], Random.rand);
-
-    switch (drop) {
-      case 1:
-        this.drop = new Heart(this.room, this.dropX, this.dropY);
-        break;
-      case 2:
-        this.drop = new GreenGem(this.room, this.dropX, this.dropY);
-        break;
-      case 3:
-        this.drop = new RedGem(this.room, this.dropX, this.dropY);
-        break;
-      case 4:
-        this.drop = new BlueGem(this.room, this.dropX, this.dropY);
-        break;
-      case 5:
-        this.drop = new Key(this.room, this.dropX, this.dropY);
-        break;
-      case 6:
-        this.drop = new Armor(this.room, this.dropX, this.dropY);
-        break;
-    }
   }
 
   get type() {
@@ -71,9 +49,32 @@ export class Chest extends Entity {
 
   private open = () => {
     this.opening = false;
-    const [openX, openY] = this.getOpenTile();
-    this.dropX = openX + 0.5;
-    this.dropY = openY + 0.5;
+    const { x, y } = this.getOpenTile();
+
+    switch (this.rollDrop()) {
+      case 1:
+        this.drop = new Heart(this.room, x, y);
+        break;
+      case 2:
+        this.drop = new GreenGem(this.room, x, y);
+        break;
+      case 3:
+        this.drop = new RedGem(this.room, x, y);
+        break;
+      case 4:
+        this.drop = new BlueGem(this.room, x, y);
+        break;
+      case 5:
+        this.drop = new Key(this.room, x, y);
+        break;
+      case 6:
+        this.drop = new Armor(this.room, x, y);
+        break;
+    }
+  };
+
+  rollDrop = (): number => {
+    return Game.randTable([1, 1, 1, 1, 1, 1, 1, 2, 3, 4], Random.rand);
   };
 
   startOpening = () => {
@@ -97,19 +98,19 @@ export class Chest extends Entity {
     this.kill();
   };
 
-  getOpenTile = () => {
+  getOpenTile = (): { x: number; y: number } => {
     for (let i = 0; i < 3; i++) {
       for (let j = 0; j < 3; j++) {
         if (!this.room.roomArray[this.x + i][this.y + j].isSolid())
-          return [this.x + i, this.y + j];
+          return { x: this.x + i, y: this.y + j };
       }
     }
-    return [this.x, this.y];
+    return { x: this.x, y: this.y };
   };
 
   draw = (delta: number) => {
     if (this.opening) {
-      this.tileX += 0.05;
+      this.tileX += 0.15;
       this.tileY = 2;
       if (this.tileX > 6) this.open();
     }
