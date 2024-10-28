@@ -16,6 +16,7 @@ export class MouseCursor {
   }
 
   public draw(): void {
+    /*
     Game.ctx.save();
     Game.ctx.fillStyle = "rgba(255, 0, 0, 0.5)"; // Semi-transparent red
     Game.ctx.fillRect(
@@ -25,6 +26,7 @@ export class MouseCursor {
       this.cursorSize
     );
     Game.ctx.restore();
+    */
   }
 
   public getPosition(): { x: number; y: number } {

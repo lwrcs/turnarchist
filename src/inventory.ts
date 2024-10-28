@@ -857,19 +857,32 @@ export class Inventory {
       };
     } else {
       // Quickbar bounds
-      let startX = 0.5 * GameConstants.WIDTH - 0.5 * width;
-      let startY = GameConstants.HEIGHT - (s + 2 * b) - 5;
-      let quickbarHeight = s + 2 * b;
-
-      return {
-        inBounds:
-          x >= startX &&
-          x <= startX + width &&
-          y >= startY &&
-          y <= startY + quickbarHeight,
-        startX,
-        startY,
-      };
+      return this.isPointInQuickbarBounds(x, y);
     }
+  };
+
+  isPointInQuickbarBounds = (
+    x: number,
+    y: number
+  ): { inBounds: boolean; startX: number; startY: number } => {
+    let s = this.isOpen
+      ? Math.min(18, (18 * (Date.now() - this.openTime)) / OPEN_TIME)
+      : 18;
+    let b = 2;
+    let g = -2;
+    let width = this.cols * (s + 2 * b + g) - g;
+    let startX = 0.5 * GameConstants.WIDTH - 0.5 * width;
+    let startY = GameConstants.HEIGHT - (s + 2 * b) - 5;
+    let quickbarHeight = s + 2 * b;
+
+    return {
+      inBounds:
+        x >= startX &&
+        x <= startX + width &&
+        y >= startY &&
+        y <= startY + quickbarHeight,
+      startX,
+      startY,
+    };
   };
 }

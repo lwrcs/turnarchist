@@ -9043,18 +9043,27 @@ var Inventory = /** @class */ (function () {
             }
             else {
                 // Quickbar bounds
-                var startX = 0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * width;
-                var startY = gameConstants_1.GameConstants.HEIGHT - (s + 2 * b) - 5;
-                var quickbarHeight = s + 2 * b;
-                return {
-                    inBounds: x >= startX &&
-                        x <= startX + width &&
-                        y >= startY &&
-                        y <= startY + quickbarHeight,
-                    startX: startX,
-                    startY: startY,
-                };
+                return _this.isPointInQuickbarBounds(x, y);
             }
+        };
+        this.isPointInQuickbarBounds = function (x, y) {
+            var s = _this.isOpen
+                ? Math.min(18, (18 * (Date.now() - _this.openTime)) / OPEN_TIME)
+                : 18;
+            var b = 2;
+            var g = -2;
+            var width = _this.cols * (s + 2 * b + g) - g;
+            var startX = 0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * width;
+            var startY = gameConstants_1.GameConstants.HEIGHT - (s + 2 * b) - 5;
+            var quickbarHeight = s + 2 * b;
+            return {
+                inBounds: x >= startX &&
+                    x <= startX + width &&
+                    y >= startY &&
+                    y <= startY + quickbarHeight,
+                startX: startX,
+                startY: startY,
+            };
         };
         this.game = game;
         this.player = player;
@@ -11084,7 +11093,6 @@ exports.Map = Map;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MouseCursor = void 0;
-var game_1 = __webpack_require__(/*! ./game */ "./src/game.ts");
 var input_1 = __webpack_require__(/*! ./input */ "./src/input.ts");
 var gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/gameConstants.ts");
 var MouseCursor = /** @class */ (function () {
@@ -11098,10 +11106,17 @@ var MouseCursor = /** @class */ (function () {
         return MouseCursor.instance;
     };
     MouseCursor.prototype.draw = function () {
-        game_1.Game.ctx.save();
-        game_1.Game.ctx.fillStyle = "rgba(255, 0, 0, 0.5)"; // Semi-transparent red
-        game_1.Game.ctx.fillRect(input_1.Input.mouseX - this.cursorSize / 2, input_1.Input.mouseY - this.cursorSize / 2, this.cursorSize, this.cursorSize);
-        game_1.Game.ctx.restore();
+        /*
+        Game.ctx.save();
+        Game.ctx.fillStyle = "rgba(255, 0, 0, 0.5)"; // Semi-transparent red
+        Game.ctx.fillRect(
+          Input.mouseX - this.cursorSize / 2,
+          Input.mouseY - this.cursorSize / 2,
+          this.cursorSize,
+          this.cursorSize
+        );
+        Game.ctx.restore();
+        */
     };
     MouseCursor.prototype.getPosition = function () {
         return { x: input_1.Input.mouseX, y: input_1.Input.mouseY };
@@ -11738,7 +11753,8 @@ var Player = /** @class */ (function (_super) {
         };
         _this.mouseLeftClick = function () {
             _this.inventory.mouseLeftClick();
-            if (!_this.inventory.isOpen) {
+            if (!_this.inventory.isOpen &&
+                !_this.inventory.isPointInQuickbarBounds(mouseCursor_1.MouseCursor.getInstance().getPosition().x, mouseCursor_1.MouseCursor.getInstance().getPosition().y).inBounds) {
                 _this.moveWithMouse();
             }
         };
@@ -11747,9 +11763,36 @@ var Player = /** @class */ (function (_super) {
         };
         _this.mouseMove = function () {
             _this.inventory.mouseMove();
+            _this.faceMouse();
+            console.log(_this.x, _this.y);
+            _this.mouseToTile();
         };
         _this.moveWithMouse = function () {
-            _this.tryMove(mouseCursor_1.MouseCursor.getInstance().getPosition().x, mouseCursor_1.MouseCursor.getInstance().getPosition().y);
+            _this.tryMove(_this.mouseToTile().x, _this.mouseToTile().y);
+            console.log(_this.mouseToTile());
+        };
+        _this.mouseToTile = function () {
+            // Get screen center coordinates
+            var screenCenterX = gameConstants_1.GameConstants.WIDTH / 2;
+            var screenCenterY = gameConstants_1.GameConstants.HEIGHT / 2;
+            var roundedMouseOffsetX = Math.floor(input_1.Input.mouseX / gameConstants_1.GameConstants.TILESIZE) *
+                gameConstants_1.GameConstants.TILESIZE;
+            var roundedMouseOffsetY = Math.floor((input_1.Input.mouseY - gameConstants_1.GameConstants.TILESIZE / 2) / gameConstants_1.GameConstants.TILESIZE) *
+                gameConstants_1.GameConstants.TILESIZE +
+                gameConstants_1.GameConstants.TILESIZE / 2;
+            // Get mouse position relative to screen center
+            var mouseOffsetX = input_1.Input.mouseX - screenCenterX + gameConstants_1.GameConstants.TILESIZE / 2;
+            var mouseOffsetY = input_1.Input.mouseY - screenCenterY + gameConstants_1.GameConstants.TILESIZE / 2;
+            //round to the nearest 32
+            _this.tileCursor = { x: roundedMouseOffsetX, y: roundedMouseOffsetY };
+            // Convert pixel offset to tile offset (assuming each tile is 16x16 pixels)
+            var tileOffsetX = Math.floor(mouseOffsetX / gameConstants_1.GameConstants.TILESIZE);
+            var tileOffsetY = Math.floor(mouseOffsetY / gameConstants_1.GameConstants.TILESIZE);
+            // Add offset to player's position to get final tile coordinates
+            return {
+                x: _this.x + tileOffsetX,
+                y: _this.y + tileOffsetY,
+            };
         };
         _this.left = function () {
             if (_this.canMove()) {
@@ -12028,6 +12071,31 @@ var Player = /** @class */ (function (_super) {
                 }
             }
         };
+        _this.faceMouse = function () {
+            var mousePosition = mouseCursor_1.MouseCursor.getInstance().getPosition();
+            var playerPixelPosition = {
+                x: gameConstants_1.GameConstants.WIDTH / 2,
+                y: gameConstants_1.GameConstants.HEIGHT / 2,
+            };
+            var dx = mousePosition.x - playerPixelPosition.x;
+            var dy = mousePosition.y - playerPixelPosition.y;
+            var angle = Math.atan2(dy, dx);
+            // Convert angle to direction
+            // atan2 returns angle in radians (-π to π)
+            // Divide the circle into 4 sectors for the 4 directions
+            if (angle >= -Math.PI / 4 && angle < Math.PI / 4) {
+                _this.direction = PlayerDirection.RIGHT;
+            }
+            else if (angle >= Math.PI / 4 && angle < (3 * Math.PI) / 4) {
+                _this.direction = PlayerDirection.DOWN;
+            }
+            else if (angle >= (-3 * Math.PI) / 4 && angle < -Math.PI / 4) {
+                _this.direction = PlayerDirection.UP;
+            }
+            else {
+                _this.direction = PlayerDirection.LEFT;
+            }
+        };
         _this.heartbeat = function () {
             _this.guiHeartFrame = 1;
         };
@@ -12076,10 +12144,15 @@ var Player = /** @class */ (function (_super) {
             postProcess_1.PostProcessor.draw(delta);
             if (_this.mapToggled === true)
                 _this.map.draw(delta);
+            _this.drawTileCursor(delta);
         };
         _this.updateDrawXY = function (delta) {
             _this.drawX += -0.5 * _this.drawX;
             _this.drawY += -0.5 * _this.drawY;
+        };
+        _this.drawTileCursor = function (delta) {
+            game_1.Game.ctx.fillStyle = "red";
+            game_1.Game.drawFX(22 + Math.floor(hitWarning_1.HitWarning.frame), 4, 1, 2, _this.tileCursor.x / gameConstants_1.GameConstants.TILESIZE, _this.tileCursor.y / gameConstants_1.GameConstants.TILESIZE - 1, 1, 2);
         };
         _this.game = game;
         _this.levelID = 0;
@@ -12138,6 +12211,7 @@ var Player = /** @class */ (function (_super) {
         _this.tutorialRoom = false;
         _this.lastMoveTime = 0;
         _this.moveCooldown = 100; // Cooldown in milliseconds (adjust as needed)
+        _this.tileCursor = { x: 0, y: 0 };
         return _this;
     }
     Player.prototype.canMove = function () {

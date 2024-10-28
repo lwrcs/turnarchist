@@ -66,7 +66,7 @@ export class Player extends Drawable {
   tutorialRoom: boolean;
   private lastMoveTime: number;
   private moveCooldown: number;
-
+  tileCursor: { x: number; y: number };
   constructor(game: Game, x: number, y: number, isLocalPlayer: boolean) {
     super();
 
@@ -131,6 +131,7 @@ export class Player extends Drawable {
     this.tutorialRoom = false;
     this.lastMoveTime = 0;
     this.moveCooldown = 100; // Cooldown in milliseconds (adjust as needed)
+    this.tileCursor = { x: 0, y: 0 };
   }
 
   inputHandler = (input: InputEnum) => {
@@ -268,7 +269,13 @@ export class Player extends Drawable {
   };
   mouseLeftClick = () => {
     this.inventory.mouseLeftClick();
-    if (!this.inventory.isOpen) {
+    if (
+      !this.inventory.isOpen &&
+      !this.inventory.isPointInQuickbarBounds(
+        MouseCursor.getInstance().getPosition().x,
+        MouseCursor.getInstance().getPosition().y
+      ).inBounds
+    ) {
       this.moveWithMouse();
     }
   };
@@ -278,13 +285,49 @@ export class Player extends Drawable {
 
   mouseMove = () => {
     this.inventory.mouseMove();
+    this.faceMouse();
+    console.log(this.x, this.y);
+    this.mouseToTile();
   };
 
   moveWithMouse = () => {
-    this.tryMove(
-      MouseCursor.getInstance().getPosition().x,
-      MouseCursor.getInstance().getPosition().y
-    );
+    this.tryMove(this.mouseToTile().x, this.mouseToTile().y);
+    console.log(this.mouseToTile());
+  };
+
+  mouseToTile = () => {
+    // Get screen center coordinates
+    const screenCenterX = GameConstants.WIDTH / 2;
+    const screenCenterY = GameConstants.HEIGHT / 2;
+
+    const roundedMouseOffsetX =
+      Math.floor(Input.mouseX / GameConstants.TILESIZE) *
+      GameConstants.TILESIZE;
+    const roundedMouseOffsetY =
+      Math.floor(
+        (Input.mouseY - GameConstants.TILESIZE / 2) / GameConstants.TILESIZE
+      ) *
+        GameConstants.TILESIZE +
+      GameConstants.TILESIZE / 2;
+
+    // Get mouse position relative to screen center
+    const mouseOffsetX =
+      Input.mouseX - screenCenterX + GameConstants.TILESIZE / 2;
+    const mouseOffsetY =
+      Input.mouseY - screenCenterY + GameConstants.TILESIZE / 2;
+    //round to the nearest 32
+
+    this.tileCursor = { x: roundedMouseOffsetX, y: roundedMouseOffsetY };
+
+    // Convert pixel offset to tile offset (assuming each tile is 16x16 pixels)
+    const tileOffsetX = Math.floor(mouseOffsetX / GameConstants.TILESIZE);
+    const tileOffsetY = Math.floor(mouseOffsetY / GameConstants.TILESIZE);
+
+    // Add offset to player's position to get final tile coordinates
+    return {
+      x: this.x + tileOffsetX,
+      y: this.y + tileOffsetY,
+    };
   };
 
   left = () => {
@@ -589,6 +632,30 @@ export class Player extends Drawable {
     }
   };
 
+  faceMouse = () => {
+    const mousePosition = MouseCursor.getInstance().getPosition();
+    const playerPixelPosition = {
+      x: GameConstants.WIDTH / 2,
+      y: GameConstants.HEIGHT / 2,
+    };
+    const dx = mousePosition.x - playerPixelPosition.x;
+    const dy = mousePosition.y - playerPixelPosition.y;
+    const angle = Math.atan2(dy, dx);
+
+    // Convert angle to direction
+    // atan2 returns angle in radians (-π to π)
+    // Divide the circle into 4 sectors for the 4 directions
+    if (angle >= -Math.PI / 4 && angle < Math.PI / 4) {
+      this.direction = PlayerDirection.RIGHT;
+    } else if (angle >= Math.PI / 4 && angle < (3 * Math.PI) / 4) {
+      this.direction = PlayerDirection.DOWN;
+    } else if (angle >= (-3 * Math.PI) / 4 && angle < -Math.PI / 4) {
+      this.direction = PlayerDirection.UP;
+    } else {
+      this.direction = PlayerDirection.LEFT;
+    }
+  };
+
   heartbeat = () => {
     this.guiHeartFrame = 1;
   };
@@ -647,11 +714,27 @@ export class Player extends Drawable {
     }
     PostProcessor.draw(delta);
     if (this.mapToggled === true) this.map.draw(delta);
+    this.drawTileCursor(delta);
   };
 
   updateDrawXY = (delta: number) => {
     this.drawX += -0.5 * this.drawX;
     this.drawY += -0.5 * this.drawY;
+  };
+
+  drawTileCursor = (delta: number) => {
+    Game.ctx.fillStyle = "red";
+
+    Game.drawFX(
+      22 + Math.floor(HitWarning.frame),
+      4,
+      1,
+      2,
+      this.tileCursor.x / GameConstants.TILESIZE,
+      this.tileCursor.y / GameConstants.TILESIZE - 1,
+      1,
+      2
+    );
   };
 
   private canMove(): boolean {
