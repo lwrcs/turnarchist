@@ -11764,34 +11764,30 @@ var Player = /** @class */ (function (_super) {
         _this.mouseMove = function () {
             _this.inventory.mouseMove();
             _this.faceMouse();
-            console.log(_this.x, _this.y);
-            _this.mouseToTile();
+            _this.setTileCursorPosition();
         };
         _this.moveWithMouse = function () {
             _this.tryMove(_this.mouseToTile().x, _this.mouseToTile().y);
-            console.log(_this.mouseToTile());
+            console.log(_this.tileCursor);
         };
         _this.mouseToTile = function () {
             // Get screen center coordinates
             var screenCenterX = gameConstants_1.GameConstants.WIDTH / 2;
             var screenCenterY = gameConstants_1.GameConstants.HEIGHT / 2;
-            var roundedMouseOffsetX = Math.floor(input_1.Input.mouseX / gameConstants_1.GameConstants.TILESIZE) *
-                gameConstants_1.GameConstants.TILESIZE;
-            var roundedMouseOffsetY = Math.floor((input_1.Input.mouseY - gameConstants_1.GameConstants.TILESIZE / 2) / gameConstants_1.GameConstants.TILESIZE) *
-                gameConstants_1.GameConstants.TILESIZE +
-                gameConstants_1.GameConstants.TILESIZE / 2;
-            // Get mouse position relative to screen center
-            var mouseOffsetX = input_1.Input.mouseX - screenCenterX + gameConstants_1.GameConstants.TILESIZE / 2;
-            var mouseOffsetY = input_1.Input.mouseY - screenCenterY + gameConstants_1.GameConstants.TILESIZE / 2;
-            //round to the nearest 32
-            _this.tileCursor = { x: roundedMouseOffsetX, y: roundedMouseOffsetY };
-            // Convert pixel offset to tile offset (assuming each tile is 16x16 pixels)
-            var tileOffsetX = Math.floor(mouseOffsetX / gameConstants_1.GameConstants.TILESIZE);
-            var tileOffsetY = Math.floor(mouseOffsetY / gameConstants_1.GameConstants.TILESIZE);
-            // Add offset to player's position to get final tile coordinates
+            // Convert pixel offset to tile offset (this part was working correctly)
+            var tileOffsetX = Math.floor((input_1.Input.mouseX - screenCenterX + gameConstants_1.GameConstants.TILESIZE / 2) /
+                gameConstants_1.GameConstants.TILESIZE);
+            var tileOffsetY = Math.floor((input_1.Input.mouseY - screenCenterY + gameConstants_1.GameConstants.TILESIZE / 2) /
+                gameConstants_1.GameConstants.TILESIZE);
             return {
                 x: _this.x + tileOffsetX,
                 y: _this.y + tileOffsetY,
+            };
+        };
+        _this.setTileCursorPosition = function () {
+            _this.tileCursor = {
+                x: Math.floor(input_1.Input.mouseX / gameConstants_1.GameConstants.TILESIZE),
+                y: Math.floor(input_1.Input.mouseY / gameConstants_1.GameConstants.TILESIZE),
             };
         };
         _this.left = function () {
@@ -12152,7 +12148,9 @@ var Player = /** @class */ (function (_super) {
         };
         _this.drawTileCursor = function (delta) {
             game_1.Game.ctx.fillStyle = "red";
-            game_1.Game.drawFX(22 + Math.floor(hitWarning_1.HitWarning.frame), 4, 1, 2, _this.tileCursor.x / gameConstants_1.GameConstants.TILESIZE, _this.tileCursor.y / gameConstants_1.GameConstants.TILESIZE - 1, 1, 2);
+            game_1.Game.drawFX(22 + Math.floor(hitWarning_1.HitWarning.frame), 4, 1, 2, _this.tileCursor.x, 
+            //round to lower odd number
+            _this.tileCursor.y - 1, 1, 2);
         };
         _this.game = game;
         _this.levelID = 0;

@@ -286,13 +286,12 @@ export class Player extends Drawable {
   mouseMove = () => {
     this.inventory.mouseMove();
     this.faceMouse();
-    console.log(this.x, this.y);
-    this.mouseToTile();
+    this.setTileCursorPosition();
   };
 
   moveWithMouse = () => {
     this.tryMove(this.mouseToTile().x, this.mouseToTile().y);
-    console.log(this.mouseToTile());
+    console.log(this.tileCursor);
   };
 
   mouseToTile = () => {
@@ -300,33 +299,26 @@ export class Player extends Drawable {
     const screenCenterX = GameConstants.WIDTH / 2;
     const screenCenterY = GameConstants.HEIGHT / 2;
 
-    const roundedMouseOffsetX =
-      Math.floor(Input.mouseX / GameConstants.TILESIZE) *
-      GameConstants.TILESIZE;
-    const roundedMouseOffsetY =
-      Math.floor(
-        (Input.mouseY - GameConstants.TILESIZE / 2) / GameConstants.TILESIZE
-      ) *
-        GameConstants.TILESIZE +
-      GameConstants.TILESIZE / 2;
+    // Convert pixel offset to tile offset (this part was working correctly)
+    const tileOffsetX = Math.floor(
+      (Input.mouseX - screenCenterX + GameConstants.TILESIZE / 2) /
+        GameConstants.TILESIZE
+    );
+    const tileOffsetY = Math.floor(
+      (Input.mouseY - screenCenterY + GameConstants.TILESIZE / 2) /
+        GameConstants.TILESIZE
+    );
 
-    // Get mouse position relative to screen center
-    const mouseOffsetX =
-      Input.mouseX - screenCenterX + GameConstants.TILESIZE / 2;
-    const mouseOffsetY =
-      Input.mouseY - screenCenterY + GameConstants.TILESIZE / 2;
-    //round to the nearest 32
-
-    this.tileCursor = { x: roundedMouseOffsetX, y: roundedMouseOffsetY };
-
-    // Convert pixel offset to tile offset (assuming each tile is 16x16 pixels)
-    const tileOffsetX = Math.floor(mouseOffsetX / GameConstants.TILESIZE);
-    const tileOffsetY = Math.floor(mouseOffsetY / GameConstants.TILESIZE);
-
-    // Add offset to player's position to get final tile coordinates
     return {
       x: this.x + tileOffsetX,
       y: this.y + tileOffsetY,
+    };
+  };
+
+  setTileCursorPosition = () => {
+    this.tileCursor = {
+      x: Math.floor(Input.mouseX / GameConstants.TILESIZE),
+      y: Math.floor(Input.mouseY / GameConstants.TILESIZE),
     };
   };
 
@@ -730,8 +722,9 @@ export class Player extends Drawable {
       4,
       1,
       2,
-      this.tileCursor.x / GameConstants.TILESIZE,
-      this.tileCursor.y / GameConstants.TILESIZE - 1,
+      this.tileCursor.x,
+      //round to lower odd number
+      this.tileCursor.y - 1,
       1,
       2
     );
