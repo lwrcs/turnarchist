@@ -12,6 +12,7 @@ import { GameState, loadGameState } from "./gameState";
 import { DoorDir } from "./tile/door";
 import { Enemy } from "./entity/enemy/enemy";
 import { TutorialListener } from "./tutorialListener";
+import { MouseCursor } from "./mouseCursor";
 
 export enum LevelState {
   IN_LEVEL,
@@ -735,6 +736,7 @@ export class Game {
       );
 
       this.players[this.localPlayerID].drawGUI(delta);
+
       for (const i in this.players) this.players[i].updateDrawXY(delta);
     } else if (this.levelState === LevelState.TRANSITIONING_LADDER) {
       let playerCX =
@@ -847,7 +849,7 @@ export class Game {
     }
     // draw chat
     let CHAT_X = 10;
-    let CHAT_BOTTOM_Y = GameConstants.HEIGHT - Game.letter_height - 14;
+    let CHAT_BOTTOM_Y = GameConstants.HEIGHT - Game.letter_height - 32;
     let CHAT_OPACITY = 0.5;
     if (this.chatOpen) {
       Game.ctx.fillStyle = "black";
@@ -907,6 +909,7 @@ export class Game {
     Game.ctx.fillStyle = LevelConstants.LEVEL_TEXT_COLOR;
     Game.fillText(fps + "fps", 1, 1);
     Game.ctx.globalAlpha = 1;
+    MouseCursor.getInstance().draw();
   };
 
   static drawHelper = (

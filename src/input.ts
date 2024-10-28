@@ -11,6 +11,11 @@ export enum InputEnum {
   UP,
   DOWN,
   SPACE,
+  COMMA,
+  PERIOD,
+  LEFT_CLICK,
+  RIGHT_CLICK,
+  MOUSE_MOVE,
 }
 
 export const Input = {
@@ -46,16 +51,18 @@ export const Input = {
   upSwipeListener: function () {},
   downSwipeListener: function () {},
   tapListener: function () {},
+  commaListener: function () {},
+  periodListener: function () {},
 
   mouseLeftClickListeners: [],
-
-  mouseLeftClickListener: function (x: number, y: number) {
-    for (let i = 0; i < Input.mouseLeftClickListeners.length; i++)
-      Input.mouseLeftClickListeners[i](x, y);
-  },
+  mouseRightClickListeners: [],
+  mouseMoveListeners: [],
+  mouseDownListeners: [],
+  mouseUpListeners: [],
 
   mouseX: 0,
   mouseY: 0,
+  mouseDown: false,
 
   lastPressTime: 0,
   lastPressKey: "",
@@ -73,6 +80,8 @@ export const Input = {
   N: "KeyN",
   I: "KeyI",
   Q: "KeyQ",
+  COMMA: "Comma",
+  PERIOD: "Period",
 
   isDown: function (keyCode: string) {
     return this._pressed[keyCode];
@@ -123,6 +132,12 @@ export const Input = {
       case Input.Q:
         Input.qListener();
         break;
+      case Input.COMMA:
+        Input.commaListener();
+        break;
+      case Input.PERIOD:
+        Input.periodListener();
+        break;
     }
   },
 
@@ -135,17 +150,46 @@ export const Input = {
     if (event.code === Input.M) Input.mUpListener();
   },
 
+  mouseLeftClickListener: function (x: number, y: number) {
+    for (let i = 0; i < Input.mouseLeftClickListeners.length; i++)
+      Input.mouseLeftClickListeners[i](x, y);
+  },
+
+  mouseRightClickListener: function (x: number, y: number) {
+    for (let i = 0; i < Input.mouseRightClickListeners.length; i++)
+      Input.mouseRightClickListeners[i](x, y);
+  },
+
+  mouseMoveListener: function (x: number, y: number) {
+    for (let i = 0; i < Input.mouseMoveListeners.length; i++)
+      Input.mouseMoveListeners[i](x, y);
+  },
+
+  mouseDownListener: function (x: number, y: number, button: number) {
+    for (let i = 0; i < Input.mouseDownListeners.length; i++)
+      Input.mouseDownListeners[i](x, y, button);
+  },
+
+  mouseUpListener: function (x: number, y: number, button: number) {
+    for (let i = 0; i < Input.mouseUpListeners.length; i++)
+      Input.mouseUpListeners[i](x, y, button);
+  },
+
   mouseClickListener: function (event: MouseEvent) {
-    if (event.button === 0) {
+    if (event.button === 0 || event.button === 2) {
       let rect = window.document
         .getElementById("gameCanvas")
         .getBoundingClientRect();
       let x = event.clientX - rect.left;
       let y = event.clientY - rect.top;
-      Input.mouseLeftClickListener(
-        Math.floor(x / Game.scale),
-        Math.floor(y / Game.scale)
-      );
+      let scaledX = Math.floor(x / Game.scale);
+      let scaledY = Math.floor(y / Game.scale);
+
+      if (event.button === 0) {
+        Input.mouseLeftClickListener(scaledX, scaledY);
+      } else if (event.button === 2) {
+        Input.mouseRightClickListener(scaledX, scaledY);
+      }
     }
   },
 
@@ -158,6 +202,18 @@ export const Input = {
 
     Input.mouseX = Math.floor(x / Game.scale);
     Input.mouseY = Math.floor(y / Game.scale);
+
+    Input.mouseMoveListener(Input.mouseX, Input.mouseY);
+  },
+
+  handleMouseDown: function (event: MouseEvent) {
+    Input.mouseDown = true;
+    Input.mouseDownListener(Input.mouseX, Input.mouseY, event.button);
+  },
+
+  handleMouseUp: function (event: MouseEvent) {
+    Input.mouseDown = false;
+    Input.mouseUpListener(Input.mouseX, Input.mouseY, event.button);
   },
 
   getTouches: function (evt) {
@@ -277,4 +333,17 @@ window.document
   .addEventListener("click", (event) => Input.mouseClickListener(event), false);
 window.document
   .getElementById("gameCanvas")
-  .addEventListener("mousemove", (event) => Input.updateMousePos(event));
+  .addEventListener("mousemove", (event) => Input.updateMousePos(event), false);
+window.document
+  .getElementById("gameCanvas")
+  .addEventListener(
+    "mousedown",
+    (event) => Input.handleMouseDown(event),
+    false
+  );
+window.document
+  .getElementById("gameCanvas")
+  .addEventListener("mouseup", (event) => Input.handleMouseUp(event), false);
+window.document
+  .getElementById("gameCanvas")
+  .addEventListener("contextmenu", (event) => event.preventDefault(), false);

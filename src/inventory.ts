@@ -27,17 +27,22 @@ import { Spellbook } from "./weapon/spellbook";
 import { Backpack } from "./item/backpack";
 import { Slingshot } from "./weapon/slingshot";
 import { Heart } from "./item/heart";
+import { MouseCursor } from "./mouseCursor";
 
 let OPEN_TIME = 100; // milliseconds
+// Dark gray color used for the background of inventory slots
 let FILL_COLOR = "#5a595b";
+// Very dark blue-gray color used for outlines and borders
 let OUTLINE_COLOR = "#292c36";
+// Light blue color used to indicate equipped items
 let EQUIP_COLOR = "#85a8e6";
+// White color used for the outer border of the inventory
 let FULL_OUTLINE = "white";
 
 export class Inventory {
   player: Player;
   items: Array<Item>;
-  rows = 2;
+  rows = 3;
   cols = 5;
   selX = 0;
   selY = 0;
@@ -90,10 +95,16 @@ export class Inventory {
   open = () => {
     this.isOpen = !this.isOpen;
     if (this.isOpen) this.openTime = Date.now();
+    if (!this.isOpen) {
+      this.selY = 0;
+    }
   };
 
   close = () => {
     this.isOpen = false;
+    if (this.selY > 0) {
+      this.selY = 0;
+    }
   };
 
   left = () => {
@@ -114,6 +125,10 @@ export class Inventory {
       this.selY = this.rows + this.expansion - 1;
   };
   space = () => {
+    this.itemUse();
+  };
+
+  itemUse = () => {
     let i = this.selX + this.selY * this.cols;
 
     if (this.items[i] instanceof Usable) {
@@ -134,6 +149,68 @@ export class Inventory {
           }
         }
       }
+    }
+  };
+
+  mouseLeftClick = () => {
+    const x = MouseCursor.getInstance().getPosition().x;
+    const y = MouseCursor.getInstance().getPosition().y;
+
+    if (this.isPointInInventoryBounds(x, y).inBounds) {
+      this.itemUse();
+    }
+  };
+
+  mouseRightClick = () => {
+    const x = MouseCursor.getInstance().getPosition().x;
+    const y = MouseCursor.getInstance().getPosition().y;
+
+    if (this.isPointInInventoryBounds(x, y).inBounds) {
+      this.drop();
+    }
+  };
+
+  leftQuickbar = () => {
+    this.left();
+  };
+
+  rightQuickbar = () => {
+    this.right();
+  };
+
+  spaceQuickbar = () => {
+    this.itemUse();
+  };
+
+  mouseMove = () => {
+    const x = MouseCursor.getInstance().getPosition().x;
+    const y = MouseCursor.getInstance().getPosition().y;
+    const bounds = this.isPointInInventoryBounds(x, y);
+
+    if (bounds.inBounds) {
+      let s = this.isOpen
+        ? Math.min(18, (18 * (Date.now() - this.openTime)) / OPEN_TIME)
+        : 18;
+      let b = 2;
+      let g = -2;
+
+      // Calculate and clamp values
+      this.selX = Math.max(
+        0,
+        Math.min(
+          Math.floor((x - bounds.startX) / (s + 2 * b + g)),
+          this.cols - 1
+        )
+      );
+      this.selY = this.isOpen
+        ? Math.max(
+            0,
+            Math.min(
+              Math.floor((y - bounds.startY) / (s + 2 * b + g)),
+              this.rows + this.expansion - 1
+            )
+          )
+        : 0;
     }
   };
 
@@ -327,72 +404,239 @@ export class Inventory {
     );
   };
 
-  draw = (delta: number) => {
-    this.drawCoins(delta);
+  drawQuickbar = (delta: number) => {
+    // Get current mouse position and check bounds
+    const x = MouseCursor.getInstance().getPosition().x;
+    const y = MouseCursor.getInstance().getPosition().y;
+    const isInBounds = this.isPointInInventoryBounds(x, y).inBounds;
 
-    if (this.isOpen) {
-      for (let i = 0; i < this.equipAnimAmount.length; i++) {
-        if (this.items[i] instanceof Equippable) {
-          if ((this.items[i] as Equippable).equipped) {
-            this.equipAnimAmount[i] += 0.2 * (1 - this.equipAnimAmount[i]);
-          } else {
-            this.equipAnimAmount[i] += 0.2 * (0 - this.equipAnimAmount[i]);
-          }
-        } else {
-          this.equipAnimAmount[i] = 0;
-        }
-      }
+    // Define dimensions and styling variables
+    let s = 18; // size of box
+    let b = 2; // border
+    let g = -2; // gap
+    let hg = 3 + Math.round(0.5 * Math.sin(Date.now() * 0.01) + 0.5); // highlighted growth
+    let ob = 1; // outer border
+    let width = this.cols * (s + 2 * b + g) - g;
+    let height = s + 2 * b;
+    let startX = Math.round(0.5 * GameConstants.WIDTH - 0.5 * width);
+    let startY = GameConstants.HEIGHT - height - 5; // 5 pixels from bottom
 
-      Game.ctx.fillStyle = "rgb(0, 0, 0, 0.8)";
-      Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
+    // Draw main background
+    Game.ctx.fillStyle = FULL_OUTLINE;
+    Game.ctx.fillRect(
+      Math.round(0.5 * GameConstants.WIDTH - 0.5 * width) - ob,
+      startY - 1,
+      width + 2,
+      height + 2
+    );
 
-      Game.ctx.globalAlpha = 1;
-
-      let s = Math.min(18, (18 * (Date.now() - this.openTime)) / OPEN_TIME); // size of box
-      let b = 2; // border
-      let g = -2; // gap
-      let hg = 3 + Math.round(0.5 * Math.sin(Date.now() * 0.01) + 0.5); // highlighted growth
-      let ob = 1; // outer border
-      let width = this.cols * (s + 2 * b + g) - g;
-      let height = (this.rows + this.expansion) * (s + 2 * b + g) - g;
-
-      Game.ctx.fillStyle = FULL_OUTLINE;
-      Game.ctx.fillRect(
-        Math.round(0.5 * GameConstants.WIDTH - 0.5 * width) - ob,
-        Math.round(0.5 * GameConstants.HEIGHT - 0.5 * height) - ob,
-        Math.round(width + 2 * ob),
-        Math.round(height + 2 * ob)
-      );
+    // Draw highlighted background for selected item only if mouse is in bounds
+    if (isInBounds) {
       Game.ctx.fillRect(
         Math.round(
           0.5 * GameConstants.WIDTH - 0.5 * width + this.selX * (s + 2 * b + g)
         ) -
           hg -
           ob,
-        Math.round(
-          0.5 * GameConstants.HEIGHT -
-            0.5 * height +
-            this.selY * (s + 2 * b + g)
-        ) -
-          hg -
-          ob,
+        startY - hg - ob,
         Math.round(s + 2 * b + 2 * hg) + 2 * ob,
         Math.round(s + 2 * b + 2 * hg) + 2 * ob
       );
+    }
 
+    // Draw individual item slots
+    for (let x = 0; x < this.cols; x++) {
+      // Draw slot outline
+      Game.ctx.fillStyle = OUTLINE_COLOR;
+      Game.ctx.fillRect(
+        startX + x * (s + 2 * b + g),
+        startY,
+        s + 2 * b,
+        s + 2 * b
+      );
+
+      // Draw slot background
+      Game.ctx.fillStyle = FILL_COLOR;
+      Game.ctx.fillRect(startX + x * (s + 2 * b + g) + b, startY + b, s, s);
+
+      // Draw equip animation (this should always show)
+      let i = x;
+      Game.ctx.fillStyle = EQUIP_COLOR;
+      let yOff = s * (1 - this.equipAnimAmount[i]);
+      Game.ctx.fillRect(
+        startX + x * (s + 2 * b + g) + b,
+        startY + b + yOff,
+        s,
+        s - yOff
+      );
+
+      // Draw item icon if exists
+      if (i < this.items.length) {
+        let drawX =
+          startX +
+          x * (s + 2 * b + g) +
+          b +
+          Math.floor(0.5 * s) -
+          0.5 * GameConstants.TILESIZE;
+        let drawY =
+          startY + b + Math.floor(0.5 * s) - 0.5 * GameConstants.TILESIZE;
+        let drawXScaled = drawX / GameConstants.TILESIZE;
+        let drawYScaled = drawY / GameConstants.TILESIZE;
+        this.items[i].drawIcon(delta, drawXScaled, drawYScaled);
+      }
+    }
+
+    // Draw selection box only if mouse is in bounds
+    if (isInBounds) {
+      let selStartX = startX + this.selX * (s + 2 * b + g);
+      let selStartY = startY;
+
+      // Outer selection box (dark)
+      Game.ctx.fillStyle = OUTLINE_COLOR;
+      Game.ctx.fillRect(
+        selStartX - hg,
+        selStartY - hg,
+        Math.round(s + 2 * b + 2 * hg),
+        Math.round(s + 2 * b + 2 * hg)
+      );
+
+      // Inner selection box (light grey)
+      Game.ctx.fillStyle = FILL_COLOR;
+      Game.ctx.fillRect(
+        selStartX + b - hg,
+        selStartY + b - hg,
+        Math.round(s + 2 * hg),
+        Math.round(s + 2 * hg)
+      );
+
+      // Draw equip animation for selected slot with highlight
+      let i = this.selX;
+      Game.ctx.fillStyle = EQUIP_COLOR;
+      let yOff = (s + 2 * hg) * (1 - this.equipAnimAmount[i]);
+      Game.ctx.fillRect(
+        Math.round(startX + this.selX * (s + 2 * b + g) + b - hg),
+        Math.round(startY + b + yOff - hg),
+        Math.round(s + 2 * hg),
+        Math.round(s + 2 * hg - yOff)
+      );
+
+      // Redraw the selected item
+      if (this.selX < this.items.length) {
+        let drawX =
+          selStartX + b + Math.floor(0.5 * s) - 0.5 * GameConstants.TILESIZE;
+        let drawY =
+          selStartY + b + Math.floor(0.5 * s) - 0.5 * GameConstants.TILESIZE;
+        let drawXScaled = drawX / GameConstants.TILESIZE;
+        let drawYScaled = drawY / GameConstants.TILESIZE;
+        this.items[this.selX].drawIcon(delta, drawXScaled, drawYScaled);
+      }
+    }
+  };
+
+  updateEquipAnimAmount = () => {
+    for (let i = 0; i < this.equipAnimAmount.length; i++) {
+      if (this.items[i] instanceof Equippable) {
+        if ((this.items[i] as Equippable).equipped) {
+          this.equipAnimAmount[i] += 0.2 * (1 - this.equipAnimAmount[i]);
+        } else {
+          this.equipAnimAmount[i] += 0.2 * (0 - this.equipAnimAmount[i]);
+        }
+      } else {
+        this.equipAnimAmount[i] = 0;
+      }
+    }
+  };
+
+  draw = (delta: number) => {
+    // Get current mouse position and check bounds
+    const x = MouseCursor.getInstance().getPosition().x;
+    const y = MouseCursor.getInstance().getPosition().y;
+    const isInBounds = this.isPointInInventoryBounds(x, y).inBounds;
+
+    // Draw coins and quickbar (these are always visible)
+    this.drawCoins(delta);
+    this.drawQuickbar(delta);
+    this.updateEquipAnimAmount();
+
+    if (this.isOpen) {
+      // Update equip animation
+
+      // Draw semi-transparent background for full inventory
+      Game.ctx.fillStyle = "rgb(0, 0, 0, 0.8)";
+      Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
+
+      Game.ctx.globalAlpha = 1;
+
+      // Define dimensions and styling variables (similar to drawQuickbar)
+      let s = Math.min(18, (18 * (Date.now() - this.openTime)) / OPEN_TIME); // size of box
+      let b = 2; // border
+      let g = -2; // gap
+      let hg = 3 + Math.round(0.5 * Math.sin(Date.now() * 0.01) + 0.5); // highlighted growth
+      let invRows = this.rows + this.expansion;
+      let ob = 1; // outer border
+      let width = this.cols * (s + 2 * b + g) - g;
+      let height = invRows * (s + 2 * b + g) - g;
+
+      // Draw main inventory background (similar to drawQuickbar)
+      Game.ctx.fillStyle = FULL_OUTLINE;
+      let mainBgX = Math.round(0.5 * GameConstants.WIDTH - 0.5 * width) - ob;
+      let mainBgY = Math.round(0.5 * GameConstants.HEIGHT - 0.5 * height) - ob;
+      Game.ctx.fillRect(
+        mainBgX,
+        mainBgY,
+        Math.round(width + 2 * ob),
+        Math.round(height + 2 * ob)
+      );
+
+      // Draw highlighted background for selected item only if mouse is in bounds
+      if (isInBounds) {
+        let highlightX =
+          Math.round(
+            0.5 * GameConstants.WIDTH -
+              0.5 * width +
+              this.selX * (s + 2 * b + g)
+          ) -
+          hg -
+          ob;
+        let highlightY =
+          Math.round(
+            0.5 * GameConstants.HEIGHT -
+              0.5 * height +
+              this.selY * (s + 2 * b + g)
+          ) -
+          hg -
+          ob;
+
+        Game.ctx.fillRect(
+          highlightX,
+          highlightY,
+          Math.round(s + 2 * b + 2 * hg) + 2 * ob,
+          Math.round(s + 2 * b + 2 * hg) + 2 * ob
+        );
+      }
+
+      // Draw individual inventory slots (similar to drawQuickbar, but for all rows)
       for (let x = 0; x < this.cols; x++) {
         for (let y = 0; y < this.rows + this.expansion; y++) {
+          // Draw slot outline
+          let slotX = Math.round(
+            0.5 * GameConstants.WIDTH - 0.5 * width + x * (s + 2 * b + g)
+          );
+          let slotY = Math.round(
+            0.5 * GameConstants.HEIGHT - 0.5 * height + y * (s + 2 * b + g)
+          );
           Game.ctx.fillStyle = OUTLINE_COLOR;
           Game.ctx.fillRect(
-            Math.round(
-              0.5 * GameConstants.WIDTH - 0.5 * width + x * (s + 2 * b + g)
-            ),
-            Math.round(
-              0.5 * GameConstants.HEIGHT - 0.5 * height + y * (s + 2 * b + g)
-            ),
+            slotX,
+            slotY,
             Math.round(s + 2 * b),
             Math.round(s + 2 * b)
           );
+          console.log(
+            `Inventory slot outline (${x}, ${y}): (${slotX}, ${slotY})`
+          );
+
+          // Draw slot background
           Game.ctx.fillStyle = FILL_COLOR;
           Game.ctx.fillRect(
             Math.round(
@@ -407,6 +651,7 @@ export class Inventory {
             Math.round(s),
             Math.round(s)
           );
+          // Draw equip animation (unique to full inventory view)
           let i = x + y * this.cols;
           Game.ctx.fillStyle = EQUIP_COLOR;
           let yOff = s * (1 - this.equipAnimAmount[i]);
@@ -426,6 +671,8 @@ export class Inventory {
           );
         }
       }
+
+      // Draw item icons after animation delay (similar to drawQuickbar, but for all items)
       if (Date.now() - this.openTime >= OPEN_TIME) {
         for (let i = 0; i < this.items.length; i++) {
           let x = i % this.cols;
@@ -452,97 +699,105 @@ export class Inventory {
           let drawYScaled = drawY / GameConstants.TILESIZE;
 
           this.items[i].drawIcon(delta, drawXScaled, drawYScaled);
-
-          //if (this.items[i] instanceof Equippable && (this.items[i] as Equippable).equipped) {
-          //  Game.drawItem(0, 4, 2, 2, x - 0.5, y - 0.5, 2, 2);
-          //}
         }
-        Game.ctx.fillStyle = OUTLINE_COLOR;
-        Game.ctx.fillRect(
-          Math.round(
-            0.5 * GameConstants.WIDTH -
-              0.5 * width +
-              this.selX * (s + 2 * b + g)
-          ) - hg,
-          Math.round(
-            0.5 * GameConstants.HEIGHT -
-              0.5 * height +
-              this.selY * (s + 2 * b + g)
-          ) - hg,
-          Math.round(s + 2 * b + 2 * hg),
-          Math.round(s + 2 * b + 2 * hg)
-        );
-        Game.ctx.fillStyle = FILL_COLOR;
-        Game.ctx.fillRect(
-          Math.round(
-            0.5 * GameConstants.WIDTH -
-              0.5 * width +
-              this.selX * (s + 2 * b + g) +
-              b -
-              hg
-          ),
-          Math.round(
-            0.5 * GameConstants.HEIGHT -
-              0.5 * height +
-              this.selY * (s + 2 * b + g) +
-              b -
-              hg
-          ),
-          Math.round(s + 2 * hg),
-          Math.round(s + 2 * hg)
-        );
-        let i = this.selX + this.selY * this.cols;
-        Game.ctx.fillStyle = EQUIP_COLOR;
-        let yOff = (s + 2 * hg) * (1 - this.equipAnimAmount[i]);
-        Game.ctx.fillRect(
-          Math.round(
+
+        // Draw selection box and related elements only if mouse is in bounds
+        if (isInBounds) {
+          // Draw selection box
+          Game.ctx.fillStyle = OUTLINE_COLOR;
+          Game.ctx.fillRect(
+            Math.round(
+              0.5 * GameConstants.WIDTH -
+                0.5 * width +
+                this.selX * (s + 2 * b + g)
+            ) - hg,
+            Math.round(
+              0.5 * GameConstants.HEIGHT -
+                0.5 * height +
+                this.selY * (s + 2 * b + g)
+            ) - hg,
+            Math.round(s + 2 * b + 2 * hg),
+            Math.round(s + 2 * b + 2 * hg)
+          );
+          let slotX = Math.round(
             0.5 * GameConstants.WIDTH -
               0.5 * width +
               this.selX * (s + 2 * b + g) +
               b -
               hg
-          ),
-          Math.round(
+          );
+          let slotY = Math.round(
             0.5 * GameConstants.HEIGHT -
               0.5 * height +
               this.selY * (s + 2 * b + g) +
               b -
-              hg +
-              yOff
-          ),
-          Math.round(s + 2 * hg),
-          Math.round(s + 2 * hg - yOff)
-        );
+              hg
+          );
+          Game.ctx.fillStyle = FILL_COLOR;
+          Game.ctx.fillRect(
+            slotX,
+            slotY,
+            Math.round(s + 2 * hg),
+            Math.round(s + 2 * hg)
+          );
 
-        let drawX = Math.round(
-          0.5 * GameConstants.WIDTH -
-            0.5 * width +
-            this.selX * (s + 2 * b + g) +
-            b +
-            Math.floor(0.5 * s) -
-            0.5 * GameConstants.TILESIZE
-        );
-        let drawY = Math.round(
-          0.5 * GameConstants.HEIGHT -
-            0.5 * height +
-            this.selY * (s + 2 * b + g) +
-            b +
-            Math.floor(0.5 * s) -
-            0.5 * GameConstants.TILESIZE
-        );
+          // Draw equip animation for selected item (unique to full inventory view)
+          let i = this.selX + this.selY * this.cols;
+          Game.ctx.fillStyle = EQUIP_COLOR;
+          let yOff = (s + 2 * hg) * (1 - this.equipAnimAmount[i]);
+          Game.ctx.fillRect(
+            Math.round(
+              0.5 * GameConstants.WIDTH -
+                0.5 * width +
+                this.selX * (s + 2 * b + g) +
+                b -
+                hg
+            ),
+            Math.round(
+              0.5 * GameConstants.HEIGHT -
+                0.5 * height +
+                this.selY * (s + 2 * b + g) +
+                b -
+                hg +
+                yOff
+            ),
+            Math.round(s + 2 * hg),
+            Math.round(s + 2 * hg - yOff)
+          );
 
-        let drawXScaled = drawX / GameConstants.TILESIZE;
-        let drawYScaled = drawY / GameConstants.TILESIZE;
+          // Redraw selected item icon (similar to drawQuickbar)
+          let drawX = Math.round(
+            0.5 * GameConstants.WIDTH -
+              0.5 * width +
+              this.selX * (s + 2 * b + g) +
+              b +
+              Math.floor(0.5 * s) -
+              0.5 * GameConstants.TILESIZE
+          );
+          let drawY = Math.round(
+            0.5 * GameConstants.HEIGHT -
+              0.5 * height +
+              this.selY * (s + 2 * b + g) +
+              b +
+              Math.floor(0.5 * s) -
+              0.5 * GameConstants.TILESIZE
+          );
 
-        if (i < this.items.length)
-          this.items[i].drawIcon(delta, drawXScaled, drawYScaled);
+          let drawXScaled = drawX / GameConstants.TILESIZE;
+          let drawYScaled = drawY / GameConstants.TILESIZE;
+
+          if (i < this.items.length)
+            this.items[i].drawIcon(delta, drawXScaled, drawYScaled);
+        }
       }
 
+      // Draw item description and action text (unique to full inventory view)
       let i = this.selX + this.selY * this.cols;
 
       if (i < this.items.length) {
         Game.ctx.fillStyle = "white";
 
+        // Determine action text
         let topPhrase = "";
         if (this.items[i] instanceof Equippable) {
           let e = this.items[i] as Equippable;
@@ -553,10 +808,12 @@ export class Inventory {
           topPhrase = "[SPACE] to use";
         }
 
+        // Draw action text
         Game.ctx.fillStyle = "white";
         let w = Game.measureText(topPhrase).width;
         Game.fillText(topPhrase, 0.5 * (GameConstants.WIDTH - w), 5);
 
+        // Draw item description
         let lines = this.items[i].getDescription().split("\n");
         let nextY = Math.round(
           0.5 * GameConstants.HEIGHT -
@@ -569,6 +826,50 @@ export class Inventory {
           nextY = this.textWrap(lines[j], 5, nextY, GameConstants.WIDTH - 10);
         }
       }
+    }
+  };
+
+  private isPointInInventoryBounds = (
+    x: number,
+    y: number
+  ): { inBounds: boolean; startX: number; startY: number } => {
+    let s = this.isOpen
+      ? Math.min(18, (18 * (Date.now() - this.openTime)) / OPEN_TIME)
+      : 18;
+    let b = 2;
+    let g = -2;
+    let width = this.cols * (s + 2 * b + g) - g;
+
+    if (this.isOpen) {
+      // Full inventory bounds
+      let height = (this.rows + this.expansion) * (s + 2 * b + g) - g;
+      let startX = 0.5 * GameConstants.WIDTH - 0.5 * width;
+      let startY = 0.5 * GameConstants.HEIGHT - 0.5 * height;
+
+      return {
+        inBounds:
+          x >= startX &&
+          x <= startX + width &&
+          y >= startY &&
+          y <= startY + height,
+        startX,
+        startY,
+      };
+    } else {
+      // Quickbar bounds
+      let startX = 0.5 * GameConstants.WIDTH - 0.5 * width;
+      let startY = GameConstants.HEIGHT - (s + 2 * b) - 5;
+      let quickbarHeight = s + 2 * b;
+
+      return {
+        inBounds:
+          x >= startX &&
+          x <= startX + width &&
+          y >= startY &&
+          y <= startY + quickbarHeight,
+        startX,
+        startY,
+      };
     }
   };
 }

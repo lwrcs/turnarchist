@@ -23,6 +23,7 @@ import { Weapon } from "./weapon/weapon";
 import { Room } from "./room";
 import { ImageParticle } from "./particle/imageParticle";
 import { Enemy } from "./entity/enemy/enemy";
+import { MouseCursor } from "./mouseCursor";
 
 export enum PlayerDirection {
   DOWN = 0,
@@ -90,6 +91,8 @@ export class Player extends Drawable {
       Input.rightSwipeListener = () => this.inputHandler(InputEnum.RIGHT);
       Input.upSwipeListener = () => this.inputHandler(InputEnum.UP);
       Input.downSwipeListener = () => this.inputHandler(InputEnum.DOWN);
+      Input.commaListener = () => this.inputHandler(InputEnum.COMMA);
+      Input.periodListener = () => this.inputHandler(InputEnum.PERIOD);
       Input.tapListener = () => {
         if (this.inventory.isOpen) {
           if (this.inventory.pointInside(Input.mouseX, Input.mouseY)) {
@@ -99,6 +102,13 @@ export class Player extends Drawable {
           }
         } else this.inputHandler(InputEnum.I);
       };
+      Input.mouseMoveListener = () => this.inputHandler(InputEnum.MOUSE_MOVE);
+      Input.mouseLeftClickListeners.push(() =>
+        this.inputHandler(InputEnum.LEFT_CLICK)
+      );
+      Input.mouseRightClickListeners.push(() =>
+        this.inputHandler(InputEnum.RIGHT_CLICK)
+      );
     }
     this.mapToggled = true;
     this.health = 2;
@@ -146,7 +156,28 @@ export class Player extends Drawable {
       case InputEnum.SPACE:
         this.spaceListener();
         break;
+      case InputEnum.COMMA:
+        this.commaListener();
+        break;
+      case InputEnum.PERIOD:
+        this.periodListener();
+        break;
+      case InputEnum.LEFT_CLICK:
+        this.mouseLeftClick();
+        break;
+      case InputEnum.RIGHT_CLICK:
+        this.mouseRightClick();
+        break;
+      case InputEnum.MOUSE_MOVE:
+        this.mouseMove();
+        break;
     }
+  };
+  commaListener = () => {
+    this.inventory.left();
+  };
+  periodListener = () => {
+    this.inventory.right();
   };
 
   tapListener = () => {
@@ -227,7 +258,7 @@ export class Player extends Drawable {
     return false;
   };
   spaceListener = () => {
-    if (this.inventory.isOpen) {
+    if (this.inventory.isOpen || this.game.levelState === LevelState.IN_LEVEL) {
       this.inventory.space();
       return;
     }
@@ -235,6 +266,27 @@ export class Player extends Drawable {
       this.openVendingMachine.space();
     }
   };
+  mouseLeftClick = () => {
+    this.inventory.mouseLeftClick();
+    if (!this.inventory.isOpen) {
+      this.moveWithMouse();
+    }
+  };
+  mouseRightClick = () => {
+    this.inventory.mouseRightClick();
+  };
+
+  mouseMove = () => {
+    this.inventory.mouseMove();
+  };
+
+  moveWithMouse = () => {
+    this.tryMove(
+      MouseCursor.getInstance().getPosition().x,
+      MouseCursor.getInstance().getPosition().y
+    );
+  };
+
   left = () => {
     if (this.canMove()) {
       this.tryMove(this.x - 1, this.y);
@@ -556,9 +608,9 @@ export class Player extends Drawable {
     );
   };
 
-  drawGUI = (delta: number) => {
+  drawGUI = (delta: number, transitioning: boolean = false) => {
     if (!this.dead) {
-      this.inventory.draw(delta);
+      if (!transitioning) this.inventory.draw(delta);
       //this.actionTab.draw(delta);
 
       if (this.guiHeartFrame > 0) this.guiHeartFrame += delta;

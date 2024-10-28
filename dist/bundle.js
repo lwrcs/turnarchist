@@ -6362,6 +6362,7 @@ var textbox_1 = __webpack_require__(/*! ./textbox */ "./src/textbox.ts");
 var gameState_1 = __webpack_require__(/*! ./gameState */ "./src/gameState.ts");
 var door_2 = __webpack_require__(/*! ./tile/door */ "./src/tile/door.ts");
 var tutorialListener_1 = __webpack_require__(/*! ./tutorialListener */ "./src/tutorialListener.ts");
+var mouseCursor_1 = __webpack_require__(/*! ./mouseCursor */ "./src/mouseCursor.ts");
 var LevelState;
 (function (LevelState) {
     LevelState[LevelState["IN_LEVEL"] = 0] = "IN_LEVEL";
@@ -6728,7 +6729,7 @@ var Game = /** @class */ (function () {
             }
             // draw chat
             var CHAT_X = 10;
-            var CHAT_BOTTOM_Y = gameConstants_1.GameConstants.HEIGHT - Game.letter_height - 14;
+            var CHAT_BOTTOM_Y = gameConstants_1.GameConstants.HEIGHT - Game.letter_height - 32;
             var CHAT_OPACITY = 0.5;
             if (_this.chatOpen) {
                 Game.ctx.fillStyle = "black";
@@ -6784,6 +6785,7 @@ var Game = /** @class */ (function () {
             Game.ctx.fillStyle = levelConstants_1.LevelConstants.LEVEL_TEXT_COLOR;
             Game.fillText(fps + "fps", 1, 1);
             Game.ctx.globalAlpha = 1;
+            mouseCursor_1.MouseCursor.getInstance().draw();
         };
         window.addEventListener("load", function () {
             var canvas = document.getElementById("gameCanvas");
@@ -8147,6 +8149,11 @@ var InputEnum;
     InputEnum[InputEnum["UP"] = 6] = "UP";
     InputEnum[InputEnum["DOWN"] = 7] = "DOWN";
     InputEnum[InputEnum["SPACE"] = 8] = "SPACE";
+    InputEnum[InputEnum["COMMA"] = 9] = "COMMA";
+    InputEnum[InputEnum["PERIOD"] = 10] = "PERIOD";
+    InputEnum[InputEnum["LEFT_CLICK"] = 11] = "LEFT_CLICK";
+    InputEnum[InputEnum["RIGHT_CLICK"] = 12] = "RIGHT_CLICK";
+    InputEnum[InputEnum["MOUSE_MOVE"] = 13] = "MOUSE_MOVE";
 })(InputEnum = exports.InputEnum || (exports.InputEnum = {}));
 exports.Input = {
     _pressed: {},
@@ -8180,13 +8187,16 @@ exports.Input = {
     upSwipeListener: function () { },
     downSwipeListener: function () { },
     tapListener: function () { },
+    commaListener: function () { },
+    periodListener: function () { },
     mouseLeftClickListeners: [],
-    mouseLeftClickListener: function (x, y) {
-        for (var i = 0; i < exports.Input.mouseLeftClickListeners.length; i++)
-            exports.Input.mouseLeftClickListeners[i](x, y);
-    },
+    mouseRightClickListeners: [],
+    mouseMoveListeners: [],
+    mouseDownListeners: [],
+    mouseUpListeners: [],
     mouseX: 0,
     mouseY: 0,
+    mouseDown: false,
     lastPressTime: 0,
     lastPressKey: "",
     SPACE: "Space",
@@ -8202,6 +8212,8 @@ exports.Input = {
     N: "KeyN",
     I: "KeyI",
     Q: "KeyQ",
+    COMMA: "Comma",
+    PERIOD: "Period",
     isDown: function (keyCode) {
         return this._pressed[keyCode];
     },
@@ -8252,6 +8264,12 @@ exports.Input = {
             case exports.Input.Q:
                 exports.Input.qListener();
                 break;
+            case exports.Input.COMMA:
+                exports.Input.commaListener();
+                break;
+            case exports.Input.PERIOD:
+                exports.Input.periodListener();
+                break;
         }
     },
     onKeyup: function (event) {
@@ -8263,14 +8281,41 @@ exports.Input = {
         if (event.code === exports.Input.M)
             exports.Input.mUpListener();
     },
+    mouseLeftClickListener: function (x, y) {
+        for (var i = 0; i < exports.Input.mouseLeftClickListeners.length; i++)
+            exports.Input.mouseLeftClickListeners[i](x, y);
+    },
+    mouseRightClickListener: function (x, y) {
+        for (var i = 0; i < exports.Input.mouseRightClickListeners.length; i++)
+            exports.Input.mouseRightClickListeners[i](x, y);
+    },
+    mouseMoveListener: function (x, y) {
+        for (var i = 0; i < exports.Input.mouseMoveListeners.length; i++)
+            exports.Input.mouseMoveListeners[i](x, y);
+    },
+    mouseDownListener: function (x, y, button) {
+        for (var i = 0; i < exports.Input.mouseDownListeners.length; i++)
+            exports.Input.mouseDownListeners[i](x, y, button);
+    },
+    mouseUpListener: function (x, y, button) {
+        for (var i = 0; i < exports.Input.mouseUpListeners.length; i++)
+            exports.Input.mouseUpListeners[i](x, y, button);
+    },
     mouseClickListener: function (event) {
-        if (event.button === 0) {
+        if (event.button === 0 || event.button === 2) {
             var rect = window.document
                 .getElementById("gameCanvas")
                 .getBoundingClientRect();
             var x = event.clientX - rect.left;
             var y = event.clientY - rect.top;
-            exports.Input.mouseLeftClickListener(Math.floor(x / game_1.Game.scale), Math.floor(y / game_1.Game.scale));
+            var scaledX = Math.floor(x / game_1.Game.scale);
+            var scaledY = Math.floor(y / game_1.Game.scale);
+            if (event.button === 0) {
+                exports.Input.mouseLeftClickListener(scaledX, scaledY);
+            }
+            else if (event.button === 2) {
+                exports.Input.mouseRightClickListener(scaledX, scaledY);
+            }
         }
     },
     updateMousePos: function (event) {
@@ -8281,6 +8326,15 @@ exports.Input = {
         var y = event.clientY - rect.top;
         exports.Input.mouseX = Math.floor(x / game_1.Game.scale);
         exports.Input.mouseY = Math.floor(y / game_1.Game.scale);
+        exports.Input.mouseMoveListener(exports.Input.mouseX, exports.Input.mouseY);
+    },
+    handleMouseDown: function (event) {
+        exports.Input.mouseDown = true;
+        exports.Input.mouseDownListener(exports.Input.mouseX, exports.Input.mouseY, event.button);
+    },
+    handleMouseUp: function (event) {
+        exports.Input.mouseDown = false;
+        exports.Input.mouseUpListener(exports.Input.mouseX, exports.Input.mouseY, event.button);
     },
     getTouches: function (evt) {
         return (evt.touches || evt.originalEvent.touches // browser API
@@ -8377,7 +8431,16 @@ window.document
     .addEventListener("click", function (event) { return exports.Input.mouseClickListener(event); }, false);
 window.document
     .getElementById("gameCanvas")
-    .addEventListener("mousemove", function (event) { return exports.Input.updateMousePos(event); });
+    .addEventListener("mousemove", function (event) { return exports.Input.updateMousePos(event); }, false);
+window.document
+    .getElementById("gameCanvas")
+    .addEventListener("mousedown", function (event) { return exports.Input.handleMouseDown(event); }, false);
+window.document
+    .getElementById("gameCanvas")
+    .addEventListener("mouseup", function (event) { return exports.Input.handleMouseUp(event); }, false);
+window.document
+    .getElementById("gameCanvas")
+    .addEventListener("contextmenu", function (event) { return event.preventDefault(); }, false);
 
 
 /***/ }),
@@ -8399,15 +8462,20 @@ var armor_1 = __webpack_require__(/*! ./item/armor */ "./src/item/armor.ts");
 var coin_1 = __webpack_require__(/*! ./item/coin */ "./src/item/coin.ts");
 var weapon_1 = __webpack_require__(/*! ./weapon/weapon */ "./src/weapon/weapon.ts");
 var usable_1 = __webpack_require__(/*! ./item/usable */ "./src/item/usable.ts");
+var mouseCursor_1 = __webpack_require__(/*! ./mouseCursor */ "./src/mouseCursor.ts");
 var OPEN_TIME = 100; // milliseconds
+// Dark gray color used for the background of inventory slots
 var FILL_COLOR = "#5a595b";
+// Very dark blue-gray color used for outlines and borders
 var OUTLINE_COLOR = "#292c36";
+// Light blue color used to indicate equipped items
 var EQUIP_COLOR = "#85a8e6";
+// White color used for the outer border of the inventory
 var FULL_OUTLINE = "white";
 var Inventory = /** @class */ (function () {
     function Inventory(game, player) {
         var _this = this;
-        this.rows = 2;
+        this.rows = 3;
         this.cols = 5;
         this.selX = 0;
         this.selY = 0;
@@ -8421,9 +8489,15 @@ var Inventory = /** @class */ (function () {
             _this.isOpen = !_this.isOpen;
             if (_this.isOpen)
                 _this.openTime = Date.now();
+            if (!_this.isOpen) {
+                _this.selY = 0;
+            }
         };
         this.close = function () {
             _this.isOpen = false;
+            if (_this.selY > 0) {
+                _this.selY = 0;
+            }
         };
         this.left = function () {
             _this.selX--;
@@ -8446,6 +8520,9 @@ var Inventory = /** @class */ (function () {
                 _this.selY = _this.rows + _this.expansion - 1;
         };
         this.space = function () {
+            _this.itemUse();
+        };
+        this.itemUse = function () {
             var i = _this.selX + _this.selY * _this.cols;
             if (_this.items[i] instanceof usable_1.Usable) {
                 _this.items[i].onUse(_this.player);
@@ -8469,6 +8546,46 @@ var Inventory = /** @class */ (function () {
                         }
                     }
                 }
+            }
+        };
+        this.mouseLeftClick = function () {
+            var x = mouseCursor_1.MouseCursor.getInstance().getPosition().x;
+            var y = mouseCursor_1.MouseCursor.getInstance().getPosition().y;
+            if (_this.isPointInInventoryBounds(x, y).inBounds) {
+                _this.itemUse();
+            }
+        };
+        this.mouseRightClick = function () {
+            var x = mouseCursor_1.MouseCursor.getInstance().getPosition().x;
+            var y = mouseCursor_1.MouseCursor.getInstance().getPosition().y;
+            if (_this.isPointInInventoryBounds(x, y).inBounds) {
+                _this.drop();
+            }
+        };
+        this.leftQuickbar = function () {
+            _this.left();
+        };
+        this.rightQuickbar = function () {
+            _this.right();
+        };
+        this.spaceQuickbar = function () {
+            _this.itemUse();
+        };
+        this.mouseMove = function () {
+            var x = mouseCursor_1.MouseCursor.getInstance().getPosition().x;
+            var y = mouseCursor_1.MouseCursor.getInstance().getPosition().y;
+            var bounds = _this.isPointInInventoryBounds(x, y);
+            if (bounds.inBounds) {
+                var s = _this.isOpen
+                    ? Math.min(18, (18 * (Date.now() - _this.openTime)) / OPEN_TIME)
+                    : 18;
+                var b = 2;
+                var g = -2;
+                // Calculate and clamp values
+                _this.selX = Math.max(0, Math.min(Math.floor((x - bounds.startX) / (s + 2 * b + g)), _this.cols - 1));
+                _this.selY = _this.isOpen
+                    ? Math.max(0, Math.min(Math.floor((y - bounds.startY) / (s + 2 * b + g)), _this.rows + _this.expansion - 1))
+                    : 0;
             }
         };
         this.drop = function () {
@@ -8637,132 +8754,245 @@ var Inventory = /** @class */ (function () {
                         ob +
                         Math.round(height + 2 * ob));
         };
-        this.draw = function (delta) {
-            _this.drawCoins(delta);
-            if (_this.isOpen) {
-                for (var i_2 = 0; i_2 < _this.equipAnimAmount.length; i_2++) {
-                    if (_this.items[i_2] instanceof equippable_1.Equippable) {
-                        if (_this.items[i_2].equipped) {
-                            _this.equipAnimAmount[i_2] += 0.2 * (1 - _this.equipAnimAmount[i_2]);
-                        }
-                        else {
-                            _this.equipAnimAmount[i_2] += 0.2 * (0 - _this.equipAnimAmount[i_2]);
-                        }
+        this.drawQuickbar = function (delta) {
+            // Get current mouse position and check bounds
+            var x = mouseCursor_1.MouseCursor.getInstance().getPosition().x;
+            var y = mouseCursor_1.MouseCursor.getInstance().getPosition().y;
+            var isInBounds = _this.isPointInInventoryBounds(x, y).inBounds;
+            // Define dimensions and styling variables
+            var s = 18; // size of box
+            var b = 2; // border
+            var g = -2; // gap
+            var hg = 3 + Math.round(0.5 * Math.sin(Date.now() * 0.01) + 0.5); // highlighted growth
+            var ob = 1; // outer border
+            var width = _this.cols * (s + 2 * b + g) - g;
+            var height = s + 2 * b;
+            var startX = Math.round(0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * width);
+            var startY = gameConstants_1.GameConstants.HEIGHT - height - 5; // 5 pixels from bottom
+            // Draw main background
+            game_1.Game.ctx.fillStyle = FULL_OUTLINE;
+            game_1.Game.ctx.fillRect(Math.round(0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * width) - ob, startY - 1, width + 2, height + 2);
+            // Draw highlighted background for selected item only if mouse is in bounds
+            if (isInBounds) {
+                game_1.Game.ctx.fillRect(Math.round(0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * width + _this.selX * (s + 2 * b + g)) -
+                    hg -
+                    ob, startY - hg - ob, Math.round(s + 2 * b + 2 * hg) + 2 * ob, Math.round(s + 2 * b + 2 * hg) + 2 * ob);
+            }
+            // Draw individual item slots
+            for (var x_1 = 0; x_1 < _this.cols; x_1++) {
+                // Draw slot outline
+                game_1.Game.ctx.fillStyle = OUTLINE_COLOR;
+                game_1.Game.ctx.fillRect(startX + x_1 * (s + 2 * b + g), startY, s + 2 * b, s + 2 * b);
+                // Draw slot background
+                game_1.Game.ctx.fillStyle = FILL_COLOR;
+                game_1.Game.ctx.fillRect(startX + x_1 * (s + 2 * b + g) + b, startY + b, s, s);
+                // Draw equip animation (this should always show)
+                var i = x_1;
+                game_1.Game.ctx.fillStyle = EQUIP_COLOR;
+                var yOff = s * (1 - _this.equipAnimAmount[i]);
+                game_1.Game.ctx.fillRect(startX + x_1 * (s + 2 * b + g) + b, startY + b + yOff, s, s - yOff);
+                // Draw item icon if exists
+                if (i < _this.items.length) {
+                    var drawX = startX +
+                        x_1 * (s + 2 * b + g) +
+                        b +
+                        Math.floor(0.5 * s) -
+                        0.5 * gameConstants_1.GameConstants.TILESIZE;
+                    var drawY = startY + b + Math.floor(0.5 * s) - 0.5 * gameConstants_1.GameConstants.TILESIZE;
+                    var drawXScaled = drawX / gameConstants_1.GameConstants.TILESIZE;
+                    var drawYScaled = drawY / gameConstants_1.GameConstants.TILESIZE;
+                    _this.items[i].drawIcon(delta, drawXScaled, drawYScaled);
+                }
+            }
+            // Draw selection box only if mouse is in bounds
+            if (isInBounds) {
+                var selStartX = startX + _this.selX * (s + 2 * b + g);
+                var selStartY = startY;
+                // Outer selection box (dark)
+                game_1.Game.ctx.fillStyle = OUTLINE_COLOR;
+                game_1.Game.ctx.fillRect(selStartX - hg, selStartY - hg, Math.round(s + 2 * b + 2 * hg), Math.round(s + 2 * b + 2 * hg));
+                // Inner selection box (light grey)
+                game_1.Game.ctx.fillStyle = FILL_COLOR;
+                game_1.Game.ctx.fillRect(selStartX + b - hg, selStartY + b - hg, Math.round(s + 2 * hg), Math.round(s + 2 * hg));
+                // Draw equip animation for selected slot with highlight
+                var i = _this.selX;
+                game_1.Game.ctx.fillStyle = EQUIP_COLOR;
+                var yOff = (s + 2 * hg) * (1 - _this.equipAnimAmount[i]);
+                game_1.Game.ctx.fillRect(Math.round(startX + _this.selX * (s + 2 * b + g) + b - hg), Math.round(startY + b + yOff - hg), Math.round(s + 2 * hg), Math.round(s + 2 * hg - yOff));
+                // Redraw the selected item
+                if (_this.selX < _this.items.length) {
+                    var drawX = selStartX + b + Math.floor(0.5 * s) - 0.5 * gameConstants_1.GameConstants.TILESIZE;
+                    var drawY = selStartY + b + Math.floor(0.5 * s) - 0.5 * gameConstants_1.GameConstants.TILESIZE;
+                    var drawXScaled = drawX / gameConstants_1.GameConstants.TILESIZE;
+                    var drawYScaled = drawY / gameConstants_1.GameConstants.TILESIZE;
+                    _this.items[_this.selX].drawIcon(delta, drawXScaled, drawYScaled);
+                }
+            }
+        };
+        this.updateEquipAnimAmount = function () {
+            for (var i = 0; i < _this.equipAnimAmount.length; i++) {
+                if (_this.items[i] instanceof equippable_1.Equippable) {
+                    if (_this.items[i].equipped) {
+                        _this.equipAnimAmount[i] += 0.2 * (1 - _this.equipAnimAmount[i]);
                     }
                     else {
-                        _this.equipAnimAmount[i_2] = 0;
+                        _this.equipAnimAmount[i] += 0.2 * (0 - _this.equipAnimAmount[i]);
                     }
                 }
+                else {
+                    _this.equipAnimAmount[i] = 0;
+                }
+            }
+        };
+        this.draw = function (delta) {
+            // Get current mouse position and check bounds
+            var x = mouseCursor_1.MouseCursor.getInstance().getPosition().x;
+            var y = mouseCursor_1.MouseCursor.getInstance().getPosition().y;
+            var isInBounds = _this.isPointInInventoryBounds(x, y).inBounds;
+            // Draw coins and quickbar (these are always visible)
+            _this.drawCoins(delta);
+            _this.drawQuickbar(delta);
+            _this.updateEquipAnimAmount();
+            if (_this.isOpen) {
+                // Update equip animation
+                // Draw semi-transparent background for full inventory
                 game_1.Game.ctx.fillStyle = "rgb(0, 0, 0, 0.8)";
                 game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
                 game_1.Game.ctx.globalAlpha = 1;
+                // Define dimensions and styling variables (similar to drawQuickbar)
                 var s = Math.min(18, (18 * (Date.now() - _this.openTime)) / OPEN_TIME); // size of box
                 var b = 2; // border
                 var g = -2; // gap
                 var hg = 3 + Math.round(0.5 * Math.sin(Date.now() * 0.01) + 0.5); // highlighted growth
+                var invRows = _this.rows + _this.expansion;
                 var ob = 1; // outer border
                 var width = _this.cols * (s + 2 * b + g) - g;
-                var height = (_this.rows + _this.expansion) * (s + 2 * b + g) - g;
+                var height = invRows * (s + 2 * b + g) - g;
+                // Draw main inventory background (similar to drawQuickbar)
                 game_1.Game.ctx.fillStyle = FULL_OUTLINE;
-                game_1.Game.ctx.fillRect(Math.round(0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * width) - ob, Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT - 0.5 * height) - ob, Math.round(width + 2 * ob), Math.round(height + 2 * ob));
-                game_1.Game.ctx.fillRect(Math.round(0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * width + _this.selX * (s + 2 * b + g)) -
-                    hg -
-                    ob, Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT -
-                    0.5 * height +
-                    _this.selY * (s + 2 * b + g)) -
-                    hg -
-                    ob, Math.round(s + 2 * b + 2 * hg) + 2 * ob, Math.round(s + 2 * b + 2 * hg) + 2 * ob);
-                for (var x = 0; x < _this.cols; x++) {
-                    for (var y = 0; y < _this.rows + _this.expansion; y++) {
+                var mainBgX = Math.round(0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * width) - ob;
+                var mainBgY = Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT - 0.5 * height) - ob;
+                game_1.Game.ctx.fillRect(mainBgX, mainBgY, Math.round(width + 2 * ob), Math.round(height + 2 * ob));
+                // Draw highlighted background for selected item only if mouse is in bounds
+                if (isInBounds) {
+                    var highlightX = Math.round(0.5 * gameConstants_1.GameConstants.WIDTH -
+                        0.5 * width +
+                        _this.selX * (s + 2 * b + g)) -
+                        hg -
+                        ob;
+                    var highlightY = Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT -
+                        0.5 * height +
+                        _this.selY * (s + 2 * b + g)) -
+                        hg -
+                        ob;
+                    game_1.Game.ctx.fillRect(highlightX, highlightY, Math.round(s + 2 * b + 2 * hg) + 2 * ob, Math.round(s + 2 * b + 2 * hg) + 2 * ob);
+                }
+                // Draw individual inventory slots (similar to drawQuickbar, but for all rows)
+                for (var x_2 = 0; x_2 < _this.cols; x_2++) {
+                    for (var y_1 = 0; y_1 < _this.rows + _this.expansion; y_1++) {
+                        // Draw slot outline
+                        var slotX = Math.round(0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * width + x_2 * (s + 2 * b + g));
+                        var slotY = Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT - 0.5 * height + y_1 * (s + 2 * b + g));
                         game_1.Game.ctx.fillStyle = OUTLINE_COLOR;
-                        game_1.Game.ctx.fillRect(Math.round(0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * width + x * (s + 2 * b + g)), Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT - 0.5 * height + y * (s + 2 * b + g)), Math.round(s + 2 * b), Math.round(s + 2 * b));
+                        game_1.Game.ctx.fillRect(slotX, slotY, Math.round(s + 2 * b), Math.round(s + 2 * b));
+                        console.log("Inventory slot outline (".concat(x_2, ", ").concat(y_1, "): (").concat(slotX, ", ").concat(slotY, ")"));
+                        // Draw slot background
                         game_1.Game.ctx.fillStyle = FILL_COLOR;
-                        game_1.Game.ctx.fillRect(Math.round(0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * width + x * (s + 2 * b + g) + b), Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT -
+                        game_1.Game.ctx.fillRect(Math.round(0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * width + x_2 * (s + 2 * b + g) + b), Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT -
                             0.5 * height +
-                            y * (s + 2 * b + g) +
+                            y_1 * (s + 2 * b + g) +
                             b), Math.round(s), Math.round(s));
-                        var i_3 = x + y * _this.cols;
+                        // Draw equip animation (unique to full inventory view)
+                        var i_2 = x_2 + y_1 * _this.cols;
                         game_1.Game.ctx.fillStyle = EQUIP_COLOR;
-                        var yOff = s * (1 - _this.equipAnimAmount[i_3]);
-                        game_1.Game.ctx.fillRect(Math.round(0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * width + x * (s + 2 * b + g) + b), Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT -
+                        var yOff = s * (1 - _this.equipAnimAmount[i_2]);
+                        game_1.Game.ctx.fillRect(Math.round(0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * width + x_2 * (s + 2 * b + g) + b), Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT -
                             0.5 * height +
-                            y * (s + 2 * b + g) +
+                            y_1 * (s + 2 * b + g) +
                             b +
                             yOff), Math.round(s), Math.round(s - yOff));
                     }
                 }
+                // Draw item icons after animation delay (similar to drawQuickbar, but for all items)
                 if (Date.now() - _this.openTime >= OPEN_TIME) {
-                    for (var i_4 = 0; i_4 < _this.items.length; i_4++) {
-                        var x = i_4 % _this.cols;
-                        var y = Math.floor(i_4 / _this.cols);
-                        var drawX_1 = Math.round(0.5 * gameConstants_1.GameConstants.WIDTH -
+                    for (var i_3 = 0; i_3 < _this.items.length; i_3++) {
+                        var x_3 = i_3 % _this.cols;
+                        var y_2 = Math.floor(i_3 / _this.cols);
+                        var drawX = Math.round(0.5 * gameConstants_1.GameConstants.WIDTH -
                             0.5 * width +
-                            x * (s + 2 * b + g) +
+                            x_3 * (s + 2 * b + g) +
                             b +
                             Math.floor(0.5 * s) -
                             0.5 * gameConstants_1.GameConstants.TILESIZE);
-                        var drawY_1 = Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT -
+                        var drawY = Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT -
                             0.5 * height +
-                            y * (s + 2 * b + g) +
+                            y_2 * (s + 2 * b + g) +
                             b +
                             Math.floor(0.5 * s) -
                             0.5 * gameConstants_1.GameConstants.TILESIZE);
-                        var drawXScaled_1 = drawX_1 / gameConstants_1.GameConstants.TILESIZE;
-                        var drawYScaled_1 = drawY_1 / gameConstants_1.GameConstants.TILESIZE;
-                        _this.items[i_4].drawIcon(delta, drawXScaled_1, drawYScaled_1);
-                        //if (this.items[i] instanceof Equippable && (this.items[i] as Equippable).equipped) {
-                        //  Game.drawItem(0, 4, 2, 2, x - 0.5, y - 0.5, 2, 2);
-                        //}
+                        var drawXScaled = drawX / gameConstants_1.GameConstants.TILESIZE;
+                        var drawYScaled = drawY / gameConstants_1.GameConstants.TILESIZE;
+                        _this.items[i_3].drawIcon(delta, drawXScaled, drawYScaled);
                     }
-                    game_1.Game.ctx.fillStyle = OUTLINE_COLOR;
-                    game_1.Game.ctx.fillRect(Math.round(0.5 * gameConstants_1.GameConstants.WIDTH -
-                        0.5 * width +
-                        _this.selX * (s + 2 * b + g)) - hg, Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT -
-                        0.5 * height +
-                        _this.selY * (s + 2 * b + g)) - hg, Math.round(s + 2 * b + 2 * hg), Math.round(s + 2 * b + 2 * hg));
-                    game_1.Game.ctx.fillStyle = FILL_COLOR;
-                    game_1.Game.ctx.fillRect(Math.round(0.5 * gameConstants_1.GameConstants.WIDTH -
-                        0.5 * width +
-                        _this.selX * (s + 2 * b + g) +
-                        b -
-                        hg), Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT -
-                        0.5 * height +
-                        _this.selY * (s + 2 * b + g) +
-                        b -
-                        hg), Math.round(s + 2 * hg), Math.round(s + 2 * hg));
-                    var i_5 = _this.selX + _this.selY * _this.cols;
-                    game_1.Game.ctx.fillStyle = EQUIP_COLOR;
-                    var yOff = (s + 2 * hg) * (1 - _this.equipAnimAmount[i_5]);
-                    game_1.Game.ctx.fillRect(Math.round(0.5 * gameConstants_1.GameConstants.WIDTH -
-                        0.5 * width +
-                        _this.selX * (s + 2 * b + g) +
-                        b -
-                        hg), Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT -
-                        0.5 * height +
-                        _this.selY * (s + 2 * b + g) +
-                        b -
-                        hg +
-                        yOff), Math.round(s + 2 * hg), Math.round(s + 2 * hg - yOff));
-                    var drawX = Math.round(0.5 * gameConstants_1.GameConstants.WIDTH -
-                        0.5 * width +
-                        _this.selX * (s + 2 * b + g) +
-                        b +
-                        Math.floor(0.5 * s) -
-                        0.5 * gameConstants_1.GameConstants.TILESIZE);
-                    var drawY = Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT -
-                        0.5 * height +
-                        _this.selY * (s + 2 * b + g) +
-                        b +
-                        Math.floor(0.5 * s) -
-                        0.5 * gameConstants_1.GameConstants.TILESIZE);
-                    var drawXScaled = drawX / gameConstants_1.GameConstants.TILESIZE;
-                    var drawYScaled = drawY / gameConstants_1.GameConstants.TILESIZE;
-                    if (i_5 < _this.items.length)
-                        _this.items[i_5].drawIcon(delta, drawXScaled, drawYScaled);
+                    // Draw selection box and related elements only if mouse is in bounds
+                    if (isInBounds) {
+                        // Draw selection box
+                        game_1.Game.ctx.fillStyle = OUTLINE_COLOR;
+                        game_1.Game.ctx.fillRect(Math.round(0.5 * gameConstants_1.GameConstants.WIDTH -
+                            0.5 * width +
+                            _this.selX * (s + 2 * b + g)) - hg, Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT -
+                            0.5 * height +
+                            _this.selY * (s + 2 * b + g)) - hg, Math.round(s + 2 * b + 2 * hg), Math.round(s + 2 * b + 2 * hg));
+                        var slotX = Math.round(0.5 * gameConstants_1.GameConstants.WIDTH -
+                            0.5 * width +
+                            _this.selX * (s + 2 * b + g) +
+                            b -
+                            hg);
+                        var slotY = Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT -
+                            0.5 * height +
+                            _this.selY * (s + 2 * b + g) +
+                            b -
+                            hg);
+                        game_1.Game.ctx.fillStyle = FILL_COLOR;
+                        game_1.Game.ctx.fillRect(slotX, slotY, Math.round(s + 2 * hg), Math.round(s + 2 * hg));
+                        // Draw equip animation for selected item (unique to full inventory view)
+                        var i_4 = _this.selX + _this.selY * _this.cols;
+                        game_1.Game.ctx.fillStyle = EQUIP_COLOR;
+                        var yOff = (s + 2 * hg) * (1 - _this.equipAnimAmount[i_4]);
+                        game_1.Game.ctx.fillRect(Math.round(0.5 * gameConstants_1.GameConstants.WIDTH -
+                            0.5 * width +
+                            _this.selX * (s + 2 * b + g) +
+                            b -
+                            hg), Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT -
+                            0.5 * height +
+                            _this.selY * (s + 2 * b + g) +
+                            b -
+                            hg +
+                            yOff), Math.round(s + 2 * hg), Math.round(s + 2 * hg - yOff));
+                        // Redraw selected item icon (similar to drawQuickbar)
+                        var drawX = Math.round(0.5 * gameConstants_1.GameConstants.WIDTH -
+                            0.5 * width +
+                            _this.selX * (s + 2 * b + g) +
+                            b +
+                            Math.floor(0.5 * s) -
+                            0.5 * gameConstants_1.GameConstants.TILESIZE);
+                        var drawY = Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT -
+                            0.5 * height +
+                            _this.selY * (s + 2 * b + g) +
+                            b +
+                            Math.floor(0.5 * s) -
+                            0.5 * gameConstants_1.GameConstants.TILESIZE);
+                        var drawXScaled = drawX / gameConstants_1.GameConstants.TILESIZE;
+                        var drawYScaled = drawY / gameConstants_1.GameConstants.TILESIZE;
+                        if (i_4 < _this.items.length)
+                            _this.items[i_4].drawIcon(delta, drawXScaled, drawYScaled);
+                    }
                 }
+                // Draw item description and action text (unique to full inventory view)
                 var i = _this.selX + _this.selY * _this.cols;
                 if (i < _this.items.length) {
                     game_1.Game.ctx.fillStyle = "white";
+                    // Determine action text
                     var topPhrase = "";
                     if (_this.items[i] instanceof equippable_1.Equippable) {
                         var e = _this.items[i];
@@ -8773,9 +9003,11 @@ var Inventory = /** @class */ (function () {
                     if (_this.items[i] instanceof usable_1.Usable) {
                         topPhrase = "[SPACE] to use";
                     }
+                    // Draw action text
                     game_1.Game.ctx.fillStyle = "white";
                     var w = game_1.Game.measureText(topPhrase).width;
                     game_1.Game.fillText(topPhrase, 0.5 * (gameConstants_1.GameConstants.WIDTH - w), 5);
+                    // Draw item description
                     var lines = _this.items[i].getDescription().split("\n");
                     var nextY = Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT -
                         0.5 * height +
@@ -8786,6 +9018,42 @@ var Inventory = /** @class */ (function () {
                         nextY = _this.textWrap(lines[j], 5, nextY, gameConstants_1.GameConstants.WIDTH - 10);
                     }
                 }
+            }
+        };
+        this.isPointInInventoryBounds = function (x, y) {
+            var s = _this.isOpen
+                ? Math.min(18, (18 * (Date.now() - _this.openTime)) / OPEN_TIME)
+                : 18;
+            var b = 2;
+            var g = -2;
+            var width = _this.cols * (s + 2 * b + g) - g;
+            if (_this.isOpen) {
+                // Full inventory bounds
+                var height = (_this.rows + _this.expansion) * (s + 2 * b + g) - g;
+                var startX = 0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * width;
+                var startY = 0.5 * gameConstants_1.GameConstants.HEIGHT - 0.5 * height;
+                return {
+                    inBounds: x >= startX &&
+                        x <= startX + width &&
+                        y >= startY &&
+                        y <= startY + height,
+                    startX: startX,
+                    startY: startY,
+                };
+            }
+            else {
+                // Quickbar bounds
+                var startX = 0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * width;
+                var startY = gameConstants_1.GameConstants.HEIGHT - (s + 2 * b) - 5;
+                var quickbarHeight = s + 2 * b;
+                return {
+                    inBounds: x >= startX &&
+                        x <= startX + width &&
+                        y >= startY &&
+                        y <= startY + quickbarHeight,
+                    startX: startX,
+                    startY: startY,
+                };
             }
         };
         this.game = game;
@@ -10807,6 +11075,56 @@ exports.Map = Map;
 
 /***/ }),
 
+/***/ "./src/mouseCursor.ts":
+/*!****************************!*\
+  !*** ./src/mouseCursor.ts ***!
+  \****************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.MouseCursor = void 0;
+var game_1 = __webpack_require__(/*! ./game */ "./src/game.ts");
+var input_1 = __webpack_require__(/*! ./input */ "./src/input.ts");
+var gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/gameConstants.ts");
+var MouseCursor = /** @class */ (function () {
+    function MouseCursor() {
+        this.cursorSize = 5; // Size of the cursor rectangle
+    }
+    MouseCursor.getInstance = function () {
+        if (!MouseCursor.instance) {
+            MouseCursor.instance = new MouseCursor();
+        }
+        return MouseCursor.instance;
+    };
+    MouseCursor.prototype.draw = function () {
+        game_1.Game.ctx.save();
+        game_1.Game.ctx.fillStyle = "rgba(255, 0, 0, 0.5)"; // Semi-transparent red
+        game_1.Game.ctx.fillRect(input_1.Input.mouseX - this.cursorSize / 2, input_1.Input.mouseY - this.cursorSize / 2, this.cursorSize, this.cursorSize);
+        game_1.Game.ctx.restore();
+    };
+    MouseCursor.prototype.getPosition = function () {
+        return { x: input_1.Input.mouseX, y: input_1.Input.mouseY };
+    };
+    MouseCursor.prototype.getTilePosition = function () {
+        return {
+            x: Math.floor(input_1.Input.mouseX / gameConstants_1.GameConstants.TILESIZE),
+            y: Math.floor(input_1.Input.mouseY / gameConstants_1.GameConstants.TILESIZE),
+        };
+    };
+    MouseCursor.prototype.getInventoryPosition = function () {
+        return {
+            x: input_1.Input.mouseX,
+            y: input_1.Input.mouseY,
+        };
+    };
+    return MouseCursor;
+}());
+exports.MouseCursor = MouseCursor;
+
+
+/***/ }),
+
 /***/ "./src/particle/deathParticle.ts":
 /*!***************************************!*\
   !*** ./src/particle/deathParticle.ts ***!
@@ -11284,6 +11602,7 @@ var healthbar_1 = __webpack_require__(/*! ./healthbar */ "./src/healthbar.ts");
 var drawable_1 = __webpack_require__(/*! ./drawable */ "./src/drawable.ts");
 var hitWarning_1 = __webpack_require__(/*! ./hitWarning */ "./src/hitWarning.ts");
 var postProcess_1 = __webpack_require__(/*! ./postProcess */ "./src/postProcess.ts");
+var mouseCursor_1 = __webpack_require__(/*! ./mouseCursor */ "./src/mouseCursor.ts");
 var PlayerDirection;
 (function (PlayerDirection) {
     PlayerDirection[PlayerDirection["DOWN"] = 0] = "DOWN";
@@ -11322,7 +11641,28 @@ var Player = /** @class */ (function (_super) {
                 case input_1.InputEnum.SPACE:
                     _this.spaceListener();
                     break;
+                case input_1.InputEnum.COMMA:
+                    _this.commaListener();
+                    break;
+                case input_1.InputEnum.PERIOD:
+                    _this.periodListener();
+                    break;
+                case input_1.InputEnum.LEFT_CLICK:
+                    _this.mouseLeftClick();
+                    break;
+                case input_1.InputEnum.RIGHT_CLICK:
+                    _this.mouseRightClick();
+                    break;
+                case input_1.InputEnum.MOUSE_MOVE:
+                    _this.mouseMove();
+                    break;
             }
+        };
+        _this.commaListener = function () {
+            _this.inventory.left();
+        };
+        _this.periodListener = function () {
+            _this.inventory.right();
         };
         _this.tapListener = function () {
             _this.inventory.open();
@@ -11388,13 +11728,28 @@ var Player = /** @class */ (function (_super) {
             return false;
         };
         _this.spaceListener = function () {
-            if (_this.inventory.isOpen) {
+            if (_this.inventory.isOpen || _this.game.levelState === game_1.LevelState.IN_LEVEL) {
                 _this.inventory.space();
                 return;
             }
             if (_this.openVendingMachine) {
                 _this.openVendingMachine.space();
             }
+        };
+        _this.mouseLeftClick = function () {
+            _this.inventory.mouseLeftClick();
+            if (!_this.inventory.isOpen) {
+                _this.moveWithMouse();
+            }
+        };
+        _this.mouseRightClick = function () {
+            _this.inventory.mouseRightClick();
+        };
+        _this.mouseMove = function () {
+            _this.inventory.mouseMove();
+        };
+        _this.moveWithMouse = function () {
+            _this.tryMove(mouseCursor_1.MouseCursor.getInstance().getPosition().x, mouseCursor_1.MouseCursor.getInstance().getPosition().y);
         };
         _this.left = function () {
             if (_this.canMove()) {
@@ -11682,9 +12037,11 @@ var Player = /** @class */ (function (_super) {
         _this.drawTopLayer = function (delta) {
             _this.healthBar.draw(delta, _this.health, _this.maxHealth, _this.x - _this.drawX, _this.y - _this.drawY, !_this.flashing || Math.floor(_this.flashingFrame) % 2 === 0);
         };
-        _this.drawGUI = function (delta) {
+        _this.drawGUI = function (delta, transitioning) {
+            if (transitioning === void 0) { transitioning = false; }
             if (!_this.dead) {
-                _this.inventory.draw(delta);
+                if (!transitioning)
+                    _this.inventory.draw(delta);
                 //this.actionTab.draw(delta);
                 if (_this.guiHeartFrame > 0)
                     _this.guiHeartFrame += delta;
@@ -11740,6 +12097,8 @@ var Player = /** @class */ (function (_super) {
             input_1.Input.rightSwipeListener = function () { return _this.inputHandler(input_1.InputEnum.RIGHT); };
             input_1.Input.upSwipeListener = function () { return _this.inputHandler(input_1.InputEnum.UP); };
             input_1.Input.downSwipeListener = function () { return _this.inputHandler(input_1.InputEnum.DOWN); };
+            input_1.Input.commaListener = function () { return _this.inputHandler(input_1.InputEnum.COMMA); };
+            input_1.Input.periodListener = function () { return _this.inputHandler(input_1.InputEnum.PERIOD); };
             input_1.Input.tapListener = function () {
                 if (_this.inventory.isOpen) {
                     if (_this.inventory.pointInside(input_1.Input.mouseX, input_1.Input.mouseY)) {
@@ -11752,6 +12111,13 @@ var Player = /** @class */ (function (_super) {
                 else
                     _this.inputHandler(input_1.InputEnum.I);
             };
+            input_1.Input.mouseMoveListener = function () { return _this.inputHandler(input_1.InputEnum.MOUSE_MOVE); };
+            input_1.Input.mouseLeftClickListeners.push(function () {
+                return _this.inputHandler(input_1.InputEnum.LEFT_CLICK);
+            });
+            input_1.Input.mouseRightClickListeners.push(function () {
+                return _this.inputHandler(input_1.InputEnum.RIGHT_CLICK);
+            });
         }
         _this.mapToggled = true;
         _this.health = 2;
