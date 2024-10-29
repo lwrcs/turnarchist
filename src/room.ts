@@ -287,7 +287,7 @@ export class Room {
   private addChests(numChests: number, rand: () => number) {
     // add chests
     let tiles = this.getEmptyTiles();
-    for (let i = 0; i < 10000; i++) {
+    for (let i = 0; i < numChests; i++) {
       let t, x, y;
       if (tiles.length == 0) return;
       t = tiles.splice(Game.rand(0, tiles.length - 1, rand), 1)[0];
@@ -597,6 +597,7 @@ export class Room {
   };
 
   populateDungeon = (rand: () => number) => {
+    //this.addChests(10, rand);
     let factor = Game.rand(1, 36, rand);
 
     if (factor < 30) this.addWallBlocks(rand);

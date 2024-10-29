@@ -66,6 +66,7 @@ export class Player extends Drawable {
   tutorialRoom: boolean;
   private lastMoveTime: number;
   private moveCooldown: number;
+  moveRange: number;
   tileCursor: { x: number; y: number };
   constructor(game: Game, x: number, y: number, isLocalPlayer: boolean) {
     super();
@@ -94,6 +95,7 @@ export class Player extends Drawable {
       Input.commaListener = () => this.inputHandler(InputEnum.COMMA);
       Input.periodListener = () => this.inputHandler(InputEnum.PERIOD);
       Input.tapListener = () => {
+        /*
         if (this.inventory.isOpen) {
           if (this.inventory.pointInside(Input.mouseX, Input.mouseY)) {
             this.inputHandler(InputEnum.SPACE);
@@ -101,6 +103,7 @@ export class Player extends Drawable {
             this.inputHandler(InputEnum.I);
           }
         } else this.inputHandler(InputEnum.I);
+         */
       };
       Input.mouseMoveListener = () => this.inputHandler(InputEnum.MOUSE_MOVE);
       Input.mouseLeftClickListeners.push(() =>
@@ -132,6 +135,7 @@ export class Player extends Drawable {
     this.lastMoveTime = 0;
     this.moveCooldown = 100; // Cooldown in milliseconds (adjust as needed)
     this.tileCursor = { x: 0, y: 0 };
+    this.moveRange = 1;
   }
 
   inputHandler = (input: InputEnum) => {
@@ -290,8 +294,9 @@ export class Player extends Drawable {
   };
 
   moveWithMouse = () => {
-    this.tryMove(this.mouseToTile().x, this.mouseToTile().y);
-    console.log(this.tileCursor);
+    if (this.moveRangeCheck(this.mouseToTile().x, this.mouseToTile().y)) {
+      this.tryMove(this.mouseToTile().x, this.mouseToTile().y);
+    }
   };
 
   mouseToTile = () => {
@@ -313,6 +318,10 @@ export class Player extends Drawable {
       x: this.x + tileOffsetX,
       y: this.y + tileOffsetY,
     };
+  };
+
+  moveRangeCheck = (x: number, y: number) => {
+    return Math.abs(this.x - x) + Math.abs(this.y - y) <= this.moveRange;
   };
 
   setTileCursorPosition = () => {
@@ -715,10 +724,14 @@ export class Player extends Drawable {
   };
 
   drawTileCursor = (delta: number) => {
-    Game.ctx.fillStyle = "red";
+    const inRange = this.moveRangeCheck(
+      this.mouseToTile().x,
+      this.mouseToTile().y
+    );
+    let tileX = inRange ? 22 : 24;
 
     Game.drawFX(
-      22 + Math.floor(HitWarning.frame),
+      tileX + Math.floor(HitWarning.frame),
       4,
       1,
       2,

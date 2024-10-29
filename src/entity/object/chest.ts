@@ -32,6 +32,7 @@ export class Chest extends Entity {
     this.opening = false;
     this.dropX = 0;
     this.dropY = 0;
+    this.drop = null;
   }
 
   get type() {
@@ -39,16 +40,19 @@ export class Chest extends Entity {
   }
 
   readonly hurt = (playerHitBy: Player, damage: number) => {
-    this.healthBar.hurt();
-
+    //this.healthBar.hurt();
     this.health -= damage;
-    if (this.health <= 1) this.startOpening();
+    if (this.health === 1 && !this.opening) this.open();
     if (this.health <= 0) this.kill();
     else this.hurtCallback();
+    console.log("health", this.health);
   };
 
   private open = () => {
-    this.opening = false;
+    this.tileX = 0;
+    this.tileY = 2;
+
+    this.opening = true;
     const { x, y } = this.getOpenTile();
 
     switch (this.rollDrop()) {
@@ -71,20 +75,16 @@ export class Chest extends Entity {
         this.drop = new Armor(this.room, x, y);
         break;
     }
+    console.log({ x, y });
+    this.room.items.push(this.drop);
   };
 
   rollDrop = (): number => {
     return Game.randTable([1, 1, 1, 1, 1, 1, 1, 2, 3, 4], Random.rand);
   };
 
-  startOpening = () => {
-    this.tileX = 0;
-    this.opening = true;
-  };
-
   kill = () => {
-    this.dead = true;
-
+    console.log("chest kill");
     GenericParticle.spawnCluster(
       this.room,
       this.x + 0.5,
@@ -92,28 +92,34 @@ export class Chest extends Entity {
       "#fbf236"
     );
 
-    this.room.items.push(this.drop);
+    this.dead = true;
   };
   killNoBones = () => {
     this.kill();
   };
 
   getOpenTile = (): { x: number; y: number } => {
-    for (let i = 0; i < 3; i++) {
-      for (let j = 0; j < 3; j++) {
-        if (!this.room.roomArray[this.x + i][this.y + j].isSolid())
-          return { x: this.x + i, y: this.y + j };
-      }
-    }
-    return { x: this.x, y: this.y };
+    let x, y;
+    do {
+      x = Game.rand(this.x - 1, this.x + 1, Random.rand);
+      y = Game.rand(this.y - 1, this.y + 1, Random.rand);
+    } while (
+      (x === this.x && y === this.y) ||
+      this.room.roomArray[x][y].isSolid() ||
+      this.room.entities.some((e) => e.x === x && e.y === y)
+    );
+    return { x, y };
   };
 
   draw = (delta: number) => {
     if (this.opening) {
-      this.tileX += 0.15;
-      this.tileY = 2;
-      if (this.tileX > 6) this.open();
+      if (this.tileX <= 6) {
+        this.tileX += 0.15;
+      } else {
+        this.opening = false;
+      }
     }
+
     if (!this.dead) {
       Game.drawObj(
         Math.floor(this.tileX),

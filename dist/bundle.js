@@ -5171,17 +5171,20 @@ var Chest = /** @class */ (function (_super) {
     function Chest(room, game, x, y) {
         var _this = _super.call(this, room, game, x, y) || this;
         _this.hurt = function (playerHitBy, damage) {
-            _this.healthBar.hurt();
+            //this.healthBar.hurt();
             _this.health -= damage;
-            if (_this.health <= 1)
-                _this.startOpening();
+            if (_this.health === 1 && !_this.opening)
+                _this.open();
             if (_this.health <= 0)
                 _this.kill();
             else
                 _this.hurtCallback();
+            console.log("health", _this.health);
         };
         _this.open = function () {
-            _this.opening = false;
+            _this.tileX = 0;
+            _this.tileY = 2;
+            _this.opening = true;
             var _a = _this.getOpenTile(), x = _a.x, y = _a.y;
             switch (_this.rollDrop()) {
                 case 1:
@@ -5203,37 +5206,38 @@ var Chest = /** @class */ (function (_super) {
                     _this.drop = new armor_1.Armor(_this.room, x, y);
                     break;
             }
+            console.log({ x: x, y: y });
+            _this.room.items.push(_this.drop);
         };
         _this.rollDrop = function () {
             return game_1.Game.randTable([1, 1, 1, 1, 1, 1, 1, 2, 3, 4], random_1.Random.rand);
         };
-        _this.startOpening = function () {
-            _this.tileX = 0;
-            _this.opening = true;
-        };
         _this.kill = function () {
-            _this.dead = true;
+            console.log("chest kill");
             genericParticle_1.GenericParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, "#fbf236");
-            _this.room.items.push(_this.drop);
+            _this.dead = true;
         };
         _this.killNoBones = function () {
             _this.kill();
         };
         _this.getOpenTile = function () {
-            for (var i = 0; i < 3; i++) {
-                for (var j = 0; j < 3; j++) {
-                    if (!_this.room.roomArray[_this.x + i][_this.y + j].isSolid())
-                        return { x: _this.x + i, y: _this.y + j };
-                }
-            }
-            return { x: _this.x, y: _this.y };
+            var x, y;
+            do {
+                x = game_1.Game.rand(_this.x - 1, _this.x + 1, random_1.Random.rand);
+                y = game_1.Game.rand(_this.y - 1, _this.y + 1, random_1.Random.rand);
+            } while ((x === _this.x && y === _this.y) ||
+                _this.room.roomArray[x][y].isSolid() ||
+                _this.room.entities.some(function (e) { return e.x === x && e.y === y; }));
+            return { x: x, y: y };
         };
         _this.draw = function (delta) {
             if (_this.opening) {
-                _this.tileX += 0.15;
-                _this.tileY = 2;
-                if (_this.tileX > 6)
-                    _this.open();
+                if (_this.tileX <= 6) {
+                    _this.tileX += 0.15;
+                }
+                else {
+                    _this.opening = false;
+                }
             }
             if (!_this.dead) {
                 game_1.Game.drawObj(Math.floor(_this.tileX), Math.floor(_this.tileY), 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
@@ -5250,6 +5254,7 @@ var Chest = /** @class */ (function (_super) {
         _this.opening = false;
         _this.dropX = 0;
         _this.dropY = 0;
+        _this.drop = null;
         return _this;
     }
     Object.defineProperty(Chest.prototype, "type", {
@@ -8456,11 +8461,13 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Inventory = void 0;
 var levelConstants_1 = __webpack_require__(/*! ./levelConstants */ "./src/levelConstants.ts");
 var game_1 = __webpack_require__(/*! ./game */ "./src/game.ts");
+var key_1 = __webpack_require__(/*! ./item/key */ "./src/item/key.ts");
 var gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/gameConstants.ts");
 var equippable_1 = __webpack_require__(/*! ./item/equippable */ "./src/item/equippable.ts");
 var armor_1 = __webpack_require__(/*! ./item/armor */ "./src/item/armor.ts");
 var coin_1 = __webpack_require__(/*! ./item/coin */ "./src/item/coin.ts");
 var weapon_1 = __webpack_require__(/*! ./weapon/weapon */ "./src/weapon/weapon.ts");
+var dagger_1 = __webpack_require__(/*! ./weapon/dagger */ "./src/weapon/dagger.ts");
 var usable_1 = __webpack_require__(/*! ./item/usable */ "./src/item/usable.ts");
 var mouseCursor_1 = __webpack_require__(/*! ./mouseCursor */ "./src/mouseCursor.ts");
 var OPEN_TIME = 100; // milliseconds
@@ -9088,7 +9095,7 @@ var Inventory = /** @class */ (function () {
             }
             _this.addItem(i);
         };
-        var startingInv = [];
+        var startingInv = [dagger_1.Dagger, key_1.Key];
         startingInv.forEach(function (item) {
             a(new item({ game: _this.game }, 0, 0));
         });
@@ -11767,8 +11774,9 @@ var Player = /** @class */ (function (_super) {
             _this.setTileCursorPosition();
         };
         _this.moveWithMouse = function () {
-            _this.tryMove(_this.mouseToTile().x, _this.mouseToTile().y);
-            console.log(_this.tileCursor);
+            if (_this.moveRangeCheck(_this.mouseToTile().x, _this.mouseToTile().y)) {
+                _this.tryMove(_this.mouseToTile().x, _this.mouseToTile().y);
+            }
         };
         _this.mouseToTile = function () {
             // Get screen center coordinates
@@ -11783,6 +11791,9 @@ var Player = /** @class */ (function (_super) {
                 x: _this.x + tileOffsetX,
                 y: _this.y + tileOffsetY,
             };
+        };
+        _this.moveRangeCheck = function (x, y) {
+            return Math.abs(_this.x - x) + Math.abs(_this.y - y) <= _this.moveRange;
         };
         _this.setTileCursorPosition = function () {
             _this.tileCursor = {
@@ -12147,8 +12158,9 @@ var Player = /** @class */ (function (_super) {
             _this.drawY += -0.5 * _this.drawY;
         };
         _this.drawTileCursor = function (delta) {
-            game_1.Game.ctx.fillStyle = "red";
-            game_1.Game.drawFX(22 + Math.floor(hitWarning_1.HitWarning.frame), 4, 1, 2, _this.tileCursor.x, 
+            var inRange = _this.moveRangeCheck(_this.mouseToTile().x, _this.mouseToTile().y);
+            var tileX = inRange ? 22 : 24;
+            game_1.Game.drawFX(tileX + Math.floor(hitWarning_1.HitWarning.frame), 4, 1, 2, _this.tileCursor.x, 
             //round to lower odd number
             _this.tileCursor.y - 1, 1, 2);
         };
@@ -12171,16 +12183,15 @@ var Player = /** @class */ (function (_super) {
             input_1.Input.commaListener = function () { return _this.inputHandler(input_1.InputEnum.COMMA); };
             input_1.Input.periodListener = function () { return _this.inputHandler(input_1.InputEnum.PERIOD); };
             input_1.Input.tapListener = function () {
-                if (_this.inventory.isOpen) {
-                    if (_this.inventory.pointInside(input_1.Input.mouseX, input_1.Input.mouseY)) {
-                        _this.inputHandler(input_1.InputEnum.SPACE);
-                    }
-                    else {
-                        _this.inputHandler(input_1.InputEnum.I);
-                    }
-                }
-                else
-                    _this.inputHandler(input_1.InputEnum.I);
+                /*
+                if (this.inventory.isOpen) {
+                  if (this.inventory.pointInside(Input.mouseX, Input.mouseY)) {
+                    this.inputHandler(InputEnum.SPACE);
+                  } else {
+                    this.inputHandler(InputEnum.I);
+                  }
+                } else this.inputHandler(InputEnum.I);
+                 */
             };
             input_1.Input.mouseMoveListener = function () { return _this.inputHandler(input_1.InputEnum.MOUSE_MOVE); };
             input_1.Input.mouseLeftClickListeners.push(function () {
@@ -12210,6 +12221,7 @@ var Player = /** @class */ (function (_super) {
         _this.lastMoveTime = 0;
         _this.moveCooldown = 100; // Cooldown in milliseconds (adjust as needed)
         _this.tileCursor = { x: 0, y: 0 };
+        _this.moveRange = 1;
         return _this;
     }
     Player.prototype.canMove = function () {
@@ -12816,6 +12828,7 @@ var Room = /** @class */ (function () {
             _this.addTorches(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 2, 3, 4], rand), rand);
         };
         this.populateDungeon = function (rand) {
+            //this.addChests(10, rand);
             var factor = game_1.Game.rand(1, 36, rand);
             if (factor < 30)
                 _this.addWallBlocks(rand);
@@ -13623,7 +13636,7 @@ var Room = /** @class */ (function () {
     Room.prototype.addChests = function (numChests, rand) {
         // add chests
         var tiles = this.getEmptyTiles();
-        for (var i = 0; i < 10000; i++) {
+        for (var i = 0; i < numChests; i++) {
             var t = void 0, x = void 0, y = void 0;
             if (tiles.length == 0)
                 return;
