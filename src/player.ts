@@ -275,12 +275,23 @@ export class Player extends Drawable {
     this.inventory.mouseLeftClick();
     if (
       !this.inventory.isOpen &&
+      !this.inventory.isPointInInventoryButton(
+        MouseCursor.getInstance().getPosition().x,
+        MouseCursor.getInstance().getPosition().y
+      ) &&
       !this.inventory.isPointInQuickbarBounds(
         MouseCursor.getInstance().getPosition().x,
         MouseCursor.getInstance().getPosition().y
       ).inBounds
     ) {
       this.moveWithMouse();
+    } else if (
+      this.inventory.isPointInInventoryButton(
+        MouseCursor.getInstance().getPosition().x,
+        MouseCursor.getInstance().getPosition().y
+      )
+    ) {
+      this.inventory.open();
     }
   };
   mouseRightClick = () => {
@@ -321,7 +332,10 @@ export class Player extends Drawable {
   };
 
   moveRangeCheck = (x: number, y: number) => {
-    return Math.abs(this.x - x) + Math.abs(this.y - y) <= this.moveRange;
+    return (
+      Math.abs(this.x - x) + Math.abs(this.y - y) <= this.moveRange &&
+      Math.abs(this.x - x) + Math.abs(this.y - y) !== 0
+    );
   };
 
   setTileCursorPosition = () => {
@@ -523,12 +537,14 @@ export class Player extends Drawable {
       this.health -= damage;
       if (this.health <= 0) {
         this.health = 0;
+        /*
         if (!this.game.tutorialActive) {
           this.dead = true;
         } else {
           this.health = 2;
           this.game.pushMessage("You are dead, but you can try again!");
         }
+        */
       }
     }
   };
@@ -716,11 +732,16 @@ export class Player extends Drawable {
     PostProcessor.draw(delta);
     if (this.mapToggled === true) this.map.draw(delta);
     this.drawTileCursor(delta);
+    this.drawInventoryButton(delta);
   };
 
   updateDrawXY = (delta: number) => {
     this.drawX += -0.5 * this.drawX;
     this.drawY += -0.5 * this.drawY;
+  };
+
+  drawInventoryButton = (delta: number) => {
+    Game.drawFX(20, 4, 2, 2, LevelConstants.SCREEN_W - 2, 0, 2, 2);
   };
 
   drawTileCursor = (delta: number) => {

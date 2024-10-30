@@ -33,6 +33,8 @@ export class Chest extends Entity {
     this.dropX = 0;
     this.dropY = 0;
     this.drop = null;
+    this.drawX = 0;
+    this.drawY = 0;
   }
 
   get type() {

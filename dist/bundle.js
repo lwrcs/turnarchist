@@ -5255,6 +5255,8 @@ var Chest = /** @class */ (function (_super) {
         _this.dropX = 0;
         _this.dropY = 0;
         _this.drop = null;
+        _this.drawX = 0;
+        _this.drawY = 0;
         return _this;
     }
     Object.defineProperty(Chest.prototype, "type", {
@@ -9072,6 +9074,14 @@ var Inventory = /** @class */ (function () {
                 startY: startY,
             };
         };
+        this.isPointInInventoryButton = function (x, y) {
+            var tX = x / gameConstants_1.GameConstants.TILESIZE;
+            var tY = y / gameConstants_1.GameConstants.TILESIZE;
+            return (tX >= levelConstants_1.LevelConstants.SCREEN_W - 2 &&
+                tX <= levelConstants_1.LevelConstants.SCREEN_W &&
+                tY >= 0 &&
+                tY <= 2);
+        };
         this.game = game;
         this.player = player;
         this.items = new Array();
@@ -11761,8 +11771,12 @@ var Player = /** @class */ (function (_super) {
         _this.mouseLeftClick = function () {
             _this.inventory.mouseLeftClick();
             if (!_this.inventory.isOpen &&
+                !_this.inventory.isPointInInventoryButton(mouseCursor_1.MouseCursor.getInstance().getPosition().x, mouseCursor_1.MouseCursor.getInstance().getPosition().y) &&
                 !_this.inventory.isPointInQuickbarBounds(mouseCursor_1.MouseCursor.getInstance().getPosition().x, mouseCursor_1.MouseCursor.getInstance().getPosition().y).inBounds) {
                 _this.moveWithMouse();
+            }
+            else if (_this.inventory.isPointInInventoryButton(mouseCursor_1.MouseCursor.getInstance().getPosition().x, mouseCursor_1.MouseCursor.getInstance().getPosition().y)) {
+                _this.inventory.open();
             }
         };
         _this.mouseRightClick = function () {
@@ -11793,7 +11807,8 @@ var Player = /** @class */ (function (_super) {
             };
         };
         _this.moveRangeCheck = function (x, y) {
-            return Math.abs(_this.x - x) + Math.abs(_this.y - y) <= _this.moveRange;
+            return (Math.abs(_this.x - x) + Math.abs(_this.y - y) <= _this.moveRange &&
+                Math.abs(_this.x - x) + Math.abs(_this.y - y) !== 0);
         };
         _this.setTileCursorPosition = function () {
             _this.tileCursor = {
@@ -11991,13 +12006,14 @@ var Player = /** @class */ (function (_super) {
                 _this.health -= damage;
                 if (_this.health <= 0) {
                     _this.health = 0;
-                    if (!_this.game.tutorialActive) {
-                        _this.dead = true;
+                    /*
+                    if (!this.game.tutorialActive) {
+                      this.dead = true;
+                    } else {
+                      this.health = 2;
+                      this.game.pushMessage("You are dead, but you can try again!");
                     }
-                    else {
-                        _this.health = 2;
-                        _this.game.pushMessage("You are dead, but you can try again!");
-                    }
+                    */
                 }
             }
         };
@@ -12152,10 +12168,14 @@ var Player = /** @class */ (function (_super) {
             if (_this.mapToggled === true)
                 _this.map.draw(delta);
             _this.drawTileCursor(delta);
+            _this.drawInventoryButton(delta);
         };
         _this.updateDrawXY = function (delta) {
             _this.drawX += -0.5 * _this.drawX;
             _this.drawY += -0.5 * _this.drawY;
+        };
+        _this.drawInventoryButton = function (delta) {
+            game_1.Game.drawFX(20, 4, 2, 2, levelConstants_1.LevelConstants.SCREEN_W - 2, 0, 2, 2);
         };
         _this.drawTileCursor = function (delta) {
             var inRange = _this.moveRangeCheck(_this.mouseToTile().x, _this.mouseToTile().y);
@@ -12825,7 +12845,7 @@ var Room = /** @class */ (function () {
             }
         };
         this.populateEmpty = function (rand) {
-            _this.addTorches(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 2, 3, 4], rand), rand);
+            _this.addRandomTorches("medium");
         };
         this.populateDungeon = function (rand) {
             //this.addChests(10, rand);
@@ -12836,7 +12856,7 @@ var Room = /** @class */ (function () {
                 _this.addFingers(rand);
             if (factor % 4 === 0)
                 _this.addChasms(rand);
-            _this.addTorches(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 2, 3, 4], rand), rand);
+            _this.addRandomTorches("medium");
             if (factor > 15)
                 _this.addSpikeTraps(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 5], rand), rand);
             var numEmptyTiles = _this.getEmptyTiles().length;
@@ -12853,7 +12873,7 @@ var Room = /** @class */ (function () {
                 _this.addVendingMachine(rand);
         };
         this.populateBoss = function (rand) {
-            _this.addTorches(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 2, 3, 4], rand), rand);
+            _this.addRandomTorches("medium");
             _this.addSpikeTraps(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 5], rand), rand);
             var numEmptyTiles = _this.getEmptyTiles().length;
             var numTotalObstacles = Math.floor(numEmptyTiles * 0.2);
@@ -12868,7 +12888,7 @@ var Room = /** @class */ (function () {
         this.populateBigDungeon = function (rand) {
             if (game_1.Game.rand(1, 4, rand) === 1)
                 _this.addChasms(rand);
-            _this.addTorches(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 2, 3, 4], rand), rand);
+            _this.addRandomTorches("medium");
             if (game_1.Game.rand(1, 4, rand) === 1)
                 _this.addPlants(game_1.Game.randTable([0, 0, 0, 0, 0, 1, 1, 2, 2, 3, 4], rand), rand);
             if (game_1.Game.rand(1, 3, rand) === 1)
@@ -12884,15 +12904,15 @@ var Room = /** @class */ (function () {
                 _this.addObstacles(game_1.Game.randTable([0, 0, 1, 1, 2, 3, 5], rand), rand);
         };
         this.populateSpawner = function (rand) {
-            _this.addTorches(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 2, 3, 4], rand), rand);
+            _this.addRandomTorches("medium");
             _this.entities.push(new spawner_1.Spawner(_this, _this.game, Math.floor(_this.roomX + _this.width / 2), Math.floor(_this.roomY + _this.height / 2)));
         };
         this.populateKeyRoom = function (rand) {
-            _this.addTorches(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 2, 3, 4], rand), rand);
+            _this.addRandomTorches("medium");
             _this.items.push(new goldenKey_1.GoldenKey(_this, Math.floor(_this.roomX + _this.width / 2), Math.floor(_this.roomY + _this.height / 2)));
         };
         this.populateFountain = function (rand) {
-            _this.addTorches(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 2, 3, 4], rand), rand);
+            _this.addRandomTorches("medium");
             var centerX = Math.floor(_this.roomX + _this.width / 2);
             var centerY = Math.floor(_this.roomY + _this.height / 2);
             for (var x = centerX - 1; x <= centerX + 1; x++) {
@@ -12907,7 +12927,7 @@ var Room = /** @class */ (function () {
             _this.roomArray[x][y + 1] = new coffinTile_1.CoffinTile(_this, x, y + 1, 1);
         };
         this.populateCoffin = function (rand) {
-            _this.addTorches(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 2, 3, 4], rand), rand);
+            _this.addRandomTorches("medium");
             _this.placeCoffin(Math.floor(_this.roomX + _this.width / 2 - 2), Math.floor(_this.roomY + _this.height / 2));
             _this.placeCoffin(Math.floor(_this.roomX + _this.width / 2), Math.floor(_this.roomY + _this.height / 2));
             _this.placeCoffin(Math.floor(_this.roomX + _this.width / 2) + 2, Math.floor(_this.roomY + _this.height / 2));
@@ -12946,10 +12966,10 @@ var Room = /** @class */ (function () {
                     _this.roomArray[x][y] = new spiketrap_1.SpikeTrap(_this, x, y, game_1.Game.rand(0, 3, rand));
                 }
             }
-            _this.addTorches(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 2, 3, 4], rand), rand);
+            _this.addRandomTorches("medium");
         };
         this.populateTreasure = function (rand) {
-            _this.addTorches(game_1.Game.randTable([0, 1, 1, 2, 2, 3, 4], rand), rand);
+            _this.addRandomTorches("medium");
             _this.addChests(game_1.Game.randTable([4, 4, 5, 5, 5, 6, 8], rand), rand);
             _this.addPlants(game_1.Game.randTable([0, 1, 2, 4, 5, 6], rand), rand);
         };
@@ -12965,39 +12985,35 @@ var Room = /** @class */ (function () {
             _this.addResources((numEmptyTiles - numEnemies) * game_1.Game.randTable([0.5, 0.6, 0.7, 0.8], rand), rand);
         };
         this.populateUpLadder = function (rand) {
-            _this.addTorches(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 2], rand), rand);
-            var cX = Math.floor(_this.roomX + _this.width / 2);
-            var cY = Math.floor(_this.roomY + _this.height / 2);
+            _this.addRandomTorches("medium");
+            var _a = _this.getRoomCenter(), x = _a.x, y = _a.y;
+            _this.roomArray[x][y] = new upLadder_1.UpLadder(_this, _this.game, x, y);
         };
         this.populateDownLadder = function (rand) {
-            _this.addTorches(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 2], rand), rand);
-            var cX = Math.floor(_this.roomX + _this.width / 2);
-            var cY = Math.floor(_this.roomY + _this.height / 2);
-            _this.roomArray[cX][cY] = new downLadder_1.DownLadder(_this, _this.game, cX, cY);
+            _this.addRandomTorches("medium");
+            var _a = _this.getRoomCenter(), x = _a.x, y = _a.y;
+            _this.roomArray[x][y] = new downLadder_1.DownLadder(_this, _this.game, x, y);
         };
         this.populateRopeHole = function (rand) {
-            _this.addTorches(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 2], rand), rand);
-            var cX = Math.floor(_this.roomX + _this.width / 2);
-            var cY = Math.floor(_this.roomY + _this.height / 2);
-            var d = new downLadder_1.DownLadder(_this, _this.game, cX, cY);
+            _this.addRandomTorches("medium");
+            var _a = _this.getRoomCenter(), x = _a.x, y = _a.y;
+            var d = new downLadder_1.DownLadder(_this, _this.game, x, y);
             d.isRope = true;
-            _this.roomArray[cX][cY] = d;
+            _this.roomArray[x][y] = d;
         };
         this.populateRopeCave = function (rand) {
-            var cX = Math.floor(_this.roomX + _this.width / 2);
-            var cY = Math.floor(_this.roomY + _this.height / 2);
-            var upLadder = new upLadder_1.UpLadder(_this, _this.game, cX, cY);
+            var _a = _this.getRoomCenter(), x = _a.x, y = _a.y;
+            var upLadder = new upLadder_1.UpLadder(_this, _this.game, x, y);
             upLadder.isRope = true;
-            _this.roomArray[cX][cY] = upLadder;
+            _this.roomArray[x][y] = upLadder;
         };
         this.populateShop = function (rand) {
             _this.addTorches(2, rand);
-            var cX = Math.floor(_this.roomX + _this.width / 2);
-            var cY = Math.floor(_this.roomY + _this.height / 2);
-            _this.entities.push(new vendingMachine_1.VendingMachine(_this, _this.game, cX - 2, cY - 1, new shotgun_1.Shotgun(_this, 0, 0)));
-            _this.entities.push(new vendingMachine_1.VendingMachine(_this, _this.game, cX + 2, cY - 1, new heart_1.Heart(_this, 0, 0)));
-            _this.entities.push(new vendingMachine_1.VendingMachine(_this, _this.game, cX - 2, cY + 2, new armor_1.Armor(_this, 0, 0)));
-            _this.entities.push(new vendingMachine_1.VendingMachine(_this, _this.game, cX + 2, cY + 2, new spear_1.Spear(_this, 0, 0)));
+            var _a = _this.getRoomCenter(), x = _a.x, y = _a.y;
+            _this.entities.push(new vendingMachine_1.VendingMachine(_this, _this.game, x - 2, y - 1, new shotgun_1.Shotgun(_this, 0, 0)));
+            _this.entities.push(new vendingMachine_1.VendingMachine(_this, _this.game, x + 2, y - 1, new heart_1.Heart(_this, 0, 0)));
+            _this.entities.push(new vendingMachine_1.VendingMachine(_this, _this.game, x - 2, y + 2, new armor_1.Armor(_this, 0, 0)));
+            _this.entities.push(new vendingMachine_1.VendingMachine(_this, _this.game, x + 2, y + 2, new spear_1.Spear(_this, 0, 0)));
         };
         this.populate = function (rand) {
             _this.name = "";
@@ -13119,7 +13135,7 @@ var Room = /** @class */ (function () {
             _this.particles.splice(0, _this.particles.length);
         };
         this.enterLevel = function (player) {
-            player.moveSnap(_this.roomX + Math.floor(_this.width / 2), _this.roomY + Math.floor(_this.height / 2));
+            player.moveSnap(_this.getRoomCenter().x, _this.getRoomCenter().y);
             _this.clearDeadStuff();
             _this.updateLighting();
             _this.entered = true;
@@ -13244,10 +13260,7 @@ var Room = /** @class */ (function () {
             var dy = Math.sin((angle * Math.PI) / 180);
             var onOpaqueSection = false;
             for (var i = 0; i < radius; i++) {
-                if (Math.floor(px) < _this.roomX ||
-                    Math.floor(px) >= _this.roomX + _this.width ||
-                    Math.floor(py) < _this.roomY ||
-                    Math.floor(py) >= _this.roomY + _this.height)
+                if (!_this.isPositionInRoom(px, py))
                     return; // we're outside the level
                 var tile = _this.roomArray[Math.floor(px)][Math.floor(py)];
                 if (tile.isOpaque()) {
@@ -13637,12 +13650,7 @@ var Room = /** @class */ (function () {
         // add chests
         var tiles = this.getEmptyTiles();
         for (var i = 0; i < numChests; i++) {
-            var t = void 0, x = void 0, y = void 0;
-            if (tiles.length == 0)
-                return;
-            t = tiles.splice(game_1.Game.rand(0, tiles.length - 1, rand), 1)[0];
-            x = t.x;
-            y = t.y;
+            var _a = this.getRandomEmptyPosition(tiles), x = _a.x, y = _a.y;
             this.entities.push(new chest_1.Chest(this, this.game, x, y));
         }
     };
@@ -13650,11 +13658,7 @@ var Room = /** @class */ (function () {
         // add spikes
         var tiles = this.getEmptyTiles();
         for (var i = 0; i < numSpikes; i++) {
-            var t = tiles.splice(game_1.Game.rand(0, tiles.length - 1, rand), 1)[0];
-            if (tiles.length == 0)
-                return;
-            var x = t.x;
-            var y = t.y;
+            var _a = this.getRandomEmptyPosition(tiles), x = _a.x, y = _a.y;
             this.roomArray[x][y] = new spiketrap_1.SpikeTrap(this, x, y);
         }
     };
@@ -13662,11 +13666,7 @@ var Room = /** @class */ (function () {
         // add spikes
         var tiles = this.getEmptyTiles();
         for (var i = 0; i < numSpikes; i++) {
-            var t = tiles.splice(game_1.Game.rand(0, tiles.length - 1, rand), 1)[0];
-            if (tiles.length == 0)
-                return;
-            var x = t.x;
-            var y = t.y;
+            var _a = this.getRandomEmptyPosition(tiles), x = _a.x, y = _a.y;
             this.roomArray[x][y] = new spike_1.Spike(this, x, y);
         }
     };
@@ -13684,15 +13684,26 @@ var Room = /** @class */ (function () {
         var _this = this;
         // Get all empty tiles in the room
         var tiles = this.getEmptyTiles();
+        //don't put enemies near the entrances so you don't get screwed instantly
+        var adjecentTiles = [];
+        for (var _i = 0, _a = this.doors; _i < _a.length; _i++) {
+            var door = _a[_i];
+            if (door.doorDir === door_2.DoorDir.North) {
+                adjecentTiles.push({ x: door.x, y: door.y - 2 }, { x: door.x - 1, y: door.y - 1 }, { x: door.x + 1, y: door.y - 1 }, { x: door.x - 1, y: door.y - 2 }, { x: door.x + 1, y: door.y - 2 });
+            }
+            if (door.doorDir === door_2.DoorDir.South) {
+                adjecentTiles.push({ x: door.x, y: door.y + 2 }, { x: door.x - 1, y: door.y + 1 }, { x: door.x + 1, y: door.y + 1 }, { x: door.x - 1, y: door.y + 2 }, { x: door.x + 1, y: door.y + 2 });
+            }
+            if (door.doorDir === door_2.DoorDir.West) {
+                adjecentTiles.push({ x: door.x - 2, y: door.y }, { x: door.x - 1, y: door.y - 1 }, { x: door.x - 1, y: door.y + 1 }, { x: door.x - 1, y: door.y - 2 }, { x: door.x - 1, y: door.y + 2 });
+            }
+            if (door.doorDir === door_2.DoorDir.East) {
+                adjecentTiles.push({ x: door.x + 2, y: door.y }, { x: door.x + 1, y: door.y - 1 }, { x: door.x + 1, y: door.y + 1 }, { x: door.x + 1, y: door.y - 2 }, { x: door.x + 1, y: door.y + 2 });
+            }
+        }
+        tiles = tiles.filter(function (tile) { return !adjecentTiles.some(function (t) { return t.x === tile.x && t.y === tile.y; }); });
         var _loop_2 = function (i) {
-            // Randomly select a tile and remove it from the list
-            var t = tiles.splice(game_1.Game.rand(0, tiles.length - 1, rand), 1)[0];
-            // If there are no more tiles, return
-            if (tiles.length == 0)
-                return { value: void 0 };
-            // Get the x and y coordinates of the selected tile
-            var x = t.x;
-            var y = t.y;
+            var _b = this_1.getRandomEmptyPosition(tiles), x = _b.x, y = _b.y;
             // Define the enemy tables for each depth level
             var tables = {
                 0: [1, 2, 3],
@@ -13721,16 +13732,16 @@ var Room = /** @class */ (function () {
                             }
                         };
                         for (var yy = 0; yy < enemy.h; yy++) {
-                            var state_3 = _loop_4(yy);
-                            if (typeof state_3 === "object")
-                                return state_3;
+                            var state_2 = _loop_4(yy);
+                            if (typeof state_2 === "object")
+                                return state_2;
                         }
                     };
                     // Check if the enemy overlaps with any other enemies
                     for (var xx = 0; xx < enemy.w; xx++) {
-                        var state_2 = _loop_3(xx);
-                        if (typeof state_2 === "object")
-                            return state_2.value;
+                        var state_1 = _loop_3(xx);
+                        if (typeof state_1 === "object")
+                            return state_1.value;
                     }
                     // If it doesn't, add the enemy to the room and return true
                     _this.entities.push(enemy);
@@ -13808,20 +13819,14 @@ var Room = /** @class */ (function () {
         var this_1 = this;
         // Loop through the number of enemies to be added
         for (var i = 0; i < numEnemies; i++) {
-            var state_1 = _loop_2(i);
-            if (typeof state_1 === "object")
-                return state_1.value;
+            _loop_2(i);
         }
     };
     Room.prototype.addObstacles = function (numObstacles, rand) {
         // add crates/barrels
         var tiles = this.getEmptyTiles();
         for (var i = 0; i < numObstacles; i++) {
-            var t = tiles.splice(game_1.Game.rand(0, tiles.length - 1, rand), 1)[0];
-            if (tiles.length == 0)
-                return;
-            var x = t.x;
-            var y = t.y;
+            var _a = this.getRandomEmptyPosition(tiles), x = _a.x, y = _a.y;
             switch (game_1.Game.randTable([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4], rand)) {
                 case 1:
                     this.entities.push(new crate_1.Crate(this, this.game, x, y));
@@ -13835,20 +13840,13 @@ var Room = /** @class */ (function () {
                 case 4:
                     this.entities.push(new tombStone_1.TombStone(this, this.game, x, y, 0));
                     break;
-                //case 5:
-                //this.enemies.push(new TombStone(this, this.game, x, y));
-                //break;
             }
         }
     };
     Room.prototype.addPlants = function (numPlants, rand) {
         var tiles = this.getEmptyTiles();
         for (var i = 0; i < numPlants; i++) {
-            var t = tiles.splice(game_1.Game.rand(0, tiles.length - 1, rand), 1)[0];
-            if (tiles.length == 0)
-                return;
-            var x = t.x;
-            var y = t.y;
+            var _a = this.getRandomEmptyPosition(tiles), x = _a.x, y = _a.y;
             var r = rand();
             if (r <= 0.45)
                 this.entities.push(new pottedPlant_1.PottedPlant(this, this.game, x, y));
@@ -13865,11 +13863,7 @@ var Room = /** @class */ (function () {
     Room.prototype.addResources = function (numResources, rand) {
         var tiles = this.getEmptyTiles();
         for (var i = 0; i < numResources; i++) {
-            var t = tiles.splice(game_1.Game.rand(0, tiles.length - 1, rand), 1)[0];
-            if (tiles.length == 0)
-                return;
-            var x = t.x;
-            var y = t.y;
+            var _a = this.getRandomEmptyPosition(tiles), x = _a.x, y = _a.y;
             var r = rand();
             if (r <= (10 - Math.pow(this.depth, 3)) / 10)
                 this.entities.push(new coalResource_1.CoalResource(this, this.game, x, y));
@@ -13880,9 +13874,7 @@ var Room = /** @class */ (function () {
         }
     };
     Room.prototype.addVendingMachine = function (rand) {
-        var t = this.getEmptyTiles().sort(function () { return 0.5 - random_1.Random.rand(); })[0];
-        var x = t.x;
-        var y = t.y;
+        var _a = this.getRandomEmptyPosition(this.getEmptyTiles()), x = _a.x, y = _a.y;
         var type = game_1.Game.randTable([1, 1, 1, 1, 1, 1, 1, 2, 3, 4, 5, 6], rand);
         switch (type) {
             case 1:
@@ -13950,6 +13942,60 @@ var Room = /** @class */ (function () {
                             (isTopWall && !isLeftWall && !isRightWall) ||
                             isInnerWall,
                     });
+                }
+            }
+        }
+    };
+    // This pattern appears in multiple methods like addVendingMachine, addChests, addSpikes, etc.
+    Room.prototype.getRandomEmptyPosition = function (tiles) {
+        if (tiles.length === 0)
+            return null;
+        var tile = tiles.splice(game_1.Game.rand(0, tiles.length - 1, random_1.Random.rand), 1)[0];
+        return { x: tile.x, y: tile.y };
+    };
+    // Used in populateUpLadder, populateDownLadder, populateRopeHole, populateRopeCave
+    Room.prototype.getRoomCenter = function () {
+        return {
+            x: Math.floor(this.roomX + this.width / 2),
+            y: Math.floor(this.roomY + this.height / 2),
+        };
+    };
+    // Many populate methods start with adding torches using the same pattern
+    Room.prototype.addRandomTorches = function (intensity) {
+        if (intensity === void 0) { intensity = "medium"; }
+        var torchPatterns = {
+            none: [0, 0, 0],
+            low: [0, 0, 0, 1, 1],
+            medium: [0, 0, 0, 1, 1, 2, 2, 3, 4],
+            high: [1, 1, 2, 2, 3, 4, 4],
+        };
+        var randTorches = game_1.Game.randTable(torchPatterns[intensity], random_1.Random.rand);
+        this.addTorches(randTorches, random_1.Random.rand);
+        console.log(randTorches);
+    };
+    // Used in populateDungeon, populateCave, etc. NOT IN USE
+    Room.prototype.populateWithEntities = function (config) {
+        var numEmptyTiles = this.getEmptyTiles().length;
+        var numEnemies = Math.ceil(numEmptyTiles * config.enemyDensity);
+        var numObstacles = Math.ceil(numEmptyTiles * config.obstacleDensity);
+        var numPlants = Math.ceil(numEmptyTiles * config.plantDensity);
+        this.addEnemies(numEnemies, random_1.Random.rand);
+        this.addObstacles(numObstacles, random_1.Random.rand);
+        this.addPlants(numPlants, random_1.Random.rand);
+    };
+    // Used in multiple methods including castShadowsAtAngle
+    Room.prototype.isPositionInRoom = function (x, y) {
+        return !(Math.floor(x) < this.roomX ||
+            Math.floor(x) >= this.roomX + this.width ||
+            Math.floor(y) < this.roomY ||
+            Math.floor(y) >= this.roomY + this.height);
+    };
+    // Could encapsulate the common drawing logic NOT IN USE
+    Room.prototype.drawLayer = function (delta, condition, method) {
+        for (var x = this.roomX; x < this.roomX + this.width; x++) {
+            for (var y = this.roomY; y < this.roomY + this.height; y++) {
+                if (condition(x, y)) {
+                    this.roomArray[x][y][method](delta);
                 }
             }
         }

@@ -885,4 +885,15 @@ export class Inventory {
       startY,
     };
   };
+
+  isPointInInventoryButton = (x: number, y: number): boolean => {
+    const tX = x / GameConstants.TILESIZE;
+    const tY = y / GameConstants.TILESIZE;
+    return (
+      tX >= LevelConstants.SCREEN_W - 2 &&
+      tX <= LevelConstants.SCREEN_W &&
+      tY >= 0 &&
+      tY <= 2
+    );
+  };
 }
