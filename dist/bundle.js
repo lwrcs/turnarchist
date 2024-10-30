@@ -12175,7 +12175,7 @@ var Player = /** @class */ (function (_super) {
             _this.drawY += -0.5 * _this.drawY;
         };
         _this.drawInventoryButton = function (delta) {
-            game_1.Game.drawFX(20, 4, 2, 2, levelConstants_1.LevelConstants.SCREEN_W - 2, 0, 2, 2);
+            game_1.Game.drawFX(0, 0, 2, 2, levelConstants_1.LevelConstants.SCREEN_W - 2, 0, 2, 2);
         };
         _this.drawTileCursor = function (delta) {
             var inRange = _this.moveRangeCheck(_this.mouseToTile().x, _this.mouseToTile().y);

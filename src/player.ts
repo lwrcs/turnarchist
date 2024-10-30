@@ -741,7 +741,7 @@ export class Player extends Drawable {
   };
 
   drawInventoryButton = (delta: number) => {
-    Game.drawFX(20, 4, 2, 2, LevelConstants.SCREEN_W - 2, 0, 2, 2);
+    Game.drawFX(0, 0, 2, 2, LevelConstants.SCREEN_W - 2, 0, 2, 2);
   };
 
   drawTileCursor = (delta: number) => {
