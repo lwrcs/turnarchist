@@ -1436,7 +1436,7 @@ export class Room {
         (this.height + 2 * LevelConstants.SCREEN_H) * GameConstants.TILESIZE
       );
       Game.ctx.globalAlpha = 1;
-      Game.ctx.globalCompositeOperation = "screen";
+      Game.ctx.globalCompositeOperation = "source-over";
     }
   };
 

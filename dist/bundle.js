@@ -5863,7 +5863,7 @@ var VendingMachine = /** @class */ (function (_super) {
                             _this.costItems[i].drawIcon(delta, drawXScaled, drawYScaled, a);
                         }
                         else if (i === _this.costItems.length) {
-                            game_1.Game.drawFX(0, 1, 1, 1, drawXScaled, drawYScaled, 1, 1);
+                            game_1.Game.drawFX(2, 0, 1, 1, drawXScaled, drawYScaled, 1, 1);
                         }
                         else if (i === _this.costItems.length + 1) {
                             _this.item.drawIcon(delta, drawXScaled, drawYScaled);
@@ -6725,7 +6725,7 @@ var Game = /** @class */ (function () {
                 Game.ctx.translate(-cameraX, -cameraY);
                 _this.room.draw(delta);
                 _this.room.drawEntities(delta);
-                //this.room.drawShade(delta);
+                _this.room.drawShade(delta);
                 _this.room.drawOverShade(delta);
                 _this.players[_this.localPlayerID].drawTopLayer(delta);
                 Game.ctx.translate(cameraX, cameraY);
@@ -8471,6 +8471,7 @@ var coin_1 = __webpack_require__(/*! ./item/coin */ "./src/item/coin.ts");
 var weapon_1 = __webpack_require__(/*! ./weapon/weapon */ "./src/weapon/weapon.ts");
 var dagger_1 = __webpack_require__(/*! ./weapon/dagger */ "./src/weapon/dagger.ts");
 var usable_1 = __webpack_require__(/*! ./item/usable */ "./src/item/usable.ts");
+var spellbook_1 = __webpack_require__(/*! ./weapon/spellbook */ "./src/weapon/spellbook.ts");
 var mouseCursor_1 = __webpack_require__(/*! ./mouseCursor */ "./src/mouseCursor.ts");
 var OPEN_TIME = 100; // milliseconds
 // Dark gray color used for the background of inventory slots
@@ -8600,8 +8601,7 @@ var Inventory = /** @class */ (function () {
         this.drop = function () {
             var i = _this.selX + _this.selY * _this.cols;
             if (i < _this.items.length) {
-                if (_this.items[i] instanceof equippable_1.Equippable)
-                    _this.items[i].equipped = false;
+                _this.items[i].dropFromInventory();
                 _this.items[i].level = _this.game.rooms[_this.player.levelID];
                 _this.items[i].x = _this.player.x;
                 _this.items[i].y = _this.player.y;
@@ -9105,7 +9105,7 @@ var Inventory = /** @class */ (function () {
             }
             _this.addItem(i);
         };
-        var startingInv = [dagger_1.Dagger, key_1.Key];
+        var startingInv = [dagger_1.Dagger, key_1.Key, spellbook_1.Spellbook];
         startingInv.forEach(function (item) {
             a(new item({ game: _this.game }, 0, 0));
         });
@@ -9552,6 +9552,12 @@ var Equippable = /** @class */ (function (_super) {
         _this.drawEquipped = function (delta, x, y) {
             game_1.Game.drawItem(_this.tileX, _this.tileY, 1, 2, x, y - 1, _this.w, _this.h);
         };
+        _this.onDrop = function () { };
+        _this.dropFromInventory = function () {
+            _this.wielder.inventory.weapon = null;
+            _this.wielder = null;
+            _this.equipped = false;
+        };
         _this.equipped = false;
         return _this;
     }
@@ -9794,6 +9800,7 @@ var Item = /** @class */ (function (_super) {
         };
         // Empty function to be called when item is dropped, to be overridden by subclasses
         _this.onDrop = function () { };
+        _this.dropFromInventory = function () { };
         // Function to be called when item is picked up
         _this.onPickup = function (player) {
             if (!_this.pickedUp) {
@@ -11807,8 +11814,9 @@ var Player = /** @class */ (function (_super) {
             };
         };
         _this.moveRangeCheck = function (x, y) {
-            return (Math.abs(_this.x - x) + Math.abs(_this.y - y) <= _this.moveRange &&
-                Math.abs(_this.x - x) + Math.abs(_this.y - y) !== 0);
+            var dx = Math.abs(_this.x - x);
+            var dy = Math.abs(_this.y - y);
+            return dx <= _this.moveRange && dy <= _this.moveRange && dx + dy !== 0;
         };
         _this.setTileCursorPosition = function () {
             _this.tileCursor = {
@@ -12005,16 +12013,19 @@ var Player = /** @class */ (function (_super) {
                 _this.flashing = true;
                 _this.health -= damage;
                 if (_this.health <= 0) {
-                    _this.health = 0;
-                    /*
-                    if (!this.game.tutorialActive) {
-                      this.dead = true;
-                    } else {
-                      this.health = 2;
-                      this.game.pushMessage("You are dead, but you can try again!");
-                    }
-                    */
+                    _this.dead = true;
                 }
+                /*
+                if (this.health <= 0) {
+                  this.health = 0;
+                  
+                  if (!this.game.tutorialActive) {
+                    this.dead = true;
+                  } else {
+                    this.health = 2;
+                    this.game.pushMessage("You are dead, but you can try again!");
+                  }
+                  */
             }
         };
         _this.dashMove = function (x, y) {
@@ -12275,9 +12286,14 @@ var PostProcessor = /** @class */ (function () {
     }
     PostProcessor.draw = function (delta) {
         game_1.Game.ctx.globalAlpha = 0.2;
-        game_1.Game.ctx.fillStyle = "#006A6E";
-        game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
         game_1.Game.ctx.globalCompositeOperation = "screen";
+        game_1.Game.ctx.fillStyle = "#006A6E"; //dark teal
+        //Game.ctx.fillStyle = "#003B6F"; //deep underwater blue
+        //Game.ctx.fillStyle = "#2F2F2F"; //smoky fog prison
+        //Game.ctx.fillStyle = "#4a6c4b"; //darker muddy green
+        //Game.ctx.fillStyle = "#800000"; // lighter red for dungeon hell theme
+        game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
+        game_1.Game.ctx.globalCompositeOperation = "source-over";
     };
     return PostProcessor;
 }());
@@ -13485,7 +13501,7 @@ var Room = /** @class */ (function () {
                 game_1.Game.ctx.fillStyle = _this.shadeColor;
                 game_1.Game.ctx.fillRect((_this.roomX - levelConstants_1.LevelConstants.SCREEN_W) * gameConstants_1.GameConstants.TILESIZE, (_this.roomY - levelConstants_1.LevelConstants.SCREEN_H) * gameConstants_1.GameConstants.TILESIZE, (_this.width + 2 * levelConstants_1.LevelConstants.SCREEN_W) * gameConstants_1.GameConstants.TILESIZE, (_this.height + 2 * levelConstants_1.LevelConstants.SCREEN_H) * gameConstants_1.GameConstants.TILESIZE);
                 game_1.Game.ctx.globalAlpha = 1;
-                game_1.Game.ctx.globalCompositeOperation = "screen";
+                game_1.Game.ctx.globalCompositeOperation = "source-over";
             }
         };
         this.drawOverShade = function (delta) {

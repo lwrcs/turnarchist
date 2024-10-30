@@ -14,7 +14,7 @@ export class Equippable extends Item {
 
   setWielder = (wielder: Player) => {
     this.wielder = wielder;
-  }
+  };
 
   coEquippable = (other: Equippable): boolean => {
     return true;
@@ -26,5 +26,13 @@ export class Equippable extends Item {
 
   drawEquipped = (delta: number, x: number, y: number) => {
     Game.drawItem(this.tileX, this.tileY, 1, 2, x, y - 1, this.w, this.h);
+  };
+
+  onDrop = () => {};
+
+  dropFromInventory = () => {
+    this.wielder.inventory.weapon = null;
+    this.wielder = null;
+    this.equipped = false;
   };
 }

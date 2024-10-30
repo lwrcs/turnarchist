@@ -80,7 +80,7 @@ export class Inventory {
 
       this.addItem(i);
     };
-    const startingInv = [Dagger, Key];
+    const startingInv = [Dagger, Key, Spellbook];
     startingInv.forEach((item) => {
       a(new item({ game: this.game } as Room, 0, 0));
     });
@@ -217,8 +217,7 @@ export class Inventory {
   drop = () => {
     let i = this.selX + this.selY * this.cols;
     if (i < this.items.length) {
-      if (this.items[i] instanceof Equippable)
-        (this.items[i] as Equippable).equipped = false;
+      this.items[i].dropFromInventory();
       this.items[i].level = this.game.rooms[this.player.levelID];
       this.items[i].x = this.player.x;
       this.items[i].y = this.player.y;

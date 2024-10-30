@@ -13,6 +13,7 @@ import { DoorDir } from "./tile/door";
 import { Enemy } from "./entity/enemy/enemy";
 import { TutorialListener } from "./tutorialListener";
 import { MouseCursor } from "./mouseCursor";
+import { PostProcessor } from "./postProcess";
 
 export enum LevelState {
   IN_LEVEL,
@@ -726,8 +727,11 @@ export class Game {
       Game.ctx.translate(-playerOffsetX, -playerOffsetY);
 
       Game.ctx.translate(newLevelOffsetX, newLevelOffsetY);
+
       this.room.drawShade(delta);
+
       this.room.drawOverShade(delta);
+
       Game.ctx.translate(-newLevelOffsetX, -newLevelOffsetY);
 
       Game.ctx.translate(
@@ -838,8 +842,10 @@ export class Game {
       Game.ctx.translate(-cameraX, -cameraY);
       this.room.draw(delta);
       this.room.drawEntities(delta);
-      //this.room.drawShade(delta);
+
+      this.room.drawShade(delta);
       this.room.drawOverShade(delta);
+
       this.players[this.localPlayerID].drawTopLayer(delta);
       Game.ctx.translate(cameraX, cameraY);
 

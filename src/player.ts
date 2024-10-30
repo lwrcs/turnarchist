@@ -332,10 +332,9 @@ export class Player extends Drawable {
   };
 
   moveRangeCheck = (x: number, y: number) => {
-    return (
-      Math.abs(this.x - x) + Math.abs(this.y - y) <= this.moveRange &&
-      Math.abs(this.x - x) + Math.abs(this.y - y) !== 0
-    );
+    const dx = Math.abs(this.x - x);
+    const dy = Math.abs(this.y - y);
+    return dx <= this.moveRange && dy <= this.moveRange && dx + dy !== 0;
   };
 
   setTileCursorPosition = () => {
@@ -536,8 +535,12 @@ export class Player extends Drawable {
       this.flashing = true;
       this.health -= damage;
       if (this.health <= 0) {
+        this.dead = true;
+      }
+      /*
+      if (this.health <= 0) {
         this.health = 0;
-        /*
+        
         if (!this.game.tutorialActive) {
           this.dead = true;
         } else {
@@ -545,7 +548,6 @@ export class Player extends Drawable {
           this.game.pushMessage("You are dead, but you can try again!");
         }
         */
-      }
     }
   };
 
@@ -730,6 +732,7 @@ export class Player extends Drawable {
       );
     }
     PostProcessor.draw(delta);
+
     if (this.mapToggled === true) this.map.draw(delta);
     this.drawTileCursor(delta);
     this.drawInventoryButton(delta);

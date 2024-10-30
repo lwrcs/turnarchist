@@ -224,7 +224,7 @@ export class VendingMachine extends Entity {
               a = 0.15;
             this.costItems[i].drawIcon(delta, drawXScaled, drawYScaled, a);
           } else if (i === this.costItems.length) {
-            Game.drawFX(0, 1, 1, 1, drawXScaled, drawYScaled, 1, 1);
+            Game.drawFX(2, 0, 1, 1, drawXScaled, drawYScaled, 1, 1);
           } else if (i === this.costItems.length + 1) {
             this.item.drawIcon(delta, drawXScaled, drawYScaled);
           }
