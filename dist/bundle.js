@@ -947,8 +947,7 @@ var BigKnightEnemy = /** @class */ (function (_super) {
         _this.drawTopLayer = function (delta) {
             _this.drawableY = _this.y;
             _this.healthBar.draw(delta, _this.health, _this.maxHealth, _this.x + 0.5, _this.y, true);
-            _this.drawX += -0.5 * _this.drawX;
-            _this.drawY += -0.5 * _this.drawY;
+            _this.updateDrawXY(delta);
         };
         _this.dropLoot = function () {
             var dropOffsets = [
@@ -1259,8 +1258,7 @@ var BigSkullEnemy = /** @class */ (function (_super) {
         _this.drawTopLayer = function (delta) {
             _this.drawableY = _this.y;
             _this.healthBar.draw(delta, _this.health, _this.maxHealth, _this.x + 0.5, _this.y, true);
-            _this.drawX += -0.5 * _this.drawX;
-            _this.drawY += -0.5 * _this.drawY;
+            _this.updateDrawXY(delta);
         };
         _this.dropLoot = function () {
             var dropOffsets = [
@@ -1757,8 +1755,8 @@ var ChargeEnemy = /** @class */ (function (_super) {
         _this.drawTopLayer = function (delta) {
             _this.drawableY = _this.y;
             _this.healthBar.draw(delta, _this.health, _this.maxHealth, _this.x, _this.y, true);
-            _this.drawX += -0.5 * _this.drawX;
-            _this.drawY += -0.5 * _this.drawY;
+            _this.drawX += -0.1 * _this.drawX;
+            _this.drawY += -0.1 * _this.drawY;
             if (_this.state === ChargeEnemyState.ALERTED) {
                 _this.trailFrame += 0.4 * delta;
                 if (Math.floor(_this.trailFrame) % 2 === 0) {
@@ -2873,8 +2871,8 @@ var FrogEnemy = /** @class */ (function (_super) {
         _this.drawTopLayer = function (delta) {
             _this.drawableY = _this.y - _this.drawY;
             _this.healthBar.draw(delta, _this.health, _this.maxHealth, _this.x, _this.y, true);
-            _this.drawX += -(0.25 / _this.jumpDistance) * _this.drawX;
-            _this.drawY += -(0.25 / _this.jumpDistance) * _this.drawY;
+            _this.drawX += -(0.25 / _this.jumpDistance) * _this.drawX * delta;
+            _this.drawY += -(0.25 / _this.jumpDistance) * _this.drawY * delta;
         };
         _this.ticks = 0;
         _this.frame = 0;
@@ -4690,8 +4688,11 @@ var Entity = /** @class */ (function (_super) {
         _this.drawTopLayer = function (delta) {
             _this.drawableY = _this.y - _this.drawY;
             _this.healthBar.draw(delta, _this.health, _this.maxHealth, _this.x, _this.y, true);
-            _this.drawX += -0.3 * _this.drawX;
-            _this.drawY += -0.3 * _this.drawY;
+            _this.updateDrawXY(delta);
+        };
+        _this.updateDrawXY = function (delta) {
+            _this.drawX += -0.3 * delta * _this.drawX;
+            _this.drawY += -0.3 * delta * _this.drawY;
         };
         _this.drawSleepingZs = function (delta, offsetX, offsetY) {
             if (offsetX === void 0) { offsetX = 0; }
@@ -5029,8 +5030,7 @@ var Barrel = /** @class */ (function (_super) {
         };
         _this.drawTopLayer = function (delta) {
             _this.drawableY = _this.y;
-            _this.drawX += -0.5 * _this.drawX;
-            _this.drawY += -0.5 * _this.drawY;
+            _this.updateDrawXY(delta);
         };
         _this.room = room;
         _this.health = 1;
@@ -5097,8 +5097,7 @@ var Block = /** @class */ (function (_super) {
         _this.draw = function (delta) {
             // not inherited because it doesn't have the 0.5 offset
             if (!_this.dead) {
-                _this.drawX += -0.5 * _this.drawX;
-                _this.drawY += -0.5 * _this.drawY;
+                _this.updateDrawXY(delta);
                 game_1.Game.drawObj(_this.tileX, _this.tileY, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
             }
         };
@@ -5312,8 +5311,7 @@ var Crate = /** @class */ (function (_super) {
         };
         _this.drawTopLayer = function (delta) {
             _this.drawableY = _this.y;
-            _this.drawX += -0.5 * _this.drawX;
-            _this.drawY += -0.5 * _this.drawY;
+            _this.updateDrawXY(delta);
         };
         _this.room = room;
         _this.health = 1;
@@ -5383,8 +5381,7 @@ var Mushrooms = /** @class */ (function (_super) {
         _this.draw = function (delta) {
             // not inherited because it doesn't have the 0.5 offset
             if (!_this.dead) {
-                _this.drawX += -0.5 * _this.drawX;
-                _this.drawY += -0.5 * _this.drawY;
+                _this.updateDrawXY(delta);
                 game_1.Game.drawObj(_this.tileX, _this.tileY, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
             }
         };
@@ -5456,8 +5453,7 @@ var Pot = /** @class */ (function (_super) {
         _this.draw = function (delta) {
             // not inherited because it doesn't have the 0.5 offset
             if (!_this.dead) {
-                _this.drawX += -0.5 * _this.drawX;
-                _this.drawY += -0.5 * _this.drawY;
+                _this.updateDrawXY(delta);
                 game_1.Game.drawObj(_this.tileX, _this.tileY, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
             }
         };
@@ -5538,8 +5534,7 @@ var PottedPlant = /** @class */ (function (_super) {
         _this.draw = function (delta) {
             // not inherited because it doesn't have the 0.5 offset
             if (!_this.dead) {
-                _this.drawX += -0.5 * _this.drawX;
-                _this.drawY += -0.5 * _this.drawY;
+                _this.updateDrawXY(delta);
                 if (_this.health <= 1)
                     _this.tileX = 2;
                 game_1.Game.drawObj(_this.tileX, _this.tileY, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
@@ -5667,8 +5662,7 @@ var TombStone = /** @class */ (function (_super) {
         };
         _this.drawTopLayer = function (delta) {
             _this.drawableY = _this.y;
-            _this.drawX += -0.5 * _this.drawX;
-            _this.drawY += -0.5 * _this.drawY;
+            _this.updateDrawXY(delta);
         };
         _this.skinType = skinType;
         _this.room = room;
@@ -6242,8 +6236,7 @@ var Rock = /** @class */ (function (_super) {
         _this.draw = function (delta) {
             // not inherited because it doesn't have the 0.5 offset
             if (!_this.dead) {
-                _this.drawX += -0.5 * _this.drawX;
-                _this.drawY += -0.5 * _this.drawY;
+                _this.updateDrawXY(delta);
                 game_1.Game.drawObj(_this.tileX, _this.tileY, 1, 2, _this.x - _this.drawX, _this.y - 1 - _this.drawY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
             }
         };
@@ -6497,7 +6490,7 @@ var Game = /** @class */ (function () {
         };
         this.run = function (timestamp) {
             if (!_this.previousFrameTimestamp)
-                _this.previousFrameTimestamp = timestamp - 1000.0 / gameConstants_1.GameConstants.FPS;
+                _this.previousFrameTimestamp = timestamp; // - 1000.0 / GameConstants.FPS;
             // normalized so 1.0 = 60fps
             var delta = ((timestamp - _this.previousFrameTimestamp) * 60) / 1000.0;
             while (times.length > 0 && times[0] <= timestamp - 1000) {
@@ -8463,7 +8456,6 @@ var coin_1 = __webpack_require__(/*! ./item/coin */ "./src/item/coin.ts");
 var weapon_1 = __webpack_require__(/*! ./weapon/weapon */ "./src/weapon/weapon.ts");
 var dagger_1 = __webpack_require__(/*! ./weapon/dagger */ "./src/weapon/dagger.ts");
 var usable_1 = __webpack_require__(/*! ./item/usable */ "./src/item/usable.ts");
-var spellbook_1 = __webpack_require__(/*! ./weapon/spellbook */ "./src/weapon/spellbook.ts");
 var mouseCursor_1 = __webpack_require__(/*! ./mouseCursor */ "./src/mouseCursor.ts");
 var OPEN_TIME = 100; // milliseconds
 // Dark gray color used for the background of inventory slots
@@ -9096,7 +9088,7 @@ var Inventory = /** @class */ (function () {
             }
             _this.addItem(i);
         };
-        var startingInv = [dagger_1.Dagger, key_1.Key, spellbook_1.Spellbook];
+        var startingInv = [dagger_1.Dagger, key_1.Key];
         startingInv.forEach(function (item) {
             a(new item({ game: _this.game }, 0, 0));
         });
@@ -9826,8 +9818,8 @@ var Item = /** @class */ (function (_super) {
         // Function to draw the top layer of the item
         _this.drawTopLayer = function (delta) {
             if (_this.pickedUp) {
-                _this.y -= 0.125;
-                _this.alpha -= 0.03;
+                _this.y -= 0.125 * delta;
+                _this.alpha -= 0.03 * delta;
                 if (_this.y < -1)
                     _this.level.items = _this.level.items.filter(function (x) { return x !== _this; }); // removes itself from the level
                 if (gameConstants_1.GameConstants.ALPHA_ENABLED)
@@ -11366,31 +11358,31 @@ var ImageParticle = /** @class */ (function (_super) {
         _this.draw = function (delta) {
             game_1.Game.ctx.imageSmoothingEnabled = false;
             if (_this.targetX)
-                _this.x += 0.2 * (_this.targetX - _this.x);
+                _this.x += 0.2 * (_this.targetX - _this.x) * delta;
             else
-                _this.x += _this.dx;
+                _this.x += _this.dx * delta;
             if (_this.targetY)
-                _this.y += 0.2 * (_this.targetY - _this.y);
+                _this.y += 0.2 * (_this.targetY - _this.y) * delta;
             else
-                _this.y += _this.dy;
+                _this.y += _this.dy * delta;
             if (_this.targetZ)
-                _this.z += 0.2 * (_this.targetZ - _this.z);
+                _this.z += 0.2 * (_this.targetZ - _this.z) * delta;
             else
-                _this.z += _this.dz;
-            _this.dx *= 0.97;
-            _this.dy *= 0.97;
+                _this.z += _this.dz * delta;
+            _this.dx *= Math.pow(0.97, delta);
+            _this.dy *= Math.pow(0.97, delta);
             if (_this.z <= 0) {
                 _this.z = 0;
                 _this.dz *= -0.8;
             }
             // apply gravity
-            _this.dz -= 0.01;
+            _this.dz -= 0.015 * delta;
             /*
             if (this.alpha < 0.2) this.alpha -= ((0.01 * this.size) + 0.005);
             else this.alpha -= ((0.005 * this.size) + 0.005);
             if (this.alpha <= 0.6) this.dead = true;
             */
-            _this.expirationTimer--;
+            _this.expirationTimer -= delta;
             if (_this.expirationTimer <= 0)
                 _this.dead = true;
             if (_this.dead)
@@ -12170,8 +12162,8 @@ var Player = /** @class */ (function (_super) {
             _this.drawInventoryButton(delta);
         };
         _this.updateDrawXY = function (delta) {
-            _this.drawX += -0.5 * _this.drawX;
-            _this.drawY += -0.5 * _this.drawY;
+            _this.drawX += -0.5 * _this.drawX * delta;
+            _this.drawY += -0.5 * _this.drawY * delta;
         };
         _this.drawInventoryButton = function (delta) {
             game_1.Game.drawFX(0, 0, 2, 2, levelConstants_1.LevelConstants.SCREEN_W - 2, 0, 2, 2);

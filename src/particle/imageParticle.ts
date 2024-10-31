@@ -118,7 +118,7 @@ export class ImageParticle extends Particle {
     this.expirationTimer = 100; // Increased life duration
     if (expirationTimer !== undefined) this.expirationTimer = expirationTimer;
   }
-  
+
   render = () => {
     let scale = GameConstants.TILESIZE;
     let yOffset = this.z * scale;
@@ -140,30 +140,31 @@ export class ImageParticle extends Particle {
 
   draw = (delta: number) => {
     Game.ctx.imageSmoothingEnabled = false;
-    
-    if (this.targetX) this.x += 0.2 * (this.targetX - this.x);
-    else this.x += this.dx;
-    if (this.targetY) this.y += 0.2 * (this.targetY - this.y);
-    else this.y += this.dy;
-    if (this.targetZ) this.z += 0.2 * (this.targetZ - this.z);
-    else this.z += this.dz;
 
-    this.dx *= 0.97;
-    this.dy *= 0.97;
+    if (this.targetX) this.x += 0.2 * (this.targetX - this.x) * delta;
+    else this.x += this.dx * delta;
+    if (this.targetY) this.y += 0.2 * (this.targetY - this.y) * delta;
+    else this.y += this.dy * delta;
+    if (this.targetZ) this.z += 0.2 * (this.targetZ - this.z) * delta;
+    else this.z += this.dz * delta;
+
+    this.dx *= Math.pow(0.97, delta);
+    this.dy *= Math.pow(0.97, delta);
     if (this.z <= 0) {
       this.z = 0;
       this.dz *= -0.8;
     }
 
     // apply gravity
-    this.dz -= 0.01;
+    this.dz -= 0.015 * delta;
+
     /*
     if (this.alpha < 0.2) this.alpha -= ((0.01 * this.size) + 0.005);
     else this.alpha -= ((0.005 * this.size) + 0.005);
     if (this.alpha <= 0.6) this.dead = true;
     */
 
-    this.expirationTimer--;
+    this.expirationTimer -= delta;
     if (this.expirationTimer <= 0) this.dead = true;
 
     if (this.dead) return;

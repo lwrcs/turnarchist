@@ -35,8 +35,8 @@ export class Pot extends Entity {
   draw = (delta: number) => {
     // not inherited because it doesn't have the 0.5 offset
     if (!this.dead) {
-      this.drawX += -0.5 * this.drawX;
-      this.drawY += -0.5 * this.drawY;
+      this.updateDrawXY(delta);
+
       Game.drawObj(
         this.tileX,
         this.tileY,

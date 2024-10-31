@@ -55,7 +55,7 @@ export class Rook extends Enemy {
   drawTopLayer = (delta: number) => {
     this.drawableY = this.y;
 
-    this.drawX += -0.5 * this.drawX;
-    this.drawY += -0.5 * this.drawY;
+    this.updateDrawXY(delta);
+
   };
 }

@@ -47,9 +47,9 @@ export class Item extends Drawable {
   }
 
   // Empty tick function to be overridden by subclasses
-  tick = () => {};
+  tick = () => { };
   // Empty tick function for inventory behavior to be overridden by subclasses
-  tickInInventory = () => {};
+  tickInInventory = () => { };
 
   // Function to get description of the item, to be overridden by subclasses
   getDescription = (): string => {
@@ -62,9 +62,9 @@ export class Item extends Drawable {
   };
 
   // Empty function to be called when item is dropped, to be overridden by subclasses
-  onDrop = () => {};
+  onDrop = () => { };
 
-  dropFromInventory = () => {};
+  dropFromInventory = () => { };
 
   // Function to be called when item is picked up
   onPickup = (player: Player) => {
@@ -97,10 +97,10 @@ export class Item extends Drawable {
         2,
         this.x + this.w * (this.scaleFactor * -0.5 + 0.5),
         this.y +
-          Math.sin(this.frame) * 0.07 -
-          1 +
-          this.offsetY +
-          this.h * (this.scaleFactor * -0.5 + 0.5),
+        Math.sin(this.frame) * 0.07 -
+        1 +
+        this.offsetY +
+        this.h * (this.scaleFactor * -0.5 + 0.5),
         this.w * this.scaleFactor,
         this.h * this.scaleFactor,
         this.level.shadeColor,
@@ -111,8 +111,8 @@ export class Item extends Drawable {
   // Function to draw the top layer of the item
   drawTopLayer = (delta: number) => {
     if (this.pickedUp) {
-      this.y -= 0.125;
-      this.alpha -= 0.03;
+      this.y -= 0.125 * delta;
+      this.alpha -= 0.03 * delta;
       if (this.y < -1)
         this.level.items = this.level.items.filter((x) => x !== this); // removes itself from the level
 

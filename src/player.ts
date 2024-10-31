@@ -318,11 +318,11 @@ export class Player extends Drawable {
     // Convert pixel offset to tile offset (this part was working correctly)
     const tileOffsetX = Math.floor(
       (Input.mouseX - screenCenterX + GameConstants.TILESIZE / 2) /
-        GameConstants.TILESIZE
+      GameConstants.TILESIZE
     );
     const tileOffsetY = Math.floor(
       (Input.mouseY - screenCenterY + GameConstants.TILESIZE / 2) /
-        GameConstants.TILESIZE
+      GameConstants.TILESIZE
     );
 
     return {
@@ -604,7 +604,7 @@ export class Player extends Drawable {
     this.drawY = 0;
   };
 
-  update = () => {};
+  update = () => { };
 
   finishTick = () => {
     this.turnCount += 1;
@@ -739,8 +739,8 @@ export class Player extends Drawable {
   };
 
   updateDrawXY = (delta: number) => {
-    this.drawX += -0.5 * this.drawX;
-    this.drawY += -0.5 * this.drawY;
+    this.drawX += -0.5 * this.drawX * delta;
+    this.drawY += -0.5 * this.drawY * delta;
   };
 
   drawInventoryButton = (delta: number) => {

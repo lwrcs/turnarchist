@@ -258,8 +258,8 @@ export class ChargeEnemy extends Enemy {
       this.y,
       true
     );
-    this.drawX += -0.5 * this.drawX;
-    this.drawY += -0.5 * this.drawY;
+    this.drawX += -0.1 * this.drawX;
+    this.drawY += -0.1 * this.drawY;
 
     if (this.state === ChargeEnemyState.ALERTED) {
       this.trailFrame += 0.4 * delta;

@@ -392,7 +392,7 @@ export class Game {
 
   run = (timestamp: number) => {
     if (!this.previousFrameTimestamp)
-      this.previousFrameTimestamp = timestamp - 1000.0 / GameConstants.FPS;
+      this.previousFrameTimestamp = timestamp// - 1000.0 / GameConstants.FPS;
 
     // normalized so 1.0 = 60fps
     let delta = ((timestamp - this.previousFrameTimestamp) * 60) / 1000.0;
@@ -498,8 +498,7 @@ export class Game {
     Game.ctx.canvas.setAttribute("height", `${GameConstants.HEIGHT}`);
     Game.ctx.canvas.setAttribute(
       "style",
-      `width: ${GameConstants.WIDTH * Game.scale}px; height: ${
-        GameConstants.HEIGHT * Game.scale
+      `width: ${GameConstants.WIDTH * Game.scale}px; height: ${GameConstants.HEIGHT * Game.scale
       }px;
     display: block;
     margin: 0 auto;
@@ -621,7 +620,7 @@ export class Game {
       let levelOffsetX = Math.floor(
         this.lerp(
           (Date.now() - this.transitionStartTime) /
-            LevelConstants.LEVEL_TRANSITION_TIME,
+          LevelConstants.LEVEL_TRANSITION_TIME,
           0,
           -this.transitionX
         )
@@ -629,7 +628,7 @@ export class Game {
       let levelOffsetY = Math.floor(
         this.lerp(
           (Date.now() - this.transitionStartTime) /
-            LevelConstants.LEVEL_TRANSITION_TIME,
+          LevelConstants.LEVEL_TRANSITION_TIME,
           0,
           -this.transitionY
         )
@@ -656,7 +655,7 @@ export class Game {
       let extraTileLerp = Math.floor(
         this.lerp(
           (Date.now() - this.transitionStartTime) /
-            LevelConstants.LEVEL_TRANSITION_TIME,
+          LevelConstants.LEVEL_TRANSITION_TIME,
           0,
           GameConstants.TILESIZE
         )
@@ -683,7 +682,7 @@ export class Game {
 
       let ditherFrame = Math.floor(
         (7 * (Date.now() - this.transitionStartTime)) /
-          LevelConstants.LEVEL_TRANSITION_TIME
+        LevelConstants.LEVEL_TRANSITION_TIME
       );
 
       Game.ctx.translate(levelOffsetX, levelOffsetY);
@@ -762,7 +761,7 @@ export class Game {
       let deadFrames = 6;
       let ditherFrame = Math.floor(
         ((7 * 2 + deadFrames) * (Date.now() - this.transitionStartTime)) /
-          LevelConstants.LEVEL_TRANSITION_TIME_LADDER
+        LevelConstants.LEVEL_TRANSITION_TIME_LADDER
       );
 
       if (ditherFrame < 7) {
@@ -828,15 +827,15 @@ export class Game {
 
       let cameraX = Math.round(
         (this.players[this.localPlayerID].x - playerDrawX + 0.5) *
-          GameConstants.TILESIZE -
-          0.5 * GameConstants.WIDTH -
-          this.screenShakeX
+        GameConstants.TILESIZE -
+        0.5 * GameConstants.WIDTH -
+        this.screenShakeX
       );
       let cameraY = Math.round(
         (this.players[this.localPlayerID].y - playerDrawY + 0.5) *
-          GameConstants.TILESIZE -
-          0.5 * GameConstants.HEIGHT -
-          this.screenShakeY
+        GameConstants.TILESIZE -
+        0.5 * GameConstants.HEIGHT -
+        this.screenShakeY
       );
 
       Game.ctx.translate(-cameraX, -cameraY);
@@ -892,7 +891,7 @@ export class Game {
               CHAT_OPACITY *
               (1 -
                 (age - GameConstants.CHAT_APPEAR_TIME) /
-                  GameConstants.CHAT_FADE_TIME);
+                GameConstants.CHAT_FADE_TIME);
         } else {
           Game.ctx.globalAlpha = 0;
         }

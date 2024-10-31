@@ -280,7 +280,7 @@ export class FrogEnemy extends Enemy {
         );
       Game.drawMob(
         this.tileX +
-          (this.tileX !== 12 && !this.rumbling ? Math.floor(this.frame) : 0),
+        (this.tileX !== 12 && !this.rumbling ? Math.floor(this.frame) : 0),
         this.tileY /*+ this.direction * 2,*/,
         1,
         2,
@@ -311,7 +311,7 @@ export class FrogEnemy extends Enemy {
       this.y,
       true
     );
-    this.drawX += -(0.25 / this.jumpDistance) * this.drawX;
-    this.drawY += -(0.25 / this.jumpDistance) * this.drawY;
+    this.drawX += -(0.25 / this.jumpDistance) * this.drawX * delta;
+    this.drawY += -(0.25 / this.jumpDistance) * this.drawY * delta;
   };
 }

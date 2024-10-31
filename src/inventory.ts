@@ -80,7 +80,7 @@ export class Inventory {
 
       this.addItem(i);
     };
-    const startingInv = [Dagger, Key, Spellbook];
+    const startingInv = [Dagger, Key];
     startingInv.forEach((item) => {
       a(new item({ game: this.game } as Room, 0, 0));
     });
@@ -204,12 +204,12 @@ export class Inventory {
       );
       this.selY = this.isOpen
         ? Math.max(
-            0,
-            Math.min(
-              Math.floor((y - bounds.startY) / (s + 2 * b + g)),
-              this.rows + this.expansion - 1
-            )
+          0,
+          Math.min(
+            Math.floor((y - bounds.startY) / (s + 2 * b + g)),
+            this.rows + this.expansion - 1
           )
+        )
         : 0;
     }
   };
@@ -392,14 +392,14 @@ export class Inventory {
     return (
       x >= Math.round(0.5 * GameConstants.WIDTH - 0.5 * width) - ob &&
       x <=
-        Math.round(0.5 * GameConstants.WIDTH - 0.5 * width) -
-          ob +
-          Math.round(width + 2 * ob) &&
+      Math.round(0.5 * GameConstants.WIDTH - 0.5 * width) -
+      ob +
+      Math.round(width + 2 * ob) &&
       y >= Math.round(0.5 * GameConstants.HEIGHT - 0.5 * height) - ob &&
       y <=
-        Math.round(0.5 * GameConstants.HEIGHT - 0.5 * height) -
-          ob +
-          Math.round(height + 2 * ob)
+      Math.round(0.5 * GameConstants.HEIGHT - 0.5 * height) -
+      ob +
+      Math.round(height + 2 * ob)
     );
   };
 
@@ -435,8 +435,8 @@ export class Inventory {
         Math.round(
           0.5 * GameConstants.WIDTH - 0.5 * width + this.selX * (s + 2 * b + g)
         ) -
-          hg -
-          ob,
+        hg -
+        ob,
         startY - hg - ob,
         Math.round(s + 2 * b + 2 * hg) + 2 * ob,
         Math.round(s + 2 * b + 2 * hg) + 2 * ob
@@ -592,16 +592,16 @@ export class Inventory {
         let highlightX =
           Math.round(
             0.5 * GameConstants.WIDTH -
-              0.5 * width +
-              this.selX * (s + 2 * b + g)
+            0.5 * width +
+            this.selX * (s + 2 * b + g)
           ) -
           hg -
           ob;
         let highlightY =
           Math.round(
             0.5 * GameConstants.HEIGHT -
-              0.5 * height +
-              this.selY * (s + 2 * b + g)
+            0.5 * height +
+            this.selY * (s + 2 * b + g)
           ) -
           hg -
           ob;
@@ -640,9 +640,9 @@ export class Inventory {
             ),
             Math.round(
               0.5 * GameConstants.HEIGHT -
-                0.5 * height +
-                y * (s + 2 * b + g) +
-                b
+              0.5 * height +
+              y * (s + 2 * b + g) +
+              b
             ),
             Math.round(s),
             Math.round(s)
@@ -657,10 +657,10 @@ export class Inventory {
             ),
             Math.round(
               0.5 * GameConstants.HEIGHT -
-                0.5 * height +
-                y * (s + 2 * b + g) +
-                b +
-                yOff
+              0.5 * height +
+              y * (s + 2 * b + g) +
+              b +
+              yOff
             ),
             Math.round(s),
             Math.round(s - yOff)
@@ -676,19 +676,19 @@ export class Inventory {
 
           let drawX = Math.round(
             0.5 * GameConstants.WIDTH -
-              0.5 * width +
-              x * (s + 2 * b + g) +
-              b +
-              Math.floor(0.5 * s) -
-              0.5 * GameConstants.TILESIZE
+            0.5 * width +
+            x * (s + 2 * b + g) +
+            b +
+            Math.floor(0.5 * s) -
+            0.5 * GameConstants.TILESIZE
           );
           let drawY = Math.round(
             0.5 * GameConstants.HEIGHT -
-              0.5 * height +
-              y * (s + 2 * b + g) +
-              b +
-              Math.floor(0.5 * s) -
-              0.5 * GameConstants.TILESIZE
+            0.5 * height +
+            y * (s + 2 * b + g) +
+            b +
+            Math.floor(0.5 * s) -
+            0.5 * GameConstants.TILESIZE
           );
 
           let drawXScaled = drawX / GameConstants.TILESIZE;
@@ -704,30 +704,30 @@ export class Inventory {
           Game.ctx.fillRect(
             Math.round(
               0.5 * GameConstants.WIDTH -
-                0.5 * width +
-                this.selX * (s + 2 * b + g)
+              0.5 * width +
+              this.selX * (s + 2 * b + g)
             ) - hg,
             Math.round(
               0.5 * GameConstants.HEIGHT -
-                0.5 * height +
-                this.selY * (s + 2 * b + g)
+              0.5 * height +
+              this.selY * (s + 2 * b + g)
             ) - hg,
             Math.round(s + 2 * b + 2 * hg),
             Math.round(s + 2 * b + 2 * hg)
           );
           let slotX = Math.round(
             0.5 * GameConstants.WIDTH -
-              0.5 * width +
-              this.selX * (s + 2 * b + g) +
-              b -
-              hg
+            0.5 * width +
+            this.selX * (s + 2 * b + g) +
+            b -
+            hg
           );
           let slotY = Math.round(
             0.5 * GameConstants.HEIGHT -
-              0.5 * height +
-              this.selY * (s + 2 * b + g) +
-              b -
-              hg
+            0.5 * height +
+            this.selY * (s + 2 * b + g) +
+            b -
+            hg
           );
           Game.ctx.fillStyle = FILL_COLOR;
           Game.ctx.fillRect(
@@ -744,18 +744,18 @@ export class Inventory {
           Game.ctx.fillRect(
             Math.round(
               0.5 * GameConstants.WIDTH -
-                0.5 * width +
-                this.selX * (s + 2 * b + g) +
-                b -
-                hg
+              0.5 * width +
+              this.selX * (s + 2 * b + g) +
+              b -
+              hg
             ),
             Math.round(
               0.5 * GameConstants.HEIGHT -
-                0.5 * height +
-                this.selY * (s + 2 * b + g) +
-                b -
-                hg +
-                yOff
+              0.5 * height +
+              this.selY * (s + 2 * b + g) +
+              b -
+              hg +
+              yOff
             ),
             Math.round(s + 2 * hg),
             Math.round(s + 2 * hg - yOff)
@@ -764,19 +764,19 @@ export class Inventory {
           // Redraw selected item icon (similar to drawQuickbar)
           let drawX = Math.round(
             0.5 * GameConstants.WIDTH -
-              0.5 * width +
-              this.selX * (s + 2 * b + g) +
-              b +
-              Math.floor(0.5 * s) -
-              0.5 * GameConstants.TILESIZE
+            0.5 * width +
+            this.selX * (s + 2 * b + g) +
+            b +
+            Math.floor(0.5 * s) -
+            0.5 * GameConstants.TILESIZE
           );
           let drawY = Math.round(
             0.5 * GameConstants.HEIGHT -
-              0.5 * height +
-              this.selY * (s + 2 * b + g) +
-              b +
-              Math.floor(0.5 * s) -
-              0.5 * GameConstants.TILESIZE
+            0.5 * height +
+            this.selY * (s + 2 * b + g) +
+            b +
+            Math.floor(0.5 * s) -
+            0.5 * GameConstants.TILESIZE
           );
 
           let drawXScaled = drawX / GameConstants.TILESIZE;
@@ -813,10 +813,10 @@ export class Inventory {
         let lines = this.items[i].getDescription().split("\n");
         let nextY = Math.round(
           0.5 * GameConstants.HEIGHT -
-            0.5 * height +
-            (this.rows + this.expansion) * (s + 2 * b + g) +
-            b +
-            5
+          0.5 * height +
+          (this.rows + this.expansion) * (s + 2 * b + g) +
+          b +
+          5
         );
         for (let j = 0; j < lines.length; j++) {
           nextY = this.textWrap(lines[j], 5, nextY, GameConstants.WIDTH - 10);

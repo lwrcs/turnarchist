@@ -123,13 +123,13 @@ export class Entity extends Drawable {
     this.diagonalAttackRange = 1;
   }
 
-  behavior = () => {};
+  behavior = () => { };
 
   hit = (): number => {
     return 0;
   };
 
-  hurtCallback = () => {};
+  hurtCallback = () => { };
 
   get type() {
     return EntityType.ENEMY;
@@ -176,7 +176,7 @@ export class Entity extends Drawable {
     else this.hurtCallback();
   };
 
-  interact = (player: Player) => {};
+  interact = (player: Player) => { };
 
   readonly dropLoot = () => {
     if (this.drop) {
@@ -316,9 +316,14 @@ export class Entity extends Drawable {
       this.y,
       true
     );
-    this.drawX += -0.3 * this.drawX;
-    this.drawY += -0.3 * this.drawY;
+    this.updateDrawXY(delta);
+
   };
+
+  updateDrawXY = (delta: number) => {
+    this.drawX += -0.3 * delta * this.drawX;
+    this.drawY += -0.3 * delta * this.drawY;
+  }
 
   drawSleepingZs = (delta: number, offsetX = 0, offsetY = 0) => {
     this.sleepingZFrame += delta;
@@ -540,17 +545,17 @@ export class Entity extends Drawable {
     ): number[][] => {
       const baseOffsets = isOrthogonal
         ? [
-            [-1, 0],
-            [1, 0],
-            [0, -1],
-            [0, 1],
-          ]
+          [-1, 0],
+          [1, 0],
+          [0, -1],
+          [0, 1],
+        ]
         : [
-            [-1, -1],
-            [1, 1],
-            [1, -1],
-            [-1, 1],
-          ];
+          [-1, -1],
+          [1, 1],
+          [1, -1],
+          [-1, 1],
+        ];
       return baseOffsets.flatMap(([dx, dy]) =>
         Array.from({ length: range }, (_, i) => [(i + 1) * dx, (i + 1) * dy])
       );

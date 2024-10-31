@@ -304,8 +304,8 @@ export class BigKnightEnemy extends Enemy {
       this.y,
       true
     );
-    this.drawX += -0.5 * this.drawX;
-    this.drawY += -0.5 * this.drawY;
+    this.updateDrawXY(delta);
+
   };
 
   dropLoot = () => {
