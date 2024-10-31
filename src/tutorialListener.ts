@@ -17,7 +17,6 @@ export class TutorialListener {
   constructor(game: Game) {
     //console.log("Tutorial constructor called");
     this.setupEventListeners();
-    console.log(`TutorialListener constructor called for room: ${game}`);
     this.game = game;
   }
 
@@ -30,14 +29,12 @@ export class TutorialListener {
     enemyType: typeof Enemy;
     enemyName: string;
   }): void {
-    console.log(`handleEnemySeen called with enemy: ${data.enemyType}`);
     if (!this.hasSeenEnemy(data.enemyType)) {
       this.game.pushMessage(`New enemy encountered: ${data.enemyName}`);
       this.addSeenEnemy(data.enemyType);
       this.pendingNewEnemies.add(data.enemyType);
       this.scheduleTutorialCreation();
     } else {
-      console.log(`Enemy already seen: ${data.enemyType}`);
     }
   }
 
@@ -57,10 +54,6 @@ export class TutorialListener {
     this.game.room.doors.forEach((door: Door) => {
       door.guard();
     });
-
-    console.log(
-      `Creating tutorial room for new enemies: ${enemyTypes.join(", ")}`
-    );
   }
 
   // Method to check if an enemy has been seen before

@@ -2160,7 +2160,6 @@ var Enemy = /** @class */ (function (_super) {
                         enemyType: _this.constructor.name,
                         enemyName: _this.name,
                     });
-                    console.log(_this.constructor.name);
                     if (player === _this.game.players[_this.game.localPlayerID])
                         _this.alertTicks = 1;
                     _this.makeHitWarnings();
@@ -3666,7 +3665,6 @@ var SniperEnemy = /** @class */ (function (_super) {
                 _this.dir = game_1.Direction.North; // Up
             else if (angle >= -3 * angleStep && angle < -angleStep)
                 _this.dir = game_1.Direction.NorthEast; // Up-Right
-            console.log(_this.dir.toString());
         };
         _this.hurt = function (playerHitBy, damage) {
             if (playerHitBy) {
@@ -4688,7 +4686,6 @@ var Entity = /** @class */ (function (_super) {
                 name: _this.name,
                 location: { x: _this.x, y: _this.y },
             });
-            console.log("Emitting entity data for ".concat(_this.name));
         };
         _this.drawTopLayer = function (delta) {
             _this.drawableY = _this.y - _this.drawY;
@@ -5179,7 +5176,6 @@ var Chest = /** @class */ (function (_super) {
                 _this.kill();
             else
                 _this.hurtCallback();
-            console.log("health", _this.health);
         };
         _this.open = function () {
             _this.tileX = 0;
@@ -5206,14 +5202,12 @@ var Chest = /** @class */ (function (_super) {
                     _this.drop = new armor_1.Armor(_this.room, x, y);
                     break;
             }
-            console.log({ x: x, y: y });
             _this.room.items.push(_this.drop);
         };
         _this.rollDrop = function () {
             return game_1.Game.randTable([1, 1, 1, 1, 1, 1, 1, 2, 3, 4], random_1.Random.rand);
         };
         _this.kill = function () {
-            console.log("chest kill");
             genericParticle_1.GenericParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, "#fbf236");
             _this.dead = true;
         };
@@ -5255,8 +5249,6 @@ var Chest = /** @class */ (function (_super) {
         _this.dropX = 0;
         _this.dropY = 0;
         _this.drop = null;
-        _this.drawX = 0;
-        _this.drawY = 0;
         return _this;
     }
     Object.defineProperty(Chest.prototype, "type", {
@@ -8904,7 +8896,6 @@ var Inventory = /** @class */ (function () {
                         var slotY = Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT - 0.5 * height + y_1 * (s + 2 * b + g));
                         game_1.Game.ctx.fillStyle = OUTLINE_COLOR;
                         game_1.Game.ctx.fillRect(slotX, slotY, Math.round(s + 2 * b), Math.round(s + 2 * b));
-                        console.log("Inventory slot outline (".concat(x_2, ", ").concat(y_1, "): (").concat(slotX, ", ").concat(slotY, ")"));
                         // Draw slot background
                         game_1.Game.ctx.fillStyle = FILL_COLOR;
                         game_1.Game.ctx.fillRect(Math.round(0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * width + x_2 * (s + 2 * b + g) + b), Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT -
@@ -9333,7 +9324,6 @@ var Candle = /** @class */ (function (_super) {
                 _this.fuel--;
                 _this.wielder.sightRadius = Math.min(_this.fuel / 5 + 2, 4);
             }
-            console.log("fuel: ".concat(_this.fuel));
         };
         _this.coEquippable = function (other) {
             return !(other instanceof Candle ||
@@ -9974,9 +9964,7 @@ var Lantern = /** @class */ (function (_super) {
             if (_this.ignite()) {
                 _this.fuel -= 1;
                 _this.wielder.sightRadius = Math.min(_this.fuel / 4 + 3, 7);
-                console.log("sight radius:" + _this.wielder.sightRadius);
             }
-            console.log("fuel:" + _this.fuel);
         };
         _this.toggleEquip = function () {
             if (_this.fuel > 0) {
@@ -13987,7 +13975,6 @@ var Room = /** @class */ (function () {
         };
         var randTorches = game_1.Game.randTable(torchPatterns[intensity], random_1.Random.rand);
         this.addTorches(randTorches, random_1.Random.rand);
-        console.log(randTorches);
     };
     // Used in populateDungeon, populateCave, etc. NOT IN USE
     Room.prototype.populateWithEntities = function (config) {
@@ -14697,15 +14684,12 @@ var Door = /** @class */ (function (_super) {
         switch (_this.type) {
             case DoorType.GUARDEDDOOR:
                 _this.guard();
-                console.log("guarded");
                 break;
             case DoorType.LOCKEDDOOR:
                 _this.lock();
-                console.log("locked");
                 break;
             case DoorType.DOOR:
                 _this.removeLock();
-                console.log("unlocked");
                 break;
         }
         return _this;
@@ -15498,7 +15482,6 @@ var TutorialListener = /** @class */ (function () {
         this.tutorialCreationTimeout = null;
         //console.log("Tutorial constructor called");
         this.setupEventListeners();
-        console.log("TutorialListener constructor called for room: ".concat(game));
         this.game = game;
     }
     TutorialListener.prototype.setupEventListeners = function () {
@@ -15506,7 +15489,6 @@ var TutorialListener = /** @class */ (function () {
         eventBus_1.globalEventBus.on("EnemySeenPlayer", this.handleEnemySeen.bind(this));
     };
     TutorialListener.prototype.handleEnemySeen = function (data) {
-        console.log("handleEnemySeen called with enemy: ".concat(data.enemyType));
         if (!this.hasSeenEnemy(data.enemyType)) {
             this.game.pushMessage("New enemy encountered: ".concat(data.enemyName));
             this.addSeenEnemy(data.enemyType);
@@ -15514,7 +15496,6 @@ var TutorialListener = /** @class */ (function () {
             this.scheduleTutorialCreation();
         }
         else {
-            console.log("Enemy already seen: ".concat(data.enemyType));
         }
     };
     TutorialListener.prototype.scheduleTutorialCreation = function () {
@@ -15533,7 +15514,6 @@ var TutorialListener = /** @class */ (function () {
         this.game.room.doors.forEach(function (door) {
             door.guard();
         });
-        console.log("Creating tutorial room for new enemies: ".concat(enemyTypes.join(", ")));
     };
     // Method to check if an enemy has been seen before
     TutorialListener.prototype.hasSeenEnemy = function (enemyType) {

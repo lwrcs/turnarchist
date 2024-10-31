@@ -631,9 +631,6 @@ export class Inventory {
             Math.round(s + 2 * b),
             Math.round(s + 2 * b)
           );
-          console.log(
-            `Inventory slot outline (${x}, ${y}): (${slotX}, ${slotY})`
-          );
 
           // Draw slot background
           Game.ctx.fillStyle = FILL_COLOR;

@@ -128,7 +128,6 @@ export class Enemy extends Entity {
           enemyType: this.constructor.name,
           enemyName: this.name,
         });
-        console.log(this.constructor.name);
         if (player === this.game.players[this.game.localPlayerID])
           this.alertTicks = 1;
         this.makeHitWarnings();

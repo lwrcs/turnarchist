@@ -33,8 +33,6 @@ export class Chest extends Entity {
     this.dropX = 0;
     this.dropY = 0;
     this.drop = null;
-    this.drawX = 0;
-    this.drawY = 0;
   }
 
   get type() {
@@ -47,7 +45,6 @@ export class Chest extends Entity {
     if (this.health === 1 && !this.opening) this.open();
     if (this.health <= 0) this.kill();
     else this.hurtCallback();
-    console.log("health", this.health);
   };
 
   private open = () => {
@@ -77,7 +74,6 @@ export class Chest extends Entity {
         this.drop = new Armor(this.room, x, y);
         break;
     }
-    console.log({ x, y });
     this.room.items.push(this.drop);
   };
 
@@ -86,7 +82,6 @@ export class Chest extends Entity {
   };
 
   kill = () => {
-    console.log("chest kill");
     GenericParticle.spawnCluster(
       this.room,
       this.x + 0.5,

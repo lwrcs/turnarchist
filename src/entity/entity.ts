@@ -303,7 +303,6 @@ export class Entity extends Drawable {
       name: this.name,
       location: { x: this.x, y: this.y },
     });
-    console.log(`Emitting entity data for ${this.name}`);
   };
 
   drawTopLayer = (delta: number) => {

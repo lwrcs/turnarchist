@@ -24,7 +24,6 @@ export class Candle extends Light {
       this.fuel--;
       this.wielder.sightRadius = Math.min(this.fuel / 5 + 2, 4);
     }
-    console.log(`fuel: ${this.fuel}`);
   };
 
   coEquippable = (other: Light): boolean => {
@@ -34,7 +33,7 @@ export class Candle extends Light {
       other instanceof Lantern
     );
   };
-  
+
   toggleEquip = () => {
     this.equipped = !this.equipped;
     if (this.ignite()) {

@@ -50,15 +50,12 @@ export class Door extends Tile {
     switch (this.type) {
       case DoorType.GUARDEDDOOR:
         this.guard();
-        console.log("guarded");
         break;
       case DoorType.LOCKEDDOOR:
         this.lock();
-        console.log("locked");
         break;
       case DoorType.DOOR:
         this.removeLock();
-        console.log("unlocked");
         break;
     }
   }

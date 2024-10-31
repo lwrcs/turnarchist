@@ -77,8 +77,6 @@ export class SniperEnemy extends Enemy {
       this.dir = Direction.North; // Up
     else if (angle >= -3 * angleStep && angle < -angleStep)
       this.dir = Direction.NorthEast; // Up-Right
-
-    console.log(this.dir.toString());
   };
 
   hurt = (playerHitBy: Player, damage: number) => {

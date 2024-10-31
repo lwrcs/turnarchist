@@ -1564,7 +1564,6 @@ export class Room {
     };
     const randTorches = Game.randTable(torchPatterns[intensity], Random.rand);
     this.addTorches(randTorches, Random.rand);
-    console.log(randTorches);
   }
 
   // Used in populateDungeon, populateCave, etc. NOT IN USE
