@@ -286,7 +286,7 @@ export class ZombieEnemy extends Enemy {
         1,
         2,
         this.x - this.drawX,
-        this.y - this.drawYOffset - this.drawY,
+        this.y - this.drawYOffset - this.drawY - this.jumpY,
         1,
         2,
         this.room.shadeColor,

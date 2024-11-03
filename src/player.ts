@@ -68,6 +68,7 @@ export class Player extends Drawable {
   private moveCooldown: number;
   moveRange: number;
   tileCursor: { x: number; y: number };
+  private jumpY: number;
   constructor(game: Game, x: number, y: number, isLocalPlayer: boolean) {
     super();
 
@@ -81,7 +82,7 @@ export class Player extends Drawable {
     this.h = 1;
     this.drawX = 0;
     this.drawY = 0;
-
+    this.jumpY = 0;
     this.frame = 0;
 
     this.direction = PlayerDirection.UP;
@@ -630,7 +631,7 @@ export class Player extends Drawable {
       1,
       2,
       this.x - this.drawX,
-      this.y - 1.45 - this.drawY,
+      this.y - 1.45 - this.drawY - this.jumpY,
       1,
       2
     );
@@ -739,8 +740,16 @@ export class Player extends Drawable {
   };
 
   updateDrawXY = (delta: number) => {
-    this.drawX += -0.5 * this.drawX * delta;
-    this.drawY += -0.5 * this.drawY * delta;
+    if (!this.doneMoving()) {
+      this.drawX += -0.3 * this.drawX * delta;
+      this.drawY += -0.3 * this.drawY * delta;
+      this.jump();
+    }
+  };
+
+  jump = () => {
+    let j = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
+    this.jumpY = Math.sin(j * Math.PI) * 0.3;
   };
 
   drawInventoryButton = (delta: number) => {

@@ -32,6 +32,8 @@ export class Enemy extends Entity {
   aggro: boolean;
   targetPlayer: Player;
   drop: Item;
+  protected jumpY: number;
+  protected jumpHeight: number;
   //dir: Direction;
 
   constructor(room: Room, game: Game, x: number, y: number) {
@@ -46,6 +48,8 @@ export class Enemy extends Entity {
     this.tileX = 17;
     this.tileY = 8;
     this.aggro = false;
+    this.jumpY = 0;
+    this.jumpHeight = 0.3;
     //this.dir = Direction.South;
     this.name = "generic enemy";
   }
@@ -387,6 +391,19 @@ export class Enemy extends Entity {
         }
       }
     }
+  };
+
+  updateDrawXY = (delta: number) => {
+    if (!this.doneMoving()) {
+      this.drawX += -0.3 * delta * this.drawX;
+      this.drawY += -0.3 * delta * this.drawY;
+      this.jump();
+    }
+  }
+
+  jump = () => {
+    let j = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
+    this.jumpY = Math.sin(j * Math.PI) * this.jumpHeight;
   };
 
   draw = (delta: number) => {

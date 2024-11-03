@@ -2385,6 +2385,17 @@ var Enemy = /** @class */ (function (_super) {
                 }
             }
         };
+        _this.updateDrawXY = function (delta) {
+            if (!_this.doneMoving()) {
+                _this.drawX += -0.3 * delta * _this.drawX;
+                _this.drawY += -0.3 * delta * _this.drawY;
+                _this.jump();
+            }
+        };
+        _this.jump = function () {
+            var j = Math.max(Math.abs(_this.drawX), Math.abs(_this.drawY));
+            _this.jumpY = Math.sin(j * Math.PI) * _this.jumpHeight;
+        };
         _this.draw = function (delta) {
             if (!_this.dead) {
                 _this.frame += 0.1 * delta;
@@ -2411,6 +2422,8 @@ var Enemy = /** @class */ (function (_super) {
         _this.tileX = 17;
         _this.tileY = 8;
         _this.aggro = false;
+        _this.jumpY = 0;
+        _this.jumpHeight = 0.3;
         //this.dir = Direction.South;
         _this.name = "generic enemy";
         return _this;
@@ -4449,7 +4462,7 @@ var ZombieEnemy = /** @class */ (function (_super) {
                     _this.frame = 0;
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
-                game_1.Game.drawMob(_this.tileX + Math.floor(_this.frame), _this.tileY + _this.direction * 2, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
+                game_1.Game.drawMob(_this.tileX + Math.floor(_this.frame), _this.tileY + _this.direction * 2, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY - _this.jumpY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
             }
             if (!_this.seenPlayer) {
                 _this.drawSleepingZs(delta);
@@ -12070,7 +12083,7 @@ var Player = /** @class */ (function (_super) {
             _this.frame += 0.1 * delta;
             if (_this.frame >= 4)
                 _this.frame = 0;
-            game_1.Game.drawMob(1 + Math.floor(_this.frame), 8 + _this.direction * 2, 1, 2, _this.x - _this.drawX, _this.y - 1.45 - _this.drawY, 1, 2);
+            game_1.Game.drawMob(1 + Math.floor(_this.frame), 8 + _this.direction * 2, 1, 2, _this.x - _this.drawX, _this.y - 1.45 - _this.drawY - _this.jumpY, 1, 2);
             if (_this.inventory.getArmor() && _this.inventory.getArmor().health > 0) {
                 // TODO draw armor
             }
@@ -12162,8 +12175,15 @@ var Player = /** @class */ (function (_super) {
             _this.drawInventoryButton(delta);
         };
         _this.updateDrawXY = function (delta) {
-            _this.drawX += -0.5 * _this.drawX * delta;
-            _this.drawY += -0.5 * _this.drawY * delta;
+            if (!_this.doneMoving()) {
+                _this.drawX += -0.3 * _this.drawX * delta;
+                _this.drawY += -0.3 * _this.drawY * delta;
+                _this.jump();
+            }
+        };
+        _this.jump = function () {
+            var j = Math.max(Math.abs(_this.drawX), Math.abs(_this.drawY));
+            _this.jumpY = Math.sin(j * Math.PI) * 0.3;
         };
         _this.drawInventoryButton = function (delta) {
             game_1.Game.drawFX(0, 0, 2, 2, levelConstants_1.LevelConstants.SCREEN_W - 2, 0, 2, 2);
@@ -12183,6 +12203,7 @@ var Player = /** @class */ (function (_super) {
         _this.h = 1;
         _this.drawX = 0;
         _this.drawY = 0;
+        _this.jumpY = 0;
         _this.frame = 0;
         _this.direction = PlayerDirection.UP;
         _this.isLocalPlayer = isLocalPlayer;
