@@ -1280,12 +1280,12 @@ export class Room {
       }
 
       // Calculate intensity based on distance (closer tiles are brighter)
-      const intensity = 1 - i / radius;
+      const intensity = 1 / ((i / radius + 1) ** 2);
       if (intensity <= 0) continue;
 
       // Blend the tint color with the existing color
       this.col[currentX][currentY] = this.blendColors(
-        oldCol[currentX][currentY],
+        this.col[currentX][currentY],
         color,
         intensity
       );

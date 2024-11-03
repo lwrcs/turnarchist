@@ -13364,11 +13364,11 @@ var Room = /** @class */ (function () {
                     return; // Stop casting tint through opaque tiles
                 }
                 // Calculate intensity based on distance (closer tiles are brighter)
-                var intensity = 1 - i / radius;
+                var intensity = 1 / (Math.pow((i / radius + 1), 2));
                 if (intensity <= 0)
                     continue;
                 // Blend the tint color with the existing color
-                _this.col[currentX][currentY] = _this.blendColors(oldCol[currentX][currentY], color, intensity);
+                _this.col[currentX][currentY] = _this.blendColors(_this.col[currentX][currentY], color, intensity);
             }
         };
         this.blur3x3 = function (array, weights) {
