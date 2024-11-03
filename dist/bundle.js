@@ -11824,10 +11824,12 @@ var Player = /** @class */ (function (_super) {
             _this.setTileCursorPosition();
         };
         _this.moveWithMouse = function () {
-            _this.faceMouse();
-            if (_this.moveRangeCheck(_this.mouseToTile().x, _this.mouseToTile().y)) {
-                _this.tryMove(_this.mouseToTile().x, _this.mouseToTile().y);
+            /*
+            this.faceMouse();
+            if (this.moveRangeCheck(this.mouseToTile().x, this.mouseToTile().y)) {
+              this.tryMove(this.mouseToTile().x, this.mouseToTile().y);
             }
+            */
         };
         _this.mouseToTile = function () {
             // Get screen center coordinates

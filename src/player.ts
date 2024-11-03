@@ -307,10 +307,12 @@ export class Player extends Drawable {
   };
 
   moveWithMouse = () => {
+    /*
     this.faceMouse();
     if (this.moveRangeCheck(this.mouseToTile().x, this.mouseToTile().y)) {
       this.tryMove(this.mouseToTile().x, this.mouseToTile().y);
     }
+    */
   };
 
   mouseToTile = () => {
