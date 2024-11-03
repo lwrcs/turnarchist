@@ -58,9 +58,8 @@ export class ImageParticle extends Particle {
     cx: number,
     cy: number,
     tileX: number,
-    tileY: number,
+    tileY: number
   ) => {
-
     for (let i = Math.floor(Math.random() * 3); i < 5; i++) {
       level.particles.push(
         new ImageParticle(
@@ -156,7 +155,7 @@ export class ImageParticle extends Particle {
     }
 
     // apply gravity
-    this.dz -= 0.015 * delta;
+    this.dz -= 0.012 * delta;
 
     /*
     if (this.alpha < 0.2) this.alpha -= ((0.01 * this.size) + 0.005);

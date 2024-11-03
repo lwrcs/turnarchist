@@ -4560,9 +4560,11 @@ var Entity = /** @class */ (function (_super) {
             return 0;
         };
         _this.hurtCallback = function () { };
-        _this.playerKilledBy = function (enemy) {
-            return enemy;
+        /*
+        playerKilledBy = (enemy: Entity) => {
+          return enemy;
         };
+      */
         _this.pointIn = function (x, y) {
             return (x >= _this.x && x < _this.x + _this.w && y >= _this.y && y < _this.y + _this.h);
         };
@@ -4584,10 +4586,13 @@ var Entity = /** @class */ (function (_super) {
             else
                 return closestPlayer;
         };
-        _this.lastHitBy = function (player) {
-            _this.hitBy = player;
-            _this.game.pushMessage("".concat(_this.hitBy));
+        /*
+        readonly lastHitBy = (player: Player) => {
+          this.hitBy = player;
+          if (this.hitBy) this.game.pushMessage(`${this.hitBy}`);
+          else this.game.pushMessage("Unknown");
         };
+        */
         _this.hurt = function (playerHitBy, damage) {
             _this.healthBar.hurt();
             _this.health -= damage;
@@ -4940,7 +4945,7 @@ var Entity = /** @class */ (function (_super) {
         _this.exclamationFrame = 0;
         _this.lastX = x;
         _this.lastY = y;
-        _this.hitBy = _this.getPlayer();
+        _this.hitBy = null;
         _this.crushX = 1;
         _this.crushY = 1;
         _this.crushVertical = false;
@@ -11423,7 +11428,7 @@ var ImageParticle = /** @class */ (function (_super) {
                 _this.dz *= -0.8;
             }
             // apply gravity
-            _this.dz -= 0.015 * delta;
+            _this.dz -= 0.012 * delta;
             /*
             if (this.alpha < 0.2) this.alpha -= ((0.01 * this.size) + 0.005);
             else this.alpha -= ((0.005 * this.size) + 0.005);
@@ -15664,10 +15669,12 @@ var TutorialListener = /** @class */ (function () {
         }
     };
     TutorialListener.prototype.createTutorialRoom = function (enemyTypes) {
+        /*
         this.game.tutorialActive = true;
-        this.game.room.doors.forEach(function (door) {
-            door.guard();
+        this.game.room.doors.forEach((door: Door) => {
+          door.guard();
         });
+        */
     };
     // Method to check if an enemy has been seen before
     TutorialListener.prototype.hasSeenEnemy = function (enemyType) {

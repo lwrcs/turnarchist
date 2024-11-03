@@ -50,10 +50,12 @@ export class TutorialListener {
   }
 
   private createTutorialRoom(enemyTypes: Array<typeof Enemy>) {
+    /*
     this.game.tutorialActive = true;
     this.game.room.doors.forEach((door: Door) => {
       door.guard();
     });
+    */
   }
 
   // Method to check if an enemy has been seen before

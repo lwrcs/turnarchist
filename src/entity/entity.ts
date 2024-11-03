@@ -49,37 +49,37 @@ export class Entity extends Drawable {
   game: Game;
   health: number;
   maxHealth: number;
-  tileX: number;
-  tileY: number;
-  hasShadow: boolean;
+  protected tileX: number;
+  protected tileY: number;
+  protected hasShadow: boolean;
   skipNextTurns: number;
   //TODO: change these to functions? for enemies that switch states
   destroyable: boolean; // can the player destroy this enemy?
   pushable: boolean; // can the player push this enemy? (true for crates/barrels, false for regular mobs)
   chainPushable: boolean; // can the player pushing another enemy push this enemy? (default true)
   interactable: boolean; // can the player interact
-  deathParticleColor: string;
+  protected deathParticleColor: string;
   healthBar: HealthBar;
   drop: Item;
-  sleepingZFrame = 0;
+  protected sleepingZFrame = 0;
   alertTicks: number;
-  exclamationFrame: number;
-  lastX: number;
-  lastY: number;
-  hitBy: Player;
-  crushX: number;
-  crushY: number;
-  crushVertical: boolean;
-  crushed: boolean;
-  rumbling: boolean;
-  animationSpeed: number;
-  drawYOffset: number;
+  protected exclamationFrame: number;
+  protected lastX: number;
+  protected lastY: number;
+  protected hitBy: Player;
+  protected crushX: number;
+  protected crushY: number;
+  protected crushVertical: boolean;
+  protected crushed: boolean;
+  protected rumbling: boolean;
+  protected animationSpeed: number;
+  protected drawYOffset: number;
   name: string;
-  orthogonalAttack: boolean;
-  diagonalAttack: boolean;
-  forwardOnlyAttack: boolean;
-  attackRange: number;
-  diagonalAttackRange: number;
+  protected orthogonalAttack: boolean;
+  protected diagonalAttack: boolean;
+  protected forwardOnlyAttack: boolean;
+  protected attackRange: number;
+  protected diagonalAttackRange: number;
   constructor(room: Room, game: Game, x: number, y: number) {
     super();
 
@@ -107,7 +107,7 @@ export class Entity extends Drawable {
     this.exclamationFrame = 0;
     this.lastX = x;
     this.lastY = y;
-    this.hitBy = this.getPlayer();
+    this.hitBy = null;
     this.crushX = 1;
     this.crushY = 1;
     this.crushVertical = false;
@@ -123,22 +123,22 @@ export class Entity extends Drawable {
     this.diagonalAttackRange = 1;
   }
 
-  behavior = () => { };
+  behavior = () => {};
 
   hit = (): number => {
     return 0;
   };
 
-  hurtCallback = () => { };
+  hurtCallback = () => {};
 
   get type() {
     return EntityType.ENEMY;
   }
-
+  /*
   playerKilledBy = (enemy: Entity) => {
     return enemy;
   };
-
+*/
   pointIn = (x: number, y: number): boolean => {
     return (
       x >= this.x && x < this.x + this.w && y >= this.y && y < this.y + this.h
@@ -162,11 +162,13 @@ export class Entity extends Drawable {
     if (closestDistance === maxDistance) return false;
     else return closestPlayer;
   };
-
+  /*
   readonly lastHitBy = (player: Player) => {
     this.hitBy = player;
-    this.game.pushMessage(`${this.hitBy}`);
+    if (this.hitBy) this.game.pushMessage(`${this.hitBy}`);
+    else this.game.pushMessage("Unknown");
   };
+  */
 
   readonly hurt = (playerHitBy: Player, damage: number) => {
     this.healthBar.hurt();
@@ -176,7 +178,7 @@ export class Entity extends Drawable {
     else this.hurtCallback();
   };
 
-  interact = (player: Player) => { };
+  interact = (player: Player) => {};
 
   readonly dropLoot = () => {
     if (this.drop) {
@@ -317,13 +319,12 @@ export class Entity extends Drawable {
       true
     );
     this.updateDrawXY(delta);
-
   };
 
   updateDrawXY = (delta: number) => {
     this.drawX += -0.3 * delta * this.drawX;
     this.drawY += -0.3 * delta * this.drawY;
-  }
+  };
 
   drawSleepingZs = (delta: number, offsetX = 0, offsetY = 0) => {
     this.sleepingZFrame += delta;
@@ -545,17 +546,17 @@ export class Entity extends Drawable {
     ): number[][] => {
       const baseOffsets = isOrthogonal
         ? [
-          [-1, 0],
-          [1, 0],
-          [0, -1],
-          [0, 1],
-        ]
+            [-1, 0],
+            [1, 0],
+            [0, -1],
+            [0, 1],
+          ]
         : [
-          [-1, -1],
-          [1, 1],
-          [1, -1],
-          [-1, 1],
-        ];
+            [-1, -1],
+            [1, 1],
+            [1, -1],
+            [-1, 1],
+          ];
       return baseOffsets.flatMap(([dx, dy]) =>
         Array.from({ length: range }, (_, i) => [(i + 1) * dx, (i + 1) * dy])
       );

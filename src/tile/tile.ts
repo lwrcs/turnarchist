@@ -9,7 +9,7 @@ export enum SkinType {
   CAVE = 1,
 }
 
-export class Tile extends Drawable {
+export abstract class Tile extends Drawable {
   x: number;
   y: number;
   room: Room;
