@@ -14,36 +14,10 @@ export class Candle extends Light {
     this.fuel = 100; //how many turns before it burns out
     this.tileX = 27;
     this.tileY = 0;
+    this.name = "candle";
+    this.fuelCap = 100;
+    this.maxRadius = 4;
+    this.minRadius = 2;
   }
 
-  tickInInventory = () => {
-    if (this.fuel <= 0) {
-      this.wielder.game.pushMessage("Your candle burns out.");
-      this.wielder.inventory.removeItem(this);
-    } else if (this.ignite()) {
-      this.fuel--;
-      this.wielder.sightRadius = Math.min(this.fuel / 5 + 2, 4);
-    }
-  };
-
-  coEquippable = (other: Light): boolean => {
-    return !(
-      other instanceof Candle ||
-      other instanceof Torch ||
-      other instanceof Lantern
-    );
-  };
-
-  toggleEquip = () => {
-    this.equipped = !this.equipped;
-    if (this.ignite()) {
-      this.wielder.sightRadius = Math.min(this.fuel / 5 + 2, 4);
-    }
-    //if (!this.equipped) this.wielder.sightRadius = this.wielder.defaultSightRadius
-  };
-
-  getDescription = () => {
-    const percentage = (this.fuel / 50) * 100;
-    return `Candle: ${percentage}%`;
-  };
 }

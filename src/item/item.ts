@@ -23,6 +23,7 @@ export class Item extends Drawable {
   pickedUp: boolean; // whether the item has been picked up or not
   alpha: number; // alpha value for transparency
   scaleFactor: number; // scale factor for size adjustment
+  name: string;
 
   // Constructor for the Item class
   constructor(level: Room, x: number, y: number) {
@@ -44,6 +45,7 @@ export class Item extends Drawable {
     this.alpha = 1;
     this.scaleFactor = 0.2;
     this.offsetY = -0.25;
+    this.name = "";
   }
 
   // Empty tick function to be overridden by subclasses

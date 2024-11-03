@@ -15,6 +15,7 @@ export class Lantern extends Light {
     this.tileX = 29;
     this.tileY = 0;
     this.fuelCap = 250;
+    this.name = "lantern";
   }
   addFuel = (amount: number) => {
     this.fuel += amount;
@@ -28,28 +29,19 @@ export class Lantern extends Light {
     );
   };
 
-  tickInInventory = () => {
-    if (this.fuel === 0 && this.equipped) {
-      this.equipped = false;
-      this.wielder.game.pushMessage("Your lantern runs out of fuel.");
-    }
-    if (this.ignite()) {
-      this.fuel -= 1;
-      this.wielder.sightRadius = Math.min(this.fuel / 4 + 3, 7);
-    }
+  setRadius = () => {
+    this.wielder.sightRadius = Math.min(this.fuel / 4 + 3, 7);
   };
 
   toggleEquip = () => {
     if (this.fuel > 0) {
       this.equipped = !this.equipped;
-      if (this.ignite()) {
-        this.wielder.sightRadius = Math.min(this.fuel / 4 + 3, 7);
-      } //else this.wielder.sightRadius = 3;
+      if (this.isIgnited()) this.setRadius();
+      else this.resetRadius();
     } else
       this.wielder.game.pushMessage(
         "I'll need some fuel before I can use this"
       );
-    //Math.max(this.wielder.defaultSightRadius, this.fuel / 25)}
   };
 
   getDescription = () => {

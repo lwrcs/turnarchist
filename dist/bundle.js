@@ -8469,6 +8469,9 @@ var coin_1 = __webpack_require__(/*! ./item/coin */ "./src/item/coin.ts");
 var weapon_1 = __webpack_require__(/*! ./weapon/weapon */ "./src/weapon/weapon.ts");
 var dagger_1 = __webpack_require__(/*! ./weapon/dagger */ "./src/weapon/dagger.ts");
 var usable_1 = __webpack_require__(/*! ./item/usable */ "./src/item/usable.ts");
+var candle_1 = __webpack_require__(/*! ./item/candle */ "./src/item/candle.ts");
+var torch_1 = __webpack_require__(/*! ./item/torch */ "./src/item/torch.ts");
+var lantern_1 = __webpack_require__(/*! ./item/lantern */ "./src/item/lantern.ts");
 var mouseCursor_1 = __webpack_require__(/*! ./mouseCursor */ "./src/mouseCursor.ts");
 var OPEN_TIME = 100; // milliseconds
 // Dark gray color used for the background of inventory slots
@@ -9101,7 +9104,7 @@ var Inventory = /** @class */ (function () {
             }
             _this.addItem(i);
         };
-        var startingInv = [dagger_1.Dagger, key_1.Key];
+        var startingInv = [dagger_1.Dagger, key_1.Key, candle_1.Candle, torch_1.Torch, lantern_1.Lantern];
         startingInv.forEach(function (item) {
             a(new item({ game: _this.game }, 0, 0));
         });
@@ -9313,42 +9316,18 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Candle = void 0;
-var torch_1 = __webpack_require__(/*! ./torch */ "./src/item/torch.ts");
-var lantern_1 = __webpack_require__(/*! ./lantern */ "./src/item/lantern.ts");
 var light_1 = __webpack_require__(/*! ./light */ "./src/item/light.ts");
 var Candle = /** @class */ (function (_super) {
     __extends(Candle, _super);
     function Candle(level, x, y) {
         var _this = _super.call(this, level, x, y) || this;
-        _this.tickInInventory = function () {
-            if (_this.fuel <= 0) {
-                _this.wielder.game.pushMessage("Your candle burns out.");
-                _this.wielder.inventory.removeItem(_this);
-            }
-            else if (_this.ignite()) {
-                _this.fuel--;
-                _this.wielder.sightRadius = Math.min(_this.fuel / 5 + 2, 4);
-            }
-        };
-        _this.coEquippable = function (other) {
-            return !(other instanceof Candle ||
-                other instanceof torch_1.Torch ||
-                other instanceof lantern_1.Lantern);
-        };
-        _this.toggleEquip = function () {
-            _this.equipped = !_this.equipped;
-            if (_this.ignite()) {
-                _this.wielder.sightRadius = Math.min(_this.fuel / 5 + 2, 4);
-            }
-            //if (!this.equipped) this.wielder.sightRadius = this.wielder.defaultSightRadius
-        };
-        _this.getDescription = function () {
-            var percentage = (_this.fuel / 50) * 100;
-            return "Candle: ".concat(percentage, "%");
-        };
         _this.fuel = 100; //how many turns before it burns out
         _this.tileX = 27;
         _this.tileY = 0;
+        _this.name = "candle";
+        _this.fuelCap = 100;
+        _this.maxRadius = 4;
+        _this.minRadius = 2;
         return _this;
     }
     return Candle;
@@ -9870,6 +9849,7 @@ var Item = /** @class */ (function (_super) {
         _this.alpha = 1;
         _this.scaleFactor = 0.2;
         _this.offsetY = -0.25;
+        _this.name = "";
         return _this;
     }
     return Item;
@@ -9961,26 +9941,19 @@ var Lantern = /** @class */ (function (_super) {
                 other instanceof torch_1.Torch ||
                 other instanceof Lantern);
         };
-        _this.tickInInventory = function () {
-            if (_this.fuel === 0 && _this.equipped) {
-                _this.equipped = false;
-                _this.wielder.game.pushMessage("Your lantern runs out of fuel.");
-            }
-            if (_this.ignite()) {
-                _this.fuel -= 1;
-                _this.wielder.sightRadius = Math.min(_this.fuel / 4 + 3, 7);
-            }
+        _this.setRadius = function () {
+            _this.wielder.sightRadius = Math.min(_this.fuel / 4 + 3, 7);
         };
         _this.toggleEquip = function () {
             if (_this.fuel > 0) {
                 _this.equipped = !_this.equipped;
-                if (_this.ignite()) {
-                    _this.wielder.sightRadius = Math.min(_this.fuel / 4 + 3, 7);
-                } //else this.wielder.sightRadius = 3;
+                if (_this.isIgnited())
+                    _this.setRadius();
+                else
+                    _this.resetRadius();
             }
             else
                 _this.wielder.game.pushMessage("I'll need some fuel before I can use this");
-            //Math.max(this.wielder.defaultSightRadius, this.fuel / 25)}
         };
         _this.getDescription = function () {
             var percentage = Math.round((_this.fuel / _this.fuelCap) * 100);
@@ -9990,6 +9963,7 @@ var Lantern = /** @class */ (function (_super) {
         _this.tileX = 29;
         _this.tileY = 0;
         _this.fuelCap = 250;
+        _this.name = "lantern";
         return _this;
     }
     return Lantern;
@@ -10023,35 +9997,98 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Light = void 0;
+var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var equippable_1 = __webpack_require__(/*! ./equippable */ "./src/item/equippable.ts");
+var gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
 var Light = /** @class */ (function (_super) {
     __extends(Light, _super);
     function Light(level, x, y) {
         var _this = _super.call(this, level, x, y) || this;
-        _this.ignite = function () {
+        _this.updateLighting = function () {
+            _this.wielder.game.rooms[_this.wielder.levelID].updateLighting();
+        };
+        _this.isIgnited = function () {
             if (_this.fuel > 0 && _this.equipped) {
                 return true;
             }
-            else
-                return false;
+            return false;
+        };
+        _this.setRadius = function () {
+            _this.wielder.sightRadius =
+                _this.wielder.defaultSightRadius +
+                    Math.max(_this.fuelPercentage * _this.maxRadius, _this.minRadius);
         };
         _this.toggleEquip = function () {
             _this.equipped = !_this.equipped;
-            if (_this.equipped) {
-                _this.wielder.sightRadius = 12;
+            if (_this.isIgnited()) {
+                _this.setRadius();
+                Light.warmEnabled = true;
             }
-            else
-                _this.wielder.sightRadius = _this.wielder.defaultSightRadius;
+            else {
+                _this.resetRadius();
+                Light.warmEnabled = false;
+            }
+            _this.updateLighting();
+        };
+        _this.coEquippable = function (other) {
+            return !(other instanceof Light);
+        };
+        _this.resetRadius = function () {
+            _this.wielder.sightRadius = _this.wielder.defaultSightRadius;
+        };
+        _this.deplete = function () {
+            if (_this.fuel <= 0) {
+                _this.wielder.game.pushMessage("".concat(_this.name, " depletes."));
+                _this.wielder.inventory.removeItem(_this);
+            }
+            else if (_this.isIgnited()) {
+                _this.fuel--;
+                _this.setRadius();
+            }
+        };
+        _this.tickInInventory = function () {
+            _this.deplete();
         };
         _this.getDescription = function () {
-            return "TORCH";
+            return "".concat(_this.name, ": ").concat(_this.fuelPercentage * 100, "%");
         };
         _this.tileX = 28;
         _this.tileY = 0;
         _this.fuel = 0;
         _this.fuelCap = 250;
+        _this.maxRadius = 6;
+        _this.minRadius = 2;
         return _this;
     }
+    Object.defineProperty(Light.prototype, "fuelPercentage", {
+        get: function () {
+            return (this.fuel / this.fuelCap);
+        },
+        enumerable: false,
+        configurable: true
+    });
+    Light.warmEnabled = false;
+    Light.warmth = 0;
+    Light.maxWarmth = 0.2;
+    Light.drawTint = function (delta) {
+        var warmthChange = 0.02 * delta;
+        if (Light.warmth <= Light.maxWarmth && Light.warmEnabled) {
+            Light.warmth += warmthChange;
+        }
+        if (Light.warmth > 0 && !Light.warmEnabled) {
+            Light.warmth -= warmthChange;
+        }
+        if (Light.warmth < 0)
+            Light.warmth = 0;
+        if (Light.warmth > Light.maxWarmth)
+            Light.warmth = Light.maxWarmth;
+        console.log(Light.warmth);
+        game_1.Game.ctx.globalAlpha = Light.warmth;
+        game_1.Game.ctx.globalCompositeOperation = "overlay";
+        game_1.Game.ctx.fillStyle = "#FF8C00"; // reddish orange red
+        game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
+        game_1.Game.ctx.globalCompositeOperation = "source-over";
+    };
     return Light;
 }(equippable_1.Equippable));
 exports.Light = Light;
@@ -10215,31 +10252,17 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Torch = void 0;
-var candle_1 = __webpack_require__(/*! ./candle */ "./src/item/candle.ts");
-var lantern_1 = __webpack_require__(/*! ./lantern */ "./src/item/lantern.ts");
 var light_1 = __webpack_require__(/*! ./light */ "./src/item/light.ts");
 var Torch = /** @class */ (function (_super) {
     __extends(Torch, _super);
     function Torch(level, x, y) {
         var _this = _super.call(this, level, x, y) || this;
-        _this.toggleEquip = function () {
-            _this.equipped = !_this.equipped;
-            if (_this.equipped) {
-                _this.wielder.sightRadius = 12;
-            }
-            else
-                _this.wielder.sightRadius = _this.wielder.defaultSightRadius;
-        };
-        _this.coEquippable = function (other) {
-            return !(other instanceof candle_1.Candle ||
-                other instanceof Torch ||
-                other instanceof lantern_1.Lantern);
-        };
-        _this.getDescription = function () {
-            return "TORCH";
-        };
         _this.tileX = 28;
         _this.tileY = 0;
+        _this.name = "torch";
+        _this.fuelCap = 50;
+        _this.fuel = 50;
+        _this.maxRadius = 7;
         return _this;
     }
     return Torch;
@@ -11635,6 +11658,7 @@ var drawable_1 = __webpack_require__(/*! ./drawable */ "./src/drawable.ts");
 var hitWarning_1 = __webpack_require__(/*! ./hitWarning */ "./src/hitWarning.ts");
 var postProcess_1 = __webpack_require__(/*! ./postProcess */ "./src/postProcess.ts");
 var mouseCursor_1 = __webpack_require__(/*! ./mouseCursor */ "./src/mouseCursor.ts");
+var light_1 = __webpack_require__(/*! ./item/light */ "./src/item/light.ts");
 var PlayerDirection;
 (function (PlayerDirection) {
     PlayerDirection[PlayerDirection["DOWN"] = 0] = "DOWN";
@@ -12169,6 +12193,7 @@ var Player = /** @class */ (function (_super) {
                 game_1.Game.fillText(gameOverString, gameConstants_1.GameConstants.WIDTH / 2 - game_1.Game.measureText(gameOverString).width / 2, gameConstants_1.GameConstants.HEIGHT / 2 - game_1.Game.letter_height + 2);
             }
             postProcess_1.PostProcessor.draw(delta);
+            light_1.Light.drawTint(delta);
             if (_this.mapToggled === true)
                 _this.map.draw(delta);
             _this.drawTileCursor(delta);
@@ -12234,8 +12259,8 @@ var Player = /** @class */ (function (_super) {
             });
         }
         _this.mapToggled = true;
-        _this.health = 2;
-        _this.maxHealth = 2;
+        _this.health = 200;
+        _this.maxHealth = 200;
         _this.healthBar = new healthbar_1.HealthBar();
         _this.dead = false;
         _this.flashing = false;
@@ -12243,7 +12268,7 @@ var Player = /** @class */ (function (_super) {
         _this.lastTickHealth = _this.health;
         _this.guiHeartFrame = 0;
         _this.inventory = new inventory_1.Inventory(game, _this);
-        _this.defaultSightRadius = 6;
+        _this.defaultSightRadius = 4;
         _this.sightRadius = _this.defaultSightRadius;
         _this.map = new map_1.Map(_this.game, _this);
         //this.actionTab = new ActionTab(this.inventory, this.game);
@@ -12264,6 +12289,7 @@ var Player = /** @class */ (function (_super) {
         }
         return false;
     };
+    Player.minSightRadius = 2; //hard minimum sight radius that ignores depth
     return Player;
 }(drawable_1.Drawable));
 exports.Player = Player;
@@ -13219,6 +13245,7 @@ var Room = /** @class */ (function () {
                 return undefined;
         };
         this.fadeLighting = function () {
+            console.log("fadeLighting");
             for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
                 for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
                     if (Math.abs(_this.softVis[x][y] - _this.vis[x][y]) >= 0.02) {
@@ -13232,6 +13259,7 @@ var Room = /** @class */ (function () {
             }
         };
         this.updateLighting = function () {
+            console.log("updateLighting");
             var oldVis = [];
             for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
                 oldVis[x] = [];
@@ -13245,7 +13273,7 @@ var Room = /** @class */ (function () {
             for (var p in _this.game.players) {
                 if (_this === _this.game.rooms[_this.game.players[p].levelID]) {
                     for (var i = 0; i < 360; i += levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP) {
-                        _this.castShadowsAtAngle(i, _this.game.players[p].x + 0.5, _this.game.players[p].y + 0.5, _this.game.players[p].sightRadius - _this.depth);
+                        _this.castShadowsAtAngle(i, _this.game.players[p].x + 0.5, _this.game.players[p].y + 0.5, Math.max(_this.game.players[p].sightRadius - _this.depth, player_1.Player.minSightRadius));
                     }
                 }
             }

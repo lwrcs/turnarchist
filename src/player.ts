@@ -24,6 +24,7 @@ import { Room } from "./room";
 import { ImageParticle } from "./particle/imageParticle";
 import { Enemy } from "./entity/enemy/enemy";
 import { MouseCursor } from "./mouseCursor";
+import { Light } from "./item/light";
 
 export enum PlayerDirection {
   DOWN = 0,
@@ -54,6 +55,7 @@ export class Player extends Drawable {
   inventory: Inventory;
   sightRadius: number;
   defaultSightRadius: number;
+  static minSightRadius: number = 2; //hard minimum sight radius that ignores depth
   guiHeartFrame: number;
   map: Map;
   openVendingMachine: VendingMachine;
@@ -115,8 +117,8 @@ export class Player extends Drawable {
       );
     }
     this.mapToggled = true;
-    this.health = 2;
-    this.maxHealth = 2;
+    this.health = 200;
+    this.maxHealth = 200;
     this.healthBar = new HealthBar();
     this.dead = false;
     this.flashing = false;
@@ -125,9 +127,8 @@ export class Player extends Drawable {
     this.guiHeartFrame = 0;
 
     this.inventory = new Inventory(game, this);
-    this.defaultSightRadius = 6;
+    this.defaultSightRadius = 4;
     this.sightRadius = this.defaultSightRadius;
-
     this.map = new Map(this.game, this);
     //this.actionTab = new ActionTab(this.inventory, this.game);
     this.turnCount = 0;
@@ -733,6 +734,7 @@ export class Player extends Drawable {
       );
     }
     PostProcessor.draw(delta);
+    Light.drawTint(delta);
 
     if (this.mapToggled === true) this.map.draw(delta);
     this.drawTileCursor(delta);
