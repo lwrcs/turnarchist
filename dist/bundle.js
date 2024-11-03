@@ -5642,6 +5642,7 @@ var TombStone = /** @class */ (function (_super) {
         _this.kill = function () {
             _this.dead = true;
             _this.dropLoot();
+            _this.room.lightSources = _this.room.lightSources.filter(function (ls) { return ls !== _this.room.lightSources[_this.room.lightSources.length - 1]; });
         };
         _this.hurt = function (playerHitBy, damage) {
             _this.healthBar.hurt();
@@ -5701,7 +5702,7 @@ var TombStone = /** @class */ (function (_super) {
         var dropProb = random_1.Random.rand();
         if (dropProb < 0.05)
             _this.drop = new spellbook_1.Spellbook(_this.room, 0, 0);
-        _this.room.lightSources.push(new lightSource_1.LightSource(_this.x + 0.5, _this.y + 0.5, 2, [10, 250, 10]));
+        _this.room.lightSources.push(new lightSource_1.LightSource(_this.x + 0.5, _this.y + 0.5, 3, [10, 250, 10]));
         return _this;
     }
     Object.defineProperty(TombStone.prototype, "type", {
@@ -8624,6 +8625,7 @@ var Inventory = /** @class */ (function () {
                 _this.items.splice(i, 1);
             }
         };
+        this.dropFromInventory = function () { };
         this.hasItem = function (itemType) {
             // itemType is class of Item we're looking for
             for (var _i = 0, _a = _this.items; _i < _a.length; _i++) {
@@ -9795,6 +9797,7 @@ var Item = /** @class */ (function (_super) {
                     _this.pickupSound();
             }
         };
+        _this.dropFromInventory = function () { };
         // Function to get the amount of shade at the item's location
         _this.shadeAmount = function () {
             if (!_this.x || !_this.y)
@@ -11817,10 +11820,11 @@ var Player = /** @class */ (function (_super) {
         };
         _this.mouseMove = function () {
             _this.inventory.mouseMove();
-            _this.faceMouse();
+            //this.faceMouse();
             _this.setTileCursorPosition();
         };
         _this.moveWithMouse = function () {
+            _this.faceMouse();
             if (_this.moveRangeCheck(_this.mouseToTile().x, _this.mouseToTile().y)) {
                 _this.tryMove(_this.mouseToTile().x, _this.mouseToTile().y);
             }
@@ -12205,7 +12209,7 @@ var Player = /** @class */ (function (_super) {
             light_1.Light.drawTint(delta);
             if (_this.mapToggled === true)
                 _this.map.draw(delta);
-            _this.drawTileCursor(delta);
+            //this.drawTileCursor(delta);
             _this.drawInventoryButton(delta);
         };
         _this.updateDrawXY = function (delta) {
@@ -13221,9 +13225,9 @@ var Room = /** @class */ (function () {
         this.enterLevelThroughLadder = function (player, ladder) {
             player.moveSnap(ladder.x, ladder.y + 1);
             _this.clearDeadStuff();
+            _this.calculateWallInfo();
             _this.updateLighting();
             _this.entered = true;
-            _this.calculateWallInfo();
             _this.message = _this.name;
             player.map.saveMapData();
         };
@@ -13260,7 +13264,7 @@ var Room = /** @class */ (function () {
                         if (_this.softVis[x][y] < _this.vis[x][y])
                             _this.softVis[x][y] += 0.02;
                         else if (_this.softVis[x][y] > _this.vis[x][y])
-                            _this.softVis[x][y] -= 0.01 * delta;
+                            _this.softVis[x][y] -= 0.02 * delta;
                     }
                     //if (this.softVis[x][y] < 0.05) this.softVis[x][y] = 0;
                 }
@@ -13282,11 +13286,11 @@ var Room = /** @class */ (function () {
                     //  this.visibilityArray[x][y] = 0;
                 }
             }
-            _this.applyAmbientLighting(oldVis, oldCol);
+            //this.applyAmbientLighting(oldVis, oldCol);
             for (var p in _this.game.players) {
                 if (_this === _this.game.rooms[_this.game.players[p].levelID]) {
                     for (var i = 0; i < 360; i += levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP) {
-                        _this.castShadowsAtAngle(i, _this.game.players[p].x + 0.5, _this.game.players[p].y + 0.5, Math.min(Math.max(_this.game.players[p].sightRadius - _this.depth, player_1.Player.minSightRadius), 7));
+                        _this.castShadowsAtAngle(i, _this.game.players[p].x + 0.5, _this.game.players[p].y + 0.5, Math.min(Math.max(_this.game.players[p].sightRadius - _this.depth, player_1.Player.minSightRadius), 7), oldVis);
                         _this.castTintAtAngle(i, _this.game.players[p].x + 0.5, _this.game.players[p].y + 0.5, Math.min(Math.max(_this.game.players[p].sightRadius - _this.depth, player_1.Player.minSightRadius), 10), [200, 165, 5], // RGB color
                         oldCol);
                     }
@@ -13296,7 +13300,7 @@ var Room = /** @class */ (function () {
             for (var _i = 0, _a = _this.lightSources; _i < _a.length; _i++) {
                 var l = _a[_i];
                 for (var i = 0; i < 360; i += levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP) {
-                    _this.castShadowsAtAngle(i, l.x, l.y, l.r);
+                    _this.castShadowsAtAngle(i, l.x, l.y, l.r, oldVis);
                     _this.castTintAtAngle(i, l.x, l.y, l.r, l.c, oldCol); // RGB color
                 }
                 //this.applyLightSourceColor(l.x, l.y, [255, 215, 0]); // Example: Warm yellow
@@ -13318,7 +13322,7 @@ var Room = /** @class */ (function () {
               }
             }*/
         };
-        this.castShadowsAtAngle = function (angle, px, py, radius) {
+        this.castShadowsAtAngle = function (angle, px, py, radius, oldVis) {
             var dx = Math.cos((angle * Math.PI) / 180);
             var dy = Math.sin((angle * Math.PI) / 180);
             var onOpaqueSection = false;
@@ -13352,7 +13356,7 @@ var Room = /** @class */ (function () {
             var dx = Math.cos((angle * Math.PI) / 180);
             var dy = Math.sin((angle * Math.PI) / 180);
             var distance = 0;
-            for (var i = 0; i < radius - 3; i++) {
+            for (var i = 0; i < radius + 1; i++) {
                 var currentX = Math.floor(px + dx * i);
                 var currentY = Math.floor(py + dy * i);
                 if (!_this.isPositionInRoom(currentX, currentY))
@@ -13362,11 +13366,11 @@ var Room = /** @class */ (function () {
                     return; // Stop casting tint through opaque tiles
                 }
                 // Calculate intensity based on distance (closer tiles are brighter)
-                var intensity = 1 - i / radius;
+                var intensity = Math.min(1 / Math.pow(Math.sqrt(i) / radius, 2), 0.1);
                 if (intensity <= 0)
                     continue;
                 // Blend the tint color with the existing color
-                _this.col[currentX][currentY] = _this.blendColors(oldCol[currentX][currentY], color, intensity);
+                _this.col[currentX][currentY] = _this.blendColors(_this.col[currentX][currentY], color, intensity);
             }
         };
         this.blur3x3 = function (array, weights) {
@@ -13584,14 +13588,16 @@ var Room = /** @class */ (function () {
         this.drawShade = function (delta) {
             var bestSightRadius = 0;
             for (var p in _this.game.players) {
+                game_1.Game.ctx.globalCompositeOperation = "soft-light";
+                game_1.Game.ctx.globalAlpha = 0.45;
                 if (_this.game.rooms[_this.game.players[p].levelID] === _this &&
-                    _this.game.players[p].sightRadius > bestSightRadius) {
-                    bestSightRadius = _this.game.players[p].sightRadius;
+                    _this.game.players[p].defaultSightRadius > bestSightRadius) {
+                    bestSightRadius = _this.game.players[p].defaultSightRadius;
                 }
             }
             var shadingAlpha = Math.max(0, Math.min(0.8, 2 / bestSightRadius));
             if (gameConstants_1.GameConstants.ALPHA_ENABLED) {
-                game_1.Game.ctx.globalAlpha = shadingAlpha;
+                game_1.Game.ctx.globalAlpha = 0.45;
                 game_1.Game.ctx.fillStyle = _this.shadeColor;
                 game_1.Game.ctx.fillRect((_this.roomX - levelConstants_1.LevelConstants.SCREEN_W) * gameConstants_1.GameConstants.TILESIZE, (_this.roomY - levelConstants_1.LevelConstants.SCREEN_H) * gameConstants_1.GameConstants.TILESIZE, (_this.width + 2 * levelConstants_1.LevelConstants.SCREEN_W) * gameConstants_1.GameConstants.TILESIZE, (_this.height + 2 * levelConstants_1.LevelConstants.SCREEN_H) * gameConstants_1.GameConstants.TILESIZE);
                 game_1.Game.ctx.globalAlpha = 1;
@@ -14014,7 +14020,7 @@ var Room = /** @class */ (function () {
         }
     };
     Room.prototype.applyAmbientLighting = function (oldVis, oldCol) {
-        var ambientColor = [10, 20, 50]; // Deep bluish-green
+        var ambientColor = [30, 20, 255]; // Deep bluish-green
         for (var x = this.roomX; x < this.roomX + this.width; x++) {
             for (var y = this.roomY; y < this.roomY + this.height; y++) {
                 var ambientIntensity = 1 - oldVis[x][y];
@@ -14032,9 +14038,9 @@ var Room = /** @class */ (function () {
      */
     Room.prototype.blendColors = function (base, overlay, alpha) {
         return [
-            Math.round((overlay[0] * alpha + base[0] * (1 - alpha))),
-            Math.round((overlay[1] * alpha + base[1] * (1 - alpha))),
-            Math.round((overlay[2] * alpha + base[2] * (1 - alpha)))
+            Math.min(255, Math.round(base[0] * (1 - alpha) + overlay[0] * alpha)),
+            Math.min(255, Math.round(base[1] * (1 - alpha) + overlay[1] * alpha)),
+            Math.min(255, Math.round(base[2] * (1 - alpha) + overlay[2] * alpha))
         ];
     };
     Room.prototype.calculateWallInfo = function () {

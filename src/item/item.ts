@@ -73,6 +73,9 @@ export class Item extends Drawable {
     }
   };
 
+  dropFromInventory = () => { };
+
+
   // Function to get the amount of shade at the item's location
   shadeAmount = () => {
     if (!this.x || !this.y) return 0;

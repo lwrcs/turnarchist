@@ -1080,9 +1080,10 @@ export class Room {
     player.moveSnap(ladder.x, ladder.y + 1);
 
     this.clearDeadStuff();
+    this.calculateWallInfo();
     this.updateLighting();
     this.entered = true;
-    this.calculateWallInfo();
+
     this.message = this.name;
     player.map.saveMapData();
   };
@@ -1117,7 +1118,7 @@ export class Room {
         if (Math.abs(this.softVis[x][y] - this.vis[x][y]) >= 0.02) {
           if (this.softVis[x][y] < this.vis[x][y]) this.softVis[x][y] += 0.02;
           else if (this.softVis[x][y] > this.vis[x][y])
-            this.softVis[x][y] -= 0.01 * delta;
+            this.softVis[x][y] -= 0.02 * delta;
         }
         //if (this.softVis[x][y] < 0.05) this.softVis[x][y] = 0;
       }
@@ -1142,7 +1143,7 @@ export class Room {
       }
     }
 
-    this.applyAmbientLighting(oldVis, oldCol);
+    //this.applyAmbientLighting(oldVis, oldCol);
     for (const p in this.game.players) {
       if (this === this.game.rooms[this.game.players[p].levelID]) {
         for (let i = 0; i < 360; i += LevelConstants.LIGHTING_ANGLE_STEP) {
@@ -1156,8 +1157,8 @@ export class Room {
                 Player.minSightRadius
               ),
               7
-            )
-
+            ),
+            oldVis
           );
 
           this.castTintAtAngle(
@@ -1181,7 +1182,7 @@ export class Room {
     }
     for (const l of this.lightSources) {
       for (let i = 0; i < 360; i += LevelConstants.LIGHTING_ANGLE_STEP) {
-        this.castShadowsAtAngle(i, l.x, l.y, l.r);
+        this.castShadowsAtAngle(i, l.x, l.y, l.r, oldVis);
         this.castTintAtAngle(i, l.x, l.y, l.r, l.c, oldCol); // RGB color
       }
       //this.applyLightSourceColor(l.x, l.y, [255, 215, 0]); // Example: Warm yellow
@@ -1206,7 +1207,7 @@ export class Room {
   };
 
   private applyAmbientLighting(oldVis: number[][], oldCol: [number, number, number][][]) {
-    const ambientColor: [number, number, number] = [10, 20, 50]; // Deep bluish-green
+    const ambientColor: [number, number, number] = [30, 20, 255]; // Deep bluish-green
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
         const ambientIntensity = 1 - oldVis[x][y];
@@ -1219,7 +1220,8 @@ export class Room {
     angle: number,
     px: number,
     py: number,
-    radius: number
+    radius: number,
+    oldVis: number[][]
 
   ) => {
     let dx = Math.cos((angle * Math.PI) / 180);
@@ -1268,7 +1270,7 @@ export class Room {
     const dy = Math.sin((angle * Math.PI) / 180);
     let distance = 0;
 
-    for (let i = 0; i < radius - 3; i++) {
+    for (let i = 0; i < radius + 1; i++) {
       const currentX = Math.floor(px + dx * i);
       const currentY = Math.floor(py + dy * i);
 
@@ -1280,15 +1282,16 @@ export class Room {
       }
 
       // Calculate intensity based on distance (closer tiles are brighter)
-      const intensity = 1 - i / radius;
+      const intensity = Math.min(1 / Math.pow(Math.sqrt(i) / radius, 2), 0.1);
       if (intensity <= 0) continue;
 
       // Blend the tint color with the existing color
       this.col[currentX][currentY] = this.blendColors(
-        oldCol[currentX][currentY],
+        this.col[currentX][currentY],
         color,
         intensity
       );
+
     }
   };
 
@@ -1306,9 +1309,9 @@ export class Room {
     alpha: number
   ): [number, number, number] {
     return [
-      Math.round((overlay[0] * alpha + base[0] * (1 - alpha))),
-      Math.round((overlay[1] * alpha + base[1] * (1 - alpha))),
-      Math.round((overlay[2] * alpha + base[2] * (1 - alpha)))
+      Math.min(255, Math.round(base[0] * (1 - alpha) + overlay[0] * alpha)),
+      Math.min(255, Math.round(base[1] * (1 - alpha) + overlay[1] * alpha)),
+      Math.min(255, Math.round(base[2] * (1 - alpha) + overlay[2] * alpha))
     ];
   }
 
@@ -1565,16 +1568,18 @@ export class Room {
   drawShade = (delta: number) => {
     let bestSightRadius = 0;
     for (const p in this.game.players) {
+      Game.ctx.globalCompositeOperation = "soft-light";
+      Game.ctx.globalAlpha = 0.45;
       if (
         this.game.rooms[this.game.players[p].levelID] === this &&
-        this.game.players[p].sightRadius > bestSightRadius
+        this.game.players[p].defaultSightRadius > bestSightRadius
       ) {
-        bestSightRadius = this.game.players[p].sightRadius;
+        bestSightRadius = this.game.players[p].defaultSightRadius;
       }
     }
     let shadingAlpha = Math.max(0, Math.min(0.8, 2 / bestSightRadius));
     if (GameConstants.ALPHA_ENABLED) {
-      Game.ctx.globalAlpha = shadingAlpha;
+      Game.ctx.globalAlpha = 0.45;
       Game.ctx.fillStyle = this.shadeColor;
       Game.ctx.fillRect(
         (this.roomX - LevelConstants.SCREEN_W) * GameConstants.TILESIZE,

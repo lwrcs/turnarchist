@@ -228,6 +228,8 @@ export class Inventory {
     }
   };
 
+  dropFromInventory = () => { };
+
   hasItem = (itemType: any): Item => {
     // itemType is class of Item we're looking for
     for (const i of this.items) {

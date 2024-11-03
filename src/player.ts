@@ -302,11 +302,12 @@ export class Player extends Drawable {
 
   mouseMove = () => {
     this.inventory.mouseMove();
-    this.faceMouse();
+    //this.faceMouse();
     this.setTileCursorPosition();
   };
 
   moveWithMouse = () => {
+    this.faceMouse();
     if (this.moveRangeCheck(this.mouseToTile().x, this.mouseToTile().y)) {
       this.tryMove(this.mouseToTile().x, this.mouseToTile().y);
     }
@@ -737,7 +738,7 @@ export class Player extends Drawable {
     Light.drawTint(delta);
 
     if (this.mapToggled === true) this.map.draw(delta);
-    this.drawTileCursor(delta);
+    //this.drawTileCursor(delta);
     this.drawInventoryButton(delta);
   };
 
