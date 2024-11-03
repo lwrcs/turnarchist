@@ -305,7 +305,6 @@ export class BigKnightEnemy extends Enemy {
       true
     );
     this.updateDrawXY(delta);
-
   };
 
   dropLoot = () => {

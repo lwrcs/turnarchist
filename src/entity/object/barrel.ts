@@ -54,6 +54,5 @@ export class Barrel extends Entity {
     this.drawableY = this.y;
 
     this.updateDrawXY(delta);
-
   };
 }

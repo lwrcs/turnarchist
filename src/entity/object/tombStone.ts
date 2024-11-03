@@ -115,6 +115,5 @@ export class TombStone extends Entity {
     this.drawableY = this.y;
 
     this.updateDrawXY(delta);
-
   };
 }

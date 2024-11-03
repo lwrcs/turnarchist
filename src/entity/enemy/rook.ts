@@ -56,6 +56,5 @@ export class Rook extends Enemy {
     this.drawableY = this.y;
 
     this.updateDrawXY(delta);
-
   };
 }

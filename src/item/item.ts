@@ -65,9 +65,6 @@ export class Item extends Drawable {
 
   // Empty function to be called when item is dropped, to be overridden by subclasses
   onDrop = () => { };
-
-  dropFromInventory = () => { };
-
   // Function to be called when item is picked up
   onPickup = (player: Player) => {
     if (!this.pickedUp) {

@@ -154,14 +154,7 @@ export class ImageParticle extends Particle {
       this.dz *= -0.8;
     }
 
-    // apply gravity
-    this.dz -= 0.012 * delta;
-
-    /*
-    if (this.alpha < 0.2) this.alpha -= ((0.01 * this.size) + 0.005);
-    else this.alpha -= ((0.005 * this.size) + 0.005);
-    if (this.alpha <= 0.6) this.dead = true;
-    */
+    this.dz -= 0.01 * delta;
 
     this.expirationTimer -= delta;
     if (this.expirationTimer <= 0) this.dead = true;

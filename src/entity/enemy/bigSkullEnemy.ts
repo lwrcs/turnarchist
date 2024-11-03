@@ -336,7 +336,6 @@ export class BigSkullEnemy extends Enemy {
       true
     );
     this.updateDrawXY(delta);
-
   };
 
   dropLoot = () => {

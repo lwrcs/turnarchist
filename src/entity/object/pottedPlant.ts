@@ -53,7 +53,6 @@ export class PottedPlant extends Entity {
     // not inherited because it doesn't have the 0.5 offset
     if (!this.dead) {
       this.updateDrawXY(delta);
-
       if (this.health <= 1) this.tileX = 2;
       Game.drawObj(
         this.tileX,

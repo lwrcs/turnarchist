@@ -99,6 +99,7 @@ export class Game {
   static fxset: HTMLImageElement;
   static fontsheet: HTMLImageElement;
 
+
   static text_rendering_canvases: Record<string, HTMLCanvasElement>;
   static readonly letters = "abcdefghijklmnopqrstuvwxyz1234567890,.!?:'()[]%-/";
   static readonly letter_widths = [

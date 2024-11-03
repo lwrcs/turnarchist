@@ -9787,7 +9787,6 @@ var Item = /** @class */ (function (_super) {
         };
         // Empty function to be called when item is dropped, to be overridden by subclasses
         _this.onDrop = function () { };
-        _this.dropFromInventory = function () { };
         // Function to be called when item is picked up
         _this.onPickup = function (player) {
             if (!_this.pickedUp) {
@@ -11427,13 +11426,7 @@ var ImageParticle = /** @class */ (function (_super) {
                 _this.z = 0;
                 _this.dz *= -0.8;
             }
-            // apply gravity
-            _this.dz -= 0.012 * delta;
-            /*
-            if (this.alpha < 0.2) this.alpha -= ((0.01 * this.size) + 0.005);
-            else this.alpha -= ((0.005 * this.size) + 0.005);
-            if (this.alpha <= 0.6) this.dead = true;
-            */
+            _this.dz -= 0.01 * delta;
             _this.expirationTimer -= delta;
             if (_this.expirationTimer <= 0)
                 _this.dead = true;
