@@ -7,4 +7,11 @@ export class Utils {
   ) => {
     return Math.sqrt((endX - startX) ** 2 + (endY - startY) ** 2);
   };
+
+  static calculateExponentialFalloff = (
+    distance: number,
+    falloffRate: number
+  ): number => {
+    return Math.exp(-falloffRate * distance);
+  };
 }

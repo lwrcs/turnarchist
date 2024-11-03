@@ -1156,7 +1156,8 @@ export class Room {
                 Player.minSightRadius
               ),
               7
-            ),
+            )
+
           );
 
           this.castTintAtAngle(
@@ -1170,7 +1171,8 @@ export class Room {
               ),
               10
             ),
-            [200, 165, 5] // RGB color
+            [200, 165, 5], // RGB color
+            oldCol
           );
         }
         //this.applyLightSourceColor(this.game.players[p].x + 0.5, this.game.players[p].y + 0.5, [255, 140, 0]); // Warm orange
@@ -1180,7 +1182,7 @@ export class Room {
     for (const l of this.lightSources) {
       for (let i = 0; i < 360; i += LevelConstants.LIGHTING_ANGLE_STEP) {
         this.castShadowsAtAngle(i, l.x, l.y, l.r);
-        this.castTintAtAngle(i, l.x, l.y, l.r, [200, 175, 25]); // RGB color
+        this.castTintAtAngle(i, l.x, l.y, l.r, l.c, oldCol); // RGB color
       }
       //this.applyLightSourceColor(l.x, l.y, [255, 215, 0]); // Example: Warm yellow
     }
@@ -1217,7 +1219,8 @@ export class Room {
     angle: number,
     px: number,
     py: number,
-    radius: number,
+    radius: number
+
   ) => {
     let dx = Math.cos((angle * Math.PI) / 180);
     let dy = Math.sin((angle * Math.PI) / 180);
@@ -1258,6 +1261,8 @@ export class Room {
     py: number,
     radius: number,
     color: [number, number, number],
+    oldCol: [number, number, number][][]
+
   ) => {
     const dx = Math.cos((angle * Math.PI) / 180);
     const dy = Math.sin((angle * Math.PI) / 180);
@@ -1280,7 +1285,7 @@ export class Room {
 
       // Blend the tint color with the existing color
       this.col[currentX][currentY] = this.blendColors(
-        this.col[currentX][currentY],
+        oldCol[currentX][currentY],
         color,
         intensity
       );

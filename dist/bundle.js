@@ -5629,6 +5629,7 @@ var random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
 var spellbook_1 = __webpack_require__(/*! ../../weapon/spellbook */ "./src/weapon/spellbook.ts");
 var sound_1 = __webpack_require__(/*! ../../sound */ "./src/sound.ts");
 var imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ "./src/particle/imageParticle.ts");
+var lightSource_1 = __webpack_require__(/*! ../../lightSource */ "./src/lightSource.ts");
 var TombStone = /** @class */ (function (_super) {
     __extends(TombStone, _super);
     function TombStone(room, game, x, y, skinType, drop) {
@@ -5695,6 +5696,7 @@ var TombStone = /** @class */ (function (_super) {
         var dropProb = random_1.Random.rand();
         if (dropProb < 0.05)
             _this.drop = new spellbook_1.Spellbook(_this.room, 0, 0);
+        _this.room.lightSources.push(new lightSource_1.LightSource(_this.x + 0.5, _this.y + 0.5, 2, [10, 250, 10]));
         return _this;
     }
     Object.defineProperty(TombStone.prototype, "type", {
@@ -10947,10 +10949,12 @@ exports.LevelGenerator = LevelGenerator;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.LightSource = void 0;
 var LightSource = /** @class */ (function () {
-    function LightSource(x, y, r) {
+    function LightSource(x, y, r, c) {
+        if (c === void 0) { c = [255, 130, 5]; }
         this.x = x;
         this.y = y;
         this.r = r;
+        this.c = c;
     }
     return LightSource;
 }());
@@ -13285,8 +13289,8 @@ var Room = /** @class */ (function () {
                 if (_this === _this.game.rooms[_this.game.players[p].levelID]) {
                     for (var i = 0; i < 360; i += levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP) {
                         _this.castShadowsAtAngle(i, _this.game.players[p].x + 0.5, _this.game.players[p].y + 0.5, Math.min(Math.max(_this.game.players[p].sightRadius - _this.depth, player_1.Player.minSightRadius), 7));
-                        _this.castTintAtAngle(i, _this.game.players[p].x + 0.5, _this.game.players[p].y + 0.5, Math.min(Math.max(_this.game.players[p].sightRadius - _this.depth, player_1.Player.minSightRadius), 10), [200, 165, 5] // RGB color
-                        );
+                        _this.castTintAtAngle(i, _this.game.players[p].x + 0.5, _this.game.players[p].y + 0.5, Math.min(Math.max(_this.game.players[p].sightRadius - _this.depth, player_1.Player.minSightRadius), 10), [200, 165, 5], // RGB color
+                        oldCol);
                     }
                     //this.applyLightSourceColor(this.game.players[p].x + 0.5, this.game.players[p].y + 0.5, [255, 140, 0]); // Warm orange
                 }
@@ -13295,7 +13299,7 @@ var Room = /** @class */ (function () {
                 var l = _a[_i];
                 for (var i = 0; i < 360; i += levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP) {
                     _this.castShadowsAtAngle(i, l.x, l.y, l.r);
-                    _this.castTintAtAngle(i, l.x, l.y, l.r, [200, 175, 25]); // RGB color
+                    _this.castTintAtAngle(i, l.x, l.y, l.r, l.c, oldCol); // RGB color
                 }
                 //this.applyLightSourceColor(l.x, l.y, [255, 215, 0]); // Example: Warm yellow
             }
@@ -13346,7 +13350,7 @@ var Room = /** @class */ (function () {
          * @param radius - The radius of the light's influence.
          * @param color - The RGB color tuple representing the tint.
          */
-        this.castTintAtAngle = function (angle, px, py, radius, color) {
+        this.castTintAtAngle = function (angle, px, py, radius, color, oldCol) {
             var dx = Math.cos((angle * Math.PI) / 180);
             var dy = Math.sin((angle * Math.PI) / 180);
             var distance = 0;
@@ -13364,7 +13368,7 @@ var Room = /** @class */ (function () {
                 if (intensity <= 0)
                     continue;
                 // Blend the tint color with the existing color
-                _this.col[currentX][currentY] = _this.blendColors(_this.col[currentX][currentY], color, intensity);
+                _this.col[currentX][currentY] = _this.blendColors(oldCol[currentX][currentY], color, intensity);
             }
         };
         this.blur3x3 = function (array, weights) {
@@ -15603,7 +15607,7 @@ var WallTorch = /** @class */ (function (_super) {
             game_1.Game.drawTile(2, _this.skin + _this.tileYOffset, 1, 1, _this.x, _this.y - 1, 1, 1, _this.room.shadeColor, _this.shadeAmount());
             game_1.Game.drawFX(Math.floor(_this.frame), 32, 1, 2, _this.x, _this.y - 1, 1, 2);
         };
-        _this.room.lightSources.push(new lightSource_1.LightSource(_this.x + 0.5, _this.y + 0.5, 3));
+        _this.room.lightSources.push(new lightSource_1.LightSource(_this.x + 0.5, _this.y + 0.5, 3, [200, 140, 5]));
         _this.frame = Math.random() * 12;
         _this.tileYOffset = 6;
         return _this;
@@ -15706,6 +15710,9 @@ var Utils = /** @class */ (function () {
     }
     Utils.distance = function (startX, startY, endX, endY) {
         return Math.sqrt(Math.pow((endX - startX), 2) + Math.pow((endY - startY), 2));
+    };
+    Utils.calculateExponentialFalloff = function (distance, falloffRate) {
+        return Math.exp(-falloffRate * distance);
     };
     return Utils;
 }());

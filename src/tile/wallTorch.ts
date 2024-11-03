@@ -9,7 +9,7 @@ export class WallTorch extends Tile {
 
   constructor(room: Room, x: number, y: number) {
     super(room, x, y);
-    this.room.lightSources.push(new LightSource(this.x + 0.5, this.y + 0.5, 3));
+    this.room.lightSources.push(new LightSource(this.x + 0.5, this.y + 0.5, 3, [200, 140, 5]));
     this.frame = Math.random() * 12;
     this.tileYOffset = 6;
   }

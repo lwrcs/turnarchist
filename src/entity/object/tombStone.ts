@@ -13,6 +13,7 @@ import { Item } from "../../item/item";
 import { Spellbook } from "../../weapon/spellbook";
 import { Sound } from "../../sound";
 import { ImageParticle } from "../../particle/imageParticle";
+import { LightSource } from "../../lightSource";
 
 export class TombStone extends Entity {
   skinType: number;
@@ -40,6 +41,8 @@ export class TombStone extends Entity {
     this.name = "tombstone";
     let dropProb = Random.rand();
     if (dropProb < 0.05) this.drop = new Spellbook(this.room, 0, 0);
+    this.room.lightSources.push(new LightSource(this.x + 0.5, this.y + 0.5, 2, [10, 250, 10]));
+
   }
 
   get type() {
