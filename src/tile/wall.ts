@@ -19,7 +19,9 @@ export class Wall extends Tile {
     return true;
   };
   isOpaque = (): boolean => {
-    return true;
+    const wallInfo = this.room.wallInfo.get(`${this.x},${this.y}`);
+    if (!wallInfo) return true;
+    return (!wallInfo.isTopWall && !wallInfo.isInnerWall) || (wallInfo.isLeftWall || wallInfo.isRightWall)
   };
 
   draw = (delta: number) => {
@@ -29,7 +31,7 @@ export class Wall extends Tile {
     // Set tileYOffset based on inner wall type
     this.tileYOffset =
       wallInfo.innerWallType === "bottomInner" ||
-      wallInfo.innerWallType === "surroundedInner"
+        wallInfo.innerWallType === "surroundedInner"
         ? 0
         : 6;
 
@@ -65,5 +67,23 @@ export class Wall extends Tile {
       this.room.shadeColor,
       this.shadeAmount()
     );
+  };
+  drawAboveShading = (delta: number) => {
+    const wallInfo = this.room.wallInfo.get(`${this.x},${this.y}`);
+    if (!wallInfo) return;
+    if (wallInfo.isBottomWall || wallInfo.isBelowDoorWall || wallInfo.isAboveDoorWall) {
+      Game.drawTile(
+        2,
+        this.skin + this.tileYOffset,
+        1,
+        1,
+        this.x,
+        this.y - 1,
+        1,
+        1,
+        this.room.shadeColor,
+        this.room.softVis[this.x][this.y + 1]
+      );
+    }
   };
 }

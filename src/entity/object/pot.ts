@@ -6,6 +6,7 @@ import { LevelConstants } from "../../levelConstants";
 import { GenericParticle } from "../../particle/genericParticle";
 import { EntityType } from "../entity";
 import { ImageParticle } from "../../particle/imageParticle";
+import { Candle } from "../../item/candle";
 
 export class Pot extends Entity {
   constructor(room: Room, game: Game, x: number, y: number) {
@@ -17,6 +18,7 @@ export class Pot extends Entity {
     this.hasShadow = false;
     this.chainPushable = false;
     this.name = "pot";
+    this.drop = new Candle(this.room, this.x, this.y);
   }
 
   get type() {
@@ -24,8 +26,8 @@ export class Pot extends Entity {
   }
 
   kill = () => {
+    this.room.items.push(this.drop);
     this.dead = true;
-
     ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 29);
   };
   killNoBones = () => {

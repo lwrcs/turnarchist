@@ -15,6 +15,7 @@ import { BlueGem } from "../../item/bluegem";
 import { EntityType } from "../entity";
 import { Random } from "../../random";
 import { Player } from "../../player";
+import { Torch } from "../../item/torch";
 
 export class Chest extends Entity {
   frame: number;
@@ -59,7 +60,7 @@ export class Chest extends Entity {
         this.drop = new Heart(this.room, x, y);
         break;
       case 2:
-        this.drop = new GreenGem(this.room, x, y);
+        this.drop = new Torch(this.room, x, y);
         break;
       case 3:
         this.drop = new RedGem(this.room, x, y);
@@ -78,7 +79,7 @@ export class Chest extends Entity {
   };
 
   rollDrop = (): number => {
-    return Game.randTable([1, 1, 1, 1, 1, 1, 1, 2, 3, 4], Random.rand);
+    return Game.randTable([1, 1, 1, 1, 1, 1, 1, 2, 3, 4, 5, 2, 2], Random.rand);
   };
 
   kill = () => {
@@ -111,7 +112,7 @@ export class Chest extends Entity {
   draw = (delta: number) => {
     if (this.opening) {
       if (this.tileX <= 6) {
-        this.tileX += 0.15;
+        this.tileX += 0.15 * delta;
       } else {
         this.opening = false;
       }

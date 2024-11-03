@@ -21,7 +21,9 @@ export class WallTorch extends Tile {
     return true;
   };
   isOpaque = (): boolean => {
-    return true;
+    const wallInfo = this.room.wallInfo.get(`${this.x},${this.y}`);
+    if (!wallInfo) return true;
+    return (!wallInfo.isTopWall && !wallInfo.isInnerWall) || (wallInfo.isLeftWall || wallInfo.isRightWall)
   };
 
   draw = (delta: number) => {
@@ -32,7 +34,7 @@ export class WallTorch extends Tile {
 
     this.tileYOffset =
       wallInfo.innerWallType === "bottomInner" ||
-      wallInfo.innerWallType === "surroundedInner"
+        wallInfo.innerWallType === "surroundedInner"
         ? 0
         : 6;
 

@@ -13,8 +13,8 @@ export class Torch extends Light {
     this.tileX = 28;
     this.tileY = 0;
     this.name = "torch";
-    this.fuelCap = 50;
-    this.fuel = 50;
-    this.maxRadius = 7;
+    this.fuelCap = 500;
+    this.fuel = 500;
+    this.maxRadius = 6;
   }
 }

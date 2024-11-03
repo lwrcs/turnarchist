@@ -45,17 +45,17 @@ export class Light extends Equippable {
   setRadius = () => {
     this.wielder.sightRadius =
       this.wielder.defaultSightRadius +
-      Math.max(this.fuelPercentage * this.maxRadius, this.minRadius);
+      this.fuelPercentage * this.maxRadius;
   };
 
   toggleEquip = () => {
     this.equipped = !this.equipped;
     if (this.isIgnited()) {
       this.setRadius();
-      Light.warmEnabled = true;
+      //Light.warmEnabled = true;
     } else {
       this.resetRadius();
-      Light.warmEnabled = false;
+      //Light.warmEnabled = false;
     }
     this.updateLighting();
   };
@@ -73,6 +73,7 @@ export class Light extends Equippable {
   deplete = () => {
     if (this.fuel <= 0) {
       this.wielder.game.pushMessage(`${this.name} depletes.`);
+      this.resetRadius();
       this.wielder.inventory.removeItem(this);
     } else if (this.isIgnited()) {
       this.fuel--;

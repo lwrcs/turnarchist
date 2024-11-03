@@ -114,6 +114,7 @@ interface WallInfo {
   isDoorWall: boolean;
   innerWallType: string | null;
   shouldDrawBottom: boolean;
+  isAboveDoorWall: boolean;
 }
 
 export class Room {
@@ -122,6 +123,10 @@ export class Room {
   roomArray: Tile[][];
   softVis: number[][]; // this is the one we use for drawing (includes smoothing)
   vis: number[][]; // visibility ranges from 0 (fully visible) to 1 (fully black)
+  //testing
+  softCol: [number, number, number][][];
+  col: [number, number, number][][];
+
   entities: Array<Entity>;
   items: Array<Item>;
   doors: Array<Door>; // (Door | BottomDoor) just a reference for mapping, still access through levelArray
@@ -976,12 +981,18 @@ export class Room {
     }
     this.vis = [];
     this.softVis = [];
+    this.col = [];
+    this.softCol = [];
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       this.vis[x] = [];
       this.softVis[x] = [];
+      this.col[x] = [];
+      this.softCol[x] = [];
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
         this.vis[x][y] = 1;
         this.softVis[x][y] = 1;
+        this.col[x][y] = [0, 0, 0];
+        this.softCol[x][y] = [0, 0, 0];
       }
     }
 
@@ -1056,9 +1067,10 @@ export class Room {
     }
 
     this.clearDeadStuff();
+    this.calculateWallInfo();
     this.updateLighting();
     this.entered = true;
-    this.calculateWallInfo();
+
     this.alertEnemiesOnEntry();
     this.message = this.name;
     player.map.saveMapData();
@@ -1099,14 +1111,13 @@ export class Room {
     else return undefined;
   };
 
-  fadeLighting = () => {
-    console.log("fadeLighting");
+  fadeLighting = (delta: number) => {
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
         if (Math.abs(this.softVis[x][y] - this.vis[x][y]) >= 0.02) {
           if (this.softVis[x][y] < this.vis[x][y]) this.softVis[x][y] += 0.02;
           else if (this.softVis[x][y] > this.vis[x][y])
-            this.softVis[x][y] -= 0.02;
+            this.softVis[x][y] -= 0.01 * delta;
         }
         //if (this.softVis[x][y] < 0.05) this.softVis[x][y] = 0;
       }
@@ -1116,15 +1127,22 @@ export class Room {
   updateLighting = () => {
     console.log("updateLighting");
     let oldVis = [];
+    let oldCol = [];
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       oldVis[x] = [];
+      oldCol[x] = [];
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
         oldVis[x][y] = this.vis[x][y];
+        oldCol[x][y] = this.col[x][y];
         this.vis[x][y] = 1;
+        this.col[x][y] = [0, 0, 0];
+
         //if (this.visibilityArray[x][y] > LevelConstants.MIN_VISIBILITY)
         //  this.visibilityArray[x][y] = 0;
       }
     }
+
+    this.applyAmbientLighting(oldVis, oldCol);
     for (const p in this.game.players) {
       if (this === this.game.rooms[this.game.players[p].levelID]) {
         for (let i = 0; i < 360; i += LevelConstants.LIGHTING_ANGLE_STEP) {
@@ -1132,18 +1150,39 @@ export class Room {
             i,
             this.game.players[p].x + 0.5,
             this.game.players[p].y + 0.5,
-            Math.max(
-              this.game.players[p].sightRadius - this.depth,
-              Player.minSightRadius
-            )
+            Math.min(
+              Math.max(
+                this.game.players[p].sightRadius - this.depth,
+                Player.minSightRadius
+              ),
+              7
+            ),
+          );
+
+          this.castTintAtAngle(
+            i,
+            this.game.players[p].x + 0.5,
+            this.game.players[p].y + 0.5,
+            Math.min(
+              Math.max(
+                this.game.players[p].sightRadius - this.depth,
+                Player.minSightRadius
+              ),
+              10
+            ),
+            [200, 165, 5] // RGB color
           );
         }
+        //this.applyLightSourceColor(this.game.players[p].x + 0.5, this.game.players[p].y + 0.5, [255, 140, 0]); // Warm orange
+
       }
     }
     for (const l of this.lightSources) {
       for (let i = 0; i < 360; i += LevelConstants.LIGHTING_ANGLE_STEP) {
         this.castShadowsAtAngle(i, l.x, l.y, l.r);
+        this.castTintAtAngle(i, l.x, l.y, l.r, [200, 175, 25]); // RGB color
       }
+      //this.applyLightSourceColor(l.x, l.y, [255, 215, 0]); // Example: Warm yellow
     }
     if (LevelConstants.SMOOTH_LIGHTING)
       this.vis = this.blur3x3(this.vis, [
@@ -1164,11 +1203,21 @@ export class Room {
     }*/
   };
 
+  private applyAmbientLighting(oldVis: number[][], oldCol: [number, number, number][][]) {
+    const ambientColor: [number, number, number] = [10, 20, 50]; // Deep bluish-green
+    for (let x = this.roomX; x < this.roomX + this.width; x++) {
+      for (let y = this.roomY; y < this.roomY + this.height; y++) {
+        const ambientIntensity = 1 - oldVis[x][y];
+        this.col[x][y] = this.blendColors(oldCol[x][y], ambientColor, ambientIntensity);
+      }
+    }
+  }
+
   castShadowsAtAngle = (
     angle: number,
     px: number,
     py: number,
-    radius: number
+    radius: number,
   ) => {
     let dx = Math.cos((angle * Math.PI) / 180);
     let dy = Math.sin((angle * Math.PI) / 180);
@@ -1192,6 +1241,73 @@ export class Room {
       py += dy;
     }
   };
+
+  /**
+   * Casts a tint from a light source at a specific angle.
+   * Updates the `col` array with the light's color based on distance and tile opacity.
+   *
+   * @param angle - The angle in degrees at which to cast the tint.
+   * @param px - The x-coordinate of the light source.
+   * @param py - The y-coordinate of the light source.
+   * @param radius - The radius of the light's influence.
+   * @param color - The RGB color tuple representing the tint.
+   */
+  castTintAtAngle = (
+    angle: number,
+    px: number,
+    py: number,
+    radius: number,
+    color: [number, number, number],
+  ) => {
+    const dx = Math.cos((angle * Math.PI) / 180);
+    const dy = Math.sin((angle * Math.PI) / 180);
+    let distance = 0;
+
+    for (let i = 0; i < radius - 3; i++) {
+      const currentX = Math.floor(px + dx * i);
+      const currentY = Math.floor(py + dy * i);
+
+      if (!this.isPositionInRoom(currentX, currentY)) return; // Outside the room
+
+      const tile = this.roomArray[currentX][currentY];
+      if (tile.isOpaque()) {
+        return; // Stop casting tint through opaque tiles
+      }
+
+      // Calculate intensity based on distance (closer tiles are brighter)
+      const intensity = 1 - i / radius;
+      if (intensity <= 0) continue;
+
+      // Blend the tint color with the existing color
+      this.col[currentX][currentY] = this.blendColors(
+        this.col[currentX][currentY],
+        color,
+        intensity
+      );
+    }
+  };
+
+  /**
+   * Blends two colors based on the given alpha value.
+   *
+   * @param base - The base RGB color.
+   * @param overlay - The overlay RGB color.
+   * @param alpha - The opacity of the overlay color.
+   * @returns The blended RGB color.
+   */
+  private blendColors(
+    base: [number, number, number],
+    overlay: [number, number, number],
+    alpha: number
+  ): [number, number, number] {
+    return [
+      Math.round((overlay[0] * alpha + base[0] * (1 - alpha))),
+      Math.round((overlay[1] * alpha + base[1] * (1 - alpha))),
+      Math.round((overlay[2] * alpha + base[2] * (1 - alpha)))
+    ];
+  }
+
+
 
   blur3x3 = (
     array: Array<Array<number>>,
@@ -1351,8 +1467,29 @@ export class Room {
 
   draw = (delta: number) => {
     HitWarning.updateFrame(delta);
-    this.fadeLighting();
+    this.fadeLighting(delta);
   };
+
+  drawColorLayer = () => {
+    Game.ctx.globalCompositeOperation = "soft-light";
+    Game.ctx.globalAlpha = 0.45;
+    for (let x = this.roomX; x < this.roomX + this.width; x++) {
+      for (let y = this.roomY; y < this.roomY + this.height; y++) {
+        const [r, g, b] = this.col[x][y];
+        if (r === 0 && g === 0 && b === 0) continue; // Skip if no color
+        Game.ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${1 - this.vis[x][y]})`;
+        Game.ctx.fillRect(
+          x * GameConstants.TILESIZE,
+          y * GameConstants.TILESIZE,
+          GameConstants.TILESIZE,
+          GameConstants.TILESIZE
+        );
+      }
+    }
+    // Set composite operation if needed
+    Game.ctx.globalCompositeOperation = "source-over";
+    Game.ctx.globalAlpha = 1;
+  }
 
   drawEntities = (delta: number, skipLocalPlayer?: boolean) => {
     let tiles = [];
@@ -1462,7 +1599,6 @@ export class Room {
     for (const s of this.particles) {
       s.drawTopLayer(delta);
     }
-
     // draw over dithered shading
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
@@ -1501,6 +1637,8 @@ export class Room {
             !isTopWall && !isBottomWall && !isLeftWall && !isRightWall;
           const isBelowDoorWall =
             y < this.roomY + this.height - 1 && this.getTile(x, y + 1)?.isDoor;
+          const isAboveDoorWall =
+            y < this.roomY + this.height - 1 && this.getTile(x, y - 1)?.isDoor;
           const isDoorWall =
             y < this.roomY + this.height && this.getTile(x, y + 1)?.isDoor;
 
@@ -1529,6 +1667,7 @@ export class Room {
             isBelowDoorWall,
             isDoorWall,
             innerWallType,
+            isAboveDoorWall,
             shouldDrawBottom:
               isDoorWall ||
               isBelowDoorWall ||

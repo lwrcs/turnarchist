@@ -5169,12 +5169,12 @@ var key_1 = __webpack_require__(/*! ../../item/key */ "./src/item/key.ts");
 var heart_1 = __webpack_require__(/*! ../../item/heart */ "./src/item/heart.ts");
 var armor_1 = __webpack_require__(/*! ../../item/armor */ "./src/item/armor.ts");
 var entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
-var greengem_1 = __webpack_require__(/*! ../../item/greengem */ "./src/item/greengem.ts");
 var genericParticle_1 = __webpack_require__(/*! ../../particle/genericParticle */ "./src/particle/genericParticle.ts");
 var redgem_1 = __webpack_require__(/*! ../../item/redgem */ "./src/item/redgem.ts");
 var bluegem_1 = __webpack_require__(/*! ../../item/bluegem */ "./src/item/bluegem.ts");
 var entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 var random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
+var torch_1 = __webpack_require__(/*! ../../item/torch */ "./src/item/torch.ts");
 var Chest = /** @class */ (function (_super) {
     __extends(Chest, _super);
     function Chest(room, game, x, y) {
@@ -5199,7 +5199,7 @@ var Chest = /** @class */ (function (_super) {
                     _this.drop = new heart_1.Heart(_this.room, x, y);
                     break;
                 case 2:
-                    _this.drop = new greengem_1.GreenGem(_this.room, x, y);
+                    _this.drop = new torch_1.Torch(_this.room, x, y);
                     break;
                 case 3:
                     _this.drop = new redgem_1.RedGem(_this.room, x, y);
@@ -5217,7 +5217,7 @@ var Chest = /** @class */ (function (_super) {
             _this.room.items.push(_this.drop);
         };
         _this.rollDrop = function () {
-            return game_1.Game.randTable([1, 1, 1, 1, 1, 1, 1, 2, 3, 4], random_1.Random.rand);
+            return game_1.Game.randTable([1, 1, 1, 1, 1, 1, 1, 2, 3, 4, 5, 2, 2], random_1.Random.rand);
         };
         _this.kill = function () {
             genericParticle_1.GenericParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, "#fbf236");
@@ -5239,7 +5239,7 @@ var Chest = /** @class */ (function (_super) {
         _this.draw = function (delta) {
             if (_this.opening) {
                 if (_this.tileX <= 6) {
-                    _this.tileX += 0.15;
+                    _this.tileX += 0.15 * delta;
                 }
                 else {
                     _this.opening = false;
@@ -5452,11 +5452,13 @@ var entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 var game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 var entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 var imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ "./src/particle/imageParticle.ts");
+var candle_1 = __webpack_require__(/*! ../../item/candle */ "./src/item/candle.ts");
 var Pot = /** @class */ (function (_super) {
     __extends(Pot, _super);
     function Pot(room, game, x, y) {
         var _this = _super.call(this, room, game, x, y) || this;
         _this.kill = function () {
+            _this.room.items.push(_this.drop);
             _this.dead = true;
             imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 29);
         };
@@ -5480,6 +5482,7 @@ var Pot = /** @class */ (function (_super) {
         _this.hasShadow = false;
         _this.chainPushable = false;
         _this.name = "pot";
+        _this.drop = new candle_1.Candle(_this.room, _this.x, _this.y);
         return _this;
     }
     Object.defineProperty(Pot.prototype, "type", {
@@ -6652,6 +6655,7 @@ var Game = /** @class */ (function () {
                 _this.players[_this.localPlayerID].draw(delta);
                 Game.ctx.translate(-playerOffsetX, -playerOffsetY);
                 Game.ctx.translate(newLevelOffsetX, newLevelOffsetY);
+                _this.room.drawColorLayer();
                 _this.room.drawShade(delta);
                 _this.room.drawOverShade(delta);
                 Game.ctx.translate(-newLevelOffsetX, -newLevelOffsetY);
@@ -6676,6 +6680,7 @@ var Game = /** @class */ (function () {
                 if (ditherFrame < 7) {
                     _this.room.draw(delta);
                     _this.room.drawEntities(delta);
+                    _this.room.drawColorLayer();
                     _this.room.drawShade(delta);
                     _this.room.drawOverShade(delta);
                     for (var x = _this.room.roomX - 1; x <= _this.room.roomX + _this.room.width; x++) {
@@ -6694,6 +6699,7 @@ var Game = /** @class */ (function () {
                     }
                     _this.room.draw(delta);
                     _this.room.drawEntities(delta);
+                    _this.room.drawColorLayer();
                     _this.room.drawShade(delta);
                     _this.room.drawOverShade(delta);
                     for (var x = _this.room.roomX - 1; x <= _this.room.roomX + _this.room.width; x++) {
@@ -6723,6 +6729,7 @@ var Game = /** @class */ (function () {
                 Game.ctx.translate(-cameraX, -cameraY);
                 _this.room.draw(delta);
                 _this.room.drawEntities(delta);
+                _this.room.drawColorLayer();
                 _this.room.drawShade(delta);
                 _this.room.drawOverShade(delta);
                 _this.players[_this.localPlayerID].drawTopLayer(delta);
@@ -8471,7 +8478,6 @@ var dagger_1 = __webpack_require__(/*! ./weapon/dagger */ "./src/weapon/dagger.t
 var usable_1 = __webpack_require__(/*! ./item/usable */ "./src/item/usable.ts");
 var candle_1 = __webpack_require__(/*! ./item/candle */ "./src/item/candle.ts");
 var torch_1 = __webpack_require__(/*! ./item/torch */ "./src/item/torch.ts");
-var lantern_1 = __webpack_require__(/*! ./item/lantern */ "./src/item/lantern.ts");
 var mouseCursor_1 = __webpack_require__(/*! ./mouseCursor */ "./src/mouseCursor.ts");
 var OPEN_TIME = 100; // milliseconds
 // Dark gray color used for the background of inventory slots
@@ -9104,7 +9110,7 @@ var Inventory = /** @class */ (function () {
             }
             _this.addItem(i);
         };
-        var startingInv = [dagger_1.Dagger, key_1.Key, candle_1.Candle, torch_1.Torch, lantern_1.Lantern];
+        var startingInv = [dagger_1.Dagger, key_1.Key, candle_1.Candle, torch_1.Torch];
         startingInv.forEach(function (item) {
             a(new item({ game: _this.game }, 0, 0));
         });
@@ -9321,11 +9327,11 @@ var Candle = /** @class */ (function (_super) {
     __extends(Candle, _super);
     function Candle(level, x, y) {
         var _this = _super.call(this, level, x, y) || this;
-        _this.fuel = 100; //how many turns before it burns out
+        _this.fuel = 250; //how many turns before it burns out
         _this.tileX = 27;
         _this.tileY = 0;
         _this.name = "candle";
-        _this.fuelCap = 100;
+        _this.fuelCap = 250;
         _this.maxRadius = 4;
         _this.minRadius = 2;
         return _this;
@@ -10016,17 +10022,17 @@ var Light = /** @class */ (function (_super) {
         _this.setRadius = function () {
             _this.wielder.sightRadius =
                 _this.wielder.defaultSightRadius +
-                    Math.max(_this.fuelPercentage * _this.maxRadius, _this.minRadius);
+                    _this.fuelPercentage * _this.maxRadius;
         };
         _this.toggleEquip = function () {
             _this.equipped = !_this.equipped;
             if (_this.isIgnited()) {
                 _this.setRadius();
-                Light.warmEnabled = true;
+                //Light.warmEnabled = true;
             }
             else {
                 _this.resetRadius();
-                Light.warmEnabled = false;
+                //Light.warmEnabled = false;
             }
             _this.updateLighting();
         };
@@ -10039,6 +10045,7 @@ var Light = /** @class */ (function (_super) {
         _this.deplete = function () {
             if (_this.fuel <= 0) {
                 _this.wielder.game.pushMessage("".concat(_this.name, " depletes."));
+                _this.resetRadius();
                 _this.wielder.inventory.removeItem(_this);
             }
             else if (_this.isIgnited()) {
@@ -10260,9 +10267,9 @@ var Torch = /** @class */ (function (_super) {
         _this.tileX = 28;
         _this.tileY = 0;
         _this.name = "torch";
-        _this.fuelCap = 50;
-        _this.fuel = 50;
-        _this.maxRadius = 7;
+        _this.fuelCap = 500;
+        _this.fuel = 500;
+        _this.maxRadius = 6;
         return _this;
     }
     return Torch;
@@ -12259,8 +12266,8 @@ var Player = /** @class */ (function (_super) {
             });
         }
         _this.mapToggled = true;
-        _this.health = 200;
-        _this.maxHealth = 200;
+        _this.health = 3;
+        _this.maxHealth = 3;
         _this.healthBar = new healthbar_1.HealthBar();
         _this.dead = false;
         _this.flashing = false;
@@ -12268,7 +12275,7 @@ var Player = /** @class */ (function (_super) {
         _this.lastTickHealth = _this.health;
         _this.guiHeartFrame = 0;
         _this.inventory = new inventory_1.Inventory(game, _this);
-        _this.defaultSightRadius = 4;
+        _this.defaultSightRadius = 3;
         _this.sightRadius = _this.defaultSightRadius;
         _this.map = new map_1.Map(_this.game, _this);
         //this.actionTab = new ActionTab(this.inventory, this.game);
@@ -13202,9 +13209,9 @@ var Room = /** @class */ (function () {
                 player.moveNoSmooth(door.x + side, door.y);
             }
             _this.clearDeadStuff();
+            _this.calculateWallInfo();
             _this.updateLighting();
             _this.entered = true;
-            _this.calculateWallInfo();
             _this.alertEnemiesOnEntry();
             _this.message = _this.name;
             player.map.saveMapData();
@@ -13244,15 +13251,14 @@ var Room = /** @class */ (function () {
             else
                 return undefined;
         };
-        this.fadeLighting = function () {
-            console.log("fadeLighting");
+        this.fadeLighting = function (delta) {
             for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
                 for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
                     if (Math.abs(_this.softVis[x][y] - _this.vis[x][y]) >= 0.02) {
                         if (_this.softVis[x][y] < _this.vis[x][y])
                             _this.softVis[x][y] += 0.02;
                         else if (_this.softVis[x][y] > _this.vis[x][y])
-                            _this.softVis[x][y] -= 0.02;
+                            _this.softVis[x][y] -= 0.01 * delta;
                     }
                     //if (this.softVis[x][y] < 0.05) this.softVis[x][y] = 0;
                 }
@@ -13261,27 +13267,37 @@ var Room = /** @class */ (function () {
         this.updateLighting = function () {
             console.log("updateLighting");
             var oldVis = [];
+            var oldCol = [];
             for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
                 oldVis[x] = [];
+                oldCol[x] = [];
                 for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
                     oldVis[x][y] = _this.vis[x][y];
+                    oldCol[x][y] = _this.col[x][y];
                     _this.vis[x][y] = 1;
+                    _this.col[x][y] = [0, 0, 0];
                     //if (this.visibilityArray[x][y] > LevelConstants.MIN_VISIBILITY)
                     //  this.visibilityArray[x][y] = 0;
                 }
             }
+            _this.applyAmbientLighting(oldVis, oldCol);
             for (var p in _this.game.players) {
                 if (_this === _this.game.rooms[_this.game.players[p].levelID]) {
                     for (var i = 0; i < 360; i += levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP) {
-                        _this.castShadowsAtAngle(i, _this.game.players[p].x + 0.5, _this.game.players[p].y + 0.5, Math.max(_this.game.players[p].sightRadius - _this.depth, player_1.Player.minSightRadius));
+                        _this.castShadowsAtAngle(i, _this.game.players[p].x + 0.5, _this.game.players[p].y + 0.5, Math.min(Math.max(_this.game.players[p].sightRadius - _this.depth, player_1.Player.minSightRadius), 7));
+                        _this.castTintAtAngle(i, _this.game.players[p].x + 0.5, _this.game.players[p].y + 0.5, Math.min(Math.max(_this.game.players[p].sightRadius - _this.depth, player_1.Player.minSightRadius), 10), [200, 165, 5] // RGB color
+                        );
                     }
+                    //this.applyLightSourceColor(this.game.players[p].x + 0.5, this.game.players[p].y + 0.5, [255, 140, 0]); // Warm orange
                 }
             }
             for (var _i = 0, _a = _this.lightSources; _i < _a.length; _i++) {
                 var l = _a[_i];
                 for (var i = 0; i < 360; i += levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP) {
                     _this.castShadowsAtAngle(i, l.x, l.y, l.r);
+                    _this.castTintAtAngle(i, l.x, l.y, l.r, [200, 175, 25]); // RGB color
                 }
+                //this.applyLightSourceColor(l.x, l.y, [255, 215, 0]); // Example: Warm yellow
             }
             if (levelConstants_1.LevelConstants.SMOOTH_LIGHTING)
                 _this.vis = _this.blur3x3(_this.vis, [
@@ -13318,6 +13334,37 @@ var Room = /** @class */ (function () {
                 _this.vis[Math.floor(px)][Math.floor(py)] = Math.min(_this.vis[Math.floor(px)][Math.floor(py)], Math.min(i / radius, 1));
                 px += dx;
                 py += dy;
+            }
+        };
+        /**
+         * Casts a tint from a light source at a specific angle.
+         * Updates the `col` array with the light's color based on distance and tile opacity.
+         *
+         * @param angle - The angle in degrees at which to cast the tint.
+         * @param px - The x-coordinate of the light source.
+         * @param py - The y-coordinate of the light source.
+         * @param radius - The radius of the light's influence.
+         * @param color - The RGB color tuple representing the tint.
+         */
+        this.castTintAtAngle = function (angle, px, py, radius, color) {
+            var dx = Math.cos((angle * Math.PI) / 180);
+            var dy = Math.sin((angle * Math.PI) / 180);
+            var distance = 0;
+            for (var i = 0; i < radius - 3; i++) {
+                var currentX = Math.floor(px + dx * i);
+                var currentY = Math.floor(py + dy * i);
+                if (!_this.isPositionInRoom(currentX, currentY))
+                    return; // Outside the room
+                var tile = _this.roomArray[currentX][currentY];
+                if (tile.isOpaque()) {
+                    return; // Stop casting tint through opaque tiles
+                }
+                // Calculate intensity based on distance (closer tiles are brighter)
+                var intensity = 1 - i / radius;
+                if (intensity <= 0)
+                    continue;
+                // Blend the tint color with the existing color
+                _this.col[currentX][currentY] = _this.blendColors(_this.col[currentX][currentY], color, intensity);
             }
         };
         this.blur3x3 = function (array, weights) {
@@ -13454,7 +13501,23 @@ var Room = /** @class */ (function () {
         };
         this.draw = function (delta) {
             hitWarning_1.HitWarning.updateFrame(delta);
-            _this.fadeLighting();
+            _this.fadeLighting(delta);
+        };
+        this.drawColorLayer = function () {
+            game_1.Game.ctx.globalCompositeOperation = "soft-light";
+            game_1.Game.ctx.globalAlpha = 0.45;
+            for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
+                for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
+                    var _a = _this.col[x][y], r = _a[0], g = _a[1], b = _a[2];
+                    if (r === 0 && g === 0 && b === 0)
+                        continue; // Skip if no color
+                    game_1.Game.ctx.fillStyle = "rgba(".concat(r, ", ").concat(g, ", ").concat(b, ", ").concat(1 - _this.vis[x][y], ")");
+                    game_1.Game.ctx.fillRect(x * gameConstants_1.GameConstants.TILESIZE, y * gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE);
+                }
+            }
+            // Set composite operation if needed
+            game_1.Game.ctx.globalCompositeOperation = "source-over";
+            game_1.Game.ctx.globalAlpha = 1;
         };
         this.drawEntities = function (delta, skipLocalPlayer) {
             var tiles = [];
@@ -13594,12 +13657,18 @@ var Room = /** @class */ (function () {
         }
         this.vis = [];
         this.softVis = [];
+        this.col = [];
+        this.softCol = [];
         for (var x_3 = this.roomX; x_3 < this.roomX + this.width; x_3++) {
             this.vis[x_3] = [];
             this.softVis[x_3] = [];
+            this.col[x_3] = [];
+            this.softCol[x_3] = [];
             for (var y_2 = this.roomY; y_2 < this.roomY + this.height; y_2++) {
                 this.vis[x_3][y_2] = 1;
                 this.softVis[x_3][y_2] = 1;
+                this.col[x_3][y_2] = [0, 0, 0];
+                this.softCol[x_3][y_2] = [0, 0, 0];
             }
         }
         this.skin = tile_1.SkinType.DUNGEON;
@@ -13942,8 +14011,32 @@ var Room = /** @class */ (function () {
                 break;
         }
     };
+    Room.prototype.applyAmbientLighting = function (oldVis, oldCol) {
+        var ambientColor = [10, 20, 50]; // Deep bluish-green
+        for (var x = this.roomX; x < this.roomX + this.width; x++) {
+            for (var y = this.roomY; y < this.roomY + this.height; y++) {
+                var ambientIntensity = 1 - oldVis[x][y];
+                this.col[x][y] = this.blendColors(oldCol[x][y], ambientColor, ambientIntensity);
+            }
+        }
+    };
+    /**
+     * Blends two colors based on the given alpha value.
+     *
+     * @param base - The base RGB color.
+     * @param overlay - The overlay RGB color.
+     * @param alpha - The opacity of the overlay color.
+     * @returns The blended RGB color.
+     */
+    Room.prototype.blendColors = function (base, overlay, alpha) {
+        return [
+            Math.round((overlay[0] * alpha + base[0] * (1 - alpha))),
+            Math.round((overlay[1] * alpha + base[1] * (1 - alpha))),
+            Math.round((overlay[2] * alpha + base[2] * (1 - alpha)))
+        ];
+    };
     Room.prototype.calculateWallInfo = function () {
-        var _a, _b;
+        var _a, _b, _c;
         this.wallInfo.clear();
         for (var x = this.roomX; x < this.roomX + this.width; x++) {
             for (var y = this.roomY; y < this.roomY + this.height; y++) {
@@ -13955,7 +14048,8 @@ var Room = /** @class */ (function () {
                     var isRightWall = x === this.roomX + this.width - 1;
                     var isInnerWall = !isTopWall && !isBottomWall && !isLeftWall && !isRightWall;
                     var isBelowDoorWall = y < this.roomY + this.height - 1 && ((_a = this.getTile(x, y + 1)) === null || _a === void 0 ? void 0 : _a.isDoor);
-                    var isDoorWall = y < this.roomY + this.height && ((_b = this.getTile(x, y + 1)) === null || _b === void 0 ? void 0 : _b.isDoor);
+                    var isAboveDoorWall = y < this.roomY + this.height - 1 && ((_b = this.getTile(x, y - 1)) === null || _b === void 0 ? void 0 : _b.isDoor);
+                    var isDoorWall = y < this.roomY + this.height && ((_c = this.getTile(x, y + 1)) === null || _c === void 0 ? void 0 : _c.isDoor);
                     var innerWallType = null;
                     if (isInnerWall) {
                         var hasWallAbove = this.getTile(x, y - 1) instanceof wall_1.Wall;
@@ -13982,6 +14076,7 @@ var Room = /** @class */ (function () {
                         isBelowDoorWall: isBelowDoorWall,
                         isDoorWall: isDoorWall,
                         innerWallType: innerWallType,
+                        isAboveDoorWall: isAboveDoorWall,
                         shouldDrawBottom: isDoorWall ||
                             isBelowDoorWall ||
                             (isTopWall && !isLeftWall && !isRightWall) ||
@@ -15407,7 +15502,10 @@ var Wall = /** @class */ (function (_super) {
             return true;
         };
         _this.isOpaque = function () {
-            return true;
+            var wallInfo = _this.room.wallInfo.get("".concat(_this.x, ",").concat(_this.y));
+            if (!wallInfo)
+                return true;
+            return (!wallInfo.isTopWall && !wallInfo.isInnerWall) || (wallInfo.isLeftWall || wallInfo.isRightWall);
         };
         _this.draw = function (delta) {
             var wallInfo = _this.room.wallInfo.get("".concat(_this.x, ",").concat(_this.y));
@@ -15426,6 +15524,14 @@ var Wall = /** @class */ (function (_super) {
                 wallInfo.isInnerWall)
                 game_1.Game.drawTile(0, _this.skin, 1, 1, _this.x, _this.y, 1, 1, _this.room.shadeColor, _this.room.softVis[_this.x][_this.y + 1]);
             game_1.Game.drawTile(2, _this.skin + _this.tileYOffset, 1, 1, _this.x, _this.y - 1, 1, 1, _this.room.shadeColor, _this.shadeAmount());
+        };
+        _this.drawAboveShading = function (delta) {
+            var wallInfo = _this.room.wallInfo.get("".concat(_this.x, ",").concat(_this.y));
+            if (!wallInfo)
+                return;
+            if (wallInfo.isBottomWall || wallInfo.isBelowDoorWall || wallInfo.isAboveDoorWall) {
+                game_1.Game.drawTile(2, _this.skin + _this.tileYOffset, 1, 1, _this.x, _this.y - 1, 1, 1, _this.room.shadeColor, _this.room.softVis[_this.x][_this.y + 1]);
+            }
         };
         _this.isDoor = false;
         _this.tileYOffset = 6;
@@ -15476,7 +15582,10 @@ var WallTorch = /** @class */ (function (_super) {
             return true;
         };
         _this.isOpaque = function () {
-            return true;
+            var wallInfo = _this.room.wallInfo.get("".concat(_this.x, ",").concat(_this.y));
+            if (!wallInfo)
+                return true;
+            return (!wallInfo.isTopWall && !wallInfo.isInnerWall) || (wallInfo.isLeftWall || wallInfo.isRightWall);
         };
         _this.draw = function (delta) {
             var wallInfo = _this.room.wallInfo.get("".concat(_this.x, ",").concat(_this.y));

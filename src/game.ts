@@ -723,11 +723,13 @@ export class Game {
 
       Game.ctx.translate(playerOffsetX, playerOffsetY);
       this.players[this.localPlayerID].draw(delta);
+
+
       Game.ctx.translate(-playerOffsetX, -playerOffsetY);
-
       Game.ctx.translate(newLevelOffsetX, newLevelOffsetY);
-
+      this.room.drawColorLayer();
       this.room.drawShade(delta);
+
 
       this.room.drawOverShade(delta);
 
@@ -767,7 +769,9 @@ export class Game {
       if (ditherFrame < 7) {
         this.room.draw(delta);
         this.room.drawEntities(delta);
+        this.room.drawColorLayer();
         this.room.drawShade(delta);
+
         this.room.drawOverShade(delta);
 
         for (
@@ -795,7 +799,9 @@ export class Game {
 
         this.room.draw(delta);
         this.room.drawEntities(delta);
+        this.room.drawColorLayer();
         this.room.drawShade(delta);
+
         this.room.drawOverShade(delta);
         for (
           let x = this.room.roomX - 1;
@@ -841,8 +847,9 @@ export class Game {
       Game.ctx.translate(-cameraX, -cameraY);
       this.room.draw(delta);
       this.room.drawEntities(delta);
-
+      this.room.drawColorLayer();
       this.room.drawShade(delta);
+
       this.room.drawOverShade(delta);
 
       this.players[this.localPlayerID].drawTopLayer(delta);

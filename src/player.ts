@@ -117,8 +117,8 @@ export class Player extends Drawable {
       );
     }
     this.mapToggled = true;
-    this.health = 200;
-    this.maxHealth = 200;
+    this.health = 3;
+    this.maxHealth = 3;
     this.healthBar = new HealthBar();
     this.dead = false;
     this.flashing = false;
@@ -127,7 +127,7 @@ export class Player extends Drawable {
     this.guiHeartFrame = 0;
 
     this.inventory = new Inventory(game, this);
-    this.defaultSightRadius = 4;
+    this.defaultSightRadius = 3;
     this.sightRadius = this.defaultSightRadius;
     this.map = new Map(this.game, this);
     //this.actionTab = new ActionTab(this.inventory, this.game);
