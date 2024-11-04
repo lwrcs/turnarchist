@@ -616,6 +616,14 @@ export class Game {
     Game.fillText(text, x, y);
   };
 
+  drawStuff = (delta: number) => {
+    this.room.drawColorLayer();
+    this.room.drawShade(delta);
+    this.room.drawOverShade(delta);
+
+
+  }
+
   draw = (delta: number) => {
     Game.ctx.globalAlpha = 1;
     Game.ctx.fillStyle = this.room.shadeColor;
@@ -732,11 +740,8 @@ export class Game {
 
       Game.ctx.translate(-playerOffsetX, -playerOffsetY);
       Game.ctx.translate(newLevelOffsetX, newLevelOffsetY);
-      this.room.drawColorLayer();
-      this.room.drawShade(delta);
 
-
-      this.room.drawOverShade(delta);
+      this.drawStuff(delta);
 
       Game.ctx.translate(-newLevelOffsetX, -newLevelOffsetY);
 
@@ -774,10 +779,8 @@ export class Game {
       if (ditherFrame < 7) {
         this.room.draw(delta);
         this.room.drawEntities(delta);
-        this.room.drawColorLayer();
-        this.room.drawShade(delta);
 
-        this.room.drawOverShade(delta);
+        this.drawStuff(delta);
 
         for (
           let x = this.room.roomX - 1;
@@ -804,10 +807,9 @@ export class Game {
 
         this.room.draw(delta);
         this.room.drawEntities(delta);
-        this.room.drawColorLayer();
-        this.room.drawShade(delta);
 
-        this.room.drawOverShade(delta);
+        this.drawStuff(delta);
+
         for (
           let x = this.room.roomX - 1;
           x <= this.room.roomX + this.room.width;
@@ -852,10 +854,8 @@ export class Game {
       Game.ctx.translate(-cameraX, -cameraY);
       this.room.draw(delta);
       this.room.drawEntities(delta);
-      this.room.drawColorLayer();
-      this.room.drawShade(delta);
 
-      this.room.drawOverShade(delta);
+      this.drawStuff(delta);
 
       this.players[this.localPlayerID].drawTopLayer(delta);
       Game.ctx.translate(cameraX, cameraY);

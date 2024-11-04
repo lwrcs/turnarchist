@@ -6603,6 +6603,11 @@ var Game = /** @class */ (function () {
             _this.screenShakeX = shakeX;
             _this.screenShakeY = shakeY;
         };
+        this.drawStuff = function (delta) {
+            _this.room.drawColorLayer();
+            _this.room.drawShade(delta);
+            _this.room.drawOverShade(delta);
+        };
         this.draw = function (delta) {
             Game.ctx.globalAlpha = 1;
             Game.ctx.fillStyle = _this.room.shadeColor;
@@ -6669,9 +6674,7 @@ var Game = /** @class */ (function () {
                 _this.players[_this.localPlayerID].draw(delta);
                 Game.ctx.translate(-playerOffsetX, -playerOffsetY);
                 Game.ctx.translate(newLevelOffsetX, newLevelOffsetY);
-                _this.room.drawColorLayer();
-                _this.room.drawShade(delta);
-                _this.room.drawOverShade(delta);
+                _this.drawStuff(delta);
                 Game.ctx.translate(-newLevelOffsetX, -newLevelOffsetY);
                 Game.ctx.translate(Math.round(playerCX + playerOffsetX - 0.5 * gameConstants_1.GameConstants.WIDTH), Math.round(playerCY + playerOffsetY - 0.5 * gameConstants_1.GameConstants.HEIGHT));
                 _this.players[_this.localPlayerID].drawGUI(delta);
@@ -6694,9 +6697,7 @@ var Game = /** @class */ (function () {
                 if (ditherFrame < 7) {
                     _this.room.draw(delta);
                     _this.room.drawEntities(delta);
-                    _this.room.drawColorLayer();
-                    _this.room.drawShade(delta);
-                    _this.room.drawOverShade(delta);
+                    _this.drawStuff(delta);
                     for (var x = _this.room.roomX - 1; x <= _this.room.roomX + _this.room.width; x++) {
                         for (var y = _this.room.roomY - 1; y <= _this.room.roomY + _this.room.height; y++) {
                             Game.drawFX(7 - ditherFrame, 10, 1, 1, x, y, 1, 1);
@@ -6713,9 +6714,7 @@ var Game = /** @class */ (function () {
                     }
                     _this.room.draw(delta);
                     _this.room.drawEntities(delta);
-                    _this.room.drawColorLayer();
-                    _this.room.drawShade(delta);
-                    _this.room.drawOverShade(delta);
+                    _this.drawStuff(delta);
                     for (var x = _this.room.roomX - 1; x <= _this.room.roomX + _this.room.width; x++) {
                         for (var y = _this.room.roomY - 1; y <= _this.room.roomY + _this.room.height; y++) {
                             Game.drawFX(ditherFrame - (7 + deadFrames), 10, 1, 1, x, y, 1, 1);
@@ -6743,9 +6742,7 @@ var Game = /** @class */ (function () {
                 Game.ctx.translate(-cameraX, -cameraY);
                 _this.room.draw(delta);
                 _this.room.drawEntities(delta);
-                _this.room.drawColorLayer();
-                _this.room.drawShade(delta);
-                _this.room.drawOverShade(delta);
+                _this.drawStuff(delta);
                 _this.players[_this.localPlayerID].drawTopLayer(delta);
                 Game.ctx.translate(cameraX, cameraY);
                 _this.room.drawTopLayer(delta);
