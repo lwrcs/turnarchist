@@ -10037,10 +10037,12 @@ var Light = /** @class */ (function (_super) {
             _this.equipped = !_this.equipped;
             if (_this.isIgnited()) {
                 _this.setRadius();
+                _this.wielder.lightEquipped = true;
                 //Light.warmEnabled = true;
             }
             else {
                 _this.resetRadius();
+                _this.wielder.lightEquipped = false;
                 //Light.warmEnabled = false;
             }
             _this.updateLighting();
@@ -10354,6 +10356,7 @@ var LevelConstants = /** @class */ (function () {
     LevelConstants.MIN_VISIBILITY = 0; // visibility level of places you've already seen
     LevelConstants.LIGHTING_ANGLE_STEP = 5; // how many degrees between each ray, previously 5
     LevelConstants.LEVEL_TEXT_COLOR = "yellow";
+    LevelConstants.AMBIENT_LIGHT_COLOR = [10, 10, 10];
     return LevelConstants;
 }());
 exports.LevelConstants = LevelConstants;
@@ -10958,11 +10961,22 @@ exports.LightSource = void 0;
 var LightSource = /** @class */ (function () {
     function LightSource(x, y, r, c) {
         if (c === void 0) { c = [255, 130, 5]; }
+        var _this = this;
+        this.updatePosition = function (x, y) {
+            _this.x = x;
+            _this.y = y;
+        };
         this.x = x;
         this.y = y;
         this.r = r;
         this.c = c;
     }
+    LightSource.add = function (room, lightSource) {
+        room.lightSources.push(lightSource);
+    };
+    LightSource.remove = function (room, lightSource) {
+        room.lightSources = room.lightSources.filter(function (ls) { return ls !== lightSource; });
+    };
     return LightSource;
 }());
 exports.LightSource = LightSource;
@@ -12294,6 +12308,7 @@ var Player = /** @class */ (function (_super) {
         _this.moveCooldown = 100; // Cooldown in milliseconds (adjust as needed)
         _this.tileCursor = { x: 0, y: 0 };
         _this.moveRange = 1;
+        _this.lightEquipped = false;
         return _this;
     }
     Player.prototype.canMove = function () {
@@ -13293,7 +13308,10 @@ var Room = /** @class */ (function () {
                 if (_this === _this.game.rooms[_this.game.players[p].levelID]) {
                     for (var i = 0; i < 360; i += levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP) {
                         _this.castShadowsAtAngle(i, _this.game.players[p].x + 0.5, _this.game.players[p].y + 0.5, Math.min(Math.max(_this.game.players[p].sightRadius - _this.depth, player_1.Player.minSightRadius), 7), oldVis);
-                        _this.castTintAtAngle(i, _this.game.players[p].x + 0.5, _this.game.players[p].y + 0.5, Math.min(Math.max(_this.game.players[p].sightRadius - _this.depth, player_1.Player.minSightRadius), 10), [200, 165, 5], // RGB color
+                        var lightColor = levelConstants_1.LevelConstants.AMBIENT_LIGHT_COLOR;
+                        if (_this.game.players[p].lightEquipped)
+                            lightColor = [200, 165, 5];
+                        _this.castTintAtAngle(i, _this.game.players[p].x + 0.5, _this.game.players[p].y + 0.5, Math.min(Math.max(_this.game.players[p].sightRadius - _this.depth, player_1.Player.minSightRadius), 10), lightColor, // RGB color
                         oldCol);
                     }
                     //this.applyLightSourceColor(this.game.players[p].x + 0.5, this.game.players[p].y + 0.5, [255, 140, 0]); // Warm orange
@@ -14022,11 +14040,11 @@ var Room = /** @class */ (function () {
         }
     };
     Room.prototype.applyAmbientLighting = function (oldVis, oldCol) {
-        var ambientColor = [30, 20, 255]; // Deep bluish-green
+        var ambientColor = [0, 0, 255]; // Deep bluish-green
         for (var x = this.roomX; x < this.roomX + this.width; x++) {
             for (var y = this.roomY; y < this.roomY + this.height; y++) {
-                var ambientIntensity = 1 - oldVis[x][y];
-                this.col[x][y] = this.blendColors(oldCol[x][y], ambientColor, ambientIntensity);
+                //const ambientIntensity = 1 - this.vis[x][y];
+                this.col[x][y] = this.blendColors(this.col[x][y], ambientColor, 1);
             }
         }
     };
@@ -15255,11 +15273,11 @@ var SpikeTrap = /** @class */ (function (_super) {
         _this.draw = function (delta) {
             game_1.Game.drawTile(1, _this.skin, 1, 1, _this.x, _this.y, 1, 1, _this.room.shadeColor, _this.shadeAmount());
             var rumbleOffsetX = 0;
-            _this.t++;
+            _this.t += delta;
             if (!_this.on && _this.tickCount === 3) {
-                if (_this.t % 4 === 1)
+                if (Math.floor(_this.t) % 4 === 1)
                     rumbleOffsetX = 0.0325;
-                if (_this.t % 4 === 3)
+                if (Math.floor(_this.t) % 4 === 3)
                     rumbleOffsetX = -0.0325;
             }
             var frames = [0, 1, 2, 3, 3, 4, 2, 0];

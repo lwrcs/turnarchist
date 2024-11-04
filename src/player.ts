@@ -71,6 +71,7 @@ export class Player extends Drawable {
   moveRange: number;
   tileCursor: { x: number; y: number };
   private jumpY: number;
+  lightEquipped: boolean;
   constructor(game: Game, x: number, y: number, isLocalPlayer: boolean) {
     super();
 
@@ -138,6 +139,7 @@ export class Player extends Drawable {
     this.moveCooldown = 100; // Cooldown in milliseconds (adjust as needed)
     this.tileCursor = { x: 0, y: 0 };
     this.moveRange = 1;
+    this.lightEquipped = false;
   }
 
   inputHandler = (input: InputEnum) => {

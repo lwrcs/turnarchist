@@ -20,4 +20,5 @@ export class LevelConstants {
   static readonly LIGHTING_ANGLE_STEP = 5; // how many degrees between each ray, previously 5
 
   static readonly LEVEL_TEXT_COLOR = "yellow";
+  static readonly AMBIENT_LIGHT_COLOR: [number, number, number] = [10, 10, 10];
 }

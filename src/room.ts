@@ -1160,7 +1160,8 @@ export class Room {
             ),
             oldVis
           );
-
+          let lightColor = LevelConstants.AMBIENT_LIGHT_COLOR;
+          if (this.game.players[p].lightEquipped) lightColor = [200, 165, 5];
           this.castTintAtAngle(
             i,
             this.game.players[p].x + 0.5,
@@ -1172,7 +1173,7 @@ export class Room {
               ),
               10
             ),
-            [200, 165, 5], // RGB color
+            lightColor, // RGB color
             oldCol
           );
         }
@@ -1207,11 +1208,11 @@ export class Room {
   };
 
   private applyAmbientLighting(oldVis: number[][], oldCol: [number, number, number][][]) {
-    const ambientColor: [number, number, number] = [30, 20, 255]; // Deep bluish-green
+    const ambientColor: [number, number, number] = [0, 0, 255]; // Deep bluish-green
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
-        const ambientIntensity = 1 - oldVis[x][y];
-        this.col[x][y] = this.blendColors(oldCol[x][y], ambientColor, ambientIntensity);
+        //const ambientIntensity = 1 - this.vis[x][y];
+        this.col[x][y] = this.blendColors(this.col[x][y], ambientColor, 1);
       }
     }
   }

@@ -7,6 +7,7 @@ import { Lantern } from "./lantern";
 import { Torch } from "./torch";
 import { PostProcessor } from "../postProcess";
 import { GameConstants } from "../gameConstants";
+import { LightSource } from "../lightSource";
 
 export class Light extends Equippable {
   fuel: number;
@@ -52,9 +53,11 @@ export class Light extends Equippable {
     this.equipped = !this.equipped;
     if (this.isIgnited()) {
       this.setRadius();
+      this.wielder.lightEquipped = true;
       //Light.warmEnabled = true;
     } else {
       this.resetRadius();
+      this.wielder.lightEquipped = false;
       //Light.warmEnabled = false;
     }
     this.updateLighting();

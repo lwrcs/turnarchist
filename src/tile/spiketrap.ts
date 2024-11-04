@@ -32,7 +32,7 @@ export class SpikeTrap extends Tile {
       for (const i in this.room.game.players) {
         if (
           this.room ===
-            this.room.game.rooms[this.room.game.players[i].levelID] &&
+          this.room.game.rooms[this.room.game.players[i].levelID] &&
           this.room.game.players[i].x === this.x &&
           this.room.game.players[i].y === this.y
         )
@@ -76,10 +76,10 @@ export class SpikeTrap extends Tile {
     );
 
     let rumbleOffsetX = 0;
-    this.t++;
+    this.t += delta;
     if (!this.on && this.tickCount === 3) {
-      if (this.t % 4 === 1) rumbleOffsetX = 0.0325;
-      if (this.t % 4 === 3) rumbleOffsetX = -0.0325;
+      if (Math.floor(this.t) % 4 === 1) rumbleOffsetX = 0.0325;
+      if (Math.floor(this.t) % 4 === 3) rumbleOffsetX = -0.0325;
     }
     let frames = [0, 1, 2, 3, 3, 4, 2, 0];
     let f = 6 + frames[Math.floor(this.frame)];
