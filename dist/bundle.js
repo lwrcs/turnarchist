@@ -6417,6 +6417,12 @@ var Game = /** @class */ (function () {
         this.localPlayerID = "localplayer";
         this.mostRecentInputReceived = true;
         this.loginMessage = "";
+        this.newGame = function () {
+            var gs = new gameState_1.GameState();
+            gs.seed = (Math.random() * 4294967296) >>> 0;
+            gs.randomState = (Math.random() * 4294967296) >>> 0;
+            (0, gameState_1.loadGameState)(_this, [_this.localPlayerID], gs, true);
+        };
         this.keyDownListener = function (key) {
             if (!_this.chatOpen) {
                 switch (key.toUpperCase()) {
@@ -6930,10 +6936,7 @@ var Game = /** @class */ (function () {
                     _this.screenShakeY = 0;
                     _this.levelState = LevelState.IN_LEVEL;
                     _this.tutorialActive = false;
-                    var gs = new gameState_1.GameState();
-                    gs.seed = (Math.random() * 4294967296) >>> 0;
-                    gs.randomState = (Math.random() * 4294967296) >>> 0;
-                    (0, gameState_1.loadGameState)(_this, [_this.localPlayerID], gs, true);
+                    _this.newGame();
                 }
             };
             checkResourcesLoaded();
@@ -7902,7 +7905,6 @@ var loadGameState = function (game, activeUsernames, gameState, newWorld) {
     random_1.Random.setState(gameState.randomState);
     game.room.updateLighting();
     var p = game.players[game.localPlayerID];
-    game.room.items.push(new dagger_1.Dagger(game.room, p.x, p.y - 1));
     game.room.items.push(new key_1.Key(game.room, p.x - 1, p.y + 1));
     game.room.items.push(new key_1.Key(game.room, p.x + 1, p.y + 1));
     game.room.items.push(new key_1.Key(game.room, p.x + 1, p.y - 2));
@@ -7913,8 +7915,6 @@ var loadGameState = function (game, activeUsernames, gameState, newWorld) {
     });
     setTimeout(function () {
         game.pushMessage("Welcome to Turnarchist");
-        game.pushMessage("Movement: arrow keys");
-        game.pushMessage("Inventory: I, Equip: space bar");
     }, 500);
     game.chat = [];
 };
@@ -11810,7 +11810,10 @@ var Player = /** @class */ (function (_super) {
             return false;
         };
         _this.spaceListener = function () {
-            if (_this.inventory.isOpen || _this.game.levelState === game_1.LevelState.IN_LEVEL) {
+            if (_this.dead) {
+                _this.restart();
+            }
+            else if (_this.inventory.isOpen || _this.game.levelState === game_1.LevelState.IN_LEVEL) {
                 _this.inventory.space();
                 return;
             }
@@ -11819,7 +11822,12 @@ var Player = /** @class */ (function (_super) {
             }
         };
         _this.mouseLeftClick = function () {
-            _this.inventory.mouseLeftClick();
+            if (_this.dead) {
+                _this.restart();
+            }
+            else {
+                _this.inventory.mouseLeftClick();
+            }
             if (!_this.inventory.isOpen &&
                 !_this.inventory.isPointInInventoryButton(mouseCursor_1.MouseCursor.getInstance().getPosition().x, mouseCursor_1.MouseCursor.getInstance().getPosition().y) &&
                 !_this.inventory.isPointInQuickbarBounds(mouseCursor_1.MouseCursor.getInstance().getPosition().x, mouseCursor_1.MouseCursor.getInstance().getPosition().y).inBounds) {
@@ -11869,6 +11877,10 @@ var Player = /** @class */ (function (_super) {
                 x: Math.floor(input_1.Input.mouseX / gameConstants_1.GameConstants.TILESIZE),
                 y: Math.floor(input_1.Input.mouseY / gameConstants_1.GameConstants.TILESIZE),
             };
+        };
+        _this.restart = function () {
+            _this.dead = false;
+            _this.game.newGame();
         };
         _this.left = function () {
             if (_this.canMove()) {
@@ -12220,6 +12232,8 @@ var Player = /** @class */ (function (_super) {
                     gameOverString = "You were slain by ".concat(_this.lastHitBy, ".");
                 }
                 game_1.Game.fillText(gameOverString, gameConstants_1.GameConstants.WIDTH / 2 - game_1.Game.measureText(gameOverString).width / 2, gameConstants_1.GameConstants.HEIGHT / 2 - game_1.Game.letter_height + 2);
+                var restartButton = "Press space or click to restart";
+                game_1.Game.fillText(restartButton, gameConstants_1.GameConstants.WIDTH / 2 - game_1.Game.measureText(restartButton).width / 2, gameConstants_1.GameConstants.HEIGHT / 2 + game_1.Game.letter_height + 5);
             }
             postProcess_1.PostProcessor.draw(delta);
             light_1.Light.drawTint(delta);

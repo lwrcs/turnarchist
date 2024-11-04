@@ -815,7 +815,6 @@ export const loadGameState = (
   Random.setState(gameState.randomState);
   game.room.updateLighting();
   let p = game.players[game.localPlayerID];
-  game.room.items.push(new Dagger(game.room, p.x, p.y - 1));
   game.room.items.push(new Key(game.room, p.x - 1, p.y + 1));
   game.room.items.push(new Key(game.room, p.x + 1, p.y + 1));
   game.room.items.push(new Key(game.room, p.x + 1, p.y - 2));
@@ -835,8 +834,6 @@ export const loadGameState = (
 
   setTimeout(() => {
     game.pushMessage("Welcome to Turnarchist");
-    game.pushMessage("Movement: arrow keys");
-    game.pushMessage("Inventory: I, Equip: space bar");
   }, 500);
 
   game.chat = [];

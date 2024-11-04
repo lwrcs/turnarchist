@@ -181,6 +181,7 @@ export class Player extends Drawable {
         this.mouseMove();
         break;
     }
+
   };
   commaListener = () => {
     this.inventory.left();
@@ -267,7 +268,9 @@ export class Player extends Drawable {
     return false;
   };
   spaceListener = () => {
-    if (this.inventory.isOpen || this.game.levelState === LevelState.IN_LEVEL) {
+    if (this.dead) {
+      this.restart();
+    } else if (this.inventory.isOpen || this.game.levelState === LevelState.IN_LEVEL) {
       this.inventory.space();
       return;
     }
@@ -276,7 +279,11 @@ export class Player extends Drawable {
     }
   };
   mouseLeftClick = () => {
-    this.inventory.mouseLeftClick();
+    if (this.dead) {
+      this.restart();
+    } else {
+      this.inventory.mouseLeftClick();
+    }
     if (
       !this.inventory.isOpen &&
       !this.inventory.isPointInInventoryButton(
@@ -350,6 +357,11 @@ export class Player extends Drawable {
       y: Math.floor(Input.mouseY / GameConstants.TILESIZE),
     };
   };
+
+  restart = () => {
+    this.dead = false;
+    this.game.newGame();
+  }
 
   left = () => {
     if (this.canMove()) {
@@ -737,6 +749,13 @@ export class Player extends Drawable {
         GameConstants.WIDTH / 2 - Game.measureText(gameOverString).width / 2,
         GameConstants.HEIGHT / 2 - Game.letter_height + 2
       );
+      let restartButton = "Press space or click to restart";
+      Game.fillText(
+        restartButton,
+        GameConstants.WIDTH / 2 - Game.measureText(restartButton).width / 2,
+        GameConstants.HEIGHT / 2 + Game.letter_height + 5
+      );
+
     }
     PostProcessor.draw(delta);
     Light.drawTint(delta);

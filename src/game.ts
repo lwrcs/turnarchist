@@ -275,15 +275,19 @@ export class Game {
 
           this.levelState = LevelState.IN_LEVEL;
           this.tutorialActive = false;
-          let gs = new GameState();
-          gs.seed = (Math.random() * 4294967296) >>> 0;
-          gs.randomState = (Math.random() * 4294967296) >>> 0;
-          loadGameState(this, [this.localPlayerID], gs, true);
+          this.newGame();
         }
       };
       checkResourcesLoaded();
     });
     this.tutorialListener = new TutorialListener(this);
+  }
+
+  newGame = () => {
+    let gs = new GameState();
+    gs.seed = (Math.random() * 4294967296) >>> 0;
+    gs.randomState = (Math.random() * 4294967296) >>> 0;
+    loadGameState(this, [this.localPlayerID], gs, true);
   }
 
   keyDownListener = (key: string) => {
