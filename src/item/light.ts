@@ -33,7 +33,7 @@ export class Light extends Equippable {
   };
 
   get fuelPercentage() {
-    return (this.fuel / this.fuelCap);
+    return this.fuel / this.fuelCap;
   }
 
   isIgnited = () => {
@@ -45,8 +45,7 @@ export class Light extends Equippable {
 
   setRadius = () => {
     this.wielder.sightRadius =
-      this.wielder.defaultSightRadius +
-      this.fuelPercentage * this.maxRadius;
+      this.wielder.defaultSightRadius + this.fuelPercentage * this.maxRadius;
   };
 
   toggleEquip = () => {
@@ -64,9 +63,7 @@ export class Light extends Equippable {
   };
 
   coEquippable = (other: Light): boolean => {
-    return !(
-      other instanceof Light
-    );
+    return !(other instanceof Light);
   };
 
   resetRadius = () => {
@@ -102,12 +99,10 @@ export class Light extends Equippable {
     }
     if (Light.warmth < 0) Light.warmth = 0;
     if (Light.warmth > Light.maxWarmth) Light.warmth = Light.maxWarmth;
-    console.log(Light.warmth);
     Game.ctx.globalAlpha = Light.warmth;
     Game.ctx.globalCompositeOperation = "overlay";
     Game.ctx.fillStyle = "#FF8C00"; // reddish orange red
     Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
     Game.ctx.globalCompositeOperation = "source-over";
-
   };
 }

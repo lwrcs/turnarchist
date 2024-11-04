@@ -11,6 +11,7 @@ export class Slingshot extends Weapon {
 
     this.tileX = 26;
     this.tileY = 0;
+    this.name = "Slingshot";
   }
 
   weaponMove = (newX: number, newY: number): boolean => {
@@ -179,8 +180,5 @@ export class Slingshot extends Weapon {
       return false;
     }
     return true;
-  };
-  getDescription = (): string => {
-    return "SLINGSHOT\nRange 5";
   };
 }

@@ -6,12 +6,13 @@ import { SlashParticle } from "../particle/slashParticle";
 import { Crate } from "../entity/object/crate";
 import { Barrel } from "../entity/object/barrel";
 
-export class Pickaxe extends Weapon {
+export class Warhammer extends Weapon {
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
 
-    this.tileX = 30;
-    this.tileY = 0;
-    this.canMine = true;
+    this.tileX = 22;
+    this.tileY = 2;
+    this.damage = 2;
+    this.name = "Warhammer";
   }
 }

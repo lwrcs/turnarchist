@@ -17,6 +17,7 @@ export class Spellbook extends Weapon {
     this.tileX = 25;
     this.tileY = 0;
     this.canMine = true;
+    this.name = "Spellbook";
   }
 
   weaponMove = (newX: number, newY: number): boolean => {
@@ -52,9 +53,5 @@ export class Spellbook extends Weapon {
         this.game.shakeScreen(10 * this.wielder.drawX, 10 * this.wielder.drawY);
     }
     return !flag;
-  };
-
-  getDescription = (): string => {
-    return "SPELLBOOK\nc̵͈̮͍̫̄a̴̲͛͂̌ŗ̴̩͈̞̠͉̤̗̎̓͐͗̐̃̈́̏̊͝ê̴̥̙̰̱̮̙̩͇̝͎̋̏͐̉̑f̴̧͎͚̟͈̻̰̫̫͎̑̔̂͛̓͂̅ú̶̢͖̣͙͔̺̋̉̾̀̿̑̍̕l̵̮͚̊́͐̌̎͘";
   };
 }

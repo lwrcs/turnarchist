@@ -15,6 +15,7 @@ export class DualDagger extends Weapon {
     this.tileX = 23;
     this.tileY = 0;
     this.firstAttack = true;
+    this.name = "Dual Dagger";
   }
 
   tickInInventory = () => {
@@ -54,6 +55,6 @@ export class DualDagger extends Weapon {
   };
 
   getDescription = (): string => {
-    return "DUAL DAGGERS\nOne extra attack per turn";
+    return "Dual Daggers\nOne extra attack per turn";
   };
 }

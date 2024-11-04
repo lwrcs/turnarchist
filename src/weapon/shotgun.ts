@@ -13,6 +13,7 @@ export class Shotgun extends Weapon {
 
     this.tileX = 26;
     this.tileY = 0;
+    this.name = "Shotgun";
   }
 
   weaponMove = (newX: number, newY: number): boolean => {
@@ -163,9 +164,5 @@ export class Shotgun extends Weapon {
       return false;
     }
     return true;
-  };
-
-  getDescription = (): string => {
-    return "SHOTGUN\nRange 3, penetration";
   };
 }

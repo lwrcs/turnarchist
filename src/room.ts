@@ -233,7 +233,7 @@ export class Room {
     }
   }
 
-  private addFingers(rand: () => number) { }
+  private addFingers(rand: () => number) {}
 
   private addTorches(numTorches: number, rand: () => number) {
     let walls = [];
@@ -511,10 +511,10 @@ export class Room {
     for (let i = 0; i < numObstacles; i++) {
       const { x, y } = this.getRandomEmptyPosition(tiles);
       switch (
-      Game.randTable(
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4],
-        rand
-      )
+        Game.randTable(
+          [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4],
+          rand
+        )
       ) {
         case 1:
           this.entities.push(new Crate(this, this.game, x, y));
@@ -633,7 +633,7 @@ export class Room {
     this.addObstacles(numObstacles, rand);
     let numEnemies = Math.ceil(
       (numEmptyTiles - numTotalObstacles) *
-      Math.min(this.depth * 0.1 + 0.1, 0.35) //this.depth * 0.01 is starting value
+        Math.min(this.depth * 0.1 + 0.1, 0.35) //this.depth * 0.01 is starting value
     );
     this.addEnemies(numEnemies, rand);
 
@@ -651,7 +651,7 @@ export class Room {
     this.addObstacles(numObstacles, rand);
     let numEnemies = Math.ceil(
       (numEmptyTiles - numTotalObstacles) *
-      Math.min(this.depth * 0.05 + 0.2, 0.5)
+        Math.min(this.depth * 0.05 + 0.2, 0.5)
     );
     this.addEnemies(numEnemies, rand);
   };
@@ -669,8 +669,8 @@ export class Room {
     let numEmptyTiles = this.getEmptyTiles().length;
     let numEnemies = Math.ceil(
       numEmptyTiles *
-      (this.depth * 0.5 + 0.5) *
-      Game.randTable([0.05, 0.05, 0.06, 0.07, 0.1], rand)
+        (this.depth * 0.5 + 0.5) *
+        Game.randTable([0.05, 0.05, 0.06, 0.07, 0.1], rand)
     );
     this.addEnemies(numEnemies, rand);
     if (numEnemies > 0)
@@ -798,7 +798,7 @@ export class Room {
     this.addChests(Game.randTable([4, 4, 5, 5, 5, 6, 8], rand), rand);
     this.addPlants(Game.randTable([0, 1, 2, 4, 5, 6], rand), rand);
   };
-  populateChessboard = (rand: () => number) => { };
+  populateChessboard = (rand: () => number) => {};
   populateCave = (rand: () => number) => {
     let factor = Game.rand(1, 36, rand);
 
@@ -1126,7 +1126,6 @@ export class Room {
   };
 
   updateLighting = () => {
-    console.log("updateLighting");
     let oldVis = [];
     let oldCol = [];
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
@@ -1178,7 +1177,6 @@ export class Room {
           );
         }
         //this.applyLightSourceColor(this.game.players[p].x + 0.5, this.game.players[p].y + 0.5, [255, 140, 0]); // Warm orange
-
       }
     }
     for (const l of this.lightSources) {
@@ -1207,7 +1205,10 @@ export class Room {
     }*/
   };
 
-  private applyAmbientLighting(oldVis: number[][], oldCol: [number, number, number][][]) {
+  private applyAmbientLighting(
+    oldVis: number[][],
+    oldCol: [number, number, number][][]
+  ) {
     const ambientColor: [number, number, number] = [0, 0, 255]; // Deep bluish-green
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
@@ -1223,7 +1224,6 @@ export class Room {
     py: number,
     radius: number,
     oldVis: number[][]
-
   ) => {
     let dx = Math.cos((angle * Math.PI) / 180);
     let dy = Math.sin((angle * Math.PI) / 180);
@@ -1265,7 +1265,6 @@ export class Room {
     radius: number,
     color: [number, number, number],
     oldCol: [number, number, number][][]
-
   ) => {
     const dx = Math.cos((angle * Math.PI) / 180);
     const dy = Math.sin((angle * Math.PI) / 180);
@@ -1292,7 +1291,6 @@ export class Room {
         color,
         intensity
       );
-
     }
   };
 
@@ -1312,11 +1310,9 @@ export class Room {
     return [
       Math.min(255, Math.round(base[0] * (1 - alpha) + overlay[0] * alpha)),
       Math.min(255, Math.round(base[1] * (1 - alpha) + overlay[1] * alpha)),
-      Math.min(255, Math.round(base[2] * (1 - alpha) + overlay[2] * alpha))
+      Math.min(255, Math.round(base[2] * (1 - alpha) + overlay[2] * alpha)),
     ];
   }
-
-
 
   blur3x3 = (
     array: Array<Array<number>>,
@@ -1456,6 +1452,7 @@ export class Room {
     this.playerTicked.finishTick();
 
     this.checkForNoEnemies();
+    console.log(this.entities.filter((e) => e instanceof Enemy).length);
 
     this.turn = TurnState.playerTurn;
   };
@@ -1463,14 +1460,14 @@ export class Room {
   private checkForNoEnemies = () => {
     let enemies = this.entities.filter((e) => e instanceof Enemy);
     if (enemies.length === 0 && this.lastEnemyCount > 0) {
-      if (this.doors[0].type === DoorType.GUARDEDDOOR) {
-        this.doors.forEach((d) => {
-          d.unGuard();
-        });
-        this.game.pushMessage(
-          "The foes have been slain and the door allows you passage."
-        );
-      }
+      // if (this.doors[0].type === DoorType.GUARDEDDOOR) {
+      this.doors.forEach((d) => {
+        d.unGuard();
+      });
+      this.game.pushMessage(
+        "The foes have been slain and the door allows you passage."
+      );
+      // }
     }
   };
 
@@ -1498,7 +1495,7 @@ export class Room {
     // Set composite operation if needed
     Game.ctx.globalCompositeOperation = "source-over";
     Game.ctx.globalAlpha = 1;
-  }
+  };
 
   drawEntities = (delta: number, skipLocalPlayer?: boolean) => {
     let tiles = [];

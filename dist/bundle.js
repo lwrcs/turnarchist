@@ -5186,7 +5186,7 @@ var Chest = /** @class */ (function (_super) {
         var _this = _super.call(this, room, game, x, y) || this;
         _this.hurt = function (playerHitBy, damage) {
             //this.healthBar.hurt();
-            _this.health -= damage;
+            _this.health -= 1;
             if (_this.health === 1 && !_this.opening)
                 _this.open();
             if (_this.health <= 0)
@@ -5650,7 +5650,7 @@ var TombStone = /** @class */ (function (_super) {
             setTimeout(function () {
                 sound_1.Sound.hurt();
             }, 100);
-            _this.health -= damage;
+            _this.health -= 1;
             if (_this.health === 1) {
                 var positions = _this.room
                     .getEmptyTiles()
@@ -8484,6 +8484,7 @@ var usable_1 = __webpack_require__(/*! ./item/usable */ "./src/item/usable.ts");
 var candle_1 = __webpack_require__(/*! ./item/candle */ "./src/item/candle.ts");
 var torch_1 = __webpack_require__(/*! ./item/torch */ "./src/item/torch.ts");
 var mouseCursor_1 = __webpack_require__(/*! ./mouseCursor */ "./src/mouseCursor.ts");
+var warhammer_1 = __webpack_require__(/*! ./weapon/warhammer */ "./src/weapon/warhammer.ts");
 var OPEN_TIME = 100; // milliseconds
 // Dark gray color used for the background of inventory slots
 var FILL_COLOR = "#5a595b";
@@ -9116,7 +9117,7 @@ var Inventory = /** @class */ (function () {
             }
             _this.addItem(i);
         };
-        var startingInv = [dagger_1.Dagger, key_1.Key, candle_1.Candle, torch_1.Torch];
+        var startingInv = [dagger_1.Dagger, key_1.Key, candle_1.Candle, torch_1.Torch, warhammer_1.Warhammer];
         startingInv.forEach(function (item) {
             a(new item({ game: _this.game }, 0, 0));
         });
@@ -10027,8 +10028,7 @@ var Light = /** @class */ (function (_super) {
         };
         _this.setRadius = function () {
             _this.wielder.sightRadius =
-                _this.wielder.defaultSightRadius +
-                    _this.fuelPercentage * _this.maxRadius;
+                _this.wielder.defaultSightRadius + _this.fuelPercentage * _this.maxRadius;
         };
         _this.toggleEquip = function () {
             _this.equipped = !_this.equipped;
@@ -10077,7 +10077,7 @@ var Light = /** @class */ (function (_super) {
     }
     Object.defineProperty(Light.prototype, "fuelPercentage", {
         get: function () {
-            return (this.fuel / this.fuelCap);
+            return this.fuel / this.fuelCap;
         },
         enumerable: false,
         configurable: true
@@ -10097,7 +10097,6 @@ var Light = /** @class */ (function (_super) {
             Light.warmth = 0;
         if (Light.warmth > Light.maxWarmth)
             Light.warmth = Light.maxWarmth;
-        console.log(Light.warmth);
         game_1.Game.ctx.globalAlpha = Light.warmth;
         game_1.Game.ctx.globalCompositeOperation = "overlay";
         game_1.Game.ctx.fillStyle = "#FF8C00"; // reddish orange red
@@ -13299,7 +13298,6 @@ var Room = /** @class */ (function () {
             }
         };
         this.updateLighting = function () {
-            console.log("updateLighting");
             var oldVis = [];
             var oldCol = [];
             for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
@@ -13523,17 +13521,18 @@ var Room = /** @class */ (function () {
             _this.clearDeadStuff();
             _this.playerTicked.finishTick();
             _this.checkForNoEnemies();
+            console.log(_this.entities.filter(function (e) { return e instanceof enemy_1.Enemy; }).length);
             _this.turn = TurnState.playerTurn;
         };
         this.checkForNoEnemies = function () {
             var enemies = _this.entities.filter(function (e) { return e instanceof enemy_1.Enemy; });
             if (enemies.length === 0 && _this.lastEnemyCount > 0) {
-                if (_this.doors[0].type === door_1.DoorType.GUARDEDDOOR) {
-                    _this.doors.forEach(function (d) {
-                        d.unGuard();
-                    });
-                    _this.game.pushMessage("The foes have been slain and the door allows you passage.");
-                }
+                // if (this.doors[0].type === DoorType.GUARDEDDOOR) {
+                _this.doors.forEach(function (d) {
+                    d.unGuard();
+                });
+                _this.game.pushMessage("The foes have been slain and the door allows you passage.");
+                // }
             }
         };
         this.draw = function (delta) {
@@ -14071,7 +14070,7 @@ var Room = /** @class */ (function () {
         return [
             Math.min(255, Math.round(base[0] * (1 - alpha) + overlay[0] * alpha)),
             Math.min(255, Math.round(base[1] * (1 - alpha) + overlay[1] * alpha)),
-            Math.min(255, Math.round(base[2] * (1 - alpha) + overlay[2] * alpha))
+            Math.min(255, Math.round(base[2] * (1 - alpha) + overlay[2] * alpha)),
         ];
     };
     Room.prototype.calculateWallInfo = function () {
@@ -15783,38 +15782,13 @@ var __extends = (this && this.__extends) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Dagger = void 0;
 var weapon_1 = __webpack_require__(/*! ./weapon */ "./src/weapon/weapon.ts");
-var sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
-var slashParticle_1 = __webpack_require__(/*! ../particle/slashParticle */ "./src/particle/slashParticle.ts");
 var Dagger = /** @class */ (function (_super) {
     __extends(Dagger, _super);
     function Dagger(level, x, y) {
         var _this = _super.call(this, level, x, y) || this;
-        _this.weaponMove = function (newX, newY) {
-            var flag = false;
-            for (var _i = 0, _a = _this.game.rooms[_this.wielder.levelID].entities; _i < _a.length; _i++) {
-                var e = _a[_i];
-                if (e.destroyable && !e.pushable && e.pointIn(newX, newY)) {
-                    e.hurt(_this.wielder, 1);
-                    flag = true;
-                }
-            }
-            if (flag) {
-                if (_this.wielder.game.rooms[_this.wielder.levelID] === _this.wielder.game.room)
-                    sound_1.Sound.hit();
-                _this.wielder.drawX = 0.5 * (_this.wielder.x - newX);
-                _this.wielder.drawY = 0.5 * (_this.wielder.y - newY);
-                _this.game.rooms[_this.wielder.levelID].particles.push(new slashParticle_1.SlashParticle(newX, newY));
-                _this.game.rooms[_this.wielder.levelID].tick(_this.wielder);
-                if (_this.wielder === _this.game.players[_this.game.localPlayerID])
-                    _this.game.shakeScreen(10 * _this.wielder.drawX, 10 * _this.wielder.drawY);
-            }
-            return !flag;
-        };
-        _this.getDescription = function () {
-            return "DAGGER\nDamage 1";
-        };
         _this.tileX = 22;
         _this.tileY = 0;
+        _this.name = "Dagger";
         return _this;
     }
     return Dagger;
@@ -15885,11 +15859,12 @@ var DualDagger = /** @class */ (function (_super) {
             return !flag;
         };
         _this.getDescription = function () {
-            return "DUAL DAGGERS\nOne extra attack per turn";
+            return "Dual Daggers\nOne extra attack per turn";
         };
         _this.tileX = 23;
         _this.tileY = 0;
         _this.firstAttack = true;
+        _this.name = "Dual Dagger";
         return _this;
     }
     return DualDagger;
@@ -15924,36 +15899,10 @@ var __extends = (this && this.__extends) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Pickaxe = void 0;
 var weapon_1 = __webpack_require__(/*! ./weapon */ "./src/weapon/weapon.ts");
-var sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
-var slashParticle_1 = __webpack_require__(/*! ../particle/slashParticle */ "./src/particle/slashParticle.ts");
 var Pickaxe = /** @class */ (function (_super) {
     __extends(Pickaxe, _super);
     function Pickaxe(level, x, y) {
         var _this = _super.call(this, level, x, y) || this;
-        _this.weaponMove = function (newX, newY) {
-            var flag = false;
-            for (var _i = 0, _a = _this.game.rooms[_this.wielder.levelID].entities; _i < _a.length; _i++) {
-                var e = _a[_i];
-                if (e.destroyable && !e.pushable && e.pointIn(newX, newY)) {
-                    e.hurt(_this.wielder, 1);
-                    flag = true;
-                }
-            }
-            if (flag) {
-                if (_this.wielder.game.rooms[_this.wielder.levelID] === _this.wielder.game.room)
-                    sound_1.Sound.hit();
-                _this.wielder.drawX = 0.5 * (_this.wielder.x - newX);
-                _this.wielder.drawY = 0.5 * (_this.wielder.y - newY);
-                _this.game.rooms[_this.wielder.levelID].particles.push(new slashParticle_1.SlashParticle(newX, newY));
-                _this.game.rooms[_this.wielder.levelID].tick(_this.wielder);
-                if (_this.wielder === _this.game.players[_this.game.localPlayerID])
-                    _this.game.shakeScreen(10 * _this.wielder.drawX, 10 * _this.wielder.drawY);
-            }
-            return !flag;
-        };
-        _this.getDescription = function () {
-            return "PICKAXE\nDamage 1, used for mining";
-        };
         _this.tileX = 30;
         _this.tileY = 0;
         _this.canMine = true;
@@ -16115,11 +16064,9 @@ var Shotgun = /** @class */ (function (_super) {
             }
             return true;
         };
-        _this.getDescription = function () {
-            return "SHOTGUN\nRange 3, penetration";
-        };
         _this.tileX = 26;
         _this.tileY = 0;
+        _this.name = "Shotgun";
         return _this;
     }
     return Shotgun;
@@ -16211,11 +16158,9 @@ var Spear = /** @class */ (function (_super) {
             }
             return !flag;
         };
-        _this.getDescription = function () {
-            return "SPEAR\nRange 2";
-        };
         _this.tileX = 24;
         _this.tileY = 0;
+        _this.name = "Spear";
         return _this;
     }
     return Spear;
@@ -16281,17 +16226,57 @@ var Spellbook = /** @class */ (function (_super) {
             }
             return !flag;
         };
-        _this.getDescription = function () {
-            return "SPELLBOOK\nc̵͈̮͍̫̄a̴̲͛͂̌ŗ̴̩͈̞̠͉̤̗̎̓͐͗̐̃̈́̏̊͝ê̴̥̙̰̱̮̙̩͇̝͎̋̏͐̉̑f̴̧͎͚̟͈̻̰̫̫͎̑̔̂͛̓͂̅ú̶̢͖̣͙͔̺̋̉̾̀̿̑̍̕l̵̮͚̊́͐̌̎͘";
-        };
         _this.tileX = 25;
         _this.tileY = 0;
         _this.canMine = true;
+        _this.name = "Spellbook";
         return _this;
     }
     return Spellbook;
 }(weapon_1.Weapon));
 exports.Spellbook = Spellbook;
+
+
+/***/ }),
+
+/***/ "./src/weapon/warhammer.ts":
+/*!*********************************!*\
+  !*** ./src/weapon/warhammer.ts ***!
+  \*********************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Warhammer = void 0;
+var weapon_1 = __webpack_require__(/*! ./weapon */ "./src/weapon/weapon.ts");
+var Warhammer = /** @class */ (function (_super) {
+    __extends(Warhammer, _super);
+    function Warhammer(level, x, y) {
+        var _this = _super.call(this, level, x, y) || this;
+        _this.tileX = 22;
+        _this.tileY = 2;
+        _this.damage = 2;
+        _this.name = "Warhammer";
+        return _this;
+    }
+    return Warhammer;
+}(weapon_1.Weapon));
+exports.Warhammer = Warhammer;
 
 
 /***/ }),
@@ -16321,6 +16306,8 @@ var __extends = (this && this.__extends) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Weapon = void 0;
 var equippable_1 = __webpack_require__(/*! ../item/equippable */ "./src/item/equippable.ts");
+var sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
+var slashParticle_1 = __webpack_require__(/*! ../particle/slashParticle */ "./src/particle/slashParticle.ts");
 var Weapon = /** @class */ (function (_super) {
     __extends(Weapon, _super);
     function Weapon(level, x, y) {
@@ -16330,14 +16317,36 @@ var Weapon = /** @class */ (function (_super) {
                 return false;
             return true;
         };
-        _this.tick = function () { };
-        // returns true if nothing was hit, false if the player should move
         _this.weaponMove = function (newX, newY) {
-            return true;
+            var flag = false;
+            for (var _i = 0, _a = _this.game.rooms[_this.wielder.levelID].entities; _i < _a.length; _i++) {
+                var e = _a[_i];
+                if (e.destroyable && !e.pushable && e.pointIn(newX, newY)) {
+                    e.hurt(_this.wielder, _this.damage);
+                    flag = true;
+                }
+            }
+            if (flag) {
+                if (_this.wielder.game.rooms[_this.wielder.levelID] === _this.wielder.game.room)
+                    sound_1.Sound.hit();
+                _this.wielder.drawX = 0.5 * (_this.wielder.x - newX);
+                _this.wielder.drawY = 0.5 * (_this.wielder.y - newY);
+                _this.game.rooms[_this.wielder.levelID].particles.push(new slashParticle_1.SlashParticle(newX, newY));
+                _this.game.rooms[_this.wielder.levelID].tick(_this.wielder);
+                if (_this.wielder === _this.game.players[_this.game.localPlayerID])
+                    _this.game.shakeScreen(10 * _this.wielder.drawX, 10 * _this.wielder.drawY);
+            }
+            return !flag;
         };
+        _this.getDescription = function () {
+            return "".concat(_this.name, "\nDamage ").concat(_this.damage);
+        };
+        _this.tick = function () { };
         if (level)
             _this.game = level.game;
         _this.canMine = false;
+        _this.range = 1;
+        _this.damage = 1;
         return _this;
     }
     return Weapon;

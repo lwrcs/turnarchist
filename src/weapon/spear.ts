@@ -12,6 +12,7 @@ export class Spear extends Weapon {
 
     this.tileX = 24;
     this.tileY = 0;
+    this.name = "Spear";
   }
 
   weaponMove = (newX: number, newY: number): boolean => {
@@ -71,9 +72,5 @@ export class Spear extends Weapon {
         this.game.shakeScreen(10 * this.wielder.drawX, 10 * this.wielder.drawY);
     }
     return !flag;
-  };
-
-  getDescription = (): string => {
-    return "SPEAR\nRange 2";
   };
 }

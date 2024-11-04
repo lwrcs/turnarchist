@@ -42,7 +42,7 @@ export class Chest extends Entity {
 
   readonly hurt = (playerHitBy: Player, damage: number) => {
     //this.healthBar.hurt();
-    this.health -= damage;
+    this.health -= 1;
     if (this.health === 1 && !this.opening) this.open();
     if (this.health <= 0) this.kill();
     else this.hurtCallback();

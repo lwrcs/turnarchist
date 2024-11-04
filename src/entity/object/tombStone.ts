@@ -41,8 +41,9 @@ export class TombStone extends Entity {
     this.name = "tombstone";
     let dropProb = Random.rand();
     if (dropProb < 0.05) this.drop = new Spellbook(this.room, 0, 0);
-    this.room.lightSources.push(new LightSource(this.x + 0.5, this.y + 0.5, 3, [10, 250, 10]));
-
+    this.room.lightSources.push(
+      new LightSource(this.x + 0.5, this.y + 0.5, 3, [10, 250, 10])
+    );
   }
 
   get type() {
@@ -52,7 +53,9 @@ export class TombStone extends Entity {
   kill = () => {
     this.dead = true;
     this.dropLoot();
-    this.room.lightSources = this.room.lightSources.filter(ls => ls !== this.room.lightSources[this.room.lightSources.length - 1]);
+    this.room.lightSources = this.room.lightSources.filter(
+      (ls) => ls !== this.room.lightSources[this.room.lightSources.length - 1]
+    );
   };
 
   hurt = (playerHitBy: Player, damage: number) => {
@@ -63,7 +66,7 @@ export class TombStone extends Entity {
       Sound.hurt();
     }, 100);
 
-    this.health -= damage;
+    this.health -= 1;
     if (this.health === 1) {
       const positions = this.room
         .getEmptyTiles()
