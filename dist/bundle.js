@@ -4060,6 +4060,12 @@ var WizardEnemy = /** @class */ (function (_super) {
     function WizardEnemy(room, game, x, y, drop) {
         var _this = _super.call(this, room, game, x, y) || this;
         _this.ATTACK_RADIUS = 5;
+        _this.addLightSource = function (lightSource) {
+            _this.room.lightSources.push(lightSource);
+        };
+        _this.removeLightSource = function (lightSource) {
+            _this.room.lightSources = _this.room.lightSources.filter(function (ls) { return ls !== lightSource; });
+        };
         _this.hit = function () {
             return 1;
         };
@@ -10350,7 +10356,7 @@ var LevelConstants = /** @class */ (function () {
     LevelConstants.SHADED_TILE_CUTOFF = 1;
     LevelConstants.SMOOTH_LIGHTING = false; //doesn't work
     LevelConstants.MIN_VISIBILITY = 0; // visibility level of places you've already seen
-    LevelConstants.LIGHTING_ANGLE_STEP = 5; // how many degrees between each ray, previously 5
+    LevelConstants.LIGHTING_ANGLE_STEP = 3; // how many degrees between each ray, previously 5
     LevelConstants.LEVEL_TEXT_COLOR = "yellow";
     LevelConstants.AMBIENT_LIGHT_COLOR = [10, 10, 10];
     return LevelConstants;
@@ -11809,12 +11815,13 @@ var Player = /** @class */ (function (_super) {
             if (_this.dead) {
                 _this.restart();
             }
-            else if (_this.inventory.isOpen || _this.game.levelState === game_1.LevelState.IN_LEVEL) {
+            else if (_this.openVendingMachine) {
+                _this.openVendingMachine.space();
+            }
+            else if (_this.inventory.isOpen ||
+                _this.game.levelState === game_1.LevelState.IN_LEVEL) {
                 _this.inventory.space();
                 return;
-            }
-            if (_this.openVendingMachine) {
-                _this.openVendingMachine.space();
             }
         };
         _this.mouseLeftClick = function () {
@@ -12686,6 +12693,7 @@ exports.WizardFireball = void 0;
 var projectile_1 = __webpack_require__(/*! ./projectile */ "./src/projectile/projectile.ts");
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var hitWarning_1 = __webpack_require__(/*! ../hitWarning */ "./src/hitWarning.ts");
+var lightSource_1 = __webpack_require__(/*! ../lightSource */ "./src/lightSource.ts");
 var WizardFireball = /** @class */ (function (_super) {
     __extends(WizardFireball, _super);
     function WizardFireball(parent, x, y) {
@@ -12696,6 +12704,7 @@ var WizardFireball = /** @class */ (function (_super) {
         };
         _this.tick = function () {
             if (_this.parent.dead || _this.state === 3) {
+                _this.parent.removeLightSource(_this.lightSource);
                 _this.dead = true;
             }
             if (!_this.dead && _this.state === 0) {
@@ -12705,6 +12714,7 @@ var WizardFireball = /** @class */ (function (_super) {
                 _this.parent.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.parent.game, _this.x, _this.y, _this.parent.x, _this.parent.y, true));
             }
             if (!_this.dead && _this.state === 2) {
+                _this.parent.removeLightSource(_this.lightSource);
                 _this.frame = 0;
                 _this.delay = game_1.Game.rand(0, 10, Math.random);
             }
@@ -12755,6 +12765,8 @@ var WizardFireball = /** @class */ (function (_super) {
         _this.parent = parent;
         _this.frame = 0;
         _this.state = 0; //- this.distanceToParent;
+        _this.lightSource = new lightSource_1.LightSource(_this.x + 0.5, _this.y + 0.5, 2, [3, 80, 255]);
+        _this.parent.addLightSource(_this.lightSource);
         return _this;
     }
     return WizardFireball;
@@ -13293,7 +13305,7 @@ var Room = /** @class */ (function () {
                         else if (_this.softVis[x][y] > _this.vis[x][y])
                             _this.softVis[x][y] -= 0.02 * delta;
                     }
-                    //if (this.softVis[x][y] < 0.05) this.softVis[x][y] = 0;
+                    // if (this.softVis[x][y] < 0.01) this.softVis[x][y] = 0;
                 }
             }
         };
@@ -13307,7 +13319,7 @@ var Room = /** @class */ (function () {
                     oldVis[x][y] = _this.vis[x][y];
                     oldCol[x][y] = _this.col[x][y];
                     _this.vis[x][y] = 1;
-                    _this.col[x][y] = [0, 0, 0];
+                    _this.col[x][y] = [1, 1, 1];
                     //if (this.visibilityArray[x][y] > LevelConstants.MIN_VISIBILITY)
                     //  this.visibilityArray[x][y] = 0;
                 }
@@ -13317,22 +13329,36 @@ var Room = /** @class */ (function () {
                 if (_this === _this.game.rooms[_this.game.players[p].levelID]) {
                     for (var i = 0; i < 360; i += levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP) {
                         _this.castShadowsAtAngle(i, _this.game.players[p].x + 0.5, _this.game.players[p].y + 0.5, Math.min(Math.max(_this.game.players[p].sightRadius - _this.depth, player_1.Player.minSightRadius), 7), oldVis);
-                        var lightColor = levelConstants_1.LevelConstants.AMBIENT_LIGHT_COLOR;
-                        if (_this.game.players[p].lightEquipped)
-                            lightColor = [200, 165, 5];
-                        _this.castTintAtAngle(i, _this.game.players[p].x + 0.5, _this.game.players[p].y + 0.5, Math.min(Math.max(_this.game.players[p].sightRadius - _this.depth, player_1.Player.minSightRadius), 10), lightColor, // RGB color
-                        oldCol);
                     }
-                    //this.applyLightSourceColor(this.game.players[p].x + 0.5, this.game.players[p].y + 0.5, [255, 140, 0]); // Warm orange
                 }
             }
             for (var _i = 0, _a = _this.lightSources; _i < _a.length; _i++) {
                 var l = _a[_i];
                 for (var i = 0; i < 360; i += levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP) {
                     _this.castShadowsAtAngle(i, l.x, l.y, l.r, oldVis);
-                    _this.castTintAtAngle(i, l.x, l.y, l.r, l.c, oldCol); // RGB color
                 }
-                //this.applyLightSourceColor(l.x, l.y, [255, 215, 0]); // Example: Warm yellow
+            }
+            for (var _b = 0, _c = _this.lightSources; _b < _c.length; _b++) {
+                var l = _c[_b];
+                for (var i = 0; i < 360; i += levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP) {
+                    _this.castTintAtAngle(i, l.x, l.y, l.r, l.c, oldCol, _this.vis); // RGB color
+                }
+            }
+            for (var p in _this.game.players) {
+                if (_this === _this.game.rooms[_this.game.players[p].levelID]) {
+                    for (var i = 0; i < 360; i += levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP) {
+                        var lightColor = levelConstants_1.LevelConstants.AMBIENT_LIGHT_COLOR;
+                        if (_this.game.players[p].lightEquipped)
+                            lightColor = [200, 165, 5];
+                        _this.castTintAtAngle(i, _this.game.players[p].x + 0.5, _this.game.players[p].y + 0.5, Math.min(Math.max(_this.game.players[p].sightRadius - _this.depth, player_1.Player.minSightRadius), 10), lightColor, // RGB color
+                        oldCol, _this.vis);
+                    }
+                }
+            }
+            for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
+                for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
+                    _this.vis[x][y] = _this.rgbToLuminance(_this.col[x][y]);
+                }
             }
             if (levelConstants_1.LevelConstants.SMOOTH_LIGHTING)
                 _this.vis = _this.blur3x3(_this.vis, [
@@ -13355,7 +13381,7 @@ var Room = /** @class */ (function () {
             var dx = Math.cos((angle * Math.PI) / 180);
             var dy = Math.sin((angle * Math.PI) / 180);
             var onOpaqueSection = false;
-            for (var i = 0; i < radius; i++) {
+            for (var i = 0; i < radius + 3; i++) {
                 if (!_this.isPositionInRoom(px, py))
                     return; // we're outside the level
                 var tile = _this.roomArray[Math.floor(px)][Math.floor(py)];
@@ -13381,11 +13407,12 @@ var Room = /** @class */ (function () {
          * @param radius - The radius of the light's influence.
          * @param color - The RGB color tuple representing the tint.
          */
-        this.castTintAtAngle = function (angle, px, py, radius, color, oldCol) {
+        this.castTintAtAngle = function (angle, px, py, radius, color, oldCol, vis, brightness) {
+            if (brightness === void 0) { brightness = 1; }
             var dx = Math.cos((angle * Math.PI) / 180);
             var dy = Math.sin((angle * Math.PI) / 180);
             var distance = 0;
-            for (var i = 0; i < radius + 1; i++) {
+            for (var i = 0; i < 15 + 1; i++) {
                 var currentX = Math.floor(px + dx * i);
                 var currentY = Math.floor(py + dy * i);
                 if (!_this.isPositionInRoom(currentX, currentY))
@@ -13395,7 +13422,7 @@ var Room = /** @class */ (function () {
                     return; // Stop casting tint through opaque tiles
                 }
                 // Calculate intensity based on distance (closer tiles are brighter)
-                var intensity = Math.min(1 / Math.pow(Math.sqrt(i) / radius, 2), 0.1);
+                var intensity = 0.1 / Math.exp(i * 0.7); // Exponential falloff with distance
                 if (intensity <= 0)
                     continue;
                 // Blend the tint color with the existing color
@@ -13428,6 +13455,10 @@ var Room = /** @class */ (function () {
                 }
             }
             return blurredArray;
+        };
+        this.rgbToLuminance = function (color) {
+            //map to 1-0 range
+            return 1 - (0.299 * color[0] + 0.587 * color[1] + 0.114 * color[2]) / 255;
         };
         this.catchUp = function () {
             if (_this.turn === TurnState.computerTurn)
@@ -13858,7 +13889,7 @@ var Room = /** @class */ (function () {
             var _b = this_1.getRandomEmptyPosition(tiles), x = _b.x, y = _b.y;
             // Define the enemy tables for each depth level
             var tables = {
-                0: [1, 2, 3],
+                0: [1, 5, 3],
                 1: [3, 4, 5, 9, 7],
                 2: [3, 4, 5, 7, 8, 9, 12],
                 3: [1, 2, 3, 5, 6, 7, 8, 9, 10],
@@ -14068,9 +14099,9 @@ var Room = /** @class */ (function () {
      */
     Room.prototype.blendColors = function (base, overlay, alpha) {
         return [
-            Math.min(255, Math.round(base[0] * (1 - alpha) + overlay[0] * alpha)),
-            Math.min(255, Math.round(base[1] * (1 - alpha) + overlay[1] * alpha)),
-            Math.min(255, Math.round(base[2] * (1 - alpha) + overlay[2] * alpha)),
+            Math.min(255, Math.round(base[0] + overlay[0] * alpha * (255 / base[0]))),
+            Math.min(255, Math.round(base[1] + overlay[1] * alpha * (255 / base[1]))),
+            Math.min(255, Math.round(base[2] + overlay[2] * alpha * (255 / base[2]))),
         ];
     };
     Room.prototype.calculateWallInfo = function () {

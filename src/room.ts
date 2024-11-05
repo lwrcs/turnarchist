@@ -390,7 +390,7 @@ export class Room {
       // Define the enemy tables for each depth level
 
       let tables = {
-        0: [1, 2, 3], //this.generateLevelTable(rand),
+        0: [1, 5, 3], //this.generateLevelTable(rand),
         1: [3, 4, 5, 9, 7],
         2: [3, 4, 5, 7, 8, 9, 12],
         3: [1, 2, 3, 5, 6, 7, 8, 9, 10],
@@ -1120,7 +1120,7 @@ export class Room {
           else if (this.softVis[x][y] > this.vis[x][y])
             this.softVis[x][y] -= 0.02 * delta;
         }
-        //if (this.softVis[x][y] < 0.05) this.softVis[x][y] = 0;
+        // if (this.softVis[x][y] < 0.01) this.softVis[x][y] = 0;
       }
     }
   };
@@ -1135,7 +1135,7 @@ export class Room {
         oldVis[x][y] = this.vis[x][y];
         oldCol[x][y] = this.col[x][y];
         this.vis[x][y] = 1;
-        this.col[x][y] = [0, 0, 0];
+        this.col[x][y] = [1, 1, 1];
 
         //if (this.visibilityArray[x][y] > LevelConstants.MIN_VISIBILITY)
         //  this.visibilityArray[x][y] = 0;
@@ -1159,6 +1159,22 @@ export class Room {
             ),
             oldVis
           );
+        }
+      }
+    }
+    for (const l of this.lightSources) {
+      for (let i = 0; i < 360; i += LevelConstants.LIGHTING_ANGLE_STEP) {
+        this.castShadowsAtAngle(i, l.x, l.y, l.r, oldVis);
+      }
+    }
+    for (const l of this.lightSources) {
+      for (let i = 0; i < 360; i += LevelConstants.LIGHTING_ANGLE_STEP) {
+        this.castTintAtAngle(i, l.x, l.y, l.r, l.c, oldCol, this.vis); // RGB color
+      }
+    }
+    for (const p in this.game.players) {
+      if (this === this.game.rooms[this.game.players[p].levelID]) {
+        for (let i = 0; i < 360; i += LevelConstants.LIGHTING_ANGLE_STEP) {
           let lightColor = LevelConstants.AMBIENT_LIGHT_COLOR;
           if (this.game.players[p].lightEquipped) lightColor = [200, 165, 5];
           this.castTintAtAngle(
@@ -1173,19 +1189,19 @@ export class Room {
               10
             ),
             lightColor, // RGB color
-            oldCol
+            oldCol,
+            this.vis
           );
         }
-        //this.applyLightSourceColor(this.game.players[p].x + 0.5, this.game.players[p].y + 0.5, [255, 140, 0]); // Warm orange
       }
     }
-    for (const l of this.lightSources) {
-      for (let i = 0; i < 360; i += LevelConstants.LIGHTING_ANGLE_STEP) {
-        this.castShadowsAtAngle(i, l.x, l.y, l.r, oldVis);
-        this.castTintAtAngle(i, l.x, l.y, l.r, l.c, oldCol); // RGB color
+
+    for (let x = this.roomX; x < this.roomX + this.width; x++) {
+      for (let y = this.roomY; y < this.roomY + this.height; y++) {
+        this.vis[x][y] = this.rgbToLuminance(this.col[x][y]);
       }
-      //this.applyLightSourceColor(l.x, l.y, [255, 215, 0]); // Example: Warm yellow
     }
+
     if (LevelConstants.SMOOTH_LIGHTING)
       this.vis = this.blur3x3(this.vis, [
         [1, 2, 1],
@@ -1228,7 +1244,7 @@ export class Room {
     let dx = Math.cos((angle * Math.PI) / 180);
     let dy = Math.sin((angle * Math.PI) / 180);
     let onOpaqueSection = false;
-    for (let i = 0; i < radius; i++) {
+    for (let i = 0; i < radius + 3; i++) {
       if (!this.isPositionInRoom(px, py)) return; // we're outside the level
 
       let tile = this.roomArray[Math.floor(px)][Math.floor(py)];
@@ -1264,13 +1280,15 @@ export class Room {
     py: number,
     radius: number,
     color: [number, number, number],
-    oldCol: [number, number, number][][]
+    oldCol: [number, number, number][][],
+    vis: number[][],
+    brightness: number = 1
   ) => {
     const dx = Math.cos((angle * Math.PI) / 180);
     const dy = Math.sin((angle * Math.PI) / 180);
     let distance = 0;
 
-    for (let i = 0; i < radius + 1; i++) {
+    for (let i = 0; i < 15 + 1; i++) {
       const currentX = Math.floor(px + dx * i);
       const currentY = Math.floor(py + dy * i);
 
@@ -1282,7 +1300,8 @@ export class Room {
       }
 
       // Calculate intensity based on distance (closer tiles are brighter)
-      const intensity = Math.min(1 / Math.pow(Math.sqrt(i) / radius, 2), 0.1);
+      const intensity = 0.1 / Math.exp(i * 0.7); // Exponential falloff with distance
+
       if (intensity <= 0) continue;
 
       // Blend the tint color with the existing color
@@ -1308,9 +1327,9 @@ export class Room {
     alpha: number
   ): [number, number, number] {
     return [
-      Math.min(255, Math.round(base[0] * (1 - alpha) + overlay[0] * alpha)),
-      Math.min(255, Math.round(base[1] * (1 - alpha) + overlay[1] * alpha)),
-      Math.min(255, Math.round(base[2] * (1 - alpha) + overlay[2] * alpha)),
+      Math.min(255, Math.round(base[0] + overlay[0] * alpha * (255 / base[0]))),
+      Math.min(255, Math.round(base[1] + overlay[1] * alpha * (255 / base[1]))),
+      Math.min(255, Math.round(base[2] + overlay[2] * alpha * (255 / base[2]))),
     ];
   }
 
@@ -1345,6 +1364,11 @@ export class Room {
       }
     }
     return blurredArray;
+  };
+
+  rgbToLuminance = (color: [number, number, number]): number => {
+    //map to 1-0 range
+    return 1 - (0.299 * color[0] + 0.587 * color[1] + 0.114 * color[2]) / 255;
   };
 
   catchUp = () => {

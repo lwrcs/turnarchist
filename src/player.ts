@@ -181,7 +181,6 @@ export class Player extends Drawable {
         this.mouseMove();
         break;
     }
-
   };
   commaListener = () => {
     this.inventory.left();
@@ -270,12 +269,14 @@ export class Player extends Drawable {
   spaceListener = () => {
     if (this.dead) {
       this.restart();
-    } else if (this.inventory.isOpen || this.game.levelState === LevelState.IN_LEVEL) {
+    } else if (this.openVendingMachine) {
+      this.openVendingMachine.space();
+    } else if (
+      this.inventory.isOpen ||
+      this.game.levelState === LevelState.IN_LEVEL
+    ) {
       this.inventory.space();
       return;
-    }
-    if (this.openVendingMachine) {
-      this.openVendingMachine.space();
     }
   };
   mouseLeftClick = () => {
@@ -332,11 +333,11 @@ export class Player extends Drawable {
     // Convert pixel offset to tile offset (this part was working correctly)
     const tileOffsetX = Math.floor(
       (Input.mouseX - screenCenterX + GameConstants.TILESIZE / 2) /
-      GameConstants.TILESIZE
+        GameConstants.TILESIZE
     );
     const tileOffsetY = Math.floor(
       (Input.mouseY - screenCenterY + GameConstants.TILESIZE / 2) /
-      GameConstants.TILESIZE
+        GameConstants.TILESIZE
     );
 
     return {
@@ -361,7 +362,7 @@ export class Player extends Drawable {
   restart = () => {
     this.dead = false;
     this.game.newGame();
-  }
+  };
 
   left = () => {
     if (this.canMove()) {
@@ -623,7 +624,7 @@ export class Player extends Drawable {
     this.drawY = 0;
   };
 
-  update = () => { };
+  update = () => {};
 
   finishTick = () => {
     this.turnCount += 1;
@@ -755,7 +756,6 @@ export class Player extends Drawable {
         GameConstants.WIDTH / 2 - Game.measureText(restartButton).width / 2,
         GameConstants.HEIGHT / 2 + Game.letter_height + 5
       );
-
     }
     PostProcessor.draw(delta);
     Light.drawTint(delta);

@@ -19,6 +19,7 @@ import { Item } from "../../item/item";
 import { Enemy } from "./enemy";
 import { SpikeTrap } from "../../tile/spiketrap";
 import { HitWarning } from "../../hitWarning";
+import { LightSource } from "../../lightSource";
 
 export enum WizardState {
   idle,
@@ -52,6 +53,16 @@ export class WizardEnemy extends Enemy {
       else this.drop = new Coin(this.room, this.x, this.y);
     }
   }
+
+  addLightSource = (lightSource: LightSource) => {
+    this.room.lightSources.push(lightSource);
+  };
+
+  removeLightSource = (lightSource: LightSource) => {
+    this.room.lightSources = this.room.lightSources.filter(
+      (ls) => ls !== lightSource
+    );
+  };
 
   hit = (): number => {
     return 1;

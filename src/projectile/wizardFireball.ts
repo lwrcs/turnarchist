@@ -5,22 +5,31 @@ import { Player } from "../player";
 import { HitWarning } from "../hitWarning";
 import { Entity } from "../entity/entity";
 import { Enemy } from "../entity/enemy/enemy";
+import { LightSource } from "../lightSource";
 
 export class WizardFireball extends Projectile {
   state: number;
   frame: number;
-  parent: Entity;
+  parent: WizardEnemy;
   delay: number;
   frameOffset: number;
   offsetX: number;
   hitWarning: HitWarning;
   tileX: number;
+  lightSource: LightSource;
 
-  constructor(parent: Entity, x: number, y: number) {
+  constructor(parent: WizardEnemy, x: number, y: number) {
     super(parent, x, y);
     this.parent = parent;
     this.frame = 0;
     this.state = 0; //- this.distanceToParent;
+    this.lightSource = new LightSource(
+      this.x + 0.5,
+      this.y + 0.5,
+      2,
+      [3, 80, 255]
+    );
+    this.parent.addLightSource(this.lightSource);
   }
   setMarkerFrame = () => {
     // Calculate offsetX based on direction
@@ -29,6 +38,7 @@ export class WizardFireball extends Projectile {
 
   tick = () => {
     if (this.parent.dead || this.state === 3) {
+      this.parent.removeLightSource(this.lightSource);
       this.dead = true;
     }
 
@@ -49,6 +59,7 @@ export class WizardFireball extends Projectile {
       );
     }
     if (!this.dead && this.state === 2) {
+      this.parent.removeLightSource(this.lightSource);
       this.frame = 0;
       this.delay = Game.rand(0, 10, Math.random);
     }
