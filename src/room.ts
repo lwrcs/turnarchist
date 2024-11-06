@@ -1171,7 +1171,7 @@ export class Room {
               10
             ),
             lightColor, // RGB color in sRGB
-            0.75 // intensity
+            1 // intensity
           );
         }
       }
@@ -1271,9 +1271,9 @@ export class Room {
       if (i === 0) {
         intensity = brightness / 3; // Full intensity at the light source tile adjusted by brightness
       } else {
-        intensity = (brightness / i ** 2) * (1 / radius); // Exponential falloff with distance
+        intensity = brightness / i ** 2; // Exponential falloff with distance
       }
-      if (intensity < 0.01) intensity = 0;
+      //if (intensity < 0.001) intensity = 0;
 
       if (intensity <= 0) continue;
 
@@ -1546,7 +1546,7 @@ export class Room {
     }
     // Set composite operation if needed
     Game.ctx.globalCompositeOperation = "source-over";
-    Game.ctx.globalAlpha = 1;
+    Game.ctx.globalAlpha = 0.75;
   };
 
   drawEntities = (delta: number, skipLocalPlayer?: boolean) => {
@@ -1629,7 +1629,7 @@ export class Room {
     }
     let shadingAlpha = Math.max(0, Math.min(0.8, 2 / bestSightRadius));
     if (GameConstants.ALPHA_ENABLED) {
-      Game.ctx.globalAlpha = 0.75;
+      Game.ctx.globalAlpha = 0.25;
       Game.ctx.fillStyle = this.shadeColor;
       Game.ctx.fillRect(
         (this.roomX - LevelConstants.SCREEN_W) * GameConstants.TILESIZE,

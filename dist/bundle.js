@@ -13339,7 +13339,7 @@ var Room = /** @class */ (function () {
                         if (_this.game.players[p].lightEquipped)
                             lightColor = [200, 25, 5];
                         _this.castTintAtAngle(i, _this.game.players[p].x + 0.5, _this.game.players[p].y + 0.5, Math.min(Math.max(_this.game.players[p].sightRadius - _this.depth + 2, player_1.Player.minSightRadius), 10), lightColor, // RGB color in sRGB
-                        0.75 // intensity
+                        1 // intensity
                         );
                     }
                 }
@@ -13415,10 +13415,9 @@ var Room = /** @class */ (function () {
                     intensity = brightness / 3; // Full intensity at the light source tile adjusted by brightness
                 }
                 else {
-                    intensity = (brightness / Math.pow(i, 2)) * (1 / radius); // Exponential falloff with distance
+                    intensity = brightness / Math.pow(i, 2); // Exponential falloff with distance
                 }
-                if (intensity < 0.01)
-                    intensity = 0;
+                //if (intensity < 0.001) intensity = 0;
                 if (intensity <= 0)
                     continue;
                 if (!_this.renderBuffer[currentX]) {
@@ -13648,7 +13647,7 @@ var Room = /** @class */ (function () {
             }
             // Set composite operation if needed
             game_1.Game.ctx.globalCompositeOperation = "source-over";
-            game_1.Game.ctx.globalAlpha = 1;
+            game_1.Game.ctx.globalAlpha = 0.75;
         };
         this.drawEntities = function (delta, skipLocalPlayer) {
             var tiles = [];
@@ -13722,7 +13721,7 @@ var Room = /** @class */ (function () {
             }
             var shadingAlpha = Math.max(0, Math.min(0.8, 2 / bestSightRadius));
             if (gameConstants_1.GameConstants.ALPHA_ENABLED) {
-                game_1.Game.ctx.globalAlpha = 0.75;
+                game_1.Game.ctx.globalAlpha = 0.25;
                 game_1.Game.ctx.fillStyle = _this.shadeColor;
                 game_1.Game.ctx.fillRect((_this.roomX - levelConstants_1.LevelConstants.SCREEN_W) * gameConstants_1.GameConstants.TILESIZE, (_this.roomY - levelConstants_1.LevelConstants.SCREEN_H) * gameConstants_1.GameConstants.TILESIZE, (_this.width + 2 * levelConstants_1.LevelConstants.SCREEN_W) * gameConstants_1.GameConstants.TILESIZE, (_this.height + 2 * levelConstants_1.LevelConstants.SCREEN_H) * gameConstants_1.GameConstants.TILESIZE);
                 game_1.Game.ctx.globalAlpha = 1;
