@@ -26,8 +26,9 @@ export class WizardFireball extends Projectile {
     this.lightSource = new LightSource(
       this.x + 0.5,
       this.y + 0.5,
-      2,
-      [3, 80, 255]
+      0.5,
+      [0, 50, 150],
+      0.25
     );
     this.parent.addLightSource(this.lightSource);
   }
