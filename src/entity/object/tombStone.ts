@@ -42,7 +42,7 @@ export class TombStone extends Entity {
     let dropProb = Random.rand();
     if (dropProb < 0.05) this.drop = new Spellbook(this.room, 0, 0);
     this.room.lightSources.push(
-      new LightSource(this.x + 0.5, this.y + 0.5, 3, [10, 250, 10])
+      new LightSource(this.x + 0.5, this.y + 0.5, 1, [5, 150, 5], 1)
     );
   }
 

@@ -9,7 +9,9 @@ export class WallTorch extends Tile {
 
   constructor(room: Room, x: number, y: number) {
     super(room, x, y);
-    this.room.lightSources.push(new LightSource(this.x + 0.5, this.y + 0.5, 3, [200, 140, 5]));
+    this.room.lightSources.push(
+      new LightSource(this.x + 0.5, this.y + 0.5, 1, [200, 25, 5], 0.5)
+    );
     this.frame = Math.random() * 12;
     this.tileYOffset = 6;
   }
@@ -23,7 +25,11 @@ export class WallTorch extends Tile {
   isOpaque = (): boolean => {
     const wallInfo = this.room.wallInfo.get(`${this.x},${this.y}`);
     if (!wallInfo) return true;
-    return (!wallInfo.isTopWall && !wallInfo.isInnerWall) || (wallInfo.isLeftWall || wallInfo.isRightWall)
+    return (
+      (!wallInfo.isTopWall && !wallInfo.isInnerWall) ||
+      wallInfo.isLeftWall ||
+      wallInfo.isRightWall
+    );
   };
 
   draw = (delta: number) => {
@@ -34,7 +40,7 @@ export class WallTorch extends Tile {
 
     this.tileYOffset =
       wallInfo.innerWallType === "bottomInner" ||
-        wallInfo.innerWallType === "surroundedInner"
+      wallInfo.innerWallType === "surroundedInner"
         ? 0
         : 6;
 

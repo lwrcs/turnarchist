@@ -72,6 +72,7 @@ import { FireWizardEnemy } from "./entity/enemy/fireWizard";
 import { Dagger } from "./weapon/dagger";
 import { TutorialListener } from "./tutorialListener";
 import { globalEventBus } from "./eventBus";
+import { RedGem } from "./item/redgem";
 
 export enum RoomType {
   START,
@@ -126,6 +127,7 @@ export class Room {
   //testing
   softCol: [number, number, number][][];
   col: [number, number, number][][];
+  renderBuffer: [number, number, number, number][][][]; // Array of color arrays (r,g,b,alpha) for each x,y position
 
   entities: Array<Entity>;
   items: Array<Item>;
@@ -995,6 +997,13 @@ export class Room {
         this.softCol[x][y] = [0, 0, 0];
       }
     }
+    this.renderBuffer = [];
+    for (let x = this.roomX; x < this.roomX + this.width; x++) {
+      this.renderBuffer[x] = [];
+      for (let y = this.roomY; y < this.roomY + this.height; y++) {
+        this.renderBuffer[x][y] = [];
+      }
+    }
 
     this.skin = SkinType.DUNGEON;
     if (this.type === RoomType.ROPECAVE || this.type === RoomType.CAVE)
@@ -1136,63 +1145,41 @@ export class Room {
         oldCol[x][y] = this.col[x][y];
         this.vis[x][y] = 1;
         this.col[x][y] = [1, 1, 1];
-
-        //if (this.visibilityArray[x][y] > LevelConstants.MIN_VISIBILITY)
-        //  this.visibilityArray[x][y] = 0;
+        this.renderBuffer[x][y] = [];
       }
     }
 
-    //this.applyAmbientLighting(oldVis, oldCol);
-    for (const p in this.game.players) {
-      if (this === this.game.rooms[this.game.players[p].levelID]) {
-        for (let i = 0; i < 360; i += LevelConstants.LIGHTING_ANGLE_STEP) {
-          this.castShadowsAtAngle(
-            i,
-            this.game.players[p].x + 0.5,
-            this.game.players[p].y + 0.5,
-            Math.min(
-              Math.max(
-                this.game.players[p].sightRadius - this.depth,
-                Player.minSightRadius
-              ),
-              7
-            ),
-            oldVis
-          );
-        }
-      }
-    }
     for (const l of this.lightSources) {
       for (let i = 0; i < 360; i += LevelConstants.LIGHTING_ANGLE_STEP) {
-        this.castShadowsAtAngle(i, l.x, l.y, l.r, oldVis);
-      }
-    }
-    for (const l of this.lightSources) {
-      for (let i = 0; i < 360; i += LevelConstants.LIGHTING_ANGLE_STEP) {
-        this.castTintAtAngle(i, l.x, l.y, l.r, l.c, oldCol, this.vis); // RGB color
+        this.castTintAtAngle(i, l.x, l.y, l.r, l.c, l.b); // RGB color in sRGB
       }
     }
     for (const p in this.game.players) {
       if (this === this.game.rooms[this.game.players[p].levelID]) {
         for (let i = 0; i < 360; i += LevelConstants.LIGHTING_ANGLE_STEP) {
           let lightColor = LevelConstants.AMBIENT_LIGHT_COLOR;
-          if (this.game.players[p].lightEquipped) lightColor = [200, 165, 5];
+          if (this.game.players[p].lightEquipped) lightColor = [200, 25, 5];
           this.castTintAtAngle(
             i,
             this.game.players[p].x + 0.5,
             this.game.players[p].y + 0.5,
             Math.min(
               Math.max(
-                this.game.players[p].sightRadius - this.depth,
+                this.game.players[p].sightRadius - this.depth + 2,
                 Player.minSightRadius
               ),
               10
             ),
-            lightColor, // RGB color
-            oldCol,
-            this.vis
+            lightColor, // RGB color in sRGB
+            0.75 // intensity
           );
         }
+      }
+    }
+
+    for (let x = this.roomX; x < this.roomX + this.width; x++) {
+      for (let y = this.roomY; y < this.roomY + this.height; y++) {
+        this.col[x][y] = this.blendColorsArray(this.renderBuffer[x][y]);
       }
     }
 
@@ -1208,31 +1195,7 @@ export class Room {
         [2, 8, 2],
         [1, 2, 1],
       ]);
-
-    /*for (let x = 0; x < this.visibilityArray.length; x++) {
-      for (let y = 0; y < this.visibilityArray[0].length; y++) {
-        if (this.visibilityArray[x][y] < oldVisibilityArray[x][y]) {
-          this.visibilityArray[x][y] = Math.min(
-            oldVisibilityArray[x][y],
-            LevelConstants.MIN_VISIBILITY
-          );
-        }
-      }
-    }*/
   };
-
-  private applyAmbientLighting(
-    oldVis: number[][],
-    oldCol: [number, number, number][][]
-  ) {
-    const ambientColor: [number, number, number] = [0, 0, 255]; // Deep bluish-green
-    for (let x = this.roomX; x < this.roomX + this.width; x++) {
-      for (let y = this.roomY; y < this.roomY + this.height; y++) {
-        //const ambientIntensity = 1 - this.vis[x][y];
-        this.col[x][y] = this.blendColors(this.col[x][y], ambientColor, 1);
-      }
-    }
-  }
 
   castShadowsAtAngle = (
     angle: number,
@@ -1280,15 +1243,19 @@ export class Room {
     py: number,
     radius: number,
     color: [number, number, number],
-    oldCol: [number, number, number][][],
-    vis: number[][],
-    brightness: number = 1
+    brightness: number
   ) => {
     const dx = Math.cos((angle * Math.PI) / 180);
     const dy = Math.sin((angle * Math.PI) / 180);
-    let distance = 0;
 
-    for (let i = 0; i < 15 + 1; i++) {
+    // Convert input color from sRGB to linear RGB
+    const linearColor: [number, number, number] = [
+      this.sRGBToLinear(color[0]),
+      this.sRGBToLinear(color[1]),
+      this.sRGBToLinear(color[2]),
+    ];
+
+    for (let i = 0; i <= radius + 3; i++) {
       const currentX = Math.floor(px + dx * i);
       const currentY = Math.floor(py + dy * i);
 
@@ -1299,39 +1266,100 @@ export class Room {
         return; // Stop casting tint through opaque tiles
       }
 
-      // Calculate intensity based on distance (closer tiles are brighter)
-      const intensity = 0.1 / Math.exp(i * 0.7); // Exponential falloff with distance
+      // Handle i=0 separately to avoid division by zero and ensure the light source tile is lit correctly
+      let intensity: number;
+      if (i === 0) {
+        intensity = brightness / 3; // Full intensity at the light source tile adjusted by brightness
+      } else {
+        intensity = (brightness / i ** 2) * (1 / radius); // Exponential falloff with distance
+      }
+      if (intensity < 0.01) intensity = 0;
 
       if (intensity <= 0) continue;
 
-      // Blend the tint color with the existing color
-      this.col[currentX][currentY] = this.blendColors(
-        this.col[currentX][currentY],
-        color,
-        intensity
+      if (!this.renderBuffer[currentX]) {
+        this.renderBuffer[currentX] = [];
+      }
+      if (!this.renderBuffer[currentX][currentY]) {
+        this.renderBuffer[currentX][currentY] = [];
+      }
+
+      const weightedLinearColor: [number, number, number, number] = [
+        linearColor[0],
+        linearColor[1],
+        linearColor[2],
+        intensity,
+      ];
+
+      this.renderBuffer[currentX][currentY].push(weightedLinearColor);
+    }
+  };
+
+  private sRGBToLinear = (value: number): number => {
+    const normalized = value / 255;
+    if (normalized <= 0.04045) {
+      return normalized / 12.92;
+    } else {
+      return Math.pow((normalized + 0.055) / 1.055, 2.4);
+    }
+  };
+
+  private linearToSRGB = (value: number): number => {
+    if (value <= 0.0031308) {
+      return Math.round(12.92 * value * 255);
+    } else {
+      return Math.round(
+        (1.055 * Math.pow(value, 1 / 2.4 /*gamma*/) - 0.055) * 255
       );
     }
   };
 
+  private clamp = (value: number, min: number = 0, max: number = 1): number => {
+    return Math.min(Math.max(value, min), max);
+  };
+
   /**
-   * Blends two colors based on the given alpha value.
+   * Blends an array of RGB colors into a single color without excessive darkness or clipping to white.
    *
-   * @param base - The base RGB color.
-   * @param overlay - The overlay RGB color.
-   * @param alpha - The opacity of the overlay color.
-   * @returns The blended RGB color.
+   * @param colors - An array of RGB tuples to blend.
+   * @returns A single RGB tuple representing the blended color.
    */
-  private blendColors(
-    base: [number, number, number],
-    overlay: [number, number, number],
-    alpha: number
-  ): [number, number, number] {
-    return [
-      Math.min(255, Math.round(base[0] + overlay[0] * alpha * (255 / base[0]))),
-      Math.min(255, Math.round(base[1] + overlay[1] * alpha * (255 / base[1]))),
-      Math.min(255, Math.round(base[2] + overlay[2] * alpha * (255 / base[2]))),
+  private blendColorsArray = (
+    colors: [red: number, green: number, blue: number, alpha: number][]
+  ): [red: number, green: number, blue: number] => {
+    if (colors.length === 0) return [0, 0, 0];
+
+    // Sum all color channels in linear RGB
+    const sum = colors.reduce(
+      (accumulator, color) => [
+        accumulator[0] + color[0] * color[3],
+        accumulator[1] + color[1] * color[3],
+        accumulator[2] + color[2] * color[3],
+      ],
+      [0, 0, 0]
+    );
+
+    // Apply scaling factor to manage overall brightness
+    const scalingFactor = 0.35; // Adjust as needed
+    const scaledSum = [
+      sum[0] * scalingFactor,
+      sum[1] * scalingFactor,
+      sum[2] * scalingFactor,
     ];
-  }
+
+    // Clamp each channel to [0, 1] to prevent overflow
+    const clampedSum: [number, number, number] = [
+      this.clamp(scaledSum[0], 0, 1),
+      this.clamp(scaledSum[1], 0, 1),
+      this.clamp(scaledSum[2], 0, 1),
+    ];
+    // Convert back to sRGB
+    return [
+      this.linearToSRGB(clampedSum[0]),
+      this.linearToSRGB(clampedSum[1]),
+      this.linearToSRGB(clampedSum[2]),
+    ];
+  };
 
   blur3x3 = (
     array: Array<Array<number>>,
@@ -1502,7 +1530,7 @@ export class Room {
 
   drawColorLayer = () => {
     Game.ctx.globalCompositeOperation = "soft-light";
-    Game.ctx.globalAlpha = 0.45;
+    Game.ctx.globalAlpha = 0.6;
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
         const [r, g, b] = this.col[x][y];
@@ -1591,7 +1619,7 @@ export class Room {
     let bestSightRadius = 0;
     for (const p in this.game.players) {
       Game.ctx.globalCompositeOperation = "soft-light";
-      Game.ctx.globalAlpha = 0.45;
+      Game.ctx.globalAlpha = 0.75;
       if (
         this.game.rooms[this.game.players[p].levelID] === this &&
         this.game.players[p].defaultSightRadius > bestSightRadius
@@ -1601,7 +1629,7 @@ export class Room {
     }
     let shadingAlpha = Math.max(0, Math.min(0.8, 2 / bestSightRadius));
     if (GameConstants.ALPHA_ENABLED) {
-      Game.ctx.globalAlpha = 0.45;
+      Game.ctx.globalAlpha = 0.75;
       Game.ctx.fillStyle = this.shadeColor;
       Game.ctx.fillRect(
         (this.roomX - LevelConstants.SCREEN_W) * GameConstants.TILESIZE,
