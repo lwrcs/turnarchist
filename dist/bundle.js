@@ -4831,8 +4831,8 @@ var Entity = /** @class */ (function (_super) {
         _this.isEntityColliding = function (x, y) {
             return _this.room.entities.some(function (entity) { return entity.x === x && entity.y === y; });
         };
-        _this.placeProjectile = function (projectileClass, x, y) {
-            _this.room.projectiles.push(new projectileClass(_this, x, y));
+        _this.placeProjectile = function (projectileClass, x, y, color) {
+            _this.room.projectiles.push(new projectileClass(_this, x, y, color));
         };
         _this.isPathClear = function (startX, startY, endX, endY) {
             var _a;
@@ -11890,26 +11890,26 @@ var Player = /** @class */ (function (_super) {
         };
         _this.left = function () {
             if (_this.canMove()) {
-                _this.tryMove(_this.x - 1, _this.y);
                 _this.direction = PlayerDirection.LEFT;
+                _this.tryMove(_this.x - 1, _this.y);
             }
         };
         _this.right = function () {
             if (_this.canMove()) {
-                _this.tryMove(_this.x + 1, _this.y);
                 _this.direction = PlayerDirection.RIGHT;
+                _this.tryMove(_this.x + 1, _this.y);
             }
         };
         _this.up = function () {
             if (_this.canMove()) {
-                _this.tryMove(_this.x, _this.y - 1);
                 _this.direction = PlayerDirection.UP;
+                _this.tryMove(_this.x, _this.y - 1);
             }
         };
         _this.down = function () {
             if (_this.canMove()) {
-                _this.tryMove(_this.x, _this.y + 1);
                 _this.direction = PlayerDirection.DOWN;
+                _this.tryMove(_this.x, _this.y + 1);
             }
         };
         _this.hit = function () {
@@ -12331,6 +12331,27 @@ var Player = /** @class */ (function (_super) {
         _this.lightEquipped = false;
         return _this;
     }
+    Object.defineProperty(Player.prototype, "angle", {
+        get: function () {
+            if (this.direction !== undefined) {
+                switch (this.direction) {
+                    case PlayerDirection.UP:
+                        return 270;
+                    case PlayerDirection.RIGHT:
+                        return 0;
+                    case PlayerDirection.DOWN:
+                        return 90;
+                    case PlayerDirection.LEFT:
+                        return 180;
+                }
+            }
+            else {
+                return 0;
+            }
+        },
+        enumerable: false,
+        configurable: true
+    });
     Player.prototype.canMove = function () {
         var currentTime = Date.now();
         if (currentTime - this.lastMoveTime >= gameConstants_1.GameConstants.MOVEMENT_COOLDOWN) {
@@ -12699,7 +12720,8 @@ var hitWarning_1 = __webpack_require__(/*! ../hitWarning */ "./src/hitWarning.ts
 var lightSource_1 = __webpack_require__(/*! ../lightSource */ "./src/lightSource.ts");
 var WizardFireball = /** @class */ (function (_super) {
     __extends(WizardFireball, _super);
-    function WizardFireball(parent, x, y) {
+    function WizardFireball(parent, x, y, color) {
+        if (color === void 0) { color = [0, 50, 150]; }
         var _this = _super.call(this, parent, x, y) || this;
         _this.setMarkerFrame = function () {
             // Calculate offsetX based on direction
@@ -12768,7 +12790,7 @@ var WizardFireball = /** @class */ (function (_super) {
         _this.parent = parent;
         _this.frame = 0;
         _this.state = 0; //- this.distanceToParent;
-        _this.lightSource = new lightSource_1.LightSource(_this.x + 0.5, _this.y + 0.5, 0.5, [0, 50, 150], 0.25);
+        _this.lightSource = new lightSource_1.LightSource(_this.x + 0.5, _this.y + 0.5, 0.5, color, 0.25);
         _this.parent.addLightSource(_this.lightSource);
         return _this;
     }
@@ -13312,6 +13334,33 @@ var Room = /** @class */ (function () {
                 }
             }
         };
+        this.fadeRgb = function (delta) {
+            for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
+                for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
+                    var diffR = Math.abs(_this.softCol[x][y][0] - _this.col[x][y][0]);
+                    if (diffR >= 5) {
+                        if (_this.softCol[x][y][0] < _this.col[x][y][0])
+                            _this.softCol[x][y][0] += 5 * delta;
+                        else if (_this.softCol[x][y][0] > _this.col[x][y][0])
+                            _this.softCol[x][y][0] -= 5 * delta;
+                    }
+                    var diffG = Math.abs(_this.softCol[x][y][1] - _this.col[x][y][1]);
+                    if (diffG >= 5) {
+                        if (_this.softCol[x][y][1] < _this.col[x][y][1])
+                            _this.softCol[x][y][1] += 5 * delta;
+                        else if (_this.softCol[x][y][1] > _this.col[x][y][1])
+                            _this.softCol[x][y][1] -= 5 * delta;
+                    }
+                    var diffB = Math.abs(_this.softCol[x][y][2] - _this.col[x][y][2]);
+                    if (diffB >= 5) {
+                        if (_this.softCol[x][y][2] < _this.col[x][y][2])
+                            _this.softCol[x][y][2] += 5 * delta;
+                        else if (_this.softCol[x][y][2] > _this.col[x][y][2])
+                            _this.softCol[x][y][2] -= 5 * delta;
+                    }
+                }
+            }
+        };
         this.updateLighting = function () {
             var oldVis = [];
             var oldCol = [];
@@ -13333,12 +13382,19 @@ var Room = /** @class */ (function () {
                 }
             }
             for (var p in _this.game.players) {
-                if (_this === _this.game.rooms[_this.game.players[p].levelID]) {
-                    for (var i = 0; i < 360; i += levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP) {
+                var player = _this.game.players[p];
+                if (_this === _this.game.rooms[player.levelID]) {
+                    console.log("i: ".concat(player.angle));
+                    var viewAngle = 360;
+                    var viewAngleEnd = player.angle + viewAngle / 2;
+                    var offsetX = player.angle === 0 ? 0.7 : player.angle === 180 ? -0.7 : 0;
+                    var offsetY = player.angle === 90 ? 0.7 : player.angle === 270 ? -0.7 : 0;
+                    for (var i = 0; i < 360; i += levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP / 2) {
+                        console.log("i: ".concat(i));
                         var lightColor = levelConstants_1.LevelConstants.AMBIENT_LIGHT_COLOR;
-                        if (_this.game.players[p].lightEquipped)
+                        if (player.lightEquipped)
                             lightColor = [200, 25, 5];
-                        _this.castTintAtAngle(i, _this.game.players[p].x + 0.5, _this.game.players[p].y + 0.5, Math.min(Math.max(_this.game.players[p].sightRadius - _this.depth + 2, player_1.Player.minSightRadius), 10), lightColor, // RGB color in sRGB
+                        _this.castTintAtAngle(i, player.x + 0.5, player.y + 0.5, Math.min(Math.max(player.sightRadius - _this.depth + 2, player_1.Player.minSightRadius), 10), lightColor, // RGB color in sRGB
                         1 // intensity
                         );
                     }
@@ -13412,7 +13468,7 @@ var Room = /** @class */ (function () {
                 // Handle i=0 separately to avoid division by zero and ensure the light source tile is lit correctly
                 var intensity = void 0;
                 if (i === 0) {
-                    intensity = brightness / 3; // Full intensity at the light source tile adjusted by brightness
+                    intensity = brightness * 0.75; // Full intensity at the light source tile adjusted by brightness
                 }
                 else {
                     intensity = brightness / Math.pow(i, 2); // Exponential falloff with distance
@@ -13632,13 +13688,15 @@ var Room = /** @class */ (function () {
         this.draw = function (delta) {
             hitWarning_1.HitWarning.updateFrame(delta);
             _this.fadeLighting(delta);
+            _this.fadeRgb(delta);
+            _this.fadeRgb(delta);
         };
         this.drawColorLayer = function () {
             game_1.Game.ctx.globalCompositeOperation = "soft-light";
             game_1.Game.ctx.globalAlpha = 0.6;
             for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
                 for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
-                    var _a = _this.col[x][y], r = _a[0], g = _a[1], b = _a[2];
+                    var _a = _this.softCol[x][y], r = _a[0], g = _a[1], b = _a[2];
                     if (r === 0 && g === 0 && b === 0)
                         continue; // Skip if no color
                     game_1.Game.ctx.fillStyle = "rgba(".concat(r, ", ").concat(g, ", ").concat(b, ", ").concat(1 - _this.vis[x][y], ")");
@@ -14254,6 +14312,7 @@ var Room = /** @class */ (function () {
             }
         }
     };
+    Room.LIGHT_RESOLUTION = 1; // Default resolution
     return Room;
 }());
 exports.Room = Room;

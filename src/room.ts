@@ -44,7 +44,7 @@ import { Shotgun } from "./weapon/shotgun";
 import { Heart } from "./item/heart";
 import { Spear } from "./weapon/spear";
 import { Drawable } from "./drawable";
-import { Player } from "./player";
+import { Player, PlayerDirection } from "./player";
 import { CrabEnemy } from "./entity/enemy/crabEnemy";
 import { ZombieEnemy } from "./entity/enemy/zombieEnemy";
 import { BigSkullEnemy } from "./entity/enemy/bigSkullEnemy";
@@ -129,6 +129,9 @@ export class Room {
   col: [number, number, number][][];
   renderBuffer: [number, number, number, number][][][]; // Array of color arrays (r,g,b,alpha) for each x,y position
 
+  oldVis: number[][];
+  oldCol: [number, number, number][][];
+
   entities: Array<Entity>;
   items: Array<Item>;
   doors: Array<Door>; // (Door | BottomDoor) just a reference for mapping, still access through levelArray
@@ -157,6 +160,8 @@ export class Room {
   wallInfo: Map<string, WallInfo> = new Map();
   savePoint: Room;
   lastEnemyCount: number;
+  static readonly LIGHT_RESOLUTION: number = 1; // Default resolution
+
   private pointInside(
     x: number,
     y: number,
@@ -1134,6 +1139,34 @@ export class Room {
     }
   };
 
+  fadeRgb = (delta: number) => {
+    for (let x = this.roomX; x < this.roomX + this.width; x++) {
+      for (let y = this.roomY; y < this.roomY + this.height; y++) {
+        let diffR = Math.abs(this.softCol[x][y][0] - this.col[x][y][0]);
+        if (diffR >= 5) {
+          if (this.softCol[x][y][0] < this.col[x][y][0])
+            this.softCol[x][y][0] += 5 * delta;
+          else if (this.softCol[x][y][0] > this.col[x][y][0])
+            this.softCol[x][y][0] -= 5 * delta;
+        }
+        let diffG = Math.abs(this.softCol[x][y][1] - this.col[x][y][1]);
+        if (diffG >= 5) {
+          if (this.softCol[x][y][1] < this.col[x][y][1])
+            this.softCol[x][y][1] += 5 * delta;
+          else if (this.softCol[x][y][1] > this.col[x][y][1])
+            this.softCol[x][y][1] -= 5 * delta;
+        }
+        let diffB = Math.abs(this.softCol[x][y][2] - this.col[x][y][2]);
+        if (diffB >= 5) {
+          if (this.softCol[x][y][2] < this.col[x][y][2])
+            this.softCol[x][y][2] += 5 * delta;
+          else if (this.softCol[x][y][2] > this.col[x][y][2])
+            this.softCol[x][y][2] -= 5 * delta;
+        }
+      }
+    }
+  };
+
   updateLighting = () => {
     let oldVis = [];
     let oldCol = [];
@@ -1143,6 +1176,7 @@ export class Room {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
         oldVis[x][y] = this.vis[x][y];
         oldCol[x][y] = this.col[x][y];
+
         this.vis[x][y] = 1;
         this.col[x][y] = [1, 1, 1];
         this.renderBuffer[x][y] = [];
@@ -1155,17 +1189,27 @@ export class Room {
       }
     }
     for (const p in this.game.players) {
-      if (this === this.game.rooms[this.game.players[p].levelID]) {
-        for (let i = 0; i < 360; i += LevelConstants.LIGHTING_ANGLE_STEP) {
+      let player = this.game.players[p];
+      if (this === this.game.rooms[player.levelID]) {
+        console.log(`i: ${player.angle}`);
+        let viewAngle = 360;
+        let viewAngleEnd = player.angle + viewAngle / 2;
+        const offsetX =
+          player.angle === 0 ? 0.7 : player.angle === 180 ? -0.7 : 0;
+        const offsetY =
+          player.angle === 90 ? 0.7 : player.angle === 270 ? -0.7 : 0;
+        for (let i = 0; i < 360; i += LevelConstants.LIGHTING_ANGLE_STEP / 2) {
+          console.log(`i: ${i}`);
           let lightColor = LevelConstants.AMBIENT_LIGHT_COLOR;
-          if (this.game.players[p].lightEquipped) lightColor = [200, 25, 5];
+
+          if (player.lightEquipped) lightColor = [200, 25, 5];
           this.castTintAtAngle(
             i,
-            this.game.players[p].x + 0.5,
-            this.game.players[p].y + 0.5,
+            player.x + 0.5,
+            player.y + 0.5,
             Math.min(
               Math.max(
-                this.game.players[p].sightRadius - this.depth + 2,
+                player.sightRadius - this.depth + 2,
                 Player.minSightRadius
               ),
               10
@@ -1269,7 +1313,7 @@ export class Room {
       // Handle i=0 separately to avoid division by zero and ensure the light source tile is lit correctly
       let intensity: number;
       if (i === 0) {
-        intensity = brightness / 3; // Full intensity at the light source tile adjusted by brightness
+        intensity = brightness * 0.75; // Full intensity at the light source tile adjusted by brightness
       } else {
         intensity = brightness / i ** 2; // Exponential falloff with distance
       }
@@ -1526,6 +1570,8 @@ export class Room {
   draw = (delta: number) => {
     HitWarning.updateFrame(delta);
     this.fadeLighting(delta);
+    this.fadeRgb(delta);
+    this.fadeRgb(delta);
   };
 
   drawColorLayer = () => {
@@ -1533,7 +1579,7 @@ export class Room {
     Game.ctx.globalAlpha = 0.6;
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
-        const [r, g, b] = this.col[x][y];
+        const [r, g, b] = this.softCol[x][y];
         if (r === 0 && g === 0 && b === 0) continue; // Skip if no color
         Game.ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${1 - this.vis[x][y]})`;
         Game.ctx.fillRect(

@@ -142,6 +142,23 @@ export class Player extends Drawable {
     this.lightEquipped = false;
   }
 
+  get angle(): number {
+    if (this.direction !== undefined) {
+      switch (this.direction) {
+        case PlayerDirection.UP:
+          return 270;
+        case PlayerDirection.RIGHT:
+          return 0;
+        case PlayerDirection.DOWN:
+          return 90;
+        case PlayerDirection.LEFT:
+          return 180;
+      }
+    } else {
+      return 0;
+    }
+  }
+
   inputHandler = (input: InputEnum) => {
     switch (input) {
       case InputEnum.I:
@@ -366,26 +383,26 @@ export class Player extends Drawable {
 
   left = () => {
     if (this.canMove()) {
-      this.tryMove(this.x - 1, this.y);
       this.direction = PlayerDirection.LEFT;
+      this.tryMove(this.x - 1, this.y);
     }
   };
   right = () => {
     if (this.canMove()) {
-      this.tryMove(this.x + 1, this.y);
       this.direction = PlayerDirection.RIGHT;
+      this.tryMove(this.x + 1, this.y);
     }
   };
   up = () => {
     if (this.canMove()) {
-      this.tryMove(this.x, this.y - 1);
       this.direction = PlayerDirection.UP;
+      this.tryMove(this.x, this.y - 1);
     }
   };
   down = () => {
     if (this.canMove()) {
-      this.tryMove(this.x, this.y + 1);
       this.direction = PlayerDirection.DOWN;
+      this.tryMove(this.x, this.y + 1);
     }
   };
 

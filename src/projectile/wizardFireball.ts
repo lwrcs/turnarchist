@@ -18,7 +18,12 @@ export class WizardFireball extends Projectile {
   tileX: number;
   lightSource: LightSource;
 
-  constructor(parent: WizardEnemy, x: number, y: number) {
+  constructor(
+    parent: WizardEnemy,
+    x: number,
+    y: number,
+    color: [number, number, number] = [0, 50, 150]
+  ) {
     super(parent, x, y);
     this.parent = parent;
     this.frame = 0;
@@ -27,7 +32,7 @@ export class WizardFireball extends Projectile {
       this.x + 0.5,
       this.y + 0.5,
       0.5,
-      [0, 50, 150],
+      color,
       0.25
     );
     this.parent.addLightSource(this.lightSource);

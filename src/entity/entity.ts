@@ -123,13 +123,13 @@ export class Entity extends Drawable {
     this.diagonalAttackRange = 1;
   }
 
-  behavior = () => { };
+  behavior = () => {};
 
   hit = (): number => {
     return 0;
   };
 
-  hurtCallback = () => { };
+  hurtCallback = () => {};
 
   get type() {
     return EntityType.ENEMY;
@@ -178,7 +178,7 @@ export class Entity extends Drawable {
     else this.hurtCallback();
   };
 
-  interact = (player: Player) => { };
+  interact = (player: Player) => {};
 
   readonly dropLoot = () => {
     if (this.drop) {
@@ -325,7 +325,6 @@ export class Entity extends Drawable {
     this.drawX += -0.3 * delta * this.drawX;
     this.drawY += -0.3 * delta * this.drawY;
   };
-
 
   drawSleepingZs = (delta: number, offsetX = 0, offsetY = 0) => {
     this.sleepingZFrame += delta;
@@ -477,11 +476,17 @@ export class Entity extends Drawable {
   };
 
   private placeProjectile = (
-    projectileClass: new (parent: Entity, x: number, y: number) => Projectile,
+    projectileClass: new (
+      parent: Entity,
+      x: number,
+      y: number,
+      color?: [number, number, number]
+    ) => Projectile,
     x: number,
-    y: number
+    y: number,
+    color?: [number, number, number]
   ) => {
-    this.room.projectiles.push(new projectileClass(this, x, y));
+    this.room.projectiles.push(new projectileClass(this, x, y, color));
   };
 
   isPathClear = (
@@ -547,17 +552,17 @@ export class Entity extends Drawable {
     ): number[][] => {
       const baseOffsets = isOrthogonal
         ? [
-          [-1, 0],
-          [1, 0],
-          [0, -1],
-          [0, 1],
-        ]
+            [-1, 0],
+            [1, 0],
+            [0, -1],
+            [0, 1],
+          ]
         : [
-          [-1, -1],
-          [1, 1],
-          [1, -1],
-          [-1, 1],
-        ];
+            [-1, -1],
+            [1, 1],
+            [1, -1],
+            [-1, 1],
+          ];
       return baseOffsets.flatMap(([dx, dy]) =>
         Array.from({ length: range }, (_, i) => [(i + 1) * dx, (i + 1) * dy])
       );

@@ -15,8 +15,5 @@ export class PostProcessor {
 
     Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
     Game.ctx.globalCompositeOperation = "source-over";
-
   };
-
-
 }
