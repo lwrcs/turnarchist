@@ -3,6 +3,8 @@ import { Entity } from "../entity/entity";
 import { Drawable } from "../drawable";
 import { HitWarning } from "../hitWarning";
 import { Direction } from "../game";
+import { LightSource } from "../lightSource";
+import { WizardEnemy } from "../entity/enemy/wizardEnemy";
 
 export class Projectile extends Drawable {
   x: number;
@@ -10,6 +12,8 @@ export class Projectile extends Drawable {
   dead: boolean;
   parent: Entity | Player;
   dir: Direction;
+  lightSource: LightSource;
+
   constructor(parent: Entity | Player, x: number, y: number) {
     super();
 

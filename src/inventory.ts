@@ -81,7 +81,7 @@ export class Inventory {
 
       this.addItem(i);
     };
-    const startingInv = [Dagger, Key, Candle, Torch, Warhammer];
+    const startingInv = [Dagger, Key, Candle, Spellbook];
     startingInv.forEach((item) => {
       a(new item({ game: this.game } as Room, 0, 0));
     });

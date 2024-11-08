@@ -20,6 +20,7 @@ import { Enemy } from "./enemy";
 import { SpikeTrap } from "../../tile/spiketrap";
 import { HitWarning } from "../../hitWarning";
 import { WizardBomb } from "../../projectile/wizardBomb";
+import { WizardEnemy } from "./wizardEnemy";
 
 export enum WizardState {
   idle,
@@ -28,11 +29,7 @@ export enum WizardState {
   teleport,
 }
 
-export class FireWizardEnemy extends Enemy {
-  ticks: number;
-  state: WizardState;
-  frame: number;
-  seenPlayer: boolean;
+export class FireWizardEnemy extends WizardEnemy {
   readonly ATTACK_RADIUS = 5;
 
   constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
@@ -46,6 +43,7 @@ export class FireWizardEnemy extends Enemy {
     this.seenPlayer = false;
     this.alertTicks = 0;
     this.name = "fire wizard";
+    this.projectileColor = [200, 20, 0];
     if (drop) this.drop = drop;
     else {
       if (Random.rand() < 0.02)
@@ -118,7 +116,7 @@ export class FireWizardEnemy extends Enemy {
                   { x: 0, y: 1 },
                   { x: 0, y: 2 },
                 ],
-                WizardBomb,
+                WizardFireball,
                 false
               );
             }

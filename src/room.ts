@@ -73,6 +73,7 @@ import { Dagger } from "./weapon/dagger";
 import { TutorialListener } from "./tutorialListener";
 import { globalEventBus } from "./eventBus";
 import { RedGem } from "./item/redgem";
+import { EnergyWizardEnemy } from "./entity/enemy/energyWizard";
 
 export enum RoomType {
   START,
@@ -397,7 +398,7 @@ export class Room {
       // Define the enemy tables for each depth level
 
       let tables = {
-        0: [1, 5, 3], //this.generateLevelTable(rand),
+        0: [1, 5, 3, 16], //this.generateLevelTable(rand),
         1: [3, 4, 5, 9, 7],
         2: [3, 4, 5, 7, 8, 9, 12],
         3: [1, 2, 3, 5, 6, 7, 8, 9, 10],
@@ -450,7 +451,7 @@ export class Room {
             addEnemy(new SkullEnemy(this, this.game, x, y));
             break;
           case 5:
-            addEnemy(new WizardEnemy(this, this.game, x, y));
+            addEnemy(new EnergyWizardEnemy(this, this.game, x, y));
             break;
           case 6:
             addEnemy(new ChargeEnemy(this, this.game, x, y));
@@ -502,7 +503,7 @@ export class Room {
             addEnemy(new SniperEnemy(this, this.game, x, y));
             break;
           case 15:
-            addEnemy(new Enemy(this, this.game, x, y));
+            addEnemy(new ZombieEnemy(this, this.game, x, y));
             break;
           case 16:
             addEnemy(new FireWizardEnemy(this, this.game, x, y));
@@ -519,7 +520,7 @@ export class Room {
       const { x, y } = this.getRandomEmptyPosition(tiles);
       switch (
         Game.randTable(
-          [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4],
+          [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 5, 5, 5],
           rand
         )
       ) {
@@ -534,6 +535,9 @@ export class Room {
           break;
         case 4:
           this.entities.push(new TombStone(this, this.game, x, y, 0));
+          break;
+        case 5:
+          this.entities.push(new Pumpkin(this, this.game, x, y));
           break;
       }
     }
@@ -1130,7 +1134,7 @@ export class Room {
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
         if (Math.abs(this.softVis[x][y] - this.vis[x][y]) >= 0.02) {
-          if (this.softVis[x][y] < this.vis[x][y]) this.softVis[x][y] += 0.02;
+          if (this.softVis[x][y] < this.vis[x][y]) this.softVis[x][y] += 0.04;
           else if (this.softVis[x][y] > this.vis[x][y])
             this.softVis[x][y] -= 0.02 * delta;
         }
@@ -1198,8 +1202,7 @@ export class Room {
           player.angle === 0 ? 0.7 : player.angle === 180 ? -0.7 : 0;
         const offsetY =
           player.angle === 90 ? 0.7 : player.angle === 270 ? -0.7 : 0;
-        for (let i = 0; i < 360; i += LevelConstants.LIGHTING_ANGLE_STEP / 2) {
-          console.log(`i: ${i}`);
+        for (let i = 0; i < 360; i += LevelConstants.LIGHTING_ANGLE_STEP) {
           let lightColor = LevelConstants.AMBIENT_LIGHT_COLOR;
 
           if (player.lightEquipped) lightColor = [200, 25, 5];
@@ -1251,7 +1254,7 @@ export class Room {
     let dx = Math.cos((angle * Math.PI) / 180);
     let dy = Math.sin((angle * Math.PI) / 180);
     let onOpaqueSection = false;
-    for (let i = 0; i < radius + 3; i++) {
+    for (let i = 0; i < radius + 1.5; i++) {
       if (!this.isPositionInRoom(px, py)) return; // we're outside the level
 
       let tile = this.roomArray[Math.floor(px)][Math.floor(py)];
@@ -1462,7 +1465,6 @@ export class Room {
 
     this.calculateWallInfo();
     this.entities = this.entities.filter((e) => !e.dead);
-    this.updateLighting();
 
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
@@ -1471,10 +1473,13 @@ export class Room {
     }
 
     this.turn = TurnState.computerTurn;
+
     //player.actionTab.setState(ActionState.WAIT);
     //sets the action tab state to Ready
     this.playerTurnTime = Date.now();
     this.playerTicked = player;
+    this.updateLighting();
+
     player.map.saveMapData();
     this.clearDeadStuff();
   };

@@ -16,15 +16,11 @@ export class WizardFireball extends Projectile {
   offsetX: number;
   hitWarning: HitWarning;
   tileX: number;
-  lightSource: LightSource;
+  tileY: number;
 
-  constructor(
-    parent: WizardEnemy,
-    x: number,
-    y: number,
-    color: [number, number, number] = [0, 50, 150]
-  ) {
+  constructor(parent: WizardEnemy, x: number, y: number) {
     super(parent, x, y);
+    this.tileY = parent.name === "wizard bomber" ? 7 : 8;
     this.parent = parent;
     this.frame = 0;
     this.state = 0; //- this.distanceToParent;
@@ -32,10 +28,11 @@ export class WizardFireball extends Projectile {
       this.x + 0.5,
       this.y + 0.5,
       0.5,
-      color,
-      0.25
+      (parent as WizardEnemy).projectileColor,
+      0.05
     );
     this.parent.addLightSource(this.lightSource);
+    this.parent.room.updateLighting();
   }
   setMarkerFrame = () => {
     // Calculate offsetX based on direction
@@ -53,6 +50,10 @@ export class WizardFireball extends Projectile {
 
     this.state++;
     if (!this.dead && this.state === 1) {
+      const lightSource = this.parent.room.lightSources.find(
+        (ls) => ls === this.lightSource
+      );
+      lightSource.b = 0.4;
       this.parent.room.hitwarnings.push(
         new HitWarning(
           this.parent.game,
@@ -94,13 +95,22 @@ export class WizardFireball extends Projectile {
       if (this.state === 0) {
         this.frame += 0.25 * delta;
         if (this.frame >= 4) this.frame = 0;
-        Game.drawFX(22 + Math.floor(this.frame), 7, 1, 1, this.x, this.y, 1, 1);
+        Game.drawFX(
+          22 + Math.floor(this.frame),
+          this.tileY,
+          1,
+          1,
+          this.x,
+          this.y,
+          1,
+          1
+        );
       } else if (this.state === 1) {
         this.frame += 0.25 * delta;
         if (this.frame >= 4) this.frame = 0;
         Game.drawFX(
           18 + Math.floor(this.frame),
-          7,
+          this.tileY,
           1,
           1,
           this.x,

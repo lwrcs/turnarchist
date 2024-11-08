@@ -25,7 +25,7 @@ enum EnemyState {
   IDLE,
 }
 
-export class Enemy extends Entity {
+export abstract class Enemy extends Entity {
   seenPlayer: boolean;
   frame: number;
   ticks: number;
@@ -399,7 +399,7 @@ export class Enemy extends Entity {
       this.drawY += -0.3 * delta * this.drawY;
       this.jump();
     }
-  }
+  };
 
   jump = () => {
     let j = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));

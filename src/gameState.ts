@@ -53,6 +53,7 @@ import { DoorType } from "./tile/door";
 import { Mushrooms } from "./entity/object/mushrooms";
 import { Pumpkin } from "./entity/object/pumpkin";
 import { Block } from "./entity/object/block";
+import { EnergyWizardEnemy } from "./entity/enemy/energyWizard";
 
 export class HitWarningState {
   x: number;
@@ -118,7 +119,7 @@ let loadProjectile = (ps: ProjectileState, game: Game): Projectile => {
   if (ps.type === ProjectileType.WIZARD) {
     let wizard = game.rooms[ps.levelID].entities[
       ps.wizardParentID
-    ] as WizardEnemy;
+    ] as EnergyWizardEnemy;
     let p = new WizardFireball(wizard, ps.x, ps.y);
     p.state = ps.wizardState;
     return p;
@@ -418,7 +419,7 @@ let loadEnemy = (es: EnemyState, game: Game): Entity => {
     enemy.quantity = es.quantity;
   }
   if (es.type === EnemyType.WIZARD) {
-    enemy = new WizardEnemy(level, game, es.x, es.y);
+    enemy = new EnergyWizardEnemy(level, game, es.x, es.y);
     enemy.ticks = es.ticks;
     enemy.state = es.wizardState;
     enemy.seenPlayer = es.seenPlayer;

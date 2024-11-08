@@ -22,6 +22,26 @@ export class WizardBomb extends Projectile {
     this.frame = 0;
     this.state = 0; //- this.distanceToParent;
   }
+
+  newLightSource = (
+    x: number,
+    y: number,
+    radius: number,
+    color: [number, number, number],
+    brightness: number
+  ) => {
+    this.lightSource = new LightSource(x, y, radius, color, brightness);
+  };
+
+  addLightSource = (lightSource: LightSource) => {
+    this.room.lightSources.push(lightSource);
+  };
+
+  removeLightSource = (lightSource: LightSource) => {
+    this.room.lightSources = this.room.lightSources.filter(
+      (ls) => ls !== lightSource
+    );
+  };
   setMarkerFrame = () => {
     // Calculate offsetX based on direction
     this.offsetX = Math.floor(((this.dir + 1) % 8) / 2);

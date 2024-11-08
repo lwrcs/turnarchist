@@ -28,11 +28,12 @@ export enum WizardState {
   teleport,
 }
 
-export class WizardEnemy extends Enemy {
+export abstract class WizardEnemy extends Enemy {
   ticks: number;
   state: WizardState;
   frame: number;
   seenPlayer: boolean;
+  projectileColor: [number, number, number];
   readonly ATTACK_RADIUS = 5;
 
   constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
@@ -53,6 +54,16 @@ export class WizardEnemy extends Enemy {
       else this.drop = new Coin(this.room, this.x, this.y);
     }
   }
+
+  newLightSource = (
+    x: number,
+    y: number,
+    radius: number,
+    color: [number, number, number],
+    brightness: number
+  ) => {
+    this.lightSource = new LightSource(x, y, radius, color, brightness);
+  };
 
   addLightSource = (lightSource: LightSource) => {
     this.room.lightSources.push(lightSource);
@@ -219,7 +230,7 @@ export class WizardEnemy extends Enemy {
           this.room.shadeColor,
           this.shadeAmount()
         );
-        this.frame += 0.4 * delta;
+        this.frame += 0.2 * delta;
         if (this.frame > 11) this.frame = -1;
       } else {
         Game.drawMob(

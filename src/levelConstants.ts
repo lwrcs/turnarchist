@@ -18,6 +18,7 @@ export class LevelConstants {
   static SMOOTH_LIGHTING = false; //doesn't work
   static readonly MIN_VISIBILITY = 0; // visibility level of places you've already seen
   static readonly LIGHTING_ANGLE_STEP = 1; // how many degrees between each ray, previously 5
+  static readonly LIGHT_RESOLUTION = 3; //1 is default
 
   static readonly LEVEL_TEXT_COLOR = "yellow";
   static readonly AMBIENT_LIGHT_COLOR: [number, number, number] = [10, 10, 10];

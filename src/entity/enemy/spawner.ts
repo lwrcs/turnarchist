@@ -19,6 +19,7 @@ import { KnightEnemy } from "./knightEnemy";
 import { WizardEnemy } from "./wizardEnemy";
 import { Enemy } from "./enemy";
 import { Random } from "../../random";
+import { EnergyWizardEnemy } from "./energyWizard";
 
 export class Spawner extends Enemy {
   ticks: number;
@@ -81,7 +82,7 @@ export class Spawner extends Enemy {
               );
               break;
             case 3:
-              spawned = new WizardEnemy(
+              spawned = new EnergyWizardEnemy(
                 this.room,
                 this.game,
                 position.x,

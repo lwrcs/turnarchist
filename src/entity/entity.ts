@@ -15,6 +15,7 @@ import { Sound } from "../sound";
 import { Projectile } from "../projectile/projectile";
 import { Utils } from "../utils";
 import { globalEventBus } from "../eventBus";
+import { LightSource } from "../lightSource";
 
 export enum EntityDirection {
   DOWN,
@@ -80,6 +81,8 @@ export class Entity extends Drawable {
   protected forwardOnlyAttack: boolean;
   protected attackRange: number;
   protected diagonalAttackRange: number;
+  lightSource: LightSource;
+
   constructor(room: Room, game: Game, x: number, y: number) {
     super();
 
@@ -122,6 +125,16 @@ export class Entity extends Drawable {
     this.attackRange = 1;
     this.diagonalAttackRange = 1;
   }
+
+  addLightSource = (lightSource: LightSource) => {
+    this.room.lightSources.push(lightSource);
+  };
+
+  removeLightSource = (lightSource: LightSource) => {
+    this.room.lightSources = this.room.lightSources.filter(
+      (ls) => ls !== lightSource
+    );
+  };
 
   behavior = () => {};
 

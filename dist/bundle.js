@@ -2442,6 +2442,111 @@ exports.Enemy = Enemy;
 
 /***/ }),
 
+/***/ "./src/entity/enemy/energyWizard.ts":
+/*!******************************************!*\
+  !*** ./src/entity/enemy/energyWizard.ts ***!
+  \******************************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.EnergyWizardEnemy = exports.WizardState = void 0;
+var game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+var floor_1 = __webpack_require__(/*! ../../tile/floor */ "./src/tile/floor.ts");
+var bones_1 = __webpack_require__(/*! ../../tile/bones */ "./src/tile/bones.ts");
+var deathParticle_1 = __webpack_require__(/*! ../../particle/deathParticle */ "./src/particle/deathParticle.ts");
+var coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
+var bluegem_1 = __webpack_require__(/*! ../../item/bluegem */ "./src/item/bluegem.ts");
+var random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
+var wizardEnemy_1 = __webpack_require__(/*! ./wizardEnemy */ "./src/entity/enemy/wizardEnemy.ts");
+var WizardState;
+(function (WizardState) {
+    WizardState[WizardState["idle"] = 0] = "idle";
+    WizardState[WizardState["attack"] = 1] = "attack";
+    WizardState[WizardState["justAttacked"] = 2] = "justAttacked";
+    WizardState[WizardState["teleport"] = 3] = "teleport";
+})(WizardState = exports.WizardState || (exports.WizardState = {}));
+var EnergyWizardEnemy = /** @class */ (function (_super) {
+    __extends(EnergyWizardEnemy, _super);
+    function EnergyWizardEnemy(room, game, x, y, drop) {
+        var _this = _super.call(this, room, game, x, y) || this;
+        _this.draw = function (delta) {
+            if (!_this.dead) {
+                if (_this.state === WizardState.attack)
+                    _this.tileX = 7;
+                else
+                    _this.tileX = 6;
+                if (_this.hasShadow)
+                    game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
+                if (_this.frame >= 0) {
+                    game_1.Game.drawMob(Math.floor(_this.frame) + 6, 2, 1, 2, _this.x, _this.y - 1.5, 1, 2, _this.room.shadeColor, _this.shadeAmount());
+                    _this.frame += 0.4 * delta;
+                    if (_this.frame > 11)
+                        _this.frame = -1;
+                }
+                else {
+                    game_1.Game.drawMob(_this.tileX, _this.tileY, 1, 2, _this.x - _this.drawX, _this.y - 1.3 - _this.drawY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
+                }
+                if (!_this.seenPlayer) {
+                    _this.drawSleepingZs(delta);
+                }
+                if (_this.alertTicks > 0) {
+                    _this.drawExclamation(delta);
+                }
+            }
+        };
+        _this.kill = function () {
+            if (_this.room.roomArray[_this.x][_this.y] instanceof floor_1.Floor) {
+                var b = new bones_1.Bones(_this.room, _this.x, _this.y);
+                b.skin = _this.room.roomArray[_this.x][_this.y].skin;
+                _this.room.roomArray[_this.x][_this.y] = b;
+            }
+            _this.dead = true;
+            _this.room.particles.push(new deathParticle_1.DeathParticle(_this.x, _this.y));
+            _this.dropLoot();
+        };
+        _this.ticks = 0;
+        _this.health = 1;
+        _this.tileX = 6;
+        _this.tileY = 0;
+        _this.frame = 0;
+        _this.state = WizardState.attack;
+        _this.seenPlayer = false;
+        _this.alertTicks = 0;
+        _this.name = "wizard bomber";
+        _this.projectileColor = [0, 50, 150];
+        if (drop)
+            _this.drop = drop;
+        else {
+            if (random_1.Random.rand() < 0.02)
+                _this.drop = new bluegem_1.BlueGem(_this.room, _this.x, _this.y);
+            else
+                _this.drop = new coin_1.Coin(_this.room, _this.x, _this.y);
+        }
+        return _this;
+    }
+    return EnergyWizardEnemy;
+}(wizardEnemy_1.WizardEnemy));
+exports.EnergyWizardEnemy = EnergyWizardEnemy;
+
+
+/***/ }),
+
 /***/ "./src/entity/enemy/fireWizard.ts":
 /*!****************************************!*\
   !*** ./src/entity/enemy/fireWizard.ts ***!
@@ -2471,11 +2576,11 @@ var floor_1 = __webpack_require__(/*! ../../tile/floor */ "./src/tile/floor.ts")
 var bones_1 = __webpack_require__(/*! ../../tile/bones */ "./src/tile/bones.ts");
 var deathParticle_1 = __webpack_require__(/*! ../../particle/deathParticle */ "./src/particle/deathParticle.ts");
 var wizardTeleportParticle_1 = __webpack_require__(/*! ../../particle/wizardTeleportParticle */ "./src/particle/wizardTeleportParticle.ts");
+var wizardFireball_1 = __webpack_require__(/*! ../../projectile/wizardFireball */ "./src/projectile/wizardFireball.ts");
 var coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
 var bluegem_1 = __webpack_require__(/*! ../../item/bluegem */ "./src/item/bluegem.ts");
 var random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
-var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
-var wizardBomb_1 = __webpack_require__(/*! ../../projectile/wizardBomb */ "./src/projectile/wizardBomb.ts");
+var wizardEnemy_1 = __webpack_require__(/*! ./wizardEnemy */ "./src/entity/enemy/wizardEnemy.ts");
 var WizardState;
 (function (WizardState) {
     WizardState[WizardState["idle"] = 0] = "idle";
@@ -2540,7 +2645,7 @@ var FireWizardEnemy = /** @class */ (function (_super) {
                                     { x: 0, y: -2 },
                                     { x: 0, y: 1 },
                                     { x: 0, y: 2 },
-                                ], wizardBomb_1.WizardBomb, false);
+                                ], wizardFireball_1.WizardFireball, false);
                             }
                             _this.state = WizardState.justAttacked;
                             break;
@@ -2633,6 +2738,7 @@ var FireWizardEnemy = /** @class */ (function (_super) {
         _this.seenPlayer = false;
         _this.alertTicks = 0;
         _this.name = "fire wizard";
+        _this.projectileColor = [200, 20, 0];
         if (drop)
             _this.drop = drop;
         else {
@@ -2644,7 +2750,7 @@ var FireWizardEnemy = /** @class */ (function (_super) {
         return _this;
     }
     return FireWizardEnemy;
-}(enemy_1.Enemy));
+}(wizardEnemy_1.WizardEnemy));
 exports.FireWizardEnemy = FireWizardEnemy;
 
 
@@ -3933,9 +4039,9 @@ var skullEnemy_1 = __webpack_require__(/*! ./skullEnemy */ "./src/entity/enemy/s
 var enemySpawnAnimation_1 = __webpack_require__(/*! ../../projectile/enemySpawnAnimation */ "./src/projectile/enemySpawnAnimation.ts");
 var bluegem_1 = __webpack_require__(/*! ../../item/bluegem */ "./src/item/bluegem.ts");
 var knightEnemy_1 = __webpack_require__(/*! ./knightEnemy */ "./src/entity/enemy/knightEnemy.ts");
-var wizardEnemy_1 = __webpack_require__(/*! ./wizardEnemy */ "./src/entity/enemy/wizardEnemy.ts");
 var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 var random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
+var energyWizard_1 = __webpack_require__(/*! ./energyWizard */ "./src/entity/enemy/energyWizard.ts");
 var Spawner = /** @class */ (function (_super) {
     __extends(Spawner, _super);
     function Spawner(room, game, x, y) {
@@ -3968,7 +4074,7 @@ var Spawner = /** @class */ (function (_super) {
                                 spawned = new skullEnemy_1.SkullEnemy(_this.room, _this.game, position.x, position.y);
                                 break;
                             case 3:
-                                spawned = new wizardEnemy_1.WizardEnemy(_this.room, _this.game, position.x, position.y);
+                                spawned = new energyWizard_1.EnergyWizardEnemy(_this.room, _this.game, position.x, position.y);
                                 break;
                         }
                         _this.room.projectiles.push(new enemySpawnAnimation_1.EnemySpawnAnimation(_this.room, spawned, position.x, position.y));
@@ -4048,6 +4154,7 @@ var coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
 var bluegem_1 = __webpack_require__(/*! ../../item/bluegem */ "./src/item/bluegem.ts");
 var random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
 var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
+var lightSource_1 = __webpack_require__(/*! ../../lightSource */ "./src/lightSource.ts");
 var WizardState;
 (function (WizardState) {
     WizardState[WizardState["idle"] = 0] = "idle";
@@ -4060,6 +4167,9 @@ var WizardEnemy = /** @class */ (function (_super) {
     function WizardEnemy(room, game, x, y, drop) {
         var _this = _super.call(this, room, game, x, y) || this;
         _this.ATTACK_RADIUS = 5;
+        _this.newLightSource = function (x, y, radius, color, brightness) {
+            _this.lightSource = new lightSource_1.LightSource(x, y, radius, color, brightness);
+        };
         _this.addLightSource = function (lightSource) {
             _this.room.lightSources.push(lightSource);
         };
@@ -4181,7 +4291,7 @@ var WizardEnemy = /** @class */ (function (_super) {
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
                 if (_this.frame >= 0) {
                     game_1.Game.drawMob(Math.floor(_this.frame) + 6, 2, 1, 2, _this.x, _this.y - 1.5, 1, 2, _this.room.shadeColor, _this.shadeAmount());
-                    _this.frame += 0.4 * delta;
+                    _this.frame += 0.2 * delta;
                     if (_this.frame > 11)
                         _this.frame = -1;
                 }
@@ -4561,6 +4671,12 @@ var Entity = /** @class */ (function (_super) {
     function Entity(room, game, x, y) {
         var _this = _super.call(this) || this;
         _this.sleepingZFrame = 0;
+        _this.addLightSource = function (lightSource) {
+            _this.room.lightSources.push(lightSource);
+        };
+        _this.removeLightSource = function (lightSource) {
+            _this.room.lightSources = _this.room.lightSources.filter(function (ls) { return ls !== lightSource; });
+        };
         _this.behavior = function () { };
         _this.hit = function () {
             return 0;
@@ -5608,6 +5724,86 @@ exports.PottedPlant = PottedPlant;
 
 /***/ }),
 
+/***/ "./src/entity/object/pumpkin.ts":
+/*!**************************************!*\
+  !*** ./src/entity/object/pumpkin.ts ***!
+  \**************************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Pumpkin = void 0;
+var entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+var game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+var entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+var lightSource_1 = __webpack_require__(/*! ../../lightSource */ "./src/lightSource.ts");
+var candle_1 = __webpack_require__(/*! ../../item/candle */ "./src/item/candle.ts");
+var imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ "./src/particle/imageParticle.ts");
+var Pumpkin = /** @class */ (function (_super) {
+    __extends(Pumpkin, _super);
+    function Pumpkin(room, game, x, y) {
+        var _this = _super.call(this, room, game, x, y) || this;
+        _this.kill = function () {
+            _this.removeLightSource(_this.lightSource);
+            _this.dead = true;
+            _this.dropLoot();
+            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 25);
+            //this.room.items.push(new Shrooms(this.room, this.x, this.y));
+        };
+        _this.killNoBones = function () {
+            _this.kill();
+        };
+        _this.draw = function (delta) {
+            // not inherited because it doesn't have the 0.5 offset
+            if (!_this.dead) {
+                _this.updateDrawXY(delta);
+                game_1.Game.drawObj(_this.tileX, _this.tileY, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
+            }
+        };
+        _this.drawTopLayer = function (delta) {
+            _this.drawableY = _this.y;
+        };
+        _this.room = room;
+        _this.health = 1;
+        _this.tileX = 15;
+        _this.tileY = 2;
+        _this.hasShadow = false;
+        _this.chainPushable = false;
+        _this.name = "pumpkin";
+        _this.drop = new candle_1.Candle(_this.room, 0, 0);
+        _this.lightSource = new lightSource_1.LightSource(_this.x + 0.5, _this.y + 0.5, 1, [200, 30, 1], 0.5);
+        _this.addLightSource(_this.lightSource);
+        return _this;
+    }
+    Object.defineProperty(Pumpkin.prototype, "type", {
+        get: function () {
+            return entity_2.EntityType.PROP;
+        },
+        enumerable: false,
+        configurable: true
+    });
+    return Pumpkin;
+}(entity_1.Entity));
+exports.Pumpkin = Pumpkin;
+
+
+/***/ }),
+
 /***/ "./src/entity/object/tombStone.ts":
 /*!****************************************!*\
   !*** ./src/entity/object/tombStone.ts ***!
@@ -5646,9 +5842,9 @@ var TombStone = /** @class */ (function (_super) {
     function TombStone(room, game, x, y, skinType, drop) {
         var _this = _super.call(this, room, game, x, y) || this;
         _this.kill = function () {
+            _this.removeLightSource(_this.lightSource);
             _this.dead = true;
             _this.dropLoot();
-            _this.room.lightSources = _this.room.lightSources.filter(function (ls) { return ls !== _this.room.lightSources[_this.room.lightSources.length - 1]; });
         };
         _this.hurt = function (playerHitBy, damage) {
             _this.healthBar.hurt();
@@ -5708,7 +5904,8 @@ var TombStone = /** @class */ (function (_super) {
         var dropProb = random_1.Random.rand();
         if (dropProb < 0.05)
             _this.drop = new spellbook_1.Spellbook(_this.room, 0, 0);
-        _this.room.lightSources.push(new lightSource_1.LightSource(_this.x + 0.5, _this.y + 0.5, 1, [5, 150, 5], 1));
+        _this.lightSource = new lightSource_1.LightSource(_this.x + 0.5, _this.y + 0.5, 1, [5, 150, 5], 1);
+        _this.addLightSource(_this.lightSource);
         return _this;
     }
     Object.defineProperty(TombStone.prototype, "type", {
@@ -7214,6 +7411,7 @@ var spear_1 = __webpack_require__(/*! ./weapon/spear */ "./src/weapon/spear.ts")
 var pickaxe_1 = __webpack_require__(/*! ./weapon/pickaxe */ "./src/weapon/pickaxe.ts");
 var backpack_1 = __webpack_require__(/*! ./item/backpack */ "./src/item/backpack.ts");
 var block_1 = __webpack_require__(/*! ./entity/object/block */ "./src/entity/object/block.ts");
+var energyWizard_1 = __webpack_require__(/*! ./entity/enemy/energyWizard */ "./src/entity/enemy/energyWizard.ts");
 var HitWarningState = /** @class */ (function () {
     function HitWarningState(hw) {
         this.x = hw.x;
@@ -7522,7 +7720,7 @@ var loadEnemy = function (es, game) {
         enemy.quantity = es.quantity;
     }
     if (es.type === EnemyType.WIZARD) {
-        enemy = new wizardEnemy_1.WizardEnemy(level, game, es.x, es.y);
+        enemy = new energyWizard_1.EnergyWizardEnemy(level, game, es.x, es.y);
         enemy.ticks = es.ticks;
         enemy.state = es.wizardState;
         enemy.seenPlayer = es.seenPlayer;
@@ -8488,9 +8686,8 @@ var weapon_1 = __webpack_require__(/*! ./weapon/weapon */ "./src/weapon/weapon.t
 var dagger_1 = __webpack_require__(/*! ./weapon/dagger */ "./src/weapon/dagger.ts");
 var usable_1 = __webpack_require__(/*! ./item/usable */ "./src/item/usable.ts");
 var candle_1 = __webpack_require__(/*! ./item/candle */ "./src/item/candle.ts");
-var torch_1 = __webpack_require__(/*! ./item/torch */ "./src/item/torch.ts");
+var spellbook_1 = __webpack_require__(/*! ./weapon/spellbook */ "./src/weapon/spellbook.ts");
 var mouseCursor_1 = __webpack_require__(/*! ./mouseCursor */ "./src/mouseCursor.ts");
-var warhammer_1 = __webpack_require__(/*! ./weapon/warhammer */ "./src/weapon/warhammer.ts");
 var OPEN_TIME = 100; // milliseconds
 // Dark gray color used for the background of inventory slots
 var FILL_COLOR = "#5a595b";
@@ -9123,7 +9320,7 @@ var Inventory = /** @class */ (function () {
             }
             _this.addItem(i);
         };
-        var startingInv = [dagger_1.Dagger, key_1.Key, candle_1.Candle, torch_1.Torch, warhammer_1.Warhammer];
+        var startingInv = [dagger_1.Dagger, key_1.Key, candle_1.Candle, spellbook_1.Spellbook];
         startingInv.forEach(function (item) {
             a(new item({ game: _this.game }, 0, 0));
         });
@@ -10357,6 +10554,7 @@ var LevelConstants = /** @class */ (function () {
     LevelConstants.SMOOTH_LIGHTING = false; //doesn't work
     LevelConstants.MIN_VISIBILITY = 0; // visibility level of places you've already seen
     LevelConstants.LIGHTING_ANGLE_STEP = 1; // how many degrees between each ray, previously 5
+    LevelConstants.LIGHT_RESOLUTION = 3; //1 is default
     LevelConstants.LEVEL_TEXT_COLOR = "yellow";
     LevelConstants.AMBIENT_LIGHT_COLOR = [10, 10, 10];
     return LevelConstants;
@@ -10985,6 +11183,43 @@ var LightSource = /** @class */ (function () {
     return LightSource;
 }());
 exports.LightSource = LightSource;
+
+
+/***/ }),
+
+/***/ "./src/lighting.ts":
+/*!*************************!*\
+  !*** ./src/lighting.ts ***!
+  \*************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Lighting = void 0;
+var lightSource_1 = __webpack_require__(/*! ./lightSource */ "./src/lightSource.ts");
+var Lighting = /** @class */ (function () {
+    function Lighting() {
+    }
+    Lighting.momentaryLight = function (room, x, y, color, duration, brightness) {
+        var lightSource = Lighting.newLightSource(x, y, color, duration, brightness);
+        Lighting.addLightSource(room, lightSource);
+        setTimeout(function () {
+            Lighting.removeLightSource(room, lightSource);
+            room.updateLighting();
+        }, duration);
+    };
+    Lighting.newLightSource = function (x, y, color, duration, brightness) {
+        return new lightSource_1.LightSource(x, y, brightness, color, duration);
+    };
+    Lighting.addLightSource = function (room, lightSource) {
+        room.lightSources.push(lightSource);
+    };
+    Lighting.removeLightSource = function (room, lightSource) {
+        room.lightSources = room.lightSources.filter(function (ls) { return ls !== lightSource; });
+    };
+    return Lighting;
+}());
+exports.Lighting = Lighting;
 
 
 /***/ }),
@@ -11631,7 +11866,7 @@ var WizardTeleportParticle = /** @class */ (function (_super) {
             game_1.Game.drawFX(Math.floor(_this.frame), 3, 1, 1, _this.x, _this.y - _this.z, 1, 1);
             _this.z += _this.dz;
             _this.dz *= 0.9;
-            _this.frame += 0.25 * delta;
+            _this.frame += 0.1 * delta;
             if (_this.frame > 6)
                 _this.dead = true;
         };
@@ -12507,6 +12742,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PlayerFireball = void 0;
 var projectile_1 = __webpack_require__(/*! ./projectile */ "./src/projectile/projectile.ts");
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+var lighting_1 = __webpack_require__(/*! ../lighting */ "./src/lighting.ts");
 var PlayerFireball = /** @class */ (function (_super) {
     __extends(PlayerFireball, _super);
     function PlayerFireball(parent, x, y) {
@@ -12521,6 +12757,7 @@ var PlayerFireball = /** @class */ (function (_super) {
         };
         _this.state = 0;
         _this.frame = 6;
+        lighting_1.Lighting.momentaryLight(_this.parent.game.rooms[_this.parent.levelID], _this.x + 0.5, _this.y + 0.5, [255, 100, 0], 150, 10);
         return _this;
     }
     return PlayerFireball;
@@ -12585,111 +12822,6 @@ exports.Projectile = Projectile;
 
 /***/ }),
 
-/***/ "./src/projectile/wizardBomb.ts":
-/*!**************************************!*\
-  !*** ./src/projectile/wizardBomb.ts ***!
-  \**************************************/
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        if (typeof b !== "function" && b !== null)
-            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.WizardBomb = void 0;
-var projectile_1 = __webpack_require__(/*! ./projectile */ "./src/projectile/projectile.ts");
-var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-var hitWarning_1 = __webpack_require__(/*! ../hitWarning */ "./src/hitWarning.ts");
-var WizardBomb = /** @class */ (function (_super) {
-    __extends(WizardBomb, _super);
-    function WizardBomb(parent, x, y) {
-        var _this = _super.call(this, parent, x, y) || this;
-        _this.setMarkerFrame = function () {
-            // Calculate offsetX based on direction
-            _this.offsetX = Math.floor(((_this.dir + 1) % 8) / 2);
-        };
-        _this.tick = function () {
-            if (_this.parent.dead || _this.state === 3) {
-                _this.dead = true;
-            }
-            if (!_this.dead && _this.state === 0) {
-            }
-            _this.state++;
-            if (!_this.dead && _this.state === 1) {
-                _this.parent.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.parent.game, _this.x, _this.y, _this.parent.x, _this.parent.y, true));
-            }
-            if (!_this.dead && _this.state === 2) {
-                _this.frame = 0;
-                _this.delay = game_1.Game.rand(0, 10, Math.random);
-            }
-        };
-        _this.hitPlayer = function (player) {
-            if (!_this.dead && _this.state === 2) {
-                player.hurt(1, _this.parent.name);
-            }
-        };
-        _this.draw = function (delta) {
-            if (_this.dead)
-                return;
-            /*Game.drawFX(
-              18 + this.offsetX, //+ Math.floor(HitWarning.frame),
-              4,
-              1,
-              1,
-              this.x,
-              this.y,
-              1,
-              1
-            );*/
-            if (_this.state >= 0) {
-                if (_this.state === 0) {
-                    _this.frame += 0.25 * delta;
-                    if (_this.frame >= 4)
-                        _this.frame = 0;
-                    game_1.Game.drawFX(22 + Math.floor(_this.frame), 8, 1, 1, _this.x, _this.y, 1, 1);
-                }
-                else if (_this.state === 1) {
-                    _this.frame += 0.25 * delta;
-                    if (_this.frame >= 4)
-                        _this.frame = 0;
-                    game_1.Game.drawFX(18 + Math.floor(_this.frame), 8, 1, 1, _this.x, _this.y - 0.2, 1, 1);
-                }
-                else {
-                    if (_this.delay > 0) {
-                        _this.delay--;
-                        return;
-                    }
-                    _this.frame += 0.3 * delta;
-                    if (_this.frame > 17)
-                        _this.dead = true;
-                    game_1.Game.drawFX(Math.floor(_this.frame), 6, 1, 2, _this.x, _this.y - 1, 1, 2);
-                }
-            }
-        };
-        _this.parent = parent;
-        _this.frame = 0;
-        _this.state = 0; //- this.distanceToParent;
-        return _this;
-    }
-    return WizardBomb;
-}(projectile_1.Projectile));
-exports.WizardBomb = WizardBomb;
-
-
-/***/ }),
-
 /***/ "./src/projectile/wizardFireball.ts":
 /*!******************************************!*\
   !*** ./src/projectile/wizardFireball.ts ***!
@@ -12720,8 +12852,7 @@ var hitWarning_1 = __webpack_require__(/*! ../hitWarning */ "./src/hitWarning.ts
 var lightSource_1 = __webpack_require__(/*! ../lightSource */ "./src/lightSource.ts");
 var WizardFireball = /** @class */ (function (_super) {
     __extends(WizardFireball, _super);
-    function WizardFireball(parent, x, y, color) {
-        if (color === void 0) { color = [0, 50, 150]; }
+    function WizardFireball(parent, x, y) {
         var _this = _super.call(this, parent, x, y) || this;
         _this.setMarkerFrame = function () {
             // Calculate offsetX based on direction
@@ -12736,6 +12867,8 @@ var WizardFireball = /** @class */ (function (_super) {
             }
             _this.state++;
             if (!_this.dead && _this.state === 1) {
+                var lightSource = _this.parent.room.lightSources.find(function (ls) { return ls === _this.lightSource; });
+                lightSource.b = 0.4;
                 _this.parent.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.parent.game, _this.x, _this.y, _this.parent.x, _this.parent.y, true));
             }
             if (!_this.dead && _this.state === 2) {
@@ -12767,13 +12900,13 @@ var WizardFireball = /** @class */ (function (_super) {
                     _this.frame += 0.25 * delta;
                     if (_this.frame >= 4)
                         _this.frame = 0;
-                    game_1.Game.drawFX(22 + Math.floor(_this.frame), 7, 1, 1, _this.x, _this.y, 1, 1);
+                    game_1.Game.drawFX(22 + Math.floor(_this.frame), _this.tileY, 1, 1, _this.x, _this.y, 1, 1);
                 }
                 else if (_this.state === 1) {
                     _this.frame += 0.25 * delta;
                     if (_this.frame >= 4)
                         _this.frame = 0;
-                    game_1.Game.drawFX(18 + Math.floor(_this.frame), 7, 1, 1, _this.x, _this.y - 0.2, 1, 1);
+                    game_1.Game.drawFX(18 + Math.floor(_this.frame), _this.tileY, 1, 1, _this.x, _this.y - 0.2, 1, 1);
                 }
                 else {
                     if (_this.delay > 0) {
@@ -12787,11 +12920,13 @@ var WizardFireball = /** @class */ (function (_super) {
                 }
             }
         };
+        _this.tileY = parent.name === "wizard bomber" ? 7 : 8;
         _this.parent = parent;
         _this.frame = 0;
         _this.state = 0; //- this.distanceToParent;
-        _this.lightSource = new lightSource_1.LightSource(_this.x + 0.5, _this.y + 0.5, 0.5, color, 0.25);
+        _this.lightSource = new lightSource_1.LightSource(_this.x + 0.5, _this.y + 0.5, 0.5, parent.projectileColor, 0.05);
         _this.parent.addLightSource(_this.lightSource);
+        _this.parent.room.updateLighting();
         return _this;
     }
     return WizardFireball;
@@ -12855,7 +12990,6 @@ var spawnfloor_1 = __webpack_require__(/*! ./tile/spawnfloor */ "./src/tile/spaw
 //import { GoldenDoor } from "./tile/goldenDoor";
 var spike_1 = __webpack_require__(/*! ./tile/spike */ "./src/tile/spike.ts");
 var gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/gameConstants.ts");
-var wizardEnemy_1 = __webpack_require__(/*! ./entity/enemy/wizardEnemy */ "./src/entity/enemy/wizardEnemy.ts");
 var skullEnemy_1 = __webpack_require__(/*! ./entity/enemy/skullEnemy */ "./src/entity/enemy/skullEnemy.ts");
 var barrel_1 = __webpack_require__(/*! ./entity/object/barrel */ "./src/entity/object/barrel.ts");
 var crate_1 = __webpack_require__(/*! ./entity/object/crate */ "./src/entity/object/crate.ts");
@@ -12895,12 +13029,14 @@ var armoredzombieEnemy_1 = __webpack_require__(/*! ./entity/enemy/armoredzombieE
 var door_2 = __webpack_require__(/*! ./tile/door */ "./src/tile/door.ts");
 //import { ActionState, ActionTab } from "./actionTab";
 var tombStone_1 = __webpack_require__(/*! ./entity/object/tombStone */ "./src/entity/object/tombStone.ts");
+var pumpkin_1 = __webpack_require__(/*! ./entity/object/pumpkin */ "./src/entity/object/pumpkin.ts");
 var queenEnemy_1 = __webpack_require__(/*! ./entity/enemy/queenEnemy */ "./src/entity/enemy/queenEnemy.ts");
 var frogEnemy_1 = __webpack_require__(/*! ./entity/enemy/frogEnemy */ "./src/entity/enemy/frogEnemy.ts");
 var bigKnightEnemy_1 = __webpack_require__(/*! ./entity/enemy/bigKnightEnemy */ "./src/entity/enemy/bigKnightEnemy.ts");
 var sniperEnemy_1 = __webpack_require__(/*! ./entity/enemy/sniperEnemy */ "./src/entity/enemy/sniperEnemy.ts");
 var enemy_1 = __webpack_require__(/*! ./entity/enemy/enemy */ "./src/entity/enemy/enemy.ts");
 var fireWizard_1 = __webpack_require__(/*! ./entity/enemy/fireWizard */ "./src/entity/enemy/fireWizard.ts");
+var energyWizard_1 = __webpack_require__(/*! ./entity/enemy/energyWizard */ "./src/entity/enemy/energyWizard.ts");
 var RoomType;
 (function (RoomType) {
     RoomType[RoomType["START"] = 0] = "START";
@@ -13326,7 +13462,7 @@ var Room = /** @class */ (function () {
                 for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
                     if (Math.abs(_this.softVis[x][y] - _this.vis[x][y]) >= 0.02) {
                         if (_this.softVis[x][y] < _this.vis[x][y])
-                            _this.softVis[x][y] += 0.02;
+                            _this.softVis[x][y] += 0.04;
                         else if (_this.softVis[x][y] > _this.vis[x][y])
                             _this.softVis[x][y] -= 0.02 * delta;
                     }
@@ -13389,8 +13525,7 @@ var Room = /** @class */ (function () {
                     var viewAngleEnd = player.angle + viewAngle / 2;
                     var offsetX = player.angle === 0 ? 0.7 : player.angle === 180 ? -0.7 : 0;
                     var offsetY = player.angle === 90 ? 0.7 : player.angle === 270 ? -0.7 : 0;
-                    for (var i = 0; i < 360; i += levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP / 2) {
-                        console.log("i: ".concat(i));
+                    for (var i = 0; i < 360; i += levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP) {
                         var lightColor = levelConstants_1.LevelConstants.AMBIENT_LIGHT_COLOR;
                         if (player.lightEquipped)
                             lightColor = [200, 25, 5];
@@ -13421,7 +13556,7 @@ var Room = /** @class */ (function () {
             var dx = Math.cos((angle * Math.PI) / 180);
             var dy = Math.sin((angle * Math.PI) / 180);
             var onOpaqueSection = false;
-            for (var i = 0; i < radius + 3; i++) {
+            for (var i = 0; i < radius + 1.5; i++) {
                 if (!_this.isPositionInRoom(px, py))
                     return; // we're outside the level
                 var tile = _this.roomArray[Math.floor(px)][Math.floor(py)];
@@ -13596,7 +13731,6 @@ var Room = /** @class */ (function () {
             _this.clearDeadStuff();
             _this.calculateWallInfo();
             _this.entities = _this.entities.filter(function (e) { return !e.dead; });
-            _this.updateLighting();
             for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
                 for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
                     _this.roomArray[x][y].tick();
@@ -13607,6 +13741,7 @@ var Room = /** @class */ (function () {
             //sets the action tab state to Ready
             _this.playerTurnTime = Date.now();
             _this.playerTicked = player;
+            _this.updateLighting();
             player.map.saveMapData();
             _this.clearDeadStuff();
         };
@@ -14017,7 +14152,7 @@ var Room = /** @class */ (function () {
             var _b = this_1.getRandomEmptyPosition(tiles), x = _b.x, y = _b.y;
             // Define the enemy tables for each depth level
             var tables = {
-                0: [1, 5, 3],
+                0: [1, 5, 3, 16],
                 1: [3, 4, 5, 9, 7],
                 2: [3, 4, 5, 7, 8, 9, 12],
                 3: [1, 2, 3, 5, 6, 7, 8, 9, 10],
@@ -14075,7 +14210,7 @@ var Room = /** @class */ (function () {
                         addEnemy(new skullEnemy_1.SkullEnemy(this_1, this_1.game, x, y));
                         break;
                     case 5:
-                        addEnemy(new wizardEnemy_1.WizardEnemy(this_1, this_1.game, x, y));
+                        addEnemy(new energyWizard_1.EnergyWizardEnemy(this_1, this_1.game, x, y));
                         break;
                     case 6:
                         addEnemy(new chargeEnemy_1.ChargeEnemy(this_1, this_1.game, x, y));
@@ -14119,7 +14254,7 @@ var Room = /** @class */ (function () {
                         addEnemy(new sniperEnemy_1.SniperEnemy(this_1, this_1.game, x, y));
                         break;
                     case 15:
-                        addEnemy(new enemy_1.Enemy(this_1, this_1.game, x, y));
+                        addEnemy(new zombieEnemy_1.ZombieEnemy(this_1, this_1.game, x, y));
                         break;
                     case 16:
                         addEnemy(new fireWizard_1.FireWizardEnemy(this_1, this_1.game, x, y));
@@ -14138,7 +14273,7 @@ var Room = /** @class */ (function () {
         var tiles = this.getEmptyTiles();
         for (var i = 0; i < numObstacles; i++) {
             var _a = this.getRandomEmptyPosition(tiles), x = _a.x, y = _a.y;
-            switch (game_1.Game.randTable([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4], rand)) {
+            switch (game_1.Game.randTable([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 5, 5, 5], rand)) {
                 case 1:
                     this.entities.push(new crate_1.Crate(this, this.game, x, y));
                     break;
@@ -14150,6 +14285,9 @@ var Room = /** @class */ (function () {
                     break;
                 case 4:
                     this.entities.push(new tombStone_1.TombStone(this, this.game, x, y, 0));
+                    break;
+                case 5:
+                    this.entities.push(new pumpkin_1.Pumpkin(this, this.game, x, y));
                     break;
             }
         }
@@ -16373,48 +16511,6 @@ var Spellbook = /** @class */ (function (_super) {
     return Spellbook;
 }(weapon_1.Weapon));
 exports.Spellbook = Spellbook;
-
-
-/***/ }),
-
-/***/ "./src/weapon/warhammer.ts":
-/*!*********************************!*\
-  !*** ./src/weapon/warhammer.ts ***!
-  \*********************************/
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        if (typeof b !== "function" && b !== null)
-            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Warhammer = void 0;
-var weapon_1 = __webpack_require__(/*! ./weapon */ "./src/weapon/weapon.ts");
-var Warhammer = /** @class */ (function (_super) {
-    __extends(Warhammer, _super);
-    function Warhammer(level, x, y) {
-        var _this = _super.call(this, level, x, y) || this;
-        _this.tileX = 22;
-        _this.tileY = 2;
-        _this.damage = 2;
-        _this.name = "Warhammer";
-        return _this;
-    }
-    return Warhammer;
-}(weapon_1.Weapon));
-exports.Warhammer = Warhammer;
 
 
 /***/ }),

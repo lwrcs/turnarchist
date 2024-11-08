@@ -9,6 +9,7 @@ import { Player } from "../player";
 import { Inventory } from "../inventory";
 import { WizardFireball } from "../projectile/wizardFireball";
 import { PlayerFireball } from "../projectile/playerFireball";
+import { Lighting } from "../lighting";
 
 export class Spellbook extends Weapon {
   constructor(level: Room, x: number, y: number) {
@@ -36,6 +37,7 @@ export class Spellbook extends Weapon {
         this.game.rooms[this.wielder.levelID].particles.push(
           new PlayerFireball(this.wielder, e.x, e.y)
         );
+
         flag = true;
       }
     }

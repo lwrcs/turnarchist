@@ -6,6 +6,11 @@ import { LevelConstants } from "../../levelConstants";
 import { GenericParticle } from "../../particle/genericParticle";
 import { Shrooms } from "../../item/shrooms";
 import { EntityType } from "../entity";
+import { LightSource } from "../../lightSource";
+import { Spellbook } from "../../weapon/spellbook";
+import { Random } from "../../random";
+import { Candle } from "../../item/candle";
+import { ImageParticle } from "../../particle/imageParticle";
 
 export class Pumpkin extends Entity {
   constructor(room: Room, game: Game, x: number, y: number) {
@@ -17,6 +22,15 @@ export class Pumpkin extends Entity {
     this.hasShadow = false;
     this.chainPushable = false;
     this.name = "pumpkin";
+    this.drop = new Candle(this.room, 0, 0);
+    this.lightSource = new LightSource(
+      this.x + 0.5,
+      this.y + 0.5,
+      1,
+      [200, 30, 1],
+      0.5
+    );
+    this.addLightSource(this.lightSource);
   }
 
   get type() {
@@ -24,14 +38,10 @@ export class Pumpkin extends Entity {
   }
 
   kill = () => {
+    this.removeLightSource(this.lightSource);
     this.dead = true;
-
-    GenericParticle.spawnCluster(
-      this.room,
-      this.x + 0.5,
-      this.y + 0.5,
-      "#ac3232"
-    );
+    this.dropLoot();
+    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 25);
 
     //this.room.items.push(new Shrooms(this.room, this.x, this.y));
   };

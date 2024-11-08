@@ -41,9 +41,14 @@ export class TombStone extends Entity {
     this.name = "tombstone";
     let dropProb = Random.rand();
     if (dropProb < 0.05) this.drop = new Spellbook(this.room, 0, 0);
-    this.room.lightSources.push(
-      new LightSource(this.x + 0.5, this.y + 0.5, 1, [5, 150, 5], 1)
+    this.lightSource = new LightSource(
+      this.x + 0.5,
+      this.y + 0.5,
+      1,
+      [5, 150, 5],
+      1
     );
+    this.addLightSource(this.lightSource);
   }
 
   get type() {
@@ -51,11 +56,9 @@ export class TombStone extends Entity {
   }
 
   kill = () => {
+    this.removeLightSource(this.lightSource);
     this.dead = true;
     this.dropLoot();
-    this.room.lightSources = this.room.lightSources.filter(
-      (ls) => ls !== this.room.lightSources[this.room.lightSources.length - 1]
-    );
   };
 
   hurt = (playerHitBy: Player, damage: number) => {
