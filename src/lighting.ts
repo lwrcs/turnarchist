@@ -6,33 +6,39 @@ export class Lighting {
     room: Room,
     x: number,
     y: number,
+    radius: number,
     color: [number, number, number],
     duration: number,
-    brightness: number
+    brightness: number,
+    delay: number
   ) => {
     const lightSource = Lighting.newLightSource(
       x,
       y,
       color,
-      duration,
+      radius,
       brightness
     );
-    Lighting.addLightSource(room, lightSource);
-
     setTimeout(() => {
-      Lighting.removeLightSource(room, lightSource);
+      Lighting.addLightSource(room, lightSource);
       room.updateLighting();
-    }, duration);
+
+      setTimeout(() => {
+        Lighting.removeLightSource(room, lightSource);
+
+        room.updateLighting();
+      }, duration);
+    }, delay);
   };
 
   static newLightSource = (
     x: number,
     y: number,
     color: [number, number, number],
-    duration: number,
+    radius: number,
     brightness: number
   ) => {
-    return new LightSource(x, y, brightness, color, duration);
+    return new LightSource(x, y, radius, color, brightness);
   };
 
   static addLightSource = (room: Room, lightSource: LightSource) => {

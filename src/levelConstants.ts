@@ -22,4 +22,5 @@ export class LevelConstants {
 
   static readonly LEVEL_TEXT_COLOR = "yellow";
   static readonly AMBIENT_LIGHT_COLOR: [number, number, number] = [10, 10, 10];
+  static readonly TORCH_LIGHT_COLOR: [number, number, number] = [200, 25, 5];
 }

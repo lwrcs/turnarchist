@@ -8677,7 +8677,6 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Inventory = void 0;
 var levelConstants_1 = __webpack_require__(/*! ./levelConstants */ "./src/levelConstants.ts");
 var game_1 = __webpack_require__(/*! ./game */ "./src/game.ts");
-var key_1 = __webpack_require__(/*! ./item/key */ "./src/item/key.ts");
 var gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/gameConstants.ts");
 var equippable_1 = __webpack_require__(/*! ./item/equippable */ "./src/item/equippable.ts");
 var armor_1 = __webpack_require__(/*! ./item/armor */ "./src/item/armor.ts");
@@ -8686,7 +8685,6 @@ var weapon_1 = __webpack_require__(/*! ./weapon/weapon */ "./src/weapon/weapon.t
 var dagger_1 = __webpack_require__(/*! ./weapon/dagger */ "./src/weapon/dagger.ts");
 var usable_1 = __webpack_require__(/*! ./item/usable */ "./src/item/usable.ts");
 var candle_1 = __webpack_require__(/*! ./item/candle */ "./src/item/candle.ts");
-var spellbook_1 = __webpack_require__(/*! ./weapon/spellbook */ "./src/weapon/spellbook.ts");
 var mouseCursor_1 = __webpack_require__(/*! ./mouseCursor */ "./src/mouseCursor.ts");
 var OPEN_TIME = 100; // milliseconds
 // Dark gray color used for the background of inventory slots
@@ -9320,7 +9318,7 @@ var Inventory = /** @class */ (function () {
             }
             _this.addItem(i);
         };
-        var startingInv = [dagger_1.Dagger, key_1.Key, candle_1.Candle, spellbook_1.Spellbook];
+        var startingInv = [dagger_1.Dagger, candle_1.Candle];
         startingInv.forEach(function (item) {
             a(new item({ game: _this.game }, 0, 0));
         });
@@ -10557,6 +10555,7 @@ var LevelConstants = /** @class */ (function () {
     LevelConstants.LIGHT_RESOLUTION = 3; //1 is default
     LevelConstants.LEVEL_TEXT_COLOR = "yellow";
     LevelConstants.AMBIENT_LIGHT_COLOR = [10, 10, 10];
+    LevelConstants.TORCH_LIGHT_COLOR = [200, 25, 5];
     return LevelConstants;
 }());
 exports.LevelConstants = LevelConstants;
@@ -11200,16 +11199,19 @@ var lightSource_1 = __webpack_require__(/*! ./lightSource */ "./src/lightSource.
 var Lighting = /** @class */ (function () {
     function Lighting() {
     }
-    Lighting.momentaryLight = function (room, x, y, color, duration, brightness) {
-        var lightSource = Lighting.newLightSource(x, y, color, duration, brightness);
-        Lighting.addLightSource(room, lightSource);
+    Lighting.momentaryLight = function (room, x, y, radius, color, duration, brightness, delay) {
+        var lightSource = Lighting.newLightSource(x, y, color, radius, brightness);
         setTimeout(function () {
-            Lighting.removeLightSource(room, lightSource);
+            Lighting.addLightSource(room, lightSource);
             room.updateLighting();
-        }, duration);
+            setTimeout(function () {
+                Lighting.removeLightSource(room, lightSource);
+                room.updateLighting();
+            }, duration);
+        }, delay);
     };
-    Lighting.newLightSource = function (x, y, color, duration, brightness) {
-        return new lightSource_1.LightSource(x, y, brightness, color, duration);
+    Lighting.newLightSource = function (x, y, color, radius, brightness) {
+        return new lightSource_1.LightSource(x, y, radius, color, brightness);
     };
     Lighting.addLightSource = function (room, lightSource) {
         room.lightSources.push(lightSource);
@@ -11864,9 +11866,9 @@ var WizardTeleportParticle = /** @class */ (function (_super) {
             if (_this.dead)
                 return;
             game_1.Game.drawFX(Math.floor(_this.frame), 3, 1, 1, _this.x, _this.y - _this.z, 1, 1);
-            _this.z += _this.dz;
+            _this.z += _this.dz * delta;
             _this.dz *= 0.9;
-            _this.frame += 0.1 * delta;
+            _this.frame += 0.3 * delta;
             if (_this.frame > 6)
                 _this.dead = true;
         };
@@ -12757,7 +12759,7 @@ var PlayerFireball = /** @class */ (function (_super) {
         };
         _this.state = 0;
         _this.frame = 6;
-        lighting_1.Lighting.momentaryLight(_this.parent.game.rooms[_this.parent.levelID], _this.x + 0.5, _this.y + 0.5, [255, 100, 0], 150, 10);
+        lighting_1.Lighting.momentaryLight(_this.parent.game.rooms[_this.parent.levelID], _this.x + 0.5, _this.y + 0.5, 0.5, [255, 100, 0], 150, 10, 1);
         return _this;
     }
     return PlayerFireball;
@@ -12850,6 +12852,7 @@ var projectile_1 = __webpack_require__(/*! ./projectile */ "./src/projectile/pro
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var hitWarning_1 = __webpack_require__(/*! ../hitWarning */ "./src/hitWarning.ts");
 var lightSource_1 = __webpack_require__(/*! ../lightSource */ "./src/lightSource.ts");
+var lighting_1 = __webpack_require__(/*! ../lighting */ "./src/lighting.ts");
 var WizardFireball = /** @class */ (function (_super) {
     __extends(WizardFireball, _super);
     function WizardFireball(parent, x, y) {
@@ -12872,6 +12875,7 @@ var WizardFireball = /** @class */ (function (_super) {
                 _this.parent.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.parent.game, _this.x, _this.y, _this.parent.x, _this.parent.y, true));
             }
             if (!_this.dead && _this.state === 2) {
+                lighting_1.Lighting.momentaryLight(_this.parent.room, _this.x, _this.y, 0.9 * (1 / _this.distanceToParent), _this.parent.projectileColor, 400, 0.9, 350);
                 _this.parent.removeLightSource(_this.lightSource);
                 _this.frame = 0;
                 _this.delay = game_1.Game.rand(0, 10, Math.random);
@@ -12923,8 +12927,8 @@ var WizardFireball = /** @class */ (function (_super) {
         _this.tileY = parent.name === "wizard bomber" ? 7 : 8;
         _this.parent = parent;
         _this.frame = 0;
-        _this.state = 0; //- this.distanceToParent;
-        _this.lightSource = new lightSource_1.LightSource(_this.x + 0.5, _this.y + 0.5, 0.5, parent.projectileColor, 0.05);
+        _this.state = 0; // this.distanceToParent;
+        _this.lightSource = new lightSource_1.LightSource(_this.x + 0.5, _this.y + 0.5, 0.5 * (1 / _this.distanceToParent), parent.projectileColor, 0.05);
         _this.parent.addLightSource(_this.lightSource);
         _this.parent.room.updateLighting();
         return _this;
@@ -13462,7 +13466,7 @@ var Room = /** @class */ (function () {
                 for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
                     if (Math.abs(_this.softVis[x][y] - _this.vis[x][y]) >= 0.02) {
                         if (_this.softVis[x][y] < _this.vis[x][y])
-                            _this.softVis[x][y] += 0.04;
+                            _this.softVis[x][y] += 0.005;
                         else if (_this.softVis[x][y] > _this.vis[x][y])
                             _this.softVis[x][y] -= 0.02 * delta;
                     }
@@ -13474,25 +13478,25 @@ var Room = /** @class */ (function () {
             for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
                 for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
                     var diffR = Math.abs(_this.softCol[x][y][0] - _this.col[x][y][0]);
-                    if (diffR >= 5) {
+                    if (diffR >= 10) {
                         if (_this.softCol[x][y][0] < _this.col[x][y][0])
-                            _this.softCol[x][y][0] += 5 * delta;
+                            _this.softCol[x][y][0] += 10 * delta;
                         else if (_this.softCol[x][y][0] > _this.col[x][y][0])
-                            _this.softCol[x][y][0] -= 5 * delta;
+                            _this.softCol[x][y][0] -= 10 * delta;
                     }
                     var diffG = Math.abs(_this.softCol[x][y][1] - _this.col[x][y][1]);
-                    if (diffG >= 5) {
+                    if (diffG >= 10) {
                         if (_this.softCol[x][y][1] < _this.col[x][y][1])
-                            _this.softCol[x][y][1] += 5 * delta;
+                            _this.softCol[x][y][1] += 10 * delta;
                         else if (_this.softCol[x][y][1] > _this.col[x][y][1])
-                            _this.softCol[x][y][1] -= 5 * delta;
+                            _this.softCol[x][y][1] -= 10 * delta;
                     }
                     var diffB = Math.abs(_this.softCol[x][y][2] - _this.col[x][y][2]);
-                    if (diffB >= 5) {
+                    if (diffB >= 10) {
                         if (_this.softCol[x][y][2] < _this.col[x][y][2])
-                            _this.softCol[x][y][2] += 5 * delta;
+                            _this.softCol[x][y][2] += 10 * delta;
                         else if (_this.softCol[x][y][2] > _this.col[x][y][2])
-                            _this.softCol[x][y][2] -= 5 * delta;
+                            _this.softCol[x][y][2] -= 10 * delta;
                     }
                 }
             }
@@ -13528,9 +13532,9 @@ var Room = /** @class */ (function () {
                     for (var i = 0; i < 360; i += levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP) {
                         var lightColor = levelConstants_1.LevelConstants.AMBIENT_LIGHT_COLOR;
                         if (player.lightEquipped)
-                            lightColor = [200, 25, 5];
+                            lightColor = levelConstants_1.LevelConstants.TORCH_LIGHT_COLOR;
                         _this.castTintAtAngle(i, player.x + 0.5, player.y + 0.5, Math.min(Math.max(player.sightRadius - _this.depth + 2, player_1.Player.minSightRadius), 10), lightColor, // RGB color in sRGB
-                        1 // intensity
+                        5 // intensity
                         );
                     }
                 }
@@ -13581,6 +13585,7 @@ var Room = /** @class */ (function () {
          * @param py - The y-coordinate of the light source.
          * @param radius - The radius of the light's influence.
          * @param color - The RGB color tuple representing the tint.
+         * @param brightness - The brightness of the light source.
          */
         this.castTintAtAngle = function (angle, px, py, radius, color, brightness) {
             var dx = Math.cos((angle * Math.PI) / 180);
@@ -13591,7 +13596,7 @@ var Room = /** @class */ (function () {
                 _this.sRGBToLinear(color[1]),
                 _this.sRGBToLinear(color[2]),
             ];
-            for (var i = 0; i <= radius + 3; i++) {
+            for (var i = 0; i <= 10; i++) {
                 var currentX = Math.floor(px + dx * i);
                 var currentY = Math.floor(py + dy * i);
                 if (!_this.isPositionInRoom(currentX, currentY))
@@ -13603,12 +13608,13 @@ var Room = /** @class */ (function () {
                 // Handle i=0 separately to avoid division by zero and ensure the light source tile is lit correctly
                 var intensity = void 0;
                 if (i === 0) {
-                    intensity = brightness * 0.75; // Full intensity at the light source tile adjusted by brightness
+                    intensity = brightness * 0.1; // Full intensity at the light source tile adjusted by brightness
                 }
                 else {
-                    intensity = brightness / Math.pow(i, 2); // Exponential falloff with distance
+                    intensity = brightness / (Math.pow(Math.E, (i))); // Exponential falloff with distance
                 }
-                //if (intensity < 0.001) intensity = 0;
+                if (intensity < 0.001)
+                    intensity = 0;
                 if (intensity <= 0)
                     continue;
                 if (!_this.renderBuffer[currentX]) {
@@ -13640,7 +13646,7 @@ var Room = /** @class */ (function () {
                 return Math.round(12.92 * value * 255);
             }
             else {
-                return Math.round((1.055 * Math.pow(value, 1 / 2.4 /*gamma*/) - 0.055) * 255);
+                return Math.round((1.055 * Math.pow(value, 1 / 2.2 /*gamma*/) - 0.055) * 255);
             }
         };
         this.clamp = function (value, min, max) {
@@ -13664,7 +13670,7 @@ var Room = /** @class */ (function () {
                 accumulator[2] + color[2] * color[3],
             ]; }, [0, 0, 0]);
             // Apply scaling factor to manage overall brightness
-            var scalingFactor = 0.35; // Adjust as needed
+            var scalingFactor = 0.45; // Adjust as needed
             var scaledSum = [
                 sum[0] * scalingFactor,
                 sum[1] * scalingFactor,
@@ -13823,7 +13829,6 @@ var Room = /** @class */ (function () {
         this.draw = function (delta) {
             hitWarning_1.HitWarning.updateFrame(delta);
             _this.fadeLighting(delta);
-            _this.fadeRgb(delta);
             _this.fadeRgb(delta);
         };
         this.drawColorLayer = function () {
@@ -15883,6 +15888,7 @@ exports.WallTorch = void 0;
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var tile_1 = __webpack_require__(/*! ./tile */ "./src/tile/tile.ts");
 var lightSource_1 = __webpack_require__(/*! ../lightSource */ "./src/lightSource.ts");
+var levelConstants_1 = __webpack_require__(/*! ../levelConstants */ "./src/levelConstants.ts");
 var WallTorch = /** @class */ (function (_super) {
     __extends(WallTorch, _super);
     function WallTorch(room, x, y) {
@@ -15917,7 +15923,7 @@ var WallTorch = /** @class */ (function (_super) {
             game_1.Game.drawTile(2, _this.skin + _this.tileYOffset, 1, 1, _this.x, _this.y - 1, 1, 1, _this.room.shadeColor, _this.shadeAmount());
             game_1.Game.drawFX(Math.floor(_this.frame), 32, 1, 2, _this.x, _this.y - 1, 1, 2);
         };
-        _this.room.lightSources.push(new lightSource_1.LightSource(_this.x + 0.5, _this.y + 0.5, 1, [200, 25, 5], 0.5));
+        _this.room.lightSources.push(new lightSource_1.LightSource(_this.x + 0.5, _this.y + 0.5, 0.5, levelConstants_1.LevelConstants.TORCH_LIGHT_COLOR, 1.5));
         _this.frame = Math.random() * 12;
         _this.tileYOffset = 6;
         return _this;

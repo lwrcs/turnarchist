@@ -241,7 +241,7 @@ export class Room {
     }
   }
 
-  private addFingers(rand: () => number) {}
+  private addFingers(rand: () => number) { }
 
   private addTorches(numTorches: number, rand: () => number) {
     let walls = [];
@@ -519,10 +519,10 @@ export class Room {
     for (let i = 0; i < numObstacles; i++) {
       const { x, y } = this.getRandomEmptyPosition(tiles);
       switch (
-        Game.randTable(
-          [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 5, 5, 5],
-          rand
-        )
+      Game.randTable(
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 5, 5, 5],
+        rand
+      )
       ) {
         case 1:
           this.entities.push(new Crate(this, this.game, x, y));
@@ -644,7 +644,7 @@ export class Room {
     this.addObstacles(numObstacles, rand);
     let numEnemies = Math.ceil(
       (numEmptyTiles - numTotalObstacles) *
-        Math.min(this.depth * 0.1 + 0.1, 0.35) //this.depth * 0.01 is starting value
+      Math.min(this.depth * 0.1 + 0.1, 0.35) //this.depth * 0.01 is starting value
     );
     this.addEnemies(numEnemies, rand);
 
@@ -662,7 +662,7 @@ export class Room {
     this.addObstacles(numObstacles, rand);
     let numEnemies = Math.ceil(
       (numEmptyTiles - numTotalObstacles) *
-        Math.min(this.depth * 0.05 + 0.2, 0.5)
+      Math.min(this.depth * 0.05 + 0.2, 0.5)
     );
     this.addEnemies(numEnemies, rand);
   };
@@ -680,8 +680,8 @@ export class Room {
     let numEmptyTiles = this.getEmptyTiles().length;
     let numEnemies = Math.ceil(
       numEmptyTiles *
-        (this.depth * 0.5 + 0.5) *
-        Game.randTable([0.05, 0.05, 0.06, 0.07, 0.1], rand)
+      (this.depth * 0.5 + 0.5) *
+      Game.randTable([0.05, 0.05, 0.06, 0.07, 0.1], rand)
     );
     this.addEnemies(numEnemies, rand);
     if (numEnemies > 0)
@@ -809,7 +809,7 @@ export class Room {
     this.addChests(Game.randTable([4, 4, 5, 5, 5, 6, 8], rand), rand);
     this.addPlants(Game.randTable([0, 1, 2, 4, 5, 6], rand), rand);
   };
-  populateChessboard = (rand: () => number) => {};
+  populateChessboard = (rand: () => number) => { };
   populateCave = (rand: () => number) => {
     let factor = Game.rand(1, 36, rand);
 
@@ -1134,7 +1134,7 @@ export class Room {
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
         if (Math.abs(this.softVis[x][y] - this.vis[x][y]) >= 0.02) {
-          if (this.softVis[x][y] < this.vis[x][y]) this.softVis[x][y] += 0.04;
+          if (this.softVis[x][y] < this.vis[x][y]) this.softVis[x][y] += 0.005;
           else if (this.softVis[x][y] > this.vis[x][y])
             this.softVis[x][y] -= 0.02 * delta;
         }
@@ -1147,25 +1147,25 @@ export class Room {
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
         let diffR = Math.abs(this.softCol[x][y][0] - this.col[x][y][0]);
-        if (diffR >= 5) {
+        if (diffR >= 10) {
           if (this.softCol[x][y][0] < this.col[x][y][0])
-            this.softCol[x][y][0] += 5 * delta;
+            this.softCol[x][y][0] += 10 * delta;
           else if (this.softCol[x][y][0] > this.col[x][y][0])
-            this.softCol[x][y][0] -= 5 * delta;
+            this.softCol[x][y][0] -= 10 * delta;
         }
         let diffG = Math.abs(this.softCol[x][y][1] - this.col[x][y][1]);
-        if (diffG >= 5) {
+        if (diffG >= 10) {
           if (this.softCol[x][y][1] < this.col[x][y][1])
-            this.softCol[x][y][1] += 5 * delta;
+            this.softCol[x][y][1] += 10 * delta;
           else if (this.softCol[x][y][1] > this.col[x][y][1])
-            this.softCol[x][y][1] -= 5 * delta;
+            this.softCol[x][y][1] -= 10 * delta;
         }
         let diffB = Math.abs(this.softCol[x][y][2] - this.col[x][y][2]);
-        if (diffB >= 5) {
+        if (diffB >= 10) {
           if (this.softCol[x][y][2] < this.col[x][y][2])
-            this.softCol[x][y][2] += 5 * delta;
+            this.softCol[x][y][2] += 10 * delta;
           else if (this.softCol[x][y][2] > this.col[x][y][2])
-            this.softCol[x][y][2] -= 5 * delta;
+            this.softCol[x][y][2] -= 10 * delta;
         }
       }
     }
@@ -1205,7 +1205,7 @@ export class Room {
         for (let i = 0; i < 360; i += LevelConstants.LIGHTING_ANGLE_STEP) {
           let lightColor = LevelConstants.AMBIENT_LIGHT_COLOR;
 
-          if (player.lightEquipped) lightColor = [200, 25, 5];
+          if (player.lightEquipped) lightColor = LevelConstants.TORCH_LIGHT_COLOR;
           this.castTintAtAngle(
             i,
             player.x + 0.5,
@@ -1218,7 +1218,7 @@ export class Room {
               10
             ),
             lightColor, // RGB color in sRGB
-            1 // intensity
+            5 // intensity
           );
         }
       }
@@ -1283,6 +1283,7 @@ export class Room {
    * @param py - The y-coordinate of the light source.
    * @param radius - The radius of the light's influence.
    * @param color - The RGB color tuple representing the tint.
+   * @param brightness - The brightness of the light source.
    */
   castTintAtAngle = (
     angle: number,
@@ -1302,7 +1303,7 @@ export class Room {
       this.sRGBToLinear(color[2]),
     ];
 
-    for (let i = 0; i <= radius + 3; i++) {
+    for (let i = 0; i <= 10; i++) {
       const currentX = Math.floor(px + dx * i);
       const currentY = Math.floor(py + dy * i);
 
@@ -1316,11 +1317,11 @@ export class Room {
       // Handle i=0 separately to avoid division by zero and ensure the light source tile is lit correctly
       let intensity: number;
       if (i === 0) {
-        intensity = brightness * 0.75; // Full intensity at the light source tile adjusted by brightness
+        intensity = brightness * 0.1; // Full intensity at the light source tile adjusted by brightness
       } else {
-        intensity = brightness / i ** 2; // Exponential falloff with distance
+        intensity = brightness / (Math.E ** (i)); // Exponential falloff with distance
       }
-      //if (intensity < 0.001) intensity = 0;
+      if (intensity < 0.001) intensity = 0;
 
       if (intensity <= 0) continue;
 
@@ -1356,7 +1357,7 @@ export class Room {
       return Math.round(12.92 * value * 255);
     } else {
       return Math.round(
-        (1.055 * Math.pow(value, 1 / 2.4 /*gamma*/) - 0.055) * 255
+        (1.055 * Math.pow(value, 1 / 2.2 /*gamma*/) - 0.055) * 255
       );
     }
   };
@@ -1387,7 +1388,7 @@ export class Room {
     );
 
     // Apply scaling factor to manage overall brightness
-    const scalingFactor = 0.35; // Adjust as needed
+    const scalingFactor = 0.45; // Adjust as needed
     const scaledSum = [
       sum[0] * scalingFactor,
       sum[1] * scalingFactor,
@@ -1575,7 +1576,6 @@ export class Room {
   draw = (delta: number) => {
     HitWarning.updateFrame(delta);
     this.fadeLighting(delta);
-    this.fadeRgb(delta);
     this.fadeRgb(delta);
   };
 

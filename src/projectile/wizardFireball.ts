@@ -6,6 +6,7 @@ import { HitWarning } from "../hitWarning";
 import { Entity } from "../entity/entity";
 import { Enemy } from "../entity/enemy/enemy";
 import { LightSource } from "../lightSource";
+import { Lighting } from "../lighting";
 
 export class WizardFireball extends Projectile {
   state: number;
@@ -23,11 +24,11 @@ export class WizardFireball extends Projectile {
     this.tileY = parent.name === "wizard bomber" ? 7 : 8;
     this.parent = parent;
     this.frame = 0;
-    this.state = 0; //- this.distanceToParent;
+    this.state = 0; // this.distanceToParent;
     this.lightSource = new LightSource(
       this.x + 0.5,
       this.y + 0.5,
-      0.5,
+      0.5 * (1 / this.distanceToParent),
       (parent as WizardEnemy).projectileColor,
       0.05
     );
@@ -66,9 +67,20 @@ export class WizardFireball extends Projectile {
       );
     }
     if (!this.dead && this.state === 2) {
+      Lighting.momentaryLight(
+        this.parent.room,
+        this.x,
+        this.y,
+        0.9 * (1 / this.distanceToParent),
+        (this.parent as WizardEnemy).projectileColor,
+        400,
+        0.9,
+        350
+      );
       this.parent.removeLightSource(this.lightSource);
       this.frame = 0;
       this.delay = Game.rand(0, 10, Math.random);
+
     }
   };
 

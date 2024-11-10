@@ -19,7 +19,6 @@ import { Item } from "../../item/item";
 import { Enemy } from "./enemy";
 import { SpikeTrap } from "../../tile/spiketrap";
 import { HitWarning } from "../../hitWarning";
-import { WizardBomb } from "../../projectile/wizardBomb";
 import { WizardEnemy } from "./wizardEnemy";
 
 export enum WizardState {
@@ -61,7 +60,7 @@ export class FireWizardEnemy extends WizardEnemy {
     for (const i in this.game.players) {
       if (
         (this.x - this.game.players[i].x) ** 2 +
-          (this.y - this.game.players[i].y) ** 2 <=
+        (this.y - this.game.players[i].y) ** 2 <=
         this.ATTACK_RADIUS ** 2
       ) {
         withinRange = true;

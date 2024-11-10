@@ -2,6 +2,7 @@ import { Game } from "../game";
 import { Tile } from "./tile";
 import { Room } from "../room";
 import { LightSource } from "../lightSource";
+import { LevelConstants } from "../levelConstants";
 
 export class WallTorch extends Tile {
   frame: number;
@@ -10,7 +11,7 @@ export class WallTorch extends Tile {
   constructor(room: Room, x: number, y: number) {
     super(room, x, y);
     this.room.lightSources.push(
-      new LightSource(this.x + 0.5, this.y + 0.5, 1, [200, 25, 5], 0.5)
+      new LightSource(this.x + 0.5, this.y + 0.5, 0.5, LevelConstants.TORCH_LIGHT_COLOR, 1.5)
     );
     this.frame = Math.random() * 12;
     this.tileYOffset = 6;
@@ -40,7 +41,7 @@ export class WallTorch extends Tile {
 
     this.tileYOffset =
       wallInfo.innerWallType === "bottomInner" ||
-      wallInfo.innerWallType === "surroundedInner"
+        wallInfo.innerWallType === "surroundedInner"
         ? 0
         : 6;
 

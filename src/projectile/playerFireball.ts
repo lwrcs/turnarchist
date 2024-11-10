@@ -18,9 +18,11 @@ export class PlayerFireball extends Projectile {
       this.parent.game.rooms[this.parent.levelID],
       this.x + 0.5,
       this.y + 0.5,
+      0.5,
       [255, 100, 0],
       150,
-      10
+      10,
+      1
     );
   }
   drawTopLayer = (delta: number) => {
