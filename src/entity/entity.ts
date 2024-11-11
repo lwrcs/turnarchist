@@ -83,6 +83,7 @@ export class Entity extends Drawable {
   protected attackRange: number;
   protected diagonalAttackRange: number;
   lightSource: LightSource;
+  drawMoveSpeed: number;
 
   constructor(room: Room, game: Game, x: number, y: number) {
     super();
@@ -125,6 +126,7 @@ export class Entity extends Drawable {
     this.forwardOnlyAttack = false;
     this.attackRange = 1;
     this.diagonalAttackRange = 1;
+    this.drawMoveSpeed = 0.3;
   }
 
   static add<
@@ -348,8 +350,8 @@ export class Entity extends Drawable {
   };
 
   updateDrawXY = (delta: number) => {
-    this.drawX += -0.3 * delta * this.drawX;
-    this.drawY += -0.3 * delta * this.drawY;
+    this.drawX += -this.drawMoveSpeed * delta * this.drawX;
+    this.drawY += -this.drawMoveSpeed * delta * this.drawY;
   };
 
   drawSleepingZs = (delta: number, offsetX = 0, offsetY = 0) => {

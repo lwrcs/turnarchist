@@ -167,15 +167,16 @@ let split_partitions = (
 let remove_wall_rooms = (
   partitions: Array<Partition>,
   w: number,
-  h: number
+  h: number,
+  prob: number = 1.0
 ): Array<Partition> => {
   for (const partition of partitions) {
     if (
-      partition.x === 0 ||
-      partition.y === 0 ||
-      partition.x + partition.w === w ||
-      partition.y + partition.h === h
-      //delete any partition where the x or y is zero
+      (partition.x === 0 ||
+        partition.y === 0 ||
+        partition.x + partition.w === w ||
+        partition.y + partition.h === h) &&
+      Random.rand() < prob
     ) {
       partitions = partitions.filter((p) => p != partition);
     }
@@ -220,6 +221,7 @@ let generate_dungeon_candidate = (
   grid = populate_grid(partitions, grid, map_w, map_h);
   //remove wall rooms and populate dat grid
   partitions.sort((a, b) => a.area() - b.area());
+  partitions = remove_wall_rooms(partitions, map_w, map_h, 0.3);
   //sort the partitions list by ... area? I think?
   let spawn = partitions[0];
   //spawn is the first Partition instance

@@ -456,7 +456,7 @@ export class Room {
       // Define the enemy tables for each depth level
 
       let tables = {
-        0: [1, 4, 3], //this.generateLevelTable(rand),
+        0: [1, 4, 3, 8, 8], //this.generateLevelTable(rand),
         1: [3, 4, 5, 9, 7],
         2: [3, 4, 5, 7, 8, 9, 12],
         3: [1, 2, 3, 5, 6, 7, 8, 9, 10],

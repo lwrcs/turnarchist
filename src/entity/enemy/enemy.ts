@@ -395,8 +395,8 @@ export abstract class Enemy extends Entity {
 
   updateDrawXY = (delta: number) => {
     if (!this.doneMoving()) {
-      this.drawX += -0.3 * delta * this.drawX;
-      this.drawY += -0.3 * delta * this.drawY;
+      this.drawX += -this.drawMoveSpeed * delta * this.drawX;
+      this.drawY += -this.drawMoveSpeed * delta * this.drawY;
       this.jump();
     }
   };
@@ -430,7 +430,7 @@ export abstract class Enemy extends Entity {
         1,
         2,
         this.x - this.drawX,
-        this.y - this.drawYOffset - this.drawY,
+        this.y - this.drawYOffset - this.drawY - this.jumpY * delta,
         1,
         2,
         this.room.shadeColor,

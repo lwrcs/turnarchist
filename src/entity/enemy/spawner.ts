@@ -20,6 +20,15 @@ import { WizardEnemy } from "./wizardEnemy";
 import { Enemy } from "./enemy";
 import { Random } from "../../random";
 import { EnergyWizardEnemy } from "./energyWizard";
+import { ZombieEnemy } from "./zombieEnemy";
+import { BishopEnemy } from "./bishopEnemy";
+import { CrabEnemy } from "./crabEnemy";
+import { ChargeEnemy } from "./chargeEnemy";
+import { BigKnightEnemy } from "./bigKnightEnemy";
+import { BigSkullEnemy } from "./bigSkullEnemy";
+import { FrogEnemy } from "./frogEnemy";
+import { FireWizardEnemy } from "./fireWizard";
+import { QueenEnemy } from "./queenEnemy";
 
 export class Spawner extends Enemy {
   ticks: number;
@@ -34,7 +43,10 @@ export class Spawner extends Enemy {
     this.tileX = 6;
     this.tileY = 4;
     this.seenPlayer = true;
-    this.enemySpawnType = Game.randTable([1, 2, 2, 2, 2, 3], Random.rand);
+    this.enemySpawnType = Game.randTable(
+      [1, 2, 2, 2, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+      Random.rand
+    );
 
     this.name = "reaper";
   }
@@ -83,6 +95,76 @@ export class Spawner extends Enemy {
               break;
             case 3:
               spawned = new EnergyWizardEnemy(
+                this.room,
+                this.game,
+                position.x,
+                position.y
+              );
+              break;
+            case 4:
+              spawned = new ZombieEnemy(
+                this.room,
+                this.game,
+                position.x,
+                position.y
+              );
+              break;
+            case 5:
+              spawned = new BishopEnemy(
+                this.room,
+                this.game,
+                position.x,
+                position.y
+              );
+              break;
+            case 6:
+              spawned = new CrabEnemy(
+                this.room,
+                this.game,
+                position.x,
+                position.y
+              );
+              break;
+            case 7:
+              spawned = new ChargeEnemy(
+                this.room,
+                this.game,
+                position.x,
+                position.y
+              );
+              break;
+            case 8:
+              spawned = new BigSkullEnemy(
+                this.room,
+                this.game,
+                position.x,
+                position.y
+              );
+              for (let xx = 0; xx < 2; xx++) {
+                for (let yy = 0; yy < 2; yy++) {
+                  this.room.roomArray[position.x + xx][position.y + yy] =
+                    new Floor(this.room, position.x + xx, position.y + yy); // remove any walls
+                }
+              }
+              break;
+            case 9:
+              spawned = new FrogEnemy(
+                this.room,
+                this.game,
+                position.x,
+                position.y
+              );
+              break;
+            case 10:
+              spawned = new FireWizardEnemy(
+                this.room,
+                this.game,
+                position.x,
+                position.y
+              );
+              break;
+            case 11:
+              spawned = new QueenEnemy(
                 this.room,
                 this.game,
                 position.x,

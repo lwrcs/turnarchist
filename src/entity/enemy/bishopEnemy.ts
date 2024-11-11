@@ -36,6 +36,11 @@ export class BishopEnemy extends Enemy {
     this.seenPlayer = false;
     this.aggro = false;
     this.name = "bishop";
+    this.jumpHeight = 1;
+    this.drawMoveSpeed = 0.2;
+    this.diagonalAttackRange = 1;
+    this.diagonalAttack = true;
+    this.orthogonalAttack = false;
     if (drop) this.drop = drop;
     else {
       let dropProb = Random.rand();
@@ -107,6 +112,11 @@ export class BishopEnemy extends Enemy {
         this.deathParticleColor
       );
     }
+  };
+
+  jump = () => {
+    let j = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
+    this.jumpY = Math.sin(j * Math.PI) * this.jumpHeight;
   };
 
   behavior = () => {
@@ -249,7 +259,7 @@ export class BishopEnemy extends Enemy {
         1,
         2,
         this.x - this.drawX,
-        this.y - this.drawYOffset - this.drawY,
+        this.y - this.drawYOffset - this.drawY - this.jumpY * delta,
         1,
         2,
         this.room.shadeColor,

@@ -39,6 +39,8 @@ export class ZombieEnemy extends Enemy {
     this.dir = Direction.South;
     this.name = "zombie";
     this.forwardOnlyAttack = true;
+    this.drawMoveSpeed = 0.2;
+    this.jumpHeight = 0.35;
 
     if (drop) this.drop = drop;
     else {
@@ -286,7 +288,7 @@ export class ZombieEnemy extends Enemy {
         1,
         2,
         this.x - this.drawX,
-        this.y - this.drawYOffset - this.drawY - this.jumpY,
+        this.y - this.drawYOffset - this.drawY - this.jumpY * delta,
         1,
         2,
         this.room.shadeColor,

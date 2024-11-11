@@ -1412,6 +1412,10 @@ var BishopEnemy = /** @class */ (function (_super) {
                 genericParticle_1.GenericParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, _this.deathParticleColor);
             }
         };
+        _this.jump = function () {
+            var j = Math.max(Math.abs(_this.drawX), Math.abs(_this.drawY));
+            _this.jumpY = Math.sin(j * Math.PI) * _this.jumpHeight;
+        };
         _this.behavior = function () {
             if (!_this.dead) {
                 if (_this.skipNextTurns > 0) {
@@ -1521,7 +1525,7 @@ var BishopEnemy = /** @class */ (function (_super) {
                     _this.frame = 0;
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
-                game_1.Game.drawMob(_this.tileX + Math.floor(_this.frame), _this.tileY, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
+                game_1.Game.drawMob(_this.tileX + Math.floor(_this.frame), _this.tileY, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY - _this.jumpY * delta, 1, 2, _this.room.shadeColor, _this.shadeAmount());
             }
             if (!_this.seenPlayer) {
                 _this.drawSleepingZs(delta);
@@ -1539,6 +1543,11 @@ var BishopEnemy = /** @class */ (function (_super) {
         _this.seenPlayer = false;
         _this.aggro = false;
         _this.name = "bishop";
+        _this.jumpHeight = 1;
+        _this.drawMoveSpeed = 0.2;
+        _this.diagonalAttackRange = 1;
+        _this.diagonalAttack = true;
+        _this.orthogonalAttack = false;
         if (drop)
             _this.drop = drop;
         else {
@@ -2387,8 +2396,8 @@ var Enemy = /** @class */ (function (_super) {
         };
         _this.updateDrawXY = function (delta) {
             if (!_this.doneMoving()) {
-                _this.drawX += -0.3 * delta * _this.drawX;
-                _this.drawY += -0.3 * delta * _this.drawY;
+                _this.drawX += -_this.drawMoveSpeed * delta * _this.drawX;
+                _this.drawY += -_this.drawMoveSpeed * delta * _this.drawY;
                 _this.jump();
             }
         };
@@ -2403,7 +2412,7 @@ var Enemy = /** @class */ (function (_super) {
                     _this.frame = 0;
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
-                game_1.Game.drawMob(_this.tileX + Math.floor(_this.frame), _this.tileY + _this.direction * 2, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
+                game_1.Game.drawMob(_this.tileX + Math.floor(_this.frame), _this.tileY + _this.direction * 2, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY - _this.jumpY * delta, 1, 2, _this.room.shadeColor, _this.shadeAmount());
             }
             if (!_this.seenPlayer) {
                 _this.drawSleepingZs(delta);
@@ -3675,7 +3684,7 @@ var SkullEnemy = /** @class */ (function (_super) {
                     _this.frame = 0;
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
-                game_1.Game.drawMob(_this.tileX + (_this.tileX === 5 ? Math.floor(_this.frame) : 0), _this.tileY + _this.direction * 2, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
+                game_1.Game.drawMob(_this.tileX + (_this.tileX === 5 ? Math.floor(_this.frame) : 0), _this.tileY + _this.direction * 2, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY - _this.jumpY * delta, 1, 2, _this.room.shadeColor, _this.shadeAmount());
             }
             if (!_this.seenPlayer) {
                 _this.drawSleepingZs(delta);
@@ -4034,6 +4043,7 @@ var __extends = (this && this.__extends) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Spawner = void 0;
 var game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+var floor_1 = __webpack_require__(/*! ../../tile/floor */ "./src/tile/floor.ts");
 var hitWarning_1 = __webpack_require__(/*! ../../hitWarning */ "./src/hitWarning.ts");
 var skullEnemy_1 = __webpack_require__(/*! ./skullEnemy */ "./src/entity/enemy/skullEnemy.ts");
 var enemySpawnAnimation_1 = __webpack_require__(/*! ../../projectile/enemySpawnAnimation */ "./src/projectile/enemySpawnAnimation.ts");
@@ -4042,6 +4052,14 @@ var knightEnemy_1 = __webpack_require__(/*! ./knightEnemy */ "./src/entity/enemy
 var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 var random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
 var energyWizard_1 = __webpack_require__(/*! ./energyWizard */ "./src/entity/enemy/energyWizard.ts");
+var zombieEnemy_1 = __webpack_require__(/*! ./zombieEnemy */ "./src/entity/enemy/zombieEnemy.ts");
+var bishopEnemy_1 = __webpack_require__(/*! ./bishopEnemy */ "./src/entity/enemy/bishopEnemy.ts");
+var crabEnemy_1 = __webpack_require__(/*! ./crabEnemy */ "./src/entity/enemy/crabEnemy.ts");
+var chargeEnemy_1 = __webpack_require__(/*! ./chargeEnemy */ "./src/entity/enemy/chargeEnemy.ts");
+var bigSkullEnemy_1 = __webpack_require__(/*! ./bigSkullEnemy */ "./src/entity/enemy/bigSkullEnemy.ts");
+var frogEnemy_1 = __webpack_require__(/*! ./frogEnemy */ "./src/entity/enemy/frogEnemy.ts");
+var fireWizard_1 = __webpack_require__(/*! ./fireWizard */ "./src/entity/enemy/fireWizard.ts");
+var queenEnemy_1 = __webpack_require__(/*! ./queenEnemy */ "./src/entity/enemy/queenEnemy.ts");
 var Spawner = /** @class */ (function (_super) {
     __extends(Spawner, _super);
     function Spawner(room, game, x, y) {
@@ -4076,6 +4094,36 @@ var Spawner = /** @class */ (function (_super) {
                             case 3:
                                 spawned = new energyWizard_1.EnergyWizardEnemy(_this.room, _this.game, position.x, position.y);
                                 break;
+                            case 4:
+                                spawned = new zombieEnemy_1.ZombieEnemy(_this.room, _this.game, position.x, position.y);
+                                break;
+                            case 5:
+                                spawned = new bishopEnemy_1.BishopEnemy(_this.room, _this.game, position.x, position.y);
+                                break;
+                            case 6:
+                                spawned = new crabEnemy_1.CrabEnemy(_this.room, _this.game, position.x, position.y);
+                                break;
+                            case 7:
+                                spawned = new chargeEnemy_1.ChargeEnemy(_this.room, _this.game, position.x, position.y);
+                                break;
+                            case 8:
+                                spawned = new bigSkullEnemy_1.BigSkullEnemy(_this.room, _this.game, position.x, position.y);
+                                for (var xx = 0; xx < 2; xx++) {
+                                    for (var yy = 0; yy < 2; yy++) {
+                                        _this.room.roomArray[position.x + xx][position.y + yy] =
+                                            new floor_1.Floor(_this.room, position.x + xx, position.y + yy); // remove any walls
+                                    }
+                                }
+                                break;
+                            case 9:
+                                spawned = new frogEnemy_1.FrogEnemy(_this.room, _this.game, position.x, position.y);
+                                break;
+                            case 10:
+                                spawned = new fireWizard_1.FireWizardEnemy(_this.room, _this.game, position.x, position.y);
+                                break;
+                            case 11:
+                                spawned = new queenEnemy_1.QueenEnemy(_this.room, _this.game, position.x, position.y);
+                                break;
                         }
                         _this.room.projectiles.push(new enemySpawnAnimation_1.EnemySpawnAnimation(_this.room, spawned, position.x, position.y));
                         _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, position.x, position.y, _this.x, _this.y));
@@ -4109,7 +4157,7 @@ var Spawner = /** @class */ (function (_super) {
         _this.tileX = 6;
         _this.tileY = 4;
         _this.seenPlayer = true;
-        _this.enemySpawnType = game_1.Game.randTable([1, 2, 2, 2, 2, 3], random_1.Random.rand);
+        _this.enemySpawnType = game_1.Game.randTable([1, 2, 2, 2, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], random_1.Random.rand);
         _this.name = "reaper";
         return _this;
     }
@@ -4578,7 +4626,7 @@ var ZombieEnemy = /** @class */ (function (_super) {
                     _this.frame = 0;
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
-                game_1.Game.drawMob(_this.tileX + Math.floor(_this.frame), _this.tileY + _this.direction * 2, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY - _this.jumpY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
+                game_1.Game.drawMob(_this.tileX + Math.floor(_this.frame), _this.tileY + _this.direction * 2, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY - _this.jumpY * delta, 1, 2, _this.room.shadeColor, _this.shadeAmount());
             }
             if (!_this.seenPlayer) {
                 _this.drawSleepingZs(delta);
@@ -4598,6 +4646,8 @@ var ZombieEnemy = /** @class */ (function (_super) {
         _this.dir = game_1.Direction.South;
         _this.name = "zombie";
         _this.forwardOnlyAttack = true;
+        _this.drawMoveSpeed = 0.2;
+        _this.jumpHeight = 0.35;
         if (drop)
             _this.drop = drop;
         else {
@@ -4840,8 +4890,8 @@ var Entity = /** @class */ (function (_super) {
             _this.updateDrawXY(delta);
         };
         _this.updateDrawXY = function (delta) {
-            _this.drawX += -0.3 * delta * _this.drawX;
-            _this.drawY += -0.3 * delta * _this.drawY;
+            _this.drawX += -_this.drawMoveSpeed * delta * _this.drawX;
+            _this.drawY += -_this.drawMoveSpeed * delta * _this.drawY;
         };
         _this.drawSleepingZs = function (delta, offsetX, offsetY) {
             if (offsetX === void 0) { offsetX = 0; }
@@ -5089,6 +5139,7 @@ var Entity = /** @class */ (function (_super) {
         _this.forwardOnlyAttack = false;
         _this.attackRange = 1;
         _this.diagonalAttackRange = 1;
+        _this.drawMoveSpeed = 0.3;
         return _this;
     }
     Entity.add = function (room, game, x, y) {
@@ -8700,8 +8751,14 @@ var coin_1 = __webpack_require__(/*! ./item/coin */ "./src/item/coin.ts");
 var weapon_1 = __webpack_require__(/*! ./weapon/weapon */ "./src/weapon/weapon.ts");
 var dagger_1 = __webpack_require__(/*! ./weapon/dagger */ "./src/weapon/dagger.ts");
 var usable_1 = __webpack_require__(/*! ./item/usable */ "./src/item/usable.ts");
+var dualdagger_1 = __webpack_require__(/*! ./weapon/dualdagger */ "./src/weapon/dualdagger.ts");
 var candle_1 = __webpack_require__(/*! ./item/candle */ "./src/item/candle.ts");
+var spear_1 = __webpack_require__(/*! ./weapon/spear */ "./src/weapon/spear.ts");
+var backpack_1 = __webpack_require__(/*! ./item/backpack */ "./src/item/backpack.ts");
+var heart_1 = __webpack_require__(/*! ./item/heart */ "./src/item/heart.ts");
 var mouseCursor_1 = __webpack_require__(/*! ./mouseCursor */ "./src/mouseCursor.ts");
+var warhammer_1 = __webpack_require__(/*! ./weapon/warhammer */ "./src/weapon/warhammer.ts");
+var godStone_1 = __webpack_require__(/*! ./item/godStone */ "./src/item/godStone.ts");
 var OPEN_TIME = 100; // milliseconds
 // Dark gray color used for the background of inventory slots
 var FILL_COLOR = "#5a595b";
@@ -9334,7 +9391,17 @@ var Inventory = /** @class */ (function () {
             }
             _this.addItem(i);
         };
-        var startingInv = [dagger_1.Dagger, candle_1.Candle];
+        var startingInv = [
+            dagger_1.Dagger,
+            candle_1.Candle,
+            godStone_1.GodStone,
+            warhammer_1.Warhammer,
+            spear_1.Spear,
+            dualdagger_1.DualDagger,
+            armor_1.Armor,
+            heart_1.Heart,
+            backpack_1.Backpack,
+        ];
         startingInv.forEach(function (item) {
             a(new item({ game: _this.game }, 0, 0));
         });
@@ -9768,6 +9835,63 @@ var Equippable = /** @class */ (function (_super) {
     return Equippable;
 }(item_1.Item));
 exports.Equippable = Equippable;
+
+
+/***/ }),
+
+/***/ "./src/item/godStone.ts":
+/*!******************************!*\
+  !*** ./src/item/godStone.ts ***!
+  \******************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.GodStone = void 0;
+var room_1 = __webpack_require__(/*! ../room */ "./src/room.ts");
+var usable_1 = __webpack_require__(/*! ./usable */ "./src/item/usable.ts");
+var GodStone = /** @class */ (function (_super) {
+    __extends(GodStone, _super);
+    function GodStone(level, x, y) {
+        var _this = _super.call(this, level, x, y) || this;
+        _this.onUse = function (player) {
+            _this.teleportToExit(player);
+        };
+        _this.teleportToExit = function (player) {
+            var downLadders = _this.room.game.rooms.filter(function (room) { return room.type === room_1.RoomType.DOWNLADDER; });
+            var room = downLadders[downLadders.length - 1];
+            room.game.changeLevelThroughDoor(player, room.doors[0], 1);
+            player.x = room.roomX + 2;
+            player.y = room.roomY + 3;
+        };
+        _this.getDescription = function () {
+            return "YOU SHOULD NOT HAVE THIS";
+        };
+        _this.room = level;
+        _this.count = 0;
+        _this.tileX = 31;
+        _this.tileY = 0;
+        _this.stackable = true;
+        return _this;
+    }
+    return GodStone;
+}(usable_1.Usable));
+exports.GodStone = GodStone;
 
 
 /***/ }),
@@ -10738,14 +10862,14 @@ var split_partitions = function (partitions, prob) {
     return partitions;
     //takes input partitions array, randomly removes partitions and adds splits, output modified partitions array
 };
-var remove_wall_rooms = function (partitions, w, h) {
+var remove_wall_rooms = function (partitions, w, h, prob) {
+    if (prob === void 0) { prob = 1.0; }
     var _loop_2 = function (partition) {
-        if (partition.x === 0 ||
+        if ((partition.x === 0 ||
             partition.y === 0 ||
             partition.x + partition.w === w ||
-            partition.y + partition.h === h
-        //delete any partition where the x or y is zero
-        ) {
+            partition.y + partition.h === h) &&
+            random_1.Random.rand() < prob) {
             partitions = partitions.filter(function (p) { return p != partition; });
         }
     };
@@ -10787,6 +10911,7 @@ var generate_dungeon_candidate = function (map_w, map_h) {
     grid = populate_grid(partitions, grid, map_w, map_h);
     //remove wall rooms and populate dat grid
     partitions.sort(function (a, b) { return a.area() - b.area(); });
+    partitions = remove_wall_rooms(partitions, map_w, map_h, 0.3);
     //sort the partitions list by ... area? I think?
     var spawn = partitions[0];
     //spawn is the first Partition instance
@@ -14159,7 +14284,7 @@ var Room = /** @class */ (function () {
             var _b = this_1.getRandomEmptyPosition(tiles), x = _b.x, y = _b.y;
             // Define the enemy tables for each depth level
             var tables = {
-                0: [1, 4, 3],
+                0: [1, 4, 3, 8, 8],
                 1: [3, 4, 5, 9, 7],
                 2: [3, 4, 5, 7, 8, 9, 12],
                 3: [1, 2, 3, 5, 6, 7, 8, 9, 10],
@@ -16518,6 +16643,48 @@ var Spellbook = /** @class */ (function (_super) {
     return Spellbook;
 }(weapon_1.Weapon));
 exports.Spellbook = Spellbook;
+
+
+/***/ }),
+
+/***/ "./src/weapon/warhammer.ts":
+/*!*********************************!*\
+  !*** ./src/weapon/warhammer.ts ***!
+  \*********************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Warhammer = void 0;
+var weapon_1 = __webpack_require__(/*! ./weapon */ "./src/weapon/weapon.ts");
+var Warhammer = /** @class */ (function (_super) {
+    __extends(Warhammer, _super);
+    function Warhammer(level, x, y) {
+        var _this = _super.call(this, level, x, y) || this;
+        _this.tileX = 22;
+        _this.tileY = 2;
+        _this.damage = 2;
+        _this.name = "Warhammer";
+        return _this;
+    }
+    return Warhammer;
+}(weapon_1.Weapon));
+exports.Warhammer = Warhammer;
 
 
 /***/ }),
