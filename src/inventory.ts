@@ -82,17 +82,10 @@ export class Inventory {
 
       this.addItem(i);
     };
-    const startingInv = [
-      Dagger,
-      Candle,
-      GodStone,
-      Warhammer,
-      Spear,
-      DualDagger,
-      Armor,
-      Heart,
-      Backpack,
-    ];
+    let startingInv = GameConstants.DEVELOPER_MODE
+      ? GameConstants.STARTING_DEV_INVENTORY
+      : GameConstants.STARTING_INVENTORY;
+
     startingInv.forEach((item) => {
       a(new item({ game: this.game } as Room, 0, 0));
     });

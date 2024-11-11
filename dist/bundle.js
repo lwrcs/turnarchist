@@ -1339,7 +1339,6 @@ var __extends = (this && this.__extends) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BishopEnemy = void 0;
 var game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-var genericParticle_1 = __webpack_require__(/*! ../../particle/genericParticle */ "./src/particle/genericParticle.ts");
 var coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
 var greengem_1 = __webpack_require__(/*! ../../item/greengem */ "./src/item/greengem.ts");
 var random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
@@ -1348,6 +1347,7 @@ var spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/sp
 var candle_1 = __webpack_require__(/*! ../../item/candle */ "./src/item/candle.ts");
 var door_1 = __webpack_require__(/*! ../../tile/door */ "./src/tile/door.ts");
 var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
+var imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ "./src/particle/imageParticle.ts");
 var BishopEnemy = /** @class */ (function (_super) {
     __extends(BishopEnemy, _super);
     function BishopEnemy(room, game, x, y, drop) {
@@ -1406,10 +1406,8 @@ var BishopEnemy = /** @class */ (function (_super) {
             _this.health -= damage;
             _this.healthBar.hurt();
             if (_this.health <= 0) {
+                imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 26);
                 _this.kill();
-            }
-            else {
-                genericParticle_1.GenericParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, _this.deathParticleColor);
             }
         };
         _this.jump = function () {
@@ -1525,7 +1523,7 @@ var BishopEnemy = /** @class */ (function (_super) {
                     _this.frame = 0;
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
-                game_1.Game.drawMob(_this.tileX + Math.floor(_this.frame), _this.tileY, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY - _this.jumpY * delta, 1, 2, _this.room.shadeColor, _this.shadeAmount());
+                game_1.Game.drawMob(_this.tileX + Math.floor(_this.frame), _this.tileY, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY - _this.jumpY * delta, 1, 2, _this.room.shadeColor, _this.shadeAmount() * (1 + (_this.jumpY * delta) / 3));
             }
             if (!_this.seenPlayer) {
                 _this.drawSleepingZs(delta);
@@ -7374,16 +7372,20 @@ var game = new Game();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GameConstants = void 0;
 var armor_1 = __webpack_require__(/*! ./item/armor */ "./src/item/armor.ts");
+var backpack_1 = __webpack_require__(/*! ./item/backpack */ "./src/item/backpack.ts");
 var candle_1 = __webpack_require__(/*! ./item/candle */ "./src/item/candle.ts");
-var key_1 = __webpack_require__(/*! ./item/key */ "./src/item/key.ts");
-var torch_1 = __webpack_require__(/*! ./item/torch */ "./src/item/torch.ts");
+var godStone_1 = __webpack_require__(/*! ./item/godStone */ "./src/item/godStone.ts");
+var heart_1 = __webpack_require__(/*! ./item/heart */ "./src/item/heart.ts");
 var levelConstants_1 = __webpack_require__(/*! ./levelConstants */ "./src/levelConstants.ts");
 var dagger_1 = __webpack_require__(/*! ./weapon/dagger */ "./src/weapon/dagger.ts");
+var spear_1 = __webpack_require__(/*! ./weapon/spear */ "./src/weapon/spear.ts");
 var spellbook_1 = __webpack_require__(/*! ./weapon/spellbook */ "./src/weapon/spellbook.ts");
+var warhammer_1 = __webpack_require__(/*! ./weapon/warhammer */ "./src/weapon/warhammer.ts");
 var GameConstants = /** @class */ (function () {
     function GameConstants() {
     }
     GameConstants.VERSION = "v0.6.3";
+    GameConstants.DEVELOPER_MODE = true;
     GameConstants.FPS = 120;
     GameConstants.ALPHA_ENABLED = true;
     GameConstants.SHADE_LEVELS = 25;
@@ -7413,10 +7415,14 @@ var GameConstants = /** @class */ (function () {
     GameConstants.STARTING_INVENTORY = [dagger_1.Dagger, candle_1.Candle];
     GameConstants.STARTING_DEV_INVENTORY = [
         dagger_1.Dagger,
-        armor_1.Armor,
-        torch_1.Torch,
+        candle_1.Candle,
+        godStone_1.GodStone,
+        warhammer_1.Warhammer,
+        spear_1.Spear,
         spellbook_1.Spellbook,
-        key_1.Key,
+        armor_1.Armor,
+        heart_1.Heart,
+        backpack_1.Backpack,
     ];
     return GameConstants;
 }());
@@ -8749,16 +8755,8 @@ var equippable_1 = __webpack_require__(/*! ./item/equippable */ "./src/item/equi
 var armor_1 = __webpack_require__(/*! ./item/armor */ "./src/item/armor.ts");
 var coin_1 = __webpack_require__(/*! ./item/coin */ "./src/item/coin.ts");
 var weapon_1 = __webpack_require__(/*! ./weapon/weapon */ "./src/weapon/weapon.ts");
-var dagger_1 = __webpack_require__(/*! ./weapon/dagger */ "./src/weapon/dagger.ts");
 var usable_1 = __webpack_require__(/*! ./item/usable */ "./src/item/usable.ts");
-var dualdagger_1 = __webpack_require__(/*! ./weapon/dualdagger */ "./src/weapon/dualdagger.ts");
-var candle_1 = __webpack_require__(/*! ./item/candle */ "./src/item/candle.ts");
-var spear_1 = __webpack_require__(/*! ./weapon/spear */ "./src/weapon/spear.ts");
-var backpack_1 = __webpack_require__(/*! ./item/backpack */ "./src/item/backpack.ts");
-var heart_1 = __webpack_require__(/*! ./item/heart */ "./src/item/heart.ts");
 var mouseCursor_1 = __webpack_require__(/*! ./mouseCursor */ "./src/mouseCursor.ts");
-var warhammer_1 = __webpack_require__(/*! ./weapon/warhammer */ "./src/weapon/warhammer.ts");
-var godStone_1 = __webpack_require__(/*! ./item/godStone */ "./src/item/godStone.ts");
 var OPEN_TIME = 100; // milliseconds
 // Dark gray color used for the background of inventory slots
 var FILL_COLOR = "#5a595b";
@@ -9391,17 +9389,9 @@ var Inventory = /** @class */ (function () {
             }
             _this.addItem(i);
         };
-        var startingInv = [
-            dagger_1.Dagger,
-            candle_1.Candle,
-            godStone_1.GodStone,
-            warhammer_1.Warhammer,
-            spear_1.Spear,
-            dualdagger_1.DualDagger,
-            armor_1.Armor,
-            heart_1.Heart,
-            backpack_1.Backpack,
-        ];
+        var startingInv = gameConstants_1.GameConstants.DEVELOPER_MODE
+            ? gameConstants_1.GameConstants.STARTING_DEV_INVENTORY
+            : gameConstants_1.GameConstants.STARTING_INVENTORY;
         startingInv.forEach(function (item) {
             a(new item({ game: _this.game }, 0, 0));
         });
@@ -10166,7 +10156,7 @@ var Item = /** @class */ (function (_super) {
             if (_this.pickedUp) {
                 _this.y -= 0.125 * delta;
                 _this.alpha -= 0.03 * delta;
-                if (_this.y < -1)
+                if (Math.abs(_this.y - _this.startY) > 5)
                     _this.level.items = _this.level.items.filter(function (x) { return x !== _this; }); // removes itself from the level
                 if (gameConstants_1.GameConstants.ALPHA_ENABLED)
                     game_1.Game.ctx.globalAlpha = Math.max(0, _this.alpha);
@@ -10204,6 +10194,7 @@ var Item = /** @class */ (function (_super) {
         _this.scaleFactor = 0.2;
         _this.offsetY = -0.25;
         _this.name = "";
+        _this.startY = y;
         return _this;
     }
     return Item;
@@ -11790,7 +11781,7 @@ var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
 var ImageParticle = /** @class */ (function (_super) {
     __extends(ImageParticle, _super);
-    function ImageParticle(level, x, y, z, s, dx, dy, dz, tileX, tileY, size, delay, expirationTimer, targetX, targetY, targetZ) {
+    function ImageParticle(room, x, y, z, s, dx, dy, dz, tileX, tileY, size, delay, expirationTimer, targetX, targetY, targetZ) {
         var _this = _super.call(this) || this;
         _this.render = function () {
             var scale = gameConstants_1.GameConstants.TILESIZE;
@@ -11798,7 +11789,7 @@ var ImageParticle = /** @class */ (function (_super) {
             var frame = _this.s > 0.5 ? 1 : 0; // Placeholder frames for large and small particles
             game_1.Game.ctx.imageSmoothingEnabled = false;
             var adjustedTileX = _this.tileX + _this.size;
-            game_1.Game.drawFX(adjustedTileX, _this.tileY, 1, 1, _this.x - _this.alpha / 2, _this.y - _this.z - _this.alpha / 2, _this.alpha, _this.alpha);
+            game_1.Game.drawFX(adjustedTileX, _this.tileY, 1, 1, _this.x - _this.alpha / 2, _this.y - _this.z - _this.alpha / 2, 1, 1, _this.shadeColor(), _this.shadeAmount());
         };
         _this.draw = function (delta) {
             game_1.Game.ctx.imageSmoothingEnabled = false;
@@ -11829,7 +11820,7 @@ var ImageParticle = /** @class */ (function (_super) {
             _this.drawableY = _this.y;
             _this.render();
         };
-        _this.level = level;
+        _this.room = room;
         _this.x = x;
         _this.y = y;
         _this.z = z; // Use provided height
@@ -11851,9 +11842,9 @@ var ImageParticle = /** @class */ (function (_super) {
             _this.expirationTimer = expirationTimer;
         return _this;
     }
-    ImageParticle.shotgun = function (level, cx, cy, tx, ty, tileX, tileY) {
+    ImageParticle.shotgun = function (room, cx, cy, tx, ty, tileX, tileY) {
         for (var i = 0; i < 4; i++) {
-            level.particles.push(new ImageParticle(level, cx, cy, 0, Math.random() * 0.5 + 0.3, 0, 0, 0, tileX, tileY, 0 //size
+            room.particles.push(new ImageParticle(room, cx, cy, 0, Math.random() * 0.5 + 0.3, 0, 0, 0, tileX, tileY, 0 //size
             ));
         }
     };
@@ -11907,6 +11898,12 @@ var Particle = /** @class */ (function (_super) {
     function Particle() {
         var _this = _super !== null && _super.apply(this, arguments) || this;
         _this.drawTopLayer = function (delta) { };
+        _this.shadeAmount = function () {
+            return _this.room.softVis[Math.floor(_this.x)][Math.floor(_this.y)];
+        };
+        _this.shadeColor = function () {
+            return _this.room.shadeColor;
+        };
         return _this;
     }
     return Particle;
@@ -13545,6 +13542,7 @@ var Room = /** @class */ (function () {
             _this.calculateWallInfo();
             _this.updateLighting();
             _this.entered = true;
+            _this.particles = [];
             _this.alertEnemiesOnEntry();
             _this.message = _this.name;
             player.map.saveMapData();
@@ -16619,7 +16617,7 @@ var Spellbook = /** @class */ (function (_super) {
                     e.pointIn(newX, newY) &&
                     !_this.game.rooms[_this.wielder.levelID].roomArray[e.x][e.y].isSolid()) {
                     e.hurt(_this.wielder, 1);
-                    _this.game.rooms[_this.wielder.levelID].particles.push(new playerFireball_1.PlayerFireball(_this.wielder, e.x, e.y));
+                    _this.game.rooms[_this.wielder.levelID].projectiles.push(new playerFireball_1.PlayerFireball(_this.wielder, e.x, e.y));
                     flag = true;
                 }
             }

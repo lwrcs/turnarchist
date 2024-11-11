@@ -1,13 +1,20 @@
 import { Armor } from "./item/armor";
+import { Backpack } from "./item/backpack";
 import { Candle } from "./item/candle";
+import { GodStone } from "./item/godStone";
+import { Heart } from "./item/heart";
 import { Key } from "./item/key";
 import { Torch } from "./item/torch";
 import { LevelConstants } from "./levelConstants";
 import { Dagger } from "./weapon/dagger";
+import { DualDagger } from "./weapon/dualdagger";
+import { Spear } from "./weapon/spear";
 import { Spellbook } from "./weapon/spellbook";
+import { Warhammer } from "./weapon/warhammer";
 
 export class GameConstants {
   static readonly VERSION = "v0.6.3";
+  static readonly DEVELOPER_MODE = true;
 
   static readonly FPS = 120;
   static readonly ALPHA_ENABLED = true;
@@ -46,9 +53,13 @@ export class GameConstants {
   static readonly STARTING_INVENTORY = [Dagger, Candle];
   static readonly STARTING_DEV_INVENTORY = [
     Dagger,
-    Armor,
-    Torch,
+    Candle,
+    GodStone,
+    Warhammer,
+    Spear,
     Spellbook,
-    Key,
+    Armor,
+    Heart,
+    Backpack,
   ];
 }

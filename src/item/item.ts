@@ -24,6 +24,7 @@ export class Item extends Drawable {
   alpha: number; // alpha value for transparency
   scaleFactor: number; // scale factor for size adjustment
   name: string;
+  startY: number;
 
   // Constructor for the Item class
   constructor(level: Room, x: number, y: number) {
@@ -46,12 +47,13 @@ export class Item extends Drawable {
     this.scaleFactor = 0.2;
     this.offsetY = -0.25;
     this.name = "";
+    this.startY = y;
   }
 
   // Empty tick function to be overridden by subclasses
-  tick = () => { };
+  tick = () => {};
   // Empty tick function for inventory behavior to be overridden by subclasses
-  tickInInventory = () => { };
+  tickInInventory = () => {};
 
   // Function to get description of the item, to be overridden by subclasses
   getDescription = (): string => {
@@ -64,7 +66,7 @@ export class Item extends Drawable {
   };
 
   // Empty function to be called when item is dropped, to be overridden by subclasses
-  onDrop = () => { };
+  onDrop = () => {};
   // Function to be called when item is picked up
   onPickup = (player: Player) => {
     if (!this.pickedUp) {
@@ -73,8 +75,7 @@ export class Item extends Drawable {
     }
   };
 
-  dropFromInventory = () => { };
-
+  dropFromInventory = () => {};
 
   // Function to get the amount of shade at the item's location
   shadeAmount = () => {
@@ -99,10 +100,10 @@ export class Item extends Drawable {
         2,
         this.x + this.w * (this.scaleFactor * -0.5 + 0.5),
         this.y +
-        Math.sin(this.frame) * 0.07 -
-        1 +
-        this.offsetY +
-        this.h * (this.scaleFactor * -0.5 + 0.5),
+          Math.sin(this.frame) * 0.07 -
+          1 +
+          this.offsetY +
+          this.h * (this.scaleFactor * -0.5 + 0.5),
         this.w * this.scaleFactor,
         this.h * this.scaleFactor,
         this.level.shadeColor,
@@ -115,7 +116,7 @@ export class Item extends Drawable {
     if (this.pickedUp) {
       this.y -= 0.125 * delta;
       this.alpha -= 0.03 * delta;
-      if (this.y < -1)
+      if (Math.abs(this.y - this.startY) > 5)
         this.level.items = this.level.items.filter((x) => x !== this); // removes itself from the level
 
       if (GameConstants.ALPHA_ENABLED)

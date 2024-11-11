@@ -16,6 +16,7 @@ import { SpikeTrap } from "../../tile/spiketrap";
 import { Candle } from "../../item/candle";
 import { Door } from "../../tile/door";
 import { Enemy } from "./enemy";
+import { ImageParticle } from "../../particle/imageParticle";
 
 export class BishopEnemy extends Enemy {
   frame: number;
@@ -103,14 +104,9 @@ export class BishopEnemy extends Enemy {
     this.health -= damage;
     this.healthBar.hurt();
     if (this.health <= 0) {
+      ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 26);
+
       this.kill();
-    } else {
-      GenericParticle.spawnCluster(
-        this.room,
-        this.x + 0.5,
-        this.y + 0.5,
-        this.deathParticleColor
-      );
     }
   };
 
@@ -263,7 +259,7 @@ export class BishopEnemy extends Enemy {
         1,
         2,
         this.room.shadeColor,
-        this.shadeAmount()
+        this.shadeAmount() * (1 + (this.jumpY * delta) / 3)
       );
     }
     if (!this.seenPlayer) {

@@ -1042,6 +1042,8 @@ export class Room {
     this.updateLighting();
     this.entered = true;
 
+    this.particles = [];
+
     this.alertEnemiesOnEntry();
     this.message = this.name;
     player.map.saveMapData();

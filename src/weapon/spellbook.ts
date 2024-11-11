@@ -34,7 +34,7 @@ export class Spellbook extends Weapon {
       ) {
         e.hurt(this.wielder, 1);
 
-        this.game.rooms[this.wielder.levelID].particles.push(
+        this.game.rooms[this.wielder.levelID].projectiles.push(
           new PlayerFireball(this.wielder, e.x, e.y)
         );
 

@@ -80,7 +80,6 @@ export class WizardFireball extends Projectile {
       this.parent.removeLightSource(this.lightSource);
       this.frame = 0;
       this.delay = Game.rand(0, 10, Math.random);
-
     }
   };
 

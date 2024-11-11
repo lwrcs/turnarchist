@@ -4,9 +4,10 @@ import { Direction, Game } from "../game";
 import { GameConstants } from "../gameConstants";
 import { Random } from "../random";
 import { Player, PlayerDirection } from "../player";
+import { Entity } from "../entity/entity";
 
 export class ImageParticle extends Particle {
-  level: Room;
+  room: Room;
   x: number;
   y: number;
   z: number;
@@ -24,9 +25,8 @@ export class ImageParticle extends Particle {
   tileX: number;
   tileY: number;
   size: number;
-
   static shotgun = (
-    level: Room,
+    room: Room,
     cx: number,
     cy: number,
     tx: number,
@@ -35,9 +35,9 @@ export class ImageParticle extends Particle {
     tileY: number
   ) => {
     for (let i = 0; i < 4; i++) {
-      level.particles.push(
+      room.particles.push(
         new ImageParticle(
-          level,
+          room,
           cx,
           cy,
           0,
@@ -80,7 +80,7 @@ export class ImageParticle extends Particle {
   };
 
   constructor(
-    level: Room,
+    room: Room,
     x: number,
     y: number,
     z: number,
@@ -98,7 +98,7 @@ export class ImageParticle extends Particle {
     targetZ?: number
   ) {
     super();
-    this.level = level;
+    this.room = room;
     this.x = x;
     this.y = y;
     this.z = z; // Use provided height
@@ -132,8 +132,10 @@ export class ImageParticle extends Particle {
       1,
       this.x - this.alpha / 2,
       this.y - this.z - this.alpha / 2,
-      this.alpha,
-      this.alpha
+      1,
+      1,
+      this.shadeColor(),
+      this.shadeAmount()
     );
   };
 
