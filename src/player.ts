@@ -72,6 +72,8 @@ export class Player extends Drawable {
   tileCursor: { x: number; y: number };
   private jumpY: number;
   lightEquipped: boolean;
+  hurtAlpha: number;
+  hurting: boolean;
   constructor(game: Game, x: number, y: number, isLocalPlayer: boolean) {
     super();
 
@@ -140,6 +142,8 @@ export class Player extends Drawable {
     this.tileCursor = { x: 0, y: 0 };
     this.moveRange = 1;
     this.lightEquipped = false;
+    this.hurting = false;
+    this.hurtAlpha = 0.5;
   }
 
   get angle(): number {
@@ -571,6 +575,8 @@ export class Player extends Drawable {
       this.healthBar.hurt();
       this.flashing = true;
       this.health -= damage;
+      this.hurting = true;
+      this.hurtAlpha = 0.5;
       if (this.health <= 0) {
         this.dead = true;
       }
@@ -775,11 +781,24 @@ export class Player extends Drawable {
       );
     }
     PostProcessor.draw(delta);
-    Light.drawTint(delta);
-
+    if (this.hurting) this.drawHurt(delta);
     if (this.mapToggled === true) this.map.draw(delta);
     //this.drawTileCursor(delta);
     this.drawInventoryButton(delta);
+  };
+
+  drawHurt = (delta: number) => {
+    Game.ctx.globalAlpha = this.hurtAlpha;
+    this.hurtAlpha -= (this.hurtAlpha / 10) * delta;
+    if (this.hurtAlpha <= 0.03) {
+      this.hurtAlpha = 0;
+      this.hurting = false;
+    }
+    Game.ctx.globalCompositeOperation = "screen";
+    Game.ctx.fillStyle = "#cc3333"; // bright but not fully saturated red
+
+    Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
+    Game.ctx.globalCompositeOperation = "source-over";
   };
 
   updateDrawXY = (delta: number) => {

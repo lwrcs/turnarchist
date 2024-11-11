@@ -119,13 +119,17 @@ interface WallInfo {
   isAboveDoorWall: boolean;
 }
 
+interface EntitySpawnConfig {
+  name: Entity["name"];
+  weight: number;
+}
+
 export class Room {
   x: number;
   y: number;
   roomArray: Tile[][];
   softVis: number[][]; // this is the one we use for drawing (includes smoothing)
   vis: number[][]; // visibility ranges from 0 (fully visible) to 1 (fully black)
-  //testing
   softCol: [number, number, number][][];
   col: [number, number, number][][];
   renderBuffer: [number, number, number, number][][][]; // Array of color arrays (r,g,b,alpha) for each x,y position
@@ -161,7 +165,6 @@ export class Room {
   wallInfo: Map<string, WallInfo> = new Map();
   savePoint: Room;
   lastEnemyCount: number;
-  static readonly LIGHT_RESOLUTION: number = 1; // Default resolution
 
   private pointInside(
     x: number,
@@ -174,6 +177,73 @@ export class Room {
     if (x < rX || x >= rX + rW) return false;
     if (y < rY || y >= rY + rH) return false;
     return true;
+  }
+
+  constructor(
+    game: Game,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    type: RoomType,
+    depth: number,
+    mapGroup: number,
+    rand = Random.rand
+  ) {
+    this.game = game;
+    this.roomX = x; //Math.floor(- this.width / 2);
+    this.roomY = y; //Math.floor(- this.height / 2);
+    this.width = w;
+    this.height = h;
+    this.type = type;
+    this.depth = depth;
+    this.mapGroup = mapGroup;
+
+    this.entered = false;
+    this.turn = TurnState.playerTurn;
+    this.playerTurnTime = Date.now();
+
+    this.items = Array<Item>();
+    this.projectiles = Array<Projectile>();
+    this.hitwarnings = Array<HitWarning>();
+    this.particles = Array<Particle>();
+    this.doors = Array<Door>();
+    this.entities = Array<Entity>();
+    this.lightSources = Array<LightSource>();
+    this.walls = Array<Wall>();
+
+    this.roomArray = [];
+    for (let x = this.roomX; x < this.roomX + this.width; x++) {
+      this.roomArray[x] = [];
+    }
+    this.vis = [];
+    this.softVis = [];
+    this.col = [];
+    this.softCol = [];
+    for (let x = this.roomX; x < this.roomX + this.width; x++) {
+      this.vis[x] = [];
+      this.softVis[x] = [];
+      this.col[x] = [];
+      this.softCol[x] = [];
+      for (let y = this.roomY; y < this.roomY + this.height; y++) {
+        this.vis[x][y] = 1;
+        this.softVis[x][y] = 1;
+        this.col[x][y] = [0, 0, 0];
+        this.softCol[x][y] = [0, 0, 0];
+      }
+    }
+    this.renderBuffer = [];
+    for (let x = this.roomX; x < this.roomX + this.width; x++) {
+      this.renderBuffer[x] = [];
+      for (let y = this.roomY; y < this.roomY + this.height; y++) {
+        this.renderBuffer[x][y] = [];
+      }
+    }
+
+    this.skin = SkinType.DUNGEON;
+    if (this.type === RoomType.ROPECAVE || this.type === RoomType.CAVE)
+      this.skin = SkinType.CAVE;
+    this.buildEmptyRoom();
   }
 
   tileInside = (tileX: number, tileY: number): boolean => {
@@ -240,8 +310,6 @@ export class Room {
       }
     }
   }
-
-  private addFingers(rand: () => number) { }
 
   private addTorches(numTorches: number, rand: () => number) {
     let walls = [];
@@ -333,16 +401,6 @@ export class Room {
     return false;
   }
 
-  generateLevelTable = (rand: () => number) => {
-    let table: number[] = [];
-    let e: number;
-    for (let i = 0; i <= Game.rand(2, 5, rand); i++) {
-      e = Game.rand(1, 2, rand);
-      table.push(e);
-    }
-    return table;
-  };
-
   // Function to add enemies to the room
   private addEnemies(numEnemies: number, rand: () => number) {
     // Get all empty tiles in the room
@@ -398,7 +456,7 @@ export class Room {
       // Define the enemy tables for each depth level
 
       let tables = {
-        0: [1, 5, 3, 16], //this.generateLevelTable(rand),
+        0: [1, 4, 3], //this.generateLevelTable(rand),
         1: [3, 4, 5, 9, 7],
         2: [3, 4, 5, 7, 8, 9, 12],
         3: [1, 2, 3, 5, 6, 7, 8, 9, 10],
@@ -439,31 +497,31 @@ export class Room {
         // Add the selected enemy type to the room
         switch (type) {
           case 1:
-            addEnemy(new CrabEnemy(this, this.game, x, y));
+            CrabEnemy.add(this, this.game, x, y);
             break;
           case 2:
-            addEnemy(new FrogEnemy(this, this.game, x, y));
+            FrogEnemy.add(this, this.game, x, y);
             break;
           case 3:
-            addEnemy(new ZombieEnemy(this, this.game, x, y));
+            ZombieEnemy.add(this, this.game, x, y);
             break;
           case 4:
-            addEnemy(new SkullEnemy(this, this.game, x, y));
+            SkullEnemy.add(this, this.game, x, y);
             break;
           case 5:
-            addEnemy(new EnergyWizardEnemy(this, this.game, x, y));
+            EnergyWizardEnemy.add(this, this.game, x, y);
             break;
           case 6:
-            addEnemy(new ChargeEnemy(this, this.game, x, y));
+            ChargeEnemy.add(this, this.game, x, y);
             break;
           case 7:
-            addEnemy(new Spawner(this, this.game, x, y));
+            Spawner.add(this, this.game, x, y);
             break;
           case 8:
-            addEnemy(new BishopEnemy(this, this.game, x, y));
+            BishopEnemy.add(this, this.game, x, y);
             break;
           case 9:
-            addEnemy(new ArmoredzombieEnemy(this, this.game, x, y));
+            ArmoredzombieEnemy.add(this, this.game, x, y);
             break;
           case 10:
             if (addEnemy(new BigSkullEnemy(this, this.game, x, y))) {
@@ -480,10 +538,10 @@ export class Room {
             }
             break;
           case 11:
-            addEnemy(new QueenEnemy(this, this.game, x, y));
+            QueenEnemy.add(this, this.game, x, y);
             break;
           case 12:
-            addEnemy(new KnightEnemy(this, this.game, x, y));
+            KnightEnemy.add(this, this.game, x, y);
             break;
           case 13:
             if (addEnemy(new BigKnightEnemy(this, this.game, x, y))) {
@@ -500,13 +558,13 @@ export class Room {
             }
             break;
           case 14:
-            addEnemy(new SniperEnemy(this, this.game, x, y));
+            SniperEnemy.add(this, this.game, x, y);
             break;
           case 15:
-            addEnemy(new ZombieEnemy(this, this.game, x, y));
+            ZombieEnemy.add(this, this.game, x, y);
             break;
           case 16:
-            addEnemy(new FireWizardEnemy(this, this.game, x, y));
+            FireWizardEnemy.add(this, this.game, x, y);
             break;
         }
       }
@@ -519,25 +577,25 @@ export class Room {
     for (let i = 0; i < numObstacles; i++) {
       const { x, y } = this.getRandomEmptyPosition(tiles);
       switch (
-      Game.randTable(
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 5, 5, 5],
-        rand
-      )
+        Game.randTable(
+          [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 5, 5, 5],
+          rand
+        )
       ) {
         case 1:
-          this.entities.push(new Crate(this, this.game, x, y));
+          Crate.add(this, this.game, x, y);
           break;
         case 2:
-          this.entities.push(new Barrel(this, this.game, x, y));
+          Barrel.add(this, this.game, x, y);
           break;
         case 3:
-          this.entities.push(new TombStone(this, this.game, x, y, 1));
+          TombStone.add(this, this.game, x, y, 1);
           break;
         case 4:
-          this.entities.push(new TombStone(this, this.game, x, y, 0));
+          TombStone.add(this, this.game, x, y, 0);
           break;
         case 5:
-          this.entities.push(new Pumpkin(this, this.game, x, y));
+          Pumpkin.add(this, this.game, x, y);
           break;
       }
     }
@@ -549,12 +607,11 @@ export class Room {
       const { x, y } = this.getRandomEmptyPosition(tiles);
 
       let r = rand();
-      if (r <= 0.45) this.entities.push(new PottedPlant(this, this.game, x, y));
-      else if (r <= 0.65) this.entities.push(new Pot(this, this.game, x, y));
-      else if (r <= 0.75) this.entities.push(new Rock(this, this.game, x, y));
-      else if (r <= 0.97)
-        this.entities.push(new Mushrooms(this, this.game, x, y));
-      else this.entities.push(new Chest(this, this.game, x, y));
+      if (r <= 0.45) PottedPlant.add(this, this.game, x, y);
+      else if (r <= 0.65) Pot.add(this, this.game, x, y);
+      else if (r <= 0.75) Rock.add(this, this.game, x, y);
+      else if (r <= 0.97) Mushrooms.add(this, this.game, x, y);
+      else Chest.add(this, this.game, x, y);
     }
   }
 
@@ -565,10 +622,10 @@ export class Room {
 
       let r = rand();
       if (r <= (10 - this.depth ** 3) / 10)
-        this.entities.push(new CoalResource(this, this.game, x, y));
+        CoalResource.add(this, this.game, x, y);
       else if (r <= (10 - (this.depth - 2) ** 3) / 10)
-        this.entities.push(new GoldResource(this, this.game, x, y));
-      else this.entities.push(new EmeraldResource(this, this.game, x, y));
+        GoldResource.add(this, this.game, x, y);
+      else EmeraldResource.add(this, this.game, x, y);
     }
   }
 
@@ -577,50 +634,26 @@ export class Room {
     let type = Game.randTable([1, 1, 1, 1, 1, 1, 1, 2, 3, 4, 5, 6], rand);
     switch (type) {
       case 1:
-        this.entities.push(
-          new VendingMachine(this, this.game, x, y, new Heart(this, 0, 0))
-        );
+        VendingMachine.add(this, this.game, x, y, new Heart(this, 0, 0));
         break;
       case 2:
-        this.entities.push(
-          new VendingMachine(this, this.game, x, y, new Lantern(this, 0, 0))
-        );
+        VendingMachine.add(this, this.game, x, y, new Lantern(this, 0, 0));
         break;
       case 3:
-        this.entities.push(
-          new VendingMachine(this, this.game, x, y, new Armor(this, 0, 0))
-        );
+        VendingMachine.add(this, this.game, x, y, new Armor(this, 0, 0));
         break;
       case 4:
-        this.entities.push(
-          new VendingMachine(this, this.game, x, y, new DualDagger(this, 0, 0))
-        );
+        VendingMachine.add(this, this.game, x, y, new DualDagger(this, 0, 0));
         break;
       case 5:
-        this.entities.push(
-          new VendingMachine(this, this.game, x, y, new Spear(this, 0, 0))
-        );
+        VendingMachine.add(this, this.game, x, y, new Spear(this, 0, 0));
         break;
       case 6:
-        this.entities.push(
-          new VendingMachine(this, this.game, x, y, new Shotgun(this, 0, 0))
-        );
+        VendingMachine.add(this, this.game, x, y, new Shotgun(this, 0, 0));
         break;
     }
   }
-  createSavePoint = () => {
-    //duplicate of the instance of the room exactly with json parsing but no circular references
-    let saveRoom = JSON.parse(JSON.stringify(this));
-    this.game.rooms.push(saveRoom);
-    this.savePoint = saveRoom;
-  };
-  loadSavePoint = () => {
-    //load the save point
-    let saveRoom = this.game.rooms.find((r) => r.savePoint);
-    if (saveRoom) {
-      this.game.changeLevel(this.game.players[0], saveRoom);
-    }
-  };
+
   populateEmpty = (rand: () => number) => {
     this.addRandomTorches("medium");
   };
@@ -630,7 +663,6 @@ export class Room {
     let factor = Game.rand(1, 36, rand);
 
     if (factor < 30) this.addWallBlocks(rand);
-    if (factor < 26) this.addFingers(rand);
     if (factor % 4 === 0) this.addChasms(rand);
     this.addRandomTorches("medium");
 
@@ -644,7 +676,7 @@ export class Room {
     this.addObstacles(numObstacles, rand);
     let numEnemies = Math.ceil(
       (numEmptyTiles - numTotalObstacles) *
-      Math.min(this.depth * 0.1 + 0.1, 0.35) //this.depth * 0.01 is starting value
+        Math.min(this.depth * 0.1 + 0.1, 0.35) //this.depth * 0.01 is starting value
     );
     this.addEnemies(numEnemies, rand);
 
@@ -662,7 +694,7 @@ export class Room {
     this.addObstacles(numObstacles, rand);
     let numEnemies = Math.ceil(
       (numEmptyTiles - numTotalObstacles) *
-      Math.min(this.depth * 0.05 + 0.2, 0.5)
+        Math.min(this.depth * 0.05 + 0.2, 0.5)
     );
     this.addEnemies(numEnemies, rand);
   };
@@ -680,26 +712,26 @@ export class Room {
     let numEmptyTiles = this.getEmptyTiles().length;
     let numEnemies = Math.ceil(
       numEmptyTiles *
-      (this.depth * 0.5 + 0.5) *
-      Game.randTable([0.05, 0.05, 0.06, 0.07, 0.1], rand)
+        (this.depth * 0.5 + 0.5) *
+        Game.randTable([0.05, 0.05, 0.06, 0.07, 0.1], rand)
     );
     this.addEnemies(numEnemies, rand);
     if (numEnemies > 0)
       this.addObstacles(numEnemies / Game.rand(1, 2, rand), rand);
     else this.addObstacles(Game.randTable([0, 0, 1, 1, 2, 3, 5], rand), rand);
   };
+
   populateSpawner = (rand: () => number) => {
     this.addRandomTorches("medium");
 
-    this.entities.push(
-      new Spawner(
-        this,
-        this.game,
-        Math.floor(this.roomX + this.width / 2),
-        Math.floor(this.roomY + this.height / 2)
-      )
+    Spawner.add(
+      this,
+      this.game,
+      Math.floor(this.roomX + this.width / 2),
+      Math.floor(this.roomY + this.height / 2)
     );
   };
+
   populateKeyRoom = (rand: () => number) => {
     this.addRandomTorches("medium");
 
@@ -809,7 +841,6 @@ export class Room {
     this.addChests(Game.randTable([4, 4, 5, 5, 5, 6, 8], rand), rand);
     this.addPlants(Game.randTable([0, 1, 2, 4, 5, 6], rand), rand);
   };
-  populateChessboard = (rand: () => number) => { };
   populateCave = (rand: () => number) => {
     let factor = Game.rand(1, 36, rand);
 
@@ -857,18 +888,10 @@ export class Room {
     this.addTorches(2, rand);
 
     const { x, y } = this.getRoomCenter();
-    this.entities.push(
-      new VendingMachine(this, this.game, x - 2, y - 1, new Shotgun(this, 0, 0))
-    );
-    this.entities.push(
-      new VendingMachine(this, this.game, x + 2, y - 1, new Heart(this, 0, 0))
-    );
-    this.entities.push(
-      new VendingMachine(this, this.game, x - 2, y + 2, new Armor(this, 0, 0))
-    );
-    this.entities.push(
-      new VendingMachine(this, this.game, x + 2, y + 2, new Spear(this, 0, 0))
-    );
+    VendingMachine.add(this, this.game, x - 2, y - 1, new Shotgun(this, 0, 0));
+    VendingMachine.add(this, this.game, x + 2, y - 1, new Heart(this, 0, 0));
+    VendingMachine.add(this, this.game, x - 2, y + 2, new Armor(this, 0, 0));
+    VendingMachine.add(this, this.game, x + 2, y + 2, new Spear(this, 0, 0));
   };
 
   populate = (rand: () => number) => {
@@ -902,9 +925,6 @@ export class Room {
         break;
       case RoomType.TREASURE:
         this.populateTreasure(rand);
-        break;
-      case RoomType.CHESSBOARD: // TODO
-        this.populateChessboard(rand);
         break;
       case RoomType.KEYROOM:
         this.populateKeyRoom(rand);
@@ -952,73 +972,6 @@ export class Room {
     }
     this.message = this.name;
   };
-
-  constructor(
-    game: Game,
-    x: number,
-    y: number,
-    w: number,
-    h: number,
-    type: RoomType,
-    depth: number,
-    mapGroup: number,
-    rand = Random.rand
-  ) {
-    this.game = game;
-    this.roomX = x; //Math.floor(- this.width / 2);
-    this.roomY = y; //Math.floor(- this.height / 2);
-    this.width = w;
-    this.height = h;
-    this.type = type;
-    this.depth = depth;
-    this.mapGroup = mapGroup;
-
-    this.entered = false;
-    this.turn = TurnState.playerTurn;
-    this.playerTurnTime = Date.now();
-
-    this.items = Array<Item>();
-    this.projectiles = Array<Projectile>();
-    this.hitwarnings = Array<HitWarning>();
-    this.particles = Array<Particle>();
-    this.doors = Array<Door>();
-    this.entities = Array<Entity>();
-    this.lightSources = Array<LightSource>();
-    this.walls = Array<Wall>();
-
-    this.roomArray = [];
-    for (let x = this.roomX; x < this.roomX + this.width; x++) {
-      this.roomArray[x] = [];
-    }
-    this.vis = [];
-    this.softVis = [];
-    this.col = [];
-    this.softCol = [];
-    for (let x = this.roomX; x < this.roomX + this.width; x++) {
-      this.vis[x] = [];
-      this.softVis[x] = [];
-      this.col[x] = [];
-      this.softCol[x] = [];
-      for (let y = this.roomY; y < this.roomY + this.height; y++) {
-        this.vis[x][y] = 1;
-        this.softVis[x][y] = 1;
-        this.col[x][y] = [0, 0, 0];
-        this.softCol[x][y] = [0, 0, 0];
-      }
-    }
-    this.renderBuffer = [];
-    for (let x = this.roomX; x < this.roomX + this.width; x++) {
-      this.renderBuffer[x] = [];
-      for (let y = this.roomY; y < this.roomY + this.height; y++) {
-        this.renderBuffer[x][y] = [];
-      }
-    }
-
-    this.skin = SkinType.DUNGEON;
-    if (this.type === RoomType.ROPECAVE || this.type === RoomType.CAVE)
-      this.skin = SkinType.CAVE;
-    this.buildEmptyRoom();
-  }
 
   addDoor = (x: number, y: number) => {
     let d;
@@ -1133,11 +1086,14 @@ export class Room {
   fadeLighting = (delta: number) => {
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
-        if (Math.abs(this.softVis[x][y] - this.vis[x][y]) >= 0.02) {
-          if (this.softVis[x][y] < this.vis[x][y]) this.softVis[x][y] += 0.005;
+        const visDiff = Math.abs(this.softVis[x][y] - this.vis[x][y]);
+        if (visDiff >= 0.05) {
+          if (this.softVis[x][y] < this.vis[x][y])
+            this.softVis[x][y] += (visDiff / 10) * delta;
           else if (this.softVis[x][y] > this.vis[x][y])
-            this.softVis[x][y] -= 0.02 * delta;
+            this.softVis[x][y] -= (visDiff / 10) * delta;
         }
+
         // if (this.softVis[x][y] < 0.01) this.softVis[x][y] = 0;
       }
     }
@@ -1146,27 +1102,30 @@ export class Room {
   fadeRgb = (delta: number) => {
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
-        let diffR = Math.abs(this.softCol[x][y][0] - this.col[x][y][0]);
-        if (diffR >= 10) {
-          if (this.softCol[x][y][0] < this.col[x][y][0])
-            this.softCol[x][y][0] += 10 * delta;
-          else if (this.softCol[x][y][0] > this.col[x][y][0])
-            this.softCol[x][y][0] -= 10 * delta;
+        const linearSoftCol = this.softCol[x][y];
+        const linearCol = this.col[x][y];
+        let diffR = Math.abs(linearCol[0] - linearSoftCol[0]);
+        if (diffR >= 8) {
+          if (linearSoftCol[0] < linearCol[0])
+            linearSoftCol[0] += (diffR / 2) * delta;
+          else if (linearSoftCol[0] > linearCol[0])
+            linearSoftCol[0] -= (diffR / 2) * delta;
         }
-        let diffG = Math.abs(this.softCol[x][y][1] - this.col[x][y][1]);
-        if (diffG >= 10) {
-          if (this.softCol[x][y][1] < this.col[x][y][1])
-            this.softCol[x][y][1] += 10 * delta;
-          else if (this.softCol[x][y][1] > this.col[x][y][1])
-            this.softCol[x][y][1] -= 10 * delta;
+        let diffG = Math.abs(linearCol[1] - linearSoftCol[1]);
+        if (diffG >= 8) {
+          if (linearSoftCol[1] < linearCol[1])
+            linearSoftCol[1] += (diffG / 2) * delta;
+          else if (linearSoftCol[1] > linearCol[1])
+            linearSoftCol[1] -= (diffG / 2) * delta;
         }
-        let diffB = Math.abs(this.softCol[x][y][2] - this.col[x][y][2]);
-        if (diffB >= 10) {
-          if (this.softCol[x][y][2] < this.col[x][y][2])
-            this.softCol[x][y][2] += 10 * delta;
-          else if (this.softCol[x][y][2] > this.col[x][y][2])
-            this.softCol[x][y][2] -= 10 * delta;
+        let diffB = Math.abs(linearCol[2] - linearSoftCol[2]);
+        if (diffB >= 8) {
+          if (linearSoftCol[2] < linearCol[2])
+            linearSoftCol[2] += (diffB / 2) * delta;
+          else if (linearSoftCol[2] > linearCol[2])
+            linearSoftCol[2] -= (diffB / 2) * delta;
         }
+        this.softCol[x][y] = linearSoftCol;
       }
     }
   };
@@ -1205,7 +1164,8 @@ export class Room {
         for (let i = 0; i < 360; i += LevelConstants.LIGHTING_ANGLE_STEP) {
           let lightColor = LevelConstants.AMBIENT_LIGHT_COLOR;
 
-          if (player.lightEquipped) lightColor = LevelConstants.TORCH_LIGHT_COLOR;
+          if (player.lightEquipped)
+            lightColor = LevelConstants.TORCH_LIGHT_COLOR;
           this.castTintAtAngle(
             i,
             player.x + 0.5,
@@ -1319,7 +1279,7 @@ export class Room {
       if (i === 0) {
         intensity = brightness * 0.1; // Full intensity at the light source tile adjusted by brightness
       } else {
-        intensity = brightness / (Math.E ** (i)); // Exponential falloff with distance
+        intensity = brightness / Math.E ** i; // Exponential falloff with distance
       }
       if (intensity < 0.001) intensity = 0;
 
@@ -1564,12 +1524,13 @@ export class Room {
     if (enemies.length === 0 && this.lastEnemyCount > 0) {
       // if (this.doors[0].type === DoorType.GUARDEDDOOR) {
       this.doors.forEach((d) => {
-        d.unGuard();
+        if (d.type === DoorType.GUARDEDDOOR) {
+          d.unGuard();
+          this.game.pushMessage(
+            "The foes have been slain and the door allows you passage."
+          );
+        }
       });
-      this.game.pushMessage(
-        "The foes have been slain and the door allows you passage."
-      );
-      // }
     }
   };
 

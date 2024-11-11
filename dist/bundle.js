@@ -4640,6 +4640,15 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
+var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
+    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+        if (ar || !(i in from)) {
+            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+            ar[i] = from[i];
+        }
+    }
+    return to.concat(ar || Array.prototype.slice.call(from));
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Entity = exports.EntityType = exports.EntityDirection = void 0;
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
@@ -5082,23 +5091,16 @@ var Entity = /** @class */ (function (_super) {
         _this.diagonalAttackRange = 1;
         return _this;
     }
+    Entity.add = function (room, game, x, y) {
+        var rest = [];
+        for (var _i = 4; _i < arguments.length; _i++) {
+            rest[_i - 4] = arguments[_i];
+        }
+        room.entities.push(new (this.bind.apply(this, __spreadArray([void 0, room, game, x, y], rest, false)))());
+    };
     Object.defineProperty(Entity.prototype, "type", {
         get: function () {
             return EntityType.ENEMY;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    Object.defineProperty(Entity.prototype, "crushXoffset", {
-        get: function () {
-            return this.crushX;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    Object.defineProperty(Entity.prototype, "crushYoffset", {
-        get: function () {
-            return this.crushY;
         },
         enumerable: false,
         configurable: true
@@ -7320,7 +7322,13 @@ var game = new Game();
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GameConstants = void 0;
+var armor_1 = __webpack_require__(/*! ./item/armor */ "./src/item/armor.ts");
+var candle_1 = __webpack_require__(/*! ./item/candle */ "./src/item/candle.ts");
+var key_1 = __webpack_require__(/*! ./item/key */ "./src/item/key.ts");
+var torch_1 = __webpack_require__(/*! ./item/torch */ "./src/item/torch.ts");
 var levelConstants_1 = __webpack_require__(/*! ./levelConstants */ "./src/levelConstants.ts");
+var dagger_1 = __webpack_require__(/*! ./weapon/dagger */ "./src/weapon/dagger.ts");
+var spellbook_1 = __webpack_require__(/*! ./weapon/spellbook */ "./src/weapon/spellbook.ts");
 var GameConstants = /** @class */ (function () {
     function GameConstants() {
     }
@@ -7351,6 +7359,14 @@ var GameConstants = /** @class */ (function () {
     GameConstants.HIT_ENEMY_TEXT_COLOR = "#76428a";
     GameConstants.HEALTH_BUFF_COLOR = "#d77bba";
     GameConstants.MISS_COLOR = "#639bff";
+    GameConstants.STARTING_INVENTORY = [dagger_1.Dagger, candle_1.Candle];
+    GameConstants.STARTING_DEV_INVENTORY = [
+        dagger_1.Dagger,
+        armor_1.Armor,
+        torch_1.Torch,
+        spellbook_1.Spellbook,
+        key_1.Key,
+    ];
     return GameConstants;
 }());
 exports.GameConstants = GameConstants;
@@ -10546,8 +10562,8 @@ var LevelConstants = /** @class */ (function () {
     LevelConstants.LEVEL_TRANSITION_TIME_LADDER = 1000; // milliseconds
     LevelConstants.ROOM_COUNT = 50;
     LevelConstants.HEALTH_BAR_FADEIN = 100;
-    LevelConstants.HEALTH_BAR_FADEOUT = 100;
-    LevelConstants.HEALTH_BAR_TOTALTIME = 1000;
+    LevelConstants.HEALTH_BAR_FADEOUT = 350;
+    LevelConstants.HEALTH_BAR_TOTALTIME = 2000;
     LevelConstants.SHADED_TILE_CUTOFF = 1;
     LevelConstants.SMOOTH_LIGHTING = false; //doesn't work
     LevelConstants.MIN_VISIBILITY = 0; // visibility level of places you've already seen
@@ -11173,12 +11189,6 @@ var LightSource = /** @class */ (function () {
         this.c = c;
         this.b = b;
     }
-    LightSource.add = function (room, lightSource) {
-        room.lightSources.push(lightSource);
-    };
-    LightSource.remove = function (room, lightSource) {
-        room.lightSources = room.lightSources.filter(function (ls) { return ls !== lightSource; });
-    };
     return LightSource;
 }());
 exports.LightSource = LightSource;
@@ -11926,7 +11936,6 @@ var drawable_1 = __webpack_require__(/*! ./drawable */ "./src/drawable.ts");
 var hitWarning_1 = __webpack_require__(/*! ./hitWarning */ "./src/hitWarning.ts");
 var postProcess_1 = __webpack_require__(/*! ./postProcess */ "./src/postProcess.ts");
 var mouseCursor_1 = __webpack_require__(/*! ./mouseCursor */ "./src/mouseCursor.ts");
-var light_1 = __webpack_require__(/*! ./item/light */ "./src/item/light.ts");
 var PlayerDirection;
 (function (PlayerDirection) {
     PlayerDirection[PlayerDirection["DOWN"] = 0] = "DOWN";
@@ -12313,6 +12322,8 @@ var Player = /** @class */ (function (_super) {
                 _this.healthBar.hurt();
                 _this.flashing = true;
                 _this.health -= damage;
+                _this.hurting = true;
+                _this.hurtAlpha = 0.5;
                 if (_this.health <= 0) {
                     _this.dead = true;
                 }
@@ -12479,11 +12490,24 @@ var Player = /** @class */ (function (_super) {
                 game_1.Game.fillText(restartButton, gameConstants_1.GameConstants.WIDTH / 2 - game_1.Game.measureText(restartButton).width / 2, gameConstants_1.GameConstants.HEIGHT / 2 + game_1.Game.letter_height + 5);
             }
             postProcess_1.PostProcessor.draw(delta);
-            light_1.Light.drawTint(delta);
+            if (_this.hurting)
+                _this.drawHurt(delta);
             if (_this.mapToggled === true)
                 _this.map.draw(delta);
             //this.drawTileCursor(delta);
             _this.drawInventoryButton(delta);
+        };
+        _this.drawHurt = function (delta) {
+            game_1.Game.ctx.globalAlpha = _this.hurtAlpha;
+            _this.hurtAlpha -= (_this.hurtAlpha / 10) * delta;
+            if (_this.hurtAlpha <= 0.03) {
+                _this.hurtAlpha = 0;
+                _this.hurting = false;
+            }
+            game_1.Game.ctx.globalCompositeOperation = "screen";
+            game_1.Game.ctx.fillStyle = "#cc3333"; // bright but not fully saturated red
+            game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
+            game_1.Game.ctx.globalCompositeOperation = "source-over";
         };
         _this.updateDrawXY = function (delta) {
             if (!_this.doneMoving()) {
@@ -12566,6 +12590,8 @@ var Player = /** @class */ (function (_super) {
         _this.tileCursor = { x: 0, y: 0 };
         _this.moveRange = 1;
         _this.lightEquipped = false;
+        _this.hurting = false;
+        _this.hurtAlpha = 0.5;
         return _this;
     }
     Object.defineProperty(Player.prototype, "angle", {
@@ -13082,28 +13108,6 @@ var Room = /** @class */ (function () {
         this.tileInside = function (tileX, tileY) {
             return _this.pointInside(tileX, tileY, _this.roomX, _this.roomY, _this.width, _this.height);
         };
-        this.generateLevelTable = function (rand) {
-            var table = [];
-            var e;
-            for (var i = 0; i <= game_1.Game.rand(2, 5, rand); i++) {
-                e = game_1.Game.rand(1, 2, rand);
-                table.push(e);
-            }
-            return table;
-        };
-        this.createSavePoint = function () {
-            //duplicate of the instance of the room exactly with json parsing but no circular references
-            var saveRoom = JSON.parse(JSON.stringify(_this));
-            _this.game.rooms.push(saveRoom);
-            _this.savePoint = saveRoom;
-        };
-        this.loadSavePoint = function () {
-            //load the save point
-            var saveRoom = _this.game.rooms.find(function (r) { return r.savePoint; });
-            if (saveRoom) {
-                _this.game.changeLevel(_this.game.players[0], saveRoom);
-            }
-        };
         this.populateEmpty = function (rand) {
             _this.addRandomTorches("medium");
         };
@@ -13112,8 +13116,6 @@ var Room = /** @class */ (function () {
             var factor = game_1.Game.rand(1, 36, rand);
             if (factor < 30)
                 _this.addWallBlocks(rand);
-            if (factor < 26)
-                _this.addFingers(rand);
             if (factor % 4 === 0)
                 _this.addChasms(rand);
             _this.addRandomTorches("medium");
@@ -13165,7 +13167,7 @@ var Room = /** @class */ (function () {
         };
         this.populateSpawner = function (rand) {
             _this.addRandomTorches("medium");
-            _this.entities.push(new spawner_1.Spawner(_this, _this.game, Math.floor(_this.roomX + _this.width / 2), Math.floor(_this.roomY + _this.height / 2)));
+            spawner_1.Spawner.add(_this, _this.game, Math.floor(_this.roomX + _this.width / 2), Math.floor(_this.roomY + _this.height / 2));
         };
         this.populateKeyRoom = function (rand) {
             _this.addRandomTorches("medium");
@@ -13233,7 +13235,6 @@ var Room = /** @class */ (function () {
             _this.addChests(game_1.Game.randTable([4, 4, 5, 5, 5, 6, 8], rand), rand);
             _this.addPlants(game_1.Game.randTable([0, 1, 2, 4, 5, 6], rand), rand);
         };
-        this.populateChessboard = function (rand) { };
         this.populateCave = function (rand) {
             var factor = game_1.Game.rand(1, 36, rand);
             _this.addWallBlocks(rand);
@@ -13270,10 +13271,10 @@ var Room = /** @class */ (function () {
         this.populateShop = function (rand) {
             _this.addTorches(2, rand);
             var _a = _this.getRoomCenter(), x = _a.x, y = _a.y;
-            _this.entities.push(new vendingMachine_1.VendingMachine(_this, _this.game, x - 2, y - 1, new shotgun_1.Shotgun(_this, 0, 0)));
-            _this.entities.push(new vendingMachine_1.VendingMachine(_this, _this.game, x + 2, y - 1, new heart_1.Heart(_this, 0, 0)));
-            _this.entities.push(new vendingMachine_1.VendingMachine(_this, _this.game, x - 2, y + 2, new armor_1.Armor(_this, 0, 0)));
-            _this.entities.push(new vendingMachine_1.VendingMachine(_this, _this.game, x + 2, y + 2, new spear_1.Spear(_this, 0, 0)));
+            vendingMachine_1.VendingMachine.add(_this, _this.game, x - 2, y - 1, new shotgun_1.Shotgun(_this, 0, 0));
+            vendingMachine_1.VendingMachine.add(_this, _this.game, x + 2, y - 1, new heart_1.Heart(_this, 0, 0));
+            vendingMachine_1.VendingMachine.add(_this, _this.game, x - 2, y + 2, new armor_1.Armor(_this, 0, 0));
+            vendingMachine_1.VendingMachine.add(_this, _this.game, x + 2, y + 2, new spear_1.Spear(_this, 0, 0));
         };
         this.populate = function (rand) {
             _this.name = "";
@@ -13306,9 +13307,6 @@ var Room = /** @class */ (function () {
                     break;
                 case RoomType.TREASURE:
                     _this.populateTreasure(rand);
-                    break;
-                case RoomType.CHESSBOARD: // TODO
-                    _this.populateChessboard(rand);
                     break;
                 case RoomType.KEYROOM:
                     _this.populateKeyRoom(rand);
@@ -13464,11 +13462,12 @@ var Room = /** @class */ (function () {
         this.fadeLighting = function (delta) {
             for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
                 for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
-                    if (Math.abs(_this.softVis[x][y] - _this.vis[x][y]) >= 0.02) {
+                    var visDiff = Math.abs(_this.softVis[x][y] - _this.vis[x][y]);
+                    if (visDiff >= 0.05) {
                         if (_this.softVis[x][y] < _this.vis[x][y])
-                            _this.softVis[x][y] += 0.005;
+                            _this.softVis[x][y] += (visDiff / 10) * delta;
                         else if (_this.softVis[x][y] > _this.vis[x][y])
-                            _this.softVis[x][y] -= 0.02 * delta;
+                            _this.softVis[x][y] -= (visDiff / 10) * delta;
                     }
                     // if (this.softVis[x][y] < 0.01) this.softVis[x][y] = 0;
                 }
@@ -13477,27 +13476,30 @@ var Room = /** @class */ (function () {
         this.fadeRgb = function (delta) {
             for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
                 for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
-                    var diffR = Math.abs(_this.softCol[x][y][0] - _this.col[x][y][0]);
-                    if (diffR >= 10) {
-                        if (_this.softCol[x][y][0] < _this.col[x][y][0])
-                            _this.softCol[x][y][0] += 10 * delta;
-                        else if (_this.softCol[x][y][0] > _this.col[x][y][0])
-                            _this.softCol[x][y][0] -= 10 * delta;
+                    var linearSoftCol = _this.softCol[x][y];
+                    var linearCol = _this.col[x][y];
+                    var diffR = Math.abs(linearCol[0] - linearSoftCol[0]);
+                    if (diffR >= 8) {
+                        if (linearSoftCol[0] < linearCol[0])
+                            linearSoftCol[0] += (diffR / 2) * delta;
+                        else if (linearSoftCol[0] > linearCol[0])
+                            linearSoftCol[0] -= (diffR / 2) * delta;
                     }
-                    var diffG = Math.abs(_this.softCol[x][y][1] - _this.col[x][y][1]);
-                    if (diffG >= 10) {
-                        if (_this.softCol[x][y][1] < _this.col[x][y][1])
-                            _this.softCol[x][y][1] += 10 * delta;
-                        else if (_this.softCol[x][y][1] > _this.col[x][y][1])
-                            _this.softCol[x][y][1] -= 10 * delta;
+                    var diffG = Math.abs(linearCol[1] - linearSoftCol[1]);
+                    if (diffG >= 8) {
+                        if (linearSoftCol[1] < linearCol[1])
+                            linearSoftCol[1] += (diffG / 2) * delta;
+                        else if (linearSoftCol[1] > linearCol[1])
+                            linearSoftCol[1] -= (diffG / 2) * delta;
                     }
-                    var diffB = Math.abs(_this.softCol[x][y][2] - _this.col[x][y][2]);
-                    if (diffB >= 10) {
-                        if (_this.softCol[x][y][2] < _this.col[x][y][2])
-                            _this.softCol[x][y][2] += 10 * delta;
-                        else if (_this.softCol[x][y][2] > _this.col[x][y][2])
-                            _this.softCol[x][y][2] -= 10 * delta;
+                    var diffB = Math.abs(linearCol[2] - linearSoftCol[2]);
+                    if (diffB >= 8) {
+                        if (linearSoftCol[2] < linearCol[2])
+                            linearSoftCol[2] += (diffB / 2) * delta;
+                        else if (linearSoftCol[2] > linearCol[2])
+                            linearSoftCol[2] -= (diffB / 2) * delta;
                     }
+                    _this.softCol[x][y] = linearSoftCol;
                 }
             }
         };
@@ -13611,7 +13613,7 @@ var Room = /** @class */ (function () {
                     intensity = brightness * 0.1; // Full intensity at the light source tile adjusted by brightness
                 }
                 else {
-                    intensity = brightness / (Math.pow(Math.E, (i))); // Exponential falloff with distance
+                    intensity = brightness / Math.pow(Math.E, i); // Exponential falloff with distance
                 }
                 if (intensity < 0.001)
                     intensity = 0;
@@ -13820,10 +13822,11 @@ var Room = /** @class */ (function () {
             if (enemies.length === 0 && _this.lastEnemyCount > 0) {
                 // if (this.doors[0].type === DoorType.GUARDEDDOOR) {
                 _this.doors.forEach(function (d) {
-                    d.unGuard();
+                    if (d.type === door_1.DoorType.GUARDEDDOOR) {
+                        d.unGuard();
+                        _this.game.pushMessage("The foes have been slain and the door allows you passage.");
+                    }
                 });
-                _this.game.pushMessage("The foes have been slain and the door allows you passage.");
-                // }
             }
         };
         this.draw = function (delta) {
@@ -14052,7 +14055,6 @@ var Room = /** @class */ (function () {
             }
         }
     };
-    Room.prototype.addFingers = function (rand) { };
     Room.prototype.addTorches = function (numTorches, rand) {
         var walls = [];
         for (var xx = this.roomX + 1; xx < this.roomX + this.width - 2; xx++) {
@@ -14157,7 +14159,7 @@ var Room = /** @class */ (function () {
             var _b = this_1.getRandomEmptyPosition(tiles), x = _b.x, y = _b.y;
             // Define the enemy tables for each depth level
             var tables = {
-                0: [1, 5, 3, 16],
+                0: [1, 4, 3],
                 1: [3, 4, 5, 9, 7],
                 2: [3, 4, 5, 7, 8, 9, 12],
                 3: [1, 2, 3, 5, 6, 7, 8, 9, 10],
@@ -14203,31 +14205,31 @@ var Room = /** @class */ (function () {
                 // Add the selected enemy type to the room
                 switch (type) {
                     case 1:
-                        addEnemy(new crabEnemy_1.CrabEnemy(this_1, this_1.game, x, y));
+                        crabEnemy_1.CrabEnemy.add(this_1, this_1.game, x, y);
                         break;
                     case 2:
-                        addEnemy(new frogEnemy_1.FrogEnemy(this_1, this_1.game, x, y));
+                        frogEnemy_1.FrogEnemy.add(this_1, this_1.game, x, y);
                         break;
                     case 3:
-                        addEnemy(new zombieEnemy_1.ZombieEnemy(this_1, this_1.game, x, y));
+                        zombieEnemy_1.ZombieEnemy.add(this_1, this_1.game, x, y);
                         break;
                     case 4:
-                        addEnemy(new skullEnemy_1.SkullEnemy(this_1, this_1.game, x, y));
+                        skullEnemy_1.SkullEnemy.add(this_1, this_1.game, x, y);
                         break;
                     case 5:
-                        addEnemy(new energyWizard_1.EnergyWizardEnemy(this_1, this_1.game, x, y));
+                        energyWizard_1.EnergyWizardEnemy.add(this_1, this_1.game, x, y);
                         break;
                     case 6:
-                        addEnemy(new chargeEnemy_1.ChargeEnemy(this_1, this_1.game, x, y));
+                        chargeEnemy_1.ChargeEnemy.add(this_1, this_1.game, x, y);
                         break;
                     case 7:
-                        addEnemy(new spawner_1.Spawner(this_1, this_1.game, x, y));
+                        spawner_1.Spawner.add(this_1, this_1.game, x, y);
                         break;
                     case 8:
-                        addEnemy(new bishopEnemy_1.BishopEnemy(this_1, this_1.game, x, y));
+                        bishopEnemy_1.BishopEnemy.add(this_1, this_1.game, x, y);
                         break;
                     case 9:
-                        addEnemy(new armoredzombieEnemy_1.ArmoredzombieEnemy(this_1, this_1.game, x, y));
+                        armoredzombieEnemy_1.ArmoredzombieEnemy.add(this_1, this_1.game, x, y);
                         break;
                     case 10:
                         if (addEnemy(new bigSkullEnemy_1.BigSkullEnemy(this_1, this_1.game, x, y))) {
@@ -14240,10 +14242,10 @@ var Room = /** @class */ (function () {
                         }
                         break;
                     case 11:
-                        addEnemy(new queenEnemy_1.QueenEnemy(this_1, this_1.game, x, y));
+                        queenEnemy_1.QueenEnemy.add(this_1, this_1.game, x, y);
                         break;
                     case 12:
-                        addEnemy(new knightEnemy_1.KnightEnemy(this_1, this_1.game, x, y));
+                        knightEnemy_1.KnightEnemy.add(this_1, this_1.game, x, y);
                         break;
                     case 13:
                         if (addEnemy(new bigKnightEnemy_1.BigKnightEnemy(this_1, this_1.game, x, y))) {
@@ -14256,13 +14258,13 @@ var Room = /** @class */ (function () {
                         }
                         break;
                     case 14:
-                        addEnemy(new sniperEnemy_1.SniperEnemy(this_1, this_1.game, x, y));
+                        sniperEnemy_1.SniperEnemy.add(this_1, this_1.game, x, y);
                         break;
                     case 15:
-                        addEnemy(new zombieEnemy_1.ZombieEnemy(this_1, this_1.game, x, y));
+                        zombieEnemy_1.ZombieEnemy.add(this_1, this_1.game, x, y);
                         break;
                     case 16:
-                        addEnemy(new fireWizard_1.FireWizardEnemy(this_1, this_1.game, x, y));
+                        fireWizard_1.FireWizardEnemy.add(this_1, this_1.game, x, y);
                         break;
                 }
             }
@@ -14280,19 +14282,19 @@ var Room = /** @class */ (function () {
             var _a = this.getRandomEmptyPosition(tiles), x = _a.x, y = _a.y;
             switch (game_1.Game.randTable([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 5, 5, 5], rand)) {
                 case 1:
-                    this.entities.push(new crate_1.Crate(this, this.game, x, y));
+                    crate_1.Crate.add(this, this.game, x, y);
                     break;
                 case 2:
-                    this.entities.push(new barrel_1.Barrel(this, this.game, x, y));
+                    barrel_1.Barrel.add(this, this.game, x, y);
                     break;
                 case 3:
-                    this.entities.push(new tombStone_1.TombStone(this, this.game, x, y, 1));
+                    tombStone_1.TombStone.add(this, this.game, x, y, 1);
                     break;
                 case 4:
-                    this.entities.push(new tombStone_1.TombStone(this, this.game, x, y, 0));
+                    tombStone_1.TombStone.add(this, this.game, x, y, 0);
                     break;
                 case 5:
-                    this.entities.push(new pumpkin_1.Pumpkin(this, this.game, x, y));
+                    pumpkin_1.Pumpkin.add(this, this.game, x, y);
                     break;
             }
         }
@@ -14303,15 +14305,15 @@ var Room = /** @class */ (function () {
             var _a = this.getRandomEmptyPosition(tiles), x = _a.x, y = _a.y;
             var r = rand();
             if (r <= 0.45)
-                this.entities.push(new pottedPlant_1.PottedPlant(this, this.game, x, y));
+                pottedPlant_1.PottedPlant.add(this, this.game, x, y);
             else if (r <= 0.65)
-                this.entities.push(new pot_1.Pot(this, this.game, x, y));
+                pot_1.Pot.add(this, this.game, x, y);
             else if (r <= 0.75)
-                this.entities.push(new rockResource_1.Rock(this, this.game, x, y));
+                rockResource_1.Rock.add(this, this.game, x, y);
             else if (r <= 0.97)
-                this.entities.push(new mushrooms_1.Mushrooms(this, this.game, x, y));
+                mushrooms_1.Mushrooms.add(this, this.game, x, y);
             else
-                this.entities.push(new chest_1.Chest(this, this.game, x, y));
+                chest_1.Chest.add(this, this.game, x, y);
         }
     };
     Room.prototype.addResources = function (numResources, rand) {
@@ -14320,11 +14322,11 @@ var Room = /** @class */ (function () {
             var _a = this.getRandomEmptyPosition(tiles), x = _a.x, y = _a.y;
             var r = rand();
             if (r <= (10 - Math.pow(this.depth, 3)) / 10)
-                this.entities.push(new coalResource_1.CoalResource(this, this.game, x, y));
+                coalResource_1.CoalResource.add(this, this.game, x, y);
             else if (r <= (10 - Math.pow((this.depth - 2), 3)) / 10)
-                this.entities.push(new goldResource_1.GoldResource(this, this.game, x, y));
+                goldResource_1.GoldResource.add(this, this.game, x, y);
             else
-                this.entities.push(new emeraldResource_1.EmeraldResource(this, this.game, x, y));
+                emeraldResource_1.EmeraldResource.add(this, this.game, x, y);
         }
     };
     Room.prototype.addVendingMachine = function (rand) {
@@ -14332,22 +14334,22 @@ var Room = /** @class */ (function () {
         var type = game_1.Game.randTable([1, 1, 1, 1, 1, 1, 1, 2, 3, 4, 5, 6], rand);
         switch (type) {
             case 1:
-                this.entities.push(new vendingMachine_1.VendingMachine(this, this.game, x, y, new heart_1.Heart(this, 0, 0)));
+                vendingMachine_1.VendingMachine.add(this, this.game, x, y, new heart_1.Heart(this, 0, 0));
                 break;
             case 2:
-                this.entities.push(new vendingMachine_1.VendingMachine(this, this.game, x, y, new lantern_1.Lantern(this, 0, 0)));
+                vendingMachine_1.VendingMachine.add(this, this.game, x, y, new lantern_1.Lantern(this, 0, 0));
                 break;
             case 3:
-                this.entities.push(new vendingMachine_1.VendingMachine(this, this.game, x, y, new armor_1.Armor(this, 0, 0)));
+                vendingMachine_1.VendingMachine.add(this, this.game, x, y, new armor_1.Armor(this, 0, 0));
                 break;
             case 4:
-                this.entities.push(new vendingMachine_1.VendingMachine(this, this.game, x, y, new dualdagger_1.DualDagger(this, 0, 0)));
+                vendingMachine_1.VendingMachine.add(this, this.game, x, y, new dualdagger_1.DualDagger(this, 0, 0));
                 break;
             case 5:
-                this.entities.push(new vendingMachine_1.VendingMachine(this, this.game, x, y, new spear_1.Spear(this, 0, 0)));
+                vendingMachine_1.VendingMachine.add(this, this.game, x, y, new spear_1.Spear(this, 0, 0));
                 break;
             case 6:
-                this.entities.push(new vendingMachine_1.VendingMachine(this, this.game, x, y, new shotgun_1.Shotgun(this, 0, 0)));
+                vendingMachine_1.VendingMachine.add(this, this.game, x, y, new shotgun_1.Shotgun(this, 0, 0));
                 break;
         }
     };
@@ -14455,7 +14457,6 @@ var Room = /** @class */ (function () {
             }
         }
     };
-    Room.LIGHT_RESOLUTION = 1; // Default resolution
     return Room;
 }());
 exports.Room = Room;

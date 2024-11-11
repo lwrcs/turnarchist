@@ -20,14 +20,6 @@ export class LightSource {
     this.b = b;
   }
 
-  static add = (room: Room, lightSource: LightSource) => {
-    room.lightSources.push(lightSource);
-  };
-
-  static remove = (room: Room, lightSource: LightSource) => {
-    room.lightSources = room.lightSources.filter((ls) => ls !== lightSource);
-  };
-
   updatePosition = (x: number, y: number) => {
     this.x = x;
     this.y = y;

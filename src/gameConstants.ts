@@ -1,4 +1,10 @@
+import { Armor } from "./item/armor";
+import { Candle } from "./item/candle";
+import { Key } from "./item/key";
+import { Torch } from "./item/torch";
 import { LevelConstants } from "./levelConstants";
+import { Dagger } from "./weapon/dagger";
+import { Spellbook } from "./weapon/spellbook";
 
 export class GameConstants {
   static readonly VERSION = "v0.6.3";
@@ -36,4 +42,13 @@ export class GameConstants {
   static readonly HIT_ENEMY_TEXT_COLOR = "#76428a";
   static readonly HEALTH_BUFF_COLOR = "#d77bba";
   static readonly MISS_COLOR = "#639bff";
+
+  static readonly STARTING_INVENTORY = [Dagger, Candle];
+  static readonly STARTING_DEV_INVENTORY = [
+    Dagger,
+    Armor,
+    Torch,
+    Spellbook,
+    Key,
+  ];
 }

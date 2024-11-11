@@ -16,6 +16,7 @@ import { Projectile } from "../projectile/projectile";
 import { Utils } from "../utils";
 import { globalEventBus } from "../eventBus";
 import { LightSource } from "../lightSource";
+import { ZombieEnemy } from "./enemy/zombieEnemy";
 
 export enum EntityDirection {
   DOWN,
@@ -124,6 +125,18 @@ export class Entity extends Drawable {
     this.forwardOnlyAttack = false;
     this.attackRange = 1;
     this.diagonalAttackRange = 1;
+  }
+
+  static add<
+    T extends new (
+      room: Room,
+      game: Game,
+      x: number,
+      y: number,
+      ...rest: any[]
+    ) => Entity
+  >(this: T, room: Room, game: Game, x: number, y: number, ...rest: any[]) {
+    room.entities.push(new this(room, game, x, y, ...rest));
   }
 
   addLightSource = (lightSource: LightSource) => {
@@ -435,14 +448,6 @@ export class Entity extends Drawable {
     }
     return rumbleOffset;
   };
-
-  get crushXoffset() {
-    return this.crushX;
-  }
-
-  get crushYoffset() {
-    return this.crushY;
-  }
 
   attemptProjectilePlacement = (
     offsets: { x: number; y: number }[],
