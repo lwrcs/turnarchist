@@ -7362,7 +7362,7 @@ var GameConstants = /** @class */ (function () {
     function GameConstants() {
     }
     GameConstants.VERSION = "v0.6.3";
-    GameConstants.DEVELOPER_MODE = true;
+    GameConstants.DEVELOPER_MODE = false;
     GameConstants.FPS = 120;
     GameConstants.ALPHA_ENABLED = true;
     GameConstants.SHADE_LEVELS = 25;
@@ -9589,11 +9589,11 @@ var Candle = /** @class */ (function (_super) {
     __extends(Candle, _super);
     function Candle(level, x, y) {
         var _this = _super.call(this, level, x, y) || this;
-        _this.fuel = 5; //how many turns before it burns out
+        _this.fuel = 100; //how many turns before it burns out
         _this.tileX = 27;
         _this.tileY = 0;
         _this.name = "candle";
-        _this.fuelCap = 250;
+        _this.fuelCap = 100;
         _this.maxRadius = 4;
         _this.minRadius = 2;
         return _this;
@@ -12689,8 +12689,8 @@ var Player = /** @class */ (function (_super) {
             });
         }
         _this.mapToggled = true;
-        _this.health = 300;
-        _this.maxHealth = 300;
+        _this.health = 3;
+        _this.maxHealth = 3;
         _this.healthBar = new healthbar_1.HealthBar();
         _this.dead = false;
         _this.flashing = false;
@@ -13647,7 +13647,7 @@ var Room = /** @class */ (function () {
             for (var p in _this.game.players) {
                 var player = _this.game.players[p];
                 if (_this === _this.game.rooms[player.levelID]) {
-                    console.log("i: ".concat(player.angle));
+                    //console.log(`i: ${player.angle}`);
                     var viewAngle = 360;
                     var viewAngleEnd = player.angle + viewAngle / 2;
                     var offsetX = player.angle === 0 ? 0.7 : player.angle === 180 ? -0.7 : 0;
@@ -13706,7 +13706,7 @@ var Room = /** @class */ (function () {
             }
         };
         this.revertLightSources = function () {
-            console.log("reverting lighting");
+            //console.log("reverting lighting");
             _this.oldCol = [];
             _this.oldVis = [];
             _this.col = _this.oldCol;
@@ -14022,7 +14022,7 @@ var Room = /** @class */ (function () {
             _this.clearDeadStuff();
             _this.playerTicked.finishTick();
             _this.checkForNoEnemies();
-            console.log(_this.entities.filter(function (e) { return e instanceof enemy_1.Enemy; }).length);
+            //console.log(this.entities.filter((e) => e instanceof Enemy).length);
             _this.turn = TurnState.playerTurn;
         };
         this.checkForNoEnemies = function () {

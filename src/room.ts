@@ -1156,7 +1156,7 @@ export class Room {
     for (const p in this.game.players) {
       let player = this.game.players[p];
       if (this === this.game.rooms[player.levelID]) {
-        console.log(`i: ${player.angle}`);
+        //console.log(`i: ${player.angle}`);
         let viewAngle = 360;
         let viewAngleEnd = player.angle + viewAngle / 2;
         const offsetX =
@@ -1246,7 +1246,7 @@ export class Room {
     }
   };
   revertLightSources = () => {
-    console.log("reverting lighting");
+    //console.log("reverting lighting");
     this.oldCol = [];
     this.oldVis = [];
     this.col = this.oldCol;
@@ -1632,7 +1632,7 @@ export class Room {
     this.playerTicked.finishTick();
 
     this.checkForNoEnemies();
-    console.log(this.entities.filter((e) => e instanceof Enemy).length);
+    //console.log(this.entities.filter((e) => e instanceof Enemy).length);
 
     this.turn = TurnState.playerTurn;
   };

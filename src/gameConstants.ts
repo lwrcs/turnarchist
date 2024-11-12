@@ -14,7 +14,7 @@ import { Warhammer } from "./weapon/warhammer";
 
 export class GameConstants {
   static readonly VERSION = "v0.6.3";
-  static readonly DEVELOPER_MODE = true;
+  static readonly DEVELOPER_MODE = false;
 
   static readonly FPS = 120;
   static readonly ALPHA_ENABLED = true;

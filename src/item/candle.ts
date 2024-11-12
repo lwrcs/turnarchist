@@ -11,11 +11,11 @@ import { Light } from "./light";
 export class Candle extends Light {
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
-    this.fuel = 5; //how many turns before it burns out
+    this.fuel = 100; //how many turns before it burns out
     this.tileX = 27;
     this.tileY = 0;
     this.name = "candle";
-    this.fuelCap = 250;
+    this.fuelCap = 100;
     this.maxRadius = 4;
     this.minRadius = 2;
   }
