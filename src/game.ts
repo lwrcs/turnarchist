@@ -98,7 +98,10 @@ export class Game {
   static itemset: HTMLImageElement;
   static fxset: HTMLImageElement;
   static fontsheet: HTMLImageElement;
-
+  isMobile: boolean;
+  started: boolean;
+  startedFadeOut: boolean;
+  private startScreenAlpha = 1;
 
   static text_rendering_canvases: Record<string, HTMLCanvasElement>;
   static readonly letters = "abcdefghijklmnopqrstuvwxyz1234567890,.!?:'()[]%-/";
@@ -280,6 +283,7 @@ export class Game {
       };
       checkResourcesLoaded();
     });
+    this.started = false;
     this.tutorialListener = new TutorialListener(this);
   }
 
@@ -288,9 +292,18 @@ export class Game {
     gs.seed = (Math.random() * 4294967296) >>> 0;
     gs.randomState = (Math.random() * 4294967296) >>> 0;
     loadGameState(this, [this.localPlayerID], gs, true);
-  }
+  };
+
+  startGame = () => {
+    this.started = true;
+    Sound.ambientSound.play();
+  };
 
   keyDownListener = (key: string) => {
+    if (!this.started) {
+      this.startedFadeOut = true;
+      return;
+    }
     if (!this.chatOpen) {
       switch (key.toUpperCase()) {
         case "C":
@@ -396,8 +409,7 @@ export class Game {
   };
 
   run = (timestamp: number) => {
-    if (!this.previousFrameTimestamp)
-      this.previousFrameTimestamp = timestamp// - 1000.0 / GameConstants.FPS;
+    if (!this.previousFrameTimestamp) this.previousFrameTimestamp = timestamp; // - 1000.0 / GameConstants.FPS;
 
     // normalized so 1.0 = 60fps
     let delta = ((timestamp - this.previousFrameTimestamp) * 60) / 1000.0;
@@ -474,10 +486,10 @@ export class Game {
       window.innerHeight / GameConstants.DEFAULTHEIGHT
     );
 
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    this.isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
-    if (isMobile) {
-      game.pushMessage("mobile detected");
+    if (this.isMobile) {
+      this.pushMessage("mobile detected");
       // Adjust scale for mobile devices
       Game.scale = 2; // Example: limit scale to 2 for mobile
     } else {
@@ -503,7 +515,8 @@ export class Game {
     Game.ctx.canvas.setAttribute("height", `${GameConstants.HEIGHT}`);
     Game.ctx.canvas.setAttribute(
       "style",
-      `width: ${GameConstants.WIDTH * Game.scale}px; height: ${GameConstants.HEIGHT * Game.scale
+      `width: ${GameConstants.WIDTH * Game.scale}px; height: ${
+        GameConstants.HEIGHT * Game.scale
       }px;
     display: block;
     margin: 0 auto;
@@ -620,9 +633,43 @@ export class Game {
     this.room.drawColorLayer();
     this.room.drawShade(delta);
     this.room.drawOverShade(delta);
+  };
 
+  drawStartScreen = (delta: number) => {
+    let startString = "Welcome to Turnarchist";
 
-  }
+    Game.ctx.globalAlpha = this.startScreenAlpha;
+    if (!this.started && !this.startedFadeOut) {
+      this.startScreenAlpha = 1;
+      if (this.startScreenAlpha <= 0) this.startScreenAlpha = 0;
+    } else if (!this.started && this.startedFadeOut) {
+      this.startScreenAlpha -= delta * 0.025;
+      if (this.startScreenAlpha <= 0) {
+        this.startScreenAlpha = 0;
+        this.started = true;
+        Sound.playAmbient();
+      }
+    }
+
+    Game.ctx.fillStyle = "black";
+    Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
+    Game.ctx.fillStyle = LevelConstants.LEVEL_TEXT_COLOR;
+
+    Game.fillText(
+      startString,
+      GameConstants.WIDTH / 2 - Game.measureText(startString).width / 2,
+      GameConstants.HEIGHT / 2 - Game.letter_height + 2
+    );
+    let restartButton = "Press space or click to start";
+    if (this.isMobile) restartButton = "Tap to start";
+    Game.fillText(
+      restartButton,
+      GameConstants.WIDTH / 2 - Game.measureText(restartButton).width / 2,
+      GameConstants.HEIGHT / 2 + Game.letter_height + 5
+    );
+
+    Game.ctx.globalAlpha = 1;
+  };
 
   draw = (delta: number) => {
     Game.ctx.globalAlpha = 1;
@@ -633,7 +680,7 @@ export class Game {
       let levelOffsetX = Math.floor(
         this.lerp(
           (Date.now() - this.transitionStartTime) /
-          LevelConstants.LEVEL_TRANSITION_TIME,
+            LevelConstants.LEVEL_TRANSITION_TIME,
           0,
           -this.transitionX
         )
@@ -641,7 +688,7 @@ export class Game {
       let levelOffsetY = Math.floor(
         this.lerp(
           (Date.now() - this.transitionStartTime) /
-          LevelConstants.LEVEL_TRANSITION_TIME,
+            LevelConstants.LEVEL_TRANSITION_TIME,
           0,
           -this.transitionY
         )
@@ -668,7 +715,7 @@ export class Game {
       let extraTileLerp = Math.floor(
         this.lerp(
           (Date.now() - this.transitionStartTime) /
-          LevelConstants.LEVEL_TRANSITION_TIME,
+            LevelConstants.LEVEL_TRANSITION_TIME,
           0,
           GameConstants.TILESIZE
         )
@@ -695,7 +742,7 @@ export class Game {
 
       let ditherFrame = Math.floor(
         (7 * (Date.now() - this.transitionStartTime)) /
-        LevelConstants.LEVEL_TRANSITION_TIME
+          LevelConstants.LEVEL_TRANSITION_TIME
       );
 
       Game.ctx.translate(levelOffsetX, levelOffsetY);
@@ -737,7 +784,6 @@ export class Game {
       Game.ctx.translate(playerOffsetX, playerOffsetY);
       this.players[this.localPlayerID].draw(delta);
 
-
       Game.ctx.translate(-playerOffsetX, -playerOffsetY);
       Game.ctx.translate(newLevelOffsetX, newLevelOffsetY);
 
@@ -773,7 +819,7 @@ export class Game {
       let deadFrames = 6;
       let ditherFrame = Math.floor(
         ((7 * 2 + deadFrames) * (Date.now() - this.transitionStartTime)) /
-        LevelConstants.LEVEL_TRANSITION_TIME_LADDER
+          LevelConstants.LEVEL_TRANSITION_TIME_LADDER
       );
 
       if (ditherFrame < 7) {
@@ -840,15 +886,15 @@ export class Game {
 
       let cameraX = Math.round(
         (this.players[this.localPlayerID].x - playerDrawX + 0.5) *
-        GameConstants.TILESIZE -
-        0.5 * GameConstants.WIDTH -
-        this.screenShakeX
+          GameConstants.TILESIZE -
+          0.5 * GameConstants.WIDTH -
+          this.screenShakeX
       );
       let cameraY = Math.round(
         (this.players[this.localPlayerID].y - playerDrawY + 0.5) *
-        GameConstants.TILESIZE -
-        0.5 * GameConstants.HEIGHT -
-        this.screenShakeY
+          GameConstants.TILESIZE -
+          0.5 * GameConstants.HEIGHT -
+          this.screenShakeY
       );
 
       Game.ctx.translate(-cameraX, -cameraY);
@@ -903,7 +949,7 @@ export class Game {
               CHAT_OPACITY *
               (1 -
                 (age - GameConstants.CHAT_APPEAR_TIME) /
-                GameConstants.CHAT_FADE_TIME);
+                  GameConstants.CHAT_FADE_TIME);
         } else {
           Game.ctx.globalAlpha = 0;
         }
@@ -926,6 +972,7 @@ export class Game {
     Game.ctx.fillStyle = LevelConstants.LEVEL_TEXT_COLOR;
     Game.fillText(fps + "fps", 1, 1);
     Game.ctx.globalAlpha = 1;
+    if (!this.started) this.drawStartScreen(delta);
     MouseCursor.getInstance().draw();
   };
 

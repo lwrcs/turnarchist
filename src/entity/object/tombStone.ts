@@ -65,9 +65,7 @@ export class TombStone extends Entity {
     this.healthBar.hurt();
     ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 25);
 
-    setTimeout(() => {
-      Sound.hurt();
-    }, 100);
+    Sound.delayPlay(Sound.hurt, 0);
 
     this.health -= 1;
     if (this.health === 1) {
@@ -91,13 +89,18 @@ export class TombStone extends Entity {
             }
           }
         }
-        Sound.skeleSpawn();
+        Sound.delayPlay(Sound.skeleSpawn, 50);
       }
       this.tileX += 2;
       //draw half broken tombstone based on skintype after it takes one damage
     }
-    if (this.health <= 0) this.kill(), Sound.breakRock();
-    else this.hurtCallback(), Sound.hit();
+    if (this.health <= 0) {
+      this.kill();
+      Sound.delayPlay(Sound.breakRock, 50);
+    } else {
+      this.hurtCallback();
+      //Sound.delayPlay(Sound.hit, 0);
+    }
   };
 
   draw = (delta: number) => {

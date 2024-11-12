@@ -74,7 +74,7 @@ export class Inventory {
       if (i instanceof Equippable) {
         i.setWielder(this.player);
       }
-      if (i instanceof Weapon) {
+      if (i instanceof Weapon && this.weapon === null) {
         i.toggleEquip();
         this.weapon = i;
         //this.player.weapon = this.weapon;
@@ -539,13 +539,15 @@ export class Inventory {
     }
   };
 
-  updateEquipAnimAmount = () => {
+  updateEquipAnimAmount = (delta: number) => {
     for (let i = 0; i < this.equipAnimAmount.length; i++) {
       if (this.items[i] instanceof Equippable) {
         if ((this.items[i] as Equippable).equipped) {
-          this.equipAnimAmount[i] += 0.2 * (1 - this.equipAnimAmount[i]);
+          this.equipAnimAmount[i] +=
+            0.2 * delta * (1 - this.equipAnimAmount[i]);
         } else {
-          this.equipAnimAmount[i] += 0.2 * (0 - this.equipAnimAmount[i]);
+          this.equipAnimAmount[i] +=
+            0.2 * delta * (0 - this.equipAnimAmount[i]);
         }
       } else {
         this.equipAnimAmount[i] = 0;
@@ -562,7 +564,7 @@ export class Inventory {
     // Draw coins and quickbar (these are always visible)
     this.drawCoins(delta);
     this.drawQuickbar(delta);
-    this.updateEquipAnimAmount();
+    this.updateEquipAnimAmount(delta);
 
     if (this.isOpen) {
       // Update equip animation

@@ -120,8 +120,8 @@ export class Player extends Drawable {
       );
     }
     this.mapToggled = true;
-    this.health = 3;
-    this.maxHealth = 3;
+    this.health = 300;
+    this.maxHealth = 300;
     this.healthBar = new HealthBar();
     this.dead = false;
     this.flashing = false;
@@ -164,6 +164,10 @@ export class Player extends Drawable {
   }
 
   inputHandler = (input: InputEnum) => {
+    if (!this.game.started && input !== InputEnum.MOUSE_MOVE) {
+      this.game.startedFadeOut = true;
+      return;
+    }
     switch (input) {
       case InputEnum.I:
         this.iListener();
@@ -580,6 +584,7 @@ export class Player extends Drawable {
       if (this.health <= 0) {
         this.dead = true;
       }
+
       /*
       if (this.health <= 0) {
         this.health = 0;

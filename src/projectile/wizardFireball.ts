@@ -33,7 +33,7 @@ export class WizardFireball extends Projectile {
       0.05
     );
     this.parent.addLightSource(this.lightSource);
-    this.parent.room.updateLighting();
+    //this.parent.room.updateLighting();
   }
   setMarkerFrame = () => {
     // Calculate offsetX based on direction
@@ -73,7 +73,7 @@ export class WizardFireball extends Projectile {
         this.y,
         0.9 * (1 / this.distanceToParent),
         (this.parent as WizardEnemy).projectileColor,
-        400,
+        500,
         0.9,
         350
       );

@@ -10,7 +10,9 @@ export class Particle extends Drawable {
   room: Room;
   drawTopLayer = (delta) => {};
   shadeAmount = () => {
-    return this.room.softVis[Math.floor(this.x)][Math.floor(this.y)];
+    let shade = this.room.softVis[Math.floor(this.x)][Math.floor(this.y)];
+    if (shade !== undefined) return shade;
+    else return 1;
   };
   shadeColor = () => {
     return this.room.shadeColor;

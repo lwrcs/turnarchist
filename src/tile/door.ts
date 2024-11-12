@@ -5,6 +5,7 @@ import { GameConstants } from "../gameConstants";
 import { SkinType, Tile } from "./tile";
 import { EntityType } from "../entity/entity";
 import { Key } from "../item/key";
+import { Sound } from "../sound";
 
 export enum DoorDir {
   North,
@@ -104,6 +105,7 @@ export class Door extends Tile {
       if (k !== null) {
         // remove key
         player.inventory.removeItem(k);
+        Sound.unlock();
         this.removeLock();
       }
     }
@@ -130,7 +132,11 @@ export class Door extends Tile {
   };
 
   onCollide = (player: Player) => {
+    if (!this.opened) {
+      Sound.doorOpen();
+    }
     this.opened = true;
+
     this.linkedDoor.opened = true;
     if (this.doorDir === DoorDir.North || this.doorDir === DoorDir.South) {
       this.game.changeLevelThroughDoor(player, this.linkedDoor);

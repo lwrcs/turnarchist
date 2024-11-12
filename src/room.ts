@@ -456,7 +456,7 @@ export class Room {
       // Define the enemy tables for each depth level
 
       let tables = {
-        0: [1, 4, 3, 8, 8], //this.generateLevelTable(rand),
+        0: [1, 4, 3], //this.generateLevelTable(rand),
         1: [3, 4, 5, 9, 7],
         2: [3, 4, 5, 7, 8, 9, 12],
         3: [1, 2, 3, 5, 6, 7, 8, 9, 10],
@@ -1205,6 +1205,53 @@ export class Room {
         [1, 2, 1],
       ]);
   };
+  updateLightSources = (lightSource?: LightSource, remove?: boolean) => {
+    this.oldCol = [];
+    this.oldVis = [];
+    this.oldCol = this.col;
+    this.oldVis = this.vis;
+    if (lightSource) {
+      for (let i = 0; i < 360; i += LevelConstants.LIGHTING_ANGLE_STEP) {
+        if (!remove) {
+          this.castTintAtAngle(
+            i,
+            lightSource.x,
+            lightSource.y,
+            lightSource.r,
+            lightSource.c,
+            lightSource.b
+          ); // RGB color in sRGB
+        } else {
+          this.unCastTintAtAngle(
+            i,
+            lightSource.x,
+            lightSource.y,
+            lightSource.r,
+            lightSource.c,
+            lightSource.b
+          );
+        }
+      }
+    }
+    for (let x = this.roomX; x < this.roomX + this.width; x++) {
+      for (let y = this.roomY; y < this.roomY + this.height; y++) {
+        this.col[x][y] = this.blendColorsArray(this.renderBuffer[x][y]);
+      }
+    }
+
+    for (let x = this.roomX; x < this.roomX + this.width; x++) {
+      for (let y = this.roomY; y < this.roomY + this.height; y++) {
+        this.vis[x][y] = this.rgbToLuminance(this.col[x][y]);
+      }
+    }
+  };
+  revertLightSources = () => {
+    console.log("reverting lighting");
+    this.oldCol = [];
+    this.oldVis = [];
+    this.col = this.oldCol;
+    this.vis = this.oldVis;
+  };
 
   castShadowsAtAngle = (
     angle: number,
@@ -1265,7 +1312,7 @@ export class Room {
       this.sRGBToLinear(color[2]),
     ];
 
-    for (let i = 0; i <= 10; i++) {
+    for (let i = 0; i <= LevelConstants.LIGHTING_MAX_DISTANCE; i++) {
       const currentX = Math.floor(px + dx * i);
       const currentY = Math.floor(py + dy * i);
 
@@ -1283,7 +1330,7 @@ export class Room {
       } else {
         intensity = brightness / Math.E ** i; // Exponential falloff with distance
       }
-      if (intensity < 0.001) intensity = 0;
+      if (intensity < 0.005) intensity = 0;
 
       if (intensity <= 0) continue;
 
@@ -1302,6 +1349,75 @@ export class Room {
       ];
 
       this.renderBuffer[currentX][currentY].push(weightedLinearColor);
+    }
+  };
+
+  unCastTintAtAngle = (
+    angle: number,
+    px: number,
+    py: number,
+    radius: number,
+    color: [number, number, number],
+    brightness: number
+  ) => {
+    const dx = Math.cos((angle * Math.PI) / 180);
+    const dy = Math.sin((angle * Math.PI) / 180);
+
+    // Convert input color from sRGB to linear RGB
+    const linearColor: [number, number, number] = [
+      this.sRGBToLinear(color[0]),
+      this.sRGBToLinear(color[1]),
+      this.sRGBToLinear(color[2]),
+    ];
+
+    for (let i = 0; i <= 10; i++) {
+      const currentX = Math.floor(px + dx * i);
+      const currentY = Math.floor(py + dy * i);
+
+      if (!this.isPositionInRoom(currentX, currentY)) return; // Outside the room
+
+      const tile = this.roomArray[currentX][currentY];
+      if (tile.isOpaque()) {
+        return; // Stop uncasting tint through opaque tiles
+      }
+
+      // Handle i=0 separately to avoid division by zero and ensure the light source tile is affected correctly
+      let intensity: number;
+      if (i === 0) {
+        intensity = brightness * 0.1; // Initial intensity adjustment
+      } else {
+        intensity = brightness / Math.E ** i; // Exponential falloff with distance
+      }
+      if (intensity < 0.001) intensity = 0;
+
+      if (intensity <= 0) continue;
+
+      if (
+        !this.renderBuffer[currentX] ||
+        !this.renderBuffer[currentX][currentY]
+      ) {
+        continue; // No tint to remove
+      }
+
+      const weightedLinearColor: [number, number, number, number] = [
+        linearColor[0],
+        linearColor[1],
+        linearColor[2],
+        intensity,
+      ];
+
+      // Remove the corresponding tint from the renderBuffer
+      this.renderBuffer[currentX][currentY] = this.renderBuffer[currentX][
+        currentY
+      ].filter(
+        (colorEntry) =>
+          !(
+            Math.abs(colorEntry[0] - weightedLinearColor[0]) < 0.0001 &&
+            Math.abs(colorEntry[1] - weightedLinearColor[1]) < 0.0001 &&
+            Math.abs(colorEntry[2] - weightedLinearColor[2]) < 0.0001 &&
+            Math.abs(colorEntry[3] - weightedLinearColor[3]) < 0.0001
+          )
+      );
     }
   };
 

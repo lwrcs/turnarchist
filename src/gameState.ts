@@ -822,20 +822,21 @@ export const loadGameState = (
   game.room.items.push(new Key(game.room, p.x - 1, p.y - 2));
 
   game.room.entities.push(
-    new Block(game.room, game, p.x, p.y - 2),
-    new Block(game.room, game, p.x + 1, p.y),
-    new Block(game.room, game, p.x - 1, p.y - 1),
-    new Block(game.room, game, p.x + 1, p.y - 1),
-    new Block(game.room, game, p.x - 1, p.y),
-    new Block(game.room, game, p.x, p.y + 1)
+    new Pot(game.room, game, p.x, p.y - 2),
+    new Pot(game.room, game, p.x + 1, p.y),
+    new Pot(game.room, game, p.x - 1, p.y - 1),
+    new Pot(game.room, game, p.x + 1, p.y - 1),
+    new Pot(game.room, game, p.x - 1, p.y),
+    new Pot(game.room, game, p.x, p.y + 1)
   );
   game.room.doors.forEach((door) => {
     door.lock();
   });
-
+  /*
   setTimeout(() => {
     game.pushMessage("Welcome to Turnarchist");
   }, 500);
+  */
 
   game.chat = [];
 };

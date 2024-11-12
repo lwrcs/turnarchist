@@ -20,7 +20,7 @@ export class PlayerFireball extends Projectile {
       this.y + 0.5,
       0.5,
       [255, 100, 0],
-      150,
+      250,
       10,
       1
     );

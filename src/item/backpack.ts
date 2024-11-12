@@ -18,9 +18,7 @@ export class Backpack extends Usable {
   onUse = (player: Player) => {
     if (this.level.game.rooms[player.levelID] === this.level.game.room)
       Sound.heal();
-   
-
-      
+    player.inventory.removeItem(this);
     player.inventory.expansion += 1;
     //this.level.items = this.level.items.filter((x) => x !== this); // removes itself from the level
   };

@@ -70,11 +70,13 @@ export class Light extends Equippable {
     this.wielder.sightRadius = this.wielder.defaultSightRadius;
   };
 
-  deplete = () => {
+  burn = () => {
     if (this.fuel <= 0) {
       this.wielder.game.pushMessage(`${this.name} depletes.`);
       this.resetRadius();
+      this.wielder.lightEquipped = false;
       this.wielder.inventory.removeItem(this);
+      this.updateLighting();
     } else if (this.isIgnited()) {
       this.fuel--;
       this.setRadius();
@@ -82,7 +84,7 @@ export class Light extends Equippable {
   };
 
   tickInInventory = () => {
-    this.deplete();
+    this.burn();
   };
 
   getDescription = () => {

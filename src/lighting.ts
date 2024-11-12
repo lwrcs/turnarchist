@@ -20,13 +20,10 @@ export class Lighting {
       brightness
     );
     setTimeout(() => {
-      Lighting.addLightSource(room, lightSource);
-      room.updateLighting();
+      room.updateLightSources(lightSource);
 
       setTimeout(() => {
-        Lighting.removeLightSource(room, lightSource);
-
-        room.updateLighting();
+        room.updateLightSources(lightSource, true);
       }, duration);
     }, delay);
   };

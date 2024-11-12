@@ -9,6 +9,7 @@ import { Coin } from "../../item/coin";
 import { EntityType } from "../entity";
 import { ImageParticle } from "../../particle/imageParticle";
 import { Random } from "../../random";
+import { Sound } from "../../sound";
 
 export class PottedPlant extends Entity {
   drop: Item;
@@ -39,14 +40,13 @@ export class PottedPlant extends Entity {
 
   kill = () => {
     this.dead = true;
-    this.killNoBones();
-
+    this.dropLoot();
+    Sound.delayPlay(Sound.potSmash, 250);
     ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 29);
     ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 28);
   };
   killNoBones = () => {
     this.dead = true;
-    this.dropLoot();
   };
 
   draw = (delta: number) => {

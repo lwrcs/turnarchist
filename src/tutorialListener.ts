@@ -30,7 +30,7 @@ export class TutorialListener {
     enemyName: string;
   }): void {
     if (!this.hasSeenEnemy(data.enemyType)) {
-      this.game.pushMessage(`New enemy encountered: ${data.enemyName}`);
+      //this.game.pushMessage(`New enemy encountered: ${data.enemyName}`);
       this.addSeenEnemy(data.enemyType);
       this.pendingNewEnemies.add(data.enemyType);
       this.scheduleTutorialCreation();
@@ -42,7 +42,7 @@ export class TutorialListener {
     if (this.tutorialCreationTimeout === null) {
       this.tutorialCreationTimeout = setTimeout(() => {
         this.createTutorialRoom(Array.from(this.pendingNewEnemies));
-        this.game.pushMessage("Defeat the enemies guarding the exits.");
+        //this.game.pushMessage("Defeat the enemies guarding the exits.");
         this.pendingNewEnemies.clear();
         this.tutorialCreationTimeout = null;
       }, 100); // Wait 100ms to collect all new enemies

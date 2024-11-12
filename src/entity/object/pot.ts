@@ -7,6 +7,9 @@ import { GenericParticle } from "../../particle/genericParticle";
 import { EntityType } from "../entity";
 import { ImageParticle } from "../../particle/imageParticle";
 import { Candle } from "../../item/candle";
+import { Random } from "../../random";
+import { Coin } from "../../item/coin";
+import { Sound } from "../../sound";
 
 export class Pot extends Entity {
   constructor(room: Room, game: Game, x: number, y: number) {
@@ -18,7 +21,10 @@ export class Pot extends Entity {
     this.hasShadow = false;
     this.chainPushable = false;
     this.name = "pot";
-    this.drop = new Candle(this.room, this.x, this.y);
+
+    let dropProb = Random.rand();
+    if (dropProb < 0.025) this.drop = new Heart(this.room, 0, 0);
+    else this.drop = new Coin(this.room, 0, 0);
   }
 
   get type() {
@@ -26,9 +32,10 @@ export class Pot extends Entity {
   }
 
   kill = () => {
-    this.room.items.push(this.drop);
+    this.dropLoot();
     this.dead = true;
     ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 29);
+    Sound.delayPlay(Sound.potSmash, 250);
   };
   killNoBones = () => {
     this.kill();

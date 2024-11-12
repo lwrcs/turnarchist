@@ -5246,78 +5246,6 @@ exports.Barrel = Barrel;
 
 /***/ }),
 
-/***/ "./src/entity/object/block.ts":
-/*!************************************!*\
-  !*** ./src/entity/object/block.ts ***!
-  \************************************/
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        if (typeof b !== "function" && b !== null)
-            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Block = void 0;
-var entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
-var game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-var entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
-var imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ "./src/particle/imageParticle.ts");
-var Block = /** @class */ (function (_super) {
-    __extends(Block, _super);
-    function Block(room, game, x, y) {
-        var _this = _super.call(this, room, game, x, y) || this;
-        _this.kill = function () {
-            _this.dead = true;
-            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 29);
-        };
-        _this.killNoBones = function () {
-            _this.kill();
-        };
-        _this.draw = function (delta) {
-            // not inherited because it doesn't have the 0.5 offset
-            if (!_this.dead) {
-                _this.updateDrawXY(delta);
-                game_1.Game.drawObj(_this.tileX, _this.tileY, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
-            }
-        };
-        _this.drawTopLayer = function (delta) {
-            _this.drawableY = _this.y;
-        };
-        _this.room = room;
-        _this.health = 1;
-        _this.tileX = 10;
-        _this.tileY = 2;
-        _this.hasShadow = false;
-        _this.chainPushable = false;
-        _this.name = "block";
-        return _this;
-    }
-    Object.defineProperty(Block.prototype, "type", {
-        get: function () {
-            return entity_2.EntityType.PROP;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    return Block;
-}(entity_1.Entity));
-exports.Block = Block;
-
-
-/***/ }),
-
 /***/ "./src/entity/object/chest.ts":
 /*!************************************!*\
   !*** ./src/entity/object/chest.ts ***!
@@ -5628,17 +5556,21 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Pot = void 0;
 var entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 var game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+var heart_1 = __webpack_require__(/*! ../../item/heart */ "./src/item/heart.ts");
 var entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 var imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ "./src/particle/imageParticle.ts");
-var candle_1 = __webpack_require__(/*! ../../item/candle */ "./src/item/candle.ts");
+var random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
+var coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
+var sound_1 = __webpack_require__(/*! ../../sound */ "./src/sound.ts");
 var Pot = /** @class */ (function (_super) {
     __extends(Pot, _super);
     function Pot(room, game, x, y) {
         var _this = _super.call(this, room, game, x, y) || this;
         _this.kill = function () {
-            _this.room.items.push(_this.drop);
+            _this.dropLoot();
             _this.dead = true;
             imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 29);
+            sound_1.Sound.delayPlay(sound_1.Sound.potSmash, 250);
         };
         _this.killNoBones = function () {
             _this.kill();
@@ -5660,7 +5592,11 @@ var Pot = /** @class */ (function (_super) {
         _this.hasShadow = false;
         _this.chainPushable = false;
         _this.name = "pot";
-        _this.drop = new candle_1.Candle(_this.room, _this.x, _this.y);
+        var dropProb = random_1.Random.rand();
+        if (dropProb < 0.025)
+            _this.drop = new heart_1.Heart(_this.room, 0, 0);
+        else
+            _this.drop = new coin_1.Coin(_this.room, 0, 0);
         return _this;
     }
     Object.defineProperty(Pot.prototype, "type", {
@@ -5708,6 +5644,7 @@ var coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
 var entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 var imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ "./src/particle/imageParticle.ts");
 var random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
+var sound_1 = __webpack_require__(/*! ../../sound */ "./src/sound.ts");
 var PottedPlant = /** @class */ (function (_super) {
     __extends(PottedPlant, _super);
     function PottedPlant(room, game, x, y, drop) {
@@ -5717,13 +5654,13 @@ var PottedPlant = /** @class */ (function (_super) {
         };
         _this.kill = function () {
             _this.dead = true;
-            _this.killNoBones();
+            _this.dropLoot();
+            sound_1.Sound.delayPlay(sound_1.Sound.potSmash, 250);
             imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 29);
             imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 28);
         };
         _this.killNoBones = function () {
             _this.dead = true;
-            _this.dropLoot();
         };
         _this.draw = function (delta) {
             // not inherited because it doesn't have the 0.5 offset
@@ -5900,9 +5837,7 @@ var TombStone = /** @class */ (function (_super) {
         _this.hurt = function (playerHitBy, damage) {
             _this.healthBar.hurt();
             imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 25);
-            setTimeout(function () {
-                sound_1.Sound.hurt();
-            }, 100);
+            sound_1.Sound.delayPlay(sound_1.Sound.hurt, 0);
             _this.health -= 1;
             if (_this.health === 1) {
                 var positions = _this.room
@@ -5920,15 +5855,19 @@ var TombStone = /** @class */ (function (_super) {
                             }
                         }
                     }
-                    sound_1.Sound.skeleSpawn();
+                    sound_1.Sound.delayPlay(sound_1.Sound.skeleSpawn, 50);
                 }
                 _this.tileX += 2;
                 //draw half broken tombstone based on skintype after it takes one damage
             }
-            if (_this.health <= 0)
-                _this.kill(), sound_1.Sound.breakRock();
-            else
-                _this.hurtCallback(), sound_1.Sound.hit();
+            if (_this.health <= 0) {
+                _this.kill();
+                sound_1.Sound.delayPlay(sound_1.Sound.breakRock, 50);
+            }
+            else {
+                _this.hurtCallback();
+                //Sound.delayPlay(Sound.hit, 0);
+            }
         };
         _this.draw = function (delta) {
             // not inherited because it doesn't have the 0.5 offset
@@ -6671,13 +6610,22 @@ var Game = /** @class */ (function () {
         this.localPlayerID = "localplayer";
         this.mostRecentInputReceived = true;
         this.loginMessage = "";
+        this.startScreenAlpha = 1;
         this.newGame = function () {
             var gs = new gameState_1.GameState();
             gs.seed = (Math.random() * 4294967296) >>> 0;
             gs.randomState = (Math.random() * 4294967296) >>> 0;
             (0, gameState_1.loadGameState)(_this, [_this.localPlayerID], gs, true);
         };
+        this.startGame = function () {
+            _this.started = true;
+            sound_1.Sound.ambientSound.play();
+        };
         this.keyDownListener = function (key) {
+            if (!_this.started) {
+                _this.startedFadeOut = true;
+                return;
+            }
             if (!_this.chatOpen) {
                 switch (key.toUpperCase()) {
                     case "C":
@@ -6828,9 +6776,9 @@ var Game = /** @class */ (function () {
         this.onResize = function () {
             var maxWidthScale = Math.floor(window.innerWidth / gameConstants_1.GameConstants.DEFAULTWIDTH);
             var maxHeightScale = Math.floor(window.innerHeight / gameConstants_1.GameConstants.DEFAULTHEIGHT);
-            var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-            if (isMobile) {
-                game.pushMessage("mobile detected");
+            _this.isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+            if (_this.isMobile) {
+                _this.pushMessage("mobile detected");
                 // Adjust scale for mobile devices
                 Game.scale = 2; // Example: limit scale to 2 for mobile
             }
@@ -6861,6 +6809,32 @@ var Game = /** @class */ (function () {
             _this.room.drawColorLayer();
             _this.room.drawShade(delta);
             _this.room.drawOverShade(delta);
+        };
+        this.drawStartScreen = function (delta) {
+            var startString = "Welcome to Turnarchist";
+            Game.ctx.globalAlpha = _this.startScreenAlpha;
+            if (!_this.started && !_this.startedFadeOut) {
+                _this.startScreenAlpha = 1;
+                if (_this.startScreenAlpha <= 0)
+                    _this.startScreenAlpha = 0;
+            }
+            else if (!_this.started && _this.startedFadeOut) {
+                _this.startScreenAlpha -= delta * 0.025;
+                if (_this.startScreenAlpha <= 0) {
+                    _this.startScreenAlpha = 0;
+                    _this.started = true;
+                    sound_1.Sound.playAmbient();
+                }
+            }
+            Game.ctx.fillStyle = "black";
+            Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
+            Game.ctx.fillStyle = levelConstants_1.LevelConstants.LEVEL_TEXT_COLOR;
+            Game.fillText(startString, gameConstants_1.GameConstants.WIDTH / 2 - Game.measureText(startString).width / 2, gameConstants_1.GameConstants.HEIGHT / 2 - Game.letter_height + 2);
+            var restartButton = "Press space or click to start";
+            if (_this.isMobile)
+                restartButton = "Tap to start";
+            Game.fillText(restartButton, gameConstants_1.GameConstants.WIDTH / 2 - Game.measureText(restartButton).width / 2, gameConstants_1.GameConstants.HEIGHT / 2 + Game.letter_height + 5);
+            Game.ctx.globalAlpha = 1;
         };
         this.draw = function (delta) {
             Game.ctx.globalAlpha = 1;
@@ -7062,6 +7036,8 @@ var Game = /** @class */ (function () {
             Game.ctx.fillStyle = levelConstants_1.LevelConstants.LEVEL_TEXT_COLOR;
             Game.fillText(fps + "fps", 1, 1);
             Game.ctx.globalAlpha = 1;
+            if (!_this.started)
+                _this.drawStartScreen(delta);
             mouseCursor_1.MouseCursor.getInstance().draw();
         };
         window.addEventListener("load", function () {
@@ -7192,6 +7168,7 @@ var Game = /** @class */ (function () {
             };
             checkResourcesLoaded();
         });
+        this.started = false;
         this.tutorialListener = new tutorialListener_1.TutorialListener(this);
     }
     Game.letters = "abcdefghijklmnopqrstuvwxyz1234567890,.!?:'()[]%-/";
@@ -7483,7 +7460,6 @@ var shotgun_1 = __webpack_require__(/*! ./weapon/shotgun */ "./src/weapon/shotgu
 var spear_1 = __webpack_require__(/*! ./weapon/spear */ "./src/weapon/spear.ts");
 var pickaxe_1 = __webpack_require__(/*! ./weapon/pickaxe */ "./src/weapon/pickaxe.ts");
 var backpack_1 = __webpack_require__(/*! ./item/backpack */ "./src/item/backpack.ts");
-var block_1 = __webpack_require__(/*! ./entity/object/block */ "./src/entity/object/block.ts");
 var energyWizard_1 = __webpack_require__(/*! ./entity/enemy/energyWizard */ "./src/entity/enemy/energyWizard.ts");
 var HitWarningState = /** @class */ (function () {
     function HitWarningState(hw) {
@@ -8183,13 +8159,15 @@ var loadGameState = function (game, activeUsernames, gameState, newWorld) {
     game.room.items.push(new key_1.Key(game.room, p.x + 1, p.y + 1));
     game.room.items.push(new key_1.Key(game.room, p.x + 1, p.y - 2));
     game.room.items.push(new key_1.Key(game.room, p.x - 1, p.y - 2));
-    game.room.entities.push(new block_1.Block(game.room, game, p.x, p.y - 2), new block_1.Block(game.room, game, p.x + 1, p.y), new block_1.Block(game.room, game, p.x - 1, p.y - 1), new block_1.Block(game.room, game, p.x + 1, p.y - 1), new block_1.Block(game.room, game, p.x - 1, p.y), new block_1.Block(game.room, game, p.x, p.y + 1));
+    game.room.entities.push(new pot_1.Pot(game.room, game, p.x, p.y - 2), new pot_1.Pot(game.room, game, p.x + 1, p.y), new pot_1.Pot(game.room, game, p.x - 1, p.y - 1), new pot_1.Pot(game.room, game, p.x + 1, p.y - 1), new pot_1.Pot(game.room, game, p.x - 1, p.y), new pot_1.Pot(game.room, game, p.x, p.y + 1));
     game.room.doors.forEach(function (door) {
         door.lock();
     });
-    setTimeout(function () {
-        game.pushMessage("Welcome to Turnarchist");
+    /*
+    setTimeout(() => {
+      game.pushMessage("Welcome to Turnarchist");
     }, 500);
+    */
     game.chat = [];
 };
 exports.loadGameState = loadGameState;
@@ -9123,14 +9101,16 @@ var Inventory = /** @class */ (function () {
                 }
             }
         };
-        this.updateEquipAnimAmount = function () {
+        this.updateEquipAnimAmount = function (delta) {
             for (var i = 0; i < _this.equipAnimAmount.length; i++) {
                 if (_this.items[i] instanceof equippable_1.Equippable) {
                     if (_this.items[i].equipped) {
-                        _this.equipAnimAmount[i] += 0.2 * (1 - _this.equipAnimAmount[i]);
+                        _this.equipAnimAmount[i] +=
+                            0.2 * delta * (1 - _this.equipAnimAmount[i]);
                     }
                     else {
-                        _this.equipAnimAmount[i] += 0.2 * (0 - _this.equipAnimAmount[i]);
+                        _this.equipAnimAmount[i] +=
+                            0.2 * delta * (0 - _this.equipAnimAmount[i]);
                     }
                 }
                 else {
@@ -9146,7 +9126,7 @@ var Inventory = /** @class */ (function () {
             // Draw coins and quickbar (these are always visible)
             _this.drawCoins(delta);
             _this.drawQuickbar(delta);
-            _this.updateEquipAnimAmount();
+            _this.updateEquipAnimAmount(delta);
             if (_this.isOpen) {
                 // Update equip animation
                 // Draw semi-transparent background for full inventory
@@ -9382,7 +9362,7 @@ var Inventory = /** @class */ (function () {
             if (i instanceof equippable_1.Equippable) {
                 i.setWielder(_this.player);
             }
-            if (i instanceof weapon_1.Weapon) {
+            if (i instanceof weapon_1.Weapon && _this.weapon === null) {
                 i.toggleEquip();
                 _this.weapon = i;
                 //this.player.weapon = this.weapon;
@@ -9517,6 +9497,7 @@ var Backpack = /** @class */ (function (_super) {
         _this.onUse = function (player) {
             if (_this.level.game.rooms[player.levelID] === _this.level.game.room)
                 sound_1.Sound.heal();
+            player.inventory.removeItem(_this);
             player.inventory.expansion += 1;
             //this.level.items = this.level.items.filter((x) => x !== this); // removes itself from the level
         };
@@ -9608,7 +9589,7 @@ var Candle = /** @class */ (function (_super) {
     __extends(Candle, _super);
     function Candle(level, x, y) {
         var _this = _super.call(this, level, x, y) || this;
-        _this.fuel = 250; //how many turns before it burns out
+        _this.fuel = 5; //how many turns before it burns out
         _this.tileX = 27;
         _this.tileY = 0;
         _this.name = "candle";
@@ -10229,12 +10210,20 @@ var __extends = (this && this.__extends) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Key = void 0;
 var item_1 = __webpack_require__(/*! ./item */ "./src/item/item.ts");
+var sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
 var Key = /** @class */ (function (_super) {
     __extends(Key, _super);
     function Key(level, x, y) {
         var _this = _super.call(this, level, x, y) || this;
         _this.getDescription = function () {
             return "KEY\nAn iron key.";
+        };
+        _this.onPickup = function (player) {
+            if (!_this.pickedUp) {
+                _this.pickedUp = player.inventory.addItem(_this);
+                if (_this.pickedUp)
+                    sound_1.Sound.keyPickup();
+            }
         };
         _this.tileX = 1;
         _this.tileY = 0;
@@ -10382,11 +10371,13 @@ var Light = /** @class */ (function (_super) {
         _this.resetRadius = function () {
             _this.wielder.sightRadius = _this.wielder.defaultSightRadius;
         };
-        _this.deplete = function () {
+        _this.burn = function () {
             if (_this.fuel <= 0) {
                 _this.wielder.game.pushMessage("".concat(_this.name, " depletes."));
                 _this.resetRadius();
+                _this.wielder.lightEquipped = false;
                 _this.wielder.inventory.removeItem(_this);
+                _this.updateLighting();
             }
             else if (_this.isIgnited()) {
                 _this.fuel--;
@@ -10394,7 +10385,7 @@ var Light = /** @class */ (function (_super) {
             }
         };
         _this.tickInInventory = function () {
-            _this.deplete();
+            _this.burn();
         };
         _this.getDescription = function () {
             return "".concat(_this.name, ": ").concat(_this.fuelPercentage * 100, "%");
@@ -10683,7 +10674,8 @@ var LevelConstants = /** @class */ (function () {
     LevelConstants.SMOOTH_LIGHTING = false; //doesn't work
     LevelConstants.MIN_VISIBILITY = 0; // visibility level of places you've already seen
     LevelConstants.LIGHTING_ANGLE_STEP = 1; // how many degrees between each ray, previously 5
-    LevelConstants.LIGHT_RESOLUTION = 3; //1 is default
+    LevelConstants.LIGHTING_MAX_DISTANCE = 7;
+    LevelConstants.LIGHT_RESOLUTION = 1; //1 is default
     LevelConstants.LEVEL_TEXT_COLOR = "yellow";
     LevelConstants.AMBIENT_LIGHT_COLOR = [10, 10, 10];
     LevelConstants.TORCH_LIGHT_COLOR = [200, 25, 5];
@@ -11328,11 +11320,9 @@ var Lighting = /** @class */ (function () {
     Lighting.momentaryLight = function (room, x, y, radius, color, duration, brightness, delay) {
         var lightSource = Lighting.newLightSource(x, y, color, radius, brightness);
         setTimeout(function () {
-            Lighting.addLightSource(room, lightSource);
-            room.updateLighting();
+            room.updateLightSources(lightSource);
             setTimeout(function () {
-                Lighting.removeLightSource(room, lightSource);
-                room.updateLighting();
+                room.updateLightSources(lightSource, true);
             }, duration);
         }, delay);
     };
@@ -11899,7 +11889,11 @@ var Particle = /** @class */ (function (_super) {
         var _this = _super !== null && _super.apply(this, arguments) || this;
         _this.drawTopLayer = function (delta) { };
         _this.shadeAmount = function () {
-            return _this.room.softVis[Math.floor(_this.x)][Math.floor(_this.y)];
+            var shade = _this.room.softVis[Math.floor(_this.x)][Math.floor(_this.y)];
+            if (shade !== undefined)
+                return shade;
+            else
+                return 1;
         };
         _this.shadeColor = function () {
             return _this.room.shadeColor;
@@ -12070,6 +12064,10 @@ var Player = /** @class */ (function (_super) {
     function Player(game, x, y, isLocalPlayer) {
         var _this = _super.call(this) || this;
         _this.inputHandler = function (input) {
+            if (!_this.game.started && input !== input_1.InputEnum.MOUSE_MOVE) {
+                _this.game.startedFadeOut = true;
+                return;
+            }
             switch (input) {
                 case input_1.InputEnum.I:
                     _this.iListener();
@@ -12691,8 +12689,8 @@ var Player = /** @class */ (function (_super) {
             });
         }
         _this.mapToggled = true;
-        _this.health = 3;
-        _this.maxHealth = 3;
+        _this.health = 300;
+        _this.maxHealth = 300;
         _this.healthBar = new healthbar_1.HealthBar();
         _this.dead = false;
         _this.flashing = false;
@@ -12907,7 +12905,7 @@ var PlayerFireball = /** @class */ (function (_super) {
         };
         _this.state = 0;
         _this.frame = 6;
-        lighting_1.Lighting.momentaryLight(_this.parent.game.rooms[_this.parent.levelID], _this.x + 0.5, _this.y + 0.5, 0.5, [255, 100, 0], 150, 10, 1);
+        lighting_1.Lighting.momentaryLight(_this.parent.game.rooms[_this.parent.levelID], _this.x + 0.5, _this.y + 0.5, 0.5, [255, 100, 0], 250, 10, 1);
         return _this;
     }
     return PlayerFireball;
@@ -13023,7 +13021,7 @@ var WizardFireball = /** @class */ (function (_super) {
                 _this.parent.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.parent.game, _this.x, _this.y, _this.parent.x, _this.parent.y, true));
             }
             if (!_this.dead && _this.state === 2) {
-                lighting_1.Lighting.momentaryLight(_this.parent.room, _this.x, _this.y, 0.9 * (1 / _this.distanceToParent), _this.parent.projectileColor, 400, 0.9, 350);
+                lighting_1.Lighting.momentaryLight(_this.parent.room, _this.x, _this.y, 0.9 * (1 / _this.distanceToParent), _this.parent.projectileColor, 500, 0.9, 350);
                 _this.parent.removeLightSource(_this.lightSource);
                 _this.frame = 0;
                 _this.delay = game_1.Game.rand(0, 10, Math.random);
@@ -13078,8 +13076,8 @@ var WizardFireball = /** @class */ (function (_super) {
         _this.state = 0; // this.distanceToParent;
         _this.lightSource = new lightSource_1.LightSource(_this.x + 0.5, _this.y + 0.5, 0.5 * (1 / _this.distanceToParent), parent.projectileColor, 0.05);
         _this.parent.addLightSource(_this.lightSource);
-        _this.parent.room.updateLighting();
         return _this;
+        //this.parent.room.updateLighting();
     }
     return WizardFireball;
 }(projectile_1.Projectile));
@@ -13681,6 +13679,39 @@ var Room = /** @class */ (function () {
                     [1, 2, 1],
                 ]);
         };
+        this.updateLightSources = function (lightSource, remove) {
+            _this.oldCol = [];
+            _this.oldVis = [];
+            _this.oldCol = _this.col;
+            _this.oldVis = _this.vis;
+            if (lightSource) {
+                for (var i = 0; i < 360; i += levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP) {
+                    if (!remove) {
+                        _this.castTintAtAngle(i, lightSource.x, lightSource.y, lightSource.r, lightSource.c, lightSource.b); // RGB color in sRGB
+                    }
+                    else {
+                        _this.unCastTintAtAngle(i, lightSource.x, lightSource.y, lightSource.r, lightSource.c, lightSource.b);
+                    }
+                }
+            }
+            for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
+                for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
+                    _this.col[x][y] = _this.blendColorsArray(_this.renderBuffer[x][y]);
+                }
+            }
+            for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
+                for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
+                    _this.vis[x][y] = _this.rgbToLuminance(_this.col[x][y]);
+                }
+            }
+        };
+        this.revertLightSources = function () {
+            console.log("reverting lighting");
+            _this.oldCol = [];
+            _this.oldVis = [];
+            _this.col = _this.oldCol;
+            _this.vis = _this.oldVis;
+        };
         this.castShadowsAtAngle = function (angle, px, py, radius, oldVis) {
             var dx = Math.cos((angle * Math.PI) / 180);
             var dy = Math.sin((angle * Math.PI) / 180);
@@ -13721,7 +13752,7 @@ var Room = /** @class */ (function () {
                 _this.sRGBToLinear(color[1]),
                 _this.sRGBToLinear(color[2]),
             ];
-            for (var i = 0; i <= 10; i++) {
+            for (var i = 0; i <= levelConstants_1.LevelConstants.LIGHTING_MAX_DISTANCE; i++) {
                 var currentX = Math.floor(px + dx * i);
                 var currentY = Math.floor(py + dy * i);
                 if (!_this.isPositionInRoom(currentX, currentY))
@@ -13738,7 +13769,7 @@ var Room = /** @class */ (function () {
                 else {
                     intensity = brightness / Math.pow(Math.E, i); // Exponential falloff with distance
                 }
-                if (intensity < 0.001)
+                if (intensity < 0.005)
                     intensity = 0;
                 if (intensity <= 0)
                     continue;
@@ -13755,6 +13786,60 @@ var Room = /** @class */ (function () {
                     intensity,
                 ];
                 _this.renderBuffer[currentX][currentY].push(weightedLinearColor);
+            }
+        };
+        this.unCastTintAtAngle = function (angle, px, py, radius, color, brightness) {
+            var dx = Math.cos((angle * Math.PI) / 180);
+            var dy = Math.sin((angle * Math.PI) / 180);
+            // Convert input color from sRGB to linear RGB
+            var linearColor = [
+                _this.sRGBToLinear(color[0]),
+                _this.sRGBToLinear(color[1]),
+                _this.sRGBToLinear(color[2]),
+            ];
+            var _loop_2 = function (i) {
+                var currentX = Math.floor(px + dx * i);
+                var currentY = Math.floor(py + dy * i);
+                if (!_this.isPositionInRoom(currentX, currentY))
+                    return { value: void 0 }; // Outside the room
+                var tile = _this.roomArray[currentX][currentY];
+                if (tile.isOpaque()) {
+                    return { value: void 0 };
+                }
+                // Handle i=0 separately to avoid division by zero and ensure the light source tile is affected correctly
+                var intensity = void 0;
+                if (i === 0) {
+                    intensity = brightness * 0.1; // Initial intensity adjustment
+                }
+                else {
+                    intensity = brightness / Math.pow(Math.E, i); // Exponential falloff with distance
+                }
+                if (intensity < 0.001)
+                    intensity = 0;
+                if (intensity <= 0)
+                    return "continue";
+                if (!_this.renderBuffer[currentX] ||
+                    !_this.renderBuffer[currentX][currentY]) {
+                    return "continue";
+                }
+                var weightedLinearColor = [
+                    linearColor[0],
+                    linearColor[1],
+                    linearColor[2],
+                    intensity,
+                ];
+                // Remove the corresponding tint from the renderBuffer
+                _this.renderBuffer[currentX][currentY] = _this.renderBuffer[currentX][currentY].filter(function (colorEntry) {
+                    return !(Math.abs(colorEntry[0] - weightedLinearColor[0]) < 0.0001 &&
+                        Math.abs(colorEntry[1] - weightedLinearColor[1]) < 0.0001 &&
+                        Math.abs(colorEntry[2] - weightedLinearColor[2]) < 0.0001 &&
+                        Math.abs(colorEntry[3] - weightedLinearColor[3]) < 0.0001);
+                });
+            };
+            for (var i = 0; i <= 10; i++) {
+                var state_1 = _loop_2(i);
+                if (typeof state_1 === "object")
+                    return state_1.value;
             }
         };
         this.sRGBToLinear = function (value) {
@@ -14278,11 +14363,11 @@ var Room = /** @class */ (function () {
             }
         }
         tiles = tiles.filter(function (tile) { return !adjecentTiles.some(function (t) { return t.x === tile.x && t.y === tile.y; }); });
-        var _loop_2 = function (i) {
+        var _loop_3 = function (i) {
             var _b = this_1.getRandomEmptyPosition(tiles), x = _b.x, y = _b.y;
             // Define the enemy tables for each depth level
             var tables = {
-                0: [1, 4, 3, 8, 8],
+                0: [1, 4, 3],
                 1: [3, 4, 5, 9, 7],
                 2: [3, 4, 5, 7, 8, 9, 12],
                 3: [1, 2, 3, 5, 6, 7, 8, 9, 10],
@@ -14299,8 +14384,8 @@ var Room = /** @class */ (function () {
             if (tables[d] && tables[d].length > 0) {
                 // Function to add an enemy to the room
                 var addEnemy = function (enemy) {
-                    var _loop_3 = function (xx) {
-                        var _loop_4 = function (yy) {
+                    var _loop_4 = function (xx) {
+                        var _loop_5 = function (yy) {
                             if (!_this.getEmptyTiles().some(function (tt) { return tt.x === x + xx && tt.y === y + yy; })) {
                                 // If it does, increment the enemy count and return false
                                 numEnemies++;
@@ -14308,16 +14393,16 @@ var Room = /** @class */ (function () {
                             }
                         };
                         for (var yy = 0; yy < enemy.h; yy++) {
-                            var state_2 = _loop_4(yy);
-                            if (typeof state_2 === "object")
-                                return state_2;
+                            var state_3 = _loop_5(yy);
+                            if (typeof state_3 === "object")
+                                return state_3;
                         }
                     };
                     // Check if the enemy overlaps with any other enemies
                     for (var xx = 0; xx < enemy.w; xx++) {
-                        var state_1 = _loop_3(xx);
-                        if (typeof state_1 === "object")
-                            return state_1.value;
+                        var state_2 = _loop_4(xx);
+                        if (typeof state_2 === "object")
+                            return state_2.value;
                     }
                     // If it doesn't, add the enemy to the room and return true
                     _this.entities.push(enemy);
@@ -14395,7 +14480,7 @@ var Room = /** @class */ (function () {
         var this_1 = this;
         // Loop through the number of enemies to be added
         for (var i = 0; i < numEnemies; i++) {
-            _loop_2(i);
+            _loop_3(i);
         }
     };
     Room.prototype.addObstacles = function (numObstacles, rand) {
@@ -14600,10 +14685,24 @@ var game_1 = __webpack_require__(/*! ./game */ "./src/game.ts");
 var Sound = /** @class */ (function () {
     function Sound() {
     }
+    Sound.playSoundSafely = function (audio) {
+        audio.play().catch(function (err) {
+            if (err.name === "NotAllowedError") {
+                console.warn("Audio playback requires user interaction first");
+            }
+            else {
+                console.error("Error playing sound:", err);
+            }
+        });
+    };
+    Sound.initialized = false;
     Sound.loadSounds = function () {
+        if (Sound.initialized)
+            return;
+        Sound.initialized = true;
         Sound.playerStoneFootsteps = new Array();
         [1, 2, 3].forEach(function (i) {
-            return Sound.playerStoneFootsteps.push(new Audio("res/SFX/footsteps/stone/footstep" + i + ".wav"));
+            return Sound.playerStoneFootsteps.push(new Audio("res/SFX/footsteps/stone/footstep" + i + ".mp3"));
         });
         for (var _i = 0, _a = Sound.playerStoneFootsteps; _i < _a.length; _i++) {
             var f = _a[_i];
@@ -14611,71 +14710,110 @@ var Sound = /** @class */ (function () {
         }
         Sound.enemyFootsteps = new Array();
         [1, 2, 3, 4, 5].forEach(function (i) {
-            return Sound.enemyFootsteps.push(new Audio("res/SFX/footsteps/enemy/enemyfootstep" + i + ".wav"));
+            return Sound.enemyFootsteps.push(new Audio("res/SFX/footsteps/enemy/enemyfootstep" + i + ".mp3"));
         });
         for (var _b = 0, _c = Sound.enemyFootsteps; _b < _c.length; _b++) {
             var f = _c[_b];
             f.volume = 1.0;
         }
-        Sound.hitSounds = new Array();
+        Sound.swingSounds = new Array();
         [1, 2, 3, 4].forEach(function (i) {
-            return Sound.hitSounds.push(new Audio("res/SFX/attacks/swing" + i + ".wav"));
+            return Sound.swingSounds.push(new Audio("res/SFX/attacks/swing" + i + ".mp3"));
         });
-        for (var _d = 0, _e = Sound.hitSounds; _d < _e.length; _d++) {
+        for (var _d = 0, _e = Sound.swingSounds; _d < _e.length; _d++) {
             var f = _e[_d];
-            (f.volume = 0), f.load;
+            (f.volume = 0.5), f.load;
             //f.play();
         }
-        Sound.enemySpawnSound = new Audio("res/SFX/attacks/enemyspawn.wav");
+        Sound.hitSounds = new Array();
+        [1, 2].forEach(function (i) {
+            return Sound.hitSounds.push(new Audio("res/SFX/attacks/hurt" + i + ".mp3"));
+        });
+        for (var _f = 0, _g = Sound.hitSounds; _f < _g.length; _f++) {
+            var f = _g[_f];
+            (f.volume = 0.5), f.load;
+            //f.play();
+        }
+        Sound.enemySpawnSound = new Audio("res/SFX/attacks/enemyspawn.mp3");
         Sound.enemySpawnSound.volume = 0.7;
         Sound.chestSounds = new Array();
         [1, 2, 3].forEach(function (i) {
-            return Sound.chestSounds.push(new Audio("res/SFX/chest/chest" + i + ".wav"));
+            return Sound.chestSounds.push(new Audio("res/SFX/chest/chest" + i + ".mp3"));
         });
-        for (var _f = 0, _g = Sound.chestSounds; _f < _g.length; _f++) {
-            var f = _g[_f];
+        for (var _h = 0, _j = Sound.chestSounds; _h < _j.length; _h++) {
+            var f = _j[_h];
             f.volume = 0.5;
         }
         Sound.coinPickupSounds = new Array();
         [1, 2, 3, 4].forEach(function (i) {
-            return Sound.coinPickupSounds.push(new Audio("res/SFX/items/coins" + i + ".wav"));
+            return Sound.coinPickupSounds.push(new Audio("res/SFX/items/coins" + i + ".mp3"));
         });
-        for (var _h = 0, _j = Sound.coinPickupSounds; _h < _j.length; _h++) {
-            var f = _j[_h];
+        for (var _k = 0, _l = Sound.coinPickupSounds; _k < _l.length; _k++) {
+            var f = _l[_k];
             f.volume = 1.0;
         }
         Sound.miningSounds = new Array();
         [1, 2, 3, 4].forEach(function (i) {
-            return Sound.miningSounds.push(new Audio("res/SFX/resources/Pickaxe" + i + ".wav"));
+            return Sound.miningSounds.push(new Audio("res/SFX/resources/Pickaxe" + i + ".mp3"));
         });
-        for (var _k = 0, _l = Sound.miningSounds; _k < _l.length; _k++) {
-            var f = _l[_k];
+        for (var _m = 0, _o = Sound.miningSounds; _m < _o.length; _m++) {
+            var f = _o[_m];
             f.volume = 0.3;
         }
         Sound.hurtSounds = new Array();
         [1].forEach(function (i) {
-            return Sound.hurtSounds.push(new Audio("res/SFX/attacks/hurt1.wav"));
+            return Sound.hurtSounds.push(new Audio("res/SFX/attacks/hit.mp3"));
         });
-        for (var _m = 0, _o = Sound.hurtSounds; _m < _o.length; _m++) {
-            var f = _o[_m];
+        for (var _p = 0, _q = Sound.hurtSounds; _p < _q.length; _p++) {
+            var f = _q[_p];
             f.volume = 0.3;
         }
-        Sound.genericPickupSound = new Audio("res/SFX/items/pickup.wav");
+        Sound.genericPickupSound = new Audio("res/SFX/items/pickup.mp3");
         Sound.genericPickupSound.volume = 1.0;
-        Sound.breakRockSound = new Audio("res/SFX/resources/rockbreak.wav");
+        Sound.breakRockSound = new Audio("res/SFX/resources/rockbreak.mp3");
         Sound.breakRockSound.volume = 1.0;
         Sound.pushSounds = new Array();
         [1, 2].forEach(function (i) {
-            return Sound.pushSounds.push(new Audio("res/SFX/pushing/push" + i + ".wav"));
+            return Sound.pushSounds.push(new Audio("res/SFX/pushing/push" + i + ".mp3"));
         });
-        for (var _p = 0, _q = Sound.pushSounds; _p < _q.length; _p++) {
-            var f = _q[_p];
+        for (var _r = 0, _s = Sound.pushSounds; _r < _s.length; _r++) {
+            var f = _s[_r];
             f.volume = 1.0;
         }
-        Sound.healSound = new Audio("res/SFX/items/powerup1.wav");
+        Sound.healSound = new Audio("res/SFX/items/powerup1.mp3");
         Sound.healSound.volume = 0.5;
         Sound.music = new Audio("res/bewitched.mp3");
-        Sound.graveSound = new Audio("res/SFX/attacks/skelespawn.wav");
+        Sound.graveSound = new Audio("res/SFX/attacks/skelespawn.mp3");
+        Sound.ambientSound = new Audio("res/SFX/ambient/ambientDark2.mp3");
+        Sound.ambientSound.volume = 1;
+        Sound.goreSound = new Audio("res/SFX/misc Unused/gore2.mp3");
+        Sound.goreSound.volume = 0.5;
+        Sound.unlockSounds = new Array();
+        [1].forEach(function (i) {
+            return Sound.unlockSounds.push(new Audio("res/SFX/door/unlock" + i + ".mp3"));
+        });
+        for (var _t = 0, _u = Sound.unlockSounds; _t < _u.length; _t++) {
+            var f = _u[_t];
+            f.volume = 0.5;
+        }
+        Sound.doorOpenSounds = new Array();
+        [1, 2].forEach(function (i) {
+            return Sound.doorOpenSounds.push(new Audio("res/SFX/door/open" + i + ".mp3"));
+        });
+        for (var _v = 0, _w = Sound.doorOpenSounds; _v < _w.length; _v++) {
+            var f = _w[_v];
+            f.volume = 0.5;
+        }
+        Sound.keyPickupSound = new Audio("res/SFX/items/keyPickup.mp3");
+        Sound.keyPickupSound.volume = 1.0;
+        Sound.potSmashSounds = new Array();
+        [1, 2, 3].forEach(function (i) {
+            return Sound.potSmashSounds.push(new Audio("res/SFX/objects/potSmash" + i + ".mp3"));
+        });
+        for (var _x = 0, _y = Sound.potSmashSounds; _x < _y.length; _x++) {
+            var f = _y[_x];
+            f.volume = 0.5;
+        }
     };
     Sound.playerStoneFootstep = function () {
         var f = game_1.Game.randTable(Sound.playerStoneFootsteps, Math.random);
@@ -14688,17 +14826,14 @@ var Sound = /** @class */ (function () {
         f.currentTime = 0;
     };
     Sound.hit = function () {
-        var f = game_1.Game.randTable(Sound.hitSounds, Math.random);
+        var f = game_1.Game.randTable(Sound.swingSounds, Math.random);
         f.play();
         f.currentTime = 0;
         setTimeout(function () {
-            Sound.hurt();
+            var f = game_1.Game.randTable(Sound.hitSounds, Math.random);
+            f.play();
+            f.currentTime = 0;
         }, 100);
-        //f = Game.randTable(Sound.hurtSounds, Math.random);
-        //f.volume = 0.1;
-        //f.play();
-        //f.currentTime = 0;
-        f.volume = 0.4;
     };
     Sound.hurt = function () {
         var f = game_1.Game.randTable(Sound.hurtSounds, Math.random);
@@ -14711,6 +14846,11 @@ var Sound = /** @class */ (function () {
     };
     Sound.chest = function () {
         var f = game_1.Game.randTable(Sound.chestSounds, Math.random);
+        f.play();
+        f.currentTime = 0;
+    };
+    Sound.potSmash = function () {
+        var f = game_1.Game.randTable(Sound.potSmashSounds, Math.random);
         f.play();
         f.currentTime = 0;
     };
@@ -14738,6 +14878,10 @@ var Sound = /** @class */ (function () {
         Sound.genericPickupSound.play();
         Sound.genericPickupSound.currentTime = 0;
     };
+    Sound.keyPickup = function () {
+        Sound.keyPickupSound.play();
+        Sound.keyPickupSound.currentTime = 0;
+    };
     Sound.push = function () {
         var f = game_1.Game.randTable(Sound.pushSounds, Math.random);
         f.play();
@@ -14748,12 +14892,42 @@ var Sound = /** @class */ (function () {
         Sound.graveSound.currentTime = 0;
         Sound.graveSound.volume = 0.3;
     };
+    Sound.unlock = function () {
+        var f = game_1.Game.randTable(Sound.unlockSounds, Math.random);
+        f.play();
+        f.currentTime = 0;
+    };
     Sound.playMusic = function () {
-        Sound.music.addEventListener("ended", function () {
+        /*
+        Sound.music.addEventListener(
+          "ended",
+          () => {
             Sound.music.currentTime = 0;
-            Sound.music.play();
-        }, false);
-        //Sound.music.play();
+            Sound.playSoundSafely(Sound.music);
+          },
+          false
+        );
+        Sound.playSoundSafely(Sound.music);
+        */
+    };
+    Sound.doorOpen = function () {
+        var f = game_1.Game.randTable(Sound.doorOpenSounds, Math.random);
+        f.play();
+        f.currentTime = 0;
+    };
+    Sound.playAmbient = function () {
+        Sound.ambientSound.addEventListener("ended", function () {
+            Sound.ambientSound.currentTime = 0;
+            Sound.playSoundSafely(Sound.ambientSound);
+        }, true);
+        Sound.playSoundSafely(Sound.ambientSound);
+    };
+    Sound.playGore = function () {
+        Sound.goreSound.play();
+        Sound.goreSound.currentTime = 0;
+    };
+    Sound.delayPlay = function (method, delay) {
+        setTimeout(method, delay);
     };
     return Sound;
 }());
@@ -15129,6 +15303,7 @@ exports.Door = exports.DoorType = exports.DoorDir = void 0;
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var tile_1 = __webpack_require__(/*! ./tile */ "./src/tile/tile.ts");
 var key_1 = __webpack_require__(/*! ../item/key */ "./src/item/key.ts");
+var sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
 var DoorDir;
 (function (DoorDir) {
     DoorDir[DoorDir["North"] = 0] = "North";
@@ -15186,6 +15361,7 @@ var Door = /** @class */ (function (_super) {
                 if (k !== null) {
                     // remove key
                     player.inventory.removeItem(k);
+                    sound_1.Sound.unlock();
                     _this.removeLock();
                 }
             }
@@ -15210,6 +15386,9 @@ var Door = /** @class */ (function (_super) {
             return true;
         };
         _this.onCollide = function (player) {
+            if (!_this.opened) {
+                sound_1.Sound.doorOpen();
+            }
             _this.opened = true;
             _this.linkedDoor.opened = true;
             if (_this.doorDir === DoorDir.North || _this.doorDir === DoorDir.South) {
@@ -16084,7 +16263,7 @@ var TutorialListener = /** @class */ (function () {
     };
     TutorialListener.prototype.handleEnemySeen = function (data) {
         if (!this.hasSeenEnemy(data.enemyType)) {
-            this.game.pushMessage("New enemy encountered: ".concat(data.enemyName));
+            //this.game.pushMessage(`New enemy encountered: ${data.enemyName}`);
             this.addSeenEnemy(data.enemyType);
             this.pendingNewEnemies.add(data.enemyType);
             this.scheduleTutorialCreation();
@@ -16097,7 +16276,7 @@ var TutorialListener = /** @class */ (function () {
         if (this.tutorialCreationTimeout === null) {
             this.tutorialCreationTimeout = setTimeout(function () {
                 _this.createTutorialRoom(Array.from(_this.pendingNewEnemies));
-                _this.game.pushMessage("Defeat the enemies guarding the exits.");
+                //this.game.pushMessage("Defeat the enemies guarding the exits.");
                 _this.pendingNewEnemies.clear();
                 _this.tutorialCreationTimeout = null;
             }, 100); // Wait 100ms to collect all new enemies
