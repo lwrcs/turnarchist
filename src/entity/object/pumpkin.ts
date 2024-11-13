@@ -22,7 +22,7 @@ export class Pumpkin extends Entity {
     this.hasShadow = false;
     this.chainPushable = false;
     this.name = "pumpkin";
-    this.drop = new Candle(this.room, 0, 0);
+    this.drop = new Candle(this.room, this.x, this.y);
     this.lightSource = new LightSource(
       this.x + 0.5,
       this.y + 0.5,

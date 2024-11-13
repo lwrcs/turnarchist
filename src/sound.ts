@@ -1,4 +1,5 @@
 import { Game } from "./game";
+import { ReverbEngine } from "./reverb";
 
 export class Sound {
   static playerStoneFootsteps: Array<HTMLAudioElement>;
@@ -145,102 +146,109 @@ export class Sound {
     });
   }
 
-  static playerStoneFootstep = () => {
+  static async playWithReverb(audio: HTMLAudioElement) {
+    await ReverbEngine.initialize();
+    ReverbEngine.applyReverb(audio);
+    this.playSoundSafely(audio);
+  }
+
+  static playerStoneFootstep = async () => {
     let f = Game.randTable(Sound.playerStoneFootsteps, Math.random);
-    f.play();
+    await this.playWithReverb(f);
     f.currentTime = 0;
+    f.play();
   };
 
   static enemyFootstep = () => {
     let f = Game.randTable(Sound.enemyFootsteps, Math.random);
-    f.play();
+    this.playWithReverb(f);
     f.currentTime = 0;
   };
 
   static hit = () => {
     let f = Game.randTable(Sound.swingSounds, Math.random);
-    f.play();
+    this.playWithReverb(f);
     f.currentTime = 0;
 
     setTimeout(() => {
       let f = Game.randTable(Sound.hitSounds, Math.random);
-      f.play();
+      this.playWithReverb(f);
       f.currentTime = 0;
     }, 100);
   };
 
   static hurt = () => {
     let f = Game.randTable(Sound.hurtSounds, Math.random);
-    f.play();
+    this.playWithReverb(f);
     f.currentTime = 0;
   };
 
   static enemySpawn = () => {
-    Sound.enemySpawnSound.play();
+    this.playWithReverb(Sound.enemySpawnSound);
     Sound.enemySpawnSound.currentTime = 0;
   };
 
   static chest = () => {
     let f = Game.randTable(Sound.chestSounds, Math.random);
-    f.play();
+    this.playWithReverb(f);
     f.currentTime = 0;
   };
 
   static potSmash = () => {
     let f = Game.randTable(Sound.potSmashSounds, Math.random);
-    f.play();
+    this.playWithReverb(f);
     f.currentTime = 0;
   };
 
   static pickupCoin = () => {
     let f = Game.randTable(Sound.coinPickupSounds, Math.random);
-    f.play();
+    this.playWithReverb(f);
     f.currentTime = 0;
   };
 
   static mine = () => {
     let f = Game.randTable(Sound.miningSounds, Math.random);
-    f.play();
+    this.playWithReverb(f);
     f.currentTime = 0;
   };
 
   static breakRock = () => {
     setTimeout(() => {
-      Sound.breakRockSound.play();
+      this.playWithReverb(Sound.breakRockSound);
     }, 100);
     Sound.breakRockSound.currentTime = 0;
   };
 
   static heal = () => {
-    Sound.healSound.play();
+    this.playWithReverb(Sound.healSound);
     Sound.healSound.currentTime = 0;
   };
 
   static genericPickup = () => {
-    Sound.genericPickupSound.play();
+    this.playWithReverb(Sound.genericPickupSound);
     Sound.genericPickupSound.currentTime = 0;
   };
 
   static keyPickup = () => {
-    Sound.keyPickupSound.play();
+    this.playWithReverb(Sound.keyPickupSound);
     Sound.keyPickupSound.currentTime = 0;
   };
 
   static push = () => {
     let f = Game.randTable(Sound.pushSounds, Math.random);
-    f.play();
+    this.playWithReverb(f);
     f.currentTime = 0;
   };
 
   static skeleSpawn = () => {
-    Sound.graveSound.play();
+    this.playWithReverb(Sound.graveSound);
     Sound.graveSound.currentTime = 0;
     Sound.graveSound.volume = 0.3;
   };
 
   static unlock = () => {
     let f = Game.randTable(Sound.unlockSounds, Math.random);
-    f.play();
+    this.playWithReverb(f);
     f.currentTime = 0;
   };
 
@@ -260,7 +268,7 @@ export class Sound {
 
   static doorOpen = () => {
     let f = Game.randTable(Sound.doorOpenSounds, Math.random);
-    f.play();
+    this.playWithReverb(f);
     f.currentTime = 0;
   };
 
@@ -269,19 +277,25 @@ export class Sound {
       "ended",
       () => {
         Sound.ambientSound.currentTime = 0;
-        Sound.playSoundSafely(Sound.ambientSound);
+        this.playWithReverb(Sound.ambientSound);
       },
       true
     );
-    Sound.playSoundSafely(Sound.ambientSound);
+    this.playWithReverb(Sound.ambientSound);
   };
 
   static playGore = () => {
-    Sound.goreSound.play();
+    this.playWithReverb(Sound.goreSound);
     Sound.goreSound.currentTime = 0;
   };
 
   static delayPlay = (method: () => void, delay: number) => {
     setTimeout(method, delay);
   };
+
+  static stopSoundWithReverb(audio: HTMLAudioElement) {
+    ReverbEngine.removeReverb(audio);
+    audio.pause();
+    audio.currentTime = 0;
+  }
 }

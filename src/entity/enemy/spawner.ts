@@ -43,10 +43,7 @@ export class Spawner extends Enemy {
     this.tileX = 6;
     this.tileY = 4;
     this.seenPlayer = true;
-    this.enemySpawnType = Game.randTable(
-      [1, 2, 2, 2, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
-      Random.rand
-    );
+    this.enemySpawnType = Game.randTable([3], Random.rand);
 
     this.name = "reaper";
   }

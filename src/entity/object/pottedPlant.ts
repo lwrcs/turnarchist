@@ -25,8 +25,8 @@ export class PottedPlant extends Entity {
     if (drop) this.drop = drop;
     else {
       let dropProb = Random.rand();
-      if (dropProb < 0.025) this.drop = new Heart(this.room, 0, 0);
-      else this.drop = new Coin(this.room, 0, 0);
+      if (dropProb < 0.025) this.drop = new Heart(this.room, this.x, this.y);
+      else this.drop = new Coin(this.room, this.x, this.y);
     }
   }
 

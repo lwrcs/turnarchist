@@ -4155,7 +4155,7 @@ var Spawner = /** @class */ (function (_super) {
         _this.tileX = 6;
         _this.tileY = 4;
         _this.seenPlayer = true;
-        _this.enemySpawnType = game_1.Game.randTable([1, 2, 2, 2, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], random_1.Random.rand);
+        _this.enemySpawnType = game_1.Game.randTable([3], random_1.Random.rand);
         _this.name = "reaper";
         return _this;
     }
@@ -5594,9 +5594,9 @@ var Pot = /** @class */ (function (_super) {
         _this.name = "pot";
         var dropProb = random_1.Random.rand();
         if (dropProb < 0.025)
-            _this.drop = new heart_1.Heart(_this.room, 0, 0);
+            _this.drop = new heart_1.Heart(_this.room, _this.x, _this.y);
         else
-            _this.drop = new coin_1.Coin(_this.room, 0, 0);
+            _this.drop = new coin_1.Coin(_this.room, _this.x, _this.y);
         return _this;
     }
     Object.defineProperty(Pot.prototype, "type", {
@@ -5692,9 +5692,9 @@ var PottedPlant = /** @class */ (function (_super) {
         else {
             var dropProb = random_1.Random.rand();
             if (dropProb < 0.025)
-                _this.drop = new heart_1.Heart(_this.room, 0, 0);
+                _this.drop = new heart_1.Heart(_this.room, _this.x, _this.y);
             else
-                _this.drop = new coin_1.Coin(_this.room, 0, 0);
+                _this.drop = new coin_1.Coin(_this.room, _this.x, _this.y);
         }
         return _this;
     }
@@ -5773,7 +5773,7 @@ var Pumpkin = /** @class */ (function (_super) {
         _this.hasShadow = false;
         _this.chainPushable = false;
         _this.name = "pumpkin";
-        _this.drop = new candle_1.Candle(_this.room, 0, 0);
+        _this.drop = new candle_1.Candle(_this.room, _this.x, _this.y);
         _this.lightSource = new lightSource_1.LightSource(_this.x + 0.5, _this.y + 0.5, 1, [200, 30, 1], 0.5);
         _this.addLightSource(_this.lightSource);
         return _this;
@@ -5893,7 +5893,7 @@ var TombStone = /** @class */ (function (_super) {
         _this.name = "tombstone";
         var dropProb = random_1.Random.rand();
         if (dropProb < 0.05)
-            _this.drop = new spellbook_1.Spellbook(_this.room, 0, 0);
+            _this.drop = new spellbook_1.Spellbook(_this.room, _this.x, _this.y);
         _this.lightSource = new lightSource_1.LightSource(_this.x + 0.5, _this.y + 0.5, 1, [5, 150, 5], 1);
         _this.addLightSource(_this.lightSource);
         return _this;
@@ -6572,6 +6572,7 @@ var gameState_1 = __webpack_require__(/*! ./gameState */ "./src/gameState.ts");
 var door_2 = __webpack_require__(/*! ./tile/door */ "./src/tile/door.ts");
 var tutorialListener_1 = __webpack_require__(/*! ./tutorialListener */ "./src/tutorialListener.ts");
 var mouseCursor_1 = __webpack_require__(/*! ./mouseCursor */ "./src/mouseCursor.ts");
+var reverb_1 = __webpack_require__(/*! ./reverb */ "./src/reverb.ts");
 var LevelState;
 (function (LevelState) {
     LevelState[LevelState["IN_LEVEL"] = 0] = "IN_LEVEL";
@@ -7170,6 +7171,7 @@ var Game = /** @class */ (function () {
         });
         this.started = false;
         this.tutorialListener = new tutorialListener_1.TutorialListener(this);
+        reverb_1.ReverbEngine.initialize();
     }
     Game.letters = "abcdefghijklmnopqrstuvwxyz1234567890,.!?:'()[]%-/";
     Game.letter_widths = [
@@ -7351,6 +7353,7 @@ exports.GameConstants = void 0;
 var armor_1 = __webpack_require__(/*! ./item/armor */ "./src/item/armor.ts");
 var backpack_1 = __webpack_require__(/*! ./item/backpack */ "./src/item/backpack.ts");
 var candle_1 = __webpack_require__(/*! ./item/candle */ "./src/item/candle.ts");
+var entitySpawner_1 = __webpack_require__(/*! ./item/entitySpawner */ "./src/item/entitySpawner.ts");
 var godStone_1 = __webpack_require__(/*! ./item/godStone */ "./src/item/godStone.ts");
 var heart_1 = __webpack_require__(/*! ./item/heart */ "./src/item/heart.ts");
 var levelConstants_1 = __webpack_require__(/*! ./levelConstants */ "./src/levelConstants.ts");
@@ -7362,7 +7365,7 @@ var GameConstants = /** @class */ (function () {
     function GameConstants() {
     }
     GameConstants.VERSION = "v0.6.3";
-    GameConstants.DEVELOPER_MODE = false;
+    GameConstants.DEVELOPER_MODE = true;
     GameConstants.FPS = 120;
     GameConstants.ALPHA_ENABLED = true;
     GameConstants.SHADE_LEVELS = 25;
@@ -7392,6 +7395,7 @@ var GameConstants = /** @class */ (function () {
     GameConstants.STARTING_INVENTORY = [dagger_1.Dagger, candle_1.Candle];
     GameConstants.STARTING_DEV_INVENTORY = [
         dagger_1.Dagger,
+        entitySpawner_1.EntitySpawner,
         candle_1.Candle,
         godStone_1.GodStone,
         warhammer_1.Warhammer,
@@ -9745,9 +9749,94 @@ var Coin = /** @class */ (function (_super) {
         _this.stackable = true;
         return _this;
     }
+    Object.defineProperty(Coin.prototype, "distanceToBottomRight", {
+        get: function () {
+            return Math.sqrt(Math.pow((this.x + this.w - window.innerWidth), 2) +
+                Math.pow((this.y + this.h - window.innerHeight), 2));
+        },
+        enumerable: false,
+        configurable: true
+    });
     return Coin;
 }(item_1.Item));
 exports.Coin = Coin;
+
+
+/***/ }),
+
+/***/ "./src/item/entitySpawner.ts":
+/*!***********************************!*\
+  !*** ./src/item/entitySpawner.ts ***!
+  \***********************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.EntitySpawner = void 0;
+var usable_1 = __webpack_require__(/*! ./usable */ "./src/item/usable.ts");
+var entity_1 = __webpack_require__(/*! ../entity/entity */ "./src/entity/entity.ts");
+var eventBus_1 = __webpack_require__(/*! ../eventBus */ "./src/eventBus.ts");
+var bishopEnemy_1 = __webpack_require__(/*! ../entity/enemy/bishopEnemy */ "./src/entity/enemy/bishopEnemy.ts");
+var EntitySpawner = /** @class */ (function (_super) {
+    __extends(EntitySpawner, _super);
+    function EntitySpawner(level, x, y) {
+        var _this = _super.call(this, level, x, y) || this;
+        _this.onUse = function (player) { };
+        _this.spawnEntity = function (entity) {
+            entity_1.Entity.add(_this.room, _this.player.game, _this.player.x, _this.player.y);
+            console.log("Entity spawned");
+        };
+        _this.commandHandler = function (command) {
+            var player = _this.room.game.players[0];
+            command = command.toLowerCase();
+            if (!command.startsWith("/new")) {
+                return;
+            }
+            switch (command.split(" ")[1]) {
+                case "bishop":
+                    _this.spawnEntity(new bishopEnemy_1.BishopEnemy(_this.room, _this.player.game, _this.player.x, _this.player.y));
+                    break;
+                default:
+                    console.log("Unknown command: ".concat(command));
+                    break;
+            }
+            console.log("Command executed: ".concat(command));
+        };
+        _this.getDescription = function () {
+            return "YOU SHOULD NOT HAVE THIS";
+        };
+        _this.room = level;
+        _this.count = 0;
+        _this.tileX = 31;
+        _this.tileY = 0;
+        _this.setupEventListeners();
+        _this.player = _this.room.game.players[0];
+        _this.stackable = false;
+        return _this;
+    }
+    EntitySpawner.prototype.setupEventListeners = function () {
+        //console.log("Setting up event listeners");
+        eventBus_1.globalEventBus.on("ChatMessage", this.commandHandler.bind(this));
+        console.log("Event listeners set up");
+    };
+    return EntitySpawner;
+}(usable_1.Usable));
+exports.EntitySpawner = EntitySpawner;
 
 
 /***/ }),
@@ -10136,6 +10225,7 @@ var Item = /** @class */ (function (_super) {
         _this.drawTopLayer = function (delta) {
             if (_this.pickedUp) {
                 _this.y -= 0.125 * delta;
+                //this.x += (Math.sin(Date.now() / 50) * delta) / 10;
                 _this.alpha -= 0.03 * delta;
                 if (Math.abs(_this.y - _this.startY) > 5)
                     _this.level.items = _this.level.items.filter(function (x) { return x !== _this; }); // removes itself from the level
@@ -10176,6 +10266,7 @@ var Item = /** @class */ (function (_super) {
         _this.offsetY = -0.25;
         _this.name = "";
         _this.startY = y;
+        _this.randomOffset = Math.random();
         return _this;
     }
     return Item;
@@ -10673,9 +10764,9 @@ var LevelConstants = /** @class */ (function () {
     LevelConstants.SHADED_TILE_CUTOFF = 1;
     LevelConstants.SMOOTH_LIGHTING = false; //doesn't work
     LevelConstants.MIN_VISIBILITY = 0; // visibility level of places you've already seen
-    LevelConstants.LIGHTING_ANGLE_STEP = 1; // how many degrees between each ray, previously 5
+    LevelConstants.LIGHTING_ANGLE_STEP = 2; // how many degrees between each ray, previously 5
     LevelConstants.LIGHTING_MAX_DISTANCE = 7;
-    LevelConstants.LIGHT_RESOLUTION = 1; //1 is default
+    LevelConstants.LIGHT_RESOLUTION = 0.1; //1 is default
     LevelConstants.LEVEL_TEXT_COLOR = "yellow";
     LevelConstants.AMBIENT_LIGHT_COLOR = [10, 10, 10];
     LevelConstants.TORCH_LIGHT_COLOR = [200, 25, 5];
@@ -10894,7 +10985,7 @@ var generate_dungeon_candidate = function (map_w, map_h) {
     grid = populate_grid(partitions, grid, map_w, map_h);
     //remove wall rooms and populate dat grid
     partitions.sort(function (a, b) { return a.area() - b.area(); });
-    partitions = remove_wall_rooms(partitions, map_w, map_h, 0.3);
+    //partitions = remove_wall_rooms(partitions, map_w, map_h, 0.3);
     //sort the partitions list by ... area? I think?
     var spawn = partitions[0];
     //spawn is the first Partition instance
@@ -11889,11 +11980,12 @@ var Particle = /** @class */ (function (_super) {
         var _this = _super !== null && _super.apply(this, arguments) || this;
         _this.drawTopLayer = function (delta) { };
         _this.shadeAmount = function () {
-            var shade = _this.room.softVis[Math.floor(_this.x)][Math.floor(_this.y)];
-            if (shade !== undefined)
-                return shade;
-            else
-                return 1;
+            var x = Math.floor(_this.x);
+            var y = Math.floor(_this.y);
+            if (!_this.room.softVis[x])
+                return 0.9;
+            var shade = _this.room.softVis[x][y];
+            return shade !== null && shade !== void 0 ? shade : 0.9;
         };
         _this.shadeColor = function () {
             return _this.room.shadeColor;
@@ -12181,16 +12273,18 @@ var Player = /** @class */ (function (_super) {
             return false;
         };
         _this.spaceListener = function () {
-            if (_this.dead) {
-                _this.restart();
-            }
-            else if (_this.openVendingMachine) {
-                _this.openVendingMachine.space();
-            }
-            else if (_this.inventory.isOpen ||
-                _this.game.levelState === game_1.LevelState.IN_LEVEL) {
-                _this.inventory.space();
-                return;
+            if (!_this.game.chatOpen) {
+                if (_this.dead) {
+                    _this.restart();
+                }
+                else if (_this.openVendingMachine) {
+                    _this.openVendingMachine.space();
+                }
+                else if (_this.inventory.isOpen ||
+                    _this.game.levelState === game_1.LevelState.IN_LEVEL) {
+                    _this.inventory.space();
+                    return;
+                }
             }
         };
         _this.mouseLeftClick = function () {
@@ -12689,8 +12783,8 @@ var Player = /** @class */ (function (_super) {
             });
         }
         _this.mapToggled = true;
-        _this.health = 3;
-        _this.maxHealth = 3;
+        _this.health = gameConstants_1.GameConstants.DEVELOPER_MODE ? 3000 : 3;
+        _this.maxHealth = gameConstants_1.GameConstants.DEVELOPER_MODE ? 3000 : 3;
         _this.healthBar = new healthbar_1.HealthBar();
         _this.dead = false;
         _this.flashing = false;
@@ -13117,13 +13211,228 @@ exports.Random = Random;
 
 /***/ }),
 
+/***/ "./src/reverb.ts":
+/*!***********************!*\
+  !*** ./src/reverb.ts ***!
+  \***********************/
+/***/ (function(__unused_webpack_module, exports) {
+
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __generator = (this && this.__generator) || function (thisArg, body) {
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
+    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    function verb(n) { return function (v) { return step([n, v]); }; }
+    function step(op) {
+        if (f) throw new TypeError("Generator is already executing.");
+        while (g && (g = 0, op[0] && (_ = 0)), _) try {
+            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+            if (y = 0, t) op = [op[0] & 2, t.value];
+            switch (op[0]) {
+                case 0: case 1: t = op; break;
+                case 4: _.label++; return { value: op[1], done: false };
+                case 5: _.label++; y = op[1]; op = [0]; continue;
+                case 7: op = _.ops.pop(); _.trys.pop(); continue;
+                default:
+                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
+                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
+                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
+                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
+                    if (t[2]) _.ops.pop();
+                    _.trys.pop(); continue;
+            }
+            op = body.call(thisArg, _);
+        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
+        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
+    }
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ReverbEngine = void 0;
+var ReverbEngine = /** @class */ (function () {
+    function ReverbEngine() {
+    }
+    // Initialize the AudioContext and ConvolverNode
+    ReverbEngine.initialize = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        if (!!ReverbEngine.audioContext) return [3 /*break*/, 2];
+                        ReverbEngine.audioContext = new (window.AudioContext ||
+                            window.webkitAudioContext)();
+                        ReverbEngine.convolver = ReverbEngine.audioContext.createConvolver();
+                        ReverbEngine.convolver.connect(ReverbEngine.audioContext.destination);
+                        return [4 /*yield*/, ReverbEngine.loadReverbBuffer("res/SFX/impulses/default.wav")];
+                    case 1:
+                        _a.sent();
+                        ReverbEngine.setDefaultReverb();
+                        _a.label = 2;
+                    case 2: return [2 /*return*/];
+                }
+            });
+        });
+    };
+    // Load a specified impulse response
+    ReverbEngine.loadReverbBuffer = function (filePath) {
+        return __awaiter(this, void 0, void 0, function () {
+            var response, arrayBuffer, _a, error_1;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
+                    case 0:
+                        _b.trys.push([0, 4, , 5]);
+                        return [4 /*yield*/, fetch(filePath)];
+                    case 1:
+                        response = _b.sent();
+                        if (!response.ok) {
+                            throw new Error("HTTP error! status: ".concat(response.status));
+                        }
+                        return [4 /*yield*/, response.arrayBuffer()];
+                    case 2:
+                        arrayBuffer = _b.sent();
+                        _a = ReverbEngine;
+                        return [4 /*yield*/, ReverbEngine.audioContext.decodeAudioData(arrayBuffer)];
+                    case 3:
+                        _a.reverbBuffer =
+                            _b.sent();
+                        console.log("ReverbEngine: Reverb buffer loaded from ".concat(filePath, " successfully."));
+                        return [3 /*break*/, 5];
+                    case 4:
+                        error_1 = _b.sent();
+                        console.error("ReverbEngine: Failed to load reverb buffer.", error_1);
+                        return [3 /*break*/, 5];
+                    case 5: return [2 /*return*/];
+                }
+            });
+        });
+    };
+    // Set the default reverb buffer
+    ReverbEngine.setDefaultReverb = function () {
+        if (ReverbEngine.reverbBuffer) {
+            ReverbEngine.convolver.buffer = ReverbEngine.reverbBuffer;
+        }
+        else {
+            console.warn("ReverbEngine: Default reverb buffer not loaded.");
+        }
+    };
+    /**
+     * Set the reverb characteristics by specifying an impulse response file.
+     * @param filePath - The path to the impulse response file.
+     */
+    ReverbEngine.setReverbImpulse = function (filePath) {
+        return __awaiter(this, void 0, void 0, function () {
+            var error_2;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        _a.trys.push([0, 2, , 3]);
+                        return [4 /*yield*/, ReverbEngine.loadReverbBuffer(filePath)];
+                    case 1:
+                        _a.sent();
+                        if (ReverbEngine.reverbBuffer) {
+                            ReverbEngine.convolver.buffer = ReverbEngine.reverbBuffer;
+                            console.log("ReverbEngine: Reverb impulse set to ".concat(filePath));
+                        }
+                        else {
+                            console.warn("ReverbEngine: Reverb buffer not set for ".concat(filePath));
+                        }
+                        return [3 /*break*/, 3];
+                    case 2:
+                        error_2 = _a.sent();
+                        console.error("ReverbEngine: Failed to set reverb impulse.", error_2);
+                        return [3 /*break*/, 3];
+                    case 3: return [2 /*return*/];
+                }
+            });
+        });
+    };
+    // Apply reverb to a given HTMLAudioElement
+    ReverbEngine.applyReverb = function (audioElement) {
+        try {
+            if (ReverbEngine.mediaSources.has(audioElement)) {
+                console.warn("ReverbEngine: Reverb already applied to this audio element.");
+                return;
+            }
+            var track = ReverbEngine.audioContext.createMediaElementSource(audioElement);
+            track.connect(ReverbEngine.convolver);
+            ReverbEngine.mediaSources.set(audioElement, track);
+            console.log("ReverbEngine: Reverb applied to ".concat(audioElement.src));
+        }
+        catch (error) {
+            console.error("ReverbEngine: Failed to apply reverb.", error);
+        }
+    };
+    // Remove reverb from a given HTMLAudioElement
+    ReverbEngine.removeReverb = function (audioElement) {
+        var track = ReverbEngine.mediaSources.get(audioElement);
+        if (track) {
+            track.disconnect();
+            ReverbEngine.mediaSources.delete(audioElement);
+            console.log("ReverbEngine: Reverb removed from ".concat(audioElement.src));
+        }
+        else {
+            console.warn("ReverbEngine: No reverb connection found for this audio element.");
+        }
+    };
+    ReverbEngine.reverbBuffer = null;
+    ReverbEngine.mediaSources = new WeakMap();
+    return ReverbEngine;
+}());
+exports.ReverbEngine = ReverbEngine;
+
+
+/***/ }),
+
 /***/ "./src/room.ts":
 /*!*********************!*\
   !*** ./src/room.ts ***!
   \*********************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __generator = (this && this.__generator) || function (thisArg, body) {
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
+    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    function verb(n) { return function (v) { return step([n, v]); }; }
+    function step(op) {
+        if (f) throw new TypeError("Generator is already executing.");
+        while (g && (g = 0, op[0] && (_ = 0)), _) try {
+            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+            if (y = 0, t) op = [op[0] & 2, t.value];
+            switch (op[0]) {
+                case 0: case 1: t = op; break;
+                case 4: _.label++; return { value: op[1], done: false };
+                case 5: _.label++; y = op[1]; op = [0]; continue;
+                case 7: op = _.ops.pop(); _.trys.pop(); continue;
+                default:
+                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
+                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
+                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
+                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
+                    if (t[2]) _.ops.pop();
+                    _.trys.pop(); continue;
+            }
+            op = body.call(thisArg, _);
+        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
+        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
+    }
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Room = exports.TurnState = exports.RoomType = void 0;
 var wall_1 = __webpack_require__(/*! ./tile/wall */ "./src/tile/wall.ts");
@@ -13187,6 +13496,7 @@ var sniperEnemy_1 = __webpack_require__(/*! ./entity/enemy/sniperEnemy */ "./src
 var enemy_1 = __webpack_require__(/*! ./entity/enemy/enemy */ "./src/entity/enemy/enemy.ts");
 var fireWizard_1 = __webpack_require__(/*! ./entity/enemy/fireWizard */ "./src/entity/enemy/fireWizard.ts");
 var energyWizard_1 = __webpack_require__(/*! ./entity/enemy/energyWizard */ "./src/entity/enemy/energyWizard.ts");
+var reverb_1 = __webpack_require__(/*! ./reverb */ "./src/reverb.ts");
 var RoomType;
 (function (RoomType) {
     RoomType[RoomType["START"] = 0] = "START";
@@ -13520,6 +13830,7 @@ var Room = /** @class */ (function () {
             _this.calculateWallInfo();
             _this.message = _this.name;
             player.map.saveMapData();
+            _this.setReverb();
         };
         this.enterLevelThroughDoor = function (player, door, side) {
             if (door instanceof door_1.Door && door.doorDir === door_2.DoorDir.North) {
@@ -13544,6 +13855,7 @@ var Room = /** @class */ (function () {
             _this.alertEnemiesOnEntry();
             _this.message = _this.name;
             player.map.saveMapData();
+            _this.setReverb();
         };
         this.enterLevelThroughLadder = function (player, ladder) {
             player.moveSnap(ladder.x, ladder.y + 1);
@@ -13553,6 +13865,7 @@ var Room = /** @class */ (function () {
             _this.entered = true;
             _this.message = _this.name;
             player.map.saveMapData();
+            _this.setReverb();
         };
         this.getEmptyTiles = function () {
             var returnVal = [];
@@ -13662,13 +13975,18 @@ var Room = /** @class */ (function () {
                     }
                 }
             }
-            for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
-                for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
-                    _this.col[x][y] = _this.blendColorsArray(_this.renderBuffer[x][y]);
+            var roomX = _this.roomX;
+            var roomY = _this.roomY;
+            var width = _this.width;
+            var height = _this.height;
+            var renderBuffer = _this.renderBuffer;
+            for (var x = roomX; x < roomX + width; x++) {
+                for (var y = roomY; y < roomY + height; y++) {
+                    _this.col[x][y] = _this.blendColorsArray(renderBuffer[x][y]);
                 }
             }
-            for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
-                for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
+            for (var x = roomX; x < roomX + width; x++) {
+                for (var y = roomY; y < roomY + height; y++) {
                     _this.vis[x][y] = _this.rgbToLuminance(_this.col[x][y]);
                 }
             }
@@ -14231,6 +14549,46 @@ var Room = /** @class */ (function () {
             return false;
         return true;
     };
+    Room.prototype.changeReverb = function (newImpulsePath) {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, reverb_1.ReverbEngine.setReverbImpulse(newImpulsePath)];
+                    case 1:
+                        _a.sent();
+                        return [2 /*return*/];
+                }
+            });
+        });
+    };
+    Object.defineProperty(Room.prototype, "roomArea", {
+        get: function () {
+            var area = (this.width - 2) * (this.height - 2);
+            var openTiles = [];
+            for (var x = this.roomX + 1; x < this.roomX + this.width - 1; x++) {
+                for (var y = this.roomY + 1; y < this.roomY + this.height - 1; y++) {
+                    if (this.roomArray[x][y] instanceof floor_1.Floor)
+                        openTiles.push({ x: x, y: y });
+                }
+            }
+            console.log(area, openTiles.length);
+            return openTiles.length;
+        },
+        enumerable: false,
+        configurable: true
+    });
+    Room.prototype.setReverb = function () {
+        var roomArea = this.roomArea;
+        if (roomArea < 10) {
+            this.changeReverb("res/SFX/impulses/small.wav");
+        }
+        else if (roomArea < 55) {
+            this.changeReverb("res/SFX/impulses/medium.wav");
+        }
+        else {
+            this.changeReverb("res/SFX/impulses/large.wav");
+        }
+    };
     Room.prototype.buildEmptyRoom = function () {
         // fill in wall and floor
         for (var x = this.roomX; x < this.roomX + this.width; x++) {
@@ -14676,12 +15034,49 @@ exports.Room = Room;
 /*!**********************!*\
   !*** ./src/sound.ts ***!
   \**********************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __generator = (this && this.__generator) || function (thisArg, body) {
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
+    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    function verb(n) { return function (v) { return step([n, v]); }; }
+    function step(op) {
+        if (f) throw new TypeError("Generator is already executing.");
+        while (g && (g = 0, op[0] && (_ = 0)), _) try {
+            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+            if (y = 0, t) op = [op[0] & 2, t.value];
+            switch (op[0]) {
+                case 0: case 1: t = op; break;
+                case 4: _.label++; return { value: op[1], done: false };
+                case 5: _.label++; y = op[1]; op = [0]; continue;
+                case 7: op = _.ops.pop(); _.trys.pop(); continue;
+                default:
+                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
+                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
+                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
+                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
+                    if (t[2]) _.ops.pop();
+                    _.trys.pop(); continue;
+            }
+            op = body.call(thisArg, _);
+        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
+        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
+    }
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Sound = void 0;
 var game_1 = __webpack_require__(/*! ./game */ "./src/game.ts");
+var reverb_1 = __webpack_require__(/*! ./reverb */ "./src/reverb.ts");
 var Sound = /** @class */ (function () {
     function Sound() {
     }
@@ -14695,6 +15090,27 @@ var Sound = /** @class */ (function () {
             }
         });
     };
+    Sound.playWithReverb = function (audio) {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_b) {
+                switch (_b.label) {
+                    case 0: return [4 /*yield*/, reverb_1.ReverbEngine.initialize()];
+                    case 1:
+                        _b.sent();
+                        reverb_1.ReverbEngine.applyReverb(audio);
+                        this.playSoundSafely(audio);
+                        return [2 /*return*/];
+                }
+            });
+        });
+    };
+    Sound.stopSoundWithReverb = function (audio) {
+        reverb_1.ReverbEngine.removeReverb(audio);
+        audio.pause();
+        audio.currentTime = 0;
+    };
+    var _a;
+    _a = Sound;
     Sound.initialized = false;
     Sound.loadSounds = function () {
         if (Sound.initialized)
@@ -14704,24 +15120,24 @@ var Sound = /** @class */ (function () {
         [1, 2, 3].forEach(function (i) {
             return Sound.playerStoneFootsteps.push(new Audio("res/SFX/footsteps/stone/footstep" + i + ".mp3"));
         });
-        for (var _i = 0, _a = Sound.playerStoneFootsteps; _i < _a.length; _i++) {
-            var f = _a[_i];
+        for (var _i = 0, _b = Sound.playerStoneFootsteps; _i < _b.length; _i++) {
+            var f = _b[_i];
             f.volume = 1.0;
         }
         Sound.enemyFootsteps = new Array();
         [1, 2, 3, 4, 5].forEach(function (i) {
             return Sound.enemyFootsteps.push(new Audio("res/SFX/footsteps/enemy/enemyfootstep" + i + ".mp3"));
         });
-        for (var _b = 0, _c = Sound.enemyFootsteps; _b < _c.length; _b++) {
-            var f = _c[_b];
+        for (var _c = 0, _d = Sound.enemyFootsteps; _c < _d.length; _c++) {
+            var f = _d[_c];
             f.volume = 1.0;
         }
         Sound.swingSounds = new Array();
         [1, 2, 3, 4].forEach(function (i) {
             return Sound.swingSounds.push(new Audio("res/SFX/attacks/swing" + i + ".mp3"));
         });
-        for (var _d = 0, _e = Sound.swingSounds; _d < _e.length; _d++) {
-            var f = _e[_d];
+        for (var _e = 0, _f = Sound.swingSounds; _e < _f.length; _e++) {
+            var f = _f[_e];
             (f.volume = 0.5), f.load;
             //f.play();
         }
@@ -14729,8 +15145,8 @@ var Sound = /** @class */ (function () {
         [1, 2].forEach(function (i) {
             return Sound.hitSounds.push(new Audio("res/SFX/attacks/hurt" + i + ".mp3"));
         });
-        for (var _f = 0, _g = Sound.hitSounds; _f < _g.length; _f++) {
-            var f = _g[_f];
+        for (var _g = 0, _h = Sound.hitSounds; _g < _h.length; _g++) {
+            var f = _h[_g];
             (f.volume = 0.5), f.load;
             //f.play();
         }
@@ -14740,32 +15156,32 @@ var Sound = /** @class */ (function () {
         [1, 2, 3].forEach(function (i) {
             return Sound.chestSounds.push(new Audio("res/SFX/chest/chest" + i + ".mp3"));
         });
-        for (var _h = 0, _j = Sound.chestSounds; _h < _j.length; _h++) {
-            var f = _j[_h];
+        for (var _j = 0, _k = Sound.chestSounds; _j < _k.length; _j++) {
+            var f = _k[_j];
             f.volume = 0.5;
         }
         Sound.coinPickupSounds = new Array();
         [1, 2, 3, 4].forEach(function (i) {
             return Sound.coinPickupSounds.push(new Audio("res/SFX/items/coins" + i + ".mp3"));
         });
-        for (var _k = 0, _l = Sound.coinPickupSounds; _k < _l.length; _k++) {
-            var f = _l[_k];
+        for (var _l = 0, _m = Sound.coinPickupSounds; _l < _m.length; _l++) {
+            var f = _m[_l];
             f.volume = 1.0;
         }
         Sound.miningSounds = new Array();
         [1, 2, 3, 4].forEach(function (i) {
             return Sound.miningSounds.push(new Audio("res/SFX/resources/Pickaxe" + i + ".mp3"));
         });
-        for (var _m = 0, _o = Sound.miningSounds; _m < _o.length; _m++) {
-            var f = _o[_m];
+        for (var _o = 0, _p = Sound.miningSounds; _o < _p.length; _o++) {
+            var f = _p[_o];
             f.volume = 0.3;
         }
         Sound.hurtSounds = new Array();
         [1].forEach(function (i) {
             return Sound.hurtSounds.push(new Audio("res/SFX/attacks/hit.mp3"));
         });
-        for (var _p = 0, _q = Sound.hurtSounds; _p < _q.length; _p++) {
-            var f = _q[_p];
+        for (var _q = 0, _r = Sound.hurtSounds; _q < _r.length; _q++) {
+            var f = _r[_q];
             f.volume = 0.3;
         }
         Sound.genericPickupSound = new Audio("res/SFX/items/pickup.mp3");
@@ -14776,8 +15192,8 @@ var Sound = /** @class */ (function () {
         [1, 2].forEach(function (i) {
             return Sound.pushSounds.push(new Audio("res/SFX/pushing/push" + i + ".mp3"));
         });
-        for (var _r = 0, _s = Sound.pushSounds; _r < _s.length; _r++) {
-            var f = _s[_r];
+        for (var _s = 0, _t = Sound.pushSounds; _s < _t.length; _s++) {
+            var f = _t[_s];
             f.volume = 1.0;
         }
         Sound.healSound = new Audio("res/SFX/items/powerup1.mp3");
@@ -14792,16 +15208,16 @@ var Sound = /** @class */ (function () {
         [1].forEach(function (i) {
             return Sound.unlockSounds.push(new Audio("res/SFX/door/unlock" + i + ".mp3"));
         });
-        for (var _t = 0, _u = Sound.unlockSounds; _t < _u.length; _t++) {
-            var f = _u[_t];
+        for (var _u = 0, _v = Sound.unlockSounds; _u < _v.length; _u++) {
+            var f = _v[_u];
             f.volume = 0.5;
         }
         Sound.doorOpenSounds = new Array();
         [1, 2].forEach(function (i) {
             return Sound.doorOpenSounds.push(new Audio("res/SFX/door/open" + i + ".mp3"));
         });
-        for (var _v = 0, _w = Sound.doorOpenSounds; _v < _w.length; _v++) {
-            var f = _w[_v];
+        for (var _w = 0, _x = Sound.doorOpenSounds; _w < _x.length; _w++) {
+            var f = _x[_w];
             f.volume = 0.5;
         }
         Sound.keyPickupSound = new Audio("res/SFX/items/keyPickup.mp3");
@@ -14810,91 +15226,101 @@ var Sound = /** @class */ (function () {
         [1, 2, 3].forEach(function (i) {
             return Sound.potSmashSounds.push(new Audio("res/SFX/objects/potSmash" + i + ".mp3"));
         });
-        for (var _x = 0, _y = Sound.potSmashSounds; _x < _y.length; _x++) {
-            var f = _y[_x];
+        for (var _y = 0, _z = Sound.potSmashSounds; _y < _z.length; _y++) {
+            var f = _z[_y];
             f.volume = 0.5;
         }
     };
-    Sound.playerStoneFootstep = function () {
-        var f = game_1.Game.randTable(Sound.playerStoneFootsteps, Math.random);
-        f.play();
-        f.currentTime = 0;
-    };
+    Sound.playerStoneFootstep = function () { return __awaiter(void 0, void 0, void 0, function () {
+        var f;
+        return __generator(_a, function (_b) {
+            switch (_b.label) {
+                case 0:
+                    f = game_1.Game.randTable(Sound.playerStoneFootsteps, Math.random);
+                    return [4 /*yield*/, this.playWithReverb(f)];
+                case 1:
+                    _b.sent();
+                    f.currentTime = 0;
+                    f.play();
+                    return [2 /*return*/];
+            }
+        });
+    }); };
     Sound.enemyFootstep = function () {
         var f = game_1.Game.randTable(Sound.enemyFootsteps, Math.random);
-        f.play();
+        _a.playWithReverb(f);
         f.currentTime = 0;
     };
     Sound.hit = function () {
         var f = game_1.Game.randTable(Sound.swingSounds, Math.random);
-        f.play();
+        _a.playWithReverb(f);
         f.currentTime = 0;
         setTimeout(function () {
             var f = game_1.Game.randTable(Sound.hitSounds, Math.random);
-            f.play();
+            _a.playWithReverb(f);
             f.currentTime = 0;
         }, 100);
     };
     Sound.hurt = function () {
         var f = game_1.Game.randTable(Sound.hurtSounds, Math.random);
-        f.play();
+        _a.playWithReverb(f);
         f.currentTime = 0;
     };
     Sound.enemySpawn = function () {
-        Sound.enemySpawnSound.play();
+        _a.playWithReverb(Sound.enemySpawnSound);
         Sound.enemySpawnSound.currentTime = 0;
     };
     Sound.chest = function () {
         var f = game_1.Game.randTable(Sound.chestSounds, Math.random);
-        f.play();
+        _a.playWithReverb(f);
         f.currentTime = 0;
     };
     Sound.potSmash = function () {
         var f = game_1.Game.randTable(Sound.potSmashSounds, Math.random);
-        f.play();
+        _a.playWithReverb(f);
         f.currentTime = 0;
     };
     Sound.pickupCoin = function () {
         var f = game_1.Game.randTable(Sound.coinPickupSounds, Math.random);
-        f.play();
+        _a.playWithReverb(f);
         f.currentTime = 0;
     };
     Sound.mine = function () {
         var f = game_1.Game.randTable(Sound.miningSounds, Math.random);
-        f.play();
+        _a.playWithReverb(f);
         f.currentTime = 0;
     };
     Sound.breakRock = function () {
         setTimeout(function () {
-            Sound.breakRockSound.play();
+            _a.playWithReverb(Sound.breakRockSound);
         }, 100);
         Sound.breakRockSound.currentTime = 0;
     };
     Sound.heal = function () {
-        Sound.healSound.play();
+        _a.playWithReverb(Sound.healSound);
         Sound.healSound.currentTime = 0;
     };
     Sound.genericPickup = function () {
-        Sound.genericPickupSound.play();
+        _a.playWithReverb(Sound.genericPickupSound);
         Sound.genericPickupSound.currentTime = 0;
     };
     Sound.keyPickup = function () {
-        Sound.keyPickupSound.play();
+        _a.playWithReverb(Sound.keyPickupSound);
         Sound.keyPickupSound.currentTime = 0;
     };
     Sound.push = function () {
         var f = game_1.Game.randTable(Sound.pushSounds, Math.random);
-        f.play();
+        _a.playWithReverb(f);
         f.currentTime = 0;
     };
     Sound.skeleSpawn = function () {
-        Sound.graveSound.play();
+        _a.playWithReverb(Sound.graveSound);
         Sound.graveSound.currentTime = 0;
         Sound.graveSound.volume = 0.3;
     };
     Sound.unlock = function () {
         var f = game_1.Game.randTable(Sound.unlockSounds, Math.random);
-        f.play();
+        _a.playWithReverb(f);
         f.currentTime = 0;
     };
     Sound.playMusic = function () {
@@ -14912,18 +15338,18 @@ var Sound = /** @class */ (function () {
     };
     Sound.doorOpen = function () {
         var f = game_1.Game.randTable(Sound.doorOpenSounds, Math.random);
-        f.play();
+        _a.playWithReverb(f);
         f.currentTime = 0;
     };
     Sound.playAmbient = function () {
         Sound.ambientSound.addEventListener("ended", function () {
             Sound.ambientSound.currentTime = 0;
-            Sound.playSoundSafely(Sound.ambientSound);
+            _a.playWithReverb(Sound.ambientSound);
         }, true);
-        Sound.playSoundSafely(Sound.ambientSound);
+        _a.playWithReverb(Sound.ambientSound);
     };
     Sound.playGore = function () {
-        Sound.goreSound.play();
+        _a.playWithReverb(Sound.goreSound);
         Sound.goreSound.currentTime = 0;
     };
     Sound.delayPlay = function (method, delay) {
@@ -14940,27 +15366,19 @@ exports.Sound = Sound;
 /*!************************!*\
   !*** ./src/textbox.ts ***!
   \************************/
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.TextBox = void 0;
+var eventBus_1 = __webpack_require__(/*! ./eventBus */ "./src/eventBus.ts");
 var TextBox = /** @class */ (function () {
     function TextBox(element) {
         var _this = this;
         this.allowedCharacters = "all";
-        this.setEnterCallback = function (callback) {
-            _this.enterCallback = callback;
-        };
-        this.setEscapeCallback = function (callback) {
-            _this.escapeCallback = callback;
-        };
-        this.clear = function () {
-            _this.text = "";
-            _this.cursor = 0;
-        };
+        this.message = "";
         this.handleKeyPress = function (key) {
-            var fontHas = "abcdefghijklmnopqrstuvwxyz1234567890,.!?:'()[]%-/".split("");
+            var fontHas = "abcdefghijklmnopqrstuvwxyz1234567890,.!?:'()[]%-/ ".split("");
             if (key.length === 1) {
                 key = key.toLowerCase();
                 if (fontHas.includes(key)) {
@@ -14971,54 +15389,62 @@ var TextBox = /** @class */ (function () {
                                 key +
                                 _this.text.substring(_this.cursor, _this.text.length);
                         _this.cursor += 1;
+                        _this.updateElement();
+                        _this.message =
+                            _this.message.substring(0, _this.cursor - 1) +
+                                key +
+                                _this.message.substring(_this.cursor - 1, _this.message.length);
                     }
                 }
+                console.log("Current message: \"".concat(_this.message, "\""));
                 return;
             }
             else {
                 switch (key) {
                     case "Backspace":
-                        _this.text =
-                            _this.text.substring(0, _this.cursor - 1) +
-                                _this.text.substring(_this.cursor, _this.text.length);
-                        _this.cursor = Math.max(0, _this.cursor - 1);
+                        if (_this.cursor > 0) {
+                            _this.text =
+                                _this.text.substring(0, _this.cursor - 1) +
+                                    _this.text.substring(_this.cursor, _this.text.length);
+                            _this.cursor = Math.max(0, _this.cursor - 1);
+                            _this.updateElement();
+                            _this.message =
+                                _this.message.substring(0, _this.cursor) +
+                                    _this.message.substring(_this.cursor + 1, _this.message.length);
+                        }
                         break;
                     case "Delete":
-                        _this.text =
-                            _this.text.substring(0, _this.cursor) +
-                                _this.text.substring(_this.cursor + 1, _this.text.length);
+                        if (_this.cursor < _this.text.length) {
+                            _this.text =
+                                _this.text.substring(0, _this.cursor) +
+                                    _this.text.substring(_this.cursor + 1, _this.text.length);
+                            _this.updateElement();
+                            _this.message =
+                                _this.message.substring(0, _this.cursor) +
+                                    _this.message.substring(_this.cursor + 1, _this.message.length);
+                        }
                         break;
                     case "ArrowLeft":
                         _this.cursor = Math.max(0, _this.cursor - 1);
+                        _this.updateCursorPosition();
                         break;
                     case "ArrowRight":
                         _this.cursor = Math.min(_this.text.length, _this.cursor + 1);
+                        _this.updateCursorPosition();
                         break;
                     case "Enter":
-                        _this.enterCallback();
+                        _this.sendMessage();
                         break;
                     case "Escape":
                         _this.escapeCallback();
                         break;
                 }
             }
+            console.log("Current message: \"".concat(_this.message, "\""));
         };
         this.handleTouchStart = function (e) {
             _this.focus();
             e.preventDefault();
-        };
-        this.focus = function () {
-            // Create a temporary input element to trigger the on-screen keyboard
-            var tempInput = document.createElement("input");
-            tempInput.type = "text";
-            tempInput.style.position = "absolute";
-            tempInput.style.opacity = "0";
-            tempInput.style.zIndex = "-1"; // Ensure it doesn't interfere with the game UI
-            document.body.appendChild(tempInput);
-            tempInput.focus();
-            tempInput.addEventListener("blur", function () {
-                document.body.removeChild(tempInput);
-            });
         };
         this.text = "";
         this.cursor = 0;
@@ -15027,6 +15453,46 @@ var TextBox = /** @class */ (function () {
         this.element = element;
         this.element.addEventListener("touchstart", this.handleTouchStart);
     }
+    TextBox.prototype.setEnterCallback = function (callback) {
+        this.enterCallback = callback;
+    };
+    TextBox.prototype.setEscapeCallback = function (callback) {
+        this.escapeCallback = callback;
+    };
+    TextBox.prototype.clear = function () {
+        this.text = "";
+        this.cursor = 0;
+        this.message = "";
+        this.updateElement();
+    };
+    TextBox.prototype.focus = function () {
+        // Create a temporary input element to trigger the on-screen keyboard
+        var tempInput = document.createElement("input");
+        tempInput.type = "text";
+        tempInput.style.position = "absolute";
+        tempInput.style.opacity = "0";
+        tempInput.style.zIndex = "-1"; // Ensure it doesn't interfere with the game UI
+        document.body.appendChild(tempInput);
+        tempInput.focus();
+        tempInput.addEventListener("blur", function () {
+            document.body.removeChild(tempInput);
+        });
+    };
+    TextBox.prototype.sendMessage = function () {
+        var message = this.message;
+        this.enterCallback();
+        console.log("Sending message: \"".concat(message, "\""));
+        eventBus_1.globalEventBus.emit("ChatMessage", message);
+        console.log("Chat message emitted: \"".concat(message, "\""));
+        this.clear();
+    };
+    TextBox.prototype.updateElement = function () {
+        this.element.textContent = this.text;
+        // Optionally, update cursor position in the UI
+    };
+    TextBox.prototype.updateCursorPosition = function () {
+        // Implement cursor position update in the UI if necessary
+    };
     return TextBox;
 }());
 exports.TextBox = TextBox;
@@ -16125,7 +16591,12 @@ var Wall = /** @class */ (function (_super) {
             var wallInfo = _this.room.wallInfo.get("".concat(_this.x, ",").concat(_this.y));
             if (!wallInfo)
                 return true;
-            return (!wallInfo.isTopWall && !wallInfo.isInnerWall) || (wallInfo.isLeftWall || wallInfo.isRightWall);
+            return ((!wallInfo.isTopWall && !wallInfo.isInnerWall) ||
+                wallInfo.isLeftWall ||
+                wallInfo.isRightWall);
+        };
+        _this.wallInfo = function () {
+            return _this.room.wallInfo.get("".concat(_this.x, ",").concat(_this.y));
         };
         _this.draw = function (delta) {
             var wallInfo = _this.room.wallInfo.get("".concat(_this.x, ",").concat(_this.y));
@@ -16149,7 +16620,9 @@ var Wall = /** @class */ (function (_super) {
             var wallInfo = _this.room.wallInfo.get("".concat(_this.x, ",").concat(_this.y));
             if (!wallInfo)
                 return;
-            if (wallInfo.isBottomWall || wallInfo.isBelowDoorWall || wallInfo.isAboveDoorWall) {
+            if (wallInfo.isBottomWall ||
+                wallInfo.isBelowDoorWall ||
+                wallInfo.isAboveDoorWall) {
                 game_1.Game.drawTile(2, _this.skin + _this.tileYOffset, 1, 1, _this.x, _this.y - 1, 1, 1, _this.room.shadeColor, _this.room.softVis[_this.x][_this.y + 1]);
             }
         };

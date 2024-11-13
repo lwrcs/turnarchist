@@ -120,8 +120,8 @@ export class Player extends Drawable {
       );
     }
     this.mapToggled = true;
-    this.health = 3;
-    this.maxHealth = 3;
+    this.health = GameConstants.DEVELOPER_MODE ? 3000 : 3;
+    this.maxHealth = GameConstants.DEVELOPER_MODE ? 3000 : 3;
     this.healthBar = new HealthBar();
     this.dead = false;
     this.flashing = false;
@@ -292,16 +292,18 @@ export class Player extends Drawable {
     return false;
   };
   spaceListener = () => {
-    if (this.dead) {
-      this.restart();
-    } else if (this.openVendingMachine) {
-      this.openVendingMachine.space();
-    } else if (
-      this.inventory.isOpen ||
-      this.game.levelState === LevelState.IN_LEVEL
-    ) {
-      this.inventory.space();
-      return;
+    if (!this.game.chatOpen) {
+      if (this.dead) {
+        this.restart();
+      } else if (this.openVendingMachine) {
+        this.openVendingMachine.space();
+      } else if (
+        this.inventory.isOpen ||
+        this.game.levelState === LevelState.IN_LEVEL
+      ) {
+        this.inventory.space();
+        return;
+      }
     }
   };
   mouseLeftClick = () => {

@@ -1,10 +1,13 @@
+import { globalEventBus } from "./eventBus";
+
 export class TextBox {
   text: string;
   cursor: number;
-  enterCallback;
-  escapeCallback;
-  allowedCharacters = "all";
-  element: HTMLElement;
+  private enterCallback: () => void;
+  private escapeCallback: () => void;
+  private allowedCharacters: string = "all";
+  private element: HTMLElement;
+  private message: string = "";
 
   constructor(element: HTMLElement) {
     this.text = "";
@@ -15,21 +18,23 @@ export class TextBox {
     this.element.addEventListener("touchstart", this.handleTouchStart);
   }
 
-  setEnterCallback = (callback) => {
+  public setEnterCallback(callback: () => void): void {
     this.enterCallback = callback;
-  };
+  }
 
-  setEscapeCallback = (callback) => {
+  public setEscapeCallback(callback: () => void): void {
     this.escapeCallback = callback;
-  };
+  }
 
-  clear = () => {
+  public clear(): void {
     this.text = "";
     this.cursor = 0;
-  };
+    this.message = "";
+    this.updateElement();
+  }
 
-  handleKeyPress = (key: string) => {
-    const fontHas = "abcdefghijklmnopqrstuvwxyz1234567890,.!?:'()[]%-/".split(
+  public handleKeyPress = (key: string): void => {
+    const fontHas = "abcdefghijklmnopqrstuvwxyz1234567890,.!?:'()[]%-/ ".split(
       ""
     );
     if (key.length === 1) {
@@ -44,44 +49,68 @@ export class TextBox {
             key +
             this.text.substring(this.cursor, this.text.length);
           this.cursor += 1;
+          this.updateElement();
+
+          this.message =
+            this.message.substring(0, this.cursor - 1) +
+            key +
+            this.message.substring(this.cursor - 1, this.message.length);
         }
       }
+      console.log(`Current message: "${this.message}"`);
       return;
     } else {
       switch (key) {
         case "Backspace":
-          this.text =
-            this.text.substring(0, this.cursor - 1) +
-            this.text.substring(this.cursor, this.text.length);
-          this.cursor = Math.max(0, this.cursor - 1);
+          if (this.cursor > 0) {
+            this.text =
+              this.text.substring(0, this.cursor - 1) +
+              this.text.substring(this.cursor, this.text.length);
+            this.cursor = Math.max(0, this.cursor - 1);
+            this.updateElement();
+
+            this.message =
+              this.message.substring(0, this.cursor) +
+              this.message.substring(this.cursor + 1, this.message.length);
+          }
           break;
         case "Delete":
-          this.text =
-            this.text.substring(0, this.cursor) +
-            this.text.substring(this.cursor + 1, this.text.length);
+          if (this.cursor < this.text.length) {
+            this.text =
+              this.text.substring(0, this.cursor) +
+              this.text.substring(this.cursor + 1, this.text.length);
+            this.updateElement();
+
+            this.message =
+              this.message.substring(0, this.cursor) +
+              this.message.substring(this.cursor + 1, this.message.length);
+          }
           break;
         case "ArrowLeft":
           this.cursor = Math.max(0, this.cursor - 1);
+          this.updateCursorPosition();
           break;
         case "ArrowRight":
           this.cursor = Math.min(this.text.length, this.cursor + 1);
+          this.updateCursorPosition();
           break;
         case "Enter":
-          this.enterCallback();
+          this.sendMessage();
           break;
         case "Escape":
           this.escapeCallback();
           break;
       }
     }
+    console.log(`Current message: "${this.message}"`);
   };
 
-  handleTouchStart = (e: TouchEvent) => {
+  private handleTouchStart = (e: TouchEvent): void => {
     this.focus();
     e.preventDefault();
   };
 
-  focus = () => {
+  private focus(): void {
     // Create a temporary input element to trigger the on-screen keyboard
     const tempInput = document.createElement("input");
     tempInput.type = "text";
@@ -93,5 +122,26 @@ export class TextBox {
     tempInput.addEventListener("blur", () => {
       document.body.removeChild(tempInput);
     });
-  };
+  }
+
+  private sendMessage(): void {
+    const message = this.message;
+
+    this.enterCallback();
+
+    console.log(`Sending message: "${message}"`);
+    globalEventBus.emit("ChatMessage", message);
+    console.log(`Chat message emitted: "${message}"`);
+
+    this.clear();
+  }
+
+  private updateElement(): void {
+    this.element.textContent = this.text;
+    // Optionally, update cursor position in the UI
+  }
+
+  private updateCursorPosition(): void {
+    // Implement cursor position update in the UI if necessary
+  }
 }

@@ -1,6 +1,7 @@
 import { Armor } from "./item/armor";
 import { Backpack } from "./item/backpack";
 import { Candle } from "./item/candle";
+import { EntitySpawner } from "./item/entitySpawner";
 import { GodStone } from "./item/godStone";
 import { Heart } from "./item/heart";
 import { Key } from "./item/key";
@@ -14,7 +15,7 @@ import { Warhammer } from "./weapon/warhammer";
 
 export class GameConstants {
   static readonly VERSION = "v0.6.3";
-  static readonly DEVELOPER_MODE = false;
+  static readonly DEVELOPER_MODE = true;
 
   static readonly FPS = 120;
   static readonly ALPHA_ENABLED = true;
@@ -53,6 +54,7 @@ export class GameConstants {
   static readonly STARTING_INVENTORY = [Dagger, Candle];
   static readonly STARTING_DEV_INVENTORY = [
     Dagger,
+    EntitySpawner,
     Candle,
     GodStone,
     Warhammer,

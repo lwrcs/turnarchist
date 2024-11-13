@@ -14,6 +14,8 @@ import { Enemy } from "./entity/enemy/enemy";
 import { TutorialListener } from "./tutorialListener";
 import { MouseCursor } from "./mouseCursor";
 import { PostProcessor } from "./postProcess";
+import { globalEventBus } from "./eventBus";
+import { ReverbEngine } from "./reverb";
 
 export enum LevelState {
   IN_LEVEL,
@@ -285,6 +287,7 @@ export class Game {
     });
     this.started = false;
     this.tutorialListener = new TutorialListener(this);
+    ReverbEngine.initialize();
   }
 
   newGame = () => {

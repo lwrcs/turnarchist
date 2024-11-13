@@ -40,7 +40,7 @@ export class TombStone extends Entity {
     this.chainPushable = false;
     this.name = "tombstone";
     let dropProb = Random.rand();
-    if (dropProb < 0.05) this.drop = new Spellbook(this.room, 0, 0);
+    if (dropProb < 0.05) this.drop = new Spellbook(this.room, this.x, this.y);
     this.lightSource = new LightSource(
       this.x + 0.5,
       this.y + 0.5,

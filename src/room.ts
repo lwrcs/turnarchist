@@ -74,6 +74,7 @@ import { TutorialListener } from "./tutorialListener";
 import { globalEventBus } from "./eventBus";
 import { RedGem } from "./item/redgem";
 import { EnergyWizardEnemy } from "./entity/enemy/energyWizard";
+import { ReverbEngine } from "./reverb";
 
 export enum RoomType {
   START,
@@ -244,6 +245,32 @@ export class Room {
     if (this.type === RoomType.ROPECAVE || this.type === RoomType.CAVE)
       this.skin = SkinType.CAVE;
     this.buildEmptyRoom();
+  }
+
+  public async changeReverb(newImpulsePath: string) {
+    await ReverbEngine.setReverbImpulse(newImpulsePath);
+  }
+  get roomArea() {
+    let area = (this.width - 2) * (this.height - 2);
+    let openTiles = [];
+    for (let x = this.roomX + 1; x < this.roomX + this.width - 1; x++) {
+      for (let y = this.roomY + 1; y < this.roomY + this.height - 1; y++) {
+        if (this.roomArray[x][y] instanceof Floor) openTiles.push({ x, y });
+      }
+    }
+    console.log(area, openTiles.length);
+    return openTiles.length;
+  }
+
+  private setReverb() {
+    const roomArea = this.roomArea;
+    if (roomArea < 10) {
+      this.changeReverb(`res/SFX/impulses/small.wav`);
+    } else if (roomArea < 55) {
+      this.changeReverb(`res/SFX/impulses/medium.wav`);
+    } else {
+      this.changeReverb(`res/SFX/impulses/large.wav`);
+    }
   }
 
   tileInside = (tileX: number, tileY: number): boolean => {
@@ -1019,6 +1046,7 @@ export class Room {
     this.calculateWallInfo();
     this.message = this.name;
     player.map.saveMapData();
+    this.setReverb();
   };
 
   enterLevelThroughDoor = (player: Player, door: any, side?: number) => {
@@ -1047,6 +1075,7 @@ export class Room {
     this.alertEnemiesOnEntry();
     this.message = this.name;
     player.map.saveMapData();
+    this.setReverb();
   };
 
   enterLevelThroughLadder = (player: Player, ladder: any) => {
@@ -1059,6 +1088,7 @@ export class Room {
 
     this.message = this.name;
     player.map.saveMapData();
+    this.setReverb();
   };
 
   getEmptyTiles = (): Tile[] => {
@@ -1185,15 +1215,20 @@ export class Room {
         }
       }
     }
+    const roomX = this.roomX;
+    const roomY = this.roomY;
+    const width = this.width;
+    const height = this.height;
+    const renderBuffer = this.renderBuffer;
 
-    for (let x = this.roomX; x < this.roomX + this.width; x++) {
-      for (let y = this.roomY; y < this.roomY + this.height; y++) {
-        this.col[x][y] = this.blendColorsArray(this.renderBuffer[x][y]);
+    for (let x = roomX; x < roomX + width; x++) {
+      for (let y = roomY; y < roomY + height; y++) {
+        this.col[x][y] = this.blendColorsArray(renderBuffer[x][y]);
       }
     }
 
-    for (let x = this.roomX; x < this.roomX + this.width; x++) {
-      for (let y = this.roomY; y < this.roomY + this.height; y++) {
+    for (let x = roomX; x < roomX + width; x++) {
+      for (let y = roomY; y < roomY + height; y++) {
         this.vis[x][y] = this.rgbToLuminance(this.col[x][y]);
       }
     }
@@ -1917,7 +1952,7 @@ export class Room {
   }
 
   // Used in multiple methods including castShadowsAtAngle
-  private isPositionInRoom(x: number, y: number): boolean {
+  isPositionInRoom(x: number, y: number): boolean {
     return !(
       Math.floor(x) < this.roomX ||
       Math.floor(x) >= this.roomX + this.width ||

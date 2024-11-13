@@ -25,6 +25,7 @@ export class Item extends Drawable {
   scaleFactor: number; // scale factor for size adjustment
   name: string;
   startY: number;
+  randomOffset: number;
 
   // Constructor for the Item class
   constructor(level: Room, x: number, y: number) {
@@ -48,6 +49,7 @@ export class Item extends Drawable {
     this.offsetY = -0.25;
     this.name = "";
     this.startY = y;
+    this.randomOffset = Math.random();
   }
 
   // Empty tick function to be overridden by subclasses
@@ -111,10 +113,12 @@ export class Item extends Drawable {
       );
     }
   };
+
   // Function to draw the top layer of the item
   drawTopLayer = (delta: number) => {
     if (this.pickedUp) {
       this.y -= 0.125 * delta;
+      //this.x += (Math.sin(Date.now() / 50) * delta) / 10;
       this.alpha -= 0.03 * delta;
       if (Math.abs(this.y - this.startY) > 5)
         this.level.items = this.level.items.filter((x) => x !== this); // removes itself from the level
