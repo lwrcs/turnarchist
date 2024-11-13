@@ -7365,7 +7365,7 @@ var GameConstants = /** @class */ (function () {
     function GameConstants() {
     }
     GameConstants.VERSION = "v0.6.3";
-    GameConstants.DEVELOPER_MODE = true;
+    GameConstants.DEVELOPER_MODE = false;
     GameConstants.FPS = 120;
     GameConstants.ALPHA_ENABLED = true;
     GameConstants.SHADE_LEVELS = 25;
