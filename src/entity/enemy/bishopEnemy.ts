@@ -45,9 +45,10 @@ export class BishopEnemy extends Enemy {
     if (drop) this.drop = drop;
     else {
       let dropProb = Random.rand();
-      if (dropProb < 0.005) this.drop = new Candle(this.room, 0, 0);
-      else if (dropProb < 0.04) this.drop = new GreenGem(this.room, 0, 0);
-      else this.drop = new Coin(this.room, 0, 0);
+      if (dropProb < 0.005) this.drop = new Candle(this.room, this.x, this.y);
+      else if (dropProb < 0.04)
+        this.drop = new GreenGem(this.room, this.x, this.y);
+      else this.drop = new Coin(this.room, this.x, this.y);
     }
   }
 

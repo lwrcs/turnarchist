@@ -45,7 +45,7 @@ export class FrogEnemy extends Enemy {
     this.rumbling = false;
     this.jumping = false;
     this.jumpDistance = 1;
-    this.drop = drop ? drop : new Coin(this.room, 0, 0);
+    this.drop = drop ? drop : new Coin(this.room, this.x, this.y);
     this.name = "frog";
     this.orthogonalAttack = true;
     this.diagonalAttack = true;
@@ -280,7 +280,7 @@ export class FrogEnemy extends Enemy {
         );
       Game.drawMob(
         this.tileX +
-        (this.tileX !== 12 && !this.rumbling ? Math.floor(this.frame) : 0),
+          (this.tileX !== 12 && !this.rumbling ? Math.floor(this.frame) : 0),
         this.tileY /*+ this.direction * 2,*/,
         1,
         2,

@@ -46,11 +46,15 @@ export class BigKnightEnemy extends Enemy {
     if (drop) this.drops.push(drop);
     while (this.drops.length < 4) {
       let dropProb = Random.rand();
-      if (dropProb < 0.005) this.drops.push(new Spear(this.room, 0, 0));
-      else if (dropProb < 0.04) this.drops.push(new RedGem(this.room, 0, 0));
-      else if (dropProb < 0.075) this.drops.push(new RedGem(this.room, 0, 0));
-      else if (dropProb < 0.1) this.drops.push(new RedGem(this.room, 0, 0));
-      else this.drops.push(new Coin(this.room, 0, 0));
+      if (dropProb < 0.005)
+        this.drops.push(new Spear(this.room, this.x, this.y));
+      else if (dropProb < 0.04)
+        this.drops.push(new RedGem(this.room, this.x, this.y));
+      else if (dropProb < 0.075)
+        this.drops.push(new RedGem(this.room, this.x, this.y));
+      else if (dropProb < 0.1)
+        this.drops.push(new RedGem(this.room, this.x, this.y));
+      else this.drops.push(new Coin(this.room, this.x, this.y));
     }
   }
 

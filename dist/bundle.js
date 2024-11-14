@@ -709,11 +709,11 @@ var ArmoredzombieEnemy = /** @class */ (function (_super) {
         else {
             var dropProb = random_1.Random.rand();
             if (dropProb < 0.05)
-                _this.drop = new armor_1.Armor(_this.room, 0, 0);
+                _this.drop = new armor_1.Armor(_this.room, _this.x, _this.y);
             else if (dropProb < 0.01)
-                _this.drop = new greengem_1.GreenGem(_this.room, 0, 0);
+                _this.drop = new greengem_1.GreenGem(_this.room, _this.x, _this.y);
             else
-                _this.drop = new coin_1.Coin(_this.room, 0, 0);
+                _this.drop = new coin_1.Coin(_this.room, _this.x, _this.y);
         }
         return _this;
     }
@@ -984,15 +984,15 @@ var BigKnightEnemy = /** @class */ (function (_super) {
         while (_this.drops.length < 4) {
             var dropProb = random_1.Random.rand();
             if (dropProb < 0.005)
-                _this.drops.push(new spear_1.Spear(_this.room, 0, 0));
+                _this.drops.push(new spear_1.Spear(_this.room, _this.x, _this.y));
             else if (dropProb < 0.04)
-                _this.drops.push(new redgem_1.RedGem(_this.room, 0, 0));
+                _this.drops.push(new redgem_1.RedGem(_this.room, _this.x, _this.y));
             else if (dropProb < 0.075)
-                _this.drops.push(new redgem_1.RedGem(_this.room, 0, 0));
+                _this.drops.push(new redgem_1.RedGem(_this.room, _this.x, _this.y));
             else if (dropProb < 0.1)
-                _this.drops.push(new redgem_1.RedGem(_this.room, 0, 0));
+                _this.drops.push(new redgem_1.RedGem(_this.room, _this.x, _this.y));
             else
-                _this.drops.push(new coin_1.Coin(_this.room, 0, 0));
+                _this.drops.push(new coin_1.Coin(_this.room, _this.x, _this.y));
         }
         return _this;
     }
@@ -1295,15 +1295,15 @@ var BigSkullEnemy = /** @class */ (function (_super) {
         while (_this.drops.length < 4) {
             var dropProb = random_1.Random.rand();
             if (dropProb < 0.005)
-                _this.drops.push(new spear_1.Spear(_this.room, 0, 0));
+                _this.drops.push(new spear_1.Spear(_this.room, _this.x, _this.y));
             else if (dropProb < 0.04)
-                _this.drops.push(new redgem_1.RedGem(_this.room, 0, 0));
+                _this.drops.push(new redgem_1.RedGem(_this.room, _this.x, _this.y));
             else if (dropProb < 0.075)
-                _this.drops.push(new redgem_1.RedGem(_this.room, 0, 0));
+                _this.drops.push(new redgem_1.RedGem(_this.room, _this.x, _this.y));
             else if (dropProb < 0.1)
-                _this.drops.push(new redgem_1.RedGem(_this.room, 0, 0));
+                _this.drops.push(new redgem_1.RedGem(_this.room, _this.x, _this.y));
             else
-                _this.drops.push(new coin_1.Coin(_this.room, 0, 0));
+                _this.drops.push(new coin_1.Coin(_this.room, _this.x, _this.y));
         }
         return _this;
     }
@@ -1551,11 +1551,11 @@ var BishopEnemy = /** @class */ (function (_super) {
         else {
             var dropProb = random_1.Random.rand();
             if (dropProb < 0.005)
-                _this.drop = new candle_1.Candle(_this.room, 0, 0);
+                _this.drop = new candle_1.Candle(_this.room, _this.x, _this.y);
             else if (dropProb < 0.04)
-                _this.drop = new greengem_1.GreenGem(_this.room, 0, 0);
+                _this.drop = new greengem_1.GreenGem(_this.room, _this.x, _this.y);
             else
-                _this.drop = new coin_1.Coin(_this.room, 0, 0);
+                _this.drop = new coin_1.Coin(_this.room, _this.x, _this.y);
         }
         return _this;
     }
@@ -1806,11 +1806,11 @@ var ChargeEnemy = /** @class */ (function (_super) {
         else {
             var dropProb = random_1.Random.rand();
             if (dropProb < 0.025)
-                _this.drop = new pickaxe_1.Pickaxe(_this.room, 0, 0);
+                _this.drop = new pickaxe_1.Pickaxe(_this.room, _this.x, _this.y);
             else if (dropProb < 0.02)
-                _this.drop = new greengem_1.GreenGem(_this.room, 0, 0);
+                _this.drop = new greengem_1.GreenGem(_this.room, _this.x, _this.y);
             else
-                _this.drop = new coin_1.Coin(_this.room, 0, 0);
+                _this.drop = new coin_1.Coin(_this.room, _this.x, _this.y);
         }
         return _this;
     }
@@ -2023,7 +2023,7 @@ var CrabEnemy = /** @class */ (function (_super) {
         if (drop)
             _this.drop = drop;
         else {
-            _this.drop = new coin_1.Coin(_this.room, 0, 0);
+            _this.drop = new coin_1.Coin(_this.room, _this.x, _this.y);
         }
         return _this;
     }
@@ -3016,7 +3016,7 @@ var FrogEnemy = /** @class */ (function (_super) {
         _this.rumbling = false;
         _this.jumping = false;
         _this.jumpDistance = 1;
-        _this.drop = drop ? drop : new coin_1.Coin(_this.room, 0, 0);
+        _this.drop = drop ? drop : new coin_1.Coin(_this.room, _this.x, _this.y);
         _this.name = "frog";
         _this.orthogonalAttack = true;
         _this.diagonalAttack = true;
@@ -3251,11 +3251,11 @@ var KnightEnemy = /** @class */ (function (_super) {
         else {
             var dropProb = random_1.Random.rand();
             if (dropProb < 0.05)
-                _this.drop = new dualdagger_1.DualDagger(_this.room, 0, 0);
+                _this.drop = new dualdagger_1.DualDagger(_this.room, _this.x, _this.y);
             else if (dropProb < 0.01)
-                _this.drop = new dualdagger_1.DualDagger(_this.room, 0, 0);
+                _this.drop = new dualdagger_1.DualDagger(_this.room, _this.x, _this.y);
             else
-                _this.drop = new coin_1.Coin(_this.room, 0, 0);
+                _this.drop = new coin_1.Coin(_this.room, _this.x, _this.y);
         }
         return _this;
     }
@@ -3464,11 +3464,11 @@ var QueenEnemy = /** @class */ (function (_super) {
         else {
             var dropProb = random_1.Random.rand();
             if (dropProb < 0.005)
-                _this.drop = new candle_1.Candle(_this.room, 0, 0);
+                _this.drop = new candle_1.Candle(_this.room, _this.x, _this.y);
             else if (dropProb < 0.04)
-                _this.drop = new greengem_1.GreenGem(_this.room, 0, 0);
+                _this.drop = new greengem_1.GreenGem(_this.room, _this.x, _this.y);
             else
-                _this.drop = new coin_1.Coin(_this.room, 0, 0);
+                _this.drop = new coin_1.Coin(_this.room, _this.x, _this.y);
         }
         return _this;
     }
@@ -3709,12 +3709,12 @@ var SkullEnemy = /** @class */ (function (_super) {
         else {
             var dropProb = random_1.Random.rand();
             if (dropProb < 0.05)
-                _this.drop = new spear_1.Spear(_this.room, 0, 0);
+                _this.drop = new spear_1.Spear(_this.room, _this.x, _this.y);
             else if (dropProb < 0.01)
-                _this.drop = new redgem_1.RedGem(_this.room, 0, 0);
+                _this.drop = new redgem_1.RedGem(_this.room, _this.x, _this.y);
             //else if (dropProb < 0.2) this.drop = new Candle(this.room, 0, 0);
             else
-                _this.drop = new coin_1.Coin(_this.room, 0, 0);
+                _this.drop = new coin_1.Coin(_this.room, _this.x, _this.y);
         }
         return _this;
     }
@@ -4001,11 +4001,11 @@ var SniperEnemy = /** @class */ (function (_super) {
         else {
             var dropProb = random_1.Random.rand();
             if (dropProb < 0.025)
-                _this.drop = new pickaxe_1.Pickaxe(_this.room, 0, 0);
+                _this.drop = new pickaxe_1.Pickaxe(_this.room, _this.x, _this.y);
             else if (dropProb < 0.02)
-                _this.drop = new greengem_1.GreenGem(_this.room, 0, 0);
+                _this.drop = new greengem_1.GreenGem(_this.room, _this.x, _this.y);
             else
-                _this.drop = new coin_1.Coin(_this.room, 0, 0);
+                _this.drop = new coin_1.Coin(_this.room, _this.x, _this.y);
         }
         return _this;
     }
@@ -4651,11 +4651,11 @@ var ZombieEnemy = /** @class */ (function (_super) {
         else {
             var dropProb = random_1.Random.rand();
             if (dropProb < 0.025)
-                _this.drop = new pickaxe_1.Pickaxe(_this.room, 0, 0);
+                _this.drop = new pickaxe_1.Pickaxe(_this.room, _this.x, _this.y);
             else if (dropProb < 0.02)
-                _this.drop = new greengem_1.GreenGem(_this.room, 0, 0);
+                _this.drop = new greengem_1.GreenGem(_this.room, _this.x, _this.y);
             else
-                _this.drop = new coin_1.Coin(_this.room, 0, 0);
+                _this.drop = new coin_1.Coin(_this.room, _this.x, _this.y);
         }
         return _this;
     }

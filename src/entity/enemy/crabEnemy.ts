@@ -35,7 +35,7 @@ export class CrabEnemy extends Enemy {
 
     if (drop) this.drop = drop;
     else {
-      this.drop = new Coin(this.room, 0, 0);
+      this.drop = new Coin(this.room, this.x, this.y);
     }
   }
 
