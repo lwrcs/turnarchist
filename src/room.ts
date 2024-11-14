@@ -265,11 +265,11 @@ export class Room {
   private setReverb() {
     const roomArea = this.roomArea;
     if (roomArea < 10) {
-      this.changeReverb(`res/SFX/impulses/small.wav`);
+      this.changeReverb(`res/SFX/impulses/small.mp3`);
     } else if (roomArea < 55) {
-      this.changeReverb(`res/SFX/impulses/medium.wav`);
+      this.changeReverb(`res/SFX/impulses/medium.mp3`);
     } else {
-      this.changeReverb(`res/SFX/impulses/large.wav`);
+      this.changeReverb(`res/SFX/impulses/large.mp3`);
     }
   }
 
