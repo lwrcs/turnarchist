@@ -96,6 +96,7 @@ export class TextBox {
           break;
         case "Enter":
           this.sendMessage();
+          this.escapeCallback();
           break;
         case "Escape":
           this.escapeCallback();
@@ -125,13 +126,16 @@ export class TextBox {
   }
 
   private sendMessage(): void {
-    const message = this.message;
+    let message = this.message;
 
     this.enterCallback();
 
     console.log(`Sending message: "${message}"`);
-    globalEventBus.emit("ChatMessage", message);
-    console.log(`Chat message emitted: "${message}"`);
+    if (message.startsWith("/")) {
+      message = message.substring(1);
+      globalEventBus.emit("ChatMessage", message);
+      console.log(`Chat message emitted: "${message}"`);
+    }
 
     this.clear();
   }

@@ -6572,6 +6572,7 @@ var gameState_1 = __webpack_require__(/*! ./gameState */ "./src/gameState.ts");
 var door_2 = __webpack_require__(/*! ./tile/door */ "./src/tile/door.ts");
 var tutorialListener_1 = __webpack_require__(/*! ./tutorialListener */ "./src/tutorialListener.ts");
 var mouseCursor_1 = __webpack_require__(/*! ./mouseCursor */ "./src/mouseCursor.ts");
+var eventBus_1 = __webpack_require__(/*! ./eventBus */ "./src/eventBus.ts");
 var reverb_1 = __webpack_require__(/*! ./reverb */ "./src/reverb.ts");
 var LevelState;
 (function (LevelState) {
@@ -6773,6 +6774,19 @@ var Game = /** @class */ (function () {
         };
         this.pushMessage = function (message) {
             _this.chat.push(new ChatMessage(message));
+        };
+        this.commandHandler = function (command) {
+            var player = _this.room.game.players[0];
+            command = command.toLowerCase();
+            switch (command) {
+                case "devmode":
+                    gameConstants_1.GameConstants.DEVELOPER_MODE = !gameConstants_1.GameConstants.DEVELOPER_MODE;
+                    console.log("Developer mode is now ".concat(gameConstants_1.GameConstants.DEVELOPER_MODE));
+                    break;
+                case "newgame":
+                    _this.newGame();
+                    break;
+            }
         };
         this.onResize = function () {
             var maxWidthScale = Math.floor(window.innerWidth / gameConstants_1.GameConstants.DEFAULTWIDTH);
@@ -7171,8 +7185,14 @@ var Game = /** @class */ (function () {
         });
         this.started = false;
         this.tutorialListener = new tutorialListener_1.TutorialListener(this);
+        this.setupEventListeners();
         reverb_1.ReverbEngine.initialize();
     }
+    Game.prototype.setupEventListeners = function () {
+        //console.log("Setting up event listeners");
+        eventBus_1.globalEventBus.on("ChatMessage", this.commandHandler.bind(this));
+        console.log("Event listeners set up");
+    };
     Game.letters = "abcdefghijklmnopqrstuvwxyz1234567890,.!?:'()[]%-/";
     Game.letter_widths = [
         4, 4, 4, 4, 3, 3, 4, 4, 1, 4, 4, 3, 5, 5, 4, 4, 4, 4, 4, 3, 4, 5, 5, 5, 5,
@@ -15434,6 +15454,7 @@ var TextBox = /** @class */ (function () {
                         break;
                     case "Enter":
                         _this.sendMessage();
+                        _this.escapeCallback();
                         break;
                     case "Escape":
                         _this.escapeCallback();
@@ -15482,8 +15503,11 @@ var TextBox = /** @class */ (function () {
         var message = this.message;
         this.enterCallback();
         console.log("Sending message: \"".concat(message, "\""));
-        eventBus_1.globalEventBus.emit("ChatMessage", message);
-        console.log("Chat message emitted: \"".concat(message, "\""));
+        if (message.startsWith("/")) {
+            message = message.substring(1);
+            eventBus_1.globalEventBus.emit("ChatMessage", message);
+            console.log("Chat message emitted: \"".concat(message, "\""));
+        }
         this.clear();
     };
     TextBox.prototype.updateElement = function () {

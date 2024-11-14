@@ -287,6 +287,7 @@ export class Game {
     });
     this.started = false;
     this.tutorialListener = new TutorialListener(this);
+    this.setupEventListeners();
     ReverbEngine.initialize();
   }
 
@@ -480,6 +481,26 @@ export class Game {
   pushMessage = (message: string) => {
     this.chat.push(new ChatMessage(message));
   };
+
+  commandHandler = (command: string): void => {
+    const player = this.room.game.players[0];
+    command = command.toLowerCase();
+    switch (command) {
+      case "devmode":
+        GameConstants.DEVELOPER_MODE = !GameConstants.DEVELOPER_MODE;
+        console.log(`Developer mode is now ${GameConstants.DEVELOPER_MODE}`);
+        break;
+      case "newgame":
+        this.newGame();
+        break;
+    }
+  };
+
+  private setupEventListeners(): void {
+    //console.log("Setting up event listeners");
+    globalEventBus.on("ChatMessage", this.commandHandler.bind(this));
+    console.log("Event listeners set up");
+  }
 
   onResize = () => {
     let maxWidthScale = Math.floor(
