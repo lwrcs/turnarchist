@@ -120,6 +120,13 @@ interface WallInfo {
   isAboveDoorWall: boolean;
 }
 
+interface OpenWalls {
+  topIsOpen: boolean;
+  bottomIsOpen: boolean;
+  leftIsOpen: boolean;
+  rightIsOpen: boolean;
+}
+
 interface EntitySpawnConfig {
   name: Entity["name"];
   weight: number;
@@ -166,6 +173,7 @@ export class Room {
   wallInfo: Map<string, WallInfo> = new Map();
   savePoint: Room;
   lastEnemyCount: number;
+  openWalls: OpenWalls;
 
   private pointInside(
     x: number,

@@ -1,10 +1,12 @@
 import { Armor } from "./item/armor";
 import { Backpack } from "./item/backpack";
 import { Candle } from "./item/candle";
+import { Coal } from "./item/coal";
 import { EntitySpawner } from "./item/entitySpawner";
 import { GodStone } from "./item/godStone";
 import { Heart } from "./item/heart";
 import { Key } from "./item/key";
+import { Lantern } from "./item/lantern";
 import { Torch } from "./item/torch";
 import { LevelConstants } from "./levelConstants";
 import { Dagger } from "./weapon/dagger";
@@ -63,5 +65,8 @@ export class GameConstants {
     Armor,
     Heart,
     Backpack,
+    Torch,
+    Lantern,
+    Coal,
   ];
 }

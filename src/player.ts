@@ -25,6 +25,7 @@ import { ImageParticle } from "./particle/imageParticle";
 import { Enemy } from "./entity/enemy/enemy";
 import { MouseCursor } from "./mouseCursor";
 import { Light } from "./item/light";
+import { LightSource } from "./lightSource";
 
 export enum PlayerDirection {
   DOWN = 0,
@@ -72,8 +73,11 @@ export class Player extends Drawable {
   tileCursor: { x: number; y: number };
   private jumpY: number;
   lightEquipped: boolean;
+  lightSource: LightSource;
   hurtAlpha: number;
   hurting: boolean;
+  lightBrightness: number;
+  sineAngle: number;
   constructor(game: Game, x: number, y: number, isLocalPlayer: boolean) {
     super();
 
@@ -144,6 +148,8 @@ export class Player extends Drawable {
     this.lightEquipped = false;
     this.hurting = false;
     this.hurtAlpha = 0.5;
+    this.lightBrightness = 0.3;
+    this.sineAngle = Math.PI / 2;
   }
 
   get angle(): number {
@@ -815,6 +821,12 @@ export class Player extends Drawable {
 
   updateDrawXY = (delta: number) => {
     if (!this.doneMoving()) {
+      /*
+      this.sineAngle += 0.04; // Initialize and increment angle
+      this.drawX *= Math.sin(this.sineAngle) * delta;
+      this.drawY *= Math.sin(this.sineAngle) * delta;
+      if (this.doneMoving()) this.sineAngle = Math.PI / 2;
+*/
       this.drawX *= 0.5 * delta;
       this.drawY *= 0.5 * delta;
       this.jump();

@@ -6137,6 +6137,89 @@ exports.VendingMachine = VendingMachine;
 
 /***/ }),
 
+/***/ "./src/entity/object/wallCrack.ts":
+/*!****************************************!*\
+  !*** ./src/entity/object/wallCrack.ts ***!
+  \****************************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.WallCrack = void 0;
+var entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+var game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+var heart_1 = __webpack_require__(/*! ../../item/heart */ "./src/item/heart.ts");
+var entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+var imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ "./src/particle/imageParticle.ts");
+var random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
+var coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
+var sound_1 = __webpack_require__(/*! ../../sound */ "./src/sound.ts");
+var WallCrack = /** @class */ (function (_super) {
+    __extends(WallCrack, _super);
+    function WallCrack(room, game, x, y) {
+        var _this = _super.call(this, room, game, x, y) || this;
+        _this.kill = function () {
+            _this.dropLoot();
+            _this.dead = true;
+            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 29);
+            sound_1.Sound.delayPlay(sound_1.Sound.potSmash, 250);
+        };
+        _this.killNoBones = function () {
+            _this.kill();
+        };
+        _this.draw = function (delta) {
+            // not inherited because it doesn't have the 0.5 offset
+            if (!_this.dead) {
+                _this.updateDrawXY(delta);
+                game_1.Game.drawObj(_this.tileX, _this.tileY, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
+            }
+        };
+        _this.drawTopLayer = function (delta) {
+            _this.drawableY = _this.y;
+        };
+        _this.room = room;
+        _this.health = 1;
+        _this.tileX = 11;
+        _this.tileY = 0;
+        _this.hasShadow = false;
+        _this.chainPushable = false;
+        _this.name = "wall crack";
+        var dropProb = random_1.Random.rand();
+        if (dropProb < 0.025)
+            _this.drop = new heart_1.Heart(_this.room, _this.x, _this.y);
+        else
+            _this.drop = new coin_1.Coin(_this.room, _this.x, _this.y);
+        return _this;
+    }
+    Object.defineProperty(WallCrack.prototype, "type", {
+        get: function () {
+            return entity_2.EntityType.PROP;
+        },
+        enumerable: false,
+        configurable: true
+    });
+    return WallCrack;
+}(entity_1.Entity));
+exports.WallCrack = WallCrack;
+
+
+/***/ }),
+
 /***/ "./src/entity/resource/coalResource.ts":
 /*!*********************************************!*\
   !*** ./src/entity/resource/coalResource.ts ***!
@@ -6983,9 +7066,9 @@ var Game = /** @class */ (function () {
             else {
                 _this.screenShakeX = Math.sin(_this.shakeFrame) * _this.shakeAmountX;
                 _this.screenShakeY = Math.sin(_this.shakeFrame) * _this.shakeAmountY;
-                _this.shakeFrame += 0.75;
-                _this.shakeAmountX *= 0.85;
-                _this.shakeAmountY *= 0.85;
+                _this.shakeFrame += 0.7;
+                _this.shakeAmountX *= 0.8;
+                _this.shakeAmountY *= 0.8;
                 if (Math.abs(_this.screenShakeX) < 0.03 &&
                     Math.abs(_this.screenShakeY) < 0.03) {
                     _this.screenShakeX = 0;
@@ -7395,9 +7478,12 @@ exports.GameConstants = void 0;
 var armor_1 = __webpack_require__(/*! ./item/armor */ "./src/item/armor.ts");
 var backpack_1 = __webpack_require__(/*! ./item/backpack */ "./src/item/backpack.ts");
 var candle_1 = __webpack_require__(/*! ./item/candle */ "./src/item/candle.ts");
+var coal_1 = __webpack_require__(/*! ./item/coal */ "./src/item/coal.ts");
 var entitySpawner_1 = __webpack_require__(/*! ./item/entitySpawner */ "./src/item/entitySpawner.ts");
 var godStone_1 = __webpack_require__(/*! ./item/godStone */ "./src/item/godStone.ts");
 var heart_1 = __webpack_require__(/*! ./item/heart */ "./src/item/heart.ts");
+var lantern_1 = __webpack_require__(/*! ./item/lantern */ "./src/item/lantern.ts");
+var torch_1 = __webpack_require__(/*! ./item/torch */ "./src/item/torch.ts");
 var levelConstants_1 = __webpack_require__(/*! ./levelConstants */ "./src/levelConstants.ts");
 var dagger_1 = __webpack_require__(/*! ./weapon/dagger */ "./src/weapon/dagger.ts");
 var spear_1 = __webpack_require__(/*! ./weapon/spear */ "./src/weapon/spear.ts");
@@ -7446,6 +7532,9 @@ var GameConstants = /** @class */ (function () {
         armor_1.Armor,
         heart_1.Heart,
         backpack_1.Backpack,
+        torch_1.Torch,
+        lantern_1.Lantern,
+        coal_1.Coal,
     ];
     return GameConstants;
 }());
@@ -9640,8 +9729,7 @@ var Candle = /** @class */ (function (_super) {
         _this.tileY = 0;
         _this.name = "candle";
         _this.fuelCap = 100;
-        _this.maxRadius = 4;
-        _this.minRadius = 2;
+        _this.radius = 4;
         return _this;
     }
     return Candle;
@@ -10464,9 +10552,7 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Light = void 0;
-var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var equippable_1 = __webpack_require__(/*! ./equippable */ "./src/item/equippable.ts");
-var gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
 var Light = /** @class */ (function (_super) {
     __extends(Light, _super);
     function Light(level, x, y) {
@@ -10482,19 +10568,21 @@ var Light = /** @class */ (function (_super) {
         };
         _this.setRadius = function () {
             _this.wielder.sightRadius =
-                _this.wielder.defaultSightRadius + _this.fuelPercentage * _this.maxRadius;
+                _this.wielder.defaultSightRadius + _this.fuelPercentage * _this.radius;
+        };
+        _this.setBrightness = function () {
+            _this.wielder.lightBrightness =
+                _this.minBrightness + _this.fuelPercentage * _this.maxBrightness;
         };
         _this.toggleEquip = function () {
             _this.equipped = !_this.equipped;
             if (_this.isIgnited()) {
                 _this.setRadius();
                 _this.wielder.lightEquipped = true;
-                //Light.warmEnabled = true;
             }
             else {
                 _this.resetRadius();
                 _this.wielder.lightEquipped = false;
-                //Light.warmEnabled = false;
             }
             _this.updateLighting();
         };
@@ -10527,8 +10615,9 @@ var Light = /** @class */ (function (_super) {
         _this.tileY = 0;
         _this.fuel = 0;
         _this.fuelCap = 250;
-        _this.maxRadius = 6;
-        _this.minRadius = 2;
+        _this.maxBrightness = 2;
+        _this.minBrightness = 0.3;
+        _this.radius = 6;
         return _this;
     }
     Object.defineProperty(Light.prototype, "fuelPercentage", {
@@ -10538,27 +10627,6 @@ var Light = /** @class */ (function (_super) {
         enumerable: false,
         configurable: true
     });
-    Light.warmEnabled = false;
-    Light.warmth = 0;
-    Light.maxWarmth = 0.2;
-    Light.drawTint = function (delta) {
-        var warmthChange = 0.02 * delta;
-        if (Light.warmth <= Light.maxWarmth && Light.warmEnabled) {
-            Light.warmth += warmthChange;
-        }
-        if (Light.warmth > 0 && !Light.warmEnabled) {
-            Light.warmth -= warmthChange;
-        }
-        if (Light.warmth < 0)
-            Light.warmth = 0;
-        if (Light.warmth > Light.maxWarmth)
-            Light.warmth = Light.maxWarmth;
-        game_1.Game.ctx.globalAlpha = Light.warmth;
-        game_1.Game.ctx.globalCompositeOperation = "overlay";
-        game_1.Game.ctx.fillStyle = "#FF8C00"; // reddish orange red
-        game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
-        game_1.Game.ctx.globalCompositeOperation = "source-over";
-    };
     return Light;
 }(equippable_1.Equippable));
 exports.Light = Light;
@@ -10732,7 +10800,7 @@ var Torch = /** @class */ (function (_super) {
         _this.name = "torch";
         _this.fuelCap = 500;
         _this.fuel = 500;
-        _this.maxRadius = 6;
+        _this.radius = 6;
         return _this;
     }
     return Torch;
@@ -12791,6 +12859,12 @@ var Player = /** @class */ (function (_super) {
         };
         _this.updateDrawXY = function (delta) {
             if (!_this.doneMoving()) {
+                /*
+                this.sineAngle += 0.04; // Initialize and increment angle
+                this.drawX *= Math.sin(this.sineAngle) * delta;
+                this.drawY *= Math.sin(this.sineAngle) * delta;
+                if (this.doneMoving()) this.sineAngle = Math.PI / 2;
+          */
                 _this.drawX *= 0.5 * delta;
                 _this.drawY *= 0.5 * delta;
                 _this.jump();
@@ -12872,6 +12946,8 @@ var Player = /** @class */ (function (_super) {
         _this.lightEquipped = false;
         _this.hurting = false;
         _this.hurtAlpha = 0.5;
+        _this.lightBrightness = 0.3;
+        _this.sineAngle = Math.PI / 2;
         return _this;
     }
     Object.defineProperty(Player.prototype, "angle", {
@@ -16633,6 +16709,7 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Wall = void 0;
+var wallCrack_1 = __webpack_require__(/*! ../entity/object/wallCrack */ "./src/entity/object/wallCrack.ts");
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var tile_1 = __webpack_require__(/*! ./tile */ "./src/tile/tile.ts");
 var Wall = /** @class */ (function (_super) {
@@ -16652,6 +16729,23 @@ var Wall = /** @class */ (function (_super) {
             return ((!wallInfo.isTopWall && !wallInfo.isInnerWall) ||
                 wallInfo.isLeftWall ||
                 wallInfo.isRightWall);
+        };
+        _this.crack = function () {
+            if (_this.room.openWalls.topIsOpen) {
+                _this.newCrack();
+            }
+            if (_this.room.openWalls.bottomIsOpen) {
+                _this.newCrack();
+            }
+            if (_this.room.openWalls.leftIsOpen) {
+                _this.newCrack();
+            }
+            if (_this.room.openWalls.rightIsOpen) {
+                _this.newCrack();
+            }
+        };
+        _this.newCrack = function () {
+            _this.room.entities.push(new wallCrack_1.WallCrack(_this.room, _this.room.game, _this.x, _this.y));
         };
         _this.wallInfo = function () {
             return _this.room.wallInfo.get("".concat(_this.x, ",").concat(_this.y));

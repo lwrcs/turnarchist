@@ -12,11 +12,9 @@ import { LightSource } from "../lightSource";
 export class Light extends Equippable {
   fuel: number;
   fuelCap: number;
-  maxRadius: number;
-  minRadius: number;
-  static warmEnabled = false;
-  static warmth = 0;
-  static maxWarmth = 0.2;
+  radius: number;
+  maxBrightness: number;
+  minBrightness: number;
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
 
@@ -24,8 +22,9 @@ export class Light extends Equippable {
     this.tileY = 0;
     this.fuel = 0;
     this.fuelCap = 250;
-    this.maxRadius = 6;
-    this.minRadius = 2;
+    this.maxBrightness = 2;
+    this.minBrightness = 0.3;
+    this.radius = 6;
   }
 
   updateLighting = () => {
@@ -45,7 +44,12 @@ export class Light extends Equippable {
 
   setRadius = () => {
     this.wielder.sightRadius =
-      this.wielder.defaultSightRadius + this.fuelPercentage * this.maxRadius;
+      this.wielder.defaultSightRadius + this.fuelPercentage * this.radius;
+  };
+
+  setBrightness = () => {
+    this.wielder.lightBrightness =
+      this.minBrightness + this.fuelPercentage * this.maxBrightness;
   };
 
   toggleEquip = () => {
@@ -53,11 +57,9 @@ export class Light extends Equippable {
     if (this.isIgnited()) {
       this.setRadius();
       this.wielder.lightEquipped = true;
-      //Light.warmEnabled = true;
     } else {
       this.resetRadius();
       this.wielder.lightEquipped = false;
-      //Light.warmEnabled = false;
     }
     this.updateLighting();
   };
@@ -89,22 +91,5 @@ export class Light extends Equippable {
 
   getDescription = () => {
     return `${this.name}: ${this.fuelPercentage * 100}%`;
-  };
-
-  static drawTint = (delta: number) => {
-    const warmthChange = 0.02 * delta;
-    if (Light.warmth <= Light.maxWarmth && Light.warmEnabled) {
-      Light.warmth += warmthChange;
-    }
-    if (Light.warmth > 0 && !Light.warmEnabled) {
-      Light.warmth -= warmthChange;
-    }
-    if (Light.warmth < 0) Light.warmth = 0;
-    if (Light.warmth > Light.maxWarmth) Light.warmth = Light.maxWarmth;
-    Game.ctx.globalAlpha = Light.warmth;
-    Game.ctx.globalCompositeOperation = "overlay";
-    Game.ctx.fillStyle = "#FF8C00"; // reddish orange red
-    Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
-    Game.ctx.globalCompositeOperation = "source-over";
   };
 }

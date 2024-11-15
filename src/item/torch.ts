@@ -15,6 +15,6 @@ export class Torch extends Light {
     this.name = "torch";
     this.fuelCap = 500;
     this.fuel = 500;
-    this.maxRadius = 6;
+    this.radius = 6;
   }
 }

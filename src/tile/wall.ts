@@ -1,3 +1,4 @@
+import { WallCrack } from "../entity/object/wallCrack";
 import { Game } from "../game";
 import { Room } from "../room";
 import { Door } from "./door";
@@ -27,6 +28,28 @@ export class Wall extends Tile {
       wallInfo.isRightWall
     );
   };
+
+  crack = () => {
+    if (this.room.openWalls.topIsOpen) {
+      this.newCrack();
+    }
+    if (this.room.openWalls.bottomIsOpen) {
+      this.newCrack();
+    }
+    if (this.room.openWalls.leftIsOpen) {
+      this.newCrack();
+    }
+    if (this.room.openWalls.rightIsOpen) {
+      this.newCrack();
+    }
+  };
+
+  newCrack = () => {
+    this.room.entities.push(
+      new WallCrack(this.room, this.room.game, this.x, this.y)
+    );
+  };
+
   wallInfo = () => {
     return this.room.wallInfo.get(`${this.x},${this.y}`);
   };

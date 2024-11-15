@@ -919,9 +919,9 @@ export class Game {
     } else {
       this.screenShakeX = Math.sin(this.shakeFrame) * this.shakeAmountX;
       this.screenShakeY = Math.sin(this.shakeFrame) * this.shakeAmountY;
-      this.shakeFrame += 0.75;
-      this.shakeAmountX *= 0.85;
-      this.shakeAmountY *= 0.85;
+      this.shakeFrame += 0.7;
+      this.shakeAmountX *= 0.8;
+      this.shakeAmountY *= 0.8;
 
       if (
         Math.abs(this.screenShakeX) < 0.03 &&

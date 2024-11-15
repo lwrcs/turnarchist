@@ -16,7 +16,6 @@ export class Candle extends Light {
     this.tileY = 0;
     this.name = "candle";
     this.fuelCap = 100;
-    this.maxRadius = 4;
-    this.minRadius = 2;
+    this.radius = 4;
   }
 }
