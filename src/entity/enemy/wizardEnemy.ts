@@ -180,15 +180,17 @@ export abstract class WizardEnemy extends Enemy {
                 bestPos = newPos;
               }
             }
-            this.tryMove(bestPos.x, bestPos.y);
-            this.drawX = this.x - oldX;
-            this.drawY = this.y - oldY;
-            this.frame = 0; // trigger teleport animation
-            this.room.particles.push(new WizardTeleportParticle(oldX, oldY));
-            if (this.withinAttackingRangeOfPlayer()) {
-              this.state = WizardState.attack;
-            } else {
-              this.state = WizardState.idle;
+            if (bestPos) {
+              this.tryMove(bestPos.x, bestPos.y);
+              this.drawX = this.x - oldX;
+              this.drawY = this.y - oldY;
+              this.frame = 0; // trigger teleport animation
+              this.room.particles.push(new WizardTeleportParticle(oldX, oldY));
+              if (this.withinAttackingRangeOfPlayer()) {
+                this.state = WizardState.attack;
+              } else {
+                this.state = WizardState.idle;
+              }
             }
             break;
           case WizardState.idle:

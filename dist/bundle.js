@@ -4308,16 +4308,18 @@ var WizardEnemy = /** @class */ (function (_super) {
                                     bestPos = newPos;
                                 }
                             }
-                            _this.tryMove(bestPos.x, bestPos.y);
-                            _this.drawX = _this.x - oldX;
-                            _this.drawY = _this.y - oldY;
-                            _this.frame = 0; // trigger teleport animation
-                            _this.room.particles.push(new wizardTeleportParticle_1.WizardTeleportParticle(oldX, oldY));
-                            if (_this.withinAttackingRangeOfPlayer()) {
-                                _this.state = WizardState.attack;
-                            }
-                            else {
-                                _this.state = WizardState.idle;
+                            if (bestPos) {
+                                _this.tryMove(bestPos.x, bestPos.y);
+                                _this.drawX = _this.x - oldX;
+                                _this.drawY = _this.y - oldY;
+                                _this.frame = 0; // trigger teleport animation
+                                _this.room.particles.push(new wizardTeleportParticle_1.WizardTeleportParticle(oldX, oldY));
+                                if (_this.withinAttackingRangeOfPlayer()) {
+                                    _this.state = WizardState.attack;
+                                }
+                                else {
+                                    _this.state = WizardState.idle;
+                                }
                             }
                             break;
                         case WizardState.idle:
@@ -5774,7 +5776,7 @@ var Pumpkin = /** @class */ (function (_super) {
         _this.chainPushable = false;
         _this.name = "pumpkin";
         _this.drop = new candle_1.Candle(_this.room, _this.x, _this.y);
-        _this.lightSource = new lightSource_1.LightSource(_this.x + 0.5, _this.y + 0.5, 1, [200, 30, 1], 0.5);
+        _this.lightSource = new lightSource_1.LightSource(_this.x + 0.5, _this.y + 0.5, 5, [200, 30, 1], 0.5);
         _this.addLightSource(_this.lightSource);
         return _this;
     }
@@ -5894,7 +5896,7 @@ var TombStone = /** @class */ (function (_super) {
         var dropProb = random_1.Random.rand();
         if (dropProb < 0.05)
             _this.drop = new spellbook_1.Spellbook(_this.room, _this.x, _this.y);
-        _this.lightSource = new lightSource_1.LightSource(_this.x + 0.5, _this.y + 0.5, 1, [5, 150, 5], 1);
+        _this.lightSource = new lightSource_1.LightSource(_this.x + 0.5, _this.y + 0.5, 5, [5, 150, 5], 1);
         _this.addLightSource(_this.lightSource);
         return _this;
     }
@@ -6605,7 +6607,7 @@ var getShadeCanvasKey = function (set, sx, sy, sw, sh, opacity) {
 };
 // fps counter
 var times = [];
-var fps;
+var fps = 60;
 var Game = /** @class */ (function () {
     function Game() {
         var _this = this;
@@ -6724,9 +6726,10 @@ var Game = /** @class */ (function () {
         };
         this.run = function (timestamp) {
             if (!_this.previousFrameTimestamp)
-                _this.previousFrameTimestamp = timestamp; // - 1000.0 / GameConstants.FPS;
+                _this.previousFrameTimestamp = timestamp;
             // normalized so 1.0 = 60fps
-            var delta = ((timestamp - _this.previousFrameTimestamp) * 60) / 1000.0;
+            var delta = ((timestamp - _this.previousFrameTimestamp) * Math.min(2 * fps, 60)) /
+                1000.0;
             while (times.length > 0 && times[0] <= timestamp - 1000) {
                 times.shift();
             }
@@ -6786,6 +6789,11 @@ var Game = /** @class */ (function () {
                 case "newgame":
                     _this.newGame();
                     break;
+                case "dev":
+                    gameConstants_1.GameConstants.DEVELOPER_MODE = !gameConstants_1.GameConstants.DEVELOPER_MODE;
+                    console.log("Developer mode is now ".concat(gameConstants_1.GameConstants.DEVELOPER_MODE));
+                    _this.newGame();
+                    break;
             }
         };
         this.onResize = function () {
@@ -6819,6 +6827,9 @@ var Game = /** @class */ (function () {
         this.shakeScreen = function (shakeX, shakeY) {
             _this.screenShakeX = shakeX;
             _this.screenShakeY = shakeY;
+            _this.shakeAmountX = shakeX * 1.5;
+            _this.shakeAmountY = shakeY * 1.5;
+            _this.shakeFrame = 0;
         };
         this.drawStuff = function (delta) {
             _this.room.drawColorLayer();
@@ -6970,8 +6981,16 @@ var Game = /** @class */ (function () {
                     _this.players[i].updateDrawXY(delta);
             }
             else {
-                _this.screenShakeX *= -0.8;
-                _this.screenShakeY *= -0.8;
+                _this.screenShakeX = Math.sin(_this.shakeFrame) * _this.shakeAmountX;
+                _this.screenShakeY = Math.sin(_this.shakeFrame) * _this.shakeAmountY;
+                _this.shakeFrame += 0.75;
+                _this.shakeAmountX *= 0.85;
+                _this.shakeAmountY *= 0.85;
+                if (Math.abs(_this.screenShakeX) < 0.03 &&
+                    Math.abs(_this.screenShakeY) < 0.03) {
+                    _this.screenShakeX = 0;
+                    _this.screenShakeY = 0;
+                }
                 var playerDrawX = _this.players[_this.localPlayerID].drawX;
                 var playerDrawY = _this.players[_this.localPlayerID].drawY;
                 var cameraX = Math.round((_this.players[_this.localPlayerID].x - playerDrawX + 0.5) *
@@ -7176,6 +7195,9 @@ var Game = /** @class */ (function () {
                     _this.chatOpen = false;
                     _this.screenShakeX = 0;
                     _this.screenShakeY = 0;
+                    _this.shakeAmountX = 0;
+                    _this.shakeAmountY = 0;
+                    _this.shakeFrame = Math.PI / 2;
                     _this.levelState = LevelState.IN_LEVEL;
                     _this.tutorialActive = false;
                     _this.newGame();
@@ -11402,11 +11424,27 @@ var LightSource = /** @class */ (function () {
             _this.x = x;
             _this.y = y;
         };
+        this.shouldUpdate = function () {
+            _this.hasChanged =
+                _this.x !== _this.oldX ||
+                    _this.y !== _this.oldY ||
+                    _this.r !== _this.oldR ||
+                    _this.c !== _this.oldC ||
+                    _this.b !== _this.oldB ||
+                    _this.hasChanged;
+            return _this.hasChanged;
+        };
         this.x = x;
         this.y = y;
         this.r = r;
         this.c = c;
         this.b = b;
+        this.oldX = x;
+        this.oldY = y;
+        this.oldR = r;
+        this.oldC = c;
+        this.oldB = b;
+        this.hasChanged = true;
     }
     return LightSource;
 }());
@@ -12558,7 +12596,7 @@ var Player = /** @class */ (function (_super) {
                 _this.health -= damage;
                 _this.hurting = true;
                 _this.hurtAlpha = 0.5;
-                if (_this.health <= 0) {
+                if (_this.health <= 0 && !gameConstants_1.GameConstants.DEVELOPER_MODE) {
                     _this.dead = true;
                 }
                 /*
@@ -12583,7 +12621,7 @@ var Player = /** @class */ (function (_super) {
                     i.onPickup(_this);
                 }
             }
-            _this.game.rooms[_this.levelID].updateLighting();
+            //this.game.rooms[this.levelID].updateLighting();
         };
         _this.doneMoving = function () {
             var EPSILON = 0.01;
@@ -12597,6 +12635,14 @@ var Player = /** @class */ (function (_super) {
                 _this.openVendingMachine.close();
             _this.drawX = x - _this.x;
             _this.drawY = y - _this.y;
+            if (_this.drawX > 1)
+                _this.drawX = 1;
+            if (_this.drawY > 1)
+                _this.drawY = 1;
+            if (_this.drawX < -1)
+                _this.drawX = -1;
+            if (_this.drawY < -1)
+                _this.drawY = -1;
             _this.x = x;
             _this.y = y;
             for (var _i = 0, _a = _this.game.rooms[_this.levelID].items; _i < _a.length; _i++) {
@@ -12605,7 +12651,7 @@ var Player = /** @class */ (function (_super) {
                     i.onPickup(_this);
                 }
             }
-            _this.game.rooms[_this.levelID].updateLighting();
+            //this.game.rooms[this.levelID].updateLighting();
         };
         _this.moveNoSmooth = function (x, y) {
             // doesn't touch smoothing
@@ -12745,8 +12791,8 @@ var Player = /** @class */ (function (_super) {
         };
         _this.updateDrawXY = function (delta) {
             if (!_this.doneMoving()) {
-                _this.drawX += -0.3 * _this.drawX * delta;
-                _this.drawY += -0.3 * _this.drawY * delta;
+                _this.drawX *= 0.5 * delta;
+                _this.drawY *= 0.5 * delta;
                 _this.jump();
             }
         };
@@ -12803,8 +12849,8 @@ var Player = /** @class */ (function (_super) {
             });
         }
         _this.mapToggled = true;
-        _this.health = gameConstants_1.GameConstants.DEVELOPER_MODE ? 3000 : 3;
-        _this.maxHealth = gameConstants_1.GameConstants.DEVELOPER_MODE ? 3000 : 3;
+        _this.health = 3;
+        _this.maxHealth = 3;
         _this.healthBar = new healthbar_1.HealthBar();
         _this.dead = false;
         _this.flashing = false;
@@ -13135,7 +13181,7 @@ var WizardFireball = /** @class */ (function (_super) {
                 _this.parent.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.parent.game, _this.x, _this.y, _this.parent.x, _this.parent.y, true));
             }
             if (!_this.dead && _this.state === 2) {
-                lighting_1.Lighting.momentaryLight(_this.parent.room, _this.x, _this.y, 0.9 * (1 / _this.distanceToParent), _this.parent.projectileColor, 500, 0.9, 350);
+                lighting_1.Lighting.momentaryLight(_this.parent.room, _this.x, _this.y, 1.5, _this.parent.projectileColor, 500, 0.9, 350);
                 _this.parent.removeLightSource(_this.lightSource);
                 _this.frame = 0;
                 _this.delay = game_1.Game.rand(0, 10, Math.random);
@@ -13188,7 +13234,7 @@ var WizardFireball = /** @class */ (function (_super) {
         _this.parent = parent;
         _this.frame = 0;
         _this.state = 0; // this.distanceToParent;
-        _this.lightSource = new lightSource_1.LightSource(_this.x + 0.5, _this.y + 0.5, 0.5 * (1 / _this.distanceToParent), parent.projectileColor, 0.05);
+        _this.lightSource = new lightSource_1.LightSource(_this.x + 0.5, _this.y + 0.5, 4, parent.projectileColor, 0.1);
         _this.parent.addLightSource(_this.lightSource);
         return _this;
         //this.parent.room.updateLighting();
@@ -13322,11 +13368,9 @@ var ReverbEngine = /** @class */ (function () {
                     case 3:
                         _a.reverbBuffer =
                             _b.sent();
-                        console.log("ReverbEngine: Reverb buffer loaded from ".concat(filePath, " successfully."));
                         return [3 /*break*/, 5];
                     case 4:
                         error_1 = _b.sent();
-                        console.error("ReverbEngine: Failed to load reverb buffer.", error_1);
                         return [3 /*break*/, 5];
                     case 5: return [2 /*return*/];
                 }
@@ -13337,9 +13381,6 @@ var ReverbEngine = /** @class */ (function () {
     ReverbEngine.setDefaultReverb = function () {
         if (ReverbEngine.reverbBuffer) {
             ReverbEngine.convolver.buffer = ReverbEngine.reverbBuffer;
-        }
-        else {
-            console.warn("ReverbEngine: Default reverb buffer not loaded.");
         }
     };
     /**
@@ -13358,15 +13399,10 @@ var ReverbEngine = /** @class */ (function () {
                         _a.sent();
                         if (ReverbEngine.reverbBuffer) {
                             ReverbEngine.convolver.buffer = ReverbEngine.reverbBuffer;
-                            console.log("ReverbEngine: Reverb impulse set to ".concat(filePath));
-                        }
-                        else {
-                            console.warn("ReverbEngine: Reverb buffer not set for ".concat(filePath));
                         }
                         return [3 /*break*/, 3];
                     case 2:
                         error_2 = _a.sent();
-                        console.error("ReverbEngine: Failed to set reverb impulse.", error_2);
                         return [3 /*break*/, 3];
                     case 3: return [2 /*return*/];
                 }
@@ -13377,17 +13413,13 @@ var ReverbEngine = /** @class */ (function () {
     ReverbEngine.applyReverb = function (audioElement) {
         try {
             if (ReverbEngine.mediaSources.has(audioElement)) {
-                console.warn("ReverbEngine: Reverb already applied to this audio element.");
                 return;
             }
             var track = ReverbEngine.audioContext.createMediaElementSource(audioElement);
             track.connect(ReverbEngine.convolver);
             ReverbEngine.mediaSources.set(audioElement, track);
-            console.log("ReverbEngine: Reverb applied to ".concat(audioElement.src));
         }
-        catch (error) {
-            console.error("ReverbEngine: Failed to apply reverb.", error);
-        }
+        catch (error) { }
     };
     // Remove reverb from a given HTMLAudioElement
     ReverbEngine.removeReverb = function (audioElement) {
@@ -13395,10 +13427,6 @@ var ReverbEngine = /** @class */ (function () {
         if (track) {
             track.disconnect();
             ReverbEngine.mediaSources.delete(audioElement);
-            console.log("ReverbEngine: Reverb removed from ".concat(audioElement.src));
-        }
-        else {
-            console.warn("ReverbEngine: No reverb connection found for this audio element.");
         }
     };
     ReverbEngine.reverbBuffer = null;
@@ -13933,31 +13961,33 @@ var Room = /** @class */ (function () {
                     var linearSoftCol = _this.softCol[x][y];
                     var linearCol = _this.col[x][y];
                     var diffR = Math.abs(linearCol[0] - linearSoftCol[0]);
-                    if (diffR >= 8) {
+                    if (diffR >= 16) {
                         if (linearSoftCol[0] < linearCol[0])
-                            linearSoftCol[0] += (diffR / 2) * delta;
+                            linearSoftCol[0] += (20 * delta) / 2;
                         else if (linearSoftCol[0] > linearCol[0])
-                            linearSoftCol[0] -= (diffR / 2) * delta;
+                            linearSoftCol[0] -= (20 * delta) / 2;
                     }
                     var diffG = Math.abs(linearCol[1] - linearSoftCol[1]);
                     if (diffG >= 8) {
                         if (linearSoftCol[1] < linearCol[1])
-                            linearSoftCol[1] += (diffG / 2) * delta;
+                            linearSoftCol[1] += (20 * delta) / 2;
                         else if (linearSoftCol[1] > linearCol[1])
-                            linearSoftCol[1] -= (diffG / 2) * delta;
+                            linearSoftCol[1] -= (20 * delta) / 2;
                     }
                     var diffB = Math.abs(linearCol[2] - linearSoftCol[2]);
                     if (diffB >= 8) {
                         if (linearSoftCol[2] < linearCol[2])
-                            linearSoftCol[2] += (diffB / 2) * delta;
+                            linearSoftCol[2] += (20 * delta) / 2;
                         else if (linearSoftCol[2] > linearCol[2])
-                            linearSoftCol[2] -= (diffB / 2) * delta;
+                            linearSoftCol[2] -= (20 * delta) / 2;
                     }
                     _this.softCol[x][y] = linearSoftCol;
                 }
             }
         };
         this.updateLighting = function () {
+            // Start timing the initial setup
+            console.time("updateLighting: Initial Setup");
             var oldVis = [];
             var oldCol = [];
             for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
@@ -13971,12 +14001,22 @@ var Room = /** @class */ (function () {
                     _this.renderBuffer[x][y] = [];
                 }
             }
+            // End timing the initial setup
+            console.timeEnd("updateLighting: Initial Setup");
+            // Start timing the processing of light sources
+            console.time("updateLighting: Process LightSources");
             for (var _i = 0, _a = _this.lightSources; _i < _a.length; _i++) {
                 var l = _a[_i];
-                for (var i = 0; i < 360; i += levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP) {
-                    _this.castTintAtAngle(i, l.x, l.y, l.r, l.c, l.b); // RGB color in sRGB
+                if (l.shouldUpdate()) {
+                    for (var i = 0; i < 360; i += levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP) {
+                        _this.castTintAtAngle(i, l.x, l.y, l.r, l.c, l.b); // RGB color in sRGB
+                    }
                 }
             }
+            // End timing the processing of light sources
+            console.timeEnd("updateLighting: Process LightSources");
+            // Start timing the processing of player lighting
+            console.time("updateLighting: Process Players");
             for (var p in _this.game.players) {
                 var player = _this.game.players[p];
                 if (_this === _this.game.rooms[player.levelID]) {
@@ -13995,6 +14035,10 @@ var Room = /** @class */ (function () {
                     }
                 }
             }
+            // End timing the processing of player lighting
+            console.timeEnd("updateLighting: Process Players");
+            // Start timing the blending of colors
+            console.time("updateLighting: Blend Colors Array");
             var roomX = _this.roomX;
             var roomY = _this.roomY;
             var width = _this.width;
@@ -14005,17 +14049,17 @@ var Room = /** @class */ (function () {
                     _this.col[x][y] = _this.blendColorsArray(renderBuffer[x][y]);
                 }
             }
+            // End timing the blending of colors
+            console.timeEnd("updateLighting: Blend Colors Array");
+            // Start timing the conversion to luminance
+            console.time("updateLighting: Convert to Luminance");
             for (var x = roomX; x < roomX + width; x++) {
                 for (var y = roomY; y < roomY + height; y++) {
                     _this.vis[x][y] = _this.rgbToLuminance(_this.col[x][y]);
                 }
             }
-            if (levelConstants_1.LevelConstants.SMOOTH_LIGHTING)
-                _this.vis = _this.blur3x3(_this.vis, [
-                    [1, 2, 1],
-                    [2, 8, 2],
-                    [1, 2, 1],
-                ]);
+            // End timing the conversion to luminance
+            console.timeEnd("updateLighting: Convert to Luminance");
         };
         this.updateLightSources = function (lightSource, remove) {
             _this.oldCol = [];
@@ -14071,62 +14115,18 @@ var Room = /** @class */ (function () {
             }
         };
         /**
-         * Casts a tint from a light source at a specific angle.
-         * Updates the `col` array with the light's color based on distance and tile opacity.
+         * Casts or uncategorizes a tint from a light source at a specific angle.
          *
-         * @param angle - The angle in degrees at which to cast the tint.
+         * @param angle - The angle in degrees at which to cast or uncast the tint.
          * @param px - The x-coordinate of the light source.
          * @param py - The y-coordinate of the light source.
          * @param radius - The radius of the light's influence.
          * @param color - The RGB color tuple representing the tint.
          * @param brightness - The brightness of the light source.
+         * @param action - 'cast' to add tint, 'unCast' to remove tint.
          */
-        this.castTintAtAngle = function (angle, px, py, radius, color, brightness) {
-            var dx = Math.cos((angle * Math.PI) / 180);
-            var dy = Math.sin((angle * Math.PI) / 180);
-            // Convert input color from sRGB to linear RGB
-            var linearColor = [
-                _this.sRGBToLinear(color[0]),
-                _this.sRGBToLinear(color[1]),
-                _this.sRGBToLinear(color[2]),
-            ];
-            for (var i = 0; i <= levelConstants_1.LevelConstants.LIGHTING_MAX_DISTANCE; i++) {
-                var currentX = Math.floor(px + dx * i);
-                var currentY = Math.floor(py + dy * i);
-                if (!_this.isPositionInRoom(currentX, currentY))
-                    return; // Outside the room
-                var tile = _this.roomArray[currentX][currentY];
-                if (tile.isOpaque()) {
-                    return; // Stop casting tint through opaque tiles
-                }
-                // Handle i=0 separately to avoid division by zero and ensure the light source tile is lit correctly
-                var intensity = void 0;
-                if (i === 0) {
-                    intensity = brightness * 0.1; // Full intensity at the light source tile adjusted by brightness
-                }
-                else {
-                    intensity = brightness / Math.pow(Math.E, i); // Exponential falloff with distance
-                }
-                if (intensity < 0.005)
-                    intensity = 0;
-                if (intensity <= 0)
-                    continue;
-                if (!_this.renderBuffer[currentX]) {
-                    _this.renderBuffer[currentX] = [];
-                }
-                if (!_this.renderBuffer[currentX][currentY]) {
-                    _this.renderBuffer[currentX][currentY] = [];
-                }
-                var weightedLinearColor = [
-                    linearColor[0],
-                    linearColor[1],
-                    linearColor[2],
-                    intensity,
-                ];
-                _this.renderBuffer[currentX][currentY].push(weightedLinearColor);
-            }
-        };
-        this.unCastTintAtAngle = function (angle, px, py, radius, color, brightness) {
+        this.processTintAtAngle = function (angle, px, py, radius, color, brightness, action) {
+            if (action === void 0) { action = "cast"; }
             var dx = Math.cos((angle * Math.PI) / 180);
             var dy = Math.sin((angle * Math.PI) / 180);
             // Convert input color from sRGB to linear RGB
@@ -14144,21 +14144,23 @@ var Room = /** @class */ (function () {
                 if (tile.isOpaque()) {
                     return { value: void 0 };
                 }
-                // Handle i=0 separately to avoid division by zero and ensure the light source tile is affected correctly
+                // Handle i=0 separately to ensure correct intensity
                 var intensity = void 0;
                 if (i === 0) {
-                    intensity = brightness * 0.1; // Initial intensity adjustment
+                    intensity = brightness * 0.1;
                 }
                 else {
-                    intensity = brightness / Math.pow(Math.E, i); // Exponential falloff with distance
+                    intensity = brightness / Math.pow(Math.E, i);
                 }
-                if (intensity < 0.001)
+                if (intensity < 0.005)
                     intensity = 0;
                 if (intensity <= 0)
                     return "continue";
-                if (!_this.renderBuffer[currentX] ||
-                    !_this.renderBuffer[currentX][currentY]) {
-                    return "continue";
+                if (!_this.renderBuffer[currentX]) {
+                    _this.renderBuffer[currentX] = [];
+                }
+                if (!_this.renderBuffer[currentX][currentY]) {
+                    _this.renderBuffer[currentX][currentY] = [];
                 }
                 var weightedLinearColor = [
                     linearColor[0],
@@ -14166,19 +14168,49 @@ var Room = /** @class */ (function () {
                     linearColor[2],
                     intensity,
                 ];
-                // Remove the corresponding tint from the renderBuffer
-                _this.renderBuffer[currentX][currentY] = _this.renderBuffer[currentX][currentY].filter(function (colorEntry) {
-                    return !(Math.abs(colorEntry[0] - weightedLinearColor[0]) < 0.0001 &&
-                        Math.abs(colorEntry[1] - weightedLinearColor[1]) < 0.0001 &&
-                        Math.abs(colorEntry[2] - weightedLinearColor[2]) < 0.0001 &&
-                        Math.abs(colorEntry[3] - weightedLinearColor[3]) < 0.0001);
-                });
+                if (action === "cast") {
+                    _this.renderBuffer[currentX][currentY].push(weightedLinearColor);
+                }
+                else if (action === "unCast") {
+                    _this.renderBuffer[currentX][currentY] = _this.renderBuffer[currentX][currentY].filter(function (colorEntry) {
+                        return !(Math.abs(colorEntry[0] - weightedLinearColor[0]) < 0.0001 &&
+                            Math.abs(colorEntry[1] - weightedLinearColor[1]) < 0.0001 &&
+                            Math.abs(colorEntry[2] - weightedLinearColor[2]) < 0.0001 &&
+                            Math.abs(colorEntry[3] - weightedLinearColor[3]) < 0.0001);
+                    });
+                }
             };
-            for (var i = 0; i <= 10; i++) {
+            for (var i = 0; i <= Math.min(levelConstants_1.LevelConstants.LIGHTING_MAX_DISTANCE, radius); i++) {
                 var state_1 = _loop_2(i);
                 if (typeof state_1 === "object")
                     return state_1.value;
             }
+        };
+        /**
+         * Casts a tint from a light source at a specific angle.
+         *
+         * @param angle - The angle in degrees at which to cast the tint.
+         * @param px - The x-coordinate of the light source.
+         * @param py - The y-coordinate of the light source.
+         * @param radius - The radius of the light's influence.
+         * @param color - The RGB color tuple representing the tint.
+         * @param brightness - The brightness of the light source.
+         */
+        this.castTintAtAngle = function (angle, px, py, radius, color, brightness) {
+            _this.processTintAtAngle(angle, px, py, radius, color, brightness, "cast");
+        };
+        /**
+         * Uncasts a tint from a light source at a specific angle.
+         *
+         * @param angle - The angle in degrees at which to uncast the tint.
+         * @param px - The x-coordinate of the light source.
+         * @param py - The y-coordinate of the light source.
+         * @param radius - The radius of the light's influence.
+         * @param color - The RGB color tuple representing the tint.
+         * @param brightness - The brightness of the light source.
+         */
+        this.unCastTintAtAngle = function (angle, px, py, radius, color, brightness) {
+            _this.processTintAtAngle(angle, px, py, radius, color, brightness, "unCast");
         };
         this.sRGBToLinear = function (value) {
             var normalized = value / 255;
@@ -14273,6 +14305,7 @@ var Room = /** @class */ (function () {
                 _this.computerTurn(); // player skipped computer's turn, catch up
         };
         this.tick = function (player) {
+            console.log("tick");
             _this.lastEnemyCount = _this.entities.filter(function (e) { return e instanceof enemy_1.Enemy; }).length;
             for (var _i = 0, _a = _this.hitwarnings; _i < _a.length; _i++) {
                 var h = _a[_i];
@@ -14295,6 +14328,7 @@ var Room = /** @class */ (function () {
             //sets the action tab state to Ready
             _this.playerTurnTime = Date.now();
             _this.playerTicked = player;
+            console.log("updating lighting");
             _this.updateLighting();
             player.map.saveMapData();
             _this.clearDeadStuff();
@@ -16723,7 +16757,7 @@ var WallTorch = /** @class */ (function (_super) {
             game_1.Game.drawTile(2, _this.skin + _this.tileYOffset, 1, 1, _this.x, _this.y - 1, 1, 1, _this.room.shadeColor, _this.shadeAmount());
             game_1.Game.drawFX(Math.floor(_this.frame), 32, 1, 2, _this.x, _this.y - 1, 1, 2);
         };
-        _this.room.lightSources.push(new lightSource_1.LightSource(_this.x + 0.5, _this.y + 0.5, 0.5, levelConstants_1.LevelConstants.TORCH_LIGHT_COLOR, 1.5));
+        _this.room.lightSources.push(new lightSource_1.LightSource(_this.x + 0.5, _this.y + 0.5, 5, levelConstants_1.LevelConstants.TORCH_LIGHT_COLOR, 1.5));
         _this.frame = Math.random() * 12;
         _this.tileYOffset = 6;
         return _this;

@@ -26,7 +26,7 @@ export class Pumpkin extends Entity {
     this.lightSource = new LightSource(
       this.x + 0.5,
       this.y + 0.5,
-      1,
+      5,
       [200, 30, 1],
       0.5
     );

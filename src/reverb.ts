@@ -31,20 +31,13 @@ export class ReverbEngine {
       const arrayBuffer = await response.arrayBuffer();
       ReverbEngine.reverbBuffer =
         await ReverbEngine.audioContext.decodeAudioData(arrayBuffer);
-      console.log(
-        `ReverbEngine: Reverb buffer loaded from ${filePath} successfully.`
-      );
-    } catch (error) {
-      console.error("ReverbEngine: Failed to load reverb buffer.", error);
-    }
+    } catch (error) {}
   }
 
   // Set the default reverb buffer
   private static setDefaultReverb() {
     if (ReverbEngine.reverbBuffer) {
       ReverbEngine.convolver.buffer = ReverbEngine.reverbBuffer;
-    } else {
-      console.warn("ReverbEngine: Default reverb buffer not loaded.");
     }
   }
 
@@ -57,22 +50,14 @@ export class ReverbEngine {
       await ReverbEngine.loadReverbBuffer(filePath);
       if (ReverbEngine.reverbBuffer) {
         ReverbEngine.convolver.buffer = ReverbEngine.reverbBuffer;
-        console.log(`ReverbEngine: Reverb impulse set to ${filePath}`);
-      } else {
-        console.warn(`ReverbEngine: Reverb buffer not set for ${filePath}`);
       }
-    } catch (error) {
-      console.error("ReverbEngine: Failed to set reverb impulse.", error);
-    }
+    } catch (error) {}
   }
 
   // Apply reverb to a given HTMLAudioElement
   public static applyReverb(audioElement: HTMLAudioElement) {
     try {
       if (ReverbEngine.mediaSources.has(audioElement)) {
-        console.warn(
-          "ReverbEngine: Reverb already applied to this audio element."
-        );
         return;
       }
 
@@ -80,10 +65,7 @@ export class ReverbEngine {
         ReverbEngine.audioContext.createMediaElementSource(audioElement);
       track.connect(ReverbEngine.convolver);
       ReverbEngine.mediaSources.set(audioElement, track);
-      console.log(`ReverbEngine: Reverb applied to ${audioElement.src}`);
-    } catch (error) {
-      console.error("ReverbEngine: Failed to apply reverb.", error);
-    }
+    } catch (error) {}
   }
 
   // Remove reverb from a given HTMLAudioElement
@@ -92,11 +74,6 @@ export class ReverbEngine {
     if (track) {
       track.disconnect();
       ReverbEngine.mediaSources.delete(audioElement);
-      console.log(`ReverbEngine: Reverb removed from ${audioElement.src}`);
-    } else {
-      console.warn(
-        "ReverbEngine: No reverb connection found for this audio element."
-      );
     }
   }
 }

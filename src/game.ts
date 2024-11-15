@@ -57,7 +57,7 @@ let getShadeCanvasKey = (
 
 // fps counter
 const times = [];
-let fps;
+let fps = 60;
 
 export class Game {
   static ctx: CanvasRenderingContext2D;
@@ -79,6 +79,9 @@ export class Game {
   transitioningLadder: any;
   screenShakeX: number;
   screenShakeY: number;
+  shakeAmountX: number;
+  shakeAmountY: number;
+  shakeFrame: number;
   chat: Array<ChatMessage>;
   chatOpen: boolean;
   chatTextBox: TextBox;
@@ -277,7 +280,9 @@ export class Game {
 
           this.screenShakeX = 0;
           this.screenShakeY = 0;
-
+          this.shakeAmountX = 0;
+          this.shakeAmountY = 0;
+          this.shakeFrame = Math.PI / 2;
           this.levelState = LevelState.IN_LEVEL;
           this.tutorialActive = false;
           this.newGame();
@@ -413,10 +418,12 @@ export class Game {
   };
 
   run = (timestamp: number) => {
-    if (!this.previousFrameTimestamp) this.previousFrameTimestamp = timestamp; // - 1000.0 / GameConstants.FPS;
+    if (!this.previousFrameTimestamp) this.previousFrameTimestamp = timestamp;
 
     // normalized so 1.0 = 60fps
-    let delta = ((timestamp - this.previousFrameTimestamp) * 60) / 1000.0;
+    let delta =
+      ((timestamp - this.previousFrameTimestamp) * Math.min(2 * fps, 60)) /
+      1000.0;
 
     while (times.length > 0 && times[0] <= timestamp - 1000) {
       times.shift();
@@ -493,6 +500,11 @@ export class Game {
       case "newgame":
         this.newGame();
         break;
+      case "dev":
+        GameConstants.DEVELOPER_MODE = !GameConstants.DEVELOPER_MODE;
+        console.log(`Developer mode is now ${GameConstants.DEVELOPER_MODE}`);
+        this.newGame();
+        break;
     }
   };
 
@@ -560,6 +572,9 @@ export class Game {
   shakeScreen = (shakeX: number, shakeY: number) => {
     this.screenShakeX = shakeX;
     this.screenShakeY = shakeY;
+    this.shakeAmountX = shakeX * 1.5;
+    this.shakeAmountY = shakeY * 1.5;
+    this.shakeFrame = 0;
   };
 
   static measureText = (text: string): { width: number; height: number } => {
@@ -902,8 +917,19 @@ export class Game {
       this.players[this.localPlayerID].drawGUI(delta);
       for (const i in this.players) this.players[i].updateDrawXY(delta);
     } else {
-      this.screenShakeX *= -0.8;
-      this.screenShakeY *= -0.8;
+      this.screenShakeX = Math.sin(this.shakeFrame) * this.shakeAmountX;
+      this.screenShakeY = Math.sin(this.shakeFrame) * this.shakeAmountY;
+      this.shakeFrame += 0.75;
+      this.shakeAmountX *= 0.85;
+      this.shakeAmountY *= 0.85;
+
+      if (
+        Math.abs(this.screenShakeX) < 0.03 &&
+        Math.abs(this.screenShakeY) < 0.03
+      ) {
+        this.screenShakeX = 0;
+        this.screenShakeY = 0;
+      }
 
       let playerDrawX = this.players[this.localPlayerID].drawX;
       let playerDrawY = this.players[this.localPlayerID].drawY;

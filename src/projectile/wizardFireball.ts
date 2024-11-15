@@ -28,9 +28,9 @@ export class WizardFireball extends Projectile {
     this.lightSource = new LightSource(
       this.x + 0.5,
       this.y + 0.5,
-      0.5 * (1 / this.distanceToParent),
+      4,
       (parent as WizardEnemy).projectileColor,
-      0.05
+      0.1
     );
     this.parent.addLightSource(this.lightSource);
     //this.parent.room.updateLighting();
@@ -71,7 +71,7 @@ export class WizardFireball extends Projectile {
         this.parent.room,
         this.x,
         this.y,
-        0.9 * (1 / this.distanceToParent),
+        1.5,
         (this.parent as WizardEnemy).projectileColor,
         500,
         0.9,

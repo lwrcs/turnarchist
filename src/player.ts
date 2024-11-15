@@ -120,8 +120,8 @@ export class Player extends Drawable {
       );
     }
     this.mapToggled = true;
-    this.health = GameConstants.DEVELOPER_MODE ? 3000 : 3;
-    this.maxHealth = GameConstants.DEVELOPER_MODE ? 3000 : 3;
+    this.health = 3;
+    this.maxHealth = 3;
     this.healthBar = new HealthBar();
     this.dead = false;
     this.flashing = false;
@@ -583,7 +583,7 @@ export class Player extends Drawable {
       this.health -= damage;
       this.hurting = true;
       this.hurtAlpha = 0.5;
-      if (this.health <= 0) {
+      if (this.health <= 0 && !GameConstants.DEVELOPER_MODE) {
         this.dead = true;
       }
 
@@ -611,7 +611,7 @@ export class Player extends Drawable {
       }
     }
 
-    this.game.rooms[this.levelID].updateLighting();
+    //this.game.rooms[this.levelID].updateLighting();
   };
 
   doneMoving = (): boolean => {
@@ -628,6 +628,11 @@ export class Player extends Drawable {
 
     this.drawX = x - this.x;
     this.drawY = y - this.y;
+    if (this.drawX > 1) this.drawX = 1;
+    if (this.drawY > 1) this.drawY = 1;
+    if (this.drawX < -1) this.drawX = -1;
+    if (this.drawY < -1) this.drawY = -1;
+
     this.x = x;
     this.y = y;
 
@@ -637,7 +642,7 @@ export class Player extends Drawable {
       }
     }
 
-    this.game.rooms[this.levelID].updateLighting();
+    //this.game.rooms[this.levelID].updateLighting();
   };
 
   moveNoSmooth = (x: number, y: number) => {
@@ -810,8 +815,8 @@ export class Player extends Drawable {
 
   updateDrawXY = (delta: number) => {
     if (!this.doneMoving()) {
-      this.drawX += -0.3 * this.drawX * delta;
-      this.drawY += -0.3 * this.drawY * delta;
+      this.drawX *= 0.5 * delta;
+      this.drawY *= 0.5 * delta;
       this.jump();
     }
   };

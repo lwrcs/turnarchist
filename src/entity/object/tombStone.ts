@@ -44,7 +44,7 @@ export class TombStone extends Entity {
     this.lightSource = new LightSource(
       this.x + 0.5,
       this.y + 0.5,
-      1,
+      5,
       [5, 150, 5],
       1
     );

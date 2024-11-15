@@ -1137,25 +1137,25 @@ export class Room {
         const linearSoftCol = this.softCol[x][y];
         const linearCol = this.col[x][y];
         let diffR = Math.abs(linearCol[0] - linearSoftCol[0]);
-        if (diffR >= 8) {
+        if (diffR >= 16) {
           if (linearSoftCol[0] < linearCol[0])
-            linearSoftCol[0] += (diffR / 2) * delta;
+            linearSoftCol[0] += (20 * delta) / 2;
           else if (linearSoftCol[0] > linearCol[0])
-            linearSoftCol[0] -= (diffR / 2) * delta;
+            linearSoftCol[0] -= (20 * delta) / 2;
         }
         let diffG = Math.abs(linearCol[1] - linearSoftCol[1]);
         if (diffG >= 8) {
           if (linearSoftCol[1] < linearCol[1])
-            linearSoftCol[1] += (diffG / 2) * delta;
+            linearSoftCol[1] += (20 * delta) / 2;
           else if (linearSoftCol[1] > linearCol[1])
-            linearSoftCol[1] -= (diffG / 2) * delta;
+            linearSoftCol[1] -= (20 * delta) / 2;
         }
         let diffB = Math.abs(linearCol[2] - linearSoftCol[2]);
         if (diffB >= 8) {
           if (linearSoftCol[2] < linearCol[2])
-            linearSoftCol[2] += (diffB / 2) * delta;
+            linearSoftCol[2] += (20 * delta) / 2;
           else if (linearSoftCol[2] > linearCol[2])
-            linearSoftCol[2] -= (diffB / 2) * delta;
+            linearSoftCol[2] -= (20 * delta) / 2;
         }
         this.softCol[x][y] = linearSoftCol;
       }
@@ -1163,6 +1163,9 @@ export class Room {
   };
 
   updateLighting = () => {
+    // Start timing the initial setup
+    console.time("updateLighting: Initial Setup");
+
     let oldVis = [];
     let oldCol = [];
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
@@ -1177,12 +1180,24 @@ export class Room {
         this.renderBuffer[x][y] = [];
       }
     }
+    // End timing the initial setup
+    console.timeEnd("updateLighting: Initial Setup");
+
+    // Start timing the processing of light sources
+    console.time("updateLighting: Process LightSources");
 
     for (const l of this.lightSources) {
-      for (let i = 0; i < 360; i += LevelConstants.LIGHTING_ANGLE_STEP) {
-        this.castTintAtAngle(i, l.x, l.y, l.r, l.c, l.b); // RGB color in sRGB
+      if (l.shouldUpdate()) {
+        for (let i = 0; i < 360; i += LevelConstants.LIGHTING_ANGLE_STEP) {
+          this.castTintAtAngle(i, l.x, l.y, l.r, l.c, l.b); // RGB color in sRGB
+        }
       }
     }
+    // End timing the processing of light sources
+    console.timeEnd("updateLighting: Process LightSources");
+
+    // Start timing the processing of player lighting
+    console.time("updateLighting: Process Players");
     for (const p in this.game.players) {
       let player = this.game.players[p];
       if (this === this.game.rooms[player.levelID]) {
@@ -1215,6 +1230,11 @@ export class Room {
         }
       }
     }
+    // End timing the processing of player lighting
+    console.timeEnd("updateLighting: Process Players");
+
+    // Start timing the blending of colors
+    console.time("updateLighting: Blend Colors Array");
     const roomX = this.roomX;
     const roomY = this.roomY;
     const width = this.width;
@@ -1226,19 +1246,18 @@ export class Room {
         this.col[x][y] = this.blendColorsArray(renderBuffer[x][y]);
       }
     }
+    // End timing the blending of colors
+    console.timeEnd("updateLighting: Blend Colors Array");
 
+    // Start timing the conversion to luminance
+    console.time("updateLighting: Convert to Luminance");
     for (let x = roomX; x < roomX + width; x++) {
       for (let y = roomY; y < roomY + height; y++) {
         this.vis[x][y] = this.rgbToLuminance(this.col[x][y]);
       }
     }
-
-    if (LevelConstants.SMOOTH_LIGHTING)
-      this.vis = this.blur3x3(this.vis, [
-        [1, 2, 1],
-        [2, 8, 2],
-        [1, 2, 1],
-      ]);
+    // End timing the conversion to luminance
+    console.timeEnd("updateLighting: Convert to Luminance");
   };
   updateLightSources = (lightSource?: LightSource, remove?: boolean) => {
     this.oldCol = [];
@@ -1319,23 +1338,24 @@ export class Room {
   };
 
   /**
-   * Casts a tint from a light source at a specific angle.
-   * Updates the `col` array with the light's color based on distance and tile opacity.
+   * Casts or uncategorizes a tint from a light source at a specific angle.
    *
-   * @param angle - The angle in degrees at which to cast the tint.
+   * @param angle - The angle in degrees at which to cast or uncast the tint.
    * @param px - The x-coordinate of the light source.
    * @param py - The y-coordinate of the light source.
    * @param radius - The radius of the light's influence.
    * @param color - The RGB color tuple representing the tint.
    * @param brightness - The brightness of the light source.
+   * @param action - 'cast' to add tint, 'unCast' to remove tint.
    */
-  castTintAtAngle = (
+  private processTintAtAngle = (
     angle: number,
     px: number,
     py: number,
     radius: number,
     color: [number, number, number],
-    brightness: number
+    brightness: number,
+    action: "cast" | "unCast" = "cast"
   ) => {
     const dx = Math.cos((angle * Math.PI) / 180);
     const dy = Math.sin((angle * Math.PI) / 180);
@@ -1347,7 +1367,11 @@ export class Room {
       this.sRGBToLinear(color[2]),
     ];
 
-    for (let i = 0; i <= LevelConstants.LIGHTING_MAX_DISTANCE; i++) {
+    for (
+      let i = 0;
+      i <= Math.min(LevelConstants.LIGHTING_MAX_DISTANCE, radius);
+      i++
+    ) {
       const currentX = Math.floor(px + dx * i);
       const currentY = Math.floor(py + dy * i);
 
@@ -1355,15 +1379,15 @@ export class Room {
 
       const tile = this.roomArray[currentX][currentY];
       if (tile.isOpaque()) {
-        return; // Stop casting tint through opaque tiles
+        return; // Stop processing through opaque tiles
       }
 
-      // Handle i=0 separately to avoid division by zero and ensure the light source tile is lit correctly
+      // Handle i=0 separately to ensure correct intensity
       let intensity: number;
       if (i === 0) {
-        intensity = brightness * 0.1; // Full intensity at the light source tile adjusted by brightness
+        intensity = brightness * 0.1;
       } else {
-        intensity = brightness / Math.E ** i; // Exponential falloff with distance
+        intensity = brightness / Math.E ** i;
       }
       if (intensity < 0.005) intensity = 0;
 
@@ -1383,10 +1407,55 @@ export class Room {
         intensity,
       ];
 
-      this.renderBuffer[currentX][currentY].push(weightedLinearColor);
+      if (action === "cast") {
+        this.renderBuffer[currentX][currentY].push(weightedLinearColor);
+      } else if (action === "unCast") {
+        this.renderBuffer[currentX][currentY] = this.renderBuffer[currentX][
+          currentY
+        ].filter(
+          (colorEntry) =>
+            !(
+              Math.abs(colorEntry[0] - weightedLinearColor[0]) < 0.0001 &&
+              Math.abs(colorEntry[1] - weightedLinearColor[1]) < 0.0001 &&
+              Math.abs(colorEntry[2] - weightedLinearColor[2]) < 0.0001 &&
+              Math.abs(colorEntry[3] - weightedLinearColor[3]) < 0.0001
+            )
+        );
+      }
     }
   };
 
+  /**
+   * Casts a tint from a light source at a specific angle.
+   *
+   * @param angle - The angle in degrees at which to cast the tint.
+   * @param px - The x-coordinate of the light source.
+   * @param py - The y-coordinate of the light source.
+   * @param radius - The radius of the light's influence.
+   * @param color - The RGB color tuple representing the tint.
+   * @param brightness - The brightness of the light source.
+   */
+  castTintAtAngle = (
+    angle: number,
+    px: number,
+    py: number,
+    radius: number,
+    color: [number, number, number],
+    brightness: number
+  ) => {
+    this.processTintAtAngle(angle, px, py, radius, color, brightness, "cast");
+  };
+
+  /**
+   * Uncasts a tint from a light source at a specific angle.
+   *
+   * @param angle - The angle in degrees at which to uncast the tint.
+   * @param px - The x-coordinate of the light source.
+   * @param py - The y-coordinate of the light source.
+   * @param radius - The radius of the light's influence.
+   * @param color - The RGB color tuple representing the tint.
+   * @param brightness - The brightness of the light source.
+   */
   unCastTintAtAngle = (
     angle: number,
     px: number,
@@ -1395,65 +1464,7 @@ export class Room {
     color: [number, number, number],
     brightness: number
   ) => {
-    const dx = Math.cos((angle * Math.PI) / 180);
-    const dy = Math.sin((angle * Math.PI) / 180);
-
-    // Convert input color from sRGB to linear RGB
-    const linearColor: [number, number, number] = [
-      this.sRGBToLinear(color[0]),
-      this.sRGBToLinear(color[1]),
-      this.sRGBToLinear(color[2]),
-    ];
-
-    for (let i = 0; i <= 10; i++) {
-      const currentX = Math.floor(px + dx * i);
-      const currentY = Math.floor(py + dy * i);
-
-      if (!this.isPositionInRoom(currentX, currentY)) return; // Outside the room
-
-      const tile = this.roomArray[currentX][currentY];
-      if (tile.isOpaque()) {
-        return; // Stop uncasting tint through opaque tiles
-      }
-
-      // Handle i=0 separately to avoid division by zero and ensure the light source tile is affected correctly
-      let intensity: number;
-      if (i === 0) {
-        intensity = brightness * 0.1; // Initial intensity adjustment
-      } else {
-        intensity = brightness / Math.E ** i; // Exponential falloff with distance
-      }
-      if (intensity < 0.001) intensity = 0;
-
-      if (intensity <= 0) continue;
-
-      if (
-        !this.renderBuffer[currentX] ||
-        !this.renderBuffer[currentX][currentY]
-      ) {
-        continue; // No tint to remove
-      }
-
-      const weightedLinearColor: [number, number, number, number] = [
-        linearColor[0],
-        linearColor[1],
-        linearColor[2],
-        intensity,
-      ];
-
-      // Remove the corresponding tint from the renderBuffer
-      this.renderBuffer[currentX][currentY] = this.renderBuffer[currentX][
-        currentY
-      ].filter(
-        (colorEntry) =>
-          !(
-            Math.abs(colorEntry[0] - weightedLinearColor[0]) < 0.0001 &&
-            Math.abs(colorEntry[1] - weightedLinearColor[1]) < 0.0001 &&
-            Math.abs(colorEntry[2] - weightedLinearColor[2]) < 0.0001 &&
-            Math.abs(colorEntry[3] - weightedLinearColor[3]) < 0.0001
-          )
-      );
-    }
+    this.processTintAtAngle(angle, px, py, radius, color, brightness, "unCast");
   };
 
   private sRGBToLinear = (value: number): number => {
@@ -1565,6 +1576,7 @@ export class Room {
   };
 
   tick = (player: Player) => {
+    console.log("tick");
     this.lastEnemyCount = this.entities.filter(
       (e) => e instanceof Enemy
     ).length;
@@ -1592,6 +1604,7 @@ export class Room {
     //sets the action tab state to Ready
     this.playerTurnTime = Date.now();
     this.playerTicked = player;
+    console.log("updating lighting");
     this.updateLighting();
 
     player.map.saveMapData();
