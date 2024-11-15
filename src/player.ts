@@ -78,6 +78,7 @@ export class Player extends Drawable {
   hurting: boolean;
   lightBrightness: number;
   sineAngle: number;
+  drawMoveSpeed: number;
   constructor(game: Game, x: number, y: number, isLocalPlayer: boolean) {
     super();
 
@@ -150,6 +151,7 @@ export class Player extends Drawable {
     this.hurtAlpha = 0.5;
     this.lightBrightness = 0.3;
     this.sineAngle = Math.PI / 2;
+    this.drawMoveSpeed = 1.5; // greater than 1 less than 2
   }
 
   get angle(): number {
@@ -493,6 +495,7 @@ export class Player extends Drawable {
           /* if no enemies and there is a wall, no move
           otherwise, push everything, killing last enemy if there is a wall */
           // here, (nextX, nextY) is the position immediately after the end of the train
+
           if (
             pushedEnemies.length === 0 &&
             (this.game.rooms[this.levelID].roomArray[nextX][
@@ -827,8 +830,8 @@ export class Player extends Drawable {
       this.drawY *= Math.sin(this.sineAngle) * delta;
       if (this.doneMoving()) this.sineAngle = Math.PI / 2;
 */
-      this.drawX *= 0.5 * delta;
-      this.drawY *= 0.5 * delta;
+      this.drawX *= (1 / this.drawMoveSpeed) * delta;
+      this.drawY *= (1 / this.drawMoveSpeed) * delta;
       this.jump();
     }
   };

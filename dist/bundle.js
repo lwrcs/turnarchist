@@ -12865,8 +12865,8 @@ var Player = /** @class */ (function (_super) {
                 this.drawY *= Math.sin(this.sineAngle) * delta;
                 if (this.doneMoving()) this.sineAngle = Math.PI / 2;
           */
-                _this.drawX *= 0.5 * delta;
-                _this.drawY *= 0.5 * delta;
+                _this.drawX *= (1 / _this.drawMoveSpeed) * delta;
+                _this.drawY *= (1 / _this.drawMoveSpeed) * delta;
                 _this.jump();
             }
         };
@@ -12948,6 +12948,7 @@ var Player = /** @class */ (function (_super) {
         _this.hurtAlpha = 0.5;
         _this.lightBrightness = 0.3;
         _this.sineAngle = Math.PI / 2;
+        _this.drawMoveSpeed = 1.5; // greater than 1 less than 2
         return _this;
     }
     Object.defineProperty(Player.prototype, "angle", {
