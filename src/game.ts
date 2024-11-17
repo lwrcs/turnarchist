@@ -82,6 +82,7 @@ export class Game {
   shakeAmountX: number;
   shakeAmountY: number;
   shakeFrame: number;
+  screenShakeCutoff: number;
   chat: Array<ChatMessage>;
   chatOpen: boolean;
   chatTextBox: TextBox;
@@ -106,6 +107,7 @@ export class Game {
   isMobile: boolean;
   started: boolean;
   startedFadeOut: boolean;
+  screenShakeActive: boolean;
   private startScreenAlpha = 1;
 
   static text_rendering_canvases: Record<string, HTMLCanvasElement>;
@@ -282,9 +284,11 @@ export class Game {
           this.screenShakeY = 0;
           this.shakeAmountX = 0;
           this.shakeAmountY = 0;
-          this.shakeFrame = Math.PI / 2;
+          this.shakeFrame = 0;
+          this.screenShakeCutoff = 0;
           this.levelState = LevelState.IN_LEVEL;
           this.tutorialActive = false;
+          this.screenShakeActive = false;
           this.newGame();
         }
       };
@@ -421,9 +425,10 @@ export class Game {
     if (!this.previousFrameTimestamp) this.previousFrameTimestamp = timestamp;
 
     // normalized so 1.0 = 60fps
-    let delta =
-      ((timestamp - this.previousFrameTimestamp) * Math.min(2 * fps, 60)) /
-      1000.0;
+    let delta = Math.min(
+      ((timestamp - this.previousFrameTimestamp) * 60) / 1000.0,
+      100
+    );
 
     while (times.length > 0 && times[0] <= timestamp - 1000) {
       times.shift();
@@ -435,6 +440,7 @@ export class Game {
     this.draw(delta);
     window.requestAnimationFrame(this.run);
 
+    console.log(delta);
     this.previousFrameTimestamp = timestamp;
   };
 
@@ -570,11 +576,13 @@ export class Game {
   };
 
   shakeScreen = (shakeX: number, shakeY: number) => {
+    this.screenShakeActive = true;
     this.screenShakeX = shakeX;
     this.screenShakeY = shakeY;
-    this.shakeAmountX = shakeX * 1.5;
-    this.shakeAmountY = shakeY * 1.5;
+    this.shakeAmountX = Math.abs(shakeX);
+    this.shakeAmountY = Math.abs(shakeY);
     this.shakeFrame = 0;
+    this.screenShakeCutoff = Date.now();
   };
 
   static measureText = (text: string): { width: number; height: number } => {
@@ -917,18 +925,32 @@ export class Game {
       this.players[this.localPlayerID].drawGUI(delta);
       for (const i in this.players) this.players[i].updateDrawXY(delta);
     } else {
-      this.screenShakeX = Math.sin(this.shakeFrame) * this.shakeAmountX;
-      this.screenShakeY = Math.sin(this.shakeFrame) * this.shakeAmountY;
-      this.shakeFrame += 0.7;
-      this.shakeAmountX *= 0.8;
-      this.shakeAmountY *= 0.8;
+      // Start of Selection
+      if (this.screenShakeActive) {
+        const decayFactor = 1 - 0.15 * delta;
+        //const decayFactor = 1 - 1 / (Date.now() - this.screenShakeCutoff);
+        this.screenShakeX =
+          Math.sin(this.shakeFrame * Math.PI * delta) * this.shakeAmountX;
+        this.screenShakeY =
+          Math.sin(this.shakeFrame * Math.PI * delta) * this.shakeAmountY;
+        this.shakeFrame += 0.35 * delta;
+        this.shakeAmountX =
+          this.shakeAmountX < 0.01 ? 0 : this.shakeAmountX * decayFactor;
+        this.shakeAmountY =
+          this.shakeAmountY < 0.01 ? 0 : this.shakeAmountY * decayFactor;
 
-      if (
-        Math.abs(this.screenShakeX) < 0.03 &&
-        Math.abs(this.screenShakeY) < 0.03
-      ) {
-        this.screenShakeX = 0;
-        this.screenShakeY = 0;
+        if (
+          (Math.abs(this.shakeAmountX) < 0.01 &&
+            Math.abs(this.shakeAmountY) < 0.01) ||
+          Date.now() - this.screenShakeCutoff > 1000
+        ) {
+          this.shakeAmountX = 0;
+          this.shakeAmountY = 0;
+          this.shakeFrame = 0;
+          this.screenShakeX = 0;
+          this.screenShakeY = 0;
+          this.screenShakeActive = false;
+        }
       }
 
       let playerDrawX = this.players[this.localPlayerID].drawX;

@@ -17,7 +17,7 @@ class PartitionConnection {
   }
 }
 
-export class Partition {
+class Partition {
   x: number;
   y: number;
   w: number;

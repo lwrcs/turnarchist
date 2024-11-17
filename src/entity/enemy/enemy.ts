@@ -395,15 +395,22 @@ export abstract class Enemy extends Entity {
 
   updateDrawXY = (delta: number) => {
     if (!this.doneMoving()) {
-      this.drawX += -this.drawMoveSpeed * delta * this.drawX;
-      this.drawY += -this.drawMoveSpeed * delta * this.drawY;
-      this.jump();
+      this.drawX *= 1 - this.drawMoveSpeed * delta;
+      this.drawY *= 1 - this.drawMoveSpeed * delta;
+
+      this.drawX =
+        Math.abs(this.drawX) < 0.01 ? 0 : Math.max(-1, Math.min(this.drawX, 1));
+      this.drawY =
+        Math.abs(this.drawY) < 0.01 ? 0 : Math.max(-1, Math.min(this.drawY, 1));
+      this.jump(delta);
     }
   };
 
-  jump = () => {
+  jump = (delta: number) => {
     let j = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
     this.jumpY = Math.sin(j * Math.PI) * this.jumpHeight;
+    if (this.jumpY < 0.01 && this.jumpY > -0.01) this.jumpY = 0;
+    if (this.jumpY > this.jumpHeight) this.jumpY = this.jumpHeight;
   };
 
   draw = (delta: number) => {
@@ -430,7 +437,7 @@ export abstract class Enemy extends Entity {
         1,
         2,
         this.x - this.drawX,
-        this.y - this.drawYOffset - this.drawY - this.jumpY * delta,
+        this.y - this.drawYOffset - this.drawY - this.jumpY,
         1,
         2,
         this.room.shadeColor,

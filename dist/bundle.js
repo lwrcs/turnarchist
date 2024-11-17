@@ -2394,14 +2394,22 @@ var Enemy = /** @class */ (function (_super) {
         };
         _this.updateDrawXY = function (delta) {
             if (!_this.doneMoving()) {
-                _this.drawX += -_this.drawMoveSpeed * delta * _this.drawX;
-                _this.drawY += -_this.drawMoveSpeed * delta * _this.drawY;
-                _this.jump();
+                _this.drawX *= 1 - _this.drawMoveSpeed * delta;
+                _this.drawY *= 1 - _this.drawMoveSpeed * delta;
+                _this.drawX =
+                    Math.abs(_this.drawX) < 0.01 ? 0 : Math.max(-1, Math.min(_this.drawX, 1));
+                _this.drawY =
+                    Math.abs(_this.drawY) < 0.01 ? 0 : Math.max(-1, Math.min(_this.drawY, 1));
+                _this.jump(delta);
             }
         };
-        _this.jump = function () {
+        _this.jump = function (delta) {
             var j = Math.max(Math.abs(_this.drawX), Math.abs(_this.drawY));
             _this.jumpY = Math.sin(j * Math.PI) * _this.jumpHeight;
+            if (_this.jumpY < 0.01 && _this.jumpY > -0.01)
+                _this.jumpY = 0;
+            if (_this.jumpY > _this.jumpHeight)
+                _this.jumpY = _this.jumpHeight;
         };
         _this.draw = function (delta) {
             if (!_this.dead) {
@@ -2410,7 +2418,7 @@ var Enemy = /** @class */ (function (_super) {
                     _this.frame = 0;
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
-                game_1.Game.drawMob(_this.tileX + Math.floor(_this.frame), _this.tileY + _this.direction * 2, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY - _this.jumpY * delta, 1, 2, _this.room.shadeColor, _this.shadeAmount());
+                game_1.Game.drawMob(_this.tileX + Math.floor(_this.frame), _this.tileY + _this.direction * 2, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY - _this.jumpY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
             }
             if (!_this.seenPlayer) {
                 _this.drawSleepingZs(delta);
@@ -3682,7 +3690,7 @@ var SkullEnemy = /** @class */ (function (_super) {
                     _this.frame = 0;
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
-                game_1.Game.drawMob(_this.tileX + (_this.tileX === 5 ? Math.floor(_this.frame) : 0), _this.tileY + _this.direction * 2, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY - _this.jumpY * delta, 1, 2, _this.room.shadeColor, _this.shadeAmount());
+                game_1.Game.drawMob(_this.tileX + (_this.tileX === 5 ? Math.floor(_this.frame) : 0), _this.tileY + _this.direction * 2, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY - _this.jumpY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
             }
             if (!_this.seenPlayer) {
                 _this.drawSleepingZs(delta);
@@ -4626,7 +4634,7 @@ var ZombieEnemy = /** @class */ (function (_super) {
                     _this.frame = 0;
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
-                game_1.Game.drawMob(_this.tileX + Math.floor(_this.frame), _this.tileY + _this.direction * 2, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY - _this.jumpY * delta, 1, 2, _this.room.shadeColor, _this.shadeAmount());
+                game_1.Game.drawMob(_this.tileX + Math.floor(_this.frame), _this.tileY + _this.direction * 2, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY - _this.jumpY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
             }
             if (!_this.seenPlayer) {
                 _this.drawSleepingZs(delta);
@@ -5896,7 +5904,7 @@ var TombStone = /** @class */ (function (_super) {
         var dropProb = random_1.Random.rand();
         if (dropProb < 0.05)
             _this.drop = new spellbook_1.Spellbook(_this.room, _this.x, _this.y);
-        _this.lightSource = new lightSource_1.LightSource(_this.x + 0.5, _this.y + 0.5, 5, [5, 150, 5], 1);
+        _this.lightSource = new lightSource_1.LightSource(_this.x + 0.5, _this.y + 0.5, 7, [5, 150, 5], 1);
         _this.addLightSource(_this.lightSource);
         return _this;
     }
@@ -6809,8 +6817,7 @@ var Game = /** @class */ (function () {
             if (!_this.previousFrameTimestamp)
                 _this.previousFrameTimestamp = timestamp;
             // normalized so 1.0 = 60fps
-            var delta = ((timestamp - _this.previousFrameTimestamp) * Math.min(2 * fps, 60)) /
-                1000.0;
+            var delta = Math.min(((timestamp - _this.previousFrameTimestamp) * 60) / 1000.0, 100);
             while (times.length > 0 && times[0] <= timestamp - 1000) {
                 times.shift();
             }
@@ -6819,6 +6826,7 @@ var Game = /** @class */ (function () {
             _this.update();
             _this.draw(delta);
             window.requestAnimationFrame(_this.run);
+            console.log(delta);
             _this.previousFrameTimestamp = timestamp;
         };
         this.update = function () {
@@ -6906,11 +6914,13 @@ var Game = /** @class */ (function () {
             //Game.ctx.canvas.height = window.innerHeight;
         };
         this.shakeScreen = function (shakeX, shakeY) {
+            _this.screenShakeActive = true;
             _this.screenShakeX = shakeX;
             _this.screenShakeY = shakeY;
-            _this.shakeAmountX = shakeX * 1.5;
-            _this.shakeAmountY = shakeY * 1.5;
+            _this.shakeAmountX = Math.abs(shakeX);
+            _this.shakeAmountY = Math.abs(shakeY);
             _this.shakeFrame = 0;
+            _this.screenShakeCutoff = Date.now();
         };
         this.drawStuff = function (delta) {
             _this.room.drawColorLayer();
@@ -7062,15 +7072,29 @@ var Game = /** @class */ (function () {
                     _this.players[i].updateDrawXY(delta);
             }
             else {
-                _this.screenShakeX = Math.sin(_this.shakeFrame) * _this.shakeAmountX;
-                _this.screenShakeY = Math.sin(_this.shakeFrame) * _this.shakeAmountY;
-                _this.shakeFrame += 0.7;
-                _this.shakeAmountX *= 0.8;
-                _this.shakeAmountY *= 0.8;
-                if (Math.abs(_this.screenShakeX) < 0.03 &&
-                    Math.abs(_this.screenShakeY) < 0.03) {
-                    _this.screenShakeX = 0;
-                    _this.screenShakeY = 0;
+                // Start of Selection
+                if (_this.screenShakeActive) {
+                    var decayFactor = 1 - 0.15 * delta;
+                    //const decayFactor = 1 - 1 / (Date.now() - this.screenShakeCutoff);
+                    _this.screenShakeX =
+                        Math.sin(_this.shakeFrame * Math.PI * delta) * _this.shakeAmountX;
+                    _this.screenShakeY =
+                        Math.sin(_this.shakeFrame * Math.PI * delta) * _this.shakeAmountY;
+                    _this.shakeFrame += 0.35 * delta;
+                    _this.shakeAmountX =
+                        _this.shakeAmountX < 0.01 ? 0 : _this.shakeAmountX * decayFactor;
+                    _this.shakeAmountY =
+                        _this.shakeAmountY < 0.01 ? 0 : _this.shakeAmountY * decayFactor;
+                    if ((Math.abs(_this.shakeAmountX) < 0.01 &&
+                        Math.abs(_this.shakeAmountY) < 0.01) ||
+                        Date.now() - _this.screenShakeCutoff > 1000) {
+                        _this.shakeAmountX = 0;
+                        _this.shakeAmountY = 0;
+                        _this.shakeFrame = 0;
+                        _this.screenShakeX = 0;
+                        _this.screenShakeY = 0;
+                        _this.screenShakeActive = false;
+                    }
                 }
                 var playerDrawX = _this.players[_this.localPlayerID].drawX;
                 var playerDrawY = _this.players[_this.localPlayerID].drawY;
@@ -7278,9 +7302,11 @@ var Game = /** @class */ (function () {
                     _this.screenShakeY = 0;
                     _this.shakeAmountX = 0;
                     _this.shakeAmountY = 0;
-                    _this.shakeFrame = Math.PI / 2;
+                    _this.shakeFrame = 0;
+                    _this.screenShakeCutoff = 0;
                     _this.levelState = LevelState.IN_LEVEL;
                     _this.tutorialActive = false;
+                    _this.screenShakeActive = false;
                     _this.newGame();
                 }
             };
@@ -9240,10 +9266,14 @@ var Inventory = /** @class */ (function () {
                     if (_this.items[i].equipped) {
                         _this.equipAnimAmount[i] +=
                             0.2 * delta * (1 - _this.equipAnimAmount[i]);
+                        if (_this.equipAnimAmount[i] > 1)
+                            _this.equipAnimAmount[i] = 1;
                     }
                     else {
                         _this.equipAnimAmount[i] +=
                             0.2 * delta * (0 - _this.equipAnimAmount[i]);
+                        if (_this.equipAnimAmount[i] < 0)
+                            _this.equipAnimAmount[i] = 0;
                     }
                 }
                 else {
@@ -10872,7 +10902,7 @@ var LevelConstants = /** @class */ (function () {
     LevelConstants.SHADED_TILE_CUTOFF = 1;
     LevelConstants.SMOOTH_LIGHTING = false; //doesn't work
     LevelConstants.MIN_VISIBILITY = 0; // visibility level of places you've already seen
-    LevelConstants.LIGHTING_ANGLE_STEP = 2; // how many degrees between each ray, previously 5
+    LevelConstants.LIGHTING_ANGLE_STEP = 5; // how many degrees between each ray, previously 5
     LevelConstants.LIGHTING_MAX_DISTANCE = 7;
     LevelConstants.LIGHT_RESOLUTION = 0.1; //1 is default
     LevelConstants.LEVEL_TEXT_COLOR = "yellow";
@@ -10902,7 +10932,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
     return to.concat(ar || Array.prototype.slice.call(from));
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.LevelGenerator = exports.Partition = void 0;
+exports.LevelGenerator = void 0;
 var game_1 = __webpack_require__(/*! ./game */ "./src/game.ts");
 var room_1 = __webpack_require__(/*! ./room */ "./src/room.ts");
 var random_1 = __webpack_require__(/*! ./random */ "./src/random.ts");
@@ -11061,7 +11091,6 @@ var Partition = /** @class */ (function () {
     }
     return Partition;
 }()); //end of Partition class
-exports.Partition = Partition;
 var split_partitions = function (partitions, prob) {
     var _loop_1 = function (partition) {
         if (random_1.Random.rand() < prob) {
@@ -12929,20 +12958,22 @@ var Player = /** @class */ (function (_super) {
         };
         _this.updateDrawXY = function (delta) {
             if (!_this.doneMoving()) {
-                /*
-                this.sineAngle += 0.04; // Initialize and increment angle
-                this.drawX *= Math.sin(this.sineAngle) * delta;
-                this.drawY *= Math.sin(this.sineAngle) * delta;
-                if (this.doneMoving()) this.sineAngle = Math.PI / 2;
-          */
-                _this.drawX *= 1 / _this.drawMoveSpeed;
-                _this.drawY *= 1 / _this.drawMoveSpeed;
-                _this.jump();
+                _this.drawX *= 1 - _this.drawMoveSpeed * delta;
+                _this.drawY *= 1 - _this.drawMoveSpeed * delta;
+                _this.drawX =
+                    Math.abs(_this.drawX) < 0.01 ? 0 : Math.max(-1, Math.min(_this.drawX, 1));
+                _this.drawY =
+                    Math.abs(_this.drawY) < 0.01 ? 0 : Math.max(-1, Math.min(_this.drawY, 1));
+                _this.jump(delta);
             }
         };
-        _this.jump = function () {
+        _this.jump = function (delta) {
             var j = Math.max(Math.abs(_this.drawX), Math.abs(_this.drawY));
-            _this.jumpY = Math.sin(j * Math.PI) * 0.3;
+            _this.jumpY = Math.sin(j * Math.PI) * _this.jumpHeight;
+            if (_this.jumpY < 0.01 && _this.jumpY > -0.01)
+                _this.jumpY = 0;
+            if (_this.jumpY > _this.jumpHeight)
+                _this.jumpY = _this.jumpHeight;
         };
         _this.drawInventoryButton = function (delta) {
             game_1.Game.drawFX(0, 0, 2, 2, levelConstants_1.LevelConstants.SCREEN_W - 2, 0, 2, 2);
@@ -12963,6 +12994,7 @@ var Player = /** @class */ (function (_super) {
         _this.drawX = 0;
         _this.drawY = 0;
         _this.jumpY = 0;
+        _this.jumpHeight = 0.3;
         _this.frame = 0;
         _this.direction = PlayerDirection.UP;
         _this.isLocalPlayer = isLocalPlayer;
@@ -13018,7 +13050,7 @@ var Player = /** @class */ (function (_super) {
         _this.hurtAlpha = 0.5;
         _this.lightBrightness = 0.3;
         _this.sineAngle = Math.PI / 2;
-        _this.drawMoveSpeed = 1.5; // greater than 1 less than 2
+        _this.drawMoveSpeed = 0.3; // greater than 1 less than 2
         return _this;
     }
     Object.defineProperty(Player.prototype, "angle", {
@@ -14449,7 +14481,7 @@ var Room = /** @class */ (function () {
                 accumulator[2] + color[2] * color[3],
             ]; }, [0, 0, 0]);
             // Apply scaling factor to manage overall brightness
-            var scalingFactor = 0.45; // Adjust as needed
+            var scalingFactor = 0.45 * 2.5; // Adjust as needed
             var scaledSum = [
                 sum[0] * scalingFactor,
                 sum[1] * scalingFactor,
@@ -16150,11 +16182,14 @@ var Door = /** @class */ (function (_super) {
         };
         _this.drawAbovePlayer = function (delta) { };
         _this.drawAboveShading = function (delta) {
+            if (_this.frame > 100)
+                _this.frame = 0;
+            _this.frame += 1;
             game_1.Game.ctx.globalAlpha = _this.iconAlpha;
             var multiplier = 0.125;
             if (_this.unlocking == true) {
                 _this.iconAlpha *= 0.92 * delta;
-                _this.iconYOffset += 0.035 * delta;
+                _this.iconYOffset -= 0.035 * delta;
                 multiplier = 0;
                 if (_this.iconAlpha <= 0.01) {
                     _this.iconYOffset = 0;
@@ -16168,13 +16203,13 @@ var Door = /** @class */ (function (_super) {
                 //if top door
                 game_1.Game.drawFX(_this.iconTileX, 2, 1, 1, _this.x + _this.iconXOffset, _this.y -
                     1.25 +
-                    multiplier * Math.sin(0.006 * Date.now() + delta) -
+                    multiplier * Math.sin((_this.frame * Math.PI) / 50) +
                     _this.iconYOffset, 1, 1);
             }
             else {
                 game_1.Game.drawFX(_this.iconTileX, 2, 1, 1, _this.x + _this.iconXOffset, _this.y -
                     1.25 +
-                    multiplier * Math.sin(0.006 * Date.now() + delta) -
+                    multiplier * Math.sin((_this.frame * Math.PI) / 50) +
                     _this.iconYOffset, 1, 1); //if not top door
             }
             game_1.Game.ctx.globalAlpha = 1;
@@ -16190,6 +16225,7 @@ var Door = /** @class */ (function (_super) {
         _this.iconYOffset = 0;
         _this.unlocking = false;
         _this.iconAlpha = 1;
+        _this.frame = 0;
         switch (_this.type) {
             case DoorType.GUARDEDDOOR:
                 _this.guard();

@@ -545,9 +545,11 @@ export class Inventory {
         if ((this.items[i] as Equippable).equipped) {
           this.equipAnimAmount[i] +=
             0.2 * delta * (1 - this.equipAnimAmount[i]);
+          if (this.equipAnimAmount[i] > 1) this.equipAnimAmount[i] = 1;
         } else {
           this.equipAnimAmount[i] +=
             0.2 * delta * (0 - this.equipAnimAmount[i]);
+          if (this.equipAnimAmount[i] < 0) this.equipAnimAmount[i] = 0;
         }
       } else {
         this.equipAnimAmount[i] = 0;

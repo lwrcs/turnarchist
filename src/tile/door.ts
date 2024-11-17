@@ -33,6 +33,7 @@ export class Door extends Tile {
   iconYOffset: number;
   unlocking: boolean;
   iconAlpha: number;
+  frame: number;
 
   constructor(
     room: Room,
@@ -54,6 +55,7 @@ export class Door extends Tile {
     this.iconYOffset = 0;
     this.unlocking = false;
     this.iconAlpha = 1;
+    this.frame = 0;
     switch (this.type) {
       case DoorType.GUARDEDDOOR:
         this.guard();
@@ -234,11 +236,13 @@ export class Door extends Tile {
   drawAbovePlayer = (delta: number) => {};
 
   drawAboveShading = (delta: number) => {
+    if (this.frame > 100) this.frame = 0;
+    this.frame += 1;
     Game.ctx.globalAlpha = this.iconAlpha;
     let multiplier = 0.125;
     if (this.unlocking == true) {
       this.iconAlpha *= 0.92 * delta;
-      this.iconYOffset += 0.035 * delta;
+      this.iconYOffset -= 0.035 * delta;
       multiplier = 0;
       if (this.iconAlpha <= 0.01) {
         this.iconYOffset = 0;
@@ -258,7 +262,7 @@ export class Door extends Tile {
         this.x + this.iconXOffset,
         this.y -
           1.25 +
-          multiplier * Math.sin(0.006 * Date.now() + delta) -
+          multiplier * Math.sin((this.frame * Math.PI) / 50) +
           this.iconYOffset,
         1,
         1
@@ -272,7 +276,7 @@ export class Door extends Tile {
         this.x + this.iconXOffset,
         this.y -
           1.25 +
-          multiplier * Math.sin(0.006 * Date.now() + delta) -
+          multiplier * Math.sin((this.frame * Math.PI) / 50) +
           this.iconYOffset,
         1,
         1

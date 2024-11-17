@@ -1627,7 +1627,7 @@ export class Room {
     );
 
     // Apply scaling factor to manage overall brightness
-    const scalingFactor = 0.45; // Adjust as needed
+    const scalingFactor = 0.45 * 2.5; // Adjust as needed
     const scaledSum = [
       sum[0] * scalingFactor,
       sum[1] * scalingFactor,

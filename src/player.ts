@@ -79,6 +79,7 @@ export class Player extends Drawable {
   lightBrightness: number;
   sineAngle: number;
   drawMoveSpeed: number;
+  jumpHeight: number;
   constructor(game: Game, x: number, y: number, isLocalPlayer: boolean) {
     super();
 
@@ -93,6 +94,7 @@ export class Player extends Drawable {
     this.drawX = 0;
     this.drawY = 0;
     this.jumpY = 0;
+    this.jumpHeight = 0.3;
     this.frame = 0;
 
     this.direction = PlayerDirection.UP;
@@ -151,7 +153,7 @@ export class Player extends Drawable {
     this.hurtAlpha = 0.5;
     this.lightBrightness = 0.3;
     this.sineAngle = Math.PI / 2;
-    this.drawMoveSpeed = 1.5; // greater than 1 less than 2
+    this.drawMoveSpeed = 0.3; // greater than 1 less than 2
   }
 
   get angle(): number {
@@ -825,21 +827,23 @@ export class Player extends Drawable {
 
   updateDrawXY = (delta: number) => {
     if (!this.doneMoving()) {
-      /*
-      this.sineAngle += 0.04; // Initialize and increment angle
-      this.drawX *= Math.sin(this.sineAngle) * delta;
-      this.drawY *= Math.sin(this.sineAngle) * delta;
-      if (this.doneMoving()) this.sineAngle = Math.PI / 2;
-*/
-      this.drawX *= 1 / this.drawMoveSpeed;
-      this.drawY *= 1 / this.drawMoveSpeed;
-      this.jump();
+      this.drawX *= 1 - this.drawMoveSpeed * delta;
+      this.drawY *= 1 - this.drawMoveSpeed * delta;
+
+      this.drawX =
+        Math.abs(this.drawX) < 0.01 ? 0 : Math.max(-1, Math.min(this.drawX, 1));
+      this.drawY =
+        Math.abs(this.drawY) < 0.01 ? 0 : Math.max(-1, Math.min(this.drawY, 1));
+
+      this.jump(delta);
     }
   };
 
-  jump = () => {
+  jump = (delta: number) => {
     let j = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
-    this.jumpY = Math.sin(j * Math.PI) * 0.3;
+    this.jumpY = Math.sin(j * Math.PI) * this.jumpHeight;
+    if (this.jumpY < 0.01 && this.jumpY > -0.01) this.jumpY = 0;
+    if (this.jumpY > this.jumpHeight) this.jumpY = this.jumpHeight;
   };
 
   drawInventoryButton = (delta: number) => {
