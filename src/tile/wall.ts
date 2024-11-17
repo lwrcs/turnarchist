@@ -1,16 +1,26 @@
 import { WallCrack } from "../entity/object/wallCrack";
 import { Game } from "../game";
-import { Room } from "../room";
+import { Room, WallDirection } from "../room";
 import { Door } from "./door";
 import { Tile } from "./tile";
+import { WallInfo } from "../room";
+import { Player } from "../player";
 
 export class Wall extends Tile {
   private tileYOffset: number;
+  wallDirections: Array<WallDirection>;
 
-  constructor(room: Room, x: number, y: number) {
+  constructor(
+    room: Room,
+    x: number,
+    y: number,
+    wallDirections?: Array<WallDirection>
+  ) {
     super(room, x, y);
     this.isDoor = false;
     this.tileYOffset = 6;
+    this.wallDirections = wallDirections || [];
+    this.crack();
   }
 
   isSolid = (): boolean => {
@@ -20,7 +30,7 @@ export class Wall extends Tile {
     return true;
   };
   isOpaque = (): boolean => {
-    const wallInfo = this.room.wallInfo.get(`${this.x},${this.y}`);
+    const wallInfo = this.wallInfo();
     if (!wallInfo) return true;
     return (
       (!wallInfo.isTopWall && !wallInfo.isInnerWall) ||
@@ -30,18 +40,39 @@ export class Wall extends Tile {
   };
 
   crack = () => {
-    if (this.room.openWalls.topIsOpen) {
+    let shouldCrack = Math.random() < 1 ? true : false;
+
+    if (this.room.cracked || !shouldCrack) return;
+    if (
+      this.room.openWalls.isTopOpen &&
+      this.wallDirections.includes(WallDirection.TOP) &&
+      !this.wallDirections.includes(WallDirection.LEFT) &&
+      !this.wallDirections.includes(WallDirection.RIGHT)
+    ) {
+      this.newCrack();
+      this.room.cracked = true;
+    }
+    /*
+    if (
+      this.room.openWalls.isBottomOpen &&
+      this.wallDirections.includes(WallDirection.BOTTOM)
+    ) {
       this.newCrack();
     }
-    if (this.room.openWalls.bottomIsOpen) {
+    if (
+      this.room.openWalls.isLeftOpen &&
+      this.wallDirections.includes(WallDirection.LEFT)
+    ) {
+      this.newCrack();
+      this.room.cracked = true;
+    }
+    if (
+      this.room.openWalls.isRightOpen &&
+      this.wallDirections.includes(WallDirection.RIGHT)
+    ) {
       this.newCrack();
     }
-    if (this.room.openWalls.leftIsOpen) {
-      this.newCrack();
-    }
-    if (this.room.openWalls.rightIsOpen) {
-      this.newCrack();
-    }
+    */
   };
 
   newCrack = () => {

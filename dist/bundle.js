@@ -4155,7 +4155,7 @@ var Spawner = /** @class */ (function (_super) {
         _this.tileX = 6;
         _this.tileY = 4;
         _this.seenPlayer = true;
-        _this.enemySpawnType = game_1.Game.randTable([3], random_1.Random.rand);
+        _this.enemySpawnType = game_1.Game.randTable([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], random_1.Random.rand);
         _this.name = "reaper";
         return _this;
     }
@@ -6168,28 +6168,26 @@ var entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 var imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ "./src/particle/imageParticle.ts");
 var random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
 var coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
-var sound_1 = __webpack_require__(/*! ../../sound */ "./src/sound.ts");
 var WallCrack = /** @class */ (function (_super) {
     __extends(WallCrack, _super);
     function WallCrack(room, game, x, y) {
         var _this = _super.call(this, room, game, x, y) || this;
         _this.kill = function () {
-            _this.dropLoot();
             _this.dead = true;
             imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 29);
-            sound_1.Sound.delayPlay(sound_1.Sound.potSmash, 250);
+            _this.room.crackWallIntoRoom(_this.x, _this.y);
         };
         _this.killNoBones = function () {
             _this.kill();
         };
-        _this.draw = function (delta) {
+        _this.drawTopLayer = function (delta) {
             // not inherited because it doesn't have the 0.5 offset
             if (!_this.dead) {
                 _this.updateDrawXY(delta);
                 game_1.Game.drawObj(_this.tileX, _this.tileY, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
             }
         };
-        _this.drawTopLayer = function (delta) {
+        _this.draw = function (delta) {
             _this.drawableY = _this.y;
         };
         _this.room = room;
@@ -10904,7 +10902,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
     return to.concat(ar || Array.prototype.slice.call(from));
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.LevelGenerator = void 0;
+exports.LevelGenerator = exports.Partition = void 0;
 var game_1 = __webpack_require__(/*! ./game */ "./src/game.ts");
 var room_1 = __webpack_require__(/*! ./room */ "./src/room.ts");
 var random_1 = __webpack_require__(/*! ./random */ "./src/random.ts");
@@ -10922,6 +10920,11 @@ var Partition = /** @class */ (function () {
     function Partition(x, y, w, h) {
         var _this = this;
         this.split = function () {
+            // Reset open walls when a partition is split
+            _this.isTopOpen = true;
+            _this.isRightOpen = true;
+            _this.isBottomOpen = true;
+            _this.isLeftOpen = true;
             // This function generates a random number around the center (0.5) within a certain width (0.6).
             // It uses the Random.rand() function to generate a random number between 0 and 1, subtracts 0.5 to center it around 0,
             // multiplies it by the width to scale it, and then adds the center (0.5) to shift it back to being between 0 and 1.
@@ -11002,6 +11005,28 @@ var Partition = /** @class */ (function () {
             //takes another partition instance as argument
             //returns true if any points of each overlap
         };
+        this.setOpenWall = function (connection) {
+            if (connection.y === _this.y - 1 &&
+                connection.x >= _this.x &&
+                connection.x < _this.x + _this.w) {
+                _this.isTopOpen = false;
+            }
+            if (connection.y === _this.y + _this.h &&
+                connection.x >= _this.x &&
+                connection.x < _this.x + _this.w) {
+                _this.isBottomOpen = false;
+            }
+            if (connection.x === _this.x + _this.w &&
+                connection.y >= _this.y &&
+                connection.y < _this.y + _this.h) {
+                _this.isRightOpen = false;
+            }
+            if (connection.x === _this.x - 1 &&
+                connection.y >= _this.y &&
+                connection.y < _this.y + _this.h) {
+                _this.isLeftOpen = false;
+            }
+        };
         this.get_branch_point = function () {
             var points = [];
             for (var x = _this.x; x < _this.x + _this.w; x++) {
@@ -11029,9 +11054,14 @@ var Partition = /** @class */ (function () {
         this.type = room_1.RoomType.DUNGEON;
         this.connections = [];
         this.distance = 1000;
+        this.isTopOpen = true;
+        this.isRightOpen = true;
+        this.isBottomOpen = true;
+        this.isLeftOpen = true;
     }
     return Partition;
 }()); //end of Partition class
+exports.Partition = Partition;
 var split_partitions = function (partitions, prob) {
     var _loop_1 = function (partition) {
         if (random_1.Random.rand() < prob) {
@@ -11123,6 +11153,9 @@ var generate_dungeon_candidate = function (map_w, map_h) {
                     p.point_next_to(point.x, point.y)) {
                     room.connections.push(new PartitionConnection(point.x, point.y, p));
                     p.connections.push(new PartitionConnection(point.x, point.y, room));
+                    // Set open walls based on connection
+                    room.setOpenWall(new PartitionConnection(point.x, point.y, p));
+                    p.setOpenWall(new PartitionConnection(point.x, point.y, room));
                     frontier.push(p);
                     connected.push(p);
                     doors_found++;
@@ -11164,6 +11197,9 @@ var generate_dungeon_candidate = function (map_w, map_h) {
                 if (p !== room && p.point_next_to(point.x, point.y)) {
                     room.connections.push(new PartitionConnection(point.x, point.y, p));
                     p.connections.push(new PartitionConnection(point.x, point.y, room));
+                    // Set open walls based on connection
+                    room.setOpenWall(new PartitionConnection(point.x, point.y, p));
+                    p.setOpenWall(new PartitionConnection(point.x, point.y, room));
                     found_door = true;
                     break;
                 }
@@ -11188,6 +11224,9 @@ var generate_dungeon_candidate = function (map_w, map_h) {
             partitions.push(stair);
             stair.connections.push(new PartitionConnection(stair.x + 1, stair.y + 3, boss));
             boss.connections.push(new PartitionConnection(stair.x + 1, stair.y + 3, stair));
+            // Set open walls for stair and boss connection
+            stair.setOpenWall(new PartitionConnection(stair.x + 1, stair.y + 3, boss));
+            boss.setOpenWall(new PartitionConnection(stair.x + 1, stair.y + 3, stair));
             return "break";
         }
     };
@@ -11377,16 +11416,46 @@ var LevelGenerator = /** @class */ (function () {
         var _this = this;
         this.depthReached = 0;
         this.currentFloorFirstLevelID = 0;
+        this.setOpenWallsForPartitions = function (partitions, mapWidth, mapHeight) {
+            for (var _i = 0, partitions_8 = partitions; _i < partitions_8.length; _i++) {
+                var partition = partitions_8[_i];
+                // Reset all walls to closed by default
+                partition.isTopOpen = false;
+                partition.isRightOpen = false;
+                partition.isBottomOpen = false;
+                partition.isLeftOpen = false;
+                // Check if partition touches map boundaries
+                if (partition.x === 0) {
+                    partition.isLeftOpen = true;
+                }
+                if (partition.y === 0) {
+                    partition.isTopOpen = true;
+                }
+                if (partition.x + partition.w === mapWidth) {
+                    partition.isRightOpen = true;
+                }
+                if (partition.y + partition.h === mapHeight) {
+                    partition.isBottomOpen = true;
+                }
+            }
+        };
         this.getLevels = function (partitions, depth, mapGroup) {
-            var levels = [];
+            _this.setOpenWallsForPartitions(partitions, 35, 35); // Using standard map size
+            var rooms = [];
             for (var i = 0; i < partitions.length; i++) {
-                var level = new room_1.Room(_this.game, partitions[i].x - 1, partitions[i].y - 1, partitions[i].w + 2, partitions[i].h + 2, partitions[i].type, depth, mapGroup, random_1.Random.rand);
-                levels.push(level);
+                var partition = partitions[i];
+                // Pass open walls information to the Room constructor
+                var room = new room_1.Room(_this.game, partition.x - 1, partition.y - 1, partition.w + 2, partition.h + 2, partition.type, depth, mapGroup, random_1.Random.rand, partition.isTopOpen, // New parameter
+                partition.isRightOpen, // New parameter
+                partition.isBottomOpen, // New parameter
+                partition.isLeftOpen // New parameter
+                );
+                rooms.push(room);
             }
             var doors_added = [];
             partitions.forEach(function (partition, index) {
                 partition.connections.forEach(function (connection) {
-                    var door = levels[index].addDoor(connection.x, connection.y);
+                    var door = rooms[index].addDoor(connection.x, connection.y);
                     var existingDoor = doors_added.find(function (existing) { return existing.x === door.x && existing.y === door.y; });
                     if (existingDoor) {
                         existingDoor.link(door);
@@ -11395,11 +11464,11 @@ var LevelGenerator = /** @class */ (function () {
                     doors_added.push(door);
                 });
             });
-            for (var _i = 0, levels_1 = levels; _i < levels_1.length; _i++) {
-                var level = levels_1[_i];
-                level.populate(random_1.Random.rand);
+            for (var _i = 0, rooms_1 = rooms; _i < rooms_1.length; _i++) {
+                var room = rooms_1[_i];
+                room.populate(random_1.Random.rand);
             }
-            return levels;
+            return rooms;
         };
         this.setSeed = function (seed) {
             _this.seed = seed;
@@ -11424,8 +11493,8 @@ var LevelGenerator = /** @class */ (function () {
             // Add the new levels to the game rooms
             _this.game.rooms = __spreadArray(__spreadArray([], _this.game.rooms, true), levels, true);
             // Generate the rope hole if it exists
-            for (var _i = 0, levels_2 = levels; _i < levels_2.length; _i++) {
-                var room = levels_2[_i];
+            for (var _i = 0, levels_1 = levels; _i < levels_1.length; _i++) {
+                var room = levels_1[_i];
                 if (room.type === room_1.RoomType.ROPEHOLE) {
                     for (var x = room.roomX; x < room.roomX + room.width; x++) {
                         for (var y = room.roomY; y < room.roomY + room.height; y++) {
@@ -11593,7 +11662,7 @@ var Map = /** @class */ (function () {
                 if (_this.game.room.mapGroup === level.mapGroup && level.entered) {
                     _this.mapData.push({
                         room: level,
-                        walls: level.walls,
+                        walls: level.innerWalls,
                         doors: level.doors,
                         entities: level.entities,
                         items: level.items,
@@ -12743,6 +12812,7 @@ var Player = /** @class */ (function (_super) {
             if (totalHealthDiff < 0) {
                 _this.flashing = true;
             }
+            console.log(_this.x, _this.y);
             //this.actionTab.actionState = ActionState.READY;
             //Sets the action tab state to Wait (during enemy turn)
         };
@@ -12865,8 +12935,8 @@ var Player = /** @class */ (function (_super) {
                 this.drawY *= Math.sin(this.sineAngle) * delta;
                 if (this.doneMoving()) this.sineAngle = Math.PI / 2;
           */
-                _this.drawX *= (1 / _this.drawMoveSpeed) * delta;
-                _this.drawY *= (1 / _this.drawMoveSpeed) * delta;
+                _this.drawX *= 1 / _this.drawMoveSpeed;
+                _this.drawY *= 1 / _this.drawMoveSpeed;
                 _this.jump();
             }
         };
@@ -13559,7 +13629,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Room = exports.TurnState = exports.RoomType = void 0;
+exports.Room = exports.WallDirection = exports.TurnState = exports.RoomType = void 0;
 var wall_1 = __webpack_require__(/*! ./tile/wall */ "./src/tile/wall.ts");
 var levelConstants_1 = __webpack_require__(/*! ./levelConstants */ "./src/levelConstants.ts");
 var floor_1 = __webpack_require__(/*! ./tile/floor */ "./src/tile/floor.ts");
@@ -13653,15 +13723,65 @@ var TurnState;
     TurnState[TurnState["playerTurn"] = 0] = "playerTurn";
     TurnState[TurnState["computerTurn"] = 1] = "computerTurn";
 })(TurnState = exports.TurnState || (exports.TurnState = {}));
+var WallDirection;
+(function (WallDirection) {
+    WallDirection[WallDirection["TOP"] = 0] = "TOP";
+    WallDirection[WallDirection["BOTTOM"] = 1] = "BOTTOM";
+    WallDirection[WallDirection["LEFT"] = 2] = "LEFT";
+    WallDirection[WallDirection["RIGHT"] = 3] = "RIGHT";
+})(WallDirection = exports.WallDirection || (exports.WallDirection = {}));
 var Room = /** @class */ (function () {
-    function Room(game, x, y, w, h, type, depth, mapGroup, rand) {
+    function Room(game, x, y, w, h, type, depth, mapGroup, rand, isTopOpen, isRightOpen, isBottomOpen, isLeftOpen) {
         if (rand === void 0) { rand = random_1.Random.rand; }
+        if (isTopOpen === void 0) { isTopOpen = false; }
+        if (isRightOpen === void 0) { isRightOpen = false; }
+        if (isBottomOpen === void 0) { isBottomOpen = false; }
+        if (isLeftOpen === void 0) { isLeftOpen = false; }
         var _this = this;
         this.shadeColor = "black";
         //actionTab: ActionTab;
         this.wallInfo = new Map();
         this.tileInside = function (tileX, tileY) {
             return _this.pointInside(tileX, tileY, _this.roomX, _this.roomY, _this.width, _this.height);
+        };
+        this.crackWallIntoRoom = function (crackX, crackY) {
+            var height = 5;
+            var width = 5;
+            var x = crackY;
+            var y = crackX;
+            console.log("crackX: ".concat(x, ", crackY: ").concat(y));
+            console.log("this.roomX: ".concat(_this.roomX, ", this.roomY: ").concat(_this.roomY));
+            var newDoor = new door_1.Door(_this, _this.game, crackX, crackY, door_2.DoorDir.North, door_1.DoorType.DOOR);
+            var newLinkedDoor = new door_1.Door(_this, _this.game, crackX, crackY, door_2.DoorDir.South, door_1.DoorType.DOOR);
+            var newRoom = new Room(_this.game, _this.roomX, _this.roomY - height - 2, width, height, _this.type, _this.depth, _this.mapGroup);
+            newDoor.linkedDoor = newLinkedDoor;
+            newLinkedDoor.linkedDoor = newDoor;
+            newRoom.roomArray[crackX][crackY] = newLinkedDoor;
+            _this.roomArray[crackX][crackY] = newDoor;
+            _this.doors.push(newDoor);
+            newRoom.doors.push(newLinkedDoor);
+            _this.roomArray[crackX][crackY] = newDoor;
+            newRoom.populate(random_1.Random.rand);
+            _this.game.rooms.push(newRoom);
+        };
+        this.removeWall = function (x, y) {
+            if (_this.roomArray[x][y] instanceof wall_1.Wall) {
+                _this.roomArray[x][y] = null;
+            }
+            _this.innerWalls = _this.innerWalls.filter(function (w) { return w.x !== x && w.y !== y; });
+            _this.outerWalls = _this.outerWalls.filter(function (w) { return w.x !== x && w.y !== y; });
+        };
+        this.getWallType = function (pointX, pointY, rectX, rectY, width, height) {
+            var directions = [];
+            if (pointY === rectY && pointX >= rectX && pointX <= rectX + width)
+                directions.push(WallDirection.TOP);
+            if (pointY === rectY + height && pointX >= rectX && pointX <= rectX + width)
+                directions.push(WallDirection.BOTTOM);
+            if (pointX === rectX && pointY >= rectY && pointY <= rectY + height)
+                directions.push(WallDirection.LEFT);
+            if (pointX === rectX + width && pointY >= rectY && pointY <= rectY + height)
+                directions.push(WallDirection.RIGHT);
+            return directions;
         };
         this.populateEmpty = function (rand) {
             _this.addRandomTorches("medium");
@@ -13981,6 +14101,8 @@ var Room = /** @class */ (function () {
             _this.message = _this.name;
             player.map.saveMapData();
             _this.setReverb();
+            //this.crackWalls();
+            console.log("isTopOpen: ".concat(_this.openWalls.isTopOpen, ", isBottomOpen: ").concat(_this.openWalls.isBottomOpen, ", isLeftOpen: ").concat(_this.openWalls.isLeftOpen, ", isRightOpen: ").concat(_this.openWalls.isRightOpen));
         };
         this.enterLevelThroughLadder = function (player, ladder) {
             player.moveSnap(ladder.x, ladder.y + 1);
@@ -14064,7 +14186,7 @@ var Room = /** @class */ (function () {
         };
         this.updateLighting = function () {
             // Start timing the initial setup
-            console.time("updateLighting: Initial Setup");
+            //console.time("updateLighting: Initial Setup");
             var oldVis = [];
             var oldCol = [];
             for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
@@ -14079,9 +14201,9 @@ var Room = /** @class */ (function () {
                 }
             }
             // End timing the initial setup
-            console.timeEnd("updateLighting: Initial Setup");
+            //console.timeEnd("updateLighting: Initial Setup");
             // Start timing the processing of light sources
-            console.time("updateLighting: Process LightSources");
+            //console.time("updateLighting: Process LightSources");
             for (var _i = 0, _a = _this.lightSources; _i < _a.length; _i++) {
                 var l = _a[_i];
                 if (l.shouldUpdate()) {
@@ -14091,9 +14213,9 @@ var Room = /** @class */ (function () {
                 }
             }
             // End timing the processing of light sources
-            console.timeEnd("updateLighting: Process LightSources");
+            //console.timeEnd("updateLighting: Process LightSources");
             // Start timing the processing of player lighting
-            console.time("updateLighting: Process Players");
+            //console.time("updateLighting: Process Players");
             for (var p in _this.game.players) {
                 var player = _this.game.players[p];
                 if (_this === _this.game.rooms[player.levelID]) {
@@ -14113,9 +14235,9 @@ var Room = /** @class */ (function () {
                 }
             }
             // End timing the processing of player lighting
-            console.timeEnd("updateLighting: Process Players");
+            //console.timeEnd("updateLighting: Process Players");
             // Start timing the blending of colors
-            console.time("updateLighting: Blend Colors Array");
+            //console.time("updateLighting: Blend Colors Array");
             var roomX = _this.roomX;
             var roomY = _this.roomY;
             var width = _this.width;
@@ -14127,16 +14249,16 @@ var Room = /** @class */ (function () {
                 }
             }
             // End timing the blending of colors
-            console.timeEnd("updateLighting: Blend Colors Array");
+            //console.timeEnd("updateLighting: Blend Colors Array");
             // Start timing the conversion to luminance
-            console.time("updateLighting: Convert to Luminance");
+            //console.time("updateLighting: Convert to Luminance");
             for (var x = roomX; x < roomX + width; x++) {
                 for (var y = roomY; y < roomY + height; y++) {
                     _this.vis[x][y] = _this.rgbToLuminance(_this.col[x][y]);
                 }
             }
             // End timing the conversion to luminance
-            console.timeEnd("updateLighting: Convert to Luminance");
+            //console.timeEnd("updateLighting: Convert to Luminance");
         };
         this.updateLightSources = function (lightSource, remove) {
             _this.oldCol = [];
@@ -14382,7 +14504,6 @@ var Room = /** @class */ (function () {
                 _this.computerTurn(); // player skipped computer's turn, catch up
         };
         this.tick = function (player) {
-            console.log("tick");
             _this.lastEnemyCount = _this.entities.filter(function (e) { return e instanceof enemy_1.Enemy; }).length;
             for (var _i = 0, _a = _this.hitwarnings; _i < _a.length; _i++) {
                 var h = _a[_i];
@@ -14405,7 +14526,7 @@ var Room = /** @class */ (function () {
             //sets the action tab state to Ready
             _this.playerTurnTime = Date.now();
             _this.playerTicked = player;
-            console.log("updating lighting");
+            //console.log("updating lighting");
             _this.updateLighting();
             player.map.saveMapData();
             _this.clearDeadStuff();
@@ -14640,7 +14761,14 @@ var Room = /** @class */ (function () {
         this.doors = Array();
         this.entities = Array();
         this.lightSources = Array();
-        this.walls = Array();
+        this.innerWalls = Array();
+        this.openWalls = {
+            isTopOpen: isTopOpen,
+            isBottomOpen: isBottomOpen,
+            isLeftOpen: isLeftOpen,
+            isRightOpen: isRightOpen,
+        };
+        this.cracked = false;
         this.roomArray = [];
         for (var x_2 = this.roomX; x_2 < this.roomX + this.width; x_2++) {
             this.roomArray[x_2] = [];
@@ -14702,7 +14830,7 @@ var Room = /** @class */ (function () {
                         openTiles.push({ x: x, y: y });
                 }
             }
-            console.log(area, openTiles.length);
+            //console.log(area, openTiles.length);
             return openTiles.length;
         },
         enumerable: false,
@@ -14721,6 +14849,7 @@ var Room = /** @class */ (function () {
         }
     };
     Room.prototype.buildEmptyRoom = function () {
+        console.log("building room array"); // building room array
         // fill in wall and floor
         for (var x = this.roomX; x < this.roomX + this.width; x++) {
             for (var y = this.roomY; y < this.roomY + this.height; y++) {
@@ -14728,11 +14857,11 @@ var Room = /** @class */ (function () {
                     this.roomArray[x][y] = new floor_1.Floor(this, x, y);
                 }
                 else {
-                    this.roomArray[x][y] = new wall_1.Wall(this, x, y);
-                    this.walls.push;
+                    this.roomArray[x][y] = new wall_1.Wall(this, x, y, this.getWallType(x, y, this.roomX, this.roomY, this.width, this.height));
                 }
             }
         }
+        console.log(this.roomArray);
     };
     Room.prototype.addWallBlocks = function (rand) {
         var numBlocks = game_1.Game.randTable([0, 0, 1, 1, 2, 2, 2, 2, 3], rand);
@@ -14747,7 +14876,7 @@ var Room = /** @class */ (function () {
                 for (var yy = y; yy < y + blockH; yy++) {
                     var w = new wall_1.Wall(this, xx, yy);
                     this.roomArray[xx][yy] = w;
-                    this.walls.push(w);
+                    this.innerWalls.push(w);
                 }
             }
         }
@@ -15937,8 +16066,6 @@ var Door = /** @class */ (function (_super) {
         _this.removeLock = function () {
             _this.type = DoorType.DOOR;
             _this.locked = false;
-            _this.iconTileX = 2;
-            _this.iconXOffset = 0;
         };
         _this.canUnlock = function (player) {
             if (_this.type === DoorType.LOCKEDDOOR) {
@@ -15964,6 +16091,7 @@ var Door = /** @class */ (function (_super) {
                     player.inventory.removeItem(k);
                     sound_1.Sound.unlock();
                     _this.removeLock();
+                    _this.unlocking = true;
                 }
             }
         };
@@ -16022,13 +16150,34 @@ var Door = /** @class */ (function (_super) {
         };
         _this.drawAbovePlayer = function (delta) { };
         _this.drawAboveShading = function (delta) {
+            game_1.Game.ctx.globalAlpha = _this.iconAlpha;
+            var multiplier = 0.125;
+            if (_this.unlocking == true) {
+                _this.iconAlpha *= 0.92 * delta;
+                _this.iconYOffset += 0.035 * delta;
+                multiplier = 0;
+                if (_this.iconAlpha <= 0.01) {
+                    _this.iconYOffset = 0;
+                    _this.unlocking = false;
+                    _this.iconTileX = 2;
+                    _this.iconXOffset = 0;
+                    _this.iconAlpha = 1;
+                }
+            }
             if (_this.doorDir === DoorDir.North) {
                 //if top door
-                game_1.Game.drawFX(_this.iconTileX, 2, 1, 1, _this.x + _this.iconXOffset, _this.y - 1.25 + 0.125 * Math.sin(0.006 * Date.now()), 1, 1);
+                game_1.Game.drawFX(_this.iconTileX, 2, 1, 1, _this.x + _this.iconXOffset, _this.y -
+                    1.25 +
+                    multiplier * Math.sin(0.006 * Date.now() + delta) -
+                    _this.iconYOffset, 1, 1);
             }
             else {
-                game_1.Game.drawFX(_this.iconTileX, 2, 1, 1, _this.x + _this.iconXOffset, _this.y - 1.25 + 0.125 * Math.sin(0.006 * Date.now()), 1, 1); //if not top door
+                game_1.Game.drawFX(_this.iconTileX, 2, 1, 1, _this.x + _this.iconXOffset, _this.y -
+                    1.25 +
+                    multiplier * Math.sin(0.006 * Date.now() + delta) -
+                    _this.iconYOffset, 1, 1); //if not top door
             }
+            game_1.Game.ctx.globalAlpha = 1;
         };
         _this.game = game;
         _this.opened = false;
@@ -16038,6 +16187,9 @@ var Door = /** @class */ (function (_super) {
         _this.type = doorType;
         _this.iconTileX = 2;
         _this.iconXOffset = 0;
+        _this.iconYOffset = 0;
+        _this.unlocking = false;
+        _this.iconAlpha = 1;
         switch (_this.type) {
             case DoorType.GUARDEDDOOR:
                 _this.guard();
@@ -16712,10 +16864,11 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Wall = void 0;
 var wallCrack_1 = __webpack_require__(/*! ../entity/object/wallCrack */ "./src/entity/object/wallCrack.ts");
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+var room_1 = __webpack_require__(/*! ../room */ "./src/room.ts");
 var tile_1 = __webpack_require__(/*! ./tile */ "./src/tile/tile.ts");
 var Wall = /** @class */ (function (_super) {
     __extends(Wall, _super);
-    function Wall(room, x, y) {
+    function Wall(room, x, y, wallDirections) {
         var _this = _super.call(this, room, x, y) || this;
         _this.isSolid = function () {
             return true;
@@ -16724,7 +16877,7 @@ var Wall = /** @class */ (function (_super) {
             return true;
         };
         _this.isOpaque = function () {
-            var wallInfo = _this.room.wallInfo.get("".concat(_this.x, ",").concat(_this.y));
+            var wallInfo = _this.wallInfo();
             if (!wallInfo)
                 return true;
             return ((!wallInfo.isTopWall && !wallInfo.isInnerWall) ||
@@ -16732,18 +16885,37 @@ var Wall = /** @class */ (function (_super) {
                 wallInfo.isRightWall);
         };
         _this.crack = function () {
-            if (_this.room.openWalls.topIsOpen) {
+            var shouldCrack = Math.random() < 1 ? true : false;
+            if (_this.room.cracked || !shouldCrack)
+                return;
+            if (_this.room.openWalls.isTopOpen &&
+                _this.wallDirections.includes(room_1.WallDirection.TOP) &&
+                !_this.wallDirections.includes(room_1.WallDirection.LEFT) &&
+                !_this.wallDirections.includes(room_1.WallDirection.RIGHT)) {
                 _this.newCrack();
+                _this.room.cracked = true;
             }
-            if (_this.room.openWalls.bottomIsOpen) {
-                _this.newCrack();
+            /*
+            if (
+              this.room.openWalls.isBottomOpen &&
+              this.wallDirections.includes(WallDirection.BOTTOM)
+            ) {
+              this.newCrack();
             }
-            if (_this.room.openWalls.leftIsOpen) {
-                _this.newCrack();
+            if (
+              this.room.openWalls.isLeftOpen &&
+              this.wallDirections.includes(WallDirection.LEFT)
+            ) {
+              this.newCrack();
+              this.room.cracked = true;
             }
-            if (_this.room.openWalls.rightIsOpen) {
-                _this.newCrack();
+            if (
+              this.room.openWalls.isRightOpen &&
+              this.wallDirections.includes(WallDirection.RIGHT)
+            ) {
+              this.newCrack();
             }
+            */
         };
         _this.newCrack = function () {
             _this.room.entities.push(new wallCrack_1.WallCrack(_this.room, _this.room.game, _this.x, _this.y));
@@ -16781,6 +16953,8 @@ var Wall = /** @class */ (function (_super) {
         };
         _this.isDoor = false;
         _this.tileYOffset = 6;
+        _this.wallDirections = wallDirections || [];
+        _this.crack();
         return _this;
     }
     return Wall;

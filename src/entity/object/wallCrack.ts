@@ -10,6 +10,9 @@ import { Candle } from "../../item/candle";
 import { Random } from "../../random";
 import { Coin } from "../../item/coin";
 import { Sound } from "../../sound";
+import { Floor } from "../../tile/floor";
+import { Wall } from "../../tile/wall";
+import { LevelGenerator } from "../../levelGenerator";
 
 export class WallCrack extends Entity {
   constructor(room: Room, game: Game, x: number, y: number) {
@@ -32,16 +35,15 @@ export class WallCrack extends Entity {
   }
 
   kill = () => {
-    this.dropLoot();
     this.dead = true;
     ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 29);
-    Sound.delayPlay(Sound.potSmash, 250);
+    this.room.crackWallIntoRoom(this.x, this.y);
   };
   killNoBones = () => {
     this.kill();
   };
 
-  draw = (delta: number) => {
+  drawTopLayer = (delta: number) => {
     // not inherited because it doesn't have the 0.5 offset
     if (!this.dead) {
       this.updateDrawXY(delta);
@@ -60,7 +62,7 @@ export class WallCrack extends Entity {
     }
   };
 
-  drawTopLayer = (delta: number) => {
+  draw = (delta: number) => {
     this.drawableY = this.y;
   };
 }

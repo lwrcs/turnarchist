@@ -681,6 +681,7 @@ export class Player extends Drawable {
     if (totalHealthDiff < 0) {
       this.flashing = true;
     }
+    console.log(this.x, this.y);
     //this.actionTab.actionState = ActionState.READY;
     //Sets the action tab state to Wait (during enemy turn)
   };
@@ -830,8 +831,8 @@ export class Player extends Drawable {
       this.drawY *= Math.sin(this.sineAngle) * delta;
       if (this.doneMoving()) this.sineAngle = Math.PI / 2;
 */
-      this.drawX *= (1 / this.drawMoveSpeed) * delta;
-      this.drawY *= (1 / this.drawMoveSpeed) * delta;
+      this.drawX *= 1 / this.drawMoveSpeed;
+      this.drawY *= 1 / this.drawMoveSpeed;
       this.jump();
     }
   };

@@ -25,7 +25,7 @@ export class Map {
       if (this.game.room.mapGroup === level.mapGroup && level.entered) {
         this.mapData.push({
           room: level,
-          walls: level.walls,
+          walls: level.innerWalls,
           doors: level.doors,
           entities: level.entities,
           items: level.items,

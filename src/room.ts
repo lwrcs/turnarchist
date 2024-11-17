@@ -107,7 +107,7 @@ export enum TurnState {
   computerTurn,
 }
 
-interface WallInfo {
+export interface WallInfo {
   isTopWall: boolean;
   isBottomWall: boolean;
   isLeftWall: boolean;
@@ -120,11 +120,18 @@ interface WallInfo {
   isAboveDoorWall: boolean;
 }
 
+export enum WallDirection {
+  TOP,
+  BOTTOM,
+  LEFT,
+  RIGHT,
+}
+
 interface OpenWalls {
-  topIsOpen: boolean;
-  bottomIsOpen: boolean;
-  leftIsOpen: boolean;
-  rightIsOpen: boolean;
+  isTopOpen: boolean;
+  isBottomOpen: boolean;
+  isLeftOpen: boolean;
+  isRightOpen: boolean;
 }
 
 interface EntitySpawnConfig {
@@ -133,8 +140,6 @@ interface EntitySpawnConfig {
 }
 
 export class Room {
-  x: number;
-  y: number;
   roomArray: Tile[][];
   softVis: number[][]; // this is the one we use for drawing (includes smoothing)
   vis: number[][]; // visibility ranges from 0 (fully visible) to 1 (fully black)
@@ -168,13 +173,14 @@ export class Room {
   entered: boolean; // has the player entered this level
   lightSources: Array<LightSource>;
   shadeColor = "black";
-  walls: Array<Wall>;
+  innerWalls: Array<Wall>;
   //actionTab: ActionTab;
   wallInfo: Map<string, WallInfo> = new Map();
   savePoint: Room;
   lastEnemyCount: number;
   openWalls: OpenWalls;
-
+  outerWalls: Array<Wall>;
+  cracked: boolean;
   private pointInside(
     x: number,
     y: number,
@@ -197,7 +203,11 @@ export class Room {
     type: RoomType,
     depth: number,
     mapGroup: number,
-    rand = Random.rand
+    rand = Random.rand,
+    isTopOpen = false,
+    isRightOpen = false,
+    isBottomOpen = false,
+    isLeftOpen = false
   ) {
     this.game = game;
     this.roomX = x; //Math.floor(- this.width / 2);
@@ -219,8 +229,14 @@ export class Room {
     this.doors = Array<Door>();
     this.entities = Array<Entity>();
     this.lightSources = Array<LightSource>();
-    this.walls = Array<Wall>();
-
+    this.innerWalls = Array<Wall>();
+    this.openWalls = {
+      isTopOpen: isTopOpen,
+      isBottomOpen: isBottomOpen,
+      isLeftOpen: isLeftOpen,
+      isRightOpen: isRightOpen,
+    };
+    this.cracked = false;
     this.roomArray = [];
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       this.roomArray[x] = [];
@@ -266,7 +282,7 @@ export class Room {
         if (this.roomArray[x][y] instanceof Floor) openTiles.push({ x, y });
       }
     }
-    console.log(area, openTiles.length);
+    //console.log(area, openTiles.length);
     return openTiles.length;
   }
 
@@ -292,7 +308,55 @@ export class Room {
     );
   };
 
+  crackWallIntoRoom = (crackX: number, crackY: number) => {
+    const height = 5;
+    const width = 5;
+    let x = crackY;
+    let y = crackX;
+    console.log(`crackX: ${x}, crackY: ${y}`);
+    console.log(`this.roomX: ${this.roomX}, this.roomY: ${this.roomY}`);
+
+    let newDoor = new Door(
+      this,
+      this.game,
+      crackX,
+      crackY,
+      DoorDir.North,
+      DoorType.DOOR
+    );
+    let newLinkedDoor = new Door(
+      this,
+      this.game,
+      crackX,
+      crackY,
+      DoorDir.South,
+      DoorType.DOOR
+    );
+
+    let newRoom = new Room(
+      this.game,
+      this.roomX,
+      this.roomY - height - 2,
+      width,
+      height,
+      this.type,
+      this.depth,
+      this.mapGroup
+    );
+    newDoor.linkedDoor = newLinkedDoor;
+    newLinkedDoor.linkedDoor = newDoor;
+    newRoom.roomArray[crackX][crackY] = newLinkedDoor;
+    this.roomArray[crackX][crackY] = newDoor;
+
+    this.doors.push(newDoor);
+    newRoom.doors.push(newLinkedDoor);
+    this.roomArray[crackX][crackY] = newDoor;
+    newRoom.populate(Random.rand);
+    this.game.rooms.push(newRoom);
+  };
+
   private buildEmptyRoom() {
+    console.log("building room array"); // building room array
     // fill in wall and floor
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
@@ -308,12 +372,51 @@ export class Room {
         ) {
           this.roomArray[x][y] = new Floor(this, x, y);
         } else {
-          this.roomArray[x][y] = new Wall(this, x, y);
-          this.walls.push;
+          this.roomArray[x][y] = new Wall(
+            this,
+            x,
+            y,
+            this.getWallType(
+              x,
+              y,
+              this.roomX,
+              this.roomY,
+              this.width,
+              this.height
+            )
+          );
         }
       }
     }
+    console.log(this.roomArray);
   }
+
+  removeWall = (x: number, y: number) => {
+    if (this.roomArray[x][y] instanceof Wall) {
+      this.roomArray[x][y] = null;
+    }
+    this.innerWalls = this.innerWalls.filter((w) => w.x !== x && w.y !== y);
+    this.outerWalls = this.outerWalls.filter((w) => w.x !== x && w.y !== y);
+  };
+  getWallType = (
+    pointX: number,
+    pointY: number,
+    rectX: number,
+    rectY: number,
+    width: number,
+    height: number
+  ): Array<WallDirection> => {
+    let directions: Array<WallDirection> = [];
+    if (pointY === rectY && pointX >= rectX && pointX <= rectX + width)
+      directions.push(WallDirection.TOP);
+    if (pointY === rectY + height && pointX >= rectX && pointX <= rectX + width)
+      directions.push(WallDirection.BOTTOM);
+    if (pointX === rectX && pointY >= rectY && pointY <= rectY + height)
+      directions.push(WallDirection.LEFT);
+    if (pointX === rectX + width && pointY >= rectY && pointY <= rectY + height)
+      directions.push(WallDirection.RIGHT);
+    return directions;
+  };
 
   private addWallBlocks(rand: () => number) {
     let numBlocks = Game.randTable([0, 0, 1, 1, 2, 2, 2, 2, 3], rand);
@@ -340,7 +443,7 @@ export class Room {
         for (let yy = y; yy < y + blockH; yy++) {
           let w = new Wall(this, xx, yy);
           this.roomArray[xx][yy] = w;
-          this.walls.push(w);
+          this.innerWalls.push(w);
         }
       }
     }
@@ -1084,6 +1187,10 @@ export class Room {
     this.message = this.name;
     player.map.saveMapData();
     this.setReverb();
+    //this.crackWalls();
+    console.log(
+      `isTopOpen: ${this.openWalls.isTopOpen}, isBottomOpen: ${this.openWalls.isBottomOpen}, isLeftOpen: ${this.openWalls.isLeftOpen}, isRightOpen: ${this.openWalls.isRightOpen}`
+    );
   };
 
   enterLevelThroughLadder = (player: Player, ladder: any) => {
@@ -1172,7 +1279,7 @@ export class Room {
 
   updateLighting = () => {
     // Start timing the initial setup
-    console.time("updateLighting: Initial Setup");
+    //console.time("updateLighting: Initial Setup");
 
     let oldVis = [];
     let oldCol = [];
@@ -1189,10 +1296,10 @@ export class Room {
       }
     }
     // End timing the initial setup
-    console.timeEnd("updateLighting: Initial Setup");
+    //console.timeEnd("updateLighting: Initial Setup");
 
     // Start timing the processing of light sources
-    console.time("updateLighting: Process LightSources");
+    //console.time("updateLighting: Process LightSources");
 
     for (const l of this.lightSources) {
       if (l.shouldUpdate()) {
@@ -1202,10 +1309,10 @@ export class Room {
       }
     }
     // End timing the processing of light sources
-    console.timeEnd("updateLighting: Process LightSources");
+    //console.timeEnd("updateLighting: Process LightSources");
 
     // Start timing the processing of player lighting
-    console.time("updateLighting: Process Players");
+    //console.time("updateLighting: Process Players");
     for (const p in this.game.players) {
       let player = this.game.players[p];
       if (this === this.game.rooms[player.levelID]) {
@@ -1239,10 +1346,10 @@ export class Room {
       }
     }
     // End timing the processing of player lighting
-    console.timeEnd("updateLighting: Process Players");
+    //console.timeEnd("updateLighting: Process Players");
 
     // Start timing the blending of colors
-    console.time("updateLighting: Blend Colors Array");
+    //console.time("updateLighting: Blend Colors Array");
     const roomX = this.roomX;
     const roomY = this.roomY;
     const width = this.width;
@@ -1255,17 +1362,17 @@ export class Room {
       }
     }
     // End timing the blending of colors
-    console.timeEnd("updateLighting: Blend Colors Array");
+    //console.timeEnd("updateLighting: Blend Colors Array");
 
     // Start timing the conversion to luminance
-    console.time("updateLighting: Convert to Luminance");
+    //console.time("updateLighting: Convert to Luminance");
     for (let x = roomX; x < roomX + width; x++) {
       for (let y = roomY; y < roomY + height; y++) {
         this.vis[x][y] = this.rgbToLuminance(this.col[x][y]);
       }
     }
     // End timing the conversion to luminance
-    console.timeEnd("updateLighting: Convert to Luminance");
+    //console.timeEnd("updateLighting: Convert to Luminance");
   };
   updateLightSources = (lightSource?: LightSource, remove?: boolean) => {
     this.oldCol = [];
@@ -1584,7 +1691,6 @@ export class Room {
   };
 
   tick = (player: Player) => {
-    console.log("tick");
     this.lastEnemyCount = this.entities.filter(
       (e) => e instanceof Enemy
     ).length;
@@ -1612,7 +1718,7 @@ export class Room {
     //sets the action tab state to Ready
     this.playerTurnTime = Date.now();
     this.playerTicked = player;
-    console.log("updating lighting");
+    //console.log("updating lighting");
     this.updateLighting();
 
     player.map.saveMapData();

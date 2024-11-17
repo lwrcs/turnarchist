@@ -17,14 +17,19 @@ class PartitionConnection {
   }
 }
 
-class Partition {
+export class Partition {
   x: number;
   y: number;
   w: number;
   h: number;
   type: RoomType;
   connections: Array<PartitionConnection>;
+  adjecents: Array<PartitionConnection>;
   distance: number;
+  isTopOpen: boolean;
+  isRightOpen: boolean;
+  isBottomOpen: boolean;
+  isLeftOpen: boolean;
 
   constructor(x: number, y: number, w: number, h: number) {
     this.x = x;
@@ -34,9 +39,19 @@ class Partition {
     this.type = RoomType.DUNGEON;
     this.connections = [];
     this.distance = 1000;
+    this.isTopOpen = true;
+    this.isRightOpen = true;
+    this.isBottomOpen = true;
+    this.isLeftOpen = true;
   }
 
   split = () => {
+    // Reset open walls when a partition is split
+    this.isTopOpen = true;
+    this.isRightOpen = true;
+    this.isBottomOpen = true;
+    this.isLeftOpen = true;
+
     // This function generates a random number around the center (0.5) within a certain width (0.6).
     // It uses the Random.rand() function to generate a random number between 0 and 1, subtracts 0.5 to center it around 0,
     // multiplies it by the width to scale it, and then adds the center (0.5) to shift it back to being between 0 and 1.
@@ -124,6 +139,37 @@ class Partition {
     );
     //takes another partition instance as argument
     //returns true if any points of each overlap
+  };
+
+  setOpenWall = (connection: PartitionConnection) => {
+    if (
+      connection.y === this.y - 1 &&
+      connection.x >= this.x &&
+      connection.x < this.x + this.w
+    ) {
+      this.isTopOpen = false;
+    }
+    if (
+      connection.y === this.y + this.h &&
+      connection.x >= this.x &&
+      connection.x < this.x + this.w
+    ) {
+      this.isBottomOpen = false;
+    }
+    if (
+      connection.x === this.x + this.w &&
+      connection.y >= this.y &&
+      connection.y < this.y + this.h
+    ) {
+      this.isRightOpen = false;
+    }
+    if (
+      connection.x === this.x - 1 &&
+      connection.y >= this.y &&
+      connection.y < this.y + this.h
+    ) {
+      this.isLeftOpen = false;
+    }
   };
 
   get_branch_point = (): { x: number; y: number } => {
@@ -256,6 +302,11 @@ let generate_dungeon_candidate = (
         ) {
           room.connections.push(new PartitionConnection(point.x, point.y, p));
           p.connections.push(new PartitionConnection(point.x, point.y, room));
+
+          // Set open walls based on connection
+          room.setOpenWall(new PartitionConnection(point.x, point.y, p));
+          p.setOpenWall(new PartitionConnection(point.x, point.y, room));
+
           frontier.push(p);
           connected.push(p);
           doors_found++;
@@ -300,6 +351,11 @@ let generate_dungeon_candidate = (
         if (p !== room && p.point_next_to(point.x, point.y)) {
           room.connections.push(new PartitionConnection(point.x, point.y, p));
           p.connections.push(new PartitionConnection(point.x, point.y, room));
+
+          // Set open walls based on connection
+          room.setOpenWall(new PartitionConnection(point.x, point.y, p));
+          p.setOpenWall(new PartitionConnection(point.x, point.y, room));
+
           found_door = true;
           break;
         }
@@ -330,6 +386,15 @@ let generate_dungeon_candidate = (
       boss.connections.push(
         new PartitionConnection(stair.x + 1, stair.y + 3, stair)
       );
+
+      // Set open walls for stair and boss connection
+      stair.setOpenWall(
+        new PartitionConnection(stair.x + 1, stair.y + 3, boss)
+      );
+      boss.setOpenWall(
+        new PartitionConnection(stair.x + 1, stair.y + 3, stair)
+      );
+
       break;
     }
   }
@@ -555,33 +620,70 @@ export class LevelGenerator {
   depthReached = 0;
   currentFloorFirstLevelID = 0;
 
+  private setOpenWallsForPartitions = (
+    partitions: Array<Partition>,
+    mapWidth: number,
+    mapHeight: number
+  ) => {
+    for (const partition of partitions) {
+      // Reset all walls to closed by default
+      partition.isTopOpen = false;
+      partition.isRightOpen = false;
+      partition.isBottomOpen = false;
+      partition.isLeftOpen = false;
+
+      // Check if partition touches map boundaries
+      if (partition.x === 0) {
+        partition.isLeftOpen = true;
+      }
+      if (partition.y === 0) {
+        partition.isTopOpen = true;
+      }
+      if (partition.x + partition.w === mapWidth) {
+        partition.isRightOpen = true;
+      }
+      if (partition.y + partition.h === mapHeight) {
+        partition.isBottomOpen = true;
+      }
+    }
+  };
+
   getLevels = (
     partitions: Array<Partition>,
     depth: number,
     mapGroup: number
   ): Array<Room> => {
-    let levels: Array<Room> = [];
+    this.setOpenWallsForPartitions(partitions, 35, 35); // Using standard map size
+
+    let rooms: Array<Room> = [];
 
     for (let i = 0; i < partitions.length; i++) {
-      let level = new Room(
+      let partition = partitions[i];
+
+      // Pass open walls information to the Room constructor
+      let room = new Room(
         this.game,
-        partitions[i].x - 1,
-        partitions[i].y - 1,
-        partitions[i].w + 2,
-        partitions[i].h + 2,
-        partitions[i].type,
+        partition.x - 1,
+        partition.y - 1,
+        partition.w + 2,
+        partition.h + 2,
+        partition.type,
         depth,
         mapGroup,
-        Random.rand
+        Random.rand,
+        partition.isTopOpen, // New parameter
+        partition.isRightOpen, // New parameter
+        partition.isBottomOpen, // New parameter
+        partition.isLeftOpen // New parameter
       );
-      levels.push(level);
+      rooms.push(room);
     }
 
     let doors_added: Array<Door> = [];
 
     partitions.forEach((partition, index) => {
       partition.connections.forEach((connection) => {
-        let door = levels[index].addDoor(connection.x, connection.y);
+        let door = rooms[index].addDoor(connection.x, connection.y);
         let existingDoor = doors_added.find(
           (existing) => existing.x === door.x && existing.y === door.y
         );
@@ -593,11 +695,11 @@ export class LevelGenerator {
       });
     });
 
-    for (let level of levels) {
-      level.populate(Random.rand);
+    for (let room of rooms) {
+      room.populate(Random.rand);
     }
 
-    return levels;
+    return rooms;
   };
 
   setSeed = (seed: number) => {

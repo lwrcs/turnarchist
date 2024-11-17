@@ -30,6 +30,9 @@ export class Door extends Tile {
   locked: boolean;
   iconTileX: number;
   iconXOffset: number;
+  iconYOffset: number;
+  unlocking: boolean;
+  iconAlpha: number;
 
   constructor(
     room: Room,
@@ -48,6 +51,9 @@ export class Door extends Tile {
     this.type = doorType;
     this.iconTileX = 2;
     this.iconXOffset = 0;
+    this.iconYOffset = 0;
+    this.unlocking = false;
+    this.iconAlpha = 1;
     switch (this.type) {
       case DoorType.GUARDEDDOOR:
         this.guard();
@@ -77,8 +83,6 @@ export class Door extends Tile {
   removeLock = () => {
     this.type = DoorType.DOOR;
     this.locked = false;
-    this.iconTileX = 2;
-    this.iconXOffset = 0;
   };
 
   canUnlock = (player: Player) => {
@@ -107,6 +111,7 @@ export class Door extends Tile {
         player.inventory.removeItem(k);
         Sound.unlock();
         this.removeLock();
+        this.unlocking = true;
       }
     }
   };
@@ -229,6 +234,20 @@ export class Door extends Tile {
   drawAbovePlayer = (delta: number) => {};
 
   drawAboveShading = (delta: number) => {
+    Game.ctx.globalAlpha = this.iconAlpha;
+    let multiplier = 0.125;
+    if (this.unlocking == true) {
+      this.iconAlpha *= 0.92 * delta;
+      this.iconYOffset += 0.035 * delta;
+      multiplier = 0;
+      if (this.iconAlpha <= 0.01) {
+        this.iconYOffset = 0;
+        this.unlocking = false;
+        this.iconTileX = 2;
+        this.iconXOffset = 0;
+        this.iconAlpha = 1;
+      }
+    }
     if (this.doorDir === DoorDir.North) {
       //if top door
       Game.drawFX(
@@ -237,7 +256,10 @@ export class Door extends Tile {
         1,
         1,
         this.x + this.iconXOffset,
-        this.y - 1.25 + 0.125 * Math.sin(0.006 * Date.now()),
+        this.y -
+          1.25 +
+          multiplier * Math.sin(0.006 * Date.now() + delta) -
+          this.iconYOffset,
         1,
         1
       );
@@ -248,10 +270,14 @@ export class Door extends Tile {
         1,
         1,
         this.x + this.iconXOffset,
-        this.y - 1.25 + 0.125 * Math.sin(0.006 * Date.now()),
+        this.y -
+          1.25 +
+          multiplier * Math.sin(0.006 * Date.now() + delta) -
+          this.iconYOffset,
         1,
         1
       ); //if not top door
     }
+    Game.ctx.globalAlpha = 1;
   };
 }
