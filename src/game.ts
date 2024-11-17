@@ -440,7 +440,6 @@ export class Game {
     this.draw(delta);
     window.requestAnimationFrame(this.run);
 
-    console.log(delta);
     this.previousFrameTimestamp = timestamp;
   };
 

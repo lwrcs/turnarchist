@@ -6826,7 +6826,6 @@ var Game = /** @class */ (function () {
             _this.update();
             _this.draw(delta);
             window.requestAnimationFrame(_this.run);
-            console.log(delta);
             _this.previousFrameTimestamp = timestamp;
         };
         this.update = function () {
@@ -7525,7 +7524,7 @@ var GameConstants = /** @class */ (function () {
     GameConstants.SCALE = 1;
     GameConstants.SWIPE_THRESH = Math.pow(25, 2); // (size of swipe threshold circle)^2
     GameConstants.KEY_REPEAT_TIME = 200; // millseconds
-    GameConstants.MOVEMENT_COOLDOWN = 100; // milliseconds
+    GameConstants.MOVEMENT_COOLDOWN = 200; // milliseconds
     GameConstants.CHAT_APPEAR_TIME = 5000;
     GameConstants.CHAT_FADE_TIME = 1000;
     GameConstants.DEFAULTWIDTH = 6 * GameConstants.TILESIZE;
@@ -12379,6 +12378,8 @@ var Player = /** @class */ (function (_super) {
     __extends(Player, _super);
     function Player(game, x, y, isLocalPlayer) {
         var _this = _super.call(this) || this;
+        _this.animationFrameId = null;
+        _this.isProcessingQueue = false;
         _this.inputHandler = function (input) {
             if (!_this.game.started && input !== input_1.InputEnum.MOUSE_MOVE) {
                 _this.game.startedFadeOut = true;
@@ -12577,24 +12578,32 @@ var Player = /** @class */ (function (_super) {
                 _this.direction = PlayerDirection.LEFT;
                 _this.tryMove(_this.x - 1, _this.y);
             }
+            else
+                _this.queueMove(_this.x - 1, _this.y, PlayerDirection.LEFT);
         };
         _this.right = function () {
             if (_this.canMove()) {
                 _this.direction = PlayerDirection.RIGHT;
                 _this.tryMove(_this.x + 1, _this.y);
             }
+            else
+                _this.queueMove(_this.x + 1, _this.y, PlayerDirection.RIGHT);
         };
         _this.up = function () {
             if (_this.canMove()) {
                 _this.direction = PlayerDirection.UP;
                 _this.tryMove(_this.x, _this.y - 1);
             }
+            else
+                _this.queueMove(_this.x, _this.y - 1, PlayerDirection.UP);
         };
         _this.down = function () {
             if (_this.canMove()) {
                 _this.direction = PlayerDirection.DOWN;
                 _this.tryMove(_this.x, _this.y + 1);
             }
+            else
+                _this.queueMove(_this.x, _this.y + 1, PlayerDirection.DOWN);
         };
         _this.hit = function () {
             return 1;
@@ -12985,6 +12994,84 @@ var Player = /** @class */ (function (_super) {
             //round to lower odd number
             _this.tileCursor.y - 1, 1, 2);
         };
+        _this.queueHandler = function () {
+            console.log("Queue handler running, queue length:", _this.moveQueue.length);
+            console.log("Is processing queue:", _this.isProcessingQueue);
+            if (!_this.isProcessingQueue) {
+                console.log("Queue processing stopped - isProcessingQueue is false");
+                return;
+            }
+            var currentTime = Date.now();
+            var timeSinceLastMove = currentTime - _this.lastMoveTime;
+            console.log("Time since last move:", timeSinceLastMove);
+            if (currentTime - _this.lastMoveTime >= gameConstants_1.GameConstants.MOVEMENT_COOLDOWN) {
+                if (_this.moveQueue.length > 0) {
+                    var _a = _this.moveQueue.shift(), x = _a.x, y = _a.y, direction = _a.direction;
+                    console.log("Processing move to:", x, y);
+                    _this.handleMoveLoop({ x: x, y: y, direction: direction });
+                    _this.lastMoveTime = currentTime;
+                }
+                else {
+                    console.log("Queue empty, stopping processing");
+                    _this.stopQueueProcessing();
+                }
+            }
+            else {
+                console.log("Waiting for cooldown, remaining time:", gameConstants_1.GameConstants.MOVEMENT_COOLDOWN - timeSinceLastMove);
+            }
+            _this.animationFrameId = requestAnimationFrame(_this.queueHandler);
+            console.log("Next animation frame requested:", _this.animationFrameId);
+        };
+        _this.startQueueProcessing = function () {
+            console.log("Attempting to start queue processing");
+            console.log("Current state - isProcessing:", _this.isProcessingQueue, "animationFrameId:", _this.animationFrameId);
+            if (!_this.isProcessingQueue) {
+                console.log("Starting queue processing");
+                _this.isProcessingQueue = true;
+                _this.animationFrameId = requestAnimationFrame(_this.queueHandler);
+                console.log("Animation frame requested:", _this.animationFrameId);
+            }
+            else {
+                console.log("Queue processing already running");
+            }
+        };
+        _this.stopQueueProcessing = function () {
+            console.log("Stopping queue processing");
+            console.log("Current state - isProcessing:", _this.isProcessingQueue, "animationFrameId:", _this.animationFrameId);
+            _this.isProcessingQueue = false;
+            if (_this.animationFrameId !== null) {
+                console.log("Canceling animation frame:", _this.animationFrameId);
+                cancelAnimationFrame(_this.animationFrameId);
+                _this.animationFrameId = null;
+            }
+        };
+        _this.handleMoveLoop = function (_a) {
+            var x = _a.x, y = _a.y, direction = _a.direction;
+            switch (direction) {
+                case PlayerDirection.RIGHT:
+                    _this.right();
+                    break;
+                case PlayerDirection.LEFT:
+                    _this.left();
+                    break;
+                case PlayerDirection.DOWN:
+                    _this.down();
+                    break;
+                case PlayerDirection.UP:
+                    _this.up();
+                    break;
+            }
+        };
+        _this.queueMove = function (x, y, direction) {
+            if (!x || !y || _this.moveQueue.length > 0)
+                return;
+            console.log("Queueing move to:", x, y);
+            console.log("Current queue length:", _this.moveQueue.length);
+            var move = { x: x, y: y, direction: direction };
+            _this.moveQueue.push(move);
+            _this.startQueueProcessing();
+            console.log("Queue length after push:", _this.moveQueue.length);
+        };
         _this.game = game;
         _this.levelID = 0;
         _this.x = x;
@@ -13051,6 +13138,8 @@ var Player = /** @class */ (function (_super) {
         _this.lightBrightness = 0.3;
         _this.sineAngle = Math.PI / 2;
         _this.drawMoveSpeed = 0.3; // greater than 1 less than 2
+        _this.moveQueue = [];
+        _this.isProcessingQueue = false;
         return _this;
     }
     Object.defineProperty(Player.prototype, "angle", {

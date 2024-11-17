@@ -29,7 +29,7 @@ export class GameConstants {
   static readonly SWIPE_THRESH = 25 ** 2; // (size of swipe threshold circle)^2
 
   static readonly KEY_REPEAT_TIME = 200; // millseconds
-  static readonly MOVEMENT_COOLDOWN = 100; // milliseconds
+  static readonly MOVEMENT_COOLDOWN = 200; // milliseconds
 
   static readonly CHAT_APPEAR_TIME = 5000;
   static readonly CHAT_FADE_TIME = 1000;

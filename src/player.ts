@@ -80,6 +80,9 @@ export class Player extends Drawable {
   sineAngle: number;
   drawMoveSpeed: number;
   jumpHeight: number;
+  moveQueue: { x: number; y: number; direction: PlayerDirection }[];
+  private animationFrameId: number | null = null;
+  private isProcessingQueue: boolean = false;
   constructor(game: Game, x: number, y: number, isLocalPlayer: boolean) {
     super();
 
@@ -154,6 +157,8 @@ export class Player extends Drawable {
     this.lightBrightness = 0.3;
     this.sineAngle = Math.PI / 2;
     this.drawMoveSpeed = 0.3; // greater than 1 less than 2
+    this.moveQueue = [];
+    this.isProcessingQueue = false;
   }
 
   get angle(): number {
@@ -405,25 +410,25 @@ export class Player extends Drawable {
     if (this.canMove()) {
       this.direction = PlayerDirection.LEFT;
       this.tryMove(this.x - 1, this.y);
-    }
+    } else this.queueMove(this.x - 1, this.y, PlayerDirection.LEFT);
   };
   right = () => {
     if (this.canMove()) {
       this.direction = PlayerDirection.RIGHT;
       this.tryMove(this.x + 1, this.y);
-    }
+    } else this.queueMove(this.x + 1, this.y, PlayerDirection.RIGHT);
   };
   up = () => {
     if (this.canMove()) {
       this.direction = PlayerDirection.UP;
       this.tryMove(this.x, this.y - 1);
-    }
+    } else this.queueMove(this.x, this.y - 1, PlayerDirection.UP);
   };
   down = () => {
     if (this.canMove()) {
       this.direction = PlayerDirection.DOWN;
       this.tryMove(this.x, this.y + 1);
-    }
+    } else this.queueMove(this.x, this.y + 1, PlayerDirection.DOWN);
   };
 
   hit = (): number => {
@@ -868,6 +873,112 @@ export class Player extends Drawable {
       1,
       2
     );
+  };
+
+  private queueHandler = () => {
+    console.log("Queue handler running, queue length:", this.moveQueue.length);
+    console.log("Is processing queue:", this.isProcessingQueue);
+
+    if (!this.isProcessingQueue) {
+      console.log("Queue processing stopped - isProcessingQueue is false");
+      return;
+    }
+
+    const currentTime = Date.now();
+    const timeSinceLastMove = currentTime - this.lastMoveTime;
+    console.log("Time since last move:", timeSinceLastMove);
+
+    if (currentTime - this.lastMoveTime >= GameConstants.MOVEMENT_COOLDOWN) {
+      if (this.moveQueue.length > 0) {
+        const { x, y, direction } = this.moveQueue.shift();
+        console.log("Processing move to:", x, y);
+        this.handleMoveLoop({ x, y, direction });
+        this.lastMoveTime = currentTime;
+      } else {
+        console.log("Queue empty, stopping processing");
+        this.stopQueueProcessing();
+      }
+    } else {
+      console.log(
+        "Waiting for cooldown, remaining time:",
+        GameConstants.MOVEMENT_COOLDOWN - timeSinceLastMove
+      );
+    }
+
+    this.animationFrameId = requestAnimationFrame(this.queueHandler);
+    console.log("Next animation frame requested:", this.animationFrameId);
+  };
+
+  private startQueueProcessing = () => {
+    console.log("Attempting to start queue processing");
+    console.log(
+      "Current state - isProcessing:",
+      this.isProcessingQueue,
+      "animationFrameId:",
+      this.animationFrameId
+    );
+
+    if (!this.isProcessingQueue) {
+      console.log("Starting queue processing");
+      this.isProcessingQueue = true;
+      this.animationFrameId = requestAnimationFrame(this.queueHandler);
+      console.log("Animation frame requested:", this.animationFrameId);
+    } else {
+      console.log("Queue processing already running");
+    }
+  };
+
+  private stopQueueProcessing = () => {
+    console.log("Stopping queue processing");
+    console.log(
+      "Current state - isProcessing:",
+      this.isProcessingQueue,
+      "animationFrameId:",
+      this.animationFrameId
+    );
+
+    this.isProcessingQueue = false;
+    if (this.animationFrameId !== null) {
+      console.log("Canceling animation frame:", this.animationFrameId);
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+    }
+  };
+
+  handleMoveLoop = ({
+    x,
+    y,
+    direction,
+  }: {
+    x: number;
+    y: number;
+    direction: PlayerDirection;
+  }) => {
+    switch (direction) {
+      case PlayerDirection.RIGHT:
+        this.right();
+        break;
+      case PlayerDirection.LEFT:
+        this.left();
+        break;
+      case PlayerDirection.DOWN:
+        this.down();
+        break;
+      case PlayerDirection.UP:
+        this.up();
+        break;
+    }
+  };
+
+  queueMove = (x: number, y: number, direction: PlayerDirection) => {
+    if (!x || !y || this.moveQueue.length > 0) return;
+
+    console.log("Queueing move to:", x, y);
+    console.log("Current queue length:", this.moveQueue.length);
+    const move = { x, y, direction };
+    this.moveQueue.push(move);
+    this.startQueueProcessing();
+    console.log("Queue length after push:", this.moveQueue.length);
   };
 
   private canMove(): boolean {
