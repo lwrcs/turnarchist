@@ -817,8 +817,6 @@ export const loadGameState = (
   game.room.updateLighting();
   let p = game.players[game.localPlayerID];
   game.room.items.push(new Key(game.room, p.x - 1, p.y + 1));
-  game.room.items.push(new Key(game.room, p.x + 1, p.y + 1));
-  game.room.items.push(new Key(game.room, p.x + 1, p.y - 2));
   game.room.items.push(new Key(game.room, p.x - 1, p.y - 2));
 
   game.room.entities.push(

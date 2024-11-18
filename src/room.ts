@@ -182,6 +182,7 @@ export class Room {
   openWalls: OpenWalls;
   outerWalls: Array<Wall>;
   cracked: boolean;
+  crackCount: number;
   private pointInside(
     x: number,
     y: number,
@@ -231,6 +232,7 @@ export class Room {
     this.entities = Array<Entity>();
     this.lightSources = Array<LightSource>();
     this.innerWalls = Array<Wall>();
+    this.crackCount = 3;
     this.openWalls = {
       isTopOpen: isTopOpen,
       isBottomOpen: isBottomOpen,
@@ -270,6 +272,7 @@ export class Room {
     if (this.type === RoomType.ROPECAVE || this.type === RoomType.CAVE)
       this.skin = SkinType.CAVE;
     this.buildEmptyRoom();
+    //this.addWallCrack();
   }
 
   public async changeReverb(newImpulsePath: string) {
@@ -367,14 +370,19 @@ export class Room {
   addWallCrack = () => {
     console.log("Starting addWallCrack");
     console.log("openWalls.isTopOpen:", this.openWalls.isTopOpen);
-    if (!this.openWalls.isTopOpen) return;
+    //if (!this.openWalls.isTopOpen) return;
 
     let topWalls = [];
     for (let x = this.roomX + 1; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height - 1; y++) {
         let tile = this.roomArray[x][y];
         if (tile instanceof Wall) {
-          if (tile.wallDirections.includes(WallDirection.TOP)) {
+          if (
+            tile.wallDirections.includes(WallDirection.TOP) ||
+            tile.wallDirections.includes(WallDirection.BOTTOM) ||
+            tile.wallDirections.includes(WallDirection.LEFT) ||
+            tile.wallDirections.includes(WallDirection.RIGHT)
+          ) {
             topWalls.push(tile);
           }
         }
@@ -405,13 +413,13 @@ export class Room {
 
       if (
         randWall instanceof Wall &&
-        !this.cracked &&
-        !randWall.wallDirections.includes(WallDirection.LEFT) &&
-        !randWall.wallDirections.includes(WallDirection.RIGHT)
+        !this.cracked
+        //!randWall.wallDirections.includes(WallDirection.LEFT) &&
+        //!randWall.wallDirections.includes(WallDirection.RIGHT)
       ) {
         console.log("Creating new crack");
         randWall.newCrack();
-        this.cracked = true;
+        //this.cracked = true;
       }
     }
   };
@@ -833,22 +841,22 @@ export class Room {
     let type = Game.randTable([1, 1, 1, 1, 1, 1, 1, 2, 3, 4, 5, 6], rand);
     switch (type) {
       case 1:
-        VendingMachine.add(this, this.game, x, y, new Heart(this, 0, 0));
+        VendingMachine.add(this, this.game, x, y, new Heart(this, x, y));
         break;
       case 2:
-        VendingMachine.add(this, this.game, x, y, new Lantern(this, 0, 0));
+        VendingMachine.add(this, this.game, x, y, new Lantern(this, x, y));
         break;
       case 3:
-        VendingMachine.add(this, this.game, x, y, new Armor(this, 0, 0));
+        VendingMachine.add(this, this.game, x, y, new Armor(this, x, y));
         break;
       case 4:
-        VendingMachine.add(this, this.game, x, y, new DualDagger(this, 0, 0));
+        VendingMachine.add(this, this.game, x, y, new DualDagger(this, x, y));
         break;
       case 5:
-        VendingMachine.add(this, this.game, x, y, new Spear(this, 0, 0));
+        VendingMachine.add(this, this.game, x, y, new Spear(this, x, y));
         break;
       case 6:
-        VendingMachine.add(this, this.game, x, y, new Shotgun(this, 0, 0));
+        VendingMachine.add(this, this.game, x, y, new Shotgun(this, x, y));
         break;
     }
   }
@@ -1248,7 +1256,6 @@ export class Room {
     this.message = this.name;
     player.map.saveMapData();
     this.setReverb();
-    this.addWallCrack();
     console.log(
       `this.roomX: ${this.roomX}, this.roomY: ${this.roomY}, this.width: ${this.width}, this.height: ${this.height}`
     );

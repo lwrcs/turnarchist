@@ -8317,8 +8317,6 @@ var loadGameState = function (game, activeUsernames, gameState, newWorld) {
     game.room.updateLighting();
     var p = game.players[game.localPlayerID];
     game.room.items.push(new key_1.Key(game.room, p.x - 1, p.y + 1));
-    game.room.items.push(new key_1.Key(game.room, p.x + 1, p.y + 1));
-    game.room.items.push(new key_1.Key(game.room, p.x + 1, p.y - 2));
     game.room.items.push(new key_1.Key(game.room, p.x - 1, p.y - 2));
     game.room.entities.push(new pot_1.Pot(game.room, game, p.x, p.y - 2), new pot_1.Pot(game.room, game, p.x + 1, p.y), new pot_1.Pot(game.room, game, p.x - 1, p.y - 1), new pot_1.Pot(game.room, game, p.x + 1, p.y - 1), new pot_1.Pot(game.room, game, p.x - 1, p.y), new pot_1.Pot(game.room, game, p.x, p.y + 1));
     game.room.doors.forEach(function (door) {
@@ -11143,7 +11141,7 @@ var populate_grid = function (partitions, grid, w, h) {
     //output grid array that indicates which cells are in which partition
 };
 var generate_dungeon_candidate = function (map_w, map_h) {
-    var partitions = [new Partition(0, 0, map_w, map_h)];
+    var partitions = [new Partition(100, 100, map_w, map_h)];
     var grid = [];
     //add a new partition and define grid as empty array
     for (var i = 0; i < 3; i++)
@@ -11321,7 +11319,7 @@ var generate_dungeon = function (map_w, map_h) {
     return partitions;
 };
 var generate_cave_candidate = function (map_w, map_h, num_rooms) {
-    var partitions = [new Partition(0, 0, map_w, map_h)];
+    var partitions = [new Partition(100, 100, map_w, map_h)];
     var grid = [];
     for (var i = 0; i < 3; i++)
         partitions = split_partitions(partitions, 0.75);
@@ -11730,9 +11728,11 @@ var Map = /** @class */ (function () {
             game_1.Game.ctx.translate(0.75 * gameConstants_1.GameConstants.WIDTH -
                 _this.game.room.roomX -
                 Math.floor(0.5 * _this.game.room.width) +
-                20, 0.25 * gameConstants_1.GameConstants.HEIGHT -
+                20 -
+                55 * _this.scale, 0.25 * gameConstants_1.GameConstants.HEIGHT -
                 _this.game.room.roomY -
                 Math.floor(0.5 * _this.game.room.height) -
+                55 * _this.scale -
                 offset);
         };
         this.drawRoom = function (data, delta) {
@@ -12560,6 +12560,22 @@ var Player = /** @class */ (function (_super) {
                 y: _this.y + tileOffsetY,
             };
         };
+        _this.tryVaultOver = function (x, y, direction) {
+            switch (direction) {
+                case PlayerDirection.UP:
+                    _this.tryMove(x, y - 1);
+                    break;
+                case PlayerDirection.DOWN:
+                    _this.tryMove(x, y + 1);
+                    break;
+                case PlayerDirection.LEFT:
+                    _this.tryMove(x - 1, y);
+                    break;
+                case PlayerDirection.RIGHT:
+                    _this.tryMove(x + 1, y);
+                    break;
+            }
+        };
         _this.moveRangeCheck = function (x, y) {
             var dx = Math.abs(_this.x - x);
             var dy = Math.abs(_this.y - y);
@@ -12716,6 +12732,7 @@ var Player = /** @class */ (function (_super) {
                             e.drawX = dx;
                             e.drawY = dy;
                             _this.move(x, y);
+                            _this.moveDistance++;
                             _this.game.rooms[_this.levelID].tick(_this);
                             return;
                         }
@@ -12852,6 +12869,7 @@ var Player = /** @class */ (function (_super) {
             if (totalHealthDiff < 0) {
                 _this.flashing = true;
             }
+            _this.moveDistance = 0;
             //this.actionTab.actionState = ActionState.READY;
             //Sets the action tab state to Wait (during enemy turn)
         };
@@ -13099,7 +13117,10 @@ var Player = /** @class */ (function (_super) {
         _this.jumpY = 0;
         _this.jumpHeight = 0.3;
         _this.frame = 0;
+        _this.moveDistance = 0;
         _this.direction = PlayerDirection.UP;
+        _this.lastX = 0;
+        _this.lastY = 0;
         _this.isLocalPlayer = isLocalPlayer;
         if (isLocalPlayer) {
             input_1.Input.leftSwipeListener = function () { return _this.inputHandler(input_1.InputEnum.LEFT); };
@@ -13907,14 +13928,16 @@ var Room = /** @class */ (function () {
         this.addWallCrack = function () {
             console.log("Starting addWallCrack");
             console.log("openWalls.isTopOpen:", _this.openWalls.isTopOpen);
-            if (!_this.openWalls.isTopOpen)
-                return;
+            //if (!this.openWalls.isTopOpen) return;
             var topWalls = [];
             for (var x = _this.roomX + 1; x < _this.roomX + _this.width; x++) {
                 for (var y = _this.roomY; y < _this.roomY + _this.height - 1; y++) {
                     var tile = _this.roomArray[x][y];
                     if (tile instanceof wall_1.Wall) {
-                        if (tile.wallDirections.includes(WallDirection.TOP)) {
+                        if (tile.wallDirections.includes(WallDirection.TOP) ||
+                            tile.wallDirections.includes(WallDirection.BOTTOM) ||
+                            tile.wallDirections.includes(WallDirection.LEFT) ||
+                            tile.wallDirections.includes(WallDirection.RIGHT)) {
                             topWalls.push(tile);
                         }
                     }
@@ -13934,12 +13957,13 @@ var Room = /** @class */ (function () {
                 console.log("- No right wall:", !(randWall instanceof wall_1.Wall) ||
                     !randWall.wallDirections.includes(WallDirection.RIGHT));
                 if (randWall instanceof wall_1.Wall &&
-                    !_this.cracked &&
-                    !randWall.wallDirections.includes(WallDirection.LEFT) &&
-                    !randWall.wallDirections.includes(WallDirection.RIGHT)) {
+                    !_this.cracked
+                //!randWall.wallDirections.includes(WallDirection.LEFT) &&
+                //!randWall.wallDirections.includes(WallDirection.RIGHT)
+                ) {
                     console.log("Creating new crack");
                     randWall.newCrack();
-                    _this.cracked = true;
+                    //this.cracked = true;
                 }
             }
         };
@@ -14280,7 +14304,6 @@ var Room = /** @class */ (function () {
             _this.message = _this.name;
             player.map.saveMapData();
             _this.setReverb();
-            _this.addWallCrack();
             console.log("this.roomX: ".concat(_this.roomX, ", this.roomY: ").concat(_this.roomY, ", this.width: ").concat(_this.width, ", this.height: ").concat(_this.height));
         };
         this.enterLevelThroughLadder = function (player, ladder) {
@@ -14941,6 +14964,7 @@ var Room = /** @class */ (function () {
         this.entities = Array();
         this.lightSources = Array();
         this.innerWalls = Array();
+        this.crackCount = 3;
         this.openWalls = {
             isTopOpen: isTopOpen,
             isBottomOpen: isBottomOpen,
@@ -14979,6 +15003,7 @@ var Room = /** @class */ (function () {
         if (this.type === RoomType.ROPECAVE || this.type === RoomType.CAVE)
             this.skin = tile_1.SkinType.CAVE;
         this.buildEmptyRoom();
+        //this.addWallCrack();
     }
     Room.prototype.pointInside = function (x, y, rX, rY, rW, rH) {
         if (x < rX || x >= rX + rW)
@@ -15339,22 +15364,22 @@ var Room = /** @class */ (function () {
         var type = game_1.Game.randTable([1, 1, 1, 1, 1, 1, 1, 2, 3, 4, 5, 6], rand);
         switch (type) {
             case 1:
-                vendingMachine_1.VendingMachine.add(this, this.game, x, y, new heart_1.Heart(this, 0, 0));
+                vendingMachine_1.VendingMachine.add(this, this.game, x, y, new heart_1.Heart(this, x, y));
                 break;
             case 2:
-                vendingMachine_1.VendingMachine.add(this, this.game, x, y, new lantern_1.Lantern(this, 0, 0));
+                vendingMachine_1.VendingMachine.add(this, this.game, x, y, new lantern_1.Lantern(this, x, y));
                 break;
             case 3:
-                vendingMachine_1.VendingMachine.add(this, this.game, x, y, new armor_1.Armor(this, 0, 0));
+                vendingMachine_1.VendingMachine.add(this, this.game, x, y, new armor_1.Armor(this, x, y));
                 break;
             case 4:
-                vendingMachine_1.VendingMachine.add(this, this.game, x, y, new dualdagger_1.DualDagger(this, 0, 0));
+                vendingMachine_1.VendingMachine.add(this, this.game, x, y, new dualdagger_1.DualDagger(this, x, y));
                 break;
             case 5:
-                vendingMachine_1.VendingMachine.add(this, this.game, x, y, new spear_1.Spear(this, 0, 0));
+                vendingMachine_1.VendingMachine.add(this, this.game, x, y, new spear_1.Spear(this, x, y));
                 break;
             case 6:
-                vendingMachine_1.VendingMachine.add(this, this.game, x, y, new shotgun_1.Shotgun(this, 0, 0));
+                vendingMachine_1.VendingMachine.add(this, this.game, x, y, new shotgun_1.Shotgun(this, x, y));
                 break;
         }
     };

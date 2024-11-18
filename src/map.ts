@@ -69,10 +69,12 @@ export class Map {
       0.75 * GameConstants.WIDTH -
         this.game.room.roomX -
         Math.floor(0.5 * this.game.room.width) +
-        20,
+        20 -
+        55 * this.scale,
       0.25 * GameConstants.HEIGHT -
         this.game.room.roomY -
         Math.floor(0.5 * this.game.room.height) -
+        55 * this.scale -
         offset
     );
   };

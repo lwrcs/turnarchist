@@ -256,7 +256,7 @@ let generate_dungeon_candidate = (
   map_w: number,
   map_h: number
 ): Array<Partition> => {
-  let partitions = [new Partition(0, 0, map_w, map_h)];
+  let partitions = [new Partition(100, 100, map_w, map_h)];
   let grid = [];
   //add a new partition and define grid as empty array
 
@@ -465,7 +465,7 @@ let generate_cave_candidate = (
   map_h: number,
   num_rooms: number
 ): Array<Partition> => {
-  let partitions = [new Partition(0, 0, map_w, map_h)];
+  let partitions = [new Partition(100, 100, map_w, map_h)];
   let grid = [];
 
   for (let i = 0; i < 3; i++) partitions = split_partitions(partitions, 0.75);

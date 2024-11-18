@@ -80,7 +80,10 @@ export class Player extends Drawable {
   sineAngle: number;
   drawMoveSpeed: number;
   jumpHeight: number;
+  moveDistance: number;
   moveQueue: { x: number; y: number; direction: PlayerDirection }[];
+  lastX: number;
+  lastY: number;
   private animationFrameId: number | null = null;
   private isProcessingQueue: boolean = false;
   constructor(game: Game, x: number, y: number, isLocalPlayer: boolean) {
@@ -99,8 +102,10 @@ export class Player extends Drawable {
     this.jumpY = 0;
     this.jumpHeight = 0.3;
     this.frame = 0;
-
+    this.moveDistance = 0;
     this.direction = PlayerDirection.UP;
+    this.lastX = 0;
+    this.lastY = 0;
 
     this.isLocalPlayer = isLocalPlayer;
     if (isLocalPlayer) {
@@ -388,6 +393,23 @@ export class Player extends Drawable {
     };
   };
 
+  tryVaultOver = (x: number, y: number, direction: PlayerDirection) => {
+    switch (direction) {
+      case PlayerDirection.UP:
+        this.tryMove(x, y - 1);
+        break;
+      case PlayerDirection.DOWN:
+        this.tryMove(x, y + 1);
+        break;
+      case PlayerDirection.LEFT:
+        this.tryMove(x - 1, y);
+        break;
+      case PlayerDirection.RIGHT:
+        this.tryMove(x + 1, y);
+        break;
+    }
+  };
+
   moveRangeCheck = (x: number, y: number) => {
     const dx = Math.abs(this.x - x);
     const dy = Math.abs(this.y - y);
@@ -546,6 +568,7 @@ export class Player extends Drawable {
             e.drawX = dx;
             e.drawY = dy;
             this.move(x, y);
+            this.moveDistance++;
             this.game.rooms[this.levelID].tick(this);
             return;
           }
@@ -688,6 +711,7 @@ export class Player extends Drawable {
     if (totalHealthDiff < 0) {
       this.flashing = true;
     }
+    this.moveDistance = 0;
 
     //this.actionTab.actionState = ActionState.READY;
     //Sets the action tab state to Wait (during enemy turn)
