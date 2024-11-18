@@ -20,7 +20,6 @@ export class Wall extends Tile {
     this.isDoor = false;
     this.tileYOffset = 6;
     this.wallDirections = wallDirections || [];
-    this.crack();
   }
 
   isSolid = (): boolean => {
@@ -40,9 +39,7 @@ export class Wall extends Tile {
   };
 
   crack = () => {
-    let shouldCrack = Math.random() < 1 ? true : false;
-
-    if (this.room.cracked || !shouldCrack) return;
+    if (this.room.cracked) return;
     if (
       this.room.openWalls.isTopOpen &&
       this.wallDirections.includes(WallDirection.TOP) &&

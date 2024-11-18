@@ -71,10 +71,10 @@ export class WizardFireball extends Projectile {
         this.parent.room,
         this.x,
         this.y,
-        1.5,
+        3,
         (this.parent as WizardEnemy).projectileColor,
         500,
-        0.9,
+        5,
         350
       );
       this.parent.removeLightSource(this.lightSource);

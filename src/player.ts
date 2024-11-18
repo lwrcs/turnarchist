@@ -688,7 +688,7 @@ export class Player extends Drawable {
     if (totalHealthDiff < 0) {
       this.flashing = true;
     }
-    console.log(this.x, this.y);
+
     //this.actionTab.actionState = ActionState.READY;
     //Sets the action tab state to Wait (during enemy turn)
   };
@@ -831,6 +831,8 @@ export class Player extends Drawable {
   };
 
   updateDrawXY = (delta: number) => {
+    //console.log("this.x", this.x);
+    //console.log("this.y", this.y);
     if (!this.doneMoving()) {
       this.drawX *= 1 - this.drawMoveSpeed * delta;
       this.drawY *= 1 - this.drawMoveSpeed * delta;
@@ -876,8 +878,8 @@ export class Player extends Drawable {
   };
 
   private queueHandler = () => {
-    console.log("Queue handler running, queue length:", this.moveQueue.length);
-    console.log("Is processing queue:", this.isProcessingQueue);
+    //      console.log("Queue handler running, queue length:", this.moveQueue.length);
+    //console.log("Is processing queue:", this.isProcessingQueue);
 
     if (!this.isProcessingQueue) {
       console.log("Queue processing stopped - isProcessingQueue is false");
@@ -886,60 +888,60 @@ export class Player extends Drawable {
 
     const currentTime = Date.now();
     const timeSinceLastMove = currentTime - this.lastMoveTime;
-    console.log("Time since last move:", timeSinceLastMove);
+    //console.log("Time since last move:", timeSinceLastMove);
 
     if (currentTime - this.lastMoveTime >= GameConstants.MOVEMENT_COOLDOWN) {
       if (this.moveQueue.length > 0) {
         const { x, y, direction } = this.moveQueue.shift();
-        console.log("Processing move to:", x, y);
+        //console.log("Processing move to:", x, y);
         this.handleMoveLoop({ x, y, direction });
         this.lastMoveTime = currentTime;
       } else {
-        console.log("Queue empty, stopping processing");
+        //console.log("Queue empty, stopping processing");
         this.stopQueueProcessing();
       }
     } else {
-      console.log(
-        "Waiting for cooldown, remaining time:",
-        GameConstants.MOVEMENT_COOLDOWN - timeSinceLastMove
-      );
+      //console.log(
+      //  "Waiting for cooldown, remaining time:",
+      //  GameConstants.MOVEMENT_COOLDOWN - timeSinceLastMove
+      //);
     }
 
     this.animationFrameId = requestAnimationFrame(this.queueHandler);
-    console.log("Next animation frame requested:", this.animationFrameId);
+    //console.log("Next animation frame requested:", this.animationFrameId);
   };
 
   private startQueueProcessing = () => {
-    console.log("Attempting to start queue processing");
-    console.log(
-      "Current state - isProcessing:",
-      this.isProcessingQueue,
-      "animationFrameId:",
-      this.animationFrameId
-    );
+    //console.log("Attempting to start queue processing");
+    //console.log(
+    //  "Current state - isProcessing:",
+    //  this.isProcessingQueue,
+    //  "animationFrameId:",
+    //  this.animationFrameId
+    //);
 
     if (!this.isProcessingQueue) {
-      console.log("Starting queue processing");
+      //console.log("Starting queue processing");
       this.isProcessingQueue = true;
       this.animationFrameId = requestAnimationFrame(this.queueHandler);
-      console.log("Animation frame requested:", this.animationFrameId);
+      //console.log("Animation frame requested:", this.animationFrameId);
     } else {
-      console.log("Queue processing already running");
+      //console.log("Queue processing already running");
     }
   };
 
   private stopQueueProcessing = () => {
-    console.log("Stopping queue processing");
-    console.log(
-      "Current state - isProcessing:",
-      this.isProcessingQueue,
-      "animationFrameId:",
-      this.animationFrameId
-    );
+    //console.log("Stopping queue processing");
+    //console.log(
+    //  "Current state - isProcessing:",
+    //  this.isProcessingQueue,
+    //  "animationFrameId:",
+    //  this.animationFrameId
+    //);
 
     this.isProcessingQueue = false;
     if (this.animationFrameId !== null) {
-      console.log("Canceling animation frame:", this.animationFrameId);
+      //console.log("Canceling animation frame:", this.animationFrameId);
       cancelAnimationFrame(this.animationFrameId);
       this.animationFrameId = null;
     }
@@ -973,12 +975,12 @@ export class Player extends Drawable {
   queueMove = (x: number, y: number, direction: PlayerDirection) => {
     if (!x || !y || this.moveQueue.length > 0) return;
 
-    console.log("Queueing move to:", x, y);
-    console.log("Current queue length:", this.moveQueue.length);
+    //console.log("Queueing move to:", x, y);
+    //console.log("Current queue length:", this.moveQueue.length);
     const move = { x, y, direction };
     this.moveQueue.push(move);
     this.startQueueProcessing();
-    console.log("Queue length after push:", this.moveQueue.length);
+    //console.log("Queue length after push:", this.moveQueue.length);
   };
 
   private canMove(): boolean {

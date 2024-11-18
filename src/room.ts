@@ -75,6 +75,7 @@ import { globalEventBus } from "./eventBus";
 import { RedGem } from "./item/redgem";
 import { EnergyWizardEnemy } from "./entity/enemy/energyWizard";
 import { ReverbEngine } from "./reverb";
+import { WallCrack } from "./entity/object/wallCrack";
 
 export enum RoomType {
   START,
@@ -164,7 +165,7 @@ export class Room {
   type: RoomType;
   depth: number;
   mapGroup: number;
-  name: string;
+  name: string = "";
   message: string;
   turn: TurnState;
   playerTurnTime: number;
@@ -309,8 +310,8 @@ export class Room {
   };
 
   crackWallIntoRoom = (crackX: number, crackY: number) => {
-    const height = 5;
-    const width = 5;
+    const height = 6;
+    const width = 6;
     let x = crackY;
     let y = crackX;
     console.log(`crackX: ${x}, crackY: ${y}`);
@@ -324,35 +325,95 @@ export class Room {
       DoorDir.North,
       DoorType.DOOR
     );
+
+    let newRoom = new Room(
+      this.game,
+      crackX - width / 2,
+      this.roomY - height - 1,
+      width + 2,
+      height + 2,
+      this.type,
+      this.depth,
+      this.mapGroup
+    );
+
     let newLinkedDoor = new Door(
-      this,
+      newRoom,
       this.game,
       crackX,
       crackY,
       DoorDir.South,
       DoorType.DOOR
     );
-
-    let newRoom = new Room(
-      this.game,
-      this.roomX,
-      this.roomY - height - 2,
-      width,
-      height,
-      this.type,
-      this.depth,
-      this.mapGroup
+    console.log(
+      `newRoom.roomX: ${newRoom.roomX}, newRoom.roomY: ${newRoom.roomY}, newRoom.width: ${newRoom.width}, newRoom.height: ${newRoom.height}`
     );
+
+    newRoom.message = "You've found a secret passage!";
     newDoor.linkedDoor = newLinkedDoor;
     newLinkedDoor.linkedDoor = newDoor;
+
     newRoom.roomArray[crackX][crackY] = newLinkedDoor;
     this.roomArray[crackX][crackY] = newDoor;
 
+    //newRoom.removeWall(crackX, crackY);
+
     this.doors.push(newDoor);
     newRoom.doors.push(newLinkedDoor);
-    this.roomArray[crackX][crackY] = newDoor;
     newRoom.populate(Random.rand);
     this.game.rooms.push(newRoom);
+  };
+
+  addWallCrack = () => {
+    console.log("Starting addWallCrack");
+    console.log("openWalls.isTopOpen:", this.openWalls.isTopOpen);
+    if (!this.openWalls.isTopOpen) return;
+
+    let topWalls = [];
+    for (let x = this.roomX + 1; x < this.roomX + this.width; x++) {
+      for (let y = this.roomY; y < this.roomY + this.height - 1; y++) {
+        let tile = this.roomArray[x][y];
+        if (tile instanceof Wall) {
+          if (tile.wallDirections.includes(WallDirection.TOP)) {
+            topWalls.push(tile);
+          }
+        }
+      }
+    }
+    console.log("Found topWalls:", topWalls.length);
+
+    let randWall = topWalls[Math.floor(Math.random() * topWalls.length)];
+    console.log("Selected randWall:", randWall);
+
+    let shouldCrack = Math.random() > 0.5;
+    console.log("shouldCrack:", shouldCrack);
+
+    if (shouldCrack) {
+      console.log("Checking wall conditions:");
+      console.log("- Is Wall:", randWall instanceof Wall);
+      console.log("- Not cracked:", !this.cracked);
+      console.log(
+        "- No left wall:",
+        !(randWall instanceof Wall) ||
+          !randWall.wallDirections.includes(WallDirection.LEFT)
+      );
+      console.log(
+        "- No right wall:",
+        !(randWall instanceof Wall) ||
+          !randWall.wallDirections.includes(WallDirection.RIGHT)
+      );
+
+      if (
+        randWall instanceof Wall &&
+        !this.cracked &&
+        !randWall.wallDirections.includes(WallDirection.LEFT) &&
+        !randWall.wallDirections.includes(WallDirection.RIGHT)
+      ) {
+        console.log("Creating new crack");
+        randWall.newCrack();
+        this.cracked = true;
+      }
+    }
   };
 
   private buildEmptyRoom() {
@@ -395,8 +456,8 @@ export class Room {
     if (this.roomArray[x][y] instanceof Wall) {
       this.roomArray[x][y] = null;
     }
-    this.innerWalls = this.innerWalls.filter((w) => w.x !== x && w.y !== y);
-    this.outerWalls = this.outerWalls.filter((w) => w.x !== x && w.y !== y);
+    //this.innerWalls = this.innerWalls.filter((w) => w.x !== x && w.y !== y);
+    //this.outerWalls = this.outerWalls.filter((w) => w.x !== x && w.y !== y);
   };
   getWallType = (
     pointX: number,
@@ -1187,9 +1248,9 @@ export class Room {
     this.message = this.name;
     player.map.saveMapData();
     this.setReverb();
-    //this.crackWalls();
+    this.addWallCrack();
     console.log(
-      `isTopOpen: ${this.openWalls.isTopOpen}, isBottomOpen: ${this.openWalls.isBottomOpen}, isLeftOpen: ${this.openWalls.isLeftOpen}, isRightOpen: ${this.openWalls.isRightOpen}`
+      `this.roomX: ${this.roomX}, this.roomY: ${this.roomY}, this.width: ${this.width}, this.height: ${this.height}`
     );
   };
 

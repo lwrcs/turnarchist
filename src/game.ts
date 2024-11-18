@@ -225,7 +225,7 @@ export class Game {
 
           // proceed with constructor
 
-          Game.scale = 1;
+          Game.scale = GameConstants.SCALE;
 
           Sound.loadSounds();
           Sound.playMusic(); // loops forever
@@ -534,6 +534,7 @@ export class Game {
       // Adjust scale for mobile devices
       Game.scale = 2; // Example: limit scale to 2 for mobile
     } else {
+      Game.scale = GameConstants.SCALE;
       Game.scale = Math.min(maxWidthScale, maxHeightScale);
     }
 
@@ -542,7 +543,7 @@ export class Game {
       maxWidthScale = window.innerWidth / GameConstants.DEFAULTWIDTH;
       maxHeightScale = window.innerHeight / GameConstants.DEFAULTHEIGHT;
     }
-    Game.scale = Math.min(maxWidthScale, maxHeightScale);
+    Game.scale = GameConstants.SCALE; //Math.min(maxWidthScale, maxHeightScale);
 
     LevelConstants.SCREEN_W = Math.floor(
       window.innerWidth / Game.scale / GameConstants.TILESIZE
@@ -925,7 +926,11 @@ export class Game {
       for (const i in this.players) this.players[i].updateDrawXY(delta);
     } else {
       // Start of Selection
+
       if (this.screenShakeActive) {
+        setTimeout(() => {
+          this.screenShakeActive = false;
+        }, 1200);
         const decayFactor = 1 - 0.15 * delta;
         //const decayFactor = 1 - 1 / (Date.now() - this.screenShakeCutoff);
         this.screenShakeX =
@@ -939,9 +944,8 @@ export class Game {
           this.shakeAmountY < 0.01 ? 0 : this.shakeAmountY * decayFactor;
 
         if (
-          (Math.abs(this.shakeAmountX) < 0.01 &&
-            Math.abs(this.shakeAmountY) < 0.01) ||
-          Date.now() - this.screenShakeCutoff > 1000
+          Math.abs(this.shakeAmountX) < 0.01 &&
+          Math.abs(this.shakeAmountY) < 0.01
         ) {
           this.shakeAmountX = 0;
           this.shakeAmountY = 0;

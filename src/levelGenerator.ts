@@ -5,6 +5,7 @@ import { LevelConstants } from "./levelConstants";
 import { Random } from "./random";
 import { DownLadder } from "./tile/downLadder";
 //Goal: CRACK THE LEVEL GENERATOR
+
 class PartitionConnection {
   x: number;
   y: number;
@@ -24,7 +25,6 @@ class Partition {
   h: number;
   type: RoomType;
   connections: Array<PartitionConnection>;
-  adjecents: Array<PartitionConnection>;
   distance: number;
   isTopOpen: boolean;
   isRightOpen: boolean;
@@ -175,14 +175,14 @@ class Partition {
   get_branch_point = (): { x: number; y: number } => {
     let points = [];
     for (let x = this.x; x < this.x + this.w; x++) {
-      //count up from the partitions x to it's width
+      //count up from the partitions x to its width
       points.push({ x: x, y: this.y - 1 /*one row above partition*/ });
       points.push({ x: x, y: this.y + this.h /*one row below partition*/ });
     } // pushes the points above and below the partition
     for (let y = this.y; y < this.y + this.h; y++) {
       points.push({ x: this.x - 1, y: y });
       points.push({ x: this.x + this.w, y: y });
-    } //pushes points to left an right of the partition
+    } //pushes points to left and right of the partition
     points = points.filter(
       (p) =>
         !this.connections.some(
@@ -192,7 +192,7 @@ class Partition {
       //delete those from the points array
     );
     points.sort(() => 0.5 - Random.rand());
-    return points[0]; //return first or last object of x y points in array points
+    return points[0]; //return first object of x y points in array points
   };
 } //end of Partition class
 
@@ -265,10 +265,9 @@ let generate_dungeon_candidate = (
   for (let i = 0; i < 3; i++) partitions = split_partitions(partitions, 0.25);
   //split partitions 3 times with different probabilities
   grid = populate_grid(partitions, grid, map_w, map_h);
-  //remove wall rooms and populate dat grid
+  //populate the grid with partitions
   partitions.sort((a, b) => a.area() - b.area());
-  //partitions = remove_wall_rooms(partitions, map_w, map_h, 0.3);
-  //sort the partitions list by ... area? I think?
+  //sort the partitions list by area
   let spawn = partitions[0];
   //spawn is the first Partition instance
   spawn.type = RoomType.START;
@@ -527,7 +526,6 @@ let generate_cave_candidate = (
   }
 
   // remove rooms we haven't connected to yet
-  // remove rooms we haven't connected to yet
   partitions = partitions.filter(
     (partition) => partition.connections.length > 0
   );
@@ -675,6 +673,9 @@ export class LevelGenerator {
         partition.isRightOpen, // New parameter
         partition.isBottomOpen, // New parameter
         partition.isLeftOpen // New parameter
+      );
+      console.log(
+        `room.roomX: ${room.roomX}, room.roomY: ${room.roomY}, room.width: ${room.width}, room.height: ${room.height}`
       );
       rooms.push(room);
     }

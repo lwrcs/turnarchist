@@ -15,7 +15,7 @@ export class Map {
 
   constructor(game: Game, player: Player) {
     this.game = game;
-    this.scale = 1;
+    this.scale = 2;
     //this.depth = player.game.level.depth
   }
 
