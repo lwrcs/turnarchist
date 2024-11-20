@@ -1,4 +1,5 @@
 import { EntityDirection } from "./entity/entity";
+import { Direction } from "./game";
 import { SpikeTrap } from "./tile/spiketrap";
 import { Wall } from "./tile/wall";
 
@@ -281,7 +282,7 @@ export namespace astar {
       diagonal?: boolean,
       diagonalsOnly?: boolean,
       turnCostsExtra?: boolean,
-      turnDirection?: EntityDirection,
+      turnDirection?: Direction,
       heuristic?: Function,
       diagonalsOmni?: boolean
     ) {
@@ -359,25 +360,25 @@ export namespace astar {
               if (
                 neighbor.pos.x - currentNode.pos.x === 0 &&
                 neighbor.pos.y - currentNode.pos.y === -1 &&
-                turnDirection === EntityDirection.UP
+                turnDirection === Direction.UP
               )
                 isTurn = false;
               if (
                 neighbor.pos.x - currentNode.pos.x === 0 &&
                 neighbor.pos.y - currentNode.pos.y === 1 &&
-                turnDirection === EntityDirection.DOWN
+                turnDirection === Direction.DOWN
               )
                 isTurn = false;
               if (
                 neighbor.pos.x - currentNode.pos.x === 1 &&
                 neighbor.pos.y - currentNode.pos.y === 0 &&
-                turnDirection === EntityDirection.RIGHT
+                turnDirection === Direction.RIGHT
               )
                 isTurn = false;
               if (
                 neighbor.pos.x - currentNode.pos.x === -1 &&
                 neighbor.pos.y - currentNode.pos.y === 0 &&
-                turnDirection === EntityDirection.LEFT
+                turnDirection === Direction.LEFT
               )
                 isTurn = false;
             }
@@ -416,7 +417,7 @@ export namespace astar {
       diagonal?: boolean,
       diagonalsOnly?: boolean,
       turnCostsExtra?: boolean,
-      turnDirection?: EntityDirection,
+      turnDirection?: Direction,
       heuristic?: Function,
       diagonalsOmni?: boolean
     ) {

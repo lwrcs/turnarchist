@@ -15,14 +15,14 @@ export class Map {
 
   constructor(game: Game, player: Player) {
     this.game = game;
-    this.scale = 2;
+    this.scale = 1;
     //this.depth = player.game.level.depth
   }
 
   saveMapData = () => {
     this.clearMap();
     for (const level of this.game.rooms) {
-      if (this.game.room.mapGroup === level.mapGroup && level.entered) {
+      if (this.game.room.mapGroup === level.mapGroup) {
         this.mapData.push({
           room: level,
           walls: level.innerWalls,
@@ -70,11 +70,11 @@ export class Map {
         this.game.room.roomX -
         Math.floor(0.5 * this.game.room.width) +
         20 -
-        55 * this.scale,
+        15 * this.scale,
       0.25 * GameConstants.HEIGHT -
         this.game.room.roomY -
         Math.floor(0.5 * this.game.room.height) -
-        55 * this.scale -
+        1 * this.scale -
         offset
     );
   };

@@ -1,5 +1,5 @@
 import { Entity, EntityDirection } from "../entity";
-import { Game } from "../../game";
+import { Direction, Game } from "../../game";
 import { Room } from "../../room";
 import { Player } from "../../player";
 import { HitWarning } from "../../hitWarning";
@@ -205,10 +205,10 @@ export class BigKnightEnemy extends Enemy {
               this.tryMove(moveX, moveY);
               this.drawX = this.x - oldX;
               this.drawY = this.y - oldY;
-              if (this.x > oldX) this.direction = EntityDirection.RIGHT;
-              else if (this.x < oldX) this.direction = EntityDirection.LEFT;
-              else if (this.y > oldY) this.direction = EntityDirection.DOWN;
-              else if (this.y < oldY) this.direction = EntityDirection.UP;
+              if (this.x > oldX) this.direction = Direction.RIGHT;
+              else if (this.x < oldX) this.direction = Direction.LEFT;
+              else if (this.y > oldY) this.direction = Direction.DOWN;
+              else if (this.y < oldY) this.direction = Direction.UP;
             }
 
             if (this.health < this.maxHealth) {

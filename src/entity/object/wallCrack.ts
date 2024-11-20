@@ -1,5 +1,5 @@
 import { Entity } from "../entity";
-import { Room } from "../../room";
+import { Room, WallDirection } from "../../room";
 import { Game } from "../../game";
 import { Heart } from "../../item/heart";
 import { LevelConstants } from "../../levelConstants";
@@ -13,9 +13,17 @@ import { Sound } from "../../sound";
 import { Floor } from "../../tile/floor";
 import { Wall } from "../../tile/wall";
 import { LevelGenerator } from "../../levelGenerator";
+import { DoorDir } from "../../tile/door";
 
 export class WallCrack extends Entity {
-  constructor(room: Room, game: Game, x: number, y: number) {
+  wallDirection: WallDirection;
+  constructor(
+    room: Room,
+    game: Game,
+    x: number,
+    y: number,
+    direction: WallDirection
+  ) {
     super(room, game, x, y);
     this.room = room;
     this.health = 1;
@@ -24,6 +32,7 @@ export class WallCrack extends Entity {
     this.hasShadow = false;
     this.chainPushable = false;
     this.name = "wall crack";
+    this.wallDirection = direction;
 
     let dropProb = Random.rand();
     if (dropProb < 0.025) this.drop = new Heart(this.room, this.x, this.y);
@@ -37,7 +46,7 @@ export class WallCrack extends Entity {
   kill = () => {
     this.dead = true;
     ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 29);
-    this.room.crackWallIntoRoom(this.x, this.y);
+    this.room.crackWallIntoRoom(this.x, this.y, this.wallDirection);
   };
   killNoBones = () => {
     this.kill();

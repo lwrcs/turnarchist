@@ -16,6 +16,7 @@ import { MouseCursor } from "./mouseCursor";
 import { PostProcessor } from "./postProcess";
 import { globalEventBus } from "./eventBus";
 import { ReverbEngine } from "./reverb";
+import { Level } from "./level";
 
 export enum LevelState {
   IN_LEVEL,
@@ -24,15 +25,15 @@ export enum LevelState {
 }
 
 export enum Direction {
-  North,
-  NorthEast,
-  East,
-  SouthEast,
-  South,
-  SouthWest,
-  West,
-  NorthWest,
-  Center,
+  DOWN,
+  UP,
+  RIGHT,
+  LEFT,
+  DOWN_RIGHT,
+  UP_LEFT,
+  UP_RIGHT,
+  DOWN_LEFT,
+  CENTER,
 }
 
 export class ChatMessage {
@@ -65,6 +66,8 @@ export class Game {
   prevLevel: Room; // for transitions
   room: Room;
   rooms: Array<Room>;
+  level: Level;
+  levels: Array<Level>;
   levelgen: LevelGenerator;
   localPlayerID = "localplayer";
   players: Record<string, Player>;
@@ -289,6 +292,8 @@ export class Game {
           this.levelState = LevelState.IN_LEVEL;
           this.tutorialActive = false;
           this.screenShakeActive = false;
+          this.levels = [];
+
           this.newGame();
         }
       };
@@ -410,10 +415,10 @@ export class Game {
       this.sideTransitionDirection = side;
       if (
         door instanceof Door &&
-        [DoorDir.East, DoorDir.West].includes(door.doorDir)
+        [Direction.RIGHT, Direction.LEFT].includes(door.doorDir)
       )
         this.sideTransition = true;
-      else if (door instanceof Door && door.doorDir === DoorDir.South)
+      else if (door instanceof Door && door.doorDir === Direction.DOWN)
         this.upwardTransition = true;
     } else {
       door.room.enterLevelThroughDoor(player, door, side);
@@ -724,6 +729,7 @@ export class Game {
     Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
 
     if (this.levelState === LevelState.TRANSITIONING) {
+      this.screenShakeActive = false;
       let levelOffsetX = Math.floor(
         this.lerp(
           (Date.now() - this.transitionStartTime) /

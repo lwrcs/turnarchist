@@ -1,5 +1,5 @@
 import { Entity, EntityDirection } from "../entity";
-import { Game } from "../../game";
+import { Direction, Game } from "../../game";
 import { Room } from "../../room";
 import { Player } from "../../player";
 import { HitWarning } from "../../hitWarning";
@@ -136,13 +136,11 @@ export class SkullEnemy extends Enemy {
               let moveX = moves[0].pos.x;
               let moveY = moves[0].pos.y;
               let hitPlayer = false;
-              let moveDirection = EntityDirection.DOWN;
+              let moveDirection = Direction.DOWN;
               if (moveX !== oldX) {
-                moveDirection =
-                  moveX > oldX ? EntityDirection.RIGHT : EntityDirection.LEFT;
+                moveDirection = moveX > oldX ? Direction.RIGHT : Direction.LEFT;
               } else if (moveY !== oldY) {
-                moveDirection =
-                  moveY > oldY ? EntityDirection.DOWN : EntityDirection.UP;
+                moveDirection = moveY > oldY ? Direction.DOWN : Direction.UP;
               }
               if (moveDirection !== this.direction) {
                 moveX = oldX;
@@ -169,10 +167,10 @@ export class SkullEnemy extends Enemy {
                 this.tryMove(moveX, moveY, true);
                 this.drawX = this.x - oldX;
                 this.drawY = this.y - oldY;
-                if (this.x > oldX) this.direction = EntityDirection.RIGHT;
-                else if (this.x < oldX) this.direction = EntityDirection.LEFT;
-                else if (this.y > oldY) this.direction = EntityDirection.DOWN;
-                else if (this.y < oldY) this.direction = EntityDirection.UP;
+                if (this.x > oldX) this.direction = Direction.RIGHT;
+                else if (this.x < oldX) this.direction = Direction.LEFT;
+                else if (this.y > oldY) this.direction = Direction.DOWN;
+                else if (this.y < oldY) this.direction = Direction.UP;
               }
             }
             this.makeHitWarnings();

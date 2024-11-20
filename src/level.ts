@@ -15,16 +15,32 @@ export class Level {
   constructor(game: Game, depth: number, width: number, height: number) {
     this.game = game;
     this.depth = depth;
-    this.width = width + 100; // 100 to keep values positive
-    this.height = height + 100;
+    this.width = width;
+    this.height = height;
     this.rooms = game.rooms;
+    this.initializeLevelArray();
+    this.loadRoomsIntoLevelArray();
   }
 
-  initializeLevelMap = () => {
+  initializeLevelArray = () => {
     // Create a 300x300 grid for depth 0
     this.levelArray = [];
     for (let x = 0; x < this.width; x++) {
       this.levelArray[x] = [];
+      for (let y = 0; y < this.height; y++) {
+        this.levelArray[x][y] = null;
+      }
     }
+  };
+
+  loadRoomsIntoLevelArray = () => {
+    for (let room of this.rooms) {
+      for (let x = room.roomX; x < room.roomX + room.width; x++) {
+        for (let y = room.roomY; y < room.roomY + room.height; y++) {
+          this.levelArray[x][y] = room.roomArray[x][y];
+        }
+      }
+    }
+    console.log(this.levelArray);
   };
 }

@@ -282,10 +282,10 @@ export abstract class Enemy extends Entity {
             this.facePlayer(player);
 
             // Determine the new direction based on the move
-            if (moveX > oldX) this.direction = EntityDirection.RIGHT;
-            else if (moveX < oldX) this.direction = EntityDirection.LEFT;
-            else if (moveY > oldY) this.direction = EntityDirection.DOWN;
-            else if (moveY < oldY) this.direction = EntityDirection.UP;
+            if (moveX > oldX) this.direction = Direction.RIGHT;
+            else if (moveX < oldX) this.direction = Direction.LEFT;
+            else if (moveY > oldY) this.direction = Direction.DOWN;
+            else if (moveY < oldY) this.direction = Direction.UP;
 
             // If the direction hasn't changed, attempt to move or attack
             if (oldDir == this.direction) {
@@ -312,16 +312,16 @@ export abstract class Enemy extends Entity {
                 this.tryMove(moveX, moveY);
                 this.drawX = this.x - oldX;
                 this.drawY = this.y - oldY;
-                if (this.x > oldX) this.direction = EntityDirection.RIGHT;
-                else if (this.x < oldX) this.direction = EntityDirection.LEFT;
-                else if (this.y > oldY) this.direction = EntityDirection.DOWN;
-                else if (this.y < oldY) this.direction = EntityDirection.UP;
+                if (this.x > oldX) this.direction = Direction.RIGHT;
+                else if (this.x < oldX) this.direction = Direction.LEFT;
+                else if (this.y > oldY) this.direction = Direction.DOWN;
+                else if (this.y < oldY) this.direction = Direction.UP;
               }
             }
           }
 
           // Add positions to avoid based on the current direction
-          if (this.direction == EntityDirection.LEFT) {
+          if (this.direction == Direction.LEFT) {
             disablePositions.push({
               x: this.x,
               y: this.y + 1,
@@ -331,7 +331,7 @@ export abstract class Enemy extends Entity {
               y: this.y - 1,
             } as astar.Position);
           }
-          if (this.direction == EntityDirection.RIGHT) {
+          if (this.direction == Direction.RIGHT) {
             disablePositions.push({
               x: this.x,
               y: this.y + 1,
@@ -341,7 +341,7 @@ export abstract class Enemy extends Entity {
               y: this.y - 1,
             } as astar.Position);
           }
-          if (this.direction == EntityDirection.DOWN) {
+          if (this.direction == Direction.DOWN) {
             disablePositions.push({
               x: this.x + 1,
               y: this.y,
@@ -351,7 +351,7 @@ export abstract class Enemy extends Entity {
               y: this.y,
             } as astar.Position);
           }
-          if (this.direction == EntityDirection.UP) {
+          if (this.direction == Direction.UP) {
             disablePositions.push({
               x: this.x + 1,
               y: this.y,

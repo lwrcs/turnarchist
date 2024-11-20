@@ -1,4 +1,4 @@
-import { Game } from "../game";
+import { Direction, Game } from "../game";
 import { Room } from "../room";
 import { Bones } from "../tile/bones";
 import { LevelConstants } from "../levelConstants";
@@ -44,7 +44,7 @@ export class Entity extends Drawable {
   y: number;
   w: number;
   h: number;
-  direction: EntityDirection;
+  direction: Direction;
   drawX: number;
   drawY: number;
   dead: boolean;
@@ -102,7 +102,7 @@ export class Entity extends Drawable {
     this.tileY = 0;
     this.hasShadow = true;
     this.skipNextTurns = 0;
-    this.direction = EntityDirection.DOWN;
+    this.direction = Direction.DOWN;
     this.destroyable = true;
     this.pushable = false;
     this.chainPushable = true;
@@ -283,11 +283,11 @@ export class Entity extends Drawable {
     if (Math.abs(dx) === Math.abs(dy)) {
       // just moved, already facing player
     } else if (Math.abs(dx) > Math.abs(dy)) {
-      if (dx > 0) this.direction = EntityDirection.RIGHT;
-      if (dx < 0) this.direction = EntityDirection.LEFT;
+      if (dx > 0) this.direction = Direction.RIGHT;
+      if (dx < 0) this.direction = Direction.LEFT;
     } else {
-      if (dy > 0) this.direction = EntityDirection.DOWN;
-      if (dy < 0) this.direction = EntityDirection.UP;
+      if (dy > 0) this.direction = Direction.DOWN;
+      if (dy < 0) this.direction = Direction.UP;
     }
   };
 
@@ -427,21 +427,18 @@ export class Entity extends Drawable {
   //create variables for the rumbling x and y offsets
   //return the rumbling x and y offsets
   //add the rumbling x and y offsets to the enemy's x and y in the draw function
-  rumble = (rumbling: boolean, frame: number, direction?: EntityDirection) => {
+  rumble = (rumbling: boolean, frame: number, direction?: Direction) => {
     let rumbleOffset = { x: 0, y: 0 };
 
     if (rumbling) {
       const isOddFrame = Math.floor(frame) % 2 === 1;
       const offset = isOddFrame ? 0.0325 : 0;
 
-      if (
-        direction === EntityDirection.LEFT ||
-        direction === EntityDirection.RIGHT
-      ) {
+      if (direction === Direction.LEFT || direction === Direction.RIGHT) {
         rumbleOffset.y = offset;
       } else if (
-        direction === EntityDirection.UP ||
-        direction === EntityDirection.DOWN ||
+        direction === Direction.UP ||
+        direction === Direction.DOWN ||
         !direction
       ) {
         rumbleOffset.x = offset;
@@ -589,10 +586,10 @@ export class Entity extends Drawable {
     };
 
     const directionOffsets = {
-      [EntityDirection.LEFT]: [-1, 0],
-      [EntityDirection.RIGHT]: [1, 0],
-      [EntityDirection.UP]: [0, -1],
-      [EntityDirection.DOWN]: [0, 1],
+      [Direction.LEFT]: [-1, 0],
+      [Direction.RIGHT]: [1, 0],
+      [Direction.UP]: [0, -1],
+      [Direction.DOWN]: [0, 1],
     };
 
     let offsets: number[][] = [];

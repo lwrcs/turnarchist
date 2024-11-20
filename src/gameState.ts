@@ -16,7 +16,7 @@ import { Spawner } from "./entity/enemy/spawner";
 import { VendingMachine } from "./entity/object/vendingMachine";
 import { WizardEnemy, WizardState } from "./entity/enemy/wizardEnemy";
 import { ZombieEnemy } from "./entity/enemy/zombieEnemy";
-import { Game } from "./game";
+import { Direction, Game } from "./game";
 import { HitWarning } from "./hitWarning";
 import { Inventory } from "./inventory";
 import { Armor } from "./item/armor";
@@ -54,6 +54,7 @@ import { Mushrooms } from "./entity/object/mushrooms";
 import { Pumpkin } from "./entity/object/pumpkin";
 import { Block } from "./entity/object/block";
 import { EnergyWizardEnemy } from "./entity/enemy/energyWizard";
+import { Level } from "./level";
 
 export class HitWarningState {
   x: number;
@@ -151,7 +152,7 @@ export class EnemyState {
   x: number;
   y: number;
   health: number;
-  direction: EntityDirection;
+  direction: Direction;
   dead: boolean;
   skipNextTurns: number;
   hasDrop: boolean;
@@ -643,7 +644,7 @@ export class PlayerState {
   y: number;
   dead: boolean;
   levelID: number;
-  direction: PlayerDirection;
+  direction: Direction;
   health: number;
   maxHealth: number;
   lastTickHealth: number;
@@ -830,10 +831,14 @@ export const loadGameState = (
   game.room.doors.forEach((door) => {
     door.lock();
   });
+  let newLevel = new Level(game, 1, 898, 898);
+  game.levels.push(newLevel);
+  game.level = newLevel;
   /*
-  setTimeout(() => {
-    game.pushMessage("Welcome to Turnarchist");
-  }, 500);
+  game.rooms.forEach((room) => {
+    room.addWallCrack();
+  });
+ 
   */
 
   game.chat = [];

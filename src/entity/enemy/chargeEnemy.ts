@@ -1,5 +1,5 @@
 import { Entity, EntityDirection } from "../entity";
-import { Game } from "../../game";
+import { Direction, Game } from "../../game";
 import { Room } from "../../room";
 import { HitWarning } from "../../hitWarning";
 import { Coin } from "../../item/coin";
@@ -128,10 +128,10 @@ export class ChargeEnemy extends Enemy {
             this.visualTargetX = this.targetX + 0.5 * dx;
             this.visualTargetY = this.targetY + 0.5 * dy;
             if (dy === 1) this.visualTargetY += 0.65;
-            if (dx > 0) this.direction = EntityDirection.RIGHT;
-            else if (dx < 0) this.direction = EntityDirection.LEFT;
-            else if (dy < 0) this.direction = EntityDirection.UP;
-            else if (dy > 0) this.direction = EntityDirection.DOWN;
+            if (dx > 0) this.direction = Direction.RIGHT;
+            else if (dx < 0) this.direction = Direction.LEFT;
+            else if (dy < 0) this.direction = Direction.UP;
+            else if (dy > 0) this.direction = Direction.DOWN;
             break;
           }
         }
@@ -268,10 +268,10 @@ export class ChargeEnemy extends Enemy {
       if (Math.floor(this.trailFrame) % 2 === 0) {
         let startX = (this.x + 0.5) * GameConstants.TILESIZE;
         let startY = (this.y - 0.25) * GameConstants.TILESIZE;
-        if (this.direction === EntityDirection.LEFT) startX -= 3;
-        else if (this.direction === EntityDirection.RIGHT) startX += 3;
-        else if (this.direction === EntityDirection.DOWN) startY += 2;
-        else if (this.direction === EntityDirection.UP) startY -= 8;
+        if (this.direction === Direction.LEFT) startX -= 3;
+        else if (this.direction === Direction.RIGHT) startX += 3;
+        else if (this.direction === Direction.DOWN) startY += 2;
+        else if (this.direction === Direction.UP) startY -= 8;
 
         Game.ctx.strokeStyle = "white";
         Game.ctx.lineWidth = GameConstants.TILESIZE * 0.25;

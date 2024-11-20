@@ -1,7 +1,7 @@
 import { WallCrack } from "../entity/object/wallCrack";
-import { Game } from "../game";
+import { Direction, Game } from "../game";
 import { Room, WallDirection } from "../room";
-import { Door } from "./door";
+import { Door, DoorDir } from "./door";
 import { Tile } from "./tile";
 import { WallInfo } from "../room";
 import { Player } from "../player";
@@ -38,45 +38,40 @@ export class Wall extends Tile {
     );
   };
 
-  crack = () => {
-    if (this.room.cracked) return;
-    if (
-      this.room.openWalls.isTopOpen &&
-      this.wallDirections.includes(WallDirection.TOP) &&
-      !this.wallDirections.includes(WallDirection.LEFT) &&
-      !this.wallDirections.includes(WallDirection.RIGHT)
-    ) {
-      this.newCrack();
-      this.room.cracked = true;
-    }
-    /*
-    if (
-      this.room.openWalls.isBottomOpen &&
-      this.wallDirections.includes(WallDirection.BOTTOM)
-    ) {
-      this.newCrack();
-    }
-    if (
-      this.room.openWalls.isLeftOpen &&
-      this.wallDirections.includes(WallDirection.LEFT)
-    ) {
-      this.newCrack();
-      this.room.cracked = true;
-    }
-    if (
-      this.room.openWalls.isRightOpen &&
-      this.wallDirections.includes(WallDirection.RIGHT)
-    ) {
-      this.newCrack();
-    }
-    */
-  };
-
   newCrack = () => {
     this.room.entities.push(
-      new WallCrack(this.room, this.room.game, this.x, this.y)
+      new WallCrack(this.room, this.room.game, this.x, this.y, this.direction)
     );
   };
+
+  get direction() {
+    let directions = [];
+    if (this.room.roomArray[this.x - 1][this.y] == null)
+      directions.push(Direction.LEFT);
+    if (this.room.roomArray[this.x + 1][this.y] == null)
+      directions.push(Direction.RIGHT);
+    if (this.room.roomArray[this.x][this.y - 1] == null)
+      directions.push(Direction.DOWN);
+    if (this.room.roomArray[this.x][this.y + 1] == null)
+      directions.push(Direction.UP);
+    if (directions.length == 1) return directions[0];
+    if (
+      directions.includes(Direction.UP) &&
+      directions.includes(Direction.LEFT)
+    )
+      return Direction.UP_LEFT;
+    if (
+      directions.includes(Direction.UP) &&
+      directions.includes(Direction.RIGHT)
+    )
+      return Direction.UP_RIGHT;
+    if (
+      directions.includes(Direction.DOWN) &&
+      directions.includes(Direction.LEFT)
+    )
+      return Direction.DOWN_LEFT;
+    return Direction.DOWN_RIGHT;
+  }
 
   wallInfo = () => {
     return this.room.wallInfo.get(`${this.x},${this.y}`);

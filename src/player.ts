@@ -1,6 +1,6 @@
 import { Input, InputEnum } from "./input";
 import { GameConstants } from "./gameConstants";
-import { ChatMessage, Game, LevelState } from "./game";
+import { ChatMessage, Direction, Game, LevelState } from "./game";
 import { Door, DoorType } from "./tile/door";
 import { Trapdoor } from "./tile/trapdoor";
 import { Inventory } from "./inventory";
@@ -28,10 +28,10 @@ import { Light } from "./item/light";
 import { LightSource } from "./lightSource";
 
 export enum PlayerDirection {
-  DOWN = 0,
-  UP = 1,
-  RIGHT = 2,
-  LEFT = 3,
+  DOWN,
+  UP,
+  RIGHT,
+  LEFT,
 }
 
 export class Player extends Drawable {
@@ -43,7 +43,7 @@ export class Player extends Drawable {
   drawX: number;
   drawY: number;
   frame: number;
-  direction: PlayerDirection;
+  direction: Direction;
   game: Game;
   levelID: number; // which room we're in (level[levelID])
   flashing: boolean;
@@ -81,7 +81,7 @@ export class Player extends Drawable {
   drawMoveSpeed: number;
   jumpHeight: number;
   moveDistance: number;
-  moveQueue: { x: number; y: number; direction: PlayerDirection }[];
+  moveQueue: { x: number; y: number; direction: Direction }[];
   lastX: number;
   lastY: number;
   private animationFrameId: number | null = null;
@@ -103,7 +103,7 @@ export class Player extends Drawable {
     this.jumpHeight = 0.3;
     this.frame = 0;
     this.moveDistance = 0;
-    this.direction = PlayerDirection.UP;
+    this.direction = Direction.UP;
     this.lastX = 0;
     this.lastY = 0;
 
@@ -169,13 +169,13 @@ export class Player extends Drawable {
   get angle(): number {
     if (this.direction !== undefined) {
       switch (this.direction) {
-        case PlayerDirection.UP:
+        case Direction.UP:
           return 270;
-        case PlayerDirection.RIGHT:
+        case Direction.RIGHT:
           return 0;
-        case PlayerDirection.DOWN:
+        case Direction.DOWN:
           return 90;
-        case PlayerDirection.LEFT:
+        case Direction.LEFT:
           return 180;
       }
     } else {
@@ -429,28 +429,28 @@ export class Player extends Drawable {
   };
 
   left = () => {
-    if (this.canMove()) {
-      this.direction = PlayerDirection.LEFT;
+    if (this.canMove() || this.moveQueue.length >= 1) {
+      this.direction = Direction.LEFT;
       this.tryMove(this.x - 1, this.y);
-    } else this.queueMove(this.x - 1, this.y, PlayerDirection.LEFT);
+    } else this.queueMove(this.x - 1, this.y, Direction.LEFT);
   };
   right = () => {
-    if (this.canMove()) {
-      this.direction = PlayerDirection.RIGHT;
+    if (this.canMove() || this.moveQueue.length >= 1) {
+      this.direction = Direction.RIGHT;
       this.tryMove(this.x + 1, this.y);
-    } else this.queueMove(this.x + 1, this.y, PlayerDirection.RIGHT);
+    } else this.queueMove(this.x + 1, this.y, Direction.RIGHT);
   };
   up = () => {
-    if (this.canMove()) {
-      this.direction = PlayerDirection.UP;
+    if (this.canMove() || this.moveQueue.length >= 1) {
+      this.direction = Direction.UP;
       this.tryMove(this.x, this.y - 1);
-    } else this.queueMove(this.x, this.y - 1, PlayerDirection.UP);
+    } else this.queueMove(this.x, this.y - 1, Direction.UP);
   };
   down = () => {
-    if (this.canMove()) {
-      this.direction = PlayerDirection.DOWN;
+    if (this.canMove() || this.moveQueue.length >= 1) {
+      this.direction = Direction.DOWN;
       this.tryMove(this.x, this.y + 1);
-    } else this.queueMove(this.x, this.y + 1, PlayerDirection.DOWN);
+    } else this.queueMove(this.x, this.y + 1, Direction.DOWN);
   };
 
   hit = (): number => {
@@ -761,13 +761,13 @@ export class Player extends Drawable {
     // atan2 returns angle in radians (-π to π)
     // Divide the circle into 4 sectors for the 4 directions
     if (angle >= -Math.PI / 4 && angle < Math.PI / 4) {
-      this.direction = PlayerDirection.RIGHT;
+      this.direction = Direction.RIGHT;
     } else if (angle >= Math.PI / 4 && angle < (3 * Math.PI) / 4) {
-      this.direction = PlayerDirection.DOWN;
+      this.direction = Direction.DOWN;
     } else if (angle >= (-3 * Math.PI) / 4 && angle < -Math.PI / 4) {
-      this.direction = PlayerDirection.UP;
+      this.direction = Direction.UP;
     } else {
-      this.direction = PlayerDirection.LEFT;
+      this.direction = Direction.LEFT;
     }
   };
 
@@ -978,25 +978,25 @@ export class Player extends Drawable {
   }: {
     x: number;
     y: number;
-    direction: PlayerDirection;
+    direction: Direction;
   }) => {
     switch (direction) {
-      case PlayerDirection.RIGHT:
+      case Direction.RIGHT:
         this.right();
         break;
-      case PlayerDirection.LEFT:
+      case Direction.LEFT:
         this.left();
         break;
-      case PlayerDirection.DOWN:
+      case Direction.DOWN:
         this.down();
         break;
-      case PlayerDirection.UP:
+      case Direction.UP:
         this.up();
         break;
     }
   };
 
-  queueMove = (x: number, y: number, direction: PlayerDirection) => {
+  queueMove = (x: number, y: number, direction: Direction) => {
     if (!x || !y || this.moveQueue.length > 0) return;
 
     //console.log("Queueing move to:", x, y);

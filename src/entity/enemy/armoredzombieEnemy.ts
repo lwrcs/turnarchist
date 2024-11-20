@@ -1,5 +1,5 @@
 import { Entity, EntityDirection } from "../entity";
-import { Game } from "../../game";
+import { Direction, Game } from "../../game";
 import { Room } from "../../room";
 import { Player } from "../../player";
 import { HitWarning } from "../../hitWarning";
@@ -134,10 +134,10 @@ export class ArmoredzombieEnemy extends Enemy {
             let oldDir = this.direction;
             let player = this.targetPlayer;
             this.facePlayer(player);
-            if (moveX > oldX) this.direction = EntityDirection.RIGHT;
-            else if (moveX < oldX) this.direction = EntityDirection.LEFT;
-            else if (moveY > oldY) this.direction = EntityDirection.DOWN;
-            else if (moveY < oldY) this.direction = EntityDirection.UP;
+            if (moveX > oldX) this.direction = Direction.RIGHT;
+            else if (moveX < oldX) this.direction = Direction.LEFT;
+            else if (moveY > oldY) this.direction = Direction.DOWN;
+            else if (moveY < oldY) this.direction = Direction.UP;
             if (oldDir == this.direction) {
               let hitPlayer = false;
               for (const i in this.game.players) {
@@ -161,15 +161,15 @@ export class ArmoredzombieEnemy extends Enemy {
                 this.tryMove(moveX, moveY);
                 this.drawX = this.x - oldX;
                 this.drawY = this.y - oldY;
-                if (this.x > oldX) this.direction = EntityDirection.RIGHT;
-                else if (this.x < oldX) this.direction = EntityDirection.LEFT;
-                else if (this.y > oldY) this.direction = EntityDirection.DOWN;
-                else if (this.y < oldY) this.direction = EntityDirection.UP;
+                if (this.x > oldX) this.direction = Direction.RIGHT;
+                else if (this.x < oldX) this.direction = Direction.LEFT;
+                else if (this.y > oldY) this.direction = Direction.DOWN;
+                else if (this.y < oldY) this.direction = Direction.UP;
               }
             }
           }
 
-          if (this.direction == EntityDirection.LEFT) {
+          if (this.direction == Direction.LEFT) {
             disablePositions.push({
               x: this.x,
               y: this.y + 1,
@@ -179,7 +179,7 @@ export class ArmoredzombieEnemy extends Enemy {
               y: this.y - 1,
             } as astar.Position);
           }
-          if (this.direction == EntityDirection.RIGHT) {
+          if (this.direction == Direction.RIGHT) {
             disablePositions.push({
               x: this.x,
               y: this.y + 1,
@@ -189,7 +189,7 @@ export class ArmoredzombieEnemy extends Enemy {
               y: this.y - 1,
             } as astar.Position);
           }
-          if (this.direction == EntityDirection.DOWN) {
+          if (this.direction == Direction.DOWN) {
             disablePositions.push({
               x: this.x + 1,
               y: this.y,
@@ -199,7 +199,7 @@ export class ArmoredzombieEnemy extends Enemy {
               y: this.y,
             } as astar.Position);
           }
-          if (this.direction == EntityDirection.UP) {
+          if (this.direction == Direction.UP) {
             disablePositions.push({
               x: this.x + 1,
               y: this.y,

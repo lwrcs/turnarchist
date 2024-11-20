@@ -1,5 +1,5 @@
 import { Entity, EntityDirection } from "../entity";
-import { Game } from "../../game";
+import { Direction, Game } from "../../game";
 import { Room } from "../../room";
 import { astar } from "../../astarclass";
 import { HitWarning } from "../../hitWarning";
@@ -153,10 +153,10 @@ export class KnightEnemy extends Enemy {
                 this.tryMove(moves[0].pos.x, moves[0].pos.y);
                 this.drawX = this.x - oldX;
                 this.drawY = this.y - oldY;
-                if (this.x > oldX) this.direction = EntityDirection.RIGHT;
-                else if (this.x < oldX) this.direction = EntityDirection.LEFT;
-                else if (this.y > oldY) this.direction = EntityDirection.DOWN;
-                else if (this.y < oldY) this.direction = EntityDirection.UP;
+                if (this.x > oldX) this.direction = Direction.RIGHT;
+                else if (this.x < oldX) this.direction = Direction.LEFT;
+                else if (this.y > oldY) this.direction = Direction.DOWN;
+                else if (this.y < oldY) this.direction = Direction.UP;
               }
             }
             this.rumbling = false;
