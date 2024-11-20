@@ -41,6 +41,7 @@ export class SkullEnemy extends Enemy {
     this.deathParticleColor = "#ffffff";
     this.name = "skeleton";
     this.forwardOnlyAttack = true;
+
     if (drop) this.drop = drop;
     else {
       let dropProb = Random.rand();
@@ -130,7 +131,11 @@ export class SkullEnemy extends Enemy {
               grid,
               this,
               this.targetPlayer,
-              disablePositions
+              disablePositions,
+              false,
+              false,
+              true,
+              this.direction
             );
             if (moves.length > 0) {
               let moveX = moves[0].pos.x;
@@ -172,6 +177,47 @@ export class SkullEnemy extends Enemy {
                 else if (this.y > oldY) this.direction = Direction.DOWN;
                 else if (this.y < oldY) this.direction = Direction.UP;
               }
+            }
+
+            if (this.direction == Direction.LEFT) {
+              disablePositions.push({
+                x: this.x,
+                y: this.y + 1,
+              } as astar.Position);
+              disablePositions.push({
+                x: this.x,
+                y: this.y - 1,
+              } as astar.Position);
+            }
+            if (this.direction == Direction.RIGHT) {
+              disablePositions.push({
+                x: this.x,
+                y: this.y + 1,
+              } as astar.Position);
+              disablePositions.push({
+                x: this.x,
+                y: this.y - 1,
+              } as astar.Position);
+            }
+            if (this.direction == Direction.DOWN) {
+              disablePositions.push({
+                x: this.x + 1,
+                y: this.y,
+              } as astar.Position);
+              disablePositions.push({
+                x: this.x - 1,
+                y: this.y,
+              } as astar.Position);
+            }
+            if (this.direction == Direction.UP) {
+              disablePositions.push({
+                x: this.x + 1,
+                y: this.y,
+              } as astar.Position);
+              disablePositions.push({
+                x: this.x - 1,
+                y: this.y,
+              } as astar.Position);
             }
             this.makeHitWarnings();
           }

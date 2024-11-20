@@ -3594,7 +3594,7 @@ var SkullEnemy = /** @class */ (function (_super) {
                                         grid[x][y] = false;
                                 }
                             }
-                            var moves = astarclass_1.astar.AStar.search(grid, _this, _this.targetPlayer, disablePositions);
+                            var moves = astarclass_1.astar.AStar.search(grid, _this, _this.targetPlayer, disablePositions, false, false, true, _this.direction);
                             if (moves.length > 0) {
                                 var moveX = moves[0].pos.x;
                                 var moveY = moves[0].pos.y;
@@ -3636,6 +3636,46 @@ var SkullEnemy = /** @class */ (function (_super) {
                                     else if (_this.y < oldY)
                                         _this.direction = game_1.Direction.UP;
                                 }
+                            }
+                            if (_this.direction == game_1.Direction.LEFT) {
+                                disablePositions.push({
+                                    x: _this.x,
+                                    y: _this.y + 1,
+                                });
+                                disablePositions.push({
+                                    x: _this.x,
+                                    y: _this.y - 1,
+                                });
+                            }
+                            if (_this.direction == game_1.Direction.RIGHT) {
+                                disablePositions.push({
+                                    x: _this.x,
+                                    y: _this.y + 1,
+                                });
+                                disablePositions.push({
+                                    x: _this.x,
+                                    y: _this.y - 1,
+                                });
+                            }
+                            if (_this.direction == game_1.Direction.DOWN) {
+                                disablePositions.push({
+                                    x: _this.x + 1,
+                                    y: _this.y,
+                                });
+                                disablePositions.push({
+                                    x: _this.x - 1,
+                                    y: _this.y,
+                                });
+                            }
+                            if (_this.direction == game_1.Direction.UP) {
+                                disablePositions.push({
+                                    x: _this.x + 1,
+                                    y: _this.y,
+                                });
+                                disablePositions.push({
+                                    x: _this.x - 1,
+                                    y: _this.y,
+                                });
                             }
                             _this.makeHitWarnings();
                         }
@@ -10685,7 +10725,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.LevelGenerator = void 0;
-console.log("levelGenerator.ts loaded");
+var game_1 = __webpack_require__(/*! ./game */ "./src/game.ts");
 var room_1 = __webpack_require__(/*! ./room */ "./src/room.ts");
 var random_1 = __webpack_require__(/*! ./random */ "./src/random.ts");
 var downLadder_1 = __webpack_require__(/*! ./tile/downLadder */ "./src/tile/downLadder.ts");
@@ -10712,7 +10752,7 @@ var Partition = /** @class */ (function () {
             // multiplies it by the width to scale it, and then adds the center (0.5) to shift it back to being between 0 and 1.
             var rand_mid = function () {
                 var center = 0.5;
-                var width = 0.75;
+                var width = 0.6;
                 return (random_1.Random.rand() - 0.5) * width + center;
             };
             var sizeRange = function () {
@@ -10780,18 +10820,12 @@ var Partition = /** @class */ (function () {
             //return the damn area
         };
         this.overlaps = function (other) {
-            // Calculate overlaps in both dimensions
-            var overlapX = Math.min(_this.x + _this.w + 1, other.x + other.w + 1) -
-                Math.max(_this.x, other.x);
-            var overlapY = Math.min(_this.y + _this.h + 1, other.y + other.h + 1) -
-                Math.max(_this.y, other.y);
-            // Partitions overlap if there's overlap in both dimensions
-            var isOverlapping = overlapX > 0 && overlapY > 0;
-            return {
-                isOverlapping: isOverlapping,
-                overlapX: overlapX,
-                overlapY: overlapY,
-            };
+            return (other.x < _this.x + _this.w + 1 &&
+                other.x + other.w > _this.x - 1 &&
+                other.y < _this.y + _this.h + 1 &&
+                other.y + other.h > _this.y - 1);
+            //takes another partition instance as argument
+            //returns true if any points of each overlap
         };
         this.setOpenWall = function (connection) {
             if (connection.y === _this.y - 1 &&
@@ -10863,258 +10897,6 @@ var split_partitions = function (partitions, prob) {
     return partitions;
     //takes input partitions array, randomly removes partitions and adds splits, output modified partitions array
 };
-var getPartitionsCenter = function (partitions) {
-    if (partitions.length === 0) {
-        return { x: 0, y: 0 };
-    }
-    // Calculate bounds of all partitions
-    var bounds = partitions.reduce(function (acc, partition) {
-        return {
-            minX: Math.min(acc.minX, partition.x),
-            maxX: Math.max(acc.maxX, partition.x + partition.w),
-            minY: Math.min(acc.minY, partition.y),
-            maxY: Math.max(acc.maxY, partition.y + partition.h),
-        };
-    }, {
-        minX: Infinity,
-        maxX: -Infinity,
-        minY: Infinity,
-        maxY: -Infinity,
-    });
-    // Calculate center point
-    return {
-        x: (bounds.minX + bounds.maxX) / 2,
-        y: (bounds.minY + bounds.maxY) / 2,
-    };
-};
-var movePartitionAwayFromPoint = function (partition, point, multiplier) {
-    // Get partition center
-    var partitionCenter = {
-        x: partition.x + partition.w / 2,
-        y: partition.y + partition.h / 2,
-    };
-    // Calculate angle between point and partition center
-    var dx = partitionCenter.x - point.x;
-    var dy = partitionCenter.y - point.y;
-    var angle = Math.atan2(dy, dx);
-    // Calculate new position using trigonometry
-    var moveX = Math.cos(angle) * multiplier;
-    var moveY = Math.sin(angle) * multiplier;
-    // Update partition position
-    partition.x += Math.round(moveX);
-    partition.y += Math.round(moveY);
-};
-// If you still need to move multiple partitions, you can use this wrapper:
-var movePartitionsAwayFromPoint = function (partitions, point, multiplier) {
-    partitions.forEach(function (partition) {
-        return movePartitionAwayFromPoint(partition, point, multiplier);
-    });
-    return partitions;
-};
-var distanceToPoint = function (center, point) {
-    return Math.sqrt(Math.pow(center.x - point.x, 2) + Math.pow(center.y - point.y, 2));
-};
-var sortByDistanceToPoint = function (partitions, centerPoint, outerToInner) {
-    if (outerToInner === void 0) { outerToInner = true; }
-    return __spreadArray([], partitions, true).sort(function (a, b) {
-        var aCenter = getPartitionsCenter([a]);
-        var bCenter = getPartitionsCenter([b]);
-        var aDistance = Math.sqrt(Math.pow(aCenter.x - centerPoint.x, 2) +
-            Math.pow(aCenter.y - centerPoint.y, 2));
-        var bDistance = Math.sqrt(Math.pow(bCenter.x - centerPoint.x, 2) +
-            Math.pow(bCenter.y - centerPoint.y, 2));
-        // If outerToInner is true, sort descending (outer first)
-        // If false, sort ascending (inner first)
-        return outerToInner ? bDistance - aDistance : aDistance - bDistance;
-    });
-};
-var removeDisconnectedPartitions = function (partitions) {
-    // Helper function to find all connected partitions starting from a root
-    var findConnectedGroup = function (root, visited) {
-        var group = [root];
-        visited.add(root);
-        // Queue for breadth-first search
-        var queue = [root];
-        while (queue.length > 0) {
-            var current = queue.shift();
-            // Check all connections from current partition
-            for (var _i = 0, _a = current.connections; _i < _a.length; _i++) {
-                var connection = _a[_i];
-                var otherPartition = connection.other;
-                if (!visited.has(otherPartition)) {
-                    visited.add(otherPartition);
-                    group.push(otherPartition);
-                    queue.push(otherPartition);
-                }
-            }
-        }
-        return group;
-    };
-    // Find all distinct groups
-    var visited = new Set();
-    var partitionGroups = [];
-    for (var _i = 0, partitions_2 = partitions; _i < partitions_2.length; _i++) {
-        var partition = partitions_2[_i];
-        if (!visited.has(partition)) {
-            var group = findConnectedGroup(partition, visited);
-            partitionGroups.push(group);
-        }
-    }
-    // If no groups were found, return empty array
-    if (partitionGroups.length === 0) {
-        return [];
-    }
-    // Sort groups by size (descending) and return the largest group
-    partitionGroups.sort(function (a, b) { return b.length - a.length; });
-    return partitionGroups[0];
-};
-// Now we can simplify sortOuterToInner to use this:
-var sortOuterToInner = function (combined, mapWidth, mapHeight) {
-    var center = getPartitionsCenter(combined);
-    return sortByDistanceToPoint(combined, center, true);
-};
-/**
- * Resolves collisions between partitions by pushing overlapping partitions apart.
- * Ensures that partitions do not exceed specified maximum boundaries during adjustment.
- * Logs input and output partitions for debugging purposes.
- * @param partitions1 First array of partitions.
- * @param partitions2 Second array of partitions.
- * @param maxX Maximum X boundary.
- * @param maxY Maximum Y boundary.
- * @returns Combined array of non-overlapping partitions.
- */
-var resolveCollisions = function (partitions1, partitions2, maxX, maxY) {
-    console.log("Starting resolveCollisions");
-    var combined = __spreadArray(__spreadArray([], partitions1, true), partitions2, true);
-    combined = sortByDistanceToPoint(combined, getPartitionsCenter(combined), false);
-    // Initial spread from center
-    var center = getPartitionsCenter(combined);
-    var maxRadius = Math.min(maxX, maxY) / 3; // Reduced to prevent spreading too far
-    /*
-    // Initial placement in a spiral
-    combined.forEach((partition, index) => {
-      const angle = (index / combined.length) * Math.PI * 2;
-      const radius = (index / combined.length) * maxRadius;
-  
-      partition.x = Math.round(center.x + Math.cos(angle) * radius);
-      partition.y = Math.round(center.y + Math.sin(angle) * radius);
-  
-      // Ensure within bounds
-      partition.x = Math.max(0, Math.min(maxX - partition.w, partition.x));
-      partition.y = Math.max(0, Math.min(maxY - partition.h, partition.y));
-    });
-    */
-    //combined = movePartitionsAwayFromPoint(combined, center, 2);
-    var maxIterations = 1000; // Reduced max iterations
-    var iteration = 0;
-    var previousOverlaps = Infinity;
-    var noProgressCount = 0;
-    //combined = remove_edge_rooms(combined, maxX, maxY);
-    while (iteration < maxIterations) {
-        var totalOverlaps = 0;
-        var maxMove = Math.max(5, 20 - iteration); // Reduced movement range
-        // Process each partition
-        for (var i = 0; i < combined.length; i++) {
-            var p1 = combined[i];
-            for (var j = i + 1; j < combined.length; j++) {
-                var p2 = combined[j];
-                var _a = p1.overlaps(p2), isOverlapping = _a.isOverlapping, overlapX = _a.overlapX, overlapY = _a.overlapY;
-                if (isOverlapping) {
-                    totalOverlaps++;
-                    // Move partitions apart based on their relative positions
-                    if (overlapX <= overlapY) {
-                        // Horizontal separation
-                        if (p1.x < p2.x) {
-                            if (Math.random() < 0.5) {
-                                p1.x -= 1;
-                            }
-                            else {
-                                p2.x += 1;
-                            }
-                        }
-                        else {
-                            if (Math.random() < 0.5) {
-                                p1.x += 1;
-                            }
-                            else {
-                                p2.x -= 1;
-                            }
-                        }
-                    }
-                    else {
-                        // Vertical separation
-                        if (p1.y < p2.y) {
-                            if (Math.random() < 0.5) {
-                                p1.y -= 1;
-                            }
-                            else {
-                                p2.y += 1;
-                            }
-                        }
-                        else {
-                            if (Math.random() < 0.5) {
-                                p1.y += 1;
-                            }
-                            else {
-                                p2.y -= 1;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        // Round all positions
-        combined.forEach(function (p) {
-            p.x = Math.round(p.x);
-            p.y = Math.round(p.y);
-        });
-        console.log("Iteration ".concat(iteration, ": ").concat(totalOverlaps, " overlaps remaining"));
-        // Check for progress
-        if (totalOverlaps >= previousOverlaps) {
-            noProgressCount++;
-            // If stuck for too long, add some randomness
-            if (noProgressCount >= 3) {
-                combined.forEach(function (p) {
-                    p.x += Math.floor(Math.random() * 6) - 3;
-                    p.y += Math.floor(Math.random() * 6) - 3;
-                    p.x = Math.max(0, Math.min(maxX - p.w, p.x));
-                    p.y = Math.max(0, Math.min(maxY - p.h, p.y));
-                });
-                noProgressCount = 0;
-            }
-        }
-        else {
-            noProgressCount = 0;
-        }
-        // Exit conditions
-        if (totalOverlaps === 0) {
-            console.log("All collisions resolved!");
-            break;
-        }
-        // Force exit if we're not making progress
-        if (noProgressCount >= 5) {
-            console.log("Exiting due to lack of progress");
-            break;
-        }
-        previousOverlaps = totalOverlaps;
-        iteration++;
-    }
-    // Final cleanup - remove any remaining overlapping partitions
-    var finalPartitions = [];
-    for (var i = 0; i < combined.length; i++) {
-        var hasOverlap = false;
-        for (var j = 0; j < finalPartitions.length; j++) {
-            if (combined[i].overlaps(finalPartitions[j]).isOverlapping) {
-                hasOverlap = true;
-                break;
-            }
-        }
-        if (!hasOverlap) {
-            finalPartitions.push(combined[i]);
-        }
-    }
-    return finalPartitions;
-};
 var remove_wall_rooms = function (partitions, w, h, prob) {
     if (prob === void 0) { prob = 1.0; }
     var _loop_2 = function (partition) {
@@ -11126,38 +10908,12 @@ var remove_wall_rooms = function (partitions, w, h, prob) {
             partitions = partitions.filter(function (p) { return p != partition; });
         }
     };
-    for (var _i = 0, partitions_3 = partitions; _i < partitions_3.length; _i++) {
-        var partition = partitions_3[_i];
+    for (var _i = 0, partitions_2 = partitions; _i < partitions_2.length; _i++) {
+        var partition = partitions_2[_i];
         _loop_2(partition);
     }
     return partitions;
     //return partitions array with no wall rooms
-};
-var remove_edge_rooms = function (partitions, w, h, prob) {
-    if (prob === void 0) { prob = 1.0; }
-    // Create copies for sorting by different criteria
-    var byLeft = __spreadArray([], partitions, true).sort(function (a, b) { return a.x - b.x; });
-    var byRight = __spreadArray([], partitions, true).sort(function (a, b) { return b.x + b.w - (a.x + a.w); });
-    var byTop = __spreadArray([], partitions, true).sort(function (a, b) { return a.y - b.y; });
-    var byBottom = __spreadArray([], partitions, true).sort(function (a, b) { return b.y + b.h - (a.y + a.h); });
-    // Calculate how many rooms to remove from each edge (20% of rooms)
-    var removeCount = Math.floor(partitions.length * 0.25);
-    // Create sets of rooms to remove
-    var toRemove = new Set();
-    // Add rooms from each edge if random check passes
-    for (var i = 0; i < removeCount; i++) {
-        if (random_1.Random.rand() < prob) {
-            byLeft[i] && toRemove.add(byLeft[i]);
-            byRight[i] && toRemove.add(byRight[i]);
-            byTop[i] && toRemove.add(byTop[i]);
-            byBottom[i] && toRemove.add(byBottom[i]);
-        }
-    }
-    // Return filtered array excluding rooms in toRemove set
-    return partitions.filter(function (p) { return !toRemove.has(p); });
-};
-var remove_disconnected_rooms = function (partitions) {
-    return partitions.filter(function (p) { return p.connections.length > 0; });
 };
 var populate_grid = function (partitions, grid, w, h) {
     for (var x = 0; x < w; x++) {
@@ -11165,8 +10921,8 @@ var populate_grid = function (partitions, grid, w, h) {
         grid[x] = []; //empty array at x index
         for (var y = 0; y < h; y++) {
             grid[x][y] = false;
-            for (var _i = 0, partitions_4 = partitions; _i < partitions_4.length; _i++) {
-                var partition = partitions_4[_i];
+            for (var _i = 0, partitions_3 = partitions; _i < partitions_3.length; _i++) {
+                var partition = partitions_3[_i];
                 if (partition.point_in(x, y))
                     grid[x][y] = partition;
             }
@@ -11177,71 +10933,47 @@ var populate_grid = function (partitions, grid, w, h) {
     //output grid array that indicates which cells are in which partition
 };
 var generate_dungeon_candidate = function (map_w, map_h) {
-    // Initialize with a single large partition
-    var partitions = [new Partition(300, 300, map_w - 600, map_h - 600)];
+    var partitions = [new Partition(100, 100, map_w, map_h)];
     var grid = [];
-    // Create slightly offset overlay partitions for variety
-    var overlayPartitions = __spreadArray([], partitions, true);
-    overlayPartitions.forEach(function (p) {
-        p.x += 5;
-        p.y += 5;
-    });
-    for (var i = 0; i < 5; i++) {
-        partitions = split_partitions(partitions, 0.3);
-    }
-    for (var j = 0; j < 5; j++) {
-        partitions = split_partitions(partitions, 0.7);
-    }
-    for (var j = 0; j < 5; j++) {
+    //add a new partition and define grid as empty array
+    for (var i = 0; i < 3; i++)
+        partitions = split_partitions(partitions, 0.75);
+    for (var i = 0; i < 3; i++)
         partitions = split_partitions(partitions, 1);
-    }
-    for (var j = 0; j < 5; j++) {
-        partitions = split_partitions(partitions, 0.7);
-    }
-    for (var j = 0; j < 5; j++) {
-        partitions = split_partitions(partitions, 0.3);
-    }
-    partitions = remove_edge_rooms(partitions, map_w, map_h, 1);
-    partitions = remove_edge_rooms(partitions, map_w, map_h, 1);
-    if (partitions.length < 5) {
-        console.warn("Not enough partitions after collision resolution");
-        return [];
-    }
-    partitions = remove_edge_rooms(partitions, map_w, map_h, 0.5);
-    if (partitions.length < 5) {
-        console.warn("Not enough partitions after edge room removal");
-        return [];
-    }
-    // Populate grid and sort partitions by area
+    for (var i = 0; i < 3; i++)
+        partitions = split_partitions(partitions, 0.25);
+    //split partitions 3 times with different probabilities
     grid = populate_grid(partitions, grid, map_w, map_h);
+    //populate the grid with partitions
     partitions.sort(function (a, b) { return a.area() - b.area(); });
+    //sort the partitions list by area
     var spawn = partitions[0];
+    //spawn is the first Partition instance
     spawn.type = room_1.RoomType.START;
+    //set the roomtype for the partition accordingly
     partitions[partitions.length - 1].type = room_1.RoomType.BOSS;
+    //set the largest room as boss room?
     var connected = [spawn];
     var frontier = [spawn];
     var found_boss = false;
-    var totalTries = 0;
-    var maxTotalTries = 5000; // Global limit for all connection attempts
-    while (frontier.length > 0 && !found_boss && totalTries < maxTotalTries) {
+    // connect rooms until we find the boss
+    while (frontier.length > 0 && !found_boss) {
         var room = frontier[0];
         frontier.splice(0, 1);
         var doors_found = 0;
         var num_doors = Math.floor(random_1.Random.rand() * 2 + 1);
-        var roomTries = 0;
-        var maxRoomTries = 100; // Limit tries per room
-        while (doors_found < num_doors && roomTries < maxRoomTries) {
+        var tries = 0;
+        var max_tries = 1000;
+        while (doors_found < num_doors && tries < max_tries) {
             var point = room.get_branch_point();
-            // Skip if no valid branch point found
-            if (!point)
-                break;
-            for (var _i = 0, partitions_5 = partitions; _i < partitions_5.length; _i++) {
-                var p = partitions_5[_i];
+            for (var _i = 0, partitions_4 = partitions; _i < partitions_4.length; _i++) {
+                var p = partitions_4[_i];
                 if (p !== room &&
                     connected.indexOf(p) === -1 &&
                     p.point_next_to(point.x, point.y)) {
                     room.connections.push(new PartitionConnection(point.x, point.y, p));
                     p.connections.push(new PartitionConnection(point.x, point.y, room));
+                    // Set open walls based on connection
                     room.setOpenWall(new PartitionConnection(point.x, point.y, p));
                     p.setOpenWall(new PartitionConnection(point.x, point.y, room));
                     frontier.push(p);
@@ -11252,24 +10984,111 @@ var generate_dungeon_candidate = function (map_w, map_h) {
                     break;
                 }
             }
-            roomTries++;
-            totalTries++;
-        }
-        // If we couldn't connect enough doors, but found the boss, that's okay
-        if (found_boss)
-            break;
-        // If we couldn't connect enough doors and haven't found the boss,
-        // check if we have any other rooms in the frontier
-        if (doors_found === 0 && frontier.length === 0) {
-            console.warn("Failed to connect all rooms");
-            return []; // Return empty array to trigger regeneration
+            tries++;
         }
     }
-    partitions = removeDisconnectedPartitions(partitions);
-    // If we hit the total tries limit or didn't find the boss
-    if (totalTries >= maxTotalTries || !found_boss) {
-        console.warn("Failed to generate valid dungeon layout");
+    var _loop_3 = function (partition) {
+        if (partition.connections.length === 0)
+            partitions = partitions.filter(function (p) { return p !== partition; });
+    };
+    // remove rooms we haven't connected to yet
+    for (var _a = 0, partitions_5 = partitions; _a < partitions_5.length; _a++) {
+        var partition = partitions_5[_a];
+        _loop_3(partition);
+    }
+    grid = populate_grid(partitions, grid, map_w, map_h); // recalculate with removed rooms
+    // make sure we haven't removed all the rooms
+    if (partitions.length === 0) {
+        return []; // for now just return an empty list so we can retry
+    }
+    // make some loops
+    var num_loop_doors = Math.floor(random_1.Random.rand() * 4 + 4);
+    var _loop_4 = function (i) {
+        var roomIndex = Math.floor(random_1.Random.rand() * partitions.length);
+        var room = partitions[roomIndex];
+        var found_door = false;
+        var tries = 0;
+        var max_tries = 10;
+        var not_already_connected = partitions.filter(function (p) { return !room.connections.some(function (c) { return c.other === p; }); });
+        while (!found_door && tries < max_tries) {
+            var point = room.get_branch_point();
+            for (var _e = 0, not_already_connected_1 = not_already_connected; _e < not_already_connected_1.length; _e++) {
+                var p = not_already_connected_1[_e];
+                if (p !== room && p.point_next_to(point.x, point.y)) {
+                    room.connections.push(new PartitionConnection(point.x, point.y, p));
+                    p.connections.push(new PartitionConnection(point.x, point.y, room));
+                    // Set open walls based on connection
+                    room.setOpenWall(new PartitionConnection(point.x, point.y, p));
+                    p.setOpenWall(new PartitionConnection(point.x, point.y, room));
+                    found_door = true;
+                    break;
+                }
+            }
+            tries++;
+        }
+    };
+    for (var i = 0; i < num_loop_doors; i++) {
+        _loop_4(i);
+    }
+    // add stair room
+    if (!partitions.some(function (p) { return p.type === room_1.RoomType.BOSS; }))
         return [];
+    var boss = partitions.find(function (p) { return p.type === room_1.RoomType.BOSS; });
+    var found_stair = false;
+    var max_stair_tries = 100;
+    var _loop_5 = function (stair_tries) {
+        var stair = new Partition(game_1.Game.rand(boss.x - 1, boss.x + boss.w - 2, random_1.Random.rand), boss.y - 4, 3, 3);
+        stair.type = room_1.RoomType.DOWNLADDER;
+        if (!partitions.some(function (p) { return p.overlaps(stair); })) {
+            found_stair = true;
+            partitions.push(stair);
+            stair.connections.push(new PartitionConnection(stair.x + 1, stair.y + 3, boss));
+            boss.connections.push(new PartitionConnection(stair.x + 1, stair.y + 3, stair));
+            // Set open walls for stair and boss connection
+            stair.setOpenWall(new PartitionConnection(stair.x + 1, stair.y + 3, boss));
+            boss.setOpenWall(new PartitionConnection(stair.x + 1, stair.y + 3, stair));
+            return "break";
+        }
+    };
+    for (var stair_tries = 0; stair_tries < max_stair_tries; stair_tries++) {
+        var state_1 = _loop_5(stair_tries);
+        if (state_1 === "break")
+            break;
+    }
+    if (!found_stair)
+        return [];
+    // calculate room distances
+    frontier = [spawn];
+    var seen = [];
+    spawn.distance = 0;
+    while (frontier.length > 0) {
+        var room = frontier[0];
+        frontier.splice(0, 1);
+        seen.push(room);
+        for (var _b = 0, _c = room.connections; _b < _c.length; _b++) {
+            var c = _c[_b];
+            var other = c.other;
+            other.distance = Math.min(other.distance, room.distance + 1);
+            if (seen.indexOf(other) === -1)
+                frontier.push(other);
+        }
+    }
+    // add special rooms
+    var added_rope_hole = false;
+    for (var _d = 0, partitions_6 = partitions; _d < partitions_6.length; _d++) {
+        var p = partitions_6[_d];
+        if (p.type === room_1.RoomType.DUNGEON) {
+            if (p.distance > 4 && p.area() <= 30 && random_1.Random.rand() < 0.1) {
+                p.type = room_1.RoomType.TREASURE;
+            }
+            else if (!added_rope_hole &&
+                p.distance > 3 &&
+                p.area() <= 20 &&
+                random_1.Random.rand() < 0.5) {
+                p.type = room_1.RoomType.ROPEHOLE;
+                added_rope_hole = true;
+            }
+        }
     }
     return partitions;
 };
@@ -11325,8 +11144,8 @@ var generate_cave_candidate = function (map_w, map_h, num_rooms) {
             var point = room.get_branch_point();
             if (!point) {
             }
-            for (var _i = 0, partitions_6 = partitions; _i < partitions_6.length; _i++) {
-                var p = partitions_6[_i];
+            for (var _i = 0, partitions_7 = partitions; _i < partitions_7.length; _i++) {
+                var p = partitions_7[_i];
                 if (p !== room &&
                     connected.indexOf(p) === -1 &&
                     p.point_next_to(point.x, point.y)) {
@@ -11350,7 +11169,7 @@ var generate_cave_candidate = function (map_w, map_h, num_rooms) {
     }
     // make some loops
     var num_loop_doors = Math.floor(random_1.Random.rand() * 4 + 4);
-    var _loop_3 = function (i) {
+    var _loop_6 = function (i) {
         var roomIndex = Math.floor(random_1.Random.rand() * partitions.length);
         var room = partitions[roomIndex];
         var found_door = false;
@@ -11362,8 +11181,8 @@ var generate_cave_candidate = function (map_w, map_h, num_rooms) {
             if (!point) {
                 break; // Skip if no valid branch point found
             }
-            for (var _c = 0, not_already_connected_1 = not_already_connected; _c < not_already_connected_1.length; _c++) {
-                var p = not_already_connected_1[_c];
+            for (var _c = 0, not_already_connected_2 = not_already_connected; _c < not_already_connected_2.length; _c++) {
+                var p = not_already_connected_2[_c];
                 if (p !== room && p.point_next_to(point.x, point.y)) {
                     room.connections.push(new PartitionConnection(point.x, point.y, p));
                     p.connections.push(new PartitionConnection(point.x, point.y, room));
@@ -11375,7 +11194,7 @@ var generate_cave_candidate = function (map_w, map_h, num_rooms) {
         }
     };
     for (var i = 0; i < num_loop_doors; i++) {
-        _loop_3(i);
+        _loop_6(i);
     }
     // calculate room distances
     frontier = [spawn];
@@ -11417,8 +11236,8 @@ var LevelGenerator = /** @class */ (function () {
         this.depthReached = 0;
         this.currentFloorFirstLevelID = 0;
         this.setOpenWallsForPartitions = function (partitions, mapWidth, mapHeight) {
-            for (var _i = 0, partitions_7 = partitions; _i < partitions_7.length; _i++) {
-                var partition = partitions_7[_i];
+            for (var _i = 0, partitions_8 = partitions; _i < partitions_8.length; _i++) {
+                var partition = partitions_8[_i];
                 // Reset all walls to closed by default
                 partition.isTopOpen = false;
                 partition.isRightOpen = false;
@@ -11476,7 +11295,6 @@ var LevelGenerator = /** @class */ (function () {
         };
         this.generate = function (game, depth, cave) {
             if (cave === void 0) { cave = false; }
-            console.log("Generate called:", { depth: depth, cave: cave });
             _this.depthReached = depth;
             // Set the random state based on the seed and depth
             random_1.Random.setState(_this.seed + depth);
@@ -11485,10 +11303,8 @@ var LevelGenerator = /** @class */ (function () {
             var mapGroup = _this.game.rooms.length > 0
                 ? _this.game.rooms[_this.game.rooms.length - 1].mapGroup + 1
                 : 0;
-            console.log("Generating partitions");
             // Generate partitions based on whether it's a cave or a dungeon
-            var partitions = cave ? generate_cave(20, 20) : generate_dungeon(900, 900);
-            console.log("Partitions generated:", partitions.length);
+            var partitions = cave ? generate_cave(20, 20) : generate_dungeon(35, 35);
             // Get the levels based on the partitions
             var levels = _this.getLevels(partitions, depth, mapGroup);
             // Update the current floor first level ID if it's not a cave
@@ -11538,7 +11354,6 @@ var LevelGenerator = /** @class */ (function () {
                 }
             }
         };
-        console.log("LevelGenerator constructed");
     }
     return LevelGenerator;
 }());
