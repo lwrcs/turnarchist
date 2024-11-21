@@ -806,6 +806,19 @@ export class Room {
         this.roomY + this.height - blockH - 2,
         rand
       );
+      let neighborCount = (wall: Wall) => {
+        let count = 0;
+        for (let xx = wall.x - 1; xx <= wall.x + 1; xx++) {
+          for (let yy = wall.y - 1; yy <= wall.y + 1; yy++) {
+            if (
+              this.roomArray[xx]?.[yy] instanceof Wall &&
+              !(xx === wall.x && yy === wall.y)
+            )
+              count++;
+          }
+        }
+        return count;
+      };
 
       for (let xx = x; xx < x + blockW; xx++) {
         for (let yy = y; yy < y + blockH; yy++) {
@@ -814,6 +827,13 @@ export class Room {
           this.innerWalls.push(w);
         }
       }
+      this.innerWalls.forEach((wall) => {
+        if (neighborCount(wall) <= 1) {
+          this.removeWall(wall.x, wall.y);
+          this.roomArray[wall.x][wall.y] = new Floor(this, wall.x, wall.y);
+          this.innerWalls = this.innerWalls.filter((w) => w !== wall);
+        }
+      });
     }
   }
 
@@ -2057,6 +2077,14 @@ export class Room {
     if (this.turn === TurnState.computerTurn) this.computerTurn(); // player skipped computer's turn, catch up
   };
 
+  tickHitWarnings = () => {
+    for (const h of this.hitwarnings) {
+      if (h.parent && (h.parent.dead || h.parent.unconscious)) {
+        h.tick();
+      }
+    }
+  };
+
   tick = (player: Player) => {
     player.updateSlowMotion();
     this.lastEnemyCount = this.entities.filter(
@@ -2167,7 +2195,7 @@ export class Room {
     this.turn = TurnState.playerTurn;
   };
 
-  private checkForNoEnemies = () => {
+  checkForNoEnemies = () => {
     let enemies = this.entities.filter((e) => e instanceof Enemy);
     if (enemies.length === 0 && this.lastEnemyCount > 0) {
       // if (this.doors[0].type === DoorType.GUARDEDDOOR) {

@@ -91,7 +91,6 @@ export class Player extends Drawable {
   moveQueue: { x: number; y: number; direction: Direction }[];
   lastX: number;
   lastY: number;
-  previousDrawDirectionArray: DrawDirection[];
   motionSpeed: number;
   slowMotionEnabled: boolean;
   justMoved: DrawDirection;
@@ -144,6 +143,8 @@ export class Player extends Drawable {
       Input.mouseRightClickListeners.push(() =>
         this.inputHandler(InputEnum.RIGHT_CLICK)
       );
+      Input.numKeyListener = (num: number) =>
+        this.inputHandler(InputEnum.NUMBER_1 + num - 1);
     }
     this.mapToggled = true;
     this.health = 3;
@@ -175,8 +176,7 @@ export class Player extends Drawable {
     this.drawMoveSpeed = 0.3; // greater than 1 less than 2
     this.moveQueue = [];
     this.isProcessingQueue = false;
-    this.previousDrawDirectionArray = [];
-    this.previousDrawDirectionArray.push(DrawDirection.Y);
+
     this.hitX = 0;
     this.hitY = 0;
     this.motionSpeed = 1;
@@ -244,6 +244,17 @@ export class Player extends Drawable {
       case InputEnum.MOUSE_MOVE:
         this.mouseMove();
         break;
+      case InputEnum.NUMBER_1:
+      case InputEnum.NUMBER_2:
+      case InputEnum.NUMBER_3:
+      case InputEnum.NUMBER_4:
+      case InputEnum.NUMBER_5:
+      case InputEnum.NUMBER_6:
+      case InputEnum.NUMBER_7:
+      case InputEnum.NUMBER_8:
+      case InputEnum.NUMBER_9:
+        this.numKeyListener(input);
+        break;
     }
   };
   commaListener = () => {
@@ -251,6 +262,9 @@ export class Player extends Drawable {
   };
   periodListener = () => {
     this.inventory.right();
+  };
+  numKeyListener = (input: InputEnum) => {
+    this.inventory.handleNumKey(input - 13);
   };
 
   tapListener = () => {
@@ -557,13 +571,12 @@ export class Player extends Drawable {
             if (e.destroyable) {
               e.kill();
               if (this.game.rooms[this.levelID] === this.game.room) Sound.hit();
-              this.hitX = 0.5 * (this.x - e.x);
-              this.hitY = 0.5 * (this.y - e.y);
               this.game.rooms[this.levelID].particles.push(
                 new SlashParticle(e.x, e.y)
               );
+              this.shakeScreen(this.x, this.y, e.x, e.y, 10);
+
               this.game.rooms[this.levelID].tick(this);
-              this.game.shakeScreen(10 * this.hitX, 10 * this.hitY);
               return;
             }
           } else {
@@ -613,8 +626,7 @@ export class Player extends Drawable {
         this.game.rooms[this.levelID].tick(this);
     } else {
       if (other instanceof Door) {
-        this.hitX = (this.x - x) * 0.5;
-        this.hitY = (this.y - y) * 0.5;
+        this.shakeScreen(this.x, this.y, x, y, 10);
         if (other.canUnlock(this)) other.unlock(this);
       }
     }
@@ -726,8 +738,6 @@ export class Player extends Drawable {
     let diffX = x - this.lastX;
     let diffY = y - this.lastY;
     if (diffX === 0 && diffY === 0) return;
-    if (Math.abs(diffX) > 0) this.justMoved = DrawDirection.X;
-    else if (Math.abs(diffY) > 0) this.justMoved = DrawDirection.Y;
 
     //this.game.rooms[this.levelID].updateLighting();
   };
@@ -736,8 +746,6 @@ export class Player extends Drawable {
     // doesn't touch smoothing
     this.x = x;
     this.y = y;
-    this.previousDrawDirectionArray = [];
-    this.previousDrawDirectionArray.push(DrawDirection.Y);
   };
 
   moveSnap = (x: number, y: number) => {
@@ -748,8 +756,6 @@ export class Player extends Drawable {
     this.drawY = 0;
     this.hitX = 0;
     this.hitY = 0;
-    this.previousDrawDirectionArray = [];
-    this.previousDrawDirectionArray.push(DrawDirection.Y);
   };
 
   update = () => {};
@@ -916,8 +922,8 @@ export class Player extends Drawable {
     //console.log("this.x", this.x);
     //console.log("this.y", this.y);
     if (!this.doneMoving()) {
-      this.drawX *= 1 - this.drawMoveSpeed * delta;
-      this.drawY *= 1 - this.drawMoveSpeed * delta;
+      this.drawX -= this.drawX * this.drawMoveSpeed * delta;
+      this.drawY -= this.drawY * this.drawMoveSpeed * delta;
     }
     if (this.doneHitting()) {
       this.jump(delta);
@@ -941,10 +947,32 @@ export class Player extends Drawable {
   };
 
   updateHitXY = (delta: number) => {
-    this.hitX *= 1 - 0.4 * delta;
-    this.hitY *= 1 - 0.4 * delta;
+    this.hitX -= this.hitX * 0.3;
+    this.hitY -= this.hitY * 0.3;
     if (Math.abs(this.hitX) < 0.01) this.hitX = 0;
     if (Math.abs(this.hitY) < 0.01) this.hitY = 0;
+  };
+
+  hitShake = (
+    playerX: number,
+    playerY: number,
+    otherX: number,
+    otherY: number
+  ) => {
+    this.hitX = 0.5 * (playerX - otherX);
+    this.hitY = 0.5 * (playerY - otherY);
+  };
+
+  shakeScreen = (
+    playerX: number,
+    playerY: number,
+    otherX: number,
+    otherY: number,
+    shakeStrength: number = 10
+  ) => {
+    this.hitShake(playerX, playerY, otherX, otherY);
+
+    this.game.shakeScreen(this.hitX * shakeStrength, this.hitY * shakeStrength);
   };
 
   jump = (delta: number) => {

@@ -84,6 +84,8 @@ export class Entity extends Drawable {
   protected diagonalAttackRange: number;
   lightSource: LightSource;
   drawMoveSpeed: number;
+  unconscious: boolean;
+  hitWarnings: HitWarning[];
 
   constructor(room: Room, game: Game, x: number, y: number) {
     super();
@@ -120,13 +122,14 @@ export class Entity extends Drawable {
     this.rumbling = false;
     this.animationSpeed = 0.1;
     this.drawYOffset = 1.175;
-
+    this.hitWarnings = [];
     this.orthogonalAttack = false;
     this.diagonalAttack = false;
     this.forwardOnlyAttack = false;
     this.attackRange = 1;
     this.diagonalAttackRange = 1;
     this.drawMoveSpeed = 0.3;
+    this.unconscious = false;
   }
 
   static add<
@@ -171,6 +174,23 @@ export class Entity extends Drawable {
     return (
       x >= this.x && x < this.x + this.w && y >= this.y && y < this.y + this.h
     );
+  };
+
+  updateDrawXY = (delta: number) => {
+    if (!this.doneMoving()) {
+      this.drawX -= this.drawMoveSpeed * delta * this.drawX;
+      this.drawY -= this.drawMoveSpeed * delta * this.drawY;
+
+      this.drawX =
+        Math.abs(this.drawX) < 0.01 ? 0 : Math.max(-1, Math.min(this.drawX, 1));
+      this.drawY =
+        Math.abs(this.drawY) < 0.01 ? 0 : Math.max(-1, Math.min(this.drawY, 1));
+    }
+  };
+
+  setDrawXY = (x: number, y: number) => {
+    this.drawX += this.x - x;
+    this.drawY += this.y - y;
   };
 
   readonly getPlayer = () => {
@@ -336,6 +356,8 @@ export class Entity extends Drawable {
   };
 
   drawTopLayer = (delta: number) => {
+    this.updateDrawXY(delta);
+
     this.drawableY = this.y - this.drawY;
 
     this.healthBar.draw(
@@ -346,12 +368,6 @@ export class Entity extends Drawable {
       this.y,
       true
     );
-    this.updateDrawXY(delta);
-  };
-
-  updateDrawXY = (delta: number) => {
-    this.drawX += -this.drawMoveSpeed * delta * this.drawX;
-    this.drawY += -this.drawMoveSpeed * delta * this.drawY;
   };
 
   drawSleepingZs = (delta: number, offsetX = 0, offsetY = 0) => {
@@ -619,9 +635,18 @@ export class Entity extends Drawable {
       const targetX = this.x + x;
       const targetY = this.y + y;
       if (this.isWithinRoomBounds(targetX, targetY)) {
-        this.room.hitwarnings.push(
-          new HitWarning(this.game, targetX, targetY, this.x, this.y)
+        const hitWarning = new HitWarning(
+          this.game,
+          targetX,
+          targetY,
+          this.x,
+          this.y,
+          true,
+          false,
+          this
         );
+        this.room.hitwarnings.push(hitWarning);
+        //this.hitWarnings.push(hitWarning);
       }
     });
   };

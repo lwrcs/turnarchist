@@ -310,8 +310,7 @@ export abstract class Enemy extends Entity {
               if (!hitPlayer) {
                 // Move to the new position
                 this.tryMove(moveX, moveY);
-                this.drawX = this.x - oldX;
-                this.drawY = this.y - oldY;
+                this.setDrawXY(oldX, oldY);
                 if (this.x > oldX) this.direction = Direction.RIGHT;
                 else if (this.x < oldX) this.direction = Direction.LEFT;
                 else if (this.y > oldY) this.direction = Direction.DOWN;
@@ -393,10 +392,17 @@ export abstract class Enemy extends Entity {
     }
   };
 
+  jump = (delta: number) => {
+    let j = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
+    this.jumpY = Math.sin(j * Math.PI) * this.jumpHeight;
+    if (this.jumpY < 0.01 && this.jumpY > -0.01) this.jumpY = 0;
+    if (this.jumpY > this.jumpHeight) this.jumpY = this.jumpHeight;
+  };
+
   updateDrawXY = (delta: number) => {
     if (!this.doneMoving()) {
-      this.drawX *= 1 - this.drawMoveSpeed * delta;
-      this.drawY *= 1 - this.drawMoveSpeed * delta;
+      this.drawX -= this.drawMoveSpeed * delta * this.drawX;
+      this.drawY -= this.drawMoveSpeed * delta * this.drawY;
 
       this.drawX =
         Math.abs(this.drawX) < 0.01 ? 0 : Math.max(-1, Math.min(this.drawX, 1));
@@ -404,13 +410,6 @@ export abstract class Enemy extends Entity {
         Math.abs(this.drawY) < 0.01 ? 0 : Math.max(-1, Math.min(this.drawY, 1));
       this.jump(delta);
     }
-  };
-
-  jump = (delta: number) => {
-    let j = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
-    this.jumpY = Math.sin(j * Math.PI) * this.jumpHeight;
-    if (this.jumpY < 0.01 && this.jumpY > -0.01) this.jumpY = 0;
-    if (this.jumpY > this.jumpHeight) this.jumpY = this.jumpHeight;
   };
 
   draw = (delta: number) => {

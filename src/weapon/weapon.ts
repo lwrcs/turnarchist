@@ -47,7 +47,7 @@ export abstract class Weapon extends Equippable {
       );
       this.game.rooms[this.wielder.levelID].tick(this.wielder);
       if (this.wielder === this.game.players[this.game.localPlayerID])
-        this.game.shakeScreen(10 * this.wielder.hitX, 10 * this.wielder.drawY);
+        this.game.shakeScreen(10 * this.wielder.hitX, 10 * this.wielder.hitY);
     }
     return !flag;
   };

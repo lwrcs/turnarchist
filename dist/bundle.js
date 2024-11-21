@@ -593,8 +593,7 @@ var ArmoredzombieEnemy = /** @class */ (function (_super) {
                                 }
                                 if (!hitPlayer) {
                                     _this.tryMove(moveX, moveY);
-                                    _this.drawX = _this.x - oldX;
-                                    _this.drawY = _this.y - oldY;
+                                    _this.setDrawXY(oldX, oldY);
                                     if (_this.x > oldX)
                                         _this.direction = game_1.Direction.RIGHT;
                                     else if (_this.x < oldX)
@@ -1485,8 +1484,7 @@ var BishopEnemy = /** @class */ (function (_super) {
                             }
                             if (!hitPlayer) {
                                 _this.tryMove(moveX, moveY);
-                                _this.drawX = _this.x - oldX;
-                                _this.drawY = _this.y - oldY;
+                                _this.setDrawXY(oldX, oldY);
                             }
                         }
                         _this.makeHitWarnings();
@@ -1933,8 +1931,7 @@ var CrabEnemy = /** @class */ (function (_super) {
                                 }
                                 if (!hitPlayer) {
                                     _this.tryMove(moves[0].pos.x, moves[0].pos.y);
-                                    _this.drawX = _this.x - oldX;
-                                    _this.drawY = _this.y - oldY;
+                                    _this.setDrawXY(oldX, oldY);
                                     if (_this.x > oldX)
                                         _this.direction = game_1.Direction.RIGHT;
                                     else if (_this.x < oldX)
@@ -2306,8 +2303,7 @@ var Enemy = /** @class */ (function (_super) {
                                 if (!hitPlayer) {
                                     // Move to the new position
                                     _this.tryMove(moveX, moveY);
-                                    _this.drawX = _this.x - oldX;
-                                    _this.drawY = _this.y - oldY;
+                                    _this.setDrawXY(oldX, oldY);
                                     if (_this.x > oldX)
                                         _this.direction = game_1.Direction.RIGHT;
                                     else if (_this.x < oldX)
@@ -2387,17 +2383,6 @@ var Enemy = /** @class */ (function (_super) {
                 }
             }
         };
-        _this.updateDrawXY = function (delta) {
-            if (!_this.doneMoving()) {
-                _this.drawX *= 1 - _this.drawMoveSpeed * delta;
-                _this.drawY *= 1 - _this.drawMoveSpeed * delta;
-                _this.drawX =
-                    Math.abs(_this.drawX) < 0.01 ? 0 : Math.max(-1, Math.min(_this.drawX, 1));
-                _this.drawY =
-                    Math.abs(_this.drawY) < 0.01 ? 0 : Math.max(-1, Math.min(_this.drawY, 1));
-                _this.jump(delta);
-            }
-        };
         _this.jump = function (delta) {
             var j = Math.max(Math.abs(_this.drawX), Math.abs(_this.drawY));
             _this.jumpY = Math.sin(j * Math.PI) * _this.jumpHeight;
@@ -2405,6 +2390,17 @@ var Enemy = /** @class */ (function (_super) {
                 _this.jumpY = 0;
             if (_this.jumpY > _this.jumpHeight)
                 _this.jumpY = _this.jumpHeight;
+        };
+        _this.updateDrawXY = function (delta) {
+            if (!_this.doneMoving()) {
+                _this.drawX -= _this.drawMoveSpeed * delta * _this.drawX;
+                _this.drawY -= _this.drawMoveSpeed * delta * _this.drawY;
+                _this.drawX =
+                    Math.abs(_this.drawX) < 0.01 ? 0 : Math.max(-1, Math.min(_this.drawX, 1));
+                _this.drawY =
+                    Math.abs(_this.drawY) < 0.01 ? 0 : Math.max(-1, Math.min(_this.drawY, 1));
+                _this.jump(delta);
+            }
         };
         _this.draw = function (delta) {
             if (!_this.dead) {
@@ -2905,8 +2901,7 @@ var FrogEnemy = /** @class */ (function (_super) {
                                     }
                                     if (_this.x !== oldX || _this.y !== oldY) {
                                         _this.jump();
-                                        _this.drawX = _this.x - oldX;
-                                        _this.drawY = _this.y - oldY;
+                                        _this.setDrawXY(oldX, oldY);
                                         if (Math.abs(_this.x - oldX) > 1 ||
                                             Math.abs(_this.y - oldY) > 1 ||
                                             (_this.x !== oldX && _this.y !== oldY)) {
@@ -3161,8 +3156,7 @@ var KnightEnemy = /** @class */ (function (_super) {
                                 }
                                 if (!hitPlayer) {
                                     _this.tryMove(moves[0].pos.x, moves[0].pos.y);
-                                    _this.drawX = _this.x - oldX;
-                                    _this.drawY = _this.y - oldY;
+                                    _this.setDrawXY(oldX, oldY);
                                     if (_this.x > oldX)
                                         _this.direction = game_1.Direction.RIGHT;
                                     else if (_this.x < oldX)
@@ -3405,8 +3399,7 @@ var QueenEnemy = /** @class */ (function (_super) {
                             if (!hitPlayer) {
                                 //if ()
                                 _this.tryMove(moveX, moveY);
-                                _this.drawX = _this.x - oldX;
-                                _this.drawY = _this.y - oldY;
+                                _this.setDrawXY(oldX, oldY);
                             }
                         }
                         _this.makeHitWarnings();
@@ -3530,8 +3523,11 @@ var SkullEnemy = /** @class */ (function (_super) {
                     _this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
             }
             _this.ticksSinceFirstHit = 0;
+            if (_this.health == 2)
+                _this.unconscious = false;
             _this.health -= damage;
             if (_this.health == 1) {
+                _this.unconscious = true;
                 imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 3, 28);
             }
             else
@@ -3552,9 +3548,11 @@ var SkullEnemy = /** @class */ (function (_super) {
                     return;
                 }
                 if (_this.health <= 1) {
+                    _this.unconscious = true;
                     _this.ticksSinceFirstHit++;
                     if (_this.ticksSinceFirstHit >= _this.REGEN_TICKS) {
                         _this.health = 2;
+                        _this.unconscious = false;
                     }
                     return;
                 }
@@ -3623,8 +3621,7 @@ var SkullEnemy = /** @class */ (function (_super) {
                                 }
                                 if (!hitPlayer) {
                                     _this.tryMove(moveX, moveY);
-                                    _this.drawX = _this.x - oldX;
-                                    _this.drawY = _this.y - oldY;
+                                    _this.setDrawXY(oldX, oldY);
                                     if (_this.x > oldX)
                                         _this.direction = game_1.Direction.RIGHT;
                                     else if (_this.x < oldX)
@@ -4283,8 +4280,7 @@ var ZombieEnemy = /** @class */ (function (_super) {
                                 if (!hitPlayer) {
                                     // Move to the new position
                                     _this.tryMove(moveX, moveY);
-                                    _this.drawX = _this.x - oldX;
-                                    _this.drawY = _this.y - oldY;
+                                    _this.setDrawXY(oldX, oldY);
                                     if (_this.x > oldX)
                                         _this.direction = game_1.Direction.RIGHT;
                                     else if (_this.x < oldX)
@@ -4494,6 +4490,20 @@ var Entity = /** @class */ (function (_super) {
         _this.pointIn = function (x, y) {
             return (x >= _this.x && x < _this.x + _this.w && y >= _this.y && y < _this.y + _this.h);
         };
+        _this.updateDrawXY = function (delta) {
+            if (!_this.doneMoving()) {
+                _this.drawX -= _this.drawMoveSpeed * delta * _this.drawX;
+                _this.drawY -= _this.drawMoveSpeed * delta * _this.drawY;
+                _this.drawX =
+                    Math.abs(_this.drawX) < 0.01 ? 0 : Math.max(-1, Math.min(_this.drawX, 1));
+                _this.drawY =
+                    Math.abs(_this.drawY) < 0.01 ? 0 : Math.max(-1, Math.min(_this.drawY, 1));
+            }
+        };
+        _this.setDrawXY = function (x, y) {
+            _this.drawX += _this.x - x;
+            _this.drawY += _this.y - y;
+        };
         _this.getPlayer = function () {
             var maxDistance = 138291380921; // pulled this straight outta my ass
             var closestDistance = maxDistance;
@@ -4630,13 +4640,9 @@ var Entity = /** @class */ (function (_super) {
             });
         };
         _this.drawTopLayer = function (delta) {
+            _this.updateDrawXY(delta);
             _this.drawableY = _this.y - _this.drawY;
             _this.healthBar.draw(delta, _this.health, _this.maxHealth, _this.x, _this.y, true);
-            _this.updateDrawXY(delta);
-        };
-        _this.updateDrawXY = function (delta) {
-            _this.drawX += -_this.drawMoveSpeed * delta * _this.drawX;
-            _this.drawY += -_this.drawMoveSpeed * delta * _this.drawY;
         };
         _this.drawSleepingZs = function (delta, offsetX, offsetY) {
             if (offsetX === void 0) { offsetX = 0; }
@@ -4836,7 +4842,9 @@ var Entity = /** @class */ (function (_super) {
                 var targetX = _this.x + x;
                 var targetY = _this.y + y;
                 if (_this.isWithinRoomBounds(targetX, targetY)) {
-                    _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, targetX, targetY, _this.x, _this.y));
+                    var hitWarning = new hitWarning_1.HitWarning(_this.game, targetX, targetY, _this.x, _this.y, true, false, _this);
+                    _this.room.hitwarnings.push(hitWarning);
+                    //this.hitWarnings.push(hitWarning);
                 }
             });
         };
@@ -4878,12 +4886,14 @@ var Entity = /** @class */ (function (_super) {
         _this.rumbling = false;
         _this.animationSpeed = 0.1;
         _this.drawYOffset = 1.175;
+        _this.hitWarnings = [];
         _this.orthogonalAttack = false;
         _this.diagonalAttack = false;
         _this.forwardOnlyAttack = false;
         _this.attackRange = 1;
         _this.diagonalAttackRange = 1;
         _this.drawMoveSpeed = 0.3;
+        _this.unconscious = false;
         return _this;
     }
     Entity.add = function (room, game, x, y) {
@@ -6653,12 +6663,19 @@ var Game = /** @class */ (function () {
             //Game.ctx.canvas.height = window.innerHeight;
         };
         this.shakeScreen = function (shakeX, shakeY) {
+            _this.screenShakeX = 0;
+            _this.screenShakeY = 0;
+            _this.shakeAmountX = 0;
+            _this.shakeAmountY = 0;
             _this.screenShakeActive = true;
             _this.screenShakeX = shakeX;
             _this.screenShakeY = shakeY;
             _this.shakeAmountX = Math.abs(shakeX);
             _this.shakeAmountY = Math.abs(shakeY);
-            _this.shakeFrame = 0;
+            if (shakeX < 0 || shakeY < 0)
+                _this.shakeFrame = (3 * Math.PI) / 2;
+            if (shakeX > 0 || shakeY > 0)
+                _this.shakeFrame = Math.PI / 2;
             _this.screenShakeCutoff = Date.now();
         };
         this.drawStuff = function (delta) {
@@ -6814,14 +6831,14 @@ var Game = /** @class */ (function () {
                 // Start of Selection
                 if (_this.screenShakeActive) {
                     //const decayFactor = 1 - 0.15 * delta;
-                    var decayFactor = 1 / Math.sqrt(Date.now() + 1 - _this.screenShakeCutoff);
-                    _this.shakeAmountX *= 1 - 0.1 * delta;
-                    _this.shakeAmountY *= 1 - 0.1 * delta;
+                    var decayFactor = 5 / Math.sqrt((Date.now() + 30 - _this.screenShakeCutoff) * delta);
+                    _this.shakeAmountX -= _this.shakeAmountX * 0.1 * delta;
+                    _this.shakeAmountY -= _this.shakeAmountY * 0.1 * delta;
                     _this.screenShakeX =
-                        Math.sin(_this.shakeFrame * Math.PI) * _this.shakeAmountX;
+                        Math.sin(_this.shakeFrame * Math.PI) * _this.shakeAmountX * decayFactor;
                     _this.screenShakeY =
-                        Math.sin(_this.shakeFrame * Math.PI) * _this.shakeAmountY;
-                    _this.shakeFrame += 0.2 * delta;
+                        Math.sin(_this.shakeFrame * Math.PI) * _this.shakeAmountY * decayFactor;
+                    _this.shakeFrame += 0.3 * delta;
                     if (Math.abs(decayFactor) < 0.001) {
                         _this.shakeAmountX = 0;
                         _this.shakeAmountY = 0;
@@ -7037,7 +7054,7 @@ var Game = /** @class */ (function () {
                     _this.screenShakeY = 0;
                     _this.shakeAmountX = 0;
                     _this.shakeAmountY = 0;
-                    _this.shakeFrame = 0;
+                    _this.shakeFrame = (3 * Math.PI) / 2;
                     _this.screenShakeCutoff = 0;
                     _this.levelState = LevelState.IN_LEVEL;
                     _this.tutorialActive = false;
@@ -8185,9 +8202,11 @@ var Direction;
 })(Direction || (Direction = {}));
 var HitWarning = /** @class */ (function (_super) {
     __extends(HitWarning, _super);
-    function HitWarning(game, x, y, eX, eY, isEnemy, dirOnly) {
+    function HitWarning(game, x, y, eX, eY, isEnemy, dirOnly, parent) {
         if (dirOnly === void 0) { dirOnly = false; }
+        if (parent === void 0) { parent = null; }
         var _this = _super.call(this) || this;
+        _this.parent = null;
         _this._pointerDir = null;
         _this._pointerOffset = null;
         _this.tick = function () {
@@ -8235,6 +8254,7 @@ var HitWarning = /** @class */ (function (_super) {
         _this.y = y;
         _this.dead = false;
         _this.game = game;
+        _this.parent = parent;
         _this.tileX = 0;
         _this.tileY = 22;
         _this.eX = eX;
@@ -8327,6 +8347,15 @@ var InputEnum;
     InputEnum[InputEnum["LEFT_CLICK"] = 11] = "LEFT_CLICK";
     InputEnum[InputEnum["RIGHT_CLICK"] = 12] = "RIGHT_CLICK";
     InputEnum[InputEnum["MOUSE_MOVE"] = 13] = "MOUSE_MOVE";
+    InputEnum[InputEnum["NUMBER_1"] = 14] = "NUMBER_1";
+    InputEnum[InputEnum["NUMBER_2"] = 15] = "NUMBER_2";
+    InputEnum[InputEnum["NUMBER_3"] = 16] = "NUMBER_3";
+    InputEnum[InputEnum["NUMBER_4"] = 17] = "NUMBER_4";
+    InputEnum[InputEnum["NUMBER_5"] = 18] = "NUMBER_5";
+    InputEnum[InputEnum["NUMBER_6"] = 19] = "NUMBER_6";
+    InputEnum[InputEnum["NUMBER_7"] = 20] = "NUMBER_7";
+    InputEnum[InputEnum["NUMBER_8"] = 21] = "NUMBER_8";
+    InputEnum[InputEnum["NUMBER_9"] = 22] = "NUMBER_9";
 })(InputEnum = exports.InputEnum || (exports.InputEnum = {}));
 exports.Input = {
     _pressed: {},
@@ -8362,6 +8391,7 @@ exports.Input = {
     tapListener: function () { },
     commaListener: function () { },
     periodListener: function () { },
+    numKeyListener: function (num) { },
     mouseLeftClickListeners: [],
     mouseRightClickListeners: [],
     mouseMoveListeners: [],
@@ -8385,6 +8415,15 @@ exports.Input = {
     N: "KeyN",
     I: "KeyI",
     Q: "KeyQ",
+    NUMBER_1: "Digit1",
+    NUMBER_2: "Digit2",
+    NUMBER_3: "Digit3",
+    NUMBER_4: "Digit4",
+    NUMBER_5: "Digit5",
+    NUMBER_6: "Digit6",
+    NUMBER_7: "Digit7",
+    NUMBER_8: "Digit8",
+    NUMBER_9: "Digit9",
     COMMA: "Comma",
     PERIOD: "Period",
     isDown: function (keyCode) {
@@ -8442,6 +8481,17 @@ exports.Input = {
                 break;
             case exports.Input.PERIOD:
                 exports.Input.periodListener();
+                break;
+            case exports.Input.NUMBER_1:
+            case exports.Input.NUMBER_2:
+            case exports.Input.NUMBER_3:
+            case exports.Input.NUMBER_4:
+            case exports.Input.NUMBER_5:
+            case exports.Input.NUMBER_6:
+            case exports.Input.NUMBER_7:
+            case exports.Input.NUMBER_8:
+            case exports.Input.NUMBER_9:
+                exports.Input.numKeyListener(parseInt(event.code.slice(-1)));
                 break;
         }
     },
@@ -8652,11 +8702,14 @@ var Inventory = /** @class */ (function () {
         this.cols = 5;
         this.selX = 0;
         this.selY = 0;
+        this.isOpen = false;
+        this.openTime = Date.now();
+        this.coins = 0;
+        this.weapon = null;
         this.expansion = 0;
         this.clear = function () {
-            _this.items = [];
-            for (var i = 0; i < (_this.rows + _this.expansion) * _this.cols; i++)
-                _this.equipAnimAmount[i] = 0;
+            _this.items.fill(null);
+            _this.equipAnimAmount.fill(0);
         };
         this.open = function () {
             _this.isOpen = !_this.isOpen;
@@ -8673,65 +8726,67 @@ var Inventory = /** @class */ (function () {
             }
         };
         this.left = function () {
-            _this.selX--;
-            if (_this.selX < 0)
-                _this.selX = 0;
+            if (_this.selX > 0) {
+                _this.selX--;
+            }
         };
         this.right = function () {
-            _this.selX++;
-            if (_this.selX > _this.cols - 1)
-                _this.selX = _this.cols - 1;
+            if (_this.selX < _this.cols - 1) {
+                _this.selX++;
+            }
         };
         this.up = function () {
-            _this.selY--;
-            if (_this.selY < 0)
-                _this.selY = 0;
+            if (_this.selY > 0) {
+                _this.selY--;
+            }
         };
         this.down = function () {
-            _this.selY++;
-            if (_this.selY > _this.rows + _this.expansion - 1)
-                _this.selY = _this.rows + _this.expansion - 1;
+            if (_this.selY < _this.rows + _this.expansion - 1) {
+                _this.selY++;
+            }
         };
         this.space = function () {
             _this.itemUse();
         };
         this.itemUse = function () {
-            var i = _this.selX + _this.selY * _this.cols;
-            if (_this.items[i] instanceof usable_1.Usable) {
-                _this.items[i].onUse(_this.player);
-                //this.items.splice(i, 0);
+            var index = _this.selX + _this.selY * _this.cols;
+            if (index < 0 || index >= _this.items.length)
+                return;
+            var item = _this.items[index];
+            if (item instanceof usable_1.Usable) {
+                item.onUse(_this.player);
+                //this.items[index] = null; // Optionally remove the item after use
             }
-            else if (_this.items[i] instanceof equippable_1.Equippable) {
-                //dont equip on the same tick as using an item
-                var e = _this.items[i];
-                e.toggleEquip();
-                if (e instanceof weapon_1.Weapon) {
-                    if (e.equipped)
-                        _this.weapon = e;
-                    else
-                        _this.weapon = null;
+            else if (item instanceof equippable_1.Equippable) {
+                // Don't equip on the same tick as using an item
+                item.toggleEquip();
+                if (item instanceof weapon_1.Weapon) {
+                    _this.weapon = item.equipped ? item : null;
                 }
-                if (e.equipped) {
-                    for (var _i = 0, _a = _this.items; _i < _a.length; _i++) {
-                        var i_1 = _a[_i];
-                        if (i_1 instanceof equippable_1.Equippable && i_1 !== e && !e.coEquippable(i_1)) {
-                            i_1.equipped = false; // prevent user from equipping two not coEquippable items
+                if (item.equipped) {
+                    _this.items.forEach(function (i, idx) {
+                        if (i instanceof equippable_1.Equippable && i !== item && !item.coEquippable(i)) {
+                            i.equipped = false;
+                            _this.equipAnimAmount[idx] = 0;
                         }
-                    }
+                    });
                 }
             }
         };
         this.mouseLeftClick = function () {
-            var x = mouseCursor_1.MouseCursor.getInstance().getPosition().x;
-            var y = mouseCursor_1.MouseCursor.getInstance().getPosition().y;
-            if (_this.isPointInInventoryBounds(x, y).inBounds) {
+            var _a = mouseCursor_1.MouseCursor.getInstance().getPosition(), x = _a.x, y = _a.y;
+            var bounds = _this.isPointInInventoryBounds(x, y);
+            if (bounds.inBounds) {
                 _this.itemUse();
+            }
+            else if (!_this.isPointInQuickbarBounds(x, y).inBounds) {
+                _this.close();
             }
         };
         this.mouseRightClick = function () {
-            var x = mouseCursor_1.MouseCursor.getInstance().getPosition().x;
-            var y = mouseCursor_1.MouseCursor.getInstance().getPosition().y;
-            if (_this.isPointInInventoryBounds(x, y).inBounds) {
+            var _a = mouseCursor_1.MouseCursor.getInstance().getPosition(), x = _a.x, y = _a.y;
+            var bounds = _this.isPointInInventoryBounds(x, y);
+            if (bounds.inBounds) {
                 _this.drop();
             }
         };
@@ -8744,9 +8799,13 @@ var Inventory = /** @class */ (function () {
         this.spaceQuickbar = function () {
             _this.itemUse();
         };
+        this.handleNumKey = function (num) {
+            _this.selX = Math.max(0, Math.min(num - 1, _this.cols - 1));
+            _this.selY = 0;
+            _this.itemUse();
+        };
         this.mouseMove = function () {
-            var x = mouseCursor_1.MouseCursor.getInstance().getPosition().x;
-            var y = mouseCursor_1.MouseCursor.getInstance().getPosition().y;
+            var _a = mouseCursor_1.MouseCursor.getInstance().getPosition(), x = _a.x, y = _a.y;
             var bounds = _this.isPointInInventoryBounds(x, y);
             if (bounds.inBounds) {
                 var s = _this.isOpen
@@ -8754,7 +8813,6 @@ var Inventory = /** @class */ (function () {
                     : 18;
                 var b = 2;
                 var g = -2;
-                // Calculate and clamp values
                 _this.selX = Math.max(0, Math.min(Math.floor((x - bounds.startX) / (s + 2 * b + g)), _this.cols - 1));
                 _this.selY = _this.isOpen
                     ? Math.max(0, Math.min(Math.floor((y - bounds.startY) / (s + 2 * b + g)), _this.rows + _this.expansion - 1))
@@ -8762,67 +8820,72 @@ var Inventory = /** @class */ (function () {
             }
         };
         this.drop = function () {
-            var i = _this.selX + _this.selY * _this.cols;
-            if (i < _this.items.length) {
-                _this.items[i].dropFromInventory();
-                _this.items[i].level = _this.game.rooms[_this.player.levelID];
-                _this.items[i].x = _this.player.x;
-                _this.items[i].y = _this.player.y;
-                _this.items[i].pickedUp = false;
-                _this.equipAnimAmount[i] = 0;
-                _this.game.rooms[_this.player.levelID].items.push(_this.items[i]);
-                _this.items.splice(i, 1);
-            }
+            var index = _this.selX + _this.selY * _this.cols;
+            if (index < 0 || index >= _this.items.length)
+                return;
+            var item = _this.items[index];
+            if (item === null)
+                return;
+            item.dropFromInventory();
+            item.level = _this.game.rooms[_this.player.levelID];
+            item.x = _this.player.x;
+            item.y = _this.player.y;
+            item.pickedUp = false;
+            _this.equipAnimAmount[index] = 0;
+            _this.game.rooms[_this.player.levelID].items.push(item);
+            _this.items[index] = null;
         };
-        this.dropFromInventory = function () { };
+        this.dropFromInventory = function () {
+            // Intentionally left blank or implement if needed
+        };
         this.hasItem = function (itemType) {
-            // itemType is class of Item we're looking for
-            for (var _i = 0, _a = _this.items; _i < _a.length; _i++) {
-                var i = _a[_i];
-                if (i instanceof itemType)
-                    return i;
-            }
-            return null;
+            return _this.items.find(function (i) { return i instanceof itemType; }) || null;
         };
         this.hasItemCount = function (item) {
+            if (item === null)
+                return false;
             if (item instanceof coin_1.Coin)
                 return _this.coinCount() >= item.stackCount;
-            for (var _i = 0, _a = _this.items; _i < _a.length; _i++) {
-                var i = _a[_i];
-                if (i.constructor === item.constructor && i.stackCount >= item.stackCount)
-                    return true;
-            }
-            return false;
+            return _this.items.some(function (i) {
+                return i !== null &&
+                    i.constructor === item.constructor &&
+                    i.stackCount >= item.stackCount;
+            });
         };
         this.subtractItemCount = function (item) {
+            if (item === null)
+                return;
             if (item instanceof coin_1.Coin) {
                 _this.subtractCoins(item.stackCount);
                 return;
             }
-            for (var _i = 0, _a = _this.items; _i < _a.length; _i++) {
-                var i = _a[_i];
+            _this.items.forEach(function (i, idx) {
+                if (i === null)
+                    return;
                 if (i.constructor === item.constructor) {
                     i.stackCount -= item.stackCount;
-                    if (i.stackCount <= 0)
-                        _this.items.splice(_this.items.indexOf(i), 1);
+                    if (i.stackCount <= 0) {
+                        _this.items[idx] = null;
+                    }
                 }
-            }
+            });
         };
         this.coinCount = function () {
             return _this.coins;
         };
         this.subtractCoins = function (n) {
-            _this.coins -= n;
-            if (_this.coins < 0)
-                _this.coins = 0;
+            _this.coins = Math.max(0, _this.coins - n);
         };
         this.addCoins = function (n) {
             _this.coins += n;
         };
         this.isFull = function () {
-            return _this.items.length >= (_this.rows + _this.expansion) * _this.cols;
+            return (_this.items.filter(function (i) { return i !== null; }).length >=
+                (_this.rows + _this.expansion) * _this.cols);
         };
         this.addItem = function (item) {
+            if (item === null)
+                return false;
             if (item instanceof coin_1.Coin) {
                 _this.coins += item.stack;
                 return true;
@@ -8831,35 +8894,35 @@ var Inventory = /** @class */ (function () {
                 item.setWielder(_this.player);
             }
             if (item.stackable) {
-                for (var _i = 0, _a = _this.items; _i < _a.length; _i++) {
-                    var i = _a[_i];
-                    if (i.constructor === item.constructor) {
-                        // we already have an item of the same type
-                        i.stackCount += item.stackCount;
+                for (var i = 0; i < _this.items.length; i++) {
+                    if (_this.items[i] !== null &&
+                        _this.items[i].constructor === item.constructor) {
+                        _this.items[i].stackCount += item.stackCount;
                         return true;
                     }
                 }
             }
             if (!_this.isFull()) {
-                // item is either not stackable, or it's stackable but we don't have one yet
-                _this.items.push(item);
-                return true;
+                for (var i = 0; i < _this.items.length; i++) {
+                    if (_this.items[i] === null) {
+                        _this.items[i] = item;
+                        return true;
+                    }
+                }
             }
             return false;
         };
         this.removeItem = function (item) {
-            var i = _this.items.indexOf(item);
-            if (i !== -1) {
-                _this.items.splice(i, 1);
+            if (item === null)
+                return;
+            var index = _this.items.indexOf(item);
+            if (index !== -1) {
+                _this.items[index] = null;
             }
         };
         this.getArmor = function () {
-            for (var _i = 0, _a = _this.items; _i < _a.length; _i++) {
-                var i = _a[_i];
-                if (i instanceof armor_1.Armor && i.equipped)
-                    return i;
-            }
-            return null;
+            return (_this.items.find(function (i) { return i instanceof armor_1.Armor && i.equipped; }) ||
+                null);
         };
         this.hasWeapon = function () {
             return _this.weapon !== null;
@@ -8868,13 +8931,15 @@ var Inventory = /** @class */ (function () {
             return _this.weapon;
         };
         this.tick = function () {
-            for (var _i = 0, _a = _this.items; _i < _a.length; _i++) {
-                var i = _a[_i];
-                i.tickInInventory();
-            }
+            _this.items.forEach(function (i) {
+                if (i !== null)
+                    i.tickInInventory();
+            });
         };
         this.textWrap = function (text, x, y, maxWidth) {
-            // returns y value for next line
+            // Returns y value for next line
+            if (text === "")
+                return y;
             var words = text.split(" ");
             var line = "";
             while (words.length > 0) {
@@ -8890,7 +8955,7 @@ var Inventory = /** @class */ (function () {
                     words.splice(0, 1);
                 }
             }
-            if (line !== " ") {
+            if (line.trim() !== "") {
                 game_1.Game.fillText(line, x, y);
                 y += 8;
             }
@@ -8900,12 +8965,12 @@ var Inventory = /** @class */ (function () {
             var coinX = levelConstants_1.LevelConstants.SCREEN_W - 1;
             var coinY = levelConstants_1.LevelConstants.SCREEN_H - 1;
             game_1.Game.drawItem(19, 0, 1, 2, coinX, coinY - 1, 1, 2);
-            var countText = "" + _this.coins;
+            var countText = "".concat(_this.coins);
             var width = game_1.Game.measureText(countText).width;
             var countX = 4 - width;
             var countY = -1;
             game_1.Game.fillTextOutline(countText, coinX * gameConstants_1.GameConstants.TILESIZE + countX, coinY * gameConstants_1.GameConstants.TILESIZE + countY, gameConstants_1.GameConstants.OUTLINE, "white");
-            var turnCountText = _this.player.turnCount.toString();
+            var turnCountText = "".concat(_this.player.turnCount);
             game_1.Game.fillTextOutline(turnCountText, coinX * gameConstants_1.GameConstants.TILESIZE + countX, coinY * gameConstants_1.GameConstants.TILESIZE + countY - 15, gameConstants_1.GameConstants.OUTLINE, "white");
         };
         this.pointInside = function (x, y) {
@@ -8916,23 +8981,19 @@ var Inventory = /** @class */ (function () {
             var ob = 1; // outer border
             var width = _this.cols * (s + 2 * b + g) - g;
             var height = (_this.rows + _this.expansion) * (s + 2 * b + g) - g;
-            return (x >= Math.round(0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * width) - ob &&
-                x <=
-                    Math.round(0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * width) -
-                        ob +
-                        Math.round(width + 2 * ob) &&
-                y >= Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT - 0.5 * height) - ob &&
-                y <=
-                    Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT - 0.5 * height) -
-                        ob +
-                        Math.round(height + 2 * ob));
+            var startX = Math.round(0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * width) - ob;
+            var startY = _this.isOpen
+                ? Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT - 0.5 * height) - ob
+                : gameConstants_1.GameConstants.HEIGHT - (s + 2 * b) - 5 - ob;
+            var checkHeight = _this.isOpen ? height + 2 * ob : s + 2 * b + 2 * ob;
+            return (x >= startX &&
+                x <= startX + width + 2 * ob &&
+                y >= startY &&
+                y <= startY + checkHeight);
         };
         this.drawQuickbar = function (delta) {
-            // Get current mouse position and check bounds
-            var x = mouseCursor_1.MouseCursor.getInstance().getPosition().x;
-            var y = mouseCursor_1.MouseCursor.getInstance().getPosition().y;
+            var _a = mouseCursor_1.MouseCursor.getInstance().getPosition(), x = _a.x, y = _a.y;
             var isInBounds = _this.isPointInInventoryBounds(x, y).inBounds;
-            // Define dimensions and styling variables
             var s = 18; // size of box
             var b = 2; // border
             var g = -2; // gap
@@ -8944,37 +9005,35 @@ var Inventory = /** @class */ (function () {
             var startY = gameConstants_1.GameConstants.HEIGHT - height - 5; // 5 pixels from bottom
             // Draw main background
             game_1.Game.ctx.fillStyle = FULL_OUTLINE;
-            game_1.Game.ctx.fillRect(Math.round(0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * width) - ob, startY - 1, width + 2, height + 2);
+            game_1.Game.ctx.fillRect(startX - ob, startY - 1, width + 2, height + 2);
             // Draw highlighted background for selected item only if mouse is in bounds
             if (isInBounds) {
-                game_1.Game.ctx.fillRect(Math.round(0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * width + _this.selX * (s + 2 * b + g)) -
-                    hg -
-                    ob, startY - hg - ob, Math.round(s + 2 * b + 2 * hg) + 2 * ob, Math.round(s + 2 * b + 2 * hg) + 2 * ob);
+                game_1.Game.ctx.fillRect(startX + _this.selX * (s + 2 * b + g) - hg - ob, startY - hg - ob, s + 2 * b + 2 * hg + 2 * ob, s + 2 * b + 2 * hg + 2 * ob);
             }
             // Draw individual item slots
-            for (var x_1 = 0; x_1 < _this.cols; x_1++) {
+            for (var xIdx = 0; xIdx < _this.cols; xIdx++) {
                 // Draw slot outline
                 game_1.Game.ctx.fillStyle = OUTLINE_COLOR;
-                game_1.Game.ctx.fillRect(startX + x_1 * (s + 2 * b + g), startY, s + 2 * b, s + 2 * b);
+                game_1.Game.ctx.fillRect(startX + xIdx * (s + 2 * b + g), startY, s + 2 * b, s + 2 * b);
                 // Draw slot background
                 game_1.Game.ctx.fillStyle = FILL_COLOR;
-                game_1.Game.ctx.fillRect(startX + x_1 * (s + 2 * b + g) + b, startY + b, s, s);
+                game_1.Game.ctx.fillRect(startX + xIdx * (s + 2 * b + g) + b, startY + b, s, s);
                 // Draw equip animation (this should always show)
-                var i = x_1;
+                var idx = xIdx;
                 game_1.Game.ctx.fillStyle = EQUIP_COLOR;
-                var yOff = s * (1 - _this.equipAnimAmount[i]);
-                game_1.Game.ctx.fillRect(startX + x_1 * (s + 2 * b + g) + b, startY + b + yOff, s, s - yOff);
+                var yOff = s * (1 - _this.equipAnimAmount[idx]);
+                game_1.Game.ctx.fillRect(startX + xIdx * (s + 2 * b + g) + b, startY + b + yOff, s, s - yOff);
                 // Draw item icon if exists
-                if (i < _this.items.length) {
+                if (idx < _this.items.length && _this.items[idx] !== null) {
                     var drawX = startX +
-                        x_1 * (s + 2 * b + g) +
+                        xIdx * (s + 2 * b + g) +
                         b +
                         Math.floor(0.5 * s) -
                         0.5 * gameConstants_1.GameConstants.TILESIZE;
                     var drawY = startY + b + Math.floor(0.5 * s) - 0.5 * gameConstants_1.GameConstants.TILESIZE;
                     var drawXScaled = drawX / gameConstants_1.GameConstants.TILESIZE;
                     var drawYScaled = drawY / gameConstants_1.GameConstants.TILESIZE;
-                    _this.items[i].drawIcon(delta, drawXScaled, drawYScaled);
+                    _this.items[idx].drawIcon(delta, drawXScaled, drawYScaled);
                 }
             }
             // Draw selection box only if mouse is in bounds
@@ -8983,217 +9042,231 @@ var Inventory = /** @class */ (function () {
                 var selStartY = startY;
                 // Outer selection box (dark)
                 game_1.Game.ctx.fillStyle = OUTLINE_COLOR;
-                game_1.Game.ctx.fillRect(selStartX - hg, selStartY - hg, Math.round(s + 2 * b + 2 * hg), Math.round(s + 2 * b + 2 * hg));
+                game_1.Game.ctx.fillRect(selStartX - hg, selStartY - hg, s + 2 * b + 2 * hg, s + 2 * b + 2 * hg);
                 // Inner selection box (light grey)
                 game_1.Game.ctx.fillStyle = FILL_COLOR;
-                game_1.Game.ctx.fillRect(selStartX + b - hg, selStartY + b - hg, Math.round(s + 2 * hg), Math.round(s + 2 * hg));
+                game_1.Game.ctx.fillRect(selStartX + b - hg, selStartY + b - hg, s + 2 * hg, s + 2 * hg);
                 // Draw equip animation for selected slot with highlight
-                var i = _this.selX;
+                var idx = _this.selX;
                 game_1.Game.ctx.fillStyle = EQUIP_COLOR;
-                var yOff = (s + 2 * hg) * (1 - _this.equipAnimAmount[i]);
-                game_1.Game.ctx.fillRect(Math.round(startX + _this.selX * (s + 2 * b + g) + b - hg), Math.round(startY + b + yOff - hg), Math.round(s + 2 * hg), Math.round(s + 2 * hg - yOff));
+                var yOff = (s + 2 * hg) * (1 - _this.equipAnimAmount[idx]);
+                game_1.Game.ctx.fillRect(Math.round(startX + _this.selX * (s + 2 * b + g) + b - hg), Math.round(startY + b + yOff - hg), s + 2 * hg, s + 2 * hg - yOff);
                 // Redraw the selected item
-                if (_this.selX < _this.items.length) {
+                if (idx < _this.items.length && _this.items[idx] !== null) {
                     var drawX = selStartX + b + Math.floor(0.5 * s) - 0.5 * gameConstants_1.GameConstants.TILESIZE;
                     var drawY = selStartY + b + Math.floor(0.5 * s) - 0.5 * gameConstants_1.GameConstants.TILESIZE;
                     var drawXScaled = drawX / gameConstants_1.GameConstants.TILESIZE;
                     var drawYScaled = drawY / gameConstants_1.GameConstants.TILESIZE;
-                    _this.items[_this.selX].drawIcon(delta, drawXScaled, drawYScaled);
+                    _this.items[idx].drawIcon(delta, drawXScaled, drawYScaled);
                 }
             }
         };
         this.updateEquipAnimAmount = function (delta) {
-            for (var i = 0; i < _this.equipAnimAmount.length; i++) {
-                if (_this.items[i] instanceof equippable_1.Equippable) {
-                    if (_this.items[i].equipped) {
-                        _this.equipAnimAmount[i] +=
-                            0.2 * delta * (1 - _this.equipAnimAmount[i]);
-                        if (_this.equipAnimAmount[i] > 1)
-                            _this.equipAnimAmount[i] = 1;
+            _this.equipAnimAmount.forEach(function (amount, idx) {
+                var item = _this.items[idx];
+                if (item instanceof equippable_1.Equippable) {
+                    if (item.equipped) {
+                        _this.equipAnimAmount[idx] +=
+                            0.2 * delta * (1 - _this.equipAnimAmount[idx]);
+                        if (_this.equipAnimAmount[idx] > 1)
+                            _this.equipAnimAmount[idx] = 1;
                     }
                     else {
-                        _this.equipAnimAmount[i] +=
-                            0.2 * delta * (0 - _this.equipAnimAmount[i]);
-                        if (_this.equipAnimAmount[i] < 0)
-                            _this.equipAnimAmount[i] = 0;
+                        _this.equipAnimAmount[idx] +=
+                            0.2 * delta * (0 - _this.equipAnimAmount[idx]);
+                        if (_this.equipAnimAmount[idx] < 0)
+                            _this.equipAnimAmount[idx] = 0;
                     }
                 }
                 else {
-                    _this.equipAnimAmount[i] = 0;
+                    _this.equipAnimAmount[idx] = 0;
                 }
-            }
+            });
         };
         this.draw = function (delta) {
-            // Get current mouse position and check bounds
-            var x = mouseCursor_1.MouseCursor.getInstance().getPosition().x;
-            var y = mouseCursor_1.MouseCursor.getInstance().getPosition().y;
+            var _a = mouseCursor_1.MouseCursor.getInstance().getPosition(), x = _a.x, y = _a.y;
             var isInBounds = _this.isPointInInventoryBounds(x, y).inBounds;
             // Draw coins and quickbar (these are always visible)
             _this.drawCoins(delta);
             _this.drawQuickbar(delta);
             _this.updateEquipAnimAmount(delta);
             if (_this.isOpen) {
-                // Update equip animation
                 // Draw semi-transparent background for full inventory
-                game_1.Game.ctx.fillStyle = "rgb(0, 0, 0, 0.8)";
+                game_1.Game.ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
                 game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
                 game_1.Game.ctx.globalAlpha = 1;
                 // Define dimensions and styling variables (similar to drawQuickbar)
-                var s = Math.min(18, (18 * (Date.now() - _this.openTime)) / OPEN_TIME); // size of box
-                var b = 2; // border
-                var g = -2; // gap
+                var s_1 = Math.min(18, (18 * (Date.now() - _this.openTime)) / OPEN_TIME); // size of box
+                var b_1 = 2; // border
+                var g_1 = -2; // gap
                 var hg = 3 + Math.round(0.5 * Math.sin(Date.now() * 0.01) + 0.5); // highlighted growth
                 var invRows = _this.rows + _this.expansion;
                 var ob = 1; // outer border
-                var width = _this.cols * (s + 2 * b + g) - g;
-                var height = invRows * (s + 2 * b + g) - g;
+                var width_1 = _this.cols * (s_1 + 2 * b_1 + g_1) - g_1;
+                var height_1 = invRows * (s_1 + 2 * b_1 + g_1) - g_1;
                 // Draw main inventory background (similar to drawQuickbar)
                 game_1.Game.ctx.fillStyle = FULL_OUTLINE;
-                var mainBgX = Math.round(0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * width) - ob;
-                var mainBgY = Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT - 0.5 * height) - ob;
-                game_1.Game.ctx.fillRect(mainBgX, mainBgY, Math.round(width + 2 * ob), Math.round(height + 2 * ob));
+                var mainBgX = Math.round(0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * width_1) - ob;
+                var mainBgY = Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT - 0.5 * height_1) - ob;
+                game_1.Game.ctx.fillRect(mainBgX, mainBgY, width_1 + 2 * ob, height_1 + 2 * ob);
                 // Draw highlighted background for selected item only if mouse is in bounds
                 if (isInBounds) {
                     var highlightX = Math.round(0.5 * gameConstants_1.GameConstants.WIDTH -
-                        0.5 * width +
-                        _this.selX * (s + 2 * b + g)) -
+                        0.5 * width_1 +
+                        _this.selX * (s_1 + 2 * b_1 + g_1)) -
                         hg -
                         ob;
                     var highlightY = Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT -
-                        0.5 * height +
-                        _this.selY * (s + 2 * b + g)) -
+                        0.5 * height_1 +
+                        _this.selY * (s_1 + 2 * b_1 + g_1)) -
                         hg -
                         ob;
-                    game_1.Game.ctx.fillRect(highlightX, highlightY, Math.round(s + 2 * b + 2 * hg) + 2 * ob, Math.round(s + 2 * b + 2 * hg) + 2 * ob);
+                    game_1.Game.ctx.fillRect(highlightX, highlightY, s_1 + 2 * b_1 + 2 * hg + 2 * ob, s_1 + 2 * b_1 + 2 * hg + 2 * ob);
                 }
                 // Draw individual inventory slots (similar to drawQuickbar, but for all rows)
-                for (var x_2 = 0; x_2 < _this.cols; x_2++) {
-                    for (var y_1 = 0; y_1 < _this.rows + _this.expansion; y_1++) {
+                for (var xIdx = 0; xIdx < _this.cols; xIdx++) {
+                    for (var yIdx = 0; yIdx < _this.rows + _this.expansion; yIdx++) {
                         // Draw slot outline
-                        var slotX = Math.round(0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * width + x_2 * (s + 2 * b + g));
-                        var slotY = Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT - 0.5 * height + y_1 * (s + 2 * b + g));
+                        var slotX = Math.round(0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * width_1 + xIdx * (s_1 + 2 * b_1 + g_1));
+                        var slotY = Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT - 0.5 * height_1 + yIdx * (s_1 + 2 * b_1 + g_1));
                         game_1.Game.ctx.fillStyle = OUTLINE_COLOR;
-                        game_1.Game.ctx.fillRect(slotX, slotY, Math.round(s + 2 * b), Math.round(s + 2 * b));
+                        game_1.Game.ctx.fillRect(slotX, slotY, s_1 + 2 * b_1, s_1 + 2 * b_1);
                         // Draw slot background
                         game_1.Game.ctx.fillStyle = FILL_COLOR;
-                        game_1.Game.ctx.fillRect(Math.round(0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * width + x_2 * (s + 2 * b + g) + b), Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT -
-                            0.5 * height +
-                            y_1 * (s + 2 * b + g) +
-                            b), Math.round(s), Math.round(s));
+                        game_1.Game.ctx.fillRect(slotX + b_1, slotY + b_1, s_1, s_1);
                         // Draw equip animation (unique to full inventory view)
-                        var i_2 = x_2 + y_1 * _this.cols;
+                        var idx = xIdx + yIdx * _this.cols;
                         game_1.Game.ctx.fillStyle = EQUIP_COLOR;
-                        var yOff = s * (1 - _this.equipAnimAmount[i_2]);
-                        game_1.Game.ctx.fillRect(Math.round(0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * width + x_2 * (s + 2 * b + g) + b), Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT -
-                            0.5 * height +
-                            y_1 * (s + 2 * b + g) +
-                            b +
-                            yOff), Math.round(s), Math.round(s - yOff));
+                        var yOff = s_1 * (1 - _this.equipAnimAmount[idx]);
+                        game_1.Game.ctx.fillRect(slotX + b_1, slotY + b_1 + yOff, s_1, s_1 - yOff);
+                        // Draw item icon if exists
+                        if (idx < _this.items.length && _this.items[idx] !== null) {
+                            var drawX = 0.5 * gameConstants_1.GameConstants.WIDTH -
+                                0.5 * width_1 +
+                                xIdx * (s_1 + 2 * b_1 + g_1) +
+                                b_1 +
+                                Math.floor(0.5 * s_1) -
+                                0.5 * gameConstants_1.GameConstants.TILESIZE;
+                            var drawY = 0.5 * gameConstants_1.GameConstants.HEIGHT -
+                                0.5 * height_1 +
+                                yIdx * (s_1 + 2 * b_1 + g_1) +
+                                b_1 +
+                                Math.floor(0.5 * s_1) -
+                                0.5 * gameConstants_1.GameConstants.TILESIZE;
+                            var drawXScaled = drawX / gameConstants_1.GameConstants.TILESIZE;
+                            var drawYScaled = drawY / gameConstants_1.GameConstants.TILESIZE;
+                            _this.items[idx].drawIcon(delta, drawXScaled, drawYScaled);
+                        }
                     }
                 }
                 // Draw item icons after animation delay (similar to drawQuickbar, but for all items)
                 if (Date.now() - _this.openTime >= OPEN_TIME) {
-                    for (var i_3 = 0; i_3 < _this.items.length; i_3++) {
-                        var x_3 = i_3 % _this.cols;
-                        var y_2 = Math.floor(i_3 / _this.cols);
-                        var drawX = Math.round(0.5 * gameConstants_1.GameConstants.WIDTH -
-                            0.5 * width +
-                            x_3 * (s + 2 * b + g) +
-                            b +
-                            Math.floor(0.5 * s) -
-                            0.5 * gameConstants_1.GameConstants.TILESIZE);
-                        var drawY = Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT -
-                            0.5 * height +
-                            y_2 * (s + 2 * b + g) +
-                            b +
-                            Math.floor(0.5 * s) -
-                            0.5 * gameConstants_1.GameConstants.TILESIZE);
+                    _this.items.forEach(function (item, idx) {
+                        if (item === null)
+                            return;
+                        var x = idx % _this.cols;
+                        var y = Math.floor(idx / _this.cols);
+                        var drawX = 0.5 * gameConstants_1.GameConstants.WIDTH -
+                            0.5 * width_1 +
+                            x * (s_1 + 2 * b_1 + g_1) +
+                            b_1 +
+                            Math.floor(0.5 * s_1) -
+                            0.5 * gameConstants_1.GameConstants.TILESIZE;
+                        var drawY = 0.5 * gameConstants_1.GameConstants.HEIGHT -
+                            0.5 * height_1 +
+                            y * (s_1 + 2 * b_1 + g_1) +
+                            b_1 +
+                            Math.floor(0.5 * s_1) -
+                            0.5 * gameConstants_1.GameConstants.TILESIZE;
                         var drawXScaled = drawX / gameConstants_1.GameConstants.TILESIZE;
                         var drawYScaled = drawY / gameConstants_1.GameConstants.TILESIZE;
-                        _this.items[i_3].drawIcon(delta, drawXScaled, drawYScaled);
-                    }
+                        item.drawIcon(delta, drawXScaled, drawYScaled);
+                    });
                     // Draw selection box and related elements only if mouse is in bounds
                     if (isInBounds) {
                         // Draw selection box
                         game_1.Game.ctx.fillStyle = OUTLINE_COLOR;
-                        game_1.Game.ctx.fillRect(Math.round(0.5 * gameConstants_1.GameConstants.WIDTH -
-                            0.5 * width +
-                            _this.selX * (s + 2 * b + g)) - hg, Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT -
-                            0.5 * height +
-                            _this.selY * (s + 2 * b + g)) - hg, Math.round(s + 2 * b + 2 * hg), Math.round(s + 2 * b + 2 * hg));
+                        game_1.Game.ctx.fillRect(0.5 * gameConstants_1.GameConstants.WIDTH -
+                            0.5 * width_1 +
+                            _this.selX * (s_1 + 2 * b_1 + g_1) -
+                            hg, 0.5 * gameConstants_1.GameConstants.HEIGHT -
+                            0.5 * height_1 +
+                            _this.selY * (s_1 + 2 * b_1 + g_1) -
+                            hg, s_1 + 2 * b_1 + 2 * hg, s_1 + 2 * b_1 + 2 * hg);
                         var slotX = Math.round(0.5 * gameConstants_1.GameConstants.WIDTH -
-                            0.5 * width +
-                            _this.selX * (s + 2 * b + g) +
-                            b -
+                            0.5 * width_1 +
+                            _this.selX * (s_1 + 2 * b_1 + g_1) +
+                            b_1 -
                             hg);
                         var slotY = Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT -
-                            0.5 * height +
-                            _this.selY * (s + 2 * b + g) +
-                            b -
+                            0.5 * height_1 +
+                            _this.selY * (s_1 + 2 * b_1 + g_1) +
+                            b_1 -
                             hg);
                         game_1.Game.ctx.fillStyle = FILL_COLOR;
-                        game_1.Game.ctx.fillRect(slotX, slotY, Math.round(s + 2 * hg), Math.round(s + 2 * hg));
+                        game_1.Game.ctx.fillRect(slotX, slotY, s_1 + 2 * hg, s_1 + 2 * hg);
                         // Draw equip animation for selected item (unique to full inventory view)
-                        var i_4 = _this.selX + _this.selY * _this.cols;
-                        game_1.Game.ctx.fillStyle = EQUIP_COLOR;
-                        var yOff = (s + 2 * hg) * (1 - _this.equipAnimAmount[i_4]);
-                        game_1.Game.ctx.fillRect(Math.round(0.5 * gameConstants_1.GameConstants.WIDTH -
-                            0.5 * width +
-                            _this.selX * (s + 2 * b + g) +
-                            b -
-                            hg), Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT -
-                            0.5 * height +
-                            _this.selY * (s + 2 * b + g) +
-                            b -
-                            hg +
-                            yOff), Math.round(s + 2 * hg), Math.round(s + 2 * hg - yOff));
-                        // Redraw selected item icon (similar to drawQuickbar)
-                        var drawX = Math.round(0.5 * gameConstants_1.GameConstants.WIDTH -
-                            0.5 * width +
-                            _this.selX * (s + 2 * b + g) +
-                            b +
-                            Math.floor(0.5 * s) -
-                            0.5 * gameConstants_1.GameConstants.TILESIZE);
-                        var drawY = Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT -
-                            0.5 * height +
-                            _this.selY * (s + 2 * b + g) +
-                            b +
-                            Math.floor(0.5 * s) -
-                            0.5 * gameConstants_1.GameConstants.TILESIZE);
-                        var drawXScaled = drawX / gameConstants_1.GameConstants.TILESIZE;
-                        var drawYScaled = drawY / gameConstants_1.GameConstants.TILESIZE;
-                        if (i_4 < _this.items.length)
-                            _this.items[i_4].drawIcon(delta, drawXScaled, drawYScaled);
+                        var idx = _this.selX + _this.selY * _this.cols;
+                        if (idx < _this.items.length && _this.items[idx] !== null) {
+                            game_1.Game.ctx.fillStyle = EQUIP_COLOR;
+                            var yOff = (s_1 + 2 * hg) * (1 - _this.equipAnimAmount[idx]);
+                            game_1.Game.ctx.fillRect(0.5 * gameConstants_1.GameConstants.WIDTH -
+                                0.5 * width_1 +
+                                _this.selX * (s_1 + 2 * b_1 + g_1) +
+                                b_1 -
+                                hg, 0.5 * gameConstants_1.GameConstants.HEIGHT -
+                                0.5 * height_1 +
+                                _this.selY * (s_1 + 2 * b_1 + g_1) +
+                                b_1 -
+                                hg +
+                                yOff, s_1 + 2 * hg, s_1 + 2 * hg - yOff);
+                            // Redraw selected item icon (similar to drawQuickbar)
+                            var drawX = 0.5 * gameConstants_1.GameConstants.WIDTH -
+                                0.5 * width_1 +
+                                _this.selX * (s_1 + 2 * b_1 + g_1) +
+                                b_1 +
+                                Math.floor(0.5 * s_1) -
+                                0.5 * gameConstants_1.GameConstants.TILESIZE;
+                            var drawY = 0.5 * gameConstants_1.GameConstants.HEIGHT -
+                                0.5 * height_1 +
+                                _this.selY * (s_1 + 2 * b_1 + g_1) +
+                                b_1 +
+                                Math.floor(0.5 * s_1) -
+                                0.5 * gameConstants_1.GameConstants.TILESIZE;
+                            var drawXScaled = drawX / gameConstants_1.GameConstants.TILESIZE;
+                            var drawYScaled = drawY / gameConstants_1.GameConstants.TILESIZE;
+                            _this.items[idx].drawIcon(delta, drawXScaled, drawYScaled);
+                        }
                     }
-                }
-                // Draw item description and action text (unique to full inventory view)
-                var i = _this.selX + _this.selY * _this.cols;
-                if (i < _this.items.length) {
-                    game_1.Game.ctx.fillStyle = "white";
-                    // Determine action text
-                    var topPhrase = "";
-                    if (_this.items[i] instanceof equippable_1.Equippable) {
-                        var e = _this.items[i];
-                        topPhrase = "[SPACE] to equip";
-                        if (e.equipped)
-                            topPhrase = "[SPACE] to unequip";
-                    }
-                    if (_this.items[i] instanceof usable_1.Usable) {
-                        topPhrase = "[SPACE] to use";
-                    }
-                    // Draw action text
-                    game_1.Game.ctx.fillStyle = "white";
-                    var w = game_1.Game.measureText(topPhrase).width;
-                    game_1.Game.fillText(topPhrase, 0.5 * (gameConstants_1.GameConstants.WIDTH - w), 5);
-                    // Draw item description
-                    var lines = _this.items[i].getDescription().split("\n");
-                    var nextY = Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT -
-                        0.5 * height +
-                        (_this.rows + _this.expansion) * (s + 2 * b + g) +
-                        b +
-                        5);
-                    for (var j = 0; j < lines.length; j++) {
-                        nextY = _this.textWrap(lines[j], 5, nextY, gameConstants_1.GameConstants.WIDTH - 10);
+                    // Draw item description and action text (unique to full inventory view)
+                    var selectedIdx = _this.selX + _this.selY * _this.cols;
+                    if (selectedIdx < _this.items.length &&
+                        _this.items[selectedIdx] !== null) {
+                        var item = _this.items[selectedIdx];
+                        game_1.Game.ctx.fillStyle = "white";
+                        // Determine action text
+                        var topPhrase = "";
+                        if (item instanceof equippable_1.Equippable) {
+                            topPhrase = item.equipped
+                                ? "[SPACE] to unequip"
+                                : "[SPACE] to equip";
+                        }
+                        if (item instanceof usable_1.Usable) {
+                            topPhrase = "[SPACE] to use";
+                        }
+                        // Draw action text
+                        var actionTextWidth = game_1.Game.measureText(topPhrase).width;
+                        game_1.Game.fillText(topPhrase, 0.5 * (gameConstants_1.GameConstants.WIDTH - actionTextWidth), 5);
+                        // Draw item description
+                        var lines = item.getDescription().split("\n");
+                        var nextY_1 = Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT -
+                            0.5 * height_1 +
+                            (_this.rows + _this.expansion) * (s_1 + 2 * b_1 + g_1) +
+                            b_1 +
+                            5);
+                        lines.forEach(function (line) {
+                            nextY_1 = _this.textWrap(line, 5, nextY_1, gameConstants_1.GameConstants.WIDTH - 10);
+                        });
                     }
                 }
             }
@@ -9202,43 +9275,52 @@ var Inventory = /** @class */ (function () {
             var s = _this.isOpen
                 ? Math.min(18, (18 * (Date.now() - _this.openTime)) / OPEN_TIME)
                 : 18;
-            var b = 2;
-            var g = -2;
+            var b = 2; // border
+            var g = -2; // gap
+            var hg = 3 + Math.round(0.5 * Math.sin(Date.now() * 0.01) + 0.5); // highlighted growth
+            var ob = 1; // outer border
             var width = _this.cols * (s + 2 * b + g) - g;
+            var startX;
+            var startY;
+            var height;
             if (_this.isOpen) {
                 // Full inventory bounds
-                var height = (_this.rows + _this.expansion) * (s + 2 * b + g) - g;
-                var startX = 0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * width;
-                var startY = 0.5 * gameConstants_1.GameConstants.HEIGHT - 0.5 * height;
-                return {
-                    inBounds: x >= startX &&
-                        x <= startX + width &&
-                        y >= startY &&
-                        y <= startY + height,
-                    startX: startX,
-                    startY: startY,
-                };
+                height = (_this.rows + _this.expansion) * (s + 2 * b + g) - g;
+                startX = 0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * width;
+                startY = 0.5 * gameConstants_1.GameConstants.HEIGHT - 0.5 * height;
             }
             else {
                 // Quickbar bounds
-                return _this.isPointInQuickbarBounds(x, y);
+                height = s + 2 * b;
+                startX = 0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * width;
+                startY = gameConstants_1.GameConstants.HEIGHT - height - 5;
             }
+            var inBounds = x >= startX - ob &&
+                x <= startX + width + ob &&
+                y >= startY - ob &&
+                y <= startY + height + ob;
+            return {
+                inBounds: inBounds,
+                startX: startX,
+                startY: startY,
+            };
         };
         this.isPointInQuickbarBounds = function (x, y) {
             var s = _this.isOpen
                 ? Math.min(18, (18 * (Date.now() - _this.openTime)) / OPEN_TIME)
                 : 18;
-            var b = 2;
-            var g = -2;
+            var b = 2; // border
+            var g = -2; // gap
             var width = _this.cols * (s + 2 * b + g) - g;
             var startX = 0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * width;
             var startY = gameConstants_1.GameConstants.HEIGHT - (s + 2 * b) - 5;
             var quickbarHeight = s + 2 * b;
+            var inBounds = x >= startX &&
+                x <= startX + width &&
+                y >= startY &&
+                y <= startY + quickbarHeight;
             return {
-                inBounds: x >= startX &&
-                    x <= startX + width &&
-                    y >= startY &&
-                    y <= startY + quickbarHeight,
+                inBounds: inBounds,
                 startX: startX,
                 startY: startY,
             };
@@ -9253,17 +9335,12 @@ var Inventory = /** @class */ (function () {
         };
         this.game = game;
         this.player = player;
-        this.items = new Array();
-        this.equipAnimAmount = [];
-        for (var i = 0; i < this.rows * this.cols; i++) {
-            this.equipAnimAmount[i] = 0;
-        }
+        this.items = new Array((this.rows + this.expansion) * this.cols).fill(null);
+        this.equipAnimAmount = new Array((this.rows + this.expansion) * this.cols).fill(0);
         //Input.mouseLeftClickListeners.push(this.mouseLeftClickListener);
-        this.coins = 0;
-        this.openTime = Date.now();
-        this.weapon = null;
-        this.expansion = 0;
         var a = function (i) {
+            if (i === null)
+                return;
             if (i instanceof equippable_1.Equippable) {
                 i.setWielder(_this.player);
             }
@@ -12224,6 +12301,17 @@ var Player = /** @class */ (function (_super) {
                 case input_1.InputEnum.MOUSE_MOVE:
                     _this.mouseMove();
                     break;
+                case input_1.InputEnum.NUMBER_1:
+                case input_1.InputEnum.NUMBER_2:
+                case input_1.InputEnum.NUMBER_3:
+                case input_1.InputEnum.NUMBER_4:
+                case input_1.InputEnum.NUMBER_5:
+                case input_1.InputEnum.NUMBER_6:
+                case input_1.InputEnum.NUMBER_7:
+                case input_1.InputEnum.NUMBER_8:
+                case input_1.InputEnum.NUMBER_9:
+                    _this.numKeyListener(input);
+                    break;
             }
         };
         _this.commaListener = function () {
@@ -12231,6 +12319,9 @@ var Player = /** @class */ (function (_super) {
         };
         _this.periodListener = function () {
             _this.inventory.right();
+        };
+        _this.numKeyListener = function (input) {
+            _this.inventory.handleNumKey(input - 13);
         };
         _this.tapListener = function () {
             _this.inventory.open();
@@ -12500,11 +12591,9 @@ var Player = /** @class */ (function (_super) {
                                 e.kill();
                                 if (_this.game.rooms[_this.levelID] === _this.game.room)
                                     sound_1.Sound.hit();
-                                _this.hitX = 0.5 * (_this.x - e.x);
-                                _this.hitY = 0.5 * (_this.y - e.y);
                                 _this.game.rooms[_this.levelID].particles.push(new slashParticle_1.SlashParticle(e.x, e.y));
+                                _this.shakeScreen(_this.x, _this.y, e.x, e.y, 10);
                                 _this.game.rooms[_this.levelID].tick(_this);
-                                _this.game.shakeScreen(10 * _this.hitX, 10 * _this.hitY);
                                 return;
                             }
                         }
@@ -12557,8 +12646,7 @@ var Player = /** @class */ (function (_super) {
             }
             else {
                 if (other instanceof door_1.Door) {
-                    _this.hitX = (_this.x - x) * 0.5;
-                    _this.hitY = (_this.y - y) * 0.5;
+                    _this.shakeScreen(_this.x, _this.y, x, y, 10);
                     if (other.canUnlock(_this))
                         other.unlock(_this);
                 }
@@ -12664,18 +12752,12 @@ var Player = /** @class */ (function (_super) {
             var diffY = y - _this.lastY;
             if (diffX === 0 && diffY === 0)
                 return;
-            if (Math.abs(diffX) > 0)
-                _this.justMoved = DrawDirection.X;
-            else if (Math.abs(diffY) > 0)
-                _this.justMoved = DrawDirection.Y;
             //this.game.rooms[this.levelID].updateLighting();
         };
         _this.moveNoSmooth = function (x, y) {
             // doesn't touch smoothing
             _this.x = x;
             _this.y = y;
-            _this.previousDrawDirectionArray = [];
-            _this.previousDrawDirectionArray.push(DrawDirection.Y);
         };
         _this.moveSnap = function (x, y) {
             // no smoothing
@@ -12685,8 +12767,6 @@ var Player = /** @class */ (function (_super) {
             _this.drawY = 0;
             _this.hitX = 0;
             _this.hitY = 0;
-            _this.previousDrawDirectionArray = [];
-            _this.previousDrawDirectionArray.push(DrawDirection.Y);
         };
         _this.update = function () { };
         _this.updateSlowMotion = function () {
@@ -12823,8 +12903,8 @@ var Player = /** @class */ (function (_super) {
             //console.log("this.x", this.x);
             //console.log("this.y", this.y);
             if (!_this.doneMoving()) {
-                _this.drawX *= 1 - _this.drawMoveSpeed * delta;
-                _this.drawY *= 1 - _this.drawMoveSpeed * delta;
+                _this.drawX -= _this.drawX * _this.drawMoveSpeed * delta;
+                _this.drawY -= _this.drawY * _this.drawMoveSpeed * delta;
             }
             if (_this.doneHitting()) {
                 _this.jump(delta);
@@ -12846,12 +12926,21 @@ var Player = /** @class */ (function (_super) {
             gameConstants_1.GameConstants.ANIMATION_SPEED = _this.motionSpeed;
         };
         _this.updateHitXY = function (delta) {
-            _this.hitX *= 1 - 0.4 * delta;
-            _this.hitY *= 1 - 0.4 * delta;
+            _this.hitX -= _this.hitX * 0.3;
+            _this.hitY -= _this.hitY * 0.3;
             if (Math.abs(_this.hitX) < 0.01)
                 _this.hitX = 0;
             if (Math.abs(_this.hitY) < 0.01)
                 _this.hitY = 0;
+        };
+        _this.hitShake = function (playerX, playerY, otherX, otherY) {
+            _this.hitX = 0.5 * (playerX - otherX);
+            _this.hitY = 0.5 * (playerY - otherY);
+        };
+        _this.shakeScreen = function (playerX, playerY, otherX, otherY, shakeStrength) {
+            if (shakeStrength === void 0) { shakeStrength = 10; }
+            _this.hitShake(playerX, playerY, otherX, otherY);
+            _this.game.shakeScreen(_this.hitX * shakeStrength, _this.hitY * shakeStrength);
         };
         _this.jump = function (delta) {
             var j = Math.max(Math.abs(_this.drawX), Math.abs(_this.drawY));
@@ -13003,6 +13092,9 @@ var Player = /** @class */ (function (_super) {
             input_1.Input.mouseRightClickListeners.push(function () {
                 return _this.inputHandler(input_1.InputEnum.RIGHT_CLICK);
             });
+            input_1.Input.numKeyListener = function (num) {
+                return _this.inputHandler(input_1.InputEnum.NUMBER_1 + num - 1);
+            };
         }
         _this.mapToggled = true;
         _this.health = 3;
@@ -13033,8 +13125,6 @@ var Player = /** @class */ (function (_super) {
         _this.drawMoveSpeed = 0.3; // greater than 1 less than 2
         _this.moveQueue = [];
         _this.isProcessingQueue = false;
-        _this.previousDrawDirectionArray = [];
-        _this.previousDrawDirectionArray.push(DrawDirection.Y);
         _this.hitX = 0;
         _this.hitY = 0;
         _this.motionSpeed = 1;
@@ -14657,6 +14747,14 @@ var Room = /** @class */ (function () {
             if (_this.turn === TurnState.computerTurn)
                 _this.computerTurn(); // player skipped computer's turn, catch up
         };
+        this.tickHitWarnings = function () {
+            for (var _i = 0, _a = _this.hitwarnings; _i < _a.length; _i++) {
+                var h = _a[_i];
+                if (h.parent && (h.parent.dead || h.parent.unconscious)) {
+                    h.tick();
+                }
+            }
+        };
         this.tick = function (player) {
             player.updateSlowMotion();
             _this.lastEnemyCount = _this.entities.filter(function (e) { return e instanceof enemy_1.Enemy; }).length;
@@ -15157,21 +15255,45 @@ var Room = /** @class */ (function () {
         console.log(this.roomArray);
     };
     Room.prototype.addWallBlocks = function (rand) {
+        var _this = this;
         var numBlocks = game_1.Game.randTable([0, 0, 1, 1, 2, 2, 2, 2, 3], rand);
         if (this.width > 8 && rand() > 0.5)
             numBlocks *= 4;
-        for (var i = 0; i < numBlocks; i++) {
-            var blockW = Math.min(game_1.Game.randTable([2, 2, 2, 2, 2, 2, 3, 3, 3, 4, 5], rand), this.width - 4);
-            var blockH = Math.min(blockW + game_1.Game.rand(-2, 2, rand), this.height - 4);
-            var x = game_1.Game.rand(this.roomX + 2, this.roomX + this.width - blockW - 2, rand);
-            var y = game_1.Game.rand(this.roomY + 2, this.roomY + this.height - blockH - 2, rand);
+        var _loop_3 = function (i) {
+            var blockW = Math.min(game_1.Game.randTable([2, 2, 2, 2, 2, 2, 3, 3, 3, 4, 5], rand), this_1.width - 4);
+            var blockH = Math.min(blockW + game_1.Game.rand(-2, 2, rand), this_1.height - 4);
+            var x = game_1.Game.rand(this_1.roomX + 2, this_1.roomX + this_1.width - blockW - 2, rand);
+            var y = game_1.Game.rand(this_1.roomY + 2, this_1.roomY + this_1.height - blockH - 2, rand);
+            var neighborCount = function (wall) {
+                var _a;
+                var count = 0;
+                for (var xx = wall.x - 1; xx <= wall.x + 1; xx++) {
+                    for (var yy = wall.y - 1; yy <= wall.y + 1; yy++) {
+                        if (((_a = _this.roomArray[xx]) === null || _a === void 0 ? void 0 : _a[yy]) instanceof wall_1.Wall &&
+                            !(xx === wall.x && yy === wall.y))
+                            count++;
+                    }
+                }
+                return count;
+            };
             for (var xx = x; xx < x + blockW; xx++) {
                 for (var yy = y; yy < y + blockH; yy++) {
-                    var w = new wall_1.Wall(this, xx, yy);
-                    this.roomArray[xx][yy] = w;
-                    this.innerWalls.push(w);
+                    var w = new wall_1.Wall(this_1, xx, yy);
+                    this_1.roomArray[xx][yy] = w;
+                    this_1.innerWalls.push(w);
                 }
             }
+            this_1.innerWalls.forEach(function (wall) {
+                if (neighborCount(wall) <= 1) {
+                    _this.removeWall(wall.x, wall.y);
+                    _this.roomArray[wall.x][wall.y] = new floor_1.Floor(_this, wall.x, wall.y);
+                    _this.innerWalls = _this.innerWalls.filter(function (w) { return w !== wall; });
+                }
+            });
+        };
+        var this_1 = this;
+        for (var i = 0; i < numBlocks; i++) {
+            _loop_3(i);
         }
     };
     Room.prototype.addTorches = function (numTorches, rand) {
@@ -15274,8 +15396,8 @@ var Room = /** @class */ (function () {
             }
         }
         tiles = tiles.filter(function (tile) { return !adjecentTiles.some(function (t) { return t.x === tile.x && t.y === tile.y; }); });
-        var _loop_3 = function (i) {
-            var _b = this_1.getRandomEmptyPosition(tiles), x = _b.x, y = _b.y;
+        var _loop_4 = function (i) {
+            var _b = this_2.getRandomEmptyPosition(tiles), x = _b.x, y = _b.y;
             // Define the enemy tables for each depth level
             var tables = {
                 0: [1, 4, 3],
@@ -15290,13 +15412,13 @@ var Room = /** @class */ (function () {
             // Define the maximum depth level
             var max_depth_table = 7;
             // Get the current depth level, capped at the maximum
-            var d = Math.min(this_1.depth, max_depth_table);
+            var d = Math.min(this_2.depth, max_depth_table);
             // If there is a table for the current depth level
             if (tables[d] && tables[d].length > 0) {
                 // Function to add an enemy to the room
                 var addEnemy = function (enemy) {
-                    var _loop_4 = function (xx) {
-                        var _loop_5 = function (yy) {
+                    var _loop_5 = function (xx) {
+                        var _loop_6 = function (yy) {
                             if (!_this.getEmptyTiles().some(function (tt) { return tt.x === x + xx && tt.y === y + yy; })) {
                                 // If it does, increment the enemy count and return false
                                 numEnemies++;
@@ -15304,14 +15426,14 @@ var Room = /** @class */ (function () {
                             }
                         };
                         for (var yy = 0; yy < enemy.h; yy++) {
-                            var state_3 = _loop_5(yy);
+                            var state_3 = _loop_6(yy);
                             if (typeof state_3 === "object")
                                 return state_3;
                         }
                     };
                     // Check if the enemy overlaps with any other enemies
                     for (var xx = 0; xx < enemy.w; xx++) {
-                        var state_2 = _loop_4(xx);
+                        var state_2 = _loop_5(xx);
                         if (typeof state_2 === "object")
                             return state_2.value;
                     }
@@ -15324,74 +15446,74 @@ var Room = /** @class */ (function () {
                 // Add the selected enemy type to the room
                 switch (type) {
                     case 1:
-                        crabEnemy_1.CrabEnemy.add(this_1, this_1.game, x, y);
+                        crabEnemy_1.CrabEnemy.add(this_2, this_2.game, x, y);
                         break;
                     case 2:
-                        frogEnemy_1.FrogEnemy.add(this_1, this_1.game, x, y);
+                        frogEnemy_1.FrogEnemy.add(this_2, this_2.game, x, y);
                         break;
                     case 3:
-                        zombieEnemy_1.ZombieEnemy.add(this_1, this_1.game, x, y);
+                        zombieEnemy_1.ZombieEnemy.add(this_2, this_2.game, x, y);
                         break;
                     case 4:
-                        skullEnemy_1.SkullEnemy.add(this_1, this_1.game, x, y);
+                        skullEnemy_1.SkullEnemy.add(this_2, this_2.game, x, y);
                         break;
                     case 5:
-                        energyWizard_1.EnergyWizardEnemy.add(this_1, this_1.game, x, y);
+                        energyWizard_1.EnergyWizardEnemy.add(this_2, this_2.game, x, y);
                         break;
                     case 6:
-                        chargeEnemy_1.ChargeEnemy.add(this_1, this_1.game, x, y);
+                        chargeEnemy_1.ChargeEnemy.add(this_2, this_2.game, x, y);
                         break;
                     case 7:
-                        spawner_1.Spawner.add(this_1, this_1.game, x, y);
+                        spawner_1.Spawner.add(this_2, this_2.game, x, y);
                         break;
                     case 8:
-                        bishopEnemy_1.BishopEnemy.add(this_1, this_1.game, x, y);
+                        bishopEnemy_1.BishopEnemy.add(this_2, this_2.game, x, y);
                         break;
                     case 9:
-                        armoredzombieEnemy_1.ArmoredzombieEnemy.add(this_1, this_1.game, x, y);
+                        armoredzombieEnemy_1.ArmoredzombieEnemy.add(this_2, this_2.game, x, y);
                         break;
                     case 10:
-                        if (addEnemy(new bigSkullEnemy_1.BigSkullEnemy(this_1, this_1.game, x, y))) {
+                        if (addEnemy(new bigSkullEnemy_1.BigSkullEnemy(this_2, this_2.game, x, y))) {
                             // clear out some space
                             for (var xx = 0; xx < 2; xx++) {
                                 for (var yy = 0; yy < 2; yy++) {
-                                    this_1.roomArray[x + xx][y + yy] = new floor_1.Floor(this_1, x + xx, y + yy); // remove any walls
+                                    this_2.roomArray[x + xx][y + yy] = new floor_1.Floor(this_2, x + xx, y + yy); // remove any walls
                                 }
                             }
                         }
                         break;
                     case 11:
-                        queenEnemy_1.QueenEnemy.add(this_1, this_1.game, x, y);
+                        queenEnemy_1.QueenEnemy.add(this_2, this_2.game, x, y);
                         break;
                     case 12:
-                        knightEnemy_1.KnightEnemy.add(this_1, this_1.game, x, y);
+                        knightEnemy_1.KnightEnemy.add(this_2, this_2.game, x, y);
                         break;
                     case 13:
-                        if (addEnemy(new bigKnightEnemy_1.BigKnightEnemy(this_1, this_1.game, x, y))) {
+                        if (addEnemy(new bigKnightEnemy_1.BigKnightEnemy(this_2, this_2.game, x, y))) {
                             // clear out some space
                             for (var xx = 0; xx < 2; xx++) {
                                 for (var yy = 0; yy < 2; yy++) {
-                                    this_1.roomArray[x + xx][y + yy] = new floor_1.Floor(this_1, x + xx, y + yy); // remove any walls
+                                    this_2.roomArray[x + xx][y + yy] = new floor_1.Floor(this_2, x + xx, y + yy); // remove any walls
                                 }
                             }
                         }
                         break;
                     case 14:
-                        zombieEnemy_1.ZombieEnemy.add(this_1, this_1.game, x, y);
+                        zombieEnemy_1.ZombieEnemy.add(this_2, this_2.game, x, y);
                         break;
                     case 15:
-                        zombieEnemy_1.ZombieEnemy.add(this_1, this_1.game, x, y);
+                        zombieEnemy_1.ZombieEnemy.add(this_2, this_2.game, x, y);
                         break;
                     case 16:
-                        fireWizard_1.FireWizardEnemy.add(this_1, this_1.game, x, y);
+                        fireWizard_1.FireWizardEnemy.add(this_2, this_2.game, x, y);
                         break;
                 }
             }
         };
-        var this_1 = this;
+        var this_2 = this;
         // Loop through the number of enemies to be added
         for (var i = 0; i < numEnemies; i++) {
-            _loop_3(i);
+            _loop_4(i);
         }
     };
     Room.prototype.addObstacles = function (numObstacles, rand) {
@@ -16372,6 +16494,7 @@ var Door = /** @class */ (function (_super) {
                 return false;
             }
             if (_this.type === DoorType.GUARDEDDOOR) {
+                _this.room.checkForNoEnemies();
                 _this.game.pushMessage("There are still remaining foes guarding this door...");
                 return false;
             }
@@ -17528,6 +17651,8 @@ var DualDagger = /** @class */ (function (_super) {
                 if (_this.wielder === _this.game.players[_this.game.localPlayerID])
                     _this.game.shakeScreen(10 * _this.wielder.hitX, 10 * _this.wielder.hitY);
                 if (_this.firstAttack) {
+                    _this.game.rooms[_this.wielder.levelID].tickHitWarnings();
+                    _this.game.rooms[_this.wielder.levelID].clearDeadStuff();
                     _this.firstAttack = false;
                     _this.wielder.slowMotionEnabled = true;
                 }
@@ -18010,7 +18135,7 @@ var Weapon = /** @class */ (function (_super) {
                 _this.game.rooms[_this.wielder.levelID].particles.push(new slashParticle_1.SlashParticle(newX, newY));
                 _this.game.rooms[_this.wielder.levelID].tick(_this.wielder);
                 if (_this.wielder === _this.game.players[_this.game.localPlayerID])
-                    _this.game.shakeScreen(10 * _this.wielder.hitX, 10 * _this.wielder.drawY);
+                    _this.game.shakeScreen(10 * _this.wielder.hitX, 10 * _this.wielder.hitY);
             }
             return !flag;
         };

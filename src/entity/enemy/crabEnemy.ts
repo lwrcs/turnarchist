@@ -136,8 +136,7 @@ export class CrabEnemy extends Enemy {
 
               if (!hitPlayer) {
                 this.tryMove(moves[0].pos.x, moves[0].pos.y);
-                this.drawX = this.x - oldX;
-                this.drawY = this.y - oldY;
+                this.setDrawXY(oldX, oldY);
                 if (this.x > oldX) this.direction = Direction.RIGHT;
                 else if (this.x < oldX) this.direction = Direction.LEFT;
                 else if (this.y > oldY) this.direction = Direction.DOWN;

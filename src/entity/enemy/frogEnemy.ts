@@ -179,8 +179,8 @@ export class FrogEnemy extends Enemy {
                 }
                 if (this.x !== oldX || this.y !== oldY) {
                   this.jump();
-                  this.drawX = this.x - oldX;
-                  this.drawY = this.y - oldY;
+                  this.setDrawXY(oldX, oldY);
+
                   if (
                     Math.abs(this.x - oldX) > 1 ||
                     Math.abs(this.y - oldY) > 1 ||

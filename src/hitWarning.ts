@@ -21,7 +21,7 @@ export class HitWarning extends Drawable {
   dead: boolean;
   static frame = 0;
   private game: Game;
-  private entity: Entity;
+  parent: Entity | null = null;
   private _pointerDir: Direction | null = null;
   private _pointerOffset: { x: number; y: number } | null = null;
   private tileX: number;
@@ -40,13 +40,15 @@ export class HitWarning extends Drawable {
     eX?: number,
     eY?: number,
     isEnemy?: Boolean,
-    dirOnly: Boolean = false
+    dirOnly: Boolean = false,
+    parent: Entity | null = null
   ) {
     super();
     this.x = x;
     this.y = y;
     this.dead = false;
     this.game = game;
+    this.parent = parent;
     this.tileX = 0;
     this.tileY = 22;
     this.eX = eX;

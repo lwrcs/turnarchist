@@ -53,6 +53,8 @@ export class DualDagger extends Weapon {
         this.game.shakeScreen(10 * this.wielder.hitX, 10 * this.wielder.hitY);
 
       if (this.firstAttack) {
+        this.game.rooms[this.wielder.levelID].tickHitWarnings();
+        this.game.rooms[this.wielder.levelID].clearDeadStuff();
         this.firstAttack = false;
         this.wielder.slowMotionEnabled = true;
       }

@@ -99,6 +99,7 @@ export class Door extends Tile {
     }
 
     if (this.type === DoorType.GUARDEDDOOR) {
+      this.room.checkForNoEnemies();
       this.game.pushMessage(
         "There are still remaining foes guarding this door..."
       );

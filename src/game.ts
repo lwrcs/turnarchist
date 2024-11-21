@@ -287,7 +287,7 @@ export class Game {
           this.screenShakeY = 0;
           this.shakeAmountX = 0;
           this.shakeAmountY = 0;
-          this.shakeFrame = 0;
+          this.shakeFrame = (3 * Math.PI) / 2;
           this.screenShakeCutoff = 0;
           this.levelState = LevelState.IN_LEVEL;
           this.tutorialActive = false;
@@ -587,12 +587,17 @@ export class Game {
   };
 
   shakeScreen = (shakeX: number, shakeY: number) => {
+    this.screenShakeX = 0;
+    this.screenShakeY = 0;
+    this.shakeAmountX = 0;
+    this.shakeAmountY = 0;
     this.screenShakeActive = true;
     this.screenShakeX = shakeX;
     this.screenShakeY = shakeY;
     this.shakeAmountX = Math.abs(shakeX);
     this.shakeAmountY = Math.abs(shakeY);
-    this.shakeFrame = 0;
+    if (shakeX < 0 || shakeY < 0) this.shakeFrame = (3 * Math.PI) / 2;
+    if (shakeX > 0 || shakeY > 0) this.shakeFrame = Math.PI / 2;
     this.screenShakeCutoff = Date.now();
   };
 
@@ -941,14 +946,14 @@ export class Game {
       if (this.screenShakeActive) {
         //const decayFactor = 1 - 0.15 * delta;
         const decayFactor =
-          1 / Math.sqrt(Date.now() + 1 - this.screenShakeCutoff);
-        this.shakeAmountX *= 1 - 0.1 * delta;
-        this.shakeAmountY *= 1 - 0.1 * delta;
+          5 / Math.sqrt((Date.now() + 30 - this.screenShakeCutoff) * delta);
+        this.shakeAmountX -= this.shakeAmountX * 0.1 * delta;
+        this.shakeAmountY -= this.shakeAmountY * 0.1 * delta;
         this.screenShakeX =
-          Math.sin(this.shakeFrame * Math.PI) * this.shakeAmountX;
+          Math.sin(this.shakeFrame * Math.PI) * this.shakeAmountX * decayFactor;
         this.screenShakeY =
-          Math.sin(this.shakeFrame * Math.PI) * this.shakeAmountY;
-        this.shakeFrame += 0.2 * delta;
+          Math.sin(this.shakeFrame * Math.PI) * this.shakeAmountY * decayFactor;
+        this.shakeFrame += 0.3 * delta;
 
         if (Math.abs(decayFactor) < 0.001) {
           this.shakeAmountX = 0;

@@ -167,8 +167,7 @@ export class QueenEnemy extends Enemy {
             if (!hitPlayer) {
               //if ()
               this.tryMove(moveX, moveY);
-              this.drawX = this.x - oldX;
-              this.drawY = this.y - oldY;
+              this.setDrawXY(oldX, oldY);
             }
           }
           this.makeHitWarnings();

@@ -16,6 +16,15 @@ export enum InputEnum {
   LEFT_CLICK,
   RIGHT_CLICK,
   MOUSE_MOVE,
+  NUMBER_1,
+  NUMBER_2,
+  NUMBER_3,
+  NUMBER_4,
+  NUMBER_5,
+  NUMBER_6,
+  NUMBER_7,
+  NUMBER_8,
+  NUMBER_9,
 }
 
 export const Input = {
@@ -53,7 +62,7 @@ export const Input = {
   tapListener: function () {},
   commaListener: function () {},
   periodListener: function () {},
-
+  numKeyListener: function (num: number) {},
   mouseLeftClickListeners: [],
   mouseRightClickListeners: [],
   mouseMoveListeners: [],
@@ -80,6 +89,15 @@ export const Input = {
   N: "KeyN",
   I: "KeyI",
   Q: "KeyQ",
+  NUMBER_1: "Digit1",
+  NUMBER_2: "Digit2",
+  NUMBER_3: "Digit3",
+  NUMBER_4: "Digit4",
+  NUMBER_5: "Digit5",
+  NUMBER_6: "Digit6",
+  NUMBER_7: "Digit7",
+  NUMBER_8: "Digit8",
+  NUMBER_9: "Digit9",
   COMMA: "Comma",
   PERIOD: "Period",
 
@@ -137,6 +155,17 @@ export const Input = {
         break;
       case Input.PERIOD:
         Input.periodListener();
+        break;
+      case Input.NUMBER_1:
+      case Input.NUMBER_2:
+      case Input.NUMBER_3:
+      case Input.NUMBER_4:
+      case Input.NUMBER_5:
+      case Input.NUMBER_6:
+      case Input.NUMBER_7:
+      case Input.NUMBER_8:
+      case Input.NUMBER_9:
+        Input.numKeyListener(parseInt(event.code.slice(-1)));
         break;
     }
   },

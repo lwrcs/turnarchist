@@ -199,8 +199,7 @@ export class BishopEnemy extends Enemy {
             }
             if (!hitPlayer) {
               this.tryMove(moveX, moveY);
-              this.drawX = this.x - oldX;
-              this.drawY = this.y - oldY;
+              this.setDrawXY(oldX, oldY);
             }
           }
           this.makeHitWarnings();

@@ -182,8 +182,8 @@ export class ZombieEnemy extends Enemy {
               if (!hitPlayer) {
                 // Move to the new position
                 this.tryMove(moveX, moveY);
-                this.drawX = this.x - oldX;
-                this.drawY = this.y - oldY;
+                this.setDrawXY(oldX, oldY);
+
                 if (this.x > oldX) this.direction = Direction.RIGHT;
                 else if (this.x < oldX) this.direction = Direction.LEFT;
                 else if (this.y > oldY) this.direction = Direction.DOWN;

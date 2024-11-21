@@ -66,8 +66,10 @@ export class SkullEnemy extends Enemy {
         this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
     }
     this.ticksSinceFirstHit = 0;
+    if (this.health == 2) this.unconscious = false;
     this.health -= damage;
     if (this.health == 1) {
+      this.unconscious = true;
       ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 3, 28);
     } else this.healthBar.hurt();
     if (this.health <= 0) {
@@ -88,9 +90,11 @@ export class SkullEnemy extends Enemy {
       }
 
       if (this.health <= 1) {
+        this.unconscious = true;
         this.ticksSinceFirstHit++;
         if (this.ticksSinceFirstHit >= this.REGEN_TICKS) {
           this.health = 2;
+          this.unconscious = false;
         }
         return;
       }
@@ -172,8 +176,8 @@ export class SkullEnemy extends Enemy {
               }
               if (!hitPlayer) {
                 this.tryMove(moveX, moveY);
-                this.drawX = this.x - oldX;
-                this.drawY = this.y - oldY;
+                this.setDrawXY(oldX, oldY);
+
                 if (this.x > oldX) this.direction = Direction.RIGHT;
                 else if (this.x < oldX) this.direction = Direction.LEFT;
                 else if (this.y > oldY) this.direction = Direction.DOWN;
