@@ -441,8 +441,14 @@ export class Game {
     times.push(timestamp);
     fps = times.length;
 
-    this.update();
-    this.draw(delta);
+    if (
+      Math.floor(timestamp / (1000 / 60)) >
+      Math.floor(this.previousFrameTimestamp / (1000 / 60))
+    ) {
+      this.update();
+    }
+
+    this.draw(delta * GameConstants.ANIMATION_SPEED * 0.8);
     window.requestAnimationFrame(this.run);
 
     this.previousFrameTimestamp = timestamp;
@@ -729,7 +735,6 @@ export class Game {
     Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
 
     if (this.levelState === LevelState.TRANSITIONING) {
-      this.screenShakeActive = false;
       let levelOffsetX = Math.floor(
         this.lerp(
           (Date.now() - this.transitionStartTime) /
@@ -934,25 +939,18 @@ export class Game {
       // Start of Selection
 
       if (this.screenShakeActive) {
-        setTimeout(() => {
-          this.screenShakeActive = false;
-        }, 1200);
-        const decayFactor = 1 - 0.15 * delta;
-        //const decayFactor = 1 - 1 / (Date.now() - this.screenShakeCutoff);
+        //const decayFactor = 1 - 0.15 * delta;
+        const decayFactor =
+          1 / Math.sqrt(Date.now() + 1 - this.screenShakeCutoff);
+        this.shakeAmountX *= 1 - 0.1 * delta;
+        this.shakeAmountY *= 1 - 0.1 * delta;
         this.screenShakeX =
-          Math.sin(this.shakeFrame * Math.PI * delta) * this.shakeAmountX;
+          Math.sin(this.shakeFrame * Math.PI) * this.shakeAmountX;
         this.screenShakeY =
-          Math.sin(this.shakeFrame * Math.PI * delta) * this.shakeAmountY;
-        this.shakeFrame += 0.35 * delta;
-        this.shakeAmountX =
-          this.shakeAmountX < 0.01 ? 0 : this.shakeAmountX * decayFactor;
-        this.shakeAmountY =
-          this.shakeAmountY < 0.01 ? 0 : this.shakeAmountY * decayFactor;
+          Math.sin(this.shakeFrame * Math.PI) * this.shakeAmountY;
+        this.shakeFrame += 0.2 * delta;
 
-        if (
-          Math.abs(this.shakeAmountX) < 0.01 &&
-          Math.abs(this.shakeAmountY) < 0.01
-        ) {
+        if (Math.abs(decayFactor) < 0.001) {
           this.shakeAmountX = 0;
           this.shakeAmountY = 0;
           this.shakeFrame = 0;

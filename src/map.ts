@@ -22,7 +22,10 @@ export class Map {
   saveMapData = () => {
     this.clearMap();
     for (const level of this.game.rooms) {
-      if (this.game.room.mapGroup === level.mapGroup) {
+      if (
+        this.game.room.mapGroup === level.mapGroup &&
+        level.entered === true
+      ) {
         this.mapData.push({
           room: level,
           walls: level.innerWalls,

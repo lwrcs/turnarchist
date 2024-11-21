@@ -29,10 +29,11 @@ export class GameConstants {
   static readonly SWIPE_THRESH = 25 ** 2; // (size of swipe threshold circle)^2
 
   static readonly KEY_REPEAT_TIME = 250; // millseconds
-  static readonly MOVEMENT_COOLDOWN = 200; // milliseconds
+  static readonly MOVEMENT_COOLDOWN = 100; // milliseconds
 
   static readonly CHAT_APPEAR_TIME = 5000;
   static readonly CHAT_FADE_TIME = 1000;
+  static ANIMATION_SPEED = 1;
 
   static readonly DEFAULTWIDTH = 6 * GameConstants.TILESIZE;
   static readonly DEFAULTHEIGHT = 12 * GameConstants.TILESIZE;
@@ -56,6 +57,7 @@ export class GameConstants {
   static readonly STARTING_INVENTORY = [Dagger, Candle];
   static readonly STARTING_DEV_INVENTORY = [
     Dagger,
+    DualDagger,
     EntitySpawner,
     Candle,
     GodStone,

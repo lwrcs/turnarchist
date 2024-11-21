@@ -3546,7 +3546,6 @@ var SkullEnemy = /** @class */ (function (_super) {
         _this.behavior = function () {
             _this.lastX = _this.x;
             _this.lastY = _this.y;
-            //set last positions
             if (!_this.dead) {
                 if (_this.skipNextTurns > 0) {
                     _this.skipNextTurns--;
@@ -3557,60 +3556,59 @@ var SkullEnemy = /** @class */ (function (_super) {
                     if (_this.ticksSinceFirstHit >= _this.REGEN_TICKS) {
                         _this.health = 2;
                     }
+                    return;
                 }
-                else {
-                    _this.ticks++;
-                    if (!_this.seenPlayer) {
-                        _this.lookForPlayer();
-                    }
-                    else if (_this.seenPlayer) {
-                        if (_this.room.playerTicked === _this.targetPlayer) {
-                            _this.alertTicks = Math.max(0, _this.alertTicks - 1);
-                            var oldX = _this.x;
-                            var oldY = _this.y;
-                            var disablePositions = Array();
-                            for (var _i = 0, _a = _this.room.entities; _i < _a.length; _i++) {
-                                var e = _a[_i];
-                                if (e !== _this) {
-                                    disablePositions.push({ x: e.x, y: e.y });
+                _this.ticks++;
+                if (!_this.seenPlayer) {
+                    _this.lookForPlayer();
+                }
+                else if (_this.seenPlayer) {
+                    if (_this.room.playerTicked === _this.targetPlayer) {
+                        _this.alertTicks = Math.max(0, _this.alertTicks - 1);
+                        var oldX = _this.x;
+                        var oldY = _this.y;
+                        var disablePositions = Array();
+                        for (var _i = 0, _a = _this.room.entities; _i < _a.length; _i++) {
+                            var e = _a[_i];
+                            if (e !== _this) {
+                                disablePositions.push({ x: e.x, y: e.y });
+                            }
+                        }
+                        for (var xx = _this.x - 1; xx <= _this.x + 1; xx++) {
+                            for (var yy = _this.y - 1; yy <= _this.y + 1; yy++) {
+                                if (_this.room.roomArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
+                                    _this.room.roomArray[xx][yy].on) {
+                                    disablePositions.push({ x: xx, y: yy });
                                 }
                             }
-                            for (var xx = _this.x - 1; xx <= _this.x + 1; xx++) {
-                                for (var yy = _this.y - 1; yy <= _this.y + 1; yy++) {
-                                    if (_this.room.roomArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
-                                        _this.room.roomArray[xx][yy].on) {
-                                        // don't walk on active spiketraps
-                                        disablePositions.push({ x: xx, y: yy });
-                                    }
-                                }
+                        }
+                        var grid = [];
+                        for (var x = 0; x < _this.room.roomX + _this.room.width; x++) {
+                            grid[x] = [];
+                            for (var y = 0; y < _this.room.roomY + _this.room.height; y++) {
+                                if (_this.room.roomArray[x] && _this.room.roomArray[x][y])
+                                    grid[x][y] = _this.room.roomArray[x][y];
+                                else
+                                    grid[x][y] = false;
                             }
-                            var grid = [];
-                            for (var x = 0; x < _this.room.roomX + _this.room.width; x++) {
-                                grid[x] = [];
-                                for (var y = 0; y < _this.room.roomY + _this.room.height; y++) {
-                                    if (_this.room.roomArray[x] && _this.room.roomArray[x][y])
-                                        grid[x][y] = _this.room.roomArray[x][y];
-                                    else
-                                        grid[x][y] = false;
-                                }
-                            }
-                            var moves = astarclass_1.astar.AStar.search(grid, _this, _this.targetPlayer, disablePositions, false, false, true, _this.direction);
-                            if (moves.length > 0) {
-                                var moveX = moves[0].pos.x;
-                                var moveY = moves[0].pos.y;
+                        }
+                        var moves = astarclass_1.astar.AStar.search(grid, _this, _this.targetPlayer, disablePositions, false, false, true, _this.direction);
+                        if (moves.length > 0) {
+                            var moveX = moves[0].pos.x;
+                            var moveY = moves[0].pos.y;
+                            var oldDir = _this.direction;
+                            var player = _this.targetPlayer;
+                            _this.facePlayer(player);
+                            if (moveX > oldX)
+                                _this.direction = game_1.Direction.RIGHT;
+                            else if (moveX < oldX)
+                                _this.direction = game_1.Direction.LEFT;
+                            else if (moveY > oldY)
+                                _this.direction = game_1.Direction.DOWN;
+                            else if (moveY < oldY)
+                                _this.direction = game_1.Direction.UP;
+                            if (oldDir == _this.direction) {
                                 var hitPlayer = false;
-                                var moveDirection = game_1.Direction.DOWN;
-                                if (moveX !== oldX) {
-                                    moveDirection = moveX > oldX ? game_1.Direction.RIGHT : game_1.Direction.LEFT;
-                                }
-                                else if (moveY !== oldY) {
-                                    moveDirection = moveY > oldY ? game_1.Direction.DOWN : game_1.Direction.UP;
-                                }
-                                if (moveDirection !== _this.direction) {
-                                    moveX = oldX;
-                                    moveY = oldY;
-                                    _this.direction = moveDirection;
-                                }
                                 for (var i in _this.game.players) {
                                     if (_this.game.rooms[_this.game.players[i].levelID] === _this.room &&
                                         _this.game.players[i].x === moveX &&
@@ -3624,7 +3622,7 @@ var SkullEnemy = /** @class */ (function (_super) {
                                     }
                                 }
                                 if (!hitPlayer) {
-                                    _this.tryMove(moveX, moveY, true);
+                                    _this.tryMove(moveX, moveY);
                                     _this.drawX = _this.x - oldX;
                                     _this.drawY = _this.y - oldY;
                                     if (_this.x > oldX)
@@ -3637,63 +3635,64 @@ var SkullEnemy = /** @class */ (function (_super) {
                                         _this.direction = game_1.Direction.UP;
                                 }
                             }
-                            if (_this.direction == game_1.Direction.LEFT) {
-                                disablePositions.push({
-                                    x: _this.x,
-                                    y: _this.y + 1,
-                                });
-                                disablePositions.push({
-                                    x: _this.x,
-                                    y: _this.y - 1,
-                                });
-                            }
-                            if (_this.direction == game_1.Direction.RIGHT) {
-                                disablePositions.push({
-                                    x: _this.x,
-                                    y: _this.y + 1,
-                                });
-                                disablePositions.push({
-                                    x: _this.x,
-                                    y: _this.y - 1,
-                                });
-                            }
-                            if (_this.direction == game_1.Direction.DOWN) {
-                                disablePositions.push({
-                                    x: _this.x + 1,
-                                    y: _this.y,
-                                });
-                                disablePositions.push({
-                                    x: _this.x - 1,
-                                    y: _this.y,
-                                });
-                            }
-                            if (_this.direction == game_1.Direction.UP) {
-                                disablePositions.push({
-                                    x: _this.x + 1,
-                                    y: _this.y,
-                                });
-                                disablePositions.push({
-                                    x: _this.x - 1,
-                                    y: _this.y,
-                                });
-                            }
-                            _this.makeHitWarnings();
                         }
-                        var targetPlayerOffline = Object.values(_this.game.offlinePlayers).indexOf(_this.targetPlayer) !== -1;
-                        if (!_this.aggro || targetPlayerOffline) {
-                            var p = _this.nearestPlayer();
-                            if (p !== false) {
-                                var distance = p[0], player = p[1];
-                                if (distance <= 4 &&
-                                    (targetPlayerOffline ||
-                                        distance < _this.playerDistance(_this.targetPlayer))) {
-                                    if (player !== _this.targetPlayer) {
-                                        _this.targetPlayer = player;
-                                        _this.facePlayer(player);
-                                        if (player === _this.game.players[_this.game.localPlayerID])
-                                            _this.alertTicks = 1;
-                                        _this.makeHitWarnings();
-                                    }
+                        if (_this.direction == game_1.Direction.LEFT) {
+                            disablePositions.push({
+                                x: _this.x,
+                                y: _this.y + 1,
+                            });
+                            disablePositions.push({
+                                x: _this.x,
+                                y: _this.y - 1,
+                            });
+                        }
+                        if (_this.direction == game_1.Direction.RIGHT) {
+                            disablePositions.push({
+                                x: _this.x,
+                                y: _this.y + 1,
+                            });
+                            disablePositions.push({
+                                x: _this.x,
+                                y: _this.y - 1,
+                            });
+                        }
+                        if (_this.direction == game_1.Direction.DOWN) {
+                            disablePositions.push({
+                                x: _this.x + 1,
+                                y: _this.y,
+                            });
+                            disablePositions.push({
+                                x: _this.x - 1,
+                                y: _this.y,
+                            });
+                        }
+                        if (_this.direction == game_1.Direction.UP) {
+                            disablePositions.push({
+                                x: _this.x + 1,
+                                y: _this.y,
+                            });
+                            disablePositions.push({
+                                x: _this.x - 1,
+                                y: _this.y,
+                            });
+                        }
+                        _this.makeHitWarnings();
+                    }
+                    var targetPlayerOffline = Object.values(_this.game.offlinePlayers).indexOf(_this.targetPlayer) !==
+                        -1;
+                    if (!_this.aggro || targetPlayerOffline) {
+                        var p = _this.nearestPlayer();
+                        if (p !== false) {
+                            var distance = p[0], player = p[1];
+                            if (distance <= 4 &&
+                                (targetPlayerOffline ||
+                                    distance < _this.playerDistance(_this.targetPlayer))) {
+                                if (player !== _this.targetPlayer) {
+                                    _this.targetPlayer = player;
+                                    _this.facePlayer(player);
+                                    if (player === _this.game.players[_this.game.localPlayerID])
+                                        _this.alertTicks = 1;
+                                    _this.makeHitWarnings();
                                 }
                             }
                         }
@@ -6560,8 +6559,11 @@ var Game = /** @class */ (function () {
             }
             times.push(timestamp);
             fps = times.length;
-            _this.update();
-            _this.draw(delta);
+            if (Math.floor(timestamp / (1000 / 60)) >
+                Math.floor(_this.previousFrameTimestamp / (1000 / 60))) {
+                _this.update();
+            }
+            _this.draw(delta * gameConstants_1.GameConstants.ANIMATION_SPEED * 0.8);
             window.requestAnimationFrame(_this.run);
             _this.previousFrameTimestamp = timestamp;
         };
@@ -6695,7 +6697,6 @@ var Game = /** @class */ (function () {
             Game.ctx.fillStyle = _this.room.shadeColor;
             Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
             if (_this.levelState === LevelState.TRANSITIONING) {
-                _this.screenShakeActive = false;
                 var levelOffsetX = Math.floor(_this.lerp((Date.now() - _this.transitionStartTime) /
                     levelConstants_1.LevelConstants.LEVEL_TRANSITION_TIME, 0, -_this.transitionX));
                 var levelOffsetY = Math.floor(_this.lerp((Date.now() - _this.transitionStartTime) /
@@ -6812,22 +6813,16 @@ var Game = /** @class */ (function () {
             else {
                 // Start of Selection
                 if (_this.screenShakeActive) {
-                    setTimeout(function () {
-                        _this.screenShakeActive = false;
-                    }, 1200);
-                    var decayFactor = 1 - 0.15 * delta;
-                    //const decayFactor = 1 - 1 / (Date.now() - this.screenShakeCutoff);
+                    //const decayFactor = 1 - 0.15 * delta;
+                    var decayFactor = 1 / Math.sqrt(Date.now() + 1 - _this.screenShakeCutoff);
+                    _this.shakeAmountX *= 1 - 0.1 * delta;
+                    _this.shakeAmountY *= 1 - 0.1 * delta;
                     _this.screenShakeX =
-                        Math.sin(_this.shakeFrame * Math.PI * delta) * _this.shakeAmountX;
+                        Math.sin(_this.shakeFrame * Math.PI) * _this.shakeAmountX;
                     _this.screenShakeY =
-                        Math.sin(_this.shakeFrame * Math.PI * delta) * _this.shakeAmountY;
-                    _this.shakeFrame += 0.35 * delta;
-                    _this.shakeAmountX =
-                        _this.shakeAmountX < 0.01 ? 0 : _this.shakeAmountX * decayFactor;
-                    _this.shakeAmountY =
-                        _this.shakeAmountY < 0.01 ? 0 : _this.shakeAmountY * decayFactor;
-                    if (Math.abs(_this.shakeAmountX) < 0.01 &&
-                        Math.abs(_this.shakeAmountY) < 0.01) {
+                        Math.sin(_this.shakeFrame * Math.PI) * _this.shakeAmountY;
+                    _this.shakeFrame += 0.2 * delta;
+                    if (Math.abs(decayFactor) < 0.001) {
                         _this.shakeAmountX = 0;
                         _this.shakeAmountY = 0;
                         _this.shakeFrame = 0;
@@ -7251,6 +7246,7 @@ var lantern_1 = __webpack_require__(/*! ./item/lantern */ "./src/item/lantern.ts
 var torch_1 = __webpack_require__(/*! ./item/torch */ "./src/item/torch.ts");
 var levelConstants_1 = __webpack_require__(/*! ./levelConstants */ "./src/levelConstants.ts");
 var dagger_1 = __webpack_require__(/*! ./weapon/dagger */ "./src/weapon/dagger.ts");
+var dualdagger_1 = __webpack_require__(/*! ./weapon/dualdagger */ "./src/weapon/dualdagger.ts");
 var spear_1 = __webpack_require__(/*! ./weapon/spear */ "./src/weapon/spear.ts");
 var spellbook_1 = __webpack_require__(/*! ./weapon/spellbook */ "./src/weapon/spellbook.ts");
 var warhammer_1 = __webpack_require__(/*! ./weapon/warhammer */ "./src/weapon/warhammer.ts");
@@ -7266,9 +7262,10 @@ var GameConstants = /** @class */ (function () {
     GameConstants.SCALE = 3;
     GameConstants.SWIPE_THRESH = Math.pow(25, 2); // (size of swipe threshold circle)^2
     GameConstants.KEY_REPEAT_TIME = 250; // millseconds
-    GameConstants.MOVEMENT_COOLDOWN = 200; // milliseconds
+    GameConstants.MOVEMENT_COOLDOWN = 100; // milliseconds
     GameConstants.CHAT_APPEAR_TIME = 5000;
     GameConstants.CHAT_FADE_TIME = 1000;
+    GameConstants.ANIMATION_SPEED = 1;
     GameConstants.DEFAULTWIDTH = 6 * GameConstants.TILESIZE;
     GameConstants.DEFAULTHEIGHT = 12 * GameConstants.TILESIZE;
     GameConstants.WIDTH = levelConstants_1.LevelConstants.SCREEN_W * GameConstants.TILESIZE;
@@ -7288,6 +7285,7 @@ var GameConstants = /** @class */ (function () {
     GameConstants.STARTING_INVENTORY = [dagger_1.Dagger, candle_1.Candle];
     GameConstants.STARTING_DEV_INVENTORY = [
         dagger_1.Dagger,
+        dualdagger_1.DualDagger,
         entitySpawner_1.EntitySpawner,
         candle_1.Candle,
         godStone_1.GodStone,
@@ -11479,7 +11477,8 @@ var Map = /** @class */ (function () {
             _this.clearMap();
             for (var _i = 0, _a = _this.game.rooms; _i < _a.length; _i++) {
                 var level = _a[_i];
-                if (_this.game.room.mapGroup === level.mapGroup) {
+                if (_this.game.room.mapGroup === level.mapGroup &&
+                    level.entered === true) {
                     _this.mapData.push({
                         room: level,
                         walls: level.innerWalls,
@@ -12168,6 +12167,11 @@ var PlayerDirection;
     PlayerDirection[PlayerDirection["RIGHT"] = 2] = "RIGHT";
     PlayerDirection[PlayerDirection["LEFT"] = 3] = "LEFT";
 })(PlayerDirection = exports.PlayerDirection || (exports.PlayerDirection = {}));
+var DrawDirection;
+(function (DrawDirection) {
+    DrawDirection[DrawDirection["X"] = 0] = "X";
+    DrawDirection[DrawDirection["Y"] = 1] = "Y";
+})(DrawDirection || (DrawDirection = {}));
 var Player = /** @class */ (function (_super) {
     __extends(Player, _super);
     function Player(game, x, y, isLocalPlayer) {
@@ -12426,6 +12430,9 @@ var Player = /** @class */ (function (_super) {
             return true;
         };
         _this.tryMove = function (x, y) {
+            _this.lastX = _this.drawX;
+            _this.lastY = _this.drawY;
+            var slowMotion = _this.slowMotionEnabled;
             var newMove = { x: x, y: y };
             // TODO don't move if hit by enemy
             _this.game.rooms[_this.levelID].catchUp();
@@ -12493,11 +12500,11 @@ var Player = /** @class */ (function (_super) {
                                 e.kill();
                                 if (_this.game.rooms[_this.levelID] === _this.game.room)
                                     sound_1.Sound.hit();
-                                _this.drawX = 0.5 * (_this.x - e.x);
-                                _this.drawY = 0.5 * (_this.y - e.y);
+                                _this.hitX = 0.5 * (_this.x - e.x);
+                                _this.hitY = 0.5 * (_this.y - e.y);
                                 _this.game.rooms[_this.levelID].particles.push(new slashParticle_1.SlashParticle(e.x, e.y));
                                 _this.game.rooms[_this.levelID].tick(_this);
-                                _this.game.shakeScreen(10 * _this.drawX, 10 * _this.drawY);
+                                _this.game.shakeScreen(10 * _this.hitX, 10 * _this.hitY);
                                 return;
                             }
                         }
@@ -12550,8 +12557,8 @@ var Player = /** @class */ (function (_super) {
             }
             else {
                 if (other instanceof door_1.Door) {
-                    _this.drawX = (_this.x - x) * 0.5;
-                    _this.drawY = (_this.y - y) * 0.5;
+                    _this.hitX = (_this.x - x) * 0.5;
+                    _this.hitY = (_this.y - y) * 0.5;
                     if (other.canUnlock(_this))
                         other.unlock(_this);
                 }
@@ -12613,22 +12620,38 @@ var Player = /** @class */ (function (_super) {
             var EPSILON = 0.01;
             return Math.abs(_this.drawX) < EPSILON && Math.abs(_this.drawY) < EPSILON;
         };
+        _this.doneHitting = function () {
+            var EPSILON = 0.01;
+            return Math.abs(_this.hitX) < EPSILON && Math.abs(_this.hitY) < EPSILON;
+        };
+        _this.enableSlowMotion = function () {
+            if (_this.motionSpeed < 1 && !_this.slowMotionEnabled) {
+                _this.motionSpeed *= 1.08;
+                if (_this.motionSpeed >= 1)
+                    _this.motionSpeed = 1;
+            }
+            if (_this.slowMotionEnabled && _this.motionSpeed > 0.25) {
+                _this.motionSpeed *= 0.95;
+                if (_this.motionSpeed < 0.25)
+                    _this.motionSpeed = 0.25;
+            }
+        };
         _this.move = function (x, y) {
+            _this.lastX = _this.x;
+            _this.lastY = _this.y;
             //this.actionTab.setState(ActionState.MOVE);
             if (_this.game.rooms[_this.levelID] === _this.game.room)
                 sound_1.Sound.playerStoneFootstep();
             if (_this.openVendingMachine)
                 _this.openVendingMachine.close();
-            _this.drawX = x - _this.x;
-            _this.drawY = y - _this.y;
-            if (_this.drawX > 1)
-                _this.drawX = 1;
-            if (_this.drawY > 1)
-                _this.drawY = 1;
-            if (_this.drawX < -1)
-                _this.drawX = -1;
-            if (_this.drawY < -1)
-                _this.drawY = -1;
+            _this.drawX += x - _this.x;
+            _this.drawY += y - _this.y;
+            /*
+            if (this.drawX > 1) this.drawX = 1;
+            if (this.drawY > 1) this.drawY = 1;
+            if (this.drawX < -1) this.drawX = -1;
+            if (this.drawY < -1) this.drawY = -1;
+            */
             _this.x = x;
             _this.y = y;
             for (var _i = 0, _a = _this.game.rooms[_this.levelID].items; _i < _a.length; _i++) {
@@ -12637,12 +12660,22 @@ var Player = /** @class */ (function (_super) {
                     i.onPickup(_this);
                 }
             }
+            var diffX = x - _this.lastX;
+            var diffY = y - _this.lastY;
+            if (diffX === 0 && diffY === 0)
+                return;
+            if (Math.abs(diffX) > 0)
+                _this.justMoved = DrawDirection.X;
+            else if (Math.abs(diffY) > 0)
+                _this.justMoved = DrawDirection.Y;
             //this.game.rooms[this.levelID].updateLighting();
         };
         _this.moveNoSmooth = function (x, y) {
             // doesn't touch smoothing
             _this.x = x;
             _this.y = y;
+            _this.previousDrawDirectionArray = [];
+            _this.previousDrawDirectionArray.push(DrawDirection.Y);
         };
         _this.moveSnap = function (x, y) {
             // no smoothing
@@ -12650,8 +12683,18 @@ var Player = /** @class */ (function (_super) {
             _this.y = y;
             _this.drawX = 0;
             _this.drawY = 0;
+            _this.hitX = 0;
+            _this.hitY = 0;
+            _this.previousDrawDirectionArray = [];
+            _this.previousDrawDirectionArray.push(DrawDirection.Y);
         };
         _this.update = function () { };
+        _this.updateSlowMotion = function () {
+            if (_this.slowMotionTickDuration > 0)
+                _this.slowMotionTickDuration -= 1;
+            if (_this.slowMotionTickDuration === 0)
+                _this.slowMotionEnabled = false;
+        };
         _this.finishTick = function () {
             _this.turnCount += 1;
             _this.inventory.tick();
@@ -12782,16 +12825,37 @@ var Player = /** @class */ (function (_super) {
             if (!_this.doneMoving()) {
                 _this.drawX *= 1 - _this.drawMoveSpeed * delta;
                 _this.drawY *= 1 - _this.drawMoveSpeed * delta;
-                _this.drawX =
-                    Math.abs(_this.drawX) < 0.01 ? 0 : Math.max(-1, Math.min(_this.drawX, 1));
-                _this.drawY =
-                    Math.abs(_this.drawY) < 0.01 ? 0 : Math.max(-1, Math.min(_this.drawY, 1));
+            }
+            if (_this.doneHitting()) {
                 _this.jump(delta);
             }
+            if (Math.abs(_this.drawX) < 0.01) {
+                _this.drawX = 0;
+                _this.justMoved = DrawDirection.Y;
+            }
+            if (Math.abs(_this.drawY) < 0.01) {
+                _this.drawY = 0;
+                _this.justMoved = DrawDirection.X;
+            }
+            if (!_this.doneHitting()) {
+                _this.updateHitXY(delta);
+            }
+            _this.drawX += _this.hitX;
+            _this.drawY += _this.hitY;
+            _this.enableSlowMotion();
+            gameConstants_1.GameConstants.ANIMATION_SPEED = _this.motionSpeed;
+        };
+        _this.updateHitXY = function (delta) {
+            _this.hitX *= 1 - 0.4 * delta;
+            _this.hitY *= 1 - 0.4 * delta;
+            if (Math.abs(_this.hitX) < 0.01)
+                _this.hitX = 0;
+            if (Math.abs(_this.hitY) < 0.01)
+                _this.hitY = 0;
         };
         _this.jump = function (delta) {
             var j = Math.max(Math.abs(_this.drawX), Math.abs(_this.drawY));
-            _this.jumpY = Math.sin(j * Math.PI) * _this.jumpHeight;
+            _this.jumpY = Math.sin(j * Math.PI * delta) * _this.jumpHeight;
             if (_this.jumpY < 0.01 && _this.jumpY > -0.01)
                 _this.jumpY = 0;
             if (_this.jumpY > _this.jumpHeight)
@@ -12969,6 +13033,14 @@ var Player = /** @class */ (function (_super) {
         _this.drawMoveSpeed = 0.3; // greater than 1 less than 2
         _this.moveQueue = [];
         _this.isProcessingQueue = false;
+        _this.previousDrawDirectionArray = [];
+        _this.previousDrawDirectionArray.push(DrawDirection.Y);
+        _this.hitX = 0;
+        _this.hitY = 0;
+        _this.motionSpeed = 1;
+        _this.slowMotionEnabled = false;
+        _this.slowMotionTickDuration = 0;
+        _this.justMoved = DrawDirection.Y;
         return _this;
     }
     Object.defineProperty(Player.prototype, "angle", {
@@ -14586,6 +14658,7 @@ var Room = /** @class */ (function () {
                 _this.computerTurn(); // player skipped computer's turn, catch up
         };
         this.tick = function (player) {
+            player.updateSlowMotion();
             _this.lastEnemyCount = _this.entities.filter(function (e) { return e instanceof enemy_1.Enemy; }).length;
             for (var _i = 0, _a = _this.hitwarnings; _i < _a.length; _i++) {
                 var h = _a[_i];
@@ -17445,17 +17518,19 @@ var DualDagger = /** @class */ (function (_super) {
             if (flag) {
                 if (_this.wielder.game.rooms[_this.wielder.levelID] === _this.wielder.game.room)
                     sound_1.Sound.hit();
-                _this.wielder.drawX = 0.5 * (_this.wielder.x - newX);
-                _this.wielder.drawY = 0.5 * (_this.wielder.y - newY);
+                _this.wielder.hitX = 0.5 * (_this.wielder.x - newX);
+                _this.wielder.hitY = 0.5 * (_this.wielder.y - newY);
                 _this.game.rooms[_this.wielder.levelID].particles.push(new slashParticle_1.SlashParticle(newX, newY));
-                if (_this.firstAttack)
-                    _this.game.rooms[_this.wielder.levelID].entities = _this.game.rooms[_this.wielder.levelID].entities.filter(function (e) { return !e.dead; });
-                else
+                _this.game.rooms[_this.wielder.levelID].entities = _this.game.rooms[_this.wielder.levelID].entities.filter(function (e) { return !e.dead; });
+                if (!_this.firstAttack) {
                     _this.game.rooms[_this.wielder.levelID].tick(_this.wielder);
+                }
                 if (_this.wielder === _this.game.players[_this.game.localPlayerID])
-                    _this.game.shakeScreen(10 * _this.wielder.drawX, 10 * _this.wielder.drawY);
-                if (_this.firstAttack)
+                    _this.game.shakeScreen(10 * _this.wielder.hitX, 10 * _this.wielder.hitY);
+                if (_this.firstAttack) {
                     _this.firstAttack = false;
+                    _this.wielder.slowMotionEnabled = true;
+                }
             }
             return !flag;
         };
@@ -17648,8 +17723,8 @@ var Shotgun = /** @class */ (function (_super) {
                 //hits all candidates in enemyHitCandidates
                 if (_this.wielder.game.rooms[_this.wielder.levelID] === _this.wielder.game.room)
                     sound_1.Sound.hit();
-                _this.wielder.drawX = 0.5 * (_this.wielder.x - newX);
-                _this.wielder.drawY = 0.5 * (_this.wielder.y - newY);
+                _this.wielder.hitX = 0.5 * (_this.wielder.x - newX);
+                _this.wielder.hitY = 0.5 * (_this.wielder.y - newY);
                 genericParticle_1.GenericParticle.shotgun(_this.game.rooms[_this.wielder.levelID], _this.wielder.x + 0.5, _this.wielder.y, targetX + 0.5, targetY, "black");
                 genericParticle_1.GenericParticle.shotgun(_this.game.rooms[_this.wielder.levelID], _this.wielder.x + 0.5, _this.wielder.y, targetX + 0.5, targetY, "#ffddff");
                 var gp = new genericParticle_1.GenericParticle(_this.game.rooms[_this.wielder.levelID], 0.5 * (newX + _this.wielder.x) + 0.5, 0.5 * (newY + _this.wielder.y), 0, 1, 0, 0, 0, "white", 0);
@@ -17660,7 +17735,7 @@ var Shotgun = /** @class */ (function (_super) {
                 //this.game.levels[this.wielder.levelID].particles.push(new SlashParticle(newX3, newY3));
                 _this.game.rooms[_this.wielder.levelID].tick(_this.wielder);
                 if (_this.wielder === _this.game.players[_this.game.localPlayerID])
-                    _this.game.shakeScreen(10 * _this.wielder.drawX, 10 * _this.wielder.drawY);
+                    _this.game.shakeScreen(10 * _this.wielder.hitX, 10 * _this.wielder.hitY);
                 return false;
             }
             return true;
@@ -17738,24 +17813,24 @@ var Spear = /** @class */ (function (_super) {
                 }
                 if (_this.wielder.game.room === _this.wielder.game.rooms[_this.wielder.levelID])
                     sound_1.Sound.hit();
-                _this.wielder.drawX = 0.5 * (_this.wielder.x - newX);
-                _this.wielder.drawY = 0.5 * (_this.wielder.y - newY);
+                _this.wielder.hitX = 0.5 * (_this.wielder.x - newX);
+                _this.wielder.hitY = 0.5 * (_this.wielder.y - newY);
                 _this.game.rooms[_this.wielder.levelID].particles.push(new slashParticle_1.SlashParticle(newX, newY));
                 _this.game.rooms[_this.wielder.levelID].particles.push(new slashParticle_1.SlashParticle(newX2, newY2));
                 _this.game.rooms[_this.wielder.levelID].tick(_this.wielder);
                 if (_this.wielder === _this.game.players[_this.game.localPlayerID])
-                    _this.game.shakeScreen(10 * _this.wielder.drawX, 10 * _this.wielder.drawY);
+                    _this.game.shakeScreen(10 * _this.wielder.hitX, 10 * _this.wielder.hitY);
                 return false;
             }
             if (flag) {
                 if (_this.wielder.game.room === _this.wielder.game.rooms[_this.wielder.levelID])
                     sound_1.Sound.hit();
-                _this.wielder.drawX = 0.5 * (_this.wielder.x - newX);
-                _this.wielder.drawY = 0.5 * (_this.wielder.y - newY);
+                _this.wielder.hitX = 0.5 * (_this.wielder.x - newX);
+                _this.wielder.hitY = 0.5 * (_this.wielder.y - newY);
                 _this.game.rooms[_this.wielder.levelID].particles.push(new slashParticle_1.SlashParticle(newX, newY));
                 _this.game.rooms[_this.wielder.levelID].tick(_this.wielder);
                 if (_this.wielder === _this.game.players[_this.game.localPlayerID])
-                    _this.game.shakeScreen(10 * _this.wielder.drawX, 10 * _this.wielder.drawY);
+                    _this.game.shakeScreen(10 * _this.wielder.hitX, 10 * _this.wielder.hitY);
             }
             return !flag;
         };
@@ -17819,11 +17894,11 @@ var Spellbook = /** @class */ (function (_super) {
             if (flag) {
                 if (_this.wielder.game.rooms[_this.wielder.levelID] === _this.wielder.game.room)
                     sound_1.Sound.hit();
-                _this.wielder.drawX = 0.5 * (_this.wielder.x - newX);
-                _this.wielder.drawY = 0.5 * (_this.wielder.y - newY);
+                _this.wielder.hitX = 0.5 * (_this.wielder.x - newX);
+                _this.wielder.hitY = 0.5 * (_this.wielder.y - newY);
                 _this.game.rooms[_this.wielder.levelID].tick(_this.wielder);
                 if (_this.wielder === _this.game.players[_this.game.localPlayerID])
-                    _this.game.shakeScreen(10 * _this.wielder.drawX, 10 * _this.wielder.drawY);
+                    _this.game.shakeScreen(10 * _this.wielder.hitX, 10 * _this.wielder.hitY);
             }
             return !flag;
         };
@@ -17930,12 +18005,12 @@ var Weapon = /** @class */ (function (_super) {
             if (flag) {
                 if (_this.wielder.game.rooms[_this.wielder.levelID] === _this.wielder.game.room)
                     sound_1.Sound.hit();
-                _this.wielder.drawX = 0.5 * (_this.wielder.x - newX);
-                _this.wielder.drawY = 0.5 * (_this.wielder.y - newY);
+                _this.wielder.hitX = 0.5 * (_this.wielder.x - newX);
+                _this.wielder.hitY = 0.5 * (_this.wielder.y - newY);
                 _this.game.rooms[_this.wielder.levelID].particles.push(new slashParticle_1.SlashParticle(newX, newY));
                 _this.game.rooms[_this.wielder.levelID].tick(_this.wielder);
                 if (_this.wielder === _this.game.players[_this.game.localPlayerID])
-                    _this.game.shakeScreen(10 * _this.wielder.drawX, 10 * _this.wielder.drawY);
+                    _this.game.shakeScreen(10 * _this.wielder.hitX, 10 * _this.wielder.drawY);
             }
             return !flag;
         };

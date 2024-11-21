@@ -5,6 +5,7 @@ import { Sound } from "../sound";
 import { SlashParticle } from "../particle/slashParticle";
 import { Crate } from "../entity/object/crate";
 import { Barrel } from "../entity/object/barrel";
+import { GameConstants } from "../gameConstants";
 
 export class DualDagger extends Weapon {
   firstAttack: boolean;
@@ -36,20 +37,25 @@ export class DualDagger extends Weapon {
         this.wielder.game.rooms[this.wielder.levelID] === this.wielder.game.room
       )
         Sound.hit();
-      this.wielder.drawX = 0.5 * (this.wielder.x - newX);
-      this.wielder.drawY = 0.5 * (this.wielder.y - newY);
+      this.wielder.hitX = 0.5 * (this.wielder.x - newX);
+      this.wielder.hitY = 0.5 * (this.wielder.y - newY);
       this.game.rooms[this.wielder.levelID].particles.push(
         new SlashParticle(newX, newY)
       );
-      if (this.firstAttack)
-        this.game.rooms[this.wielder.levelID].entities = this.game.rooms[
-          this.wielder.levelID
-        ].entities.filter((e) => !e.dead);
-      else this.game.rooms[this.wielder.levelID].tick(this.wielder);
-      if (this.wielder === this.game.players[this.game.localPlayerID])
-        this.game.shakeScreen(10 * this.wielder.drawX, 10 * this.wielder.drawY);
+      this.game.rooms[this.wielder.levelID].entities = this.game.rooms[
+        this.wielder.levelID
+      ].entities.filter((e) => !e.dead);
 
-      if (this.firstAttack) this.firstAttack = false;
+      if (!this.firstAttack) {
+        this.game.rooms[this.wielder.levelID].tick(this.wielder);
+      }
+      if (this.wielder === this.game.players[this.game.localPlayerID])
+        this.game.shakeScreen(10 * this.wielder.hitX, 10 * this.wielder.hitY);
+
+      if (this.firstAttack) {
+        this.firstAttack = false;
+        this.wielder.slowMotionEnabled = true;
+      }
     }
     return !flag;
   };

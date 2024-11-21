@@ -44,8 +44,8 @@ export class Spear extends Weapon {
         this.wielder.game.room === this.wielder.game.rooms[this.wielder.levelID]
       )
         Sound.hit();
-      this.wielder.drawX = 0.5 * (this.wielder.x - newX);
-      this.wielder.drawY = 0.5 * (this.wielder.y - newY);
+      this.wielder.hitX = 0.5 * (this.wielder.x - newX);
+      this.wielder.hitY = 0.5 * (this.wielder.y - newY);
       this.game.rooms[this.wielder.levelID].particles.push(
         new SlashParticle(newX, newY)
       );
@@ -54,7 +54,7 @@ export class Spear extends Weapon {
       );
       this.game.rooms[this.wielder.levelID].tick(this.wielder);
       if (this.wielder === this.game.players[this.game.localPlayerID])
-        this.game.shakeScreen(10 * this.wielder.drawX, 10 * this.wielder.drawY);
+        this.game.shakeScreen(10 * this.wielder.hitX, 10 * this.wielder.hitY);
       return false;
     }
     if (flag) {
@@ -62,14 +62,14 @@ export class Spear extends Weapon {
         this.wielder.game.room === this.wielder.game.rooms[this.wielder.levelID]
       )
         Sound.hit();
-      this.wielder.drawX = 0.5 * (this.wielder.x - newX);
-      this.wielder.drawY = 0.5 * (this.wielder.y - newY);
+      this.wielder.hitX = 0.5 * (this.wielder.x - newX);
+      this.wielder.hitY = 0.5 * (this.wielder.y - newY);
       this.game.rooms[this.wielder.levelID].particles.push(
         new SlashParticle(newX, newY)
       );
       this.game.rooms[this.wielder.levelID].tick(this.wielder);
       if (this.wielder === this.game.players[this.game.localPlayerID])
-        this.game.shakeScreen(10 * this.wielder.drawX, 10 * this.wielder.drawY);
+        this.game.shakeScreen(10 * this.wielder.hitX, 10 * this.wielder.hitY);
     }
     return !flag;
   };

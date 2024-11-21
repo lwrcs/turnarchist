@@ -2058,6 +2058,7 @@ export class Room {
   };
 
   tick = (player: Player) => {
+    player.updateSlowMotion();
     this.lastEnemyCount = this.entities.filter(
       (e) => e instanceof Enemy
     ).length;

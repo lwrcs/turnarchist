@@ -34,6 +34,11 @@ export enum PlayerDirection {
   LEFT,
 }
 
+enum DrawDirection {
+  X,
+  Y,
+}
+
 export class Player extends Drawable {
   id: string;
   x: number;
@@ -42,6 +47,8 @@ export class Player extends Drawable {
   h: number;
   drawX: number;
   drawY: number;
+  hitX: number;
+  hitY: number;
   frame: number;
   direction: Direction;
   game: Game;
@@ -84,6 +91,11 @@ export class Player extends Drawable {
   moveQueue: { x: number; y: number; direction: Direction }[];
   lastX: number;
   lastY: number;
+  previousDrawDirectionArray: DrawDirection[];
+  motionSpeed: number;
+  slowMotionEnabled: boolean;
+  justMoved: DrawDirection;
+  slowMotionTickDuration: number;
   private animationFrameId: number | null = null;
   private isProcessingQueue: boolean = false;
   constructor(game: Game, x: number, y: number, isLocalPlayer: boolean) {
@@ -106,7 +118,6 @@ export class Player extends Drawable {
     this.direction = Direction.UP;
     this.lastX = 0;
     this.lastY = 0;
-
     this.isLocalPlayer = isLocalPlayer;
     if (isLocalPlayer) {
       Input.leftSwipeListener = () => this.inputHandler(InputEnum.LEFT);
@@ -164,6 +175,14 @@ export class Player extends Drawable {
     this.drawMoveSpeed = 0.3; // greater than 1 less than 2
     this.moveQueue = [];
     this.isProcessingQueue = false;
+    this.previousDrawDirectionArray = [];
+    this.previousDrawDirectionArray.push(DrawDirection.Y);
+    this.hitX = 0;
+    this.hitY = 0;
+    this.motionSpeed = 1;
+    this.slowMotionEnabled = false;
+    this.slowMotionTickDuration = 0;
+    this.justMoved = DrawDirection.Y;
   }
 
   get angle(): number {
@@ -464,6 +483,9 @@ export class Player extends Drawable {
   };
 
   tryMove = (x: number, y: number) => {
+    this.lastX = this.drawX;
+    this.lastY = this.drawY;
+    let slowMotion = this.slowMotionEnabled;
     let newMove = { x: x, y: y };
     // TODO don't move if hit by enemy
     this.game.rooms[this.levelID].catchUp();
@@ -535,13 +557,13 @@ export class Player extends Drawable {
             if (e.destroyable) {
               e.kill();
               if (this.game.rooms[this.levelID] === this.game.room) Sound.hit();
-              this.drawX = 0.5 * (this.x - e.x);
-              this.drawY = 0.5 * (this.y - e.y);
+              this.hitX = 0.5 * (this.x - e.x);
+              this.hitY = 0.5 * (this.y - e.y);
               this.game.rooms[this.levelID].particles.push(
                 new SlashParticle(e.x, e.y)
               );
               this.game.rooms[this.levelID].tick(this);
-              this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+              this.game.shakeScreen(10 * this.hitX, 10 * this.hitY);
               return;
             }
           } else {
@@ -591,8 +613,8 @@ export class Player extends Drawable {
         this.game.rooms[this.levelID].tick(this);
     } else {
       if (other instanceof Door) {
-        this.drawX = (this.x - x) * 0.5;
-        this.drawY = (this.y - y) * 0.5;
+        this.hitX = (this.x - x) * 0.5;
+        this.hitY = (this.y - y) * 0.5;
         if (other.canUnlock(this)) other.unlock(this);
       }
     }
@@ -658,19 +680,40 @@ export class Player extends Drawable {
     return Math.abs(this.drawX) < EPSILON && Math.abs(this.drawY) < EPSILON;
   };
 
+  doneHitting = (): boolean => {
+    let EPSILON = 0.01;
+    return Math.abs(this.hitX) < EPSILON && Math.abs(this.hitY) < EPSILON;
+  };
+
+  enableSlowMotion = () => {
+    if (this.motionSpeed < 1 && !this.slowMotionEnabled) {
+      this.motionSpeed *= 1.08;
+      if (this.motionSpeed >= 1) this.motionSpeed = 1;
+    }
+    if (this.slowMotionEnabled && this.motionSpeed > 0.25) {
+      this.motionSpeed *= 0.95;
+      if (this.motionSpeed < 0.25) this.motionSpeed = 0.25;
+    }
+  };
+
   move = (x: number, y: number) => {
+    this.lastX = this.x;
+    this.lastY = this.y;
     //this.actionTab.setState(ActionState.MOVE);
     if (this.game.rooms[this.levelID] === this.game.room)
       Sound.playerStoneFootstep();
 
     if (this.openVendingMachine) this.openVendingMachine.close();
 
-    this.drawX = x - this.x;
-    this.drawY = y - this.y;
+    this.drawX += x - this.x;
+    this.drawY += y - this.y;
+
+    /*
     if (this.drawX > 1) this.drawX = 1;
     if (this.drawY > 1) this.drawY = 1;
     if (this.drawX < -1) this.drawX = -1;
     if (this.drawY < -1) this.drawY = -1;
+    */
 
     this.x = x;
     this.y = y;
@@ -680,6 +723,11 @@ export class Player extends Drawable {
         i.onPickup(this);
       }
     }
+    let diffX = x - this.lastX;
+    let diffY = y - this.lastY;
+    if (diffX === 0 && diffY === 0) return;
+    if (Math.abs(diffX) > 0) this.justMoved = DrawDirection.X;
+    else if (Math.abs(diffY) > 0) this.justMoved = DrawDirection.Y;
 
     //this.game.rooms[this.levelID].updateLighting();
   };
@@ -688,6 +736,8 @@ export class Player extends Drawable {
     // doesn't touch smoothing
     this.x = x;
     this.y = y;
+    this.previousDrawDirectionArray = [];
+    this.previousDrawDirectionArray.push(DrawDirection.Y);
   };
 
   moveSnap = (x: number, y: number) => {
@@ -696,9 +746,17 @@ export class Player extends Drawable {
     this.y = y;
     this.drawX = 0;
     this.drawY = 0;
+    this.hitX = 0;
+    this.hitY = 0;
+    this.previousDrawDirectionArray = [];
+    this.previousDrawDirectionArray.push(DrawDirection.Y);
   };
 
   update = () => {};
+  updateSlowMotion = () => {
+    if (this.slowMotionTickDuration > 0) this.slowMotionTickDuration -= 1;
+    if (this.slowMotionTickDuration === 0) this.slowMotionEnabled = false;
+  };
 
   finishTick = () => {
     this.turnCount += 1;
@@ -860,19 +918,38 @@ export class Player extends Drawable {
     if (!this.doneMoving()) {
       this.drawX *= 1 - this.drawMoveSpeed * delta;
       this.drawY *= 1 - this.drawMoveSpeed * delta;
-
-      this.drawX =
-        Math.abs(this.drawX) < 0.01 ? 0 : Math.max(-1, Math.min(this.drawX, 1));
-      this.drawY =
-        Math.abs(this.drawY) < 0.01 ? 0 : Math.max(-1, Math.min(this.drawY, 1));
-
+    }
+    if (this.doneHitting()) {
       this.jump(delta);
     }
+    if (Math.abs(this.drawX) < 0.01) {
+      this.drawX = 0;
+      this.justMoved = DrawDirection.Y;
+    }
+    if (Math.abs(this.drawY) < 0.01) {
+      this.drawY = 0;
+      this.justMoved = DrawDirection.X;
+    }
+    if (!this.doneHitting()) {
+      this.updateHitXY(delta);
+    }
+    this.drawX += this.hitX;
+    this.drawY += this.hitY;
+
+    this.enableSlowMotion();
+    GameConstants.ANIMATION_SPEED = this.motionSpeed;
+  };
+
+  updateHitXY = (delta: number) => {
+    this.hitX *= 1 - 0.4 * delta;
+    this.hitY *= 1 - 0.4 * delta;
+    if (Math.abs(this.hitX) < 0.01) this.hitX = 0;
+    if (Math.abs(this.hitY) < 0.01) this.hitY = 0;
   };
 
   jump = (delta: number) => {
     let j = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
-    this.jumpY = Math.sin(j * Math.PI) * this.jumpHeight;
+    this.jumpY = Math.sin(j * Math.PI * delta) * this.jumpHeight;
     if (this.jumpY < 0.01 && this.jumpY > -0.01) this.jumpY = 0;
     if (this.jumpY > this.jumpHeight) this.jumpY = this.jumpHeight;
   };

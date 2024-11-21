@@ -138,8 +138,8 @@ export class Slingshot extends Weapon {
         this.wielder.game.rooms[this.wielder.levelID] === this.wielder.game.room
       )
         Sound.hit();
-      this.wielder.drawX = 0.5 * (this.wielder.x - newX);
-      this.wielder.drawY = 0.5 * (this.wielder.y - newY);
+      this.wielder.hitX = 0.5 * (this.wielder.x - newX);
+      this.wielder.hitY = 0.5 * (this.wielder.y - newY);
       GenericParticle.shotgun(
         this.game.rooms[this.wielder.levelID],
         this.wielder.x + 0.5,
@@ -175,7 +175,7 @@ export class Slingshot extends Weapon {
       //this.game.levels[this.wielder.levelID].particles.push(new SlashParticle(newX3, newY3));
       this.game.rooms[this.wielder.levelID].tick(this.wielder);
       if (this.wielder === this.game.players[this.game.localPlayerID])
-        this.game.shakeScreen(10 * this.wielder.drawX, 10 * this.wielder.drawY);
+        this.game.shakeScreen(10 * this.wielder.hitX, 10 * this.wielder.hitY);
 
       return false;
     }
