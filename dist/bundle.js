@@ -9511,8 +9511,12 @@ var Inventory = /** @class */ (function () {
             // Ignore if not left click
             if (button !== 0)
                 return;
-            var bounds = _this.isPointInInventoryBounds(x, y);
-            if (bounds.inBounds) {
+            var invBounds = _this.isPointInInventoryBounds(x, y);
+            var quickbarBounds = _this.isPointInQuickbarBounds(x, y);
+            var isValidDropZone = _this.isOpen
+                ? invBounds.inBounds
+                : quickbarBounds.inBounds;
+            if (isValidDropZone) {
                 if (_this._isDragging && _this.grabbedItem !== null) {
                     // We were dragging, place the item
                     console.log("Ending drag, placing item");
@@ -9524,6 +9528,18 @@ var Inventory = /** @class */ (function () {
                     console.log("Quick click detected, using item");
                     _this.itemUse();
                 }
+            }
+            else if (_this.grabbedItem !== null) {
+                // Drop the item in the world
+                console.log("Dropping item in world");
+                _this.grabbedItem.dropFromInventory();
+                _this.grabbedItem.level = _this.game.rooms[_this.player.levelID];
+                _this.grabbedItem.x = _this.player.x;
+                _this.grabbedItem.y = _this.player.y;
+                _this.grabbedItem.pickedUp = false;
+                _this.game.rooms[_this.player.levelID].items.push(_this.grabbedItem);
+                _this.grabbedItem = null;
+                _this.items[_this._dragStartSlot] = null;
             }
             // Reset all drag/hold state
             _this._isDragging = false;

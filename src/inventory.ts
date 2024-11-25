@@ -1084,8 +1084,13 @@ export class Inventory {
     // Ignore if not left click
     if (button !== 0) return;
 
-    const bounds = this.isPointInInventoryBounds(x, y);
-    if (bounds.inBounds) {
+    const invBounds = this.isPointInInventoryBounds(x, y);
+    const quickbarBounds = this.isPointInQuickbarBounds(x, y);
+    const isValidDropZone = this.isOpen
+      ? invBounds.inBounds
+      : quickbarBounds.inBounds;
+
+    if (isValidDropZone) {
       if (this._isDragging && this.grabbedItem !== null) {
         // We were dragging, place the item
         console.log("Ending drag, placing item");
@@ -1096,6 +1101,18 @@ export class Inventory {
         console.log("Quick click detected, using item");
         this.itemUse();
       }
+    } else if (this.grabbedItem !== null) {
+      // Drop the item in the world
+      console.log("Dropping item in world");
+      this.grabbedItem.dropFromInventory();
+      this.grabbedItem.level = this.game.rooms[this.player.levelID];
+      this.grabbedItem.x = this.player.x;
+      this.grabbedItem.y = this.player.y;
+      this.grabbedItem.pickedUp = false;
+      this.game.rooms[this.player.levelID].items.push(this.grabbedItem);
+
+      this.grabbedItem = null;
+      this.items[this._dragStartSlot] = null;
     }
 
     // Reset all drag/hold state
