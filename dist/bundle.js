@@ -715,6 +715,7 @@ var ArmoredzombieEnemy = /** @class */ (function (_super) {
         }
         return _this;
     }
+    ArmoredzombieEnemy.difficulty = 2;
     return ArmoredzombieEnemy;
 }(enemy_1.Enemy));
 exports.ArmoredzombieEnemy = ArmoredzombieEnemy;
@@ -993,6 +994,7 @@ var BigKnightEnemy = /** @class */ (function (_super) {
         }
         return _this;
     }
+    BigKnightEnemy.difficulty = 4;
     return BigKnightEnemy;
 }(enemy_1.Enemy));
 exports.BigKnightEnemy = BigKnightEnemy;
@@ -1303,6 +1305,7 @@ var BigSkullEnemy = /** @class */ (function (_super) {
         }
         return _this;
     }
+    BigSkullEnemy.difficulty = 4;
     return BigSkullEnemy;
 }(enemy_1.Enemy));
 exports.BigSkullEnemy = BigSkullEnemy;
@@ -1554,6 +1557,7 @@ var BishopEnemy = /** @class */ (function (_super) {
         }
         return _this;
     }
+    BishopEnemy.difficulty = 2;
     return BishopEnemy;
 }(enemy_1.Enemy));
 exports.BishopEnemy = BishopEnemy;
@@ -1808,6 +1812,7 @@ var ChargeEnemy = /** @class */ (function (_super) {
         }
         return _this;
     }
+    ChargeEnemy.difficulty = 3;
     return ChargeEnemy;
 }(enemy_1.Enemy));
 exports.ChargeEnemy = ChargeEnemy;
@@ -2026,6 +2031,7 @@ var CrabEnemy = /** @class */ (function (_super) {
         enumerable: false,
         configurable: true
     });
+    CrabEnemy.difficulty = 1;
     return CrabEnemy;
 }(enemy_1.Enemy));
 exports.CrabEnemy = CrabEnemy;
@@ -2546,6 +2552,7 @@ var EnergyWizardEnemy = /** @class */ (function (_super) {
         }
         return _this;
     }
+    EnergyWizardEnemy.difficulty = 3;
     return EnergyWizardEnemy;
 }(wizardEnemy_1.WizardEnemy));
 exports.EnergyWizardEnemy = EnergyWizardEnemy;
@@ -2755,6 +2762,7 @@ var FireWizardEnemy = /** @class */ (function (_super) {
         }
         return _this;
     }
+    FireWizardEnemy.difficulty = 3;
     return FireWizardEnemy;
 }(wizardEnemy_1.WizardEnemy));
 exports.FireWizardEnemy = FireWizardEnemy;
@@ -3019,6 +3027,7 @@ var FrogEnemy = /** @class */ (function (_super) {
         _this.diagonalAttack = true;
         return _this;
     }
+    FrogEnemy.difficulty = 1;
     return FrogEnemy;
 }(enemy_1.Enemy));
 exports.FrogEnemy = FrogEnemy;
@@ -3254,6 +3263,7 @@ var KnightEnemy = /** @class */ (function (_super) {
         }
         return _this;
     }
+    KnightEnemy.difficulty = 2;
     return KnightEnemy;
 }(enemy_1.Enemy));
 exports.KnightEnemy = KnightEnemy;
@@ -3466,6 +3476,7 @@ var QueenEnemy = /** @class */ (function (_super) {
         }
         return _this;
     }
+    QueenEnemy.difficulty = 4;
     return QueenEnemy;
 }(enemy_1.Enemy));
 exports.QueenEnemy = QueenEnemy;
@@ -3752,6 +3763,7 @@ var SkullEnemy = /** @class */ (function (_super) {
         }
         return _this;
     }
+    SkullEnemy.difficulty = 2;
     return SkullEnemy;
 }(enemy_1.Enemy));
 exports.SkullEnemy = SkullEnemy;
@@ -3811,6 +3823,7 @@ var Spawner = /** @class */ (function (_super) {
             return 1;
         };
         _this.behavior = function () {
+            var shouldSpawn = true;
             _this.lastX = _this.x;
             _this.lastY = _this.y;
             if (!_this.dead) {
@@ -3836,37 +3849,37 @@ var Spawner = /** @class */ (function (_super) {
                     if (positions.length > 0) {
                         _this.tileX = 7;
                         var position = game_1.Game.randTable(positions, random_1.Random.rand);
-                        var spawned = void 0;
+                        var spawned_1;
                         switch (_this.enemySpawnType) {
                             case 1:
-                                spawned = new crabEnemy_1.CrabEnemy(_this.room, _this.game, position.x, position.y);
+                                spawned_1 = new crabEnemy_1.CrabEnemy(_this.room, _this.game, position.x, position.y);
                                 break;
                             case 2:
-                                spawned = new frogEnemy_1.FrogEnemy(_this.room, _this.game, position.x, position.y);
+                                spawned_1 = new frogEnemy_1.FrogEnemy(_this.room, _this.game, position.x, position.y);
                                 break;
                             case 3:
-                                spawned = new zombieEnemy_1.ZombieEnemy(_this.room, _this.game, position.x, position.y);
+                                spawned_1 = new zombieEnemy_1.ZombieEnemy(_this.room, _this.game, position.x, position.y);
                                 break;
                             case 4:
-                                spawned = new skullEnemy_1.SkullEnemy(_this.room, _this.game, position.x, position.y);
+                                spawned_1 = new skullEnemy_1.SkullEnemy(_this.room, _this.game, position.x, position.y);
                                 break;
                             case 5:
-                                spawned = new energyWizard_1.EnergyWizardEnemy(_this.room, _this.game, position.x, position.y);
+                                spawned_1 = new energyWizard_1.EnergyWizardEnemy(_this.room, _this.game, position.x, position.y);
                                 break;
                             case 6:
-                                spawned = new chargeEnemy_1.ChargeEnemy(_this.room, _this.game, position.x, position.y);
+                                spawned_1 = new chargeEnemy_1.ChargeEnemy(_this.room, _this.game, position.x, position.y);
                                 break;
                             case 7:
-                                spawned = new Spawner(_this.room, _this.game, position.x, position.y, _this.enemyTable);
+                                spawned_1 = new Spawner(_this.room, _this.game, position.x, position.y, _this.enemyTable);
                                 break;
                             case 8:
-                                spawned = new bishopEnemy_1.BishopEnemy(_this.room, _this.game, position.x, position.y);
+                                spawned_1 = new bishopEnemy_1.BishopEnemy(_this.room, _this.game, position.x, position.y);
                                 break;
                             case 9:
-                                spawned = new armoredzombieEnemy_1.ArmoredzombieEnemy(_this.room, _this.game, position.x, position.y);
+                                spawned_1 = new armoredzombieEnemy_1.ArmoredzombieEnemy(_this.room, _this.game, position.x, position.y);
                                 break;
                             case 10:
-                                spawned = new bigSkullEnemy_1.BigSkullEnemy(_this.room, _this.game, position.x, position.y);
+                                spawned_1 = new bigSkullEnemy_1.BigSkullEnemy(_this.room, _this.game, position.x, position.y);
                                 for (var xx = 0; xx < 2; xx++) {
                                     for (var yy = 0; yy < 2; yy++) {
                                         _this.room.roomArray[position.x + xx][position.y + yy] =
@@ -3875,13 +3888,13 @@ var Spawner = /** @class */ (function (_super) {
                                 }
                                 break;
                             case 11:
-                                spawned = new queenEnemy_1.QueenEnemy(_this.room, _this.game, position.x, position.y);
+                                spawned_1 = new queenEnemy_1.QueenEnemy(_this.room, _this.game, position.x, position.y);
                                 break;
                             case 12:
-                                spawned = new knightEnemy_1.KnightEnemy(_this.room, _this.game, position.x, position.y);
+                                spawned_1 = new knightEnemy_1.KnightEnemy(_this.room, _this.game, position.x, position.y);
                                 break;
                             case 13:
-                                spawned = new bigKnightEnemy_1.BigKnightEnemy(_this.room, _this.game, position.x, position.y);
+                                spawned_1 = new bigKnightEnemy_1.BigKnightEnemy(_this.room, _this.game, position.x, position.y);
                                 for (var xx = 0; xx < 2; xx++) {
                                     for (var yy = 0; yy < 2; yy++) {
                                         _this.room.roomArray[position.x + xx][position.y + yy] =
@@ -3890,17 +3903,31 @@ var Spawner = /** @class */ (function (_super) {
                                 }
                                 break;
                             case 14:
-                                spawned = new zombieEnemy_1.ZombieEnemy(_this.room, _this.game, position.x, position.y);
+                                spawned_1 = new zombieEnemy_1.ZombieEnemy(_this.room, _this.game, position.x, position.y);
                                 break;
                             case 15:
-                                spawned = new fireWizard_1.FireWizardEnemy(_this.room, _this.game, position.x, position.y);
+                                spawned_1 = new fireWizard_1.FireWizardEnemy(_this.room, _this.game, position.x, position.y);
                                 break;
                         }
-                        _this.room.projectiles.push(new enemySpawnAnimation_1.EnemySpawnAnimation(_this.room, spawned, position.x, position.y));
-                        _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, position.x, position.y, _this.x, _this.y));
+                        var roomArea = _this.room.width * _this.room.height;
+                        var enemies = _this.room.entities.filter(function (e) { return e instanceof enemy_1.Enemy; });
+                        var maxIndividualCount = Math.round((_this.room.width + _this.room.height) /
+                            Math.pow(spawned_1.constructor.difficulty, 2));
+                        var enemySpawnTypeCount = _this.room.entities.filter(function (e) { return e instanceof spawned_1.constructor; }).length;
+                        console.log("Count in room of ".concat(spawned_1.constructor.name, ": ").concat(enemySpawnTypeCount));
+                        console.log("maxIndividualCount of ".concat(spawned_1.constructor.name, ": ").concat(maxIndividualCount));
+                        if (enemies.length >= Math.round(roomArea / 4) ||
+                            enemySpawnTypeCount >= maxIndividualCount) {
+                            shouldSpawn = false;
+                        }
+                        if (shouldSpawn) {
+                            _this.room.projectiles.push(new enemySpawnAnimation_1.EnemySpawnAnimation(_this.room, spawned_1, position.x, position.y));
+                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, position.x, position.y, _this.x, _this.y));
+                        }
                     }
                 }
-                _this.ticks++;
+                if (shouldSpawn)
+                    _this.ticks++;
             }
         };
         _this.draw = function (delta) {
@@ -4158,6 +4185,7 @@ var WizardEnemy = /** @class */ (function (_super) {
         }
         return _this;
     }
+    WizardEnemy.difficulty = 3;
     return WizardEnemy;
 }(enemy_1.Enemy));
 exports.WizardEnemy = WizardEnemy;
@@ -4434,6 +4462,7 @@ var ZombieEnemy = /** @class */ (function (_super) {
         }
         return _this;
     }
+    ZombieEnemy.difficulty = 1;
     return ZombieEnemy;
 }(enemy_1.Enemy));
 exports.ZombieEnemy = ZombieEnemy;
@@ -6655,7 +6684,7 @@ var Game = /** @class */ (function () {
                     gameConstants_1.GameConstants.DEVELOPER_MODE = !gameConstants_1.GameConstants.DEVELOPER_MODE;
                     console.log("Developer mode is now ".concat(gameConstants_1.GameConstants.DEVELOPER_MODE));
                     break;
-                case "newgame":
+                case "new":
                     _this.newGame();
                     break;
                 case "dev":
@@ -10994,7 +11023,6 @@ var Level = /** @class */ (function () {
                     }
                 }
             }
-            console.log(_this.levelArray);
         };
         this.game = game;
         this.depth = depth;
@@ -11274,7 +11302,10 @@ var populate_grid = function (partitions, grid, w, h) {
     //input grid array, partitions array and width and height
     //output grid array that indicates which cells are in which partition
 };
-var generate_dungeon_candidate = function (map_w, map_h) {
+var generate_dungeon_candidate = function (map_w, map_h, depth) {
+    var minRoomCount = depth > 0 ? 3 : 4;
+    var maxRoomCount = depth > 0 ? 12 : 7;
+    var maxRoomArea = depth > 0 ? 120 : 49;
     var partitions = [new Partition(100, 100, map_w, map_h)];
     var grid = [];
     //add a new partition and define grid as empty array
@@ -11284,8 +11315,23 @@ var generate_dungeon_candidate = function (map_w, map_h) {
         partitions = split_partitions(partitions, 1);
     for (var i = 0; i < 3; i++)
         partitions = split_partitions(partitions, 0.25);
+    var partitionsBackup = __spreadArray([], partitions, true);
+    partitions.forEach(function (p) { return console.log(p.area()); });
+    console.log("depth: ".concat(depth));
     //split partitions 3 times with different probabilities
     grid = populate_grid(partitions, grid, map_w, map_h);
+    if (depth > 0) {
+        partitions = remove_wall_rooms(partitions, map_w, map_h, 0.5);
+    }
+    partitions = partitions.filter(function (p) {
+        if (p.area() > maxRoomArea && partitions.length - 1 > minRoomCount) {
+            return false;
+        }
+        return true;
+    });
+    while (partitions.length > maxRoomCount) {
+        partitions.pop();
+    }
     //populate the grid with partitions
     partitions.sort(function (a, b) { return a.area() - b.area(); });
     //sort the partitions list by area
@@ -11434,12 +11480,12 @@ var generate_dungeon_candidate = function (map_w, map_h) {
     }
     return partitions;
 };
-var generate_dungeon = function (map_w, map_h) {
+var generate_dungeon = function (map_w, map_h, depth) {
     var passes_checks = false;
     var partitions;
     var tries = 0;
     while (!passes_checks) {
-        partitions = generate_dungeon_candidate(map_w, map_h);
+        partitions = generate_dungeon_candidate(map_w, map_h, depth);
         passes_checks = true;
         if (partitions.length < 6)
             passes_checks = false;
@@ -11611,7 +11657,6 @@ var LevelGenerator = /** @class */ (function () {
                 partition.isBottomOpen, // New parameter
                 partition.isLeftOpen // New parameter
                 );
-                console.log("room.roomX: ".concat(room.roomX, ", room.roomY: ").concat(room.roomY, ", room.width: ").concat(room.width, ", room.height: ").concat(room.height));
                 rooms.push(room);
             }
             var doors_added = [];
@@ -11637,6 +11682,7 @@ var LevelGenerator = /** @class */ (function () {
         };
         this.generate = function (game, depth, cave) {
             if (cave === void 0) { cave = false; }
+            var dimensions = depth > 0 ? 35 : 20;
             _this.depthReached = depth;
             // Set the random state based on the seed and depth
             random_1.Random.setState(_this.seed + depth);
@@ -11646,7 +11692,9 @@ var LevelGenerator = /** @class */ (function () {
                 ? _this.game.rooms[_this.game.rooms.length - 1].mapGroup + 1
                 : 0;
             // Generate partitions based on whether it's a cave or a dungeon
-            var partitions = cave ? generate_cave(20, 20) : generate_dungeon(35, 35);
+            var partitions = cave
+                ? generate_cave(20, 20)
+                : generate_dungeon(dimensions, dimensions, depth);
             // Get the levels based on the partitions
             var levels = _this.getLevels(partitions, depth, mapGroup);
             // Update the current floor first level ID if it's not a cave
@@ -11822,7 +11870,7 @@ var Map = /** @class */ (function () {
             for (var _i = 0, _a = _this.game.rooms; _i < _a.length; _i++) {
                 var level = _a[_i];
                 if (_this.game.room.mapGroup === level.mapGroup &&
-                    level.entered === true) {
+                    (level.entered === true || gameConstants_1.GameConstants.DEVELOPER_MODE)) {
                     _this.mapData.push({
                         room: level,
                         walls: level.innerWalls,
@@ -14283,7 +14331,6 @@ var Room = /** @class */ (function () {
                 directions.push(WallDirection.WEST);
             if (pointX === rectX + width && pointY >= rectY && pointY <= rectY + height)
                 directions.push(WallDirection.EAST);
-            console.log("directions: ".concat(directions));
             return directions;
         };
         this.populateEmpty = function (rand) {
@@ -15498,7 +15545,6 @@ var Room = /** @class */ (function () {
         return true;
     };
     Room.prototype.buildEmptyRoom = function () {
-        console.log("building room array"); // building room array
         // fill in wall and floor
         for (var x = this.roomX; x < this.roomX + this.width; x++) {
             for (var y = this.roomY; y < this.roomY + this.height; y++) {
@@ -15510,7 +15556,6 @@ var Room = /** @class */ (function () {
                 }
             }
         }
-        console.log(this.roomArray);
     };
     Room.prototype.addWallBlocks = function (rand) {
         var _this = this;
@@ -15636,6 +15681,8 @@ var Room = /** @class */ (function () {
         var _this = this;
         // Get all empty tiles in the room
         var tiles = this.getEmptyTiles();
+        if (tiles === null)
+            return;
         //don't put enemies near the entrances so you don't get screwed instantly
         var adjecentTiles = [];
         for (var _i = 0, _a = this.doors; _i < _a.length; _i++) {

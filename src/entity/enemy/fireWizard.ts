@@ -29,6 +29,7 @@ export enum WizardState {
 }
 
 export class FireWizardEnemy extends WizardEnemy {
+  static difficulty: number = 3;
   readonly ATTACK_RADIUS = 5;
 
   constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
@@ -60,7 +61,7 @@ export class FireWizardEnemy extends WizardEnemy {
     for (const i in this.game.players) {
       if (
         (this.x - this.game.players[i].x) ** 2 +
-        (this.y - this.game.players[i].y) ** 2 <=
+          (this.y - this.game.players[i].y) ** 2 <=
         this.ATTACK_RADIUS ** 2
       ) {
         withinRange = true;

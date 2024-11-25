@@ -63,6 +63,7 @@ export class Spawner extends Enemy {
   };
 
   behavior = () => {
+    let shouldSpawn = true;
     this.lastX = this.x;
     this.lastY = this.y;
     if (!this.dead) {
@@ -230,15 +231,45 @@ export class Spawner extends Enemy {
               );
               break;
           }
-          this.room.projectiles.push(
-            new EnemySpawnAnimation(this.room, spawned, position.x, position.y)
+          let roomArea = this.room.width * this.room.height;
+          let enemies = this.room.entities.filter((e) => e instanceof Enemy);
+          let maxIndividualCount = Math.round(
+            (this.room.width + this.room.height) /
+              spawned.constructor.difficulty ** 2
           );
-          this.room.hitwarnings.push(
-            new HitWarning(this.game, position.x, position.y, this.x, this.y)
+          let enemySpawnTypeCount = this.room.entities.filter(
+            (e) => e instanceof spawned.constructor
+          ).length;
+          console.log(
+            `Count in room of ${spawned.constructor.name}: ${enemySpawnTypeCount}`
           );
+          console.log(
+            `maxIndividualCount of ${spawned.constructor.name}: ${maxIndividualCount}`
+          );
+
+          if (
+            enemies.length >= Math.round(roomArea / 4) ||
+            enemySpawnTypeCount >= maxIndividualCount
+          ) {
+            shouldSpawn = false;
+          }
+
+          if (shouldSpawn) {
+            this.room.projectiles.push(
+              new EnemySpawnAnimation(
+                this.room,
+                spawned,
+                position.x,
+                position.y
+              )
+            );
+            this.room.hitwarnings.push(
+              new HitWarning(this.game, position.x, position.y, this.x, this.y)
+            );
+          }
         }
       }
-      this.ticks++;
+      if (shouldSpawn) this.ticks++;
     }
   };
 

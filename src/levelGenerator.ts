@@ -254,8 +254,12 @@ let populate_grid = (
 
 let generate_dungeon_candidate = (
   map_w: number,
-  map_h: number
+  map_h: number,
+  depth: number
 ): Array<Partition> => {
+  const minRoomCount = depth > 0 ? 3 : 4;
+  const maxRoomCount = depth > 0 ? 12 : 7;
+  const maxRoomArea = depth > 0 ? 120 : 49;
   let partitions = [new Partition(100, 100, map_w, map_h)];
   let grid = [];
   //add a new partition and define grid as empty array
@@ -263,8 +267,26 @@ let generate_dungeon_candidate = (
   for (let i = 0; i < 3; i++) partitions = split_partitions(partitions, 0.75);
   for (let i = 0; i < 3; i++) partitions = split_partitions(partitions, 1);
   for (let i = 0; i < 3; i++) partitions = split_partitions(partitions, 0.25);
+  let partitionsBackup = [...partitions];
+  partitions.forEach((p) => console.log(p.area()));
+  console.log(`depth: ${depth}`);
   //split partitions 3 times with different probabilities
   grid = populate_grid(partitions, grid, map_w, map_h);
+  if (depth > 0) {
+    partitions = remove_wall_rooms(partitions, map_w, map_h, 0.5);
+  }
+
+  partitions = partitions.filter((p) => {
+    if (p.area() > maxRoomArea && partitions.length - 1 > minRoomCount) {
+      return false;
+    }
+    return true;
+  });
+
+  while (partitions.length > maxRoomCount) {
+    partitions.pop();
+  }
+
   //populate the grid with partitions
   partitions.sort((a, b) => a.area() - b.area());
   //sort the partitions list by area
@@ -437,14 +459,18 @@ let generate_dungeon_candidate = (
   return partitions;
 };
 
-let generate_dungeon = (map_w: number, map_h: number): Array<Partition> => {
+let generate_dungeon = (
+  map_w: number,
+  map_h: number,
+  depth: number
+): Array<Partition> => {
   let passes_checks = false;
   let partitions: Array<Partition>;
 
   let tries = 0;
 
   while (!passes_checks) {
-    partitions = generate_dungeon_candidate(map_w, map_h);
+    partitions = generate_dungeon_candidate(map_w, map_h, depth);
 
     passes_checks = true;
     if (partitions.length < 6) passes_checks = false;
@@ -674,9 +700,6 @@ export class LevelGenerator {
         partition.isBottomOpen, // New parameter
         partition.isLeftOpen // New parameter
       );
-      console.log(
-        `room.roomX: ${room.roomX}, room.roomY: ${room.roomY}, room.width: ${room.width}, room.height: ${room.height}`
-      );
       rooms.push(room);
     }
 
@@ -708,6 +731,7 @@ export class LevelGenerator {
   };
 
   generate = (game: Game, depth: number, cave = false): Room => {
+    let dimensions = depth > 0 ? 35 : 20;
     this.depthReached = depth;
 
     // Set the random state based on the seed and depth
@@ -722,7 +746,9 @@ export class LevelGenerator {
         : 0;
 
     // Generate partitions based on whether it's a cave or a dungeon
-    let partitions = cave ? generate_cave(20, 20) : generate_dungeon(35, 35);
+    let partitions = cave
+      ? generate_cave(20, 20)
+      : generate_dungeon(dimensions, dimensions, depth);
 
     // Get the levels based on the partitions
     let levels = this.getLevels(partitions, depth, mapGroup);

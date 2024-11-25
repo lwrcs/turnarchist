@@ -29,6 +29,7 @@ export enum WizardState {
 }
 
 export abstract class WizardEnemy extends Enemy {
+  static difficulty: number = 3;
   ticks: number;
   state: WizardState;
   frame: number;

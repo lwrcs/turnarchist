@@ -41,6 +41,5 @@ export class Level {
         }
       }
     }
-    console.log(this.levelArray);
   };
 }

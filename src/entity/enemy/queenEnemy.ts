@@ -23,6 +23,7 @@ export class QueenEnemy extends Enemy {
   aggro: boolean;
   targetPlayer: Player;
   drop: Item;
+  static difficulty: number = 4;
 
   constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
     super(room, game, x, y);

@@ -34,6 +34,7 @@ export abstract class Enemy extends Entity {
   drop: Item;
   protected jumpY: number;
   protected jumpHeight: number;
+  static difficulty: number;
   //dir: Direction;
 
   constructor(room: Room, game: Game, x: number, y: number) {

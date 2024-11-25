@@ -513,7 +513,7 @@ export class Game {
         GameConstants.DEVELOPER_MODE = !GameConstants.DEVELOPER_MODE;
         console.log(`Developer mode is now ${GameConstants.DEVELOPER_MODE}`);
         break;
-      case "newgame":
+      case "new":
         this.newGame();
         break;
       case "dev":

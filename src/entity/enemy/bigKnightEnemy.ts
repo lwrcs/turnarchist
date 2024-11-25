@@ -23,6 +23,7 @@ export class BigKnightEnemy extends Enemy {
   aggro: boolean;
   readonly REGEN_TICKS = 5;
   drops: Array<Item>;
+  static difficulty: number = 4;
 
   constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
     super(room, game, x, y);

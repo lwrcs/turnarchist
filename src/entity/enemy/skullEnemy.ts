@@ -26,6 +26,7 @@ export class SkullEnemy extends Enemy {
   targetPlayer: Player;
   readonly REGEN_TICKS = 5;
   drop: Item;
+  static difficulty: number = 2;
   constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
     super(room, game, x, y);
     this.ticks = 0;

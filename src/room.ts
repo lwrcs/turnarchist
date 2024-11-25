@@ -723,7 +723,6 @@ export class Room {
   };
 
   private buildEmptyRoom() {
-    console.log("building room array"); // building room array
     // fill in wall and floor
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
@@ -755,7 +754,6 @@ export class Room {
         }
       }
     }
-    console.log(this.roomArray);
   }
 
   removeWall = (x: number, y: number) => {
@@ -782,7 +780,6 @@ export class Room {
       directions.push(WallDirection.WEST);
     if (pointX === rectX + width && pointY >= rectY && pointY <= rectY + height)
       directions.push(WallDirection.EAST);
-    console.log(`directions: ${directions}`);
     return directions;
   };
 
@@ -931,6 +928,7 @@ export class Room {
   private addEnemies(numEnemies: number, rand: () => number) {
     // Get all empty tiles in the room
     let tiles = this.getEmptyTiles();
+    if (tiles === null) return;
     //don't put enemies near the entrances so you don't get screwed instantly
 
     const adjecentTiles = [];

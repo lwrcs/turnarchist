@@ -24,7 +24,7 @@ export class Map {
     for (const level of this.game.rooms) {
       if (
         this.game.room.mapGroup === level.mapGroup &&
-        level.entered === true
+        (level.entered === true || GameConstants.DEVELOPER_MODE)
       ) {
         this.mapData.push({
           room: level,

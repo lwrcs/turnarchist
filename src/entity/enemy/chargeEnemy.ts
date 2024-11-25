@@ -30,6 +30,7 @@ export class ChargeEnemy extends Enemy {
   state: ChargeEnemyState;
   trailFrame: number;
   drop: Item;
+  static difficulty: number = 3;
 
   constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
     super(room, game, x, y);
