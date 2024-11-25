@@ -8866,9 +8866,12 @@ var Inventory = /** @class */ (function () {
         };
         this.itemAtSelectedSlot = function () {
             var index = _this.selX + _this.selY * _this.cols;
+            console.log("Checking slot:", index, "selX:", _this.selX, "selY:", _this.selY);
             if (index < 0 || index >= _this.items.length) {
+                console.log("Invalid slot index");
                 return null;
             }
+            console.log("Found item:", _this.items[index]);
             return _this.items[index];
         };
         this.getIndexOfItem = function (item) {
@@ -8945,6 +8948,9 @@ var Inventory = /** @class */ (function () {
                 _this.selY = _this.isOpen
                     ? Math.max(0, Math.min(Math.floor((y - bounds.startY) / (s + 2 * b + g)), _this.rows + _this.expansion - 1))
                     : 0;
+                if (oldSelX !== _this.selX || oldSelY !== _this.selY) {
+                    console.log("Selection changed to:", _this.selX, _this.selY);
+                }
             }
         };
         this.moveItemToSlot = function (item, index, otherItem, otherIndex) {
@@ -8968,33 +8974,48 @@ var Inventory = /** @class */ (function () {
             }
         };
         this.grabItem = function (item) {
+            console.log("grabItem called with:", item);
             if (item === null) {
+                console.log("Cannot grab null item");
                 return;
             }
             if (_this.grabbedItem !== null) {
+                console.log("Already holding an item:", _this.grabbedItem);
                 return;
             }
             // Remove the item from its slot when grabbed
             var index = _this.getIndexOfItem(item);
+            console.log("Found item at index:", index);
             if (index !== -1) {
+                console.log("Removing item from slot", index);
                 _this.items[index] = null;
                 _this.grabbedItem = item;
+                console.log("Item grabbed successfully");
+            }
+            else {
+                console.log("Could not find item in inventory");
             }
         };
         this.releaseItem = function () {
+            console.log("releaseItem called, grabbed item:", _this.grabbedItem);
             if (_this.grabbedItem === null) {
+                console.log("No item to release");
                 return;
             }
             var targetIndex = _this.selX + _this.selY * _this.cols;
             var existingItem = _this.items[targetIndex];
+            console.log("Target slot:", targetIndex, "existing item:", existingItem);
             // If target slot is empty, place item there
             if (existingItem === null) {
+                console.log("Placing item in empty slot");
                 _this.items[targetIndex] = _this.grabbedItem;
             }
             else {
                 // Swap items
+                console.log("Swapping with existing item");
                 _this.items[targetIndex] = _this.grabbedItem;
             }
+            console.log("Item placed, clearing grabbed item");
             _this.grabbedItem = null;
         };
         this.drawDraggedItem = function (delta) {
@@ -9536,11 +9557,13 @@ var Inventory = /** @class */ (function () {
                 if (selectedItem !== null) {
                     _this._dragStartItem = selectedItem;
                     _this._dragStartSlot = _this.selX + _this.selY * _this.cols;
+                    console.log("Mouse down started with item:", selectedItem);
                 }
             }
         };
         this.onHoldDetected = function () {
             if (_this._dragStartItem !== null && !_this._isDragging) {
+                console.log("Hold threshold reached, initiating drag");
                 _this._isDragging = true;
                 _this.grabbedItem = _this._dragStartItem;
                 // Remove item from original slot
@@ -9561,16 +9584,19 @@ var Inventory = /** @class */ (function () {
             if (isValidDropZone) {
                 if (_this._isDragging && _this.grabbedItem !== null) {
                     // We were dragging, place the item
+                    console.log("Ending drag, placing item");
                     var targetSlot = _this.selX + _this.selY * _this.cols;
                     _this.placeItemInSlot(targetSlot);
                 }
                 else if (_this._dragStartItem !== null) {
                     // We had an item but weren't dragging (quick click)
+                    console.log("Quick click detected, using item");
                     _this.itemUse();
                 }
             }
             else if (_this.grabbedItem !== null) {
                 // Drop the item in the world
+                console.log("Dropping item in world");
                 _this.dropItem(_this.grabbedItem, _this._dragStartSlot);
                 _this.grabbedItem = null;
                 _this.items[_this._dragStartSlot] = null;
@@ -9582,14 +9608,28 @@ var Inventory = /** @class */ (function () {
             _this.grabbedItem = null;
         };
         this.checkForDragStart = function () {
+            console.log("Checking for drag start:", {
+                mouseDown: input_1.Input.mouseDown,
+                isMouseHold: input_1.Input.isMouseHold,
+                dragStartItem: _this._dragStartItem,
+                isDragging: _this._isDragging,
+                grabbedItem: _this.grabbedItem,
+            });
             if (!input_1.Input.mouseDown || _this._dragStartItem === null || _this._isDragging) {
+                console.log("Drag start check failed:", {
+                    noMouseDown: !input_1.Input.mouseDown,
+                    noDragStartItem: _this._dragStartItem === null,
+                    alreadyDragging: _this._isDragging,
+                });
                 return;
             }
             if (input_1.Input.isMouseHold) {
+                console.log("Starting drag operation");
                 _this._isDragging = true;
                 _this.grabbedItem = _this._dragStartItem;
                 // Remove item from original slot
                 if (_this._dragStartSlot !== null) {
+                    console.log("Removing item from slot:", _this._dragStartSlot);
                     _this.items[_this._dragStartSlot] = null;
                 }
             }
@@ -9597,6 +9637,7 @@ var Inventory = /** @class */ (function () {
         this.placeItemInSlot = function (targetSlot) {
             if (_this.grabbedItem === null)
                 return;
+            console.log("Placing item in slot:", targetSlot);
             var existingItem = _this.items[targetSlot];
             // If target slot is empty
             if (existingItem === null) {
@@ -10150,6 +10191,18 @@ var Equippable = /** @class */ (function (_super) {
         _this.drawEquipped = function (delta, x, y) {
             game_1.Game.drawItem(_this.tileX, _this.tileY, 1, 2, x, y - 1, _this.w, _this.h);
         };
+        _this.degrade = function (degradeAmount) {
+            if (degradeAmount === void 0) { degradeAmount = 1; }
+            _this.durability -= degradeAmount;
+            if (_this.durability <= 0)
+                _this.break();
+        };
+        _this.break = function () {
+            _this.durability = 0;
+            _this.toggleEquip();
+            _this.wielder.inventory.removeItem(_this);
+            _this.wielder = null;
+        };
         _this.onDrop = function () { };
         _this.dropFromInventory = function () {
             _this.wielder.inventory.weapon = null;
@@ -10434,6 +10487,7 @@ var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
 var sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
 var drawable_1 = __webpack_require__(/*! ../drawable */ "./src/drawable.ts");
+var utils_1 = __webpack_require__(/*! ../utils */ "./src/utils.ts");
 // Item class extends Drawable class and represents an item in the game
 var Item = /** @class */ (function (_super) {
     __extends(Item, _super);
@@ -10493,6 +10547,9 @@ var Item = /** @class */ (function (_super) {
                     _this.h * (_this.scaleFactor * -0.5 + 0.5), _this.w * _this.scaleFactor, _this.h * _this.scaleFactor, _this.level.shadeColor, _this.shadeAmount());
             }
         };
+        _this.degrade = function () {
+            _this.durability -= 1;
+        };
         // Function to draw the top layer of the item
         _this.drawTopLayer = function (delta) {
             if (_this.pickedUp) {
@@ -10513,6 +10570,7 @@ var Item = /** @class */ (function (_super) {
             if (opacity === void 0) { opacity = 1; }
             if (gameConstants_1.GameConstants.ALPHA_ENABLED)
                 game_1.Game.ctx.globalAlpha = opacity;
+            _this.drawDurability(x, y);
             game_1.Game.drawItem(_this.tileX, _this.tileY, 1, 2, x, y - 1, _this.w, _this.h);
             game_1.Game.ctx.globalAlpha = 1;
             var countText = _this.stackCount <= 1 ? "" : "" + _this.stackCount;
@@ -10520,6 +10578,32 @@ var Item = /** @class */ (function (_super) {
             var countX = 16 - width;
             var countY = 10;
             game_1.Game.fillTextOutline(countText, x * gameConstants_1.GameConstants.TILESIZE + countX, y * gameConstants_1.GameConstants.TILESIZE + countY, gameConstants_1.GameConstants.OUTLINE, "white");
+        };
+        // Function to draw the item's durability bar with color transitioning from green to red
+        _this.drawDurability = function (x, y) {
+            if (_this.durability < _this.durabilityMax) {
+                // Calculate durability ratio (1 = full, 0 = broken)
+                var durabilityRatio = _this.durability / _this.durabilityMax;
+                // Map durability ratio to hue (120 = green, 0 = red)
+                var color = utils_1.Utils.hsvToHex(120 * durabilityRatio, // Hue from 120 (green) to 0 (red)
+                1, // Full saturation
+                1 // Full value
+                );
+                var iconWidth = gameConstants_1.GameConstants.TILESIZE;
+                var barWidth = durabilityRatio * iconWidth;
+                var barHeight = 2; // 2 pixels tall
+                // Calculate the position of the durability bar
+                var barX = x * gameConstants_1.GameConstants.TILESIZE;
+                var barY = y * gameConstants_1.GameConstants.TILESIZE + gameConstants_1.GameConstants.TILESIZE - 2;
+                // Set the fill style for the durability bar
+                game_1.Game.ctx.fillStyle = color;
+                // Set the interpolation mode to nearest neighbor
+                game_1.Game.ctx.imageSmoothingEnabled = false;
+                // Draw the durability bar
+                game_1.Game.ctx.fillRect(barX, barY, barWidth, barHeight);
+                // Reset fill style to default
+                game_1.Game.ctx.fillStyle = "white";
+            }
         };
         // Initialize properties
         _this.level = level;
@@ -10540,6 +10624,8 @@ var Item = /** @class */ (function (_super) {
         _this.name = "";
         _this.startY = y;
         _this.randomOffset = Math.random();
+        _this.durability = 25;
+        _this.durabilityMax = 25;
         return _this;
     }
     return Item;
@@ -10695,7 +10781,10 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Light = void 0;
+var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var equippable_1 = __webpack_require__(/*! ./equippable */ "./src/item/equippable.ts");
+var gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
+var utils_1 = __webpack_require__(/*! ../utils */ "./src/utils.ts");
 var Light = /** @class */ (function (_super) {
     __extends(Light, _super);
     function Light(level, x, y) {
@@ -10746,6 +10835,31 @@ var Light = /** @class */ (function (_super) {
             else if (_this.isIgnited()) {
                 _this.fuel--;
                 _this.setRadius();
+            }
+        };
+        _this.drawDurability = function (x, y) {
+            if (_this.fuel < _this.fuelCap) {
+                // Calculate durability ratio (1 = full, 0 = broken)
+                var durabilityRatio = _this.fuel / _this.fuelCap;
+                // Map durability ratio to hue (120 = green, 0 = red)
+                var color = utils_1.Utils.hsvToHex(120 * durabilityRatio, // Hue from 120 (green) to 0 (red)
+                1, // Full saturation
+                1 // Full value
+                );
+                var iconWidth = gameConstants_1.GameConstants.TILESIZE;
+                var barWidth = durabilityRatio * iconWidth;
+                var barHeight = 2; // 2 pixels tall
+                // Calculate the position of the durability bar
+                var barX = x * gameConstants_1.GameConstants.TILESIZE;
+                var barY = y * gameConstants_1.GameConstants.TILESIZE + gameConstants_1.GameConstants.TILESIZE - 2;
+                // Set the fill style for the durability bar
+                game_1.Game.ctx.fillStyle = color;
+                // Set the interpolation mode to nearest neighbor
+                game_1.Game.ctx.imageSmoothingEnabled = false;
+                // Draw the durability bar
+                game_1.Game.ctx.fillRect(barX, barY, barWidth, barHeight);
+                // Reset fill style to default
+                game_1.Game.ctx.fillStyle = "white";
             }
         };
         _this.tickInInventory = function () {
@@ -13616,6 +13730,7 @@ exports.PlayerFireball = void 0;
 var projectile_1 = __webpack_require__(/*! ./projectile */ "./src/projectile/projectile.ts");
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var lighting_1 = __webpack_require__(/*! ../lighting */ "./src/lighting.ts");
+var utils_1 = __webpack_require__(/*! ../utils */ "./src/utils.ts");
 var PlayerFireball = /** @class */ (function (_super) {
     __extends(PlayerFireball, _super);
     function PlayerFireball(parent, x, y) {
@@ -13623,13 +13738,20 @@ var PlayerFireball = /** @class */ (function (_super) {
         _this.drawTopLayer = function (delta) {
             if (_this.dead)
                 return;
-            _this.frame += 0.25 * delta;
+            if (_this.offsetFrame < 0)
+                _this.offsetFrame += 10 * delta;
+            if (_this.offsetFrame >= 0) {
+                _this.frame += 0.25 * delta;
+            }
             if (_this.frame > 17)
                 _this.dead = true;
             game_1.Game.drawFX(Math.floor(_this.frame), 6, 1, 2, _this.x, _this.y - 1, 1, 2);
         };
         _this.state = 0;
         _this.frame = 6;
+        _this.offsetFrame =
+            -utils_1.Utils.distance(_this.parent.x, _this.parent.y, _this.x, _this.y) * 50;
+        _this.delay = 0;
         lighting_1.Lighting.momentaryLight(_this.parent.game.rooms[_this.parent.levelID], _this.x + 0.5, _this.y + 0.5, 0.5, [255, 100, 0], 250, 10, 1);
         return _this;
     }
@@ -15685,6 +15807,7 @@ var Room = /** @class */ (function () {
             return;
         //don't put enemies near the entrances so you don't get screwed instantly
         var adjecentTiles = [];
+        var spawnerCount = 0;
         for (var _i = 0, _a = this.doors; _i < _a.length; _i++) {
             var door = _a[_i];
             if (door.doorDir === game_1.Direction.UP) {
@@ -15706,7 +15829,7 @@ var Room = /** @class */ (function () {
             // Define the enemy tables for each depth level
             var tables = {
                 0: [1, 4, 3],
-                1: [3, 4, 5, 9, 7],
+                1: [3, 4, 9, 7],
                 2: [3, 4, 5, 7, 8, 9, 12],
                 3: [1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
                 4: [4, 5, 6, 7, 8, 9, 10, 11, 12],
@@ -15748,6 +15871,20 @@ var Room = /** @class */ (function () {
                 };
                 // Randomly select an enemy type from the table
                 var type = game_1.Game.randTable(tables[d], rand);
+                // If we roll a spawner and spawnerCount is greater than 0, we have a 1/spawnerCount chance to roll another spawner; otherwise, we reroll
+                if (type === 7 && spawnerCount > 0) {
+                    var roll = Math.random();
+                    console.log("roll: ".concat(roll, ", 1 / spawnerCount: ").concat(1 / spawnerCount));
+                    if (roll <= 1 / spawnerCount) {
+                        type = 7;
+                        console.log("rolled spawner");
+                    }
+                    else {
+                        console.log("rolled non-spawner");
+                        type = game_1.Game.randTable(tables[d], rand);
+                    }
+                }
+                console.log(spawnerCount);
                 // Add the selected enemy type to the room
                 switch (type) {
                     case 1:
@@ -15770,6 +15907,7 @@ var Room = /** @class */ (function () {
                         break;
                     case 7:
                         spawner_1.Spawner.add(this_2, this_2.game, x, y, tables[d]);
+                        spawnerCount++;
                         break;
                     case 8:
                         bishopEnemy_1.BishopEnemy.add(this_2, this_2.game, x, y);
@@ -16207,6 +16345,10 @@ var Sound = /** @class */ (function () {
             var f = _z[_y];
             f.volume = 0.5;
         }
+        Sound.magicSound = new Audio("res/SFX/attacks/magic2.mp3");
+        Sound.magicSound.volume = 0.25;
+        Sound.wooshSound = new Audio("res/SFX/attacks/woosh1.mp3");
+        Sound.wooshSound.volume = 0.2;
     };
     Sound.playerStoneFootstep = function () { return __awaiter(void 0, void 0, void 0, function () {
         var f;
@@ -16328,6 +16470,14 @@ var Sound = /** @class */ (function () {
     Sound.playGore = function () {
         _a.playWithReverb(Sound.goreSound);
         Sound.goreSound.currentTime = 0;
+    };
+    Sound.playMagic = function () {
+        var f = Sound.magicSound;
+        var woosh = Sound.wooshSound;
+        _a.playWithReverb(f);
+        _a.playWithReverb(woosh);
+        f.currentTime = 0;
+        woosh.currentTime = 0;
     };
     Sound.delayPlay = function (method, delay) {
         setTimeout(method, delay);
@@ -17849,6 +17999,53 @@ var Utils = /** @class */ (function () {
     Utils.calculateExponentialFalloff = function (distance, falloffRate) {
         return Math.exp(-falloffRate * distance);
     };
+    // Corrected HSV to HEX conversion
+    Utils.hsvToHex = function (h, s, v) {
+        var c = v * s;
+        var x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+        var m = v - c;
+        var r = 0, g = 0, b = 0;
+        if (h >= 0 && h < 60) {
+            r = c;
+            g = x;
+            b = 0;
+        }
+        else if (h >= 60 && h < 120) {
+            r = x;
+            g = c;
+            b = 0;
+        }
+        else if (h >= 120 && h < 180) {
+            r = 0;
+            g = c;
+            b = x;
+        }
+        else if (h >= 180 && h < 240) {
+            r = 0;
+            g = x;
+            b = c;
+        }
+        else if (h >= 240 && h < 300) {
+            r = x;
+            g = 0;
+            b = c;
+        }
+        else {
+            r = c;
+            g = 0;
+            b = x;
+        }
+        // Convert to RGB values
+        var rFinal = Math.round((r + m) * 255);
+        var gFinal = Math.round((g + m) * 255);
+        var bFinal = Math.round((b + m) * 255);
+        // Convert RGB to HEX
+        var toHex = function (val) {
+            var hex = val.toString(16);
+            return hex.length === 1 ? "0" + hex : hex;
+        };
+        return "#".concat(toHex(rFinal)).concat(toHex(gFinal)).concat(toHex(bFinal));
+    };
     return Utils;
 }());
 exports.Utils = Utils;
@@ -17885,6 +18082,7 @@ var Dagger = /** @class */ (function (_super) {
     __extends(Dagger, _super);
     function Dagger(level, x, y) {
         var _this = _super.call(this, level, x, y) || this;
+        _this.degrade = function () { };
         _this.tileX = 22;
         _this.tileY = 0;
         _this.name = "Dagger";
@@ -17958,6 +18156,7 @@ var DualDagger = /** @class */ (function (_super) {
                     _this.firstAttack = false;
                     _this.wielder.slowMotionEnabled = true;
                 }
+                _this.degrade();
             }
             return !flag;
         };
@@ -18163,6 +18362,7 @@ var Shotgun = /** @class */ (function (_super) {
                 _this.game.rooms[_this.wielder.levelID].tick(_this.wielder);
                 if (_this.wielder === _this.game.players[_this.game.localPlayerID])
                     _this.game.shakeScreen(10 * _this.wielder.hitX, 10 * _this.wielder.hitY);
+                _this.degrade();
                 return false;
             }
             return true;
@@ -18206,6 +18406,7 @@ exports.Spear = void 0;
 var weapon_1 = __webpack_require__(/*! ./weapon */ "./src/weapon/weapon.ts");
 var sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
 var slashParticle_1 = __webpack_require__(/*! ../particle/slashParticle */ "./src/particle/slashParticle.ts");
+var enemy_1 = __webpack_require__(/*! ../entity/enemy/enemy */ "./src/entity/enemy/enemy.ts");
 var Spear = /** @class */ (function (_super) {
     __extends(Spear, _super);
     function Spear(level, x, y) {
@@ -18228,7 +18429,8 @@ var Spear = /** @class */ (function (_super) {
                     }
                     if (e.pointIn(newX2, newY2) &&
                         !_this.game.rooms[_this.wielder.levelID].roomArray[newX][newY].isSolid()) {
-                        if (!e.pushable)
+                        //only hit targest 2 tiles away if they are enemies
+                        if (!e.pushable && e instanceof enemy_1.Enemy)
                             enemyHitCandidates.push(e);
                     }
                 }
@@ -18247,6 +18449,7 @@ var Spear = /** @class */ (function (_super) {
                 _this.game.rooms[_this.wielder.levelID].tick(_this.wielder);
                 if (_this.wielder === _this.game.players[_this.game.localPlayerID])
                     _this.game.shakeScreen(10 * _this.wielder.hitX, 10 * _this.wielder.hitY);
+                _this.degrade();
                 return false;
             }
             if (flag) {
@@ -18258,6 +18461,7 @@ var Spear = /** @class */ (function (_super) {
                 _this.game.rooms[_this.wielder.levelID].tick(_this.wielder);
                 if (_this.wielder === _this.game.players[_this.game.localPlayerID])
                     _this.game.shakeScreen(10 * _this.wielder.hitX, 10 * _this.wielder.hitY);
+                _this.degrade();
             }
             return !flag;
         };
@@ -18300,19 +18504,52 @@ exports.Spellbook = void 0;
 var weapon_1 = __webpack_require__(/*! ./weapon */ "./src/weapon/weapon.ts");
 var sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
 var playerFireball_1 = __webpack_require__(/*! ../projectile/playerFireball */ "./src/projectile/playerFireball.ts");
+var enemy_1 = __webpack_require__(/*! ../entity/enemy/enemy */ "./src/entity/enemy/enemy.ts");
+var utils_1 = __webpack_require__(/*! ../utils */ "./src/utils.ts");
+var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var Spellbook = /** @class */ (function (_super) {
     __extends(Spellbook, _super);
     function Spellbook(level, x, y) {
         var _this = _super.call(this, level, x, y) || this;
+        _this.getTargets = function () {
+            _this.targets = [];
+            var entities = _this.game.rooms[_this.wielder.levelID].entities;
+            _this.targets = entities.filter(function (e) {
+                return !e.pushable &&
+                    utils_1.Utils.distance(_this.wielder.x, _this.wielder.y, e.x, e.y) <= _this.range;
+            });
+            var enemies = _this.targets.filter(function (e) { return e instanceof enemy_1.Enemy; });
+            console.log(enemies);
+            if (enemies.length > 0)
+                return enemies;
+            else {
+                console.log(_this.targets);
+                return _this.targets;
+            }
+        };
         _this.weaponMove = function (newX, newY) {
+            _this.getTargets();
+            var direction = _this.wielder.direction;
             var flag = false;
-            var difX = newX - _this.x;
-            var difY = newY - _this.y;
-            for (var _i = 0, _a = _this.game.rooms[_this.wielder.levelID].entities; _i < _a.length; _i++) {
-                var e = _a[_i];
-                if ((e.destroyable || e.pushable) &&
-                    e.pointIn(newX, newY) &&
-                    !_this.game.rooms[_this.wielder.levelID].roomArray[e.x][e.y].isSolid()) {
+            var targets = _this.targets;
+            var isTargetInDirection = function (e) {
+                switch (direction) {
+                    case game_1.Direction.UP:
+                        return e.y <= newY;
+                    case game_1.Direction.RIGHT:
+                        return e.x >= newX;
+                    case game_1.Direction.DOWN:
+                        return e.y >= newY;
+                    case game_1.Direction.LEFT:
+                        return e.x <= newX;
+                    default:
+                        return false;
+                }
+            };
+            targets = targets.filter(isTargetInDirection);
+            for (var _i = 0, targets_1 = targets; _i < targets_1.length; _i++) {
+                var e = targets_1[_i];
+                if (!_this.game.rooms[_this.wielder.levelID].roomArray[e.x][e.y].isSolid()) {
                     e.hurt(_this.wielder, 1);
                     _this.game.rooms[_this.wielder.levelID].projectiles.push(new playerFireball_1.PlayerFireball(_this.wielder, e.x, e.y));
                     flag = true;
@@ -18326,9 +18563,12 @@ var Spellbook = /** @class */ (function (_super) {
                 _this.game.rooms[_this.wielder.levelID].tick(_this.wielder);
                 if (_this.wielder === _this.game.players[_this.game.localPlayerID])
                     _this.game.shakeScreen(10 * _this.wielder.hitX, 10 * _this.wielder.hitY);
+                sound_1.Sound.playMagic();
+                _this.degrade();
             }
             return !flag;
         };
+        _this.range = 4;
         _this.tileX = 25;
         _this.tileY = 0;
         _this.canMine = true;
@@ -18415,6 +18655,13 @@ var Weapon = /** @class */ (function (_super) {
     __extends(Weapon, _super);
     function Weapon(level, x, y) {
         var _this = _super.call(this, level, x, y) || this;
+        _this.break = function () {
+            _this.durability = 0;
+            _this.wielder.inventory.weapon = null;
+            _this.toggleEquip();
+            _this.wielder.inventory.removeItem(_this);
+            _this.wielder = null;
+        };
         _this.coEquippable = function (other) {
             if (other instanceof Weapon)
                 return false;
@@ -18438,6 +18685,8 @@ var Weapon = /** @class */ (function (_super) {
                 _this.game.rooms[_this.wielder.levelID].tick(_this.wielder);
                 if (_this.wielder === _this.game.players[_this.game.localPlayerID])
                     _this.game.shakeScreen(10 * _this.wielder.hitX, 10 * _this.wielder.hitY);
+                _this.degrade();
+                console.log(_this.durability);
             }
             return !flag;
         };

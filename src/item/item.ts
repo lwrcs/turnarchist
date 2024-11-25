@@ -5,6 +5,7 @@ import { Player } from "../player";
 import { Room } from "../room";
 import { Sound } from "../sound";
 import { Drawable } from "../drawable";
+import { Utils } from "../utils";
 
 // Item class extends Drawable class and represents an item in the game
 export class Item extends Drawable {
@@ -26,6 +27,8 @@ export class Item extends Drawable {
   name: string;
   startY: number;
   randomOffset: number;
+  durability: number;
+  durabilityMax: number;
 
   // Constructor for the Item class
   constructor(level: Room, x: number, y: number) {
@@ -50,6 +53,8 @@ export class Item extends Drawable {
     this.name = "";
     this.startY = y;
     this.randomOffset = Math.random();
+    this.durability = 25;
+    this.durabilityMax = 25;
   }
 
   // Empty tick function to be overridden by subclasses
@@ -119,6 +124,10 @@ export class Item extends Drawable {
     }
   };
 
+  degrade = () => {
+    this.durability -= 1;
+  };
+
   // Function to draw the top layer of the item
   drawTopLayer = (delta: number) => {
     if (this.pickedUp) {
@@ -149,6 +158,8 @@ export class Item extends Drawable {
   // Function to draw the item's icon
   drawIcon = (delta: number, x: number, y: number, opacity = 1) => {
     if (GameConstants.ALPHA_ENABLED) Game.ctx.globalAlpha = opacity;
+    this.drawDurability(x, y);
+
     Game.drawItem(this.tileX, this.tileY, 1, 2, x, y - 1, this.w, this.h);
     Game.ctx.globalAlpha = 1;
 
@@ -164,5 +175,39 @@ export class Item extends Drawable {
       GameConstants.OUTLINE,
       "white"
     );
+  };
+
+  // Function to draw the item's durability bar with color transitioning from green to red
+  drawDurability = (x: number, y: number) => {
+    if (this.durability < this.durabilityMax) {
+      // Calculate durability ratio (1 = full, 0 = broken)
+      const durabilityRatio = this.durability / this.durabilityMax;
+
+      // Map durability ratio to hue (120 = green, 0 = red)
+      let color = Utils.hsvToHex(
+        120 * durabilityRatio, // Hue from 120 (green) to 0 (red)
+        1, // Full saturation
+        1 // Full value
+      );
+
+      const iconWidth = GameConstants.TILESIZE;
+      const barWidth = durabilityRatio * iconWidth;
+      const barHeight = 2; // 2 pixels tall
+
+      // Calculate the position of the durability bar
+      const barX = x * GameConstants.TILESIZE;
+      const barY = y * GameConstants.TILESIZE + GameConstants.TILESIZE - 2;
+
+      // Set the fill style for the durability bar
+      Game.ctx.fillStyle = color;
+      // Set the interpolation mode to nearest neighbor
+      Game.ctx.imageSmoothingEnabled = false;
+
+      // Draw the durability bar
+      Game.ctx.fillRect(barX, barY, barWidth, barHeight);
+
+      // Reset fill style to default
+      Game.ctx.fillStyle = "white";
+    }
   };
 }

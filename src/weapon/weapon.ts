@@ -21,6 +21,14 @@ export abstract class Weapon extends Equippable {
     this.damage = 1;
   }
 
+  break = () => {
+    this.durability = 0;
+    this.wielder.inventory.weapon = null;
+    this.toggleEquip();
+    this.wielder.inventory.removeItem(this);
+    this.wielder = null;
+  };
+
   coEquippable = (other: Equippable): boolean => {
     if (other instanceof Weapon) return false;
     return true;
@@ -48,6 +56,8 @@ export abstract class Weapon extends Equippable {
       this.game.rooms[this.wielder.levelID].tick(this.wielder);
       if (this.wielder === this.game.players[this.game.localPlayerID])
         this.game.shakeScreen(10 * this.wielder.hitX, 10 * this.wielder.hitY);
+      this.degrade();
+      console.log(this.durability);
     }
     return !flag;
   };

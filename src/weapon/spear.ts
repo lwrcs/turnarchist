@@ -5,6 +5,7 @@ import { Sound } from "../sound";
 import { SlashParticle } from "../particle/slashParticle";
 import { Crate } from "../entity/object/crate";
 import { Barrel } from "../entity/object/barrel";
+import { Enemy } from "../entity/enemy/enemy";
 
 export class Spear extends Weapon {
   constructor(level: Room, x: number, y: number) {
@@ -34,7 +35,8 @@ export class Spear extends Weapon {
           e.pointIn(newX2, newY2) &&
           !this.game.rooms[this.wielder.levelID].roomArray[newX][newY].isSolid()
         ) {
-          if (!e.pushable) enemyHitCandidates.push(e);
+          //only hit targest 2 tiles away if they are enemies
+          if (!e.pushable && e instanceof Enemy) enemyHitCandidates.push(e);
         }
       }
     }
@@ -55,6 +57,7 @@ export class Spear extends Weapon {
       this.game.rooms[this.wielder.levelID].tick(this.wielder);
       if (this.wielder === this.game.players[this.game.localPlayerID])
         this.game.shakeScreen(10 * this.wielder.hitX, 10 * this.wielder.hitY);
+      this.degrade();
       return false;
     }
     if (flag) {
@@ -70,6 +73,7 @@ export class Spear extends Weapon {
       this.game.rooms[this.wielder.levelID].tick(this.wielder);
       if (this.wielder === this.game.players[this.game.localPlayerID])
         this.game.shakeScreen(10 * this.wielder.hitX, 10 * this.wielder.hitY);
+      this.degrade();
     }
     return !flag;
   };

@@ -14,4 +14,6 @@ export class Dagger extends Weapon {
     this.tileY = 0;
     this.name = "Dagger";
   }
+
+  degrade = () => {};
 }

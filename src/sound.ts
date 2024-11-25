@@ -23,6 +23,8 @@ export class Sound {
   static doorOpenSounds: Array<HTMLAudioElement>;
   static potSmashSounds: Array<HTMLAudioElement>;
   static keyPickupSound: HTMLAudioElement;
+  static magicSound: HTMLAudioElement;
+  static wooshSound: HTMLAudioElement;
   static initialized: boolean = false;
   static loadSounds = () => {
     if (Sound.initialized) return;
@@ -134,6 +136,12 @@ export class Sound {
       )
     );
     for (let f of Sound.potSmashSounds) f.volume = 0.5;
+
+    Sound.magicSound = new Audio("res/SFX/attacks/magic2.mp3");
+    Sound.magicSound.volume = 0.25;
+
+    Sound.wooshSound = new Audio("res/SFX/attacks/woosh1.mp3");
+    Sound.wooshSound.volume = 0.2;
   };
 
   private static playSoundSafely(audio: HTMLAudioElement) {
@@ -287,6 +295,15 @@ export class Sound {
   static playGore = () => {
     this.playWithReverb(Sound.goreSound);
     Sound.goreSound.currentTime = 0;
+  };
+
+  static playMagic = () => {
+    let f = Sound.magicSound;
+    let woosh = Sound.wooshSound;
+    this.playWithReverb(f);
+    this.playWithReverb(woosh);
+    f.currentTime = 0;
+    woosh.currentTime = 0;
   };
 
   static delayPlay = (method: () => void, delay: number) => {

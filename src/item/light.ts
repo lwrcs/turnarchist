@@ -8,6 +8,7 @@ import { Torch } from "./torch";
 import { PostProcessor } from "../postProcess";
 import { GameConstants } from "../gameConstants";
 import { LightSource } from "../lightSource";
+import { Utils } from "../utils";
 
 export class Light extends Equippable {
   fuel: number;
@@ -82,6 +83,39 @@ export class Light extends Equippable {
     } else if (this.isIgnited()) {
       this.fuel--;
       this.setRadius();
+    }
+  };
+
+  drawDurability = (x: number, y: number) => {
+    if (this.fuel < this.fuelCap) {
+      // Calculate durability ratio (1 = full, 0 = broken)
+      const durabilityRatio = this.fuel / this.fuelCap;
+
+      // Map durability ratio to hue (120 = green, 0 = red)
+      let color = Utils.hsvToHex(
+        120 * durabilityRatio, // Hue from 120 (green) to 0 (red)
+        1, // Full saturation
+        1 // Full value
+      );
+
+      const iconWidth = GameConstants.TILESIZE;
+      const barWidth = durabilityRatio * iconWidth;
+      const barHeight = 2; // 2 pixels tall
+
+      // Calculate the position of the durability bar
+      const barX = x * GameConstants.TILESIZE;
+      const barY = y * GameConstants.TILESIZE + GameConstants.TILESIZE - 2;
+
+      // Set the fill style for the durability bar
+      Game.ctx.fillStyle = color;
+      // Set the interpolation mode to nearest neighbor
+      Game.ctx.imageSmoothingEnabled = false;
+
+      // Draw the durability bar
+      Game.ctx.fillRect(barX, barY, barWidth, barHeight);
+
+      // Reset fill style to default
+      Game.ctx.fillStyle = "white";
     }
   };
 

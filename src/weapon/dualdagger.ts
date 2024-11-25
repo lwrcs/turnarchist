@@ -58,6 +58,7 @@ export class DualDagger extends Weapon {
         this.firstAttack = false;
         this.wielder.slowMotionEnabled = true;
       }
+      this.degrade();
     }
     return !flag;
   };

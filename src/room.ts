@@ -932,6 +932,7 @@ export class Room {
     //don't put enemies near the entrances so you don't get screwed instantly
 
     const adjecentTiles = [];
+    let spawnerCount = 0;
     for (let door of this.doors) {
       if (door.doorDir === Direction.UP) {
         adjecentTiles.push(
@@ -981,7 +982,7 @@ export class Room {
 
       let tables = {
         0: [1, 4, 3], //this.generateLevelTable(rand),
-        1: [3, 4, 5, 9, 7],
+        1: [3, 4, 9, 7],
         2: [3, 4, 5, 7, 8, 9, 12],
         3: [1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
         4: [4, 5, 6, 7, 8, 9, 10, 11, 12],
@@ -1018,7 +1019,21 @@ export class Room {
 
         // Randomly select an enemy type from the table
         let type = Game.randTable(tables[d], rand);
+        // If we roll a spawner and spawnerCount is greater than 0, we have a 1/spawnerCount chance to roll another spawner; otherwise, we reroll
+        if (type === 7 && spawnerCount > 0) {
+          let roll = Math.random();
+          console.log(`roll: ${roll}, 1 / spawnerCount: ${1 / spawnerCount}`);
+          if (roll <= 1 / spawnerCount) {
+            type = 7;
+            console.log("rolled spawner");
+          } else {
+            console.log("rolled non-spawner");
+            type = Game.randTable(tables[d], rand);
+          }
+        }
+        console.log(spawnerCount);
         // Add the selected enemy type to the room
+
         switch (type) {
           case 1:
             CrabEnemy.add(this, this.game, x, y);
@@ -1040,6 +1055,7 @@ export class Room {
             break;
           case 7:
             Spawner.add(this, this.game, x, y, tables[d]);
+            spawnerCount++;
             break;
           case 8:
             BishopEnemy.add(this, this.game, x, y);

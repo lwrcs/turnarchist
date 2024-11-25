@@ -28,6 +28,18 @@ export class Equippable extends Item {
     Game.drawItem(this.tileX, this.tileY, 1, 2, x, y - 1, this.w, this.h);
   };
 
+  degrade = (degradeAmount: number = 1) => {
+    this.durability -= degradeAmount;
+    if (this.durability <= 0) this.break();
+  };
+
+  break = () => {
+    this.durability = 0;
+    this.toggleEquip();
+    this.wielder.inventory.removeItem(this);
+    this.wielder = null;
+  };
+
   onDrop = () => {};
 
   dropFromInventory = () => {
