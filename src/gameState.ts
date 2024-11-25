@@ -400,7 +400,7 @@ let loadEnemy = (es: EnemyState, game: Game): Entity => {
     }
   }
   if (es.type === EnemyType.SPAWNER) {
-    enemy = new Spawner(level, game, es.x, es.y);
+    enemy = new Spawner(level, game, es.x, es.y, [es.enemySpawnType]);
     enemy.ticks = es.ticks;
     enemy.seenPlayer = es.seenPlayer;
     enemy.enemySpawnType = es.enemySpawnType;

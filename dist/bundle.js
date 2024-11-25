@@ -3797,13 +3797,15 @@ var zombieEnemy_1 = __webpack_require__(/*! ./zombieEnemy */ "./src/entity/enemy
 var bishopEnemy_1 = __webpack_require__(/*! ./bishopEnemy */ "./src/entity/enemy/bishopEnemy.ts");
 var crabEnemy_1 = __webpack_require__(/*! ./crabEnemy */ "./src/entity/enemy/crabEnemy.ts");
 var chargeEnemy_1 = __webpack_require__(/*! ./chargeEnemy */ "./src/entity/enemy/chargeEnemy.ts");
+var bigKnightEnemy_1 = __webpack_require__(/*! ./bigKnightEnemy */ "./src/entity/enemy/bigKnightEnemy.ts");
 var bigSkullEnemy_1 = __webpack_require__(/*! ./bigSkullEnemy */ "./src/entity/enemy/bigSkullEnemy.ts");
 var frogEnemy_1 = __webpack_require__(/*! ./frogEnemy */ "./src/entity/enemy/frogEnemy.ts");
 var fireWizard_1 = __webpack_require__(/*! ./fireWizard */ "./src/entity/enemy/fireWizard.ts");
 var queenEnemy_1 = __webpack_require__(/*! ./queenEnemy */ "./src/entity/enemy/queenEnemy.ts");
+var armoredzombieEnemy_1 = __webpack_require__(/*! ./armoredzombieEnemy */ "./src/entity/enemy/armoredzombieEnemy.ts");
 var Spawner = /** @class */ (function (_super) {
     __extends(Spawner, _super);
-    function Spawner(room, game, x, y) {
+    function Spawner(room, game, x, y, enemyTable) {
         var _this = _super.call(this, room, game, x, y) || this;
         _this.hit = function () {
             return 1;
@@ -3821,33 +3823,49 @@ var Spawner = /** @class */ (function (_super) {
                     var positions = _this.room
                         .getEmptyTiles()
                         .filter(function (t) { return Math.abs(t.x - _this.x) <= 1 && Math.abs(t.y - _this.y) <= 1; });
+                    if (_this.enemySpawnType === 8) {
+                        var offLimits_1 = [
+                            { x: _this.x, y: _this.y },
+                            { x: _this.x + 1, y: _this.y + 1 },
+                            { x: _this.x - 1, y: _this.y - 1 },
+                            { x: _this.x + 1, y: _this.y - 1 },
+                            { x: _this.x - 1, y: _this.y + 1 },
+                        ];
+                        positions = positions.filter(function (t) { return !offLimits_1.some(function (o) { return o.x === t.x && o.y === t.y; }); });
+                    }
                     if (positions.length > 0) {
                         _this.tileX = 7;
                         var position = game_1.Game.randTable(positions, random_1.Random.rand);
                         var spawned = void 0;
                         switch (_this.enemySpawnType) {
                             case 1:
-                                spawned = new knightEnemy_1.KnightEnemy(_this.room, _this.game, position.x, position.y);
-                                break;
-                            case 2:
-                                spawned = new skullEnemy_1.SkullEnemy(_this.room, _this.game, position.x, position.y);
-                                break;
-                            case 3:
-                                spawned = new energyWizard_1.EnergyWizardEnemy(_this.room, _this.game, position.x, position.y);
-                                break;
-                            case 4:
-                                spawned = new zombieEnemy_1.ZombieEnemy(_this.room, _this.game, position.x, position.y);
-                                break;
-                            case 5:
-                                spawned = new bishopEnemy_1.BishopEnemy(_this.room, _this.game, position.x, position.y);
-                                break;
-                            case 6:
                                 spawned = new crabEnemy_1.CrabEnemy(_this.room, _this.game, position.x, position.y);
                                 break;
-                            case 7:
+                            case 2:
+                                spawned = new frogEnemy_1.FrogEnemy(_this.room, _this.game, position.x, position.y);
+                                break;
+                            case 3:
+                                spawned = new zombieEnemy_1.ZombieEnemy(_this.room, _this.game, position.x, position.y);
+                                break;
+                            case 4:
+                                spawned = new skullEnemy_1.SkullEnemy(_this.room, _this.game, position.x, position.y);
+                                break;
+                            case 5:
+                                spawned = new energyWizard_1.EnergyWizardEnemy(_this.room, _this.game, position.x, position.y);
+                                break;
+                            case 6:
                                 spawned = new chargeEnemy_1.ChargeEnemy(_this.room, _this.game, position.x, position.y);
                                 break;
+                            case 7:
+                                spawned = new Spawner(_this.room, _this.game, position.x, position.y, _this.enemyTable);
+                                break;
                             case 8:
+                                spawned = new bishopEnemy_1.BishopEnemy(_this.room, _this.game, position.x, position.y);
+                                break;
+                            case 9:
+                                spawned = new armoredzombieEnemy_1.ArmoredzombieEnemy(_this.room, _this.game, position.x, position.y);
+                                break;
+                            case 10:
                                 spawned = new bigSkullEnemy_1.BigSkullEnemy(_this.room, _this.game, position.x, position.y);
                                 for (var xx = 0; xx < 2; xx++) {
                                     for (var yy = 0; yy < 2; yy++) {
@@ -3856,14 +3874,26 @@ var Spawner = /** @class */ (function (_super) {
                                     }
                                 }
                                 break;
-                            case 9:
-                                spawned = new frogEnemy_1.FrogEnemy(_this.room, _this.game, position.x, position.y);
-                                break;
-                            case 10:
-                                spawned = new fireWizard_1.FireWizardEnemy(_this.room, _this.game, position.x, position.y);
-                                break;
                             case 11:
                                 spawned = new queenEnemy_1.QueenEnemy(_this.room, _this.game, position.x, position.y);
+                                break;
+                            case 12:
+                                spawned = new knightEnemy_1.KnightEnemy(_this.room, _this.game, position.x, position.y);
+                                break;
+                            case 13:
+                                spawned = new bigKnightEnemy_1.BigKnightEnemy(_this.room, _this.game, position.x, position.y);
+                                for (var xx = 0; xx < 2; xx++) {
+                                    for (var yy = 0; yy < 2; yy++) {
+                                        _this.room.roomArray[position.x + xx][position.y + yy] =
+                                            new floor_1.Floor(_this.room, position.x + xx, position.y + yy); // remove any walls
+                                    }
+                                }
+                                break;
+                            case 14:
+                                spawned = new zombieEnemy_1.ZombieEnemy(_this.room, _this.game, position.x, position.y);
+                                break;
+                            case 15:
+                                spawned = new fireWizard_1.FireWizardEnemy(_this.room, _this.game, position.x, position.y);
                                 break;
                         }
                         _this.room.projectiles.push(new enemySpawnAnimation_1.EnemySpawnAnimation(_this.room, spawned, position.x, position.y));
@@ -3898,7 +3928,9 @@ var Spawner = /** @class */ (function (_super) {
         _this.tileX = 6;
         _this.tileY = 4;
         _this.seenPlayer = true;
-        _this.enemySpawnType = game_1.Game.randTable([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], random_1.Random.rand);
+        _this.enemyTable = enemyTable.filter(function (t) { return t !== 7; });
+        var randSpawnType = game_1.Game.randTable(_this.enemyTable, random_1.Random.rand);
+        _this.enemySpawnType = randSpawnType;
         _this.name = "reaper";
         return _this;
     }
@@ -7663,7 +7695,7 @@ var loadEnemy = function (es, game) {
         }
     }
     if (es.type === EnemyType.SPAWNER) {
-        enemy = new spawner_1.Spawner(level, game, es.x, es.y);
+        enemy = new spawner_1.Spawner(level, game, es.x, es.y, [es.enemySpawnType]);
         enemy.ticks = es.ticks;
         enemy.seenPlayer = es.seenPlayer;
         enemy.enemySpawnType = es.enemySpawnType;
@@ -8805,12 +8837,9 @@ var Inventory = /** @class */ (function () {
         };
         this.itemAtSelectedSlot = function () {
             var index = _this.selX + _this.selY * _this.cols;
-            console.log("Checking slot:", index, "selX:", _this.selX, "selY:", _this.selY);
             if (index < 0 || index >= _this.items.length) {
-                console.log("Invalid slot index");
                 return null;
             }
-            console.log("Found item:", _this.items[index]);
             return _this.items[index];
         };
         this.getIndexOfItem = function (item) {
@@ -8887,9 +8916,6 @@ var Inventory = /** @class */ (function () {
                 _this.selY = _this.isOpen
                     ? Math.max(0, Math.min(Math.floor((y - bounds.startY) / (s + 2 * b + g)), _this.rows + _this.expansion - 1))
                     : 0;
-                if (oldSelX !== _this.selX || oldSelY !== _this.selY) {
-                    console.log("Selection changed to:", _this.selX, _this.selY);
-                }
             }
         };
         this.moveItemToSlot = function (item, index, otherItem, otherIndex) {
@@ -8913,48 +8939,33 @@ var Inventory = /** @class */ (function () {
             }
         };
         this.grabItem = function (item) {
-            console.log("grabItem called with:", item);
             if (item === null) {
-                console.log("Cannot grab null item");
                 return;
             }
             if (_this.grabbedItem !== null) {
-                console.log("Already holding an item:", _this.grabbedItem);
                 return;
             }
             // Remove the item from its slot when grabbed
             var index = _this.getIndexOfItem(item);
-            console.log("Found item at index:", index);
             if (index !== -1) {
-                console.log("Removing item from slot", index);
                 _this.items[index] = null;
                 _this.grabbedItem = item;
-                console.log("Item grabbed successfully");
-            }
-            else {
-                console.log("Could not find item in inventory");
             }
         };
         this.releaseItem = function () {
-            console.log("releaseItem called, grabbed item:", _this.grabbedItem);
             if (_this.grabbedItem === null) {
-                console.log("No item to release");
                 return;
             }
             var targetIndex = _this.selX + _this.selY * _this.cols;
             var existingItem = _this.items[targetIndex];
-            console.log("Target slot:", targetIndex, "existing item:", existingItem);
             // If target slot is empty, place item there
             if (existingItem === null) {
-                console.log("Placing item in empty slot");
                 _this.items[targetIndex] = _this.grabbedItem;
             }
             else {
                 // Swap items
-                console.log("Swapping with existing item");
                 _this.items[targetIndex] = _this.grabbedItem;
             }
-            console.log("Item placed, clearing grabbed item");
             _this.grabbedItem = null;
         };
         this.drawDraggedItem = function (delta) {
@@ -8975,11 +8986,15 @@ var Inventory = /** @class */ (function () {
             var item = _this.items[index];
             if (item === null)
                 return;
-            item.dropFromInventory();
+            _this.dropItem(item, index);
+        };
+        this.dropItem = function (item, index) {
             item.level = _this.game.rooms[_this.player.levelID];
             item.x = _this.player.x;
             item.y = _this.player.y;
+            item.alpha = 1;
             item.pickedUp = false;
+            item.dropFromInventory();
             _this.equipAnimAmount[index] = 0;
             _this.game.rooms[_this.player.levelID].items.push(item);
             _this.items[index] = null;
@@ -9492,13 +9507,11 @@ var Inventory = /** @class */ (function () {
                 if (selectedItem !== null) {
                     _this._dragStartItem = selectedItem;
                     _this._dragStartSlot = _this.selX + _this.selY * _this.cols;
-                    console.log("Mouse down started with item:", selectedItem);
                 }
             }
         };
         this.onHoldDetected = function () {
             if (_this._dragStartItem !== null && !_this._isDragging) {
-                console.log("Hold threshold reached, initiating drag");
                 _this._isDragging = true;
                 _this.grabbedItem = _this._dragStartItem;
                 // Remove item from original slot
@@ -9519,25 +9532,17 @@ var Inventory = /** @class */ (function () {
             if (isValidDropZone) {
                 if (_this._isDragging && _this.grabbedItem !== null) {
                     // We were dragging, place the item
-                    console.log("Ending drag, placing item");
                     var targetSlot = _this.selX + _this.selY * _this.cols;
                     _this.placeItemInSlot(targetSlot);
                 }
                 else if (_this._dragStartItem !== null) {
                     // We had an item but weren't dragging (quick click)
-                    console.log("Quick click detected, using item");
                     _this.itemUse();
                 }
             }
             else if (_this.grabbedItem !== null) {
                 // Drop the item in the world
-                console.log("Dropping item in world");
-                _this.grabbedItem.dropFromInventory();
-                _this.grabbedItem.level = _this.game.rooms[_this.player.levelID];
-                _this.grabbedItem.x = _this.player.x;
-                _this.grabbedItem.y = _this.player.y;
-                _this.grabbedItem.pickedUp = false;
-                _this.game.rooms[_this.player.levelID].items.push(_this.grabbedItem);
+                _this.dropItem(_this.grabbedItem, _this._dragStartSlot);
                 _this.grabbedItem = null;
                 _this.items[_this._dragStartSlot] = null;
             }
@@ -9548,28 +9553,14 @@ var Inventory = /** @class */ (function () {
             _this.grabbedItem = null;
         };
         this.checkForDragStart = function () {
-            console.log("Checking for drag start:", {
-                mouseDown: input_1.Input.mouseDown,
-                isMouseHold: input_1.Input.isMouseHold,
-                dragStartItem: _this._dragStartItem,
-                isDragging: _this._isDragging,
-                grabbedItem: _this.grabbedItem,
-            });
             if (!input_1.Input.mouseDown || _this._dragStartItem === null || _this._isDragging) {
-                console.log("Drag start check failed:", {
-                    noMouseDown: !input_1.Input.mouseDown,
-                    noDragStartItem: _this._dragStartItem === null,
-                    alreadyDragging: _this._isDragging,
-                });
                 return;
             }
             if (input_1.Input.isMouseHold) {
-                console.log("Starting drag operation");
                 _this._isDragging = true;
                 _this.grabbedItem = _this._dragStartItem;
                 // Remove item from original slot
                 if (_this._dragStartSlot !== null) {
-                    console.log("Removing item from slot:", _this._dragStartSlot);
                     _this.items[_this._dragStartSlot] = null;
                 }
             }
@@ -9577,7 +9568,6 @@ var Inventory = /** @class */ (function () {
         this.placeItemInSlot = function (targetSlot) {
             if (_this.grabbedItem === null)
                 return;
-            console.log("Placing item in slot:", targetSlot);
             var existingItem = _this.items[targetSlot];
             // If target slot is empty
             if (existingItem === null) {
@@ -10439,6 +10429,11 @@ var Item = /** @class */ (function (_super) {
         // Function to be called when item is picked up
         _this.onPickup = function (player) {
             if (!_this.pickedUp) {
+                _this.startY = player.y;
+                _this.y = player.y;
+                _this.x = player.x;
+                _this.drawableY = _this.y;
+                _this.alpha = 1;
                 _this.pickedUp = player.inventory.addItem(_this);
                 if (_this.pickedUp)
                     _this.pickupSound();
@@ -10475,8 +10470,9 @@ var Item = /** @class */ (function (_super) {
                 _this.y -= 0.125 * delta;
                 //this.x += (Math.sin(Date.now() / 50) * delta) / 10;
                 _this.alpha -= 0.03 * delta;
-                if (Math.abs(_this.y - _this.startY) > 5)
-                    _this.level.items = _this.level.items.filter(function (x) { return x !== _this; }); // removes itself from the level
+                if (Math.abs(_this.y - _this.startY) > 5) {
+                    _this.level.items = _this.level.items.filter(function (x) { return x !== _this; });
+                }
                 if (gameConstants_1.GameConstants.ALPHA_ENABLED)
                     game_1.Game.ctx.globalAlpha = Math.max(0, _this.alpha);
                 game_1.Game.drawItem(_this.tileX, _this.tileY, 1, 2, _this.x, _this.y - 1, _this.w, _this.h);
@@ -15665,7 +15661,7 @@ var Room = /** @class */ (function () {
                 0: [1, 4, 3],
                 1: [3, 4, 5, 9, 7],
                 2: [3, 4, 5, 7, 8, 9, 12],
-                3: [1, 2, 3, 5, 6, 7, 8, 9, 10],
+                3: [1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
                 4: [4, 5, 6, 7, 8, 9, 10, 11, 12],
                 5: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
                 6: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
@@ -15726,7 +15722,7 @@ var Room = /** @class */ (function () {
                         chargeEnemy_1.ChargeEnemy.add(this_2, this_2.game, x, y);
                         break;
                     case 7:
-                        spawner_1.Spawner.add(this_2, this_2.game, x, y);
+                        spawner_1.Spawner.add(this_2, this_2.game, x, y, tables[d]);
                         break;
                     case 8:
                         bishopEnemy_1.BishopEnemy.add(this_2, this_2.game, x, y);
@@ -15764,9 +15760,6 @@ var Room = /** @class */ (function () {
                         zombieEnemy_1.ZombieEnemy.add(this_2, this_2.game, x, y);
                         break;
                     case 15:
-                        zombieEnemy_1.ZombieEnemy.add(this_2, this_2.game, x, y);
-                        break;
-                    case 16:
                         fireWizard_1.FireWizardEnemy.add(this_2, this_2.game, x, y);
                         break;
                 }

@@ -72,6 +72,11 @@ export class Item extends Drawable {
   // Function to be called when item is picked up
   onPickup = (player: Player) => {
     if (!this.pickedUp) {
+      this.startY = player.y;
+      this.y = player.y;
+      this.x = player.x;
+      this.drawableY = this.y;
+      this.alpha = 1;
       this.pickedUp = player.inventory.addItem(this);
       if (this.pickedUp) this.pickupSound();
     }
@@ -120,8 +125,9 @@ export class Item extends Drawable {
       this.y -= 0.125 * delta;
       //this.x += (Math.sin(Date.now() / 50) * delta) / 10;
       this.alpha -= 0.03 * delta;
-      if (Math.abs(this.y - this.startY) > 5)
-        this.level.items = this.level.items.filter((x) => x !== this); // removes itself from the level
+      if (Math.abs(this.y - this.startY) > 5) {
+        this.level.items = this.level.items.filter((x) => x !== this);
+      }
 
       if (GameConstants.ALPHA_ENABLED)
         Game.ctx.globalAlpha = Math.max(0, this.alpha);

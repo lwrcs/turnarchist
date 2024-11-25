@@ -985,7 +985,7 @@ export class Room {
         0: [1, 4, 3], //this.generateLevelTable(rand),
         1: [3, 4, 5, 9, 7],
         2: [3, 4, 5, 7, 8, 9, 12],
-        3: [1, 2, 3, 5, 6, 7, 8, 9, 10],
+        3: [1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
         4: [4, 5, 6, 7, 8, 9, 10, 11, 12],
         5: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
         6: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
@@ -1041,7 +1041,7 @@ export class Room {
             ChargeEnemy.add(this, this.game, x, y);
             break;
           case 7:
-            Spawner.add(this, this.game, x, y);
+            Spawner.add(this, this.game, x, y, tables[d]);
             break;
           case 8:
             BishopEnemy.add(this, this.game, x, y);
@@ -1087,9 +1087,6 @@ export class Room {
             ZombieEnemy.add(this, this.game, x, y);
             break;
           case 15:
-            ZombieEnemy.add(this, this.game, x, y);
-            break;
-          case 16:
             FireWizardEnemy.add(this, this.game, x, y);
             break;
         }
