@@ -6831,7 +6831,7 @@ var Game = /** @class */ (function () {
                 // Start of Selection
                 if (_this.screenShakeActive) {
                     //const decayFactor = 1 - 0.15 * delta;
-                    var decayFactor = 5 / Math.sqrt((Date.now() + 30 - _this.screenShakeCutoff) * delta);
+                    var decayFactor = 3 / Math.sqrt((Date.now() + 30 - _this.screenShakeCutoff) * delta);
                     _this.shakeAmountX -= _this.shakeAmountX * 0.1 * delta;
                     _this.shakeAmountY -= _this.shakeAmountY * 0.1 * delta;
                     _this.screenShakeX =
@@ -7278,6 +7278,7 @@ var GameConstants = /** @class */ (function () {
     GameConstants.TILESIZE = 16;
     GameConstants.SCALE = 3;
     GameConstants.SWIPE_THRESH = Math.pow(25, 2); // (size of swipe threshold circle)^2
+    GameConstants.HOLD_THRESH = 250; // milliseconds
     GameConstants.KEY_REPEAT_TIME = 250; // millseconds
     GameConstants.MOVEMENT_COOLDOWN = 100; // milliseconds
     GameConstants.CHAT_APPEAR_TIME = 5000;
@@ -8357,6 +8358,13 @@ var InputEnum;
     InputEnum[InputEnum["NUMBER_8"] = 21] = "NUMBER_8";
     InputEnum[InputEnum["NUMBER_9"] = 22] = "NUMBER_9";
 })(InputEnum = exports.InputEnum || (exports.InputEnum = {}));
+var checkIsMouseHold = function () {
+    if (exports.Input.mouseDownStartTime !== null &&
+        Date.now() >= exports.Input.mouseDownStartTime + gameConstants_1.GameConstants.HOLD_THRESH) {
+        exports.Input.isMouseHold = true;
+        console.log("Mouse hold detected");
+    }
+};
 exports.Input = {
     _pressed: {},
     isTapHold: false,
@@ -8552,12 +8560,45 @@ exports.Input = {
         exports.Input.mouseMoveListener(exports.Input.mouseX, exports.Input.mouseY);
     },
     handleMouseDown: function (event) {
+        if (exports.Input.mouseDown)
+            return; // Prevent multiple triggers
         exports.Input.mouseDown = true;
+        exports.Input.mouseDownStartTime = Date.now();
+        exports.Input.isMouseHold = false;
         exports.Input.mouseDownListener(exports.Input.mouseX, exports.Input.mouseY, event.button);
+        // Start checking for hold
+        if (!exports.Input._holdCheckInterval) {
+            exports.Input._holdCheckInterval = setInterval(exports.Input.checkIsMouseHold, 16); // Check every frame
+        }
     },
     handleMouseUp: function (event) {
         exports.Input.mouseDown = false;
+        exports.Input.mouseDownStartTime = null;
         exports.Input.mouseUpListener(exports.Input.mouseX, exports.Input.mouseY, event.button);
+        // Clear hold check interval
+        if (exports.Input._holdCheckInterval) {
+            clearInterval(exports.Input._holdCheckInterval);
+            exports.Input._holdCheckInterval = null;
+        }
+        // Clear isMouseHold after a short delay to ensure click handler sees it
+        setTimeout(function () {
+            exports.Input.isMouseHold = false;
+        }, 50);
+    },
+    _holdCheckInterval: null,
+    checkIsMouseHold: function () {
+        if (!exports.Input.mouseDown || exports.Input.mouseDownStartTime === null)
+            return;
+        if (Date.now() >= exports.Input.mouseDownStartTime + exports.Input.HOLD_THRESH) {
+            if (!exports.Input.isMouseHold) {
+                console.log("Mouse hold detected at:", Date.now() - exports.Input.mouseDownStartTime);
+                exports.Input.isMouseHold = true;
+                // Call the hold callback if one is registered
+                if (exports.Input.holdCallback) {
+                    exports.Input.holdCallback();
+                }
+            }
+        }
     },
     getTouches: function (evt) {
         return (evt.touches || evt.originalEvent.touches // browser API
@@ -8642,6 +8683,10 @@ exports.Input = {
             Date.now() >= exports.Input.tapStartTime + exports.Input.IS_TAP_HOLD_THRESH)
             exports.Input.isTapHold = true;
     },
+    isMouseHold: false,
+    mouseDownStartTime: null,
+    HOLD_THRESH: 200,
+    holdCallback: null,
 };
 window.addEventListener("keyup", function (event) {
     exports.Input.onKeyup(event);
@@ -8686,6 +8731,7 @@ var coin_1 = __webpack_require__(/*! ./item/coin */ "./src/item/coin.ts");
 var weapon_1 = __webpack_require__(/*! ./weapon/weapon */ "./src/weapon/weapon.ts");
 var usable_1 = __webpack_require__(/*! ./item/usable */ "./src/item/usable.ts");
 var mouseCursor_1 = __webpack_require__(/*! ./mouseCursor */ "./src/mouseCursor.ts");
+var input_1 = __webpack_require__(/*! ./input */ "./src/input.ts");
 var OPEN_TIME = 100; // milliseconds
 // Dark gray color used for the background of inventory slots
 var FILL_COLOR = "#5a595b";
@@ -8707,6 +8753,15 @@ var Inventory = /** @class */ (function () {
         this.coins = 0;
         this.weapon = null;
         this.expansion = 0;
+        this.grabbedItem = null;
+        this._mouseDownStartX = null;
+        this._mouseDownStartY = null;
+        this._mouseDownItem = null;
+        this._wasHoldDetected = false;
+        this._isDragging = false;
+        this._dragStartItem = null;
+        this._dragStartSlot = null;
+        this.itemEquipAnimations = new Map();
         this.clear = function () {
             _this.items.fill(null);
             _this.equipAnimAmount.fill(0);
@@ -8748,6 +8803,21 @@ var Inventory = /** @class */ (function () {
         this.space = function () {
             _this.itemUse();
         };
+        this.itemAtSelectedSlot = function () {
+            var index = _this.selX + _this.selY * _this.cols;
+            console.log("Checking slot:", index, "selX:", _this.selX, "selY:", _this.selY);
+            if (index < 0 || index >= _this.items.length) {
+                console.log("Invalid slot index");
+                return null;
+            }
+            console.log("Found item:", _this.items[index]);
+            return _this.items[index];
+        };
+        this.getIndexOfItem = function (item) {
+            if (item === null)
+                return -1;
+            return _this.items.indexOf(item);
+        };
         this.itemUse = function () {
             var index = _this.selX + _this.selY * _this.cols;
             if (index < 0 || index >= _this.items.length)
@@ -8776,10 +8846,8 @@ var Inventory = /** @class */ (function () {
         this.mouseLeftClick = function () {
             var _a = mouseCursor_1.MouseCursor.getInstance().getPosition(), x = _a.x, y = _a.y;
             var bounds = _this.isPointInInventoryBounds(x, y);
-            if (bounds.inBounds) {
-                _this.itemUse();
-            }
-            else if (!_this.isPointInQuickbarBounds(x, y).inBounds) {
+            // Only close inventory if clicking outside
+            if (!bounds.inBounds && !_this.isPointInQuickbarBounds(x, y).inBounds) {
                 _this.close();
             }
         };
@@ -8813,11 +8881,92 @@ var Inventory = /** @class */ (function () {
                     : 18;
                 var b = 2;
                 var g = -2;
+                var oldSelX = _this.selX;
+                var oldSelY = _this.selY;
                 _this.selX = Math.max(0, Math.min(Math.floor((x - bounds.startX) / (s + 2 * b + g)), _this.cols - 1));
                 _this.selY = _this.isOpen
                     ? Math.max(0, Math.min(Math.floor((y - bounds.startY) / (s + 2 * b + g)), _this.rows + _this.expansion - 1))
                     : 0;
+                if (oldSelX !== _this.selX || oldSelY !== _this.selY) {
+                    console.log("Selection changed to:", _this.selX, _this.selY);
+                }
             }
+        };
+        this.moveItemToSlot = function (item, index, otherItem, otherIndex) {
+            var _a, _b, _c;
+            if (item === null)
+                return;
+            // Preserve animation states before moving
+            var itemAnim = _this.equipAnimAmount[index];
+            var otherAnim = otherItem ? _this.equipAnimAmount[otherIndex] : 0;
+            if (otherItem === null) {
+                _this.items[index] = item;
+                _this.equipAnimAmount[index] = (_a = _this.itemEquipAnimations.get(item)) !== null && _a !== void 0 ? _a : 0;
+            }
+            else {
+                _this.items[index] = otherItem;
+                _this.items[otherIndex] = item;
+                _this.equipAnimAmount[index] =
+                    (_b = _this.itemEquipAnimations.get(otherItem)) !== null && _b !== void 0 ? _b : 0;
+                _this.equipAnimAmount[otherIndex] =
+                    (_c = _this.itemEquipAnimations.get(item)) !== null && _c !== void 0 ? _c : 0;
+            }
+        };
+        this.grabItem = function (item) {
+            console.log("grabItem called with:", item);
+            if (item === null) {
+                console.log("Cannot grab null item");
+                return;
+            }
+            if (_this.grabbedItem !== null) {
+                console.log("Already holding an item:", _this.grabbedItem);
+                return;
+            }
+            // Remove the item from its slot when grabbed
+            var index = _this.getIndexOfItem(item);
+            console.log("Found item at index:", index);
+            if (index !== -1) {
+                console.log("Removing item from slot", index);
+                _this.items[index] = null;
+                _this.grabbedItem = item;
+                console.log("Item grabbed successfully");
+            }
+            else {
+                console.log("Could not find item in inventory");
+            }
+        };
+        this.releaseItem = function () {
+            console.log("releaseItem called, grabbed item:", _this.grabbedItem);
+            if (_this.grabbedItem === null) {
+                console.log("No item to release");
+                return;
+            }
+            var targetIndex = _this.selX + _this.selY * _this.cols;
+            var existingItem = _this.items[targetIndex];
+            console.log("Target slot:", targetIndex, "existing item:", existingItem);
+            // If target slot is empty, place item there
+            if (existingItem === null) {
+                console.log("Placing item in empty slot");
+                _this.items[targetIndex] = _this.grabbedItem;
+            }
+            else {
+                // Swap items
+                console.log("Swapping with existing item");
+                _this.items[targetIndex] = _this.grabbedItem;
+            }
+            console.log("Item placed, clearing grabbed item");
+            _this.grabbedItem = null;
+        };
+        this.drawDraggedItem = function (delta) {
+            if (_this.grabbedItem === null)
+                return;
+            var _a = mouseCursor_1.MouseCursor.getInstance().getPosition(), x = _a.x, y = _a.y;
+            var item = _this.grabbedItem;
+            var drawX = x - 0.5 * gameConstants_1.GameConstants.TILESIZE;
+            var drawY = y - 0.5 * gameConstants_1.GameConstants.TILESIZE;
+            var drawXScaled = drawX / gameConstants_1.GameConstants.TILESIZE;
+            var drawYScaled = drawY / gameConstants_1.GameConstants.TILESIZE;
+            item.drawIcon(delta, drawXScaled, drawYScaled);
         };
         this.drop = function () {
             var index = _this.selX + _this.selY * _this.cols;
@@ -8935,6 +9084,8 @@ var Inventory = /** @class */ (function () {
                 if (i !== null)
                     i.tickInInventory();
             });
+            // Check for drag initiation
+            _this.checkForDragStart();
         };
         this.textWrap = function (text, x, y, maxWidth) {
             // Returns y value for next line
@@ -9063,23 +9214,20 @@ var Inventory = /** @class */ (function () {
         };
         this.updateEquipAnimAmount = function (delta) {
             _this.equipAnimAmount.forEach(function (amount, idx) {
+                var _a;
                 var item = _this.items[idx];
                 if (item instanceof equippable_1.Equippable) {
-                    if (item.equipped) {
-                        _this.equipAnimAmount[idx] +=
-                            0.2 * delta * (1 - _this.equipAnimAmount[idx]);
-                        if (_this.equipAnimAmount[idx] > 1)
-                            _this.equipAnimAmount[idx] = 1;
-                    }
-                    else {
-                        _this.equipAnimAmount[idx] +=
-                            0.2 * delta * (0 - _this.equipAnimAmount[idx]);
-                        if (_this.equipAnimAmount[idx] < 0)
-                            _this.equipAnimAmount[idx] = 0;
-                    }
+                    var targetAmount = item.equipped ? 1 : 0;
+                    var currentAmount = (_a = _this.itemEquipAnimations.get(item)) !== null && _a !== void 0 ? _a : amount;
+                    currentAmount += 0.2 * delta * (targetAmount - currentAmount);
+                    currentAmount = Math.max(0, Math.min(1, currentAmount));
+                    _this.itemEquipAnimations.set(item, currentAmount);
+                    _this.equipAnimAmount[idx] = currentAmount;
                 }
                 else {
                     _this.equipAnimAmount[idx] = 0;
+                    if (item)
+                        _this.itemEquipAnimations.delete(item);
                 }
             });
         };
@@ -9270,6 +9418,7 @@ var Inventory = /** @class */ (function () {
                     }
                 }
             }
+            _this.drawDraggedItem(delta);
         };
         this.isPointInInventoryBounds = function (x, y) {
             var s = _this.isOpen
@@ -9333,11 +9482,111 @@ var Inventory = /** @class */ (function () {
                 tY >= 0 &&
                 tY <= 2);
         };
+        this.handleMouseDown = function (x, y, button) {
+            // Ignore if not left click
+            if (button !== 0)
+                return;
+            var bounds = _this.isPointInInventoryBounds(x, y);
+            if (bounds.inBounds) {
+                var selectedItem = _this.itemAtSelectedSlot();
+                if (selectedItem !== null) {
+                    _this._dragStartItem = selectedItem;
+                    _this._dragStartSlot = _this.selX + _this.selY * _this.cols;
+                    console.log("Mouse down started with item:", selectedItem);
+                }
+            }
+        };
+        this.onHoldDetected = function () {
+            if (_this._dragStartItem !== null && !_this._isDragging) {
+                console.log("Hold threshold reached, initiating drag");
+                _this._isDragging = true;
+                _this.grabbedItem = _this._dragStartItem;
+                // Remove item from original slot
+                if (_this._dragStartSlot !== null) {
+                    _this.items[_this._dragStartSlot] = null;
+                }
+            }
+        };
+        this.handleMouseUp = function (x, y, button) {
+            // Ignore if not left click
+            if (button !== 0)
+                return;
+            var bounds = _this.isPointInInventoryBounds(x, y);
+            if (bounds.inBounds) {
+                if (_this._isDragging && _this.grabbedItem !== null) {
+                    // We were dragging, place the item
+                    console.log("Ending drag, placing item");
+                    var targetSlot = _this.selX + _this.selY * _this.cols;
+                    _this.placeItemInSlot(targetSlot);
+                }
+                else if (_this._dragStartItem !== null) {
+                    // We had an item but weren't dragging (quick click)
+                    console.log("Quick click detected, using item");
+                    _this.itemUse();
+                }
+            }
+            // Reset all drag/hold state
+            _this._isDragging = false;
+            _this._dragStartItem = null;
+            _this._dragStartSlot = null;
+            _this.grabbedItem = null;
+        };
+        this.checkForDragStart = function () {
+            console.log("Checking for drag start:", {
+                mouseDown: input_1.Input.mouseDown,
+                isMouseHold: input_1.Input.isMouseHold,
+                dragStartItem: _this._dragStartItem,
+                isDragging: _this._isDragging,
+                grabbedItem: _this.grabbedItem,
+            });
+            if (!input_1.Input.mouseDown || _this._dragStartItem === null || _this._isDragging) {
+                console.log("Drag start check failed:", {
+                    noMouseDown: !input_1.Input.mouseDown,
+                    noDragStartItem: _this._dragStartItem === null,
+                    alreadyDragging: _this._isDragging,
+                });
+                return;
+            }
+            if (input_1.Input.isMouseHold) {
+                console.log("Starting drag operation");
+                _this._isDragging = true;
+                _this.grabbedItem = _this._dragStartItem;
+                // Remove item from original slot
+                if (_this._dragStartSlot !== null) {
+                    console.log("Removing item from slot:", _this._dragStartSlot);
+                    _this.items[_this._dragStartSlot] = null;
+                }
+            }
+        };
+        this.placeItemInSlot = function (targetSlot) {
+            if (_this.grabbedItem === null)
+                return;
+            console.log("Placing item in slot:", targetSlot);
+            var existingItem = _this.items[targetSlot];
+            // If target slot is empty
+            if (existingItem === null) {
+                _this.items[targetSlot] = _this.grabbedItem;
+            }
+            else {
+                // Swap items
+                if (_this._dragStartSlot !== null) {
+                    _this.items[_this._dragStartSlot] = existingItem;
+                }
+                _this.items[targetSlot] = _this.grabbedItem;
+            }
+            _this.grabbedItem = null;
+        };
         this.game = game;
         this.player = player;
+        input_1.Input.mouseDownListeners.push(function (x, y, button) {
+            return _this.handleMouseDown(x, y, button);
+        });
+        input_1.Input.mouseUpListeners.push(function (x, y, button) {
+            return _this.handleMouseUp(x, y, button);
+        });
+        input_1.Input.holdCallback = function () { return _this.onHoldDetected(); };
         this.items = new Array((this.rows + this.expansion) * this.cols).fill(null);
         this.equipAnimAmount = new Array((this.rows + this.expansion) * this.cols).fill(0);
-        //Input.mouseLeftClickListeners.push(this.mouseLeftClickListener);
         var a = function (i) {
             if (i === null)
                 return;
@@ -9356,6 +9605,12 @@ var Inventory = /** @class */ (function () {
             : gameConstants_1.GameConstants.STARTING_INVENTORY;
         startingInv.forEach(function (item) {
             a(new item({ game: _this.game }, 0, 0));
+        });
+        input_1.Input.mouseDownListeners.push(function (x, y, button) {
+            return _this.handleMouseDown(x, y, button);
+        });
+        input_1.Input.mouseUpListeners.push(function (x, y, button) {
+            return _this.handleMouseUp(x, y, button);
         });
     }
     return Inventory;
@@ -12521,24 +12776,11 @@ var Player = /** @class */ (function (_super) {
             return true;
         };
         _this.tryMove = function (x, y) {
-            _this.lastX = _this.drawX;
-            _this.lastY = _this.drawY;
+            _this.updateLastPosition();
             var slowMotion = _this.slowMotionEnabled;
             var newMove = { x: x, y: y };
             // TODO don't move if hit by enemy
             _this.game.rooms[_this.levelID].catchUp();
-            /*
-            if (!this.triedMove) {
-              if (this.wouldHurt(x, y)) {
-                this.drawY = 0.2 * (this.x - x);
-                this.drawX = 0.2 * (this.y - y);
-                this.game.pushMessage("Moving there would hurt you, are you sure?");
-                this.triedMove = true;
-                return;
-              }
-              this.triedMove = false;
-            }
-              */
             if (_this.dead)
                 return;
             for (var i = 0; i < 2; i++)
@@ -12651,6 +12893,10 @@ var Player = /** @class */ (function (_super) {
                         other.unlock(_this);
                 }
             }
+        };
+        _this.updateLastPosition = function () {
+            _this.lastX = _this.drawX;
+            _this.lastY = _this.drawY;
         };
         //get cancelHoldMove = () => {};
         _this.wouldHurt = function (x, y) {

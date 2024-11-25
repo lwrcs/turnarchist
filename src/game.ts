@@ -946,7 +946,7 @@ export class Game {
       if (this.screenShakeActive) {
         //const decayFactor = 1 - 0.15 * delta;
         const decayFactor =
-          5 / Math.sqrt((Date.now() + 30 - this.screenShakeCutoff) * delta);
+          3 / Math.sqrt((Date.now() + 30 - this.screenShakeCutoff) * delta);
         this.shakeAmountX -= this.shakeAmountX * 0.1 * delta;
         this.shakeAmountY -= this.shakeAmountY * 0.1 * delta;
         this.screenShakeX =

@@ -27,6 +27,16 @@ export enum InputEnum {
   NUMBER_9,
 }
 
+const checkIsMouseHold = function () {
+  if (
+    Input.mouseDownStartTime !== null &&
+    Date.now() >= Input.mouseDownStartTime + GameConstants.HOLD_THRESH
+  ) {
+    Input.isMouseHold = true;
+    console.log("Mouse hold detected");
+  }
+};
+
 export const Input = {
   _pressed: {},
 
@@ -236,13 +246,54 @@ export const Input = {
   },
 
   handleMouseDown: function (event: MouseEvent) {
+    if (Input.mouseDown) return; // Prevent multiple triggers
+
     Input.mouseDown = true;
+    Input.mouseDownStartTime = Date.now();
+    Input.isMouseHold = false;
     Input.mouseDownListener(Input.mouseX, Input.mouseY, event.button);
+
+    // Start checking for hold
+    if (!Input._holdCheckInterval) {
+      Input._holdCheckInterval = setInterval(Input.checkIsMouseHold, 16); // Check every frame
+    }
   },
 
   handleMouseUp: function (event: MouseEvent) {
     Input.mouseDown = false;
+    Input.mouseDownStartTime = null;
     Input.mouseUpListener(Input.mouseX, Input.mouseY, event.button);
+
+    // Clear hold check interval
+    if (Input._holdCheckInterval) {
+      clearInterval(Input._holdCheckInterval);
+      Input._holdCheckInterval = null;
+    }
+
+    // Clear isMouseHold after a short delay to ensure click handler sees it
+    setTimeout(() => {
+      Input.isMouseHold = false;
+    }, 50);
+  },
+
+  _holdCheckInterval: null,
+
+  checkIsMouseHold: function () {
+    if (!Input.mouseDown || Input.mouseDownStartTime === null) return;
+
+    if (Date.now() >= Input.mouseDownStartTime + Input.HOLD_THRESH) {
+      if (!Input.isMouseHold) {
+        console.log(
+          "Mouse hold detected at:",
+          Date.now() - Input.mouseDownStartTime
+        );
+        Input.isMouseHold = true;
+        // Call the hold callback if one is registered
+        if (Input.holdCallback) {
+          Input.holdCallback();
+        }
+      }
+    }
   },
 
   getTouches: function (evt) {
@@ -342,6 +393,12 @@ export const Input = {
     )
       Input.isTapHold = true;
   },
+
+  isMouseHold: false,
+  mouseDownStartTime: null,
+  HOLD_THRESH: 200, // Adjust this value as needed
+
+  holdCallback: null as (() => void) | null,
 };
 window.addEventListener(
   "keyup",

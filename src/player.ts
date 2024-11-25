@@ -497,24 +497,11 @@ export class Player extends Drawable {
   };
 
   tryMove = (x: number, y: number) => {
-    this.lastX = this.drawX;
-    this.lastY = this.drawY;
+    this.updateLastPosition();
     let slowMotion = this.slowMotionEnabled;
     let newMove = { x: x, y: y };
     // TODO don't move if hit by enemy
     this.game.rooms[this.levelID].catchUp();
-    /*
-    if (!this.triedMove) {
-      if (this.wouldHurt(x, y)) {
-        this.drawY = 0.2 * (this.x - x);
-        this.drawX = 0.2 * (this.y - y);
-        this.game.pushMessage("Moving there would hurt you, are you sure?");
-        this.triedMove = true;
-        return;
-      }
-      this.triedMove = false;
-    }
-      */
     if (this.dead) return;
 
     for (let i = 0; i < 2; i++)
@@ -630,6 +617,10 @@ export class Player extends Drawable {
         if (other.canUnlock(this)) other.unlock(this);
       }
     }
+  };
+  private updateLastPosition = () => {
+    this.lastX = this.drawX;
+    this.lastY = this.drawY;
   };
 
   //get cancelHoldMove = () => {};

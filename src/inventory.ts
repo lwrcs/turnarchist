@@ -1,9 +1,7 @@
-// Start of Selection
 import { Item } from "./item/item";
 import { LevelConstants } from "./levelConstants";
 import { Game } from "./game";
 import { Key } from "./item/key";
-import { Input } from "./input";
 import { GameConstants } from "./gameConstants";
 import { Equippable } from "./item/equippable";
 import { Armor } from "./item/armor";
@@ -31,6 +29,7 @@ import { Heart } from "./item/heart";
 import { MouseCursor } from "./mouseCursor";
 import { Warhammer } from "./weapon/warhammer";
 import { GodStone } from "./item/godStone";
+import { Input } from "./input";
 
 let OPEN_TIME = 100; // milliseconds
 // Dark gray color used for the background of inventory slots
@@ -56,17 +55,33 @@ export class Inventory {
   equipAnimAmount: Array<number>;
   weapon: Weapon | null = null;
   expansion: number = 0;
+  grabbedItem: Item | null = null;
+  private _mouseDownStartX: number | null = null;
+  private _mouseDownStartY: number | null = null;
+  private _mouseDownItem: Item | null = null;
+  private _wasHoldDetected: boolean = false;
+  private _isDragging: boolean = false;
+  private _dragStartItem: Item | null = null;
+  private _dragStartSlot: number | null = null;
+  private itemEquipAnimations: Map<Item, number> = new Map();
 
   constructor(game: Game, player: Player) {
     this.game = game;
     this.player = player;
+    Input.mouseDownListeners.push((x, y, button) =>
+      this.handleMouseDown(x, y, button)
+    );
+    Input.mouseUpListeners.push((x, y, button) =>
+      this.handleMouseUp(x, y, button)
+    );
+    Input.holdCallback = () => this.onHoldDetected();
+
     this.items = new Array<Item | null>(
       (this.rows + this.expansion) * this.cols
     ).fill(null);
     this.equipAnimAmount = new Array<number>(
       (this.rows + this.expansion) * this.cols
     ).fill(0);
-    //Input.mouseLeftClickListeners.push(this.mouseLeftClickListener);
     let a = (i: Item | null) => {
       if (i === null) return;
       if (i instanceof Equippable) {
@@ -87,6 +102,13 @@ export class Inventory {
     startingInv.forEach((item) => {
       a(new item({ game: this.game } as Room, 0, 0));
     });
+
+    Input.mouseDownListeners.push((x, y, button) =>
+      this.handleMouseDown(x, y, button)
+    );
+    Input.mouseUpListeners.push((x, y, button) =>
+      this.handleMouseUp(x, y, button)
+    );
   }
 
   clear = () => {
@@ -137,6 +159,29 @@ export class Inventory {
     this.itemUse();
   };
 
+  itemAtSelectedSlot = (): Item | null => {
+    let index = this.selX + this.selY * this.cols;
+    console.log(
+      "Checking slot:",
+      index,
+      "selX:",
+      this.selX,
+      "selY:",
+      this.selY
+    );
+    if (index < 0 || index >= this.items.length) {
+      console.log("Invalid slot index");
+      return null;
+    }
+    console.log("Found item:", this.items[index]);
+    return this.items[index];
+  };
+
+  getIndexOfItem = (item: Item): number => {
+    if (item === null) return -1;
+    return this.items.indexOf(item);
+  };
+
   itemUse = () => {
     let index = this.selX + this.selY * this.cols;
     if (index < 0 || index >= this.items.length) return;
@@ -165,9 +210,8 @@ export class Inventory {
     const { x, y } = MouseCursor.getInstance().getPosition();
     const bounds = this.isPointInInventoryBounds(x, y);
 
-    if (bounds.inBounds) {
-      this.itemUse();
-    } else if (!this.isPointInQuickbarBounds(x, y).inBounds) {
+    // Only close inventory if clicking outside
+    if (!bounds.inBounds && !this.isPointInQuickbarBounds(x, y).inBounds) {
       this.close();
     }
   };
@@ -210,6 +254,9 @@ export class Inventory {
       const b = 2;
       const g = -2;
 
+      const oldSelX = this.selX;
+      const oldSelY = this.selY;
+
       this.selX = Math.max(
         0,
         Math.min(
@@ -226,7 +273,98 @@ export class Inventory {
             )
           )
         : 0;
+
+      if (oldSelX !== this.selX || oldSelY !== this.selY) {
+        console.log("Selection changed to:", this.selX, this.selY);
+      }
     }
+  };
+
+  moveItemToSlot = (
+    item: Item | null,
+    index: number,
+    otherItem: Item | null,
+    otherIndex: number
+  ) => {
+    if (item === null) return;
+
+    // Preserve animation states before moving
+    const itemAnim = this.equipAnimAmount[index];
+    const otherAnim = otherItem ? this.equipAnimAmount[otherIndex] : 0;
+
+    if (otherItem === null) {
+      this.items[index] = item;
+      this.equipAnimAmount[index] = this.itemEquipAnimations.get(item) ?? 0;
+    } else {
+      this.items[index] = otherItem;
+      this.items[otherIndex] = item;
+      this.equipAnimAmount[index] =
+        this.itemEquipAnimations.get(otherItem) ?? 0;
+      this.equipAnimAmount[otherIndex] =
+        this.itemEquipAnimations.get(item) ?? 0;
+    }
+  };
+
+  grabItem = (item: Item) => {
+    console.log("grabItem called with:", item);
+    if (item === null) {
+      console.log("Cannot grab null item");
+      return;
+    }
+    if (this.grabbedItem !== null) {
+      console.log("Already holding an item:", this.grabbedItem);
+      return;
+    }
+
+    // Remove the item from its slot when grabbed
+    const index = this.getIndexOfItem(item);
+    console.log("Found item at index:", index);
+
+    if (index !== -1) {
+      console.log("Removing item from slot", index);
+      this.items[index] = null;
+      this.grabbedItem = item;
+      console.log("Item grabbed successfully");
+    } else {
+      console.log("Could not find item in inventory");
+    }
+  };
+
+  releaseItem = () => {
+    console.log("releaseItem called, grabbed item:", this.grabbedItem);
+    if (this.grabbedItem === null) {
+      console.log("No item to release");
+      return;
+    }
+
+    const targetIndex = this.selX + this.selY * this.cols;
+    const existingItem = this.items[targetIndex];
+    console.log("Target slot:", targetIndex, "existing item:", existingItem);
+
+    // If target slot is empty, place item there
+    if (existingItem === null) {
+      console.log("Placing item in empty slot");
+      this.items[targetIndex] = this.grabbedItem;
+    } else {
+      // Swap items
+      console.log("Swapping with existing item");
+      this.items[targetIndex] = this.grabbedItem;
+    }
+
+    console.log("Item placed, clearing grabbed item");
+    this.grabbedItem = null;
+  };
+
+  drawDraggedItem = (delta: number) => {
+    if (this.grabbedItem === null) return;
+    const { x, y } = MouseCursor.getInstance().getPosition();
+
+    let item = this.grabbedItem;
+    const drawX = x - 0.5 * GameConstants.TILESIZE;
+    const drawY = y - 0.5 * GameConstants.TILESIZE;
+    const drawXScaled = drawX / GameConstants.TILESIZE;
+    const drawYScaled = drawY / GameConstants.TILESIZE;
+    item.drawIcon(delta, drawXScaled, drawYScaled);
   };
 
   drop = () => {
@@ -358,6 +496,9 @@ export class Inventory {
     this.items.forEach((i) => {
       if (i !== null) i.tickInInventory();
     });
+
+    // Check for drag initiation
+    this.checkForDragStart();
   };
 
   textWrap = (text: string, x: number, y: number, maxWidth: number): number => {
@@ -557,17 +698,17 @@ export class Inventory {
     this.equipAnimAmount.forEach((amount, idx) => {
       const item = this.items[idx];
       if (item instanceof Equippable) {
-        if (item.equipped) {
-          this.equipAnimAmount[idx] +=
-            0.2 * delta * (1 - this.equipAnimAmount[idx]);
-          if (this.equipAnimAmount[idx] > 1) this.equipAnimAmount[idx] = 1;
-        } else {
-          this.equipAnimAmount[idx] +=
-            0.2 * delta * (0 - this.equipAnimAmount[idx]);
-          if (this.equipAnimAmount[idx] < 0) this.equipAnimAmount[idx] = 0;
-        }
+        let targetAmount = item.equipped ? 1 : 0;
+        let currentAmount = this.itemEquipAnimations.get(item) ?? amount;
+
+        currentAmount += 0.2 * delta * (targetAmount - currentAmount);
+        currentAmount = Math.max(0, Math.min(1, currentAmount));
+
+        this.itemEquipAnimations.set(item, currentAmount);
+        this.equipAnimAmount[idx] = currentAmount;
       } else {
         this.equipAnimAmount[idx] = 0;
+        if (item) this.itemEquipAnimations.delete(item);
       }
     });
   };
@@ -828,6 +969,7 @@ export class Inventory {
         }
       }
     }
+    this.drawDraggedItem(delta);
   };
 
   private isPointInInventoryBounds = (
@@ -908,5 +1050,109 @@ export class Inventory {
       tY >= 0 &&
       tY <= 2
     );
+  };
+
+  handleMouseDown = (x: number, y: number, button: number) => {
+    // Ignore if not left click
+    if (button !== 0) return;
+
+    const bounds = this.isPointInInventoryBounds(x, y);
+    if (bounds.inBounds) {
+      const selectedItem = this.itemAtSelectedSlot();
+      if (selectedItem !== null) {
+        this._dragStartItem = selectedItem;
+        this._dragStartSlot = this.selX + this.selY * this.cols;
+        console.log("Mouse down started with item:", selectedItem);
+      }
+    }
+  };
+
+  onHoldDetected = () => {
+    if (this._dragStartItem !== null && !this._isDragging) {
+      console.log("Hold threshold reached, initiating drag");
+      this._isDragging = true;
+      this.grabbedItem = this._dragStartItem;
+
+      // Remove item from original slot
+      if (this._dragStartSlot !== null) {
+        this.items[this._dragStartSlot] = null;
+      }
+    }
+  };
+
+  handleMouseUp = (x: number, y: number, button: number) => {
+    // Ignore if not left click
+    if (button !== 0) return;
+
+    const bounds = this.isPointInInventoryBounds(x, y);
+    if (bounds.inBounds) {
+      if (this._isDragging && this.grabbedItem !== null) {
+        // We were dragging, place the item
+        console.log("Ending drag, placing item");
+        const targetSlot = this.selX + this.selY * this.cols;
+        this.placeItemInSlot(targetSlot);
+      } else if (this._dragStartItem !== null) {
+        // We had an item but weren't dragging (quick click)
+        console.log("Quick click detected, using item");
+        this.itemUse();
+      }
+    }
+
+    // Reset all drag/hold state
+    this._isDragging = false;
+    this._dragStartItem = null;
+    this._dragStartSlot = null;
+    this.grabbedItem = null;
+  };
+
+  checkForDragStart = () => {
+    console.log("Checking for drag start:", {
+      mouseDown: Input.mouseDown,
+      isMouseHold: Input.isMouseHold,
+      dragStartItem: this._dragStartItem,
+      isDragging: this._isDragging,
+      grabbedItem: this.grabbedItem,
+    });
+
+    if (!Input.mouseDown || this._dragStartItem === null || this._isDragging) {
+      console.log("Drag start check failed:", {
+        noMouseDown: !Input.mouseDown,
+        noDragStartItem: this._dragStartItem === null,
+        alreadyDragging: this._isDragging,
+      });
+      return;
+    }
+
+    if (Input.isMouseHold) {
+      console.log("Starting drag operation");
+      this._isDragging = true;
+      this.grabbedItem = this._dragStartItem;
+
+      // Remove item from original slot
+      if (this._dragStartSlot !== null) {
+        console.log("Removing item from slot:", this._dragStartSlot);
+        this.items[this._dragStartSlot] = null;
+      }
+    }
+  };
+
+  placeItemInSlot = (targetSlot: number) => {
+    if (this.grabbedItem === null) return;
+
+    console.log("Placing item in slot:", targetSlot);
+    const existingItem = this.items[targetSlot];
+
+    // If target slot is empty
+    if (existingItem === null) {
+      this.items[targetSlot] = this.grabbedItem;
+    } else {
+      // Swap items
+      if (this._dragStartSlot !== null) {
+        this.items[this._dragStartSlot] = existingItem;
+      }
+      this.items[targetSlot] = this.grabbedItem;
+    }
+
+    this.grabbedItem = null;
   };
 }

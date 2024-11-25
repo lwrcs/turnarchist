@@ -27,6 +27,7 @@ export class GameConstants {
   static readonly SCALE = 3;
 
   static readonly SWIPE_THRESH = 25 ** 2; // (size of swipe threshold circle)^2
+  static readonly HOLD_THRESH = 250; // milliseconds
 
   static readonly KEY_REPEAT_TIME = 250; // millseconds
   static readonly MOVEMENT_COOLDOWN = 100; // milliseconds
