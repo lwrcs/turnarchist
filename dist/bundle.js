@@ -8423,7 +8423,6 @@ var checkIsMouseHold = function () {
     if (exports.Input.mouseDownStartTime !== null &&
         Date.now() >= exports.Input.mouseDownStartTime + gameConstants_1.GameConstants.HOLD_THRESH) {
         exports.Input.isMouseHold = true;
-        console.log("Mouse hold detected");
     }
 };
 exports.Input = {
@@ -8652,7 +8651,6 @@ exports.Input = {
             return;
         if (Date.now() >= exports.Input.mouseDownStartTime + exports.Input.HOLD_THRESH) {
             if (!exports.Input.isMouseHold) {
-                console.log("Mouse hold detected at:", Date.now() - exports.Input.mouseDownStartTime);
                 exports.Input.isMouseHold = true;
                 // Call the hold callback if one is registered
                 if (exports.Input.holdCallback) {
@@ -8866,12 +8864,9 @@ var Inventory = /** @class */ (function () {
         };
         this.itemAtSelectedSlot = function () {
             var index = _this.selX + _this.selY * _this.cols;
-            console.log("Checking slot:", index, "selX:", _this.selX, "selY:", _this.selY);
             if (index < 0 || index >= _this.items.length) {
-                console.log("Invalid slot index");
                 return null;
             }
-            console.log("Found item:", _this.items[index]);
             return _this.items[index];
         };
         this.getIndexOfItem = function (item) {
@@ -8949,7 +8944,6 @@ var Inventory = /** @class */ (function () {
                     ? Math.max(0, Math.min(Math.floor((y - bounds.startY) / (s + 2 * b + g)), _this.rows + _this.expansion - 1))
                     : 0;
                 if (oldSelX !== _this.selX || oldSelY !== _this.selY) {
-                    console.log("Selection changed to:", _this.selX, _this.selY);
                 }
             }
         };
@@ -8974,48 +8968,35 @@ var Inventory = /** @class */ (function () {
             }
         };
         this.grabItem = function (item) {
-            console.log("grabItem called with:", item);
             if (item === null) {
-                console.log("Cannot grab null item");
                 return;
             }
             if (_this.grabbedItem !== null) {
-                console.log("Already holding an item:", _this.grabbedItem);
                 return;
             }
             // Remove the item from its slot when grabbed
             var index = _this.getIndexOfItem(item);
-            console.log("Found item at index:", index);
             if (index !== -1) {
-                console.log("Removing item from slot", index);
                 _this.items[index] = null;
                 _this.grabbedItem = item;
-                console.log("Item grabbed successfully");
             }
             else {
-                console.log("Could not find item in inventory");
             }
         };
         this.releaseItem = function () {
-            console.log("releaseItem called, grabbed item:", _this.grabbedItem);
             if (_this.grabbedItem === null) {
-                console.log("No item to release");
                 return;
             }
             var targetIndex = _this.selX + _this.selY * _this.cols;
             var existingItem = _this.items[targetIndex];
-            console.log("Target slot:", targetIndex, "existing item:", existingItem);
             // If target slot is empty, place item there
             if (existingItem === null) {
-                console.log("Placing item in empty slot");
                 _this.items[targetIndex] = _this.grabbedItem;
             }
             else {
                 // Swap items
-                console.log("Swapping with existing item");
                 _this.items[targetIndex] = _this.grabbedItem;
             }
-            console.log("Item placed, clearing grabbed item");
             _this.grabbedItem = null;
         };
         this.drawDraggedItem = function (delta) {
@@ -9557,13 +9538,11 @@ var Inventory = /** @class */ (function () {
                 if (selectedItem !== null) {
                     _this._dragStartItem = selectedItem;
                     _this._dragStartSlot = _this.selX + _this.selY * _this.cols;
-                    console.log("Mouse down started with item:", selectedItem);
                 }
             }
         };
         this.onHoldDetected = function () {
             if (_this._dragStartItem !== null && !_this._isDragging) {
-                console.log("Hold threshold reached, initiating drag");
                 _this._isDragging = true;
                 _this.grabbedItem = _this._dragStartItem;
                 // Remove item from original slot
@@ -9584,19 +9563,16 @@ var Inventory = /** @class */ (function () {
             if (isValidDropZone) {
                 if (_this._isDragging && _this.grabbedItem !== null) {
                     // We were dragging, place the item
-                    console.log("Ending drag, placing item");
                     var targetSlot = _this.selX + _this.selY * _this.cols;
                     _this.placeItemInSlot(targetSlot);
                 }
                 else if (_this._dragStartItem !== null) {
                     // We had an item but weren't dragging (quick click)
-                    console.log("Quick click detected, using item");
                     _this.itemUse();
                 }
             }
             else if (_this.grabbedItem !== null) {
                 // Drop the item in the world
-                console.log("Dropping item in world");
                 _this.dropItem(_this.grabbedItem, _this._dragStartSlot);
                 _this.grabbedItem = null;
                 _this.items[_this._dragStartSlot] = null;
@@ -9608,28 +9584,14 @@ var Inventory = /** @class */ (function () {
             _this.grabbedItem = null;
         };
         this.checkForDragStart = function () {
-            console.log("Checking for drag start:", {
-                mouseDown: input_1.Input.mouseDown,
-                isMouseHold: input_1.Input.isMouseHold,
-                dragStartItem: _this._dragStartItem,
-                isDragging: _this._isDragging,
-                grabbedItem: _this.grabbedItem,
-            });
             if (!input_1.Input.mouseDown || _this._dragStartItem === null || _this._isDragging) {
-                console.log("Drag start check failed:", {
-                    noMouseDown: !input_1.Input.mouseDown,
-                    noDragStartItem: _this._dragStartItem === null,
-                    alreadyDragging: _this._isDragging,
-                });
                 return;
             }
             if (input_1.Input.isMouseHold) {
-                console.log("Starting drag operation");
                 _this._isDragging = true;
                 _this.grabbedItem = _this._dragStartItem;
                 // Remove item from original slot
                 if (_this._dragStartSlot !== null) {
-                    console.log("Removing item from slot:", _this._dragStartSlot);
                     _this.items[_this._dragStartSlot] = null;
                 }
             }
@@ -9637,7 +9599,6 @@ var Inventory = /** @class */ (function () {
         this.placeItemInSlot = function (targetSlot) {
             if (_this.grabbedItem === null)
                 return;
-            console.log("Placing item in slot:", targetSlot);
             var existingItem = _this.items[targetSlot];
             // If target slot is empty
             if (existingItem === null) {
@@ -13384,7 +13345,6 @@ var Player = /** @class */ (function (_super) {
             //      console.log("Queue handler running, queue length:", this.moveQueue.length);
             //console.log("Is processing queue:", this.isProcessingQueue);
             if (!_this.isProcessingQueue) {
-                console.log("Queue processing stopped - isProcessingQueue is false");
                 return;
             }
             var currentTime = Date.now();
@@ -14220,7 +14180,6 @@ var bishopEnemy_1 = __webpack_require__(/*! ./entity/enemy/bishopEnemy */ "./src
 var rockResource_1 = __webpack_require__(/*! ./entity/resource/rockResource */ "./src/entity/resource/rockResource.ts");
 var mushrooms_1 = __webpack_require__(/*! ./entity/object/mushrooms */ "./src/entity/object/mushrooms.ts");
 var armoredzombieEnemy_1 = __webpack_require__(/*! ./entity/enemy/armoredzombieEnemy */ "./src/entity/enemy/armoredzombieEnemy.ts");
-var door_2 = __webpack_require__(/*! ./tile/door */ "./src/tile/door.ts");
 //import { ActionState, ActionTab } from "./actionTab";
 var tombStone_1 = __webpack_require__(/*! ./entity/object/tombStone */ "./src/entity/object/tombStone.ts");
 var pumpkin_1 = __webpack_require__(/*! ./entity/object/pumpkin */ "./src/entity/object/pumpkin.ts");
@@ -14231,6 +14190,7 @@ var enemy_1 = __webpack_require__(/*! ./entity/enemy/enemy */ "./src/entity/enem
 var fireWizard_1 = __webpack_require__(/*! ./entity/enemy/fireWizard */ "./src/entity/enemy/fireWizard.ts");
 var energyWizard_1 = __webpack_require__(/*! ./entity/enemy/energyWizard */ "./src/entity/enemy/energyWizard.ts");
 var reverb_1 = __webpack_require__(/*! ./reverb */ "./src/reverb.ts");
+var astarclass_1 = __webpack_require__(/*! ./astarclass */ "./src/astarclass.ts");
 var RoomType;
 (function (RoomType) {
     RoomType[RoomType["START"] = 0] = "START";
@@ -14288,154 +14248,6 @@ var Room = /** @class */ (function () {
         this.tileInside = function (tileX, tileY) {
             return _this.pointInside(tileX, tileY, _this.roomX, _this.roomY, _this.width, _this.height);
         };
-        this.crackWallIntoRoom = function (crackX, crackY, wallDirection) {
-            console.log("crackWallIntoRoom called with crackX: ".concat(crackX, ", crackY: ").concat(crackY, ", wallDirection: ").concat(WallDirection[wallDirection]));
-            var doorDir;
-            switch (wallDirection) {
-                case WallDirection.NORTH:
-                    doorDir = game_1.Direction.UP;
-                    break;
-                case WallDirection.SOUTH:
-                    doorDir = game_1.Direction.DOWN;
-                    break;
-                case WallDirection.WEST:
-                    doorDir = game_1.Direction.LEFT;
-                    break;
-                case WallDirection.EAST:
-                    doorDir = game_1.Direction.RIGHT;
-                    break;
-                default:
-                    console.error("Unsupported WallDirection: ".concat(wallDirection));
-                    return;
-            }
-            console.log("Mapped WallDirection to DoorDir: ".concat(game_1.Direction[doorDir]));
-            var dimensions = _this.getNewRoomDimensions(crackX, crackY, doorDir, 10, 10);
-            console.log("getNewRoomDimensions returned: ".concat(JSON.stringify(dimensions)));
-            if (!dimensions) {
-                console.warn("Failed to get new room dimensions. Aborting room generation.");
-                return;
-            }
-            var height = dimensions.height;
-            var width = dimensions.width;
-            var x = crackX; // Corrected from crackY
-            var y = crackY; // Corrected from crackX
-            console.log("Calculated newRoom dimensions - Width: ".concat(width, ", Height: ").concat(height));
-            console.log("New room position - x: ".concat(x, ", y: ").concat(y));
-            var newDoor = new door_1.Door(_this, _this.game, crackX, crackY, doorDir, door_1.DoorType.DOOR);
-            console.log("Created newDoor at (".concat(crackX, ", ").concat(crackY, ") with direction ").concat(door_2.DoorDir[doorDir]));
-            var newRoomX;
-            var newRoomY;
-            if (doorDir === game_1.Direction.UP) {
-                newRoomX = crackX - Math.ceil(width / 2);
-                newRoomY = crackY - height - 1;
-            }
-            else if (doorDir === game_1.Direction.DOWN) {
-                newRoomX = crackX - Math.ceil(width / 2);
-                newRoomY = crackY + height + 1;
-            }
-            else if (doorDir === game_1.Direction.RIGHT) {
-                newRoomX = crackX + width + 1;
-                newRoomY = crackY - Math.ceil(height / 2);
-            }
-            else if (doorDir === game_1.Direction.LEFT) {
-                newRoomX = crackX - width - 1;
-                newRoomY = crackY - Math.ceil(height / 2);
-            }
-            else {
-                console.error("Unsupported DoorDir: ".concat(doorDir));
-                return;
-            }
-            console.log("New room coordinates - newRoomX: ".concat(newRoomX, ", newRoomY: ").concat(newRoomY));
-            var newRoom = new Room(_this.game, newRoomX, newRoomY, width + 2, height + 2, _this.type, _this.depth, _this.mapGroup);
-            console.log("Initialized new Room at (".concat(newRoomX, ", ").concat(newRoomY, ") with size (").concat(width + 2, "x").concat(height + 2, ")"));
-            var linkedDoorDir;
-            if (doorDir === game_1.Direction.UP) {
-                linkedDoorDir = game_1.Direction.DOWN;
-            }
-            else if (doorDir === game_1.Direction.DOWN) {
-                linkedDoorDir = game_1.Direction.UP;
-            }
-            else if (doorDir === game_1.Direction.RIGHT) {
-                linkedDoorDir = game_1.Direction.LEFT;
-            }
-            else if (doorDir === game_1.Direction.LEFT) {
-                linkedDoorDir = game_1.Direction.RIGHT;
-            }
-            else {
-                console.error("Unsupported DoorDir for linking: ".concat(doorDir));
-                return;
-            }
-            console.log("LinkedDoorDir set to: ".concat(door_2.DoorDir[linkedDoorDir]));
-            var newLinkedDoor = new door_1.Door(newRoom, _this.game, crackX, crackY, linkedDoorDir, door_1.DoorType.DOOR);
-            console.log("Created newLinkedDoor at (".concat(crackX, ", ").concat(crackY, ") with direction ").concat(door_2.DoorDir[linkedDoorDir]));
-            console.log("newRoom.roomX: ".concat(newRoom.roomX, ", newRoom.roomY: ").concat(newRoom.roomY, ", newRoom.width: ").concat(newRoom.width, ", newRoom.height: ").concat(newRoom.height));
-            newRoom.message = "You've found a secret passage!";
-            console.log("Set newRoom message: \"".concat(newRoom.message, "\""));
-            newDoor.linkedDoor = newLinkedDoor;
-            newLinkedDoor.linkedDoor = newDoor;
-            console.log("Linked newDoor and newLinkedDoor together.");
-            newRoom.roomArray[crackX][crackY] = newLinkedDoor;
-            _this.roomArray[crackX][crackY] = newDoor;
-            console.log("Placed newDoor and newLinkedDoor in room arrays at (".concat(crackX, ", ").concat(crackY, ")"));
-            _this.doors.push(newDoor);
-            newRoom.doors.push(newLinkedDoor);
-            console.log("Added newDoor to this.doors and newLinkedDoor to newRoom.doors");
-            newRoom.populate(random_1.Random.rand);
-            console.log("Populated newRoom with entities and obstacles.");
-            _this.game.rooms.push(newRoom);
-            console.log("Added newRoom to game.rooms");
-        };
-        this.addWallCrack = function () {
-            console.log("addWallCrack triggered.");
-            var walls = [];
-            for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
-                for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
-                    var tile = _this.roomArray[x][y];
-                    if (tile instanceof wall_1.Wall) {
-                        // Only consider walls with primary directions
-                        if (tile.direction === WallDirection.NORTH ||
-                            tile.direction === WallDirection.EAST ||
-                            tile.direction === WallDirection.SOUTH ||
-                            tile.direction === WallDirection.WEST) {
-                            walls.push(tile);
-                            //console.log(
-                            //  `Added wall at (${x}, ${y}) with direction ${tile.direction}`
-                            //);
-                        }
-                    }
-                }
-            }
-            console.log("Total eligible walls for cracking: ".concat(walls.length));
-            if (walls.length === 0) {
-                console.warn("No eligible walls found for cracking.");
-                return;
-            }
-            // Select a random wall from the eligible walls
-            var randIndex = Math.floor(Math.random() * walls.length);
-            var randWall = walls[randIndex];
-            var doorDir = randWall.direction;
-            if (!doorDir) {
-                console.warn("Cannot map WallDirection: ".concat(randWall.direction, " to DoorDir."));
-                return;
-            }
-            console.log("Selected random wall at (".concat(randWall.x, ", ").concat(randWall.y, ") with direction ").concat(doorDir));
-            if (_this.canPlaceRoom(randWall.x, randWall.y, 3, 3, doorDir)) {
-                var shouldCrack = Math.random() > 0.5; // Adjusted probability
-                console.log("shouldCrack evaluated to: ".concat(shouldCrack));
-                if (shouldCrack) {
-                    console.log("Creating new crack in the wall.");
-                    randWall.newCrack();
-                    // this.cracked = true; // Uncomment if necessary
-                    console.log("New crack created.");
-                }
-                else {
-                    console.log("Decided not to crack the wall.");
-                }
-            }
-            else {
-                console.warn("Cannot place room at the selected wall position.");
-            }
-        };
         this.removeWall = function (x, y) {
             if (_this.roomArray[x][y] instanceof wall_1.Wall) {
                 _this.roomArray[x][y] = null;
@@ -14480,6 +14292,18 @@ var Room = /** @class */ (function () {
             _this.addEnemies(numEnemies, rand);
             if (factor <= 6)
                 _this.addVendingMachine(rand);
+            var obstacles = _this.checkDoorObstructions();
+            if (obstacles.length > 0) {
+                var _loop_1 = function (obstacle) {
+                    console.log("Removing obstacle at (".concat(obstacle.x, ",").concat(obstacle.y, ")"));
+                    _this.entities = _this.entities.filter(function (e) { return e !== obstacle; });
+                    obstacle = null;
+                };
+                for (var _i = 0, obstacles_1 = obstacles; _i < obstacles_1.length; _i++) {
+                    var obstacle = obstacles_1[_i];
+                    _loop_1(obstacle);
+                }
+            }
         };
         this.populateBoss = function (rand) {
             _this.addRandomTorches("medium");
@@ -14622,6 +14446,17 @@ var Room = /** @class */ (function () {
             vendingMachine_1.VendingMachine.add(_this, _this.game, x + 2, y - 1, new heart_1.Heart(_this, 0, 0));
             vendingMachine_1.VendingMachine.add(_this, _this.game, x - 2, y + 2, new armor_1.Armor(_this, 0, 0));
             vendingMachine_1.VendingMachine.add(_this, _this.game, x + 2, y + 2, new spear_1.Spear(_this, 0, 0));
+            var obstacles = _this.checkDoorObstructions();
+            if (obstacles.length > 0) {
+            }
+            var _loop_2 = function (obstacle) {
+                _this.entities = _this.entities.filter(function (e) { return e !== obstacle; });
+                obstacle = null;
+            };
+            for (var _i = 0, obstacles_2 = obstacles; _i < obstacles_2.length; _i++) {
+                var obstacle = obstacles_2[_i];
+                _loop_2(obstacle);
+            }
         };
         this.populate = function (rand) {
             _this.name = "";
@@ -14773,7 +14608,6 @@ var Room = /** @class */ (function () {
             _this.message = _this.name;
             player.map.saveMapData();
             _this.setReverb();
-            console.log("this.roomX: ".concat(_this.roomX, ", this.roomY: ").concat(_this.roomY, ", this.width: ").concat(_this.width, ", this.height: ").concat(_this.height));
         };
         this.enterLevelThroughLadder = function (player, ladder) {
             player.moveSnap(ladder.x, ladder.y + 1);
@@ -14796,12 +14630,12 @@ var Room = /** @class */ (function () {
                     }
                 }
             }
-            var _loop_1 = function (e) {
+            var _loop_3 = function (e) {
                 returnVal = returnVal.filter(function (t) { return !e.pointIn(t.x, t.y); });
             };
             for (var _i = 0, _a = _this.entities; _i < _a.length; _i++) {
                 var e = _a[_i];
-                _loop_1(e);
+                _loop_3(e);
             }
             return returnVal;
         };
@@ -15005,7 +14839,7 @@ var Room = /** @class */ (function () {
                 _this.sRGBToLinear(color[1]),
                 _this.sRGBToLinear(color[2]),
             ];
-            var _loop_2 = function (i) {
+            var _loop_4 = function (i) {
                 var currentX = Math.floor(px + dx * i);
                 var currentY = Math.floor(py + dy * i);
                 if (!_this.isPositionInRoom(currentX, currentY))
@@ -15051,7 +14885,7 @@ var Room = /** @class */ (function () {
                 }
             };
             for (var i = 0; i <= Math.min(levelConstants_1.LevelConstants.LIGHTING_MAX_DISTANCE, radius); i++) {
-                var state_1 = _loop_2(i);
+                var state_1 = _loop_4(i);
                 if (typeof state_1 === "object")
                     return state_1.value;
             }
@@ -15423,6 +15257,65 @@ var Room = /** @class */ (function () {
             game_1.Game.fillText(_this.message, gameConstants_1.GameConstants.WIDTH / 2 - game_1.Game.measureText(_this.name).width / 2, 5);
             game_1.Game.ctx.font = old;
         };
+        this.checkDoorObstructions = function () {
+            var obstacles = [];
+            for (var _i = 0, _a = _this.doors; _i < _a.length; _i++) {
+                var door = _a[_i];
+                for (var _b = 0, _c = _this.doors; _b < _c.length; _b++) {
+                    var otherDoor = _c[_b];
+                    if (door === otherDoor || door === null || otherDoor === null)
+                        break;
+                    var pathObstacles = _this.findPath(door, otherDoor);
+                    if (pathObstacles.length > 0) {
+                    }
+                    obstacles.push.apply(obstacles, pathObstacles);
+                }
+            }
+            return obstacles;
+        };
+        this.findPath = function (startTile, targetTile) {
+            var disablePositions = Array();
+            var obstacleCandidates = [];
+            for (var _i = 0, _a = _this.entities; _i < _a.length; _i++) {
+                var e = _a[_i];
+                if (e instanceof vendingMachine_1.VendingMachine || e instanceof rockResource_1.Rock) {
+                    disablePositions.push({ x: e.x, y: e.y });
+                    obstacleCandidates.push(e);
+                }
+            }
+            /*
+            for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
+              for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
+                if (
+                  this.room.roomArray[xx][yy] instanceof SpikeTrap &&
+                  (this.room.roomArray[xx][yy] as SpikeTrap).on
+                ) {
+                  // Don't walk on active spike traps
+                  disablePositions.push({ x: xx, y: yy } as astar.Position);
+                }
+              }
+            }
+              */
+            // Create a grid of the room
+            var grid = [];
+            for (var x = 0; x < _this.roomX + _this.width; x++) {
+                grid[x] = [];
+                for (var y = 0; y < _this.roomY + _this.height; y++) {
+                    if (_this.roomArray[x] && _this.roomArray[x][y])
+                        grid[x][y] = _this.roomArray[x][y];
+                    else
+                        grid[x][y] = false;
+                }
+            }
+            // Find a path to the target player
+            var moves = astarclass_1.astar.AStar.search(grid, startTile, targetTile, disablePositions, false, false, false);
+            if (moves.length === 0) {
+                return obstacleCandidates;
+            }
+            else {
+                return [];
+            }
+        };
         this.game = game;
         this.roomX = x; //Math.floor(- this.width / 2);
         this.roomY = y; //Math.floor(- this.height / 2);
@@ -15524,100 +15417,6 @@ var Room = /** @class */ (function () {
             this.changeReverb("res/SFX/impulses/large.mp3");
         }
     };
-    Room.prototype.getNewRoomDimensions = function (doorX, doorY, doorDir, maxWidth, maxHeight) {
-        var _a;
-        console.log("getNewRoomDimensions called with doorX: ".concat(doorX, ", doorY: ").concat(doorY, ", doorDir: ").concat(game_1.Direction[doorDir], ", maxWidth: ").concat(maxWidth, ", maxHeight: ").concat(maxHeight));
-        // Define direction vectors based on DoorDir
-        var directionVectors = (_a = {},
-            _a[game_1.Direction.UP] = { dx: 0, dy: -1 },
-            _a[game_1.Direction.DOWN] = { dx: 0, dy: 1 },
-            _a[game_1.Direction.RIGHT] = { dx: 1, dy: 0 },
-            _a[game_1.Direction.LEFT] = { dx: -1, dy: 0 },
-            _a);
-        var _b = directionVectors[doorDir], dx = _b.dx, dy = _b.dy;
-        console.log("Direction vectors - dx: ".concat(dx, ", dy: ").concat(dy));
-        // Offset the starting position by 2 units in the door's direction
-        var startX = doorX + dx * 2;
-        var startY = doorY + dy * 2;
-        console.log("Starting position after offset - startX: ".concat(startX, ", startY: ").concat(startY));
-        // Initialize room dimensions with a minimum size of 3x3
-        var width = 3;
-        var height = 3;
-        console.log("Initial room dimensions - width: ".concat(width, ", height: ").concat(height));
-        // Determine expansion directions based on door direction
-        var canExpandForward = true;
-        var canExpandLeft = true;
-        var canExpandRight = true;
-        console.log("Expansion flags - canExpandForward: ".concat(canExpandForward, ", canExpandLeft: ").concat(canExpandLeft, ", canExpandRight: ").concat(canExpandRight));
-        // Expand in the forward direction first
-        if (doorDir === game_1.Direction.UP || doorDir === game_1.Direction.DOWN) {
-            console.log("Expanding forward in vertical direction.");
-            for (var h = 0; h < maxHeight && canExpandForward; h++) {
-                console.log("Attempting to expand height to: ".concat(height + 1));
-                if (this.canPlaceRoom(startX, startY, width, height, doorDir)) {
-                    height++;
-                    console.log("Height incremented to: ".concat(height));
-                }
-                else {
-                    canExpandForward = false;
-                    console.log("Cannot expand height further. canExpandForward set to false.");
-                }
-            }
-        }
-        else {
-            console.log("Expanding forward in horizontal direction.");
-            for (var w = 0; w < maxWidth && canExpandForward; w++) {
-                console.log("Attempting to expand width to: ".concat(width + 1));
-                if (this.canPlaceRoom(startX, startY, width, height, doorDir)) {
-                    width++;
-                    console.log("Width incremented to: ".concat(width));
-                }
-                else {
-                    canExpandForward = false;
-                    console.log("Cannot expand width further. canExpandForward set to false.");
-                }
-            }
-        }
-        // Expand width or height symmetrically based on forward direction
-        if (doorDir === game_1.Direction.UP || doorDir === game_1.Direction.DOWN) {
-            console.log("Symmetrically expanding room width.");
-            for (var w = 0; w < maxWidth && canExpandLeft && canExpandRight; w++) {
-                console.log("Attempting to expand width to: ".concat(width + 1));
-                if (this.canPlaceRoom(startX, startY, width, height, doorDir)) {
-                    width++;
-                    console.log("Width incremented to: ".concat(width));
-                }
-                else {
-                    canExpandLeft = false;
-                    canExpandRight = false;
-                    console.log("Cannot expand width further. canExpandLeft and canExpandRight set to false.");
-                }
-            }
-        }
-        else {
-            console.log("Symmetrically expanding room height.");
-            for (var h = 0; h < maxHeight && canExpandLeft && canExpandRight; h++) {
-                console.log("Attempting to expand height to: ".concat(height + 1));
-                if (this.canPlaceRoom(startX, startY, width, height, doorDir)) {
-                    height++;
-                    console.log("Height incremented to: ".concat(height));
-                }
-                else {
-                    canExpandLeft = false;
-                    canExpandRight = false;
-                    console.log("Cannot expand height further. canExpandLeft and canExpandRight set to false.");
-                }
-            }
-        }
-        // Final validation to ensure minimum size
-        if (width >= 3 && height >= 3) {
-            console.log("Final room dimensions verified - width: ".concat(width, ", height: ").concat(height));
-            return { width: width, height: height };
-        }
-        // If unable to fit, return false
-        console.warn("Room dimensions below minimum size - width: ".concat(width, ", height: ").concat(height, ". Unable to place room."));
-        return false;
-    };
     /**
      * Checks if a room can be placed at the specified position with the given dimensions.
      *
@@ -15627,45 +15426,6 @@ var Room = /** @class */ (function () {
      * @param height - The height of the room.
      * @returns `true` if the room can be placed without overlapping; otherwise, `false`.
      */
-    Room.prototype.canPlaceRoom = function (x, y, width, height, doorDir) {
-        var _a;
-        console.log("canPlaceRoom called with x: ".concat(x, ", y: ").concat(y, ", width: ").concat(width, ", height: ").concat(height, ", doorDir: ").concat(doorDir));
-        var dx = 0, dy = 0;
-        switch (doorDir) {
-            case game_1.Direction.UP:
-                dy = -1;
-                break;
-            case game_1.Direction.RIGHT:
-                dx = 1;
-                break;
-            case game_1.Direction.DOWN:
-                dy = 1;
-                break;
-            case game_1.Direction.LEFT:
-                dx = -1;
-                break;
-            default:
-                console.error("Unhandled DoorDir: ".concat(doorDir));
-                return false;
-        }
-        var checkX = x + dx;
-        var checkY = y + dy;
-        var roundedWidth = Math.ceil(width / 2);
-        var roundedHeight = Math.ceil(height / 2);
-        console.log("Check position after offset - checkX: ".concat(checkX, ", checkY: ").concat(checkY));
-        console.log("Rounded dimensions - roundedWidth: ".concat(roundedWidth, ", roundedHeight: ").concat(roundedHeight));
-        for (var i = checkX - roundedWidth; i <= checkX + roundedWidth; i++) {
-            for (var j = checkY - roundedHeight; j <= checkY + roundedHeight; j++) {
-                var cell = (_a = this.roomArray[i]) === null || _a === void 0 ? void 0 : _a[j];
-                if (cell && !(cell instanceof wall_1.Wall)) {
-                    console.log("Space occupied at (".concat(i, ", ").concat(j, ") by ").concat(cell.constructor.name));
-                    return false;
-                }
-            }
-        }
-        console.log("Room can be placed at the specified location.");
-        return true;
-    };
     Room.prototype.buildEmptyRoom = function () {
         // fill in wall and floor
         for (var x = this.roomX; x < this.roomX + this.width; x++) {
@@ -15684,7 +15444,7 @@ var Room = /** @class */ (function () {
         var numBlocks = game_1.Game.randTable([0, 0, 1, 1, 2, 2, 2, 2, 3], rand);
         if (this.width > 8 && rand() > 0.5)
             numBlocks *= 4;
-        var _loop_3 = function (i) {
+        var _loop_5 = function (i) {
             var blockW = Math.min(game_1.Game.randTable([2, 2, 2, 2, 2, 2, 3, 3, 3, 4, 5], rand), this_1.width - 4);
             var blockH = Math.min(blockW + game_1.Game.rand(-2, 2, rand), this_1.height - 4);
             var x = game_1.Game.rand(this_1.roomX + 2, this_1.roomX + this_1.width - blockW - 2, rand);
@@ -15718,7 +15478,7 @@ var Room = /** @class */ (function () {
         };
         var this_1 = this;
         for (var i = 0; i < numBlocks; i++) {
-            _loop_3(i);
+            _loop_5(i);
         }
     };
     Room.prototype.addTorches = function (numTorches, rand) {
@@ -15824,8 +15584,11 @@ var Room = /** @class */ (function () {
             }
         }
         tiles = tiles.filter(function (tile) { return !adjecentTiles.some(function (t) { return t.x === tile.x && t.y === tile.y; }); });
-        var _loop_4 = function (i) {
-            var _b = this_2.getRandomEmptyPosition(tiles), x = _b.x, y = _b.y;
+        var _loop_6 = function (i) {
+            var emptyTiles = this_2.getRandomEmptyPosition(tiles);
+            if (emptyTiles.x === null || emptyTiles.y === null)
+                return "break";
+            var x = emptyTiles.x, y = emptyTiles.y;
             // Define the enemy tables for each depth level
             var tables = {
                 0: [1, 4, 3],
@@ -15845,8 +15608,8 @@ var Room = /** @class */ (function () {
             if (tables[d] && tables[d].length > 0) {
                 // Function to add an enemy to the room
                 var addEnemy = function (enemy) {
-                    var _loop_5 = function (xx) {
-                        var _loop_6 = function (yy) {
+                    var _loop_7 = function (xx) {
+                        var _loop_8 = function (yy) {
                             if (!_this.getEmptyTiles().some(function (tt) { return tt.x === x + xx && tt.y === y + yy; })) {
                                 // If it does, increment the enemy count and return false
                                 numEnemies++;
@@ -15854,16 +15617,16 @@ var Room = /** @class */ (function () {
                             }
                         };
                         for (var yy = 0; yy < enemy.h; yy++) {
-                            var state_3 = _loop_6(yy);
-                            if (typeof state_3 === "object")
-                                return state_3;
+                            var state_4 = _loop_8(yy);
+                            if (typeof state_4 === "object")
+                                return state_4;
                         }
                     };
                     // Check if the enemy overlaps with any other enemies
                     for (var xx = 0; xx < enemy.w; xx++) {
-                        var state_2 = _loop_5(xx);
-                        if (typeof state_2 === "object")
-                            return state_2.value;
+                        var state_3 = _loop_7(xx);
+                        if (typeof state_3 === "object")
+                            return state_3.value;
                     }
                     // If it doesn't, add the enemy to the room and return true
                     _this.entities.push(enemy);
@@ -15874,17 +15637,13 @@ var Room = /** @class */ (function () {
                 // If we roll a spawner and spawnerCount is greater than 0, we have a 1/spawnerCount chance to roll another spawner; otherwise, we reroll
                 if (type === 7 && spawnerCount > 0) {
                     var roll = Math.random();
-                    console.log("roll: ".concat(roll, ", 1 / spawnerCount: ").concat(1 / spawnerCount));
                     if (roll <= 1 / spawnerCount) {
                         type = 7;
-                        console.log("rolled spawner");
                     }
                     else {
-                        console.log("rolled non-spawner");
                         type = game_1.Game.randTable(tables[d], rand);
                     }
                 }
-                console.log(spawnerCount);
                 // Add the selected enemy type to the room
                 switch (type) {
                     case 1:
@@ -15953,7 +15712,9 @@ var Room = /** @class */ (function () {
         var this_2 = this;
         // Loop through the number of enemies to be added
         for (var i = 0; i < numEnemies; i++) {
-            _loop_4(i);
+            var state_2 = _loop_6(i);
+            if (state_2 === "break")
+                break;
         }
     };
     Room.prototype.addObstacles = function (numObstacles, rand) {
@@ -16127,6 +15888,14 @@ var Room = /** @class */ (function () {
             Math.floor(x) >= this.roomX + this.width ||
             Math.floor(y) < this.roomY ||
             Math.floor(y) >= this.roomY + this.height);
+    };
+    Room.prototype.pathIsBlockedBy = function (tile, otherTile) {
+        var entities = [];
+        if (tile.isSolid())
+            entities.push(tile);
+        if (otherTile.isSolid())
+            entities.push(otherTile);
+        return entities;
     };
     // Could encapsulate the common drawing logic NOT IN USE
     Room.prototype.drawLayer = function (delta, condition, method) {

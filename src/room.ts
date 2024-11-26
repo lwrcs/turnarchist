@@ -74,6 +74,7 @@ import { RedGem } from "./item/redgem";
 import { EnergyWizardEnemy } from "./entity/enemy/energyWizard";
 import { ReverbEngine } from "./reverb";
 import { WallCrack } from "./entity/object/wallCrack";
+import { astar } from "./astarclass";
 
 export enum RoomType {
   START,
@@ -304,289 +305,7 @@ export class Room {
     );
   };
 
-  crackWallIntoRoom = (
-    crackX: number,
-    crackY: number,
-    wallDirection: WallDirection
-  ) => {
-    console.log(
-      `crackWallIntoRoom called with crackX: ${crackX}, crackY: ${crackY}, wallDirection: ${WallDirection[wallDirection]}`
-    );
 
-    let doorDir: Direction;
-    switch (wallDirection) {
-      case WallDirection.NORTH:
-        doorDir = Direction.UP;
-        break;
-      case WallDirection.SOUTH:
-        doorDir = Direction.DOWN;
-        break;
-      case WallDirection.WEST:
-        doorDir = Direction.LEFT;
-        break;
-      case WallDirection.EAST:
-        doorDir = Direction.RIGHT;
-        break;
-      default:
-        console.error(`Unsupported WallDirection: ${wallDirection}`);
-        return;
-    }
-    console.log(`Mapped WallDirection to DoorDir: ${Direction[doorDir]}`);
-
-    const dimensions = this.getNewRoomDimensions(
-      crackX,
-      crackY,
-      doorDir,
-      10,
-      10
-    );
-    console.log(`getNewRoomDimensions returned: ${JSON.stringify(dimensions)}`);
-
-    if (!dimensions) {
-      console.warn(
-        "Failed to get new room dimensions. Aborting room generation."
-      );
-      return;
-    }
-
-    const height = dimensions.height;
-    const width = dimensions.width;
-    let x = crackX; // Corrected from crackY
-    let y = crackY; // Corrected from crackX
-    console.log(
-      `Calculated newRoom dimensions - Width: ${width}, Height: ${height}`
-    );
-    console.log(`New room position - x: ${x}, y: ${y}`);
-
-    let newDoor = new Door(
-      this,
-      this.game,
-      crackX,
-      crackY,
-      doorDir,
-      DoorType.DOOR
-    );
-    console.log(
-      `Created newDoor at (${crackX}, ${crackY}) with direction ${DoorDir[doorDir]}`
-    );
-
-    let newRoomX: number;
-    let newRoomY: number;
-    if (doorDir === Direction.UP) {
-      newRoomX = crackX - Math.ceil(width / 2);
-      newRoomY = crackY - height - 1;
-    } else if (doorDir === Direction.DOWN) {
-      newRoomX = crackX - Math.ceil(width / 2);
-      newRoomY = crackY + height + 1;
-    } else if (doorDir === Direction.RIGHT) {
-      newRoomX = crackX + width + 1;
-      newRoomY = crackY - Math.ceil(height / 2);
-    } else if (doorDir === Direction.LEFT) {
-      newRoomX = crackX - width - 1;
-      newRoomY = crackY - Math.ceil(height / 2);
-    } else {
-      console.error(`Unsupported DoorDir: ${doorDir}`);
-      return;
-    }
-    console.log(
-      `New room coordinates - newRoomX: ${newRoomX}, newRoomY: ${newRoomY}`
-    );
-
-    let newRoom = new Room(
-      this.game,
-      newRoomX,
-      newRoomY,
-      width + 2,
-      height + 2,
-      this.type,
-      this.depth,
-      this.mapGroup
-    );
-    console.log(
-      `Initialized new Room at (${newRoomX}, ${newRoomY}) with size (${
-        width + 2
-      }x${height + 2})`
-    );
-
-    let linkedDoorDir: Direction;
-    if (doorDir === Direction.UP) {
-      linkedDoorDir = Direction.DOWN;
-    } else if (doorDir === Direction.DOWN) {
-      linkedDoorDir = Direction.UP;
-    } else if (doorDir === Direction.RIGHT) {
-      linkedDoorDir = Direction.LEFT;
-    } else if (doorDir === Direction.LEFT) {
-      linkedDoorDir = Direction.RIGHT;
-    } else {
-      console.error(`Unsupported DoorDir for linking: ${doorDir}`);
-      return;
-    }
-    console.log(`LinkedDoorDir set to: ${DoorDir[linkedDoorDir]}`);
-
-    let newLinkedDoor = new Door(
-      newRoom,
-      this.game,
-      crackX,
-      crackY,
-      linkedDoorDir,
-      DoorType.DOOR
-    );
-    console.log(
-      `Created newLinkedDoor at (${crackX}, ${crackY}) with direction ${DoorDir[linkedDoorDir]}`
-    );
-
-    console.log(
-      `newRoom.roomX: ${newRoom.roomX}, newRoom.roomY: ${newRoom.roomY}, newRoom.width: ${newRoom.width}, newRoom.height: ${newRoom.height}`
-    );
-
-    newRoom.message = "You've found a secret passage!";
-    console.log(`Set newRoom message: "${newRoom.message}"`);
-
-    newDoor.linkedDoor = newLinkedDoor;
-    newLinkedDoor.linkedDoor = newDoor;
-    console.log("Linked newDoor and newLinkedDoor together.");
-
-    newRoom.roomArray[crackX][crackY] = newLinkedDoor;
-    this.roomArray[crackX][crackY] = newDoor;
-    console.log(
-      `Placed newDoor and newLinkedDoor in room arrays at (${crackX}, ${crackY})`
-    );
-
-    this.doors.push(newDoor);
-    newRoom.doors.push(newLinkedDoor);
-    console.log(
-      "Added newDoor to this.doors and newLinkedDoor to newRoom.doors"
-    );
-
-    newRoom.populate(Random.rand);
-    console.log("Populated newRoom with entities and obstacles.");
-
-    this.game.rooms.push(newRoom);
-    console.log("Added newRoom to game.rooms");
-  };
-
-  getNewRoomDimensions(
-    doorX: number,
-    doorY: number,
-    doorDir: Direction,
-    maxWidth: number,
-    maxHeight: number
-  ): RoomDimensions | false {
-    console.log(
-      `getNewRoomDimensions called with doorX: ${doorX}, doorY: ${doorY}, doorDir: ${Direction[doorDir]}, maxWidth: ${maxWidth}, maxHeight: ${maxHeight}`
-    );
-
-    // Define direction vectors based on DoorDir
-    const directionVectors: Partial<
-      Record<Direction, { dx: number; dy: number }>
-    > = {
-      [Direction.UP]: { dx: 0, dy: -1 },
-      [Direction.DOWN]: { dx: 0, dy: 1 },
-      [Direction.RIGHT]: { dx: 1, dy: 0 },
-      [Direction.LEFT]: { dx: -1, dy: 0 },
-    };
-
-    const { dx, dy } = directionVectors[doorDir];
-    console.log(`Direction vectors - dx: ${dx}, dy: ${dy}`);
-
-    // Offset the starting position by 2 units in the door's direction
-    const startX = doorX + dx * 2;
-    const startY = doorY + dy * 2;
-    console.log(
-      `Starting position after offset - startX: ${startX}, startY: ${startY}`
-    );
-
-    // Initialize room dimensions with a minimum size of 3x3
-    let width = 3;
-    let height = 3;
-    console.log(`Initial room dimensions - width: ${width}, height: ${height}`);
-
-    // Determine expansion directions based on door direction
-    let canExpandForward = true;
-    let canExpandLeft = true;
-    let canExpandRight = true;
-    console.log(
-      `Expansion flags - canExpandForward: ${canExpandForward}, canExpandLeft: ${canExpandLeft}, canExpandRight: ${canExpandRight}`
-    );
-
-    // Expand in the forward direction first
-    if (doorDir === Direction.UP || doorDir === Direction.DOWN) {
-      console.log(`Expanding forward in vertical direction.`);
-      for (let h = 0; h < maxHeight && canExpandForward; h++) {
-        console.log(`Attempting to expand height to: ${height + 1}`);
-        if (this.canPlaceRoom(startX, startY, width, height, doorDir)) {
-          height++;
-          console.log(`Height incremented to: ${height}`);
-        } else {
-          canExpandForward = false;
-          console.log(
-            `Cannot expand height further. canExpandForward set to false.`
-          );
-        }
-      }
-    } else {
-      console.log(`Expanding forward in horizontal direction.`);
-      for (let w = 0; w < maxWidth && canExpandForward; w++) {
-        console.log(`Attempting to expand width to: ${width + 1}`);
-        if (this.canPlaceRoom(startX, startY, width, height, doorDir)) {
-          width++;
-          console.log(`Width incremented to: ${width}`);
-        } else {
-          canExpandForward = false;
-          console.log(
-            `Cannot expand width further. canExpandForward set to false.`
-          );
-        }
-      }
-    }
-
-    // Expand width or height symmetrically based on forward direction
-    if (doorDir === Direction.UP || doorDir === Direction.DOWN) {
-      console.log(`Symmetrically expanding room width.`);
-      for (let w = 0; w < maxWidth && canExpandLeft && canExpandRight; w++) {
-        console.log(`Attempting to expand width to: ${width + 1}`);
-        if (this.canPlaceRoom(startX, startY, width, height, doorDir)) {
-          width++;
-          console.log(`Width incremented to: ${width}`);
-        } else {
-          canExpandLeft = false;
-          canExpandRight = false;
-          console.log(
-            `Cannot expand width further. canExpandLeft and canExpandRight set to false.`
-          );
-        }
-      }
-    } else {
-      console.log(`Symmetrically expanding room height.`);
-      for (let h = 0; h < maxHeight && canExpandLeft && canExpandRight; h++) {
-        console.log(`Attempting to expand height to: ${height + 1}`);
-        if (this.canPlaceRoom(startX, startY, width, height, doorDir)) {
-          height++;
-          console.log(`Height incremented to: ${height}`);
-        } else {
-          canExpandLeft = false;
-          canExpandRight = false;
-          console.log(
-            `Cannot expand height further. canExpandLeft and canExpandRight set to false.`
-          );
-        }
-      }
-    }
-
-    // Final validation to ensure minimum size
-    if (width >= 3 && height >= 3) {
-      console.log(
-        `Final room dimensions verified - width: ${width}, height: ${height}`
-      );
-      return { width, height };
-    }
-
-    // If unable to fit, return false
-    console.warn(
-      `Room dimensions below minimum size - width: ${width}, height: ${height}. Unable to place room.`
-    );
-    return false;
-  }
 
   /**
    * Checks if a room can be placed at the specified position with the given dimensions.
@@ -597,130 +316,6 @@ export class Room {
    * @param height - The height of the room.
    * @returns `true` if the room can be placed without overlapping; otherwise, `false`.
    */
-  private canPlaceRoom(
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-    doorDir: Direction
-  ): boolean {
-    console.log(
-      `canPlaceRoom called with x: ${x}, y: ${y}, width: ${width}, height: ${height}, doorDir: ${doorDir}`
-    );
-
-    let dx = 0,
-      dy = 0;
-
-    switch (doorDir) {
-      case Direction.UP:
-        dy = -1;
-        break;
-      case Direction.RIGHT:
-        dx = 1;
-        break;
-      case Direction.DOWN:
-        dy = 1;
-        break;
-      case Direction.LEFT:
-        dx = -1;
-        break;
-      default:
-        console.error(`Unhandled DoorDir: ${doorDir}`);
-        return false;
-    }
-
-    const checkX = x + dx;
-    const checkY = y + dy;
-
-    const roundedWidth = Math.ceil(width / 2);
-    const roundedHeight = Math.ceil(height / 2);
-
-    console.log(
-      `Check position after offset - checkX: ${checkX}, checkY: ${checkY}`
-    );
-    console.log(
-      `Rounded dimensions - roundedWidth: ${roundedWidth}, roundedHeight: ${roundedHeight}`
-    );
-
-    for (let i = checkX - roundedWidth; i <= checkX + roundedWidth; i++) {
-      for (let j = checkY - roundedHeight; j <= checkY + roundedHeight; j++) {
-        const cell = this.roomArray[i]?.[j];
-        if (cell && !(cell instanceof Wall)) {
-          console.log(
-            `Space occupied at (${i}, ${j}) by ${cell.constructor.name}`
-          );
-          return false;
-        }
-      }
-    }
-
-    console.log("Room can be placed at the specified location.");
-    return true;
-  }
-
-  addWallCrack = () => {
-    console.log("addWallCrack triggered.");
-    const walls: Wall[] = [];
-
-    for (let x = this.roomX; x < this.roomX + this.width; x++) {
-      for (let y = this.roomY; y < this.roomY + this.height; y++) {
-        const tile = this.roomArray[x][y];
-        if (tile instanceof Wall) {
-          // Only consider walls with primary directions
-          if (
-            tile.direction === WallDirection.NORTH ||
-            tile.direction === WallDirection.EAST ||
-            tile.direction === WallDirection.SOUTH ||
-            tile.direction === WallDirection.WEST
-          ) {
-            walls.push(tile);
-            //console.log(
-            //  `Added wall at (${x}, ${y}) with direction ${tile.direction}`
-            //);
-          }
-        }
-      }
-    }
-
-    console.log(`Total eligible walls for cracking: ${walls.length}`);
-
-    if (walls.length === 0) {
-      console.warn("No eligible walls found for cracking.");
-      return;
-    }
-
-    // Select a random wall from the eligible walls
-    const randIndex = Math.floor(Math.random() * walls.length);
-    const randWall = walls[randIndex];
-    const doorDir = randWall.direction;
-
-    if (!doorDir) {
-      console.warn(
-        `Cannot map WallDirection: ${randWall.direction} to DoorDir.`
-      );
-      return;
-    }
-
-    console.log(
-      `Selected random wall at (${randWall.x}, ${randWall.y}) with direction ${doorDir}`
-    );
-
-    if (this.canPlaceRoom(randWall.x, randWall.y, 3, 3, doorDir)) {
-      const shouldCrack = Math.random() > 0.5; // Adjusted probability
-      console.log(`shouldCrack evaluated to: ${shouldCrack}`);
-
-      if (shouldCrack) {
-        console.log("Creating new crack in the wall.");
-        randWall.newCrack();
-        // this.cracked = true; // Uncomment if necessary
-        console.log("New crack created.");
-      } else {
-        console.log("Decided not to crack the wall.");
-      }
-    } else {
-      console.warn("Cannot place room at the selected wall position.");
-    }
-  };
 
   private buildEmptyRoom() {
     // fill in wall and floor
@@ -976,7 +571,10 @@ export class Room {
     );
     // Loop through the number of enemies to be added
     for (let i = 0; i < numEnemies; i++) {
-      const { x, y } = this.getRandomEmptyPosition(tiles);
+      let emptyTiles = this.getRandomEmptyPosition(tiles);
+      if (emptyTiles.x === null || emptyTiles.y === null) break;
+      const { x, y } = emptyTiles;
+
 
       // Define the enemy tables for each depth level
 
@@ -1022,16 +620,12 @@ export class Room {
         // If we roll a spawner and spawnerCount is greater than 0, we have a 1/spawnerCount chance to roll another spawner; otherwise, we reroll
         if (type === 7 && spawnerCount > 0) {
           let roll = Math.random();
-          console.log(`roll: ${roll}, 1 / spawnerCount: ${1 / spawnerCount}`);
           if (roll <= 1 / spawnerCount) {
             type = 7;
-            console.log("rolled spawner");
           } else {
-            console.log("rolled non-spawner");
             type = Game.randTable(tables[d], rand);
           }
         }
-        console.log(spawnerCount);
         // Add the selected enemy type to the room
 
         switch (type) {
@@ -1114,10 +708,10 @@ export class Room {
     for (let i = 0; i < numObstacles; i++) {
       const { x, y } = this.getRandomEmptyPosition(tiles);
       switch (
-        Game.randTable(
-          [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 5, 5, 5],
-          rand
-        )
+      Game.randTable(
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 5, 5, 5],
+        rand
+      )
       ) {
         case 1:
           Crate.add(this, this.game, x, y);
@@ -1213,11 +807,20 @@ export class Room {
     this.addObstacles(numObstacles, rand);
     let numEnemies = Math.ceil(
       (numEmptyTiles - numTotalObstacles) *
-        Math.min(this.depth * 0.1 + 0.1, 0.35) //this.depth * 0.01 is starting value
+      Math.min(this.depth * 0.1 + 0.1, 0.35) //this.depth * 0.01 is starting value
     );
     this.addEnemies(numEnemies, rand);
 
     if (factor <= 6) this.addVendingMachine(rand);
+
+    const obstacles = this.checkDoorObstructions();
+    if (obstacles.length > 0) {
+      for (let obstacle of obstacles) {
+        console.log(`Removing obstacle at (${obstacle.x},${obstacle.y})`);
+        this.entities = this.entities.filter(e => e !== obstacle);
+        obstacle = null
+      }
+    }
   };
   populateBoss = (rand: () => number) => {
     this.addRandomTorches("medium");
@@ -1231,7 +834,7 @@ export class Room {
     this.addObstacles(numObstacles, rand);
     let numEnemies = Math.ceil(
       (numEmptyTiles - numTotalObstacles) *
-        Math.min(this.depth * 0.05 + 0.2, 0.5)
+      Math.min(this.depth * 0.05 + 0.2, 0.5)
     );
     this.addEnemies(numEnemies, rand);
   };
@@ -1249,8 +852,8 @@ export class Room {
     let numEmptyTiles = this.getEmptyTiles().length;
     let numEnemies = Math.ceil(
       numEmptyTiles *
-        (this.depth * 0.5 + 0.5) *
-        Game.randTable([0.05, 0.05, 0.06, 0.07, 0.1], rand)
+      (this.depth * 0.5 + 0.5) *
+      Game.randTable([0.05, 0.05, 0.06, 0.07, 0.1], rand)
     );
     this.addEnemies(numEnemies, rand);
     if (numEnemies > 0)
@@ -1429,6 +1032,15 @@ export class Room {
     VendingMachine.add(this, this.game, x + 2, y - 1, new Heart(this, 0, 0));
     VendingMachine.add(this, this.game, x - 2, y + 2, new Armor(this, 0, 0));
     VendingMachine.add(this, this.game, x + 2, y + 2, new Spear(this, 0, 0));
+
+    const obstacles = this.checkDoorObstructions();
+    if (obstacles.length > 0) {
+    }
+    for (let obstacle of obstacles) {
+      this.entities = this.entities.filter(e => e !== obstacle);
+      obstacle = null
+    }
+
   };
 
   populate = (rand: () => number) => {
@@ -1586,9 +1198,6 @@ export class Room {
     this.message = this.name;
     player.map.saveMapData();
     this.setReverb();
-    console.log(
-      `this.roomX: ${this.roomX}, this.roomY: ${this.roomY}, this.width: ${this.width}, this.height: ${this.height}`
-    );
   };
 
   enterLevelThroughLadder = (player: Player, ladder: any) => {
@@ -2494,6 +2103,83 @@ export class Room {
       Math.floor(y) >= this.roomY + this.height
     );
   }
+
+  pathIsBlockedBy(tile: Tile, otherTile: Tile): Entity[] {
+    const entities = [];
+    if (tile.isSolid()) entities.push(tile);
+    if (otherTile.isSolid()) entities.push(otherTile);
+    return entities;
+  }
+
+  checkDoorObstructions = () => {
+    let obstacles = [];
+    for (const door of this.doors) {
+      for (const otherDoor of this.doors) {
+        if (door === otherDoor || door === null || otherDoor === null) break;
+        const pathObstacles = this.findPath(door, otherDoor);
+        if (pathObstacles.length > 0) {
+        }
+        obstacles.push(...pathObstacles);
+      }
+    }
+    return obstacles;
+  }
+
+
+
+  findPath = (startTile: Tile, targetTile: Tile): Array<Entity> => {
+    let disablePositions = Array<astar.Position>();
+    let obstacleCandidates = []
+
+    for (const e of this.entities) {
+      if (e instanceof VendingMachine || e instanceof Rock) {
+        disablePositions.push({ x: e.x, y: e.y } as astar.Position);
+        obstacleCandidates.push(e);
+      }
+    }
+
+    /*
+    for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
+      for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
+        if (
+          this.room.roomArray[xx][yy] instanceof SpikeTrap &&
+          (this.room.roomArray[xx][yy] as SpikeTrap).on
+        ) {
+          // Don't walk on active spike traps
+          disablePositions.push({ x: xx, y: yy } as astar.Position);
+        }
+      }
+    }
+      */
+    // Create a grid of the room
+    let grid = [];
+    for (let x = 0; x < this.roomX + this.width; x++) {
+      grid[x] = [];
+      for (let y = 0; y < this.roomY + this.height; y++) {
+        if (this.roomArray[x] && this.roomArray[x][y])
+          grid[x][y] = this.roomArray[x][y];
+        else grid[x][y] = false;
+      }
+    }
+
+    // Find a path to the target player
+    let moves = astar.AStar.search(
+      grid,
+      startTile,
+      targetTile,
+      disablePositions,
+      false,
+      false,
+      false,
+    );
+    if (moves.length === 0) {
+      return obstacleCandidates;
+    }
+    else {
+      return [];
+    }
+  };
+
 
   // Could encapsulate the common drawing logic NOT IN USE
   private drawLayer(

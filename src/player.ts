@@ -413,11 +413,11 @@ export class Player extends Drawable {
     // Convert pixel offset to tile offset (this part was working correctly)
     const tileOffsetX = Math.floor(
       (Input.mouseX - screenCenterX + GameConstants.TILESIZE / 2) /
-        GameConstants.TILESIZE
+      GameConstants.TILESIZE
     );
     const tileOffsetY = Math.floor(
       (Input.mouseY - screenCenterY + GameConstants.TILESIZE / 2) /
-        GameConstants.TILESIZE
+      GameConstants.TILESIZE
     );
 
     return {
@@ -749,7 +749,7 @@ export class Player extends Drawable {
     this.hitY = 0;
   };
 
-  update = () => {};
+  update = () => { };
   updateSlowMotion = () => {
     if (this.slowMotionTickDuration > 0) this.slowMotionTickDuration -= 1;
     if (this.slowMotionTickDuration === 0) this.slowMotionEnabled = false;
@@ -1002,7 +1002,6 @@ export class Player extends Drawable {
     //console.log("Is processing queue:", this.isProcessingQueue);
 
     if (!this.isProcessingQueue) {
-      console.log("Queue processing stopped - isProcessingQueue is false");
       return;
     }
 

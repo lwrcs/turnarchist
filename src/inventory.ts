@@ -161,19 +161,9 @@ export class Inventory {
 
   itemAtSelectedSlot = (): Item | null => {
     let index = this.selX + this.selY * this.cols;
-    console.log(
-      "Checking slot:",
-      index,
-      "selX:",
-      this.selX,
-      "selY:",
-      this.selY
-    );
     if (index < 0 || index >= this.items.length) {
-      console.log("Invalid slot index");
       return null;
     }
-    console.log("Found item:", this.items[index]);
     return this.items[index];
   };
 
@@ -266,16 +256,15 @@ export class Inventory {
       );
       this.selY = this.isOpen
         ? Math.max(
-            0,
-            Math.min(
-              Math.floor((y - bounds.startY) / (s + 2 * b + g)),
-              this.rows + this.expansion - 1
-            )
+          0,
+          Math.min(
+            Math.floor((y - bounds.startY) / (s + 2 * b + g)),
+            this.rows + this.expansion - 1
           )
+        )
         : 0;
 
       if (oldSelX !== this.selX || oldSelY !== this.selY) {
-        console.log("Selection changed to:", this.selX, this.selY);
       }
     }
   };
@@ -306,52 +295,39 @@ export class Inventory {
   };
 
   grabItem = (item: Item) => {
-    console.log("grabItem called with:", item);
     if (item === null) {
-      console.log("Cannot grab null item");
       return;
     }
     if (this.grabbedItem !== null) {
-      console.log("Already holding an item:", this.grabbedItem);
       return;
     }
 
     // Remove the item from its slot when grabbed
     const index = this.getIndexOfItem(item);
-    console.log("Found item at index:", index);
 
     if (index !== -1) {
-      console.log("Removing item from slot", index);
       this.items[index] = null;
       this.grabbedItem = item;
-      console.log("Item grabbed successfully");
     } else {
-      console.log("Could not find item in inventory");
     }
   };
 
   releaseItem = () => {
-    console.log("releaseItem called, grabbed item:", this.grabbedItem);
     if (this.grabbedItem === null) {
-      console.log("No item to release");
       return;
     }
 
     const targetIndex = this.selX + this.selY * this.cols;
     const existingItem = this.items[targetIndex];
-    console.log("Target slot:", targetIndex, "existing item:", existingItem);
 
     // If target slot is empty, place item there
     if (existingItem === null) {
-      console.log("Placing item in empty slot");
       this.items[targetIndex] = this.grabbedItem;
     } else {
       // Swap items
-      console.log("Swapping with existing item");
       this.items[targetIndex] = this.grabbedItem;
     }
 
-    console.log("Item placed, clearing grabbed item");
     this.grabbedItem = null;
   };
 
@@ -755,16 +731,16 @@ export class Inventory {
         const highlightX =
           Math.round(
             0.5 * GameConstants.WIDTH -
-              0.5 * width +
-              this.selX * (s + 2 * b + g)
+            0.5 * width +
+            this.selX * (s + 2 * b + g)
           ) -
           hg -
           ob;
         const highlightY =
           Math.round(
             0.5 * GameConstants.HEIGHT -
-              0.5 * height +
-              this.selY * (s + 2 * b + g)
+            0.5 * height +
+            this.selY * (s + 2 * b + g)
           ) -
           hg -
           ob;
@@ -857,30 +833,30 @@ export class Inventory {
           Game.ctx.fillStyle = OUTLINE_COLOR;
           Game.ctx.fillRect(
             0.5 * GameConstants.WIDTH -
-              0.5 * width +
-              this.selX * (s + 2 * b + g) -
-              hg,
+            0.5 * width +
+            this.selX * (s + 2 * b + g) -
+            hg,
             0.5 * GameConstants.HEIGHT -
-              0.5 * height +
-              this.selY * (s + 2 * b + g) -
-              hg,
+            0.5 * height +
+            this.selY * (s + 2 * b + g) -
+            hg,
             s + 2 * b + 2 * hg,
             s + 2 * b + 2 * hg
           );
 
           const slotX = Math.round(
             0.5 * GameConstants.WIDTH -
-              0.5 * width +
-              this.selX * (s + 2 * b + g) +
-              b -
-              hg
+            0.5 * width +
+            this.selX * (s + 2 * b + g) +
+            b -
+            hg
           );
           const slotY = Math.round(
             0.5 * GameConstants.HEIGHT -
-              0.5 * height +
-              this.selY * (s + 2 * b + g) +
-              b -
-              hg
+            0.5 * height +
+            this.selY * (s + 2 * b + g) +
+            b -
+            hg
           );
           Game.ctx.fillStyle = FILL_COLOR;
           Game.ctx.fillRect(slotX, slotY, s + 2 * hg, s + 2 * hg);
@@ -892,16 +868,16 @@ export class Inventory {
             const yOff = (s + 2 * hg) * (1 - this.equipAnimAmount[idx]);
             Game.ctx.fillRect(
               0.5 * GameConstants.WIDTH -
-                0.5 * width +
-                this.selX * (s + 2 * b + g) +
-                b -
-                hg,
+              0.5 * width +
+              this.selX * (s + 2 * b + g) +
+              b -
+              hg,
               0.5 * GameConstants.HEIGHT -
-                0.5 * height +
-                this.selY * (s + 2 * b + g) +
-                b -
-                hg +
-                yOff,
+              0.5 * height +
+              this.selY * (s + 2 * b + g) +
+              b -
+              hg +
+              yOff,
               s + 2 * hg,
               s + 2 * hg - yOff
             );
@@ -962,10 +938,10 @@ export class Inventory {
           const lines = item.getDescription().split("\n");
           let nextY = Math.round(
             0.5 * GameConstants.HEIGHT -
-              0.5 * height +
-              (this.rows + this.expansion) * (s + 2 * b + g) +
-              b +
-              5
+            0.5 * height +
+            (this.rows + this.expansion) * (s + 2 * b + g) +
+            b +
+            5
           );
           lines.forEach((line) => {
             nextY = this.textWrap(line, 5, nextY, GameConstants.WIDTH - 10);
@@ -1066,14 +1042,12 @@ export class Inventory {
       if (selectedItem !== null) {
         this._dragStartItem = selectedItem;
         this._dragStartSlot = this.selX + this.selY * this.cols;
-        console.log("Mouse down started with item:", selectedItem);
       }
     }
   };
 
   onHoldDetected = () => {
     if (this._dragStartItem !== null && !this._isDragging) {
-      console.log("Hold threshold reached, initiating drag");
       this._isDragging = true;
       this.grabbedItem = this._dragStartItem;
 
@@ -1097,17 +1071,14 @@ export class Inventory {
     if (isValidDropZone) {
       if (this._isDragging && this.grabbedItem !== null) {
         // We were dragging, place the item
-        console.log("Ending drag, placing item");
         const targetSlot = this.selX + this.selY * this.cols;
         this.placeItemInSlot(targetSlot);
       } else if (this._dragStartItem !== null) {
         // We had an item but weren't dragging (quick click)
-        console.log("Quick click detected, using item");
         this.itemUse();
       }
     } else if (this.grabbedItem !== null) {
       // Drop the item in the world
-      console.log("Dropping item in world");
       this.dropItem(this.grabbedItem, this._dragStartSlot);
 
       this.grabbedItem = null;
@@ -1122,31 +1093,17 @@ export class Inventory {
   };
   z;
   checkForDragStart = () => {
-    console.log("Checking for drag start:", {
-      mouseDown: Input.mouseDown,
-      isMouseHold: Input.isMouseHold,
-      dragStartItem: this._dragStartItem,
-      isDragging: this._isDragging,
-      grabbedItem: this.grabbedItem,
-    });
 
     if (!Input.mouseDown || this._dragStartItem === null || this._isDragging) {
-      console.log("Drag start check failed:", {
-        noMouseDown: !Input.mouseDown,
-        noDragStartItem: this._dragStartItem === null,
-        alreadyDragging: this._isDragging,
-      });
       return;
     }
 
     if (Input.isMouseHold) {
-      console.log("Starting drag operation");
       this._isDragging = true;
       this.grabbedItem = this._dragStartItem;
 
       // Remove item from original slot
       if (this._dragStartSlot !== null) {
-        console.log("Removing item from slot:", this._dragStartSlot);
         this.items[this._dragStartSlot] = null;
       }
     }
@@ -1155,7 +1112,6 @@ export class Inventory {
   placeItemInSlot = (targetSlot: number) => {
     if (this.grabbedItem === null) return;
 
-    console.log("Placing item in slot:", targetSlot);
     const existingItem = this.items[targetSlot];
 
     // If target slot is empty
