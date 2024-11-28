@@ -841,22 +841,38 @@ let visualize_partitions = (
   mapWidth: number,
   mapHeight: number,
 ) => {
-  const grid = Array.from({ length: mapHeight }, () =>
-    Array(mapWidth).fill("."),
+  // Create grid with padded spaces
+  const grid = Array.from(
+    { length: mapHeight },
+    () => Array(mapWidth).fill(" . "), // Pad dots with spaces
   );
 
+  // Calculate the maximum number of digits needed
+  const maxIndex = partitions.length - 1;
+  const padLength = maxIndex.toString().length;
+
   partitions.forEach((partition, index) => {
+    // Pad the index number with spaces to maintain consistent width
+    const paddedIndex = index.toString().padStart(padLength, " ");
+
     for (let x = partition.x; x < partition.x + partition.w; x++) {
       for (let y = partition.y; y < partition.y + partition.h; y++) {
         if (x >= 0 && x < mapWidth && y >= 0 && y < mapHeight) {
-          grid[y][x] = index.toString();
+          grid[y][x] = ` ${paddedIndex} `; // Pad numbers with spaces
         }
       }
     }
   });
 
   console.log("Partition Layout:");
-  grid.forEach((row) => console.log(row.join(" ")));
+  console.log(
+    "   " + [...Array(mapWidth)].map((_, i) => i % 10).join("  ") + " X",
+  ); // Column headers
+  grid.forEach((row, index) => {
+    const paddedIndex = index.toString().padStart(2, " ");
+    console.log(`${paddedIndex} ${row.join("")}`);
+  });
+  console.log("Y");
 };
 
 let check_overlaps = (partitions: Array<Partition>): boolean => {

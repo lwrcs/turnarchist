@@ -74,7 +74,10 @@ import { RedGem } from "./item/redgem";
 import { EnergyWizardEnemy } from "./entity/enemy/energyWizard";
 import { ReverbEngine } from "./reverb";
 import { astar } from "./astarclass";
-
+import {
+  EnemyParameters,
+  LevelParameterGenerator,
+} from "./levelParametersGenerator";
 export enum RoomType {
   START,
   DUNGEON,
@@ -573,19 +576,13 @@ export class Room {
       const { x, y } = emptyTiles;
 
       // Define the enemy tables for each depth level
-
-      let tables = {
-        0: [1, 4, 3], //this.generateLevelTable(rand),
-        1: [3, 4, 9, 7],
-        2: [3, 4, 5, 7, 8, 9, 12],
-        3: [1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-        4: [4, 5, 6, 7, 8, 9, 10, 11, 12],
-        5: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
-        6: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
-        7: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
-      };
+      let tables = LevelParameterGenerator.getEnemyParameters(
+        this.depth,
+      ).enemyTables;
       // Define the maximum depth level
-      let max_depth_table = 7;
+      let max_depth_table = LevelParameterGenerator.getEnemyParameters(
+        this.depth,
+      ).maxDepthTable;
       // Get the current depth level, capped at the maximum
       let d = Math.min(this.depth, max_depth_table);
       // If there is a table for the current depth level

@@ -11771,20 +11771,29 @@ var generate_tutorial = function (height, width) {
     return partitions;
 };
 var visualize_partitions = function (partitions, mapWidth, mapHeight) {
-    var grid = Array.from({ length: mapHeight }, function () {
-        return Array(mapWidth).fill(".");
-    });
+    // Create grid with padded spaces
+    var grid = Array.from({ length: mapHeight }, function () { return Array(mapWidth).fill(" . "); });
+    // Calculate the maximum number of digits needed
+    var maxIndex = partitions.length - 1;
+    var padLength = maxIndex.toString().length;
     partitions.forEach(function (partition, index) {
+        // Pad the index number with spaces to maintain consistent width
+        var paddedIndex = index.toString().padStart(padLength, " ");
         for (var x = partition.x; x < partition.x + partition.w; x++) {
             for (var y = partition.y; y < partition.y + partition.h; y++) {
                 if (x >= 0 && x < mapWidth && y >= 0 && y < mapHeight) {
-                    grid[y][x] = index.toString();
+                    grid[y][x] = " ".concat(paddedIndex, " "); // Pad numbers with spaces
                 }
             }
         }
     });
     console.log("Partition Layout:");
-    grid.forEach(function (row) { return console.log(row.join(" ")); });
+    console.log("   " + __spreadArray([], Array(mapWidth), true).map(function (_, i) { return i % 10; }).join("  ") + " X"); // Column headers
+    grid.forEach(function (row, index) {
+        var paddedIndex = index.toString().padStart(2, " ");
+        console.log("".concat(paddedIndex, " ").concat(row.join("")));
+    });
+    console.log("Y");
 };
 var check_overlaps = function (partitions) {
     for (var i = 0; i < partitions.length; i++) {
@@ -11944,11 +11953,66 @@ exports.LevelGenerator = LevelGenerator;
 /*!*****************************************!*\
   !*** ./src/levelParametersGenerator.ts ***!
   \*****************************************/
-/***/ ((__unused_webpack_module, exports) => {
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
+var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
+    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+        if (ar || !(i in from)) {
+            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+            ar[i] = from[i];
+        }
+    }
+    return to.concat(ar || Array.prototype.slice.call(from));
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.LevelParameterGenerator = void 0;
+exports.LevelParameterGenerator = exports.enemyMinimumDepth = exports.enemyClasses = void 0;
+var crabEnemy_1 = __webpack_require__(/*! ./entity/enemy/crabEnemy */ "./src/entity/enemy/crabEnemy.ts");
+var frogEnemy_1 = __webpack_require__(/*! ./entity/enemy/frogEnemy */ "./src/entity/enemy/frogEnemy.ts");
+var zombieEnemy_1 = __webpack_require__(/*! ./entity/enemy/zombieEnemy */ "./src/entity/enemy/zombieEnemy.ts");
+var skullEnemy_1 = __webpack_require__(/*! ./entity/enemy/skullEnemy */ "./src/entity/enemy/skullEnemy.ts");
+var energyWizard_1 = __webpack_require__(/*! ./entity/enemy/energyWizard */ "./src/entity/enemy/energyWizard.ts");
+var chargeEnemy_1 = __webpack_require__(/*! ./entity/enemy/chargeEnemy */ "./src/entity/enemy/chargeEnemy.ts");
+var spawner_1 = __webpack_require__(/*! ./entity/enemy/spawner */ "./src/entity/enemy/spawner.ts");
+var bishopEnemy_1 = __webpack_require__(/*! ./entity/enemy/bishopEnemy */ "./src/entity/enemy/bishopEnemy.ts");
+var armoredzombieEnemy_1 = __webpack_require__(/*! ./entity/enemy/armoredzombieEnemy */ "./src/entity/enemy/armoredzombieEnemy.ts");
+var bigSkullEnemy_1 = __webpack_require__(/*! ./entity/enemy/bigSkullEnemy */ "./src/entity/enemy/bigSkullEnemy.ts");
+var queenEnemy_1 = __webpack_require__(/*! ./entity/enemy/queenEnemy */ "./src/entity/enemy/queenEnemy.ts");
+var knightEnemy_1 = __webpack_require__(/*! ./entity/enemy/knightEnemy */ "./src/entity/enemy/knightEnemy.ts");
+var bigKnightEnemy_1 = __webpack_require__(/*! ./entity/enemy/bigKnightEnemy */ "./src/entity/enemy/bigKnightEnemy.ts");
+var fireWizard_1 = __webpack_require__(/*! ./entity/enemy/fireWizard */ "./src/entity/enemy/fireWizard.ts");
+exports.enemyClasses = {
+    1: crabEnemy_1.CrabEnemy,
+    2: frogEnemy_1.FrogEnemy,
+    3: zombieEnemy_1.ZombieEnemy,
+    4: skullEnemy_1.SkullEnemy,
+    5: energyWizard_1.EnergyWizardEnemy,
+    6: chargeEnemy_1.ChargeEnemy,
+    7: spawner_1.Spawner,
+    8: bishopEnemy_1.BishopEnemy,
+    9: armoredzombieEnemy_1.ArmoredzombieEnemy,
+    10: bigSkullEnemy_1.BigSkullEnemy,
+    11: queenEnemy_1.QueenEnemy,
+    12: knightEnemy_1.KnightEnemy,
+    13: bigKnightEnemy_1.BigKnightEnemy,
+    14: fireWizard_1.FireWizardEnemy,
+};
+exports.enemyMinimumDepth = {
+    1: 0,
+    2: 0,
+    3: 0,
+    4: 0,
+    5: 1,
+    6: 2,
+    7: 1,
+    8: 1,
+    9: 1,
+    10: 3,
+    11: 2,
+    12: 2,
+    13: 3,
+    14: 3, // FireWizardEnemy
+};
 var LevelParameterGenerator = /** @class */ (function () {
     function LevelParameterGenerator() {
     }
@@ -11969,6 +12033,70 @@ var LevelParameterGenerator = /** @class */ (function () {
             numLoopDoorsRange: [4, 8],
             numberOfRooms: depth > 0 ? 5 : 3,
         };
+    };
+    /**
+     * Generates enemy parameters based on the current depth.
+     * @param depth The current depth level.
+     * @returns An object conforming to the EnemyParameters interface.
+     */
+    LevelParameterGenerator.getEnemyParameters = function (depth) {
+        // Generate the enemy pool based on current depth
+        var enemyPoolIds = LevelParameterGenerator.generateEnemyPoolIds(depth);
+        // Create enemyTables where each level maps to the enemyPoolIds
+        var enemyTables = {};
+        for (var tableDepth = 0; tableDepth <= depth; tableDepth++) {
+            // Assign the same pool for all tables up to current depth
+            enemyTables[tableDepth] = enemyPoolIds;
+        }
+        return {
+            enemyTables: enemyTables,
+            maxDepthTable: depth,
+            minDepths: exports.enemyMinimumDepth,
+        };
+    };
+    /**
+     * Generates the enemy pool IDs based on the current depth.
+     * @param depth The current depth level.
+     * @returns An array of selected enemy IDs.
+     */
+    LevelParameterGenerator.generateEnemyPoolIds = function (depth) {
+        var availableEnemies = Object.entries(exports.enemyMinimumDepth)
+            .filter(function (_a) {
+            var enemyId = _a[0], minDepth = _a[1];
+            return depth >= minDepth;
+        })
+            .map(function (_a) {
+            var enemyId = _a[0];
+            return Number(enemyId);
+        });
+        var numberOfTypes = LevelParameterGenerator.getNumberOfEnemyTypes(depth);
+        var selectedEnemyIds = LevelParameterGenerator.getRandomElements(availableEnemies, numberOfTypes);
+        // Ensure uniqueness and limit based on available enemies
+        return Array.from(new Set(selectedEnemyIds)).slice(0, numberOfTypes);
+    };
+    /**
+     * Determines the number of enemy types allowed based on the current depth.
+     * @param depth The current depth level.
+     * @returns The number of enemy types.
+     */
+    LevelParameterGenerator.getNumberOfEnemyTypes = function (depth) {
+        // Example logic: depth 0 -> 2 types, depth 1 -> 4, depth 2 -> 6, etc.
+        return 2 + depth * 2;
+    };
+    /**
+     * Utility function to get random elements from an array.
+     * @param array The array to select from.
+     * @param count The number of elements to select.
+     * @returns An array of randomly selected elements.
+     */
+    LevelParameterGenerator.getRandomElements = function (array, count) {
+        var _a;
+        var shuffled = __spreadArray([], array, true);
+        for (var i = shuffled.length - 1; i > 0; i--) {
+            var j = Math.floor(Math.random() * (i + 1));
+            _a = [shuffled[j], shuffled[i]], shuffled[i] = _a[0], shuffled[j] = _a[1];
+        }
+        return shuffled.slice(0, Math.min(count, shuffled.length));
     };
     return LevelParameterGenerator;
 }());
@@ -14339,6 +14467,7 @@ var fireWizard_1 = __webpack_require__(/*! ./entity/enemy/fireWizard */ "./src/e
 var energyWizard_1 = __webpack_require__(/*! ./entity/enemy/energyWizard */ "./src/entity/enemy/energyWizard.ts");
 var reverb_1 = __webpack_require__(/*! ./reverb */ "./src/reverb.ts");
 var astarclass_1 = __webpack_require__(/*! ./astarclass */ "./src/astarclass.ts");
+var levelParametersGenerator_1 = __webpack_require__(/*! ./levelParametersGenerator */ "./src/levelParametersGenerator.ts");
 var RoomType;
 (function (RoomType) {
     RoomType[RoomType["START"] = 0] = "START";
@@ -15736,18 +15865,9 @@ var Room = /** @class */ (function () {
                 return "break";
             var x = emptyTiles.x, y = emptyTiles.y;
             // Define the enemy tables for each depth level
-            var tables = {
-                0: [1, 4, 3],
-                1: [3, 4, 9, 7],
-                2: [3, 4, 5, 7, 8, 9, 12],
-                3: [1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-                4: [4, 5, 6, 7, 8, 9, 10, 11, 12],
-                5: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
-                6: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
-                7: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
-            };
+            var tables = levelParametersGenerator_1.LevelParameterGenerator.getEnemyParameters(this_2.depth).enemyTables;
             // Define the maximum depth level
-            var max_depth_table = 7;
+            var max_depth_table = levelParametersGenerator_1.LevelParameterGenerator.getEnemyParameters(this_2.depth).maxDepthTable;
             // Get the current depth level, capped at the maximum
             var d = Math.min(this_2.depth, max_depth_table);
             // If there is a table for the current depth level
