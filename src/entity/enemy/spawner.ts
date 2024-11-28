@@ -51,6 +51,18 @@ export class Spawner extends Enemy {
     this.tileX = 6;
     this.tileY = 4;
     this.seenPlayer = true;
+    let drop = Game.randTable([1, 2, 3], Random.rand);
+    switch (drop) {
+      case 1:
+        this.drop = new BlueGem(this.room, this.x, this.y);
+        break;
+      case 2:
+        this.drop = new GreenGem(this.room, this.x, this.y);
+        break;
+      case 3:
+        this.drop = new RedGem(this.room, this.x, this.y);
+        break;
+    }
     this.enemyTable = enemyTable.filter((t) => t !== 7);
     const randSpawnType = Game.randTable(this.enemyTable, Random.rand);
     this.enemySpawnType = randSpawnType;
@@ -313,6 +325,6 @@ export class Spawner extends Enemy {
   };
 
   dropLoot = () => {
-    this.room.items.push(new BlueGem(this.room, this.x, this.y));
+    this.room.items.push(this.drop);
   };
 }

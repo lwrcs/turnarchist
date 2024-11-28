@@ -8,6 +8,7 @@ import {
   LevelParameterGenerator,
   LevelParameters,
 } from "./levelParametersGenerator";
+import { Level } from "./level";
 
 class PartitionConnection {
   x: number;
@@ -341,20 +342,8 @@ let get_wall_rooms = (
       hasBottomPath,
     ].filter(Boolean).length;
 
-    // Log the path statuses for debugging
-    console.log(
-      `Partition ${index}: (${partition.x}, ${partition.y}, ${partition.w}, ${partition.h})`,
-    );
-    console.log(`  hasLeftPath: ${hasLeftPath}`);
-    console.log(`  hasRightPath: ${hasRightPath}`);
-    console.log(`  hasTopPath: ${hasTopPath}`);
-    console.log(`  hasBottomPath: ${hasBottomPath}`);
-    console.log(`  Open Paths Count: ${openPaths}`);
-
     // Define wall rooms as those with exactly one open path
     const isWallRoom = openPaths === 1;
-
-    console.log(`  isWallRoom: ${isWallRoom}`);
 
     return isWallRoom;
   });
@@ -368,7 +357,6 @@ let remove_wall_rooms = (
 ): Array<Partition> => {
   // Get all wall rooms
   const wallRooms = get_wall_rooms(partitions, w, h);
-  console.log(`wallRooms.length: ${wallRooms.length}`);
 
   // Remove wall rooms based on probability
   for (const wallRoom of wallRooms) {
@@ -414,10 +402,6 @@ let generate_dungeon_candidate = (
     splitProbabilities,
     wallRemoveProbability,
   } = params;
-  console.log("Generating dungeon candidate with depth:", depth);
-  console.log(
-    `level parameters: minRoomCount: ${minRoomCount}, maxRoomCount: ${maxRoomCount}, maxRoomArea: ${maxRoomArea}, splitProbabilities: ${splitProbabilities}, wallRemoveProbability: ${wallRemoveProbability}`,
-  );
 
   let partitions = [new Partition(0, 0, map_w, map_h)];
   let grid = [];
@@ -430,16 +414,16 @@ let generate_dungeon_candidate = (
   }
   for (let i = 0; i < 100; i++) {
     partitions.forEach((partition) => {
-      if (partition.area() > params.maxRoomArea) {
-        console.log("Splitting partition");
+      let roomArea =
+        Math.random() > 0.95 ? params.softMaxRoomArea : params.maxRoomArea;
+      if (partition.area() > roomArea) {
         partitions = partitions.filter((p) => p !== partition);
         partitions = partitions.concat(split_partition(partition, 0.5));
       }
     });
-    console.log(partitions.length);
   }
 
-  visualize_partitions(partitions, map_w, map_h);
+  //visualize_partitions(partitions, map_w, map_h);
   partitions = remove_wall_rooms(
     partitions,
     map_w,
@@ -470,7 +454,6 @@ let generate_dungeon_candidate = (
 
   // Check if we have any partitions before proceeding
   if (partitions.length === 0) {
-    console.log("No partitions generated.");
     return [];
   }
 
@@ -930,12 +913,18 @@ export class LevelGenerator {
     }
   };
 
-  getLevels = (
+  createLevel = (depth: number) => {
+    let newLevel = new Level(this.game, depth, 100, 100);
+    this.game.levels.push(newLevel);
+    this.game.level = newLevel;
+  };
+
+  getRooms = (
     partitions: Array<Partition>,
     depth: number,
     mapGroup: number,
   ): Array<Room> => {
-    this.setOpenWallsForPartitions(partitions, 35, 35); // Using standard map size
+    //this.setOpenWallsForPartitions(partitions, 35, 35); // Using standard map size
 
     let rooms: Array<Room> = [];
 
@@ -952,6 +941,7 @@ export class LevelGenerator {
         partition.type,
         depth,
         mapGroup,
+        this.game.levels[depth],
         Random.rand,
         partition.isTopOpen, // New parameter
         partition.isRightOpen, // New parameter
@@ -1016,16 +1006,19 @@ export class LevelGenerator {
     }
 
     // Get the levels based on the partitions
-    let levels = this.getLevels(partitions, depth, mapGroup);
+    this.createLevel(depth);
+    let rooms = this.getRooms(partitions, depth, mapGroup);
+    console.log(`mapGroup: ${mapGroup}`);
+    console.log(`depth: ${depth}`);
 
     // Update the current floor first level ID if it's not a cave
     if (!cave) this.currentFloorFirstLevelID = this.game.rooms.length;
 
     // Add the new levels to the game rooms
-    this.game.rooms = [...this.game.rooms, ...levels];
+    this.game.rooms = [...this.game.rooms, ...rooms];
 
     // Generate the rope hole if it exists
-    for (let room of levels) {
+    for (let room of rooms) {
       if (room.type === RoomType.ROPEHOLE) {
         for (let x = room.roomX; x < room.roomX + room.width; x++) {
           for (let y = room.roomY; y < room.roomY + room.height; y++) {
@@ -1033,8 +1026,8 @@ export class LevelGenerator {
             if (tile instanceof DownLadder && tile.isRope) {
               tile.generate();
               return cave
-                ? levels.find((l) => l.type === RoomType.ROPECAVE)
-                : levels.find((l) => l.type === RoomType.START);
+                ? rooms.find((r) => r.type === RoomType.ROPECAVE)
+                : rooms.find((r) => r.type === RoomType.START);
             }
           }
         }
@@ -1043,8 +1036,8 @@ export class LevelGenerator {
 
     // Return the start room or the rope cave room
     return cave
-      ? levels.find((l) => l.type === RoomType.ROPECAVE)
-      : levels.find((l) => l.type === RoomType.START);
+      ? rooms.find((r) => r.type === RoomType.ROPECAVE)
+      : rooms.find((r) => r.type === RoomType.START);
   };
 
   generateFirstNFloors = (game, numFloors) => {

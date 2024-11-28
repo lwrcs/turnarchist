@@ -111,6 +111,7 @@ export class Game {
   started: boolean;
   startedFadeOut: boolean;
   screenShakeActive: boolean;
+  encounteredEnemies: Array<number>;
   private startScreenAlpha = 1;
 
   static text_rendering_canvases: Record<string, HTMLCanvasElement>;
@@ -293,7 +294,7 @@ export class Game {
           this.tutorialActive = false;
           this.screenShakeActive = false;
           this.levels = [];
-
+          this.encounteredEnemies = [];
           this.newGame();
         }
       };
@@ -306,6 +307,8 @@ export class Game {
   }
 
   newGame = () => {
+    this.encounteredEnemies = [];
+    this.levels = [];
     let gs = new GameState();
     gs.seed = (Math.random() * 4294967296) >>> 0;
     gs.randomState = (Math.random() * 4294967296) >>> 0;

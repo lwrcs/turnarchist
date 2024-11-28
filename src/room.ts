@@ -74,10 +74,10 @@ import { RedGem } from "./item/redgem";
 import { EnergyWizardEnemy } from "./entity/enemy/energyWizard";
 import { ReverbEngine } from "./reverb";
 import { astar } from "./astarclass";
-import {
-  EnemyParameters,
-  LevelParameterGenerator,
-} from "./levelParametersGenerator";
+import { Level } from "./level";
+import { Warhammer } from "./weapon/warhammer";
+import { Spellbook } from "./weapon/spellbook";
+import { Torch } from "./item/torch";
 export enum RoomType {
   START,
   DUNGEON,
@@ -183,6 +183,7 @@ export class Room {
   savePoint: Room;
   lastEnemyCount: number;
   outerWalls: Array<Wall>;
+  level: Level;
   private pointInside(
     x: number,
     y: number,
@@ -205,6 +206,7 @@ export class Room {
     type: RoomType,
     depth: number,
     mapGroup: number,
+    level: Level,
     rand = Random.rand,
     isTopOpen = false,
     isRightOpen = false,
@@ -232,6 +234,7 @@ export class Room {
     this.entities = Array<Entity>();
     this.lightSources = Array<LightSource>();
     this.innerWalls = Array<Wall>();
+    this.level = level;
 
     this.roomArray = [];
     for (let x = this.roomX - 1; x < this.roomX + this.width + 1; x++) {
@@ -571,18 +574,23 @@ export class Room {
     );
     // Loop through the number of enemies to be added
     for (let i = 0; i < numEnemies; i++) {
+      let rerolls = 1;
+
+      if (tiles.length === 0) {
+        console.log(`No tiles left to spawn enemies`);
+        break;
+      }
       let emptyTiles = this.getRandomEmptyPosition(tiles);
-      if (emptyTiles.x === null || emptyTiles.y === null) break;
+      if (emptyTiles.x === null || emptyTiles.y === null) {
+        i = numEnemies;
+        break;
+      }
       const { x, y } = emptyTiles;
 
       // Define the enemy tables for each depth level
-      let tables = LevelParameterGenerator.getEnemyParameters(
-        this.depth,
-      ).enemyTables;
+      let tables = this.level.enemyParameters.enemyTables;
       // Define the maximum depth level
-      let max_depth_table = LevelParameterGenerator.getEnemyParameters(
-        this.depth,
-      ).maxDepthTable;
+      let max_depth_table = this.level.enemyParameters.maxDepthTable;
       // Get the current depth level, capped at the maximum
       let d = Math.min(this.depth, max_depth_table);
       // If there is a table for the current depth level
@@ -609,14 +617,18 @@ export class Room {
         };
 
         // Randomly select an enemy type from the table
-        let type = Game.randTable(tables[d], rand);
+        let type = Game.randTable(tables[d], Math.random);
+        if (this.game.encounteredEnemies.includes(type) && rerolls > 0) {
+          type = Game.randTable(tables[d], Math.random);
+          rerolls--;
+        }
         // If we roll a spawner and spawnerCount is greater than 0, we have a 1/spawnerCount chance to roll another spawner; otherwise, we reroll
         if (type === 7 && spawnerCount > 0) {
           let roll = Math.random();
           if (roll <= 1 / spawnerCount) {
             type = 7;
           } else {
-            type = Game.randTable(tables[d], rand);
+            type = Game.randTable(tables[d], Math.random);
           }
         }
         // Add the selected enemy type to the room
@@ -693,6 +705,29 @@ export class Room {
         }
       }
     }
+    let spawnerAmounts = [1, 1, 1, 2, 2, 3];
+    if (this.depth > 0 && Math.random() <= 0.5) {
+      let spawnerAmount = Game.randTable(spawnerAmounts, Math.random);
+      console.log(`Adding ${spawnerAmount} spawners`);
+      this.addSpawners(spawnerAmount, Math.random);
+    }
+  }
+  private addSpawners(numSpawners: number, rand: () => number) {
+    let tiles = this.getEmptyTiles();
+    if (tiles === null) {
+      console.log(`No tiles left to spawn spawners`);
+      return;
+    }
+    for (let i = 0; i < numSpawners; i++) {
+      const { x, y } = this.getRandomEmptyPosition(tiles);
+      Spawner.add(
+        this,
+        this.game,
+        x,
+        y,
+        this.level.enemyParameters.enemyTables[this.depth],
+      );
+    }
   }
 
   private addObstacles(numObstacles: number, rand: () => number) {
@@ -755,7 +790,11 @@ export class Room {
 
   private addVendingMachine(rand: () => number) {
     const { x, y } = this.getRandomEmptyPosition(this.getEmptyTiles());
-    let type = Game.randTable([1, 1, 1, 1, 1, 1, 1, 2, 3, 4, 5, 6], rand);
+    let table =
+      this.depth > 0
+        ? [1, 1, 1, 1, 1, 1, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+        : [1, 1, 1];
+    let type = Game.randTable(table, rand);
     switch (type) {
       case 1:
         VendingMachine.add(this, this.game, x, y, new Heart(this, x, y));
@@ -775,6 +814,15 @@ export class Room {
       case 6:
         VendingMachine.add(this, this.game, x, y, new Shotgun(this, x, y));
         break;
+      case 7:
+        VendingMachine.add(this, this.game, x, y, new Warhammer(this, x, y));
+        break;
+      case 8:
+        VendingMachine.add(this, this.game, x, y, new Spellbook(this, x, y));
+        break;
+      case 9:
+        VendingMachine.add(this, this.game, x, y, new Torch(this, x, y));
+        break;
     }
   }
 
@@ -791,7 +839,7 @@ export class Room {
     this.addRandomTorches("medium");
 
     if (factor > 15)
-      this.addSpikeTraps(Game.randTable([0, 0, 0, 1, 1, 2, 5], rand), rand);
+      this.addSpikeTraps(Game.randTable([0, 0, 0, 1, 1, 2, 3], rand), rand);
     let numEmptyTiles = this.getEmptyTiles().length;
     let numTotalObstacles = Math.floor(numEmptyTiles * 0.35 * rand());
     let numPlants = Math.ceil(numTotalObstacles * rand());

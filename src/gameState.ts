@@ -103,7 +103,7 @@ export class ProjectileState {
       this.wizardState = projectile.state;
       this.levelID = game.rooms.indexOf(projectile.parent.room);
       this.wizardParentID = projectile.parent.room.entities.indexOf(
-        projectile.parent
+        projectile.parent,
       );
     }
   }
@@ -208,11 +208,11 @@ export class EnemyState {
       this.seenPlayer = enemy.seenPlayer;
       if (enemy.seenPlayer) {
         this.targetPlayerID = Object.keys(game.players).find(
-          (key) => game.players[key] === enemy.targetPlayer
+          (key) => game.players[key] === enemy.targetPlayer,
         );
         if (!this.targetPlayerID)
           this.targetPlayerID = Object.keys(game.offlinePlayers).find(
-            (key) => game.offlinePlayers[key] === enemy.targetPlayer
+            (key) => game.offlinePlayers[key] === enemy.targetPlayer,
           );
       }
       this.drops = [];
@@ -240,11 +240,11 @@ export class EnemyState {
       this.seenPlayer = enemy.seenPlayer;
       if (enemy.seenPlayer) {
         this.targetPlayerID = Object.keys(game.players).find(
-          (key) => game.players[key] === enemy.targetPlayer
+          (key) => game.players[key] === enemy.targetPlayer,
         );
         if (!this.targetPlayerID)
           this.targetPlayerID = Object.keys(game.offlinePlayers).find(
-            (key) => game.offlinePlayers[key] === enemy.targetPlayer
+            (key) => game.offlinePlayers[key] === enemy.targetPlayer,
           );
       }
     }
@@ -257,11 +257,11 @@ export class EnemyState {
       this.seenPlayer = enemy.seenPlayer;
       if (enemy.seenPlayer) {
         this.targetPlayerID = Object.keys(game.players).find(
-          (key) => game.players[key] === enemy.targetPlayer
+          (key) => game.players[key] === enemy.targetPlayer,
         );
         if (!this.targetPlayerID)
           this.targetPlayerID = Object.keys(game.offlinePlayers).find(
-            (key) => game.offlinePlayers[key] === enemy.targetPlayer
+            (key) => game.offlinePlayers[key] === enemy.targetPlayer,
           );
       }
     }
@@ -271,11 +271,11 @@ export class EnemyState {
       this.seenPlayer = enemy.seenPlayer;
       if (enemy.seenPlayer) {
         this.targetPlayerID = Object.keys(game.players).find(
-          (key) => game.players[key] === enemy.targetPlayer
+          (key) => game.players[key] === enemy.targetPlayer,
         );
         if (!this.targetPlayerID)
           this.targetPlayerID = Object.keys(game.offlinePlayers).find(
-            (key) => game.offlinePlayers[key] === enemy.targetPlayer
+            (key) => game.offlinePlayers[key] === enemy.targetPlayer,
           );
       }
     }
@@ -291,11 +291,11 @@ export class EnemyState {
       if (enemy.playerOpened) {
         this.isPlayerOpened = true;
         this.playerOpenedID = Object.keys(game.players).find(
-          (key) => game.players[key] === enemy.playerOpened
+          (key) => game.players[key] === enemy.playerOpened,
         );
         if (!this.playerOpenedID)
           this.playerOpenedID = Object.keys(game.offlinePlayers).find(
-            (key) => game.offlinePlayers[key] === enemy.playerOpened
+            (key) => game.offlinePlayers[key] === enemy.playerOpened,
           );
       }
       this.open = enemy.open;
@@ -318,11 +318,11 @@ export class EnemyState {
       this.seenPlayer = enemy.seenPlayer;
       if (enemy.seenPlayer) {
         this.targetPlayerID = Object.keys(game.players).find(
-          (key) => game.players[key] === enemy.targetPlayer
+          (key) => game.players[key] === enemy.targetPlayer,
         );
         if (!this.targetPlayerID)
           this.targetPlayerID = Object.keys(game.offlinePlayers).find(
-            (key) => game.offlinePlayers[key] === enemy.targetPlayer
+            (key) => game.offlinePlayers[key] === enemy.targetPlayer,
           );
       }
     }
@@ -668,11 +668,11 @@ export class PlayerState {
     if (player.openVendingMachine) {
       this.hasOpenVendingMachine = true;
       this.openVendingMachineLevelID = game.rooms.indexOf(
-        player.openVendingMachine.room
+        player.openVendingMachine.room,
       );
       this.openVendingMachineID =
         player.openVendingMachine.room.entities.indexOf(
-          player.openVendingMachine
+          player.openVendingMachine,
         );
     }
     this.sightRadius = player.sightRadius;
@@ -747,9 +747,10 @@ export const loadGameState = (
   game: Game,
   activeUsernames: Array<string>,
   gameState: GameState,
-  newWorld: boolean
+  newWorld: boolean,
 ) => {
   game.rooms = Array<Room>();
+
   game.levelgen = new LevelGenerator();
   game.levelgen.setSeed(gameState.seed);
   if (newWorld) gameState.depth = 0;
@@ -773,7 +774,7 @@ export const loadGameState = (
           game.offlinePlayers[i] = loadPlayer(
             i,
             gameState.offlinePlayers[i],
-            game
+            game,
           );
       }
     }
@@ -795,12 +796,12 @@ export const loadGameState = (
       game.players[game.localPlayerID].x =
         game.rooms[game.levelgen.currentFloorFirstLevelID].roomX +
         Math.floor(
-          game.rooms[game.levelgen.currentFloorFirstLevelID].width / 2
+          game.rooms[game.levelgen.currentFloorFirstLevelID].width / 2,
         );
       game.players[game.localPlayerID].y =
         game.rooms[game.levelgen.currentFloorFirstLevelID].roomY +
         Math.floor(
-          game.rooms[game.levelgen.currentFloorFirstLevelID].height / 2
+          game.rooms[game.levelgen.currentFloorFirstLevelID].height / 2,
         );
       game.room = game.rooms[game.levelgen.currentFloorFirstLevelID];
 
@@ -826,14 +827,11 @@ export const loadGameState = (
     new Pot(game.room, game, p.x - 1, p.y - 1),
     new Pot(game.room, game, p.x + 1, p.y - 1),
     new Pot(game.room, game, p.x - 1, p.y),
-    new Pot(game.room, game, p.x, p.y + 1)
+    new Pot(game.room, game, p.x, p.y + 1),
   );
   game.room.doors.forEach((door) => {
     door.lock();
   });
-  let newLevel = new Level(game, 1, 100, 100);
-  game.levels.push(newLevel);
-  game.level = newLevel;
   /*
   game.rooms.forEach((room) => {
     room.addWallCrack();

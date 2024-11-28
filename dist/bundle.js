@@ -3796,8 +3796,10 @@ exports.Spawner = void 0;
 var game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 var floor_1 = __webpack_require__(/*! ../../tile/floor */ "./src/tile/floor.ts");
 var hitWarning_1 = __webpack_require__(/*! ../../hitWarning */ "./src/hitWarning.ts");
+var greengem_1 = __webpack_require__(/*! ../../item/greengem */ "./src/item/greengem.ts");
 var skullEnemy_1 = __webpack_require__(/*! ./skullEnemy */ "./src/entity/enemy/skullEnemy.ts");
 var enemySpawnAnimation_1 = __webpack_require__(/*! ../../projectile/enemySpawnAnimation */ "./src/projectile/enemySpawnAnimation.ts");
+var redgem_1 = __webpack_require__(/*! ../../item/redgem */ "./src/item/redgem.ts");
 var bluegem_1 = __webpack_require__(/*! ../../item/bluegem */ "./src/item/bluegem.ts");
 var knightEnemy_1 = __webpack_require__(/*! ./knightEnemy */ "./src/entity/enemy/knightEnemy.ts");
 var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
@@ -3945,7 +3947,7 @@ var Spawner = /** @class */ (function (_super) {
             }
         };
         _this.dropLoot = function () {
-            _this.room.items.push(new bluegem_1.BlueGem(_this.room, _this.x, _this.y));
+            _this.room.items.push(_this.drop);
         };
         _this.ticks = 0;
         _this.health = 4;
@@ -3953,6 +3955,18 @@ var Spawner = /** @class */ (function (_super) {
         _this.tileX = 6;
         _this.tileY = 4;
         _this.seenPlayer = true;
+        var drop = game_1.Game.randTable([1, 2, 3], random_1.Random.rand);
+        switch (drop) {
+            case 1:
+                _this.drop = new bluegem_1.BlueGem(_this.room, _this.x, _this.y);
+                break;
+            case 2:
+                _this.drop = new greengem_1.GreenGem(_this.room, _this.x, _this.y);
+                break;
+            case 3:
+                _this.drop = new redgem_1.RedGem(_this.room, _this.x, _this.y);
+                break;
+        }
         _this.enemyTable = enemyTable.filter(function (t) { return t !== 7; });
         var randSpawnType = game_1.Game.randTable(_this.enemyTable, random_1.Random.rand);
         _this.enemySpawnType = randSpawnType;
@@ -5754,20 +5768,21 @@ exports.VendingMachine = void 0;
 var game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 var entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 var coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
-var coal_1 = __webpack_require__(/*! ../../item/coal */ "./src/item/coal.ts");
 var greengem_1 = __webpack_require__(/*! ../../item/greengem */ "./src/item/greengem.ts");
 var gameConstants_1 = __webpack_require__(/*! ../../gameConstants */ "./src/gameConstants.ts");
 var shotgun_1 = __webpack_require__(/*! ../../weapon/shotgun */ "./src/weapon/shotgun.ts");
 var armor_1 = __webpack_require__(/*! ../../item/armor */ "./src/item/armor.ts");
 var heart_1 = __webpack_require__(/*! ../../item/heart */ "./src/item/heart.ts");
 var spear_1 = __webpack_require__(/*! ../../weapon/spear */ "./src/weapon/spear.ts");
-var gold_1 = __webpack_require__(/*! ../../item/gold */ "./src/item/gold.ts");
 var bluegem_1 = __webpack_require__(/*! ../../item/bluegem */ "./src/item/bluegem.ts");
 var dualdagger_1 = __webpack_require__(/*! ../../weapon/dualdagger */ "./src/weapon/dualdagger.ts");
 var lantern_1 = __webpack_require__(/*! ../../item/lantern */ "./src/item/lantern.ts");
 var redgem_1 = __webpack_require__(/*! ../../item/redgem */ "./src/item/redgem.ts");
 var entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 var random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
+var warhammer_1 = __webpack_require__(/*! ../../weapon/warhammer */ "./src/weapon/warhammer.ts");
+var torch_1 = __webpack_require__(/*! ../../item/torch */ "./src/item/torch.ts");
+var spellbook_1 = __webpack_require__(/*! ../../weapon/spellbook */ "./src/weapon/spellbook.ts");
 var OPEN_TIME = 150;
 var FILL_COLOR = "#5a595b";
 var OUTLINE_COLOR = "#292c36";
@@ -5905,33 +5920,48 @@ var VendingMachine = /** @class */ (function (_super) {
         _this.name = "vending machine";
         if (_this.item instanceof shotgun_1.Shotgun) {
             var g = new bluegem_1.BlueGem(room, 0, 0);
-            g.stackCount = game_1.Game.randTable([5, 5, 6, 7], random_1.Random.rand);
+            g.stackCount = game_1.Game.randTable([7], random_1.Random.rand);
             _this.costItems = [g];
         }
         else if (_this.item instanceof heart_1.Heart) {
             var c = new coin_1.Coin(room, 0, 0);
             c.stackCount = 10;
             _this.costItems = [c];
-            _this.isInf = true;
+            _this.quantity = 3;
         }
         else if (_this.item instanceof spear_1.Spear) {
             var g = new greengem_1.GreenGem(room, 0, 0);
-            g.stackCount = game_1.Game.randTable([5, 5, 6, 7], random_1.Random.rand);
+            g.stackCount = game_1.Game.randTable([5], random_1.Random.rand);
             _this.costItems = [g];
         }
         else if (_this.item instanceof armor_1.Armor) {
-            var g = new gold_1.Gold(room, 0, 0);
-            g.stackCount = game_1.Game.randTable([5, 5, 6, 7], random_1.Random.rand);
+            var g = new greengem_1.GreenGem(room, 0, 0);
+            g.stackCount = game_1.Game.randTable([5], random_1.Random.rand);
             _this.costItems = [g];
         }
         else if (_this.item instanceof dualdagger_1.DualDagger) {
-            var g = new redgem_1.RedGem(room, 0, 0);
-            g.stackCount = game_1.Game.randTable([5, 5, 6, 7], random_1.Random.rand);
+            var g = new bluegem_1.BlueGem(room, 0, 0);
+            g.stackCount = game_1.Game.randTable([5], random_1.Random.rand);
             _this.costItems = [g];
         }
         else if (_this.item instanceof lantern_1.Lantern) {
-            var g = new coal_1.Coal(room, 0, 0);
-            g.stackCount = game_1.Game.randTable([25, 26, 27, 28], random_1.Random.rand);
+            var c = new coin_1.Coin(room, 0, 0);
+            c.stackCount = game_1.Game.randTable([50], random_1.Random.rand);
+            _this.costItems = [c];
+        }
+        else if (_this.item instanceof warhammer_1.Warhammer) {
+            var g = new redgem_1.RedGem(room, 0, 0);
+            g.stackCount = game_1.Game.randTable([5], random_1.Random.rand);
+            _this.costItems = [g];
+        }
+        else if (_this.item instanceof spellbook_1.Spellbook) {
+            var g = new redgem_1.RedGem(room, 0, 0);
+            g.stackCount = game_1.Game.randTable([7], random_1.Random.rand);
+            _this.costItems = [g];
+        }
+        else if (_this.item instanceof torch_1.Torch) {
+            var g = new redgem_1.RedGem(room, 0, 0);
+            g.stackCount = game_1.Game.randTable([1], random_1.Random.rand);
             _this.costItems = [g];
         }
         return _this;
@@ -6428,6 +6458,8 @@ var Game = /** @class */ (function () {
         this.loginMessage = "";
         this.startScreenAlpha = 1;
         this.newGame = function () {
+            _this.encounteredEnemies = [];
+            _this.levels = [];
             var gs = new gameState_1.GameState();
             gs.seed = (Math.random() * 4294967296) >>> 0;
             gs.randomState = (Math.random() * 4294967296) >>> 0;
@@ -7037,6 +7069,7 @@ var Game = /** @class */ (function () {
                     _this.tutorialActive = false;
                     _this.screenShakeActive = false;
                     _this.levels = [];
+                    _this.encounteredEnemies = [];
                     _this.newGame();
                 }
             };
@@ -7354,7 +7387,6 @@ var spear_1 = __webpack_require__(/*! ./weapon/spear */ "./src/weapon/spear.ts")
 var pickaxe_1 = __webpack_require__(/*! ./weapon/pickaxe */ "./src/weapon/pickaxe.ts");
 var backpack_1 = __webpack_require__(/*! ./item/backpack */ "./src/item/backpack.ts");
 var energyWizard_1 = __webpack_require__(/*! ./entity/enemy/energyWizard */ "./src/entity/enemy/energyWizard.ts");
-var level_1 = __webpack_require__(/*! ./level */ "./src/level.ts");
 var HitWarningState = /** @class */ (function () {
     function HitWarningState(hw) {
         this.x = hw.x;
@@ -8055,9 +8087,6 @@ var loadGameState = function (game, activeUsernames, gameState, newWorld) {
     game.room.doors.forEach(function (door) {
         door.lock();
     });
-    var newLevel = new level_1.Level(game, 1, 100, 100);
-    game.levels.push(newLevel);
-    game.level = newLevel;
     /*
     game.rooms.forEach((room) => {
       room.addWallCrack();
@@ -10978,11 +11007,57 @@ exports.Usable = Usable;
 /*!**********************!*\
   !*** ./src/level.ts ***!
   \**********************/
-/***/ ((__unused_webpack_module, exports) => {
+/***/ (function(__unused_webpack_module, exports) {
 
 
+var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
+    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+        if (ar || !(i in from)) {
+            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+            ar[i] = from[i];
+        }
+    }
+    return to.concat(ar || Array.prototype.slice.call(from));
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Level = void 0;
+exports.Level = exports.enemyMinimumDepth = void 0;
+exports.enemyMinimumDepth = {
+    1: 0,
+    2: 0,
+    3: 0,
+    4: 0,
+    5: 1,
+    6: 2,
+    7: 200,
+    8: 1,
+    9: 1,
+    10: 3,
+    11: 2,
+    12: 2,
+    13: 3,
+    14: 3, // FireWizardEnemy
+};
+/*
+interface enemySpawnPoolData {
+  maxCount: number;
+  minCount: number;
+}
+
+interface environmentData {
+  name: string;
+  preferredEnemies: Array<Enemy>;
+  preferredEntities: Array<Entity>;
+  entityBlacklist: Array<Entity>;
+  enemySpawnPoolData: enemySpawnPoolData;
+  roomData: roomData;
+}
+
+interface entitySpawnData {
+  enemy: Enemy;
+  spawnChance: number;
+  maximumCount: number;
+}
+*/
 var Level = /** @class */ (function () {
     function Level(game, depth, width, height) {
         var _this = this;
@@ -11013,7 +11088,96 @@ var Level = /** @class */ (function () {
         this.rooms = game.rooms;
         this.initializeLevelArray();
         //this.loadRoomsIntoLevelArray();
+        console.log("depth: ".concat(this.depth));
+        this.enemyParameters = this.getEnemyParameters();
     }
+    /**
+     * Generates enemy parameters based on the current depth.
+     * @param depth The current depth level.
+     * @returns An object conforming to the EnemyParameters interface.
+     */
+    Level.prototype.getEnemyParameters = function () {
+        var _a;
+        var _this = this;
+        var currentDepth = this.depth <= 7 ? this.depth : 8;
+        // Generate the enemy pool based on current depth
+        var enemyPoolIds = this.generateEnemyPoolIds(currentDepth);
+        // Create enemyTables where each level maps to the enemyPoolIds
+        var enemyTables = {};
+        for (var tableDepth = 0; tableDepth <= currentDepth; tableDepth++) {
+            // Assign the same pool for all tables up to current depth
+            enemyTables[tableDepth] = enemyPoolIds;
+        }
+        var newEnemies = enemyTables[currentDepth].filter(function (id) { return !_this.game.encounteredEnemies.includes(id); });
+        (_a = this.game.encounteredEnemies).push.apply(_a, newEnemies);
+        console.log("encounteredEnemies for depth ".concat(this.depth, ": ").concat(this.game.encounteredEnemies));
+        return {
+            enemyTables: enemyTables,
+            maxDepthTable: currentDepth,
+            minDepths: exports.enemyMinimumDepth,
+        };
+    };
+    /**
+     * Generates the enemy pool IDs based on the current depth, introducing up to 2 new enemies each level.
+     * @param depth The current depth level.
+     * @returns An array of selected enemy IDs.
+     */
+    Level.prototype.generateEnemyPoolIds = function (depth) {
+        var _a;
+        var _this = this;
+        var availableEnemies = Object.entries(exports.enemyMinimumDepth)
+            .filter(function (_a) {
+            var enemyId = _a[0], minDepth = _a[1];
+            return depth >= minDepth;
+        })
+            .map(function (_a) {
+            var enemyId = _a[0];
+            return Number(enemyId);
+        });
+        // Determine which enemies are new (not yet encountered)
+        var newEnemies = availableEnemies.filter(function (id) { return !_this.game.encounteredEnemies.includes(id); });
+        // Decide how many new enemies to introduce (1 or 2)
+        var newEnemiesToAddCount = Math.min(newEnemies.length, 2);
+        var newEnemiesToAdd = this.getRandomElements(newEnemies, newEnemiesToAddCount);
+        // Add the new enemies to encounteredEnemies
+        (_a = this.game.encounteredEnemies).push.apply(_a, newEnemiesToAdd);
+        // Log the newly added enemies for debugging
+        console.log("New enemies introduced at depth ".concat(depth, ": ").concat(newEnemiesToAdd));
+        // Combine encountered enemies to form the enemy pool
+        var enemyPoolIds = this.game.encounteredEnemies.slice();
+        // Determine the number of enemy types for the current depth
+        var numberOfTypes = this.getNumberOfEnemyTypes(depth);
+        // Select the final set of enemy IDs for the pool
+        var selectedEnemyIds = this.getRandomElements(enemyPoolIds, numberOfTypes);
+        // Ensure uniqueness and limit based on available enemies
+        return Array.from(new Set(selectedEnemyIds)).slice(0, numberOfTypes);
+    };
+    /**
+     * Determines the number of enemy types allowed based on the current depth.
+     * @param depth The current depth level.
+     * @returns The number of enemy types.
+     */
+    Level.prototype.getNumberOfEnemyTypes = function (depth) {
+        // Example logic: depth 0 -> 2 types, depth 1 -> 4, depth 2 -> 6, etc.
+        var numberOfTypes = depth === 0 ? 2 : Math.ceil(Math.sqrt(depth + 1)) + 2;
+        console.log("numberOfTypes: ".concat(numberOfTypes));
+        return numberOfTypes;
+    };
+    /**
+     * Utility function to get random elements from an array.
+     * @param array The array to select from.
+     * @param count The number of elements to select.
+     * @returns An array of randomly selected elements.
+     */
+    Level.prototype.getRandomElements = function (array, count) {
+        var _a;
+        var shuffled = __spreadArray([], array, true);
+        for (var i = shuffled.length - 1; i > 0; i--) {
+            var j = Math.floor(Math.random() * (i + 1));
+            _a = [shuffled[j], shuffled[i]], shuffled[i] = _a[0], shuffled[j] = _a[1];
+        }
+        return shuffled.slice(0, Math.min(count, shuffled.length));
+    };
     return Level;
 }());
 exports.Level = Level;
@@ -11082,6 +11246,7 @@ var room_1 = __webpack_require__(/*! ./room */ "./src/room.ts");
 var random_1 = __webpack_require__(/*! ./random */ "./src/random.ts");
 var downLadder_1 = __webpack_require__(/*! ./tile/downLadder */ "./src/tile/downLadder.ts");
 var levelParametersGenerator_1 = __webpack_require__(/*! ./levelParametersGenerator */ "./src/levelParametersGenerator.ts");
+var level_1 = __webpack_require__(/*! ./level */ "./src/level.ts");
 var PartitionConnection = /** @class */ (function () {
     function PartitionConnection(x, y, other) {
         this.x = x;
@@ -11380,16 +11545,8 @@ var get_wall_rooms = function (partitions, mapWidth, mapHeight) {
             hasTopPath,
             hasBottomPath,
         ].filter(Boolean).length;
-        // Log the path statuses for debugging
-        console.log("Partition ".concat(index, ": (").concat(partition.x, ", ").concat(partition.y, ", ").concat(partition.w, ", ").concat(partition.h, ")"));
-        console.log("  hasLeftPath: ".concat(hasLeftPath));
-        console.log("  hasRightPath: ".concat(hasRightPath));
-        console.log("  hasTopPath: ".concat(hasTopPath));
-        console.log("  hasBottomPath: ".concat(hasBottomPath));
-        console.log("  Open Paths Count: ".concat(openPaths));
         // Define wall rooms as those with exactly one open path
         var isWallRoom = openPaths === 1;
-        console.log("  isWallRoom: ".concat(isWallRoom));
         return isWallRoom;
     });
 };
@@ -11397,7 +11554,6 @@ var remove_wall_rooms = function (partitions, w, h, prob) {
     if (prob === void 0) { prob = 1.0; }
     // Get all wall rooms
     var wallRooms = get_wall_rooms(partitions, w, h);
-    console.log("wallRooms.length: ".concat(wallRooms.length));
     var _loop_6 = function (wallRoom) {
         if (random_1.Random.rand() < prob) {
             partitions = partitions.filter(function (p) { return p !== wallRoom; });
@@ -11429,8 +11585,6 @@ var populate_grid = function (partitions, grid, w, h) {
 };
 var generate_dungeon_candidate = function (map_w, map_h, depth, params) {
     var minRoomCount = params.minRoomCount, maxRoomCount = params.maxRoomCount, maxRoomArea = params.maxRoomArea, splitProbabilities = params.splitProbabilities, wallRemoveProbability = params.wallRemoveProbability;
-    console.log("Generating dungeon candidate with depth:", depth);
-    console.log("level parameters: minRoomCount: ".concat(minRoomCount, ", maxRoomCount: ").concat(maxRoomCount, ", maxRoomArea: ").concat(maxRoomArea, ", splitProbabilities: ").concat(splitProbabilities, ", wallRemoveProbability: ").concat(wallRemoveProbability));
     var partitions = [new Partition(0, 0, map_w, map_h)];
     var grid = [];
     // Use splitProbabilities for splitting
@@ -11441,15 +11595,14 @@ var generate_dungeon_candidate = function (map_w, map_h, depth, params) {
     }
     for (var i = 0; i < 100; i++) {
         partitions.forEach(function (partition) {
-            if (partition.area() > params.maxRoomArea) {
-                console.log("Splitting partition");
+            var roomArea = Math.random() > 0.95 ? params.softMaxRoomArea : params.maxRoomArea;
+            if (partition.area() > roomArea) {
                 partitions = partitions.filter(function (p) { return p !== partition; });
                 partitions = partitions.concat(split_partition(partition, 0.5));
             }
         });
-        console.log(partitions.length);
     }
-    visualize_partitions(partitions, map_w, map_h);
+    //visualize_partitions(partitions, map_w, map_h);
     partitions = remove_wall_rooms(partitions, map_w, map_h, wallRemoveProbability);
     // Remove wall rooms based on probability
     /*
@@ -11473,7 +11626,6 @@ var generate_dungeon_candidate = function (map_w, map_h, depth, params) {
     */
     // Check if we have any partitions before proceeding
     if (partitions.length === 0) {
-        console.log("No partitions generated.");
         return [];
     }
     //populate the grid with partitions
@@ -11839,13 +11991,18 @@ var LevelGenerator = /** @class */ (function () {
                 }
             }
         };
-        this.getLevels = function (partitions, depth, mapGroup) {
-            _this.setOpenWallsForPartitions(partitions, 35, 35); // Using standard map size
+        this.createLevel = function (depth) {
+            var newLevel = new level_1.Level(_this.game, depth, 100, 100);
+            _this.game.levels.push(newLevel);
+            _this.game.level = newLevel;
+        };
+        this.getRooms = function (partitions, depth, mapGroup) {
+            //this.setOpenWallsForPartitions(partitions, 35, 35); // Using standard map size
             var rooms = [];
             for (var i = 0; i < partitions.length; i++) {
                 var partition = partitions[i];
                 // Pass open walls information to the Room constructor
-                var room = new room_1.Room(_this.game, partition.x - 1, partition.y - 1, partition.w + 2, partition.h + 2, partition.type, depth, mapGroup, random_1.Random.rand, partition.isTopOpen, // New parameter
+                var room = new room_1.Room(_this.game, partition.x - 1, partition.y - 1, partition.w + 2, partition.h + 2, partition.type, depth, mapGroup, _this.game.levels[depth], random_1.Random.rand, partition.isTopOpen, // New parameter
                 partition.isRightOpen, // New parameter
                 partition.isBottomOpen, // New parameter
                 partition.isLeftOpen);
@@ -11893,15 +12050,18 @@ var LevelGenerator = /** @class */ (function () {
                 console.warn("There are overlapping partitions.");
             }
             // Get the levels based on the partitions
-            var levels = _this.getLevels(partitions, depth, mapGroup);
+            _this.createLevel(depth);
+            var rooms = _this.getRooms(partitions, depth, mapGroup);
+            console.log("mapGroup: ".concat(mapGroup));
+            console.log("depth: ".concat(depth));
             // Update the current floor first level ID if it's not a cave
             if (!cave)
                 _this.currentFloorFirstLevelID = _this.game.rooms.length;
             // Add the new levels to the game rooms
-            _this.game.rooms = __spreadArray(__spreadArray([], _this.game.rooms, true), levels, true);
+            _this.game.rooms = __spreadArray(__spreadArray([], _this.game.rooms, true), rooms, true);
             // Generate the rope hole if it exists
-            for (var _i = 0, levels_1 = levels; _i < levels_1.length; _i++) {
-                var room = levels_1[_i];
+            for (var _i = 0, rooms_2 = rooms; _i < rooms_2.length; _i++) {
+                var room = rooms_2[_i];
                 if (room.type === room_1.RoomType.ROPEHOLE) {
                     for (var x = room.roomX; x < room.roomX + room.width; x++) {
                         for (var y = room.roomY; y < room.roomY + room.height; y++) {
@@ -11909,8 +12069,8 @@ var LevelGenerator = /** @class */ (function () {
                             if (tile instanceof downLadder_1.DownLadder && tile.isRope) {
                                 tile.generate();
                                 return cave
-                                    ? levels.find(function (l) { return l.type === room_1.RoomType.ROPECAVE; })
-                                    : levels.find(function (l) { return l.type === room_1.RoomType.START; });
+                                    ? rooms.find(function (r) { return r.type === room_1.RoomType.ROPECAVE; })
+                                    : rooms.find(function (r) { return r.type === room_1.RoomType.START; });
                             }
                         }
                     }
@@ -11918,8 +12078,8 @@ var LevelGenerator = /** @class */ (function () {
             }
             // Return the start room or the rope cave room
             return cave
-                ? levels.find(function (l) { return l.type === room_1.RoomType.ROPECAVE; })
-                : levels.find(function (l) { return l.type === room_1.RoomType.START; });
+                ? rooms.find(function (r) { return r.type === room_1.RoomType.ROPECAVE; })
+                : rooms.find(function (r) { return r.type === room_1.RoomType.START; });
         };
         this.generateFirstNFloors = function (game, numFloors) {
             _this.generate(game, 0, false);
@@ -11953,20 +12113,11 @@ exports.LevelGenerator = LevelGenerator;
 /*!*****************************************!*\
   !*** ./src/levelParametersGenerator.ts ***!
   \*****************************************/
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
-var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
-    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
-        if (ar || !(i in from)) {
-            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
-            ar[i] = from[i];
-        }
-    }
-    return to.concat(ar || Array.prototype.slice.call(from));
-};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.LevelParameterGenerator = exports.enemyMinimumDepth = exports.enemyClasses = void 0;
+exports.LevelParameterGenerator = exports.enemyClasses = void 0;
 var crabEnemy_1 = __webpack_require__(/*! ./entity/enemy/crabEnemy */ "./src/entity/enemy/crabEnemy.ts");
 var frogEnemy_1 = __webpack_require__(/*! ./entity/enemy/frogEnemy */ "./src/entity/enemy/frogEnemy.ts");
 var zombieEnemy_1 = __webpack_require__(/*! ./entity/enemy/zombieEnemy */ "./src/entity/enemy/zombieEnemy.ts");
@@ -11997,22 +12148,6 @@ exports.enemyClasses = {
     13: bigKnightEnemy_1.BigKnightEnemy,
     14: fireWizard_1.FireWizardEnemy,
 };
-exports.enemyMinimumDepth = {
-    1: 0,
-    2: 0,
-    3: 0,
-    4: 0,
-    5: 1,
-    6: 2,
-    7: 1,
-    8: 1,
-    9: 1,
-    10: 3,
-    11: 2,
-    12: 2,
-    13: 3,
-    14: 3, // FireWizardEnemy
-};
 var LevelParameterGenerator = /** @class */ (function () {
     function LevelParameterGenerator() {
     }
@@ -12025,78 +12160,15 @@ var LevelParameterGenerator = /** @class */ (function () {
         return {
             minRoomCount: depth > 0 ? 4 : 5,
             maxRoomCount: depth > 0 ? 12 : 8,
-            maxRoomArea: depth > 0 ? 120 : 40,
-            mapWidth: depth > 0 ? 35 : 25,
-            mapHeight: depth > 0 ? 35 : 25,
+            maxRoomArea: depth > 0 ? 120 + 10 * depth : 40,
+            mapWidth: 25 + 5 * depth,
+            mapHeight: 25 + 5 * depth,
             splitProbabilities: [0.75, 1.0, 0.25],
             wallRemoveProbability: depth > 0 ? 0.5 : 1,
             numLoopDoorsRange: [4, 8],
             numberOfRooms: depth > 0 ? 5 : 3,
+            softMaxRoomArea: 0.5 * (120 + 10 * depth),
         };
-    };
-    /**
-     * Generates enemy parameters based on the current depth.
-     * @param depth The current depth level.
-     * @returns An object conforming to the EnemyParameters interface.
-     */
-    LevelParameterGenerator.getEnemyParameters = function (depth) {
-        // Generate the enemy pool based on current depth
-        var enemyPoolIds = LevelParameterGenerator.generateEnemyPoolIds(depth);
-        // Create enemyTables where each level maps to the enemyPoolIds
-        var enemyTables = {};
-        for (var tableDepth = 0; tableDepth <= depth; tableDepth++) {
-            // Assign the same pool for all tables up to current depth
-            enemyTables[tableDepth] = enemyPoolIds;
-        }
-        return {
-            enemyTables: enemyTables,
-            maxDepthTable: depth,
-            minDepths: exports.enemyMinimumDepth,
-        };
-    };
-    /**
-     * Generates the enemy pool IDs based on the current depth.
-     * @param depth The current depth level.
-     * @returns An array of selected enemy IDs.
-     */
-    LevelParameterGenerator.generateEnemyPoolIds = function (depth) {
-        var availableEnemies = Object.entries(exports.enemyMinimumDepth)
-            .filter(function (_a) {
-            var enemyId = _a[0], minDepth = _a[1];
-            return depth >= minDepth;
-        })
-            .map(function (_a) {
-            var enemyId = _a[0];
-            return Number(enemyId);
-        });
-        var numberOfTypes = LevelParameterGenerator.getNumberOfEnemyTypes(depth);
-        var selectedEnemyIds = LevelParameterGenerator.getRandomElements(availableEnemies, numberOfTypes);
-        // Ensure uniqueness and limit based on available enemies
-        return Array.from(new Set(selectedEnemyIds)).slice(0, numberOfTypes);
-    };
-    /**
-     * Determines the number of enemy types allowed based on the current depth.
-     * @param depth The current depth level.
-     * @returns The number of enemy types.
-     */
-    LevelParameterGenerator.getNumberOfEnemyTypes = function (depth) {
-        // Example logic: depth 0 -> 2 types, depth 1 -> 4, depth 2 -> 6, etc.
-        return 2 + depth * 2;
-    };
-    /**
-     * Utility function to get random elements from an array.
-     * @param array The array to select from.
-     * @param count The number of elements to select.
-     * @returns An array of randomly selected elements.
-     */
-    LevelParameterGenerator.getRandomElements = function (array, count) {
-        var _a;
-        var shuffled = __spreadArray([], array, true);
-        for (var i = shuffled.length - 1; i > 0; i--) {
-            var j = Math.floor(Math.random() * (i + 1));
-            _a = [shuffled[j], shuffled[i]], shuffled[i] = _a[0], shuffled[j] = _a[1];
-        }
-        return shuffled.slice(0, Math.min(count, shuffled.length));
     };
     return LevelParameterGenerator;
 }());
@@ -14467,7 +14539,9 @@ var fireWizard_1 = __webpack_require__(/*! ./entity/enemy/fireWizard */ "./src/e
 var energyWizard_1 = __webpack_require__(/*! ./entity/enemy/energyWizard */ "./src/entity/enemy/energyWizard.ts");
 var reverb_1 = __webpack_require__(/*! ./reverb */ "./src/reverb.ts");
 var astarclass_1 = __webpack_require__(/*! ./astarclass */ "./src/astarclass.ts");
-var levelParametersGenerator_1 = __webpack_require__(/*! ./levelParametersGenerator */ "./src/levelParametersGenerator.ts");
+var warhammer_1 = __webpack_require__(/*! ./weapon/warhammer */ "./src/weapon/warhammer.ts");
+var spellbook_1 = __webpack_require__(/*! ./weapon/spellbook */ "./src/weapon/spellbook.ts");
+var torch_1 = __webpack_require__(/*! ./item/torch */ "./src/item/torch.ts");
 var RoomType;
 (function (RoomType) {
     RoomType[RoomType["START"] = 0] = "START";
@@ -14511,7 +14585,7 @@ var WallDirection;
     WallDirection["BOTTOMRIGHT"] = "BottomRight";
 })(WallDirection = exports.WallDirection || (exports.WallDirection = {}));
 var Room = /** @class */ (function () {
-    function Room(game, x, y, w, h, type, depth, mapGroup, rand, isTopOpen, isRightOpen, isBottomOpen, isLeftOpen) {
+    function Room(game, x, y, w, h, type, depth, mapGroup, level, rand, isTopOpen, isRightOpen, isBottomOpen, isLeftOpen) {
         if (rand === void 0) { rand = random_1.Random.rand; }
         if (isTopOpen === void 0) { isTopOpen = false; }
         if (isRightOpen === void 0) { isRightOpen = false; }
@@ -14556,7 +14630,7 @@ var Room = /** @class */ (function () {
                 _this.addChasms(rand);
             _this.addRandomTorches("medium");
             if (factor > 15)
-                _this.addSpikeTraps(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 5], rand), rand);
+                _this.addSpikeTraps(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 3], rand), rand);
             var numEmptyTiles = _this.getEmptyTiles().length;
             var numTotalObstacles = Math.floor(numEmptyTiles * 0.35 * rand());
             var numPlants = Math.ceil(numTotalObstacles * rand());
@@ -15610,6 +15684,7 @@ var Room = /** @class */ (function () {
         this.entities = Array();
         this.lightSources = Array();
         this.innerWalls = Array();
+        this.level = level;
         this.roomArray = [];
         for (var x_2 = this.roomX - 1; x_2 < this.roomX + this.width + 1; x_2++) {
             this.roomArray[x_2] = [];
@@ -15860,14 +15935,21 @@ var Room = /** @class */ (function () {
         }
         tiles = tiles.filter(function (tile) { return !adjecentTiles.some(function (t) { return t.x === tile.x && t.y === tile.y; }); });
         var _loop_6 = function (i) {
+            var rerolls = 1;
+            if (tiles.length === 0) {
+                console.log("No tiles left to spawn enemies");
+                return out_i_1 = i, "break";
+            }
             var emptyTiles = this_2.getRandomEmptyPosition(tiles);
-            if (emptyTiles.x === null || emptyTiles.y === null)
-                return "break";
+            if (emptyTiles.x === null || emptyTiles.y === null) {
+                i = numEnemies;
+                return out_i_1 = i, "break";
+            }
             var x = emptyTiles.x, y = emptyTiles.y;
             // Define the enemy tables for each depth level
-            var tables = levelParametersGenerator_1.LevelParameterGenerator.getEnemyParameters(this_2.depth).enemyTables;
+            var tables = this_2.level.enemyParameters.enemyTables;
             // Define the maximum depth level
-            var max_depth_table = levelParametersGenerator_1.LevelParameterGenerator.getEnemyParameters(this_2.depth).maxDepthTable;
+            var max_depth_table = this_2.level.enemyParameters.maxDepthTable;
             // Get the current depth level, capped at the maximum
             var d = Math.min(this_2.depth, max_depth_table);
             // If there is a table for the current depth level
@@ -15899,7 +15981,11 @@ var Room = /** @class */ (function () {
                     return true;
                 };
                 // Randomly select an enemy type from the table
-                var type = game_1.Game.randTable(tables[d], rand);
+                var type = game_1.Game.randTable(tables[d], Math.random);
+                if (this_2.game.encounteredEnemies.includes(type) && rerolls > 0) {
+                    type = game_1.Game.randTable(tables[d], Math.random);
+                    rerolls--;
+                }
                 // If we roll a spawner and spawnerCount is greater than 0, we have a 1/spawnerCount chance to roll another spawner; otherwise, we reroll
                 if (type === 7 && spawnerCount > 0) {
                     var roll = Math.random();
@@ -15907,7 +15993,7 @@ var Room = /** @class */ (function () {
                         type = 7;
                     }
                     else {
-                        type = game_1.Game.randTable(tables[d], rand);
+                        type = game_1.Game.randTable(tables[d], Math.random);
                     }
                 }
                 // Add the selected enemy type to the room
@@ -15974,13 +16060,32 @@ var Room = /** @class */ (function () {
                         break;
                 }
             }
+            out_i_1 = i;
         };
-        var this_2 = this;
+        var this_2 = this, out_i_1;
         // Loop through the number of enemies to be added
         for (var i = 0; i < numEnemies; i++) {
             var state_2 = _loop_6(i);
+            i = out_i_1;
             if (state_2 === "break")
                 break;
+        }
+        var spawnerAmounts = [1, 1, 1, 2, 2, 3];
+        if (this.depth > 0 && Math.random() <= 0.5) {
+            var spawnerAmount = game_1.Game.randTable(spawnerAmounts, Math.random);
+            console.log("Adding ".concat(spawnerAmount, " spawners"));
+            this.addSpawners(spawnerAmount, Math.random);
+        }
+    };
+    Room.prototype.addSpawners = function (numSpawners, rand) {
+        var tiles = this.getEmptyTiles();
+        if (tiles === null) {
+            console.log("No tiles left to spawn spawners");
+            return;
+        }
+        for (var i = 0; i < numSpawners; i++) {
+            var _a = this.getRandomEmptyPosition(tiles), x = _a.x, y = _a.y;
+            spawner_1.Spawner.add(this, this.game, x, y, this.level.enemyParameters.enemyTables[this.depth]);
         }
     };
     Room.prototype.addObstacles = function (numObstacles, rand) {
@@ -16039,7 +16144,10 @@ var Room = /** @class */ (function () {
     };
     Room.prototype.addVendingMachine = function (rand) {
         var _a = this.getRandomEmptyPosition(this.getEmptyTiles()), x = _a.x, y = _a.y;
-        var type = game_1.Game.randTable([1, 1, 1, 1, 1, 1, 1, 2, 3, 4, 5, 6], rand);
+        var table = this.depth > 0
+            ? [1, 1, 1, 1, 1, 1, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+            : [1, 1, 1];
+        var type = game_1.Game.randTable(table, rand);
         switch (type) {
             case 1:
                 vendingMachine_1.VendingMachine.add(this, this.game, x, y, new heart_1.Heart(this, x, y));
@@ -16058,6 +16166,15 @@ var Room = /** @class */ (function () {
                 break;
             case 6:
                 vendingMachine_1.VendingMachine.add(this, this.game, x, y, new shotgun_1.Shotgun(this, x, y));
+                break;
+            case 7:
+                vendingMachine_1.VendingMachine.add(this, this.game, x, y, new warhammer_1.Warhammer(this, x, y));
+                break;
+            case 8:
+                vendingMachine_1.VendingMachine.add(this, this.game, x, y, new spellbook_1.Spellbook(this, x, y));
+                break;
+            case 9:
+                vendingMachine_1.VendingMachine.add(this, this.game, x, y, new torch_1.Torch(this, x, y));
                 break;
         }
     };

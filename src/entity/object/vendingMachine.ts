@@ -20,6 +20,9 @@ import { Lantern } from "../../item/lantern";
 import { RedGem } from "../../item/redgem";
 import { EntityType } from "../entity";
 import { Random } from "../../random";
+import { Warhammer } from "../../weapon/warhammer";
+import { Torch } from "../../item/torch";
+import { Spellbook } from "../../weapon/spellbook";
 
 let OPEN_TIME = 150;
 let FILL_COLOR = "#5a595b";
@@ -50,28 +53,40 @@ export class VendingMachine extends Entity {
     this.name = "vending machine";
     if (this.item instanceof Shotgun) {
       let g = new BlueGem(room, 0, 0);
-      g.stackCount = Game.randTable([5, 5, 6, 7], Random.rand);
+      g.stackCount = Game.randTable([7], Random.rand);
       this.costItems = [g];
     } else if (this.item instanceof Heart) {
       let c = new Coin(room, 0, 0);
       c.stackCount = 10;
       this.costItems = [c];
-      this.isInf = true;
+      this.quantity = 3;
     } else if (this.item instanceof Spear) {
       let g = new GreenGem(room, 0, 0);
-      g.stackCount = Game.randTable([5, 5, 6, 7], Random.rand);
+      g.stackCount = Game.randTable([5], Random.rand);
       this.costItems = [g];
     } else if (this.item instanceof Armor) {
-      let g = new Gold(room, 0, 0);
-      g.stackCount = Game.randTable([5, 5, 6, 7], Random.rand);
+      let g = new GreenGem(room, 0, 0);
+      g.stackCount = Game.randTable([5], Random.rand);
       this.costItems = [g];
     } else if (this.item instanceof DualDagger) {
-      let g = new RedGem(room, 0, 0);
-      g.stackCount = Game.randTable([5, 5, 6, 7], Random.rand);
+      let g = new BlueGem(room, 0, 0);
+      g.stackCount = Game.randTable([5], Random.rand);
       this.costItems = [g];
     } else if (this.item instanceof Lantern) {
-      let g = new Coal(room, 0, 0);
-      g.stackCount = Game.randTable([25, 26, 27, 28], Random.rand);
+      let c = new Coin(room, 0, 0);
+      c.stackCount = Game.randTable([50], Random.rand);
+      this.costItems = [c];
+    } else if (this.item instanceof Warhammer) {
+      let g = new RedGem(room, 0, 0);
+      g.stackCount = Game.randTable([5], Random.rand);
+      this.costItems = [g];
+    } else if (this.item instanceof Spellbook) {
+      let g = new RedGem(room, 0, 0);
+      g.stackCount = Game.randTable([7], Random.rand);
+      this.costItems = [g];
+    } else if (this.item instanceof Torch) {
+      let g = new RedGem(room, 0, 0);
+      g.stackCount = Game.randTable([1], Random.rand);
       this.costItems = [g];
     }
   }
