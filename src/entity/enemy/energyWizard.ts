@@ -68,7 +68,7 @@ export class EnergyWizardEnemy extends WizardEnemy {
           1,
           1,
           this.room.shadeColor,
-          this.shadeAmount()
+          this.shadeAmount(),
         );
       if (this.frame >= 0) {
         Game.drawMob(
@@ -81,7 +81,7 @@ export class EnergyWizardEnemy extends WizardEnemy {
           1,
           2,
           this.room.shadeColor,
-          this.shadeAmount()
+          this.shadeAmount(),
         );
         this.frame += 0.4 * delta;
         if (this.frame > 11) this.frame = -1;
@@ -96,7 +96,7 @@ export class EnergyWizardEnemy extends WizardEnemy {
           1,
           2,
           this.room.shadeColor,
-          this.shadeAmount()
+          this.shadeAmount(),
         );
       }
       if (!this.seenPlayer) {

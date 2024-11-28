@@ -19,7 +19,7 @@ export class LightSource {
     y: number,
     r: number,
     c: [number, number, number] = [180, 60, 5],
-    b: number = 1
+    b: number = 1,
   ) {
     this.x = x;
     this.y = y;

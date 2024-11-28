@@ -6,7 +6,8 @@ import { Key } from "../item/key";
 import { GoldenKey } from "../item/goldenKey";
 import { Tile } from "./tile";
 
-export class GoldenDoor extends Tile {/*
+export class GoldenDoor extends Tile {
+  /*
   unlock = (player: Player) => {
     let k = player.inventory.hasItem(GoldenKey);
     if (k !== null) {
@@ -31,4 +32,5 @@ export class GoldenDoor extends Tile {/*
       this.shadeAmount()
     );
   };
-*/}
+*/
+}

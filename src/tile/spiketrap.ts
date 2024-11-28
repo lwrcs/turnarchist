@@ -32,7 +32,7 @@ export class SpikeTrap extends Tile {
       for (const i in this.room.game.players) {
         if (
           this.room ===
-          this.room.game.rooms[this.room.game.players[i].levelID] &&
+            this.room.game.rooms[this.room.game.players[i].levelID] &&
           this.room.game.players[i].x === this.x &&
           this.room.game.players[i].y === this.y
         )
@@ -42,7 +42,7 @@ export class SpikeTrap extends Tile {
 
     if (this.tickCount === 3)
       this.room.hitwarnings.push(
-        new HitWarning(this.room.game, this.x, this.y, this.x, this.y, false)
+        new HitWarning(this.room.game, this.x, this.y, this.x, this.y, false),
       );
   };
 
@@ -72,7 +72,7 @@ export class SpikeTrap extends Tile {
       1,
       1,
       this.room.shadeColor,
-      this.shadeAmount()
+      this.shadeAmount(),
     );
 
     let rumbleOffsetX = 0;
@@ -99,7 +99,7 @@ export class SpikeTrap extends Tile {
       1,
       2,
       this.room.shadeColor,
-      this.shadeAmount()
+      this.shadeAmount(),
     );
     if (this.on && this.frame < frames.length - 1) {
       if (frames[Math.floor(this.frame)] < 3) this.frame += 0.4 * delta;

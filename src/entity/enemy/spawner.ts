@@ -42,7 +42,7 @@ export class Spawner extends Enemy {
     game: Game,
     x: number,
     y: number,
-    enemyTable: number[]
+    enemyTable: number[],
   ) {
     super(room, game, x, y);
     this.ticks = 0;
@@ -76,7 +76,7 @@ export class Spawner extends Enemy {
         let positions = this.room
           .getEmptyTiles()
           .filter(
-            (t) => Math.abs(t.x - this.x) <= 1 && Math.abs(t.y - this.y) <= 1
+            (t) => Math.abs(t.x - this.x) <= 1 && Math.abs(t.y - this.y) <= 1,
           );
         if (this.enemySpawnType === 8) {
           const offLimits = [
@@ -87,7 +87,7 @@ export class Spawner extends Enemy {
             { x: this.x - 1, y: this.y + 1 },
           ];
           positions = positions.filter(
-            (t) => !offLimits.some((o) => o.x === t.x && o.y === t.y)
+            (t) => !offLimits.some((o) => o.x === t.x && o.y === t.y),
           );
         }
         if (positions.length > 0) {
@@ -102,7 +102,7 @@ export class Spawner extends Enemy {
                 this.room,
                 this.game,
                 position.x,
-                position.y
+                position.y,
               );
               break;
             case 2:
@@ -110,7 +110,7 @@ export class Spawner extends Enemy {
                 this.room,
                 this.game,
                 position.x,
-                position.y
+                position.y,
               );
               break;
             case 3:
@@ -118,7 +118,7 @@ export class Spawner extends Enemy {
                 this.room,
                 this.game,
                 position.x,
-                position.y
+                position.y,
               );
               break;
             case 4:
@@ -126,7 +126,7 @@ export class Spawner extends Enemy {
                 this.room,
                 this.game,
                 position.x,
-                position.y
+                position.y,
               );
               break;
             case 5:
@@ -134,7 +134,7 @@ export class Spawner extends Enemy {
                 this.room,
                 this.game,
                 position.x,
-                position.y
+                position.y,
               );
               break;
             case 6:
@@ -142,7 +142,7 @@ export class Spawner extends Enemy {
                 this.room,
                 this.game,
                 position.x,
-                position.y
+                position.y,
               );
               break;
             case 7:
@@ -151,7 +151,7 @@ export class Spawner extends Enemy {
                 this.game,
                 position.x,
                 position.y,
-                this.enemyTable
+                this.enemyTable,
               );
               break;
             case 8:
@@ -159,7 +159,7 @@ export class Spawner extends Enemy {
                 this.room,
                 this.game,
                 position.x,
-                position.y
+                position.y,
               );
               break;
             case 9:
@@ -167,7 +167,7 @@ export class Spawner extends Enemy {
                 this.room,
                 this.game,
                 position.x,
-                position.y
+                position.y,
               );
               break;
             case 10:
@@ -175,7 +175,7 @@ export class Spawner extends Enemy {
                 this.room,
                 this.game,
                 position.x,
-                position.y
+                position.y,
               );
               for (let xx = 0; xx < 2; xx++) {
                 for (let yy = 0; yy < 2; yy++) {
@@ -189,7 +189,7 @@ export class Spawner extends Enemy {
                 this.room,
                 this.game,
                 position.x,
-                position.y
+                position.y,
               );
               break;
             case 12:
@@ -197,7 +197,7 @@ export class Spawner extends Enemy {
                 this.room,
                 this.game,
                 position.x,
-                position.y
+                position.y,
               );
               break;
             case 13:
@@ -205,7 +205,7 @@ export class Spawner extends Enemy {
                 this.room,
                 this.game,
                 position.x,
-                position.y
+                position.y,
               );
               for (let xx = 0; xx < 2; xx++) {
                 for (let yy = 0; yy < 2; yy++) {
@@ -219,7 +219,7 @@ export class Spawner extends Enemy {
                 this.room,
                 this.game,
                 position.x,
-                position.y
+                position.y,
               );
               break;
             case 15:
@@ -227,7 +227,7 @@ export class Spawner extends Enemy {
                 this.room,
                 this.game,
                 position.x,
-                position.y
+                position.y,
               );
               break;
           }
@@ -235,16 +235,16 @@ export class Spawner extends Enemy {
           let enemies = this.room.entities.filter((e) => e instanceof Enemy);
           let maxIndividualCount = Math.round(
             (this.room.width + this.room.height) /
-              spawned.constructor.difficulty ** 2
+              spawned.constructor.difficulty ** 2,
           );
           let enemySpawnTypeCount = this.room.entities.filter(
-            (e) => e instanceof spawned.constructor
+            (e) => e instanceof spawned.constructor,
           ).length;
           console.log(
-            `Count in room of ${spawned.constructor.name}: ${enemySpawnTypeCount}`
+            `Count in room of ${spawned.constructor.name}: ${enemySpawnTypeCount}`,
           );
           console.log(
-            `maxIndividualCount of ${spawned.constructor.name}: ${maxIndividualCount}`
+            `maxIndividualCount of ${spawned.constructor.name}: ${maxIndividualCount}`,
           );
 
           if (
@@ -260,11 +260,11 @@ export class Spawner extends Enemy {
                 this.room,
                 spawned,
                 position.x,
-                position.y
-              )
+                position.y,
+              ),
             );
             this.room.hitwarnings.push(
-              new HitWarning(this.game, position.x, position.y, this.x, this.y)
+              new HitWarning(this.game, position.x, position.y, this.x, this.y),
             );
           }
         }
@@ -289,7 +289,7 @@ export class Spawner extends Enemy {
           1,
           1,
           this.room.shadeColor,
-          this.shadeAmount()
+          this.shadeAmount(),
         );
       Game.drawMob(
         this.tileX,
@@ -301,7 +301,7 @@ export class Spawner extends Enemy {
         1,
         2,
         this.room.shadeColor,
-        this.shadeAmount()
+        this.shadeAmount(),
       );
     }
     if (!this.seenPlayer) {

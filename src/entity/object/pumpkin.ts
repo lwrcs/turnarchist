@@ -28,7 +28,7 @@ export class Pumpkin extends Entity {
       this.y + 0.5,
       5,
       [200, 30, 1],
-      3
+      3,
     );
     this.addLightSource(this.lightSource);
   }
@@ -63,7 +63,7 @@ export class Pumpkin extends Entity {
         1,
         2,
         this.room.shadeColor,
-        this.shadeAmount()
+        this.shadeAmount(),
       );
     }
   };

@@ -102,7 +102,7 @@ export class FireWizardEnemy extends WizardEnemy {
               const offsets = this.calculateProjectileOffsets(
                 targetPlayer.x,
                 targetPlayer.y,
-                10
+                10,
               );
 
               this.attemptProjectilePlacement(
@@ -117,7 +117,7 @@ export class FireWizardEnemy extends WizardEnemy {
                   { x: 0, y: 2 },
                 ],
                 WizardFireball,
-                false
+                false,
               );
             }
             this.state = WizardState.justAttacked;
@@ -135,13 +135,13 @@ export class FireWizardEnemy extends WizardEnemy {
               (tile) =>
                 !this.room.projectiles.some(
                   (projectile) =>
-                    projectile.x === tile.x && projectile.y === tile.y
-                )
+                    projectile.x === tile.x && projectile.y === tile.y,
+                ),
             );
 
             let optimalDist = Game.randTable(
               [2, 2, 3, 3, 3, 3, 3],
-              Random.rand
+              Random.rand,
             );
             // pick a random player to target
             let player_ids = [];
@@ -191,7 +191,7 @@ export class FireWizardEnemy extends WizardEnemy {
           1,
           1,
           this.room.shadeColor,
-          this.shadeAmount()
+          this.shadeAmount(),
         );
       if (this.frame >= 0) {
         Game.drawMob(
@@ -204,7 +204,7 @@ export class FireWizardEnemy extends WizardEnemy {
           1,
           2,
           this.room.shadeColor,
-          this.shadeAmount()
+          this.shadeAmount(),
         );
       } else {
         Game.drawMob(
@@ -217,7 +217,7 @@ export class FireWizardEnemy extends WizardEnemy {
           1,
           2,
           this.room.shadeColor,
-          this.shadeAmount()
+          this.shadeAmount(),
         );
       }
       if (!this.seenPlayer) {

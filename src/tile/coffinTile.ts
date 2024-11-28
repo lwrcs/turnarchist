@@ -29,7 +29,7 @@ export class CoffinTile extends Tile {
         1,
         1,
         this.room.shadeColor,
-        this.shadeAmount()
+        this.shadeAmount(),
       );
       Game.drawTile(
         1,
@@ -41,7 +41,7 @@ export class CoffinTile extends Tile {
         1,
         1,
         this.room.shadeColor,
-        this.shadeAmount()
+        this.shadeAmount(),
       );
       Game.drawTile(
         2,
@@ -53,7 +53,7 @@ export class CoffinTile extends Tile {
         1,
         1,
         this.room.shadeColor,
-        this.shadeAmount()
+        this.shadeAmount(),
       );
       Game.drawTile(
         0,
@@ -65,9 +65,20 @@ export class CoffinTile extends Tile {
         1,
         1,
         this.room.shadeColor,
-        this.shadeAmount()
+        this.shadeAmount(),
       );
-      Game.drawTile(1, 6, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
+      Game.drawTile(
+        1,
+        6,
+        1,
+        1,
+        this.x,
+        this.y,
+        1,
+        1,
+        this.room.shadeColor,
+        this.shadeAmount(),
+      );
       Game.drawTile(
         2,
         6,
@@ -78,7 +89,7 @@ export class CoffinTile extends Tile {
         1,
         1,
         this.room.shadeColor,
-        this.shadeAmount()
+        this.shadeAmount(),
       );
     } else {
       Game.drawTile(
@@ -91,9 +102,20 @@ export class CoffinTile extends Tile {
         1,
         1,
         this.room.shadeColor,
-        this.shadeAmount()
+        this.shadeAmount(),
       );
-      Game.drawTile(1, 7, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
+      Game.drawTile(
+        1,
+        7,
+        1,
+        1,
+        this.x,
+        this.y,
+        1,
+        1,
+        this.room.shadeColor,
+        this.shadeAmount(),
+      );
       Game.drawTile(
         2,
         7,
@@ -104,7 +126,7 @@ export class CoffinTile extends Tile {
         1,
         1,
         this.room.shadeColor,
-        this.shadeAmount()
+        this.shadeAmount(),
       );
     }
   };

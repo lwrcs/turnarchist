@@ -12,13 +12,13 @@ export class SpawnFloor extends Tile {
     if (this.skin == SkinType.DUNGEON)
       this.variation = Game.randTable(
         [1, 1, 1, 1, 1, 1, 8, 8, 8, 9, 10, 10, 10, 10, 10, 12],
-        Math.random
+        Math.random,
       );
     if (this.skin == SkinType.CAVE)
       //this.variation = Game.randTable([1, 1, 1, 1, 8, 9, 10, 12], Math.random);
       this.variation = Game.randTable(
         [1, 1, 1, 1, 1, 1, 8, 8, 8, 9, 10, 10, 10, 10, 10, 12],
-        Math.random
+        Math.random,
       );
   }
 
@@ -33,7 +33,7 @@ export class SpawnFloor extends Tile {
       1,
       1,
       this.room.shadeColor,
-      this.shadeAmount()
+      this.shadeAmount(),
     );
   };
 }

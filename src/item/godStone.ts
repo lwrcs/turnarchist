@@ -24,7 +24,7 @@ export class GodStone extends Usable {
   };
   teleportToExit = (player: Player): void => {
     let downLadders = this.room.game.rooms.filter(
-      (room) => room.type === RoomType.DOWNLADDER
+      (room) => room.type === RoomType.DOWNLADDER,
     );
     const room = downLadders[downLadders.length - 1];
     room.game.changeLevelThroughDoor(player, room.doors[0], 1);

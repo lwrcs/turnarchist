@@ -123,7 +123,7 @@ export class FrogEnemy extends Enemy {
               grid,
               this,
               this.targetPlayer,
-              disablePositions
+              disablePositions,
             );
             if (moves.length > 0) {
               let hitPlayer = false;
@@ -155,7 +155,7 @@ export class FrogEnemy extends Enemy {
                   grid,
                   this,
                   this.targetPlayer,
-                  disablePositions
+                  disablePositions,
                 );
                 tryX = this.x;
                 tryY = this.y;
@@ -174,7 +174,7 @@ export class FrogEnemy extends Enemy {
                     grid,
                     this,
                     this.targetPlayer,
-                    disablePositions
+                    disablePositions,
                   );
                   this.tryMove(moves[0].pos.x, moves[0].pos.y);
                 }
@@ -256,7 +256,7 @@ export class FrogEnemy extends Enemy {
     if (this.jumping)
       jumpHeight =
         Math.sin(
-          ((this.frame - 2) / ((this.jumpDistance + 1.825) * 1.475)) * Math.PI
+          ((this.frame - 2) / ((this.jumpDistance + 1.825) * 1.475)) * Math.PI,
         ) * 0.75;
     let rumbleX = this.rumble(this.rumbling, this.frame).x;
 
@@ -277,7 +277,7 @@ export class FrogEnemy extends Enemy {
           1,
           1,
           this.room.shadeColor,
-          this.shadeAmount()
+          this.shadeAmount(),
         );
       Game.drawMob(
         this.tileX +
@@ -290,7 +290,7 @@ export class FrogEnemy extends Enemy {
         1,
         2,
         this.room.shadeColor,
-        this.shadeAmount()
+        this.shadeAmount(),
       );
     }
     if (!this.seenPlayer) {
@@ -310,7 +310,7 @@ export class FrogEnemy extends Enemy {
       this.maxHealth,
       this.x,
       this.y,
-      true
+      true,
     );
     this.drawX += -(0.25 / this.jumpDistance) * this.drawX * delta;
     this.drawY += -(0.25 / this.jumpDistance) * this.drawY * delta;

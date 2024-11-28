@@ -24,7 +24,7 @@ export class EmeraldResource extends Resource {
       this.room,
       this.x + 0.5,
       this.y + 0.5,
-      "#fbf236"
+      "#fbf236",
     );
 
     if (this.room === this.game.room) Sound.mine();

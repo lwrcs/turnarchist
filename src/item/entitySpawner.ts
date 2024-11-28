@@ -49,8 +49,8 @@ export class EntitySpawner extends Usable {
             this.room,
             this.player.game,
             this.player.x,
-            this.player.y
-          )
+            this.player.y,
+          ),
         );
         break;
       default:

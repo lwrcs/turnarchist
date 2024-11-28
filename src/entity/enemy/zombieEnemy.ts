@@ -140,7 +140,7 @@ export class ZombieEnemy extends Enemy {
             false,
             false,
             true,
-            this.direction
+            this.direction,
           );
 
           // If there are moves available
@@ -281,7 +281,7 @@ export class ZombieEnemy extends Enemy {
           1,
           1,
           this.room.shadeColor,
-          this.shadeAmount()
+          this.shadeAmount(),
         );
       Game.drawMob(
         this.tileX + Math.floor(this.frame),
@@ -293,7 +293,7 @@ export class ZombieEnemy extends Enemy {
         1,
         2,
         this.room.shadeColor,
-        this.shadeAmount()
+        this.shadeAmount(),
       );
     }
     if (!this.seenPlayer) {

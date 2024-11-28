@@ -10,5 +10,4 @@ export class Usable extends Item {
     super(level, x, y);
   }
   onUse = (player: Player) => {};
-
 }

@@ -9,7 +9,7 @@ export enum ActionState {
   ATTACK,
   WAIT,
   HALFATTACK,
-  MOVE
+  MOVE,
 }
 
 export class ActionTab {
@@ -36,9 +36,9 @@ export class ActionTab {
     let tabY = LevelConstants.SCREEN_H - 1;
 
     let action = this.actionState;
-    const actionString: string = "" + ActionState[action]
+    const actionString: string = "" + ActionState[action];
     let width = Game.measureText(actionString).width;
-    let actionX = 4 - width/2;
+    let actionX = 4 - width / 2;
     let actionY = -1;
 
     Game.fillTextOutline(
@@ -46,7 +46,7 @@ export class ActionTab {
       tabX * GameConstants.TILESIZE + actionX,
       tabY * GameConstants.TILESIZE + actionY,
       GameConstants.OUTLINE,
-      "white"
+      "white",
     );
   };
 }

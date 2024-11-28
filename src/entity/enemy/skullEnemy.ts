@@ -142,7 +142,7 @@ export class SkullEnemy extends Enemy {
             false,
             false,
             true,
-            this.direction
+            this.direction,
           );
           if (moves.length > 0) {
             let moveX = moves[0].pos.x;
@@ -285,7 +285,7 @@ export class SkullEnemy extends Enemy {
           1,
           1,
           this.room.shadeColor,
-          this.shadeAmount()
+          this.shadeAmount(),
         );
       Game.drawMob(
         this.tileX + (this.tileX === 5 ? Math.floor(this.frame) : 0),
@@ -297,7 +297,7 @@ export class SkullEnemy extends Enemy {
         1,
         2,
         this.room.shadeColor,
-        this.shadeAmount()
+        this.shadeAmount(),
       );
     }
     if (!this.seenPlayer) {

@@ -36,7 +36,7 @@ export class Rock extends Resource {
       this.room,
       this.x + 0.5,
       this.y + 0.5,
-      "#9badb7"
+      "#9badb7",
     );
 
     this.room.items.push(new Stone(this.room, this.x, this.y));
@@ -59,7 +59,7 @@ export class Rock extends Resource {
         1,
         2,
         this.room.shadeColor,
-        this.shadeAmount()
+        this.shadeAmount(),
       );
     }
   };

@@ -199,7 +199,7 @@ export abstract class Enemy extends Entity {
       false,
       false,
       true,
-      this.direction
+      this.direction,
     );
   };
 
@@ -269,7 +269,7 @@ export abstract class Enemy extends Entity {
             false,
             false,
             true,
-            this.direction
+            this.direction,
           );
 
           // If there are moves available
@@ -429,7 +429,7 @@ export abstract class Enemy extends Entity {
           1,
           1,
           this.room.shadeColor,
-          this.shadeAmount()
+          this.shadeAmount(),
         );
       Game.drawMob(
         this.tileX + Math.floor(this.frame),
@@ -441,7 +441,7 @@ export abstract class Enemy extends Entity {
         1,
         2,
         this.room.shadeColor,
-        this.shadeAmount()
+        this.shadeAmount(),
       );
     }
     if (!this.seenPlayer) {

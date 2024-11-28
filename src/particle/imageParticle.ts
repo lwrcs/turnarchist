@@ -32,7 +32,7 @@ export class ImageParticle extends Particle {
     tx: number,
     ty: number,
     tileX: number,
-    tileY: number
+    tileY: number,
   ) => {
     for (let i = 0; i < 4; i++) {
       room.particles.push(
@@ -47,8 +47,8 @@ export class ImageParticle extends Particle {
           0,
           tileX,
           tileY,
-          0 //size
-        )
+          0, //size
+        ),
       );
     }
   };
@@ -58,7 +58,7 @@ export class ImageParticle extends Particle {
     cx: number,
     cy: number,
     tileX: number,
-    tileY: number
+    tileY: number,
   ) => {
     for (let i = Math.floor(Math.random() * 3); i < 5; i++) {
       level.particles.push(
@@ -73,8 +73,8 @@ export class ImageParticle extends Particle {
           0.2 * (Math.random() - 1), //dz
           tileX,
           tileY,
-          [2, 1, 0, 1, 2, 2, 2][i] //size
-        )
+          [2, 1, 0, 1, 2, 2, 2][i], //size
+        ),
       );
     }
   };
@@ -95,7 +95,7 @@ export class ImageParticle extends Particle {
     expirationTimer?: number,
     targetX?: number,
     targetY?: number,
-    targetZ?: number
+    targetZ?: number,
   ) {
     super();
     this.room = room;
@@ -135,7 +135,7 @@ export class ImageParticle extends Particle {
       1,
       1,
       this.shadeColor(),
-      this.shadeAmount()
+      this.shadeAmount(),
     );
   };
 

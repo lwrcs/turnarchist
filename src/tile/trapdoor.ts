@@ -23,7 +23,7 @@ export class Trapdoor extends Tile {
       1,
       1,
       this.room.shadeColor,
-      this.shadeAmount()
+      this.shadeAmount(),
     );
   };
 

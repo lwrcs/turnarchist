@@ -122,8 +122,8 @@ export class ChargeEnemy extends Enemy {
                     this.targetX,
                     this.targetY,
                     this.x,
-                    this.y
-                  )
+                    this.y,
+                  ),
                 );
             }
             this.visualTargetX = this.targetX + 0.5 * dx;
@@ -183,13 +183,13 @@ export class ChargeEnemy extends Enemy {
           this.room,
           this.x - this.drawX + 0.5,
           this.y - this.drawY + 0.5,
-          "black"
+          "black",
         );
         GenericParticle.spawnCluster(
           this.room,
           this.x - this.drawX + 0.5,
           this.y - this.drawY + 0.5,
-          "white"
+          "white",
         );
       }
 
@@ -204,12 +204,12 @@ export class ChargeEnemy extends Enemy {
           Game.ctx.beginPath();
           Game.ctx.moveTo(
             (this.startX + 0.5) * GameConstants.TILESIZE,
-            (this.startY + 0.5) * GameConstants.TILESIZE
+            (this.startY + 0.5) * GameConstants.TILESIZE,
           );
           Game.ctx.lineCap = "round";
           Game.ctx.lineTo(
             (this.x - this.drawX + 0.5) * GameConstants.TILESIZE,
-            (this.y - this.drawY + 0.5) * GameConstants.TILESIZE
+            (this.y - this.drawY + 0.5) * GameConstants.TILESIZE,
           );
           Game.ctx.stroke();
           Game.ctx.globalAlpha = 1;
@@ -227,7 +227,7 @@ export class ChargeEnemy extends Enemy {
           1,
           1,
           this.room.shadeColor,
-          this.shadeAmount()
+          this.shadeAmount(),
         );
       Game.drawMob(
         this.tileX + Math.floor(this.frame),
@@ -239,7 +239,7 @@ export class ChargeEnemy extends Enemy {
         1,
         2,
         this.room.shadeColor,
-        this.shadeAmount()
+        this.shadeAmount(),
       );
       if (this.state === ChargeEnemyState.IDLE) {
         this.drawSleepingZs(delta);
@@ -258,7 +258,7 @@ export class ChargeEnemy extends Enemy {
       this.maxHealth,
       this.x,
       this.y,
-      true
+      true,
     );
     this.drawX += -0.1 * this.drawX;
     this.drawY += -0.1 * this.drawY;
@@ -281,7 +281,7 @@ export class ChargeEnemy extends Enemy {
         Game.ctx.lineCap = "round";
         Game.ctx.lineTo(
           Math.round((this.visualTargetX + 0.5) * GameConstants.TILESIZE),
-          Math.round((this.visualTargetY - 0.25) * GameConstants.TILESIZE)
+          Math.round((this.visualTargetY - 0.25) * GameConstants.TILESIZE),
         );
         Game.ctx.stroke();
         Game.ctx.globalAlpha = 1;

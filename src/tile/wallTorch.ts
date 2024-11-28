@@ -16,8 +16,8 @@ export class WallTorch extends Tile {
         this.y + 0.5,
         5,
         LevelConstants.TORCH_LIGHT_COLOR,
-        1.5
-      )
+        1.5,
+      ),
     );
     this.frame = Math.random() * 12;
     this.tileYOffset = 6;
@@ -61,7 +61,7 @@ export class WallTorch extends Tile {
       1,
       1,
       this.room.shadeColor,
-      this.shadeAmount()
+      this.shadeAmount(),
     );
 
     Game.drawTile(
@@ -74,7 +74,7 @@ export class WallTorch extends Tile {
       1,
       1,
       this.room.shadeColor,
-      this.shadeAmount()
+      this.shadeAmount(),
     );
 
     Game.drawFX(Math.floor(this.frame), 32, 1, 2, this.x, this.y - 1, 1, 2);

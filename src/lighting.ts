@@ -10,14 +10,14 @@ export class Lighting {
     color: [number, number, number],
     duration: number,
     brightness: number,
-    delay: number
+    delay: number,
   ) => {
     const lightSource = Lighting.newLightSource(
       x,
       y,
       color,
       radius,
-      brightness
+      brightness,
     );
     setTimeout(() => {
       room.updateLightSources(lightSource);
@@ -33,7 +33,7 @@ export class Lighting {
     y: number,
     color: [number, number, number],
     radius: number,
-    brightness: number
+    brightness: number,
   ) => {
     return new LightSource(x, y, radius, color, brightness);
   };

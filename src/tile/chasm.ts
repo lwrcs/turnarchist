@@ -14,7 +14,7 @@ export class Chasm extends Tile {
     leftEdge: boolean,
     rightEdge: boolean,
     topEdge: boolean,
-    bottomEdge: boolean
+    bottomEdge: boolean,
   ) {
     super(room, x, y);
 
@@ -38,7 +38,18 @@ export class Chasm extends Tile {
 
   draw = (delta: number) => {
     if (this.topEdge)
-      Game.drawTile(22, 0, 1, 2, this.x, this.y, 1, 2, this.room.shadeColor, this.shadeAmount());
+      Game.drawTile(
+        22,
+        0,
+        1,
+        2,
+        this.x,
+        this.y,
+        1,
+        2,
+        this.room.shadeColor,
+        this.shadeAmount(),
+      );
     Game.drawTile(
       this.tileX,
       this.tileY,
@@ -49,7 +60,7 @@ export class Chasm extends Tile {
       1,
       1,
       this.room.shadeColor,
-      this.shadeAmount()
+      this.shadeAmount(),
     );
   };
 }

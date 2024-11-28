@@ -4,7 +4,10 @@ import { Door } from "./tile/door";
 import { LevelConstants } from "./levelConstants";
 import { Random } from "./random";
 import { DownLadder } from "./tile/downLadder";
-//Goal: CRACK THE LEVEL GENERATOR
+import {
+  LevelParameterGenerator,
+  LevelParameters,
+} from "./levelParametersGenerator";
 
 class PartitionConnection {
   x: number;
@@ -186,8 +189,8 @@ class Partition {
     points = points.filter(
       (p) =>
         !this.connections.some(
-          (c) => Math.abs(c.x - p.x) + Math.abs(c.y - p.y) <= 1
-        )
+          (c) => Math.abs(c.x - p.x) + Math.abs(c.y - p.y) <= 1,
+        ),
       //if the sum of the distance between the input x and y values and the partitions x and y values is > 1
       //delete those from the points array
     );
@@ -198,7 +201,7 @@ class Partition {
 
 let split_partitions = (
   partitions: Array<Partition>,
-  prob: number
+  prob: number,
 ): Array<Partition> => {
   for (let partition of partitions) {
     if (Random.rand() < prob) {
@@ -210,32 +213,178 @@ let split_partitions = (
   //takes input partitions array, randomly removes partitions and adds splits, output modified partitions array
 };
 
+let split_partition = (
+  partition: Partition,
+  prob: number,
+): Array<Partition> => {
+  if (Random.rand() < prob) {
+    return partition.split();
+  } else {
+    return [partition];
+  }
+  // Takes a single partition and probability
+  // Returns an array with either the split partitions or the original partition
+};
+
+let reduce_dimensions = (partition: Partition, params: LevelParameters) => {
+  let reduceY = 0;
+  let reduceX = 0;
+  let translateX = 0;
+  let translateY = 0;
+  partition.connections.forEach((connection) => {
+    if (connection.y === partition.y) reduceY++, translateY++;
+    if (connection.y === partition.y + partition.h) reduceY++;
+    if (connection.x === partition.x) reduceX++, translateX++;
+    if (connection.x === partition.x + partition.w) reduceX++;
+  });
+
+  if (partition.w > 7) {
+    partition.w -= translateX;
+    partition.x += translateX;
+  }
+  if (partition.h > 7) {
+    partition.h -= translateY;
+    partition.y += translateY;
+  }
+};
+
+let get_wall_rooms = (
+  partitions: Array<Partition>,
+  mapWidth: number,
+  mapHeight: number,
+): Array<Partition> => {
+  return partitions.filter((partition, index) => {
+    // Helper function to check if a specific path is clear
+    const isPathClear = (
+      direction: "left" | "right" | "top" | "bottom",
+    ): boolean => {
+      switch (direction) {
+        case "left":
+          for (let y = partition.y; y < partition.y + partition.h; y++) {
+            let blocked = partitions.some((other) => {
+              if (other === partition) return false;
+              // Check if other partition overlaps this y-coordinate and is to the left
+              return (
+                other.y <= y &&
+                y < other.y + other.h &&
+                other.x + other.w > 0 &&
+                other.x + other.w <= partition.x
+              );
+            });
+            if (!blocked) return true; // Found at least one y without a blocker
+          }
+          return false;
+
+        case "right":
+          for (let y = partition.y; y < partition.y + partition.h; y++) {
+            let blocked = partitions.some((other) => {
+              if (other === partition) return false;
+              // Check if other partition overlaps this y-coordinate and is to the right
+              return (
+                other.y <= y &&
+                y < other.y + other.h &&
+                other.x < mapWidth &&
+                other.x >= partition.x + partition.w
+              );
+            });
+            if (!blocked) return true;
+          }
+          return false;
+
+        case "top":
+          for (let x = partition.x; x < partition.x + partition.w; x++) {
+            let blocked = partitions.some((other) => {
+              if (other === partition) return false;
+              // Check if other partition overlaps this x-coordinate and is above
+              return (
+                other.x <= x &&
+                x < other.x + other.w &&
+                other.y + other.h > 0 &&
+                other.y + other.h <= partition.y
+              );
+            });
+            if (!blocked) return true;
+          }
+          return false;
+
+        case "bottom":
+          for (let x = partition.x; x < partition.x + partition.w; x++) {
+            let blocked = partitions.some((other) => {
+              if (other === partition) return false;
+              // Check if other partition overlaps this x-coordinate and is below
+              return (
+                other.x <= x &&
+                x < other.x + other.w &&
+                other.y < mapHeight &&
+                other.y >= partition.y + partition.h
+              );
+            });
+            if (!blocked) return true;
+          }
+          return false;
+
+        default:
+          return false;
+      }
+    };
+
+    const hasLeftPath = isPathClear("left");
+    const hasRightPath = isPathClear("right");
+    const hasTopPath = isPathClear("top");
+    const hasBottomPath = isPathClear("bottom");
+
+    // Count the number of open paths
+    const openPaths = [
+      hasLeftPath,
+      hasRightPath,
+      hasTopPath,
+      hasBottomPath,
+    ].filter(Boolean).length;
+
+    // Log the path statuses for debugging
+    console.log(
+      `Partition ${index}: (${partition.x}, ${partition.y}, ${partition.w}, ${partition.h})`,
+    );
+    console.log(`  hasLeftPath: ${hasLeftPath}`);
+    console.log(`  hasRightPath: ${hasRightPath}`);
+    console.log(`  hasTopPath: ${hasTopPath}`);
+    console.log(`  hasBottomPath: ${hasBottomPath}`);
+    console.log(`  Open Paths Count: ${openPaths}`);
+
+    // Define wall rooms as those with exactly one open path
+    const isWallRoom = openPaths === 1;
+
+    console.log(`  isWallRoom: ${isWallRoom}`);
+
+    return isWallRoom;
+  });
+};
+
 let remove_wall_rooms = (
   partitions: Array<Partition>,
   w: number,
   h: number,
-  prob: number = 1.0
+  prob: number = 1.0,
 ): Array<Partition> => {
-  for (const partition of partitions) {
-    if (
-      (partition.x === 0 ||
-        partition.y === 0 ||
-        partition.x + partition.w === w ||
-        partition.y + partition.h === h) &&
-      Random.rand() < prob
-    ) {
-      partitions = partitions.filter((p) => p != partition);
+  // Get all wall rooms
+  const wallRooms = get_wall_rooms(partitions, w, h);
+  console.log(`wallRooms.length: ${wallRooms.length}`);
+
+  // Remove wall rooms based on probability
+  for (const wallRoom of wallRooms) {
+    if (Random.rand() < prob) {
+      partitions = partitions.filter((p) => p !== wallRoom);
     }
   }
+
   return partitions;
-  //return partitions array with no wall rooms
 };
 
 let populate_grid = (
   partitions: Array<Partition>,
   grid: Array<Array<Partition | false>>,
   w: number,
-  h: number
+  h: number,
 ): Array<Array<Partition | false>> => {
   for (let x = 0; x < w; x++) {
     //loop through the horizontal tiles
@@ -255,47 +404,95 @@ let populate_grid = (
 let generate_dungeon_candidate = (
   map_w: number,
   map_h: number,
-  depth: number
+  depth: number,
+  params: LevelParameters,
 ): Array<Partition> => {
-  const minRoomCount = depth > 0 ? 3 : 4;
-  const maxRoomCount = depth > 0 ? 12 : 7;
-  const maxRoomArea = depth > 0 ? 120 : 49;
-  let partitions = [new Partition(100, 100, map_w, map_h)];
-  let grid = [];
-  //add a new partition and define grid as empty array
+  const {
+    minRoomCount,
+    maxRoomCount,
+    maxRoomArea,
+    splitProbabilities,
+    wallRemoveProbability,
+  } = params;
+  console.log("Generating dungeon candidate with depth:", depth);
+  console.log(
+    `level parameters: minRoomCount: ${minRoomCount}, maxRoomCount: ${maxRoomCount}, maxRoomArea: ${maxRoomArea}, splitProbabilities: ${splitProbabilities}, wallRemoveProbability: ${wallRemoveProbability}`,
+  );
 
-  for (let i = 0; i < 3; i++) partitions = split_partitions(partitions, 0.75);
-  for (let i = 0; i < 3; i++) partitions = split_partitions(partitions, 1);
-  for (let i = 0; i < 3; i++) partitions = split_partitions(partitions, 0.25);
-  let partitionsBackup = [...partitions];
-  partitions.forEach((p) => console.log(p.area()));
-  console.log(`depth: ${depth}`);
-  //split partitions 3 times with different probabilities
-  grid = populate_grid(partitions, grid, map_w, map_h);
-  if (depth > 0) {
-    partitions = remove_wall_rooms(partitions, map_w, map_h, 0.5);
+  let partitions = [new Partition(0, 0, map_w, map_h)];
+  let grid = [];
+
+  // Use splitProbabilities for splitting
+  while (partitions.length < params.maxRoomCount) {
+    for (let i = 0; i < splitProbabilities.length; i++) {
+      partitions = split_partitions(partitions, splitProbabilities[i]);
+    }
+  }
+  for (let i = 0; i < 100; i++) {
+    partitions.forEach((partition) => {
+      if (partition.area() > params.maxRoomArea) {
+        console.log("Splitting partition");
+        partitions = partitions.filter((p) => p !== partition);
+        partitions = partitions.concat(split_partition(partition, 0.5));
+      }
+    });
+    console.log(partitions.length);
   }
 
-  partitions = partitions.filter((p) => {
-    if (p.area() > maxRoomArea && partitions.length - 1 > minRoomCount) {
-      return false;
-    }
-    return true;
-  });
+  visualize_partitions(partitions, map_w, map_h);
+  partitions = remove_wall_rooms(
+    partitions,
+    map_w,
+    map_h,
+    wallRemoveProbability,
+  );
 
-  while (partitions.length > maxRoomCount) {
-    partitions.pop();
+  // Remove wall rooms based on probability
+  /*
+  if (partitions.length > params.minRoomCount) {
+    for (let i = 0; i < 1; i++) {
+      partitions = remove_wall_rooms(partitions, map_w, map_h, wallRemoveProbability);
+    }
+  }
+  
+  /*
+    partitions = partitions.filter((p) => {
+      if (p.area() > maxRoomArea && partitions.length > params.minRoomCount) {
+        return false;
+      }
+      return true;
+    });
+   
+    while (partitions.length > maxRoomCount) {
+      partitions.pop();
+    }
+  */
+
+  // Check if we have any partitions before proceeding
+  if (partitions.length === 0) {
+    console.log("No partitions generated.");
+    return [];
   }
 
   //populate the grid with partitions
   partitions.sort((a, b) => a.area() - b.area());
-  //sort the partitions list by area
+
+  // Make sure we have at least one partition before assigning spawn
+  if (partitions.length === 0) {
+    console.log("No partitions generated after filtering.");
+    return [];
+  }
+
   let spawn = partitions[0];
-  //spawn is the first Partition instance
+  if (!spawn) {
+    console.log("No spawn point found.");
+    return [];
+  }
+
   spawn.type = RoomType.START;
-  //set the roomtype for the partition accordingly
-  partitions[partitions.length - 1].type = RoomType.BOSS;
-  //set the largest room as boss room?
+  if (partitions.length > 1) {
+    partitions[partitions.length - 1].type = RoomType.BOSS;
+  }
 
   let connected = [spawn];
   let frontier = [spawn];
@@ -363,7 +560,7 @@ let generate_dungeon_candidate = (
     const max_tries = 10;
 
     let not_already_connected = partitions.filter(
-      (p) => !room.connections.some((c) => c.other === p)
+      (p) => !room.connections.some((c) => c.other === p),
     );
 
     while (!found_door && tries < max_tries) {
@@ -395,25 +592,25 @@ let generate_dungeon_candidate = (
       Game.rand(boss.x - 1, boss.x + boss.w - 2, Random.rand),
       boss.y - 4,
       3,
-      3
+      3,
     );
     stair.type = RoomType.DOWNLADDER;
     if (!partitions.some((p) => p.overlaps(stair))) {
       found_stair = true;
       partitions.push(stair);
       stair.connections.push(
-        new PartitionConnection(stair.x + 1, stair.y + 3, boss)
+        new PartitionConnection(stair.x + 1, stair.y + 3, boss),
       );
       boss.connections.push(
-        new PartitionConnection(stair.x + 1, stair.y + 3, stair)
+        new PartitionConnection(stair.x + 1, stair.y + 3, stair),
       );
 
       // Set open walls for stair and boss connection
       stair.setOpenWall(
-        new PartitionConnection(stair.x + 1, stair.y + 3, boss)
+        new PartitionConnection(stair.x + 1, stair.y + 3, boss),
       );
       boss.setOpenWall(
-        new PartitionConnection(stair.x + 1, stair.y + 3, stair)
+        new PartitionConnection(stair.x + 1, stair.y + 3, stair),
       );
 
       break;
@@ -462,7 +659,8 @@ let generate_dungeon_candidate = (
 let generate_dungeon = (
   map_w: number,
   map_h: number,
-  depth: number
+  depth: number,
+  params: LevelParameters,
 ): Array<Partition> => {
   let passes_checks = false;
   let partitions: Array<Partition>;
@@ -470,10 +668,10 @@ let generate_dungeon = (
   let tries = 0;
 
   while (!passes_checks) {
-    partitions = generate_dungeon_candidate(map_w, map_h, depth);
+    partitions = generate_dungeon_candidate(map_w, map_h, depth, params);
 
     passes_checks = true;
-    if (partitions.length < 6) passes_checks = false;
+    if (partitions.length < params.minRoomCount) passes_checks = false;
     if (!partitions.some((p) => p.type === RoomType.BOSS))
       passes_checks = false;
     else if (partitions.find((p) => p.type === RoomType.BOSS).distance < 3)
@@ -482,16 +680,16 @@ let generate_dungeon = (
     tries++;
     //if (tries > 100) break;
   }
-
+  //partitions.forEach((partition) => reduce_dimensions(partition, params));
   return partitions;
 };
 
 let generate_cave_candidate = (
   map_w: number,
   map_h: number,
-  num_rooms: number
+  num_rooms: number,
 ): Array<Partition> => {
-  let partitions = [new Partition(100, 100, map_w, map_h)];
+  let partitions = [new Partition(0, 0, map_w, map_h)];
   let grid = [];
 
   for (let i = 0; i < 3; i++) partitions = split_partitions(partitions, 0.75);
@@ -553,7 +751,7 @@ let generate_cave_candidate = (
 
   // remove rooms we haven't connected to yet
   partitions = partitions.filter(
-    (partition) => partition.connections.length > 0
+    (partition) => partition.connections.length > 0,
   );
   grid = populate_grid(partitions, grid, map_w, map_h); // recalculate with removed rooms
 
@@ -574,7 +772,7 @@ let generate_cave_candidate = (
     const max_tries = 100;
 
     let not_already_connected = partitions.filter(
-      (p) => !room.connections.some((c) => c.other === p)
+      (p) => !room.connections.some((c) => c.other === p),
     );
 
     while (!found_door && tries < max_tries) {
@@ -628,7 +826,7 @@ let generate_cave = (mapWidth: number, mapHeight: number): Array<Partition> => {
 
 let generate_tutorial = (
   height: number = 7,
-  width: number = 7
+  width: number = 7,
 ): Array<Partition> => {
   let partitions: Array<Partition>;
 
@@ -636,6 +834,50 @@ let generate_tutorial = (
   partitions[0].type = RoomType.TUTORIAL;
 
   return partitions;
+};
+
+let visualize_partitions = (
+  partitions: Array<Partition>,
+  mapWidth: number,
+  mapHeight: number,
+) => {
+  const grid = Array.from({ length: mapHeight }, () =>
+    Array(mapWidth).fill("."),
+  );
+
+  partitions.forEach((partition, index) => {
+    for (let x = partition.x; x < partition.x + partition.w; x++) {
+      for (let y = partition.y; y < partition.y + partition.h; y++) {
+        if (x >= 0 && x < mapWidth && y >= 0 && y < mapHeight) {
+          grid[y][x] = index.toString();
+        }
+      }
+    }
+  });
+
+  console.log("Partition Layout:");
+  grid.forEach((row) => console.log(row.join(" ")));
+};
+
+let check_overlaps = (partitions: Array<Partition>): boolean => {
+  for (let i = 0; i < partitions.length; i++) {
+    for (let j = i + 1; j < partitions.length; j++) {
+      const a = partitions[i];
+      const b = partitions[j];
+      if (
+        a.x < b.x + b.w &&
+        a.x + a.w > b.x &&
+        a.y < b.y + b.h &&
+        a.y + a.h > b.y
+      ) {
+        console.log(
+          `Overlap detected between Partition ${i} and Partition ${j}`,
+        );
+        return true;
+      }
+    }
+  }
+  return false;
 };
 
 export class LevelGenerator {
@@ -647,7 +889,7 @@ export class LevelGenerator {
   private setOpenWallsForPartitions = (
     partitions: Array<Partition>,
     mapWidth: number,
-    mapHeight: number
+    mapHeight: number,
   ) => {
     for (const partition of partitions) {
       // Reset all walls to closed by default
@@ -675,7 +917,7 @@ export class LevelGenerator {
   getLevels = (
     partitions: Array<Partition>,
     depth: number,
-    mapGroup: number
+    mapGroup: number,
   ): Array<Room> => {
     this.setOpenWallsForPartitions(partitions, 35, 35); // Using standard map size
 
@@ -698,7 +940,7 @@ export class LevelGenerator {
         partition.isTopOpen, // New parameter
         partition.isRightOpen, // New parameter
         partition.isBottomOpen, // New parameter
-        partition.isLeftOpen // New parameter
+        partition.isLeftOpen, // New parameter
       );
       rooms.push(room);
     }
@@ -709,7 +951,7 @@ export class LevelGenerator {
       partition.connections.forEach((connection) => {
         let door = rooms[index].addDoor(connection.x, connection.y);
         let existingDoor = doors_added.find(
-          (existing) => existing.x === door.x && existing.y === door.y
+          (existing) => existing.x === door.x && existing.y === door.y,
         );
         if (existingDoor) {
           existingDoor.link(door);
@@ -731,7 +973,9 @@ export class LevelGenerator {
   };
 
   generate = (game: Game, depth: number, cave = false): Room => {
-    let dimensions = depth > 0 ? 35 : 20;
+    const params: LevelParameters =
+      LevelParameterGenerator.getParameters(depth);
+    let dimensions = params.mapWidth; // Assuming square maps for simplicity
     this.depthReached = depth;
 
     // Set the random state based on the seed and depth
@@ -747,8 +991,13 @@ export class LevelGenerator {
 
     // Generate partitions based on whether it's a cave or a dungeon
     let partitions = cave
-      ? generate_cave(20, 20)
-      : generate_dungeon(dimensions, dimensions, depth);
+      ? generate_cave(20, 20) // You might want to make these dynamic based on params
+      : generate_dungeon(dimensions, dimensions, depth, params);
+
+    // Call this function before get_wall_rooms
+    if (check_overlaps(partitions)) {
+      console.warn("There are overlapping partitions.");
+    }
 
     // Get the levels based on the partitions
     let levels = this.getLevels(partitions, depth, mapGroup);

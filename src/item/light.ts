@@ -95,7 +95,7 @@ export class Light extends Equippable {
       let color = Utils.hsvToHex(
         120 * durabilityRatio, // Hue from 120 (green) to 0 (red)
         1, // Full saturation
-        1 // Full value
+        1, // Full value
       );
 
       const iconWidth = GameConstants.TILESIZE;

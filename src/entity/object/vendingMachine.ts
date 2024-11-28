@@ -149,7 +149,7 @@ export class VendingMachine extends Entity {
       1,
       2,
       this.room.shadeColor,
-      this.shadeAmount()
+      this.shadeAmount(),
     );
   };
 
@@ -176,7 +176,7 @@ export class VendingMachine extends Entity {
         Math.round(cx - 0.5 * width) - ob,
         Math.round(cy - 0.5 * height) - ob,
         Math.round(width + 2 * ob),
-        Math.round(height + 2 * ob)
+        Math.round(height + 2 * ob),
       );
       for (let x = 0; x < this.costItems.length + 2; x++) {
         Game.ctx.fillStyle = OUTLINE_COLOR;
@@ -184,7 +184,7 @@ export class VendingMachine extends Entity {
           Math.round(cx - 0.5 * width + x * (s + 2 * b + g)),
           Math.round(cy - 0.5 * height),
           Math.round(s + 2 * b),
-          Math.round(s + 2 * b)
+          Math.round(s + 2 * b),
         );
         if (x !== this.costItems.length) {
           Game.ctx.fillStyle = FILL_COLOR;
@@ -192,7 +192,7 @@ export class VendingMachine extends Entity {
             Math.round(cx - 0.5 * width + x * (s + 2 * b + g) + b),
             Math.round(cy - 0.5 * height + b),
             Math.round(s),
-            Math.round(s)
+            Math.round(s),
           );
         }
       }
@@ -205,14 +205,14 @@ export class VendingMachine extends Entity {
               i * (s + 2 * b + g) +
               b +
               Math.floor(0.5 * s) -
-              0.5 * GameConstants.TILESIZE
+              0.5 * GameConstants.TILESIZE,
           );
           let drawY = Math.round(
             cy -
               0.5 * height +
               b +
               Math.floor(0.5 * s) -
-              0.5 * GameConstants.TILESIZE
+              0.5 * GameConstants.TILESIZE,
           );
 
           let drawXScaled = drawX / GameConstants.TILESIZE;
@@ -238,7 +238,7 @@ export class VendingMachine extends Entity {
         Math.round(cx - 0.5 * width) - ob,
         Math.round(cy - 0.5 * height) - ob,
         Math.round(width + 2 * ob),
-        Math.round(height + 2 * ob)
+        Math.round(height + 2 * ob),
       );
       Game.ctx.globalAlpha = 1.0;
     }

@@ -4,6 +4,34 @@ import { Entity, EntityType } from "./entity/entity";
 import { Item } from "./item/item";
 import { DoorType } from "./tile/door";
 import { Tile } from "./tile/tile";
+import { Enemy } from "./entity/enemy/enemy";
+
+interface roomData {
+  minCount: number;
+  maxCount: number;
+  minSize: number;
+  maxSize: number;
+}
+
+interface enemySpawnPoolData {
+  maxCount: number;
+  minCount: number;
+}
+
+interface environmentData {
+  name: string;
+  preferredEnemies: Array<Enemy>;
+  preferredEntities: Array<Entity>;
+  entityBlacklist: Array<Entity>;
+  enemySpawnPoolData: enemySpawnPoolData;
+  roomData: roomData;
+}
+
+interface entitySpawnData {
+  enemy: Enemy;
+  spawnChance: number;
+  maximumCount: number;
+}
 
 export class Level {
   depth: number;
@@ -12,6 +40,8 @@ export class Level {
   height: number;
   game: Game;
   rooms: Room[];
+  environmentData: environmentData;
+  enemySpawnPool: Array<entitySpawnData>;
   constructor(game: Game, depth: number, width: number, height: number) {
     this.game = game;
     this.depth = depth;
@@ -19,7 +49,7 @@ export class Level {
     this.height = height;
     this.rooms = game.rooms;
     this.initializeLevelArray();
-    this.loadRoomsIntoLevelArray();
+    //this.loadRoomsIntoLevelArray();
   }
 
   initializeLevelArray = () => {

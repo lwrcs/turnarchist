@@ -170,7 +170,7 @@ export class BishopEnemy extends Enemy {
             this,
             this.targetPlayer,
             disablePositions,
-            true //diagonals
+            true, //diagonals
           );
           moves = moves.filter((move) => {
             const dx = Math.abs(move.pos.x - this.x);
@@ -248,7 +248,7 @@ export class BishopEnemy extends Enemy {
           1,
           1,
           this.room.shadeColor,
-          this.shadeAmount()
+          this.shadeAmount(),
         );
       Game.drawMob(
         this.tileX + Math.floor(this.frame),
@@ -260,7 +260,7 @@ export class BishopEnemy extends Enemy {
         1,
         2,
         this.room.shadeColor,
-        this.shadeAmount() * (1 + (this.jumpY * delta) / 3)
+        this.shadeAmount() * (1 + (this.jumpY * delta) / 3),
       );
     }
     if (!this.seenPlayer) {

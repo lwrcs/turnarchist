@@ -13,7 +13,13 @@ export class TextParticle extends Particle {
   dead: boolean;
   delay: number;
 
-  constructor(text: string, x: number, y: number, color: string, delay?: number) {
+  constructor(
+    text: string,
+    x: number,
+    y: number,
+    color: string,
+    delay?: number,
+  ) {
     super();
     this.text = text;
     this.x = x * GameConstants.TILESIZE;
@@ -49,7 +55,13 @@ export class TextParticle extends Particle {
 
       let width = Game.measureText(this.text).width;
 
-      Game.fillTextOutline(this.text, this.x - width / 2, this.y - this.z, GameConstants.OUTLINE, this.color);
+      Game.fillTextOutline(
+        this.text,
+        this.x - width / 2,
+        this.y - this.z,
+        GameConstants.OUTLINE,
+        this.color,
+      );
     }
   };
 }

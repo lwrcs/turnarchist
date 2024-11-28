@@ -43,17 +43,17 @@ export class EnemySpawnAnimation extends Projectile {
         this.room,
         this.x + 0.5,
         this.y + 0.5,
-        "#ffffff"
+        "#ffffff",
       );
       GenericParticle.spawnCluster(
         this.room,
         this.x + 0.5,
         this.y + 0.5,
-        "#ffffff"
+        "#ffffff",
       );
     } else {
       this.room.hitwarnings.push(
-        new HitWarning(this.room.game, this.x, this.y, this.x, this.y)
+        new HitWarning(this.room.game, this.x, this.y, this.x, this.y),
       );
     }
   };
@@ -73,7 +73,7 @@ export class EnemySpawnAnimation extends Projectile {
         this.x + Math.round(offsetX) / 16.0,
         this.y - 0.5,
         1,
-        1
+        1,
       );
     }
     if (Math.floor(this.frame * 4) % 2 == 0)
@@ -88,8 +88,8 @@ export class EnemySpawnAnimation extends Projectile {
           0.025 * (Math.random() * 1 - 0.5),
           0.2 * (Math.random() - 1),
           "#ffffff",
-          0
-        )
+          0,
+        ),
       );
   };
 }

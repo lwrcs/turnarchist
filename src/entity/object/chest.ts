@@ -87,7 +87,7 @@ export class Chest extends Entity {
       this.room,
       this.x + 0.5,
       this.y + 0.5,
-      "#fbf236"
+      "#fbf236",
     );
 
     this.dead = true;
@@ -129,7 +129,7 @@ export class Chest extends Entity {
         1,
         2,
         this.room.shadeColor,
-        this.shadeAmount()
+        this.shadeAmount(),
       );
     }
   };

@@ -139,7 +139,7 @@ export class Entity extends Drawable {
       x: number,
       y: number,
       ...rest: any[]
-    ) => Entity
+    ) => Entity,
   >(this: T, room: Room, game: Game, x: number, y: number, ...rest: any[]) {
     room.entities.push(new this(room, game, x, y, ...rest));
   }
@@ -150,7 +150,7 @@ export class Entity extends Drawable {
 
   removeLightSource = (lightSource: LightSource) => {
     this.room.lightSources = this.room.lightSources.filter(
-      (ls) => ls !== lightSource
+      (ls) => ls !== lightSource,
     );
   };
 
@@ -324,7 +324,7 @@ export class Entity extends Drawable {
           1,
           1,
           this.room.shadeColor,
-          this.shadeAmount()
+          this.shadeAmount(),
         );
       Game.drawMob(
         this.tileX,
@@ -336,7 +336,7 @@ export class Entity extends Drawable {
         1,
         2,
         this.room.shadeColor,
-        this.shadeAmount()
+        this.shadeAmount(),
       );
     }
     /*if (this.crushed) {
@@ -366,7 +366,7 @@ export class Entity extends Drawable {
       this.maxHealth,
       this.x,
       this.y,
-      true
+      true,
     );
   };
 
@@ -393,7 +393,7 @@ export class Entity extends Drawable {
         (this.x + 0.5) * GameConstants.TILESIZE - width / 2 + xoff + offsetX,
         (this.y - 0.6) * GameConstants.TILESIZE - yoff + offsetY,
         GameConstants.OUTLINE,
-        "white"
+        "white",
       );
       Game.ctx.globalAlpha = 1;
     }
@@ -415,7 +415,7 @@ export class Entity extends Drawable {
         (this.x + 0.5) * GameConstants.TILESIZE - width / 2 + offsetX,
         (this.y - 0.75) * GameConstants.TILESIZE + yoff + offsetY,
         GameConstants.OUTLINE,
-        GameConstants.WARNING_RED
+        GameConstants.WARNING_RED,
       );
     }
   };
@@ -469,7 +469,7 @@ export class Entity extends Drawable {
     projectileClass: new (parent: Entity, x: number, y: number) => Projectile,
     collide: boolean = false,
     clearPath: boolean = true,
-    targetingPlayer: boolean = false
+    targetingPlayer: boolean = false,
   ) => {
     for (const offset of offsets) {
       const targetX = this.x + offset.x;
@@ -492,7 +492,7 @@ export class Entity extends Drawable {
     x: number,
     y: number,
     collide: boolean,
-    clearPath: boolean
+    clearPath: boolean,
   ): boolean => {
     if (!this.isWithinRoomBounds(x, y)) return false;
     if (clearPath && !this.isPathClear(this.x, this.y, x, y)) return false;
@@ -504,7 +504,7 @@ export class Entity extends Drawable {
 
   private isEntityColliding = (x: number, y: number): boolean => {
     return this.room.entities.some(
-      (entity) => entity.x === x && entity.y === y
+      (entity) => entity.x === x && entity.y === y,
     );
   };
 
@@ -513,11 +513,11 @@ export class Entity extends Drawable {
       parent: Entity,
       x: number,
       y: number,
-      color?: [number, number, number]
+      color?: [number, number, number],
     ) => Projectile,
     x: number,
     y: number,
-    color?: [number, number, number]
+    color?: [number, number, number],
   ) => {
     this.room.projectiles.push(new projectileClass(this, x, y, color));
   };
@@ -526,7 +526,7 @@ export class Entity extends Drawable {
     startX: number,
     startY: number,
     endX: number,
-    endY: number
+    endY: number,
   ): boolean => {
     const dx = Math.sign(endX - startX);
     const dy = Math.sign(endY - startY);
@@ -551,7 +551,7 @@ export class Entity extends Drawable {
   calculateProjectileOffsets(
     targetX: number,
     targetY: number,
-    attackLength: number
+    attackLength: number,
   ): { x: number; y: number }[] {
     const dx = targetX - this.x;
     const dy = targetY - this.y;
@@ -581,7 +581,7 @@ export class Entity extends Drawable {
 
     const generateOffsets = (
       isOrthogonal: boolean,
-      range: number
+      range: number,
     ): number[][] => {
       const baseOffsets = isOrthogonal
         ? [
@@ -597,7 +597,7 @@ export class Entity extends Drawable {
             [-1, 1],
           ];
       return baseOffsets.flatMap(([dx, dy]) =>
-        Array.from({ length: range }, (_, i) => [(i + 1) * dx, (i + 1) * dy])
+        Array.from({ length: range }, (_, i) => [(i + 1) * dx, (i + 1) * dy]),
       );
     };
 
@@ -643,7 +643,7 @@ export class Entity extends Drawable {
           this.y,
           true,
           false,
-          this
+          this,
         );
         this.room.hitwarnings.push(hitWarning);
         //this.hitWarnings.push(hitWarning);

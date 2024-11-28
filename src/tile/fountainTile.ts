@@ -6,7 +6,13 @@ export class FountainTile extends Tile {
   subTileX: number; // each fountain is 3x3, this is the sub-tile coordinate
   subTileY: number;
 
-  constructor(room: Room, x: number, y: number, subTileX: number, subTileY: number) {
+  constructor(
+    room: Room,
+    x: number,
+    y: number,
+    subTileX: number,
+    subTileY: number,
+  ) {
     super(room, x, y);
     this.subTileX = subTileX;
     this.subTileY = subTileY;
@@ -30,7 +36,7 @@ export class FountainTile extends Tile {
       1,
       1,
       this.room.shadeColor,
-      this.shadeAmount()
+      this.shadeAmount(),
     );
     Game.drawTile(
       this.subTileX,
@@ -42,7 +48,7 @@ export class FountainTile extends Tile {
       1,
       1,
       this.room.shadeColor,
-      this.shadeAmount()
+      this.shadeAmount(),
     );
   };
 }

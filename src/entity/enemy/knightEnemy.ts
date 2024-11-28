@@ -129,7 +129,7 @@ export class KnightEnemy extends Enemy {
               grid,
               this,
               this.targetPlayer,
-              disablePositions
+              disablePositions,
             );
             if (moves.length > 0) {
               let hitPlayer = false;
@@ -221,7 +221,7 @@ export class KnightEnemy extends Enemy {
           1,
           1,
           this.room.shadeColor,
-          this.shadeAmount()
+          this.shadeAmount(),
         );
       Game.drawMob(
         this.tileX + (this.tileX === 4 ? 0 : Math.floor(this.frame)),
@@ -236,7 +236,7 @@ export class KnightEnemy extends Enemy {
         1,
         2,
         this.room.shadeColor,
-        this.shadeAmount()
+        this.shadeAmount(),
       );
     }
     if (!this.seenPlayer) {

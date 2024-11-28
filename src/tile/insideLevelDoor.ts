@@ -25,9 +25,31 @@ export class InsideLevelDoor extends Tile {
   };
 
   draw = (delta: number) => {
-    Game.drawTile(1, 0, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
+    Game.drawTile(
+      1,
+      0,
+      1,
+      1,
+      this.x,
+      this.y,
+      1,
+      1,
+      this.room.shadeColor,
+      this.shadeAmount(),
+    );
     if (this.opened)
-      Game.drawTile(15, 1, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
+      Game.drawTile(
+        15,
+        1,
+        1,
+        1,
+        this.x,
+        this.y,
+        1,
+        1,
+        this.room.shadeColor,
+        this.shadeAmount(),
+      );
     else
       Game.drawTile(
         3,
@@ -39,7 +61,7 @@ export class InsideLevelDoor extends Tile {
         1,
         1,
         this.room.shadeColor,
-        this.shadeAmount()
+        this.shadeAmount(),
       );
   };
 
@@ -55,7 +77,7 @@ export class InsideLevelDoor extends Tile {
         1,
         1,
         this.room.shadeColor,
-        this.shadeAmount()
+        this.shadeAmount(),
       );
     else
       Game.drawTile(
@@ -68,7 +90,7 @@ export class InsideLevelDoor extends Tile {
         1,
         1,
         this.room.shadeColor,
-        this.shadeAmount()
+        this.shadeAmount(),
       );
   };
 }

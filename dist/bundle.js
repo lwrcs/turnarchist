@@ -1461,8 +1461,7 @@ var BishopEnemy = /** @class */ (function (_super) {
                         disablePositions.push({ x: _this.x - 1, y: _this.y });
                         disablePositions.push({ x: _this.x, y: _this.y + 1 });
                         disablePositions.push({ x: _this.x, y: _this.y - 1 });
-                        var moves = astarclass_1.astar.AStar.search(grid, _this, _this.targetPlayer, disablePositions, true //diagonals
-                        );
+                        var moves = astarclass_1.astar.AStar.search(grid, _this, _this.targetPlayer, disablePositions, true);
                         moves = moves.filter(function (move) {
                             var dx = Math.abs(move.pos.x - _this.x);
                             var dy = Math.abs(move.pos.y - _this.y);
@@ -3384,8 +3383,7 @@ var QueenEnemy = /** @class */ (function (_super) {
                         }
                         var moves = astarclass_1.astar.AStar.search(grid, _this, _this.targetPlayer, disablePositions, true, //diagonals
                         false, //diagonalsOnly
-                        undefined, undefined, undefined, false //diagonalsOmni
-                        );
+                        undefined, undefined, undefined, false);
                         if (moves.length > 0) {
                             disablePositions.push({ x: oldX + 1, y: oldY });
                             disablePositions.push({ x: oldX - 1, y: oldY });
@@ -5952,88 +5950,6 @@ exports.VendingMachine = VendingMachine;
 
 /***/ }),
 
-/***/ "./src/entity/object/wallCrack.ts":
-/*!****************************************!*\
-  !*** ./src/entity/object/wallCrack.ts ***!
-  \****************************************/
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        if (typeof b !== "function" && b !== null)
-            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.WallCrack = void 0;
-var entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
-var game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-var heart_1 = __webpack_require__(/*! ../../item/heart */ "./src/item/heart.ts");
-var entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
-var imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ "./src/particle/imageParticle.ts");
-var random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
-var coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
-var WallCrack = /** @class */ (function (_super) {
-    __extends(WallCrack, _super);
-    function WallCrack(room, game, x, y, direction) {
-        var _this = _super.call(this, room, game, x, y) || this;
-        _this.kill = function () {
-            _this.dead = true;
-            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 29);
-            _this.room.crackWallIntoRoom(_this.x, _this.y, _this.wallDirection);
-        };
-        _this.killNoBones = function () {
-            _this.kill();
-        };
-        _this.drawTopLayer = function (delta) {
-            // not inherited because it doesn't have the 0.5 offset
-            if (!_this.dead) {
-                _this.updateDrawXY(delta);
-                game_1.Game.drawObj(_this.tileX, _this.tileY, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
-            }
-        };
-        _this.draw = function (delta) {
-            _this.drawableY = _this.y;
-        };
-        _this.room = room;
-        _this.health = 1;
-        _this.tileX = 11;
-        _this.tileY = 0;
-        _this.hasShadow = false;
-        _this.chainPushable = false;
-        _this.name = "wall crack";
-        _this.wallDirection = direction;
-        var dropProb = random_1.Random.rand();
-        if (dropProb < 0.025)
-            _this.drop = new heart_1.Heart(_this.room, _this.x, _this.y);
-        else
-            _this.drop = new coin_1.Coin(_this.room, _this.x, _this.y);
-        return _this;
-    }
-    Object.defineProperty(WallCrack.prototype, "type", {
-        get: function () {
-            return entity_2.EntityType.PROP;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    return WallCrack;
-}(entity_1.Entity));
-exports.WallCrack = WallCrack;
-
-
-/***/ }),
-
 /***/ "./src/entity/resource/coalResource.ts":
 /*!*********************************************!*\
   !*** ./src/entity/resource/coalResource.ts ***!
@@ -8139,7 +8055,7 @@ var loadGameState = function (game, activeUsernames, gameState, newWorld) {
     game.room.doors.forEach(function (door) {
         door.lock();
     });
-    var newLevel = new level_1.Level(game, 1, 898, 898);
+    var newLevel = new level_1.Level(game, 1, 100, 100);
     game.levels.push(newLevel);
     game.level = newLevel;
     /*
@@ -10548,8 +10464,7 @@ var Item = /** @class */ (function (_super) {
                 // Map durability ratio to hue (120 = green, 0 = red)
                 var color = utils_1.Utils.hsvToHex(120 * durabilityRatio, // Hue from 120 (green) to 0 (red)
                 1, // Full saturation
-                1 // Full value
-                );
+                1);
                 var iconWidth = gameConstants_1.GameConstants.TILESIZE;
                 var barWidth = durabilityRatio * iconWidth;
                 var barHeight = 2; // 2 pixels tall
@@ -10671,8 +10586,6 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Lantern = void 0;
-var candle_1 = __webpack_require__(/*! ./candle */ "./src/item/candle.ts");
-var torch_1 = __webpack_require__(/*! ./torch */ "./src/item/torch.ts");
 var light_1 = __webpack_require__(/*! ./light */ "./src/item/light.ts");
 var Lantern = /** @class */ (function (_super) {
     __extends(Lantern, _super);
@@ -10680,11 +10593,6 @@ var Lantern = /** @class */ (function (_super) {
         var _this = _super.call(this, level, x, y) || this;
         _this.addFuel = function (amount) {
             _this.fuel += amount;
-        };
-        _this.coEquippable = function (other) {
-            return !(other instanceof candle_1.Candle ||
-                other instanceof torch_1.Torch ||
-                other instanceof Lantern);
         };
         _this.setRadius = function () {
             _this.wielder.sightRadius = Math.min(_this.fuel / 4 + 3, 7);
@@ -10805,8 +10713,7 @@ var Light = /** @class */ (function (_super) {
                 // Map durability ratio to hue (120 = green, 0 = red)
                 var color = utils_1.Utils.hsvToHex(120 * durabilityRatio, // Hue from 120 (green) to 0 (red)
                 1, // Full saturation
-                1 // Full value
-                );
+                1);
                 var iconWidth = gameConstants_1.GameConstants.TILESIZE;
                 var barWidth = durabilityRatio * iconWidth;
                 var barHeight = 2; // 2 pixels tall
@@ -11105,7 +11012,7 @@ var Level = /** @class */ (function () {
         this.height = height;
         this.rooms = game.rooms;
         this.initializeLevelArray();
-        this.loadRoomsIntoLevelArray();
+        //this.loadRoomsIntoLevelArray();
     }
     return Level;
 }());
@@ -11174,7 +11081,7 @@ var game_1 = __webpack_require__(/*! ./game */ "./src/game.ts");
 var room_1 = __webpack_require__(/*! ./room */ "./src/room.ts");
 var random_1 = __webpack_require__(/*! ./random */ "./src/random.ts");
 var downLadder_1 = __webpack_require__(/*! ./tile/downLadder */ "./src/tile/downLadder.ts");
-//Goal: CRACK THE LEVEL GENERATOR
+var levelParametersGenerator_1 = __webpack_require__(/*! ./levelParametersGenerator */ "./src/levelParametersGenerator.ts");
 var PartitionConnection = /** @class */ (function () {
     function PartitionConnection(x, y, other) {
         this.x = x;
@@ -11307,10 +11214,7 @@ var Partition = /** @class */ (function () {
             } //pushes points to left and right of the partition
             points = points.filter(function (p) {
                 return !_this.connections.some(function (c) { return Math.abs(c.x - p.x) + Math.abs(c.y - p.y) <= 1; });
-            }
-            //if the sum of the distance between the input x and y values and the partitions x and y values is > 1
-            //delete those from the points array
-            );
+            });
             points.sort(function () { return 0.5 - random_1.Random.rand(); });
             return points[0]; //return first object of x y points in array points
         };
@@ -11342,23 +11246,169 @@ var split_partitions = function (partitions, prob) {
     return partitions;
     //takes input partitions array, randomly removes partitions and adds splits, output modified partitions array
 };
+var split_partition = function (partition, prob) {
+    if (random_1.Random.rand() < prob) {
+        return partition.split();
+    }
+    else {
+        return [partition];
+    }
+    // Takes a single partition and probability
+    // Returns an array with either the split partitions or the original partition
+};
+var reduce_dimensions = function (partition, params) {
+    var reduceY = 0;
+    var reduceX = 0;
+    var translateX = 0;
+    var translateY = 0;
+    partition.connections.forEach(function (connection) {
+        if (connection.y === partition.y)
+            reduceY++, translateY++;
+        if (connection.y === partition.y + partition.h)
+            reduceY++;
+        if (connection.x === partition.x)
+            reduceX++, translateX++;
+        if (connection.x === partition.x + partition.w)
+            reduceX++;
+    });
+    if (partition.w > 7) {
+        partition.w -= translateX;
+        partition.x += translateX;
+    }
+    if (partition.h > 7) {
+        partition.h -= translateY;
+        partition.y += translateY;
+    }
+};
+var get_wall_rooms = function (partitions, mapWidth, mapHeight) {
+    return partitions.filter(function (partition, index) {
+        // Helper function to check if a specific path is clear
+        var isPathClear = function (direction) {
+            switch (direction) {
+                case "left":
+                    var _loop_2 = function (y) {
+                        var blocked = partitions.some(function (other) {
+                            if (other === partition)
+                                return false;
+                            // Check if other partition overlaps this y-coordinate and is to the left
+                            return (other.y <= y &&
+                                y < other.y + other.h &&
+                                other.x + other.w > 0 &&
+                                other.x + other.w <= partition.x);
+                        });
+                        if (!blocked)
+                            return { value: true }; // Found at least one y without a blocker
+                    };
+                    for (var y = partition.y; y < partition.y + partition.h; y++) {
+                        var state_1 = _loop_2(y);
+                        if (typeof state_1 === "object")
+                            return state_1.value;
+                    }
+                    return false;
+                case "right":
+                    var _loop_3 = function (y) {
+                        var blocked = partitions.some(function (other) {
+                            if (other === partition)
+                                return false;
+                            // Check if other partition overlaps this y-coordinate and is to the right
+                            return (other.y <= y &&
+                                y < other.y + other.h &&
+                                other.x < mapWidth &&
+                                other.x >= partition.x + partition.w);
+                        });
+                        if (!blocked)
+                            return { value: true };
+                    };
+                    for (var y = partition.y; y < partition.y + partition.h; y++) {
+                        var state_2 = _loop_3(y);
+                        if (typeof state_2 === "object")
+                            return state_2.value;
+                    }
+                    return false;
+                case "top":
+                    var _loop_4 = function (x) {
+                        var blocked = partitions.some(function (other) {
+                            if (other === partition)
+                                return false;
+                            // Check if other partition overlaps this x-coordinate and is above
+                            return (other.x <= x &&
+                                x < other.x + other.w &&
+                                other.y + other.h > 0 &&
+                                other.y + other.h <= partition.y);
+                        });
+                        if (!blocked)
+                            return { value: true };
+                    };
+                    for (var x = partition.x; x < partition.x + partition.w; x++) {
+                        var state_3 = _loop_4(x);
+                        if (typeof state_3 === "object")
+                            return state_3.value;
+                    }
+                    return false;
+                case "bottom":
+                    var _loop_5 = function (x) {
+                        var blocked = partitions.some(function (other) {
+                            if (other === partition)
+                                return false;
+                            // Check if other partition overlaps this x-coordinate and is below
+                            return (other.x <= x &&
+                                x < other.x + other.w &&
+                                other.y < mapHeight &&
+                                other.y >= partition.y + partition.h);
+                        });
+                        if (!blocked)
+                            return { value: true };
+                    };
+                    for (var x = partition.x; x < partition.x + partition.w; x++) {
+                        var state_4 = _loop_5(x);
+                        if (typeof state_4 === "object")
+                            return state_4.value;
+                    }
+                    return false;
+                default:
+                    return false;
+            }
+        };
+        var hasLeftPath = isPathClear("left");
+        var hasRightPath = isPathClear("right");
+        var hasTopPath = isPathClear("top");
+        var hasBottomPath = isPathClear("bottom");
+        // Count the number of open paths
+        var openPaths = [
+            hasLeftPath,
+            hasRightPath,
+            hasTopPath,
+            hasBottomPath,
+        ].filter(Boolean).length;
+        // Log the path statuses for debugging
+        console.log("Partition ".concat(index, ": (").concat(partition.x, ", ").concat(partition.y, ", ").concat(partition.w, ", ").concat(partition.h, ")"));
+        console.log("  hasLeftPath: ".concat(hasLeftPath));
+        console.log("  hasRightPath: ".concat(hasRightPath));
+        console.log("  hasTopPath: ".concat(hasTopPath));
+        console.log("  hasBottomPath: ".concat(hasBottomPath));
+        console.log("  Open Paths Count: ".concat(openPaths));
+        // Define wall rooms as those with exactly one open path
+        var isWallRoom = openPaths === 1;
+        console.log("  isWallRoom: ".concat(isWallRoom));
+        return isWallRoom;
+    });
+};
 var remove_wall_rooms = function (partitions, w, h, prob) {
     if (prob === void 0) { prob = 1.0; }
-    var _loop_2 = function (partition) {
-        if ((partition.x === 0 ||
-            partition.y === 0 ||
-            partition.x + partition.w === w ||
-            partition.y + partition.h === h) &&
-            random_1.Random.rand() < prob) {
-            partitions = partitions.filter(function (p) { return p != partition; });
+    // Get all wall rooms
+    var wallRooms = get_wall_rooms(partitions, w, h);
+    console.log("wallRooms.length: ".concat(wallRooms.length));
+    var _loop_6 = function (wallRoom) {
+        if (random_1.Random.rand() < prob) {
+            partitions = partitions.filter(function (p) { return p !== wallRoom; });
         }
     };
-    for (var _i = 0, partitions_2 = partitions; _i < partitions_2.length; _i++) {
-        var partition = partitions_2[_i];
-        _loop_2(partition);
+    // Remove wall rooms based on probability
+    for (var _i = 0, wallRooms_1 = wallRooms; _i < wallRooms_1.length; _i++) {
+        var wallRoom = wallRooms_1[_i];
+        _loop_6(wallRoom);
     }
     return partitions;
-    //return partitions array with no wall rooms
 };
 var populate_grid = function (partitions, grid, w, h) {
     for (var x = 0; x < w; x++) {
@@ -11366,8 +11416,8 @@ var populate_grid = function (partitions, grid, w, h) {
         grid[x] = []; //empty array at x index
         for (var y = 0; y < h; y++) {
             grid[x][y] = false;
-            for (var _i = 0, partitions_3 = partitions; _i < partitions_3.length; _i++) {
-                var partition = partitions_3[_i];
+            for (var _i = 0, partitions_2 = partitions; _i < partitions_2.length; _i++) {
+                var partition = partitions_2[_i];
                 if (partition.point_in(x, y))
                     grid[x][y] = partition;
             }
@@ -11377,45 +11427,71 @@ var populate_grid = function (partitions, grid, w, h) {
     //input grid array, partitions array and width and height
     //output grid array that indicates which cells are in which partition
 };
-var generate_dungeon_candidate = function (map_w, map_h, depth) {
-    var minRoomCount = depth > 0 ? 3 : 4;
-    var maxRoomCount = depth > 0 ? 12 : 7;
-    var maxRoomArea = depth > 0 ? 120 : 49;
-    var partitions = [new Partition(100, 100, map_w, map_h)];
+var generate_dungeon_candidate = function (map_w, map_h, depth, params) {
+    var minRoomCount = params.minRoomCount, maxRoomCount = params.maxRoomCount, maxRoomArea = params.maxRoomArea, splitProbabilities = params.splitProbabilities, wallRemoveProbability = params.wallRemoveProbability;
+    console.log("Generating dungeon candidate with depth:", depth);
+    console.log("level parameters: minRoomCount: ".concat(minRoomCount, ", maxRoomCount: ").concat(maxRoomCount, ", maxRoomArea: ").concat(maxRoomArea, ", splitProbabilities: ").concat(splitProbabilities, ", wallRemoveProbability: ").concat(wallRemoveProbability));
+    var partitions = [new Partition(0, 0, map_w, map_h)];
     var grid = [];
-    //add a new partition and define grid as empty array
-    for (var i = 0; i < 3; i++)
-        partitions = split_partitions(partitions, 0.75);
-    for (var i = 0; i < 3; i++)
-        partitions = split_partitions(partitions, 1);
-    for (var i = 0; i < 3; i++)
-        partitions = split_partitions(partitions, 0.25);
-    var partitionsBackup = __spreadArray([], partitions, true);
-    partitions.forEach(function (p) { return console.log(p.area()); });
-    console.log("depth: ".concat(depth));
-    //split partitions 3 times with different probabilities
-    grid = populate_grid(partitions, grid, map_w, map_h);
-    if (depth > 0) {
-        partitions = remove_wall_rooms(partitions, map_w, map_h, 0.5);
+    // Use splitProbabilities for splitting
+    while (partitions.length < params.maxRoomCount) {
+        for (var i = 0; i < splitProbabilities.length; i++) {
+            partitions = split_partitions(partitions, splitProbabilities[i]);
+        }
     }
-    partitions = partitions.filter(function (p) {
-        if (p.area() > maxRoomArea && partitions.length - 1 > minRoomCount) {
-            return false;
+    for (var i = 0; i < 100; i++) {
+        partitions.forEach(function (partition) {
+            if (partition.area() > params.maxRoomArea) {
+                console.log("Splitting partition");
+                partitions = partitions.filter(function (p) { return p !== partition; });
+                partitions = partitions.concat(split_partition(partition, 0.5));
+            }
+        });
+        console.log(partitions.length);
+    }
+    visualize_partitions(partitions, map_w, map_h);
+    partitions = remove_wall_rooms(partitions, map_w, map_h, wallRemoveProbability);
+    // Remove wall rooms based on probability
+    /*
+    if (partitions.length > params.minRoomCount) {
+      for (let i = 0; i < 1; i++) {
+        partitions = remove_wall_rooms(partitions, map_w, map_h, wallRemoveProbability);
+      }
+    }
+    
+    /*
+      partitions = partitions.filter((p) => {
+        if (p.area() > maxRoomArea && partitions.length > params.minRoomCount) {
+          return false;
         }
         return true;
-    });
-    while (partitions.length > maxRoomCount) {
+      });
+     
+      while (partitions.length > maxRoomCount) {
         partitions.pop();
+      }
+    */
+    // Check if we have any partitions before proceeding
+    if (partitions.length === 0) {
+        console.log("No partitions generated.");
+        return [];
     }
     //populate the grid with partitions
     partitions.sort(function (a, b) { return a.area() - b.area(); });
-    //sort the partitions list by area
+    // Make sure we have at least one partition before assigning spawn
+    if (partitions.length === 0) {
+        console.log("No partitions generated after filtering.");
+        return [];
+    }
     var spawn = partitions[0];
-    //spawn is the first Partition instance
+    if (!spawn) {
+        console.log("No spawn point found.");
+        return [];
+    }
     spawn.type = room_1.RoomType.START;
-    //set the roomtype for the partition accordingly
-    partitions[partitions.length - 1].type = room_1.RoomType.BOSS;
-    //set the largest room as boss room?
+    if (partitions.length > 1) {
+        partitions[partitions.length - 1].type = room_1.RoomType.BOSS;
+    }
     var connected = [spawn];
     var frontier = [spawn];
     var found_boss = false;
@@ -11429,8 +11505,8 @@ var generate_dungeon_candidate = function (map_w, map_h, depth) {
         var max_tries = 1000;
         while (doors_found < num_doors && tries < max_tries) {
             var point = room.get_branch_point();
-            for (var _i = 0, partitions_4 = partitions; _i < partitions_4.length; _i++) {
-                var p = partitions_4[_i];
+            for (var _i = 0, partitions_3 = partitions; _i < partitions_3.length; _i++) {
+                var p = partitions_3[_i];
                 if (p !== room &&
                     connected.indexOf(p) === -1 &&
                     p.point_next_to(point.x, point.y)) {
@@ -11450,14 +11526,14 @@ var generate_dungeon_candidate = function (map_w, map_h, depth) {
             tries++;
         }
     }
-    var _loop_3 = function (partition) {
+    var _loop_7 = function (partition) {
         if (partition.connections.length === 0)
             partitions = partitions.filter(function (p) { return p !== partition; });
     };
     // remove rooms we haven't connected to yet
-    for (var _a = 0, partitions_5 = partitions; _a < partitions_5.length; _a++) {
-        var partition = partitions_5[_a];
-        _loop_3(partition);
+    for (var _a = 0, partitions_4 = partitions; _a < partitions_4.length; _a++) {
+        var partition = partitions_4[_a];
+        _loop_7(partition);
     }
     grid = populate_grid(partitions, grid, map_w, map_h); // recalculate with removed rooms
     // make sure we haven't removed all the rooms
@@ -11466,7 +11542,7 @@ var generate_dungeon_candidate = function (map_w, map_h, depth) {
     }
     // make some loops
     var num_loop_doors = Math.floor(random_1.Random.rand() * 4 + 4);
-    var _loop_4 = function (i) {
+    var _loop_8 = function (i) {
         var roomIndex = Math.floor(random_1.Random.rand() * partitions.length);
         var room = partitions[roomIndex];
         var found_door = false;
@@ -11491,7 +11567,7 @@ var generate_dungeon_candidate = function (map_w, map_h, depth) {
         }
     };
     for (var i = 0; i < num_loop_doors; i++) {
-        _loop_4(i);
+        _loop_8(i);
     }
     // add stair room
     if (!partitions.some(function (p) { return p.type === room_1.RoomType.BOSS; }))
@@ -11499,7 +11575,7 @@ var generate_dungeon_candidate = function (map_w, map_h, depth) {
     var boss = partitions.find(function (p) { return p.type === room_1.RoomType.BOSS; });
     var found_stair = false;
     var max_stair_tries = 100;
-    var _loop_5 = function (stair_tries) {
+    var _loop_9 = function (stair_tries) {
         var stair = new Partition(game_1.Game.rand(boss.x - 1, boss.x + boss.w - 2, random_1.Random.rand), boss.y - 4, 3, 3);
         stair.type = room_1.RoomType.DOWNLADDER;
         if (!partitions.some(function (p) { return p.overlaps(stair); })) {
@@ -11514,8 +11590,8 @@ var generate_dungeon_candidate = function (map_w, map_h, depth) {
         }
     };
     for (var stair_tries = 0; stair_tries < max_stair_tries; stair_tries++) {
-        var state_1 = _loop_5(stair_tries);
-        if (state_1 === "break")
+        var state_5 = _loop_9(stair_tries);
+        if (state_5 === "break")
             break;
     }
     if (!found_stair)
@@ -11538,8 +11614,8 @@ var generate_dungeon_candidate = function (map_w, map_h, depth) {
     }
     // add special rooms
     var added_rope_hole = false;
-    for (var _d = 0, partitions_6 = partitions; _d < partitions_6.length; _d++) {
-        var p = partitions_6[_d];
+    for (var _d = 0, partitions_5 = partitions; _d < partitions_5.length; _d++) {
+        var p = partitions_5[_d];
         if (p.type === room_1.RoomType.DUNGEON) {
             if (p.distance > 4 && p.area() <= 30 && random_1.Random.rand() < 0.1) {
                 p.type = room_1.RoomType.TREASURE;
@@ -11555,14 +11631,14 @@ var generate_dungeon_candidate = function (map_w, map_h, depth) {
     }
     return partitions;
 };
-var generate_dungeon = function (map_w, map_h, depth) {
+var generate_dungeon = function (map_w, map_h, depth, params) {
     var passes_checks = false;
     var partitions;
     var tries = 0;
     while (!passes_checks) {
-        partitions = generate_dungeon_candidate(map_w, map_h, depth);
+        partitions = generate_dungeon_candidate(map_w, map_h, depth, params);
         passes_checks = true;
-        if (partitions.length < 6)
+        if (partitions.length < params.minRoomCount)
             passes_checks = false;
         if (!partitions.some(function (p) { return p.type === room_1.RoomType.BOSS; }))
             passes_checks = false;
@@ -11571,10 +11647,11 @@ var generate_dungeon = function (map_w, map_h, depth) {
         tries++;
         //if (tries > 100) break;
     }
+    //partitions.forEach((partition) => reduce_dimensions(partition, params));
     return partitions;
 };
 var generate_cave_candidate = function (map_w, map_h, num_rooms) {
-    var partitions = [new Partition(100, 100, map_w, map_h)];
+    var partitions = [new Partition(0, 0, map_w, map_h)];
     var grid = [];
     for (var i = 0; i < 3; i++)
         partitions = split_partitions(partitions, 0.75);
@@ -11607,8 +11684,8 @@ var generate_cave_candidate = function (map_w, map_h, num_rooms) {
             var point = room.get_branch_point();
             if (!point) {
             }
-            for (var _i = 0, partitions_7 = partitions; _i < partitions_7.length; _i++) {
-                var p = partitions_7[_i];
+            for (var _i = 0, partitions_6 = partitions; _i < partitions_6.length; _i++) {
+                var p = partitions_6[_i];
                 if (p !== room &&
                     connected.indexOf(p) === -1 &&
                     p.point_next_to(point.x, point.y)) {
@@ -11632,7 +11709,7 @@ var generate_cave_candidate = function (map_w, map_h, num_rooms) {
     }
     // make some loops
     var num_loop_doors = Math.floor(random_1.Random.rand() * 4 + 4);
-    var _loop_6 = function (i) {
+    var _loop_10 = function (i) {
         var roomIndex = Math.floor(random_1.Random.rand() * partitions.length);
         var room = partitions[roomIndex];
         var found_door = false;
@@ -11657,7 +11734,7 @@ var generate_cave_candidate = function (map_w, map_h, num_rooms) {
         }
     };
     for (var i = 0; i < num_loop_doors; i++) {
-        _loop_6(i);
+        _loop_10(i);
     }
     // calculate room distances
     frontier = [spawn];
@@ -11693,14 +11770,46 @@ var generate_tutorial = function (height, width) {
     partitions[0].type = room_1.RoomType.TUTORIAL;
     return partitions;
 };
+var visualize_partitions = function (partitions, mapWidth, mapHeight) {
+    var grid = Array.from({ length: mapHeight }, function () {
+        return Array(mapWidth).fill(".");
+    });
+    partitions.forEach(function (partition, index) {
+        for (var x = partition.x; x < partition.x + partition.w; x++) {
+            for (var y = partition.y; y < partition.y + partition.h; y++) {
+                if (x >= 0 && x < mapWidth && y >= 0 && y < mapHeight) {
+                    grid[y][x] = index.toString();
+                }
+            }
+        }
+    });
+    console.log("Partition Layout:");
+    grid.forEach(function (row) { return console.log(row.join(" ")); });
+};
+var check_overlaps = function (partitions) {
+    for (var i = 0; i < partitions.length; i++) {
+        for (var j = i + 1; j < partitions.length; j++) {
+            var a = partitions[i];
+            var b = partitions[j];
+            if (a.x < b.x + b.w &&
+                a.x + a.w > b.x &&
+                a.y < b.y + b.h &&
+                a.y + a.h > b.y) {
+                console.log("Overlap detected between Partition ".concat(i, " and Partition ").concat(j));
+                return true;
+            }
+        }
+    }
+    return false;
+};
 var LevelGenerator = /** @class */ (function () {
     function LevelGenerator() {
         var _this = this;
         this.depthReached = 0;
         this.currentFloorFirstLevelID = 0;
         this.setOpenWallsForPartitions = function (partitions, mapWidth, mapHeight) {
-            for (var _i = 0, partitions_8 = partitions; _i < partitions_8.length; _i++) {
-                var partition = partitions_8[_i];
+            for (var _i = 0, partitions_7 = partitions; _i < partitions_7.length; _i++) {
+                var partition = partitions_7[_i];
                 // Reset all walls to closed by default
                 partition.isTopOpen = false;
                 partition.isRightOpen = false;
@@ -11730,8 +11839,7 @@ var LevelGenerator = /** @class */ (function () {
                 var room = new room_1.Room(_this.game, partition.x - 1, partition.y - 1, partition.w + 2, partition.h + 2, partition.type, depth, mapGroup, random_1.Random.rand, partition.isTopOpen, // New parameter
                 partition.isRightOpen, // New parameter
                 partition.isBottomOpen, // New parameter
-                partition.isLeftOpen // New parameter
-                );
+                partition.isLeftOpen);
                 rooms.push(room);
             }
             var doors_added = [];
@@ -11757,7 +11865,8 @@ var LevelGenerator = /** @class */ (function () {
         };
         this.generate = function (game, depth, cave) {
             if (cave === void 0) { cave = false; }
-            var dimensions = depth > 0 ? 35 : 20;
+            var params = levelParametersGenerator_1.LevelParameterGenerator.getParameters(depth);
+            var dimensions = params.mapWidth; // Assuming square maps for simplicity
             _this.depthReached = depth;
             // Set the random state based on the seed and depth
             random_1.Random.setState(_this.seed + depth);
@@ -11768,8 +11877,12 @@ var LevelGenerator = /** @class */ (function () {
                 : 0;
             // Generate partitions based on whether it's a cave or a dungeon
             var partitions = cave
-                ? generate_cave(20, 20)
-                : generate_dungeon(dimensions, dimensions, depth);
+                ? generate_cave(20, 20) // You might want to make these dynamic based on params
+                : generate_dungeon(dimensions, dimensions, depth, params);
+            // Call this function before get_wall_rooms
+            if (check_overlaps(partitions)) {
+                console.warn("There are overlapping partitions.");
+            }
             // Get the levels based on the partitions
             var levels = _this.getLevels(partitions, depth, mapGroup);
             // Update the current floor first level ID if it's not a cave
@@ -11823,6 +11936,43 @@ var LevelGenerator = /** @class */ (function () {
     return LevelGenerator;
 }());
 exports.LevelGenerator = LevelGenerator;
+
+
+/***/ }),
+
+/***/ "./src/levelParametersGenerator.ts":
+/*!*****************************************!*\
+  !*** ./src/levelParametersGenerator.ts ***!
+  \*****************************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.LevelParameterGenerator = void 0;
+var LevelParameterGenerator = /** @class */ (function () {
+    function LevelParameterGenerator() {
+    }
+    /**
+     * Generates level parameters based on the current depth.
+     * @param depth The current depth level.
+     * @returns An object conforming to the LevelParameters interface.
+     */
+    LevelParameterGenerator.getParameters = function (depth) {
+        return {
+            minRoomCount: depth > 0 ? 4 : 5,
+            maxRoomCount: depth > 0 ? 12 : 8,
+            maxRoomArea: depth > 0 ? 120 : 40,
+            mapWidth: depth > 0 ? 35 : 25,
+            mapHeight: depth > 0 ? 35 : 25,
+            splitProbabilities: [0.75, 1.0, 0.25],
+            wallRemoveProbability: depth > 0 ? 0.5 : 1,
+            numLoopDoorsRange: [4, 8],
+            numberOfRooms: depth > 0 ? 5 : 3,
+        };
+    };
+    return LevelParameterGenerator;
+}());
+exports.LevelParameterGenerator = LevelParameterGenerator;
 
 
 /***/ }),
@@ -12408,8 +12558,7 @@ var ImageParticle = /** @class */ (function (_super) {
     }
     ImageParticle.shotgun = function (room, cx, cy, tx, ty, tileX, tileY) {
         for (var i = 0; i < 4; i++) {
-            room.particles.push(new ImageParticle(room, cx, cy, 0, Math.random() * 0.5 + 0.3, 0, 0, 0, tileX, tileY, 0 //size
-            ));
+            room.particles.push(new ImageParticle(room, cx, cy, 0, Math.random() * 0.5 + 0.3, 0, 0, 0, tileX, tileY, 0));
         }
     };
     ImageParticle.spawnCluster = function (level, cx, cy, tileX, tileY) {
@@ -12421,8 +12570,7 @@ var ImageParticle = /** @class */ (function (_super) {
             0.025 * (Math.random() * 2 - 1), //dx
             0.025 * (Math.random() * 2 - 1), //dy
             0.2 * (Math.random() - 1), //dz
-            tileX, tileY, [2, 1, 0, 1, 2, 2, 2][i] //size
-            ));
+            tileX, tileY, [2, 1, 0, 1, 2, 2, 2][i]));
         }
     };
     return ImageParticle;
@@ -13909,9 +14057,9 @@ var Random = /** @class */ (function () {
         Random.state = state;
     };
     Random.rand = function () {
-        Random.state ^= (Random.state << 21);
-        Random.state ^= (Random.state >>> 35);
-        Random.state ^= (Random.state << 4);
+        Random.state ^= Random.state << 21;
+        Random.state ^= Random.state >>> 35;
+        Random.state ^= Random.state << 4;
         return (Random.state >>> 0) / 4294967296;
     };
     return Random;
@@ -14287,8 +14435,7 @@ var Room = /** @class */ (function () {
             _this.addPlants(numPlants, rand);
             _this.addObstacles(numObstacles, rand);
             var numEnemies = Math.ceil((numEmptyTiles - numTotalObstacles) *
-                Math.min(_this.depth * 0.1 + 0.1, 0.35) //this.depth * 0.01 is starting value
-            );
+                Math.min(_this.depth * 0.1 + 0.1, 0.35));
             _this.addEnemies(numEnemies, rand);
             if (factor <= 6)
                 _this.addVendingMachine(rand);
@@ -14734,8 +14881,7 @@ var Room = /** @class */ (function () {
                         if (player.lightEquipped)
                             lightColor = levelConstants_1.LevelConstants.TORCH_LIGHT_COLOR;
                         _this.castTintAtAngle(i, player.x + 0.5, player.y + 0.5, Math.min(Math.max(player.sightRadius - _this.depth + 2, player_1.Player.minSightRadius), 10), lightColor, // RGB color in sRGB
-                        5 // intensity
-                        );
+                        5);
                     }
                 }
             }
@@ -16490,7 +16636,8 @@ var Button = /** @class */ (function (_super) {
         _this.tickEnd = function () {
             _this.unpress();
             for (var i in _this.room.game.players) {
-                if (_this.room.game.players[i].x === _this.x && _this.room.game.players[i].y === _this.y)
+                if (_this.room.game.players[i].x === _this.x &&
+                    _this.room.game.players[i].y === _this.y)
                     _this.press();
             }
             for (var _i = 0, _a = _this.room.entities; _i < _a.length; _i++) {
@@ -16902,7 +17049,9 @@ var DownLadder = /** @class */ (function (_super) {
             else {
                 var allPlayersHere = true;
                 for (var i in _this.game.players) {
-                    if (_this.game.rooms[_this.game.players[i].levelID] !== _this.room || _this.game.players[i].x !== _this.x || _this.game.players[i].y !== _this.y) {
+                    if (_this.game.rooms[_this.game.players[i].levelID] !== _this.room ||
+                        _this.game.players[i].x !== _this.x ||
+                        _this.game.players[i].y !== _this.y) {
                         allPlayersHere = false;
                     }
                 }
@@ -16914,7 +17063,7 @@ var DownLadder = /** @class */ (function (_super) {
                 }
                 else {
                     if (player === _this.game.players[_this.game.localPlayerID])
-                        _this.game.chat.push(new game_1.ChatMessage('all players must be present'));
+                        _this.game.chat.push(new game_1.ChatMessage("all players must be present"));
                 }
             }
         };
@@ -17503,7 +17652,6 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Wall = void 0;
-var wallCrack_1 = __webpack_require__(/*! ../entity/object/wallCrack */ "./src/entity/object/wallCrack.ts");
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var tile_1 = __webpack_require__(/*! ./tile */ "./src/tile/tile.ts");
 var Wall = /** @class */ (function (_super) {
@@ -17523,9 +17671,6 @@ var Wall = /** @class */ (function (_super) {
             return ((!wallInfo.isTopWall && !wallInfo.isInnerWall) ||
                 wallInfo.isLeftWall ||
                 wallInfo.isRightWall);
-        };
-        _this.newCrack = function () {
-            _this.room.entities.push(new wallCrack_1.WallCrack(_this.room, _this.room.game, _this.x, _this.y, _this.direction));
         };
         _this.wallInfo = function () {
             return _this.room.wallInfo.get("".concat(_this.x, ",").concat(_this.y));

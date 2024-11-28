@@ -113,7 +113,7 @@ export class CrabEnemy extends Enemy {
               grid,
               this,
               this.targetPlayer,
-              disablePositions
+              disablePositions,
             );
             if (moves.length > 0) {
               let hitPlayer = false;
@@ -203,7 +203,7 @@ export class CrabEnemy extends Enemy {
           1,
           1,
           this.room.shadeColor,
-          this.shadeAmount()
+          this.shadeAmount(),
         );
       Game.drawMob(
         this.tileX,
@@ -215,7 +215,7 @@ export class CrabEnemy extends Enemy {
         1 * this.crushX,
         1 * this.crushY,
         this.room.shadeColor,
-        this.shadeAmount()
+        this.shadeAmount(),
       );
       if (this.crushed) {
         this.crushAnim(delta);

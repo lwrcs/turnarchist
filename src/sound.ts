@@ -32,22 +32,22 @@ export class Sound {
     Sound.playerStoneFootsteps = new Array<HTMLAudioElement>();
     [1, 2, 3].forEach((i) =>
       Sound.playerStoneFootsteps.push(
-        new Audio("res/SFX/footsteps/stone/footstep" + i + ".mp3")
-      )
+        new Audio("res/SFX/footsteps/stone/footstep" + i + ".mp3"),
+      ),
     );
     for (let f of Sound.playerStoneFootsteps) f.volume = 1.0;
 
     Sound.enemyFootsteps = new Array<HTMLAudioElement>();
     [1, 2, 3, 4, 5].forEach((i) =>
       Sound.enemyFootsteps.push(
-        new Audio("res/SFX/footsteps/enemy/enemyfootstep" + i + ".mp3")
-      )
+        new Audio("res/SFX/footsteps/enemy/enemyfootstep" + i + ".mp3"),
+      ),
     );
     for (let f of Sound.enemyFootsteps) f.volume = 1.0;
 
     Sound.swingSounds = new Array<HTMLAudioElement>();
     [1, 2, 3, 4].forEach((i) =>
-      Sound.swingSounds.push(new Audio("res/SFX/attacks/swing" + i + ".mp3"))
+      Sound.swingSounds.push(new Audio("res/SFX/attacks/swing" + i + ".mp3")),
     );
     for (let f of Sound.swingSounds) {
       (f.volume = 0.5), f.load;
@@ -56,7 +56,7 @@ export class Sound {
 
     Sound.hitSounds = new Array<HTMLAudioElement>();
     [1, 2].forEach((i) =>
-      Sound.hitSounds.push(new Audio("res/SFX/attacks/hurt" + i + ".mp3"))
+      Sound.hitSounds.push(new Audio("res/SFX/attacks/hurt" + i + ".mp3")),
     );
     for (let f of Sound.hitSounds) {
       (f.volume = 0.5), f.load;
@@ -67,27 +67,29 @@ export class Sound {
 
     Sound.chestSounds = new Array<HTMLAudioElement>();
     [1, 2, 3].forEach((i) =>
-      Sound.chestSounds.push(new Audio("res/SFX/chest/chest" + i + ".mp3"))
+      Sound.chestSounds.push(new Audio("res/SFX/chest/chest" + i + ".mp3")),
     );
     for (let f of Sound.chestSounds) f.volume = 0.5;
 
     Sound.coinPickupSounds = new Array<HTMLAudioElement>();
     [1, 2, 3, 4].forEach((i) =>
-      Sound.coinPickupSounds.push(new Audio("res/SFX/items/coins" + i + ".mp3"))
+      Sound.coinPickupSounds.push(
+        new Audio("res/SFX/items/coins" + i + ".mp3"),
+      ),
     );
     for (let f of Sound.coinPickupSounds) f.volume = 1.0;
 
     Sound.miningSounds = new Array<HTMLAudioElement>();
     [1, 2, 3, 4].forEach((i) =>
       Sound.miningSounds.push(
-        new Audio("res/SFX/resources/Pickaxe" + i + ".mp3")
-      )
+        new Audio("res/SFX/resources/Pickaxe" + i + ".mp3"),
+      ),
     );
     for (let f of Sound.miningSounds) f.volume = 0.3;
 
     Sound.hurtSounds = new Array<HTMLAudioElement>();
     [1].forEach((i) =>
-      Sound.hurtSounds.push(new Audio("res/SFX/attacks/hit.mp3"))
+      Sound.hurtSounds.push(new Audio("res/SFX/attacks/hit.mp3")),
     );
     for (let f of Sound.hurtSounds) f.volume = 0.3;
 
@@ -99,7 +101,7 @@ export class Sound {
 
     Sound.pushSounds = new Array<HTMLAudioElement>();
     [1, 2].forEach((i) =>
-      Sound.pushSounds.push(new Audio("res/SFX/pushing/push" + i + ".mp3"))
+      Sound.pushSounds.push(new Audio("res/SFX/pushing/push" + i + ".mp3")),
     );
     for (let f of Sound.pushSounds) f.volume = 1.0;
 
@@ -116,13 +118,13 @@ export class Sound {
 
     Sound.unlockSounds = new Array<HTMLAudioElement>();
     [1].forEach((i) =>
-      Sound.unlockSounds.push(new Audio("res/SFX/door/unlock" + i + ".mp3"))
+      Sound.unlockSounds.push(new Audio("res/SFX/door/unlock" + i + ".mp3")),
     );
     for (let f of Sound.unlockSounds) f.volume = 0.5;
 
     Sound.doorOpenSounds = new Array<HTMLAudioElement>();
     [1, 2].forEach((i) =>
-      Sound.doorOpenSounds.push(new Audio("res/SFX/door/open" + i + ".mp3"))
+      Sound.doorOpenSounds.push(new Audio("res/SFX/door/open" + i + ".mp3")),
     );
     for (let f of Sound.doorOpenSounds) f.volume = 0.5;
 
@@ -132,8 +134,8 @@ export class Sound {
     Sound.potSmashSounds = new Array<HTMLAudioElement>();
     [1, 2, 3].forEach((i) =>
       Sound.potSmashSounds.push(
-        new Audio("res/SFX/objects/potSmash" + i + ".mp3")
-      )
+        new Audio("res/SFX/objects/potSmash" + i + ".mp3"),
+      ),
     );
     for (let f of Sound.potSmashSounds) f.volume = 0.5;
 
@@ -287,7 +289,7 @@ export class Sound {
         Sound.ambientSound.currentTime = 0;
         this.playWithReverb(Sound.ambientSound);
       },
-      true
+      true,
     );
     this.playWithReverb(Sound.ambientSound);
   };

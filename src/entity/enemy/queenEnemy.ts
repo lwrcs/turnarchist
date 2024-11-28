@@ -69,7 +69,7 @@ export class QueenEnemy extends Enemy {
         this.room,
         this.x + 0.5,
         this.y + 0.5,
-        this.deathParticleColor
+        this.deathParticleColor,
       );
     }
   };
@@ -138,7 +138,7 @@ export class QueenEnemy extends Enemy {
             undefined,
             undefined,
             undefined,
-            false //diagonalsOmni
+            false, //diagonalsOmni
           );
           if (moves.length > 0) {
             disablePositions.push({ x: oldX + 1, y: oldY } as astar.Position);
@@ -216,7 +216,7 @@ export class QueenEnemy extends Enemy {
           1,
           1,
           this.room.shadeColor,
-          this.shadeAmount()
+          this.shadeAmount(),
         );
       Game.drawMob(
         this.tileX + Math.floor(this.frame),
@@ -228,7 +228,7 @@ export class QueenEnemy extends Enemy {
         1,
         2,
         this.room.shadeColor,
-        this.shadeAmount()
+        this.shadeAmount(),
       );
     }
     if (!this.seenPlayer) {

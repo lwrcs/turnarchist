@@ -228,7 +228,7 @@ export namespace astar {
     constructor(
       grid: any[][],
       disablePoints?: Position[],
-      enableCost?: boolean
+      enableCost?: boolean,
     ) {
       this.grid = [];
       for (var x = 0, xl = grid.length; x < xl; x++) {
@@ -284,7 +284,7 @@ export namespace astar {
       turnCostsExtra?: boolean,
       turnDirection?: Direction,
       heuristic?: Function,
-      diagonalsOmni?: boolean
+      diagonalsOmni?: boolean,
     ) {
       heuristic = heuristic || this.manhattan;
       diagonal = !!diagonal;
@@ -330,7 +330,7 @@ export namespace astar {
           currentNode,
           diagonal,
           diagonalsOnly,
-          diagonalsOmni
+          diagonalsOmni,
         );
 
         for (var i = 0, il = neighbors.length; i < il; i++) {
@@ -419,7 +419,7 @@ export namespace astar {
       turnCostsExtra?: boolean,
       turnDirection?: Direction,
       heuristic?: Function,
-      diagonalsOmni?: boolean
+      diagonalsOmni?: boolean,
     ) {
       var astar = new AStar(grid, disablePoints);
       return astar._search(
@@ -430,7 +430,7 @@ export namespace astar {
         turnCostsExtra,
         turnDirection,
         heuristic,
-        diagonalsOmni
+        diagonalsOmni,
       );
     }
 
@@ -446,7 +446,7 @@ export namespace astar {
       node: AStarData,
       diagonals?: boolean,
       diagonalsOnly?: boolean,
-      diagonalsOmni?: boolean
+      diagonalsOmni?: boolean,
     ): AStarData[] {
       var grid = this.grid;
       var ret = [];

@@ -69,18 +69,18 @@ export class Inventory {
     this.game = game;
     this.player = player;
     Input.mouseDownListeners.push((x, y, button) =>
-      this.handleMouseDown(x, y, button)
+      this.handleMouseDown(x, y, button),
     );
     Input.mouseUpListeners.push((x, y, button) =>
-      this.handleMouseUp(x, y, button)
+      this.handleMouseUp(x, y, button),
     );
     Input.holdCallback = () => this.onHoldDetected();
 
     this.items = new Array<Item | null>(
-      (this.rows + this.expansion) * this.cols
+      (this.rows + this.expansion) * this.cols,
     ).fill(null);
     this.equipAnimAmount = new Array<number>(
-      (this.rows + this.expansion) * this.cols
+      (this.rows + this.expansion) * this.cols,
     ).fill(0);
     let a = (i: Item | null) => {
       if (i === null) return;
@@ -104,10 +104,10 @@ export class Inventory {
     });
 
     Input.mouseDownListeners.push((x, y, button) =>
-      this.handleMouseDown(x, y, button)
+      this.handleMouseDown(x, y, button),
     );
     Input.mouseUpListeners.push((x, y, button) =>
-      this.handleMouseUp(x, y, button)
+      this.handleMouseUp(x, y, button),
     );
   }
 
@@ -251,17 +251,17 @@ export class Inventory {
         0,
         Math.min(
           Math.floor((x - bounds.startX) / (s + 2 * b + g)),
-          this.cols - 1
-        )
+          this.cols - 1,
+        ),
       );
       this.selY = this.isOpen
         ? Math.max(
-          0,
-          Math.min(
-            Math.floor((y - bounds.startY) / (s + 2 * b + g)),
-            this.rows + this.expansion - 1
+            0,
+            Math.min(
+              Math.floor((y - bounds.startY) / (s + 2 * b + g)),
+              this.rows + this.expansion - 1,
+            ),
           )
-        )
         : 0;
 
       if (oldSelX !== this.selX || oldSelY !== this.selY) {
@@ -273,7 +273,7 @@ export class Inventory {
     item: Item | null,
     index: number,
     otherItem: Item | null,
-    otherIndex: number
+    otherIndex: number,
   ) => {
     if (item === null) return;
 
@@ -378,7 +378,7 @@ export class Inventory {
       (i) =>
         i !== null &&
         i.constructor === item.constructor &&
-        i.stackCount >= item.stackCount
+        i.stackCount >= item.stackCount,
     );
   };
 
@@ -521,7 +521,7 @@ export class Inventory {
       coinX * GameConstants.TILESIZE + countX,
       coinY * GameConstants.TILESIZE + countY,
       GameConstants.OUTLINE,
-      "white"
+      "white",
     );
 
     const turnCountText = `${this.player.turnCount}`;
@@ -530,7 +530,7 @@ export class Inventory {
       coinX * GameConstants.TILESIZE + countX,
       coinY * GameConstants.TILESIZE + countY - 15,
       GameConstants.OUTLINE,
-      "white"
+      "white",
     );
   };
 
@@ -581,7 +581,7 @@ export class Inventory {
         startX + this.selX * (s + 2 * b + g) - hg - ob,
         startY - hg - ob,
         s + 2 * b + 2 * hg + 2 * ob,
-        s + 2 * b + 2 * hg + 2 * ob
+        s + 2 * b + 2 * hg + 2 * ob,
       );
     }
 
@@ -593,7 +593,7 @@ export class Inventory {
         startX + xIdx * (s + 2 * b + g),
         startY,
         s + 2 * b,
-        s + 2 * b
+        s + 2 * b,
       );
 
       // Draw slot background
@@ -608,7 +608,7 @@ export class Inventory {
         startX + xIdx * (s + 2 * b + g) + b,
         startY + b + yOff,
         s,
-        s - yOff
+        s - yOff,
       );
 
       // Draw item icon if exists
@@ -638,7 +638,7 @@ export class Inventory {
         selStartX - hg,
         selStartY - hg,
         s + 2 * b + 2 * hg,
-        s + 2 * b + 2 * hg
+        s + 2 * b + 2 * hg,
       );
 
       // Inner selection box (light grey)
@@ -647,7 +647,7 @@ export class Inventory {
         selStartX + b - hg,
         selStartY + b - hg,
         s + 2 * hg,
-        s + 2 * hg
+        s + 2 * hg,
       );
 
       // Draw equip animation for selected slot with highlight
@@ -658,7 +658,7 @@ export class Inventory {
         Math.round(startX + this.selX * (s + 2 * b + g) + b - hg),
         Math.round(startY + b + yOff - hg),
         s + 2 * hg,
-        s + 2 * hg - yOff
+        s + 2 * hg - yOff,
       );
 
       // Redraw the selected item
@@ -731,16 +731,16 @@ export class Inventory {
         const highlightX =
           Math.round(
             0.5 * GameConstants.WIDTH -
-            0.5 * width +
-            this.selX * (s + 2 * b + g)
+              0.5 * width +
+              this.selX * (s + 2 * b + g),
           ) -
           hg -
           ob;
         const highlightY =
           Math.round(
             0.5 * GameConstants.HEIGHT -
-            0.5 * height +
-            this.selY * (s + 2 * b + g)
+              0.5 * height +
+              this.selY * (s + 2 * b + g),
           ) -
           hg -
           ob;
@@ -749,7 +749,7 @@ export class Inventory {
           highlightX,
           highlightY,
           s + 2 * b + 2 * hg + 2 * ob,
-          s + 2 * b + 2 * hg + 2 * ob
+          s + 2 * b + 2 * hg + 2 * ob,
         );
       }
 
@@ -758,10 +758,10 @@ export class Inventory {
         for (let yIdx = 0; yIdx < this.rows + this.expansion; yIdx++) {
           // Draw slot outline
           const slotX = Math.round(
-            0.5 * GameConstants.WIDTH - 0.5 * width + xIdx * (s + 2 * b + g)
+            0.5 * GameConstants.WIDTH - 0.5 * width + xIdx * (s + 2 * b + g),
           );
           const slotY = Math.round(
-            0.5 * GameConstants.HEIGHT - 0.5 * height + yIdx * (s + 2 * b + g)
+            0.5 * GameConstants.HEIGHT - 0.5 * height + yIdx * (s + 2 * b + g),
           );
           Game.ctx.fillStyle = OUTLINE_COLOR;
           Game.ctx.fillRect(slotX, slotY, s + 2 * b, s + 2 * b);
@@ -833,30 +833,30 @@ export class Inventory {
           Game.ctx.fillStyle = OUTLINE_COLOR;
           Game.ctx.fillRect(
             0.5 * GameConstants.WIDTH -
-            0.5 * width +
-            this.selX * (s + 2 * b + g) -
-            hg,
+              0.5 * width +
+              this.selX * (s + 2 * b + g) -
+              hg,
             0.5 * GameConstants.HEIGHT -
-            0.5 * height +
-            this.selY * (s + 2 * b + g) -
-            hg,
+              0.5 * height +
+              this.selY * (s + 2 * b + g) -
+              hg,
             s + 2 * b + 2 * hg,
-            s + 2 * b + 2 * hg
+            s + 2 * b + 2 * hg,
           );
 
           const slotX = Math.round(
             0.5 * GameConstants.WIDTH -
-            0.5 * width +
-            this.selX * (s + 2 * b + g) +
-            b -
-            hg
+              0.5 * width +
+              this.selX * (s + 2 * b + g) +
+              b -
+              hg,
           );
           const slotY = Math.round(
             0.5 * GameConstants.HEIGHT -
-            0.5 * height +
-            this.selY * (s + 2 * b + g) +
-            b -
-            hg
+              0.5 * height +
+              this.selY * (s + 2 * b + g) +
+              b -
+              hg,
           );
           Game.ctx.fillStyle = FILL_COLOR;
           Game.ctx.fillRect(slotX, slotY, s + 2 * hg, s + 2 * hg);
@@ -868,18 +868,18 @@ export class Inventory {
             const yOff = (s + 2 * hg) * (1 - this.equipAnimAmount[idx]);
             Game.ctx.fillRect(
               0.5 * GameConstants.WIDTH -
-              0.5 * width +
-              this.selX * (s + 2 * b + g) +
-              b -
-              hg,
+                0.5 * width +
+                this.selX * (s + 2 * b + g) +
+                b -
+                hg,
               0.5 * GameConstants.HEIGHT -
-              0.5 * height +
-              this.selY * (s + 2 * b + g) +
-              b -
-              hg +
-              yOff,
+                0.5 * height +
+                this.selY * (s + 2 * b + g) +
+                b -
+                hg +
+                yOff,
               s + 2 * hg,
-              s + 2 * hg - yOff
+              s + 2 * hg - yOff,
             );
 
             // Redraw selected item icon (similar to drawQuickbar)
@@ -931,17 +931,17 @@ export class Inventory {
           Game.fillText(
             topPhrase,
             0.5 * (GameConstants.WIDTH - actionTextWidth),
-            5
+            5,
           );
 
           // Draw item description
           const lines = item.getDescription().split("\n");
           let nextY = Math.round(
             0.5 * GameConstants.HEIGHT -
-            0.5 * height +
-            (this.rows + this.expansion) * (s + 2 * b + g) +
-            b +
-            5
+              0.5 * height +
+              (this.rows + this.expansion) * (s + 2 * b + g) +
+              b +
+              5,
           );
           lines.forEach((line) => {
             nextY = this.textWrap(line, 5, nextY, GameConstants.WIDTH - 10);
@@ -954,7 +954,7 @@ export class Inventory {
 
   private isPointInInventoryBounds = (
     x: number,
-    y: number
+    y: number,
   ): { inBounds: boolean; startX: number; startY: number } => {
     const s = this.isOpen
       ? Math.min(18, (18 * (Date.now() - this.openTime)) / OPEN_TIME)
@@ -996,7 +996,7 @@ export class Inventory {
 
   isPointInQuickbarBounds = (
     x: number,
-    y: number
+    y: number,
   ): { inBounds: boolean; startX: number; startY: number } => {
     const s = this.isOpen
       ? Math.min(18, (18 * (Date.now() - this.openTime)) / OPEN_TIME)
@@ -1093,7 +1093,6 @@ export class Inventory {
   };
   z;
   checkForDragStart = () => {
-
     if (!Input.mouseDown || this._dragStartItem === null || this._isDragging) {
       return;
     }

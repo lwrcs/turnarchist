@@ -78,7 +78,7 @@ export class Map {
         this.game.room.roomY -
         Math.floor(0.5 * this.game.room.height) -
         1 * this.scale -
-        offset
+        offset,
     );
   };
 
@@ -98,7 +98,7 @@ export class Map {
       level.roomX * s + 0,
       level.roomY * s + 0,
       level.width * s - 0,
-      level.height * s - 0
+      level.height * s - 0,
     );
     if (level.type === RoomType.UPLADDER) Game.ctx.fillStyle = "#101460";
     if (level.type === RoomType.DOWNLADDER) Game.ctx.fillStyle = "#601410";
@@ -107,7 +107,7 @@ export class Map {
       level.roomX * s + 1,
       level.roomY * s + 1,
       level.width * s - 2,
-      level.height * s - 2
+      level.height * s - 2,
     );
   };
 

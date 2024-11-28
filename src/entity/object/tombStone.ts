@@ -24,7 +24,7 @@ export class TombStone extends Entity {
     x: number,
     y: number,
     skinType: number,
-    drop?: Item
+    drop?: Item,
   ) {
     super(room, game, x, y);
     this.skinType = skinType;
@@ -46,7 +46,7 @@ export class TombStone extends Entity {
       this.y + 0.5,
       7,
       [5, 150, 5],
-      1
+      1,
     );
     this.addLightSource(this.lightSource);
   }
@@ -72,7 +72,7 @@ export class TombStone extends Entity {
       const positions = this.room
         .getEmptyTiles()
         .filter(
-          (t) => Math.abs(t.x - this.x) <= 1 && Math.abs(t.y - this.y) <= 1
+          (t) => Math.abs(t.x - this.x) <= 1 && Math.abs(t.y - this.y) <= 1,
         );
       if (positions.length > 0) {
         for (let position of positions) {
@@ -84,7 +84,7 @@ export class TombStone extends Entity {
               (playerX === position.x && playerY !== position.y)
             ) {
               this.room.entities.push(
-                new SkullEnemy(this.room, this.game, position.x, position.y)
+                new SkullEnemy(this.room, this.game, position.x, position.y),
               );
             }
           }
@@ -116,7 +116,7 @@ export class TombStone extends Entity {
         1,
         2,
         this.room.shadeColor,
-        this.shadeAmount()
+        this.shadeAmount(),
       );
     }
   };

@@ -35,7 +35,7 @@ export class TextBox {
 
   public handleKeyPress = (key: string): void => {
     const fontHas = "abcdefghijklmnopqrstuvwxyz1234567890,.!?:'()[]%-/ ".split(
-      ""
+      "",
     );
     if (key.length === 1) {
       key = key.toLowerCase();

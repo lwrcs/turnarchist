@@ -46,7 +46,7 @@ export class Block extends Entity {
         1,
         2,
         this.room.shadeColor,
-        this.shadeAmount()
+        this.shadeAmount(),
       );
     }
   };

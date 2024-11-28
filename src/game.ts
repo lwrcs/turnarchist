@@ -51,7 +51,7 @@ let getShadeCanvasKey = (
   sy: number,
   sw: number,
   sh: number,
-  opacity: number
+  opacity: number,
 ): string => {
   return set.src + "," + sx + "," + sy + "," + sw + "," + sh + "," + opacity;
 };
@@ -164,7 +164,7 @@ export class Game {
         () => {
           usernameElement.focus();
         },
-        { once: true }
+        { once: true },
       );
 
       this.chat = [];
@@ -240,7 +240,7 @@ export class Game {
                 e.preventDefault();
               }
             },
-            false
+            false,
           );
           document.addEventListener(
             "touchend",
@@ -249,7 +249,7 @@ export class Game {
                 e.preventDefault();
               }
             },
-            false
+            false,
           );
           document.addEventListener(
             "touchmove",
@@ -258,7 +258,7 @@ export class Game {
                 e.preventDefault();
               }
             },
-            false
+            false,
           );
 
           document.addEventListener("touchstart", Input.handleTouchStart, {
@@ -432,7 +432,7 @@ export class Game {
     // normalized so 1.0 = 60fps
     let delta = Math.min(
       ((timestamp - this.previousFrameTimestamp) * 60) / 1000.0,
-      100
+      100,
     );
 
     while (times.length > 0 && times[0] <= timestamp - 1000) {
@@ -532,10 +532,10 @@ export class Game {
 
   onResize = () => {
     let maxWidthScale = Math.floor(
-      window.innerWidth / GameConstants.DEFAULTWIDTH
+      window.innerWidth / GameConstants.DEFAULTWIDTH,
     );
     let maxHeightScale = Math.floor(
-      window.innerHeight / GameConstants.DEFAULTHEIGHT
+      window.innerHeight / GameConstants.DEFAULTHEIGHT,
     );
 
     this.isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
@@ -557,10 +557,10 @@ export class Game {
     Game.scale = GameConstants.SCALE; //Math.min(maxWidthScale, maxHeightScale);
 
     LevelConstants.SCREEN_W = Math.floor(
-      window.innerWidth / Game.scale / GameConstants.TILESIZE
+      window.innerWidth / Game.scale / GameConstants.TILESIZE,
     );
     LevelConstants.SCREEN_H = Math.floor(
-      window.innerHeight / Game.scale / GameConstants.TILESIZE
+      window.innerHeight / Game.scale / GameConstants.TILESIZE,
     );
     GameConstants.WIDTH = LevelConstants.SCREEN_W * GameConstants.TILESIZE;
     GameConstants.HEIGHT = LevelConstants.SCREEN_H * GameConstants.TILESIZE;
@@ -580,7 +580,7 @@ export class Game {
     image-rendering: -o-crisp-edges; /* OS X & Windows Opera (12.02+) */
     image-rendering: pixelated; /* Awesome future-browsers       */
   
-    -ms-interpolation-mode: nearest-neighbor;`
+    -ms-interpolation-mode: nearest-neighbor;`,
     );
     //Game.ctx.canvas.width = window.innerWidth;
     //Game.ctx.canvas.height = window.innerHeight;
@@ -653,7 +653,7 @@ export class Game {
                     letter_x,
                     0,
                     Game.letter_widths[i],
-                    Game.letter_height
+                    Game.letter_height,
                   );
                   letter_x += Game.letter_widths[i] + 1;
                 }
@@ -665,7 +665,7 @@ export class Game {
             0,
             0,
             Game.text_rendering_canvases[key].width,
-            Game.text_rendering_canvases[key].height
+            Game.text_rendering_canvases[key].height,
           );
           Game.ctx.drawImage(Game.text_rendering_canvases[key], x, y);
         } else {
@@ -680,7 +680,7 @@ export class Game {
     x: number,
     y: number,
     outlineColor: string,
-    fillColor: string
+    fillColor: string,
   ) => {
     Game.ctx.fillStyle = outlineColor;
     for (let xx = -1; xx <= 1; xx++) {
@@ -721,14 +721,14 @@ export class Game {
     Game.fillText(
       startString,
       GameConstants.WIDTH / 2 - Game.measureText(startString).width / 2,
-      GameConstants.HEIGHT / 2 - Game.letter_height + 2
+      GameConstants.HEIGHT / 2 - Game.letter_height + 2,
     );
     let restartButton = "Press space or click to start";
     if (this.isMobile) restartButton = "Tap to start";
     Game.fillText(
       restartButton,
       GameConstants.WIDTH / 2 - Game.measureText(restartButton).width / 2,
-      GameConstants.HEIGHT / 2 + Game.letter_height + 5
+      GameConstants.HEIGHT / 2 + Game.letter_height + 5,
     );
 
     Game.ctx.globalAlpha = 1;
@@ -745,16 +745,16 @@ export class Game {
           (Date.now() - this.transitionStartTime) /
             LevelConstants.LEVEL_TRANSITION_TIME,
           0,
-          -this.transitionX
-        )
+          -this.transitionX,
+        ),
       );
       let levelOffsetY = Math.floor(
         this.lerp(
           (Date.now() - this.transitionStartTime) /
             LevelConstants.LEVEL_TRANSITION_TIME,
           0,
-          -this.transitionY
-        )
+          -this.transitionY,
+        ),
       );
       let playerOffsetX = levelOffsetX - this.transitionX;
       let playerOffsetY = levelOffsetY - this.transitionY;
@@ -772,7 +772,7 @@ export class Game {
 
       Game.ctx.translate(
         -Math.round(playerCX + playerOffsetX - 0.5 * GameConstants.WIDTH),
-        -Math.round(playerCY + playerOffsetY - 0.5 * GameConstants.HEIGHT)
+        -Math.round(playerCY + playerOffsetY - 0.5 * GameConstants.HEIGHT),
       );
 
       let extraTileLerp = Math.floor(
@@ -780,8 +780,8 @@ export class Game {
           (Date.now() - this.transitionStartTime) /
             LevelConstants.LEVEL_TRANSITION_TIME,
           0,
-          GameConstants.TILESIZE
-        )
+          GameConstants.TILESIZE,
+        ),
       );
 
       let newLevelOffsetX = playerOffsetX;
@@ -805,7 +805,7 @@ export class Game {
 
       let ditherFrame = Math.floor(
         (7 * (Date.now() - this.transitionStartTime)) /
-          LevelConstants.LEVEL_TRANSITION_TIME
+          LevelConstants.LEVEL_TRANSITION_TIME,
       );
 
       Game.ctx.translate(levelOffsetX, levelOffsetY);
@@ -856,7 +856,7 @@ export class Game {
 
       Game.ctx.translate(
         Math.round(playerCX + playerOffsetX - 0.5 * GameConstants.WIDTH),
-        Math.round(playerCY + playerOffsetY - 0.5 * GameConstants.HEIGHT)
+        Math.round(playerCY + playerOffsetY - 0.5 * GameConstants.HEIGHT),
       );
 
       this.players[this.localPlayerID].drawGUI(delta);
@@ -876,13 +876,13 @@ export class Game {
 
       Game.ctx.translate(
         -Math.round(playerCX - 0.5 * GameConstants.WIDTH),
-        -Math.round(playerCY - 0.5 * GameConstants.HEIGHT)
+        -Math.round(playerCY - 0.5 * GameConstants.HEIGHT),
       );
 
       let deadFrames = 6;
       let ditherFrame = Math.floor(
         ((7 * 2 + deadFrames) * (Date.now() - this.transitionStartTime)) /
-          LevelConstants.LEVEL_TRANSITION_TIME_LADDER
+          LevelConstants.LEVEL_TRANSITION_TIME_LADDER,
       );
 
       if (ditherFrame < 7) {
@@ -935,7 +935,7 @@ export class Game {
       }
       Game.ctx.translate(
         Math.round(playerCX - 0.5 * GameConstants.WIDTH),
-        Math.round(playerCY - 0.5 * GameConstants.HEIGHT)
+        Math.round(playerCY - 0.5 * GameConstants.HEIGHT),
       );
 
       this.players[this.localPlayerID].drawGUI(delta);
@@ -972,13 +972,13 @@ export class Game {
         (this.players[this.localPlayerID].x - playerDrawX + 0.5) *
           GameConstants.TILESIZE -
           0.5 * GameConstants.WIDTH -
-          this.screenShakeX
+          this.screenShakeX,
       );
       let cameraY = Math.round(
         (this.players[this.localPlayerID].y - playerDrawY + 0.5) *
           GameConstants.TILESIZE -
           0.5 * GameConstants.HEIGHT -
-          this.screenShakeY
+          this.screenShakeY,
       );
 
       Game.ctx.translate(-cameraX, -cameraY);
@@ -1007,7 +1007,7 @@ export class Game {
       Game.ctx.fillStyle = "white";
       Game.fillText(this.chatTextBox.text, CHAT_X, CHAT_BOTTOM_Y);
       let cursorX = Game.measureText(
-        this.chatTextBox.text.substring(0, this.chatTextBox.cursor)
+        this.chatTextBox.text.substring(0, this.chatTextBox.cursor),
       ).width;
       Game.ctx.fillRect(CHAT_X + cursorX, CHAT_BOTTOM_Y, 1, Game.letter_height);
     }
@@ -1047,7 +1047,7 @@ export class Game {
     Game.fillText(
       GameConstants.VERSION,
       GameConstants.WIDTH - Game.measureText(GameConstants.VERSION).width - 1,
-      1
+      1,
     );
     Game.ctx.globalAlpha = 1;
 
@@ -1071,7 +1071,7 @@ export class Game {
     dW: number,
     dH: number,
     shadeColor = "black",
-    shadeOpacity = 0
+    shadeOpacity = 0,
   ) => {
     // snap to nearest shading increment
     shadeOpacity =
@@ -1088,7 +1088,7 @@ export class Game {
         0,
         0,
         Game.shade_canvases[key].width,
-        Game.shade_canvases[key].height
+        Game.shade_canvases[key].height,
       );
 
       shCtx.globalCompositeOperation = "source-over";
@@ -1101,7 +1101,7 @@ export class Game {
         0,
         0,
         Math.round(sW * GameConstants.TILESIZE),
-        Math.round(sH * GameConstants.TILESIZE)
+        Math.round(sH * GameConstants.TILESIZE),
       );
 
       shCtx.globalAlpha = shadeOpacity;
@@ -1110,7 +1110,7 @@ export class Game {
         0,
         0,
         Game.shade_canvases[key].width,
-        Game.shade_canvases[key].height
+        Game.shade_canvases[key].height,
       );
       shCtx.globalAlpha = 1.0;
 
@@ -1124,7 +1124,7 @@ export class Game {
         0,
         0,
         Math.round(sW * GameConstants.TILESIZE),
-        Math.round(sH * GameConstants.TILESIZE)
+        Math.round(sH * GameConstants.TILESIZE),
       );
     }
     Game.ctx.drawImage(
@@ -1132,7 +1132,7 @@ export class Game {
       Math.round(dX * GameConstants.TILESIZE),
       Math.round(dY * GameConstants.TILESIZE),
       Math.round(dW * GameConstants.TILESIZE),
-      Math.round(dH * GameConstants.TILESIZE)
+      Math.round(dH * GameConstants.TILESIZE),
     );
   };
 
@@ -1146,7 +1146,7 @@ export class Game {
     dW: number,
     dH: number,
     shadeColor = "black",
-    shadeOpacity = 0
+    shadeOpacity = 0,
   ) => {
     Game.drawHelper(
       Game.tileset,
@@ -1159,7 +1159,7 @@ export class Game {
       dW,
       dH,
       shadeColor,
-      shadeOpacity
+      shadeOpacity,
     );
 
     /*Game.ctx.drawImage(
@@ -1197,7 +1197,7 @@ export class Game {
     dW: number,
     dH: number,
     shadeColor = "black",
-    shadeOpacity = 0
+    shadeOpacity = 0,
   ) => {
     Game.drawHelper(
       Game.objset,
@@ -1210,7 +1210,7 @@ export class Game {
       dW,
       dH,
       shadeColor,
-      shadeOpacity
+      shadeOpacity,
     );
   };
 
@@ -1224,7 +1224,7 @@ export class Game {
     dW: number,
     dH: number,
     shadeColor = "black",
-    shadeOpacity = 0
+    shadeOpacity = 0,
   ) => {
     Game.drawHelper(
       Game.mobset,
@@ -1237,7 +1237,7 @@ export class Game {
       dW,
       dH,
       shadeColor,
-      shadeOpacity
+      shadeOpacity,
     );
   };
 
@@ -1251,7 +1251,7 @@ export class Game {
     dW: number,
     dH: number,
     shadeColor = "black",
-    shadeOpacity = 0
+    shadeOpacity = 0,
   ) => {
     Game.drawHelper(
       Game.itemset,
@@ -1264,7 +1264,7 @@ export class Game {
       dW,
       dH,
       shadeColor,
-      shadeOpacity
+      shadeOpacity,
     );
   };
 
@@ -1278,7 +1278,7 @@ export class Game {
     dW: number,
     dH: number,
     shadeColor = "black",
-    shadeOpacity = 0
+    shadeOpacity = 0,
   ) => {
     Game.drawHelper(
       Game.fxset,
@@ -1291,7 +1291,7 @@ export class Game {
       dW,
       dH,
       shadeColor,
-      shadeOpacity
+      shadeOpacity,
     );
   };
 }

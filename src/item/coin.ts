@@ -38,7 +38,7 @@ export class Coin extends Item {
   get distanceToBottomRight() {
     return Math.sqrt(
       (this.x + this.w - window.innerWidth) ** 2 +
-        (this.y + this.h - window.innerHeight) ** 2
+        (this.y + this.h - window.innerHeight) ** 2,
     );
   }
   draw = (delta: number) => {
@@ -64,7 +64,7 @@ export class Coin extends Item {
         this.w * this.scaleFactor,
         this.h * this.scaleFactor,
         this.level.shadeColor,
-        this.shadeAmount()
+        this.shadeAmount(),
       );
     }
   };

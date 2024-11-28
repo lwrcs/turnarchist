@@ -41,7 +41,7 @@ export class Door extends Tile {
     x: number,
     y: number,
     doorDir: Direction,
-    doorType: DoorType
+    doorType: DoorType,
   ) {
     super(room, x, y);
     this.game = game;
@@ -101,7 +101,7 @@ export class Door extends Tile {
     if (this.type === DoorType.GUARDEDDOOR) {
       this.room.checkForNoEnemies();
       this.game.pushMessage(
-        "There are still remaining foes guarding this door..."
+        "There are still remaining foes guarding this door...",
       );
       return false;
     }
@@ -152,7 +152,7 @@ export class Door extends Tile {
       this.game.changeLevelThroughDoor(
         player,
         this.linkedDoor,
-        this.linkedDoor.room.roomX - this.room.roomX > 0 ? 1 : -1
+        this.linkedDoor.room.roomX - this.room.roomX > 0 ? 1 : -1,
       );
     this.linkedDoor.locked = false;
     this.linkedDoor.type = DoorType.DOOR;
@@ -172,7 +172,7 @@ export class Door extends Tile {
           1,
           1,
           this.room.shadeColor,
-          this.shadeAmount()
+          this.shadeAmount(),
         );
       else
         Game.drawTile(
@@ -185,7 +185,7 @@ export class Door extends Tile {
           1,
           1,
           this.room.shadeColor,
-          this.shadeAmount()
+          this.shadeAmount(),
         );
     }
     if (this.doorDir !== Direction.UP)
@@ -200,7 +200,7 @@ export class Door extends Tile {
         1,
         1,
         this.room.shadeColor,
-        this.shadeAmount()
+        this.shadeAmount(),
       );
     //the following used to be in the drawaboveplayer function
     if (this.doorDir === Direction.UP) {
@@ -216,7 +216,7 @@ export class Door extends Tile {
           1,
           1,
           this.room.shadeColor,
-          this.shadeAmount()
+          this.shadeAmount(),
         );
       else
         Game.drawTile(
@@ -229,7 +229,7 @@ export class Door extends Tile {
           1,
           1,
           this.room.shadeColor,
-          this.shadeAmount()
+          this.shadeAmount(),
         );
     }
   };
@@ -266,7 +266,7 @@ export class Door extends Tile {
           multiplier * Math.sin((this.frame * Math.PI) / 50) +
           this.iconYOffset,
         1,
-        1
+        1,
       );
     } else {
       Game.drawFX(
@@ -280,7 +280,7 @@ export class Door extends Tile {
           multiplier * Math.sin((this.frame * Math.PI) / 50) +
           this.iconYOffset,
         1,
-        1
+        1,
       ); //if not top door
     }
     Game.ctx.globalAlpha = 1;

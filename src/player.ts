@@ -138,10 +138,10 @@ export class Player extends Drawable {
       };
       Input.mouseMoveListener = () => this.inputHandler(InputEnum.MOUSE_MOVE);
       Input.mouseLeftClickListeners.push(() =>
-        this.inputHandler(InputEnum.LEFT_CLICK)
+        this.inputHandler(InputEnum.LEFT_CLICK),
       );
       Input.mouseRightClickListeners.push(() =>
-        this.inputHandler(InputEnum.RIGHT_CLICK)
+        this.inputHandler(InputEnum.RIGHT_CLICK),
       );
       Input.numKeyListener = (num: number) =>
         this.inputHandler(InputEnum.NUMBER_1 + num - 1);
@@ -369,18 +369,18 @@ export class Player extends Drawable {
       !this.inventory.isOpen &&
       !this.inventory.isPointInInventoryButton(
         MouseCursor.getInstance().getPosition().x,
-        MouseCursor.getInstance().getPosition().y
+        MouseCursor.getInstance().getPosition().y,
       ) &&
       !this.inventory.isPointInQuickbarBounds(
         MouseCursor.getInstance().getPosition().x,
-        MouseCursor.getInstance().getPosition().y
+        MouseCursor.getInstance().getPosition().y,
       ).inBounds
     ) {
       this.moveWithMouse();
     } else if (
       this.inventory.isPointInInventoryButton(
         MouseCursor.getInstance().getPosition().x,
-        MouseCursor.getInstance().getPosition().y
+        MouseCursor.getInstance().getPosition().y,
       )
     ) {
       this.inventory.open();
@@ -413,11 +413,11 @@ export class Player extends Drawable {
     // Convert pixel offset to tile offset (this part was working correctly)
     const tileOffsetX = Math.floor(
       (Input.mouseX - screenCenterX + GameConstants.TILESIZE / 2) /
-      GameConstants.TILESIZE
+        GameConstants.TILESIZE,
     );
     const tileOffsetY = Math.floor(
       (Input.mouseY - screenCenterY + GameConstants.TILESIZE / 2) /
-      GameConstants.TILESIZE
+        GameConstants.TILESIZE,
     );
 
     return {
@@ -559,7 +559,7 @@ export class Player extends Drawable {
               e.kill();
               if (this.game.rooms[this.levelID] === this.game.room) Sound.hit();
               this.game.rooms[this.levelID].particles.push(
-                new SlashParticle(e.x, e.y)
+                new SlashParticle(e.x, e.y),
               );
               this.shakeScreen(this.x, this.y, e.x, e.y, 10);
 
@@ -749,7 +749,7 @@ export class Player extends Drawable {
     this.hitY = 0;
   };
 
-  update = () => { };
+  update = () => {};
   updateSlowMotion = () => {
     if (this.slowMotionTickDuration > 0) this.slowMotionTickDuration -= 1;
     if (this.slowMotionTickDuration === 0) this.slowMotionEnabled = false;
@@ -783,7 +783,7 @@ export class Player extends Drawable {
       this.x - this.drawX,
       this.y - 1.45 - this.drawY - this.jumpY,
       1,
-      2
+      2,
     );
     if (this.inventory.getArmor() && this.inventory.getArmor().health > 0) {
       // TODO draw armor
@@ -841,7 +841,7 @@ export class Player extends Drawable {
       this.maxHealth,
       this.x - this.drawX,
       this.y - this.drawY,
-      !this.flashing || Math.floor(this.flashingFrame) % 2 === 0
+      !this.flashing || Math.floor(this.flashingFrame) % 2 === 0,
     );
   };
 
@@ -879,13 +879,13 @@ export class Player extends Drawable {
       Game.fillText(
         gameOverString,
         GameConstants.WIDTH / 2 - Game.measureText(gameOverString).width / 2,
-        GameConstants.HEIGHT / 2 - Game.letter_height + 2
+        GameConstants.HEIGHT / 2 - Game.letter_height + 2,
       );
       let restartButton = "Press space or click to restart";
       Game.fillText(
         restartButton,
         GameConstants.WIDTH / 2 - Game.measureText(restartButton).width / 2,
-        GameConstants.HEIGHT / 2 + Game.letter_height + 5
+        GameConstants.HEIGHT / 2 + Game.letter_height + 5,
       );
     }
     PostProcessor.draw(delta);
@@ -948,7 +948,7 @@ export class Player extends Drawable {
     playerX: number,
     playerY: number,
     otherX: number,
-    otherY: number
+    otherY: number,
   ) => {
     this.hitX = 0.5 * (playerX - otherX);
     this.hitY = 0.5 * (playerY - otherY);
@@ -959,7 +959,7 @@ export class Player extends Drawable {
     playerY: number,
     otherX: number,
     otherY: number,
-    shakeStrength: number = 10
+    shakeStrength: number = 10,
   ) => {
     this.hitShake(playerX, playerY, otherX, otherY);
 
@@ -980,7 +980,7 @@ export class Player extends Drawable {
   drawTileCursor = (delta: number) => {
     const inRange = this.moveRangeCheck(
       this.mouseToTile().x,
-      this.mouseToTile().y
+      this.mouseToTile().y,
     );
     let tileX = inRange ? 22 : 24;
 
@@ -993,7 +993,7 @@ export class Player extends Drawable {
       //round to lower odd number
       this.tileCursor.y - 1,
       1,
-      2
+      2,
     );
   };
 

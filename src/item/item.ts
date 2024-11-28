@@ -58,9 +58,9 @@ export class Item extends Drawable {
   }
 
   // Empty tick function to be overridden by subclasses
-  tick = () => { };
+  tick = () => {};
   // Empty tick function for inventory behavior to be overridden by subclasses
-  tickInInventory = () => { };
+  tickInInventory = () => {};
 
   // Function to get description of the item, to be overridden by subclasses
   getDescription = (): string => {
@@ -73,7 +73,7 @@ export class Item extends Drawable {
   };
 
   // Empty function to be called when item is dropped, to be overridden by subclasses
-  onDrop = () => { };
+  onDrop = () => {};
   // Function to be called when item is picked up
   onPickup = (player: Player) => {
     if (!this.pickedUp) {
@@ -87,7 +87,7 @@ export class Item extends Drawable {
     }
   };
 
-  dropFromInventory = () => { };
+  dropFromInventory = () => {};
 
   // Function to get the amount of shade at the item's location
   shadeAmount = () => {
@@ -112,14 +112,14 @@ export class Item extends Drawable {
         2,
         this.x + this.w * (this.scaleFactor * -0.5 + 0.5),
         this.y +
-        Math.sin(this.frame) * 0.07 -
-        1 +
-        this.offsetY +
-        this.h * (this.scaleFactor * -0.5 + 0.5),
+          Math.sin(this.frame) * 0.07 -
+          1 +
+          this.offsetY +
+          this.h * (this.scaleFactor * -0.5 + 0.5),
         this.w * this.scaleFactor,
         this.h * this.scaleFactor,
         this.level.shadeColor,
-        this.shadeAmount()
+        this.shadeAmount(),
       );
     }
   };
@@ -149,7 +149,7 @@ export class Item extends Drawable {
         this.x,
         this.y - 1,
         this.w,
-        this.h
+        this.h,
       );
 
       Game.ctx.globalAlpha = 1.0;
@@ -173,7 +173,7 @@ export class Item extends Drawable {
       x * GameConstants.TILESIZE + countX,
       y * GameConstants.TILESIZE + countY,
       GameConstants.OUTLINE,
-      "white"
+      "white",
     );
   };
 
@@ -187,7 +187,7 @@ export class Item extends Drawable {
       let color = Utils.hsvToHex(
         120 * durabilityRatio, // Hue from 120 (green) to 0 (red)
         1, // Full saturation
-        1 // Full value
+        1, // Full value
       );
 
       const iconWidth = GameConstants.TILESIZE;

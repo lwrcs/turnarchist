@@ -37,7 +37,7 @@ export class UpLadder extends Tile {
       1,
       1,
       this.room.shadeColor,
-      this.shadeAmount()
+      this.shadeAmount(),
     );
     if (!this.isRope)
       Game.drawTile(
@@ -50,7 +50,7 @@ export class UpLadder extends Tile {
         1,
         1,
         this.room.shadeColor,
-        this.shadeAmount()
+        this.shadeAmount(),
       );
     Game.drawTile(
       xx,
@@ -62,7 +62,7 @@ export class UpLadder extends Tile {
       1,
       1,
       this.room.shadeColor,
-      this.shadeAmount()
+      this.shadeAmount(),
     );
   };
 
@@ -78,7 +78,7 @@ export class UpLadder extends Tile {
         1,
         1,
         this.room.shadeColor,
-        this.shadeAmount()
+        this.shadeAmount(),
       );
   };
 }

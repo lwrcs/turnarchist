@@ -831,7 +831,7 @@ export const loadGameState = (
   game.room.doors.forEach((door) => {
     door.lock();
   });
-  let newLevel = new Level(game, 1, 898, 898);
+  let newLevel = new Level(game, 1, 100, 100);
   game.levels.push(newLevel);
   game.level = newLevel;
   /*

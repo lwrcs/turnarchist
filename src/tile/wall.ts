@@ -1,4 +1,3 @@
-import { WallCrack } from "../entity/object/wallCrack";
 import { Direction, Game } from "../game";
 import { Room, WallDirection } from "../room";
 import { Door, DoorDir } from "./door";
@@ -35,12 +34,6 @@ export class Wall extends Tile {
       (!wallInfo.isTopWall && !wallInfo.isInnerWall) ||
       wallInfo.isLeftWall ||
       wallInfo.isRightWall
-    );
-  };
-
-  newCrack = () => {
-    this.room.entities.push(
-      new WallCrack(this.room, this.room.game, this.x, this.y, this.direction)
     );
   };
 
@@ -84,7 +77,7 @@ export class Wall extends Tile {
     // Set tileYOffset based on inner wall type
     this.tileYOffset =
       wallInfo.innerWallType === "bottomInner" ||
-      wallInfo.innerWallType === "surroundedInner"
+        wallInfo.innerWallType === "surroundedInner"
         ? 0
         : 6;
 

@@ -30,7 +30,7 @@ export class WizardFireball extends Projectile {
       this.y + 0.5,
       4,
       (parent as WizardEnemy).projectileColor,
-      0.1
+      0.1,
     );
     this.parent.addLightSource(this.lightSource);
     //this.parent.room.updateLighting();
@@ -52,7 +52,7 @@ export class WizardFireball extends Projectile {
     this.state++;
     if (!this.dead && this.state === 1) {
       const lightSource = this.parent.room.lightSources.find(
-        (ls) => ls === this.lightSource
+        (ls) => ls === this.lightSource,
       );
       lightSource.b = 0.4;
       this.parent.room.hitwarnings.push(
@@ -62,8 +62,8 @@ export class WizardFireball extends Projectile {
           this.y,
           this.parent.x,
           this.parent.y,
-          true
-        )
+          true,
+        ),
       );
     }
     if (!this.dead && this.state === 2) {
@@ -75,7 +75,7 @@ export class WizardFireball extends Projectile {
         (this.parent as WizardEnemy).projectileColor,
         500,
         5,
-        350
+        350,
       );
       this.parent.removeLightSource(this.lightSource);
       this.frame = 0;
@@ -114,7 +114,7 @@ export class WizardFireball extends Projectile {
           this.x,
           this.y,
           1,
-          1
+          1,
         );
       } else if (this.state === 1) {
         this.frame += 0.25 * delta;
@@ -127,7 +127,7 @@ export class WizardFireball extends Projectile {
           this.x,
           this.y - 0.2,
           1,
-          1
+          1,
         );
       } else {
         if (this.delay > 0) {

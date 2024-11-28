@@ -26,7 +26,7 @@ export class GenericParticle extends Particle {
     cy: number,
     tx: number,
     ty: number,
-    color: string
+    color: string,
   ) => {
     for (let i = 0; i < 4; i++) {
       level.particles.push(
@@ -44,8 +44,8 @@ export class GenericParticle extends Particle {
           10000000,
           tx + Math.random() - 0.5,
           ty + Math.random() - 0.5,
-          0
-        )
+          0,
+        ),
       );
     }
   };
@@ -54,7 +54,7 @@ export class GenericParticle extends Particle {
     level: Room,
     cx: number,
     cy: number,
-    color: string
+    color: string,
   ) => {
     for (let i = 0; i < 4; i++) {
       level.particles.push(
@@ -68,8 +68,8 @@ export class GenericParticle extends Particle {
           0.025 * (Math.random() * 2 - 1),
           0.2 * (Math.random() - 1),
           color,
-          0
-        )
+          0,
+        ),
       );
     }
   };
@@ -88,7 +88,7 @@ export class GenericParticle extends Particle {
     expirationTimer?: number,
     targetX?: number,
     targetY?: number,
-    targetZ?: number
+    targetZ?: number,
   ) {
     super();
     this.level = level;
@@ -124,7 +124,7 @@ export class GenericParticle extends Particle {
       Math.round(halfS * scale),
       0,
       2 * Math.PI,
-      false
+      false,
     );
     Game.ctx.fill();
 

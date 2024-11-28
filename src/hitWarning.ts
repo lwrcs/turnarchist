@@ -41,7 +41,7 @@ export class HitWarning extends Drawable {
     eY?: number,
     isEnemy?: Boolean,
     dirOnly: Boolean = false,
-    parent: Entity | null = null
+    parent: Entity | null = null,
   ) {
     super();
     this.x = x;
@@ -140,7 +140,7 @@ export class HitWarning extends Drawable {
           this.x + this.pointerOffset.x,
           this.y + this.pointerOffset.y - this.offsetY,
           1,
-          1
+          1,
         );
       }
       if (!this.dirOnly) {
@@ -152,7 +152,7 @@ export class HitWarning extends Drawable {
           this.x,
           this.y - this.offsetY + 0,
           1,
-          1
+          1,
         );
       }
     }
@@ -168,7 +168,7 @@ export class HitWarning extends Drawable {
         this.x + this.pointerOffset.x,
         this.y + this.pointerOffset.y - this.offsetY,
         1,
-        1
+        1,
       );
     }
     if (
@@ -184,7 +184,7 @@ export class HitWarning extends Drawable {
           this.x,
           this.y - this.offsetY + 0,
           1,
-          1
+          1,
         );
       }
     }

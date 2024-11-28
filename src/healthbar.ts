@@ -19,7 +19,7 @@ export class HealthBar {
     maxHearts: number,
     x: number,
     y: number,
-    flashing: boolean
+    flashing: boolean,
   ) => {
     let t = Date.now() - this.hurtTimer;
     if (t <= LevelConstants.HEALTH_BAR_TOTALTIME) {
@@ -34,8 +34,8 @@ export class HealthBar {
       let drawWidth = Math.round(
         Math.min(
           9,
-          Math.min(0.05 * (LevelConstants.HEALTH_BAR_TOTALTIME - t), 0.05 * t)
-        )
+          Math.min(0.05 * (LevelConstants.HEALTH_BAR_TOTALTIME - t), 0.05 * t),
+        ),
       );
       let drawHeight =
         Math.round(
@@ -43,9 +43,9 @@ export class HealthBar {
             0.5,
             Math.min(
               0.003 * (LevelConstants.HEALTH_BAR_TOTALTIME - t),
-              0.003 * t
-            )
-          ) * 16
+              0.003 * t,
+            ),
+          ) * 16,
         ) / 16.0;
       let width = (drawWidth * (maxHearts - 1) + 8) / 16.0;
       let xxStart = 0.5 + -width / 2;
@@ -64,7 +64,7 @@ export class HealthBar {
           x + xx,
           y - 1 - drawHeight / 2,
           0.5,
-          drawHeight
+          drawHeight,
         );
         xx += 9.0 / 16.0;
 
@@ -84,7 +84,7 @@ export class HealthBar {
             x + xx,
             y - 1 - drawHeight / 2,
             0.5,
-            drawHeight
+            drawHeight,
           );
           xx += 9.0 / 16.0;
         }

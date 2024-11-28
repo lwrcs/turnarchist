@@ -70,7 +70,7 @@ export class ArmoredzombieEnemy extends Enemy {
         this.room,
         this.x + 0.5,
         this.y + 0.5,
-        this.deathParticleColor
+        this.deathParticleColor,
       );
     }
   };
@@ -126,7 +126,7 @@ export class ArmoredzombieEnemy extends Enemy {
             false,
             false,
             true,
-            this.direction
+            this.direction,
           );
           if (moves.length > 0) {
             let moveX = moves[0].pos.x;
@@ -260,7 +260,7 @@ export class ArmoredzombieEnemy extends Enemy {
           1,
           1,
           this.room.shadeColor,
-          this.shadeAmount()
+          this.shadeAmount(),
         );
       Game.drawMob(
         this.tileX + (this.tileX === 5 ? Math.floor(this.frame) : 0),
@@ -272,7 +272,7 @@ export class ArmoredzombieEnemy extends Enemy {
         1,
         2,
         this.room.shadeColor,
-        this.shadeAmount()
+        this.shadeAmount(),
       );
     }
     if (!this.seenPlayer) {

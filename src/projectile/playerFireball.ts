@@ -27,7 +27,7 @@ export class PlayerFireball extends Projectile {
       [255, 100, 0],
       250,
       10,
-      1
+      1,
     );
   }
   drawTopLayer = (delta: number) => {

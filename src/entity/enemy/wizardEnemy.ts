@@ -61,7 +61,7 @@ export abstract class WizardEnemy extends Enemy {
     y: number,
     radius: number,
     color: [number, number, number],
-    brightness: number
+    brightness: number,
   ) => {
     this.lightSource = new LightSource(x, y, radius, color, brightness);
   };
@@ -72,7 +72,7 @@ export abstract class WizardEnemy extends Enemy {
 
   removeLightSource = (lightSource: LightSource) => {
     this.room.lightSources = this.room.lightSources.filter(
-      (ls) => ls !== lightSource
+      (ls) => ls !== lightSource,
     );
   };
 
@@ -126,7 +126,7 @@ export abstract class WizardEnemy extends Enemy {
               const offsets = this.calculateProjectileOffsets(
                 targetPlayer.x,
                 targetPlayer.y,
-                10
+                10,
               );
 
               this.attemptProjectilePlacement(
@@ -141,7 +141,7 @@ export abstract class WizardEnemy extends Enemy {
                   { x: 0, y: 2 },
                 ],
                 WizardFireball,
-                false
+                false,
               );
             }
             this.state = WizardState.justAttacked;
@@ -159,13 +159,13 @@ export abstract class WizardEnemy extends Enemy {
               (tile) =>
                 !this.room.projectiles.some(
                   (projectile) =>
-                    projectile.x === tile.x && projectile.y === tile.y
-                )
+                    projectile.x === tile.x && projectile.y === tile.y,
+                ),
             );
 
             let optimalDist = Game.randTable(
               [2, 2, 3, 3, 3, 3, 3],
-              Random.rand
+              Random.rand,
             );
             // pick a random player to target
             let player_ids = [];
@@ -218,7 +218,7 @@ export abstract class WizardEnemy extends Enemy {
           1,
           1,
           this.room.shadeColor,
-          this.shadeAmount()
+          this.shadeAmount(),
         );
       if (this.frame >= 0) {
         Game.drawMob(
@@ -231,7 +231,7 @@ export abstract class WizardEnemy extends Enemy {
           1,
           2,
           this.room.shadeColor,
-          this.shadeAmount()
+          this.shadeAmount(),
         );
         this.frame += 0.2 * delta;
         if (this.frame > 11) this.frame = -1;
@@ -246,7 +246,7 @@ export abstract class WizardEnemy extends Enemy {
           1,
           2,
           this.room.shadeColor,
-          this.shadeAmount()
+          this.shadeAmount(),
         );
       }
       if (!this.seenPlayer) {

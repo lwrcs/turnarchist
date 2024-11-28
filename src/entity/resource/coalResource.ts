@@ -29,7 +29,7 @@ export class CoalResource extends Resource {
       this.room,
       this.x + 0.5,
       this.y + 0.5,
-      "#ffffff"
+      "#ffffff",
     );
 
     if (this.room === this.game.room) Sound.mine();

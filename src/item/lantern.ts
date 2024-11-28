@@ -21,14 +21,6 @@ export class Lantern extends Light {
     this.fuel += amount;
   };
 
-  coEquippable = (other: Light): boolean => {
-    return !(
-      other instanceof Candle ||
-      other instanceof Torch ||
-      other instanceof Lantern
-    );
-  };
-
   setRadius = () => {
     this.wielder.sightRadius = Math.min(this.fuel / 4 + 3, 7);
   };
