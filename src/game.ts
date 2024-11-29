@@ -17,6 +17,7 @@ import { PostProcessor } from "./postProcess";
 import { globalEventBus } from "./eventBus";
 import { ReverbEngine } from "./reverb";
 import { Level } from "./level";
+import { statsTracker } from "./stats";
 
 export enum LevelState {
   IN_LEVEL,
@@ -307,6 +308,7 @@ export class Game {
   }
 
   newGame = () => {
+    statsTracker.resetStats();
     this.encounteredEnemies = [];
     this.levels = [];
     let gs = new GameState();
@@ -523,6 +525,18 @@ export class Game {
         GameConstants.DEVELOPER_MODE = !GameConstants.DEVELOPER_MODE;
         console.log(`Developer mode is now ${GameConstants.DEVELOPER_MODE}`);
         this.newGame();
+        break;
+      case "kill":
+        for (const i in this.players) {
+          this.players[i].dead = true;
+        }
+        break;
+      case "killall":
+        for (const i in this.players) {
+          this.players[i].game.room.entities.forEach((e) => {
+            e.kill();
+          });
+        }
         break;
     }
   };

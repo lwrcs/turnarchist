@@ -69,6 +69,7 @@ export class CrabEnemy extends Enemy {
   behavior = () => {
     this.lastX = this.x;
     this.lastY = this.y;
+
     if (!this.dead) {
       if (this.skipNextTurns > 0) {
         this.skipNextTurns--;
@@ -84,11 +85,13 @@ export class CrabEnemy extends Enemy {
             let oldX = this.x;
             let oldY = this.y;
             let disablePositions = Array<astar.Position>();
+
             for (const e of this.room.entities) {
               if (e !== this) {
                 disablePositions.push({ x: e.x, y: e.y } as astar.Position);
               }
             }
+
             for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
               for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
                 if (
@@ -100,6 +103,7 @@ export class CrabEnemy extends Enemy {
                 }
               }
             }
+
             let grid = [];
             for (let x = 0; x < this.room.roomX + this.room.width; x++) {
               grid[x] = [];

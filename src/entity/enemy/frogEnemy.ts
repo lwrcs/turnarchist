@@ -43,13 +43,12 @@ export class FrogEnemy extends Enemy {
     this.startFrame = 0;
     this.animationSpeed = 0.1;
     this.tickCount = 0;
-    this.rumbling = false;
     this.jumping = false;
     this.jumpDistance = 1;
     this.drop = drop ? drop : new Coin(this.room, this.x, this.y);
     this.name = "frog";
     this.orthogonalAttack = true;
-    this.diagonalAttack = true;
+    //this.diagonalAttack = true;
   }
 
   hurt = (playerHitBy: Player, damage: number) => {
@@ -75,7 +74,6 @@ export class FrogEnemy extends Enemy {
   behavior = () => {
     this.lastX = this.x;
     this.lastY = this.y;
-    this.rumbling = false;
     this.tileX = 1;
     this.frameLength = 3;
     this.animationSpeed = 0.1;
@@ -94,9 +92,16 @@ export class FrogEnemy extends Enemy {
           this.alertTicks = Math.max(0, this.alertTicks - 1);
           this.ticks++;
           if (this.ticks % 2 === 1) {
+            this.rumbling = true;
             let oldX = this.x;
             let oldY = this.y;
             let disablePositions = Array<astar.Position>();
+
+            for (const e of this.room.entities) {
+              if (e !== this) {
+                disablePositions.push({ x: e.x, y: e.y } as astar.Position);
+              }
+            }
 
             for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
               for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
@@ -142,64 +147,18 @@ export class FrogEnemy extends Enemy {
                   )
                     this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
                   hitPlayer = true;
-                  break;
                 }
               }
               if (!hitPlayer) {
-                oldX = this.x;
-                oldY = this.y;
-                let tryX = this.x;
-                let tryY = this.y;
-                this.tryMove(moves[0].pos.x, moves[0].pos.y, false);
-                moves = astar.AStar.search(
-                  grid,
-                  this,
-                  this.targetPlayer,
-                  disablePositions,
-                );
-                tryX = this.x;
-                tryY = this.y;
                 this.tryMove(moves[0].pos.x, moves[0].pos.y);
-                /*
-                if (this.x != oldX && this.y != oldY) {
-                  // if we've moved diagonally, we need to move back to the original position
-                  this.x = tryX;
-                  this.y = tryY;
-                }
-*/
-                if (Math.abs(this.x - oldX) + Math.abs(this.y - oldY) < 2) {
-                  this.x = oldX;
-                  this.y = oldY;
-                  moves = astar.AStar.search(
-                    grid,
-                    this,
-                    this.targetPlayer,
-                    disablePositions,
-                  );
-                  this.tryMove(moves[0].pos.x, moves[0].pos.y);
-                }
-                if (this.x !== oldX || this.y !== oldY) {
-                  this.jump();
-                  this.setDrawXY(oldX, oldY);
-
-                  if (
-                    Math.abs(this.x - oldX) > 1 ||
-                    Math.abs(this.y - oldY) > 1 ||
-                    (this.x !== oldX && this.y !== oldY)
-                  ) {
-                    this.jumpDistance = 2;
-                  } else {
-                    this.x = tryX;
-                    this.y = tryY;
-                    this.jumpDistance = 1.3;
-                  }
-                }
+                this.setDrawXY(oldX, oldY);
                 if (this.x > oldX) this.direction = Direction.RIGHT;
                 else if (this.x < oldX) this.direction = Direction.LEFT;
                 else if (this.y > oldY) this.direction = Direction.DOWN;
                 else if (this.y < oldY) this.direction = Direction.UP;
               }
             }
+            this.rumbling = false;
           } else {
             this.makeHitWarnings();
             this.rumbling = true;
@@ -228,6 +187,7 @@ export class FrogEnemy extends Enemy {
                 if (player === this.game.players[this.game.localPlayerID])
                   this.alertTicks = 1;
                 if (this.ticks % 2 === 0) {
+                  this.makeHitWarnings();
                 }
               }
             }
@@ -237,34 +197,14 @@ export class FrogEnemy extends Enemy {
     }
   };
 
-  jump = () => {
-    this.frameLength = 9;
-    this.frame = 2;
-    this.animationSpeed = 0.3;
-    this.jumping = true;
-
-    setTimeout(() => {
-      this.tileX = 1;
-      this.frameLength = 3;
-      this.animationSpeed = 0.1;
-      this.jumping = false;
-    }, 300);
-  };
-
   draw = (delta: number) => {
-    let jumpHeight = 0;
-    if (this.jumping)
-      jumpHeight =
-        Math.sin(
-          ((this.frame - 2) / ((this.jumpDistance + 1.825) * 1.475)) * Math.PI,
-        ) * 0.75;
-    let rumbleX = this.rumble(this.rumbling, this.frame).x;
-
     if (!this.dead) {
       this.frame += this.animationSpeed * delta;
       if (this.frame >= this.frameLength) {
         this.frame = 0;
       }
+      let rumbleX = this.rumble(this.rumbling, this.frame).x;
+      let rumbleY = this.rumble(this.rumbling, this.frame).y;
 
       if (this.hasShadow)
         Game.drawMob(
@@ -286,7 +226,7 @@ export class FrogEnemy extends Enemy {
         1,
         2,
         this.x + rumbleX - this.drawX,
-        this.y - this.drawYOffset - this.drawY - jumpHeight,
+        this.y - this.drawYOffset - this.drawY - this.jumpY,
         1,
         2,
         this.room.shadeColor,
@@ -312,7 +252,7 @@ export class FrogEnemy extends Enemy {
       this.y,
       true,
     );
-    this.drawX += -(0.25 / this.jumpDistance) * this.drawX * delta;
-    this.drawY += -(0.25 / this.jumpDistance) * this.drawY * delta;
+    //this.drawX += -(0.25 / this.jumpDistance) * this.drawX * delta;
+    //this.drawY += -(0.25 / this.jumpDistance) * this.drawY * delta;
   };
 }

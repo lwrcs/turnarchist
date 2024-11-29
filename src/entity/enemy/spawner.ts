@@ -30,6 +30,7 @@ import { FrogEnemy } from "./frogEnemy";
 import { FireWizardEnemy } from "./fireWizard";
 import { QueenEnemy } from "./queenEnemy";
 import { ArmoredzombieEnemy } from "./armoredzombieEnemy";
+import { RookEnemy } from "./rookEnemy";
 
 export class Spawner extends Enemy {
   ticks: number;
@@ -158,12 +159,11 @@ export class Spawner extends Enemy {
               );
               break;
             case 7:
-              spawned = new Spawner(
+              spawned = new RookEnemy(
                 this.room,
                 this.game,
                 position.x,
                 position.y,
-                this.enemyTable,
               );
               break;
             case 8:

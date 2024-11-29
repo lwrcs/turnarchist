@@ -26,6 +26,7 @@ import { Enemy } from "./entity/enemy/enemy";
 import { MouseCursor } from "./mouseCursor";
 import { Light } from "./item/light";
 import { LightSource } from "./lightSource";
+import { statsTracker } from "./stats";
 
 export enum PlayerDirection {
   DOWN,
@@ -859,33 +860,80 @@ export class Player extends Drawable {
         if (i >= Math.floor(this.health)) {
           if (i == Math.floor(this.health) && (this.health * 2) % 2 == 1) {
             // draw half heart
-
             Game.drawFX(4, 2, 1, 1, i, LevelConstants.SCREEN_H - 1, 1, 1);
           } else {
             Game.drawFX(3, 2, 1, 1, i, LevelConstants.SCREEN_H - 1, 1, 1);
           }
-        } else
+        } else {
           Game.drawFX(frame, 2, 1, 1, i, LevelConstants.SCREEN_H - 1, 1, 1);
+        }
       }
       if (this.inventory.getArmor())
         this.inventory.getArmor().drawGUI(delta, this.maxHealth);
     } else {
       Game.ctx.fillStyle = LevelConstants.LEVEL_TEXT_COLOR;
-      let gameOverString = "Game Over";
+      const enemies = statsTracker.getStats().enemies;
+      // Count the occurrences of each enemy
+      const enemyCounts = enemies.reduce(
+        (acc, enemy) => {
+          acc[enemy] = (acc[enemy] || 0) + 1;
+          return acc;
+        },
+        {} as Record<string, number>,
+      );
+
+      // Create individual lines
+      const lines: string[] = [];
+
+      // Line 1: Game Over or slain by
       if (this.lastHitBy !== "enemy") {
-        gameOverString = `You were slain by ${this.lastHitBy}.`;
+        lines.push(`You were slain by ${this.lastHitBy}.`);
+      } else {
+        lines.push("Game Over");
       }
 
-      Game.fillText(
-        gameOverString,
-        GameConstants.WIDTH / 2 - Game.measureText(gameOverString).width / 2,
-        GameConstants.HEIGHT / 2 - Game.letter_height + 2,
+      lines.push(`Depth reached: ${this.game.rooms[this.levelID].depth}`);
+
+      // Line 2: Enemies killed
+      lines.push(
+        `${Object.values(enemyCounts).reduce(
+          (a, b) => a + b,
+          0,
+        )} enemies killed in total:`,
       );
-      let restartButton = "Press space or click to restart";
+
+      // Subsequent lines: Each enemy count
+      Object.entries(enemyCounts).forEach(([enemy, count]) => {
+        lines.push(`${enemy} x${count}`);
+      });
+
+      // Line after enemy counts: Restart instruction
+      const restartButton = "Press space or click to restart";
+
+      // Calculate total height based on number of lines
+      const lineHeight = Game.letter_height + 2; // Adjust spacing as needed
+      const totalHeight = lines.length * lineHeight + lineHeight; // Additional space for restart button
+
+      // Starting Y position to center the text block
+      let startY = GameConstants.HEIGHT / 2 - totalHeight / 2;
+
+      // Draw each line centered horizontally
+      lines.forEach((line, index) => {
+        const textWidth = Game.measureText(line).width;
+        const spacing =
+          index === 0 || index === 1 || index === lines.length - 1
+            ? lineHeight * 1.5
+            : lineHeight;
+        Game.fillText(line, GameConstants.WIDTH / 2 - textWidth / 2, startY);
+        startY += spacing;
+      });
+
+      // Draw the restart button
+      const restartTextWidth = Game.measureText(restartButton).width;
       Game.fillText(
         restartButton,
-        GameConstants.WIDTH / 2 - Game.measureText(restartButton).width / 2,
-        GameConstants.HEIGHT / 2 + Game.letter_height + 5,
+        GameConstants.WIDTH / 2 - restartTextWidth / 2,
+        startY,
       );
     }
     PostProcessor.draw(delta);

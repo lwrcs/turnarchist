@@ -15,6 +15,12 @@ export const EVENTS = {
   // **Additional Custom Events:**
   CHAT_MESSAGE: "ChatMessage",
   ENEMY_SEEN_PLAYER: "EnemySeenPlayer",
+  ENEMY_KILLED: "ENEMY_KILLED",
+  DAMAGE_DONE: "DAMAGE_DONE",
+  DAMAGE_TAKEN: "DAMAGE_TAKEN",
+  TURN_PASSED: "TURN_PASSED",
+  COIN_COLLECTED: "COIN_COLLECTED",
+  ITEM_COLLECTED: "ITEM_COLLECTED",
   // Add other custom events as needed
 } as const;
 
@@ -49,6 +55,26 @@ export interface EnemySeenPlayerEvent {
   // Add other relevant properties
 }
 
+export interface EnemyKilledEvent {
+  enemyId: string;
+}
+
+export interface DamageDoneEvent {
+  amount: number;
+}
+
+export interface DamageTakenEvent {
+  amount: number;
+}
+
+export interface CoinCollectedEvent {
+  amount: number;
+}
+
+export interface ItemCollectedEvent {
+  itemId: string;
+}
+
 // **Union Type for Events:**
 export type AppEvents =
   | typeof EVENTS.KEY_DOWN
@@ -64,7 +90,13 @@ export type AppEvents =
   | typeof EVENTS.MOUSE_DOWN
   | typeof EVENTS.MOUSE_UP
   | typeof EVENTS.CHAT_MESSAGE
-  | typeof EVENTS.ENEMY_SEEN_PLAYER;
+  | typeof EVENTS.ENEMY_SEEN_PLAYER
+  | typeof EVENTS.ENEMY_KILLED
+  | typeof EVENTS.DAMAGE_DONE
+  | typeof EVENTS.DAMAGE_TAKEN
+  | typeof EVENTS.TURN_PASSED
+  | typeof EVENTS.COIN_COLLECTED
+  | typeof EVENTS.ITEM_COLLECTED;
 // | Add other events as needed
 
 // **Type Mapping for Event Payloads:**
@@ -84,5 +116,11 @@ export type EventPayloads = {
 
   [EVENTS.CHAT_MESSAGE]: ChatMessageEvent;
   [EVENTS.ENEMY_SEEN_PLAYER]: EnemySeenPlayerEvent;
+  [EVENTS.ENEMY_KILLED]: EnemyKilledEvent;
+  [EVENTS.DAMAGE_DONE]: DamageDoneEvent;
+  [EVENTS.DAMAGE_TAKEN]: DamageTakenEvent;
+  [EVENTS.TURN_PASSED]: void;
+  [EVENTS.COIN_COLLECTED]: CoinCollectedEvent;
+  [EVENTS.ITEM_COLLECTED]: ItemCollectedEvent;
   // | Add other event payloads as needed
 };

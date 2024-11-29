@@ -12,6 +12,7 @@ import { QueenEnemy } from "./entity/enemy/queenEnemy";
 import { KnightEnemy } from "./entity/enemy/knightEnemy";
 import { BigKnightEnemy } from "./entity/enemy/bigKnightEnemy";
 import { FireWizardEnemy } from "./entity/enemy/fireWizard";
+import { RookEnemy } from "./entity/enemy/rookEnemy";
 
 export const enemyClasses = {
   1: CrabEnemy,
@@ -20,7 +21,7 @@ export const enemyClasses = {
   4: SkullEnemy,
   5: EnergyWizardEnemy,
   6: ChargeEnemy,
-  7: Spawner,
+  7: RookEnemy,
   8: BishopEnemy,
   9: ArmoredzombieEnemy,
   10: BigSkullEnemy,

@@ -20,7 +20,7 @@ export const enemyMinimumDepth: Record<number, number> = {
   4: 0, // SkullEnemy
   5: 1, // EnergyWizardEnemy
   6: 2, // ChargeEnemy
-  7: 200, // Spawner (200 is a placeholder, as it's not used in the level generation)
+  7: 2, // RookEnemy
   8: 1, // BishopEnemy
   9: 1, // ArmoredzombieEnemy
   10: 3, // BigSkullEnemy
@@ -100,7 +100,7 @@ export class Level {
    * @returns An object conforming to the EnemyParameters interface.
    */
   getEnemyParameters(): EnemyParameters {
-    let currentDepth = this.depth <= 7 ? this.depth : 8;
+    let currentDepth = this.depth;
     // Generate the enemy pool based on current depth
     const enemyPoolIds = this.generateEnemyPoolIds(currentDepth);
 

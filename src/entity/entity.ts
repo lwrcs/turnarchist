@@ -17,6 +17,7 @@ import { Utils } from "../utils";
 import { globalEventBus } from "../eventBus";
 import { LightSource } from "../lightSource";
 import { ZombieEnemy } from "./enemy/zombieEnemy";
+import { EVENTS } from "../events";
 
 export enum EntityDirection {
   DOWN,
@@ -249,6 +250,7 @@ export class Entity extends Drawable {
       b.skin = this.room.roomArray[this.x][this.y].skin;
       this.room.roomArray[this.x][this.y] = b;
     }
+    this.emitEnemyKilled();
 
     this.killNoBones();
   };
@@ -268,6 +270,12 @@ export class Entity extends Drawable {
 
   shadeAmount = () => {
     return this.room.softVis[this.x][this.y];
+  };
+
+  emitEnemyKilled = () => {
+    globalEventBus.emit(EVENTS.ENEMY_KILLED, {
+      enemyId: this.name,
+    });
   };
 
   doneMoving = (): boolean => {
