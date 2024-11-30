@@ -130,6 +130,13 @@ export class KnightEnemy extends Enemy {
               this,
               this.targetPlayer,
               disablePositions,
+              undefined,
+              undefined,
+              undefined,
+              undefined,
+              undefined,
+              undefined,
+              this.lastPlayerPos,
             );
             if (moves.length > 0) {
               let hitPlayer = false;

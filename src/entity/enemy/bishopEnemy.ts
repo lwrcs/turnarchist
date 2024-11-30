@@ -165,6 +165,7 @@ export class BishopEnemy extends Enemy {
           disablePositions.push({ x: this.x - 1, y: this.y } as astar.Position);
           disablePositions.push({ x: this.x, y: this.y + 1 } as astar.Position);
           disablePositions.push({ x: this.x, y: this.y - 1 } as astar.Position);
+          disablePositions.push({ x: this.x, y: this.y } as astar.Position);
           let moves = astar.AStar.search(
             grid,
             this,

@@ -48,7 +48,9 @@ export class FrogEnemy extends Enemy {
     this.drop = drop ? drop : new Coin(this.room, this.x, this.y);
     this.name = "frog";
     this.orthogonalAttack = true;
-    //this.diagonalAttack = true;
+    this.diagonalAttack = true;
+    this.jumpHeight = 1;
+    this.drawMoveSpeed = 0.2;
   }
 
   hurt = (playerHitBy: Player, damage: number) => {
@@ -129,14 +131,24 @@ export class FrogEnemy extends Enemy {
               this,
               this.targetPlayer,
               disablePositions,
+              false,
+              false,
+              false,
+              undefined,
+              undefined,
+              false,
+              this.lastPlayerPos,
             );
             if (moves.length > 0) {
               let hitPlayer = false;
               for (const i in this.game.players) {
                 if (
-                  this.game.rooms[this.game.players[i].levelID] === this.room &&
-                  this.game.players[i].x === moves[0].pos.x &&
-                  this.game.players[i].y === moves[0].pos.y
+                  (this.game.rooms[this.game.players[i].levelID] ===
+                    this.room &&
+                    this.game.players[i].x === moves[0].pos.x &&
+                    this.game.players[i].y === moves[0].pos.y) ||
+                  (this.game.players[i].x === moves[1].pos.x &&
+                    this.game.players[i].y === moves[1].pos.y)
                 ) {
                   this.game.players[i].hurt(this.hit(), this.name);
                   this.drawX = 0.5 * (this.x - this.game.players[i].x);
@@ -150,12 +162,22 @@ export class FrogEnemy extends Enemy {
                 }
               }
               if (!hitPlayer) {
-                this.tryMove(moves[0].pos.x, moves[0].pos.y);
-                this.setDrawXY(oldX, oldY);
-                if (this.x > oldX) this.direction = Direction.RIGHT;
-                else if (this.x < oldX) this.direction = Direction.LEFT;
-                else if (this.y > oldY) this.direction = Direction.DOWN;
-                else if (this.y < oldY) this.direction = Direction.UP;
+                let moveX = moves[0].pos.x;
+                let moveY = moves[0].pos.y;
+                if (moves.length > 1) {
+                  moveX = moves[1].pos.x;
+                  moveY = moves[1].pos.y;
+                }
+                this.tryMove(moveX, moveY);
+                this.setDrawXY(this.lastX, this.lastY);
+                if (this.jumping) {
+                  this.frame = 8;
+                  this.animationSpeed = 1;
+                }
+                if (this.x > moveX) this.direction = Direction.RIGHT;
+                else if (this.x < moveX) this.direction = Direction.LEFT;
+                else if (this.y > moveY) this.direction = Direction.DOWN;
+                else if (this.y < moveY) this.direction = Direction.UP;
               }
             }
             this.rumbling = false;
@@ -197,6 +219,38 @@ export class FrogEnemy extends Enemy {
     }
   };
 
+  jump = (delta: number) => {
+    console.log(`this.drawX, this.drawY: ${this.drawX}, ${this.drawY}`);
+    if (this.jumping) {
+      let j = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
+      if (j > 1) {
+        this.jumpDistance = 2;
+        this.drawMoveSpeed = 0.2;
+      }
+      this.jumpY =
+        Math.sin((j / this.jumpDistance) * Math.PI) * this.jumpHeight;
+      if (this.jumpY < 0.01 && this.jumpY > -0.01) {
+        this.jumpY = 0;
+        this.jumpDistance = 1;
+        this.drawMoveSpeed = 0.2;
+      }
+      if (this.jumpY > this.jumpHeight) this.jumpY = this.jumpHeight;
+    }
+  };
+
+  updateDrawXY = (delta: number) => {
+    if (!this.doneMoving()) {
+      this.drawX -= this.drawMoveSpeed * delta * this.drawX;
+      this.drawY -= this.drawMoveSpeed * delta * this.drawY;
+
+      this.drawX =
+        Math.abs(this.drawX) < 0.01 ? 0 : Math.max(-2, Math.min(this.drawX, 2));
+      this.drawY =
+        Math.abs(this.drawY) < 0.01 ? 0 : Math.max(-2, Math.min(this.drawY, 2));
+      this.jump(delta);
+    }
+  };
+
   draw = (delta: number) => {
     if (!this.dead) {
       this.frame += this.animationSpeed * delta;
@@ -205,7 +259,18 @@ export class FrogEnemy extends Enemy {
       }
       let rumbleX = this.rumble(this.rumbling, this.frame).x;
       let rumbleY = this.rumble(this.rumbling, this.frame).y;
-
+      if (this.drawX !== 0 || this.drawY !== 0) {
+        this.jumping = true;
+      } else {
+        this.jumping = false;
+      }
+      if (this.jumping) {
+        this.frameLength = 10;
+        this.animationSpeed = 0.4;
+      } else {
+        this.frameLength = 3;
+        this.animationSpeed = 0.1;
+      }
       if (this.hasShadow)
         Game.drawMob(
           0,
@@ -239,20 +304,5 @@ export class FrogEnemy extends Enemy {
     if (this.alertTicks > 0) {
       this.drawExclamation(delta);
     }
-  };
-
-  drawTopLayer = (delta: number) => {
-    this.drawableY = this.y - this.drawY;
-
-    this.healthBar.draw(
-      delta,
-      this.health,
-      this.maxHealth,
-      this.x,
-      this.y,
-      true,
-    );
-    //this.drawX += -(0.25 / this.jumpDistance) * this.drawX * delta;
-    //this.drawY += -(0.25 / this.jumpDistance) * this.drawY * delta;
   };
 }

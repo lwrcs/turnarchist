@@ -79,6 +79,49 @@ import { Warhammer } from "./weapon/warhammer";
 import { Spellbook } from "./weapon/spellbook";
 import { Torch } from "./item/torch";
 import { RookEnemy } from "./entity/enemy/rookEnemy";
+
+/**
+ * Enumeration of available enemy types.
+ */
+export enum EnemyType {
+  crab = "crab",
+  frog = "frog",
+  zombie = "zombie",
+  skull = "skull",
+  energyWizard = "energyWizard",
+  charge = "charge",
+  rook = "rook",
+  bishop = "bishop",
+  armoredZombie = "armoredZombie",
+  bigSkull = "bigSkull",
+  queen = "queen",
+  knight = "knight",
+  bigKnight = "bigKnight",
+  fireWizard = "fireWizard",
+  // Add other enemy types here
+}
+
+/**
+ * Mapping of enemy types to their corresponding classes.
+ */
+export const EnemyTypeMap: { [key in EnemyType]: EnemyStatic } = {
+  [EnemyType.crab]: CrabEnemy,
+  [EnemyType.frog]: FrogEnemy,
+  [EnemyType.zombie]: ZombieEnemy,
+  [EnemyType.skull]: SkullEnemy,
+  [EnemyType.energyWizard]: EnergyWizardEnemy,
+  [EnemyType.charge]: ChargeEnemy,
+  [EnemyType.rook]: RookEnemy,
+  [EnemyType.bishop]: BishopEnemy,
+  [EnemyType.armoredZombie]: ArmoredzombieEnemy,
+  [EnemyType.bigSkull]: BigSkullEnemy,
+  [EnemyType.queen]: QueenEnemy,
+  [EnemyType.knight]: KnightEnemy,
+  [EnemyType.bigKnight]: BigKnightEnemy,
+  [EnemyType.fireWizard]: FireWizardEnemy,
+  // Add other enemy mappings here
+};
+
 export enum RoomType {
   START,
   DUNGEON,
@@ -144,6 +187,9 @@ interface EntitySpawnConfig {
   weight: number;
 }
 
+export interface EnemyStatic {
+  add(room: Room, game: Game, x: number, y: number, ...rest: any[]): void;
+}
 export class Room {
   roomArray: Tile[][];
   softVis: number[][]; // this is the one we use for drawing (includes smoothing)
@@ -625,7 +671,7 @@ export class Room {
             CrabEnemy.add(this, this.game, x, y);
             break;
           case 2:
-            //  FrogEnemy.add(this, this.game, x, y);
+            FrogEnemy.add(this, this.game, x, y);
             break;
           case 3:
             ZombieEnemy.add(this, this.game, x, y);
@@ -714,6 +760,28 @@ export class Room {
       Spawner.add(this, this.game, x, y, spawnTable);
     }
   }
+  //used for spawn commands, implement elsewhere later
+  /**
+   * Adds a new enemy to the room based on the provided enemy type string.
+   *
+   * @param enemyType - The string identifier for the enemy type.
+   */
+  addNewEnemy = (enemyType: EnemyType): void => {
+    const EnemyClass = EnemyTypeMap[enemyType];
+    if (!EnemyClass) {
+      console.error(`Enemy type "${enemyType}" is not recognized.`);
+      return;
+    }
+
+    const tiles = this.getEmptyTiles();
+    if (!tiles || tiles.length === 0) {
+      console.log(`No tiles left to spawn enemies.`);
+      return;
+    }
+
+    const { x, y } = this.getRandomEmptyPosition(tiles);
+    EnemyClass.add(this, this.game, x, y);
+  };
 
   private addObstacles(numObstacles: number, rand: () => number) {
     // add crates/barrels

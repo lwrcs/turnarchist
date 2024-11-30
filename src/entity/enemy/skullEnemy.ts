@@ -143,6 +143,8 @@ export class SkullEnemy extends Enemy {
             false,
             true,
             this.direction,
+            undefined,
+            undefined,
           );
           if (moves.length > 0) {
             let moveX = moves[0].pos.x;

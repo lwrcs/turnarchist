@@ -498,7 +498,8 @@ export class Player extends Drawable {
   };
 
   tryMove = (x: number, y: number) => {
-    this.updateLastPosition();
+    console.log(`lastX, lastY: ${this.lastX}, ${this.lastY}`);
+
     let slowMotion = this.slowMotionEnabled;
     let newMove = { x: x, y: y };
     // TODO don't move if hit by enemy
@@ -619,9 +620,10 @@ export class Player extends Drawable {
       }
     }
   };
-  private updateLastPosition = () => {
-    this.lastX = this.drawX;
-    this.lastY = this.drawY;
+  private updateLastPosition = (x: number, y: number) => {
+    console.log(`updateLastPosition: ${x}, ${y}`);
+    this.lastX = x;
+    this.lastY = y;
   };
 
   //get cancelHoldMove = () => {};
@@ -701,8 +703,8 @@ export class Player extends Drawable {
   };
 
   move = (x: number, y: number) => {
-    this.lastX = this.x;
-    this.lastY = this.y;
+    this.updateLastPosition(this.x, this.y);
+
     //this.actionTab.setState(ActionState.MOVE);
     if (this.game.rooms[this.levelID] === this.game.room)
       Sound.playerStoneFootstep();

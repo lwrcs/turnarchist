@@ -30,7 +30,7 @@ var astar;
     })(GraphNodeType = astar_1.GraphNodeType || (astar_1.GraphNodeType = {}));
     var getTileCost = function (tile) {
         if (tile)
-            return tile.isSolid() || tile.isDoor ? 99999999 : 1;
+            return tile.isSolid() || tile.isDoor ? 99999999 : 300;
         else
             return 99999999;
     };
@@ -185,7 +185,7 @@ var astar;
     }());
     astar_1.BinaryHeap = BinaryHeap;
     var AStar = /** @class */ (function () {
-        function AStar(grid, disablePoints, enableCost) {
+        function AStar(grid, disablePoints, lastPlayerPosition, enableCost) {
             this.grid = [];
             for (var x = 0, xl = grid.length; x < xl; x++) {
                 this.grid[x] = [];
@@ -216,6 +216,13 @@ var astar;
                         this.grid[disablePoints[i].x][disablePoints[i].y].cost = 99999999;
                 }
             }
+            if (lastPlayerPosition) {
+                if (lastPlayerPosition.x >= 0 &&
+                    lastPlayerPosition.x < this.grid.length &&
+                    lastPlayerPosition.y >= 0 &&
+                    lastPlayerPosition.y < this.grid[0].length)
+                    this.grid[lastPlayerPosition.x][lastPlayerPosition.y].cost = 0.5;
+            }
         }
         AStar.prototype.heap = function () {
             return new BinaryHeap(function (node) {
@@ -228,7 +235,7 @@ var astar;
                     if (this.grid[x][y].org == org)
                         return this.grid[x][y];
         };
-        AStar.prototype._search = function (start, end, diagonal, diagonalsOnly, turnCostsExtra, turnDirection, heuristic, diagonalsOmni) {
+        AStar.prototype._search = function (start, end, diagonal, diagonalsOnly, turnCostsExtra, turnDirection, heuristic, diagonalsOmni, lastPlayerPosition) {
             heuristic = heuristic || this.manhattan;
             diagonal = !!diagonal;
             diagonalsOnly = !!diagonalsOnly;
@@ -308,7 +315,9 @@ var astar;
                         // Found an optimal (so far) path to this node.  Take score for node to see how good it is.
                         neighbor.visited = true;
                         neighbor.parent = currentNode;
-                        neighbor.h = neighbor.h || heuristic(neighbor.pos, _end.pos);
+                        neighbor.h =
+                            neighbor.h ||
+                                heuristic(neighbor.pos, _end.pos, lastPlayerPosition);
                         neighbor.g = gScore;
                         neighbor.f = neighbor.g + neighbor.h;
                         if (!beenVisited) {
@@ -325,15 +334,15 @@ var astar;
             // No result was found - empty array signifies failure to find path.
             return [];
         };
-        AStar.search = function (grid, start, end, disablePoints, diagonal, diagonalsOnly, turnCostsExtra, turnDirection, heuristic, diagonalsOmni) {
-            var astar = new AStar(grid, disablePoints);
+        AStar.search = function (grid, start, end, disablePoints, diagonal, diagonalsOnly, turnCostsExtra, turnDirection, heuristic, diagonalsOmni, lastPlayerPosition) {
+            var astar = new AStar(grid, disablePoints, lastPlayerPosition);
             return astar._search(start, end, diagonal, diagonalsOnly, turnCostsExtra, turnDirection, heuristic, diagonalsOmni);
         };
         AStar.prototype.manhattan = function (pos0, pos1) {
-            // See list of heuristics: http://theory.stanford.edu/~amitp/GameProgramming/Heuristics.html
             var d1 = Math.abs(pos1.x - pos0.x);
             var d2 = Math.abs(pos1.y - pos0.y);
-            return d1 + d2;
+            var heuristic = d1 + d2;
+            return heuristic;
         };
         AStar.prototype.neighbors = function (node, diagonals, diagonalsOnly, diagonalsOmni) {
             var grid = this.grid;
@@ -1461,6 +1470,7 @@ var BishopEnemy = /** @class */ (function (_super) {
                         disablePositions.push({ x: _this.x - 1, y: _this.y });
                         disablePositions.push({ x: _this.x, y: _this.y + 1 });
                         disablePositions.push({ x: _this.x, y: _this.y - 1 });
+                        disablePositions.push({ x: _this.x, y: _this.y });
                         var moves = astarclass_1.astar.AStar.search(grid, _this, _this.targetPlayer, disablePositions, true);
                         moves = moves.filter(function (move) {
                             var dx = Math.abs(move.pos.x - _this.x);
@@ -1917,7 +1927,7 @@ var CrabEnemy = /** @class */ (function (_super) {
                                         grid[x][y] = false;
                                 }
                             }
-                            var moves = astarclass_1.astar.AStar.search(grid, _this, _this.targetPlayer, disablePositions);
+                            var moves = astarclass_1.astar.AStar.search(grid, _this, _this.targetPlayer, disablePositions, undefined, undefined, undefined, undefined, undefined, undefined, _this.lastPlayerPos);
                             if (moves.length > 0) {
                                 var hitPlayer = false;
                                 for (var i in _this.game.players) {
@@ -2308,14 +2318,14 @@ var Enemy = /** @class */ (function (_super) {
                                 if (!hitPlayer) {
                                     // Move to the new position
                                     _this.tryMove(moveX, moveY);
-                                    _this.setDrawXY(oldX, oldY);
-                                    if (_this.x > oldX)
+                                    _this.setDrawXY(moveX, moveY);
+                                    if (_this.x > moveX)
                                         _this.direction = game_1.Direction.RIGHT;
-                                    else if (_this.x < oldX)
+                                    else if (_this.x < moveX)
                                         _this.direction = game_1.Direction.LEFT;
-                                    else if (_this.y > oldY)
+                                    else if (_this.y > moveY)
                                         _this.direction = game_1.Direction.DOWN;
-                                    else if (_this.y < oldY)
+                                    else if (_this.y < moveY)
                                         _this.direction = game_1.Direction.UP;
                                 }
                             }
@@ -2407,6 +2417,10 @@ var Enemy = /** @class */ (function (_super) {
                 _this.jump(delta);
             }
         };
+        _this.setDrawXY = function (x, y) {
+            _this.drawX += _this.x - x;
+            _this.drawY += _this.y - y;
+        };
         _this.draw = function (delta) {
             if (!_this.dead) {
                 _this.frame += 0.1 * delta;
@@ -2439,6 +2453,16 @@ var Enemy = /** @class */ (function (_super) {
         _this.name = "generic enemy";
         return _this;
     }
+    Object.defineProperty(Enemy.prototype, "lastPlayerPos", {
+        get: function () {
+            return {
+                x: this.targetPlayer.lastX,
+                y: this.targetPlayer.lastY,
+            };
+        },
+        enumerable: false,
+        configurable: true
+    });
     Object.defineProperty(Enemy.prototype, "type", {
         get: function () {
             return entity_2.EntityType.ENEMY;
@@ -2872,13 +2896,16 @@ var FrogEnemy = /** @class */ (function (_super) {
                                         grid[x][y] = false;
                                 }
                             }
-                            var moves = astarclass_1.astar.AStar.search(grid, _this, _this.targetPlayer, disablePositions);
+                            var moves = astarclass_1.astar.AStar.search(grid, _this, _this.targetPlayer, disablePositions, false, false, false, undefined, undefined, false, _this.lastPlayerPos);
                             if (moves.length > 0) {
                                 var hitPlayer = false;
                                 for (var i in _this.game.players) {
-                                    if (_this.game.rooms[_this.game.players[i].levelID] === _this.room &&
+                                    if ((_this.game.rooms[_this.game.players[i].levelID] ===
+                                        _this.room &&
                                         _this.game.players[i].x === moves[0].pos.x &&
-                                        _this.game.players[i].y === moves[0].pos.y) {
+                                        _this.game.players[i].y === moves[0].pos.y) ||
+                                        (_this.game.players[i].x === moves[1].pos.x &&
+                                            _this.game.players[i].y === moves[1].pos.y)) {
                                         _this.game.players[i].hurt(_this.hit(), _this.name);
                                         _this.drawX = 0.5 * (_this.x - _this.game.players[i].x);
                                         _this.drawY = 0.5 * (_this.y - _this.game.players[i].y);
@@ -2889,15 +2916,25 @@ var FrogEnemy = /** @class */ (function (_super) {
                                     }
                                 }
                                 if (!hitPlayer) {
-                                    _this.tryMove(moves[0].pos.x, moves[0].pos.y);
-                                    _this.setDrawXY(oldX, oldY);
-                                    if (_this.x > oldX)
+                                    var moveX = moves[0].pos.x;
+                                    var moveY = moves[0].pos.y;
+                                    if (moves.length > 1) {
+                                        moveX = moves[1].pos.x;
+                                        moveY = moves[1].pos.y;
+                                    }
+                                    _this.tryMove(moveX, moveY);
+                                    _this.setDrawXY(_this.lastX, _this.lastY);
+                                    if (_this.jumping) {
+                                        _this.frame = 8;
+                                        _this.animationSpeed = 1;
+                                    }
+                                    if (_this.x > moveX)
                                         _this.direction = game_1.Direction.RIGHT;
-                                    else if (_this.x < oldX)
+                                    else if (_this.x < moveX)
                                         _this.direction = game_1.Direction.LEFT;
-                                    else if (_this.y > oldY)
+                                    else if (_this.y > moveY)
                                         _this.direction = game_1.Direction.DOWN;
-                                    else if (_this.y < oldY)
+                                    else if (_this.y < moveY)
                                         _this.direction = game_1.Direction.UP;
                                 }
                             }
@@ -2936,6 +2973,36 @@ var FrogEnemy = /** @class */ (function (_super) {
                 }
             }
         };
+        _this.jump = function (delta) {
+            console.log("this.drawX, this.drawY: ".concat(_this.drawX, ", ").concat(_this.drawY));
+            if (_this.jumping) {
+                var j = Math.max(Math.abs(_this.drawX), Math.abs(_this.drawY));
+                if (j > 1) {
+                    _this.jumpDistance = 2;
+                    _this.drawMoveSpeed = 0.2;
+                }
+                _this.jumpY =
+                    Math.sin((j / _this.jumpDistance) * Math.PI) * _this.jumpHeight;
+                if (_this.jumpY < 0.01 && _this.jumpY > -0.01) {
+                    _this.jumpY = 0;
+                    _this.jumpDistance = 1;
+                    _this.drawMoveSpeed = 0.2;
+                }
+                if (_this.jumpY > _this.jumpHeight)
+                    _this.jumpY = _this.jumpHeight;
+            }
+        };
+        _this.updateDrawXY = function (delta) {
+            if (!_this.doneMoving()) {
+                _this.drawX -= _this.drawMoveSpeed * delta * _this.drawX;
+                _this.drawY -= _this.drawMoveSpeed * delta * _this.drawY;
+                _this.drawX =
+                    Math.abs(_this.drawX) < 0.01 ? 0 : Math.max(-2, Math.min(_this.drawX, 2));
+                _this.drawY =
+                    Math.abs(_this.drawY) < 0.01 ? 0 : Math.max(-2, Math.min(_this.drawY, 2));
+                _this.jump(delta);
+            }
+        };
         _this.draw = function (delta) {
             if (!_this.dead) {
                 _this.frame += _this.animationSpeed * delta;
@@ -2944,6 +3011,20 @@ var FrogEnemy = /** @class */ (function (_super) {
                 }
                 var rumbleX = _this.rumble(_this.rumbling, _this.frame).x;
                 var rumbleY = _this.rumble(_this.rumbling, _this.frame).y;
+                if (_this.drawX !== 0 || _this.drawY !== 0) {
+                    _this.jumping = true;
+                }
+                else {
+                    _this.jumping = false;
+                }
+                if (_this.jumping) {
+                    _this.frameLength = 10;
+                    _this.animationSpeed = 0.4;
+                }
+                else {
+                    _this.frameLength = 3;
+                    _this.animationSpeed = 0.1;
+                }
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
                 game_1.Game.drawMob(_this.tileX +
@@ -2955,12 +3036,6 @@ var FrogEnemy = /** @class */ (function (_super) {
             if (_this.alertTicks > 0) {
                 _this.drawExclamation(delta);
             }
-        };
-        _this.drawTopLayer = function (delta) {
-            _this.drawableY = _this.y - _this.drawY;
-            _this.healthBar.draw(delta, _this.health, _this.maxHealth, _this.x, _this.y, true);
-            //this.drawX += -(0.25 / this.jumpDistance) * this.drawX * delta;
-            //this.drawY += -(0.25 / this.jumpDistance) * this.drawY * delta;
         };
         _this.ticks = 0;
         _this.frame = 0;
@@ -2980,8 +3055,10 @@ var FrogEnemy = /** @class */ (function (_super) {
         _this.drop = drop ? drop : new coin_1.Coin(_this.room, _this.x, _this.y);
         _this.name = "frog";
         _this.orthogonalAttack = true;
+        _this.diagonalAttack = true;
+        _this.jumpHeight = 1;
+        _this.drawMoveSpeed = 0.2;
         return _this;
-        //this.diagonalAttack = true;
     }
     FrogEnemy.difficulty = 1;
     return FrogEnemy;
@@ -3103,7 +3180,7 @@ var KnightEnemy = /** @class */ (function (_super) {
                                         grid[x][y] = false;
                                 }
                             }
-                            var moves = astarclass_1.astar.AStar.search(grid, _this, _this.targetPlayer, disablePositions);
+                            var moves = astarclass_1.astar.AStar.search(grid, _this, _this.targetPlayer, disablePositions, undefined, undefined, undefined, undefined, undefined, undefined, _this.lastPlayerPos);
                             if (moves.length > 0) {
                                 var hitPlayer = false;
                                 for (var i in _this.game.players) {
@@ -3552,12 +3629,9 @@ var RookEnemy = /** @class */ (function (_super) {
                         }
                         var moves = astarclass_1.astar.AStar.search(grid, _this, _this.targetPlayer, disablePositions, false, //diagonals
                         false, //diagonalsOnly
-                        undefined, undefined, undefined, false);
+                        undefined, undefined, undefined, false, //diagonalsOmni
+                        _this.lastPlayerPos);
                         if (moves.length > 0) {
-                            disablePositions.push({ x: oldX + 1, y: oldY });
-                            disablePositions.push({ x: oldX - 1, y: oldY });
-                            disablePositions.push({ x: oldX, y: oldY + 1 });
-                            disablePositions.push({ x: oldX, y: oldY - 1 });
                             var moveX = moves[0].pos.x;
                             var moveY = moves[0].pos.y;
                             var hitPlayer = false;
@@ -3574,7 +3648,6 @@ var RookEnemy = /** @class */ (function (_super) {
                                 }
                             }
                             if (!hitPlayer) {
-                                //if ()
                                 _this.tryMove(moveX, moveY);
                                 _this.setDrawXY(oldX, oldY);
                             }
@@ -3769,7 +3842,7 @@ var SkullEnemy = /** @class */ (function (_super) {
                                     grid[x][y] = false;
                             }
                         }
-                        var moves = astarclass_1.astar.AStar.search(grid, _this, _this.targetPlayer, disablePositions, false, false, true, _this.direction);
+                        var moves = astarclass_1.astar.AStar.search(grid, _this, _this.targetPlayer, disablePositions, false, false, true, _this.direction, undefined, undefined);
                         if (moves.length > 0) {
                             var moveX = moves[0].pos.x;
                             var moveY = moves[0].pos.y;
@@ -6869,6 +6942,11 @@ var Game = /** @class */ (function () {
                         });
                     }
                     break;
+                default:
+                    if (command.startsWith("new ")) {
+                        _this.room.addNewEnemy(command.slice(4));
+                    }
+                    break;
             }
         };
         this.onResize = function () {
@@ -7509,7 +7587,7 @@ var warhammer_1 = __webpack_require__(/*! ./weapon/warhammer */ "./src/weapon/wa
 var GameConstants = /** @class */ (function () {
     function GameConstants() {
     }
-    GameConstants.VERSION = "v0.6.3";
+    GameConstants.VERSION = "v1.0.0"; //"v0.6.3";
     GameConstants.DEVELOPER_MODE = false;
     GameConstants.FPS = 120;
     GameConstants.ALPHA_ENABLED = true;
@@ -8311,11 +8389,14 @@ var loadGameState = function (game, activeUsernames, gameState, newWorld) {
     game.room.updateLighting();
     var p = game.players[game.localPlayerID];
     game.room.items.push(new key_1.Key(game.room, p.x - 1, p.y + 1));
-    game.room.items.push(new key_1.Key(game.room, p.x - 1, p.y - 2));
-    game.room.entities.push(new pot_1.Pot(game.room, game, p.x, p.y - 2), new pot_1.Pot(game.room, game, p.x + 1, p.y), new pot_1.Pot(game.room, game, p.x - 1, p.y - 1), new pot_1.Pot(game.room, game, p.x + 1, p.y - 1), new pot_1.Pot(game.room, game, p.x - 1, p.y), new pot_1.Pot(game.room, game, p.x, p.y + 1));
-    game.room.doors.forEach(function (door) {
-        door.lock();
-    });
+    //choose one door to lock
+    var locked = false;
+    if (!locked) {
+        game.room.doors.forEach(function (door) {
+            door.lock();
+            locked = true;
+        });
+    }
     /*
     game.rooms.forEach((room) => {
       room.addWallCrack();
@@ -13489,7 +13570,7 @@ var Player = /** @class */ (function (_super) {
             return true;
         };
         _this.tryMove = function (x, y) {
-            _this.updateLastPosition();
+            console.log("lastX, lastY: ".concat(_this.lastX, ", ").concat(_this.lastY));
             var slowMotion = _this.slowMotionEnabled;
             var newMove = { x: x, y: y };
             // TODO don't move if hit by enemy
@@ -13607,9 +13688,10 @@ var Player = /** @class */ (function (_super) {
                 }
             }
         };
-        _this.updateLastPosition = function () {
-            _this.lastX = _this.drawX;
-            _this.lastY = _this.drawY;
+        _this.updateLastPosition = function (x, y) {
+            console.log("updateLastPosition: ".concat(x, ", ").concat(y));
+            _this.lastX = x;
+            _this.lastY = y;
         };
         //get cancelHoldMove = () => {};
         _this.wouldHurt = function (x, y) {
@@ -13684,8 +13766,7 @@ var Player = /** @class */ (function (_super) {
             }
         };
         _this.move = function (x, y) {
-            _this.lastX = _this.x;
-            _this.lastY = _this.y;
+            _this.updateLastPosition(_this.x, _this.y);
             //this.actionTab.setState(ActionState.MOVE);
             if (_this.game.rooms[_this.levelID] === _this.game.room)
                 sound_1.Sound.playerStoneFootstep();
@@ -14597,7 +14678,7 @@ var ReverbEngine = /** @class */ (function () {
                             window.webkitAudioContext)();
                         ReverbEngine.convolver = ReverbEngine.audioContext.createConvolver();
                         ReverbEngine.convolver.connect(ReverbEngine.audioContext.destination);
-                        return [4 /*yield*/, ReverbEngine.loadReverbBuffer("res/SFX/impulses/default.wav")];
+                        return [4 /*yield*/, ReverbEngine.loadReverbBuffer("res/SFX/impulses/small.mp3")];
                     case 1:
                         _a.sent();
                         ReverbEngine.setDefaultReverb();
@@ -14742,8 +14823,9 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Room = exports.WallDirection = exports.TurnState = exports.RoomType = void 0;
+exports.Room = exports.WallDirection = exports.TurnState = exports.RoomType = exports.EnemyTypeMap = exports.EnemyType = void 0;
 var wall_1 = __webpack_require__(/*! ./tile/wall */ "./src/tile/wall.ts");
 var levelConstants_1 = __webpack_require__(/*! ./levelConstants */ "./src/levelConstants.ts");
 var floor_1 = __webpack_require__(/*! ./tile/floor */ "./src/tile/floor.ts");
@@ -14798,6 +14880,7 @@ var armoredzombieEnemy_1 = __webpack_require__(/*! ./entity/enemy/armoredzombieE
 var tombStone_1 = __webpack_require__(/*! ./entity/object/tombStone */ "./src/entity/object/tombStone.ts");
 var pumpkin_1 = __webpack_require__(/*! ./entity/object/pumpkin */ "./src/entity/object/pumpkin.ts");
 var queenEnemy_1 = __webpack_require__(/*! ./entity/enemy/queenEnemy */ "./src/entity/enemy/queenEnemy.ts");
+var frogEnemy_1 = __webpack_require__(/*! ./entity/enemy/frogEnemy */ "./src/entity/enemy/frogEnemy.ts");
 var bigKnightEnemy_1 = __webpack_require__(/*! ./entity/enemy/bigKnightEnemy */ "./src/entity/enemy/bigKnightEnemy.ts");
 var enemy_1 = __webpack_require__(/*! ./entity/enemy/enemy */ "./src/entity/enemy/enemy.ts");
 var fireWizard_1 = __webpack_require__(/*! ./entity/enemy/fireWizard */ "./src/entity/enemy/fireWizard.ts");
@@ -14808,6 +14891,46 @@ var warhammer_1 = __webpack_require__(/*! ./weapon/warhammer */ "./src/weapon/wa
 var spellbook_1 = __webpack_require__(/*! ./weapon/spellbook */ "./src/weapon/spellbook.ts");
 var torch_1 = __webpack_require__(/*! ./item/torch */ "./src/item/torch.ts");
 var rookEnemy_1 = __webpack_require__(/*! ./entity/enemy/rookEnemy */ "./src/entity/enemy/rookEnemy.ts");
+/**
+ * Enumeration of available enemy types.
+ */
+var EnemyType;
+(function (EnemyType) {
+    EnemyType["crab"] = "crab";
+    EnemyType["frog"] = "frog";
+    EnemyType["zombie"] = "zombie";
+    EnemyType["skull"] = "skull";
+    EnemyType["energyWizard"] = "energyWizard";
+    EnemyType["charge"] = "charge";
+    EnemyType["rook"] = "rook";
+    EnemyType["bishop"] = "bishop";
+    EnemyType["armoredZombie"] = "armoredZombie";
+    EnemyType["bigSkull"] = "bigSkull";
+    EnemyType["queen"] = "queen";
+    EnemyType["knight"] = "knight";
+    EnemyType["bigKnight"] = "bigKnight";
+    EnemyType["fireWizard"] = "fireWizard";
+    // Add other enemy types here
+})(EnemyType = exports.EnemyType || (exports.EnemyType = {}));
+/**
+ * Mapping of enemy types to their corresponding classes.
+ */
+exports.EnemyTypeMap = (_a = {},
+    _a[EnemyType.crab] = crabEnemy_1.CrabEnemy,
+    _a[EnemyType.frog] = frogEnemy_1.FrogEnemy,
+    _a[EnemyType.zombie] = zombieEnemy_1.ZombieEnemy,
+    _a[EnemyType.skull] = skullEnemy_1.SkullEnemy,
+    _a[EnemyType.energyWizard] = energyWizard_1.EnergyWizardEnemy,
+    _a[EnemyType.charge] = chargeEnemy_1.ChargeEnemy,
+    _a[EnemyType.rook] = rookEnemy_1.RookEnemy,
+    _a[EnemyType.bishop] = bishopEnemy_1.BishopEnemy,
+    _a[EnemyType.armoredZombie] = armoredzombieEnemy_1.ArmoredzombieEnemy,
+    _a[EnemyType.bigSkull] = bigSkullEnemy_1.BigSkullEnemy,
+    _a[EnemyType.queen] = queenEnemy_1.QueenEnemy,
+    _a[EnemyType.knight] = knightEnemy_1.KnightEnemy,
+    _a[EnemyType.bigKnight] = bigKnightEnemy_1.BigKnightEnemy,
+    _a[EnemyType.fireWizard] = fireWizard_1.FireWizardEnemy,
+    _a);
 var RoomType;
 (function (RoomType) {
     RoomType[RoomType["START"] = 0] = "START";
@@ -14883,6 +15006,26 @@ var Room = /** @class */ (function () {
             if (pointX === rectX + width && pointY >= rectY && pointY <= rectY + height)
                 directions.push(WallDirection.EAST);
             return directions;
+        };
+        //used for spawn commands, implement elsewhere later
+        /**
+         * Adds a new enemy to the room based on the provided enemy type string.
+         *
+         * @param enemyType - The string identifier for the enemy type.
+         */
+        this.addNewEnemy = function (enemyType) {
+            var EnemyClass = exports.EnemyTypeMap[enemyType];
+            if (!EnemyClass) {
+                console.error("Enemy type \"".concat(enemyType, "\" is not recognized."));
+                return;
+            }
+            var tiles = _this.getEmptyTiles();
+            if (!tiles || tiles.length === 0) {
+                console.log("No tiles left to spawn enemies.");
+                return;
+            }
+            var _a = _this.getRandomEmptyPosition(tiles), x = _a.x, y = _a.y;
+            EnemyClass.add(_this, _this.game, x, y);
         };
         this.populateEmpty = function (rand) {
             _this.addRandomTorches("medium");
@@ -16253,7 +16396,7 @@ var Room = /** @class */ (function () {
                         crabEnemy_1.CrabEnemy.add(this_2, this_2.game, x, y);
                         break;
                     case 2:
-                        //  FrogEnemy.add(this, this.game, x, y);
+                        frogEnemy_1.FrogEnemy.add(this_2, this_2.game, x, y);
                         break;
                     case 3:
                         zombieEnemy_1.ZombieEnemy.add(this_2, this_2.game, x, y);

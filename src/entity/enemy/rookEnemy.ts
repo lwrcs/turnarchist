@@ -129,6 +129,7 @@ export class RookEnemy extends Enemy {
               else grid[x][y] = false;
             }
           }
+
           let moves = astar.AStar.search(
             grid,
             this,
@@ -140,13 +141,11 @@ export class RookEnemy extends Enemy {
             undefined,
             undefined,
             false, //diagonalsOmni
+            this.lastPlayerPos,
           );
           if (moves.length > 0) {
-            disablePositions.push({ x: oldX + 1, y: oldY } as astar.Position);
-            disablePositions.push({ x: oldX - 1, y: oldY } as astar.Position);
-            disablePositions.push({ x: oldX, y: oldY + 1 } as astar.Position);
-            disablePositions.push({ x: oldX, y: oldY - 1 } as astar.Position);
             let moveX = moves[0].pos.x;
+
             let moveY = moves[0].pos.y;
 
             let hitPlayer = false;
@@ -166,8 +165,8 @@ export class RookEnemy extends Enemy {
                   this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
               }
             }
+
             if (!hitPlayer) {
-              //if ()
               this.tryMove(moveX, moveY);
               this.setDrawXY(oldX, oldY);
             }

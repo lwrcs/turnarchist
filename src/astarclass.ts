@@ -25,7 +25,7 @@ export namespace astar {
   }
 
   let getTileCost = (tile) => {
-    if (tile) return tile.isSolid() || tile.isDoor ? 99999999 : 1;
+    if (tile) return tile.isSolid() || tile.isDoor ? 99999999 : 300;
     else return 99999999;
   };
 
@@ -228,6 +228,7 @@ export namespace astar {
     constructor(
       grid: any[][],
       disablePoints?: Position[],
+      lastPlayerPosition?: Position,
       enableCost?: boolean,
     ) {
       this.grid = [];
@@ -262,6 +263,15 @@ export namespace astar {
             this.grid[disablePoints[i].x][disablePoints[i].y].cost = 99999999;
         }
       }
+      if (lastPlayerPosition) {
+        if (
+          lastPlayerPosition.x >= 0 &&
+          lastPlayerPosition.x < this.grid.length &&
+          lastPlayerPosition.y >= 0 &&
+          lastPlayerPosition.y < this.grid[0].length
+        )
+          this.grid[lastPlayerPosition.x][lastPlayerPosition.y].cost = 0.5;
+      }
     }
 
     heap(): BinaryHeap {
@@ -285,6 +295,7 @@ export namespace astar {
       turnDirection?: Direction,
       heuristic?: Function,
       diagonalsOmni?: boolean,
+      lastPlayerPosition?: Position,
     ) {
       heuristic = heuristic || this.manhattan;
       diagonal = !!diagonal;
@@ -390,7 +401,9 @@ export namespace astar {
             // Found an optimal (so far) path to this node.  Take score for node to see how good it is.
             neighbor.visited = true;
             neighbor.parent = currentNode;
-            neighbor.h = neighbor.h || heuristic(neighbor.pos, _end.pos);
+            neighbor.h =
+              neighbor.h ||
+              heuristic(neighbor.pos, _end.pos, lastPlayerPosition);
             neighbor.g = gScore;
             neighbor.f = neighbor.g + neighbor.h;
 
@@ -420,8 +433,9 @@ export namespace astar {
       turnDirection?: Direction,
       heuristic?: Function,
       diagonalsOmni?: boolean,
+      lastPlayerPosition?: Position,
     ) {
-      var astar = new AStar(grid, disablePoints);
+      var astar = new AStar(grid, disablePoints, lastPlayerPosition);
       return astar._search(
         start,
         end,
@@ -435,11 +449,11 @@ export namespace astar {
     }
 
     manhattan(pos0: Position, pos1: Position): number {
-      // See list of heuristics: http://theory.stanford.edu/~amitp/GameProgramming/Heuristics.html
-
       var d1 = Math.abs(pos1.x - pos0.x);
       var d2 = Math.abs(pos1.y - pos0.y);
-      return d1 + d2;
+      var heuristic = d1 + d2;
+
+      return heuristic;
     }
 
     neighbors(

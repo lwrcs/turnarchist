@@ -16,7 +16,7 @@ import { Spellbook } from "./weapon/spellbook";
 import { Warhammer } from "./weapon/warhammer";
 
 export class GameConstants {
-  static readonly VERSION = "v0.6.3";
+  static readonly VERSION = "v1.0.0"; //"v0.6.3";
   static DEVELOPER_MODE = false;
 
   static readonly FPS = 120;

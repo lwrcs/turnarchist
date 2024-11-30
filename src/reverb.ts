@@ -14,7 +14,7 @@ export class ReverbEngine {
         (window as any).webkitAudioContext)();
       ReverbEngine.convolver = ReverbEngine.audioContext.createConvolver();
       ReverbEngine.convolver.connect(ReverbEngine.audioContext.destination);
-      await ReverbEngine.loadReverbBuffer(`res/SFX/impulses/default.wav`);
+      await ReverbEngine.loadReverbBuffer(`res/SFX/impulses/small.mp3`);
       ReverbEngine.setDefaultReverb();
     }
   }

@@ -1,5 +1,5 @@
 import { GameConstants } from "./gameConstants";
-import { Room, RoomType } from "./room";
+import { EnemyType, Room, RoomType } from "./room";
 import { Player } from "./player";
 import { Door } from "./tile/door";
 import { Sound } from "./sound";
@@ -536,6 +536,11 @@ export class Game {
           this.players[i].game.room.entities.forEach((e) => {
             e.kill();
           });
+        }
+        break;
+      default:
+        if (command.startsWith("new ")) {
+          this.room.addNewEnemy(command.slice(4) as EnemyType);
         }
         break;
     }

@@ -311,11 +311,11 @@ export abstract class Enemy extends Entity {
               if (!hitPlayer) {
                 // Move to the new position
                 this.tryMove(moveX, moveY);
-                this.setDrawXY(oldX, oldY);
-                if (this.x > oldX) this.direction = Direction.RIGHT;
-                else if (this.x < oldX) this.direction = Direction.LEFT;
-                else if (this.y > oldY) this.direction = Direction.DOWN;
-                else if (this.y < oldY) this.direction = Direction.UP;
+                this.setDrawXY(moveX, moveY);
+                if (this.x > moveX) this.direction = Direction.RIGHT;
+                else if (this.x < moveX) this.direction = Direction.LEFT;
+                else if (this.y > moveY) this.direction = Direction.DOWN;
+                else if (this.y < moveY) this.direction = Direction.UP;
               }
             }
           }
@@ -412,6 +412,18 @@ export abstract class Enemy extends Entity {
       this.jump(delta);
     }
   };
+
+  setDrawXY = (x: number, y: number) => {
+    this.drawX += this.x - x;
+    this.drawY += this.y - y;
+  };
+
+  get lastPlayerPos() {
+    return {
+      x: this.targetPlayer.lastX,
+      y: this.targetPlayer.lastY,
+    };
+  }
 
   draw = (delta: number) => {
     if (!this.dead) {
