@@ -2819,10 +2819,12 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.FrogEnemy = void 0;
 var game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 var astarclass_1 = __webpack_require__(/*! ../../astarclass */ "./src/astarclass.ts");
+var hitWarning_1 = __webpack_require__(/*! ../../hitWarning */ "./src/hitWarning.ts");
 var spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 var coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
 var imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ "./src/particle/imageParticle.ts");
 var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
+var utils_1 = __webpack_require__(/*! ../../utils */ "./src/utils.ts");
 var FrogEnemy = /** @class */ (function (_super) {
     __extends(FrogEnemy, _super);
     function FrogEnemy(room, game, x, y, drop) {
@@ -2896,19 +2898,31 @@ var FrogEnemy = /** @class */ (function (_super) {
                                         grid[x][y] = false;
                                 }
                             }
-                            var moves = astarclass_1.astar.AStar.search(grid, _this, _this.targetPlayer, disablePositions, false, false, false, undefined, undefined, false, _this.lastPlayerPos);
+                            var targetPosition = {
+                                x: _this.targetPlayer.x,
+                                y: _this.targetPlayer.y,
+                            };
+                            var dx = _this.targetPlayer.x - _this.x;
+                            var dy = _this.targetPlayer.y - _this.y;
+                            if ((dx === 0 && dy <= 1) ||
+                                (dx <= 1 && dy === 0) ||
+                                (dx === 0 && dy >= -1) ||
+                                (dx >= -1 && dy === 0)) {
+                                targetPosition = {
+                                    x: _this.targetPlayer.x + dx,
+                                    y: _this.targetPlayer.y + dy,
+                                };
+                            }
+                            var moves = astarclass_1.astar.AStar.search(grid, _this, targetPosition, disablePositions, false, false, false, undefined, undefined, false, _this.lastPlayerPos);
                             if (moves.length > 0) {
                                 var hitPlayer = false;
                                 for (var i in _this.game.players) {
-                                    if ((_this.game.rooms[_this.game.players[i].levelID] ===
-                                        _this.room &&
-                                        _this.game.players[i].x === moves[0].pos.x &&
-                                        _this.game.players[i].y === moves[0].pos.y) ||
-                                        (_this.game.players[i].x === moves[1].pos.x &&
-                                            _this.game.players[i].y === moves[1].pos.y)) {
+                                    if (_this.game.rooms[_this.game.players[i].levelID] === _this.room &&
+                                        _this.game.players[i].x === moves[1].pos.x &&
+                                        _this.game.players[i].y === moves[1].pos.y) {
                                         _this.game.players[i].hurt(_this.hit(), _this.name);
-                                        _this.drawX = 0.5 * (_this.x - _this.game.players[i].x);
-                                        _this.drawY = 0.5 * (_this.y - _this.game.players[i].y);
+                                        _this.drawX += 1.5 * (_this.x - _this.game.players[i].x);
+                                        _this.drawY += 1.5 * (_this.y - _this.game.players[i].y);
                                         if (_this.game.players[i] ===
                                             _this.game.players[_this.game.localPlayerID])
                                             _this.game.shakeScreen(10 * _this.drawX, 10 * _this.drawY);
@@ -2916,26 +2930,24 @@ var FrogEnemy = /** @class */ (function (_super) {
                                     }
                                 }
                                 if (!hitPlayer) {
-                                    var moveX = moves[0].pos.x;
-                                    var moveY = moves[0].pos.y;
                                     if (moves.length > 1) {
-                                        moveX = moves[1].pos.x;
-                                        moveY = moves[1].pos.y;
+                                        var moveX = moves[1].pos.x;
+                                        var moveY = moves[1].pos.y;
+                                        _this.tryMove(moveX, moveY);
+                                        _this.setDrawXY(_this.lastX, _this.lastY);
+                                        if (_this.jumping) {
+                                            _this.frame = 8;
+                                            _this.animationSpeed = 1;
+                                        }
+                                        if (_this.x > moveX)
+                                            _this.direction = game_1.Direction.RIGHT;
+                                        else if (_this.x < moveX)
+                                            _this.direction = game_1.Direction.LEFT;
+                                        else if (_this.y > moveY)
+                                            _this.direction = game_1.Direction.DOWN;
+                                        else if (_this.y < moveY)
+                                            _this.direction = game_1.Direction.UP;
                                     }
-                                    _this.tryMove(moveX, moveY);
-                                    _this.setDrawXY(_this.lastX, _this.lastY);
-                                    if (_this.jumping) {
-                                        _this.frame = 8;
-                                        _this.animationSpeed = 1;
-                                    }
-                                    if (_this.x > moveX)
-                                        _this.direction = game_1.Direction.RIGHT;
-                                    else if (_this.x < moveX)
-                                        _this.direction = game_1.Direction.LEFT;
-                                    else if (_this.y > moveY)
-                                        _this.direction = game_1.Direction.DOWN;
-                                    else if (_this.y < moveY)
-                                        _this.direction = game_1.Direction.UP;
                                 }
                             }
                             _this.rumbling = false;
@@ -3002,6 +3014,78 @@ var FrogEnemy = /** @class */ (function (_super) {
                     Math.abs(_this.drawY) < 0.01 ? 0 : Math.max(-2, Math.min(_this.drawY, 2));
                 _this.jump(delta);
             }
+        };
+        _this.makeHitWarnings = function () {
+            var _a;
+            var cullFactor = 0.25;
+            var player = _this.getPlayer();
+            var orthogonal = _this.orthogonalAttack;
+            var diagonal = _this.diagonalAttack;
+            var forwardOnly = _this.forwardOnlyAttack;
+            var direction = _this.direction;
+            var orthoRange = _this.attackRange;
+            var diagRange = _this.diagonalAttackRange;
+            var generateOffsets = function (isOrthogonal, range) {
+                var baseOffsets = isOrthogonal
+                    ? [
+                        [-2, 0],
+                        [2, 0],
+                        [0, -2],
+                        [0, 2],
+                    ]
+                    : [
+                        [-1, -1],
+                        [1, 1],
+                        [1, -1],
+                        [-1, 1],
+                    ];
+                return baseOffsets.flatMap(function (_a) {
+                    var dx = _a[0], dy = _a[1];
+                    return Array.from({ length: range }, function (_, i) { return [(i + 1) * dx, (i + 1) * dy]; });
+                });
+            };
+            var directionOffsets = (_a = {},
+                _a[game_1.Direction.LEFT] = [-1, 0],
+                _a[game_1.Direction.RIGHT] = [1, 0],
+                _a[game_1.Direction.UP] = [0, -1],
+                _a[game_1.Direction.DOWN] = [0, 1],
+                _a);
+            var offsets = [];
+            if (forwardOnly) {
+                var _b = directionOffsets[direction], dx_1 = _b[0], dy_1 = _b[1];
+                offsets = Array.from({ length: orthoRange }, function (_, i) { return [
+                    (i + 1) * dx_1,
+                    (i + 1) * dy_1,
+                ]; });
+            }
+            else {
+                if (orthogonal)
+                    offsets.push.apply(offsets, generateOffsets(true, orthoRange));
+                if (diagonal)
+                    offsets.push.apply(offsets, generateOffsets(false, diagRange));
+            }
+            var warningCoordinates = offsets
+                .map(function (_a) {
+                var dx = _a[0], dy = _a[1];
+                return ({
+                    x: dx,
+                    y: dy,
+                    distance: utils_1.Utils.distance(dx, dy, player.x - _this.x, player.y - _this.y),
+                });
+            })
+                .sort(function (a, b) { return a.distance - b.distance; });
+            var keepCount = Math.ceil(warningCoordinates.length * (1 - cullFactor));
+            var culledWarnings = warningCoordinates.slice(0, keepCount);
+            culledWarnings.forEach(function (_a) {
+                var x = _a.x, y = _a.y;
+                var targetX = _this.x + x;
+                var targetY = _this.y + y;
+                if (_this.isWithinRoomBounds(targetX, targetY)) {
+                    var hitWarning = new hitWarning_1.HitWarning(_this.game, targetX, targetY, _this.x, _this.y, true, false, _this);
+                    _this.room.hitwarnings.push(hitWarning);
+                    //this.hitWarnings.push(hitWarning);
+                }
+            });
         };
         _this.draw = function (delta) {
             if (!_this.dead) {

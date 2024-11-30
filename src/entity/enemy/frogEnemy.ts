@@ -11,6 +11,7 @@ import { Item } from "../../item/item";
 import { GameConstants } from "../../gameConstants";
 import { ImageParticle } from "../../particle/imageParticle";
 import { Enemy } from "./enemy";
+import { Utils } from "../../utils";
 
 export class FrogEnemy extends Enemy {
   ticks: number;
@@ -126,10 +127,27 @@ export class FrogEnemy extends Enemy {
                 else grid[x][y] = false;
               }
             }
+            let targetPosition = {
+              x: this.targetPlayer.x,
+              y: this.targetPlayer.y,
+            };
+            let dx = this.targetPlayer.x - this.x;
+            let dy = this.targetPlayer.y - this.y;
+            if (
+              (dx === 0 && dy <= 1) ||
+              (dx <= 1 && dy === 0) ||
+              (dx === 0 && dy >= -1) ||
+              (dx >= -1 && dy === 0)
+            ) {
+              targetPosition = {
+                x: this.targetPlayer.x + dx,
+                y: this.targetPlayer.y + dy,
+              };
+            }
             let moves = astar.AStar.search(
               grid,
               this,
-              this.targetPlayer,
+              targetPosition,
               disablePositions,
               false,
               false,
@@ -143,16 +161,13 @@ export class FrogEnemy extends Enemy {
               let hitPlayer = false;
               for (const i in this.game.players) {
                 if (
-                  (this.game.rooms[this.game.players[i].levelID] ===
-                    this.room &&
-                    this.game.players[i].x === moves[0].pos.x &&
-                    this.game.players[i].y === moves[0].pos.y) ||
-                  (this.game.players[i].x === moves[1].pos.x &&
-                    this.game.players[i].y === moves[1].pos.y)
+                  this.game.rooms[this.game.players[i].levelID] === this.room &&
+                  this.game.players[i].x === moves[1].pos.x &&
+                  this.game.players[i].y === moves[1].pos.y
                 ) {
                   this.game.players[i].hurt(this.hit(), this.name);
-                  this.drawX = 0.5 * (this.x - this.game.players[i].x);
-                  this.drawY = 0.5 * (this.y - this.game.players[i].y);
+                  this.drawX += 1.5 * (this.x - this.game.players[i].x);
+                  this.drawY += 1.5 * (this.y - this.game.players[i].y);
                   if (
                     this.game.players[i] ===
                     this.game.players[this.game.localPlayerID]
@@ -162,22 +177,21 @@ export class FrogEnemy extends Enemy {
                 }
               }
               if (!hitPlayer) {
-                let moveX = moves[0].pos.x;
-                let moveY = moves[0].pos.y;
                 if (moves.length > 1) {
-                  moveX = moves[1].pos.x;
-                  moveY = moves[1].pos.y;
+                  let moveX = moves[1].pos.x;
+                  let moveY = moves[1].pos.y;
+                  this.tryMove(moveX, moveY);
+                  this.setDrawXY(this.lastX, this.lastY);
+
+                  if (this.jumping) {
+                    this.frame = 8;
+                    this.animationSpeed = 1;
+                  }
+                  if (this.x > moveX) this.direction = Direction.RIGHT;
+                  else if (this.x < moveX) this.direction = Direction.LEFT;
+                  else if (this.y > moveY) this.direction = Direction.DOWN;
+                  else if (this.y < moveY) this.direction = Direction.UP;
                 }
-                this.tryMove(moveX, moveY);
-                this.setDrawXY(this.lastX, this.lastY);
-                if (this.jumping) {
-                  this.frame = 8;
-                  this.animationSpeed = 1;
-                }
-                if (this.x > moveX) this.direction = Direction.RIGHT;
-                else if (this.x < moveX) this.direction = Direction.LEFT;
-                else if (this.y > moveY) this.direction = Direction.DOWN;
-                else if (this.y < moveY) this.direction = Direction.UP;
               }
             }
             this.rumbling = false;
@@ -249,6 +263,88 @@ export class FrogEnemy extends Enemy {
         Math.abs(this.drawY) < 0.01 ? 0 : Math.max(-2, Math.min(this.drawY, 2));
       this.jump(delta);
     }
+  };
+
+  makeHitWarnings = () => {
+    const cullFactor = 0.25;
+    const player: Player = this.getPlayer();
+    const orthogonal = this.orthogonalAttack;
+    const diagonal = this.diagonalAttack;
+    const forwardOnly = this.forwardOnlyAttack;
+    const direction = this.direction;
+    const orthoRange = this.attackRange;
+    const diagRange = this.diagonalAttackRange;
+
+    const generateOffsets = (
+      isOrthogonal: boolean,
+      range: number,
+    ): number[][] => {
+      const baseOffsets = isOrthogonal
+        ? [
+            [-2, 0],
+            [2, 0],
+            [0, -2],
+            [0, 2],
+          ]
+        : [
+            [-1, -1],
+            [1, 1],
+            [1, -1],
+            [-1, 1],
+          ];
+      return baseOffsets.flatMap(([dx, dy]) =>
+        Array.from({ length: range }, (_, i) => [(i + 1) * dx, (i + 1) * dy]),
+      );
+    };
+
+    const directionOffsets = {
+      [Direction.LEFT]: [-1, 0],
+      [Direction.RIGHT]: [1, 0],
+      [Direction.UP]: [0, -1],
+      [Direction.DOWN]: [0, 1],
+    };
+
+    let offsets: number[][] = [];
+    if (forwardOnly) {
+      const [dx, dy] = directionOffsets[direction];
+      offsets = Array.from({ length: orthoRange }, (_, i) => [
+        (i + 1) * dx,
+        (i + 1) * dy,
+      ]);
+    } else {
+      if (orthogonal) offsets.push(...generateOffsets(true, orthoRange));
+      if (diagonal) offsets.push(...generateOffsets(false, diagRange));
+    }
+
+    const warningCoordinates = offsets
+      .map(([dx, dy]) => ({
+        x: dx,
+        y: dy,
+        distance: Utils.distance(dx, dy, player.x - this.x, player.y - this.y),
+      }))
+      .sort((a, b) => a.distance - b.distance);
+
+    const keepCount = Math.ceil(warningCoordinates.length * (1 - cullFactor));
+    const culledWarnings = warningCoordinates.slice(0, keepCount);
+
+    culledWarnings.forEach(({ x, y }) => {
+      const targetX = this.x + x;
+      const targetY = this.y + y;
+      if (this.isWithinRoomBounds(targetX, targetY)) {
+        const hitWarning = new HitWarning(
+          this.game,
+          targetX,
+          targetY,
+          this.x,
+          this.y,
+          true,
+          false,
+          this,
+        );
+        this.room.hitwarnings.push(hitWarning);
+        //this.hitWarnings.push(hitWarning);
+      }
+    });
   };
 
   draw = (delta: number) => {
