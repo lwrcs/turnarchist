@@ -8674,7 +8674,7 @@ var loadGameState = function (game, activeUsernames, gameState, newWorld) {
     game.levelgen.setSeed(gameState.seed);
     if (newWorld)
         gameState.depth = 0;
-    game.levelgen.generateFirstNFloors(game, 20 + gameState.depth);
+    game.levelgen.generateFirstNFloors(game, gameState.depth);
     if (!newWorld) {
         if (gameState.players) {
             for (var i in gameState.players) {
@@ -15267,16 +15267,16 @@ var EnemyType;
     EnemyType["frog"] = "frog";
     EnemyType["zombie"] = "zombie";
     EnemyType["skull"] = "skull";
-    EnemyType["energyWizard"] = "energyWizard";
+    EnemyType["energyWizard"] = "energywizard";
     EnemyType["charge"] = "charge";
     EnemyType["rook"] = "rook";
     EnemyType["bishop"] = "bishop";
-    EnemyType["armoredZombie"] = "armoredZombie";
-    EnemyType["bigSkull"] = "bigSkull";
+    EnemyType["armoredzombie"] = "armoredzombie";
+    EnemyType["bigskull"] = "bigskull";
     EnemyType["queen"] = "queen";
     EnemyType["knight"] = "knight";
-    EnemyType["bigKnight"] = "bigKnight";
-    EnemyType["fireWizard"] = "fireWizard";
+    EnemyType["bigknight"] = "bigknight";
+    EnemyType["firewizard"] = "firewizard";
     // Add other enemy types here
 })(EnemyType = exports.EnemyType || (exports.EnemyType = {}));
 /**
@@ -15291,12 +15291,12 @@ exports.EnemyTypeMap = (_a = {},
     _a[EnemyType.charge] = chargeEnemy_1.ChargeEnemy,
     _a[EnemyType.rook] = rookEnemy_1.RookEnemy,
     _a[EnemyType.bishop] = bishopEnemy_1.BishopEnemy,
-    _a[EnemyType.armoredZombie] = armoredzombieEnemy_1.ArmoredzombieEnemy,
-    _a[EnemyType.bigSkull] = bigSkullEnemy_1.BigSkullEnemy,
+    _a[EnemyType.armoredzombie] = armoredzombieEnemy_1.ArmoredzombieEnemy,
+    _a[EnemyType.bigskull] = bigSkullEnemy_1.BigSkullEnemy,
     _a[EnemyType.queen] = queenEnemy_1.QueenEnemy,
     _a[EnemyType.knight] = knightEnemy_1.KnightEnemy,
-    _a[EnemyType.bigKnight] = bigKnightEnemy_1.BigKnightEnemy,
-    _a[EnemyType.fireWizard] = fireWizard_1.FireWizardEnemy,
+    _a[EnemyType.bigknight] = bigKnightEnemy_1.BigKnightEnemy,
+    _a[EnemyType.firewizard] = fireWizard_1.FireWizardEnemy,
     _a);
 var RoomType;
 (function (RoomType) {

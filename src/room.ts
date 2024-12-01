@@ -89,16 +89,16 @@ export enum EnemyType {
   frog = "frog",
   zombie = "zombie",
   skull = "skull",
-  energyWizard = "energyWizard",
+  energyWizard = "energywizard",
   charge = "charge",
   rook = "rook",
   bishop = "bishop",
-  armoredZombie = "armoredZombie",
-  bigSkull = "bigSkull",
+  armoredzombie = "armoredzombie",
+  bigskull = "bigskull",
   queen = "queen",
   knight = "knight",
-  bigKnight = "bigKnight",
-  fireWizard = "fireWizard",
+  bigknight = "bigknight",
+  firewizard = "firewizard",
   // Add other enemy types here
 }
 
@@ -114,12 +114,12 @@ export const EnemyTypeMap: { [key in EnemyType]: EnemyStatic } = {
   [EnemyType.charge]: ChargeEnemy,
   [EnemyType.rook]: RookEnemy,
   [EnemyType.bishop]: BishopEnemy,
-  [EnemyType.armoredZombie]: ArmoredzombieEnemy,
-  [EnemyType.bigSkull]: BigSkullEnemy,
+  [EnemyType.armoredzombie]: ArmoredzombieEnemy,
+  [EnemyType.bigskull]: BigSkullEnemy,
   [EnemyType.queen]: QueenEnemy,
   [EnemyType.knight]: KnightEnemy,
-  [EnemyType.bigKnight]: BigKnightEnemy,
-  [EnemyType.fireWizard]: FireWizardEnemy,
+  [EnemyType.bigknight]: BigKnightEnemy,
+  [EnemyType.firewizard]: FireWizardEnemy,
   // Add other enemy mappings here
 };
 
@@ -651,11 +651,7 @@ export class Room {
           // Check if the enemy overlaps with any other enemies
           for (let xx = 0; xx < enemy.w; xx++) {
             for (let yy = 0; yy < enemy.h; yy++) {
-              if (
-                !tiles.some(
-                  (tt) => tt.x === x + xx && tt.y === y + yy,
-                )
-              ) {
+              if (!tiles.some((tt) => tt.x === x + xx && tt.y === y + yy)) {
                 // If it does, increment the enemy count and return false
                 numEnemies++;
                 return false;
