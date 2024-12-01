@@ -27,6 +27,8 @@ import { MouseCursor } from "./mouseCursor";
 import { Light } from "./item/light";
 import { LightSource } from "./lightSource";
 import { statsTracker } from "./stats";
+import { BeamEffect } from "./beamEffect";
+import { Spellbook } from "./weapon/spellbook";
 
 export enum PlayerDirection {
   DOWN,
@@ -793,6 +795,43 @@ export class Player extends Drawable {
     }
   };
 
+  drawSpellBeam = (delta: number) => {
+    // Clear existing beam effects each frame
+    this.game.rooms[this.levelID].beamEffects = [];
+
+    if (this.inventory.getWeapon() instanceof Spellbook) {
+      const spellbook = this.inventory.getWeapon() as Spellbook;
+      if (spellbook.isTargeting) {
+        let targets = spellbook.targets;
+        for (let target of targets) {
+          // Create a new beam effect from the player to the enemy
+          this.game.rooms[this.levelID].addBeamEffect(
+            this.x - this.drawX,
+            this.y - this.drawY,
+            target.x - target.drawX,
+            target.y - target.drawY,
+          );
+
+          // Retrieve the newly added beam effect
+          const beam =
+            this.game.rooms[this.levelID].beamEffects[
+              this.game.rooms[this.levelID].beamEffects.length - 1
+            ];
+
+          // Render the beam
+          beam.render(
+            this.x - this.drawX,
+            this.y - this.drawY,
+            target.x - target.drawX,
+            target.y - target.drawY,
+            "cyan",
+            2,
+            delta,
+          );
+        }
+      }
+    }
+  };
   draw = (delta: number) => {
     this.drawableY = this.y;
 
@@ -803,6 +842,7 @@ export class Player extends Drawable {
         this.drawPlayerSprite(delta);
       }
     }
+    this.drawSpellBeam(delta);
   };
 
   faceMouse = () => {

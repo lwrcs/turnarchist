@@ -450,6 +450,237 @@ var astar;
 
 /***/ }),
 
+/***/ "./src/beamEffect.ts":
+/*!***************************!*\
+  !*** ./src/beamEffect.ts ***!
+  \***************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BeamEffect = void 0;
+var game_1 = __webpack_require__(/*! ./game */ "./src/game.ts");
+var gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/gameConstants.ts");
+var BeamEffect = /** @class */ (function () {
+    function BeamEffect(x1, y1, x2, y2) {
+        this.active = true;
+        this.time = 0;
+        var startX = x1 * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
+        var startY = y1 * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
+        var endX = x2 * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
+        var endY = y2 * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
+        this.points = this.initializePoints(startX, startY, endX, endY);
+        this.prevStartX = startX;
+        this.prevStartY = startY;
+        this.prevEndX = endX;
+        this.prevEndY = endY;
+    }
+    BeamEffect.prototype.render = function (x1, y1, x2, y2, color, lineWidth, delta) {
+        if (color === void 0) { color = "cyan"; }
+        if (lineWidth === void 0) { lineWidth = 2; }
+        if (delta === void 0) { delta = 1 / 60; }
+        var startX = x1 * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
+        var startY = y1 * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
+        var endX = x2 * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
+        var endY = y2 * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
+        var startForceX = (startX - this.prevStartX) * BeamEffect.MOTION_INFLUENCE * delta;
+        var startForceY = (startY - this.prevStartY) * BeamEffect.MOTION_INFLUENCE * delta;
+        var endForceX = (endX - this.prevEndX) * BeamEffect.MOTION_INFLUENCE * delta;
+        var endForceY = (endY - this.prevEndY) * BeamEffect.MOTION_INFLUENCE * delta;
+        for (var i = 1; i < 4; i++) {
+            var influence = 1 - i / 4;
+            this.points[i].x += startForceX * influence;
+            this.points[i].y += startForceY * influence;
+        }
+        for (var i = this.points.length - 4; i < this.points.length - 1; i++) {
+            var influence = 1 - (this.points.length - i) / 4;
+            this.points[i].x += endForceX * influence;
+            this.points[i].y += endForceY * influence;
+        }
+        this.simulateRope(startX, startY, endX, endY, delta);
+        var ctx = game_1.Game.ctx;
+        ctx.save();
+        for (var i = 0; i < this.points.length - 1; i++) {
+            var p1 = this.points[i];
+            var p2 = this.points[i + 1];
+            var dx = p2.x - p1.x;
+            var dy = p2.y - p1.y;
+            var steps = Math.max(Math.abs(dx), Math.abs(dy));
+            var xIncrement = dx / steps;
+            var yIncrement = dy / steps;
+            var x = p1.x;
+            var y = p1.y;
+            for (var step = 0; step <= steps; step++) {
+                for (var w = 0; w < lineWidth; w++) {
+                    for (var h = 0; h < lineWidth; h++) {
+                        ctx.fillStyle = color;
+                        ctx.fillRect(Math.round(x + w), Math.round(y + h), 1, 1);
+                    }
+                }
+                x += xIncrement;
+                y += yIncrement;
+            }
+        }
+        ctx.restore();
+        this.prevStartX = startX;
+        this.prevStartY = startY;
+        this.prevEndX = endX;
+        this.prevEndY = endY;
+    };
+    BeamEffect.prototype.initializePoints = function (startX, startY, endX, endY) {
+        var points = [];
+        for (var i = 0; i < BeamEffect.SEGMENTS; i++) {
+            var t = i / (BeamEffect.SEGMENTS - 1);
+            points.push({
+                x: startX + (endX - startX) * t,
+                y: startY + (endY - startY) * t,
+                oldX: startX + (endX - startX) * t,
+                oldY: startY + (endY - startY) * t,
+                velocityX: 0,
+                velocityY: 0,
+                angle: Math.random() * Math.PI * 2,
+            });
+        }
+        return points;
+    };
+    BeamEffect.prototype.applyTurbulence = function (point, index) {
+        point.angle +=
+            Math.sin(this.time * 0.1 + index * 0.5) * BeamEffect.ANGLE_CHANGE;
+        var turbulenceX = Math.cos(point.angle) * BeamEffect.TURBULENCE;
+        var turbulenceY = Math.sin(point.angle) * BeamEffect.TURBULENCE;
+        point.velocityX += turbulenceX;
+        point.velocityY += turbulenceY;
+        point.velocityX = Math.min(Math.max(point.velocityX, -BeamEffect.MAX_VELOCITY), BeamEffect.MAX_VELOCITY);
+        point.velocityY = Math.min(Math.max(point.velocityY, -BeamEffect.MAX_VELOCITY), BeamEffect.MAX_VELOCITY);
+    };
+    BeamEffect.prototype.simulateRope = function (startX, startY, endX, endY, delta) {
+        var iterationsThisFrame = Math.ceil(BeamEffect.ITERATIONS * delta);
+        for (var iteration = 0; iteration < iterationsThisFrame; iteration++) {
+            for (var i = 1; i < this.points.length - 1; i++) {
+                var point = this.points[i];
+                var prevPoint = this.points[i - 1];
+                var nextPoint = this.points[i + 1];
+                var springForceXPrev = (prevPoint.x - point.x) * BeamEffect.SPRING_STIFFNESS * delta;
+                var springForceYPrev = (prevPoint.y - point.y) * BeamEffect.SPRING_STIFFNESS * delta;
+                var springForceXNext = (nextPoint.x - point.x) * BeamEffect.SPRING_STIFFNESS * delta;
+                var springForceYNext = (nextPoint.y - point.y) * BeamEffect.SPRING_STIFFNESS * delta;
+                this.applyTurbulence(point, i);
+                point.velocityX =
+                    (point.velocityX + springForceXPrev + springForceXNext) *
+                        Math.pow(BeamEffect.DAMPING, delta);
+                point.velocityY =
+                    (point.velocityY + springForceYPrev + springForceYNext) *
+                        Math.pow(BeamEffect.DAMPING, delta);
+                var relativeVXPrev = (prevPoint.velocityX - point.velocityX) * delta;
+                var relativeVYPrev = (prevPoint.velocityY - point.velocityY) * delta;
+                var relativeVXNext = (nextPoint.velocityX - point.velocityX) * delta;
+                var relativeVYNext = (nextPoint.velocityY - point.velocityY) * delta;
+                point.velocityX +=
+                    (relativeVXPrev + relativeVXNext) * BeamEffect.SPRING_DAMPING;
+                point.velocityY +=
+                    (relativeVYPrev + relativeVYNext) * BeamEffect.SPRING_DAMPING;
+                point.oldX = point.x;
+                point.oldY = point.y;
+                point.x += point.velocityX * delta;
+                point.y += point.velocityY * delta + BeamEffect.GRAVITY * delta * delta;
+            }
+            var segmentLength = Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2)) /
+                (BeamEffect.SEGMENTS - 1);
+            for (var constraintIteration = 0; constraintIteration < 2; constraintIteration++) {
+                for (var i = 0; i < this.points.length - 1; i++) {
+                    var p1 = this.points[i];
+                    var p2 = this.points[i + 1];
+                    var dx = p2.x - p1.x;
+                    var dy = p2.y - p1.y;
+                    var distance = Math.sqrt(dx * dx + dy * dy);
+                    var difference = segmentLength - distance;
+                    var percent = difference / distance / 2;
+                    var offsetX = dx * percent;
+                    var offsetY = dy * percent;
+                    if (i > 0) {
+                        p1.x -= offsetX * 1.5;
+                        p1.y -= offsetY * 1.5;
+                    }
+                    if (i < this.points.length - 2) {
+                        p2.x += offsetX * 1.5;
+                        p2.y += offsetY * 1.5;
+                    }
+                }
+            }
+        }
+        this.points[0].x = startX;
+        this.points[0].y = startY;
+        this.points[0].oldX = startX;
+        this.points[0].oldY = startY;
+        this.points[this.points.length - 1].x = endX;
+        this.points[this.points.length - 1].y = endY;
+        this.points[this.points.length - 1].oldX = endX;
+        this.points[this.points.length - 1].oldY = endY;
+    };
+    BeamEffect.renderBeam = function (x1, y1, x2, y2, color, lineWidth) {
+        if (color === void 0) { color = "cyan"; }
+        if (lineWidth === void 0) { lineWidth = 2; }
+        var ctx = game_1.Game.ctx;
+        var startX = x1 * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
+        var startY = y1 * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
+        var endX = x2 * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
+        var endY = y2 * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(endX, endY);
+        ctx.lineWidth = lineWidth;
+        ctx.strokeStyle = color;
+        ctx.stroke();
+        ctx.restore();
+    };
+    BeamEffect.prototype.destroy = function () {
+        this.active = false;
+        this.points = [];
+    };
+    BeamEffect.prototype.isActive = function () {
+        return this.active;
+    };
+    // Number of points that make up the beam (higher = smoother but more expensive)
+    // Range: 10-100, recommended: 30
+    BeamEffect.SEGMENTS = 30;
+    // Downward force applied to each point (0 = no gravity)
+    // Range: 0-10, recommended: 2
+    BeamEffect.GRAVITY = 2;
+    // Physics simulation steps per frame (higher = more accurate but more expensive)
+    // Range: 1-10, recommended: 1
+    BeamEffect.ITERATIONS = 5;
+    // How much the beam reacts to movement of start/end points
+    // Range: 0-5, recommended: 1
+    BeamEffect.MOTION_INFLUENCE = 1;
+    // Amount of random movement applied to points (0 = straight beam)
+    // Range: 0-1, recommended: 0.5
+    BeamEffect.TURBULENCE = 0.5;
+    // How quickly velocity decreases over time
+    // Range: 0-1, recommended: 0.5
+    BeamEffect.VELOCITY_DECAY = 0.1;
+    // How quickly the turbulence angle changes
+    // Range: 0-2, recommended: 0.9
+    BeamEffect.ANGLE_CHANGE = 0.01; // for turbulence specifically
+    // Maximum speed any point can move per frame
+    // Range: 10-1000, recommended: 100
+    BeamEffect.MAX_VELOCITY = 100;
+    // General movement resistance (1 = no damping, 0 = full stop)
+    // Range: 0.9-0.999, recommended: 0.8
+    BeamEffect.DAMPING = 0.8;
+    // How strongly points pull toward their neighbors
+    // Range: 0.01-1, recommended: 0.01
+    BeamEffect.SPRING_STIFFNESS = 0.01;
+    // How quickly spring oscillations settle
+    // Range: 0.001-0.1, recommended: 0.1
+    BeamEffect.SPRING_DAMPING = 0.1;
+    return BeamEffect;
+}());
+exports.BeamEffect = BeamEffect;
+
+
+/***/ }),
+
 /***/ "./src/drawable.ts":
 /*!*************************!*\
   !*** ./src/drawable.ts ***!
@@ -5192,6 +5423,25 @@ var Entity = /** @class */ (function (_super) {
             }
             return true;
         };
+        _this.getLuminance = function () {
+            if (_this.room.roomArray[_this.x][_this.y]) {
+                return _this.room.vis[_this.x][_this.y];
+            }
+            return null;
+        };
+        _this.getAverageLuminance = function () {
+            var total = 0;
+            var count = 0;
+            for (var x = _this.x - 2; x <= _this.x + 2; x++) {
+                for (var y = _this.y - 2; y <= _this.y + 2; y++) {
+                    if (_this.room.vis[x][y]) {
+                        total += _this.room.vis[x][y];
+                        count++;
+                    }
+                }
+            }
+            return total / count;
+        };
         _this.makeHitWarnings = function () {
             var _a;
             var cullFactor = 0.25;
@@ -8624,7 +8874,9 @@ var HitWarning = /** @class */ (function (_super) {
         _this.removeOverlapping = function () {
             for (var _i = 0, _a = _this.game.room.entities; _i < _a.length; _i++) {
                 var entity = _a[_i];
-                if (entity.x === _this.x && entity.y === _this.y) {
+                if (entity.x === _this.x &&
+                    entity.y === _this.y &&
+                    entity.pushable === false) {
                     _this.dead = true;
                     break;
                 }
@@ -13379,6 +13631,7 @@ var hitWarning_1 = __webpack_require__(/*! ./hitWarning */ "./src/hitWarning.ts"
 var postProcess_1 = __webpack_require__(/*! ./postProcess */ "./src/postProcess.ts");
 var mouseCursor_1 = __webpack_require__(/*! ./mouseCursor */ "./src/mouseCursor.ts");
 var stats_1 = __webpack_require__(/*! ./stats */ "./src/stats.ts");
+var spellbook_1 = __webpack_require__(/*! ./weapon/spellbook */ "./src/weapon/spellbook.ts");
 var PlayerDirection;
 (function (PlayerDirection) {
     PlayerDirection[PlayerDirection["DOWN"] = 0] = "DOWN";
@@ -13930,6 +14183,25 @@ var Player = /** @class */ (function (_super) {
                 // TODO draw armor
             }
         };
+        _this.drawSpellBeam = function (delta) {
+            // Clear existing beam effects each frame
+            _this.game.rooms[_this.levelID].beamEffects = [];
+            if (_this.inventory.getWeapon() instanceof spellbook_1.Spellbook) {
+                var spellbook = _this.inventory.getWeapon();
+                if (spellbook.isTargeting) {
+                    var targets = spellbook.targets;
+                    for (var _i = 0, targets_1 = targets; _i < targets_1.length; _i++) {
+                        var target = targets_1[_i];
+                        // Create a new beam effect from the player to the enemy
+                        _this.game.rooms[_this.levelID].addBeamEffect(_this.x - _this.drawX, _this.y - _this.drawY, target.x - target.drawX, target.y - target.drawY);
+                        // Retrieve the newly added beam effect
+                        var beam = _this.game.rooms[_this.levelID].beamEffects[_this.game.rooms[_this.levelID].beamEffects.length - 1];
+                        // Render the beam
+                        beam.render(_this.x - _this.drawX, _this.y - _this.drawY, target.x - target.drawX, target.y - target.drawY, "cyan", 2, delta);
+                    }
+                }
+            }
+        };
         _this.draw = function (delta) {
             _this.drawableY = _this.y;
             _this.flashingFrame += (delta * 12) / gameConstants_1.GameConstants.FPS;
@@ -13939,6 +14211,7 @@ var Player = /** @class */ (function (_super) {
                     _this.drawPlayerSprite(delta);
                 }
             }
+            _this.drawSpellBeam(delta);
         };
         _this.faceMouse = function () {
             var mousePosition = mouseCursor_1.MouseCursor.getInstance().getPosition();
@@ -14984,6 +15257,7 @@ var warhammer_1 = __webpack_require__(/*! ./weapon/warhammer */ "./src/weapon/wa
 var spellbook_1 = __webpack_require__(/*! ./weapon/spellbook */ "./src/weapon/spellbook.ts");
 var torch_1 = __webpack_require__(/*! ./item/torch */ "./src/item/torch.ts");
 var rookEnemy_1 = __webpack_require__(/*! ./entity/enemy/rookEnemy */ "./src/entity/enemy/rookEnemy.ts");
+var beamEffect_1 = __webpack_require__(/*! ./beamEffect */ "./src/beamEffect.ts");
 /**
  * Enumeration of available enemy types.
  */
@@ -15078,6 +15352,8 @@ var Room = /** @class */ (function () {
         this.shadeColor = "black";
         //actionTab: ActionTab;
         this.wallInfo = new Map();
+        // Add a list to keep track of BeamEffect instances
+        this.beamEffects = [];
         this.tileInside = function (tileX, tileY) {
             return _this.pointInside(tileX, tileY, _this.roomX, _this.roomY, _this.width, _this.height);
         };
@@ -15891,6 +16167,7 @@ var Room = /** @class */ (function () {
             //sets the action tab state to Ready
             _this.playerTurnTime = Date.now();
             _this.playerTicked = player;
+            // Update Beam Effects lighting
             //console.log("updating lighting");
             _this.updateLighting();
             player.map.saveMapData();
@@ -16780,6 +17057,18 @@ var Room = /** @class */ (function () {
                 }
             }
         }
+    };
+    /**
+     * Adds a new BeamEffect to the room.
+     *
+     * @param x1 - Starting tile X coordinate.
+     * @param y1 - Starting tile Y coordinate.
+     * @param x2 - Ending tile X coordinate.
+     * @param y2 - Ending tile Y coordinate.
+     */
+    Room.prototype.addBeamEffect = function (x1, y1, x2, y2) {
+        var beam = new beamEffect_1.BeamEffect(x1, y1, x2, y2);
+        this.beamEffects.push(beam);
     };
     return Room;
 }());
@@ -19268,6 +19557,12 @@ var Spellbook = /** @class */ (function (_super) {
                         return false;
                 }
             };
+            if (targets.length > 0) {
+                _this.isTargeting = true;
+            }
+            else {
+                _this.isTargeting = false;
+            }
             targets = targets.filter(isTargetInDirection);
             for (var _i = 0, targets_1 = targets; _i < targets_1.length; _i++) {
                 var e = targets_1[_i];
@@ -19287,6 +19582,9 @@ var Spellbook = /** @class */ (function (_super) {
                     _this.game.shakeScreen(10 * _this.wielder.hitX, 10 * _this.wielder.hitY);
                 sound_1.Sound.playMagic();
                 _this.degrade();
+                setTimeout(function () {
+                    _this.isTargeting = false;
+                }, 100);
             }
             return !flag;
         };
@@ -19295,6 +19593,7 @@ var Spellbook = /** @class */ (function (_super) {
         _this.tileY = 0;
         _this.canMine = true;
         _this.name = "Spellbook";
+        _this.isTargeting = false;
         return _this;
     }
     return Spellbook;

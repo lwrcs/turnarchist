@@ -15,6 +15,7 @@ import { Candle } from "../../item/candle";
 import { ImageParticle } from "../../particle/imageParticle";
 import { Enemy } from "./enemy";
 import { Random } from "../../random";
+import { BeamEffect } from "../../beamEffect";
 
 export class SkullEnemy extends Enemy {
   frame: number;

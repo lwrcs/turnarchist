@@ -72,7 +72,11 @@ export class HitWarning extends Drawable {
 
   removeOverlapping = () => {
     for (const entity of this.game.room.entities) {
-      if (entity.x === this.x && entity.y === this.y) {
+      if (
+        entity.x === this.x &&
+        entity.y === this.y &&
+        entity.pushable === false
+      ) {
         this.dead = true;
         break;
       }

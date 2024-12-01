@@ -577,6 +577,27 @@ export class Entity extends Drawable {
     return offsets;
   }
 
+  getLuminance = (): number => {
+    if (this.room.roomArray[this.x][this.y]) {
+      return this.room.vis[this.x][this.y];
+    }
+    return null;
+  };
+
+  getAverageLuminance = (): number => {
+    let total = 0;
+    let count = 0;
+    for (let x = this.x - 2; x <= this.x + 2; x++) {
+      for (let y = this.y - 2; y <= this.y + 2; y++) {
+        if (this.room.vis[x][y]) {
+          total += this.room.vis[x][y];
+          count++;
+        }
+      }
+    }
+    return total / count;
+  };
+
   makeHitWarnings = () => {
     const cullFactor = 0.25;
     const player: Player = this.getPlayer();

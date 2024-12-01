@@ -79,6 +79,7 @@ import { Warhammer } from "./weapon/warhammer";
 import { Spellbook } from "./weapon/spellbook";
 import { Torch } from "./item/torch";
 import { RookEnemy } from "./entity/enemy/rookEnemy";
+import { BeamEffect } from "./beamEffect";
 
 /**
  * Enumeration of available enemy types.
@@ -243,6 +244,9 @@ export class Room {
     if (y < rY || y >= rY + rH) return false;
     return true;
   }
+
+  // Add a list to keep track of BeamEffect instances
+  beamEffects: BeamEffect[] = [];
 
   constructor(
     game: Game,
@@ -1827,6 +1831,9 @@ export class Room {
     //sets the action tab state to Ready
     this.playerTurnTime = Date.now();
     this.playerTicked = player;
+
+    // Update Beam Effects lighting
+
     //console.log("updating lighting");
     this.updateLighting();
 
@@ -2283,5 +2290,18 @@ export class Room {
         }
       }
     }
+  }
+
+  /**
+   * Adds a new BeamEffect to the room.
+   *
+   * @param x1 - Starting tile X coordinate.
+   * @param y1 - Starting tile Y coordinate.
+   * @param x2 - Ending tile X coordinate.
+   * @param y2 - Ending tile Y coordinate.
+   */
+  public addBeamEffect(x1: number, y1: number, x2: number, y2: number): void {
+    const beam = new BeamEffect(x1, y1, x2, y2);
+    this.beamEffects.push(beam);
   }
 }

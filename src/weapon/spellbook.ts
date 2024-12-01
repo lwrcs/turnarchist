@@ -16,7 +16,7 @@ import { Utils } from "../utils";
 import { Direction } from "../game";
 export class Spellbook extends Weapon {
   targets: Entity[];
-
+  isTargeting: boolean;
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
     this.range = 4;
@@ -24,6 +24,7 @@ export class Spellbook extends Weapon {
     this.tileY = 0;
     this.canMine = true;
     this.name = "Spellbook";
+    this.isTargeting = false;
   }
 
   getTargets = () => {
@@ -32,7 +33,7 @@ export class Spellbook extends Weapon {
     this.targets = entities.filter(
       (e) =>
         !e.pushable &&
-        Utils.distance(this.wielder.x, this.wielder.y, e.x, e.y) <= this.range
+        Utils.distance(this.wielder.x, this.wielder.y, e.x, e.y) <= this.range,
     );
     let enemies = this.targets.filter((e) => e instanceof Enemy);
     console.log(enemies);
@@ -62,6 +63,11 @@ export class Spellbook extends Weapon {
           return false;
       }
     };
+    if (targets.length > 0) {
+      this.isTargeting = true;
+    } else {
+      this.isTargeting = false;
+    }
 
     targets = targets.filter(isTargetInDirection);
 
@@ -72,7 +78,7 @@ export class Spellbook extends Weapon {
         e.hurt(this.wielder, 1);
 
         this.game.rooms[this.wielder.levelID].projectiles.push(
-          new PlayerFireball(this.wielder, e.x, e.y)
+          new PlayerFireball(this.wielder, e.x, e.y),
         );
 
         flag = true;
@@ -92,6 +98,9 @@ export class Spellbook extends Weapon {
         this.game.shakeScreen(10 * this.wielder.hitX, 10 * this.wielder.hitY);
       Sound.playMagic();
       this.degrade();
+      setTimeout(() => {
+        this.isTargeting = false;
+      }, 100);
     }
     return !flag;
   };
