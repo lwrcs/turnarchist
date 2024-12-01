@@ -18,11 +18,13 @@ import { globalEventBus } from "./eventBus";
 import { ReverbEngine } from "./reverb";
 import { Level } from "./level";
 import { statsTracker } from "./stats";
+import { EVENTS } from "./events";
 
 export enum LevelState {
   IN_LEVEL,
   TRANSITIONING,
   TRANSITIONING_LADDER,
+  LEVEL_GENERATION,
 }
 
 export enum Direction {
@@ -222,6 +224,8 @@ export class Game {
       };
       Game.fontsheet.src = "res/font.png";
 
+      this.levelState = LevelState.LEVEL_GENERATION;
+
       let checkResourcesLoaded = () => {
         if (resourcesLoaded < NUM_RESOURCES) {
           window.setTimeout(checkResourcesLoaded, 500);
@@ -291,7 +295,6 @@ export class Game {
           this.shakeAmountY = 0;
           this.shakeFrame = (3 * Math.PI) / 2;
           this.screenShakeCutoff = 0;
-          this.levelState = LevelState.IN_LEVEL;
           this.tutorialActive = false;
           this.screenShakeActive = false;
           this.levels = [];
@@ -305,6 +308,13 @@ export class Game {
     this.tutorialListener = new TutorialListener(this);
     this.setupEventListeners();
     ReverbEngine.initialize();
+
+    globalEventBus.on(EVENTS.LEVEL_GENERATION_STARTED, () => {
+      this.levelState = LevelState.LEVEL_GENERATION;
+    });
+    globalEventBus.on(EVENTS.LEVEL_GENERATION_COMPLETED, () => {
+      this.levelState = LevelState.IN_LEVEL;
+    });
   }
 
   newGame = () => {
@@ -315,6 +325,7 @@ export class Game {
     gs.seed = (Math.random() * 4294967296) >>> 0;
     gs.randomState = (Math.random() * 4294967296) >>> 0;
     loadGameState(this, [this.localPlayerID], gs, true);
+    this.levelState = LevelState.LEVEL_GENERATION;
   };
 
   startGame = () => {
@@ -361,6 +372,21 @@ export class Game {
           break;
         case "Q":
           this.players[this.localPlayerID].inputHandler(InputEnum.Q);
+          break;
+        case "1":
+          LevelGenerator.ANIMATION_CONSTANT = 1;
+          break;
+        case "2":
+          LevelGenerator.ANIMATION_CONSTANT = 2;
+          break;
+        case "3":
+          LevelGenerator.ANIMATION_CONSTANT = 5;
+          break;
+        case "4":
+          LevelGenerator.ANIMATION_CONSTANT = 10000;
+          break;
+        case "0":
+          LevelGenerator.ANIMATION_CONSTANT = 0;
           break;
       }
     } else {
@@ -489,14 +515,15 @@ export class Game {
         this.players[this.localPlayerID].map.saveMapData();
       }
     }
+    if (this.levelState !== LevelState.LEVEL_GENERATION) {
+      for (const i in this.players) {
+        this.players[i].update();
+        this.rooms[this.players[i].levelID].update();
 
-    for (const i in this.players) {
-      this.players[i].update();
-      this.rooms[this.players[i].levelID].update();
-
-      if (this.players[i].dead) {
-        for (const j in this.players) {
-          this.players[j].dead = true;
+        if (this.players[i].dead) {
+          for (const j in this.players) {
+            this.players[j].dead = true;
+          }
         }
       }
     }
@@ -758,7 +785,8 @@ export class Game {
 
   draw = (delta: number) => {
     Game.ctx.globalAlpha = 1;
-    Game.ctx.fillStyle = this.room.shadeColor;
+    if (this.room) Game.ctx.fillStyle = this.room.shadeColor;
+    else Game.ctx.fillStyle = "black";
     Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
 
     if (this.levelState === LevelState.TRANSITIONING) {
@@ -962,7 +990,9 @@ export class Game {
 
       this.players[this.localPlayerID].drawGUI(delta);
       for (const i in this.players) this.players[i].updateDrawXY(delta);
-    } else {
+    } else if (this.levelState === LevelState.LEVEL_GENERATION) {
+      this.levelgen.draw(delta);
+    } else if (this.levelState === LevelState.IN_LEVEL) {
       // Start of Selection
 
       if (this.screenShakeActive) {

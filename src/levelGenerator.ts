@@ -1,4 +1,4 @@
-import { Game } from "./game";
+import { ChatMessage, Game } from "./game";
 import { Room, RoomType } from "./room";
 import { Door } from "./tile/door";
 import { LevelConstants } from "./levelConstants";
@@ -9,6 +9,12 @@ import {
   LevelParameters,
 } from "./levelParametersGenerator";
 import { Level } from "./level";
+import { GameConstants } from "./gameConstants";
+
+// animation delays in ms
+const ANIMATION_PARTITION_SPLIT_DELAY = 10; // for partition splitting
+const ANIMATION_PATHFINDING_DELAY = 100; // for pathfinding
+const ANIMATION_LARGE_DELAY = 100; // in between larger steps
 
 class PartitionConnection {
   x: number;
@@ -28,6 +34,7 @@ class Partition {
   w: number;
   h: number;
   type: RoomType;
+  fillStyle: string;
   connections: Array<PartitionConnection>;
   distance: number;
   isTopOpen: boolean;
@@ -35,11 +42,12 @@ class Partition {
   isBottomOpen: boolean;
   isLeftOpen: boolean;
 
-  constructor(x: number, y: number, w: number, h: number) {
+  constructor(x: number, y: number, w: number, h: number, fillStyle: string) {
     this.x = x;
     this.y = y;
     this.w = w;
     this.h = h;
+    this.fillStyle = fillStyle;
     this.type = RoomType.DUNGEON;
     this.connections = [];
     this.distance = 1000;
@@ -49,7 +57,9 @@ class Partition {
     this.isLeftOpen = true;
   }
 
-  split = () => {
+  split = async (): Promise<Array<Partition>> => {
+    await new Promise((resolve) => setTimeout(resolve, LevelGenerator.ANIMATION_CONSTANT * ANIMATION_PARTITION_SPLIT_DELAY));
+
     // Reset open walls when a partition is split
     this.isTopOpen = true;
     this.isRightOpen = true;
@@ -90,8 +100,8 @@ class Partition {
       if (w1 < MIN_SIZE || w2 < MIN_SIZE) return [this];
       //if either of these are less than the min size: return an array with this Partition
       return [
-        new Partition(this.x, this.y, w1, this.h),
-        new Partition(this.x + w1 + 1, this.y, w2, this.h),
+        new Partition(this.x, this.y, w1, this.h, this.fillStyle),
+        new Partition(this.x + w1 + 1, this.y, w2, this.h, this.fillStyle),
       ];
       //return an array with two new partitions
     } else {
@@ -99,8 +109,8 @@ class Partition {
       let h2 = this.h - h1 - 1;
       if (h1 < MIN_SIZE || h2 < MIN_SIZE) return [this];
       return [
-        new Partition(this.x, this.y, this.w, h1),
-        new Partition(this.x, this.y + h1 + 1, this.w, h2),
+        new Partition(this.x, this.y, this.w, h1, this.fillStyle),
+        new Partition(this.x, this.y + h1 + 1, this.w, h2, this.fillStyle),
       ];
       //identical code for case where height > width
     }
@@ -198,28 +208,46 @@ class Partition {
     points.sort(() => 0.5 - Random.rand());
     return points[0]; //return first object of x y points in array points
   };
+
+  draw = (delta: number, levelCenterX: number, levelCenterY: number) => {
+    Game.ctx.fillStyle = this.fillStyle;
+    Game.ctx.fillRect(
+      Math.round(GameConstants.WIDTH / 2 + this.x - levelCenterX),
+      Math.round(GameConstants.HEIGHT / 2 + this.y - levelCenterY),
+      this.w,
+      this.h
+    );
+
+    for (let connection of this.connections) {
+      Game.ctx.fillRect(
+        Math.round(GameConstants.WIDTH / 2 + connection.x - levelCenterX),
+        Math.round(GameConstants.HEIGHT / 2 + connection.y - levelCenterY),
+        1, 1
+      );
+    }
+  }
 } //end of Partition class
 
-let split_partitions = (
+let split_partitions = async (
   partitions: Array<Partition>,
   prob: number,
-): Array<Partition> => {
+): Promise<Array<Partition>> => {
   for (let partition of partitions) {
     if (Random.rand() < prob) {
       partitions = partitions.filter((p) => p !== partition); // remove partition
-      partitions = partitions.concat(partition.split()); // add splits
+      partitions = partitions.concat(await partition.split()); // add splits
     }
   }
   return partitions;
   //takes input partitions array, randomly removes partitions and adds splits, output modified partitions array
 };
 
-let split_partition = (
+let split_partition = async (
   partition: Partition,
   prob: number,
-): Array<Partition> => {
+): Promise<Array<Partition>> => {
   if (Random.rand() < prob) {
-    return partition.split();
+    return await partition.split();
   } else {
     return [partition];
   }
@@ -389,12 +417,14 @@ let populate_grid = (
   //output grid array that indicates which cells are in which partition
 };
 
-let generate_dungeon_candidate = (
+let generate_dungeon_candidate = async (
+  game: Game,
+  partialLevel: PartialLevel,
   map_w: number,
   map_h: number,
   depth: number,
   params: LevelParameters,
-): Array<Partition> => {
+) => {
   const {
     minRoomCount,
     maxRoomCount,
@@ -403,33 +433,35 @@ let generate_dungeon_candidate = (
     wallRemoveProbability,
   } = params;
 
-  let partitions = [new Partition(0, 0, map_w, map_h)];
+  partialLevel.partitions = [new Partition(0, 0, map_w, map_h, "white")];
   let grid = [];
 
   // Use splitProbabilities for splitting
-  while (partitions.length < params.maxRoomCount) {
+  while (partialLevel.partitions.length < params.maxRoomCount) {
     for (let i = 0; i < splitProbabilities.length; i++) {
-      partitions = split_partitions(partitions, splitProbabilities[i]);
+      partialLevel.partitions = await split_partitions(partialLevel.partitions, splitProbabilities[i]);
     }
   }
   for (let i = 0; i < 100; i++) {
-    partitions.forEach((partition) => {
+    partialLevel.partitions.forEach(async (partition) => {
       let roomArea = 100000;
       //Math.random() > 0.95 ? params.softMaxRoomArea : params.maxRoomArea;
       if (partition.area() > roomArea) {
-        partitions = partitions.filter((p) => p !== partition);
-        partitions = partitions.concat(split_partition(partition, 0.5));
+        partialLevel.partitions = partialLevel.partitions.filter((p) => p !== partition);
+        partialLevel.partitions = partialLevel.partitions.concat(await split_partition(partition, 0.5));
       }
     });
   }
 
-  //visualize_partitions(partitions, map_w, map_h);
-  partitions = remove_wall_rooms(
-    partitions,
+  //visualize_partialLevel.partitions(partialLevel.partitions, map_w, map_h);
+  partialLevel.partitions = remove_wall_rooms(
+    partialLevel.partitions,
     map_w,
     map_h,
     wallRemoveProbability,
   );
+
+  await new Promise((resolve) => setTimeout(resolve, LevelGenerator.ANIMATION_CONSTANT * ANIMATION_LARGE_DELAY));;
 
   // Remove wall rooms based on probability
   /*
@@ -453,29 +485,42 @@ let generate_dungeon_candidate = (
   */
 
   // Check if we have any partitions before proceeding
-  if (partitions.length === 0) {
-    return [];
+  if (partialLevel.partitions.length === 0) {
+    partialLevel.partitions = [];
+    return;
   }
 
   //populate the grid with partitions
-  partitions.sort((a, b) => a.area() - b.area());
+  partialLevel.partitions.sort((a, b) => a.area() - b.area());
+  // shade each partition's fillStyle based on its area, medium gray for smallest, white for largest
+  partialLevel.partitions.forEach((partition) => {
+    partition.fillStyle = `rgba(128, 128, 128, ${partition.area() / partialLevel.partitions[0].area()})`;
+  });
+
+  await new Promise((resolve) => setTimeout(resolve, LevelGenerator.ANIMATION_CONSTANT * ANIMATION_LARGE_DELAY));;
 
   // Make sure we have at least one partition before assigning spawn
-  if (partitions.length === 0) {
+  if (partialLevel.partitions.length === 0) {
     console.log("No partitions generated after filtering.");
-    return [];
+    partialLevel.partitions = [];
+    return;
   }
 
-  let spawn = partitions[0];
+  let spawn = partialLevel.partitions[0];
   if (!spawn) {
     console.log("No spawn point found.");
-    return [];
+    partialLevel.partitions = [];
+    return;
   }
 
   spawn.type = RoomType.START;
-  if (partitions.length > 1) {
-    partitions[partitions.length - 1].type = RoomType.BOSS;
+  spawn.fillStyle = "rgb(0, 255, 0)";
+  if (partialLevel.partitions.length > 1) {
+    partialLevel.partitions[partialLevel.partitions.length - 1].type = RoomType.BOSS;
+    partialLevel.partitions[partialLevel.partitions.length - 1].fillStyle = "red";
   }
+
+  await new Promise((resolve) => setTimeout(resolve, LevelGenerator.ANIMATION_CONSTANT * ANIMATION_LARGE_DELAY));;
 
   let connected = [spawn];
   let frontier = [spawn];
@@ -485,6 +530,7 @@ let generate_dungeon_candidate = (
   // connect rooms until we find the boss
   while (frontier.length > 0 && !found_boss) {
     let room = frontier[0];
+    if (room !== spawn) room.fillStyle = "green";
     frontier.splice(0, 1);
 
     let doors_found = 0;
@@ -495,7 +541,7 @@ let generate_dungeon_candidate = (
 
     while (doors_found < num_doors && tries < max_tries) {
       let point = room.get_branch_point();
-      for (const p of partitions) {
+      for (const p of partialLevel.partitions) {
         if (
           p !== room &&
           connected.indexOf(p) === -1 &&
@@ -511,38 +557,47 @@ let generate_dungeon_candidate = (
           frontier.push(p);
           connected.push(p);
           doors_found++;
-          if (p.type === RoomType.BOSS) found_boss = true;
+          if (p.type === RoomType.BOSS) {
+            found_boss = true;
+            p.fillStyle = "rgb(255, 0, 0)";
+          }
           break;
         }
       }
       tries++;
     }
+
+    await new Promise((resolve) => setTimeout(resolve, LevelGenerator.ANIMATION_CONSTANT * ANIMATION_PATHFINDING_DELAY));
   }
 
   // remove rooms we haven't connected to yet
-  for (const partition of partitions) {
+  for (const partition of partialLevel.partitions) {
     if (partition.connections.length === 0)
-      partitions = partitions.filter((p) => p !== partition);
+      partialLevel.partitions = partialLevel.partitions.filter((p) => p !== partition);
   }
-  grid = populate_grid(partitions, grid, map_w, map_h); // recalculate with removed rooms
+
+  await new Promise((resolve) => setTimeout(resolve, LevelGenerator.ANIMATION_CONSTANT * ANIMATION_LARGE_DELAY));;
+
+  grid = populate_grid(partialLevel.partitions, grid, map_w, map_h); // recalculate with removed rooms
 
   // make sure we haven't removed all the rooms
-  if (partitions.length === 0) {
-    return []; // for now just return an empty list so we can retry
+  if (partialLevel.partitions.length === 0) {
+    partialLevel.partitions = [];
+    return; // for now just return an empty list so we can retry
   }
 
   // make some loops
   let num_loop_doors = Math.floor(Random.rand() * 4 + 4);
   for (let i = 0; i < num_loop_doors; i++) {
-    let roomIndex = Math.floor(Random.rand() * partitions.length);
-    let room = partitions[roomIndex];
+    let roomIndex = Math.floor(Random.rand() * partialLevel.partitions.length);
+    let room = partialLevel.partitions[roomIndex];
 
     let found_door = false;
 
     let tries = 0;
     const max_tries = 10;
 
-    let not_already_connected = partitions.filter(
+    let not_already_connected = partialLevel.partitions.filter(
       (p) => !room.connections.some((c) => c.other === p),
     );
 
@@ -566,8 +621,11 @@ let generate_dungeon_candidate = (
   }
 
   // add stair room
-  if (!partitions.some((p) => p.type === RoomType.BOSS)) return [];
-  let boss = partitions.find((p) => p.type === RoomType.BOSS);
+  if (!partialLevel.partitions.some((p) => p.type === RoomType.BOSS)) {
+    partialLevel.partitions = [];
+    return;
+  }
+  let boss = partialLevel.partitions.find((p) => p.type === RoomType.BOSS);
   let found_stair = false;
   const max_stair_tries = 100;
   for (let stair_tries = 0; stair_tries < max_stair_tries; stair_tries++) {
@@ -576,11 +634,13 @@ let generate_dungeon_candidate = (
       boss.y - 4,
       3,
       3,
+      "white",
     );
     stair.type = RoomType.DOWNLADDER;
-    if (!partitions.some((p) => p.overlaps(stair))) {
+    stair.fillStyle = "blue";
+    if (!partialLevel.partitions.some((p) => p.overlaps(stair))) {
       found_stair = true;
-      partitions.push(stair);
+      partialLevel.partitions.push(stair);
       stair.connections.push(
         new PartitionConnection(stair.x + 1, stair.y + 3, boss),
       );
@@ -595,11 +655,15 @@ let generate_dungeon_candidate = (
       boss.setOpenWall(
         new PartitionConnection(stair.x + 1, stair.y + 3, stair),
       );
-
       break;
     }
   }
-  if (!found_stair) return [];
+  if (!found_stair) {
+    console.log("No stair found");
+    partialLevel.partitions = [];
+    game.pushMessage("No stair found");
+    return;
+  }
 
   // calculate room distances
   frontier = [spawn];
@@ -620,7 +684,7 @@ let generate_dungeon_candidate = (
 
   // add special rooms
   let added_rope_hole = false;
-  for (const p of partitions) {
+  for (const p of partialLevel.partitions) {
     if (p.type === RoomType.DUNGEON) {
       if (p.distance > 4 && p.area() <= 30 && Random.rand() < 0.1) {
         p.type = RoomType.TREASURE;
@@ -636,60 +700,77 @@ let generate_dungeon_candidate = (
     }
   }
 
-  return partitions;
+  await new Promise((resolve) => setTimeout(resolve, 10 * LevelGenerator.ANIMATION_CONSTANT * ANIMATION_LARGE_DELAY));
 };
 
-let generate_dungeon = (
+let generate_dungeon = async (
+  game: Game,
+  partialLevel: PartialLevel,
   map_w: number,
   map_h: number,
   depth: number,
   params: LevelParameters,
-): Array<Partition> => {
+) => {
   let passes_checks = false;
-  let partitions: Array<Partition>;
 
   let tries = 0;
 
   while (!passes_checks) {
-    partitions = generate_dungeon_candidate(map_w, map_h, depth, params);
+
+    await generate_dungeon_candidate(game, partialLevel, map_w, map_h, depth, params);
 
     passes_checks = true;
-    if (partitions.length < params.minRoomCount) passes_checks = false;
-    if (!partitions.some((p) => p.type === RoomType.BOSS))
+    if (partialLevel.partitions.length < params.minRoomCount) {
       passes_checks = false;
-    else if (partitions.find((p) => p.type === RoomType.BOSS).distance < 3)
+      game.pushMessage("Not enough rooms");
+    }
+    else if (!partialLevel.partitions.some((p) => p.type === RoomType.BOSS))
+    {
       passes_checks = false;
+      game.pushMessage("Boss room unreachable");
+    }
+    else if (partialLevel.partitions.find((p) => p.type === RoomType.BOSS).distance < 3)
+    {
+      passes_checks = false;
+      game.pushMessage("Boss room too close to spawn");
+    }
 
     tries++;
     //if (tries > 100) break;
   }
-  //partitions.forEach((partition) => reduce_dimensions(partition, params));
-  return partitions;
+
+  game.pushMessage("Dungeon passed all checks");
+
+  await new Promise((resolve) => setTimeout(resolve, 10 * LevelGenerator.ANIMATION_CONSTANT * ANIMATION_LARGE_DELAY));
+
+  console.log("finished generation");
+  //partialLevel.partitions.forEach((partition) => reduce_dimensions(partition, params));
 };
 
-let generate_cave_candidate = (
+let generate_cave_candidate = async (
+  partialLevel: PartialLevel,
   map_w: number,
   map_h: number,
   num_rooms: number,
-): Array<Partition> => {
-  let partitions = [new Partition(0, 0, map_w, map_h)];
+) => {
+  partialLevel.partitions = [new Partition(0, 0, map_w, map_h, "white")];
   let grid = [];
 
-  for (let i = 0; i < 3; i++) partitions = split_partitions(partitions, 0.75);
-  for (let i = 0; i < 3; i++) partitions = split_partitions(partitions, 1);
-  for (let i = 0; i < 3; i++) partitions = split_partitions(partitions, 0.5);
-  grid = populate_grid(partitions, grid, map_w, map_h);
+  for (let i = 0; i < 3; i++) partialLevel.partitions = await split_partitions(partialLevel.partitions, 0.75);
+  for (let i = 0; i < 3; i++) partialLevel.partitions = await split_partitions(partialLevel.partitions, 1);
+  for (let i = 0; i < 3; i++) partialLevel.partitions = await split_partitions(partialLevel.partitions, 0.5);
+  grid = populate_grid(partialLevel.partitions, grid, map_w, map_h);
 
-  partitions.sort((a, b) => a.area() - b.area());
+  partialLevel.partitions.sort((a, b) => a.area() - b.area());
 
-  if (partitions.length === 0) {
+  if (partialLevel.partitions.length === 0) {
     throw new Error("No partitions generated."); // Throw an error if no partitions
   }
 
-  let spawn = partitions[0];
+  let spawn = partialLevel.partitions[0];
   spawn.type = RoomType.ROPECAVE;
-  for (let i = 1; i < partitions.length; i++)
-    partitions[i].type = RoomType.CAVE;
+  for (let i = 1; i < partialLevel.partitions.length; i++)
+    partialLevel.partitions[i].type = RoomType.CAVE;
 
   let connected = [spawn];
   let frontier = [spawn];
@@ -714,7 +795,7 @@ let generate_cave_candidate = (
       if (!point) {
       }
 
-      for (const p of partitions) {
+      for (const p of partialLevel.partitions) {
         if (
           p !== room &&
           connected.indexOf(p) === -1 &&
@@ -733,28 +814,28 @@ let generate_cave_candidate = (
   }
 
   // remove rooms we haven't connected to yet
-  partitions = partitions.filter(
+  partialLevel.partitions = partialLevel.partitions.filter(
     (partition) => partition.connections.length > 0,
   );
-  grid = populate_grid(partitions, grid, map_w, map_h); // recalculate with removed rooms
+  grid = populate_grid(partialLevel.partitions, grid, map_w, map_h); // recalculate with removed rooms
 
   // make sure we haven't removed all the rooms
-  if (partitions.length === 0) {
+  if (partialLevel.partitions.length === 0) {
     throw new Error("No valid rooms after filtering."); // Throw an error if no valid rooms
   }
 
   // make some loops
   let num_loop_doors = Math.floor(Random.rand() * 4 + 4);
   for (let i = 0; i < num_loop_doors; i++) {
-    let roomIndex = Math.floor(Random.rand() * partitions.length);
-    let room = partitions[roomIndex];
+    let roomIndex = Math.floor(Random.rand() * partialLevel.partitions.length);
+    let room = partialLevel.partitions[roomIndex];
 
     let found_door = false;
 
     let tries = 0;
     const max_tries = 100;
 
-    let not_already_connected = partitions.filter(
+    let not_already_connected = partialLevel.partitions.filter(
       (p) => !room.connections.some((c) => c.other === p),
     );
 
@@ -793,18 +874,17 @@ let generate_cave_candidate = (
     }
   }
 
-  return partitions;
+  return partialLevel.partitions;
 };
 
-let generate_cave = (mapWidth: number, mapHeight: number): Array<Partition> => {
-  let partitions: Array<Partition>;
+let generate_cave = async (partialLevel: PartialLevel, mapWidth: number, mapHeight: number): Promise<Array<Partition>> => {
   const numberOfRooms = 5; // don't set this too high or cave generation will time out
 
   do {
-    partitions = generate_cave_candidate(mapWidth, mapHeight, numberOfRooms);
-  } while (partitions.length < numberOfRooms);
+    await generate_cave_candidate(partialLevel, mapWidth, mapHeight, numberOfRooms);
+  } while (partialLevel.partitions.length < numberOfRooms);
 
-  return partitions;
+  return partialLevel.partitions;
 };
 
 let generate_tutorial = (
@@ -813,7 +893,7 @@ let generate_tutorial = (
 ): Array<Partition> => {
   let partitions: Array<Partition>;
 
-  partitions = [new Partition(0, 0, height, width)];
+  partitions = [new Partition(0, 0, height, width, "white")];
   partitions[0].type = RoomType.TUTORIAL;
 
   return partitions;
@@ -879,11 +959,18 @@ let check_overlaps = (partitions: Array<Partition>): boolean => {
   return false;
 };
 
+export class PartialLevel {
+  partitions: Array<Partition>;
+}
+
 export class LevelGenerator {
   game: Game;
   seed: number;
   depthReached = 0;
   currentFloorFirstLevelID = 0;
+  partialLevel: PartialLevel;
+  levelParams: LevelParameters;
+  static ANIMATION_CONSTANT = 1;
 
   private setOpenWallsForPartitions = (
     partitions: Array<Partition>,
@@ -978,10 +1065,8 @@ export class LevelGenerator {
     this.seed = seed;
   };
 
-  generate = (game: Game, depth: number, cave = false): Room => {
-    const params: LevelParameters =
-      LevelParameterGenerator.getParameters(depth);
-    let dimensions = params.mapWidth; // Assuming square maps for simplicity
+  generate = async (game: Game, depth: number, cave = false, callback: (linkedLevel: Room) => void) => {
+    this.levelParams = LevelParameterGenerator.getParameters(depth);
     this.depthReached = depth;
 
     // Set the random state based on the seed and depth
@@ -995,19 +1080,20 @@ export class LevelGenerator {
         ? this.game.rooms[this.game.rooms.length - 1].mapGroup + 1
         : 0;
 
+    this.partialLevel = new PartialLevel();
+
     // Generate partitions based on whether it's a cave or a dungeon
-    let partitions = cave
-      ? generate_cave(20, 20) // You might want to make these dynamic based on params
-      : generate_dungeon(dimensions, dimensions, depth, params);
+    if (cave) await generate_cave(this.partialLevel, 20, 20) // You might want to make these dynamic based on params
+    else await generate_dungeon(game, this.partialLevel, this.levelParams.mapWidth, this.levelParams.mapHeight, depth, this.levelParams);
 
     // Call this function before get_wall_rooms
-    if (check_overlaps(partitions)) {
+    if (check_overlaps(this.partialLevel.partitions)) {
       console.warn("There are overlapping partitions.");
     }
 
     // Get the levels based on the partitions
     this.createLevel(depth);
-    let rooms = this.getRooms(partitions, depth, mapGroup);
+    let rooms = this.getRooms(this.partialLevel.partitions, depth, mapGroup);
     console.log(`mapGroup: ${mapGroup}`);
     console.log(`depth: ${depth}`);
 
@@ -1015,33 +1101,35 @@ export class LevelGenerator {
     if (!cave) this.currentFloorFirstLevelID = this.game.rooms.length;
 
     // Add the new levels to the game rooms
-    this.game.rooms = [...this.game.rooms, ...rooms];
+    this.game.rooms = rooms;
 
-    // Generate the rope hole if it exists
-    for (let room of rooms) {
-      if (room.type === RoomType.ROPEHOLE) {
-        for (let x = room.roomX; x < room.roomX + room.width; x++) {
-          for (let y = room.roomY; y < room.roomY + room.height; y++) {
-            let tile = room.roomArray[x][y];
-            if (tile instanceof DownLadder && tile.isRope) {
-              tile.generate();
-              return cave
-                ? rooms.find((r) => r.type === RoomType.ROPECAVE)
-                : rooms.find((r) => r.type === RoomType.START);
-            }
-          }
-        }
-      }
-    }
+    // // Generate the rope hole if it exists
+    // for (let room of rooms) {
+    //   if (room.type === RoomType.ROPEHOLE) {
+    //     for (let x = room.roomX; x < room.roomX + room.width; x++) {
+    //       for (let y = room.roomY; y < room.roomY + room.height; y++) {
+    //         let tile = room.roomArray[x][y];
+    //         if (tile instanceof DownLadder && tile.isRope) {
+    //           tile.generate();
+
+    //           callback(cave
+    //             ? rooms.find((r) => r.type === RoomType.ROPECAVE)
+    //             : rooms.find((r) => r.type === RoomType.START));
+    //           return;
+    //         }
+    //       }
+    //     }
+    //   }
+    // }
 
     // Return the start room or the rope cave room
-    return cave
+    callback(cave
       ? rooms.find((r) => r.type === RoomType.ROPECAVE)
-      : rooms.find((r) => r.type === RoomType.START);
+      : rooms.find((r) => r.type === RoomType.START));
   };
 
-  generateFirstNFloors = (game, numFloors) => {
-    this.generate(game, 0, false);
+  generateFirstNFloors = async (game, numFloors) => {
+    await this.generate(game, 0, false, () => { });
     for (let i = 0; i < numFloors; i++) {
       let foundRoom = this.game.rooms
         .slice()
@@ -1067,6 +1155,17 @@ export class LevelGenerator {
           }
         }
       }
+    }
+  };
+
+  draw = (delta: number) => {
+    Game.ctx.fillStyle = "rgba(0, 0, 0, 1)";
+    Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
+
+    if (this.partialLevel.partitions) {
+      this.partialLevel.partitions.forEach((partition) => {
+        partition.draw(delta, this.levelParams.mapWidth / 2, this.levelParams.mapHeight / 2);
+      });
     }
   };
 }

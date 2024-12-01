@@ -21,6 +21,8 @@ export const EVENTS = {
   TURN_PASSED: "TURN_PASSED",
   COIN_COLLECTED: "COIN_COLLECTED",
   ITEM_COLLECTED: "ITEM_COLLECTED",
+  LEVEL_GENERATION_STARTED: "LEVEL_GENERATION_STARTED",
+  LEVEL_GENERATION_COMPLETED: "LEVEL_GENERATION_COMPLETED",
   // Add other custom events as needed
 } as const;
 
@@ -96,7 +98,9 @@ export type AppEvents =
   | typeof EVENTS.DAMAGE_TAKEN
   | typeof EVENTS.TURN_PASSED
   | typeof EVENTS.COIN_COLLECTED
-  | typeof EVENTS.ITEM_COLLECTED;
+  | typeof EVENTS.ITEM_COLLECTED
+  | typeof EVENTS.LEVEL_GENERATION_STARTED
+  | typeof EVENTS.LEVEL_GENERATION_COMPLETED;
 // | Add other events as needed
 
 // **Type Mapping for Event Payloads:**
@@ -122,5 +126,7 @@ export type EventPayloads = {
   [EVENTS.TURN_PASSED]: void;
   [EVENTS.COIN_COLLECTED]: CoinCollectedEvent;
   [EVENTS.ITEM_COLLECTED]: ItemCollectedEvent;
+  [EVENTS.LEVEL_GENERATION_STARTED]: void;
+  [EVENTS.LEVEL_GENERATION_COMPLETED]: void;
   // | Add other event payloads as needed
 };

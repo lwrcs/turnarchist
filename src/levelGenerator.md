@@ -106,7 +106,6 @@ This class orchestrates the generation of levels and integrates them into the ga
 
   - `game: Game` - Reference to the main game instance.
   - `seed: number` - Seed for random number generation.
-  - `depthReached: number` - Tracks the depth of generated levels.
   - `currentFloorFirstLevelID: number` - Identifier for the first level on the current floor.
 
 - **Methods**:
