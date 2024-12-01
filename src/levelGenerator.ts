@@ -414,8 +414,8 @@ let generate_dungeon_candidate = (
   }
   for (let i = 0; i < 100; i++) {
     partitions.forEach((partition) => {
-      let roomArea =
-        Math.random() > 0.95 ? params.softMaxRoomArea : params.maxRoomArea;
+      let roomArea = 100000;
+      //Math.random() > 0.95 ? params.softMaxRoomArea : params.maxRoomArea;
       if (partition.area() > roomArea) {
         partitions = partitions.filter((p) => p !== partition);
         partitions = partitions.concat(split_partition(partition, 0.5));

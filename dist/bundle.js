@@ -2921,8 +2921,8 @@ var FrogEnemy = /** @class */ (function (_super) {
                                 }
                             }
                             var moves = astarclass_1.astar.AStar.search(grid, _this, targetPosition, disablePositions, false, false, false, undefined, undefined, false, _this.lastPlayerPos);
-                            console.log(moves);
-                            if (moves.length > 1) {
+                            //console.log(moves); //DON'T REMOVE THIS
+                            if (moves[1]) {
                                 var hitPlayer = false;
                                 for (var i in _this.game.players) {
                                     if (_this.game.rooms[_this.game.players[i].levelID] === _this.room &&
@@ -11997,7 +11997,8 @@ var generate_dungeon_candidate = function (map_w, map_h, depth, params) {
     }
     for (var i = 0; i < 100; i++) {
         partitions.forEach(function (partition) {
-            var roomArea = Math.random() > 0.95 ? params.softMaxRoomArea : params.maxRoomArea;
+            var roomArea = 100000;
+            //Math.random() > 0.95 ? params.softMaxRoomArea : params.maxRoomArea;
             if (partition.area() > roomArea) {
                 partitions = partitions.filter(function (p) { return p !== partition; });
                 partitions = partitions.concat(split_partition(partition, 0.5));

@@ -166,9 +166,9 @@ export class FrogEnemy extends Enemy {
               false,
               this.lastPlayerPos,
             );
-            console.log(moves);
+            //console.log(moves); //DON'T REMOVE THIS
 
-            if (moves.length > 1) {
+            if (moves[1]) {
               let hitPlayer = false;
               for (const i in this.game.players) {
                 if (
