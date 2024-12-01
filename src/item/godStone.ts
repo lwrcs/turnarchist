@@ -26,6 +26,7 @@ export class GodStone extends Usable {
     let downLadders = this.room.game.rooms.filter(
       (room) => room.type === RoomType.DOWNLADDER,
     );
+    console.log("downLadders", downLadders);
     const room = downLadders[downLadders.length - 1];
     room.game.changeLevelThroughDoor(player, room.doors[0], 1);
     player.x = room.roomX + 2;

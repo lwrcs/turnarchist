@@ -7021,6 +7021,8 @@ exports.EVENTS = {
     TURN_PASSED: "TURN_PASSED",
     COIN_COLLECTED: "COIN_COLLECTED",
     ITEM_COLLECTED: "ITEM_COLLECTED",
+    LEVEL_GENERATION_STARTED: "LEVEL_GENERATION_STARTED",
+    LEVEL_GENERATION_COMPLETED: "LEVEL_GENERATION_COMPLETED",
     // Add other custom events as needed
 };
 
@@ -7040,6 +7042,7 @@ var gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/gameCons
 var door_1 = __webpack_require__(/*! ./tile/door */ "./src/tile/door.ts");
 var sound_1 = __webpack_require__(/*! ./sound */ "./src/sound.ts");
 var levelConstants_1 = __webpack_require__(/*! ./levelConstants */ "./src/levelConstants.ts");
+var levelGenerator_1 = __webpack_require__(/*! ./levelGenerator */ "./src/levelGenerator.ts");
 var input_1 = __webpack_require__(/*! ./input */ "./src/input.ts");
 var downLadder_1 = __webpack_require__(/*! ./tile/downLadder */ "./src/tile/downLadder.ts");
 var textbox_1 = __webpack_require__(/*! ./textbox */ "./src/textbox.ts");
@@ -7049,11 +7052,13 @@ var mouseCursor_1 = __webpack_require__(/*! ./mouseCursor */ "./src/mouseCursor.
 var eventBus_1 = __webpack_require__(/*! ./eventBus */ "./src/eventBus.ts");
 var reverb_1 = __webpack_require__(/*! ./reverb */ "./src/reverb.ts");
 var stats_1 = __webpack_require__(/*! ./stats */ "./src/stats.ts");
+var events_1 = __webpack_require__(/*! ./events */ "./src/events.ts");
 var LevelState;
 (function (LevelState) {
     LevelState[LevelState["IN_LEVEL"] = 0] = "IN_LEVEL";
     LevelState[LevelState["TRANSITIONING"] = 1] = "TRANSITIONING";
     LevelState[LevelState["TRANSITIONING_LADDER"] = 2] = "TRANSITIONING_LADDER";
+    LevelState[LevelState["LEVEL_GENERATION"] = 3] = "LEVEL_GENERATION";
 })(LevelState = exports.LevelState || (exports.LevelState = {}));
 var Direction;
 (function (Direction) {
@@ -7096,6 +7101,7 @@ var Game = /** @class */ (function () {
             gs.seed = (Math.random() * 4294967296) >>> 0;
             gs.randomState = (Math.random() * 4294967296) >>> 0;
             (0, gameState_1.loadGameState)(_this, [_this.localPlayerID], gs, true);
+            _this.levelState = LevelState.LEVEL_GENERATION;
         };
         this.startGame = function () {
             _this.started = true;
@@ -7140,6 +7146,21 @@ var Game = /** @class */ (function () {
                         break;
                     case "Q":
                         _this.players[_this.localPlayerID].inputHandler(input_1.InputEnum.Q);
+                        break;
+                    case "1":
+                        levelGenerator_1.LevelGenerator.ANIMATION_CONSTANT = 1;
+                        break;
+                    case "2":
+                        levelGenerator_1.LevelGenerator.ANIMATION_CONSTANT = 2;
+                        break;
+                    case "3":
+                        levelGenerator_1.LevelGenerator.ANIMATION_CONSTANT = 5;
+                        break;
+                    case "4":
+                        levelGenerator_1.LevelGenerator.ANIMATION_CONSTANT = 10000;
+                        break;
+                    case "0":
+                        levelGenerator_1.LevelGenerator.ANIMATION_CONSTANT = 0;
                         break;
                 }
             }
@@ -7240,12 +7261,14 @@ var Game = /** @class */ (function () {
                     _this.players[_this.localPlayerID].map.saveMapData();
                 }
             }
-            for (var i in _this.players) {
-                _this.players[i].update();
-                _this.rooms[_this.players[i].levelID].update();
-                if (_this.players[i].dead) {
-                    for (var j in _this.players) {
-                        _this.players[j].dead = true;
+            if (_this.levelState !== LevelState.LEVEL_GENERATION) {
+                for (var i in _this.players) {
+                    _this.players[i].update();
+                    _this.rooms[_this.players[i].levelID].update();
+                    if (_this.players[i].dead) {
+                        for (var j in _this.players) {
+                            _this.players[j].dead = true;
+                        }
                     }
                 }
             }
@@ -7369,7 +7392,10 @@ var Game = /** @class */ (function () {
         };
         this.draw = function (delta) {
             Game.ctx.globalAlpha = 1;
-            Game.ctx.fillStyle = _this.room.shadeColor;
+            if (_this.room)
+                Game.ctx.fillStyle = _this.room.shadeColor;
+            else
+                Game.ctx.fillStyle = "black";
             Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
             if (_this.levelState === LevelState.TRANSITIONING) {
                 var levelOffsetX = Math.floor(_this.lerp((Date.now() - _this.transitionStartTime) /
@@ -7485,7 +7511,10 @@ var Game = /** @class */ (function () {
                 for (var i in _this.players)
                     _this.players[i].updateDrawXY(delta);
             }
-            else {
+            else if (_this.levelState === LevelState.LEVEL_GENERATION) {
+                _this.levelgen.draw(delta);
+            }
+            else if (_this.levelState === LevelState.IN_LEVEL) {
                 // Start of Selection
                 if (_this.screenShakeActive) {
                     //const decayFactor = 1 - 0.15 * delta;
@@ -7665,6 +7694,7 @@ var Game = /** @class */ (function () {
                 resourcesLoaded++;
             };
             Game.fontsheet.src = "res/font.png";
+            _this.levelState = LevelState.LEVEL_GENERATION;
             var checkResourcesLoaded = function () {
                 if (resourcesLoaded < NUM_RESOURCES) {
                     window.setTimeout(checkResourcesLoaded, 500);
@@ -7714,7 +7744,6 @@ var Game = /** @class */ (function () {
                     _this.shakeAmountY = 0;
                     _this.shakeFrame = (3 * Math.PI) / 2;
                     _this.screenShakeCutoff = 0;
-                    _this.levelState = LevelState.IN_LEVEL;
                     _this.tutorialActive = false;
                     _this.screenShakeActive = false;
                     _this.levels = [];
@@ -7728,6 +7757,12 @@ var Game = /** @class */ (function () {
         this.tutorialListener = new tutorialListener_1.TutorialListener(this);
         this.setupEventListeners();
         reverb_1.ReverbEngine.initialize();
+        eventBus_1.globalEventBus.on(events_1.EVENTS.LEVEL_GENERATION_STARTED, function () {
+            _this.levelState = LevelState.LEVEL_GENERATION;
+        });
+        eventBus_1.globalEventBus.on(events_1.EVENTS.LEVEL_GENERATION_COMPLETED, function () {
+            _this.levelState = LevelState.IN_LEVEL;
+        });
     }
     Game.prototype.setupEventListeners = function () {
         //console.log("Setting up event listeners");
@@ -8036,6 +8071,8 @@ var spear_1 = __webpack_require__(/*! ./weapon/spear */ "./src/weapon/spear.ts")
 var pickaxe_1 = __webpack_require__(/*! ./weapon/pickaxe */ "./src/weapon/pickaxe.ts");
 var backpack_1 = __webpack_require__(/*! ./item/backpack */ "./src/item/backpack.ts");
 var energyWizard_1 = __webpack_require__(/*! ./entity/enemy/energyWizard */ "./src/entity/enemy/energyWizard.ts");
+var eventBus_1 = __webpack_require__(/*! ./eventBus */ "./src/eventBus.ts");
+var events_1 = __webpack_require__(/*! ./events */ "./src/events.ts");
 var HitWarningState = /** @class */ (function () {
     function HitWarningState(hw) {
         this.x = hw.x;
@@ -8654,7 +8691,7 @@ var createGameState = function (game) {
     var gs = new GameState();
     gs.seed = game.levelgen.seed; // random state for generating levels
     gs.randomState = random_1.Random.state; // current random state
-    gs.depth = game.levelgen.depthReached;
+    gs.depth = game.level.depth;
     for (var i in game.players)
         gs.players[i] = new PlayerState(game.players[i], game);
     for (var i in game.offlinePlayers) {
@@ -8674,78 +8711,81 @@ var loadGameState = function (game, activeUsernames, gameState, newWorld) {
     game.levelgen.setSeed(gameState.seed);
     if (newWorld)
         gameState.depth = 0;
-    game.levelgen.generateFirstNFloors(game, gameState.depth);
-    if (!newWorld) {
-        if (gameState.players) {
-            for (var i in gameState.players) {
-                if (activeUsernames.includes(i))
-                    game.players[i] = loadPlayer(i, gameState.players[i], game);
-                else
-                    game.offlinePlayers[i] = loadPlayer(i, gameState.players[i], game);
-            }
-        }
-        if (gameState.offlinePlayers) {
-            for (var i in gameState.offlinePlayers) {
-                if (i === game.localPlayerID)
-                    game.players[i] = loadPlayer(i, gameState.offlinePlayers[i], game);
-                else if (activeUsernames.includes(i))
-                    game.players[i] = loadPlayer(i, gameState.offlinePlayers[i], game);
-                else
-                    game.offlinePlayers[i] = loadPlayer(i, gameState.offlinePlayers[i], game);
-            }
-        }
-        for (var _i = 0, _a = gameState.levels; _i < _a.length; _i++) {
-            var levelState = _a[_i];
-            for (var i = 0; i < game.rooms.length; i++) {
-                if (i === levelState.levelID) {
-                    loadLevel(game.rooms[i], levelState, game);
+    eventBus_1.globalEventBus.emit(events_1.EVENTS.LEVEL_GENERATION_STARTED, {});
+    game.levelgen.generateFirstNFloors(game, gameState.depth).then(function () {
+        eventBus_1.globalEventBus.emit(events_1.EVENTS.LEVEL_GENERATION_COMPLETED, {});
+        if (!newWorld) {
+            if (gameState.players) {
+                for (var i in gameState.players) {
+                    if (activeUsernames.includes(i))
+                        game.players[i] = loadPlayer(i, gameState.players[i], game);
+                    else
+                        game.offlinePlayers[i] = loadPlayer(i, gameState.players[i], game);
                 }
             }
-        }
-        if (!(game.localPlayerID in gameState.players) &&
-            !(game.localPlayerID in gameState.offlinePlayers)) {
-            // we're not in the gamestate, create a new player
-            game.players[game.localPlayerID] = new player_1.Player(game, 0, 0, true);
-            game.players[game.localPlayerID].levelID =
-                game.levelgen.currentFloorFirstLevelID;
-            game.players[game.localPlayerID].x =
-                game.rooms[game.levelgen.currentFloorFirstLevelID].roomX +
-                    Math.floor(game.rooms[game.levelgen.currentFloorFirstLevelID].width / 2);
-            game.players[game.localPlayerID].y =
-                game.rooms[game.levelgen.currentFloorFirstLevelID].roomY +
-                    Math.floor(game.rooms[game.levelgen.currentFloorFirstLevelID].height / 2);
-            game.room = game.rooms[game.levelgen.currentFloorFirstLevelID];
-            game.room.enterLevel(game.players[game.localPlayerID]);
+            if (gameState.offlinePlayers) {
+                for (var i in gameState.offlinePlayers) {
+                    if (i === game.localPlayerID)
+                        game.players[i] = loadPlayer(i, gameState.offlinePlayers[i], game);
+                    else if (activeUsernames.includes(i))
+                        game.players[i] = loadPlayer(i, gameState.offlinePlayers[i], game);
+                    else
+                        game.offlinePlayers[i] = loadPlayer(i, gameState.offlinePlayers[i], game);
+                }
+            }
+            for (var _i = 0, _a = gameState.levels; _i < _a.length; _i++) {
+                var levelState = _a[_i];
+                for (var i = 0; i < game.rooms.length; i++) {
+                    if (i === levelState.levelID) {
+                        loadLevel(game.rooms[i], levelState, game);
+                    }
+                }
+            }
+            if (!(game.localPlayerID in gameState.players) &&
+                !(game.localPlayerID in gameState.offlinePlayers)) {
+                // we're not in the gamestate, create a new player
+                game.players[game.localPlayerID] = new player_1.Player(game, 0, 0, true);
+                game.players[game.localPlayerID].levelID =
+                    game.levelgen.currentFloorFirstLevelID;
+                game.players[game.localPlayerID].x =
+                    game.rooms[game.levelgen.currentFloorFirstLevelID].roomX +
+                        Math.floor(game.rooms[game.levelgen.currentFloorFirstLevelID].width / 2);
+                game.players[game.localPlayerID].y =
+                    game.rooms[game.levelgen.currentFloorFirstLevelID].roomY +
+                        Math.floor(game.rooms[game.levelgen.currentFloorFirstLevelID].height / 2);
+                game.room = game.rooms[game.levelgen.currentFloorFirstLevelID];
+                game.room.enterLevel(game.players[game.localPlayerID]);
+            }
+            else {
+                game.room = game.rooms[game.players[game.localPlayerID].levelID];
+            }
         }
         else {
+            // stub game state, start a new world
+            game.players[game.localPlayerID] = new player_1.Player(game, 0, 0, true);
             game.room = game.rooms[game.players[game.localPlayerID].levelID];
+            game.room.enterLevel(game.players[game.localPlayerID]);
         }
-    }
-    else {
-        // stub game state, start a new world
-        game.players[game.localPlayerID] = new player_1.Player(game, 0, 0, true);
-        game.room = game.rooms[game.players[game.localPlayerID].levelID];
-        game.room.enterLevel(game.players[game.localPlayerID]);
-    }
-    random_1.Random.setState(gameState.randomState);
-    game.room.updateLighting();
-    var p = game.players[game.localPlayerID];
-    game.room.items.push(new key_1.Key(game.room, p.x - 1, p.y + 1));
-    //choose one door to lock
-    var locked = false;
-    if (!locked) {
-        game.room.doors.forEach(function (door) {
-            door.lock();
-            locked = true;
+        random_1.Random.setState(gameState.randomState);
+        game.room.updateLighting();
+        var p = game.players[game.localPlayerID];
+        game.room.items.push(new key_1.Key(game.room, p.x - 1, p.y + 1));
+        //choose one door to lock
+        var locked = false;
+        if (!locked) {
+            game.room.doors.forEach(function (door) {
+                door.lock();
+                locked = true;
+            });
+        }
+        /*
+        game.rooms.forEach((room) => {
+          room.addWallCrack();
         });
-    }
-    /*
-    game.rooms.forEach((room) => {
-      room.addWallCrack();
+       
+        */
+        game.chat = [];
     });
-   
-    */
-    game.chat = [];
 };
 exports.loadGameState = loadGameState;
 
@@ -10814,6 +10854,7 @@ var GodStone = /** @class */ (function (_super) {
         };
         _this.teleportToExit = function (player) {
             var downLadders = _this.room.game.rooms.filter(function (room) { return room.type === room_1.RoomType.DOWNLADDER; });
+            console.log("downLadders", downLadders);
             var room = downLadders[downLadders.length - 1];
             room.game.changeLevelThroughDoor(player, room.doors[0], 1);
             player.x = room.roomX + 2;
@@ -11884,6 +11925,42 @@ exports.LevelConstants = LevelConstants;
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __generator = (this && this.__generator) || function (thisArg, body) {
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
+    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    function verb(n) { return function (v) { return step([n, v]); }; }
+    function step(op) {
+        if (f) throw new TypeError("Generator is already executing.");
+        while (g && (g = 0, op[0] && (_ = 0)), _) try {
+            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+            if (y = 0, t) op = [op[0] & 2, t.value];
+            switch (op[0]) {
+                case 0: case 1: t = op; break;
+                case 4: _.label++; return { value: op[1], done: false };
+                case 5: _.label++; y = op[1]; op = [0]; continue;
+                case 7: op = _.ops.pop(); _.trys.pop(); continue;
+                default:
+                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
+                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
+                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
+                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
+                    if (t[2]) _.ops.pop();
+                    _.trys.pop(); continue;
+            }
+            op = body.call(thisArg, _);
+        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
+        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
+    }
+};
 var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
     if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
         if (ar || !(i in from)) {
@@ -11894,13 +11971,18 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
     return to.concat(ar || Array.prototype.slice.call(from));
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.LevelGenerator = void 0;
+exports.LevelGenerator = exports.PartialLevel = void 0;
 var game_1 = __webpack_require__(/*! ./game */ "./src/game.ts");
 var room_1 = __webpack_require__(/*! ./room */ "./src/room.ts");
 var random_1 = __webpack_require__(/*! ./random */ "./src/random.ts");
 var downLadder_1 = __webpack_require__(/*! ./tile/downLadder */ "./src/tile/downLadder.ts");
 var levelParametersGenerator_1 = __webpack_require__(/*! ./levelParametersGenerator */ "./src/levelParametersGenerator.ts");
 var level_1 = __webpack_require__(/*! ./level */ "./src/level.ts");
+var gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/gameConstants.ts");
+// animation delays in ms
+var ANIMATION_PARTITION_SPLIT_DELAY = 10; // for partition splitting
+var ANIMATION_PATHFINDING_DELAY = 100; // for pathfinding
+var ANIMATION_LARGE_DELAY = 100; // in between larger steps
 var PartitionConnection = /** @class */ (function () {
     function PartitionConnection(x, y, other) {
         this.x = x;
@@ -11910,66 +11992,70 @@ var PartitionConnection = /** @class */ (function () {
     return PartitionConnection;
 }());
 var Partition = /** @class */ (function () {
-    function Partition(x, y, w, h) {
+    function Partition(x, y, w, h, fillStyle) {
         var _this = this;
-        this.split = function () {
-            // Reset open walls when a partition is split
-            _this.isTopOpen = true;
-            _this.isRightOpen = true;
-            _this.isBottomOpen = true;
-            _this.isLeftOpen = true;
-            // This function generates a random number around the center (0.5) within a certain width (0.6).
-            // It uses the Random.rand() function to generate a random number between 0 and 1, subtracts 0.5 to center it around 0,
-            // multiplies it by the width to scale it, and then adds the center (0.5) to shift it back to being between 0 and 1.
-            var rand_mid = function () {
-                var center = 0.5;
-                var width = 0.6;
-                return (random_1.Random.rand() - 0.5) * width + center;
-            };
-            var sizeRange = function () {
-                var sizes = [
-                    { size: 1, probability: 0.2 },
-                    { size: 3, probability: 0.6 },
-                    { size: 10, probability: 0.2 },
-                ];
-                var rand = random_1.Random.rand();
-                var sum = 0;
-                for (var _i = 0, sizes_1 = sizes; _i < sizes_1.length; _i++) {
-                    var size = sizes_1[_i];
-                    sum += size.probability;
-                    if (rand <= sum)
-                        return size.size;
+        this.split = function () { return __awaiter(_this, void 0, void 0, function () {
+            var rand_mid, sizeRange, MIN_SIZE, w1, w2, h1, h2;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, new Promise(function (resolve) { return setTimeout(resolve, LevelGenerator.ANIMATION_CONSTANT * ANIMATION_PARTITION_SPLIT_DELAY); })];
+                    case 1:
+                        _a.sent();
+                        // Reset open walls when a partition is split
+                        this.isTopOpen = true;
+                        this.isRightOpen = true;
+                        this.isBottomOpen = true;
+                        this.isLeftOpen = true;
+                        rand_mid = function () {
+                            var center = 0.5;
+                            var width = 0.6;
+                            return (random_1.Random.rand() - 0.5) * width + center;
+                        };
+                        sizeRange = function () {
+                            var sizes = [
+                                { size: 1, probability: 0.2 },
+                                { size: 3, probability: 0.6 },
+                                { size: 10, probability: 0.2 },
+                            ];
+                            var rand = random_1.Random.rand();
+                            var sum = 0;
+                            for (var _i = 0, sizes_1 = sizes; _i < sizes_1.length; _i++) {
+                                var size = sizes_1[_i];
+                                sum += size.probability;
+                                if (rand <= sum)
+                                    return size.size;
+                            }
+                            return sizes[sizes.length - 1].size;
+                        };
+                        MIN_SIZE = 4;
+                        if (this.w > this.h) {
+                            w1 = Math.floor(rand_mid() * this.w);
+                            w2 = this.w - w1 - 1;
+                            //The remaining border - 1
+                            if (w1 < MIN_SIZE || w2 < MIN_SIZE)
+                                return [2 /*return*/, [this]];
+                            //if either of these are less than the min size: return an array with this Partition
+                            return [2 /*return*/, [
+                                    new Partition(this.x, this.y, w1, this.h, this.fillStyle),
+                                    new Partition(this.x + w1 + 1, this.y, w2, this.h, this.fillStyle),
+                                ]];
+                            //return an array with two new partitions
+                        }
+                        else {
+                            h1 = Math.floor(rand_mid() * this.h);
+                            h2 = this.h - h1 - 1;
+                            if (h1 < MIN_SIZE || h2 < MIN_SIZE)
+                                return [2 /*return*/, [this]];
+                            return [2 /*return*/, [
+                                    new Partition(this.x, this.y, this.w, h1, this.fillStyle),
+                                    new Partition(this.x, this.y + h1 + 1, this.w, h2, this.fillStyle),
+                                ]];
+                            //identical code for case where height > width
+                        }
+                        return [2 /*return*/];
                 }
-                return sizes[sizes.length - 1].size;
-            };
-            var MIN_SIZE = 4;
-            if (_this.w > _this.h) {
-                //if the partitions width is greater than its height
-                var w1 = Math.floor(rand_mid() * _this.w);
-                //choose a random tile within the width of the tiles
-                var w2 = _this.w - w1 - 1;
-                //The remaining border - 1
-                if (w1 < MIN_SIZE || w2 < MIN_SIZE)
-                    return [_this];
-                //if either of these are less than the min size: return an array with this Partition
-                return [
-                    new Partition(_this.x, _this.y, w1, _this.h),
-                    new Partition(_this.x + w1 + 1, _this.y, w2, _this.h),
-                ];
-                //return an array with two new partitions
-            }
-            else {
-                var h1 = Math.floor(rand_mid() * _this.h);
-                var h2 = _this.h - h1 - 1;
-                if (h1 < MIN_SIZE || h2 < MIN_SIZE)
-                    return [_this];
-                return [
-                    new Partition(_this.x, _this.y, _this.w, h1),
-                    new Partition(_this.x, _this.y + h1 + 1, _this.w, h2),
-                ];
-                //identical code for case where height > width
-            }
-        };
+            });
+        }); };
         this.point_in = function (x, y) {
             //given the input argument x,y coordinates output boolean
             return (x >= _this.x && x < _this.x + _this.w && y >= _this.y && y < _this.y + _this.h);
@@ -12037,10 +12123,19 @@ var Partition = /** @class */ (function () {
             points.sort(function () { return 0.5 - random_1.Random.rand(); });
             return points[0]; //return first object of x y points in array points
         };
+        this.draw = function (delta, levelCenterX, levelCenterY) {
+            game_1.Game.ctx.fillStyle = _this.fillStyle;
+            game_1.Game.ctx.fillRect(Math.round(gameConstants_1.GameConstants.WIDTH / 2 + _this.x - levelCenterX), Math.round(gameConstants_1.GameConstants.HEIGHT / 2 + _this.y - levelCenterY), _this.w, _this.h);
+            for (var _i = 0, _a = _this.connections; _i < _a.length; _i++) {
+                var connection = _a[_i];
+                game_1.Game.ctx.fillRect(Math.round(gameConstants_1.GameConstants.WIDTH / 2 + connection.x - levelCenterX), Math.round(gameConstants_1.GameConstants.HEIGHT / 2 + connection.y - levelCenterY), 1, 1);
+            }
+        };
         this.x = x;
         this.y = y;
         this.w = w;
         this.h = h;
+        this.fillStyle = fillStyle;
         this.type = room_1.RoomType.DUNGEON;
         this.connections = [];
         this.distance = 1000;
@@ -12051,30 +12146,54 @@ var Partition = /** @class */ (function () {
     }
     return Partition;
 }()); //end of Partition class
-var split_partitions = function (partitions, prob) {
-    var _loop_1 = function (partition) {
-        if (random_1.Random.rand() < prob) {
-            partitions = partitions.filter(function (p) { return p !== partition; }); // remove partition
-            partitions = partitions.concat(partition.split()); // add splits
+var split_partitions = function (partitions, prob) { return __awaiter(void 0, void 0, void 0, function () {
+    var _loop_1, _i, partitions_1, partition;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _loop_1 = function (partition) {
+                    var _b, _c;
+                    return __generator(this, function (_d) {
+                        switch (_d.label) {
+                            case 0:
+                                if (!(random_1.Random.rand() < prob)) return [3 /*break*/, 2];
+                                partitions = partitions.filter(function (p) { return p !== partition; }); // remove partition
+                                _c = (_b = partitions).concat;
+                                return [4 /*yield*/, partition.split()];
+                            case 1:
+                                partitions = _c.apply(_b, [_d.sent()]); // add splits
+                                _d.label = 2;
+                            case 2: return [2 /*return*/];
+                        }
+                    });
+                };
+                _i = 0, partitions_1 = partitions;
+                _a.label = 1;
+            case 1:
+                if (!(_i < partitions_1.length)) return [3 /*break*/, 4];
+                partition = partitions_1[_i];
+                return [5 /*yield**/, _loop_1(partition)];
+            case 2:
+                _a.sent();
+                _a.label = 3;
+            case 3:
+                _i++;
+                return [3 /*break*/, 1];
+            case 4: return [2 /*return*/, partitions];
         }
-    };
-    for (var _i = 0, partitions_1 = partitions; _i < partitions_1.length; _i++) {
-        var partition = partitions_1[_i];
-        _loop_1(partition);
-    }
-    return partitions;
-    //takes input partitions array, randomly removes partitions and adds splits, output modified partitions array
-};
-var split_partition = function (partition, prob) {
-    if (random_1.Random.rand() < prob) {
-        return partition.split();
-    }
-    else {
-        return [partition];
-    }
-    // Takes a single partition and probability
-    // Returns an array with either the split partitions or the original partition
-};
+    });
+}); };
+var split_partition = function (partition, prob) { return __awaiter(void 0, void 0, void 0, function () {
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                if (!(random_1.Random.rand() < prob)) return [3 /*break*/, 2];
+                return [4 /*yield*/, partition.split()];
+            case 1: return [2 /*return*/, _a.sent()];
+            case 2: return [2 /*return*/, [partition]];
+        }
+    });
+}); };
 var reduce_dimensions = function (partition, params) {
     var reduceY = 0;
     var reduceX = 0;
@@ -12237,343 +12356,480 @@ var populate_grid = function (partitions, grid, w, h) {
     //input grid array, partitions array and width and height
     //output grid array that indicates which cells are in which partition
 };
-var generate_dungeon_candidate = function (map_w, map_h, depth, params) {
-    var minRoomCount = params.minRoomCount, maxRoomCount = params.maxRoomCount, maxRoomArea = params.maxRoomArea, splitProbabilities = params.splitProbabilities, wallRemoveProbability = params.wallRemoveProbability;
-    var partitions = [new Partition(0, 0, map_w, map_h)];
-    var grid = [];
-    // Use splitProbabilities for splitting
-    while (partitions.length < params.maxRoomCount) {
-        for (var i = 0; i < splitProbabilities.length; i++) {
-            partitions = split_partitions(partitions, splitProbabilities[i]);
-        }
-    }
-    for (var i = 0; i < 100; i++) {
-        partitions.forEach(function (partition) {
-            var roomArea = 100000;
-            //Math.random() > 0.95 ? params.softMaxRoomArea : params.maxRoomArea;
-            if (partition.area() > roomArea) {
-                partitions = partitions.filter(function (p) { return p !== partition; });
-                partitions = partitions.concat(split_partition(partition, 0.5));
-            }
-        });
-    }
-    //visualize_partitions(partitions, map_w, map_h);
-    partitions = remove_wall_rooms(partitions, map_w, map_h, wallRemoveProbability);
-    // Remove wall rooms based on probability
-    /*
-    if (partitions.length > params.minRoomCount) {
-      for (let i = 0; i < 1; i++) {
-        partitions = remove_wall_rooms(partitions, map_w, map_h, wallRemoveProbability);
-      }
-    }
-    
-    /*
-      partitions = partitions.filter((p) => {
-        if (p.area() > maxRoomArea && partitions.length > params.minRoomCount) {
-          return false;
-        }
-        return true;
-      });
-     
-      while (partitions.length > maxRoomCount) {
-        partitions.pop();
-      }
-    */
-    // Check if we have any partitions before proceeding
-    if (partitions.length === 0) {
-        return [];
-    }
-    //populate the grid with partitions
-    partitions.sort(function (a, b) { return a.area() - b.area(); });
-    // Make sure we have at least one partition before assigning spawn
-    if (partitions.length === 0) {
-        console.log("No partitions generated after filtering.");
-        return [];
-    }
-    var spawn = partitions[0];
-    if (!spawn) {
-        console.log("No spawn point found.");
-        return [];
-    }
-    spawn.type = room_1.RoomType.START;
-    if (partitions.length > 1) {
-        partitions[partitions.length - 1].type = room_1.RoomType.BOSS;
-    }
-    var connected = [spawn];
-    var frontier = [spawn];
-    var found_boss = false;
-    // connect rooms until we find the boss
-    while (frontier.length > 0 && !found_boss) {
-        var room = frontier[0];
-        frontier.splice(0, 1);
-        var doors_found = 0;
-        var num_doors = Math.floor(random_1.Random.rand() * 2 + 1);
-        var tries = 0;
-        var max_tries = 1000;
-        while (doors_found < num_doors && tries < max_tries) {
-            var point = room.get_branch_point();
-            for (var _i = 0, partitions_3 = partitions; _i < partitions_3.length; _i++) {
-                var p = partitions_3[_i];
-                if (p !== room &&
-                    connected.indexOf(p) === -1 &&
-                    p.point_next_to(point.x, point.y)) {
-                    room.connections.push(new PartitionConnection(point.x, point.y, p));
-                    p.connections.push(new PartitionConnection(point.x, point.y, room));
-                    // Set open walls based on connection
-                    room.setOpenWall(new PartitionConnection(point.x, point.y, p));
-                    p.setOpenWall(new PartitionConnection(point.x, point.y, room));
-                    frontier.push(p);
-                    connected.push(p);
-                    doors_found++;
-                    if (p.type === room_1.RoomType.BOSS)
-                        found_boss = true;
-                    break;
+var generate_dungeon_candidate = function (game, partialLevel, map_w, map_h, depth, params) { return __awaiter(void 0, void 0, void 0, function () {
+    var minRoomCount, maxRoomCount, maxRoomArea, splitProbabilities, wallRemoveProbability, grid, i, _a, i, spawn, connected, frontier, found_boss, room, doors_found, num_doors, tries, max_tries, point, _i, _b, p, _loop_7, _c, _d, partition, num_loop_doors, _loop_8, i, boss, found_stair, max_stair_tries, _loop_9, stair_tries, state_5, seen, room, _e, _f, c, other, added_rope_hole, _g, _h, p;
+    return __generator(this, function (_j) {
+        switch (_j.label) {
+            case 0:
+                minRoomCount = params.minRoomCount, maxRoomCount = params.maxRoomCount, maxRoomArea = params.maxRoomArea, splitProbabilities = params.splitProbabilities, wallRemoveProbability = params.wallRemoveProbability;
+                partialLevel.partitions = [new Partition(0, 0, map_w, map_h, "white")];
+                grid = [];
+                _j.label = 1;
+            case 1:
+                if (!(partialLevel.partitions.length < params.maxRoomCount)) return [3 /*break*/, 6];
+                i = 0;
+                _j.label = 2;
+            case 2:
+                if (!(i < splitProbabilities.length)) return [3 /*break*/, 5];
+                _a = partialLevel;
+                return [4 /*yield*/, split_partitions(partialLevel.partitions, splitProbabilities[i])];
+            case 3:
+                _a.partitions = _j.sent();
+                _j.label = 4;
+            case 4:
+                i++;
+                return [3 /*break*/, 2];
+            case 5: return [3 /*break*/, 1];
+            case 6:
+                for (i = 0; i < 100; i++) {
+                    partialLevel.partitions.forEach(function (partition) { return __awaiter(void 0, void 0, void 0, function () {
+                        var roomArea, _a, _b, _c;
+                        return __generator(this, function (_d) {
+                            switch (_d.label) {
+                                case 0:
+                                    roomArea = 100000;
+                                    if (!(partition.area() > roomArea)) return [3 /*break*/, 2];
+                                    partialLevel.partitions = partialLevel.partitions.filter(function (p) { return p !== partition; });
+                                    _a = partialLevel;
+                                    _c = (_b = partialLevel.partitions).concat;
+                                    return [4 /*yield*/, split_partition(partition, 0.5)];
+                                case 1:
+                                    _a.partitions = _c.apply(_b, [_d.sent()]);
+                                    _d.label = 2;
+                                case 2: return [2 /*return*/];
+                            }
+                        });
+                    }); });
                 }
-            }
-            tries++;
-        }
-    }
-    var _loop_7 = function (partition) {
-        if (partition.connections.length === 0)
-            partitions = partitions.filter(function (p) { return p !== partition; });
-    };
-    // remove rooms we haven't connected to yet
-    for (var _a = 0, partitions_4 = partitions; _a < partitions_4.length; _a++) {
-        var partition = partitions_4[_a];
-        _loop_7(partition);
-    }
-    grid = populate_grid(partitions, grid, map_w, map_h); // recalculate with removed rooms
-    // make sure we haven't removed all the rooms
-    if (partitions.length === 0) {
-        return []; // for now just return an empty list so we can retry
-    }
-    // make some loops
-    var num_loop_doors = Math.floor(random_1.Random.rand() * 4 + 4);
-    var _loop_8 = function (i) {
-        var roomIndex = Math.floor(random_1.Random.rand() * partitions.length);
-        var room = partitions[roomIndex];
-        var found_door = false;
-        var tries = 0;
-        var max_tries = 10;
-        var not_already_connected = partitions.filter(function (p) { return !room.connections.some(function (c) { return c.other === p; }); });
-        while (!found_door && tries < max_tries) {
-            var point = room.get_branch_point();
-            for (var _e = 0, not_already_connected_1 = not_already_connected; _e < not_already_connected_1.length; _e++) {
-                var p = not_already_connected_1[_e];
-                if (p !== room && p.point_next_to(point.x, point.y)) {
-                    room.connections.push(new PartitionConnection(point.x, point.y, p));
-                    p.connections.push(new PartitionConnection(point.x, point.y, room));
-                    // Set open walls based on connection
-                    room.setOpenWall(new PartitionConnection(point.x, point.y, p));
-                    p.setOpenWall(new PartitionConnection(point.x, point.y, room));
-                    found_door = true;
-                    break;
+                //visualize_partialLevel.partitions(partialLevel.partitions, map_w, map_h);
+                partialLevel.partitions = remove_wall_rooms(partialLevel.partitions, map_w, map_h, wallRemoveProbability);
+                return [4 /*yield*/, new Promise(function (resolve) { return setTimeout(resolve, LevelGenerator.ANIMATION_CONSTANT * ANIMATION_LARGE_DELAY); })];
+            case 7:
+                _j.sent();
+                ;
+                // Remove wall rooms based on probability
+                /*
+                if (partitions.length > params.minRoomCount) {
+                  for (let i = 0; i < 1; i++) {
+                    partitions = remove_wall_rooms(partitions, map_w, map_h, wallRemoveProbability);
+                  }
                 }
-            }
-            tries++;
-        }
-    };
-    for (var i = 0; i < num_loop_doors; i++) {
-        _loop_8(i);
-    }
-    // add stair room
-    if (!partitions.some(function (p) { return p.type === room_1.RoomType.BOSS; }))
-        return [];
-    var boss = partitions.find(function (p) { return p.type === room_1.RoomType.BOSS; });
-    var found_stair = false;
-    var max_stair_tries = 100;
-    var _loop_9 = function (stair_tries) {
-        var stair = new Partition(game_1.Game.rand(boss.x - 1, boss.x + boss.w - 2, random_1.Random.rand), boss.y - 4, 3, 3);
-        stair.type = room_1.RoomType.DOWNLADDER;
-        if (!partitions.some(function (p) { return p.overlaps(stair); })) {
-            found_stair = true;
-            partitions.push(stair);
-            stair.connections.push(new PartitionConnection(stair.x + 1, stair.y + 3, boss));
-            boss.connections.push(new PartitionConnection(stair.x + 1, stair.y + 3, stair));
-            // Set open walls for stair and boss connection
-            stair.setOpenWall(new PartitionConnection(stair.x + 1, stair.y + 3, boss));
-            boss.setOpenWall(new PartitionConnection(stair.x + 1, stair.y + 3, stair));
-            return "break";
-        }
-    };
-    for (var stair_tries = 0; stair_tries < max_stair_tries; stair_tries++) {
-        var state_5 = _loop_9(stair_tries);
-        if (state_5 === "break")
-            break;
-    }
-    if (!found_stair)
-        return [];
-    // calculate room distances
-    frontier = [spawn];
-    var seen = [];
-    spawn.distance = 0;
-    while (frontier.length > 0) {
-        var room = frontier[0];
-        frontier.splice(0, 1);
-        seen.push(room);
-        for (var _b = 0, _c = room.connections; _b < _c.length; _b++) {
-            var c = _c[_b];
-            var other = c.other;
-            other.distance = Math.min(other.distance, room.distance + 1);
-            if (seen.indexOf(other) === -1)
-                frontier.push(other);
-        }
-    }
-    // add special rooms
-    var added_rope_hole = false;
-    for (var _d = 0, partitions_5 = partitions; _d < partitions_5.length; _d++) {
-        var p = partitions_5[_d];
-        if (p.type === room_1.RoomType.DUNGEON) {
-            if (p.distance > 4 && p.area() <= 30 && random_1.Random.rand() < 0.1) {
-                p.type = room_1.RoomType.TREASURE;
-            }
-            else if (!added_rope_hole &&
-                p.distance > 3 &&
-                p.area() <= 20 &&
-                random_1.Random.rand() < 0.5) {
-                p.type = room_1.RoomType.ROPEHOLE;
-                added_rope_hole = true;
-            }
-        }
-    }
-    return partitions;
-};
-var generate_dungeon = function (map_w, map_h, depth, params) {
-    var passes_checks = false;
-    var partitions;
-    var tries = 0;
-    while (!passes_checks) {
-        partitions = generate_dungeon_candidate(map_w, map_h, depth, params);
-        passes_checks = true;
-        if (partitions.length < params.minRoomCount)
-            passes_checks = false;
-        if (!partitions.some(function (p) { return p.type === room_1.RoomType.BOSS; }))
-            passes_checks = false;
-        else if (partitions.find(function (p) { return p.type === room_1.RoomType.BOSS; }).distance < 3)
-            passes_checks = false;
-        tries++;
-        //if (tries > 100) break;
-    }
-    //partitions.forEach((partition) => reduce_dimensions(partition, params));
-    return partitions;
-};
-var generate_cave_candidate = function (map_w, map_h, num_rooms) {
-    var partitions = [new Partition(0, 0, map_w, map_h)];
-    var grid = [];
-    for (var i = 0; i < 3; i++)
-        partitions = split_partitions(partitions, 0.75);
-    for (var i = 0; i < 3; i++)
-        partitions = split_partitions(partitions, 1);
-    for (var i = 0; i < 3; i++)
-        partitions = split_partitions(partitions, 0.5);
-    grid = populate_grid(partitions, grid, map_w, map_h);
-    partitions.sort(function (a, b) { return a.area() - b.area(); });
-    if (partitions.length === 0) {
-        throw new Error("No partitions generated."); // Throw an error if no partitions
-    }
-    var spawn = partitions[0];
-    spawn.type = room_1.RoomType.ROPECAVE;
-    for (var i = 1; i < partitions.length; i++)
-        partitions[i].type = room_1.RoomType.CAVE;
-    var connected = [spawn];
-    var frontier = [spawn];
-    // connect rooms until we hit num_rooms
-    while (frontier.length > 0 && connected.length < num_rooms) {
-        var room = frontier[0];
-        frontier.splice(0, 1);
-        var doors_found = 0;
-        var num_doors = Math.floor(random_1.Random.rand() * 2 + 1);
-        var tries = 0;
-        var max_tries = 1000;
-        while (doors_found < num_doors &&
-            tries < max_tries &&
-            connected.length < num_rooms) {
-            var point = room.get_branch_point();
-            if (!point) {
-            }
-            for (var _i = 0, partitions_6 = partitions; _i < partitions_6.length; _i++) {
-                var p = partitions_6[_i];
-                if (p !== room &&
-                    connected.indexOf(p) === -1 &&
-                    p.point_next_to(point.x, point.y)) {
-                    room.connections.push(new PartitionConnection(point.x, point.y, p));
-                    p.connections.push(new PartitionConnection(point.x, point.y, room));
-                    frontier.push(p);
-                    connected.push(p);
-                    doors_found++;
-                    break;
+                
+                /*
+                  partitions = partitions.filter((p) => {
+                    if (p.area() > maxRoomArea && partitions.length > params.minRoomCount) {
+                      return false;
+                    }
+                    return true;
+                  });
+                 
+                  while (partitions.length > maxRoomCount) {
+                    partitions.pop();
+                  }
+                */
+                // Check if we have any partitions before proceeding
+                if (partialLevel.partitions.length === 0) {
+                    partialLevel.partitions = [];
+                    return [2 /*return*/];
                 }
-            }
-            tries++;
-        }
-    }
-    // remove rooms we haven't connected to yet
-    partitions = partitions.filter(function (partition) { return partition.connections.length > 0; });
-    grid = populate_grid(partitions, grid, map_w, map_h); // recalculate with removed rooms
-    // make sure we haven't removed all the rooms
-    if (partitions.length === 0) {
-        throw new Error("No valid rooms after filtering."); // Throw an error if no valid rooms
-    }
-    // make some loops
-    var num_loop_doors = Math.floor(random_1.Random.rand() * 4 + 4);
-    var _loop_10 = function (i) {
-        var roomIndex = Math.floor(random_1.Random.rand() * partitions.length);
-        var room = partitions[roomIndex];
-        var found_door = false;
-        var tries = 0;
-        var max_tries = 100;
-        var not_already_connected = partitions.filter(function (p) { return !room.connections.some(function (c) { return c.other === p; }); });
-        while (!found_door && tries < max_tries) {
-            var point = room.get_branch_point();
-            if (!point) {
-                break; // Skip if no valid branch point found
-            }
-            for (var _c = 0, not_already_connected_2 = not_already_connected; _c < not_already_connected_2.length; _c++) {
-                var p = not_already_connected_2[_c];
-                if (p !== room && p.point_next_to(point.x, point.y)) {
-                    room.connections.push(new PartitionConnection(point.x, point.y, p));
-                    p.connections.push(new PartitionConnection(point.x, point.y, room));
-                    found_door = true;
-                    break;
+                //populate the grid with partitions
+                partialLevel.partitions.sort(function (a, b) { return a.area() - b.area(); });
+                // shade each partition's fillStyle based on its area, medium gray for smallest, white for largest
+                partialLevel.partitions.forEach(function (partition) {
+                    partition.fillStyle = "rgba(128, 128, 128, ".concat(partition.area() / partialLevel.partitions[0].area(), ")");
+                });
+                return [4 /*yield*/, new Promise(function (resolve) { return setTimeout(resolve, LevelGenerator.ANIMATION_CONSTANT * ANIMATION_LARGE_DELAY); })];
+            case 8:
+                _j.sent();
+                ;
+                // Make sure we have at least one partition before assigning spawn
+                if (partialLevel.partitions.length === 0) {
+                    console.log("No partitions generated after filtering.");
+                    partialLevel.partitions = [];
+                    return [2 /*return*/];
                 }
-            }
-            tries++;
+                spawn = partialLevel.partitions[0];
+                if (!spawn) {
+                    console.log("No spawn point found.");
+                    partialLevel.partitions = [];
+                    return [2 /*return*/];
+                }
+                spawn.type = room_1.RoomType.START;
+                spawn.fillStyle = "rgb(0, 255, 0)";
+                if (partialLevel.partitions.length > 1) {
+                    partialLevel.partitions[partialLevel.partitions.length - 1].type = room_1.RoomType.BOSS;
+                    partialLevel.partitions[partialLevel.partitions.length - 1].fillStyle = "red";
+                }
+                return [4 /*yield*/, new Promise(function (resolve) { return setTimeout(resolve, LevelGenerator.ANIMATION_CONSTANT * ANIMATION_LARGE_DELAY); })];
+            case 9:
+                _j.sent();
+                ;
+                connected = [spawn];
+                frontier = [spawn];
+                found_boss = false;
+                _j.label = 10;
+            case 10:
+                if (!(frontier.length > 0 && !found_boss)) return [3 /*break*/, 12];
+                room = frontier[0];
+                if (room !== spawn)
+                    room.fillStyle = "green";
+                frontier.splice(0, 1);
+                doors_found = 0;
+                num_doors = Math.floor(random_1.Random.rand() * 2 + 1);
+                tries = 0;
+                max_tries = 1000;
+                while (doors_found < num_doors && tries < max_tries) {
+                    point = room.get_branch_point();
+                    for (_i = 0, _b = partialLevel.partitions; _i < _b.length; _i++) {
+                        p = _b[_i];
+                        if (p !== room &&
+                            connected.indexOf(p) === -1 &&
+                            p.point_next_to(point.x, point.y)) {
+                            room.connections.push(new PartitionConnection(point.x, point.y, p));
+                            p.connections.push(new PartitionConnection(point.x, point.y, room));
+                            // Set open walls based on connection
+                            room.setOpenWall(new PartitionConnection(point.x, point.y, p));
+                            p.setOpenWall(new PartitionConnection(point.x, point.y, room));
+                            frontier.push(p);
+                            connected.push(p);
+                            doors_found++;
+                            if (p.type === room_1.RoomType.BOSS) {
+                                found_boss = true;
+                                p.fillStyle = "rgb(255, 0, 0)";
+                            }
+                            break;
+                        }
+                    }
+                    tries++;
+                }
+                return [4 /*yield*/, new Promise(function (resolve) { return setTimeout(resolve, LevelGenerator.ANIMATION_CONSTANT * ANIMATION_PATHFINDING_DELAY); })];
+            case 11:
+                _j.sent();
+                return [3 /*break*/, 10];
+            case 12:
+                _loop_7 = function (partition) {
+                    if (partition.connections.length === 0)
+                        partialLevel.partitions = partialLevel.partitions.filter(function (p) { return p !== partition; });
+                };
+                // remove rooms we haven't connected to yet
+                for (_c = 0, _d = partialLevel.partitions; _c < _d.length; _c++) {
+                    partition = _d[_c];
+                    _loop_7(partition);
+                }
+                return [4 /*yield*/, new Promise(function (resolve) { return setTimeout(resolve, LevelGenerator.ANIMATION_CONSTANT * ANIMATION_LARGE_DELAY); })];
+            case 13:
+                _j.sent();
+                ;
+                grid = populate_grid(partialLevel.partitions, grid, map_w, map_h); // recalculate with removed rooms
+                // make sure we haven't removed all the rooms
+                if (partialLevel.partitions.length === 0) {
+                    partialLevel.partitions = [];
+                    return [2 /*return*/]; // for now just return an empty list so we can retry
+                }
+                num_loop_doors = Math.floor(random_1.Random.rand() * 4 + 4);
+                _loop_8 = function (i) {
+                    var roomIndex = Math.floor(random_1.Random.rand() * partialLevel.partitions.length);
+                    var room = partialLevel.partitions[roomIndex];
+                    var found_door = false;
+                    var tries = 0;
+                    var max_tries = 10;
+                    var not_already_connected = partialLevel.partitions.filter(function (p) { return !room.connections.some(function (c) { return c.other === p; }); });
+                    while (!found_door && tries < max_tries) {
+                        var point = room.get_branch_point();
+                        for (var _k = 0, not_already_connected_1 = not_already_connected; _k < not_already_connected_1.length; _k++) {
+                            var p = not_already_connected_1[_k];
+                            if (p !== room && p.point_next_to(point.x, point.y)) {
+                                room.connections.push(new PartitionConnection(point.x, point.y, p));
+                                p.connections.push(new PartitionConnection(point.x, point.y, room));
+                                // Set open walls based on connection
+                                room.setOpenWall(new PartitionConnection(point.x, point.y, p));
+                                p.setOpenWall(new PartitionConnection(point.x, point.y, room));
+                                found_door = true;
+                                break;
+                            }
+                        }
+                        tries++;
+                    }
+                };
+                for (i = 0; i < num_loop_doors; i++) {
+                    _loop_8(i);
+                }
+                // add stair room
+                if (!partialLevel.partitions.some(function (p) { return p.type === room_1.RoomType.BOSS; })) {
+                    partialLevel.partitions = [];
+                    return [2 /*return*/];
+                }
+                boss = partialLevel.partitions.find(function (p) { return p.type === room_1.RoomType.BOSS; });
+                found_stair = false;
+                max_stair_tries = 100;
+                _loop_9 = function (stair_tries) {
+                    var stair = new Partition(game_1.Game.rand(boss.x - 1, boss.x + boss.w - 2, random_1.Random.rand), boss.y - 4, 3, 3, "white");
+                    stair.type = room_1.RoomType.DOWNLADDER;
+                    stair.fillStyle = "blue";
+                    if (!partialLevel.partitions.some(function (p) { return p.overlaps(stair); })) {
+                        found_stair = true;
+                        partialLevel.partitions.push(stair);
+                        stair.connections.push(new PartitionConnection(stair.x + 1, stair.y + 3, boss));
+                        boss.connections.push(new PartitionConnection(stair.x + 1, stair.y + 3, stair));
+                        // Set open walls for stair and boss connection
+                        stair.setOpenWall(new PartitionConnection(stair.x + 1, stair.y + 3, boss));
+                        boss.setOpenWall(new PartitionConnection(stair.x + 1, stair.y + 3, stair));
+                        return "break";
+                    }
+                };
+                for (stair_tries = 0; stair_tries < max_stair_tries; stair_tries++) {
+                    state_5 = _loop_9(stair_tries);
+                    if (state_5 === "break")
+                        break;
+                }
+                if (!found_stair) {
+                    console.log("No stair found");
+                    partialLevel.partitions = [];
+                    game.pushMessage("No stair found");
+                    return [2 /*return*/];
+                }
+                // calculate room distances
+                frontier = [spawn];
+                seen = [];
+                spawn.distance = 0;
+                while (frontier.length > 0) {
+                    room = frontier[0];
+                    frontier.splice(0, 1);
+                    seen.push(room);
+                    for (_e = 0, _f = room.connections; _e < _f.length; _e++) {
+                        c = _f[_e];
+                        other = c.other;
+                        other.distance = Math.min(other.distance, room.distance + 1);
+                        if (seen.indexOf(other) === -1)
+                            frontier.push(other);
+                    }
+                }
+                added_rope_hole = false;
+                for (_g = 0, _h = partialLevel.partitions; _g < _h.length; _g++) {
+                    p = _h[_g];
+                    if (p.type === room_1.RoomType.DUNGEON) {
+                        if (p.distance > 4 && p.area() <= 30 && random_1.Random.rand() < 0.1) {
+                            p.type = room_1.RoomType.TREASURE;
+                        }
+                        else if (!added_rope_hole &&
+                            p.distance > 3 &&
+                            p.area() <= 20 &&
+                            random_1.Random.rand() < 0.5) {
+                            p.type = room_1.RoomType.ROPEHOLE;
+                            added_rope_hole = true;
+                        }
+                    }
+                }
+                return [4 /*yield*/, new Promise(function (resolve) { return setTimeout(resolve, 10 * LevelGenerator.ANIMATION_CONSTANT * ANIMATION_LARGE_DELAY); })];
+            case 14:
+                _j.sent();
+                return [2 /*return*/];
         }
-    };
-    for (var i = 0; i < num_loop_doors; i++) {
-        _loop_10(i);
-    }
-    // calculate room distances
-    frontier = [spawn];
-    var seen = [];
-    spawn.distance = 0;
-    while (frontier.length > 0) {
-        var room = frontier[0];
-        frontier.splice(0, 1);
-        seen.push(room);
-        for (var _a = 0, _b = room.connections; _a < _b.length; _a++) {
-            var c = _b[_a];
-            var other = c.other;
-            other.distance = Math.min(other.distance, room.distance + 1);
-            if (seen.indexOf(other) === -1)
-                frontier.push(other);
+    });
+}); };
+var generate_dungeon = function (game, partialLevel, map_w, map_h, depth, params) { return __awaiter(void 0, void 0, void 0, function () {
+    var passes_checks, tries;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                passes_checks = false;
+                tries = 0;
+                _a.label = 1;
+            case 1:
+                if (!!passes_checks) return [3 /*break*/, 3];
+                return [4 /*yield*/, generate_dungeon_candidate(game, partialLevel, map_w, map_h, depth, params)];
+            case 2:
+                _a.sent();
+                passes_checks = true;
+                if (partialLevel.partitions.length < params.minRoomCount) {
+                    passes_checks = false;
+                    game.pushMessage("Not enough rooms");
+                }
+                else if (!partialLevel.partitions.some(function (p) { return p.type === room_1.RoomType.BOSS; })) {
+                    passes_checks = false;
+                    game.pushMessage("Boss room unreachable");
+                }
+                else if (partialLevel.partitions.find(function (p) { return p.type === room_1.RoomType.BOSS; }).distance < 3) {
+                    passes_checks = false;
+                    game.pushMessage("Boss room too close to spawn");
+                }
+                tries++;
+                return [3 /*break*/, 1];
+            case 3:
+                game.pushMessage("Dungeon passed all checks");
+                return [4 /*yield*/, new Promise(function (resolve) { return setTimeout(resolve, 10 * LevelGenerator.ANIMATION_CONSTANT * ANIMATION_LARGE_DELAY); })];
+            case 4:
+                _a.sent();
+                console.log("finished generation");
+                return [2 /*return*/];
         }
-    }
-    return partitions;
-};
-var generate_cave = function (mapWidth, mapHeight) {
-    var partitions;
-    var numberOfRooms = 5; // don't set this too high or cave generation will time out
-    do {
-        partitions = generate_cave_candidate(mapWidth, mapHeight, numberOfRooms);
-    } while (partitions.length < numberOfRooms);
-    return partitions;
-};
+    });
+}); };
+var generate_cave_candidate = function (partialLevel, map_w, map_h, num_rooms) { return __awaiter(void 0, void 0, void 0, function () {
+    var grid, i, _a, i, _b, i, _c, spawn, i, connected, frontier, room, doors_found, num_doors, tries, max_tries, point, _i, _d, p, num_loop_doors, _loop_10, i, seen, room, _e, _f, c, other;
+    return __generator(this, function (_g) {
+        switch (_g.label) {
+            case 0:
+                partialLevel.partitions = [new Partition(0, 0, map_w, map_h, "white")];
+                grid = [];
+                i = 0;
+                _g.label = 1;
+            case 1:
+                if (!(i < 3)) return [3 /*break*/, 4];
+                _a = partialLevel;
+                return [4 /*yield*/, split_partitions(partialLevel.partitions, 0.75)];
+            case 2:
+                _a.partitions = _g.sent();
+                _g.label = 3;
+            case 3:
+                i++;
+                return [3 /*break*/, 1];
+            case 4:
+                i = 0;
+                _g.label = 5;
+            case 5:
+                if (!(i < 3)) return [3 /*break*/, 8];
+                _b = partialLevel;
+                return [4 /*yield*/, split_partitions(partialLevel.partitions, 1)];
+            case 6:
+                _b.partitions = _g.sent();
+                _g.label = 7;
+            case 7:
+                i++;
+                return [3 /*break*/, 5];
+            case 8:
+                i = 0;
+                _g.label = 9;
+            case 9:
+                if (!(i < 3)) return [3 /*break*/, 12];
+                _c = partialLevel;
+                return [4 /*yield*/, split_partitions(partialLevel.partitions, 0.5)];
+            case 10:
+                _c.partitions = _g.sent();
+                _g.label = 11;
+            case 11:
+                i++;
+                return [3 /*break*/, 9];
+            case 12:
+                grid = populate_grid(partialLevel.partitions, grid, map_w, map_h);
+                partialLevel.partitions.sort(function (a, b) { return a.area() - b.area(); });
+                if (partialLevel.partitions.length === 0) {
+                    throw new Error("No partitions generated."); // Throw an error if no partitions
+                }
+                spawn = partialLevel.partitions[0];
+                spawn.type = room_1.RoomType.ROPECAVE;
+                for (i = 1; i < partialLevel.partitions.length; i++)
+                    partialLevel.partitions[i].type = room_1.RoomType.CAVE;
+                connected = [spawn];
+                frontier = [spawn];
+                // connect rooms until we hit num_rooms
+                while (frontier.length > 0 && connected.length < num_rooms) {
+                    room = frontier[0];
+                    frontier.splice(0, 1);
+                    doors_found = 0;
+                    num_doors = Math.floor(random_1.Random.rand() * 2 + 1);
+                    tries = 0;
+                    max_tries = 1000;
+                    while (doors_found < num_doors &&
+                        tries < max_tries &&
+                        connected.length < num_rooms) {
+                        point = room.get_branch_point();
+                        if (!point) {
+                        }
+                        for (_i = 0, _d = partialLevel.partitions; _i < _d.length; _i++) {
+                            p = _d[_i];
+                            if (p !== room &&
+                                connected.indexOf(p) === -1 &&
+                                p.point_next_to(point.x, point.y)) {
+                                room.connections.push(new PartitionConnection(point.x, point.y, p));
+                                p.connections.push(new PartitionConnection(point.x, point.y, room));
+                                frontier.push(p);
+                                connected.push(p);
+                                doors_found++;
+                                break;
+                            }
+                        }
+                        tries++;
+                    }
+                }
+                // remove rooms we haven't connected to yet
+                partialLevel.partitions = partialLevel.partitions.filter(function (partition) { return partition.connections.length > 0; });
+                grid = populate_grid(partialLevel.partitions, grid, map_w, map_h); // recalculate with removed rooms
+                // make sure we haven't removed all the rooms
+                if (partialLevel.partitions.length === 0) {
+                    throw new Error("No valid rooms after filtering."); // Throw an error if no valid rooms
+                }
+                num_loop_doors = Math.floor(random_1.Random.rand() * 4 + 4);
+                _loop_10 = function (i) {
+                    var roomIndex = Math.floor(random_1.Random.rand() * partialLevel.partitions.length);
+                    var room = partialLevel.partitions[roomIndex];
+                    var found_door = false;
+                    var tries = 0;
+                    var max_tries = 100;
+                    var not_already_connected = partialLevel.partitions.filter(function (p) { return !room.connections.some(function (c) { return c.other === p; }); });
+                    while (!found_door && tries < max_tries) {
+                        var point = room.get_branch_point();
+                        if (!point) {
+                            break; // Skip if no valid branch point found
+                        }
+                        for (var _h = 0, not_already_connected_2 = not_already_connected; _h < not_already_connected_2.length; _h++) {
+                            var p = not_already_connected_2[_h];
+                            if (p !== room && p.point_next_to(point.x, point.y)) {
+                                room.connections.push(new PartitionConnection(point.x, point.y, p));
+                                p.connections.push(new PartitionConnection(point.x, point.y, room));
+                                found_door = true;
+                                break;
+                            }
+                        }
+                        tries++;
+                    }
+                };
+                for (i = 0; i < num_loop_doors; i++) {
+                    _loop_10(i);
+                }
+                // calculate room distances
+                frontier = [spawn];
+                seen = [];
+                spawn.distance = 0;
+                while (frontier.length > 0) {
+                    room = frontier[0];
+                    frontier.splice(0, 1);
+                    seen.push(room);
+                    for (_e = 0, _f = room.connections; _e < _f.length; _e++) {
+                        c = _f[_e];
+                        other = c.other;
+                        other.distance = Math.min(other.distance, room.distance + 1);
+                        if (seen.indexOf(other) === -1)
+                            frontier.push(other);
+                    }
+                }
+                return [2 /*return*/, partialLevel.partitions];
+        }
+    });
+}); };
+var generate_cave = function (partialLevel, mapWidth, mapHeight) { return __awaiter(void 0, void 0, void 0, function () {
+    var numberOfRooms;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                numberOfRooms = 5;
+                _a.label = 1;
+            case 1: return [4 /*yield*/, generate_cave_candidate(partialLevel, mapWidth, mapHeight, numberOfRooms)];
+            case 2:
+                _a.sent();
+                _a.label = 3;
+            case 3:
+                if (partialLevel.partitions.length < numberOfRooms) return [3 /*break*/, 1];
+                _a.label = 4;
+            case 4: return [2 /*return*/, partialLevel.partitions];
+        }
+    });
+}); };
 var generate_tutorial = function (height, width) {
     if (height === void 0) { height = 7; }
     if (width === void 0) { width = 7; }
     var partitions;
-    partitions = [new Partition(0, 0, height, width)];
+    partitions = [new Partition(0, 0, height, width, "white")];
     partitions[0].type = room_1.RoomType.TUTORIAL;
     return partitions;
 };
@@ -12618,14 +12874,20 @@ var check_overlaps = function (partitions) {
     }
     return false;
 };
+var PartialLevel = /** @class */ (function () {
+    function PartialLevel() {
+    }
+    return PartialLevel;
+}());
+exports.PartialLevel = PartialLevel;
 var LevelGenerator = /** @class */ (function () {
     function LevelGenerator() {
         var _this = this;
         this.depthReached = 0;
         this.currentFloorFirstLevelID = 0;
         this.setOpenWallsForPartitions = function (partitions, mapWidth, mapHeight) {
-            for (var _i = 0, partitions_7 = partitions; _i < partitions_7.length; _i++) {
-                var partition = partitions_7[_i];
+            for (var _i = 0, partitions_3 = partitions; _i < partitions_3.length; _i++) {
+                var partition = partitions_3[_i];
                 // Reset all walls to closed by default
                 partition.isTopOpen = false;
                 partition.isRightOpen = false;
@@ -12684,79 +12946,118 @@ var LevelGenerator = /** @class */ (function () {
         this.setSeed = function (seed) {
             _this.seed = seed;
         };
-        this.generate = function (game, depth, cave) {
+        this.generate = function (game, depth, cave, callback) {
             if (cave === void 0) { cave = false; }
-            var params = levelParametersGenerator_1.LevelParameterGenerator.getParameters(depth);
-            var dimensions = params.mapWidth; // Assuming square maps for simplicity
-            _this.depthReached = depth;
-            // Set the random state based on the seed and depth
-            random_1.Random.setState(_this.seed + depth);
-            _this.game = game;
-            // Determine the map group
-            var mapGroup = _this.game.rooms.length > 0
-                ? _this.game.rooms[_this.game.rooms.length - 1].mapGroup + 1
-                : 0;
-            // Generate partitions based on whether it's a cave or a dungeon
-            var partitions = cave
-                ? generate_cave(20, 20) // You might want to make these dynamic based on params
-                : generate_dungeon(dimensions, dimensions, depth, params);
-            // Call this function before get_wall_rooms
-            if (check_overlaps(partitions)) {
-                console.warn("There are overlapping partitions.");
-            }
-            // Get the levels based on the partitions
-            _this.createLevel(depth);
-            var rooms = _this.getRooms(partitions, depth, mapGroup);
-            console.log("mapGroup: ".concat(mapGroup));
-            console.log("depth: ".concat(depth));
-            // Update the current floor first level ID if it's not a cave
-            if (!cave)
-                _this.currentFloorFirstLevelID = _this.game.rooms.length;
-            // Add the new levels to the game rooms
-            _this.game.rooms = __spreadArray(__spreadArray([], _this.game.rooms, true), rooms, true);
-            // Generate the rope hole if it exists
-            for (var _i = 0, rooms_2 = rooms; _i < rooms_2.length; _i++) {
-                var room = rooms_2[_i];
-                if (room.type === room_1.RoomType.ROPEHOLE) {
-                    for (var x = room.roomX; x < room.roomX + room.width; x++) {
-                        for (var y = room.roomY; y < room.roomY + room.height; y++) {
-                            var tile = room.roomArray[x][y];
-                            if (tile instanceof downLadder_1.DownLadder && tile.isRope) {
-                                tile.generate();
-                                return cave
-                                    ? rooms.find(function (r) { return r.type === room_1.RoomType.ROPECAVE; })
-                                    : rooms.find(function (r) { return r.type === room_1.RoomType.START; });
+            return __awaiter(_this, void 0, void 0, function () {
+                var mapGroup, rooms;
+                return __generator(this, function (_a) {
+                    switch (_a.label) {
+                        case 0:
+                            this.levelParams = levelParametersGenerator_1.LevelParameterGenerator.getParameters(depth);
+                            this.depthReached = depth;
+                            // Set the random state based on the seed and depth
+                            random_1.Random.setState(this.seed + depth);
+                            this.game = game;
+                            mapGroup = this.game.rooms.length > 0
+                                ? this.game.rooms[this.game.rooms.length - 1].mapGroup + 1
+                                : 0;
+                            this.partialLevel = new PartialLevel();
+                            if (!cave) return [3 /*break*/, 2];
+                            return [4 /*yield*/, generate_cave(this.partialLevel, 20, 20)]; // You might want to make these dynamic based on params
+                        case 1:
+                            _a.sent(); // You might want to make these dynamic based on params
+                            return [3 /*break*/, 4];
+                        case 2: return [4 /*yield*/, generate_dungeon(game, this.partialLevel, this.levelParams.mapWidth, this.levelParams.mapHeight, depth, this.levelParams)];
+                        case 3:
+                            _a.sent();
+                            _a.label = 4;
+                        case 4:
+                            // Call this function before get_wall_rooms
+                            if (check_overlaps(this.partialLevel.partitions)) {
+                                console.warn("There are overlapping partitions.");
                             }
-                        }
+                            // Get the levels based on the partitions
+                            this.createLevel(depth);
+                            rooms = this.getRooms(this.partialLevel.partitions, depth, mapGroup);
+                            console.log("mapGroup: ".concat(mapGroup));
+                            console.log("depth: ".concat(depth));
+                            // Update the current floor first level ID if it's not a cave
+                            if (!cave)
+                                this.currentFloorFirstLevelID = this.game.rooms.length;
+                            // Add the new levels to the game rooms
+                            this.game.rooms = rooms;
+                            // // Generate the rope hole if it exists
+                            // for (let room of rooms) {
+                            //   if (room.type === RoomType.ROPEHOLE) {
+                            //     for (let x = room.roomX; x < room.roomX + room.width; x++) {
+                            //       for (let y = room.roomY; y < room.roomY + room.height; y++) {
+                            //         let tile = room.roomArray[x][y];
+                            //         if (tile instanceof DownLadder && tile.isRope) {
+                            //           tile.generate();
+                            //           callback(cave
+                            //             ? rooms.find((r) => r.type === RoomType.ROPECAVE)
+                            //             : rooms.find((r) => r.type === RoomType.START));
+                            //           return;
+                            //         }
+                            //       }
+                            //     }
+                            //   }
+                            // }
+                            // Return the start room or the rope cave room
+                            callback(cave
+                                ? rooms.find(function (r) { return r.type === room_1.RoomType.ROPECAVE; })
+                                : rooms.find(function (r) { return r.type === room_1.RoomType.START; }));
+                            return [2 /*return*/];
                     }
-                }
-            }
-            // Return the start room or the rope cave room
-            return cave
-                ? rooms.find(function (r) { return r.type === room_1.RoomType.ROPECAVE; })
-                : rooms.find(function (r) { return r.type === room_1.RoomType.START; });
+                });
+            });
         };
-        this.generateFirstNFloors = function (game, numFloors) {
-            _this.generate(game, 0, false);
-            for (var i = 0; i < numFloors; i++) {
-                var foundRoom = _this.game.rooms
-                    .slice()
-                    .reverse()
-                    .find(function (room) { return room.type === room_1.RoomType.DOWNLADDER; });
-                if (foundRoom) {
-                    for (var x = foundRoom.roomX; x < foundRoom.roomX + foundRoom.width; x++) {
-                        for (var y = foundRoom.roomY; y < foundRoom.roomY + foundRoom.height; y++) {
-                            var tile = foundRoom.roomArray[x][y];
-                            if (tile instanceof downLadder_1.DownLadder) {
-                                tile.generate();
-                                break;
+        this.generateFirstNFloors = function (game, numFloors) { return __awaiter(_this, void 0, void 0, function () {
+            var i, foundRoom, x, y, tile;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.generate(game, 0, false, function () { })];
+                    case 1:
+                        _a.sent();
+                        for (i = 0; i < numFloors; i++) {
+                            foundRoom = this.game.rooms
+                                .slice()
+                                .reverse()
+                                .find(function (room) { return room.type === room_1.RoomType.DOWNLADDER; });
+                            if (foundRoom) {
+                                for (x = foundRoom.roomX; x < foundRoom.roomX + foundRoom.width; x++) {
+                                    for (y = foundRoom.roomY; y < foundRoom.roomY + foundRoom.height; y++) {
+                                        tile = foundRoom.roomArray[x][y];
+                                        if (tile instanceof downLadder_1.DownLadder) {
+                                            tile.generate();
+                                            break;
+                                        }
+                                    }
+                                }
                             }
                         }
-                    }
+                        return [2 /*return*/];
                 }
+            });
+        }); };
+        this.draw = function (delta) {
+            game_1.Game.ctx.fillStyle = "rgba(0, 0, 0, 1)";
+            game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
+            if (document.cookie.includes("showgeneration=true")) {
+                if (_this.partialLevel.partitions) {
+                    _this.partialLevel.partitions.forEach(function (partition) {
+                        partition.draw(delta, _this.levelParams.mapWidth / 2, _this.levelParams.mapHeight / 2);
+                    });
+                }
+            }
+            else {
+                game_1.Game.ctx.fillStyle = "rgb(255, 255, 255)";
+                var dimensions = game_1.Game.measureText("generating level...");
+                game_1.Game.fillText("generating level...", gameConstants_1.GameConstants.WIDTH / 2 - dimensions.width / 2, gameConstants_1.GameConstants.HEIGHT / 2 - dimensions.height / 2);
             }
         };
     }
+    LevelGenerator.ANIMATION_CONSTANT = 1;
     return LevelGenerator;
 }());
 exports.LevelGenerator = LevelGenerator;
@@ -18128,51 +18429,98 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __generator = (this && this.__generator) || function (thisArg, body) {
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
+    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    function verb(n) { return function (v) { return step([n, v]); }; }
+    function step(op) {
+        if (f) throw new TypeError("Generator is already executing.");
+        while (g && (g = 0, op[0] && (_ = 0)), _) try {
+            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+            if (y = 0, t) op = [op[0] & 2, t.value];
+            switch (op[0]) {
+                case 0: case 1: t = op; break;
+                case 4: _.label++; return { value: op[1], done: false };
+                case 5: _.label++; y = op[1]; op = [0]; continue;
+                case 7: op = _.ops.pop(); _.trys.pop(); continue;
+                default:
+                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
+                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
+                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
+                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
+                    if (t[2]) _.ops.pop();
+                    _.trys.pop(); continue;
+            }
+            op = body.call(thisArg, _);
+        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
+        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
+    }
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DownLadder = void 0;
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var tile_1 = __webpack_require__(/*! ./tile */ "./src/tile/tile.ts");
 var upLadder_1 = __webpack_require__(/*! ./upLadder */ "./src/tile/upLadder.ts");
+var events_1 = __webpack_require__(/*! ../events */ "./src/events.ts");
+var eventBus_1 = __webpack_require__(/*! ../eventBus */ "./src/eventBus.ts");
 var DownLadder = /** @class */ (function (_super) {
     __extends(DownLadder, _super);
     function DownLadder(room, game, x, y) {
         var _this = _super.call(this, room, x, y) || this;
         _this.isRope = false;
-        _this.generate = function () {
-            // called by Game during transition
-            if (!_this.linkedLevel) {
-                _this.linkedLevel = _this.game.levelgen.generate(_this.game, _this.room.depth + (_this.isRope ? 0 : 1), _this.isRope);
-                for (var x = _this.linkedLevel.roomX; x < _this.linkedLevel.roomX + _this.linkedLevel.width; x++) {
-                    for (var y = _this.linkedLevel.roomY; y < _this.linkedLevel.roomY + _this.linkedLevel.height; y++) {
-                        var tile = _this.linkedLevel.roomArray[x][y];
-                        if (tile instanceof upLadder_1.UpLadder && tile.isRope)
-                            tile.linkedLevel = _this.room;
-                    }
+        _this.generate = function () { return __awaiter(_this, void 0, void 0, function () {
+            var _this = this;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        if (!!this.linkedLevel) return [3 /*break*/, 2];
+                        return [4 /*yield*/, this.game.levelgen.generate(this.game, this.room.depth + (this.isRope ? 0 : 1), this.isRope, function (linkedLevel) {
+                                _this.linkedLevel = linkedLevel;
+                                for (var x = _this.linkedLevel.roomX; x < _this.linkedLevel.roomX + _this.linkedLevel.width; x++) {
+                                    for (var y = _this.linkedLevel.roomY; y < _this.linkedLevel.roomY + _this.linkedLevel.height; y++) {
+                                        var tile = _this.linkedLevel.roomArray[x][y];
+                                        if (tile instanceof upLadder_1.UpLadder && tile.isRope)
+                                            tile.linkedLevel = _this.room;
+                                    }
+                                }
+                            })];
+                    case 1:
+                        _a.sent();
+                        _a.label = 2;
+                    case 2: return [2 /*return*/];
+                }
+            });
+        }); };
+        _this.onCollide = function (player) {
+            var allPlayersHere = true;
+            for (var i in _this.game.players) {
+                if (_this.game.rooms[_this.game.players[i].levelID] !== _this.room ||
+                    _this.game.players[i].x !== _this.x ||
+                    _this.game.players[i].y !== _this.y) {
+                    allPlayersHere = false;
                 }
             }
-        };
-        _this.onCollide = function (player) {
-            if (_this.isRope)
-                _this.game.changeLevelThroughLadder(player, _this);
-            else {
-                var allPlayersHere = true;
-                for (var i in _this.game.players) {
-                    if (_this.game.rooms[_this.game.players[i].levelID] !== _this.room ||
-                        _this.game.players[i].x !== _this.x ||
-                        _this.game.players[i].y !== _this.y) {
-                        allPlayersHere = false;
-                    }
-                }
-                if (allPlayersHere) {
-                    _this.generate();
+            if (allPlayersHere) {
+                eventBus_1.globalEventBus.emit(events_1.EVENTS.LEVEL_GENERATION_STARTED, {});
+                _this.generate().then(function () {
+                    eventBus_1.globalEventBus.emit(events_1.EVENTS.LEVEL_GENERATION_COMPLETED, {});
                     for (var i in _this.game.players) {
                         _this.game.changeLevelThroughLadder(_this.game.players[i], _this);
                     }
-                }
-                else {
-                    if (player === _this.game.players[_this.game.localPlayerID])
-                        _this.game.chat.push(new game_1.ChatMessage("all players must be present"));
-                }
+                });
+            }
+            else {
+                if (player === _this.game.players[_this.game.localPlayerID])
+                    _this.game.chat.push(new game_1.ChatMessage("all players must be present"));
             }
         };
         _this.draw = function (delta) {

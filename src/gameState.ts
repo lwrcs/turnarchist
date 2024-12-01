@@ -55,6 +55,8 @@ import { Pumpkin } from "./entity/object/pumpkin";
 import { Block } from "./entity/object/block";
 import { EnergyWizardEnemy } from "./entity/enemy/energyWizard";
 import { Level } from "./level";
+import { globalEventBus } from "./eventBus";
+import { EVENTS } from "./events";
 
 export class HitWarningState {
   x: number;
@@ -730,7 +732,7 @@ export const createGameState = (game: Game): GameState => {
   let gs = new GameState();
   gs.seed = game.levelgen.seed; // random state for generating levels
   gs.randomState = Random.state; // current random state
-  gs.depth = game.levelgen.depthReached;
+  gs.depth = game.level.depth;
   for (const i in game.players)
     gs.players[i] = new PlayerState(game.players[i], game);
   for (const i in game.offlinePlayers) {
@@ -754,86 +756,88 @@ export const loadGameState = (
   game.levelgen = new LevelGenerator();
   game.levelgen.setSeed(gameState.seed);
   if (newWorld) gameState.depth = 0;
-  game.levelgen.generateFirstNFloors(game, gameState.depth);
-
-  if (!newWorld) {
-    if (gameState.players) {
-      for (const i in gameState.players) {
-        if (activeUsernames.includes(i))
-          game.players[i] = loadPlayer(i, gameState.players[i], game);
-        else game.offlinePlayers[i] = loadPlayer(i, gameState.players[i], game);
-      }
-    }
-    if (gameState.offlinePlayers) {
-      for (const i in gameState.offlinePlayers) {
-        if (i === game.localPlayerID)
-          game.players[i] = loadPlayer(i, gameState.offlinePlayers[i], game);
-        else if (activeUsernames.includes(i))
-          game.players[i] = loadPlayer(i, gameState.offlinePlayers[i], game);
-        else
-          game.offlinePlayers[i] = loadPlayer(
-            i,
-            gameState.offlinePlayers[i],
-            game,
-          );
-      }
-    }
-    for (let levelState of gameState.levels) {
-      for (let i = 0; i < game.rooms.length; i++) {
-        if (i === levelState.levelID) {
-          loadLevel(game.rooms[i], levelState, game);
+  globalEventBus.emit(EVENTS.LEVEL_GENERATION_STARTED, {});
+  game.levelgen.generateFirstNFloors(game, gameState.depth).then(() => {
+    globalEventBus.emit(EVENTS.LEVEL_GENERATION_COMPLETED, {});
+    if (!newWorld) {
+      if (gameState.players) {
+        for (const i in gameState.players) {
+          if (activeUsernames.includes(i))
+            game.players[i] = loadPlayer(i, gameState.players[i], game);
+          else game.offlinePlayers[i] = loadPlayer(i, gameState.players[i], game);
         }
       }
-    }
-    if (
-      !(game.localPlayerID in gameState.players) &&
-      !(game.localPlayerID in gameState.offlinePlayers)
-    ) {
-      // we're not in the gamestate, create a new player
-      game.players[game.localPlayerID] = new Player(game, 0, 0, true);
-      game.players[game.localPlayerID].levelID =
-        game.levelgen.currentFloorFirstLevelID;
-      game.players[game.localPlayerID].x =
-        game.rooms[game.levelgen.currentFloorFirstLevelID].roomX +
-        Math.floor(
-          game.rooms[game.levelgen.currentFloorFirstLevelID].width / 2,
-        );
-      game.players[game.localPlayerID].y =
-        game.rooms[game.levelgen.currentFloorFirstLevelID].roomY +
-        Math.floor(
-          game.rooms[game.levelgen.currentFloorFirstLevelID].height / 2,
-        );
-      game.room = game.rooms[game.levelgen.currentFloorFirstLevelID];
+      if (gameState.offlinePlayers) {
+        for (const i in gameState.offlinePlayers) {
+          if (i === game.localPlayerID)
+            game.players[i] = loadPlayer(i, gameState.offlinePlayers[i], game);
+          else if (activeUsernames.includes(i))
+            game.players[i] = loadPlayer(i, gameState.offlinePlayers[i], game);
+          else
+            game.offlinePlayers[i] = loadPlayer(
+              i,
+              gameState.offlinePlayers[i],
+              game,
+            );
+        }
+      }
+      for (let levelState of gameState.levels) {
+        for (let i = 0; i < game.rooms.length; i++) {
+          if (i === levelState.levelID) {
+            loadLevel(game.rooms[i], levelState, game);
+          }
+        }
+      }
+      if (
+        !(game.localPlayerID in gameState.players) &&
+        !(game.localPlayerID in gameState.offlinePlayers)
+      ) {
+        // we're not in the gamestate, create a new player
+        game.players[game.localPlayerID] = new Player(game, 0, 0, true);
+        game.players[game.localPlayerID].levelID =
+          game.levelgen.currentFloorFirstLevelID;
+        game.players[game.localPlayerID].x =
+          game.rooms[game.levelgen.currentFloorFirstLevelID].roomX +
+          Math.floor(
+            game.rooms[game.levelgen.currentFloorFirstLevelID].width / 2,
+          );
+        game.players[game.localPlayerID].y =
+          game.rooms[game.levelgen.currentFloorFirstLevelID].roomY +
+          Math.floor(
+            game.rooms[game.levelgen.currentFloorFirstLevelID].height / 2,
+          );
+        game.room = game.rooms[game.levelgen.currentFloorFirstLevelID];
 
-      game.room.enterLevel(game.players[game.localPlayerID]);
+        game.room.enterLevel(game.players[game.localPlayerID]);
+      } else {
+        game.room = game.rooms[game.players[game.localPlayerID].levelID];
+      }
     } else {
+      // stub game state, start a new world
+      game.players[game.localPlayerID] = new Player(game, 0, 0, true);
       game.room = game.rooms[game.players[game.localPlayerID].levelID];
+      game.room.enterLevel(game.players[game.localPlayerID]);
     }
-  } else {
-    // stub game state, start a new world
-    game.players[game.localPlayerID] = new Player(game, 0, 0, true);
-    game.room = game.rooms[game.players[game.localPlayerID].levelID];
-    game.room.enterLevel(game.players[game.localPlayerID]);
-  }
-  Random.setState(gameState.randomState);
-  game.room.updateLighting();
-  let p = game.players[game.localPlayerID];
-  game.room.items.push(new Key(game.room, p.x - 1, p.y + 1));
+    Random.setState(gameState.randomState);
+    game.room.updateLighting();
+    let p = game.players[game.localPlayerID];
+    game.room.items.push(new Key(game.room, p.x - 1, p.y + 1));
 
-  //choose one door to lock
-  let locked = false;
-  if (!locked) {
-    game.room.doors.forEach((door) => {
-      door.lock();
-      locked = true;
+    //choose one door to lock
+    let locked = false;
+    if (!locked) {
+      game.room.doors.forEach((door) => {
+        door.lock();
+        locked = true;
+      });
+    }
+    /*
+    game.rooms.forEach((room) => {
+      room.addWallCrack();
     });
-  }
-  /*
-  game.rooms.forEach((room) => {
-    room.addWallCrack();
-  });
- 
-  */
+   
+    */
 
-  game.chat = [];
+    game.chat = [];
+  });
 };
