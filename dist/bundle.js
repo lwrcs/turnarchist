@@ -2908,10 +2908,17 @@ var FrogEnemy = /** @class */ (function (_super) {
                                 (dx <= 1 && dy === 0) ||
                                 (dx === 0 && dy >= -1) ||
                                 (dx >= -1 && dy === 0)) {
-                                targetPosition = {
-                                    x: _this.targetPlayer.x + dx,
-                                    y: _this.targetPlayer.y + dy,
-                                };
+                                var jumpOverX = _this.targetPlayer.x + dx;
+                                var jumpOverY = _this.targetPlayer.y + dy;
+                                if (_this.room.roomArray[jumpOverX] &&
+                                    _this.room.roomArray[jumpOverX][jumpOverY]) {
+                                    if (!_this.room.roomArray[jumpOverX][jumpOverY].isSolid()) {
+                                        targetPosition = {
+                                            x: jumpOverX,
+                                            y: jumpOverY,
+                                        };
+                                    }
+                                }
                             }
                             var moves = astarclass_1.astar.AStar.search(grid, _this, targetPosition, disablePositions, false, false, false, undefined, undefined, false, _this.lastPlayerPos);
                             if (moves.length > 0) {

@@ -139,10 +139,19 @@ export class FrogEnemy extends Enemy {
               (dx === 0 && dy >= -1) ||
               (dx >= -1 && dy === 0)
             ) {
-              targetPosition = {
-                x: this.targetPlayer.x + dx,
-                y: this.targetPlayer.y + dy,
-              };
+              let jumpOverX = this.targetPlayer.x + dx;
+              let jumpOverY = this.targetPlayer.y + dy;
+              if (
+                this.room.roomArray[jumpOverX] &&
+                this.room.roomArray[jumpOverX][jumpOverY]
+              ) {
+                if (!this.room.roomArray[jumpOverX][jumpOverY].isSolid()) {
+                  targetPosition = {
+                    x: jumpOverX,
+                    y: jumpOverY,
+                  };
+                }
+              }
             }
             let moves = astar.AStar.search(
               grid,
