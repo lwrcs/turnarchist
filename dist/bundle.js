@@ -12791,10 +12791,17 @@ var LevelGenerator = /** @class */ (function () {
         this.draw = function (delta) {
             game_1.Game.ctx.fillStyle = "rgba(0, 0, 0, 1)";
             game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
-            if (_this.partialLevel.partitions) {
-                _this.partialLevel.partitions.forEach(function (partition) {
-                    partition.draw(delta, _this.levelParams.mapWidth / 2, _this.levelParams.mapHeight / 2);
-                });
+            if (document.cookie.includes("showgeneration=true")) {
+                if (_this.partialLevel.partitions) {
+                    _this.partialLevel.partitions.forEach(function (partition) {
+                        partition.draw(delta, _this.levelParams.mapWidth / 2, _this.levelParams.mapHeight / 2);
+                    });
+                }
+            }
+            else {
+                game_1.Game.ctx.fillStyle = "white";
+                var dimensions = game_1.Game.measureText("generating level...");
+                game_1.Game.fillText("generating level...", gameConstants_1.GameConstants.WIDTH / 2 - dimensions.width / 2, gameConstants_1.GameConstants.HEIGHT / 2 - dimensions.height / 2);
             }
         };
     }

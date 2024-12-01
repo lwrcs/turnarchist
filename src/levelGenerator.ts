@@ -724,13 +724,11 @@ let generate_dungeon = async (
       passes_checks = false;
       game.pushMessage("Not enough rooms");
     }
-    else if (!partialLevel.partitions.some((p) => p.type === RoomType.BOSS))
-    {
+    else if (!partialLevel.partitions.some((p) => p.type === RoomType.BOSS)) {
       passes_checks = false;
       game.pushMessage("Boss room unreachable");
     }
-    else if (partialLevel.partitions.find((p) => p.type === RoomType.BOSS).distance < 3)
-    {
+    else if (partialLevel.partitions.find((p) => p.type === RoomType.BOSS).distance < 3) {
       passes_checks = false;
       game.pushMessage("Boss room too close to spawn");
     }
@@ -1162,10 +1160,17 @@ export class LevelGenerator {
     Game.ctx.fillStyle = "rgba(0, 0, 0, 1)";
     Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
 
-    if (this.partialLevel.partitions) {
-      this.partialLevel.partitions.forEach((partition) => {
-        partition.draw(delta, this.levelParams.mapWidth / 2, this.levelParams.mapHeight / 2);
-      });
+    if (document.cookie.includes("showgeneration=true")) {
+      if (this.partialLevel.partitions) {
+        this.partialLevel.partitions.forEach((partition) => {
+          partition.draw(delta, this.levelParams.mapWidth / 2, this.levelParams.mapHeight / 2);
+        });
+      }
+    }
+    else {
+      Game.ctx.fillStyle = "white";
+      let dimensions = Game.measureText("generating level...");
+      Game.fillText("generating level...", GameConstants.WIDTH / 2 - dimensions.width / 2, GameConstants.HEIGHT / 2 - dimensions.height / 2);
     }
   };
 }
