@@ -2921,6 +2921,7 @@ var FrogEnemy = /** @class */ (function (_super) {
                                 }
                             }
                             var moves = astarclass_1.astar.AStar.search(grid, _this, targetPosition, disablePositions, false, false, false, undefined, undefined, false, _this.lastPlayerPos);
+                            console.log("moves: ".concat(moves));
                             if (moves.length > 1) {
                                 var hitPlayer = false;
                                 for (var i in _this.game.players) {
