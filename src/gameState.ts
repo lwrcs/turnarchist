@@ -754,7 +754,7 @@ export const loadGameState = (
   game.levelgen = new LevelGenerator();
   game.levelgen.setSeed(gameState.seed);
   if (newWorld) gameState.depth = 0;
-  game.levelgen.generateFirstNFloors(game, gameState.depth);
+  game.levelgen.generateFirstNFloors(game, 20 + gameState.depth);
 
   if (!newWorld) {
     if (gameState.players) {

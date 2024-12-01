@@ -652,7 +652,7 @@ export class Room {
           for (let xx = 0; xx < enemy.w; xx++) {
             for (let yy = 0; yy < enemy.h; yy++) {
               if (
-                !this.getEmptyTiles().some(
+                !tiles.some(
                   (tt) => tt.x === x + xx && tt.y === y + yy,
                 )
               ) {

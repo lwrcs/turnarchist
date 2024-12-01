@@ -8674,7 +8674,7 @@ var loadGameState = function (game, activeUsernames, gameState, newWorld) {
     game.levelgen.setSeed(gameState.seed);
     if (newWorld)
         gameState.depth = 0;
-    game.levelgen.generateFirstNFloors(game, gameState.depth);
+    game.levelgen.generateFirstNFloors(game, 20 + gameState.depth);
     if (!newWorld) {
         if (gameState.players) {
             for (var i in gameState.players) {
@@ -16737,7 +16737,7 @@ var Room = /** @class */ (function () {
                 var addEnemy = function (enemy) {
                     var _loop_7 = function (xx) {
                         var _loop_8 = function (yy) {
-                            if (!_this.getEmptyTiles().some(function (tt) { return tt.x === x + xx && tt.y === y + yy; })) {
+                            if (!tiles.some(function (tt) { return tt.x === x + xx && tt.y === y + yy; })) {
                                 // If it does, increment the enemy count and return false
                                 numEnemies++;
                                 return { value: false };
