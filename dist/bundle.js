@@ -8424,7 +8424,7 @@ var loadGameState = function (game, activeUsernames, gameState, newWorld) {
     game.levelgen.setSeed(gameState.seed);
     if (newWorld)
         gameState.depth = 0;
-    game.levelgen.generateFirstNFloors(game, 20 + gameState.depth);
+    game.levelgen.generateFirstNFloors(game, gameState.depth);
     if (!newWorld) {
         if (gameState.players) {
             for (var i in gameState.players) {
@@ -16459,7 +16459,7 @@ var Room = /** @class */ (function () {
                 // Function to add an enemy to the room
                 var addEnemy = function (enemy) {
                     var _loop_7 = function (xx) {
-                        var _loop_8 = function (yy) {
+                        var _loop_9 = function (yy) {
                             if (!tiles.some(function (tt) { return tt.x === x + xx && tt.y === y + yy; })) {
                                 // If it does, increment the enemy count and return false
                                 numEnemies++;
@@ -16467,7 +16467,7 @@ var Room = /** @class */ (function () {
                             }
                         };
                         for (var yy = 0; yy < enemy.h; yy++) {
-                            var state_4 = _loop_8(yy);
+                            var state_4 = _loop_9(yy);
                             if (typeof state_4 === "object")
                                 return state_4;
                         }
@@ -16478,8 +16478,19 @@ var Room = /** @class */ (function () {
                         if (typeof state_3 === "object")
                             return state_3.value;
                     }
-                    // If it doesn't, add the enemy to the room and return true
+                    // If it doesn't, add the enemy to the room, remove the tiles used from the available pool, and return true
                     _this.entities.push(enemy);
+                    var _loop_8 = function (xx) {
+                        var _loop_10 = function (yy) {
+                            tiles = tiles.filter(function (t) { return !(t.x === x + xx && t.y === y + yy); });
+                        };
+                        for (var yy = 0; yy < enemy.h; yy++) {
+                            _loop_10(yy);
+                        }
+                    };
+                    for (var xx = 0; xx < enemy.w; xx++) {
+                        _loop_8(xx);
+                    }
                     return true;
                 };
                 // Randomly select an enemy type from the table

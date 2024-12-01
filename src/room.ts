@@ -658,8 +658,13 @@ export class Room {
               }
             }
           }
-          // If it doesn't, add the enemy to the room and return true
+          // If it doesn't, add the enemy to the room, remove the tiles used from the available pool, and return true
           this.entities.push(enemy);
+          for (let xx = 0; xx < enemy.w; xx++) {
+            for (let yy = 0; yy < enemy.h; yy++) {
+              tiles = tiles.filter((t) => !(t.x === x + xx && t.y === y + yy));
+            }
+          }
           return true;
         };
 
