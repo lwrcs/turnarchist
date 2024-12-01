@@ -12799,7 +12799,7 @@ var LevelGenerator = /** @class */ (function () {
                 }
             }
             else {
-                game_1.Game.ctx.fillStyle = "white";
+                game_1.Game.ctx.fillStyle = "rgb(255, 255, 255)";
                 var dimensions = game_1.Game.measureText("generating level...");
                 game_1.Game.fillText("generating level...", gameConstants_1.GameConstants.WIDTH / 2 - dimensions.width / 2, gameConstants_1.GameConstants.HEIGHT / 2 - dimensions.height / 2);
             }

@@ -1168,7 +1168,7 @@ export class LevelGenerator {
       }
     }
     else {
-      Game.ctx.fillStyle = "white";
+      Game.ctx.fillStyle = "rgb(255, 255, 255)";
       let dimensions = Game.measureText("generating level...");
       Game.fillText("generating level...", GameConstants.WIDTH / 2 - dimensions.width / 2, GameConstants.HEIGHT / 2 - dimensions.height / 2);
     }
