@@ -11980,9 +11980,9 @@ var levelParametersGenerator_1 = __webpack_require__(/*! ./levelParametersGenera
 var level_1 = __webpack_require__(/*! ./level */ "./src/level.ts");
 var gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/gameConstants.ts");
 // animation delays in ms
-var ANIMATION_PARTITION_SPLIT_DELAY = 10; // for partition splitting
-var ANIMATION_PATHFINDING_DELAY = 100; // for pathfinding
-var ANIMATION_LARGE_DELAY = 100; // in between larger steps
+var ANIMATION_PARTITION_SPLIT_DELAY = 0; // for partition splitting
+var ANIMATION_PATHFINDING_DELAY = 0; // for pathfinding
+var ANIMATION_LARGE_DELAY = 0; // in between larger steps
 var PartitionConnection = /** @class */ (function () {
     function PartitionConnection(x, y, other) {
         this.x = x;
@@ -11998,7 +11998,9 @@ var Partition = /** @class */ (function () {
             var rand_mid, sizeRange, MIN_SIZE, w1, w2, h1, h2;
             return __generator(this, function (_a) {
                 switch (_a.label) {
-                    case 0: return [4 /*yield*/, new Promise(function (resolve) { return setTimeout(resolve, LevelGenerator.ANIMATION_CONSTANT * ANIMATION_PARTITION_SPLIT_DELAY); })];
+                    case 0: return [4 /*yield*/, new Promise(function (resolve) {
+                            return setTimeout(resolve, LevelGenerator.ANIMATION_CONSTANT * ANIMATION_PARTITION_SPLIT_DELAY);
+                        })];
                     case 1:
                         _a.sent();
                         // Reset open walls when a partition is split
@@ -12403,10 +12405,11 @@ var generate_dungeon_candidate = function (game, partialLevel, map_w, map_h, dep
                 }
                 //visualize_partialLevel.partitions(partialLevel.partitions, map_w, map_h);
                 partialLevel.partitions = remove_wall_rooms(partialLevel.partitions, map_w, map_h, wallRemoveProbability);
-                return [4 /*yield*/, new Promise(function (resolve) { return setTimeout(resolve, LevelGenerator.ANIMATION_CONSTANT * ANIMATION_LARGE_DELAY); })];
+                return [4 /*yield*/, new Promise(function (resolve) {
+                        return setTimeout(resolve, LevelGenerator.ANIMATION_CONSTANT * ANIMATION_LARGE_DELAY);
+                    })];
             case 7:
                 _j.sent();
-                ;
                 // Remove wall rooms based on probability
                 /*
                 if (partitions.length > params.minRoomCount) {
@@ -12438,10 +12441,11 @@ var generate_dungeon_candidate = function (game, partialLevel, map_w, map_h, dep
                 partialLevel.partitions.forEach(function (partition) {
                     partition.fillStyle = "rgba(128, 128, 128, ".concat(partition.area() / partialLevel.partitions[0].area(), ")");
                 });
-                return [4 /*yield*/, new Promise(function (resolve) { return setTimeout(resolve, LevelGenerator.ANIMATION_CONSTANT * ANIMATION_LARGE_DELAY); })];
+                return [4 /*yield*/, new Promise(function (resolve) {
+                        return setTimeout(resolve, LevelGenerator.ANIMATION_CONSTANT * ANIMATION_LARGE_DELAY);
+                    })];
             case 8:
                 _j.sent();
-                ;
                 // Make sure we have at least one partition before assigning spawn
                 if (partialLevel.partitions.length === 0) {
                     console.log("No partitions generated after filtering.");
@@ -12457,13 +12461,16 @@ var generate_dungeon_candidate = function (game, partialLevel, map_w, map_h, dep
                 spawn.type = room_1.RoomType.START;
                 spawn.fillStyle = "rgb(0, 255, 0)";
                 if (partialLevel.partitions.length > 1) {
-                    partialLevel.partitions[partialLevel.partitions.length - 1].type = room_1.RoomType.BOSS;
-                    partialLevel.partitions[partialLevel.partitions.length - 1].fillStyle = "red";
+                    partialLevel.partitions[partialLevel.partitions.length - 1].type =
+                        room_1.RoomType.BOSS;
+                    partialLevel.partitions[partialLevel.partitions.length - 1].fillStyle =
+                        "red";
                 }
-                return [4 /*yield*/, new Promise(function (resolve) { return setTimeout(resolve, LevelGenerator.ANIMATION_CONSTANT * ANIMATION_LARGE_DELAY); })];
+                return [4 /*yield*/, new Promise(function (resolve) {
+                        return setTimeout(resolve, LevelGenerator.ANIMATION_CONSTANT * ANIMATION_LARGE_DELAY);
+                    })];
             case 9:
                 _j.sent();
-                ;
                 connected = [spawn];
                 frontier = [spawn];
                 found_boss = false;
@@ -12502,7 +12509,9 @@ var generate_dungeon_candidate = function (game, partialLevel, map_w, map_h, dep
                     }
                     tries++;
                 }
-                return [4 /*yield*/, new Promise(function (resolve) { return setTimeout(resolve, LevelGenerator.ANIMATION_CONSTANT * ANIMATION_PATHFINDING_DELAY); })];
+                return [4 /*yield*/, new Promise(function (resolve) {
+                        return setTimeout(resolve, LevelGenerator.ANIMATION_CONSTANT * ANIMATION_PATHFINDING_DELAY);
+                    })];
             case 11:
                 _j.sent();
                 return [3 /*break*/, 10];
@@ -12516,10 +12525,11 @@ var generate_dungeon_candidate = function (game, partialLevel, map_w, map_h, dep
                     partition = _d[_c];
                     _loop_7(partition);
                 }
-                return [4 /*yield*/, new Promise(function (resolve) { return setTimeout(resolve, LevelGenerator.ANIMATION_CONSTANT * ANIMATION_LARGE_DELAY); })];
+                return [4 /*yield*/, new Promise(function (resolve) {
+                        return setTimeout(resolve, LevelGenerator.ANIMATION_CONSTANT * ANIMATION_LARGE_DELAY);
+                    })];
             case 13:
                 _j.sent();
-                ;
                 grid = populate_grid(partialLevel.partitions, grid, map_w, map_h); // recalculate with removed rooms
                 // make sure we haven't removed all the rooms
                 if (partialLevel.partitions.length === 0) {
@@ -12620,7 +12630,9 @@ var generate_dungeon_candidate = function (game, partialLevel, map_w, map_h, dep
                         }
                     }
                 }
-                return [4 /*yield*/, new Promise(function (resolve) { return setTimeout(resolve, 10 * LevelGenerator.ANIMATION_CONSTANT * ANIMATION_LARGE_DELAY); })];
+                return [4 /*yield*/, new Promise(function (resolve) {
+                        return setTimeout(resolve, 10 * LevelGenerator.ANIMATION_CONSTANT * ANIMATION_LARGE_DELAY);
+                    })];
             case 14:
                 _j.sent();
                 return [2 /*return*/];
@@ -12657,7 +12669,9 @@ var generate_dungeon = function (game, partialLevel, map_w, map_h, depth, params
                 return [3 /*break*/, 1];
             case 3:
                 game.pushMessage("Dungeon passed all checks");
-                return [4 /*yield*/, new Promise(function (resolve) { return setTimeout(resolve, 10 * LevelGenerator.ANIMATION_CONSTANT * ANIMATION_LARGE_DELAY); })];
+                return [4 /*yield*/, new Promise(function (resolve) {
+                        return setTimeout(resolve, 10 * LevelGenerator.ANIMATION_CONSTANT * ANIMATION_LARGE_DELAY);
+                    })];
             case 4:
                 _a.sent();
                 console.log("finished generation");
@@ -12963,7 +12977,7 @@ var LevelGenerator = /** @class */ (function () {
                                 : 0;
                             this.partialLevel = new PartialLevel();
                             if (!cave) return [3 /*break*/, 2];
-                            return [4 /*yield*/, generate_cave(this.partialLevel, 20, 20)]; // You might want to make these dynamic based on params
+                            return [4 /*yield*/, generate_cave(this.partialLevel, 20, 20)];
                         case 1:
                             _a.sent(); // You might want to make these dynamic based on params
                             return [3 /*break*/, 4];
