@@ -778,22 +778,20 @@ let generate_dungeon = async (
     );
 
     passes_checks = true;
-    if (document.cookie.includes("animation=true")) {
-      if (partialLevel.partitions.length < params.minRoomCount) {
-        passes_checks = false;
+    if (partialLevel.partitions.length < params.minRoomCount) {
+      passes_checks = false;
+      if (document.cookie.includes("animation=true"))
         game.pushMessage("Not enough rooms");
-      } else if (
-        !partialLevel.partitions.some((p) => p.type === RoomType.BOSS)
-      ) {
-        passes_checks = false;
+    } else if (!partialLevel.partitions.some((p) => p.type === RoomType.BOSS)) {
+      passes_checks = false;
+      if (document.cookie.includes("animation=true"))
         game.pushMessage("Boss room unreachable");
-      } else if (
-        partialLevel.partitions.find((p) => p.type === RoomType.BOSS).distance <
-        3
-      ) {
-        passes_checks = false;
+    } else if (
+      partialLevel.partitions.find((p) => p.type === RoomType.BOSS).distance < 3
+    ) {
+      passes_checks = false;
+      if (document.cookie.includes("animation=true"))
         game.pushMessage("Boss room too close to spawn");
-      }
     }
 
     tries++;
