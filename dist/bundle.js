@@ -7093,6 +7093,7 @@ var Game = /** @class */ (function () {
         this.mostRecentInputReceived = true;
         this.loginMessage = "";
         this.startScreenAlpha = 1;
+        this.generating = true;
         this.newGame = function () {
             stats_1.statsTracker.resetStats();
             _this.encounteredEnemies = [];
@@ -7614,8 +7615,9 @@ var Game = /** @class */ (function () {
             Game.ctx.fillStyle = levelConstants_1.LevelConstants.LEVEL_TEXT_COLOR;
             Game.fillText(fps + "fps", 1, 1);
             Game.ctx.globalAlpha = 1;
-            if (!_this.started)
+            if (!_this.started && _this.levelState !== LevelState.LEVEL_GENERATION) {
                 _this.drawStartScreen(delta);
+            }
             mouseCursor_1.MouseCursor.getInstance().draw();
         };
         window.addEventListener("load", function () {

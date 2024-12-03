@@ -116,6 +116,7 @@ export class Game {
   screenShakeActive: boolean;
   encounteredEnemies: Array<number>;
   private startScreenAlpha = 1;
+  generating: boolean = true;
 
   static text_rendering_canvases: Record<string, HTMLCanvasElement>;
   static readonly letters = "abcdefghijklmnopqrstuvwxyz1234567890,.!?:'()[]%-/";
@@ -1108,7 +1109,9 @@ export class Game {
     Game.ctx.fillStyle = LevelConstants.LEVEL_TEXT_COLOR;
     Game.fillText(fps + "fps", 1, 1);
     Game.ctx.globalAlpha = 1;
-    if (!this.started) this.drawStartScreen(delta);
+    if (!this.started && this.levelState !== LevelState.LEVEL_GENERATION) {
+      this.drawStartScreen(delta);
+    }
     MouseCursor.getInstance().draw();
   };
 
