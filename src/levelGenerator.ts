@@ -12,9 +12,14 @@ import { Level } from "./level";
 import { GameConstants } from "./gameConstants";
 
 // animation delays in ms
-const ANIMATION_PARTITION_SPLIT_DELAY = 0; // for partition splitting
-const ANIMATION_PATHFINDING_DELAY = 0; // for pathfinding
-const ANIMATION_LARGE_DELAY = 0; // in between larger steps
+let ANIMATION_PARTITION_SPLIT_DELAY = 0; // for partition splitting
+let ANIMATION_PATHFINDING_DELAY = 0; // for pathfinding
+let ANIMATION_LARGE_DELAY = 0; // in between larger steps
+if (document.cookie.includes("animation=true")) {
+  ANIMATION_PARTITION_SPLIT_DELAY = 10; // for partition splitting
+  ANIMATION_PATHFINDING_DELAY = 100; // for pathfinding
+  ANIMATION_LARGE_DELAY = 100; // in between larger steps
+}
 
 class PartitionConnection {
   x: number;
@@ -773,17 +778,22 @@ let generate_dungeon = async (
     );
 
     passes_checks = true;
-    if (partialLevel.partitions.length < params.minRoomCount) {
-      passes_checks = false;
-      game.pushMessage("Not enough rooms");
-    } else if (!partialLevel.partitions.some((p) => p.type === RoomType.BOSS)) {
-      passes_checks = false;
-      game.pushMessage("Boss room unreachable");
-    } else if (
-      partialLevel.partitions.find((p) => p.type === RoomType.BOSS).distance < 3
-    ) {
-      passes_checks = false;
-      game.pushMessage("Boss room too close to spawn");
+    if (document.cookie.includes("animation=true")) {
+      if (partialLevel.partitions.length < params.minRoomCount) {
+        passes_checks = false;
+        game.pushMessage("Not enough rooms");
+      } else if (
+        !partialLevel.partitions.some((p) => p.type === RoomType.BOSS)
+      ) {
+        passes_checks = false;
+        game.pushMessage("Boss room unreachable");
+      } else if (
+        partialLevel.partitions.find((p) => p.type === RoomType.BOSS).distance <
+        3
+      ) {
+        passes_checks = false;
+        game.pushMessage("Boss room too close to spawn");
+      }
     }
 
     tries++;
