@@ -11985,7 +11985,7 @@ var gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/gameCons
 var ANIMATION_PARTITION_SPLIT_DELAY = 0; // for partition splitting
 var ANIMATION_PATHFINDING_DELAY = 0; // for pathfinding
 var ANIMATION_LARGE_DELAY = 0; // in between larger steps
-if (document.cookie.includes("animation=true")) {
+if (document.cookie.includes("showgeneration=true")) {
     ANIMATION_PARTITION_SPLIT_DELAY = 10; // for partition splitting
     ANIMATION_PATHFINDING_DELAY = 100; // for pathfinding
     ANIMATION_LARGE_DELAY = 100; // in between larger steps
@@ -12662,17 +12662,17 @@ var generate_dungeon = function (game, partialLevel, map_w, map_h, depth, params
                 passes_checks = true;
                 if (partialLevel.partitions.length < params.minRoomCount) {
                     passes_checks = false;
-                    if (document.cookie.includes("animation=true"))
+                    if (document.cookie.includes("showgeneration=true"))
                         game.pushMessage("Not enough rooms");
                 }
                 else if (!partialLevel.partitions.some(function (p) { return p.type === room_1.RoomType.BOSS; })) {
                     passes_checks = false;
-                    if (document.cookie.includes("animation=true"))
+                    if (document.cookie.includes("showgeneration=true"))
                         game.pushMessage("Boss room unreachable");
                 }
                 else if (partialLevel.partitions.find(function (p) { return p.type === room_1.RoomType.BOSS; }).distance < 3) {
                     passes_checks = false;
-                    if (document.cookie.includes("animation=true"))
+                    if (document.cookie.includes("showgeneration=true"))
                         game.pushMessage("Boss room too close to spawn");
                 }
                 tries++;
