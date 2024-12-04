@@ -61,28 +61,28 @@ export class BigKnightEnemy extends Enemy {
 
   addHitWarnings = () => {
     this.room.hitwarnings.push(
-      new HitWarning(this.game, this.x - 1, this.y, this.x, this.y)
+      new HitWarning(this.game, this.x - 1, this.y, this.x, this.y),
     );
     this.room.hitwarnings.push(
-      new HitWarning(this.game, this.x - 1, this.y + 1, this.x, this.y)
+      new HitWarning(this.game, this.x - 1, this.y + 1, this.x, this.y),
     );
     this.room.hitwarnings.push(
-      new HitWarning(this.game, this.x + 2, this.y, this.x, this.y)
+      new HitWarning(this.game, this.x + 2, this.y, this.x, this.y),
     );
     this.room.hitwarnings.push(
-      new HitWarning(this.game, this.x + 2, this.y + 1, this.x, this.y)
+      new HitWarning(this.game, this.x + 2, this.y + 1, this.x, this.y),
     );
     this.room.hitwarnings.push(
-      new HitWarning(this.game, this.x, this.y - 1, this.x, this.y)
+      new HitWarning(this.game, this.x, this.y - 1, this.x, this.y),
     );
     this.room.hitwarnings.push(
-      new HitWarning(this.game, this.x + 1, this.y - 1, this.x, this.y)
+      new HitWarning(this.game, this.x + 1, this.y - 1, this.x, this.y),
     );
     this.room.hitwarnings.push(
-      new HitWarning(this.game, this.x, this.y + 2, this.x, this.y)
+      new HitWarning(this.game, this.x, this.y + 2, this.x, this.y),
     );
     this.room.hitwarnings.push(
-      new HitWarning(this.game, this.x + 1, this.y + 2, this.x, this.y)
+      new HitWarning(this.game, this.x + 1, this.y + 2, this.x, this.y),
     );
   };
 
@@ -90,7 +90,11 @@ export class BigKnightEnemy extends Enemy {
     return 1;
   };
 
-  hurt = (playerHitBy: Player, damage: number) => {
+  hurt = (
+    playerHitBy: Player,
+    damage: number,
+    type: "none" | "poison" | "blood" | "heal" = "none",
+  ) => {
     if (playerHitBy) {
       this.aggro = true;
       this.targetPlayer = playerHitBy;
@@ -100,6 +104,7 @@ export class BigKnightEnemy extends Enemy {
     }
     this.ticksSinceFirstHit = 0;
     this.health -= damage;
+    this.createDamageNumber(damage, type);
     this.healthBar.hurt();
     if (this.health <= 0) {
       this.kill();
@@ -108,7 +113,7 @@ export class BigKnightEnemy extends Enemy {
         this.room,
         this.x + 1,
         this.y + 1,
-        this.deathParticleColor
+        this.deathParticleColor,
       );
     }
   };
@@ -119,7 +124,7 @@ export class BigKnightEnemy extends Enemy {
       this.room,
       this.x + 1,
       this.y + 1,
-      this.deathParticleColor
+      this.deathParticleColor,
     );
     this.room.particles.push(new DeathParticle(this.x + 0.5, this.y + 0.5));
 
@@ -225,7 +230,7 @@ export class BigKnightEnemy extends Enemy {
 
           let targetPlayerOffline =
             Object.values(this.game.offlinePlayers).indexOf(
-              this.targetPlayer
+              this.targetPlayer,
             ) !== -1;
           if (!this.aggro || targetPlayerOffline) {
             let p = this.nearestPlayer();
@@ -267,7 +272,7 @@ export class BigKnightEnemy extends Enemy {
           2,
           2,
           this.room.shadeColor,
-          this.shadeAmount()
+          this.shadeAmount(),
         );
       Game.drawMob(
         2 * Math.floor((this.tileX + this.frame) / 2) + 1,
@@ -279,21 +284,21 @@ export class BigKnightEnemy extends Enemy {
         2,
         4,
         this.room.shadeColor,
-        this.shadeAmount()
+        this.shadeAmount(),
       );
     }
     if (!this.seenPlayer) {
       this.drawSleepingZs(
         delta,
         GameConstants.TILESIZE * 0.5,
-        GameConstants.TILESIZE * -1
+        GameConstants.TILESIZE * -1,
       );
     }
     if (this.alertTicks > 0) {
       this.drawExclamation(
         delta,
         GameConstants.TILESIZE * 0.5,
-        GameConstants.TILESIZE * -1
+        GameConstants.TILESIZE * -1,
       );
     }
   };
@@ -307,7 +312,7 @@ export class BigKnightEnemy extends Enemy {
       this.maxHealth,
       this.x + 0.5,
       this.y,
-      true
+      true,
     );
     this.updateDrawXY(delta);
   };

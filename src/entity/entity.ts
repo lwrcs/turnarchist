@@ -18,6 +18,7 @@ import { globalEventBus } from "../eventBus";
 import { LightSource } from "../lightSource";
 import { ZombieEnemy } from "./enemy/zombieEnemy";
 import { EVENTS } from "../events";
+import { DamageNumber } from "../particle/damageNumber";
 
 export enum EntityDirection {
   DOWN,
@@ -87,6 +88,8 @@ export class Entity extends Drawable {
   drawMoveSpeed: number;
   unconscious: boolean;
   hitWarnings: HitWarning[];
+  imageParticleX: number = 0;
+  imageParticleY: number = 26;
 
   constructor(room: Room, game: Game, x: number, y: number) {
     super();
@@ -177,6 +180,26 @@ export class Entity extends Drawable {
     );
   };
 
+  createDamageNumber = (
+    damage: number,
+    type: "none" | "poison" | "blood" | "heal" = "none",
+  ) => {
+    let color = "red";
+    let outlineColor = GameConstants.OUTLINE;
+    if (type === "poison") color = "green";
+    if (type === "blood") {
+      color = "#8B0000";
+      outlineColor = "red";
+    }
+    if (type === "heal") {
+      color = "purple";
+      outlineColor = "white";
+    }
+    this.room.particles.push(
+      new DamageNumber(this.room, this.x, this.y, damage, color, outlineColor),
+    );
+  };
+
   updateDrawXY = (delta: number) => {
     if (!this.doneMoving()) {
       this.drawX -= this.drawMoveSpeed * delta * this.drawX;
@@ -221,7 +244,7 @@ export class Entity extends Drawable {
 
   readonly hurt = (playerHitBy: Player, damage: number) => {
     this.healthBar.hurt();
-
+    this.createDamageNumber(damage);
     this.health -= damage;
     if (this.health <= 0) this.kill();
     else this.hurtCallback();

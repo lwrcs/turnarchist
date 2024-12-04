@@ -116,7 +116,6 @@ export class Game {
   screenShakeActive: boolean;
   encounteredEnemies: Array<number>;
   private startScreenAlpha = 1;
-  generating: boolean = true;
 
   static text_rendering_canvases: Record<string, HTMLCanvasElement>;
   static readonly letters = "abcdefghijklmnopqrstuvwxyz1234567890,.!?:'()[]%-/";

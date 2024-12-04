@@ -65,6 +65,10 @@ export class Inventory {
   private _dragStartSlot: number | null = null;
   private itemEquipAnimations: Map<Item, number> = new Map();
 
+  // New state for using items on other items
+  private usingItem: Usable | null = null;
+  private usingItemIndex: number | null = null;
+
   constructor(game: Game, player: Player) {
     this.game = game;
     this.player = player;
@@ -121,6 +125,8 @@ export class Inventory {
     if (this.isOpen) this.openTime = Date.now();
     if (!this.isOpen) {
       this.selY = 0;
+      this.usingItem = null;
+      this.usingItemIndex = null;
     }
   };
 
@@ -129,6 +135,8 @@ export class Inventory {
     if (this.selY > 0) {
       this.selY = 0;
     }
+    this.usingItem = null;
+    this.usingItemIndex = null;
   };
 
   left = () => {
@@ -176,22 +184,53 @@ export class Inventory {
     let index = this.selX + this.selY * this.cols;
     if (index < 0 || index >= this.items.length) return;
     const item = this.items[index];
-    if (item instanceof Usable) {
-      item.onUse(this.player);
-      //this.items[index] = null; // Optionally remove the item after use
-    } else if (item instanceof Equippable) {
-      // Don't equip on the same tick as using an item
-      item.toggleEquip();
-      if (item instanceof Weapon) {
-        this.weapon = item.equipped ? item : null;
+
+    if (this.usingItem) {
+      // Attempt to use 'usingItem' on the currently selected item
+      if (item === null) {
+        // Clicked on empty slot; cancel the using state
+        this.usingItem = null;
+        this.usingItemIndex = null;
+        return;
       }
-      if (item.equipped) {
-        this.items.forEach((i, idx) => {
-          if (i instanceof Equippable && i !== item && !item.coEquippable(i)) {
-            i.equipped = false;
-            this.equipAnimAmount[idx] = 0;
-          }
-        });
+      // Attempt to use on other
+      if (item instanceof Item) {
+        this.usingItem.useOnOther(this.player, item);
+      }
+      // Exit tryingToUse state
+      this.usingItem = null;
+      this.usingItemIndex = null;
+    } else {
+      // Not in tryingToUse state
+      if (item instanceof Usable) {
+        if (item.canUseOnOther) {
+          // Enter tryingToUse state
+          this.usingItem = item;
+          this.usingItemIndex = index;
+        } else {
+          // Use normally
+          item.onUse(this.player);
+          // Optionally remove the item
+          // this.items[index] = null;
+        }
+      } else if (item instanceof Equippable) {
+        // Existing equipping logic
+        item.toggleEquip();
+        if (item instanceof Weapon) {
+          this.weapon = item.equipped ? item : null;
+        }
+        if (item.equipped) {
+          this.items.forEach((i, idx) => {
+            if (
+              i instanceof Equippable &&
+              i !== item &&
+              !item.coEquippable(i)
+            ) {
+              i.equipped = false;
+              this.equipAnimAmount[idx] = 0;
+            }
+          });
+        }
       }
     }
   };
@@ -265,6 +304,7 @@ export class Inventory {
         : 0;
 
       if (oldSelX !== this.selX || oldSelY !== this.selY) {
+        // Optional: Handle selection change
       }
     }
   };
@@ -660,6 +700,7 @@ export class Inventory {
         s + 2 * hg,
         s + 2 * hg - yOff,
       );
+      this.drawUsingItem(delta, startX, startY, s, b, g);
 
       // Redraw the selected item
       if (idx < this.items.length && this.items[idx] !== null) {
@@ -669,8 +710,39 @@ export class Inventory {
           selStartY + b + Math.floor(0.5 * s) - 0.5 * GameConstants.TILESIZE;
         const drawXScaled = drawX / GameConstants.TILESIZE;
         const drawYScaled = drawY / GameConstants.TILESIZE;
+
         this.items[idx]!.drawIcon(delta, drawXScaled, drawYScaled);
       }
+      this.drawUsingItem(delta, startX, startY, s, b, g);
+    }
+    this.drawUsingItem(delta, startX, startY, s, b, g);
+  };
+
+  drawUsingItem = (
+    delta: number,
+    startX: number,
+    startY: number,
+    s: number,
+    b: number,
+    g: number,
+  ) => {
+    // Highlight the usingItem's slot if in using state and it's different from current selection
+    Game.ctx.globalCompositeOperation = "source-over";
+    if (this.usingItem && this.usingItemIndex !== null) {
+      const usingX = this.usingItemIndex % this.cols;
+      const usingY = Math.floor(this.usingItemIndex / this.cols);
+      const highlightStartX = startX + usingX * (s + 2 * b + g);
+      const highlightStartY = startY + usingY * (s + 2 * b + g);
+
+      Game.ctx.strokeStyle = "yellow"; // Choose a distinct color for using item
+      Game.ctx.lineWidth = 2;
+      Game.ctx.strokeRect(
+        highlightStartX,
+        highlightStartY,
+        s + 2 * b,
+        s + 2 * b,
+      );
+      Game.ctx.lineWidth = 1; // Reset line width
     }
   };
 
@@ -696,6 +768,16 @@ export class Inventory {
   draw = (delta: number) => {
     const { x, y } = MouseCursor.getInstance().getPosition();
     const isInBounds = this.isPointInInventoryBounds(x, y).inBounds;
+    const s = Math.min(18, (18 * (Date.now() - this.openTime)) / OPEN_TIME); // size of box
+    const b = 2; // border
+    const g = -2; // gap
+    const hg = 3 + Math.round(0.5 * Math.sin(Date.now() * 0.01) + 0.5); // highlighted growth
+    const invRows = this.rows + this.expansion;
+    const ob = 1; // outer border
+    const width = this.cols * (s + 2 * b + g) - g;
+    const height = invRows * (s + 2 * b + g) - g;
+    const mainBgX = Math.round(0.5 * GameConstants.WIDTH - 0.5 * width) - ob;
+    const mainBgY = Math.round(0.5 * GameConstants.HEIGHT - 0.5 * height) - ob;
 
     // Draw coins and quickbar (these are always visible)
     this.drawCoins(delta);
@@ -794,6 +876,7 @@ export class Inventory {
               0.5 * GameConstants.TILESIZE;
             const drawXScaled = drawX / GameConstants.TILESIZE;
             const drawYScaled = drawY / GameConstants.TILESIZE;
+
             this.items[idx]!.drawIcon(delta, drawXScaled, drawYScaled);
           }
         }
@@ -862,6 +945,7 @@ export class Inventory {
           Game.ctx.fillRect(slotX, slotY, s + 2 * hg, s + 2 * hg);
 
           // Draw equip animation for selected item (unique to full inventory view)
+          // Draw equip animation for selected item (unique to full inventory view)
           const idx = this.selX + this.selY * this.cols;
           if (idx < this.items.length && this.items[idx] !== null) {
             Game.ctx.fillStyle = EQUIP_COLOR;
@@ -903,6 +987,8 @@ export class Inventory {
 
             this.items[idx]!.drawIcon(delta, drawXScaled, drawYScaled);
           }
+
+          // **Move drawUsingItem here, after the main selection box**
         }
 
         // Draw item description and action text (unique to full inventory view)
@@ -947,8 +1033,18 @@ export class Inventory {
             nextY = this.textWrap(line, 5, nextY, GameConstants.WIDTH - 10);
           });
         }
+
+        // **Ensure drawUsingItem is not called again here**
+        // this.drawUsingItem(delta, mainBgX, mainBgY, s, b, g);
       }
+
+      // **Ensure drawUsingItem is not called again here**
+      // this.drawUsingItem(delta, mainBgX, mainBgY, s, b, g);
     }
+    if (this.isOpen) {
+      this.drawUsingItem(delta, mainBgX + 1, mainBgY + 1, s, b, g);
+    }
+
     this.drawDraggedItem(delta);
   };
 

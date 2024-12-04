@@ -59,7 +59,11 @@ export class SkullEnemy extends Enemy {
     return 1;
   };
 
-  hurt = (playerHitBy: Player, damage: number) => {
+  hurt = (
+    playerHitBy: Player,
+    damage: number,
+    type: "none" | "poison" | "blood" | "heal" = "none",
+  ) => {
     if (playerHitBy) {
       this.aggro = true;
       this.targetPlayer = playerHitBy;
@@ -70,15 +74,19 @@ export class SkullEnemy extends Enemy {
     this.ticksSinceFirstHit = 0;
     if (this.health == 2) this.unconscious = false;
     this.health -= damage;
+    this.healthBar.hurt();
+    this.createDamageNumber(damage, type);
+
     if (this.health == 1) {
       this.unconscious = true;
       ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 3, 28);
-    } else this.healthBar.hurt();
+    } else {
+      this.healthBar.hurt();
+    }
     if (this.health <= 0) {
       ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 24);
       this.kill();
-    } else {
-    }
+    } else this.hurtCallback();
   };
 
   behavior = () => {
@@ -88,6 +96,8 @@ export class SkullEnemy extends Enemy {
     if (!this.dead) {
       if (this.skipNextTurns > 0) {
         this.skipNextTurns--;
+        this.ticks++;
+
         return;
       }
 
@@ -96,8 +106,11 @@ export class SkullEnemy extends Enemy {
         this.ticksSinceFirstHit++;
         if (this.ticksSinceFirstHit >= this.REGEN_TICKS) {
           this.health = 2;
+          this.healthBar.hurt();
           this.unconscious = false;
         }
+        this.ticks++;
+
         return;
       }
 

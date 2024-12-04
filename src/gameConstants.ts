@@ -8,6 +8,8 @@ import { Heart } from "./item/heart";
 import { Key } from "./item/key";
 import { Lantern } from "./item/lantern";
 import { Torch } from "./item/torch";
+import { WeaponBlood } from "./item/weaponBlood";
+import { WeaponPoison } from "./item/weaponPoision";
 import { LevelConstants } from "./levelConstants";
 import { Dagger } from "./weapon/dagger";
 import { DualDagger } from "./weapon/dualdagger";
@@ -59,6 +61,8 @@ export class GameConstants {
   static readonly STARTING_DEV_INVENTORY = [
     Dagger,
     DualDagger,
+    WeaponPoison,
+    WeaponBlood,
     EntitySpawner,
     Candle,
     GodStone,

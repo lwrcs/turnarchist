@@ -795,6 +795,11 @@ export class Player extends Drawable {
     }
   };
 
+  heal = (amount: number) => {
+    this.health += amount;
+    if (this.health > this.maxHealth) this.health = this.maxHealth;
+  };
+
   drawSpellBeam = (delta: number) => {
     // Clear existing beam effects each frame
     this.game.rooms[this.levelID].beamEffects = [];

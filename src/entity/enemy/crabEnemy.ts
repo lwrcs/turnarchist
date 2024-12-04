@@ -33,6 +33,8 @@ export class CrabEnemy extends Enemy {
     this.aggro = false;
     this.name = "crab";
     this.orthogonalAttack = true;
+    this.imageParticleX = 3;
+    this.imageParticleY = 24;
 
     if (drop) this.drop = drop;
     else {
@@ -46,21 +48,6 @@ export class CrabEnemy extends Enemy {
     Attack Pattern: Omnidirectional
     Moves every other turn`;
   }
-  hurt = (playerHitBy: Player, damage: number) => {
-    if (playerHitBy) {
-      this.aggro = true;
-      this.targetPlayer = playerHitBy;
-      this.facePlayer(playerHitBy);
-      if (playerHitBy === this.game.players[this.game.localPlayerID])
-        this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
-    }
-    this.healthBar.hurt();
-    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 3, 24);
-
-    this.health -= damage;
-    if (this.health <= 0) this.kill();
-    else this.hurtCallback();
-  };
 
   hit = (): number => {
     return 1;

@@ -134,12 +134,13 @@ export class BigSkullEnemy extends Enemy {
         this.skipNextTurns--;
         return;
       }
-      if (this.health == 1) {
+      if (this.health <= 2) {
         this.ticksSinceFirstHit++;
         if (this.ticksSinceFirstHit >= this.REGEN_TICKS) {
           this.health++;
           this.ticksSinceFirstHit = 0;
         }
+        this.ticks++;
       } else {
         this.ticks++;
         if (!this.seenPlayer) {
@@ -177,7 +178,7 @@ export class BigSkullEnemy extends Enemy {
             }
 
             let hitPlayer = false;
-            if (this.health >= 3) {
+            if (this.health >= 2.5) {
               let wouldHit = (player: Player, moveX: number, moveY: number) => {
                 return (
                   player.x >= moveX &&
@@ -220,7 +221,7 @@ export class BigSkullEnemy extends Enemy {
               }
             }
 
-            if (this.health >= 3) this.addHitWarnings();
+            if (this.health >= 2.5) this.addHitWarnings();
           }
 
           let targetPlayerOffline =

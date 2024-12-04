@@ -25,6 +25,11 @@ enum EnemyState {
   IDLE,
 }
 
+interface EnemyStatus {
+  poison: boolean;
+  bleed: boolean;
+}
+
 export abstract class Enemy extends Entity {
   seenPlayer: boolean;
   frame: number;
@@ -32,9 +37,12 @@ export abstract class Enemy extends Entity {
   aggro: boolean;
   targetPlayer: Player;
   drop: Item;
+  status: EnemyStatus;
   protected jumpY: number;
   protected jumpHeight: number;
   static difficulty: number;
+  private effectStartTick: number;
+  private startTick: number;
   //dir: Direction;
 
   constructor(room: Room, game: Game, x: number, y: number) {
@@ -53,6 +61,9 @@ export abstract class Enemy extends Entity {
     this.jumpHeight = 0.3;
     //this.dir = Direction.South;
     this.name = "generic enemy";
+    this.status = { poison: false, bleed: false };
+    this.effectStartTick = 1;
+    this.startTick = 1;
   }
 
   readonly tryMove = (x: number, y: number, collide: boolean = true) => {
@@ -97,7 +108,11 @@ export abstract class Enemy extends Entity {
     return 1;
   };
 
-  hurt = (playerHitBy: Player, damage: number) => {
+  hurt = (
+    playerHitBy: Player,
+    damage: number,
+    type: "none" | "poison" | "blood" | "heal" = "none",
+  ) => {
     if (playerHitBy) {
       this.aggro = true;
       this.targetPlayer = playerHitBy;
@@ -106,20 +121,71 @@ export abstract class Enemy extends Entity {
         this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
     }
     this.health -= damage;
-    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 26);
+    this.createDamageNumber(damage, type);
+    if (type === "none" || this.health <= 0) {
+      ImageParticle.spawnCluster(
+        this.room,
+        this.x + 0.5,
+        this.y + 0.5,
+        this.imageParticleX,
+        this.imageParticleY,
+      );
+    }
     this.healthBar.hurt();
     if (this.health <= 0) {
       this.kill();
-    } else {
+    } else this.hurtCallback();
+  };
+
+  poison = () => {
+    if (!this.status.poison) {
+      this.status.poison = true;
+      this.effectStartTick = this.ticks % 3;
+      this.startTick = this.ticks;
+    }
+  };
+
+  bleed = () => {
+    if (!this.status.bleed) {
+      this.status.bleed = true;
+      this.effectStartTick = this.ticks % 3;
+      this.startTick = this.ticks;
+    }
+  };
+
+  tickPoison = () => {
+    if (this.status.poison) {
+      if (
+        this.ticks % 3 === this.effectStartTick &&
+        this.ticks !== this.startTick
+      ) {
+        this.hurt(this.targetPlayer, 0.5, "poison");
+      }
+    }
+  };
+
+  tickBleed = () => {
+    if (this.status.bleed) {
+      if (
+        this.ticks % 3 === this.effectStartTick &&
+        this.ticks !== this.startTick
+      ) {
+        this.hurt(this.targetPlayer, 0.5, "blood");
+      }
+
+      if (this.targetPlayer) this.targetPlayer.heal(0.5);
     }
   };
 
   tick = () => {
+    this.tickPoison();
+    this.tickBleed();
     this.behavior();
     if (this.x !== this.lastX || this.y !== this.lastY) {
       this.emitEntityData();
     }
   };
+
   lookForPlayer = () => {
     let p = this.nearestPlayer();
     if (p !== false) {

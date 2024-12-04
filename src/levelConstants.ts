@@ -12,7 +12,7 @@ export class LevelConstants {
 
   static readonly HEALTH_BAR_FADEIN = 100;
   static readonly HEALTH_BAR_FADEOUT = 350;
-  static readonly HEALTH_BAR_TOTALTIME = 2000;
+  static readonly HEALTH_BAR_TOTALTIME = 1000;
 
   static readonly SHADED_TILE_CUTOFF = 1;
   static SMOOTH_LIGHTING = false; //doesn't work

@@ -43,6 +43,8 @@ export class BishopEnemy extends Enemy {
     this.diagonalAttackRange = 1;
     this.diagonalAttack = true;
     this.orthogonalAttack = false;
+    this.imageParticleX = 0;
+    this.imageParticleY = 26;
     if (drop) this.drop = drop;
     else {
       let dropProb = Random.rand();
@@ -93,23 +95,6 @@ export class BishopEnemy extends Enemy {
 
   hit = (): number => {
     return 1;
-  };
-
-  hurt = (playerHitBy: Player, damage: number) => {
-    if (playerHitBy) {
-      this.aggro = true;
-      this.targetPlayer = playerHitBy;
-      this.facePlayer(playerHitBy);
-      if (playerHitBy === this.game.players[this.game.localPlayerID])
-        this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
-    }
-    this.health -= damage;
-    this.healthBar.hurt();
-    if (this.health <= 0) {
-      ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 26);
-
-      this.kill();
-    }
   };
 
   jump = () => {

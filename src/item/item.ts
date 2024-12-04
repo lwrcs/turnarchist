@@ -95,6 +95,8 @@ export class Item extends Drawable {
     else return this.level.softVis[this.x][this.y];
   };
 
+  drawStatus = (x: number, y: number) => {};
+
   // Function to draw the item
   draw = (delta: number) => {
     if (!this.pickedUp) {
@@ -175,6 +177,7 @@ export class Item extends Drawable {
       GameConstants.OUTLINE,
       "white",
     );
+    this.drawStatus(x, y);
   };
 
   // Function to draw the item's durability bar with color transitioning from green to red

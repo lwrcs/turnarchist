@@ -28,6 +28,7 @@ export class DualDagger extends Weapon {
     for (let e of this.game.rooms[this.wielder.levelID].entities) {
       if (e.destroyable && !e.pushable && e.pointIn(newX, newY)) {
         e.hurt(this.wielder, 1);
+        this.statusEffect(e);
 
         flag = true;
       }
@@ -40,7 +41,7 @@ export class DualDagger extends Weapon {
       this.wielder.hitX = 0.5 * (this.wielder.x - newX);
       this.wielder.hitY = 0.5 * (this.wielder.y - newY);
       this.game.rooms[this.wielder.levelID].particles.push(
-        new SlashParticle(newX, newY)
+        new SlashParticle(newX, newY),
       );
       this.game.rooms[this.wielder.levelID].entities = this.game.rooms[
         this.wielder.levelID

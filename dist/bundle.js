@@ -1015,7 +1015,8 @@ var BigKnightEnemy = /** @class */ (function (_super) {
         _this.hit = function () {
             return 1;
         };
-        _this.hurt = function (playerHitBy, damage) {
+        _this.hurt = function (playerHitBy, damage, type) {
+            if (type === void 0) { type = "none"; }
             if (playerHitBy) {
                 _this.aggro = true;
                 _this.targetPlayer = playerHitBy;
@@ -1025,6 +1026,7 @@ var BigKnightEnemy = /** @class */ (function (_super) {
             }
             _this.ticksSinceFirstHit = 0;
             _this.health -= damage;
+            _this.createDamageNumber(damage, type);
             _this.healthBar.hurt();
             if (_this.health <= 0) {
                 _this.kill();
@@ -1326,12 +1328,13 @@ var BigSkullEnemy = /** @class */ (function (_super) {
                     _this.skipNextTurns--;
                     return;
                 }
-                if (_this.health == 1) {
+                if (_this.health <= 2) {
                     _this.ticksSinceFirstHit++;
                     if (_this.ticksSinceFirstHit >= _this.REGEN_TICKS) {
                         _this.health++;
                         _this.ticksSinceFirstHit = 0;
                     }
+                    _this.ticks++;
                 }
                 else {
                     _this.ticks++;
@@ -1380,7 +1383,7 @@ var BigSkullEnemy = /** @class */ (function (_super) {
                                     moveX--;
                             }
                             var hitPlayer = false;
-                            if (_this.health >= 3) {
+                            if (_this.health >= 2.5) {
                                 var wouldHit = function (player, moveX, moveY) {
                                     return (player.x >= moveX &&
                                         player.x < moveX + _this.w &&
@@ -1419,7 +1422,7 @@ var BigSkullEnemy = /** @class */ (function (_super) {
                                     _this.ticksSinceFirstHit = 0;
                                 }
                             }
-                            if (_this.health >= 3)
+                            if (_this.health >= 2.5)
                                 _this.addHitWarnings();
                         }
                         var targetPlayerOffline = Object.values(_this.game.offlinePlayers).indexOf(_this.targetPlayer) !== -1;
@@ -1586,7 +1589,6 @@ var spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/sp
 var candle_1 = __webpack_require__(/*! ../../item/candle */ "./src/item/candle.ts");
 var door_1 = __webpack_require__(/*! ../../tile/door */ "./src/tile/door.ts");
 var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
-var imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ "./src/particle/imageParticle.ts");
 var BishopEnemy = /** @class */ (function (_super) {
     __extends(BishopEnemy, _super);
     function BishopEnemy(room, game, x, y, drop) {
@@ -1633,21 +1635,6 @@ var BishopEnemy = /** @class */ (function (_super) {
         };
         _this.hit = function () {
             return 1;
-        };
-        _this.hurt = function (playerHitBy, damage) {
-            if (playerHitBy) {
-                _this.aggro = true;
-                _this.targetPlayer = playerHitBy;
-                _this.facePlayer(playerHitBy);
-                if (playerHitBy === _this.game.players[_this.game.localPlayerID])
-                    _this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
-            }
-            _this.health -= damage;
-            _this.healthBar.hurt();
-            if (_this.health <= 0) {
-                imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 26);
-                _this.kill();
-            }
         };
         _this.jump = function () {
             var j = Math.max(Math.abs(_this.drawX), Math.abs(_this.drawY));
@@ -1784,6 +1771,8 @@ var BishopEnemy = /** @class */ (function (_super) {
         _this.diagonalAttackRange = 1;
         _this.diagonalAttack = true;
         _this.orthogonalAttack = false;
+        _this.imageParticleX = 0;
+        _this.imageParticleY = 26;
         if (drop)
             _this.drop = drop;
         else {
@@ -2089,28 +2078,11 @@ var astarclass_1 = __webpack_require__(/*! ../../astarclass */ "./src/astarclass
 var spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 var coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
 var gameConstants_1 = __webpack_require__(/*! ../../gameConstants */ "./src/gameConstants.ts");
-var imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ "./src/particle/imageParticle.ts");
 var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 var CrabEnemy = /** @class */ (function (_super) {
     __extends(CrabEnemy, _super);
     function CrabEnemy(room, game, x, y, drop) {
         var _this = _super.call(this, room, game, x, y) || this;
-        _this.hurt = function (playerHitBy, damage) {
-            if (playerHitBy) {
-                _this.aggro = true;
-                _this.targetPlayer = playerHitBy;
-                _this.facePlayer(playerHitBy);
-                if (playerHitBy === _this.game.players[_this.game.localPlayerID])
-                    _this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
-            }
-            _this.healthBar.hurt();
-            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 3, 24);
-            _this.health -= damage;
-            if (_this.health <= 0)
-                _this.kill();
-            else
-                _this.hurtCallback();
-        };
         _this.hit = function () {
             return 1;
         };
@@ -2257,6 +2229,8 @@ var CrabEnemy = /** @class */ (function (_super) {
         _this.aggro = false;
         _this.name = "crab";
         _this.orthogonalAttack = true;
+        _this.imageParticleX = 3;
+        _this.imageParticleY = 24;
         if (drop)
             _this.drop = drop;
         else {
@@ -2367,7 +2341,8 @@ var Enemy = /** @class */ (function (_super) {
         _this.hit = function () {
             return 1;
         };
-        _this.hurt = function (playerHitBy, damage) {
+        _this.hurt = function (playerHitBy, damage, type) {
+            if (type === void 0) { type = "none"; }
             if (playerHitBy) {
                 _this.aggro = true;
                 _this.targetPlayer = playerHitBy;
@@ -2376,15 +2351,52 @@ var Enemy = /** @class */ (function (_super) {
                     _this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
             }
             _this.health -= damage;
-            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 26);
+            _this.createDamageNumber(damage, type);
+            if (type === "none" || _this.health <= 0) {
+                imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, _this.imageParticleX, _this.imageParticleY);
+            }
             _this.healthBar.hurt();
             if (_this.health <= 0) {
                 _this.kill();
             }
-            else {
+            else
+                _this.hurtCallback();
+        };
+        _this.poison = function () {
+            if (!_this.status.poison) {
+                _this.status.poison = true;
+                _this.effectStartTick = _this.ticks % 3;
+                _this.startTick = _this.ticks;
+            }
+        };
+        _this.bleed = function () {
+            if (!_this.status.bleed) {
+                _this.status.bleed = true;
+                _this.effectStartTick = _this.ticks % 3;
+                _this.startTick = _this.ticks;
+            }
+        };
+        _this.tickPoison = function () {
+            if (_this.status.poison) {
+                if (_this.ticks % 3 === _this.effectStartTick &&
+                    _this.ticks !== _this.startTick) {
+                    _this.hurt(_this.targetPlayer, 0.5, "poison");
+                }
+            }
+        };
+        _this.tickBleed = function () {
+            if (_this.status.bleed) {
+                if (_this.ticks % 3 === _this.effectStartTick &&
+                    _this.ticks !== _this.startTick) {
+                    _this.hurt(_this.targetPlayer, 0.5, "blood");
+                }
+                if (_this.targetPlayer)
+                    _this.targetPlayer.heal(0.5);
             }
         };
         _this.tick = function () {
+            _this.tickPoison();
+            _this.tickBleed();
             _this.behavior();
             if (_this.x !== _this.lastX || _this.y !== _this.lastY) {
                 _this.emitEntityData();
@@ -2682,6 +2694,9 @@ var Enemy = /** @class */ (function (_super) {
         _this.jumpHeight = 0.3;
         //this.dir = Direction.South;
         _this.name = "generic enemy";
+        _this.status = { poison: false, bleed: false };
+        _this.effectStartTick = 1;
+        _this.startTick = 1;
         return _this;
     }
     Object.defineProperty(Enemy.prototype, "lastPlayerPos", {
@@ -3053,29 +3068,12 @@ var astarclass_1 = __webpack_require__(/*! ../../astarclass */ "./src/astarclass
 var hitWarning_1 = __webpack_require__(/*! ../../hitWarning */ "./src/hitWarning.ts");
 var spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 var coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
-var imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ "./src/particle/imageParticle.ts");
 var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 var utils_1 = __webpack_require__(/*! ../../utils */ "./src/utils.ts");
 var FrogEnemy = /** @class */ (function (_super) {
     __extends(FrogEnemy, _super);
     function FrogEnemy(room, game, x, y, drop) {
         var _this = _super.call(this, room, game, x, y) || this;
-        _this.hurt = function (playerHitBy, damage) {
-            if (playerHitBy) {
-                _this.aggro = true;
-                _this.targetPlayer = playerHitBy;
-                _this.facePlayer(playerHitBy);
-                if (playerHitBy === _this.game.players[_this.game.localPlayerID])
-                    _this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
-            }
-            _this.healthBar.hurt();
-            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 3, 30);
-            _this.health -= damage;
-            if (_this.health <= 0)
-                _this.kill();
-            else
-                _this.hurtCallback();
-        };
         _this.hit = function () {
             return 0.5;
         };
@@ -3381,6 +3379,8 @@ var FrogEnemy = /** @class */ (function (_super) {
         _this.diagonalAttack = true;
         _this.jumpHeight = 1;
         _this.drawMoveSpeed = 0.2;
+        _this.imageParticleX = 3;
+        _this.imageParticleY = 30;
         return _this;
     }
     FrogEnemy.difficulty = 1;
@@ -3420,29 +3420,12 @@ var astarclass_1 = __webpack_require__(/*! ../../astarclass */ "./src/astarclass
 var spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 var coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
 var dualdagger_1 = __webpack_require__(/*! ../../weapon/dualdagger */ "./src/weapon/dualdagger.ts");
-var imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ "./src/particle/imageParticle.ts");
 var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 var random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
 var KnightEnemy = /** @class */ (function (_super) {
     __extends(KnightEnemy, _super);
     function KnightEnemy(room, game, x, y, drop) {
         var _this = _super.call(this, room, game, x, y) || this;
-        _this.hurt = function (playerHitBy, damage) {
-            if (playerHitBy) {
-                _this.aggro = true;
-                _this.targetPlayer = playerHitBy;
-                _this.facePlayer(playerHitBy);
-                if (playerHitBy === _this.game.players[_this.game.localPlayerID])
-                    _this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
-            }
-            _this.healthBar.hurt();
-            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 3, 29);
-            _this.health -= damage;
-            if (_this.health <= 0)
-                _this.kill();
-            else
-                _this.hurtCallback();
-        };
         _this.hit = function () {
             return 1;
         };
@@ -3606,6 +3589,8 @@ var KnightEnemy = /** @class */ (function (_super) {
         _this.lastY = _this.y;
         _this.name = "burrow knight";
         _this.orthogonalAttack = true;
+        _this.imageParticleX = 3;
+        _this.imageParticleY = 29;
         if (drop)
             _this.drop = drop;
         else {
@@ -3652,7 +3637,6 @@ var __extends = (this && this.__extends) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.QueenEnemy = void 0;
 var game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-var genericParticle_1 = __webpack_require__(/*! ../../particle/genericParticle */ "./src/particle/genericParticle.ts");
 var coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
 var greengem_1 = __webpack_require__(/*! ../../item/greengem */ "./src/item/greengem.ts");
 var random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
@@ -3666,23 +3650,6 @@ var QueenEnemy = /** @class */ (function (_super) {
         var _this = _super.call(this, room, game, x, y) || this;
         _this.hit = function () {
             return 1;
-        };
-        _this.hurt = function (playerHitBy, damage) {
-            if (playerHitBy) {
-                _this.aggro = true;
-                _this.targetPlayer = playerHitBy;
-                _this.facePlayer(playerHitBy);
-                if (playerHitBy === _this.game.players[_this.game.localPlayerID])
-                    _this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
-            }
-            _this.health -= damage;
-            _this.healthBar.hurt();
-            if (_this.health <= 0) {
-                _this.kill();
-            }
-            else {
-                genericParticle_1.GenericParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, _this.deathParticleColor);
-            }
         };
         _this.behavior = function () {
             _this.lastX = _this.x;
@@ -3864,7 +3831,6 @@ var __extends = (this && this.__extends) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RookEnemy = void 0;
 var game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-var genericParticle_1 = __webpack_require__(/*! ../../particle/genericParticle */ "./src/particle/genericParticle.ts");
 var coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
 var greengem_1 = __webpack_require__(/*! ../../item/greengem */ "./src/item/greengem.ts");
 var random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
@@ -3878,23 +3844,6 @@ var RookEnemy = /** @class */ (function (_super) {
         var _this = _super.call(this, room, game, x, y) || this;
         _this.hit = function () {
             return 1;
-        };
-        _this.hurt = function (playerHitBy, damage) {
-            if (playerHitBy) {
-                _this.aggro = true;
-                _this.targetPlayer = playerHitBy;
-                _this.facePlayer(playerHitBy);
-                if (playerHitBy === _this.game.players[_this.game.localPlayerID])
-                    _this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
-            }
-            _this.health -= damage;
-            _this.healthBar.hurt();
-            if (_this.health <= 0) {
-                _this.kill();
-            }
-            else {
-                genericParticle_1.GenericParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, _this.deathParticleColor);
-            }
         };
         _this.behavior = function () {
             _this.lastX = _this.x;
@@ -4089,7 +4038,8 @@ var SkullEnemy = /** @class */ (function (_super) {
         _this.hit = function () {
             return 1;
         };
-        _this.hurt = function (playerHitBy, damage) {
+        _this.hurt = function (playerHitBy, damage, type) {
+            if (type === void 0) { type = "none"; }
             if (playerHitBy) {
                 _this.aggro = true;
                 _this.targetPlayer = playerHitBy;
@@ -4101,18 +4051,21 @@ var SkullEnemy = /** @class */ (function (_super) {
             if (_this.health == 2)
                 _this.unconscious = false;
             _this.health -= damage;
+            _this.healthBar.hurt();
+            _this.createDamageNumber(damage, type);
             if (_this.health == 1) {
                 _this.unconscious = true;
                 imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 3, 28);
             }
-            else
+            else {
                 _this.healthBar.hurt();
+            }
             if (_this.health <= 0) {
                 imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 24);
                 _this.kill();
             }
-            else {
-            }
+            else
+                _this.hurtCallback();
         };
         _this.behavior = function () {
             _this.lastX = _this.x;
@@ -4120,6 +4073,7 @@ var SkullEnemy = /** @class */ (function (_super) {
             if (!_this.dead) {
                 if (_this.skipNextTurns > 0) {
                     _this.skipNextTurns--;
+                    _this.ticks++;
                     return;
                 }
                 if (_this.health <= 1) {
@@ -4127,8 +4081,10 @@ var SkullEnemy = /** @class */ (function (_super) {
                     _this.ticksSinceFirstHit++;
                     if (_this.ticksSinceFirstHit >= _this.REGEN_TICKS) {
                         _this.health = 2;
+                        _this.healthBar.hurt();
                         _this.unconscious = false;
                     }
+                    _this.ticks++;
                     return;
                 }
                 _this.ticks++;
@@ -4803,7 +4759,6 @@ var random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
 var astarclass_1 = __webpack_require__(/*! ../../astarclass */ "./src/astarclass.ts");
 var spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 var pickaxe_1 = __webpack_require__(/*! ../../weapon/pickaxe */ "./src/weapon/pickaxe.ts");
-var imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ "./src/particle/imageParticle.ts");
 var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 var ZombieEnemy = /** @class */ (function (_super) {
     __extends(ZombieEnemy, _super);
@@ -4811,23 +4766,6 @@ var ZombieEnemy = /** @class */ (function (_super) {
         var _this = _super.call(this, room, game, x, y) || this;
         _this.hit = function () {
             return 1;
-        };
-        _this.hurt = function (playerHitBy, damage) {
-            if (playerHitBy) {
-                _this.aggro = true;
-                _this.targetPlayer = playerHitBy;
-                _this.facePlayer(playerHitBy);
-                if (playerHitBy === _this.game.players[_this.game.localPlayerID])
-                    _this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
-            }
-            _this.health -= damage;
-            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 26);
-            _this.healthBar.hurt();
-            if (_this.health <= 0) {
-                _this.kill();
-            }
-            else {
-            }
         };
         _this.behavior = function () {
             // Store the current position
@@ -5092,6 +5030,7 @@ var hitWarning_1 = __webpack_require__(/*! ../hitWarning */ "./src/hitWarning.ts
 var utils_1 = __webpack_require__(/*! ../utils */ "./src/utils.ts");
 var eventBus_1 = __webpack_require__(/*! ../eventBus */ "./src/eventBus.ts");
 var events_1 = __webpack_require__(/*! ../events */ "./src/events.ts");
+var damageNumber_1 = __webpack_require__(/*! ../particle/damageNumber */ "./src/particle/damageNumber.ts");
 var EntityDirection;
 (function (EntityDirection) {
     EntityDirection[EntityDirection["DOWN"] = 0] = "DOWN";
@@ -5112,6 +5051,8 @@ var Entity = /** @class */ (function (_super) {
     function Entity(room, game, x, y) {
         var _this = _super.call(this) || this;
         _this.sleepingZFrame = 0;
+        _this.imageParticleX = 0;
+        _this.imageParticleY = 26;
         _this.addLightSource = function (lightSource) {
             _this.room.lightSources.push(lightSource);
         };
@@ -5130,6 +5071,22 @@ var Entity = /** @class */ (function (_super) {
       */
         _this.pointIn = function (x, y) {
             return (x >= _this.x && x < _this.x + _this.w && y >= _this.y && y < _this.y + _this.h);
+        };
+        _this.createDamageNumber = function (damage, type) {
+            if (type === void 0) { type = "none"; }
+            var color = "red";
+            var outlineColor = gameConstants_1.GameConstants.OUTLINE;
+            if (type === "poison")
+                color = "green";
+            if (type === "blood") {
+                color = "#8B0000";
+                outlineColor = "red";
+            }
+            if (type === "heal") {
+                color = "purple";
+                outlineColor = "white";
+            }
+            _this.room.particles.push(new damageNumber_1.DamageNumber(_this.room, _this.x, _this.y, damage, color, outlineColor));
         };
         _this.updateDrawXY = function (delta) {
             if (!_this.doneMoving()) {
@@ -5172,6 +5129,7 @@ var Entity = /** @class */ (function (_super) {
         */
         _this.hurt = function (playerHitBy, damage) {
             _this.healthBar.hurt();
+            _this.createDamageNumber(damage);
             _this.health -= damage;
             if (_this.health <= 0)
                 _this.kill();
@@ -7093,7 +7051,6 @@ var Game = /** @class */ (function () {
         this.mostRecentInputReceived = true;
         this.loginMessage = "";
         this.startScreenAlpha = 1;
-        this.generating = true;
         this.newGame = function () {
             stats_1.statsTracker.resetStats();
             _this.encounteredEnemies = [];
@@ -7957,6 +7914,8 @@ var godStone_1 = __webpack_require__(/*! ./item/godStone */ "./src/item/godStone
 var heart_1 = __webpack_require__(/*! ./item/heart */ "./src/item/heart.ts");
 var lantern_1 = __webpack_require__(/*! ./item/lantern */ "./src/item/lantern.ts");
 var torch_1 = __webpack_require__(/*! ./item/torch */ "./src/item/torch.ts");
+var weaponBlood_1 = __webpack_require__(/*! ./item/weaponBlood */ "./src/item/weaponBlood.ts");
+var weaponPoision_1 = __webpack_require__(/*! ./item/weaponPoision */ "./src/item/weaponPoision.ts");
 var levelConstants_1 = __webpack_require__(/*! ./levelConstants */ "./src/levelConstants.ts");
 var dagger_1 = __webpack_require__(/*! ./weapon/dagger */ "./src/weapon/dagger.ts");
 var dualdagger_1 = __webpack_require__(/*! ./weapon/dualdagger */ "./src/weapon/dualdagger.ts");
@@ -8000,6 +7959,8 @@ var GameConstants = /** @class */ (function () {
     GameConstants.STARTING_DEV_INVENTORY = [
         dagger_1.Dagger,
         dualdagger_1.DualDagger,
+        weaponPoision_1.WeaponPoison,
+        weaponBlood_1.WeaponBlood,
         entitySpawner_1.EntitySpawner,
         candle_1.Candle,
         godStone_1.GodStone,
@@ -9422,6 +9383,7 @@ window.document
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Inventory = void 0;
+var item_1 = __webpack_require__(/*! ./item/item */ "./src/item/item.ts");
 var levelConstants_1 = __webpack_require__(/*! ./levelConstants */ "./src/levelConstants.ts");
 var game_1 = __webpack_require__(/*! ./game */ "./src/game.ts");
 var gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/gameConstants.ts");
@@ -9462,6 +9424,9 @@ var Inventory = /** @class */ (function () {
         this._dragStartItem = null;
         this._dragStartSlot = null;
         this.itemEquipAnimations = new Map();
+        // New state for using items on other items
+        this.usingItem = null;
+        this.usingItemIndex = null;
         this.clear = function () {
             _this.items.fill(null);
             _this.equipAnimAmount.fill(0);
@@ -9472,6 +9437,8 @@ var Inventory = /** @class */ (function () {
                 _this.openTime = Date.now();
             if (!_this.isOpen) {
                 _this.selY = 0;
+                _this.usingItem = null;
+                _this.usingItemIndex = null;
             }
         };
         this.close = function () {
@@ -9479,6 +9446,8 @@ var Inventory = /** @class */ (function () {
             if (_this.selY > 0) {
                 _this.selY = 0;
             }
+            _this.usingItem = null;
+            _this.usingItemIndex = null;
         };
         this.left = function () {
             if (_this.selX > 0) {
@@ -9520,23 +9489,53 @@ var Inventory = /** @class */ (function () {
             if (index < 0 || index >= _this.items.length)
                 return;
             var item = _this.items[index];
-            if (item instanceof usable_1.Usable) {
-                item.onUse(_this.player);
-                //this.items[index] = null; // Optionally remove the item after use
-            }
-            else if (item instanceof equippable_1.Equippable) {
-                // Don't equip on the same tick as using an item
-                item.toggleEquip();
-                if (item instanceof weapon_1.Weapon) {
-                    _this.weapon = item.equipped ? item : null;
+            if (_this.usingItem) {
+                // Attempt to use 'usingItem' on the currently selected item
+                if (item === null) {
+                    // Clicked on empty slot; cancel the using state
+                    _this.usingItem = null;
+                    _this.usingItemIndex = null;
+                    return;
                 }
-                if (item.equipped) {
-                    _this.items.forEach(function (i, idx) {
-                        if (i instanceof equippable_1.Equippable && i !== item && !item.coEquippable(i)) {
-                            i.equipped = false;
-                            _this.equipAnimAmount[idx] = 0;
-                        }
-                    });
+                // Attempt to use on other
+                if (item instanceof item_1.Item) {
+                    _this.usingItem.useOnOther(_this.player, item);
+                }
+                // Exit tryingToUse state
+                _this.usingItem = null;
+                _this.usingItemIndex = null;
+            }
+            else {
+                // Not in tryingToUse state
+                if (item instanceof usable_1.Usable) {
+                    if (item.canUseOnOther) {
+                        // Enter tryingToUse state
+                        _this.usingItem = item;
+                        _this.usingItemIndex = index;
+                    }
+                    else {
+                        // Use normally
+                        item.onUse(_this.player);
+                        // Optionally remove the item
+                        // this.items[index] = null;
+                    }
+                }
+                else if (item instanceof equippable_1.Equippable) {
+                    // Existing equipping logic
+                    item.toggleEquip();
+                    if (item instanceof weapon_1.Weapon) {
+                        _this.weapon = item.equipped ? item : null;
+                    }
+                    if (item.equipped) {
+                        _this.items.forEach(function (i, idx) {
+                            if (i instanceof equippable_1.Equippable &&
+                                i !== item &&
+                                !item.coEquippable(i)) {
+                                i.equipped = false;
+                                _this.equipAnimAmount[idx] = 0;
+                            }
+                        });
+                    }
                 }
             }
         };
@@ -9585,6 +9584,7 @@ var Inventory = /** @class */ (function () {
                     ? Math.max(0, Math.min(Math.floor((y - bounds.startY) / (s + 2 * b + g)), _this.rows + _this.expansion - 1))
                     : 0;
                 if (oldSelX !== _this.selX || oldSelY !== _this.selY) {
+                    // Optional: Handle selection change
                 }
             }
         };
@@ -9889,6 +9889,7 @@ var Inventory = /** @class */ (function () {
                 game_1.Game.ctx.fillStyle = EQUIP_COLOR;
                 var yOff = (s + 2 * hg) * (1 - _this.equipAnimAmount[idx]);
                 game_1.Game.ctx.fillRect(Math.round(startX + _this.selX * (s + 2 * b + g) + b - hg), Math.round(startY + b + yOff - hg), s + 2 * hg, s + 2 * hg - yOff);
+                _this.drawUsingItem(delta, startX, startY, s, b, g);
                 // Redraw the selected item
                 if (idx < _this.items.length && _this.items[idx] !== null) {
                     var drawX = selStartX + b + Math.floor(0.5 * s) - 0.5 * gameConstants_1.GameConstants.TILESIZE;
@@ -9897,6 +9898,22 @@ var Inventory = /** @class */ (function () {
                     var drawYScaled = drawY / gameConstants_1.GameConstants.TILESIZE;
                     _this.items[idx].drawIcon(delta, drawXScaled, drawYScaled);
                 }
+                _this.drawUsingItem(delta, startX, startY, s, b, g);
+            }
+            _this.drawUsingItem(delta, startX, startY, s, b, g);
+        };
+        this.drawUsingItem = function (delta, startX, startY, s, b, g) {
+            // Highlight the usingItem's slot if in using state and it's different from current selection
+            game_1.Game.ctx.globalCompositeOperation = "source-over";
+            if (_this.usingItem && _this.usingItemIndex !== null) {
+                var usingX = _this.usingItemIndex % _this.cols;
+                var usingY = Math.floor(_this.usingItemIndex / _this.cols);
+                var highlightStartX = startX + usingX * (s + 2 * b + g);
+                var highlightStartY = startY + usingY * (s + 2 * b + g);
+                game_1.Game.ctx.strokeStyle = "yellow"; // Choose a distinct color for using item
+                game_1.Game.ctx.lineWidth = 2;
+                game_1.Game.ctx.strokeRect(highlightStartX, highlightStartY, s + 2 * b, s + 2 * b);
+                game_1.Game.ctx.lineWidth = 1; // Reset line width
             }
         };
         this.updateEquipAnimAmount = function (delta) {
@@ -9921,6 +9938,16 @@ var Inventory = /** @class */ (function () {
         this.draw = function (delta) {
             var _a = mouseCursor_1.MouseCursor.getInstance().getPosition(), x = _a.x, y = _a.y;
             var isInBounds = _this.isPointInInventoryBounds(x, y).inBounds;
+            var s = Math.min(18, (18 * (Date.now() - _this.openTime)) / OPEN_TIME); // size of box
+            var b = 2; // border
+            var g = -2; // gap
+            var hg = 3 + Math.round(0.5 * Math.sin(Date.now() * 0.01) + 0.5); // highlighted growth
+            var invRows = _this.rows + _this.expansion;
+            var ob = 1; // outer border
+            var width = _this.cols * (s + 2 * b + g) - g;
+            var height = invRows * (s + 2 * b + g) - g;
+            var mainBgX = Math.round(0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * width) - ob;
+            var mainBgY = Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT - 0.5 * height) - ob;
             // Draw coins and quickbar (these are always visible)
             _this.drawCoins(delta);
             _this.drawQuickbar(delta);
@@ -9934,29 +9961,29 @@ var Inventory = /** @class */ (function () {
                 var s_1 = Math.min(18, (18 * (Date.now() - _this.openTime)) / OPEN_TIME); // size of box
                 var b_1 = 2; // border
                 var g_1 = -2; // gap
-                var hg = 3 + Math.round(0.5 * Math.sin(Date.now() * 0.01) + 0.5); // highlighted growth
-                var invRows = _this.rows + _this.expansion;
-                var ob = 1; // outer border
+                var hg_1 = 3 + Math.round(0.5 * Math.sin(Date.now() * 0.01) + 0.5); // highlighted growth
+                var invRows_1 = _this.rows + _this.expansion;
+                var ob_1 = 1; // outer border
                 var width_1 = _this.cols * (s_1 + 2 * b_1 + g_1) - g_1;
-                var height_1 = invRows * (s_1 + 2 * b_1 + g_1) - g_1;
+                var height_1 = invRows_1 * (s_1 + 2 * b_1 + g_1) - g_1;
                 // Draw main inventory background (similar to drawQuickbar)
                 game_1.Game.ctx.fillStyle = FULL_OUTLINE;
-                var mainBgX = Math.round(0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * width_1) - ob;
-                var mainBgY = Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT - 0.5 * height_1) - ob;
-                game_1.Game.ctx.fillRect(mainBgX, mainBgY, width_1 + 2 * ob, height_1 + 2 * ob);
+                var mainBgX_1 = Math.round(0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * width_1) - ob_1;
+                var mainBgY_1 = Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT - 0.5 * height_1) - ob_1;
+                game_1.Game.ctx.fillRect(mainBgX_1, mainBgY_1, width_1 + 2 * ob_1, height_1 + 2 * ob_1);
                 // Draw highlighted background for selected item only if mouse is in bounds
                 if (isInBounds) {
                     var highlightX = Math.round(0.5 * gameConstants_1.GameConstants.WIDTH -
                         0.5 * width_1 +
                         _this.selX * (s_1 + 2 * b_1 + g_1)) -
-                        hg -
-                        ob;
+                        hg_1 -
+                        ob_1;
                     var highlightY = Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT -
                         0.5 * height_1 +
                         _this.selY * (s_1 + 2 * b_1 + g_1)) -
-                        hg -
-                        ob;
-                    game_1.Game.ctx.fillRect(highlightX, highlightY, s_1 + 2 * b_1 + 2 * hg + 2 * ob, s_1 + 2 * b_1 + 2 * hg + 2 * ob);
+                        hg_1 -
+                        ob_1;
+                    game_1.Game.ctx.fillRect(highlightX, highlightY, s_1 + 2 * b_1 + 2 * hg_1 + 2 * ob_1, s_1 + 2 * b_1 + 2 * hg_1 + 2 * ob_1);
                 }
                 // Draw individual inventory slots (similar to drawQuickbar, but for all rows)
                 for (var xIdx = 0; xIdx < _this.cols; xIdx++) {
@@ -10024,37 +10051,38 @@ var Inventory = /** @class */ (function () {
                         game_1.Game.ctx.fillRect(0.5 * gameConstants_1.GameConstants.WIDTH -
                             0.5 * width_1 +
                             _this.selX * (s_1 + 2 * b_1 + g_1) -
-                            hg, 0.5 * gameConstants_1.GameConstants.HEIGHT -
+                            hg_1, 0.5 * gameConstants_1.GameConstants.HEIGHT -
                             0.5 * height_1 +
                             _this.selY * (s_1 + 2 * b_1 + g_1) -
-                            hg, s_1 + 2 * b_1 + 2 * hg, s_1 + 2 * b_1 + 2 * hg);
+                            hg_1, s_1 + 2 * b_1 + 2 * hg_1, s_1 + 2 * b_1 + 2 * hg_1);
                         var slotX = Math.round(0.5 * gameConstants_1.GameConstants.WIDTH -
                             0.5 * width_1 +
                             _this.selX * (s_1 + 2 * b_1 + g_1) +
                             b_1 -
-                            hg);
+                            hg_1);
                         var slotY = Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT -
                             0.5 * height_1 +
                             _this.selY * (s_1 + 2 * b_1 + g_1) +
                             b_1 -
-                            hg);
+                            hg_1);
                         game_1.Game.ctx.fillStyle = FILL_COLOR;
-                        game_1.Game.ctx.fillRect(slotX, slotY, s_1 + 2 * hg, s_1 + 2 * hg);
+                        game_1.Game.ctx.fillRect(slotX, slotY, s_1 + 2 * hg_1, s_1 + 2 * hg_1);
+                        // Draw equip animation for selected item (unique to full inventory view)
                         // Draw equip animation for selected item (unique to full inventory view)
                         var idx = _this.selX + _this.selY * _this.cols;
                         if (idx < _this.items.length && _this.items[idx] !== null) {
                             game_1.Game.ctx.fillStyle = EQUIP_COLOR;
-                            var yOff = (s_1 + 2 * hg) * (1 - _this.equipAnimAmount[idx]);
+                            var yOff = (s_1 + 2 * hg_1) * (1 - _this.equipAnimAmount[idx]);
                             game_1.Game.ctx.fillRect(0.5 * gameConstants_1.GameConstants.WIDTH -
                                 0.5 * width_1 +
                                 _this.selX * (s_1 + 2 * b_1 + g_1) +
                                 b_1 -
-                                hg, 0.5 * gameConstants_1.GameConstants.HEIGHT -
+                                hg_1, 0.5 * gameConstants_1.GameConstants.HEIGHT -
                                 0.5 * height_1 +
                                 _this.selY * (s_1 + 2 * b_1 + g_1) +
                                 b_1 -
-                                hg +
-                                yOff, s_1 + 2 * hg, s_1 + 2 * hg - yOff);
+                                hg_1 +
+                                yOff, s_1 + 2 * hg_1, s_1 + 2 * hg_1 - yOff);
                             // Redraw selected item icon (similar to drawQuickbar)
                             var drawX = 0.5 * gameConstants_1.GameConstants.WIDTH -
                                 0.5 * width_1 +
@@ -10072,6 +10100,7 @@ var Inventory = /** @class */ (function () {
                             var drawYScaled = drawY / gameConstants_1.GameConstants.TILESIZE;
                             _this.items[idx].drawIcon(delta, drawXScaled, drawYScaled);
                         }
+                        // **Move drawUsingItem here, after the main selection box**
                     }
                     // Draw item description and action text (unique to full inventory view)
                     var selectedIdx = _this.selX + _this.selY * _this.cols;
@@ -10103,7 +10132,14 @@ var Inventory = /** @class */ (function () {
                             nextY_1 = _this.textWrap(line, 5, nextY_1, gameConstants_1.GameConstants.WIDTH - 10);
                         });
                     }
+                    // **Ensure drawUsingItem is not called again here**
+                    // this.drawUsingItem(delta, mainBgX, mainBgY, s, b, g);
                 }
+                // **Ensure drawUsingItem is not called again here**
+                // this.drawUsingItem(delta, mainBgX, mainBgY, s, b, g);
+            }
+            if (_this.isOpen) {
+                _this.drawUsingItem(delta, mainBgX + 1, mainBgY + 1, s, b, g);
             }
             _this.drawDraggedItem(delta);
         };
@@ -11133,6 +11169,7 @@ var Item = /** @class */ (function (_super) {
             else
                 return _this.level.softVis[_this.x][_this.y];
         };
+        _this.drawStatus = function (x, y) { };
         // Function to draw the item
         _this.draw = function (delta) {
             if (!_this.pickedUp) {
@@ -11181,6 +11218,7 @@ var Item = /** @class */ (function (_super) {
             var countX = 16 - width;
             var countY = 10;
             game_1.Game.fillTextOutline(countText, x * gameConstants_1.GameConstants.TILESIZE + countX, y * gameConstants_1.GameConstants.TILESIZE + countY, gameConstants_1.GameConstants.OUTLINE, "white");
+            _this.drawStatus(x, y);
         };
         // Function to draw the item's durability bar with color transitioning from green to red
         _this.drawDurability = function (x, y) {
@@ -11691,11 +11729,135 @@ var Usable = /** @class */ (function (_super) {
     function Usable(level, x, y) {
         var _this = _super.call(this, level, x, y) || this;
         _this.onUse = function (player) { };
+        _this.useOnOther = function (player, other) { };
+        _this.canUseOnOther = false;
         return _this;
     }
     return Usable;
 }(item_1.Item));
 exports.Usable = Usable;
+
+
+/***/ }),
+
+/***/ "./src/item/weaponBlood.ts":
+/*!*********************************!*\
+  !*** ./src/item/weaponBlood.ts ***!
+  \*********************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.WeaponBlood = void 0;
+var sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
+var usable_1 = __webpack_require__(/*! ./usable */ "./src/item/usable.ts");
+var weapon_1 = __webpack_require__(/*! ../weapon/weapon */ "./src/weapon/weapon.ts");
+var WeaponBlood = /** @class */ (function (_super) {
+    __extends(WeaponBlood, _super);
+    function WeaponBlood(level, x, y) {
+        var _this = _super.call(this, level, x, y) || this;
+        _this.onUse = function (player) {
+            player.health = Math.min(player.maxHealth, player.health + 1);
+            if (_this.level.game.rooms[player.levelID] === _this.level.game.room)
+                sound_1.Sound.heal();
+            //this.level.items = this.level.items.filter((x) => x !== this); // removes itself from the level
+        };
+        _this.useOnOther = function (player, other) {
+            if (other instanceof weapon_1.Weapon) {
+                other.applyStatus({ blood: true, poison: false });
+                player.inventory.removeItem(_this);
+                _this.level.game.pushMessage("You coat your ".concat(other.name, " in cursed blood."));
+                console.log("weapon blood used on ".concat(other.name));
+            }
+        };
+        _this.getDescription = function () {
+            return "WEAPON BLOOD\nRestores 1 heart";
+        };
+        _this.tileX = 8;
+        _this.tileY = 0;
+        _this.offsetY = -0.3;
+        _this.canUseOnOther = true;
+        return _this;
+    }
+    return WeaponBlood;
+}(usable_1.Usable));
+exports.WeaponBlood = WeaponBlood;
+
+
+/***/ }),
+
+/***/ "./src/item/weaponPoision.ts":
+/*!***********************************!*\
+  !*** ./src/item/weaponPoision.ts ***!
+  \***********************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.WeaponPoison = void 0;
+var sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
+var usable_1 = __webpack_require__(/*! ./usable */ "./src/item/usable.ts");
+var weapon_1 = __webpack_require__(/*! ../weapon/weapon */ "./src/weapon/weapon.ts");
+var WeaponPoison = /** @class */ (function (_super) {
+    __extends(WeaponPoison, _super);
+    function WeaponPoison(level, x, y) {
+        var _this = _super.call(this, level, x, y) || this;
+        _this.onUse = function (player) {
+            player.health = Math.min(player.maxHealth, player.health + 1);
+            if (_this.level.game.rooms[player.levelID] === _this.level.game.room)
+                sound_1.Sound.heal();
+            //this.level.items = this.level.items.filter((x) => x !== this); // removes itself from the level
+        };
+        _this.useOnOther = function (player, other) {
+            if (other instanceof weapon_1.Weapon) {
+                other.applyStatus({ poison: true, blood: false });
+                player.inventory.removeItem(_this);
+                _this.level.game.pushMessage("You apply the poison to your ".concat(other.name, "."));
+                console.log("weapon poison used on ".concat(other.name));
+            }
+        };
+        _this.getDescription = function () {
+            return "WEAPON POISON\nPoisons enemies";
+        };
+        _this.tileX = 7;
+        _this.tileY = 0;
+        _this.offsetY = -0.3;
+        _this.canUseOnOther = true;
+        return _this;
+    }
+    return WeaponPoison;
+}(usable_1.Usable));
+exports.WeaponPoison = WeaponPoison;
 
 
 /***/ }),
@@ -11903,7 +12065,7 @@ var LevelConstants = /** @class */ (function () {
     LevelConstants.ROOM_COUNT = 50;
     LevelConstants.HEALTH_BAR_FADEIN = 100;
     LevelConstants.HEALTH_BAR_FADEOUT = 350;
-    LevelConstants.HEALTH_BAR_TOTALTIME = 2000;
+    LevelConstants.HEALTH_BAR_TOTALTIME = 1000;
     LevelConstants.SHADED_TILE_CUTOFF = 1;
     LevelConstants.SMOOTH_LIGHTING = false; //doesn't work
     LevelConstants.MIN_VISIBILITY = 0; // visibility level of places you've already seen
@@ -13474,6 +13636,89 @@ exports.MouseCursor = MouseCursor;
 
 /***/ }),
 
+/***/ "./src/particle/damageNumber.ts":
+/*!**************************************!*\
+  !*** ./src/particle/damageNumber.ts ***!
+  \**************************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DamageNumber = void 0;
+var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+var gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
+var particle_1 = __webpack_require__(/*! ./particle */ "./src/particle/particle.ts");
+var DamageNumber = /** @class */ (function (_super) {
+    __extends(DamageNumber, _super);
+    function DamageNumber(room, x, y, damage, color, outlineColor) {
+        var _this = _super.call(this) || this;
+        _this.alpha = 1;
+        _this.frame = 0;
+        _this.xoffset = 0;
+        _this.getXoffset = function () {
+            if (_this.room.particles.length > 0) {
+                var damageNumbers = _this.room.particles.filter(function (p) { return p instanceof DamageNumber; });
+                if (damageNumbers.length % 3 === 0)
+                    return 0.5;
+                if (damageNumbers.length % 3 === 1)
+                    return 0;
+                if (damageNumbers.length % 3 === 2)
+                    return 0.25;
+            }
+        };
+        _this.drawTopLayer = function (delta) {
+            if (_this.dead)
+                return;
+            if (_this.frame > 30)
+                _this.alpha *= 0.75;
+            _this.y -= 0.03 * delta;
+            _this.frame += delta;
+            var width = game_1.Game.measureText(_this.damage.toString()).width;
+            game_1.Game.ctx.globalAlpha = _this.alpha;
+            if (_this.alpha <= 0.002) {
+                _this.alpha = 0;
+                _this.dead = true;
+            }
+            game_1.Game.fillTextOutline(_this.damage.toString(), (_this.x + 0.4 + _this.xoffset) * gameConstants_1.GameConstants.TILESIZE - width / 2, (_this.y - 0.6) * gameConstants_1.GameConstants.TILESIZE, _this.outlineColor, _this.color);
+            game_1.Game.ctx.globalAlpha = 1;
+        };
+        _this.room = room;
+        _this.damage = damage;
+        _this.x = x;
+        _this.y = y;
+        if (color)
+            _this.color = color;
+        else
+            _this.color = "red";
+        if (outlineColor)
+            _this.outlineColor = outlineColor;
+        else
+            _this.outlineColor = gameConstants_1.GameConstants.OUTLINE;
+        _this.xoffset = Math.random() * 0.2;
+        return _this;
+    }
+    return DamageNumber;
+}(particle_1.Particle));
+exports.DamageNumber = DamageNumber;
+
+
+/***/ }),
+
 /***/ "./src/particle/deathParticle.ts":
 /*!***************************************!*\
   !*** ./src/particle/deathParticle.ts ***!
@@ -14507,6 +14752,11 @@ var Player = /** @class */ (function (_super) {
             if (_this.inventory.getArmor() && _this.inventory.getArmor().health > 0) {
                 // TODO draw armor
             }
+        };
+        _this.heal = function (amount) {
+            _this.health += amount;
+            if (_this.health > _this.maxHealth)
+                _this.health = _this.maxHealth;
         };
         _this.drawSpellBeam = function (delta) {
             // Clear existing beam effects each frame
@@ -19529,6 +19779,7 @@ var DualDagger = /** @class */ (function (_super) {
                 var e = _a[_i];
                 if (e.destroyable && !e.pushable && e.pointIn(newX, newY)) {
                     e.hurt(_this.wielder, 1);
+                    _this.statusEffect(e);
                     flag = true;
                 }
             }
@@ -19818,6 +20069,7 @@ var Spear = /** @class */ (function (_super) {
                             return true;
                         else {
                             e.hurt(_this.wielder, 1);
+                            _this.statusEffect(e);
                             flag = true;
                         }
                     }
@@ -20052,12 +20304,15 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Weapon = void 0;
+var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var equippable_1 = __webpack_require__(/*! ../item/equippable */ "./src/item/equippable.ts");
 var sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
 var slashParticle_1 = __webpack_require__(/*! ../particle/slashParticle */ "./src/particle/slashParticle.ts");
+var enemy_1 = __webpack_require__(/*! ../entity/enemy/enemy */ "./src/entity/enemy/enemy.ts");
+var gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
 var Weapon = /** @class */ (function (_super) {
     __extends(Weapon, _super);
-    function Weapon(level, x, y) {
+    function Weapon(level, x, y, status) {
         var _this = _super.call(this, level, x, y) || this;
         _this.break = function () {
             _this.durability = 0;
@@ -20071,12 +20326,24 @@ var Weapon = /** @class */ (function (_super) {
                 return false;
             return true;
         };
+        _this.applyStatus = function (status) {
+            _this.status = status;
+        };
+        _this.statusEffect = function (enemy) {
+            if (enemy instanceof enemy_1.Enemy) {
+                if (_this.status.poison)
+                    enemy.poison();
+                if (_this.status.blood)
+                    enemy.bleed();
+            }
+        };
         _this.weaponMove = function (newX, newY) {
             var flag = false;
             for (var _i = 0, _a = _this.game.rooms[_this.wielder.levelID].entities; _i < _a.length; _i++) {
                 var e = _a[_i];
                 if (e.destroyable && !e.pushable && e.pointIn(newX, newY)) {
                     e.hurt(_this.wielder, _this.damage);
+                    _this.statusEffect(e);
                     flag = true;
                 }
             }
@@ -20094,6 +20361,18 @@ var Weapon = /** @class */ (function (_super) {
             }
             return !flag;
         };
+        _this.drawStatus = function (x, y) {
+            if (_this.status.poison || _this.status.blood) {
+                var tileX = 3;
+                if (_this.status.poison) {
+                    tileX = 4;
+                }
+                if (_this.status.blood) {
+                    tileX = 3;
+                }
+                game_1.Game.drawFX(tileX, 0, 1, 1, x - 1 / gameConstants_1.GameConstants.TILESIZE, y - 1 / gameConstants_1.GameConstants.TILESIZE, 1, 1);
+            }
+        };
         _this.getDescription = function () {
             return "".concat(_this.name, "\nDamage ").concat(_this.damage);
         };
@@ -20103,6 +20382,7 @@ var Weapon = /** @class */ (function (_super) {
         _this.canMine = false;
         _this.range = 1;
         _this.damage = 1;
+        _this.status = status || { poison: false, blood: false };
         return _this;
     }
     return Weapon;

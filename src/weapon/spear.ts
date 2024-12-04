@@ -27,7 +27,7 @@ export class Spear extends Weapon {
           if (e.pushable) return true;
           else {
             e.hurt(this.wielder, 1);
-
+            this.statusEffect(e);
             flag = true;
           }
         }
@@ -49,10 +49,10 @@ export class Spear extends Weapon {
       this.wielder.hitX = 0.5 * (this.wielder.x - newX);
       this.wielder.hitY = 0.5 * (this.wielder.y - newY);
       this.game.rooms[this.wielder.levelID].particles.push(
-        new SlashParticle(newX, newY)
+        new SlashParticle(newX, newY),
       );
       this.game.rooms[this.wielder.levelID].particles.push(
-        new SlashParticle(newX2, newY2)
+        new SlashParticle(newX2, newY2),
       );
       this.game.rooms[this.wielder.levelID].tick(this.wielder);
       if (this.wielder === this.game.players[this.game.localPlayerID])
@@ -68,7 +68,7 @@ export class Spear extends Weapon {
       this.wielder.hitX = 0.5 * (this.wielder.x - newX);
       this.wielder.hitY = 0.5 * (this.wielder.y - newY);
       this.game.rooms[this.wielder.levelID].particles.push(
-        new SlashParticle(newX, newY)
+        new SlashParticle(newX, newY),
       );
       this.game.rooms[this.wielder.levelID].tick(this.wielder);
       if (this.wielder === this.game.players[this.game.localPlayerID])
