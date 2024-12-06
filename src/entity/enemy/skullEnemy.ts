@@ -47,7 +47,7 @@ export class SkullEnemy extends Enemy {
     if (drop) this.drop = drop;
     else {
       let dropProb = Random.rand();
-      if (dropProb < 0.05) this.drop = new Spear(this.room, this.x, this.y);
+      if (dropProb < 0.03) this.drop = new Spear(this.room, this.x, this.y);
       else if (dropProb < 0.01)
         this.drop = new RedGem(this.room, this.x, this.y);
       //else if (dropProb < 0.2) this.drop = new Candle(this.room, 0, 0);
@@ -79,6 +79,7 @@ export class SkullEnemy extends Enemy {
 
     if (this.health == 1) {
       this.unconscious = true;
+
       ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 3, 28);
     } else {
       this.healthBar.hurt();
@@ -105,8 +106,8 @@ export class SkullEnemy extends Enemy {
         this.unconscious = true;
         this.ticksSinceFirstHit++;
         if (this.ticksSinceFirstHit >= this.REGEN_TICKS) {
-          this.health = 2;
           this.healthBar.hurt();
+          this.health = 2;
           this.unconscious = false;
         }
         this.ticks++;

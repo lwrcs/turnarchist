@@ -261,16 +261,20 @@ export class Player extends Drawable {
     }
   };
   commaListener = () => {
+    this.inventory.mostRecentInput = "keyboard";
     this.inventory.left();
   };
   periodListener = () => {
+    this.inventory.mostRecentInput = "keyboard";
     this.inventory.right();
   };
   numKeyListener = (input: InputEnum) => {
+    this.inventory.mostRecentInput = "keyboard";
     this.inventory.handleNumKey(input - 13);
   };
 
   tapListener = () => {
+    this.inventory.mostRecentInput = "mouse";
     this.inventory.open();
   };
   iListener = () => {
@@ -288,6 +292,7 @@ export class Player extends Drawable {
     );
   };
   leftListener = (isLocal: boolean): boolean => {
+    this.inventory.mostRecentInput = "keyboard";
     if (this.inventory.isOpen) {
       this.inventory.left();
       return true;
@@ -303,6 +308,7 @@ export class Player extends Drawable {
     return false;
   };
   rightListener = (isLocal: boolean): boolean => {
+    this.inventory.mostRecentInput = "keyboard";
     if (this.inventory.isOpen) {
       this.inventory.right();
       return true;
@@ -318,6 +324,7 @@ export class Player extends Drawable {
     return false;
   };
   upListener = (isLocal: boolean): boolean => {
+    this.inventory.mostRecentInput = "keyboard";
     if (this.inventory.isOpen) {
       this.inventory.up();
       return true;
@@ -333,6 +340,7 @@ export class Player extends Drawable {
     return false;
   };
   downListener = (isLocal: boolean): boolean => {
+    this.inventory.mostRecentInput = "keyboard";
     if (this.inventory.isOpen) {
       this.inventory.down();
       return true;
@@ -348,6 +356,7 @@ export class Player extends Drawable {
     return false;
   };
   spaceListener = () => {
+    this.inventory.mostRecentInput = "keyboard";
     if (!this.game.chatOpen) {
       if (this.dead) {
         this.restart();
@@ -363,6 +372,7 @@ export class Player extends Drawable {
     }
   };
   mouseLeftClick = () => {
+    this.inventory.mostRecentInput = "mouse";
     if (this.dead) {
       this.restart();
     } else {
@@ -390,10 +400,12 @@ export class Player extends Drawable {
     }
   };
   mouseRightClick = () => {
+    this.inventory.mostRecentInput = "mouse";
     this.inventory.mouseRightClick();
   };
 
   mouseMove = () => {
+    this.inventory.mostRecentInput = "mouse";
     this.inventory.mouseMove();
     //this.faceMouse();
     this.setTileCursorPosition();
@@ -500,8 +512,6 @@ export class Player extends Drawable {
   };
 
   tryMove = (x: number, y: number) => {
-    console.log(`lastX, lastY: ${this.lastX}, ${this.lastY}`);
-
     let slowMotion = this.slowMotionEnabled;
     let newMove = { x: x, y: y };
     // TODO don't move if hit by enemy
@@ -520,9 +530,13 @@ export class Player extends Drawable {
       }
 
     for (let e of this.game.rooms[this.levelID].entities) {
+      e.lastX = e.x;
+      e.lastY = e.y;
+      console.log(`e.lastX, e.lastY: ${e.lastX}, ${e.lastY}`);
       if (this.tryCollide(e, x, y)) {
         if (e.pushable) {
           // pushing a crate or barrel
+
           let dx = x - this.x;
           let dy = y - this.y;
           let nextX = x + dx;
@@ -533,6 +547,8 @@ export class Player extends Drawable {
           while (true) {
             foundEnd = true;
             for (const f of this.game.rooms[this.levelID].entities) {
+              f.lastX = f.x;
+              f.lastY = f.y;
               if (f.pointIn(nextX, nextY)) {
                 if (!f.chainPushable) {
                   enemyEnd = true;
@@ -573,7 +589,10 @@ export class Player extends Drawable {
           } else {
             if (this.game.rooms[this.levelID] === this.game.room) Sound.push();
             // here pushedEnemies may still be []
+
             for (const f of pushedEnemies) {
+              f.lastX = f.x;
+              f.lastY = f.y;
               f.x += dx;
               f.y += dy;
               f.drawX = dx;
@@ -589,6 +608,7 @@ export class Player extends Drawable {
               pushedEnemies[pushedEnemies.length - 1].crush();
               if (this.game.rooms[this.levelID] === this.game.room) Sound.hit();
             }
+
             e.x += dx;
             e.y += dy;
             e.drawX = dx;
@@ -623,7 +643,6 @@ export class Player extends Drawable {
     }
   };
   private updateLastPosition = (x: number, y: number) => {
-    console.log(`updateLastPosition: ${x}, ${y}`);
     this.lastX = x;
     this.lastY = y;
   };

@@ -29,14 +29,17 @@ export abstract class Weapon extends Equippable {
     this.range = 1;
     this.damage = 1;
     this.status = status || { poison: false, blood: false };
+    this.durability = 50;
+    this.durabilityMax = 50;
   }
 
   break = () => {
     this.durability = 0;
     this.wielder.inventory.weapon = null;
     this.toggleEquip();
-    this.wielder.inventory.removeItem(this);
-    this.wielder = null;
+    //this.wielder.inventory.removeItem(this);
+    //this.wielder = null;
+    this.broken = true;
   };
 
   coEquippable = (other: Equippable): boolean => {
@@ -108,7 +111,14 @@ export abstract class Weapon extends Equippable {
   };
 
   getDescription = (): string => {
-    return `${this.name}\nDamage ${this.damage}`;
+    let broken = this.broken ? " (broken)" : "";
+    let status = [];
+    let durability = "";
+    if (this.status.poison) status.push("Poison");
+    if (this.status.blood) status.push(" Bleed");
+    if (this.durability < this.durabilityMax)
+      durability = ` Durability: ${this.durability}/${this.durabilityMax}`;
+    return `${this.name}${broken}\n${status.join(", ")}\n${durability}\n${this.description}`;
   };
 
   tick = () => {};

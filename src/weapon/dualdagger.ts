@@ -16,7 +16,11 @@ export class DualDagger extends Weapon {
     this.tileX = 23;
     this.tileY = 0;
     this.firstAttack = true;
-    this.name = "Dual Dagger";
+    this.name = "Dual Daggers";
+    this.durability = 75;
+    this.durabilityMax = 75;
+    this.description =
+      "After the first attack, enemies will not take their turn until you attack or move again.";
   }
 
   tickInInventory = () => {
@@ -62,9 +66,5 @@ export class DualDagger extends Weapon {
       this.degrade();
     }
     return !flag;
-  };
-
-  getDescription = (): string => {
-    return "Dual Daggers\nOne extra attack per turn";
   };
 }

@@ -68,8 +68,8 @@ export class Entity extends Drawable {
   protected sleepingZFrame = 0;
   alertTicks: number;
   protected exclamationFrame: number;
-  protected lastX: number;
-  protected lastY: number;
+  lastX: number;
+  lastY: number;
   protected hitBy: Player;
   protected crushX: number;
   protected crushY: number;
@@ -192,8 +192,8 @@ export class Entity extends Drawable {
       outlineColor = "red";
     }
     if (type === "heal") {
-      color = "purple";
-      outlineColor = "white";
+      color = "#B8A4FF";
+      outlineColor = GameConstants.OUTLINE;
     }
     this.room.particles.push(
       new DamageNumber(this.room, this.x, this.y, damage, color, outlineColor),
@@ -253,14 +253,20 @@ export class Entity extends Drawable {
   interact = (player: Player) => {};
 
   readonly dropLoot = () => {
+    let coordX: number;
+    let coordY: number;
+    if (this.crushed) {
+      coordX = this.lastX;
+      coordY = this.lastY;
+    } else {
+      coordX = this.x;
+      coordY = this.y;
+    }
     if (this.drop) {
       this.drop.level = this.room;
-      if (!this.room.roomArray[this.x][this.y].isSolid()) {
-        this.drop.x = this.x;
-        this.drop.y = this.y;
-      } else if (this.room.roomArray[this.x][this.y].isSolid()) {
-        this.drop.x = this.lastX;
-        this.drop.y = this.lastY;
+      if (!this.room.roomArray[coordX][coordY].isSolid()) {
+        this.drop.x = coordX;
+        this.drop.y = coordY;
       }
       this.room.items.push(this.drop);
       this.drop.onDrop();
@@ -268,26 +274,25 @@ export class Entity extends Drawable {
   };
 
   kill = () => {
-    if (this.room.roomArray[this.x][this.y] instanceof Floor) {
-      let b = new Bones(this.room, this.x, this.y);
-      b.skin = this.room.roomArray[this.x][this.y].skin;
-      this.room.roomArray[this.x][this.y] = b;
+    let x = this.x;
+    let y = this.y;
+    if (this.crushed) {
+      x = this.lastX;
+      y = this.lastY;
+    }
+    if (this.room.roomArray[x][y] instanceof Floor) {
+      let b = new Bones(this.room, x, y);
+      b.skin = this.room.roomArray[x][y].skin;
+      this.room.roomArray[x][y] = b;
     }
     this.emitEnemyKilled();
 
-    this.killNoBones();
+    this.dead = true;
+    this.dropLoot();
   };
 
   killNoBones = () => {
     this.dead = true;
-    /*GenericParticle.spawnCluster(
-      this.room,
-      this.x + 0.5,
-      this.y + 0.5,
-      this.deathParticleColor
-    );
-    this.room.particles.push(new DeathParticle(this.x, this.y));
-*/
     this.dropLoot();
   };
 

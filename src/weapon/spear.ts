@@ -13,7 +13,9 @@ export class Spear extends Weapon {
 
     this.tileX = 24;
     this.tileY = 0;
-    this.name = "Spear";
+    this.name = "spear";
+    this.description =
+      "Hits enemies in front of you within a range of 2 tiles.";
   }
 
   weaponMove = (newX: number, newY: number): boolean => {

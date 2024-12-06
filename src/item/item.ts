@@ -29,6 +29,9 @@ export class Item extends Drawable {
   randomOffset: number;
   durability: number;
   durabilityMax: number;
+  broken: boolean;
+  description: string;
+  drawOffset: number;
 
   // Constructor for the Item class
   constructor(level: Room, x: number, y: number) {
@@ -53,8 +56,17 @@ export class Item extends Drawable {
     this.name = "";
     this.startY = y;
     this.randomOffset = Math.random();
-    this.durability = 25;
-    this.durabilityMax = 25;
+    this.durability = 50;
+    this.durabilityMax = 50;
+    this.broken = false;
+    this.description = "";
+    this.drawOffset = 0;
+  }
+
+  static add<
+    T extends new (room: Room, x: number, y: number, ...rest: any[]) => Item,
+  >(this: T, room: Room, x: number, y: number, ...rest: any[]) {
+    room.items.push(new this(room, x, y, ...rest));
   }
 
   // Empty tick function to be overridden by subclasses
@@ -87,7 +99,9 @@ export class Item extends Drawable {
     }
   };
 
-  dropFromInventory = () => {};
+  dropFromInventory = () => {
+    this.setDrawOffset();
+  };
 
   // Function to get the amount of shade at the item's location
   shadeAmount = () => {
@@ -96,6 +110,21 @@ export class Item extends Drawable {
   };
 
   drawStatus = (x: number, y: number) => {};
+
+  drawBrokenSymbol = (x: number, y: number) => {
+    if (this.broken) {
+      Game.drawFX(
+        5,
+        0,
+        1,
+        1,
+        x - 0.5 / GameConstants.TILESIZE,
+        y - 0.5 / GameConstants.TILESIZE,
+        1,
+        1,
+      );
+    }
+  };
 
   // Function to draw the item
   draw = (delta: number) => {
@@ -112,7 +141,7 @@ export class Item extends Drawable {
         this.tileY,
         1,
         2,
-        this.x + this.w * (this.scaleFactor * -0.5 + 0.5),
+        this.x + this.w * (this.scaleFactor * -0.5 + 0.5) + this.drawOffset,
         this.y +
           Math.sin(this.frame) * 0.07 -
           1 +
@@ -123,6 +152,19 @@ export class Item extends Drawable {
         this.level.shadeColor,
         this.shadeAmount(),
       );
+    }
+  };
+
+  setDrawOffset = () => {
+    const itemsOnTile = this.level.items.filter(
+      (item) => item.x === this.x && item.y === this.y,
+    );
+    if (itemsOnTile.length > 1) {
+      itemsOnTile.forEach((item) => {
+        item.drawOffset =
+          (-itemsOnTile.length / 2 + itemsOnTile.indexOf(item) + 1) /
+          itemsOnTile.length;
+      });
     }
   };
 
@@ -137,6 +179,8 @@ export class Item extends Drawable {
       //this.x += (Math.sin(Date.now() / 50) * delta) / 10;
       this.alpha -= 0.03 * delta;
       if (Math.abs(this.y - this.startY) > 5) {
+        this.drawOffset = 0;
+
         this.level.items = this.level.items.filter((x) => x !== this);
       }
 
@@ -161,8 +205,23 @@ export class Item extends Drawable {
   drawIcon = (delta: number, x: number, y: number, opacity = 1) => {
     if (GameConstants.ALPHA_ENABLED) Game.ctx.globalAlpha = opacity;
     this.drawDurability(x, y);
+    let shake = 0;
+    if (this.durability <= 1 && !this.broken)
+      shake =
+        Math.round(Math.sin(Date.now() / 25) + 1 / 2) /
+        2 /
+        GameConstants.TILESIZE;
 
-    Game.drawItem(this.tileX, this.tileY, 1, 2, x, y - 1, this.w, this.h);
+    Game.drawItem(
+      this.tileX,
+      this.tileY,
+      1,
+      2,
+      x + shake,
+      y - 1,
+      this.w,
+      this.h,
+    );
     Game.ctx.globalAlpha = 1;
 
     let countText = this.stackCount <= 1 ? "" : "" + this.stackCount;
@@ -178,6 +237,7 @@ export class Item extends Drawable {
       "white",
     );
     this.drawStatus(x, y);
+    this.drawBrokenSymbol(x, y);
   };
 
   // Function to draw the item's durability bar with color transitioning from green to red
@@ -194,22 +254,23 @@ export class Item extends Drawable {
       );
 
       const iconWidth = GameConstants.TILESIZE;
-      const barWidth = durabilityRatio * iconWidth;
+      const barWidth = Math.ceil(durabilityRatio * iconWidth); // Round to nearest pixel
       const barHeight = 2; // 2 pixels tall
 
       // Calculate the position of the durability bar
-      const barX = x * GameConstants.TILESIZE;
-      const barY = y * GameConstants.TILESIZE + GameConstants.TILESIZE - 2;
+      const barX = Math.round(x * GameConstants.TILESIZE); // Round to nearest pixel
+      const barY = Math.round(
+        y * GameConstants.TILESIZE + GameConstants.TILESIZE - 2,
+      ); // Round to nearest pixel
 
       // Set the fill style for the durability bar
       Game.ctx.fillStyle = color;
-      // Set the interpolation mode to nearest neighbor
       Game.ctx.imageSmoothingEnabled = false;
 
       // Draw the durability bar
       Game.ctx.fillRect(barX, barY, barWidth, barHeight);
 
-      // Reset fill style to default
+      // Reset settings
       Game.ctx.fillStyle = "white";
     }
   };

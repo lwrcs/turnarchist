@@ -9,8 +9,8 @@ import { Weapon } from "../weapon/weapon";
 export class WeaponPoison extends Usable {
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
-    this.tileX = 7;
-    this.tileY = 0;
+    this.tileX = 11;
+    this.tileY = 4;
     this.offsetY = -0.3;
     this.canUseOnOther = true;
   }
@@ -35,6 +35,6 @@ export class WeaponPoison extends Usable {
   };
 
   getDescription = () => {
-    return "WEAPON POISON\nPoisons enemies";
+    return "WEAPON POISON\nCan be applied to weapons to deal poison damage";
   };
 }

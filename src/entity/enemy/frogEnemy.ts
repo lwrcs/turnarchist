@@ -12,6 +12,9 @@ import { GameConstants } from "../../gameConstants";
 import { ImageParticle } from "../../particle/imageParticle";
 import { Enemy } from "./enemy";
 import { Utils } from "../../utils";
+import { Random } from "../../random";
+import { WeaponPoison } from "../../item/weaponPoision";
+import { GreenGem } from "../../item/greengem";
 
 export class FrogEnemy extends Enemy {
   ticks: number;
@@ -54,6 +57,16 @@ export class FrogEnemy extends Enemy {
     this.drawMoveSpeed = 0.2;
     this.imageParticleX = 3;
     this.imageParticleY = 30;
+
+    if (drop) this.drop = drop;
+    else {
+      let dropProb = Random.rand();
+      if (dropProb < 0.05)
+        this.drop = new WeaponPoison(this.room, this.x, this.y);
+      else if (dropProb < 0.01)
+        this.drop = new GreenGem(this.room, this.x, this.y);
+      else this.drop = new Coin(this.room, this.x, this.y);
+    }
   }
 
   hit = (): number => {

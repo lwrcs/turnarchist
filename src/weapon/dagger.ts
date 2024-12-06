@@ -12,7 +12,8 @@ export class Dagger extends Weapon {
 
     this.tileX = 22;
     this.tileY = 0;
-    this.name = "Dagger";
+    this.name = "dagger";
+    this.description = "A basic but dependable weapon.";
   }
 
   degrade = () => {};

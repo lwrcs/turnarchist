@@ -13,7 +13,7 @@ export class Shotgun extends Weapon {
 
     this.tileX = 26;
     this.tileY = 0;
-    this.name = "Shotgun";
+    this.name = "shotgun";
   }
 
   weaponMove = (newX: number, newY: number): boolean => {
@@ -130,7 +130,7 @@ export class Shotgun extends Weapon {
         this.wielder.y,
         targetX + 0.5,
         targetY,
-        "black"
+        "black",
       );
       GenericParticle.shotgun(
         this.game.rooms[this.wielder.levelID],
@@ -138,7 +138,7 @@ export class Shotgun extends Weapon {
         this.wielder.y,
         targetX + 0.5,
         targetY,
-        "#ffddff"
+        "#ffddff",
       );
       let gp = new GenericParticle(
         this.game.rooms[this.wielder.levelID],
@@ -150,7 +150,7 @@ export class Shotgun extends Weapon {
         0,
         0,
         "white",
-        0
+        0,
       );
       gp.expirationTimer = 10;
       this.game.rooms[this.wielder.levelID].particles.push(gp);

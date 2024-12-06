@@ -232,6 +232,8 @@ export class Room {
   lastEnemyCount: number;
   outerWalls: Array<Wall>;
   level: Level;
+  onMainPath: boolean = false;
+  pathIndex: number = 0;
   private pointInside(
     x: number,
     y: number,
@@ -259,10 +261,8 @@ export class Room {
     mapGroup: number,
     level: Level,
     rand = Random.rand,
-    isTopOpen = false,
-    isRightOpen = false,
-    isBottomOpen = false,
-    isLeftOpen = false,
+    onMainPath = false,
+    pathIndex: number = 0,
   ) {
     this.game = game;
     this.roomX = x; //Math.floor(- this.width / 2);
@@ -322,6 +322,9 @@ export class Room {
     if (this.type === RoomType.ROPECAVE || this.type === RoomType.CAVE)
       this.skin = SkinType.CAVE;
     this.buildEmptyRoom();
+
+    this.onMainPath = onMainPath;
+    this.pathIndex = pathIndex;
   }
 
   public async changeReverb(newImpulsePath: string) {
@@ -580,49 +583,20 @@ export class Room {
     if (tiles === null) return;
     //don't put enemies near the entrances so you don't get screwed instantly
 
-    const adjecentTiles = [];
-    let spawnerCount = 0;
-    for (let door of this.doors) {
-      if (door.doorDir === Direction.UP) {
-        adjecentTiles.push(
-          { x: door.x, y: door.y - 2 },
-          { x: door.x - 1, y: door.y - 1 },
-          { x: door.x + 1, y: door.y - 1 },
-          { x: door.x - 1, y: door.y - 2 },
-          { x: door.x + 1, y: door.y - 2 },
-        );
-      }
-      if (door.doorDir === Direction.DOWN) {
-        adjecentTiles.push(
-          { x: door.x, y: door.y + 2 },
-          { x: door.x - 1, y: door.y + 1 },
-          { x: door.x + 1, y: door.y + 1 },
-          { x: door.x - 1, y: door.y + 2 },
-          { x: door.x + 1, y: door.y + 2 },
-        );
-      }
-      if (door.doorDir === Direction.LEFT) {
-        adjecentTiles.push(
-          { x: door.x - 2, y: door.y },
-          { x: door.x - 1, y: door.y - 1 },
-          { x: door.x - 1, y: door.y + 1 },
-          { x: door.x - 1, y: door.y - 2 },
-          { x: door.x - 1, y: door.y + 2 },
-        );
-      }
-      if (door.doorDir === Direction.RIGHT) {
-        adjecentTiles.push(
-          { x: door.x + 2, y: door.y },
-          { x: door.x + 1, y: door.y - 1 },
-          { x: door.x + 1, y: door.y + 1 },
-          { x: door.x + 1, y: door.y - 2 },
-          { x: door.x + 1, y: door.y + 2 },
-        );
+    // Create a Set to store coordinates that should be excluded
+    const excludedCoords = new Set<string>();
+
+    // For each door, add coordinates in a 5x5 area around it to excluded set
+    for (const door of this.doors) {
+      for (let dx = -2; dx <= 2; dx++) {
+        for (let dy = -2; dy <= 2; dy++) {
+          excludedCoords.add(`${door.x + dx},${door.y + dy}`);
+        }
       }
     }
-    tiles = tiles.filter(
-      (tile) => !adjecentTiles.some((t) => t.x === tile.x && t.y === tile.y),
-    );
+
+    // Filter tiles that aren't in the excluded set
+    tiles = tiles.filter((tile) => !excludedCoords.has(`${tile.x},${tile.y}`));
     // Loop through the number of enemies to be added
     for (let i = 0; i < numEnemies; i++) {
       let rerolls = 1;

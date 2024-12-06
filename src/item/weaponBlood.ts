@@ -10,7 +10,7 @@ export class WeaponBlood extends Usable {
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
     this.tileX = 8;
-    this.tileY = 0;
+    this.tileY = 2;
     this.offsetY = -0.3;
     this.canUseOnOther = true;
   }
@@ -35,6 +35,6 @@ export class WeaponBlood extends Usable {
   };
 
   getDescription = () => {
-    return "WEAPON BLOOD\nRestores 1 heart";
+    return "WEAPON BLOOD\nCan be applied to weapons to deal bleed damage";
   };
 }

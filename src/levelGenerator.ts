@@ -46,6 +46,8 @@ class Partition {
   isRightOpen: boolean;
   isBottomOpen: boolean;
   isLeftOpen: boolean;
+  onMainPath: boolean;
+  pathIndex: number;
 
   constructor(x: number, y: number, w: number, h: number, fillStyle: string) {
     this.x = x;
@@ -60,6 +62,8 @@ class Partition {
     this.isRightOpen = true;
     this.isBottomOpen = true;
     this.isLeftOpen = true;
+    this.onMainPath = false;
+    this.pathIndex = 0;
   }
 
   split = async (): Promise<Array<Partition>> => {
@@ -1115,10 +1119,6 @@ export class LevelGenerator {
         mapGroup,
         this.game.levels[depth],
         Random.rand,
-        partition.isTopOpen, // New parameter
-        partition.isRightOpen, // New parameter
-        partition.isBottomOpen, // New parameter
-        partition.isLeftOpen, // New parameter
       );
       rooms.push(room);
     }

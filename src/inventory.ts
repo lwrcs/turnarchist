@@ -68,6 +68,7 @@ export class Inventory {
   // New state for using items on other items
   private usingItem: Usable | null = null;
   private usingItemIndex: number | null = null;
+  mostRecentInput: "mouse" | "keyboard" = "keyboard";
 
   constructor(game: Game, player: Player) {
     this.game = game;
@@ -236,6 +237,7 @@ export class Inventory {
   };
 
   mouseLeftClick = () => {
+    this.mostRecentInput = "mouse";
     const { x, y } = MouseCursor.getInstance().getPosition();
     const bounds = this.isPointInInventoryBounds(x, y);
 
@@ -246,6 +248,7 @@ export class Inventory {
   };
 
   mouseRightClick = () => {
+    this.mostRecentInput = "mouse";
     const { x, y } = MouseCursor.getInstance().getPosition();
     const bounds = this.isPointInInventoryBounds(x, y);
 
@@ -255,24 +258,31 @@ export class Inventory {
   };
 
   leftQuickbar = () => {
+    this.mostRecentInput = "keyboard";
+
     this.left();
   };
 
   rightQuickbar = () => {
+    this.mostRecentInput = "keyboard";
     this.right();
   };
 
   spaceQuickbar = () => {
+    this.mostRecentInput = "keyboard";
     this.itemUse();
   };
 
   handleNumKey = (num: number) => {
+    this.mostRecentInput = "keyboard";
+
     this.selX = Math.max(0, Math.min(num - 1, this.cols - 1));
     this.selY = 0;
     this.itemUse();
   };
 
   mouseMove = () => {
+    this.mostRecentInput = "mouse";
     const { x, y } = MouseCursor.getInstance().getPosition();
     const bounds = this.isPointInInventoryBounds(x, y);
 
@@ -389,6 +399,7 @@ export class Inventory {
     const item = this.items[index];
     if (item === null) return;
     this.dropItem(item, index);
+    item.setDrawOffset();
   };
 
   dropItem = (item: Item, index: number) => {
@@ -616,7 +627,7 @@ export class Inventory {
     Game.ctx.fillRect(startX - ob, startY - 1, width + 2, height + 2);
 
     // Draw highlighted background for selected item only if mouse is in bounds
-    if (isInBounds) {
+    if (isInBounds || this.mostRecentInput === "keyboard") {
       Game.ctx.fillRect(
         startX + this.selX * (s + 2 * b + g) - hg - ob,
         startY - hg - ob,
@@ -668,7 +679,7 @@ export class Inventory {
     }
 
     // Draw selection box only if mouse is in bounds
-    if (isInBounds) {
+    if (isInBounds || this.mostRecentInput === "keyboard") {
       const selStartX = startX + this.selX * (s + 2 * b + g);
       const selStartY = startY;
 
@@ -809,7 +820,7 @@ export class Inventory {
       Game.ctx.fillRect(mainBgX, mainBgY, width + 2 * ob, height + 2 * ob);
 
       // Draw highlighted background for selected item only if mouse is in bounds
-      if (isInBounds) {
+      if (isInBounds || this.mostRecentInput === "keyboard") {
         const highlightX =
           Math.round(
             0.5 * GameConstants.WIDTH -
@@ -911,7 +922,7 @@ export class Inventory {
         });
 
         // Draw selection box and related elements only if mouse is in bounds
-        if (isInBounds) {
+        if (isInBounds || this.mostRecentInput === "keyboard") {
           // Draw selection box
           Game.ctx.fillStyle = OUTLINE_COLOR;
           Game.ctx.fillRect(

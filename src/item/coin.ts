@@ -1,9 +1,6 @@
 import { Item } from "./item";
-import { Player } from "../player";
 import { Game } from "../game";
 import { Room } from "../room";
-import { TextParticle } from "../particle/textParticle";
-import { GameConstants } from "../gameConstants";
 import { Sound } from "../sound";
 
 export class Coin extends Item {

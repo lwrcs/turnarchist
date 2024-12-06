@@ -6,6 +6,8 @@ import { LevelConstants } from "../../levelConstants";
 import { GenericParticle } from "../../particle/genericParticle";
 import { EntityType } from "../entity";
 import { ImageParticle } from "../../particle/imageParticle";
+import { WeaponFragments } from "../../item/weaponFragments";
+import { Coin } from "../../item/coin";
 
 export class Barrel extends Entity {
   constructor(room: Room, game: Game, x: number, y: number) {
@@ -17,6 +19,11 @@ export class Barrel extends Entity {
     this.hasShadow = false;
     this.pushable = true;
     this.name = "barrel";
+    if (Math.random() < 0.1) {
+      this.drop = new WeaponFragments(this.room, this.x, this.y);
+    } else {
+      this.drop = new Coin(this.room, this.x, this.y);
+    }
   }
 
   get type() {
@@ -25,6 +32,7 @@ export class Barrel extends Entity {
 
   kill = () => {
     ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 3, 25);
+    this.dropLoot();
 
     this.dead = true;
   };

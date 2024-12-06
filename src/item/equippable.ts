@@ -22,6 +22,17 @@ export class Equippable extends Item {
 
   toggleEquip = () => {
     this.equipped = !this.equipped;
+    if (this.broken) {
+      this.equipped = false;
+      let pronoun = this.name.endsWith("s") ? "them" : "it";
+      this.level.game.pushMessage(
+        "You'll have to fix your " +
+          this.name +
+          " before you can use " +
+          pronoun +
+          ".",
+      );
+    }
   };
 
   drawEquipped = (delta: number, x: number, y: number) => {
@@ -35,8 +46,9 @@ export class Equippable extends Item {
 
   break = () => {
     this.durability = 0;
+    this.broken = true;
     this.toggleEquip();
-    this.wielder.inventory.removeItem(this);
+    //this.wielder.inventory.removeItem(this);
     this.wielder = null;
   };
 
