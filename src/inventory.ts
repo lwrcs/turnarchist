@@ -399,7 +399,6 @@ export class Inventory {
     const item = this.items[index];
     if (item === null) return;
     this.dropItem(item, index);
-    item.setDrawOffset();
   };
 
   dropItem = (item: Item, index: number) => {

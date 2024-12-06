@@ -7963,7 +7963,7 @@ var GameConstants = /** @class */ (function () {
     GameConstants.DEVELOPER_MODE = false;
     GameConstants.FPS = 120;
     GameConstants.ALPHA_ENABLED = true;
-    GameConstants.SHADE_LEVELS = 25;
+    GameConstants.SHADE_LEVELS = 256;
     GameConstants.TILESIZE = 16;
     GameConstants.SCALE = 3;
     GameConstants.SWIPE_THRESH = Math.pow(25, 2); // (size of swipe threshold circle)^2
@@ -9695,7 +9695,6 @@ var Inventory = /** @class */ (function () {
             if (item === null)
                 return;
             _this.dropItem(item, index);
-            item.setDrawOffset();
         };
         this.dropItem = function (item, index) {
             item.level = _this.game.rooms[_this.player.levelID];
@@ -11858,7 +11857,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Level = exports.enemyMinimumDepth = void 0;
 exports.enemyMinimumDepth = {
     1: 0,
-    2: 0,
+    2: 1,
     3: 0,
     4: 0,
     5: 1,
@@ -16382,11 +16381,11 @@ var Room = /** @class */ (function () {
             for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
                 for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
                     var visDiff = Math.abs(_this.softVis[x][y] - _this.vis[x][y]);
-                    if (visDiff >= 0.05) {
+                    if (visDiff > 0.01) {
                         if (_this.softVis[x][y] < _this.vis[x][y])
-                            _this.softVis[x][y] += (visDiff / 10) * delta;
+                            _this.softVis[x][y] += visDiff * 0.05 * delta;
                         else if (_this.softVis[x][y] > _this.vis[x][y])
-                            _this.softVis[x][y] -= (visDiff / 10) * delta;
+                            _this.softVis[x][y] -= visDiff * 0.05 * delta;
                     }
                     // if (this.softVis[x][y] < 0.01) this.softVis[x][y] = 0;
                 }
@@ -16398,7 +16397,7 @@ var Room = /** @class */ (function () {
                     var linearSoftCol = _this.softCol[x][y];
                     var linearCol = _this.col[x][y];
                     var diffR = Math.abs(linearCol[0] - linearSoftCol[0]);
-                    if (diffR >= 16) {
+                    if (diffR >= 8) {
                         if (linearSoftCol[0] < linearCol[0])
                             linearSoftCol[0] += (20 * delta) / 2;
                         else if (linearSoftCol[0] > linearCol[0])
@@ -16654,7 +16653,7 @@ var Room = /** @class */ (function () {
                 return normalized / 12.92;
             }
             else {
-                return Math.pow((normalized + 0.055) / 1.055, 2.4);
+                return Math.pow((normalized + 0.055) / 1.055, 2.2);
             }
         };
         this.linearToSRGB = function (value) {
@@ -16856,12 +16855,12 @@ var Room = /** @class */ (function () {
         };
         this.draw = function (delta) {
             hitWarning_1.HitWarning.updateFrame(delta);
-            _this.fadeLighting(delta);
             _this.fadeRgb(delta);
+            _this.fadeLighting(delta);
         };
         this.drawColorLayer = function () {
             game_1.Game.ctx.globalCompositeOperation = "soft-light";
-            game_1.Game.ctx.globalAlpha = 0.6;
+            game_1.Game.ctx.globalAlpha = 0.75;
             for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
                 for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
                     var _a = _this.softCol[x][y], r = _a[0], g = _a[1], b = _a[2];

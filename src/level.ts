@@ -15,7 +15,7 @@ export interface EnemyParameters {
 
 export const enemyMinimumDepth: Record<number, number> = {
   1: 0, // CrabEnemy
-  2: 0, // FrogEnemy
+  2: 1, // FrogEnemy
   3: 0, // ZombieEnemy
   4: 0, // SkullEnemy
   5: 1, // EnergyWizardEnemy

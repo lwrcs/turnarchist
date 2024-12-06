@@ -1313,11 +1313,11 @@ export class Room {
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
         const visDiff = Math.abs(this.softVis[x][y] - this.vis[x][y]);
-        if (visDiff >= 0.05) {
+        if (visDiff > 0.01) {
           if (this.softVis[x][y] < this.vis[x][y])
-            this.softVis[x][y] += (visDiff / 10) * delta;
+            this.softVis[x][y] += visDiff * 0.05 * delta;
           else if (this.softVis[x][y] > this.vis[x][y])
-            this.softVis[x][y] -= (visDiff / 10) * delta;
+            this.softVis[x][y] -= visDiff * 0.05 * delta;
         }
 
         // if (this.softVis[x][y] < 0.01) this.softVis[x][y] = 0;
@@ -1331,7 +1331,7 @@ export class Room {
         const linearSoftCol = this.softCol[x][y];
         const linearCol = this.col[x][y];
         let diffR = Math.abs(linearCol[0] - linearSoftCol[0]);
-        if (diffR >= 16) {
+        if (diffR >= 8) {
           if (linearSoftCol[0] < linearCol[0])
             linearSoftCol[0] += (20 * delta) / 2;
           else if (linearSoftCol[0] > linearCol[0])
@@ -1666,7 +1666,7 @@ export class Room {
     if (normalized <= 0.04045) {
       return normalized / 12.92;
     } else {
-      return Math.pow((normalized + 0.055) / 1.055, 2.4);
+      return Math.pow((normalized + 0.055) / 1.055, 2.2);
     }
   };
 
@@ -1907,13 +1907,13 @@ export class Room {
 
   draw = (delta: number) => {
     HitWarning.updateFrame(delta);
-    this.fadeLighting(delta);
     this.fadeRgb(delta);
+    this.fadeLighting(delta);
   };
 
   drawColorLayer = () => {
     Game.ctx.globalCompositeOperation = "soft-light";
-    Game.ctx.globalAlpha = 0.6;
+    Game.ctx.globalAlpha = 0.75;
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
         const [r, g, b] = this.softCol[x][y];
