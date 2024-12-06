@@ -14195,6 +14195,7 @@ var Player = /** @class */ (function (_super) {
         var _this = _super.call(this) || this;
         _this.animationFrameId = null;
         _this.isProcessingQueue = false;
+        _this.lowHealthFrame = 0;
         _this.inputHandler = function (input) {
             if (!_this.game.started && input !== input_1.InputEnum.MOUSE_MOVE) {
                 _this.game.startedFadeOut = true;
@@ -14826,18 +14827,30 @@ var Player = /** @class */ (function (_super) {
                     _this.guiHeartFrame = 0;
                 }
                 for (var i = 0; i < _this.maxHealth; i++) {
+                    var shake = 0;
+                    var shakeY = 0;
+                    if (_this.health <= 1) {
+                        shake =
+                            Math.round(Math.sin(Date.now() / 25 / (i + 1)) + i / 2) /
+                                2 /
+                                gameConstants_1.GameConstants.TILESIZE;
+                        shakeY =
+                            Math.round(Math.sin(Date.now() / 25 / (i + 2)) + i / 2) /
+                                2 /
+                                gameConstants_1.GameConstants.TILESIZE;
+                    }
                     var frame = _this.guiHeartFrame > 0 ? 1 : 0;
                     if (i >= Math.floor(_this.health)) {
                         if (i == Math.floor(_this.health) && (_this.health * 2) % 2 == 1) {
                             // draw half heart
-                            game_1.Game.drawFX(4, 2, 1, 1, i, levelConstants_1.LevelConstants.SCREEN_H - 1, 1, 1);
+                            game_1.Game.drawFX(4, 2, 1, 1, i + shake, levelConstants_1.LevelConstants.SCREEN_H - 1 + shakeY, 1, 1);
                         }
                         else {
-                            game_1.Game.drawFX(3, 2, 1, 1, i, levelConstants_1.LevelConstants.SCREEN_H - 1, 1, 1);
+                            game_1.Game.drawFX(3, 2, 1, 1, i + shake, levelConstants_1.LevelConstants.SCREEN_H - 1 + shakeY, 1, 1);
                         }
                     }
                     else {
-                        game_1.Game.drawFX(frame, 2, 1, 1, i, levelConstants_1.LevelConstants.SCREEN_H - 1, 1, 1);
+                        game_1.Game.drawFX(frame, 2, 1, 1, i + shake, levelConstants_1.LevelConstants.SCREEN_H - 1 + shakeY, 1, 1);
                     }
                 }
                 if (_this.inventory.getArmor())
@@ -14899,7 +14912,7 @@ var Player = /** @class */ (function (_super) {
         _this.drawHurt = function (delta) {
             game_1.Game.ctx.globalAlpha = _this.hurtAlpha;
             _this.hurtAlpha -= (_this.hurtAlpha / 10) * delta;
-            if (_this.hurtAlpha <= 0.03) {
+            if (_this.hurtAlpha <= 0.01) {
                 _this.hurtAlpha = 0;
                 _this.hurting = false;
             }
@@ -14907,6 +14920,31 @@ var Player = /** @class */ (function (_super) {
             game_1.Game.ctx.fillStyle = "#cc3333"; // bright but not fully saturated red
             game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
             game_1.Game.ctx.globalCompositeOperation = "source-over";
+        };
+        _this.drawLowHealth = function (delta) {
+            //unused
+            if (_this.health <= 1 && !_this.dead) {
+                // Calculate pulsating alpha for the vignette effect
+                var lowHealthAlpha = 0.5; //Math.sin(this.lowHealthFrame / 10) * 0.5 + 0.5;
+                game_1.Game.ctx.globalAlpha = lowHealthAlpha;
+                _this.lowHealthFrame += delta;
+                var gradientBottom = game_1.Game.ctx.createLinearGradient(0, gameConstants_1.GameConstants.HEIGHT, 0, (gameConstants_1.GameConstants.HEIGHT * 2) / 3);
+                // Define gradient color stops
+                [gradientBottom].forEach(function (gradient) {
+                    gradient.addColorStop(0, "#cc3333"); // Solid red at edges
+                    gradient.addColorStop(1, "rgba(0, 0, 0, 0)"); // Transparent toward center
+                });
+                // Draw the gradients
+                game_1.Game.ctx.globalCompositeOperation = "source-over";
+                game_1.Game.ctx.fillStyle = gradientBottom;
+                game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
+                // Reset composite operation and alpha
+                game_1.Game.ctx.globalCompositeOperation = "source-over";
+                game_1.Game.ctx.globalAlpha = 1.0;
+            }
+            else {
+                _this.lowHealthFrame = 0;
+            }
         };
         _this.updateDrawXY = function (delta) {
             //console.log("this.x", this.x);

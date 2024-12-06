@@ -100,6 +100,7 @@ export class Player extends Drawable {
   slowMotionTickDuration: number;
   private animationFrameId: number | null = null;
   private isProcessingQueue: boolean = false;
+  private lowHealthFrame: number = 0;
   constructor(game: Game, x: number, y: number, isLocalPlayer: boolean) {
     super();
 
@@ -922,16 +923,55 @@ export class Player extends Drawable {
         this.guiHeartFrame = 0;
       }
       for (let i = 0; i < this.maxHealth; i++) {
+        let shake = 0;
+        let shakeY = 0;
+        if (this.health <= 1) {
+          shake =
+            Math.round(Math.sin(Date.now() / 25 / (i + 1)) + i / 2) /
+            2 /
+            GameConstants.TILESIZE;
+          shakeY =
+            Math.round(Math.sin(Date.now() / 25 / (i + 2)) + i / 2) /
+            2 /
+            GameConstants.TILESIZE;
+        }
         let frame = this.guiHeartFrame > 0 ? 1 : 0;
         if (i >= Math.floor(this.health)) {
           if (i == Math.floor(this.health) && (this.health * 2) % 2 == 1) {
             // draw half heart
-            Game.drawFX(4, 2, 1, 1, i, LevelConstants.SCREEN_H - 1, 1, 1);
+            Game.drawFX(
+              4,
+              2,
+              1,
+              1,
+              i + shake,
+              LevelConstants.SCREEN_H - 1 + shakeY,
+              1,
+              1,
+            );
           } else {
-            Game.drawFX(3, 2, 1, 1, i, LevelConstants.SCREEN_H - 1, 1, 1);
+            Game.drawFX(
+              3,
+              2,
+              1,
+              1,
+              i + shake,
+              LevelConstants.SCREEN_H - 1 + shakeY,
+              1,
+              1,
+            );
           }
         } else {
-          Game.drawFX(frame, 2, 1, 1, i, LevelConstants.SCREEN_H - 1, 1, 1);
+          Game.drawFX(
+            frame,
+            2,
+            1,
+            1,
+            i + shake,
+            LevelConstants.SCREEN_H - 1 + shakeY,
+            1,
+            1,
+          );
         }
       }
       if (this.inventory.getArmor())
@@ -1004,6 +1044,7 @@ export class Player extends Drawable {
     }
     PostProcessor.draw(delta);
     if (this.hurting) this.drawHurt(delta);
+
     if (this.mapToggled === true) this.map.draw(delta);
     //this.drawTileCursor(delta);
     this.drawInventoryButton(delta);
@@ -1012,7 +1053,7 @@ export class Player extends Drawable {
   drawHurt = (delta: number) => {
     Game.ctx.globalAlpha = this.hurtAlpha;
     this.hurtAlpha -= (this.hurtAlpha / 10) * delta;
-    if (this.hurtAlpha <= 0.03) {
+    if (this.hurtAlpha <= 0.01) {
       this.hurtAlpha = 0;
       this.hurting = false;
     }
@@ -1021,6 +1062,41 @@ export class Player extends Drawable {
 
     Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
     Game.ctx.globalCompositeOperation = "source-over";
+  };
+
+  drawLowHealth = (delta: number) => {
+    //unused
+    if (this.health <= 1 && !this.dead) {
+      // Calculate pulsating alpha for the vignette effect
+      const lowHealthAlpha = 0.5; //Math.sin(this.lowHealthFrame / 10) * 0.5 + 0.5;
+      Game.ctx.globalAlpha = lowHealthAlpha;
+      this.lowHealthFrame += delta;
+
+      const gradientBottom = Game.ctx.createLinearGradient(
+        0,
+        GameConstants.HEIGHT,
+        0,
+        (GameConstants.HEIGHT * 2) / 3,
+      );
+
+      // Define gradient color stops
+      [gradientBottom].forEach((gradient) => {
+        gradient.addColorStop(0, "#cc3333"); // Solid red at edges
+        gradient.addColorStop(1, "rgba(0, 0, 0, 0)"); // Transparent toward center
+      });
+
+      // Draw the gradients
+      Game.ctx.globalCompositeOperation = "source-over";
+
+      Game.ctx.fillStyle = gradientBottom;
+      Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
+
+      // Reset composite operation and alpha
+      Game.ctx.globalCompositeOperation = "source-over";
+      Game.ctx.globalAlpha = 1.0;
+    } else {
+      this.lowHealthFrame = 0;
+    }
   };
 
   updateDrawXY = (delta: number) => {
