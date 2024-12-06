@@ -8,6 +8,7 @@ import { Enemy } from "../entity/enemy/enemy";
 import { Entity } from "../entity/entity";
 import { GameConstants } from "../gameConstants";
 import { Utils } from "../utils";
+import { WeaponFragments } from "../item/weaponFragments";
 
 interface WeaponStatus {
   poison: boolean;
@@ -56,6 +57,19 @@ export abstract class Weapon extends Equippable {
       if (this.status.poison) enemy.poison();
       if (this.status.blood) enemy.bleed();
     }
+  };
+
+  disassemble = () => {
+    let inventory = this.wielder.inventory;
+    let inventoryX = this.x;
+    let inventoryY = this.y;
+    let numFragments = Math.floor(this.durability / 3);
+    this.toggleEquip();
+    inventory.weapon = null;
+    inventory.removeItem(this);
+    inventory.addItem(
+      new WeaponFragments(this.level, inventoryX, inventoryY, numFragments),
+    );
   };
 
   weaponMove = (newX: number, newY: number): boolean => {

@@ -17,6 +17,7 @@ import { DualDagger } from "./weapon/dualdagger";
 import { Spear } from "./weapon/spear";
 import { Spellbook } from "./weapon/spellbook";
 import { Warhammer } from "./weapon/warhammer";
+import { Hammer } from "./item/hammer";
 
 export class GameConstants {
   static readonly VERSION = "v1.0.0"; //"v0.6.3";
@@ -58,7 +59,7 @@ export class GameConstants {
   static readonly HEALTH_BUFF_COLOR = "#d77bba";
   static readonly MISS_COLOR = "#639bff";
 
-  static readonly STARTING_INVENTORY = [Dagger, Candle];
+  static readonly STARTING_INVENTORY = [Dagger, Torch];
   static readonly STARTING_DEV_INVENTORY = [
     Dagger,
     WeaponFragments,

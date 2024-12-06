@@ -4986,7 +4986,7 @@ var ZombieEnemy = /** @class */ (function (_super) {
             var dropProb = random_1.Random.rand();
             if (dropProb < 0.025)
                 _this.drop = new pickaxe_1.Pickaxe(_this.room, _this.x, _this.y);
-            else if (dropProb < 0.02)
+            else if (dropProb < 0.05)
                 _this.drop = new greengem_1.GreenGem(_this.room, _this.x, _this.y);
             else
                 _this.drop = new coin_1.Coin(_this.room, _this.x, _this.y);
@@ -5903,7 +5903,6 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Mushrooms = void 0;
 var entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 var game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-var shrooms_1 = __webpack_require__(/*! ../../item/shrooms */ "./src/item/shrooms.ts");
 var entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 var imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ "./src/particle/imageParticle.ts");
 var Mushrooms = /** @class */ (function (_super) {
@@ -5913,7 +5912,7 @@ var Mushrooms = /** @class */ (function (_super) {
         _this.kill = function () {
             _this.dead = true;
             imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 30);
-            _this.room.items.push(new shrooms_1.Shrooms(_this.room, _this.x, _this.y));
+            //this.room.items.push(new Shrooms(this.room, this.x, this.y));
         };
         _this.killNoBones = function () {
             _this.kill();
@@ -7948,7 +7947,6 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GameConstants = void 0;
 var armor_1 = __webpack_require__(/*! ./item/armor */ "./src/item/armor.ts");
 var backpack_1 = __webpack_require__(/*! ./item/backpack */ "./src/item/backpack.ts");
-var candle_1 = __webpack_require__(/*! ./item/candle */ "./src/item/candle.ts");
 var godStone_1 = __webpack_require__(/*! ./item/godStone */ "./src/item/godStone.ts");
 var heart_1 = __webpack_require__(/*! ./item/heart */ "./src/item/heart.ts");
 var torch_1 = __webpack_require__(/*! ./item/torch */ "./src/item/torch.ts");
@@ -7991,7 +7989,7 @@ var GameConstants = /** @class */ (function () {
     GameConstants.HIT_ENEMY_TEXT_COLOR = "#76428a";
     GameConstants.HEALTH_BUFF_COLOR = "#d77bba";
     GameConstants.MISS_COLOR = "#639bff";
-    GameConstants.STARTING_INVENTORY = [dagger_1.Dagger, candle_1.Candle];
+    GameConstants.STARTING_INVENTORY = [dagger_1.Dagger, torch_1.Torch];
     GameConstants.STARTING_DEV_INVENTORY = [
         dagger_1.Dagger,
         weaponFragments_1.WeaponFragments,
@@ -11578,50 +11576,6 @@ var RedGem = /** @class */ (function (_super) {
     return RedGem;
 }(item_1.Item));
 exports.RedGem = RedGem;
-
-
-/***/ }),
-
-/***/ "./src/item/shrooms.ts":
-/*!*****************************!*\
-  !*** ./src/item/shrooms.ts ***!
-  \*****************************/
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        if (typeof b !== "function" && b !== null)
-            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Shrooms = void 0;
-var item_1 = __webpack_require__(/*! ./item */ "./src/item/item.ts");
-var Shrooms = /** @class */ (function (_super) {
-    __extends(Shrooms, _super);
-    function Shrooms(level, x, y) {
-        var _this = _super.call(this, level, x, y) || this;
-        _this.getDescription = function () {
-            return "SHROOMS\nI don't think I should eat these...";
-        };
-        _this.tileX = 6;
-        _this.tileY = 0;
-        _this.stackable = true;
-        return _this;
-    }
-    return Shrooms;
-}(item_1.Item));
-exports.Shrooms = Shrooms;
 
 
 /***/ }),
@@ -20353,6 +20307,7 @@ var sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
 var slashParticle_1 = __webpack_require__(/*! ../particle/slashParticle */ "./src/particle/slashParticle.ts");
 var enemy_1 = __webpack_require__(/*! ../entity/enemy/enemy */ "./src/entity/enemy/enemy.ts");
 var gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
+var weaponFragments_1 = __webpack_require__(/*! ../item/weaponFragments */ "./src/item/weaponFragments.ts");
 var Weapon = /** @class */ (function (_super) {
     __extends(Weapon, _super);
     function Weapon(level, x, y, status) {
@@ -20380,6 +20335,16 @@ var Weapon = /** @class */ (function (_super) {
                 if (_this.status.blood)
                     enemy.bleed();
             }
+        };
+        _this.disassemble = function () {
+            var inventory = _this.wielder.inventory;
+            var inventoryX = _this.x;
+            var inventoryY = _this.y;
+            var numFragments = Math.floor(_this.durability / 3);
+            _this.toggleEquip();
+            inventory.weapon = null;
+            inventory.removeItem(_this);
+            inventory.addItem(new weaponFragments_1.WeaponFragments(_this.level, inventoryX, inventoryY, numFragments));
         };
         _this.weaponMove = function (newX, newY) {
             var flag = false;

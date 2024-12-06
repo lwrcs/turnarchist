@@ -46,7 +46,7 @@ export class ZombieEnemy extends Enemy {
     else {
       let dropProb = Random.rand();
       if (dropProb < 0.025) this.drop = new Pickaxe(this.room, this.x, this.y);
-      else if (dropProb < 0.02)
+      else if (dropProb < 0.05)
         this.drop = new GreenGem(this.room, this.x, this.y);
       else this.drop = new Coin(this.room, this.x, this.y);
     }
