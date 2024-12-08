@@ -39,10 +39,10 @@ export class Spellbook extends Weapon {
         Utils.distance(this.wielder.x, this.wielder.y, e.x, e.y) <= this.range,
     );
     let enemies = this.targets.filter((e) => e instanceof Enemy);
-    console.log(enemies);
+    //console.log(enemies);
     if (enemies.length > 0) return enemies;
     else {
-      console.log(this.targets);
+      //console.log(this.targets);
       return this.targets;
     }
   };

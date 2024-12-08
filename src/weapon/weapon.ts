@@ -96,7 +96,7 @@ export abstract class Weapon extends Equippable {
       if (this.wielder === this.game.players[this.game.localPlayerID])
         this.game.shakeScreen(10 * this.wielder.hitX, 10 * this.wielder.hitY);
       this.degrade();
-      console.log(this.durability);
+      //console.log(this.durability);
     }
     return !flag;
   };

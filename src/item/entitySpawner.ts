@@ -33,7 +33,7 @@ export class EntitySpawner extends Usable {
 
   spawnEntity = (entity: Entity): void => {
     Entity.add(this.room, this.player.game, this.player.x, this.player.y);
-    console.log("Entity spawned");
+    //console.log("Entity spawned");
   };
 
   commandHandler = (command: string): void => {
@@ -54,16 +54,16 @@ export class EntitySpawner extends Usable {
         );
         break;
       default:
-        console.log(`Unknown command: ${command}`);
+        //console.log(`Unknown command: ${command}`);
         break;
     }
-    console.log(`Command executed: ${command}`);
+    //console.log(`Command executed: ${command}`);
   };
 
   private setupEventListeners(): void {
     //console.log("Setting up event listeners");
     globalEventBus.on("ChatMessage", this.commandHandler.bind(this));
-    console.log("Event listeners set up");
+    //console.log("Event listeners set up");
   }
 
   getDescription = (): string => {

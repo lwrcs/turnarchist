@@ -30,7 +30,6 @@ export class WeaponBlood extends Usable {
       this.level.game.pushMessage(
         `You coat your ${other.name} in cursed blood.`,
       );
-      console.log(`weapon blood used on ${other.name}`);
     }
   };
 

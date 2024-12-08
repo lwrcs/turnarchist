@@ -533,7 +533,7 @@ export class Player extends Drawable {
     for (let e of this.game.rooms[this.levelID].entities) {
       e.lastX = e.x;
       e.lastY = e.y;
-      console.log(`e.lastX, e.lastY: ${e.lastX}, ${e.lastY}`);
+      //console.log(`e.lastX, e.lastY: ${e.lastX}, ${e.lastY}`);
       if (this.tryCollide(e, x, y)) {
         if (e.pushable) {
           // pushing a crate or barrel

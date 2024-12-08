@@ -40,40 +40,40 @@ class StatsTracker {
   ): void => {
     this.stats.enemiesKilled += 1;
     this.stats.enemies.push(payload.enemyId);
-    console.log(`Enemy killed: ${payload.enemyId}`);
+    //console.log(`Enemy killed: ${payload.enemyId}`);
   };
 
   private handleDamageDone = (
     payload: EventPayloads[typeof EVENTS.DAMAGE_DONE],
   ): void => {
     this.stats.damageDone += payload.amount;
-    console.log(`Damage done: ${payload.amount}`);
+    //console.log(`Damage done: ${payload.amount}`);
   };
 
   private handleDamageTaken = (
     payload: EventPayloads[typeof EVENTS.DAMAGE_TAKEN],
   ): void => {
     this.stats.damageTaken += payload.amount;
-    console.log(`Damage taken: ${payload.amount}`);
+    //console.log(`Damage taken: ${payload.amount}`);
   };
 
   private handleTurnPassed = (): void => {
     this.stats.turnsPassed += 1;
-    console.log(`Turn passed: ${this.stats.turnsPassed}`);
+    //console.log(`Turn passed: ${this.stats.turnsPassed}`);
   };
 
   private handleCoinCollected = (
     payload: EventPayloads[typeof EVENTS.COIN_COLLECTED],
   ): void => {
     this.stats.coinsCollected += payload.amount;
-    console.log(`Coins collected: ${payload.amount}`);
+    //console.log(`Coins collected: ${payload.amount}`);
   };
 
   private handleItemCollected = (
     payload: EventPayloads[typeof EVENTS.ITEM_COLLECTED],
   ): void => {
     this.stats.itemsCollected += 1;
-    console.log(`Item collected: ${payload.itemId}`);
+    //console.log(`Item collected: ${payload.itemId}`);
   };
 
   public getStats(): Stats {
@@ -90,7 +90,7 @@ class StatsTracker {
       itemsCollected: 0,
       enemies: [],
     };
-    console.log("Stats have been reset.");
+    //console.log("Stats have been reset.");
   }
 }
 

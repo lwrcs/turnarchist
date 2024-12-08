@@ -244,7 +244,7 @@ export class FrogEnemy extends Enemy {
   };
 
   jump = (delta: number) => {
-    console.log(`this.drawX, this.drawY: ${this.drawX}, ${this.drawY}`);
+    //console.log(`this.drawX, this.drawY: ${this.drawX}, ${this.drawY}`);
     if (this.jumping) {
       let j = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
       if (j > 1) {

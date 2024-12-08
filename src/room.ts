@@ -1312,13 +1312,15 @@ export class Room {
   fadeLighting = (delta: number) => {
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
-        const visDiff = Math.abs(this.softVis[x][y] - this.vis[x][y]);
-        if (visDiff > 0.01) {
-          if (this.softVis[x][y] < this.vis[x][y])
-            this.softVis[x][y] += visDiff * 0.05 * delta;
-          else if (this.softVis[x][y] > this.vis[x][y])
-            this.softVis[x][y] -= visDiff * 0.05 * delta;
+        let visDiff = this.softVis[x][y] - this.vis[x][y];
+        let softVis = this.softVis[x][y];
+        if (Math.abs(visDiff) > 0.01) {
+          visDiff = visDiff * 0.05 * delta;
         }
+        softVis -= visDiff;
+        if (softVis < 0) softVis = 0;
+        if (softVis > 1) softVis = 1;
+        this.softVis[x][y] = softVis;
 
         // if (this.softVis[x][y] < 0.01) this.softVis[x][y] = 0;
       }
@@ -1328,30 +1330,29 @@ export class Room {
   fadeRgb = (delta: number) => {
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
-        const linearSoftCol = this.softCol[x][y];
-        const linearCol = this.col[x][y];
-        let diffR = Math.abs(linearCol[0] - linearSoftCol[0]);
-        if (diffR >= 8) {
-          if (linearSoftCol[0] < linearCol[0])
-            linearSoftCol[0] += (20 * delta) / 2;
-          else if (linearSoftCol[0] > linearCol[0])
-            linearSoftCol[0] -= (20 * delta) / 2;
+        const [softR, softG, softB] = this.softCol[x][y];
+        const [targetR, targetG, targetB] = this.col[x][y];
+
+        // Calculate differences
+        let diffR = targetR - softR;
+        let diffG = targetG - softG;
+        let diffB = targetB - softB;
+
+        // Apply smoothing similar to fadeLighting
+        if (Math.abs(diffR) > 8) {
+          diffR = diffR * 0.05 * delta;
         }
-        let diffG = Math.abs(linearCol[1] - linearSoftCol[1]);
-        if (diffG >= 8) {
-          if (linearSoftCol[1] < linearCol[1])
-            linearSoftCol[1] += (20 * delta) / 2;
-          else if (linearSoftCol[1] > linearCol[1])
-            linearSoftCol[1] -= (20 * delta) / 2;
+        if (Math.abs(diffG) > 8) {
+          diffG = diffG * 0.05 * delta;
         }
-        let diffB = Math.abs(linearCol[2] - linearSoftCol[2]);
-        if (diffB >= 8) {
-          if (linearSoftCol[2] < linearCol[2])
-            linearSoftCol[2] += (20 * delta) / 2;
-          else if (linearSoftCol[2] > linearCol[2])
-            linearSoftCol[2] -= (20 * delta) / 2;
+        if (Math.abs(diffB) > 8) {
+          diffB = diffB * 0.05 * delta;
         }
-        this.softCol[x][y] = linearSoftCol;
+
+        // Update soft colors
+        this.softCol[x][y][0] = this.clamp(Math.round(softR + diffR), 0, 255);
+        this.softCol[x][y][1] = this.clamp(Math.round(softG + diffG), 0, 255);
+        this.softCol[x][y][2] = this.clamp(Math.round(softB + diffB), 0, 255);
       }
     }
   };

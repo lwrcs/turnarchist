@@ -30,7 +30,6 @@ export class Hammer extends Usable {
       this.level.game.pushMessage(
         `You dissassemble your ${other.name} into fragments.`,
       );
-      console.log(`weapon blood used on ${other.name}`);
     } else if (other.name === "dagger") {
       this.level.game.pushMessage(
         `You probably shouldn't disassemble your dagger...`,

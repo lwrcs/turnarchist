@@ -3226,7 +3226,7 @@ var FrogEnemy = /** @class */ (function (_super) {
             }
         };
         _this.jump = function (delta) {
-            console.log("this.drawX, this.drawY: ".concat(_this.drawX, ", ").concat(_this.drawY));
+            //console.log(`this.drawX, this.drawY: ${this.drawX}, ${this.drawY}`);
             if (_this.jumping) {
                 var j = Math.max(Math.abs(_this.drawX), Math.abs(_this.drawY));
                 if (j > 1) {
@@ -14491,7 +14491,7 @@ var Player = /** @class */ (function (_super) {
                 var e = _a[_i];
                 e.lastX = e.x;
                 e.lastY = e.y;
-                console.log("e.lastX, e.lastY: ".concat(e.lastX, ", ").concat(e.lastY));
+                //console.log(`e.lastX, e.lastY: ${e.lastX}, ${e.lastY}`);
                 if (_this.tryCollide(e, x, y)) {
                     if (e.pushable) {
                         // pushing a crate or barrel
@@ -16380,13 +16380,17 @@ var Room = /** @class */ (function () {
         this.fadeLighting = function (delta) {
             for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
                 for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
-                    var visDiff = Math.abs(_this.softVis[x][y] - _this.vis[x][y]);
-                    if (visDiff > 0.01) {
-                        if (_this.softVis[x][y] < _this.vis[x][y])
-                            _this.softVis[x][y] += visDiff * 0.05 * delta;
-                        else if (_this.softVis[x][y] > _this.vis[x][y])
-                            _this.softVis[x][y] -= visDiff * 0.05 * delta;
+                    var visDiff = _this.softVis[x][y] - _this.vis[x][y];
+                    var softVis = _this.softVis[x][y];
+                    if (Math.abs(visDiff) > 0.01) {
+                        visDiff = visDiff * 0.05 * delta;
                     }
+                    softVis -= visDiff;
+                    if (softVis < 0)
+                        softVis = 0;
+                    if (softVis > 1)
+                        softVis = 1;
+                    _this.softVis[x][y] = softVis;
                     // if (this.softVis[x][y] < 0.01) this.softVis[x][y] = 0;
                 }
             }
@@ -16394,30 +16398,26 @@ var Room = /** @class */ (function () {
         this.fadeRgb = function (delta) {
             for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
                 for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
-                    var linearSoftCol = _this.softCol[x][y];
-                    var linearCol = _this.col[x][y];
-                    var diffR = Math.abs(linearCol[0] - linearSoftCol[0]);
-                    if (diffR >= 8) {
-                        if (linearSoftCol[0] < linearCol[0])
-                            linearSoftCol[0] += (20 * delta) / 2;
-                        else if (linearSoftCol[0] > linearCol[0])
-                            linearSoftCol[0] -= (20 * delta) / 2;
+                    var _a = _this.softCol[x][y], softR = _a[0], softG = _a[1], softB = _a[2];
+                    var _b = _this.col[x][y], targetR = _b[0], targetG = _b[1], targetB = _b[2];
+                    // Calculate differences
+                    var diffR = targetR - softR;
+                    var diffG = targetG - softG;
+                    var diffB = targetB - softB;
+                    // Apply smoothing similar to fadeLighting
+                    if (Math.abs(diffR) > 8) {
+                        diffR = diffR * 0.05 * delta;
                     }
-                    var diffG = Math.abs(linearCol[1] - linearSoftCol[1]);
-                    if (diffG >= 8) {
-                        if (linearSoftCol[1] < linearCol[1])
-                            linearSoftCol[1] += (20 * delta) / 2;
-                        else if (linearSoftCol[1] > linearCol[1])
-                            linearSoftCol[1] -= (20 * delta) / 2;
+                    if (Math.abs(diffG) > 8) {
+                        diffG = diffG * 0.05 * delta;
                     }
-                    var diffB = Math.abs(linearCol[2] - linearSoftCol[2]);
-                    if (diffB >= 8) {
-                        if (linearSoftCol[2] < linearCol[2])
-                            linearSoftCol[2] += (20 * delta) / 2;
-                        else if (linearSoftCol[2] > linearCol[2])
-                            linearSoftCol[2] -= (20 * delta) / 2;
+                    if (Math.abs(diffB) > 8) {
+                        diffB = diffB * 0.05 * delta;
                     }
-                    _this.softCol[x][y] = linearSoftCol;
+                    // Update soft colors
+                    _this.softCol[x][y][0] = _this.clamp(Math.round(softR + diffR), 0, 255);
+                    _this.softCol[x][y][1] = _this.clamp(Math.round(softG + diffG), 0, 255);
+                    _this.softCol[x][y][2] = _this.clamp(Math.round(softB + diffB), 0, 255);
                 }
             }
         };
@@ -18059,27 +18059,27 @@ var StatsTracker = /** @class */ (function () {
         this.handleEnemyKilled = function (payload) {
             _this.stats.enemiesKilled += 1;
             _this.stats.enemies.push(payload.enemyId);
-            console.log("Enemy killed: ".concat(payload.enemyId));
+            //console.log(`Enemy killed: ${payload.enemyId}`);
         };
         this.handleDamageDone = function (payload) {
             _this.stats.damageDone += payload.amount;
-            console.log("Damage done: ".concat(payload.amount));
+            //console.log(`Damage done: ${payload.amount}`);
         };
         this.handleDamageTaken = function (payload) {
             _this.stats.damageTaken += payload.amount;
-            console.log("Damage taken: ".concat(payload.amount));
+            //console.log(`Damage taken: ${payload.amount}`);
         };
         this.handleTurnPassed = function () {
             _this.stats.turnsPassed += 1;
-            console.log("Turn passed: ".concat(_this.stats.turnsPassed));
+            //console.log(`Turn passed: ${this.stats.turnsPassed}`);
         };
         this.handleCoinCollected = function (payload) {
             _this.stats.coinsCollected += payload.amount;
-            console.log("Coins collected: ".concat(payload.amount));
+            //console.log(`Coins collected: ${payload.amount}`);
         };
         this.handleItemCollected = function (payload) {
             _this.stats.itemsCollected += 1;
-            console.log("Item collected: ".concat(payload.itemId));
+            //console.log(`Item collected: ${payload.itemId}`);
         };
         this.initializeListeners();
     }
@@ -18104,7 +18104,7 @@ var StatsTracker = /** @class */ (function () {
             itemsCollected: 0,
             enemies: [],
         };
-        console.log("Stats have been reset.");
+        //console.log("Stats have been reset.");
     };
     return StatsTracker;
 }());
@@ -18147,7 +18147,7 @@ var TextBox = /** @class */ (function () {
                                 _this.message.substring(_this.cursor - 1, _this.message.length);
                     }
                 }
-                console.log("Current message: \"".concat(_this.message, "\""));
+                //console.log(`Current message: "${this.message}"`);
                 return;
             }
             else {
@@ -18192,7 +18192,7 @@ var TextBox = /** @class */ (function () {
                         break;
                 }
             }
-            console.log("Current message: \"".concat(_this.message, "\""));
+            //console.log(`Current message: "${this.message}"`);
         };
         this.handleTouchStart = function (e) {
             _this.focus();
@@ -18233,11 +18233,11 @@ var TextBox = /** @class */ (function () {
     TextBox.prototype.sendMessage = function () {
         var message = this.message;
         this.enterCallback();
-        console.log("Sending message: \"".concat(message, "\""));
+        //console.log(`Sending message: "${message}"`);
         if (message.startsWith("/")) {
             message = message.substring(1);
             eventBus_1.globalEventBus.emit("ChatMessage", message);
-            console.log("Chat message emitted: \"".concat(message, "\""));
+            //console.log(`Chat message emitted: "${message}"`);
         }
         this.clear();
     };
@@ -20195,11 +20195,11 @@ var Spellbook = /** @class */ (function (_super) {
                     utils_1.Utils.distance(_this.wielder.x, _this.wielder.y, e.x, e.y) <= _this.range;
             });
             var enemies = _this.targets.filter(function (e) { return e instanceof enemy_1.Enemy; });
-            console.log(enemies);
+            //console.log(enemies);
             if (enemies.length > 0)
                 return enemies;
             else {
-                console.log(_this.targets);
+                //console.log(this.targets);
                 return _this.targets;
             }
         };
@@ -20403,7 +20403,7 @@ var Weapon = /** @class */ (function (_super) {
                 if (_this.wielder === _this.game.players[_this.game.localPlayerID])
                     _this.game.shakeScreen(10 * _this.wielder.hitX, 10 * _this.wielder.hitY);
                 _this.degrade();
-                console.log(_this.durability);
+                //console.log(this.durability);
             }
             return !flag;
         };
