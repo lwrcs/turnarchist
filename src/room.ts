@@ -1393,13 +1393,15 @@ export class Room {
 
     // Start timing the processing of player lighting
     //console.time("updateLighting: Process Players");
-    if (!GameConstants.isMobile) {
+    let lightingAngleStep = LevelConstants.LIGHTING_ANGLE_STEP;
+    if (GameConstants.isMobile) {
+      lightingAngleStep = 90;
     }
     for (const p in this.game.players) {
       let player = this.game.players[p];
       if (this === this.game.rooms[player.levelID]) {
         //console.log(`i: ${player.angle}`);
-        for (let i = 0; i < 360; i += LevelConstants.LIGHTING_ANGLE_STEP) {
+        for (let i = 0; i < 360; i += lightingAngleStep) {
           let lightColor = LevelConstants.AMBIENT_LIGHT_COLOR;
           if (player.lightEquipped)
             lightColor = LevelConstants.TORCH_LIGHT_COLOR;
@@ -1903,9 +1905,7 @@ export class Room {
 
   draw = (delta: number) => {
     HitWarning.updateFrame(delta);
-    if (!GameConstants.isMobile) {
-      this.fadeRgb(delta);
-    }
+    this.fadeRgb(delta);
     this.fadeLighting(delta);
   };
 
