@@ -588,22 +588,21 @@ export class Game {
     );
 
     this.isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-
     if (this.isMobile) {
       this.pushMessage("mobile detected");
-      // Adjust scale for mobile devices
-      Game.scale = 2; // Example: limit scale to 2 for mobile
+      // Use smaller scale for mobile devices based on screen size
+      Game.scale = Math.min(maxWidthScale, maxHeightScale, 2); // Cap at 2x for mobile
     } else {
-      Game.scale = GameConstants.SCALE;
-      Game.scale = Math.min(maxWidthScale, maxHeightScale);
+      // For desktop, use standard scaling logic
+      Game.scale = Math.min(maxWidthScale, maxHeightScale, GameConstants.SCALE);
     }
 
-    Game.scale = Math.min(maxWidthScale, maxHeightScale);
+    // Handle case where scale would be 0
     if (Game.scale === 0) {
       maxWidthScale = window.innerWidth / GameConstants.DEFAULTWIDTH;
       maxHeightScale = window.innerHeight / GameConstants.DEFAULTHEIGHT;
+      Game.scale = Math.min(maxWidthScale, maxHeightScale, 1); // Ensure minimum scale of 1
     }
-    Game.scale = GameConstants.SCALE; //Math.min(maxWidthScale, maxHeightScale);
 
     LevelConstants.SCREEN_W = Math.floor(
       window.innerWidth / Game.scale / GameConstants.TILESIZE,

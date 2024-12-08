@@ -130,15 +130,17 @@ export class Player extends Drawable {
       Input.commaListener = () => this.inputHandler(InputEnum.COMMA);
       Input.periodListener = () => this.inputHandler(InputEnum.PERIOD);
       Input.tapListener = () => {
-        /*
-        if (this.inventory.isOpen) {
+        if (
+          this.inventory.isOpen ||
+          this.inventory.isPointInQuickbarBounds(Input.mouseX, Input.mouseY)
+            .inBounds
+        ) {
           if (this.inventory.pointInside(Input.mouseX, Input.mouseY)) {
             this.inputHandler(InputEnum.SPACE);
           } else {
             this.inputHandler(InputEnum.I);
           }
         } else this.inputHandler(InputEnum.I);
-         */
       };
       Input.mouseMoveListener = () => this.inputHandler(InputEnum.MOUSE_MOVE);
       Input.mouseLeftClickListeners.push(() =>
@@ -397,7 +399,7 @@ export class Player extends Drawable {
         MouseCursor.getInstance().getPosition().y,
       )
     ) {
-      this.inventory.open();
+      this.inventory.toggleOpen();
     }
   };
   mouseRightClick = () => {

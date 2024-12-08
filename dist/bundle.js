@@ -7318,19 +7318,19 @@ var Game = /** @class */ (function () {
             _this.isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
             if (_this.isMobile) {
                 _this.pushMessage("mobile detected");
-                // Adjust scale for mobile devices
-                Game.scale = 2; // Example: limit scale to 2 for mobile
+                // Use smaller scale for mobile devices based on screen size
+                Game.scale = Math.min(maxWidthScale, maxHeightScale, 2); // Cap at 2x for mobile
             }
             else {
-                Game.scale = gameConstants_1.GameConstants.SCALE;
-                Game.scale = Math.min(maxWidthScale, maxHeightScale);
+                // For desktop, use standard scaling logic
+                Game.scale = Math.min(maxWidthScale, maxHeightScale, gameConstants_1.GameConstants.SCALE);
             }
-            Game.scale = Math.min(maxWidthScale, maxHeightScale);
+            // Handle case where scale would be 0
             if (Game.scale === 0) {
                 maxWidthScale = window.innerWidth / gameConstants_1.GameConstants.DEFAULTWIDTH;
                 maxHeightScale = window.innerHeight / gameConstants_1.GameConstants.DEFAULTHEIGHT;
+                Game.scale = Math.min(maxWidthScale, maxHeightScale, 1); // Ensure minimum scale of 1
             }
-            Game.scale = gameConstants_1.GameConstants.SCALE; //Math.min(maxWidthScale, maxHeightScale);
             levelConstants_1.LevelConstants.SCREEN_W = Math.floor(window.innerWidth / Game.scale / gameConstants_1.GameConstants.TILESIZE);
             levelConstants_1.LevelConstants.SCREEN_H = Math.floor(window.innerHeight / Game.scale / gameConstants_1.GameConstants.TILESIZE);
             gameConstants_1.GameConstants.WIDTH = levelConstants_1.LevelConstants.SCREEN_W * gameConstants_1.GameConstants.TILESIZE;
@@ -9470,6 +9470,14 @@ var Inventory = /** @class */ (function () {
                 _this.usingItemIndex = null;
             }
         };
+        this.toggleOpen = function () {
+            if (_this.isOpen) {
+                _this.close();
+            }
+            else {
+                _this.open();
+            }
+        };
         this.close = function () {
             _this.isOpen = false;
             if (_this.selY > 0) {
@@ -9573,7 +9581,8 @@ var Inventory = /** @class */ (function () {
             var _a = mouseCursor_1.MouseCursor.getInstance().getPosition(), x = _a.x, y = _a.y;
             var bounds = _this.isPointInInventoryBounds(x, y);
             // Only close inventory if clicking outside
-            if (!bounds.inBounds && !_this.isPointInQuickbarBounds(x, y).inBounds) {
+            if ((!bounds.inBounds && !_this.isPointInQuickbarBounds(x, y).inBounds) ||
+                _this.isPointInInventoryButton(x, y)) {
                 _this.close();
             }
         };
@@ -9844,8 +9853,16 @@ var Inventory = /** @class */ (function () {
             var countX = 4 - width;
             var countY = -1;
             game_1.Game.fillTextOutline(countText, coinX * gameConstants_1.GameConstants.TILESIZE + countX, coinY * gameConstants_1.GameConstants.TILESIZE + countY, gameConstants_1.GameConstants.OUTLINE, "white");
-            var turnCountText = "".concat(_this.player.turnCount);
-            game_1.Game.fillTextOutline(turnCountText, coinX * gameConstants_1.GameConstants.TILESIZE + countX, coinY * gameConstants_1.GameConstants.TILESIZE + countY - 15, gameConstants_1.GameConstants.OUTLINE, "white");
+            /*
+            const turnCountText = `${this.player.turnCount}`;
+            Game.fillTextOutline(
+              turnCountText,
+              coinX * GameConstants.TILESIZE + countX,
+              coinY * GameConstants.TILESIZE + countY - 15,
+              GameConstants.OUTLINE,
+              "white",
+            );
+            */
         };
         this.pointInside = function (x, y) {
             var s = Math.min(18, (18 * (Date.now() - _this.openTime)) / OPEN_TIME); // size of box
@@ -14364,7 +14381,7 @@ var Player = /** @class */ (function (_super) {
                 _this.moveWithMouse();
             }
             else if (_this.inventory.isPointInInventoryButton(mouseCursor_1.MouseCursor.getInstance().getPosition().x, mouseCursor_1.MouseCursor.getInstance().getPosition().y)) {
-                _this.inventory.open();
+                _this.inventory.toggleOpen();
             }
         };
         _this.mouseRightClick = function () {
@@ -15120,15 +15137,18 @@ var Player = /** @class */ (function (_super) {
             input_1.Input.commaListener = function () { return _this.inputHandler(input_1.InputEnum.COMMA); };
             input_1.Input.periodListener = function () { return _this.inputHandler(input_1.InputEnum.PERIOD); };
             input_1.Input.tapListener = function () {
-                /*
-                if (this.inventory.isOpen) {
-                  if (this.inventory.pointInside(Input.mouseX, Input.mouseY)) {
-                    this.inputHandler(InputEnum.SPACE);
-                  } else {
-                    this.inputHandler(InputEnum.I);
-                  }
-                } else this.inputHandler(InputEnum.I);
-                 */
+                if (_this.inventory.isOpen ||
+                    _this.inventory.isPointInQuickbarBounds(input_1.Input.mouseX, input_1.Input.mouseY)
+                        .inBounds) {
+                    if (_this.inventory.pointInside(input_1.Input.mouseX, input_1.Input.mouseY)) {
+                        _this.inputHandler(input_1.InputEnum.SPACE);
+                    }
+                    else {
+                        _this.inputHandler(input_1.InputEnum.I);
+                    }
+                }
+                else
+                    _this.inputHandler(input_1.InputEnum.I);
             };
             input_1.Input.mouseMoveListener = function () { return _this.inputHandler(input_1.InputEnum.MOUSE_MOVE); };
             input_1.Input.mouseLeftClickListeners.push(function () {

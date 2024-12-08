@@ -131,6 +131,14 @@ export class Inventory {
     }
   };
 
+  toggleOpen = () => {
+    if (this.isOpen) {
+      this.close();
+    } else {
+      this.open();
+    }
+  };
+
   close = () => {
     this.isOpen = false;
     if (this.selY > 0) {
@@ -242,7 +250,10 @@ export class Inventory {
     const bounds = this.isPointInInventoryBounds(x, y);
 
     // Only close inventory if clicking outside
-    if (!bounds.inBounds && !this.isPointInQuickbarBounds(x, y).inBounds) {
+    if (
+      (!bounds.inBounds && !this.isPointInQuickbarBounds(x, y).inBounds) ||
+      this.isPointInInventoryButton(x, y)
+    ) {
       this.close();
     }
   };
@@ -573,7 +584,7 @@ export class Inventory {
       GameConstants.OUTLINE,
       "white",
     );
-
+    /*
     const turnCountText = `${this.player.turnCount}`;
     Game.fillTextOutline(
       turnCountText,
@@ -582,6 +593,7 @@ export class Inventory {
       GameConstants.OUTLINE,
       "white",
     );
+    */
   };
 
   pointInside = (x: number, y: number): boolean => {
