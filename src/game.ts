@@ -589,10 +589,12 @@ export class Game {
 
     this.isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     if (this.isMobile) {
+      GameConstants.isMobile = true;
       this.pushMessage("mobile detected");
       // Use smaller scale for mobile devices based on screen size
       Game.scale = Math.min(maxWidthScale, maxHeightScale, 2); // Cap at 2x for mobile
     } else {
+      GameConstants.isMobile = false;
       // For desktop, use standard scaling logic
       Game.scale = Math.min(maxWidthScale, maxHeightScale, GameConstants.SCALE);
     }

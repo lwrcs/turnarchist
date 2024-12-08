@@ -7317,11 +7317,13 @@ var Game = /** @class */ (function () {
             var maxHeightScale = Math.floor(window.innerHeight / gameConstants_1.GameConstants.DEFAULTHEIGHT);
             _this.isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
             if (_this.isMobile) {
+                gameConstants_1.GameConstants.isMobile = true;
                 _this.pushMessage("mobile detected");
                 // Use smaller scale for mobile devices based on screen size
                 Game.scale = Math.min(maxWidthScale, maxHeightScale, 2); // Cap at 2x for mobile
             }
             else {
+                gameConstants_1.GameConstants.isMobile = false;
                 // For desktop, use standard scaling logic
                 Game.scale = Math.min(maxWidthScale, maxHeightScale, gameConstants_1.GameConstants.SCALE);
             }
@@ -7961,6 +7963,7 @@ var GameConstants = /** @class */ (function () {
     }
     GameConstants.VERSION = "v1.0.1"; //"v0.6.3";
     GameConstants.DEVELOPER_MODE = false;
+    GameConstants.isMobile = false;
     GameConstants.FPS = 120;
     GameConstants.ALPHA_ENABLED = true;
     GameConstants.SHADE_LEVELS = 256;
@@ -16473,14 +16476,12 @@ var Room = /** @class */ (function () {
             //console.timeEnd("updateLighting: Process LightSources");
             // Start timing the processing of player lighting
             //console.time("updateLighting: Process Players");
+            if (!gameConstants_1.GameConstants.isMobile) {
+            }
             for (var p in _this.game.players) {
                 var player = _this.game.players[p];
                 if (_this === _this.game.rooms[player.levelID]) {
                     //console.log(`i: ${player.angle}`);
-                    var viewAngle = 360;
-                    var viewAngleEnd = player.angle + viewAngle / 2;
-                    var offsetX = player.angle === 0 ? 0.7 : player.angle === 180 ? -0.7 : 0;
-                    var offsetY = player.angle === 90 ? 0.7 : player.angle === 270 ? -0.7 : 0;
                     for (var i = 0; i < 360; i += levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP) {
                         var lightColor = levelConstants_1.LevelConstants.AMBIENT_LIGHT_COLOR;
                         if (player.lightEquipped)
@@ -16875,7 +16876,9 @@ var Room = /** @class */ (function () {
         };
         this.draw = function (delta) {
             hitWarning_1.HitWarning.updateFrame(delta);
-            _this.fadeRgb(delta);
+            if (!gameConstants_1.GameConstants.isMobile) {
+                _this.fadeRgb(delta);
+            }
             _this.fadeLighting(delta);
         };
         this.drawColorLayer = function () {
