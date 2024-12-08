@@ -392,7 +392,7 @@ export class Entity extends Drawable {
   };
 
   drawTopLayer = (delta: number) => {
-    this.updateDrawXY(delta);
+    //this.updateDrawXY(delta);
 
     this.drawableY = this.y - this.drawY;
 

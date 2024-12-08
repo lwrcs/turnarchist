@@ -4244,6 +4244,7 @@ var SkullEnemy = /** @class */ (function (_super) {
         };
         _this.draw = function (delta) {
             if (!_this.dead) {
+                _this.updateDrawXY(delta);
                 _this.tileX = 5;
                 _this.tileY = 8;
                 if (_this.health <= 1) {
@@ -4953,6 +4954,7 @@ var ZombieEnemy = /** @class */ (function (_super) {
         };
         _this.draw = function (delta) {
             if (!_this.dead) {
+                _this.updateDrawXY(delta);
                 _this.frame += 0.1 * delta;
                 if (_this.frame >= 4)
                     _this.frame = 0;
@@ -5264,7 +5266,7 @@ var Entity = /** @class */ (function (_super) {
             });
         };
         _this.drawTopLayer = function (delta) {
-            _this.updateDrawXY(delta);
+            //this.updateDrawXY(delta);
             _this.drawableY = _this.y - _this.drawY;
             _this.healthBar.draw(delta, _this.health, _this.maxHealth, _this.x, _this.y, true);
         };

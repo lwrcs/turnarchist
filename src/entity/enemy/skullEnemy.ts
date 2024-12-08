@@ -275,6 +275,7 @@ export class SkullEnemy extends Enemy {
 
   draw = (delta: number) => {
     if (!this.dead) {
+      this.updateDrawXY(delta);
       this.tileX = 5;
       this.tileY = 8;
       if (this.health <= 1) {
