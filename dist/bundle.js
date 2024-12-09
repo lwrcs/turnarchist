@@ -16537,9 +16537,6 @@ var Room = /** @class */ (function () {
             // Start timing the processing of player lighting
             //console.time("updateLighting: Process Players");
             var lightingAngleStep = levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP;
-            if (gameConstants_1.GameConstants.isMobile) {
-                lightingAngleStep = 90;
-            }
             for (var p in _this.game.players) {
                 var player = _this.game.players[p];
                 if (_this === _this.game.rooms[player.levelID]) {
