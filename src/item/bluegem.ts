@@ -6,6 +6,8 @@ import { TextParticle } from "../particle/textParticle";
 import { GameConstants } from "../gameConstants";
 
 export class BlueGem extends Item {
+  static itemName = "zircon";
+
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
 

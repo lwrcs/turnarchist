@@ -115,6 +115,7 @@ export class Game {
   startedFadeOut: boolean;
   screenShakeActive: boolean;
   encounteredEnemies: Array<number>;
+  paused: boolean;
   private startScreenAlpha = 1;
 
   static text_rendering_canvases: Record<string, HTMLCanvasElement>;
@@ -458,13 +459,13 @@ export class Game {
   };
 
   run = (timestamp: number) => {
+    if (this.paused) return;
     if (!this.previousFrameTimestamp) this.previousFrameTimestamp = timestamp;
 
     // normalized so 1.0 = 60fps
     let delta = Math.min(
       ((timestamp - this.previousFrameTimestamp) * 60) / 1000.0,
     );
-    console.log(delta);
 
     while (times.length > 0 && times[0] <= timestamp - 1000) {
       times.shift();
@@ -479,7 +480,7 @@ export class Game {
       this.update();
     }
 
-    this.draw(delta * GameConstants.ANIMATION_SPEED * 0.8);
+    this.draw(delta * GameConstants.ANIMATION_SPEED * 0.9);
     window.requestAnimationFrame(this.run);
 
     this.previousFrameTimestamp = timestamp;

@@ -5,6 +5,7 @@ import { Sound } from "../sound";
 
 export class Coin extends Item {
   stack: number;
+  static itemName = "coin";
   //checked: boolean;
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);

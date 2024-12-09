@@ -9,6 +9,7 @@ import { GameConstants } from "../gameConstants";
 
 export class DualDagger extends Weapon {
   firstAttack: boolean;
+  static itemName = "dual daggers";
 
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);

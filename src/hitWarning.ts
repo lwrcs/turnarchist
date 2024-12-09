@@ -32,6 +32,9 @@ export class HitWarning extends Drawable {
   private pointerOffset: { x: number; y: number };
   private isEnemy: Boolean;
   private dirOnly: Boolean;
+  private alpha: number = 0;
+  private ticks: number;
+  private tickedForDeath = false;
 
   constructor(
     game: Game,
@@ -62,7 +65,8 @@ export class HitWarning extends Drawable {
   }
 
   tick = () => {
-    this.dead = true;
+    if (this.tickedForDeath) this.dead = true;
+    this.tickedForDeath = true;
   };
 
   static updateFrame = (delta: number) => {
@@ -130,11 +134,23 @@ export class HitWarning extends Drawable {
     return this._pointerOffset;
   }
 
+  fadeHitwarnings = (delta: number) => {
+    if (!this.tickedForDeath) {
+      if (this.alpha < 1) this.alpha += 0.03 * delta;
+      if (this.alpha > 1) this.alpha = 1;
+    } else {
+      if (this.alpha > 0) this.alpha -= 0.03 * delta;
+      if (this.alpha < 0) this.alpha = 0;
+    }
+  };
+
   draw = (delta: number) => {
+    this.fadeHitwarnings(delta);
     if (
       Math.abs(this.x - this.game.players[this.game.localPlayerID].x) <= 1 &&
       Math.abs(this.y - this.game.players[this.game.localPlayerID].y) <= 1
     ) {
+      Game.ctx.globalAlpha = this.alpha;
       if (this.isEnemy) {
         Game.drawFX(
           this.tileX + Math.floor(HitWarning.frame),
@@ -159,10 +175,15 @@ export class HitWarning extends Drawable {
           1,
         );
       }
+      Game.ctx.globalAlpha = 1;
     }
   };
 
   drawTopLayer = (delta: number) => {
+    this.fadeHitwarnings(delta);
+
+    Game.ctx.globalAlpha = this.alpha;
+
     if (this.isEnemy) {
       Game.drawFX(
         this.tileX + Math.floor(HitWarning.frame),
@@ -192,5 +213,6 @@ export class HitWarning extends Drawable {
         );
       }
     }
+    Game.ctx.globalAlpha = 1;
   };
 }

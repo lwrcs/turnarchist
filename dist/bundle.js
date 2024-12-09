@@ -2407,12 +2407,14 @@ var Enemy = /** @class */ (function (_super) {
             }
         };
         _this.lookForPlayer = function () {
+            if (_this.seenPlayer)
+                return;
             var p = _this.nearestPlayer();
             if (p !== false) {
                 var distance = p[0], player = p[1];
                 if (distance <= 4) {
                     _this.targetPlayer = player;
-                    _this.facePlayer(player);
+                    //this.facePlayer(player);
                     _this.seenPlayer = true;
                     var type = _this.constructor;
                     eventBus_1.globalEventBus.emit("EnemySeenPlayer", {
@@ -6407,11 +6409,25 @@ var VendingMachine = /** @class */ (function (_super) {
         };
         _this.space = function () {
             if (_this.open) {
+                var _loop_1 = function (i) {
+                    if (!_this.playerOpened.inventory.hasItemCount(i)) {
+                        var numOfItem_1 = 0;
+                        _this.playerOpened.inventory.items.forEach(function (item) {
+                            if (item instanceof i.constructor)
+                                numOfItem_1++;
+                        });
+                        var difference = _this.costItems[0].stackCount - numOfItem_1;
+                        var pluralLetter_1 = _this.costItems[0].stackCount > 1 ? "s" : "";
+                        _this.game.pushMessage("You need ".concat(difference, " more ").concat(_this.costItems[0].constructor.itemName).concat(pluralLetter_1, " to buy that. "));
+                        return { value: void 0 };
+                    }
+                };
                 // check if player can pay
                 for (var _i = 0, _a = _this.costItems; _i < _a.length; _i++) {
                     var i = _a[_i];
-                    if (!_this.playerOpened.inventory.hasItemCount(i))
-                        return;
+                    var state_1 = _loop_1(i);
+                    if (typeof state_1 === "object")
+                        return state_1.value;
                 }
                 for (var _b = 0, _c = _this.costItems; _b < _c.length; _b++) {
                     var i = _c[_b];
@@ -6426,12 +6442,16 @@ var VendingMachine = /** @class */ (function (_super) {
                     _this.room.entities.some(function (e) { return e.x === x_1 && e.y === y_1; }));
                 var newItem = new _this.item.constructor();
                 newItem = newItem.constructor(_this.room, x_1, y_1);
-                _this.room.items.push(newItem);
+                newItem.onPickup(_this.playerOpened);
+                var cost = _this.costItems[0].stackCount;
+                var pluralLetter = cost > 1 ? "s" : "";
                 if (!_this.isInf) {
                     _this.quantity--;
                     if (_this.quantity <= 0)
                         _this.close();
                 }
+                _this.game.pushMessage("Purchased ".concat(newItem.constructor.itemName, " for ").concat(cost, " ").concat(_this.costItems[0].constructor.itemName).concat(pluralLetter));
+                _this.game.pushMessage("".concat(_this.quantity, " available to buy."));
                 _this.buyAnimAmount = 0.99;
                 if (_this.playerOpened === _this.game.players[_this.game.localPlayerID])
                     _this.game.shakeScreen(0, 4);
@@ -6491,7 +6511,7 @@ var VendingMachine = /** @class */ (function (_super) {
                             game_1.Game.drawFX(2, 0, 1, 1, drawXScaled, drawYScaled, 1, 1);
                         }
                         else if (i === _this.costItems.length + 1) {
-                            _this.item.drawIcon(delta, drawXScaled, drawYScaled);
+                            _this.item.drawIcon(delta, drawXScaled, drawYScaled, 1, _this.quantity);
                         }
                     }
                 }
@@ -7221,11 +7241,12 @@ var Game = /** @class */ (function () {
             player.map.saveMapData();
         };
         this.run = function (timestamp) {
+            if (_this.paused)
+                return;
             if (!_this.previousFrameTimestamp)
                 _this.previousFrameTimestamp = timestamp;
             // normalized so 1.0 = 60fps
             var delta = Math.min(((timestamp - _this.previousFrameTimestamp) * 60) / 1000.0);
-            console.log(delta);
             while (times.length > 0 && times[0] <= timestamp - 1000) {
                 times.shift();
             }
@@ -7235,7 +7256,7 @@ var Game = /** @class */ (function () {
                 Math.floor(_this.previousFrameTimestamp / (1000 / 60))) {
                 _this.update();
             }
-            _this.draw(delta * gameConstants_1.GameConstants.ANIMATION_SPEED * 0.8);
+            _this.draw(delta * gameConstants_1.GameConstants.ANIMATION_SPEED * 0.9);
             window.requestAnimationFrame(_this.run);
             _this.previousFrameTimestamp = timestamp;
         };
@@ -8903,8 +8924,12 @@ var HitWarning = /** @class */ (function (_super) {
         _this.parent = null;
         _this._pointerDir = null;
         _this._pointerOffset = null;
+        _this.alpha = 0;
+        _this.tickedForDeath = false;
         _this.tick = function () {
-            _this.dead = true;
+            if (_this.tickedForDeath)
+                _this.dead = true;
+            _this.tickedForDeath = true;
         };
         _this.removeOverlapping = function () {
             for (var _i = 0, _a = _this.game.room.entities; _i < _a.length; _i++) {
@@ -8924,18 +8949,37 @@ var HitWarning = /** @class */ (function (_super) {
                 }
             }
         };
+        _this.fadeHitwarnings = function (delta) {
+            if (!_this.tickedForDeath) {
+                if (_this.alpha < 1)
+                    _this.alpha += 0.03 * delta;
+                if (_this.alpha > 1)
+                    _this.alpha = 1;
+            }
+            else {
+                if (_this.alpha > 0)
+                    _this.alpha -= 0.03 * delta;
+                if (_this.alpha < 0)
+                    _this.alpha = 0;
+            }
+        };
         _this.draw = function (delta) {
+            _this.fadeHitwarnings(delta);
             if (Math.abs(_this.x - _this.game.players[_this.game.localPlayerID].x) <= 1 &&
                 Math.abs(_this.y - _this.game.players[_this.game.localPlayerID].y) <= 1) {
+                game_1.Game.ctx.globalAlpha = _this.alpha;
                 if (_this.isEnemy) {
                     game_1.Game.drawFX(_this.tileX + Math.floor(HitWarning.frame), _this.tileY, 1, 1, _this.x + _this.pointerOffset.x, _this.y + _this.pointerOffset.y - _this.offsetY, 1, 1);
                 }
                 if (!_this.dirOnly) {
                     game_1.Game.drawFX(18 + Math.floor(HitWarning.frame), 5, 1, 1, _this.x, _this.y - _this.offsetY + 0, 1, 1);
                 }
+                game_1.Game.ctx.globalAlpha = 1;
             }
         };
         _this.drawTopLayer = function (delta) {
+            _this.fadeHitwarnings(delta);
+            game_1.Game.ctx.globalAlpha = _this.alpha;
             if (_this.isEnemy) {
                 game_1.Game.drawFX(_this.tileX + Math.floor(HitWarning.frame), _this.tileY + 1, 1, 1, _this.x + _this.pointerOffset.x, _this.y + _this.pointerOffset.y - _this.offsetY, 1, 1);
             }
@@ -8945,6 +8989,7 @@ var HitWarning = /** @class */ (function (_super) {
                     game_1.Game.drawFX(18 + Math.floor(HitWarning.frame), 6, 1, 1, _this.x, _this.y - _this.offsetY + 0, 1, 1);
                 }
             }
+            game_1.Game.ctx.globalAlpha = 1;
         };
         _this.x = x;
         _this.y = y;
@@ -10465,6 +10510,7 @@ var Armor = /** @class */ (function (_super) {
         _this.tileY = 0;
         return _this;
     }
+    Armor.itemName = "armor";
     return Armor;
 }(equippable_1.Equippable));
 exports.Armor = Armor;
@@ -10517,6 +10563,7 @@ var Backpack = /** @class */ (function (_super) {
         _this.offsetY = 0;
         return _this;
     }
+    Backpack.itemName = "backpack";
     return Backpack;
 }(usable_1.Usable));
 exports.Backpack = Backpack;
@@ -10561,6 +10608,7 @@ var BlueGem = /** @class */ (function (_super) {
         _this.stackable = true;
         return _this;
     }
+    BlueGem.itemName = "zircon";
     return BlueGem;
 }(item_1.Item));
 exports.BlueGem = BlueGem;
@@ -10605,6 +10653,7 @@ var Candle = /** @class */ (function (_super) {
         _this.radius = 4;
         return _this;
     }
+    Candle.itemName = "candle";
     return Candle;
 }(light_1.Light));
 exports.Candle = Candle;
@@ -10663,6 +10712,7 @@ var Coal = /** @class */ (function (_super) {
         _this.stackable = true;
         return _this;
     }
+    Coal.itemName = "coal";
     return Coal;
 }(usable_1.Usable));
 exports.Coal = Coal;
@@ -10760,6 +10810,7 @@ var Coin = /** @class */ (function (_super) {
         enumerable: false,
         configurable: true
     });
+    Coin.itemName = "coin";
     return Coin;
 }(item_1.Item));
 exports.Coin = Coin;
@@ -10942,6 +10993,7 @@ var Gold = /** @class */ (function (_super) {
         _this.stackable = true;
         return _this;
     }
+    Gold.itemName = "gold";
     return Gold;
 }(item_1.Item));
 exports.Gold = Gold;
@@ -10985,6 +11037,7 @@ var GoldenKey = /** @class */ (function (_super) {
         _this.tileY = 0;
         return _this;
     }
+    GoldenKey.itemName = "goldenKey";
     return GoldenKey;
 }(equippable_1.Equippable));
 exports.GoldenKey = GoldenKey;
@@ -11029,6 +11082,7 @@ var GreenGem = /** @class */ (function (_super) {
         _this.stackable = true;
         return _this;
     }
+    GreenGem.itemName = "peridot";
     return GreenGem;
 }(item_1.Item));
 exports.GreenGem = GreenGem;
@@ -11081,6 +11135,7 @@ var Heart = /** @class */ (function (_super) {
         _this.offsetY = -0.3;
         return _this;
     }
+    Heart.itemName = "health potion";
     return Heart;
 }(usable_1.Usable));
 exports.Heart = Heart;
@@ -11226,7 +11281,7 @@ var Item = /** @class */ (function (_super) {
             }
         };
         // Function to draw the item's icon
-        _this.drawIcon = function (delta, x, y, opacity) {
+        _this.drawIcon = function (delta, x, y, opacity, count) {
             if (opacity === void 0) { opacity = 1; }
             if (gameConstants_1.GameConstants.ALPHA_ENABLED)
                 game_1.Game.ctx.globalAlpha = opacity;
@@ -11239,7 +11294,8 @@ var Item = /** @class */ (function (_super) {
                         gameConstants_1.GameConstants.TILESIZE;
             game_1.Game.drawItem(_this.tileX, _this.tileY, 1, 2, x + shake, y - 1, _this.w, _this.h);
             game_1.Game.ctx.globalAlpha = 1;
-            var countText = _this.stackCount <= 1 ? "" : "" + _this.stackCount;
+            var countToUse = count ? count : _this.stackCount;
+            var countText = countToUse <= 1 ? "" : "" + countToUse;
             var width = game_1.Game.measureText(countText).width;
             var countX = 16 - width;
             var countY = 10;
@@ -11356,6 +11412,7 @@ var Key = /** @class */ (function (_super) {
         _this.tileY = 0;
         return _this;
     }
+    Key.itemName = "key";
     return Key;
 }(item_1.Item));
 exports.Key = Key;
@@ -11420,6 +11477,7 @@ var Lantern = /** @class */ (function (_super) {
         _this.name = "lantern";
         return _this;
     }
+    Lantern.itemName = "lantern";
     return Lantern;
 }(light_1.Light));
 exports.Lantern = Lantern;
@@ -11597,6 +11655,7 @@ var RedGem = /** @class */ (function (_super) {
         _this.stackable = true;
         return _this;
     }
+    RedGem.itemName = "garnet";
     return RedGem;
 }(item_1.Item));
 exports.RedGem = RedGem;
@@ -11641,6 +11700,7 @@ var Stone = /** @class */ (function (_super) {
         _this.stackable = true;
         return _this;
     }
+    Stone.itemName = "stones";
     return Stone;
 }(item_1.Item));
 exports.Stone = Stone;
@@ -11685,6 +11745,7 @@ var Torch = /** @class */ (function (_super) {
         _this.radius = 6;
         return _this;
     }
+    Torch.itemName = "torch";
     return Torch;
 }(light_1.Light));
 exports.Torch = Torch;
@@ -11794,6 +11855,7 @@ var WeaponFragments = /** @class */ (function (_super) {
         _this.stackCount = stackCount || 10;
         return _this;
     }
+    WeaponFragments.itemName = "weapon fragments";
     return WeaponFragments;
 }(usable_1.Usable));
 exports.WeaponFragments = WeaponFragments;
@@ -11855,6 +11917,7 @@ var WeaponPoison = /** @class */ (function (_super) {
         _this.canUseOnOther = true;
         return _this;
     }
+    WeaponPoison.itemName = "weapon poison";
     return WeaponPoison;
 }(usable_1.Usable));
 exports.WeaponPoison = WeaponPoison;
@@ -14380,6 +14443,9 @@ var Player = /** @class */ (function (_super) {
             _this.inventory.mostRecentInput = "mouse";
             if (_this.dead) {
                 _this.restart();
+            }
+            else if (_this.openVendingMachine) {
+                _this.openVendingMachine.space();
             }
             else {
                 _this.inventory.mouseLeftClick();
@@ -19843,6 +19909,7 @@ var Dagger = /** @class */ (function (_super) {
         _this.description = "A basic but dependable weapon.";
         return _this;
     }
+    Dagger.itemName = "dagger";
     return Dagger;
 }(weapon_1.Weapon));
 exports.Dagger = Dagger;
@@ -19926,6 +19993,7 @@ var DualDagger = /** @class */ (function (_super) {
             "After the first attack, enemies will not take their turn until you attack or move again.";
         return _this;
     }
+    DualDagger.itemName = "dual daggers";
     return DualDagger;
 }(weapon_1.Weapon));
 exports.DualDagger = DualDagger;
@@ -19967,6 +20035,7 @@ var Pickaxe = /** @class */ (function (_super) {
         _this.canMine = true;
         return _this;
     }
+    Pickaxe.itemName = "pickaxe";
     return Pickaxe;
 }(weapon_1.Weapon));
 exports.Pickaxe = Pickaxe;
@@ -20129,6 +20198,7 @@ var Shotgun = /** @class */ (function (_super) {
         _this.name = "shotgun";
         return _this;
     }
+    Shotgun.itemName = "shotgun";
     return Shotgun;
 }(weapon_1.Weapon));
 exports.Shotgun = Shotgun;
@@ -20230,6 +20300,7 @@ var Spear = /** @class */ (function (_super) {
             "Hits enemies in front of you within a range of 2 tiles.";
         return _this;
     }
+    Spear.itemName = "spear";
     return Spear;
 }(weapon_1.Weapon));
 exports.Spear = Spear;
@@ -20348,6 +20419,7 @@ var Spellbook = /** @class */ (function (_super) {
         _this.description = "Hits multiple enemies within a range of 4 tiles.";
         return _this;
     }
+    Spellbook.itemName = "spear";
     return Spellbook;
 }(weapon_1.Weapon));
 exports.Spellbook = Spellbook;
@@ -20391,6 +20463,7 @@ var Warhammer = /** @class */ (function (_super) {
         _this.durability = 1;
         return _this;
     }
+    Warhammer.itemName = "warhammer";
     return Warhammer;
 }(weapon_1.Weapon));
 exports.Warhammer = Warhammer;
@@ -20526,6 +20599,7 @@ var Weapon = /** @class */ (function (_super) {
         _this.durabilityMax = 50;
         return _this;
     }
+    Weapon.itemName = "weapon";
     return Weapon;
 }(equippable_1.Equippable));
 exports.Weapon = Weapon;

@@ -17,6 +17,7 @@ import { Direction } from "../game";
 export class Spellbook extends Weapon {
   targets: Entity[];
   isTargeting: boolean;
+  static itemName = "spear";
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
     this.range = 4;

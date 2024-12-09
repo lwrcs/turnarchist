@@ -7,6 +7,7 @@ import { Lantern } from "./lantern";
 import { Light } from "./light";
 
 export class Torch extends Light {
+  static itemName = "torch";
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
 

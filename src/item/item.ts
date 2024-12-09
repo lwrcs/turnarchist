@@ -33,6 +33,7 @@ export class Item extends Drawable {
   description: string;
   drawOffset: number;
   pickupOffsetY: number;
+  static itemName: string;
 
   // Constructor for the Item class
   constructor(level: Room, x: number, y: number) {
@@ -208,7 +209,7 @@ export class Item extends Drawable {
     }
   };
   // Function to draw the item's icon
-  drawIcon = (delta: number, x: number, y: number, opacity = 1) => {
+  drawIcon = (delta: number, x: number, y: number, opacity = 1, count?) => {
     if (GameConstants.ALPHA_ENABLED) Game.ctx.globalAlpha = opacity;
     this.drawDurability(x, y);
     let shake = 0;
@@ -230,7 +231,8 @@ export class Item extends Drawable {
     );
     Game.ctx.globalAlpha = 1;
 
-    let countText = this.stackCount <= 1 ? "" : "" + this.stackCount;
+    let countToUse = count ? count : this.stackCount;
+    let countText = countToUse <= 1 ? "" : "" + countToUse;
     let width = Game.measureText(countText).width;
     let countX = 16 - width;
     let countY = 10;

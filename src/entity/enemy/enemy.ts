@@ -187,12 +187,13 @@ export abstract class Enemy extends Entity {
   };
 
   lookForPlayer = () => {
+    if (this.seenPlayer) return;
     let p = this.nearestPlayer();
     if (p !== false) {
       let [distance, player] = p;
       if (distance <= 4) {
         this.targetPlayer = player;
-        this.facePlayer(player);
+        //this.facePlayer(player);
         this.seenPlayer = true;
         let type = this.constructor;
         globalEventBus.emit("EnemySeenPlayer", {

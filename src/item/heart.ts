@@ -6,6 +6,8 @@ import { Room } from "../room";
 import { Usable } from "./usable";
 
 export class Heart extends Usable {
+  static itemName = "health potion";
+
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
     this.tileX = 8;

@@ -8,6 +8,7 @@ import { Weapon } from "../weapon/weapon";
 import { Dagger } from "../weapon/dagger";
 
 export class Hammer extends Usable {
+  static itemName = "hammer";
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
     this.tileX = 8;

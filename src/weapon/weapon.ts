@@ -21,6 +21,7 @@ export abstract class Weapon extends Equippable {
   canMine: boolean;
   damage: number;
   status: WeaponStatus;
+  static itemName = "weapon";
   constructor(level: Room, x: number, y: number, status?: WeaponStatus) {
     super(level, x, y);
 

@@ -3,6 +3,7 @@ import { Equippable } from "./equippable";
 import { Room } from "../room";
 
 export class GoldenKey extends Equippable {
+  static itemName = "goldenKey";
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
 

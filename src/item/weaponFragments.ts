@@ -7,6 +7,7 @@ import { Usable } from "./usable";
 import { Equippable } from "./equippable";
 
 export class WeaponFragments extends Usable {
+  static itemName = "weapon fragments";
   constructor(level: Room, x: number, y: number, stackCount?: number) {
     super(level, x, y);
     this.tileX = 3;

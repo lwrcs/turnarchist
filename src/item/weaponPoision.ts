@@ -7,6 +7,7 @@ import { Usable } from "./usable";
 import { Weapon } from "../weapon/weapon";
 
 export class WeaponPoison extends Usable {
+  static itemName = "weapon poison";
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
     this.tileX = 11;

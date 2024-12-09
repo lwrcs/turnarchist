@@ -7,6 +7,7 @@ import { Crate } from "../entity/object/crate";
 import { Barrel } from "../entity/object/barrel";
 
 export class Dagger extends Weapon {
+  static itemName = "dagger";
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
 

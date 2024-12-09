@@ -8,6 +8,7 @@ import { Barrel } from "../entity/object/barrel";
 import { GenericParticle } from "../particle/genericParticle";
 
 export class Shotgun extends Weapon {
+  static itemName = "shotgun";
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
 

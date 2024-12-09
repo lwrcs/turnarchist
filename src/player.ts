@@ -382,6 +382,8 @@ export class Player extends Drawable {
     this.inventory.mostRecentInput = "mouse";
     if (this.dead) {
       this.restart();
+    } else if (this.openVendingMachine) {
+      this.openVendingMachine.space();
     } else {
       this.inventory.mouseLeftClick();
     }

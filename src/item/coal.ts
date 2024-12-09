@@ -8,6 +8,7 @@ import { Usable } from "./usable";
 import { Lantern } from "./lantern";
 
 export class Coal extends Usable {
+  static itemName = "coal";
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
 

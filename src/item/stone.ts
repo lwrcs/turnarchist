@@ -6,6 +6,7 @@ import { TextParticle } from "../particle/textParticle";
 import { GameConstants } from "../gameConstants";
 
 export class Stone extends Item {
+  static itemName = "stones";
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
 
