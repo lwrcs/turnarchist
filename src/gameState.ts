@@ -764,7 +764,8 @@ export const loadGameState = (
         for (const i in gameState.players) {
           if (activeUsernames.includes(i))
             game.players[i] = loadPlayer(i, gameState.players[i], game);
-          else game.offlinePlayers[i] = loadPlayer(i, gameState.players[i], game);
+          else
+            game.offlinePlayers[i] = loadPlayer(i, gameState.players[i], game);
         }
       }
       if (gameState.offlinePlayers) {
@@ -825,18 +826,12 @@ export const loadGameState = (
 
     //choose one door to lock
     let locked = false;
-    if (!locked) {
-      game.room.doors.forEach((door) => {
+    game.room.doors.forEach((door) => {
+      if (!locked) {
         door.lock();
         locked = true;
-      });
-    }
-    /*
-    game.rooms.forEach((room) => {
-      room.addWallCrack();
+      }
     });
-   
-    */
 
     game.chat = [];
   });

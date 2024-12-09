@@ -204,6 +204,7 @@ export abstract class WizardEnemy extends Enemy {
 
   draw = (delta: number) => {
     if (!this.dead) {
+      this.updateDrawXY(delta);
       if (this.state === WizardState.attack) this.tileX = 7;
       else this.tileX = 6;
 

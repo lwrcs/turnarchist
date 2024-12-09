@@ -179,6 +179,7 @@ export class CrabEnemy extends Enemy {
 
   draw = (delta: number) => {
     if (!this.dead) {
+      this.updateDrawXY(delta);
       if (this.ticks % 2 === 0) {
         this.tileX = 9;
         this.tileY = 4;

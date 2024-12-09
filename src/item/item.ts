@@ -32,6 +32,7 @@ export class Item extends Drawable {
   broken: boolean;
   description: string;
   drawOffset: number;
+  pickupOffsetY: number;
 
   // Constructor for the Item class
   constructor(level: Room, x: number, y: number) {
@@ -51,7 +52,7 @@ export class Item extends Drawable {
     this.stackCount = 1;
     this.pickedUp = false;
     this.alpha = 1;
-    this.scaleFactor = 0.2;
+    this.scaleFactor = 5;
     this.offsetY = -0.25;
     this.name = "";
     this.startY = y;
@@ -61,6 +62,7 @@ export class Item extends Drawable {
     this.broken = false;
     this.description = "";
     this.drawOffset = 0;
+    this.pickupOffsetY = 1;
   }
 
   static add<
@@ -131,8 +133,10 @@ export class Item extends Drawable {
     if (!this.pickedUp) {
       this.drawableY = this.y;
 
-      if (this.scaleFactor < 1) this.scaleFactor += 0.04;
-      else this.scaleFactor = 1;
+      if (this.scaleFactor > 0) this.scaleFactor *= 0.9 ** delta;
+      else this.scaleFactor = 0;
+      const scale = 1 / (this.scaleFactor + 1);
+      Game.ctx.imageSmoothingEnabled = false;
 
       Game.drawItem(0, 0, 1, 1, this.x, this.y, 1, 1);
       this.frame += (delta * (Math.PI * 2)) / 60;
@@ -141,14 +145,14 @@ export class Item extends Drawable {
         this.tileY,
         1,
         2,
-        this.x + this.w * (this.scaleFactor * -0.5 + 0.5) + this.drawOffset,
+        this.x + this.w * (scale * -0.5 + 0.5) + this.drawOffset,
         this.y +
           Math.sin(this.frame) * 0.07 -
           1 +
           this.offsetY +
-          this.h * (this.scaleFactor * -0.5 + 0.5),
-        this.w * this.scaleFactor,
-        this.h * this.scaleFactor,
+          this.h * (scale * -0.5 + 0.5),
+        this.w * scale,
+        this.h * scale,
         this.level.shadeColor,
         this.shadeAmount(),
       );
@@ -175,11 +179,13 @@ export class Item extends Drawable {
   // Function to draw the top layer of the item
   drawTopLayer = (delta: number) => {
     if (this.pickedUp) {
-      this.y -= 0.125 * delta;
+      this.pickupOffsetY += (4.5 - this.pickupOffsetY) * 0.1 * delta;
+
       //this.x += (Math.sin(Date.now() / 50) * delta) / 10;
-      this.alpha -= 0.03 * delta;
-      if (Math.abs(this.y - this.startY) > 5) {
+      this.alpha *= 0.9 ** delta;
+      if (Math.abs(this.alpha) < 0.01) {
         this.drawOffset = 0;
+        this.pickupOffsetY = 1;
 
         this.level.items = this.level.items.filter((x) => x !== this);
       }
@@ -193,7 +199,7 @@ export class Item extends Drawable {
         1,
         2,
         this.x,
-        this.y - 1,
+        this.y - this.pickupOffsetY,
         this.w,
         this.h,
       );

@@ -87,6 +87,11 @@ export class Door extends Tile {
     this.locked = false;
   };
 
+  removeLockIcon = () => {
+    this.iconTileX = 2;
+    this.iconAlpha = 1;
+  };
+
   canUnlock = (player: Player) => {
     if (this.type === DoorType.LOCKEDDOOR) {
       let k = player.inventory.hasItem(Key);
@@ -154,8 +159,8 @@ export class Door extends Tile {
         this.linkedDoor,
         this.linkedDoor.room.roomX - this.room.roomX > 0 ? 1 : -1,
       );
-    this.linkedDoor.locked = false;
-    this.linkedDoor.type = DoorType.DOOR;
+    this.linkedDoor.removeLock();
+    this.linkedDoor.removeLockIcon();
   };
 
   draw = (delta: number) => {
@@ -242,7 +247,7 @@ export class Door extends Tile {
     Game.ctx.globalAlpha = this.iconAlpha;
     let multiplier = 0.125;
     if (this.unlocking == true) {
-      this.iconAlpha *= 0.92 * delta;
+      this.iconAlpha *= 0.92 ** delta;
       this.iconYOffset -= 0.035 * delta;
       multiplier = 0;
       if (this.iconAlpha <= 0.01) {

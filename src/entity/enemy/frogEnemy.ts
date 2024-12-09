@@ -262,19 +262,6 @@ export class FrogEnemy extends Enemy {
     }
   };
 
-  updateDrawXY = (delta: number) => {
-    if (!this.doneMoving()) {
-      this.drawX -= this.drawMoveSpeed * delta * this.drawX;
-      this.drawY -= this.drawMoveSpeed * delta * this.drawY;
-
-      this.drawX =
-        Math.abs(this.drawX) < 0.01 ? 0 : Math.max(-2, Math.min(this.drawX, 2));
-      this.drawY =
-        Math.abs(this.drawY) < 0.01 ? 0 : Math.max(-2, Math.min(this.drawY, 2));
-      this.jump(delta);
-    }
-  };
-
   makeHitWarnings = () => {
     const cullFactor = 0.25;
     const player: Player = this.getPlayer();
@@ -359,6 +346,7 @@ export class FrogEnemy extends Enemy {
 
   draw = (delta: number) => {
     if (!this.dead) {
+      this.updateDrawXY(delta);
       this.frame += this.animationSpeed * delta;
       if (this.frame >= this.frameLength) {
         this.frame = 0;

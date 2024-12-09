@@ -240,6 +240,7 @@ export class ArmoredzombieEnemy extends Enemy {
 
   draw = (delta: number) => {
     if (!this.dead) {
+      this.updateDrawXY(delta);
       this.tileX = 27;
       this.tileY = 8;
       if (this.health <= 1) {

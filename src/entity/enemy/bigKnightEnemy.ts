@@ -257,7 +257,8 @@ export class BigKnightEnemy extends Enemy {
   };
 
   draw = (delta: number) => {
-    {
+    if (!this.dead) {
+      this.updateDrawXY(delta);
       this.frame += 0.1 * delta;
       if (this.frame >= 4) this.frame = 0;
 
@@ -286,20 +287,21 @@ export class BigKnightEnemy extends Enemy {
         this.room.shadeColor,
         this.shadeAmount(),
       );
-    }
-    if (!this.seenPlayer) {
-      this.drawSleepingZs(
-        delta,
-        GameConstants.TILESIZE * 0.5,
-        GameConstants.TILESIZE * -1,
-      );
-    }
-    if (this.alertTicks > 0) {
-      this.drawExclamation(
-        delta,
-        GameConstants.TILESIZE * 0.5,
-        GameConstants.TILESIZE * -1,
-      );
+
+      if (!this.seenPlayer) {
+        this.drawSleepingZs(
+          delta,
+          GameConstants.TILESIZE * 0.5,
+          GameConstants.TILESIZE * -1,
+        );
+      }
+      if (this.alertTicks > 0) {
+        this.drawExclamation(
+          delta,
+          GameConstants.TILESIZE * 0.5,
+          GameConstants.TILESIZE * -1,
+        );
+      }
     }
   };
 
@@ -314,7 +316,6 @@ export class BigKnightEnemy extends Enemy {
       this.y,
       true,
     );
-    this.updateDrawXY(delta);
   };
 
   dropLoot = () => {

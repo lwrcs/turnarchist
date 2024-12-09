@@ -101,6 +101,10 @@ export class Player extends Drawable {
   private animationFrameId: number | null = null;
   private isProcessingQueue: boolean = false;
   private lowHealthFrame: number = 0;
+  private drawMoveQueue: {
+    drawX: number;
+    drawY: number;
+  }[] = [];
   constructor(game: Game, x: number, y: number, isLocalPlayer: boolean) {
     super();
 
@@ -584,7 +588,8 @@ export class Player extends Drawable {
               this.game.rooms[this.levelID].particles.push(
                 new SlashParticle(e.x, e.y),
               );
-              this.shakeScreen(this.x, this.y, e.x, e.y, 10);
+              this.shakeScreen(this.x, this.y, e.x, e.y);
+              //this.hitShake(this.x, this.y, e.x, e.y);
 
               this.game.rooms[this.levelID].tick(this);
               return;
@@ -640,7 +645,8 @@ export class Player extends Drawable {
         this.game.rooms[this.levelID].tick(this);
     } else {
       if (other instanceof Door) {
-        this.shakeScreen(this.x, this.y, x, y, 10);
+        this.shakeScreen(this.x, this.y, x, y);
+
         if (other.canUnlock(this)) other.unlock(this);
       }
     }
@@ -737,6 +743,10 @@ export class Player extends Drawable {
 
     this.drawX += x - this.x;
     this.drawY += y - this.y;
+    this.drawMoveQueue.push({
+      drawX: x - this.x,
+      drawY: y - this.y,
+    });
 
     /*
     if (this.drawX > 1) this.drawX = 1;
@@ -807,8 +817,8 @@ export class Player extends Drawable {
       8 + this.direction * 2,
       1,
       2,
-      this.x - this.drawX,
-      this.y - 1.45 - this.drawY - this.jumpY,
+      this.x - this.drawX - this.hitX,
+      this.y - 1.45 - this.drawY - this.jumpY - this.hitY,
       1,
       2,
     );
@@ -860,6 +870,7 @@ export class Player extends Drawable {
     }
   };
   draw = (delta: number) => {
+    this.updateDrawXY(delta);
     this.drawableY = this.y;
 
     this.flashingFrame += (delta * 12) / GameConstants.FPS;
@@ -1102,38 +1113,85 @@ export class Player extends Drawable {
   };
 
   updateDrawXY = (delta: number) => {
-    //console.log("this.x", this.x);
-    //console.log("this.y", this.y);
     if (!this.doneMoving()) {
-      this.drawX -= this.drawX * this.drawMoveSpeed * delta;
-      this.drawY -= this.drawY * this.drawMoveSpeed * delta;
+      /*
+      for (let i = 0; i < this.drawMoveQueue.length; i++) {
+        let prevX = 0;
+        let prevY = 0;
+        if (this.drawMoveQueue.length > 1) {
+          prevX = this.drawMoveQueue[i - 1]?.drawX;
+          prevY = this.drawMoveQueue[i - 1]?.drawY;
+        }
+        //let threshold = (1 - i / this.drawMoveQueue.length) / 2;
+        const speed = (i + 1) / (this.drawMoveQueue.length * 20);
+        if (Math.abs(this.drawMoveQueue[i].drawX) > 0) {
+          this.drawMoveQueue[i].drawX *=
+            0.99 -
+            Math.abs(Math.sin(this.drawMoveQueue[i].drawX * Math.PI)) / 10 -
+            speed ** delta;
+        } else if (Math.abs(this.drawMoveQueue[i].drawX) < 0.01) {
+          this.drawMoveQueue[i].drawX = 0;
+        }
+        if (Math.abs(this.drawMoveQueue[i].drawY) > 0) {
+          this.drawMoveQueue[i].drawY *=
+            0.99 -
+            Math.abs(Math.sin(this.drawMoveQueue[i].drawX * Math.PI)) / 10 -
+            speed ** delta;
+        } else if (Math.abs(this.drawMoveQueue[i].drawY) < 0.01) {
+          this.drawMoveQueue[i].drawY = 0;
+        }
+
+        this.drawMoveQueue[i].drawX = Math.min(
+          Math.max(this.drawMoveQueue[i].drawX, -1),
+          1,
+        );
+        this.drawMoveQueue[i].drawY = Math.min(
+          Math.max(this.drawMoveQueue[i].drawY, -1),
+          1,
+        );
+      }
+
+      let sumX = 0;
+      let sumY = 0;
+      this.drawMoveQueue.forEach((move) => {
+        sumX += move.drawX;
+        sumY += move.drawY;
+      });
+      
+      this.drawX = sumX;
+      this.drawY = sumY;
+      if (
+        Math.abs(this.drawMoveQueue[0].drawX) < 0.01 &&
+        Math.abs(this.drawMoveQueue[0].drawY) < 0.01
+      )
+        this.drawMoveQueue.shift();
+        
+        */
+      this.drawX *= 0.85 ** delta;
+
+      this.drawY *= 0.85 ** delta;
+      this.drawX = Math.abs(this.drawX) < 0.01 ? 0 : this.drawX;
+      this.drawY = Math.abs(this.drawY) < 0.01 ? 0 : this.drawY;
     }
     if (this.doneHitting()) {
       this.jump(delta);
     }
-    if (Math.abs(this.drawX) < 0.01) {
-      this.drawX = 0;
-      this.justMoved = DrawDirection.Y;
-    }
-    if (Math.abs(this.drawY) < 0.01) {
-      this.drawY = 0;
-      this.justMoved = DrawDirection.X;
-    }
+
     if (!this.doneHitting()) {
       this.updateHitXY(delta);
     }
-    this.drawX += this.hitX;
-    this.drawY += this.hitY;
 
     this.enableSlowMotion();
     GameConstants.ANIMATION_SPEED = this.motionSpeed;
   };
 
   updateHitXY = (delta: number) => {
-    this.hitX -= this.hitX * 0.3;
-    this.hitY -= this.hitY * 0.3;
-    if (Math.abs(this.hitX) < 0.01) this.hitX = 0;
-    if (Math.abs(this.hitY) < 0.01) this.hitY = 0;
+    const hitX = this.hitX - this.hitX * 0.3;
+    const hitY = this.hitY - this.hitY * 0.3;
+    this.hitX = Math.min(Math.max(hitX, -1), 1);
+    this.hitY = Math.min(Math.max(hitY, -1), 1);
+    if (Math.abs(hitX) < 0.01) this.hitX = 0;
+    if (Math.abs(hitY) < 0.01) this.hitY = 0;
   };
 
   hitShake = (
@@ -1142,8 +1200,9 @@ export class Player extends Drawable {
     otherX: number,
     otherY: number,
   ) => {
-    this.hitX = 0.5 * (playerX - otherX);
-    this.hitY = 0.5 * (playerY - otherY);
+    const range = GameConstants.TILESIZE;
+    this.hitX = Math.min(Math.max(0.5 * (playerX - otherX), -range), range);
+    this.hitY = Math.min(Math.max(0.5 * (playerY - otherY), -range), range);
   };
 
   shakeScreen = (
@@ -1153,15 +1212,20 @@ export class Player extends Drawable {
     otherY: number,
     shakeStrength: number = 10,
   ) => {
-    this.hitShake(playerX, playerY, otherX, otherY);
+    const range = GameConstants.TILESIZE;
+    this.hitX = Math.min(Math.max(0.5 * (playerX - otherX), -range), range);
+    this.hitY = Math.min(Math.max(0.5 * (playerY - otherY), -range), range);
 
-    this.game.shakeScreen(this.hitX * shakeStrength, this.hitY * shakeStrength);
+    this.game.shakeScreen(
+      -this.hitX * 3 * shakeStrength,
+      -this.hitY * 3 * shakeStrength,
+    );
   };
 
   jump = (delta: number) => {
     let j = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
-    this.jumpY = Math.sin(j * Math.PI * delta) * this.jumpHeight;
-    if (this.jumpY < 0.01 && this.jumpY > -0.01) this.jumpY = 0;
+    this.jumpY = Math.abs(Math.sin(j * Math.PI) * this.jumpHeight);
+    if (Math.abs(this.jumpY) < 0.01) this.jumpY = 0;
     if (this.jumpY > this.jumpHeight) this.jumpY = this.jumpHeight;
   };
 

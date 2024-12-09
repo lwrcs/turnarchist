@@ -192,6 +192,7 @@ export class KnightEnemy extends Enemy {
     let rumbleX = this.rumble(this.rumbling, this.frame).x;
     let rumbleY = this.rumble(this.rumbling, this.frame, this.direction).y;
     if (!this.dead) {
+      this.updateDrawXY(delta);
       if (this.ticks % 2 === 0) {
         this.tileX = 9;
         this.tileY = 8;

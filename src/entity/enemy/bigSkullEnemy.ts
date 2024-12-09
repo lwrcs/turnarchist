@@ -254,6 +254,7 @@ export class BigSkullEnemy extends Enemy {
 
   draw = (delta: number) => {
     if (!this.dead) {
+      this.updateDrawXY(delta);
       this.tileX = 21;
       this.tileY = 0;
       if (this.health === 3) {
@@ -341,7 +342,6 @@ export class BigSkullEnemy extends Enemy {
       this.y,
       true,
     );
-    this.updateDrawXY(delta);
   };
 
   dropLoot = () => {

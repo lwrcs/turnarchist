@@ -911,6 +911,7 @@ var ArmoredzombieEnemy = /** @class */ (function (_super) {
         };
         _this.draw = function (delta) {
             if (!_this.dead) {
+                _this.updateDrawXY(delta);
                 _this.tileX = 27;
                 _this.tileY = 8;
                 if (_this.health <= 1) {
@@ -1169,25 +1170,25 @@ var BigKnightEnemy = /** @class */ (function (_super) {
             }
         };
         _this.draw = function (delta) {
-            {
+            if (!_this.dead) {
+                _this.updateDrawXY(delta);
                 _this.frame += 0.1 * delta;
                 if (_this.frame >= 4)
                     _this.frame = 0;
                 if (_this.hasShadow)
                     game_1.Game.drawMob(18, 0, 2, 2, _this.x - _this.drawX, _this.y - _this.drawY, 2, 2, _this.room.shadeColor, _this.shadeAmount());
                 game_1.Game.drawMob(2 * Math.floor((_this.tileX + _this.frame) / 2) + 1, _this.tileY, 2, 4, _this.x - _this.drawX, _this.y - 2.5 - _this.drawY, 2, 4, _this.room.shadeColor, _this.shadeAmount());
-            }
-            if (!_this.seenPlayer) {
-                _this.drawSleepingZs(delta, gameConstants_1.GameConstants.TILESIZE * 0.5, gameConstants_1.GameConstants.TILESIZE * -1);
-            }
-            if (_this.alertTicks > 0) {
-                _this.drawExclamation(delta, gameConstants_1.GameConstants.TILESIZE * 0.5, gameConstants_1.GameConstants.TILESIZE * -1);
+                if (!_this.seenPlayer) {
+                    _this.drawSleepingZs(delta, gameConstants_1.GameConstants.TILESIZE * 0.5, gameConstants_1.GameConstants.TILESIZE * -1);
+                }
+                if (_this.alertTicks > 0) {
+                    _this.drawExclamation(delta, gameConstants_1.GameConstants.TILESIZE * 0.5, gameConstants_1.GameConstants.TILESIZE * -1);
+                }
             }
         };
         _this.drawTopLayer = function (delta) {
             _this.drawableY = _this.y;
             _this.healthBar.draw(delta, _this.health, _this.maxHealth, _this.x + 0.5, _this.y, true);
-            _this.updateDrawXY(delta);
         };
         _this.dropLoot = function () {
             var dropOffsets = [
@@ -1450,6 +1451,7 @@ var BigSkullEnemy = /** @class */ (function (_super) {
         };
         _this.draw = function (delta) {
             if (!_this.dead) {
+                _this.updateDrawXY(delta);
                 _this.tileX = 21;
                 _this.tileY = 0;
                 if (_this.health === 3) {
@@ -1499,7 +1501,6 @@ var BigSkullEnemy = /** @class */ (function (_super) {
         _this.drawTopLayer = function (delta) {
             _this.drawableY = _this.y;
             _this.healthBar.draw(delta, _this.health, _this.maxHealth, _this.x + 0.5, _this.y, true);
-            _this.updateDrawXY(delta);
         };
         _this.dropLoot = function () {
             var dropOffsets = [
@@ -1743,6 +1744,7 @@ var BishopEnemy = /** @class */ (function (_super) {
         };
         _this.draw = function (delta) {
             if (!_this.dead) {
+                _this.updateDrawXY(delta);
                 _this.frame += 0.1 * delta;
                 if (_this.frame >= 4)
                     _this.frame = 0;
@@ -1950,6 +1952,7 @@ var ChargeEnemy = /** @class */ (function (_super) {
         };
         _this.draw = function (delta) {
             if (!_this.dead) {
+                _this.updateDrawXY(delta);
                 _this.frame += 0.1 * delta;
                 if (_this.frame >= 4)
                     _this.frame = 0;
@@ -2192,6 +2195,7 @@ var CrabEnemy = /** @class */ (function (_super) {
         };
         _this.draw = function (delta) {
             if (!_this.dead) {
+                _this.updateDrawXY(delta);
                 if (_this.ticks % 2 === 0) {
                     _this.tileX = 9;
                     _this.tileY = 4;
@@ -2643,20 +2647,18 @@ var Enemy = /** @class */ (function (_super) {
         };
         _this.jump = function (delta) {
             var j = Math.max(Math.abs(_this.drawX), Math.abs(_this.drawY));
-            _this.jumpY = Math.sin(j * Math.PI) * _this.jumpHeight;
-            if (_this.jumpY < 0.01 && _this.jumpY > -0.01)
+            _this.jumpY = Math.abs(Math.sin(j * Math.PI)) * _this.jumpHeight;
+            if (_this.jumpY < 0.01)
                 _this.jumpY = 0;
             if (_this.jumpY > _this.jumpHeight)
                 _this.jumpY = _this.jumpHeight;
         };
         _this.updateDrawXY = function (delta) {
             if (!_this.doneMoving()) {
-                _this.drawX -= _this.drawMoveSpeed * delta * _this.drawX;
-                _this.drawY -= _this.drawMoveSpeed * delta * _this.drawY;
-                _this.drawX =
-                    Math.abs(_this.drawX) < 0.01 ? 0 : Math.max(-1, Math.min(_this.drawX, 1));
-                _this.drawY =
-                    Math.abs(_this.drawY) < 0.01 ? 0 : Math.max(-1, Math.min(_this.drawY, 1));
+                _this.drawX *= Math.pow(0.85, delta);
+                _this.drawY *= Math.pow(0.85, delta);
+                _this.drawX = Math.abs(_this.drawX) < 0.01 ? 0 : _this.drawX;
+                _this.drawY = Math.abs(_this.drawY) < 0.01 ? 0 : _this.drawY;
                 _this.jump(delta);
             }
         };
@@ -2666,6 +2668,7 @@ var Enemy = /** @class */ (function (_super) {
         };
         _this.draw = function (delta) {
             if (!_this.dead) {
+                _this.updateDrawXY(delta);
                 _this.frame += 0.1 * delta;
                 if (_this.frame >= 4)
                     _this.frame = 0;
@@ -2768,6 +2771,7 @@ var EnergyWizardEnemy = /** @class */ (function (_super) {
         var _this = _super.call(this, room, game, x, y) || this;
         _this.draw = function (delta) {
             if (!_this.dead) {
+                _this.updateDrawXY(delta);
                 if (_this.state === WizardState.attack)
                     _this.tileX = 7;
                 else
@@ -2985,6 +2989,7 @@ var FireWizardEnemy = /** @class */ (function (_super) {
             if (_this.frame >= 4)
                 _this.frame = 0;
             if (!_this.dead) {
+                _this.updateDrawXY(delta);
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
                 if (_this.frame >= 0) {
@@ -3244,17 +3249,6 @@ var FrogEnemy = /** @class */ (function (_super) {
                     _this.jumpY = _this.jumpHeight;
             }
         };
-        _this.updateDrawXY = function (delta) {
-            if (!_this.doneMoving()) {
-                _this.drawX -= _this.drawMoveSpeed * delta * _this.drawX;
-                _this.drawY -= _this.drawMoveSpeed * delta * _this.drawY;
-                _this.drawX =
-                    Math.abs(_this.drawX) < 0.01 ? 0 : Math.max(-2, Math.min(_this.drawX, 2));
-                _this.drawY =
-                    Math.abs(_this.drawY) < 0.01 ? 0 : Math.max(-2, Math.min(_this.drawY, 2));
-                _this.jump(delta);
-            }
-        };
         _this.makeHitWarnings = function () {
             var _a;
             var cullFactor = 0.25;
@@ -3329,6 +3323,7 @@ var FrogEnemy = /** @class */ (function (_super) {
         };
         _this.draw = function (delta) {
             if (!_this.dead) {
+                _this.updateDrawXY(delta);
                 _this.frame += _this.animationSpeed * delta;
                 if (_this.frame >= _this.frameLength) {
                     _this.frame = 0;
@@ -3565,6 +3560,7 @@ var KnightEnemy = /** @class */ (function (_super) {
             var rumbleX = _this.rumble(_this.rumbling, _this.frame).x;
             var rumbleY = _this.rumble(_this.rumbling, _this.frame, _this.direction).y;
             if (!_this.dead) {
+                _this.updateDrawXY(delta);
                 if (_this.ticks % 2 === 0) {
                     _this.tileX = 9;
                     _this.tileY = 8;
@@ -3774,6 +3770,7 @@ var QueenEnemy = /** @class */ (function (_super) {
         };
         _this.draw = function (delta) {
             if (!_this.dead) {
+                _this.updateDrawXY(delta);
                 _this.frame += 0.1 * delta;
                 if (_this.frame >= 4)
                     _this.frame = 0;
@@ -3964,6 +3961,7 @@ var RookEnemy = /** @class */ (function (_super) {
         };
         _this.draw = function (delta) {
             if (!_this.dead) {
+                _this.updateDrawXY(delta);
                 _this.frame += 0.1 * delta;
                 if (_this.frame >= 4)
                     _this.frame = 0;
@@ -4470,6 +4468,7 @@ var Spawner = /** @class */ (function (_super) {
         };
         _this.draw = function (delta) {
             if (!_this.dead) {
+                _this.updateDrawXY(delta);
                 _this.frame += 0.1 * delta;
                 if (_this.frame >= 4)
                     _this.frame = 0;
@@ -4683,6 +4682,7 @@ var WizardEnemy = /** @class */ (function (_super) {
         };
         _this.draw = function (delta) {
             if (!_this.dead) {
+                _this.updateDrawXY(delta);
                 if (_this.state === WizardState.attack)
                     _this.tileX = 7;
                 else
@@ -5106,12 +5106,10 @@ var Entity = /** @class */ (function (_super) {
         };
         _this.updateDrawXY = function (delta) {
             if (!_this.doneMoving()) {
-                _this.drawX -= _this.drawMoveSpeed * delta * _this.drawX;
-                _this.drawY -= _this.drawMoveSpeed * delta * _this.drawY;
-                _this.drawX =
-                    Math.abs(_this.drawX) < 0.01 ? 0 : Math.max(-1, Math.min(_this.drawX, 1));
-                _this.drawY =
-                    Math.abs(_this.drawY) < 0.01 ? 0 : Math.max(-1, Math.min(_this.drawY, 1));
+                _this.drawX *= Math.pow(0.9, delta);
+                _this.drawY *= Math.pow(0.9, delta);
+                _this.drawX = Math.abs(_this.drawX) < 0.01 ? 0 : _this.drawX;
+                _this.drawY = Math.abs(_this.drawY) < 0.01 ? 0 : _this.drawY;
             }
         };
         _this.setDrawXY = function (x, y) {
@@ -5620,12 +5618,12 @@ var Barrel = /** @class */ (function (_super) {
         _this.draw = function (delta) {
             // not inherited because it doesn't have the 0.5 offset
             if (!_this.dead) {
+                _this.updateDrawXY(delta);
                 game_1.Game.drawObj(_this.tileX, _this.tileY, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
             }
         };
         _this.drawTopLayer = function (delta) {
             _this.drawableY = _this.y;
-            _this.updateDrawXY(delta);
         };
         _this.room = room;
         _this.health = 1;
@@ -5766,6 +5764,7 @@ var Chest = /** @class */ (function (_super) {
                 }
             }
             if (!_this.dead) {
+                _this.updateDrawXY(delta);
                 game_1.Game.drawObj(Math.floor(_this.tileX), Math.floor(_this.tileY), 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
             }
         };
@@ -5842,12 +5841,12 @@ var Crate = /** @class */ (function (_super) {
         _this.draw = function (delta) {
             // not inherited because it doesn't have the 0.5 offset
             if (!_this.dead) {
+                _this.updateDrawXY(delta);
                 game_1.Game.drawObj(_this.tileX, _this.tileY, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
             }
         };
         _this.drawTopLayer = function (delta) {
             _this.drawableY = _this.y;
-            _this.updateDrawXY(delta);
         };
         _this.room = room;
         _this.health = 1;
@@ -7225,7 +7224,8 @@ var Game = /** @class */ (function () {
             if (!_this.previousFrameTimestamp)
                 _this.previousFrameTimestamp = timestamp;
             // normalized so 1.0 = 60fps
-            var delta = Math.min(((timestamp - _this.previousFrameTimestamp) * 60) / 1000.0, 100);
+            var delta = Math.min(((timestamp - _this.previousFrameTimestamp) * 60) / 1000.0);
+            console.log(delta);
             while (times.length > 0 && times[0] <= timestamp - 1000) {
                 times.shift();
             }
@@ -7465,8 +7465,7 @@ var Game = /** @class */ (function () {
                 Game.ctx.translate(-newLevelOffsetX, -newLevelOffsetY);
                 Game.ctx.translate(Math.round(playerCX + playerOffsetX - 0.5 * gameConstants_1.GameConstants.WIDTH), Math.round(playerCY + playerOffsetY - 0.5 * gameConstants_1.GameConstants.HEIGHT));
                 _this.players[_this.localPlayerID].drawGUI(delta);
-                for (var i in _this.players)
-                    _this.players[i].updateDrawXY(delta);
+                //for (const i in this.players) this.players[i].updateDrawXY(delta);
             }
             else if (_this.levelState === LevelState.TRANSITIONING_LADDER) {
                 var playerCX = (_this.players[_this.localPlayerID].x -
@@ -7510,33 +7509,14 @@ var Game = /** @class */ (function () {
                 }
                 Game.ctx.translate(Math.round(playerCX - 0.5 * gameConstants_1.GameConstants.WIDTH), Math.round(playerCY - 0.5 * gameConstants_1.GameConstants.HEIGHT));
                 _this.players[_this.localPlayerID].drawGUI(delta);
-                for (var i in _this.players)
-                    _this.players[i].updateDrawXY(delta);
+                //for (const i in this.players) this.players[i].updateDrawXY(delta);
             }
             else if (_this.levelState === LevelState.LEVEL_GENERATION) {
                 _this.levelgen.draw(delta);
             }
             else if (_this.levelState === LevelState.IN_LEVEL) {
                 // Start of Selection
-                if (_this.screenShakeActive) {
-                    //const decayFactor = 1 - 0.15 * delta;
-                    var decayFactor = 3 / Math.sqrt((Date.now() + 30 - _this.screenShakeCutoff) * delta);
-                    _this.shakeAmountX -= _this.shakeAmountX * 0.1 * delta;
-                    _this.shakeAmountY -= _this.shakeAmountY * 0.1 * delta;
-                    _this.screenShakeX =
-                        Math.sin(_this.shakeFrame * Math.PI) * _this.shakeAmountX * decayFactor;
-                    _this.screenShakeY =
-                        Math.sin(_this.shakeFrame * Math.PI) * _this.shakeAmountY * decayFactor;
-                    _this.shakeFrame += 0.3 * delta;
-                    if (Math.abs(decayFactor) < 0.001) {
-                        _this.shakeAmountX = 0;
-                        _this.shakeAmountY = 0;
-                        _this.shakeFrame = 0;
-                        _this.screenShakeX = 0;
-                        _this.screenShakeY = 0;
-                        _this.screenShakeActive = false;
-                    }
-                }
+                _this.drawScreenShake(delta);
                 var playerDrawX = _this.players[_this.localPlayerID].drawX;
                 var playerDrawY = _this.players[_this.localPlayerID].drawY;
                 var cameraX = Math.round((_this.players[_this.localPlayerID].x - playerDrawX + 0.5) *
@@ -7555,8 +7535,7 @@ var Game = /** @class */ (function () {
                 Game.ctx.translate(cameraX, cameraY);
                 _this.room.drawTopLayer(delta);
                 _this.players[_this.localPlayerID].drawGUI(delta);
-                for (var i in _this.players)
-                    _this.players[i].updateDrawXY(delta);
+                //for (const i in this.players) this.players[i].updateDrawXY(delta);
             }
             // draw chat
             var CHAT_X = 10;
@@ -7617,9 +7596,35 @@ var Game = /** @class */ (function () {
             Game.fillText(fps + "fps", 1, 1);
             Game.ctx.globalAlpha = 1;
             if (!_this.started && _this.levelState !== LevelState.LEVEL_GENERATION) {
-                _this.drawStartScreen(delta);
+                _this.drawStartScreen(delta * 10);
             }
             mouseCursor_1.MouseCursor.getInstance().draw();
+        };
+        this.drawScreenShake = function (delta) {
+            if (!_this.screenShakeActive) {
+                _this.resetScreenShake();
+                return;
+            }
+            //const decayFactor = 1 - 0.15 * delta;
+            var decayFactor = 3 / Math.sqrt((Date.now() + 30 - _this.screenShakeCutoff) * delta);
+            _this.shakeAmountX *= Math.pow(0.9, delta);
+            _this.shakeAmountY *= Math.pow(0.9, delta);
+            _this.screenShakeX =
+                Math.sin(_this.shakeFrame * Math.PI) * _this.shakeAmountX * decayFactor;
+            _this.screenShakeY =
+                Math.sin(_this.shakeFrame * Math.PI) * _this.shakeAmountY * decayFactor;
+            _this.shakeFrame += 0.3 * delta;
+            if (Math.abs(decayFactor) < 0.001) {
+                _this.resetScreenShake();
+            }
+        };
+        this.resetScreenShake = function () {
+            _this.shakeAmountX = 0;
+            _this.shakeAmountY = 0;
+            _this.shakeFrame = 0;
+            _this.screenShakeX = 0;
+            _this.screenShakeY = 0;
+            _this.screenShakeActive = false;
         };
         window.addEventListener("load", function () {
             var canvas = document.getElementById("gameCanvas");
@@ -8768,18 +8773,12 @@ var loadGameState = function (game, activeUsernames, gameState, newWorld) {
         game.room.items.push(new key_1.Key(game.room, p.x - 1, p.y + 1));
         //choose one door to lock
         var locked = false;
-        if (!locked) {
-            game.room.doors.forEach(function (door) {
+        game.room.doors.forEach(function (door) {
+            if (!locked) {
                 door.lock();
                 locked = true;
-            });
-        }
-        /*
-        game.rooms.forEach((room) => {
-          room.addWallCrack();
+            }
         });
-       
-        */
         game.chat = [];
     });
 };
@@ -11181,17 +11180,19 @@ var Item = /** @class */ (function (_super) {
         _this.draw = function (delta) {
             if (!_this.pickedUp) {
                 _this.drawableY = _this.y;
-                if (_this.scaleFactor < 1)
-                    _this.scaleFactor += 0.04;
+                if (_this.scaleFactor > 0)
+                    _this.scaleFactor *= Math.pow(0.9, delta);
                 else
-                    _this.scaleFactor = 1;
+                    _this.scaleFactor = 0;
+                var scale = 1 / (_this.scaleFactor + 1);
+                game_1.Game.ctx.imageSmoothingEnabled = false;
                 game_1.Game.drawItem(0, 0, 1, 1, _this.x, _this.y, 1, 1);
                 _this.frame += (delta * (Math.PI * 2)) / 60;
-                game_1.Game.drawItem(_this.tileX, _this.tileY, 1, 2, _this.x + _this.w * (_this.scaleFactor * -0.5 + 0.5) + _this.drawOffset, _this.y +
+                game_1.Game.drawItem(_this.tileX, _this.tileY, 1, 2, _this.x + _this.w * (scale * -0.5 + 0.5) + _this.drawOffset, _this.y +
                     Math.sin(_this.frame) * 0.07 -
                     1 +
                     _this.offsetY +
-                    _this.h * (_this.scaleFactor * -0.5 + 0.5), _this.w * _this.scaleFactor, _this.h * _this.scaleFactor, _this.level.shadeColor, _this.shadeAmount());
+                    _this.h * (scale * -0.5 + 0.5), _this.w * scale, _this.h * scale, _this.level.shadeColor, _this.shadeAmount());
             }
         };
         _this.setDrawOffset = function () {
@@ -11210,16 +11211,17 @@ var Item = /** @class */ (function (_super) {
         // Function to draw the top layer of the item
         _this.drawTopLayer = function (delta) {
             if (_this.pickedUp) {
-                _this.y -= 0.125 * delta;
+                _this.pickupOffsetY += (4.5 - _this.pickupOffsetY) * 0.1 * delta;
                 //this.x += (Math.sin(Date.now() / 50) * delta) / 10;
-                _this.alpha -= 0.03 * delta;
-                if (Math.abs(_this.y - _this.startY) > 5) {
+                _this.alpha *= Math.pow(0.9, delta);
+                if (Math.abs(_this.alpha) < 0.01) {
                     _this.drawOffset = 0;
+                    _this.pickupOffsetY = 1;
                     _this.level.items = _this.level.items.filter(function (x) { return x !== _this; });
                 }
                 if (gameConstants_1.GameConstants.ALPHA_ENABLED)
                     game_1.Game.ctx.globalAlpha = Math.max(0, _this.alpha);
-                game_1.Game.drawItem(_this.tileX, _this.tileY, 1, 2, _this.x, _this.y - 1, _this.w, _this.h);
+                game_1.Game.drawItem(_this.tileX, _this.tileY, 1, 2, _this.x, _this.y - _this.pickupOffsetY, _this.w, _this.h);
                 game_1.Game.ctx.globalAlpha = 1.0;
             }
         };
@@ -11283,7 +11285,7 @@ var Item = /** @class */ (function (_super) {
         _this.stackCount = 1;
         _this.pickedUp = false;
         _this.alpha = 1;
-        _this.scaleFactor = 0.2;
+        _this.scaleFactor = 5;
         _this.offsetY = -0.25;
         _this.name = "";
         _this.startY = y;
@@ -11293,6 +11295,7 @@ var Item = /** @class */ (function (_super) {
         _this.broken = false;
         _this.description = "";
         _this.drawOffset = 0;
+        _this.pickupOffsetY = 1;
         return _this;
     }
     Item.add = function (room, x, y) {
@@ -14217,6 +14220,7 @@ var Player = /** @class */ (function (_super) {
         _this.animationFrameId = null;
         _this.isProcessingQueue = false;
         _this.lowHealthFrame = 0;
+        _this.drawMoveQueue = [];
         _this.inputHandler = function (input) {
             if (!_this.game.started && input !== input_1.InputEnum.MOUSE_MOVE) {
                 _this.game.startedFadeOut = true;
@@ -14557,7 +14561,8 @@ var Player = /** @class */ (function (_super) {
                                 if (_this.game.rooms[_this.levelID] === _this.game.room)
                                     sound_1.Sound.hit();
                                 _this.game.rooms[_this.levelID].particles.push(new slashParticle_1.SlashParticle(e.x, e.y));
-                                _this.shakeScreen(_this.x, _this.y, e.x, e.y, 10);
+                                _this.shakeScreen(_this.x, _this.y, e.x, e.y);
+                                //this.hitShake(this.x, this.y, e.x, e.y);
                                 _this.game.rooms[_this.levelID].tick(_this);
                                 return;
                             }
@@ -14613,7 +14618,7 @@ var Player = /** @class */ (function (_super) {
             }
             else {
                 if (other instanceof door_1.Door) {
-                    _this.shakeScreen(_this.x, _this.y, x, y, 10);
+                    _this.shakeScreen(_this.x, _this.y, x, y);
                     if (other.canUnlock(_this))
                         other.unlock(_this);
                 }
@@ -14704,6 +14709,10 @@ var Player = /** @class */ (function (_super) {
                 _this.openVendingMachine.close();
             _this.drawX += x - _this.x;
             _this.drawY += y - _this.y;
+            _this.drawMoveQueue.push({
+                drawX: x - _this.x,
+                drawY: y - _this.y,
+            });
             /*
             if (this.drawX > 1) this.drawX = 1;
             if (this.drawY > 1) this.drawY = 1;
@@ -14762,7 +14771,7 @@ var Player = /** @class */ (function (_super) {
             _this.frame += 0.1 * delta;
             if (_this.frame >= 4)
                 _this.frame = 0;
-            game_1.Game.drawMob(1 + Math.floor(_this.frame), 8 + _this.direction * 2, 1, 2, _this.x - _this.drawX, _this.y - 1.45 - _this.drawY - _this.jumpY, 1, 2);
+            game_1.Game.drawMob(1 + Math.floor(_this.frame), 8 + _this.direction * 2, 1, 2, _this.x - _this.drawX - _this.hitX, _this.y - 1.45 - _this.drawY - _this.jumpY - _this.hitY, 1, 2);
             if (_this.inventory.getArmor() && _this.inventory.getArmor().health > 0) {
                 // TODO draw armor
             }
@@ -14792,6 +14801,7 @@ var Player = /** @class */ (function (_super) {
             }
         };
         _this.draw = function (delta) {
+            _this.updateDrawXY(delta);
             _this.drawableY = _this.y;
             _this.flashingFrame += (delta * 12) / gameConstants_1.GameConstants.FPS;
             if (!_this.dead) {
@@ -14968,52 +14978,100 @@ var Player = /** @class */ (function (_super) {
             }
         };
         _this.updateDrawXY = function (delta) {
-            //console.log("this.x", this.x);
-            //console.log("this.y", this.y);
             if (!_this.doneMoving()) {
-                _this.drawX -= _this.drawX * _this.drawMoveSpeed * delta;
-                _this.drawY -= _this.drawY * _this.drawMoveSpeed * delta;
+                /*
+                for (let i = 0; i < this.drawMoveQueue.length; i++) {
+                  let prevX = 0;
+                  let prevY = 0;
+                  if (this.drawMoveQueue.length > 1) {
+                    prevX = this.drawMoveQueue[i - 1]?.drawX;
+                    prevY = this.drawMoveQueue[i - 1]?.drawY;
+                  }
+                  //let threshold = (1 - i / this.drawMoveQueue.length) / 2;
+                  const speed = (i + 1) / (this.drawMoveQueue.length * 20);
+                  if (Math.abs(this.drawMoveQueue[i].drawX) > 0) {
+                    this.drawMoveQueue[i].drawX *=
+                      0.99 -
+                      Math.abs(Math.sin(this.drawMoveQueue[i].drawX * Math.PI)) / 10 -
+                      speed ** delta;
+                  } else if (Math.abs(this.drawMoveQueue[i].drawX) < 0.01) {
+                    this.drawMoveQueue[i].drawX = 0;
+                  }
+                  if (Math.abs(this.drawMoveQueue[i].drawY) > 0) {
+                    this.drawMoveQueue[i].drawY *=
+                      0.99 -
+                      Math.abs(Math.sin(this.drawMoveQueue[i].drawX * Math.PI)) / 10 -
+                      speed ** delta;
+                  } else if (Math.abs(this.drawMoveQueue[i].drawY) < 0.01) {
+                    this.drawMoveQueue[i].drawY = 0;
+                  }
+          
+                  this.drawMoveQueue[i].drawX = Math.min(
+                    Math.max(this.drawMoveQueue[i].drawX, -1),
+                    1,
+                  );
+                  this.drawMoveQueue[i].drawY = Math.min(
+                    Math.max(this.drawMoveQueue[i].drawY, -1),
+                    1,
+                  );
+                }
+          
+                let sumX = 0;
+                let sumY = 0;
+                this.drawMoveQueue.forEach((move) => {
+                  sumX += move.drawX;
+                  sumY += move.drawY;
+                });
+                
+                this.drawX = sumX;
+                this.drawY = sumY;
+                if (
+                  Math.abs(this.drawMoveQueue[0].drawX) < 0.01 &&
+                  Math.abs(this.drawMoveQueue[0].drawY) < 0.01
+                )
+                  this.drawMoveQueue.shift();
+                  
+                  */
+                _this.drawX *= Math.pow(0.85, delta);
+                _this.drawY *= Math.pow(0.85, delta);
+                _this.drawX = Math.abs(_this.drawX) < 0.01 ? 0 : _this.drawX;
+                _this.drawY = Math.abs(_this.drawY) < 0.01 ? 0 : _this.drawY;
             }
             if (_this.doneHitting()) {
                 _this.jump(delta);
             }
-            if (Math.abs(_this.drawX) < 0.01) {
-                _this.drawX = 0;
-                _this.justMoved = DrawDirection.Y;
-            }
-            if (Math.abs(_this.drawY) < 0.01) {
-                _this.drawY = 0;
-                _this.justMoved = DrawDirection.X;
-            }
             if (!_this.doneHitting()) {
                 _this.updateHitXY(delta);
             }
-            _this.drawX += _this.hitX;
-            _this.drawY += _this.hitY;
             _this.enableSlowMotion();
             gameConstants_1.GameConstants.ANIMATION_SPEED = _this.motionSpeed;
         };
         _this.updateHitXY = function (delta) {
-            _this.hitX -= _this.hitX * 0.3;
-            _this.hitY -= _this.hitY * 0.3;
-            if (Math.abs(_this.hitX) < 0.01)
+            var hitX = _this.hitX - _this.hitX * 0.3;
+            var hitY = _this.hitY - _this.hitY * 0.3;
+            _this.hitX = Math.min(Math.max(hitX, -1), 1);
+            _this.hitY = Math.min(Math.max(hitY, -1), 1);
+            if (Math.abs(hitX) < 0.01)
                 _this.hitX = 0;
-            if (Math.abs(_this.hitY) < 0.01)
+            if (Math.abs(hitY) < 0.01)
                 _this.hitY = 0;
         };
         _this.hitShake = function (playerX, playerY, otherX, otherY) {
-            _this.hitX = 0.5 * (playerX - otherX);
-            _this.hitY = 0.5 * (playerY - otherY);
+            var range = gameConstants_1.GameConstants.TILESIZE;
+            _this.hitX = Math.min(Math.max(0.5 * (playerX - otherX), -range), range);
+            _this.hitY = Math.min(Math.max(0.5 * (playerY - otherY), -range), range);
         };
         _this.shakeScreen = function (playerX, playerY, otherX, otherY, shakeStrength) {
             if (shakeStrength === void 0) { shakeStrength = 10; }
-            _this.hitShake(playerX, playerY, otherX, otherY);
-            _this.game.shakeScreen(_this.hitX * shakeStrength, _this.hitY * shakeStrength);
+            var range = gameConstants_1.GameConstants.TILESIZE;
+            _this.hitX = Math.min(Math.max(0.5 * (playerX - otherX), -range), range);
+            _this.hitY = Math.min(Math.max(0.5 * (playerY - otherY), -range), range);
+            _this.game.shakeScreen(-_this.hitX * 3 * shakeStrength, -_this.hitY * 3 * shakeStrength);
         };
         _this.jump = function (delta) {
             var j = Math.max(Math.abs(_this.drawX), Math.abs(_this.drawY));
-            _this.jumpY = Math.sin(j * Math.PI * delta) * _this.jumpHeight;
-            if (_this.jumpY < 0.01 && _this.jumpY > -0.01)
+            _this.jumpY = Math.abs(Math.sin(j * Math.PI) * _this.jumpHeight);
+            if (Math.abs(_this.jumpY) < 0.01)
                 _this.jumpY = 0;
             if (_this.jumpY > _this.jumpHeight)
                 _this.jumpY = _this.jumpHeight;
@@ -18584,6 +18642,10 @@ var Door = /** @class */ (function (_super) {
             _this.type = DoorType.DOOR;
             _this.locked = false;
         };
+        _this.removeLockIcon = function () {
+            _this.iconTileX = 2;
+            _this.iconAlpha = 1;
+        };
         _this.canUnlock = function (player) {
             if (_this.type === DoorType.LOCKEDDOOR) {
                 var k = player.inventory.hasItem(key_1.Key);
@@ -18643,8 +18705,8 @@ var Door = /** @class */ (function (_super) {
             }
             else
                 _this.game.changeLevelThroughDoor(player, _this.linkedDoor, _this.linkedDoor.room.roomX - _this.room.roomX > 0 ? 1 : -1);
-            _this.linkedDoor.locked = false;
-            _this.linkedDoor.type = DoorType.DOOR;
+            _this.linkedDoor.removeLock();
+            _this.linkedDoor.removeLockIcon();
         };
         _this.draw = function (delta) {
             if (_this.doorDir === game_1.Direction.UP) {
@@ -18674,7 +18736,7 @@ var Door = /** @class */ (function (_super) {
             game_1.Game.ctx.globalAlpha = _this.iconAlpha;
             var multiplier = 0.125;
             if (_this.unlocking == true) {
-                _this.iconAlpha *= 0.92 * delta;
+                _this.iconAlpha *= Math.pow(0.92, delta);
                 _this.iconYOffset -= 0.035 * delta;
                 multiplier = 0;
                 if (_this.iconAlpha <= 0.01) {

@@ -202,13 +202,11 @@ export class Entity extends Drawable {
 
   updateDrawXY = (delta: number) => {
     if (!this.doneMoving()) {
-      this.drawX -= this.drawMoveSpeed * delta * this.drawX;
-      this.drawY -= this.drawMoveSpeed * delta * this.drawY;
+      this.drawX *= 0.9 ** delta;
+      this.drawY *= 0.9 ** delta;
 
-      this.drawX =
-        Math.abs(this.drawX) < 0.01 ? 0 : Math.max(-1, Math.min(this.drawX, 1));
-      this.drawY =
-        Math.abs(this.drawY) < 0.01 ? 0 : Math.max(-1, Math.min(this.drawY, 1));
+      this.drawX = Math.abs(this.drawX) < 0.01 ? 0 : this.drawX;
+      this.drawY = Math.abs(this.drawY) < 0.01 ? 0 : this.drawY;
     }
   };
 

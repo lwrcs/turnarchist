@@ -463,8 +463,8 @@ export class Game {
     // normalized so 1.0 = 60fps
     let delta = Math.min(
       ((timestamp - this.previousFrameTimestamp) * 60) / 1000.0,
-      100,
     );
+    console.log(delta);
 
     while (times.length > 0 && times[0] <= timestamp - 1000) {
       times.shift();
@@ -912,7 +912,7 @@ export class Game {
 
       this.players[this.localPlayerID].drawGUI(delta);
 
-      for (const i in this.players) this.players[i].updateDrawXY(delta);
+      //for (const i in this.players) this.players[i].updateDrawXY(delta);
     } else if (this.levelState === LevelState.TRANSITIONING_LADDER) {
       let playerCX =
         (this.players[this.localPlayerID].x -
@@ -990,33 +990,13 @@ export class Game {
       );
 
       this.players[this.localPlayerID].drawGUI(delta);
-      for (const i in this.players) this.players[i].updateDrawXY(delta);
+      //for (const i in this.players) this.players[i].updateDrawXY(delta);
     } else if (this.levelState === LevelState.LEVEL_GENERATION) {
       this.levelgen.draw(delta);
     } else if (this.levelState === LevelState.IN_LEVEL) {
       // Start of Selection
 
-      if (this.screenShakeActive) {
-        //const decayFactor = 1 - 0.15 * delta;
-        const decayFactor =
-          3 / Math.sqrt((Date.now() + 30 - this.screenShakeCutoff) * delta);
-        this.shakeAmountX -= this.shakeAmountX * 0.1 * delta;
-        this.shakeAmountY -= this.shakeAmountY * 0.1 * delta;
-        this.screenShakeX =
-          Math.sin(this.shakeFrame * Math.PI) * this.shakeAmountX * decayFactor;
-        this.screenShakeY =
-          Math.sin(this.shakeFrame * Math.PI) * this.shakeAmountY * decayFactor;
-        this.shakeFrame += 0.3 * delta;
-
-        if (Math.abs(decayFactor) < 0.001) {
-          this.shakeAmountX = 0;
-          this.shakeAmountY = 0;
-          this.shakeFrame = 0;
-          this.screenShakeX = 0;
-          this.screenShakeY = 0;
-          this.screenShakeActive = false;
-        }
-      }
+      this.drawScreenShake(delta);
 
       let playerDrawX = this.players[this.localPlayerID].drawX;
       let playerDrawY = this.players[this.localPlayerID].drawY;
@@ -1045,7 +1025,7 @@ export class Game {
 
       this.room.drawTopLayer(delta);
       this.players[this.localPlayerID].drawGUI(delta);
-      for (const i in this.players) this.players[i].updateDrawXY(delta);
+      //for (const i in this.players) this.players[i].updateDrawXY(delta);
     }
     // draw chat
     let CHAT_X = 10;
@@ -1110,9 +1090,40 @@ export class Game {
     Game.fillText(fps + "fps", 1, 1);
     Game.ctx.globalAlpha = 1;
     if (!this.started && this.levelState !== LevelState.LEVEL_GENERATION) {
-      this.drawStartScreen(delta);
+      this.drawStartScreen(delta * 10);
     }
     MouseCursor.getInstance().draw();
+  };
+
+  drawScreenShake = (delta: number) => {
+    if (!this.screenShakeActive) {
+      this.resetScreenShake();
+      return;
+    }
+
+    //const decayFactor = 1 - 0.15 * delta;
+    const decayFactor =
+      3 / Math.sqrt((Date.now() + 30 - this.screenShakeCutoff) * delta);
+    this.shakeAmountX *= 0.9 ** delta;
+    this.shakeAmountY *= 0.9 ** delta;
+    this.screenShakeX =
+      Math.sin(this.shakeFrame * Math.PI) * this.shakeAmountX * decayFactor;
+    this.screenShakeY =
+      Math.sin(this.shakeFrame * Math.PI) * this.shakeAmountY * decayFactor;
+    this.shakeFrame += 0.3 * delta;
+
+    if (Math.abs(decayFactor) < 0.001) {
+      this.resetScreenShake();
+    }
+  };
+
+  private resetScreenShake = () => {
+    this.shakeAmountX = 0;
+    this.shakeAmountY = 0;
+    this.shakeFrame = 0;
+    this.screenShakeX = 0;
+    this.screenShakeY = 0;
+    this.screenShakeActive = false;
   };
 
   static drawHelper = (
