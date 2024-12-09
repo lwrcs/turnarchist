@@ -1394,9 +1394,7 @@ export class Room {
     // Start timing the processing of player lighting
     //console.time("updateLighting: Process Players");
     let lightingAngleStep = LevelConstants.LIGHTING_ANGLE_STEP;
-    if (GameConstants.isMobile) {
-      lightingAngleStep = 90;
-    }
+
     for (const p in this.game.players) {
       let player = this.game.players[p];
       if (this === this.game.rooms[player.levelID]) {
