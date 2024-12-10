@@ -467,17 +467,15 @@ export class Game {
       return;
     }
 
-    const maxFPS = 60;
-
     // Calculate elapsed time in milliseconds
     let elapsed = timestamp - this.previousFrameTimestamp;
 
     // Normalize delta to 60 FPS
-    let delta = (elapsed * maxFPS) / 1000.0;
+    let delta = (elapsed * 60) / 1000.0;
 
     // Define minimum and maximum delta values
-    const deltaMin = maxFPS / 1000; // Approximately 1 ms
-    const deltaMax = (maxFPS / 1000) * 8; // Approximately 33.33 ms
+    const deltaMin = 1 / 1000; // Approximately 1 ms
+    const deltaMax = 8; // Approximately 33.33 ms
 
     // Cap delta within [deltaMin, deltaMax]
     if (delta < deltaMin) {
@@ -485,7 +483,7 @@ export class Game {
     } else if (delta > deltaMax) {
       delta = deltaMax;
     }
-
+    delta = 2;
     // Update FPS tracking
     while (times.length > 0 && times[0] <= timestamp - 1000) {
       times.shift();
@@ -495,14 +493,14 @@ export class Game {
 
     // Update game logic
     if (
-      Math.floor(timestamp / (1000 / maxFPS)) >
-      Math.floor(this.previousFrameTimestamp / (1000 / maxFPS))
+      Math.floor(timestamp / (1000 / 60)) >
+      Math.floor(this.previousFrameTimestamp / (1000 / 60))
     ) {
       this.update();
     }
 
     // Render the frame with capped delta
-    this.draw(delta * GameConstants.ANIMATION_SPEED * 2.2);
+    this.draw(delta * GameConstants.ANIMATION_SPEED * 1);
 
     // Request the next frame
     window.requestAnimationFrame(this.run);

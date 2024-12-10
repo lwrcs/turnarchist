@@ -7289,14 +7289,13 @@ var Game = /** @class */ (function () {
                 window.requestAnimationFrame(_this.run);
                 return;
             }
-            var maxFPS = 60;
             // Calculate elapsed time in milliseconds
             var elapsed = timestamp - _this.previousFrameTimestamp;
             // Normalize delta to 60 FPS
-            var delta = (elapsed * maxFPS) / 1000.0;
+            var delta = (elapsed * 60) / 1000.0;
             // Define minimum and maximum delta values
-            var deltaMin = maxFPS / 1000; // Approximately 1 ms
-            var deltaMax = (maxFPS / 1000) * 8; // Approximately 33.33 ms
+            var deltaMin = 1 / 1000; // Approximately 1 ms
+            var deltaMax = 8; // Approximately 33.33 ms
             // Cap delta within [deltaMin, deltaMax]
             if (delta < deltaMin) {
                 delta = deltaMin;
@@ -7304,6 +7303,7 @@ var Game = /** @class */ (function () {
             else if (delta > deltaMax) {
                 delta = deltaMax;
             }
+            delta = 2;
             // Update FPS tracking
             while (times.length > 0 && times[0] <= timestamp - 1000) {
                 times.shift();
@@ -7311,12 +7311,12 @@ var Game = /** @class */ (function () {
             times.push(timestamp);
             fps = times.length;
             // Update game logic
-            if (Math.floor(timestamp / (1000 / maxFPS)) >
-                Math.floor(_this.previousFrameTimestamp / (1000 / maxFPS))) {
+            if (Math.floor(timestamp / (1000 / 60)) >
+                Math.floor(_this.previousFrameTimestamp / (1000 / 60))) {
                 _this.update();
             }
             // Render the frame with capped delta
-            _this.draw(delta * gameConstants_1.GameConstants.ANIMATION_SPEED * 2.2);
+            _this.draw(delta * gameConstants_1.GameConstants.ANIMATION_SPEED * 1);
             // Request the next frame
             window.requestAnimationFrame(_this.run);
             // Update the previous frame timestamp
