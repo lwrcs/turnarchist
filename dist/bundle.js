@@ -7294,8 +7294,8 @@ var Game = /** @class */ (function () {
             // Normalize delta to 60 FPS
             var delta = (elapsed * 60) / 1000.0;
             // Define minimum and maximum delta values
-            var deltaMin = 1 / 1000; // Approximately 1 ms
-            var deltaMax = 8; // Approximately 33.33 ms
+            var deltaMin = 1 / 10; // 600fps
+            var deltaMax = 8; //7.5fps
             // Cap delta within [deltaMin, deltaMax]
             if (delta < deltaMin) {
                 delta = deltaMin;
@@ -7689,16 +7689,13 @@ var Game = /** @class */ (function () {
                 _this.resetScreenShake();
                 return;
             }
-            //const decayFactor = 1 - 0.15 * delta;
-            var decayFactor = 3 / Math.sqrt((Date.now() + 30 - _this.screenShakeCutoff) * delta);
             _this.shakeAmountX *= Math.pow(0.9, delta);
             _this.shakeAmountY *= Math.pow(0.9, delta);
-            _this.screenShakeX =
-                Math.sin(_this.shakeFrame * Math.PI) * _this.shakeAmountX * decayFactor;
-            _this.screenShakeY =
-                Math.sin(_this.shakeFrame * Math.PI) * _this.shakeAmountY * decayFactor;
+            _this.screenShakeX = Math.sin(_this.shakeFrame * Math.PI) * _this.shakeAmountX;
+            _this.screenShakeY = Math.sin(_this.shakeFrame * Math.PI) * _this.shakeAmountY;
             _this.shakeFrame += 0.3 * delta;
-            if (Math.abs(decayFactor) < 0.001) {
+            if (Math.abs(_this.shakeAmountX) < 0.001 &&
+                Math.abs(_this.shakeAmountY) < 0.001) {
                 _this.resetScreenShake();
             }
         };
@@ -16666,13 +16663,13 @@ var Room = /** @class */ (function () {
                     var diffB = softB - targetB;
                     // Apply smoothing similar to fadeLighting
                     if (Math.abs(diffR) > 0.001) {
-                        diffR *= 0.1;
+                        diffR *= 0.1 * delta;
                     }
                     if (Math.abs(diffG) > 0.001) {
-                        diffG *= 0.1;
+                        diffG *= 0.1 * delta;
                     }
                     if (Math.abs(diffB) > 0.001) {
-                        diffB *= 0.1;
+                        diffB *= 0.1 * delta;
                     }
                     // Update soft colors
                     if (Math.abs(diffR) > 0.001) {

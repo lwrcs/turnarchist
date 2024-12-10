@@ -1317,6 +1317,7 @@ export class Room {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
         let visDiff = this.softVis[x][y] - this.vis[x][y];
         let softVis = this.softVis[x][y];
+
         if (Math.abs(visDiff) > 0.01) {
           visDiff *= 0.05 * delta;
         }
@@ -1324,6 +1325,7 @@ export class Room {
 
         if (softVis < 0) softVis = 0;
         if (softVis > 1) softVis = 1;
+
         this.softVis[x][y] = softVis;
 
         // if (this.softVis[x][y] < 0.01) this.softVis[x][y] = 0;
@@ -1344,13 +1346,13 @@ export class Room {
 
         // Apply smoothing similar to fadeLighting
         if (Math.abs(diffR) > 0.001) {
-          diffR *= 0.1;
+          diffR *= 0.1 * delta;
         }
         if (Math.abs(diffG) > 0.001) {
-          diffG *= 0.1;
+          diffG *= 0.1 * delta;
         }
         if (Math.abs(diffB) > 0.001) {
-          diffB *= 0.1;
+          diffB *= 0.1 * delta;
         }
 
         // Update soft colors

@@ -474,9 +474,8 @@ export class Game {
     let delta = (elapsed * 60) / 1000.0;
 
     // Define minimum and maximum delta values
-    const deltaMin = 1 / 1000; // Approximately 1 ms
-    const deltaMax = 8; // Approximately 33.33 ms
-
+    const deltaMin = 1 / 10; // 600fps
+    const deltaMax = 8; //7.5fps
     // Cap delta within [deltaMin, deltaMax]
     if (delta < deltaMin) {
       delta = deltaMin;
@@ -1128,18 +1127,16 @@ export class Game {
       return;
     }
 
-    //const decayFactor = 1 - 0.15 * delta;
-    const decayFactor =
-      3 / Math.sqrt((Date.now() + 30 - this.screenShakeCutoff) * delta);
     this.shakeAmountX *= 0.9 ** delta;
     this.shakeAmountY *= 0.9 ** delta;
-    this.screenShakeX =
-      Math.sin(this.shakeFrame * Math.PI) * this.shakeAmountX * decayFactor;
-    this.screenShakeY =
-      Math.sin(this.shakeFrame * Math.PI) * this.shakeAmountY * decayFactor;
+    this.screenShakeX = Math.sin(this.shakeFrame * Math.PI) * this.shakeAmountX;
+    this.screenShakeY = Math.sin(this.shakeFrame * Math.PI) * this.shakeAmountY;
     this.shakeFrame += 0.3 * delta;
 
-    if (Math.abs(decayFactor) < 0.001) {
+    if (
+      Math.abs(this.shakeAmountX) < 0.001 &&
+      Math.abs(this.shakeAmountY) < 0.001
+    ) {
       this.resetScreenShake();
     }
   };
