@@ -20,7 +20,7 @@ import { Warhammer } from "./weapon/warhammer";
 import { Hammer } from "./item/hammer";
 
 export class GameConstants {
-  static readonly VERSION = "v1.0.1"; //"v0.6.3";
+  static readonly VERSION = "v1.0.2"; //"v0.6.3";
   static DEVELOPER_MODE = false;
   static isMobile = false;
 
