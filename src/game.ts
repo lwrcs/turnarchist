@@ -483,7 +483,6 @@ export class Game {
     } else if (delta > deltaMax) {
       delta = deltaMax;
     }
-    delta = 2;
     // Update FPS tracking
     while (times.length > 0 && times[0] <= timestamp - 1000) {
       times.shift();

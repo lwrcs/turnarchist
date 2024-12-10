@@ -1318,16 +1318,13 @@ export class Room {
         let visDiff = this.softVis[x][y] - this.vis[x][y];
         let softVis = this.softVis[x][y];
         if (Math.abs(visDiff) > 0.01) {
-          visDiff *= 0.05 ** delta;
+          visDiff *= 0.05 * delta;
         }
-        if (Math.abs(visDiff) > 0.0001) {
-          softVis -= visDiff;
-        }
+        softVis -= visDiff;
+
         if (softVis < 0) softVis = 0;
         if (softVis > 1) softVis = 1;
-        if (Math.abs(visDiff) > 0) {
-          this.softVis[x][y] = softVis;
-        }
+        this.softVis[x][y] = softVis;
 
         // if (this.softVis[x][y] < 0.01) this.softVis[x][y] = 0;
       }
@@ -1346,24 +1343,24 @@ export class Room {
         let diffB = softB - targetB;
 
         // Apply smoothing similar to fadeLighting
-        if (Math.abs(diffR) > 8) {
-          diffR *= 0.05 ** delta;
+        if (Math.abs(diffR) > 0.001) {
+          diffR *= 0.1;
         }
-        if (Math.abs(diffG) > 8) {
-          diffG *= 0.05 ** delta;
+        if (Math.abs(diffG) > 0.001) {
+          diffG *= 0.1;
         }
-        if (Math.abs(diffB) > 8) {
-          diffB *= 0.05 ** delta;
+        if (Math.abs(diffB) > 0.001) {
+          diffB *= 0.1;
         }
 
         // Update soft colors
-        if (Math.abs(diffR) > 1) {
+        if (Math.abs(diffR) > 0.001) {
           this.softCol[x][y][0] = this.clamp(Math.round(softR - diffR), 0, 255);
         }
-        if (Math.abs(diffG) > 1) {
+        if (Math.abs(diffG) > 0.001) {
           this.softCol[x][y][1] = this.clamp(Math.round(softG - diffG), 0, 255);
         }
-        if (Math.abs(diffB) > 1) {
+        if (Math.abs(diffB) > 0.001) {
           this.softCol[x][y][2] = this.clamp(Math.round(softB - diffB), 0, 255);
         }
       }
