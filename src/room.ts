@@ -234,6 +234,8 @@ export class Room {
   level: Level;
   onMainPath: boolean = false;
   pathIndex: number = 0;
+  coordinatesWithLightingChanges: { x: number; y: number }[];
+
   private pointInside(
     x: number,
     y: number,
@@ -325,6 +327,7 @@ export class Room {
 
     this.onMainPath = onMainPath;
     this.pathIndex = pathIndex;
+    this.coordinatesWithLightingChanges = [];
   }
 
   public async changeReverb(newImpulsePath: string) {
@@ -1315,12 +1318,16 @@ export class Room {
         let visDiff = this.softVis[x][y] - this.vis[x][y];
         let softVis = this.softVis[x][y];
         if (Math.abs(visDiff) > 0.01) {
-          visDiff = visDiff * 0.05 * delta;
+          visDiff *= 0.05 ** delta;
         }
-        softVis -= visDiff;
+        if (Math.abs(visDiff) > 0.0001) {
+          softVis -= visDiff;
+        }
         if (softVis < 0) softVis = 0;
         if (softVis > 1) softVis = 1;
-        this.softVis[x][y] = softVis;
+        if (Math.abs(visDiff) > 0) {
+          this.softVis[x][y] = softVis;
+        }
 
         // if (this.softVis[x][y] < 0.01) this.softVis[x][y] = 0;
       }
@@ -1334,25 +1341,31 @@ export class Room {
         const [targetR, targetG, targetB] = this.col[x][y];
 
         // Calculate differences
-        let diffR = targetR - softR;
-        let diffG = targetG - softG;
-        let diffB = targetB - softB;
+        let diffR = softR - targetR;
+        let diffG = softG - targetG;
+        let diffB = softB - targetB;
 
         // Apply smoothing similar to fadeLighting
         if (Math.abs(diffR) > 8) {
-          diffR = diffR * 0.05 * delta;
+          diffR *= 0.05 ** delta;
         }
         if (Math.abs(diffG) > 8) {
-          diffG = diffG * 0.05 * delta;
+          diffG *= 0.05 ** delta;
         }
         if (Math.abs(diffB) > 8) {
-          diffB = diffB * 0.05 * delta;
+          diffB *= 0.05 ** delta;
         }
 
         // Update soft colors
-        this.softCol[x][y][0] = this.clamp(Math.round(softR + diffR), 0, 255);
-        this.softCol[x][y][1] = this.clamp(Math.round(softG + diffG), 0, 255);
-        this.softCol[x][y][2] = this.clamp(Math.round(softB + diffB), 0, 255);
+        if (Math.abs(diffR) > 1) {
+          this.softCol[x][y][0] = this.clamp(Math.round(softR - diffR), 0, 255);
+        }
+        if (Math.abs(diffG) > 1) {
+          this.softCol[x][y][1] = this.clamp(Math.round(softG - diffG), 0, 255);
+        }
+        if (Math.abs(diffB) > 1) {
+          this.softCol[x][y][2] = this.clamp(Math.round(softB - diffB), 0, 255);
+        }
       }
     }
   };
@@ -1908,6 +1921,7 @@ export class Room {
   };
 
   drawColorLayer = () => {
+    Game.ctx.save();
     Game.ctx.globalCompositeOperation = "soft-light";
     Game.ctx.globalAlpha = 0.75;
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
@@ -1923,9 +1937,7 @@ export class Room {
         );
       }
     }
-    // Set composite operation if needed
-    Game.ctx.globalCompositeOperation = "source-over";
-    Game.ctx.globalAlpha = 0.75;
+    Game.ctx.restore();
   };
 
   drawEntities = (delta: number, skipLocalPlayer?: boolean) => {

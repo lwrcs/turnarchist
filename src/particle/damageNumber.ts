@@ -44,7 +44,12 @@ export class DamageNumber extends Particle {
   };
 
   drawTopLayer = (delta: number) => {
-    if (this.dead) return;
+    Game.ctx.save();
+
+    if (this.dead) {
+      Game.ctx.restore();
+      return;
+    }
     if (this.frame > 30) this.alpha *= 0.75;
     this.y -= 0.03 * delta;
     this.frame += delta;
@@ -63,5 +68,7 @@ export class DamageNumber extends Particle {
     );
 
     Game.ctx.globalAlpha = 1;
+
+    Game.ctx.restore();
   };
 }

@@ -127,24 +127,59 @@ export class Player extends Drawable {
     this.lastY = 0;
     this.isLocalPlayer = isLocalPlayer;
     if (isLocalPlayer) {
-      Input.leftSwipeListener = () => this.inputHandler(InputEnum.LEFT);
-      Input.rightSwipeListener = () => this.inputHandler(InputEnum.RIGHT);
-      Input.upSwipeListener = () => this.inputHandler(InputEnum.UP);
-      Input.downSwipeListener = () => this.inputHandler(InputEnum.DOWN);
+      Input.leftSwipeListener = () => {
+        if (
+          !this.inventory.isPointInQuickbarBounds(Input.mouseX, Input.mouseY)
+            .inBounds &&
+          !this.inventory.isOpen
+        )
+          this.inputHandler(InputEnum.LEFT);
+      };
+
+      Input.rightSwipeListener = () => {
+        if (
+          !this.inventory.isPointInQuickbarBounds(Input.mouseX, Input.mouseY)
+            .inBounds &&
+          !this.inventory.isOpen
+        )
+          this.inputHandler(InputEnum.RIGHT);
+      };
+
+      Input.upSwipeListener = () => {
+        if (
+          !this.inventory.isPointInQuickbarBounds(Input.mouseX, Input.mouseY)
+            .inBounds &&
+          !this.inventory.isOpen
+        )
+          this.inputHandler(InputEnum.UP);
+      };
+
+      Input.downSwipeListener = () => {
+        if (
+          !this.inventory.isPointInQuickbarBounds(Input.mouseX, Input.mouseY)
+            .inBounds &&
+          !this.inventory.isOpen
+        )
+          this.inputHandler(InputEnum.DOWN);
+      };
+
       Input.commaListener = () => this.inputHandler(InputEnum.COMMA);
       Input.periodListener = () => this.inputHandler(InputEnum.PERIOD);
       Input.tapListener = () => {
-        if (
-          this.inventory.isOpen ||
-          this.inventory.isPointInQuickbarBounds(Input.mouseX, Input.mouseY)
-            .inBounds
-        ) {
+        if (this.inventory.isOpen) {
           if (this.inventory.pointInside(Input.mouseX, Input.mouseY)) {
             this.inputHandler(InputEnum.SPACE);
-          } else {
-            this.inputHandler(InputEnum.I);
           }
-        } else this.inputHandler(InputEnum.I);
+        } else {
+          if (
+            this.inventory.isPointInQuickbarBounds(Input.mouseX, Input.mouseY)
+              .inBounds
+          ) {
+            if (this.inventory.pointInside(Input.mouseX, Input.mouseY)) {
+              this.inputHandler(InputEnum.SPACE);
+            }
+          }
+        }
       };
       Input.mouseMoveListener = () => this.inputHandler(InputEnum.MOUSE_MOVE);
       Input.mouseLeftClickListeners.push(() =>
@@ -382,11 +417,17 @@ export class Player extends Drawable {
     this.inventory.mostRecentInput = "mouse";
     if (this.dead) {
       this.restart();
-    } else if (this.openVendingMachine) {
-      this.openVendingMachine.space();
-    } else {
-      this.inventory.mouseLeftClick();
-    }
+    } else if (this.openVendingMachine)
+      if (
+        this.openVendingMachine.isPointInVendingMachineBounds(
+          MouseCursor.getInstance().getPosition().x,
+          MouseCursor.getInstance().getPosition().y,
+        )
+      ) {
+        this.openVendingMachine.space();
+      } else {
+        this.inventory.mouseLeftClick();
+      }
     if (
       !this.inventory.isOpen &&
       !this.inventory.isPointInInventoryButton(
@@ -811,7 +852,14 @@ export class Player extends Drawable {
     //Sets the action tab state to Wait (during enemy turn)
   };
 
+  /**
+   * Draws the player sprite to the canvas.
+   * Added `ctx.save()` at the beginning and `ctx.restore()` at the end
+   * to ensure canvas state is preserved.
+   */
   drawPlayerSprite = (delta: number) => {
+    Game.ctx.save(); // Save the current canvas state
+
     this.frame += 0.1 * delta;
     if (this.frame >= 4) this.frame = 0;
     Game.drawMob(
@@ -827,6 +875,8 @@ export class Player extends Drawable {
     if (this.inventory.getArmor() && this.inventory.getArmor().health > 0) {
       // TODO draw armor
     }
+
+    Game.ctx.restore(); // Restore the canvas state
   };
 
   heal = (amount: number) => {
@@ -917,7 +967,14 @@ export class Player extends Drawable {
     this.mapToggled = !this.mapToggled;
   };
 
+  /**
+   * Draws the top layer elements, such as the health bar.
+   * Added `ctx.save()` at the beginning and `ctx.restore()` at the end
+   * to ensure canvas state is preserved.
+   */
   drawTopLayer = (delta: number) => {
+    Game.ctx.save(); // Save the current canvas state
+
     this.healthBar.draw(
       delta,
       this.health,
@@ -926,6 +983,8 @@ export class Player extends Drawable {
       this.y - this.drawY,
       !this.flashing || Math.floor(this.flashingFrame) % 2 === 0,
     );
+
+    Game.ctx.restore(); // Restore the canvas state
   };
 
   drawGUI = (delta: number, transitioning: boolean = false) => {
@@ -1066,6 +1125,7 @@ export class Player extends Drawable {
   };
 
   drawHurt = (delta: number) => {
+    Game.ctx.save(); // Save the current canvas state
     Game.ctx.globalAlpha = this.hurtAlpha;
     this.hurtAlpha -= (this.hurtAlpha / 10) * delta;
     if (this.hurtAlpha <= 0.01) {
@@ -1077,6 +1137,8 @@ export class Player extends Drawable {
 
     Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
     Game.ctx.globalCompositeOperation = "source-over";
+
+    Game.ctx.restore(); // Restore the canvas state
   };
 
   drawLowHealth = (delta: number) => {
@@ -1231,11 +1293,27 @@ export class Player extends Drawable {
     if (this.jumpY > this.jumpHeight) this.jumpY = this.jumpHeight;
   };
 
+  /**
+   * Draws the inventory button to the canvas.
+   * Added `ctx.save()` at the beginning and `ctx.restore()` at the end
+   * to ensure canvas state is preserved.
+   */
   drawInventoryButton = (delta: number) => {
+    Game.ctx.save(); // Save the current canvas state
+
     Game.drawFX(0, 0, 2, 2, LevelConstants.SCREEN_W - 2, 0, 2, 2);
+
+    Game.ctx.restore(); // Restore the canvas state
   };
 
+  /**
+   * Draws the tile cursor to the canvas.
+   * Added `ctx.save()` at the beginning and `ctx.restore()` at the end
+   * to ensure canvas state is preserved.
+   */
   drawTileCursor = (delta: number) => {
+    Game.ctx.save(); // Save the current canvas state
+
     const inRange = this.moveRangeCheck(
       this.mouseToTile().x,
       this.mouseToTile().y,
@@ -1248,11 +1326,12 @@ export class Player extends Drawable {
       1,
       2,
       this.tileCursor.x,
-      //round to lower odd number
       this.tileCursor.y - 1,
       1,
       2,
     );
+
+    Game.ctx.restore(); // Restore the canvas state
   };
 
   private queueHandler = () => {

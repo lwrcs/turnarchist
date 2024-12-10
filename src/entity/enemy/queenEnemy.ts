@@ -24,7 +24,6 @@ export class QueenEnemy extends Enemy {
   targetPlayer: Player;
   drop: Item;
   static difficulty: number = 4;
-
   constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
     super(room, game, x, y);
     this.ticks = 0;
@@ -38,6 +37,7 @@ export class QueenEnemy extends Enemy {
     this.name = "queen";
     this.orthogonalAttack = true;
     this.diagonalAttack = true;
+    this.jumpHeight = 1;
     if (drop) this.drop = drop;
     else {
       let dropProb = Random.rand();
@@ -178,6 +178,16 @@ export class QueenEnemy extends Enemy {
     }
   };
 
+  jump = (delta: number) => {
+    let j = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
+    console.log(j);
+
+    let jumpY = Math.abs(Math.sin(j * Math.PI)) * this.jumpHeight;
+    if (jumpY < 0.01) jumpY = 0;
+    if (jumpY > this.jumpHeight) jumpY = this.jumpHeight;
+    this.jumpY = jumpY;
+  };
+
   draw = (delta: number) => {
     if (!this.dead) {
       this.updateDrawXY(delta);
@@ -203,11 +213,11 @@ export class QueenEnemy extends Enemy {
         1,
         2,
         this.x - this.drawX,
-        this.y - this.drawYOffset - this.drawY,
+        this.y - this.drawYOffset - this.drawY - this.jumpY,
         1,
         2,
         this.room.shadeColor,
-        this.shadeAmount(),
+        this.shadeAmount() * (1 + this.jumpY / 3),
       );
     }
     if (!this.seenPlayer) {

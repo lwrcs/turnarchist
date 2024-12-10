@@ -460,29 +460,54 @@ export class Game {
 
   run = (timestamp: number) => {
     if (this.paused) return;
-    if (!this.previousFrameTimestamp) this.previousFrameTimestamp = timestamp;
 
-    // normalized so 1.0 = 60fps
-    let delta = Math.min(
-      ((timestamp - this.previousFrameTimestamp) * 60) / 1000.0,
-    );
+    if (!this.previousFrameTimestamp) {
+      this.previousFrameTimestamp = timestamp;
+      window.requestAnimationFrame(this.run);
+      return;
+    }
 
+    const maxFPS = 60;
+
+    // Calculate elapsed time in milliseconds
+    let elapsed = timestamp - this.previousFrameTimestamp;
+
+    // Normalize delta to 60 FPS
+    let delta = (elapsed * maxFPS) / 1000.0;
+
+    // Define minimum and maximum delta values
+    const deltaMin = maxFPS / 1000; // Approximately 1 ms
+    const deltaMax = (maxFPS / 1000) * 8; // Approximately 33.33 ms
+
+    // Cap delta within [deltaMin, deltaMax]
+    if (delta < deltaMin) {
+      delta = deltaMin;
+    } else if (delta > deltaMax) {
+      delta = deltaMax;
+    }
+
+    // Update FPS tracking
     while (times.length > 0 && times[0] <= timestamp - 1000) {
       times.shift();
     }
     times.push(timestamp);
     fps = times.length;
 
+    // Update game logic
     if (
-      Math.floor(timestamp / (1000 / 60)) >
-      Math.floor(this.previousFrameTimestamp / (1000 / 60))
+      Math.floor(timestamp / (1000 / maxFPS)) >
+      Math.floor(this.previousFrameTimestamp / (1000 / maxFPS))
     ) {
       this.update();
     }
 
-    this.draw(delta * GameConstants.ANIMATION_SPEED * 0.9);
+    // Render the frame with capped delta
+    this.draw(delta * GameConstants.ANIMATION_SPEED * 2.2);
+
+    // Request the next frame
     window.requestAnimationFrame(this.run);
 
+    // Update the previous frame timestamp
     this.previousFrameTimestamp = timestamp;
   };
 
@@ -786,6 +811,8 @@ export class Game {
   };
 
   draw = (delta: number) => {
+    Game.ctx.save(); // Save the current canvas state
+
     Game.ctx.globalAlpha = 1;
     if (this.room) Game.ctx.fillStyle = this.room.shadeColor;
     else Game.ctx.fillStyle = "black";
@@ -1094,6 +1121,8 @@ export class Game {
       this.drawStartScreen(delta * 10);
     }
     MouseCursor.getInstance().draw();
+
+    Game.ctx.restore(); // Restore the canvas state
   };
 
   drawScreenShake = (delta: number) => {
@@ -1140,7 +1169,9 @@ export class Game {
     shadeColor = "black",
     shadeOpacity = 0,
   ) => {
-    // snap to nearest shading increment
+    Game.ctx.save(); // Save the current canvas state
+
+    // Snap to nearest shading increment
     shadeOpacity =
       Math.round(shadeOpacity * GameConstants.SHADE_LEVELS) /
       GameConstants.SHADE_LEVELS;
@@ -1201,6 +1232,8 @@ export class Game {
       Math.round(dW * GameConstants.TILESIZE),
       Math.round(dH * GameConstants.TILESIZE),
     );
+
+    Game.ctx.restore(); // Restore the canvas state
   };
 
   static drawTile = (
@@ -1228,30 +1261,6 @@ export class Game {
       shadeColor,
       shadeOpacity,
     );
-
-    /*Game.ctx.drawImage(
-      Game.tileset,
-      Math.round(sX * GameConstants.TILESIZE),
-      Math.round(sY * GameConstants.TILESIZE),
-      Math.round(sW * GameConstants.TILESIZE),
-      Math.round(sH * GameConstants.TILESIZE),
-      Math.round(dX * GameConstants.TILESIZE),
-      Math.round(dY * GameConstants.TILESIZE),
-      Math.round(dW * GameConstants.TILESIZE),
-      Math.round(dH * GameConstants.TILESIZE)
-    );
-
-    if (GameConstants.ALPHA_ENABLED) {
-      Game.ctx.globalAlpha = shadeOpacity;
-      Game.ctx.fillStyle = shadeColor;
-      Game.ctx.fillRect(
-        Math.round(dX * GameConstants.TILESIZE),
-        Math.round(dY * GameConstants.TILESIZE),
-        Math.round(dW * GameConstants.TILESIZE),
-        Math.round(dH * GameConstants.TILESIZE)
-      );
-      Game.ctx.globalAlpha = 1.0;
-    }*/
   };
 
   static drawObj = (

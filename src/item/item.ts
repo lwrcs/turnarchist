@@ -134,7 +134,7 @@ export class Item extends Drawable {
     if (!this.pickedUp) {
       this.drawableY = this.y;
 
-      if (this.scaleFactor > 0) this.scaleFactor *= 0.9 ** delta;
+      if (this.scaleFactor > 0) this.scaleFactor *= 0.5 ** delta;
       else this.scaleFactor = 0;
       const scale = 1 / (this.scaleFactor + 1);
       Game.ctx.imageSmoothingEnabled = false;

@@ -1637,9 +1637,15 @@ var BishopEnemy = /** @class */ (function (_super) {
         _this.hit = function () {
             return 1;
         };
-        _this.jump = function () {
+        _this.jump = function (delta) {
             var j = Math.max(Math.abs(_this.drawX), Math.abs(_this.drawY));
-            _this.jumpY = Math.sin(j * Math.PI) * _this.jumpHeight;
+            console.log(j);
+            var jumpY = Math.abs(Math.sin(j * Math.PI)) * _this.jumpHeight;
+            if (jumpY < 0.01)
+                jumpY = 0;
+            if (jumpY > _this.jumpHeight)
+                jumpY = _this.jumpHeight;
+            _this.jumpY = jumpY;
         };
         _this.behavior = function () {
             if (!_this.dead) {
@@ -1750,7 +1756,7 @@ var BishopEnemy = /** @class */ (function (_super) {
                     _this.frame = 0;
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
-                game_1.Game.drawMob(_this.tileX + Math.floor(_this.frame), _this.tileY, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY - _this.jumpY * delta, 1, 2, _this.room.shadeColor, _this.shadeAmount() * (1 + (_this.jumpY * delta) / 3));
+                game_1.Game.drawMob(_this.tileX + Math.floor(_this.frame), _this.tileY, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY - _this.jumpY, 1, 2, _this.room.shadeColor, _this.shadeAmount() * (1 + (_this.jumpY * delta) / 3));
             }
             if (!_this.seenPlayer) {
                 _this.drawSleepingZs(delta);
@@ -3770,6 +3776,16 @@ var QueenEnemy = /** @class */ (function (_super) {
                 }
             }
         };
+        _this.jump = function (delta) {
+            var j = Math.max(Math.abs(_this.drawX), Math.abs(_this.drawY));
+            console.log(j);
+            var jumpY = Math.abs(Math.sin(j * Math.PI)) * _this.jumpHeight;
+            if (jumpY < 0.01)
+                jumpY = 0;
+            if (jumpY > _this.jumpHeight)
+                jumpY = _this.jumpHeight;
+            _this.jumpY = jumpY;
+        };
         _this.draw = function (delta) {
             if (!_this.dead) {
                 _this.updateDrawXY(delta);
@@ -3778,7 +3794,7 @@ var QueenEnemy = /** @class */ (function (_super) {
                     _this.frame = 0;
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
-                game_1.Game.drawMob(_this.tileX + Math.floor(_this.frame), _this.tileY + _this.direction * 2, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
+                game_1.Game.drawMob(_this.tileX + Math.floor(_this.frame), _this.tileY + _this.direction * 2, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY - _this.jumpY, 1, 2, _this.room.shadeColor, _this.shadeAmount() * (1 + _this.jumpY / 3));
             }
             if (!_this.seenPlayer) {
                 _this.drawSleepingZs(delta);
@@ -3798,6 +3814,7 @@ var QueenEnemy = /** @class */ (function (_super) {
         _this.name = "queen";
         _this.orthogonalAttack = true;
         _this.diagonalAttack = true;
+        _this.jumpHeight = 1;
         if (drop)
             _this.drop = drop;
         else {
@@ -6390,6 +6407,30 @@ var VendingMachine = /** @class */ (function (_super) {
         _this.isInf = false;
         _this.quantity = 1;
         _this.buyAnimAmount = 0;
+        _this.isPointInVendingMachineBounds = function (x, y) {
+            var _a;
+            // First check if this is the currently open vending machine
+            if (!_this.open || _this !== ((_a = _this.playerOpened) === null || _a === void 0 ? void 0 : _a.openVendingMachine))
+                return false;
+            var OPEN_TIME = 200; // Match the constant from drawTopLayer
+            var s = Math.min(18, (18 * (Date.now() - _this.openTime)) / OPEN_TIME); // size of box
+            var b = 2; // border
+            var g = -2; // gap
+            var ob = 1; // outer border
+            // Calculate total width and height of the UI
+            var width = (_this.costItems.length + 2) * (s + 2 * b + g) - g;
+            var height = s + 2 * b + g - g;
+            // Calculate center position (matches drawTopLayer positioning)
+            var cx = (_this.x + 0.5) * gameConstants_1.GameConstants.TILESIZE;
+            var cy = (_this.y - 1.5) * gameConstants_1.GameConstants.TILESIZE;
+            // Calculate bounds
+            var left = Math.round(cx - 0.5 * width) - ob;
+            var right = Math.round(cx - 0.5 * width) - ob + Math.round(width + 2 * ob);
+            var top = Math.round(cy - 0.5 * height) - ob;
+            var bottom = Math.round(cy - 0.5 * height) - ob + Math.round(height + 2 * ob);
+            // Check if point is within bounds
+            return x >= left && x <= right && y >= top && y <= bottom;
+        };
         _this.interact = function (player) {
             if (_this.isInf || _this.quantity > 0) {
                 if (_this.open)
@@ -7243,21 +7284,42 @@ var Game = /** @class */ (function () {
         this.run = function (timestamp) {
             if (_this.paused)
                 return;
-            if (!_this.previousFrameTimestamp)
+            if (!_this.previousFrameTimestamp) {
                 _this.previousFrameTimestamp = timestamp;
-            // normalized so 1.0 = 60fps
-            var delta = Math.min(((timestamp - _this.previousFrameTimestamp) * 60) / 1000.0);
+                window.requestAnimationFrame(_this.run);
+                return;
+            }
+            var maxFPS = 60;
+            // Calculate elapsed time in milliseconds
+            var elapsed = timestamp - _this.previousFrameTimestamp;
+            // Normalize delta to 60 FPS
+            var delta = (elapsed * maxFPS) / 1000.0;
+            // Define minimum and maximum delta values
+            var deltaMin = maxFPS / 1000; // Approximately 1 ms
+            var deltaMax = (maxFPS / 1000) * 8; // Approximately 33.33 ms
+            // Cap delta within [deltaMin, deltaMax]
+            if (delta < deltaMin) {
+                delta = deltaMin;
+            }
+            else if (delta > deltaMax) {
+                delta = deltaMax;
+            }
+            // Update FPS tracking
             while (times.length > 0 && times[0] <= timestamp - 1000) {
                 times.shift();
             }
             times.push(timestamp);
             fps = times.length;
-            if (Math.floor(timestamp / (1000 / 60)) >
-                Math.floor(_this.previousFrameTimestamp / (1000 / 60))) {
+            // Update game logic
+            if (Math.floor(timestamp / (1000 / maxFPS)) >
+                Math.floor(_this.previousFrameTimestamp / (1000 / maxFPS))) {
                 _this.update();
             }
-            _this.draw(delta * gameConstants_1.GameConstants.ANIMATION_SPEED * 0.9);
+            // Render the frame with capped delta
+            _this.draw(delta * gameConstants_1.GameConstants.ANIMATION_SPEED * 2.2);
+            // Request the next frame
             window.requestAnimationFrame(_this.run);
+            // Update the previous frame timestamp
             _this.previousFrameTimestamp = timestamp;
         };
         this.update = function () {
@@ -7414,6 +7476,7 @@ var Game = /** @class */ (function () {
             Game.ctx.globalAlpha = 1;
         };
         this.draw = function (delta) {
+            Game.ctx.save(); // Save the current canvas state
             Game.ctx.globalAlpha = 1;
             if (_this.room)
                 Game.ctx.fillStyle = _this.room.shadeColor;
@@ -7620,6 +7683,7 @@ var Game = /** @class */ (function () {
                 _this.drawStartScreen(delta * 10);
             }
             mouseCursor_1.MouseCursor.getInstance().draw();
+            Game.ctx.restore(); // Restore the canvas state
         };
         this.drawScreenShake = function (delta) {
             if (!_this.screenShakeActive) {
@@ -7888,7 +7952,8 @@ var Game = /** @class */ (function () {
     Game.drawHelper = function (set, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity) {
         if (shadeColor === void 0) { shadeColor = "black"; }
         if (shadeOpacity === void 0) { shadeOpacity = 0; }
-        // snap to nearest shading increment
+        Game.ctx.save(); // Save the current canvas state
+        // Snap to nearest shading increment
         shadeOpacity =
             Math.round(shadeOpacity * gameConstants_1.GameConstants.SHADE_LEVELS) /
                 gameConstants_1.GameConstants.SHADE_LEVELS;
@@ -7909,34 +7974,12 @@ var Game = /** @class */ (function () {
             shCtx.drawImage(set, Math.round(sX * gameConstants_1.GameConstants.TILESIZE), Math.round(sY * gameConstants_1.GameConstants.TILESIZE), Math.round(sW * gameConstants_1.GameConstants.TILESIZE), Math.round(sH * gameConstants_1.GameConstants.TILESIZE), 0, 0, Math.round(sW * gameConstants_1.GameConstants.TILESIZE), Math.round(sH * gameConstants_1.GameConstants.TILESIZE));
         }
         Game.ctx.drawImage(Game.shade_canvases[key], Math.round(dX * gameConstants_1.GameConstants.TILESIZE), Math.round(dY * gameConstants_1.GameConstants.TILESIZE), Math.round(dW * gameConstants_1.GameConstants.TILESIZE), Math.round(dH * gameConstants_1.GameConstants.TILESIZE));
+        Game.ctx.restore(); // Restore the canvas state
     };
     Game.drawTile = function (sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity) {
         if (shadeColor === void 0) { shadeColor = "black"; }
         if (shadeOpacity === void 0) { shadeOpacity = 0; }
         Game.drawHelper(Game.tileset, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity);
-        /*Game.ctx.drawImage(
-          Game.tileset,
-          Math.round(sX * GameConstants.TILESIZE),
-          Math.round(sY * GameConstants.TILESIZE),
-          Math.round(sW * GameConstants.TILESIZE),
-          Math.round(sH * GameConstants.TILESIZE),
-          Math.round(dX * GameConstants.TILESIZE),
-          Math.round(dY * GameConstants.TILESIZE),
-          Math.round(dW * GameConstants.TILESIZE),
-          Math.round(dH * GameConstants.TILESIZE)
-        );
-    
-        if (GameConstants.ALPHA_ENABLED) {
-          Game.ctx.globalAlpha = shadeOpacity;
-          Game.ctx.fillStyle = shadeColor;
-          Game.ctx.fillRect(
-            Math.round(dX * GameConstants.TILESIZE),
-            Math.round(dY * GameConstants.TILESIZE),
-            Math.round(dW * GameConstants.TILESIZE),
-            Math.round(dH * GameConstants.TILESIZE)
-          );
-          Game.ctx.globalAlpha = 1.0;
-        }*/
     };
     Game.drawObj = function (sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity) {
         if (shadeColor === void 0) { shadeColor = "black"; }
@@ -11236,7 +11279,7 @@ var Item = /** @class */ (function (_super) {
             if (!_this.pickedUp) {
                 _this.drawableY = _this.y;
                 if (_this.scaleFactor > 0)
-                    _this.scaleFactor *= Math.pow(0.9, delta);
+                    _this.scaleFactor *= Math.pow(0.5, delta);
                 else
                     _this.scaleFactor = 0;
                 var scale = 1 / (_this.scaleFactor + 1);
@@ -13518,6 +13561,7 @@ var Map = /** @class */ (function () {
             _this.oldMapData = __spreadArray([], _this.mapData, true);
         };
         this.renderMap = function (delta) {
+            game_1.Game.ctx.save(); // Save the current canvas state
             _this.setInitialCanvasSettings(1);
             _this.translateCanvas(0);
             for (var _i = 0, _a = _this.mapData; _i < _a.length; _i++) {
@@ -13528,6 +13572,7 @@ var Map = /** @class */ (function () {
               this.drawRoom(data);
             }*/
             _this.resetCanvasTransform();
+            game_1.Game.ctx.restore(); // Restore the canvas state
         };
         this.draw = function (delta) {
             _this.renderMap(delta);
@@ -13568,41 +13613,52 @@ var Map = /** @class */ (function () {
         };
         this.drawRoomWalls = function (walls) {
             var s = _this.scale;
+            game_1.Game.ctx.save(); // Save the current canvas state
             for (var _i = 0, walls_1 = walls; _i < walls_1.length; _i++) {
                 var wall = walls_1[_i];
                 game_1.Game.ctx.fillStyle = "#404040";
                 game_1.Game.ctx.fillRect(wall.x * s, wall.y * s, 1 * s, 1 * s);
             }
+            game_1.Game.ctx.restore(); // Restore the canvas state
         };
         this.drawRoomDoors = function (doors) {
             var s = _this.scale;
+            game_1.Game.ctx.save(); // Save the current canvas state
             for (var _i = 0, doors_1 = doors; _i < doors_1.length; _i++) {
                 var door = doors_1[_i];
                 if (door.opened === false)
                     game_1.Game.ctx.fillStyle = "#5A5A5A";
-                if (door.opened === true)
-                    (game_1.Game.ctx.fillStyle = "black"),
-                        game_1.Game.ctx.fillRect(door.x * s, door.y * s, 1 * s, 1 * s);
+                if (door.opened === true) {
+                    game_1.Game.ctx.fillStyle = "black";
+                    game_1.Game.ctx.fillRect(door.x * s, door.y * s, 1 * s, 1 * s);
+                }
+                game_1.Game.ctx.fillStyle = "#5A5A5A"; // Reset to default after each door
             }
+            game_1.Game.ctx.restore(); // Restore the canvas state
         };
         this.drawRoomPlayers = function (players, delta) {
             var s = _this.scale;
+            game_1.Game.ctx.save(); // Save the current canvas state
             for (var i in players) {
                 game_1.Game.ctx.fillStyle = "white";
                 if (_this.game.rooms[players[i].levelID].mapGroup === _this.game.room.mapGroup) {
                     game_1.Game.ctx.fillRect(players[i].x * s, players[i].y * s, 1 * s, 1 * s);
                 }
             }
+            game_1.Game.ctx.restore(); // Restore the canvas state
         };
         this.drawRoomEntities = function (entities) {
             var s = _this.scale;
+            game_1.Game.ctx.save(); // Save the current canvas state
             for (var _i = 0, entities_1 = entities; _i < entities_1.length; _i++) {
                 var enemy = entities_1[_i];
                 _this.setEntityColor(enemy);
                 game_1.Game.ctx.fillRect(enemy.x * s, enemy.y * s, 1 * s, 1 * s);
             }
+            game_1.Game.ctx.restore(); // Restore the canvas state
         };
         this.setEntityColor = function (enemy) {
+            // No need to save/restore here as only fillStyle is being set
             if (enemy.type === entity_1.EntityType.ENEMY) {
                 game_1.Game.ctx.fillStyle = "yellow";
             }
@@ -13618,6 +13674,7 @@ var Map = /** @class */ (function () {
         };
         this.drawRoomItems = function (items) {
             var s = _this.scale;
+            game_1.Game.ctx.save(); // Save the current canvas state
             for (var _i = 0, items_1 = items; _i < items_1.length; _i++) {
                 var item = items_1[_i];
                 var x = item.x;
@@ -13627,6 +13684,7 @@ var Map = /** @class */ (function () {
                     game_1.Game.ctx.fillRect(item.x * s, item.y * s, 1 * s, 1 * s);
                 }
             }
+            game_1.Game.ctx.restore(); // Restore the canvas state
         };
         this.resetCanvasTransform = function () {
             game_1.Game.ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -13744,8 +13802,11 @@ var DamageNumber = /** @class */ (function (_super) {
             }
         };
         _this.drawTopLayer = function (delta) {
-            if (_this.dead)
+            game_1.Game.ctx.save();
+            if (_this.dead) {
+                game_1.Game.ctx.restore();
                 return;
+            }
             if (_this.frame > 30)
                 _this.alpha *= 0.75;
             _this.y -= 0.03 * delta;
@@ -13758,6 +13819,7 @@ var DamageNumber = /** @class */ (function (_super) {
             }
             game_1.Game.fillTextOutline(_this.damage.toString(), (_this.x + 0.4 + _this.xoffset) * gameConstants_1.GameConstants.TILESIZE - width / 2, (_this.y - 0.6) * gameConstants_1.GameConstants.TILESIZE, _this.outlineColor, _this.color);
             game_1.Game.ctx.globalAlpha = 1;
+            game_1.Game.ctx.restore();
         };
         _this.room = room;
         _this.damage = damage;
@@ -14444,12 +14506,13 @@ var Player = /** @class */ (function (_super) {
             if (_this.dead) {
                 _this.restart();
             }
-            else if (_this.openVendingMachine) {
-                _this.openVendingMachine.space();
-            }
-            else {
-                _this.inventory.mouseLeftClick();
-            }
+            else if (_this.openVendingMachine)
+                if (_this.openVendingMachine.isPointInVendingMachineBounds(mouseCursor_1.MouseCursor.getInstance().getPosition().x, mouseCursor_1.MouseCursor.getInstance().getPosition().y)) {
+                    _this.openVendingMachine.space();
+                }
+                else {
+                    _this.inventory.mouseLeftClick();
+                }
             if (!_this.inventory.isOpen &&
                 !_this.inventory.isPointInInventoryButton(mouseCursor_1.MouseCursor.getInstance().getPosition().x, mouseCursor_1.MouseCursor.getInstance().getPosition().y) &&
                 !_this.inventory.isPointInQuickbarBounds(mouseCursor_1.MouseCursor.getInstance().getPosition().x, mouseCursor_1.MouseCursor.getInstance().getPosition().y).inBounds) {
@@ -14833,7 +14896,13 @@ var Player = /** @class */ (function (_super) {
             //this.actionTab.actionState = ActionState.READY;
             //Sets the action tab state to Wait (during enemy turn)
         };
+        /**
+         * Draws the player sprite to the canvas.
+         * Added `ctx.save()` at the beginning and `ctx.restore()` at the end
+         * to ensure canvas state is preserved.
+         */
         _this.drawPlayerSprite = function (delta) {
+            game_1.Game.ctx.save(); // Save the current canvas state
             _this.frame += 0.1 * delta;
             if (_this.frame >= 4)
                 _this.frame = 0;
@@ -14841,6 +14910,7 @@ var Player = /** @class */ (function (_super) {
             if (_this.inventory.getArmor() && _this.inventory.getArmor().health > 0) {
                 // TODO draw armor
             }
+            game_1.Game.ctx.restore(); // Restore the canvas state
         };
         _this.heal = function (amount) {
             _this.health += amount;
@@ -14909,8 +14979,15 @@ var Player = /** @class */ (function (_super) {
         _this.tapHoldHandler = function () {
             _this.mapToggled = !_this.mapToggled;
         };
+        /**
+         * Draws the top layer elements, such as the health bar.
+         * Added `ctx.save()` at the beginning and `ctx.restore()` at the end
+         * to ensure canvas state is preserved.
+         */
         _this.drawTopLayer = function (delta) {
+            game_1.Game.ctx.save(); // Save the current canvas state
             _this.healthBar.draw(delta, _this.health, _this.maxHealth, _this.x - _this.drawX, _this.y - _this.drawY, !_this.flashing || Math.floor(_this.flashingFrame) % 2 === 0);
+            game_1.Game.ctx.restore(); // Restore the canvas state
         };
         _this.drawGUI = function (delta, transitioning) {
             if (transitioning === void 0) { transitioning = false; }
@@ -15007,6 +15084,7 @@ var Player = /** @class */ (function (_super) {
             _this.drawInventoryButton(delta);
         };
         _this.drawHurt = function (delta) {
+            game_1.Game.ctx.save(); // Save the current canvas state
             game_1.Game.ctx.globalAlpha = _this.hurtAlpha;
             _this.hurtAlpha -= (_this.hurtAlpha / 10) * delta;
             if (_this.hurtAlpha <= 0.01) {
@@ -15017,6 +15095,7 @@ var Player = /** @class */ (function (_super) {
             game_1.Game.ctx.fillStyle = "#cc3333"; // bright but not fully saturated red
             game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
             game_1.Game.ctx.globalCompositeOperation = "source-over";
+            game_1.Game.ctx.restore(); // Restore the canvas state
         };
         _this.drawLowHealth = function (delta) {
             //unused
@@ -15142,15 +15221,27 @@ var Player = /** @class */ (function (_super) {
             if (_this.jumpY > _this.jumpHeight)
                 _this.jumpY = _this.jumpHeight;
         };
+        /**
+         * Draws the inventory button to the canvas.
+         * Added `ctx.save()` at the beginning and `ctx.restore()` at the end
+         * to ensure canvas state is preserved.
+         */
         _this.drawInventoryButton = function (delta) {
+            game_1.Game.ctx.save(); // Save the current canvas state
             game_1.Game.drawFX(0, 0, 2, 2, levelConstants_1.LevelConstants.SCREEN_W - 2, 0, 2, 2);
+            game_1.Game.ctx.restore(); // Restore the canvas state
         };
+        /**
+         * Draws the tile cursor to the canvas.
+         * Added `ctx.save()` at the beginning and `ctx.restore()` at the end
+         * to ensure canvas state is preserved.
+         */
         _this.drawTileCursor = function (delta) {
+            game_1.Game.ctx.save(); // Save the current canvas state
             var inRange = _this.moveRangeCheck(_this.mouseToTile().x, _this.mouseToTile().y);
             var tileX = inRange ? 22 : 24;
-            game_1.Game.drawFX(tileX + Math.floor(hitWarning_1.HitWarning.frame), 4, 1, 2, _this.tileCursor.x, 
-            //round to lower odd number
-            _this.tileCursor.y - 1, 1, 2);
+            game_1.Game.drawFX(tileX + Math.floor(hitWarning_1.HitWarning.frame), 4, 1, 2, _this.tileCursor.x, _this.tileCursor.y - 1, 1, 2);
+            game_1.Game.ctx.restore(); // Restore the canvas state
         };
         _this.queueHandler = function () {
             //      console.log("Queue handler running, queue length:", this.moveQueue.length);
@@ -15259,25 +15350,46 @@ var Player = /** @class */ (function (_super) {
         _this.lastY = 0;
         _this.isLocalPlayer = isLocalPlayer;
         if (isLocalPlayer) {
-            input_1.Input.leftSwipeListener = function () { return _this.inputHandler(input_1.InputEnum.LEFT); };
-            input_1.Input.rightSwipeListener = function () { return _this.inputHandler(input_1.InputEnum.RIGHT); };
-            input_1.Input.upSwipeListener = function () { return _this.inputHandler(input_1.InputEnum.UP); };
-            input_1.Input.downSwipeListener = function () { return _this.inputHandler(input_1.InputEnum.DOWN); };
+            input_1.Input.leftSwipeListener = function () {
+                if (!_this.inventory.isPointInQuickbarBounds(input_1.Input.mouseX, input_1.Input.mouseY)
+                    .inBounds &&
+                    !_this.inventory.isOpen)
+                    _this.inputHandler(input_1.InputEnum.LEFT);
+            };
+            input_1.Input.rightSwipeListener = function () {
+                if (!_this.inventory.isPointInQuickbarBounds(input_1.Input.mouseX, input_1.Input.mouseY)
+                    .inBounds &&
+                    !_this.inventory.isOpen)
+                    _this.inputHandler(input_1.InputEnum.RIGHT);
+            };
+            input_1.Input.upSwipeListener = function () {
+                if (!_this.inventory.isPointInQuickbarBounds(input_1.Input.mouseX, input_1.Input.mouseY)
+                    .inBounds &&
+                    !_this.inventory.isOpen)
+                    _this.inputHandler(input_1.InputEnum.UP);
+            };
+            input_1.Input.downSwipeListener = function () {
+                if (!_this.inventory.isPointInQuickbarBounds(input_1.Input.mouseX, input_1.Input.mouseY)
+                    .inBounds &&
+                    !_this.inventory.isOpen)
+                    _this.inputHandler(input_1.InputEnum.DOWN);
+            };
             input_1.Input.commaListener = function () { return _this.inputHandler(input_1.InputEnum.COMMA); };
             input_1.Input.periodListener = function () { return _this.inputHandler(input_1.InputEnum.PERIOD); };
             input_1.Input.tapListener = function () {
-                if (_this.inventory.isOpen ||
-                    _this.inventory.isPointInQuickbarBounds(input_1.Input.mouseX, input_1.Input.mouseY)
-                        .inBounds) {
+                if (_this.inventory.isOpen) {
                     if (_this.inventory.pointInside(input_1.Input.mouseX, input_1.Input.mouseY)) {
                         _this.inputHandler(input_1.InputEnum.SPACE);
                     }
-                    else {
-                        _this.inputHandler(input_1.InputEnum.I);
+                }
+                else {
+                    if (_this.inventory.isPointInQuickbarBounds(input_1.Input.mouseX, input_1.Input.mouseY)
+                        .inBounds) {
+                        if (_this.inventory.pointInside(input_1.Input.mouseX, input_1.Input.mouseY)) {
+                            _this.inputHandler(input_1.InputEnum.SPACE);
+                        }
                     }
                 }
-                else
-                    _this.inputHandler(input_1.InputEnum.I);
             };
             input_1.Input.mouseMoveListener = function () { return _this.inputHandler(input_1.InputEnum.MOUSE_MOVE); };
             input_1.Input.mouseLeftClickListeners.push(function () {
@@ -16532,14 +16644,18 @@ var Room = /** @class */ (function () {
                     var visDiff = _this.softVis[x][y] - _this.vis[x][y];
                     var softVis = _this.softVis[x][y];
                     if (Math.abs(visDiff) > 0.01) {
-                        visDiff = visDiff * 0.05 * delta;
+                        visDiff *= Math.pow(0.05, delta);
                     }
-                    softVis -= visDiff;
+                    if (Math.abs(visDiff) > 0.0001) {
+                        softVis -= visDiff;
+                    }
                     if (softVis < 0)
                         softVis = 0;
                     if (softVis > 1)
                         softVis = 1;
-                    _this.softVis[x][y] = softVis;
+                    if (Math.abs(visDiff) > 0) {
+                        _this.softVis[x][y] = softVis;
+                    }
                     // if (this.softVis[x][y] < 0.01) this.softVis[x][y] = 0;
                 }
             }
@@ -16550,23 +16666,29 @@ var Room = /** @class */ (function () {
                     var _a = _this.softCol[x][y], softR = _a[0], softG = _a[1], softB = _a[2];
                     var _b = _this.col[x][y], targetR = _b[0], targetG = _b[1], targetB = _b[2];
                     // Calculate differences
-                    var diffR = targetR - softR;
-                    var diffG = targetG - softG;
-                    var diffB = targetB - softB;
+                    var diffR = softR - targetR;
+                    var diffG = softG - targetG;
+                    var diffB = softB - targetB;
                     // Apply smoothing similar to fadeLighting
                     if (Math.abs(diffR) > 8) {
-                        diffR = diffR * 0.05 * delta;
+                        diffR *= Math.pow(0.05, delta);
                     }
                     if (Math.abs(diffG) > 8) {
-                        diffG = diffG * 0.05 * delta;
+                        diffG *= Math.pow(0.05, delta);
                     }
                     if (Math.abs(diffB) > 8) {
-                        diffB = diffB * 0.05 * delta;
+                        diffB *= Math.pow(0.05, delta);
                     }
                     // Update soft colors
-                    _this.softCol[x][y][0] = _this.clamp(Math.round(softR + diffR), 0, 255);
-                    _this.softCol[x][y][1] = _this.clamp(Math.round(softG + diffG), 0, 255);
-                    _this.softCol[x][y][2] = _this.clamp(Math.round(softB + diffB), 0, 255);
+                    if (Math.abs(diffR) > 1) {
+                        _this.softCol[x][y][0] = _this.clamp(Math.round(softR - diffR), 0, 255);
+                    }
+                    if (Math.abs(diffG) > 1) {
+                        _this.softCol[x][y][1] = _this.clamp(Math.round(softG - diffG), 0, 255);
+                    }
+                    if (Math.abs(diffB) > 1) {
+                        _this.softCol[x][y][2] = _this.clamp(Math.round(softB - diffB), 0, 255);
+                    }
                 }
             }
         };
@@ -17005,6 +17127,7 @@ var Room = /** @class */ (function () {
             _this.fadeLighting(delta);
         };
         this.drawColorLayer = function () {
+            game_1.Game.ctx.save();
             game_1.Game.ctx.globalCompositeOperation = "soft-light";
             game_1.Game.ctx.globalAlpha = 0.75;
             for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
@@ -17016,9 +17139,7 @@ var Room = /** @class */ (function () {
                     game_1.Game.ctx.fillRect(x * gameConstants_1.GameConstants.TILESIZE, y * gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE);
                 }
             }
-            // Set composite operation if needed
-            game_1.Game.ctx.globalCompositeOperation = "source-over";
-            game_1.Game.ctx.globalAlpha = 0.75;
+            game_1.Game.ctx.restore();
         };
         this.drawEntities = function (delta, skipLocalPlayer) {
             var tiles = [];
@@ -17250,6 +17371,7 @@ var Room = /** @class */ (function () {
         this.buildEmptyRoom();
         this.onMainPath = onMainPath;
         this.pathIndex = pathIndex;
+        this.coordinatesWithLightingChanges = [];
     }
     Room.prototype.pointInside = function (x, y, rX, rY, rW, rH) {
         if (x < rX || x >= rX + rW)

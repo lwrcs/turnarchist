@@ -42,15 +42,15 @@ export const Input = {
   isTapHold: false,
   tapStartTime: null,
   IS_TAP_HOLD_THRESH: 300,
-  keyDownListener: function (key: string) { },
-  iListener: function () { },
-  mListener: function () { },
-  mUpListener: function () { },
-  qListener: function () { },
-  leftListener: function () { },
-  rightListener: function () { },
-  upListener: function () { },
-  downListener: function () { },
+  keyDownListener: function (key: string) {},
+  iListener: function () {},
+  mListener: function () {},
+  mUpListener: function () {},
+  qListener: function () {},
+  leftListener: function () {},
+  rightListener: function () {},
+  upListener: function () {},
+  downListener: function () {},
   aListener: function () {
     Input.leftListener();
   },
@@ -63,15 +63,15 @@ export const Input = {
   sListener: function () {
     Input.downListener();
   },
-  spaceListener: function () { },
-  leftSwipeListener: function () { },
-  rightSwipeListener: function () { },
-  upSwipeListener: function () { },
-  downSwipeListener: function () { },
-  tapListener: function () { },
-  commaListener: function () { },
-  periodListener: function () { },
-  numKeyListener: function (num: number) { },
+  spaceListener: function () {},
+  leftSwipeListener: function () {},
+  rightSwipeListener: function () {},
+  upSwipeListener: function () {},
+  downSwipeListener: function () {},
+  tapListener: function () {},
+  commaListener: function () {},
+  periodListener: function () {},
+  numKeyListener: function (num: number) {},
   mouseLeftClickListeners: [],
   mouseRightClickListeners: [],
   mouseMoveListeners: [],
@@ -400,14 +400,14 @@ window.addEventListener(
   function (event) {
     Input.onKeyup(event);
   },
-  false
+  false,
 );
 window.addEventListener(
   "keydown",
   function (event) {
     Input.onKeydown(event);
   },
-  false
+  false,
 );
 window.document
   .getElementById("gameCanvas")
@@ -420,7 +420,7 @@ window.document
   .addEventListener(
     "mousedown",
     (event) => Input.handleMouseDown(event),
-    false
+    false,
   );
 window.document
   .getElementById("gameCanvas")

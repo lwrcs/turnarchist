@@ -91,6 +91,37 @@ export class VendingMachine extends Entity {
     }
   }
 
+  isPointInVendingMachineBounds = (x: number, y: number): boolean => {
+    // First check if this is the currently open vending machine
+    if (!this.open || this !== this.playerOpened?.openVendingMachine)
+      return false;
+
+    const OPEN_TIME = 200; // Match the constant from drawTopLayer
+    const s = Math.min(18, (18 * (Date.now() - this.openTime)) / OPEN_TIME); // size of box
+    const b = 2; // border
+    const g = -2; // gap
+    const ob = 1; // outer border
+
+    // Calculate total width and height of the UI
+    const width = (this.costItems.length + 2) * (s + 2 * b + g) - g;
+    const height = s + 2 * b + g - g;
+
+    // Calculate center position (matches drawTopLayer positioning)
+    const cx = (this.x + 0.5) * GameConstants.TILESIZE;
+    const cy = (this.y - 1.5) * GameConstants.TILESIZE;
+
+    // Calculate bounds
+    const left = Math.round(cx - 0.5 * width) - ob;
+    const right =
+      Math.round(cx - 0.5 * width) - ob + Math.round(width + 2 * ob);
+    const top = Math.round(cy - 0.5 * height) - ob;
+    const bottom =
+      Math.round(cy - 0.5 * height) - ob + Math.round(height + 2 * ob);
+
+    // Check if point is within bounds
+    return x >= left && x <= right && y >= top && y <= bottom;
+  };
+
   get type() {
     return EntityType.PROP;
   }

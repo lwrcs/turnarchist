@@ -1111,7 +1111,6 @@ export class Inventory {
       startY,
     };
   };
-
   isPointInQuickbarBounds = (
     x: number,
     y: number,

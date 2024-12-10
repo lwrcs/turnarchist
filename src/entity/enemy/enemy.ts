@@ -474,7 +474,6 @@ export abstract class Enemy extends Entity {
 
       this.drawX = Math.abs(this.drawX) < 0.01 ? 0 : this.drawX;
       this.drawY = Math.abs(this.drawY) < 0.01 ? 0 : this.drawY;
-
       this.jump(delta);
     }
   };

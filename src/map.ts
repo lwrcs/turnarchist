@@ -47,6 +47,8 @@ export class Map {
   };
 
   renderMap = (delta: number) => {
+    Game.ctx.save(); // Save the current canvas state
+
     this.setInitialCanvasSettings(1);
     this.translateCanvas(0);
     for (const data of this.mapData) {
@@ -56,6 +58,8 @@ export class Map {
       this.drawRoom(data);
     }*/
     this.resetCanvasTransform();
+
+    Game.ctx.restore(); // Restore the canvas state
   };
 
   draw = (delta: number) => {
@@ -113,24 +117,31 @@ export class Map {
 
   drawRoomWalls = (walls) => {
     const s = this.scale;
+    Game.ctx.save(); // Save the current canvas state
     for (const wall of walls) {
       Game.ctx.fillStyle = "#404040";
       Game.ctx.fillRect(wall.x * s, wall.y * s, 1 * s, 1 * s);
     }
+    Game.ctx.restore(); // Restore the canvas state
   };
 
   drawRoomDoors = (doors) => {
     const s = this.scale;
+    Game.ctx.save(); // Save the current canvas state
     for (const door of doors) {
       if (door.opened === false) Game.ctx.fillStyle = "#5A5A5A";
-      if (door.opened === true)
-        (Game.ctx.fillStyle = "black"),
-          Game.ctx.fillRect(door.x * s, door.y * s, 1 * s, 1 * s);
+      if (door.opened === true) {
+        Game.ctx.fillStyle = "black";
+        Game.ctx.fillRect(door.x * s, door.y * s, 1 * s, 1 * s);
+      }
+      Game.ctx.fillStyle = "#5A5A5A"; // Reset to default after each door
     }
+    Game.ctx.restore(); // Restore the canvas state
   };
 
   drawRoomPlayers = (players, delta: number) => {
     const s = this.scale;
+    Game.ctx.save(); // Save the current canvas state
     for (const i in players) {
       Game.ctx.fillStyle = "white";
       if (
@@ -139,17 +150,21 @@ export class Map {
         Game.ctx.fillRect(players[i].x * s, players[i].y * s, 1 * s, 1 * s);
       }
     }
+    Game.ctx.restore(); // Restore the canvas state
   };
 
   drawRoomEntities = (entities) => {
     const s = this.scale;
+    Game.ctx.save(); // Save the current canvas state
     for (const enemy of entities) {
       this.setEntityColor(enemy);
       Game.ctx.fillRect(enemy.x * s, enemy.y * s, 1 * s, 1 * s);
     }
+    Game.ctx.restore(); // Restore the canvas state
   };
 
   setEntityColor = (enemy) => {
+    // No need to save/restore here as only fillStyle is being set
     if (enemy.type === EntityType.ENEMY) {
       Game.ctx.fillStyle = "yellow";
     }
@@ -166,6 +181,7 @@ export class Map {
 
   drawRoomItems = (items) => {
     const s = this.scale;
+    Game.ctx.save(); // Save the current canvas state
     for (const item of items) {
       let x = item.x;
       let y = item.y;
@@ -174,6 +190,7 @@ export class Map {
         Game.ctx.fillRect(item.x * s, item.y * s, 1 * s, 1 * s);
       }
     }
+    Game.ctx.restore(); // Restore the canvas state
   };
 
   resetCanvasTransform = () => {
