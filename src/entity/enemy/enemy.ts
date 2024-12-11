@@ -16,6 +16,9 @@ import { EntityType } from "../entity";
 import { ItemType } from "../../gameState";
 import { ImageParticle } from "../../particle/imageParticle";
 import { globalEventBus } from "../../eventBus";
+import { Random } from "../../random";
+import { Armor } from "../../item/armor";
+import { GreenGem } from "../../item/greengem";
 
 enum EnemyState {
   SLEEP,

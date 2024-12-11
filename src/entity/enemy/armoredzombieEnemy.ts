@@ -42,7 +42,7 @@ export class ArmoredzombieEnemy extends Enemy {
     if (drop) this.drop = drop;
     else {
       let dropProb = Random.rand();
-      if (dropProb < 0.05) this.drop = new Armor(this.room, this.x, this.y);
+      if (dropProb < 0.07) this.drop = new Armor(this.room, this.x, this.y);
       else if (dropProb < 0.01)
         this.drop = new GreenGem(this.room, this.x, this.y);
       else this.drop = new Coin(this.room, this.x, this.y);

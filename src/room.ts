@@ -1317,10 +1317,13 @@ export class Room {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
         let visDiff = this.softVis[x][y] - this.vis[x][y];
         let softVis = this.softVis[x][y];
+        let flag = false;
+        if (Math.abs(visDiff) > 0.01) flag = true;
 
-        if (Math.abs(visDiff) > 0.01) {
-          visDiff *= 0.05 * delta;
-        }
+        if (!flag) continue;
+
+        visDiff *= 0.05 * delta;
+
         softVis -= visDiff;
 
         if (softVis < 0) softVis = 0;
@@ -1344,25 +1347,28 @@ export class Room {
         let diffG = softG - targetG;
         let diffB = softB - targetB;
 
-        // Apply smoothing similar to fadeLighting
-        if (Math.abs(diffR) > 0.001) {
-          diffR *= 0.1 * delta;
-        }
-        if (Math.abs(diffG) > 0.001) {
-          diffG *= 0.1 * delta;
-        }
-        if (Math.abs(diffB) > 0.001) {
-          diffB *= 0.1 * delta;
+        let flagR = false;
+        let flagG = false;
+        let flagB = false;
+        if (Math.abs(diffR) > 0.001) flagR = true;
+        if (Math.abs(diffG) > 0.001) flagG = true;
+        if (Math.abs(diffB) > 0.001) flagB = true;
+
+        if (!flagR && !flagG && !flagB) {
+          continue;
         }
 
-        // Update soft colors
-        if (Math.abs(diffR) > 0.001) {
+        // Apply smoothing similar to fadeLighting
+        if (flagR) {
+          diffR *= 0.1 * delta;
           this.softCol[x][y][0] = this.clamp(Math.round(softR - diffR), 0, 255);
         }
-        if (Math.abs(diffG) > 0.001) {
+        if (flagG) {
+          diffG *= 0.1 * delta;
           this.softCol[x][y][1] = this.clamp(Math.round(softG - diffG), 0, 255);
         }
-        if (Math.abs(diffB) > 0.001) {
+        if (flagB) {
+          diffB *= 0.1 * delta;
           this.softCol[x][y][2] = this.clamp(Math.round(softB - diffB), 0, 255);
         }
       }
@@ -1921,7 +1927,8 @@ export class Room {
 
   drawColorLayer = () => {
     Game.ctx.save();
-    Game.ctx.globalCompositeOperation = "soft-light";
+    Game.ctx.globalCompositeOperation =
+      GameConstants.COLOR_LAYER_COMPOSITE_OPERATION as GlobalCompositeOperation; //"soft-light";
     Game.ctx.globalAlpha = 0.75;
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
@@ -1940,6 +1947,7 @@ export class Room {
   };
 
   drawEntities = (delta: number, skipLocalPlayer?: boolean) => {
+    Game.ctx.save();
     let tiles = [];
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
@@ -1969,6 +1977,7 @@ export class Room {
           drawables.push(this.game.players[i]);
       }
     }
+
     drawables.sort((a, b) => {
       if (a instanceof Floor) {
         return -1;
@@ -1999,17 +2008,18 @@ export class Room {
         if (this.softVis[x][y] < 1) this.roomArray[x][y].drawAbovePlayer(delta);
       }
     }
-
     for (const i of this.items) {
       i.drawTopLayer(delta);
     }
+    Game.ctx.restore();
   };
 
   drawShade = (delta: number) => {
+    Game.ctx.save();
     let bestSightRadius = 0;
     for (const p in this.game.players) {
-      Game.ctx.globalCompositeOperation = "soft-light";
-      Game.ctx.globalAlpha = 0.75;
+      Game.ctx.globalCompositeOperation = "darken"; // "soft-light";
+      Game.ctx.globalAlpha = 0.5;
       if (
         this.game.rooms[this.game.players[p].levelID] === this &&
         this.game.players[p].defaultSightRadius > bestSightRadius
@@ -2019,7 +2029,7 @@ export class Room {
     }
     let shadingAlpha = Math.max(0, Math.min(0.8, 2 / bestSightRadius));
     if (GameConstants.ALPHA_ENABLED) {
-      Game.ctx.globalAlpha = 0.25;
+      Game.ctx.globalAlpha = 0.125;
       Game.ctx.fillStyle = this.shadeColor;
       Game.ctx.fillRect(
         (this.roomX - LevelConstants.SCREEN_W) * GameConstants.TILESIZE,
@@ -2030,9 +2040,11 @@ export class Room {
       Game.ctx.globalAlpha = 1;
       Game.ctx.globalCompositeOperation = "source-over";
     }
+    Game.ctx.restore();
   };
 
   drawOverShade = (delta: number) => {
+    Game.ctx.save();
     for (const e of this.entities) {
       e.drawTopLayer(delta); // health bars
     }
@@ -2055,10 +2067,12 @@ export class Room {
         this.roomArray[x][y].drawAboveShading(delta);
       }
     }
+    Game.ctx.restore();
   };
 
   // for stuff rendered on top of the player
   drawTopLayer = (delta: number) => {
+    Game.ctx.save();
     // gui stuff
 
     // room name
@@ -2071,6 +2085,7 @@ export class Room {
       5,
     );
     Game.ctx.font = old;
+    Game.ctx.restore();
   };
 
   calculateWallInfo() {

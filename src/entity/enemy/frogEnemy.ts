@@ -13,7 +13,7 @@ import { ImageParticle } from "../../particle/imageParticle";
 import { Enemy } from "./enemy";
 import { Utils } from "../../utils";
 import { Random } from "../../random";
-import { WeaponPoison } from "../../item/weaponPoision";
+import { WeaponPoison } from "../../item/weaponPoison";
 import { GreenGem } from "../../item/greengem";
 
 export class FrogEnemy extends Enemy {
@@ -182,7 +182,7 @@ export class FrogEnemy extends Enemy {
                     this.game.players[i] ===
                     this.game.players[this.game.localPlayerID]
                   )
-                    this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                    this.game.shakeScreen(5 * this.drawX, 5 * this.drawY);
                   hitPlayer = true;
                 }
               }

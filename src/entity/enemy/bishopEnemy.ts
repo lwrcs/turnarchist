@@ -99,7 +99,6 @@ export class BishopEnemy extends Enemy {
 
   jump = (delta: number) => {
     let j = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
-    console.log(j);
 
     let jumpY = Math.abs(Math.sin(j * Math.PI)) * this.jumpHeight;
     if (jumpY < 0.01) jumpY = 0;
@@ -252,7 +251,7 @@ export class BishopEnemy extends Enemy {
         1,
         2,
         this.room.shadeColor,
-        this.shadeAmount() * (1 + (this.jumpY * delta) / 3),
+        this.shadeAmount() * (1 + this.jumpY / 3),
       );
     }
     if (!this.seenPlayer) {

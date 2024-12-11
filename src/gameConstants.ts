@@ -10,7 +10,7 @@ import { Lantern } from "./item/lantern";
 import { Torch } from "./item/torch";
 import { WeaponBlood } from "./item/weaponBlood";
 import { WeaponFragments } from "./item/weaponFragments";
-import { WeaponPoison } from "./item/weaponPoision";
+import { WeaponPoison } from "./item/weaponPoison";
 import { LevelConstants } from "./levelConstants";
 import { Dagger } from "./weapon/dagger";
 import { DualDagger } from "./weapon/dualdagger";
@@ -26,7 +26,7 @@ export class GameConstants {
 
   static readonly FPS = 120;
   static readonly ALPHA_ENABLED = true;
-  static readonly SHADE_LEVELS = 256;
+  static readonly SHADE_LEVELS = 50;
 
   static readonly TILESIZE = 16;
   static readonly SCALE = 3;
@@ -59,6 +59,31 @@ export class GameConstants {
   static readonly HIT_ENEMY_TEXT_COLOR = "#76428a";
   static readonly HEALTH_BUFF_COLOR = "#d77bba";
   static readonly MISS_COLOR = "#639bff";
+
+  static COLOR_LAYER_COMPOSITE_OPERATION = "soft-light"; //"soft-light";
+
+  static readonly COLOR_LAYER_COMPOSITE_OPERATIONS = [
+    "soft-light",
+    "addition",
+    "darken",
+    "overlay",
+    "hue",
+    "source-over",
+  ];
+
+  static readonly SET_COLOR_LAYER_COMPOSITE_OPERATION = () => {
+    const currentIndex = GameConstants.COLOR_LAYER_COMPOSITE_OPERATIONS.indexOf(
+      GameConstants.COLOR_LAYER_COMPOSITE_OPERATION,
+    );
+    const nextIndex =
+      (currentIndex + 1) %
+      GameConstants.COLOR_LAYER_COMPOSITE_OPERATIONS.length;
+    GameConstants.COLOR_LAYER_COMPOSITE_OPERATION =
+      GameConstants.COLOR_LAYER_COMPOSITE_OPERATIONS[nextIndex];
+    console.log(
+      `Color layer composite operation set to ${GameConstants.COLOR_LAYER_COMPOSITE_OPERATION}`,
+    );
+  };
 
   static readonly STARTING_INVENTORY = [Dagger, Torch];
   static readonly STARTING_DEV_INVENTORY = [

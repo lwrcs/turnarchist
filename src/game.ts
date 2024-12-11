@@ -117,6 +117,7 @@ export class Game {
   encounteredEnemies: Array<number>;
   paused: boolean;
   private startScreenAlpha = 1;
+  static delta: number;
 
   static text_rendering_canvases: Record<string, HTMLCanvasElement>;
   static readonly letters = "abcdefghijklmnopqrstuvwxyz1234567890,.!?:'()[]%-/";
@@ -477,6 +478,7 @@ export class Game {
     const deltaMin = 1 / 10; // 600fps
     const deltaMax = 8; //7.5fps
     // Cap delta within [deltaMin, deltaMax]
+    if (Game.delta) delta = Game.delta;
     if (delta < deltaMin) {
       delta = deltaMin;
     } else if (delta > deltaMax) {
@@ -587,6 +589,9 @@ export class Game {
           });
         }
         break;
+      case "col":
+        GameConstants.SET_COLOR_LAYER_COMPOSITE_OPERATION();
+        break;
       default:
         if (command.startsWith("new ")) {
           this.room.addNewEnemy(command.slice(4) as EnemyType);
@@ -659,17 +664,19 @@ export class Game {
   };
 
   shakeScreen = (shakeX: number, shakeY: number) => {
+    let clampedX = Math.max(-3, Math.min(3, shakeX));
+    let clampedY = Math.max(-3, Math.min(3, shakeY));
     this.screenShakeX = 0;
     this.screenShakeY = 0;
     this.shakeAmountX = 0;
     this.shakeAmountY = 0;
     this.screenShakeActive = true;
-    this.screenShakeX = shakeX;
-    this.screenShakeY = shakeY;
-    this.shakeAmountX = Math.abs(shakeX);
-    this.shakeAmountY = Math.abs(shakeY);
-    if (shakeX < 0 || shakeY < 0) this.shakeFrame = (3 * Math.PI) / 2;
-    if (shakeX > 0 || shakeY > 0) this.shakeFrame = Math.PI / 2;
+    this.screenShakeX = clampedX;
+    this.screenShakeY = clampedY;
+    this.shakeAmountX = Math.abs(clampedX);
+    this.shakeAmountY = Math.abs(clampedY);
+    if (clampedX < 0 || clampedY < 0) this.shakeFrame = (3 * Math.PI) / 2;
+    if (clampedX > 0 || clampedY > 0) this.shakeFrame = Math.PI / 2;
     this.screenShakeCutoff = Date.now();
   };
 
@@ -886,6 +893,9 @@ export class Game {
       Game.ctx.translate(levelOffsetX, levelOffsetY);
       this.prevLevel.draw(delta);
       this.prevLevel.drawEntities(delta);
+      this.prevLevel.drawColorLayer();
+      this.prevLevel.drawShade(delta);
+      this.prevLevel.drawOverShade(delta);
       for (
         let x = this.prevLevel.roomX - 1;
         x <= this.prevLevel.roomX + this.prevLevel.width;

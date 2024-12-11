@@ -180,7 +180,6 @@ export class QueenEnemy extends Enemy {
 
   jump = (delta: number) => {
     let j = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
-    console.log(j);
 
     let jumpY = Math.abs(Math.sin(j * Math.PI)) * this.jumpHeight;
     if (jumpY < 0.01) jumpY = 0;

@@ -215,7 +215,7 @@ export class Player extends Drawable {
     this.moveRange = 1;
     this.lightEquipped = false;
     this.hurting = false;
-    this.hurtAlpha = 0.5;
+    this.hurtAlpha = 0.25;
     this.lightBrightness = 0.3;
     this.sineAngle = Math.PI / 2;
     this.drawMoveSpeed = 0.3; // greater than 1 less than 2
@@ -722,7 +722,7 @@ export class Player extends Drawable {
       this.flashing = true;
       this.health -= damage;
       this.hurting = true;
-      this.hurtAlpha = 0.5;
+      this.hurtAlpha = 0.25;
       if (this.health <= 0 && !GameConstants.DEVELOPER_MODE) {
         this.dead = true;
       }
@@ -885,6 +885,7 @@ export class Player extends Drawable {
   };
 
   drawSpellBeam = (delta: number) => {
+    Game.ctx.save();
     // Clear existing beam effects each frame
     this.game.rooms[this.levelID].beamEffects = [];
 
@@ -920,8 +921,10 @@ export class Player extends Drawable {
         }
       }
     }
+    Game.ctx.restore();
   };
   draw = (delta: number) => {
+    Game.ctx.save();
     this.updateDrawXY(delta);
     this.drawableY = this.y;
 
@@ -933,6 +936,7 @@ export class Player extends Drawable {
       }
     }
     this.drawSpellBeam(delta);
+    Game.ctx.restore();
   };
 
   faceMouse = () => {
@@ -988,6 +992,7 @@ export class Player extends Drawable {
   };
 
   drawGUI = (delta: number, transitioning: boolean = false) => {
+    Game.ctx.save();
     if (!this.dead) {
       if (!transitioning) this.inventory.draw(delta);
       //this.actionTab.draw(delta);
@@ -1122,6 +1127,7 @@ export class Player extends Drawable {
     if (this.mapToggled === true) this.map.draw(delta);
     //this.drawTileCursor(delta);
     this.drawInventoryButton(delta);
+    Game.ctx.restore();
   };
 
   drawHurt = (delta: number) => {
@@ -1132,7 +1138,7 @@ export class Player extends Drawable {
       this.hurtAlpha = 0;
       this.hurting = false;
     }
-    Game.ctx.globalCompositeOperation = "screen";
+    //Game.ctx.globalCompositeOperation = "screen";
     Game.ctx.fillStyle = "#cc3333"; // bright but not fully saturated red
 
     Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
@@ -1142,6 +1148,7 @@ export class Player extends Drawable {
   };
 
   drawLowHealth = (delta: number) => {
+    Game.ctx.save();
     //unused
     if (this.health <= 1 && !this.dead) {
       // Calculate pulsating alpha for the vignette effect
@@ -1174,6 +1181,7 @@ export class Player extends Drawable {
     } else {
       this.lowHealthFrame = 0;
     }
+    Game.ctx.restore();
   };
 
   updateDrawXY = (delta: number) => {
