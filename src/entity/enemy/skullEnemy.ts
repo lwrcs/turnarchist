@@ -16,6 +16,7 @@ import { ImageParticle } from "../../particle/imageParticle";
 import { Enemy } from "./enemy";
 import { Random } from "../../random";
 import { BeamEffect } from "../../beamEffect";
+import { DropTable } from "../../item/dropTable";
 
 export class SkullEnemy extends Enemy {
   frame: number;
@@ -45,14 +46,7 @@ export class SkullEnemy extends Enemy {
     this.forwardOnlyAttack = true;
 
     if (drop) this.drop = drop;
-    else {
-      let dropProb = Random.rand();
-      if (dropProb < 0.03) this.drop = new Spear(this.room, this.x, this.y);
-      else if (dropProb < 0.01)
-        this.drop = new RedGem(this.room, this.x, this.y);
-      //else if (dropProb < 0.2) this.drop = new Candle(this.room, 0, 0);
-      else this.drop = new Coin(this.room, this.x, this.y);
-    }
+    this.getDrop(["weapon", "equipment", "consumable", "gem", "tool", "coin"]);
   }
 
   hit = (): number => {

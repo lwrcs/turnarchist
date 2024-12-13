@@ -14,13 +14,8 @@ import { globalEventBus } from "../eventBus";
 import type { LightSource } from "../lightSource";
 import { EVENTS } from "../events";
 import { DamageNumber } from "../particle/damageNumber";
-import { Hammer } from "../item/hammer";
-import { Pickaxe } from "../weapon/pickaxe";
-import { Armor } from "../item/armor";
-import { Spear } from "../weapon/spear";
-import { DualDagger } from "../weapon/dualdagger";
-import { Heart } from "../item/heart";
-import { Warhammer } from "../weapon/warhammer";
+
+import { DropTable } from "../item/dropTable";
 
 export enum EntityDirection {
   DOWN,
@@ -150,15 +145,8 @@ export class Entity extends Drawable {
     room.entities.push(new this(room, game, x, y, ...rest));
   }
 
-  getDrop = () => {
-    const roll = Math.floor(Math.random() * 6);
-    if (roll === 0) return new DualDagger(this.room, this.x, this.y);
-    if (roll === 1) return new Spear(this.room, this.x, this.y);
-    if (roll === 2) return new Hammer(this.room, this.x, this.y);
-    if (roll === 3) return new Armor(this.room, this.x, this.y);
-    if (roll === 4) return new Pickaxe(this.room, this.x, this.y);
-    if (roll === 5) return new Warhammer(this.room, this.x, this.y);
-    return null;
+  getDrop = (useCategory: string[] = []) => {
+    DropTable.getDrop(this, false, useCategory);
   };
 
   addLightSource = (lightSource: LightSource) => {

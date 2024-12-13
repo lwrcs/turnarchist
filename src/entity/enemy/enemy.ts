@@ -56,7 +56,6 @@ export abstract class Enemy extends Entity {
     this.status = { poison: false, bleed: false };
     this.effectStartTick = 1;
     this.startTick = 1;
-    if (Math.random() < 0.99) this.drop = this.getDrop();
   }
 
   readonly tryMove = (x: number, y: number, collide: boolean = true) => {
