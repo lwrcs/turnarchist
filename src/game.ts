@@ -592,6 +592,13 @@ export class Game {
       case "col":
         GameConstants.SET_COLOR_LAYER_COMPOSITE_OPERATION();
         break;
+      case "scl":
+        GameConstants.SET_SCALE();
+        this.onResize();
+        break;
+      case "shd":
+        GameConstants.SET_COLOR_LAYER_COMPOSITE_OPERATION(true);
+        break;
       default:
         if (command.startsWith("new ")) {
           this.room.addNewEnemy(command.slice(4) as EnemyType);

@@ -489,7 +489,7 @@ let loadLevel = (level: Room, levelState: LevelState, game: Game) => {
   for (const hw of levelState.hitwarnings)
     level.hitwarnings.push(loadHitWarning(hw, game));
 };
-
+//use the other one
 export enum ItemType {
   ARMOR,
   BLUEGEM,
@@ -499,7 +499,6 @@ export enum ItemType {
   GOLD,
   GOLDENKEY,
   GREENGEM,
-  HEART,
   KEY,
   LANTERN,
   REDGEM,
@@ -510,6 +509,16 @@ export enum ItemType {
   SPEAR,
   PICKAXE,
   BACKPACK,
+  SPELLBOOK,
+  WEAPON_FRAGMENTS,
+  WARHAMMER,
+  HAMMER,
+  WEAPON_POISON,
+  WEAPON_BLOOD,
+  HEART,
+  MUSHROOMS,
+  STONE,
+  BLUE_POTION,
 }
 
 export class ItemState {

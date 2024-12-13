@@ -3,8 +3,10 @@ import { GameConstants } from "./gameConstants";
 
 export class PostProcessor {
   static draw = (delta: number) => {
+    Game.ctx.save();
     Game.ctx.globalAlpha = 0.2;
-    Game.ctx.globalCompositeOperation = "screen";
+    Game.ctx.globalCompositeOperation =
+      GameConstants.SHADE_LAYER_COMPOSITE_OPERATION as GlobalCompositeOperation; //"soft-light";
 
     Game.ctx.fillStyle = "#006A6E"; //dark teal
     //Game.ctx.fillStyle = "#003B6F"; //deep underwater blue
@@ -14,6 +16,6 @@ export class PostProcessor {
     //Game.ctx.fillStyle = "#800000"; // lighter red for dungeon hell theme
 
     Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
-    Game.ctx.globalCompositeOperation = "source-over";
+    Game.ctx.restore();
   };
 }

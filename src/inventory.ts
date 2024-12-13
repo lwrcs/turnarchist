@@ -286,10 +286,37 @@ export class Inventory {
 
   handleNumKey = (num: number) => {
     this.mostRecentInput = "keyboard";
-
-    this.selX = Math.max(0, Math.min(num - 1, this.cols - 1));
-    this.selY = 0;
-    this.itemUse();
+    if (num <= 5) {
+      this.selX = Math.max(0, Math.min(num - 1, this.cols - 1));
+      this.selY = 0;
+      this.itemUse();
+    } else {
+      if (GameConstants.DEVELOPER_MODE) {
+        switch (num) {
+          case 6:
+            GameConstants.SET_COLOR_LAYER_COMPOSITE_OPERATION(true);
+            break;
+          case 7:
+            GameConstants.SET_COLOR_LAYER_COMPOSITE_OPERATION(false);
+            break;
+        }
+      }
+      {
+        switch (num) {
+          case 8:
+            GameConstants.SET_SCALE();
+            this.game.onResize();
+            break;
+          case 9:
+            GameConstants.TOGGLE_USE_OPTIMIZED_SHADING();
+            this.game.pushMessage(
+              "Optimized shading is now " +
+                (GameConstants.USE_OPTIMIZED_SHADING ? "on" : "off"),
+            );
+            break;
+        }
+      }
+    }
   };
 
   mouseMove = () => {

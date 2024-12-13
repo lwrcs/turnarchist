@@ -1,13 +1,10 @@
 import { Room } from "../room";
 import { Game } from "../game";
 import { Equippable } from "../item/equippable";
-import { Player } from "../player";
 import { Sound } from "../sound";
 import { SlashParticle } from "../particle/slashParticle";
-import { Enemy } from "../entity/enemy/enemy";
-import { Entity } from "../entity/entity";
+import type { Entity } from "../entity/entity";
 import { GameConstants } from "../gameConstants";
-import { Utils } from "../utils";
 import { WeaponFragments } from "../item/weaponFragments";
 
 interface WeaponStatus {
@@ -54,10 +51,7 @@ export abstract class Weapon extends Equippable {
   };
 
   statusEffect = (enemy: Entity) => {
-    if (enemy instanceof Enemy) {
-      if (this.status.poison) enemy.poison();
-      if (this.status.blood) enemy.bleed();
-    }
+    this.wielder.applyStatus(enemy, this.status);
   };
 
   disassemble = () => {

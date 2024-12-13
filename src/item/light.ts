@@ -1,16 +1,10 @@
-import { Item } from "./item";
 import { Game } from "../game";
 import { Room } from "../room";
 import { Equippable } from "./equippable";
-import { Candle } from "./candle";
-import { Lantern } from "./lantern";
-import { Torch } from "./torch";
-import { PostProcessor } from "../postProcess";
 import { GameConstants } from "../gameConstants";
-import { LightSource } from "../lightSource";
 import { Utils } from "../utils";
 
-export class Light extends Equippable {
+export abstract class Light extends Equippable {
   fuel: number;
   fuelCap: number;
   radius: number;

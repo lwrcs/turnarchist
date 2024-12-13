@@ -1,6 +1,5 @@
 import { Game } from "../game";
 import { GameConstants } from "../gameConstants";
-import { LevelConstants } from "../levelConstants";
 import { Player } from "../player";
 import { Room } from "../room";
 import { Sound } from "../sound";
@@ -69,7 +68,7 @@ export class Item extends Drawable {
   static add<
     T extends new (room: Room, x: number, y: number, ...rest: any[]) => Item,
   >(this: T, room: Room, x: number, y: number, ...rest: any[]) {
-    room.items.push(new this(room, x, y, ...rest));
+    return new this(room, x, y, ...rest);
   }
 
   // Empty tick function to be overridden by subclasses

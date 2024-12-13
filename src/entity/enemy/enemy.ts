@@ -2,23 +2,12 @@ import { Entity, EntityDirection } from "../entity";
 import { Direction, Game } from "../../game";
 import { Room } from "../../room";
 import { Player } from "../../player";
-import { HitWarning } from "../../hitWarning";
-import { GenericParticle } from "../../particle/genericParticle";
-import { Coin } from "../../item/coin";
-import { RedGem } from "../../item/redgem";
 import { Item } from "../../item/item";
-import { Spear } from "../../weapon/spear";
 import { astar } from "../../astarclass";
 import { SpikeTrap } from "../../tile/spiketrap";
-import { DeathParticle } from "../../particle/deathParticle";
-import { Candle } from "../../item/candle";
 import { EntityType } from "../entity";
-import { ItemType } from "../../gameState";
 import { ImageParticle } from "../../particle/imageParticle";
 import { globalEventBus } from "../../eventBus";
-import { Random } from "../../random";
-import { Armor } from "../../item/armor";
-import { GreenGem } from "../../item/greengem";
 
 enum EnemyState {
   SLEEP,
@@ -67,6 +56,7 @@ export abstract class Enemy extends Entity {
     this.status = { poison: false, bleed: false };
     this.effectStartTick = 1;
     this.startTick = 1;
+    if (Math.random() < 0.99) this.drop = this.getDrop();
   }
 
   readonly tryMove = (x: number, y: number, collide: boolean = true) => {

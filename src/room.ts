@@ -1930,11 +1930,17 @@ export class Room {
     Game.ctx.globalCompositeOperation =
       GameConstants.COLOR_LAYER_COMPOSITE_OPERATION as GlobalCompositeOperation; //"soft-light";
     Game.ctx.globalAlpha = 0.75;
+    let lastFillStyle = "";
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
         const [r, g, b] = this.softCol[x][y];
         if (r === 0 && g === 0 && b === 0) continue; // Skip if no color
-        Game.ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${1 - this.vis[x][y]})`;
+        const alpha = 1 - this.vis[x][y];
+        const fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        if (fillStyle !== lastFillStyle) {
+          Game.ctx.fillStyle = fillStyle;
+          lastFillStyle = fillStyle;
+        }
         Game.ctx.fillRect(
           x * GameConstants.TILESIZE,
           y * GameConstants.TILESIZE,
@@ -2018,8 +2024,8 @@ export class Room {
     Game.ctx.save();
     let bestSightRadius = 0;
     for (const p in this.game.players) {
-      Game.ctx.globalCompositeOperation = "darken"; // "soft-light";
-      Game.ctx.globalAlpha = 0.5;
+      Game.ctx.globalCompositeOperation = "source-over"; // "soft-light";
+      Game.ctx.globalAlpha = 1;
       if (
         this.game.rooms[this.game.players[p].levelID] === this &&
         this.game.players[p].defaultSightRadius > bestSightRadius
@@ -2029,7 +2035,7 @@ export class Room {
     }
     let shadingAlpha = Math.max(0, Math.min(0.8, 2 / bestSightRadius));
     if (GameConstants.ALPHA_ENABLED) {
-      Game.ctx.globalAlpha = 0.125;
+      Game.ctx.globalAlpha = 0.25;
       Game.ctx.fillStyle = this.shadeColor;
       Game.ctx.fillRect(
         (this.roomX - LevelConstants.SCREEN_W) * GameConstants.TILESIZE,

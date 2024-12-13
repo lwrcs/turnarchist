@@ -1,24 +1,26 @@
 import { Direction, Game } from "../game";
 import { Room } from "../room";
 import { Bones } from "../tile/bones";
-import { LevelConstants } from "../levelConstants";
 import { Player } from "../player";
-import { DeathParticle } from "../particle/deathParticle";
 import { Floor } from "../tile/floor";
-import { GenericParticle } from "../particle/genericParticle";
 import { HealthBar } from "../healthbar";
 import { Drawable } from "../drawable";
 import { Item } from "../item/item";
 import { GameConstants } from "../gameConstants";
 import { HitWarning } from "../hitWarning";
-import { Sound } from "../sound";
 import { Projectile } from "../projectile/projectile";
 import { Utils } from "../utils";
 import { globalEventBus } from "../eventBus";
-import { LightSource } from "../lightSource";
-import { ZombieEnemy } from "./enemy/zombieEnemy";
+import type { LightSource } from "../lightSource";
 import { EVENTS } from "../events";
 import { DamageNumber } from "../particle/damageNumber";
+import { Hammer } from "../item/hammer";
+import { Pickaxe } from "../weapon/pickaxe";
+import { Armor } from "../item/armor";
+import { Spear } from "../weapon/spear";
+import { DualDagger } from "../weapon/dualdagger";
+import { Heart } from "../item/heart";
+import { Warhammer } from "../weapon/warhammer";
 
 export enum EntityDirection {
   DOWN,
@@ -106,7 +108,7 @@ export class Entity extends Drawable {
     this.maxHealth = 1;
     this.tileX = 0;
     this.tileY = 0;
-    this.hasShadow = true;
+    this.hasShadow = false;
     this.skipNextTurns = 0;
     this.direction = Direction.DOWN;
     this.destroyable = true;
@@ -147,6 +149,17 @@ export class Entity extends Drawable {
   >(this: T, room: Room, game: Game, x: number, y: number, ...rest: any[]) {
     room.entities.push(new this(room, game, x, y, ...rest));
   }
+
+  getDrop = () => {
+    const roll = Math.floor(Math.random() * 6);
+    if (roll === 0) return new DualDagger(this.room, this.x, this.y);
+    if (roll === 1) return new Spear(this.room, this.x, this.y);
+    if (roll === 2) return new Hammer(this.room, this.x, this.y);
+    if (roll === 3) return new Armor(this.room, this.x, this.y);
+    if (roll === 4) return new Pickaxe(this.room, this.x, this.y);
+    if (roll === 5) return new Warhammer(this.room, this.x, this.y);
+    return null;
+  };
 
   addLightSource = (lightSource: LightSource) => {
     this.room.lightSources.push(lightSource);
@@ -232,13 +245,6 @@ export class Entity extends Drawable {
     if (closestDistance === maxDistance) return false;
     else return closestPlayer;
   };
-  /*
-  readonly lastHitBy = (player: Player) => {
-    this.hitBy = player;
-    if (this.hitBy) this.game.pushMessage(`${this.hitBy}`);
-    else this.game.pushMessage("Unknown");
-  };
-  */
 
   readonly hurt = (playerHitBy: Player, damage: number) => {
     this.healthBar.hurt();
@@ -250,7 +256,7 @@ export class Entity extends Drawable {
 
   interact = (player: Player) => {};
 
-  readonly dropLoot = () => {
+  protected dropLoot = () => {
     let coordX: number;
     let coordY: number;
     if (this.crushed) {

@@ -1,10 +1,5 @@
-import { Game } from "../game";
 import { Weapon } from "./weapon";
 import { Room } from "../room";
-import { Sound } from "../sound";
-import { SlashParticle } from "../particle/slashParticle";
-import { Crate } from "../entity/object/crate";
-import { Barrel } from "../entity/object/barrel";
 
 export class Dagger extends Weapon {
   static itemName = "dagger";

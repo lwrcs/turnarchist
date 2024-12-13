@@ -1,9 +1,6 @@
 import { Entity } from "../entity";
 import { Room } from "../../room";
 import { Game } from "../../game";
-import { Heart } from "../../item/heart";
-import { LevelConstants } from "../../levelConstants";
-import { GenericParticle } from "../../particle/genericParticle";
 import { EntityType } from "../entity";
 import { ImageParticle } from "../../particle/imageParticle";
 import { WeaponFragments } from "../../item/weaponFragments";

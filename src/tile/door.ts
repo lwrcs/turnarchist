@@ -243,7 +243,7 @@ export class Door extends Tile {
 
   drawAboveShading = (delta: number) => {
     if (this.frame > 100) this.frame = 0;
-    this.frame += 1;
+    this.frame += 1 * delta;
     Game.ctx.globalAlpha = this.iconAlpha;
     let multiplier = 0.125;
     if (this.unlocking == true) {

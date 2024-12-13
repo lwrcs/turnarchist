@@ -247,6 +247,16 @@ export class Player extends Drawable {
     }
   }
 
+  applyStatus = (
+    enemy: Entity,
+    status: { poison: boolean; blood: boolean },
+  ) => {
+    if (enemy instanceof Enemy) {
+      if (status.poison) enemy.poison();
+      if (status.blood) enemy.bleed();
+    }
+  };
+
   inputHandler = (input: InputEnum) => {
     if (!this.game.started && input !== InputEnum.MOUSE_MOVE) {
       this.game.startedFadeOut = true;
@@ -1138,11 +1148,10 @@ export class Player extends Drawable {
       this.hurtAlpha = 0;
       this.hurting = false;
     }
-    //Game.ctx.globalCompositeOperation = "screen";
+    Game.ctx.globalCompositeOperation = "source-over";
     Game.ctx.fillStyle = "#cc3333"; // bright but not fully saturated red
 
     Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
-    Game.ctx.globalCompositeOperation = "source-over";
 
     Game.ctx.restore(); // Restore the canvas state
   };

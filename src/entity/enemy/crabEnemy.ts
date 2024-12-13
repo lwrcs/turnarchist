@@ -1,14 +1,10 @@
 import { Direction, Game } from "../../game";
 import { Room } from "../../room";
 import { astar } from "../../astarclass";
-import { HitWarning } from "../../hitWarning";
 import { SpikeTrap } from "../../tile/spiketrap";
-import { Coin } from "../../item/coin";
 import { Player } from "../../player";
-import { DualDagger } from "../../weapon/dualdagger";
 import { Item } from "../../item/item";
 import { GameConstants } from "../../gameConstants";
-import { ImageParticle } from "../../particle/imageParticle";
 import { Enemy } from "./enemy";
 
 export class CrabEnemy extends Enemy {
@@ -36,9 +32,8 @@ export class CrabEnemy extends Enemy {
     this.imageParticleY = 24;
 
     if (drop) this.drop = drop;
-    else {
-      this.drop = new Coin(this.room, this.x, this.y);
-    }
+
+    //this.drop = Hammer.add(this.room, this.x, this.y);
   }
 
   get alertText() {

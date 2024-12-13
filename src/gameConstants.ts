@@ -29,7 +29,7 @@ export class GameConstants {
   static readonly SHADE_LEVELS = 50;
 
   static readonly TILESIZE = 16;
-  static readonly SCALE = 3;
+  static SCALE = 3;
 
   static readonly SWIPE_THRESH = 25 ** 2; // (size of swipe threshold circle)^2
   static readonly HOLD_THRESH = 250; // milliseconds
@@ -61,6 +61,8 @@ export class GameConstants {
   static readonly MISS_COLOR = "#639bff";
 
   static COLOR_LAYER_COMPOSITE_OPERATION = "soft-light"; //"soft-light";
+  static SHADE_LAYER_COMPOSITE_OPERATION = "screen"; //"soft-light";
+  static USE_OPTIMIZED_SHADING = false;
 
   static readonly COLOR_LAYER_COMPOSITE_OPERATIONS = [
     "soft-light",
@@ -69,20 +71,45 @@ export class GameConstants {
     "overlay",
     "hue",
     "source-over",
+    "screen",
+    "multiply",
+    "difference",
+    "exclusion",
+    "luminosity",
+    "color-dodge",
+    "color-burn",
+    "hard-light",
+    "soft-light",
+    "lighten",
   ];
 
-  static readonly SET_COLOR_LAYER_COMPOSITE_OPERATION = () => {
-    const currentIndex = GameConstants.COLOR_LAYER_COMPOSITE_OPERATIONS.indexOf(
-      GameConstants.COLOR_LAYER_COMPOSITE_OPERATION,
-    );
+  static readonly SET_COLOR_LAYER_COMPOSITE_OPERATION = (shade?: boolean) => {
+    let operation = shade
+      ? GameConstants.SHADE_LAYER_COMPOSITE_OPERATION
+      : GameConstants.COLOR_LAYER_COMPOSITE_OPERATION;
+    const currentIndex =
+      GameConstants.COLOR_LAYER_COMPOSITE_OPERATIONS.indexOf(operation);
     const nextIndex =
       (currentIndex + 1) %
       GameConstants.COLOR_LAYER_COMPOSITE_OPERATIONS.length;
-    GameConstants.COLOR_LAYER_COMPOSITE_OPERATION =
-      GameConstants.COLOR_LAYER_COMPOSITE_OPERATIONS[nextIndex];
-    console.log(
-      `Color layer composite operation set to ${GameConstants.COLOR_LAYER_COMPOSITE_OPERATION}`,
-    );
+    operation = GameConstants.COLOR_LAYER_COMPOSITE_OPERATIONS[nextIndex];
+    if (shade) {
+      GameConstants.SHADE_LAYER_COMPOSITE_OPERATION = operation;
+    } else {
+      GameConstants.COLOR_LAYER_COMPOSITE_OPERATION = operation;
+    }
+    console.log(`Color layer composite operation set to ${operation}`);
+  };
+
+  static readonly TOGGLE_USE_OPTIMIZED_SHADING = () => {
+    GameConstants.USE_OPTIMIZED_SHADING = !GameConstants.USE_OPTIMIZED_SHADING;
+  };
+
+  static readonly SET_SCALE = () => {
+    GameConstants.SCALE++;
+    if (GameConstants.SCALE > 4) {
+      GameConstants.SCALE = 1;
+    }
   };
 
   static readonly STARTING_INVENTORY = [Dagger, Torch];

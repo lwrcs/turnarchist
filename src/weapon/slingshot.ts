@@ -1,8 +1,6 @@
-import { Game } from "../game";
 import { Weapon } from "./weapon";
 import { Room } from "../room";
 import { Sound } from "../sound";
-import { SlashParticle } from "../particle/slashParticle";
 import { GenericParticle } from "../particle/genericParticle";
 
 export class Slingshot extends Weapon {

@@ -1,11 +1,8 @@
-import { Game } from "../game";
 import { Weapon } from "./weapon";
 import { Room } from "../room";
 import { Sound } from "../sound";
 import { SlashParticle } from "../particle/slashParticle";
-import { Crate } from "../entity/object/crate";
-import { Barrel } from "../entity/object/barrel";
-import { Enemy } from "../entity/enemy/enemy";
+import type { Enemy } from "../entity/enemy/enemy";
 
 export class Spear extends Weapon {
   static itemName = "spear";
@@ -39,7 +36,7 @@ export class Spear extends Weapon {
           !this.game.rooms[this.wielder.levelID].roomArray[newX][newY].isSolid()
         ) {
           //only hit targest 2 tiles away if they are enemies
-          if (!e.pushable && e instanceof Enemy) enemyHitCandidates.push(e);
+          if (!e.pushable) enemyHitCandidates.push(e);
         }
       }
     }
