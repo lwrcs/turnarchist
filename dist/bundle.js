@@ -8064,7 +8064,9 @@ var GameConstants = /** @class */ (function () {
     GameConstants.ALPHA_ENABLED = true;
     GameConstants.SHADE_LEVELS = 50;
     GameConstants.TILESIZE = 16;
-    GameConstants.SCALE = 3;
+    GameConstants.SCALE = 4;
+    GameConstants.MAX_SCALE = 5;
+    GameConstants.MIN_SCALE = 1;
     GameConstants.SWIPE_THRESH = Math.pow(25, 2); // (size of swipe threshold circle)^2
     GameConstants.HOLD_THRESH = 250; // milliseconds
     GameConstants.KEY_REPEAT_TIME = 250; // millseconds
@@ -8130,8 +8132,24 @@ var GameConstants = /** @class */ (function () {
     };
     GameConstants.SET_SCALE = function () {
         GameConstants.SCALE++;
-        if (GameConstants.SCALE > 4) {
-            GameConstants.SCALE = 1;
+        if (GameConstants.SCALE > GameConstants.MAX_SCALE) {
+            GameConstants.SCALE = GameConstants.MIN_SCALE;
+        }
+    };
+    GameConstants.INCREASE_SCALE = function () {
+        if (GameConstants.SCALE < GameConstants.MAX_SCALE) {
+            GameConstants.SCALE++;
+            if (GameConstants.SCALE > GameConstants.MAX_SCALE) {
+                GameConstants.SCALE = GameConstants.MIN_SCALE;
+            }
+        }
+    };
+    GameConstants.DECREASE_SCALE = function () {
+        if (GameConstants.SCALE > GameConstants.MIN_SCALE) {
+            GameConstants.SCALE--;
+            if (GameConstants.SCALE < GameConstants.MIN_SCALE) {
+                GameConstants.SCALE = GameConstants.MAX_SCALE;
+            }
         }
     };
     GameConstants.STARTING_INVENTORY = [dagger_1.Dagger, torch_1.Torch];
@@ -9221,6 +9239,8 @@ var InputEnum;
     InputEnum[InputEnum["NUMBER_7"] = 20] = "NUMBER_7";
     InputEnum[InputEnum["NUMBER_8"] = 21] = "NUMBER_8";
     InputEnum[InputEnum["NUMBER_9"] = 22] = "NUMBER_9";
+    InputEnum[InputEnum["MINUS"] = 23] = "MINUS";
+    InputEnum[InputEnum["EQUALS"] = 24] = "EQUALS";
 })(InputEnum = exports.InputEnum || (exports.InputEnum = {}));
 var checkIsMouseHold = function () {
     if (exports.Input.mouseDownStartTime !== null &&
@@ -9263,6 +9283,8 @@ exports.Input = {
     commaListener: function () { },
     periodListener: function () { },
     numKeyListener: function (num) { },
+    equalsListener: function () { },
+    minusListener: function () { },
     mouseLeftClickListeners: [],
     mouseRightClickListeners: [],
     mouseMoveListeners: [],
@@ -9297,6 +9319,8 @@ exports.Input = {
     NUMBER_9: "Digit9",
     COMMA: "Comma",
     PERIOD: "Period",
+    MINUS: "Minus",
+    EQUALS: "Equal",
     isDown: function (keyCode) {
         return this._pressed[keyCode];
     },
@@ -9363,6 +9387,12 @@ exports.Input = {
             case exports.Input.NUMBER_8:
             case exports.Input.NUMBER_9:
                 exports.Input.numKeyListener(parseInt(event.code.slice(-1)));
+                break;
+            case exports.Input.EQUALS:
+                exports.Input.equalsListener();
+                break;
+            case exports.Input.MINUS:
+                exports.Input.minusListener();
                 break;
         }
     },
@@ -9799,10 +9829,6 @@ var Inventory = /** @class */ (function () {
                 }
                 {
                     switch (num) {
-                        case 8:
-                            gameConstants_1.GameConstants.SET_SCALE();
-                            _this.game.onResize();
-                            break;
                         case 9:
                             gameConstants_1.GameConstants.TOGGLE_USE_OPTIMIZED_SHADING();
                             _this.game.pushMessage("Optimized shading is now " +
@@ -14580,6 +14606,12 @@ var Player = /** @class */ (function (_super) {
                 case input_1.InputEnum.NUMBER_9:
                     _this.numKeyListener(input);
                     break;
+                case input_1.InputEnum.EQUALS:
+                    _this.plusListener();
+                    break;
+                case input_1.InputEnum.MINUS:
+                    _this.minusListener();
+                    break;
             }
         };
         _this.commaListener = function () {
@@ -14677,6 +14709,15 @@ var Player = /** @class */ (function (_super) {
                     return;
                 }
             }
+        };
+        _this.plusListener = function () {
+            0;
+            gameConstants_1.GameConstants.INCREASE_SCALE();
+            _this.game.onResize();
+        };
+        _this.minusListener = function () {
+            gameConstants_1.GameConstants.DECREASE_SCALE();
+            _this.game.onResize();
         };
         _this.mouseLeftClick = function () {
             _this.inventory.mostRecentInput = "mouse";
@@ -15585,6 +15626,8 @@ var Player = /** @class */ (function (_super) {
             input_1.Input.numKeyListener = function (num) {
                 return _this.inputHandler(input_1.InputEnum.NUMBER_1 + num - 1);
             };
+            input_1.Input.equalsListener = function () { return _this.inputHandler(input_1.InputEnum.EQUALS); };
+            input_1.Input.minusListener = function () { return _this.inputHandler(input_1.InputEnum.MINUS); };
         }
         _this.mapToggled = true;
         _this.health = 3;

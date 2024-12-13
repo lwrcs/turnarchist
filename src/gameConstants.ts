@@ -29,7 +29,9 @@ export class GameConstants {
   static readonly SHADE_LEVELS = 50;
 
   static readonly TILESIZE = 16;
-  static SCALE = 3;
+  static SCALE = 4;
+  static readonly MAX_SCALE = 5;
+  static readonly MIN_SCALE = 1;
 
   static readonly SWIPE_THRESH = 25 ** 2; // (size of swipe threshold circle)^2
   static readonly HOLD_THRESH = 250; // milliseconds
@@ -107,8 +109,26 @@ export class GameConstants {
 
   static readonly SET_SCALE = () => {
     GameConstants.SCALE++;
-    if (GameConstants.SCALE > 4) {
-      GameConstants.SCALE = 1;
+    if (GameConstants.SCALE > GameConstants.MAX_SCALE) {
+      GameConstants.SCALE = GameConstants.MIN_SCALE;
+    }
+  };
+
+  static readonly INCREASE_SCALE = () => {
+    if (GameConstants.SCALE < GameConstants.MAX_SCALE) {
+      GameConstants.SCALE++;
+      if (GameConstants.SCALE > GameConstants.MAX_SCALE) {
+        GameConstants.SCALE = GameConstants.MIN_SCALE;
+      }
+    }
+  };
+
+  static readonly DECREASE_SCALE = () => {
+    if (GameConstants.SCALE > GameConstants.MIN_SCALE) {
+      GameConstants.SCALE--;
+      if (GameConstants.SCALE < GameConstants.MIN_SCALE) {
+        GameConstants.SCALE = GameConstants.MAX_SCALE;
+      }
     }
   };
 

@@ -25,6 +25,8 @@ export enum InputEnum {
   NUMBER_7,
   NUMBER_8,
   NUMBER_9,
+  MINUS,
+  EQUALS,
 }
 
 const checkIsMouseHold = function () {
@@ -72,6 +74,8 @@ export const Input = {
   commaListener: function () {},
   periodListener: function () {},
   numKeyListener: function (num: number) {},
+  equalsListener: function () {},
+  minusListener: function () {},
   mouseLeftClickListeners: [],
   mouseRightClickListeners: [],
   mouseMoveListeners: [],
@@ -109,6 +113,8 @@ export const Input = {
   NUMBER_9: "Digit9",
   COMMA: "Comma",
   PERIOD: "Period",
+  MINUS: "Minus",
+  EQUALS: "Equal",
 
   isDown: function (keyCode: string) {
     return this._pressed[keyCode];
@@ -175,6 +181,12 @@ export const Input = {
       case Input.NUMBER_8:
       case Input.NUMBER_9:
         Input.numKeyListener(parseInt(event.code.slice(-1)));
+        break;
+      case Input.EQUALS:
+        Input.equalsListener();
+        break;
+      case Input.MINUS:
+        Input.minusListener();
         break;
     }
   },

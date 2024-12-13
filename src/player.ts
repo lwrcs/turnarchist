@@ -190,6 +190,8 @@ export class Player extends Drawable {
       );
       Input.numKeyListener = (num: number) =>
         this.inputHandler(InputEnum.NUMBER_1 + num - 1);
+      Input.equalsListener = () => this.inputHandler(InputEnum.EQUALS);
+      Input.minusListener = () => this.inputHandler(InputEnum.MINUS);
     }
     this.mapToggled = true;
     this.health = 3;
@@ -310,6 +312,12 @@ export class Player extends Drawable {
       case InputEnum.NUMBER_9:
         this.numKeyListener(input);
         break;
+      case InputEnum.EQUALS:
+        this.plusListener();
+        break;
+      case InputEnum.MINUS:
+        this.minusListener();
+        break;
     }
   };
   commaListener = () => {
@@ -422,6 +430,15 @@ export class Player extends Drawable {
         return;
       }
     }
+  };
+  plusListener = () => {
+    0;
+    GameConstants.INCREASE_SCALE();
+    this.game.onResize();
+  };
+  minusListener = () => {
+    GameConstants.DECREASE_SCALE();
+    this.game.onResize();
   };
   mouseLeftClick = () => {
     this.inventory.mostRecentInput = "mouse";

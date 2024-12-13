@@ -303,10 +303,6 @@ export class Inventory {
       }
       {
         switch (num) {
-          case 8:
-            GameConstants.SET_SCALE();
-            this.game.onResize();
-            break;
           case 9:
             GameConstants.TOGGLE_USE_OPTIMIZED_SHADING();
             this.game.pushMessage(
