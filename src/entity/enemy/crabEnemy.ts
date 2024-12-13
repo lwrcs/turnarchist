@@ -32,9 +32,16 @@ export class CrabEnemy extends Enemy {
     this.imageParticleY = 24;
 
     if (drop) this.drop = drop;
-    this.getDrop(["weapon", "equipment", "consumable", "gem", "tool", "coin"]);
-
-    //this.drop = Hammer.add(this.room, this.x, this.y);
+    if (Math.random() < this.dropChance) {
+      this.getDrop([
+        "weapon",
+        "equipment",
+        "consumable",
+        "gem",
+        "tool",
+        "coin",
+      ]);
+    }
   }
 
   get alertText() {

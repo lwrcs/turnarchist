@@ -56,6 +56,7 @@ export abstract class Enemy extends Entity {
     this.status = { poison: false, bleed: false };
     this.effectStartTick = 1;
     this.startTick = 1;
+    this.getDrop(["weapon", "equipment", "consumable", "gem", "tool", "coin"]);
   }
 
   readonly tryMove = (x: number, y: number, collide: boolean = true) => {

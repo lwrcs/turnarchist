@@ -87,6 +87,7 @@ export class Entity extends Drawable {
   hitWarnings: HitWarning[];
   imageParticleX: number = 0;
   imageParticleY: number = 26;
+  dropChance: number = 0.03;
 
   constructor(room: Room, game: Game, x: number, y: number) {
     super();

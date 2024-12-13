@@ -1,20 +1,10 @@
-import { Entity, EntityDirection } from "../entity";
 import { Direction, Game } from "../../game";
 import { Room } from "../../room";
 import { Player } from "../../player";
-import { HitWarning } from "../../hitWarning";
 import { GenericParticle } from "../../particle/genericParticle";
-import { Coin } from "../../item/coin";
-import { RedGem } from "../../item/redgem";
 import { Item } from "../../item/item";
-import { Spear } from "../../weapon/spear";
-import { DualDagger } from "../../weapon/dualdagger";
-import { GreenGem } from "../../item/greengem";
-import { Random } from "../../random";
 import { astar } from "../../astarclass";
 import { SpikeTrap } from "../../tile/spiketrap";
-import { Pickaxe } from "../../weapon/pickaxe";
-import { Armor } from "../../item/armor";
 import { Enemy } from "./enemy";
 
 export class ArmoredzombieEnemy extends Enemy {
@@ -40,12 +30,15 @@ export class ArmoredzombieEnemy extends Enemy {
     this.forwardOnlyAttack = true;
 
     if (drop) this.drop = drop;
-    else {
-      let dropProb = Random.rand();
-      if (dropProb < 0.07) this.drop = new Armor(this.room, this.x, this.y);
-      else if (dropProb < 0.01)
-        this.drop = new GreenGem(this.room, this.x, this.y);
-      else this.drop = new Coin(this.room, this.x, this.y);
+    if (Math.random() < this.dropChance) {
+      this.getDrop([
+        "weapon",
+        "equipment",
+        "consumable",
+        "gem",
+        "tool",
+        "coin",
+      ]);
     }
   }
 

@@ -10,6 +10,7 @@ export class Warhammer extends Weapon {
     this.tileY = 2;
     this.damage = 3;
     this.name = "warhammer";
-    this.durability = 1;
+    this.durability = 25;
+    this.durabilityMax = 25;
   }
 }

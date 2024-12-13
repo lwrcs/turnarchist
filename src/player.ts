@@ -85,7 +85,9 @@ export class Player extends Drawable {
   lightEquipped: boolean;
   lightSource: LightSource;
   hurtAlpha: number;
-  hurting: boolean;
+  hurting: boolean; // handles drawing hurt animation
+  hurtingShield: boolean; // handles drawing hurt shield animation
+  hurtShield: boolean; // handles logic to take damage or not
   lightBrightness: number;
   sineAngle: number;
   drawMoveSpeed: number;
@@ -217,6 +219,8 @@ export class Player extends Drawable {
     this.moveRange = 1;
     this.lightEquipped = false;
     this.hurting = false;
+    this.hurtingShield = false;
+    this.hurtShield = false;
     this.hurtAlpha = 0.25;
     this.lightBrightness = 0.3;
     this.sineAngle = Math.PI / 2;
@@ -742,12 +746,16 @@ export class Player extends Drawable {
 
     if (this.inventory.getArmor() && this.inventory.getArmor().health > 0) {
       this.inventory.getArmor().hurt(damage);
-    } else {
+      this.hurtingShield = true;
+      this.hurtShield = true;
+    }
+    {
       this.lastHitBy = enemy;
       //console.log("Last Hit by: ", enemy);
       this.healthBar.hurt();
       this.flashing = true;
-      this.health -= damage;
+      if (!this.hurtShield) this.health -= damage;
+      this.hurtShield = false;
       this.hurting = true;
       this.hurtAlpha = 0.25;
       if (this.health <= 0 && !GameConstants.DEVELOPER_MODE) {
@@ -1164,9 +1172,13 @@ export class Player extends Drawable {
     if (this.hurtAlpha <= 0.01) {
       this.hurtAlpha = 0;
       this.hurting = false;
+      this.hurtingShield = false;
     }
     Game.ctx.globalCompositeOperation = "source-over";
     Game.ctx.fillStyle = "#cc3333"; // bright but not fully saturated red
+    if (this.hurtingShield) {
+      Game.ctx.fillStyle = "#639bff"; // bright but not fully saturated blue
+    }
 
     Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
 

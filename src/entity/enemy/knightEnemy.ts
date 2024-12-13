@@ -1,17 +1,10 @@
-import { Entity, EntityDirection } from "../entity";
 import { Direction, Game } from "../../game";
 import { Room } from "../../room";
 import { astar } from "../../astarclass";
-import { HitWarning } from "../../hitWarning";
 import { SpikeTrap } from "../../tile/spiketrap";
-import { Coin } from "../../item/coin";
 import { Player } from "../../player";
-import { DualDagger } from "../../weapon/dualdagger";
 import { Item } from "../../item/item";
-import { ImageParticle } from "../../particle/imageParticle";
-import { Armor } from "../../item/armor";
 import { Enemy } from "./enemy";
-import { Random } from "../../random";
 
 export class KnightEnemy extends Enemy {
   ticks: number;
@@ -40,13 +33,15 @@ export class KnightEnemy extends Enemy {
     this.imageParticleX = 3;
     this.imageParticleY = 29;
     if (drop) this.drop = drop;
-    else {
-      let dropProb = Random.rand();
-      if (dropProb < 0.05)
-        this.drop = new DualDagger(this.room, this.x, this.y);
-      else if (dropProb < 0.01)
-        this.drop = new DualDagger(this.room, this.x, this.y);
-      else this.drop = new Coin(this.room, this.x, this.y);
+    if (Math.random() < this.dropChance) {
+      this.getDrop([
+        "weapon",
+        "equipment",
+        "consumable",
+        "gem",
+        "tool",
+        "coin",
+      ]);
     }
   }
 

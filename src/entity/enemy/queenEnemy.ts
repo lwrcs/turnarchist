@@ -1,19 +1,9 @@
-import { Entity, EntityDirection } from "../entity";
 import { Game } from "../../game";
 import { Room } from "../../room";
 import { Player } from "../../player";
-import { HitWarning } from "../../hitWarning";
-import { GenericParticle } from "../../particle/genericParticle";
-import { Coin } from "../../item/coin";
-import { RedGem } from "../../item/redgem";
 import { Item } from "../../item/item";
-import { Spear } from "../../weapon/spear";
-import { DualDagger } from "../../weapon/dualdagger";
-import { GreenGem } from "../../item/greengem";
-import { Random } from "../../random";
 import { astar } from "../../astarclass";
 import { SpikeTrap } from "../../tile/spiketrap";
-import { Candle } from "../../item/candle";
 import { Enemy } from "./enemy";
 
 export class QueenEnemy extends Enemy {
@@ -39,12 +29,15 @@ export class QueenEnemy extends Enemy {
     this.diagonalAttack = true;
     this.jumpHeight = 1;
     if (drop) this.drop = drop;
-    else {
-      let dropProb = Random.rand();
-      if (dropProb < 0.005) this.drop = new Candle(this.room, this.x, this.y);
-      else if (dropProb < 0.04)
-        this.drop = new GreenGem(this.room, this.x, this.y);
-      else this.drop = new Coin(this.room, this.x, this.y);
+    if (Math.random() < this.dropChance) {
+      this.getDrop([
+        "weapon",
+        "equipment",
+        "consumable",
+        "gem",
+        "tool",
+        "coin",
+      ]);
     }
   }
 

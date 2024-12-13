@@ -1,4 +1,3 @@
-import { Entity, EntityDirection } from "../entity";
 import { Direction, Game } from "../../game";
 import { Room } from "../../room";
 import { Player } from "../../player";

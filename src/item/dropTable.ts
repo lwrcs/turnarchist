@@ -71,10 +71,11 @@ export class DropTable {
 
     // Consumables
     { itemType: "heart", dropWeight: 5, category: "consumable" },
-    { itemType: "weaponpoison", dropWeight: 5, category: "weapon" },
-    { itemType: "weaponblood", dropWeight: 5, category: "weapon" },
 
-    { itemType: "coin", dropWeight: 100, category: "coin" },
+    { itemType: "weaponpoison", dropWeight: 5, category: "poison" },
+    { itemType: "weaponblood", dropWeight: 5, category: "blood" },
+
+    { itemType: "coin", dropWeight: 250, category: "coin" },
 
     { itemType: "weaponfragments", dropWeight: 5, category: "weapon" },
 
@@ -130,6 +131,9 @@ export class DropTable {
       return;
     }
     entity.drop = ItemClass.add(entity.room, entity.x, entity.y);
-    console.log(`Drop for ${entity.name}:`, entity.drop.constructor.name);
+    console.log(
+      `Drop for ${entity.constructor.name}:`,
+      entity.drop.constructor.name,
+    );
   };
 }

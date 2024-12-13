@@ -728,12 +728,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ArmoredzombieEnemy = void 0;
 var game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 var genericParticle_1 = __webpack_require__(/*! ../../particle/genericParticle */ "./src/particle/genericParticle.ts");
-var coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
-var greengem_1 = __webpack_require__(/*! ../../item/greengem */ "./src/item/greengem.ts");
-var random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
 var astarclass_1 = __webpack_require__(/*! ../../astarclass */ "./src/astarclass.ts");
 var spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
-var armor_1 = __webpack_require__(/*! ../../item/armor */ "./src/item/armor.ts");
 var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 var ArmoredzombieEnemy = /** @class */ (function (_super) {
     __extends(ArmoredzombieEnemy, _super);
@@ -945,14 +941,15 @@ var ArmoredzombieEnemy = /** @class */ (function (_super) {
         _this.forwardOnlyAttack = true;
         if (drop)
             _this.drop = drop;
-        else {
-            var dropProb = random_1.Random.rand();
-            if (dropProb < 0.07)
-                _this.drop = new armor_1.Armor(_this.room, _this.x, _this.y);
-            else if (dropProb < 0.01)
-                _this.drop = new greengem_1.GreenGem(_this.room, _this.x, _this.y);
-            else
-                _this.drop = new coin_1.Coin(_this.room, _this.x, _this.y);
+        if (Math.random() < _this.dropChance) {
+            _this.getDrop([
+                "weapon",
+                "equipment",
+                "consumable",
+                "gem",
+                "tool",
+                "coin",
+            ]);
         }
         return _this;
     }
@@ -1582,12 +1579,8 @@ var __extends = (this && this.__extends) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BishopEnemy = void 0;
 var game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-var coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
-var greengem_1 = __webpack_require__(/*! ../../item/greengem */ "./src/item/greengem.ts");
-var random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
 var astarclass_1 = __webpack_require__(/*! ../../astarclass */ "./src/astarclass.ts");
 var spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
-var candle_1 = __webpack_require__(/*! ../../item/candle */ "./src/item/candle.ts");
 var door_1 = __webpack_require__(/*! ../../tile/door */ "./src/tile/door.ts");
 var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 var BishopEnemy = /** @class */ (function (_super) {
@@ -1782,14 +1775,15 @@ var BishopEnemy = /** @class */ (function (_super) {
         _this.imageParticleY = 26;
         if (drop)
             _this.drop = drop;
-        else {
-            var dropProb = random_1.Random.rand();
-            if (dropProb < 0.005)
-                _this.drop = new candle_1.Candle(_this.room, _this.x, _this.y);
-            else if (dropProb < 0.04)
-                _this.drop = new greengem_1.GreenGem(_this.room, _this.x, _this.y);
-            else
-                _this.drop = new coin_1.Coin(_this.room, _this.x, _this.y);
+        if (Math.random() < _this.dropChance) {
+            _this.getDrop([
+                "weapon",
+                "equipment",
+                "consumable",
+                "gem",
+                "tool",
+                "coin",
+            ]);
         }
         return _this;
     }
@@ -1827,13 +1821,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ChargeEnemy = exports.ChargeEnemyState = void 0;
 var game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 var hitWarning_1 = __webpack_require__(/*! ../../hitWarning */ "./src/hitWarning.ts");
-var coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
 var door_1 = __webpack_require__(/*! ../../tile/door */ "./src/tile/door.ts");
 var genericParticle_1 = __webpack_require__(/*! ../../particle/genericParticle */ "./src/particle/genericParticle.ts");
 var gameConstants_1 = __webpack_require__(/*! ../../gameConstants */ "./src/gameConstants.ts");
-var random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
-var pickaxe_1 = __webpack_require__(/*! ../../weapon/pickaxe */ "./src/weapon/pickaxe.ts");
-var greengem_1 = __webpack_require__(/*! ../../item/greengem */ "./src/item/greengem.ts");
 var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 var ChargeEnemyState;
 (function (ChargeEnemyState) {
@@ -2038,14 +2028,15 @@ var ChargeEnemy = /** @class */ (function (_super) {
         _this.state = ChargeEnemyState.IDLE;
         if (drop)
             _this.drop = drop;
-        else {
-            var dropProb = random_1.Random.rand();
-            if (dropProb < 0.025)
-                _this.drop = new pickaxe_1.Pickaxe(_this.room, _this.x, _this.y);
-            else if (dropProb < 0.02)
-                _this.drop = new greengem_1.GreenGem(_this.room, _this.x, _this.y);
-            else
-                _this.drop = new coin_1.Coin(_this.room, _this.x, _this.y);
+        if (Math.random() < _this.dropChance) {
+            _this.getDrop([
+                "weapon",
+                "equipment",
+                "consumable",
+                "gem",
+                "tool",
+                "coin",
+            ]);
         }
         return _this;
     }
@@ -2241,9 +2232,17 @@ var CrabEnemy = /** @class */ (function (_super) {
         _this.imageParticleY = 24;
         if (drop)
             _this.drop = drop;
-        _this.getDrop(["weapon", "equipment", "consumable", "gem", "tool", "coin"]);
+        if (Math.random() < _this.dropChance) {
+            _this.getDrop([
+                "weapon",
+                "equipment",
+                "consumable",
+                "gem",
+                "tool",
+                "coin",
+            ]);
+        }
         return _this;
-        //this.drop = Hammer.add(this.room, this.x, this.y);
     }
     Object.defineProperty(CrabEnemy.prototype, "alertText", {
         get: function () {
@@ -2705,6 +2704,7 @@ var Enemy = /** @class */ (function (_super) {
         _this.status = { poison: false, bleed: false };
         _this.effectStartTick = 1;
         _this.startTick = 1;
+        _this.getDrop(["weapon", "equipment", "consumable", "gem", "tool", "coin"]);
         return _this;
     }
     Object.defineProperty(Enemy.prototype, "lastPlayerPos", {
@@ -2759,9 +2759,6 @@ var game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 var floor_1 = __webpack_require__(/*! ../../tile/floor */ "./src/tile/floor.ts");
 var bones_1 = __webpack_require__(/*! ../../tile/bones */ "./src/tile/bones.ts");
 var deathParticle_1 = __webpack_require__(/*! ../../particle/deathParticle */ "./src/particle/deathParticle.ts");
-var coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
-var bluegem_1 = __webpack_require__(/*! ../../item/bluegem */ "./src/item/bluegem.ts");
-var random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
 var wizardEnemy_1 = __webpack_require__(/*! ./wizardEnemy */ "./src/entity/enemy/wizardEnemy.ts");
 var WizardState;
 (function (WizardState) {
@@ -2822,11 +2819,15 @@ var EnergyWizardEnemy = /** @class */ (function (_super) {
         _this.projectileColor = [0, 50, 150];
         if (drop)
             _this.drop = drop;
-        else {
-            if (random_1.Random.rand() < 0.02)
-                _this.drop = new bluegem_1.BlueGem(_this.room, _this.x, _this.y);
-            else
-                _this.drop = new coin_1.Coin(_this.room, _this.x, _this.y);
+        if (Math.random() < _this.dropChance) {
+            _this.getDrop([
+                "weapon",
+                "equipment",
+                "consumable",
+                "gem",
+                "tool",
+                "coin",
+            ]);
         }
         return _this;
     }
@@ -2868,8 +2869,6 @@ var bones_1 = __webpack_require__(/*! ../../tile/bones */ "./src/tile/bones.ts")
 var deathParticle_1 = __webpack_require__(/*! ../../particle/deathParticle */ "./src/particle/deathParticle.ts");
 var wizardTeleportParticle_1 = __webpack_require__(/*! ../../particle/wizardTeleportParticle */ "./src/particle/wizardTeleportParticle.ts");
 var wizardFireball_1 = __webpack_require__(/*! ../../projectile/wizardFireball */ "./src/projectile/wizardFireball.ts");
-var coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
-var bluegem_1 = __webpack_require__(/*! ../../item/bluegem */ "./src/item/bluegem.ts");
 var random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
 var wizardEnemy_1 = __webpack_require__(/*! ./wizardEnemy */ "./src/entity/enemy/wizardEnemy.ts");
 var WizardState;
@@ -3033,11 +3032,15 @@ var FireWizardEnemy = /** @class */ (function (_super) {
         _this.projectileColor = [200, 20, 0];
         if (drop)
             _this.drop = drop;
-        else {
-            if (random_1.Random.rand() < 0.02)
-                _this.drop = new bluegem_1.BlueGem(_this.room, _this.x, _this.y);
-            else
-                _this.drop = new coin_1.Coin(_this.room, _this.x, _this.y);
+        if (Math.random() < _this.dropChance) {
+            _this.getDrop([
+                "weapon",
+                "equipment",
+                "consumable",
+                "gem",
+                "tool",
+                "coin",
+            ]);
         }
         return _this;
     }
@@ -3080,9 +3083,6 @@ var spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/sp
 var coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
 var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 var utils_1 = __webpack_require__(/*! ../../utils */ "./src/utils.ts");
-var random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
-var weaponPoison_1 = __webpack_require__(/*! ../../item/weaponPoison */ "./src/item/weaponPoison.ts");
-var greengem_1 = __webpack_require__(/*! ../../item/greengem */ "./src/item/greengem.ts");
 var FrogEnemy = /** @class */ (function (_super) {
     __extends(FrogEnemy, _super);
     function FrogEnemy(room, game, x, y, drop) {
@@ -3386,14 +3386,8 @@ var FrogEnemy = /** @class */ (function (_super) {
         _this.imageParticleY = 30;
         if (drop)
             _this.drop = drop;
-        else {
-            var dropProb = random_1.Random.rand();
-            if (dropProb < 0.05)
-                _this.drop = new weaponPoison_1.WeaponPoison(_this.room, _this.x, _this.y);
-            else if (dropProb < 0.01)
-                _this.drop = new greengem_1.GreenGem(_this.room, _this.x, _this.y);
-            else
-                _this.drop = new coin_1.Coin(_this.room, _this.x, _this.y);
+        if (Math.random() < _this.dropChance) {
+            _this.getDrop(["weapon", "consumable", "gem", "tool", "coin", "poison"]);
         }
         return _this;
     }
@@ -3432,10 +3426,7 @@ exports.KnightEnemy = void 0;
 var game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 var astarclass_1 = __webpack_require__(/*! ../../astarclass */ "./src/astarclass.ts");
 var spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
-var coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
-var dualdagger_1 = __webpack_require__(/*! ../../weapon/dualdagger */ "./src/weapon/dualdagger.ts");
 var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
-var random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
 var KnightEnemy = /** @class */ (function (_super) {
     __extends(KnightEnemy, _super);
     function KnightEnemy(room, game, x, y, drop) {
@@ -3608,14 +3599,15 @@ var KnightEnemy = /** @class */ (function (_super) {
         _this.imageParticleY = 29;
         if (drop)
             _this.drop = drop;
-        else {
-            var dropProb = random_1.Random.rand();
-            if (dropProb < 0.05)
-                _this.drop = new dualdagger_1.DualDagger(_this.room, _this.x, _this.y);
-            else if (dropProb < 0.01)
-                _this.drop = new dualdagger_1.DualDagger(_this.room, _this.x, _this.y);
-            else
-                _this.drop = new coin_1.Coin(_this.room, _this.x, _this.y);
+        if (Math.random() < _this.dropChance) {
+            _this.getDrop([
+                "weapon",
+                "equipment",
+                "consumable",
+                "gem",
+                "tool",
+                "coin",
+            ]);
         }
         return _this;
     }
@@ -3652,12 +3644,8 @@ var __extends = (this && this.__extends) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.QueenEnemy = void 0;
 var game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-var coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
-var greengem_1 = __webpack_require__(/*! ../../item/greengem */ "./src/item/greengem.ts");
-var random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
 var astarclass_1 = __webpack_require__(/*! ../../astarclass */ "./src/astarclass.ts");
 var spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
-var candle_1 = __webpack_require__(/*! ../../item/candle */ "./src/item/candle.ts");
 var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 var QueenEnemy = /** @class */ (function (_super) {
     __extends(QueenEnemy, _super);
@@ -3813,14 +3801,15 @@ var QueenEnemy = /** @class */ (function (_super) {
         _this.jumpHeight = 1;
         if (drop)
             _this.drop = drop;
-        else {
-            var dropProb = random_1.Random.rand();
-            if (dropProb < 0.005)
-                _this.drop = new candle_1.Candle(_this.room, _this.x, _this.y);
-            else if (dropProb < 0.04)
-                _this.drop = new greengem_1.GreenGem(_this.room, _this.x, _this.y);
-            else
-                _this.drop = new coin_1.Coin(_this.room, _this.x, _this.y);
+        if (Math.random() < _this.dropChance) {
+            _this.getDrop([
+                "weapon",
+                "equipment",
+                "consumable",
+                "gem",
+                "tool",
+                "coin",
+            ]);
         }
         return _this;
     }
@@ -3857,12 +3846,8 @@ var __extends = (this && this.__extends) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RookEnemy = void 0;
 var game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-var coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
-var greengem_1 = __webpack_require__(/*! ../../item/greengem */ "./src/item/greengem.ts");
-var random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
 var astarclass_1 = __webpack_require__(/*! ../../astarclass */ "./src/astarclass.ts");
 var spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
-var candle_1 = __webpack_require__(/*! ../../item/candle */ "./src/item/candle.ts");
 var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 var RookEnemy = /** @class */ (function (_super) {
     __extends(RookEnemy, _super);
@@ -4005,14 +3990,15 @@ var RookEnemy = /** @class */ (function (_super) {
         _this.jumpHeight = 0.5;
         if (drop)
             _this.drop = drop;
-        else {
-            var dropProb = random_1.Random.rand();
-            if (dropProb < 0.05)
-                _this.drop = new candle_1.Candle(_this.room, _this.x, _this.y);
-            else if (dropProb < 0.04)
-                _this.drop = new greengem_1.GreenGem(_this.room, _this.x, _this.y);
-            else
-                _this.drop = new coin_1.Coin(_this.room, _this.x, _this.y);
+        if (Math.random() < _this.dropChance) {
+            _this.getDrop([
+                "weapon",
+                "equipment",
+                "consumable",
+                "gem",
+                "tool",
+                "coin",
+            ]);
         }
         return _this;
     }
@@ -4295,7 +4281,9 @@ var SkullEnemy = /** @class */ (function (_super) {
         _this.forwardOnlyAttack = true;
         if (drop)
             _this.drop = drop;
-        _this.getDrop(["weapon", "equipment", "consumable", "gem", "tool", "coin"]);
+        if (Math.random() < _this.dropChance) {
+            _this.getDrop(["weapon", "consumable", "gem", "tool", "coin"]);
+        }
         return _this;
     }
     SkullEnemy.difficulty = 2;
@@ -4549,8 +4537,6 @@ var bones_1 = __webpack_require__(/*! ../../tile/bones */ "./src/tile/bones.ts")
 var deathParticle_1 = __webpack_require__(/*! ../../particle/deathParticle */ "./src/particle/deathParticle.ts");
 var wizardTeleportParticle_1 = __webpack_require__(/*! ../../particle/wizardTeleportParticle */ "./src/particle/wizardTeleportParticle.ts");
 var wizardFireball_1 = __webpack_require__(/*! ../../projectile/wizardFireball */ "./src/projectile/wizardFireball.ts");
-var coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
-var bluegem_1 = __webpack_require__(/*! ../../item/bluegem */ "./src/item/bluegem.ts");
 var random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
 var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 var lightSource_1 = __webpack_require__(/*! ../../lightSource */ "./src/lightSource.ts");
@@ -4729,11 +4715,15 @@ var WizardEnemy = /** @class */ (function (_super) {
         _this.name = "wizard bomber";
         if (drop)
             _this.drop = drop;
-        else {
-            if (random_1.Random.rand() < 0.02)
-                _this.drop = new bluegem_1.BlueGem(_this.room, _this.x, _this.y);
-            else
-                _this.drop = new coin_1.Coin(_this.room, _this.x, _this.y);
+        if (Math.random() < _this.dropChance) {
+            _this.getDrop([
+                "weapon",
+                "equipment",
+                "consumable",
+                "gem",
+                "tool",
+                "coin",
+            ]);
         }
         return _this;
     }
@@ -4982,7 +4972,9 @@ var ZombieEnemy = /** @class */ (function (_super) {
         _this.jumpHeight = 0.35;
         if (drop)
             _this.drop = drop;
-        _this.getDrop(["weapon", "equipment", "consumable", "gem", "tool", "coin"]);
+        if (Math.random() < _this.dropChance) {
+            _this.getDrop(["consumable", "gem", "tool", "coin"]);
+        }
         return _this;
     }
     ZombieEnemy.difficulty = 1;
@@ -5060,6 +5052,7 @@ var Entity = /** @class */ (function (_super) {
         _this.sleepingZFrame = 0;
         _this.imageParticleX = 0;
         _this.imageParticleY = 26;
+        _this.dropChance = 0.03;
         _this.getDrop = function (useCategory) {
             if (useCategory === void 0) { useCategory = []; }
             dropTable_1.DropTable.getDrop(_this, false, useCategory);
@@ -11019,9 +11012,9 @@ var DropTable = /** @class */ (function () {
         { itemType: "hammer", dropWeight: 3, category: "tool" },
         // Consumables
         { itemType: "heart", dropWeight: 5, category: "consumable" },
-        { itemType: "weaponpoison", dropWeight: 5, category: "weapon" },
-        { itemType: "weaponblood", dropWeight: 5, category: "weapon" },
-        { itemType: "coin", dropWeight: 100, category: "coin" },
+        { itemType: "weaponpoison", dropWeight: 5, category: "poison" },
+        { itemType: "weaponblood", dropWeight: 5, category: "blood" },
+        { itemType: "coin", dropWeight: 250, category: "coin" },
         { itemType: "weaponfragments", dropWeight: 5, category: "weapon" },
         // Light sources
         { itemType: "candle", dropWeight: 15, category: "light" },
@@ -11064,7 +11057,7 @@ var DropTable = /** @class */ (function () {
             return;
         }
         entity.drop = ItemClass.add(entity.room, entity.x, entity.y);
-        console.log("Drop for ".concat(entity.name, ":"), entity.drop.constructor.name);
+        console.log("Drop for ".concat(entity.constructor.name, ":"), entity.drop.constructor.name);
     };
     return DropTable;
 }());
@@ -15130,13 +15123,17 @@ var Player = /** @class */ (function (_super) {
                 sound_1.Sound.hurt();
             if (_this.inventory.getArmor() && _this.inventory.getArmor().health > 0) {
                 _this.inventory.getArmor().hurt(damage);
+                _this.hurtingShield = true;
+                _this.hurtShield = true;
             }
-            else {
+            {
                 _this.lastHitBy = enemy;
                 //console.log("Last Hit by: ", enemy);
                 _this.healthBar.hurt();
                 _this.flashing = true;
-                _this.health -= damage;
+                if (!_this.hurtShield)
+                    _this.health -= damage;
+                _this.hurtShield = false;
                 _this.hurting = true;
                 _this.hurtAlpha = 0.25;
                 if (_this.health <= 0 && !gameConstants_1.GameConstants.DEVELOPER_MODE) {
@@ -15453,9 +15450,13 @@ var Player = /** @class */ (function (_super) {
             if (_this.hurtAlpha <= 0.01) {
                 _this.hurtAlpha = 0;
                 _this.hurting = false;
+                _this.hurtingShield = false;
             }
             game_1.Game.ctx.globalCompositeOperation = "source-over";
             game_1.Game.ctx.fillStyle = "#cc3333"; // bright but not fully saturated red
+            if (_this.hurtingShield) {
+                game_1.Game.ctx.fillStyle = "#639bff"; // bright but not fully saturated blue
+            }
             game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
             game_1.Game.ctx.restore(); // Restore the canvas state
         };
@@ -15791,6 +15792,8 @@ var Player = /** @class */ (function (_super) {
         _this.moveRange = 1;
         _this.lightEquipped = false;
         _this.hurting = false;
+        _this.hurtingShield = false;
+        _this.hurtShield = false;
         _this.hurtAlpha = 0.25;
         _this.lightBrightness = 0.3;
         _this.sineAngle = Math.PI / 2;
@@ -20108,7 +20111,7 @@ var Wall = /** @class */ (function (_super) {
                 game_1.Game.drawTile(0, _this.skin, 1, 1, _this.x, _this.y, 1, 1, _this.room.shadeColor, _this.room.softVis[_this.x][_this.y + 1]);
             game_1.Game.drawTile(2 + _this.tileXOffset, _this.skin, 1, 1, _this.x, _this.y - 1, 1, 1, _this.room.shadeColor, _this.shadeAmount());
         };
-        _this.drawAboveShading = function (delta) {
+        _this.drawTopLayer = function (delta) {
             var wallInfo = _this.room.wallInfo.get("".concat(_this.x, ",").concat(_this.y));
             if (!wallInfo)
                 return;
@@ -20968,7 +20971,8 @@ var Warhammer = /** @class */ (function (_super) {
         _this.tileY = 2;
         _this.damage = 3;
         _this.name = "warhammer";
-        _this.durability = 1;
+        _this.durability = 25;
+        _this.durabilityMax = 25;
         return _this;
     }
     Warhammer.itemName = "warhammer";

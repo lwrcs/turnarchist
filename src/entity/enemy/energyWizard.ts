@@ -1,25 +1,9 @@
-import { Entity } from "../entity";
-import { LevelConstants } from "../../levelConstants";
 import { Game } from "../../game";
 import { Room } from "../../room";
-import { astar } from "../../astarclass";
-import { Heart } from "../../item/heart";
 import { Floor } from "../../tile/floor";
 import { Bones } from "../../tile/bones";
 import { DeathParticle } from "../../particle/deathParticle";
-import { WizardTeleportParticle } from "../../particle/wizardTeleportParticle";
-import { GameConstants } from "../../gameConstants";
-import { WizardFireball } from "../../projectile/wizardFireball";
-import { GreenGem } from "../../item/greengem";
-import { Player } from "../../player";
-import { Coin } from "../../item/coin";
-import { BlueGem } from "../../item/bluegem";
-import { Random } from "../../random";
 import { Item } from "../../item/item";
-import { Enemy } from "./enemy";
-import { SpikeTrap } from "../../tile/spiketrap";
-import { HitWarning } from "../../hitWarning";
-import { LightSource } from "../../lightSource";
 import { WizardEnemy } from "./wizardEnemy";
 
 export enum WizardState {
@@ -45,10 +29,15 @@ export class EnergyWizardEnemy extends WizardEnemy {
     this.projectileColor = [0, 50, 150];
 
     if (drop) this.drop = drop;
-    else {
-      if (Random.rand() < 0.02)
-        this.drop = new BlueGem(this.room, this.x, this.y);
-      else this.drop = new Coin(this.room, this.x, this.y);
+    if (Math.random() < this.dropChance) {
+      this.getDrop([
+        "weapon",
+        "equipment",
+        "consumable",
+        "gem",
+        "tool",
+        "coin",
+      ]);
     }
   }
 

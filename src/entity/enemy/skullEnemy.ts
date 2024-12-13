@@ -1,22 +1,11 @@
-import { Entity, EntityDirection } from "../entity";
 import { Direction, Game } from "../../game";
 import { Room } from "../../room";
 import { Player } from "../../player";
-import { HitWarning } from "../../hitWarning";
-import { GenericParticle } from "../../particle/genericParticle";
-import { Coin } from "../../item/coin";
-import { RedGem } from "../../item/redgem";
 import { Item } from "../../item/item";
-import { Spear } from "../../weapon/spear";
 import { astar } from "../../astarclass";
 import { SpikeTrap } from "../../tile/spiketrap";
-import { DeathParticle } from "../../particle/deathParticle";
-import { Candle } from "../../item/candle";
 import { ImageParticle } from "../../particle/imageParticle";
 import { Enemy } from "./enemy";
-import { Random } from "../../random";
-import { BeamEffect } from "../../beamEffect";
-import { DropTable } from "../../item/dropTable";
 
 export class SkullEnemy extends Enemy {
   frame: number;
@@ -46,7 +35,9 @@ export class SkullEnemy extends Enemy {
     this.forwardOnlyAttack = true;
 
     if (drop) this.drop = drop;
-    this.getDrop(["weapon", "equipment", "consumable", "gem", "tool", "coin"]);
+    if (Math.random() < this.dropChance) {
+      this.getDrop(["weapon", "consumable", "gem", "tool", "coin"]);
+    }
   }
 
   hit = (): number => {

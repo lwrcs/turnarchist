@@ -114,7 +114,7 @@ export class Wall extends Tile {
       this.shadeAmount(),
     );
   };
-  drawAboveShading = (delta: number) => {
+  drawTopLayer = (delta: number) => {
     const wallInfo = this.room.wallInfo.get(`${this.x},${this.y}`);
     if (!wallInfo) return;
     if (
