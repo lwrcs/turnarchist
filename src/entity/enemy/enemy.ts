@@ -2,18 +2,10 @@ import { Entity, EntityDirection } from "../entity";
 import { Direction, Game } from "../../game";
 import { Room } from "../../room";
 import { Player } from "../../player";
-import { HitWarning } from "../../hitWarning";
-import { GenericParticle } from "../../particle/genericParticle";
-import { Coin } from "../../item/coin";
-import { RedGem } from "../../item/redgem";
 import { Item } from "../../item/item";
-import { Spear } from "../../weapon/spear";
 import { astar } from "../../astarclass";
 import { SpikeTrap } from "../../tile/spiketrap";
-import { DeathParticle } from "../../particle/deathParticle";
-import { Candle } from "../../item/candle";
 import { EntityType } from "../entity";
-import { ItemType } from "../../gameState";
 import { ImageParticle } from "../../particle/imageParticle";
 import { globalEventBus } from "../../eventBus";
 
@@ -25,6 +17,11 @@ enum EnemyState {
   IDLE,
 }
 
+interface EnemyStatus {
+  poison: boolean;
+  bleed: boolean;
+}
+
 export abstract class Enemy extends Entity {
   seenPlayer: boolean;
   frame: number;
@@ -32,9 +29,12 @@ export abstract class Enemy extends Entity {
   aggro: boolean;
   targetPlayer: Player;
   drop: Item;
+  status: EnemyStatus;
   protected jumpY: number;
   protected jumpHeight: number;
   static difficulty: number;
+  private effectStartTick: number;
+  private startTick: number;
   //dir: Direction;
 
   constructor(room: Room, game: Game, x: number, y: number) {
@@ -53,6 +53,10 @@ export abstract class Enemy extends Entity {
     this.jumpHeight = 0.3;
     //this.dir = Direction.South;
     this.name = "generic enemy";
+    this.status = { poison: false, bleed: false };
+    this.effectStartTick = 1;
+    this.startTick = 1;
+    this.getDrop(["weapon", "equipment", "consumable", "gem", "tool", "coin"]);
   }
 
   readonly tryMove = (x: number, y: number, collide: boolean = true) => {
@@ -97,7 +101,11 @@ export abstract class Enemy extends Entity {
     return 1;
   };
 
-  hurt = (playerHitBy: Player, damage: number) => {
+  hurt = (
+    playerHitBy: Player,
+    damage: number,
+    type: "none" | "poison" | "blood" | "heal" = "none",
+  ) => {
     if (playerHitBy) {
       this.aggro = true;
       this.targetPlayer = playerHitBy;
@@ -106,27 +114,79 @@ export abstract class Enemy extends Entity {
         this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
     }
     this.health -= damage;
-    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 26);
+    this.createDamageNumber(damage, type);
+    if (type === "none" || this.health <= 0) {
+      ImageParticle.spawnCluster(
+        this.room,
+        this.x + 0.5,
+        this.y + 0.5,
+        this.imageParticleX,
+        this.imageParticleY,
+      );
+    }
     this.healthBar.hurt();
     if (this.health <= 0) {
       this.kill();
-    } else {
+    } else this.hurtCallback();
+  };
+
+  poison = () => {
+    if (!this.status.poison) {
+      this.status.poison = true;
+      this.effectStartTick = this.ticks % 3;
+      this.startTick = this.ticks;
+    }
+  };
+
+  bleed = () => {
+    if (!this.status.bleed) {
+      this.status.bleed = true;
+      this.effectStartTick = this.ticks % 3;
+      this.startTick = this.ticks;
+    }
+  };
+
+  tickPoison = () => {
+    if (this.status.poison) {
+      if (
+        this.ticks % 3 === this.effectStartTick &&
+        this.ticks !== this.startTick
+      ) {
+        this.hurt(this.targetPlayer, 0.5, "poison");
+      }
+    }
+  };
+
+  tickBleed = () => {
+    if (this.status.bleed) {
+      if (
+        this.ticks % 3 === this.effectStartTick &&
+        this.ticks !== this.startTick
+      ) {
+        this.hurt(this.targetPlayer, 0.5, "blood");
+      }
+
+      if (this.targetPlayer) this.targetPlayer.heal(0.5);
     }
   };
 
   tick = () => {
+    this.tickPoison();
+    this.tickBleed();
     this.behavior();
     if (this.x !== this.lastX || this.y !== this.lastY) {
       this.emitEntityData();
     }
   };
+
   lookForPlayer = () => {
+    if (this.seenPlayer) return;
     let p = this.nearestPlayer();
     if (p !== false) {
       let [distance, player] = p;
       if (distance <= 4) {
         this.targetPlayer = player;
-        this.facePlayer(player);
+        //this.facePlayer(player);
         this.seenPlayer = true;
         let type = this.constructor;
         globalEventBus.emit("EnemySeenPlayer", {
@@ -395,20 +455,18 @@ export abstract class Enemy extends Entity {
 
   jump = (delta: number) => {
     let j = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
-    this.jumpY = Math.sin(j * Math.PI) * this.jumpHeight;
-    if (this.jumpY < 0.01 && this.jumpY > -0.01) this.jumpY = 0;
+    this.jumpY = Math.abs(Math.sin(j * Math.PI)) * this.jumpHeight;
+    if (this.jumpY < 0.01) this.jumpY = 0;
     if (this.jumpY > this.jumpHeight) this.jumpY = this.jumpHeight;
   };
 
   updateDrawXY = (delta: number) => {
     if (!this.doneMoving()) {
-      this.drawX -= this.drawMoveSpeed * delta * this.drawX;
-      this.drawY -= this.drawMoveSpeed * delta * this.drawY;
+      this.drawX *= 0.85 ** delta;
+      this.drawY *= 0.85 ** delta;
 
-      this.drawX =
-        Math.abs(this.drawX) < 0.01 ? 0 : Math.max(-1, Math.min(this.drawX, 1));
-      this.drawY =
-        Math.abs(this.drawY) < 0.01 ? 0 : Math.max(-1, Math.min(this.drawY, 1));
+      this.drawX = Math.abs(this.drawX) < 0.01 ? 0 : this.drawX;
+      this.drawY = Math.abs(this.drawY) < 0.01 ? 0 : this.drawY;
       this.jump(delta);
     }
   };
@@ -427,6 +485,7 @@ export abstract class Enemy extends Entity {
 
   draw = (delta: number) => {
     if (!this.dead) {
+      this.updateDrawXY(delta);
       this.frame += 0.1 * delta;
       if (this.frame >= 4) this.frame = 0;
 

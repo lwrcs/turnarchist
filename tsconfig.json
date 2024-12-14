@@ -6,5 +6,13 @@
     "sourceMap": true,
     "outDir": "js",
     "rootDir": "src"
-  }
+  },
+  "include": [
+    "src/**/*",
+    "other-folder/**/*" // Add paths to other folders containing .ts files
+  ],
+  "exclude": [
+    "node_modules",
+    "**/*.spec.ts" // Optional: exclude test files
+  ]
 }

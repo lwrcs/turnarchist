@@ -2,14 +2,7 @@ import { Game } from "../game";
 import { Weapon } from "./weapon";
 import { Room } from "../room";
 import { Sound } from "../sound";
-import { SlashParticle } from "../particle/slashParticle";
-import { Crate } from "../entity/object/crate";
-import { Barrel } from "../entity/object/barrel";
-import { Player } from "../player";
-import { Inventory } from "../inventory";
-import { WizardFireball } from "../projectile/wizardFireball";
 import { PlayerFireball } from "../projectile/playerFireball";
-import { Lighting } from "../lighting";
 import { Entity } from "../entity/entity";
 import { Enemy } from "../entity/enemy/enemy";
 import { Utils } from "../utils";
@@ -17,6 +10,7 @@ import { Direction } from "../game";
 export class Spellbook extends Weapon {
   targets: Entity[];
   isTargeting: boolean;
+  static itemName = "spear";
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
     this.range = 4;
@@ -25,6 +19,9 @@ export class Spellbook extends Weapon {
     this.canMine = true;
     this.name = "Spellbook";
     this.isTargeting = false;
+    this.durability = 5;
+    this.durabilityMax = 10;
+    this.description = "Hits multiple enemies within a range of 4 tiles.";
   }
 
   getTargets = () => {
@@ -36,10 +33,10 @@ export class Spellbook extends Weapon {
         Utils.distance(this.wielder.x, this.wielder.y, e.x, e.y) <= this.range,
     );
     let enemies = this.targets.filter((e) => e instanceof Enemy);
-    console.log(enemies);
+    //console.log(enemies);
     if (enemies.length > 0) return enemies;
     else {
-      console.log(this.targets);
+      //console.log(this.targets);
       return this.targets;
     }
   };

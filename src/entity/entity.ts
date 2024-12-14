@@ -1,23 +1,21 @@
 import { Direction, Game } from "../game";
 import { Room } from "../room";
 import { Bones } from "../tile/bones";
-import { LevelConstants } from "../levelConstants";
 import { Player } from "../player";
-import { DeathParticle } from "../particle/deathParticle";
 import { Floor } from "../tile/floor";
-import { GenericParticle } from "../particle/genericParticle";
 import { HealthBar } from "../healthbar";
 import { Drawable } from "../drawable";
 import { Item } from "../item/item";
 import { GameConstants } from "../gameConstants";
 import { HitWarning } from "../hitWarning";
-import { Sound } from "../sound";
 import { Projectile } from "../projectile/projectile";
 import { Utils } from "../utils";
 import { globalEventBus } from "../eventBus";
-import { LightSource } from "../lightSource";
-import { ZombieEnemy } from "./enemy/zombieEnemy";
+import type { LightSource } from "../lightSource";
 import { EVENTS } from "../events";
+import { DamageNumber } from "../particle/damageNumber";
+
+import { DropTable } from "../item/dropTable";
 
 export enum EntityDirection {
   DOWN,
@@ -67,8 +65,8 @@ export class Entity extends Drawable {
   protected sleepingZFrame = 0;
   alertTicks: number;
   protected exclamationFrame: number;
-  protected lastX: number;
-  protected lastY: number;
+  lastX: number;
+  lastY: number;
   protected hitBy: Player;
   protected crushX: number;
   protected crushY: number;
@@ -87,6 +85,9 @@ export class Entity extends Drawable {
   drawMoveSpeed: number;
   unconscious: boolean;
   hitWarnings: HitWarning[];
+  imageParticleX: number = 0;
+  imageParticleY: number = 26;
+  dropChance: number = 0.03;
 
   constructor(room: Room, game: Game, x: number, y: number) {
     super();
@@ -103,7 +104,7 @@ export class Entity extends Drawable {
     this.maxHealth = 1;
     this.tileX = 0;
     this.tileY = 0;
-    this.hasShadow = true;
+    this.hasShadow = false;
     this.skipNextTurns = 0;
     this.direction = Direction.DOWN;
     this.destroyable = true;
@@ -145,6 +146,10 @@ export class Entity extends Drawable {
     room.entities.push(new this(room, game, x, y, ...rest));
   }
 
+  getDrop = (useCategory: string[] = []) => {
+    DropTable.getDrop(this, false, useCategory);
+  };
+
   addLightSource = (lightSource: LightSource) => {
     this.room.lightSources.push(lightSource);
   };
@@ -177,15 +182,33 @@ export class Entity extends Drawable {
     );
   };
 
+  createDamageNumber = (
+    damage: number,
+    type: "none" | "poison" | "blood" | "heal" = "none",
+  ) => {
+    let color = "red";
+    let outlineColor = GameConstants.OUTLINE;
+    if (type === "poison") color = "green";
+    if (type === "blood") {
+      color = "#8B0000";
+      outlineColor = "red";
+    }
+    if (type === "heal") {
+      color = "#B8A4FF";
+      outlineColor = GameConstants.OUTLINE;
+    }
+    this.room.particles.push(
+      new DamageNumber(this.room, this.x, this.y, damage, color, outlineColor),
+    );
+  };
+
   updateDrawXY = (delta: number) => {
     if (!this.doneMoving()) {
-      this.drawX -= this.drawMoveSpeed * delta * this.drawX;
-      this.drawY -= this.drawMoveSpeed * delta * this.drawY;
+      this.drawX *= 0.9 ** delta;
+      this.drawY *= 0.9 ** delta;
 
-      this.drawX =
-        Math.abs(this.drawX) < 0.01 ? 0 : Math.max(-1, Math.min(this.drawX, 1));
-      this.drawY =
-        Math.abs(this.drawY) < 0.01 ? 0 : Math.max(-1, Math.min(this.drawY, 1));
+      this.drawX = Math.abs(this.drawX) < 0.01 ? 0 : this.drawX;
+      this.drawY = Math.abs(this.drawY) < 0.01 ? 0 : this.drawY;
     }
   };
 
@@ -211,17 +234,10 @@ export class Entity extends Drawable {
     if (closestDistance === maxDistance) return false;
     else return closestPlayer;
   };
-  /*
-  readonly lastHitBy = (player: Player) => {
-    this.hitBy = player;
-    if (this.hitBy) this.game.pushMessage(`${this.hitBy}`);
-    else this.game.pushMessage("Unknown");
-  };
-  */
 
   readonly hurt = (playerHitBy: Player, damage: number) => {
     this.healthBar.hurt();
-
+    this.createDamageNumber(damage);
     this.health -= damage;
     if (this.health <= 0) this.kill();
     else this.hurtCallback();
@@ -229,15 +245,21 @@ export class Entity extends Drawable {
 
   interact = (player: Player) => {};
 
-  readonly dropLoot = () => {
+  protected dropLoot = () => {
+    let coordX: number;
+    let coordY: number;
+    if (this.crushed) {
+      coordX = this.lastX;
+      coordY = this.lastY;
+    } else {
+      coordX = this.x;
+      coordY = this.y;
+    }
     if (this.drop) {
       this.drop.level = this.room;
-      if (!this.room.roomArray[this.x][this.y].isSolid()) {
-        this.drop.x = this.x;
-        this.drop.y = this.y;
-      } else if (this.room.roomArray[this.x][this.y].isSolid()) {
-        this.drop.x = this.lastX;
-        this.drop.y = this.lastY;
+      if (!this.room.roomArray[coordX][coordY].isSolid()) {
+        this.drop.x = coordX;
+        this.drop.y = coordY;
       }
       this.room.items.push(this.drop);
       this.drop.onDrop();
@@ -245,26 +267,25 @@ export class Entity extends Drawable {
   };
 
   kill = () => {
-    if (this.room.roomArray[this.x][this.y] instanceof Floor) {
-      let b = new Bones(this.room, this.x, this.y);
-      b.skin = this.room.roomArray[this.x][this.y].skin;
-      this.room.roomArray[this.x][this.y] = b;
+    let x = this.x;
+    let y = this.y;
+    if (this.crushed) {
+      x = this.lastX;
+      y = this.lastY;
+    }
+    if (this.room.roomArray[x][y] instanceof Floor) {
+      let b = new Bones(this.room, x, y);
+      b.skin = this.room.roomArray[x][y].skin;
+      this.room.roomArray[x][y] = b;
     }
     this.emitEnemyKilled();
 
-    this.killNoBones();
+    this.dead = true;
+    this.dropLoot();
   };
 
   killNoBones = () => {
     this.dead = true;
-    /*GenericParticle.spawnCluster(
-      this.room,
-      this.x + 0.5,
-      this.y + 0.5,
-      this.deathParticleColor
-    );
-    this.room.particles.push(new DeathParticle(this.x, this.y));
-*/
     this.dropLoot();
   };
 
@@ -364,7 +385,7 @@ export class Entity extends Drawable {
   };
 
   drawTopLayer = (delta: number) => {
-    this.updateDrawXY(delta);
+    //this.updateDrawXY(delta);
 
     this.drawableY = this.y - this.drawY;
 

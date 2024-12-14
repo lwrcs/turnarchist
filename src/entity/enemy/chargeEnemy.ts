@@ -1,14 +1,9 @@
-import { Entity, EntityDirection } from "../entity";
 import { Direction, Game } from "../../game";
 import { Room } from "../../room";
 import { HitWarning } from "../../hitWarning";
-import { Coin } from "../../item/coin";
 import { Door } from "../../tile/door";
 import { GenericParticle } from "../../particle/genericParticle";
 import { GameConstants } from "../../gameConstants";
-import { Random } from "../../random";
-import { Pickaxe } from "../../weapon/pickaxe";
-import { GreenGem } from "../../item/greengem";
 import { Item } from "../../item/item";
 import { Enemy } from "./enemy";
 
@@ -49,12 +44,15 @@ export class ChargeEnemy extends Enemy {
 
     this.state = ChargeEnemyState.IDLE;
     if (drop) this.drop = drop;
-    else {
-      let dropProb = Random.rand();
-      if (dropProb < 0.025) this.drop = new Pickaxe(this.room, this.x, this.y);
-      else if (dropProb < 0.02)
-        this.drop = new GreenGem(this.room, this.x, this.y);
-      else this.drop = new Coin(this.room, this.x, this.y);
+    if (Math.random() < this.dropChance) {
+      this.getDrop([
+        "weapon",
+        "equipment",
+        "consumable",
+        "gem",
+        "tool",
+        "coin",
+      ]);
     }
   }
 
@@ -171,6 +169,7 @@ export class ChargeEnemy extends Enemy {
 
   draw = (delta: number) => {
     if (!this.dead) {
+      this.updateDrawXY(delta);
       this.frame += 0.1 * delta;
       if (this.frame >= 4) this.frame = 0;
 

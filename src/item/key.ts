@@ -5,6 +5,7 @@ import { Sound } from "../sound";
 import { Player } from "../player";
 
 export class Key extends Item {
+  static itemName = "key";
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
 

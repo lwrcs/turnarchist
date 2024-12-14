@@ -115,8 +115,9 @@ export class Game {
   startedFadeOut: boolean;
   screenShakeActive: boolean;
   encounteredEnemies: Array<number>;
+  paused: boolean;
   private startScreenAlpha = 1;
-  generating: boolean = true;
+  static delta: number;
 
   static text_rendering_canvases: Record<string, HTMLCanvasElement>;
   static readonly letters = "abcdefghijklmnopqrstuvwxyz1234567890,.!?:'()[]%-/";
@@ -459,20 +460,38 @@ export class Game {
   };
 
   run = (timestamp: number) => {
-    if (!this.previousFrameTimestamp) this.previousFrameTimestamp = timestamp;
+    if (this.paused) return;
 
-    // normalized so 1.0 = 60fps
-    let delta = Math.min(
-      ((timestamp - this.previousFrameTimestamp) * 60) / 1000.0,
-      100,
-    );
+    if (!this.previousFrameTimestamp) {
+      this.previousFrameTimestamp = timestamp;
+      window.requestAnimationFrame(this.run);
+      return;
+    }
 
+    // Calculate elapsed time in milliseconds
+    let elapsed = timestamp - this.previousFrameTimestamp;
+
+    // Normalize delta to 60 FPS
+    let delta = (elapsed * 60) / 1000.0;
+
+    // Define minimum and maximum delta values
+    const deltaMin = 1 / 10; // 600fps
+    const deltaMax = 8; //7.5fps
+    // Cap delta within [deltaMin, deltaMax]
+    if (Game.delta) delta = Game.delta;
+    if (delta < deltaMin) {
+      delta = deltaMin;
+    } else if (delta > deltaMax) {
+      delta = deltaMax;
+    }
+    // Update FPS tracking
     while (times.length > 0 && times[0] <= timestamp - 1000) {
       times.shift();
     }
     times.push(timestamp);
     fps = times.length;
 
+    // Update game logic
     if (
       Math.floor(timestamp / (1000 / 60)) >
       Math.floor(this.previousFrameTimestamp / (1000 / 60))
@@ -480,9 +499,13 @@ export class Game {
       this.update();
     }
 
-    this.draw(delta * GameConstants.ANIMATION_SPEED * 0.8);
+    // Render the frame with capped delta
+    this.draw(delta * GameConstants.ANIMATION_SPEED * 1);
+
+    // Request the next frame
     window.requestAnimationFrame(this.run);
 
+    // Update the previous frame timestamp
     this.previousFrameTimestamp = timestamp;
   };
 
@@ -566,6 +589,16 @@ export class Game {
           });
         }
         break;
+      case "col":
+        GameConstants.SET_COLOR_LAYER_COMPOSITE_OPERATION();
+        break;
+      case "scl":
+        GameConstants.SET_SCALE();
+        this.onResize();
+        break;
+      case "shd":
+        GameConstants.SET_COLOR_LAYER_COMPOSITE_OPERATION(true);
+        break;
       default:
         if (command.startsWith("new ")) {
           this.room.addNewEnemy(command.slice(4) as EnemyType);
@@ -589,22 +622,23 @@ export class Game {
     );
 
     this.isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-
     if (this.isMobile) {
+      GameConstants.isMobile = true;
       this.pushMessage("mobile detected");
-      // Adjust scale for mobile devices
-      Game.scale = 2; // Example: limit scale to 2 for mobile
+      // Use smaller scale for mobile devices based on screen size
+      Game.scale = Math.min(maxWidthScale, maxHeightScale, 2); // Cap at 2x for mobile
     } else {
-      Game.scale = GameConstants.SCALE;
-      Game.scale = Math.min(maxWidthScale, maxHeightScale);
+      GameConstants.isMobile = false;
+      // For desktop, use standard scaling logic
+      Game.scale = Math.min(maxWidthScale, maxHeightScale, GameConstants.SCALE);
     }
 
-    Game.scale = Math.min(maxWidthScale, maxHeightScale);
+    // Handle case where scale would be 0
     if (Game.scale === 0) {
       maxWidthScale = window.innerWidth / GameConstants.DEFAULTWIDTH;
       maxHeightScale = window.innerHeight / GameConstants.DEFAULTHEIGHT;
+      Game.scale = Math.min(maxWidthScale, maxHeightScale, 1); // Ensure minimum scale of 1
     }
-    Game.scale = GameConstants.SCALE; //Math.min(maxWidthScale, maxHeightScale);
 
     LevelConstants.SCREEN_W = Math.floor(
       window.innerWidth / Game.scale / GameConstants.TILESIZE,
@@ -637,17 +671,19 @@ export class Game {
   };
 
   shakeScreen = (shakeX: number, shakeY: number) => {
+    let clampedX = Math.max(-3, Math.min(3, shakeX));
+    let clampedY = Math.max(-3, Math.min(3, shakeY));
     this.screenShakeX = 0;
     this.screenShakeY = 0;
     this.shakeAmountX = 0;
     this.shakeAmountY = 0;
     this.screenShakeActive = true;
-    this.screenShakeX = shakeX;
-    this.screenShakeY = shakeY;
-    this.shakeAmountX = Math.abs(shakeX);
-    this.shakeAmountY = Math.abs(shakeY);
-    if (shakeX < 0 || shakeY < 0) this.shakeFrame = (3 * Math.PI) / 2;
-    if (shakeX > 0 || shakeY > 0) this.shakeFrame = Math.PI / 2;
+    this.screenShakeX = clampedX;
+    this.screenShakeY = clampedY;
+    this.shakeAmountX = Math.abs(clampedX);
+    this.shakeAmountY = Math.abs(clampedY);
+    if (clampedX < 0 || clampedY < 0) this.shakeFrame = (3 * Math.PI) / 2;
+    if (clampedX > 0 || clampedY > 0) this.shakeFrame = Math.PI / 2;
     this.screenShakeCutoff = Date.now();
   };
 
@@ -785,6 +821,8 @@ export class Game {
   };
 
   draw = (delta: number) => {
+    Game.ctx.save(); // Save the current canvas state
+
     Game.ctx.globalAlpha = 1;
     if (this.room) Game.ctx.fillStyle = this.room.shadeColor;
     else Game.ctx.fillStyle = "black";
@@ -862,6 +900,9 @@ export class Game {
       Game.ctx.translate(levelOffsetX, levelOffsetY);
       this.prevLevel.draw(delta);
       this.prevLevel.drawEntities(delta);
+      this.prevLevel.drawColorLayer();
+      this.prevLevel.drawShade(delta);
+      this.prevLevel.drawOverShade(delta);
       for (
         let x = this.prevLevel.roomX - 1;
         x <= this.prevLevel.roomX + this.prevLevel.width;
@@ -912,7 +953,7 @@ export class Game {
 
       this.players[this.localPlayerID].drawGUI(delta);
 
-      for (const i in this.players) this.players[i].updateDrawXY(delta);
+      //for (const i in this.players) this.players[i].updateDrawXY(delta);
     } else if (this.levelState === LevelState.TRANSITIONING_LADDER) {
       let playerCX =
         (this.players[this.localPlayerID].x -
@@ -990,33 +1031,13 @@ export class Game {
       );
 
       this.players[this.localPlayerID].drawGUI(delta);
-      for (const i in this.players) this.players[i].updateDrawXY(delta);
+      //for (const i in this.players) this.players[i].updateDrawXY(delta);
     } else if (this.levelState === LevelState.LEVEL_GENERATION) {
       this.levelgen.draw(delta);
     } else if (this.levelState === LevelState.IN_LEVEL) {
       // Start of Selection
 
-      if (this.screenShakeActive) {
-        //const decayFactor = 1 - 0.15 * delta;
-        const decayFactor =
-          3 / Math.sqrt((Date.now() + 30 - this.screenShakeCutoff) * delta);
-        this.shakeAmountX -= this.shakeAmountX * 0.1 * delta;
-        this.shakeAmountY -= this.shakeAmountY * 0.1 * delta;
-        this.screenShakeX =
-          Math.sin(this.shakeFrame * Math.PI) * this.shakeAmountX * decayFactor;
-        this.screenShakeY =
-          Math.sin(this.shakeFrame * Math.PI) * this.shakeAmountY * decayFactor;
-        this.shakeFrame += 0.3 * delta;
-
-        if (Math.abs(decayFactor) < 0.001) {
-          this.shakeAmountX = 0;
-          this.shakeAmountY = 0;
-          this.shakeFrame = 0;
-          this.screenShakeX = 0;
-          this.screenShakeY = 0;
-          this.screenShakeActive = false;
-        }
-      }
+      this.drawScreenShake(delta);
 
       let playerDrawX = this.players[this.localPlayerID].drawX;
       let playerDrawY = this.players[this.localPlayerID].drawY;
@@ -1045,7 +1066,7 @@ export class Game {
 
       this.room.drawTopLayer(delta);
       this.players[this.localPlayerID].drawGUI(delta);
-      for (const i in this.players) this.players[i].updateDrawXY(delta);
+      //for (const i in this.players) this.players[i].updateDrawXY(delta);
     }
     // draw chat
     let CHAT_X = 10;
@@ -1110,9 +1131,40 @@ export class Game {
     Game.fillText(fps + "fps", 1, 1);
     Game.ctx.globalAlpha = 1;
     if (!this.started && this.levelState !== LevelState.LEVEL_GENERATION) {
-      this.drawStartScreen(delta);
+      this.drawStartScreen(delta * 10);
     }
     MouseCursor.getInstance().draw();
+
+    Game.ctx.restore(); // Restore the canvas state
+  };
+
+  drawScreenShake = (delta: number) => {
+    if (!this.screenShakeActive) {
+      this.resetScreenShake();
+      return;
+    }
+
+    this.shakeAmountX *= 0.9 ** delta;
+    this.shakeAmountY *= 0.9 ** delta;
+    this.screenShakeX = Math.sin(this.shakeFrame * Math.PI) * this.shakeAmountX;
+    this.screenShakeY = Math.sin(this.shakeFrame * Math.PI) * this.shakeAmountY;
+    this.shakeFrame += 0.3 * delta;
+
+    if (
+      Math.abs(this.shakeAmountX) < 0.001 &&
+      Math.abs(this.shakeAmountY) < 0.001
+    ) {
+      this.resetScreenShake();
+    }
+  };
+
+  private resetScreenShake = () => {
+    this.shakeAmountX = 0;
+    this.shakeAmountY = 0;
+    this.shakeFrame = 0;
+    this.screenShakeX = 0;
+    this.screenShakeY = 0;
+    this.screenShakeActive = false;
   };
 
   static drawHelper = (
@@ -1128,7 +1180,9 @@ export class Game {
     shadeColor = "black",
     shadeOpacity = 0,
   ) => {
-    // snap to nearest shading increment
+    Game.ctx.save(); // Save the current canvas state
+
+    // Snap to nearest shading increment
     shadeOpacity =
       Math.round(shadeOpacity * GameConstants.SHADE_LEVELS) /
       GameConstants.SHADE_LEVELS;
@@ -1189,6 +1243,8 @@ export class Game {
       Math.round(dW * GameConstants.TILESIZE),
       Math.round(dH * GameConstants.TILESIZE),
     );
+
+    Game.ctx.restore(); // Restore the canvas state
   };
 
   static drawTile = (
@@ -1216,30 +1272,6 @@ export class Game {
       shadeColor,
       shadeOpacity,
     );
-
-    /*Game.ctx.drawImage(
-      Game.tileset,
-      Math.round(sX * GameConstants.TILESIZE),
-      Math.round(sY * GameConstants.TILESIZE),
-      Math.round(sW * GameConstants.TILESIZE),
-      Math.round(sH * GameConstants.TILESIZE),
-      Math.round(dX * GameConstants.TILESIZE),
-      Math.round(dY * GameConstants.TILESIZE),
-      Math.round(dW * GameConstants.TILESIZE),
-      Math.round(dH * GameConstants.TILESIZE)
-    );
-
-    if (GameConstants.ALPHA_ENABLED) {
-      Game.ctx.globalAlpha = shadeOpacity;
-      Game.ctx.fillStyle = shadeColor;
-      Game.ctx.fillRect(
-        Math.round(dX * GameConstants.TILESIZE),
-        Math.round(dY * GameConstants.TILESIZE),
-        Math.round(dW * GameConstants.TILESIZE),
-        Math.round(dH * GameConstants.TILESIZE)
-      );
-      Game.ctx.globalAlpha = 1.0;
-    }*/
   };
 
   static drawObj = (

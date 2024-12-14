@@ -57,7 +57,7 @@ export class TextBox {
             this.message.substring(this.cursor - 1, this.message.length);
         }
       }
-      console.log(`Current message: "${this.message}"`);
+      //console.log(`Current message: "${this.message}"`);
       return;
     } else {
       switch (key) {
@@ -103,7 +103,7 @@ export class TextBox {
           break;
       }
     }
-    console.log(`Current message: "${this.message}"`);
+    //console.log(`Current message: "${this.message}"`);
   };
 
   private handleTouchStart = (e: TouchEvent): void => {
@@ -130,11 +130,11 @@ export class TextBox {
 
     this.enterCallback();
 
-    console.log(`Sending message: "${message}"`);
+    //console.log(`Sending message: "${message}"`);
     if (message.startsWith("/")) {
       message = message.substring(1);
       globalEventBus.emit("ChatMessage", message);
-      console.log(`Chat message emitted: "${message}"`);
+      //console.log(`Chat message emitted: "${message}"`);
     }
 
     this.clear();

@@ -1,11 +1,10 @@
-import { Game } from "../game";
 import { Weapon } from "./weapon";
 import { Room } from "../room";
 import { Sound } from "../sound";
-import { SlashParticle } from "../particle/slashParticle";
 import { GenericParticle } from "../particle/genericParticle";
 
 export class Slingshot extends Weapon {
+  static itemName = "slingshot";
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
 
@@ -124,7 +123,7 @@ export class Slingshot extends Weapon {
             if (currentEnemy.dist < minEnemy.dist) {
               return currentEnemy;
             } else return minEnemy;
-          }
+          },
         );
         closestEnemy.enemy.hurt(this.wielder, 1);
       }
@@ -146,7 +145,7 @@ export class Slingshot extends Weapon {
         this.wielder.y,
         targetX + 0.5,
         targetY,
-        "black"
+        "black",
       );
       GenericParticle.shotgun(
         this.game.rooms[this.wielder.levelID],
@@ -154,7 +153,7 @@ export class Slingshot extends Weapon {
         this.wielder.y,
         targetX + 0.5,
         targetY,
-        "#ffddff"
+        "#ffddff",
       );
       let gp = new GenericParticle(
         this.game.rooms[this.wielder.levelID],
@@ -166,7 +165,7 @@ export class Slingshot extends Weapon {
         0,
         0,
         "white",
-        0
+        0,
       );
       gp.expirationTimer = 10;
       this.game.rooms[this.wielder.levelID].particles.push(gp);

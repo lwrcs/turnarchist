@@ -1,19 +1,19 @@
-import { Game } from "../game";
 import { Weapon } from "./weapon";
 import { Room } from "../room";
 import { Sound } from "../sound";
 import { SlashParticle } from "../particle/slashParticle";
-import { Crate } from "../entity/object/crate";
-import { Barrel } from "../entity/object/barrel";
-import { Enemy } from "../entity/enemy/enemy";
+import type { Enemy } from "../entity/enemy/enemy";
 
 export class Spear extends Weapon {
+  static itemName = "spear";
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
 
     this.tileX = 24;
     this.tileY = 0;
-    this.name = "Spear";
+    this.name = "spear";
+    this.description =
+      "Hits enemies in front of you within a range of 2 tiles.";
   }
 
   weaponMove = (newX: number, newY: number): boolean => {
@@ -27,7 +27,7 @@ export class Spear extends Weapon {
           if (e.pushable) return true;
           else {
             e.hurt(this.wielder, 1);
-
+            this.statusEffect(e);
             flag = true;
           }
         }
@@ -36,7 +36,7 @@ export class Spear extends Weapon {
           !this.game.rooms[this.wielder.levelID].roomArray[newX][newY].isSolid()
         ) {
           //only hit targest 2 tiles away if they are enemies
-          if (!e.pushable && e instanceof Enemy) enemyHitCandidates.push(e);
+          if (!e.pushable) enemyHitCandidates.push(e);
         }
       }
     }
@@ -49,10 +49,10 @@ export class Spear extends Weapon {
       this.wielder.hitX = 0.5 * (this.wielder.x - newX);
       this.wielder.hitY = 0.5 * (this.wielder.y - newY);
       this.game.rooms[this.wielder.levelID].particles.push(
-        new SlashParticle(newX, newY)
+        new SlashParticle(newX, newY),
       );
       this.game.rooms[this.wielder.levelID].particles.push(
-        new SlashParticle(newX2, newY2)
+        new SlashParticle(newX2, newY2),
       );
       this.game.rooms[this.wielder.levelID].tick(this.wielder);
       if (this.wielder === this.game.players[this.game.localPlayerID])
@@ -68,7 +68,7 @@ export class Spear extends Weapon {
       this.wielder.hitX = 0.5 * (this.wielder.x - newX);
       this.wielder.hitY = 0.5 * (this.wielder.y - newY);
       this.game.rooms[this.wielder.levelID].particles.push(
-        new SlashParticle(newX, newY)
+        new SlashParticle(newX, newY),
       );
       this.game.rooms[this.wielder.levelID].tick(this.wielder);
       if (this.wielder === this.game.players[this.game.localPlayerID])

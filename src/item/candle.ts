@@ -9,6 +9,7 @@ import { Player } from "../player";
 import { Light } from "./light";
 
 export class Candle extends Light {
+  static itemName = "candle";
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
     this.fuel = 100; //how many turns before it burns out

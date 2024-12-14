@@ -91,6 +91,37 @@ export class VendingMachine extends Entity {
     }
   }
 
+  isPointInVendingMachineBounds = (x: number, y: number): boolean => {
+    // First check if this is the currently open vending machine
+    if (!this.open || this !== this.playerOpened?.openVendingMachine)
+      return false;
+
+    const OPEN_TIME = 200; // Match the constant from drawTopLayer
+    const s = Math.min(18, (18 * (Date.now() - this.openTime)) / OPEN_TIME); // size of box
+    const b = 2; // border
+    const g = -2; // gap
+    const ob = 1; // outer border
+
+    // Calculate total width and height of the UI
+    const width = (this.costItems.length + 2) * (s + 2 * b + g) - g;
+    const height = s + 2 * b + g - g;
+
+    // Calculate center position (matches drawTopLayer positioning)
+    const cx = (this.x + 0.5) * GameConstants.TILESIZE;
+    const cy = (this.y - 1.5) * GameConstants.TILESIZE;
+
+    // Calculate bounds
+    const left = Math.round(cx - 0.5 * width) - ob;
+    const right =
+      Math.round(cx - 0.5 * width) - ob + Math.round(width + 2 * ob);
+    const top = Math.round(cy - 0.5 * height) - ob;
+    const bottom =
+      Math.round(cy - 0.5 * height) - ob + Math.round(height + 2 * ob);
+
+    // Check if point is within bounds
+    return x >= left && x <= right && y >= top && y <= bottom;
+  };
+
   get type() {
     return EntityType.PROP;
   }
@@ -119,7 +150,19 @@ export class VendingMachine extends Entity {
     if (this.open) {
       // check if player can pay
       for (const i of this.costItems) {
-        if (!this.playerOpened.inventory.hasItemCount(i)) return;
+        if (!this.playerOpened.inventory.hasItemCount(i)) {
+          let numOfItem = 0;
+          this.playerOpened.inventory.items.forEach((item) => {
+            if (item instanceof i.constructor) numOfItem++;
+          });
+          const difference = this.costItems[0].stackCount - numOfItem;
+          const pluralLetter = this.costItems[0].stackCount > 1 ? "s" : "";
+
+          this.game.pushMessage(
+            `You need ${difference} more ${(this.costItems[0].constructor as any).itemName}${pluralLetter} to buy that. `,
+          );
+          return;
+        }
       }
 
       for (const i of this.costItems) {
@@ -138,12 +181,18 @@ export class VendingMachine extends Entity {
 
       let newItem = new (this.item.constructor as { new (): Item })();
       newItem = newItem.constructor(this.room, x, y);
-      this.room.items.push(newItem);
+      newItem.onPickup(this.playerOpened);
+      const cost = this.costItems[0].stackCount;
+      const pluralLetter = cost > 1 ? "s" : "";
 
       if (!this.isInf) {
         this.quantity--;
         if (this.quantity <= 0) this.close();
       }
+      this.game.pushMessage(
+        `Purchased ${(newItem.constructor as any).itemName} for ${cost} ${(this.costItems[0].constructor as any).itemName}${pluralLetter}`,
+      );
+      this.game.pushMessage(`${this.quantity} available to buy.`);
 
       this.buyAnimAmount = 0.99;
       if (this.playerOpened === this.game.players[this.game.localPlayerID])
@@ -241,7 +290,13 @@ export class VendingMachine extends Entity {
           } else if (i === this.costItems.length) {
             Game.drawFX(2, 0, 1, 1, drawXScaled, drawYScaled, 1, 1);
           } else if (i === this.costItems.length + 1) {
-            this.item.drawIcon(delta, drawXScaled, drawYScaled);
+            this.item.drawIcon(
+              delta,
+              drawXScaled,
+              drawYScaled,
+              1,
+              this.quantity,
+            );
           }
         }
       }

@@ -1,15 +1,10 @@
-import { Entity, EntityDirection } from "../entity";
 import { Direction, Game } from "../../game";
 import { Room } from "../../room";
 import { astar } from "../../astarclass";
-import { HitWarning } from "../../hitWarning";
 import { SpikeTrap } from "../../tile/spiketrap";
-import { Coin } from "../../item/coin";
 import { Player } from "../../player";
-import { DualDagger } from "../../weapon/dualdagger";
 import { Item } from "../../item/item";
 import { GameConstants } from "../../gameConstants";
-import { ImageParticle } from "../../particle/imageParticle";
 import { Enemy } from "./enemy";
 
 export class CrabEnemy extends Enemy {
@@ -33,10 +28,19 @@ export class CrabEnemy extends Enemy {
     this.aggro = false;
     this.name = "crab";
     this.orthogonalAttack = true;
+    this.imageParticleX = 3;
+    this.imageParticleY = 24;
 
     if (drop) this.drop = drop;
-    else {
-      this.drop = new Coin(this.room, this.x, this.y);
+    if (Math.random() < this.dropChance) {
+      this.getDrop([
+        "weapon",
+        "equipment",
+        "consumable",
+        "gem",
+        "tool",
+        "coin",
+      ]);
     }
   }
 
@@ -46,21 +50,6 @@ export class CrabEnemy extends Enemy {
     Attack Pattern: Omnidirectional
     Moves every other turn`;
   }
-  hurt = (playerHitBy: Player, damage: number) => {
-    if (playerHitBy) {
-      this.aggro = true;
-      this.targetPlayer = playerHitBy;
-      this.facePlayer(playerHitBy);
-      if (playerHitBy === this.game.players[this.game.localPlayerID])
-        this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
-    }
-    this.healthBar.hurt();
-    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 3, 24);
-
-    this.health -= damage;
-    if (this.health <= 0) this.kill();
-    else this.hurtCallback();
-  };
 
   hit = (): number => {
     return 1;
@@ -192,6 +181,7 @@ export class CrabEnemy extends Enemy {
 
   draw = (delta: number) => {
     if (!this.dead) {
+      this.updateDrawXY(delta);
       if (this.ticks % 2 === 0) {
         this.tileX = 9;
         this.tileY = 4;

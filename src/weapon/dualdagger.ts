@@ -1,14 +1,11 @@
-import { Game } from "../game";
 import { Weapon } from "./weapon";
 import { Room } from "../room";
 import { Sound } from "../sound";
 import { SlashParticle } from "../particle/slashParticle";
-import { Crate } from "../entity/object/crate";
-import { Barrel } from "../entity/object/barrel";
-import { GameConstants } from "../gameConstants";
 
 export class DualDagger extends Weapon {
   firstAttack: boolean;
+  static itemName = "dual daggers";
 
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
@@ -16,7 +13,11 @@ export class DualDagger extends Weapon {
     this.tileX = 23;
     this.tileY = 0;
     this.firstAttack = true;
-    this.name = "Dual Dagger";
+    this.name = "Dual Daggers";
+    this.durability = 75;
+    this.durabilityMax = 75;
+    this.description =
+      "After the first attack, enemies will not take their turn until you attack or move again.";
   }
 
   tickInInventory = () => {
@@ -28,6 +29,7 @@ export class DualDagger extends Weapon {
     for (let e of this.game.rooms[this.wielder.levelID].entities) {
       if (e.destroyable && !e.pushable && e.pointIn(newX, newY)) {
         e.hurt(this.wielder, 1);
+        this.statusEffect(e);
 
         flag = true;
       }
@@ -40,7 +42,7 @@ export class DualDagger extends Weapon {
       this.wielder.hitX = 0.5 * (this.wielder.x - newX);
       this.wielder.hitY = 0.5 * (this.wielder.y - newY);
       this.game.rooms[this.wielder.levelID].particles.push(
-        new SlashParticle(newX, newY)
+        new SlashParticle(newX, newY),
       );
       this.game.rooms[this.wielder.levelID].entities = this.game.rooms[
         this.wielder.levelID
@@ -61,9 +63,5 @@ export class DualDagger extends Weapon {
       this.degrade();
     }
     return !flag;
-  };
-
-  getDescription = (): string => {
-    return "Dual Daggers\nOne extra attack per turn";
   };
 }

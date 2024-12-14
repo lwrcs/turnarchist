@@ -9,6 +9,7 @@ import { Light } from "./light";
 
 export class Lantern extends Light {
   fuelCap: number;
+  static itemName = "lantern";
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
     this.fuel = 0;
@@ -32,7 +33,7 @@ export class Lantern extends Light {
       else this.resetRadius();
     } else
       this.wielder.game.pushMessage(
-        "I'll need some fuel before I can use this"
+        "I'll need some fuel before I can use this",
       );
   };
 

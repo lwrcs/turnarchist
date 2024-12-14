@@ -489,7 +489,7 @@ let loadLevel = (level: Room, levelState: LevelState, game: Game) => {
   for (const hw of levelState.hitwarnings)
     level.hitwarnings.push(loadHitWarning(hw, game));
 };
-
+//use the other one
 export enum ItemType {
   ARMOR,
   BLUEGEM,
@@ -499,7 +499,6 @@ export enum ItemType {
   GOLD,
   GOLDENKEY,
   GREENGEM,
-  HEART,
   KEY,
   LANTERN,
   REDGEM,
@@ -510,6 +509,16 @@ export enum ItemType {
   SPEAR,
   PICKAXE,
   BACKPACK,
+  SPELLBOOK,
+  WEAPON_FRAGMENTS,
+  WARHAMMER,
+  HAMMER,
+  WEAPON_POISON,
+  WEAPON_BLOOD,
+  HEART,
+  MUSHROOMS,
+  STONE,
+  BLUE_POTION,
 }
 
 export class ItemState {
@@ -764,7 +773,8 @@ export const loadGameState = (
         for (const i in gameState.players) {
           if (activeUsernames.includes(i))
             game.players[i] = loadPlayer(i, gameState.players[i], game);
-          else game.offlinePlayers[i] = loadPlayer(i, gameState.players[i], game);
+          else
+            game.offlinePlayers[i] = loadPlayer(i, gameState.players[i], game);
         }
       }
       if (gameState.offlinePlayers) {
@@ -825,18 +835,12 @@ export const loadGameState = (
 
     //choose one door to lock
     let locked = false;
-    if (!locked) {
-      game.room.doors.forEach((door) => {
+    game.room.doors.forEach((door) => {
+      if (!locked) {
         door.lock();
         locked = true;
-      });
-    }
-    /*
-    game.rooms.forEach((room) => {
-      room.addWallCrack();
+      }
     });
-   
-    */
 
     game.chat = [];
   });

@@ -6,18 +6,18 @@ import { WallInfo } from "../room";
 import { Player } from "../player";
 
 export class Wall extends Tile {
-  private tileYOffset: number;
+  private tileXOffset: number;
   wallDirections: Array<WallDirection>;
 
   constructor(
     room: Room,
     x: number,
     y: number,
-    wallDirections?: Array<WallDirection>
+    wallDirections?: Array<WallDirection>,
   ) {
     super(room, x, y);
     this.isDoor = false;
-    this.tileYOffset = 6;
+    this.tileXOffset = 6;
     this.wallDirections = wallDirections || [];
   }
 
@@ -75,11 +75,11 @@ export class Wall extends Tile {
     if (!wallInfo) return;
 
     // Set tileYOffset based on inner wall type
-    this.tileYOffset =
+    this.tileXOffset =
       wallInfo.innerWallType === "bottomInner" ||
-        wallInfo.innerWallType === "surroundedInner"
+      wallInfo.innerWallType === "surroundedInner"
         ? 0
-        : 6;
+        : 26;
 
     // Only draw the bottom part of the wall if it's not at the bottom edge of the room
     if (
@@ -98,12 +98,12 @@ export class Wall extends Tile {
         1,
         1,
         this.room.shadeColor,
-        this.room.softVis[this.x][this.y + 1]
+        this.room.softVis[this.x][this.y + 1],
       );
 
     Game.drawTile(
-      2,
-      this.skin + this.tileYOffset,
+      2 + this.tileXOffset,
+      this.skin,
       1,
       1,
       this.x,
@@ -111,10 +111,10 @@ export class Wall extends Tile {
       1,
       1,
       this.room.shadeColor,
-      this.shadeAmount()
+      this.shadeAmount(),
     );
   };
-  drawAboveShading = (delta: number) => {
+  drawTopLayer = (delta: number) => {
     const wallInfo = this.room.wallInfo.get(`${this.x},${this.y}`);
     if (!wallInfo) return;
     if (
@@ -123,8 +123,8 @@ export class Wall extends Tile {
       wallInfo.isAboveDoorWall
     ) {
       Game.drawTile(
-        2,
-        this.skin + this.tileYOffset,
+        2 + this.tileXOffset,
+        this.skin,
         1,
         1,
         this.x,
@@ -132,7 +132,7 @@ export class Wall extends Tile {
         1,
         1,
         this.room.shadeColor,
-        this.room.softVis[this.x][this.y + 1]
+        this.room.softVis[this.x][this.y + 1],
       );
     }
   };

@@ -1,17 +1,10 @@
-import { Entity, EntityDirection } from "../entity";
 import { Direction, Game } from "../../game";
 import { Room } from "../../room";
 import { astar } from "../../astarclass";
-import { HitWarning } from "../../hitWarning";
 import { SpikeTrap } from "../../tile/spiketrap";
-import { Coin } from "../../item/coin";
 import { Player } from "../../player";
-import { DualDagger } from "../../weapon/dualdagger";
 import { Item } from "../../item/item";
-import { ImageParticle } from "../../particle/imageParticle";
-import { Armor } from "../../item/armor";
 import { Enemy } from "./enemy";
-import { Random } from "../../random";
 
 export class KnightEnemy extends Enemy {
   ticks: number;
@@ -37,33 +30,20 @@ export class KnightEnemy extends Enemy {
     this.lastY = this.y;
     this.name = "burrow knight";
     this.orthogonalAttack = true;
-
+    this.imageParticleX = 3;
+    this.imageParticleY = 29;
     if (drop) this.drop = drop;
-    else {
-      let dropProb = Random.rand();
-      if (dropProb < 0.05)
-        this.drop = new DualDagger(this.room, this.x, this.y);
-      else if (dropProb < 0.01)
-        this.drop = new DualDagger(this.room, this.x, this.y);
-      else this.drop = new Coin(this.room, this.x, this.y);
+    if (Math.random() < this.dropChance) {
+      this.getDrop([
+        "weapon",
+        "equipment",
+        "consumable",
+        "gem",
+        "tool",
+        "coin",
+      ]);
     }
   }
-
-  hurt = (playerHitBy: Player, damage: number) => {
-    if (playerHitBy) {
-      this.aggro = true;
-      this.targetPlayer = playerHitBy;
-      this.facePlayer(playerHitBy);
-      if (playerHitBy === this.game.players[this.game.localPlayerID])
-        this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
-    }
-    this.healthBar.hurt();
-    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 3, 29);
-
-    this.health -= damage;
-    if (this.health <= 0) this.kill();
-    else this.hurtCallback();
-  };
 
   hit = (): number => {
     return 1;
@@ -207,6 +187,7 @@ export class KnightEnemy extends Enemy {
     let rumbleX = this.rumble(this.rumbling, this.frame).x;
     let rumbleY = this.rumble(this.rumbling, this.frame, this.direction).y;
     if (!this.dead) {
+      this.updateDrawXY(delta);
       if (this.ticks % 2 === 0) {
         this.tileX = 9;
         this.tileY = 8;

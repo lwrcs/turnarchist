@@ -2,21 +2,11 @@ import { Entity, EntityDirection } from "../entity";
 import { Game } from "../../game";
 import { Room } from "../../room";
 import { Player } from "../../player";
-import { HitWarning } from "../../hitWarning";
-import { GenericParticle } from "../../particle/genericParticle";
-import { Coin } from "../../item/coin";
-import { RedGem } from "../../item/redgem";
 import { Item } from "../../item/item";
-import { Spear } from "../../weapon/spear";
-import { DualDagger } from "../../weapon/dualdagger";
-import { GreenGem } from "../../item/greengem";
-import { Random } from "../../random";
 import { astar } from "../../astarclass";
 import { SpikeTrap } from "../../tile/spiketrap";
-import { Candle } from "../../item/candle";
 import { Door } from "../../tile/door";
 import { Enemy } from "./enemy";
-import { ImageParticle } from "../../particle/imageParticle";
 
 export class BishopEnemy extends Enemy {
   frame: number;
@@ -43,13 +33,18 @@ export class BishopEnemy extends Enemy {
     this.diagonalAttackRange = 1;
     this.diagonalAttack = true;
     this.orthogonalAttack = false;
+    this.imageParticleX = 0;
+    this.imageParticleY = 26;
     if (drop) this.drop = drop;
-    else {
-      let dropProb = Random.rand();
-      if (dropProb < 0.005) this.drop = new Candle(this.room, this.x, this.y);
-      else if (dropProb < 0.04)
-        this.drop = new GreenGem(this.room, this.x, this.y);
-      else this.drop = new Coin(this.room, this.x, this.y);
+    if (Math.random() < this.dropChance) {
+      this.getDrop([
+        "weapon",
+        "equipment",
+        "consumable",
+        "gem",
+        "tool",
+        "coin",
+      ]);
     }
   }
 
@@ -95,26 +90,13 @@ export class BishopEnemy extends Enemy {
     return 1;
   };
 
-  hurt = (playerHitBy: Player, damage: number) => {
-    if (playerHitBy) {
-      this.aggro = true;
-      this.targetPlayer = playerHitBy;
-      this.facePlayer(playerHitBy);
-      if (playerHitBy === this.game.players[this.game.localPlayerID])
-        this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
-    }
-    this.health -= damage;
-    this.healthBar.hurt();
-    if (this.health <= 0) {
-      ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 26);
-
-      this.kill();
-    }
-  };
-
-  jump = () => {
+  jump = (delta: number) => {
     let j = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
-    this.jumpY = Math.sin(j * Math.PI) * this.jumpHeight;
+
+    let jumpY = Math.abs(Math.sin(j * Math.PI)) * this.jumpHeight;
+    if (jumpY < 0.01) jumpY = 0;
+    if (jumpY > this.jumpHeight) jumpY = this.jumpHeight;
+    this.jumpY = jumpY;
   };
 
   behavior = () => {
@@ -235,6 +217,7 @@ export class BishopEnemy extends Enemy {
 
   draw = (delta: number) => {
     if (!this.dead) {
+      this.updateDrawXY(delta);
       this.frame += 0.1 * delta;
       if (this.frame >= 4) this.frame = 0;
 
@@ -257,11 +240,11 @@ export class BishopEnemy extends Enemy {
         1,
         2,
         this.x - this.drawX,
-        this.y - this.drawYOffset - this.drawY - this.jumpY * delta,
+        this.y - this.drawYOffset - this.drawY - this.jumpY,
         1,
         2,
         this.room.shadeColor,
-        this.shadeAmount() * (1 + (this.jumpY * delta) / 3),
+        this.shadeAmount() * (1 + this.jumpY / 3),
       );
     }
     if (!this.seenPlayer) {

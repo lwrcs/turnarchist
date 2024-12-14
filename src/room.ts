@@ -232,6 +232,10 @@ export class Room {
   lastEnemyCount: number;
   outerWalls: Array<Wall>;
   level: Level;
+  onMainPath: boolean = false;
+  pathIndex: number = 0;
+  coordinatesWithLightingChanges: { x: number; y: number }[];
+
   private pointInside(
     x: number,
     y: number,
@@ -259,10 +263,8 @@ export class Room {
     mapGroup: number,
     level: Level,
     rand = Random.rand,
-    isTopOpen = false,
-    isRightOpen = false,
-    isBottomOpen = false,
-    isLeftOpen = false,
+    onMainPath = false,
+    pathIndex: number = 0,
   ) {
     this.game = game;
     this.roomX = x; //Math.floor(- this.width / 2);
@@ -322,6 +324,10 @@ export class Room {
     if (this.type === RoomType.ROPECAVE || this.type === RoomType.CAVE)
       this.skin = SkinType.CAVE;
     this.buildEmptyRoom();
+
+    this.onMainPath = onMainPath;
+    this.pathIndex = pathIndex;
+    this.coordinatesWithLightingChanges = [];
   }
 
   public async changeReverb(newImpulsePath: string) {
@@ -580,49 +586,20 @@ export class Room {
     if (tiles === null) return;
     //don't put enemies near the entrances so you don't get screwed instantly
 
-    const adjecentTiles = [];
-    let spawnerCount = 0;
-    for (let door of this.doors) {
-      if (door.doorDir === Direction.UP) {
-        adjecentTiles.push(
-          { x: door.x, y: door.y - 2 },
-          { x: door.x - 1, y: door.y - 1 },
-          { x: door.x + 1, y: door.y - 1 },
-          { x: door.x - 1, y: door.y - 2 },
-          { x: door.x + 1, y: door.y - 2 },
-        );
-      }
-      if (door.doorDir === Direction.DOWN) {
-        adjecentTiles.push(
-          { x: door.x, y: door.y + 2 },
-          { x: door.x - 1, y: door.y + 1 },
-          { x: door.x + 1, y: door.y + 1 },
-          { x: door.x - 1, y: door.y + 2 },
-          { x: door.x + 1, y: door.y + 2 },
-        );
-      }
-      if (door.doorDir === Direction.LEFT) {
-        adjecentTiles.push(
-          { x: door.x - 2, y: door.y },
-          { x: door.x - 1, y: door.y - 1 },
-          { x: door.x - 1, y: door.y + 1 },
-          { x: door.x - 1, y: door.y - 2 },
-          { x: door.x - 1, y: door.y + 2 },
-        );
-      }
-      if (door.doorDir === Direction.RIGHT) {
-        adjecentTiles.push(
-          { x: door.x + 2, y: door.y },
-          { x: door.x + 1, y: door.y - 1 },
-          { x: door.x + 1, y: door.y + 1 },
-          { x: door.x + 1, y: door.y - 2 },
-          { x: door.x + 1, y: door.y + 2 },
-        );
+    // Create a Set to store coordinates that should be excluded
+    const excludedCoords = new Set<string>();
+
+    // For each door, add coordinates in a 5x5 area around it to excluded set
+    for (const door of this.doors) {
+      for (let dx = -2; dx <= 2; dx++) {
+        for (let dy = -2; dy <= 2; dy++) {
+          excludedCoords.add(`${door.x + dx},${door.y + dy}`);
+        }
       }
     }
-    tiles = tiles.filter(
-      (tile) => !adjecentTiles.some((t) => t.x === tile.x && t.y === tile.y),
-    );
+
+    // Filter tiles that aren't in the excluded set
+    tiles = tiles.filter((tile) => !excludedCoords.has(`${tile.x},${tile.y}`));
     // Loop through the number of enemies to be added
     for (let i = 0; i < numEnemies; i++) {
       let rerolls = 1;
@@ -1338,13 +1315,21 @@ export class Room {
   fadeLighting = (delta: number) => {
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
-        const visDiff = Math.abs(this.softVis[x][y] - this.vis[x][y]);
-        if (visDiff >= 0.05) {
-          if (this.softVis[x][y] < this.vis[x][y])
-            this.softVis[x][y] += (visDiff / 10) * delta;
-          else if (this.softVis[x][y] > this.vis[x][y])
-            this.softVis[x][y] -= (visDiff / 10) * delta;
-        }
+        let visDiff = this.softVis[x][y] - this.vis[x][y];
+        let softVis = this.softVis[x][y];
+        let flag = false;
+        if (Math.abs(visDiff) > 0.01) flag = true;
+
+        if (!flag) continue;
+
+        visDiff *= 0.05 * delta;
+
+        softVis -= visDiff;
+
+        if (softVis < 0) softVis = 0;
+        if (softVis > 1) softVis = 1;
+
+        this.softVis[x][y] = softVis;
 
         // if (this.softVis[x][y] < 0.01) this.softVis[x][y] = 0;
       }
@@ -1354,30 +1339,38 @@ export class Room {
   fadeRgb = (delta: number) => {
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
-        const linearSoftCol = this.softCol[x][y];
-        const linearCol = this.col[x][y];
-        let diffR = Math.abs(linearCol[0] - linearSoftCol[0]);
-        if (diffR >= 16) {
-          if (linearSoftCol[0] < linearCol[0])
-            linearSoftCol[0] += (20 * delta) / 2;
-          else if (linearSoftCol[0] > linearCol[0])
-            linearSoftCol[0] -= (20 * delta) / 2;
+        const [softR, softG, softB] = this.softCol[x][y];
+        const [targetR, targetG, targetB] = this.col[x][y];
+
+        // Calculate differences
+        let diffR = softR - targetR;
+        let diffG = softG - targetG;
+        let diffB = softB - targetB;
+
+        let flagR = false;
+        let flagG = false;
+        let flagB = false;
+        if (Math.abs(diffR) > 0.001) flagR = true;
+        if (Math.abs(diffG) > 0.001) flagG = true;
+        if (Math.abs(diffB) > 0.001) flagB = true;
+
+        if (!flagR && !flagG && !flagB) {
+          continue;
         }
-        let diffG = Math.abs(linearCol[1] - linearSoftCol[1]);
-        if (diffG >= 8) {
-          if (linearSoftCol[1] < linearCol[1])
-            linearSoftCol[1] += (20 * delta) / 2;
-          else if (linearSoftCol[1] > linearCol[1])
-            linearSoftCol[1] -= (20 * delta) / 2;
+
+        // Apply smoothing similar to fadeLighting
+        if (flagR) {
+          diffR *= 0.1 * delta;
+          this.softCol[x][y][0] = this.clamp(Math.round(softR - diffR), 0, 255);
         }
-        let diffB = Math.abs(linearCol[2] - linearSoftCol[2]);
-        if (diffB >= 8) {
-          if (linearSoftCol[2] < linearCol[2])
-            linearSoftCol[2] += (20 * delta) / 2;
-          else if (linearSoftCol[2] > linearCol[2])
-            linearSoftCol[2] -= (20 * delta) / 2;
+        if (flagG) {
+          diffG *= 0.1 * delta;
+          this.softCol[x][y][1] = this.clamp(Math.round(softG - diffG), 0, 255);
         }
-        this.softCol[x][y] = linearSoftCol;
+        if (flagB) {
+          diffB *= 0.1 * delta;
+          this.softCol[x][y][2] = this.clamp(Math.round(softB - diffB), 0, 255);
+        }
       }
     }
   };
@@ -1418,19 +1411,14 @@ export class Room {
 
     // Start timing the processing of player lighting
     //console.time("updateLighting: Process Players");
+    let lightingAngleStep = LevelConstants.LIGHTING_ANGLE_STEP;
+
     for (const p in this.game.players) {
       let player = this.game.players[p];
       if (this === this.game.rooms[player.levelID]) {
         //console.log(`i: ${player.angle}`);
-        let viewAngle = 360;
-        let viewAngleEnd = player.angle + viewAngle / 2;
-        const offsetX =
-          player.angle === 0 ? 0.7 : player.angle === 180 ? -0.7 : 0;
-        const offsetY =
-          player.angle === 90 ? 0.7 : player.angle === 270 ? -0.7 : 0;
-        for (let i = 0; i < 360; i += LevelConstants.LIGHTING_ANGLE_STEP) {
+        for (let i = 0; i < 360; i += lightingAngleStep) {
           let lightColor = LevelConstants.AMBIENT_LIGHT_COLOR;
-
           if (player.lightEquipped)
             lightColor = LevelConstants.TORCH_LIGHT_COLOR;
           this.castTintAtAngle(
@@ -1692,7 +1680,7 @@ export class Room {
     if (normalized <= 0.04045) {
       return normalized / 12.92;
     } else {
-      return Math.pow((normalized + 0.055) / 1.055, 2.4);
+      return Math.pow((normalized + 0.055) / 1.055, 2.2);
     }
   };
 
@@ -1933,18 +1921,26 @@ export class Room {
 
   draw = (delta: number) => {
     HitWarning.updateFrame(delta);
-    this.fadeLighting(delta);
     this.fadeRgb(delta);
+    this.fadeLighting(delta);
   };
 
   drawColorLayer = () => {
-    Game.ctx.globalCompositeOperation = "soft-light";
-    Game.ctx.globalAlpha = 0.6;
+    Game.ctx.save();
+    Game.ctx.globalCompositeOperation =
+      GameConstants.COLOR_LAYER_COMPOSITE_OPERATION as GlobalCompositeOperation; //"soft-light";
+    Game.ctx.globalAlpha = 0.75;
+    let lastFillStyle = "";
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
         const [r, g, b] = this.softCol[x][y];
         if (r === 0 && g === 0 && b === 0) continue; // Skip if no color
-        Game.ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${1 - this.vis[x][y]})`;
+        const alpha = 1 - this.vis[x][y];
+        const fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        if (fillStyle !== lastFillStyle) {
+          Game.ctx.fillStyle = fillStyle;
+          lastFillStyle = fillStyle;
+        }
         Game.ctx.fillRect(
           x * GameConstants.TILESIZE,
           y * GameConstants.TILESIZE,
@@ -1953,12 +1949,11 @@ export class Room {
         );
       }
     }
-    // Set composite operation if needed
-    Game.ctx.globalCompositeOperation = "source-over";
-    Game.ctx.globalAlpha = 0.75;
+    Game.ctx.restore();
   };
 
   drawEntities = (delta: number, skipLocalPlayer?: boolean) => {
+    Game.ctx.save();
     let tiles = [];
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
@@ -1988,6 +1983,7 @@ export class Room {
           drawables.push(this.game.players[i]);
       }
     }
+
     drawables.sort((a, b) => {
       if (a instanceof Floor) {
         return -1;
@@ -2018,17 +2014,18 @@ export class Room {
         if (this.softVis[x][y] < 1) this.roomArray[x][y].drawAbovePlayer(delta);
       }
     }
-
     for (const i of this.items) {
       i.drawTopLayer(delta);
     }
+    Game.ctx.restore();
   };
 
   drawShade = (delta: number) => {
+    Game.ctx.save();
     let bestSightRadius = 0;
     for (const p in this.game.players) {
-      Game.ctx.globalCompositeOperation = "soft-light";
-      Game.ctx.globalAlpha = 0.75;
+      Game.ctx.globalCompositeOperation = "source-over"; // "soft-light";
+      Game.ctx.globalAlpha = 1;
       if (
         this.game.rooms[this.game.players[p].levelID] === this &&
         this.game.players[p].defaultSightRadius > bestSightRadius
@@ -2049,9 +2046,11 @@ export class Room {
       Game.ctx.globalAlpha = 1;
       Game.ctx.globalCompositeOperation = "source-over";
     }
+    Game.ctx.restore();
   };
 
   drawOverShade = (delta: number) => {
+    Game.ctx.save();
     for (const e of this.entities) {
       e.drawTopLayer(delta); // health bars
     }
@@ -2074,10 +2073,12 @@ export class Room {
         this.roomArray[x][y].drawAboveShading(delta);
       }
     }
+    Game.ctx.restore();
   };
 
   // for stuff rendered on top of the player
   drawTopLayer = (delta: number) => {
+    Game.ctx.save();
     // gui stuff
 
     // room name
@@ -2090,6 +2091,7 @@ export class Room {
       5,
     );
     Game.ctx.font = old;
+    Game.ctx.restore();
   };
 
   calculateWallInfo() {

@@ -1,4 +1,3 @@
-import { Entity, EntityDirection } from "../entity";
 import { Direction, Game } from "../../game";
 import { Room } from "../../room";
 import { astar } from "../../astarclass";
@@ -6,10 +5,7 @@ import { HitWarning } from "../../hitWarning";
 import { SpikeTrap } from "../../tile/spiketrap";
 import { Coin } from "../../item/coin";
 import { Player } from "../../player";
-import { DualDagger } from "../../weapon/dualdagger";
 import { Item } from "../../item/item";
-import { GameConstants } from "../../gameConstants";
-import { ImageParticle } from "../../particle/imageParticle";
 import { Enemy } from "./enemy";
 import { Utils } from "../../utils";
 
@@ -52,23 +48,14 @@ export class FrogEnemy extends Enemy {
     this.diagonalAttack = true;
     this.jumpHeight = 1;
     this.drawMoveSpeed = 0.2;
-  }
+    this.imageParticleX = 3;
+    this.imageParticleY = 30;
 
-  hurt = (playerHitBy: Player, damage: number) => {
-    if (playerHitBy) {
-      this.aggro = true;
-      this.targetPlayer = playerHitBy;
-      this.facePlayer(playerHitBy);
-      if (playerHitBy === this.game.players[this.game.localPlayerID])
-        this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
+    if (drop) this.drop = drop;
+    if (Math.random() < this.dropChance) {
+      this.getDrop(["weapon", "consumable", "gem", "tool", "coin", "poison"]);
     }
-    this.healthBar.hurt();
-    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 3, 30);
-
-    this.health -= damage;
-    if (this.health <= 0) this.kill();
-    else this.hurtCallback();
-  };
+  }
 
   hit = (): number => {
     return 0.5;
@@ -183,7 +170,7 @@ export class FrogEnemy extends Enemy {
                     this.game.players[i] ===
                     this.game.players[this.game.localPlayerID]
                   )
-                    this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                    this.game.shakeScreen(5 * this.drawX, 5 * this.drawY);
                   hitPlayer = true;
                 }
               }
@@ -245,7 +232,7 @@ export class FrogEnemy extends Enemy {
   };
 
   jump = (delta: number) => {
-    console.log(`this.drawX, this.drawY: ${this.drawX}, ${this.drawY}`);
+    //console.log(`this.drawX, this.drawY: ${this.drawX}, ${this.drawY}`);
     if (this.jumping) {
       let j = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
       if (j > 1) {
@@ -260,19 +247,6 @@ export class FrogEnemy extends Enemy {
         this.drawMoveSpeed = 0.2;
       }
       if (this.jumpY > this.jumpHeight) this.jumpY = this.jumpHeight;
-    }
-  };
-
-  updateDrawXY = (delta: number) => {
-    if (!this.doneMoving()) {
-      this.drawX -= this.drawMoveSpeed * delta * this.drawX;
-      this.drawY -= this.drawMoveSpeed * delta * this.drawY;
-
-      this.drawX =
-        Math.abs(this.drawX) < 0.01 ? 0 : Math.max(-2, Math.min(this.drawX, 2));
-      this.drawY =
-        Math.abs(this.drawY) < 0.01 ? 0 : Math.max(-2, Math.min(this.drawY, 2));
-      this.jump(delta);
     }
   };
 
@@ -360,6 +334,7 @@ export class FrogEnemy extends Enemy {
 
   draw = (delta: number) => {
     if (!this.dead) {
+      this.updateDrawXY(delta);
       this.frame += this.animationSpeed * delta;
       if (this.frame >= this.frameLength) {
         this.frame = 0;

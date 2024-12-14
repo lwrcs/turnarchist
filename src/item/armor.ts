@@ -11,6 +11,7 @@ export class Armor extends Equippable {
   health: number;
   rechargeTurnCounter: number;
   readonly RECHARGE_TURNS = 15;
+  static itemName = "armor";
 
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);

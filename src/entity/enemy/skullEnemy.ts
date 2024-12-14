@@ -1,21 +1,11 @@
-import { Entity, EntityDirection } from "../entity";
 import { Direction, Game } from "../../game";
 import { Room } from "../../room";
 import { Player } from "../../player";
-import { HitWarning } from "../../hitWarning";
-import { GenericParticle } from "../../particle/genericParticle";
-import { Coin } from "../../item/coin";
-import { RedGem } from "../../item/redgem";
 import { Item } from "../../item/item";
-import { Spear } from "../../weapon/spear";
 import { astar } from "../../astarclass";
 import { SpikeTrap } from "../../tile/spiketrap";
-import { DeathParticle } from "../../particle/deathParticle";
-import { Candle } from "../../item/candle";
 import { ImageParticle } from "../../particle/imageParticle";
 import { Enemy } from "./enemy";
-import { Random } from "../../random";
-import { BeamEffect } from "../../beamEffect";
 
 export class SkullEnemy extends Enemy {
   frame: number;
@@ -45,13 +35,8 @@ export class SkullEnemy extends Enemy {
     this.forwardOnlyAttack = true;
 
     if (drop) this.drop = drop;
-    else {
-      let dropProb = Random.rand();
-      if (dropProb < 0.05) this.drop = new Spear(this.room, this.x, this.y);
-      else if (dropProb < 0.01)
-        this.drop = new RedGem(this.room, this.x, this.y);
-      //else if (dropProb < 0.2) this.drop = new Candle(this.room, 0, 0);
-      else this.drop = new Coin(this.room, this.x, this.y);
+    if (Math.random() < this.dropChance) {
+      this.getDrop(["weapon", "consumable", "gem", "tool", "coin"]);
     }
   }
 
@@ -59,7 +44,11 @@ export class SkullEnemy extends Enemy {
     return 1;
   };
 
-  hurt = (playerHitBy: Player, damage: number) => {
+  hurt = (
+    playerHitBy: Player,
+    damage: number,
+    type: "none" | "poison" | "blood" | "heal" = "none",
+  ) => {
     if (playerHitBy) {
       this.aggro = true;
       this.targetPlayer = playerHitBy;
@@ -70,15 +59,20 @@ export class SkullEnemy extends Enemy {
     this.ticksSinceFirstHit = 0;
     if (this.health == 2) this.unconscious = false;
     this.health -= damage;
+    this.healthBar.hurt();
+    this.createDamageNumber(damage, type);
+
     if (this.health == 1) {
       this.unconscious = true;
+
       ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 3, 28);
-    } else this.healthBar.hurt();
+    } else {
+      this.healthBar.hurt();
+    }
     if (this.health <= 0) {
       ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 24);
       this.kill();
-    } else {
-    }
+    } else this.hurtCallback();
   };
 
   behavior = () => {
@@ -88,6 +82,8 @@ export class SkullEnemy extends Enemy {
     if (!this.dead) {
       if (this.skipNextTurns > 0) {
         this.skipNextTurns--;
+        this.ticks++;
+
         return;
       }
 
@@ -95,9 +91,12 @@ export class SkullEnemy extends Enemy {
         this.unconscious = true;
         this.ticksSinceFirstHit++;
         if (this.ticksSinceFirstHit >= this.REGEN_TICKS) {
+          this.healthBar.hurt();
           this.health = 2;
           this.unconscious = false;
         }
+        this.ticks++;
+
         return;
       }
 
@@ -261,6 +260,7 @@ export class SkullEnemy extends Enemy {
 
   draw = (delta: number) => {
     if (!this.dead) {
+      this.updateDrawXY(delta);
       this.tileX = 5;
       this.tileY = 8;
       if (this.health <= 1) {

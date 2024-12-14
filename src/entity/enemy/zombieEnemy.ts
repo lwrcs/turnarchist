@@ -43,34 +43,13 @@ export class ZombieEnemy extends Enemy {
     this.jumpHeight = 0.35;
 
     if (drop) this.drop = drop;
-    else {
-      let dropProb = Random.rand();
-      if (dropProb < 0.025) this.drop = new Pickaxe(this.room, this.x, this.y);
-      else if (dropProb < 0.02)
-        this.drop = new GreenGem(this.room, this.x, this.y);
-      else this.drop = new Coin(this.room, this.x, this.y);
+    if (Math.random() < this.dropChance) {
+      this.getDrop(["consumable", "gem", "tool", "coin"]);
     }
   }
 
   hit = (): number => {
     return 1;
-  };
-
-  hurt = (playerHitBy: Player, damage: number) => {
-    if (playerHitBy) {
-      this.aggro = true;
-      this.targetPlayer = playerHitBy;
-      this.facePlayer(playerHitBy);
-      if (playerHitBy === this.game.players[this.game.localPlayerID])
-        this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
-    }
-    this.health -= damage;
-    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 26);
-    this.healthBar.hurt();
-    if (this.health <= 0) {
-      this.kill();
-    } else {
-    }
   };
 
   behavior = () => {
@@ -267,6 +246,7 @@ export class ZombieEnemy extends Enemy {
 
   draw = (delta: number) => {
     if (!this.dead) {
+      this.updateDrawXY(delta);
       this.frame += 0.1 * delta;
       if (this.frame >= 4) this.frame = 0;
 

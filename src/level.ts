@@ -15,7 +15,7 @@ export interface EnemyParameters {
 
 export const enemyMinimumDepth: Record<number, number> = {
   1: 0, // CrabEnemy
-  2: 0, // FrogEnemy
+  2: 1, // FrogEnemy
   3: 0, // ZombieEnemy
   4: 0, // SkullEnemy
   5: 1, // EnergyWizardEnemy
@@ -23,11 +23,11 @@ export const enemyMinimumDepth: Record<number, number> = {
   7: 2, // RookEnemy
   8: 1, // BishopEnemy
   9: 1, // ArmoredzombieEnemy
-  10: 3, // BigSkullEnemy
+  10: 2, // BigSkullEnemy
   11: 2, // QueenEnemy
-  12: 2, // KnightEnemy
-  13: 3, // BigKnightEnemy
-  14: 3, // FireWizardEnemy
+  12: 1, // KnightEnemy
+  13: 2, // BigKnightEnemy
+  14: 2, // FireWizardEnemy
 };
 /*
 interface enemySpawnPoolData {

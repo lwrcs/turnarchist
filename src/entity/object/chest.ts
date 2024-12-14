@@ -16,6 +16,7 @@ import { EntityType } from "../entity";
 import { Random } from "../../random";
 import { Player } from "../../player";
 import { Torch } from "../../item/torch";
+import { WeaponFragments } from "../../item/weaponFragments";
 
 export class Chest extends Entity {
   frame: number;
@@ -74,6 +75,9 @@ export class Chest extends Entity {
       case 6:
         this.drop = new Armor(this.room, x, y);
         break;
+      case 7:
+        this.drop = new WeaponFragments(this.room, x, y, 100);
+        break;
     }
     this.room.items.push(this.drop);
   };
@@ -119,6 +123,7 @@ export class Chest extends Entity {
     }
 
     if (!this.dead) {
+      this.updateDrawXY(delta);
       Game.drawObj(
         Math.floor(this.tileX),
         Math.floor(this.tileY),

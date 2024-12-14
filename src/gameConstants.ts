@@ -8,23 +8,30 @@ import { Heart } from "./item/heart";
 import { Key } from "./item/key";
 import { Lantern } from "./item/lantern";
 import { Torch } from "./item/torch";
+import { WeaponBlood } from "./item/weaponBlood";
+import { WeaponFragments } from "./item/weaponFragments";
+import { WeaponPoison } from "./item/weaponPoison";
 import { LevelConstants } from "./levelConstants";
 import { Dagger } from "./weapon/dagger";
 import { DualDagger } from "./weapon/dualdagger";
 import { Spear } from "./weapon/spear";
 import { Spellbook } from "./weapon/spellbook";
 import { Warhammer } from "./weapon/warhammer";
+import { Hammer } from "./item/hammer";
 
 export class GameConstants {
-  static readonly VERSION = "v1.0.0"; //"v0.6.3";
+  static readonly VERSION = "v1.0.2"; //"v0.6.3";
   static DEVELOPER_MODE = false;
+  static isMobile = false;
 
   static readonly FPS = 120;
   static readonly ALPHA_ENABLED = true;
-  static readonly SHADE_LEVELS = 25;
+  static readonly SHADE_LEVELS = 50;
 
   static readonly TILESIZE = 16;
-  static readonly SCALE = 3;
+  static SCALE = 4;
+  static readonly MAX_SCALE = 5;
+  static readonly MIN_SCALE = 1;
 
   static readonly SWIPE_THRESH = 25 ** 2; // (size of swipe threshold circle)^2
   static readonly HOLD_THRESH = 250; // milliseconds
@@ -55,21 +62,87 @@ export class GameConstants {
   static readonly HEALTH_BUFF_COLOR = "#d77bba";
   static readonly MISS_COLOR = "#639bff";
 
-  static readonly STARTING_INVENTORY = [Dagger, Candle];
+  static COLOR_LAYER_COMPOSITE_OPERATION = "soft-light"; //"soft-light";
+  static SHADE_LAYER_COMPOSITE_OPERATION = "screen"; //"soft-light";
+  static USE_OPTIMIZED_SHADING = false;
+
+  static readonly COLOR_LAYER_COMPOSITE_OPERATIONS = [
+    "soft-light",
+    "addition",
+    "darken",
+    "overlay",
+    "hue",
+    "source-over",
+    "screen",
+    "multiply",
+    "difference",
+    "exclusion",
+    "luminosity",
+    "color-dodge",
+    "color-burn",
+    "hard-light",
+    "soft-light",
+    "lighten",
+  ];
+
+  static readonly SET_COLOR_LAYER_COMPOSITE_OPERATION = (shade?: boolean) => {
+    let operation = shade
+      ? GameConstants.SHADE_LAYER_COMPOSITE_OPERATION
+      : GameConstants.COLOR_LAYER_COMPOSITE_OPERATION;
+    const currentIndex =
+      GameConstants.COLOR_LAYER_COMPOSITE_OPERATIONS.indexOf(operation);
+    const nextIndex =
+      (currentIndex + 1) %
+      GameConstants.COLOR_LAYER_COMPOSITE_OPERATIONS.length;
+    operation = GameConstants.COLOR_LAYER_COMPOSITE_OPERATIONS[nextIndex];
+    if (shade) {
+      GameConstants.SHADE_LAYER_COMPOSITE_OPERATION = operation;
+    } else {
+      GameConstants.COLOR_LAYER_COMPOSITE_OPERATION = operation;
+    }
+    console.log(`Color layer composite operation set to ${operation}`);
+  };
+
+  static readonly TOGGLE_USE_OPTIMIZED_SHADING = () => {
+    GameConstants.USE_OPTIMIZED_SHADING = !GameConstants.USE_OPTIMIZED_SHADING;
+  };
+
+  static readonly SET_SCALE = () => {
+    GameConstants.SCALE++;
+    if (GameConstants.SCALE > GameConstants.MAX_SCALE) {
+      GameConstants.SCALE = GameConstants.MIN_SCALE;
+    }
+  };
+
+  static readonly INCREASE_SCALE = () => {
+    if (GameConstants.SCALE < GameConstants.MAX_SCALE) {
+      GameConstants.SCALE++;
+      if (GameConstants.SCALE > GameConstants.MAX_SCALE) {
+        GameConstants.SCALE = GameConstants.MIN_SCALE;
+      }
+    }
+  };
+
+  static readonly DECREASE_SCALE = () => {
+    if (GameConstants.SCALE > GameConstants.MIN_SCALE) {
+      GameConstants.SCALE--;
+      if (GameConstants.SCALE < GameConstants.MIN_SCALE) {
+        GameConstants.SCALE = GameConstants.MAX_SCALE;
+      }
+    }
+  };
+
+  static readonly STARTING_INVENTORY = [Dagger, Torch];
   static readonly STARTING_DEV_INVENTORY = [
     Dagger,
-    DualDagger,
-    EntitySpawner,
-    Candle,
-    GodStone,
+    WeaponFragments,
+    Torch,
     Warhammer,
+    GodStone,
     Spear,
     Spellbook,
     Armor,
     Heart,
     Backpack,
-    Torch,
-    Lantern,
-    Coal,
   ];
 }

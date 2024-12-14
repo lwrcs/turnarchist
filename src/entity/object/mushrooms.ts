@@ -29,7 +29,7 @@ export class Mushrooms extends Entity {
 
     ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 30);
 
-    this.room.items.push(new Shrooms(this.room, this.x, this.y));
+    //this.room.items.push(new Shrooms(this.room, this.x, this.y));
   };
   killNoBones = () => {
     this.kill();

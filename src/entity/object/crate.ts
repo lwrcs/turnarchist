@@ -6,6 +6,8 @@ import { LevelConstants } from "../../levelConstants";
 import { GenericParticle } from "../../particle/genericParticle";
 import { EntityType } from "../entity";
 import { ImageParticle } from "../../particle/imageParticle";
+import { WeaponFragments } from "../../item/weaponFragments";
+import { Coin } from "../../item/coin";
 
 export class Crate extends Entity {
   constructor(room: Room, game: Game, x: number, y: number) {
@@ -18,6 +20,11 @@ export class Crate extends Entity {
     this.hasShadow = false;
     this.pushable = true;
     this.name = "crate";
+    if (Math.random() < 0.1) {
+      this.drop = new WeaponFragments(this.room, this.x, this.y, 100);
+    } else {
+      this.drop = new Coin(this.room, this.x, this.y);
+    }
   }
 
   get type() {
@@ -26,6 +33,7 @@ export class Crate extends Entity {
 
   kill = () => {
     ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 3, 26);
+    this.dropLoot();
     this.dead = true;
   };
   killNoBones = () => {
@@ -35,6 +43,7 @@ export class Crate extends Entity {
   draw = (delta: number) => {
     // not inherited because it doesn't have the 0.5 offset
     if (!this.dead) {
+      this.updateDrawXY(delta);
       Game.drawObj(
         this.tileX,
         this.tileY,
@@ -52,7 +61,5 @@ export class Crate extends Entity {
 
   drawTopLayer = (delta: number) => {
     this.drawableY = this.y;
-
-    this.updateDrawXY(delta);
   };
 }

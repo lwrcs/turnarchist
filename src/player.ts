@@ -85,7 +85,9 @@ export class Player extends Drawable {
   lightEquipped: boolean;
   lightSource: LightSource;
   hurtAlpha: number;
-  hurting: boolean;
+  hurting: boolean; // handles drawing hurt animation
+  hurtingShield: boolean; // handles drawing hurt shield animation
+  hurtShield: boolean; // handles logic to take damage or not
   lightBrightness: number;
   sineAngle: number;
   drawMoveSpeed: number;
@@ -100,6 +102,11 @@ export class Player extends Drawable {
   slowMotionTickDuration: number;
   private animationFrameId: number | null = null;
   private isProcessingQueue: boolean = false;
+  private lowHealthFrame: number = 0;
+  private drawMoveQueue: {
+    drawX: number;
+    drawY: number;
+  }[] = [];
   constructor(game: Game, x: number, y: number, isLocalPlayer: boolean) {
     super();
 
@@ -122,22 +129,59 @@ export class Player extends Drawable {
     this.lastY = 0;
     this.isLocalPlayer = isLocalPlayer;
     if (isLocalPlayer) {
-      Input.leftSwipeListener = () => this.inputHandler(InputEnum.LEFT);
-      Input.rightSwipeListener = () => this.inputHandler(InputEnum.RIGHT);
-      Input.upSwipeListener = () => this.inputHandler(InputEnum.UP);
-      Input.downSwipeListener = () => this.inputHandler(InputEnum.DOWN);
+      Input.leftSwipeListener = () => {
+        if (
+          !this.inventory.isPointInQuickbarBounds(Input.mouseX, Input.mouseY)
+            .inBounds &&
+          !this.inventory.isOpen
+        )
+          this.inputHandler(InputEnum.LEFT);
+      };
+
+      Input.rightSwipeListener = () => {
+        if (
+          !this.inventory.isPointInQuickbarBounds(Input.mouseX, Input.mouseY)
+            .inBounds &&
+          !this.inventory.isOpen
+        )
+          this.inputHandler(InputEnum.RIGHT);
+      };
+
+      Input.upSwipeListener = () => {
+        if (
+          !this.inventory.isPointInQuickbarBounds(Input.mouseX, Input.mouseY)
+            .inBounds &&
+          !this.inventory.isOpen
+        )
+          this.inputHandler(InputEnum.UP);
+      };
+
+      Input.downSwipeListener = () => {
+        if (
+          !this.inventory.isPointInQuickbarBounds(Input.mouseX, Input.mouseY)
+            .inBounds &&
+          !this.inventory.isOpen
+        )
+          this.inputHandler(InputEnum.DOWN);
+      };
+
       Input.commaListener = () => this.inputHandler(InputEnum.COMMA);
       Input.periodListener = () => this.inputHandler(InputEnum.PERIOD);
       Input.tapListener = () => {
-        /*
         if (this.inventory.isOpen) {
           if (this.inventory.pointInside(Input.mouseX, Input.mouseY)) {
             this.inputHandler(InputEnum.SPACE);
-          } else {
-            this.inputHandler(InputEnum.I);
           }
-        } else this.inputHandler(InputEnum.I);
-         */
+        } else {
+          if (
+            this.inventory.isPointInQuickbarBounds(Input.mouseX, Input.mouseY)
+              .inBounds
+          ) {
+            if (this.inventory.pointInside(Input.mouseX, Input.mouseY)) {
+              this.inputHandler(InputEnum.SPACE);
+            }
+          }
+        }
       };
       Input.mouseMoveListener = () => this.inputHandler(InputEnum.MOUSE_MOVE);
       Input.mouseLeftClickListeners.push(() =>
@@ -148,6 +192,8 @@ export class Player extends Drawable {
       );
       Input.numKeyListener = (num: number) =>
         this.inputHandler(InputEnum.NUMBER_1 + num - 1);
+      Input.equalsListener = () => this.inputHandler(InputEnum.EQUALS);
+      Input.minusListener = () => this.inputHandler(InputEnum.MINUS);
     }
     this.mapToggled = true;
     this.health = 3;
@@ -173,7 +219,9 @@ export class Player extends Drawable {
     this.moveRange = 1;
     this.lightEquipped = false;
     this.hurting = false;
-    this.hurtAlpha = 0.5;
+    this.hurtingShield = false;
+    this.hurtShield = false;
+    this.hurtAlpha = 0.25;
     this.lightBrightness = 0.3;
     this.sineAngle = Math.PI / 2;
     this.drawMoveSpeed = 0.3; // greater than 1 less than 2
@@ -204,6 +252,16 @@ export class Player extends Drawable {
       return 0;
     }
   }
+
+  applyStatus = (
+    enemy: Entity,
+    status: { poison: boolean; blood: boolean },
+  ) => {
+    if (enemy instanceof Enemy) {
+      if (status.poison) enemy.poison();
+      if (status.blood) enemy.bleed();
+    }
+  };
 
   inputHandler = (input: InputEnum) => {
     if (!this.game.started && input !== InputEnum.MOUSE_MOVE) {
@@ -258,19 +316,29 @@ export class Player extends Drawable {
       case InputEnum.NUMBER_9:
         this.numKeyListener(input);
         break;
+      case InputEnum.EQUALS:
+        this.plusListener();
+        break;
+      case InputEnum.MINUS:
+        this.minusListener();
+        break;
     }
   };
   commaListener = () => {
+    this.inventory.mostRecentInput = "keyboard";
     this.inventory.left();
   };
   periodListener = () => {
+    this.inventory.mostRecentInput = "keyboard";
     this.inventory.right();
   };
   numKeyListener = (input: InputEnum) => {
+    this.inventory.mostRecentInput = "keyboard";
     this.inventory.handleNumKey(input - 13);
   };
 
   tapListener = () => {
+    this.inventory.mostRecentInput = "mouse";
     this.inventory.open();
   };
   iListener = () => {
@@ -288,6 +356,7 @@ export class Player extends Drawable {
     );
   };
   leftListener = (isLocal: boolean): boolean => {
+    this.inventory.mostRecentInput = "keyboard";
     if (this.inventory.isOpen) {
       this.inventory.left();
       return true;
@@ -303,6 +372,7 @@ export class Player extends Drawable {
     return false;
   };
   rightListener = (isLocal: boolean): boolean => {
+    this.inventory.mostRecentInput = "keyboard";
     if (this.inventory.isOpen) {
       this.inventory.right();
       return true;
@@ -318,6 +388,7 @@ export class Player extends Drawable {
     return false;
   };
   upListener = (isLocal: boolean): boolean => {
+    this.inventory.mostRecentInput = "keyboard";
     if (this.inventory.isOpen) {
       this.inventory.up();
       return true;
@@ -333,6 +404,7 @@ export class Player extends Drawable {
     return false;
   };
   downListener = (isLocal: boolean): boolean => {
+    this.inventory.mostRecentInput = "keyboard";
     if (this.inventory.isOpen) {
       this.inventory.down();
       return true;
@@ -348,6 +420,7 @@ export class Player extends Drawable {
     return false;
   };
   spaceListener = () => {
+    this.inventory.mostRecentInput = "keyboard";
     if (!this.game.chatOpen) {
       if (this.dead) {
         this.restart();
@@ -362,12 +435,30 @@ export class Player extends Drawable {
       }
     }
   };
+  plusListener = () => {
+    0;
+    GameConstants.INCREASE_SCALE();
+    this.game.onResize();
+  };
+  minusListener = () => {
+    GameConstants.DECREASE_SCALE();
+    this.game.onResize();
+  };
   mouseLeftClick = () => {
+    this.inventory.mostRecentInput = "mouse";
     if (this.dead) {
       this.restart();
-    } else {
-      this.inventory.mouseLeftClick();
-    }
+    } else if (this.openVendingMachine)
+      if (
+        this.openVendingMachine.isPointInVendingMachineBounds(
+          MouseCursor.getInstance().getPosition().x,
+          MouseCursor.getInstance().getPosition().y,
+        )
+      ) {
+        this.openVendingMachine.space();
+      } else {
+        this.inventory.mouseLeftClick();
+      }
     if (
       !this.inventory.isOpen &&
       !this.inventory.isPointInInventoryButton(
@@ -386,14 +477,16 @@ export class Player extends Drawable {
         MouseCursor.getInstance().getPosition().y,
       )
     ) {
-      this.inventory.open();
+      this.inventory.toggleOpen();
     }
   };
   mouseRightClick = () => {
+    this.inventory.mostRecentInput = "mouse";
     this.inventory.mouseRightClick();
   };
 
   mouseMove = () => {
+    this.inventory.mostRecentInput = "mouse";
     this.inventory.mouseMove();
     //this.faceMouse();
     this.setTileCursorPosition();
@@ -500,8 +593,6 @@ export class Player extends Drawable {
   };
 
   tryMove = (x: number, y: number) => {
-    console.log(`lastX, lastY: ${this.lastX}, ${this.lastY}`);
-
     let slowMotion = this.slowMotionEnabled;
     let newMove = { x: x, y: y };
     // TODO don't move if hit by enemy
@@ -520,9 +611,13 @@ export class Player extends Drawable {
       }
 
     for (let e of this.game.rooms[this.levelID].entities) {
+      e.lastX = e.x;
+      e.lastY = e.y;
+      //console.log(`e.lastX, e.lastY: ${e.lastX}, ${e.lastY}`);
       if (this.tryCollide(e, x, y)) {
         if (e.pushable) {
           // pushing a crate or barrel
+
           let dx = x - this.x;
           let dy = y - this.y;
           let nextX = x + dx;
@@ -533,6 +628,8 @@ export class Player extends Drawable {
           while (true) {
             foundEnd = true;
             for (const f of this.game.rooms[this.levelID].entities) {
+              f.lastX = f.x;
+              f.lastY = f.y;
               if (f.pointIn(nextX, nextY)) {
                 if (!f.chainPushable) {
                   enemyEnd = true;
@@ -565,7 +662,8 @@ export class Player extends Drawable {
               this.game.rooms[this.levelID].particles.push(
                 new SlashParticle(e.x, e.y),
               );
-              this.shakeScreen(this.x, this.y, e.x, e.y, 10);
+              this.shakeScreen(this.x, this.y, e.x, e.y);
+              //this.hitShake(this.x, this.y, e.x, e.y);
 
               this.game.rooms[this.levelID].tick(this);
               return;
@@ -573,7 +671,10 @@ export class Player extends Drawable {
           } else {
             if (this.game.rooms[this.levelID] === this.game.room) Sound.push();
             // here pushedEnemies may still be []
+
             for (const f of pushedEnemies) {
+              f.lastX = f.x;
+              f.lastY = f.y;
               f.x += dx;
               f.y += dy;
               f.drawX = dx;
@@ -589,6 +690,7 @@ export class Player extends Drawable {
               pushedEnemies[pushedEnemies.length - 1].crush();
               if (this.game.rooms[this.levelID] === this.game.room) Sound.hit();
             }
+
             e.x += dx;
             e.y += dy;
             e.drawX = dx;
@@ -617,13 +719,13 @@ export class Player extends Drawable {
         this.game.rooms[this.levelID].tick(this);
     } else {
       if (other instanceof Door) {
-        this.shakeScreen(this.x, this.y, x, y, 10);
+        this.shakeScreen(this.x, this.y, x, y);
+
         if (other.canUnlock(this)) other.unlock(this);
       }
     }
   };
   private updateLastPosition = (x: number, y: number) => {
-    console.log(`updateLastPosition: ${x}, ${y}`);
     this.lastX = x;
     this.lastY = y;
   };
@@ -644,14 +746,18 @@ export class Player extends Drawable {
 
     if (this.inventory.getArmor() && this.inventory.getArmor().health > 0) {
       this.inventory.getArmor().hurt(damage);
-    } else {
+      this.hurtingShield = true;
+      this.hurtShield = true;
+    }
+    {
       this.lastHitBy = enemy;
       //console.log("Last Hit by: ", enemy);
       this.healthBar.hurt();
       this.flashing = true;
-      this.health -= damage;
+      if (!this.hurtShield) this.health -= damage;
+      this.hurtShield = false;
       this.hurting = true;
-      this.hurtAlpha = 0.5;
+      this.hurtAlpha = 0.25;
       if (this.health <= 0 && !GameConstants.DEVELOPER_MODE) {
         this.dead = true;
       }
@@ -715,6 +821,10 @@ export class Player extends Drawable {
 
     this.drawX += x - this.x;
     this.drawY += y - this.y;
+    this.drawMoveQueue.push({
+      drawX: x - this.x,
+      drawY: y - this.y,
+    });
 
     /*
     if (this.drawX > 1) this.drawX = 1;
@@ -777,7 +887,14 @@ export class Player extends Drawable {
     //Sets the action tab state to Wait (during enemy turn)
   };
 
+  /**
+   * Draws the player sprite to the canvas.
+   * Added `ctx.save()` at the beginning and `ctx.restore()` at the end
+   * to ensure canvas state is preserved.
+   */
   drawPlayerSprite = (delta: number) => {
+    Game.ctx.save(); // Save the current canvas state
+
     this.frame += 0.1 * delta;
     if (this.frame >= 4) this.frame = 0;
     Game.drawMob(
@@ -785,17 +902,25 @@ export class Player extends Drawable {
       8 + this.direction * 2,
       1,
       2,
-      this.x - this.drawX,
-      this.y - 1.45 - this.drawY - this.jumpY,
+      this.x - this.drawX - this.hitX,
+      this.y - 1.45 - this.drawY - this.jumpY - this.hitY,
       1,
       2,
     );
     if (this.inventory.getArmor() && this.inventory.getArmor().health > 0) {
       // TODO draw armor
     }
+
+    Game.ctx.restore(); // Restore the canvas state
+  };
+
+  heal = (amount: number) => {
+    this.health += amount;
+    if (this.health > this.maxHealth) this.health = this.maxHealth;
   };
 
   drawSpellBeam = (delta: number) => {
+    Game.ctx.save();
     // Clear existing beam effects each frame
     this.game.rooms[this.levelID].beamEffects = [];
 
@@ -831,8 +956,11 @@ export class Player extends Drawable {
         }
       }
     }
+    Game.ctx.restore();
   };
   draw = (delta: number) => {
+    Game.ctx.save();
+    this.updateDrawXY(delta);
     this.drawableY = this.y;
 
     this.flashingFrame += (delta * 12) / GameConstants.FPS;
@@ -843,6 +971,7 @@ export class Player extends Drawable {
       }
     }
     this.drawSpellBeam(delta);
+    Game.ctx.restore();
   };
 
   faceMouse = () => {
@@ -877,7 +1006,14 @@ export class Player extends Drawable {
     this.mapToggled = !this.mapToggled;
   };
 
+  /**
+   * Draws the top layer elements, such as the health bar.
+   * Added `ctx.save()` at the beginning and `ctx.restore()` at the end
+   * to ensure canvas state is preserved.
+   */
   drawTopLayer = (delta: number) => {
+    Game.ctx.save(); // Save the current canvas state
+
     this.healthBar.draw(
       delta,
       this.health,
@@ -886,9 +1022,12 @@ export class Player extends Drawable {
       this.y - this.drawY,
       !this.flashing || Math.floor(this.flashingFrame) % 2 === 0,
     );
+
+    Game.ctx.restore(); // Restore the canvas state
   };
 
   drawGUI = (delta: number, transitioning: boolean = false) => {
+    Game.ctx.save();
     if (!this.dead) {
       if (!transitioning) this.inventory.draw(delta);
       //this.actionTab.draw(delta);
@@ -898,16 +1037,55 @@ export class Player extends Drawable {
         this.guiHeartFrame = 0;
       }
       for (let i = 0; i < this.maxHealth; i++) {
+        let shake = 0;
+        let shakeY = 0;
+        if (this.health <= 1) {
+          shake =
+            Math.round(Math.sin(Date.now() / 25 / (i + 1)) + i / 2) /
+            2 /
+            GameConstants.TILESIZE;
+          shakeY =
+            Math.round(Math.sin(Date.now() / 25 / (i + 2)) + i / 2) /
+            2 /
+            GameConstants.TILESIZE;
+        }
         let frame = this.guiHeartFrame > 0 ? 1 : 0;
         if (i >= Math.floor(this.health)) {
           if (i == Math.floor(this.health) && (this.health * 2) % 2 == 1) {
             // draw half heart
-            Game.drawFX(4, 2, 1, 1, i, LevelConstants.SCREEN_H - 1, 1, 1);
+            Game.drawFX(
+              4,
+              2,
+              1,
+              1,
+              i + shake,
+              LevelConstants.SCREEN_H - 1 + shakeY,
+              1,
+              1,
+            );
           } else {
-            Game.drawFX(3, 2, 1, 1, i, LevelConstants.SCREEN_H - 1, 1, 1);
+            Game.drawFX(
+              3,
+              2,
+              1,
+              1,
+              i + shake,
+              LevelConstants.SCREEN_H - 1 + shakeY,
+              1,
+              1,
+            );
           }
         } else {
-          Game.drawFX(frame, 2, 1, 1, i, LevelConstants.SCREEN_H - 1, 1, 1);
+          Game.drawFX(
+            frame,
+            2,
+            1,
+            1,
+            i + shake,
+            LevelConstants.SCREEN_H - 1 + shakeY,
+            1,
+            1,
+          );
         }
       }
       if (this.inventory.getArmor())
@@ -980,58 +1158,150 @@ export class Player extends Drawable {
     }
     PostProcessor.draw(delta);
     if (this.hurting) this.drawHurt(delta);
+
     if (this.mapToggled === true) this.map.draw(delta);
     //this.drawTileCursor(delta);
     this.drawInventoryButton(delta);
+    Game.ctx.restore();
   };
 
   drawHurt = (delta: number) => {
+    Game.ctx.save(); // Save the current canvas state
     Game.ctx.globalAlpha = this.hurtAlpha;
     this.hurtAlpha -= (this.hurtAlpha / 10) * delta;
-    if (this.hurtAlpha <= 0.03) {
+    if (this.hurtAlpha <= 0.01) {
       this.hurtAlpha = 0;
       this.hurting = false;
+      this.hurtingShield = false;
     }
-    Game.ctx.globalCompositeOperation = "screen";
+    Game.ctx.globalCompositeOperation = "source-over";
     Game.ctx.fillStyle = "#cc3333"; // bright but not fully saturated red
+    if (this.hurtingShield) {
+      Game.ctx.fillStyle = "#639bff"; // bright but not fully saturated blue
+    }
 
     Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
-    Game.ctx.globalCompositeOperation = "source-over";
+
+    Game.ctx.restore(); // Restore the canvas state
+  };
+
+  drawLowHealth = (delta: number) => {
+    Game.ctx.save();
+    //unused
+    if (this.health <= 1 && !this.dead) {
+      // Calculate pulsating alpha for the vignette effect
+      const lowHealthAlpha = 0.5; //Math.sin(this.lowHealthFrame / 10) * 0.5 + 0.5;
+      Game.ctx.globalAlpha = lowHealthAlpha;
+      this.lowHealthFrame += delta;
+
+      const gradientBottom = Game.ctx.createLinearGradient(
+        0,
+        GameConstants.HEIGHT,
+        0,
+        (GameConstants.HEIGHT * 2) / 3,
+      );
+
+      // Define gradient color stops
+      [gradientBottom].forEach((gradient) => {
+        gradient.addColorStop(0, "#cc3333"); // Solid red at edges
+        gradient.addColorStop(1, "rgba(0, 0, 0, 0)"); // Transparent toward center
+      });
+
+      // Draw the gradients
+      Game.ctx.globalCompositeOperation = "source-over";
+
+      Game.ctx.fillStyle = gradientBottom;
+      Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
+
+      // Reset composite operation and alpha
+      Game.ctx.globalCompositeOperation = "source-over";
+      Game.ctx.globalAlpha = 1.0;
+    } else {
+      this.lowHealthFrame = 0;
+    }
+    Game.ctx.restore();
   };
 
   updateDrawXY = (delta: number) => {
-    //console.log("this.x", this.x);
-    //console.log("this.y", this.y);
     if (!this.doneMoving()) {
-      this.drawX -= this.drawX * this.drawMoveSpeed * delta;
-      this.drawY -= this.drawY * this.drawMoveSpeed * delta;
+      /*
+      for (let i = 0; i < this.drawMoveQueue.length; i++) {
+        let prevX = 0;
+        let prevY = 0;
+        if (this.drawMoveQueue.length > 1) {
+          prevX = this.drawMoveQueue[i - 1]?.drawX;
+          prevY = this.drawMoveQueue[i - 1]?.drawY;
+        }
+        //let threshold = (1 - i / this.drawMoveQueue.length) / 2;
+        const speed = (i + 1) / (this.drawMoveQueue.length * 20);
+        if (Math.abs(this.drawMoveQueue[i].drawX) > 0) {
+          this.drawMoveQueue[i].drawX *=
+            0.99 -
+            Math.abs(Math.sin(this.drawMoveQueue[i].drawX * Math.PI)) / 10 -
+            speed ** delta;
+        } else if (Math.abs(this.drawMoveQueue[i].drawX) < 0.01) {
+          this.drawMoveQueue[i].drawX = 0;
+        }
+        if (Math.abs(this.drawMoveQueue[i].drawY) > 0) {
+          this.drawMoveQueue[i].drawY *=
+            0.99 -
+            Math.abs(Math.sin(this.drawMoveQueue[i].drawX * Math.PI)) / 10 -
+            speed ** delta;
+        } else if (Math.abs(this.drawMoveQueue[i].drawY) < 0.01) {
+          this.drawMoveQueue[i].drawY = 0;
+        }
+
+        this.drawMoveQueue[i].drawX = Math.min(
+          Math.max(this.drawMoveQueue[i].drawX, -1),
+          1,
+        );
+        this.drawMoveQueue[i].drawY = Math.min(
+          Math.max(this.drawMoveQueue[i].drawY, -1),
+          1,
+        );
+      }
+
+      let sumX = 0;
+      let sumY = 0;
+      this.drawMoveQueue.forEach((move) => {
+        sumX += move.drawX;
+        sumY += move.drawY;
+      });
+      
+      this.drawX = sumX;
+      this.drawY = sumY;
+      if (
+        Math.abs(this.drawMoveQueue[0].drawX) < 0.01 &&
+        Math.abs(this.drawMoveQueue[0].drawY) < 0.01
+      )
+        this.drawMoveQueue.shift();
+        
+        */
+      this.drawX *= 0.85 ** delta;
+
+      this.drawY *= 0.85 ** delta;
+      this.drawX = Math.abs(this.drawX) < 0.01 ? 0 : this.drawX;
+      this.drawY = Math.abs(this.drawY) < 0.01 ? 0 : this.drawY;
     }
     if (this.doneHitting()) {
       this.jump(delta);
     }
-    if (Math.abs(this.drawX) < 0.01) {
-      this.drawX = 0;
-      this.justMoved = DrawDirection.Y;
-    }
-    if (Math.abs(this.drawY) < 0.01) {
-      this.drawY = 0;
-      this.justMoved = DrawDirection.X;
-    }
+
     if (!this.doneHitting()) {
       this.updateHitXY(delta);
     }
-    this.drawX += this.hitX;
-    this.drawY += this.hitY;
 
     this.enableSlowMotion();
     GameConstants.ANIMATION_SPEED = this.motionSpeed;
   };
 
   updateHitXY = (delta: number) => {
-    this.hitX -= this.hitX * 0.3;
-    this.hitY -= this.hitY * 0.3;
-    if (Math.abs(this.hitX) < 0.01) this.hitX = 0;
-    if (Math.abs(this.hitY) < 0.01) this.hitY = 0;
+    const hitX = this.hitX - this.hitX * 0.3;
+    const hitY = this.hitY - this.hitY * 0.3;
+    this.hitX = Math.min(Math.max(hitX, -1), 1);
+    this.hitY = Math.min(Math.max(hitY, -1), 1);
+    if (Math.abs(hitX) < 0.01) this.hitX = 0;
+    if (Math.abs(hitY) < 0.01) this.hitY = 0;
   };
 
   hitShake = (
@@ -1040,8 +1310,9 @@ export class Player extends Drawable {
     otherX: number,
     otherY: number,
   ) => {
-    this.hitX = 0.5 * (playerX - otherX);
-    this.hitY = 0.5 * (playerY - otherY);
+    const range = GameConstants.TILESIZE;
+    this.hitX = Math.min(Math.max(0.5 * (playerX - otherX), -range), range);
+    this.hitY = Math.min(Math.max(0.5 * (playerY - otherY), -range), range);
   };
 
   shakeScreen = (
@@ -1051,23 +1322,44 @@ export class Player extends Drawable {
     otherY: number,
     shakeStrength: number = 10,
   ) => {
-    this.hitShake(playerX, playerY, otherX, otherY);
+    const range = GameConstants.TILESIZE;
+    this.hitX = Math.min(Math.max(0.5 * (playerX - otherX), -range), range);
+    this.hitY = Math.min(Math.max(0.5 * (playerY - otherY), -range), range);
 
-    this.game.shakeScreen(this.hitX * shakeStrength, this.hitY * shakeStrength);
+    this.game.shakeScreen(
+      -this.hitX * 3 * shakeStrength,
+      -this.hitY * 3 * shakeStrength,
+    );
   };
 
   jump = (delta: number) => {
     let j = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
-    this.jumpY = Math.sin(j * Math.PI * delta) * this.jumpHeight;
-    if (this.jumpY < 0.01 && this.jumpY > -0.01) this.jumpY = 0;
+    this.jumpY = Math.abs(Math.sin(j * Math.PI) * this.jumpHeight);
+    if (Math.abs(this.jumpY) < 0.01) this.jumpY = 0;
     if (this.jumpY > this.jumpHeight) this.jumpY = this.jumpHeight;
   };
 
+  /**
+   * Draws the inventory button to the canvas.
+   * Added `ctx.save()` at the beginning and `ctx.restore()` at the end
+   * to ensure canvas state is preserved.
+   */
   drawInventoryButton = (delta: number) => {
+    Game.ctx.save(); // Save the current canvas state
+
     Game.drawFX(0, 0, 2, 2, LevelConstants.SCREEN_W - 2, 0, 2, 2);
+
+    Game.ctx.restore(); // Restore the canvas state
   };
 
+  /**
+   * Draws the tile cursor to the canvas.
+   * Added `ctx.save()` at the beginning and `ctx.restore()` at the end
+   * to ensure canvas state is preserved.
+   */
   drawTileCursor = (delta: number) => {
+    Game.ctx.save(); // Save the current canvas state
+
     const inRange = this.moveRangeCheck(
       this.mouseToTile().x,
       this.mouseToTile().y,
@@ -1080,11 +1372,12 @@ export class Player extends Drawable {
       1,
       2,
       this.tileCursor.x,
-      //round to lower odd number
       this.tileCursor.y - 1,
       1,
       2,
     );
+
+    Game.ctx.restore(); // Restore the canvas state
   };
 
   private queueHandler = () => {

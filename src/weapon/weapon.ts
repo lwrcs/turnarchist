@@ -1,17 +1,25 @@
 import { Room } from "../room";
 import { Game } from "../game";
 import { Equippable } from "../item/equippable";
-import { Player } from "../player";
 import { Sound } from "../sound";
 import { SlashParticle } from "../particle/slashParticle";
+import type { Entity } from "../entity/entity";
+import { GameConstants } from "../gameConstants";
+import { WeaponFragments } from "../item/weaponFragments";
+
+interface WeaponStatus {
+  poison: boolean;
+  blood: boolean;
+}
 
 export abstract class Weapon extends Equippable {
   game: Game;
   range: number;
   canMine: boolean;
   damage: number;
-
-  constructor(level: Room, x: number, y: number) {
+  status: WeaponStatus;
+  static itemName = "weapon";
+  constructor(level: Room, x: number, y: number, status?: WeaponStatus) {
     super(level, x, y);
 
     if (level) this.game = level.game;
@@ -19,14 +27,18 @@ export abstract class Weapon extends Equippable {
     this.canMine = false;
     this.range = 1;
     this.damage = 1;
+    this.status = status || { poison: false, blood: false };
+    this.durability = 50;
+    this.durabilityMax = 50;
   }
 
   break = () => {
     this.durability = 0;
     this.wielder.inventory.weapon = null;
     this.toggleEquip();
-    this.wielder.inventory.removeItem(this);
-    this.wielder = null;
+    //this.wielder.inventory.removeItem(this);
+    //this.wielder = null;
+    this.broken = true;
   };
 
   coEquippable = (other: Equippable): boolean => {
@@ -34,11 +46,33 @@ export abstract class Weapon extends Equippable {
     return true;
   };
 
+  applyStatus = (status: WeaponStatus) => {
+    this.status = status;
+  };
+
+  statusEffect = (enemy: Entity) => {
+    this.wielder.applyStatus(enemy, this.status);
+  };
+
+  disassemble = () => {
+    let inventory = this.wielder.inventory;
+    let inventoryX = this.x;
+    let inventoryY = this.y;
+    let numFragments = Math.floor(this.durability / 3);
+    this.toggleEquip();
+    inventory.weapon = null;
+    inventory.removeItem(this);
+    inventory.addItem(
+      new WeaponFragments(this.level, inventoryX, inventoryY, numFragments),
+    );
+  };
+
   weaponMove = (newX: number, newY: number): boolean => {
     let flag = false;
     for (let e of this.game.rooms[this.wielder.levelID].entities) {
       if (e.destroyable && !e.pushable && e.pointIn(newX, newY)) {
         e.hurt(this.wielder, this.damage);
+        this.statusEffect(e);
 
         flag = true;
       }
@@ -51,19 +85,49 @@ export abstract class Weapon extends Equippable {
       this.wielder.hitX = 0.5 * (this.wielder.x - newX);
       this.wielder.hitY = 0.5 * (this.wielder.y - newY);
       this.game.rooms[this.wielder.levelID].particles.push(
-        new SlashParticle(newX, newY)
+        new SlashParticle(newX, newY),
       );
       this.game.rooms[this.wielder.levelID].tick(this.wielder);
       if (this.wielder === this.game.players[this.game.localPlayerID])
         this.game.shakeScreen(10 * this.wielder.hitX, 10 * this.wielder.hitY);
       this.degrade();
-      console.log(this.durability);
+      //console.log(this.durability);
     }
     return !flag;
   };
 
+  drawStatus = (x: number, y: number) => {
+    if (this.status.poison || this.status.blood) {
+      let tileX = 3;
+      if (this.status.poison) {
+        tileX = 4;
+      }
+      if (this.status.blood) {
+        tileX = 3;
+      }
+
+      Game.drawFX(
+        tileX,
+        0,
+        1,
+        1,
+        x - 1 / GameConstants.TILESIZE,
+        y - 1 / GameConstants.TILESIZE,
+        1,
+        1,
+      );
+    }
+  };
+
   getDescription = (): string => {
-    return `${this.name}\nDamage ${this.damage}`;
+    let broken = this.broken ? " (broken)" : "";
+    let status = [];
+    let durability = "";
+    if (this.status.poison) status.push("Poison");
+    if (this.status.blood) status.push(" Bleed");
+    if (this.durability < this.durabilityMax)
+      durability = ` Durability: ${this.durability}/${this.durabilityMax}`;
+    return `${this.name}${broken}\n${status.join(", ")}\n${durability}\n${this.description}`;
   };
 
   tick = () => {};
