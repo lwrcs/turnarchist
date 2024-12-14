@@ -18,6 +18,8 @@ import { Stone } from "./stone";
 import { Pickaxe } from "../weapon/pickaxe";
 import { Hammer } from "./hammer";
 import { Coal } from "./coal";
+import { Torch } from "./torch";
+import { Lantern } from "./lantern";
 
 interface Drop {
   itemType: string;
@@ -44,8 +46,8 @@ export const ItemTypeMap: { [key: string]: typeof Item } = {
   weaponfragments: WeaponFragments,
 
   candle: Candle,
-  torch: Item,
-  lantern: Item,
+  torch: Torch,
+  lantern: Lantern,
 
   redgem: RedGem,
   bluegem: BlueGem,
@@ -97,12 +99,20 @@ export class DropTable {
     entity: Entity,
     uniqueTable: boolean = false,
     useCategory: string[] = ["coin"],
+    force: boolean = false,
   ) => {
     let filteredDrops = this.drops;
     if (useCategory.length > 0) {
       filteredDrops = this.drops.filter((drop) =>
         useCategory.includes(drop.category),
       );
+    }
+
+    if (filteredDrops.length === 0) {
+      if (force) {
+        filteredDrops = this.drops;
+        if (filteredDrops.length === 0) return null;
+      } else return null;
     }
 
     const totalWeight = filteredDrops.reduce(
@@ -116,11 +126,17 @@ export class DropTable {
     for (const drop of filteredDrops) {
       cumulativeWeight += drop.dropWeight;
 
-      if (randomWeight < cumulativeWeight) {
+      if (randomWeight <= cumulativeWeight) {
         this.addNewItem(drop.itemType, entity);
         return;
       }
     }
+
+    if (force && filteredDrops.length > 0) {
+      this.addNewItem(filteredDrops[0].itemType, entity);
+      return;
+    }
+
     return null;
   };
 

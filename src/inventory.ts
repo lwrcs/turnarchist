@@ -70,9 +70,17 @@ export class Inventory {
   private usingItemIndex: number | null = null;
   mostRecentInput: "mouse" | "keyboard" = "keyboard";
 
+  // Static variables for inventory button position
+  private buttonY: number;
+  private buttonX: number;
+
   constructor(game: Game, player: Player) {
     this.game = game;
     this.player = player;
+
+    this.buttonX =
+      (Math.round(GameConstants.WIDTH / 2) + 3) / GameConstants.TILESIZE;
+    this.buttonY = 10;
     Input.mouseDownListeners.push((x, y, button) =>
       this.handleMouseDown(x, y, button),
     );
@@ -250,12 +258,9 @@ export class Inventory {
     const bounds = this.isPointInInventoryBounds(x, y);
 
     // Only close inventory if clicking outside
-    if (
-      (!bounds.inBounds && !this.isPointInQuickbarBounds(x, y).inBounds) ||
-      this.isPointInInventoryButton(x, y)
-    ) {
-      this.close();
-    }
+    //if (!this.isPointInInventoryBounds(x, y) && this.open) {
+    //this.close();
+    //}
   };
 
   mouseRightClick = () => {
@@ -591,7 +596,7 @@ export class Inventory {
 
   drawCoins = (delta: number) => {
     const coinX = LevelConstants.SCREEN_W - 1;
-    const coinY = LevelConstants.SCREEN_H - 1;
+    const coinY = LevelConstants.SCREEN_H - 2.75;
 
     Game.drawItem(19, 0, 1, 2, coinX, coinY - 1, 1, 2);
 
@@ -828,6 +833,7 @@ export class Inventory {
     this.drawCoins(delta);
     this.drawQuickbar(delta);
     this.updateEquipAnimAmount(delta);
+    this.drawInventoryButton(delta);
 
     if (this.isOpen) {
       // Draw semi-transparent background for full inventory
@@ -1093,7 +1099,7 @@ export class Inventory {
     this.drawDraggedItem(delta);
   };
 
-  private isPointInInventoryBounds = (
+  isPointInInventoryBounds = (
     x: number,
     y: number,
   ): { inBounds: boolean; startX: number; startY: number } => {
@@ -1165,11 +1171,25 @@ export class Inventory {
     const tX = x / GameConstants.TILESIZE;
     const tY = y / GameConstants.TILESIZE;
     return (
-      tX >= LevelConstants.SCREEN_W - 2 &&
-      tX <= LevelConstants.SCREEN_W &&
-      tY >= 0 &&
-      tY <= 2
+      tX >= this.buttonX &&
+      tX <= this.buttonX + 2 &&
+      tY >= this.buttonY &&
+      tY <= this.buttonY + 2
     );
+  };
+
+  /**
+   * Draws the inventory button to the canvas.
+   * Added `ctx.save()` at the beginning and `ctx.restore()` at the end
+   * to ensure canvas state is preserved.
+   */
+  drawInventoryButton = (delta: number) => {
+    Game.ctx.save(); // Save the current canvas state
+    this.buttonX = LevelConstants.SCREEN_W - 2;
+    this.buttonY = LevelConstants.SCREEN_H - 2.25;
+    Game.drawFX(0, 0, 2, 2, this.buttonX, this.buttonY, 2, 2);
+
+    Game.ctx.restore(); // Restore the canvas state
   };
 
   handleMouseDown = (x: number, y: number, button: number) => {

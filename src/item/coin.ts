@@ -39,33 +39,7 @@ export class Coin extends Item {
         (this.y + this.h - window.innerHeight) ** 2,
     );
   }
-  draw = (delta: number) => {
-    if (!this.pickedUp) {
-      this.drawableY = this.y;
 
-      if (this.scaleFactor < 1) this.scaleFactor += 0.04;
-      else this.scaleFactor = 1;
-
-      Game.drawItem(0, 0, 1, 1, this.x, this.y, 1, 1);
-      this.frame += (delta * (Math.PI * 2)) / 60;
-      Game.drawItem(
-        this.tileX,
-        this.tileY,
-        1,
-        2,
-        this.x + this.w * (this.scaleFactor * -0.5 + 0.5),
-        this.y +
-          Math.sin(this.frame) * 0.07 -
-          1 +
-          this.offsetY +
-          this.h * (this.scaleFactor * -0.5 + 0.5),
-        this.w * this.scaleFactor,
-        this.h * this.scaleFactor,
-        this.level.shadeColor,
-        this.shadeAmount(),
-      );
-    }
-  };
   pickupSound = () => {
     if (this.level === this.level.game.room) Sound.pickupCoin();
   };

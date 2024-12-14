@@ -13,6 +13,11 @@ export class Map {
   depth: number;
   scale: number;
 
+  offsetX: number = 0;
+  offsetY: number = 0;
+  softOffsetX: number = 0;
+  softOffsetY: number = 0;
+
   constructor(game: Game, player: Player) {
     this.game = game;
     this.scale = 1;
@@ -35,6 +40,26 @@ export class Map {
           players: this.game.players,
         });
       }
+    }
+
+    const enteredRooms = this.mapData
+      .map((data) => data.room)
+      .filter((room) => room.entered);
+
+    if (enteredRooms.length > 0) {
+      const sortedByX = [...enteredRooms].sort((a, b) => a.roomX - b.roomX);
+      console.log(`sortedX ${sortedByX[sortedByX.length - 1].roomX}`);
+      const sortedByY = [...enteredRooms].sort((a, b) => a.roomY - b.roomY);
+      console.log(`sortedY ${sortedByY[0].roomY}`);
+
+      const maxX = sortedByX[sortedByX.length - 1].roomX;
+      const minY = sortedByY[0].roomY;
+
+      this.offsetX = maxX;
+      this.offsetY = minY;
+    } else {
+      this.offsetX = 0;
+      this.offsetY = 0;
     }
   };
 
@@ -61,8 +86,24 @@ export class Map {
 
     Game.ctx.restore(); // Restore the canvas state
   };
+  updateOffsetXY = () => {
+    let diffX = this.offsetX - this.softOffsetX;
+    let diffY = this.offsetY - this.softOffsetY;
+    console.log(`offsetX ${this.offsetX} offsetY ${this.offsetY}`);
+
+    if (Math.abs(diffX) > 0.01) {
+      this.softOffsetX += diffX * 0.1;
+      this.softOffsetX = this.softOffsetX;
+    } else this.softOffsetX = this.offsetX;
+    if (Math.abs(diffY) > 0.01) {
+      this.softOffsetY += diffY * 0.1;
+      this.softOffsetY = this.softOffsetY;
+    } else this.softOffsetY = this.offsetY;
+    console.log(`offsetX ${this.softOffsetX} offsetY ${this.softOffsetY}`);
+  };
 
   draw = (delta: number) => {
+    this.updateOffsetXY();
     this.renderMap(delta);
   };
 
@@ -73,21 +114,25 @@ export class Map {
 
   translateCanvas = (offset: number) => {
     Game.ctx.translate(
-      0.75 * GameConstants.WIDTH -
-        this.game.room.roomX -
-        Math.floor(0.5 * this.game.room.width) +
-        20 -
-        15 * this.scale,
-      0.25 * GameConstants.HEIGHT -
-        this.game.room.roomY -
-        Math.floor(0.5 * this.game.room.height) -
+      Math.floor(0.95 * GameConstants.WIDTH) -
+        //this.game.room.roomX -
+        //Math.floor(0.5 * this.game.room.width) +
+        15 * this.scale -
+        Math.floor(this.softOffsetX),
+      Math.floor(0.05 * GameConstants.HEIGHT) -
+        //this.game.room.roomY -
+        //Math.floor(0.5 * this.game.room.height) -
         1 * this.scale -
-        offset,
+        offset -
+        Math.floor(this.softOffsetY),
     );
   };
 
   drawRoom = (data, delta: number) => {
+    //this.drawUnderRoomPlayers(data.players, delta);
+
     this.drawRoomOutline(data.room);
+
     this.drawRoomWalls(data.walls);
     this.drawRoomDoors(data.doors);
     this.drawRoomEntities(data.entities);
@@ -148,6 +193,69 @@ export class Map {
         this.game.rooms[players[i].levelID].mapGroup === this.game.room.mapGroup
       ) {
         Game.ctx.fillRect(players[i].x * s, players[i].y * s, 1 * s, 1 * s);
+      }
+    }
+    Game.ctx.restore(); // Restore the canvas state
+  };
+
+  drawUnderRoomPlayers = (players, delta: number) => {
+    const s = this.scale;
+    Game.ctx.save(); // Save the current canvas state
+    for (const i in players) {
+      this.game.rooms[players[i].levelID].mapGroup === this.game.room.mapGroup;
+      {
+        if (Math.floor(Date.now() / 300) % 2) {
+          Game.ctx.fillStyle = "#4D8C8C";
+          // Draw 3x3 outline box around player
+          Game.ctx.fillRect(
+            (players[i].x - 1) * s,
+            (players[i].y - 1) * s,
+            1 * s,
+            1 * s,
+          ); // Top left
+          Game.ctx.fillRect(
+            players[i].x * s,
+            (players[i].y - 1) * s,
+            1 * s,
+            1 * s,
+          ); // Top middle
+          Game.ctx.fillRect(
+            (players[i].x + 1) * s,
+            (players[i].y - 1) * s,
+            1 * s,
+            1 * s,
+          ); // Top right
+          Game.ctx.fillRect(
+            (players[i].x - 1) * s,
+            players[i].y * s,
+            1 * s,
+            1 * s,
+          ); // Middle left
+          Game.ctx.fillRect(
+            (players[i].x + 1) * s,
+            players[i].y * s,
+            1 * s,
+            1 * s,
+          ); // Middle right
+          Game.ctx.fillRect(
+            (players[i].x - 1) * s,
+            (players[i].y + 1) * s,
+            1 * s,
+            1 * s,
+          ); // Bottom left
+          Game.ctx.fillRect(
+            players[i].x * s,
+            (players[i].y + 1) * s,
+            1 * s,
+            1 * s,
+          ); // Bottom middle
+          Game.ctx.fillRect(
+            (players[i].x + 1) * s,
+            (players[i].y + 1) * s,
+            1 * s,
+            1 * s,
+          ); // Bottom right
+        }
       }
     }
     Game.ctx.restore(); // Restore the canvas state

@@ -41,7 +41,6 @@ export class ZombieEnemy extends Enemy {
     this.forwardOnlyAttack = true;
     this.drawMoveSpeed = 0.2;
     this.jumpHeight = 0.35;
-
     if (drop) this.drop = drop;
     if (Math.random() < this.dropChance) {
       this.getDrop(["consumable", "gem", "tool", "coin"]);

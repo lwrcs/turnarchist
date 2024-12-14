@@ -52,21 +52,57 @@ export class Spawner extends Enemy {
     this.tileX = 6;
     this.tileY = 4;
     this.seenPlayer = true;
-    let drop = Game.randTable([1, 2, 3], Random.rand);
-    switch (drop) {
-      case 1:
-        this.drop = new BlueGem(this.room, this.x, this.y);
-        break;
-      case 2:
-        this.drop = new GreenGem(this.room, this.x, this.y);
-        break;
-      case 3:
-        this.drop = new RedGem(this.room, this.x, this.y);
-        break;
-    }
+
     this.enemyTable = enemyTable.filter((t) => t !== 7);
     const randSpawnType = Game.randTable(this.enemyTable, Random.rand);
     this.enemySpawnType = randSpawnType;
+    switch (this.enemySpawnType) {
+      case 0:
+        this.getDrop(["consumables"]);
+        break;
+      case 1:
+        this.getDrop(["gems"]);
+        break;
+      case 2:
+        this.getDrop(["consumables"]);
+        break;
+      case 3:
+        this.getDrop(["gems"]);
+        break;
+      case 4:
+        this.getDrop(["gems"]);
+        break;
+      case 5:
+        this.getDrop(["consumables"]);
+        break;
+      case 6:
+        this.getDrop(["gems"]);
+        break;
+      case 7:
+        this.getDrop(["gems"]);
+        break;
+      case 8:
+        this.getDrop(["gems"]);
+        break;
+      case 9:
+        this.getDrop(["equipment", "weapons", "tools"]);
+        break;
+      case 10:
+        this.getDrop(["weapons"]);
+        break;
+      case 11:
+        this.getDrop(["weapons"]);
+        break;
+      case 12:
+        this.getDrop(["weapons"]);
+        break;
+      case 13:
+        this.getDrop(["weapons"]);
+        break;
+      case 14:
+        this.getDrop(["spellbook"]);
+        break;
+    }
 
     this.name = "reaper";
   }

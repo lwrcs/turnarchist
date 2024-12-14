@@ -1082,9 +1082,27 @@ export class Room {
   };
   populateDownLadder = (rand: () => number) => {
     this.addRandomTorches("medium");
-
     const { x, y } = this.getRoomCenter();
     this.roomArray[x][y] = new DownLadder(this, this.game, x, y);
+    const numChests = Math.floor(Math.random() * 4);
+
+    let tiles = this.getEmptyTiles();
+    tiles = tiles.filter((tile) => tile.x !== x || tile.y !== y);
+    let weaponDropped = false;
+    for (let i = 0; i < 5; i++) {
+      if (tiles.length > 0) {
+        const { x, y } = this.getRandomEmptyPosition(tiles);
+
+        let chest = new Chest(this, this.game, x, y);
+
+        if (!weaponDropped) {
+          chest.getDrop(["weapon"], true);
+          weaponDropped = true;
+        } else chest.getDrop(["consumables"], true);
+        tiles.filter((tile) => tile.x !== x && tile.y !== y);
+        this.entities.push(chest);
+      }
+    }
   };
   populateRopeHole = (rand: () => number) => {
     this.addRandomTorches("medium");

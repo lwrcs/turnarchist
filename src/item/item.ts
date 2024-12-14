@@ -33,6 +33,9 @@ export class Item extends Drawable {
   drawOffset: number;
   pickupOffsetY: number;
   static itemName: string;
+  inChest: boolean;
+  chestOffsetY: number;
+  sineAnimateFactor: number;
 
   // Constructor for the Item class
   constructor(level: Room, x: number, y: number) {
@@ -63,6 +66,8 @@ export class Item extends Drawable {
     this.description = "";
     this.drawOffset = 0;
     this.pickupOffsetY = 1;
+    this.chestOffsetY = 0;
+    this.sineAnimateFactor = 1;
   }
 
   static add<
@@ -81,6 +86,13 @@ export class Item extends Drawable {
     return "";
   };
 
+  animateFromChest = () => {
+    this.chestOffsetY = 0.5;
+    this.alpha = 0;
+    this.inChest = true;
+    this.sineAnimateFactor = 0;
+  };
+
   // Function to play sound when item is picked up
   pickupSound = () => {
     if (this.level === this.level.game.room) Sound.genericPickup();
@@ -92,8 +104,7 @@ export class Item extends Drawable {
   onPickup = (player: Player) => {
     if (!this.pickedUp) {
       this.startY = player.y;
-      this.y = player.y;
-      this.x = player.x;
+
       this.drawableY = this.y;
       this.alpha = 1;
       this.pickedUp = player.inventory.addItem(this);
@@ -130,9 +141,20 @@ export class Item extends Drawable {
 
   // Function to draw the item
   draw = (delta: number) => {
+    Game.ctx.save();
     if (!this.pickedUp) {
+      Game.ctx.globalAlpha = this.alpha;
+      if (this.alpha < 1) this.alpha += 0.01 * delta;
       this.drawableY = this.y;
+      if (this.inChest) {
+        this.chestOffsetY -= Math.abs(this.chestOffsetY + 0.5) * 0.035 * delta;
 
+        if (this.chestOffsetY < -0.47) {
+          this.chestOffsetY = -0.5;
+        }
+      }
+      if (this.sineAnimateFactor < 1 && this.chestOffsetY < -0.45)
+        this.sineAnimateFactor += 0.2 * delta;
       if (this.scaleFactor > 0) this.scaleFactor *= 0.5 ** delta;
       else this.scaleFactor = 0;
       const scale = 1 / (this.scaleFactor + 1);
@@ -147,16 +169,18 @@ export class Item extends Drawable {
         2,
         this.x + this.w * (scale * -0.5 + 0.5) + this.drawOffset,
         this.y +
-          Math.sin(this.frame) * 0.07 -
+          this.sineAnimateFactor * Math.sin(this.frame) * 0.07 -
           1 +
           this.offsetY +
-          this.h * (scale * -0.5 + 0.5),
+          this.h * (scale * -0.5 + 0.5) +
+          this.chestOffsetY,
         this.w * scale,
         this.h * scale,
         this.level.shadeColor,
         this.shadeAmount(),
       );
     }
+    Game.ctx.restore();
   };
 
   setDrawOffset = () => {

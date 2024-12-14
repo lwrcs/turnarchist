@@ -14,6 +14,9 @@ import { globalEventBus } from "../eventBus";
 import type { LightSource } from "../lightSource";
 import { EVENTS } from "../events";
 import { DamageNumber } from "../particle/damageNumber";
+import { DownLadder } from "../tile/downLadder";
+import { Door } from "../tile/door";
+import { Wall } from "../tile/wall";
 
 import { DropTable } from "../item/dropTable";
 
@@ -74,7 +77,7 @@ export class Entity extends Drawable {
   protected crushed: boolean;
   protected rumbling: boolean;
   protected animationSpeed: number;
-  protected drawYOffset: number;
+  drawYOffset: number;
   name: string;
   protected orthogonalAttack: boolean;
   protected diagonalAttack: boolean;
@@ -132,6 +135,7 @@ export class Entity extends Drawable {
     this.diagonalAttackRange = 1;
     this.drawMoveSpeed = 0.3;
     this.unconscious = false;
+    this.dropChance = 0.01;
   }
 
   static add<
@@ -146,8 +150,8 @@ export class Entity extends Drawable {
     room.entities.push(new this(room, game, x, y, ...rest));
   }
 
-  getDrop = (useCategory: string[] = []) => {
-    DropTable.getDrop(this, false, useCategory);
+  getDrop = (useCategory: string[] = [], force: boolean = false) => {
+    DropTable.getDrop(this, false, useCategory, force);
   };
 
   addLightSource = (lightSource: LightSource) => {
@@ -617,6 +621,24 @@ export class Entity extends Drawable {
       }
     }
     return total / count;
+  };
+
+  getOpenTile = (): { x: number; y: number } => {
+    let x, y;
+    do {
+      x = Math.floor(Math.random() * 3 + this.x - 1);
+      y = Math.floor(Math.random() * 3 + this.y - 1);
+    } while (
+      (x === this.x && y === this.y) ||
+      this.room.roomArray[x][y].isSolid() ||
+      this.room.roomArray[x][y] instanceof DownLadder ||
+      this.room.roomArray[x][y] instanceof Door ||
+      this.room.roomArray[x][y] instanceof Wall ||
+      this.room.entities.some((e) => e.x === x && e.y === y)
+    );
+
+    if (!x || !y) return { x: this.x, y: this.y };
+    return { x, y };
   };
 
   makeHitWarnings = () => {

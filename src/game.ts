@@ -286,6 +286,10 @@ export class Game {
           window.requestAnimationFrame(this.run);
           this.onResize();
           window.addEventListener("resize", this.onResize);
+          window.addEventListener("orientationchange", () => {
+            // Small delay to ensure new dimensions are available
+            setTimeout(this.onResize, 100);
+          });
 
           this.players = {};
           this.offlinePlayers = {};
@@ -626,7 +630,11 @@ export class Game {
       GameConstants.isMobile = true;
       this.pushMessage("mobile detected");
       // Use smaller scale for mobile devices based on screen size
-      Game.scale = Math.min(maxWidthScale, maxHeightScale, 2); // Cap at 2x for mobile
+      if (window.orientation === 90 || window.orientation === -90) {
+        Game.scale = Math.min(maxWidthScale, maxHeightScale, 3); // Cap at 2x for mobile
+      } else {
+        Game.scale = Math.min(maxWidthScale, maxHeightScale, 3); // Cap at 2x for mobile
+      }
     } else {
       GameConstants.isMobile = false;
       // For desktop, use standard scaling logic
@@ -640,12 +648,15 @@ export class Game {
       Game.scale = Math.min(maxWidthScale, maxHeightScale, 1); // Ensure minimum scale of 1
     }
 
-    LevelConstants.SCREEN_W = Math.floor(
-      window.innerWidth / Game.scale / GameConstants.TILESIZE,
-    );
-    LevelConstants.SCREEN_H = Math.floor(
-      window.innerHeight / Game.scale / GameConstants.TILESIZE,
-    );
+    LevelConstants.SCREEN_W =
+      Math.floor(
+        (window.innerWidth / Game.scale / GameConstants.TILESIZE) * 16,
+      ) / 16;
+    LevelConstants.SCREEN_H =
+      Math.floor(
+        (window.innerHeight / Game.scale / GameConstants.TILESIZE) * 16,
+      ) / 16;
+
     GameConstants.WIDTH = LevelConstants.SCREEN_W * GameConstants.TILESIZE;
     GameConstants.HEIGHT = LevelConstants.SCREEN_H * GameConstants.TILESIZE;
     Game.ctx.canvas.setAttribute("width", `${GameConstants.WIDTH}`);

@@ -446,38 +446,36 @@ export class Player extends Drawable {
   };
   mouseLeftClick = () => {
     this.inventory.mostRecentInput = "mouse";
+    const mousePos = MouseCursor.getInstance().getPosition();
+    const { x, y } = mousePos;
+
     if (this.dead) {
       this.restart();
-    } else if (this.openVendingMachine)
-      if (
-        this.openVendingMachine.isPointInVendingMachineBounds(
-          MouseCursor.getInstance().getPosition().x,
-          MouseCursor.getInstance().getPosition().y,
-        )
-      ) {
+      return;
+    }
+
+    if (
+      (this.inventory.isOpen &&
+        !this.inventory.isPointInInventoryBounds(x, y).inBounds) ||
+      this.inventory.isPointInInventoryButton(x, y)
+    ) {
+      this.inventory.toggleOpen();
+    }
+
+    if (this.openVendingMachine) {
+      if (this.openVendingMachine.isPointInVendingMachineBounds(x, y)) {
         this.openVendingMachine.space();
       } else {
         this.inventory.mouseLeftClick();
       }
-    if (
-      !this.inventory.isOpen &&
-      !this.inventory.isPointInInventoryButton(
-        MouseCursor.getInstance().getPosition().x,
-        MouseCursor.getInstance().getPosition().y,
-      ) &&
-      !this.inventory.isPointInQuickbarBounds(
-        MouseCursor.getInstance().getPosition().x,
-        MouseCursor.getInstance().getPosition().y,
-      ).inBounds
-    ) {
+      return;
+    }
+    const notInInventoryUI =
+      !this.inventory.isPointInInventoryButton(x, y) &&
+      !this.inventory.isPointInQuickbarBounds(x, y).inBounds;
+
+    if (notInInventoryUI) {
       this.moveWithMouse();
-    } else if (
-      this.inventory.isPointInInventoryButton(
-        MouseCursor.getInstance().getPosition().x,
-        MouseCursor.getInstance().getPosition().y,
-      )
-    ) {
-      this.inventory.toggleOpen();
     }
   };
   mouseRightClick = () => {
@@ -1161,7 +1159,7 @@ export class Player extends Drawable {
 
     if (this.mapToggled === true) this.map.draw(delta);
     //this.drawTileCursor(delta);
-    this.drawInventoryButton(delta);
+    //this.drawInventoryButton(delta);
     Game.ctx.restore();
   };
 
@@ -1337,19 +1335,6 @@ export class Player extends Drawable {
     this.jumpY = Math.abs(Math.sin(j * Math.PI) * this.jumpHeight);
     if (Math.abs(this.jumpY) < 0.01) this.jumpY = 0;
     if (this.jumpY > this.jumpHeight) this.jumpY = this.jumpHeight;
-  };
-
-  /**
-   * Draws the inventory button to the canvas.
-   * Added `ctx.save()` at the beginning and `ctx.restore()` at the end
-   * to ensure canvas state is preserved.
-   */
-  drawInventoryButton = (delta: number) => {
-    Game.ctx.save(); // Save the current canvas state
-
-    Game.drawFX(0, 0, 2, 2, LevelConstants.SCREEN_W - 2, 0, 2, 2);
-
-    Game.ctx.restore(); // Restore the canvas state
   };
 
   /**

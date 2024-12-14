@@ -169,19 +169,16 @@ export class VendingMachine extends Entity {
         this.playerOpened.inventory.subtractItemCount(i);
       }
 
-      let x, y;
-      do {
-        x = Game.rand(this.x - 1, this.x + 1, Random.rand);
-        y = Game.rand(this.y - 1, this.y + 1, Random.rand);
-      } while (
-        (x === this.x && y === this.y) ||
-        this.room.roomArray[x][y].isSolid() ||
-        this.room.entities.some((e) => e.x === x && e.y === y)
-      );
-
       let newItem = new (this.item.constructor as { new (): Item })();
-      newItem = newItem.constructor(this.room, x, y);
-      newItem.onPickup(this.playerOpened);
+      newItem = newItem.constructor(this.room, this.x, this.y);
+      if (!this.playerOpened.inventory.isFull) {
+        newItem.onPickup(this.playerOpened);
+      } else {
+        const { x, y } = this.getOpenTile();
+        newItem.x = x;
+        newItem.y = y;
+        this.room.items.push(newItem);
+      }
       const cost = this.costItems[0].stackCount;
       const pluralLetter = cost > 1 ? "s" : "";
 
