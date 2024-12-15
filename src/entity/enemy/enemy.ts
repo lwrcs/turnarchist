@@ -53,10 +53,11 @@ export abstract class Enemy extends Entity {
     this.jumpHeight = 0.3;
     //this.dir = Direction.South;
     this.name = "generic enemy";
-    this.dropChance = 0.3;
+    this.dropChance = 0.1;
     this.status = { poison: false, bleed: false };
     this.effectStartTick = 1;
     this.startTick = 1;
+    this.isEnemy = true;
     //this.getDrop(["weapon", "equipment", "consumable", "gem", "tool", "coin"]);
   }
 

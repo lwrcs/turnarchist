@@ -1,22 +1,10 @@
-import { Item } from "../../item/item";
 import { Game } from "../../game";
-import { Key } from "../../item/key";
 import { Room } from "../../room";
-import { Heart } from "../../item/heart";
-import { Armor } from "../../item/armor";
 import { Entity } from "../entity";
-import { LevelConstants } from "../../levelConstants";
-import { GreenGem } from "../../item/greengem";
-import { GenericParticle } from "../../particle/genericParticle";
 import { Coin } from "../../item/coin";
-import { Sound } from "../../sound";
-import { RedGem } from "../../item/redgem";
-import { BlueGem } from "../../item/bluegem";
 import { EntityType } from "../entity";
 import { Random } from "../../random";
 import { Player } from "../../player";
-import { Torch } from "../../item/torch";
-import { WeaponFragments } from "../../item/weaponFragments";
 import { ChestLayer } from "./chestLayer";
 import { ImageParticle } from "../../particle/imageParticle";
 
@@ -38,6 +26,10 @@ export class Chest extends Entity {
     this.dropX = 0;
     this.dropY = 0;
     this.drop = null;
+    this.destroyable = false;
+    this.pushable = false;
+    this.chainPushable = false;
+    this.interactable = true;
     /*
     this.layer = new ChestLayer(
       this.room,
@@ -53,14 +45,18 @@ export class Chest extends Entity {
     return EntityType.CHEST;
   }
 
-  readonly hurt = (playerHitBy: Player, damage: number) => {
+  interact = (playerHitBy: Player) => {
     //this.healthBar.hurt();
     this.health -= 1;
     if (this.health === 2 && !this.opening) this.open();
 
-    if (this.health === 1) this.drop.onPickup(playerHitBy);
-    if (this.health <= 0) this.kill();
-    else this.hurtCallback();
+    if (this.health === 1) {
+      this.drop.onPickup(playerHitBy);
+      this.destroyable = true;
+    }
+    if (this.health <= 0) {
+      this.kill();
+    } else this.hurtCallback();
   };
 
   private open = () => {
@@ -68,19 +64,8 @@ export class Chest extends Entity {
     this.tileY = 2;
 
     this.opening = true;
-    /*
-    if (this.getOpenTile().x && this.getOpenTile().y) {
-      const { x, y } = this.getOpenTile();
 
-      this.drop.x = x;
-      this.drop.y = y;
-
-      this.room.items.push(this.drop);
-    } else if (!this.game.players[0].inventory.isFull()) {
-      this.drop.onPickup(this.game.players[0]);
-    }
-      */
-    if (this.drop === null) this.drop = Coin.add(this.room, this.x, this.y);
+    if (this.drop === null) this.getDrop(["consumable", "gem", "coin"]);
     this.dropLoot();
     this.drop.animateFromChest();
   };

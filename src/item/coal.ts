@@ -15,6 +15,9 @@ export class Coal extends Usable {
     this.tileX = 17;
     this.tileY = 0;
     this.stackable = true;
+    this.stackCount = Math.ceil(Math.random() * 7 + 3);
+    this.name = Coal.itemName;
+    this.description = "A piece of coal. Fuels lantern.";
   }
   onUse = (player: Player) => {
     let l = player.inventory.hasItem(Lantern);
@@ -28,9 +31,5 @@ export class Coal extends Usable {
         }
       }
     }
-  };
-
-  getDescription = (): string => {
-    return "COAL\nA lump of coal.";
   };
 }

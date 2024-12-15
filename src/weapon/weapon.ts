@@ -58,7 +58,7 @@ export abstract class Weapon extends Equippable {
     let inventory = this.wielder.inventory;
     let inventoryX = this.x;
     let inventoryY = this.y;
-    let numFragments = Math.floor(this.durability / 3);
+    let numFragments = Math.floor(this.durability / 1.5);
     this.toggleEquip();
     inventory.weapon = null;
     inventory.removeItem(this);
@@ -127,7 +127,7 @@ export abstract class Weapon extends Equippable {
     if (this.status.blood) status.push(" Bleed");
     if (this.durability < this.durabilityMax)
       durability = ` Durability: ${this.durability}/${this.durabilityMax}`;
-    return `${this.name}${broken}\n${status.join(", ")}\n${durability}\n${this.description}`;
+    return `${this.name}${broken}\n${status.join(", ")}\n${durability}\n${this.description}\ndamage: ${this.damage}`;
   };
 
   tick = () => {};

@@ -20,6 +20,7 @@ import { Hammer } from "./hammer";
 import { Coal } from "./coal";
 import { Torch } from "./torch";
 import { Lantern } from "./lantern";
+import { Spellbook } from "../weapon/spellbook";
 
 interface Drop {
   itemType: string;
@@ -31,6 +32,7 @@ export const ItemTypeMap: { [key: string]: typeof Item } = {
   dualdagger: DualDagger,
   warhammer: Warhammer,
   spear: Spear,
+  spellbook: Spellbook,
 
   armor: Armor,
 
@@ -63,6 +65,7 @@ export class DropTable {
     { itemType: "dualdagger", dropWeight: 3, category: "weapon" },
     { itemType: "warhammer", dropWeight: 3, category: "weapon" },
     { itemType: "spear", dropWeight: 5, category: "weapon" },
+    { itemType: "spellbook", dropWeight: 0.1, category: "weapon" },
 
     // Equipment
     { itemType: "armor", dropWeight: 8, category: "equipment" },
@@ -74,17 +77,17 @@ export class DropTable {
     // Consumables
     { itemType: "heart", dropWeight: 5, category: "consumable" },
 
-    { itemType: "weaponpoison", dropWeight: 5, category: "poison" },
-    { itemType: "weaponblood", dropWeight: 5, category: "blood" },
+    { itemType: "weaponpoison", dropWeight: 0.25, category: "consumable" },
+    { itemType: "weaponblood", dropWeight: 0.25, category: "consumable" },
 
     { itemType: "coin", dropWeight: 250, category: "coin" },
 
-    { itemType: "weaponfragments", dropWeight: 5, category: "weapon" },
+    { itemType: "weaponfragments", dropWeight: 5, category: "consumable" },
 
     // Light sources
-    { itemType: "candle", dropWeight: 15, category: "light" },
-    { itemType: "torch", dropWeight: 15, category: "light" },
-    { itemType: "lantern", dropWeight: 15, category: "light" },
+    { itemType: "candle", dropWeight: 10, category: "light" },
+    { itemType: "torch", dropWeight: 5, category: "light" },
+    { itemType: "lantern", dropWeight: 2, category: "light" },
 
     // Gems and minerals
     { itemType: "redgem", dropWeight: 5, category: "gem" },
@@ -92,7 +95,7 @@ export class DropTable {
     { itemType: "greengem", dropWeight: 5, category: "gem" },
     { itemType: "gold", dropWeight: 5, category: "gem" },
     { itemType: "stone", dropWeight: 5, category: "gem" },
-    { itemType: "coal", dropWeight: 5, category: "fuel" },
+    { itemType: "coal", dropWeight: 15, category: "fuel" },
   ];
 
   static getDrop = (

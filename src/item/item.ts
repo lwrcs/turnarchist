@@ -83,7 +83,8 @@ export class Item extends Drawable {
 
   // Function to get description of the item, to be overridden by subclasses
   getDescription = (): string => {
-    return "";
+    const stackText = this.stackable ? `\nAmount: ${this.stackCount}` : "";
+    return `${this.name} \n${this.description} \n${stackText}`;
   };
 
   animateFromChest = () => {

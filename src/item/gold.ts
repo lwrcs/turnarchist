@@ -12,11 +12,8 @@ export class Gold extends Item {
 
     this.tileX = 18;
     this.tileY = 0;
-
+    this.name = Gold.itemName;
     this.stackable = true;
+    this.description = "A bar of gold";
   }
-
-  getDescription = (): string => {
-    return "GOLD\nA nugget of gold.";
-  };
 }

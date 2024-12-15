@@ -11,10 +11,12 @@ export class Hammer extends Usable {
   static itemName = "hammer";
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
-    this.tileX = 8;
+    this.tileX = 21;
     this.tileY = 2;
     this.offsetY = -0.3;
     this.canUseOnOther = true;
+    this.description = "useful for breaking weapons down into fragments";
+    this.name = Hammer.itemName;
   }
 
   onUse = (player: Player) => {

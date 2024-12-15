@@ -144,5 +144,6 @@ export class GameConstants {
     Armor,
     Heart,
     Backpack,
+    Hammer,
   ];
 }

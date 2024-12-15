@@ -90,7 +90,8 @@ export class Entity extends Drawable {
   hitWarnings: HitWarning[];
   imageParticleX: number = 0;
   imageParticleY: number = 26;
-  dropChance: number = 0.03;
+  dropChance: number = 0.02;
+  isEnemy: boolean;
 
   constructor(room: Room, game: Game, x: number, y: number) {
     super();
@@ -135,7 +136,8 @@ export class Entity extends Drawable {
     this.diagonalAttackRange = 1;
     this.drawMoveSpeed = 0.3;
     this.unconscious = false;
-    this.dropChance = 0.01;
+    this.dropChance = 0.02;
+    this.isEnemy = false;
   }
 
   static add<

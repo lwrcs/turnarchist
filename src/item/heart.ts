@@ -13,18 +13,18 @@ export class Heart extends Usable {
     this.tileX = 8;
     this.tileY = 0;
     this.offsetY = -0.3;
+    this.name = Heart.itemName;
+    this.description = "restores 1 health";
   }
 
   onUse = (player: Player) => {
-    player.health = Math.min(player.maxHealth, player.health + 1);
-    if (this.level.game.rooms[player.levelID] === this.level.game.room)
-      Sound.heal();
-    player.inventory.removeItem(this);
+    if (player.health < player.maxHealth) {
+      player.health = Math.min(player.maxHealth, player.health + 1);
+      if (this.level.game.rooms[player.levelID] === this.level.game.room)
+        Sound.heal();
+      player.inventory.removeItem(this);
+    }
 
     //this.level.items = this.level.items.filter((x) => x !== this); // removes itself from the level
-  };
-
-  getDescription = () => {
-    return "HEALTH POTION\nRestores 1 heart";
   };
 }

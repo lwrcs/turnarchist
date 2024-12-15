@@ -2700,10 +2700,11 @@ var Enemy = /** @class */ (function (_super) {
         _this.jumpHeight = 0.3;
         //this.dir = Direction.South;
         _this.name = "generic enemy";
-        _this.dropChance = 0.3;
+        _this.dropChance = 0.1;
         _this.status = { poison: false, bleed: false };
         _this.effectStartTick = 1;
         _this.startTick = 1;
+        _this.isEnemy = true;
         return _this;
         //this.getDrop(["weapon", "equipment", "consumable", "gem", "tool", "coin"]);
     }
@@ -4443,10 +4444,10 @@ var Spawner = /** @class */ (function (_super) {
                             enemySpawnTypeCount >= maxIndividualCount) {
                             shouldSpawn = false;
                         }
-                        if (shouldSpawn) {
-                            _this.room.projectiles.push(new enemySpawnAnimation_1.EnemySpawnAnimation(_this.room, spawned_1, position.x, position.y));
-                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, position.x, position.y, _this.x, _this.y));
-                        }
+                        //if (shouldSpawn) {
+                        _this.room.projectiles.push(new enemySpawnAnimation_1.EnemySpawnAnimation(_this.room, spawned_1, position.x, position.y));
+                        _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, position.x, position.y, _this.x, _this.y));
+                        // }
                     }
                 }
                 if (shouldSpawn)
@@ -4470,9 +4471,6 @@ var Spawner = /** @class */ (function (_super) {
                 _this.drawExclamation(delta);
             }
         };
-        _this.dropLoot = function () {
-            _this.room.items.push(_this.drop);
-        };
         _this.ticks = 0;
         _this.health = 4;
         _this.maxHealth = 4;
@@ -4482,52 +4480,57 @@ var Spawner = /** @class */ (function (_super) {
         _this.enemyTable = enemyTable.filter(function (t) { return t !== 7; });
         var randSpawnType = game_1.Game.randTable(_this.enemyTable, random_1.Random.rand);
         _this.enemySpawnType = randSpawnType;
-        switch (_this.enemySpawnType) {
-            case 0:
-                _this.getDrop(["consumables"]);
-                break;
-            case 1:
-                _this.getDrop(["gems"]);
-                break;
-            case 2:
-                _this.getDrop(["consumables"]);
-                break;
-            case 3:
-                _this.getDrop(["gems"]);
-                break;
-            case 4:
-                _this.getDrop(["gems"]);
-                break;
-            case 5:
-                _this.getDrop(["consumables"]);
-                break;
-            case 6:
-                _this.getDrop(["gems"]);
-                break;
-            case 7:
-                _this.getDrop(["gems"]);
-                break;
-            case 8:
-                _this.getDrop(["gems"]);
-                break;
-            case 9:
-                _this.getDrop(["equipment", "weapons", "tools"]);
-                break;
-            case 10:
-                _this.getDrop(["weapons"]);
-                break;
-            case 11:
-                _this.getDrop(["weapons"]);
-                break;
-            case 12:
-                _this.getDrop(["weapons"]);
-                break;
-            case 13:
-                _this.getDrop(["weapons"]);
-                break;
-            case 14:
-                _this.getDrop(["spellbook"]);
-                break;
+        if (Math.random() < 0.15) {
+            switch (_this.enemySpawnType) {
+                case 0:
+                    _this.getDrop(["consumable"]);
+                    break;
+                case 1:
+                    _this.getDrop(["gem"]);
+                    break;
+                case 2:
+                    _this.getDrop(["consumable"]);
+                    break;
+                case 3:
+                    _this.getDrop(["gem"]);
+                    break;
+                case 4:
+                    _this.getDrop(["gem"]);
+                    break;
+                case 5:
+                    _this.getDrop(["consumable"]);
+                    break;
+                case 6:
+                    _this.getDrop(["gem"]);
+                    break;
+                case 7:
+                    _this.getDrop(["gem"]);
+                    break;
+                case 8:
+                    _this.getDrop(["gem"]);
+                    break;
+                case 9:
+                    _this.getDrop(["equipment", "weapon", "tool"]);
+                    break;
+                case 10:
+                    _this.getDrop(["weapon"]);
+                    break;
+                case 11:
+                    _this.getDrop(["weapon"]);
+                    break;
+                case 12:
+                    _this.getDrop(["weapon"]);
+                    break;
+                case 13:
+                    _this.getDrop(["weapon"]);
+                    break;
+                case 14:
+                    _this.getDrop(["weapon"]);
+                    break;
+            }
+        }
+        else {
+            _this.getDrop(["consumable", "tool"]);
         }
         _this.name = "reaper";
         return _this;
@@ -5087,7 +5090,7 @@ var Entity = /** @class */ (function (_super) {
         _this.sleepingZFrame = 0;
         _this.imageParticleX = 0;
         _this.imageParticleY = 26;
-        _this.dropChance = 0.03;
+        _this.dropChance = 0.02;
         _this.getDrop = function (useCategory, force) {
             if (useCategory === void 0) { useCategory = []; }
             if (force === void 0) { force = false; }
@@ -5569,7 +5572,8 @@ var Entity = /** @class */ (function (_super) {
         _this.diagonalAttackRange = 1;
         _this.drawMoveSpeed = 0.3;
         _this.unconscious = false;
-        _this.dropChance = 0.01;
+        _this.dropChance = 0.02;
+        _this.isEnemy = false;
         return _this;
     }
     Entity.add = function (room, game, x, y) {
@@ -5713,7 +5717,6 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Chest = void 0;
 var game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 var entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
-var coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
 var entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 var random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
 var imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ "./src/particle/imageParticle.ts");
@@ -5721,15 +5724,18 @@ var Chest = /** @class */ (function (_super) {
     __extends(Chest, _super);
     function Chest(room, game, x, y) {
         var _this = _super.call(this, room, game, x, y) || this;
-        _this.hurt = function (playerHitBy, damage) {
+        _this.interact = function (playerHitBy) {
             //this.healthBar.hurt();
             _this.health -= 1;
             if (_this.health === 2 && !_this.opening)
                 _this.open();
-            if (_this.health === 1)
+            if (_this.health === 1) {
                 _this.drop.onPickup(playerHitBy);
-            if (_this.health <= 0)
+                _this.destroyable = true;
+            }
+            if (_this.health <= 0) {
                 _this.kill();
+            }
             else
                 _this.hurtCallback();
         };
@@ -5737,20 +5743,8 @@ var Chest = /** @class */ (function (_super) {
             _this.tileX = 0;
             _this.tileY = 2;
             _this.opening = true;
-            /*
-            if (this.getOpenTile().x && this.getOpenTile().y) {
-              const { x, y } = this.getOpenTile();
-        
-              this.drop.x = x;
-              this.drop.y = y;
-        
-              this.room.items.push(this.drop);
-            } else if (!this.game.players[0].inventory.isFull()) {
-              this.drop.onPickup(this.game.players[0]);
-            }
-              */
             if (_this.drop === null)
-                _this.drop = coin_1.Coin.add(_this.room, _this.x, _this.y);
+                _this.getDrop(["consumable", "gem", "coin"]);
             _this.dropLoot();
             _this.drop.animateFromChest();
         };
@@ -5792,6 +5786,10 @@ var Chest = /** @class */ (function (_super) {
         _this.dropX = 0;
         _this.dropY = 0;
         _this.drop = null;
+        _this.destroyable = false;
+        _this.pushable = false;
+        _this.chainPushable = false;
+        _this.interactable = true;
         return _this;
         /*
         this.layer = new ChestLayer(
@@ -8056,6 +8054,7 @@ var dagger_1 = __webpack_require__(/*! ./weapon/dagger */ "./src/weapon/dagger.t
 var spear_1 = __webpack_require__(/*! ./weapon/spear */ "./src/weapon/spear.ts");
 var spellbook_1 = __webpack_require__(/*! ./weapon/spellbook */ "./src/weapon/spellbook.ts");
 var warhammer_1 = __webpack_require__(/*! ./weapon/warhammer */ "./src/weapon/warhammer.ts");
+var hammer_1 = __webpack_require__(/*! ./item/hammer */ "./src/item/hammer.ts");
 var GameConstants = /** @class */ (function () {
     function GameConstants() {
     }
@@ -8166,6 +8165,7 @@ var GameConstants = /** @class */ (function () {
         armor_1.Armor,
         heart_1.Heart,
         backpack_1.Backpack,
+        hammer_1.Hammer,
     ];
     return GameConstants;
 }());
@@ -10898,12 +10898,12 @@ var Coal = /** @class */ (function (_super) {
                 }
             }
         };
-        _this.getDescription = function () {
-            return "COAL\nA lump of coal.";
-        };
         _this.tileX = 17;
         _this.tileY = 0;
         _this.stackable = true;
+        _this.stackCount = Math.ceil(Math.random() * 7 + 3);
+        _this.name = Coal.itemName;
+        _this.description = "A piece of coal. Fuels lantern.";
         return _this;
     }
     Coal.itemName = "coal";
@@ -11024,10 +11024,12 @@ var hammer_1 = __webpack_require__(/*! ./hammer */ "./src/item/hammer.ts");
 var coal_1 = __webpack_require__(/*! ./coal */ "./src/item/coal.ts");
 var torch_1 = __webpack_require__(/*! ./torch */ "./src/item/torch.ts");
 var lantern_1 = __webpack_require__(/*! ./lantern */ "./src/item/lantern.ts");
+var spellbook_1 = __webpack_require__(/*! ../weapon/spellbook */ "./src/weapon/spellbook.ts");
 exports.ItemTypeMap = {
     dualdagger: dualdagger_1.DualDagger,
     warhammer: warhammer_1.Warhammer,
     spear: spear_1.Spear,
+    spellbook: spellbook_1.Spellbook,
     armor: armor_1.Armor,
     pickaxe: pickaxe_1.Pickaxe,
     hammer: hammer_1.Hammer,
@@ -11056,6 +11058,7 @@ var DropTable = /** @class */ (function () {
         { itemType: "dualdagger", dropWeight: 3, category: "weapon" },
         { itemType: "warhammer", dropWeight: 3, category: "weapon" },
         { itemType: "spear", dropWeight: 5, category: "weapon" },
+        { itemType: "spellbook", dropWeight: 0.1, category: "weapon" },
         // Equipment
         { itemType: "armor", dropWeight: 8, category: "equipment" },
         // Tools
@@ -11063,21 +11066,21 @@ var DropTable = /** @class */ (function () {
         { itemType: "hammer", dropWeight: 3, category: "tool" },
         // Consumables
         { itemType: "heart", dropWeight: 5, category: "consumable" },
-        { itemType: "weaponpoison", dropWeight: 5, category: "poison" },
-        { itemType: "weaponblood", dropWeight: 5, category: "blood" },
+        { itemType: "weaponpoison", dropWeight: 0.25, category: "consumable" },
+        { itemType: "weaponblood", dropWeight: 0.25, category: "consumable" },
         { itemType: "coin", dropWeight: 250, category: "coin" },
-        { itemType: "weaponfragments", dropWeight: 5, category: "weapon" },
+        { itemType: "weaponfragments", dropWeight: 5, category: "consumable" },
         // Light sources
-        { itemType: "candle", dropWeight: 15, category: "light" },
-        { itemType: "torch", dropWeight: 15, category: "light" },
-        { itemType: "lantern", dropWeight: 15, category: "light" },
+        { itemType: "candle", dropWeight: 10, category: "light" },
+        { itemType: "torch", dropWeight: 5, category: "light" },
+        { itemType: "lantern", dropWeight: 2, category: "light" },
         // Gems and minerals
         { itemType: "redgem", dropWeight: 5, category: "gem" },
         { itemType: "bluegem", dropWeight: 5, category: "gem" },
         { itemType: "greengem", dropWeight: 5, category: "gem" },
         { itemType: "gold", dropWeight: 5, category: "gem" },
         { itemType: "stone", dropWeight: 5, category: "gem" },
-        { itemType: "coal", dropWeight: 5, category: "fuel" },
+        { itemType: "coal", dropWeight: 15, category: "fuel" },
     ];
     DropTable.getDrop = function (entity, uniqueTable, useCategory, force) {
         if (uniqueTable === void 0) { uniqueTable = false; }
@@ -11298,12 +11301,11 @@ var Gold = /** @class */ (function (_super) {
     __extends(Gold, _super);
     function Gold(level, x, y) {
         var _this = _super.call(this, level, x, y) || this;
-        _this.getDescription = function () {
-            return "GOLD\nA nugget of gold.";
-        };
         _this.tileX = 18;
         _this.tileY = 0;
+        _this.name = Gold.itemName;
         _this.stackable = true;
+        _this.description = "A bar of gold";
         return _this;
     }
     Gold.itemName = "gold";
@@ -11449,10 +11451,12 @@ var Hammer = /** @class */ (function (_super) {
                 _this.level.game.pushMessage("You probably shouldn't disassemble your dagger...");
             }
         };
-        _this.tileX = 8;
+        _this.tileX = 21;
         _this.tileY = 2;
         _this.offsetY = -0.3;
         _this.canUseOnOther = true;
+        _this.description = "useful for breaking weapons down into fragments";
+        _this.name = Hammer.itemName;
         return _this;
     }
     Hammer.itemName = "hammer";
@@ -11494,18 +11498,19 @@ var Heart = /** @class */ (function (_super) {
     function Heart(level, x, y) {
         var _this = _super.call(this, level, x, y) || this;
         _this.onUse = function (player) {
-            player.health = Math.min(player.maxHealth, player.health + 1);
-            if (_this.level.game.rooms[player.levelID] === _this.level.game.room)
-                sound_1.Sound.heal();
-            player.inventory.removeItem(_this);
+            if (player.health < player.maxHealth) {
+                player.health = Math.min(player.maxHealth, player.health + 1);
+                if (_this.level.game.rooms[player.levelID] === _this.level.game.room)
+                    sound_1.Sound.heal();
+                player.inventory.removeItem(_this);
+            }
             //this.level.items = this.level.items.filter((x) => x !== this); // removes itself from the level
-        };
-        _this.getDescription = function () {
-            return "HEALTH POTION\nRestores 1 heart";
         };
         _this.tileX = 8;
         _this.tileY = 0;
         _this.offsetY = -0.3;
+        _this.name = Heart.itemName;
+        _this.description = "restores 1 health";
         return _this;
     }
     Heart.itemName = "health potion";
@@ -11566,7 +11571,8 @@ var Item = /** @class */ (function (_super) {
         _this.tickInInventory = function () { };
         // Function to get description of the item, to be overridden by subclasses
         _this.getDescription = function () {
-            return "";
+            var stackText = _this.stackable ? "\nAmount: ".concat(_this.stackCount) : "";
+            return "".concat(_this.name, " \n").concat(_this.description, " \n").concat(stackText);
         };
         _this.animateFromChest = function () {
             _this.chestOffsetY = 0.5;
@@ -13973,9 +13979,7 @@ var Map = /** @class */ (function () {
                 .filter(function (room) { return room.entered; });
             if (enteredRooms.length > 0) {
                 var sortedByX = __spreadArray([], enteredRooms, true).sort(function (a, b) { return a.roomX - b.roomX; });
-                console.log("sortedX ".concat(sortedByX[sortedByX.length - 1].roomX));
                 var sortedByY = __spreadArray([], enteredRooms, true).sort(function (a, b) { return a.roomY - b.roomY; });
-                console.log("sortedY ".concat(sortedByY[0].roomY));
                 var maxX = sortedByX[sortedByX.length - 1].roomX;
                 var minY = sortedByY[0].roomY;
                 _this.offsetX = maxX;
@@ -14009,7 +14013,6 @@ var Map = /** @class */ (function () {
         this.updateOffsetXY = function () {
             var diffX = _this.offsetX - _this.softOffsetX;
             var diffY = _this.offsetY - _this.softOffsetY;
-            console.log("offsetX ".concat(_this.offsetX, " offsetY ").concat(_this.offsetY));
             if (Math.abs(diffX) > 0.01) {
                 _this.softOffsetX += diffX * 0.1;
                 _this.softOffsetX = _this.softOffsetX;
@@ -14022,7 +14025,6 @@ var Map = /** @class */ (function () {
             }
             else
                 _this.softOffsetY = _this.offsetY;
-            console.log("offsetX ".concat(_this.softOffsetX, " offsetY ").concat(_this.softOffsetY));
         };
         this.draw = function (delta) {
             _this.updateOffsetXY();
@@ -16935,10 +16937,12 @@ var Room = /** @class */ (function () {
             _this.addRandomTorches("medium");
             var _a = _this.getRoomCenter(), x = _a.x, y = _a.y;
             _this.roomArray[x][y] = new downLadder_1.DownLadder(_this, _this.game, x, y);
-            var numChests = Math.floor(Math.random() * 4);
+            var numChests = Math.ceil(Math.random() * 5);
             var tiles = _this.getEmptyTiles();
             tiles = tiles.filter(function (tile) { return tile.x !== x || tile.y !== y; });
             var weaponDropped = false;
+            var toolDropped = false;
+            var lightDropped = false;
             var _loop_2 = function (i) {
                 if (tiles.length > 0) {
                     var _b = _this.getRandomEmptyPosition(tiles), x_2 = _b.x, y_2 = _b.y;
@@ -16947,13 +16951,14 @@ var Room = /** @class */ (function () {
                         chest.getDrop(["weapon"], true);
                         weaponDropped = true;
                     }
-                    else
-                        chest.getDrop(["consumables"], true);
+                    else {
+                        chest.getDrop(["consumable", "gem", "light", "tool", "fuel"], true);
+                    }
                     tiles.filter(function (tile) { return tile.x !== x_2 && tile.y !== y_2; });
                     _this.entities.push(chest);
                 }
             };
-            for (var i = 0; i < 5; i++) {
+            for (var i = 0; i < numChests; i++) {
                 _loop_2(i);
             }
         };
@@ -21013,7 +21018,6 @@ exports.Spellbook = void 0;
 var weapon_1 = __webpack_require__(/*! ./weapon */ "./src/weapon/weapon.ts");
 var sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
 var playerFireball_1 = __webpack_require__(/*! ../projectile/playerFireball */ "./src/projectile/playerFireball.ts");
-var enemy_1 = __webpack_require__(/*! ../entity/enemy/enemy */ "./src/entity/enemy/enemy.ts");
 var utils_1 = __webpack_require__(/*! ../utils */ "./src/utils.ts");
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var Spellbook = /** @class */ (function (_super) {
@@ -21027,7 +21031,7 @@ var Spellbook = /** @class */ (function (_super) {
                 return !e.pushable &&
                     utils_1.Utils.distance(_this.wielder.x, _this.wielder.y, e.x, e.y) <= _this.range;
             });
-            var enemies = _this.targets.filter(function (e) { return e instanceof enemy_1.Enemy; });
+            var enemies = _this.targets.filter(function (e) { return e.isEnemy === true; });
             //console.log(enemies);
             if (enemies.length > 0)
                 return enemies;
@@ -21207,7 +21211,7 @@ var Weapon = /** @class */ (function (_super) {
             var inventory = _this.wielder.inventory;
             var inventoryX = _this.x;
             var inventoryY = _this.y;
-            var numFragments = Math.floor(_this.durability / 3);
+            var numFragments = Math.floor(_this.durability / 1.5);
             _this.toggleEquip();
             inventory.weapon = null;
             inventory.removeItem(_this);
@@ -21259,7 +21263,7 @@ var Weapon = /** @class */ (function (_super) {
                 status.push(" Bleed");
             if (_this.durability < _this.durabilityMax)
                 durability = " Durability: ".concat(_this.durability, "/").concat(_this.durabilityMax);
-            return "".concat(_this.name).concat(broken, "\n").concat(status.join(", "), "\n").concat(durability, "\n").concat(_this.description);
+            return "".concat(_this.name).concat(broken, "\n").concat(status.join(", "), "\n").concat(durability, "\n").concat(_this.description, "\ndamage: ").concat(_this.damage);
         };
         _this.tick = function () { };
         if (level)

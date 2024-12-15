@@ -48,9 +48,7 @@ export class Map {
 
     if (enteredRooms.length > 0) {
       const sortedByX = [...enteredRooms].sort((a, b) => a.roomX - b.roomX);
-      console.log(`sortedX ${sortedByX[sortedByX.length - 1].roomX}`);
       const sortedByY = [...enteredRooms].sort((a, b) => a.roomY - b.roomY);
-      console.log(`sortedY ${sortedByY[0].roomY}`);
 
       const maxX = sortedByX[sortedByX.length - 1].roomX;
       const minY = sortedByY[0].roomY;
@@ -89,7 +87,6 @@ export class Map {
   updateOffsetXY = () => {
     let diffX = this.offsetX - this.softOffsetX;
     let diffY = this.offsetY - this.softOffsetY;
-    console.log(`offsetX ${this.offsetX} offsetY ${this.offsetY}`);
 
     if (Math.abs(diffX) > 0.01) {
       this.softOffsetX += diffX * 0.1;
@@ -99,7 +96,6 @@ export class Map {
       this.softOffsetY += diffY * 0.1;
       this.softOffsetY = this.softOffsetY;
     } else this.softOffsetY = this.offsetY;
-    console.log(`offsetX ${this.softOffsetX} offsetY ${this.softOffsetY}`);
   };
 
   draw = (delta: number) => {

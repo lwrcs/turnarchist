@@ -56,54 +56,57 @@ export class Spawner extends Enemy {
     this.enemyTable = enemyTable.filter((t) => t !== 7);
     const randSpawnType = Game.randTable(this.enemyTable, Random.rand);
     this.enemySpawnType = randSpawnType;
-    switch (this.enemySpawnType) {
-      case 0:
-        this.getDrop(["consumables"]);
-        break;
-      case 1:
-        this.getDrop(["gems"]);
-        break;
-      case 2:
-        this.getDrop(["consumables"]);
-        break;
-      case 3:
-        this.getDrop(["gems"]);
-        break;
-      case 4:
-        this.getDrop(["gems"]);
-        break;
-      case 5:
-        this.getDrop(["consumables"]);
-        break;
-      case 6:
-        this.getDrop(["gems"]);
-        break;
-      case 7:
-        this.getDrop(["gems"]);
-        break;
-      case 8:
-        this.getDrop(["gems"]);
-        break;
-      case 9:
-        this.getDrop(["equipment", "weapons", "tools"]);
-        break;
-      case 10:
-        this.getDrop(["weapons"]);
-        break;
-      case 11:
-        this.getDrop(["weapons"]);
-        break;
-      case 12:
-        this.getDrop(["weapons"]);
-        break;
-      case 13:
-        this.getDrop(["weapons"]);
-        break;
-      case 14:
-        this.getDrop(["spellbook"]);
-        break;
+    if (Math.random() < 0.15) {
+      switch (this.enemySpawnType) {
+        case 0:
+          this.getDrop(["consumable"]);
+          break;
+        case 1:
+          this.getDrop(["gem"]);
+          break;
+        case 2:
+          this.getDrop(["consumable"]);
+          break;
+        case 3:
+          this.getDrop(["gem"]);
+          break;
+        case 4:
+          this.getDrop(["gem"]);
+          break;
+        case 5:
+          this.getDrop(["consumable"]);
+          break;
+        case 6:
+          this.getDrop(["gem"]);
+          break;
+        case 7:
+          this.getDrop(["gem"]);
+          break;
+        case 8:
+          this.getDrop(["gem"]);
+          break;
+        case 9:
+          this.getDrop(["equipment", "weapon", "tool"]);
+          break;
+        case 10:
+          this.getDrop(["weapon"]);
+          break;
+        case 11:
+          this.getDrop(["weapon"]);
+          break;
+        case 12:
+          this.getDrop(["weapon"]);
+          break;
+        case 13:
+          this.getDrop(["weapon"]);
+          break;
+        case 14:
+          this.getDrop(["weapon"]);
+          break;
+      }
+    } else {
+      this.getDrop(["consumable", "tool"]);
     }
-
     this.name = "reaper";
   }
 
@@ -302,19 +305,14 @@ export class Spawner extends Enemy {
             shouldSpawn = false;
           }
 
-          if (shouldSpawn) {
-            this.room.projectiles.push(
-              new EnemySpawnAnimation(
-                this.room,
-                spawned,
-                position.x,
-                position.y,
-              ),
-            );
-            this.room.hitwarnings.push(
-              new HitWarning(this.game, position.x, position.y, this.x, this.y),
-            );
-          }
+          //if (shouldSpawn) {
+          this.room.projectiles.push(
+            new EnemySpawnAnimation(this.room, spawned, position.x, position.y),
+          );
+          this.room.hitwarnings.push(
+            new HitWarning(this.game, position.x, position.y, this.x, this.y),
+          );
+          // }
         }
       }
       if (shouldSpawn) this.ticks++;
@@ -359,9 +357,5 @@ export class Spawner extends Enemy {
     if (this.alertTicks > 0) {
       this.drawExclamation(delta);
     }
-  };
-
-  dropLoot = () => {
-    this.room.items.push(this.drop);
   };
 }

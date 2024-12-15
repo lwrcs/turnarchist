@@ -3,8 +3,7 @@ import { Weapon } from "./weapon";
 import { Room } from "../room";
 import { Sound } from "../sound";
 import { PlayerFireball } from "../projectile/playerFireball";
-import { Entity } from "../entity/entity";
-import { Enemy } from "../entity/enemy/enemy";
+import type { Entity } from "../entity/entity";
 import { Utils } from "../utils";
 import { Direction } from "../game";
 export class Spellbook extends Weapon {
@@ -32,7 +31,7 @@ export class Spellbook extends Weapon {
         !e.pushable &&
         Utils.distance(this.wielder.x, this.wielder.y, e.x, e.y) <= this.range,
     );
-    let enemies = this.targets.filter((e) => e instanceof Enemy);
+    let enemies = this.targets.filter((e) => e.isEnemy === true);
     //console.log(enemies);
     if (enemies.length > 0) return enemies;
     else {
