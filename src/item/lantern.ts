@@ -17,25 +17,12 @@ export class Lantern extends Light {
     this.tileY = 0;
     this.fuelCap = 250;
     this.name = "lantern";
+    this.canRefuel = true;
+    this.maxBrightness = 3;
+    this.minBrightness = 2;
+    this.radius = 7;
+    this.broken = this.fuel <= 0 ? true : false;
   }
-  addFuel = (amount: number) => {
-    this.fuel += amount;
-  };
-
-  setRadius = () => {
-    this.wielder.sightRadius = Math.min(this.fuel / 4 + 3, 7);
-  };
-
-  toggleEquip = () => {
-    if (this.fuel > 0) {
-      this.equipped = !this.equipped;
-      if (this.isIgnited()) this.setRadius();
-      else this.resetRadius();
-    } else
-      this.wielder.game.pushMessage(
-        "I'll need some fuel before I can use this",
-      );
-  };
 
   getDescription = () => {
     const percentage = Math.round((this.fuel / this.fuelCap) * 100);

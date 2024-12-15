@@ -8045,16 +8045,18 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GameConstants = void 0;
 var armor_1 = __webpack_require__(/*! ./item/armor */ "./src/item/armor.ts");
 var backpack_1 = __webpack_require__(/*! ./item/backpack */ "./src/item/backpack.ts");
+var coal_1 = __webpack_require__(/*! ./item/coal */ "./src/item/coal.ts");
 var godStone_1 = __webpack_require__(/*! ./item/godStone */ "./src/item/godStone.ts");
 var heart_1 = __webpack_require__(/*! ./item/heart */ "./src/item/heart.ts");
+var lantern_1 = __webpack_require__(/*! ./item/lantern */ "./src/item/lantern.ts");
 var torch_1 = __webpack_require__(/*! ./item/torch */ "./src/item/torch.ts");
-var weaponFragments_1 = __webpack_require__(/*! ./item/weaponFragments */ "./src/item/weaponFragments.ts");
 var levelConstants_1 = __webpack_require__(/*! ./levelConstants */ "./src/levelConstants.ts");
 var dagger_1 = __webpack_require__(/*! ./weapon/dagger */ "./src/weapon/dagger.ts");
 var spear_1 = __webpack_require__(/*! ./weapon/spear */ "./src/weapon/spear.ts");
 var spellbook_1 = __webpack_require__(/*! ./weapon/spellbook */ "./src/weapon/spellbook.ts");
 var warhammer_1 = __webpack_require__(/*! ./weapon/warhammer */ "./src/weapon/warhammer.ts");
 var hammer_1 = __webpack_require__(/*! ./item/hammer */ "./src/item/hammer.ts");
+var spellbookPage_1 = __webpack_require__(/*! ./item/spellbookPage */ "./src/item/spellbookPage.ts");
 var GameConstants = /** @class */ (function () {
     function GameConstants() {
     }
@@ -8156,7 +8158,7 @@ var GameConstants = /** @class */ (function () {
     GameConstants.STARTING_INVENTORY = [dagger_1.Dagger, torch_1.Torch];
     GameConstants.STARTING_DEV_INVENTORY = [
         dagger_1.Dagger,
-        weaponFragments_1.WeaponFragments,
+        spellbookPage_1.SpellbookPage,
         torch_1.Torch,
         warhammer_1.Warhammer,
         godStone_1.GodStone,
@@ -8166,6 +8168,8 @@ var GameConstants = /** @class */ (function () {
         heart_1.Heart,
         backpack_1.Backpack,
         hammer_1.Hammer,
+        lantern_1.Lantern,
+        coal_1.Coal,
     ];
     return GameConstants;
 }());
@@ -9647,7 +9651,7 @@ var Inventory = /** @class */ (function () {
         this.openTime = Date.now();
         this.coins = 0;
         this.weapon = null;
-        this.expansion = 0;
+        this._expansion = 0;
         this.grabbedItem = null;
         this._mouseDownStartX = null;
         this._mouseDownStartY = null;
@@ -9707,7 +9711,7 @@ var Inventory = /** @class */ (function () {
             }
         };
         this.down = function () {
-            if (_this.selY < _this.rows + _this.expansion - 1) {
+            if (_this.selY < _this.rows + _this._expansion - 1) {
                 _this.selY++;
             }
         };
@@ -9853,7 +9857,7 @@ var Inventory = /** @class */ (function () {
                 var oldSelY = _this.selY;
                 _this.selX = Math.max(0, Math.min(Math.floor((x - bounds.startX) / (s + 2 * b + g)), _this.cols - 1));
                 _this.selY = _this.isOpen
-                    ? Math.max(0, Math.min(Math.floor((y - bounds.startY) / (s + 2 * b + g)), _this.rows + _this.expansion - 1))
+                    ? Math.max(0, Math.min(Math.floor((y - bounds.startY) / (s + 2 * b + g)), _this.rows + _this._expansion - 1))
                     : 0;
                 if (oldSelX !== _this.selX || oldSelY !== _this.selY) {
                     // Optional: Handle selection change
@@ -9989,7 +9993,7 @@ var Inventory = /** @class */ (function () {
         };
         this.isFull = function () {
             return (_this.items.filter(function (i) { return i !== null; }).length >=
-                (_this.rows + _this.expansion) * _this.cols);
+                (_this.rows + _this._expansion) * _this.cols);
         };
         this.addItem = function (item) {
             if (item === null)
@@ -10098,7 +10102,7 @@ var Inventory = /** @class */ (function () {
             var hg = 3 + Math.round(0.5 * Math.sin(Date.now() * 0.01) + 0.5); // highlighted growth
             var ob = 1; // outer border
             var width = _this.cols * (s + 2 * b + g) - g;
-            var height = (_this.rows + _this.expansion) * (s + 2 * b + g) - g;
+            var height = (_this.rows + _this._expansion) * (s + 2 * b + g) - g;
             var startX = Math.round(0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * width) - ob;
             var startY = _this.isOpen
                 ? Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT - 0.5 * height) - ob
@@ -10110,7 +10114,8 @@ var Inventory = /** @class */ (function () {
                 y <= startY + checkHeight);
         };
         this.drawQuickbar = function (delta) {
-            var _a = mouseCursor_1.MouseCursor.getInstance().getPosition(), x = _a.x, y = _a.y;
+            var _a, _b;
+            var _c = mouseCursor_1.MouseCursor.getInstance().getPosition(), x = _c.x, y = _c.y;
             var isInBounds = _this.isPointInInventoryBounds(x, y).inBounds;
             var s = 18; // size of box
             var b = 2; // border
@@ -10151,7 +10156,7 @@ var Inventory = /** @class */ (function () {
                     var drawY = startY + b + Math.floor(0.5 * s) - 0.5 * gameConstants_1.GameConstants.TILESIZE;
                     var drawXScaled = drawX / gameConstants_1.GameConstants.TILESIZE;
                     var drawYScaled = drawY / gameConstants_1.GameConstants.TILESIZE;
-                    _this.items[idx].drawIcon(delta, drawXScaled, drawYScaled);
+                    (_a = _this.items[idx]) === null || _a === void 0 ? void 0 : _a.drawIcon(delta, drawXScaled, drawYScaled);
                 }
             }
             // Draw selection box only if mouse is in bounds
@@ -10176,7 +10181,7 @@ var Inventory = /** @class */ (function () {
                     var drawY = selStartY + b + Math.floor(0.5 * s) - 0.5 * gameConstants_1.GameConstants.TILESIZE;
                     var drawXScaled = drawX / gameConstants_1.GameConstants.TILESIZE;
                     var drawYScaled = drawY / gameConstants_1.GameConstants.TILESIZE;
-                    _this.items[idx].drawIcon(delta, drawXScaled, drawYScaled);
+                    (_b = _this.items[idx]) === null || _b === void 0 ? void 0 : _b.drawIcon(delta, drawXScaled, drawYScaled);
                 }
                 _this.drawUsingItem(delta, startX, startY, s, b, g);
             }
@@ -10216,13 +10221,14 @@ var Inventory = /** @class */ (function () {
             });
         };
         this.draw = function (delta) {
-            var _a = mouseCursor_1.MouseCursor.getInstance().getPosition(), x = _a.x, y = _a.y;
+            var _a, _b;
+            var _c = mouseCursor_1.MouseCursor.getInstance().getPosition(), x = _c.x, y = _c.y;
             var isInBounds = _this.isPointInInventoryBounds(x, y).inBounds;
             var s = Math.min(18, (18 * (Date.now() - _this.openTime)) / OPEN_TIME); // size of box
             var b = 2; // border
             var g = -2; // gap
             var hg = 3 + Math.round(0.5 * Math.sin(Date.now() * 0.01) + 0.5); // highlighted growth
-            var invRows = _this.rows + _this.expansion;
+            var invRows = _this.rows + _this._expansion;
             var ob = 1; // outer border
             var width = _this.cols * (s + 2 * b + g) - g;
             var height = invRows * (s + 2 * b + g) - g;
@@ -10243,7 +10249,7 @@ var Inventory = /** @class */ (function () {
                 var b_1 = 2; // border
                 var g_1 = -2; // gap
                 var hg_1 = 3 + Math.round(0.5 * Math.sin(Date.now() * 0.01) + 0.5); // highlighted growth
-                var invRows_1 = _this.rows + _this.expansion;
+                var invRows_1 = _this.rows + _this._expansion;
                 var ob_1 = 1; // outer border
                 var width_1 = _this.cols * (s_1 + 2 * b_1 + g_1) - g_1;
                 var height_1 = invRows_1 * (s_1 + 2 * b_1 + g_1) - g_1;
@@ -10268,7 +10274,7 @@ var Inventory = /** @class */ (function () {
                 }
                 // Draw individual inventory slots (similar to drawQuickbar, but for all rows)
                 for (var xIdx = 0; xIdx < _this.cols; xIdx++) {
-                    for (var yIdx = 0; yIdx < _this.rows + _this.expansion; yIdx++) {
+                    for (var yIdx = 0; yIdx < _this.rows + _this._expansion; yIdx++) {
                         // Draw slot outline
                         var slotX = Math.round(0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * width_1 + xIdx * (s_1 + 2 * b_1 + g_1));
                         var slotY = Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT - 0.5 * height_1 + yIdx * (s_1 + 2 * b_1 + g_1));
@@ -10298,7 +10304,7 @@ var Inventory = /** @class */ (function () {
                                 0.5 * gameConstants_1.GameConstants.TILESIZE;
                             var drawXScaled = drawX / gameConstants_1.GameConstants.TILESIZE;
                             var drawYScaled = drawY / gameConstants_1.GameConstants.TILESIZE;
-                            _this.items[idx].drawIcon(delta, drawXScaled, drawYScaled);
+                            (_a = _this.items[idx]) === null || _a === void 0 ? void 0 : _a.drawIcon(delta, drawXScaled, drawYScaled);
                         }
                     }
                 }
@@ -10379,39 +10385,9 @@ var Inventory = /** @class */ (function () {
                                 0.5 * gameConstants_1.GameConstants.TILESIZE;
                             var drawXScaled = drawX / gameConstants_1.GameConstants.TILESIZE;
                             var drawYScaled = drawY / gameConstants_1.GameConstants.TILESIZE;
-                            _this.items[idx].drawIcon(delta, drawXScaled, drawYScaled);
+                            (_b = _this.items[idx]) === null || _b === void 0 ? void 0 : _b.drawIcon(delta, drawXScaled, drawYScaled);
                         }
                         // **Move drawUsingItem here, after the main selection box**
-                    }
-                    // Draw item description and action text (unique to full inventory view)
-                    var selectedIdx = _this.selX + _this.selY * _this.cols;
-                    if (selectedIdx < _this.items.length &&
-                        _this.items[selectedIdx] !== null) {
-                        var item = _this.items[selectedIdx];
-                        game_1.Game.ctx.fillStyle = "white";
-                        // Determine action text
-                        var topPhrase = "";
-                        if (item instanceof equippable_1.Equippable) {
-                            topPhrase = item.equipped
-                                ? "[SPACE] to unequip"
-                                : "[SPACE] to equip";
-                        }
-                        if (item instanceof usable_1.Usable) {
-                            topPhrase = "[SPACE] to use";
-                        }
-                        // Draw action text
-                        var actionTextWidth = game_1.Game.measureText(topPhrase).width;
-                        game_1.Game.fillText(topPhrase, 0.5 * (gameConstants_1.GameConstants.WIDTH - actionTextWidth), 5);
-                        // Draw item description
-                        var lines = item.getDescription().split("\n");
-                        var nextY_1 = Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT -
-                            0.5 * height_1 +
-                            (_this.rows + _this.expansion) * (s_1 + 2 * b_1 + g_1) +
-                            b_1 +
-                            5);
-                        lines.forEach(function (line) {
-                            nextY_1 = _this.textWrap(line, 5, nextY_1, gameConstants_1.GameConstants.WIDTH - 10);
-                        });
                     }
                     // **Ensure drawUsingItem is not called again here**
                     // this.drawUsingItem(delta, mainBgX, mainBgY, s, b, g);
@@ -10438,7 +10414,7 @@ var Inventory = /** @class */ (function () {
             var height;
             if (_this.isOpen) {
                 // Full inventory bounds
-                height = (_this.rows + _this.expansion) * (s + 2 * b + g) - g;
+                height = (_this.rows + _this._expansion) * (s + 2 * b + g) - g;
                 startX = 0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * width;
                 startY = 0.5 * gameConstants_1.GameConstants.HEIGHT - 0.5 * height;
             }
@@ -10595,8 +10571,8 @@ var Inventory = /** @class */ (function () {
             return _this.handleMouseUp(x, y, button);
         });
         input_1.Input.holdCallback = function () { return _this.onHoldDetected(); };
-        this.items = new Array((this.rows + this.expansion) * this.cols).fill(null);
-        this.equipAnimAmount = new Array((this.rows + this.expansion) * this.cols).fill(0);
+        this.items = new Array((this.rows + this._expansion) * this.cols).fill(null);
+        this.equipAnimAmount = new Array((this.rows + this._expansion) * this.cols).fill(0);
         var a = function (i) {
             if (i === null)
                 return;
@@ -10623,6 +10599,33 @@ var Inventory = /** @class */ (function () {
             return _this.handleMouseUp(x, y, button);
         });
     }
+    Object.defineProperty(Inventory.prototype, "expansion", {
+        get: function () {
+            return this._expansion;
+        },
+        set: function (value) {
+            var _a, _b;
+            if (value !== this._expansion) {
+                var oldTotalSlots = (this.rows + this._expansion) * this.cols;
+                this._expansion = value;
+                var newTotalSlots = (this.rows + this._expansion) * this.cols;
+                // Resize items array
+                if (newTotalSlots > oldTotalSlots) {
+                    (_a = this.items).push.apply(_a, Array(newTotalSlots - oldTotalSlots).fill(null));
+                    (_b = this.equipAnimAmount).push.apply(_b, Array(newTotalSlots - oldTotalSlots).fill(0));
+                }
+                else if (newTotalSlots < oldTotalSlots) {
+                    this.items.length = newTotalSlots;
+                    this.equipAnimAmount.length = newTotalSlots;
+                }
+            }
+        },
+        enumerable: false,
+        configurable: true
+    });
+    Inventory.prototype.expandInventory = function (additionalRows) {
+        this.expansion += additionalRows;
+    };
     return Inventory;
 }());
 exports.Inventory = Inventory;
@@ -10845,6 +10848,7 @@ var Candle = /** @class */ (function (_super) {
         _this.name = "candle";
         _this.fuelCap = 100;
         _this.radius = 4;
+        _this.stackable = true;
         return _this;
     }
     Candle.itemName = "candle";
@@ -10881,6 +10885,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Coal = void 0;
 var usable_1 = __webpack_require__(/*! ./usable */ "./src/item/usable.ts");
 var lantern_1 = __webpack_require__(/*! ./lantern */ "./src/item/lantern.ts");
+var light_1 = __webpack_require__(/*! ./light */ "./src/item/light.ts");
 var Coal = /** @class */ (function (_super) {
     __extends(Coal, _super);
     function Coal(level, x, y) {
@@ -10889,12 +10894,24 @@ var Coal = /** @class */ (function (_super) {
             var l = player.inventory.hasItem(lantern_1.Lantern);
             if (l instanceof lantern_1.Lantern) {
                 if (l.fuel <= l.fuelCap - 50) {
-                    l.addFuel(50);
                     player.game.pushMessage("You add some fuel to your lantern.");
                     _this.stackCount -= 1;
                     if (_this.stackCount <= 0) {
                         player.inventory.removeItem(_this);
                     }
+                }
+            }
+        };
+        _this.useOnOther = function (player, other) {
+            if (other instanceof light_1.Light) {
+                if (other.canRefuel && other.fuel <= 0 && other.broken) {
+                    var amountToRefuel = Math.min(_this.stackCount * 25, other.fuelCap);
+                    other.fuel += amountToRefuel;
+                    _this.stackCount -= amountToRefuel / 25;
+                    other.broken = false;
+                    _this.level.game.pushMessage("You add refuel your ".concat(other.name, " with ").concat(amountToRefuel / 25, " coal."));
+                    if (_this.stackCount <= 0)
+                        player.inventory.removeItem(_this);
                 }
             }
         };
@@ -10904,6 +10921,7 @@ var Coal = /** @class */ (function (_super) {
         _this.stackCount = Math.ceil(Math.random() * 7 + 3);
         _this.name = Coal.itemName;
         _this.description = "A piece of coal. Fuels lantern.";
+        _this.canUseOnOther = true;
         return _this;
     }
     Coal.itemName = "coal";
@@ -11025,6 +11043,8 @@ var coal_1 = __webpack_require__(/*! ./coal */ "./src/item/coal.ts");
 var torch_1 = __webpack_require__(/*! ./torch */ "./src/item/torch.ts");
 var lantern_1 = __webpack_require__(/*! ./lantern */ "./src/item/lantern.ts");
 var spellbook_1 = __webpack_require__(/*! ../weapon/spellbook */ "./src/weapon/spellbook.ts");
+var spellbookPage_1 = __webpack_require__(/*! ./spellbookPage */ "./src/item/spellbookPage.ts");
+var backpack_1 = __webpack_require__(/*! ./backpack */ "./src/item/backpack.ts");
 exports.ItemTypeMap = {
     dualdagger: dualdagger_1.DualDagger,
     warhammer: warhammer_1.Warhammer,
@@ -11038,6 +11058,8 @@ exports.ItemTypeMap = {
     weaponblood: weaponBlood_1.WeaponBlood,
     coin: coin_1.Coin,
     weaponfragments: weaponFragments_1.WeaponFragments,
+    spellbookPage: spellbookPage_1.SpellbookPage,
+    backpack: backpack_1.Backpack,
     candle: candle_1.Candle,
     torch: torch_1.Torch,
     lantern: lantern_1.Lantern,
@@ -11056,9 +11078,9 @@ var DropTable = /** @class */ (function () {
     DropTable.drops = [
         // Weapons
         { itemType: "dualdagger", dropWeight: 3, category: "weapon" },
-        { itemType: "warhammer", dropWeight: 3, category: "weapon" },
-        { itemType: "spear", dropWeight: 5, category: "weapon" },
-        { itemType: "spellbook", dropWeight: 0.1, category: "weapon" },
+        { itemType: "warhammer", dropWeight: 5, category: "weapon" },
+        { itemType: "spear", dropWeight: 10, category: "weapon" },
+        { itemType: "spellbook", dropWeight: 1, category: "weapon" },
         // Equipment
         { itemType: "armor", dropWeight: 8, category: "equipment" },
         // Tools
@@ -11066,10 +11088,13 @@ var DropTable = /** @class */ (function () {
         { itemType: "hammer", dropWeight: 3, category: "tool" },
         // Consumables
         { itemType: "heart", dropWeight: 5, category: "consumable" },
-        { itemType: "weaponpoison", dropWeight: 0.25, category: "consumable" },
-        { itemType: "weaponblood", dropWeight: 0.25, category: "consumable" },
+        { itemType: "weaponpoison", dropWeight: 1, category: "consumable" },
+        { itemType: "weaponblood", dropWeight: 1, category: "consumable" },
         { itemType: "coin", dropWeight: 250, category: "coin" },
         { itemType: "weaponfragments", dropWeight: 5, category: "consumable" },
+        { itemType: "spellbookPage", dropWeight: 2, category: "consumable" },
+        // Upgrades
+        { itemType: "backpack", dropWeight: 3, category: "upgrade" },
         // Light sources
         { itemType: "candle", dropWeight: 10, category: "light" },
         { itemType: "torch", dropWeight: 5, category: "light" },
@@ -11848,23 +11873,6 @@ var Lantern = /** @class */ (function (_super) {
     __extends(Lantern, _super);
     function Lantern(level, x, y) {
         var _this = _super.call(this, level, x, y) || this;
-        _this.addFuel = function (amount) {
-            _this.fuel += amount;
-        };
-        _this.setRadius = function () {
-            _this.wielder.sightRadius = Math.min(_this.fuel / 4 + 3, 7);
-        };
-        _this.toggleEquip = function () {
-            if (_this.fuel > 0) {
-                _this.equipped = !_this.equipped;
-                if (_this.isIgnited())
-                    _this.setRadius();
-                else
-                    _this.resetRadius();
-            }
-            else
-                _this.wielder.game.pushMessage("I'll need some fuel before I can use this");
-        };
         _this.getDescription = function () {
             var percentage = Math.round((_this.fuel / _this.fuelCap) * 100);
             return "LANTERN - Fuel: ".concat(percentage, "%, Capacity: ").concat(_this.fuelCap / 50);
@@ -11874,6 +11882,11 @@ var Lantern = /** @class */ (function (_super) {
         _this.tileY = 0;
         _this.fuelCap = 250;
         _this.name = "lantern";
+        _this.canRefuel = true;
+        _this.maxBrightness = 3;
+        _this.minBrightness = 2;
+        _this.radius = 7;
+        _this.broken = _this.fuel <= 0 ? true : false;
         return _this;
     }
     Lantern.itemName = "lantern";
@@ -11916,6 +11929,7 @@ var Light = /** @class */ (function (_super) {
     __extends(Light, _super);
     function Light(level, x, y) {
         var _this = _super.call(this, level, x, y) || this;
+        _this.canRefuel = false;
         _this.updateLighting = function () {
             _this.wielder.game.rooms[_this.wielder.levelID].updateLighting();
         };
@@ -11934,14 +11948,19 @@ var Light = /** @class */ (function (_super) {
                 _this.minBrightness + _this.fuelPercentage * _this.maxBrightness;
         };
         _this.toggleEquip = function () {
-            _this.equipped = !_this.equipped;
-            if (_this.isIgnited()) {
-                _this.setRadius();
-                _this.wielder.lightEquipped = true;
+            if (_this.fuel > 0) {
+                _this.equipped = !_this.equipped;
+                if (_this.isIgnited()) {
+                    _this.setRadius();
+                    _this.wielder.lightEquipped = true;
+                }
+                else {
+                    _this.resetRadius();
+                    _this.wielder.lightEquipped = false;
+                }
             }
             else {
-                _this.resetRadius();
-                _this.wielder.lightEquipped = false;
+                _this.wielder.game.pushMessage("I'll need some fuel before I can use this");
             }
             _this.updateLighting();
         };
@@ -11953,14 +11972,28 @@ var Light = /** @class */ (function (_super) {
         };
         _this.burn = function () {
             if (_this.fuel <= 0) {
-                _this.wielder.game.pushMessage("".concat(_this.name, " depletes."));
                 _this.resetRadius();
                 _this.wielder.lightEquipped = false;
-                _this.wielder.inventory.removeItem(_this);
+                if (!_this.canRefuel && _this.stackCount <= 1) {
+                    _this.wielder.inventory.removeItem(_this);
+                }
+                else if (_this.stackable) {
+                    _this.stackCount--;
+                    _this.fuel = _this.fuelCap;
+                }
+                else {
+                    _this.broken = true;
+                }
                 _this.updateLighting();
             }
             else if (_this.isIgnited()) {
                 _this.fuel--;
+                if (_this.fuel <= 0 && _this.canRefuel) {
+                    _this.wielder.game.pushMessage("".concat(_this.name, " depletes."));
+                    _this.equipped = false;
+                    _this.resetRadius();
+                    _this.wielder.lightEquipped = false;
+                }
                 _this.setRadius();
             }
         };
@@ -12058,6 +12091,75 @@ var RedGem = /** @class */ (function (_super) {
     return RedGem;
 }(item_1.Item));
 exports.RedGem = RedGem;
+
+
+/***/ }),
+
+/***/ "./src/item/spellbookPage.ts":
+/*!***********************************!*\
+  !*** ./src/item/spellbookPage.ts ***!
+  \***********************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SpellbookPage = void 0;
+var sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
+var usable_1 = __webpack_require__(/*! ./usable */ "./src/item/usable.ts");
+var equippable_1 = __webpack_require__(/*! ./equippable */ "./src/item/equippable.ts");
+var SpellbookPage = /** @class */ (function (_super) {
+    __extends(SpellbookPage, _super);
+    function SpellbookPage(level, x, y, stackCount) {
+        var _this = _super.call(this, level, x, y) || this;
+        _this.onUse = function (player) {
+            player.health = Math.min(player.maxHealth, player.health + 1);
+            if (_this.level.game.rooms[player.levelID] === _this.level.game.room)
+                sound_1.Sound.heal();
+            player.inventory.removeItem(_this);
+            //this.level.items = this.level.items.filter((x) => x !== this); // removes itself from the level
+        };
+        _this.useOnOther = function (player, other) {
+            if (other instanceof equippable_1.Equippable &&
+                other.broken &&
+                other.name === "spellbook") {
+                var repairAmount = Math.min(other.durabilityMax - other.durability, _this.stackCount);
+                other.durability += repairAmount;
+                _this.stackCount -= repairAmount;
+                other.broken = false;
+                _this.level.game.pushMessage("You feel your ".concat(other.name, "'s power return as you add ").concat(repairAmount, " pages to it."));
+                if (_this.stackCount <= 0)
+                    player.inventory.removeItem(_this);
+            }
+        };
+        _this.tileX = 25;
+        _this.tileY = 2;
+        _this.offsetY = -0.3;
+        _this.name = "spellbook pages";
+        _this.canUseOnOther = true;
+        _this.stackable = true;
+        _this.stackCount = stackCount || Math.ceil(Math.random() * 3);
+        _this.description = "Can be used to restore power to a depleted spellbook";
+        return _this;
+    }
+    SpellbookPage.itemName = "weapon fragments";
+    return SpellbookPage;
+}(usable_1.Usable));
+exports.SpellbookPage = SpellbookPage;
 
 
 /***/ }),
@@ -12293,7 +12395,9 @@ var WeaponFragments = /** @class */ (function (_super) {
             //this.level.items = this.level.items.filter((x) => x !== this); // removes itself from the level
         };
         _this.useOnOther = function (player, other) {
-            if (other instanceof equippable_1.Equippable && other.broken) {
+            if (other instanceof equippable_1.Equippable &&
+                other.broken &&
+                other.name !== "spellbook") {
                 var repairAmount = Math.min(other.durabilityMax - other.durability, _this.stackCount);
                 other.durability += repairAmount;
                 _this.stackCount -= repairAmount;
@@ -12302,9 +12406,9 @@ var WeaponFragments = /** @class */ (function (_super) {
                 if (_this.stackCount <= 0)
                     player.inventory.removeItem(_this);
             }
-        };
-        _this.getDescription = function () {
-            return "WEAPON FRAGMENTS\nCan be used to repair broken weapons";
+            else if (other.name === "spellbook") {
+                _this.level.game.pushMessage("You'll need some book pages to replenish that.");
+            }
         };
         _this.tileX = 3;
         _this.tileY = 0;
@@ -12313,6 +12417,7 @@ var WeaponFragments = /** @class */ (function (_super) {
         _this.canUseOnOther = true;
         _this.stackable = true;
         _this.stackCount = stackCount || 10;
+        _this.description = "Can be used to repair broken weapons";
         return _this;
     }
     WeaponFragments.itemName = "weapon fragments";
@@ -21094,14 +21199,14 @@ var Spellbook = /** @class */ (function (_super) {
         _this.tileX = 25;
         _this.tileY = 0;
         _this.canMine = true;
-        _this.name = "Spellbook";
+        _this.name = Spellbook.itemName;
         _this.isTargeting = false;
         _this.durability = 5;
         _this.durabilityMax = 10;
         _this.description = "Hits multiple enemies within a range of 4 tiles.";
         return _this;
     }
-    Spellbook.itemName = "spear";
+    Spellbook.itemName = "spellbook";
     return Spellbook;
 }(weapon_1.Weapon));
 exports.Spellbook = Spellbook;

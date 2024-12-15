@@ -18,5 +18,6 @@ export class Candle extends Light {
     this.name = "candle";
     this.fuelCap = 100;
     this.radius = 4;
+    this.stackable = true;
   }
 }

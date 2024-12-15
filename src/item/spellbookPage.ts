@@ -5,18 +5,18 @@ import { Room } from "../room";
 import { Usable } from "./usable";
 import { Equippable } from "./equippable";
 
-export class WeaponFragments extends Usable {
+export class SpellbookPage extends Usable {
   static itemName = "weapon fragments";
   constructor(level: Room, x: number, y: number, stackCount?: number) {
     super(level, x, y);
-    this.tileX = 3;
-    this.tileY = 0;
+    this.tileX = 25;
+    this.tileY = 2;
     this.offsetY = -0.3;
-    this.name = "weapon fragments";
+    this.name = "spellbook pages";
     this.canUseOnOther = true;
     this.stackable = true;
-    this.stackCount = stackCount || 10;
-    this.description = "Can be used to repair broken weapons";
+    this.stackCount = stackCount || Math.ceil(Math.random() * 3);
+    this.description = "Can be used to restore power to a depleted spellbook";
   }
 
   onUse = (player: Player) => {
@@ -32,7 +32,7 @@ export class WeaponFragments extends Usable {
     if (
       other instanceof Equippable &&
       other.broken &&
-      other.name !== "spellbook"
+      other.name === "spellbook"
     ) {
       let repairAmount = Math.min(
         other.durabilityMax - other.durability,
@@ -42,13 +42,9 @@ export class WeaponFragments extends Usable {
       this.stackCount -= repairAmount;
       other.broken = false;
       this.level.game.pushMessage(
-        `You repair your ${other.name} with ${repairAmount} fragments.`,
+        `You feel your ${other.name}'s power return as you add ${repairAmount} pages to it.`,
       );
       if (this.stackCount <= 0) player.inventory.removeItem(this);
-    } else if (other.name === "spellbook") {
-      this.level.game.pushMessage(
-        "You'll need some book pages to replenish that.",
-      );
     }
   };
 }

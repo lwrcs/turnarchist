@@ -18,6 +18,7 @@ import { Spear } from "./weapon/spear";
 import { Spellbook } from "./weapon/spellbook";
 import { Warhammer } from "./weapon/warhammer";
 import { Hammer } from "./item/hammer";
+import { SpellbookPage } from "./item/spellbookPage";
 
 export class GameConstants {
   static readonly VERSION = "v1.0.2"; //"v0.6.3";
@@ -135,7 +136,7 @@ export class GameConstants {
   static readonly STARTING_INVENTORY = [Dagger, Torch];
   static readonly STARTING_DEV_INVENTORY = [
     Dagger,
-    WeaponFragments,
+    SpellbookPage,
     Torch,
     Warhammer,
     GodStone,
@@ -145,5 +146,7 @@ export class GameConstants {
     Heart,
     Backpack,
     Hammer,
+    Lantern,
+    Coal,
   ];
 }

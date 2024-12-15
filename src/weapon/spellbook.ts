@@ -9,14 +9,14 @@ import { Direction } from "../game";
 export class Spellbook extends Weapon {
   targets: Entity[];
   isTargeting: boolean;
-  static itemName = "spear";
+  static itemName = "spellbook";
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
     this.range = 4;
     this.tileX = 25;
     this.tileY = 0;
     this.canMine = true;
-    this.name = "Spellbook";
+    this.name = Spellbook.itemName;
     this.isTargeting = false;
     this.durability = 5;
     this.durabilityMax = 10;

@@ -21,6 +21,8 @@ import { Coal } from "./coal";
 import { Torch } from "./torch";
 import { Lantern } from "./lantern";
 import { Spellbook } from "../weapon/spellbook";
+import { SpellbookPage } from "./spellbookPage";
+import { Backpack } from "./backpack";
 
 interface Drop {
   itemType: string;
@@ -46,6 +48,9 @@ export const ItemTypeMap: { [key: string]: typeof Item } = {
   coin: Coin,
 
   weaponfragments: WeaponFragments,
+  spellbookPage: SpellbookPage,
+
+  backpack: Backpack,
 
   candle: Candle,
   torch: Torch,
@@ -63,9 +68,9 @@ export class DropTable {
   static drops: Drop[] = [
     // Weapons
     { itemType: "dualdagger", dropWeight: 3, category: "weapon" },
-    { itemType: "warhammer", dropWeight: 3, category: "weapon" },
-    { itemType: "spear", dropWeight: 5, category: "weapon" },
-    { itemType: "spellbook", dropWeight: 0.1, category: "weapon" },
+    { itemType: "warhammer", dropWeight: 5, category: "weapon" },
+    { itemType: "spear", dropWeight: 10, category: "weapon" },
+    { itemType: "spellbook", dropWeight: 1, category: "weapon" },
 
     // Equipment
     { itemType: "armor", dropWeight: 8, category: "equipment" },
@@ -77,12 +82,16 @@ export class DropTable {
     // Consumables
     { itemType: "heart", dropWeight: 5, category: "consumable" },
 
-    { itemType: "weaponpoison", dropWeight: 0.25, category: "consumable" },
-    { itemType: "weaponblood", dropWeight: 0.25, category: "consumable" },
+    { itemType: "weaponpoison", dropWeight: 1, category: "consumable" },
+    { itemType: "weaponblood", dropWeight: 1, category: "consumable" },
 
     { itemType: "coin", dropWeight: 250, category: "coin" },
 
     { itemType: "weaponfragments", dropWeight: 5, category: "consumable" },
+    { itemType: "spellbookPage", dropWeight: 2, category: "consumable" },
+
+    // Upgrades
+    { itemType: "backpack", dropWeight: 3, category: "upgrade" },
 
     // Light sources
     { itemType: "candle", dropWeight: 10, category: "light" },

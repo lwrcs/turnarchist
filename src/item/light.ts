@@ -10,6 +10,7 @@ export abstract class Light extends Equippable {
   radius: number;
   maxBrightness: number;
   minBrightness: number;
+  canRefuel: boolean = false;
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
 
@@ -48,14 +49,21 @@ export abstract class Light extends Equippable {
   };
 
   toggleEquip = () => {
-    this.equipped = !this.equipped;
-    if (this.isIgnited()) {
-      this.setRadius();
-      this.wielder.lightEquipped = true;
+    if (this.fuel > 0) {
+      this.equipped = !this.equipped;
+      if (this.isIgnited()) {
+        this.setRadius();
+        this.wielder.lightEquipped = true;
+      } else {
+        this.resetRadius();
+        this.wielder.lightEquipped = false;
+      }
     } else {
-      this.resetRadius();
-      this.wielder.lightEquipped = false;
+      this.wielder.game.pushMessage(
+        "I'll need some fuel before I can use this",
+      );
     }
+
     this.updateLighting();
   };
 
@@ -69,13 +77,25 @@ export abstract class Light extends Equippable {
 
   burn = () => {
     if (this.fuel <= 0) {
-      this.wielder.game.pushMessage(`${this.name} depletes.`);
       this.resetRadius();
       this.wielder.lightEquipped = false;
-      this.wielder.inventory.removeItem(this);
+      if (!this.canRefuel && this.stackCount <= 1) {
+        this.wielder.inventory.removeItem(this);
+      } else if (this.stackable) {
+        this.stackCount--;
+        this.fuel = this.fuelCap;
+      } else {
+        this.broken = true;
+      }
       this.updateLighting();
     } else if (this.isIgnited()) {
       this.fuel--;
+      if (this.fuel <= 0 && this.canRefuel) {
+        this.wielder.game.pushMessage(`${this.name} depletes.`);
+        this.equipped = false;
+        this.resetRadius();
+        this.wielder.lightEquipped = false;
+      }
       this.setRadius();
     }
   };

@@ -1,34 +1,15 @@
 import { Item } from "./item/item";
 import { LevelConstants } from "./levelConstants";
 import { Game } from "./game";
-import { Key } from "./item/key";
 import { GameConstants } from "./gameConstants";
 import { Equippable } from "./item/equippable";
 import { Armor } from "./item/armor";
-import { GoldenKey } from "./item/goldenKey";
 import { Coin } from "./item/coin";
-import { Gold } from "./item/gold";
-import { GreenGem } from "./item/greengem";
-import { Coal } from "./item/coal";
 import { Weapon } from "./weapon/weapon";
-import { Dagger } from "./weapon/dagger";
 import { Room } from "./room";
 import { Usable } from "./item/usable";
-import { Shotgun } from "./weapon/shotgun";
-import { DualDagger } from "./weapon/dualdagger";
-import { Candle } from "./item/candle";
-import { Torch } from "./item/torch";
-import { Lantern } from "./item/lantern";
 import { Player } from "./player";
-import { Spear } from "./weapon/spear";
-import { Pickaxe } from "./weapon/pickaxe";
-import { Spellbook } from "./weapon/spellbook";
-import { Backpack } from "./item/backpack";
-import { Slingshot } from "./weapon/slingshot";
-import { Heart } from "./item/heart";
 import { MouseCursor } from "./mouseCursor";
-import { Warhammer } from "./weapon/warhammer";
-import { GodStone } from "./item/godStone";
 import { Input } from "./input";
 
 let OPEN_TIME = 100; // milliseconds
@@ -54,7 +35,7 @@ export class Inventory {
   coins: number = 0;
   equipAnimAmount: Array<number>;
   weapon: Weapon | null = null;
-  expansion: number = 0;
+  private _expansion: number = 0;
   grabbedItem: Item | null = null;
   private _mouseDownStartX: number | null = null;
   private _mouseDownStartY: number | null = null;
@@ -90,10 +71,10 @@ export class Inventory {
     Input.holdCallback = () => this.onHoldDetected();
 
     this.items = new Array<Item | null>(
-      (this.rows + this.expansion) * this.cols,
+      (this.rows + this._expansion) * this.cols,
     ).fill(null);
     this.equipAnimAmount = new Array<number>(
-      (this.rows + this.expansion) * this.cols,
+      (this.rows + this._expansion) * this.cols,
     ).fill(0);
     let a = (i: Item | null) => {
       if (i === null) return;
@@ -175,7 +156,7 @@ export class Inventory {
   };
 
   down = () => {
-    if (this.selY < this.rows + this.expansion - 1) {
+    if (this.selY < this.rows + this._expansion - 1) {
       this.selY++;
     }
   };
@@ -347,7 +328,7 @@ export class Inventory {
             0,
             Math.min(
               Math.floor((y - bounds.startY) / (s + 2 * b + g)),
-              this.rows + this.expansion - 1,
+              this.rows + this._expansion - 1,
             ),
           )
         : 0;
@@ -503,7 +484,7 @@ export class Inventory {
   isFull = (): boolean => {
     return (
       this.items.filter((i) => i !== null).length >=
-      (this.rows + this.expansion) * this.cols
+      (this.rows + this._expansion) * this.cols
     );
   };
 
@@ -631,7 +612,7 @@ export class Inventory {
     const hg = 3 + Math.round(0.5 * Math.sin(Date.now() * 0.01) + 0.5); // highlighted growth
     const ob = 1; // outer border
     const width = this.cols * (s + 2 * b + g) - g;
-    const height = (this.rows + this.expansion) * (s + 2 * b + g) - g;
+    const height = (this.rows + this._expansion) * (s + 2 * b + g) - g;
 
     const startX = Math.round(0.5 * GameConstants.WIDTH - 0.5 * width) - ob;
     const startY = this.isOpen
@@ -713,7 +694,7 @@ export class Inventory {
           startY + b + Math.floor(0.5 * s) - 0.5 * GameConstants.TILESIZE;
         const drawXScaled = drawX / GameConstants.TILESIZE;
         const drawYScaled = drawY / GameConstants.TILESIZE;
-        this.items[idx]!.drawIcon(delta, drawXScaled, drawYScaled);
+        this.items[idx]?.drawIcon(delta, drawXScaled, drawYScaled);
       }
     }
 
@@ -761,7 +742,7 @@ export class Inventory {
         const drawXScaled = drawX / GameConstants.TILESIZE;
         const drawYScaled = drawY / GameConstants.TILESIZE;
 
-        this.items[idx]!.drawIcon(delta, drawXScaled, drawYScaled);
+        this.items[idx]?.drawIcon(delta, drawXScaled, drawYScaled);
       }
       this.drawUsingItem(delta, startX, startY, s, b, g);
     }
@@ -822,7 +803,7 @@ export class Inventory {
     const b = 2; // border
     const g = -2; // gap
     const hg = 3 + Math.round(0.5 * Math.sin(Date.now() * 0.01) + 0.5); // highlighted growth
-    const invRows = this.rows + this.expansion;
+    const invRows = this.rows + this._expansion;
     const ob = 1; // outer border
     const width = this.cols * (s + 2 * b + g) - g;
     const height = invRows * (s + 2 * b + g) - g;
@@ -847,7 +828,7 @@ export class Inventory {
       const b = 2; // border
       const g = -2; // gap
       const hg = 3 + Math.round(0.5 * Math.sin(Date.now() * 0.01) + 0.5); // highlighted growth
-      const invRows = this.rows + this.expansion;
+      const invRows = this.rows + this._expansion;
       const ob = 1; // outer border
       const width = this.cols * (s + 2 * b + g) - g;
       const height = invRows * (s + 2 * b + g) - g;
@@ -888,7 +869,7 @@ export class Inventory {
 
       // Draw individual inventory slots (similar to drawQuickbar, but for all rows)
       for (let xIdx = 0; xIdx < this.cols; xIdx++) {
-        for (let yIdx = 0; yIdx < this.rows + this.expansion; yIdx++) {
+        for (let yIdx = 0; yIdx < this.rows + this._expansion; yIdx++) {
           // Draw slot outline
           const slotX = Math.round(
             0.5 * GameConstants.WIDTH - 0.5 * width + xIdx * (s + 2 * b + g),
@@ -928,7 +909,7 @@ export class Inventory {
             const drawXScaled = drawX / GameConstants.TILESIZE;
             const drawYScaled = drawY / GameConstants.TILESIZE;
 
-            this.items[idx]!.drawIcon(delta, drawXScaled, drawYScaled);
+            this.items[idx]?.drawIcon(delta, drawXScaled, drawYScaled);
           }
         }
       }
@@ -1036,53 +1017,10 @@ export class Inventory {
             const drawXScaled = drawX / GameConstants.TILESIZE;
             const drawYScaled = drawY / GameConstants.TILESIZE;
 
-            this.items[idx]!.drawIcon(delta, drawXScaled, drawYScaled);
+            this.items[idx]?.drawIcon(delta, drawXScaled, drawYScaled);
           }
 
           // **Move drawUsingItem here, after the main selection box**
-        }
-
-        // Draw item description and action text (unique to full inventory view)
-        const selectedIdx = this.selX + this.selY * this.cols;
-
-        if (
-          selectedIdx < this.items.length &&
-          this.items[selectedIdx] !== null
-        ) {
-          const item = this.items[selectedIdx]!;
-          Game.ctx.fillStyle = "white";
-
-          // Determine action text
-          let topPhrase = "";
-          if (item instanceof Equippable) {
-            topPhrase = item.equipped
-              ? "[SPACE] to unequip"
-              : "[SPACE] to equip";
-          }
-          if (item instanceof Usable) {
-            topPhrase = "[SPACE] to use";
-          }
-
-          // Draw action text
-          const actionTextWidth = Game.measureText(topPhrase).width;
-          Game.fillText(
-            topPhrase,
-            0.5 * (GameConstants.WIDTH - actionTextWidth),
-            5,
-          );
-
-          // Draw item description
-          const lines = item.getDescription().split("\n");
-          let nextY = Math.round(
-            0.5 * GameConstants.HEIGHT -
-              0.5 * height +
-              (this.rows + this.expansion) * (s + 2 * b + g) +
-              b +
-              5,
-          );
-          lines.forEach((line) => {
-            nextY = this.textWrap(line, 5, nextY, GameConstants.WIDTH - 10);
-          });
         }
 
         // **Ensure drawUsingItem is not called again here**
@@ -1118,7 +1056,7 @@ export class Inventory {
 
     if (this.isOpen) {
       // Full inventory bounds
-      height = (this.rows + this.expansion) * (s + 2 * b + g) - g;
+      height = (this.rows + this._expansion) * (s + 2 * b + g) - g;
       startX = 0.5 * GameConstants.WIDTH - 0.5 * width;
       startY = 0.5 * GameConstants.HEIGHT - 0.5 * height;
     } else {
@@ -1286,4 +1224,31 @@ export class Inventory {
 
     this.grabbedItem = null;
   };
+
+  get expansion(): number {
+    return this._expansion;
+  }
+
+  set expansion(value: number) {
+    if (value !== this._expansion) {
+      const oldTotalSlots = (this.rows + this._expansion) * this.cols;
+      this._expansion = value;
+      const newTotalSlots = (this.rows + this._expansion) * this.cols;
+
+      // Resize items array
+      if (newTotalSlots > oldTotalSlots) {
+        this.items.push(...Array(newTotalSlots - oldTotalSlots).fill(null));
+        this.equipAnimAmount.push(
+          ...Array(newTotalSlots - oldTotalSlots).fill(0),
+        );
+      } else if (newTotalSlots < oldTotalSlots) {
+        this.items.length = newTotalSlots;
+        this.equipAnimAmount.length = newTotalSlots;
+      }
+    }
+  }
+
+  expandInventory(additionalRows: number) {
+    this.expansion += additionalRows;
+  }
 }
