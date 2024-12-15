@@ -2230,8 +2230,7 @@ var CrabEnemy = /** @class */ (function (_super) {
         _this.orthogonalAttack = true;
         _this.imageParticleX = 3;
         _this.imageParticleY = 24;
-        if (drop)
-            _this.drop = drop;
+        //if (drop) this.drop = drop;
         if (Math.random() < _this.dropChance) {
             _this.getDrop([
                 "weapon",
@@ -2701,11 +2700,12 @@ var Enemy = /** @class */ (function (_super) {
         _this.jumpHeight = 0.3;
         //this.dir = Direction.South;
         _this.name = "generic enemy";
+        _this.dropChance = 0.3;
         _this.status = { poison: false, bleed: false };
         _this.effectStartTick = 1;
         _this.startTick = 1;
-        _this.getDrop(["weapon", "equipment", "consumable", "gem", "tool", "coin"]);
         return _this;
+        //this.getDrop(["weapon", "equipment", "consumable", "gem", "tool", "coin"]);
     }
     Object.defineProperty(Enemy.prototype, "lastPlayerPos", {
         get: function () {
@@ -4321,11 +4321,8 @@ exports.Spawner = void 0;
 var game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 var floor_1 = __webpack_require__(/*! ../../tile/floor */ "./src/tile/floor.ts");
 var hitWarning_1 = __webpack_require__(/*! ../../hitWarning */ "./src/hitWarning.ts");
-var greengem_1 = __webpack_require__(/*! ../../item/greengem */ "./src/item/greengem.ts");
 var skullEnemy_1 = __webpack_require__(/*! ./skullEnemy */ "./src/entity/enemy/skullEnemy.ts");
 var enemySpawnAnimation_1 = __webpack_require__(/*! ../../projectile/enemySpawnAnimation */ "./src/projectile/enemySpawnAnimation.ts");
-var redgem_1 = __webpack_require__(/*! ../../item/redgem */ "./src/item/redgem.ts");
-var bluegem_1 = __webpack_require__(/*! ../../item/bluegem */ "./src/item/bluegem.ts");
 var knightEnemy_1 = __webpack_require__(/*! ./knightEnemy */ "./src/entity/enemy/knightEnemy.ts");
 var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 var random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
@@ -4482,21 +4479,56 @@ var Spawner = /** @class */ (function (_super) {
         _this.tileX = 6;
         _this.tileY = 4;
         _this.seenPlayer = true;
-        var drop = game_1.Game.randTable([1, 2, 3], random_1.Random.rand);
-        switch (drop) {
-            case 1:
-                _this.drop = new bluegem_1.BlueGem(_this.room, _this.x, _this.y);
-                break;
-            case 2:
-                _this.drop = new greengem_1.GreenGem(_this.room, _this.x, _this.y);
-                break;
-            case 3:
-                _this.drop = new redgem_1.RedGem(_this.room, _this.x, _this.y);
-                break;
-        }
         _this.enemyTable = enemyTable.filter(function (t) { return t !== 7; });
         var randSpawnType = game_1.Game.randTable(_this.enemyTable, random_1.Random.rand);
         _this.enemySpawnType = randSpawnType;
+        switch (_this.enemySpawnType) {
+            case 0:
+                _this.getDrop(["consumables"]);
+                break;
+            case 1:
+                _this.getDrop(["gems"]);
+                break;
+            case 2:
+                _this.getDrop(["consumables"]);
+                break;
+            case 3:
+                _this.getDrop(["gems"]);
+                break;
+            case 4:
+                _this.getDrop(["gems"]);
+                break;
+            case 5:
+                _this.getDrop(["consumables"]);
+                break;
+            case 6:
+                _this.getDrop(["gems"]);
+                break;
+            case 7:
+                _this.getDrop(["gems"]);
+                break;
+            case 8:
+                _this.getDrop(["gems"]);
+                break;
+            case 9:
+                _this.getDrop(["equipment", "weapons", "tools"]);
+                break;
+            case 10:
+                _this.getDrop(["weapons"]);
+                break;
+            case 11:
+                _this.getDrop(["weapons"]);
+                break;
+            case 12:
+                _this.getDrop(["weapons"]);
+                break;
+            case 13:
+                _this.getDrop(["weapons"]);
+                break;
+            case 14:
+                _this.getDrop(["spellbook"]);
+                break;
+        }
         _this.name = "reaper";
         return _this;
     }
@@ -5029,6 +5061,9 @@ var utils_1 = __webpack_require__(/*! ../utils */ "./src/utils.ts");
 var eventBus_1 = __webpack_require__(/*! ../eventBus */ "./src/eventBus.ts");
 var events_1 = __webpack_require__(/*! ../events */ "./src/events.ts");
 var damageNumber_1 = __webpack_require__(/*! ../particle/damageNumber */ "./src/particle/damageNumber.ts");
+var downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/downLadder.ts");
+var door_1 = __webpack_require__(/*! ../tile/door */ "./src/tile/door.ts");
+var wall_1 = __webpack_require__(/*! ../tile/wall */ "./src/tile/wall.ts");
 var dropTable_1 = __webpack_require__(/*! ../item/dropTable */ "./src/item/dropTable.ts");
 var EntityDirection;
 (function (EntityDirection) {
@@ -5053,9 +5088,10 @@ var Entity = /** @class */ (function (_super) {
         _this.imageParticleX = 0;
         _this.imageParticleY = 26;
         _this.dropChance = 0.03;
-        _this.getDrop = function (useCategory) {
+        _this.getDrop = function (useCategory, force) {
             if (useCategory === void 0) { useCategory = []; }
-            dropTable_1.DropTable.getDrop(_this, false, useCategory);
+            if (force === void 0) { force = false; }
+            dropTable_1.DropTable.getDrop(_this, false, useCategory, force);
         };
         _this.addLightSource = function (lightSource) {
             _this.room.lightSources.push(lightSource);
@@ -5400,6 +5436,21 @@ var Entity = /** @class */ (function (_super) {
             }
             return total / count;
         };
+        _this.getOpenTile = function () {
+            var x, y;
+            do {
+                x = Math.floor(Math.random() * 3 + _this.x - 1);
+                y = Math.floor(Math.random() * 3 + _this.y - 1);
+            } while ((x === _this.x && y === _this.y) ||
+                _this.room.roomArray[x][y].isSolid() ||
+                _this.room.roomArray[x][y] instanceof downLadder_1.DownLadder ||
+                _this.room.roomArray[x][y] instanceof door_1.Door ||
+                _this.room.roomArray[x][y] instanceof wall_1.Wall ||
+                _this.room.entities.some(function (e) { return e.x === x && e.y === y; }));
+            if (!x || !y)
+                return { x: _this.x, y: _this.y };
+            return { x: x, y: y };
+        };
         _this.makeHitWarnings = function () {
             var _a;
             var cullFactor = 0.25;
@@ -5518,6 +5569,7 @@ var Entity = /** @class */ (function (_super) {
         _this.diagonalAttackRange = 1;
         _this.drawMoveSpeed = 0.3;
         _this.unconscious = false;
+        _this.dropChance = 0.01;
         return _this;
     }
     Entity.add = function (room, game, x, y) {
@@ -5660,17 +5712,11 @@ var __extends = (this && this.__extends) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Chest = void 0;
 var game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-var key_1 = __webpack_require__(/*! ../../item/key */ "./src/item/key.ts");
-var heart_1 = __webpack_require__(/*! ../../item/heart */ "./src/item/heart.ts");
-var armor_1 = __webpack_require__(/*! ../../item/armor */ "./src/item/armor.ts");
 var entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
-var genericParticle_1 = __webpack_require__(/*! ../../particle/genericParticle */ "./src/particle/genericParticle.ts");
-var redgem_1 = __webpack_require__(/*! ../../item/redgem */ "./src/item/redgem.ts");
-var bluegem_1 = __webpack_require__(/*! ../../item/bluegem */ "./src/item/bluegem.ts");
+var coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
 var entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 var random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
-var torch_1 = __webpack_require__(/*! ../../item/torch */ "./src/item/torch.ts");
-var weaponFragments_1 = __webpack_require__(/*! ../../item/weaponFragments */ "./src/item/weaponFragments.ts");
+var imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ "./src/particle/imageParticle.ts");
 var Chest = /** @class */ (function (_super) {
     __extends(Chest, _super);
     function Chest(room, game, x, y) {
@@ -5678,8 +5724,10 @@ var Chest = /** @class */ (function (_super) {
         _this.hurt = function (playerHitBy, damage) {
             //this.healthBar.hurt();
             _this.health -= 1;
-            if (_this.health === 1 && !_this.opening)
+            if (_this.health === 2 && !_this.opening)
                 _this.open();
+            if (_this.health === 1)
+                _this.drop.onPickup(playerHitBy);
             if (_this.health <= 0)
                 _this.kill();
             else
@@ -5689,51 +5737,34 @@ var Chest = /** @class */ (function (_super) {
             _this.tileX = 0;
             _this.tileY = 2;
             _this.opening = true;
-            var _a = _this.getOpenTile(), x = _a.x, y = _a.y;
-            switch (_this.rollDrop()) {
-                case 1:
-                    _this.drop = new heart_1.Heart(_this.room, x, y);
-                    break;
-                case 2:
-                    _this.drop = new torch_1.Torch(_this.room, x, y);
-                    break;
-                case 3:
-                    _this.drop = new redgem_1.RedGem(_this.room, x, y);
-                    break;
-                case 4:
-                    _this.drop = new bluegem_1.BlueGem(_this.room, x, y);
-                    break;
-                case 5:
-                    _this.drop = new key_1.Key(_this.room, x, y);
-                    break;
-                case 6:
-                    _this.drop = new armor_1.Armor(_this.room, x, y);
-                    break;
-                case 7:
-                    _this.drop = new weaponFragments_1.WeaponFragments(_this.room, x, y, 100);
-                    break;
+            /*
+            if (this.getOpenTile().x && this.getOpenTile().y) {
+              const { x, y } = this.getOpenTile();
+        
+              this.drop.x = x;
+              this.drop.y = y;
+        
+              this.room.items.push(this.drop);
+            } else if (!this.game.players[0].inventory.isFull()) {
+              this.drop.onPickup(this.game.players[0]);
             }
-            _this.room.items.push(_this.drop);
+              */
+            if (_this.drop === null)
+                _this.drop = coin_1.Coin.add(_this.room, _this.x, _this.y);
+            _this.dropLoot();
+            _this.drop.animateFromChest();
         };
         _this.rollDrop = function () {
             return game_1.Game.randTable([1, 1, 1, 1, 1, 1, 1, 2, 3, 4, 5, 2, 2], random_1.Random.rand);
         };
         _this.kill = function () {
-            genericParticle_1.GenericParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, "#fbf236");
+            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 3, 26);
             _this.dead = true;
+            //this.layer.dead = true;
+            //this.room.entities.filter((layer) => layer !== this.layer);
         };
         _this.killNoBones = function () {
             _this.kill();
-        };
-        _this.getOpenTile = function () {
-            var x, y;
-            do {
-                x = game_1.Game.rand(_this.x - 1, _this.x + 1, random_1.Random.rand);
-                y = game_1.Game.rand(_this.y - 1, _this.y + 1, random_1.Random.rand);
-            } while ((x === _this.x && y === _this.y) ||
-                _this.room.roomArray[x][y].isSolid() ||
-                _this.room.entities.some(function (e) { return e.x === x && e.y === y; }));
-            return { x: x, y: y };
         };
         _this.draw = function (delta) {
             if (_this.opening) {
@@ -5750,11 +5781,11 @@ var Chest = /** @class */ (function (_super) {
             }
         };
         _this.drawTopLayer = function (delta) {
-            _this.drawableY = _this.y;
+            _this.drawableY = _this.y - 1;
         };
         _this.tileX = 4;
         _this.tileY = 0;
-        _this.health = 2;
+        _this.health = 3;
         _this.name = "chest";
         _this.frame = 0;
         _this.opening = false;
@@ -5762,6 +5793,15 @@ var Chest = /** @class */ (function (_super) {
         _this.dropY = 0;
         _this.drop = null;
         return _this;
+        /*
+        this.layer = new ChestLayer(
+          this.room,
+          this.game,
+          this.x,
+          this.y,
+        );
+        this.room.entities.push(this.layer);
+        */
     }
     Object.defineProperty(Chest.prototype, "type", {
         get: function () {
@@ -6436,16 +6476,17 @@ var VendingMachine = /** @class */ (function (_super) {
                     var i = _c[_b];
                     _this.playerOpened.inventory.subtractItemCount(i);
                 }
-                var x_1, y_1;
-                do {
-                    x_1 = game_1.Game.rand(_this.x - 1, _this.x + 1, random_1.Random.rand);
-                    y_1 = game_1.Game.rand(_this.y - 1, _this.y + 1, random_1.Random.rand);
-                } while ((x_1 === _this.x && y_1 === _this.y) ||
-                    _this.room.roomArray[x_1][y_1].isSolid() ||
-                    _this.room.entities.some(function (e) { return e.x === x_1 && e.y === y_1; }));
                 var newItem = new _this.item.constructor();
-                newItem = newItem.constructor(_this.room, x_1, y_1);
-                newItem.onPickup(_this.playerOpened);
+                newItem = newItem.constructor(_this.room, _this.x, _this.y);
+                if (!_this.playerOpened.inventory.isFull) {
+                    newItem.onPickup(_this.playerOpened);
+                }
+                else {
+                    var _d = _this.getOpenTile(), x = _d.x, y = _d.y;
+                    newItem.x = x;
+                    newItem.y = y;
+                    _this.room.items.push(newItem);
+                }
                 var cost = _this.costItems[0].stackCount;
                 var pluralLetter = cost > 1 ? "s" : "";
                 if (!_this.isInf) {
@@ -7378,7 +7419,12 @@ var Game = /** @class */ (function () {
                 gameConstants_1.GameConstants.isMobile = true;
                 _this.pushMessage("mobile detected");
                 // Use smaller scale for mobile devices based on screen size
-                Game.scale = Math.min(maxWidthScale, maxHeightScale, 2); // Cap at 2x for mobile
+                if (window.orientation === 90 || window.orientation === -90) {
+                    Game.scale = Math.min(maxWidthScale, maxHeightScale, 3); // Cap at 2x for mobile
+                }
+                else {
+                    Game.scale = Math.min(maxWidthScale, maxHeightScale, 3); // Cap at 2x for mobile
+                }
             }
             else {
                 gameConstants_1.GameConstants.isMobile = false;
@@ -7391,8 +7437,10 @@ var Game = /** @class */ (function () {
                 maxHeightScale = window.innerHeight / gameConstants_1.GameConstants.DEFAULTHEIGHT;
                 Game.scale = Math.min(maxWidthScale, maxHeightScale, 1); // Ensure minimum scale of 1
             }
-            levelConstants_1.LevelConstants.SCREEN_W = Math.floor(window.innerWidth / Game.scale / gameConstants_1.GameConstants.TILESIZE);
-            levelConstants_1.LevelConstants.SCREEN_H = Math.floor(window.innerHeight / Game.scale / gameConstants_1.GameConstants.TILESIZE);
+            levelConstants_1.LevelConstants.SCREEN_W =
+                Math.floor((window.innerWidth / Game.scale / gameConstants_1.GameConstants.TILESIZE) * 16) / 16;
+            levelConstants_1.LevelConstants.SCREEN_H =
+                Math.floor((window.innerHeight / Game.scale / gameConstants_1.GameConstants.TILESIZE) * 16) / 16;
             gameConstants_1.GameConstants.WIDTH = levelConstants_1.LevelConstants.SCREEN_W * gameConstants_1.GameConstants.TILESIZE;
             gameConstants_1.GameConstants.HEIGHT = levelConstants_1.LevelConstants.SCREEN_H * gameConstants_1.GameConstants.TILESIZE;
             Game.ctx.canvas.setAttribute("width", "".concat(gameConstants_1.GameConstants.WIDTH));
@@ -7803,6 +7851,10 @@ var Game = /** @class */ (function () {
                     window.requestAnimationFrame(_this.run);
                     _this.onResize();
                     window.addEventListener("resize", _this.onResize);
+                    window.addEventListener("orientationchange", function () {
+                        // Small delay to ensure new dimensions are available
+                        setTimeout(_this.onResize, 100);
+                    });
                     _this.players = {};
                     _this.offlinePlayers = {};
                     _this.chatOpen = false;
@@ -9734,10 +9786,9 @@ var Inventory = /** @class */ (function () {
             var _a = mouseCursor_1.MouseCursor.getInstance().getPosition(), x = _a.x, y = _a.y;
             var bounds = _this.isPointInInventoryBounds(x, y);
             // Only close inventory if clicking outside
-            if ((!bounds.inBounds && !_this.isPointInQuickbarBounds(x, y).inBounds) ||
-                _this.isPointInInventoryButton(x, y)) {
-                _this.close();
-            }
+            //if (!this.isPointInInventoryBounds(x, y) && this.open) {
+            //this.close();
+            //}
         };
         this.mouseRightClick = function () {
             _this.mostRecentInput = "mouse";
@@ -10022,7 +10073,7 @@ var Inventory = /** @class */ (function () {
         };
         this.drawCoins = function (delta) {
             var coinX = levelConstants_1.LevelConstants.SCREEN_W - 1;
-            var coinY = levelConstants_1.LevelConstants.SCREEN_H - 1;
+            var coinY = levelConstants_1.LevelConstants.SCREEN_H - 2.75;
             game_1.Game.drawItem(19, 0, 1, 2, coinX, coinY - 1, 1, 2);
             var countText = "".concat(_this.coins);
             var width = game_1.Game.measureText(countText).width;
@@ -10181,6 +10232,7 @@ var Inventory = /** @class */ (function () {
             _this.drawCoins(delta);
             _this.drawQuickbar(delta);
             _this.updateEquipAnimAmount(delta);
+            _this.drawInventoryButton(delta);
             if (_this.isOpen) {
                 // Draw semi-transparent background for full inventory
                 game_1.Game.ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
@@ -10429,10 +10481,22 @@ var Inventory = /** @class */ (function () {
         this.isPointInInventoryButton = function (x, y) {
             var tX = x / gameConstants_1.GameConstants.TILESIZE;
             var tY = y / gameConstants_1.GameConstants.TILESIZE;
-            return (tX >= levelConstants_1.LevelConstants.SCREEN_W - 2 &&
-                tX <= levelConstants_1.LevelConstants.SCREEN_W &&
-                tY >= 0 &&
-                tY <= 2);
+            return (tX >= _this.buttonX &&
+                tX <= _this.buttonX + 2 &&
+                tY >= _this.buttonY &&
+                tY <= _this.buttonY + 2);
+        };
+        /**
+         * Draws the inventory button to the canvas.
+         * Added `ctx.save()` at the beginning and `ctx.restore()` at the end
+         * to ensure canvas state is preserved.
+         */
+        this.drawInventoryButton = function (delta) {
+            game_1.Game.ctx.save(); // Save the current canvas state
+            _this.buttonX = levelConstants_1.LevelConstants.SCREEN_W - 2;
+            _this.buttonY = levelConstants_1.LevelConstants.SCREEN_H - 2.25;
+            game_1.Game.drawFX(0, 0, 2, 2, _this.buttonX, _this.buttonY, 2, 2);
+            game_1.Game.ctx.restore(); // Restore the canvas state
         };
         this.handleMouseDown = function (x, y, button) {
             // Ignore if not left click
@@ -10521,6 +10585,9 @@ var Inventory = /** @class */ (function () {
         };
         this.game = game;
         this.player = player;
+        this.buttonX =
+            (Math.round(gameConstants_1.GameConstants.WIDTH / 2) + 3) / gameConstants_1.GameConstants.TILESIZE;
+        this.buttonY = 10;
         input_1.Input.mouseDownListeners.push(function (x, y, button) {
             return _this.handleMouseDown(x, y, button);
         });
@@ -10872,7 +10939,6 @@ var __extends = (this && this.__extends) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Coin = void 0;
 var item_1 = __webpack_require__(/*! ./item */ "./src/item/item.ts");
-var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
 var Coin = /** @class */ (function (_super) {
     __extends(Coin, _super);
@@ -10901,22 +10967,6 @@ var Coin = /** @class */ (function (_super) {
             for (var _b = 0, coinList_1 = coinList; _b < coinList_1.length; _b++) {
                 var otherCoin = coinList_1[_b];
                 _loop_1(otherCoin);
-            }
-        };
-        _this.draw = function (delta) {
-            if (!_this.pickedUp) {
-                _this.drawableY = _this.y;
-                if (_this.scaleFactor < 1)
-                    _this.scaleFactor += 0.04;
-                else
-                    _this.scaleFactor = 1;
-                game_1.Game.drawItem(0, 0, 1, 1, _this.x, _this.y, 1, 1);
-                _this.frame += (delta * (Math.PI * 2)) / 60;
-                game_1.Game.drawItem(_this.tileX, _this.tileY, 1, 2, _this.x + _this.w * (_this.scaleFactor * -0.5 + 0.5), _this.y +
-                    Math.sin(_this.frame) * 0.07 -
-                    1 +
-                    _this.offsetY +
-                    _this.h * (_this.scaleFactor * -0.5 + 0.5), _this.w * _this.scaleFactor, _this.h * _this.scaleFactor, _this.level.shadeColor, _this.shadeAmount());
             }
         };
         _this.pickupSound = function () {
@@ -10960,7 +11010,6 @@ var candle_1 = __webpack_require__(/*! ./candle */ "./src/item/candle.ts");
 var coin_1 = __webpack_require__(/*! ./coin */ "./src/item/coin.ts");
 var greengem_1 = __webpack_require__(/*! ./greengem */ "./src/item/greengem.ts");
 var heart_1 = __webpack_require__(/*! ./heart */ "./src/item/heart.ts");
-var item_1 = __webpack_require__(/*! ./item */ "./src/item/item.ts");
 var redgem_1 = __webpack_require__(/*! ./redgem */ "./src/item/redgem.ts");
 var weaponFragments_1 = __webpack_require__(/*! ./weaponFragments */ "./src/item/weaponFragments.ts");
 var spear_1 = __webpack_require__(/*! ../weapon/spear */ "./src/weapon/spear.ts");
@@ -10973,6 +11022,8 @@ var stone_1 = __webpack_require__(/*! ./stone */ "./src/item/stone.ts");
 var pickaxe_1 = __webpack_require__(/*! ../weapon/pickaxe */ "./src/weapon/pickaxe.ts");
 var hammer_1 = __webpack_require__(/*! ./hammer */ "./src/item/hammer.ts");
 var coal_1 = __webpack_require__(/*! ./coal */ "./src/item/coal.ts");
+var torch_1 = __webpack_require__(/*! ./torch */ "./src/item/torch.ts");
+var lantern_1 = __webpack_require__(/*! ./lantern */ "./src/item/lantern.ts");
 exports.ItemTypeMap = {
     dualdagger: dualdagger_1.DualDagger,
     warhammer: warhammer_1.Warhammer,
@@ -10986,8 +11037,8 @@ exports.ItemTypeMap = {
     coin: coin_1.Coin,
     weaponfragments: weaponFragments_1.WeaponFragments,
     candle: candle_1.Candle,
-    torch: item_1.Item,
-    lantern: item_1.Item,
+    torch: torch_1.Torch,
+    lantern: lantern_1.Lantern,
     redgem: redgem_1.RedGem,
     bluegem: bluegem_1.BlueGem,
     greengem: greengem_1.GreenGem,
@@ -11028,14 +11079,24 @@ var DropTable = /** @class */ (function () {
         { itemType: "stone", dropWeight: 5, category: "gem" },
         { itemType: "coal", dropWeight: 5, category: "fuel" },
     ];
-    DropTable.getDrop = function (entity, uniqueTable, useCategory) {
+    DropTable.getDrop = function (entity, uniqueTable, useCategory, force) {
         if (uniqueTable === void 0) { uniqueTable = false; }
         if (useCategory === void 0) { useCategory = ["coin"]; }
+        if (force === void 0) { force = false; }
         var filteredDrops = _a.drops;
         if (useCategory.length > 0) {
             filteredDrops = _a.drops.filter(function (drop) {
                 return useCategory.includes(drop.category);
             });
+        }
+        if (filteredDrops.length === 0) {
+            if (force) {
+                filteredDrops = _a.drops;
+                if (filteredDrops.length === 0)
+                    return null;
+            }
+            else
+                return null;
         }
         var totalWeight = filteredDrops.reduce(function (acc, drop) { return acc + drop.dropWeight; }, 0);
         var randomWeight = Math.floor(Math.random() * totalWeight);
@@ -11043,10 +11104,14 @@ var DropTable = /** @class */ (function () {
         for (var _i = 0, filteredDrops_1 = filteredDrops; _i < filteredDrops_1.length; _i++) {
             var drop = filteredDrops_1[_i];
             cumulativeWeight += drop.dropWeight;
-            if (randomWeight < cumulativeWeight) {
+            if (randomWeight <= cumulativeWeight) {
                 _a.addNewItem(drop.itemType, entity);
                 return;
             }
+        }
+        if (force && filteredDrops.length > 0) {
+            _a.addNewItem(filteredDrops[0].itemType, entity);
+            return;
         }
         return null;
     };
@@ -11503,6 +11568,12 @@ var Item = /** @class */ (function (_super) {
         _this.getDescription = function () {
             return "";
         };
+        _this.animateFromChest = function () {
+            _this.chestOffsetY = 0.5;
+            _this.alpha = 0;
+            _this.inChest = true;
+            _this.sineAnimateFactor = 0;
+        };
         // Function to play sound when item is picked up
         _this.pickupSound = function () {
             if (_this.level === _this.level.game.room)
@@ -11514,8 +11585,6 @@ var Item = /** @class */ (function (_super) {
         _this.onPickup = function (player) {
             if (!_this.pickedUp) {
                 _this.startY = player.y;
-                _this.y = player.y;
-                _this.x = player.x;
                 _this.drawableY = _this.y;
                 _this.alpha = 1;
                 _this.pickedUp = player.inventory.addItem(_this);
@@ -11541,8 +11610,20 @@ var Item = /** @class */ (function (_super) {
         };
         // Function to draw the item
         _this.draw = function (delta) {
+            game_1.Game.ctx.save();
             if (!_this.pickedUp) {
+                game_1.Game.ctx.globalAlpha = _this.alpha;
+                if (_this.alpha < 1)
+                    _this.alpha += 0.01 * delta;
                 _this.drawableY = _this.y;
+                if (_this.inChest) {
+                    _this.chestOffsetY -= Math.abs(_this.chestOffsetY + 0.5) * 0.035 * delta;
+                    if (_this.chestOffsetY < -0.47) {
+                        _this.chestOffsetY = -0.5;
+                    }
+                }
+                if (_this.sineAnimateFactor < 1 && _this.chestOffsetY < -0.45)
+                    _this.sineAnimateFactor += 0.2 * delta;
                 if (_this.scaleFactor > 0)
                     _this.scaleFactor *= Math.pow(0.5, delta);
                 else
@@ -11552,11 +11633,13 @@ var Item = /** @class */ (function (_super) {
                 game_1.Game.drawItem(0, 0, 1, 1, _this.x, _this.y, 1, 1);
                 _this.frame += (delta * (Math.PI * 2)) / 60;
                 game_1.Game.drawItem(_this.tileX, _this.tileY, 1, 2, _this.x + _this.w * (scale * -0.5 + 0.5) + _this.drawOffset, _this.y +
-                    Math.sin(_this.frame) * 0.07 -
+                    _this.sineAnimateFactor * Math.sin(_this.frame) * 0.07 -
                     1 +
                     _this.offsetY +
-                    _this.h * (scale * -0.5 + 0.5), _this.w * scale, _this.h * scale, _this.level.shadeColor, _this.shadeAmount());
+                    _this.h * (scale * -0.5 + 0.5) +
+                    _this.chestOffsetY, _this.w * scale, _this.h * scale, _this.level.shadeColor, _this.shadeAmount());
             }
+            game_1.Game.ctx.restore();
         };
         _this.setDrawOffset = function () {
             var itemsOnTile = _this.level.items.filter(function (item) { return item.x === _this.x && item.y === _this.y; });
@@ -11660,6 +11743,8 @@ var Item = /** @class */ (function (_super) {
         _this.description = "";
         _this.drawOffset = 0;
         _this.pickupOffsetY = 1;
+        _this.chestOffsetY = 0;
+        _this.sineAnimateFactor = 1;
         return _this;
     }
     Item.add = function (room, x, y) {
@@ -12319,7 +12404,7 @@ exports.enemyMinimumDepth = {
     4: 0,
     5: 1,
     6: 2,
-    7: 2,
+    7: 1,
     8: 1,
     9: 1,
     10: 2,
@@ -12450,7 +12535,7 @@ var Level = /** @class */ (function () {
      */
     Level.prototype.getNumberOfEnemyTypes = function (depth) {
         // Example logic: depth 0 -> 2 types, depth 1 -> 4, depth 2 -> 6, etc.
-        var numberOfTypes = depth === 0 ? 2 : Math.ceil(Math.sqrt(depth + 1)) + 2;
+        var numberOfTypes = depth === 0 ? 2 : Math.ceil(Math.sqrt(depth + 1)) + 3;
         console.log("numberOfTypes: ".concat(numberOfTypes));
         return numberOfTypes;
     };
@@ -13863,6 +13948,10 @@ var Map = /** @class */ (function () {
         var _this = this;
         this.mapData = [];
         this.oldMapData = [];
+        this.offsetX = 0;
+        this.offsetY = 0;
+        this.softOffsetX = 0;
+        this.softOffsetY = 0;
         this.saveMapData = function () {
             _this.clearMap();
             for (var _i = 0, _a = _this.game.rooms; _i < _a.length; _i++) {
@@ -13878,6 +13967,23 @@ var Map = /** @class */ (function () {
                         players: _this.game.players,
                     });
                 }
+            }
+            var enteredRooms = _this.mapData
+                .map(function (data) { return data.room; })
+                .filter(function (room) { return room.entered; });
+            if (enteredRooms.length > 0) {
+                var sortedByX = __spreadArray([], enteredRooms, true).sort(function (a, b) { return a.roomX - b.roomX; });
+                console.log("sortedX ".concat(sortedByX[sortedByX.length - 1].roomX));
+                var sortedByY = __spreadArray([], enteredRooms, true).sort(function (a, b) { return a.roomY - b.roomY; });
+                console.log("sortedY ".concat(sortedByY[0].roomY));
+                var maxX = sortedByX[sortedByX.length - 1].roomX;
+                var minY = sortedByY[0].roomY;
+                _this.offsetX = maxX;
+                _this.offsetY = minY;
+            }
+            else {
+                _this.offsetX = 0;
+                _this.offsetY = 0;
             }
         };
         this.clearMap = function () {
@@ -13900,7 +14006,26 @@ var Map = /** @class */ (function () {
             _this.resetCanvasTransform();
             game_1.Game.ctx.restore(); // Restore the canvas state
         };
+        this.updateOffsetXY = function () {
+            var diffX = _this.offsetX - _this.softOffsetX;
+            var diffY = _this.offsetY - _this.softOffsetY;
+            console.log("offsetX ".concat(_this.offsetX, " offsetY ").concat(_this.offsetY));
+            if (Math.abs(diffX) > 0.01) {
+                _this.softOffsetX += diffX * 0.1;
+                _this.softOffsetX = _this.softOffsetX;
+            }
+            else
+                _this.softOffsetX = _this.offsetX;
+            if (Math.abs(diffY) > 0.01) {
+                _this.softOffsetY += diffY * 0.1;
+                _this.softOffsetY = _this.softOffsetY;
+            }
+            else
+                _this.softOffsetY = _this.offsetY;
+            console.log("offsetX ".concat(_this.softOffsetX, " offsetY ").concat(_this.softOffsetY));
+        };
         this.draw = function (delta) {
+            _this.updateOffsetXY();
             _this.renderMap(delta);
         };
         this.setInitialCanvasSettings = function (alpha) {
@@ -13908,17 +14033,19 @@ var Map = /** @class */ (function () {
             game_1.Game.ctx.globalCompositeOperation = "source-over";
         };
         this.translateCanvas = function (offset) {
-            game_1.Game.ctx.translate(0.75 * gameConstants_1.GameConstants.WIDTH -
-                _this.game.room.roomX -
-                Math.floor(0.5 * _this.game.room.width) +
-                20 -
-                15 * _this.scale, 0.25 * gameConstants_1.GameConstants.HEIGHT -
-                _this.game.room.roomY -
-                Math.floor(0.5 * _this.game.room.height) -
+            game_1.Game.ctx.translate(Math.floor(0.95 * gameConstants_1.GameConstants.WIDTH) -
+                //this.game.room.roomX -
+                //Math.floor(0.5 * this.game.room.width) +
+                15 * _this.scale -
+                Math.floor(_this.softOffsetX), Math.floor(0.05 * gameConstants_1.GameConstants.HEIGHT) -
+                //this.game.room.roomY -
+                //Math.floor(0.5 * this.game.room.height) -
                 1 * _this.scale -
-                offset);
+                offset -
+                Math.floor(_this.softOffsetY));
         };
         this.drawRoom = function (data, delta) {
+            //this.drawUnderRoomPlayers(data.players, delta);
             _this.drawRoomOutline(data.room);
             _this.drawRoomWalls(data.walls);
             _this.drawRoomDoors(data.doors);
@@ -13969,6 +14096,28 @@ var Map = /** @class */ (function () {
                 game_1.Game.ctx.fillStyle = "white";
                 if (_this.game.rooms[players[i].levelID].mapGroup === _this.game.room.mapGroup) {
                     game_1.Game.ctx.fillRect(players[i].x * s, players[i].y * s, 1 * s, 1 * s);
+                }
+            }
+            game_1.Game.ctx.restore(); // Restore the canvas state
+        };
+        this.drawUnderRoomPlayers = function (players, delta) {
+            var s = _this.scale;
+            game_1.Game.ctx.save(); // Save the current canvas state
+            for (var i in players) {
+                _this.game.rooms[players[i].levelID].mapGroup === _this.game.room.mapGroup;
+                {
+                    if (Math.floor(Date.now() / 300) % 2) {
+                        game_1.Game.ctx.fillStyle = "#4D8C8C";
+                        // Draw 3x3 outline box around player
+                        game_1.Game.ctx.fillRect((players[i].x - 1) * s, (players[i].y - 1) * s, 1 * s, 1 * s); // Top left
+                        game_1.Game.ctx.fillRect(players[i].x * s, (players[i].y - 1) * s, 1 * s, 1 * s); // Top middle
+                        game_1.Game.ctx.fillRect((players[i].x + 1) * s, (players[i].y - 1) * s, 1 * s, 1 * s); // Top right
+                        game_1.Game.ctx.fillRect((players[i].x - 1) * s, players[i].y * s, 1 * s, 1 * s); // Middle left
+                        game_1.Game.ctx.fillRect((players[i].x + 1) * s, players[i].y * s, 1 * s, 1 * s); // Middle right
+                        game_1.Game.ctx.fillRect((players[i].x - 1) * s, (players[i].y + 1) * s, 1 * s, 1 * s); // Bottom left
+                        game_1.Game.ctx.fillRect(players[i].x * s, (players[i].y + 1) * s, 1 * s, 1 * s); // Bottom middle
+                        game_1.Game.ctx.fillRect((players[i].x + 1) * s, (players[i].y + 1) * s, 1 * s, 1 * s); // Bottom right
+                    }
                 }
             }
             game_1.Game.ctx.restore(); // Restore the canvas state
@@ -14853,23 +15002,30 @@ var Player = /** @class */ (function (_super) {
         };
         _this.mouseLeftClick = function () {
             _this.inventory.mostRecentInput = "mouse";
+            var mousePos = mouseCursor_1.MouseCursor.getInstance().getPosition();
+            var x = mousePos.x, y = mousePos.y;
             if (_this.dead) {
                 _this.restart();
+                return;
             }
-            else if (_this.openVendingMachine)
-                if (_this.openVendingMachine.isPointInVendingMachineBounds(mouseCursor_1.MouseCursor.getInstance().getPosition().x, mouseCursor_1.MouseCursor.getInstance().getPosition().y)) {
+            if ((_this.inventory.isOpen &&
+                !_this.inventory.isPointInInventoryBounds(x, y).inBounds) ||
+                _this.inventory.isPointInInventoryButton(x, y)) {
+                _this.inventory.toggleOpen();
+            }
+            if (_this.openVendingMachine) {
+                if (_this.openVendingMachine.isPointInVendingMachineBounds(x, y)) {
                     _this.openVendingMachine.space();
                 }
                 else {
                     _this.inventory.mouseLeftClick();
                 }
-            if (!_this.inventory.isOpen &&
-                !_this.inventory.isPointInInventoryButton(mouseCursor_1.MouseCursor.getInstance().getPosition().x, mouseCursor_1.MouseCursor.getInstance().getPosition().y) &&
-                !_this.inventory.isPointInQuickbarBounds(mouseCursor_1.MouseCursor.getInstance().getPosition().x, mouseCursor_1.MouseCursor.getInstance().getPosition().y).inBounds) {
-                _this.moveWithMouse();
+                return;
             }
-            else if (_this.inventory.isPointInInventoryButton(mouseCursor_1.MouseCursor.getInstance().getPosition().x, mouseCursor_1.MouseCursor.getInstance().getPosition().y)) {
-                _this.inventory.toggleOpen();
+            var notInInventoryUI = !_this.inventory.isPointInInventoryButton(x, y) &&
+                !_this.inventory.isPointInQuickbarBounds(x, y).inBounds;
+            if (notInInventoryUI) {
+                _this.moveWithMouse();
             }
         };
         _this.mouseRightClick = function () {
@@ -15440,7 +15596,7 @@ var Player = /** @class */ (function (_super) {
             if (_this.mapToggled === true)
                 _this.map.draw(delta);
             //this.drawTileCursor(delta);
-            _this.drawInventoryButton(delta);
+            //this.drawInventoryButton(delta);
             game_1.Game.ctx.restore();
         };
         _this.drawHurt = function (delta) {
@@ -15585,16 +15741,6 @@ var Player = /** @class */ (function (_super) {
                 _this.jumpY = 0;
             if (_this.jumpY > _this.jumpHeight)
                 _this.jumpY = _this.jumpHeight;
-        };
-        /**
-         * Draws the inventory button to the canvas.
-         * Added `ctx.save()` at the beginning and `ctx.restore()` at the end
-         * to ensure canvas state is preserved.
-         */
-        _this.drawInventoryButton = function (delta) {
-            game_1.Game.ctx.save(); // Save the current canvas state
-            game_1.Game.drawFX(0, 0, 2, 2, levelConstants_1.LevelConstants.SCREEN_W - 2, 0, 2, 2);
-            game_1.Game.ctx.restore(); // Restore the canvas state
         };
         /**
          * Draws the tile cursor to the canvas.
@@ -16789,6 +16935,27 @@ var Room = /** @class */ (function () {
             _this.addRandomTorches("medium");
             var _a = _this.getRoomCenter(), x = _a.x, y = _a.y;
             _this.roomArray[x][y] = new downLadder_1.DownLadder(_this, _this.game, x, y);
+            var numChests = Math.floor(Math.random() * 4);
+            var tiles = _this.getEmptyTiles();
+            tiles = tiles.filter(function (tile) { return tile.x !== x || tile.y !== y; });
+            var weaponDropped = false;
+            var _loop_2 = function (i) {
+                if (tiles.length > 0) {
+                    var _b = _this.getRandomEmptyPosition(tiles), x_2 = _b.x, y_2 = _b.y;
+                    var chest = new chest_1.Chest(_this, _this.game, x_2, y_2);
+                    if (!weaponDropped) {
+                        chest.getDrop(["weapon"], true);
+                        weaponDropped = true;
+                    }
+                    else
+                        chest.getDrop(["consumables"], true);
+                    tiles.filter(function (tile) { return tile.x !== x_2 && tile.y !== y_2; });
+                    _this.entities.push(chest);
+                }
+            };
+            for (var i = 0; i < 5; i++) {
+                _loop_2(i);
+            }
         };
         this.populateRopeHole = function (rand) {
             _this.addRandomTorches("medium");
@@ -16813,13 +16980,13 @@ var Room = /** @class */ (function () {
             var obstacles = _this.checkDoorObstructions();
             if (obstacles.length > 0) {
             }
-            var _loop_2 = function (obstacle) {
+            var _loop_3 = function (obstacle) {
                 _this.entities = _this.entities.filter(function (e) { return e !== obstacle; });
                 obstacle = null;
             };
             for (var _i = 0, obstacles_2 = obstacles; _i < obstacles_2.length; _i++) {
                 var obstacle = obstacles_2[_i];
-                _loop_2(obstacle);
+                _loop_3(obstacle);
             }
         };
         this.populate = function (rand) {
@@ -16994,12 +17161,12 @@ var Room = /** @class */ (function () {
                     }
                 }
             }
-            var _loop_3 = function (e) {
+            var _loop_4 = function (e) {
                 returnVal = returnVal.filter(function (t) { return !e.pointIn(t.x, t.y); });
             };
             for (var _i = 0, _a = _this.entities; _i < _a.length; _i++) {
                 var e = _a[_i];
-                _loop_3(e);
+                _loop_4(e);
             }
             return returnVal;
         };
@@ -17213,7 +17380,7 @@ var Room = /** @class */ (function () {
                 _this.sRGBToLinear(color[1]),
                 _this.sRGBToLinear(color[2]),
             ];
-            var _loop_4 = function (i) {
+            var _loop_5 = function (i) {
                 var currentX = Math.floor(px + dx * i);
                 var currentY = Math.floor(py + dy * i);
                 if (!_this.isPositionInRoom(currentX, currentY))
@@ -17259,7 +17426,7 @@ var Room = /** @class */ (function () {
                 }
             };
             for (var i = 0; i <= Math.min(levelConstants_1.LevelConstants.LIGHTING_MAX_DISTANCE, radius); i++) {
-                var state_1 = _loop_4(i);
+                var state_1 = _loop_5(i);
                 if (typeof state_1 === "object")
                     return state_1.value;
             }
@@ -17726,33 +17893,33 @@ var Room = /** @class */ (function () {
         this.innerWalls = Array();
         this.level = level;
         this.roomArray = [];
-        for (var x_2 = this.roomX - 1; x_2 < this.roomX + this.width + 1; x_2++) {
-            this.roomArray[x_2] = [];
-            for (var y_2 = this.roomY - 1; y_2 < this.roomY + this.height + 1; y_2++) {
-                this.roomArray[x_2][y_2] = null;
+        for (var x_3 = this.roomX - 1; x_3 < this.roomX + this.width + 1; x_3++) {
+            this.roomArray[x_3] = [];
+            for (var y_3 = this.roomY - 1; y_3 < this.roomY + this.height + 1; y_3++) {
+                this.roomArray[x_3][y_3] = null;
             }
         }
         this.vis = [];
         this.softVis = [];
         this.col = [];
         this.softCol = [];
-        for (var x_3 = this.roomX; x_3 < this.roomX + this.width; x_3++) {
-            this.vis[x_3] = [];
-            this.softVis[x_3] = [];
-            this.col[x_3] = [];
-            this.softCol[x_3] = [];
-            for (var y_3 = this.roomY; y_3 < this.roomY + this.height; y_3++) {
-                this.vis[x_3][y_3] = 1;
-                this.softVis[x_3][y_3] = 1;
-                this.col[x_3][y_3] = [0, 0, 0];
-                this.softCol[x_3][y_3] = [0, 0, 0];
+        for (var x_4 = this.roomX; x_4 < this.roomX + this.width; x_4++) {
+            this.vis[x_4] = [];
+            this.softVis[x_4] = [];
+            this.col[x_4] = [];
+            this.softCol[x_4] = [];
+            for (var y_4 = this.roomY; y_4 < this.roomY + this.height; y_4++) {
+                this.vis[x_4][y_4] = 1;
+                this.softVis[x_4][y_4] = 1;
+                this.col[x_4][y_4] = [0, 0, 0];
+                this.softCol[x_4][y_4] = [0, 0, 0];
             }
         }
         this.renderBuffer = [];
-        for (var x_4 = this.roomX; x_4 < this.roomX + this.width; x_4++) {
-            this.renderBuffer[x_4] = [];
-            for (var y_4 = this.roomY; y_4 < this.roomY + this.height; y_4++) {
-                this.renderBuffer[x_4][y_4] = [];
+        for (var x_5 = this.roomX; x_5 < this.roomX + this.width; x_5++) {
+            this.renderBuffer[x_5] = [];
+            for (var y_5 = this.roomY; y_5 < this.roomY + this.height; y_5++) {
+                this.renderBuffer[x_5][y_5] = [];
             }
         }
         this.skin = tile_1.SkinType.DUNGEON;
@@ -17837,7 +18004,7 @@ var Room = /** @class */ (function () {
         var numBlocks = game_1.Game.randTable([0, 0, 1, 1, 2, 2, 2, 2, 3], rand);
         if (this.width > 8 && rand() > 0.5)
             numBlocks *= 4;
-        var _loop_5 = function (i) {
+        var _loop_6 = function (i) {
             var blockW = Math.min(game_1.Game.randTable([2, 2, 2, 2, 2, 2, 3, 3, 3, 4, 5], rand), this_1.width - 4);
             var blockH = Math.min(blockW + game_1.Game.rand(-2, 2, rand), this_1.height - 4);
             var x = game_1.Game.rand(this_1.roomX + 2, this_1.roomX + this_1.width - blockW - 2, rand);
@@ -17871,7 +18038,7 @@ var Room = /** @class */ (function () {
         };
         var this_1 = this;
         for (var i = 0; i < numBlocks; i++) {
-            _loop_5(i);
+            _loop_6(i);
         }
     };
     Room.prototype.addTorches = function (numTorches, rand) {
@@ -17972,7 +18139,7 @@ var Room = /** @class */ (function () {
         }
         // Filter tiles that aren't in the excluded set
         tiles = tiles.filter(function (tile) { return !excludedCoords.has("".concat(tile.x, ",").concat(tile.y)); });
-        var _loop_6 = function (i) {
+        var _loop_7 = function (i) {
             var rerolls = 1;
             if (tiles.length === 0) {
                 console.log("No tiles left to spawn enemies");
@@ -17994,8 +18161,8 @@ var Room = /** @class */ (function () {
             if (tables[d] && tables[d].length > 0) {
                 // Function to add an enemy to the room
                 var addEnemy = function (enemy) {
-                    var _loop_7 = function (xx) {
-                        var _loop_9 = function (yy) {
+                    var _loop_8 = function (xx) {
+                        var _loop_10 = function (yy) {
                             if (!tiles.some(function (tt) { return tt.x === x + xx && tt.y === y + yy; })) {
                                 // If it does, increment the enemy count and return false
                                 numEnemies++;
@@ -18003,29 +18170,29 @@ var Room = /** @class */ (function () {
                             }
                         };
                         for (var yy = 0; yy < enemy.h; yy++) {
-                            var state_4 = _loop_9(yy);
+                            var state_4 = _loop_10(yy);
                             if (typeof state_4 === "object")
                                 return state_4;
                         }
                     };
                     // Check if the enemy overlaps with any other enemies
                     for (var xx = 0; xx < enemy.w; xx++) {
-                        var state_3 = _loop_7(xx);
+                        var state_3 = _loop_8(xx);
                         if (typeof state_3 === "object")
                             return state_3.value;
                     }
                     // If it doesn't, add the enemy to the room, remove the tiles used from the available pool, and return true
                     _this.entities.push(enemy);
-                    var _loop_8 = function (xx) {
-                        var _loop_10 = function (yy) {
+                    var _loop_9 = function (xx) {
+                        var _loop_11 = function (yy) {
                             tiles = tiles.filter(function (t) { return !(t.x === x + xx && t.y === y + yy); });
                         };
                         for (var yy = 0; yy < enemy.h; yy++) {
-                            _loop_10(yy);
+                            _loop_11(yy);
                         }
                     };
                     for (var xx = 0; xx < enemy.w; xx++) {
-                        _loop_8(xx);
+                        _loop_9(xx);
                     }
                     return true;
                 };
@@ -18098,7 +18265,7 @@ var Room = /** @class */ (function () {
         var this_2 = this, out_i_1;
         // Loop through the number of enemies to be added
         for (var i = 0; i < numEnemies; i++) {
-            var state_2 = _loop_6(i);
+            var state_2 = _loop_7(i);
             i = out_i_1;
             if (state_2 === "break")
                 break;

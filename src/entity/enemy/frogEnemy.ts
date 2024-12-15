@@ -50,7 +50,6 @@ export class FrogEnemy extends Enemy {
     this.drawMoveSpeed = 0.2;
     this.imageParticleX = 3;
     this.imageParticleY = 30;
-
     if (drop) this.drop = drop;
     if (Math.random() < this.dropChance) {
       this.getDrop(["weapon", "consumable", "gem", "tool", "coin", "poison"]);

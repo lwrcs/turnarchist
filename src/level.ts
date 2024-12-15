@@ -20,7 +20,7 @@ export const enemyMinimumDepth: Record<number, number> = {
   4: 0, // SkullEnemy
   5: 1, // EnergyWizardEnemy
   6: 2, // ChargeEnemy
-  7: 2, // RookEnemy
+  7: 1, // RookEnemy
   8: 1, // BishopEnemy
   9: 1, // ArmoredzombieEnemy
   10: 2, // BigSkullEnemy
@@ -177,7 +177,7 @@ export class Level {
    */
   getNumberOfEnemyTypes(depth: number): number {
     // Example logic: depth 0 -> 2 types, depth 1 -> 4, depth 2 -> 6, etc.
-    let numberOfTypes = depth === 0 ? 2 : Math.ceil(Math.sqrt(depth + 1)) + 2;
+    let numberOfTypes = depth === 0 ? 2 : Math.ceil(Math.sqrt(depth + 1)) + 3;
     console.log(`numberOfTypes: ${numberOfTypes}`);
     return numberOfTypes;
   }

@@ -17,24 +17,36 @@ import { Random } from "../../random";
 import { Player } from "../../player";
 import { Torch } from "../../item/torch";
 import { WeaponFragments } from "../../item/weaponFragments";
+import { ChestLayer } from "./chestLayer";
+import { ImageParticle } from "../../particle/imageParticle";
 
 export class Chest extends Entity {
   frame: number;
   opening: boolean;
   dropX: number;
   dropY: number;
+  layer: ChestLayer;
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
 
     this.tileX = 4;
     this.tileY = 0;
-    this.health = 2;
+    this.health = 3;
     this.name = "chest";
     this.frame = 0;
     this.opening = false;
     this.dropX = 0;
     this.dropY = 0;
     this.drop = null;
+    /*
+    this.layer = new ChestLayer(
+      this.room,
+      this.game,
+      this.x,
+      this.y,
+    );
+    this.room.entities.push(this.layer);
+    */
   }
 
   get type() {
@@ -44,7 +56,9 @@ export class Chest extends Entity {
   readonly hurt = (playerHitBy: Player, damage: number) => {
     //this.healthBar.hurt();
     this.health -= 1;
-    if (this.health === 1 && !this.opening) this.open();
+    if (this.health === 2 && !this.opening) this.open();
+
+    if (this.health === 1) this.drop.onPickup(playerHitBy);
     if (this.health <= 0) this.kill();
     else this.hurtCallback();
   };
@@ -54,32 +68,21 @@ export class Chest extends Entity {
     this.tileY = 2;
 
     this.opening = true;
-    const { x, y } = this.getOpenTile();
+    /*
+    if (this.getOpenTile().x && this.getOpenTile().y) {
+      const { x, y } = this.getOpenTile();
 
-    switch (this.rollDrop()) {
-      case 1:
-        this.drop = new Heart(this.room, x, y);
-        break;
-      case 2:
-        this.drop = new Torch(this.room, x, y);
-        break;
-      case 3:
-        this.drop = new RedGem(this.room, x, y);
-        break;
-      case 4:
-        this.drop = new BlueGem(this.room, x, y);
-        break;
-      case 5:
-        this.drop = new Key(this.room, x, y);
-        break;
-      case 6:
-        this.drop = new Armor(this.room, x, y);
-        break;
-      case 7:
-        this.drop = new WeaponFragments(this.room, x, y, 100);
-        break;
+      this.drop.x = x;
+      this.drop.y = y;
+
+      this.room.items.push(this.drop);
+    } else if (!this.game.players[0].inventory.isFull()) {
+      this.drop.onPickup(this.game.players[0]);
     }
-    this.room.items.push(this.drop);
+      */
+    if (this.drop === null) this.drop = Coin.add(this.room, this.x, this.y);
+    this.dropLoot();
+    this.drop.animateFromChest();
   };
 
   rollDrop = (): number => {
@@ -87,30 +90,14 @@ export class Chest extends Entity {
   };
 
   kill = () => {
-    GenericParticle.spawnCluster(
-      this.room,
-      this.x + 0.5,
-      this.y + 0.5,
-      "#fbf236",
-    );
+    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 3, 26);
 
     this.dead = true;
+    //this.layer.dead = true;
+    //this.room.entities.filter((layer) => layer !== this.layer);
   };
   killNoBones = () => {
     this.kill();
-  };
-
-  getOpenTile = (): { x: number; y: number } => {
-    let x, y;
-    do {
-      x = Game.rand(this.x - 1, this.x + 1, Random.rand);
-      y = Game.rand(this.y - 1, this.y + 1, Random.rand);
-    } while (
-      (x === this.x && y === this.y) ||
-      this.room.roomArray[x][y].isSolid() ||
-      this.room.entities.some((e) => e.x === x && e.y === y)
-    );
-    return { x, y };
   };
 
   draw = (delta: number) => {
@@ -140,6 +127,6 @@ export class Chest extends Entity {
   };
 
   drawTopLayer = (delta: number) => {
-    this.drawableY = this.y;
+    this.drawableY = this.y - 1;
   };
 }

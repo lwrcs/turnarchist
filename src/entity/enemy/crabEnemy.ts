@@ -30,8 +30,7 @@ export class CrabEnemy extends Enemy {
     this.orthogonalAttack = true;
     this.imageParticleX = 3;
     this.imageParticleY = 24;
-
-    if (drop) this.drop = drop;
+    //if (drop) this.drop = drop;
     if (Math.random() < this.dropChance) {
       this.getDrop([
         "weapon",

@@ -33,7 +33,6 @@ export class SkullEnemy extends Enemy {
     this.deathParticleColor = "#ffffff";
     this.name = "skeleton";
     this.forwardOnlyAttack = true;
-
     if (drop) this.drop = drop;
     if (Math.random() < this.dropChance) {
       this.getDrop(["weapon", "consumable", "gem", "tool", "coin"]);
