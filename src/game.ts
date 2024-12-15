@@ -648,14 +648,12 @@ export class Game {
       Game.scale = Math.min(maxWidthScale, maxHeightScale, 1); // Ensure minimum scale of 1
     }
 
-    LevelConstants.SCREEN_W =
-      Math.floor(
-        (window.innerWidth / Game.scale / GameConstants.TILESIZE) * 16,
-      ) / 16;
-    LevelConstants.SCREEN_H =
-      Math.floor(
-        (window.innerHeight / Game.scale / GameConstants.TILESIZE) * 16,
-      ) / 16;
+    LevelConstants.SCREEN_W = Math.floor(
+      window.innerWidth / Game.scale / GameConstants.TILESIZE,
+    );
+    LevelConstants.SCREEN_H = Math.floor(
+      window.innerHeight / Game.scale / GameConstants.TILESIZE,
+    );
 
     GameConstants.WIDTH = LevelConstants.SCREEN_W * GameConstants.TILESIZE;
     GameConstants.HEIGHT = LevelConstants.SCREEN_H * GameConstants.TILESIZE;
@@ -840,6 +838,10 @@ export class Game {
     Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
 
     if (this.levelState === LevelState.TRANSITIONING) {
+      this.screenShakeX = 0;
+      this.screenShakeY = 0;
+      this.screenShakeActive = false;
+
       let levelOffsetX = Math.floor(
         this.lerp(
           (Date.now() - this.transitionStartTime) /

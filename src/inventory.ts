@@ -1029,6 +1029,43 @@ export class Inventory {
 
       // **Ensure drawUsingItem is not called again here**
       // this.drawUsingItem(delta, mainBgX, mainBgY, s, b, g);
+      // Draw item description and action text (unique to full inventory view)
+      const selectedIdx = this.selX + this.selY * this.cols;
+
+      if (selectedIdx < this.items.length && this.items[selectedIdx] !== null) {
+        const item = this.items[selectedIdx]!;
+        Game.ctx.fillStyle = "white";
+
+        // Determine action text
+        let topPhrase = "";
+        if (item instanceof Equippable) {
+          topPhrase = item.equipped ? "[SPACE] to unequip" : "[SPACE] to equip";
+        }
+        if (item instanceof Usable) {
+          topPhrase = "[SPACE] to use";
+        }
+
+        // Draw action text
+        const actionTextWidth = Game.measureText(topPhrase).width;
+        Game.fillText(
+          topPhrase,
+          0.5 * (GameConstants.WIDTH - actionTextWidth),
+          5,
+        );
+
+        // Draw item description
+        const lines = item.getDescription().split("\n");
+        let nextY = Math.round(
+          0.5 * GameConstants.HEIGHT -
+            0.5 * height +
+            (this.rows + this.expansion) * (s + 2 * b + g) +
+            b +
+            5,
+        );
+        lines.forEach((line) => {
+          nextY = this.textWrap(line, 5, nextY, GameConstants.WIDTH - 10);
+        });
+      }
     }
     if (this.isOpen) {
       this.drawUsingItem(delta, mainBgX + 1, mainBgY + 1, s, b, g);

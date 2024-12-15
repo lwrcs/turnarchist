@@ -7435,10 +7435,8 @@ var Game = /** @class */ (function () {
                 maxHeightScale = window.innerHeight / gameConstants_1.GameConstants.DEFAULTHEIGHT;
                 Game.scale = Math.min(maxWidthScale, maxHeightScale, 1); // Ensure minimum scale of 1
             }
-            levelConstants_1.LevelConstants.SCREEN_W =
-                Math.floor((window.innerWidth / Game.scale / gameConstants_1.GameConstants.TILESIZE) * 16) / 16;
-            levelConstants_1.LevelConstants.SCREEN_H =
-                Math.floor((window.innerHeight / Game.scale / gameConstants_1.GameConstants.TILESIZE) * 16) / 16;
+            levelConstants_1.LevelConstants.SCREEN_W = Math.floor(window.innerWidth / Game.scale / gameConstants_1.GameConstants.TILESIZE);
+            levelConstants_1.LevelConstants.SCREEN_H = Math.floor(window.innerHeight / Game.scale / gameConstants_1.GameConstants.TILESIZE);
             gameConstants_1.GameConstants.WIDTH = levelConstants_1.LevelConstants.SCREEN_W * gameConstants_1.GameConstants.TILESIZE;
             gameConstants_1.GameConstants.HEIGHT = levelConstants_1.LevelConstants.SCREEN_H * gameConstants_1.GameConstants.TILESIZE;
             Game.ctx.canvas.setAttribute("width", "".concat(gameConstants_1.GameConstants.WIDTH));
@@ -7505,6 +7503,9 @@ var Game = /** @class */ (function () {
                 Game.ctx.fillStyle = "black";
             Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
             if (_this.levelState === LevelState.TRANSITIONING) {
+                _this.screenShakeX = 0;
+                _this.screenShakeY = 0;
+                _this.screenShakeActive = false;
                 var levelOffsetX = Math.floor(_this.lerp((Date.now() - _this.transitionStartTime) /
                     levelConstants_1.LevelConstants.LEVEL_TRANSITION_TIME, 0, -_this.transitionX));
                 var levelOffsetY = Math.floor(_this.lerp((Date.now() - _this.transitionStartTime) /
@@ -8045,6 +8046,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GameConstants = void 0;
 var armor_1 = __webpack_require__(/*! ./item/armor */ "./src/item/armor.ts");
 var backpack_1 = __webpack_require__(/*! ./item/backpack */ "./src/item/backpack.ts");
+var candle_1 = __webpack_require__(/*! ./item/candle */ "./src/item/candle.ts");
 var coal_1 = __webpack_require__(/*! ./item/coal */ "./src/item/coal.ts");
 var godStone_1 = __webpack_require__(/*! ./item/godStone */ "./src/item/godStone.ts");
 var heart_1 = __webpack_require__(/*! ./item/heart */ "./src/item/heart.ts");
@@ -8054,9 +8056,7 @@ var levelConstants_1 = __webpack_require__(/*! ./levelConstants */ "./src/levelC
 var dagger_1 = __webpack_require__(/*! ./weapon/dagger */ "./src/weapon/dagger.ts");
 var spear_1 = __webpack_require__(/*! ./weapon/spear */ "./src/weapon/spear.ts");
 var spellbook_1 = __webpack_require__(/*! ./weapon/spellbook */ "./src/weapon/spellbook.ts");
-var warhammer_1 = __webpack_require__(/*! ./weapon/warhammer */ "./src/weapon/warhammer.ts");
 var hammer_1 = __webpack_require__(/*! ./item/hammer */ "./src/item/hammer.ts");
-var spellbookPage_1 = __webpack_require__(/*! ./item/spellbookPage */ "./src/item/spellbookPage.ts");
 var GameConstants = /** @class */ (function () {
     function GameConstants() {
     }
@@ -8158,17 +8158,18 @@ var GameConstants = /** @class */ (function () {
     GameConstants.STARTING_INVENTORY = [dagger_1.Dagger, torch_1.Torch];
     GameConstants.STARTING_DEV_INVENTORY = [
         dagger_1.Dagger,
-        spellbookPage_1.SpellbookPage,
+        candle_1.Candle,
         torch_1.Torch,
-        warhammer_1.Warhammer,
+        lantern_1.Lantern,
         godStone_1.GodStone,
+        candle_1.Candle,
+        candle_1.Candle,
         spear_1.Spear,
         spellbook_1.Spellbook,
         armor_1.Armor,
         heart_1.Heart,
         backpack_1.Backpack,
         hammer_1.Hammer,
-        lantern_1.Lantern,
         coal_1.Coal,
     ];
     return GameConstants;
@@ -10394,6 +10395,33 @@ var Inventory = /** @class */ (function () {
                 }
                 // **Ensure drawUsingItem is not called again here**
                 // this.drawUsingItem(delta, mainBgX, mainBgY, s, b, g);
+                // Draw item description and action text (unique to full inventory view)
+                var selectedIdx = _this.selX + _this.selY * _this.cols;
+                if (selectedIdx < _this.items.length && _this.items[selectedIdx] !== null) {
+                    var item = _this.items[selectedIdx];
+                    game_1.Game.ctx.fillStyle = "white";
+                    // Determine action text
+                    var topPhrase = "";
+                    if (item instanceof equippable_1.Equippable) {
+                        topPhrase = item.equipped ? "[SPACE] to unequip" : "[SPACE] to equip";
+                    }
+                    if (item instanceof usable_1.Usable) {
+                        topPhrase = "[SPACE] to use";
+                    }
+                    // Draw action text
+                    var actionTextWidth = game_1.Game.measureText(topPhrase).width;
+                    game_1.Game.fillText(topPhrase, 0.5 * (gameConstants_1.GameConstants.WIDTH - actionTextWidth), 5);
+                    // Draw item description
+                    var lines = item.getDescription().split("\n");
+                    var nextY_1 = Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT -
+                        0.5 * height_1 +
+                        (_this.rows + _this.expansion) * (s_1 + 2 * b_1 + g_1) +
+                        b_1 +
+                        5);
+                    lines.forEach(function (line) {
+                        nextY_1 = _this.textWrap(line, 5, nextY_1, gameConstants_1.GameConstants.WIDTH - 10);
+                    });
+                }
             }
             if (_this.isOpen) {
                 _this.drawUsingItem(delta, mainBgX + 1, mainBgY + 1, s, b, g);
@@ -10842,11 +10870,11 @@ var Candle = /** @class */ (function (_super) {
     __extends(Candle, _super);
     function Candle(level, x, y) {
         var _this = _super.call(this, level, x, y) || this;
-        _this.fuel = 100; //how many turns before it burns out
+        _this.fuel = 50; //how many turns before it burns out
         _this.tileX = 27;
         _this.tileY = 0;
         _this.name = "candle";
-        _this.fuelCap = 100;
+        _this.fuelCap = 50;
         _this.radius = 4;
         _this.stackable = true;
         return _this;
@@ -11971,30 +11999,35 @@ var Light = /** @class */ (function (_super) {
             _this.wielder.sightRadius = _this.wielder.defaultSightRadius;
         };
         _this.burn = function () {
+            // Handle active burning
+            if (_this.isIgnited()) {
+                _this.fuel--;
+                _this.setRadius();
+            }
+            // Handle depleted fuel
             if (_this.fuel <= 0) {
-                _this.resetRadius();
-                _this.wielder.lightEquipped = false;
-                if (!_this.canRefuel && _this.stackCount <= 1) {
-                    _this.wielder.inventory.removeItem(_this);
-                }
-                else if (_this.stackable) {
+                if (_this.stackable) {
                     _this.stackCount--;
                     _this.fuel = _this.fuelCap;
                 }
-                else {
-                    _this.broken = true;
+                // Check if item should be removed after stack reduction
+                if (_this.equipped) {
+                    if ((_this.stackable && _this.stackCount <= 0) ||
+                        (!_this.stackable && !_this.canRefuel)) {
+                        _this.resetRadius();
+                        _this.wielder.lightEquipped = false;
+                        _this.wielder.inventory.removeItem(_this);
+                        _this.wielder.game.pushMessage("".concat(_this.name, " depletes."));
+                    }
+                    else if (_this.canRefuel) {
+                        _this.wielder.game.pushMessage("".concat(_this.name, " depletes."));
+                        _this.equipped = false;
+                        _this.resetRadius();
+                        _this.wielder.lightEquipped = false;
+                        _this.broken = true;
+                    }
+                    _this.updateLighting();
                 }
-                _this.updateLighting();
-            }
-            else if (_this.isIgnited()) {
-                _this.fuel--;
-                if (_this.fuel <= 0 && _this.canRefuel) {
-                    _this.wielder.game.pushMessage("".concat(_this.name, " depletes."));
-                    _this.equipped = false;
-                    _this.resetRadius();
-                    _this.wielder.lightEquipped = false;
-                }
-                _this.setRadius();
             }
         };
         _this.drawDurability = function (x, y) {
@@ -12025,7 +12058,7 @@ var Light = /** @class */ (function (_super) {
             _this.burn();
         };
         _this.getDescription = function () {
-            return "".concat(_this.name, ": ").concat(_this.fuelPercentage * 100, "%");
+            return "".concat(_this.name, ": ").concat(Math.ceil(_this.fuelPercentage * 100), "%");
         };
         _this.tileX = 28;
         _this.tileY = 0;
@@ -12034,6 +12067,7 @@ var Light = /** @class */ (function (_super) {
         _this.maxBrightness = 2;
         _this.minBrightness = 0.3;
         _this.radius = 6;
+        _this.equipped = false;
         return _this;
     }
     Object.defineProperty(Light.prototype, "fuelPercentage", {
@@ -12241,9 +12275,11 @@ var Torch = /** @class */ (function (_super) {
         _this.tileX = 28;
         _this.tileY = 0;
         _this.name = "torch";
-        _this.fuelCap = 500;
-        _this.fuel = 500;
-        _this.radius = 6;
+        _this.fuelCap = 250;
+        _this.fuel = 250;
+        _this.radius = 5;
+        _this.maxBrightness = 2;
+        _this.minBrightness = 0.75;
         return _this;
     }
     Torch.itemName = "torch";

@@ -21,6 +21,7 @@ export abstract class Light extends Equippable {
     this.maxBrightness = 2;
     this.minBrightness = 0.3;
     this.radius = 6;
+    this.equipped = false;
   }
 
   updateLighting = () => {
@@ -76,27 +77,39 @@ export abstract class Light extends Equippable {
   };
 
   burn = () => {
+    // Handle active burning
+    if (this.isIgnited()) {
+      this.fuel--;
+      this.setRadius();
+    }
+
+    // Handle depleted fuel
     if (this.fuel <= 0) {
-      this.resetRadius();
-      this.wielder.lightEquipped = false;
-      if (!this.canRefuel && this.stackCount <= 1) {
-        this.wielder.inventory.removeItem(this);
-      } else if (this.stackable) {
+      if (this.stackable) {
         this.stackCount--;
         this.fuel = this.fuelCap;
-      } else {
-        this.broken = true;
       }
-      this.updateLighting();
-    } else if (this.isIgnited()) {
-      this.fuel--;
-      if (this.fuel <= 0 && this.canRefuel) {
-        this.wielder.game.pushMessage(`${this.name} depletes.`);
-        this.equipped = false;
-        this.resetRadius();
-        this.wielder.lightEquipped = false;
+
+      // Check if item should be removed after stack reduction
+      if (this.equipped) {
+        if (
+          (this.stackable && this.stackCount <= 0) ||
+          (!this.stackable && !this.canRefuel)
+        ) {
+          this.resetRadius();
+          this.wielder.lightEquipped = false;
+          this.wielder.inventory.removeItem(this);
+          this.wielder.game.pushMessage(`${this.name} depletes.`);
+        } else if (this.canRefuel) {
+          this.wielder.game.pushMessage(`${this.name} depletes.`);
+          this.equipped = false;
+          this.resetRadius();
+          this.wielder.lightEquipped = false;
+          this.broken = true;
+        }
+
+        this.updateLighting();
       }
-      this.setRadius();
     }
   };
 
@@ -138,6 +151,6 @@ export abstract class Light extends Equippable {
   };
 
   getDescription = () => {
-    return `${this.name}: ${this.fuelPercentage * 100}%`;
+    return `${this.name}: ${Math.ceil(this.fuelPercentage * 100)}%`;
   };
 }

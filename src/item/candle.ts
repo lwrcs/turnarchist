@@ -12,11 +12,11 @@ export class Candle extends Light {
   static itemName = "candle";
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
-    this.fuel = 100; //how many turns before it burns out
+    this.fuel = 50; //how many turns before it burns out
     this.tileX = 27;
     this.tileY = 0;
     this.name = "candle";
-    this.fuelCap = 100;
+    this.fuelCap = 50;
     this.radius = 4;
     this.stackable = true;
   }
