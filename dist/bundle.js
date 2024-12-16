@@ -8081,7 +8081,7 @@ var hammer_1 = __webpack_require__(/*! ./item/hammer */ "./src/item/hammer.ts");
 var GameConstants = /** @class */ (function () {
     function GameConstants() {
     }
-    GameConstants.VERSION = "v1.0.2"; //"v0.6.3";
+    GameConstants.VERSION = "v1.0.3"; //"v0.6.3";
     GameConstants.DEVELOPER_MODE = false;
     GameConstants.isMobile = false;
     GameConstants.FPS = 120;
