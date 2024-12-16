@@ -7,6 +7,7 @@ import { Drawable } from "../drawable";
 export enum SkinType {
   DUNGEON = 0,
   CAVE = 1,
+  FOREST = 2,
 }
 
 export abstract class Tile extends Drawable {

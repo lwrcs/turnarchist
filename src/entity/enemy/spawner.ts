@@ -1,22 +1,10 @@
-import { Entity, EntityDirection } from "../entity";
-import { LevelConstants } from "../../levelConstants";
 import { Game } from "../../game";
 import { Room } from "../../room";
-import { astar } from "../../astarclass";
-import { Heart } from "../../item/heart";
 import { Floor } from "../../tile/floor";
-import { Bones } from "../../tile/bones";
-import { DeathParticle } from "../../particle/deathParticle";
-import { GameConstants } from "../../gameConstants";
 import { HitWarning } from "../../hitWarning";
-import { GreenGem } from "../../item/greengem";
-import { SpikeTrap } from "../../tile/spiketrap";
 import { SkullEnemy } from "./skullEnemy";
 import { EnemySpawnAnimation } from "../../projectile/enemySpawnAnimation";
-import { RedGem } from "../../item/redgem";
-import { BlueGem } from "../../item/bluegem";
 import { KnightEnemy } from "./knightEnemy";
-import { WizardEnemy } from "./wizardEnemy";
 import { Enemy } from "./enemy";
 import { Random } from "../../random";
 import { EnergyWizardEnemy } from "./energyWizard";
@@ -43,7 +31,7 @@ export class Spawner extends Enemy {
     game: Game,
     x: number,
     y: number,
-    enemyTable: number[],
+    enemyTable: number[] = [0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14],
   ) {
     super(room, game, x, y);
     this.ticks = 0;
@@ -124,7 +112,7 @@ export class Spawner extends Enemy {
         return;
       }
       this.tileX = 6;
-      if (this.ticks % 8 === 0) {
+      if (this.ticks % 4 === 0) {
         let positions = this.room
           .getEmptyTiles()
           .filter(
@@ -282,37 +270,20 @@ export class Spawner extends Enemy {
               );
               break;
           }
-          let roomArea = this.room.width * this.room.height;
-          let enemies = this.room.entities.filter((e) => e instanceof Enemy);
-          let maxIndividualCount = Math.round(
-            (this.room.width + this.room.height) /
-              spawned.constructor.difficulty ** 2,
-          );
-          let enemySpawnTypeCount = this.room.entities.filter(
-            (e) => e instanceof spawned.constructor,
-          ).length;
-          console.log(
-            `Count in room of ${spawned.constructor.name}: ${enemySpawnTypeCount}`,
-          );
-          console.log(
-            `maxIndividualCount of ${spawned.constructor.name}: ${maxIndividualCount}`,
-          );
 
-          if (
-            enemies.length >= Math.round(roomArea / 4) ||
-            enemySpawnTypeCount >= maxIndividualCount
-          ) {
-            shouldSpawn = false;
+          if (shouldSpawn) {
+            this.room.projectiles.push(
+              new EnemySpawnAnimation(
+                this.room,
+                spawned,
+                position.x,
+                position.y,
+              ),
+            );
+            this.room.hitwarnings.push(
+              new HitWarning(this.game, position.x, position.y, this.x, this.y),
+            );
           }
-
-          //if (shouldSpawn) {
-          this.room.projectiles.push(
-            new EnemySpawnAnimation(this.room, spawned, position.x, position.y),
-          );
-          this.room.hitwarnings.push(
-            new HitWarning(this.game, position.x, position.y, this.x, this.y),
-          );
-          // }
         }
       }
       if (shouldSpawn) this.ticks++;

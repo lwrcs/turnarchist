@@ -80,6 +80,7 @@ import { Spellbook } from "./weapon/spellbook";
 import { Torch } from "./item/torch";
 import { RookEnemy } from "./entity/enemy/rookEnemy";
 import { BeamEffect } from "./beamEffect";
+import { EnvType } from "./environment";
 
 /**
  * Enumeration of available enemy types.
@@ -99,6 +100,7 @@ export enum EnemyType {
   knight = "knight",
   bigknight = "bigknight",
   firewizard = "firewizard",
+  spawner = "spawner",
   // Add other enemy types here
 }
 
@@ -120,6 +122,7 @@ export const EnemyTypeMap: { [key in EnemyType]: EnemyStatic } = {
   [EnemyType.knight]: KnightEnemy,
   [EnemyType.bigknight]: BigKnightEnemy,
   [EnemyType.firewizard]: FireWizardEnemy,
+  [EnemyType.spawner]: Spawner,
   // Add other enemy mappings here
 };
 
@@ -320,7 +323,7 @@ export class Room {
       }
     }
 
-    this.skin = SkinType.DUNGEON;
+    this.skin = this.level.environment.skin;
     if (this.type === RoomType.ROPECAVE || this.type === RoomType.CAVE)
       this.skin = SkinType.CAVE;
     this.buildEmptyRoom();
@@ -490,6 +493,7 @@ export class Room {
   }
 
   private addTorches(numTorches: number, rand: () => number) {
+    if (this.level.environment.type === EnvType.FOREST) return;
     let walls = [];
     for (let xx = this.roomX + 1; xx < this.roomX + this.width - 2; xx++) {
       for (let yy = this.roomY; yy < this.roomY + this.height - 1; yy++) {
@@ -553,6 +557,7 @@ export class Room {
   }
 
   private addSpikeTraps(numSpikes: number, rand: () => number) {
+    if (this.level.environment.type === EnvType.FOREST) return;
     // add spikes
     let tiles = this.getEmptyTiles();
     for (let i = 0; i < numSpikes; i++) {
@@ -765,11 +770,29 @@ export class Room {
     EnemyClass.add(this, this.game, x, y);
   };
 
+  addNewSpawner = (enemyType: EnemyType): void => {
+    const EnemyClass = EnemyTypeMap[enemyType];
+    if (!EnemyClass) {
+      console.error(`Enemy type "${enemyType}" is not recognized.`);
+      return;
+    }
+
+    const tiles = this.getEmptyTiles();
+    if (!tiles || tiles.length === 0) {
+      console.log(`No tiles left to spawn enemies.`);
+      return;
+    }
+
+    const { x, y } = this.getRandomEmptyPosition(tiles);
+    Spawner.add(this, this.game, x, y);
+  };
+
   private addObstacles(numObstacles: number, rand: () => number) {
     // add crates/barrels
     let tiles = this.getEmptyTiles();
     for (let i = 0; i < numObstacles; i++) {
       const { x, y } = this.getRandomEmptyPosition(tiles);
+      const env = this.level.environment.type; //bootleg variable to start to vary the environments
       switch (
         Game.randTable(
           [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 5, 5, 5],
@@ -777,9 +800,12 @@ export class Room {
         )
       ) {
         case 1:
+          if (env === EnvType.FOREST) break;
           Crate.add(this, this.game, x, y);
           break;
         case 2:
+          if (env === EnvType.FOREST) break;
+
           Barrel.add(this, this.game, x, y);
           break;
         case 3:
@@ -1249,7 +1275,7 @@ export class Room {
 
   alertEnemiesOnEntry = () => {
     for (const e of this.entities) {
-      if (e instanceof Enemy) e.lookForPlayer();
+      if (e instanceof Enemy) e.lookForPlayer(false);
     }
   };
 

@@ -462,8 +462,8 @@ let generate_dungeon_candidate = async (
   }
   for (let i = 0; i < 100; i++) {
     partialLevel.partitions.forEach(async (partition) => {
-      let roomArea = 100000;
-      //Math.random() > 0.95 ? params.softMaxRoomArea : params.maxRoomArea;
+      let roomArea =
+        Math.random() > 0.95 ? params.softMaxRoomArea : params.maxRoomArea; //Math.random() > 0.95 ? params.softMaxRoomArea : params.maxRoomArea;
       if (partition.area() > roomArea) {
         partialLevel.partitions = partialLevel.partitions.filter(
           (p) => p !== partition,
@@ -732,25 +732,26 @@ let generate_dungeon_candidate = async (
       if (seen.indexOf(other) === -1) frontier.push(other);
     }
   }
-
+  /*
   // add special rooms
   let added_rope_hole = false;
   for (const p of partialLevel.partitions) {
     if (p.type === RoomType.DUNGEON) {
-      if (p.distance > 4 && p.area() <= 30 && Random.rand() < 0.1) {
+      if (p.distance > 4 && p.area() <= 30 && Random.rand() < 0) {
         p.type = RoomType.TREASURE;
       } else if (
-        !added_rope_hole &&
-        p.distance > 3 &&
-        p.area() <= 20 &&
-        Random.rand() < 0.5
+        !added_rope_hole //&&
+        //p.distance > 1 &&
+        //p.area() <= 40 &&
+        //Random.rand() < 0.5
       ) {
         p.type = RoomType.ROPEHOLE;
         added_rope_hole = true;
+        console.log("ADDED ROPEHOLE!!!!!!");
       }
     }
   }
-
+*/
   await new Promise((resolve) =>
     setTimeout(
       resolve,
@@ -1203,23 +1204,25 @@ export class LevelGenerator {
     this.game.rooms = rooms;
 
     // // Generate the rope hole if it exists
-    // for (let room of rooms) {
-    //   if (room.type === RoomType.ROPEHOLE) {
-    //     for (let x = room.roomX; x < room.roomX + room.width; x++) {
-    //       for (let y = room.roomY; y < room.roomY + room.height; y++) {
-    //         let tile = room.roomArray[x][y];
-    //         if (tile instanceof DownLadder && tile.isRope) {
-    //           tile.generate();
+    for (let room of rooms) {
+      if (room.type === RoomType.ROPEHOLE) {
+        for (let x = room.roomX; x < room.roomX + room.width; x++) {
+          for (let y = room.roomY; y < room.roomY + room.height; y++) {
+            let tile = room.roomArray[x][y];
+            if (tile instanceof DownLadder && tile.isRope) {
+              tile.generate();
 
-    //           callback(cave
-    //             ? rooms.find((r) => r.type === RoomType.ROPECAVE)
-    //             : rooms.find((r) => r.type === RoomType.START));
-    //           return;
-    //         }
-    //       }
-    //     }
-    //   }
-    // }
+              callback(
+                cave
+                  ? rooms.find((r) => r.type === RoomType.ROPECAVE)
+                  : rooms.find((r) => r.type === RoomType.START),
+              );
+              return;
+            }
+          }
+        }
+      }
+    }
 
     // Return the start room or the rope cave room
     callback(

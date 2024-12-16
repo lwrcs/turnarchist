@@ -6,6 +6,7 @@ import { DoorType } from "./tile/door";
 import { Tile } from "./tile/tile";
 import { Enemy } from "./entity/enemy/enemy";
 import { LevelParameterGenerator } from "./levelParametersGenerator";
+import { Environment } from "./environment";
 
 export interface EnemyParameters {
   enemyTables: Record<number, number[]>;
@@ -58,6 +59,7 @@ export class Level {
   height: number;
   game: Game;
   rooms: Room[];
+  environment: Environment;
   //environmentData: environmentData;
   //enemySpawnPool: Array<entitySpawnData>;
   enemyParameters: EnemyParameters;
@@ -71,6 +73,8 @@ export class Level {
     //this.loadRoomsIntoLevelArray();
     console.log(`depth: ${this.depth}`);
     this.enemyParameters = this.getEnemyParameters();
+    let envType = Math.floor(Math.random() * 3);
+    this.environment = new Environment(envType);
   }
 
   initializeLevelArray = () => {

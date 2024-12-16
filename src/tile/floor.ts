@@ -20,6 +20,12 @@ export class Floor extends Tile {
         [1, 1, 1, 1, 1, 1, 8, 8, 8, 9, 10, 10, 10, 10, 10, 12],
         Math.random,
       );
+    if (this.skin == SkinType.FOREST)
+      //this.variation = Game.randTable([1, 1, 1, 1, 8, 9, 10, 12], Math.random);
+      this.variation = Game.randTable(
+        [1, 1, 1, 1, 1, 1, 8, 8, 8, 9, 10, 10, 10, 10, 10, 12],
+        Math.random,
+      );
   }
 
   draw = (delta: number) => {

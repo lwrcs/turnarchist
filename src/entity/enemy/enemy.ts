@@ -32,7 +32,7 @@ export abstract class Enemy extends Entity {
   status: EnemyStatus;
   protected jumpY: number;
   protected jumpHeight: number;
-  static difficulty: number;
+  static difficulty: number = 1;
   private effectStartTick: number;
   private startTick: number;
   //dir: Direction;
@@ -181,14 +181,14 @@ export abstract class Enemy extends Entity {
     }
   };
 
-  lookForPlayer = () => {
+  lookForPlayer = (face: boolean = true) => {
     if (this.seenPlayer) return;
     let p = this.nearestPlayer();
     if (p !== false) {
       let [distance, player] = p;
       if (distance <= 4) {
         this.targetPlayer = player;
-        //this.facePlayer(player);
+        if (face) this.facePlayer(player);
         this.seenPlayer = true;
         let type = this.constructor;
         globalEventBus.emit("EnemySeenPlayer", {

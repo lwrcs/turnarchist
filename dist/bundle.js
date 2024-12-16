@@ -2407,7 +2407,8 @@ var Enemy = /** @class */ (function (_super) {
                 _this.emitEntityData();
             }
         };
-        _this.lookForPlayer = function () {
+        _this.lookForPlayer = function (face) {
+            if (face === void 0) { face = true; }
             if (_this.seenPlayer)
                 return;
             var p = _this.nearestPlayer();
@@ -2415,7 +2416,8 @@ var Enemy = /** @class */ (function (_super) {
                 var distance = p[0], player = p[1];
                 if (distance <= 4) {
                     _this.targetPlayer = player;
-                    //this.facePlayer(player);
+                    if (face)
+                        _this.facePlayer(player);
                     _this.seenPlayer = true;
                     var type = _this.constructor;
                     eventBus_1.globalEventBus.emit("EnemySeenPlayer", {
@@ -2725,6 +2727,7 @@ var Enemy = /** @class */ (function (_super) {
         enumerable: false,
         configurable: true
     });
+    Enemy.difficulty = 1;
     return Enemy;
 }(entity_1.Entity));
 exports.Enemy = Enemy;
@@ -4342,6 +4345,7 @@ var rookEnemy_1 = __webpack_require__(/*! ./rookEnemy */ "./src/entity/enemy/roo
 var Spawner = /** @class */ (function (_super) {
     __extends(Spawner, _super);
     function Spawner(room, game, x, y, enemyTable) {
+        if (enemyTable === void 0) { enemyTable = [0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14]; }
         var _this = _super.call(this, room, game, x, y) || this;
         _this.hit = function () {
             return 1;
@@ -4356,7 +4360,7 @@ var Spawner = /** @class */ (function (_super) {
                     return;
                 }
                 _this.tileX = 6;
-                if (_this.ticks % 8 === 0) {
+                if (_this.ticks % 4 === 0) {
                     var positions = _this.room
                         .getEmptyTiles()
                         .filter(function (t) { return Math.abs(t.x - _this.x) <= 1 && Math.abs(t.y - _this.y) <= 1; });
@@ -4373,37 +4377,37 @@ var Spawner = /** @class */ (function (_super) {
                     if (positions.length > 0) {
                         _this.tileX = 7;
                         var position = game_1.Game.randTable(positions, random_1.Random.rand);
-                        var spawned_1;
+                        var spawned = void 0;
                         switch (_this.enemySpawnType) {
                             case 1:
-                                spawned_1 = new crabEnemy_1.CrabEnemy(_this.room, _this.game, position.x, position.y);
+                                spawned = new crabEnemy_1.CrabEnemy(_this.room, _this.game, position.x, position.y);
                                 break;
                             case 2:
-                                spawned_1 = new frogEnemy_1.FrogEnemy(_this.room, _this.game, position.x, position.y);
+                                spawned = new frogEnemy_1.FrogEnemy(_this.room, _this.game, position.x, position.y);
                                 break;
                             case 3:
-                                spawned_1 = new zombieEnemy_1.ZombieEnemy(_this.room, _this.game, position.x, position.y);
+                                spawned = new zombieEnemy_1.ZombieEnemy(_this.room, _this.game, position.x, position.y);
                                 break;
                             case 4:
-                                spawned_1 = new skullEnemy_1.SkullEnemy(_this.room, _this.game, position.x, position.y);
+                                spawned = new skullEnemy_1.SkullEnemy(_this.room, _this.game, position.x, position.y);
                                 break;
                             case 5:
-                                spawned_1 = new energyWizard_1.EnergyWizardEnemy(_this.room, _this.game, position.x, position.y);
+                                spawned = new energyWizard_1.EnergyWizardEnemy(_this.room, _this.game, position.x, position.y);
                                 break;
                             case 6:
-                                spawned_1 = new chargeEnemy_1.ChargeEnemy(_this.room, _this.game, position.x, position.y);
+                                spawned = new chargeEnemy_1.ChargeEnemy(_this.room, _this.game, position.x, position.y);
                                 break;
                             case 7:
-                                spawned_1 = new rookEnemy_1.RookEnemy(_this.room, _this.game, position.x, position.y);
+                                spawned = new rookEnemy_1.RookEnemy(_this.room, _this.game, position.x, position.y);
                                 break;
                             case 8:
-                                spawned_1 = new bishopEnemy_1.BishopEnemy(_this.room, _this.game, position.x, position.y);
+                                spawned = new bishopEnemy_1.BishopEnemy(_this.room, _this.game, position.x, position.y);
                                 break;
                             case 9:
-                                spawned_1 = new armoredzombieEnemy_1.ArmoredzombieEnemy(_this.room, _this.game, position.x, position.y);
+                                spawned = new armoredzombieEnemy_1.ArmoredzombieEnemy(_this.room, _this.game, position.x, position.y);
                                 break;
                             case 10:
-                                spawned_1 = new bigSkullEnemy_1.BigSkullEnemy(_this.room, _this.game, position.x, position.y);
+                                spawned = new bigSkullEnemy_1.BigSkullEnemy(_this.room, _this.game, position.x, position.y);
                                 for (var xx = 0; xx < 2; xx++) {
                                     for (var yy = 0; yy < 2; yy++) {
                                         _this.room.roomArray[position.x + xx][position.y + yy] =
@@ -4412,13 +4416,13 @@ var Spawner = /** @class */ (function (_super) {
                                 }
                                 break;
                             case 11:
-                                spawned_1 = new queenEnemy_1.QueenEnemy(_this.room, _this.game, position.x, position.y);
+                                spawned = new queenEnemy_1.QueenEnemy(_this.room, _this.game, position.x, position.y);
                                 break;
                             case 12:
-                                spawned_1 = new knightEnemy_1.KnightEnemy(_this.room, _this.game, position.x, position.y);
+                                spawned = new knightEnemy_1.KnightEnemy(_this.room, _this.game, position.x, position.y);
                                 break;
                             case 13:
-                                spawned_1 = new bigKnightEnemy_1.BigKnightEnemy(_this.room, _this.game, position.x, position.y);
+                                spawned = new bigKnightEnemy_1.BigKnightEnemy(_this.room, _this.game, position.x, position.y);
                                 for (var xx = 0; xx < 2; xx++) {
                                     for (var yy = 0; yy < 2; yy++) {
                                         _this.room.roomArray[position.x + xx][position.y + yy] =
@@ -4427,27 +4431,16 @@ var Spawner = /** @class */ (function (_super) {
                                 }
                                 break;
                             case 14:
-                                spawned_1 = new zombieEnemy_1.ZombieEnemy(_this.room, _this.game, position.x, position.y);
+                                spawned = new zombieEnemy_1.ZombieEnemy(_this.room, _this.game, position.x, position.y);
                                 break;
                             case 15:
-                                spawned_1 = new fireWizard_1.FireWizardEnemy(_this.room, _this.game, position.x, position.y);
+                                spawned = new fireWizard_1.FireWizardEnemy(_this.room, _this.game, position.x, position.y);
                                 break;
                         }
-                        var roomArea = _this.room.width * _this.room.height;
-                        var enemies = _this.room.entities.filter(function (e) { return e instanceof enemy_1.Enemy; });
-                        var maxIndividualCount = Math.round((_this.room.width + _this.room.height) /
-                            Math.pow(spawned_1.constructor.difficulty, 2));
-                        var enemySpawnTypeCount = _this.room.entities.filter(function (e) { return e instanceof spawned_1.constructor; }).length;
-                        console.log("Count in room of ".concat(spawned_1.constructor.name, ": ").concat(enemySpawnTypeCount));
-                        console.log("maxIndividualCount of ".concat(spawned_1.constructor.name, ": ").concat(maxIndividualCount));
-                        if (enemies.length >= Math.round(roomArea / 4) ||
-                            enemySpawnTypeCount >= maxIndividualCount) {
-                            shouldSpawn = false;
+                        if (shouldSpawn) {
+                            _this.room.projectiles.push(new enemySpawnAnimation_1.EnemySpawnAnimation(_this.room, spawned, position.x, position.y));
+                            _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, position.x, position.y, _this.x, _this.y));
                         }
-                        //if (shouldSpawn) {
-                        _this.room.projectiles.push(new enemySpawnAnimation_1.EnemySpawnAnimation(_this.room, spawned_1, position.x, position.y));
-                        _this.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.game, position.x, position.y, _this.x, _this.y));
-                        // }
                     }
                 }
                 if (shouldSpawn)
@@ -5876,7 +5869,7 @@ var Crate = /** @class */ (function (_super) {
         _this.pushable = true;
         _this.name = "crate";
         if (Math.random() < 0.1) {
-            _this.drop = new weaponFragments_1.WeaponFragments(_this.room, _this.x, _this.y, 100);
+            _this.drop = new weaponFragments_1.WeaponFragments(_this.room, _this.x, _this.y, 10);
         }
         else {
             _this.drop = new coin_1.Coin(_this.room, _this.x, _this.y);
@@ -6975,6 +6968,33 @@ exports.Rock = Rock;
 
 /***/ }),
 
+/***/ "./src/environment.ts":
+/*!****************************!*\
+  !*** ./src/environment.ts ***!
+  \****************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Environment = exports.EnvType = void 0;
+var EnvType;
+(function (EnvType) {
+    EnvType[EnvType["DUNGEON"] = 0] = "DUNGEON";
+    EnvType[EnvType["CAVE"] = 1] = "CAVE";
+    EnvType[EnvType["FOREST"] = 2] = "FOREST";
+})(EnvType = exports.EnvType || (exports.EnvType = {}));
+var Environment = /** @class */ (function () {
+    function Environment(type) {
+        this.type = type;
+        this.skin = this.type;
+    }
+    return Environment;
+}());
+exports.Environment = Environment;
+
+
+/***/ }),
+
 /***/ "./src/eventBus.ts":
 /*!*************************!*\
   !*** ./src/eventBus.ts ***!
@@ -8050,10 +8070,11 @@ var candle_1 = __webpack_require__(/*! ./item/candle */ "./src/item/candle.ts");
 var coal_1 = __webpack_require__(/*! ./item/coal */ "./src/item/coal.ts");
 var godStone_1 = __webpack_require__(/*! ./item/godStone */ "./src/item/godStone.ts");
 var heart_1 = __webpack_require__(/*! ./item/heart */ "./src/item/heart.ts");
-var lantern_1 = __webpack_require__(/*! ./item/lantern */ "./src/item/lantern.ts");
 var torch_1 = __webpack_require__(/*! ./item/torch */ "./src/item/torch.ts");
+var weaponFragments_1 = __webpack_require__(/*! ./item/weaponFragments */ "./src/item/weaponFragments.ts");
 var levelConstants_1 = __webpack_require__(/*! ./levelConstants */ "./src/levelConstants.ts");
 var dagger_1 = __webpack_require__(/*! ./weapon/dagger */ "./src/weapon/dagger.ts");
+var dualdagger_1 = __webpack_require__(/*! ./weapon/dualdagger */ "./src/weapon/dualdagger.ts");
 var spear_1 = __webpack_require__(/*! ./weapon/spear */ "./src/weapon/spear.ts");
 var spellbook_1 = __webpack_require__(/*! ./weapon/spellbook */ "./src/weapon/spellbook.ts");
 var hammer_1 = __webpack_require__(/*! ./item/hammer */ "./src/item/hammer.ts");
@@ -8158,9 +8179,9 @@ var GameConstants = /** @class */ (function () {
     GameConstants.STARTING_INVENTORY = [dagger_1.Dagger, torch_1.Torch];
     GameConstants.STARTING_DEV_INVENTORY = [
         dagger_1.Dagger,
+        dualdagger_1.DualDagger,
         candle_1.Candle,
         torch_1.Torch,
-        lantern_1.Lantern,
         godStone_1.GodStone,
         candle_1.Candle,
         candle_1.Candle,
@@ -8171,6 +8192,9 @@ var GameConstants = /** @class */ (function () {
         backpack_1.Backpack,
         hammer_1.Hammer,
         coal_1.Coal,
+        weaponFragments_1.WeaponFragments,
+        weaponFragments_1.WeaponFragments,
+        weaponFragments_1.WeaponFragments,
     ];
     return GameConstants;
 }());
@@ -12452,7 +12476,7 @@ var WeaponFragments = /** @class */ (function (_super) {
         _this.name = "weapon fragments";
         _this.canUseOnOther = true;
         _this.stackable = true;
-        _this.stackCount = stackCount || 10;
+        _this.stackCount = stackCount || Math.ceil(Math.random() * 10) + 7;
         _this.description = "Can be used to repair broken weapons";
         return _this;
     }
@@ -12530,7 +12554,7 @@ exports.WeaponPoison = WeaponPoison;
 /*!**********************!*\
   !*** ./src/level.ts ***!
   \**********************/
-/***/ (function(__unused_webpack_module, exports) {
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
 var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
@@ -12544,6 +12568,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Level = exports.enemyMinimumDepth = void 0;
+var environment_1 = __webpack_require__(/*! ./environment */ "./src/environment.ts");
 exports.enemyMinimumDepth = {
     1: 0,
     2: 1,
@@ -12613,6 +12638,8 @@ var Level = /** @class */ (function () {
         //this.loadRoomsIntoLevelArray();
         console.log("depth: ".concat(this.depth));
         this.enemyParameters = this.getEnemyParameters();
+        var envType = Math.floor(Math.random() * 3);
+        this.environment = new environment_1.Environment(envType);
     }
     /**
      * Generates enemy parameters based on the current depth.
@@ -13194,25 +13221,25 @@ var populate_grid = function (partitions, grid, w, h) {
     //output grid array that indicates which cells are in which partition
 };
 var generate_dungeon_candidate = function (game, partialLevel, map_w, map_h, depth, params) { return __awaiter(void 0, void 0, void 0, function () {
-    var minRoomCount, maxRoomCount, maxRoomArea, splitProbabilities, wallRemoveProbability, grid, i, _a, i, spawn, connected, frontier, found_boss, room, doors_found, num_doors, tries, max_tries, point, _i, _b, p, _loop_7, _c, _d, partition, num_loop_doors, _loop_8, i, boss, found_stair, max_stair_tries, _loop_9, stair_tries, state_5, seen, room, _e, _f, c, other, added_rope_hole, _g, _h, p;
-    return __generator(this, function (_j) {
-        switch (_j.label) {
+    var minRoomCount, maxRoomCount, maxRoomArea, splitProbabilities, wallRemoveProbability, grid, i, _a, i, spawn, connected, frontier, found_boss, room, doors_found, num_doors, tries, max_tries, point, _i, _b, p, _loop_7, _c, _d, partition, num_loop_doors, _loop_8, i, boss, found_stair, max_stair_tries, _loop_9, stair_tries, state_5, seen, room, _e, _f, c, other;
+    return __generator(this, function (_g) {
+        switch (_g.label) {
             case 0:
                 minRoomCount = params.minRoomCount, maxRoomCount = params.maxRoomCount, maxRoomArea = params.maxRoomArea, splitProbabilities = params.splitProbabilities, wallRemoveProbability = params.wallRemoveProbability;
                 partialLevel.partitions = [new Partition(0, 0, map_w, map_h, "white")];
                 grid = [];
-                _j.label = 1;
+                _g.label = 1;
             case 1:
                 if (!(partialLevel.partitions.length < params.maxRoomCount)) return [3 /*break*/, 6];
                 i = 0;
-                _j.label = 2;
+                _g.label = 2;
             case 2:
                 if (!(i < splitProbabilities.length)) return [3 /*break*/, 5];
                 _a = partialLevel;
                 return [4 /*yield*/, split_partitions(partialLevel.partitions, splitProbabilities[i])];
             case 3:
-                _a.partitions = _j.sent();
-                _j.label = 4;
+                _a.partitions = _g.sent();
+                _g.label = 4;
             case 4:
                 i++;
                 return [3 /*break*/, 2];
@@ -13224,7 +13251,7 @@ var generate_dungeon_candidate = function (game, partialLevel, map_w, map_h, dep
                         return __generator(this, function (_d) {
                             switch (_d.label) {
                                 case 0:
-                                    roomArea = 100000;
+                                    roomArea = Math.random() > 0.95 ? params.softMaxRoomArea : params.maxRoomArea;
                                     if (!(partition.area() > roomArea)) return [3 /*break*/, 2];
                                     partialLevel.partitions = partialLevel.partitions.filter(function (p) { return p !== partition; });
                                     _a = partialLevel;
@@ -13244,7 +13271,7 @@ var generate_dungeon_candidate = function (game, partialLevel, map_w, map_h, dep
                         return setTimeout(resolve, LevelGenerator.ANIMATION_CONSTANT * ANIMATION_LARGE_DELAY);
                     })];
             case 7:
-                _j.sent();
+                _g.sent();
                 // Remove wall rooms based on probability
                 /*
                 if (partitions.length > params.minRoomCount) {
@@ -13280,7 +13307,7 @@ var generate_dungeon_candidate = function (game, partialLevel, map_w, map_h, dep
                         return setTimeout(resolve, LevelGenerator.ANIMATION_CONSTANT * ANIMATION_LARGE_DELAY);
                     })];
             case 8:
-                _j.sent();
+                _g.sent();
                 // Make sure we have at least one partition before assigning spawn
                 if (partialLevel.partitions.length === 0) {
                     console.log("No partitions generated after filtering.");
@@ -13305,11 +13332,11 @@ var generate_dungeon_candidate = function (game, partialLevel, map_w, map_h, dep
                         return setTimeout(resolve, LevelGenerator.ANIMATION_CONSTANT * ANIMATION_LARGE_DELAY);
                     })];
             case 9:
-                _j.sent();
+                _g.sent();
                 connected = [spawn];
                 frontier = [spawn];
                 found_boss = false;
-                _j.label = 10;
+                _g.label = 10;
             case 10:
                 if (!(frontier.length > 0 && !found_boss)) return [3 /*break*/, 12];
                 room = frontier[0];
@@ -13348,7 +13375,7 @@ var generate_dungeon_candidate = function (game, partialLevel, map_w, map_h, dep
                         return setTimeout(resolve, LevelGenerator.ANIMATION_CONSTANT * ANIMATION_PATHFINDING_DELAY);
                     })];
             case 11:
-                _j.sent();
+                _g.sent();
                 return [3 /*break*/, 10];
             case 12:
                 _loop_7 = function (partition) {
@@ -13364,7 +13391,7 @@ var generate_dungeon_candidate = function (game, partialLevel, map_w, map_h, dep
                         return setTimeout(resolve, LevelGenerator.ANIMATION_CONSTANT * ANIMATION_LARGE_DELAY);
                     })];
             case 13:
-                _j.sent();
+                _g.sent();
                 grid = populate_grid(partialLevel.partitions, grid, map_w, map_h); // recalculate with removed rooms
                 // make sure we haven't removed all the rooms
                 if (partialLevel.partitions.length === 0) {
@@ -13381,8 +13408,8 @@ var generate_dungeon_candidate = function (game, partialLevel, map_w, map_h, dep
                     var not_already_connected = partialLevel.partitions.filter(function (p) { return !room.connections.some(function (c) { return c.other === p; }); });
                     while (!found_door && tries < max_tries) {
                         var point = room.get_branch_point();
-                        for (var _k = 0, not_already_connected_1 = not_already_connected; _k < not_already_connected_1.length; _k++) {
-                            var p = not_already_connected_1[_k];
+                        for (var _h = 0, not_already_connected_1 = not_already_connected; _h < not_already_connected_1.length; _h++) {
+                            var p = not_already_connected_1[_h];
                             if (p !== room && p.point_next_to(point.x, point.y)) {
                                 room.connections.push(new PartitionConnection(point.x, point.y, p));
                                 p.connections.push(new PartitionConnection(point.x, point.y, room));
@@ -13449,27 +13476,51 @@ var generate_dungeon_candidate = function (game, partialLevel, map_w, map_h, dep
                             frontier.push(other);
                     }
                 }
-                added_rope_hole = false;
-                for (_g = 0, _h = partialLevel.partitions; _g < _h.length; _g++) {
-                    p = _h[_g];
-                    if (p.type === room_1.RoomType.DUNGEON) {
-                        if (p.distance > 4 && p.area() <= 30 && random_1.Random.rand() < 0.1) {
-                            p.type = room_1.RoomType.TREASURE;
-                        }
-                        else if (!added_rope_hole &&
-                            p.distance > 3 &&
-                            p.area() <= 20 &&
-                            random_1.Random.rand() < 0.5) {
-                            p.type = room_1.RoomType.ROPEHOLE;
-                            added_rope_hole = true;
-                        }
+                /*
+                // add special rooms
+                let added_rope_hole = false;
+                for (const p of partialLevel.partitions) {
+                  if (p.type === RoomType.DUNGEON) {
+                    if (p.distance > 4 && p.area() <= 30 && Random.rand() < 0) {
+                      p.type = RoomType.TREASURE;
+                    } else if (
+                      !added_rope_hole //&&
+                      //p.distance > 1 &&
+                      //p.area() <= 40 &&
+                      //Random.rand() < 0.5
+                    ) {
+                      p.type = RoomType.ROPEHOLE;
+                      added_rope_hole = true;
+                      console.log("ADDED ROPEHOLE!!!!!!");
                     }
+                  }
                 }
+              */
                 return [4 /*yield*/, new Promise(function (resolve) {
                         return setTimeout(resolve, 10 * LevelGenerator.ANIMATION_CONSTANT * ANIMATION_LARGE_DELAY);
                     })];
             case 14:
-                _j.sent();
+                /*
+                // add special rooms
+                let added_rope_hole = false;
+                for (const p of partialLevel.partitions) {
+                  if (p.type === RoomType.DUNGEON) {
+                    if (p.distance > 4 && p.area() <= 30 && Random.rand() < 0) {
+                      p.type = RoomType.TREASURE;
+                    } else if (
+                      !added_rope_hole //&&
+                      //p.distance > 1 &&
+                      //p.area() <= 40 &&
+                      //Random.rand() < 0.5
+                    ) {
+                      p.type = RoomType.ROPEHOLE;
+                      added_rope_hole = true;
+                      console.log("ADDED ROPEHOLE!!!!!!");
+                    }
+                  }
+                }
+              */
+                _g.sent();
                 return [2 /*return*/];
         }
     });
@@ -13798,7 +13849,7 @@ var LevelGenerator = /** @class */ (function () {
         this.generate = function (game, depth, cave, callback) {
             if (cave === void 0) { cave = false; }
             return __awaiter(_this, void 0, void 0, function () {
-                var mapGroup, rooms;
+                var mapGroup, rooms, _i, rooms_2, room, x, y, tile;
                 return __generator(this, function (_a) {
                     switch (_a.label) {
                         case 0:
@@ -13836,22 +13887,23 @@ var LevelGenerator = /** @class */ (function () {
                             // Add the new levels to the game rooms
                             this.game.rooms = rooms;
                             // // Generate the rope hole if it exists
-                            // for (let room of rooms) {
-                            //   if (room.type === RoomType.ROPEHOLE) {
-                            //     for (let x = room.roomX; x < room.roomX + room.width; x++) {
-                            //       for (let y = room.roomY; y < room.roomY + room.height; y++) {
-                            //         let tile = room.roomArray[x][y];
-                            //         if (tile instanceof DownLadder && tile.isRope) {
-                            //           tile.generate();
-                            //           callback(cave
-                            //             ? rooms.find((r) => r.type === RoomType.ROPECAVE)
-                            //             : rooms.find((r) => r.type === RoomType.START));
-                            //           return;
-                            //         }
-                            //       }
-                            //     }
-                            //   }
-                            // }
+                            for (_i = 0, rooms_2 = rooms; _i < rooms_2.length; _i++) {
+                                room = rooms_2[_i];
+                                if (room.type === room_1.RoomType.ROPEHOLE) {
+                                    for (x = room.roomX; x < room.roomX + room.width; x++) {
+                                        for (y = room.roomY; y < room.roomY + room.height; y++) {
+                                            tile = room.roomArray[x][y];
+                                            if (tile instanceof downLadder_1.DownLadder && tile.isRope) {
+                                                tile.generate();
+                                                callback(cave
+                                                    ? rooms.find(function (r) { return r.type === room_1.RoomType.ROPECAVE; })
+                                                    : rooms.find(function (r) { return r.type === room_1.RoomType.START; }));
+                                                return [2 /*return*/];
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                             // Return the start room or the rope cave room
                             callback(cave
                                 ? rooms.find(function (r) { return r.type === room_1.RoomType.ROPECAVE; })
@@ -16783,6 +16835,7 @@ var spellbook_1 = __webpack_require__(/*! ./weapon/spellbook */ "./src/weapon/sp
 var torch_1 = __webpack_require__(/*! ./item/torch */ "./src/item/torch.ts");
 var rookEnemy_1 = __webpack_require__(/*! ./entity/enemy/rookEnemy */ "./src/entity/enemy/rookEnemy.ts");
 var beamEffect_1 = __webpack_require__(/*! ./beamEffect */ "./src/beamEffect.ts");
+var environment_1 = __webpack_require__(/*! ./environment */ "./src/environment.ts");
 /**
  * Enumeration of available enemy types.
  */
@@ -16802,6 +16855,7 @@ var EnemyType;
     EnemyType["knight"] = "knight";
     EnemyType["bigknight"] = "bigknight";
     EnemyType["firewizard"] = "firewizard";
+    EnemyType["spawner"] = "spawner";
     // Add other enemy types here
 })(EnemyType = exports.EnemyType || (exports.EnemyType = {}));
 /**
@@ -16822,6 +16876,7 @@ exports.EnemyTypeMap = (_a = {},
     _a[EnemyType.knight] = knightEnemy_1.KnightEnemy,
     _a[EnemyType.bigknight] = bigKnightEnemy_1.BigKnightEnemy,
     _a[EnemyType.firewizard] = fireWizard_1.FireWizardEnemy,
+    _a[EnemyType.spawner] = spawner_1.Spawner,
     _a);
 var RoomType;
 (function (RoomType) {
@@ -16920,6 +16975,20 @@ var Room = /** @class */ (function () {
             }
             var _a = _this.getRandomEmptyPosition(tiles), x = _a.x, y = _a.y;
             EnemyClass.add(_this, _this.game, x, y);
+        };
+        this.addNewSpawner = function (enemyType) {
+            var EnemyClass = exports.EnemyTypeMap[enemyType];
+            if (!EnemyClass) {
+                console.error("Enemy type \"".concat(enemyType, "\" is not recognized."));
+                return;
+            }
+            var tiles = _this.getEmptyTiles();
+            if (!tiles || tiles.length === 0) {
+                console.log("No tiles left to spawn enemies.");
+                return;
+            }
+            var _a = _this.getRandomEmptyPosition(tiles), x = _a.x, y = _a.y;
+            spawner_1.Spawner.add(_this, _this.game, x, y);
         };
         this.populateEmpty = function (rand) {
             _this.addRandomTorches("medium");
@@ -17245,7 +17314,7 @@ var Room = /** @class */ (function () {
             for (var _i = 0, _a = _this.entities; _i < _a.length; _i++) {
                 var e = _a[_i];
                 if (e instanceof enemy_1.Enemy)
-                    e.lookForPlayer();
+                    e.lookForPlayer(false);
             }
         };
         this.exitLevel = function () {
@@ -18068,7 +18137,7 @@ var Room = /** @class */ (function () {
                 this.renderBuffer[x_5][y_5] = [];
             }
         }
-        this.skin = tile_1.SkinType.DUNGEON;
+        this.skin = this.level.environment.skin;
         if (this.type === RoomType.ROPECAVE || this.type === RoomType.CAVE)
             this.skin = tile_1.SkinType.CAVE;
         this.buildEmptyRoom();
@@ -18188,6 +18257,8 @@ var Room = /** @class */ (function () {
         }
     };
     Room.prototype.addTorches = function (numTorches, rand) {
+        if (this.level.environment.type === environment_1.EnvType.FOREST)
+            return;
         var walls = [];
         for (var xx = this.roomX + 1; xx < this.roomX + this.width - 2; xx++) {
             for (var yy = this.roomY; yy < this.roomY + this.height - 1; yy++) {
@@ -18240,6 +18311,8 @@ var Room = /** @class */ (function () {
         }
     };
     Room.prototype.addSpikeTraps = function (numSpikes, rand) {
+        if (this.level.environment.type === environment_1.EnvType.FOREST)
+            return;
         // add spikes
         var tiles = this.getEmptyTiles();
         for (var i = 0; i < numSpikes; i++) {
@@ -18444,11 +18517,16 @@ var Room = /** @class */ (function () {
         var tiles = this.getEmptyTiles();
         for (var i = 0; i < numObstacles; i++) {
             var _a = this.getRandomEmptyPosition(tiles), x = _a.x, y = _a.y;
+            var env = this.level.environment.type; //bootleg variable to start to vary the environments
             switch (game_1.Game.randTable([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 5, 5, 5], rand)) {
                 case 1:
+                    if (env === environment_1.EnvType.FOREST)
+                        break;
                     crate_1.Crate.add(this, this.game, x, y);
                     break;
                 case 2:
+                    if (env === environment_1.EnvType.FOREST)
+                        break;
                     barrel_1.Barrel.add(this, this.game, x, y);
                     break;
                 case 3:
@@ -19856,6 +19934,9 @@ var Floor = /** @class */ (function (_super) {
         if (_this.skin == tile_1.SkinType.CAVE)
             //this.variation = Game.randTable([1, 1, 1, 1, 8, 9, 10, 12], Math.random);
             _this.variation = game_1.Game.randTable([1, 1, 1, 1, 1, 1, 8, 8, 8, 9, 10, 10, 10, 10, 10, 12], Math.random);
+        if (_this.skin == tile_1.SkinType.FOREST)
+            //this.variation = Game.randTable([1, 1, 1, 1, 8, 9, 10, 12], Math.random);
+            _this.variation = game_1.Game.randTable([1, 1, 1, 1, 1, 1, 8, 8, 8, 9, 10, 10, 10, 10, 10, 12], Math.random);
         return _this;
     }
     return Floor;
@@ -20207,6 +20288,7 @@ var SkinType;
 (function (SkinType) {
     SkinType[SkinType["DUNGEON"] = 0] = "DUNGEON";
     SkinType[SkinType["CAVE"] = 1] = "CAVE";
+    SkinType[SkinType["FOREST"] = 2] = "FOREST";
 })(SkinType = exports.SkinType || (exports.SkinType = {}));
 var Tile = /** @class */ (function (_super) {
     __extends(Tile, _super);

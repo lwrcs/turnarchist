@@ -21,7 +21,7 @@ export class Crate extends Entity {
     this.pushable = true;
     this.name = "crate";
     if (Math.random() < 0.1) {
-      this.drop = new WeaponFragments(this.room, this.x, this.y, 100);
+      this.drop = new WeaponFragments(this.room, this.x, this.y, 10);
     } else {
       this.drop = new Coin(this.room, this.x, this.y);
     }

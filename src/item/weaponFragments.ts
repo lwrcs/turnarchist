@@ -15,7 +15,7 @@ export class WeaponFragments extends Usable {
     this.name = "weapon fragments";
     this.canUseOnOther = true;
     this.stackable = true;
-    this.stackCount = stackCount || 10;
+    this.stackCount = stackCount || Math.ceil(Math.random() * 10) + 7;
     this.description = "Can be used to repair broken weapons";
   }
 
