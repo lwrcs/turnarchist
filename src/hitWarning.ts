@@ -2,6 +2,7 @@ import { Game } from "./game";
 import { Drawable } from "./drawable";
 import { Room } from "./room";
 import { Entity } from "./entity/entity";
+import { Utils } from "./utils";
 
 enum Direction {
   North,
@@ -151,7 +152,17 @@ export class HitWarning extends Drawable {
       Math.abs(this.y - this.game.players[this.game.localPlayerID].y) <= 1
     ) {
       Game.ctx.globalAlpha = this.alpha;
-      if (this.isEnemy) {
+      if (
+        this.isEnemy &&
+        Utils.distance(
+          this.x,
+          this.y,
+          this.game.players[this.game.localPlayerID].x,
+          this.game.players[this.game.localPlayerID].y,
+        ) <= 1
+      ) {
+        // Red Arrow that only renders one square away
+
         Game.drawFX(
           this.tileX + Math.floor(HitWarning.frame),
           this.tileY,
@@ -163,7 +174,9 @@ export class HitWarning extends Drawable {
           1,
         );
       }
-      if (!this.dirOnly) {
+      if (false) {
+        // removed for now because unneeded and overlaps poorly with top layer x
+        // Red X that only renders one square away
         Game.drawFX(
           18 + Math.floor(HitWarning.frame),
           5,
@@ -184,7 +197,8 @@ export class HitWarning extends Drawable {
 
     Game.ctx.globalAlpha = this.alpha;
 
-    if (this.isEnemy) {
+    if (this.isEnemy && this.getPointerDir() !== Direction.North) {
+      //white arrow top layer
       Game.drawFX(
         this.tileX + Math.floor(HitWarning.frame),
         this.tileY + 1,
@@ -197,10 +211,15 @@ export class HitWarning extends Drawable {
       );
     }
     if (
-      Math.abs(this.x - this.game.players[this.game.localPlayerID].x) <= 1 &&
-      Math.abs(this.y - this.game.players[this.game.localPlayerID].y) <= 1
+      Utils.distance(
+        this.x,
+        this.y,
+        this.game.players[this.game.localPlayerID].x,
+        this.game.players[this.game.localPlayerID].y,
+      ) <= 1
     ) {
       if (!this.dirOnly) {
+        // Red X that renders 1 square away for top layer
         Game.drawFX(
           18 + Math.floor(HitWarning.frame),
           6,

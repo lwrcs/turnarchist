@@ -2372,6 +2372,7 @@ var Enemy = /** @class */ (function (_super) {
                 _this.status.poison = true;
                 _this.effectStartTick = _this.ticks % 3;
                 _this.startTick = _this.ticks;
+                _this.poisonHitCount = 0;
             }
         };
         _this.bleed = function () {
@@ -2379,6 +2380,7 @@ var Enemy = /** @class */ (function (_super) {
                 _this.status.bleed = true;
                 _this.effectStartTick = _this.ticks % 3;
                 _this.startTick = _this.ticks;
+                _this.bleedHitCount = 0;
             }
         };
         _this.tickPoison = function () {
@@ -2386,17 +2388,23 @@ var Enemy = /** @class */ (function (_super) {
                 if (_this.ticks % 3 === _this.effectStartTick &&
                     _this.ticks !== _this.startTick) {
                     _this.hurt(_this.targetPlayer, 0.5, "poison");
+                    _this.poisonHitCount++;
+                    if (_this.poisonHitCount >= 2)
+                        _this.status.poison = false;
                 }
             }
         };
         _this.tickBleed = function () {
             if (_this.status.bleed) {
-                if (_this.ticks % 3 === _this.effectStartTick &&
+                if (_this.ticks % 2 === _this.effectStartTick &&
                     _this.ticks !== _this.startTick) {
-                    _this.hurt(_this.targetPlayer, 0.5, "blood");
+                    _this.hurt(_this.targetPlayer, 0.25, "blood");
+                    _this.bleedHitCount++;
                 }
                 if (_this.targetPlayer)
-                    _this.targetPlayer.heal(0.5);
+                    _this.targetPlayer.heal(0.25);
+                if (_this.bleedHitCount >= 2)
+                    _this.status.bleed = false;
             }
         };
         _this.tick = function () {
@@ -2707,6 +2715,8 @@ var Enemy = /** @class */ (function (_super) {
         _this.effectStartTick = 1;
         _this.startTick = 1;
         _this.isEnemy = true;
+        _this.poisonHitCount = 0;
+        _this.bleedHitCount = 0;
         return _this;
         //this.getDrop(["weapon", "equipment", "consumable", "gem", "tool", "coin"]);
     }
@@ -5449,7 +5459,7 @@ var Entity = /** @class */ (function (_super) {
         };
         _this.makeHitWarnings = function () {
             var _a;
-            var cullFactor = 0.25;
+            var cullFactor = 0.45;
             var player = _this.getPlayer();
             var orthogonal = _this.orthogonalAttack;
             var diagonal = _this.diagonalAttack;
@@ -6982,6 +6992,9 @@ var EnvType;
     EnvType[EnvType["DUNGEON"] = 0] = "DUNGEON";
     EnvType[EnvType["CAVE"] = 1] = "CAVE";
     EnvType[EnvType["FOREST"] = 2] = "FOREST";
+    EnvType[EnvType["SWAMP"] = 3] = "SWAMP";
+    EnvType[EnvType["GLACIER"] = 4] = "GLACIER";
+    EnvType[EnvType["CASTLE"] = 5] = "CASTLE";
 })(EnvType = exports.EnvType || (exports.EnvType = {}));
 var Environment = /** @class */ (function () {
     function Environment(type) {
@@ -9076,6 +9089,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.HitWarning = void 0;
 var game_1 = __webpack_require__(/*! ./game */ "./src/game.ts");
 var drawable_1 = __webpack_require__(/*! ./drawable */ "./src/drawable.ts");
+var utils_1 = __webpack_require__(/*! ./utils */ "./src/utils.ts");
 var Direction;
 (function (Direction) {
     Direction[Direction["North"] = 0] = "North";
@@ -9141,24 +9155,25 @@ var HitWarning = /** @class */ (function (_super) {
             if (Math.abs(_this.x - _this.game.players[_this.game.localPlayerID].x) <= 1 &&
                 Math.abs(_this.y - _this.game.players[_this.game.localPlayerID].y) <= 1) {
                 game_1.Game.ctx.globalAlpha = _this.alpha;
-                if (_this.isEnemy) {
+                if (_this.isEnemy &&
+                    utils_1.Utils.distance(_this.x, _this.y, _this.game.players[_this.game.localPlayerID].x, _this.game.players[_this.game.localPlayerID].y) <= 1) {
+                    // Red Arrow that only renders one square away
                     game_1.Game.drawFX(_this.tileX + Math.floor(HitWarning.frame), _this.tileY, 1, 1, _this.x + _this.pointerOffset.x, _this.y + _this.pointerOffset.y - _this.offsetY, 1, 1);
                 }
-                if (!_this.dirOnly) {
-                    game_1.Game.drawFX(18 + Math.floor(HitWarning.frame), 5, 1, 1, _this.x, _this.y - _this.offsetY + 0, 1, 1);
-                }
+                if (false) {}
                 game_1.Game.ctx.globalAlpha = 1;
             }
         };
         _this.drawTopLayer = function (delta) {
             _this.fadeHitwarnings(delta);
             game_1.Game.ctx.globalAlpha = _this.alpha;
-            if (_this.isEnemy) {
+            if (_this.isEnemy && _this.getPointerDir() !== Direction.North) {
+                //white arrow top layer
                 game_1.Game.drawFX(_this.tileX + Math.floor(HitWarning.frame), _this.tileY + 1, 1, 1, _this.x + _this.pointerOffset.x, _this.y + _this.pointerOffset.y - _this.offsetY, 1, 1);
             }
-            if (Math.abs(_this.x - _this.game.players[_this.game.localPlayerID].x) <= 1 &&
-                Math.abs(_this.y - _this.game.players[_this.game.localPlayerID].y) <= 1) {
+            if (utils_1.Utils.distance(_this.x, _this.y, _this.game.players[_this.game.localPlayerID].x, _this.game.players[_this.game.localPlayerID].y) <= 1) {
                 if (!_this.dirOnly) {
+                    // Red X that renders 1 square away for top layer
                     game_1.Game.drawFX(18 + Math.floor(HitWarning.frame), 6, 1, 1, _this.x, _this.y - _this.offsetY + 0, 1, 1);
                 }
             }
@@ -9969,6 +9984,7 @@ var Inventory = /** @class */ (function () {
             item.pickedUp = false;
             item.dropFromInventory();
             _this.equipAnimAmount[index] = 0;
+            item.drawableY = _this.player.y;
             _this.game.rooms[_this.player.levelID].items.push(item);
             _this.items[index] = null;
         };
@@ -10716,7 +10732,7 @@ var Armor = /** @class */ (function (_super) {
     __extends(Armor, _super);
     function Armor(level, x, y) {
         var _this = _super.call(this, level, x, y) || this;
-        _this.RECHARGE_TURNS = 15;
+        _this.RECHARGE_TURNS = 25;
         _this.coEquippable = function (other) {
             if (other instanceof Armor)
                 return false;
@@ -10739,7 +10755,7 @@ var Armor = /** @class */ (function (_super) {
         _this.hurt = function (damage) {
             if (_this.health <= 0)
                 return;
-            _this.health -= damage;
+            _this.health -= Math.max(damage, 1);
             _this.rechargeTurnCounter = _this.RECHARGE_TURNS + 1;
         };
         _this.drawGUI = function (delta, playerHealth) {
@@ -11273,11 +11289,10 @@ var Equippable = /** @class */ (function (_super) {
             _this.broken = true;
             _this.toggleEquip();
             //this.wielder.inventory.removeItem(this);
-            _this.wielder = null;
+            //this.wielder = null;
         };
         _this.onDrop = function () { };
         _this.dropFromInventory = function () {
-            _this.wielder.inventory.weapon = null;
             _this.wielder = null;
             _this.equipped = false;
         };
@@ -12638,7 +12653,7 @@ var Level = /** @class */ (function () {
         //this.loadRoomsIntoLevelArray();
         console.log("depth: ".concat(this.depth));
         this.enemyParameters = this.getEnemyParameters();
-        var envType = Math.floor(Math.random() * 3);
+        var envType = Math.floor(Math.random() * 3); //multiply by number of environments to choose from
         this.environment = new environment_1.Environment(envType);
     }
     /**
@@ -15019,10 +15034,14 @@ var Player = /** @class */ (function (_super) {
         _this.drawMoveQueue = [];
         _this.applyStatus = function (enemy, status) {
             if (enemy instanceof enemy_1.Enemy) {
-                if (status.poison)
+                if (status.poison) {
                     enemy.poison();
-                if (status.blood)
+                    return true;
+                }
+                if (status.blood) {
                     enemy.bleed();
+                    return true;
+                }
             }
         };
         _this.inputHandler = function (input) {
@@ -16111,8 +16130,8 @@ var Player = /** @class */ (function (_super) {
             input_1.Input.minusListener = function () { return _this.inputHandler(input_1.InputEnum.MINUS); };
         }
         _this.mapToggled = true;
-        _this.health = 3;
-        _this.maxHealth = 3;
+        _this.health = 2;
+        _this.maxHealth = 2;
         _this.healthBar = new healthbar_1.HealthBar();
         _this.dead = false;
         _this.flashing = false;
@@ -20289,6 +20308,9 @@ var SkinType;
     SkinType[SkinType["DUNGEON"] = 0] = "DUNGEON";
     SkinType[SkinType["CAVE"] = 1] = "CAVE";
     SkinType[SkinType["FOREST"] = 2] = "FOREST";
+    SkinType[SkinType["SWAMP"] = 3] = "SWAMP";
+    SkinType[SkinType["GLACIER"] = 4] = "GLACIER";
+    SkinType[SkinType["CASTLE"] = 5] = "CASTLE";
 })(SkinType = exports.SkinType || (exports.SkinType = {}));
 var Tile = /** @class */ (function (_super) {
     __extends(Tile, _super);
@@ -21427,10 +21449,28 @@ var Weapon = /** @class */ (function (_super) {
         _this.applyStatus = function (status) {
             _this.status = status;
         };
+        _this.clearStatus = function () {
+            var status = _this.status.poison ? "poison" : "bleed";
+            _this.game.pushMessage("Your ".concat(_this.name, "'s ").concat(status, " effect dries up"));
+            _this.status = { poison: false, blood: false };
+            _this.statusApplicationCount = 0;
+        };
         _this.statusEffect = function (enemy) {
-            _this.wielder.applyStatus(enemy, _this.status);
+            if (_this.wielder.applyStatus(enemy, _this.status)) {
+                _this.statusApplicationCount++;
+                var message = _this.status.poison
+                    ? "Your weapon poisons the ".concat(enemy.name)
+                    : "Your cursed weapon draws blood from the ".concat(enemy.name);
+                _this.game.pushMessage(message);
+                if (_this.statusApplicationCount >= 10)
+                    _this.clearStatus();
+            }
         };
         _this.disassemble = function () {
+            if (_this.equipped) {
+                _this.game.pushMessage("I should probably unequip this before I try to disassemble it...");
+                return;
+            }
             var inventory = _this.wielder.inventory;
             var inventoryX = _this.x;
             var inventoryY = _this.y;
@@ -21439,6 +21479,12 @@ var Weapon = /** @class */ (function (_super) {
             inventory.weapon = null;
             inventory.removeItem(_this);
             inventory.addItem(new weaponFragments_1.WeaponFragments(_this.level, inventoryX, inventoryY, numFragments));
+        };
+        _this.dropFromInventory = function () {
+            if (_this.wielder.inventory.weapon === _this)
+                _this.wielder.inventory.weapon = null;
+            _this.wielder = null;
+            _this.equipped = false;
         };
         _this.weaponMove = function (newX, newY) {
             var flag = false;
@@ -21497,6 +21543,7 @@ var Weapon = /** @class */ (function (_super) {
         _this.status = status || { poison: false, blood: false };
         _this.durability = 50;
         _this.durabilityMax = 50;
+        _this.statusApplicationCount = 0;
         return _this;
     }
     Weapon.itemName = "weapon";

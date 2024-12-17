@@ -49,13 +49,12 @@ export class Equippable extends Item {
     this.broken = true;
     this.toggleEquip();
     //this.wielder.inventory.removeItem(this);
-    this.wielder = null;
+    //this.wielder = null;
   };
 
   onDrop = () => {};
 
   dropFromInventory = () => {
-    this.wielder.inventory.weapon = null;
     this.wielder = null;
     this.equipped = false;
   };

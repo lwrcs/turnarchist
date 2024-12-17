@@ -1,16 +1,12 @@
-import { Item } from "./item";
 import { Game } from "../game";
 import { LevelConstants } from "../levelConstants";
-import { Player } from "../player";
 import { Room } from "../room";
-import { TextParticle } from "../particle/textParticle";
-import { GameConstants } from "../gameConstants";
 import { Equippable } from "./equippable";
 
 export class Armor extends Equippable {
   health: number;
   rechargeTurnCounter: number;
-  readonly RECHARGE_TURNS = 15;
+  readonly RECHARGE_TURNS = 25;
   static itemName = "armor";
 
   constructor(level: Room, x: number, y: number) {
@@ -46,7 +42,7 @@ export class Armor extends Equippable {
 
   hurt = (damage: number) => {
     if (this.health <= 0) return;
-    this.health -= damage;
+    this.health -= Math.max(damage, 1);
     this.rechargeTurnCounter = this.RECHARGE_TURNS + 1;
   };
 

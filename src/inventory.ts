@@ -429,6 +429,7 @@ export class Inventory {
     item.pickedUp = false;
     item.dropFromInventory();
     this.equipAnimAmount[index] = 0;
+    item.drawableY = this.player.y;
     this.game.rooms[this.player.levelID].items.push(item);
     this.items[index] = null;
   };

@@ -73,7 +73,7 @@ export class Level {
     //this.loadRoomsIntoLevelArray();
     console.log(`depth: ${this.depth}`);
     this.enemyParameters = this.getEnemyParameters();
-    let envType = Math.floor(Math.random() * 3);
+    let envType = Math.floor(Math.random() * 3); //multiply by number of environments to choose from
     this.environment = new Environment(envType);
   }
 

@@ -644,7 +644,7 @@ export class Entity extends Drawable {
   };
 
   makeHitWarnings = () => {
-    const cullFactor = 0.25;
+    const cullFactor = 0.45;
     const player: Player = this.getPlayer();
     const orthogonal = this.orthogonalAttack;
     const diagonal = this.diagonalAttack;

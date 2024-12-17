@@ -19,6 +19,7 @@ export abstract class Weapon extends Equippable {
   damage: number;
   status: WeaponStatus;
   static itemName = "weapon";
+  statusApplicationCount: number;
   constructor(level: Room, x: number, y: number, status?: WeaponStatus) {
     super(level, x, y);
 
@@ -30,6 +31,7 @@ export abstract class Weapon extends Equippable {
     this.status = status || { poison: false, blood: false };
     this.durability = 50;
     this.durabilityMax = 50;
+    this.statusApplicationCount = 0;
   }
 
   break = () => {
@@ -50,11 +52,33 @@ export abstract class Weapon extends Equippable {
     this.status = status;
   };
 
+  clearStatus = () => {
+    const status = this.status.poison ? "poison" : "bleed";
+    this.game.pushMessage(`Your ${this.name}'s ${status} effect dries up`);
+
+    this.status = { poison: false, blood: false };
+    this.statusApplicationCount = 0;
+  };
+
   statusEffect = (enemy: Entity) => {
-    this.wielder.applyStatus(enemy, this.status);
+    if (this.wielder.applyStatus(enemy, this.status)) {
+      this.statusApplicationCount++;
+      const message = this.status.poison
+        ? `Your weapon poisons the ${enemy.name}`
+        : `Your cursed weapon draws blood from the ${enemy.name}`;
+      this.game.pushMessage(message);
+
+      if (this.statusApplicationCount >= 10) this.clearStatus();
+    }
   };
 
   disassemble = () => {
+    if (this.equipped) {
+      this.game.pushMessage(
+        "I should probably unequip this before I try to disassemble it...",
+      );
+      return;
+    }
     let inventory = this.wielder.inventory;
     let inventoryX = this.x;
     let inventoryY = this.y;
@@ -65,6 +89,13 @@ export abstract class Weapon extends Equippable {
     inventory.addItem(
       new WeaponFragments(this.level, inventoryX, inventoryY, numFragments),
     );
+  };
+
+  dropFromInventory = () => {
+    if (this.wielder.inventory.weapon === this)
+      this.wielder.inventory.weapon = null;
+    this.wielder = null;
+    this.equipped = false;
   };
 
   weaponMove = (newX: number, newY: number): boolean => {

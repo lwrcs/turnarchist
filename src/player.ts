@@ -196,8 +196,8 @@ export class Player extends Drawable {
       Input.minusListener = () => this.inputHandler(InputEnum.MINUS);
     }
     this.mapToggled = true;
-    this.health = 3;
-    this.maxHealth = 3;
+    this.health = 2;
+    this.maxHealth = 2;
     this.healthBar = new HealthBar();
     this.dead = false;
     this.flashing = false;
@@ -258,8 +258,14 @@ export class Player extends Drawable {
     status: { poison: boolean; blood: boolean },
   ) => {
     if (enemy instanceof Enemy) {
-      if (status.poison) enemy.poison();
-      if (status.blood) enemy.bleed();
+      if (status.poison) {
+        enemy.poison();
+        return true;
+      }
+      if (status.blood) {
+        enemy.bleed();
+        return true;
+      }
     }
   };
 

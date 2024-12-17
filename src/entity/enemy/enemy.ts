@@ -35,6 +35,9 @@ export abstract class Enemy extends Entity {
   static difficulty: number = 1;
   private effectStartTick: number;
   private startTick: number;
+  private poisonHitCount;
+  private bleedHitCount;
+
   //dir: Direction;
 
   constructor(room: Room, game: Game, x: number, y: number) {
@@ -58,6 +61,8 @@ export abstract class Enemy extends Entity {
     this.effectStartTick = 1;
     this.startTick = 1;
     this.isEnemy = true;
+    this.poisonHitCount = 0;
+    this.bleedHitCount = 0;
     //this.getDrop(["weapon", "equipment", "consumable", "gem", "tool", "coin"]);
   }
 
@@ -137,6 +142,7 @@ export abstract class Enemy extends Entity {
       this.status.poison = true;
       this.effectStartTick = this.ticks % 3;
       this.startTick = this.ticks;
+      this.poisonHitCount = 0;
     }
   };
 
@@ -145,6 +151,7 @@ export abstract class Enemy extends Entity {
       this.status.bleed = true;
       this.effectStartTick = this.ticks % 3;
       this.startTick = this.ticks;
+      this.bleedHitCount = 0;
     }
   };
 
@@ -155,6 +162,8 @@ export abstract class Enemy extends Entity {
         this.ticks !== this.startTick
       ) {
         this.hurt(this.targetPlayer, 0.5, "poison");
+        this.poisonHitCount++;
+        if (this.poisonHitCount >= 2) this.status.poison = false;
       }
     }
   };
@@ -162,13 +171,15 @@ export abstract class Enemy extends Entity {
   tickBleed = () => {
     if (this.status.bleed) {
       if (
-        this.ticks % 3 === this.effectStartTick &&
+        this.ticks % 2 === this.effectStartTick &&
         this.ticks !== this.startTick
       ) {
-        this.hurt(this.targetPlayer, 0.5, "blood");
+        this.hurt(this.targetPlayer, 0.25, "blood");
+        this.bleedHitCount++;
       }
 
-      if (this.targetPlayer) this.targetPlayer.heal(0.5);
+      if (this.targetPlayer) this.targetPlayer.heal(0.25);
+      if (this.bleedHitCount >= 2) this.status.bleed = false;
     }
   };
 
