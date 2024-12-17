@@ -27,7 +27,7 @@ import { Backpack } from "./backpack";
 interface Drop {
   itemType: string;
   dropWeight: number;
-  category: string;
+  category: string[];
 }
 
 export const ItemTypeMap: { [key: string]: typeof Item } = {
@@ -67,44 +67,55 @@ export const ItemTypeMap: { [key: string]: typeof Item } = {
 export class DropTable {
   static drops: Drop[] = [
     // Weapons
-    { itemType: "dualdagger", dropWeight: 3, category: "weapon" },
-    { itemType: "warhammer", dropWeight: 5, category: "weapon" },
-    { itemType: "spear", dropWeight: 10, category: "weapon" },
-    { itemType: "spellbook", dropWeight: 1, category: "weapon" },
+    { itemType: "dualdagger", dropWeight: 3, category: ["weapon", "melee"] },
+    { itemType: "warhammer", dropWeight: 5, category: ["weapon", "melee"] },
+    { itemType: "spear", dropWeight: 10, category: ["weapon", "melee"] },
+    { itemType: "spellbook", dropWeight: 1, category: ["weapon", "magic"] },
 
     // Equipment
-    { itemType: "armor", dropWeight: 8, category: "equipment" },
+    { itemType: "armor", dropWeight: 8, category: ["equipment"] },
 
     // Tools
-    { itemType: "pickaxe", dropWeight: 3, category: "tool" },
-    { itemType: "hammer", dropWeight: 3, category: "tool" },
+    { itemType: "pickaxe", dropWeight: 3, category: ["tool"] },
+    { itemType: "hammer", dropWeight: 3, category: ["tool"] },
 
     // Consumables
-    { itemType: "heart", dropWeight: 5, category: "consumable" },
+    { itemType: "heart", dropWeight: 5, category: ["consumable"] },
+    { itemType: "weaponpoison", dropWeight: 1, category: ["consumable"] },
+    { itemType: "weaponblood", dropWeight: 1, category: ["consumable"] },
 
-    { itemType: "weaponpoison", dropWeight: 1, category: "consumable" },
-    { itemType: "weaponblood", dropWeight: 1, category: "consumable" },
+    { itemType: "coin", dropWeight: 100, category: ["coin"] },
 
-    { itemType: "coin", dropWeight: 250, category: "coin" },
-
-    { itemType: "weaponfragments", dropWeight: 5, category: "consumable" },
-    { itemType: "spellbookPage", dropWeight: 2, category: "consumable" },
+    {
+      itemType: "weaponfragments",
+      dropWeight: 5,
+      category: ["consumable", "melee"],
+    },
+    {
+      itemType: "spellbookPage",
+      dropWeight: 2,
+      category: ["consumable", "magic"],
+    },
 
     // Upgrades
-    { itemType: "backpack", dropWeight: 3, category: "upgrade" },
+    { itemType: "backpack", dropWeight: 3, category: ["upgrade"] },
 
     // Light sources
-    { itemType: "candle", dropWeight: 10, category: "light" },
-    { itemType: "torch", dropWeight: 5, category: "light" },
-    { itemType: "lantern", dropWeight: 2, category: "light" },
+    { itemType: "candle", dropWeight: 10, category: ["light"] },
+    { itemType: "torch", dropWeight: 5, category: ["light"] },
+    { itemType: "lantern", dropWeight: 2, category: ["light"] },
 
     // Gems and minerals
-    { itemType: "redgem", dropWeight: 5, category: "gem" },
-    { itemType: "bluegem", dropWeight: 5, category: "gem" },
-    { itemType: "greengem", dropWeight: 5, category: "gem" },
-    { itemType: "gold", dropWeight: 5, category: "gem" },
-    { itemType: "stone", dropWeight: 5, category: "gem" },
-    { itemType: "coal", dropWeight: 15, category: "fuel" },
+    { itemType: "redgem", dropWeight: 5, category: ["gem", "resource"] },
+    { itemType: "bluegem", dropWeight: 5, category: ["gem", "resource"] },
+    { itemType: "greengem", dropWeight: 5, category: ["gem", "resource"] },
+    { itemType: "gold", dropWeight: 5, category: ["gem", "resource"] },
+    { itemType: "stone", dropWeight: 5, category: ["gem", "resource"] },
+    {
+      itemType: "coal",
+      dropWeight: 15,
+      category: ["fuel", "lantern", "resource"],
+    },
   ];
 
   static getDrop = (
@@ -113,21 +124,60 @@ export class DropTable {
     useCategory: string[] = ["coin"],
     force: boolean = false,
   ) => {
-    let filteredDrops = this.drops;
-    if (useCategory.length > 0) {
-      filteredDrops = this.drops.filter((drop) =>
-        useCategory.includes(drop.category),
+    let filteredDropsByCategory: Drop[] = [];
+    let filteredDropsByItem: Drop[] = [];
+
+    const allCategories = Array.from(
+      new Set(this.drops.flatMap((drop) => drop.category)),
+    );
+    const allItemTypes = Object.keys(ItemTypeMap);
+
+    // Separate categories and specific item names from useCategory
+    const categories = useCategory.filter((cat) => allCategories.includes(cat));
+    const specificItems = useCategory.filter((item) =>
+      allItemTypes.includes(item),
+    );
+
+    // Get drops from specified categories
+    if (categories.length > 0) {
+      filteredDropsByCategory = this.drops.filter((drop) =>
+        drop.category.some((cat) => categories.includes(cat)),
       );
     }
 
-    if (filteredDrops.length === 0) {
+    // Get specific drops by item name
+    if (specificItems.length > 0) {
+      filteredDropsByItem = this.drops.filter((drop) =>
+        specificItems.includes(drop.itemType),
+      );
+    }
+
+    // Combine and remove duplicates
+    const combinedDropsMap: { [key: string]: Drop } = {};
+
+    filteredDropsByCategory.forEach((drop) => {
+      combinedDropsMap[drop.itemType] = drop;
+    });
+
+    filteredDropsByItem.forEach((drop) => {
+      combinedDropsMap[drop.itemType] = drop;
+    });
+
+    let combinedDrops = Object.values(combinedDropsMap);
+
+    // If no categories or specific items matched, use all drops
+    if (combinedDrops.length === 0) {
+      combinedDrops = this.drops;
+    }
+
+    if (combinedDrops.length === 0) {
       if (force) {
-        filteredDrops = this.drops;
-        if (filteredDrops.length === 0) return null;
+        combinedDrops = this.drops;
+        if (combinedDrops.length === 0) return null;
       } else return null;
     }
 
-    const totalWeight = filteredDrops.reduce(
+    const totalWeight = combinedDrops.reduce(
       (acc, drop) => acc + drop.dropWeight,
       0,
     );
@@ -135,7 +185,7 @@ export class DropTable {
     const randomWeight = Math.floor(Math.random() * totalWeight);
 
     let cumulativeWeight = 0;
-    for (const drop of filteredDrops) {
+    for (const drop of combinedDrops) {
       cumulativeWeight += drop.dropWeight;
 
       if (randomWeight <= cumulativeWeight) {
@@ -144,8 +194,8 @@ export class DropTable {
       }
     }
 
-    if (force && filteredDrops.length > 0) {
-      this.addNewItem(filteredDrops[0].itemType, entity);
+    if (force && combinedDrops.length > 0) {
+      this.addNewItem(combinedDrops[0].itemType, entity);
       return;
     }
 

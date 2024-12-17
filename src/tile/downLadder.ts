@@ -12,6 +12,7 @@ export class DownLadder extends Tile {
   linkedLevel: Room;
   game: Game;
   isRope = false;
+  frame: number = 0;
 
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, x, y);
@@ -101,6 +102,23 @@ export class DownLadder extends Tile {
       1,
       this.room.shadeColor,
       this.shadeAmount(),
+    );
+  };
+
+  drawAboveShading = (delta: number) => {
+    if (this.frame > 100) this.frame = 0;
+    this.frame += 1 * delta;
+    let multiplier = 0.125;
+
+    Game.drawFX(
+      2,
+      2,
+      1,
+      1,
+      this.x,
+      this.y - 1.25 + multiplier * Math.sin((this.frame * Math.PI) / 50),
+      1,
+      1,
     );
   };
 

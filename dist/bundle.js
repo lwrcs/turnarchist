@@ -2206,7 +2206,7 @@ var CrabEnemy = /** @class */ (function (_super) {
                     _this.frame = 0;
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - 0.25 - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
-                game_1.Game.drawMob(_this.tileX, _this.tileY + _this.direction, 1, 1, _this.x - _this.drawX + rumbleX, _this.y - _this.drawYOffset - _this.drawY + rumbleY + 1.25, 1 * _this.crushX, 1 * _this.crushY, _this.room.shadeColor, _this.shadeAmount());
+                game_1.Game.drawMob(_this.tileX, _this.tileY + _this.direction, 1, 1, _this.x - _this.drawX + rumbleX, _this.y - _this.drawYOffset - _this.drawY + rumbleY, 1 * _this.crushX, 1 * _this.crushY, _this.room.shadeColor, _this.shadeAmount());
                 if (_this.crushed) {
                     _this.crushAnim(delta);
                 }
@@ -2231,6 +2231,7 @@ var CrabEnemy = /** @class */ (function (_super) {
         _this.imageParticleX = 3;
         _this.imageParticleY = 24;
         //if (drop) this.drop = drop;
+        _this.drawYOffset = 0.175;
         if (Math.random() < _this.dropChance) {
             _this.getDrop([
                 "weapon",
@@ -11145,68 +11146,108 @@ var DropTable = /** @class */ (function () {
     _a = DropTable;
     DropTable.drops = [
         // Weapons
-        { itemType: "dualdagger", dropWeight: 3, category: "weapon" },
-        { itemType: "warhammer", dropWeight: 5, category: "weapon" },
-        { itemType: "spear", dropWeight: 10, category: "weapon" },
-        { itemType: "spellbook", dropWeight: 1, category: "weapon" },
+        { itemType: "dualdagger", dropWeight: 3, category: ["weapon", "melee"] },
+        { itemType: "warhammer", dropWeight: 5, category: ["weapon", "melee"] },
+        { itemType: "spear", dropWeight: 10, category: ["weapon", "melee"] },
+        { itemType: "spellbook", dropWeight: 1, category: ["weapon", "magic"] },
         // Equipment
-        { itemType: "armor", dropWeight: 8, category: "equipment" },
+        { itemType: "armor", dropWeight: 8, category: ["equipment"] },
         // Tools
-        { itemType: "pickaxe", dropWeight: 3, category: "tool" },
-        { itemType: "hammer", dropWeight: 3, category: "tool" },
+        { itemType: "pickaxe", dropWeight: 3, category: ["tool"] },
+        { itemType: "hammer", dropWeight: 3, category: ["tool"] },
         // Consumables
-        { itemType: "heart", dropWeight: 5, category: "consumable" },
-        { itemType: "weaponpoison", dropWeight: 1, category: "consumable" },
-        { itemType: "weaponblood", dropWeight: 1, category: "consumable" },
-        { itemType: "coin", dropWeight: 250, category: "coin" },
-        { itemType: "weaponfragments", dropWeight: 5, category: "consumable" },
-        { itemType: "spellbookPage", dropWeight: 2, category: "consumable" },
+        { itemType: "heart", dropWeight: 5, category: ["consumable"] },
+        { itemType: "weaponpoison", dropWeight: 1, category: ["consumable"] },
+        { itemType: "weaponblood", dropWeight: 1, category: ["consumable"] },
+        { itemType: "coin", dropWeight: 100, category: ["coin"] },
+        {
+            itemType: "weaponfragments",
+            dropWeight: 5,
+            category: ["consumable", "melee"],
+        },
+        {
+            itemType: "spellbookPage",
+            dropWeight: 2,
+            category: ["consumable", "magic"],
+        },
         // Upgrades
-        { itemType: "backpack", dropWeight: 3, category: "upgrade" },
+        { itemType: "backpack", dropWeight: 3, category: ["upgrade"] },
         // Light sources
-        { itemType: "candle", dropWeight: 10, category: "light" },
-        { itemType: "torch", dropWeight: 5, category: "light" },
-        { itemType: "lantern", dropWeight: 2, category: "light" },
+        { itemType: "candle", dropWeight: 10, category: ["light"] },
+        { itemType: "torch", dropWeight: 5, category: ["light"] },
+        { itemType: "lantern", dropWeight: 2, category: ["light"] },
         // Gems and minerals
-        { itemType: "redgem", dropWeight: 5, category: "gem" },
-        { itemType: "bluegem", dropWeight: 5, category: "gem" },
-        { itemType: "greengem", dropWeight: 5, category: "gem" },
-        { itemType: "gold", dropWeight: 5, category: "gem" },
-        { itemType: "stone", dropWeight: 5, category: "gem" },
-        { itemType: "coal", dropWeight: 15, category: "fuel" },
+        { itemType: "redgem", dropWeight: 5, category: ["gem", "resource"] },
+        { itemType: "bluegem", dropWeight: 5, category: ["gem", "resource"] },
+        { itemType: "greengem", dropWeight: 5, category: ["gem", "resource"] },
+        { itemType: "gold", dropWeight: 5, category: ["gem", "resource"] },
+        { itemType: "stone", dropWeight: 5, category: ["gem", "resource"] },
+        {
+            itemType: "coal",
+            dropWeight: 15,
+            category: ["fuel", "lantern", "resource"],
+        },
     ];
     DropTable.getDrop = function (entity, uniqueTable, useCategory, force) {
         if (uniqueTable === void 0) { uniqueTable = false; }
         if (useCategory === void 0) { useCategory = ["coin"]; }
         if (force === void 0) { force = false; }
-        var filteredDrops = _a.drops;
-        if (useCategory.length > 0) {
-            filteredDrops = _a.drops.filter(function (drop) {
-                return useCategory.includes(drop.category);
+        var filteredDropsByCategory = [];
+        var filteredDropsByItem = [];
+        var allCategories = Array.from(new Set(_a.drops.flatMap(function (drop) { return drop.category; })));
+        var allItemTypes = Object.keys(exports.ItemTypeMap);
+        // Separate categories and specific item names from useCategory
+        var categories = useCategory.filter(function (cat) { return allCategories.includes(cat); });
+        var specificItems = useCategory.filter(function (item) {
+            return allItemTypes.includes(item);
+        });
+        // Get drops from specified categories
+        if (categories.length > 0) {
+            filteredDropsByCategory = _a.drops.filter(function (drop) {
+                return drop.category.some(function (cat) { return categories.includes(cat); });
             });
         }
-        if (filteredDrops.length === 0) {
+        // Get specific drops by item name
+        if (specificItems.length > 0) {
+            filteredDropsByItem = _a.drops.filter(function (drop) {
+                return specificItems.includes(drop.itemType);
+            });
+        }
+        // Combine and remove duplicates
+        var combinedDropsMap = {};
+        filteredDropsByCategory.forEach(function (drop) {
+            combinedDropsMap[drop.itemType] = drop;
+        });
+        filteredDropsByItem.forEach(function (drop) {
+            combinedDropsMap[drop.itemType] = drop;
+        });
+        var combinedDrops = Object.values(combinedDropsMap);
+        // If no categories or specific items matched, use all drops
+        if (combinedDrops.length === 0) {
+            combinedDrops = _a.drops;
+        }
+        if (combinedDrops.length === 0) {
             if (force) {
-                filteredDrops = _a.drops;
-                if (filteredDrops.length === 0)
+                combinedDrops = _a.drops;
+                if (combinedDrops.length === 0)
                     return null;
             }
             else
                 return null;
         }
-        var totalWeight = filteredDrops.reduce(function (acc, drop) { return acc + drop.dropWeight; }, 0);
+        var totalWeight = combinedDrops.reduce(function (acc, drop) { return acc + drop.dropWeight; }, 0);
         var randomWeight = Math.floor(Math.random() * totalWeight);
         var cumulativeWeight = 0;
-        for (var _i = 0, filteredDrops_1 = filteredDrops; _i < filteredDrops_1.length; _i++) {
-            var drop = filteredDrops_1[_i];
+        for (var _i = 0, combinedDrops_1 = combinedDrops; _i < combinedDrops_1.length; _i++) {
+            var drop = combinedDrops_1[_i];
             cumulativeWeight += drop.dropWeight;
             if (randomWeight <= cumulativeWeight) {
                 _a.addNewItem(drop.itemType, entity);
                 return;
             }
         }
-        if (force && filteredDrops.length > 0) {
-            _a.addNewItem(filteredDrops[0].itemType, entity);
+        if (force && combinedDrops.length > 0) {
+            _a.addNewItem(combinedDrops[0].itemType, entity);
             return;
         }
         return null;
@@ -13236,7 +13277,7 @@ var populate_grid = function (partitions, grid, w, h) {
     //output grid array that indicates which cells are in which partition
 };
 var generate_dungeon_candidate = function (game, partialLevel, map_w, map_h, depth, params) { return __awaiter(void 0, void 0, void 0, function () {
-    var minRoomCount, maxRoomCount, maxRoomArea, splitProbabilities, wallRemoveProbability, grid, i, _a, i, spawn, connected, frontier, found_boss, room, doors_found, num_doors, tries, max_tries, point, _i, _b, p, _loop_7, _c, _d, partition, num_loop_doors, _loop_8, i, boss, found_stair, max_stair_tries, _loop_9, stair_tries, state_5, seen, room, _e, _f, c, other;
+    var minRoomCount, maxRoomCount, maxRoomArea, splitProbabilities, wallRemoveProbability, grid, i, _a, i, spawn, connected, frontier, found_boss, room, doors_found, num_doors, tries, max_tries, point, _i, _b, p, _loop_7, _c, _d, partition, num_loop_doors, _loop_8, i, boss, found_stair, max_stair_tries, stairRoomWidth, stairRoomHeight, _loop_9, stair_tries, state_5, seen, room, _e, _f, c, other;
     return __generator(this, function (_g) {
         switch (_g.label) {
             case 0:
@@ -13449,15 +13490,17 @@ var generate_dungeon_candidate = function (game, partialLevel, map_w, map_h, dep
                 boss = partialLevel.partitions.find(function (p) { return p.type === room_1.RoomType.BOSS; });
                 found_stair = false;
                 max_stair_tries = 100;
+                stairRoomWidth = 5;
+                stairRoomHeight = 5;
                 _loop_9 = function (stair_tries) {
-                    var stair = new Partition(game_1.Game.rand(boss.x - 1, boss.x + boss.w - 2, random_1.Random.rand), boss.y - 4, 3, 3, "white");
+                    var stair = new Partition(game_1.Game.rand(boss.x - 1, boss.x + boss.w - 2, random_1.Random.rand), boss.y - stairRoomHeight - 1, stairRoomWidth, stairRoomHeight, "white");
                     stair.type = room_1.RoomType.DOWNLADDER;
                     stair.fillStyle = "blue";
                     if (!partialLevel.partitions.some(function (p) { return p.overlaps(stair); })) {
                         found_stair = true;
                         partialLevel.partitions.push(stair);
-                        stair.connections.push(new PartitionConnection(stair.x + 1, stair.y + 3, boss));
-                        boss.connections.push(new PartitionConnection(stair.x + 1, stair.y + 3, stair));
+                        stair.connections.push(new PartitionConnection(stair.x + 1, stair.y + stairRoomHeight, boss));
+                        boss.connections.push(new PartitionConnection(stair.x + 1, stair.y + stairRoomHeight, stair));
                         // Set open walls for stair and boss connection
                         stair.setOpenWall(new PartitionConnection(stair.x + 1, stair.y + 3, boss));
                         boss.setOpenWall(new PartitionConnection(stair.x + 1, stair.y + 3, stair));
@@ -16799,7 +16842,6 @@ var entity_1 = __webpack_require__(/*! ./entity/entity */ "./src/entity/entity.t
 var chest_1 = __webpack_require__(/*! ./entity/object/chest */ "./src/entity/object/chest.ts");
 var goldenKey_1 = __webpack_require__(/*! ./item/goldenKey */ "./src/item/goldenKey.ts");
 var spawnfloor_1 = __webpack_require__(/*! ./tile/spawnfloor */ "./src/tile/spawnfloor.ts");
-//import { GoldenDoor } from "./tile/goldenDoor";
 var spike_1 = __webpack_require__(/*! ./tile/spike */ "./src/tile/spike.ts");
 var gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/gameConstants.ts");
 var skullEnemy_1 = __webpack_require__(/*! ./entity/enemy/skullEnemy */ "./src/entity/enemy/skullEnemy.ts");
@@ -16838,7 +16880,6 @@ var bishopEnemy_1 = __webpack_require__(/*! ./entity/enemy/bishopEnemy */ "./src
 var rockResource_1 = __webpack_require__(/*! ./entity/resource/rockResource */ "./src/entity/resource/rockResource.ts");
 var mushrooms_1 = __webpack_require__(/*! ./entity/object/mushrooms */ "./src/entity/object/mushrooms.ts");
 var armoredzombieEnemy_1 = __webpack_require__(/*! ./entity/enemy/armoredzombieEnemy */ "./src/entity/enemy/armoredzombieEnemy.ts");
-//import { ActionState, ActionTab } from "./actionTab";
 var tombStone_1 = __webpack_require__(/*! ./entity/object/tombStone */ "./src/entity/object/tombStone.ts");
 var pumpkin_1 = __webpack_require__(/*! ./entity/object/pumpkin */ "./src/entity/object/pumpkin.ts");
 var queenEnemy_1 = __webpack_require__(/*! ./entity/enemy/queenEnemy */ "./src/entity/enemy/queenEnemy.ts");
@@ -16855,6 +16896,7 @@ var torch_1 = __webpack_require__(/*! ./item/torch */ "./src/item/torch.ts");
 var rookEnemy_1 = __webpack_require__(/*! ./entity/enemy/rookEnemy */ "./src/entity/enemy/rookEnemy.ts");
 var beamEffect_1 = __webpack_require__(/*! ./beamEffect */ "./src/beamEffect.ts");
 var environment_1 = __webpack_require__(/*! ./environment */ "./src/environment.ts");
+var pickaxe_1 = __webpack_require__(/*! ./weapon/pickaxe */ "./src/weapon/pickaxe.ts");
 /**
  * Enumeration of available enemy types.
  */
@@ -17155,7 +17197,7 @@ var Room = /** @class */ (function () {
             var numEmptyTiles = _this.getEmptyTiles().length;
             var numEnemies = Math.ceil(numEmptyTiles * game_1.Game.randTable([0.25, 0.3, 0.35], rand));
             _this.addEnemies(numEnemies, rand);
-            _this.addResources((numEmptyTiles - numEnemies) * game_1.Game.randTable([0.5, 0.6, 0.7, 0.8], rand), rand);
+            _this.addResources((numEmptyTiles - numEnemies) * game_1.Game.randTable([0.1, 0.2, 0.3], rand), rand);
         };
         this.populateUpLadder = function (rand) {
             _this.addRandomTorches("medium");
@@ -17163,9 +17205,10 @@ var Room = /** @class */ (function () {
             _this.roomArray[x][y] = new upLadder_1.UpLadder(_this, _this.game, x, y);
         };
         this.populateDownLadder = function (rand) {
-            _this.addRandomTorches("medium");
+            _this.addTorches(1, rand, _this.roomX + 3, _this.roomY);
+            _this.addVendingMachine(rand, _this.roomX + 1, _this.roomY + 1);
             var _a = _this.getRoomCenter(), x = _a.x, y = _a.y;
-            _this.roomArray[x][y] = new downLadder_1.DownLadder(_this, _this.game, x, y);
+            _this.roomArray[x + 1][y - 1] = new downLadder_1.DownLadder(_this, _this.game, x + 1, y - 1);
             var numChests = Math.ceil(Math.random() * 5);
             var tiles = _this.getEmptyTiles();
             tiles = tiles.filter(function (tile) { return tile.x !== x || tile.y !== y; });
@@ -17229,13 +17272,25 @@ var Room = /** @class */ (function () {
                 case RoomType.START:
                     _this.populateEmpty(rand);
                     _this.name = "FLOOR " + -_this.depth;
+                    if (_this.level.environment.type === environment_1.EnvType.CAVE) {
+                        var _a = _this.getRoomCenter(), x = _a.x, y = _a.y;
+                        var sign = Math.random() < 0.5 ? -1 : 1;
+                        var offsetX = Math.floor(Math.random()) * sign;
+                        var offsetY = offsetX !== 0 ? 0 : sign;
+                        _this.items.push(new pickaxe_1.Pickaxe(_this, x + offsetX, y + offsetY));
+                    }
                     break;
                 case RoomType.BOSS:
                     _this.populateBoss(rand);
                     _this.name = "BOSS";
                     break;
                 case RoomType.DUNGEON:
-                    _this.populateDungeon(rand);
+                    if (_this.level.environment.type === environment_1.EnvType.CAVE &&
+                        Math.random() <= 0.2) {
+                        _this.populateCave(rand);
+                    }
+                    else
+                        _this.populateDungeon(rand);
                     break;
                 case RoomType.BIGDUNGEON:
                     _this.populateBigDungeon(rand);
@@ -17390,7 +17445,8 @@ var Room = /** @class */ (function () {
                 for (var y = _this.roomY + 1; y < _this.roomY + _this.height - 1; y++) {
                     if (!_this.roomArray[x][y].isSolid() &&
                         !(_this.roomArray[x][y] instanceof spiketrap_1.SpikeTrap) &&
-                        !(_this.roomArray[x][y] instanceof spawnfloor_1.SpawnFloor)) {
+                        !(_this.roomArray[x][y] instanceof spawnfloor_1.SpawnFloor) &&
+                        !(_this.roomArray[x][y] instanceof downLadder_1.DownLadder)) {
                         returnVal.push(_this.roomArray[x][y]);
                     }
                 }
@@ -18275,9 +18331,18 @@ var Room = /** @class */ (function () {
             _loop_6(i);
         }
     };
-    Room.prototype.addTorches = function (numTorches, rand) {
-        if (this.level.environment.type === environment_1.EnvType.FOREST)
+    Room.prototype.addTorches = function (numTorches, rand, placeX, placeY) {
+        var _a;
+        if (this.level.environment.type === environment_1.EnvType.FOREST &&
+            this.type !== RoomType.DOWNLADDER)
             return;
+        if (placeX !== undefined &&
+            placeY !== undefined &&
+            ((_a = this.roomArray[placeX]) === null || _a === void 0 ? void 0 : _a[placeY]) instanceof wall_1.Wall) {
+            this.roomArray[placeX][placeY] = new wallTorch_1.WallTorch(this, placeX, placeY);
+            console.log("placed torch");
+            return;
+        }
         var walls = [];
         for (var xx = this.roomX + 1; xx < this.roomX + this.width - 2; xx++) {
             for (var yy = this.roomY; yy < this.roomY + this.height - 1; yy++) {
@@ -18288,12 +18353,12 @@ var Room = /** @class */ (function () {
             }
         }
         for (var i = 0; i < numTorches; i++) {
-            var t = void 0, x = void 0, y = void 0;
             if (walls.length == 0)
                 return;
-            t = walls.splice(game_1.Game.rand(0, walls.length - 1, rand), 1)[0];
-            x = t.x;
-            y = t.y;
+            var randomIndex = game_1.Game.rand(0, walls.length - 1, rand);
+            var t = walls.splice(randomIndex, 1)[0];
+            var x = t.x;
+            var y = t.y;
             this.roomArray[x][y] = new wallTorch_1.WallTorch(this, x, y);
         }
     };
@@ -18590,8 +18655,10 @@ var Room = /** @class */ (function () {
                 emeraldResource_1.EmeraldResource.add(this, this.game, x, y);
         }
     };
-    Room.prototype.addVendingMachine = function (rand) {
-        var _a = this.getRandomEmptyPosition(this.getEmptyTiles()), x = _a.x, y = _a.y;
+    Room.prototype.addVendingMachine = function (rand, placeX, placeY) {
+        var pos = this.getRandomEmptyPosition(this.getEmptyTiles());
+        var x = placeX ? placeX : pos.x;
+        var y = placeY ? placeY : pos.y;
         var table = this.depth > 0
             ? [1, 1, 1, 1, 1, 1, 1, 2, 3, 4, 5, 6, 7, 8, 9]
             : [1, 1, 1];
@@ -19849,6 +19916,7 @@ var DownLadder = /** @class */ (function (_super) {
     function DownLadder(room, game, x, y) {
         var _this = _super.call(this, room, x, y) || this;
         _this.isRope = false;
+        _this.frame = 0;
         _this.generate = function () { return __awaiter(_this, void 0, void 0, function () {
             var _this = this;
             return __generator(this, function (_a) {
@@ -19901,6 +19969,13 @@ var DownLadder = /** @class */ (function (_super) {
                 xx = 16;
             game_1.Game.drawTile(1, _this.skin, 1, 1, _this.x, _this.y, 1, 1, _this.room.shadeColor, _this.shadeAmount());
             game_1.Game.drawTile(xx, _this.skin, 1, 1, _this.x, _this.y, 1, 1, _this.room.shadeColor, _this.shadeAmount());
+        };
+        _this.drawAboveShading = function (delta) {
+            if (_this.frame > 100)
+                _this.frame = 0;
+            _this.frame += 1 * delta;
+            var multiplier = 0.125;
+            game_1.Game.drawFX(2, 2, 1, 1, _this.x, _this.y - 1.25 + multiplier * Math.sin((_this.frame * Math.PI) / 50), 1, 1);
         };
         _this.drawAbovePlayer = function (delta) { };
         _this.game = game;

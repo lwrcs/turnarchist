@@ -4,21 +4,17 @@ import { Floor } from "./tile/floor";
 import { Direction, Game, LevelState } from "./game";
 import { Door, DoorType } from "./tile/door";
 import { Tile, SkinType } from "./tile/tile";
-import { Trapdoor } from "./tile/trapdoor";
 import { KnightEnemy } from "./entity/enemy/knightEnemy";
 import { Entity, EntityType } from "./entity/entity";
 import { Chest } from "./entity/object/chest";
 import { Item } from "./item/item";
 import { GoldenKey } from "./item/goldenKey";
 import { SpawnFloor } from "./tile/spawnfloor";
-//import { GoldenDoor } from "./tile/goldenDoor";
 import { Spike } from "./tile/spike";
 import { GameConstants } from "./gameConstants";
-import { WizardEnemy } from "./entity/enemy/wizardEnemy";
 import { SkullEnemy } from "./entity/enemy/skullEnemy";
 import { Barrel } from "./entity/object/barrel";
 import { Crate } from "./entity/object/crate";
-import { Input } from "./input";
 import { Armor } from "./item/armor";
 import { Particle } from "./particle/particle";
 import { Projectile } from "./projectile/projectile";
@@ -56,21 +52,13 @@ import { BishopEnemy } from "./entity/enemy/bishopEnemy";
 import { Rock } from "./entity/resource/rockResource";
 import { Mushrooms } from "./entity/object/mushrooms";
 import { ArmoredzombieEnemy } from "./entity/enemy/armoredzombieEnemy";
-import { Backpack } from "./item/backpack";
-import { DoorDir } from "./tile/door";
-//import { ActionState, ActionTab } from "./actionTab";
 import { TombStone } from "./entity/object/tombStone";
 import { Pumpkin } from "./entity/object/pumpkin";
 import { QueenEnemy } from "./entity/enemy/queenEnemy";
 import { FrogEnemy } from "./entity/enemy/frogEnemy";
 import { BigKnightEnemy } from "./entity/enemy/bigKnightEnemy";
-import { EventEmitter } from "./eventEmitter";
 import { Enemy } from "./entity/enemy/enemy";
 import { FireWizardEnemy } from "./entity/enemy/fireWizard";
-import { Dagger } from "./weapon/dagger";
-import { TutorialListener } from "./tutorialListener";
-import { globalEventBus } from "./eventBus";
-import { RedGem } from "./item/redgem";
 import { EnergyWizardEnemy } from "./entity/enemy/energyWizard";
 import { ReverbEngine } from "./reverb";
 import { astar } from "./astarclass";
@@ -81,6 +69,7 @@ import { Torch } from "./item/torch";
 import { RookEnemy } from "./entity/enemy/rookEnemy";
 import { BeamEffect } from "./beamEffect";
 import { EnvType } from "./environment";
+import { Pickaxe } from "./weapon/pickaxe";
 
 /**
  * Enumeration of available enemy types.
@@ -421,6 +410,7 @@ export class Room {
     //this.innerWalls = this.innerWalls.filter((w) => w.x !== x && w.y !== y);
     //this.outerWalls = this.outerWalls.filter((w) => w.x !== x && w.y !== y);
   };
+
   getWallType = (
     pointX: number,
     pointY: number,
@@ -492,8 +482,29 @@ export class Room {
     }
   }
 
-  private addTorches(numTorches: number, rand: () => number) {
-    if (this.level.environment.type === EnvType.FOREST) return;
+  private addTorches(
+    numTorches: number,
+    rand: () => number,
+    placeX?: number,
+    placeY?: number,
+  ) {
+    if (
+      this.level.environment.type === EnvType.FOREST &&
+      this.type !== RoomType.DOWNLADDER
+    )
+      return;
+
+    if (
+      placeX !== undefined &&
+      placeY !== undefined &&
+      this.roomArray[placeX]?.[placeY] instanceof Wall
+    ) {
+      this.roomArray[placeX][placeY] = new WallTorch(this, placeX, placeY);
+      console.log("placed torch");
+
+      return;
+    }
+
     let walls = [];
     for (let xx = this.roomX + 1; xx < this.roomX + this.width - 2; xx++) {
       for (let yy = this.roomY; yy < this.roomY + this.height - 1; yy++) {
@@ -505,12 +516,13 @@ export class Room {
         }
       }
     }
+
     for (let i = 0; i < numTorches; i++) {
-      let t, x, y;
       if (walls.length == 0) return;
-      t = walls.splice(Game.rand(0, walls.length - 1, rand), 1)[0];
-      x = t.x;
-      y = t.y;
+      const randomIndex = Game.rand(0, walls.length - 1, rand);
+      const t = walls.splice(randomIndex, 1)[0];
+      const x = t.x;
+      const y = t.y;
       this.roomArray[x][y] = new WallTorch(this, x, y);
     }
   }
@@ -733,6 +745,7 @@ export class Room {
       this.addSpawners(spawnerAmount, Math.random);
     }
   }
+
   private addSpawners(numSpawners: number, rand: () => number) {
     let tiles = this.getEmptyTiles();
     if (tiles === null) {
@@ -747,6 +760,7 @@ export class Room {
       Spawner.add(this, this.game, x, y, spawnTable);
     }
   }
+
   //used for spawn commands, implement elsewhere later
   /**
    * Adds a new enemy to the room based on the provided enemy type string.
@@ -849,8 +863,16 @@ export class Room {
     }
   }
 
-  private addVendingMachine(rand: () => number) {
-    const { x, y } = this.getRandomEmptyPosition(this.getEmptyTiles());
+  private addVendingMachine(
+    rand: () => number,
+    placeX?: number,
+    placeY?: number,
+  ) {
+    const pos = this.getRandomEmptyPosition(this.getEmptyTiles());
+
+    let x = placeX ? placeX : pos.x;
+    let y = placeY ? placeY : pos.y;
+
     let table =
       this.depth > 0
         ? [1, 1, 1, 1, 1, 1, 1, 2, 3, 4, 5, 6, 7, 8, 9]
@@ -924,6 +946,7 @@ export class Room {
       }
     }
   };
+
   populateBoss = (rand: () => number) => {
     this.addRandomTorches("medium");
 
@@ -940,6 +963,7 @@ export class Room {
     );
     this.addEnemies(numEnemies, rand);
   };
+
   populateBigDungeon = (rand: () => number) => {
     if (Game.rand(1, 4, rand) === 1) this.addChasms(rand);
     this.addRandomTorches("medium");
@@ -985,6 +1009,7 @@ export class Room {
       ),
     );
   };
+
   populateFountain = (rand: () => number) => {
     this.addRandomTorches("medium");
 
@@ -1004,10 +1029,12 @@ export class Room {
 
     this.addPlants(Game.randTable([0, 0, 1, 2], rand), rand);
   };
+
   placeCoffin = (x: number, y: number) => {
     this.roomArray[x][y] = new CoffinTile(this, x, y, 0);
     this.roomArray[x][y + 1] = new CoffinTile(this, x, y + 1, 1);
   };
+
   populateCoffin = (rand: () => number) => {
     this.addRandomTorches("medium");
 
@@ -1024,6 +1051,7 @@ export class Room {
       Math.floor(this.roomY + this.height / 2),
     );
   };
+
   populatePuzzle = (rand: () => number) => {
     let d;
 
@@ -1068,6 +1096,7 @@ export class Room {
       rand,
     );
   };
+
   populateSpikeCorridor = (rand: () => number) => {
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY + 1; y < this.roomY + this.height - 1; y++) {
@@ -1077,12 +1106,14 @@ export class Room {
 
     this.addRandomTorches("medium");
   };
+
   populateTreasure = (rand: () => number) => {
     this.addRandomTorches("medium");
 
     this.addChests(Game.randTable([4, 4, 5, 5, 5, 6, 8], rand), rand);
     this.addPlants(Game.randTable([0, 1, 2, 4, 5, 6], rand), rand);
   };
+
   populateCave = (rand: () => number) => {
     let factor = Game.rand(1, 36, rand);
 
@@ -1096,20 +1127,29 @@ export class Room {
     );
     this.addEnemies(numEnemies, rand);
     this.addResources(
-      (numEmptyTiles - numEnemies) * Game.randTable([0.5, 0.6, 0.7, 0.8], rand),
+      (numEmptyTiles - numEnemies) * Game.randTable([0.1, 0.2, 0.3], rand),
       rand,
     );
   };
+
   populateUpLadder = (rand: () => number) => {
     this.addRandomTorches("medium");
 
     const { x, y } = this.getRoomCenter();
     this.roomArray[x][y] = new UpLadder(this, this.game, x, y);
   };
+
   populateDownLadder = (rand: () => number) => {
-    this.addRandomTorches("medium");
+    this.addTorches(1, rand, this.roomX + 3, this.roomY);
+    this.addVendingMachine(rand, this.roomX + 1, this.roomY + 1);
+
     const { x, y } = this.getRoomCenter();
-    this.roomArray[x][y] = new DownLadder(this, this.game, x, y);
+    this.roomArray[x + 1][y - 1] = new DownLadder(
+      this,
+      this.game,
+      x + 1,
+      y - 1,
+    );
     const numChests = Math.ceil(Math.random() * 5);
 
     let tiles = this.getEmptyTiles();
@@ -1135,6 +1175,7 @@ export class Room {
       }
     }
   };
+
   populateRopeHole = (rand: () => number) => {
     this.addRandomTorches("medium");
 
@@ -1143,12 +1184,14 @@ export class Room {
     d.isRope = true;
     this.roomArray[x][y] = d;
   };
+
   populateRopeCave = (rand: () => number) => {
     const { x, y } = this.getRoomCenter();
     let upLadder = new UpLadder(this, this.game, x, y);
     upLadder.isRope = true;
     this.roomArray[x][y] = upLadder;
   };
+
   populateShop = (rand: () => number) => {
     this.addTorches(2, rand);
 
@@ -1173,13 +1216,25 @@ export class Room {
       case RoomType.START:
         this.populateEmpty(rand);
         this.name = "FLOOR " + -this.depth;
+        if (this.level.environment.type === EnvType.CAVE) {
+          const { x, y } = this.getRoomCenter();
+          let sign = Math.random() < 0.5 ? -1 : 1;
+          let offsetX = Math.floor(Math.random()) * sign;
+          let offsetY = offsetX !== 0 ? 0 : sign;
+          this.items.push(new Pickaxe(this, x + offsetX, y + offsetY));
+        }
         break;
       case RoomType.BOSS:
         this.populateBoss(rand);
         this.name = "BOSS";
         break;
       case RoomType.DUNGEON:
-        this.populateDungeon(rand);
+        if (
+          this.level.environment.type === EnvType.CAVE &&
+          Math.random() <= 0.2
+        ) {
+          this.populateCave(rand);
+        } else this.populateDungeon(rand);
         break;
       case RoomType.BIGDUNGEON:
         this.populateBigDungeon(rand);
@@ -1213,6 +1268,7 @@ export class Room {
       case RoomType.UPLADDER:
         this.populateUpLadder(rand);
         this.name = "FLOOR " + -this.depth;
+
         break;
       case RoomType.DOWNLADDER:
         this.populateDownLadder(rand);
@@ -1344,7 +1400,8 @@ export class Room {
         if (
           !this.roomArray[x][y].isSolid() &&
           !(this.roomArray[x][y] instanceof SpikeTrap) &&
-          !(this.roomArray[x][y] instanceof SpawnFloor)
+          !(this.roomArray[x][y] instanceof SpawnFloor) &&
+          !(this.roomArray[x][y] instanceof DownLadder)
         ) {
           returnVal.push(this.roomArray[x][y]);
         }

@@ -679,12 +679,14 @@ let generate_dungeon_candidate = async (
   let boss = partialLevel.partitions.find((p) => p.type === RoomType.BOSS);
   let found_stair = false;
   const max_stair_tries = 100;
+  const stairRoomWidth = 5;
+  const stairRoomHeight = 5;
   for (let stair_tries = 0; stair_tries < max_stair_tries; stair_tries++) {
     let stair = new Partition(
       Game.rand(boss.x - 1, boss.x + boss.w - 2, Random.rand),
-      boss.y - 4,
-      3,
-      3,
+      boss.y - stairRoomHeight - 1,
+      stairRoomWidth,
+      stairRoomHeight,
       "white",
     );
     stair.type = RoomType.DOWNLADDER;
@@ -693,10 +695,10 @@ let generate_dungeon_candidate = async (
       found_stair = true;
       partialLevel.partitions.push(stair);
       stair.connections.push(
-        new PartitionConnection(stair.x + 1, stair.y + 3, boss),
+        new PartitionConnection(stair.x + 1, stair.y + stairRoomHeight, boss),
       );
       boss.connections.push(
-        new PartitionConnection(stair.x + 1, stair.y + 3, stair),
+        new PartitionConnection(stair.x + 1, stair.y + stairRoomHeight, stair),
       );
 
       // Set open walls for stair and boss connection
