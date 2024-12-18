@@ -1,3 +1,4 @@
+// #region imports
 import { Wall } from "./tile/wall";
 import { LevelConstants } from "./levelConstants";
 import { Floor } from "./tile/floor";
@@ -71,6 +72,9 @@ import { BeamEffect } from "./beamEffect";
 import { EnvType } from "./environment";
 import { Pickaxe } from "./weapon/pickaxe";
 
+// #endregion
+
+// #region Enums & Interfaces
 /**
  * Enumeration of available enemy types.
  */
@@ -183,14 +187,17 @@ interface EntitySpawnConfig {
 export interface EnemyStatic {
   add(room: Room, game: Game, x: number, y: number, ...rest: any[]): void;
 }
+
+// #endregion
+
 export class Room {
   roomArray: Tile[][];
+
   softVis: number[][]; // this is the one we use for drawing (includes smoothing)
   vis: number[][]; // visibility ranges from 0 (fully visible) to 1 (fully black)
   softCol: [number, number, number][][];
   col: [number, number, number][][];
   renderBuffer: [number, number, number, number][][][]; // Array of color arrays (r,g,b,alpha) for each x,y position
-
   oldVis: number[][];
   oldCol: [number, number, number][][];
 
@@ -200,6 +207,7 @@ export class Room {
   projectiles: Array<Projectile>;
   particles: Array<Particle>;
   hitwarnings: Array<HitWarning>;
+
   game: Game;
   roomX: number;
   roomY: number;
@@ -218,28 +226,11 @@ export class Room {
   lightSources: Array<LightSource>;
   shadeColor = "black";
   innerWalls: Array<Wall>;
-  //actionTab: ActionTab;
   wallInfo: Map<string, WallInfo> = new Map();
   savePoint: Room;
   lastEnemyCount: number;
   outerWalls: Array<Wall>;
   level: Level;
-  onMainPath: boolean = false;
-  pathIndex: number = 0;
-  coordinatesWithLightingChanges: { x: number; y: number }[];
-
-  private pointInside(
-    x: number,
-    y: number,
-    rX: number,
-    rY: number,
-    rW: number,
-    rH: number,
-  ): boolean {
-    if (x < rX || x >= rX + rW) return false;
-    if (y < rY || y >= rY + rH) return false;
-    return true;
-  }
 
   // Add a list to keep track of BeamEffect instances
   beamEffects: BeamEffect[] = [];
@@ -255,8 +246,6 @@ export class Room {
     mapGroup: number,
     level: Level,
     rand = Random.rand,
-    onMainPath = false,
-    pathIndex: number = 0,
   ) {
     this.game = game;
     this.roomX = x; //Math.floor(- this.width / 2);
@@ -281,6 +270,10 @@ export class Room {
     this.innerWalls = Array<Wall>();
     this.level = level;
 
+    // #region initialize arrays
+
+    //initialize room array
+
     this.roomArray = [];
     for (let x = this.roomX - 1; x < this.roomX + this.width + 1; x++) {
       this.roomArray[x] = [];
@@ -288,6 +281,8 @@ export class Room {
         this.roomArray[x][y] = null;
       }
     }
+
+    //initialize visibility & color arrays, as well as their soft variants
     this.vis = [];
     this.softVis = [];
     this.col = [];
@@ -304,6 +299,8 @@ export class Room {
         this.softCol[x][y] = [0, 0, 0];
       }
     }
+
+    //initialize the render buffer array
     this.renderBuffer = [];
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       this.renderBuffer[x] = [];
@@ -312,62 +309,16 @@ export class Room {
       }
     }
 
+    //initialize the skin for the given environment
     this.skin = this.level.environment.skin;
     if (this.type === RoomType.ROPECAVE || this.type === RoomType.CAVE)
       this.skin = SkinType.CAVE;
     this.buildEmptyRoom();
 
-    this.onMainPath = onMainPath;
-    this.pathIndex = pathIndex;
-    this.coordinatesWithLightingChanges = [];
+    // #endregion
   }
 
-  public async changeReverb(newImpulsePath: string) {
-    await ReverbEngine.setReverbImpulse(newImpulsePath);
-  }
-  get roomArea() {
-    let area = (this.width - 2) * (this.height - 2);
-    let openTiles = [];
-    for (let x = this.roomX + 1; x < this.roomX + this.width - 1; x++) {
-      for (let y = this.roomY + 1; y < this.roomY + this.height - 1; y++) {
-        if (this.roomArray[x][y] instanceof Floor) openTiles.push({ x, y });
-      }
-    }
-    //console.log(area, openTiles.length);
-    return openTiles.length;
-  }
-
-  private setReverb() {
-    const roomArea = this.roomArea;
-    if (roomArea < 10) {
-      this.changeReverb(`res/SFX/impulses/small.mp3`);
-    } else if (roomArea < 55) {
-      this.changeReverb(`res/SFX/impulses/medium.mp3`);
-    } else {
-      this.changeReverb(`res/SFX/impulses/large.mp3`);
-    }
-  }
-
-  tileInside = (tileX: number, tileY: number): boolean => {
-    return this.pointInside(
-      tileX,
-      tileY,
-      this.roomX,
-      this.roomY,
-      this.width,
-      this.height,
-    );
-  };
-
-  /**
-   * Checks if a room can be placed at the specified position with the given dimensions.
-   *
-   * @param x - The x-coordinate of the door which the new room will branch from.
-   * @param y - The y-coordinate of the door which the new room will branch from.
-   * @param width - The width of the room.
-   * @param height - The height of the room.
-   * @returns `true` if the room can be placed without overlapping; otherwise, `false`.
-   */
+  // #region TILE ADDING METHODS
 
   private buildEmptyRoom() {
     // fill in wall and floor
@@ -559,14 +510,32 @@ export class Room {
     }
   }
 
-  private addChests(numChests: number, rand: () => number) {
-    // add chests
-    let tiles = this.getEmptyTiles();
-    for (let i = 0; i < numChests; i++) {
-      const { x, y } = this.getRandomEmptyPosition(tiles);
-      this.entities.push(new Chest(this, this.game, x, y));
+  addDoor = (x: number, y: number) => {
+    let d;
+    let t = DoorType.DOOR;
+    if (this.type === RoomType.BOSS) t = DoorType.GUARDEDDOOR;
+    if (this.type === RoomType.KEYROOM) t = DoorType.LOCKEDDOOR;
+    if (x === this.roomX) {
+      d = new Door(this, this.game, x, y, Direction.RIGHT, t);
+      this.roomArray[x + 1][y] = new SpawnFloor(this, x + 1, y);
+    } else if (x === this.roomX + this.width - 1) {
+      d = new Door(this, this.game, x, y, Direction.LEFT, t);
+      this.roomArray[x - 1][y] = new SpawnFloor(this, x - 1, y);
+    } else if (y === this.roomY) {
+      d = new Door(this, this.game, x, y, Direction.UP, t);
+      this.roomArray[x][y + 1] = new SpawnFloor(this, x, y + 1);
+    } else if (y === this.roomY + this.height - 1) {
+      d = new Door(this, this.game, x, y, Direction.DOWN, t);
+      this.roomArray[x][y - 1] = new SpawnFloor(this, x, y - 1);
     }
-  }
+
+    this.doors.push(d);
+    if (this.roomArray[d.x] == undefined) {
+    }
+    this.roomArray[d.x][d.y] = d;
+
+    return d;
+  };
 
   private addSpikeTraps(numSpikes: number, rand: () => number) {
     if (this.level.environment.type === EnvType.FOREST) return;
@@ -578,23 +547,9 @@ export class Room {
     }
   }
 
-  private addSpikes(numSpikes: number, rand: () => number) {
-    // add spikes
-    let tiles = this.getEmptyTiles();
-    for (let i = 0; i < numSpikes; i++) {
-      const { x, y } = this.getRandomEmptyPosition(tiles);
-      this.roomArray[x][y] = new Spike(this, x, y);
-    }
-  }
+  // #endregion
 
-  hasPlayer(player: Player): boolean {
-    for (let tile of this.roomArray) {
-      if (tile instanceof Player) {
-        return true;
-      }
-    }
-    return false;
-  }
+  // #region ADDING ENTITIES
 
   // Function to add enemies to the room
   private addEnemies(numEnemies: number, rand: () => number) {
@@ -801,6 +756,15 @@ export class Room {
     Spawner.add(this, this.game, x, y);
   };
 
+  private addChests(numChests: number, rand: () => number) {
+    // add chests
+    let tiles = this.getEmptyTiles();
+    for (let i = 0; i < numChests; i++) {
+      const { x, y } = this.getRandomEmptyPosition(tiles);
+      this.entities.push(new Chest(this, this.game, x, y));
+    }
+  }
+
   private addObstacles(numObstacles: number, rand: () => number) {
     // add crates/barrels
     let tiles = this.getEmptyTiles();
@@ -908,6 +872,9 @@ export class Room {
         break;
     }
   }
+  // #endregion
+
+  // #region POPULATING METHODS
 
   populateEmpty = (rand: () => number) => {
     this.addRandomTorches("medium");
@@ -1210,6 +1177,36 @@ export class Room {
     }
   };
 
+  // Many populate methods start with adding torches using the same pattern
+  private addRandomTorches(
+    intensity: "none" | "low" | "medium" | "high" = "medium",
+  ): void {
+    const torchPatterns = {
+      none: [0, 0, 0],
+      low: [0, 0, 0, 1, 1],
+      medium: [0, 0, 0, 1, 1, 2, 2, 3, 4],
+      high: [1, 1, 2, 2, 3, 4, 4],
+    };
+    const randTorches = Game.randTable(torchPatterns[intensity], Random.rand);
+    this.addTorches(randTorches, Random.rand);
+  }
+
+  // Used in populateDungeon, populateCave, etc. NOT IN USE
+  private populateWithEntities(config: {
+    enemyDensity: number;
+    obstacleDensity: number;
+    plantDensity: number;
+  }): void {
+    const numEmptyTiles = this.getEmptyTiles().length;
+    const numEnemies = Math.ceil(numEmptyTiles * config.enemyDensity);
+    const numObstacles = Math.ceil(numEmptyTiles * config.obstacleDensity);
+    const numPlants = Math.ceil(numEmptyTiles * config.plantDensity);
+
+    this.addEnemies(numEnemies, Random.rand);
+    this.addObstacles(numObstacles, Random.rand);
+    this.addPlants(numPlants, Random.rand);
+  }
+
   populate = (rand: () => number) => {
     this.name = "";
     switch (this.type) {
@@ -1302,38 +1299,9 @@ export class Room {
     this.message = this.name;
   };
 
-  addDoor = (x: number, y: number) => {
-    let d;
-    let t = DoorType.DOOR;
-    if (this.type === RoomType.BOSS) t = DoorType.GUARDEDDOOR;
-    if (this.type === RoomType.KEYROOM) t = DoorType.LOCKEDDOOR;
-    if (x === this.roomX) {
-      d = new Door(this, this.game, x, y, Direction.RIGHT, t);
-      this.roomArray[x + 1][y] = new SpawnFloor(this, x + 1, y);
-    } else if (x === this.roomX + this.width - 1) {
-      d = new Door(this, this.game, x, y, Direction.LEFT, t);
-      this.roomArray[x - 1][y] = new SpawnFloor(this, x - 1, y);
-    } else if (y === this.roomY) {
-      d = new Door(this, this.game, x, y, Direction.UP, t);
-      this.roomArray[x][y + 1] = new SpawnFloor(this, x, y + 1);
-    } else if (y === this.roomY + this.height - 1) {
-      d = new Door(this, this.game, x, y, Direction.DOWN, t);
-      this.roomArray[x][y - 1] = new SpawnFloor(this, x, y - 1);
-    }
+  // #endregion
 
-    this.doors.push(d);
-    if (this.roomArray[d.x] == undefined) {
-    }
-    this.roomArray[d.x][d.y] = d;
-
-    return d;
-  };
-
-  alertEnemiesOnEntry = () => {
-    for (const e of this.entities) {
-      if (e instanceof Enemy) e.lookForPlayer(false);
-    }
-  };
+  // #region ENTERING / EXITING ROOM METHODS
 
   exitLevel = () => {
     this.particles.splice(0, this.particles.length);
@@ -1393,30 +1361,144 @@ export class Room {
     this.setReverb();
   };
 
-  getEmptyTiles = (): Tile[] => {
-    let returnVal: Tile[] = [];
-    for (let x = this.roomX + 1; x < this.roomX + this.width - 1; x++) {
-      for (let y = this.roomY + 1; y < this.roomY + this.height - 1; y++) {
+  alertEnemiesOnEntry = () => {
+    for (const e of this.entities) {
+      if (e instanceof Enemy) e.lookForPlayer(false);
+    }
+  };
+
+  // #endregion
+
+  // #region LOGIC METHODS
+
+  tick = (player: Player) => {
+    player.updateSlowMotion();
+    this.lastEnemyCount = this.entities.filter(
+      (e) => e instanceof Enemy,
+    ).length;
+    for (const h of this.hitwarnings) {
+      h.tick();
+    }
+    for (const p of this.projectiles) {
+      p.tick();
+    }
+
+    this.clearDeadStuff();
+
+    this.calculateWallInfo();
+    this.entities = this.entities.filter((e) => !e.dead);
+
+    for (let x = this.roomX; x < this.roomX + this.width; x++) {
+      for (let y = this.roomY; y < this.roomY + this.height; y++) {
+        this.roomArray[x][y].tick();
+      }
+    }
+
+    this.turn = TurnState.computerTurn;
+
+    //player.actionTab.setState(ActionState.WAIT);
+    //sets the action tab state to Ready
+    this.playerTurnTime = Date.now();
+    this.playerTicked = player;
+
+    // Update Beam Effects lighting
+
+    //console.log("updating lighting");
+    this.updateLighting();
+
+    player.map.saveMapData();
+    this.clearDeadStuff();
+  };
+
+  computerTurn = () => {
+    // take computer turn
+    for (const e of this.entities) {
+      e.tick();
+    }
+    this.entities = this.entities.filter((e) => !e.dead);
+    for (const i of this.items) {
+      i.tick();
+    }
+
+    for (const h of this.hitwarnings) {
+      if (
+        !this.roomArray[h.x] ||
+        !this.roomArray[h.x][h.y] ||
+        this.roomArray[h.x][h.y].isSolid()
+      ) {
+        h.dead = true;
+      }
+      h.removeOverlapping();
+    }
+
+    for (const p of this.projectiles) {
+      if (this.roomArray[p.x][p.y].isSolid()) p.dead = true;
+      for (const i in this.game.players) {
         if (
-          !this.roomArray[x][y].isSolid() &&
-          !(this.roomArray[x][y] instanceof SpikeTrap) &&
-          !(this.roomArray[x][y] instanceof SpawnFloor) &&
-          !(this.roomArray[x][y] instanceof DownLadder)
+          this.game.rooms[this.game.players[i].levelID] === this &&
+          p.x === this.game.players[i].x &&
+          p.y === this.game.players[i].y
         ) {
-          returnVal.push(this.roomArray[x][y]);
+          p.hitPlayer(this.game.players[i]);
+        }
+      }
+      for (const e of this.entities) {
+        if (p.x === e.x && p.y === e.y) {
+          p.hitEnemy(e);
         }
       }
     }
-    for (const e of this.entities) {
-      returnVal = returnVal.filter((t) => !e.pointIn(t.x, t.y));
+
+    for (let x = this.roomX; x < this.roomX + this.width; x++) {
+      for (let y = this.roomY; y < this.roomY + this.height; y++) {
+        this.roomArray[x][y].tickEnd();
+      }
     }
-    return returnVal;
+    this.entities = this.entities.filter((e) => !e.dead); // enemies may be killed by spiketrap
+
+    this.clearDeadStuff();
+
+    this.playerTicked.finishTick();
+
+    this.checkForNoEnemies();
+    //console.log(this.entities.filter((e) => e instanceof Enemy).length);
+
+    this.turn = TurnState.playerTurn;
   };
 
-  getTile = (x: number, y: number) => {
-    if (this.roomArray[x]) return this.roomArray[x][y];
-    else return undefined;
+  update = () => {
+    if (this.turn == TurnState.computerTurn) {
+      if (
+        Date.now() - this.playerTurnTime >=
+        LevelConstants.COMPUTER_TURN_DELAY
+      ) {
+        this.computerTurn();
+      }
+    }
   };
+
+  clearDeadStuff = () => {
+    this.entities = this.entities.filter((e) => !e.dead);
+    this.projectiles = this.projectiles.filter((p) => !p.dead);
+    this.hitwarnings = this.hitwarnings.filter((h) => !h.dead);
+    this.particles = this.particles.filter((p) => !p.dead);
+  };
+
+  catchUp = () => {
+    if (this.turn === TurnState.computerTurn) this.computerTurn(); // player skipped computer's turn, catch up
+  };
+
+  tickHitWarnings = () => {
+    for (const h of this.hitwarnings) {
+      if (h.parent && (h.parent.dead || h.parent.unconscious)) {
+        h.tick();
+      }
+    }
+  };
+
+  // #endregion
+
+  // #region LIGHTING METHODS
 
   fadeLighting = (delta: number) => {
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
@@ -1573,6 +1655,7 @@ export class Room {
     // End timing the conversion to luminance
     //console.timeEnd("updateLighting: Convert to Luminance");
   };
+
   updateLightSources = (lightSource?: LightSource, remove?: boolean) => {
     this.oldCol = [];
     this.oldVis = [];
@@ -1613,6 +1696,7 @@ export class Room {
       }
     }
   };
+
   revertLightSources = () => {
     //console.log("reverting lighting");
     this.oldCol = [];
@@ -1847,182 +1931,9 @@ export class Room {
     ];
   };
 
-  blur3x3 = (
-    array: Array<Array<number>>,
-    weights: Array<Array<number>>,
-  ): Array<Array<number>> => {
-    let blurredArray = [];
-    for (let x = 0; x < array.length; x++) {
-      blurredArray[x] = [];
-      for (let y = 0; y < array[0].length; y++) {
-        if (array[x][y] === 0) {
-          blurredArray[x][y] = 0;
-          continue;
-        }
-        let total = 0;
-        let totalWeights = 0;
-        for (let xx = -1; xx <= 1; xx++) {
-          for (let yy = -1; yy <= 1; yy++) {
-            if (
-              x + xx >= 0 &&
-              x + xx < array.length &&
-              y + yy >= 0 &&
-              y + yy < array[0].length
-            ) {
-              total += array[x + xx][y + yy] * weights[xx + 1][yy + 1];
-              totalWeights += weights[xx + 1][yy + 1];
-            }
-          }
-        }
-        blurredArray[x][y] = total / totalWeights;
-      }
-    }
-    return blurredArray;
-  };
-
   rgbToLuminance = (color: [number, number, number]): number => {
     //map to 1-0 range
     return 1 - (0.299 * color[0] + 0.587 * color[1] + 0.114 * color[2]) / 255;
-  };
-
-  catchUp = () => {
-    if (this.turn === TurnState.computerTurn) this.computerTurn(); // player skipped computer's turn, catch up
-  };
-
-  tickHitWarnings = () => {
-    for (const h of this.hitwarnings) {
-      if (h.parent && (h.parent.dead || h.parent.unconscious)) {
-        h.tick();
-      }
-    }
-  };
-
-  tick = (player: Player) => {
-    player.updateSlowMotion();
-    this.lastEnemyCount = this.entities.filter(
-      (e) => e instanceof Enemy,
-    ).length;
-    for (const h of this.hitwarnings) {
-      h.tick();
-    }
-    for (const p of this.projectiles) {
-      p.tick();
-    }
-
-    this.clearDeadStuff();
-
-    this.calculateWallInfo();
-    this.entities = this.entities.filter((e) => !e.dead);
-
-    for (let x = this.roomX; x < this.roomX + this.width; x++) {
-      for (let y = this.roomY; y < this.roomY + this.height; y++) {
-        this.roomArray[x][y].tick();
-      }
-    }
-
-    this.turn = TurnState.computerTurn;
-
-    //player.actionTab.setState(ActionState.WAIT);
-    //sets the action tab state to Ready
-    this.playerTurnTime = Date.now();
-    this.playerTicked = player;
-
-    // Update Beam Effects lighting
-
-    //console.log("updating lighting");
-    this.updateLighting();
-
-    player.map.saveMapData();
-    this.clearDeadStuff();
-  };
-
-  update = () => {
-    if (this.turn == TurnState.computerTurn) {
-      if (
-        Date.now() - this.playerTurnTime >=
-        LevelConstants.COMPUTER_TURN_DELAY
-      ) {
-        this.computerTurn();
-      }
-    }
-  };
-
-  clearDeadStuff = () => {
-    this.entities = this.entities.filter((e) => !e.dead);
-    this.projectiles = this.projectiles.filter((p) => !p.dead);
-    this.hitwarnings = this.hitwarnings.filter((h) => !h.dead);
-    this.particles = this.particles.filter((p) => !p.dead);
-  };
-
-  computerTurn = () => {
-    // take computer turn
-    for (const e of this.entities) {
-      e.tick();
-    }
-    this.entities = this.entities.filter((e) => !e.dead);
-    for (const i of this.items) {
-      i.tick();
-    }
-
-    for (const h of this.hitwarnings) {
-      if (
-        !this.roomArray[h.x] ||
-        !this.roomArray[h.x][h.y] ||
-        this.roomArray[h.x][h.y].isSolid()
-      ) {
-        h.dead = true;
-      }
-      h.removeOverlapping();
-    }
-
-    for (const p of this.projectiles) {
-      if (this.roomArray[p.x][p.y].isSolid()) p.dead = true;
-      for (const i in this.game.players) {
-        if (
-          this.game.rooms[this.game.players[i].levelID] === this &&
-          p.x === this.game.players[i].x &&
-          p.y === this.game.players[i].y
-        ) {
-          p.hitPlayer(this.game.players[i]);
-        }
-      }
-      for (const e of this.entities) {
-        if (p.x === e.x && p.y === e.y) {
-          p.hitEnemy(e);
-        }
-      }
-    }
-
-    for (let x = this.roomX; x < this.roomX + this.width; x++) {
-      for (let y = this.roomY; y < this.roomY + this.height; y++) {
-        this.roomArray[x][y].tickEnd();
-      }
-    }
-    this.entities = this.entities.filter((e) => !e.dead); // enemies may be killed by spiketrap
-
-    this.clearDeadStuff();
-
-    this.playerTicked.finishTick();
-
-    this.checkForNoEnemies();
-    //console.log(this.entities.filter((e) => e instanceof Enemy).length);
-
-    this.turn = TurnState.playerTurn;
-  };
-
-  checkForNoEnemies = () => {
-    let enemies = this.entities.filter((e) => e instanceof Enemy);
-    if (enemies.length === 0 && this.lastEnemyCount > 0) {
-      // if (this.doors[0].type === DoorType.GUARDEDDOOR) {
-      this.doors.forEach((d) => {
-        if (d.type === DoorType.GUARDEDDOOR) {
-          d.unGuard();
-          this.game.pushMessage(
-            "The foes have been slain and the door allows you passage.",
-          );
-        }
-      });
-    }
   };
 
   draw = (delta: number) => {
@@ -2200,6 +2111,7 @@ export class Room {
     Game.ctx.restore();
   };
 
+  //calculate wall info for proper wall rendering
   calculateWallInfo() {
     this.wallInfo.clear();
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
@@ -2256,6 +2168,74 @@ export class Room {
     }
   }
 
+  // #endregion
+
+  // #region UTILITIES
+
+  private pointInside(
+    x: number,
+    y: number,
+    rX: number,
+    rY: number,
+    rW: number,
+    rH: number,
+  ): boolean {
+    if (x < rX || x >= rX + rW) return false;
+    if (y < rY || y >= rY + rH) return false;
+    return true;
+  }
+
+  tileInside = (tileX: number, tileY: number): boolean => {
+    return this.pointInside(
+      tileX,
+      tileY,
+      this.roomX,
+      this.roomY,
+      this.width,
+      this.height,
+    );
+  };
+
+  getEmptyTiles = (): Tile[] => {
+    let returnVal: Tile[] = [];
+    for (let x = this.roomX + 1; x < this.roomX + this.width - 1; x++) {
+      for (let y = this.roomY + 1; y < this.roomY + this.height - 1; y++) {
+        if (
+          !this.roomArray[x][y].isSolid() &&
+          !(this.roomArray[x][y] instanceof SpikeTrap) &&
+          !(this.roomArray[x][y] instanceof SpawnFloor) &&
+          !(this.roomArray[x][y] instanceof DownLadder)
+        ) {
+          returnVal.push(this.roomArray[x][y]);
+        }
+      }
+    }
+    for (const e of this.entities) {
+      returnVal = returnVal.filter((t) => !e.pointIn(t.x, t.y));
+    }
+    return returnVal;
+  };
+
+  getTile = (x: number, y: number) => {
+    if (this.roomArray[x]) return this.roomArray[x][y];
+    else return undefined;
+  };
+
+  checkForNoEnemies = () => {
+    let enemies = this.entities.filter((e) => e instanceof Enemy);
+    if (enemies.length === 0 && this.lastEnemyCount > 0) {
+      // if (this.doors[0].type === DoorType.GUARDEDDOOR) {
+      this.doors.forEach((d) => {
+        if (d.type === DoorType.GUARDEDDOOR) {
+          d.unGuard();
+          this.game.pushMessage(
+            "The foes have been slain and the door allows you passage.",
+          );
+        }
+      });
+    }
+  };
+
   // This pattern appears in multiple methods like addVendingMachine, addChests, addSpikes, etc.
   private getRandomEmptyPosition(tiles: Tile[]): { x: number; y: number } {
     if (tiles.length === 0) return null;
@@ -2272,35 +2252,6 @@ export class Room {
       x: Math.floor(this.roomX + this.width / 2),
       y: Math.floor(this.roomY + this.height / 2),
     };
-  }
-  // Many populate methods start with adding torches using the same pattern
-  private addRandomTorches(
-    intensity: "none" | "low" | "medium" | "high" = "medium",
-  ): void {
-    const torchPatterns = {
-      none: [0, 0, 0],
-      low: [0, 0, 0, 1, 1],
-      medium: [0, 0, 0, 1, 1, 2, 2, 3, 4],
-      high: [1, 1, 2, 2, 3, 4, 4],
-    };
-    const randTorches = Game.randTable(torchPatterns[intensity], Random.rand);
-    this.addTorches(randTorches, Random.rand);
-  }
-
-  // Used in populateDungeon, populateCave, etc. NOT IN USE
-  private populateWithEntities(config: {
-    enemyDensity: number;
-    obstacleDensity: number;
-    plantDensity: number;
-  }): void {
-    const numEmptyTiles = this.getEmptyTiles().length;
-    const numEnemies = Math.ceil(numEmptyTiles * config.enemyDensity);
-    const numObstacles = Math.ceil(numEmptyTiles * config.obstacleDensity);
-    const numPlants = Math.ceil(numEmptyTiles * config.plantDensity);
-
-    this.addEnemies(numEnemies, Random.rand);
-    this.addObstacles(numObstacles, Random.rand);
-    this.addPlants(numPlants, Random.rand);
   }
 
   // Used in multiple methods including castShadowsAtAngle
@@ -2320,6 +2271,8 @@ export class Room {
     return entities;
   }
 
+  // checks for obstructions between doors and finds paths avoiding obstacles.
+
   checkDoorObstructions = () => {
     let obstacles = [];
     for (const door of this.doors) {
@@ -2334,6 +2287,7 @@ export class Room {
     return obstacles;
   };
 
+  // avoid blocking doorways with unbreakable entities
   findPath = (startTile: Tile, targetTile: Tile): Array<Entity> => {
     let disablePositions = Array<astar.Position>();
     let obstacleCandidates = [];
@@ -2345,19 +2299,6 @@ export class Room {
       }
     }
 
-    /*
-    for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
-      for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
-        if (
-          this.room.roomArray[xx][yy] instanceof SpikeTrap &&
-          (this.room.roomArray[xx][yy] as SpikeTrap).on
-        ) {
-          // Don't walk on active spike traps
-          disablePositions.push({ x: xx, y: yy } as astar.Position);
-        }
-      }
-    }
-      */
     // Create a grid of the room
     let grid = [];
     for (let x = 0; x < this.roomX + this.width; x++) {
@@ -2369,7 +2310,6 @@ export class Room {
       }
     }
 
-    // Find a path to the target player
     let moves = astar.AStar.search(
       grid,
       startTile,
@@ -2386,20 +2326,9 @@ export class Room {
     }
   };
 
-  // Could encapsulate the common drawing logic NOT IN USE
-  private drawLayer(
-    delta: number,
-    condition: (x: number, y: number) => boolean,
-    method: string,
-  ): void {
-    for (let x = this.roomX; x < this.roomX + this.width; x++) {
-      for (let y = this.roomY; y < this.roomY + this.height; y++) {
-        if (condition(x, y)) {
-          this.roomArray[x][y][method](delta);
-        }
-      }
-    }
-  }
+  // #endregion
+
+  // #region MISC
 
   /**
    * Adds a new BeamEffect to the room.
@@ -2413,4 +2342,32 @@ export class Room {
     const beam = new BeamEffect(x1, y1, x2, y2);
     this.beamEffects.push(beam);
   }
+
+  public async changeReverb(newImpulsePath: string) {
+    await ReverbEngine.setReverbImpulse(newImpulsePath);
+  }
+  get roomArea() {
+    let area = (this.width - 2) * (this.height - 2);
+    let openTiles = [];
+    for (let x = this.roomX + 1; x < this.roomX + this.width - 1; x++) {
+      for (let y = this.roomY + 1; y < this.roomY + this.height - 1; y++) {
+        if (this.roomArray[x][y] instanceof Floor) openTiles.push({ x, y });
+      }
+    }
+    //console.log(area, openTiles.length);
+    return openTiles.length;
+  }
+
+  private setReverb() {
+    const roomArea = this.roomArea;
+    if (roomArea < 10) {
+      this.changeReverb(`res/SFX/impulses/small.mp3`);
+    } else if (roomArea < 55) {
+      this.changeReverb(`res/SFX/impulses/medium.mp3`);
+    } else {
+      this.changeReverb(`res/SFX/impulses/large.mp3`);
+    }
+  }
+
+  // #endregion
 }

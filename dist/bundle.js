@@ -13061,7 +13061,6 @@ var Partition = /** @class */ (function () {
         this.isRightOpen = true;
         this.isBottomOpen = true;
         this.isLeftOpen = true;
-        this.onMainPath = false;
         this.pathIndex = 0;
     }
     return Partition;
@@ -16831,6 +16830,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Room = exports.WallDirection = exports.TurnState = exports.RoomType = exports.EnemyTypeMap = exports.EnemyType = void 0;
+// #region imports
 var wall_1 = __webpack_require__(/*! ./tile/wall */ "./src/tile/wall.ts");
 var levelConstants_1 = __webpack_require__(/*! ./levelConstants */ "./src/levelConstants.ts");
 var floor_1 = __webpack_require__(/*! ./tile/floor */ "./src/tile/floor.ts");
@@ -16842,7 +16842,6 @@ var entity_1 = __webpack_require__(/*! ./entity/entity */ "./src/entity/entity.t
 var chest_1 = __webpack_require__(/*! ./entity/object/chest */ "./src/entity/object/chest.ts");
 var goldenKey_1 = __webpack_require__(/*! ./item/goldenKey */ "./src/item/goldenKey.ts");
 var spawnfloor_1 = __webpack_require__(/*! ./tile/spawnfloor */ "./src/tile/spawnfloor.ts");
-var spike_1 = __webpack_require__(/*! ./tile/spike */ "./src/tile/spike.ts");
 var gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/gameConstants.ts");
 var skullEnemy_1 = __webpack_require__(/*! ./entity/enemy/skullEnemy */ "./src/entity/enemy/skullEnemy.ts");
 var barrel_1 = __webpack_require__(/*! ./entity/object/barrel */ "./src/entity/object/barrel.ts");
@@ -16897,6 +16896,8 @@ var rookEnemy_1 = __webpack_require__(/*! ./entity/enemy/rookEnemy */ "./src/ent
 var beamEffect_1 = __webpack_require__(/*! ./beamEffect */ "./src/beamEffect.ts");
 var environment_1 = __webpack_require__(/*! ./environment */ "./src/environment.ts");
 var pickaxe_1 = __webpack_require__(/*! ./weapon/pickaxe */ "./src/weapon/pickaxe.ts");
+// #endregion
+// #region Enums & Interfaces
 /**
  * Enumeration of available enemy types.
  */
@@ -16981,23 +16982,16 @@ var WallDirection;
     WallDirection["BOTTOMLEFT"] = "BottomLeft";
     WallDirection["BOTTOMRIGHT"] = "BottomRight";
 })(WallDirection = exports.WallDirection || (exports.WallDirection = {}));
+// #endregion
 var Room = /** @class */ (function () {
-    function Room(game, x, y, w, h, type, depth, mapGroup, level, rand, onMainPath, pathIndex) {
+    function Room(game, x, y, w, h, type, depth, mapGroup, level, rand) {
         if (rand === void 0) { rand = random_1.Random.rand; }
-        if (onMainPath === void 0) { onMainPath = false; }
-        if (pathIndex === void 0) { pathIndex = 0; }
         var _this = this;
         this.name = "";
         this.shadeColor = "black";
-        //actionTab: ActionTab;
         this.wallInfo = new Map();
-        this.onMainPath = false;
-        this.pathIndex = 0;
         // Add a list to keep track of BeamEffect instances
         this.beamEffects = [];
-        this.tileInside = function (tileX, tileY) {
-            return _this.pointInside(tileX, tileY, _this.roomX, _this.roomY, _this.width, _this.height);
-        };
         this.removeWall = function (x, y) {
             if (_this.roomArray[x][y] instanceof wall_1.Wall) {
                 _this.roomArray[x][y] = null;
@@ -17016,6 +17010,35 @@ var Room = /** @class */ (function () {
             if (pointX === rectX + width && pointY >= rectY && pointY <= rectY + height)
                 directions.push(WallDirection.EAST);
             return directions;
+        };
+        this.addDoor = function (x, y) {
+            var d;
+            var t = door_1.DoorType.DOOR;
+            if (_this.type === RoomType.BOSS)
+                t = door_1.DoorType.GUARDEDDOOR;
+            if (_this.type === RoomType.KEYROOM)
+                t = door_1.DoorType.LOCKEDDOOR;
+            if (x === _this.roomX) {
+                d = new door_1.Door(_this, _this.game, x, y, game_1.Direction.RIGHT, t);
+                _this.roomArray[x + 1][y] = new spawnfloor_1.SpawnFloor(_this, x + 1, y);
+            }
+            else if (x === _this.roomX + _this.width - 1) {
+                d = new door_1.Door(_this, _this.game, x, y, game_1.Direction.LEFT, t);
+                _this.roomArray[x - 1][y] = new spawnfloor_1.SpawnFloor(_this, x - 1, y);
+            }
+            else if (y === _this.roomY) {
+                d = new door_1.Door(_this, _this.game, x, y, game_1.Direction.UP, t);
+                _this.roomArray[x][y + 1] = new spawnfloor_1.SpawnFloor(_this, x, y + 1);
+            }
+            else if (y === _this.roomY + _this.height - 1) {
+                d = new door_1.Door(_this, _this.game, x, y, game_1.Direction.DOWN, t);
+                _this.roomArray[x][y - 1] = new spawnfloor_1.SpawnFloor(_this, x, y - 1);
+            }
+            _this.doors.push(d);
+            if (_this.roomArray[d.x] == undefined) {
+            }
+            _this.roomArray[d.x][d.y] = d;
+            return d;
         };
         //used for spawn commands, implement elsewhere later
         /**
@@ -17051,6 +17074,8 @@ var Room = /** @class */ (function () {
             var _a = _this.getRandomEmptyPosition(tiles), x = _a.x, y = _a.y;
             spawner_1.Spawner.add(_this, _this.game, x, y);
         };
+        // #endregion
+        // #region POPULATING METHODS
         this.populateEmpty = function (rand) {
             _this.addRandomTorches("medium");
         };
@@ -17355,42 +17380,8 @@ var Room = /** @class */ (function () {
             }
             _this.message = _this.name;
         };
-        this.addDoor = function (x, y) {
-            var d;
-            var t = door_1.DoorType.DOOR;
-            if (_this.type === RoomType.BOSS)
-                t = door_1.DoorType.GUARDEDDOOR;
-            if (_this.type === RoomType.KEYROOM)
-                t = door_1.DoorType.LOCKEDDOOR;
-            if (x === _this.roomX) {
-                d = new door_1.Door(_this, _this.game, x, y, game_1.Direction.RIGHT, t);
-                _this.roomArray[x + 1][y] = new spawnfloor_1.SpawnFloor(_this, x + 1, y);
-            }
-            else if (x === _this.roomX + _this.width - 1) {
-                d = new door_1.Door(_this, _this.game, x, y, game_1.Direction.LEFT, t);
-                _this.roomArray[x - 1][y] = new spawnfloor_1.SpawnFloor(_this, x - 1, y);
-            }
-            else if (y === _this.roomY) {
-                d = new door_1.Door(_this, _this.game, x, y, game_1.Direction.UP, t);
-                _this.roomArray[x][y + 1] = new spawnfloor_1.SpawnFloor(_this, x, y + 1);
-            }
-            else if (y === _this.roomY + _this.height - 1) {
-                d = new door_1.Door(_this, _this.game, x, y, game_1.Direction.DOWN, t);
-                _this.roomArray[x][y - 1] = new spawnfloor_1.SpawnFloor(_this, x, y - 1);
-            }
-            _this.doors.push(d);
-            if (_this.roomArray[d.x] == undefined) {
-            }
-            _this.roomArray[d.x][d.y] = d;
-            return d;
-        };
-        this.alertEnemiesOnEntry = function () {
-            for (var _i = 0, _a = _this.entities; _i < _a.length; _i++) {
-                var e = _a[_i];
-                if (e instanceof enemy_1.Enemy)
-                    e.lookForPlayer(false);
-            }
-        };
+        // #endregion
+        // #region ENTERING / EXITING ROOM METHODS
         this.exitLevel = function () {
             _this.particles.splice(0, _this.particles.length);
         };
@@ -17439,33 +17430,123 @@ var Room = /** @class */ (function () {
             player.map.saveMapData();
             _this.setReverb();
         };
-        this.getEmptyTiles = function () {
-            var returnVal = [];
-            for (var x = _this.roomX + 1; x < _this.roomX + _this.width - 1; x++) {
-                for (var y = _this.roomY + 1; y < _this.roomY + _this.height - 1; y++) {
-                    if (!_this.roomArray[x][y].isSolid() &&
-                        !(_this.roomArray[x][y] instanceof spiketrap_1.SpikeTrap) &&
-                        !(_this.roomArray[x][y] instanceof spawnfloor_1.SpawnFloor) &&
-                        !(_this.roomArray[x][y] instanceof downLadder_1.DownLadder)) {
-                        returnVal.push(_this.roomArray[x][y]);
+        this.alertEnemiesOnEntry = function () {
+            for (var _i = 0, _a = _this.entities; _i < _a.length; _i++) {
+                var e = _a[_i];
+                if (e instanceof enemy_1.Enemy)
+                    e.lookForPlayer(false);
+            }
+        };
+        // #endregion
+        // #region LOGIC METHODS
+        this.tick = function (player) {
+            player.updateSlowMotion();
+            _this.lastEnemyCount = _this.entities.filter(function (e) { return e instanceof enemy_1.Enemy; }).length;
+            for (var _i = 0, _a = _this.hitwarnings; _i < _a.length; _i++) {
+                var h = _a[_i];
+                h.tick();
+            }
+            for (var _b = 0, _c = _this.projectiles; _b < _c.length; _b++) {
+                var p = _c[_b];
+                p.tick();
+            }
+            _this.clearDeadStuff();
+            _this.calculateWallInfo();
+            _this.entities = _this.entities.filter(function (e) { return !e.dead; });
+            for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
+                for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
+                    _this.roomArray[x][y].tick();
+                }
+            }
+            _this.turn = TurnState.computerTurn;
+            //player.actionTab.setState(ActionState.WAIT);
+            //sets the action tab state to Ready
+            _this.playerTurnTime = Date.now();
+            _this.playerTicked = player;
+            // Update Beam Effects lighting
+            //console.log("updating lighting");
+            _this.updateLighting();
+            player.map.saveMapData();
+            _this.clearDeadStuff();
+        };
+        this.computerTurn = function () {
+            // take computer turn
+            for (var _i = 0, _a = _this.entities; _i < _a.length; _i++) {
+                var e = _a[_i];
+                e.tick();
+            }
+            _this.entities = _this.entities.filter(function (e) { return !e.dead; });
+            for (var _b = 0, _c = _this.items; _b < _c.length; _b++) {
+                var i = _c[_b];
+                i.tick();
+            }
+            for (var _d = 0, _e = _this.hitwarnings; _d < _e.length; _d++) {
+                var h = _e[_d];
+                if (!_this.roomArray[h.x] ||
+                    !_this.roomArray[h.x][h.y] ||
+                    _this.roomArray[h.x][h.y].isSolid()) {
+                    h.dead = true;
+                }
+                h.removeOverlapping();
+            }
+            for (var _f = 0, _g = _this.projectiles; _f < _g.length; _f++) {
+                var p = _g[_f];
+                if (_this.roomArray[p.x][p.y].isSolid())
+                    p.dead = true;
+                for (var i in _this.game.players) {
+                    if (_this.game.rooms[_this.game.players[i].levelID] === _this &&
+                        p.x === _this.game.players[i].x &&
+                        p.y === _this.game.players[i].y) {
+                        p.hitPlayer(_this.game.players[i]);
+                    }
+                }
+                for (var _h = 0, _j = _this.entities; _h < _j.length; _h++) {
+                    var e = _j[_h];
+                    if (p.x === e.x && p.y === e.y) {
+                        p.hitEnemy(e);
                     }
                 }
             }
-            var _loop_4 = function (e) {
-                returnVal = returnVal.filter(function (t) { return !e.pointIn(t.x, t.y); });
-            };
-            for (var _i = 0, _a = _this.entities; _i < _a.length; _i++) {
-                var e = _a[_i];
-                _loop_4(e);
+            for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
+                for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
+                    _this.roomArray[x][y].tickEnd();
+                }
             }
-            return returnVal;
+            _this.entities = _this.entities.filter(function (e) { return !e.dead; }); // enemies may be killed by spiketrap
+            _this.clearDeadStuff();
+            _this.playerTicked.finishTick();
+            _this.checkForNoEnemies();
+            //console.log(this.entities.filter((e) => e instanceof Enemy).length);
+            _this.turn = TurnState.playerTurn;
         };
-        this.getTile = function (x, y) {
-            if (_this.roomArray[x])
-                return _this.roomArray[x][y];
-            else
-                return undefined;
+        this.update = function () {
+            if (_this.turn == TurnState.computerTurn) {
+                if (Date.now() - _this.playerTurnTime >=
+                    levelConstants_1.LevelConstants.COMPUTER_TURN_DELAY) {
+                    _this.computerTurn();
+                }
+            }
         };
+        this.clearDeadStuff = function () {
+            _this.entities = _this.entities.filter(function (e) { return !e.dead; });
+            _this.projectiles = _this.projectiles.filter(function (p) { return !p.dead; });
+            _this.hitwarnings = _this.hitwarnings.filter(function (h) { return !h.dead; });
+            _this.particles = _this.particles.filter(function (p) { return !p.dead; });
+        };
+        this.catchUp = function () {
+            if (_this.turn === TurnState.computerTurn)
+                _this.computerTurn(); // player skipped computer's turn, catch up
+        };
+        this.tickHitWarnings = function () {
+            for (var _i = 0, _a = _this.hitwarnings; _i < _a.length; _i++) {
+                var h = _a[_i];
+                if (h.parent && (h.parent.dead || h.parent.unconscious)) {
+                    h.tick();
+                }
+            }
+        };
+        // #endregion
+        // #region LIGHTING METHODS
         this.fadeLighting = function (delta) {
             for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
                 for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
@@ -17670,7 +17751,7 @@ var Room = /** @class */ (function () {
                 _this.sRGBToLinear(color[1]),
                 _this.sRGBToLinear(color[2]),
             ];
-            var _loop_5 = function (i) {
+            var _loop_4 = function (i) {
                 var currentX = Math.floor(px + dx * i);
                 var currentY = Math.floor(py + dy * i);
                 if (!_this.isPositionInRoom(currentX, currentY))
@@ -17716,7 +17797,7 @@ var Room = /** @class */ (function () {
                 }
             };
             for (var i = 0; i <= Math.min(levelConstants_1.LevelConstants.LIGHTING_MAX_DISTANCE, radius); i++) {
-                var state_1 = _loop_5(i);
+                var state_1 = _loop_4(i);
                 if (typeof state_1 === "object")
                     return state_1.value;
             }
@@ -17804,154 +17885,9 @@ var Room = /** @class */ (function () {
                 _this.linearToSRGB(clampedSum[2]),
             ];
         };
-        this.blur3x3 = function (array, weights) {
-            var blurredArray = [];
-            for (var x = 0; x < array.length; x++) {
-                blurredArray[x] = [];
-                for (var y = 0; y < array[0].length; y++) {
-                    if (array[x][y] === 0) {
-                        blurredArray[x][y] = 0;
-                        continue;
-                    }
-                    var total = 0;
-                    var totalWeights = 0;
-                    for (var xx = -1; xx <= 1; xx++) {
-                        for (var yy = -1; yy <= 1; yy++) {
-                            if (x + xx >= 0 &&
-                                x + xx < array.length &&
-                                y + yy >= 0 &&
-                                y + yy < array[0].length) {
-                                total += array[x + xx][y + yy] * weights[xx + 1][yy + 1];
-                                totalWeights += weights[xx + 1][yy + 1];
-                            }
-                        }
-                    }
-                    blurredArray[x][y] = total / totalWeights;
-                }
-            }
-            return blurredArray;
-        };
         this.rgbToLuminance = function (color) {
             //map to 1-0 range
             return 1 - (0.299 * color[0] + 0.587 * color[1] + 0.114 * color[2]) / 255;
-        };
-        this.catchUp = function () {
-            if (_this.turn === TurnState.computerTurn)
-                _this.computerTurn(); // player skipped computer's turn, catch up
-        };
-        this.tickHitWarnings = function () {
-            for (var _i = 0, _a = _this.hitwarnings; _i < _a.length; _i++) {
-                var h = _a[_i];
-                if (h.parent && (h.parent.dead || h.parent.unconscious)) {
-                    h.tick();
-                }
-            }
-        };
-        this.tick = function (player) {
-            player.updateSlowMotion();
-            _this.lastEnemyCount = _this.entities.filter(function (e) { return e instanceof enemy_1.Enemy; }).length;
-            for (var _i = 0, _a = _this.hitwarnings; _i < _a.length; _i++) {
-                var h = _a[_i];
-                h.tick();
-            }
-            for (var _b = 0, _c = _this.projectiles; _b < _c.length; _b++) {
-                var p = _c[_b];
-                p.tick();
-            }
-            _this.clearDeadStuff();
-            _this.calculateWallInfo();
-            _this.entities = _this.entities.filter(function (e) { return !e.dead; });
-            for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
-                for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
-                    _this.roomArray[x][y].tick();
-                }
-            }
-            _this.turn = TurnState.computerTurn;
-            //player.actionTab.setState(ActionState.WAIT);
-            //sets the action tab state to Ready
-            _this.playerTurnTime = Date.now();
-            _this.playerTicked = player;
-            // Update Beam Effects lighting
-            //console.log("updating lighting");
-            _this.updateLighting();
-            player.map.saveMapData();
-            _this.clearDeadStuff();
-        };
-        this.update = function () {
-            if (_this.turn == TurnState.computerTurn) {
-                if (Date.now() - _this.playerTurnTime >=
-                    levelConstants_1.LevelConstants.COMPUTER_TURN_DELAY) {
-                    _this.computerTurn();
-                }
-            }
-        };
-        this.clearDeadStuff = function () {
-            _this.entities = _this.entities.filter(function (e) { return !e.dead; });
-            _this.projectiles = _this.projectiles.filter(function (p) { return !p.dead; });
-            _this.hitwarnings = _this.hitwarnings.filter(function (h) { return !h.dead; });
-            _this.particles = _this.particles.filter(function (p) { return !p.dead; });
-        };
-        this.computerTurn = function () {
-            // take computer turn
-            for (var _i = 0, _a = _this.entities; _i < _a.length; _i++) {
-                var e = _a[_i];
-                e.tick();
-            }
-            _this.entities = _this.entities.filter(function (e) { return !e.dead; });
-            for (var _b = 0, _c = _this.items; _b < _c.length; _b++) {
-                var i = _c[_b];
-                i.tick();
-            }
-            for (var _d = 0, _e = _this.hitwarnings; _d < _e.length; _d++) {
-                var h = _e[_d];
-                if (!_this.roomArray[h.x] ||
-                    !_this.roomArray[h.x][h.y] ||
-                    _this.roomArray[h.x][h.y].isSolid()) {
-                    h.dead = true;
-                }
-                h.removeOverlapping();
-            }
-            for (var _f = 0, _g = _this.projectiles; _f < _g.length; _f++) {
-                var p = _g[_f];
-                if (_this.roomArray[p.x][p.y].isSolid())
-                    p.dead = true;
-                for (var i in _this.game.players) {
-                    if (_this.game.rooms[_this.game.players[i].levelID] === _this &&
-                        p.x === _this.game.players[i].x &&
-                        p.y === _this.game.players[i].y) {
-                        p.hitPlayer(_this.game.players[i]);
-                    }
-                }
-                for (var _h = 0, _j = _this.entities; _h < _j.length; _h++) {
-                    var e = _j[_h];
-                    if (p.x === e.x && p.y === e.y) {
-                        p.hitEnemy(e);
-                    }
-                }
-            }
-            for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
-                for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
-                    _this.roomArray[x][y].tickEnd();
-                }
-            }
-            _this.entities = _this.entities.filter(function (e) { return !e.dead; }); // enemies may be killed by spiketrap
-            _this.clearDeadStuff();
-            _this.playerTicked.finishTick();
-            _this.checkForNoEnemies();
-            //console.log(this.entities.filter((e) => e instanceof Enemy).length);
-            _this.turn = TurnState.playerTurn;
-        };
-        this.checkForNoEnemies = function () {
-            var enemies = _this.entities.filter(function (e) { return e instanceof enemy_1.Enemy; });
-            if (enemies.length === 0 && _this.lastEnemyCount > 0) {
-                // if (this.doors[0].type === DoorType.GUARDEDDOOR) {
-                _this.doors.forEach(function (d) {
-                    if (d.type === door_1.DoorType.GUARDEDDOOR) {
-                        d.unGuard();
-                        _this.game.pushMessage("The foes have been slain and the door allows you passage.");
-                    }
-                });
-            }
         };
         this.draw = function (delta) {
             hitWarning_1.HitWarning.updateFrame(delta);
@@ -18103,6 +18039,49 @@ var Room = /** @class */ (function () {
             game_1.Game.ctx.font = old;
             game_1.Game.ctx.restore();
         };
+        this.tileInside = function (tileX, tileY) {
+            return _this.pointInside(tileX, tileY, _this.roomX, _this.roomY, _this.width, _this.height);
+        };
+        this.getEmptyTiles = function () {
+            var returnVal = [];
+            for (var x = _this.roomX + 1; x < _this.roomX + _this.width - 1; x++) {
+                for (var y = _this.roomY + 1; y < _this.roomY + _this.height - 1; y++) {
+                    if (!_this.roomArray[x][y].isSolid() &&
+                        !(_this.roomArray[x][y] instanceof spiketrap_1.SpikeTrap) &&
+                        !(_this.roomArray[x][y] instanceof spawnfloor_1.SpawnFloor) &&
+                        !(_this.roomArray[x][y] instanceof downLadder_1.DownLadder)) {
+                        returnVal.push(_this.roomArray[x][y]);
+                    }
+                }
+            }
+            var _loop_5 = function (e) {
+                returnVal = returnVal.filter(function (t) { return !e.pointIn(t.x, t.y); });
+            };
+            for (var _i = 0, _a = _this.entities; _i < _a.length; _i++) {
+                var e = _a[_i];
+                _loop_5(e);
+            }
+            return returnVal;
+        };
+        this.getTile = function (x, y) {
+            if (_this.roomArray[x])
+                return _this.roomArray[x][y];
+            else
+                return undefined;
+        };
+        this.checkForNoEnemies = function () {
+            var enemies = _this.entities.filter(function (e) { return e instanceof enemy_1.Enemy; });
+            if (enemies.length === 0 && _this.lastEnemyCount > 0) {
+                // if (this.doors[0].type === DoorType.GUARDEDDOOR) {
+                _this.doors.forEach(function (d) {
+                    if (d.type === door_1.DoorType.GUARDEDDOOR) {
+                        d.unGuard();
+                        _this.game.pushMessage("The foes have been slain and the door allows you passage.");
+                    }
+                });
+            }
+        };
+        // checks for obstructions between doors and finds paths avoiding obstacles.
         this.checkDoorObstructions = function () {
             var obstacles = [];
             for (var _i = 0, _a = _this.doors; _i < _a.length; _i++) {
@@ -18119,6 +18098,7 @@ var Room = /** @class */ (function () {
             }
             return obstacles;
         };
+        // avoid blocking doorways with unbreakable entities
         this.findPath = function (startTile, targetTile) {
             var disablePositions = Array();
             var obstacleCandidates = [];
@@ -18129,19 +18109,6 @@ var Room = /** @class */ (function () {
                     obstacleCandidates.push(e);
                 }
             }
-            /*
-            for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
-              for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
-                if (
-                  this.room.roomArray[xx][yy] instanceof SpikeTrap &&
-                  (this.room.roomArray[xx][yy] as SpikeTrap).on
-                ) {
-                  // Don't walk on active spike traps
-                  disablePositions.push({ x: xx, y: yy } as astar.Position);
-                }
-              }
-            }
-              */
             // Create a grid of the room
             var grid = [];
             for (var x = 0; x < _this.roomX + _this.width; x++) {
@@ -18153,7 +18120,6 @@ var Room = /** @class */ (function () {
                         grid[x][y] = false;
                 }
             }
-            // Find a path to the target player
             var moves = astarclass_1.astar.AStar.search(grid, startTile, targetTile, disablePositions, false, false, false);
             if (moves.length === 0) {
                 return obstacleCandidates;
@@ -18182,6 +18148,8 @@ var Room = /** @class */ (function () {
         this.lightSources = Array();
         this.innerWalls = Array();
         this.level = level;
+        // #region initialize arrays
+        //initialize room array
         this.roomArray = [];
         for (var x_3 = this.roomX - 1; x_3 < this.roomX + this.width + 1; x_3++) {
             this.roomArray[x_3] = [];
@@ -18189,6 +18157,7 @@ var Room = /** @class */ (function () {
                 this.roomArray[x_3][y_3] = null;
             }
         }
+        //initialize visibility & color arrays, as well as their soft variants
         this.vis = [];
         this.softVis = [];
         this.col = [];
@@ -18205,6 +18174,7 @@ var Room = /** @class */ (function () {
                 this.softCol[x_4][y_4] = [0, 0, 0];
             }
         }
+        //initialize the render buffer array
         this.renderBuffer = [];
         for (var x_5 = this.roomX; x_5 < this.roomX + this.width; x_5++) {
             this.renderBuffer[x_5] = [];
@@ -18212,70 +18182,14 @@ var Room = /** @class */ (function () {
                 this.renderBuffer[x_5][y_5] = [];
             }
         }
+        //initialize the skin for the given environment
         this.skin = this.level.environment.skin;
         if (this.type === RoomType.ROPECAVE || this.type === RoomType.CAVE)
             this.skin = tile_1.SkinType.CAVE;
         this.buildEmptyRoom();
-        this.onMainPath = onMainPath;
-        this.pathIndex = pathIndex;
-        this.coordinatesWithLightingChanges = [];
+        // #endregion
     }
-    Room.prototype.pointInside = function (x, y, rX, rY, rW, rH) {
-        if (x < rX || x >= rX + rW)
-            return false;
-        if (y < rY || y >= rY + rH)
-            return false;
-        return true;
-    };
-    Room.prototype.changeReverb = function (newImpulsePath) {
-        return __awaiter(this, void 0, void 0, function () {
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0: return [4 /*yield*/, reverb_1.ReverbEngine.setReverbImpulse(newImpulsePath)];
-                    case 1:
-                        _a.sent();
-                        return [2 /*return*/];
-                }
-            });
-        });
-    };
-    Object.defineProperty(Room.prototype, "roomArea", {
-        get: function () {
-            var area = (this.width - 2) * (this.height - 2);
-            var openTiles = [];
-            for (var x = this.roomX + 1; x < this.roomX + this.width - 1; x++) {
-                for (var y = this.roomY + 1; y < this.roomY + this.height - 1; y++) {
-                    if (this.roomArray[x][y] instanceof floor_1.Floor)
-                        openTiles.push({ x: x, y: y });
-                }
-            }
-            //console.log(area, openTiles.length);
-            return openTiles.length;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    Room.prototype.setReverb = function () {
-        var roomArea = this.roomArea;
-        if (roomArea < 10) {
-            this.changeReverb("res/SFX/impulses/small.mp3");
-        }
-        else if (roomArea < 55) {
-            this.changeReverb("res/SFX/impulses/medium.mp3");
-        }
-        else {
-            this.changeReverb("res/SFX/impulses/large.mp3");
-        }
-    };
-    /**
-     * Checks if a room can be placed at the specified position with the given dimensions.
-     *
-     * @param x - The x-coordinate of the door which the new room will branch from.
-     * @param y - The y-coordinate of the door which the new room will branch from.
-     * @param width - The width of the room.
-     * @param height - The height of the room.
-     * @returns `true` if the room can be placed without overlapping; otherwise, `false`.
-     */
+    // #region TILE ADDING METHODS
     Room.prototype.buildEmptyRoom = function () {
         // fill in wall and floor
         for (var x = this.roomX; x < this.roomX + this.width; x++) {
@@ -18386,14 +18300,6 @@ var Room = /** @class */ (function () {
             }
         }
     };
-    Room.prototype.addChests = function (numChests, rand) {
-        // add chests
-        var tiles = this.getEmptyTiles();
-        for (var i = 0; i < numChests; i++) {
-            var _a = this.getRandomEmptyPosition(tiles), x = _a.x, y = _a.y;
-            this.entities.push(new chest_1.Chest(this, this.game, x, y));
-        }
-    };
     Room.prototype.addSpikeTraps = function (numSpikes, rand) {
         if (this.level.environment.type === environment_1.EnvType.FOREST)
             return;
@@ -18404,23 +18310,8 @@ var Room = /** @class */ (function () {
             this.roomArray[x][y] = new spiketrap_1.SpikeTrap(this, x, y);
         }
     };
-    Room.prototype.addSpikes = function (numSpikes, rand) {
-        // add spikes
-        var tiles = this.getEmptyTiles();
-        for (var i = 0; i < numSpikes; i++) {
-            var _a = this.getRandomEmptyPosition(tiles), x = _a.x, y = _a.y;
-            this.roomArray[x][y] = new spike_1.Spike(this, x, y);
-        }
-    };
-    Room.prototype.hasPlayer = function (player) {
-        for (var _i = 0, _a = this.roomArray; _i < _a.length; _i++) {
-            var tile = _a[_i];
-            if (tile instanceof player_1.Player) {
-                return true;
-            }
-        }
-        return false;
-    };
+    // #endregion
+    // #region ADDING ENTITIES
     // Function to add enemies to the room
     Room.prototype.addEnemies = function (numEnemies, rand) {
         var _this = this;
@@ -18596,6 +18487,14 @@ var Room = /** @class */ (function () {
             spawner_1.Spawner.add(this, this.game, x, y, spawnTable);
         }
     };
+    Room.prototype.addChests = function (numChests, rand) {
+        // add chests
+        var tiles = this.getEmptyTiles();
+        for (var i = 0; i < numChests; i++) {
+            var _a = this.getRandomEmptyPosition(tiles), x = _a.x, y = _a.y;
+            this.entities.push(new chest_1.Chest(this, this.game, x, y));
+        }
+    };
     Room.prototype.addObstacles = function (numObstacles, rand) {
         // add crates/barrels
         var tiles = this.getEmptyTiles();
@@ -18693,6 +18592,29 @@ var Room = /** @class */ (function () {
                 break;
         }
     };
+    // Many populate methods start with adding torches using the same pattern
+    Room.prototype.addRandomTorches = function (intensity) {
+        if (intensity === void 0) { intensity = "medium"; }
+        var torchPatterns = {
+            none: [0, 0, 0],
+            low: [0, 0, 0, 1, 1],
+            medium: [0, 0, 0, 1, 1, 2, 2, 3, 4],
+            high: [1, 1, 2, 2, 3, 4, 4],
+        };
+        var randTorches = game_1.Game.randTable(torchPatterns[intensity], random_1.Random.rand);
+        this.addTorches(randTorches, random_1.Random.rand);
+    };
+    // Used in populateDungeon, populateCave, etc. NOT IN USE
+    Room.prototype.populateWithEntities = function (config) {
+        var numEmptyTiles = this.getEmptyTiles().length;
+        var numEnemies = Math.ceil(numEmptyTiles * config.enemyDensity);
+        var numObstacles = Math.ceil(numEmptyTiles * config.obstacleDensity);
+        var numPlants = Math.ceil(numEmptyTiles * config.plantDensity);
+        this.addEnemies(numEnemies, random_1.Random.rand);
+        this.addObstacles(numObstacles, random_1.Random.rand);
+        this.addPlants(numPlants, random_1.Random.rand);
+    };
+    //calculate wall info for proper wall rendering
     Room.prototype.calculateWallInfo = function () {
         var _a, _b, _c;
         this.wallInfo.clear();
@@ -18744,6 +18666,15 @@ var Room = /** @class */ (function () {
             }
         }
     };
+    // #endregion
+    // #region UTILITIES
+    Room.prototype.pointInside = function (x, y, rX, rY, rW, rH) {
+        if (x < rX || x >= rX + rW)
+            return false;
+        if (y < rY || y >= rY + rH)
+            return false;
+        return true;
+    };
     // This pattern appears in multiple methods like addVendingMachine, addChests, addSpikes, etc.
     Room.prototype.getRandomEmptyPosition = function (tiles) {
         if (tiles.length === 0)
@@ -18757,28 +18688,6 @@ var Room = /** @class */ (function () {
             x: Math.floor(this.roomX + this.width / 2),
             y: Math.floor(this.roomY + this.height / 2),
         };
-    };
-    // Many populate methods start with adding torches using the same pattern
-    Room.prototype.addRandomTorches = function (intensity) {
-        if (intensity === void 0) { intensity = "medium"; }
-        var torchPatterns = {
-            none: [0, 0, 0],
-            low: [0, 0, 0, 1, 1],
-            medium: [0, 0, 0, 1, 1, 2, 2, 3, 4],
-            high: [1, 1, 2, 2, 3, 4, 4],
-        };
-        var randTorches = game_1.Game.randTable(torchPatterns[intensity], random_1.Random.rand);
-        this.addTorches(randTorches, random_1.Random.rand);
-    };
-    // Used in populateDungeon, populateCave, etc. NOT IN USE
-    Room.prototype.populateWithEntities = function (config) {
-        var numEmptyTiles = this.getEmptyTiles().length;
-        var numEnemies = Math.ceil(numEmptyTiles * config.enemyDensity);
-        var numObstacles = Math.ceil(numEmptyTiles * config.obstacleDensity);
-        var numPlants = Math.ceil(numEmptyTiles * config.plantDensity);
-        this.addEnemies(numEnemies, random_1.Random.rand);
-        this.addObstacles(numObstacles, random_1.Random.rand);
-        this.addPlants(numPlants, random_1.Random.rand);
     };
     // Used in multiple methods including castShadowsAtAngle
     Room.prototype.isPositionInRoom = function (x, y) {
@@ -18795,16 +18704,8 @@ var Room = /** @class */ (function () {
             entities.push(otherTile);
         return entities;
     };
-    // Could encapsulate the common drawing logic NOT IN USE
-    Room.prototype.drawLayer = function (delta, condition, method) {
-        for (var x = this.roomX; x < this.roomX + this.width; x++) {
-            for (var y = this.roomY; y < this.roomY + this.height; y++) {
-                if (condition(x, y)) {
-                    this.roomArray[x][y][method](delta);
-                }
-            }
-        }
-    };
+    // #endregion
+    // #region MISC
     /**
      * Adds a new BeamEffect to the room.
      *
@@ -18816,6 +18717,46 @@ var Room = /** @class */ (function () {
     Room.prototype.addBeamEffect = function (x1, y1, x2, y2) {
         var beam = new beamEffect_1.BeamEffect(x1, y1, x2, y2);
         this.beamEffects.push(beam);
+    };
+    Room.prototype.changeReverb = function (newImpulsePath) {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, reverb_1.ReverbEngine.setReverbImpulse(newImpulsePath)];
+                    case 1:
+                        _a.sent();
+                        return [2 /*return*/];
+                }
+            });
+        });
+    };
+    Object.defineProperty(Room.prototype, "roomArea", {
+        get: function () {
+            var area = (this.width - 2) * (this.height - 2);
+            var openTiles = [];
+            for (var x = this.roomX + 1; x < this.roomX + this.width - 1; x++) {
+                for (var y = this.roomY + 1; y < this.roomY + this.height - 1; y++) {
+                    if (this.roomArray[x][y] instanceof floor_1.Floor)
+                        openTiles.push({ x: x, y: y });
+                }
+            }
+            //console.log(area, openTiles.length);
+            return openTiles.length;
+        },
+        enumerable: false,
+        configurable: true
+    });
+    Room.prototype.setReverb = function () {
+        var roomArea = this.roomArea;
+        if (roomArea < 10) {
+            this.changeReverb("res/SFX/impulses/small.mp3");
+        }
+        else if (roomArea < 55) {
+            this.changeReverb("res/SFX/impulses/medium.mp3");
+        }
+        else {
+            this.changeReverb("res/SFX/impulses/large.mp3");
+        }
     };
     return Room;
 }());
@@ -20198,51 +20139,6 @@ var SpawnFloor = /** @class */ (function (_super) {
     return SpawnFloor;
 }(tile_1.Tile));
 exports.SpawnFloor = SpawnFloor;
-
-
-/***/ }),
-
-/***/ "./src/tile/spike.ts":
-/*!***************************!*\
-  !*** ./src/tile/spike.ts ***!
-  \***************************/
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        if (typeof b !== "function" && b !== null)
-            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Spike = void 0;
-var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-var tile_1 = __webpack_require__(/*! ./tile */ "./src/tile/tile.ts");
-var Spike = /** @class */ (function (_super) {
-    __extends(Spike, _super);
-    function Spike() {
-        var _this = _super !== null && _super.apply(this, arguments) || this;
-        _this.onCollide = function (player) {
-            player.hurt(1, "spike");
-        };
-        _this.draw = function (delta) {
-            game_1.Game.drawTile(11, 0, 1, 1, _this.x, _this.y, 1, 1, _this.room.shadeColor, _this.shadeAmount());
-        };
-        return _this;
-    }
-    return Spike;
-}(tile_1.Tile));
-exports.Spike = Spike;
 
 
 /***/ }),

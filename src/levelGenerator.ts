@@ -46,7 +46,6 @@ class Partition {
   isRightOpen: boolean;
   isBottomOpen: boolean;
   isLeftOpen: boolean;
-  onMainPath: boolean;
   pathIndex: number;
 
   constructor(x: number, y: number, w: number, h: number, fillStyle: string) {
@@ -62,7 +61,6 @@ class Partition {
     this.isRightOpen = true;
     this.isBottomOpen = true;
     this.isLeftOpen = true;
-    this.onMainPath = false;
     this.pathIndex = 0;
   }
 
