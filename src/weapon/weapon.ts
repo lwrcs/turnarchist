@@ -32,6 +32,7 @@ export abstract class Weapon extends Equippable {
     this.durability = 50;
     this.durabilityMax = 50;
     this.statusApplicationCount = 0;
+    this.equipTick = true;
   }
 
   break = () => {

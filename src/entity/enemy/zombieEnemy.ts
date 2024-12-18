@@ -248,7 +248,7 @@ export class ZombieEnemy extends Enemy {
       this.updateDrawXY(delta);
       this.frame += 0.1 * delta;
       if (this.frame >= 4) this.frame = 0;
-
+      this.drawShield(delta);
       if (this.hasShadow)
         Game.drawMob(
           0,

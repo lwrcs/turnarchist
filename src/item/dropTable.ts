@@ -98,7 +98,7 @@ export class DropTable {
     },
 
     // Upgrades
-    { itemType: "backpack", dropWeight: 3, category: ["upgrade"] },
+    { itemType: "backpack", dropWeight: 5, category: ["upgrade"] },
 
     // Light sources
     { itemType: "candle", dropWeight: 10, category: ["light"] },

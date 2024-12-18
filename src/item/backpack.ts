@@ -22,6 +22,9 @@ export class Backpack extends Usable {
       Sound.heal();
     player.inventory.removeItem(this);
     player.inventory.expansion += 1;
+    this.level.game.pushMessage(
+      "You equip the backpack, increasing the amount you can carry.",
+    );
     //this.level.items = this.level.items.filter((x) => x !== this); // removes itself from the level
   };
   getDescription = () => {

@@ -25,7 +25,7 @@ let FULL_OUTLINE = "white";
 export class Inventory {
   player: Player;
   items: Array<Item | null>;
-  rows = 3;
+  rows = 4;
   cols = 5;
   selX = 0;
   selY = 0;

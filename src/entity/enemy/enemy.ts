@@ -38,8 +38,6 @@ export abstract class Enemy extends Entity {
   private poisonHitCount;
   private bleedHitCount;
 
-  //dir: Direction;
-
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
     this.drawYOffset = 1.5;
@@ -515,7 +513,7 @@ export abstract class Enemy extends Entity {
       this.updateDrawXY(delta);
       this.frame += 0.1 * delta;
       if (this.frame >= 4) this.frame = 0;
-
+      this.drawShield(delta);
       if (this.hasShadow)
         Game.drawMob(
           0,

@@ -10,8 +10,8 @@ export class WeaponBlood extends Usable {
   static itemName = "cursed blood";
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
-    this.tileX = 8;
-    this.tileY = 2;
+    this.tileX = 12;
+    this.tileY = 4;
     this.offsetY = -0.3;
     this.canUseOnOther = true;
   }

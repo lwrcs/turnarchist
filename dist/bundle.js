@@ -2300,7 +2300,6 @@ var EnemyState;
 })(EnemyState || (EnemyState = {}));
 var Enemy = /** @class */ (function (_super) {
     __extends(Enemy, _super);
-    //dir: Direction;
     function Enemy(room, game, x, y) {
         var _this = _super.call(this, room, game, x, y) || this;
         _this.tryMove = function (x, y, collide) {
@@ -2700,6 +2699,7 @@ var Enemy = /** @class */ (function (_super) {
                 _this.frame += 0.1 * delta;
                 if (_this.frame >= 4)
                     _this.frame = 0;
+                _this.drawShield(delta);
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
                 game_1.Game.drawMob(_this.tileX + Math.floor(_this.frame), _this.tileY + _this.direction * 2, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY - _this.jumpY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
@@ -4273,6 +4273,7 @@ var SkullEnemy = /** @class */ (function (_super) {
                 _this.updateDrawXY(delta);
                 _this.tileX = 5;
                 _this.tileY = 8;
+                _this.drawShield(delta);
                 if (_this.health <= 1) {
                     _this.tileX = 3;
                     _this.tileY = 0;
@@ -4735,6 +4736,7 @@ var WizardEnemy = /** @class */ (function (_super) {
         _this.draw = function (delta) {
             if (!_this.dead) {
                 _this.updateDrawXY(delta);
+                _this.drawShield(delta);
                 if (_this.state === WizardState.attack)
                     _this.tileX = 7;
                 else
@@ -5010,6 +5012,7 @@ var ZombieEnemy = /** @class */ (function (_super) {
                 _this.frame += 0.1 * delta;
                 if (_this.frame >= 4)
                     _this.frame = 0;
+                _this.drawShield(delta);
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
                 game_1.Game.drawMob(_this.tileX + Math.floor(_this.frame), _this.tileY + _this.direction * 2, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY - _this.jumpY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
@@ -5136,7 +5139,7 @@ var Entity = /** @class */ (function (_super) {
         };
         _this.drawShield = function (delta) {
             if (_this.shielded) {
-                game_1.Game.drawFX(22, _this.tileY, 1, 1, _this.x, _this.y, 1, 1);
+                game_1.Game.drawFX(22, 9, 1, 1, _this.x, _this.y, 1, 1);
             }
         };
         _this.getDrop = function (useCategory, force) {
@@ -5645,7 +5648,7 @@ var Entity = /** @class */ (function (_super) {
         _this.unconscious = false;
         _this.dropChance = 0.02;
         _this.isEnemy = false;
-        _this.shielded = false;
+        _this.shielded = true;
         _this.shieldHealth = 1;
         return _this;
         //this.shield = null;
@@ -9763,7 +9766,7 @@ var FULL_OUTLINE = "white";
 var Inventory = /** @class */ (function () {
     function Inventory(game, player) {
         var _this = this;
-        this.rows = 3;
+        this.rows = 4;
         this.cols = 5;
         this.selX = 0;
         this.selY = 0;
@@ -10898,6 +10901,7 @@ var Backpack = /** @class */ (function (_super) {
                 sound_1.Sound.heal();
             player.inventory.removeItem(_this);
             player.inventory.expansion += 1;
+            _this.level.game.pushMessage("You equip the backpack, increasing the amount you can carry.");
             //this.level.items = this.level.items.filter((x) => x !== this); // removes itself from the level
         };
         _this.getDescription = function () {
@@ -11251,7 +11255,7 @@ var DropTable = /** @class */ (function () {
             category: ["consumable", "magic"],
         },
         // Upgrades
-        { itemType: "backpack", dropWeight: 3, category: ["upgrade"] },
+        { itemType: "backpack", dropWeight: 5, category: ["upgrade"] },
         // Light sources
         { itemType: "candle", dropWeight: 10, category: ["light"] },
         { itemType: "torch", dropWeight: 5, category: ["light"] },
@@ -11378,6 +11382,7 @@ var Equippable = /** @class */ (function (_super) {
     __extends(Equippable, _super);
     function Equippable(level, x, y) {
         var _this = _super.call(this, level, x, y) || this;
+        _this.equipTick = false;
         _this.setWielder = function (wielder) {
             _this.wielder = wielder;
         };
@@ -12538,8 +12543,8 @@ var WeaponBlood = /** @class */ (function (_super) {
         _this.getDescription = function () {
             return "WEAPON BLOOD\nCan be applied to weapons to deal bleed damage";
         };
-        _this.tileX = 8;
-        _this.tileY = 2;
+        _this.tileX = 12;
+        _this.tileY = 4;
         _this.offsetY = -0.3;
         _this.canUseOnOther = true;
         return _this;
@@ -17329,7 +17334,7 @@ var Room = /** @class */ (function () {
                         weaponDropped = true;
                     }
                     else {
-                        chest.getDrop(["consumable", "gem", "light", "tool", "fuel"], true);
+                        chest.getDrop(["consumable", "gem", "light", "tool", "fuel", "backpack"], true);
                     }
                     tiles.filter(function (tile) { return tile.x !== x_2 && tile.y !== y_2; });
                     _this.entities.push(chest);
@@ -21595,6 +21600,7 @@ var Weapon = /** @class */ (function (_super) {
         _this.durability = 50;
         _this.durabilityMax = 50;
         _this.statusApplicationCount = 0;
+        _this.equipTick = true;
         return _this;
     }
     Weapon.itemName = "weapon";

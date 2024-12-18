@@ -1134,7 +1134,10 @@ export class Room {
           chest.getDrop(["weapon"], true);
           weaponDropped = true;
         } else {
-          chest.getDrop(["consumable", "gem", "light", "tool", "fuel"], true);
+          chest.getDrop(
+            ["consumable", "gem", "light", "tool", "fuel", "backpack"],
+            true,
+          );
         }
 
         tiles.filter((tile) => tile.x !== x && tile.y !== y);

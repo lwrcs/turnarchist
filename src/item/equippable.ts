@@ -6,6 +6,7 @@ import { Player } from "../player";
 export class Equippable extends Item {
   wielder: Player;
   equipped: boolean;
+  equipTick: boolean = false;
 
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);

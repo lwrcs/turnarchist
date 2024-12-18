@@ -142,7 +142,7 @@ export class Entity extends Drawable {
     this.unconscious = false;
     this.dropChance = 0.02;
     this.isEnemy = false;
-    this.shielded = false;
+    this.shielded = true;
     this.shieldHealth = 1;
     //this.shield = null;
   }
@@ -174,7 +174,7 @@ export class Entity extends Drawable {
 
   drawShield = (delta: number) => {
     if (this.shielded) {
-      Game.drawFX(22, this.tileY, 1, 1, this.x, this.y, 1, 1);
+      Game.drawFX(22, 9, 1, 1, this.x, this.y, 1, 1);
     }
   };
 
