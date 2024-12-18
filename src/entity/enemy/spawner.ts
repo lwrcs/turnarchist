@@ -19,6 +19,7 @@ import { FireWizardEnemy } from "./fireWizard";
 import { QueenEnemy } from "./queenEnemy";
 import { ArmoredzombieEnemy } from "./armoredzombieEnemy";
 import { RookEnemy } from "./rookEnemy";
+import { RoomType } from "../../room";
 
 export class Spawner extends Enemy {
   ticks: number;
@@ -210,6 +211,15 @@ export class Spawner extends Enemy {
               );
               break;
             case 10:
+              if (this.room.type !== RoomType.BIGDUNGEON) {
+                spawned = new SkullEnemy(
+                  this.room,
+                  this.game,
+                  position.x,
+                  position.y,
+                );
+                break;
+              }
               spawned = new BigSkullEnemy(
                 this.room,
                 this.game,
@@ -240,6 +250,16 @@ export class Spawner extends Enemy {
               );
               break;
             case 13:
+              if (this.room.type !== RoomType.BIGDUNGEON) {
+                spawned = new KnightEnemy(
+                  this.room,
+                  this.game,
+                  position.x,
+                  position.y,
+                );
+                break;
+              }
+
               spawned = new BigKnightEnemy(
                 this.room,
                 this.game,

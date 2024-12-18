@@ -139,6 +139,8 @@ export class GameConstants {
     DualDagger,
     Candle,
     Torch,
+    WeaponPoison,
+    WeaponBlood,
     GodStone,
     Candle,
     Candle,

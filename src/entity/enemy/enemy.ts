@@ -120,6 +120,20 @@ export abstract class Enemy extends Entity {
       if (playerHitBy === this.game.players[this.game.localPlayerID])
         this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
     }
+
+    if (this.shielded && this.shieldHealth > 0) {
+      let shieldDiff = Math.max(0, damage - this.shieldHealth);
+      this.shieldHealth -= damage;
+      if (this.shieldHealth === 0) this.removeShield();
+      if (shieldDiff > 0) {
+        this.health -= shieldDiff;
+        this.healthBar.hurt();
+      }
+      this.createDamageNumber(damage);
+      if (this.health <= 0) this.kill();
+      return;
+    }
+
     this.health -= damage;
     this.createDamageNumber(damage, type);
     if (type === "none" || this.health <= 0) {

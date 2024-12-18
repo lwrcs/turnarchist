@@ -2356,6 +2356,20 @@ var Enemy = /** @class */ (function (_super) {
                 if (playerHitBy === _this.game.players[_this.game.localPlayerID])
                     _this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
             }
+            if (_this.shielded && _this.shieldHealth > 0) {
+                var shieldDiff = Math.max(0, damage - _this.shieldHealth);
+                _this.shieldHealth -= damage;
+                if (_this.shieldHealth === 0)
+                    _this.removeShield();
+                if (shieldDiff > 0) {
+                    _this.health -= shieldDiff;
+                    _this.healthBar.hurt();
+                }
+                _this.createDamageNumber(damage);
+                if (_this.health <= 0)
+                    _this.kill();
+                return;
+            }
             _this.health -= damage;
             _this.createDamageNumber(damage, type);
             if (type === "none" || _this.health <= 0) {
@@ -2793,6 +2807,7 @@ var EnergyWizardEnemy = /** @class */ (function (_super) {
                     _this.tileX = 7;
                 else
                     _this.tileX = 6;
+                _this.drawShield(delta);
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
                 if (_this.frame >= 0) {
@@ -3980,6 +3995,7 @@ var RookEnemy = /** @class */ (function (_super) {
                 _this.frame += 0.1 * delta;
                 if (_this.frame >= 4)
                     _this.frame = 0;
+                _this.drawShield(delta);
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
                 game_1.Game.drawMob(_this.tileX + Math.floor(_this.frame), _this.tileY, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY - _this.jumpY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
@@ -4353,6 +4369,7 @@ var fireWizard_1 = __webpack_require__(/*! ./fireWizard */ "./src/entity/enemy/f
 var queenEnemy_1 = __webpack_require__(/*! ./queenEnemy */ "./src/entity/enemy/queenEnemy.ts");
 var armoredzombieEnemy_1 = __webpack_require__(/*! ./armoredzombieEnemy */ "./src/entity/enemy/armoredzombieEnemy.ts");
 var rookEnemy_1 = __webpack_require__(/*! ./rookEnemy */ "./src/entity/enemy/rookEnemy.ts");
+var room_1 = __webpack_require__(/*! ../../room */ "./src/room.ts");
 var Spawner = /** @class */ (function (_super) {
     __extends(Spawner, _super);
     function Spawner(room, game, x, y, enemyTable) {
@@ -4418,6 +4435,10 @@ var Spawner = /** @class */ (function (_super) {
                                 spawned = new armoredzombieEnemy_1.ArmoredzombieEnemy(_this.room, _this.game, position.x, position.y);
                                 break;
                             case 10:
+                                if (_this.room.type !== room_1.RoomType.BIGDUNGEON) {
+                                    spawned = new skullEnemy_1.SkullEnemy(_this.room, _this.game, position.x, position.y);
+                                    break;
+                                }
                                 spawned = new bigSkullEnemy_1.BigSkullEnemy(_this.room, _this.game, position.x, position.y);
                                 for (var xx = 0; xx < 2; xx++) {
                                     for (var yy = 0; yy < 2; yy++) {
@@ -4433,6 +4454,10 @@ var Spawner = /** @class */ (function (_super) {
                                 spawned = new knightEnemy_1.KnightEnemy(_this.room, _this.game, position.x, position.y);
                                 break;
                             case 13:
+                                if (_this.room.type !== room_1.RoomType.BIGDUNGEON) {
+                                    spawned = new knightEnemy_1.KnightEnemy(_this.room, _this.game, position.x, position.y);
+                                    break;
+                                }
                                 spawned = new bigKnightEnemy_1.BigKnightEnemy(_this.room, _this.game, position.x, position.y);
                                 for (var xx = 0; xx < 2; xx++) {
                                     for (var yy = 0; yy < 2; yy++) {
@@ -5072,6 +5097,7 @@ var downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/dow
 var door_1 = __webpack_require__(/*! ../tile/door */ "./src/tile/door.ts");
 var wall_1 = __webpack_require__(/*! ../tile/wall */ "./src/tile/wall.ts");
 var dropTable_1 = __webpack_require__(/*! ../item/dropTable */ "./src/item/dropTable.ts");
+var weapon_1 = __webpack_require__(/*! ../weapon/weapon */ "./src/weapon/weapon.ts");
 var EntityDirection;
 (function (EntityDirection) {
     EntityDirection[EntityDirection["DOWN"] = 0] = "DOWN";
@@ -5089,16 +5115,39 @@ var EntityType;
 })(EntityType = exports.EntityType || (exports.EntityType = {}));
 var Entity = /** @class */ (function (_super) {
     __extends(Entity, _super);
+    //shield: ShieldParticle;
     function Entity(room, game, x, y) {
         var _this = _super.call(this) || this;
         _this.sleepingZFrame = 0;
         _this.imageParticleX = 0;
         _this.imageParticleY = 26;
         _this.dropChance = 0.02;
+        _this.applyShield = function (shieldHealth) {
+            if (shieldHealth === void 0) { shieldHealth = 1; }
+            _this.shielded = true;
+            _this.shieldHealth = shieldHealth;
+            //this.shield = new ShieldProjectile(this.x, this.y);
+            //this.room.projectile.push(this.shield);
+        };
+        _this.removeShield = function () {
+            _this.shielded = false;
+            _this.shieldHealth = 0;
+            //this.room.projectiles.filter(projectile => projectile !== this.shield).
+        };
+        _this.drawShield = function (delta) {
+            if (_this.shielded) {
+                game_1.Game.drawFX(22, _this.tileY, 1, 1, _this.x, _this.y, 1, 1);
+            }
+        };
         _this.getDrop = function (useCategory, force) {
             if (useCategory === void 0) { useCategory = []; }
             if (force === void 0) { force = false; }
             dropTable_1.DropTable.getDrop(_this, false, useCategory, force);
+            //make monsters drop degraded weapons
+            if (_this.drop instanceof weapon_1.Weapon && _this.type === EntityType.ENEMY) {
+                _this.drop.durability = Math.floor(Math.random() * 0.31 * _this.drop.durabilityMax);
+                _this.drop.durabilityMax;
+            }
         };
         _this.addLightSource = function (lightSource) {
             _this.room.lightSources.push(lightSource);
@@ -5166,6 +5215,21 @@ var Entity = /** @class */ (function (_super) {
                 return closestPlayer;
         };
         _this.hurt = function (playerHitBy, damage) {
+            console.log("ouchie");
+            if (_this.shielded && _this.shieldHealth > 0) {
+                var shieldDiff = Math.max(0, damage - _this.shieldHealth);
+                _this.shieldHealth -= damage;
+                if (_this.shieldHealth === 0)
+                    _this.removeShield();
+                if (shieldDiff > 0) {
+                    _this.health -= shieldDiff;
+                    _this.healthBar.hurt();
+                }
+                _this.createDamageNumber(damage);
+                if (_this.health <= 0)
+                    _this.kill();
+                return;
+            }
             _this.healthBar.hurt();
             _this.createDamageNumber(damage);
             _this.health -= damage;
@@ -5270,8 +5334,11 @@ var Entity = /** @class */ (function (_super) {
         };
         _this.draw = function (delta) {
             if (!_this.dead) {
-                if (_this.hasShadow)
-                    game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
+                if (_this.shielded)
+                    if (_this.hasShadow) {
+                        game_1.Game.drawFX(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
+                    }
+                game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
                 game_1.Game.drawMob(_this.tileX, _this.tileY + _this.direction * 2, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
             }
             /*if (this.crushed) {
@@ -5578,7 +5645,10 @@ var Entity = /** @class */ (function (_super) {
         _this.unconscious = false;
         _this.dropChance = 0.02;
         _this.isEnemy = false;
+        _this.shielded = false;
+        _this.shieldHealth = 1;
         return _this;
+        //this.shield = null;
     }
     Entity.add = function (room, game, x, y) {
         var rest = [];
@@ -5749,6 +5819,11 @@ var Chest = /** @class */ (function (_super) {
             _this.opening = true;
             if (_this.drop === null)
                 _this.getDrop(["consumable", "gem", "coin"]);
+            if (_this.drop.name === "coin") {
+                var stack = Math.ceil(Math.random() * 5);
+                _this.drop.stackCount = stack;
+                _this.drop.stack = stack;
+            }
             _this.dropLoot();
             _this.drop.animateFromChest();
         };
@@ -8085,7 +8160,9 @@ var coal_1 = __webpack_require__(/*! ./item/coal */ "./src/item/coal.ts");
 var godStone_1 = __webpack_require__(/*! ./item/godStone */ "./src/item/godStone.ts");
 var heart_1 = __webpack_require__(/*! ./item/heart */ "./src/item/heart.ts");
 var torch_1 = __webpack_require__(/*! ./item/torch */ "./src/item/torch.ts");
+var weaponBlood_1 = __webpack_require__(/*! ./item/weaponBlood */ "./src/item/weaponBlood.ts");
 var weaponFragments_1 = __webpack_require__(/*! ./item/weaponFragments */ "./src/item/weaponFragments.ts");
+var weaponPoison_1 = __webpack_require__(/*! ./item/weaponPoison */ "./src/item/weaponPoison.ts");
 var levelConstants_1 = __webpack_require__(/*! ./levelConstants */ "./src/levelConstants.ts");
 var dagger_1 = __webpack_require__(/*! ./weapon/dagger */ "./src/weapon/dagger.ts");
 var dualdagger_1 = __webpack_require__(/*! ./weapon/dualdagger */ "./src/weapon/dualdagger.ts");
@@ -8196,6 +8273,8 @@ var GameConstants = /** @class */ (function () {
         dualdagger_1.DualDagger,
         candle_1.Candle,
         torch_1.Torch,
+        weaponPoison_1.WeaponPoison,
+        weaponBlood_1.WeaponBlood,
         godStone_1.GodStone,
         candle_1.Candle,
         candle_1.Candle,
@@ -11064,6 +11143,7 @@ var Coin = /** @class */ (function (_super) {
         _this.tileY = 0;
         _this.stack = 1;
         _this.stackable = true;
+        _this.name = Coin.itemName;
         return _this;
     }
     Object.defineProperty(Coin.prototype, "distanceToBottomRight", {

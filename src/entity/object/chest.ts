@@ -66,6 +66,11 @@ export class Chest extends Entity {
     this.opening = true;
 
     if (this.drop === null) this.getDrop(["consumable", "gem", "coin"]);
+    if (this.drop.name === "coin") {
+      const stack = Math.ceil(Math.random() * 5);
+      this.drop.stackCount = stack;
+      this.drop.stack = stack;
+    }
     this.dropLoot();
     this.drop.animateFromChest();
   };

@@ -19,6 +19,7 @@ import { Door } from "../tile/door";
 import { Wall } from "../tile/wall";
 
 import { DropTable } from "../item/dropTable";
+import { Weapon } from "../weapon/weapon";
 
 export enum EntityDirection {
   DOWN,
@@ -92,6 +93,9 @@ export class Entity extends Drawable {
   imageParticleY: number = 26;
   dropChance: number = 0.02;
   isEnemy: boolean;
+  shielded: boolean;
+  shieldHealth: number;
+  //shield: ShieldParticle;
 
   constructor(room: Room, game: Game, x: number, y: number) {
     super();
@@ -138,6 +142,9 @@ export class Entity extends Drawable {
     this.unconscious = false;
     this.dropChance = 0.02;
     this.isEnemy = false;
+    this.shielded = false;
+    this.shieldHealth = 1;
+    //this.shield = null;
   }
 
   static add<
@@ -152,8 +159,34 @@ export class Entity extends Drawable {
     room.entities.push(new this(room, game, x, y, ...rest));
   }
 
+  applyShield = (shieldHealth: number = 1) => {
+    this.shielded = true;
+    this.shieldHealth = shieldHealth;
+    //this.shield = new ShieldProjectile(this.x, this.y);
+    //this.room.projectile.push(this.shield);
+  };
+
+  removeShield = () => {
+    this.shielded = false;
+    this.shieldHealth = 0;
+    //this.room.projectiles.filter(projectile => projectile !== this.shield).
+  };
+
+  drawShield = (delta: number) => {
+    if (this.shielded) {
+      Game.drawFX(22, this.tileY, 1, 1, this.x, this.y, 1, 1);
+    }
+  };
+
   getDrop = (useCategory: string[] = [], force: boolean = false) => {
     DropTable.getDrop(this, false, useCategory, force);
+    //make monsters drop degraded weapons
+    if (this.drop instanceof Weapon && this.type === EntityType.ENEMY) {
+      this.drop.durability = Math.floor(
+        Math.random() * 0.31 * this.drop.durabilityMax,
+      );
+      this.drop.durabilityMax;
+    }
   };
 
   addLightSource = (lightSource: LightSource) => {
@@ -242,6 +275,19 @@ export class Entity extends Drawable {
   };
 
   readonly hurt = (playerHitBy: Player, damage: number) => {
+    console.log("ouchie");
+    if (this.shielded && this.shieldHealth > 0) {
+      let shieldDiff = Math.max(0, damage - this.shieldHealth);
+      this.shieldHealth -= damage;
+      if (this.shieldHealth === 0) this.removeShield();
+      if (shieldDiff > 0) {
+        this.health -= shieldDiff;
+        this.healthBar.hurt();
+      }
+      this.createDamageNumber(damage);
+      if (this.health <= 0) this.kill();
+      return;
+    }
     this.healthBar.hurt();
     this.createDamageNumber(damage);
     this.health -= damage;
@@ -348,19 +394,33 @@ export class Entity extends Drawable {
 
   draw = (delta: number) => {
     if (!this.dead) {
-      if (this.hasShadow)
-        Game.drawMob(
-          0,
-          0,
-          1,
-          1,
-          this.x - this.drawX,
-          this.y - this.drawY,
-          1,
-          1,
-          this.room.shadeColor,
-          this.shadeAmount(),
-        );
+      if (this.shielded)
+        if (this.hasShadow) {
+          Game.drawFX(
+            0,
+            0,
+            1,
+            1,
+            this.x - this.drawX,
+            this.y - this.drawY,
+            1,
+            1,
+            this.room.shadeColor,
+            this.shadeAmount(),
+          );
+        }
+      Game.drawMob(
+        0,
+        0,
+        1,
+        1,
+        this.x - this.drawX,
+        this.y - this.drawY,
+        1,
+        1,
+        this.room.shadeColor,
+        this.shadeAmount(),
+      );
       Game.drawMob(
         this.tileX,
         this.tileY + this.direction * 2,

@@ -14,6 +14,7 @@ export class Coin extends Item {
     this.tileY = 0;
     this.stack = 1;
     this.stackable = true;
+    this.name = Coin.itemName;
   }
   onDrop = () => {
     const coinList = []; //array to store coin objects
