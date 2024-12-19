@@ -4,6 +4,7 @@ import { Room } from "../room";
 import { Player } from "../player";
 import { InsideLevelDoor } from "./insideLevelDoor";
 import { Entity } from "../entity/entity";
+import { Enemy } from "../entity/enemy/enemy";
 
 export class Button extends Tile {
   // all are in grid units
@@ -34,13 +35,13 @@ export class Button extends Tile {
     this.linkedDoor.opened = false;
   };
 
-  /*onCollide = (player: Player) => {
+  onCollide = (player: Player) => {
     this.press();
   };
 
   onCollideEnemy = (enemy: Enemy) => {
     this.press();
-  };*/
+  };
 
   tickEnd = () => {
     this.unpress();

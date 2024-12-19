@@ -8,6 +8,9 @@ export class TextBox {
   private allowedCharacters: string = "all";
   private element: HTMLElement;
   private message: string = "";
+  private sentMessages: Array<string>;
+  private currentMessageIndex: number = -1;
+  private readonly MAX_HISTORY: number = 50;
 
   constructor(element: HTMLElement) {
     this.text = "";
@@ -15,6 +18,7 @@ export class TextBox {
     this.enterCallback = () => {};
     this.escapeCallback = () => {};
     this.element = element;
+    this.sentMessages = [];
     this.element.addEventListener("touchstart", this.handleTouchStart);
   }
 
@@ -94,6 +98,34 @@ export class TextBox {
           this.cursor = Math.min(this.text.length, this.cursor + 1);
           this.updateCursorPosition();
           break;
+        case "ArrowUp":
+          if (
+            this.sentMessages.length > 0 &&
+            this.currentMessageIndex < this.sentMessages.length - 1
+          ) {
+            this.currentMessageIndex++;
+            this.text =
+              this.sentMessages[
+                this.sentMessages.length - 1 - this.currentMessageIndex
+              ];
+            this.updateElement();
+            this.message = this.text;
+          }
+          break;
+        case "ArrowDown":
+          if (this.currentMessageIndex > 0) {
+            this.currentMessageIndex--;
+            this.text =
+              this.sentMessages[
+                this.sentMessages.length - 1 - this.currentMessageIndex
+              ];
+            this.updateElement();
+            this.message = this.text;
+          } else if (this.currentMessageIndex === 0) {
+            this.currentMessageIndex = -1;
+            this.clear();
+          }
+          break;
         case "Enter":
           this.sendMessage();
           this.escapeCallback();
@@ -126,18 +158,31 @@ export class TextBox {
   }
 
   private sendMessage(): void {
-    let message = this.message;
+    let message = this.message.trim();
 
-    this.enterCallback();
+    if (message) {
+      // Add the new message to the history
+      this.sentMessages.push(message);
 
-    //console.log(`Sending message: "${message}"`);
-    if (message.startsWith("/")) {
-      message = message.substring(1);
-      globalEventBus.emit("ChatMessage", message);
-      //console.log(`Chat message emitted: "${message}"`);
+      // Ensure the history size doesn't exceed the maximum limit
+      if (this.sentMessages.length > this.MAX_HISTORY) {
+        this.sentMessages.shift(); // Remove the oldest message
+      }
+
+      console.log(this.sentMessages);
+
+      this.enterCallback();
+
+      if (message.startsWith("/")) {
+        message = message.substring(1);
+        globalEventBus.emit("ChatMessage", message);
+      }
+
+      this.clear();
+
+      // Reset the navigation index
+      this.currentMessageIndex = -1;
     }
-
-    this.clear();
   }
 
   private updateElement(): void {

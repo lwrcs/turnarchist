@@ -7,6 +7,7 @@ import { Random } from "../../random";
 import { Player } from "../../player";
 import { ChestLayer } from "./chestLayer";
 import { ImageParticle } from "../../particle/imageParticle";
+import { Sound } from "../../sound";
 
 export class Chest extends Entity {
   frame: number;
@@ -64,6 +65,7 @@ export class Chest extends Entity {
     this.tileY = 2;
 
     this.opening = true;
+    Sound.chest();
 
     if (this.drop === null) this.getDrop(["consumable", "gem", "coin"]);
     if (this.drop.name === "coin") {

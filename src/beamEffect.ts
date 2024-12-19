@@ -64,6 +64,8 @@ export class BeamEffect {
   private prevEndY: number;
   private active: boolean = true;
   private time: number = 0;
+  targetX: number;
+  targetY: number;
 
   constructor(x1: number, y1: number, x2: number, y2: number) {
     const startX = x1 * GameConstants.TILESIZE + 0.5 * GameConstants.TILESIZE;

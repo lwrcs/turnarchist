@@ -20,6 +20,8 @@ export class Crate extends Entity {
     this.hasShadow = false;
     this.pushable = true;
     this.name = "crate";
+    this.imageParticleX = 3;
+    this.imageParticleY = 26;
     if (Math.random() < 0.1) {
       this.drop = new WeaponFragments(this.room, this.x, this.y, 10);
     } else {
@@ -31,11 +33,6 @@ export class Crate extends Entity {
     return EntityType.PROP;
   }
 
-  kill = () => {
-    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 3, 26);
-    this.dropLoot();
-    this.dead = true;
-  };
   killNoBones = () => {
     this.kill();
   };

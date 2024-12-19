@@ -89,47 +89,6 @@ export class BigKnightEnemy extends Enemy {
     return 1;
   };
 
-  hurt = (
-    playerHitBy: Player,
-    damage: number,
-    type: "none" | "poison" | "blood" | "heal" = "none",
-  ) => {
-    if (playerHitBy) {
-      this.aggro = true;
-      this.targetPlayer = playerHitBy;
-      this.facePlayer(playerHitBy);
-      if (playerHitBy === this.game.players[this.game.localPlayerID])
-        this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
-    }
-    this.ticksSinceFirstHit = 0;
-    this.health -= damage;
-    this.createDamageNumber(damage, type);
-    this.healthBar.hurt();
-    if (this.health <= 0) {
-      this.kill();
-    } else {
-      GenericParticle.spawnCluster(
-        this.room,
-        this.x + 1,
-        this.y + 1,
-        this.deathParticleColor,
-      );
-    }
-  };
-
-  killNoBones = () => {
-    this.dead = true;
-    GenericParticle.spawnCluster(
-      this.room,
-      this.x + 1,
-      this.y + 1,
-      this.deathParticleColor,
-    );
-    this.room.particles.push(new DeathParticle(this.x + 0.5, this.y + 0.5));
-
-    this.dropLoot();
-  };
-
   behavior = () => {
     this.lastX = this.x;
     this.lastY = this.y;

@@ -22,6 +22,10 @@ export class Pot extends Entity {
     this.chainPushable = false;
     this.name = "pot";
 
+    this.hitSound = Sound.potSmash;
+    this.imageParticleX = 0;
+    this.imageParticleY = 29;
+
     let dropProb = Random.rand();
     if (dropProb < 0.025) this.drop = new Heart(this.room, this.x, this.y);
     else this.drop = new Coin(this.room, this.x, this.y);
@@ -31,12 +35,6 @@ export class Pot extends Entity {
     return EntityType.PROP;
   }
 
-  kill = () => {
-    this.dropLoot();
-    this.dead = true;
-    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 29);
-    Sound.delayPlay(Sound.potSmash, 250);
-  };
   killNoBones = () => {
     this.kill();
   };

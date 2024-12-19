@@ -46,28 +46,6 @@ export class ArmoredzombieEnemy extends Enemy {
     return 1;
   };
 
-  hurt = (playerHitBy: Player, damage: number) => {
-    if (playerHitBy) {
-      this.aggro = true;
-      this.targetPlayer = playerHitBy;
-      //this.facePlayer(playerHitBy); //
-      if (playerHitBy === this.game.players[this.game.localPlayerID])
-        this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
-    }
-    this.health -= damage;
-    this.healthBar.hurt();
-    if (this.health <= 0) {
-      this.kill();
-    } else {
-      GenericParticle.spawnCluster(
-        this.room,
-        this.x + 0.5,
-        this.y + 0.5,
-        this.deathParticleColor,
-      );
-    }
-  };
-
   behavior = () => {
     this.lastX = this.x;
     this.lastY = this.y;

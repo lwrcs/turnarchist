@@ -727,7 +727,6 @@ var __extends = (this && this.__extends) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ArmoredzombieEnemy = void 0;
 var game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-var genericParticle_1 = __webpack_require__(/*! ../../particle/genericParticle */ "./src/particle/genericParticle.ts");
 var astarclass_1 = __webpack_require__(/*! ../../astarclass */ "./src/astarclass.ts");
 var spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
@@ -737,23 +736,6 @@ var ArmoredzombieEnemy = /** @class */ (function (_super) {
         var _this = _super.call(this, room, game, x, y) || this;
         _this.hit = function () {
             return 1;
-        };
-        _this.hurt = function (playerHitBy, damage) {
-            if (playerHitBy) {
-                _this.aggro = true;
-                _this.targetPlayer = playerHitBy;
-                //this.facePlayer(playerHitBy); //
-                if (playerHitBy === _this.game.players[_this.game.localPlayerID])
-                    _this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
-            }
-            _this.health -= damage;
-            _this.healthBar.hurt();
-            if (_this.health <= 0) {
-                _this.kill();
-            }
-            else {
-                genericParticle_1.GenericParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, _this.deathParticleColor);
-            }
         };
         _this.behavior = function () {
             _this.lastX = _this.x;
@@ -987,12 +969,10 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BigKnightEnemy = void 0;
 var game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 var hitWarning_1 = __webpack_require__(/*! ../../hitWarning */ "./src/hitWarning.ts");
-var genericParticle_1 = __webpack_require__(/*! ../../particle/genericParticle */ "./src/particle/genericParticle.ts");
 var coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
 var redgem_1 = __webpack_require__(/*! ../../item/redgem */ "./src/item/redgem.ts");
 var spear_1 = __webpack_require__(/*! ../../weapon/spear */ "./src/weapon/spear.ts");
 var gameConstants_1 = __webpack_require__(/*! ../../gameConstants */ "./src/gameConstants.ts");
-var deathParticle_1 = __webpack_require__(/*! ../../particle/deathParticle */ "./src/particle/deathParticle.ts");
 var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 var random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
 var BigKnightEnemy = /** @class */ (function (_super) {
@@ -1012,32 +992,6 @@ var BigKnightEnemy = /** @class */ (function (_super) {
         };
         _this.hit = function () {
             return 1;
-        };
-        _this.hurt = function (playerHitBy, damage, type) {
-            if (type === void 0) { type = "none"; }
-            if (playerHitBy) {
-                _this.aggro = true;
-                _this.targetPlayer = playerHitBy;
-                _this.facePlayer(playerHitBy);
-                if (playerHitBy === _this.game.players[_this.game.localPlayerID])
-                    _this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
-            }
-            _this.ticksSinceFirstHit = 0;
-            _this.health -= damage;
-            _this.createDamageNumber(damage, type);
-            _this.healthBar.hurt();
-            if (_this.health <= 0) {
-                _this.kill();
-            }
-            else {
-                genericParticle_1.GenericParticle.spawnCluster(_this.room, _this.x + 1, _this.y + 1, _this.deathParticleColor);
-            }
-        };
-        _this.killNoBones = function () {
-            _this.dead = true;
-            genericParticle_1.GenericParticle.spawnCluster(_this.room, _this.x + 1, _this.y + 1, _this.deathParticleColor);
-            _this.room.particles.push(new deathParticle_1.DeathParticle(_this.x + 0.5, _this.y + 0.5));
-            _this.dropLoot();
         };
         _this.behavior = function () {
             _this.lastX = _this.x;
@@ -1268,12 +1222,10 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BigSkullEnemy = void 0;
 var game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 var hitWarning_1 = __webpack_require__(/*! ../../hitWarning */ "./src/hitWarning.ts");
-var genericParticle_1 = __webpack_require__(/*! ../../particle/genericParticle */ "./src/particle/genericParticle.ts");
 var coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
 var redgem_1 = __webpack_require__(/*! ../../item/redgem */ "./src/item/redgem.ts");
 var spear_1 = __webpack_require__(/*! ../../weapon/spear */ "./src/weapon/spear.ts");
 var gameConstants_1 = __webpack_require__(/*! ../../gameConstants */ "./src/gameConstants.ts");
-var deathParticle_1 = __webpack_require__(/*! ../../particle/deathParticle */ "./src/particle/deathParticle.ts");
 var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 var random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
 var BigSkullEnemy = /** @class */ (function (_super) {
@@ -1293,30 +1245,6 @@ var BigSkullEnemy = /** @class */ (function (_super) {
         };
         _this.hit = function () {
             return 1;
-        };
-        _this.hurt = function (playerHitBy, damage) {
-            if (playerHitBy) {
-                _this.aggro = true;
-                _this.targetPlayer = playerHitBy;
-                _this.facePlayer(playerHitBy);
-                if (playerHitBy === _this.game.players[_this.game.localPlayerID])
-                    _this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
-            }
-            _this.ticksSinceFirstHit = 0;
-            _this.health -= damage;
-            _this.healthBar.hurt();
-            if (_this.health <= 0) {
-                _this.kill();
-            }
-            else {
-                genericParticle_1.GenericParticle.spawnCluster(_this.room, _this.x + 1, _this.y + 1, _this.deathParticleColor);
-            }
-        };
-        _this.killNoBones = function () {
-            _this.dead = true;
-            genericParticle_1.GenericParticle.spawnCluster(_this.room, _this.x + 1, _this.y + 1, _this.deathParticleColor);
-            _this.room.particles.push(new deathParticle_1.DeathParticle(_this.x + 0.5, _this.y + 0.5));
-            _this.dropLoot();
         };
         _this.behavior = function () {
             _this.lastX = _this.x;
@@ -2288,7 +2216,6 @@ var game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 var astarclass_1 = __webpack_require__(/*! ../../astarclass */ "./src/astarclass.ts");
 var spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 var entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
-var imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ "./src/particle/imageParticle.ts");
 var eventBus_1 = __webpack_require__(/*! ../../eventBus */ "./src/eventBus.ts");
 var EnemyState;
 (function (EnemyState) {
@@ -2346,40 +2273,16 @@ var Enemy = /** @class */ (function (_super) {
         _this.hit = function () {
             return 1;
         };
-        _this.hurt = function (playerHitBy, damage, type) {
-            if (type === void 0) { type = "none"; }
+        _this.handleEnemyCase = function (playerHitBy) {
+            if (!playerHitBy)
+                return;
             if (playerHitBy) {
                 _this.aggro = true;
                 _this.targetPlayer = playerHitBy;
-                _this.facePlayer(playerHitBy);
+                //this.facePlayer(playerHitBy);
                 if (playerHitBy === _this.game.players[_this.game.localPlayerID])
                     _this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
             }
-            if (_this.shielded && _this.shieldHealth > 0) {
-                var shieldDiff = Math.max(0, damage - _this.shieldHealth);
-                _this.shieldHealth -= damage;
-                if (_this.shieldHealth === 0)
-                    _this.removeShield();
-                if (shieldDiff > 0) {
-                    _this.health -= shieldDiff;
-                    _this.healthBar.hurt();
-                }
-                _this.createDamageNumber(damage);
-                if (_this.health <= 0)
-                    _this.kill();
-                return;
-            }
-            _this.health -= damage;
-            _this.createDamageNumber(damage, type);
-            if (type === "none" || _this.health <= 0) {
-                imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, _this.imageParticleX, _this.imageParticleY);
-            }
-            _this.healthBar.hurt();
-            if (_this.health <= 0) {
-                _this.kill();
-            }
-            else
-                _this.hurtCallback();
         };
         _this.poison = function () {
             if (!_this.status.poison) {
@@ -2428,6 +2331,8 @@ var Enemy = /** @class */ (function (_super) {
             if (_this.x !== _this.lastX || _this.y !== _this.lastY) {
                 _this.emitEntityData();
             }
+            if (_this.shielded)
+                _this.shield.updateLightSourcePos();
         };
         _this.lookForPlayer = function (face) {
             if (face === void 0) { face = true; }
@@ -2699,7 +2604,6 @@ var Enemy = /** @class */ (function (_super) {
                 _this.frame += 0.1 * delta;
                 if (_this.frame >= 4)
                     _this.frame = 0;
-                _this.drawShield(delta);
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
                 game_1.Game.drawMob(_this.tileX + Math.floor(_this.frame), _this.tileY + _this.direction * 2, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY - _this.jumpY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
@@ -2807,7 +2711,6 @@ var EnergyWizardEnemy = /** @class */ (function (_super) {
                     _this.tileX = 7;
                 else
                     _this.tileX = 6;
-                _this.drawShield(delta);
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
                 if (_this.frame >= 0) {
@@ -3649,6 +3552,136 @@ exports.KnightEnemy = KnightEnemy;
 
 /***/ }),
 
+/***/ "./src/entity/enemy/occultistEnemy.ts":
+/*!********************************************!*\
+  !*** ./src/entity/enemy/occultistEnemy.ts ***!
+  \********************************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.OccultistEnemy = void 0;
+var game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+var enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
+var utils_1 = __webpack_require__(/*! ../../utils */ "./src/utils.ts");
+var beamEffect_1 = __webpack_require__(/*! ../../beamEffect */ "./src/beamEffect.ts");
+var OccultistEnemy = /** @class */ (function (_super) {
+    __extends(OccultistEnemy, _super);
+    function OccultistEnemy(room, game, x, y) {
+        var _this = _super.call(this, room, game, x, y) || this;
+        _this.hit = function () {
+            return 1;
+        };
+        _this.uniqueKillBehavior = function () {
+            _this.unshieldEnemies();
+        };
+        _this.behavior = function () {
+            _this.lastX = _this.x;
+            _this.lastY = _this.y;
+            var enemiesToShield = _this.room.entities.filter(function (entity) {
+                return entity instanceof enemy_1.Enemy &&
+                    utils_1.Utils.distance(_this.x, _this.y, entity.x, entity.y) <= _this.range &&
+                    !entity.shielded &&
+                    !entity.dead &&
+                    entity !== _this &&
+                    !entity.shieldedBefore;
+            });
+            if (!_this.dead) {
+                if (_this.skipNextTurns > 0) {
+                    _this.skipNextTurns--;
+                    return;
+                }
+                if (_this.ticks % 2 === 0) {
+                    if (enemiesToShield.length > 0) {
+                        _this.applyShieldTo(enemiesToShield[Math.floor(Math.random() * enemiesToShield.length)]);
+                        _this.createBeam(_this.shieldedEnemies);
+                    }
+                }
+            }
+        };
+        _this.unshieldEnemies = function () {
+            if (_this.shieldedEnemies.length > 0) {
+                _this.shieldedEnemies.forEach(function (enemy) {
+                    enemy.removeShield();
+                });
+                _this.shieldedEnemies = [];
+            }
+        };
+        _this.applyShieldTo = function (enemy) {
+            enemy.applyShield();
+        };
+        _this.createBeam = function (enemies) {
+            enemies.forEach(function (enemy) {
+                enemy.shield.beam = new beamEffect_1.BeamEffect(_this.x, _this.y, enemy.x, enemy.y);
+                _this.room.beamEffects.push(enemy.shield.beam);
+            });
+        };
+        _this.drawBeam = function (delta) {
+            _this.room.beamEffects.forEach(function (beam) {
+                beam.render(_this.x, _this.y, beam.targetX, beam.targetY, "cyan", 2, delta);
+            });
+        };
+        _this.updateBeam = function (delta) {
+            _this.shieldedEnemies.forEach(function (enemy) {
+                if (enemy.shield.beam) {
+                    enemy.shield.beam.targetX = enemy.x - enemy.drawX;
+                    enemy.shield.beam.targetY = enemy.y - enemy.drawY;
+                }
+            });
+        };
+        _this.draw = function (delta) {
+            _this.drawableY = _this.y;
+            if (!_this.dead) {
+                _this.updateDrawXY(delta);
+                if (_this.room.beamEffects.length > 0) {
+                    _this.updateBeam(delta);
+                    _this.drawBeam(delta);
+                }
+                _this.frame += 0.1 * delta;
+                if (_this.frame >= 4)
+                    _this.frame = 0;
+                if (_this.hasShadow)
+                    game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
+                game_1.Game.drawMob(_this.tileX + Math.floor(_this.frame), _this.tileY, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
+            }
+        };
+        _this.ticks = 0;
+        _this.health = 6;
+        _this.maxHealth = 6;
+        _this.tileX = 55;
+        _this.tileY = 8;
+        _this.seenPlayer = true;
+        _this.name = "occultist";
+        _this.range = 6;
+        _this.aggro = false;
+        _this.frame = 0;
+        _this.hasShadow = true;
+        _this.shieldedBefore = false;
+        _this.shieldedEnemies = [];
+        return _this;
+    }
+    return OccultistEnemy;
+}(enemy_1.Enemy));
+exports.OccultistEnemy = OccultistEnemy;
+
+
+/***/ }),
+
 /***/ "./src/entity/enemy/queenEnemy.ts":
 /*!****************************************!*\
   !*** ./src/entity/enemy/queenEnemy.ts ***!
@@ -3995,7 +4028,6 @@ var RookEnemy = /** @class */ (function (_super) {
                 _this.frame += 0.1 * delta;
                 if (_this.frame >= 4)
                     _this.frame = 0;
-                _this.drawShield(delta);
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
                 game_1.Game.drawMob(_this.tileX + Math.floor(_this.frame), _this.tileY, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY - _this.jumpY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
@@ -4273,7 +4305,6 @@ var SkullEnemy = /** @class */ (function (_super) {
                 _this.updateDrawXY(delta);
                 _this.tileX = 5;
                 _this.tileY = 8;
-                _this.drawShield(delta);
                 if (_this.health <= 1) {
                     _this.tileX = 3;
                     _this.tileY = 0;
@@ -4379,7 +4410,11 @@ var Spawner = /** @class */ (function (_super) {
         _this.hit = function () {
             return 1;
         };
+        _this.setSpawnFrequency = function () {
+            _this.spawnFrequency = Math.max(8, 4 * _this.room.currentSpawnerCount);
+        };
         _this.behavior = function () {
+            _this.setSpawnFrequency();
             var shouldSpawn = true;
             _this.lastX = _this.x;
             _this.lastY = _this.y;
@@ -4389,7 +4424,7 @@ var Spawner = /** @class */ (function (_super) {
                     return;
                 }
                 _this.tileX = 6;
-                if (_this.ticks % 4 === 0) {
+                if (_this.ticks % _this.spawnFrequency === 0) {
                     var positions = _this.room
                         .getEmptyTiles()
                         .filter(function (t) { return Math.abs(t.x - _this.x) <= 1 && Math.abs(t.y - _this.y) <= 1; });
@@ -4484,6 +4519,9 @@ var Spawner = /** @class */ (function (_super) {
                     _this.ticks++;
             }
         };
+        _this.uniqueKillBehavior = function () {
+            _this.room.currentSpawnerCount--;
+        };
         _this.draw = function (delta) {
             if (!_this.dead) {
                 _this.updateDrawXY(delta);
@@ -4507,6 +4545,8 @@ var Spawner = /** @class */ (function (_super) {
         _this.tileX = 6;
         _this.tileY = 4;
         _this.seenPlayer = true;
+        _this.spawnFrequency = 4;
+        _this.room.currentSpawnerCount++;
         _this.enemyTable = enemyTable.filter(function (t) { return t !== 7; });
         var randSpawnType = game_1.Game.randTable(_this.enemyTable, random_1.Random.rand);
         _this.enemySpawnType = randSpawnType;
@@ -4736,7 +4776,6 @@ var WizardEnemy = /** @class */ (function (_super) {
         _this.draw = function (delta) {
             if (!_this.dead) {
                 _this.updateDrawXY(delta);
-                _this.drawShield(delta);
                 if (_this.state === WizardState.attack)
                     _this.tileX = 7;
                 else
@@ -5012,7 +5051,6 @@ var ZombieEnemy = /** @class */ (function (_super) {
                 _this.frame += 0.1 * delta;
                 if (_this.frame >= 4)
                     _this.frame = 0;
-                _this.drawShield(delta);
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
                 game_1.Game.drawMob(_this.tileX + Math.floor(_this.frame), _this.tileY + _this.direction * 2, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY - _this.jumpY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
@@ -5101,6 +5139,9 @@ var door_1 = __webpack_require__(/*! ../tile/door */ "./src/tile/door.ts");
 var wall_1 = __webpack_require__(/*! ../tile/wall */ "./src/tile/wall.ts");
 var dropTable_1 = __webpack_require__(/*! ../item/dropTable */ "./src/item/dropTable.ts");
 var weapon_1 = __webpack_require__(/*! ../weapon/weapon */ "./src/weapon/weapon.ts");
+var enemyShield_1 = __webpack_require__(/*! ../projectile/enemyShield */ "./src/projectile/enemyShield.ts");
+var sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
+var imageParticle_1 = __webpack_require__(/*! ../particle/imageParticle */ "./src/particle/imageParticle.ts");
 var EntityDirection;
 (function (EntityDirection) {
     EntityDirection[EntityDirection["DOWN"] = 0] = "DOWN";
@@ -5118,7 +5159,6 @@ var EntityType;
 })(EntityType = exports.EntityType || (exports.EntityType = {}));
 var Entity = /** @class */ (function (_super) {
     __extends(Entity, _super);
-    //shield: ShieldParticle;
     function Entity(room, game, x, y) {
         var _this = _super.call(this) || this;
         _this.sleepingZFrame = 0;
@@ -5127,20 +5167,14 @@ var Entity = /** @class */ (function (_super) {
         _this.dropChance = 0.02;
         _this.applyShield = function (shieldHealth) {
             if (shieldHealth === void 0) { shieldHealth = 1; }
+            _this.shield = new enemyShield_1.EnemyShield(_this, _this.x, _this.y, shieldHealth);
             _this.shielded = true;
-            _this.shieldHealth = shieldHealth;
-            //this.shield = new ShieldProjectile(this.x, this.y);
-            //this.room.projectile.push(this.shield);
+            _this.shieldedBefore = true;
+            _this.health += shieldHealth;
+            _this.maxHealth += shieldHealth;
         };
         _this.removeShield = function () {
-            _this.shielded = false;
-            _this.shieldHealth = 0;
-            //this.room.projectiles.filter(projectile => projectile !== this.shield).
-        };
-        _this.drawShield = function (delta) {
-            if (_this.shielded) {
-                game_1.Game.drawFX(22, 9, 1, 1, _this.x, _this.y, 1, 1);
-            }
+            _this.shield.remove();
         };
         _this.getDrop = function (useCategory, force) {
             if (useCategory === void 0) { useCategory = []; }
@@ -5163,11 +5197,6 @@ var Entity = /** @class */ (function (_super) {
             return 0;
         };
         _this.hurtCallback = function () { };
-        /*
-        playerKilledBy = (enemy: Entity) => {
-          return enemy;
-        };
-      */
         _this.pointIn = function (x, y) {
             return (x >= _this.x && x < _this.x + _this.w && y >= _this.y && y < _this.y + _this.h);
         };
@@ -5217,31 +5246,41 @@ var Entity = /** @class */ (function (_super) {
             else
                 return closestPlayer;
         };
-        _this.hurt = function (playerHitBy, damage) {
-            console.log("ouchie");
-            if (_this.shielded && _this.shieldHealth > 0) {
-                var shieldDiff = Math.max(0, damage - _this.shieldHealth);
-                _this.shieldHealth -= damage;
-                if (_this.shieldHealth === 0)
-                    _this.removeShield();
-                if (shieldDiff > 0) {
-                    _this.health -= shieldDiff;
-                    _this.healthBar.hurt();
+        _this.hurt = function (playerHitBy, damage, type) {
+            if (type === void 0) { type = "none"; }
+            _this.handleEnemyCase(playerHitBy);
+            var hitShield = false;
+            var shieldHealth = 0;
+            if (_this.shielded) {
+                shieldHealth = _this.shield.health;
+                if (shieldHealth > 0) {
+                    _this.shield.hurt(damage);
+                    hitShield = true;
                 }
-                _this.createDamageNumber(damage);
-                if (_this.health <= 0)
-                    _this.kill();
-                return;
             }
-            _this.healthBar.hurt();
-            _this.createDamageNumber(damage);
             _this.health -= damage;
-            if (_this.health <= 0)
+            _this.maxHealth -= shieldHealth;
+            _this.createDamageNumber(damage, type);
+            _this.playHitSound();
+            _this.healthBar.hurt();
+            if (type === "none" || _this.health <= 0) {
+                _this.createHitParticles();
+            }
+            if (_this.health <= 0) {
                 _this.kill();
+            }
             else
                 _this.hurtCallback();
         };
         _this.interact = function (player) { };
+        _this.handleEnemyCase = function (playerHitBy) { };
+        _this.playHitSound = function () {
+            if (_this.hitSound)
+                sound_1.Sound.delayPlay(_this.hitSound, 250);
+        };
+        _this.createHitParticles = function () {
+            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, _this.imageParticleX, _this.imageParticleY);
+        };
         _this.dropLoot = function () {
             var coordX;
             var coordY;
@@ -5270,7 +5309,7 @@ var Entity = /** @class */ (function (_super) {
                 x = _this.lastX;
                 y = _this.lastY;
             }
-            if (_this.room.roomArray[x][y] instanceof floor_1.Floor) {
+            if (_this.room.roomArray[x][y] instanceof floor_1.Floor && _this.isEnemy) {
                 var b = new bones_1.Bones(_this.room, x, y);
                 b.skin = _this.room.roomArray[x][y].skin;
                 _this.room.roomArray[x][y] = b;
@@ -5278,7 +5317,9 @@ var Entity = /** @class */ (function (_super) {
             _this.emitEnemyKilled();
             _this.dead = true;
             _this.dropLoot();
+            _this.uniqueKillBehavior();
         };
+        _this.uniqueKillBehavior = function () { };
         _this.killNoBones = function () {
             _this.dead = true;
             _this.dropLoot();
@@ -5350,6 +5391,8 @@ var Entity = /** @class */ (function (_super) {
         };
         _this.tick = function () {
             _this.behavior();
+            if (_this.shielded)
+                _this.shield.updateLightSourcePos();
         };
         _this.emitEntityData = function () {
             eventBus_1.globalEventBus.emit("EntityData", {
@@ -5648,10 +5691,14 @@ var Entity = /** @class */ (function (_super) {
         _this.unconscious = false;
         _this.dropChance = 0.02;
         _this.isEnemy = false;
-        _this.shielded = true;
-        _this.shieldHealth = 1;
+        _this.shielded = false;
+        _this.shield = null;
+        _this.frame = 0;
+        _this.shieldedBefore = false;
+        _this._imageParticleTiles = { x: 0, y: 0 };
+        _this.hitSound = null;
+        _this.currentSpawnerCount = 0;
         return _this;
-        //this.shield = null;
     }
     Entity.add = function (room, game, x, y) {
         var rest = [];
@@ -5660,6 +5707,13 @@ var Entity = /** @class */ (function (_super) {
         }
         room.entities.push(new (this.bind.apply(this, __spreadArray([void 0, room, game, x, y], rest, false)))());
     };
+    Object.defineProperty(Entity.prototype, "imageParticleTiles", {
+        get: function () {
+            return this._imageParticleTiles;
+        },
+        enumerable: false,
+        configurable: true
+    });
     Object.defineProperty(Entity.prototype, "type", {
         get: function () {
             return EntityType.ENEMY;
@@ -5714,18 +5768,12 @@ exports.Barrel = void 0;
 var entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 var game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 var entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
-var imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ "./src/particle/imageParticle.ts");
 var weaponFragments_1 = __webpack_require__(/*! ../../item/weaponFragments */ "./src/item/weaponFragments.ts");
 var coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
 var Barrel = /** @class */ (function (_super) {
     __extends(Barrel, _super);
     function Barrel(room, game, x, y) {
         var _this = _super.call(this, room, game, x, y) || this;
-        _this.kill = function () {
-            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 3, 25);
-            _this.dropLoot();
-            _this.dead = true;
-        };
         _this.killNoBones = function () {
             _this.kill();
         };
@@ -5746,6 +5794,8 @@ var Barrel = /** @class */ (function (_super) {
         _this.hasShadow = false;
         _this.pushable = true;
         _this.name = "barrel";
+        _this.imageParticleX = 3;
+        _this.imageParticleY = 25;
         if (Math.random() < 0.1) {
             _this.drop = new weaponFragments_1.WeaponFragments(_this.room, _this.x, _this.y);
         }
@@ -5797,6 +5847,7 @@ var entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 var entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 var random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
 var imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ "./src/particle/imageParticle.ts");
+var sound_1 = __webpack_require__(/*! ../../sound */ "./src/sound.ts");
 var Chest = /** @class */ (function (_super) {
     __extends(Chest, _super);
     function Chest(room, game, x, y) {
@@ -5820,6 +5871,7 @@ var Chest = /** @class */ (function (_super) {
             _this.tileX = 0;
             _this.tileY = 2;
             _this.opening = true;
+            sound_1.Sound.chest();
             if (_this.drop === null)
                 _this.getDrop(["consumable", "gem", "coin"]);
             if (_this.drop.name === "coin") {
@@ -5924,18 +5976,12 @@ exports.Crate = void 0;
 var entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 var game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 var entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
-var imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ "./src/particle/imageParticle.ts");
 var weaponFragments_1 = __webpack_require__(/*! ../../item/weaponFragments */ "./src/item/weaponFragments.ts");
 var coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
 var Crate = /** @class */ (function (_super) {
     __extends(Crate, _super);
     function Crate(room, game, x, y) {
         var _this = _super.call(this, room, game, x, y) || this;
-        _this.kill = function () {
-            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 3, 26);
-            _this.dropLoot();
-            _this.dead = true;
-        };
         _this.killNoBones = function () {
             _this.kill();
         };
@@ -5957,6 +6003,8 @@ var Crate = /** @class */ (function (_super) {
         _this.hasShadow = false;
         _this.pushable = true;
         _this.name = "crate";
+        _this.imageParticleX = 3;
+        _this.imageParticleY = 26;
         if (Math.random() < 0.1) {
             _this.drop = new weaponFragments_1.WeaponFragments(_this.room, _this.x, _this.y, 10);
         }
@@ -6006,16 +6054,10 @@ exports.Mushrooms = void 0;
 var entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 var game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 var entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
-var imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ "./src/particle/imageParticle.ts");
 var Mushrooms = /** @class */ (function (_super) {
     __extends(Mushrooms, _super);
     function Mushrooms(room, game, x, y) {
         var _this = _super.call(this, room, game, x, y) || this;
-        _this.kill = function () {
-            _this.dead = true;
-            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 30);
-            //this.room.items.push(new Shrooms(this.room, this.x, this.y));
-        };
         _this.killNoBones = function () {
             _this.kill();
         };
@@ -6036,6 +6078,8 @@ var Mushrooms = /** @class */ (function (_super) {
         _this.hasShadow = false;
         _this.chainPushable = false;
         _this.name = "mushrooms";
+        _this.imageParticleX = 0;
+        _this.imageParticleY = 30;
         return _this;
     }
     Object.defineProperty(Mushrooms.prototype, "type", {
@@ -6080,7 +6124,6 @@ var entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 var game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 var heart_1 = __webpack_require__(/*! ../../item/heart */ "./src/item/heart.ts");
 var entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
-var imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ "./src/particle/imageParticle.ts");
 var random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
 var coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
 var sound_1 = __webpack_require__(/*! ../../sound */ "./src/sound.ts");
@@ -6088,12 +6131,6 @@ var Pot = /** @class */ (function (_super) {
     __extends(Pot, _super);
     function Pot(room, game, x, y) {
         var _this = _super.call(this, room, game, x, y) || this;
-        _this.kill = function () {
-            _this.dropLoot();
-            _this.dead = true;
-            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 29);
-            sound_1.Sound.delayPlay(sound_1.Sound.potSmash, 250);
-        };
         _this.killNoBones = function () {
             _this.kill();
         };
@@ -6114,6 +6151,9 @@ var Pot = /** @class */ (function (_super) {
         _this.hasShadow = false;
         _this.chainPushable = false;
         _this.name = "pot";
+        _this.hitSound = sound_1.Sound.potSmash;
+        _this.imageParticleX = 0;
+        _this.imageParticleY = 29;
         var dropProb = random_1.Random.rand();
         if (dropProb < 0.025)
             _this.drop = new heart_1.Heart(_this.room, _this.x, _this.y);
@@ -6166,23 +6206,15 @@ var coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
 var entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 var imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ "./src/particle/imageParticle.ts");
 var random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
-var sound_1 = __webpack_require__(/*! ../../sound */ "./src/sound.ts");
 var PottedPlant = /** @class */ (function (_super) {
     __extends(PottedPlant, _super);
     function PottedPlant(room, game, x, y, drop) {
         var _this = _super.call(this, room, game, x, y) || this;
-        _this.hurtCallback = function () {
-            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 28);
-        };
-        _this.kill = function () {
-            _this.dead = true;
-            _this.dropLoot();
-            sound_1.Sound.delayPlay(sound_1.Sound.potSmash, 250);
-            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 29);
-            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 28);
-        };
         _this.killNoBones = function () {
             _this.dead = true;
+        };
+        _this.uniqueKillBehavior = function () {
+            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 29);
         };
         _this.draw = function (delta) {
             // not inherited because it doesn't have the 0.5 offset
@@ -6209,6 +6241,8 @@ var PottedPlant = /** @class */ (function (_super) {
         _this.hasShadow = false;
         _this.chainPushable = false;
         _this.name = "plant";
+        _this.imageParticleX = 0;
+        _this.imageParticleY = 28;
         if (drop)
             _this.drop = drop;
         else {
@@ -16366,6 +16400,103 @@ exports.PostProcessor = PostProcessor;
 
 /***/ }),
 
+/***/ "./src/projectile/enemyShield.ts":
+/*!***************************************!*\
+  !*** ./src/projectile/enemyShield.ts ***!
+  \***************************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.EnemyShield = void 0;
+var projectile_1 = __webpack_require__(/*! ./projectile */ "./src/projectile/projectile.ts");
+var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+var lighting_1 = __webpack_require__(/*! ../lighting */ "./src/lighting.ts");
+var genericParticle_1 = __webpack_require__(/*! ../particle/genericParticle */ "./src/particle/genericParticle.ts");
+var EnemyShield = /** @class */ (function (_super) {
+    __extends(EnemyShield, _super);
+    function EnemyShield(parent, x, y, health) {
+        if (health === void 0) { health = 1; }
+        var _this = _super.call(this, parent, x, y) || this;
+        _this.remove = function () {
+            _this.parent.shielded = false;
+            _this.parent.removeLightSource(_this.lightSource);
+            _this.parent.room.projectiles = _this.parent.room.projectiles.filter(function (projectile) { return projectile !== _this; });
+            _this.lightSource = null;
+            _this.parent.shield = null;
+        };
+        _this.updateLightSourcePos = function () {
+            if (_this.lightSource === null)
+                return;
+            var index = _this.parent.room.lightSources.indexOf(_this.lightSource);
+            _this.parent.room.lightSources[index].x = _this.parent.x + 0.5;
+            _this.parent.room.lightSources[index].y = _this.parent.y + 0.5;
+            _this.parent.room.updateLighting();
+        };
+        _this.hurt = function (damage) {
+            var damageOverShield = Math.max(0, damage - _this.health);
+            _this.health -= damage;
+            genericParticle_1.GenericParticle.spawnCluster(_this.parent.room, _this.parent.x + 0.5, _this.parent.y + 0.5, "#fbf236");
+            if (_this.health <= 0) {
+                _this.remove();
+            }
+            return damageOverShield;
+        };
+        _this.tick = function () {
+            if (_this.parent.dead) {
+                _this.remove();
+            }
+            if (_this.dead)
+                _this.parent.room.beamEffects = _this.parent.room.beamEffects.filter(function (beam) { return beam !== _this.beam; });
+        };
+        _this.draw = function (delta) {
+            if (_this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = 1;
+            _this.frame += 0.1 * delta;
+            if (_this.frame >= 4)
+                _this.frame = 0;
+            _this.drawableY = _this.parent.drawableY - 0.05;
+            game_1.Game.ctx.globalCompositeOperation = "difference";
+            if (_this.parent.shielded) {
+                game_1.Game.drawFX(18 + Math.floor(_this.frame), 9, 1, 1, _this.parent.x - _this.parent.drawX, _this.parent.y - _this.parent.drawY, 1, 1);
+            }
+            game_1.Game.ctx.restore();
+        };
+        _this.parent = parent;
+        _this.frame = 0;
+        _this.health = health;
+        _this.parent.shielded = true;
+        _this.beam = null;
+        _this.lightSource = lighting_1.Lighting.newLightSource(_this.x + 0.5, _this.y + 0.5, [250, 0, 150], 0.5, 1);
+        _this.parent.addLightSource(_this.lightSource);
+        _this.parent.room.projectiles.push(_this);
+        _this.parent.room.updateLighting();
+        return _this;
+    }
+    return EnemyShield;
+}(projectile_1.Projectile));
+exports.EnemyShield = EnemyShield;
+
+
+/***/ }),
+
 /***/ "./src/projectile/enemySpawnAnimation.ts":
 /*!***********************************************!*\
   !*** ./src/projectile/enemySpawnAnimation.ts ***!
@@ -16981,6 +17112,7 @@ var rookEnemy_1 = __webpack_require__(/*! ./entity/enemy/rookEnemy */ "./src/ent
 var beamEffect_1 = __webpack_require__(/*! ./beamEffect */ "./src/beamEffect.ts");
 var environment_1 = __webpack_require__(/*! ./environment */ "./src/environment.ts");
 var pickaxe_1 = __webpack_require__(/*! ./weapon/pickaxe */ "./src/weapon/pickaxe.ts");
+var occultistEnemy_1 = __webpack_require__(/*! ./entity/enemy/occultistEnemy */ "./src/entity/enemy/occultistEnemy.ts");
 // #endregion
 // #region Enums & Interfaces
 /**
@@ -17003,6 +17135,7 @@ var EnemyType;
     EnemyType["bigknight"] = "bigknight";
     EnemyType["firewizard"] = "firewizard";
     EnemyType["spawner"] = "spawner";
+    EnemyType["occultist"] = "occultist";
     // Add other enemy types here
 })(EnemyType = exports.EnemyType || (exports.EnemyType = {}));
 /**
@@ -17024,6 +17157,7 @@ exports.EnemyTypeMap = (_a = {},
     _a[EnemyType.bigknight] = bigKnightEnemy_1.BigKnightEnemy,
     _a[EnemyType.firewizard] = fireWizard_1.FireWizardEnemy,
     _a[EnemyType.spawner] = spawner_1.Spawner,
+    _a[EnemyType.occultist] = occultistEnemy_1.OccultistEnemy,
     _a);
 var RoomType;
 (function (RoomType) {
@@ -17282,7 +17416,8 @@ var Room = /** @class */ (function () {
             var numCrates = game_1.Game.randTable([1, 2, 2, 3, 4], rand);
             for (var i = 0; i < numCrates; i++) {
                 var t = crateTiles.splice(game_1.Game.rand(0, crateTiles.length - 1, rand), 1)[0];
-                _this.entities.push(new crate_1.Crate(_this, _this.game, t.x, t.y));
+                if (t)
+                    _this.entities.push(new crate_1.Crate(_this, _this.game, t.x, t.y));
             }
             _this.addPlants(game_1.Game.randTable([0, 0, 0, 0, 0, 1, 1, 2, 2, 3, 4], rand), rand);
         };
@@ -17845,6 +17980,9 @@ var Room = /** @class */ (function () {
                 if (tile.isOpaque()) {
                     return { value: void 0 };
                 }
+                else if (Math.random() < 1 - tile.opacity) {
+                    return { value: void 0 };
+                }
                 // Handle i=0 separately to ensure correct intensity
                 var intensity = void 0;
                 if (i === 0) {
@@ -18233,6 +18371,7 @@ var Room = /** @class */ (function () {
         this.lightSources = Array();
         this.innerWalls = Array();
         this.level = level;
+        this.currentSpawnerCount = 0;
         // #region initialize arrays
         //initialize room array
         this.roomArray = [];
@@ -18550,12 +18689,18 @@ var Room = /** @class */ (function () {
                 break;
         }
         var spawnerAmounts = [
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 2, 2, 3,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 2, 2, 3, 4, 5, 3, 6,
         ];
         if (this.depth > 0) {
             var spawnerAmount = game_1.Game.randTable(spawnerAmounts, Math.random);
             console.log("Adding ".concat(spawnerAmount, " spawners"));
             this.addSpawners(spawnerAmount, Math.random);
+        }
+        var occultistAmounts = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 2, 5];
+        if (this.depth > 0) {
+            var occultistAmount = game_1.Game.randTable(occultistAmounts, Math.random);
+            console.log("Adding ".concat(occultistAmount, " occultists"));
+            this.addOccultists(occultistAmount, Math.random);
         }
     };
     Room.prototype.addSpawners = function (numSpawners, rand) {
@@ -18570,6 +18715,17 @@ var Room = /** @class */ (function () {
                 .getEnemyParameters()
                 .enemyTables[this.depth].filter(function (t) { return t !== 7; });
             spawner_1.Spawner.add(this, this.game, x, y, spawnTable);
+        }
+    };
+    Room.prototype.addOccultists = function (numOccultists, rand) {
+        var tiles = this.getEmptyTiles();
+        if (tiles === null) {
+            console.log("No tiles left to spawn spawners");
+            return;
+        }
+        for (var i = 0; i < numOccultists; i++) {
+            var _a = this.getRandomEmptyPosition(tiles), x = _a.x, y = _a.y;
+            occultistEnemy_1.OccultistEnemy.add(this, this.game, x, y);
         }
     };
     Room.prototype.addChests = function (numChests, rand) {
@@ -19289,6 +19445,8 @@ var TextBox = /** @class */ (function () {
         var _this = this;
         this.allowedCharacters = "all";
         this.message = "";
+        this.currentMessageIndex = -1;
+        this.MAX_HISTORY = 50;
         this.handleKeyPress = function (key) {
             var fontHas = "abcdefghijklmnopqrstuvwxyz1234567890,.!?:'()[]%-/ ".split("");
             if (key.length === 1) {
@@ -19344,6 +19502,29 @@ var TextBox = /** @class */ (function () {
                         _this.cursor = Math.min(_this.text.length, _this.cursor + 1);
                         _this.updateCursorPosition();
                         break;
+                    case "ArrowUp":
+                        if (_this.sentMessages.length > 0 &&
+                            _this.currentMessageIndex < _this.sentMessages.length - 1) {
+                            _this.currentMessageIndex++;
+                            _this.text =
+                                _this.sentMessages[_this.sentMessages.length - 1 - _this.currentMessageIndex];
+                            _this.updateElement();
+                            _this.message = _this.text;
+                        }
+                        break;
+                    case "ArrowDown":
+                        if (_this.currentMessageIndex > 0) {
+                            _this.currentMessageIndex--;
+                            _this.text =
+                                _this.sentMessages[_this.sentMessages.length - 1 - _this.currentMessageIndex];
+                            _this.updateElement();
+                            _this.message = _this.text;
+                        }
+                        else if (_this.currentMessageIndex === 0) {
+                            _this.currentMessageIndex = -1;
+                            _this.clear();
+                        }
+                        break;
                     case "Enter":
                         _this.sendMessage();
                         _this.escapeCallback();
@@ -19364,6 +19545,7 @@ var TextBox = /** @class */ (function () {
         this.enterCallback = function () { };
         this.escapeCallback = function () { };
         this.element = element;
+        this.sentMessages = [];
         this.element.addEventListener("touchstart", this.handleTouchStart);
     }
     TextBox.prototype.setEnterCallback = function (callback) {
@@ -19392,15 +19574,24 @@ var TextBox = /** @class */ (function () {
         });
     };
     TextBox.prototype.sendMessage = function () {
-        var message = this.message;
-        this.enterCallback();
-        //console.log(`Sending message: "${message}"`);
-        if (message.startsWith("/")) {
-            message = message.substring(1);
-            eventBus_1.globalEventBus.emit("ChatMessage", message);
-            //console.log(`Chat message emitted: "${message}"`);
+        var message = this.message.trim();
+        if (message) {
+            // Add the new message to the history
+            this.sentMessages.push(message);
+            // Ensure the history size doesn't exceed the maximum limit
+            if (this.sentMessages.length > this.MAX_HISTORY) {
+                this.sentMessages.shift(); // Remove the oldest message
+            }
+            console.log(this.sentMessages);
+            this.enterCallback();
+            if (message.startsWith("/")) {
+                message = message.substring(1);
+                eventBus_1.globalEventBus.emit("ChatMessage", message);
+            }
+            this.clear();
+            // Reset the navigation index
+            this.currentMessageIndex = -1;
         }
-        this.clear();
     };
     TextBox.prototype.updateElement = function () {
         this.element.textContent = this.text;
@@ -19496,13 +19687,12 @@ var Button = /** @class */ (function (_super) {
             _this.pressed = false;
             _this.linkedDoor.opened = false;
         };
-        /*onCollide = (player: Player) => {
-          this.press();
+        _this.onCollide = function (player) {
+            _this.press();
         };
-      
-        onCollideEnemy = (enemy: Enemy) => {
-          this.press();
-        };*/
+        _this.onCollideEnemy = function (enemy) {
+            _this.press();
+        };
         _this.tickEnd = function () {
             _this.unpress();
             for (var i in _this.room.game.players) {
@@ -20404,6 +20594,7 @@ var Tile = /** @class */ (function (_super) {
         _this.y = y;
         _this.drawableY = y;
         _this.isDoor = false;
+        _this.opacity = 1;
         return _this;
     }
     return Tile;
@@ -20558,7 +20749,7 @@ var Wall = /** @class */ (function (_super) {
         _this.isOpaque = function () {
             var wallInfo = _this.wallInfo();
             if (!wallInfo)
-                return true;
+                return false;
             return ((!wallInfo.isTopWall && !wallInfo.isInnerWall) ||
                 wallInfo.isLeftWall ||
                 wallInfo.isRightWall);
@@ -20597,6 +20788,7 @@ var Wall = /** @class */ (function (_super) {
         _this.isDoor = false;
         _this.tileXOffset = 6;
         _this.wallDirections = wallDirections || [];
+        _this.opacity = 1;
         return _this;
     }
     Object.defineProperty(Wall.prototype, "direction", {
@@ -20613,14 +20805,20 @@ var Wall = /** @class */ (function (_super) {
             if (directions.length == 1)
                 return directions[0];
             if (directions.includes(game_1.Direction.UP) &&
-                directions.includes(game_1.Direction.LEFT))
+                directions.includes(game_1.Direction.LEFT)) {
+                this.opacity = 0.5;
                 return game_1.Direction.UP_LEFT;
+            }
             if (directions.includes(game_1.Direction.UP) &&
-                directions.includes(game_1.Direction.RIGHT))
+                directions.includes(game_1.Direction.RIGHT)) {
+                this.opacity = 0.5;
                 return game_1.Direction.UP_RIGHT;
+            }
             if (directions.includes(game_1.Direction.DOWN) &&
-                directions.includes(game_1.Direction.LEFT))
+                directions.includes(game_1.Direction.LEFT)) {
+                this.opacity = 0.5;
                 return game_1.Direction.DOWN_LEFT;
+            }
             return game_1.Direction.DOWN_RIGHT;
         },
         enumerable: false,

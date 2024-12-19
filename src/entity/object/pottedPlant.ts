@@ -22,6 +22,8 @@ export class PottedPlant extends Entity {
     this.hasShadow = false;
     this.chainPushable = false;
     this.name = "plant";
+    this.imageParticleX = 0;
+    this.imageParticleY = 28;
     if (drop) this.drop = drop;
     else {
       let dropProb = Random.rand();
@@ -34,19 +36,12 @@ export class PottedPlant extends Entity {
     return EntityType.PROP;
   }
 
-  hurtCallback = () => {
-    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 28);
-  };
-
-  kill = () => {
-    this.dead = true;
-    this.dropLoot();
-    Sound.delayPlay(Sound.potSmash, 250);
-    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 29);
-    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 28);
-  };
   killNoBones = () => {
     this.dead = true;
+  };
+
+  uniqueKillBehavior = () => {
+    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 29);
   };
 
   draw = (delta: number) => {

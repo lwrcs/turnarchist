@@ -71,6 +71,7 @@ import { RookEnemy } from "./entity/enemy/rookEnemy";
 import { BeamEffect } from "./beamEffect";
 import { EnvType } from "./environment";
 import { Pickaxe } from "./weapon/pickaxe";
+import { OccultistEnemy } from "./entity/enemy/occultistEnemy";
 
 // #endregion
 
@@ -94,6 +95,7 @@ export enum EnemyType {
   bigknight = "bigknight",
   firewizard = "firewizard",
   spawner = "spawner",
+  occultist = "occultist",
   // Add other enemy types here
 }
 
@@ -116,6 +118,7 @@ export const EnemyTypeMap: { [key in EnemyType]: EnemyStatic } = {
   [EnemyType.bigknight]: BigKnightEnemy,
   [EnemyType.firewizard]: FireWizardEnemy,
   [EnemyType.spawner]: Spawner,
+  [EnemyType.occultist]: OccultistEnemy,
   // Add other enemy mappings here
 };
 
@@ -208,6 +211,8 @@ export class Room {
   particles: Array<Particle>;
   hitwarnings: Array<HitWarning>;
 
+  currentSpawnerCount: number;
+
   game: Game;
   roomX: number;
   roomY: number;
@@ -269,6 +274,8 @@ export class Room {
     this.lightSources = Array<LightSource>();
     this.innerWalls = Array<Wall>();
     this.level = level;
+
+    this.currentSpawnerCount = 0;
 
     // #region initialize arrays
 
@@ -692,12 +699,18 @@ export class Room {
       }
     }
     let spawnerAmounts = [
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 2, 2, 3,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 2, 2, 3, 4, 5, 3, 6,
     ];
     if (this.depth > 0) {
       let spawnerAmount = Game.randTable(spawnerAmounts, Math.random);
       console.log(`Adding ${spawnerAmount} spawners`);
       this.addSpawners(spawnerAmount, Math.random);
+    }
+    let occultistAmounts = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 2, 5];
+    if (this.depth > 0) {
+      let occultistAmount = Game.randTable(occultistAmounts, Math.random);
+      console.log(`Adding ${occultistAmount} occultists`);
+      this.addOccultists(occultistAmount, Math.random);
     }
   }
 
@@ -715,7 +728,17 @@ export class Room {
       Spawner.add(this, this.game, x, y, spawnTable);
     }
   }
-
+  private addOccultists(numOccultists: number, rand: () => number) {
+    let tiles = this.getEmptyTiles();
+    if (tiles === null) {
+      console.log(`No tiles left to spawn spawners`);
+      return;
+    }
+    for (let i = 0; i < numOccultists; i++) {
+      const { x, y } = this.getRandomEmptyPosition(tiles);
+      OccultistEnemy.add(this, this.game, x, y);
+    }
+  }
   //used for spawn commands, implement elsewhere later
   /**
    * Adds a new enemy to the room based on the provided enemy type string.
@@ -1055,8 +1078,7 @@ export class Room {
         Game.rand(0, crateTiles.length - 1, rand),
         1,
       )[0];
-
-      this.entities.push(new Crate(this, this.game, t.x, t.y));
+      if (t) this.entities.push(new Crate(this, this.game, t.x, t.y));
     }
     this.addPlants(
       Game.randTable([0, 0, 0, 0, 0, 1, 1, 2, 2, 3, 4], rand),
@@ -1781,6 +1803,8 @@ export class Room {
       const tile = this.roomArray[currentX][currentY];
       if (tile.isOpaque()) {
         return; // Stop processing through opaque tiles
+      } else if (Math.random() < 1 - tile.opacity) {
+        return;
       }
 
       // Handle i=0 separately to ensure correct intensity

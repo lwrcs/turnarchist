@@ -19,6 +19,7 @@ export class Wall extends Tile {
     this.isDoor = false;
     this.tileXOffset = 6;
     this.wallDirections = wallDirections || [];
+    this.opacity = 1;
   }
 
   isSolid = (): boolean => {
@@ -29,7 +30,7 @@ export class Wall extends Tile {
   };
   isOpaque = (): boolean => {
     const wallInfo = this.wallInfo();
-    if (!wallInfo) return true;
+    if (!wallInfo) return false;
     return (
       (!wallInfo.isTopWall && !wallInfo.isInnerWall) ||
       wallInfo.isLeftWall ||
@@ -51,18 +52,24 @@ export class Wall extends Tile {
     if (
       directions.includes(Direction.UP) &&
       directions.includes(Direction.LEFT)
-    )
+    ) {
+      this.opacity = 0.5;
       return Direction.UP_LEFT;
+    }
     if (
       directions.includes(Direction.UP) &&
       directions.includes(Direction.RIGHT)
-    )
+    ) {
+      this.opacity = 0.5;
       return Direction.UP_RIGHT;
+    }
     if (
       directions.includes(Direction.DOWN) &&
       directions.includes(Direction.LEFT)
-    )
+    ) {
+      this.opacity = 0.5;
       return Direction.DOWN_LEFT;
+    }
     return Direction.DOWN_RIGHT;
   }
 

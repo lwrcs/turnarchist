@@ -17,9 +17,14 @@ import { DamageNumber } from "../particle/damageNumber";
 import { DownLadder } from "../tile/downLadder";
 import { Door } from "../tile/door";
 import { Wall } from "../tile/wall";
+import { Lighting } from "../lighting";
 
 import { DropTable } from "../item/dropTable";
 import { Weapon } from "../weapon/weapon";
+import { EnemyShield } from "../projectile/enemyShield";
+import { Sound } from "../sound";
+import { ImageParticle } from "../particle/imageParticle";
+import { Enemy } from "./enemy/enemy";
 
 export enum EntityDirection {
   DOWN,
@@ -94,8 +99,13 @@ export class Entity extends Drawable {
   dropChance: number = 0.02;
   isEnemy: boolean;
   shielded: boolean;
-  shieldHealth: number;
-  //shield: ShieldParticle;
+  //shieldHealth: number;
+  frame: number;
+  shield: EnemyShield;
+  shieldedBefore: boolean;
+  currentSpawnerCount: number;
+  private _imageParticleTiles: { x: number; y: number };
+  hitSound: () => void;
 
   constructor(room: Room, game: Game, x: number, y: number) {
     super();
@@ -142,9 +152,13 @@ export class Entity extends Drawable {
     this.unconscious = false;
     this.dropChance = 0.02;
     this.isEnemy = false;
-    this.shielded = true;
-    this.shieldHealth = 1;
-    //this.shield = null;
+    this.shielded = false;
+    this.shield = null;
+    this.frame = 0;
+    this.shieldedBefore = false;
+    this._imageParticleTiles = { x: 0, y: 0 };
+    this.hitSound = null;
+    this.currentSpawnerCount = 0;
   }
 
   static add<
@@ -159,23 +173,20 @@ export class Entity extends Drawable {
     room.entities.push(new this(room, game, x, y, ...rest));
   }
 
+  get imageParticleTiles() {
+    return this._imageParticleTiles;
+  }
+
   applyShield = (shieldHealth: number = 1) => {
+    this.shield = new EnemyShield(this, this.x, this.y, shieldHealth);
     this.shielded = true;
-    this.shieldHealth = shieldHealth;
-    //this.shield = new ShieldProjectile(this.x, this.y);
-    //this.room.projectile.push(this.shield);
+    this.shieldedBefore = true;
+    this.health += shieldHealth;
+    this.maxHealth += shieldHealth;
   };
 
   removeShield = () => {
-    this.shielded = false;
-    this.shieldHealth = 0;
-    //this.room.projectiles.filter(projectile => projectile !== this.shield).
-  };
-
-  drawShield = (delta: number) => {
-    if (this.shielded) {
-      Game.drawFX(22, 9, 1, 1, this.x, this.y, 1, 1);
-    }
+    this.shield.remove();
   };
 
   getDrop = (useCategory: string[] = [], force: boolean = false) => {
@@ -210,11 +221,7 @@ export class Entity extends Drawable {
   get type() {
     return EntityType.ENEMY;
   }
-  /*
-  playerKilledBy = (enemy: Entity) => {
-    return enemy;
-  };
-*/
+
   pointIn = (x: number, y: number): boolean => {
     return (
       x >= this.x && x < this.x + this.w && y >= this.y && y < this.y + this.h
@@ -274,28 +281,56 @@ export class Entity extends Drawable {
     else return closestPlayer;
   };
 
-  readonly hurt = (playerHitBy: Player, damage: number) => {
-    console.log("ouchie");
-    if (this.shielded && this.shieldHealth > 0) {
-      let shieldDiff = Math.max(0, damage - this.shieldHealth);
-      this.shieldHealth -= damage;
-      if (this.shieldHealth === 0) this.removeShield();
-      if (shieldDiff > 0) {
-        this.health -= shieldDiff;
-        this.healthBar.hurt();
+  hurt = (
+    playerHitBy: Player,
+    damage: number,
+    type: "none" | "poison" | "blood" | "heal" = "none",
+  ) => {
+    this.handleEnemyCase(playerHitBy);
+
+    let hitShield = false;
+    let shieldHealth = 0;
+    if (this.shielded) {
+      shieldHealth = this.shield.health;
+      if (shieldHealth > 0) {
+        this.shield.hurt(damage);
+        hitShield = true;
       }
-      this.createDamageNumber(damage);
-      if (this.health <= 0) this.kill();
-      return;
     }
-    this.healthBar.hurt();
-    this.createDamageNumber(damage);
+
     this.health -= damage;
-    if (this.health <= 0) this.kill();
-    else this.hurtCallback();
+    this.maxHealth -= shieldHealth;
+    this.createDamageNumber(damage, type);
+    this.playHitSound();
+
+    this.healthBar.hurt();
+
+    if (type === "none" || this.health <= 0) {
+      this.createHitParticles();
+    }
+
+    if (this.health <= 0) {
+      this.kill();
+    } else this.hurtCallback();
   };
 
   interact = (player: Player) => {};
+
+  handleEnemyCase = (playerHitBy?: Player) => {};
+
+  playHitSound = () => {
+    if (this.hitSound) Sound.delayPlay(this.hitSound, 250);
+  };
+
+  createHitParticles = () => {
+    ImageParticle.spawnCluster(
+      this.room,
+      this.x + 0.5,
+      this.y + 0.5,
+      this.imageParticleX,
+      this.imageParticleY,
+    );
+  };
 
   protected dropLoot = () => {
     let coordX: number;
@@ -325,7 +360,7 @@ export class Entity extends Drawable {
       x = this.lastX;
       y = this.lastY;
     }
-    if (this.room.roomArray[x][y] instanceof Floor) {
+    if (this.room.roomArray[x][y] instanceof Floor && this.isEnemy) {
       let b = new Bones(this.room, x, y);
       b.skin = this.room.roomArray[x][y].skin;
       this.room.roomArray[x][y] = b;
@@ -334,7 +369,10 @@ export class Entity extends Drawable {
 
     this.dead = true;
     this.dropLoot();
+    this.uniqueKillBehavior();
   };
+
+  uniqueKillBehavior = () => {};
 
   killNoBones = () => {
     this.dead = true;
@@ -441,6 +479,7 @@ export class Entity extends Drawable {
 
   tick = () => {
     this.behavior();
+    if (this.shielded) this.shield.updateLightSourcePos();
   };
 
   emitEntityData = (): void => {

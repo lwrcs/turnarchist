@@ -16,6 +16,8 @@ export class Barrel extends Entity {
     this.hasShadow = false;
     this.pushable = true;
     this.name = "barrel";
+    this.imageParticleX = 3;
+    this.imageParticleY = 25;
     if (Math.random() < 0.1) {
       this.drop = new WeaponFragments(this.room, this.x, this.y);
     } else {
@@ -27,12 +29,6 @@ export class Barrel extends Entity {
     return EntityType.PROP;
   }
 
-  kill = () => {
-    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 3, 25);
-    this.dropLoot();
-
-    this.dead = true;
-  };
   killNoBones = () => {
     this.kill();
   };

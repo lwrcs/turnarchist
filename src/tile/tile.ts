@@ -19,6 +19,7 @@ export abstract class Tile extends Drawable {
   room: Room;
   skin: SkinType;
   isDoor: boolean;
+  opacity: number;
 
   constructor(room: Room, x: number, y: number) {
     super();
@@ -28,6 +29,7 @@ export abstract class Tile extends Drawable {
     this.y = y;
     this.drawableY = y;
     this.isDoor = false;
+    this.opacity = 1;
   }
 
   hasPlayer = (player: Player) => {

@@ -106,47 +106,15 @@ export abstract class Enemy extends Entity {
     return 1;
   };
 
-  hurt = (
-    playerHitBy: Player,
-    damage: number,
-    type: "none" | "poison" | "blood" | "heal" = "none",
-  ) => {
+  handleEnemyCase = (playerHitBy?: Player) => {
+    if (!playerHitBy) return;
     if (playerHitBy) {
       this.aggro = true;
       this.targetPlayer = playerHitBy;
-      this.facePlayer(playerHitBy);
+      //this.facePlayer(playerHitBy);
       if (playerHitBy === this.game.players[this.game.localPlayerID])
         this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
     }
-
-    if (this.shielded && this.shieldHealth > 0) {
-      let shieldDiff = Math.max(0, damage - this.shieldHealth);
-      this.shieldHealth -= damage;
-      if (this.shieldHealth === 0) this.removeShield();
-      if (shieldDiff > 0) {
-        this.health -= shieldDiff;
-        this.healthBar.hurt();
-      }
-      this.createDamageNumber(damage);
-      if (this.health <= 0) this.kill();
-      return;
-    }
-
-    this.health -= damage;
-    this.createDamageNumber(damage, type);
-    if (type === "none" || this.health <= 0) {
-      ImageParticle.spawnCluster(
-        this.room,
-        this.x + 0.5,
-        this.y + 0.5,
-        this.imageParticleX,
-        this.imageParticleY,
-      );
-    }
-    this.healthBar.hurt();
-    if (this.health <= 0) {
-      this.kill();
-    } else this.hurtCallback();
   };
 
   poison = () => {
@@ -202,6 +170,7 @@ export abstract class Enemy extends Entity {
     if (this.x !== this.lastX || this.y !== this.lastY) {
       this.emitEntityData();
     }
+    if (this.shielded) this.shield.updateLightSourcePos();
   };
 
   lookForPlayer = (face: boolean = true) => {
@@ -513,7 +482,6 @@ export abstract class Enemy extends Entity {
       this.updateDrawXY(delta);
       this.frame += 0.1 * delta;
       if (this.frame >= 4) this.frame = 0;
-      this.drawShield(delta);
       if (this.hasShadow)
         Game.drawMob(
           0,
