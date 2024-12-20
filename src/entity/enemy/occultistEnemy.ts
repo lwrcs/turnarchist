@@ -60,60 +60,73 @@ export class OccultistEnemy extends Enemy {
       }
       if (this.ticks % 2 === 0) {
         if (enemiesToShield.length > 0) {
-          this.applyShieldTo(
-            enemiesToShield[
-              Math.floor(Math.random() * enemiesToShield.length)
-            ] as Enemy,
-          );
+          enemiesToShield.forEach((enemy) => {
+            this.applyShieldTo(enemy as Enemy);
+          });
           this.createBeam(this.shieldedEnemies);
         }
       }
+      this.shieldedEnemies.forEach((enemy) => {
+        if (enemy.dead) {
+          this.shieldedEnemies = this.shieldedEnemies.filter(
+            (e) => e !== enemy,
+          );
+        }
+      });
     }
   };
 
   unshieldEnemies = () => {
     if (this.shieldedEnemies.length > 0) {
-      this.shieldedEnemies.forEach((enemy) => {
+      for (let enemy of this.shieldedEnemies) {
         enemy.removeShield();
-      });
+      }
       this.shieldedEnemies = [];
     }
   };
 
   applyShieldTo = (enemy: Enemy) => {
     enemy.applyShield();
+    this.shieldedEnemies.push(enemy);
   };
 
   private createBeam = (enemies: Enemy[]) => {
-    enemies.forEach((enemy) => {
-      enemy.shield.beam = new BeamEffect(this.x, this.y, enemy.x, enemy.y);
-      this.room.beamEffects.push(enemy.shield.beam);
-    });
-  };
-
-  private drawBeam = (delta: number) => {
-    this.room.beamEffects.forEach((beam) => {
-      beam.render(this.x, this.y, beam.targetX, beam.targetY, "cyan", 2, delta);
-    });
+    for (let enemy of enemies) {
+      if (enemy.shielded && enemy.shield) {
+        let beam = new BeamEffect(enemy.x, enemy.y, this.x, this.y, enemy);
+        beam.compositeOperation = "source-over";
+        beam.color = "purple";
+        beam.turbulence = 0.5;
+        beam.gravity = 0.1;
+        beam.iterations = 1;
+        beam.segments = 30;
+        beam.angleChange = 0.01;
+        beam.springDamping = 0.1;
+        this.room.projectiles.push(beam);
+        console.log("beam created");
+      }
+    }
   };
 
   updateBeam = (delta: number) => {
-    this.shieldedEnemies.forEach((enemy) => {
-      if (enemy.shield.beam) {
-        enemy.shield.beam.targetX = enemy.x - enemy.drawX;
-        enemy.shield.beam.targetY = enemy.y - enemy.drawY;
+    for (let beam of this.room.projectiles) {
+      if (beam instanceof BeamEffect) {
+        beam.setTarget(
+          this.x - this.drawX,
+          this.y - this.drawY,
+          beam.parent.x - beam.parent.drawX,
+          beam.parent.y - beam.parent.drawY,
+        );
       }
-    });
+    }
   };
 
   draw = (delta: number) => {
     this.drawableY = this.y;
     if (!this.dead) {
       this.updateDrawXY(delta);
-      if (this.room.beamEffects.length > 0) {
-        this.updateBeam(delta);
-        this.drawBeam(delta);
-      }
+      this.updateBeam(delta);
+
       this.frame += 0.1 * delta;
       if (this.frame >= 4) this.frame = 0;
 

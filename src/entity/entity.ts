@@ -103,7 +103,6 @@ export class Entity extends Drawable {
   frame: number;
   shield: EnemyShield;
   shieldedBefore: boolean;
-  currentSpawnerCount: number;
   private _imageParticleTiles: { x: number; y: number };
   hitSound: () => void;
 
@@ -158,7 +157,6 @@ export class Entity extends Drawable {
     this.shieldedBefore = false;
     this._imageParticleTiles = { x: 0, y: 0 };
     this.hitSound = null;
-    this.currentSpawnerCount = 0;
   }
 
   static add<
@@ -178,11 +176,13 @@ export class Entity extends Drawable {
   }
 
   applyShield = (shieldHealth: number = 1) => {
-    this.shield = new EnemyShield(this, this.x, this.y, shieldHealth);
-    this.shielded = true;
-    this.shieldedBefore = true;
-    this.health += shieldHealth;
-    this.maxHealth += shieldHealth;
+    if (!this.shieldedBefore) {
+      this.shield = new EnemyShield(this, this.x, this.y, shieldHealth);
+      this.shielded = true;
+      this.shieldedBefore = true;
+      this.health += shieldHealth;
+      this.maxHealth += shieldHealth;
+    }
   };
 
   removeShield = () => {

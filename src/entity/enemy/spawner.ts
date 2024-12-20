@@ -106,7 +106,7 @@ export class Spawner extends Enemy {
   };
 
   setSpawnFrequency = () => {
-    this.spawnFrequency = Math.max(8, 4 * this.room.currentSpawnerCount);
+    this.spawnFrequency = Math.min(12, 4 * this.room.currentSpawnerCount);
   };
 
   behavior = () => {

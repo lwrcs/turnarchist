@@ -454,39 +454,118 @@ var astar;
 /*!***************************!*\
   !*** ./src/beamEffect.ts ***!
   \***************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BeamEffect = void 0;
 var game_1 = __webpack_require__(/*! ./game */ "./src/game.ts");
 var gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/gameConstants.ts");
-var BeamEffect = /** @class */ (function () {
-    function BeamEffect(x1, y1, x2, y2) {
-        this.active = true;
-        this.time = 0;
+var projectile_1 = __webpack_require__(/*! ./projectile/projectile */ "./src/projectile/projectile.ts");
+var BeamEffect = /** @class */ (function (_super) {
+    __extends(BeamEffect, _super);
+    function BeamEffect(x1, y1, x2, y2, parent) {
+        var _this = _super.call(this, parent, x1, y1) || this;
+        _this.active = true;
+        _this.time = 0;
+        _this.gravity = BeamEffect.GRAVITY;
+        _this.motionInfluence = BeamEffect.MOTION_INFLUENCE;
+        _this.turbulence = BeamEffect.TURBULENCE;
+        _this.velocityDecay = BeamEffect.VELOCITY_DECAY;
+        _this.angleChange = BeamEffect.ANGLE_CHANGE;
+        _this.maxVelocity = BeamEffect.MAX_VELOCITY;
+        _this.damping = BeamEffect.DAMPING;
+        _this.springStiffness = BeamEffect.SPRING_STIFFNESS;
+        _this.springDamping = BeamEffect.SPRING_DAMPING;
+        _this.iterations = BeamEffect.ITERATIONS;
+        _this.segments = BeamEffect.SEGMENTS;
+        _this.tick = function () {
+            if (_this.parent.dead) {
+                _this.destroy();
+            }
+        };
+        _this.draw = function (delta) {
+            _this.render(_this.targetX, _this.targetY, _this.x, _this.y, _this.color, 2, delta, _this.compositeOperation);
+        };
         var startX = x1 * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
         var startY = y1 * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
         var endX = x2 * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
         var endY = y2 * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
-        this.points = this.initializePoints(startX, startY, endX, endY);
-        this.prevStartX = startX;
-        this.prevStartY = startY;
-        this.prevEndX = endX;
-        this.prevEndY = endY;
+        _this.x = x1;
+        _this.y = y1;
+        _this.targetX = x2;
+        _this.targetY = y2;
+        _this.points = _this.initializePoints(startX, startY, endX, endY);
+        _this.prevStartX = startX;
+        _this.prevStartY = startY;
+        _this.prevEndX = endX;
+        _this.prevEndY = endY;
+        _this.color = "cyan";
+        _this.compositeOperation = "source-over";
+        return _this;
     }
-    BeamEffect.prototype.render = function (x1, y1, x2, y2, color, lineWidth, delta) {
-        if (color === void 0) { color = "cyan"; }
+    /**
+     * Sets the physics properties for the beam effect.
+     *
+     * @param {number} [gravity] - The gravitational force applied to the beam. Default: 2
+     * @param {number} [motionInfluence] - The influence of motion on the beam. Default: 1
+     * @param {number} [turbulence] - The turbulence applied to the beam. Default: 0.5
+     * @param {number} [velocityDecay] - The rate at which velocity decays. Default: 0.1
+     * @param {number} [angleChange] - The change in angle of the beam. Default: 0.01
+     * @param {number} [maxVelocity] - The maximum velocity of the beam.
+     * @param {number} [damping] - The damping factor for the beam's motion.
+     * @param {number} [springStiffness] - The stiffness of the spring effect.
+     * @param {number} [springDamping] - The damping of the spring effect.
+     * @param {number} [iterations] - The number of iterations for the physics simulation.
+     * @param {number} [segments] - The number of segments for the beam.
+     */
+    BeamEffect.prototype.setPhysics = function (gravity, motionInfluence, turbulence, velocityDecay, angleChange, maxVelocity, damping, springStiffness, springDamping, iterations, segments) {
+        this.gravity = gravity !== null && gravity !== void 0 ? gravity : BeamEffect.GRAVITY;
+        this.motionInfluence = motionInfluence !== null && motionInfluence !== void 0 ? motionInfluence : BeamEffect.MOTION_INFLUENCE;
+        this.turbulence = turbulence !== null && turbulence !== void 0 ? turbulence : BeamEffect.TURBULENCE;
+        this.velocityDecay = velocityDecay !== null && velocityDecay !== void 0 ? velocityDecay : BeamEffect.VELOCITY_DECAY;
+        this.angleChange = angleChange !== null && angleChange !== void 0 ? angleChange : BeamEffect.ANGLE_CHANGE;
+        this.maxVelocity = maxVelocity !== null && maxVelocity !== void 0 ? maxVelocity : BeamEffect.MAX_VELOCITY;
+        this.damping = damping !== null && damping !== void 0 ? damping : BeamEffect.DAMPING;
+        this.springStiffness = springStiffness !== null && springStiffness !== void 0 ? springStiffness : BeamEffect.SPRING_STIFFNESS;
+        this.springDamping = springDamping !== null && springDamping !== void 0 ? springDamping : BeamEffect.SPRING_DAMPING;
+        this.iterations = iterations !== null && iterations !== void 0 ? iterations : BeamEffect.ITERATIONS;
+        this.segments = segments !== null && segments !== void 0 ? segments : BeamEffect.SEGMENTS;
+    };
+    BeamEffect.prototype.setTarget = function (x, y, x2, y2) {
+        this.x = x;
+        this.y = y;
+        this.targetX = x2;
+        this.targetY = y2;
+    };
+    BeamEffect.prototype.render = function (x1, y1, x2, y2, color, lineWidth, delta, compositeOperation) {
+        if (color === void 0) { color = this.color; }
         if (lineWidth === void 0) { lineWidth = 2; }
         if (delta === void 0) { delta = 1 / 60; }
-        var startX = x1 * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
-        var startY = y1 * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
-        var endX = x2 * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
-        var endY = y2 * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
-        var startForceX = (startX - this.prevStartX) * BeamEffect.MOTION_INFLUENCE * delta;
-        var startForceY = (startY - this.prevStartY) * BeamEffect.MOTION_INFLUENCE * delta;
-        var endForceX = (endX - this.prevEndX) * BeamEffect.MOTION_INFLUENCE * delta;
-        var endForceY = (endY - this.prevEndY) * BeamEffect.MOTION_INFLUENCE * delta;
+        if (compositeOperation === void 0) { compositeOperation = this.compositeOperation; }
+        var startX = this.x * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
+        var startY = this.y * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
+        var endX = this.targetX * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
+        var endY = this.targetY * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
+        var startForceX = (startX - this.prevStartX) * this.motionInfluence * delta;
+        var startForceY = (startY - this.prevStartY) * this.motionInfluence * delta;
+        var endForceX = (endX - this.prevEndX) * this.motionInfluence * delta;
+        var endForceY = (endY - this.prevEndY) * this.motionInfluence * delta;
         for (var i = 1; i < 4; i++) {
             var influence = 1 - i / 4;
             this.points[i].x += startForceX * influence;
@@ -500,6 +579,8 @@ var BeamEffect = /** @class */ (function () {
         this.simulateRope(startX, startY, endX, endY, delta);
         var ctx = game_1.Game.ctx;
         ctx.save();
+        game_1.Game.ctx.globalCompositeOperation =
+            compositeOperation;
         for (var i = 0; i < this.points.length - 1; i++) {
             var p1 = this.points[i];
             var p2 = this.points[i + 1];
@@ -529,8 +610,8 @@ var BeamEffect = /** @class */ (function () {
     };
     BeamEffect.prototype.initializePoints = function (startX, startY, endX, endY) {
         var points = [];
-        for (var i = 0; i < BeamEffect.SEGMENTS; i++) {
-            var t = i / (BeamEffect.SEGMENTS - 1);
+        for (var i = 0; i < this.segments; i++) {
+            var t = i / (this.segments - 1);
             points.push({
                 x: startX + (endX - startX) * t,
                 y: startY + (endY - startY) * t,
@@ -544,48 +625,47 @@ var BeamEffect = /** @class */ (function () {
         return points;
     };
     BeamEffect.prototype.applyTurbulence = function (point, index) {
-        point.angle +=
-            Math.sin(this.time * 0.1 + index * 0.5) * BeamEffect.ANGLE_CHANGE;
-        var turbulenceX = Math.cos(point.angle) * BeamEffect.TURBULENCE;
-        var turbulenceY = Math.sin(point.angle) * BeamEffect.TURBULENCE;
+        point.angle += Math.sin(this.time * 0.1 + index * 0.5) * this.angleChange;
+        var turbulenceX = Math.cos(point.angle) * this.turbulence;
+        var turbulenceY = Math.sin(point.angle) * this.turbulence;
         point.velocityX += turbulenceX;
         point.velocityY += turbulenceY;
-        point.velocityX = Math.min(Math.max(point.velocityX, -BeamEffect.MAX_VELOCITY), BeamEffect.MAX_VELOCITY);
-        point.velocityY = Math.min(Math.max(point.velocityY, -BeamEffect.MAX_VELOCITY), BeamEffect.MAX_VELOCITY);
+        point.velocityX = Math.min(Math.max(point.velocityX, -this.maxVelocity), this.maxVelocity);
+        point.velocityY = Math.min(Math.max(point.velocityY, -this.maxVelocity), this.maxVelocity);
     };
     BeamEffect.prototype.simulateRope = function (startX, startY, endX, endY, delta) {
-        var iterationsThisFrame = Math.ceil(BeamEffect.ITERATIONS * delta);
+        var iterationsThisFrame = Math.ceil(this.iterations * delta);
         for (var iteration = 0; iteration < iterationsThisFrame; iteration++) {
             for (var i = 1; i < this.points.length - 1; i++) {
                 var point = this.points[i];
                 var prevPoint = this.points[i - 1];
                 var nextPoint = this.points[i + 1];
-                var springForceXPrev = (prevPoint.x - point.x) * BeamEffect.SPRING_STIFFNESS * delta;
-                var springForceYPrev = (prevPoint.y - point.y) * BeamEffect.SPRING_STIFFNESS * delta;
-                var springForceXNext = (nextPoint.x - point.x) * BeamEffect.SPRING_STIFFNESS * delta;
-                var springForceYNext = (nextPoint.y - point.y) * BeamEffect.SPRING_STIFFNESS * delta;
+                var springForceXPrev = (prevPoint.x - point.x) * this.springStiffness;
+                var springForceYPrev = (prevPoint.y - point.y) * this.springStiffness;
+                var springForceXNext = (nextPoint.x - point.x) * this.springStiffness;
+                var springForceYNext = (nextPoint.y - point.y) * this.springStiffness;
                 this.applyTurbulence(point, i);
                 point.velocityX =
                     (point.velocityX + springForceXPrev + springForceXNext) *
-                        Math.pow(BeamEffect.DAMPING, delta);
+                        this.damping;
                 point.velocityY =
                     (point.velocityY + springForceYPrev + springForceYNext) *
-                        Math.pow(BeamEffect.DAMPING, delta);
-                var relativeVXPrev = (prevPoint.velocityX - point.velocityX) * delta;
-                var relativeVYPrev = (prevPoint.velocityY - point.velocityY) * delta;
-                var relativeVXNext = (nextPoint.velocityX - point.velocityX) * delta;
-                var relativeVYNext = (nextPoint.velocityY - point.velocityY) * delta;
+                        this.damping;
+                var relativeVXPrev = prevPoint.velocityX - point.velocityX;
+                var relativeVYPrev = prevPoint.velocityY - point.velocityY;
+                var relativeVXNext = nextPoint.velocityX - point.velocityX;
+                var relativeVYNext = nextPoint.velocityY - point.velocityY;
                 point.velocityX +=
-                    (relativeVXPrev + relativeVXNext) * BeamEffect.SPRING_DAMPING;
+                    (relativeVXPrev + relativeVXNext) * this.springDamping;
                 point.velocityY +=
-                    (relativeVYPrev + relativeVYNext) * BeamEffect.SPRING_DAMPING;
+                    (relativeVYPrev + relativeVYNext) * this.springDamping;
                 point.oldX = point.x;
                 point.oldY = point.y;
-                point.x += point.velocityX * delta;
-                point.y += point.velocityY * delta + BeamEffect.GRAVITY * delta * delta;
+                point.x += point.velocityX;
+                point.y += point.velocityY + this.gravity;
             }
             var segmentLength = Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2)) /
-                (BeamEffect.SEGMENTS - 1);
+                (this.segments - 1);
             for (var constraintIteration = 0; constraintIteration < 2; constraintIteration++) {
                 for (var i = 0; i < this.points.length - 1; i++) {
                     var p1 = this.points[i];
@@ -637,6 +717,7 @@ var BeamEffect = /** @class */ (function () {
     BeamEffect.prototype.destroy = function () {
         this.active = false;
         this.points = [];
+        this.dead = true;
     };
     BeamEffect.prototype.isActive = function () {
         return this.active;
@@ -675,7 +756,7 @@ var BeamEffect = /** @class */ (function () {
     // Range: 0.001-0.1, recommended: 0.1
     BeamEffect.SPRING_DAMPING = 0.1;
     return BeamEffect;
-}());
+}(projectile_1.Projectile));
 exports.BeamEffect = BeamEffect;
 
 
@@ -3608,50 +3689,63 @@ var OccultistEnemy = /** @class */ (function (_super) {
                 }
                 if (_this.ticks % 2 === 0) {
                     if (enemiesToShield.length > 0) {
-                        _this.applyShieldTo(enemiesToShield[Math.floor(Math.random() * enemiesToShield.length)]);
+                        enemiesToShield.forEach(function (enemy) {
+                            _this.applyShieldTo(enemy);
+                        });
                         _this.createBeam(_this.shieldedEnemies);
                     }
                 }
+                _this.shieldedEnemies.forEach(function (enemy) {
+                    if (enemy.dead) {
+                        _this.shieldedEnemies = _this.shieldedEnemies.filter(function (e) { return e !== enemy; });
+                    }
+                });
             }
         };
         _this.unshieldEnemies = function () {
             if (_this.shieldedEnemies.length > 0) {
-                _this.shieldedEnemies.forEach(function (enemy) {
+                for (var _i = 0, _a = _this.shieldedEnemies; _i < _a.length; _i++) {
+                    var enemy = _a[_i];
                     enemy.removeShield();
-                });
+                }
                 _this.shieldedEnemies = [];
             }
         };
         _this.applyShieldTo = function (enemy) {
             enemy.applyShield();
+            _this.shieldedEnemies.push(enemy);
         };
         _this.createBeam = function (enemies) {
-            enemies.forEach(function (enemy) {
-                enemy.shield.beam = new beamEffect_1.BeamEffect(_this.x, _this.y, enemy.x, enemy.y);
-                _this.room.beamEffects.push(enemy.shield.beam);
-            });
-        };
-        _this.drawBeam = function (delta) {
-            _this.room.beamEffects.forEach(function (beam) {
-                beam.render(_this.x, _this.y, beam.targetX, beam.targetY, "cyan", 2, delta);
-            });
+            for (var _i = 0, enemies_1 = enemies; _i < enemies_1.length; _i++) {
+                var enemy = enemies_1[_i];
+                if (enemy.shielded && enemy.shield) {
+                    var beam = new beamEffect_1.BeamEffect(enemy.x, enemy.y, _this.x, _this.y, enemy);
+                    beam.compositeOperation = "source-over";
+                    beam.color = "purple";
+                    beam.turbulence = 0.5;
+                    beam.gravity = 0.1;
+                    beam.iterations = 1;
+                    beam.segments = 30;
+                    beam.angleChange = 0.01;
+                    beam.springDamping = 0.1;
+                    _this.room.projectiles.push(beam);
+                    console.log("beam created");
+                }
+            }
         };
         _this.updateBeam = function (delta) {
-            _this.shieldedEnemies.forEach(function (enemy) {
-                if (enemy.shield.beam) {
-                    enemy.shield.beam.targetX = enemy.x - enemy.drawX;
-                    enemy.shield.beam.targetY = enemy.y - enemy.drawY;
+            for (var _i = 0, _a = _this.room.projectiles; _i < _a.length; _i++) {
+                var beam = _a[_i];
+                if (beam instanceof beamEffect_1.BeamEffect) {
+                    beam.setTarget(_this.x - _this.drawX, _this.y - _this.drawY, beam.parent.x - beam.parent.drawX, beam.parent.y - beam.parent.drawY);
                 }
-            });
+            }
         };
         _this.draw = function (delta) {
             _this.drawableY = _this.y;
             if (!_this.dead) {
                 _this.updateDrawXY(delta);
-                if (_this.room.beamEffects.length > 0) {
-                    _this.updateBeam(delta);
-                    _this.drawBeam(delta);
-                }
+                _this.updateBeam(delta);
                 _this.frame += 0.1 * delta;
                 if (_this.frame >= 4)
                     _this.frame = 0;
@@ -4411,7 +4505,7 @@ var Spawner = /** @class */ (function (_super) {
             return 1;
         };
         _this.setSpawnFrequency = function () {
-            _this.spawnFrequency = Math.max(8, 4 * _this.room.currentSpawnerCount);
+            _this.spawnFrequency = Math.min(12, 4 * _this.room.currentSpawnerCount);
         };
         _this.behavior = function () {
             _this.setSpawnFrequency();
@@ -5167,11 +5261,13 @@ var Entity = /** @class */ (function (_super) {
         _this.dropChance = 0.02;
         _this.applyShield = function (shieldHealth) {
             if (shieldHealth === void 0) { shieldHealth = 1; }
-            _this.shield = new enemyShield_1.EnemyShield(_this, _this.x, _this.y, shieldHealth);
-            _this.shielded = true;
-            _this.shieldedBefore = true;
-            _this.health += shieldHealth;
-            _this.maxHealth += shieldHealth;
+            if (!_this.shieldedBefore) {
+                _this.shield = new enemyShield_1.EnemyShield(_this, _this.x, _this.y, shieldHealth);
+                _this.shielded = true;
+                _this.shieldedBefore = true;
+                _this.health += shieldHealth;
+                _this.maxHealth += shieldHealth;
+            }
         };
         _this.removeShield = function () {
             _this.shield.remove();
@@ -5697,7 +5793,6 @@ var Entity = /** @class */ (function (_super) {
         _this.shieldedBefore = false;
         _this._imageParticleTiles = { x: 0, y: 0 };
         _this.hitSound = null;
-        _this.currentSpawnerCount = 0;
         return _this;
     }
     Entity.add = function (room, game, x, y) {
@@ -15813,7 +15908,7 @@ var Player = /** @class */ (function (_super) {
                     for (var _i = 0, targets_1 = targets; _i < targets_1.length; _i++) {
                         var target = targets_1[_i];
                         // Create a new beam effect from the player to the enemy
-                        _this.game.rooms[_this.levelID].addBeamEffect(_this.x - _this.drawX, _this.y - _this.drawY, target.x - target.drawX, target.y - target.drawY);
+                        _this.game.rooms[_this.levelID].addBeamEffect(_this.x - _this.drawX, _this.y - _this.drawY, target.x - target.drawX, target.y - target.drawY, target);
                         // Retrieve the newly added beam effect
                         var beam = _this.game.rooms[_this.levelID].beamEffects[_this.game.rooms[_this.levelID].beamEffects.length - 1];
                         // Render the beam
@@ -16461,8 +16556,9 @@ var EnemyShield = /** @class */ (function (_super) {
             if (_this.parent.dead) {
                 _this.remove();
             }
-            if (_this.dead)
-                _this.parent.room.beamEffects = _this.parent.room.beamEffects.filter(function (beam) { return beam !== _this.beam; });
+            if (_this.dead) {
+                _this.parent.room.projectiles = _this.parent.room.projectiles.filter(function (projectile) { return projectile !== _this; });
+            }
         };
         _this.draw = function (delta) {
             if (_this.dead)
@@ -16483,7 +16579,6 @@ var EnemyShield = /** @class */ (function (_super) {
         _this.frame = 0;
         _this.health = health;
         _this.parent.shielded = true;
-        _this.beam = null;
         _this.lightSource = lighting_1.Lighting.newLightSource(_this.x + 0.5, _this.y + 0.5, [250, 0, 150], 0.5, 1);
         _this.parent.addLightSource(_this.lightSource);
         _this.parent.room.projectiles.push(_this);
@@ -16685,6 +16780,7 @@ var Projectile = /** @class */ (function (_super) {
         enumerable: false,
         configurable: true
     });
+    Projectile.prototype.setTarget = function (x, y, x2, y2) { };
     return Projectile;
 }(drawable_1.Drawable));
 exports.Projectile = Projectile;
@@ -17515,6 +17611,8 @@ var Room = /** @class */ (function () {
             _this.name = "";
             switch (_this.type) {
                 case RoomType.START:
+                    _this.addNewEnemy(EnemyType.zombie);
+                    _this.addNewEnemy(EnemyType.occultist);
                     _this.populateEmpty(rand);
                     _this.name = "FLOOR " + -_this.depth;
                     if (_this.level.environment.type === environment_1.EnvType.CAVE) {
@@ -18955,8 +19053,8 @@ var Room = /** @class */ (function () {
      * @param x2 - Ending tile X coordinate.
      * @param y2 - Ending tile Y coordinate.
      */
-    Room.prototype.addBeamEffect = function (x1, y1, x2, y2) {
-        var beam = new beamEffect_1.BeamEffect(x1, y1, x2, y2);
+    Room.prototype.addBeamEffect = function (x1, y1, x2, y2, parent) {
+        var beam = new beamEffect_1.BeamEffect(x1, y1, x2, y2, parent);
         this.beamEffects.push(beam);
     };
     Room.prototype.changeReverb = function (newImpulsePath) {

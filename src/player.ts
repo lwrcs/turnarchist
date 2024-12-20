@@ -939,6 +939,7 @@ export class Player extends Drawable {
             this.y - this.drawY,
             target.x - target.drawX,
             target.y - target.drawY,
+            target,
           );
 
           // Retrieve the newly added beam effect

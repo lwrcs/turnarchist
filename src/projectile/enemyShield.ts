@@ -17,7 +17,6 @@ export class EnemyShield extends Projectile {
   tileX: number;
   tileY: number;
   health: number;
-  beam: BeamEffect;
 
   constructor(parent: Entity, x: number, y: number, health: number = 1) {
     super(parent, x, y);
@@ -25,7 +24,6 @@ export class EnemyShield extends Projectile {
     this.frame = 0;
     this.health = health;
     this.parent.shielded = true;
-    this.beam = null;
     this.lightSource = Lighting.newLightSource(
       this.x + 0.5,
       this.y + 0.5,
@@ -76,10 +74,11 @@ export class EnemyShield extends Projectile {
     if (this.parent.dead) {
       this.remove();
     }
-    if (this.dead)
-      this.parent.room.beamEffects = this.parent.room.beamEffects.filter(
-        (beam) => beam !== this.beam,
+    if (this.dead) {
+      this.parent.room.projectiles = this.parent.room.projectiles.filter(
+        (projectile) => projectile !== this,
       );
+    }
   };
 
   draw = (delta: number) => {

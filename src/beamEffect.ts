@@ -1,5 +1,8 @@
+import { Entity } from "./entity/entity";
 import { Game } from "./game";
 import { GameConstants } from "./gameConstants";
+import { Particle } from "./particle/particle";
+import { Projectile } from "./projectile/projectile";
 import { Room } from "./room";
 
 interface Point {
@@ -12,7 +15,7 @@ interface Point {
   angle: number;
 }
 
-export class BeamEffect {
+export class BeamEffect extends Projectile {
   // Number of points that make up the beam (higher = smoother but more expensive)
   // Range: 10-100, recommended: 30
   private static readonly SEGMENTS = 30;
@@ -66,18 +69,84 @@ export class BeamEffect {
   private time: number = 0;
   targetX: number;
   targetY: number;
-
-  constructor(x1: number, y1: number, x2: number, y2: number) {
+  color: string;
+  compositeOperation: string;
+  gravity: number = BeamEffect.GRAVITY;
+  motionInfluence: number = BeamEffect.MOTION_INFLUENCE;
+  turbulence: number = BeamEffect.TURBULENCE;
+  velocityDecay: number = BeamEffect.VELOCITY_DECAY;
+  angleChange: number = BeamEffect.ANGLE_CHANGE;
+  maxVelocity: number = BeamEffect.MAX_VELOCITY;
+  damping: number = BeamEffect.DAMPING;
+  springStiffness: number = BeamEffect.SPRING_STIFFNESS;
+  springDamping: number = BeamEffect.SPRING_DAMPING;
+  iterations: number = BeamEffect.ITERATIONS;
+  segments: number = BeamEffect.SEGMENTS;
+  constructor(x1: number, y1: number, x2: number, y2: number, parent: Entity) {
+    super(parent, x1, y1);
     const startX = x1 * GameConstants.TILESIZE + 0.5 * GameConstants.TILESIZE;
     const startY = y1 * GameConstants.TILESIZE + 0.5 * GameConstants.TILESIZE;
     const endX = x2 * GameConstants.TILESIZE + 0.5 * GameConstants.TILESIZE;
     const endY = y2 * GameConstants.TILESIZE + 0.5 * GameConstants.TILESIZE;
+    this.x = x1;
+    this.y = y1;
+    this.targetX = x2;
+    this.targetY = y2;
 
     this.points = this.initializePoints(startX, startY, endX, endY);
     this.prevStartX = startX;
     this.prevStartY = startY;
     this.prevEndX = endX;
     this.prevEndY = endY;
+    this.color = "cyan";
+    this.compositeOperation = "source-over";
+  }
+  /**
+   * Sets the physics properties for the beam effect.
+   *
+   * @param {number} [gravity] - The gravitational force applied to the beam. Default: 2
+   * @param {number} [motionInfluence] - The influence of motion on the beam. Default: 1
+   * @param {number} [turbulence] - The turbulence applied to the beam. Default: 0.5
+   * @param {number} [velocityDecay] - The rate at which velocity decays. Default: 0.1
+   * @param {number} [angleChange] - The change in angle of the beam. Default: 0.01
+   * @param {number} [maxVelocity] - The maximum velocity of the beam.
+   * @param {number} [damping] - The damping factor for the beam's motion.
+   * @param {number} [springStiffness] - The stiffness of the spring effect.
+   * @param {number} [springDamping] - The damping of the spring effect.
+   * @param {number} [iterations] - The number of iterations for the physics simulation.
+   * @param {number} [segments] - The number of segments for the beam.
+   */
+  setPhysics(
+    gravity?: number,
+    motionInfluence?: number,
+    turbulence?: number,
+    velocityDecay?: number,
+    angleChange?: number,
+    maxVelocity?: number,
+    damping?: number,
+    springStiffness?: number,
+    springDamping?: number,
+    iterations?: number,
+    segments?: number,
+  ) {
+    this.gravity = gravity ?? BeamEffect.GRAVITY;
+    this.motionInfluence = motionInfluence ?? BeamEffect.MOTION_INFLUENCE;
+    this.turbulence = turbulence ?? BeamEffect.TURBULENCE;
+    this.velocityDecay = velocityDecay ?? BeamEffect.VELOCITY_DECAY;
+    this.angleChange = angleChange ?? BeamEffect.ANGLE_CHANGE;
+    this.maxVelocity = maxVelocity ?? BeamEffect.MAX_VELOCITY;
+    this.damping = damping ?? BeamEffect.DAMPING;
+    this.springStiffness = springStiffness ?? BeamEffect.SPRING_STIFFNESS;
+    this.springDamping = springDamping ?? BeamEffect.SPRING_DAMPING;
+    this.iterations = iterations ?? BeamEffect.ITERATIONS;
+    this.segments = segments ?? BeamEffect.SEGMENTS;
+  }
+
+  setTarget(x: number, y: number, x2: number, y2: number) {
+    this.x = x;
+    this.y = y;
+    this.targetX = x2;
+    this.targetY = y2;
   }
 
   render(
@@ -85,23 +154,26 @@ export class BeamEffect {
     y1: number,
     x2: number,
     y2: number,
-    color: string = "cyan",
+    color: string = this.color,
     lineWidth: number = 2,
     delta: number = 1 / 60,
+    compositeOperation: string = this.compositeOperation,
   ): void {
-    const startX = x1 * GameConstants.TILESIZE + 0.5 * GameConstants.TILESIZE;
-    const startY = y1 * GameConstants.TILESIZE + 0.5 * GameConstants.TILESIZE;
-    const endX = x2 * GameConstants.TILESIZE + 0.5 * GameConstants.TILESIZE;
-    const endY = y2 * GameConstants.TILESIZE + 0.5 * GameConstants.TILESIZE;
+    const startX =
+      this.x * GameConstants.TILESIZE + 0.5 * GameConstants.TILESIZE;
+    const startY =
+      this.y * GameConstants.TILESIZE + 0.5 * GameConstants.TILESIZE;
+    const endX =
+      this.targetX * GameConstants.TILESIZE + 0.5 * GameConstants.TILESIZE;
+    const endY =
+      this.targetY * GameConstants.TILESIZE + 0.5 * GameConstants.TILESIZE;
 
     const startForceX =
-      (startX - this.prevStartX) * BeamEffect.MOTION_INFLUENCE * delta;
+      (startX - this.prevStartX) * this.motionInfluence * delta;
     const startForceY =
-      (startY - this.prevStartY) * BeamEffect.MOTION_INFLUENCE * delta;
-    const endForceX =
-      (endX - this.prevEndX) * BeamEffect.MOTION_INFLUENCE * delta;
-    const endForceY =
-      (endY - this.prevEndY) * BeamEffect.MOTION_INFLUENCE * delta;
+      (startY - this.prevStartY) * this.motionInfluence * delta;
+    const endForceX = (endX - this.prevEndX) * this.motionInfluence * delta;
+    const endForceY = (endY - this.prevEndY) * this.motionInfluence * delta;
 
     for (let i = 1; i < 4; i++) {
       const influence = 1 - i / 4;
@@ -118,6 +190,8 @@ export class BeamEffect {
 
     const ctx = Game.ctx;
     ctx.save();
+    Game.ctx.globalCompositeOperation =
+      compositeOperation as GlobalCompositeOperation;
 
     for (let i = 0; i < this.points.length - 1; i++) {
       const p1 = this.points[i];
@@ -160,8 +234,8 @@ export class BeamEffect {
     endY: number,
   ): Point[] {
     const points: Point[] = [];
-    for (let i = 0; i < BeamEffect.SEGMENTS; i++) {
-      const t = i / (BeamEffect.SEGMENTS - 1);
+    for (let i = 0; i < this.segments; i++) {
+      const t = i / (this.segments - 1);
       points.push({
         x: startX + (endX - startX) * t,
         y: startY + (endY - startY) * t,
@@ -176,24 +250,29 @@ export class BeamEffect {
   }
 
   private applyTurbulence(point: Point, index: number): void {
-    point.angle +=
-      Math.sin(this.time * 0.1 + index * 0.5) * BeamEffect.ANGLE_CHANGE;
+    point.angle += Math.sin(this.time * 0.1 + index * 0.5) * this.angleChange;
 
-    const turbulenceX = Math.cos(point.angle) * BeamEffect.TURBULENCE;
-    const turbulenceY = Math.sin(point.angle) * BeamEffect.TURBULENCE;
+    const turbulenceX = Math.cos(point.angle) * this.turbulence;
+    const turbulenceY = Math.sin(point.angle) * this.turbulence;
 
     point.velocityX += turbulenceX;
     point.velocityY += turbulenceY;
 
     point.velocityX = Math.min(
-      Math.max(point.velocityX, -BeamEffect.MAX_VELOCITY),
-      BeamEffect.MAX_VELOCITY,
+      Math.max(point.velocityX, -this.maxVelocity),
+      this.maxVelocity,
     );
     point.velocityY = Math.min(
-      Math.max(point.velocityY, -BeamEffect.MAX_VELOCITY),
-      BeamEffect.MAX_VELOCITY,
+      Math.max(point.velocityY, -this.maxVelocity),
+      this.maxVelocity,
     );
   }
+
+  tick = () => {
+    if (this.parent.dead) {
+      this.destroy();
+    }
+  };
 
   private simulateRope(
     startX: number,
@@ -202,7 +281,7 @@ export class BeamEffect {
     endY: number,
     delta: number,
   ): void {
-    const iterationsThisFrame = Math.ceil(BeamEffect.ITERATIONS * delta);
+    const iterationsThisFrame = Math.ceil(this.iterations * delta);
 
     for (let iteration = 0; iteration < iterationsThisFrame; iteration++) {
       for (let i = 1; i < this.points.length - 1; i++) {
@@ -210,44 +289,40 @@ export class BeamEffect {
         const prevPoint = this.points[i - 1];
         const nextPoint = this.points[i + 1];
 
-        const springForceXPrev =
-          (prevPoint.x - point.x) * BeamEffect.SPRING_STIFFNESS * delta;
-        const springForceYPrev =
-          (prevPoint.y - point.y) * BeamEffect.SPRING_STIFFNESS * delta;
-        const springForceXNext =
-          (nextPoint.x - point.x) * BeamEffect.SPRING_STIFFNESS * delta;
-        const springForceYNext =
-          (nextPoint.y - point.y) * BeamEffect.SPRING_STIFFNESS * delta;
+        const springForceXPrev = (prevPoint.x - point.x) * this.springStiffness;
+        const springForceYPrev = (prevPoint.y - point.y) * this.springStiffness;
+        const springForceXNext = (nextPoint.x - point.x) * this.springStiffness;
+        const springForceYNext = (nextPoint.y - point.y) * this.springStiffness;
 
         this.applyTurbulence(point, i);
 
         point.velocityX =
           (point.velocityX + springForceXPrev + springForceXNext) *
-          Math.pow(BeamEffect.DAMPING, delta);
+          this.damping;
         point.velocityY =
           (point.velocityY + springForceYPrev + springForceYNext) *
-          Math.pow(BeamEffect.DAMPING, delta);
+          this.damping;
 
-        const relativeVXPrev = (prevPoint.velocityX - point.velocityX) * delta;
-        const relativeVYPrev = (prevPoint.velocityY - point.velocityY) * delta;
-        const relativeVXNext = (nextPoint.velocityX - point.velocityX) * delta;
-        const relativeVYNext = (nextPoint.velocityY - point.velocityY) * delta;
+        const relativeVXPrev = prevPoint.velocityX - point.velocityX;
+        const relativeVYPrev = prevPoint.velocityY - point.velocityY;
+        const relativeVXNext = nextPoint.velocityX - point.velocityX;
+        const relativeVYNext = nextPoint.velocityY - point.velocityY;
 
         point.velocityX +=
-          (relativeVXPrev + relativeVXNext) * BeamEffect.SPRING_DAMPING;
+          (relativeVXPrev + relativeVXNext) * this.springDamping;
         point.velocityY +=
-          (relativeVYPrev + relativeVYNext) * BeamEffect.SPRING_DAMPING;
+          (relativeVYPrev + relativeVYNext) * this.springDamping;
 
         point.oldX = point.x;
         point.oldY = point.y;
 
-        point.x += point.velocityX * delta;
-        point.y += point.velocityY * delta + BeamEffect.GRAVITY * delta * delta;
+        point.x += point.velocityX;
+        point.y += point.velocityY + this.gravity;
       }
 
       const segmentLength =
         Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2)) /
-        (BeamEffect.SEGMENTS - 1);
+        (this.segments - 1);
 
       for (
         let constraintIteration = 0;
@@ -288,6 +363,19 @@ export class BeamEffect {
     this.points[this.points.length - 1].oldY = endY;
   }
 
+  draw = (delta: number) => {
+    this.render(
+      this.targetX,
+      this.targetY,
+      this.x,
+      this.y,
+      this.color,
+      2,
+      delta,
+      this.compositeOperation,
+    );
+  };
+
   static renderBeam(
     x1: number,
     y1: number,
@@ -316,6 +404,7 @@ export class BeamEffect {
   destroy(): void {
     this.active = false;
     this.points = [];
+    this.dead = true;
   }
 
   isActive(): boolean {

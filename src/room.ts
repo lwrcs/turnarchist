@@ -1236,6 +1236,8 @@ export class Room {
     this.name = "";
     switch (this.type) {
       case RoomType.START:
+        this.addNewEnemy(EnemyType.zombie);
+        this.addNewEnemy(EnemyType.occultist);
         this.populateEmpty(rand);
         this.name = "FLOOR " + -this.depth;
         if (this.level.environment.type === EnvType.CAVE) {
@@ -2365,8 +2367,14 @@ export class Room {
    * @param x2 - Ending tile X coordinate.
    * @param y2 - Ending tile Y coordinate.
    */
-  public addBeamEffect(x1: number, y1: number, x2: number, y2: number): void {
-    const beam = new BeamEffect(x1, y1, x2, y2);
+  public addBeamEffect(
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+    parent: Entity,
+  ): void {
+    const beam = new BeamEffect(x1, y1, x2, y2, parent);
     this.beamEffects.push(beam);
   }
 

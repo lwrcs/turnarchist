@@ -28,6 +28,8 @@ export class Projectile extends Drawable {
     return Math.abs(this.x - this.parent.x) + Math.abs(this.y - this.parent.y);
   }
 
+  setTarget(x: number, y: number, x2: number, y2: number) {}
+
   hitPlayer = (player: Player) => {};
   hitEnemy = (enemy: Entity) => {};
 
