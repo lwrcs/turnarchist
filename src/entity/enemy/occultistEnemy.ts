@@ -102,6 +102,7 @@ export class OccultistEnemy extends Enemy {
         beam.segments = 30;
         beam.angleChange = 0.01;
         beam.springDamping = 0.1;
+        beam.drawableY = enemy.drawableY;
         this.room.projectiles.push(beam);
         console.log("beam created");
       }
@@ -117,6 +118,7 @@ export class OccultistEnemy extends Enemy {
           beam.parent.x - beam.parent.drawX,
           beam.parent.y - beam.parent.drawY,
         );
+        beam.drawableY = beam.parent.drawableY;
       }
     }
   };

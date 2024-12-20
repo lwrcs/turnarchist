@@ -3728,6 +3728,7 @@ var OccultistEnemy = /** @class */ (function (_super) {
                     beam.segments = 30;
                     beam.angleChange = 0.01;
                     beam.springDamping = 0.1;
+                    beam.drawableY = enemy.drawableY;
                     _this.room.projectiles.push(beam);
                     console.log("beam created");
                 }
@@ -3738,6 +3739,7 @@ var OccultistEnemy = /** @class */ (function (_super) {
                 var beam = _a[_i];
                 if (beam instanceof beamEffect_1.BeamEffect) {
                     beam.setTarget(_this.x - _this.drawX, _this.y - _this.drawY, beam.parent.x - beam.parent.drawX, beam.parent.y - beam.parent.drawY);
+                    beam.drawableY = beam.parent.drawableY;
                 }
             }
         };
@@ -18787,14 +18789,17 @@ var Room = /** @class */ (function () {
                 break;
         }
         var spawnerAmounts = [
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 2, 2, 3, 4, 5, 3, 6,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1,
+            1, 1, 1, 1, 1, 1, 2, 2, 3, 4, 5, 3,
         ];
         if (this.depth > 0) {
             var spawnerAmount = game_1.Game.randTable(spawnerAmounts, Math.random);
             console.log("Adding ".concat(spawnerAmount, " spawners"));
             this.addSpawners(spawnerAmount, Math.random);
         }
-        var occultistAmounts = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 2, 5];
+        var occultistAmounts = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2,
+        ];
         if (this.depth > 0) {
             var occultistAmount = game_1.Game.randTable(occultistAmounts, Math.random);
             console.log("Adding ".concat(occultistAmount, " occultists"));
