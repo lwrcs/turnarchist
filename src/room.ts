@@ -1236,8 +1236,8 @@ export class Room {
     this.name = "";
     switch (this.type) {
       case RoomType.START:
-        this.addNewEnemy(EnemyType.zombie);
-        this.addNewEnemy(EnemyType.occultist);
+        //this.addNewEnemy(EnemyType.zombie);
+        //this.addNewEnemy(EnemyType.occultist);
         this.populateEmpty(rand);
         this.name = "FLOOR " + -this.depth;
         if (this.level.environment.type === EnvType.CAVE) {
