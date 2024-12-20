@@ -17611,8 +17611,8 @@ var Room = /** @class */ (function () {
             _this.name = "";
             switch (_this.type) {
                 case RoomType.START:
-                    _this.addNewEnemy(EnemyType.zombie);
-                    _this.addNewEnemy(EnemyType.occultist);
+                    //this.addNewEnemy(EnemyType.zombie);
+                    //this.addNewEnemy(EnemyType.occultist);
                     _this.populateEmpty(rand);
                     _this.name = "FLOOR " + -_this.depth;
                     if (_this.level.environment.type === environment_1.EnvType.CAVE) {
