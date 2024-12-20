@@ -27,7 +27,7 @@ export class EnemyShield extends Projectile {
     this.lightSource = Lighting.newLightSource(
       this.x + 0.5,
       this.y + 0.5,
-      [250, 0, 150],
+      [100, 0, 200],
       0.5,
       1,
     );
@@ -57,12 +57,14 @@ export class EnemyShield extends Projectile {
   hurt = (damage: number) => {
     const damageOverShield = Math.max(0, damage - this.health);
     this.health -= damage;
+    /*
     GenericParticle.spawnCluster(
       this.parent.room,
       this.parent.x + 0.5,
       this.parent.y + 0.5,
       "#fbf236",
     );
+    */
 
     if (this.health <= 0) {
       this.remove();

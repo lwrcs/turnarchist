@@ -483,6 +483,7 @@ var BeamEffect = /** @class */ (function (_super) {
         var _this = _super.call(this, parent, x1, y1) || this;
         _this.active = true;
         _this.time = 0;
+        _this.alpha = 1;
         _this.gravity = BeamEffect.GRAVITY;
         _this.motionInfluence = BeamEffect.MOTION_INFLUENCE;
         _this.turbulence = BeamEffect.TURBULENCE;
@@ -697,10 +698,12 @@ var BeamEffect = /** @class */ (function (_super) {
         this.points[this.points.length - 1].oldX = endX;
         this.points[this.points.length - 1].oldY = endY;
     };
-    BeamEffect.renderBeam = function (x1, y1, x2, y2, color, lineWidth) {
+    BeamEffect.renderBeam = function (x1, y1, x2, y2, color, lineWidth, alpha) {
         if (color === void 0) { color = "cyan"; }
         if (lineWidth === void 0) { lineWidth = 2; }
+        if (alpha === void 0) { alpha = 1; }
         var ctx = game_1.Game.ctx;
+        ctx.globalAlpha = alpha;
         var startX = x1 * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
         var startY = y1 * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
         var endX = x2 * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
@@ -2366,43 +2369,58 @@ var Enemy = /** @class */ (function (_super) {
             }
         };
         _this.poison = function () {
-            if (!_this.status.poison) {
-                _this.status.poison = true;
-                _this.effectStartTick = _this.ticks % 3;
-                _this.startTick = _this.ticks;
-                _this.poisonHitCount = 0;
+            if (!_this.status.poison.active) {
+                _this.status.poison = {
+                    active: true,
+                    hitCount: 0,
+                    startTick: _this.ticks,
+                    effectTick: _this.ticks % 3,
+                };
             }
         };
         _this.bleed = function () {
-            if (!_this.status.bleed) {
-                _this.status.bleed = true;
-                _this.effectStartTick = _this.ticks % 3;
-                _this.startTick = _this.ticks;
-                _this.bleedHitCount = 0;
+            if (!_this.status.bleed.active) {
+                _this.status.bleed = {
+                    active: true,
+                    hitCount: 0,
+                    startTick: _this.ticks,
+                    effectTick: _this.ticks % 2,
+                };
             }
         };
         _this.tickPoison = function () {
-            if (_this.status.poison) {
-                if (_this.ticks % 3 === _this.effectStartTick &&
-                    _this.ticks !== _this.startTick) {
+            if (_this.status.poison.active && _this.targetPlayer) {
+                if (_this.ticks % 3 === _this.status.poison.effectTick &&
+                    _this.ticks !== _this.status.poison.startTick) {
                     _this.hurt(_this.targetPlayer, 0.5, "poison");
-                    _this.poisonHitCount++;
-                    if (_this.poisonHitCount >= 2)
-                        _this.status.poison = false;
+                    _this.status.poison.hitCount++;
+                    if (_this.status.poison.hitCount >= 2) {
+                        _this.status.poison = {
+                            active: false,
+                            hitCount: 0,
+                            startTick: 0,
+                            effectTick: 0,
+                        };
+                    }
                 }
             }
         };
         _this.tickBleed = function () {
-            if (_this.status.bleed) {
-                if (_this.ticks % 2 === _this.effectStartTick &&
-                    _this.ticks !== _this.startTick) {
-                    _this.hurt(_this.targetPlayer, 0.25, "blood");
-                    _this.bleedHitCount++;
+            if (_this.status.bleed.active && _this.targetPlayer) {
+                if (_this.ticks % 2 === _this.status.bleed.effectTick &&
+                    _this.ticks !== _this.status.bleed.startTick) {
+                    _this.hurt(_this.targetPlayer, 0.5, "blood");
+                    _this.targetPlayer.heal(0.5);
+                    _this.status.bleed.hitCount++;
+                    if (_this.status.bleed.hitCount >= 1) {
+                        _this.status.bleed = {
+                            active: false,
+                            hitCount: 0,
+                            startTick: 0,
+                            effectTick: 0,
+                        };
+                    }
                 }
-                if (_this.targetPlayer)
-                    _this.targetPlayer.heal(0.25);
-                if (_this.bleedHitCount >= 2)
-                    _this.status.bleed = false;
             }
         };
         _this.tick = function () {
@@ -2711,7 +2729,10 @@ var Enemy = /** @class */ (function (_super) {
         //this.dir = Direction.South;
         _this.name = "generic enemy";
         _this.dropChance = 0.1;
-        _this.status = { poison: false, bleed: false };
+        _this.status = {
+            poison: { active: false, hitCount: 0, startTick: 0, effectTick: 0 },
+            bleed: { active: false, hitCount: 0, startTick: 0, effectTick: 0 },
+        };
         _this.effectStartTick = 1;
         _this.startTick = 1;
         _this.isEnemy = true;
@@ -3721,7 +3742,7 @@ var OccultistEnemy = /** @class */ (function (_super) {
                 if (enemy.shielded && enemy.shield) {
                     var beam = new beamEffect_1.BeamEffect(enemy.x, enemy.y, _this.x, _this.y, enemy);
                     beam.compositeOperation = "source-over";
-                    beam.color = "purple";
+                    beam.color = "#2E0854";
                     beam.turbulence = 0.5;
                     beam.gravity = 0.1;
                     beam.iterations = 1;
@@ -3740,6 +3761,20 @@ var OccultistEnemy = /** @class */ (function (_super) {
                 if (beam instanceof beamEffect_1.BeamEffect) {
                     beam.setTarget(_this.x - _this.drawX, _this.y - _this.drawY, beam.parent.x - beam.parent.drawX, beam.parent.y - beam.parent.drawY);
                     beam.drawableY = beam.parent.drawableY;
+                    switch (Math.floor(_this.frame)) {
+                        case 0:
+                            beam.color = "#2e0854";
+                            break;
+                        case 1:
+                            beam.color = "#331988";
+                            break;
+                        case 2:
+                            beam.color = "#4729db";
+                            break;
+                        case 3:
+                            beam.color = "#331988";
+                            break;
+                    }
                 }
             }
         };
@@ -16524,7 +16559,6 @@ exports.EnemyShield = void 0;
 var projectile_1 = __webpack_require__(/*! ./projectile */ "./src/projectile/projectile.ts");
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var lighting_1 = __webpack_require__(/*! ../lighting */ "./src/lighting.ts");
-var genericParticle_1 = __webpack_require__(/*! ../particle/genericParticle */ "./src/particle/genericParticle.ts");
 var EnemyShield = /** @class */ (function (_super) {
     __extends(EnemyShield, _super);
     function EnemyShield(parent, x, y, health) {
@@ -16548,7 +16582,14 @@ var EnemyShield = /** @class */ (function (_super) {
         _this.hurt = function (damage) {
             var damageOverShield = Math.max(0, damage - _this.health);
             _this.health -= damage;
-            genericParticle_1.GenericParticle.spawnCluster(_this.parent.room, _this.parent.x + 0.5, _this.parent.y + 0.5, "#fbf236");
+            /*
+            GenericParticle.spawnCluster(
+              this.parent.room,
+              this.parent.x + 0.5,
+              this.parent.y + 0.5,
+              "#fbf236",
+            );
+            */
             if (_this.health <= 0) {
                 _this.remove();
             }
@@ -16581,7 +16622,7 @@ var EnemyShield = /** @class */ (function (_super) {
         _this.frame = 0;
         _this.health = health;
         _this.parent.shielded = true;
-        _this.lightSource = lighting_1.Lighting.newLightSource(_this.x + 0.5, _this.y + 0.5, [250, 0, 150], 0.5, 1);
+        _this.lightSource = lighting_1.Lighting.newLightSource(_this.x + 0.5, _this.y + 0.5, [100, 0, 200], 0.5, 1);
         _this.parent.addLightSource(_this.lightSource);
         _this.parent.room.projectiles.push(_this);
         _this.parent.room.updateLighting();

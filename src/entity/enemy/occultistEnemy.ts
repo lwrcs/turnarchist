@@ -95,7 +95,7 @@ export class OccultistEnemy extends Enemy {
       if (enemy.shielded && enemy.shield) {
         let beam = new BeamEffect(enemy.x, enemy.y, this.x, this.y, enemy);
         beam.compositeOperation = "source-over";
-        beam.color = "purple";
+        beam.color = "#2E0854";
         beam.turbulence = 0.5;
         beam.gravity = 0.1;
         beam.iterations = 1;
@@ -119,6 +119,21 @@ export class OccultistEnemy extends Enemy {
           beam.parent.y - beam.parent.drawY,
         );
         beam.drawableY = beam.parent.drawableY;
+
+        switch (Math.floor(this.frame)) {
+          case 0:
+            beam.color = "#2e0854";
+            break;
+          case 1:
+            beam.color = "#331988";
+            break;
+          case 2:
+            beam.color = "#4729db";
+            break;
+          case 3:
+            beam.color = "#331988";
+            break;
+        }
       }
     }
   };
