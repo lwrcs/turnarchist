@@ -244,6 +244,8 @@ export const Input = {
   },
 
   updateMousePos: function (event: MouseEvent) {
+    Game.inputReceived = true;
+
     let rect = window.document
       .getElementById("gameCanvas")
       .getBoundingClientRect();
@@ -304,6 +306,8 @@ export const Input = {
   },
 
   getTouches: function (evt) {
+    Game.inputReceived = true;
+
     return (
       evt.touches || evt.originalEvent.touches // browser API
     ); // jQuery
@@ -316,6 +320,8 @@ export const Input = {
   swiped: false,
 
   handleTouchStart: function (evt) {
+    Game.inputReceived = true;
+
     evt.preventDefault();
 
     const firstTouch = Input.getTouches(evt)[0];

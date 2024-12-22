@@ -72,7 +72,7 @@ export class Level {
     this.rooms = [];
     this.initializeLevelArray();
     //this.loadRoomsIntoLevelArray();
-    console.log(`level depth: ${this.depth}`);
+    //console.log(`level depth: ${this.depth}`);
 
     this.enemyParameters = this.getEnemyParameters();
     let envType = Math.floor(Math.random() * 3); //multiply by number of environments to choose from
@@ -91,7 +91,6 @@ export class Level {
     this.rooms.filter((room) => room.depth === this.depth);
     rooms.forEach((room) => {
       room.id = this.rooms.indexOf(room);
-      console.log(`room id: ${room.id}`);
     });
   }
 
@@ -137,9 +136,9 @@ export class Level {
       (id) => !this.game.encounteredEnemies.includes(id),
     );
     this.game.encounteredEnemies.push(...newEnemies);
-    console.log(
-      `encounteredEnemies for depth ${this.depth}: ${this.game.encounteredEnemies}`,
-    );
+    //console.log(
+    //`encounteredEnemies for depth ${this.depth}: ${this.game.encounteredEnemies}`,
+    //);
 
     return {
       enemyTables,
@@ -174,7 +173,7 @@ export class Level {
     this.game.encounteredEnemies.push(...newEnemiesToAdd);
 
     // Log the newly added enemies for debugging
-    console.log(`New enemies introduced at depth ${depth}: ${newEnemiesToAdd}`);
+    // console.log(`New enemies introduced at depth ${depth}: ${newEnemiesToAdd}`);
 
     // Combine encountered enemies to form the enemy pool
     const enemyPoolIds = this.game.encounteredEnemies.slice();

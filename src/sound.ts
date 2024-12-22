@@ -27,7 +27,7 @@ export class Sound {
   static wooshSound: HTMLAudioElement;
   static initialized: boolean = false;
   static audioMuted: boolean = false;
-  static async loadSounds() {
+  static loadSounds = async () => {
     if (Sound.initialized) return;
     Sound.initialized = true;
     Sound.playerStoneFootsteps = new Array<HTMLAudioElement>();
@@ -145,7 +145,7 @@ export class Sound {
 
     Sound.wooshSound = new Audio("res/SFX/attacks/woosh1.mp3");
     Sound.wooshSound.volume = 0.2;
-  }
+  };
 
   private static playSoundSafely(audio: HTMLAudioElement) {
     audio.play().catch((err) => {

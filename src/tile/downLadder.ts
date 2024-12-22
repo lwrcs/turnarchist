@@ -54,11 +54,17 @@ export class DownLadder extends Tile {
     }
   };
 
+  get linkedRoom() {
+    return this.game.levels[this.depth - 1].exitRoom;
+  }
+
   onCollide = (player: Player) => {
     let allPlayersHere = true;
     for (const i in this.game.players) {
       if (
-        this.game.rooms[this.game.players[i].levelID] !== this.room ||
+        this.game.levels[this.game.players[i].depth].rooms[
+          this.game.players[i].levelID
+        ] !== this.room ||
         this.game.players[i].x !== this.x ||
         this.game.players[i].y !== this.y
       ) {
@@ -67,6 +73,9 @@ export class DownLadder extends Tile {
           `this.game.players[i].levelID: ${this.game.players[i].levelID}`,
         );
         console.log(`this.room.id: ${this.room.id}`);
+        console.log(
+          `this.game.players[i].x, this.game.players[i].y: ${this.game.players[i].x}, ${this.game.players[i].y}, this.x, this.y: ${this.x}, ${this.y}`,
+        );
         allPlayersHere = false;
       }
     }
@@ -75,11 +84,7 @@ export class DownLadder extends Tile {
       this.generate().then(() => {
         globalEventBus.emit(EVENTS.LEVEL_GENERATION_COMPLETED, {});
         for (const i in this.game.players) {
-          this.game.changeLevelThroughLadder(
-            this.game.players[i],
-            this,
-            this.linkedLevel,
-          );
+          this.game.changeLevelThroughLadder(this.game.players[i], this);
         }
       });
     } else {

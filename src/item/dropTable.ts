@@ -217,9 +217,9 @@ export class DropTable {
       return;
     }
     entity.drop = ItemClass.add(entity.room, entity.x, entity.y);
-    console.log(
-      `Drop for ${entity.constructor.name}:`,
-      entity.drop.constructor.name,
-    );
+    //console.log(
+    //  `Drop for ${entity.constructor.name}:`,
+    //  entity.drop.constructor.name,
+    //);
   };
 }

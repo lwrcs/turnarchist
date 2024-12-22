@@ -29,6 +29,7 @@ import { LightSource } from "./lightSource";
 import { statsTracker } from "./stats";
 import { BeamEffect } from "./beamEffect";
 import { Spellbook } from "./weapon/spellbook";
+import { globalEventBus } from "./eventBus";
 
 export enum PlayerDirection {
   DOWN,
@@ -130,6 +131,7 @@ export class Player extends Drawable {
     this.lastY = 0;
     this.isLocalPlayer = isLocalPlayer;
     this.depth = 0;
+
     if (isLocalPlayer) {
       Input.leftSwipeListener = () => {
         if (
@@ -878,15 +880,17 @@ export class Player extends Drawable {
 
   moveSnap = (x: number, y: number) => {
     // no smoothing
-    this.x = x;
-    this.y = y;
+    this.x = Math.round(x);
+    this.y = Math.round(y);
     this.drawX = 0;
     this.drawY = 0;
     this.hitX = 0;
     this.hitY = 0;
+    this.jumpY = 0;
   };
 
   update = () => {};
+
   updateSlowMotion = () => {
     if (this.slowMotionTickDuration > 0) this.slowMotionTickDuration -= 1;
     if (this.slowMotionTickDuration === 0) this.slowMotionEnabled = false;

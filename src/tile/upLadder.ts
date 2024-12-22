@@ -22,10 +22,15 @@ export class UpLadder extends Tile {
       return;
     }
     try {
-      this.game.changeLevelThroughLadder(player, this, this.linkedLevel);
+      this.linkLevel();
+      this.game.changeLevelThroughLadder(player, this);
     } catch (error) {
       console.error("Error during changeLevelThroughLadder:", error);
     }
+  };
+
+  linkLevel = () => {
+    this.linkedLevel = this.game.levels[this.depth - 1].exitRoom;
   };
 
   draw = (delta: number) => {

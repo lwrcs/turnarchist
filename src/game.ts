@@ -94,8 +94,9 @@ export class Game {
   chatOpen: boolean;
   chatTextBox: TextBox;
   previousFrameTimestamp: number;
+  player: Player;
 
-  mostRecentInputReceived = true;
+  static inputReceived = false;
 
   loginMessage: string = "";
   username: string;
@@ -120,6 +121,7 @@ export class Game {
   private startScreenAlpha = 1;
   static delta: number;
   currentDepth: number;
+  previousDepth: number;
 
   static text_rendering_canvases: Record<string, HTMLCanvasElement>;
   static readonly letters = "abcdefghijklmnopqrstuvwxyz1234567890,.!?:'()[]%-/";
@@ -140,6 +142,11 @@ export class Game {
     return table[Game.rand(0, table.length - 1, rand)];
   };
   tutorialListener: TutorialListener;
+
+  private focusTimeout: number | null = null;
+  private readonly FOCUS_TIMEOUT_DURATION = 5000; // 5 seconds
+  private wasMuted = false;
+  private wasStarted = false;
 
   constructor() {
     window.addEventListener("load", () => {
@@ -289,8 +296,8 @@ export class Game {
             // Small delay to ensure new dimensions are available
             setTimeout(this.onResize, 100);
           });
-          Sound.loadSounds();
-          Sound.playMusic(); // loops forever
+
+          //Sound.playMusic(); // loops forever
 
           this.players = {};
           this.offlinePlayers = {};
@@ -311,10 +318,13 @@ export class Game {
       };
       checkResourcesLoaded();
     });
+    ReverbEngine.initialize();
+
+    Sound.loadSounds();
+
     this.started = false;
     this.tutorialListener = new TutorialListener(this);
     this.setupEventListeners();
-    ReverbEngine.initialize();
 
     globalEventBus.on(EVENTS.LEVEL_GENERATION_STARTED, () => {
       this.levelState = LevelState.LEVEL_GENERATION;
@@ -322,7 +332,26 @@ export class Game {
     globalEventBus.on(EVENTS.LEVEL_GENERATION_COMPLETED, () => {
       this.levelState = LevelState.IN_LEVEL;
     });
+
+    // Add focus/blur event listeners
+    window.addEventListener("blur", this.handleWindowBlur);
+    window.addEventListener("focus", this.handleWindowFocus);
   }
+
+  updateDepth = (depth: number) => {
+    this.previousDepth = this.currentDepth;
+    this.currentDepth = depth;
+    this.players[this.localPlayerID].depth = depth;
+  };
+
+  updateLevel = () => {
+    this.level = this.levels[this.currentDepth];
+    if (this.level.rooms.length > 0) this.rooms = this.level.rooms;
+  };
+
+  setPlayer = () => {
+    this.player = this.players[this.localPlayerID];
+  };
 
   newGame = () => {
     statsTracker.resetStats();
@@ -336,12 +365,8 @@ export class Game {
     this.levelState = LevelState.LEVEL_GENERATION;
   };
 
-  startGame = () => {
-    this.started = true;
-    Sound.ambientSound.play();
-  };
-
   keyDownListener = (key: string) => {
+    Game.inputReceived = true;
     if (!this.started) {
       this.startedFadeOut = true;
       return;
@@ -420,10 +445,11 @@ export class Game {
   changeLevelThroughLadder = (
     player: Player,
     ladder: UpLadder | DownLadder,
-    newRoom: Room,
   ) => {
     player.map.saveOldMap();
     if (ladder instanceof DownLadder && !ladder.linkedLevel) ladder.generate();
+
+    const newRoom = ladder.linkedLevel;
 
     if (this.players[this.localPlayerID] === player) {
       player.levelID = newRoom.id;
@@ -433,13 +459,15 @@ export class Game {
       }
     }
 
+    this.updateDepth(newRoom.depth);
+
     this.levelState = LevelState.TRANSITIONING_LADDER;
     this.transitionStartTime = Date.now();
     this.transitioningLadder = ladder;
   };
 
-  changeLevelThroughDoor = (player: Player, door: any, side?: number) => {
-    player.levelID = this.rooms.indexOf(door.room);
+  changeLevelThroughDoor = (player: Player, door: Door, side?: number) => {
+    player.levelID = door.room.id;
 
     if (this.players[this.localPlayerID] === player) {
       this.levelState = LevelState.TRANSITIONING;
@@ -478,7 +506,11 @@ export class Game {
   };
 
   run = (timestamp: number) => {
-    if (this.paused) return;
+    if (this.paused) {
+      // Still request next frame even when paused to maintain loop
+      window.requestAnimationFrame(this.run);
+      return;
+    }
 
     if (!this.previousFrameTimestamp) {
       this.previousFrameTimestamp = timestamp;
@@ -560,7 +592,9 @@ export class Game {
     if (this.levelState !== LevelState.LEVEL_GENERATION) {
       for (const i in this.players) {
         this.players[i].update();
-        this.rooms[this.players[i].levelID].update();
+        this.levels[this.players[i].depth].rooms[
+          this.players[i].levelID
+        ].update();
 
         if (this.players[i].dead) {
           for (const j in this.players) {
@@ -1408,6 +1442,49 @@ export class Game {
       shadeOpacity,
     );
   };
+
+  private handleWindowBlur = () => {
+    // Start a timeout when window loses focus
+    this.focusTimeout = window.setTimeout(() => {
+      // Store current state
+      this.wasMuted = Sound.audioMuted;
+      this.wasStarted = this.started;
+
+      // Mute audio and pause game
+      Sound.audioMuted = true;
+      this.started = false;
+      this.paused = true;
+
+      // Optional: Show a message in chat
+      this.pushMessage("Game paused - window inactive");
+    }, this.FOCUS_TIMEOUT_DURATION);
+  };
+
+  private handleWindowFocus = () => {
+    // Clear the timeout if it exists
+    if (this.focusTimeout) {
+      clearTimeout(this.focusTimeout);
+      this.focusTimeout = null;
+    }
+
+    // If game was paused due to inactivity, restore previous state
+    if (this.paused) {
+      Sound.audioMuted = this.wasMuted;
+      this.started = this.wasStarted;
+      this.paused = false;
+
+      // Optional: Show a message in chat
+      this.pushMessage("Game resumed");
+    }
+  };
+
+  destroy() {
+    window.removeEventListener("blur", this.handleWindowBlur);
+    window.removeEventListener("focus", this.handleWindowFocus);
+    if (this.focusTimeout) {
+      clearTimeout(this.focusTimeout);
+    }
+  }
 }
 
 let game = new Game();
