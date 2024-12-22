@@ -48,18 +48,25 @@ export class SkullEnemy extends Enemy {
     damage: number,
     type: "none" | "poison" | "blood" | "heal" = "none",
   ) => {
-    if (playerHitBy) {
-      this.aggro = true;
-      this.targetPlayer = playerHitBy;
-      this.facePlayer(playerHitBy);
-      if (playerHitBy === this.game.players[this.game.localPlayerID])
-        this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
+    this.handleEnemyCase(playerHitBy);
+
+    let hitShield = false;
+    let shieldHealth = 0;
+    if (this.shielded) {
+      shieldHealth = this.shield.health;
+      if (shieldHealth > 0) {
+        this.shield.hurt(damage);
+        hitShield = true;
+      }
     }
     this.ticksSinceFirstHit = 0;
     if (this.health == 2) this.unconscious = false;
     this.health -= damage;
+    this.maxHealth -= shieldHealth;
+
     this.healthBar.hurt();
     this.createDamageNumber(damage, type);
+    this.playHitSound();
 
     if (this.health == 1) {
       this.unconscious = true;

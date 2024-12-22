@@ -100,6 +100,7 @@ export class Player extends Drawable {
   slowMotionEnabled: boolean;
   justMoved: DrawDirection;
   slowMotionTickDuration: number;
+  depth: number;
   private animationFrameId: number | null = null;
   private isProcessingQueue: boolean = false;
   private lowHealthFrame: number = 0;
@@ -128,6 +129,7 @@ export class Player extends Drawable {
     this.lastX = 0;
     this.lastY = 0;
     this.isLocalPlayer = isLocalPlayer;
+    this.depth = 0;
     if (isLocalPlayer) {
       Input.leftSwipeListener = () => {
         if (
@@ -600,7 +602,7 @@ export class Player extends Drawable {
     let slowMotion = this.slowMotionEnabled;
     let newMove = { x: x, y: y };
     // TODO don't move if hit by enemy
-    this.game.rooms[this.levelID].catchUp();
+    this.game.levels[this.depth].rooms[this.levelID].catchUp();
     if (this.dead) return;
 
     for (let i = 0; i < 2; i++)
@@ -614,7 +616,7 @@ export class Player extends Drawable {
         //}
       }
 
-    for (let e of this.game.rooms[this.levelID].entities) {
+    for (let e of this.game.levels[this.depth].rooms[this.levelID].entities) {
       e.lastX = e.x;
       e.lastY = e.y;
       //console.log(`e.lastX, e.lastY: ${e.lastX}, ${e.lastY}`);
@@ -631,7 +633,8 @@ export class Player extends Drawable {
           let pushedEnemies = [];
           while (true) {
             foundEnd = true;
-            for (const f of this.game.rooms[this.levelID].entities) {
+            for (const f of this.game.levels[this.depth].rooms[this.levelID]
+              .entities) {
               f.lastX = f.x;
               f.lastY = f.y;
               if (f.pointIn(nextX, nextY)) {
@@ -655,25 +658,33 @@ export class Player extends Drawable {
 
           if (
             pushedEnemies.length === 0 &&
-            (this.game.rooms[this.levelID].roomArray[nextX][
+            (this.game.levels[this.depth].rooms[this.levelID].roomArray[nextX][
               nextY
             ].canCrushEnemy() ||
               enemyEnd)
           ) {
             if (e.destroyable) {
               e.kill();
-              if (this.game.rooms[this.levelID] === this.game.room) Sound.hit();
-              this.game.rooms[this.levelID].particles.push(
+              if (
+                this.game.levels[this.depth].rooms[this.levelID] ===
+                this.game.room
+              )
+                Sound.hit();
+              this.game.levels[this.depth].rooms[this.levelID].particles.push(
                 new SlashParticle(e.x, e.y),
               );
               this.shakeScreen(this.x, this.y, e.x, e.y);
               //this.hitShake(this.x, this.y, e.x, e.y);
 
-              this.game.rooms[this.levelID].tick(this);
+              this.game.levels[this.depth].rooms[this.levelID].tick(this);
               return;
             }
           } else {
-            if (this.game.rooms[this.levelID] === this.game.room) Sound.push();
+            if (
+              this.game.levels[this.depth].rooms[this.levelID] ===
+              this.game.room
+            )
+              Sound.push();
             // here pushedEnemies may still be []
 
             for (const f of pushedEnemies) {
@@ -686,13 +697,17 @@ export class Player extends Drawable {
               f.skipNextTurns = 1; // skip next turn, so they don't move while we're pushing them
             }
             if (
-              this.game.rooms[this.levelID].roomArray[nextX][
+              this.game.levels[this.depth].rooms[this.levelID].roomArray[nextX][
                 nextY
               ].canCrushEnemy() ||
               enemyEnd
             ) {
               pushedEnemies[pushedEnemies.length - 1].crush();
-              if (this.game.rooms[this.levelID] === this.game.room) Sound.hit();
+              if (
+                this.game.levels[this.depth].rooms[this.levelID] ===
+                this.game.room
+              )
+                Sound.hit();
             }
 
             e.x += dx;
@@ -701,7 +716,7 @@ export class Player extends Drawable {
             e.drawY = dy;
             this.move(x, y);
             this.moveDistance++;
-            this.game.rooms[this.levelID].tick(this);
+            this.game.levels[this.depth].rooms[this.levelID].tick(this);
             return;
           }
         } else {
@@ -715,12 +730,13 @@ export class Player extends Drawable {
         }
       }
     }
-    let other = this.game.rooms[this.levelID].roomArray[x][y];
+    let other =
+      this.game.levels[this.depth].rooms[this.levelID].roomArray[x][y];
     if (!other.isSolid()) {
       this.move(x, y);
       other.onCollide(this);
       if (!(other instanceof Door || other instanceof Trapdoor))
-        this.game.rooms[this.levelID].tick(this);
+        this.game.levels[this.depth].rooms[this.levelID].tick(this);
     } else {
       if (other instanceof Door) {
         this.shakeScreen(this.x, this.y, x, y);
@@ -737,7 +753,8 @@ export class Player extends Drawable {
   //get cancelHoldMove = () => {};
 
   wouldHurt = (x: number, y: number) => {
-    for (let h of this.game.rooms[this.levelID].hitwarnings) {
+    for (let h of this.game.levels[this.depth].rooms[this.levelID]
+      .hitwarnings) {
       if (h instanceof HitWarning && h.x == x && h.y == y) return true;
       else {
         return false;
@@ -746,7 +763,8 @@ export class Player extends Drawable {
   };
 
   hurt = (damage: number, enemy: string) => {
-    if (this.game.rooms[this.levelID] === this.game.room) Sound.hurt();
+    if (this.game.levels[this.depth].rooms[this.levelID] === this.game.room)
+      Sound.hurt();
 
     if (this.inventory.getArmor() && this.inventory.getArmor().health > 0) {
       this.inventory.getArmor().hurt(damage);
@@ -784,7 +802,7 @@ export class Player extends Drawable {
     this.x = x;
     this.y = y;
 
-    for (let i of this.game.rooms[this.levelID].items) {
+    for (let i of this.game.levels[this.depth].rooms[this.levelID].items) {
       if (i.x === x && i.y === y) {
         i.onPickup(this);
       }
@@ -818,7 +836,7 @@ export class Player extends Drawable {
     this.updateLastPosition(this.x, this.y);
 
     //this.actionTab.setState(ActionState.MOVE);
-    if (this.game.rooms[this.levelID] === this.game.room)
+    if (this.game.levels[this.depth].rooms[this.levelID] === this.game.room)
       Sound.playerStoneFootstep();
 
     if (this.openVendingMachine) this.openVendingMachine.close();
@@ -840,7 +858,7 @@ export class Player extends Drawable {
     this.x = x;
     this.y = y;
 
-    for (let i of this.game.rooms[this.levelID].items) {
+    for (let i of this.game.levels[this.depth].rooms[this.levelID].items) {
       if (i.x === x && i.y === y) {
         i.onPickup(this);
       }
@@ -926,7 +944,7 @@ export class Player extends Drawable {
   drawSpellBeam = (delta: number) => {
     Game.ctx.save();
     // Clear existing beam effects each frame
-    this.game.rooms[this.levelID].beamEffects = [];
+    this.game.levels[this.depth].rooms[this.levelID].beamEffects = [];
 
     if (this.inventory.getWeapon() instanceof Spellbook) {
       const spellbook = this.inventory.getWeapon() as Spellbook;
@@ -934,7 +952,7 @@ export class Player extends Drawable {
         let targets = spellbook.targets;
         for (let target of targets) {
           // Create a new beam effect from the player to the enemy
-          this.game.rooms[this.levelID].addBeamEffect(
+          this.game.levels[this.depth].rooms[this.levelID].addBeamEffect(
             this.x - this.drawX,
             this.y - this.drawY,
             target.x - target.drawX,
@@ -944,8 +962,9 @@ export class Player extends Drawable {
 
           // Retrieve the newly added beam effect
           const beam =
-            this.game.rooms[this.levelID].beamEffects[
-              this.game.rooms[this.levelID].beamEffects.length - 1
+            this.game.levels[this.depth].rooms[this.levelID].beamEffects[
+              this.game.levels[this.depth].rooms[this.levelID].beamEffects
+                .length - 1
             ];
 
           // Render the beam
@@ -1117,7 +1136,9 @@ export class Player extends Drawable {
         lines.push("Game Over");
       }
 
-      lines.push(`Depth reached: ${this.game.rooms[this.levelID].depth}`);
+      lines.push(
+        `Depth reached: ${this.game.levels[this.depth].rooms[this.levelID].depth}`,
+      );
 
       // Line 2: Enemies killed
       lines.push(

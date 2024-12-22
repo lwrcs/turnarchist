@@ -103,6 +103,8 @@ export class Entity extends Drawable {
   frame: number;
   shield: EnemyShield;
   shieldedBefore: boolean;
+  shadeColor: string;
+  shadeMultiplier: number = 1;
   private _imageParticleTiles: { x: number; y: number };
   hitSound: () => void;
 
@@ -157,6 +159,7 @@ export class Entity extends Drawable {
     this.shieldedBefore = false;
     this._imageParticleTiles = { x: 0, y: 0 };
     this.hitSound = null;
+    this.shadeColor = this.room.shadeColor;
   }
 
   static add<
@@ -182,11 +185,15 @@ export class Entity extends Drawable {
       this.shieldedBefore = true;
       this.health += shieldHealth;
       this.maxHealth += shieldHealth;
+      this.shadeColor = "purple";
+      this.shadeMultiplier = 0.5;
     }
   };
 
   removeShield = () => {
     this.shield.remove();
+    this.shadeColor = this.room.shadeColor;
+    this.shadeMultiplier = 1;
   };
 
   getDrop = (useCategory: string[] = [], force: boolean = false) => {
@@ -297,6 +304,12 @@ export class Entity extends Drawable {
         hitShield = true;
       }
     }
+    /*
+    this.shadeColor = "red";
+    setTimeout(() => {
+      this.shadeColor = this.room.shadeColor;
+    }, 100);
+    */
 
     this.health -= damage;
     this.maxHealth -= shieldHealth;
@@ -380,7 +393,12 @@ export class Entity extends Drawable {
   };
 
   shadeAmount = () => {
-    return this.room.softVis[this.x][this.y];
+    return this.room.softVis[this.x][this.y] * this.shadeMultiplier;
+  };
+
+  shadeCol = () => {
+    const [r, g, b] = this.room.softCol[this.x][this.y];
+    return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
   };
 
   emitEnemyKilled = () => {
@@ -443,7 +461,7 @@ export class Entity extends Drawable {
             this.y - this.drawY,
             1,
             1,
-            this.room.shadeColor,
+            this.shadeColor,
             this.shadeAmount(),
           );
         }
@@ -468,7 +486,7 @@ export class Entity extends Drawable {
         this.y - this.drawYOffset - this.drawY,
         1,
         2,
-        this.room.shadeColor,
+        this.shadeColor,
         this.shadeAmount(),
       );
     }

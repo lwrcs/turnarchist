@@ -236,6 +236,7 @@ export class Room {
   lastEnemyCount: number;
   outerWalls: Array<Wall>;
   level: Level;
+  id: number;
 
   // Add a list to keep track of BeamEffect instances
   beamEffects: BeamEffect[] = [];
@@ -274,7 +275,8 @@ export class Room {
     this.lightSources = Array<LightSource>();
     this.innerWalls = Array<Wall>();
     this.level = level;
-
+    this.id = 0;
+    console.log(`room id: ${this.id}`);
     this.currentSpawnerCount = 0;
 
     // #region initialize arrays
@@ -1128,7 +1130,7 @@ export class Room {
     this.addRandomTorches("medium");
 
     const { x, y } = this.getRoomCenter();
-    this.roomArray[x][y] = new UpLadder(this, this.game, x, y);
+    this.roomArray[x - 1][y - 1] = new UpLadder(this, this.game, x - 1, y - 1);
   };
 
   populateDownLadder = (rand: () => number) => {
@@ -1142,6 +1144,7 @@ export class Room {
       x + 1,
       y - 1,
     );
+
     const numChests = Math.ceil(Math.random() * 5);
 
     let tiles = this.getEmptyTiles();
@@ -1241,6 +1244,7 @@ export class Room {
       case RoomType.START:
         //this.addNewEnemy(EnemyType.zombie);
         //this.addNewEnemy(EnemyType.occultist);
+        if (this.depth !== 0) this.populateUpLadder(rand);
         this.populateEmpty(rand);
         this.name = "FLOOR " + -this.depth;
         if (this.level.environment.type === EnvType.CAVE) {
@@ -1338,6 +1342,12 @@ export class Room {
   };
 
   enterLevel = (player: Player) => {
+    console.log(`room id: ${this.id}`);
+    this.game.level = this.level;
+    this.game.currentDepth = this.depth;
+    player.levelID = this.id;
+    player.depth = this.depth;
+    this.game.players[this.game.localPlayerID] = player;
     player.moveSnap(this.getRoomCenter().x, this.getRoomCenter().y);
 
     this.clearDeadStuff();
@@ -1364,6 +1374,7 @@ export class Room {
       // if side door
       player.moveNoSmooth(door.x + side, door.y);
     }
+    console.log(`player coordinates: ${player.x}, ${player.y}`);
 
     this.clearDeadStuff();
     this.calculateWallInfo();
@@ -1379,6 +1390,11 @@ export class Room {
   };
 
   enterLevelThroughLadder = (player: Player, ladder: any) => {
+    this.game.level = this.level;
+    this.game.currentDepth = this.depth;
+    player.levelID = this.id;
+    player.depth = this.depth;
+    this.game.players[this.game.localPlayerID] = player;
     player.moveSnap(ladder.x, ladder.y + 1);
 
     this.clearDeadStuff();
@@ -1465,7 +1481,7 @@ export class Room {
       if (this.roomArray[p.x][p.y].isSolid()) p.dead = true;
       for (const i in this.game.players) {
         if (
-          this.game.rooms[this.game.players[i].levelID] === this &&
+          this.level.rooms[this.game.players[i].levelID] === this &&
           p.x === this.game.players[i].x &&
           p.y === this.game.players[i].y
         ) {
@@ -1633,7 +1649,7 @@ export class Room {
 
     for (const p in this.game.players) {
       let player = this.game.players[p];
-      if (this === this.game.rooms[player.levelID]) {
+      if (this === this.level.rooms[player.levelID]) {
         //console.log(`i: ${player.angle}`);
         for (let i = 0; i < 360; i += lightingAngleStep) {
           let lightColor = LevelConstants.AMBIENT_LIGHT_COLOR;
@@ -2076,7 +2092,7 @@ export class Room {
       Game.ctx.globalCompositeOperation = "source-over"; // "soft-light";
       Game.ctx.globalAlpha = 1;
       if (
-        this.game.rooms[this.game.players[p].levelID] === this &&
+        this.level.rooms[this.game.players[p].levelID] === this &&
         this.game.players[p].defaultSightRadius > bestSightRadius
       ) {
         bestSightRadius = this.game.players[p].defaultSightRadius;

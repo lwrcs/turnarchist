@@ -28,6 +28,7 @@ interface Drop {
   itemType: string;
   dropWeight: number;
   category: string[];
+  minDepth?: number;
 }
 
 export const ItemTypeMap: { [key: string]: typeof Item } = {
@@ -67,9 +68,9 @@ export const ItemTypeMap: { [key: string]: typeof Item } = {
 export class DropTable {
   static drops: Drop[] = [
     // Weapons
-    { itemType: "dualdagger", dropWeight: 3, category: ["weapon", "melee"] },
-    { itemType: "warhammer", dropWeight: 5, category: ["weapon", "melee"] },
-    { itemType: "spear", dropWeight: 10, category: ["weapon", "melee"] },
+    { itemType: "dualdagger", dropWeight: 1, category: ["weapon", "melee"] },
+    { itemType: "warhammer", dropWeight: 2, category: ["weapon", "melee"] },
+    { itemType: "spear", dropWeight: 5, category: ["weapon", "melee"] },
     { itemType: "spellbook", dropWeight: 1, category: ["weapon", "magic"] },
 
     // Equipment
@@ -123,31 +124,38 @@ export class DropTable {
     uniqueTable: boolean = false,
     useCategory: string[] = ["coin"],
     force: boolean = false,
+    currentDepth: number = 0,
   ) => {
     let filteredDropsByCategory: Drop[] = [];
     let filteredDropsByItem: Drop[] = [];
+    let filteredDropsByDepth: Drop[] = [];
 
     const allCategories = Array.from(
       new Set(this.drops.flatMap((drop) => drop.category)),
     );
     const allItemTypes = Object.keys(ItemTypeMap);
 
+    const allDepth = this.drops.map((drop) => drop.minDepth);
+
     // Separate categories and specific item names from useCategory
     const categories = useCategory.filter((cat) => allCategories.includes(cat));
     const specificItems = useCategory.filter((item) =>
       allItemTypes.includes(item),
     );
+    const itemsByDepth = this.drops.filter(
+      (drop) => drop.minDepth === undefined || drop.minDepth <= currentDepth,
+    );
 
     // Get drops from specified categories
     if (categories.length > 0) {
-      filteredDropsByCategory = this.drops.filter((drop) =>
+      filteredDropsByCategory = itemsByDepth.filter((drop) =>
         drop.category.some((cat) => categories.includes(cat)),
       );
     }
 
     // Get specific drops by item name
     if (specificItems.length > 0) {
-      filteredDropsByItem = this.drops.filter((drop) =>
+      filteredDropsByItem = itemsByDepth.filter((drop) =>
         specificItems.includes(drop.itemType),
       );
     }
@@ -165,14 +173,14 @@ export class DropTable {
 
     let combinedDrops = Object.values(combinedDropsMap);
 
-    // If no categories or specific items matched, use all drops
+    // If no categories or specific items matched, use items by depth
     if (combinedDrops.length === 0) {
-      combinedDrops = this.drops;
+      combinedDrops = itemsByDepth;
     }
 
     if (combinedDrops.length === 0) {
       if (force) {
-        combinedDrops = this.drops;
+        combinedDrops = itemsByDepth;
         if (combinedDrops.length === 0) return null;
       } else return null;
     }

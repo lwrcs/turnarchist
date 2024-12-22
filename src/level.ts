@@ -1,4 +1,4 @@
-import { Room } from "./room";
+import { Room, RoomType } from "./room";
 import { Game } from "./game";
 import { Entity, EntityType } from "./entity/entity";
 import { Item } from "./item/item";
@@ -60,6 +60,7 @@ export class Level {
   game: Game;
   rooms: Room[];
   environment: Environment;
+  exitRoom: Room;
   //environmentData: environmentData;
   //enemySpawnPool: Array<entitySpawnData>;
   enemyParameters: EnemyParameters;
@@ -68,13 +69,30 @@ export class Level {
     this.depth = depth;
     this.width = width;
     this.height = height;
-    this.rooms = game.rooms;
+    this.rooms = [];
     this.initializeLevelArray();
     //this.loadRoomsIntoLevelArray();
-    console.log(`depth: ${this.depth}`);
+    console.log(`level depth: ${this.depth}`);
+
     this.enemyParameters = this.getEnemyParameters();
     let envType = Math.floor(Math.random() * 3); //multiply by number of environments to choose from
     this.environment = new Environment(envType);
+  }
+
+  setExitRoom() {
+    this.exitRoom = this.rooms.find(
+      (room) => room.type === RoomType.DOWNLADDER,
+    );
+  }
+
+  setRooms(rooms: Room[]) {
+    this.rooms = rooms;
+    this.setExitRoom();
+    this.rooms.filter((room) => room.depth === this.depth);
+    rooms.forEach((room) => {
+      room.id = this.rooms.indexOf(room);
+      console.log(`room id: ${room.id}`);
+    });
   }
 
   initializeLevelArray = () => {

@@ -8,6 +8,7 @@ import { SpikeTrap } from "../../tile/spiketrap";
 import { EntityType } from "../entity";
 import { ImageParticle } from "../../particle/imageParticle";
 import { globalEventBus } from "../../eventBus";
+import { Sound } from "../../sound";
 
 enum EnemyState {
   SLEEP,

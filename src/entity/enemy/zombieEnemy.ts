@@ -258,7 +258,7 @@ export class ZombieEnemy extends Enemy {
           this.y - this.drawY,
           1,
           1,
-          this.room.shadeColor,
+          this.shadeCol(),
           this.shadeAmount(),
         );
       Game.drawMob(
@@ -270,7 +270,7 @@ export class ZombieEnemy extends Enemy {
         this.y - this.drawYOffset - this.drawY - this.jumpY,
         1,
         2,
-        this.room.shadeColor,
+        this.shadeColor,
         this.shadeAmount(),
       );
     }

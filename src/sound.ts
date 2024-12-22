@@ -26,7 +26,8 @@ export class Sound {
   static magicSound: HTMLAudioElement;
   static wooshSound: HTMLAudioElement;
   static initialized: boolean = false;
-  static loadSounds = () => {
+  static audioMuted: boolean = false;
+  static async loadSounds() {
     if (Sound.initialized) return;
     Sound.initialized = true;
     Sound.playerStoneFootsteps = new Array<HTMLAudioElement>();
@@ -144,7 +145,7 @@ export class Sound {
 
     Sound.wooshSound = new Audio("res/SFX/attacks/woosh1.mp3");
     Sound.wooshSound.volume = 0.2;
-  };
+  }
 
   private static playSoundSafely(audio: HTMLAudioElement) {
     audio.play().catch((err) => {
@@ -163,6 +164,7 @@ export class Sound {
   }
 
   static playerStoneFootstep = async () => {
+    if (Sound.audioMuted) return;
     let f = Game.randTable(Sound.playerStoneFootsteps, Math.random);
     await this.playWithReverb(f);
     f.currentTime = 0;
@@ -170,12 +172,14 @@ export class Sound {
   };
 
   static enemyFootstep = () => {
+    if (Sound.audioMuted) return;
     let f = Game.randTable(Sound.enemyFootsteps, Math.random);
     this.playWithReverb(f);
     f.currentTime = 0;
   };
 
   static hit = () => {
+    if (Sound.audioMuted) return;
     let f = Game.randTable(Sound.swingSounds, Math.random);
     this.playWithReverb(f);
     f.currentTime = 0;
@@ -188,41 +192,48 @@ export class Sound {
   };
 
   static hurt = () => {
+    if (Sound.audioMuted) return;
     let f = Game.randTable(Sound.hurtSounds, Math.random);
     this.playWithReverb(f);
     f.currentTime = 0;
   };
 
   static enemySpawn = () => {
+    if (Sound.audioMuted) return;
     this.playWithReverb(Sound.enemySpawnSound);
     Sound.enemySpawnSound.currentTime = 0;
   };
 
   static chest = () => {
+    if (Sound.audioMuted) return;
     let f = Game.randTable(Sound.chestSounds, Math.random);
     this.playWithReverb(f);
     f.currentTime = 0;
   };
 
   static potSmash = () => {
+    if (Sound.audioMuted) return;
     let f = Game.randTable(Sound.potSmashSounds, Math.random);
     this.playWithReverb(f);
     f.currentTime = 0;
   };
 
   static pickupCoin = () => {
+    if (Sound.audioMuted) return;
     let f = Game.randTable(Sound.coinPickupSounds, Math.random);
     this.playWithReverb(f);
     f.currentTime = 0;
   };
 
   static mine = () => {
+    if (Sound.audioMuted) return;
     let f = Game.randTable(Sound.miningSounds, Math.random);
     this.playWithReverb(f);
     f.currentTime = 0;
   };
 
   static breakRock = () => {
+    if (Sound.audioMuted) return;
     setTimeout(() => {
       this.playWithReverb(Sound.breakRockSound);
     }, 100);
@@ -230,39 +241,46 @@ export class Sound {
   };
 
   static heal = () => {
+    if (Sound.audioMuted) return;
     this.playWithReverb(Sound.healSound);
     Sound.healSound.currentTime = 0;
   };
 
   static genericPickup = () => {
+    if (Sound.audioMuted) return;
     this.playWithReverb(Sound.genericPickupSound);
     Sound.genericPickupSound.currentTime = 0;
   };
 
   static keyPickup = () => {
+    if (Sound.audioMuted) return;
     this.playWithReverb(Sound.keyPickupSound);
     Sound.keyPickupSound.currentTime = 0;
   };
 
   static push = () => {
+    if (Sound.audioMuted) return;
     let f = Game.randTable(Sound.pushSounds, Math.random);
     this.playWithReverb(f);
     f.currentTime = 0;
   };
 
   static skeleSpawn = () => {
+    if (Sound.audioMuted) return;
     this.playWithReverb(Sound.graveSound);
     Sound.graveSound.currentTime = 0;
     Sound.graveSound.volume = 0.3;
   };
 
   static unlock = () => {
+    if (Sound.audioMuted) return;
     let f = Game.randTable(Sound.unlockSounds, Math.random);
     this.playWithReverb(f);
     f.currentTime = 0;
   };
 
   static playMusic = () => {
+    if (Sound.audioMuted) return;
     /*
     Sound.music.addEventListener(
       "ended",
@@ -277,12 +295,14 @@ export class Sound {
   };
 
   static doorOpen = () => {
+    if (Sound.audioMuted) return;
     let f = Game.randTable(Sound.doorOpenSounds, Math.random);
     this.playWithReverb(f);
     f.currentTime = 0;
   };
 
   static playAmbient = () => {
+    if (Sound.audioMuted) return;
     Sound.ambientSound.addEventListener(
       "ended",
       () => {
@@ -295,11 +315,13 @@ export class Sound {
   };
 
   static playGore = () => {
+    if (Sound.audioMuted) return;
     this.playWithReverb(Sound.goreSound);
     Sound.goreSound.currentTime = 0;
   };
 
   static playMagic = () => {
+    if (Sound.audioMuted) return;
     let f = Sound.magicSound;
     let woosh = Sound.wooshSound;
     this.playWithReverb(f);

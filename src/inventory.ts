@@ -422,7 +422,7 @@ export class Inventory {
   };
 
   dropItem = (item: Item, index: number) => {
-    item.level = this.game.rooms[this.player.levelID];
+    item.level = this.game.levels[this.player.depth].rooms[this.player.levelID];
     item.x = this.player.x;
     item.y = this.player.y;
     item.alpha = 1;
@@ -430,7 +430,9 @@ export class Inventory {
     item.dropFromInventory();
     this.equipAnimAmount[index] = 0;
     item.drawableY = this.player.y;
-    this.game.rooms[this.player.levelID].items.push(item);
+    this.game.levels[this.player.depth].rooms[this.player.levelID].items.push(
+      item,
+    );
     this.items[index] = null;
   };
 

@@ -7,6 +7,7 @@ import { Utils } from "../../utils";
 import { BeamEffect } from "../../beamEffect";
 import { Player } from "../../player";
 import { ImageParticle } from "../../particle/imageParticle";
+import { Lighting } from "../../lighting";
 
 export class OccultistEnemy extends Enemy {
   ticks: number;
@@ -29,6 +30,15 @@ export class OccultistEnemy extends Enemy {
     this.hasShadow = true;
     this.shieldedBefore = false;
     this.shieldedEnemies = [];
+    this.lightSource = Lighting.newLightSource(
+      this.x + 0.5,
+      this.y + 0.5,
+      [100, 0, 200],
+      0.5,
+      1,
+    );
+    this.addLightSource(this.lightSource);
+    this.room.updateLighting();
   }
 
   hit = (): number => {

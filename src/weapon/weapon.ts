@@ -85,7 +85,7 @@ export abstract class Weapon extends Equippable {
     let inventoryY = this.y;
     let numFragments = Math.floor(this.durability / 1.5);
     this.toggleEquip();
-    inventory.weapon = null;
+    //inventory.weapon = null;
     inventory.removeItem(this);
     inventory.addItem(
       new WeaponFragments(this.level, inventoryX, inventoryY, numFragments),
@@ -110,10 +110,7 @@ export abstract class Weapon extends Equippable {
       }
     }
     if (flag) {
-      if (
-        this.wielder.game.rooms[this.wielder.levelID] === this.wielder.game.room
-      )
-        Sound.hit();
+      this.hitSound();
       this.wielder.hitX = 0.5 * (this.wielder.x - newX);
       this.wielder.hitY = 0.5 * (this.wielder.y - newY);
       this.game.rooms[this.wielder.levelID].particles.push(
@@ -126,6 +123,13 @@ export abstract class Weapon extends Equippable {
       //console.log(this.durability);
     }
     return !flag;
+  };
+
+  hitSound = () => {
+    if (
+      this.wielder.game.rooms[this.wielder.levelID] === this.wielder.game.room
+    )
+      Sound.hit();
   };
 
   drawStatus = (x: number, y: number) => {

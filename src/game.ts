@@ -19,6 +19,7 @@ import { ReverbEngine } from "./reverb";
 import { Level } from "./level";
 import { statsTracker } from "./stats";
 import { EVENTS } from "./events";
+import { UpLadder } from "./tile/upLadder";
 
 export enum LevelState {
   IN_LEVEL,
@@ -72,7 +73,7 @@ export class Game {
   level: Level;
   levels: Array<Level>;
   levelgen: LevelGenerator;
-  localPlayerID = "localplayer";
+  readonly localPlayerID = "localplayer";
   players: Record<string, Player>;
   offlinePlayers: Record<string, Player>;
   levelState: LevelState;
@@ -82,7 +83,7 @@ export class Game {
   upwardTransition: boolean;
   sideTransition: boolean;
   sideTransitionDirection: number;
-  transitioningLadder: any;
+  transitioningLadder: UpLadder | DownLadder;
   screenShakeX: number;
   screenShakeY: number;
   shakeAmountX: number;
@@ -101,7 +102,7 @@ export class Game {
   usernameTextBox: TextBox;
   passwordTextBox: TextBox;
   worldCodes: Array<string>;
-  selectedWorldCode: number;
+  private selectedWorldCode: number;
   tutorialActive: boolean;
   static scale;
   static tileset: HTMLImageElement;
@@ -118,6 +119,7 @@ export class Game {
   paused: boolean;
   private startScreenAlpha = 1;
   static delta: number;
+  currentDepth: number;
 
   static text_rendering_canvases: Record<string, HTMLCanvasElement>;
   static readonly letters = "abcdefghijklmnopqrstuvwxyz1234567890,.!?:'()[]%-/";
@@ -238,9 +240,6 @@ export class Game {
 
           Game.scale = GameConstants.SCALE;
 
-          Sound.loadSounds();
-          Sound.playMusic(); // loops forever
-
           document.addEventListener(
             "touchstart",
             function (e) {
@@ -290,6 +289,8 @@ export class Game {
             // Small delay to ensure new dimensions are available
             setTimeout(this.onResize, 100);
           });
+          Sound.loadSounds();
+          Sound.playMusic(); // loops forever
 
           this.players = {};
           this.offlinePlayers = {};
@@ -325,6 +326,7 @@ export class Game {
 
   newGame = () => {
     statsTracker.resetStats();
+    this.currentDepth = 0;
     this.encounteredEnemies = [];
     this.levels = [];
     let gs = new GameState();
@@ -346,6 +348,11 @@ export class Game {
     }
     if (!this.chatOpen) {
       switch (key.toUpperCase()) {
+        case "M":
+          Sound.audioMuted = !Sound.audioMuted;
+          const message = Sound.audioMuted ? "Audio muted" : "Audio unmuted";
+          this.pushMessage(message);
+          break;
         case "C":
           this.chatOpen = true;
           break;
@@ -401,30 +408,34 @@ export class Game {
   };
 
   changeLevel = (player: Player, newLevel: Room) => {
-    player.levelID = this.rooms.indexOf(newLevel);
+    player.levelID = this.levels[player.depth].rooms.indexOf(newLevel);
     if (this.players[this.localPlayerID] === player) {
       //this.level.exitLevel();
       this.room = newLevel;
     }
+    this.level = this.room.level;
     newLevel.enterLevel(player);
   };
 
-  changeLevelThroughLadder = (player: Player, ladder: any) => {
-    player.levelID = this.rooms.indexOf(ladder.linkedLevel);
-
-    if (ladder instanceof DownLadder) {
-      player.map.saveOldMap();
-      ladder.generate();
-      //let newLevel = new Level(1);
-    }
+  changeLevelThroughLadder = (
+    player: Player,
+    ladder: UpLadder | DownLadder,
+    newRoom: Room,
+  ) => {
+    player.map.saveOldMap();
+    if (ladder instanceof DownLadder && !ladder.linkedLevel) ladder.generate();
 
     if (this.players[this.localPlayerID] === player) {
-      this.levelState = LevelState.TRANSITIONING_LADDER;
-      this.transitionStartTime = Date.now();
-      this.transitioningLadder = ladder;
-    } else {
-      ladder.linkedLevel.enterLevel(player, ladder.linkedLevel); // since it's not a local player, don't wait for transition
+      player.levelID = newRoom.id;
+      if (ladder instanceof UpLadder) {
+        this.players[this.localPlayerID].levelID =
+          newRoom.level.rooms.indexOf(newRoom);
+      }
     }
+
+    this.levelState = LevelState.TRANSITIONING_LADDER;
+    this.transitionStartTime = Date.now();
+    this.transitioningLadder = ladder;
   };
 
   changeLevelThroughDoor = (player: Player, door: any, side?: number) => {
@@ -461,6 +472,9 @@ export class Game {
       door.room.enterLevelThroughDoor(player, door, side);
     }
     player.map.saveMapData();
+    console.log(
+      `Current room Index  ${this.rooms.indexOf(this.room)} Current Room Type ${this.room.type}`,
+    );
   };
 
   run = (timestamp: number) => {
@@ -1014,7 +1028,7 @@ export class Game {
           this.prevLevel = this.room;
           this.room.exitLevel();
           this.room = this.transitioningLadder.linkedLevel;
-
+          //this.players[this.localPlayerID].levelID = this.room.id;
           this.room.enterLevel(this.players[this.localPlayerID]);
           this.transitioningLadder = null;
         }

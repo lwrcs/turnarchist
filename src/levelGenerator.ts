@@ -1092,8 +1092,7 @@ export class LevelGenerator {
 
   createLevel = (depth: number) => {
     let newLevel = new Level(this.game, depth, 100, 100);
-    this.game.levels.push(newLevel);
-    this.game.level = newLevel;
+    return newLevel;
   };
 
   getRooms = (
@@ -1122,6 +1121,7 @@ export class LevelGenerator {
         Random.rand,
       );
       rooms.push(room);
+      console.log(`room index: ${rooms.indexOf(room)}`);
     }
 
     let doors_added: Array<Door> = [];
@@ -1192,8 +1192,14 @@ export class LevelGenerator {
     }
 
     // Get the levels based on the partitions
-    this.createLevel(depth);
+    let newLevel = this.createLevel(depth);
+
+    this.game.levels.push(newLevel);
+    this.game.level = newLevel;
     let rooms = this.getRooms(this.partialLevel.partitions, depth, mapGroup);
+
+    newLevel.setRooms(rooms);
+
     console.log(`mapGroup: ${mapGroup}`);
     console.log(`depth: ${depth}`);
 
