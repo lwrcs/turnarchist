@@ -27,7 +27,7 @@ export class EnemyShield extends Projectile {
     this.lightSource = Lighting.newLightSource(
       this.x + 0.5,
       this.y + 0.5,
-      [10, 0, 20],
+      [20, 0, 40],
       2.5,
       20,
     );
@@ -42,6 +42,15 @@ export class EnemyShield extends Projectile {
     this.parent.room.projectiles = this.parent.room.projectiles.filter(
       (projectile) => projectile !== this,
     );
+
+    let beam = this.parent.room.projectiles.find(
+      (projectile) =>
+        projectile instanceof BeamEffect && projectile.parent === this.parent,
+    );
+    if (beam) {
+      beam.dead = true;
+    }
+    this.parent.shadeColor = "black";
     this.lightSource = null;
     this.parent.shield = null;
   };

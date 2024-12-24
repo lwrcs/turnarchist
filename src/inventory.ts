@@ -290,10 +290,11 @@ export class Inventory {
       {
         switch (num) {
           case 9:
-            GameConstants.TOGGLE_USE_OPTIMIZED_SHADING();
+            GameConstants.CUSTOM_SHADER_COLOR_ENABLED =
+              !GameConstants.CUSTOM_SHADER_COLOR_ENABLED;
             this.game.pushMessage(
-              "Optimized shading is now " +
-                (GameConstants.USE_OPTIMIZED_SHADING ? "on" : "off"),
+              "Custom shade color is now " +
+                (GameConstants.CUSTOM_SHADER_COLOR_ENABLED ? "on" : "off"),
             );
             break;
         }

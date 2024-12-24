@@ -30,12 +30,13 @@ export class OccultistEnemy extends Enemy {
     this.hasShadow = true;
     this.shieldedBefore = false;
     this.shieldedEnemies = [];
+    this.shadeColor = "#000000";
     this.lightSource = Lighting.newLightSource(
       this.x + 0.5,
       this.y + 0.5,
-      [100, 0, 200],
-      0.5,
-      1,
+      [20, 0, 40],
+      2.5,
+      20,
     );
     this.addLightSource(this.lightSource);
     this.room.updateLighting();
@@ -47,6 +48,8 @@ export class OccultistEnemy extends Enemy {
 
   uniqueKillBehavior = () => {
     this.unshieldEnemies();
+    this.removeLightSource(this.lightSource);
+    this.lightSource = null;
   };
 
   behavior = () => {
@@ -68,14 +71,17 @@ export class OccultistEnemy extends Enemy {
         this.skipNextTurns--;
         return;
       }
+
       if (this.ticks % 2 === 0) {
         if (enemiesToShield.length > 0) {
           enemiesToShield.forEach((enemy) => {
             this.applyShieldTo(enemy as Enemy);
           });
-          this.createBeam(this.shieldedEnemies);
+
+          //this.createBeam(this.shieldedEnemies);
         }
       }
+
       this.shieldedEnemies.forEach((enemy) => {
         if (enemy.dead) {
           this.shieldedEnemies = this.shieldedEnemies.filter(
@@ -84,20 +90,44 @@ export class OccultistEnemy extends Enemy {
         }
       });
     }
+
+    if (this.shieldedEnemies.length > 0) {
+      this.shadeColor = "#2E0854";
+    } else {
+      this.shadeColor = "#000000";
+    }
   };
 
   unshieldEnemies = () => {
     if (this.shieldedEnemies.length > 0) {
       for (let enemy of this.shieldedEnemies) {
-        enemy.removeShield();
+        if (!enemy.cloned) {
+          enemy.removeShield();
+        }
       }
       this.shieldedEnemies = [];
     }
   };
 
   applyShieldTo = (enemy: Enemy) => {
+    //this.shadeColor = "#2E0854";
+    this.shadeMultiplier = 1.5;
     enemy.applyShield();
     this.shieldedEnemies.push(enemy);
+    if (enemy.shielded && enemy.shield) {
+      let beam = new BeamEffect(enemy.x, enemy.y, this.x, this.y, enemy);
+      beam.compositeOperation = "source-over";
+      beam.color = "#2E0854";
+      beam.turbulence = 0.5;
+      beam.gravity = 0.1;
+      beam.iterations = 1;
+      beam.segments = 30;
+      beam.angleChange = 0.01;
+      beam.springDamping = 0.1;
+      beam.drawableY = enemy.drawableY;
+      this.room.projectiles.push(beam);
+      console.log("beam created");
+    }
   };
 
   private createBeam = (enemies: Enemy[]) => {
@@ -149,6 +179,10 @@ export class OccultistEnemy extends Enemy {
   };
 
   draw = (delta: number) => {
+    if (this.dead) return;
+    Game.ctx.save();
+    Game.ctx.globalAlpha = this.alpha;
+
     this.drawableY = this.y;
     if (!this.dead) {
       this.updateDrawXY(delta);
@@ -179,9 +213,10 @@ export class OccultistEnemy extends Enemy {
         this.y - this.drawYOffset - this.drawY,
         1,
         2,
-        this.room.shadeColor,
+        this.softShadeColor,
         this.shadeAmount(),
       );
     }
+    Game.ctx.restore();
   };
 }

@@ -210,11 +210,15 @@ export class ArmoredzombieEnemy extends Enemy {
   };
 
   draw = (delta: number) => {
+    if (this.dead) return;
+    Game.ctx.save();
+    Game.ctx.globalAlpha = this.alpha;
+
     if (!this.dead) {
       this.updateDrawXY(delta);
       this.tileX = 27;
       this.tileY = 8;
-      if (this.health <= 1) {
+      if (this.health <= 1 || this.dying) {
         this.tileX = 17;
         this.tileY = 8;
       }
@@ -243,15 +247,18 @@ export class ArmoredzombieEnemy extends Enemy {
         this.y - this.drawYOffset - this.drawY,
         1,
         2,
-        this.room.shadeColor,
+        this.softShadeColor,
         this.shadeAmount(),
       );
     }
-    if (!this.seenPlayer) {
-      this.drawSleepingZs(delta);
+    if (!this.cloned) {
+      if (!this.seenPlayer) {
+        this.drawSleepingZs(delta);
+      }
+      if (this.alertTicks > 0) {
+        this.drawExclamation(delta);
+      }
     }
-    if (this.alertTicks > 0) {
-      this.drawExclamation(delta);
-    }
+    Game.ctx.restore();
   };
 }

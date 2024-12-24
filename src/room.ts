@@ -205,6 +205,7 @@ export class Room {
   oldCol: [number, number, number][][];
 
   entities: Array<Entity>;
+  deadEntities: Array<Entity>;
   items: Array<Item>;
   doors: Array<Door>; // (Door | BottomDoor) just a reference for mapping, still access through levelArray
   projectiles: Array<Projectile>;
@@ -229,7 +230,7 @@ export class Room {
   skin: SkinType;
   entered: boolean; // has the player entered this level
   lightSources: Array<LightSource>;
-  shadeColor = "black";
+  shadeColor = "#000000";
   innerWalls: Array<Wall>;
   wallInfo: Map<string, WallInfo> = new Map();
   savePoint: Room;
@@ -237,6 +238,7 @@ export class Room {
   outerWalls: Array<Wall>;
   level: Level;
   id: number;
+  tunnelDoor: Door = null; // this is the door that connects the start room to the exit room
 
   // Add a list to keep track of BeamEffect instances
   beamEffects: BeamEffect[] = [];
@@ -277,7 +279,7 @@ export class Room {
     this.level = level;
     this.id = 0;
     this.currentSpawnerCount = 0;
-
+    this.deadEntities = Array<Entity>();
     // #region initialize arrays
 
     //initialize room array
@@ -459,7 +461,6 @@ export class Room {
       this.roomArray[placeX]?.[placeY] instanceof Wall
     ) {
       this.roomArray[placeX][placeY] = new WallTorch(this, placeX, placeY);
-      console.log("placed torch");
 
       return;
     }
@@ -518,32 +519,45 @@ export class Room {
     }
   }
 
-  addDoor = (x: number, y: number) => {
+  addDoor = (
+    x: number,
+    y: number,
+    room: Room = this,
+    tunnelDoor: boolean = false,
+  ) => {
     let d;
     let t = DoorType.DOOR;
-    if (this.type === RoomType.BOSS) t = DoorType.GUARDEDDOOR;
-    if (this.type === RoomType.KEYROOM) t = DoorType.LOCKEDDOOR;
-    if (x === this.roomX) {
-      d = new Door(this, this.game, x, y, Direction.RIGHT, t);
-      this.roomArray[x + 1][y] = new SpawnFloor(this, x + 1, y);
-    } else if (x === this.roomX + this.width - 1) {
-      d = new Door(this, this.game, x, y, Direction.LEFT, t);
-      this.roomArray[x - 1][y] = new SpawnFloor(this, x - 1, y);
-    } else if (y === this.roomY) {
-      d = new Door(this, this.game, x, y, Direction.UP, t);
-      this.roomArray[x][y + 1] = new SpawnFloor(this, x, y + 1);
-    } else if (y === this.roomY + this.height - 1) {
-      d = new Door(this, this.game, x, y, Direction.DOWN, t);
-      this.roomArray[x][y - 1] = new SpawnFloor(this, x, y - 1);
+    if (room.type === RoomType.BOSS) t = DoorType.GUARDEDDOOR;
+    if (room.type === RoomType.KEYROOM) t = DoorType.LOCKEDDOOR;
+    if (tunnelDoor) t = DoorType.TUNNELDOOR;
+    if (x === room.roomX) {
+      d = new Door(room, room.game, x, y, Direction.RIGHT, t);
+      room.roomArray[x + 1][y] = new SpawnFloor(room, x + 1, y);
+    } else if (x === room.roomX + room.width - 1) {
+      d = new Door(room, room.game, x, y, Direction.LEFT, t);
+      room.roomArray[x - 1][y] = new SpawnFloor(room, x - 1, y);
+    } else if (y === room.roomY) {
+      d = new Door(room, room.game, x, y, Direction.UP, t);
+      room.roomArray[x][y + 1] = new SpawnFloor(room, x, y + 1);
+    } else if (y === room.roomY + room.height - 1) {
+      d = new Door(room, room.game, x, y, Direction.DOWN, t);
+      room.roomArray[x][y - 1] = new SpawnFloor(room, x, y - 1);
     }
 
-    this.doors.push(d);
-    if (this.roomArray[d.x] == undefined) {
+    if (tunnelDoor) {
+      room.tunnelDoor = d;
     }
-    this.roomArray[d.x][d.y] = d;
+
+    room.doors.push(d);
+    if (room.roomArray[d.x] == undefined) {
+      console.log("door not added");
+    }
+    room.roomArray[d.x][d.y] = d;
 
     return d;
   };
+
+  // ... start of file ...
 
   private addSpikeTraps(numSpikes: number, rand: () => number) {
     if (this.level.environment.type === EnvType.FOREST) return;
@@ -899,9 +913,32 @@ export class Room {
         break;
     }
   }
+
   // #endregion
 
   // #region POPULATING METHODS
+
+  linkExitToStart = () => {
+    if (
+      this.addDoorWithOffset(
+        this.level.startRoom.roomX +
+          Math.floor(this.level.startRoom.width / 2) +
+          1,
+        this.level.startRoom.roomY,
+        this.level.startRoom,
+        true,
+      ) &&
+      this.addDoorWithOffset(
+        this.roomX + Math.floor(this.width / 2) - 1,
+        this.roomY,
+        this,
+        true,
+      )
+    ) {
+      this.tunnelDoor.linkedDoor = this.level.startRoom.tunnelDoor;
+      this.tunnelDoor.linkedDoor.linkedDoor = this.tunnelDoor;
+    }
+  };
 
   populateEmpty = (rand: () => number) => {
     this.addRandomTorches("medium");
@@ -1241,8 +1278,8 @@ export class Room {
     this.name = "";
     switch (this.type) {
       case RoomType.START:
-        //this.addNewEnemy(EnemyType.zombie);
-        //this.addNewEnemy(EnemyType.occultist);
+        this.addNewEnemy(EnemyType.zombie);
+        this.addNewEnemy(EnemyType.occultist);
         if (this.depth !== 0) this.populateUpLadder(rand);
         this.populateEmpty(rand);
         this.name = "FLOOR " + -this.depth;
@@ -1354,10 +1391,14 @@ export class Room {
     this.setReverb();
   };
 
-  enterLevelThroughDoor = (player: Player, door: any, side?: number) => {
+  enterLevelThroughDoor = (player: Player, door: Door, side?: number) => {
+    if (door.doorDir === door.linkedDoor.doorDir) {
+      door.opened = true;
+      player.moveSnap(door.x, door.y + 1);
+    }
     if (door instanceof Door && door.doorDir === Direction.UP) {
       //if top door
-      (door as Door).opened = true;
+      door.opened = true;
       player.moveNoSmooth(door.x, door.y + 1);
     } else if (door instanceof Door && door.doorDir === Direction.DOWN) {
       //if bottom door
@@ -1369,7 +1410,6 @@ export class Room {
       // if side door
       player.moveNoSmooth(door.x + side, door.y);
     }
-    console.log(`player coordinates: ${player.x}, ${player.y}`);
 
     this.clearDeadStuff();
     this.calculateWallInfo();
@@ -1382,8 +1422,6 @@ export class Room {
     this.message = this.name;
     player.map.saveMapData();
     this.setReverb();
-    console.log(`this.entities: ${this.entities}`);
-    console.log(`this.roomArray: ${this.roomArray}`);
   };
 
   enterLevelThroughLadder = (player: Player, ladder: any) => {
@@ -1516,6 +1554,7 @@ export class Room {
   };
 
   clearDeadStuff = () => {
+    this.deadEntities = this.deadEntities.filter((e) => !e.dead);
     this.entities = this.entities.filter((e) => !e.dead);
     this.projectiles = this.projectiles.filter((p) => !p.dead);
     this.hitwarnings = this.hitwarnings.filter((h) => !h.dead);
@@ -1924,7 +1963,7 @@ export class Room {
     }
   };
 
-  private clamp = (value: number, min: number = 0, max: number = 1): number => {
+  clamp = (value: number, min: number = 0, max: number = 1): number => {
     return Math.min(Math.max(value, min), max);
   };
 
@@ -2020,10 +2059,12 @@ export class Room {
     }
 
     let drawables = new Array<Drawable>();
+    let entities = new Array<Entity>();
+    entities = entities.concat(this.entities, this.deadEntities);
 
     drawables = drawables.concat(
       tiles,
-      this.entities,
+      entities,
       this.hitwarnings,
       this.projectiles,
       this.particles,
@@ -2042,9 +2083,9 @@ export class Room {
     }
 
     drawables.sort((a, b) => {
-      if (a instanceof Floor) {
+      if (a instanceof Floor || a instanceof SpawnFloor) {
         return -1;
-      } else if (b instanceof Floor) {
+      } else if (b instanceof Floor || b instanceof SpawnFloor) {
         return 1;
       }
       if (Math.abs(a.drawableY - b.drawableY) < 0.1) {
@@ -2093,12 +2134,14 @@ export class Room {
     let shadingAlpha = Math.max(0, Math.min(0.8, 2 / bestSightRadius));
     if (GameConstants.ALPHA_ENABLED) {
       Game.ctx.globalAlpha = 0.25;
+      Game.ctx.resetTransform();
+      //Game.ctx.fillStyle = "#4a5d23"; // hex dark misty green
       Game.ctx.fillStyle = this.shadeColor;
       Game.ctx.fillRect(
-        (this.roomX - LevelConstants.SCREEN_W) * GameConstants.TILESIZE,
-        (this.roomY - LevelConstants.SCREEN_H) * GameConstants.TILESIZE,
-        (this.width + 2 * LevelConstants.SCREEN_W) * GameConstants.TILESIZE,
-        (this.height + 2 * LevelConstants.SCREEN_H) * GameConstants.TILESIZE,
+        0,
+        0,
+        this.game.level.width * GameConstants.TILESIZE,
+        this.game.level.height * GameConstants.TILESIZE,
       );
       Game.ctx.globalAlpha = 1;
       Game.ctx.globalCompositeOperation = "source-over";
@@ -2416,4 +2459,83 @@ export class Room {
   }
 
   // #endregion
+
+  /**
+   * Adds a door with offset to prevent overlapping doors.
+   * If a door already exists at the desired (x, y) position, it offsets the door randomly to either side.
+   * Ensures the new door is at least one tile away from the room's edge based on its direction.
+   *
+   * @param x - The x-coordinate for the door placement.
+   * @param y - The y-coordinate for the door placement.
+   * @param room - The Room object where the door is being placed. Defaults to the current room.
+   * @param tunnelDoor - Whether the door is a tunnel door. Defaults to false.
+   * @returns The created Door object or null if placement failed.
+   */
+  addDoorWithOffset = (
+    x: number,
+    y: number,
+    room: Room = this,
+    tunnelDoor: boolean = false,
+  ) => {
+    // Check if a door already exists at the desired position
+    if (room.roomArray[x]?.[y] instanceof Door) {
+      // Determine the direction based on the door's position
+      let direction: Direction | null = null;
+      if (x === room.roomX) {
+        direction = Direction.RIGHT;
+      } else if (x === room.roomX + room.width - 1) {
+        direction = Direction.LEFT;
+      } else if (y === room.roomY) {
+        direction = Direction.DOWN;
+      } else if (y === room.roomY + room.height - 1) {
+        direction = Direction.UP;
+      }
+
+      if (!direction) {
+        console.log("Invalid door position.");
+        return null;
+      }
+
+      // Define possible offset adjustments based on door direction
+      const offsetOptions: Array<{ dx: number; dy: number }> = [];
+      switch (direction) {
+        case Direction.RIGHT | Direction.LEFT:
+          // Offsets along the y-axis for vertical walls
+          offsetOptions.push({ dx: 0, dy: 1 }, { dx: 0, dy: -1 });
+          break;
+        case Direction.UP | Direction.DOWN:
+          // Offsets along the x-axis for horizontal walls
+          offsetOptions.push({ dx: 1, dy: 0 }, { dx: -1, dy: 0 });
+          break;
+      }
+
+      // Shuffle the offset options to randomize placement
+      const shuffledOffsets = offsetOptions.sort(() => Math.random() - 0.5);
+
+      for (const offset of shuffledOffsets) {
+        const newX = x + offset.dx;
+        const newY = y + offset.dy;
+
+        // Ensure the new position is within bounds and not on the edge
+        const isWithinBounds =
+          newX > room.roomX &&
+          newX < room.roomX + room.width - 1 &&
+          newY > room.roomY &&
+          newY < room.roomY + room.height - 1;
+
+        if (isWithinBounds && !(room.roomArray[newX]?.[newY] instanceof Door)) {
+          // Offset the door placement
+          return room.addDoor(newX, newY, room, tunnelDoor);
+        }
+      }
+
+      console.log(
+        `Cannot place door at (${x}, ${y}) without overlapping existing doors.`,
+      );
+      return null;
+    }
+
+    // If no door exists at the desired position, place it normally
+    return room.addDoor(x, y, room, tunnelDoor);
+  };
 }

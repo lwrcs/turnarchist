@@ -364,6 +364,7 @@ export class BeamEffect extends Projectile {
   }
 
   draw = (delta: number) => {
+    this.drawableY = this.y - 0.01;
     this.render(
       this.targetX,
       this.targetY,

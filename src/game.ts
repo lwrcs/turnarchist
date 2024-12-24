@@ -1,7 +1,7 @@
 import { GameConstants } from "./gameConstants";
 import { EnemyType, Room, RoomType } from "./room";
 import { Player } from "./player";
-import { Door } from "./tile/door";
+import { Door, DoorType } from "./tile/door";
 import { Sound } from "./sound";
 import { LevelConstants } from "./levelConstants";
 import { LevelGenerator } from "./levelGenerator";
@@ -51,13 +51,28 @@ export class ChatMessage {
 
 let getShadeCanvasKey = (
   set: HTMLImageElement,
-  sx: number,
-  sy: number,
-  sw: number,
-  sh: number,
+  sX: number,
+  sY: number,
+  sW: number,
+  sH: number,
   opacity: number,
+  shadeColor: string,
 ): string => {
-  return set.src + "," + sx + "," + sy + "," + sw + "," + sh + "," + opacity;
+  return (
+    set.src +
+    "," +
+    sX +
+    "," +
+    sY +
+    "," +
+    sW +
+    "," +
+    sH +
+    "," +
+    opacity +
+    "," +
+    shadeColor
+  );
 };
 
 // fps counter
@@ -83,6 +98,7 @@ export class Game {
   upwardTransition: boolean;
   sideTransition: boolean;
   sideTransitionDirection: number;
+  transition: boolean;
   transitioningLadder: UpLadder | DownLadder;
   screenShakeX: number;
   screenShakeY: number;
@@ -472,6 +488,7 @@ export class Game {
     if (this.players[this.localPlayerID] === player) {
       this.levelState = LevelState.TRANSITIONING;
       this.transitionStartTime = Date.now();
+      const hasDir = door.doorDir !== door.linkedDoor.doorDir;
 
       let oldX = this.players[this.localPlayerID].x;
       let oldY = this.players[this.localPlayerID].y;
@@ -491,18 +508,20 @@ export class Game {
       this.sideTransitionDirection = side;
       if (
         door instanceof Door &&
-        [Direction.RIGHT, Direction.LEFT].includes(door.doorDir)
+        [Direction.RIGHT, Direction.LEFT].includes(door.doorDir) &&
+        hasDir
       )
         this.sideTransition = true;
-      else if (door instanceof Door && door.doorDir === Direction.DOWN)
+      else if (
+        door instanceof Door &&
+        door.doorDir === Direction.DOWN &&
+        hasDir
+      )
         this.upwardTransition = true;
     } else {
       door.room.enterLevelThroughDoor(player, door, side);
     }
     player.map.saveMapData();
-    console.log(
-      `Current room Index  ${this.rooms.indexOf(this.room)} Current Room Type ${this.room.type}`,
-    );
   };
 
   run = (timestamp: number) => {
@@ -880,10 +899,17 @@ export class Game {
   draw = (delta: number) => {
     Game.ctx.save(); // Save the current canvas state
 
+    // Reset transformations to ensure the black background covers the entire canvas
+    Game.ctx.setTransform(1, 0, 0, 1, 0, 0);
+
     Game.ctx.globalAlpha = 1;
-    if (this.room) Game.ctx.fillStyle = this.room.shadeColor;
-    else Game.ctx.fillStyle = "black";
+    Game.ctx.globalCompositeOperation = "source-over";
+    Game.ctx.fillStyle = "black";
     Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
+
+    //if (this.room) Game.ctx.fillStyle = this.room.shadeColor;
+    //else Game.ctx.fillStyle = "black";
+    //Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
 
     if (this.levelState === LevelState.TRANSITIONING) {
       this.screenShakeX = 0;
@@ -1001,6 +1027,7 @@ export class Game {
       this.players[this.localPlayerID].draw(delta);
 
       Game.ctx.translate(-playerOffsetX, -playerOffsetY);
+
       Game.ctx.translate(newLevelOffsetX, newLevelOffsetY);
 
       this.drawStuff(delta);
@@ -1247,7 +1274,10 @@ export class Game {
     shadeOpacity =
       Math.round(shadeOpacity * GameConstants.SHADE_LEVELS) /
       GameConstants.SHADE_LEVELS;
-    let key = getShadeCanvasKey(set, sX, sY, sW, sH, shadeOpacity);
+
+    // Include shadeColor in the cache key
+    let key = getShadeCanvasKey(set, sX, sY, sW, sH, shadeOpacity, shadeColor);
+
     if (!Game.shade_canvases[key]) {
       Game.shade_canvases[key] = document.createElement("canvas");
       Game.shade_canvases[key].width = Math.round(sW * GameConstants.TILESIZE);
@@ -1297,6 +1327,7 @@ export class Game {
         Math.round(sH * GameConstants.TILESIZE),
       );
     }
+
     Game.ctx.drawImage(
       Game.shade_canvases[key],
       Math.round(dX * GameConstants.TILESIZE),

@@ -61,6 +61,7 @@ export class Level {
   rooms: Room[];
   environment: Environment;
   exitRoom: Room;
+  startRoom: Room;
   //environmentData: environmentData;
   //enemySpawnPool: Array<entitySpawnData>;
   enemyParameters: EnemyParameters;
@@ -85,9 +86,14 @@ export class Level {
     );
   }
 
+  setStartRoom() {
+    this.startRoom = this.rooms.find((room) => room.type === RoomType.START);
+  }
+
   setRooms(rooms: Room[]) {
     this.rooms = rooms;
     this.setExitRoom();
+    this.setStartRoom();
     this.rooms.filter((room) => room.depth === this.depth);
     rooms.forEach((room) => {
       room.id = this.rooms.indexOf(room);
@@ -198,8 +204,8 @@ export class Level {
    */
   getNumberOfEnemyTypes(depth: number): number {
     // Example logic: depth 0 -> 2 types, depth 1 -> 4, depth 2 -> 6, etc.
-    let numberOfTypes = depth === 0 ? 2 : Math.ceil(Math.sqrt(depth + 1)) + 3;
-    console.log(`numberOfTypes: ${numberOfTypes}`);
+    let numberOfTypes = depth === 0 ? 2 : Math.ceil(Math.sqrt(depth + 1)) + 4;
+    //console.log(`numberOfTypes: ${numberOfTypes}`);
     return numberOfTypes;
   }
 

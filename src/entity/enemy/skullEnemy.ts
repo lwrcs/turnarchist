@@ -63,6 +63,7 @@ export class SkullEnemy extends Enemy {
     if (this.health == 2) this.unconscious = false;
     this.health -= damage;
     this.maxHealth -= shieldHealth;
+    this.startHurting();
 
     this.healthBar.hurt();
     this.createDamageNumber(damage, type);
@@ -265,12 +266,15 @@ export class SkullEnemy extends Enemy {
   };
 
   draw = (delta: number) => {
+    if (this.dead) return;
+    Game.ctx.save();
+    Game.ctx.globalAlpha = this.alpha;
     if (!this.dead) {
       this.updateDrawXY(delta);
       this.tileX = 5;
       this.tileY = 8;
 
-      if (this.health <= 1) {
+      if (this.health <= 1 || this.dying) {
         this.tileX = 3;
         this.tileY = 0;
         if (this.ticksSinceFirstHit >= 3) {
@@ -306,15 +310,18 @@ export class SkullEnemy extends Enemy {
         this.y - this.drawYOffset - this.drawY - this.jumpY,
         1,
         2,
-        this.room.shadeColor,
+        this.softShadeColor,
         this.shadeAmount(),
       );
     }
-    if (!this.seenPlayer) {
-      this.drawSleepingZs(delta);
+    if (!this.cloned) {
+      if (!this.seenPlayer) {
+        this.drawSleepingZs(delta);
+      }
+      if (this.alertTicks > 0) {
+        this.drawExclamation(delta);
+      }
     }
-    if (this.alertTicks > 0) {
-      this.drawExclamation(delta);
-    }
+    Game.ctx.restore();
   };
 }

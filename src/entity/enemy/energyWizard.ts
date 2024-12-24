@@ -42,6 +42,9 @@ export class EnergyWizardEnemy extends WizardEnemy {
   }
 
   draw = (delta: number) => {
+    if (this.dead) return;
+    Game.ctx.save();
+    Game.ctx.globalAlpha = this.alpha;
     if (!this.dead) {
       this.updateDrawXY(delta);
       if (this.state === WizardState.attack) this.tileX = 7;
@@ -70,7 +73,7 @@ export class EnergyWizardEnemy extends WizardEnemy {
           this.y - 1.5,
           1,
           2,
-          this.room.shadeColor,
+          this.softShadeColor,
           this.shadeAmount(),
         );
         this.frame += 0.4 * delta;
@@ -85,29 +88,19 @@ export class EnergyWizardEnemy extends WizardEnemy {
           this.y - 1.3 - this.drawY,
           1,
           2,
-          this.room.shadeColor,
+          this.softShadeColor,
           this.shadeAmount(),
         );
       }
-      if (!this.seenPlayer) {
-        this.drawSleepingZs(delta);
-      }
-      if (this.alertTicks > 0) {
-        this.drawExclamation(delta);
+      if (!this.cloned) {
+        if (!this.seenPlayer) {
+          this.drawSleepingZs(delta);
+        }
+        if (this.alertTicks > 0) {
+          this.drawExclamation(delta);
+        }
       }
     }
-  };
-
-  kill = () => {
-    if (this.room.roomArray[this.x][this.y] instanceof Floor) {
-      let b = new Bones(this.room, this.x, this.y);
-      b.skin = this.room.roomArray[this.x][this.y].skin;
-      this.room.roomArray[this.x][this.y] = b;
-    }
-
-    this.dead = true;
-    this.room.particles.push(new DeathParticle(this.x, this.y));
-
-    this.dropLoot();
+    Game.ctx.restore();
   };
 }

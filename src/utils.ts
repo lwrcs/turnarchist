@@ -55,12 +55,16 @@ export class Utils {
     const gFinal = Math.round((g + m) * 255);
     const bFinal = Math.round((b + m) * 255);
 
-    // Convert RGB to HEX
+    return Utils.rgbToHex(rFinal, gFinal, bFinal);
+  };
+
+  // RGB to HEX conversion
+  static rgbToHex = (r: number, g: number, b: number): string => {
     const toHex = (val: number) => {
       const hex = val.toString(16);
       return hex.length === 1 ? "0" + hex : hex;
     };
 
-    return `#${toHex(rFinal)}${toHex(gFinal)}${toHex(bFinal)}`;
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
   };
 }

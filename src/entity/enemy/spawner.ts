@@ -27,6 +27,7 @@ export class Spawner extends Enemy {
   enemySpawnType: number;
   enemyTable: number[];
   spawnFrequency: number;
+  spawnOffset: number;
 
   constructor(
     room: Room,
@@ -47,6 +48,8 @@ export class Spawner extends Enemy {
     this.enemyTable = enemyTable.filter((t) => t !== 7);
     const randSpawnType = Game.randTable(this.enemyTable, Random.rand);
     this.enemySpawnType = randSpawnType;
+    this.spawnOffset = 0;
+
     if (Math.random() < 0.15) {
       switch (this.enemySpawnType) {
         case 0:
@@ -107,6 +110,8 @@ export class Spawner extends Enemy {
 
   setSpawnFrequency = () => {
     this.spawnFrequency = Math.min(12, 4 * this.room.currentSpawnerCount);
+    const spawners = this.room.entities.filter((e) => e instanceof Spawner);
+    this.spawnOffset = (spawners.indexOf(this) + 1) * 4;
   };
 
   behavior = () => {
@@ -120,7 +125,7 @@ export class Spawner extends Enemy {
         return;
       }
       this.tileX = 6;
-      if (this.ticks % this.spawnFrequency === 0) {
+      if ((this.ticks + this.spawnOffset) % this.spawnFrequency === 0) {
         let positions = this.room
           .getEmptyTiles()
           .filter(
@@ -349,7 +354,7 @@ export class Spawner extends Enemy {
         this.y - this.drawYOffset - this.drawY,
         1,
         2,
-        this.room.shadeColor,
+        this.softShadeColor,
         this.shadeAmount(),
       );
     }

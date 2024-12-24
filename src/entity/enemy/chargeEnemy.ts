@@ -168,6 +168,10 @@ export class ChargeEnemy extends Enemy {
   };
 
   draw = (delta: number) => {
+    if (this.dead) return;
+    Game.ctx.save();
+    Game.ctx.globalAlpha = this.alpha;
+
     if (!this.dead) {
       this.updateDrawXY(delta);
       this.frame += 0.1 * delta;
@@ -237,18 +241,22 @@ export class ChargeEnemy extends Enemy {
         this.y - this.drawYOffset - this.drawY,
         1,
         2,
-        this.room.shadeColor,
+        this.softShadeColor,
         this.shadeAmount(),
       );
-      if (this.state === ChargeEnemyState.IDLE) {
-        this.drawSleepingZs(delta);
-      } else if (this.state === ChargeEnemyState.ALERTED) {
-        this.drawExclamation(delta);
+      if (!this.cloned) {
+        if (this.state === ChargeEnemyState.IDLE) {
+          this.drawSleepingZs(delta);
+        } else if (this.state === ChargeEnemyState.ALERTED) {
+          this.drawExclamation(delta);
+        }
       }
     }
+    Game.ctx.restore();
   };
 
   drawTopLayer = (delta: number) => {
+    if (this.dying) return;
     this.drawableY = this.y;
 
     this.healthBar.draw(

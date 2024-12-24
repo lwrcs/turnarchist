@@ -501,6 +501,7 @@ var BeamEffect = /** @class */ (function (_super) {
             }
         };
         _this.draw = function (delta) {
+            _this.drawableY = _this.y - 0.01;
             _this.render(_this.targetX, _this.targetY, _this.x, _this.y, _this.color, 2, delta, _this.compositeOperation);
         };
         var startX = x1 * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
@@ -972,11 +973,15 @@ var ArmoredzombieEnemy = /** @class */ (function (_super) {
             }
         };
         _this.draw = function (delta) {
+            if (_this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = _this.alpha;
             if (!_this.dead) {
                 _this.updateDrawXY(delta);
                 _this.tileX = 27;
                 _this.tileY = 8;
-                if (_this.health <= 1) {
+                if (_this.health <= 1 || _this.dying) {
                     _this.tileX = 17;
                     _this.tileY = 8;
                 }
@@ -985,14 +990,17 @@ var ArmoredzombieEnemy = /** @class */ (function (_super) {
                     _this.frame = 0;
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
-                game_1.Game.drawMob(_this.tileX + (_this.tileX === 5 ? Math.floor(_this.frame) : 0), _this.tileY + _this.direction * 2, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
+                game_1.Game.drawMob(_this.tileX + (_this.tileX === 5 ? Math.floor(_this.frame) : 0), _this.tileY + _this.direction * 2, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY, 1, 2, _this.softShadeColor, _this.shadeAmount());
             }
-            if (!_this.seenPlayer) {
-                _this.drawSleepingZs(delta);
+            if (!_this.cloned) {
+                if (!_this.seenPlayer) {
+                    _this.drawSleepingZs(delta);
+                }
+                if (_this.alertTicks > 0) {
+                    _this.drawExclamation(delta);
+                }
             }
-            if (_this.alertTicks > 0) {
-                _this.drawExclamation(delta);
-            }
+            game_1.Game.ctx.restore();
         };
         _this.ticks = 0;
         _this.frame = 0;
@@ -1205,6 +1213,10 @@ var BigKnightEnemy = /** @class */ (function (_super) {
             }
         };
         _this.draw = function (delta) {
+            if (_this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = _this.alpha;
             if (!_this.dead) {
                 _this.updateDrawXY(delta);
                 _this.frame += 0.1 * delta;
@@ -1212,14 +1224,17 @@ var BigKnightEnemy = /** @class */ (function (_super) {
                     _this.frame = 0;
                 if (_this.hasShadow)
                     game_1.Game.drawMob(18, 0, 2, 2, _this.x - _this.drawX, _this.y - _this.drawY, 2, 2, _this.room.shadeColor, _this.shadeAmount());
-                game_1.Game.drawMob(2 * Math.floor((_this.tileX + _this.frame) / 2) + 1, _this.tileY, 2, 4, _this.x - _this.drawX, _this.y - 2.5 - _this.drawY, 2, 4, _this.room.shadeColor, _this.shadeAmount());
-                if (!_this.seenPlayer) {
-                    _this.drawSleepingZs(delta, gameConstants_1.GameConstants.TILESIZE * 0.5, gameConstants_1.GameConstants.TILESIZE * -1);
-                }
-                if (_this.alertTicks > 0) {
-                    _this.drawExclamation(delta, gameConstants_1.GameConstants.TILESIZE * 0.5, gameConstants_1.GameConstants.TILESIZE * -1);
+                game_1.Game.drawMob(2 * Math.floor((_this.tileX + _this.frame) / 2) + 1, _this.tileY, 2, 4, _this.x - _this.drawX, _this.y - 2.5 - _this.drawY, 2, 4, _this.softShadeColor, _this.shadeAmount());
+                if (!_this.cloned) {
+                    if (!_this.seenPlayer) {
+                        _this.drawSleepingZs(delta, gameConstants_1.GameConstants.TILESIZE * 0.5, gameConstants_1.GameConstants.TILESIZE * -1);
+                    }
+                    if (_this.alertTicks > 0) {
+                        _this.drawExclamation(delta, gameConstants_1.GameConstants.TILESIZE * 0.5, gameConstants_1.GameConstants.TILESIZE * -1);
+                    }
                 }
             }
+            game_1.Game.ctx.restore();
         };
         _this.drawTopLayer = function (delta) {
             _this.drawableY = _this.y;
@@ -1459,6 +1474,10 @@ var BigSkullEnemy = /** @class */ (function (_super) {
             }
         };
         _this.draw = function (delta) {
+            if (_this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = _this.alpha;
             if (!_this.dead) {
                 _this.updateDrawXY(delta);
                 _this.tileX = 21;
@@ -1498,14 +1517,17 @@ var BigSkullEnemy = /** @class */ (function (_super) {
                     _this.frame = 0;
                 if (_this.hasShadow)
                     game_1.Game.drawMob(18, 0, 2, 2, _this.x - _this.drawX, _this.y - _this.drawY, 2, 2, _this.room.shadeColor, _this.shadeAmount());
-                game_1.Game.drawMob(_this.tileX + (_this.tileX === 20 ? Math.floor(_this.frame) * 2 : 0), _this.tileY, 2, 4, _this.x - _this.drawX, _this.y - 2.5 - _this.drawY, 2, 4, _this.room.shadeColor, _this.shadeAmount());
+                game_1.Game.drawMob(_this.tileX + (_this.tileX === 20 ? Math.floor(_this.frame) * 2 : 0), _this.tileY, 2, 4, _this.x - _this.drawX, _this.y - 2.5 - _this.drawY, 2, 4, _this.softShadeColor, _this.shadeAmount());
+                if (!_this.cloned) {
+                    if (!_this.seenPlayer) {
+                        _this.drawSleepingZs(delta, gameConstants_1.GameConstants.TILESIZE * 0.5, gameConstants_1.GameConstants.TILESIZE * -1);
+                    }
+                    if (_this.alertTicks > 0) {
+                        _this.drawExclamation(delta, gameConstants_1.GameConstants.TILESIZE * 0.5, gameConstants_1.GameConstants.TILESIZE * -1);
+                    }
+                }
             }
-            if (!_this.seenPlayer) {
-                _this.drawSleepingZs(delta, gameConstants_1.GameConstants.TILESIZE * 0.5, gameConstants_1.GameConstants.TILESIZE * -1);
-            }
-            if (_this.alertTicks > 0) {
-                _this.drawExclamation(delta, gameConstants_1.GameConstants.TILESIZE * 0.5, gameConstants_1.GameConstants.TILESIZE * -1);
-            }
+            game_1.Game.ctx.restore();
         };
         _this.drawTopLayer = function (delta) {
             _this.drawableY = _this.y;
@@ -1753,6 +1775,10 @@ var BishopEnemy = /** @class */ (function (_super) {
             }
         };
         _this.draw = function (delta) {
+            if (_this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = _this.alpha;
             if (!_this.dead) {
                 _this.updateDrawXY(delta);
                 _this.frame += 0.1 * delta;
@@ -1760,14 +1786,17 @@ var BishopEnemy = /** @class */ (function (_super) {
                     _this.frame = 0;
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
-                game_1.Game.drawMob(_this.tileX + Math.floor(_this.frame), _this.tileY, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY - _this.jumpY, 1, 2, _this.room.shadeColor, _this.shadeAmount() * (1 + _this.jumpY / 3));
+                game_1.Game.drawMob(_this.tileX + Math.floor(_this.frame), _this.tileY, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY - _this.jumpY, 1, 2, _this.softShadeColor, _this.shadeAmount() * (1 + _this.jumpY / 3));
             }
-            if (!_this.seenPlayer) {
-                _this.drawSleepingZs(delta);
+            if (!_this.cloned) {
+                if (!_this.seenPlayer) {
+                    _this.drawSleepingZs(delta);
+                }
+                if (_this.alertTicks > 0) {
+                    _this.drawExclamation(delta);
+                }
             }
-            if (_this.alertTicks > 0) {
-                _this.drawExclamation(delta);
-            }
+            game_1.Game.ctx.restore();
         };
         _this.ticks = 0;
         _this.frame = 0;
@@ -1958,6 +1987,10 @@ var ChargeEnemy = /** @class */ (function (_super) {
             }
         };
         _this.draw = function (delta) {
+            if (_this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = _this.alpha;
             if (!_this.dead) {
                 _this.updateDrawXY(delta);
                 _this.frame += 0.1 * delta;
@@ -1987,16 +2020,21 @@ var ChargeEnemy = /** @class */ (function (_super) {
                 }
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
-                game_1.Game.drawMob(_this.tileX + Math.floor(_this.frame), _this.tileY + _this.direction * 2, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
-                if (_this.state === ChargeEnemyState.IDLE) {
-                    _this.drawSleepingZs(delta);
-                }
-                else if (_this.state === ChargeEnemyState.ALERTED) {
-                    _this.drawExclamation(delta);
+                game_1.Game.drawMob(_this.tileX + Math.floor(_this.frame), _this.tileY + _this.direction * 2, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY, 1, 2, _this.softShadeColor, _this.shadeAmount());
+                if (!_this.cloned) {
+                    if (_this.state === ChargeEnemyState.IDLE) {
+                        _this.drawSleepingZs(delta);
+                    }
+                    else if (_this.state === ChargeEnemyState.ALERTED) {
+                        _this.drawExclamation(delta);
+                    }
                 }
             }
+            game_1.Game.ctx.restore();
         };
         _this.drawTopLayer = function (delta) {
+            if (_this.dying)
+                return;
             _this.drawableY = _this.y;
             _this.healthBar.draw(delta, _this.health, _this.maxHealth, _this.x, _this.y, true);
             _this.drawX += -0.1 * _this.drawX;
@@ -2201,6 +2239,10 @@ var CrabEnemy = /** @class */ (function (_super) {
             }
         };
         _this.draw = function (delta) {
+            if (_this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = _this.alpha;
             if (!_this.dead) {
                 _this.updateDrawXY(delta);
                 if (_this.ticks % 2 === 0) {
@@ -2218,17 +2260,20 @@ var CrabEnemy = /** @class */ (function (_super) {
                     _this.frame = 0;
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - 0.25 - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
-                game_1.Game.drawMob(_this.tileX, _this.tileY + _this.direction, 1, 1, _this.x - _this.drawX + rumbleX, _this.y - _this.drawYOffset - _this.drawY + rumbleY, 1 * _this.crushX, 1 * _this.crushY, _this.room.shadeColor, _this.shadeAmount());
+                game_1.Game.drawMob(_this.tileX, _this.tileY + _this.direction, 1, 1, _this.x - _this.drawX + rumbleX, _this.y - _this.drawYOffset - _this.drawY + rumbleY, 1 * _this.crushX, 1 * _this.crushY, _this.softShadeColor, _this.shadeAmount());
                 if (_this.crushed) {
                     _this.crushAnim(delta);
                 }
             }
-            if (!_this.seenPlayer) {
-                _this.drawSleepingZs(delta, 0, 0.75 * gameConstants_1.GameConstants.TILESIZE);
+            if (!_this.cloned) {
+                if (!_this.seenPlayer) {
+                    _this.drawSleepingZs(delta, 0, 0.75 * gameConstants_1.GameConstants.TILESIZE);
+                }
+                if (_this.alertTicks > 0) {
+                    _this.drawExclamation(delta, 0, 0.75 * gameConstants_1.GameConstants.TILESIZE);
+                }
             }
-            if (_this.alertTicks > 0) {
-                _this.drawExclamation(delta, 0, 0.75 * gameConstants_1.GameConstants.TILESIZE);
-            }
+            game_1.Game.ctx.restore();
         };
         _this.ticks = 0;
         _this.frame = 0;
@@ -2376,6 +2421,7 @@ var Enemy = /** @class */ (function (_super) {
                     startTick: _this.ticks,
                     effectTick: _this.ticks % 3,
                 };
+                _this.shadeColor = "#00FF00";
             }
         };
         _this.bleed = function () {
@@ -2393,6 +2439,7 @@ var Enemy = /** @class */ (function (_super) {
                 if (_this.ticks % 3 === _this.status.poison.effectTick &&
                     _this.ticks !== _this.status.poison.startTick) {
                     _this.hurt(_this.targetPlayer, 0.5, "poison");
+                    _this.shadeColor = "#00FF00";
                     _this.status.poison.hitCount++;
                     if (_this.status.poison.hitCount >= 2) {
                         _this.status.poison = {
@@ -2411,6 +2458,7 @@ var Enemy = /** @class */ (function (_super) {
                     _this.ticks !== _this.status.bleed.startTick) {
                     _this.hurt(_this.targetPlayer, 0.5, "blood");
                     _this.targetPlayer.heal(0.5);
+                    _this.shadeColor = "#FF0000";
                     _this.status.bleed.hitCount++;
                     if (_this.status.bleed.hitCount >= 1) {
                         _this.status.bleed = {
@@ -2685,6 +2733,9 @@ var Enemy = /** @class */ (function (_super) {
                 _this.jumpY = _this.jumpHeight;
         };
         _this.updateDrawXY = function (delta) {
+            //putting this here bc i'm lazy
+            _this.updateHurtFrame(delta);
+            _this.animateDying(delta);
             if (!_this.doneMoving()) {
                 _this.drawX *= Math.pow(0.85, delta);
                 _this.drawY *= Math.pow(0.85, delta);
@@ -2692,6 +2743,7 @@ var Enemy = /** @class */ (function (_super) {
                 _this.drawY = Math.abs(_this.drawY) < 0.01 ? 0 : _this.drawY;
                 _this.jump(delta);
             }
+            _this.updateShadeColor(delta);
         };
         _this.setDrawXY = function (x, y) {
             _this.drawX += _this.x - x;
@@ -2705,7 +2757,7 @@ var Enemy = /** @class */ (function (_super) {
                     _this.frame = 0;
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
-                game_1.Game.drawMob(_this.tileX + Math.floor(_this.frame), _this.tileY + _this.direction * 2, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY - _this.jumpY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
+                game_1.Game.drawMob(_this.tileX + Math.floor(_this.frame), _this.tileY + _this.direction * 2, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY - _this.jumpY, 1, 2, _this.softShadeColor, _this.shadeAmount());
             }
             if (!_this.seenPlayer) {
                 _this.drawSleepingZs(delta);
@@ -2791,9 +2843,6 @@ var __extends = (this && this.__extends) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.EnergyWizardEnemy = exports.WizardState = void 0;
 var game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-var floor_1 = __webpack_require__(/*! ../../tile/floor */ "./src/tile/floor.ts");
-var bones_1 = __webpack_require__(/*! ../../tile/bones */ "./src/tile/bones.ts");
-var deathParticle_1 = __webpack_require__(/*! ../../particle/deathParticle */ "./src/particle/deathParticle.ts");
 var wizardEnemy_1 = __webpack_require__(/*! ./wizardEnemy */ "./src/entity/enemy/wizardEnemy.ts");
 var WizardState;
 (function (WizardState) {
@@ -2807,6 +2856,10 @@ var EnergyWizardEnemy = /** @class */ (function (_super) {
     function EnergyWizardEnemy(room, game, x, y, drop) {
         var _this = _super.call(this, room, game, x, y) || this;
         _this.draw = function (delta) {
+            if (_this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = _this.alpha;
             if (!_this.dead) {
                 _this.updateDrawXY(delta);
                 if (_this.state === WizardState.attack)
@@ -2816,31 +2869,24 @@ var EnergyWizardEnemy = /** @class */ (function (_super) {
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
                 if (_this.frame >= 0) {
-                    game_1.Game.drawMob(Math.floor(_this.frame) + 6, 2, 1, 2, _this.x, _this.y - 1.5, 1, 2, _this.room.shadeColor, _this.shadeAmount());
+                    game_1.Game.drawMob(Math.floor(_this.frame) + 6, 2, 1, 2, _this.x, _this.y - 1.5, 1, 2, _this.softShadeColor, _this.shadeAmount());
                     _this.frame += 0.4 * delta;
                     if (_this.frame > 11)
                         _this.frame = -1;
                 }
                 else {
-                    game_1.Game.drawMob(_this.tileX, _this.tileY, 1, 2, _this.x - _this.drawX, _this.y - 1.3 - _this.drawY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
+                    game_1.Game.drawMob(_this.tileX, _this.tileY, 1, 2, _this.x - _this.drawX, _this.y - 1.3 - _this.drawY, 1, 2, _this.softShadeColor, _this.shadeAmount());
                 }
-                if (!_this.seenPlayer) {
-                    _this.drawSleepingZs(delta);
-                }
-                if (_this.alertTicks > 0) {
-                    _this.drawExclamation(delta);
+                if (!_this.cloned) {
+                    if (!_this.seenPlayer) {
+                        _this.drawSleepingZs(delta);
+                    }
+                    if (_this.alertTicks > 0) {
+                        _this.drawExclamation(delta);
+                    }
                 }
             }
-        };
-        _this.kill = function () {
-            if (_this.room.roomArray[_this.x][_this.y] instanceof floor_1.Floor) {
-                var b = new bones_1.Bones(_this.room, _this.x, _this.y);
-                b.skin = _this.room.roomArray[_this.x][_this.y].skin;
-                _this.room.roomArray[_this.x][_this.y] = b;
-            }
-            _this.dead = true;
-            _this.room.particles.push(new deathParticle_1.DeathParticle(_this.x, _this.y));
-            _this.dropLoot();
+            game_1.Game.ctx.restore();
         };
         _this.ticks = 0;
         _this.health = 1;
@@ -3032,10 +3078,10 @@ var FireWizardEnemy = /** @class */ (function (_super) {
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
                 if (_this.frame >= 0) {
-                    game_1.Game.drawMob(_this.tileX + Math.floor(_this.frame), _this.tileY, 1, 2, _this.x, _this.y - 1.3, 1, 2, _this.room.shadeColor, _this.shadeAmount());
+                    game_1.Game.drawMob(_this.tileX + Math.floor(_this.frame), _this.tileY, 1, 2, _this.x, _this.y - 1.3, 1, 2, _this.softShadeColor, _this.shadeAmount());
                 }
                 else {
-                    game_1.Game.drawMob(_this.tileX, _this.tileY, 1, 2, _this.x - _this.drawX, _this.y - 1.3 - _this.drawY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
+                    game_1.Game.drawMob(_this.tileX, _this.tileY, 1, 2, _this.x - _this.drawX, _this.y - 1.3 - _this.drawY, 1, 2, _this.softShadeColor, _this.shadeAmount());
                 }
                 if (!_this.seenPlayer) {
                     _this.drawSleepingZs(delta);
@@ -3362,6 +3408,10 @@ var FrogEnemy = /** @class */ (function (_super) {
             });
         };
         _this.draw = function (delta) {
+            if (_this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = _this.alpha;
             if (!_this.dead) {
                 _this.updateDrawXY(delta);
                 _this.frame += _this.animationSpeed * delta;
@@ -3387,14 +3437,17 @@ var FrogEnemy = /** @class */ (function (_super) {
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
                 game_1.Game.drawMob(_this.tileX +
-                    (_this.tileX !== 12 && !_this.rumbling ? Math.floor(_this.frame) : 0), _this.tileY /*+ this.direction * 2,*/, 1, 2, _this.x + rumbleX - _this.drawX, _this.y - _this.drawYOffset - _this.drawY - _this.jumpY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
+                    (_this.tileX !== 12 && !_this.rumbling ? Math.floor(_this.frame) : 0), _this.tileY /*+ this.direction * 2,*/, 1, 2, _this.x + rumbleX - _this.drawX, _this.y - _this.drawYOffset - _this.drawY - _this.jumpY, 1, 2, _this.softShadeColor, _this.shadeAmount());
             }
-            if (!_this.seenPlayer) {
-                _this.drawSleepingZs(delta);
+            if (!_this.cloned) {
+                if (!_this.seenPlayer) {
+                    _this.drawSleepingZs(delta);
+                }
+                if (_this.alertTicks > 0) {
+                    _this.drawExclamation(delta);
+                }
             }
-            if (_this.alertTicks > 0) {
-                _this.drawExclamation(delta);
-            }
+            game_1.Game.ctx.restore();
         };
         _this.ticks = 0;
         _this.frame = 0;
@@ -3588,6 +3641,10 @@ var KnightEnemy = /** @class */ (function (_super) {
             }
         };
         _this.draw = function (delta) {
+            if (_this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = _this.alpha;
             var rumbleX = _this.rumble(_this.rumbling, _this.frame).x;
             var rumbleY = _this.rumble(_this.rumbling, _this.frame, _this.direction).y;
             if (!_this.dead) {
@@ -3608,14 +3665,17 @@ var KnightEnemy = /** @class */ (function (_super) {
                 game_1.Game.drawMob(_this.tileX + (_this.tileX === 4 ? 0 : Math.floor(_this.frame)), _this.tileY + _this.direction * 2, 1, 2, _this.x - _this.drawX + rumbleX, _this.y -
                     _this.drawYOffset -
                     _this.drawY +
-                    (_this.tileX === 4 ? 0.1875 : 0), 1, 2, _this.room.shadeColor, _this.shadeAmount());
+                    (_this.tileX === 4 ? 0.1875 : 0), 1, 2, _this.softShadeColor, _this.shadeAmount());
             }
-            if (!_this.seenPlayer) {
-                _this.drawSleepingZs(delta);
+            if (!_this.cloned) {
+                if (!_this.seenPlayer) {
+                    _this.drawSleepingZs(delta);
+                }
+                if (_this.alertTicks > 0) {
+                    _this.drawExclamation(delta);
+                }
             }
-            if (_this.alertTicks > 0) {
-                _this.drawExclamation(delta);
-            }
+            game_1.Game.ctx.restore();
         };
         _this.ticks = 0;
         _this.frame = 0;
@@ -3692,6 +3752,8 @@ var OccultistEnemy = /** @class */ (function (_super) {
         };
         _this.uniqueKillBehavior = function () {
             _this.unshieldEnemies();
+            _this.removeLightSource(_this.lightSource);
+            _this.lightSource = null;
         };
         _this.behavior = function () {
             _this.lastX = _this.x;
@@ -3714,7 +3776,7 @@ var OccultistEnemy = /** @class */ (function (_super) {
                         enemiesToShield.forEach(function (enemy) {
                             _this.applyShieldTo(enemy);
                         });
-                        _this.createBeam(_this.shieldedEnemies);
+                        //this.createBeam(this.shieldedEnemies);
                     }
                 }
                 _this.shieldedEnemies.forEach(function (enemy) {
@@ -3723,19 +3785,43 @@ var OccultistEnemy = /** @class */ (function (_super) {
                     }
                 });
             }
+            if (_this.shieldedEnemies.length > 0) {
+                _this.shadeColor = "#2E0854";
+            }
+            else {
+                _this.shadeColor = "#000000";
+            }
         };
         _this.unshieldEnemies = function () {
             if (_this.shieldedEnemies.length > 0) {
                 for (var _i = 0, _a = _this.shieldedEnemies; _i < _a.length; _i++) {
                     var enemy = _a[_i];
-                    enemy.removeShield();
+                    if (!enemy.cloned) {
+                        enemy.removeShield();
+                    }
                 }
                 _this.shieldedEnemies = [];
             }
         };
         _this.applyShieldTo = function (enemy) {
+            //this.shadeColor = "#2E0854";
+            _this.shadeMultiplier = 1.5;
             enemy.applyShield();
             _this.shieldedEnemies.push(enemy);
+            if (enemy.shielded && enemy.shield) {
+                var beam = new beamEffect_1.BeamEffect(enemy.x, enemy.y, _this.x, _this.y, enemy);
+                beam.compositeOperation = "source-over";
+                beam.color = "#2E0854";
+                beam.turbulence = 0.5;
+                beam.gravity = 0.1;
+                beam.iterations = 1;
+                beam.segments = 30;
+                beam.angleChange = 0.01;
+                beam.springDamping = 0.1;
+                beam.drawableY = enemy.drawableY;
+                _this.room.projectiles.push(beam);
+                console.log("beam created");
+            }
         };
         _this.createBeam = function (enemies) {
             for (var _i = 0, enemies_1 = enemies; _i < enemies_1.length; _i++) {
@@ -3780,6 +3866,10 @@ var OccultistEnemy = /** @class */ (function (_super) {
             }
         };
         _this.draw = function (delta) {
+            if (_this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = _this.alpha;
             _this.drawableY = _this.y;
             if (!_this.dead) {
                 _this.updateDrawXY(delta);
@@ -3789,8 +3879,9 @@ var OccultistEnemy = /** @class */ (function (_super) {
                     _this.frame = 0;
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
-                game_1.Game.drawMob(_this.tileX + Math.floor(_this.frame), _this.tileY, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
+                game_1.Game.drawMob(_this.tileX + Math.floor(_this.frame), _this.tileY, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY, 1, 2, _this.softShadeColor, _this.shadeAmount());
             }
+            game_1.Game.ctx.restore();
         };
         _this.ticks = 0;
         _this.health = 6;
@@ -3805,7 +3896,8 @@ var OccultistEnemy = /** @class */ (function (_super) {
         _this.hasShadow = true;
         _this.shieldedBefore = false;
         _this.shieldedEnemies = [];
-        _this.lightSource = lighting_1.Lighting.newLightSource(_this.x + 0.5, _this.y + 0.5, [100, 0, 200], 0.5, 1);
+        _this.shadeColor = "#000000";
+        _this.lightSource = lighting_1.Lighting.newLightSource(_this.x + 0.5, _this.y + 0.5, [20, 0, 40], 2.5, 20);
         _this.addLightSource(_this.lightSource);
         _this.room.updateLighting();
         return _this;
@@ -3969,6 +4061,10 @@ var QueenEnemy = /** @class */ (function (_super) {
             _this.jumpY = jumpY;
         };
         _this.draw = function (delta) {
+            if (_this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = _this.alpha;
             if (!_this.dead) {
                 _this.updateDrawXY(delta);
                 _this.frame += 0.1 * delta;
@@ -3976,14 +4072,17 @@ var QueenEnemy = /** @class */ (function (_super) {
                     _this.frame = 0;
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
-                game_1.Game.drawMob(_this.tileX + Math.floor(_this.frame), _this.tileY + _this.direction * 2, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY - _this.jumpY, 1, 2, _this.room.shadeColor, _this.shadeAmount() * (1 + _this.jumpY / 3));
+                game_1.Game.drawMob(_this.tileX + Math.floor(_this.frame), _this.tileY + _this.direction * 2, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY - _this.jumpY, 1, 2, _this.softShadeColor, _this.shadeAmount() * (1 + _this.jumpY / 3));
             }
-            if (!_this.seenPlayer) {
-                _this.drawSleepingZs(delta);
+            if (!_this.cloned) {
+                if (!_this.seenPlayer) {
+                    _this.drawSleepingZs(delta);
+                }
+                if (_this.alertTicks > 0) {
+                    _this.drawExclamation(delta);
+                }
             }
-            if (_this.alertTicks > 0) {
-                _this.drawExclamation(delta);
-            }
+            game_1.Game.ctx.restore();
         };
         _this.ticks = 0;
         _this.frame = 0;
@@ -4158,6 +4257,10 @@ var RookEnemy = /** @class */ (function (_super) {
             }
         };
         _this.draw = function (delta) {
+            if (_this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = _this.alpha;
             if (!_this.dead) {
                 _this.updateDrawXY(delta);
                 _this.frame += 0.1 * delta;
@@ -4165,14 +4268,17 @@ var RookEnemy = /** @class */ (function (_super) {
                     _this.frame = 0;
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
-                game_1.Game.drawMob(_this.tileX + Math.floor(_this.frame), _this.tileY, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY - _this.jumpY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
+                game_1.Game.drawMob(_this.tileX + Math.floor(_this.frame), _this.tileY, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY - _this.jumpY, 1, 2, _this.softShadeColor, _this.shadeAmount());
             }
-            if (!_this.seenPlayer) {
-                _this.drawSleepingZs(delta);
+            if (!_this.cloned) {
+                if (!_this.seenPlayer) {
+                    _this.drawSleepingZs(delta);
+                }
+                if (_this.alertTicks > 0) {
+                    _this.drawExclamation(delta);
+                }
             }
-            if (_this.alertTicks > 0) {
-                _this.drawExclamation(delta);
-            }
+            game_1.Game.ctx.restore();
         };
         _this.ticks = 0;
         _this.frame = 0;
@@ -4262,6 +4368,7 @@ var SkullEnemy = /** @class */ (function (_super) {
                 _this.unconscious = false;
             _this.health -= damage;
             _this.maxHealth -= shieldHealth;
+            _this.startHurting();
             _this.healthBar.hurt();
             _this.createDamageNumber(damage, type);
             _this.playHitSound();
@@ -4441,11 +4548,15 @@ var SkullEnemy = /** @class */ (function (_super) {
             }
         };
         _this.draw = function (delta) {
+            if (_this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = _this.alpha;
             if (!_this.dead) {
                 _this.updateDrawXY(delta);
                 _this.tileX = 5;
                 _this.tileY = 8;
-                if (_this.health <= 1) {
+                if (_this.health <= 1 || _this.dying) {
                     _this.tileX = 3;
                     _this.tileY = 0;
                     if (_this.ticksSinceFirstHit >= 3) {
@@ -4460,14 +4571,17 @@ var SkullEnemy = /** @class */ (function (_super) {
                     _this.frame = 0;
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
-                game_1.Game.drawMob(_this.tileX + (_this.tileX === 5 ? Math.floor(_this.frame) : 0), _this.tileY + _this.direction * 2, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY - _this.jumpY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
+                game_1.Game.drawMob(_this.tileX + (_this.tileX === 5 ? Math.floor(_this.frame) : 0), _this.tileY + _this.direction * 2, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY - _this.jumpY, 1, 2, _this.softShadeColor, _this.shadeAmount());
             }
-            if (!_this.seenPlayer) {
-                _this.drawSleepingZs(delta);
+            if (!_this.cloned) {
+                if (!_this.seenPlayer) {
+                    _this.drawSleepingZs(delta);
+                }
+                if (_this.alertTicks > 0) {
+                    _this.drawExclamation(delta);
+                }
             }
-            if (_this.alertTicks > 0) {
-                _this.drawExclamation(delta);
-            }
+            game_1.Game.ctx.restore();
         };
         _this.ticks = 0;
         _this.frame = 0;
@@ -4552,6 +4666,8 @@ var Spawner = /** @class */ (function (_super) {
         };
         _this.setSpawnFrequency = function () {
             _this.spawnFrequency = Math.min(12, 4 * _this.room.currentSpawnerCount);
+            var spawners = _this.room.entities.filter(function (e) { return e instanceof Spawner; });
+            _this.spawnOffset = (spawners.indexOf(_this) + 1) * 4;
         };
         _this.behavior = function () {
             _this.setSpawnFrequency();
@@ -4564,7 +4680,7 @@ var Spawner = /** @class */ (function (_super) {
                     return;
                 }
                 _this.tileX = 6;
-                if (_this.ticks % _this.spawnFrequency === 0) {
+                if ((_this.ticks + _this.spawnOffset) % _this.spawnFrequency === 0) {
                     var positions = _this.room
                         .getEmptyTiles()
                         .filter(function (t) { return Math.abs(t.x - _this.x) <= 1 && Math.abs(t.y - _this.y) <= 1; });
@@ -4670,7 +4786,7 @@ var Spawner = /** @class */ (function (_super) {
                     _this.frame = 0;
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
-                game_1.Game.drawMob(_this.tileX, _this.tileY, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
+                game_1.Game.drawMob(_this.tileX, _this.tileY, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY, 1, 2, _this.softShadeColor, _this.shadeAmount());
             }
             if (!_this.seenPlayer) {
                 _this.drawSleepingZs(delta);
@@ -4690,6 +4806,7 @@ var Spawner = /** @class */ (function (_super) {
         _this.enemyTable = enemyTable.filter(function (t) { return t !== 7; });
         var randSpawnType = game_1.Game.randTable(_this.enemyTable, random_1.Random.rand);
         _this.enemySpawnType = randSpawnType;
+        _this.spawnOffset = 0;
         if (Math.random() < 0.15) {
             switch (_this.enemySpawnType) {
                 case 0:
@@ -4777,9 +4894,6 @@ var __extends = (this && this.__extends) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.WizardEnemy = exports.WizardState = void 0;
 var game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-var floor_1 = __webpack_require__(/*! ../../tile/floor */ "./src/tile/floor.ts");
-var bones_1 = __webpack_require__(/*! ../../tile/bones */ "./src/tile/bones.ts");
-var deathParticle_1 = __webpack_require__(/*! ../../particle/deathParticle */ "./src/particle/deathParticle.ts");
 var wizardTeleportParticle_1 = __webpack_require__(/*! ../../particle/wizardTeleportParticle */ "./src/particle/wizardTeleportParticle.ts");
 var wizardFireball_1 = __webpack_require__(/*! ../../projectile/wizardFireball */ "./src/projectile/wizardFireball.ts");
 var random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
@@ -4914,6 +5028,10 @@ var WizardEnemy = /** @class */ (function (_super) {
             }
         };
         _this.draw = function (delta) {
+            if (_this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = _this.alpha;
             if (!_this.dead) {
                 _this.updateDrawXY(delta);
                 if (_this.state === WizardState.attack)
@@ -4923,13 +5041,13 @@ var WizardEnemy = /** @class */ (function (_super) {
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
                 if (_this.frame >= 0) {
-                    game_1.Game.drawMob(Math.floor(_this.frame) + 6, 2, 1, 2, _this.x, _this.y - 1.5, 1, 2, _this.room.shadeColor, _this.shadeAmount());
+                    game_1.Game.drawMob(Math.floor(_this.frame) + 6, 2, 1, 2, _this.x, _this.y - 1.5, 1, 2, _this.softShadeColor, _this.shadeAmount());
                     _this.frame += 0.2 * delta;
                     if (_this.frame > 11)
                         _this.frame = -1;
                 }
                 else {
-                    game_1.Game.drawMob(_this.tileX, _this.tileY, 1, 2, _this.x - _this.drawX, _this.y - 1.3 - _this.drawY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
+                    game_1.Game.drawMob(_this.tileX, _this.tileY, 1, 2, _this.x - _this.drawX, _this.y - 1.3 - _this.drawY, 1, 2, _this.softShadeColor, _this.shadeAmount());
                 }
                 if (!_this.seenPlayer) {
                     _this.drawSleepingZs(delta);
@@ -4938,16 +5056,7 @@ var WizardEnemy = /** @class */ (function (_super) {
                     _this.drawExclamation(delta);
                 }
             }
-        };
-        _this.kill = function () {
-            if (_this.room.roomArray[_this.x][_this.y] instanceof floor_1.Floor) {
-                var b = new bones_1.Bones(_this.room, _this.x, _this.y);
-                b.skin = _this.room.roomArray[_this.x][_this.y].skin;
-                _this.room.roomArray[_this.x][_this.y] = b;
-            }
-            _this.dead = true;
-            _this.room.particles.push(new deathParticle_1.DeathParticle(_this.x, _this.y));
-            _this.dropLoot();
+            game_1.Game.ctx.restore();
         };
         _this.ticks = 0;
         _this.health = 1;
@@ -5186,21 +5295,26 @@ var ZombieEnemy = /** @class */ (function (_super) {
             }
         };
         _this.draw = function (delta) {
-            if (!_this.dead) {
-                _this.updateDrawXY(delta);
-                _this.frame += 0.1 * delta;
-                if (_this.frame >= 4)
-                    _this.frame = 0;
-                if (_this.hasShadow)
-                    game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.shadeCol(), _this.shadeAmount());
-                game_1.Game.drawMob(_this.tileX + Math.floor(_this.frame), _this.tileY + _this.direction * 2, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY - _this.jumpY, 1, 2, _this.shadeColor, _this.shadeAmount());
+            if (_this.dead)
+                return;
+            //this.updateShadeColor(delta);
+            game_1.Game.ctx.globalAlpha = _this.alpha;
+            _this.updateDrawXY(delta);
+            _this.frame += 0.1 * delta;
+            if (_this.frame >= 4)
+                _this.frame = 0;
+            if (_this.hasShadow)
+                game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.shadeColor, _this.shadeAmount());
+            game_1.Game.drawMob(_this.tileX + Math.floor(_this.frame), _this.tileY + _this.direction * 2, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY - _this.jumpY, 1, 2, _this.softShadeColor, _this.shadeAmount());
+            if (!_this.cloned) {
+                if (!_this.seenPlayer) {
+                    _this.drawSleepingZs(delta);
+                }
+                if (_this.alertTicks > 0) {
+                    _this.drawExclamation(delta);
+                }
             }
-            if (!_this.seenPlayer) {
-                _this.drawSleepingZs(delta);
-            }
-            if (_this.alertTicks > 0) {
-                _this.drawExclamation(delta);
-            }
+            game_1.Game.ctx.globalAlpha = 1;
         };
         _this.ticks = 0;
         _this.frame = 0;
@@ -5264,8 +5378,6 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Entity = exports.EntityType = exports.EntityDirection = void 0;
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-var bones_1 = __webpack_require__(/*! ../tile/bones */ "./src/tile/bones.ts");
-var floor_1 = __webpack_require__(/*! ../tile/floor */ "./src/tile/floor.ts");
 var healthbar_1 = __webpack_require__(/*! ../healthbar */ "./src/healthbar.ts");
 var drawable_1 = __webpack_require__(/*! ../drawable */ "./src/drawable.ts");
 var gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
@@ -5305,6 +5417,7 @@ var Entity = /** @class */ (function (_super) {
         _this.imageParticleX = 0;
         _this.imageParticleY = 26;
         _this.dropChance = 0.02;
+        //shadeColor: string;
         _this.shadeMultiplier = 1;
         _this.applyShield = function (shieldHealth) {
             if (shieldHealth === void 0) { shieldHealth = 1; }
@@ -5364,6 +5477,9 @@ var Entity = /** @class */ (function (_super) {
             _this.room.particles.push(new damageNumber_1.DamageNumber(_this.room, _this.x, _this.y, damage, color, outlineColor));
         };
         _this.updateDrawXY = function (delta) {
+            //putting this here bc i'm lazy
+            _this.updateHurtFrame(delta);
+            _this.animateDying(delta);
             if (!_this.doneMoving()) {
                 _this.drawX *= Math.pow(0.9, delta);
                 _this.drawY *= Math.pow(0.9, delta);
@@ -5413,10 +5529,11 @@ var Entity = /** @class */ (function (_super) {
             */
             _this.health -= damage;
             _this.maxHealth -= shieldHealth;
+            _this.startHurting();
             _this.createDamageNumber(damage, type);
             _this.playHitSound();
             _this.healthBar.hurt();
-            if (type === "none" || _this.health <= 0) {
+            if (type === "none" || _this.health <= 0 || !_this.isEnemy) {
                 _this.createHitParticles();
             }
             if (_this.health <= 0) {
@@ -5424,6 +5541,17 @@ var Entity = /** @class */ (function (_super) {
             }
             else
                 _this.hurtCallback();
+        };
+        _this.startHurting = function () {
+            _this.hurting = true;
+            _this.hurtFrame += 15;
+            _this.shadeColor = "#FF0000";
+            _this.shadeMultiplier = 1.5;
+        };
+        _this.stopHurting = function () {
+            _this.hurting = false;
+            _this.hurtFrame = 0;
+            _this.shadeColor = "#000000";
         };
         _this.interact = function (player) { };
         _this.handleEnemyCase = function (playerHitBy) { };
@@ -5456,19 +5584,12 @@ var Entity = /** @class */ (function (_super) {
             }
         };
         _this.kill = function () {
-            var x = _this.x;
-            var y = _this.y;
-            if (_this.crushed) {
-                x = _this.lastX;
-                y = _this.lastY;
-            }
-            if (_this.room.roomArray[x][y] instanceof floor_1.Floor && _this.isEnemy) {
-                var b = new bones_1.Bones(_this.room, x, y);
-                b.skin = _this.room.roomArray[x][y].skin;
-                _this.room.roomArray[x][y] = b;
-            }
-            _this.emitEnemyKilled();
+            if (_this.cloned)
+                return;
+            var deadEntity = _this.clone();
+            _this.room.deadEntities.push(deadEntity);
             _this.dead = true;
+            //this.room.entities = this.room.entities.filter((e) => e !== this);
             _this.dropLoot();
             _this.uniqueKillBehavior();
         };
@@ -5477,12 +5598,79 @@ var Entity = /** @class */ (function (_super) {
             _this.dead = true;
             _this.dropLoot();
         };
-        _this.shadeAmount = function () {
-            return _this.room.softVis[_this.x][_this.y] * _this.shadeMultiplier;
+        _this.updateHurtFrame = function (delta) {
+            if (_this.hurting) {
+                _this.hurtFrame -= delta;
+                if (_this.hurtFrame < 0) {
+                    _this.stopHurting();
+                }
+            }
         };
-        _this.shadeCol = function () {
-            var _a = _this.room.softCol[_this.x][_this.y], r = _a[0], g = _a[1], b = _a[2];
-            return "#".concat(((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1));
+        _this.shadeAmount = function () {
+            return Math.min(1, _this.room.softVis[_this.x][_this.y] * _this.shadeMultiplier);
+        };
+        _this.updateShadeColor = function (delta) {
+            if (_this.shadeMultiplier > 1)
+                _this.shadeMultiplier -= 0.01 * delta;
+            if (_this.shadeMultiplier < 1)
+                _this.shadeMultiplier = 1;
+            var updated = false;
+            // Convert hex color to RGB
+            var hexToRgb = function (hex) {
+                var bigint = parseInt(hex.slice(1), 16);
+                var r = (bigint >> 16) & 255;
+                var g = (bigint >> 8) & 255;
+                var b = bigint & 255;
+                return [r, g, b];
+            };
+            // Convert RGB to hex color
+            var rgbToHex = function (rgb) {
+                var r = rgb[0], g = rgb[1], b = rgb[2];
+                return ("#" +
+                    ((1 << 24) + (r << 16) + (g << 8) + b)
+                        .toString(16)
+                        .slice(1)
+                        .toUpperCase());
+            };
+            var _a = hexToRgb(_this.softShadeColor), softR = _a[0], softG = _a[1], softB = _a[2];
+            var _b = hexToRgb(_this.shadeColor), targetR = _b[0], targetG = _b[1], targetB = _b[2];
+            // Calculate differences
+            var diffR = softR - targetR;
+            var diffG = softG - targetG;
+            var diffB = softB - targetB;
+            var flagR = false;
+            var flagG = false;
+            var flagB = false;
+            if (Math.abs(diffR) > 1)
+                flagR = true;
+            if (Math.abs(diffG) > 1)
+                flagG = true;
+            if (Math.abs(diffB) > 1)
+                flagB = true;
+            if (!flagR && !flagG && !flagB) {
+                return _this.softShadeColor;
+            }
+            var softShadeRgb = [softR, softG, softB];
+            // Apply smoothing similar to fadeLighting
+            if (flagR) {
+                diffR *= 0.1 * delta;
+                softShadeRgb[0] = _this.room.clamp(Math.round(softR - diffR), 0, 255);
+                updated = true;
+            }
+            if (flagG) {
+                diffG *= 0.1 * delta;
+                softShadeRgb[1] = _this.room.clamp(Math.round(softG - diffG), 0, 255);
+                updated = true;
+            }
+            if (flagB) {
+                diffB *= 0.1 * delta;
+                softShadeRgb[2] = _this.room.clamp(Math.round(softB - diffB), 0, 255);
+                updated = true;
+            }
+            if (updated) {
+                _this.softShadeColor = rgbToHex(softShadeRgb);
+            }
+            return _this.softShadeColor;
         };
         _this.emitEnemyKilled = function () {
             eventBus_1.globalEventBus.emit(events_1.EVENTS.ENEMY_KILLED, {
@@ -5533,8 +5721,25 @@ var Entity = /** @class */ (function (_super) {
                     _this.direction = game_1.Direction.UP;
             }
         };
+        _this.animateDying = function (delta) {
+            if (_this.cloned) {
+                //this.frame = 0;
+                console.log("dying");
+                _this.dyingFrame -= delta / 3;
+                console.log(_this.dyingFrame);
+                _this.alpha = Math.max(0, _this.alpha - delta / 50);
+                if (_this.dyingFrame <= 0) {
+                    console.log("dyingFrame <= 0");
+                    _this.dead = true;
+                    _this.dying = false;
+                    _this.uniqueKillBehavior();
+                    _this.room.clearDeadStuff();
+                }
+            }
+        };
         _this.draw = function (delta) {
             if (!_this.dead) {
+                game_1.Game.ctx.globalAlpha = _this.alpha;
                 if (_this.shielded)
                     if (_this.hasShadow) {
                         game_1.Game.drawFX(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.shadeColor, _this.shadeAmount());
@@ -5545,6 +5750,7 @@ var Entity = /** @class */ (function (_super) {
             /*if (this.crushed) {
               this.crushAnim(delta);
             }*/
+            game_1.Game.ctx.globalAlpha = 1;
         };
         _this.tick = function () {
             _this.behavior();
@@ -5855,6 +6061,14 @@ var Entity = /** @class */ (function (_super) {
         _this._imageParticleTiles = { x: 0, y: 0 };
         _this.hitSound = null;
         _this.shadeColor = _this.room.shadeColor;
+        _this.hurting = false;
+        _this.hurtFrame = 0;
+        _this.softShadeColor = "#000000";
+        _this.dying = false;
+        _this.dyingFrame = 30;
+        _this.alpha = 1;
+        _this.cloned = false;
+        _this.dead = false;
         return _this;
     }
     Entity.add = function (room, game, x, y) {
@@ -5863,6 +6077,45 @@ var Entity = /** @class */ (function (_super) {
             rest[_i - 4] = arguments[_i];
         }
         room.entities.push(new (this.bind.apply(this, __spreadArray([void 0, room, game, x, y], rest, false)))());
+    };
+    Entity.cloneEntity = function (original) {
+        var room = original.room, game = original.game, x = original.x, y = original.y;
+        // Create a new instance using the constructor
+        var cloned = new original.constructor(room, game, x, y);
+        // Assign other properties
+        cloned.cloned = true;
+        cloned.dead = false;
+        cloned.dying = true;
+        cloned.drawableY = original.drawableY;
+        cloned.tileX = original.tileX;
+        cloned.tileY = original.tileY;
+        cloned.frame = original.frame;
+        cloned.isEnemy = original.isEnemy;
+        cloned.hasShadow = original.hasShadow;
+        cloned.skipNextTurns = original.skipNextTurns;
+        cloned.direction = original.direction;
+        cloned.drawX = original.drawX;
+        cloned.drawY = original.drawY;
+        cloned.alpha = original.alpha;
+        cloned.shadeColor = original.shadeColor;
+        cloned.shadeMultiplier = original.shadeMultiplier;
+        cloned.softShadeColor = original.softShadeColor;
+        cloned.removeLightSource(cloned.lightSource);
+        //cloned.room.updateLighting();
+        // Add the cloned entity to deadEntities
+        room.deadEntities.push(cloned);
+        console.log("Cloned Entity - Dead: ".concat(cloned.dead, ", Dying: ").concat(cloned.dying));
+        return cloned;
+    };
+    /**
+     * Clones the current entity without adding it to deadEntities.
+     */
+    Entity.prototype.clone = function () {
+        var cloned = Entity.cloneEntity(this);
+        cloned.dead = false; // Explicitly set as not dead
+        cloned.dying = true; // Ensure the clone is in a dying state
+        console.log("Cloned Entity - Dead: ".concat(cloned.dead, ", Dying: ").concat(cloned.dying));
+        return cloned;
     };
     Object.defineProperty(Entity.prototype, "imageParticleTiles", {
         get: function () {
@@ -6003,7 +6256,6 @@ var game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 var entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 var entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 var random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
-var imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ "./src/particle/imageParticle.ts");
 var sound_1 = __webpack_require__(/*! ../../sound */ "./src/sound.ts");
 var Chest = /** @class */ (function (_super) {
     __extends(Chest, _super);
@@ -6042,16 +6294,14 @@ var Chest = /** @class */ (function (_super) {
         _this.rollDrop = function () {
             return game_1.Game.randTable([1, 1, 1, 1, 1, 1, 1, 2, 3, 4, 5, 2, 2], random_1.Random.rand);
         };
-        _this.kill = function () {
-            imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 3, 26);
-            _this.dead = true;
-            //this.layer.dead = true;
-            //this.room.entities.filter((layer) => layer !== this.layer);
-        };
         _this.killNoBones = function () {
             _this.kill();
         };
         _this.draw = function (delta) {
+            if (_this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = _this.alpha;
             if (_this.opening) {
                 if (_this.tileX <= 6) {
                     _this.tileX += 0.15 * delta;
@@ -6064,6 +6314,7 @@ var Chest = /** @class */ (function (_super) {
                 _this.updateDrawXY(delta);
                 game_1.Game.drawObj(Math.floor(_this.tileX), Math.floor(_this.tileY), 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
             }
+            game_1.Game.ctx.restore();
         };
         _this.drawTopLayer = function (delta) {
             _this.drawableY = _this.y - 1;
@@ -6081,6 +6332,8 @@ var Chest = /** @class */ (function (_super) {
         _this.pushable = false;
         _this.chainPushable = false;
         _this.interactable = true;
+        _this.imageParticleX = 3;
+        _this.imageParticleY = 26;
         return _this;
         /*
         this.layer = new ChestLayer(
@@ -7445,8 +7698,20 @@ var ChatMessage = /** @class */ (function () {
     return ChatMessage;
 }());
 exports.ChatMessage = ChatMessage;
-var getShadeCanvasKey = function (set, sx, sy, sw, sh, opacity) {
-    return set.src + "," + sx + "," + sy + "," + sw + "," + sh + "," + opacity;
+var getShadeCanvasKey = function (set, sX, sY, sW, sH, opacity, shadeColor) {
+    return (set.src +
+        "," +
+        sX +
+        "," +
+        sY +
+        "," +
+        sW +
+        "," +
+        sH +
+        "," +
+        opacity +
+        "," +
+        shadeColor);
 };
 // fps counter
 var times = [];
@@ -7583,6 +7848,7 @@ var Game = /** @class */ (function () {
             if (_this.players[_this.localPlayerID] === player) {
                 _this.levelState = LevelState.TRANSITIONING;
                 _this.transitionStartTime = Date.now();
+                var hasDir = door.doorDir !== door.linkedDoor.doorDir;
                 var oldX = _this.players[_this.localPlayerID].x;
                 var oldY = _this.players[_this.localPlayerID].y;
                 _this.prevLevel = _this.room;
@@ -7597,16 +7863,18 @@ var Game = /** @class */ (function () {
                 _this.sideTransition = false;
                 _this.sideTransitionDirection = side;
                 if (door instanceof door_1.Door &&
-                    [Direction.RIGHT, Direction.LEFT].includes(door.doorDir))
+                    [Direction.RIGHT, Direction.LEFT].includes(door.doorDir) &&
+                    hasDir)
                     _this.sideTransition = true;
-                else if (door instanceof door_1.Door && door.doorDir === Direction.DOWN)
+                else if (door instanceof door_1.Door &&
+                    door.doorDir === Direction.DOWN &&
+                    hasDir)
                     _this.upwardTransition = true;
             }
             else {
                 door.room.enterLevelThroughDoor(player, door, side);
             }
             player.map.saveMapData();
-            console.log("Current room Index  ".concat(_this.rooms.indexOf(_this.room), " Current Room Type ").concat(_this.room.type));
         };
         this.run = function (timestamp) {
             if (_this.paused) {
@@ -7825,12 +8093,15 @@ var Game = /** @class */ (function () {
         };
         this.draw = function (delta) {
             Game.ctx.save(); // Save the current canvas state
+            // Reset transformations to ensure the black background covers the entire canvas
+            Game.ctx.setTransform(1, 0, 0, 1, 0, 0);
             Game.ctx.globalAlpha = 1;
-            if (_this.room)
-                Game.ctx.fillStyle = _this.room.shadeColor;
-            else
-                Game.ctx.fillStyle = "black";
+            Game.ctx.globalCompositeOperation = "source-over";
+            Game.ctx.fillStyle = "black";
             Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
+            //if (this.room) Game.ctx.fillStyle = this.room.shadeColor;
+            //else Game.ctx.fillStyle = "black";
+            //Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
             if (_this.levelState === LevelState.TRANSITIONING) {
                 _this.screenShakeX = 0;
                 _this.screenShakeY = 0;
@@ -8353,7 +8624,8 @@ var Game = /** @class */ (function () {
         shadeOpacity =
             Math.round(shadeOpacity * gameConstants_1.GameConstants.SHADE_LEVELS) /
                 gameConstants_1.GameConstants.SHADE_LEVELS;
-        var key = getShadeCanvasKey(set, sX, sY, sW, sH, shadeOpacity);
+        // Include shadeColor in the cache key
+        var key = getShadeCanvasKey(set, sX, sY, sW, sH, shadeOpacity, shadeColor);
         if (!Game.shade_canvases[key]) {
             Game.shade_canvases[key] = document.createElement("canvas");
             Game.shade_canvases[key].width = Math.round(sW * gameConstants_1.GameConstants.TILESIZE);
@@ -8467,6 +8739,7 @@ var GameConstants = /** @class */ (function () {
     GameConstants.HIT_ENEMY_TEXT_COLOR = "#76428a";
     GameConstants.HEALTH_BUFF_COLOR = "#d77bba";
     GameConstants.MISS_COLOR = "#639bff";
+    GameConstants.CUSTOM_SHADER_COLOR_ENABLED = false;
     GameConstants.COLOR_LAYER_COMPOSITE_OPERATION = "soft-light"; //"soft-light";
     GameConstants.SHADE_LAYER_COMPOSITE_OPERATION = "screen"; //"soft-light";
     GameConstants.USE_OPTIMIZED_SHADING = false;
@@ -10220,9 +10493,10 @@ var Inventory = /** @class */ (function () {
                 {
                     switch (num) {
                         case 9:
-                            gameConstants_1.GameConstants.TOGGLE_USE_OPTIMIZED_SHADING();
-                            _this.game.pushMessage("Optimized shading is now " +
-                                (gameConstants_1.GameConstants.USE_OPTIMIZED_SHADING ? "on" : "off"));
+                            gameConstants_1.GameConstants.CUSTOM_SHADER_COLOR_ENABLED =
+                                !gameConstants_1.GameConstants.CUSTOM_SHADER_COLOR_ENABLED;
+                            _this.game.pushMessage("Custom shade color is now " +
+                                (gameConstants_1.GameConstants.CUSTOM_SHADER_COLOR_ENABLED ? "on" : "off"));
                             break;
                     }
                 }
@@ -13055,10 +13329,14 @@ var Level = /** @class */ (function () {
     Level.prototype.setExitRoom = function () {
         this.exitRoom = this.rooms.find(function (room) { return room.type === room_1.RoomType.DOWNLADDER; });
     };
+    Level.prototype.setStartRoom = function () {
+        this.startRoom = this.rooms.find(function (room) { return room.type === room_1.RoomType.START; });
+    };
     Level.prototype.setRooms = function (rooms) {
         var _this = this;
         this.rooms = rooms;
         this.setExitRoom();
+        this.setStartRoom();
         this.rooms.filter(function (room) { return room.depth === _this.depth; });
         rooms.forEach(function (room) {
             room.id = _this.rooms.indexOf(room);
@@ -13134,8 +13412,8 @@ var Level = /** @class */ (function () {
      */
     Level.prototype.getNumberOfEnemyTypes = function (depth) {
         // Example logic: depth 0 -> 2 types, depth 1 -> 4, depth 2 -> 6, etc.
-        var numberOfTypes = depth === 0 ? 2 : Math.ceil(Math.sqrt(depth + 1)) + 3;
-        console.log("numberOfTypes: ".concat(numberOfTypes));
+        var numberOfTypes = depth === 0 ? 2 : Math.ceil(Math.sqrt(depth + 1)) + 4;
+        //console.log(`numberOfTypes: ${numberOfTypes}`);
         return numberOfTypes;
     };
     /**
@@ -13734,13 +14012,11 @@ var generate_dungeon_candidate = function (game, partialLevel, map_w, map_h, dep
                 _g.sent();
                 // Make sure we have at least one partition before assigning spawn
                 if (partialLevel.partitions.length === 0) {
-                    console.log("No partitions generated after filtering.");
                     partialLevel.partitions = [];
                     return [2 /*return*/];
                 }
                 spawn = partialLevel.partitions[0];
                 if (!spawn) {
-                    console.log("No spawn point found.");
                     partialLevel.partitions = [];
                     return [2 /*return*/];
                 }
@@ -13883,7 +14159,7 @@ var generate_dungeon_candidate = function (game, partialLevel, map_w, map_h, dep
                 if (!found_stair) {
                     console.log("No stair found");
                     partialLevel.partitions = [];
-                    game.pushMessage("No stair found");
+                    //game.pushMessage("No stair found");
                     return [2 /*return*/];
                 }
                 // calculate room distances
@@ -13982,12 +14258,13 @@ var generate_dungeon = function (game, partialLevel, map_w, map_h, depth, params
                 }
                 tries++;
                 return [3 /*break*/, 1];
-            case 3:
-                game.pushMessage("Dungeon passed all checks");
-                return [4 /*yield*/, new Promise(function (resolve) {
-                        return setTimeout(resolve, 10 * LevelGenerator.ANIMATION_CONSTANT * ANIMATION_LARGE_DELAY);
-                    })];
+            case 3: 
+            //game.pushMessage("Dungeon passed all checks");
+            return [4 /*yield*/, new Promise(function (resolve) {
+                    return setTimeout(resolve, 10 * LevelGenerator.ANIMATION_CONSTANT * ANIMATION_LARGE_DELAY);
+                })];
             case 4:
+                //game.pushMessage("Dungeon passed all checks");
                 _a.sent();
                 console.log("finished generation");
                 return [2 /*return*/];
@@ -14196,7 +14473,6 @@ var check_overlaps = function (partitions) {
                 a.x + a.w > b.x &&
                 a.y < b.y + b.h &&
                 a.y + a.h > b.y) {
-                console.log("Overlap detected between Partition ".concat(i, " and Partition ").concat(j));
                 return true;
             }
         }
@@ -14249,7 +14525,6 @@ var LevelGenerator = /** @class */ (function () {
                 // Pass open walls information to the Room constructor
                 var room = new room_1.Room(_this.game, partition.x - 1, partition.y - 1, partition.w + 2, partition.h + 2, partition.type, depth, mapGroup, _this.game.levels[depth], random_1.Random.rand);
                 rooms.push(room);
-                console.log("room index: ".concat(rooms.indexOf(room)));
             }
             var doors_added = [];
             partitions.forEach(function (partition, index) {
@@ -14307,8 +14582,7 @@ var LevelGenerator = /** @class */ (function () {
                             this.game.level = newLevel;
                             rooms = this.getRooms(this.partialLevel.partitions, depth, mapGroup);
                             newLevel.setRooms(rooms);
-                            console.log("mapGroup: ".concat(mapGroup));
-                            console.log("depth: ".concat(depth));
+                            newLevel.exitRoom.linkExitToStart();
                             // Update the current floor first level ID if it's not a cave
                             if (!cave)
                                 this.currentFloorFirstLevelID = this.game.rooms.length;
@@ -15427,6 +15701,7 @@ var enemy_1 = __webpack_require__(/*! ./entity/enemy/enemy */ "./src/entity/enem
 var mouseCursor_1 = __webpack_require__(/*! ./mouseCursor */ "./src/mouseCursor.ts");
 var stats_1 = __webpack_require__(/*! ./stats */ "./src/stats.ts");
 var spellbook_1 = __webpack_require__(/*! ./weapon/spellbook */ "./src/weapon/spellbook.ts");
+var utils_1 = __webpack_require__(/*! ./utils */ "./src/utils.ts");
 var PlayerDirection;
 (function (PlayerDirection) {
     PlayerDirection[PlayerDirection["DOWN"] = 0] = "DOWN";
@@ -16051,11 +16326,19 @@ var Player = /** @class */ (function (_super) {
             _this.frame += 0.1 * delta;
             if (_this.frame >= 4)
                 _this.frame = 0;
-            game_1.Game.drawMob(1 + Math.floor(_this.frame), 8 + _this.direction * 2, 1, 2, _this.x - _this.drawX - _this.hitX, _this.y - 1.45 - _this.drawY - _this.jumpY - _this.hitY, 1, 2);
+            game_1.Game.drawMob(1 + Math.floor(_this.frame), 8 + _this.direction * 2, 1, 2, _this.x - _this.drawX - _this.hitX, _this.y - 1.45 - _this.drawY - _this.jumpY - _this.hitY, 1, 2, _this.shadeColor());
             if (_this.inventory.getArmor() && _this.inventory.getArmor().health > 0) {
                 // TODO draw armor
             }
             game_1.Game.ctx.restore(); // Restore the canvas state
+        };
+        _this.shadeColor = function () {
+            if (!gameConstants_1.GameConstants.CUSTOM_SHADER_COLOR_ENABLED) {
+                return "black";
+            }
+            else {
+                return utils_1.Utils.rgbToHex(_this.game.levels[_this.depth].rooms[_this.levelID].col[_this.x][_this.y][0], _this.game.levels[_this.depth].rooms[_this.levelID].col[_this.x][_this.y][1], _this.game.levels[_this.depth].rooms[_this.levelID].col[_this.x][_this.y][2]);
+            }
         };
         _this.heal = function (amount) {
             _this.health += amount;
@@ -16689,6 +16972,7 @@ exports.EnemyShield = void 0;
 var projectile_1 = __webpack_require__(/*! ./projectile */ "./src/projectile/projectile.ts");
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var lighting_1 = __webpack_require__(/*! ../lighting */ "./src/lighting.ts");
+var beamEffect_1 = __webpack_require__(/*! ../beamEffect */ "./src/beamEffect.ts");
 var EnemyShield = /** @class */ (function (_super) {
     __extends(EnemyShield, _super);
     function EnemyShield(parent, x, y, health) {
@@ -16698,6 +16982,13 @@ var EnemyShield = /** @class */ (function (_super) {
             _this.parent.shielded = false;
             _this.parent.removeLightSource(_this.lightSource);
             _this.parent.room.projectiles = _this.parent.room.projectiles.filter(function (projectile) { return projectile !== _this; });
+            var beam = _this.parent.room.projectiles.find(function (projectile) {
+                return projectile instanceof beamEffect_1.BeamEffect && projectile.parent === _this.parent;
+            });
+            if (beam) {
+                beam.dead = true;
+            }
+            _this.parent.shadeColor = "black";
             _this.lightSource = null;
             _this.parent.shield = null;
         };
@@ -16752,7 +17043,7 @@ var EnemyShield = /** @class */ (function (_super) {
         _this.frame = 0;
         _this.health = health;
         _this.parent.shielded = true;
-        _this.lightSource = lighting_1.Lighting.newLightSource(_this.x + 0.5, _this.y + 0.5, [10, 0, 20], 2.5, 20);
+        _this.lightSource = lighting_1.Lighting.newLightSource(_this.x + 0.5, _this.y + 0.5, [20, 0, 40], 2.5, 20);
         _this.parent.addLightSource(_this.lightSource);
         _this.parent.room.projectiles.push(_this);
         _this.parent.room.updateLighting();
@@ -17545,8 +17836,9 @@ var Room = /** @class */ (function () {
         if (rand === void 0) { rand = random_1.Random.rand; }
         var _this = this;
         this.name = "";
-        this.shadeColor = "black";
+        this.shadeColor = "#000000";
         this.wallInfo = new Map();
+        this.tunnelDoor = null; // this is the door that connects the start room to the exit room
         // Add a list to keep track of BeamEffect instances
         this.beamEffects = [];
         this.removeWall = function (x, y) {
@@ -17568,33 +17860,41 @@ var Room = /** @class */ (function () {
                 directions.push(WallDirection.EAST);
             return directions;
         };
-        this.addDoor = function (x, y) {
+        this.addDoor = function (x, y, room, tunnelDoor) {
+            if (room === void 0) { room = _this; }
+            if (tunnelDoor === void 0) { tunnelDoor = false; }
             var d;
             var t = door_1.DoorType.DOOR;
-            if (_this.type === RoomType.BOSS)
+            if (room.type === RoomType.BOSS)
                 t = door_1.DoorType.GUARDEDDOOR;
-            if (_this.type === RoomType.KEYROOM)
+            if (room.type === RoomType.KEYROOM)
                 t = door_1.DoorType.LOCKEDDOOR;
-            if (x === _this.roomX) {
-                d = new door_1.Door(_this, _this.game, x, y, game_1.Direction.RIGHT, t);
-                _this.roomArray[x + 1][y] = new spawnfloor_1.SpawnFloor(_this, x + 1, y);
+            if (tunnelDoor)
+                t = door_1.DoorType.TUNNELDOOR;
+            if (x === room.roomX) {
+                d = new door_1.Door(room, room.game, x, y, game_1.Direction.RIGHT, t);
+                room.roomArray[x + 1][y] = new spawnfloor_1.SpawnFloor(room, x + 1, y);
             }
-            else if (x === _this.roomX + _this.width - 1) {
-                d = new door_1.Door(_this, _this.game, x, y, game_1.Direction.LEFT, t);
-                _this.roomArray[x - 1][y] = new spawnfloor_1.SpawnFloor(_this, x - 1, y);
+            else if (x === room.roomX + room.width - 1) {
+                d = new door_1.Door(room, room.game, x, y, game_1.Direction.LEFT, t);
+                room.roomArray[x - 1][y] = new spawnfloor_1.SpawnFloor(room, x - 1, y);
             }
-            else if (y === _this.roomY) {
-                d = new door_1.Door(_this, _this.game, x, y, game_1.Direction.UP, t);
-                _this.roomArray[x][y + 1] = new spawnfloor_1.SpawnFloor(_this, x, y + 1);
+            else if (y === room.roomY) {
+                d = new door_1.Door(room, room.game, x, y, game_1.Direction.UP, t);
+                room.roomArray[x][y + 1] = new spawnfloor_1.SpawnFloor(room, x, y + 1);
             }
-            else if (y === _this.roomY + _this.height - 1) {
-                d = new door_1.Door(_this, _this.game, x, y, game_1.Direction.DOWN, t);
-                _this.roomArray[x][y - 1] = new spawnfloor_1.SpawnFloor(_this, x, y - 1);
+            else if (y === room.roomY + room.height - 1) {
+                d = new door_1.Door(room, room.game, x, y, game_1.Direction.DOWN, t);
+                room.roomArray[x][y - 1] = new spawnfloor_1.SpawnFloor(room, x, y - 1);
             }
-            _this.doors.push(d);
-            if (_this.roomArray[d.x] == undefined) {
+            if (tunnelDoor) {
+                room.tunnelDoor = d;
             }
-            _this.roomArray[d.x][d.y] = d;
+            room.doors.push(d);
+            if (room.roomArray[d.x] == undefined) {
+                console.log("door not added");
+            }
+            room.roomArray[d.x][d.y] = d;
             return d;
         };
         //used for spawn commands, implement elsewhere later
@@ -17633,6 +17933,15 @@ var Room = /** @class */ (function () {
         };
         // #endregion
         // #region POPULATING METHODS
+        this.linkExitToStart = function () {
+            if (_this.addDoorWithOffset(_this.level.startRoom.roomX +
+                Math.floor(_this.level.startRoom.width / 2) +
+                1, _this.level.startRoom.roomY, _this.level.startRoom, true) &&
+                _this.addDoorWithOffset(_this.roomX + Math.floor(_this.width / 2) - 1, _this.roomY, _this, true)) {
+                _this.tunnelDoor.linkedDoor = _this.level.startRoom.tunnelDoor;
+                _this.tunnelDoor.linkedDoor.linkedDoor = _this.tunnelDoor;
+            }
+        };
         this.populateEmpty = function (rand) {
             _this.addRandomTorches("medium");
         };
@@ -17853,8 +18162,8 @@ var Room = /** @class */ (function () {
             _this.name = "";
             switch (_this.type) {
                 case RoomType.START:
-                    //this.addNewEnemy(EnemyType.zombie);
-                    //this.addNewEnemy(EnemyType.occultist);
+                    _this.addNewEnemy(EnemyType.zombie);
+                    _this.addNewEnemy(EnemyType.occultist);
                     if (_this.depth !== 0)
                         _this.populateUpLadder(rand);
                     _this.populateEmpty(rand);
@@ -17959,6 +18268,10 @@ var Room = /** @class */ (function () {
             _this.setReverb();
         };
         this.enterLevelThroughDoor = function (player, door, side) {
+            if (door.doorDir === door.linkedDoor.doorDir) {
+                door.opened = true;
+                player.moveSnap(door.x, door.y + 1);
+            }
             if (door instanceof door_1.Door && door.doorDir === game_1.Direction.UP) {
                 //if top door
                 door.opened = true;
@@ -17973,7 +18286,6 @@ var Room = /** @class */ (function () {
                 // if side door
                 player.moveNoSmooth(door.x + side, door.y);
             }
-            console.log("player coordinates: ".concat(player.x, ", ").concat(player.y));
             _this.clearDeadStuff();
             _this.calculateWallInfo();
             _this.updateLighting();
@@ -17983,8 +18295,6 @@ var Room = /** @class */ (function () {
             _this.message = _this.name;
             player.map.saveMapData();
             _this.setReverb();
-            console.log("this.entities: ".concat(_this.entities));
-            console.log("this.roomArray: ".concat(_this.roomArray));
         };
         this.enterLevelThroughLadder = function (player, ladder) {
             player.moveSnap(ladder.x, ladder.y + 1);
@@ -18094,6 +18404,7 @@ var Room = /** @class */ (function () {
             }
         };
         this.clearDeadStuff = function () {
+            _this.deadEntities = _this.deadEntities.filter(function (e) { return !e.dead; });
             _this.entities = _this.entities.filter(function (e) { return !e.dead; });
             _this.projectiles = _this.projectiles.filter(function (p) { return !p.dead; });
             _this.hitwarnings = _this.hitwarnings.filter(function (h) { return !h.dead; });
@@ -18496,7 +18807,9 @@ var Room = /** @class */ (function () {
                 }
             }
             var drawables = new Array();
-            drawables = drawables.concat(tiles, _this.entities, _this.hitwarnings, _this.projectiles, _this.particles, _this.items);
+            var entities = new Array();
+            entities = entities.concat(_this.entities, _this.deadEntities);
+            drawables = drawables.concat(tiles, entities, _this.hitwarnings, _this.projectiles, _this.particles, _this.items);
             for (var i in _this.game.players) {
                 if (_this.game.rooms[_this.game.players[i].levelID] === _this) {
                     if (!(skipLocalPlayer &&
@@ -18505,10 +18818,10 @@ var Room = /** @class */ (function () {
                 }
             }
             drawables.sort(function (a, b) {
-                if (a instanceof floor_1.Floor) {
+                if (a instanceof floor_1.Floor || a instanceof spawnfloor_1.SpawnFloor) {
                     return -1;
                 }
-                else if (b instanceof floor_1.Floor) {
+                else if (b instanceof floor_1.Floor || b instanceof spawnfloor_1.SpawnFloor) {
                     return 1;
                 }
                 if (Math.abs(a.drawableY - b.drawableY) < 0.1) {
@@ -18561,8 +18874,10 @@ var Room = /** @class */ (function () {
             var shadingAlpha = Math.max(0, Math.min(0.8, 2 / bestSightRadius));
             if (gameConstants_1.GameConstants.ALPHA_ENABLED) {
                 game_1.Game.ctx.globalAlpha = 0.25;
+                game_1.Game.ctx.resetTransform();
+                //Game.ctx.fillStyle = "#4a5d23"; // hex dark misty green
                 game_1.Game.ctx.fillStyle = _this.shadeColor;
-                game_1.Game.ctx.fillRect((_this.roomX - levelConstants_1.LevelConstants.SCREEN_W) * gameConstants_1.GameConstants.TILESIZE, (_this.roomY - levelConstants_1.LevelConstants.SCREEN_H) * gameConstants_1.GameConstants.TILESIZE, (_this.width + 2 * levelConstants_1.LevelConstants.SCREEN_W) * gameConstants_1.GameConstants.TILESIZE, (_this.height + 2 * levelConstants_1.LevelConstants.SCREEN_H) * gameConstants_1.GameConstants.TILESIZE);
+                game_1.Game.ctx.fillRect(0, 0, _this.game.level.width * gameConstants_1.GameConstants.TILESIZE, _this.game.level.height * gameConstants_1.GameConstants.TILESIZE);
                 game_1.Game.ctx.globalAlpha = 1;
                 game_1.Game.ctx.globalCompositeOperation = "source-over";
             }
@@ -18697,6 +19012,76 @@ var Room = /** @class */ (function () {
                 return [];
             }
         };
+        // #endregion
+        /**
+         * Adds a door with offset to prevent overlapping doors.
+         * If a door already exists at the desired (x, y) position, it offsets the door randomly to either side.
+         * Ensures the new door is at least one tile away from the room's edge based on its direction.
+         *
+         * @param x - The x-coordinate for the door placement.
+         * @param y - The y-coordinate for the door placement.
+         * @param room - The Room object where the door is being placed. Defaults to the current room.
+         * @param tunnelDoor - Whether the door is a tunnel door. Defaults to false.
+         * @returns The created Door object or null if placement failed.
+         */
+        this.addDoorWithOffset = function (x, y, room, tunnelDoor) {
+            var _a, _b;
+            if (room === void 0) { room = _this; }
+            if (tunnelDoor === void 0) { tunnelDoor = false; }
+            // Check if a door already exists at the desired position
+            if (((_a = room.roomArray[x]) === null || _a === void 0 ? void 0 : _a[y]) instanceof door_1.Door) {
+                // Determine the direction based on the door's position
+                var direction = null;
+                if (x === room.roomX) {
+                    direction = game_1.Direction.RIGHT;
+                }
+                else if (x === room.roomX + room.width - 1) {
+                    direction = game_1.Direction.LEFT;
+                }
+                else if (y === room.roomY) {
+                    direction = game_1.Direction.DOWN;
+                }
+                else if (y === room.roomY + room.height - 1) {
+                    direction = game_1.Direction.UP;
+                }
+                if (!direction) {
+                    console.log("Invalid door position.");
+                    return null;
+                }
+                // Define possible offset adjustments based on door direction
+                var offsetOptions = [];
+                switch (direction) {
+                    case game_1.Direction.RIGHT | game_1.Direction.LEFT:
+                        // Offsets along the y-axis for vertical walls
+                        offsetOptions.push({ dx: 0, dy: 1 }, { dx: 0, dy: -1 });
+                        break;
+                    case game_1.Direction.UP | game_1.Direction.DOWN:
+                        // Offsets along the x-axis for horizontal walls
+                        offsetOptions.push({ dx: 1, dy: 0 }, { dx: -1, dy: 0 });
+                        break;
+                }
+                // Shuffle the offset options to randomize placement
+                var shuffledOffsets = offsetOptions.sort(function () { return Math.random() - 0.5; });
+                for (var _i = 0, shuffledOffsets_1 = shuffledOffsets; _i < shuffledOffsets_1.length; _i++) {
+                    var offset = shuffledOffsets_1[_i];
+                    var newX = x + offset.dx;
+                    var newY = y + offset.dy;
+                    // Ensure the new position is within bounds and not on the edge
+                    var isWithinBounds = newX > room.roomX &&
+                        newX < room.roomX + room.width - 1 &&
+                        newY > room.roomY &&
+                        newY < room.roomY + room.height - 1;
+                    if (isWithinBounds && !(((_b = room.roomArray[newX]) === null || _b === void 0 ? void 0 : _b[newY]) instanceof door_1.Door)) {
+                        // Offset the door placement
+                        return room.addDoor(newX, newY, room, tunnelDoor);
+                    }
+                }
+                console.log("Cannot place door at (".concat(x, ", ").concat(y, ") without overlapping existing doors."));
+                return null;
+            }
+            // If no door exists at the desired position, place it normally
+            return room.addDoor(x, y, room, tunnelDoor);
+        };
         this.game = game;
         this.roomX = x; //Math.floor(- this.width / 2);
         this.roomY = y; //Math.floor(- this.height / 2);
@@ -18719,6 +19104,7 @@ var Room = /** @class */ (function () {
         this.level = level;
         this.id = 0;
         this.currentSpawnerCount = 0;
+        this.deadEntities = Array();
         // #region initialize arrays
         //initialize room array
         this.roomArray = [];
@@ -18825,7 +19211,6 @@ var Room = /** @class */ (function () {
             placeY !== undefined &&
             ((_a = this.roomArray[placeX]) === null || _a === void 0 ? void 0 : _a[placeY]) instanceof wall_1.Wall) {
             this.roomArray[placeX][placeY] = new wallTorch_1.WallTorch(this, placeX, placeY);
-            console.log("placed torch");
             return;
         }
         var walls = [];
@@ -18871,6 +19256,7 @@ var Room = /** @class */ (function () {
             }
         }
     };
+    // ... start of file ...
     Room.prototype.addSpikeTraps = function (numSpikes, rand) {
         if (this.level.environment.type === environment_1.EnvType.FOREST)
             return;
@@ -20286,6 +20672,7 @@ var DoorType;
     DoorType[DoorType["DOOR"] = 0] = "DOOR";
     DoorType[DoorType["LOCKEDDOOR"] = 1] = "LOCKEDDOOR";
     DoorType[DoorType["GUARDEDDOOR"] = 2] = "GUARDEDDOOR";
+    DoorType[DoorType["TUNNELDOOR"] = 3] = "TUNNELDOOR";
 })(DoorType = exports.DoorType || (exports.DoorType = {}));
 var Door = /** @class */ (function (_super) {
     __extends(Door, _super);
@@ -20304,11 +20691,15 @@ var Door = /** @class */ (function (_super) {
             _this.iconXOffset = 1 / 32;
         };
         _this.removeLock = function () {
-            _this.type = DoorType.DOOR;
+            if (_this.type !== DoorType.TUNNELDOOR)
+                _this.type = DoorType.DOOR;
             _this.locked = false;
         };
         _this.removeLockIcon = function () {
+            _this.iconYOffset = 0;
+            _this.unlocking = false;
             _this.iconTileX = 2;
+            _this.iconXOffset = 0;
             _this.iconAlpha = 1;
         };
         _this.canUnlock = function (player) {
@@ -20327,6 +20718,18 @@ var Door = /** @class */ (function (_super) {
                 _this.game.pushMessage("There are still remaining foes guarding this door...");
                 return false;
             }
+            if (_this.type === DoorType.TUNNELDOOR &&
+                (!_this.opened || !_this.linkedDoor.opened)) {
+                if (_this.linkedDoor === _this.room.level.exitRoom.tunnelDoor) {
+                    _this.game.pushMessage("The door refuses to budge from this side.");
+                    return false;
+                }
+                else {
+                    _this.game.pushMessage("You clear the debris, revealing a narrow tunnel.");
+                    return true;
+                }
+            }
+            return true;
         };
         _this.unlock = function (player) {
             if (_this.type === DoorType.LOCKEDDOOR) {
@@ -20338,6 +20741,10 @@ var Door = /** @class */ (function (_super) {
                     _this.removeLock();
                     _this.unlocking = true;
                 }
+            }
+            else if (_this.type === DoorType.TUNNELDOOR) {
+                _this.locked = false;
+                _this.unlocking = true;
             }
         };
         _this.unGuard = function () {
@@ -20372,14 +20779,15 @@ var Door = /** @class */ (function (_super) {
                 _this.game.changeLevelThroughDoor(player, _this.linkedDoor, _this.linkedDoor.room.roomX - _this.room.roomX > 0 ? 1 : -1);
             _this.linkedDoor.removeLock();
             _this.linkedDoor.removeLockIcon();
+            _this.removeLockIcon();
         };
         _this.draw = function (delta) {
             if (_this.doorDir === game_1.Direction.UP) {
                 //if top door
                 if (_this.opened)
-                    game_1.Game.drawTile(6, _this.skin, 1, 1, _this.x, _this.y, 1, 1, _this.room.shadeColor, _this.shadeAmount());
+                    game_1.Game.drawTile(6 + _this.tileXOffset, _this.skin, 1, 1, _this.x, _this.y, 1, 1, _this.room.shadeColor, _this.shadeAmount());
                 else
-                    game_1.Game.drawTile(3, _this.skin, 1, 1, _this.x, _this.y, 1, 1, _this.room.shadeColor, _this.shadeAmount());
+                    game_1.Game.drawTile(3 + _this.tileXOffset, _this.skin, 1, 1, _this.x, _this.y, 1, 1, _this.room.shadeColor, _this.shadeAmount());
             }
             if (_this.doorDir !== game_1.Direction.UP)
                 //if not top door
@@ -20400,16 +20808,12 @@ var Door = /** @class */ (function (_super) {
             _this.frame += 1 * delta;
             game_1.Game.ctx.globalAlpha = _this.iconAlpha;
             var multiplier = 0.125;
-            if (_this.unlocking == true) {
+            if (_this.unlocking === true) {
                 _this.iconAlpha *= Math.pow(0.92, delta);
                 _this.iconYOffset -= 0.035 * delta;
                 multiplier = 0;
                 if (_this.iconAlpha <= 0.01) {
-                    _this.iconYOffset = 0;
-                    _this.unlocking = false;
-                    _this.iconTileX = 2;
-                    _this.iconXOffset = 0;
-                    _this.iconAlpha = 1;
+                    _this.removeLockIcon();
                 }
             }
             if (_this.doorDir === game_1.Direction.UP) {
@@ -20439,6 +20843,7 @@ var Door = /** @class */ (function (_super) {
         _this.unlocking = false;
         _this.iconAlpha = 1;
         _this.frame = 0;
+        _this.tileXOffset = 0;
         switch (_this.type) {
             case DoorType.GUARDEDDOOR:
                 _this.guard();
@@ -20448,6 +20853,12 @@ var Door = /** @class */ (function (_super) {
                 break;
             case DoorType.DOOR:
                 _this.removeLock();
+                break;
+            case DoorType.TUNNELDOOR:
+                // this.tileX = ? find the right tile for this
+                _this.locked = true;
+                _this.iconTileX = 10;
+                _this.iconXOffset = 1 / 32;
                 break;
         }
         return _this;
@@ -20543,7 +20954,7 @@ var DownLadder = /** @class */ (function (_super) {
                                         var tile = _this.linkedLevel.roomArray[x][y];
                                         if (tile instanceof upLadder_1.UpLadder) {
                                             tile.linkedLevel = _this.game.levels[_this.room.depth].exitRoom;
-                                            console.log("linked level", tile.linkedLevel);
+                                            //console.log("linked level", tile.linkedLevel);
                                             break outerLoop;
                                         }
                                     }
@@ -20562,10 +20973,6 @@ var DownLadder = /** @class */ (function (_super) {
                 if (_this.game.levels[_this.game.players[i].depth].rooms[_this.game.players[i].levelID] !== _this.room ||
                     _this.game.players[i].x !== _this.x ||
                     _this.game.players[i].y !== _this.y) {
-                    console.log("player not here", _this.game.players[i]);
-                    console.log("this.game.players[i].levelID: ".concat(_this.game.players[i].levelID));
-                    console.log("this.room.id: ".concat(_this.room.id));
-                    console.log("this.game.players[i].x, this.game.players[i].y: ".concat(_this.game.players[i].x, ", ").concat(_this.game.players[i].y, ", this.x, this.y: ").concat(_this.x, ", ").concat(_this.y));
                     allPlayersHere = false;
                 }
             }
@@ -21469,12 +21876,15 @@ var Utils = /** @class */ (function () {
         var rFinal = Math.round((r + m) * 255);
         var gFinal = Math.round((g + m) * 255);
         var bFinal = Math.round((b + m) * 255);
-        // Convert RGB to HEX
+        return Utils.rgbToHex(rFinal, gFinal, bFinal);
+    };
+    // RGB to HEX conversion
+    Utils.rgbToHex = function (r, g, b) {
         var toHex = function (val) {
             var hex = val.toString(16);
             return hex.length === 1 ? "0" + hex : hex;
         };
-        return "#".concat(toHex(rFinal)).concat(toHex(gFinal)).concat(toHex(bFinal));
+        return "#".concat(toHex(r)).concat(toHex(g)).concat(toHex(b));
     };
     return Utils;
 }());

@@ -531,14 +531,12 @@ let generate_dungeon_candidate = async (
 
   // Make sure we have at least one partition before assigning spawn
   if (partialLevel.partitions.length === 0) {
-    console.log("No partitions generated after filtering.");
     partialLevel.partitions = [];
     return;
   }
 
   let spawn = partialLevel.partitions[0];
   if (!spawn) {
-    console.log("No spawn point found.");
     partialLevel.partitions = [];
     return;
   }
@@ -679,6 +677,7 @@ let generate_dungeon_candidate = async (
   const max_stair_tries = 100;
   const stairRoomWidth = 5;
   const stairRoomHeight = 5;
+
   for (let stair_tries = 0; stair_tries < max_stair_tries; stair_tries++) {
     let stair = new Partition(
       Game.rand(boss.x - 1, boss.x + boss.w - 2, Random.rand),
@@ -695,6 +694,7 @@ let generate_dungeon_candidate = async (
       stair.connections.push(
         new PartitionConnection(stair.x + 1, stair.y + stairRoomHeight, boss),
       );
+
       boss.connections.push(
         new PartitionConnection(stair.x + 1, stair.y + stairRoomHeight, stair),
       );
@@ -712,7 +712,7 @@ let generate_dungeon_candidate = async (
   if (!found_stair) {
     console.log("No stair found");
     partialLevel.partitions = [];
-    game.pushMessage("No stair found");
+    //game.pushMessage("No stair found");
     return;
   }
 
@@ -803,7 +803,7 @@ let generate_dungeon = async (
     //if (tries > 100) break;
   }
 
-  game.pushMessage("Dungeon passed all checks");
+  //game.pushMessage("Dungeon passed all checks");
 
   await new Promise((resolve) =>
     setTimeout(
@@ -1039,9 +1039,6 @@ let check_overlaps = (partitions: Array<Partition>): boolean => {
         a.y < b.y + b.h &&
         a.y + a.h > b.y
       ) {
-        console.log(
-          `Overlap detected between Partition ${i} and Partition ${j}`,
-        );
         return true;
       }
     }
@@ -1121,7 +1118,6 @@ export class LevelGenerator {
         Random.rand,
       );
       rooms.push(room);
-      console.log(`room index: ${rooms.indexOf(room)}`);
     }
 
     let doors_added: Array<Door> = [];
@@ -1199,9 +1195,7 @@ export class LevelGenerator {
     let rooms = this.getRooms(this.partialLevel.partitions, depth, mapGroup);
 
     newLevel.setRooms(rooms);
-
-    console.log(`mapGroup: ${mapGroup}`);
-    console.log(`depth: ${depth}`);
+    newLevel.exitRoom.linkExitToStart();
 
     // Update the current floor first level ID if it's not a cave
     if (!cave) this.currentFloorFirstLevelID = this.game.rooms.length;

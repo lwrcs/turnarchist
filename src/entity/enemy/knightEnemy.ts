@@ -184,6 +184,9 @@ export class KnightEnemy extends Enemy {
   };
 
   draw = (delta: number) => {
+    if (this.dead) return;
+    Game.ctx.save();
+    Game.ctx.globalAlpha = this.alpha;
     let rumbleX = this.rumble(this.rumbling, this.frame).x;
     let rumbleY = this.rumble(this.rumbling, this.frame, this.direction).y;
     if (!this.dead) {
@@ -223,15 +226,18 @@ export class KnightEnemy extends Enemy {
           (this.tileX === 4 ? 0.1875 : 0),
         1,
         2,
-        this.room.shadeColor,
+        this.softShadeColor,
         this.shadeAmount(),
       );
     }
-    if (!this.seenPlayer) {
-      this.drawSleepingZs(delta);
+    if (!this.cloned) {
+      if (!this.seenPlayer) {
+        this.drawSleepingZs(delta);
+      }
+      if (this.alertTicks > 0) {
+        this.drawExclamation(delta);
+      }
     }
-    if (this.alertTicks > 0) {
-      this.drawExclamation(delta);
-    }
+    Game.ctx.restore();
   };
 }

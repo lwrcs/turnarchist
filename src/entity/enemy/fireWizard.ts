@@ -197,7 +197,7 @@ export class FireWizardEnemy extends WizardEnemy {
           this.y - 1.3,
           1,
           2,
-          this.room.shadeColor,
+          this.softShadeColor,
           this.shadeAmount(),
         );
       } else {
@@ -210,7 +210,7 @@ export class FireWizardEnemy extends WizardEnemy {
           this.y - 1.3 - this.drawY,
           1,
           2,
-          this.room.shadeColor,
+          this.softShadeColor,
           this.shadeAmount(),
         );
       }

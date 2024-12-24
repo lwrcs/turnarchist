@@ -18,6 +18,7 @@ export enum DoorType {
   DOOR,
   LOCKEDDOOR,
   GUARDEDDOOR,
+  TUNNELDOOR,
 }
 
 export class Door extends Tile {
@@ -34,7 +35,7 @@ export class Door extends Tile {
   unlocking: boolean;
   iconAlpha: number;
   frame: number;
-
+  tileXOffset: number;
   constructor(
     room: Room,
     game: Game,
@@ -56,6 +57,7 @@ export class Door extends Tile {
     this.unlocking = false;
     this.iconAlpha = 1;
     this.frame = 0;
+    this.tileXOffset = 0;
     switch (this.type) {
       case DoorType.GUARDEDDOOR:
         this.guard();
@@ -65,6 +67,12 @@ export class Door extends Tile {
         break;
       case DoorType.DOOR:
         this.removeLock();
+        break;
+      case DoorType.TUNNELDOOR:
+        // this.tileX = ? find the right tile for this
+        this.locked = true;
+        this.iconTileX = 10;
+        this.iconXOffset = 1 / 32;
         break;
     }
   }
@@ -82,13 +90,17 @@ export class Door extends Tile {
     this.iconTileX = 10;
     this.iconXOffset = 1 / 32;
   };
+
   removeLock = () => {
-    this.type = DoorType.DOOR;
+    if (this.type !== DoorType.TUNNELDOOR) this.type = DoorType.DOOR;
     this.locked = false;
   };
 
   removeLockIcon = () => {
+    this.iconYOffset = 0;
+    this.unlocking = false;
     this.iconTileX = 2;
+    this.iconXOffset = 0;
     this.iconAlpha = 1;
   };
 
@@ -110,7 +122,24 @@ export class Door extends Tile {
       );
       return false;
     }
+
+    if (
+      this.type === DoorType.TUNNELDOOR &&
+      (!this.opened || !this.linkedDoor.opened)
+    ) {
+      if (this.linkedDoor === this.room.level.exitRoom.tunnelDoor) {
+        this.game.pushMessage("The door refuses to budge from this side.");
+        return false;
+      } else {
+        this.game.pushMessage(
+          "You clear the debris, revealing a narrow tunnel.",
+        );
+        return true;
+      }
+    }
+    return true;
   };
+
   unlock = (player: Player) => {
     if (this.type === DoorType.LOCKEDDOOR) {
       let k = player.inventory.hasItem(Key);
@@ -121,6 +150,9 @@ export class Door extends Tile {
         this.removeLock();
         this.unlocking = true;
       }
+    } else if (this.type === DoorType.TUNNELDOOR) {
+      this.locked = false;
+      this.unlocking = true;
     }
   };
 
@@ -151,6 +183,7 @@ export class Door extends Tile {
     this.opened = true;
 
     this.linkedDoor.opened = true;
+
     if (this.doorDir === Direction.UP || this.doorDir === Direction.DOWN) {
       this.game.changeLevelThroughDoor(player, this.linkedDoor);
     } else
@@ -161,6 +194,7 @@ export class Door extends Tile {
       );
     this.linkedDoor.removeLock();
     this.linkedDoor.removeLockIcon();
+    this.removeLockIcon();
   };
 
   draw = (delta: number) => {
@@ -168,7 +202,7 @@ export class Door extends Tile {
       //if top door
       if (this.opened)
         Game.drawTile(
-          6,
+          6 + this.tileXOffset,
           this.skin,
           1,
           1,
@@ -181,7 +215,7 @@ export class Door extends Tile {
         );
       else
         Game.drawTile(
-          3,
+          3 + this.tileXOffset,
           this.skin,
           1,
           1,
@@ -246,16 +280,12 @@ export class Door extends Tile {
     this.frame += 1 * delta;
     Game.ctx.globalAlpha = this.iconAlpha;
     let multiplier = 0.125;
-    if (this.unlocking == true) {
+    if (this.unlocking === true) {
       this.iconAlpha *= 0.92 ** delta;
       this.iconYOffset -= 0.035 * delta;
       multiplier = 0;
       if (this.iconAlpha <= 0.01) {
-        this.iconYOffset = 0;
-        this.unlocking = false;
-        this.iconTileX = 2;
-        this.iconXOffset = 0;
-        this.iconAlpha = 1;
+        this.removeLockIcon();
       }
     }
     if (this.doorDir === Direction.UP) {

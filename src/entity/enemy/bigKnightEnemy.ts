@@ -215,6 +215,9 @@ export class BigKnightEnemy extends Enemy {
   };
 
   draw = (delta: number) => {
+    if (this.dead) return;
+    Game.ctx.save();
+    Game.ctx.globalAlpha = this.alpha;
     if (!this.dead) {
       this.updateDrawXY(delta);
       this.frame += 0.1 * delta;
@@ -242,25 +245,28 @@ export class BigKnightEnemy extends Enemy {
         this.y - 2.5 - this.drawY,
         2,
         4,
-        this.room.shadeColor,
+        this.softShadeColor,
         this.shadeAmount(),
       );
 
-      if (!this.seenPlayer) {
-        this.drawSleepingZs(
-          delta,
-          GameConstants.TILESIZE * 0.5,
-          GameConstants.TILESIZE * -1,
-        );
-      }
-      if (this.alertTicks > 0) {
-        this.drawExclamation(
-          delta,
-          GameConstants.TILESIZE * 0.5,
-          GameConstants.TILESIZE * -1,
-        );
+      if (!this.cloned) {
+        if (!this.seenPlayer) {
+          this.drawSleepingZs(
+            delta,
+            GameConstants.TILESIZE * 0.5,
+            GameConstants.TILESIZE * -1,
+          );
+        }
+        if (this.alertTicks > 0) {
+          this.drawExclamation(
+            delta,
+            GameConstants.TILESIZE * 0.5,
+            GameConstants.TILESIZE * -1,
+          );
+        }
       }
     }
+    Game.ctx.restore();
   };
 
   drawTopLayer = (delta: number) => {

@@ -44,7 +44,7 @@ export class DownLadder extends Tile {
 
               if (tile instanceof UpLadder) {
                 tile.linkedLevel = this.game.levels[this.room.depth].exitRoom;
-                console.log("linked level", tile.linkedLevel);
+                //console.log("linked level", tile.linkedLevel);
                 break outerLoop;
               }
             }
@@ -68,14 +68,6 @@ export class DownLadder extends Tile {
         this.game.players[i].x !== this.x ||
         this.game.players[i].y !== this.y
       ) {
-        console.log("player not here", this.game.players[i]);
-        console.log(
-          `this.game.players[i].levelID: ${this.game.players[i].levelID}`,
-        );
-        console.log(`this.room.id: ${this.room.id}`);
-        console.log(
-          `this.game.players[i].x, this.game.players[i].y: ${this.game.players[i].x}, ${this.game.players[i].y}, this.x, this.y: ${this.x}, ${this.y}`,
-        );
         allPlayersHere = false;
       }
     }

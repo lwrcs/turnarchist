@@ -30,6 +30,7 @@ import { statsTracker } from "./stats";
 import { BeamEffect } from "./beamEffect";
 import { Spellbook } from "./weapon/spellbook";
 import { globalEventBus } from "./eventBus";
+import { Utils } from "./utils";
 
 export enum PlayerDirection {
   DOWN,
@@ -131,7 +132,6 @@ export class Player extends Drawable {
     this.lastY = 0;
     this.isLocalPlayer = isLocalPlayer;
     this.depth = 0;
-
     if (isLocalPlayer) {
       Input.leftSwipeListener = () => {
         if (
@@ -932,12 +932,25 @@ export class Player extends Drawable {
       this.y - 1.45 - this.drawY - this.jumpY - this.hitY,
       1,
       2,
+      this.shadeColor(),
     );
     if (this.inventory.getArmor() && this.inventory.getArmor().health > 0) {
       // TODO draw armor
     }
 
     Game.ctx.restore(); // Restore the canvas state
+  };
+
+  shadeColor = () => {
+    if (!GameConstants.CUSTOM_SHADER_COLOR_ENABLED) {
+      return "black";
+    } else {
+      return Utils.rgbToHex(
+        this.game.levels[this.depth].rooms[this.levelID].col[this.x][this.y][0],
+        this.game.levels[this.depth].rooms[this.levelID].col[this.x][this.y][1],
+        this.game.levels[this.depth].rooms[this.levelID].col[this.x][this.y][2],
+      );
+    }
   };
 
   heal = (amount: number) => {
@@ -990,7 +1003,6 @@ export class Player extends Drawable {
     Game.ctx.save();
     this.updateDrawXY(delta);
     this.drawableY = this.y;
-
     this.flashingFrame += (delta * 12) / GameConstants.FPS;
     if (!this.dead) {
       Game.drawMob(0, 0, 1, 1, this.x - this.drawX, this.y - this.drawY, 1, 1);
@@ -1307,6 +1319,7 @@ export class Player extends Drawable {
         this.drawMoveQueue.shift();
         
         */
+
       this.drawX *= 0.85 ** delta;
 
       this.drawY *= 0.85 ** delta;

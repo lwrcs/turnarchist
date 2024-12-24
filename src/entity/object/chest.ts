@@ -31,6 +31,8 @@ export class Chest extends Entity {
     this.pushable = false;
     this.chainPushable = false;
     this.interactable = true;
+    this.imageParticleX = 3;
+    this.imageParticleY = 26;
     /*
     this.layer = new ChestLayer(
       this.room,
@@ -81,18 +83,15 @@ export class Chest extends Entity {
     return Game.randTable([1, 1, 1, 1, 1, 1, 1, 2, 3, 4, 5, 2, 2], Random.rand);
   };
 
-  kill = () => {
-    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 3, 26);
-
-    this.dead = true;
-    //this.layer.dead = true;
-    //this.room.entities.filter((layer) => layer !== this.layer);
-  };
   killNoBones = () => {
     this.kill();
   };
 
   draw = (delta: number) => {
+    if (this.dead) return;
+    Game.ctx.save();
+    Game.ctx.globalAlpha = this.alpha;
+
     if (this.opening) {
       if (this.tileX <= 6) {
         this.tileX += 0.15 * delta;
@@ -116,6 +115,7 @@ export class Chest extends Entity {
         this.shadeAmount(),
       );
     }
+    Game.ctx.restore();
   };
 
   drawTopLayer = (delta: number) => {

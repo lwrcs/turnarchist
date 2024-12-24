@@ -63,6 +63,8 @@ export class GameConstants {
   static readonly HEALTH_BUFF_COLOR = "#d77bba";
   static readonly MISS_COLOR = "#639bff";
 
+  static CUSTOM_SHADER_COLOR_ENABLED = false;
+
   static COLOR_LAYER_COMPOSITE_OPERATION = "soft-light"; //"soft-light";
   static SHADE_LAYER_COMPOSITE_OPERATION = "screen"; //"soft-light";
   static USE_OPTIMIZED_SHADING = false;
