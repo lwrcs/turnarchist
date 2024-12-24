@@ -67,6 +67,7 @@ export class BeamEffect extends Projectile {
   private prevEndY: number;
   private active: boolean = true;
   private time: number = 0;
+  alpha: number = 1;
   targetX: number;
   targetY: number;
   color: string;
@@ -192,7 +193,6 @@ export class BeamEffect extends Projectile {
     ctx.save();
     Game.ctx.globalCompositeOperation =
       compositeOperation as GlobalCompositeOperation;
-
     for (let i = 0; i < this.points.length - 1; i++) {
       const p1 = this.points[i];
       const p2 = this.points[i + 1];
@@ -383,8 +383,10 @@ export class BeamEffect extends Projectile {
     y2: number,
     color: string = "cyan",
     lineWidth: number = 2,
+    alpha: number = 1,
   ): void {
     const ctx = Game.ctx;
+    ctx.globalAlpha = alpha;
 
     const startX = x1 * GameConstants.TILESIZE + 0.5 * GameConstants.TILESIZE;
     const startY = y1 * GameConstants.TILESIZE + 0.5 * GameConstants.TILESIZE;

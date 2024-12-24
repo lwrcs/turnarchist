@@ -18,8 +18,18 @@ enum EnemyState {
 }
 
 interface EnemyStatus {
-  poison: boolean;
-  bleed: boolean;
+  poison: {
+    active: boolean;
+    hitCount: number;
+    startTick: number;
+    effectTick: number;
+  };
+  bleed: {
+    active: boolean;
+    hitCount: number;
+    startTick: number;
+    effectTick: number;
+  };
 }
 
 export abstract class Enemy extends Entity {
@@ -55,7 +65,10 @@ export abstract class Enemy extends Entity {
     //this.dir = Direction.South;
     this.name = "generic enemy";
     this.dropChance = 0.1;
-    this.status = { poison: false, bleed: false };
+    this.status = {
+      poison: { active: false, hitCount: 0, startTick: 0, effectTick: 0 },
+      bleed: { active: false, hitCount: 0, startTick: 0, effectTick: 0 },
+    };
     this.effectStartTick = 1;
     this.startTick = 1;
     this.isEnemy = true;
@@ -118,48 +131,68 @@ export abstract class Enemy extends Entity {
   };
 
   poison = () => {
-    if (!this.status.poison) {
-      this.status.poison = true;
-      this.effectStartTick = this.ticks % 3;
-      this.startTick = this.ticks;
-      this.poisonHitCount = 0;
+    if (!this.status.poison.active) {
+      this.status.poison = {
+        active: true,
+        hitCount: 0,
+        startTick: this.ticks,
+        effectTick: this.ticks % 3,
+      };
     }
   };
 
   bleed = () => {
-    if (!this.status.bleed) {
-      this.status.bleed = true;
-      this.effectStartTick = this.ticks % 3;
-      this.startTick = this.ticks;
-      this.bleedHitCount = 0;
+    if (!this.status.bleed.active) {
+      this.status.bleed = {
+        active: true,
+        hitCount: 0,
+        startTick: this.ticks,
+        effectTick: this.ticks % 2,
+      };
     }
   };
 
   tickPoison = () => {
-    if (this.status.poison) {
+    if (this.status.poison.active && this.targetPlayer) {
       if (
-        this.ticks % 3 === this.effectStartTick &&
-        this.ticks !== this.startTick
+        this.ticks % 3 === this.status.poison.effectTick &&
+        this.ticks !== this.status.poison.startTick
       ) {
         this.hurt(this.targetPlayer, 0.5, "poison");
-        this.poisonHitCount++;
-        if (this.poisonHitCount >= 2) this.status.poison = false;
+        this.status.poison.hitCount++;
+
+        if (this.status.poison.hitCount >= 2) {
+          this.status.poison = {
+            active: false,
+            hitCount: 0,
+            startTick: 0,
+            effectTick: 0,
+          };
+        }
       }
     }
   };
 
   tickBleed = () => {
-    if (this.status.bleed) {
+    if (this.status.bleed.active && this.targetPlayer) {
       if (
-        this.ticks % 2 === this.effectStartTick &&
-        this.ticks !== this.startTick
+        this.ticks % 2 === this.status.bleed.effectTick &&
+        this.ticks !== this.status.bleed.startTick
       ) {
-        this.hurt(this.targetPlayer, 0.25, "blood");
-        this.bleedHitCount++;
-      }
+        this.hurt(this.targetPlayer, 0.5, "blood");
+        this.targetPlayer.heal(0.5);
 
-      if (this.targetPlayer) this.targetPlayer.heal(0.25);
-      if (this.bleedHitCount >= 2) this.status.bleed = false;
+        this.status.bleed.hitCount++;
+
+        if (this.status.bleed.hitCount >= 1) {
+          this.status.bleed = {
+            active: false,
+            hitCount: 0,
+            startTick: 0,
+            effectTick: 0,
+          };
+        }
+      }
     }
   };
 
