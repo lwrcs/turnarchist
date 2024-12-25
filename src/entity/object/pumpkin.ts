@@ -23,6 +23,8 @@ export class Pumpkin extends Entity {
     this.chainPushable = false;
     this.name = "pumpkin";
     this.drop = new Candle(this.room, this.x, this.y);
+    this.imageParticleX = 0;
+    this.imageParticleY = 25;
     this.lightSource = new LightSource(
       this.x + 0.5,
       this.y + 0.5,
@@ -37,20 +39,18 @@ export class Pumpkin extends Entity {
     return EntityType.PROP;
   }
 
-  kill = () => {
-    this.removeLightSource(this.lightSource);
-    this.dead = true;
-    this.dropLoot();
-    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 25);
-
-    //this.room.items.push(new Shrooms(this.room, this.x, this.y));
-  };
   killNoBones = () => {
     this.kill();
   };
 
+  uniqueKillBehavior = () => {
+    this.removeLightSource(this.lightSource);
+  };
+
   draw = (delta: number) => {
-    // not inherited because it doesn't have the 0.5 offset
+    if (this.dead) return;
+    Game.ctx.save();
+    Game.ctx.globalAlpha = this.alpha;
     if (!this.dead) {
       this.updateDrawXY(delta);
       Game.drawObj(
@@ -66,6 +66,7 @@ export class Pumpkin extends Entity {
         this.shadeAmount(),
       );
     }
+    Game.ctx.restore();
   };
 
   drawTopLayer = (delta: number) => {

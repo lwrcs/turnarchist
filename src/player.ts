@@ -566,28 +566,42 @@ export class Player extends Drawable {
   };
 
   left = () => {
-    if (this.canMove() || this.moveQueue.length >= 1) {
+    const { x, y } = { x: this.x - 1, y: this.y };
+    if (this.canMove()) {
       this.direction = Direction.LEFT;
-      this.tryMove(this.x - 1, this.y);
-    } else this.queueMove(this.x - 1, this.y, Direction.LEFT);
+      {
+        this.tryMove(x, y);
+      }
+    } else this.queueMove(x, y, Direction.LEFT);
   };
   right = () => {
-    if (this.canMove() || this.moveQueue.length >= 1) {
+    const { x, y } = { x: this.x + 1, y: this.y };
+    if (this.canMove()) {
       this.direction = Direction.RIGHT;
-      this.tryMove(this.x + 1, this.y);
-    } else this.queueMove(this.x + 1, this.y, Direction.RIGHT);
+      {
+        this.tryMove(x, y);
+      }
+    } else this.queueMove(x, y, Direction.RIGHT);
   };
   up = () => {
-    if (this.canMove() || this.moveQueue.length >= 1) {
+    const { x, y } = { x: this.x, y: this.y - 1 };
+
+    if (this.canMove()) {
       this.direction = Direction.UP;
-      this.tryMove(this.x, this.y - 1);
-    } else this.queueMove(this.x, this.y - 1, Direction.UP);
+      {
+        this.tryMove(x, y);
+      }
+    } else this.queueMove(x, y, Direction.UP);
   };
   down = () => {
-    if (this.canMove() || this.moveQueue.length >= 1) {
+    const { x, y } = { x: this.x, y: this.y + 1 };
+
+    if (this.canMove()) {
       this.direction = Direction.DOWN;
-      this.tryMove(this.x, this.y + 1);
-    } else this.queueMove(this.x, this.y + 1, Direction.DOWN);
+      {
+        this.tryMove(x, y);
+      }
+    } else this.queueMove(x, y, Direction.DOWN);
   };
 
   hit = (): number => {
@@ -666,7 +680,7 @@ export class Player extends Drawable {
               enemyEnd)
           ) {
             if (e.destroyable) {
-              e.kill();
+              e.hurt(this, e.health, "none");
               if (
                 this.game.levels[this.depth].rooms[this.levelID] ===
                 this.game.room
@@ -1517,10 +1531,14 @@ export class Player extends Drawable {
 
   private canMove(): boolean {
     const currentTime = Date.now();
-    if (currentTime - this.lastMoveTime >= GameConstants.MOVEMENT_COOLDOWN) {
+    if (
+      currentTime - this.lastMoveTime >=
+      GameConstants.MOVEMENT_COOLDOWN - this.moveQueue.length * 25
+    ) {
       this.lastMoveTime = currentTime;
       return true;
     }
+
     return false;
   }
 }

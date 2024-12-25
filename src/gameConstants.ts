@@ -38,7 +38,7 @@ export class GameConstants {
   static readonly HOLD_THRESH = 250; // milliseconds
 
   static readonly KEY_REPEAT_TIME = 250; // millseconds
-  static readonly MOVEMENT_COOLDOWN = 100; // milliseconds
+  static readonly MOVEMENT_COOLDOWN = 125; // milliseconds
 
   static readonly CHAT_APPEAR_TIME = 5000;
   static readonly CHAT_FADE_TIME = 1000;

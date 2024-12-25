@@ -327,6 +327,8 @@ export class Spawner extends Enemy {
   };
 
   draw = (delta: number) => {
+    Game.ctx.save();
+    Game.ctx.globalAlpha = this.alpha;
     if (!this.dead) {
       this.updateDrawXY(delta);
       this.frame += 0.1 * delta;

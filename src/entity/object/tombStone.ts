@@ -104,7 +104,9 @@ export class TombStone extends Entity {
   };
 
   draw = (delta: number) => {
-    // not inherited because it doesn't have the 0.5 offset
+    if (this.dead) return;
+    Game.ctx.save();
+    Game.ctx.globalAlpha = this.alpha;
     if (!this.dead) {
       Game.drawObj(
         this.tileX,
@@ -119,6 +121,7 @@ export class TombStone extends Entity {
         this.shadeAmount(),
       );
     }
+    Game.ctx.restore();
   };
 
   drawTopLayer = (delta: number) => {

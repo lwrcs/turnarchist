@@ -1278,8 +1278,8 @@ export class Room {
     this.name = "";
     switch (this.type) {
       case RoomType.START:
-        this.addNewEnemy(EnemyType.zombie);
-        this.addNewEnemy(EnemyType.occultist);
+        //this.addNewEnemy(EnemyType.zombie);
+        //this.addNewEnemy(EnemyType.occultist);
         if (this.depth !== 0) this.populateUpLadder(rand);
         this.populateEmpty(rand);
         this.name = "FLOOR " + -this.depth;
@@ -1382,11 +1382,11 @@ export class Room {
     player.moveSnap(this.getRoomCenter().x, this.getRoomCenter().y);
 
     this.clearDeadStuff();
-    this.updateLighting();
     this.entered = true;
     this.calculateWallInfo();
     this.message = this.name;
     player.map.saveMapData();
+    this.updateLighting();
 
     this.setReverb();
   };
@@ -1429,8 +1429,8 @@ export class Room {
 
     this.clearDeadStuff();
     this.calculateWallInfo();
-    this.updateLighting();
     this.entered = true;
+    this.updateLighting();
 
     this.message = this.name;
     player.map.saveMapData();
