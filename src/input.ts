@@ -30,11 +30,24 @@ export enum InputEnum {
 }
 
 const checkIsMouseHold = function () {
+  console.log("checkIsMouseHold called");
+  console.log(`mouseDown: ${Input.mouseDown}`);
+  console.log(`mouseDownStartTime: ${Input.mouseDownStartTime}`);
+  console.log(`Current Time: ${Date.now()}`);
+  console.log(`Hold Threshold: ${GameConstants.HOLD_THRESH}`);
+
   if (
     Input.mouseDownStartTime !== null &&
     Date.now() >= Input.mouseDownStartTime + GameConstants.HOLD_THRESH
   ) {
-    Input.isMouseHold = true;
+    if (!Input.isMouseHold) {
+      console.log("Hold detected!");
+      Input.isMouseHold = true;
+      // Call the hold callback if one is registered
+      if (Input.holdCallback) {
+        Input.holdCallback();
+      }
+    }
   }
 };
 
@@ -320,6 +333,7 @@ export const Input = {
   swiped: false,
 
   handleTouchStart: function (evt) {
+    console.log("handleTouchStart triggered");
     Game.inputReceived = true;
 
     evt.preventDefault();
@@ -338,9 +352,19 @@ export const Input = {
     } as MouseEvent);
 
     Input.swiped = false;
+
+    // ADDED - unify with mouseDown logic
+    Input.mouseDown = true;
+    Input.mouseDownStartTime = Date.now();
+    Input.isMouseHold = false;
+    if (!Input._holdCheckInterval) {
+      Input._holdCheckInterval = setInterval(Input.checkIsMouseHold, 16); // Check every frame
+      console.log("_holdCheckInterval started");
+    }
   },
 
   handleTouchMove: function (evt) {
+    console.log("handleTouchMove triggered");
     evt.preventDefault();
 
     Input.currentX = evt.touches[0].clientX;
@@ -379,6 +403,7 @@ export const Input = {
   },
 
   handleTouchEnd: function (evt) {
+    console.log("handleTouchEnd triggered");
     evt.preventDefault();
 
     if (!Input.isTapHold && !Input.swiped) Input.tapListener();
@@ -397,6 +422,19 @@ export const Input = {
       clientX: 0,
       clientY: 0,
     } as MouseEvent);
+
+    // ADDED - unify with mouseUp logic
+    Input.mouseDown = false;
+    Input.mouseDownStartTime = null;
+    if (Input._holdCheckInterval) {
+      clearInterval(Input._holdCheckInterval);
+      Input._holdCheckInterval = null;
+      console.log("_holdCheckInterval cleared");
+    }
+    setTimeout(() => {
+      Input.isMouseHold = false;
+      console.log("isMouseHold reset");
+    }, 50);
   },
 
   checkIsTapHold: function () {
@@ -407,7 +445,17 @@ export const Input = {
       Input.isTapHold = true;
   },
 
-  isMouseHold: false,
+  set isMouseHold(value: boolean) {
+    console.log(`isMouseHold set to: ${value}`);
+    this._isMouseHold = value;
+  },
+
+  get isMouseHold() {
+    return this._isMouseHold;
+  },
+
+  _isMouseHold: false,
+
   mouseDownStartTime: null,
   HOLD_THRESH: 200, // Adjust this value as needed
 

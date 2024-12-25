@@ -1185,15 +1185,38 @@ export class Inventory {
     }
   };
 
-  onHoldDetected = () => {
-    if (this._dragStartItem !== null && !this._isDragging) {
-      this._isDragging = true;
-      this.grabbedItem = this._dragStartItem;
+  /**
+   * Unified method to initiate dragging.
+   */
+  initiateDrag = () => {
+    if (this._dragStartItem === null || this._isDragging) {
+      return;
+    }
 
-      // Remove item from original slot
-      if (this._dragStartSlot !== null) {
-        this.items[this._dragStartSlot] = null;
-      }
+    this._isDragging = true;
+    this.grabbedItem = this._dragStartItem;
+
+    // Remove item from original slot
+    if (this._dragStartSlot !== null) {
+      this.items[this._dragStartSlot] = null;
+    }
+  };
+
+  /**
+   * Handle hold detection for both mouse and touch.
+   */
+  onHoldDetected = () => {
+    this.initiateDrag();
+  };
+
+  /**
+   * Continuously check for mouse hold during tick.
+   */
+  checkForDragStart = () => {
+    if (Input.mouseDown && Input.isMouseHold) {
+      this.initiateDrag();
+    } else if (Input.isTapHold) {
+      this.initiateDrag();
     }
   };
 
@@ -1229,22 +1252,6 @@ export class Inventory {
     this._dragStartItem = null;
     this._dragStartSlot = null;
     this.grabbedItem = null;
-  };
-  z;
-  checkForDragStart = () => {
-    if (!Input.mouseDown || this._dragStartItem === null || this._isDragging) {
-      return;
-    }
-
-    if (Input.isMouseHold) {
-      this._isDragging = true;
-      this.grabbedItem = this._dragStartItem;
-
-      // Remove item from original slot
-      if (this._dragStartSlot !== null) {
-        this.items[this._dragStartSlot] = null;
-      }
-    }
   };
 
   placeItemInSlot = (targetSlot: number) => {

@@ -103,6 +103,7 @@ export class OccultistEnemy extends Enemy {
       for (let enemy of this.shieldedEnemies) {
         if (!enemy.cloned) {
           enemy.removeShield();
+          console.log("unshielded enemy:", enemy.name);
         }
       }
       this.shieldedEnemies = [];

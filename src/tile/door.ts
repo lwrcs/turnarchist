@@ -36,6 +36,8 @@ export class Door extends Tile {
   iconAlpha: number;
   frame: number;
   tileXOffset: number;
+  tileX: number;
+  drawTopOf: boolean;
   constructor(
     room: Room,
     game: Game,
@@ -58,6 +60,8 @@ export class Door extends Tile {
     this.iconAlpha = 1;
     this.frame = 0;
     this.tileXOffset = 0;
+    this.tileX = 2;
+    this.drawTopOf = true;
     switch (this.type) {
       case DoorType.GUARDEDDOOR:
         this.guard();
@@ -73,6 +77,8 @@ export class Door extends Tile {
         this.locked = true;
         this.iconTileX = 10;
         this.iconXOffset = 1 / 32;
+        this.tileXOffset = 12;
+        this.drawTopOf = false;
         break;
     }
   }
@@ -244,6 +250,7 @@ export class Door extends Tile {
     //the following used to be in the drawaboveplayer function
     if (this.doorDir === Direction.UP) {
       //if top door
+      if (!this.drawTopOf) return;
       if (!this.opened)
         Game.drawTile(
           13,

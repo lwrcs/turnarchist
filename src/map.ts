@@ -27,17 +27,17 @@ export class Map {
 
   saveMapData = () => {
     this.clearMap();
-    for (const level of this.game.levels[this.player.depth].rooms) {
+    for (const room of this.game.levels[this.player.depth].rooms) {
       if (
-        this.game.room.mapGroup === level.mapGroup &&
-        (level.entered === true || GameConstants.DEVELOPER_MODE)
+        this.game.room.mapGroup === room.mapGroup &&
+        (room.entered === true || GameConstants.DEVELOPER_MODE)
       ) {
         this.mapData.push({
-          room: level,
-          walls: level.innerWalls,
-          doors: level.doors,
-          entities: level.entities,
-          items: level.items,
+          room: room,
+          walls: room.innerWalls,
+          doors: room.doors,
+          entities: room.entities,
+          items: room.items,
           players: this.game.players,
         });
       }

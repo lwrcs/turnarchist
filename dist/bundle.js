@@ -3800,6 +3800,7 @@ var OccultistEnemy = /** @class */ (function (_super) {
                     var enemy = _a[_i];
                     if (!enemy.cloned) {
                         enemy.removeShield();
+                        console.log("unshielded enemy:", enemy.name);
                     }
                 }
                 _this.shieldedEnemies = [];
@@ -4792,12 +4793,15 @@ var Spawner = /** @class */ (function (_super) {
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
                 game_1.Game.drawMob(_this.tileX, _this.tileY, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY, 1, 2, _this.softShadeColor, _this.shadeAmount());
             }
-            if (!_this.seenPlayer) {
-                _this.drawSleepingZs(delta);
+            if (!_this.dying) {
+                if (!_this.seenPlayer) {
+                    _this.drawSleepingZs(delta);
+                }
+                if (_this.alertTicks > 0) {
+                    _this.drawExclamation(delta);
+                }
             }
-            if (_this.alertTicks > 0) {
-                _this.drawExclamation(delta);
-            }
+            game_1.Game.ctx.restore();
         };
         _this.ticks = 0;
         _this.health = 4;
@@ -5436,9 +5440,13 @@ var Entity = /** @class */ (function (_super) {
             }
         };
         _this.removeShield = function () {
-            _this.shield.remove();
-            _this.shadeColor = _this.room.shadeColor;
-            _this.shadeMultiplier = 1;
+            if (_this.shield) {
+                _this.health -= _this.shield.health;
+                _this.maxHealth -= _this.shield.health;
+                _this.shield.remove();
+                _this.shadeColor = _this.room.shadeColor;
+                _this.shadeMultiplier = 1;
+            }
         };
         _this.getDrop = function (useCategory, force) {
             if (useCategory === void 0) { useCategory = []; }
@@ -5591,6 +5599,7 @@ var Entity = /** @class */ (function (_super) {
         _this.kill = function () {
             if (_this.cloned)
                 return;
+            _this.emitEnemyKilled();
             var deadEntity = _this.clone();
             _this.room.deadEntities.push(deadEntity);
             _this.dead = true;
@@ -9938,9 +9947,21 @@ var InputEnum;
     InputEnum[InputEnum["EQUALS"] = 24] = "EQUALS";
 })(InputEnum = exports.InputEnum || (exports.InputEnum = {}));
 var checkIsMouseHold = function () {
+    console.log("checkIsMouseHold called");
+    console.log("mouseDown: ".concat(exports.Input.mouseDown));
+    console.log("mouseDownStartTime: ".concat(exports.Input.mouseDownStartTime));
+    console.log("Current Time: ".concat(Date.now()));
+    console.log("Hold Threshold: ".concat(gameConstants_1.GameConstants.HOLD_THRESH));
     if (exports.Input.mouseDownStartTime !== null &&
         Date.now() >= exports.Input.mouseDownStartTime + gameConstants_1.GameConstants.HOLD_THRESH) {
-        exports.Input.isMouseHold = true;
+        if (!exports.Input.isMouseHold) {
+            console.log("Hold detected!");
+            exports.Input.isMouseHold = true;
+            // Call the hold callback if one is registered
+            if (exports.Input.holdCallback) {
+                exports.Input.holdCallback();
+            }
+        }
     }
 };
 exports.Input = {
@@ -10199,6 +10220,7 @@ exports.Input = {
     currentY: 0,
     swiped: false,
     handleTouchStart: function (evt) {
+        console.log("handleTouchStart triggered");
         game_1.Game.inputReceived = true;
         evt.preventDefault();
         var firstTouch = exports.Input.getTouches(evt)[0];
@@ -10212,8 +10234,17 @@ exports.Input = {
             clientY: exports.Input.currentY,
         });
         exports.Input.swiped = false;
+        // ADDED - unify with mouseDown logic
+        exports.Input.mouseDown = true;
+        exports.Input.mouseDownStartTime = Date.now();
+        exports.Input.isMouseHold = false;
+        if (!exports.Input._holdCheckInterval) {
+            exports.Input._holdCheckInterval = setInterval(exports.Input.checkIsMouseHold, 16); // Check every frame
+            console.log("_holdCheckInterval started");
+        }
     },
     handleTouchMove: function (evt) {
+        console.log("handleTouchMove triggered");
         evt.preventDefault();
         exports.Input.currentX = evt.touches[0].clientX;
         exports.Input.currentY = evt.touches[0].clientY;
@@ -10250,6 +10281,7 @@ exports.Input = {
         }
     },
     handleTouchEnd: function (evt) {
+        console.log("handleTouchEnd triggered");
         evt.preventDefault();
         if (!exports.Input.isTapHold && !exports.Input.swiped)
             exports.Input.tapListener();
@@ -10267,13 +10299,32 @@ exports.Input = {
             clientX: 0,
             clientY: 0,
         });
+        // ADDED - unify with mouseUp logic
+        exports.Input.mouseDown = false;
+        exports.Input.mouseDownStartTime = null;
+        if (exports.Input._holdCheckInterval) {
+            clearInterval(exports.Input._holdCheckInterval);
+            exports.Input._holdCheckInterval = null;
+            console.log("_holdCheckInterval cleared");
+        }
+        setTimeout(function () {
+            exports.Input.isMouseHold = false;
+            console.log("isMouseHold reset");
+        }, 50);
     },
     checkIsTapHold: function () {
         if (exports.Input.tapStartTime !== null &&
             Date.now() >= exports.Input.tapStartTime + exports.Input.IS_TAP_HOLD_THRESH)
             exports.Input.isTapHold = true;
     },
-    isMouseHold: false,
+    set isMouseHold(value) {
+        console.log("isMouseHold set to: ".concat(value));
+        this._isMouseHold = value;
+    },
+    get isMouseHold() {
+        return this._isMouseHold;
+    },
+    _isMouseHold: false,
     mouseDownStartTime: null,
     HOLD_THRESH: 200,
     holdCallback: null,
@@ -11208,14 +11259,35 @@ var Inventory = /** @class */ (function () {
                 }
             }
         };
+        /**
+         * Unified method to initiate dragging.
+         */
+        this.initiateDrag = function () {
+            if (_this._dragStartItem === null || _this._isDragging) {
+                return;
+            }
+            _this._isDragging = true;
+            _this.grabbedItem = _this._dragStartItem;
+            // Remove item from original slot
+            if (_this._dragStartSlot !== null) {
+                _this.items[_this._dragStartSlot] = null;
+            }
+        };
+        /**
+         * Handle hold detection for both mouse and touch.
+         */
         this.onHoldDetected = function () {
-            if (_this._dragStartItem !== null && !_this._isDragging) {
-                _this._isDragging = true;
-                _this.grabbedItem = _this._dragStartItem;
-                // Remove item from original slot
-                if (_this._dragStartSlot !== null) {
-                    _this.items[_this._dragStartSlot] = null;
-                }
+            _this.initiateDrag();
+        };
+        /**
+         * Continuously check for mouse hold during tick.
+         */
+        this.checkForDragStart = function () {
+            if (input_1.Input.mouseDown && input_1.Input.isMouseHold) {
+                _this.initiateDrag();
+            }
+            else if (input_1.Input.isTapHold) {
+                _this.initiateDrag();
             }
         };
         this.handleMouseUp = function (x, y, button) {
@@ -11249,19 +11321,6 @@ var Inventory = /** @class */ (function () {
             _this._dragStartItem = null;
             _this._dragStartSlot = null;
             _this.grabbedItem = null;
-        };
-        this.checkForDragStart = function () {
-            if (!input_1.Input.mouseDown || _this._dragStartItem === null || _this._isDragging) {
-                return;
-            }
-            if (input_1.Input.isMouseHold) {
-                _this._isDragging = true;
-                _this.grabbedItem = _this._dragStartItem;
-                // Remove item from original slot
-                if (_this._dragStartSlot !== null) {
-                    _this.items[_this._dragStartSlot] = null;
-                }
-            }
         };
         this.placeItemInSlot = function (targetSlot) {
             if (_this.grabbedItem === null)
@@ -14890,15 +14949,15 @@ var Map = /** @class */ (function () {
         this.saveMapData = function () {
             _this.clearMap();
             for (var _i = 0, _a = _this.game.levels[_this.player.depth].rooms; _i < _a.length; _i++) {
-                var level = _a[_i];
-                if (_this.game.room.mapGroup === level.mapGroup &&
-                    (level.entered === true || gameConstants_1.GameConstants.DEVELOPER_MODE)) {
+                var room = _a[_i];
+                if (_this.game.room.mapGroup === room.mapGroup &&
+                    (room.entered === true || gameConstants_1.GameConstants.DEVELOPER_MODE)) {
                     _this.mapData.push({
-                        room: level,
-                        walls: level.innerWalls,
-                        doors: level.doors,
-                        entities: level.entities,
-                        items: level.items,
+                        room: room,
+                        walls: room.innerWalls,
+                        doors: room.doors,
+                        entities: room.entities,
+                        items: room.items,
                         players: _this.game.players,
                     });
                 }
@@ -20842,6 +20901,8 @@ var Door = /** @class */ (function (_super) {
             //the following used to be in the drawaboveplayer function
             if (_this.doorDir === game_1.Direction.UP) {
                 //if top door
+                if (!_this.drawTopOf)
+                    return;
                 if (!_this.opened)
                     game_1.Game.drawTile(13, 0, 1, 1, _this.x, _this.y - 1, 1, 1, _this.room.shadeColor, _this.shadeAmount());
                 else
@@ -20891,6 +20952,8 @@ var Door = /** @class */ (function (_super) {
         _this.iconAlpha = 1;
         _this.frame = 0;
         _this.tileXOffset = 0;
+        _this.tileX = 2;
+        _this.drawTopOf = true;
         switch (_this.type) {
             case DoorType.GUARDEDDOOR:
                 _this.guard();
@@ -20906,6 +20969,8 @@ var Door = /** @class */ (function (_super) {
                 _this.locked = true;
                 _this.iconTileX = 10;
                 _this.iconXOffset = 1 / 32;
+                _this.tileXOffset = 12;
+                _this.drawTopOf = false;
                 break;
         }
         return _this;

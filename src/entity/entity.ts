@@ -260,9 +260,13 @@ export class Entity extends Drawable {
   };
 
   removeShield = () => {
-    this.shield.remove();
-    this.shadeColor = this.room.shadeColor;
-    this.shadeMultiplier = 1;
+    if (this.shield) {
+      this.health -= this.shield.health;
+      this.maxHealth -= this.shield.health;
+      this.shield.remove();
+      this.shadeColor = this.room.shadeColor;
+      this.shadeMultiplier = 1;
+    }
   };
 
   getDrop = (useCategory: string[] = [], force: boolean = false) => {
@@ -458,6 +462,7 @@ export class Entity extends Drawable {
 
   kill = () => {
     if (this.cloned) return;
+    this.emitEnemyKilled();
     const deadEntity = this.clone();
     this.room.deadEntities.push(deadEntity);
     this.dead = true;

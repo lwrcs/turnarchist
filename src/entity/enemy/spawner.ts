@@ -360,11 +360,14 @@ export class Spawner extends Enemy {
         this.shadeAmount(),
       );
     }
-    if (!this.seenPlayer) {
-      this.drawSleepingZs(delta);
+    if (!this.dying) {
+      if (!this.seenPlayer) {
+        this.drawSleepingZs(delta);
+      }
+      if (this.alertTicks > 0) {
+        this.drawExclamation(delta);
+      }
     }
-    if (this.alertTicks > 0) {
-      this.drawExclamation(delta);
-    }
+    Game.ctx.restore();
   };
 }
