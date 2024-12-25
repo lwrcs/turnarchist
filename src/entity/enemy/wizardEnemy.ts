@@ -197,6 +197,9 @@ export abstract class WizardEnemy extends Enemy {
   };
 
   draw = (delta: number) => {
+    if (this.dead) return;
+    Game.ctx.save();
+    Game.ctx.globalAlpha = this.alpha;
     if (!this.dead) {
       this.updateDrawXY(delta);
 
@@ -226,7 +229,7 @@ export abstract class WizardEnemy extends Enemy {
           this.y - 1.5,
           1,
           2,
-          this.room.shadeColor,
+          this.softShadeColor,
           this.shadeAmount(),
         );
         this.frame += 0.2 * delta;
@@ -241,7 +244,7 @@ export abstract class WizardEnemy extends Enemy {
           this.y - 1.3 - this.drawY,
           1,
           2,
-          this.room.shadeColor,
+          this.softShadeColor,
           this.shadeAmount(),
         );
       }
@@ -252,18 +255,6 @@ export abstract class WizardEnemy extends Enemy {
         this.drawExclamation(delta);
       }
     }
-  };
-
-  kill = () => {
-    if (this.room.roomArray[this.x][this.y] instanceof Floor) {
-      let b = new Bones(this.room, this.x, this.y);
-      b.skin = this.room.roomArray[this.x][this.y].skin;
-      this.room.roomArray[this.x][this.y] = b;
-    }
-
-    this.dead = true;
-    this.room.particles.push(new DeathParticle(this.x, this.y));
-
-    this.dropLoot();
+    Game.ctx.restore();
   };
 }

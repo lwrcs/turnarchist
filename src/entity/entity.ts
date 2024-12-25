@@ -25,6 +25,8 @@ import { EnemyShield } from "../projectile/enemyShield";
 import { Sound } from "../sound";
 import { ImageParticle } from "../particle/imageParticle";
 import { Enemy } from "./enemy/enemy";
+import { Particle } from "../particle/particle";
+import { DeathParticle } from "../particle/deathParticle";
 
 export enum EntityDirection {
   DOWN,
@@ -103,6 +105,16 @@ export class Entity extends Drawable {
   frame: number;
   shield: EnemyShield;
   shieldedBefore: boolean;
+  //shadeColor: string;
+  shadeMultiplier: number = 1;
+  hurting: boolean;
+  hurtFrame: number;
+  softShadeColor: string;
+  shadeColor: string;
+  dying: boolean;
+  dyingFrame: number;
+  alpha: number;
+  cloned: boolean;
   private _imageParticleTiles: { x: number; y: number };
   hitSound: () => void;
 
@@ -157,6 +169,15 @@ export class Entity extends Drawable {
     this.shieldedBefore = false;
     this._imageParticleTiles = { x: 0, y: 0 };
     this.hitSound = null;
+    this.shadeColor = this.room.shadeColor;
+    this.hurting = false;
+    this.hurtFrame = 0;
+    this.softShadeColor = "#000000";
+    this.dying = false;
+    this.dyingFrame = 30;
+    this.alpha = 1;
+    this.cloned = false;
+    this.dead = false;
   }
 
   static add<
@@ -171,6 +192,57 @@ export class Entity extends Drawable {
     room.entities.push(new this(room, game, x, y, ...rest));
   }
 
+  static cloneEntity(original: Entity): Entity {
+    const { room, game, x, y } = original;
+
+    // Create a new instance using the constructor
+    const cloned = new (original.constructor as typeof Entity)(
+      room,
+      game,
+      x,
+      y,
+    );
+
+    // Assign other properties
+    cloned.cloned = true;
+    cloned.dead = false;
+    cloned.dying = true;
+    cloned.drawableY = original.drawableY;
+    cloned.tileX = original.tileX;
+    cloned.tileY = original.tileY;
+    cloned.frame = original.frame;
+    cloned.isEnemy = original.isEnemy;
+    cloned.hasShadow = original.hasShadow;
+    cloned.skipNextTurns = original.skipNextTurns;
+    cloned.direction = original.direction;
+    cloned.drawX = original.drawX;
+    cloned.drawY = original.drawY;
+    cloned.alpha = original.alpha;
+    cloned.shadeColor = original.shadeColor;
+    cloned.shadeMultiplier = original.shadeMultiplier;
+    cloned.softShadeColor = original.softShadeColor;
+    cloned.removeLightSource(cloned.lightSource);
+    //cloned.room.updateLighting();
+
+    // Add the cloned entity to deadEntities
+    room.deadEntities.push(cloned);
+
+    console.log(`Cloned Entity - Dead: ${cloned.dead}, Dying: ${cloned.dying}`);
+    return cloned;
+  }
+
+  /**
+   * Clones the current entity without adding it to deadEntities.
+   */
+  clone(): Entity {
+    const cloned = Entity.cloneEntity(this);
+    cloned.dead = false; // Explicitly set as not dead
+    cloned.dying = true; // Ensure the clone is in a dying state
+
+    console.log(`Cloned Entity - Dead: ${cloned.dead}, Dying: ${cloned.dying}`);
+    return cloned;
+  }
+
   get imageParticleTiles() {
     return this._imageParticleTiles;
   }
@@ -182,11 +254,19 @@ export class Entity extends Drawable {
       this.shieldedBefore = true;
       this.health += shieldHealth;
       this.maxHealth += shieldHealth;
+      this.shadeColor = "purple";
+      this.shadeMultiplier = 0.5;
     }
   };
 
   removeShield = () => {
-    this.shield.remove();
+    if (this.shield) {
+      this.health -= this.shield.health;
+      this.maxHealth -= this.shield.health;
+      this.shield.remove();
+      this.shadeColor = this.room.shadeColor;
+      this.shadeMultiplier = 1;
+    }
   };
 
   getDrop = (useCategory: string[] = [], force: boolean = false) => {
@@ -249,6 +329,10 @@ export class Entity extends Drawable {
   };
 
   updateDrawXY = (delta: number) => {
+    //putting this here bc i'm lazy
+    this.updateHurtFrame(delta);
+    this.animateDying(delta);
+
     if (!this.doneMoving()) {
       this.drawX *= 0.9 ** delta;
       this.drawY *= 0.9 ** delta;
@@ -256,6 +340,8 @@ export class Entity extends Drawable {
       this.drawX = Math.abs(this.drawX) < 0.01 ? 0 : this.drawX;
       this.drawY = Math.abs(this.drawY) < 0.01 ? 0 : this.drawY;
     }
+
+    this.updateShadeColor(delta);
   };
 
   setDrawXY = (x: number, y: number) => {
@@ -297,21 +383,42 @@ export class Entity extends Drawable {
         hitShield = true;
       }
     }
+    /*
+    this.shadeColor = "red";
+    setTimeout(() => {
+      this.shadeColor = this.room.shadeColor;
+    }, 100);
+    */
 
     this.health -= damage;
     this.maxHealth -= shieldHealth;
+
+    this.startHurting();
     this.createDamageNumber(damage, type);
     this.playHitSound();
 
     this.healthBar.hurt();
 
-    if (type === "none" || this.health <= 0) {
+    if (type === "none" || this.health <= 0 || !this.isEnemy) {
       this.createHitParticles();
     }
 
     if (this.health <= 0) {
       this.kill();
     } else this.hurtCallback();
+  };
+
+  startHurting = () => {
+    this.hurting = true;
+    this.hurtFrame += 15;
+    this.shadeColor = "#FF0000";
+    this.shadeMultiplier = 1.5;
+  };
+
+  stopHurting = () => {
+    this.hurting = false;
+    this.hurtFrame = 0;
+    this.shadeColor = "#000000";
   };
 
   interact = (player: Player) => {};
@@ -354,20 +461,13 @@ export class Entity extends Drawable {
   };
 
   kill = () => {
-    let x = this.x;
-    let y = this.y;
-    if (this.crushed) {
-      x = this.lastX;
-      y = this.lastY;
-    }
-    if (this.room.roomArray[x][y] instanceof Floor && this.isEnemy) {
-      let b = new Bones(this.room, x, y);
-      b.skin = this.room.roomArray[x][y].skin;
-      this.room.roomArray[x][y] = b;
-    }
+    if (this.cloned) return;
     this.emitEnemyKilled();
-
+    const deadEntity = this.clone();
+    this.room.deadEntities.push(deadEntity);
     this.dead = true;
+    //this.room.entities = this.room.entities.filter((e) => e !== this);
+
     this.dropLoot();
     this.uniqueKillBehavior();
   };
@@ -379,8 +479,93 @@ export class Entity extends Drawable {
     this.dropLoot();
   };
 
+  updateHurtFrame = (delta: number) => {
+    if (this.hurting) {
+      this.hurtFrame -= delta;
+      if (this.hurtFrame < 0) {
+        this.stopHurting();
+      }
+    }
+  };
+
   shadeAmount = () => {
+    const softVis = this.room.softVis[this.x][this.y];
+
+    if (this.shadeMultiplier > 1)
+      return Math.min(1, softVis + (1 - softVis) * (this.shadeMultiplier - 1));
     return this.room.softVis[this.x][this.y];
+  };
+
+  updateShadeColor = (delta: number) => {
+    if (this.shadeMultiplier > 1) this.shadeMultiplier -= 0.01 * delta;
+    if (this.shadeMultiplier < 1) this.shadeMultiplier = 1;
+    let updated = false;
+
+    // Convert hex color to RGB
+    const hexToRgb = (hex: string): [number, number, number] => {
+      const bigint = parseInt(hex.slice(1), 16);
+      const r = (bigint >> 16) & 255;
+      const g = (bigint >> 8) & 255;
+      const b = bigint & 255;
+      return [r, g, b];
+    };
+    // Convert RGB to hex color
+    const rgbToHex = (rgb: [number, number, number]): string => {
+      const [r, g, b] = rgb;
+      return (
+        "#" +
+        ((1 << 24) + (r << 16) + (g << 8) + b)
+          .toString(16)
+          .slice(1)
+          .toUpperCase()
+      );
+    };
+
+    const [softR, softG, softB] = hexToRgb(this.softShadeColor);
+    const [targetR, targetG, targetB] = hexToRgb(this.shadeColor);
+
+    // Calculate differences
+    let diffR = softR - targetR;
+    let diffG = softG - targetG;
+    let diffB = softB - targetB;
+
+    let flagR = false;
+    let flagG = false;
+    let flagB = false;
+    if (Math.abs(diffR) > 1) flagR = true;
+    if (Math.abs(diffG) > 1) flagG = true;
+    if (Math.abs(diffB) > 1) flagB = true;
+
+    if (!flagR && !flagG && !flagB) {
+      return this.softShadeColor;
+    }
+
+    let softShadeRgb = [softR, softG, softB];
+
+    // Apply smoothing similar to fadeLighting
+    if (flagR) {
+      diffR *= 0.1 * delta;
+      softShadeRgb[0] = this.room.clamp(Math.round(softR - diffR), 0, 255);
+      updated = true;
+    }
+
+    if (flagG) {
+      diffG *= 0.1 * delta;
+      softShadeRgb[1] = this.room.clamp(Math.round(softG - diffG), 0, 255);
+      updated = true;
+    }
+
+    if (flagB) {
+      diffB *= 0.1 * delta;
+      softShadeRgb[2] = this.room.clamp(Math.round(softB - diffB), 0, 255);
+      updated = true;
+    }
+
+    if (updated) {
+      this.softShadeColor = rgbToHex(softShadeRgb as [number, number, number]);
+    }
+
+    return this.softShadeColor;
   };
 
   emitEnemyKilled = () => {
@@ -430,8 +615,27 @@ export class Entity extends Drawable {
     }
   };
 
+  animateDying = (delta: number) => {
+    if (this.cloned) {
+      //this.frame = 0;
+      console.log("dying");
+      this.dyingFrame -= delta / 3;
+      console.log(this.dyingFrame);
+      this.alpha = Math.max(0, this.alpha - delta / 50);
+
+      if (this.dyingFrame <= 0) {
+        console.log("dyingFrame <= 0");
+        this.dead = true;
+        this.dying = false;
+        this.uniqueKillBehavior();
+        this.room.clearDeadStuff();
+      }
+    }
+  };
+
   draw = (delta: number) => {
     if (!this.dead) {
+      Game.ctx.globalAlpha = this.alpha;
       if (this.shielded)
         if (this.hasShadow) {
           Game.drawFX(
@@ -443,7 +647,7 @@ export class Entity extends Drawable {
             this.y - this.drawY,
             1,
             1,
-            this.room.shadeColor,
+            this.shadeColor,
             this.shadeAmount(),
           );
         }
@@ -468,13 +672,14 @@ export class Entity extends Drawable {
         this.y - this.drawYOffset - this.drawY,
         1,
         2,
-        this.room.shadeColor,
+        this.shadeColor,
         this.shadeAmount(),
       );
     }
     /*if (this.crushed) {
       this.crushAnim(delta);
     }*/
+    Game.ctx.globalAlpha = 1;
   };
 
   tick = () => {

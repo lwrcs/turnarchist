@@ -13,15 +13,16 @@ export class DownLadder extends Tile {
   game: Game;
   isRope = false;
   frame: number = 0;
+  depth: number;
 
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, x, y);
     this.game = game;
     this.linkedLevel = null;
+    this.depth = room.depth;
   }
 
   generate = async () => {
-    // called by Game during transition
     if (!this.linkedLevel) {
       await this.game.levelgen.generate(
         this.game,
@@ -29,8 +30,7 @@ export class DownLadder extends Tile {
         this.isRope,
         (linkedLevel: Room) => {
           this.linkedLevel = linkedLevel;
-
-          for (
+          outerLoop: for (
             let x = this.linkedLevel.roomX;
             x < this.linkedLevel.roomX + this.linkedLevel.width;
             x++
@@ -41,8 +41,12 @@ export class DownLadder extends Tile {
               y++
             ) {
               let tile = this.linkedLevel.roomArray[x][y];
-              if (tile instanceof UpLadder && tile.isRope)
-                tile.linkedLevel = this.room;
+
+              if (tile instanceof UpLadder) {
+                tile.linkedLevel = this.game.levels[this.room.depth].exitRoom;
+                //console.log("linked level", tile.linkedLevel);
+                break outerLoop;
+              }
             }
           }
         },
@@ -50,11 +54,17 @@ export class DownLadder extends Tile {
     }
   };
 
+  get linkedRoom() {
+    return this.game.levels[this.depth - 1].exitRoom;
+  }
+
   onCollide = (player: Player) => {
     let allPlayersHere = true;
     for (const i in this.game.players) {
       if (
-        this.game.rooms[this.game.players[i].levelID] !== this.room ||
+        this.game.levels[this.game.players[i].depth].rooms[
+          this.game.players[i].levelID
+        ] !== this.room ||
         this.game.players[i].x !== this.x ||
         this.game.players[i].y !== this.y
       ) {

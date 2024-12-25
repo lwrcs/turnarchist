@@ -172,6 +172,9 @@ export class RookEnemy extends Enemy {
   };
 
   draw = (delta: number) => {
+    if (this.dead) return;
+    Game.ctx.save();
+    Game.ctx.globalAlpha = this.alpha;
     if (!this.dead) {
       this.updateDrawXY(delta);
       this.frame += 0.1 * delta;
@@ -199,15 +202,18 @@ export class RookEnemy extends Enemy {
         this.y - this.drawYOffset - this.drawY - this.jumpY,
         1,
         2,
-        this.room.shadeColor,
+        this.softShadeColor,
         this.shadeAmount(),
       );
     }
-    if (!this.seenPlayer) {
-      this.drawSleepingZs(delta);
+    if (!this.cloned) {
+      if (!this.seenPlayer) {
+        this.drawSleepingZs(delta);
+      }
+      if (this.alertTicks > 0) {
+        this.drawExclamation(delta);
+      }
     }
-    if (this.alertTicks > 0) {
-      this.drawExclamation(delta);
-    }
+    Game.ctx.restore();
   };
 }

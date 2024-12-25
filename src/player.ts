@@ -29,6 +29,8 @@ import { LightSource } from "./lightSource";
 import { statsTracker } from "./stats";
 import { BeamEffect } from "./beamEffect";
 import { Spellbook } from "./weapon/spellbook";
+import { globalEventBus } from "./eventBus";
+import { Utils } from "./utils";
 
 export enum PlayerDirection {
   DOWN,
@@ -100,6 +102,7 @@ export class Player extends Drawable {
   slowMotionEnabled: boolean;
   justMoved: DrawDirection;
   slowMotionTickDuration: number;
+  depth: number;
   private animationFrameId: number | null = null;
   private isProcessingQueue: boolean = false;
   private lowHealthFrame: number = 0;
@@ -128,6 +131,7 @@ export class Player extends Drawable {
     this.lastX = 0;
     this.lastY = 0;
     this.isLocalPlayer = isLocalPlayer;
+    this.depth = 0;
     if (isLocalPlayer) {
       Input.leftSwipeListener = () => {
         if (
@@ -170,7 +174,7 @@ export class Player extends Drawable {
       Input.tapListener = () => {
         if (this.inventory.isOpen) {
           if (this.inventory.pointInside(Input.mouseX, Input.mouseY)) {
-            this.inputHandler(InputEnum.SPACE);
+            this.inputHandler(InputEnum.LEFT_CLICK);
           }
         } else {
           if (
@@ -178,7 +182,7 @@ export class Player extends Drawable {
               .inBounds
           ) {
             if (this.inventory.pointInside(Input.mouseX, Input.mouseY)) {
-              this.inputHandler(InputEnum.SPACE);
+              this.inputHandler(InputEnum.LEFT_CLICK);
             }
           }
         }
@@ -441,6 +445,7 @@ export class Player extends Drawable {
       }
     }
   };
+
   plusListener = () => {
     0;
     GameConstants.INCREASE_SCALE();
@@ -450,6 +455,7 @@ export class Player extends Drawable {
     GameConstants.DECREASE_SCALE();
     this.game.onResize();
   };
+
   mouseLeftClick = () => {
     this.inventory.mostRecentInput = "mouse";
     const mousePos = MouseCursor.getInstance().getPosition();
@@ -562,28 +568,42 @@ export class Player extends Drawable {
   };
 
   left = () => {
-    if (this.canMove() || this.moveQueue.length >= 1) {
+    const { x, y } = { x: this.x - 1, y: this.y };
+    if (this.canMove()) {
       this.direction = Direction.LEFT;
-      this.tryMove(this.x - 1, this.y);
-    } else this.queueMove(this.x - 1, this.y, Direction.LEFT);
+      {
+        this.tryMove(x, y);
+      }
+    } else this.queueMove(x, y, Direction.LEFT);
   };
   right = () => {
-    if (this.canMove() || this.moveQueue.length >= 1) {
+    const { x, y } = { x: this.x + 1, y: this.y };
+    if (this.canMove()) {
       this.direction = Direction.RIGHT;
-      this.tryMove(this.x + 1, this.y);
-    } else this.queueMove(this.x + 1, this.y, Direction.RIGHT);
+      {
+        this.tryMove(x, y);
+      }
+    } else this.queueMove(x, y, Direction.RIGHT);
   };
   up = () => {
-    if (this.canMove() || this.moveQueue.length >= 1) {
+    const { x, y } = { x: this.x, y: this.y - 1 };
+
+    if (this.canMove()) {
       this.direction = Direction.UP;
-      this.tryMove(this.x, this.y - 1);
-    } else this.queueMove(this.x, this.y - 1, Direction.UP);
+      {
+        this.tryMove(x, y);
+      }
+    } else this.queueMove(x, y, Direction.UP);
   };
   down = () => {
-    if (this.canMove() || this.moveQueue.length >= 1) {
+    const { x, y } = { x: this.x, y: this.y + 1 };
+
+    if (this.canMove()) {
       this.direction = Direction.DOWN;
-      this.tryMove(this.x, this.y + 1);
-    } else this.queueMove(this.x, this.y + 1, Direction.DOWN);
+      {
+        this.tryMove(x, y);
+      }
+    } else this.queueMove(x, y, Direction.DOWN);
   };
 
   hit = (): number => {
@@ -600,7 +620,7 @@ export class Player extends Drawable {
     let slowMotion = this.slowMotionEnabled;
     let newMove = { x: x, y: y };
     // TODO don't move if hit by enemy
-    this.game.rooms[this.levelID].catchUp();
+    this.game.levels[this.depth].rooms[this.levelID].catchUp();
     if (this.dead) return;
 
     for (let i = 0; i < 2; i++)
@@ -614,7 +634,7 @@ export class Player extends Drawable {
         //}
       }
 
-    for (let e of this.game.rooms[this.levelID].entities) {
+    for (let e of this.game.levels[this.depth].rooms[this.levelID].entities) {
       e.lastX = e.x;
       e.lastY = e.y;
       //console.log(`e.lastX, e.lastY: ${e.lastX}, ${e.lastY}`);
@@ -631,7 +651,8 @@ export class Player extends Drawable {
           let pushedEnemies = [];
           while (true) {
             foundEnd = true;
-            for (const f of this.game.rooms[this.levelID].entities) {
+            for (const f of this.game.levels[this.depth].rooms[this.levelID]
+              .entities) {
               f.lastX = f.x;
               f.lastY = f.y;
               if (f.pointIn(nextX, nextY)) {
@@ -655,25 +676,33 @@ export class Player extends Drawable {
 
           if (
             pushedEnemies.length === 0 &&
-            (this.game.rooms[this.levelID].roomArray[nextX][
+            (this.game.levels[this.depth].rooms[this.levelID].roomArray[nextX][
               nextY
             ].canCrushEnemy() ||
               enemyEnd)
           ) {
             if (e.destroyable) {
-              e.kill();
-              if (this.game.rooms[this.levelID] === this.game.room) Sound.hit();
-              this.game.rooms[this.levelID].particles.push(
+              e.hurt(this, e.health, "none");
+              if (
+                this.game.levels[this.depth].rooms[this.levelID] ===
+                this.game.room
+              )
+                Sound.hit();
+              this.game.levels[this.depth].rooms[this.levelID].particles.push(
                 new SlashParticle(e.x, e.y),
               );
               this.shakeScreen(this.x, this.y, e.x, e.y);
               //this.hitShake(this.x, this.y, e.x, e.y);
 
-              this.game.rooms[this.levelID].tick(this);
+              this.game.levels[this.depth].rooms[this.levelID].tick(this);
               return;
             }
           } else {
-            if (this.game.rooms[this.levelID] === this.game.room) Sound.push();
+            if (
+              this.game.levels[this.depth].rooms[this.levelID] ===
+              this.game.room
+            )
+              Sound.push();
             // here pushedEnemies may still be []
 
             for (const f of pushedEnemies) {
@@ -686,13 +715,17 @@ export class Player extends Drawable {
               f.skipNextTurns = 1; // skip next turn, so they don't move while we're pushing them
             }
             if (
-              this.game.rooms[this.levelID].roomArray[nextX][
+              this.game.levels[this.depth].rooms[this.levelID].roomArray[nextX][
                 nextY
               ].canCrushEnemy() ||
               enemyEnd
             ) {
               pushedEnemies[pushedEnemies.length - 1].crush();
-              if (this.game.rooms[this.levelID] === this.game.room) Sound.hit();
+              if (
+                this.game.levels[this.depth].rooms[this.levelID] ===
+                this.game.room
+              )
+                Sound.hit();
             }
 
             e.x += dx;
@@ -701,7 +734,7 @@ export class Player extends Drawable {
             e.drawY = dy;
             this.move(x, y);
             this.moveDistance++;
-            this.game.rooms[this.levelID].tick(this);
+            this.game.levels[this.depth].rooms[this.levelID].tick(this);
             return;
           }
         } else {
@@ -715,12 +748,13 @@ export class Player extends Drawable {
         }
       }
     }
-    let other = this.game.rooms[this.levelID].roomArray[x][y];
+    let other =
+      this.game.levels[this.depth].rooms[this.levelID].roomArray[x][y];
     if (!other.isSolid()) {
       this.move(x, y);
       other.onCollide(this);
       if (!(other instanceof Door || other instanceof Trapdoor))
-        this.game.rooms[this.levelID].tick(this);
+        this.game.levels[this.depth].rooms[this.levelID].tick(this);
     } else {
       if (other instanceof Door) {
         this.shakeScreen(this.x, this.y, x, y);
@@ -737,7 +771,8 @@ export class Player extends Drawable {
   //get cancelHoldMove = () => {};
 
   wouldHurt = (x: number, y: number) => {
-    for (let h of this.game.rooms[this.levelID].hitwarnings) {
+    for (let h of this.game.levels[this.depth].rooms[this.levelID]
+      .hitwarnings) {
       if (h instanceof HitWarning && h.x == x && h.y == y) return true;
       else {
         return false;
@@ -746,7 +781,8 @@ export class Player extends Drawable {
   };
 
   hurt = (damage: number, enemy: string) => {
-    if (this.game.rooms[this.levelID] === this.game.room) Sound.hurt();
+    if (this.game.levels[this.depth].rooms[this.levelID] === this.game.room)
+      Sound.hurt();
 
     if (this.inventory.getArmor() && this.inventory.getArmor().health > 0) {
       this.inventory.getArmor().hurt(damage);
@@ -784,7 +820,7 @@ export class Player extends Drawable {
     this.x = x;
     this.y = y;
 
-    for (let i of this.game.rooms[this.levelID].items) {
+    for (let i of this.game.levels[this.depth].rooms[this.levelID].items) {
       if (i.x === x && i.y === y) {
         i.onPickup(this);
       }
@@ -818,7 +854,7 @@ export class Player extends Drawable {
     this.updateLastPosition(this.x, this.y);
 
     //this.actionTab.setState(ActionState.MOVE);
-    if (this.game.rooms[this.levelID] === this.game.room)
+    if (this.game.levels[this.depth].rooms[this.levelID] === this.game.room)
       Sound.playerStoneFootstep();
 
     if (this.openVendingMachine) this.openVendingMachine.close();
@@ -840,7 +876,7 @@ export class Player extends Drawable {
     this.x = x;
     this.y = y;
 
-    for (let i of this.game.rooms[this.levelID].items) {
+    for (let i of this.game.levels[this.depth].rooms[this.levelID].items) {
       if (i.x === x && i.y === y) {
         i.onPickup(this);
       }
@@ -860,15 +896,17 @@ export class Player extends Drawable {
 
   moveSnap = (x: number, y: number) => {
     // no smoothing
-    this.x = x;
-    this.y = y;
+    this.x = Math.round(x);
+    this.y = Math.round(y);
     this.drawX = 0;
     this.drawY = 0;
     this.hitX = 0;
     this.hitY = 0;
+    this.jumpY = 0;
   };
 
   update = () => {};
+
   updateSlowMotion = () => {
     if (this.slowMotionTickDuration > 0) this.slowMotionTickDuration -= 1;
     if (this.slowMotionTickDuration === 0) this.slowMotionEnabled = false;
@@ -910,12 +948,25 @@ export class Player extends Drawable {
       this.y - 1.45 - this.drawY - this.jumpY - this.hitY,
       1,
       2,
+      this.shadeColor(),
     );
     if (this.inventory.getArmor() && this.inventory.getArmor().health > 0) {
       // TODO draw armor
     }
 
     Game.ctx.restore(); // Restore the canvas state
+  };
+
+  shadeColor = () => {
+    if (!GameConstants.CUSTOM_SHADER_COLOR_ENABLED) {
+      return "black";
+    } else {
+      return Utils.rgbToHex(
+        this.game.levels[this.depth].rooms[this.levelID].col[this.x][this.y][0],
+        this.game.levels[this.depth].rooms[this.levelID].col[this.x][this.y][1],
+        this.game.levels[this.depth].rooms[this.levelID].col[this.x][this.y][2],
+      );
+    }
   };
 
   heal = (amount: number) => {
@@ -926,7 +977,7 @@ export class Player extends Drawable {
   drawSpellBeam = (delta: number) => {
     Game.ctx.save();
     // Clear existing beam effects each frame
-    this.game.rooms[this.levelID].beamEffects = [];
+    this.game.levels[this.depth].rooms[this.levelID].beamEffects = [];
 
     if (this.inventory.getWeapon() instanceof Spellbook) {
       const spellbook = this.inventory.getWeapon() as Spellbook;
@@ -934,7 +985,7 @@ export class Player extends Drawable {
         let targets = spellbook.targets;
         for (let target of targets) {
           // Create a new beam effect from the player to the enemy
-          this.game.rooms[this.levelID].addBeamEffect(
+          this.game.levels[this.depth].rooms[this.levelID].addBeamEffect(
             this.x - this.drawX,
             this.y - this.drawY,
             target.x - target.drawX,
@@ -944,8 +995,9 @@ export class Player extends Drawable {
 
           // Retrieve the newly added beam effect
           const beam =
-            this.game.rooms[this.levelID].beamEffects[
-              this.game.rooms[this.levelID].beamEffects.length - 1
+            this.game.levels[this.depth].rooms[this.levelID].beamEffects[
+              this.game.levels[this.depth].rooms[this.levelID].beamEffects
+                .length - 1
             ];
 
           // Render the beam
@@ -967,7 +1019,6 @@ export class Player extends Drawable {
     Game.ctx.save();
     this.updateDrawXY(delta);
     this.drawableY = this.y;
-
     this.flashingFrame += (delta * 12) / GameConstants.FPS;
     if (!this.dead) {
       Game.drawMob(0, 0, 1, 1, this.x - this.drawX, this.y - this.drawY, 1, 1);
@@ -1117,7 +1168,9 @@ export class Player extends Drawable {
         lines.push("Game Over");
       }
 
-      lines.push(`Depth reached: ${this.game.rooms[this.levelID].depth}`);
+      lines.push(
+        `Depth reached: ${this.game.levels[this.depth].rooms[this.levelID].depth}`,
+      );
 
       // Line 2: Enemies killed
       lines.push(
@@ -1282,6 +1335,7 @@ export class Player extends Drawable {
         this.drawMoveQueue.shift();
         
         */
+
       this.drawX *= 0.85 ** delta;
 
       this.drawY *= 0.85 ** delta;
@@ -1479,10 +1533,14 @@ export class Player extends Drawable {
 
   private canMove(): boolean {
     const currentTime = Date.now();
-    if (currentTime - this.lastMoveTime >= GameConstants.MOVEMENT_COOLDOWN) {
+    if (
+      currentTime - this.lastMoveTime >=
+      GameConstants.MOVEMENT_COOLDOWN - this.moveQueue.length * 25
+    ) {
       this.lastMoveTime = currentTime;
       return true;
     }
+
     return false;
   }
 }

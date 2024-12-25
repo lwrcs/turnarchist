@@ -1,7 +1,7 @@
 import { GameConstants } from "./gameConstants";
 import { EnemyType, Room, RoomType } from "./room";
 import { Player } from "./player";
-import { Door } from "./tile/door";
+import { Door, DoorType } from "./tile/door";
 import { Sound } from "./sound";
 import { LevelConstants } from "./levelConstants";
 import { LevelGenerator } from "./levelGenerator";
@@ -19,6 +19,7 @@ import { ReverbEngine } from "./reverb";
 import { Level } from "./level";
 import { statsTracker } from "./stats";
 import { EVENTS } from "./events";
+import { UpLadder } from "./tile/upLadder";
 
 export enum LevelState {
   IN_LEVEL,
@@ -50,13 +51,28 @@ export class ChatMessage {
 
 let getShadeCanvasKey = (
   set: HTMLImageElement,
-  sx: number,
-  sy: number,
-  sw: number,
-  sh: number,
+  sX: number,
+  sY: number,
+  sW: number,
+  sH: number,
   opacity: number,
+  shadeColor: string,
 ): string => {
-  return set.src + "," + sx + "," + sy + "," + sw + "," + sh + "," + opacity;
+  return (
+    set.src +
+    "," +
+    sX +
+    "," +
+    sY +
+    "," +
+    sW +
+    "," +
+    sH +
+    "," +
+    opacity +
+    "," +
+    shadeColor
+  );
 };
 
 // fps counter
@@ -72,7 +88,7 @@ export class Game {
   level: Level;
   levels: Array<Level>;
   levelgen: LevelGenerator;
-  localPlayerID = "localplayer";
+  readonly localPlayerID = "localplayer";
   players: Record<string, Player>;
   offlinePlayers: Record<string, Player>;
   levelState: LevelState;
@@ -82,7 +98,8 @@ export class Game {
   upwardTransition: boolean;
   sideTransition: boolean;
   sideTransitionDirection: number;
-  transitioningLadder: any;
+  transition: boolean;
+  transitioningLadder: UpLadder | DownLadder;
   screenShakeX: number;
   screenShakeY: number;
   shakeAmountX: number;
@@ -93,15 +110,16 @@ export class Game {
   chatOpen: boolean;
   chatTextBox: TextBox;
   previousFrameTimestamp: number;
+  player: Player;
 
-  mostRecentInputReceived = true;
+  static inputReceived = false;
 
   loginMessage: string = "";
   username: string;
   usernameTextBox: TextBox;
   passwordTextBox: TextBox;
   worldCodes: Array<string>;
-  selectedWorldCode: number;
+  private selectedWorldCode: number;
   tutorialActive: boolean;
   static scale;
   static tileset: HTMLImageElement;
@@ -118,6 +136,8 @@ export class Game {
   paused: boolean;
   private startScreenAlpha = 1;
   static delta: number;
+  currentDepth: number;
+  previousDepth: number;
 
   static text_rendering_canvases: Record<string, HTMLCanvasElement>;
   static readonly letters = "abcdefghijklmnopqrstuvwxyz1234567890,.!?:'()[]%-/";
@@ -138,6 +158,11 @@ export class Game {
     return table[Game.rand(0, table.length - 1, rand)];
   };
   tutorialListener: TutorialListener;
+
+  private focusTimeout: number | null = null;
+  private readonly FOCUS_TIMEOUT_DURATION = 5000; // 5 seconds
+  private wasMuted = false;
+  private wasStarted = false;
 
   constructor() {
     window.addEventListener("load", () => {
@@ -238,9 +263,6 @@ export class Game {
 
           Game.scale = GameConstants.SCALE;
 
-          Sound.loadSounds();
-          Sound.playMusic(); // loops forever
-
           document.addEventListener(
             "touchstart",
             function (e) {
@@ -291,6 +313,8 @@ export class Game {
             setTimeout(this.onResize, 100);
           });
 
+          //Sound.playMusic(); // loops forever
+
           this.players = {};
           this.offlinePlayers = {};
           this.chatOpen = false;
@@ -310,10 +334,13 @@ export class Game {
       };
       checkResourcesLoaded();
     });
+    ReverbEngine.initialize();
+
+    Sound.loadSounds();
+
     this.started = false;
     this.tutorialListener = new TutorialListener(this);
     this.setupEventListeners();
-    ReverbEngine.initialize();
 
     globalEventBus.on(EVENTS.LEVEL_GENERATION_STARTED, () => {
       this.levelState = LevelState.LEVEL_GENERATION;
@@ -321,10 +348,30 @@ export class Game {
     globalEventBus.on(EVENTS.LEVEL_GENERATION_COMPLETED, () => {
       this.levelState = LevelState.IN_LEVEL;
     });
+
+    // Add focus/blur event listeners
+    window.addEventListener("blur", this.handleWindowBlur);
+    window.addEventListener("focus", this.handleWindowFocus);
   }
+
+  updateDepth = (depth: number) => {
+    this.previousDepth = this.currentDepth;
+    this.currentDepth = depth;
+    this.players[this.localPlayerID].depth = depth;
+  };
+
+  updateLevel = () => {
+    this.level = this.levels[this.currentDepth];
+    if (this.level.rooms.length > 0) this.rooms = this.level.rooms;
+  };
+
+  setPlayer = () => {
+    this.player = this.players[this.localPlayerID];
+  };
 
   newGame = () => {
     statsTracker.resetStats();
+    this.currentDepth = 0;
     this.encounteredEnemies = [];
     this.levels = [];
     let gs = new GameState();
@@ -334,18 +381,19 @@ export class Game {
     this.levelState = LevelState.LEVEL_GENERATION;
   };
 
-  startGame = () => {
-    this.started = true;
-    Sound.ambientSound.play();
-  };
-
   keyDownListener = (key: string) => {
+    Game.inputReceived = true;
     if (!this.started) {
       this.startedFadeOut = true;
       return;
     }
     if (!this.chatOpen) {
       switch (key.toUpperCase()) {
+        case "M":
+          Sound.audioMuted = !Sound.audioMuted;
+          const message = Sound.audioMuted ? "Audio muted" : "Audio unmuted";
+          this.pushMessage(message);
+          break;
         case "C":
           this.chatOpen = true;
           break;
@@ -401,38 +449,46 @@ export class Game {
   };
 
   changeLevel = (player: Player, newLevel: Room) => {
-    player.levelID = this.rooms.indexOf(newLevel);
+    player.levelID = this.levels[player.depth].rooms.indexOf(newLevel);
     if (this.players[this.localPlayerID] === player) {
       //this.level.exitLevel();
       this.room = newLevel;
     }
+    this.level = this.room.level;
     newLevel.enterLevel(player);
   };
 
-  changeLevelThroughLadder = (player: Player, ladder: any) => {
-    player.levelID = this.rooms.indexOf(ladder.linkedLevel);
+  changeLevelThroughLadder = (
+    player: Player,
+    ladder: UpLadder | DownLadder,
+  ) => {
+    player.map.saveOldMap();
+    if (ladder instanceof DownLadder && !ladder.linkedLevel) ladder.generate();
 
-    if (ladder instanceof DownLadder) {
-      player.map.saveOldMap();
-      ladder.generate();
-      //let newLevel = new Level(1);
-    }
+    const newRoom = ladder.linkedLevel;
 
     if (this.players[this.localPlayerID] === player) {
-      this.levelState = LevelState.TRANSITIONING_LADDER;
-      this.transitionStartTime = Date.now();
-      this.transitioningLadder = ladder;
-    } else {
-      ladder.linkedLevel.enterLevel(player, ladder.linkedLevel); // since it's not a local player, don't wait for transition
+      player.levelID = newRoom.id;
+      if (ladder instanceof UpLadder) {
+        this.players[this.localPlayerID].levelID =
+          newRoom.level.rooms.indexOf(newRoom);
+      }
     }
+
+    this.updateDepth(newRoom.depth);
+
+    this.levelState = LevelState.TRANSITIONING_LADDER;
+    this.transitionStartTime = Date.now();
+    this.transitioningLadder = ladder;
   };
 
-  changeLevelThroughDoor = (player: Player, door: any, side?: number) => {
-    player.levelID = this.rooms.indexOf(door.room);
+  changeLevelThroughDoor = (player: Player, door: Door, side?: number) => {
+    player.levelID = door.room.id;
 
     if (this.players[this.localPlayerID] === player) {
       this.levelState = LevelState.TRANSITIONING;
       this.transitionStartTime = Date.now();
+      const hasDir = door.doorDir !== door.linkedDoor.doorDir;
 
       let oldX = this.players[this.localPlayerID].x;
       let oldY = this.players[this.localPlayerID].y;
@@ -452,10 +508,15 @@ export class Game {
       this.sideTransitionDirection = side;
       if (
         door instanceof Door &&
-        [Direction.RIGHT, Direction.LEFT].includes(door.doorDir)
+        [Direction.RIGHT, Direction.LEFT].includes(door.doorDir) &&
+        hasDir
       )
         this.sideTransition = true;
-      else if (door instanceof Door && door.doorDir === Direction.DOWN)
+      else if (
+        door instanceof Door &&
+        door.doorDir === Direction.DOWN &&
+        hasDir
+      )
         this.upwardTransition = true;
     } else {
       door.room.enterLevelThroughDoor(player, door, side);
@@ -464,7 +525,11 @@ export class Game {
   };
 
   run = (timestamp: number) => {
-    if (this.paused) return;
+    if (this.paused) {
+      // Still request next frame even when paused to maintain loop
+      window.requestAnimationFrame(this.run);
+      return;
+    }
 
     if (!this.previousFrameTimestamp) {
       this.previousFrameTimestamp = timestamp;
@@ -546,7 +611,9 @@ export class Game {
     if (this.levelState !== LevelState.LEVEL_GENERATION) {
       for (const i in this.players) {
         this.players[i].update();
-        this.rooms[this.players[i].levelID].update();
+        this.levels[this.players[i].depth].rooms[
+          this.players[i].levelID
+        ].update();
 
         if (this.players[i].dead) {
           for (const j in this.players) {
@@ -832,10 +899,17 @@ export class Game {
   draw = (delta: number) => {
     Game.ctx.save(); // Save the current canvas state
 
+    // Reset transformations to ensure the black background covers the entire canvas
+    Game.ctx.setTransform(1, 0, 0, 1, 0, 0);
+
     Game.ctx.globalAlpha = 1;
-    if (this.room) Game.ctx.fillStyle = this.room.shadeColor;
-    else Game.ctx.fillStyle = "black";
+    Game.ctx.globalCompositeOperation = "source-over";
+    Game.ctx.fillStyle = "black";
     Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
+
+    //if (this.room) Game.ctx.fillStyle = this.room.shadeColor;
+    //else Game.ctx.fillStyle = "black";
+    //Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
 
     if (this.levelState === LevelState.TRANSITIONING) {
       this.screenShakeX = 0;
@@ -953,6 +1027,7 @@ export class Game {
       this.players[this.localPlayerID].draw(delta);
 
       Game.ctx.translate(-playerOffsetX, -playerOffsetY);
+
       Game.ctx.translate(newLevelOffsetX, newLevelOffsetY);
 
       this.drawStuff(delta);
@@ -1014,7 +1089,7 @@ export class Game {
           this.prevLevel = this.room;
           this.room.exitLevel();
           this.room = this.transitioningLadder.linkedLevel;
-
+          //this.players[this.localPlayerID].levelID = this.room.id;
           this.room.enterLevel(this.players[this.localPlayerID]);
           this.transitioningLadder = null;
         }
@@ -1199,7 +1274,10 @@ export class Game {
     shadeOpacity =
       Math.round(shadeOpacity * GameConstants.SHADE_LEVELS) /
       GameConstants.SHADE_LEVELS;
-    let key = getShadeCanvasKey(set, sX, sY, sW, sH, shadeOpacity);
+
+    // Include shadeColor in the cache key
+    let key = getShadeCanvasKey(set, sX, sY, sW, sH, shadeOpacity, shadeColor);
+
     if (!Game.shade_canvases[key]) {
       Game.shade_canvases[key] = document.createElement("canvas");
       Game.shade_canvases[key].width = Math.round(sW * GameConstants.TILESIZE);
@@ -1249,6 +1327,7 @@ export class Game {
         Math.round(sH * GameConstants.TILESIZE),
       );
     }
+
     Game.ctx.drawImage(
       Game.shade_canvases[key],
       Math.round(dX * GameConstants.TILESIZE),
@@ -1394,6 +1473,49 @@ export class Game {
       shadeOpacity,
     );
   };
+
+  private handleWindowBlur = () => {
+    // Start a timeout when window loses focus
+    this.focusTimeout = window.setTimeout(() => {
+      // Store current state
+      this.wasMuted = Sound.audioMuted;
+      this.wasStarted = this.started;
+
+      // Mute audio and pause game
+      Sound.audioMuted = true;
+      this.started = false;
+      this.paused = true;
+
+      // Optional: Show a message in chat
+      this.pushMessage("Game paused - window inactive");
+    }, this.FOCUS_TIMEOUT_DURATION);
+  };
+
+  private handleWindowFocus = () => {
+    // Clear the timeout if it exists
+    if (this.focusTimeout) {
+      clearTimeout(this.focusTimeout);
+      this.focusTimeout = null;
+    }
+
+    // If game was paused due to inactivity, restore previous state
+    if (this.paused) {
+      Sound.audioMuted = this.wasMuted;
+      this.started = this.wasStarted;
+      this.paused = false;
+
+      // Optional: Show a message in chat
+      this.pushMessage("Game resumed");
+    }
+  };
+
+  destroy() {
+    window.removeEventListener("blur", this.handleWindowBlur);
+    window.removeEventListener("focus", this.handleWindowFocus);
+    if (this.focusTimeout) {
+      clearTimeout(this.focusTimeout);
+    }
+  }
 }
 
 let game = new Game();

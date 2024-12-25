@@ -38,7 +38,9 @@ export class Crate extends Entity {
   };
 
   draw = (delta: number) => {
-    // not inherited because it doesn't have the 0.5 offset
+    if (this.dead) return;
+    Game.ctx.save();
+    Game.ctx.globalAlpha = this.alpha;
     if (!this.dead) {
       this.updateDrawXY(delta);
       Game.drawObj(
@@ -54,6 +56,7 @@ export class Crate extends Entity {
         this.shadeAmount(),
       );
     }
+    Game.ctx.restore();
   };
 
   drawTopLayer = (delta: number) => {

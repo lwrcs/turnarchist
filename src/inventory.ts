@@ -62,12 +62,14 @@ export class Inventory {
     this.buttonX =
       (Math.round(GameConstants.WIDTH / 2) + 3) / GameConstants.TILESIZE;
     this.buttonY = 10;
+
     Input.mouseDownListeners.push((x, y, button) =>
       this.handleMouseDown(x, y, button),
     );
     Input.mouseUpListeners.push((x, y, button) =>
       this.handleMouseUp(x, y, button),
     );
+
     Input.holdCallback = () => this.onHoldDetected();
 
     this.items = new Array<Item | null>(
@@ -96,13 +98,6 @@ export class Inventory {
     startingInv.forEach((item) => {
       a(new item({ game: this.game } as Room, 0, 0));
     });
-
-    Input.mouseDownListeners.push((x, y, button) =>
-      this.handleMouseDown(x, y, button),
-    );
-    Input.mouseUpListeners.push((x, y, button) =>
-      this.handleMouseUp(x, y, button),
-    );
   }
 
   clear = () => {
@@ -290,10 +285,11 @@ export class Inventory {
       {
         switch (num) {
           case 9:
-            GameConstants.TOGGLE_USE_OPTIMIZED_SHADING();
+            GameConstants.CUSTOM_SHADER_COLOR_ENABLED =
+              !GameConstants.CUSTOM_SHADER_COLOR_ENABLED;
             this.game.pushMessage(
-              "Optimized shading is now " +
-                (GameConstants.USE_OPTIMIZED_SHADING ? "on" : "off"),
+              "Custom shade color is now " +
+                (GameConstants.CUSTOM_SHADER_COLOR_ENABLED ? "on" : "off"),
             );
             break;
         }
@@ -422,7 +418,7 @@ export class Inventory {
   };
 
   dropItem = (item: Item, index: number) => {
-    item.level = this.game.rooms[this.player.levelID];
+    item.level = this.game.levels[this.player.depth].rooms[this.player.levelID];
     item.x = this.player.x;
     item.y = this.player.y;
     item.alpha = 1;
@@ -430,7 +426,9 @@ export class Inventory {
     item.dropFromInventory();
     this.equipAnimAmount[index] = 0;
     item.drawableY = this.player.y;
-    this.game.rooms[this.player.levelID].items.push(item);
+    this.game.levels[this.player.depth].rooms[this.player.levelID].items.push(
+      item,
+    );
     this.items[index] = null;
   };
 
@@ -1182,15 +1180,38 @@ export class Inventory {
     }
   };
 
-  onHoldDetected = () => {
-    if (this._dragStartItem !== null && !this._isDragging) {
-      this._isDragging = true;
-      this.grabbedItem = this._dragStartItem;
+  /**
+   * Unified method to initiate dragging.
+   */
+  initiateDrag = () => {
+    if (this._dragStartItem === null || this._isDragging) {
+      return;
+    }
 
-      // Remove item from original slot
-      if (this._dragStartSlot !== null) {
-        this.items[this._dragStartSlot] = null;
-      }
+    this._isDragging = true;
+    this.grabbedItem = this._dragStartItem;
+
+    // Remove item from original slot
+    if (this._dragStartSlot !== null) {
+      this.items[this._dragStartSlot] = null;
+    }
+  };
+
+  /**
+   * Handle hold detection for both mouse and touch.
+   */
+  onHoldDetected = () => {
+    this.initiateDrag();
+  };
+
+  /**
+   * Continuously check for mouse hold during tick.
+   */
+  checkForDragStart = () => {
+    if (Input.mouseDown && Input.isMouseHold) {
+      this.initiateDrag();
+    } else if (Input.isTapHold) {
+      this.initiateDrag();
     }
   };
 
@@ -1226,22 +1247,6 @@ export class Inventory {
     this._dragStartItem = null;
     this._dragStartSlot = null;
     this.grabbedItem = null;
-  };
-  z;
-  checkForDragStart = () => {
-    if (!Input.mouseDown || this._dragStartItem === null || this._isDragging) {
-      return;
-    }
-
-    if (Input.isMouseHold) {
-      this._isDragging = true;
-      this.grabbedItem = this._dragStartItem;
-
-      // Remove item from original slot
-      if (this._dragStartSlot !== null) {
-        this.items[this._dragStartSlot] = null;
-      }
-    }
   };
 
   placeItemInSlot = (targetSlot: number) => {

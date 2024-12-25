@@ -9,14 +9,28 @@ export class UpLadder extends Tile {
   linkedLevel: Room;
   game: Game;
   isRope = false;
-
+  depth: number;
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, x, y);
     this.game = game;
+    this.depth = room.depth;
   }
 
   onCollide = (player: Player) => {
-    this.game.changeLevelThroughLadder(player, this);
+    if (!this.game) {
+      console.error("Game instance is undefined in UpLadder:", this);
+      return;
+    }
+    try {
+      this.linkLevel();
+      this.game.changeLevelThroughLadder(player, this);
+    } catch (error) {
+      console.error("Error during changeLevelThroughLadder:", error);
+    }
+  };
+
+  linkLevel = () => {
+    this.linkedLevel = this.game.levels[this.depth - 1].exitRoom;
   };
 
   draw = (delta: number) => {

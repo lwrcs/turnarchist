@@ -180,6 +180,10 @@ export class CrabEnemy extends Enemy {
   };
 
   draw = (delta: number) => {
+    if (this.dead) return;
+    Game.ctx.save();
+    Game.ctx.globalAlpha = this.alpha;
+
     if (!this.dead) {
       this.updateDrawXY(delta);
       if (this.ticks % 2 === 0) {
@@ -215,18 +219,21 @@ export class CrabEnemy extends Enemy {
         this.y - this.drawYOffset - this.drawY + rumbleY,
         1 * this.crushX,
         1 * this.crushY,
-        this.room.shadeColor,
+        this.softShadeColor,
         this.shadeAmount(),
       );
       if (this.crushed) {
         this.crushAnim(delta);
       }
     }
-    if (!this.seenPlayer) {
-      this.drawSleepingZs(delta, 0, 0.75 * GameConstants.TILESIZE);
+    if (!this.cloned) {
+      if (!this.seenPlayer) {
+        this.drawSleepingZs(delta, 0, 0.75 * GameConstants.TILESIZE);
+      }
+      if (this.alertTicks > 0) {
+        this.drawExclamation(delta, 0, 0.75 * GameConstants.TILESIZE);
+      }
     }
-    if (this.alertTicks > 0) {
-      this.drawExclamation(delta, 0, 0.75 * GameConstants.TILESIZE);
-    }
+    Game.ctx.restore();
   };
 }

@@ -244,41 +244,46 @@ export class ZombieEnemy extends Enemy {
   };
 
   draw = (delta: number) => {
-    if (!this.dead) {
-      this.updateDrawXY(delta);
-      this.frame += 0.1 * delta;
-      if (this.frame >= 4) this.frame = 0;
-      if (this.hasShadow)
-        Game.drawMob(
-          0,
-          0,
-          1,
-          1,
-          this.x - this.drawX,
-          this.y - this.drawY,
-          1,
-          1,
-          this.room.shadeColor,
-          this.shadeAmount(),
-        );
+    if (this.dead) return;
+    //this.updateShadeColor(delta);
+    Game.ctx.globalAlpha = this.alpha;
+    this.updateDrawXY(delta);
+    this.frame += 0.1 * delta;
+    if (this.frame >= 4) this.frame = 0;
+    if (this.hasShadow)
       Game.drawMob(
-        this.tileX + Math.floor(this.frame),
-        this.tileY + this.direction * 2,
+        0,
+        0,
         1,
-        2,
+        1,
         this.x - this.drawX,
-        this.y - this.drawYOffset - this.drawY - this.jumpY,
+        this.y - this.drawY,
         1,
-        2,
-        this.room.shadeColor,
+        1,
+        this.shadeColor,
         this.shadeAmount(),
       );
+    Game.drawMob(
+      this.tileX + Math.floor(this.frame),
+      this.tileY + this.direction * 2,
+      1,
+      2,
+      this.x - this.drawX,
+      this.y - this.drawYOffset - this.drawY - this.jumpY,
+      1,
+      2,
+      this.softShadeColor,
+      this.shadeAmount(),
+    );
+
+    if (!this.cloned) {
+      if (!this.seenPlayer) {
+        this.drawSleepingZs(delta);
+      }
+      if (this.alertTicks > 0) {
+        this.drawExclamation(delta);
+      }
     }
-    if (!this.seenPlayer) {
-      this.drawSleepingZs(delta);
-    }
-    if (this.alertTicks > 0) {
-      this.drawExclamation(delta);
-    }
+    Game.ctx.globalAlpha = 1;
   };
 }

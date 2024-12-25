@@ -8,6 +8,7 @@ import { SpikeTrap } from "../../tile/spiketrap";
 import { EntityType } from "../entity";
 import { ImageParticle } from "../../particle/imageParticle";
 import { globalEventBus } from "../../eventBus";
+import { Sound } from "../../sound";
 
 enum EnemyState {
   SLEEP,
@@ -138,6 +139,7 @@ export abstract class Enemy extends Entity {
         startTick: this.ticks,
         effectTick: this.ticks % 3,
       };
+      this.shadeColor = "#00FF00";
     }
   };
 
@@ -159,6 +161,7 @@ export abstract class Enemy extends Entity {
         this.ticks !== this.status.poison.startTick
       ) {
         this.hurt(this.targetPlayer, 0.5, "poison");
+        this.shadeColor = "#00FF00";
         this.status.poison.hitCount++;
 
         if (this.status.poison.hitCount >= 2) {
@@ -181,7 +184,7 @@ export abstract class Enemy extends Entity {
       ) {
         this.hurt(this.targetPlayer, 0.5, "blood");
         this.targetPlayer.heal(0.5);
-
+        this.shadeColor = "#FF0000";
         this.status.bleed.hitCount++;
 
         if (this.status.bleed.hitCount >= 1) {
@@ -488,6 +491,10 @@ export abstract class Enemy extends Entity {
   };
 
   updateDrawXY = (delta: number) => {
+    //putting this here bc i'm lazy
+    this.updateHurtFrame(delta);
+    this.animateDying(delta);
+
     if (!this.doneMoving()) {
       this.drawX *= 0.85 ** delta;
       this.drawY *= 0.85 ** delta;
@@ -496,6 +503,8 @@ export abstract class Enemy extends Entity {
       this.drawY = Math.abs(this.drawY) < 0.01 ? 0 : this.drawY;
       this.jump(delta);
     }
+
+    this.updateShadeColor(delta);
   };
 
   setDrawXY = (x: number, y: number) => {
@@ -537,15 +546,17 @@ export abstract class Enemy extends Entity {
         this.y - this.drawYOffset - this.drawY - this.jumpY,
         1,
         2,
-        this.room.shadeColor,
+        this.softShadeColor,
         this.shadeAmount(),
       );
     }
-    if (!this.seenPlayer) {
-      this.drawSleepingZs(delta);
-    }
-    if (this.alertTicks > 0) {
-      this.drawExclamation(delta);
+    if (!this.dying) {
+      if (!this.seenPlayer) {
+        this.drawSleepingZs(delta);
+      }
+      if (this.alertTicks > 0) {
+        this.drawExclamation(delta);
+      }
     }
   };
 

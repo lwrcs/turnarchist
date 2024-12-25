@@ -17,26 +17,27 @@ export class Map {
   offsetY: number = 0;
   softOffsetX: number = 0;
   softOffsetY: number = 0;
-
+  player: Player;
   constructor(game: Game, player: Player) {
     this.game = game;
     this.scale = 1;
+    this.player = player;
     //this.depth = player.game.level.depth
   }
 
   saveMapData = () => {
     this.clearMap();
-    for (const level of this.game.rooms) {
+    for (const room of this.game.levels[this.player.depth].rooms) {
       if (
-        this.game.room.mapGroup === level.mapGroup &&
-        (level.entered === true || GameConstants.DEVELOPER_MODE)
+        this.game.room.mapGroup === room.mapGroup &&
+        (room.entered === true || GameConstants.DEVELOPER_MODE)
       ) {
         this.mapData.push({
-          room: level,
-          walls: level.innerWalls,
-          doors: level.doors,
-          entities: level.entities,
-          items: level.items,
+          room: room,
+          walls: room.innerWalls,
+          doors: room.doors,
+          entities: room.entities,
+          items: room.items,
           players: this.game.players,
         });
       }
@@ -186,7 +187,8 @@ export class Map {
     for (const i in players) {
       Game.ctx.fillStyle = "white";
       if (
-        this.game.rooms[players[i].levelID].mapGroup === this.game.room.mapGroup
+        this.game.levels[players[i].depth].rooms[players[i].levelID]
+          .mapGroup === this.game.room.mapGroup
       ) {
         Game.ctx.fillRect(players[i].x * s, players[i].y * s, 1 * s, 1 * s);
       }

@@ -29,15 +29,6 @@ export enum InputEnum {
   EQUALS,
 }
 
-const checkIsMouseHold = function () {
-  if (
-    Input.mouseDownStartTime !== null &&
-    Date.now() >= Input.mouseDownStartTime + GameConstants.HOLD_THRESH
-  ) {
-    Input.isMouseHold = true;
-  }
-};
-
 export const Input = {
   _pressed: {},
 
@@ -81,6 +72,9 @@ export const Input = {
   mouseMoveListeners: [],
   mouseDownListeners: [],
   mouseUpListeners: [],
+
+  touchStartListeners: [],
+  touchEndListeners: [],
 
   mouseX: 0,
   mouseY: 0,
@@ -244,6 +238,8 @@ export const Input = {
   },
 
   updateMousePos: function (event: MouseEvent) {
+    Game.inputReceived = true;
+
     let rect = window.document
       .getElementById("gameCanvas")
       .getBoundingClientRect();
@@ -304,6 +300,8 @@ export const Input = {
   },
 
   getTouches: function (evt) {
+    Game.inputReceived = true;
+
     return (
       evt.touches || evt.originalEvent.touches // browser API
     ); // jQuery
@@ -316,6 +314,9 @@ export const Input = {
   swiped: false,
 
   handleTouchStart: function (evt) {
+    console.log("handleTouchStart triggered");
+    Game.inputReceived = true;
+
     evt.preventDefault();
 
     const firstTouch = Input.getTouches(evt)[0];
@@ -332,9 +333,19 @@ export const Input = {
     } as MouseEvent);
 
     Input.swiped = false;
+
+    // ADDED - unify with mouseDown logic
+    Input.mouseDown = true;
+    Input.mouseDownStartTime = Date.now();
+    Input.isMouseHold = false;
+    if (!Input._holdCheckInterval) {
+      Input._holdCheckInterval = setInterval(Input.checkIsMouseHold, 16); // Check every frame
+      console.log("_holdCheckInterval started");
+    }
   },
 
   handleTouchMove: function (evt) {
+    console.log("handleTouchMove triggered");
     evt.preventDefault();
 
     Input.currentX = evt.touches[0].clientX;
@@ -373,6 +384,7 @@ export const Input = {
   },
 
   handleTouchEnd: function (evt) {
+    console.log("handleTouchEnd triggered");
     evt.preventDefault();
 
     if (!Input.isTapHold && !Input.swiped) Input.tapListener();
@@ -391,6 +403,19 @@ export const Input = {
       clientX: 0,
       clientY: 0,
     } as MouseEvent);
+
+    // ADDED - unify with mouseUp logic
+    Input.mouseDown = false;
+    Input.mouseDownStartTime = null;
+    if (Input._holdCheckInterval) {
+      clearInterval(Input._holdCheckInterval);
+      Input._holdCheckInterval = null;
+      console.log("_holdCheckInterval cleared");
+    }
+    setTimeout(() => {
+      Input.isMouseHold = false;
+      console.log("isMouseHold reset");
+    }, 50);
   },
 
   checkIsTapHold: function () {
@@ -401,7 +426,17 @@ export const Input = {
       Input.isTapHold = true;
   },
 
-  isMouseHold: false,
+  set isMouseHold(value: boolean) {
+    console.log(`isMouseHold set to: ${value}`);
+    this._isMouseHold = value;
+  },
+
+  get isMouseHold() {
+    return this._isMouseHold;
+  },
+
+  _isMouseHold: false,
+
   mouseDownStartTime: null,
   HOLD_THRESH: 200, // Adjust this value as needed
 
@@ -418,6 +453,20 @@ window.addEventListener(
   "keydown",
   function (event) {
     Input.onKeydown(event);
+  },
+  false,
+);
+window.addEventListener(
+  "touchstart",
+  function (event) {
+    Input.handleTouchStart(event);
+  },
+  false,
+);
+window.addEventListener(
+  "touchend",
+  function (event) {
+    Input.handleTouchEnd(event);
   },
   false,
 );
@@ -440,3 +489,14 @@ window.document
 window.document
   .getElementById("gameCanvas")
   .addEventListener("contextmenu", (event) => event.preventDefault(), false);
+
+window.document
+  .getElementById("gameCanvas")
+  .addEventListener(
+    "touchstart",
+    (event) => Input.handleTouchStart(event),
+    false,
+  );
+window.document
+  .getElementById("gameCanvas")
+  .addEventListener("touchend", (event) => Input.handleTouchEnd(event), false);

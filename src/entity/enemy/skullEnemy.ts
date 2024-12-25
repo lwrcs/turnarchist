@@ -48,18 +48,26 @@ export class SkullEnemy extends Enemy {
     damage: number,
     type: "none" | "poison" | "blood" | "heal" = "none",
   ) => {
-    if (playerHitBy) {
-      this.aggro = true;
-      this.targetPlayer = playerHitBy;
-      this.facePlayer(playerHitBy);
-      if (playerHitBy === this.game.players[this.game.localPlayerID])
-        this.alertTicks = 2; // this is really 1 tick, it will be decremented immediately in tick()
+    this.handleEnemyCase(playerHitBy);
+
+    let hitShield = false;
+    let shieldHealth = 0;
+    if (this.shielded) {
+      shieldHealth = this.shield.health;
+      if (shieldHealth > 0) {
+        this.shield.hurt(damage);
+        hitShield = true;
+      }
     }
     this.ticksSinceFirstHit = 0;
     if (this.health == 2) this.unconscious = false;
     this.health -= damage;
+    this.maxHealth -= shieldHealth;
+    this.startHurting();
+
     this.healthBar.hurt();
     this.createDamageNumber(damage, type);
+    this.playHitSound();
 
     if (this.health == 1) {
       this.unconscious = true;
@@ -258,12 +266,15 @@ export class SkullEnemy extends Enemy {
   };
 
   draw = (delta: number) => {
+    if (this.dead) return;
+    Game.ctx.save();
+    Game.ctx.globalAlpha = this.alpha;
     if (!this.dead) {
       this.updateDrawXY(delta);
       this.tileX = 5;
       this.tileY = 8;
 
-      if (this.health <= 1) {
+      if (this.health <= 1 || this.dying) {
         this.tileX = 3;
         this.tileY = 0;
         if (this.ticksSinceFirstHit >= 3) {
@@ -299,15 +310,18 @@ export class SkullEnemy extends Enemy {
         this.y - this.drawYOffset - this.drawY - this.jumpY,
         1,
         2,
-        this.room.shadeColor,
+        this.softShadeColor,
         this.shadeAmount(),
       );
     }
-    if (!this.seenPlayer) {
-      this.drawSleepingZs(delta);
+    if (!this.cloned) {
+      if (!this.seenPlayer) {
+        this.drawSleepingZs(delta);
+      }
+      if (this.alertTicks > 0) {
+        this.drawExclamation(delta);
+      }
     }
-    if (this.alertTicks > 0) {
-      this.drawExclamation(delta);
-    }
+    Game.ctx.restore();
   };
 }

@@ -38,7 +38,7 @@ export class GameConstants {
   static readonly HOLD_THRESH = 250; // milliseconds
 
   static readonly KEY_REPEAT_TIME = 250; // millseconds
-  static readonly MOVEMENT_COOLDOWN = 100; // milliseconds
+  static readonly MOVEMENT_COOLDOWN = 125; // milliseconds
 
   static readonly CHAT_APPEAR_TIME = 5000;
   static readonly CHAT_FADE_TIME = 1000;
@@ -62,6 +62,8 @@ export class GameConstants {
   static readonly HIT_ENEMY_TEXT_COLOR = "#76428a";
   static readonly HEALTH_BUFF_COLOR = "#d77bba";
   static readonly MISS_COLOR = "#639bff";
+
+  static CUSTOM_SHADER_COLOR_ENABLED = false;
 
   static COLOR_LAYER_COMPOSITE_OPERATION = "soft-light"; //"soft-light";
   static SHADE_LAYER_COMPOSITE_OPERATION = "screen"; //"soft-light";
@@ -137,14 +139,14 @@ export class GameConstants {
   static readonly STARTING_DEV_INVENTORY = [
     Dagger,
     DualDagger,
-    Candle,
+    Warhammer,
     Torch,
-    WeaponPoison,
-    WeaponBlood,
     GodStone,
     Candle,
     Candle,
     Spear,
+    WeaponPoison,
+    WeaponBlood,
     Spellbook,
     Armor,
     Heart,
