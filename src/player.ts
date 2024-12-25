@@ -174,7 +174,7 @@ export class Player extends Drawable {
       Input.tapListener = () => {
         if (this.inventory.isOpen) {
           if (this.inventory.pointInside(Input.mouseX, Input.mouseY)) {
-            this.inputHandler(InputEnum.SPACE);
+            this.inputHandler(InputEnum.LEFT_CLICK);
           }
         } else {
           if (
@@ -182,7 +182,7 @@ export class Player extends Drawable {
               .inBounds
           ) {
             if (this.inventory.pointInside(Input.mouseX, Input.mouseY)) {
-              this.inputHandler(InputEnum.SPACE);
+              this.inputHandler(InputEnum.LEFT_CLICK);
             }
           }
         }
@@ -445,6 +445,7 @@ export class Player extends Drawable {
       }
     }
   };
+
   plusListener = () => {
     0;
     GameConstants.INCREASE_SCALE();
@@ -454,6 +455,7 @@ export class Player extends Drawable {
     GameConstants.DECREASE_SCALE();
     this.game.onResize();
   };
+
   mouseLeftClick = () => {
     this.inventory.mostRecentInput = "mouse";
     const mousePos = MouseCursor.getInstance().getPosition();

@@ -29,28 +29,6 @@ export enum InputEnum {
   EQUALS,
 }
 
-const checkIsMouseHold = function () {
-  console.log("checkIsMouseHold called");
-  console.log(`mouseDown: ${Input.mouseDown}`);
-  console.log(`mouseDownStartTime: ${Input.mouseDownStartTime}`);
-  console.log(`Current Time: ${Date.now()}`);
-  console.log(`Hold Threshold: ${GameConstants.HOLD_THRESH}`);
-
-  if (
-    Input.mouseDownStartTime !== null &&
-    Date.now() >= Input.mouseDownStartTime + GameConstants.HOLD_THRESH
-  ) {
-    if (!Input.isMouseHold) {
-      console.log("Hold detected!");
-      Input.isMouseHold = true;
-      // Call the hold callback if one is registered
-      if (Input.holdCallback) {
-        Input.holdCallback();
-      }
-    }
-  }
-};
-
 export const Input = {
   _pressed: {},
 
@@ -94,6 +72,9 @@ export const Input = {
   mouseMoveListeners: [],
   mouseDownListeners: [],
   mouseUpListeners: [],
+
+  touchStartListeners: [],
+  touchEndListeners: [],
 
   mouseX: 0,
   mouseY: 0,
@@ -475,6 +456,20 @@ window.addEventListener(
   },
   false,
 );
+window.addEventListener(
+  "touchstart",
+  function (event) {
+    Input.handleTouchStart(event);
+  },
+  false,
+);
+window.addEventListener(
+  "touchend",
+  function (event) {
+    Input.handleTouchEnd(event);
+  },
+  false,
+);
 window.document
   .getElementById("gameCanvas")
   .addEventListener("click", (event) => Input.mouseClickListener(event), false);
@@ -494,3 +489,14 @@ window.document
 window.document
   .getElementById("gameCanvas")
   .addEventListener("contextmenu", (event) => event.preventDefault(), false);
+
+window.document
+  .getElementById("gameCanvas")
+  .addEventListener(
+    "touchstart",
+    (event) => Input.handleTouchStart(event),
+    false,
+  );
+window.document
+  .getElementById("gameCanvas")
+  .addEventListener("touchend", (event) => Input.handleTouchEnd(event), false);

@@ -9946,24 +9946,6 @@ var InputEnum;
     InputEnum[InputEnum["MINUS"] = 23] = "MINUS";
     InputEnum[InputEnum["EQUALS"] = 24] = "EQUALS";
 })(InputEnum = exports.InputEnum || (exports.InputEnum = {}));
-var checkIsMouseHold = function () {
-    console.log("checkIsMouseHold called");
-    console.log("mouseDown: ".concat(exports.Input.mouseDown));
-    console.log("mouseDownStartTime: ".concat(exports.Input.mouseDownStartTime));
-    console.log("Current Time: ".concat(Date.now()));
-    console.log("Hold Threshold: ".concat(gameConstants_1.GameConstants.HOLD_THRESH));
-    if (exports.Input.mouseDownStartTime !== null &&
-        Date.now() >= exports.Input.mouseDownStartTime + gameConstants_1.GameConstants.HOLD_THRESH) {
-        if (!exports.Input.isMouseHold) {
-            console.log("Hold detected!");
-            exports.Input.isMouseHold = true;
-            // Call the hold callback if one is registered
-            if (exports.Input.holdCallback) {
-                exports.Input.holdCallback();
-            }
-        }
-    }
-};
 exports.Input = {
     _pressed: {},
     isTapHold: false,
@@ -10006,6 +9988,8 @@ exports.Input = {
     mouseMoveListeners: [],
     mouseDownListeners: [],
     mouseUpListeners: [],
+    touchStartListeners: [],
+    touchEndListeners: [],
     mouseX: 0,
     mouseY: 0,
     mouseDown: false,
@@ -10335,6 +10319,12 @@ window.addEventListener("keyup", function (event) {
 window.addEventListener("keydown", function (event) {
     exports.Input.onKeydown(event);
 }, false);
+window.addEventListener("touchstart", function (event) {
+    exports.Input.handleTouchStart(event);
+}, false);
+window.addEventListener("touchend", function (event) {
+    exports.Input.handleTouchEnd(event);
+}, false);
 window.document
     .getElementById("gameCanvas")
     .addEventListener("click", function (event) { return exports.Input.mouseClickListener(event); }, false);
@@ -10350,6 +10340,12 @@ window.document
 window.document
     .getElementById("gameCanvas")
     .addEventListener("contextmenu", function (event) { return event.preventDefault(); }, false);
+window.document
+    .getElementById("gameCanvas")
+    .addEventListener("touchstart", function (event) { return exports.Input.handleTouchStart(event); }, false);
+window.document
+    .getElementById("gameCanvas")
+    .addEventListener("touchend", function (event) { return exports.Input.handleTouchEnd(event); }, false);
 
 
 /***/ }),
@@ -11371,12 +11367,6 @@ var Inventory = /** @class */ (function () {
             : gameConstants_1.GameConstants.STARTING_INVENTORY;
         startingInv.forEach(function (item) {
             a(new item({ game: _this.game }, 0, 0));
-        });
-        input_1.Input.mouseDownListeners.push(function (x, y, button) {
-            return _this.handleMouseDown(x, y, button);
-        });
-        input_1.Input.mouseUpListeners.push(function (x, y, button) {
-            return _this.handleMouseUp(x, y, button);
         });
     }
     Object.defineProperty(Inventory.prototype, "expansion", {
@@ -16915,14 +16905,14 @@ var Player = /** @class */ (function (_super) {
             input_1.Input.tapListener = function () {
                 if (_this.inventory.isOpen) {
                     if (_this.inventory.pointInside(input_1.Input.mouseX, input_1.Input.mouseY)) {
-                        _this.inputHandler(input_1.InputEnum.SPACE);
+                        _this.inputHandler(input_1.InputEnum.LEFT_CLICK);
                     }
                 }
                 else {
                     if (_this.inventory.isPointInQuickbarBounds(input_1.Input.mouseX, input_1.Input.mouseY)
                         .inBounds) {
                         if (_this.inventory.pointInside(input_1.Input.mouseX, input_1.Input.mouseY)) {
-                            _this.inputHandler(input_1.InputEnum.SPACE);
+                            _this.inputHandler(input_1.InputEnum.LEFT_CLICK);
                         }
                     }
                 }

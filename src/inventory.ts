@@ -62,12 +62,14 @@ export class Inventory {
     this.buttonX =
       (Math.round(GameConstants.WIDTH / 2) + 3) / GameConstants.TILESIZE;
     this.buttonY = 10;
+
     Input.mouseDownListeners.push((x, y, button) =>
       this.handleMouseDown(x, y, button),
     );
     Input.mouseUpListeners.push((x, y, button) =>
       this.handleMouseUp(x, y, button),
     );
+
     Input.holdCallback = () => this.onHoldDetected();
 
     this.items = new Array<Item | null>(
@@ -96,13 +98,6 @@ export class Inventory {
     startingInv.forEach((item) => {
       a(new item({ game: this.game } as Room, 0, 0));
     });
-
-    Input.mouseDownListeners.push((x, y, button) =>
-      this.handleMouseDown(x, y, button),
-    );
-    Input.mouseUpListeners.push((x, y, button) =>
-      this.handleMouseUp(x, y, button),
-    );
   }
 
   clear = () => {
