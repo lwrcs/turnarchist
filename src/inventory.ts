@@ -275,7 +275,7 @@ export class Inventory {
       if (GameConstants.DEVELOPER_MODE) {
         switch (num) {
           case 6:
-            GameConstants.SET_COLOR_LAYER_COMPOSITE_OPERATION(true);
+            GameConstants.SET_COLOR_LAYER_COMPOSITE_OPERATION(false, true);
             break;
           case 7:
             GameConstants.SET_COLOR_LAYER_COMPOSITE_OPERATION(false);

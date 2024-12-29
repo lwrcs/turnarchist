@@ -50,6 +50,8 @@ export class GameConstants {
   static HEIGHT = LevelConstants.SCREEN_H * GameConstants.TILESIZE;
   static scrolling = true;
 
+  static drawOtherRooms = true;
+
   static readonly SCRIPT_FONT_SIZE = 16;
   static readonly FONT_SIZE = 7;
   static readonly BIG_FONT_SIZE = 15;
@@ -71,38 +73,56 @@ export class GameConstants {
 
   static readonly COLOR_LAYER_COMPOSITE_OPERATIONS = [
     "soft-light",
-    "addition",
-    "darken",
+    //"addition",
+    //"darken",
     "overlay",
-    "hue",
-    "source-over",
-    "screen",
+    //"hue",
+    //"source-over",
+    //"screen",
     "multiply",
-    "difference",
-    "exclusion",
-    "luminosity",
-    "color-dodge",
-    "color-burn",
-    "hard-light",
-    "soft-light",
-    "lighten",
+    //"difference",
+    //"exclusion",
+    //"luminosity",
+    //"color-dodge",
+    //"color-burn",
+    //"hard-light",
+    //"soft-light",
+    //"lighten",
   ];
 
-  static readonly SET_COLOR_LAYER_COMPOSITE_OPERATION = (shade?: boolean) => {
+  static readonly SET_COLOR_LAYER_COMPOSITE_OPERATION = (
+    shade?: boolean,
+    back: boolean = false,
+  ) => {
     let operation = shade
       ? GameConstants.SHADE_LAYER_COMPOSITE_OPERATION
       : GameConstants.COLOR_LAYER_COMPOSITE_OPERATION;
     const currentIndex =
       GameConstants.COLOR_LAYER_COMPOSITE_OPERATIONS.indexOf(operation);
-    const nextIndex =
-      (currentIndex + 1) %
-      GameConstants.COLOR_LAYER_COMPOSITE_OPERATIONS.length;
+    let nextIndex;
+
+    if (back) {
+      // Decrement the index to move backward in the operations array
+      nextIndex =
+        (currentIndex -
+          1 +
+          GameConstants.COLOR_LAYER_COMPOSITE_OPERATIONS.length) %
+        GameConstants.COLOR_LAYER_COMPOSITE_OPERATIONS.length;
+    } else {
+      // Increment the index to move forward in the operations array
+      nextIndex =
+        (currentIndex + 1) %
+        GameConstants.COLOR_LAYER_COMPOSITE_OPERATIONS.length;
+    }
+
     operation = GameConstants.COLOR_LAYER_COMPOSITE_OPERATIONS[nextIndex];
+
     if (shade) {
       GameConstants.SHADE_LAYER_COMPOSITE_OPERATION = operation;
     } else {
       GameConstants.COLOR_LAYER_COMPOSITE_OPERATION = operation;
     }
+
     console.log(`Color layer composite operation set to ${operation}`);
   };
 

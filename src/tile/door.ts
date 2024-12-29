@@ -6,6 +6,7 @@ import { SkinType, Tile } from "./tile";
 import { EntityType } from "../entity/entity";
 import { Key } from "../item/key";
 import { Sound } from "../sound";
+import { LightSource } from "../lightSource";
 
 export enum DoorDir {
   North = "North",
@@ -38,6 +39,7 @@ export class Door extends Tile {
   tileXOffset: number;
   tileX: number;
   drawTopOf: boolean;
+  lightSource: LightSource;
   constructor(
     room: Room,
     game: Game,
@@ -62,6 +64,9 @@ export class Door extends Tile {
     this.tileXOffset = 0;
     this.tileX = 2;
     this.drawTopOf = true;
+    this.lightSource = new LightSource(x + 0.5, y + 0.5, 0, [0, 0, 0], 0);
+    this.room.lightSources.push(this.lightSource);
+
     switch (this.type) {
       case DoorType.GUARDEDDOOR:
         this.guard();
@@ -82,6 +87,17 @@ export class Door extends Tile {
         break;
     }
   }
+
+  openTunnelXOffset = () => {
+    if (this.type === DoorType.TUNNELDOOR) {
+      if (!this.opened) {
+        return 0;
+      } else {
+        return -3;
+      }
+    }
+    return 0;
+  };
 
   guard = () => {
     this.type = DoorType.GUARDEDDOOR;
@@ -208,7 +224,7 @@ export class Door extends Tile {
       //if top door
       if (this.opened)
         Game.drawTile(
-          6 + this.tileXOffset,
+          6 + this.tileXOffset + this.openTunnelXOffset(),
           this.skin,
           1,
           1,
@@ -217,11 +233,11 @@ export class Door extends Tile {
           1,
           1,
           this.room.shadeColor,
-          this.shadeAmount(),
+          this.shadeAmount(0, 1),
         );
       else
         Game.drawTile(
-          3 + this.tileXOffset,
+          3 + this.tileXOffset + this.openTunnelXOffset(),
           this.skin,
           1,
           1,
@@ -262,7 +278,7 @@ export class Door extends Tile {
           1,
           1,
           this.room.shadeColor,
-          this.shadeAmount(),
+          this.shadeAmount(0, 1),
         );
       else
         Game.drawTile(
@@ -275,7 +291,7 @@ export class Door extends Tile {
           1,
           1,
           this.room.shadeColor,
-          this.shadeAmount(),
+          this.shadeAmount(0, 1),
         );
     }
   };
@@ -283,6 +299,7 @@ export class Door extends Tile {
   drawAbovePlayer = (delta: number) => {};
 
   drawAboveShading = (delta: number) => {
+    if (this.type === DoorType.TUNNELDOOR) return;
     if (this.frame > 100) this.frame = 0;
     this.frame += 1 * delta;
     Game.ctx.globalAlpha = this.iconAlpha;

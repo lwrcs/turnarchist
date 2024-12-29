@@ -4,9 +4,9 @@ import { GameConstants } from "./gameConstants";
 export class PostProcessor {
   static draw = (delta: number) => {
     Game.ctx.save();
-    Game.ctx.globalAlpha = 0.2;
-    Game.ctx.globalCompositeOperation =
-      GameConstants.SHADE_LAYER_COMPOSITE_OPERATION as GlobalCompositeOperation; //"soft-light";
+    Game.ctx.globalAlpha = 0.15;
+    Game.ctx.globalCompositeOperation = "screen";
+    // GameConstants.SHADE_LAYER_COMPOSITE_OPERATION as GlobalCompositeOperation; //"soft-light";
 
     Game.ctx.fillStyle = "#006A6E"; //dark teal
     //Game.ctx.fillStyle = "#003B6F"; //deep underwater blue

@@ -37,8 +37,8 @@ export abstract class Tile extends Drawable {
     else return false;
   };
 
-  shadeAmount = () => {
-    return this.room.softVis[this.x][this.y];
+  shadeAmount = (offsetX: number = 0, offsetY: number = 0) => {
+    return this.room.softVis[this.x + offsetX][this.y + offsetY];
   };
 
   isSolid = (): boolean => {

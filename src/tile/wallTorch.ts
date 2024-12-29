@@ -3,8 +3,9 @@ import { Tile } from "./tile";
 import { Room } from "../room";
 import { LightSource } from "../lightSource";
 import { LevelConstants } from "../levelConstants";
+import { Wall } from "./wall";
 
-export class WallTorch extends Tile {
+export class WallTorch extends Wall {
   frame: number;
   private tileYOffset: number;
 
@@ -40,6 +41,7 @@ export class WallTorch extends Tile {
   };
 
   draw = (delta: number) => {
+    this.drawWall(delta);
     const wallInfo = this.room.wallInfo.get(`${this.x},${this.y}`);
     if (!wallInfo) this.tileYOffset = 6;
     this.frame += 0.3 * delta;
@@ -58,19 +60,6 @@ export class WallTorch extends Tile {
       1,
       this.x,
       this.y,
-      1,
-      1,
-      this.room.shadeColor,
-      this.shadeAmount(),
-    );
-
-    Game.drawTile(
-      2,
-      this.skin + this.tileYOffset,
-      1,
-      1,
-      this.x,
-      this.y - 1,
       1,
       1,
       this.room.shadeColor,

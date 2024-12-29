@@ -227,7 +227,6 @@ export class Entity extends Drawable {
     // Add the cloned entity to deadEntities
     room.deadEntities.push(cloned);
 
-    console.log(`Cloned Entity - Dead: ${cloned.dead}, Dying: ${cloned.dying}`);
     return cloned;
   }
 
@@ -239,7 +238,6 @@ export class Entity extends Drawable {
     cloned.dead = false; // Explicitly set as not dead
     cloned.dying = true; // Ensure the clone is in a dying state
 
-    console.log(`Cloned Entity - Dead: ${cloned.dead}, Dying: ${cloned.dying}`);
     return cloned;
   }
 
@@ -618,13 +616,10 @@ export class Entity extends Drawable {
   animateDying = (delta: number) => {
     if (this.cloned) {
       //this.frame = 0;
-      console.log("dying");
       this.dyingFrame -= delta / 3;
-      console.log(this.dyingFrame);
       this.alpha = Math.max(0, this.alpha - delta / 50);
 
       if (this.dyingFrame <= 0) {
-        console.log("dyingFrame <= 0");
         this.dead = true;
         this.dying = false;
         this.uniqueKillBehavior();
@@ -879,7 +874,6 @@ export class Entity extends Drawable {
         !this.isWithinRoomBounds(x, y) ||
         this.room.roomArray[x][y]?.isSolid()
       ) {
-        //console.log(`Path blocked at (${x}, ${y})`);
         return false;
       }
     }

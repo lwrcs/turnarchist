@@ -452,6 +452,7 @@ export class Game {
     player.levelID = this.levels[player.depth].rooms.indexOf(newLevel);
     if (this.players[this.localPlayerID] === player) {
       //this.level.exitLevel();
+
       this.room = newLevel;
     }
     this.level = this.room.level;
@@ -483,6 +484,7 @@ export class Game {
   };
 
   changeLevelThroughDoor = (player: Player, door: Door, side?: number) => {
+    door.linkedDoor.room.entered = true;
     player.levelID = door.room.id;
 
     if (this.players[this.localPlayerID] === player) {
@@ -494,8 +496,11 @@ export class Game {
       let oldY = this.players[this.localPlayerID].y;
 
       this.prevLevel = this.room;
+      this.prevLevel.exitLevel();
+
       //this.level.exitLevel();
       this.room = door.room;
+
       door.room.enterLevelThroughDoor(player, door, side);
 
       this.transitionX =
@@ -661,14 +666,14 @@ export class Game {
         }
         break;
       case "col":
-        GameConstants.SET_COLOR_LAYER_COMPOSITE_OPERATION();
+        GameConstants.SET_COLOR_LAYER_COMPOSITE_OPERATION(false);
         break;
       case "scl":
         GameConstants.SET_SCALE();
         this.onResize();
         break;
       case "shd":
-        GameConstants.SET_COLOR_LAYER_COMPOSITE_OPERATION(true);
+        GameConstants.SET_COLOR_LAYER_COMPOSITE_OPERATION(false, true);
         break;
       default:
         if (command.startsWith("new ")) {
@@ -761,6 +766,33 @@ export class Game {
     if (clampedX < 0 || clampedY < 0) this.shakeFrame = (3 * Math.PI) / 2;
     if (clampedX > 0 || clampedY > 0) this.shakeFrame = Math.PI / 2;
     this.screenShakeCutoff = Date.now();
+  };
+
+  drawRooms = (delta: number, skipLocalPlayer: boolean = false) => {
+    if (!GameConstants.drawOtherRooms) {
+      this.room.draw(delta);
+      this.room.drawEntities(delta, true);
+    } else if (GameConstants.drawOtherRooms) {
+      // Create a sorted copy of the rooms array based on roomY + height
+      const sortedRooms = this.levels[this.currentDepth].rooms
+        .slice()
+        .sort((a, b) => {
+          const aPosition = a.roomY + a.height;
+          const bPosition = b.roomY + b.height;
+          return aPosition - bPosition; // Ascending order
+        });
+
+      for (const room of sortedRooms) {
+        if (room.active || room.entered) {
+          room.draw(delta);
+          room.drawEntities(delta, skipLocalPlayer);
+          room.drawShade(delta); // this used to come after the color layer
+
+          room.drawColorLayer();
+          if (room.active) room.drawOverShade(delta);
+        }
+      }
+    }
   };
 
   static measureText = (text: string): { width: number; height: number } => {
@@ -856,7 +888,7 @@ export class Game {
 
   drawStuff = (delta: number) => {
     this.room.drawColorLayer();
-    this.room.drawShade(delta);
+    //this.room.drawShade(delta);
     this.room.drawOverShade(delta);
   };
 
@@ -985,29 +1017,38 @@ export class Game {
       );
 
       Game.ctx.translate(levelOffsetX, levelOffsetY);
-      this.prevLevel.draw(delta);
-      this.prevLevel.drawEntities(delta);
-      this.prevLevel.drawColorLayer();
-      this.prevLevel.drawShade(delta);
-      this.prevLevel.drawOverShade(delta);
-      for (
-        let x = this.prevLevel.roomX - 1;
-        x <= this.prevLevel.roomX + this.prevLevel.width;
-        x++
-      ) {
+      if (!GameConstants.drawOtherRooms) {
+        this.prevLevel.draw(delta);
+        this.prevLevel.drawEntities(delta);
+        this.prevLevel.drawColorLayer();
+        this.prevLevel.drawShade(delta);
+        this.prevLevel.drawOverShade(delta);
+
+        /*
         for (
-          let y = this.prevLevel.roomY - 1;
-          y <= this.prevLevel.roomY + this.prevLevel.height;
-          y++
+          let x = this.prevLevel.roomX - 1;
+          x <= this.prevLevel.roomX + this.prevLevel.width;
+          x++
         ) {
-          Game.drawFX(7 - ditherFrame, 10, 1, 1, x, y, 1, 1);
+          for (
+            let y = this.prevLevel.roomY - 1;
+            y <= this.prevLevel.roomY + this.prevLevel.height;
+            y++
+          ) {
+            Game.drawFX(7 - ditherFrame, 10, 1, 1, x, y, 1, 1);
+          }
         }
+      
+      */
       }
       Game.ctx.translate(-levelOffsetX, -levelOffsetY);
 
       Game.ctx.translate(newLevelOffsetX, newLevelOffsetY);
-      this.room.draw(delta);
-      this.room.drawEntities(delta, true);
+
+      if (GameConstants.drawOtherRooms) {
+        this.drawRooms(delta, true);
+      }
+
       for (
         let x = this.room.roomX - 1;
         x <= this.room.roomX + this.room.width;
@@ -1018,7 +1059,7 @@ export class Game {
           y <= this.room.roomY + this.room.height;
           y++
         ) {
-          Game.drawFX(ditherFrame, 10, 1, 1, x, y, 1, 1);
+          //Game.drawFX(ditherFrame, 10, 1, 1, x, y, 1, 1);
         }
       }
       Game.ctx.translate(-newLevelOffsetX, -newLevelOffsetY);
@@ -1030,7 +1071,7 @@ export class Game {
 
       Game.ctx.translate(newLevelOffsetX, newLevelOffsetY);
 
-      this.drawStuff(delta);
+      //this.drawStuff(delta);
 
       Game.ctx.translate(-newLevelOffsetX, -newLevelOffsetY);
 
@@ -1066,22 +1107,21 @@ export class Game {
       );
 
       if (ditherFrame < 7) {
-        this.room.draw(delta);
-        this.room.drawEntities(delta);
+        this.drawRooms(delta);
 
-        this.drawStuff(delta);
-
-        for (
-          let x = this.room.roomX - 1;
-          x <= this.room.roomX + this.room.width;
-          x++
-        ) {
+        if (!GameConstants.drawOtherRooms) {
           for (
-            let y = this.room.roomY - 1;
-            y <= this.room.roomY + this.room.height;
-            y++
+            let x = this.room.roomX - 1;
+            x <= this.room.roomX + this.room.width;
+            x++
           ) {
-            Game.drawFX(7 - ditherFrame, 10, 1, 1, x, y, 1, 1);
+            for (
+              let y = this.room.roomY - 1;
+              y <= this.room.roomY + this.room.height;
+              y++
+            ) {
+              Game.drawFX(7 - ditherFrame, 10, 1, 1, x, y, 1, 1);
+            }
           }
         }
       } else if (ditherFrame >= 7 + deadFrames) {
@@ -1089,27 +1129,30 @@ export class Game {
           this.prevLevel = this.room;
           this.room.exitLevel();
           this.room = this.transitioningLadder.linkedLevel;
+
           //this.players[this.localPlayerID].levelID = this.room.id;
           this.room.enterLevel(this.players[this.localPlayerID]);
           this.transitioningLadder = null;
         }
 
-        this.room.draw(delta);
-        this.room.drawEntities(delta);
+        this.drawRooms(delta);
 
-        this.drawStuff(delta);
-
-        for (
-          let x = this.room.roomX - 1;
-          x <= this.room.roomX + this.room.width;
-          x++
-        ) {
+        //        this.room.draw(delta);
+        //        this.room.drawEntities(delta);
+        //        this.drawStuff(delta);
+        if (!GameConstants.drawOtherRooms) {
           for (
-            let y = this.room.roomY - 1;
-            y <= this.room.roomY + this.room.height;
-            y++
+            let x = this.room.roomX - 1;
+            x <= this.room.roomX + this.room.width;
+            x++
           ) {
-            Game.drawFX(ditherFrame - (7 + deadFrames), 10, 1, 1, x, y, 1, 1);
+            for (
+              let y = this.room.roomY - 1;
+              y <= this.room.roomY + this.room.height;
+              y++
+            ) {
+              Game.drawFX(ditherFrame - (7 + deadFrames), 10, 1, 1, x, y, 1, 1);
+            }
           }
         }
       }
@@ -1144,12 +1187,13 @@ export class Game {
       );
 
       Game.ctx.translate(-cameraX, -cameraY);
-      this.room.draw(delta);
-      this.room.drawEntities(delta);
+      this.drawRooms(delta);
 
-      this.drawStuff(delta);
+      //      this.room.draw(delta);
+      //      this.room.drawEntities(delta);
 
-      this.players[this.localPlayerID].drawTopLayer(delta);
+      // this.drawStuff(delta);
+
       Game.ctx.translate(cameraX, cameraY);
 
       this.room.drawTopLayer(delta);

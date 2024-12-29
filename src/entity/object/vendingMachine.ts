@@ -148,7 +148,7 @@ export class VendingMachine extends Entity {
 
   space = () => {
     if (this.open) {
-      // check if player can pay
+      // Check if player can pay
       for (const i of this.costItems) {
         if (!this.playerOpened.inventory.hasItemCount(i)) {
           let numOfItem = 0;
@@ -165,32 +165,45 @@ export class VendingMachine extends Entity {
         }
       }
 
+      // Create the new item instance
+      let newItem = new (this.item.constructor as { new (): Item })();
+      newItem = newItem.constructor(this.room, this.x, this.y);
+
+      // **Attempt to add the item directly to the player's inventory**
+      const addedSuccessfully = this.playerOpened.inventory.addItem(newItem);
+
+      if (!addedSuccessfully) {
+        // If adding the item failed, refund the cost items
+        for (const i of this.costItems) {
+          this.playerOpened.inventory.addItem(i);
+        }
+        this.game.pushMessage(
+          "Your inventory is full. Cannot purchase the item.",
+        );
+        return;
+      }
+
+      // Subtract the cost items from player's inventory
       for (const i of this.costItems) {
         this.playerOpened.inventory.subtractItemCount(i);
       }
 
-      let newItem = new (this.item.constructor as { new (): Item })();
-      newItem = newItem.constructor(this.room, this.x, this.y);
-      if (!this.playerOpened.inventory.isFull) {
-        newItem.onPickup(this.playerOpened);
-      } else {
-        const { x, y } = this.getOpenTile();
-        newItem.x = x;
-        newItem.y = y;
-        this.room.items.push(newItem);
-      }
       const cost = this.costItems[0].stackCount;
       const pluralLetter = cost > 1 ? "s" : "";
 
+      // Decrement the quantity of items available in the vending machine, if not infinite
       if (!this.isInf) {
         this.quantity--;
         if (this.quantity <= 0) this.close();
       }
+
+      // Notify the player of the successful purchase
       this.game.pushMessage(
         `Purchased ${(newItem.constructor as any).itemName} for ${cost} ${(this.costItems[0].constructor as any).itemName}${pluralLetter}`,
       );
       this.game.pushMessage(`${this.quantity} available to buy.`);
 
+      // Handle visual feedback and screen shake
       this.buyAnimAmount = 0.99;
       if (this.playerOpened === this.game.players[this.game.localPlayerID])
         this.game.shakeScreen(0, 4);

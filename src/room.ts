@@ -239,6 +239,7 @@ export class Room {
   level: Level;
   id: number;
   tunnelDoor: Door = null; // this is the door that connects the start room to the exit room
+  active: boolean;
 
   // Add a list to keep track of BeamEffect instances
   beamEffects: BeamEffect[] = [];
@@ -280,6 +281,7 @@ export class Room {
     this.id = 0;
     this.currentSpawnerCount = 0;
     this.deadEntities = Array<Entity>();
+    this.active = false;
     // #region initialize arrays
 
     //initialize room array
@@ -1171,7 +1173,6 @@ export class Room {
 
   populateDownLadder = (rand: () => number) => {
     this.addTorches(1, rand, this.roomX + 3, this.roomY);
-    this.addVendingMachine(rand, this.roomX + 1, this.roomY + 1);
 
     const { x, y } = this.getRoomCenter();
     this.roomArray[x + 1][y - 1] = new DownLadder(
@@ -1280,7 +1281,16 @@ export class Room {
       case RoomType.START:
         //this.addNewEnemy(EnemyType.zombie);
         //this.addNewEnemy(EnemyType.occultist);
-        if (this.depth !== 0) this.populateUpLadder(rand);
+        //this.addNewEnemy(EnemyType.occultist);
+
+        //   this.addNewEnemy(EnemyType.occultist);
+
+        if (this.depth !== 0) {
+          this.populateUpLadder(rand);
+          //this.addVendingMachine(rand, this.roomX + 1, this.roomY + 1);
+          this.placeVendingMachineInWall();
+        }
+
         this.populateEmpty(rand);
         this.name = "FLOOR " + -this.depth;
         if (this.level.environment.type === EnvType.CAVE) {
@@ -1374,18 +1384,26 @@ export class Room {
   // #region ENTERING / EXITING ROOM METHODS
 
   exitLevel = () => {
+    this.active = false;
+    this.updateLighting();
+
     this.particles.splice(0, this.particles.length);
   };
 
   enterLevel = (player: Player) => {
+    console.log("enterLevel" + "id" + this.id);
+    this.active = true;
+    this.entered = true;
+
     this.game.updateLevel();
     player.moveSnap(this.getRoomCenter().x, this.getRoomCenter().y);
 
     this.clearDeadStuff();
-    this.entered = true;
     this.calculateWallInfo();
     this.message = this.name;
     player.map.saveMapData();
+    this.resetDoorLightSources();
+
     this.updateLighting();
 
     this.setReverb();
@@ -1395,6 +1413,9 @@ export class Room {
     if (door.doorDir === door.linkedDoor.doorDir) {
       door.opened = true;
       player.moveSnap(door.x, door.y + 1);
+      setTimeout(() => {
+        player.direction = Direction.DOWN;
+      }, 150);
     }
     if (door instanceof Door && door.doorDir === Direction.UP) {
       //if top door
@@ -1410,11 +1431,11 @@ export class Room {
       // if side door
       player.moveNoSmooth(door.x + side, door.y);
     }
+    //this.entered = true;
 
     this.clearDeadStuff();
     this.calculateWallInfo();
-    this.updateLighting();
-    this.entered = true;
+    this.resetDoorLightSources();
 
     this.particles = [];
 
@@ -1422,6 +1443,8 @@ export class Room {
     this.message = this.name;
     player.map.saveMapData();
     this.setReverb();
+    this.active = true;
+    this.updateLighting();
   };
 
   enterLevelThroughLadder = (player: Player, ladder: any) => {
@@ -1480,6 +1503,7 @@ export class Room {
     // Update Beam Effects lighting
 
     //console.log("updating lighting");
+
     this.updateLighting();
 
     player.map.saveMapData();
@@ -1508,7 +1532,12 @@ export class Room {
     }
 
     for (const p of this.projectiles) {
-      if (this.roomArray[p.x][p.y].isSolid()) p.dead = true;
+      if (
+        this.roomArray[p.x] &&
+        this.roomArray[p.x][p.y] &&
+        this.roomArray[p.x][p.y].isSolid()
+      )
+        p.dead = true;
       for (const i in this.game.players) {
         if (
           this.level.rooms[this.game.players[i].levelID] === this &&
@@ -1625,24 +1654,84 @@ export class Room {
 
         // Apply smoothing similar to fadeLighting
         if (flagR) {
-          diffR *= 0.1 * delta;
+          diffR *= 0.05 * delta;
           this.softCol[x][y][0] = this.clamp(Math.round(softR - diffR), 0, 255);
         }
         if (flagG) {
-          diffG *= 0.1 * delta;
+          diffG *= 0.05 * delta;
           this.softCol[x][y][1] = this.clamp(Math.round(softG - diffG), 0, 255);
         }
         if (flagB) {
-          diffB *= 0.1 * delta;
+          diffB *= 0.05 * delta;
           this.softCol[x][y][2] = this.clamp(Math.round(softB - diffB), 0, 255);
         }
       }
     }
   };
 
+  resetDoorLightSources = () => {
+    this.doors.forEach((d) => {
+      d.lightSource.r = 0;
+      d.linkedDoor.lightSource.r = 0;
+    });
+  };
+
+  tileValuesToLightSource = (x: number, y: number, room: Room) => {
+    if (!room.roomArray[x]) return null;
+    if (!room.roomArray[x][y]) return null;
+    const color = room.col[x][y];
+    const brightness = room.vis[x][y];
+    const radius = 7;
+    return { color, brightness, radius };
+  };
+
+  updateDoorLightSources = () => {
+    if (!this.active) return;
+    const directionOffsets = {
+      [Direction.UP]: { x: 0, y: -1 },
+      [Direction.DOWN]: { x: 0, y: 1 },
+      [Direction.LEFT]: { x: -1, y: 0 },
+      [Direction.RIGHT]: { x: 1, y: 0 },
+    };
+    let linkedDoors: Door[] = [];
+    this.doors.forEach((d) => {
+      if (d.linkedDoor && d.room.entered) linkedDoors.push(d.linkedDoor);
+    });
+
+    this.doors.forEach((d) => {
+      d.lightSource.b = 0.01;
+    });
+
+    for (const d of linkedDoors) {
+      d.lightSource.c = this.tileValuesToLightSource(
+        d.linkedDoor.x,
+        d.linkedDoor.y,
+        this,
+      ).color;
+      d.lightSource.b = this.tileValuesToLightSource(
+        d.linkedDoor.x,
+        d.linkedDoor.y,
+        this,
+      ).brightness;
+      d.lightSource.r = LevelConstants.LIGHTING_MAX_DISTANCE;
+    }
+
+    let connectedRooms: Set<Room> = new Set(
+      this.doors
+        .filter((d) => d && d.linkedDoor) // Ensure door and linkedDoor exist
+        .map((d) => d.linkedDoor.room)
+        .filter((r) => r), // Ensure room exists
+    );
+
+    for (const r of Array.from(connectedRooms)) {
+      if (r.entered) r.updateLighting();
+    }
+  };
+
   updateLighting = () => {
     // Start timing the initial setup
     //console.time("updateLighting: Initial Setup");
+    this.updateDoorLightSources();
 
     let oldVis = [];
     let oldCol = [];
@@ -1690,6 +1779,7 @@ export class Room {
             i,
             player.x + 0.5,
             player.y + 0.5,
+            /*
             Math.min(
               Math.max(
                 player.sightRadius - this.depth + 2,
@@ -1697,6 +1787,8 @@ export class Room {
               ),
               10,
             ),
+            */
+            LevelConstants.LIGHTING_MAX_DISTANCE,
             lightColor, // RGB color in sRGB
             5, // intensity
           );
@@ -1731,6 +1823,7 @@ export class Room {
     }
     // End timing the conversion to luminance
     //console.timeEnd("updateLighting: Convert to Luminance");
+    this.updateDoorLightSources();
   };
 
   updateLightSources = (lightSource?: LightSource, remove?: boolean) => {
@@ -1780,36 +1873,6 @@ export class Room {
     this.oldVis = [];
     this.col = this.oldCol;
     this.vis = this.oldVis;
-  };
-
-  castShadowsAtAngle = (
-    angle: number,
-    px: number,
-    py: number,
-    radius: number,
-    oldVis: number[][],
-  ) => {
-    let dx = Math.cos((angle * Math.PI) / 180);
-    let dy = Math.sin((angle * Math.PI) / 180);
-    let onOpaqueSection = false;
-    for (let i = 0; i < radius + 1.5; i++) {
-      if (!this.isPositionInRoom(px, py)) return; // we're outside the level
-
-      let tile = this.roomArray[Math.floor(px)][Math.floor(py)];
-      if (tile.isOpaque()) {
-        if (i > 0) onOpaqueSection = true;
-      } else if (onOpaqueSection) {
-        return;
-      }
-
-      this.vis[Math.floor(px)][Math.floor(py)] = Math.min(
-        this.vis[Math.floor(px)][Math.floor(py)],
-        Math.min(i / radius, 1),
-      );
-
-      px += dx;
-      py += dy;
-    }
   };
 
   /**
@@ -1920,7 +1983,15 @@ export class Room {
     color: [number, number, number],
     brightness: number,
   ) => {
-    this.processTintAtAngle(angle, px, py, radius, color, brightness, "cast");
+    this.processTintAtAngle(
+      angle,
+      px,
+      py,
+      radius,
+      color,
+      brightness / 5,
+      "cast",
+    );
   };
 
   /**
@@ -1941,7 +2012,15 @@ export class Room {
     color: [number, number, number],
     brightness: number,
   ) => {
-    this.processTintAtAngle(angle, px, py, radius, color, brightness, "unCast");
+    this.processTintAtAngle(
+      angle,
+      px,
+      py,
+      radius,
+      color,
+      brightness / 5, // added this
+      "unCast",
+    );
   };
 
   private sRGBToLinear = (value: number): number => {
@@ -2016,23 +2095,25 @@ export class Room {
   };
 
   draw = (delta: number) => {
-    HitWarning.updateFrame(delta);
+    if (this.active) {
+      HitWarning.updateFrame(delta);
+    }
     this.fadeRgb(delta);
     this.fadeLighting(delta);
   };
-
+  // added a multiplier to the input rgb values to avoid clipping to white
   drawColorLayer = () => {
     Game.ctx.save();
     Game.ctx.globalCompositeOperation =
       GameConstants.COLOR_LAYER_COMPOSITE_OPERATION as GlobalCompositeOperation; //"soft-light";
-    Game.ctx.globalAlpha = 0.75;
+    Game.ctx.globalAlpha = 0.9;
     let lastFillStyle = "";
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
         const [r, g, b] = this.softCol[x][y];
         if (r === 0 && g === 0 && b === 0) continue; // Skip if no color
         const alpha = 1 - this.vis[x][y];
-        const fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        const fillStyle = `rgba(${r * 0.9}, ${g * 0.9}, ${b * 0.9}, ${alpha})`;
         if (fillStyle !== lastFillStyle) {
           Game.ctx.fillStyle = fillStyle;
           lastFillStyle = fillStyle;
@@ -2107,15 +2188,19 @@ export class Room {
       d.draw(delta);
     }
 
+    this.drawAbovePlayer(delta);
+    for (const i of this.items) {
+      i.drawTopLayer(delta);
+    }
+    Game.ctx.restore();
+  };
+
+  drawAbovePlayer = (delta: number) => {
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
         if (this.softVis[x][y] < 1) this.roomArray[x][y].drawAbovePlayer(delta);
       }
     }
-    for (const i of this.items) {
-      i.drawTopLayer(delta);
-    }
-    Game.ctx.restore();
   };
 
   drawShade = (delta: number) => {
@@ -2133,20 +2218,28 @@ export class Room {
     }
     let shadingAlpha = Math.max(0, Math.min(0.8, 2 / bestSightRadius));
     if (GameConstants.ALPHA_ENABLED) {
-      Game.ctx.globalAlpha = 0.25;
-      Game.ctx.resetTransform();
+      Game.ctx.globalAlpha = 0.25; //this.shadeOpacity();
+      //Game.ctx.resetTransform();
       //Game.ctx.fillStyle = "#4a5d23"; // hex dark misty green
       Game.ctx.fillStyle = this.shadeColor;
       Game.ctx.fillRect(
-        0,
-        0,
-        this.game.level.width * GameConstants.TILESIZE,
-        this.game.level.height * GameConstants.TILESIZE,
+        this.roomX * GameConstants.TILESIZE,
+        (this.roomY - 1) * GameConstants.TILESIZE,
+        this.width * GameConstants.TILESIZE,
+        (this.height + 1) * GameConstants.TILESIZE,
       );
       Game.ctx.globalAlpha = 1;
       Game.ctx.globalCompositeOperation = "source-over";
     }
     Game.ctx.restore();
+  };
+
+  shadeOpacity = () => {
+    if (this.active) {
+      return 0.25;
+    } else {
+      return 0.25;
+    }
   };
 
   drawOverShade = (delta: number) => {
@@ -2538,4 +2631,133 @@ export class Room {
     // If no door exists at the desired position, place it normally
     return room.addDoor(x, y, room, tunnelDoor);
   };
+
+  /**
+   * Finds all wall tiles that do not have a door in them or adjacent to them.
+   * @returns An array of wall tiles without doors or adjacent doors.
+   */
+  getEmptyWall(): Wall[] {
+    console.log("getEmptyWall: Starting to find empty walls.");
+    const emptyWalls: Wall[] = [];
+
+    for (let x = this.roomX + 1; x < this.roomX + this.width - 1; x++) {
+      for (let y = this.roomY - 1; y < this.roomY + this.height - 1; y++) {
+        const tile = this.roomArray[x][y];
+
+        if (tile instanceof Wall || tile instanceof WallTorch) {
+          // Check if the current wall tile is not a door
+          if (!(tile instanceof Door)) {
+            // Check adjacent tiles for doors
+            const adjacentTiles = [
+              this.roomArray[x + 1]?.[y],
+              this.roomArray[x - 1]?.[y],
+              this.roomArray[x]?.[y + 1],
+              this.roomArray[x]?.[y - 1],
+            ];
+
+            const hasAdjacentDoor = adjacentTiles.some(
+              (adjTile) => adjTile instanceof Door,
+            );
+
+            if (!hasAdjacentDoor) {
+              emptyWalls.push(tile);
+              console.log(`getEmptyWall: Added empty wall at (${x}, ${y}).`);
+            } else {
+              console.log(
+                `getEmptyWall: Skipped wall at (${x}, ${y}) due to adjacent door.`,
+              );
+            }
+          } else {
+            console.log(
+              `getEmptyWall: Skipped tile at (${x}, ${y}) because it's a Door.`,
+            );
+          }
+        }
+      }
+    }
+
+    console.log(`getEmptyWall: Found ${emptyWalls.length} empty walls.`);
+    return emptyWalls;
+  }
+
+  /**
+   * Removes a specified empty wall from the room.
+   * @param wall - The wall tile to remove.
+   * @returns An object containing the x and y coordinates of the removed wall.
+   */
+  removeEmptyWall(wall: Wall): { x: number; y: number } | null {
+    console.log("removeEmptyWall: Attempting to remove a wall.");
+
+    if (!(wall instanceof Wall)) {
+      console.error("removeEmptyWall: Provided tile is not a Wall.");
+      return null;
+    }
+
+    const { x, y } = wall;
+    console.log(`removeEmptyWall: Removing wall at (${x}, ${y}).`);
+
+    // Replace the wall with a Floor tile to maintain room integrity
+    this.roomArray[x][y] = new Floor(this, x, y);
+    console.log(`removeEmptyWall: Replaced wall with Floor at (${x}, ${y}).`);
+
+    // Remove from innerWalls or outerWalls if applicable
+    const initialInnerWallsCount = this.innerWalls.length;
+    this.innerWalls = this.innerWalls.filter((w) => w !== wall);
+    const finalInnerWallsCount = this.innerWalls.length;
+    console.log(
+      `removeEmptyWall: Updated innerWalls count from ${initialInnerWallsCount} to ${finalInnerWallsCount}.`,
+    );
+
+    return { x, y };
+  }
+
+  /**
+   * Places a VendingMachine in an empty wall.
+   */
+  placeVendingMachineInWall(): void {
+    console.log(
+      "placeVendingMachineInWall: Attempting to place a VendingMachine.",
+    );
+
+    const emptyWalls = this.getEmptyWall();
+
+    if (emptyWalls.length === 0) {
+      console.log(
+        "placeVendingMachineInWall: No available empty walls to place a VendingMachine.",
+      );
+      return;
+    }
+
+    // Select a random empty wall
+    const selectedWall = Game.randTable(emptyWalls, Random.rand);
+    console.log(
+      `placeVendingMachineInWall: Selected wall at (${selectedWall.x}, ${selectedWall.y}).`,
+    );
+
+    if (!selectedWall) {
+      console.log("placeVendingMachineInWall: Failed to select an empty wall.");
+      return;
+    }
+
+    // Remove the selected wall
+    const removedWallInfo = this.removeEmptyWall(selectedWall);
+
+    if (!removedWallInfo) {
+      console.log(
+        "placeVendingMachineInWall: Failed to remove the selected wall.",
+      );
+      return;
+    }
+
+    const { x, y } = removedWallInfo;
+    console.log(
+      `placeVendingMachineInWall: Placing VendingMachine at (${x}, ${y}).`,
+    );
+
+    // Create and add the VendingMachine
+    this.addVendingMachine(Random.rand, x, y);
+    console.log(
+      `placeVendingMachineInWall: VendingMachine placed at (${x}, ${y}).`,
+    );
+  }
 }
