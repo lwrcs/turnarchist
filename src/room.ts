@@ -1416,6 +1416,7 @@ export class Room {
   };
 
   enterLevelThroughDoor = (player: Player, door: Door, side?: number) => {
+    console.log(door.linkedDoor.x, door.linkedDoor.y, door.x, door.y);
     if (door.doorDir === door.linkedDoor.doorDir) {
       door.opened = true;
       player.moveSnap(door.x, door.y + 1);
@@ -2143,7 +2144,7 @@ export class Room {
     let tiles = [];
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
-        if (this.softVis[x][y] < 1) this.roomArray[x][y].drawUnderPlayer(delta);
+        this.roomArray[x][y].drawUnderPlayer(delta);
         tiles.push(this.roomArray[x][y]);
       }
     }
@@ -2207,7 +2208,7 @@ export class Room {
   drawAbovePlayer = (delta: number) => {
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
-        if (this.softVis[x][y] < 1) this.roomArray[x][y].drawAbovePlayer(delta);
+        //if (this.softVis[x][y] < 1) this.roomArray[x][y].drawAbovePlayer(delta);
       }
     }
   };

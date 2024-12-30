@@ -40,6 +40,7 @@ export class Door extends Tile {
   tileX: number;
   drawTopOf: boolean;
   lightSource: LightSource;
+  alpha: number;
   constructor(
     room: Room,
     game: Game,
@@ -66,6 +67,7 @@ export class Door extends Tile {
     this.drawTopOf = true;
     let lightOffsetX = 0;
     let lightOffsetY = 0;
+    this.alpha = 1;
 
     switch (this.doorDir) {
       case Direction.UP:
@@ -233,6 +235,8 @@ export class Door extends Tile {
   };
 
   draw = (delta: number) => {
+    Game.ctx.save();
+
     if (this.doorDir === Direction.DOWN) {
       Game.drawTile(
         1,
@@ -322,6 +326,7 @@ export class Door extends Tile {
           this.shadeAmount(0, 1),
         );
     }
+    Game.ctx.restore();
   };
 
   drawAbovePlayer = (delta: number) => {};

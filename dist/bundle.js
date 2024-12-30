@@ -18446,6 +18446,7 @@ var Room = /** @class */ (function () {
             _this.onEnterRoom(player);
         };
         this.enterLevelThroughDoor = function (player, door, side) {
+            console.log(door.linkedDoor.x, door.linkedDoor.y, door.x, door.y);
             if (door.doorDir === door.linkedDoor.doorDir) {
                 door.opened = true;
                 player.moveSnap(door.x, door.y + 1);
@@ -19036,8 +19037,7 @@ var Room = /** @class */ (function () {
             var tiles = [];
             for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
                 for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
-                    if (_this.softVis[x][y] < 1)
-                        _this.roomArray[x][y].drawUnderPlayer(delta);
+                    _this.roomArray[x][y].drawUnderPlayer(delta);
                     tiles.push(_this.roomArray[x][y]);
                 }
             }
@@ -19093,8 +19093,7 @@ var Room = /** @class */ (function () {
         this.drawAbovePlayer = function (delta) {
             for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
                 for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
-                    if (_this.softVis[x][y] < 1)
-                        _this.roomArray[x][y].drawAbovePlayer(delta);
+                    //if (this.softVis[x][y] < 1) this.roomArray[x][y].drawAbovePlayer(delta);
                 }
             }
         };
@@ -21132,6 +21131,7 @@ var Door = /** @class */ (function (_super) {
             _this.removeLockIcon();
         };
         _this.draw = function (delta) {
+            game_1.Game.ctx.save();
             if (_this.doorDir === game_1.Direction.DOWN) {
                 game_1.Game.drawTile(1, _this.skin, 1, 1, _this.x, _this.y, 1, 1, _this.room.shadeColor, _this.shadeAmount());
             }
@@ -21155,6 +21155,7 @@ var Door = /** @class */ (function (_super) {
                 else
                     game_1.Game.drawTile(14, 0, 1, 1, _this.x, _this.y - 1, 1, 1, _this.room.shadeColor, _this.shadeAmount(0, 1));
             }
+            game_1.Game.ctx.restore();
         };
         _this.drawAbovePlayer = function (delta) { };
         _this.drawAboveShading = function (delta) {
@@ -21205,6 +21206,7 @@ var Door = /** @class */ (function (_super) {
         _this.drawTopOf = true;
         var lightOffsetX = 0;
         var lightOffsetY = 0;
+        _this.alpha = 1;
         switch (_this.doorDir) {
             case game_1.Direction.UP:
                 lightOffsetY = -0.5;
