@@ -15,7 +15,6 @@ export class LevelConstants {
   static readonly HEALTH_BAR_TOTALTIME = 1000;
 
   static readonly SHADED_TILE_CUTOFF = 1;
-  static SMOOTH_LIGHTING = false; //doesn't work
   static readonly MIN_VISIBILITY = 0; // visibility level of places you've already seen
   static readonly LIGHTING_ANGLE_STEP = 1; // how many degrees between each ray, previously 5
   static readonly LIGHTING_MAX_DISTANCE = 7;
@@ -23,5 +22,5 @@ export class LevelConstants {
 
   static readonly LEVEL_TEXT_COLOR = "yellow";
   static readonly AMBIENT_LIGHT_COLOR: [number, number, number] = [10, 10, 10];
-  static readonly TORCH_LIGHT_COLOR: [number, number, number] = [150, 35, 1];
+  static readonly TORCH_LIGHT_COLOR: [number, number, number] = [120, 35, 10];
 }

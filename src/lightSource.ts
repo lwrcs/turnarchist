@@ -40,6 +40,7 @@ export class LightSource {
   };
 
   shouldUpdate = () => {
+    return true;
     this.hasChanged =
       this.x !== this.oldX ||
       this.y !== this.oldY ||

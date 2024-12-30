@@ -64,7 +64,20 @@ export class Door extends Tile {
     this.tileXOffset = 0;
     this.tileX = 2;
     this.drawTopOf = true;
-    this.lightSource = new LightSource(x + 0.5, y + 0.5, 0, [0, 0, 0], 0);
+    let lightOffsetX = 0;
+    let lightOffsetY = 0;
+
+    switch (this.doorDir) {
+      case Direction.UP:
+        lightOffsetY = -0.5;
+      case Direction.DOWN:
+        lightOffsetY = 0.5;
+      case Direction.LEFT:
+        lightOffsetX = -0.5;
+      case Direction.RIGHT:
+        lightOffsetX = 0.5;
+    }
+    this.lightSource = new LightSource(x + 0.5, y + 0.5, 0, [0, 0, 0], 9);
     this.room.lightSources.push(this.lightSource);
 
     switch (this.type) {
@@ -220,6 +233,21 @@ export class Door extends Tile {
   };
 
   draw = (delta: number) => {
+    if (this.doorDir === Direction.DOWN) {
+      Game.drawTile(
+        1,
+        this.skin,
+        1,
+        1,
+        this.x,
+        this.y,
+        1,
+        1,
+        this.room.shadeColor,
+        this.shadeAmount(),
+      );
+    }
+
     if (this.doorDir === Direction.UP) {
       //if top door
       if (this.opened)

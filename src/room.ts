@@ -1390,23 +1390,29 @@ export class Room {
     this.particles.splice(0, this.particles.length);
   };
 
-  enterLevel = (player: Player) => {
-    console.log("enterLevel" + "id" + this.id);
-    this.active = true;
+  onEnterRoom = (player: Player) => {
     this.entered = true;
-
-    this.game.updateLevel();
-    player.moveSnap(this.getRoomCenter().x, this.getRoomCenter().y);
 
     this.clearDeadStuff();
     this.calculateWallInfo();
-    this.message = this.name;
-    player.map.saveMapData();
     this.resetDoorLightSources();
 
-    this.updateLighting();
+    this.particles = [];
 
+    this.alertEnemiesOnEntry();
+    this.message = this.name;
+    player.map.saveMapData();
     this.setReverb();
+    this.active = true;
+    this.updateLighting();
+  };
+
+  enterLevel = (player: Player) => {
+    console.log("enterLevel" + "id" + this.id);
+
+    this.game.updateLevel();
+    player.moveSnap(this.getRoomCenter().x, this.getRoomCenter().y);
+    this.onEnterRoom(player);
   };
 
   enterLevelThroughDoor = (player: Player, door: Door, side?: number) => {
@@ -1431,33 +1437,7 @@ export class Room {
       // if side door
       player.moveNoSmooth(door.x + side, door.y);
     }
-    //this.entered = true;
-
-    this.clearDeadStuff();
-    this.calculateWallInfo();
-    this.resetDoorLightSources();
-
-    this.particles = [];
-
-    this.alertEnemiesOnEntry();
-    this.message = this.name;
-    player.map.saveMapData();
-    this.setReverb();
-    this.active = true;
-    this.updateLighting();
-  };
-
-  enterLevelThroughLadder = (player: Player, ladder: any) => {
-    player.moveSnap(ladder.x, ladder.y + 1);
-
-    this.clearDeadStuff();
-    this.calculateWallInfo();
-    this.entered = true;
-    this.updateLighting();
-
-    this.message = this.name;
-    player.map.saveMapData();
-    this.setReverb();
+    this.onEnterRoom(player);
   };
 
   alertEnemiesOnEntry = () => {
@@ -1471,6 +1451,7 @@ export class Room {
   // #region LOGIC METHODS
 
   tick = (player: Player) => {
+    this.updateLighting();
     player.updateSlowMotion();
     this.lastEnemyCount = this.entities.filter(
       (e) => e instanceof Enemy,
@@ -1681,12 +1662,14 @@ export class Room {
     if (!room.roomArray[x][y]) return null;
     const color = room.col[x][y];
     const brightness = room.vis[x][y];
-    const radius = 7;
+    const radius = 9;
     return { color, brightness, radius };
   };
 
   updateDoorLightSources = () => {
+    //works from inactive rooms onto their connected rooms
     if (!this.active) return;
+
     const directionOffsets = {
       [Direction.UP]: { x: 0, y: -1 },
       [Direction.DOWN]: { x: 0, y: 1 },
@@ -1699,7 +1682,7 @@ export class Room {
     });
 
     this.doors.forEach((d) => {
-      d.lightSource.b = 0.01;
+      d.lightSource.b = 0.1;
     });
 
     for (const d of linkedDoors) {
@@ -1760,11 +1743,7 @@ export class Room {
         }
       }
     }
-    // End timing the processing of light sources
-    //console.timeEnd("updateLighting: Process LightSources");
 
-    // Start timing the processing of player lighting
-    //console.time("updateLighting: Process Players");
     let lightingAngleStep = LevelConstants.LIGHTING_ANGLE_STEP;
 
     for (const p in this.game.players) {
@@ -2104,16 +2083,46 @@ export class Room {
   // added a multiplier to the input rgb values to avoid clipping to white
   drawColorLayer = () => {
     Game.ctx.save();
+    //if (GameConstants.SMOOTH_LIGHTING)
+    Game.ctx.filter = "blur(5px)";
     Game.ctx.globalCompositeOperation =
       GameConstants.COLOR_LAYER_COMPOSITE_OPERATION as GlobalCompositeOperation; //"soft-light";
-    Game.ctx.globalAlpha = 0.9;
+    Game.ctx.globalAlpha = 0.6;
     let lastFillStyle = "";
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
         const [r, g, b] = this.softCol[x][y];
         if (r === 0 && g === 0 && b === 0) continue; // Skip if no color
-        const alpha = 1 - this.vis[x][y];
-        const fillStyle = `rgba(${r * 0.9}, ${g * 0.9}, ${b * 0.9}, ${alpha})`;
+        //const alpha = this.softVis[x][y];
+        const fillStyle = `rgba(${r * 1}, ${g * 1}, ${b * 1}, ${1})`;
+        if (fillStyle !== lastFillStyle) {
+          Game.ctx.fillStyle = fillStyle;
+          lastFillStyle = fillStyle;
+        }
+        Game.ctx.fillRect(
+          x * GameConstants.TILESIZE,
+          y * GameConstants.TILESIZE,
+          GameConstants.TILESIZE,
+          GameConstants.TILESIZE,
+        );
+      }
+    }
+    Game.ctx.restore();
+  };
+
+  // added a multiplier to the input rgb values to avoid clipping to white
+  drawShadeLayer = () => {
+    if (!GameConstants.SMOOTH_LIGHTING) return;
+    Game.ctx.save();
+    if (GameConstants.SMOOTH_LIGHTING) Game.ctx.filter = "blur(5px)";
+    Game.ctx.globalCompositeOperation = "source-over";
+    //GameConstants.COLOR_LAYER_COMPOSITE_OPERATION as GlobalCompositeOperation; //"soft-light";
+    Game.ctx.globalAlpha = 1;
+    let lastFillStyle = "";
+    for (let x = this.roomX; x < this.roomX + this.width; x++) {
+      for (let y = this.roomY; y < this.roomY + this.height; y++) {
+        const alpha = this.softVis[x][y];
+        const fillStyle = `rgba(${0}, ${0}, ${0}, ${alpha ** 2})`;
         if (fillStyle !== lastFillStyle) {
           Game.ctx.fillStyle = fillStyle;
           lastFillStyle = fillStyle;

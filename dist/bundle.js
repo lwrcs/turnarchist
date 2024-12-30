@@ -5621,6 +5621,8 @@ var Entity = /** @class */ (function (_super) {
             }
         };
         _this.shadeAmount = function () {
+            if (gameConstants_1.GameConstants.SMOOTH_LIGHTING)
+                return 0;
             var softVis = _this.room.softVis[_this.x][_this.y];
             if (_this.shadeMultiplier > 1)
                 return Math.min(1, softVis + (1 - softVis) * (_this.shadeMultiplier - 1));
@@ -8126,7 +8128,8 @@ var Game = /** @class */ (function () {
                     if (room.active || room.entered) {
                         room.draw(delta);
                         room.drawEntities(delta, skipLocalPlayer);
-                        room.drawShade(delta); // this used to come after the color layer
+                        //room.drawShade(delta); // this used to come after the color layer
+                        room.drawShadeLayer();
                         room.drawColorLayer();
                         if (room.active)
                             room.drawOverShade(delta);
@@ -8135,6 +8138,7 @@ var Game = /** @class */ (function () {
             }
         };
         this.drawStuff = function (delta) {
+            _this.room.drawShadeLayer();
             _this.room.drawColorLayer();
             //this.room.drawShade(delta);
             _this.room.drawOverShade(delta);
@@ -8835,6 +8839,7 @@ var GameConstants = /** @class */ (function () {
     GameConstants.COLOR_LAYER_COMPOSITE_OPERATION = "soft-light"; //"soft-light";
     GameConstants.SHADE_LAYER_COMPOSITE_OPERATION = "screen"; //"soft-light";
     GameConstants.USE_OPTIMIZED_SHADING = false;
+    GameConstants.SMOOTH_LIGHTING = false;
     GameConstants.COLOR_LAYER_COMPOSITE_OPERATIONS = [
         "soft-light",
         //"addition",
@@ -13607,14 +13612,13 @@ var LevelConstants = /** @class */ (function () {
     LevelConstants.HEALTH_BAR_FADEOUT = 350;
     LevelConstants.HEALTH_BAR_TOTALTIME = 1000;
     LevelConstants.SHADED_TILE_CUTOFF = 1;
-    LevelConstants.SMOOTH_LIGHTING = false; //doesn't work
     LevelConstants.MIN_VISIBILITY = 0; // visibility level of places you've already seen
     LevelConstants.LIGHTING_ANGLE_STEP = 1; // how many degrees between each ray, previously 5
     LevelConstants.LIGHTING_MAX_DISTANCE = 7;
     LevelConstants.LIGHT_RESOLUTION = 0.1; //1 is default
     LevelConstants.LEVEL_TEXT_COLOR = "yellow";
     LevelConstants.AMBIENT_LIGHT_COLOR = [10, 10, 10];
-    LevelConstants.TORCH_LIGHT_COLOR = [150, 35, 1];
+    LevelConstants.TORCH_LIGHT_COLOR = [120, 35, 10];
     return LevelConstants;
 }());
 exports.LevelConstants = LevelConstants;
@@ -14902,6 +14906,7 @@ var LightSource = /** @class */ (function () {
             _this.y = y;
         };
         this.shouldUpdate = function () {
+            return true;
             _this.hasChanged =
                 _this.x !== _this.oldX ||
                     _this.y !== _this.oldY ||
@@ -18421,19 +18426,24 @@ var Room = /** @class */ (function () {
             _this.updateLighting();
             _this.particles.splice(0, _this.particles.length);
         };
-        this.enterLevel = function (player) {
-            console.log("enterLevel" + "id" + _this.id);
-            _this.active = true;
+        this.onEnterRoom = function (player) {
             _this.entered = true;
-            _this.game.updateLevel();
-            player.moveSnap(_this.getRoomCenter().x, _this.getRoomCenter().y);
             _this.clearDeadStuff();
             _this.calculateWallInfo();
+            _this.resetDoorLightSources();
+            _this.particles = [];
+            _this.alertEnemiesOnEntry();
             _this.message = _this.name;
             player.map.saveMapData();
-            _this.resetDoorLightSources();
-            _this.updateLighting();
             _this.setReverb();
+            _this.active = true;
+            _this.updateLighting();
+        };
+        this.enterLevel = function (player) {
+            console.log("enterLevel" + "id" + _this.id);
+            _this.game.updateLevel();
+            player.moveSnap(_this.getRoomCenter().x, _this.getRoomCenter().y);
+            _this.onEnterRoom(player);
         };
         this.enterLevelThroughDoor = function (player, door, side) {
             if (door.doorDir === door.linkedDoor.doorDir) {
@@ -18457,27 +18467,7 @@ var Room = /** @class */ (function () {
                 // if side door
                 player.moveNoSmooth(door.x + side, door.y);
             }
-            //this.entered = true;
-            _this.clearDeadStuff();
-            _this.calculateWallInfo();
-            _this.resetDoorLightSources();
-            _this.particles = [];
-            _this.alertEnemiesOnEntry();
-            _this.message = _this.name;
-            player.map.saveMapData();
-            _this.setReverb();
-            _this.active = true;
-            _this.updateLighting();
-        };
-        this.enterLevelThroughLadder = function (player, ladder) {
-            player.moveSnap(ladder.x, ladder.y + 1);
-            _this.clearDeadStuff();
-            _this.calculateWallInfo();
-            _this.entered = true;
-            _this.updateLighting();
-            _this.message = _this.name;
-            player.map.saveMapData();
-            _this.setReverb();
+            _this.onEnterRoom(player);
         };
         this.alertEnemiesOnEntry = function () {
             for (var _i = 0, _a = _this.entities; _i < _a.length; _i++) {
@@ -18489,6 +18479,7 @@ var Room = /** @class */ (function () {
         // #endregion
         // #region LOGIC METHODS
         this.tick = function (player) {
+            _this.updateLighting();
             player.updateSlowMotion();
             _this.lastEnemyCount = _this.entities.filter(function (e) { return e instanceof enemy_1.Enemy; }).length;
             for (var _i = 0, _a = _this.hitwarnings; _i < _a.length; _i++) {
@@ -18670,11 +18661,12 @@ var Room = /** @class */ (function () {
                 return null;
             var color = room.col[x][y];
             var brightness = room.vis[x][y];
-            var radius = 7;
+            var radius = 9;
             return { color: color, brightness: brightness, radius: radius };
         };
         this.updateDoorLightSources = function () {
             var _a;
+            //works from inactive rooms onto their connected rooms
             if (!_this.active)
                 return;
             var directionOffsets = (_a = {},
@@ -18689,7 +18681,7 @@ var Room = /** @class */ (function () {
                     linkedDoors.push(d.linkedDoor);
             });
             _this.doors.forEach(function (d) {
-                d.lightSource.b = 0.01;
+                d.lightSource.b = 0.1;
             });
             for (var _i = 0, linkedDoors_1 = linkedDoors; _i < linkedDoors_1.length; _i++) {
                 var d = linkedDoors_1[_i];
@@ -18736,10 +18728,6 @@ var Room = /** @class */ (function () {
                     }
                 }
             }
-            // End timing the processing of light sources
-            //console.timeEnd("updateLighting: Process LightSources");
-            // Start timing the processing of player lighting
-            //console.time("updateLighting: Process Players");
             var lightingAngleStep = levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP;
             for (var p in _this.game.players) {
                 var player = _this.game.players[p];
@@ -18997,17 +18985,43 @@ var Room = /** @class */ (function () {
         // added a multiplier to the input rgb values to avoid clipping to white
         this.drawColorLayer = function () {
             game_1.Game.ctx.save();
+            //if (GameConstants.SMOOTH_LIGHTING)
+            game_1.Game.ctx.filter = "blur(5px)";
             game_1.Game.ctx.globalCompositeOperation =
                 gameConstants_1.GameConstants.COLOR_LAYER_COMPOSITE_OPERATION; //"soft-light";
-            game_1.Game.ctx.globalAlpha = 0.9;
+            game_1.Game.ctx.globalAlpha = 0.6;
             var lastFillStyle = "";
             for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
                 for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
                     var _a = _this.softCol[x][y], r = _a[0], g = _a[1], b = _a[2];
                     if (r === 0 && g === 0 && b === 0)
                         continue; // Skip if no color
-                    var alpha = 1 - _this.vis[x][y];
-                    var fillStyle = "rgba(".concat(r * 0.9, ", ").concat(g * 0.9, ", ").concat(b * 0.9, ", ").concat(alpha, ")");
+                    //const alpha = this.softVis[x][y];
+                    var fillStyle = "rgba(".concat(r * 1, ", ").concat(g * 1, ", ").concat(b * 1, ", ").concat(1, ")");
+                    if (fillStyle !== lastFillStyle) {
+                        game_1.Game.ctx.fillStyle = fillStyle;
+                        lastFillStyle = fillStyle;
+                    }
+                    game_1.Game.ctx.fillRect(x * gameConstants_1.GameConstants.TILESIZE, y * gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE);
+                }
+            }
+            game_1.Game.ctx.restore();
+        };
+        // added a multiplier to the input rgb values to avoid clipping to white
+        this.drawShadeLayer = function () {
+            if (!gameConstants_1.GameConstants.SMOOTH_LIGHTING)
+                return;
+            game_1.Game.ctx.save();
+            if (gameConstants_1.GameConstants.SMOOTH_LIGHTING)
+                game_1.Game.ctx.filter = "blur(5px)";
+            game_1.Game.ctx.globalCompositeOperation = "source-over";
+            //GameConstants.COLOR_LAYER_COMPOSITE_OPERATION as GlobalCompositeOperation; //"soft-light";
+            game_1.Game.ctx.globalAlpha = 1;
+            var lastFillStyle = "";
+            for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
+                for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
+                    var alpha = _this.softVis[x][y];
+                    var fillStyle = "rgba(".concat(0, ", ").concat(0, ", ").concat(0, ", ").concat(Math.pow(alpha, 2), ")");
                     if (fillStyle !== lastFillStyle) {
                         game_1.Game.ctx.fillStyle = fillStyle;
                         lastFillStyle = fillStyle;
@@ -21118,6 +21132,9 @@ var Door = /** @class */ (function (_super) {
             _this.removeLockIcon();
         };
         _this.draw = function (delta) {
+            if (_this.doorDir === game_1.Direction.DOWN) {
+                game_1.Game.drawTile(1, _this.skin, 1, 1, _this.x, _this.y, 1, 1, _this.room.shadeColor, _this.shadeAmount());
+            }
             if (_this.doorDir === game_1.Direction.UP) {
                 //if top door
                 if (_this.opened)
@@ -21186,7 +21203,19 @@ var Door = /** @class */ (function (_super) {
         _this.tileXOffset = 0;
         _this.tileX = 2;
         _this.drawTopOf = true;
-        _this.lightSource = new lightSource_1.LightSource(x + 0.5, y + 0.5, 0, [0, 0, 0], 0);
+        var lightOffsetX = 0;
+        var lightOffsetY = 0;
+        switch (_this.doorDir) {
+            case game_1.Direction.UP:
+                lightOffsetY = -0.5;
+            case game_1.Direction.DOWN:
+                lightOffsetY = 0.5;
+            case game_1.Direction.LEFT:
+                lightOffsetX = -0.5;
+            case game_1.Direction.RIGHT:
+                lightOffsetX = 0.5;
+        }
+        _this.lightSource = new lightSource_1.LightSource(x + 0.5, y + 0.5, 0, [0, 0, 0], 9);
         _this.room.lightSources.push(_this.lightSource);
         switch (_this.type) {
             case DoorType.GUARDEDDOOR:
@@ -21715,6 +21744,7 @@ var __extends = (this && this.__extends) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Tile = exports.SkinType = void 0;
 var drawable_1 = __webpack_require__(/*! ../drawable */ "./src/drawable.ts");
+var gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
 var SkinType;
 (function (SkinType) {
     SkinType[SkinType["DUNGEON"] = 0] = "DUNGEON";
@@ -21737,6 +21767,8 @@ var Tile = /** @class */ (function (_super) {
         _this.shadeAmount = function (offsetX, offsetY) {
             if (offsetX === void 0) { offsetX = 0; }
             if (offsetY === void 0) { offsetY = 0; }
+            if (gameConstants_1.GameConstants.SMOOTH_LIGHTING)
+                return 0;
             return _this.room.softVis[_this.x + offsetX][_this.y + offsetY];
         };
         _this.isSolid = function () {

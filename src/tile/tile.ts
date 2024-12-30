@@ -1,8 +1,8 @@
 import { Room } from "../room";
-import { LevelConstants } from "../levelConstants";
 import { Player } from "../player";
 import { Entity } from "../entity/entity";
 import { Drawable } from "../drawable";
+import { GameConstants } from "../gameConstants";
 
 export enum SkinType {
   DUNGEON = 0,
@@ -38,6 +38,7 @@ export abstract class Tile extends Drawable {
   };
 
   shadeAmount = (offsetX: number = 0, offsetY: number = 0) => {
+    if (GameConstants.SMOOTH_LIGHTING) return 0;
     return this.room.softVis[this.x + offsetX][this.y + offsetY];
   };
 

@@ -487,6 +487,7 @@ export class Entity extends Drawable {
   };
 
   shadeAmount = () => {
+    if (GameConstants.SMOOTH_LIGHTING) return 0;
     const softVis = this.room.softVis[this.x][this.y];
 
     if (this.shadeMultiplier > 1)

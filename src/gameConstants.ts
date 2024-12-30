@@ -70,6 +70,7 @@ export class GameConstants {
   static COLOR_LAYER_COMPOSITE_OPERATION = "soft-light"; //"soft-light";
   static SHADE_LAYER_COMPOSITE_OPERATION = "screen"; //"soft-light";
   static USE_OPTIMIZED_SHADING = false;
+  static SMOOTH_LIGHTING = false;
 
   static readonly COLOR_LAYER_COMPOSITE_OPERATIONS = [
     "soft-light",

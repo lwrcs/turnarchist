@@ -786,7 +786,8 @@ export class Game {
         if (room.active || room.entered) {
           room.draw(delta);
           room.drawEntities(delta, skipLocalPlayer);
-          room.drawShade(delta); // this used to come after the color layer
+          //room.drawShade(delta); // this used to come after the color layer
+          room.drawShadeLayer();
 
           room.drawColorLayer();
           if (room.active) room.drawOverShade(delta);
@@ -887,7 +888,9 @@ export class Game {
   };
 
   drawStuff = (delta: number) => {
+    this.room.drawShadeLayer();
     this.room.drawColorLayer();
+
     //this.room.drawShade(delta);
     this.room.drawOverShade(delta);
   };
