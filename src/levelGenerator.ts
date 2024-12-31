@@ -444,6 +444,7 @@ let generate_dungeon_candidate = async (
     maxRoomArea,
     splitProbabilities,
     wallRemoveProbability,
+    softMaxRoomArea,
   } = params;
 
   partialLevel.partitions = [new Partition(0, 0, map_w, map_h, "white")];
@@ -460,8 +461,7 @@ let generate_dungeon_candidate = async (
   }
   for (let i = 0; i < 100; i++) {
     partialLevel.partitions.forEach(async (partition) => {
-      let roomArea =
-        Math.random() > 0.95 ? params.softMaxRoomArea : params.maxRoomArea; //Math.random() > 0.95 ? params.softMaxRoomArea : params.maxRoomArea;
+      let roomArea = Math.random() > 0.95 ? softMaxRoomArea : maxRoomArea; //Math.random() > 0.95 ? params.softMaxRoomArea : params.maxRoomArea;
       if (partition.area() > roomArea) {
         partialLevel.partitions = partialLevel.partitions.filter(
           (p) => p !== partition,
@@ -674,7 +674,7 @@ let generate_dungeon_candidate = async (
   }
   let boss = partialLevel.partitions.find((p) => p.type === RoomType.BOSS);
   let found_stair = false;
-  const max_stair_tries = 100;
+  const max_stair_tries = 5;
   const stairRoomWidth = 5;
   const stairRoomHeight = 5;
 

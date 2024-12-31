@@ -14101,11 +14101,11 @@ var populate_grid = function (partitions, grid, w, h) {
     //output grid array that indicates which cells are in which partition
 };
 var generate_dungeon_candidate = function (game, partialLevel, map_w, map_h, depth, params) { return __awaiter(void 0, void 0, void 0, function () {
-    var minRoomCount, maxRoomCount, maxRoomArea, splitProbabilities, wallRemoveProbability, grid, i, _a, i, spawn, connected, frontier, found_boss, room, doors_found, num_doors, tries, max_tries, point, _i, _b, p, _loop_7, _c, _d, partition, num_loop_doors, _loop_8, i, boss, found_stair, max_stair_tries, stairRoomWidth, stairRoomHeight, _loop_9, stair_tries, state_5, seen, room, _e, _f, c, other;
+    var minRoomCount, maxRoomCount, maxRoomArea, splitProbabilities, wallRemoveProbability, softMaxRoomArea, grid, i, _a, i, spawn, connected, frontier, found_boss, room, doors_found, num_doors, tries, max_tries, point, _i, _b, p, _loop_7, _c, _d, partition, num_loop_doors, _loop_8, i, boss, found_stair, max_stair_tries, stairRoomWidth, stairRoomHeight, _loop_9, stair_tries, state_5, seen, room, _e, _f, c, other;
     return __generator(this, function (_g) {
         switch (_g.label) {
             case 0:
-                minRoomCount = params.minRoomCount, maxRoomCount = params.maxRoomCount, maxRoomArea = params.maxRoomArea, splitProbabilities = params.splitProbabilities, wallRemoveProbability = params.wallRemoveProbability;
+                minRoomCount = params.minRoomCount, maxRoomCount = params.maxRoomCount, maxRoomArea = params.maxRoomArea, splitProbabilities = params.splitProbabilities, wallRemoveProbability = params.wallRemoveProbability, softMaxRoomArea = params.softMaxRoomArea;
                 partialLevel.partitions = [new Partition(0, 0, map_w, map_h, "white")];
                 grid = [];
                 _g.label = 1;
@@ -14131,7 +14131,7 @@ var generate_dungeon_candidate = function (game, partialLevel, map_w, map_h, dep
                         return __generator(this, function (_d) {
                             switch (_d.label) {
                                 case 0:
-                                    roomArea = Math.random() > 0.95 ? params.softMaxRoomArea : params.maxRoomArea;
+                                    roomArea = Math.random() > 0.95 ? softMaxRoomArea : maxRoomArea;
                                     if (!(partition.area() > roomArea)) return [3 /*break*/, 2];
                                     partialLevel.partitions = partialLevel.partitions.filter(function (p) { return p !== partition; });
                                     _a = partialLevel;
@@ -14311,7 +14311,7 @@ var generate_dungeon_candidate = function (game, partialLevel, map_w, map_h, dep
                 }
                 boss = partialLevel.partitions.find(function (p) { return p.type === room_1.RoomType.BOSS; });
                 found_stair = false;
-                max_stair_tries = 100;
+                max_stair_tries = 5;
                 stairRoomWidth = 5;
                 stairRoomHeight = 5;
                 _loop_9 = function (stair_tries) {
@@ -14895,16 +14895,16 @@ var LevelParameterGenerator = /** @class */ (function () {
      */
     LevelParameterGenerator.getParameters = function (depth) {
         return {
-            minRoomCount: depth > 0 ? 4 : 5,
-            maxRoomCount: depth > 0 ? 12 : 8,
+            minRoomCount: depth > 0 ? 0 : 0,
+            maxRoomCount: depth > 0 ? 12 : 5,
             maxRoomArea: depth > 0 ? 120 + 10 * depth : 40,
             mapWidth: 25 + 5 * depth,
             mapHeight: 25 + 5 * depth,
             splitProbabilities: [0.75, 1.0, 0.25],
-            wallRemoveProbability: depth > 0 ? 0.5 : 1,
+            wallRemoveProbability: depth > 0 ? 0.1 : 1,
             numLoopDoorsRange: [4, 8],
             numberOfRooms: depth > 0 ? 5 : 3,
-            softMaxRoomArea: 0.5 * (120 + 10 * depth),
+            softMaxRoomArea: depth > 0 ? 0.5 * (120 + 10 * depth) : 20,
         };
     };
     return LevelParameterGenerator;
@@ -18166,7 +18166,7 @@ var Room = /** @class */ (function () {
             _this.addPlants(numPlants, rand);
             _this.addObstacles(numObstacles, rand);
             var numEnemies = Math.ceil((numEmptyTiles - numTotalObstacles) *
-                Math.min(_this.depth * 0.1 + 0.1, 0.35));
+                Math.min(_this.depth * 0.1 + 0.75, 0.35));
             _this.addEnemies(numEnemies, rand);
             if (factor <= 6)
                 _this.addVendingMachine(rand);
@@ -19807,8 +19807,9 @@ var Room = /** @class */ (function () {
                 break;
         }
         var spawnerAmounts = [
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1,
-            1, 1, 1, 1, 1, 1, 2, 2, 3, 4, 5, 3,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2,
+            2, 2, 3, 3, 4, 5, 3,
         ];
         if (this.depth > 0) {
             var spawnerAmount = game_1.Game.randTable(spawnerAmounts, rand);
@@ -19818,7 +19819,7 @@ var Room = /** @class */ (function () {
         var occultistAmounts = [
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1,
         ];
-        if (this.depth > 0) {
+        if (this.depth > 1) {
             var occultistAmount = game_1.Game.randTable(occultistAmounts, rand);
             console.log("Adding ".concat(occultistAmount, " occultists"));
             this.addOccultists(occultistAmount, rand);
@@ -22329,7 +22330,7 @@ var TutorialListener = /** @class */ (function () {
     };
     TutorialListener.prototype.handleEnemySeen = function (data) {
         if (!this.hasSeenEnemy(data.enemyType)) {
-            //this.game.pushMessage(`New enemy encountered: ${data.enemyName}`);
+            this.game.pushMessage("New enemy encountered: ".concat(data.enemyName));
             this.addSeenEnemy(data.enemyType);
             this.pendingNewEnemies.add(data.enemyType);
             this.scheduleTutorialCreation();

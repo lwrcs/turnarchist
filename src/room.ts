@@ -748,8 +748,9 @@ export class Room {
       }
     }
     let spawnerAmounts = [
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1,
-      1, 1, 1, 1, 1, 1, 2, 2, 3, 4, 5, 3,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2,
+      2, 2, 3, 3, 4, 5, 3,
     ];
     if (this.depth > 0) {
       let spawnerAmount = Game.randTable(spawnerAmounts, rand);
@@ -759,7 +760,7 @@ export class Room {
     let occultistAmounts = [
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1,
     ];
-    if (this.depth > 0) {
+    if (this.depth > 1) {
       let occultistAmount = Game.randTable(occultistAmounts, rand);
       console.log(`Adding ${occultistAmount} occultists`);
       this.addOccultists(occultistAmount, rand);
@@ -996,7 +997,7 @@ export class Room {
     this.addObstacles(numObstacles, rand);
     let numEnemies = Math.ceil(
       (numEmptyTiles - numTotalObstacles) *
-        Math.min(this.depth * 0.1 + 0.1, 0.35), //this.depth * 0.01 is starting value
+        Math.min(this.depth * 0.1 + 0.75, 0.35), //this.depth * 0.01 is starting value
     );
     this.addEnemies(numEnemies, rand);
 

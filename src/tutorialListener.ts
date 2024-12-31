@@ -30,7 +30,7 @@ export class TutorialListener {
     enemyName: string;
   }): void {
     if (!this.hasSeenEnemy(data.enemyType)) {
-      //this.game.pushMessage(`New enemy encountered: ${data.enemyName}`);
+      this.game.pushMessage(`New enemy encountered: ${data.enemyName}`);
       this.addSeenEnemy(data.enemyType);
       this.pendingNewEnemies.add(data.enemyType);
       this.scheduleTutorialCreation();

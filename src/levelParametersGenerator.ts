@@ -52,16 +52,16 @@ export class LevelParameterGenerator {
    */
   static getParameters(depth: number): LevelParameters {
     return {
-      minRoomCount: depth > 0 ? 4 : 5,
-      maxRoomCount: depth > 0 ? 12 : 8,
+      minRoomCount: depth > 0 ? 0 : 0,
+      maxRoomCount: depth > 0 ? 12 : 5,
       maxRoomArea: depth > 0 ? 120 + 10 * depth : 40,
       mapWidth: 25 + 5 * depth,
       mapHeight: 25 + 5 * depth,
       splitProbabilities: [0.75, 1.0, 0.25], // Example probabilities
-      wallRemoveProbability: depth > 0 ? 0.5 : 1,
+      wallRemoveProbability: depth > 0 ? 0.1 : 1,
       numLoopDoorsRange: [4, 8], // Random between 4 and 8
       numberOfRooms: depth > 0 ? 5 : 3,
-      softMaxRoomArea: 0.5 * (120 + 10 * depth),
+      softMaxRoomArea: depth > 0 ? 0.5 * (120 + 10 * depth) : 20,
     };
   }
 }
