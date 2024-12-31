@@ -28,6 +28,10 @@ export class GodStone extends Usable {
     );
     console.log("downLadders", downLadders);
     const room = downLadders[downLadders.length - 1];
+    this.room.game.rooms.forEach((room) => {
+      room.entered = true;
+      room.calculateWallInfo();
+    });
     room.game.changeLevelThroughDoor(player, room.doors[0], 1);
     player.x = room.roomX + 2;
     player.y = room.roomY + 3;

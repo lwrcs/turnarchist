@@ -330,6 +330,7 @@ export class Entity extends Drawable {
     //putting this here bc i'm lazy
     this.updateHurtFrame(delta);
     this.animateDying(delta);
+    this.updateShadeColor(delta);
 
     if (!this.doneMoving()) {
       this.drawX *= 0.9 ** delta;
@@ -338,8 +339,6 @@ export class Entity extends Drawable {
       this.drawX = Math.abs(this.drawX) < 0.01 ? 0 : this.drawX;
       this.drawY = Math.abs(this.drawY) < 0.01 ? 0 : this.drawY;
     }
-
-    this.updateShadeColor(delta);
   };
 
   setDrawXY = (x: number, y: number) => {
@@ -489,10 +488,10 @@ export class Entity extends Drawable {
   shadeAmount = () => {
     let factor = !GameConstants.SMOOTH_LIGHTING ? 2 : 1;
 
-    let softVis = this.room.softVis[this.x][this.y] * factor;
+    let softVis = this.room.softVis[this.x][this.y] * 1;
 
     if (this.shadeMultiplier > 1)
-      return Math.min(1, softVis + (1 - softVis) * (this.shadeMultiplier - 1));
+      return Math.min(1, softVis * this.shadeMultiplier);
     return this.room.softVis[this.x][this.y];
   };
 

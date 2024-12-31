@@ -5492,13 +5492,13 @@ var Entity = /** @class */ (function (_super) {
             //putting this here bc i'm lazy
             _this.updateHurtFrame(delta);
             _this.animateDying(delta);
+            _this.updateShadeColor(delta);
             if (!_this.doneMoving()) {
                 _this.drawX *= Math.pow(0.9, delta);
                 _this.drawY *= Math.pow(0.9, delta);
                 _this.drawX = Math.abs(_this.drawX) < 0.01 ? 0 : _this.drawX;
                 _this.drawY = Math.abs(_this.drawY) < 0.01 ? 0 : _this.drawY;
             }
-            _this.updateShadeColor(delta);
         };
         _this.setDrawXY = function (x, y) {
             _this.drawX += _this.x - x;
@@ -5622,9 +5622,9 @@ var Entity = /** @class */ (function (_super) {
         };
         _this.shadeAmount = function () {
             var factor = !gameConstants_1.GameConstants.SMOOTH_LIGHTING ? 2 : 1;
-            var softVis = _this.room.softVis[_this.x][_this.y] * factor;
+            var softVis = _this.room.softVis[_this.x][_this.y] * 1;
             if (_this.shadeMultiplier > 1)
-                return Math.min(1, softVis + (1 - softVis) * (_this.shadeMultiplier - 1));
+                return Math.min(1, softVis * _this.shadeMultiplier);
             return _this.room.softVis[_this.x][_this.y];
         };
         _this.updateShadeColor = function (delta) {
@@ -12187,6 +12187,10 @@ var GodStone = /** @class */ (function (_super) {
             var downLadders = _this.room.game.rooms.filter(function (room) { return room.type === room_1.RoomType.DOWNLADDER; });
             console.log("downLadders", downLadders);
             var room = downLadders[downLadders.length - 1];
+            _this.room.game.rooms.forEach(function (room) {
+                room.entered = true;
+                room.calculateWallInfo();
+            });
             room.game.changeLevelThroughDoor(player, room.doors[0], 1);
             player.x = room.roomX + 2;
             player.y = room.roomY + 3;
