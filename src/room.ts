@@ -2164,17 +2164,17 @@ export class Room {
       }
     }
 
-    // Create mask to exclude walls
-    const maskCanvas = this.createWallMask();
-
-    // Apply mask and draw the blurred color layer
-    this.applyMaskAndDrawLayer(
+    // Draw the blurred color layer directly without masking
+    Game.ctx.globalCompositeOperation =
+      GameConstants.COLOR_LAYER_COMPOSITE_OPERATION as GlobalCompositeOperation;
+    Game.ctx.globalAlpha = 0.6;
+    Game.ctx.filter = "blur(5px)";
+    Game.ctx.drawImage(
       this.colorOffscreenCanvas,
-      GameConstants.COLOR_LAYER_COMPOSITE_OPERATION as GlobalCompositeOperation,
-      0.6,
-      maskCanvas,
+      this.roomX * GameConstants.TILESIZE,
+      this.roomY * GameConstants.TILESIZE,
     );
-    Game.ctx.save();
+    Game.ctx.restore();
   };
 
   drawShadeLayer = () => {
@@ -2215,15 +2215,14 @@ export class Room {
       }
     }
 
-    // Create mask to exclude walls
-    const maskCanvas = this.createWallMask();
-
-    // Apply mask and draw the blurred shade layer
-    this.applyMaskAndDrawLayer(
+    // Draw the blurred shade layer directly without masking
+    Game.ctx.globalCompositeOperation = "source-over";
+    Game.ctx.globalAlpha = 1;
+    Game.ctx.filter = "blur(5px)";
+    Game.ctx.drawImage(
       this.shadeOffscreenCanvas,
-      "source-over",
-      1,
-      maskCanvas,
+      this.roomX * GameConstants.TILESIZE,
+      this.roomY * GameConstants.TILESIZE,
     );
 
     Game.ctx.restore();

@@ -19054,11 +19054,13 @@ var Room = /** @class */ (function () {
                     _this.colorOffscreenCtx.fillRect((x - _this.roomX) * gameConstants_1.GameConstants.TILESIZE, (y - _this.roomY) * gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE);
                 }
             }
-            // Create mask to exclude walls
-            var maskCanvas = _this.createWallMask();
-            // Apply mask and draw the blurred color layer
-            _this.applyMaskAndDrawLayer(_this.colorOffscreenCanvas, gameConstants_1.GameConstants.COLOR_LAYER_COMPOSITE_OPERATION, 0.6, maskCanvas);
-            game_1.Game.ctx.save();
+            // Draw the blurred color layer directly without masking
+            game_1.Game.ctx.globalCompositeOperation =
+                gameConstants_1.GameConstants.COLOR_LAYER_COMPOSITE_OPERATION;
+            game_1.Game.ctx.globalAlpha = 0.6;
+            game_1.Game.ctx.filter = "blur(5px)";
+            game_1.Game.ctx.drawImage(_this.colorOffscreenCanvas, _this.roomX * gameConstants_1.GameConstants.TILESIZE, _this.roomY * gameConstants_1.GameConstants.TILESIZE);
+            game_1.Game.ctx.restore();
         };
         this.drawShadeLayer = function () {
             if (!_this.onScreen)
@@ -19085,10 +19087,11 @@ var Room = /** @class */ (function () {
                     _this.shadeOffscreenCtx.fillRect((x - _this.roomX) * gameConstants_1.GameConstants.TILESIZE, (y - _this.roomY - 0.5) * gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE);
                 }
             }
-            // Create mask to exclude walls
-            var maskCanvas = _this.createWallMask();
-            // Apply mask and draw the blurred shade layer
-            _this.applyMaskAndDrawLayer(_this.shadeOffscreenCanvas, "source-over", 1, maskCanvas);
+            // Draw the blurred shade layer directly without masking
+            game_1.Game.ctx.globalCompositeOperation = "source-over";
+            game_1.Game.ctx.globalAlpha = 1;
+            game_1.Game.ctx.filter = "blur(5px)";
+            game_1.Game.ctx.drawImage(_this.shadeOffscreenCanvas, _this.roomX * gameConstants_1.GameConstants.TILESIZE, _this.roomY * gameConstants_1.GameConstants.TILESIZE);
             game_1.Game.ctx.restore();
         };
         this.drawEntities = function (delta, skipLocalPlayer) {
