@@ -109,7 +109,7 @@ export class Wall extends Tile {
         1,
         1,
         this.room.shadeColor,
-        this.room.softVis[this.x][this.y + 1],
+        this.shadeAmount(), //this.room.softVis[this.x][this.y + 1],
       );
 
     Game.drawTile(
@@ -144,7 +144,7 @@ export class Wall extends Tile {
         1,
         1,
         this.room.shadeColor,
-        this.room.softVis[this.x][this.y + 1],
+        this.shadeAmount(), //this.room.softVis[this.x][this.y + 1],
       );
     }
   };

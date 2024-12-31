@@ -211,6 +211,11 @@ export class Room {
   projectiles: Array<Projectile>;
   particles: Array<Particle>;
   hitwarnings: Array<HitWarning>;
+  private colorOffscreenCanvas: HTMLCanvasElement;
+  private colorOffscreenCtx: CanvasRenderingContext2D;
+
+  private shadeOffscreenCanvas: HTMLCanvasElement;
+  private shadeOffscreenCtx: CanvasRenderingContext2D;
 
   currentSpawnerCount: number;
 
@@ -240,6 +245,7 @@ export class Room {
   id: number;
   tunnelDoor: Door = null; // this is the door that connects the start room to the exit room
   active: boolean;
+  onScreen: boolean;
 
   // Add a list to keep track of BeamEffect instances
   beamEffects: BeamEffect[] = [];
@@ -282,6 +288,27 @@ export class Room {
     this.currentSpawnerCount = 0;
     this.deadEntities = Array<Entity>();
     this.active = false;
+
+    // Initialize Color Offscreen Canvas
+    this.colorOffscreenCanvas = document.createElement("canvas");
+    this.colorOffscreenCanvas.width = this.width * GameConstants.TILESIZE;
+    this.colorOffscreenCanvas.height = this.height * GameConstants.TILESIZE;
+    const colorCtx = this.colorOffscreenCanvas.getContext("2d");
+    if (!colorCtx) {
+      throw new Error("Failed to initialize color offscreen canvas context.");
+    }
+    this.colorOffscreenCtx = colorCtx;
+
+    // Initialize Shade Offscreen Canvas
+    this.shadeOffscreenCanvas = document.createElement("canvas");
+    this.shadeOffscreenCanvas.width = this.width * GameConstants.TILESIZE;
+    this.shadeOffscreenCanvas.height = this.height * GameConstants.TILESIZE;
+    const shadeCtx = this.shadeOffscreenCanvas.getContext("2d");
+    if (!shadeCtx) {
+      throw new Error("Failed to initialize shade offscreen canvas context.");
+    }
+    this.shadeOffscreenCtx = shadeCtx;
+
     // #region initialize arrays
 
     //initialize room array
@@ -1384,6 +1411,18 @@ export class Room {
   // #region ENTERING / EXITING ROOM METHODS
 
   exitLevel = () => {
+    for (let door of this.doors) {
+      if (
+        door.linkedDoor.lightSource !== null &&
+        !door.linkedDoor.room.active &&
+        door.linkedDoor.room.entered
+      ) {
+        door.linkedDoor.lightSource.b = 0;
+        door.linkedDoor.lightSource.r = 0;
+
+        door.room.updateLighting();
+      }
+    }
     this.active = false;
     this.updateLighting();
 
@@ -1391,6 +1430,9 @@ export class Room {
   };
 
   onEnterRoom = (player: Player) => {
+    for (let room of this.level.rooms) {
+      room.roomOnScreen(player);
+    }
     this.entered = true;
 
     this.clearDeadStuff();
@@ -2084,58 +2126,99 @@ export class Room {
   // added a multiplier to the input rgb values to avoid clipping to white
   drawColorLayer = () => {
     Game.ctx.save();
-    //if (GameConstants.SMOOTH_LIGHTING)
-    Game.ctx.filter = "blur(5px)";
-    Game.ctx.globalCompositeOperation =
-      GameConstants.COLOR_LAYER_COMPOSITE_OPERATION as GlobalCompositeOperation; //"soft-light";
-    Game.ctx.globalAlpha = 0.6;
+    // Clear the offscreen color canvas
+    this.colorOffscreenCtx.clearRect(
+      0,
+      0,
+      this.colorOffscreenCanvas.width,
+      this.colorOffscreenCanvas.height,
+    );
+
     let lastFillStyle = "";
+
+    // Draw all color rectangles without any filters
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
         const [r, g, b] = this.softCol[x][y];
         if (r === 0 && g === 0 && b === 0) continue; // Skip if no color
-        //const alpha = this.softVis[x][y];
-        const fillStyle = `rgba(${r * 1}, ${g * 1}, ${b * 1}, ${1})`;
+
+        const fillStyle = `rgba(${r}, ${g}, ${b}, 1)`;
+
         if (fillStyle !== lastFillStyle) {
-          Game.ctx.fillStyle = fillStyle;
+          this.colorOffscreenCtx.fillStyle = fillStyle;
           lastFillStyle = fillStyle;
         }
-        Game.ctx.fillRect(
-          x * GameConstants.TILESIZE,
-          y * GameConstants.TILESIZE,
+
+        this.colorOffscreenCtx.fillRect(
+          (x - this.roomX) * GameConstants.TILESIZE,
+          (y - this.roomY) * GameConstants.TILESIZE,
           GameConstants.TILESIZE,
           GameConstants.TILESIZE,
         );
       }
     }
-    Game.ctx.restore();
+
+    // Create mask to exclude walls
+    const maskCanvas = this.createWallMask();
+
+    // Apply mask and draw the blurred color layer
+    this.applyMaskAndDrawLayer(
+      this.colorOffscreenCanvas,
+      GameConstants.COLOR_LAYER_COMPOSITE_OPERATION as GlobalCompositeOperation,
+      0.6,
+      maskCanvas,
+    );
+    Game.ctx.save();
   };
 
-  // added a multiplier to the input rgb values to avoid clipping to white
   drawShadeLayer = () => {
-    if (!GameConstants.SMOOTH_LIGHTING) return;
     Game.ctx.save();
-    if (GameConstants.SMOOTH_LIGHTING) Game.ctx.filter = "blur(5px)";
-    Game.ctx.globalCompositeOperation = "source-over";
-    //GameConstants.COLOR_LAYER_COMPOSITE_OPERATION as GlobalCompositeOperation; //"soft-light";
-    Game.ctx.globalAlpha = 1;
+    // Clear the offscreen shade canvas
+    this.shadeOffscreenCtx.clearRect(
+      0,
+      0,
+      this.shadeOffscreenCanvas.width,
+      this.shadeOffscreenCanvas.height,
+    );
+
     let lastFillStyle = "";
+
+    // Draw all shade rectangles without any filters
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
         const alpha = this.softVis[x][y];
-        const fillStyle = `rgba(${0}, ${0}, ${0}, ${alpha ** 2})`;
+        if (alpha === 0) continue; // Skip if no visibility adjustment
+        let factor = !GameConstants.SMOOTH_LIGHTING ? 2 : 1;
+        const computedAlpha = alpha / factor;
+        if (computedAlpha <= 0) continue; // Skip if alpha is effectively zero
+
+        const fillStyle = `rgba(0, 0, 0, ${computedAlpha})`;
+
         if (fillStyle !== lastFillStyle) {
-          Game.ctx.fillStyle = fillStyle;
+          this.shadeOffscreenCtx.fillStyle = fillStyle;
           lastFillStyle = fillStyle;
         }
-        Game.ctx.fillRect(
-          x * GameConstants.TILESIZE,
-          y * GameConstants.TILESIZE,
+
+        this.shadeOffscreenCtx.fillRect(
+          (x - this.roomX) * GameConstants.TILESIZE,
+          (y - this.roomY - 0.5) * GameConstants.TILESIZE,
           GameConstants.TILESIZE,
           GameConstants.TILESIZE,
         );
       }
     }
+
+    // Create mask to exclude walls
+    const maskCanvas = this.createWallMask();
+
+    // Apply mask and draw the blurred shade layer
+    this.applyMaskAndDrawLayer(
+      this.shadeOffscreenCanvas,
+      "source-over",
+      1,
+      maskCanvas,
+    );
+
     Game.ctx.restore();
   };
 
@@ -2294,6 +2377,86 @@ export class Room {
       5,
     );
     Game.ctx.font = old;
+    Game.ctx.restore();
+  };
+
+  // src/room.ts
+  createWallMask = (): HTMLCanvasElement => {
+    Game.ctx.save();
+    const maskCanvas = document.createElement("canvas");
+    maskCanvas.width = this.width * GameConstants.TILESIZE - 14;
+    maskCanvas.height = this.height * GameConstants.TILESIZE - 14;
+    const maskCtx = maskCanvas.getContext("2d");
+    if (!maskCtx) {
+      throw new Error("Failed to initialize mask canvas context.");
+    }
+
+    // Fill the canvas with opaque color
+    maskCtx.fillStyle = "rgba(255, 255, 255, 1)";
+    maskCtx.fillRect(
+      this.roomX * GameConstants.TILESIZE,
+      this.roomY * GameConstants.TILESIZE,
+      maskCanvas.width,
+      maskCanvas.height,
+    );
+
+    // Make wall areas transparent
+    /*
+    for (let x = this.roomX - 1; x < this.roomX + 1 + this.width; x++) {
+      for (let y = this.roomY - 1; y < this.roomY + 1 + this.height; y++) {
+        const tile = this.getTile(x, y);
+        if (tile instanceof Wall) {
+          let offsetY = 0;
+          if (tile.direction === Direction.DOWN) offsetY = 1;
+          maskCtx.clearRect(
+            (x - this.roomX) * GameConstants.TILESIZE,
+            (y - 1 - this.roomY) * GameConstants.TILESIZE,
+            GameConstants.TILESIZE,
+            GameConstants.TILESIZE,
+          );
+        }
+      }
+    }
+      */
+    Game.ctx.restore();
+
+    return maskCanvas;
+  };
+  // src/room.ts
+  applyMaskAndDrawLayer = (
+    offscreenCanvas: HTMLCanvasElement,
+    compositeOperation: GlobalCompositeOperation,
+    alpha: number,
+    maskCanvas: HTMLCanvasElement,
+  ) => {
+    // Save the main context state
+    Game.ctx.save();
+
+    // Set global settings
+    Game.ctx.globalCompositeOperation = compositeOperation;
+    Game.ctx.globalAlpha = alpha;
+    Game.ctx.filter = "blur(5px)";
+
+    // Draw the blurred layer
+    Game.ctx.drawImage(
+      offscreenCanvas,
+      this.roomX * GameConstants.TILESIZE,
+      this.roomY * GameConstants.TILESIZE,
+    );
+
+    Game.ctx.restore();
+    Game.ctx.save();
+
+    // Apply the mask
+
+    Game.ctx.globalAlpha = alpha;
+    Game.ctx.filter = "blur(5px)";
+
+    Game.ctx.globalCompositeOperation = "source-over";
+    Game.ctx.globalAlpha = 0;
+    Game.ctx.drawImage(maskCanvas, 0, 0);
+
+    // Restore the main context state
     Game.ctx.restore();
   };
 
@@ -2548,6 +2711,53 @@ export class Room {
     }
     //console.log(area, openTiles.length);
     return openTiles.length;
+  }
+  /**
+   * Determines if the room is currently on screen.
+   * Uses a buffer of 2 tiles beyond the room's dimensions to account for partial visibility.
+   *
+   * @returns {boolean} - True if the room is on screen, otherwise false.
+   */
+  public roomOnScreen(player: Player) {
+    const tileSize = GameConstants.TILESIZE;
+
+    // Calculate room boundaries with a buffer of 2 tiles
+    const roomLeft = (this.roomX - 2) * tileSize;
+    const roomRight = (this.roomX + this.width + 2) * tileSize;
+    const roomTop = (this.roomY - 2) * tileSize;
+    const roomBottom = (this.roomY + this.height + 2) * tileSize;
+
+    // Assuming the camera's position is tracked in the Game instance
+    const cameraX =
+      player.x -
+      player.drawX +
+      0.5 * GameConstants.TILESIZE -
+      0.5 * GameConstants.WIDTH -
+      this.game.screenShakeX; // X-coordinate of the camera's top-left corner
+    const cameraY =
+      player.y -
+      player.drawY +
+      0.5 * GameConstants.TILESIZE -
+      0.5 * GameConstants.WIDTH -
+      this.game.screenShakeY; // Y-coordinate of the camera's top-left corner
+    const cameraWidth = innerWidth; // Width of the visible canvas area
+    const cameraHeight = innerHeight; // Height of the visible canvas area
+
+    // Define the camera's boundaries
+    const cameraLeft = cameraX;
+    const cameraRight = cameraX + cameraWidth;
+    const cameraTop = cameraY;
+    const cameraBottom = cameraY + cameraHeight;
+
+    // Check if the room's boundaries overlap with the camera's view
+    const isOverlapping = !(
+      roomRight < cameraLeft ||
+      roomLeft > cameraRight ||
+      roomBottom < cameraTop ||
+      roomTop > cameraBottom
+    );
+
+    this.onScreen = isOverlapping;
   }
 
   private setReverb() {

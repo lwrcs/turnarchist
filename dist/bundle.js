@@ -5621,9 +5621,8 @@ var Entity = /** @class */ (function (_super) {
             }
         };
         _this.shadeAmount = function () {
-            if (gameConstants_1.GameConstants.SMOOTH_LIGHTING)
-                return 0;
-            var softVis = _this.room.softVis[_this.x][_this.y];
+            var factor = !gameConstants_1.GameConstants.SMOOTH_LIGHTING ? 2 : 1;
+            var softVis = _this.room.softVis[_this.x][_this.y] * factor;
             if (_this.shadeMultiplier > 1)
                 return Math.min(1, softVis + (1 - softVis) * (_this.shadeMultiplier - 1));
             return _this.room.softVis[_this.x][_this.y];
@@ -8047,6 +8046,8 @@ var Game = /** @class */ (function () {
                 case "shd":
                     gameConstants_1.GameConstants.SET_COLOR_LAYER_COMPOSITE_OPERATION(false, true);
                     break;
+                case "smooth":
+                    gameConstants_1.GameConstants.SMOOTH_LIGHTING = !gameConstants_1.GameConstants.SMOOTH_LIGHTING;
                 default:
                     if (command.startsWith("new ")) {
                         _this.room.addNewEnemy(command.slice(4));
@@ -8125,15 +8126,22 @@ var Game = /** @class */ (function () {
                 });
                 for (var _i = 0, sortedRooms_1 = sortedRooms; _i < sortedRooms_1.length; _i++) {
                     var room = sortedRooms_1[_i];
-                    if (room.active || room.entered) {
+                    if (room.active || (room.entered && room.onScreen)) {
                         room.draw(delta);
                         room.drawEntities(delta, skipLocalPlayer);
                         //room.drawShade(delta); // this used to come after the color layer
-                        room.drawShadeLayer();
-                        room.drawColorLayer();
-                        if (room.active)
-                            room.drawOverShade(delta);
                     }
+                }
+            }
+        };
+        this.drawRoomShadeAndColor = function (delta) {
+            for (var _i = 0, _a = _this.levels[_this.currentDepth].rooms; _i < _a.length; _i++) {
+                var room = _a[_i];
+                if (room.active || room.entered) {
+                    room.drawShadeLayer();
+                    room.drawColorLayer();
+                    if (room.active)
+                        room.drawOverShade(delta);
                 }
             }
         };
@@ -8251,6 +8259,7 @@ var Game = /** @class */ (function () {
                 Game.ctx.translate(newLevelOffsetX, newLevelOffsetY);
                 if (gameConstants_1.GameConstants.drawOtherRooms) {
                     _this.drawRooms(delta, true);
+                    _this.drawRoomShadeAndColor(delta);
                 }
                 for (var x = _this.room.roomX - 1; x <= _this.room.roomX + _this.room.width; x++) {
                     for (var y = _this.room.roomY - 1; y <= _this.room.roomY + _this.room.height; y++) {
@@ -8283,6 +8292,7 @@ var Game = /** @class */ (function () {
                     levelConstants_1.LevelConstants.LEVEL_TRANSITION_TIME_LADDER);
                 if (ditherFrame < 7) {
                     _this.drawRooms(delta);
+                    _this.drawRoomShadeAndColor(delta);
                     if (!gameConstants_1.GameConstants.drawOtherRooms) {
                         for (var x = _this.room.roomX - 1; x <= _this.room.roomX + _this.room.width; x++) {
                             for (var y = _this.room.roomY - 1; y <= _this.room.roomY + _this.room.height; y++) {
@@ -8301,6 +8311,7 @@ var Game = /** @class */ (function () {
                         _this.transitioningLadder = null;
                     }
                     _this.drawRooms(delta);
+                    _this.drawRoomShadeAndColor(delta);
                     //        this.room.draw(delta);
                     //        this.room.drawEntities(delta);
                     //        this.drawStuff(delta);
@@ -8334,6 +8345,7 @@ var Game = /** @class */ (function () {
                     _this.screenShakeY);
                 Game.ctx.translate(-cameraX, -cameraY);
                 _this.drawRooms(delta);
+                _this.drawRoomShadeAndColor(delta);
                 //      this.room.draw(delta);
                 //      this.room.drawEntities(delta);
                 // this.drawStuff(delta);
@@ -18422,11 +18434,25 @@ var Room = /** @class */ (function () {
         // #endregion
         // #region ENTERING / EXITING ROOM METHODS
         this.exitLevel = function () {
+            for (var _i = 0, _a = _this.doors; _i < _a.length; _i++) {
+                var door = _a[_i];
+                if (door.linkedDoor.lightSource !== null &&
+                    !door.linkedDoor.room.active &&
+                    door.linkedDoor.room.entered) {
+                    door.linkedDoor.lightSource.b = 0;
+                    door.linkedDoor.lightSource.r = 0;
+                    door.room.updateLighting();
+                }
+            }
             _this.active = false;
             _this.updateLighting();
             _this.particles.splice(0, _this.particles.length);
         };
         this.onEnterRoom = function (player) {
+            for (var _i = 0, _a = _this.level.rooms; _i < _a.length; _i++) {
+                var room = _a[_i];
+                room.roomOnScreen(player);
+            }
             _this.entered = true;
             _this.clearDeadStuff();
             _this.calculateWallInfo();
@@ -18986,50 +19012,56 @@ var Room = /** @class */ (function () {
         // added a multiplier to the input rgb values to avoid clipping to white
         this.drawColorLayer = function () {
             game_1.Game.ctx.save();
-            //if (GameConstants.SMOOTH_LIGHTING)
-            game_1.Game.ctx.filter = "blur(5px)";
-            game_1.Game.ctx.globalCompositeOperation =
-                gameConstants_1.GameConstants.COLOR_LAYER_COMPOSITE_OPERATION; //"soft-light";
-            game_1.Game.ctx.globalAlpha = 0.6;
+            // Clear the offscreen color canvas
+            _this.colorOffscreenCtx.clearRect(0, 0, _this.colorOffscreenCanvas.width, _this.colorOffscreenCanvas.height);
             var lastFillStyle = "";
+            // Draw all color rectangles without any filters
             for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
                 for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
                     var _a = _this.softCol[x][y], r = _a[0], g = _a[1], b = _a[2];
                     if (r === 0 && g === 0 && b === 0)
                         continue; // Skip if no color
-                    //const alpha = this.softVis[x][y];
-                    var fillStyle = "rgba(".concat(r * 1, ", ").concat(g * 1, ", ").concat(b * 1, ", ").concat(1, ")");
+                    var fillStyle = "rgba(".concat(r, ", ").concat(g, ", ").concat(b, ", 1)");
                     if (fillStyle !== lastFillStyle) {
-                        game_1.Game.ctx.fillStyle = fillStyle;
+                        _this.colorOffscreenCtx.fillStyle = fillStyle;
                         lastFillStyle = fillStyle;
                     }
-                    game_1.Game.ctx.fillRect(x * gameConstants_1.GameConstants.TILESIZE, y * gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE);
+                    _this.colorOffscreenCtx.fillRect((x - _this.roomX) * gameConstants_1.GameConstants.TILESIZE, (y - _this.roomY) * gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE);
                 }
             }
-            game_1.Game.ctx.restore();
-        };
-        // added a multiplier to the input rgb values to avoid clipping to white
-        this.drawShadeLayer = function () {
-            if (!gameConstants_1.GameConstants.SMOOTH_LIGHTING)
-                return;
+            // Create mask to exclude walls
+            var maskCanvas = _this.createWallMask();
+            // Apply mask and draw the blurred color layer
+            _this.applyMaskAndDrawLayer(_this.colorOffscreenCanvas, gameConstants_1.GameConstants.COLOR_LAYER_COMPOSITE_OPERATION, 0.6, maskCanvas);
             game_1.Game.ctx.save();
-            if (gameConstants_1.GameConstants.SMOOTH_LIGHTING)
-                game_1.Game.ctx.filter = "blur(5px)";
-            game_1.Game.ctx.globalCompositeOperation = "source-over";
-            //GameConstants.COLOR_LAYER_COMPOSITE_OPERATION as GlobalCompositeOperation; //"soft-light";
-            game_1.Game.ctx.globalAlpha = 1;
+        };
+        this.drawShadeLayer = function () {
+            game_1.Game.ctx.save();
+            // Clear the offscreen shade canvas
+            _this.shadeOffscreenCtx.clearRect(0, 0, _this.shadeOffscreenCanvas.width, _this.shadeOffscreenCanvas.height);
             var lastFillStyle = "";
+            // Draw all shade rectangles without any filters
             for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
                 for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
                     var alpha = _this.softVis[x][y];
-                    var fillStyle = "rgba(".concat(0, ", ").concat(0, ", ").concat(0, ", ").concat(Math.pow(alpha, 2), ")");
+                    if (alpha === 0)
+                        continue; // Skip if no visibility adjustment
+                    var factor = !gameConstants_1.GameConstants.SMOOTH_LIGHTING ? 2 : 1;
+                    var computedAlpha = alpha / factor;
+                    if (computedAlpha <= 0)
+                        continue; // Skip if alpha is effectively zero
+                    var fillStyle = "rgba(0, 0, 0, ".concat(computedAlpha, ")");
                     if (fillStyle !== lastFillStyle) {
-                        game_1.Game.ctx.fillStyle = fillStyle;
+                        _this.shadeOffscreenCtx.fillStyle = fillStyle;
                         lastFillStyle = fillStyle;
                     }
-                    game_1.Game.ctx.fillRect(x * gameConstants_1.GameConstants.TILESIZE, y * gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE);
+                    _this.shadeOffscreenCtx.fillRect((x - _this.roomX) * gameConstants_1.GameConstants.TILESIZE, (y - _this.roomY - 0.5) * gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE);
                 }
             }
+            // Create mask to exclude walls
+            var maskCanvas = _this.createWallMask();
+            // Apply mask and draw the blurred shade layer
+            _this.applyMaskAndDrawLayer(_this.shadeOffscreenCanvas, "source-over", 1, maskCanvas);
             game_1.Game.ctx.restore();
         };
         this.drawEntities = function (delta, skipLocalPlayer) {
@@ -19166,6 +19198,61 @@ var Room = /** @class */ (function () {
             game_1.Game.ctx.fillStyle = levelConstants_1.LevelConstants.LEVEL_TEXT_COLOR;
             game_1.Game.fillText(_this.message, gameConstants_1.GameConstants.WIDTH / 2 - game_1.Game.measureText(_this.name).width / 2, 5);
             game_1.Game.ctx.font = old;
+            game_1.Game.ctx.restore();
+        };
+        // src/room.ts
+        this.createWallMask = function () {
+            game_1.Game.ctx.save();
+            var maskCanvas = document.createElement("canvas");
+            maskCanvas.width = _this.width * gameConstants_1.GameConstants.TILESIZE - 14;
+            maskCanvas.height = _this.height * gameConstants_1.GameConstants.TILESIZE - 14;
+            var maskCtx = maskCanvas.getContext("2d");
+            if (!maskCtx) {
+                throw new Error("Failed to initialize mask canvas context.");
+            }
+            // Fill the canvas with opaque color
+            maskCtx.fillStyle = "rgba(255, 255, 255, 1)";
+            maskCtx.fillRect(_this.roomX * gameConstants_1.GameConstants.TILESIZE, _this.roomY * gameConstants_1.GameConstants.TILESIZE, maskCanvas.width, maskCanvas.height);
+            // Make wall areas transparent
+            /*
+            for (let x = this.roomX - 1; x < this.roomX + 1 + this.width; x++) {
+              for (let y = this.roomY - 1; y < this.roomY + 1 + this.height; y++) {
+                const tile = this.getTile(x, y);
+                if (tile instanceof Wall) {
+                  let offsetY = 0;
+                  if (tile.direction === Direction.DOWN) offsetY = 1;
+                  maskCtx.clearRect(
+                    (x - this.roomX) * GameConstants.TILESIZE,
+                    (y - 1 - this.roomY) * GameConstants.TILESIZE,
+                    GameConstants.TILESIZE,
+                    GameConstants.TILESIZE,
+                  );
+                }
+              }
+            }
+              */
+            game_1.Game.ctx.restore();
+            return maskCanvas;
+        };
+        // src/room.ts
+        this.applyMaskAndDrawLayer = function (offscreenCanvas, compositeOperation, alpha, maskCanvas) {
+            // Save the main context state
+            game_1.Game.ctx.save();
+            // Set global settings
+            game_1.Game.ctx.globalCompositeOperation = compositeOperation;
+            game_1.Game.ctx.globalAlpha = alpha;
+            game_1.Game.ctx.filter = "blur(5px)";
+            // Draw the blurred layer
+            game_1.Game.ctx.drawImage(offscreenCanvas, _this.roomX * gameConstants_1.GameConstants.TILESIZE, _this.roomY * gameConstants_1.GameConstants.TILESIZE);
+            game_1.Game.ctx.restore();
+            game_1.Game.ctx.save();
+            // Apply the mask
+            game_1.Game.ctx.globalAlpha = alpha;
+            game_1.Game.ctx.filter = "blur(5px)";
+            game_1.Game.ctx.globalCompositeOperation = "source-over";
+            game_1.Game.ctx.globalAlpha = 0;
+            game_1.Game.ctx.drawImage(maskCanvas, 0, 0);
+            // Restore the main context state
             game_1.Game.ctx.restore();
         };
         this.tileInside = function (tileX, tileY) {
@@ -19351,6 +19438,24 @@ var Room = /** @class */ (function () {
         this.currentSpawnerCount = 0;
         this.deadEntities = Array();
         this.active = false;
+        // Initialize Color Offscreen Canvas
+        this.colorOffscreenCanvas = document.createElement("canvas");
+        this.colorOffscreenCanvas.width = this.width * gameConstants_1.GameConstants.TILESIZE;
+        this.colorOffscreenCanvas.height = this.height * gameConstants_1.GameConstants.TILESIZE;
+        var colorCtx = this.colorOffscreenCanvas.getContext("2d");
+        if (!colorCtx) {
+            throw new Error("Failed to initialize color offscreen canvas context.");
+        }
+        this.colorOffscreenCtx = colorCtx;
+        // Initialize Shade Offscreen Canvas
+        this.shadeOffscreenCanvas = document.createElement("canvas");
+        this.shadeOffscreenCanvas.width = this.width * gameConstants_1.GameConstants.TILESIZE;
+        this.shadeOffscreenCanvas.height = this.height * gameConstants_1.GameConstants.TILESIZE;
+        var shadeCtx = this.shadeOffscreenCanvas.getContext("2d");
+        if (!shadeCtx) {
+            throw new Error("Failed to initialize shade offscreen canvas context.");
+        }
+        this.shadeOffscreenCtx = shadeCtx;
         // #region initialize arrays
         //initialize room array
         this.roomArray = [];
@@ -19969,6 +20074,44 @@ var Room = /** @class */ (function () {
         enumerable: false,
         configurable: true
     });
+    /**
+     * Determines if the room is currently on screen.
+     * Uses a buffer of 2 tiles beyond the room's dimensions to account for partial visibility.
+     *
+     * @returns {boolean} - True if the room is on screen, otherwise false.
+     */
+    Room.prototype.roomOnScreen = function (player) {
+        var tileSize = gameConstants_1.GameConstants.TILESIZE;
+        // Calculate room boundaries with a buffer of 2 tiles
+        var roomLeft = (this.roomX - 2) * tileSize;
+        var roomRight = (this.roomX + this.width + 2) * tileSize;
+        var roomTop = (this.roomY - 2) * tileSize;
+        var roomBottom = (this.roomY + this.height + 2) * tileSize;
+        // Assuming the camera's position is tracked in the Game instance
+        var cameraX = player.x -
+            player.drawX +
+            0.5 * gameConstants_1.GameConstants.TILESIZE -
+            0.5 * gameConstants_1.GameConstants.WIDTH -
+            this.game.screenShakeX; // X-coordinate of the camera's top-left corner
+        var cameraY = player.y -
+            player.drawY +
+            0.5 * gameConstants_1.GameConstants.TILESIZE -
+            0.5 * gameConstants_1.GameConstants.WIDTH -
+            this.game.screenShakeY; // Y-coordinate of the camera's top-left corner
+        var cameraWidth = innerWidth; // Width of the visible canvas area
+        var cameraHeight = innerHeight; // Height of the visible canvas area
+        // Define the camera's boundaries
+        var cameraLeft = cameraX;
+        var cameraRight = cameraX + cameraWidth;
+        var cameraTop = cameraY;
+        var cameraBottom = cameraY + cameraHeight;
+        // Check if the room's boundaries overlap with the camera's view
+        var isOverlapping = !(roomRight < cameraLeft ||
+            roomLeft > cameraRight ||
+            roomBottom < cameraTop ||
+            roomTop > cameraBottom);
+        this.onScreen = isOverlapping;
+    };
     Room.prototype.setReverb = function () {
         var roomArea = this.roomArea;
         if (roomArea < 10) {
@@ -21991,7 +22134,7 @@ var Wall = /** @class */ (function (_super) {
                 wallInfo.isBelowDoorWall ||
                 (wallInfo.isTopWall && !wallInfo.isLeftWall && !wallInfo.isRightWall) ||
                 wallInfo.isInnerWall)
-                game_1.Game.drawTile(0, _this.skin, 1, 1, _this.x, _this.y, 1, 1, _this.room.shadeColor, _this.room.softVis[_this.x][_this.y + 1]);
+                game_1.Game.drawTile(0, _this.skin, 1, 1, _this.x, _this.y, 1, 1, _this.room.shadeColor, _this.shadeAmount());
             game_1.Game.drawTile(2 + _this.tileXOffset, _this.skin, 1, 1, _this.x, _this.y - 1, 1, 1, _this.room.shadeColor, _this.shadeAmount());
         };
         _this.drawTopLayer = function (delta) {
@@ -22001,7 +22144,7 @@ var Wall = /** @class */ (function (_super) {
             if (wallInfo.isBottomWall ||
                 wallInfo.isBelowDoorWall ||
                 wallInfo.isAboveDoorWall) {
-                game_1.Game.drawTile(2 + _this.tileXOffset, _this.skin, 1, 1, _this.x, _this.y - 1, 1, 1, _this.room.shadeColor, _this.room.softVis[_this.x][_this.y + 1]);
+                game_1.Game.drawTile(2 + _this.tileXOffset, _this.skin, 1, 1, _this.x, _this.y - 1, 1, 1, _this.room.shadeColor, _this.shadeAmount());
             }
         };
         _this.isDoor = false;

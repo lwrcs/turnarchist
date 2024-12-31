@@ -675,6 +675,8 @@ export class Game {
       case "shd":
         GameConstants.SET_COLOR_LAYER_COMPOSITE_OPERATION(false, true);
         break;
+      case "smooth":
+        GameConstants.SMOOTH_LIGHTING = !GameConstants.SMOOTH_LIGHTING;
       default:
         if (command.startsWith("new ")) {
           this.room.addNewEnemy(command.slice(4) as EnemyType);
@@ -783,15 +785,21 @@ export class Game {
         });
 
       for (const room of sortedRooms) {
-        if (room.active || room.entered) {
+        if (room.active || (room.entered && room.onScreen)) {
           room.draw(delta);
           room.drawEntities(delta, skipLocalPlayer);
           //room.drawShade(delta); // this used to come after the color layer
-          room.drawShadeLayer();
-
-          room.drawColorLayer();
-          if (room.active) room.drawOverShade(delta);
         }
+      }
+    }
+  };
+
+  drawRoomShadeAndColor = (delta: number) => {
+    for (const room of this.levels[this.currentDepth].rooms) {
+      if (room.active || room.entered) {
+        room.drawShadeLayer();
+        room.drawColorLayer();
+        if (room.active) room.drawOverShade(delta);
       }
     }
   };
@@ -1050,6 +1058,7 @@ export class Game {
 
       if (GameConstants.drawOtherRooms) {
         this.drawRooms(delta, true);
+        this.drawRoomShadeAndColor(delta);
       }
 
       for (
@@ -1111,6 +1120,7 @@ export class Game {
 
       if (ditherFrame < 7) {
         this.drawRooms(delta);
+        this.drawRoomShadeAndColor(delta);
 
         if (!GameConstants.drawOtherRooms) {
           for (
@@ -1139,6 +1149,7 @@ export class Game {
         }
 
         this.drawRooms(delta);
+        this.drawRoomShadeAndColor(delta);
 
         //        this.room.draw(delta);
         //        this.room.drawEntities(delta);
@@ -1191,6 +1202,7 @@ export class Game {
 
       Game.ctx.translate(-cameraX, -cameraY);
       this.drawRooms(delta);
+      this.drawRoomShadeAndColor(delta);
 
       //      this.room.draw(delta);
       //      this.room.drawEntities(delta);
