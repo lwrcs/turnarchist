@@ -886,6 +886,14 @@ export class Player extends Drawable {
     if (diffX === 0 && diffY === 0) return;
 
     //this.game.rooms[this.levelID].updateLighting();
+    console.log("_______________________");
+    let roomsOnScreen = 0;
+    for (let room of this.game.level.rooms) {
+      room.roomOnScreen(this);
+      console.log("On Screen? " + room.onScreen + " levelID: " + room.id);
+      if (room.onScreen) roomsOnScreen++;
+    }
+    console.log("Rooms On Screen Currently: " + roomsOnScreen);
   };
 
   moveNoSmooth = (x: number, y: number) => {

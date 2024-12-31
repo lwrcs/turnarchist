@@ -677,6 +677,8 @@ export class Game {
         break;
       case "smooth":
         GameConstants.SMOOTH_LIGHTING = !GameConstants.SMOOTH_LIGHTING;
+      case "rooms":
+        GameConstants.drawOtherRooms = !GameConstants.drawOtherRooms;
       default:
         if (command.startsWith("new ")) {
           this.room.addNewEnemy(command.slice(4) as EnemyType);
@@ -690,8 +692,8 @@ export class Game {
     globalEventBus.on("ChatMessage", this.commandHandler.bind(this));
     console.log("Event listeners set up");
   }
-
   onResize = () => {
+    // Calculate maximum possible scale based on window size
     let maxWidthScale = Math.floor(
       window.innerWidth / GameConstants.DEFAULTWIDTH,
     );
@@ -702,26 +704,31 @@ export class Game {
     this.isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     if (this.isMobile) {
       GameConstants.isMobile = true;
-      this.pushMessage("mobile detected");
+      this.pushMessage("Mobile detected");
       // Use smaller scale for mobile devices based on screen size
-      if (window.orientation === 90 || window.orientation === -90) {
-        Game.scale = Math.min(maxWidthScale, maxHeightScale, 3); // Cap at 2x for mobile
-      } else {
-        Game.scale = Math.min(maxWidthScale, maxHeightScale, 3); // Cap at 2x for mobile
-      }
+      // Ensure Game.scale is an integer by using Math.min with integer values
+      Game.scale = Math.min(maxWidthScale, maxHeightScale, 3); // Cap at 3x for mobile
     } else {
       GameConstants.isMobile = false;
       // For desktop, use standard scaling logic
-      Game.scale = Math.min(maxWidthScale, maxHeightScale, GameConstants.SCALE);
+      // Ensure GameConstants.SCALE is an integer. If not, round it.
+      const integerScale = Math.floor(GameConstants.SCALE);
+      Game.scale = Math.min(maxWidthScale, maxHeightScale, integerScale);
     }
 
     // Handle case where scale would be 0
     if (Game.scale === 0) {
+      // Recalculate max scales without flooring to check for minimum scale
       maxWidthScale = window.innerWidth / GameConstants.DEFAULTWIDTH;
       maxHeightScale = window.innerHeight / GameConstants.DEFAULTHEIGHT;
-      Game.scale = Math.min(maxWidthScale, maxHeightScale, 1); // Ensure minimum scale of 1
+      // Ensure Game.scale is at least 1 and an integer
+      Game.scale = Math.max(
+        1,
+        Math.min(Math.floor(maxWidthScale), Math.floor(maxHeightScale), 1),
+      );
     }
 
+    // Calculate screen width and height in tiles, ensuring integer values
     LevelConstants.SCREEN_W = Math.floor(
       window.innerWidth / Game.scale / GameConstants.TILESIZE,
     );
@@ -729,28 +736,36 @@ export class Game {
       window.innerHeight / Game.scale / GameConstants.TILESIZE,
     );
 
+    // Calculate canvas width and height in pixels, ensuring integer values
     GameConstants.WIDTH = LevelConstants.SCREEN_W * GameConstants.TILESIZE;
     GameConstants.HEIGHT = LevelConstants.SCREEN_H * GameConstants.TILESIZE;
+
+    // Set canvas width and height attributes as integers
     Game.ctx.canvas.setAttribute("width", `${GameConstants.WIDTH}`);
     Game.ctx.canvas.setAttribute("height", `${GameConstants.HEIGHT}`);
+
+    // Set CSS styles with integer pixel values for scaling
     Game.ctx.canvas.setAttribute(
       "style",
       `width: ${GameConstants.WIDTH * Game.scale}px; height: ${
         GameConstants.HEIGHT * Game.scale
       }px;
-    display: block;
-    margin: 0 auto;
-  
-    image-rendering: optimizeSpeed; /* Older versions of FF          */
-    image-rendering: -moz-crisp-edges; /* FF 6.0+                       */
-    image-rendering: -webkit-optimize-contrast; /* Safari                        */
-    image-rendering: -o-crisp-edges; /* OS X & Windows Opera (12.02+) */
-    image-rendering: pixelated; /* Awesome future-browsers       */
-  
-    -ms-interpolation-mode: nearest-neighbor;`,
+      display: block;
+      margin: 0 auto;
+      image-rendering: optimizeSpeed; /* Older versions of FF */
+      image-rendering: -moz-crisp-edges; /* FF 6.0+ */
+      image-rendering: -webkit-optimize-contrast; /* Safari */
+      image-rendering: -o-crisp-edges; /* OS X & Windows Opera (12.02+) */
+      image-rendering: pixelated; /* Future-browsers */
+      -ms-interpolation-mode: nearest-neighbor; /* IE */
+      `,
     );
-    //Game.ctx.canvas.width = window.innerWidth;
-    //Game.ctx.canvas.height = window.innerHeight;
+
+    // Optional: Log the new scale and canvas size for debugging
+    console.log(`Scale set to: ${Game.scale}`);
+    console.log(
+      `Canvas size: ${GameConstants.WIDTH}px x ${GameConstants.HEIGHT}px`,
+    );
   };
 
   shakeScreen = (shakeX: number, shakeY: number) => {

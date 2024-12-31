@@ -246,9 +246,13 @@ export class Room {
   tunnelDoor: Door = null; // this is the door that connects the start room to the exit room
   active: boolean;
   onScreen: boolean;
+  lastLightingUpdate: number;
 
   // Add a list to keep track of BeamEffect instances
   beamEffects: BeamEffect[] = [];
+
+  // Add this property to track created mask canvases
+  private maskCanvases: HTMLCanvasElement[] = [];
 
   constructor(
     game: Game,
@@ -288,6 +292,7 @@ export class Room {
     this.currentSpawnerCount = 0;
     this.deadEntities = Array<Entity>();
     this.active = false;
+    this.lastLightingUpdate = 0;
 
     // Initialize Color Offscreen Canvas
     this.colorOffscreenCanvas = document.createElement("canvas");
@@ -1433,6 +1438,7 @@ export class Room {
     for (let room of this.level.rooms) {
       room.roomOnScreen(player);
     }
+
     this.entered = true;
 
     this.clearDeadStuff();
@@ -1446,12 +1452,11 @@ export class Room {
     player.map.saveMapData();
     this.setReverb();
     this.active = true;
+
     this.updateLighting();
   };
 
   enterLevel = (player: Player) => {
-    console.log("enterLevel" + "id" + this.id);
-
     this.game.updateLevel();
     player.moveSnap(this.getRoomCenter().x, this.getRoomCenter().y);
     this.onEnterRoom(player);
@@ -1755,6 +1760,7 @@ export class Room {
   };
 
   updateLighting = () => {
+    if (!this.onScreen) return;
     // Start timing the initial setup
     //console.time("updateLighting: Initial Setup");
     this.updateDoorLightSources();
@@ -2172,6 +2178,7 @@ export class Room {
   };
 
   drawShadeLayer = () => {
+    if (!this.onScreen) return;
     Game.ctx.save();
     // Clear the offscreen shade canvas
     this.shadeOffscreenCtx.clearRect(
@@ -2382,18 +2389,18 @@ export class Room {
 
   // src/room.ts
   createWallMask = (): HTMLCanvasElement => {
-    Game.ctx.save();
     const maskCanvas = document.createElement("canvas");
-    maskCanvas.width = this.width * GameConstants.TILESIZE - 14;
-    maskCanvas.height = this.height * GameConstants.TILESIZE - 14;
-    const maskCtx = maskCanvas.getContext("2d");
-    if (!maskCtx) {
-      throw new Error("Failed to initialize mask canvas context.");
+    this.maskCanvases.push(maskCanvas); // <-- Track the canvas
+    maskCanvas.width = this.width * GameConstants.TILESIZE;
+    maskCanvas.height = this.height * GameConstants.TILESIZE;
+    const ctx = maskCanvas.getContext("2d");
+    if (!ctx) {
+      throw new Error("Failed to create mask canvas context.");
     }
 
     // Fill the canvas with opaque color
-    maskCtx.fillStyle = "rgba(255, 255, 255, 1)";
-    maskCtx.fillRect(
+    ctx.fillStyle = "rgba(255, 255, 255, 1)";
+    ctx.fillRect(
       this.roomX * GameConstants.TILESIZE,
       this.roomY * GameConstants.TILESIZE,
       maskCanvas.width,
@@ -2408,7 +2415,7 @@ export class Room {
         if (tile instanceof Wall) {
           let offsetY = 0;
           if (tile.direction === Direction.DOWN) offsetY = 1;
-          maskCtx.clearRect(
+          ctx.clearRect(
             (x - this.roomX) * GameConstants.TILESIZE,
             (y - 1 - this.roomY) * GameConstants.TILESIZE,
             GameConstants.TILESIZE,
@@ -2418,8 +2425,6 @@ export class Room {
       }
     }
       */
-    Game.ctx.restore();
-
     return maskCanvas;
   };
   // src/room.ts
@@ -2727,21 +2732,25 @@ export class Room {
     const roomTop = (this.roomY - 2) * tileSize;
     const roomBottom = (this.roomY + this.height + 2) * tileSize;
 
-    // Assuming the camera's position is tracked in the Game instance
+    // Convert player position from tiles to pixels
+    const playerPosX = player.x * tileSize;
+    const playerPosY = player.y * tileSize;
+
+    // Calculate camera position in pixels
     const cameraX =
-      player.x -
+      playerPosX -
       player.drawX +
-      0.5 * GameConstants.TILESIZE -
+      0.5 * tileSize -
       0.5 * GameConstants.WIDTH -
       this.game.screenShakeX; // X-coordinate of the camera's top-left corner
     const cameraY =
-      player.y -
+      playerPosY -
       player.drawY +
-      0.5 * GameConstants.TILESIZE -
-      0.5 * GameConstants.WIDTH -
+      0.5 * tileSize -
+      0.5 * GameConstants.HEIGHT - // Corrected from WIDTH to HEIGHT
       this.game.screenShakeY; // Y-coordinate of the camera's top-left corner
-    const cameraWidth = innerWidth; // Width of the visible canvas area
-    const cameraHeight = innerHeight; // Height of the visible canvas area
+    const cameraWidth = GameConstants.WIDTH; // Corrected from innerWidth
+    const cameraHeight = GameConstants.HEIGHT; // Corrected from innerHeight
 
     // Define the camera's boundaries
     const cameraLeft = cameraX;

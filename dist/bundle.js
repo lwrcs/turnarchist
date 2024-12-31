@@ -8048,6 +8048,8 @@ var Game = /** @class */ (function () {
                     break;
                 case "smooth":
                     gameConstants_1.GameConstants.SMOOTH_LIGHTING = !gameConstants_1.GameConstants.SMOOTH_LIGHTING;
+                case "rooms":
+                    gameConstants_1.GameConstants.drawOtherRooms = !gameConstants_1.GameConstants.drawOtherRooms;
                 default:
                     if (command.startsWith("new ")) {
                         _this.room.addNewEnemy(command.slice(4));
@@ -8056,40 +8058,46 @@ var Game = /** @class */ (function () {
             }
         };
         this.onResize = function () {
+            // Calculate maximum possible scale based on window size
             var maxWidthScale = Math.floor(window.innerWidth / gameConstants_1.GameConstants.DEFAULTWIDTH);
             var maxHeightScale = Math.floor(window.innerHeight / gameConstants_1.GameConstants.DEFAULTHEIGHT);
             _this.isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
             if (_this.isMobile) {
                 gameConstants_1.GameConstants.isMobile = true;
-                _this.pushMessage("mobile detected");
+                _this.pushMessage("Mobile detected");
                 // Use smaller scale for mobile devices based on screen size
-                if (window.orientation === 90 || window.orientation === -90) {
-                    Game.scale = Math.min(maxWidthScale, maxHeightScale, 3); // Cap at 2x for mobile
-                }
-                else {
-                    Game.scale = Math.min(maxWidthScale, maxHeightScale, 3); // Cap at 2x for mobile
-                }
+                // Ensure Game.scale is an integer by using Math.min with integer values
+                Game.scale = Math.min(maxWidthScale, maxHeightScale, 3); // Cap at 3x for mobile
             }
             else {
                 gameConstants_1.GameConstants.isMobile = false;
                 // For desktop, use standard scaling logic
-                Game.scale = Math.min(maxWidthScale, maxHeightScale, gameConstants_1.GameConstants.SCALE);
+                // Ensure GameConstants.SCALE is an integer. If not, round it.
+                var integerScale = Math.floor(gameConstants_1.GameConstants.SCALE);
+                Game.scale = Math.min(maxWidthScale, maxHeightScale, integerScale);
             }
             // Handle case where scale would be 0
             if (Game.scale === 0) {
+                // Recalculate max scales without flooring to check for minimum scale
                 maxWidthScale = window.innerWidth / gameConstants_1.GameConstants.DEFAULTWIDTH;
                 maxHeightScale = window.innerHeight / gameConstants_1.GameConstants.DEFAULTHEIGHT;
-                Game.scale = Math.min(maxWidthScale, maxHeightScale, 1); // Ensure minimum scale of 1
+                // Ensure Game.scale is at least 1 and an integer
+                Game.scale = Math.max(1, Math.min(Math.floor(maxWidthScale), Math.floor(maxHeightScale), 1));
             }
+            // Calculate screen width and height in tiles, ensuring integer values
             levelConstants_1.LevelConstants.SCREEN_W = Math.floor(window.innerWidth / Game.scale / gameConstants_1.GameConstants.TILESIZE);
             levelConstants_1.LevelConstants.SCREEN_H = Math.floor(window.innerHeight / Game.scale / gameConstants_1.GameConstants.TILESIZE);
+            // Calculate canvas width and height in pixels, ensuring integer values
             gameConstants_1.GameConstants.WIDTH = levelConstants_1.LevelConstants.SCREEN_W * gameConstants_1.GameConstants.TILESIZE;
             gameConstants_1.GameConstants.HEIGHT = levelConstants_1.LevelConstants.SCREEN_H * gameConstants_1.GameConstants.TILESIZE;
+            // Set canvas width and height attributes as integers
             Game.ctx.canvas.setAttribute("width", "".concat(gameConstants_1.GameConstants.WIDTH));
             Game.ctx.canvas.setAttribute("height", "".concat(gameConstants_1.GameConstants.HEIGHT));
-            Game.ctx.canvas.setAttribute("style", "width: ".concat(gameConstants_1.GameConstants.WIDTH * Game.scale, "px; height: ").concat(gameConstants_1.GameConstants.HEIGHT * Game.scale, "px;\n    display: block;\n    margin: 0 auto;\n  \n    image-rendering: optimizeSpeed; /* Older versions of FF          */\n    image-rendering: -moz-crisp-edges; /* FF 6.0+                       */\n    image-rendering: -webkit-optimize-contrast; /* Safari                        */\n    image-rendering: -o-crisp-edges; /* OS X & Windows Opera (12.02+) */\n    image-rendering: pixelated; /* Awesome future-browsers       */\n  \n    -ms-interpolation-mode: nearest-neighbor;"));
-            //Game.ctx.canvas.width = window.innerWidth;
-            //Game.ctx.canvas.height = window.innerHeight;
+            // Set CSS styles with integer pixel values for scaling
+            Game.ctx.canvas.setAttribute("style", "width: ".concat(gameConstants_1.GameConstants.WIDTH * Game.scale, "px; height: ").concat(gameConstants_1.GameConstants.HEIGHT * Game.scale, "px;\n      display: block;\n      margin: 0 auto;\n      image-rendering: optimizeSpeed; /* Older versions of FF */\n      image-rendering: -moz-crisp-edges; /* FF 6.0+ */\n      image-rendering: -webkit-optimize-contrast; /* Safari */\n      image-rendering: -o-crisp-edges; /* OS X & Windows Opera (12.02+) */\n      image-rendering: pixelated; /* Future-browsers */\n      -ms-interpolation-mode: nearest-neighbor; /* IE */\n      "));
+            // Optional: Log the new scale and canvas size for debugging
+            console.log("Scale set to: ".concat(Game.scale));
+            console.log("Canvas size: ".concat(gameConstants_1.GameConstants.WIDTH, "px x ").concat(gameConstants_1.GameConstants.HEIGHT, "px"));
         };
         this.shakeScreen = function (shakeX, shakeY) {
             var clampedX = Math.max(-3, Math.min(3, shakeX));
@@ -16455,6 +16463,16 @@ var Player = /** @class */ (function (_super) {
             if (diffX === 0 && diffY === 0)
                 return;
             //this.game.rooms[this.levelID].updateLighting();
+            console.log("_______________________");
+            var roomsOnScreen = 0;
+            for (var _b = 0, _c = _this.game.level.rooms; _b < _c.length; _b++) {
+                var room = _c[_b];
+                room.roomOnScreen(_this);
+                console.log("On Screen? " + room.onScreen + " levelID: " + room.id);
+                if (room.onScreen)
+                    roomsOnScreen++;
+            }
+            console.log("Rooms On Screen Currently: " + roomsOnScreen);
         };
         _this.moveNoSmooth = function (x, y) {
             // doesn't touch smoothing
@@ -18017,6 +18035,8 @@ var Room = /** @class */ (function () {
         this.tunnelDoor = null; // this is the door that connects the start room to the exit room
         // Add a list to keep track of BeamEffect instances
         this.beamEffects = [];
+        // Add this property to track created mask canvases
+        this.maskCanvases = [];
         this.removeWall = function (x, y) {
             if (_this.roomArray[x][y] instanceof wall_1.Wall) {
                 _this.roomArray[x][y] = null;
@@ -18466,7 +18486,6 @@ var Room = /** @class */ (function () {
             _this.updateLighting();
         };
         this.enterLevel = function (player) {
-            console.log("enterLevel" + "id" + _this.id);
             _this.game.updateLevel();
             player.moveSnap(_this.getRoomCenter().x, _this.getRoomCenter().y);
             _this.onEnterRoom(player);
@@ -18727,6 +18746,8 @@ var Room = /** @class */ (function () {
             }
         };
         this.updateLighting = function () {
+            if (!_this.onScreen)
+                return;
             // Start timing the initial setup
             //console.time("updateLighting: Initial Setup");
             _this.updateDoorLightSources();
@@ -19036,6 +19057,8 @@ var Room = /** @class */ (function () {
             game_1.Game.ctx.save();
         };
         this.drawShadeLayer = function () {
+            if (!_this.onScreen)
+                return;
             game_1.Game.ctx.save();
             // Clear the offscreen shade canvas
             _this.shadeOffscreenCtx.clearRect(0, 0, _this.shadeOffscreenCanvas.width, _this.shadeOffscreenCanvas.height);
@@ -19202,17 +19225,17 @@ var Room = /** @class */ (function () {
         };
         // src/room.ts
         this.createWallMask = function () {
-            game_1.Game.ctx.save();
             var maskCanvas = document.createElement("canvas");
-            maskCanvas.width = _this.width * gameConstants_1.GameConstants.TILESIZE - 14;
-            maskCanvas.height = _this.height * gameConstants_1.GameConstants.TILESIZE - 14;
-            var maskCtx = maskCanvas.getContext("2d");
-            if (!maskCtx) {
-                throw new Error("Failed to initialize mask canvas context.");
+            _this.maskCanvases.push(maskCanvas); // <-- Track the canvas
+            maskCanvas.width = _this.width * gameConstants_1.GameConstants.TILESIZE;
+            maskCanvas.height = _this.height * gameConstants_1.GameConstants.TILESIZE;
+            var ctx = maskCanvas.getContext("2d");
+            if (!ctx) {
+                throw new Error("Failed to create mask canvas context.");
             }
             // Fill the canvas with opaque color
-            maskCtx.fillStyle = "rgba(255, 255, 255, 1)";
-            maskCtx.fillRect(_this.roomX * gameConstants_1.GameConstants.TILESIZE, _this.roomY * gameConstants_1.GameConstants.TILESIZE, maskCanvas.width, maskCanvas.height);
+            ctx.fillStyle = "rgba(255, 255, 255, 1)";
+            ctx.fillRect(_this.roomX * gameConstants_1.GameConstants.TILESIZE, _this.roomY * gameConstants_1.GameConstants.TILESIZE, maskCanvas.width, maskCanvas.height);
             // Make wall areas transparent
             /*
             for (let x = this.roomX - 1; x < this.roomX + 1 + this.width; x++) {
@@ -19221,7 +19244,7 @@ var Room = /** @class */ (function () {
                 if (tile instanceof Wall) {
                   let offsetY = 0;
                   if (tile.direction === Direction.DOWN) offsetY = 1;
-                  maskCtx.clearRect(
+                  ctx.clearRect(
                     (x - this.roomX) * GameConstants.TILESIZE,
                     (y - 1 - this.roomY) * GameConstants.TILESIZE,
                     GameConstants.TILESIZE,
@@ -19231,7 +19254,6 @@ var Room = /** @class */ (function () {
               }
             }
               */
-            game_1.Game.ctx.restore();
             return maskCanvas;
         };
         // src/room.ts
@@ -19438,6 +19460,7 @@ var Room = /** @class */ (function () {
         this.currentSpawnerCount = 0;
         this.deadEntities = Array();
         this.active = false;
+        this.lastLightingUpdate = 0;
         // Initialize Color Offscreen Canvas
         this.colorOffscreenCanvas = document.createElement("canvas");
         this.colorOffscreenCanvas.width = this.width * gameConstants_1.GameConstants.TILESIZE;
@@ -20087,19 +20110,22 @@ var Room = /** @class */ (function () {
         var roomRight = (this.roomX + this.width + 2) * tileSize;
         var roomTop = (this.roomY - 2) * tileSize;
         var roomBottom = (this.roomY + this.height + 2) * tileSize;
-        // Assuming the camera's position is tracked in the Game instance
-        var cameraX = player.x -
+        // Convert player position from tiles to pixels
+        var playerPosX = player.x * tileSize;
+        var playerPosY = player.y * tileSize;
+        // Calculate camera position in pixels
+        var cameraX = playerPosX -
             player.drawX +
-            0.5 * gameConstants_1.GameConstants.TILESIZE -
+            0.5 * tileSize -
             0.5 * gameConstants_1.GameConstants.WIDTH -
             this.game.screenShakeX; // X-coordinate of the camera's top-left corner
-        var cameraY = player.y -
+        var cameraY = playerPosY -
             player.drawY +
-            0.5 * gameConstants_1.GameConstants.TILESIZE -
-            0.5 * gameConstants_1.GameConstants.WIDTH -
+            0.5 * tileSize -
+            0.5 * gameConstants_1.GameConstants.HEIGHT - // Corrected from WIDTH to HEIGHT
             this.game.screenShakeY; // Y-coordinate of the camera's top-left corner
-        var cameraWidth = innerWidth; // Width of the visible canvas area
-        var cameraHeight = innerHeight; // Height of the visible canvas area
+        var cameraWidth = gameConstants_1.GameConstants.WIDTH; // Corrected from innerWidth
+        var cameraHeight = gameConstants_1.GameConstants.HEIGHT; // Corrected from innerHeight
         // Define the camera's boundaries
         var cameraLeft = cameraX;
         var cameraRight = cameraX + cameraWidth;
