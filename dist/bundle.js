@@ -8073,7 +8073,7 @@ var Game = /** @class */ (function () {
                 gameConstants_1.GameConstants.isMobile = false;
                 // For desktop, use standard scaling logic
                 // Ensure GameConstants.SCALE is an integer. If not, round it.
-                var integerScale = Math.floor(gameConstants_1.GameConstants.SCALE);
+                var integerScale = Math.ceil(gameConstants_1.GameConstants.SCALE);
                 Game.scale = Math.min(maxWidthScale, maxHeightScale, integerScale);
             }
             // Handle case where scale would be 0
@@ -8082,18 +8082,22 @@ var Game = /** @class */ (function () {
                 maxWidthScale = window.innerWidth / gameConstants_1.GameConstants.DEFAULTWIDTH;
                 maxHeightScale = window.innerHeight / gameConstants_1.GameConstants.DEFAULTHEIGHT;
                 // Ensure Game.scale is at least 1 and an integer
-                Game.scale = Math.max(1, Math.min(Math.floor(maxWidthScale), Math.floor(maxHeightScale), 1));
+                Game.scale = Math.max(1, Math.min(Math.ceil(maxWidthScale), Math.ceil(maxHeightScale), 1));
             }
+            // Apply device pixel ratio negation by setting scale to 80%
+            var NEGATE_DPR_FACTOR = 1;
+            Game.scale *= NEGATE_DPR_FACTOR / window.devicePixelRatio;
             // Calculate screen width and height in tiles, ensuring integer values
             levelConstants_1.LevelConstants.SCREEN_W = Math.floor(window.innerWidth / Game.scale / gameConstants_1.GameConstants.TILESIZE);
             levelConstants_1.LevelConstants.SCREEN_H = Math.floor(window.innerHeight / Game.scale / gameConstants_1.GameConstants.TILESIZE);
+            console.log("levelConstants.SCREEN_W:" + levelConstants_1.LevelConstants.SCREEN_W, "levelConstants.SCREEN_H" + levelConstants_1.LevelConstants.SCREEN_H);
             // Calculate canvas width and height in pixels, ensuring integer values
             gameConstants_1.GameConstants.WIDTH = levelConstants_1.LevelConstants.SCREEN_W * gameConstants_1.GameConstants.TILESIZE;
             gameConstants_1.GameConstants.HEIGHT = levelConstants_1.LevelConstants.SCREEN_H * gameConstants_1.GameConstants.TILESIZE;
             // Set canvas width and height attributes as integers
             Game.ctx.canvas.setAttribute("width", "".concat(gameConstants_1.GameConstants.WIDTH));
             Game.ctx.canvas.setAttribute("height", "".concat(gameConstants_1.GameConstants.HEIGHT));
-            // Set CSS styles with integer pixel values for scaling
+            // Set CSS styles with integer pixel values for scaling, applying 80% factor
             Game.ctx.canvas.setAttribute("style", "width: ".concat(gameConstants_1.GameConstants.WIDTH * Game.scale, "px; height: ").concat(gameConstants_1.GameConstants.HEIGHT * Game.scale, "px;\n      display: block;\n      margin: 0 auto;\n      image-rendering: optimizeSpeed; /* Older versions of FF */\n      image-rendering: -moz-crisp-edges; /* FF 6.0+ */\n      image-rendering: -webkit-optimize-contrast; /* Safari */\n      image-rendering: -o-crisp-edges; /* OS X & Windows Opera (12.02+) */\n      image-rendering: pixelated; /* Future-browsers */\n      -ms-interpolation-mode: nearest-neighbor; /* IE */\n      "));
             // Optional: Log the new scale and canvas size for debugging
             console.log("Scale set to: ".concat(Game.scale));

@@ -712,7 +712,7 @@ export class Game {
       GameConstants.isMobile = false;
       // For desktop, use standard scaling logic
       // Ensure GameConstants.SCALE is an integer. If not, round it.
-      const integerScale = Math.floor(GameConstants.SCALE);
+      const integerScale = Math.ceil(GameConstants.SCALE);
       Game.scale = Math.min(maxWidthScale, maxHeightScale, integerScale);
     }
 
@@ -724,9 +724,13 @@ export class Game {
       // Ensure Game.scale is at least 1 and an integer
       Game.scale = Math.max(
         1,
-        Math.min(Math.floor(maxWidthScale), Math.floor(maxHeightScale), 1),
+        Math.min(Math.ceil(maxWidthScale), Math.ceil(maxHeightScale), 1),
       );
     }
+
+    // Apply device pixel ratio negation by setting scale to 80%
+    const NEGATE_DPR_FACTOR = 1;
+    Game.scale *= NEGATE_DPR_FACTOR / window.devicePixelRatio;
 
     // Calculate screen width and height in tiles, ensuring integer values
     LevelConstants.SCREEN_W = Math.floor(
@@ -735,7 +739,10 @@ export class Game {
     LevelConstants.SCREEN_H = Math.floor(
       window.innerHeight / Game.scale / GameConstants.TILESIZE,
     );
-
+    console.log(
+      "levelConstants.SCREEN_W:" + LevelConstants.SCREEN_W,
+      "levelConstants.SCREEN_H" + LevelConstants.SCREEN_H,
+    );
     // Calculate canvas width and height in pixels, ensuring integer values
     GameConstants.WIDTH = LevelConstants.SCREEN_W * GameConstants.TILESIZE;
     GameConstants.HEIGHT = LevelConstants.SCREEN_H * GameConstants.TILESIZE;
@@ -744,7 +751,7 @@ export class Game {
     Game.ctx.canvas.setAttribute("width", `${GameConstants.WIDTH}`);
     Game.ctx.canvas.setAttribute("height", `${GameConstants.HEIGHT}`);
 
-    // Set CSS styles with integer pixel values for scaling
+    // Set CSS styles with integer pixel values for scaling, applying 80% factor
     Game.ctx.canvas.setAttribute(
       "style",
       `width: ${GameConstants.WIDTH * Game.scale}px; height: ${
