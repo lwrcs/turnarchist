@@ -2437,7 +2437,8 @@ var Enemy = /** @class */ (function (_super) {
         _this.tickPoison = function () {
             if (_this.status.poison.active && _this.targetPlayer) {
                 if (_this.ticks % 3 === _this.status.poison.effectTick &&
-                    _this.ticks !== _this.status.poison.startTick) {
+                    _this.ticks !== _this.status.poison.startTick &&
+                    _this.health > 1) {
                     _this.hurt(_this.targetPlayer, 0.5, "poison");
                     _this.shadeColor = "#00FF00";
                     _this.status.poison.hitCount++;
@@ -2456,6 +2457,7 @@ var Enemy = /** @class */ (function (_super) {
             if (_this.status.bleed.active && _this.targetPlayer) {
                 if (_this.ticks % 2 === _this.status.bleed.effectTick &&
                     _this.ticks !== _this.status.bleed.startTick) {
+                    _this.targetPlayer.inventory.weapon.damage = Math.max(0.5, _this.targetPlayer.inventory.weapon.damage - 0.5);
                     _this.hurt(_this.targetPlayer, 0.5, "blood");
                     _this.targetPlayer.heal(0.5);
                     _this.shadeColor = "#FF0000";
@@ -2771,6 +2773,7 @@ var Enemy = /** @class */ (function (_super) {
         _this.drawYOffset = 1.5;
         _this.name = "";
         _this.seenPlayer = false;
+        _this.heardPlayer = false;
         _this.ticks = 0;
         _this.frame = 0;
         _this.health = 1;
@@ -8830,7 +8833,7 @@ var GameConstants = /** @class */ (function () {
     GameConstants.isMobile = false;
     GameConstants.FPS = 120;
     GameConstants.ALPHA_ENABLED = true;
-    GameConstants.SHADE_LEVELS = 50;
+    GameConstants.SHADE_LEVELS = 30;
     GameConstants.TILESIZE = 16;
     GameConstants.SCALE = 4;
     GameConstants.MAX_SCALE = 5;
@@ -23097,6 +23100,10 @@ var Weapon = /** @class */ (function (_super) {
             _this.toggleEquip();
             //this.wielder.inventory.removeItem(this);
             //this.wielder = null;
+            _this.game.pushMessage("Your weapon breaks");
+            if (_this.status.poison || _this.status.blood) {
+                _this.clearStatus();
+            }
             _this.broken = true;
         };
         _this.coEquippable = function (other) {
@@ -23106,6 +23113,9 @@ var Weapon = /** @class */ (function (_super) {
         };
         _this.applyStatus = function (status) {
             _this.status = status;
+            if (_this.status.blood) {
+                _this.damage = Math.max(0.5, _this.damage - 0.5);
+            }
         };
         _this.clearStatus = function () {
             var status = _this.status.poison ? "poison" : "bleed";
@@ -23120,8 +23130,7 @@ var Weapon = /** @class */ (function (_super) {
                     ? "Your weapon poisons the ".concat(enemy.name)
                     : "Your cursed weapon draws blood from the ".concat(enemy.name);
                 _this.game.pushMessage(message);
-                if (_this.statusApplicationCount >= 10)
-                    _this.clearStatus();
+                //if (this.statusApplicationCount >= 10) this.clearStatus();
             }
         };
         _this.disassemble = function () {

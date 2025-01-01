@@ -115,6 +115,7 @@ export class Entity extends Drawable {
   dyingFrame: number;
   alpha: number;
   cloned: boolean;
+
   private _imageParticleTiles: { x: number; y: number };
   hitSound: () => void;
 

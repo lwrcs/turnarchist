@@ -35,6 +35,7 @@ interface EnemyStatus {
 
 export abstract class Enemy extends Entity {
   seenPlayer: boolean;
+  heardPlayer: boolean;
   frame: number;
   ticks: number;
   aggro: boolean;
@@ -54,6 +55,7 @@ export abstract class Enemy extends Entity {
     this.drawYOffset = 1.5;
     this.name = "";
     this.seenPlayer = false;
+    this.heardPlayer = false;
     this.ticks = 0;
     this.frame = 0;
     this.health = 1;
@@ -158,7 +160,8 @@ export abstract class Enemy extends Entity {
     if (this.status.poison.active && this.targetPlayer) {
       if (
         this.ticks % 3 === this.status.poison.effectTick &&
-        this.ticks !== this.status.poison.startTick
+        this.ticks !== this.status.poison.startTick &&
+        this.health > 1
       ) {
         this.hurt(this.targetPlayer, 0.5, "poison");
         this.shadeColor = "#00FF00";
@@ -182,6 +185,10 @@ export abstract class Enemy extends Entity {
         this.ticks % 2 === this.status.bleed.effectTick &&
         this.ticks !== this.status.bleed.startTick
       ) {
+        this.targetPlayer.inventory.weapon.damage = Math.max(
+          0.5,
+          this.targetPlayer.inventory.weapon.damage - 0.5,
+        );
         this.hurt(this.targetPlayer, 0.5, "blood");
         this.targetPlayer.heal(0.5);
         this.shadeColor = "#FF0000";

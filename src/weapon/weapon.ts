@@ -41,6 +41,10 @@ export abstract class Weapon extends Equippable {
     this.toggleEquip();
     //this.wielder.inventory.removeItem(this);
     //this.wielder = null;
+    this.game.pushMessage("Your weapon breaks");
+    if (this.status.poison || this.status.blood) {
+      this.clearStatus();
+    }
     this.broken = true;
   };
 
@@ -51,6 +55,9 @@ export abstract class Weapon extends Equippable {
 
   applyStatus = (status: WeaponStatus) => {
     this.status = status;
+    if (this.status.blood) {
+      this.damage = Math.max(0.5, this.damage - 0.5);
+    }
   };
 
   clearStatus = () => {
@@ -69,7 +76,7 @@ export abstract class Weapon extends Equippable {
         : `Your cursed weapon draws blood from the ${enemy.name}`;
       this.game.pushMessage(message);
 
-      if (this.statusApplicationCount >= 10) this.clearStatus();
+      //if (this.statusApplicationCount >= 10) this.clearStatus();
     }
   };
 
