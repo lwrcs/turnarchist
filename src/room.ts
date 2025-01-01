@@ -216,6 +216,8 @@ export class Room {
 
   private shadeOffscreenCanvas: HTMLCanvasElement;
   private shadeOffscreenCtx: CanvasRenderingContext2D;
+  private bloomOffscreenCanvas: HTMLCanvasElement;
+  private bloomOffscreenCtx: CanvasRenderingContext2D;
 
   currentSpawnerCount: number;
 
@@ -313,6 +315,16 @@ export class Room {
       throw new Error("Failed to initialize shade offscreen canvas context.");
     }
     this.shadeOffscreenCtx = shadeCtx;
+
+    // Initialize Bloom Offscreen Canvas
+    this.bloomOffscreenCanvas = document.createElement("canvas");
+    this.bloomOffscreenCanvas.width = this.width * GameConstants.TILESIZE;
+    this.bloomOffscreenCanvas.height = this.height * GameConstants.TILESIZE;
+    const bloomCtx = this.bloomOffscreenCanvas.getContext("2d");
+    if (!bloomCtx) {
+      throw new Error("Failed to initialize bloom offscreen canvas context.");
+    }
+    this.bloomOffscreenCtx = bloomCtx;
 
     // #region initialize arrays
 
@@ -2196,8 +2208,8 @@ export class Room {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
         const alpha = this.softVis[x][y];
         if (alpha === 0) continue; // Skip if no visibility adjustment
-        let factor = !GameConstants.SMOOTH_LIGHTING ? 2 : 1;
-        const computedAlpha = alpha / factor;
+        let factor = !GameConstants.SMOOTH_LIGHTING ? 1.5 : 0.5;
+        const computedAlpha = alpha ** factor;
         if (computedAlpha <= 0) continue; // Skip if alpha is effectively zero
 
         const fillStyle = `rgba(0, 0, 0, ${computedAlpha})`;
@@ -2226,6 +2238,91 @@ export class Room {
       this.roomY * GameConstants.TILESIZE,
     );
 
+    Game.ctx.restore();
+  };
+
+  drawBloomLayer = (delta: number) => {
+    if (!this.onScreen) return;
+    Game.ctx.save();
+    // Clear the offscreen shade canvas
+    this.bloomOffscreenCtx.clearRect(
+      0,
+      0,
+      this.bloomOffscreenCanvas.width,
+      this.bloomOffscreenCanvas.height,
+    );
+
+    let lastFillStyle = "";
+
+    // Draw all shade rectangles without any filters
+    const allEntities = this.entities.concat(this.deadEntities);
+    if (allEntities.length > 0)
+      for (let e of this.entities) {
+        if (e.hasBloom) {
+          e.updateBloom(delta);
+          this.bloomOffscreenCtx.globalAlpha =
+            1 * (1 - this.softVis[e.x][e.y]) * e.softBloomAlpha;
+          this.bloomOffscreenCtx.fillStyle = e.bloomColor;
+
+          this.bloomOffscreenCtx.fillRect(
+            (e.x - e.drawX - this.roomX) * GameConstants.TILESIZE,
+            (e.y - e.drawY - this.roomY - 0.5) * GameConstants.TILESIZE,
+            GameConstants.TILESIZE,
+            GameConstants.TILESIZE,
+          );
+        }
+      }
+
+    for (let x = this.roomX; x < this.roomX + this.width; x++) {
+      for (let y = this.roomY; y < this.roomY + this.height; y++) {
+        if (this.roomArray[x][y].hasBloom) {
+          this.roomArray[x][y].updateBloom(delta);
+          this.bloomOffscreenCtx.globalAlpha =
+            1 * (1 - this.softVis[x][y]) * this.roomArray[x][y].softBloomAlpha;
+          this.bloomOffscreenCtx.fillStyle = this.roomArray[x][y].bloomColor;
+
+          this.bloomOffscreenCtx.fillRect(
+            (x - this.roomX) * GameConstants.TILESIZE,
+            (y - this.roomY - 0.5) * GameConstants.TILESIZE,
+            GameConstants.TILESIZE,
+            GameConstants.TILESIZE,
+          );
+        }
+      }
+    }
+
+    if (this.projectiles.length > 0)
+      for (let p of this.projectiles) {
+        if (p.hasBloom) {
+          p.updateBloom(delta);
+          this.bloomOffscreenCtx.globalAlpha =
+            1 * (1 - this.softVis[p.x][p.y]) * p.softBloomAlpha;
+          this.bloomOffscreenCtx.fillStyle = p.bloomColor;
+
+          this.bloomOffscreenCtx.fillRect(
+            (p.x - this.roomX) * GameConstants.TILESIZE,
+            (p.y - this.roomY) * GameConstants.TILESIZE,
+            GameConstants.TILESIZE,
+            GameConstants.TILESIZE,
+          );
+        }
+      }
+
+    // Draw the blurred shade layer directly without masking
+    Game.ctx.globalCompositeOperation = "screen";
+    Game.ctx.filter = "blur(7px)";
+    Game.ctx.globalAlpha = 0.8;
+    Game.ctx.drawImage(
+      this.bloomOffscreenCanvas,
+      this.roomX * GameConstants.TILESIZE,
+      this.roomY * GameConstants.TILESIZE,
+    );
+    this.bloomOffscreenCtx.clearRect(
+      0,
+      0,
+      this.bloomOffscreenCanvas.width,
+      this.bloomOffscreenCanvas.height,
+    );
     Game.ctx.restore();
   };
 

@@ -777,8 +777,27 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Drawable = void 0;
 var Drawable = /** @class */ (function () {
     function Drawable() {
+        var _this = this;
         this.drawableY = 0;
         this.draw = function (delta) { };
+        this.hasBloom = false;
+        this.bloomColor = "#FFFFFF";
+        this.bloomAlpha = 1;
+        this.softBloomAlpha = 0;
+        this.updateBloom = function (delta) {
+            if (_this.hasBloom) {
+                var diff = _this.softBloomAlpha - _this.bloomAlpha;
+                if (Math.abs(diff) > 0.001) {
+                    _this.softBloomAlpha = _this.softBloomAlpha - diff * 0.1 * delta;
+                }
+                else {
+                    _this.softBloomAlpha = _this.bloomAlpha;
+                }
+            }
+            else {
+                _this.softBloomAlpha = 0;
+            }
+        };
     }
     return Drawable;
 }());
@@ -3903,9 +3922,13 @@ var OccultistEnemy = /** @class */ (function (_super) {
         _this.shieldedBefore = false;
         _this.shieldedEnemies = [];
         _this.shadeColor = "#000000";
-        _this.lightSource = lighting_1.Lighting.newLightSource(_this.x + 0.5, _this.y + 0.5, [20, 0, 40], 2.5, 20);
+        _this.lightSource = lighting_1.Lighting.newLightSource(_this.x + 0.5, _this.y + 0.5, [20, 0, 40], 3.5, 20);
         _this.addLightSource(_this.lightSource);
         _this.room.updateLighting();
+        _this.hasBloom = true;
+        _this.bloomColor = "#2E0854";
+        _this.bloomAlpha = 1;
+        _this.softBloomAlpha = 0;
         return _this;
     }
     return OccultistEnemy;
@@ -5430,6 +5453,9 @@ var Entity = /** @class */ (function (_super) {
         _this.dropChance = 0.02;
         //shadeColor: string;
         _this.shadeMultiplier = 1;
+        _this.bloomColor = "#FFFFFF";
+        _this.bloomAlpha = 1;
+        _this.softBloomAlpha = 1;
         _this.applyShield = function (shieldHealth) {
             if (shieldHealth === void 0) { shieldHealth = 1; }
             if (!_this.shieldedBefore) {
@@ -5440,6 +5466,9 @@ var Entity = /** @class */ (function (_super) {
                 _this.maxHealth += shieldHealth;
                 _this.shadeColor = "purple";
                 _this.shadeMultiplier = 0.5;
+                _this.hasBloom = true;
+                _this.bloomColor = "#2E0854";
+                _this.bloomAlpha = 1;
             }
         };
         _this.removeShield = function () {
@@ -5449,6 +5478,8 @@ var Entity = /** @class */ (function (_super) {
                 _this.shield.remove();
                 _this.shadeColor = _this.room.shadeColor;
                 _this.shadeMultiplier = 1;
+                _this.hasBloom = false;
+                _this.bloomAlpha = 0;
             }
         };
         _this.getDrop = function (useCategory, force) {
@@ -5496,6 +5527,7 @@ var Entity = /** @class */ (function (_super) {
             _this.updateHurtFrame(delta);
             _this.animateDying(delta);
             _this.updateShadeColor(delta);
+            //this.updateBloom(delta);
             if (!_this.doneMoving()) {
                 _this.drawX *= Math.pow(0.9, delta);
                 _this.drawY *= Math.pow(0.9, delta);
@@ -5554,6 +5586,7 @@ var Entity = /** @class */ (function (_super) {
             }
             if (_this.health <= 0) {
                 _this.kill();
+                _this.bloomAlpha = 0;
             }
             else
                 _this.hurtCallback();
@@ -5624,7 +5657,6 @@ var Entity = /** @class */ (function (_super) {
             }
         };
         _this.shadeAmount = function () {
-            var factor = !gameConstants_1.GameConstants.SMOOTH_LIGHTING ? 2 : 1;
             var softVis = _this.room.softVis[_this.x][_this.y] * 1;
             if (_this.shadeMultiplier > 1)
                 return Math.min(1, softVis * _this.shadeMultiplier);
@@ -6086,6 +6118,8 @@ var Entity = /** @class */ (function (_super) {
         _this.alpha = 1;
         _this.cloned = false;
         _this.dead = false;
+        _this.hasBloom = false;
+        _this.bloomColor = "#FFFFFF";
         return _this;
     }
     Entity.add = function (room, game, x, y) {
@@ -6117,6 +6151,10 @@ var Entity = /** @class */ (function (_super) {
         cloned.shadeColor = original.shadeColor;
         cloned.shadeMultiplier = original.shadeMultiplier;
         cloned.softShadeColor = original.softShadeColor;
+        cloned.hasBloom = original.hasBloom;
+        cloned.bloomColor = original.bloomColor;
+        cloned.bloomAlpha = 1;
+        cloned.softBloomAlpha = 1;
         cloned.removeLightSource(cloned.lightSource);
         //cloned.room.updateLighting();
         // Add the cloned entity to deadEntities
@@ -6777,6 +6815,10 @@ var Pumpkin = /** @class */ (function (_super) {
         _this.drop = new candle_1.Candle(_this.room, _this.x, _this.y);
         _this.imageParticleX = 0;
         _this.imageParticleY = 25;
+        _this.bloomColor = "#FFA500";
+        _this.hasBloom = true;
+        _this.bloomAlpha = 1;
+        _this.softBloomAlpha = 0;
         _this.lightSource = new lightSource_1.LightSource(_this.x + 0.5, _this.y + 0.5, 5, [200, 30, 1], 3);
         _this.addLightSource(_this.lightSource);
         return _this;
@@ -6901,6 +6943,10 @@ var TombStone = /** @class */ (function (_super) {
         var dropProb = random_1.Random.rand();
         if (dropProb < 0.05)
             _this.drop = new spellbook_1.Spellbook(_this.room, _this.x, _this.y);
+        _this.hasBloom = true;
+        _this.bloomColor = "#05FF05";
+        _this.bloomAlpha = 1;
+        _this.softBloomAlpha = 0;
         _this.lightSource = new lightSource_1.LightSource(_this.x + 0.5, _this.y + 0.5, 7, [5, 150, 5], 1);
         _this.addLightSource(_this.lightSource);
         return _this;
@@ -8051,6 +8097,7 @@ var Game = /** @class */ (function () {
                     break;
                 case "smooth":
                     gameConstants_1.GameConstants.SMOOTH_LIGHTING = !gameConstants_1.GameConstants.SMOOTH_LIGHTING;
+                    break;
                 case "rooms":
                     gameConstants_1.GameConstants.drawOtherRooms = !gameConstants_1.GameConstants.drawOtherRooms;
                 default:
@@ -8155,6 +8202,7 @@ var Game = /** @class */ (function () {
                 if (room.active || room.entered) {
                     room.drawShadeLayer();
                     room.drawColorLayer();
+                    room.drawBloomLayer(delta);
                     if (room.active)
                         room.drawOverShade(delta);
                 }
@@ -8163,6 +8211,7 @@ var Game = /** @class */ (function () {
         this.drawStuff = function (delta) {
             _this.room.drawShadeLayer();
             _this.room.drawColorLayer();
+            _this.room.drawBloomLayer(delta);
             //this.room.drawShade(delta);
             _this.room.drawOverShade(delta);
         };
@@ -17248,7 +17297,7 @@ var EnemyShield = /** @class */ (function (_super) {
         _this.frame = 0;
         _this.health = health;
         _this.parent.shielded = true;
-        _this.lightSource = lighting_1.Lighting.newLightSource(_this.x + 0.5, _this.y + 0.5, [20, 0, 40], 2.5, 20);
+        _this.lightSource = lighting_1.Lighting.newLightSource(_this.x + 0.5, _this.y + 0.5, [20, 0, 40], 3.5, 20);
         _this.parent.addLightSource(_this.lightSource);
         _this.parent.room.projectiles.push(_this);
         _this.parent.room.updateLighting();
@@ -17440,6 +17489,8 @@ var Projectile = /** @class */ (function (_super) {
         _this.dead = false;
         _this.parent = parent;
         _this.drawableY = y;
+        _this.hasBloom = false;
+        _this.bloomColor = "#00BFFF";
         return _this;
     }
     Object.defineProperty(Projectile.prototype, "distanceToParent", {
@@ -17563,8 +17614,12 @@ var WizardFireball = /** @class */ (function (_super) {
         _this.state = 0; // this.distanceToParent;
         _this.lightSource = new lightSource_1.LightSource(_this.x + 0.5, _this.y + 0.5, 4, parent.projectileColor, 0.1);
         _this.parent.addLightSource(_this.lightSource);
-        return _this;
         //this.parent.room.updateLighting();
+        _this.hasBloom = true;
+        _this.bloomColor = "#00BFFF";
+        _this.bloomAlpha = 1;
+        _this.softBloomAlpha = 0;
+        return _this;
     }
     return WizardFireball;
 }(projectile_1.Projectile));
@@ -19082,8 +19137,8 @@ var Room = /** @class */ (function () {
                     var alpha = _this.softVis[x][y];
                     if (alpha === 0)
                         continue; // Skip if no visibility adjustment
-                    var factor = !gameConstants_1.GameConstants.SMOOTH_LIGHTING ? 2 : 1;
-                    var computedAlpha = alpha / factor;
+                    var factor = !gameConstants_1.GameConstants.SMOOTH_LIGHTING ? 1.5 : 0.5;
+                    var computedAlpha = Math.pow(alpha, factor);
                     if (computedAlpha <= 0)
                         continue; // Skip if alpha is effectively zero
                     var fillStyle = "rgba(0, 0, 0, ".concat(computedAlpha, ")");
@@ -19099,6 +19154,56 @@ var Room = /** @class */ (function () {
             game_1.Game.ctx.globalAlpha = 1;
             game_1.Game.ctx.filter = "blur(5px)";
             game_1.Game.ctx.drawImage(_this.shadeOffscreenCanvas, _this.roomX * gameConstants_1.GameConstants.TILESIZE, _this.roomY * gameConstants_1.GameConstants.TILESIZE);
+            game_1.Game.ctx.restore();
+        };
+        this.drawBloomLayer = function (delta) {
+            if (!_this.onScreen)
+                return;
+            game_1.Game.ctx.save();
+            // Clear the offscreen shade canvas
+            _this.bloomOffscreenCtx.clearRect(0, 0, _this.bloomOffscreenCanvas.width, _this.bloomOffscreenCanvas.height);
+            var lastFillStyle = "";
+            // Draw all shade rectangles without any filters
+            var allEntities = _this.entities.concat(_this.deadEntities);
+            if (allEntities.length > 0)
+                for (var _i = 0, _a = _this.entities; _i < _a.length; _i++) {
+                    var e = _a[_i];
+                    if (e.hasBloom) {
+                        e.updateBloom(delta);
+                        _this.bloomOffscreenCtx.globalAlpha =
+                            1 * (1 - _this.softVis[e.x][e.y]) * e.softBloomAlpha;
+                        _this.bloomOffscreenCtx.fillStyle = e.bloomColor;
+                        _this.bloomOffscreenCtx.fillRect((e.x - e.drawX - _this.roomX) * gameConstants_1.GameConstants.TILESIZE, (e.y - e.drawY - _this.roomY - 0.5) * gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE);
+                    }
+                }
+            for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
+                for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
+                    if (_this.roomArray[x][y].hasBloom) {
+                        _this.roomArray[x][y].updateBloom(delta);
+                        _this.bloomOffscreenCtx.globalAlpha =
+                            1 * (1 - _this.softVis[x][y]) * _this.roomArray[x][y].softBloomAlpha;
+                        _this.bloomOffscreenCtx.fillStyle = _this.roomArray[x][y].bloomColor;
+                        _this.bloomOffscreenCtx.fillRect((x - _this.roomX) * gameConstants_1.GameConstants.TILESIZE, (y - _this.roomY - 0.5) * gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE);
+                    }
+                }
+            }
+            if (_this.projectiles.length > 0)
+                for (var _b = 0, _c = _this.projectiles; _b < _c.length; _b++) {
+                    var p = _c[_b];
+                    if (p.hasBloom) {
+                        p.updateBloom(delta);
+                        _this.bloomOffscreenCtx.globalAlpha =
+                            1 * (1 - _this.softVis[p.x][p.y]) * p.softBloomAlpha;
+                        _this.bloomOffscreenCtx.fillStyle = p.bloomColor;
+                        _this.bloomOffscreenCtx.fillRect((p.x - _this.roomX) * gameConstants_1.GameConstants.TILESIZE, (p.y - _this.roomY) * gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE);
+                    }
+                }
+            // Draw the blurred shade layer directly without masking
+            game_1.Game.ctx.globalCompositeOperation = "screen";
+            game_1.Game.ctx.filter = "blur(7px)";
+            game_1.Game.ctx.globalAlpha = 0.8;
+            game_1.Game.ctx.drawImage(_this.bloomOffscreenCanvas, _this.roomX * gameConstants_1.GameConstants.TILESIZE, _this.roomY * gameConstants_1.GameConstants.TILESIZE);
+            _this.bloomOffscreenCtx.clearRect(0, 0, _this.bloomOffscreenCanvas.width, _this.bloomOffscreenCanvas.height);
             game_1.Game.ctx.restore();
         };
         this.drawEntities = function (delta, skipLocalPlayer) {
@@ -19493,6 +19598,15 @@ var Room = /** @class */ (function () {
             throw new Error("Failed to initialize shade offscreen canvas context.");
         }
         this.shadeOffscreenCtx = shadeCtx;
+        // Initialize Bloom Offscreen Canvas
+        this.bloomOffscreenCanvas = document.createElement("canvas");
+        this.bloomOffscreenCanvas.width = this.width * gameConstants_1.GameConstants.TILESIZE;
+        this.bloomOffscreenCanvas.height = this.height * gameConstants_1.GameConstants.TILESIZE;
+        var bloomCtx = this.bloomOffscreenCanvas.getContext("2d");
+        if (!bloomCtx) {
+            throw new Error("Failed to initialize bloom offscreen canvas context.");
+        }
+        this.bloomOffscreenCtx = bloomCtx;
         // #region initialize arrays
         //initialize room array
         this.roomArray = [];
@@ -22299,6 +22413,10 @@ var WallTorch = /** @class */ (function (_super) {
         _this.room.lightSources.push(new lightSource_1.LightSource(_this.x + 0.5, _this.y + 0.5, 5, levelConstants_1.LevelConstants.TORCH_LIGHT_COLOR, 1.5));
         _this.frame = Math.random() * 12;
         _this.tileYOffset = 6;
+        _this.hasBloom = true;
+        _this.bloomColor = "#FFA500";
+        _this.bloomAlpha = 1;
+        _this.softBloomAlpha = 0;
         return _this;
     }
     return WallTorch;

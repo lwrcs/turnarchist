@@ -25,6 +25,10 @@ export class Pumpkin extends Entity {
     this.drop = new Candle(this.room, this.x, this.y);
     this.imageParticleX = 0;
     this.imageParticleY = 25;
+    this.bloomColor = "#FFA500";
+    this.hasBloom = true;
+    this.bloomAlpha = 1;
+    this.softBloomAlpha = 0;
     this.lightSource = new LightSource(
       this.x + 0.5,
       this.y + 0.5,

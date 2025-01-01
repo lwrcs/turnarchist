@@ -22,6 +22,10 @@ export class WallTorch extends Wall {
     );
     this.frame = Math.random() * 12;
     this.tileYOffset = 6;
+    this.hasBloom = true;
+    this.bloomColor = "#FFA500";
+    this.bloomAlpha = 1;
+    this.softBloomAlpha = 0;
   }
 
   isSolid = (): boolean => {

@@ -35,11 +35,15 @@ export class OccultistEnemy extends Enemy {
       this.x + 0.5,
       this.y + 0.5,
       [20, 0, 40],
-      2.5,
+      3.5,
       20,
     );
     this.addLightSource(this.lightSource);
     this.room.updateLighting();
+    this.hasBloom = true;
+    this.bloomColor = "#2E0854";
+    this.bloomAlpha = 1;
+    this.softBloomAlpha = 0;
   }
 
   hit = (): number => {

@@ -22,6 +22,8 @@ export class Projectile extends Drawable {
     this.dead = false;
     this.parent = parent;
     this.drawableY = y;
+    this.hasBloom = false;
+    this.bloomColor = "#00BFFF";
   }
 
   get distanceToParent() {

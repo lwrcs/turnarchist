@@ -48,6 +48,15 @@ export interface entityData {
   location: { x: number; y: number };
 }
 
+export interface bloomData {
+  blurAmount: number;
+  color: string;
+  xOffset: number;
+  yOffset: number;
+  size: number;
+  alpha: number;
+}
+
 export class Entity extends Drawable {
   room: Room;
   x: number;
@@ -115,6 +124,10 @@ export class Entity extends Drawable {
   dyingFrame: number;
   alpha: number;
   cloned: boolean;
+  hasBloom: boolean;
+  bloomColor: string = "#FFFFFF";
+  bloomAlpha: number = 1;
+  softBloomAlpha: number = 1;
 
   private _imageParticleTiles: { x: number; y: number };
   hitSound: () => void;
@@ -179,6 +192,8 @@ export class Entity extends Drawable {
     this.alpha = 1;
     this.cloned = false;
     this.dead = false;
+    this.hasBloom = false;
+    this.bloomColor = "#FFFFFF";
   }
 
   static add<
@@ -222,6 +237,10 @@ export class Entity extends Drawable {
     cloned.shadeColor = original.shadeColor;
     cloned.shadeMultiplier = original.shadeMultiplier;
     cloned.softShadeColor = original.softShadeColor;
+    cloned.hasBloom = original.hasBloom;
+    cloned.bloomColor = original.bloomColor;
+    cloned.bloomAlpha = 1;
+    cloned.softBloomAlpha = 1;
     cloned.removeLightSource(cloned.lightSource);
     //cloned.room.updateLighting();
 
@@ -255,6 +274,9 @@ export class Entity extends Drawable {
       this.maxHealth += shieldHealth;
       this.shadeColor = "purple";
       this.shadeMultiplier = 0.5;
+      this.hasBloom = true;
+      this.bloomColor = "#2E0854";
+      this.bloomAlpha = 1;
     }
   };
 
@@ -265,6 +287,8 @@ export class Entity extends Drawable {
       this.shield.remove();
       this.shadeColor = this.room.shadeColor;
       this.shadeMultiplier = 1;
+      this.hasBloom = false;
+      this.bloomAlpha = 0;
     }
   };
 
@@ -332,6 +356,7 @@ export class Entity extends Drawable {
     this.updateHurtFrame(delta);
     this.animateDying(delta);
     this.updateShadeColor(delta);
+    //this.updateBloom(delta);
 
     if (!this.doneMoving()) {
       this.drawX *= 0.9 ** delta;
@@ -403,6 +428,7 @@ export class Entity extends Drawable {
 
     if (this.health <= 0) {
       this.kill();
+      this.bloomAlpha = 0;
     } else this.hurtCallback();
   };
 
@@ -487,8 +513,6 @@ export class Entity extends Drawable {
   };
 
   shadeAmount = () => {
-    let factor = !GameConstants.SMOOTH_LIGHTING ? 2 : 1;
-
     let softVis = this.room.softVis[this.x][this.y] * 1;
 
     if (this.shadeMultiplier > 1)

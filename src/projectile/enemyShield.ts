@@ -28,7 +28,7 @@ export class EnemyShield extends Projectile {
       this.x + 0.5,
       this.y + 0.5,
       [20, 0, 40],
-      2.5,
+      3.5,
       20,
     );
     this.parent.addLightSource(this.lightSource);

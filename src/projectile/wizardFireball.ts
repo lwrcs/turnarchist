@@ -34,6 +34,10 @@ export class WizardFireball extends Projectile {
     );
     this.parent.addLightSource(this.lightSource);
     //this.parent.room.updateLighting();
+    this.hasBloom = true;
+    this.bloomColor = "#00BFFF";
+    this.bloomAlpha = 1;
+    this.softBloomAlpha = 0;
   }
   setMarkerFrame = () => {
     // Calculate offsetX based on direction

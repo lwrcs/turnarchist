@@ -677,6 +677,7 @@ export class Game {
         break;
       case "smooth":
         GameConstants.SMOOTH_LIGHTING = !GameConstants.SMOOTH_LIGHTING;
+        break;
       case "rooms":
         GameConstants.drawOtherRooms = !GameConstants.drawOtherRooms;
       default:
@@ -821,6 +822,7 @@ export class Game {
       if (room.active || room.entered) {
         room.drawShadeLayer();
         room.drawColorLayer();
+        room.drawBloomLayer(delta);
         if (room.active) room.drawOverShade(delta);
       }
     }
@@ -920,7 +922,7 @@ export class Game {
   drawStuff = (delta: number) => {
     this.room.drawShadeLayer();
     this.room.drawColorLayer();
-
+    this.room.drawBloomLayer(delta);
     //this.room.drawShade(delta);
     this.room.drawOverShade(delta);
   };

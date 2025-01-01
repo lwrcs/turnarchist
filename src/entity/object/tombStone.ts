@@ -41,6 +41,10 @@ export class TombStone extends Entity {
     this.name = "tombstone";
     let dropProb = Random.rand();
     if (dropProb < 0.05) this.drop = new Spellbook(this.room, this.x, this.y);
+    this.hasBloom = true;
+    this.bloomColor = "#05FF05";
+    this.bloomAlpha = 1;
+    this.softBloomAlpha = 0;
     this.lightSource = new LightSource(
       this.x + 0.5,
       this.y + 0.5,
