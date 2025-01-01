@@ -21,7 +21,7 @@ import { Hammer } from "./item/hammer";
 import { SpellbookPage } from "./item/spellbookPage";
 
 export class GameConstants {
-  static readonly VERSION = "v1.0.3"; //"v0.6.3";
+  static readonly VERSION = "v1.0.4"; //"v0.6.3";
   static DEVELOPER_MODE = false;
   static isMobile = false;
 
