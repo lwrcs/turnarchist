@@ -44,8 +44,8 @@ export class GameConstants {
   static readonly CHAT_FADE_TIME = 1000;
   static ANIMATION_SPEED = 1;
 
-  static readonly DEFAULTWIDTH = 6 * GameConstants.TILESIZE;
-  static readonly DEFAULTHEIGHT = 12 * GameConstants.TILESIZE;
+  static readonly DEFAULTWIDTH = GameConstants.TILESIZE;
+  static readonly DEFAULTHEIGHT = GameConstants.TILESIZE;
   static WIDTH = LevelConstants.SCREEN_W * GameConstants.TILESIZE;
   static HEIGHT = LevelConstants.SCREEN_H * GameConstants.TILESIZE;
   static scrolling = true;

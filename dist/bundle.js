@@ -8145,6 +8145,7 @@ var Game = /** @class */ (function () {
         this.onResize = function () {
             // Determine device pixel ratio
             var dpr = window.devicePixelRatio || 1;
+            console.log("dpr:", dpr);
             // Define scale adjustment based on device pixel ratio
             var scaleOffset = 0;
             if (dpr > 1.5) {
@@ -8164,7 +8165,8 @@ var Game = /** @class */ (function () {
                 _this.pushMessage("Mobile detected");
                 // Use smaller scale for mobile devices based on screen size
                 // Adjust max scale with scaleOffset
-                Game.scale = Math.min(maxWidthScale, maxHeightScale, 3 + scaleOffset); // Cap at 3 + offset for mobile
+                var integerScale = Math.ceil(gameConstants_1.GameConstants.SCALE) + scaleOffset;
+                Game.scale = Math.min(maxWidthScale, maxHeightScale, integerScale); // Cap at 3 + offset for mobile
             }
             else {
                 gameConstants_1.GameConstants.isMobile = false;
@@ -8945,8 +8947,8 @@ var GameConstants = /** @class */ (function () {
     GameConstants.CHAT_APPEAR_TIME = 5000;
     GameConstants.CHAT_FADE_TIME = 1000;
     GameConstants.ANIMATION_SPEED = 1;
-    GameConstants.DEFAULTWIDTH = 6 * GameConstants.TILESIZE;
-    GameConstants.DEFAULTHEIGHT = 12 * GameConstants.TILESIZE;
+    GameConstants.DEFAULTWIDTH = GameConstants.TILESIZE;
+    GameConstants.DEFAULTHEIGHT = GameConstants.TILESIZE;
     GameConstants.WIDTH = levelConstants_1.LevelConstants.SCREEN_W * GameConstants.TILESIZE;
     GameConstants.HEIGHT = levelConstants_1.LevelConstants.SCREEN_H * GameConstants.TILESIZE;
     GameConstants.scrolling = true;

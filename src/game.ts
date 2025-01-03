@@ -696,7 +696,7 @@ export class Game {
   onResize = () => {
     // Determine device pixel ratio
     const dpr = window.devicePixelRatio || 1;
-
+    console.log("dpr:", dpr);
     // Define scale adjustment based on device pixel ratio
     let scaleOffset = 0;
     if (dpr > 1.5) {
@@ -721,7 +721,8 @@ export class Game {
       this.pushMessage("Mobile detected");
       // Use smaller scale for mobile devices based on screen size
       // Adjust max scale with scaleOffset
-      Game.scale = Math.min(maxWidthScale, maxHeightScale, 3 + scaleOffset); // Cap at 3 + offset for mobile
+      const integerScale = Math.ceil(GameConstants.SCALE) + scaleOffset;
+      Game.scale = Math.min(maxWidthScale, maxHeightScale, integerScale); // Cap at 3 + offset for mobile
     } else {
       GameConstants.isMobile = false;
       // For desktop, use standard scaling logic
