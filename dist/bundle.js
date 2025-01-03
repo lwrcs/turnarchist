@@ -19427,6 +19427,8 @@ var Room = /** @class */ (function () {
             game_1.Game.ctx.restore();
         };
         this.drawShadeLayer = function () {
+            if (_this.game.isMobile)
+                return;
             if (!_this.onScreen)
                 return;
             game_1.Game.ctx.save();
@@ -19554,6 +19556,8 @@ var Room = /** @class */ (function () {
             game_1.Game.ctx.restore();
         };
         this.drawBloomLayer = function (delta) {
+            if (_this.game.isMobile)
+                return;
             if (!_this.onScreen)
                 return;
             game_1.Game.ctx.save();
