@@ -249,6 +249,7 @@ export class Room {
   active: boolean;
   onScreen: boolean;
   lastLightingUpdate: number;
+  walls: Array<Wall>;
 
   // Add a list to keep track of BeamEffect instances
   beamEffects: BeamEffect[] = [];
@@ -295,6 +296,7 @@ export class Room {
     this.deadEntities = Array<Entity>();
     this.active = false;
     this.lastLightingUpdate = 0;
+    this.walls = Array<Wall>();
 
     // Initialize Color Offscreen Canvas
     this.colorOffscreenCanvas = document.createElement("canvas");
@@ -308,8 +310,9 @@ export class Room {
 
     // Initialize Shade Offscreen Canvas
     this.shadeOffscreenCanvas = document.createElement("canvas");
-    this.shadeOffscreenCanvas.width = this.width * GameConstants.TILESIZE;
-    this.shadeOffscreenCanvas.height = this.height * GameConstants.TILESIZE;
+    this.shadeOffscreenCanvas.width = (this.width + 2) * GameConstants.TILESIZE;
+    this.shadeOffscreenCanvas.height =
+      (this.height + 2) * GameConstants.TILESIZE;
     const shadeCtx = this.shadeOffscreenCanvas.getContext("2d");
     if (!shadeCtx) {
       throw new Error("Failed to initialize shade offscreen canvas context.");
@@ -966,6 +969,7 @@ export class Room {
   // #region POPULATING METHODS
 
   linkExitToStart = () => {
+    //if (this.type === RoomType.ROPEHOLE) return;
     if (
       this.addDoorWithOffset(
         this.level.startRoom.roomX +
@@ -1722,7 +1726,7 @@ export class Room {
     if (!room.roomArray[x]) return null;
     if (!room.roomArray[x][y]) return null;
     const color = room.col[x][y];
-    const brightness = room.vis[x][y];
+    const brightness = 1 - room.vis[x][y];
     const radius = 9;
     return { color, brightness, radius };
   };
@@ -1814,8 +1818,11 @@ export class Room {
         //console.log(`i: ${player.angle}`);
         for (let i = 0; i < 360; i += lightingAngleStep) {
           let lightColor = LevelConstants.AMBIENT_LIGHT_COLOR;
-          if (player.lightEquipped)
+          let lightBrightness = 5;
+          if (player.lightEquipped) {
             lightColor = LevelConstants.TORCH_LIGHT_COLOR;
+            lightBrightness = player.lightBrightness;
+          }
           this.castTintAtAngle(
             i,
             player.x + 0.5,
@@ -1831,7 +1838,7 @@ export class Room {
             */
             LevelConstants.LIGHTING_MAX_DISTANCE,
             lightColor, // RGB color in sRGB
-            5, // intensity
+            lightBrightness, // intensity
           );
         }
       }
@@ -2180,8 +2187,19 @@ export class Room {
     // Draw the blurred color layer directly without masking
     Game.ctx.globalCompositeOperation =
       GameConstants.COLOR_LAYER_COMPOSITE_OPERATION as GlobalCompositeOperation;
+    //Game.ctx.globalCompositeOperation = "source-over";
     Game.ctx.globalAlpha = 0.6;
-    Game.ctx.filter = "blur(5px)";
+    Game.ctx.filter = "blur(6px)";
+    Game.ctx.drawImage(
+      this.colorOffscreenCanvas,
+      this.roomX * GameConstants.TILESIZE,
+      this.roomY * GameConstants.TILESIZE,
+    );
+
+    //draw slight haze
+    Game.ctx.globalCompositeOperation = "lighten";
+    Game.ctx.globalAlpha = 0.05;
+    Game.ctx.filter = "blur(12px)";
     Game.ctx.drawImage(
       this.colorOffscreenCanvas,
       this.roomX * GameConstants.TILESIZE,
@@ -2204,13 +2222,114 @@ export class Room {
     let lastFillStyle = "";
 
     // Draw all shade rectangles without any filters
-    for (let x = this.roomX; x < this.roomX + this.width; x++) {
-      for (let y = this.roomY; y < this.roomY + this.height; y++) {
-        const alpha = this.softVis[x][y];
-        if (alpha === 0) continue; // Skip if no visibility adjustment
-        let factor = !GameConstants.SMOOTH_LIGHTING ? 1.5 : 0.5;
-        const computedAlpha = alpha ** factor;
-        if (computedAlpha <= 0) continue; // Skip if alpha is effectively zero
+    for (let x = this.roomX - 2; x < this.roomX + this.width + 4; x++) {
+      for (let y = this.roomY - 2; y < this.roomY + this.height + 4; y++) {
+        let alpha =
+          this.softVis[x] && this.softVis[x][y] ? this.softVis[x][y] : 0;
+        if (
+          this.roomArray[x] &&
+          this.roomArray[x][y] &&
+          this.roomArray[x][y] instanceof WallTorch
+        )
+          continue;
+        //if (alpha === 0) continue; // Skip if no visibility adjustment
+        let factor = !GameConstants.SMOOTH_LIGHTING ? 2 : 0.5;
+        let computedAlpha = alpha ** factor;
+        // if (computedAlpha <= 0) continue; // Skip if alpha is effectively zero
+
+        let fillX = x;
+        let fillY = y;
+        let fillWidth = 1;
+        let fillHeight = 1;
+        if (
+          this.roomArray[x] &&
+          this.roomArray[x][y] &&
+          this.roomArray[x][y] instanceof Wall
+        ) {
+          const wall = this.roomArray[x][y] as Wall;
+          if (!this.innerWalls.includes(wall)) {
+            switch (wall.direction) {
+              case Direction.UP:
+                fillY = y - 0.5;
+                fillHeight = 0.5;
+                break;
+              case Direction.DOWN:
+                fillY = y - 0.5;
+                fillHeight = 1.5;
+                break;
+              case Direction.LEFT:
+                fillX = x + 0.5;
+                fillWidth = 0.5;
+                break;
+              case Direction.RIGHT:
+                fillX = x + 0;
+                fillWidth = 0.5;
+                break;
+              case Direction.DOWN_LEFT:
+                fillX = x + 0.5;
+                fillY = y - 0.5;
+                fillWidth = 0.5;
+                fillHeight = 1.5;
+                break;
+              case Direction.DOWN_RIGHT:
+                fillX = x;
+                fillY = y - 0.5;
+                fillWidth = 0.5;
+                fillHeight = 1.5;
+                break;
+              case Direction.UP_LEFT:
+                fillX = x + 0.5;
+                fillY = y - 0.5;
+                fillWidth = 0.5;
+                fillHeight = 0.5;
+                break;
+              case Direction.UP_RIGHT:
+                fillX = x - 0.5;
+                fillY = y - 0.5;
+                fillWidth = 0.5;
+                fillHeight = 0.5;
+                break;
+            }
+          }
+        }
+        /*
+        if (
+          this.roomArray[x] &&
+          this.roomArray[x][y] &&
+          this.roomArray[x][y] instanceof Door &&
+          !(this.roomArray[x][y] as Door).opened &&
+          !(this.roomArray[x][y] as Door).linkedDoor.room.entered
+        ) {
+          //computedAlpha = 1;
+          switch ((this.roomArray[x][y] as Door).doorDir) {
+            case Direction.UP:
+              fillY = y - 0.75;
+              fillX = x - 0.5;
+              fillHeight = 2;
+              fillWidth = 1.5;
+
+              break;
+            case Direction.DOWN:
+              fillX = x;
+              fillY = y + 0.5;
+              fillHeight = 2;
+              fillWidth = 1.5;
+              break;
+            case Direction.LEFT:
+              fillX = x;
+              fillY = y - 0.5;
+              fillWidth = 2;
+              fillHeight = 2;
+              break;
+            case Direction.RIGHT:
+              fillX = x - 0.5;
+              fillY = y - 0.5;
+              fillWidth = 2;
+              fillHeight = 2;
+              break;
+          }
+        }
+        */
 
         const fillStyle = `rgba(0, 0, 0, ${computedAlpha})`;
 
@@ -2219,11 +2338,13 @@ export class Room {
           lastFillStyle = fillStyle;
         }
 
+        fillY += 1;
+        fillX += 1;
         this.shadeOffscreenCtx.fillRect(
-          (x - this.roomX) * GameConstants.TILESIZE,
-          (y - this.roomY - 0.5) * GameConstants.TILESIZE,
-          GameConstants.TILESIZE,
-          GameConstants.TILESIZE,
+          (fillX - this.roomX) * GameConstants.TILESIZE,
+          (fillY - this.roomY) * GameConstants.TILESIZE,
+          fillWidth * GameConstants.TILESIZE,
+          fillHeight * GameConstants.TILESIZE,
         );
       }
     }
@@ -2234,8 +2355,8 @@ export class Room {
     Game.ctx.filter = "blur(5px)";
     Game.ctx.drawImage(
       this.shadeOffscreenCanvas,
-      this.roomX * GameConstants.TILESIZE,
-      this.roomY * GameConstants.TILESIZE,
+      (this.roomX - 1) * GameConstants.TILESIZE,
+      (this.roomY - 1) * GameConstants.TILESIZE,
     );
 
     Game.ctx.restore();
@@ -2569,6 +2690,7 @@ export class Room {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
         const tile = this.getTile(x, y);
         if (tile instanceof Wall || tile instanceof WallTorch) {
+          this.walls.push(tile);
           const isTopWall = y === this.roomY;
           const isBottomWall = y === this.roomY + this.height - 1;
           const isLeftWall = x === this.roomX;
@@ -2618,6 +2740,105 @@ export class Room {
       }
     }
   }
+
+  /**
+   * Finds and returns the darkest and lightest tiles in the room based on their visibility.
+   * Loops through the roomArray, sums all the vis values, sorts them, and identifies the extremes.
+   *
+   * @returns An object containing the darkest and lightest tiles with their coordinates and vis values.
+   */
+  getExtremeLuminance = (): {
+    darkest: { x: number; y: number; vis: number } | null;
+    lightest: { x: number; y: number; vis: number } | null;
+  } => {
+    const visValues: { x: number; y: number; vis: number }[] = [];
+
+    // Loop through each tile in the room
+    for (let x = this.roomX; x < this.roomX + this.width; x++) {
+      for (let y = this.roomY; y < this.roomY + this.height; y++) {
+        if (this.vis[x] && this.vis[x][y] !== undefined) {
+          visValues.push({ x, y, vis: this.vis[x][y] });
+        }
+      }
+    }
+
+    if (visValues.length === 0) {
+      return { darkest: null, lightest: null };
+    }
+
+    // Sort the vis values in ascending order
+    visValues.sort((a, b) => a.vis - b.vis);
+
+    return {
+      darkest: visValues[visValues.length - 1],
+      lightest: visValues[0],
+    };
+  };
+
+  /**
+   * Finds and returns the darkest and lightest tiles adjacent to a given point.
+   * It checks the tiles above, below, to the left, and to the right of the specified point.
+   *
+   * @param px - The x-coordinate of the reference point.
+   * @param py - The y-coordinate of the reference point.
+   * @returns An object containing the darkest and lightest adjacent tiles with their coordinates and vis values,
+   *          or null if no valid adjacent tiles are found.
+   */
+  getExtremeLuminanceFromPoint = (
+    px: number,
+    py: number,
+  ): {
+    darkest: { x: number; y: number; vis: number } | null;
+    lightest: { x: number; y: number; vis: number } | null;
+  } => {
+    const adjacentPositions = [
+      { x: px, y: py - 1 }, // Up
+      { x: px, y: py + 1 }, // Down
+      { x: px - 1, y: py }, // Left
+      { x: px + 1, y: py }, // Right
+    ];
+
+    const visValues: { x: number; y: number; vis: number }[] = [];
+
+    adjacentPositions.forEach((pos) => {
+      const { x, y } = pos;
+      if (this.vis[x] && this.vis[x][y] !== undefined) {
+        if (this.roomArray[x] && this.roomArray[x][y]) {
+          if (this.roomArray[x][y] instanceof Floor) {
+            visValues.push({ x, y, vis: this.vis[x][y] });
+          }
+        }
+      }
+    });
+
+    if (visValues.length === 0) {
+      return { darkest: null, lightest: null };
+    }
+
+    // Sort the vis values in ascending order
+    visValues.sort((a, b) => a.vis - b.vis);
+
+    return {
+      darkest: visValues[visValues.length - 1],
+      lightest: visValues[0],
+    };
+  };
+
+  getAverageLuminance = (): number => {
+    let total = 0;
+    let count = 0;
+    for (let x = this.roomX - 2; x <= this.roomX + 2; x++) {
+      if (this.roomArray[x] && this.roomArray[x][this.roomY]) {
+        for (let y = this.roomY - 2; y <= this.roomY + 2; y++) {
+          if (this.vis[x][y]) {
+            total += this.vis[x][y];
+            count++;
+          }
+        }
+      }
+    }
+    return total / count;
+  };
 
   // #endregion
 

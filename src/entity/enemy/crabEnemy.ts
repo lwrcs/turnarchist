@@ -6,6 +6,7 @@ import { Player } from "../../player";
 import { Item } from "../../item/item";
 import { GameConstants } from "../../gameConstants";
 import { Enemy } from "./enemy";
+import { Utils } from "../../utils";
 
 export class CrabEnemy extends Enemy {
   ticks: number;
@@ -102,10 +103,15 @@ export class CrabEnemy extends Enemy {
                 else grid[x][y] = false;
               }
             }
+            this.target =
+              this.getAverageLuminance() > 0 // 0.8
+                ? this.targetPlayer
+                : this.room.getExtremeLuminanceFromPoint(this.x, this.y)
+                    .darkest;
             let moves = astar.AStar.search(
               grid,
               this,
-              this.targetPlayer,
+              this.target,
               disablePositions,
               undefined,
               undefined,
@@ -147,7 +153,20 @@ export class CrabEnemy extends Enemy {
             this.rumbling = false;
           } else {
             this.rumbling = true;
-            this.makeHitWarnings();
+            /*
+            if (
+              (this.target.x === this.targetPlayer.x &&
+                this.target.y === this.targetPlayer.y) ||
+              Utils.distance(
+                this.targetPlayer.x,
+                this.targetPlayer.y,
+                this.x,
+                this.y,
+              ) <= 2
+            )
+              */ {
+              this.makeHitWarnings();
+            }
           }
         }
 
@@ -169,7 +188,19 @@ export class CrabEnemy extends Enemy {
                 if (player === this.game.players[this.game.localPlayerID])
                   this.alertTicks = 1;
                 if (this.ticks % 2 === 0) {
-                  this.makeHitWarnings();
+                  /*
+                  if (
+                    (this.target.x === this.targetPlayer.x &&
+                      this.target.y === this.targetPlayer.y) ||
+                    Utils.distance(
+                      this.targetPlayer.x,
+                      this.targetPlayer.y,
+                      this.x,
+                      this.y,
+                    ) <= 2
+                  ) */ {
+                    this.makeHitWarnings();
+                  }
                 }
               }
             }

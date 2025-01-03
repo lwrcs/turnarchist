@@ -31,6 +31,7 @@ import { BeamEffect } from "./beamEffect";
 import { Spellbook } from "./weapon/spellbook";
 import { globalEventBus } from "./eventBus";
 import { Utils } from "./utils";
+import { Menu } from "./menu";
 
 export enum PlayerDirection {
   DOWN,
@@ -103,6 +104,7 @@ export class Player extends Drawable {
   justMoved: DrawDirection;
   slowMotionTickDuration: number;
   depth: number;
+  menu: Menu;
   private animationFrameId: number | null = null;
   private isProcessingQueue: boolean = false;
   private lowHealthFrame: number = 0;
@@ -132,6 +134,7 @@ export class Player extends Drawable {
     this.lastY = 0;
     this.isLocalPlayer = isLocalPlayer;
     this.depth = 0;
+    this.menu = new Menu();
     if (isLocalPlayer) {
       Input.leftSwipeListener = () => {
         if (
@@ -198,6 +201,7 @@ export class Player extends Drawable {
         this.inputHandler(InputEnum.NUMBER_1 + num - 1);
       Input.equalsListener = () => this.inputHandler(InputEnum.EQUALS);
       Input.minusListener = () => this.inputHandler(InputEnum.MINUS);
+      Input.escapeListener = () => this.inputHandler(InputEnum.ESCAPE);
     }
     this.mapToggled = true;
     this.health = 2;
@@ -211,7 +215,7 @@ export class Player extends Drawable {
 
     this.inventory = new Inventory(game, this);
     this.defaultSightRadius = 3;
-    this.sightRadius = this.defaultSightRadius;
+    this.sightRadius = LevelConstants.LIGHTING_MAX_DISTANCE; //this.defaultSightRadius;
     this.map = new Map(this.game, this);
     //this.actionTab = new ActionTab(this.inventory, this.game);
     this.turnCount = 0;
@@ -274,6 +278,10 @@ export class Player extends Drawable {
   };
 
   inputHandler = (input: InputEnum) => {
+    if (this.menu.open) {
+      this.menu.inputHandler(input);
+      return;
+    }
     if (!this.game.started && input !== InputEnum.MOUSE_MOVE) {
       this.game.startedFadeOut = true;
       return;
@@ -332,6 +340,16 @@ export class Player extends Drawable {
       case InputEnum.MINUS:
         this.minusListener();
         break;
+      case InputEnum.ESCAPE:
+        this.escapeListener();
+        break;
+    }
+  };
+  escapeListener = () => {
+    if (this.inventory.isOpen) {
+      this.inventory.close();
+    } else {
+      this.menu.open = !this.menu.open;
     }
   };
   commaListener = () => {
@@ -1228,6 +1246,7 @@ export class Player extends Drawable {
     if (this.mapToggled === true) this.map.draw(delta);
     //this.drawTileCursor(delta);
     //this.drawInventoryButton(delta);
+    if (this.menu.open) this.menu.drawMenu();
     Game.ctx.restore();
   };
 

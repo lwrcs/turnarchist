@@ -128,6 +128,7 @@ export class Entity extends Drawable {
   bloomColor: string = "#FFFFFF";
   bloomAlpha: number = 1;
   softBloomAlpha: number = 1;
+  target: { x: number; y: number };
 
   private _imageParticleTiles: { x: number; y: number };
   hitSound: () => void;
@@ -939,10 +940,12 @@ export class Entity extends Drawable {
     let total = 0;
     let count = 0;
     for (let x = this.x - 2; x <= this.x + 2; x++) {
-      for (let y = this.y - 2; y <= this.y + 2; y++) {
-        if (this.room.vis[x][y]) {
-          total += this.room.vis[x][y];
-          count++;
+      if (this.room.roomArray[x] && this.room.roomArray[x][this.y]) {
+        for (let y = this.y - 2; y <= this.y + 2; y++) {
+          if (this.room.vis[x][y]) {
+            total += this.room.vis[x][y];
+            count++;
+          }
         }
       }
     }

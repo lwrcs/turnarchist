@@ -19,5 +19,7 @@ export class Candle extends Light {
     this.fuelCap = 50;
     this.radius = 4;
     this.stackable = true;
+    this.maxBrightness = 2;
+    this.maxBrightness = 0.25;
   }
 }

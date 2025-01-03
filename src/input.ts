@@ -27,6 +27,7 @@ export enum InputEnum {
   NUMBER_9,
   MINUS,
   EQUALS,
+  ESCAPE,
 }
 
 export const Input = {
@@ -67,6 +68,7 @@ export const Input = {
   numKeyListener: function (num: number) {},
   equalsListener: function () {},
   minusListener: function () {},
+  escapeListener: function () {},
   mouseLeftClickListeners: [],
   mouseRightClickListeners: [],
   mouseMoveListeners: [],
@@ -109,6 +111,7 @@ export const Input = {
   PERIOD: "Period",
   MINUS: "Minus",
   EQUALS: "Equal",
+  ESCAPE: "Escape",
 
   isDown: function (keyCode: string) {
     return this._pressed[keyCode];
@@ -181,6 +184,9 @@ export const Input = {
         break;
       case Input.MINUS:
         Input.minusListener();
+        break;
+      case Input.ESCAPE:
+        Input.escapeListener();
         break;
     }
   },

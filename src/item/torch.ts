@@ -12,8 +12,8 @@ export class Torch extends Light {
     this.name = "torch";
     this.fuelCap = 250;
     this.fuel = 250;
-    this.radius = 5;
-    this.maxBrightness = 2;
-    this.minBrightness = 0.75;
+    this.radius = 7;
+    this.maxBrightness = 5;
+    this.minBrightness = 2;
   }
 }

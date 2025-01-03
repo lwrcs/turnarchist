@@ -1082,6 +1082,14 @@ export class Game {
 
       if (GameConstants.drawOtherRooms) {
         this.drawRooms(delta, true);
+
+        Game.ctx.translate(-newLevelOffsetX, -newLevelOffsetY);
+        Game.ctx.translate(playerOffsetX, playerOffsetY);
+        this.players[this.localPlayerID].draw(delta); // draw the translation
+
+        Game.ctx.translate(-playerOffsetX, -playerOffsetY);
+        Game.ctx.translate(newLevelOffsetX, newLevelOffsetY);
+
         this.drawRoomShadeAndColor(delta);
       }
 
@@ -1098,14 +1106,6 @@ export class Game {
           //Game.drawFX(ditherFrame, 10, 1, 1, x, y, 1, 1);
         }
       }
-      Game.ctx.translate(-newLevelOffsetX, -newLevelOffsetY);
-
-      Game.ctx.translate(playerOffsetX, playerOffsetY);
-      this.players[this.localPlayerID].draw(delta);
-
-      Game.ctx.translate(-playerOffsetX, -playerOffsetY);
-
-      Game.ctx.translate(newLevelOffsetX, newLevelOffsetY);
 
       //this.drawStuff(delta);
 

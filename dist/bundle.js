@@ -2197,7 +2197,12 @@ var CrabEnemy = /** @class */ (function (_super) {
                                         grid[x][y] = false;
                                 }
                             }
-                            var moves = astarclass_1.astar.AStar.search(grid, _this, _this.targetPlayer, disablePositions, undefined, undefined, undefined, undefined, undefined, undefined, _this.lastPlayerPos);
+                            _this.target =
+                                _this.getAverageLuminance() > 0 // 0.8
+                                    ? _this.targetPlayer
+                                    : _this.room.getExtremeLuminanceFromPoint(_this.x, _this.y)
+                                        .darkest;
+                            var moves = astarclass_1.astar.AStar.search(grid, _this, _this.target, disablePositions, undefined, undefined, undefined, undefined, undefined, undefined, _this.lastPlayerPos);
                             if (moves.length > 0) {
                                 var hitPlayer = false;
                                 for (var i in _this.game.players) {
@@ -2230,7 +2235,20 @@ var CrabEnemy = /** @class */ (function (_super) {
                         }
                         else {
                             _this.rumbling = true;
-                            _this.makeHitWarnings();
+                            /*
+                            if (
+                              (this.target.x === this.targetPlayer.x &&
+                                this.target.y === this.targetPlayer.y) ||
+                              Utils.distance(
+                                this.targetPlayer.x,
+                                this.targetPlayer.y,
+                                this.x,
+                                this.y,
+                              ) <= 2
+                            )
+                              */ {
+                                _this.makeHitWarnings();
+                            }
                         }
                     }
                     var targetPlayerOffline = Object.values(_this.game.offlinePlayers).indexOf(_this.targetPlayer) !==
@@ -2248,7 +2266,19 @@ var CrabEnemy = /** @class */ (function (_super) {
                                     if (player === _this.game.players[_this.game.localPlayerID])
                                         _this.alertTicks = 1;
                                     if (_this.ticks % 2 === 0) {
-                                        _this.makeHitWarnings();
+                                        /*
+                                        if (
+                                          (this.target.x === this.targetPlayer.x &&
+                                            this.target.y === this.targetPlayer.y) ||
+                                          Utils.distance(
+                                            this.targetPlayer.x,
+                                            this.targetPlayer.y,
+                                            this.x,
+                                            this.y,
+                                          ) <= 2
+                                        ) */ {
+                                            _this.makeHitWarnings();
+                                        }
                                     }
                                 }
                             }
@@ -5959,10 +5989,12 @@ var Entity = /** @class */ (function (_super) {
             var total = 0;
             var count = 0;
             for (var x = _this.x - 2; x <= _this.x + 2; x++) {
-                for (var y = _this.y - 2; y <= _this.y + 2; y++) {
-                    if (_this.room.vis[x][y]) {
-                        total += _this.room.vis[x][y];
-                        count++;
+                if (_this.room.roomArray[x] && _this.room.roomArray[x][_this.y]) {
+                    for (var y = _this.y - 2; y <= _this.y + 2; y++) {
+                        if (_this.room.vis[x][y]) {
+                            total += _this.room.vis[x][y];
+                            count++;
+                        }
                     }
                 }
             }
@@ -8323,6 +8355,11 @@ var Game = /** @class */ (function () {
                 Game.ctx.translate(newLevelOffsetX, newLevelOffsetY);
                 if (gameConstants_1.GameConstants.drawOtherRooms) {
                     _this.drawRooms(delta, true);
+                    Game.ctx.translate(-newLevelOffsetX, -newLevelOffsetY);
+                    Game.ctx.translate(playerOffsetX, playerOffsetY);
+                    _this.players[_this.localPlayerID].draw(delta); // draw the translation
+                    Game.ctx.translate(-playerOffsetX, -playerOffsetY);
+                    Game.ctx.translate(newLevelOffsetX, newLevelOffsetY);
                     _this.drawRoomShadeAndColor(delta);
                 }
                 for (var x = _this.room.roomX - 1; x <= _this.room.roomX + _this.room.width; x++) {
@@ -8330,11 +8367,6 @@ var Game = /** @class */ (function () {
                         //Game.drawFX(ditherFrame, 10, 1, 1, x, y, 1, 1);
                     }
                 }
-                Game.ctx.translate(-newLevelOffsetX, -newLevelOffsetY);
-                Game.ctx.translate(playerOffsetX, playerOffsetY);
-                _this.players[_this.localPlayerID].draw(delta);
-                Game.ctx.translate(-playerOffsetX, -playerOffsetY);
-                Game.ctx.translate(newLevelOffsetX, newLevelOffsetY);
                 //this.drawStuff(delta);
                 Game.ctx.translate(-newLevelOffsetX, -newLevelOffsetY);
                 Game.ctx.translate(Math.round(playerCX + playerOffsetX - 0.5 * gameConstants_1.GameConstants.WIDTH), Math.round(playerCY + playerOffsetY - 0.5 * gameConstants_1.GameConstants.HEIGHT));
@@ -8863,16 +8895,15 @@ var candle_1 = __webpack_require__(/*! ./item/candle */ "./src/item/candle.ts");
 var coal_1 = __webpack_require__(/*! ./item/coal */ "./src/item/coal.ts");
 var godStone_1 = __webpack_require__(/*! ./item/godStone */ "./src/item/godStone.ts");
 var heart_1 = __webpack_require__(/*! ./item/heart */ "./src/item/heart.ts");
+var lantern_1 = __webpack_require__(/*! ./item/lantern */ "./src/item/lantern.ts");
 var torch_1 = __webpack_require__(/*! ./item/torch */ "./src/item/torch.ts");
 var weaponBlood_1 = __webpack_require__(/*! ./item/weaponBlood */ "./src/item/weaponBlood.ts");
 var weaponFragments_1 = __webpack_require__(/*! ./item/weaponFragments */ "./src/item/weaponFragments.ts");
 var weaponPoison_1 = __webpack_require__(/*! ./item/weaponPoison */ "./src/item/weaponPoison.ts");
 var levelConstants_1 = __webpack_require__(/*! ./levelConstants */ "./src/levelConstants.ts");
 var dagger_1 = __webpack_require__(/*! ./weapon/dagger */ "./src/weapon/dagger.ts");
-var dualdagger_1 = __webpack_require__(/*! ./weapon/dualdagger */ "./src/weapon/dualdagger.ts");
 var spear_1 = __webpack_require__(/*! ./weapon/spear */ "./src/weapon/spear.ts");
 var spellbook_1 = __webpack_require__(/*! ./weapon/spellbook */ "./src/weapon/spellbook.ts");
-var warhammer_1 = __webpack_require__(/*! ./weapon/warhammer */ "./src/weapon/warhammer.ts");
 var hammer_1 = __webpack_require__(/*! ./item/hammer */ "./src/item/hammer.ts");
 var GameConstants = /** @class */ (function () {
     function GameConstants() {
@@ -8992,11 +9023,10 @@ var GameConstants = /** @class */ (function () {
     GameConstants.STARTING_INVENTORY = [dagger_1.Dagger, torch_1.Torch];
     GameConstants.STARTING_DEV_INVENTORY = [
         dagger_1.Dagger,
-        dualdagger_1.DualDagger,
-        warhammer_1.Warhammer,
+        candle_1.Candle,
+        lantern_1.Lantern,
         torch_1.Torch,
         godStone_1.GodStone,
-        candle_1.Candle,
         candle_1.Candle,
         spear_1.Spear,
         weaponPoison_1.WeaponPoison,
@@ -9006,6 +9036,11 @@ var GameConstants = /** @class */ (function () {
         heart_1.Heart,
         backpack_1.Backpack,
         hammer_1.Hammer,
+        coal_1.Coal,
+        coal_1.Coal,
+        coal_1.Coal,
+        coal_1.Coal,
+        coal_1.Coal,
         coal_1.Coal,
         weaponFragments_1.WeaponFragments,
         weaponFragments_1.WeaponFragments,
@@ -9796,6 +9831,34 @@ exports.loadGameState = loadGameState;
 
 /***/ }),
 
+/***/ "./src/guiButton.ts":
+/*!**************************!*\
+  !*** ./src/guiButton.ts ***!
+  \**************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.guiButton = void 0;
+var guiButton = /** @class */ (function () {
+    function guiButton(x, y, width, height, text, onClick, toggleable) {
+        if (toggleable === void 0) { toggleable = false; }
+        this.toggleable = toggleable;
+        this.toggled = false;
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        this.text = text;
+        this.onClick = onClick;
+    }
+    return guiButton;
+}());
+exports.guiButton = guiButton;
+
+
+/***/ }),
+
 /***/ "./src/healthbar.ts":
 /*!**************************!*\
   !*** ./src/healthbar.ts ***!
@@ -10089,6 +10152,7 @@ var InputEnum;
     InputEnum[InputEnum["NUMBER_9"] = 22] = "NUMBER_9";
     InputEnum[InputEnum["MINUS"] = 23] = "MINUS";
     InputEnum[InputEnum["EQUALS"] = 24] = "EQUALS";
+    InputEnum[InputEnum["ESCAPE"] = 25] = "ESCAPE";
 })(InputEnum = exports.InputEnum || (exports.InputEnum = {}));
 exports.Input = {
     _pressed: {},
@@ -10127,6 +10191,7 @@ exports.Input = {
     numKeyListener: function (num) { },
     equalsListener: function () { },
     minusListener: function () { },
+    escapeListener: function () { },
     mouseLeftClickListeners: [],
     mouseRightClickListeners: [],
     mouseMoveListeners: [],
@@ -10165,6 +10230,7 @@ exports.Input = {
     PERIOD: "Period",
     MINUS: "Minus",
     EQUALS: "Equal",
+    ESCAPE: "Escape",
     isDown: function (keyCode) {
         return this._pressed[keyCode];
     },
@@ -10237,6 +10303,9 @@ exports.Input = {
                 break;
             case exports.Input.MINUS:
                 exports.Input.minusListener();
+                break;
+            case exports.Input.ESCAPE:
+                exports.Input.escapeListener();
                 break;
         }
     },
@@ -11764,6 +11833,8 @@ var Candle = /** @class */ (function (_super) {
         _this.fuelCap = 50;
         _this.radius = 4;
         _this.stackable = true;
+        _this.maxBrightness = 2;
+        _this.maxBrightness = 0.25;
         return _this;
     }
     Candle.itemName = "candle";
@@ -12850,8 +12921,8 @@ var Lantern = /** @class */ (function (_super) {
         _this.fuelCap = 250;
         _this.name = "lantern";
         _this.canRefuel = true;
-        _this.maxBrightness = 3;
-        _this.minBrightness = 2;
+        _this.maxBrightness = 20;
+        _this.minBrightness = 5;
         _this.radius = 7;
         _this.broken = _this.fuel <= 0 ? true : false;
         return _this;
@@ -12907,8 +12978,7 @@ var Light = /** @class */ (function (_super) {
             return false;
         };
         _this.setRadius = function () {
-            _this.wielder.sightRadius =
-                _this.wielder.defaultSightRadius + _this.fuelPercentage * _this.radius;
+            _this.wielder.sightRadius = _this.radius + _this.fuelPercentage * _this.radius;
         };
         _this.setBrightness = function () {
             _this.wielder.lightBrightness =
@@ -12918,11 +12988,13 @@ var Light = /** @class */ (function (_super) {
             if (_this.fuel > 0) {
                 _this.equipped = !_this.equipped;
                 if (_this.isIgnited()) {
-                    _this.setRadius();
+                    //this.setRadius();
+                    _this.setBrightness();
                     _this.wielder.lightEquipped = true;
                 }
                 else {
-                    _this.resetRadius();
+                    //this.resetRadius();
+                    _this.resetBrightness();
                     _this.wielder.lightEquipped = false;
                 }
             }
@@ -12937,11 +13009,15 @@ var Light = /** @class */ (function (_super) {
         _this.resetRadius = function () {
             _this.wielder.sightRadius = _this.wielder.defaultSightRadius;
         };
+        _this.resetBrightness = function () {
+            _this.wielder.lightBrightness = 0.5;
+        };
         _this.burn = function () {
             // Handle active burning
             if (_this.isIgnited()) {
                 _this.fuel--;
                 _this.setRadius();
+                _this.setBrightness();
             }
             // Handle depleted fuel
             if (_this.fuel <= 0) {
@@ -13003,8 +13079,8 @@ var Light = /** @class */ (function (_super) {
         _this.tileY = 0;
         _this.fuel = 0;
         _this.fuelCap = 250;
-        _this.maxBrightness = 2;
-        _this.minBrightness = 0.3;
+        _this.maxBrightness = 5;
+        _this.minBrightness = 2;
         _this.radius = 6;
         _this.equipped = false;
         return _this;
@@ -13216,9 +13292,9 @@ var Torch = /** @class */ (function (_super) {
         _this.name = "torch";
         _this.fuelCap = 250;
         _this.fuel = 250;
-        _this.radius = 5;
-        _this.maxBrightness = 2;
-        _this.minBrightness = 0.75;
+        _this.radius = 7;
+        _this.maxBrightness = 5;
+        _this.minBrightness = 2;
         return _this;
     }
     Torch.itemName = "torch";
@@ -13694,10 +13770,10 @@ var LevelConstants = /** @class */ (function () {
     LevelConstants.SHADED_TILE_CUTOFF = 1;
     LevelConstants.MIN_VISIBILITY = 0; // visibility level of places you've already seen
     LevelConstants.LIGHTING_ANGLE_STEP = 1; // how many degrees between each ray, previously 5
-    LevelConstants.LIGHTING_MAX_DISTANCE = 7;
+    LevelConstants.LIGHTING_MAX_DISTANCE = 10;
     LevelConstants.LIGHT_RESOLUTION = 0.1; //1 is default
     LevelConstants.LEVEL_TEXT_COLOR = "yellow";
-    LevelConstants.AMBIENT_LIGHT_COLOR = [10, 10, 10];
+    LevelConstants.AMBIENT_LIGHT_COLOR = [12, 15, 12];
     LevelConstants.TORCH_LIGHT_COLOR = [120, 35, 10];
     return LevelConstants;
 }());
@@ -14948,7 +15024,7 @@ var LevelParameterGenerator = /** @class */ (function () {
     LevelParameterGenerator.getParameters = function (depth) {
         return {
             minRoomCount: depth > 0 ? 0 : 0,
-            maxRoomCount: depth > 0 ? 12 : 5,
+            maxRoomCount: depth > 0 ? 12 : 6,
             maxRoomArea: depth > 0 ? 120 + 10 * depth : 40,
             mapWidth: 25 + 5 * depth,
             mapHeight: 25 + 5 * depth,
@@ -14956,7 +15032,7 @@ var LevelParameterGenerator = /** @class */ (function () {
             wallRemoveProbability: depth > 0 ? 0.1 : 1,
             numLoopDoorsRange: [4, 8],
             numberOfRooms: depth > 0 ? 5 : 3,
-            softMaxRoomArea: depth > 0 ? 0.5 * (120 + 10 * depth) : 20,
+            softMaxRoomArea: depth > 0 ? 0.5 * (120 + 10 * depth) : 40,
         };
     };
     return LevelParameterGenerator;
@@ -15301,6 +15377,183 @@ var Map = /** @class */ (function () {
     return Map;
 }());
 exports.Map = Map;
+
+
+/***/ }),
+
+/***/ "./src/menu.ts":
+/*!*********************!*\
+  !*** ./src/menu.ts ***!
+  \*********************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Menu = void 0;
+var game_1 = __webpack_require__(/*! ./game */ "./src/game.ts");
+var guiButton_1 = __webpack_require__(/*! ./guiButton */ "./src/guiButton.ts");
+var input_1 = __webpack_require__(/*! ./input */ "./src/input.ts");
+var gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/gameConstants.ts");
+var Menu = /** @class */ (function () {
+    function Menu() {
+        var _this = this;
+        // Example action methods
+        this.startGame = function () {
+            console.log("Game Started");
+            _this.close();
+            // Implement game start logic
+        };
+        this.exitGame = function () {
+            console.log("Exit Game");
+            // Implement exit game logic
+        };
+        this.openAudioSettings = function () {
+            console.log("Audio Settings Opened");
+            // Implement audio settings logic
+        };
+        this.openGraphicsSettings = function () {
+            console.log("Graphics Settings Opened");
+            // Implement graphics settings logic
+        };
+        this.openControlsSettings = function () {
+            console.log("Controls Settings Opened");
+            // Implement controls settings logic
+        };
+        this.buttons = [];
+        this.open = false;
+        this.selectedButton = 0;
+        this.subMenus = {};
+        this.currentSubMenu = null;
+        //this.initializeMainMenu();
+    }
+    Menu.prototype.initializeMainMenu = function () {
+        var _this = this;
+        this.addButton(new guiButton_1.guiButton(0, 0, 200, 50, "Start Game", this.startGame));
+        this.addButton(new guiButton_1.guiButton(0, 60, 200, 50, "Settings", function () {
+            return _this.openSubMenu("Settings");
+        }));
+        this.addButton(new guiButton_1.guiButton(0, 120, 200, 50, "Exit", this.exitGame));
+        this.initializeSettingsMenu();
+        this.positionButtons();
+    };
+    Menu.prototype.initializeSettingsMenu = function () {
+        var _this = this;
+        var settingsMenu = new Menu();
+        settingsMenu.addButton(new guiButton_1.guiButton(0, 0, 200, 50, "Audio", this.openAudioSettings));
+        settingsMenu.addButton(new guiButton_1.guiButton(0, 60, 200, 50, "Graphics", this.openGraphicsSettings));
+        settingsMenu.addButton(new guiButton_1.guiButton(0, 120, 200, 50, "Controls", this.openControlsSettings));
+        settingsMenu.addButton(new guiButton_1.guiButton(0, 180, 200, 50, "Back", function () { return _this.closeSubMenu(); }));
+        settingsMenu.positionButtons();
+        this.subMenus["Settings"] = settingsMenu;
+    };
+    Menu.prototype.addButton = function (button) {
+        this.buttons.push(button);
+    };
+    Menu.prototype.drawMenu = function () {
+        var _this = this;
+        if (!this.open && !this.currentSubMenu)
+            return;
+        game_1.Game.ctx.save();
+        game_1.Game.ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+        game_1.Game.ctx.fillRect(0, 0, innerWidth, innerHeight);
+        var menuToDraw = this.currentSubMenu
+            ? this.subMenus[this.currentSubMenu]
+            : this;
+        menuToDraw.buttons.forEach(function (button) {
+            _this.drawButton(button, menuToDraw);
+        });
+        game_1.Game.ctx.restore();
+    };
+    Menu.prototype.drawButton = function (button, menu) {
+        game_1.Game.ctx.fillStyle =
+            menu.selectedButton === menu.buttons.indexOf(button)
+                ? "rgba(200, 200, 200, 1)"
+                : "rgba(255, 255, 255, 1)";
+        game_1.Game.ctx.fillRect(button.x, button.y, button.width, button.height);
+        game_1.Game.ctx.fillStyle = "rgba(0, 0, 0, 1)";
+        game_1.Game.ctx.font = "20px Arial";
+        var textWidth = game_1.Game.measureText(button.text).width;
+        var textX = button.x + (button.width - textWidth) / 2;
+        var textY = button.y + button.height / 2 + game_1.Game.letter_height / 2;
+        game_1.Game.fillText(button.text, textX, textY);
+    };
+    Menu.prototype.inputHandler = function (input) {
+        if (!this.open)
+            return;
+        switch (input) {
+            case input_1.InputEnum.ESCAPE:
+                if (this.currentSubMenu) {
+                    this.closeSubMenu();
+                }
+                else {
+                    this.open = false;
+                }
+                break;
+            case input_1.InputEnum.UP:
+                this.up();
+                break;
+            case input_1.InputEnum.DOWN:
+                this.down();
+                break;
+            case input_1.InputEnum.SPACE:
+                this.select();
+                break;
+            default:
+                break;
+        }
+    };
+    Menu.prototype.openSubMenu = function (menuName) {
+        if (this.subMenus[menuName]) {
+            this.currentSubMenu = menuName;
+            this.selectedButton = 0;
+        }
+    };
+    Menu.prototype.closeSubMenu = function () {
+        this.currentSubMenu = null;
+        this.selectedButton = 0;
+    };
+    Menu.prototype.close = function () {
+        this.open = false;
+        this.currentSubMenu = null;
+    };
+    Menu.prototype.select = function () {
+        var menuToSelect = this.currentSubMenu
+            ? this.subMenus[this.currentSubMenu]
+            : this;
+        if (menuToSelect.open) {
+            menuToSelect.buttons[menuToSelect.selectedButton].onClick();
+        }
+    };
+    Menu.prototype.up = function () {
+        var menuToNavigate = this.currentSubMenu
+            ? this.subMenus[this.currentSubMenu]
+            : this;
+        if (menuToNavigate.open) {
+            menuToNavigate.selectedButton =
+                (menuToNavigate.selectedButton - 1 + menuToNavigate.buttons.length) %
+                    menuToNavigate.buttons.length;
+        }
+    };
+    Menu.prototype.down = function () {
+        var menuToNavigate = this.currentSubMenu
+            ? this.subMenus[this.currentSubMenu]
+            : this;
+        if (menuToNavigate.open) {
+            menuToNavigate.selectedButton =
+                (menuToNavigate.selectedButton + 1) % menuToNavigate.buttons.length;
+        }
+    };
+    Menu.prototype.positionButtons = function () {
+        var startX = (gameConstants_1.GameConstants.WIDTH - 200) / 2;
+        var startY = (gameConstants_1.GameConstants.HEIGHT - this.buttons.length * 60) / 2;
+        this.buttons.forEach(function (button, index) {
+            button.x = startX;
+            button.y = startY + index * 60;
+        });
+    };
+    return Menu;
+}());
+exports.Menu = Menu;
 
 
 /***/ }),
@@ -15933,6 +16186,7 @@ var mouseCursor_1 = __webpack_require__(/*! ./mouseCursor */ "./src/mouseCursor.
 var stats_1 = __webpack_require__(/*! ./stats */ "./src/stats.ts");
 var spellbook_1 = __webpack_require__(/*! ./weapon/spellbook */ "./src/weapon/spellbook.ts");
 var utils_1 = __webpack_require__(/*! ./utils */ "./src/utils.ts");
+var menu_1 = __webpack_require__(/*! ./menu */ "./src/menu.ts");
 var PlayerDirection;
 (function (PlayerDirection) {
     PlayerDirection[PlayerDirection["DOWN"] = 0] = "DOWN";
@@ -15966,6 +16220,10 @@ var Player = /** @class */ (function (_super) {
             }
         };
         _this.inputHandler = function (input) {
+            if (_this.menu.open) {
+                _this.menu.inputHandler(input);
+                return;
+            }
             if (!_this.game.started && input !== input_1.InputEnum.MOUSE_MOVE) {
                 _this.game.startedFadeOut = true;
                 return;
@@ -16028,6 +16286,17 @@ var Player = /** @class */ (function (_super) {
                 case input_1.InputEnum.MINUS:
                     _this.minusListener();
                     break;
+                case input_1.InputEnum.ESCAPE:
+                    _this.escapeListener();
+                    break;
+            }
+        };
+        _this.escapeListener = function () {
+            if (_this.inventory.isOpen) {
+                _this.inventory.close();
+            }
+            else {
+                _this.menu.open = !_this.menu.open;
             }
         };
         _this.commaListener = function () {
@@ -16769,6 +17038,8 @@ var Player = /** @class */ (function (_super) {
                 _this.map.draw(delta);
             //this.drawTileCursor(delta);
             //this.drawInventoryButton(delta);
+            if (_this.menu.open)
+                _this.menu.drawMenu();
             game_1.Game.ctx.restore();
         };
         _this.drawHurt = function (delta) {
@@ -17033,6 +17304,7 @@ var Player = /** @class */ (function (_super) {
         _this.lastY = 0;
         _this.isLocalPlayer = isLocalPlayer;
         _this.depth = 0;
+        _this.menu = new menu_1.Menu();
         if (isLocalPlayer) {
             input_1.Input.leftSwipeListener = function () {
                 if (!_this.inventory.isPointInQuickbarBounds(input_1.Input.mouseX, input_1.Input.mouseY)
@@ -17087,6 +17359,7 @@ var Player = /** @class */ (function (_super) {
             };
             input_1.Input.equalsListener = function () { return _this.inputHandler(input_1.InputEnum.EQUALS); };
             input_1.Input.minusListener = function () { return _this.inputHandler(input_1.InputEnum.MINUS); };
+            input_1.Input.escapeListener = function () { return _this.inputHandler(input_1.InputEnum.ESCAPE); };
         }
         _this.mapToggled = true;
         _this.health = 2;
@@ -17099,7 +17372,7 @@ var Player = /** @class */ (function (_super) {
         _this.guiHeartFrame = 0;
         _this.inventory = new inventory_1.Inventory(game, _this);
         _this.defaultSightRadius = 3;
-        _this.sightRadius = _this.defaultSightRadius;
+        _this.sightRadius = levelConstants_1.LevelConstants.LIGHTING_MAX_DISTANCE; //this.defaultSightRadius;
         _this.map = new map_1.Map(_this.game, _this);
         //this.actionTab = new ActionTab(this.inventory, this.game);
         _this.turnCount = 0;
@@ -18196,6 +18469,7 @@ var Room = /** @class */ (function () {
         // #endregion
         // #region POPULATING METHODS
         this.linkExitToStart = function () {
+            //if (this.type === RoomType.ROPEHOLE) return;
             if (_this.addDoorWithOffset(_this.level.startRoom.roomX +
                 Math.floor(_this.level.startRoom.width / 2) +
                 1, _this.level.startRoom.roomY, _this.level.startRoom, true) &&
@@ -18772,7 +19046,7 @@ var Room = /** @class */ (function () {
             if (!room.roomArray[x][y])
                 return null;
             var color = room.col[x][y];
-            var brightness = room.vis[x][y];
+            var brightness = 1 - room.vis[x][y];
             var radius = 9;
             return { color: color, brightness: brightness, radius: radius };
         };
@@ -18849,8 +19123,11 @@ var Room = /** @class */ (function () {
                     //console.log(`i: ${player.angle}`);
                     for (var i = 0; i < 360; i += lightingAngleStep) {
                         var lightColor = levelConstants_1.LevelConstants.AMBIENT_LIGHT_COLOR;
-                        if (player.lightEquipped)
+                        var lightBrightness = 5;
+                        if (player.lightEquipped) {
                             lightColor = levelConstants_1.LevelConstants.TORCH_LIGHT_COLOR;
+                            lightBrightness = player.lightBrightness;
+                        }
                         _this.castTintAtAngle(i, player.x + 0.5, player.y + 0.5, 
                         /*
                         Math.min(
@@ -18862,7 +19139,7 @@ var Room = /** @class */ (function () {
                         ),
                         */
                         levelConstants_1.LevelConstants.LIGHTING_MAX_DISTANCE, lightColor, // RGB color in sRGB
-                        5);
+                        lightBrightness);
                     }
                 }
             }
@@ -19119,8 +19396,14 @@ var Room = /** @class */ (function () {
             // Draw the blurred color layer directly without masking
             game_1.Game.ctx.globalCompositeOperation =
                 gameConstants_1.GameConstants.COLOR_LAYER_COMPOSITE_OPERATION;
+            //Game.ctx.globalCompositeOperation = "source-over";
             game_1.Game.ctx.globalAlpha = 0.6;
-            game_1.Game.ctx.filter = "blur(5px)";
+            game_1.Game.ctx.filter = "blur(6px)";
+            game_1.Game.ctx.drawImage(_this.colorOffscreenCanvas, _this.roomX * gameConstants_1.GameConstants.TILESIZE, _this.roomY * gameConstants_1.GameConstants.TILESIZE);
+            //draw slight haze
+            game_1.Game.ctx.globalCompositeOperation = "lighten";
+            game_1.Game.ctx.globalAlpha = 0.05;
+            game_1.Game.ctx.filter = "blur(12px)";
             game_1.Game.ctx.drawImage(_this.colorOffscreenCanvas, _this.roomX * gameConstants_1.GameConstants.TILESIZE, _this.roomY * gameConstants_1.GameConstants.TILESIZE);
             game_1.Game.ctx.restore();
         };
@@ -19132,28 +19415,123 @@ var Room = /** @class */ (function () {
             _this.shadeOffscreenCtx.clearRect(0, 0, _this.shadeOffscreenCanvas.width, _this.shadeOffscreenCanvas.height);
             var lastFillStyle = "";
             // Draw all shade rectangles without any filters
-            for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
-                for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
-                    var alpha = _this.softVis[x][y];
-                    if (alpha === 0)
-                        continue; // Skip if no visibility adjustment
-                    var factor = !gameConstants_1.GameConstants.SMOOTH_LIGHTING ? 1.5 : 0.5;
+            for (var x = _this.roomX - 2; x < _this.roomX + _this.width + 4; x++) {
+                for (var y = _this.roomY - 2; y < _this.roomY + _this.height + 4; y++) {
+                    var alpha = _this.softVis[x] && _this.softVis[x][y] ? _this.softVis[x][y] : 0;
+                    if (_this.roomArray[x] &&
+                        _this.roomArray[x][y] &&
+                        _this.roomArray[x][y] instanceof wallTorch_1.WallTorch)
+                        continue;
+                    //if (alpha === 0) continue; // Skip if no visibility adjustment
+                    var factor = !gameConstants_1.GameConstants.SMOOTH_LIGHTING ? 2 : 0.5;
                     var computedAlpha = Math.pow(alpha, factor);
-                    if (computedAlpha <= 0)
-                        continue; // Skip if alpha is effectively zero
+                    // if (computedAlpha <= 0) continue; // Skip if alpha is effectively zero
+                    var fillX = x;
+                    var fillY = y;
+                    var fillWidth = 1;
+                    var fillHeight = 1;
+                    if (_this.roomArray[x] &&
+                        _this.roomArray[x][y] &&
+                        _this.roomArray[x][y] instanceof wall_1.Wall) {
+                        var wall = _this.roomArray[x][y];
+                        if (!_this.innerWalls.includes(wall)) {
+                            switch (wall.direction) {
+                                case game_1.Direction.UP:
+                                    fillY = y - 0.5;
+                                    fillHeight = 0.5;
+                                    break;
+                                case game_1.Direction.DOWN:
+                                    fillY = y - 0.5;
+                                    fillHeight = 1.5;
+                                    break;
+                                case game_1.Direction.LEFT:
+                                    fillX = x + 0.5;
+                                    fillWidth = 0.5;
+                                    break;
+                                case game_1.Direction.RIGHT:
+                                    fillX = x + 0;
+                                    fillWidth = 0.5;
+                                    break;
+                                case game_1.Direction.DOWN_LEFT:
+                                    fillX = x + 0.5;
+                                    fillY = y - 0.5;
+                                    fillWidth = 0.5;
+                                    fillHeight = 1.5;
+                                    break;
+                                case game_1.Direction.DOWN_RIGHT:
+                                    fillX = x;
+                                    fillY = y - 0.5;
+                                    fillWidth = 0.5;
+                                    fillHeight = 1.5;
+                                    break;
+                                case game_1.Direction.UP_LEFT:
+                                    fillX = x + 0.5;
+                                    fillY = y - 0.5;
+                                    fillWidth = 0.5;
+                                    fillHeight = 0.5;
+                                    break;
+                                case game_1.Direction.UP_RIGHT:
+                                    fillX = x - 0.5;
+                                    fillY = y - 0.5;
+                                    fillWidth = 0.5;
+                                    fillHeight = 0.5;
+                                    break;
+                            }
+                        }
+                    }
+                    /*
+                    if (
+                      this.roomArray[x] &&
+                      this.roomArray[x][y] &&
+                      this.roomArray[x][y] instanceof Door &&
+                      !(this.roomArray[x][y] as Door).opened &&
+                      !(this.roomArray[x][y] as Door).linkedDoor.room.entered
+                    ) {
+                      //computedAlpha = 1;
+                      switch ((this.roomArray[x][y] as Door).doorDir) {
+                        case Direction.UP:
+                          fillY = y - 0.75;
+                          fillX = x - 0.5;
+                          fillHeight = 2;
+                          fillWidth = 1.5;
+            
+                          break;
+                        case Direction.DOWN:
+                          fillX = x;
+                          fillY = y + 0.5;
+                          fillHeight = 2;
+                          fillWidth = 1.5;
+                          break;
+                        case Direction.LEFT:
+                          fillX = x;
+                          fillY = y - 0.5;
+                          fillWidth = 2;
+                          fillHeight = 2;
+                          break;
+                        case Direction.RIGHT:
+                          fillX = x - 0.5;
+                          fillY = y - 0.5;
+                          fillWidth = 2;
+                          fillHeight = 2;
+                          break;
+                      }
+                    }
+                    */
                     var fillStyle = "rgba(0, 0, 0, ".concat(computedAlpha, ")");
                     if (fillStyle !== lastFillStyle) {
                         _this.shadeOffscreenCtx.fillStyle = fillStyle;
                         lastFillStyle = fillStyle;
                     }
-                    _this.shadeOffscreenCtx.fillRect((x - _this.roomX) * gameConstants_1.GameConstants.TILESIZE, (y - _this.roomY - 0.5) * gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE);
+                    fillY += 1;
+                    fillX += 1;
+                    _this.shadeOffscreenCtx.fillRect((fillX - _this.roomX) * gameConstants_1.GameConstants.TILESIZE, (fillY - _this.roomY) * gameConstants_1.GameConstants.TILESIZE, fillWidth * gameConstants_1.GameConstants.TILESIZE, fillHeight * gameConstants_1.GameConstants.TILESIZE);
                 }
             }
             // Draw the blurred shade layer directly without masking
             game_1.Game.ctx.globalCompositeOperation = "source-over";
             game_1.Game.ctx.globalAlpha = 1;
             game_1.Game.ctx.filter = "blur(5px)";
-            game_1.Game.ctx.drawImage(_this.shadeOffscreenCanvas, _this.roomX * gameConstants_1.GameConstants.TILESIZE, _this.roomY * gameConstants_1.GameConstants.TILESIZE);
+            game_1.Game.ctx.drawImage(_this.shadeOffscreenCanvas, (_this.roomX - 1) * gameConstants_1.GameConstants.TILESIZE, (_this.roomY - 1) * gameConstants_1.GameConstants.TILESIZE);
             game_1.Game.ctx.restore();
         };
         this.drawBloomLayer = function (delta) {
@@ -19396,6 +19774,84 @@ var Room = /** @class */ (function () {
             // Restore the main context state
             game_1.Game.ctx.restore();
         };
+        /**
+         * Finds and returns the darkest and lightest tiles in the room based on their visibility.
+         * Loops through the roomArray, sums all the vis values, sorts them, and identifies the extremes.
+         *
+         * @returns An object containing the darkest and lightest tiles with their coordinates and vis values.
+         */
+        this.getExtremeLuminance = function () {
+            var visValues = [];
+            // Loop through each tile in the room
+            for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
+                for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
+                    if (_this.vis[x] && _this.vis[x][y] !== undefined) {
+                        visValues.push({ x: x, y: y, vis: _this.vis[x][y] });
+                    }
+                }
+            }
+            if (visValues.length === 0) {
+                return { darkest: null, lightest: null };
+            }
+            // Sort the vis values in ascending order
+            visValues.sort(function (a, b) { return a.vis - b.vis; });
+            return {
+                darkest: visValues[visValues.length - 1],
+                lightest: visValues[0],
+            };
+        };
+        /**
+         * Finds and returns the darkest and lightest tiles adjacent to a given point.
+         * It checks the tiles above, below, to the left, and to the right of the specified point.
+         *
+         * @param px - The x-coordinate of the reference point.
+         * @param py - The y-coordinate of the reference point.
+         * @returns An object containing the darkest and lightest adjacent tiles with their coordinates and vis values,
+         *          or null if no valid adjacent tiles are found.
+         */
+        this.getExtremeLuminanceFromPoint = function (px, py) {
+            var adjacentPositions = [
+                { x: px, y: py - 1 },
+                { x: px, y: py + 1 },
+                { x: px - 1, y: py },
+                { x: px + 1, y: py }, // Right
+            ];
+            var visValues = [];
+            adjacentPositions.forEach(function (pos) {
+                var x = pos.x, y = pos.y;
+                if (_this.vis[x] && _this.vis[x][y] !== undefined) {
+                    if (_this.roomArray[x] && _this.roomArray[x][y]) {
+                        if (_this.roomArray[x][y] instanceof floor_1.Floor) {
+                            visValues.push({ x: x, y: y, vis: _this.vis[x][y] });
+                        }
+                    }
+                }
+            });
+            if (visValues.length === 0) {
+                return { darkest: null, lightest: null };
+            }
+            // Sort the vis values in ascending order
+            visValues.sort(function (a, b) { return a.vis - b.vis; });
+            return {
+                darkest: visValues[visValues.length - 1],
+                lightest: visValues[0],
+            };
+        };
+        this.getAverageLuminance = function () {
+            var total = 0;
+            var count = 0;
+            for (var x = _this.roomX - 2; x <= _this.roomX + 2; x++) {
+                if (_this.roomArray[x] && _this.roomArray[x][_this.roomY]) {
+                    for (var y = _this.roomY - 2; y <= _this.roomY + 2; y++) {
+                        if (_this.vis[x][y]) {
+                            total += _this.vis[x][y];
+                            count++;
+                        }
+                    }
+                }
+            }
+            return total / count;
+        };
         this.tileInside = function (tileX, tileY) {
             return _this.pointInside(tileX, tileY, _this.roomX, _this.roomY, _this.width, _this.height);
         };
@@ -19580,6 +20036,7 @@ var Room = /** @class */ (function () {
         this.deadEntities = Array();
         this.active = false;
         this.lastLightingUpdate = 0;
+        this.walls = Array();
         // Initialize Color Offscreen Canvas
         this.colorOffscreenCanvas = document.createElement("canvas");
         this.colorOffscreenCanvas.width = this.width * gameConstants_1.GameConstants.TILESIZE;
@@ -19591,8 +20048,9 @@ var Room = /** @class */ (function () {
         this.colorOffscreenCtx = colorCtx;
         // Initialize Shade Offscreen Canvas
         this.shadeOffscreenCanvas = document.createElement("canvas");
-        this.shadeOffscreenCanvas.width = this.width * gameConstants_1.GameConstants.TILESIZE;
-        this.shadeOffscreenCanvas.height = this.height * gameConstants_1.GameConstants.TILESIZE;
+        this.shadeOffscreenCanvas.width = (this.width + 2) * gameConstants_1.GameConstants.TILESIZE;
+        this.shadeOffscreenCanvas.height =
+            (this.height + 2) * gameConstants_1.GameConstants.TILESIZE;
         var shadeCtx = this.shadeOffscreenCanvas.getContext("2d");
         if (!shadeCtx) {
             throw new Error("Failed to initialize shade offscreen canvas context.");
@@ -20102,6 +20560,7 @@ var Room = /** @class */ (function () {
             for (var y = this.roomY; y < this.roomY + this.height; y++) {
                 var tile = this.getTile(x, y);
                 if (tile instanceof wall_1.Wall || tile instanceof wallTorch_1.WallTorch) {
+                    this.walls.push(tile);
                     var isTopWall = y === this.roomY;
                     var isBottomWall = y === this.roomY + this.height - 1;
                     var isLeftWall = x === this.roomX;

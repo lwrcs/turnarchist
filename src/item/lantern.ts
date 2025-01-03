@@ -18,8 +18,8 @@ export class Lantern extends Light {
     this.fuelCap = 250;
     this.name = "lantern";
     this.canRefuel = true;
-    this.maxBrightness = 3;
-    this.minBrightness = 2;
+    this.maxBrightness = 20;
+    this.minBrightness = 5;
     this.radius = 7;
     this.broken = this.fuel <= 0 ? true : false;
   }

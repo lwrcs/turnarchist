@@ -18,8 +18,8 @@ export abstract class Light extends Equippable {
     this.tileY = 0;
     this.fuel = 0;
     this.fuelCap = 250;
-    this.maxBrightness = 2;
-    this.minBrightness = 0.3;
+    this.maxBrightness = 5;
+    this.minBrightness = 2;
     this.radius = 6;
     this.equipped = false;
   }
@@ -40,8 +40,7 @@ export abstract class Light extends Equippable {
   };
 
   setRadius = () => {
-    this.wielder.sightRadius =
-      this.wielder.defaultSightRadius + this.fuelPercentage * this.radius;
+    this.wielder.sightRadius = this.radius + this.fuelPercentage * this.radius;
   };
 
   setBrightness = () => {
@@ -53,10 +52,12 @@ export abstract class Light extends Equippable {
     if (this.fuel > 0) {
       this.equipped = !this.equipped;
       if (this.isIgnited()) {
-        this.setRadius();
+        //this.setRadius();
+        this.setBrightness();
         this.wielder.lightEquipped = true;
       } else {
-        this.resetRadius();
+        //this.resetRadius();
+        this.resetBrightness();
         this.wielder.lightEquipped = false;
       }
     } else {
@@ -76,11 +77,16 @@ export abstract class Light extends Equippable {
     this.wielder.sightRadius = this.wielder.defaultSightRadius;
   };
 
+  resetBrightness = () => {
+    this.wielder.lightBrightness = 0.5;
+  };
+
   burn = () => {
     // Handle active burning
     if (this.isIgnited()) {
       this.fuel--;
       this.setRadius();
+      this.setBrightness();
     }
 
     // Handle depleted fuel
