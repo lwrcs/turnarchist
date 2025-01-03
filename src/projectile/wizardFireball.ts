@@ -36,7 +36,7 @@ export class WizardFireball extends Projectile {
     //this.parent.room.updateLighting();
     this.hasBloom = true;
     this.bloomColor = "#00BFFF";
-    this.bloomAlpha = 1;
+    this.bloomAlpha = 0.5;
     this.softBloomAlpha = 0;
   }
   setMarkerFrame = () => {
@@ -51,10 +51,13 @@ export class WizardFireball extends Projectile {
     }
 
     if (!this.dead && this.state === 0) {
+      this.bloomAlpha = 0.25;
     }
 
     this.state++;
     if (!this.dead && this.state === 1) {
+      this.bloomAlpha = 0.5;
+
       const lightSource = this.parent.room.lightSources.find(
         (ls) => ls === this.lightSource,
       );
@@ -71,6 +74,7 @@ export class WizardFireball extends Projectile {
       );
     }
     if (!this.dead && this.state === 2) {
+      this.bloomAlpha = 0;
       Lighting.momentaryLight(
         this.parent.room,
         this.x,

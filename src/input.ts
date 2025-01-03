@@ -319,7 +319,7 @@ export const Input = {
   currentY: 0,
   swiped: false,
 
-  handleTouchStart: function (evt) {
+  handleTouchStart: function (evt: TouchEvent) {
     console.log("handleTouchStart triggered");
     Game.inputReceived = true;
 
@@ -340,12 +340,14 @@ export const Input = {
 
     Input.swiped = false;
 
-    // ADDED - unify with mouseDown logic
+    // Unify with mouseDown logic, but force button=0 (left-click equivalent)
     Input.mouseDown = true;
     Input.mouseDownStartTime = Date.now();
     Input.isMouseHold = false;
+    Input.mouseDownListener(Input.mouseX, Input.mouseY, 0);
+
     if (!Input._holdCheckInterval) {
-      Input._holdCheckInterval = setInterval(Input.checkIsMouseHold, 16); // Check every frame
+      Input._holdCheckInterval = setInterval(Input.checkIsMouseHold, 16);
       console.log("_holdCheckInterval started");
     }
   },
@@ -389,7 +391,7 @@ export const Input = {
     }
   },
 
-  handleTouchEnd: function (evt) {
+  handleTouchEnd: function (evt: TouchEvent) {
     console.log("handleTouchEnd triggered");
     evt.preventDefault();
 
@@ -397,22 +399,13 @@ export const Input = {
     Input.isTapHold = false;
     Input.tapStartTime = null;
 
-    // we've already swiped, don't count the click
-    if (Input.swiped) return;
-    Input.mouseClickListener({
-      button: 0,
-      clientX: Input.currentX,
-      clientY: Input.currentY,
-    } as MouseEvent);
+    //if (Input.swiped) return;
 
-    Input.updateMousePos({
-      clientX: 0,
-      clientY: 0,
-    } as MouseEvent);
-
-    // ADDED - unify with mouseUp logic
+    // Also unify with mouseUp logic, again forcing button=0
     Input.mouseDown = false;
     Input.mouseDownStartTime = null;
+    Input.mouseUpListener(Input.mouseX, Input.mouseY, 0);
+
     if (Input._holdCheckInterval) {
       clearInterval(Input._holdCheckInterval);
       Input._holdCheckInterval = null;

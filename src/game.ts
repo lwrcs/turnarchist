@@ -694,6 +694,19 @@ export class Game {
     console.log("Event listeners set up");
   }
   onResize = () => {
+    // Determine device pixel ratio
+    const dpr = window.devicePixelRatio || 1;
+
+    // Define scale adjustment based on device pixel ratio
+    let scaleOffset = 0;
+    if (dpr > 1.5) {
+      // High DPI devices like MacBook Air
+      scaleOffset = 2;
+    } else {
+      // Standard DPI devices
+      scaleOffset = 0;
+    }
+
     // Calculate maximum possible scale based on window size
     let maxWidthScale = Math.floor(
       window.innerWidth / GameConstants.DEFAULTWIDTH,
@@ -707,13 +720,13 @@ export class Game {
       GameConstants.isMobile = true;
       this.pushMessage("Mobile detected");
       // Use smaller scale for mobile devices based on screen size
-      // Ensure Game.scale is an integer by using Math.min with integer values
-      Game.scale = Math.min(maxWidthScale, maxHeightScale, 3); // Cap at 3x for mobile
+      // Adjust max scale with scaleOffset
+      Game.scale = Math.min(maxWidthScale, maxHeightScale, 3 + scaleOffset); // Cap at 3 + offset for mobile
     } else {
       GameConstants.isMobile = false;
       // For desktop, use standard scaling logic
       // Ensure GameConstants.SCALE is an integer. If not, round it.
-      const integerScale = Math.ceil(GameConstants.SCALE);
+      const integerScale = Math.ceil(GameConstants.SCALE) + scaleOffset;
       Game.scale = Math.min(maxWidthScale, maxHeightScale, integerScale);
     }
 
@@ -725,13 +738,17 @@ export class Game {
       // Ensure Game.scale is at least 1 and an integer
       Game.scale = Math.max(
         1,
-        Math.min(Math.ceil(maxWidthScale), Math.ceil(maxHeightScale), 1),
+        Math.min(
+          Math.ceil(maxWidthScale),
+          Math.ceil(maxHeightScale),
+          1 + scaleOffset,
+        ),
       );
     }
 
-    // Apply device pixel ratio negation by setting scale to 80%
+    // Apply device pixel ratio negation by setting scale to compensate for DPI
     const NEGATE_DPR_FACTOR = 1;
-    Game.scale *= NEGATE_DPR_FACTOR / window.devicePixelRatio;
+    Game.scale *= NEGATE_DPR_FACTOR / dpr;
 
     // Calculate screen width and height in tiles, ensuring integer values
     LevelConstants.SCREEN_W = Math.floor(
@@ -744,6 +761,7 @@ export class Game {
       "levelConstants.SCREEN_W:" + LevelConstants.SCREEN_W,
       "levelConstants.SCREEN_H" + LevelConstants.SCREEN_H,
     );
+
     // Calculate canvas width and height in pixels, ensuring integer values
     GameConstants.WIDTH = LevelConstants.SCREEN_W * GameConstants.TILESIZE;
     GameConstants.HEIGHT = LevelConstants.SCREEN_H * GameConstants.TILESIZE;
@@ -752,12 +770,12 @@ export class Game {
     Game.ctx.canvas.setAttribute("width", `${GameConstants.WIDTH}`);
     Game.ctx.canvas.setAttribute("height", `${GameConstants.HEIGHT}`);
 
-    // Set CSS styles with integer pixel values for scaling, applying 80% factor
+    // Set CSS styles with integer pixel values for scaling, applying negated DPR factor
     Game.ctx.canvas.setAttribute(
       "style",
-      `width: ${GameConstants.WIDTH * Game.scale}px; height: ${
-        GameConstants.HEIGHT * Game.scale
-      }px;
+      `width: ${Math.round(GameConstants.WIDTH * Game.scale)}px; height: ${Math.round(
+        GameConstants.HEIGHT * Game.scale,
+      )}px;
       display: block;
       margin: 0 auto;
       image-rendering: optimizeSpeed; /* Older versions of FF */
@@ -823,6 +841,10 @@ export class Game {
         room.drawShadeLayer();
         room.drawColorLayer();
         room.drawBloomLayer(delta);
+      }
+    }
+    for (const room of this.levels[this.currentDepth].rooms) {
+      if (room.active || room.entered) {
         if (room.active) room.drawOverShade(delta);
       }
     }

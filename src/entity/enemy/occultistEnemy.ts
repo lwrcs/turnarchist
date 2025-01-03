@@ -79,7 +79,10 @@ export class OccultistEnemy extends Enemy {
       if (this.ticks % 2 === 0) {
         if (enemiesToShield.length > 0) {
           enemiesToShield.forEach((enemy) => {
-            this.applyShieldTo(enemy as Enemy);
+            const distance = Utils.distance(this.x, this.y, enemy.x, enemy.y);
+            if (Math.random() * 10 > distance) {
+              this.applyShieldTo(enemy as Enemy);
+            }
           });
 
           //this.createBeam(this.shieldedEnemies);
@@ -123,10 +126,10 @@ export class OccultistEnemy extends Enemy {
       let beam = new BeamEffect(enemy.x, enemy.y, this.x, this.y, enemy);
       beam.compositeOperation = "source-over";
       beam.color = "#2E0854";
-      beam.turbulence = 0.2;
+      beam.turbulence = 0.4;
       beam.gravity = 0.1;
       beam.iterations = 1;
-      beam.segments = 30;
+      beam.segments = 100;
       beam.angleChange = 0.001;
       beam.springDamping = 0.01;
       beam.drawableY = enemy.drawableY;

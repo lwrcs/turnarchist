@@ -72,6 +72,8 @@ import { BeamEffect } from "./beamEffect";
 import { EnvType } from "./environment";
 import { Pickaxe } from "./weapon/pickaxe";
 import { OccultistEnemy } from "./entity/enemy/occultistEnemy";
+import { Puddle } from "./tile/decorations/puddle";
+import { Decoration } from "./tile/decorations/decoration";
 
 // #endregion
 
@@ -250,6 +252,7 @@ export class Room {
   onScreen: boolean;
   lastLightingUpdate: number;
   walls: Array<Wall>;
+  decorations: Array<Decoration>;
 
   // Add a list to keep track of BeamEffect instances
   beamEffects: BeamEffect[] = [];
@@ -297,7 +300,7 @@ export class Room {
     this.active = false;
     this.lastLightingUpdate = 0;
     this.walls = Array<Wall>();
-
+    this.decorations = Array<Decoration>();
     // Initialize Color Offscreen Canvas
     this.colorOffscreenCanvas = document.createElement("canvas");
     this.colorOffscreenCanvas.width = this.width * GameConstants.TILESIZE;
@@ -904,6 +907,14 @@ export class Room {
     }
   }
 
+  private addDecorations(numDecorations: number, rand: () => number) {
+    let tiles = this.getEmptyTiles();
+    for (let i = 0; i < numDecorations; i++) {
+      const { x, y } = this.getRandomEmptyPosition(tiles);
+      this.decorations.push(new Puddle(this, x, y));
+    }
+  }
+
   private addResources(numResources: number, rand: () => number) {
     let tiles = this.getEmptyTiles();
     for (let i = 0; i < numResources; i++) {
@@ -1010,6 +1021,7 @@ export class Room {
     let numPlants = Math.ceil(numTotalObstacles * rand());
     let numObstacles = numTotalObstacles - numPlants;
     this.addPlants(numPlants, rand);
+    //this.addDecorations(Game.randTable([0, 0, 0, 1, 1, 2, 3], rand), rand);
     this.addObstacles(numObstacles, rand);
     let numEnemies = Math.ceil(
       (numEmptyTiles - numTotalObstacles) *
@@ -2404,9 +2416,9 @@ export class Room {
 
           this.bloomOffscreenCtx.fillRect(
             (x - this.roomX) * GameConstants.TILESIZE,
-            (y - this.roomY - 0.5) * GameConstants.TILESIZE,
+            (y - this.roomY - 0.25) * GameConstants.TILESIZE,
             GameConstants.TILESIZE,
-            GameConstants.TILESIZE,
+            GameConstants.TILESIZE * 0.75,
           );
         }
       }
@@ -2431,8 +2443,8 @@ export class Room {
 
     // Draw the blurred shade layer directly without masking
     Game.ctx.globalCompositeOperation = "screen";
-    Game.ctx.filter = "blur(7px)";
-    Game.ctx.globalAlpha = 0.8;
+    Game.ctx.filter = "blur(8px)";
+    Game.ctx.globalAlpha = 1;
     Game.ctx.drawImage(
       this.bloomOffscreenCanvas,
       this.roomX * GameConstants.TILESIZE,
@@ -2463,6 +2475,7 @@ export class Room {
 
     drawables = drawables.concat(
       tiles,
+      this.decorations,
       entities,
       this.hitwarnings,
       this.projectiles,
@@ -2485,6 +2498,10 @@ export class Room {
       if (a instanceof Floor || a instanceof SpawnFloor) {
         return -1;
       } else if (b instanceof Floor || b instanceof SpawnFloor) {
+        return 1;
+      } else if (a instanceof Decoration) {
+        return -1;
+      } else if (b instanceof Decoration) {
         return 1;
       }
       if (Math.abs(a.drawableY - b.drawableY) < 0.1) {

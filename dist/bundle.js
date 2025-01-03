@@ -3828,7 +3828,10 @@ var OccultistEnemy = /** @class */ (function (_super) {
                 if (_this.ticks % 2 === 0) {
                     if (enemiesToShield.length > 0) {
                         enemiesToShield.forEach(function (enemy) {
-                            _this.applyShieldTo(enemy);
+                            var distance = utils_1.Utils.distance(_this.x, _this.y, enemy.x, enemy.y);
+                            if (Math.random() * 10 > distance) {
+                                _this.applyShieldTo(enemy);
+                            }
                         });
                         //this.createBeam(this.shieldedEnemies);
                     }
@@ -3867,10 +3870,10 @@ var OccultistEnemy = /** @class */ (function (_super) {
                 var beam = new beamEffect_1.BeamEffect(enemy.x, enemy.y, _this.x, _this.y, enemy);
                 beam.compositeOperation = "source-over";
                 beam.color = "#2E0854";
-                beam.turbulence = 0.2;
+                beam.turbulence = 0.4;
                 beam.gravity = 0.1;
                 beam.iterations = 1;
-                beam.segments = 30;
+                beam.segments = 100;
                 beam.angleChange = 0.001;
                 beam.springDamping = 0.01;
                 beam.drawableY = enemy.drawableY;
@@ -8140,6 +8143,18 @@ var Game = /** @class */ (function () {
             }
         };
         this.onResize = function () {
+            // Determine device pixel ratio
+            var dpr = window.devicePixelRatio || 1;
+            // Define scale adjustment based on device pixel ratio
+            var scaleOffset = 0;
+            if (dpr > 1.5) {
+                // High DPI devices like MacBook Air
+                scaleOffset = 2;
+            }
+            else {
+                // Standard DPI devices
+                scaleOffset = 0;
+            }
             // Calculate maximum possible scale based on window size
             var maxWidthScale = Math.floor(window.innerWidth / gameConstants_1.GameConstants.DEFAULTWIDTH);
             var maxHeightScale = Math.floor(window.innerHeight / gameConstants_1.GameConstants.DEFAULTHEIGHT);
@@ -8148,14 +8163,14 @@ var Game = /** @class */ (function () {
                 gameConstants_1.GameConstants.isMobile = true;
                 _this.pushMessage("Mobile detected");
                 // Use smaller scale for mobile devices based on screen size
-                // Ensure Game.scale is an integer by using Math.min with integer values
-                Game.scale = Math.min(maxWidthScale, maxHeightScale, 3); // Cap at 3x for mobile
+                // Adjust max scale with scaleOffset
+                Game.scale = Math.min(maxWidthScale, maxHeightScale, 3 + scaleOffset); // Cap at 3 + offset for mobile
             }
             else {
                 gameConstants_1.GameConstants.isMobile = false;
                 // For desktop, use standard scaling logic
                 // Ensure GameConstants.SCALE is an integer. If not, round it.
-                var integerScale = Math.ceil(gameConstants_1.GameConstants.SCALE);
+                var integerScale = Math.ceil(gameConstants_1.GameConstants.SCALE) + scaleOffset;
                 Game.scale = Math.min(maxWidthScale, maxHeightScale, integerScale);
             }
             // Handle case where scale would be 0
@@ -8164,11 +8179,11 @@ var Game = /** @class */ (function () {
                 maxWidthScale = window.innerWidth / gameConstants_1.GameConstants.DEFAULTWIDTH;
                 maxHeightScale = window.innerHeight / gameConstants_1.GameConstants.DEFAULTHEIGHT;
                 // Ensure Game.scale is at least 1 and an integer
-                Game.scale = Math.max(1, Math.min(Math.ceil(maxWidthScale), Math.ceil(maxHeightScale), 1));
+                Game.scale = Math.max(1, Math.min(Math.ceil(maxWidthScale), Math.ceil(maxHeightScale), 1 + scaleOffset));
             }
-            // Apply device pixel ratio negation by setting scale to 80%
+            // Apply device pixel ratio negation by setting scale to compensate for DPI
             var NEGATE_DPR_FACTOR = 1;
-            Game.scale *= NEGATE_DPR_FACTOR / window.devicePixelRatio;
+            Game.scale *= NEGATE_DPR_FACTOR / dpr;
             // Calculate screen width and height in tiles, ensuring integer values
             levelConstants_1.LevelConstants.SCREEN_W = Math.floor(window.innerWidth / Game.scale / gameConstants_1.GameConstants.TILESIZE);
             levelConstants_1.LevelConstants.SCREEN_H = Math.floor(window.innerHeight / Game.scale / gameConstants_1.GameConstants.TILESIZE);
@@ -8179,8 +8194,8 @@ var Game = /** @class */ (function () {
             // Set canvas width and height attributes as integers
             Game.ctx.canvas.setAttribute("width", "".concat(gameConstants_1.GameConstants.WIDTH));
             Game.ctx.canvas.setAttribute("height", "".concat(gameConstants_1.GameConstants.HEIGHT));
-            // Set CSS styles with integer pixel values for scaling, applying 80% factor
-            Game.ctx.canvas.setAttribute("style", "width: ".concat(gameConstants_1.GameConstants.WIDTH * Game.scale, "px; height: ").concat(gameConstants_1.GameConstants.HEIGHT * Game.scale, "px;\n      display: block;\n      margin: 0 auto;\n      image-rendering: optimizeSpeed; /* Older versions of FF */\n      image-rendering: -moz-crisp-edges; /* FF 6.0+ */\n      image-rendering: -webkit-optimize-contrast; /* Safari */\n      image-rendering: -o-crisp-edges; /* OS X & Windows Opera (12.02+) */\n      image-rendering: pixelated; /* Future-browsers */\n      -ms-interpolation-mode: nearest-neighbor; /* IE */\n      "));
+            // Set CSS styles with integer pixel values for scaling, applying negated DPR factor
+            Game.ctx.canvas.setAttribute("style", "width: ".concat(Math.round(gameConstants_1.GameConstants.WIDTH * Game.scale), "px; height: ").concat(Math.round(gameConstants_1.GameConstants.HEIGHT * Game.scale), "px;\n      display: block;\n      margin: 0 auto;\n      image-rendering: optimizeSpeed; /* Older versions of FF */\n      image-rendering: -moz-crisp-edges; /* FF 6.0+ */\n      image-rendering: -webkit-optimize-contrast; /* Safari */\n      image-rendering: -o-crisp-edges; /* OS X & Windows Opera (12.02+) */\n      image-rendering: pixelated; /* Future-browsers */\n      -ms-interpolation-mode: nearest-neighbor; /* IE */\n      "));
             // Optional: Log the new scale and canvas size for debugging
             console.log("Scale set to: ".concat(Game.scale));
             console.log("Canvas size: ".concat(gameConstants_1.GameConstants.WIDTH, "px x ").concat(gameConstants_1.GameConstants.HEIGHT, "px"));
@@ -8235,6 +8250,11 @@ var Game = /** @class */ (function () {
                     room.drawShadeLayer();
                     room.drawColorLayer();
                     room.drawBloomLayer(delta);
+                }
+            }
+            for (var _b = 0, _c = _this.levels[_this.currentDepth].rooms; _b < _c.length; _b++) {
+                var room = _c[_b];
+                if (room.active || room.entered) {
                     if (room.active)
                         room.drawOverShade(delta);
                 }
@@ -10431,12 +10451,13 @@ exports.Input = {
             clientY: exports.Input.currentY,
         });
         exports.Input.swiped = false;
-        // ADDED - unify with mouseDown logic
+        // Unify with mouseDown logic, but force button=0 (left-click equivalent)
         exports.Input.mouseDown = true;
         exports.Input.mouseDownStartTime = Date.now();
         exports.Input.isMouseHold = false;
+        exports.Input.mouseDownListener(exports.Input.mouseX, exports.Input.mouseY, 0);
         if (!exports.Input._holdCheckInterval) {
-            exports.Input._holdCheckInterval = setInterval(exports.Input.checkIsMouseHold, 16); // Check every frame
+            exports.Input._holdCheckInterval = setInterval(exports.Input.checkIsMouseHold, 16);
             console.log("_holdCheckInterval started");
         }
     },
@@ -10484,21 +10505,11 @@ exports.Input = {
             exports.Input.tapListener();
         exports.Input.isTapHold = false;
         exports.Input.tapStartTime = null;
-        // we've already swiped, don't count the click
-        if (exports.Input.swiped)
-            return;
-        exports.Input.mouseClickListener({
-            button: 0,
-            clientX: exports.Input.currentX,
-            clientY: exports.Input.currentY,
-        });
-        exports.Input.updateMousePos({
-            clientX: 0,
-            clientY: 0,
-        });
-        // ADDED - unify with mouseUp logic
+        //if (Input.swiped) return;
+        // Also unify with mouseUp logic, again forcing button=0
         exports.Input.mouseDown = false;
         exports.Input.mouseDownStartTime = null;
+        exports.Input.mouseUpListener(exports.Input.mouseX, exports.Input.mouseY, 0);
         if (exports.Input._holdCheckInterval) {
             clearInterval(exports.Input._holdCheckInterval);
             exports.Input._holdCheckInterval = null;
@@ -13769,8 +13780,8 @@ var LevelConstants = /** @class */ (function () {
     LevelConstants.HEALTH_BAR_TOTALTIME = 1000;
     LevelConstants.SHADED_TILE_CUTOFF = 1;
     LevelConstants.MIN_VISIBILITY = 0; // visibility level of places you've already seen
-    LevelConstants.LIGHTING_ANGLE_STEP = 1; // how many degrees between each ray, previously 5
-    LevelConstants.LIGHTING_MAX_DISTANCE = 10;
+    LevelConstants.LIGHTING_ANGLE_STEP = 2; // how many degrees between each ray, previously 5
+    LevelConstants.LIGHTING_MAX_DISTANCE = 7;
     LevelConstants.LIGHT_RESOLUTION = 0.1; //1 is default
     LevelConstants.LEVEL_TEXT_COLOR = "yellow";
     LevelConstants.AMBIENT_LIGHT_COLOR = [12, 15, 12];
@@ -17824,14 +17835,17 @@ var WizardFireball = /** @class */ (function (_super) {
                 _this.dead = true;
             }
             if (!_this.dead && _this.state === 0) {
+                _this.bloomAlpha = 0.25;
             }
             _this.state++;
             if (!_this.dead && _this.state === 1) {
+                _this.bloomAlpha = 0.5;
                 var lightSource = _this.parent.room.lightSources.find(function (ls) { return ls === _this.lightSource; });
                 lightSource.b = 0.4;
                 _this.parent.room.hitwarnings.push(new hitWarning_1.HitWarning(_this.parent.game, _this.x, _this.y, _this.parent.x, _this.parent.y, true));
             }
             if (!_this.dead && _this.state === 2) {
+                _this.bloomAlpha = 0;
                 lighting_1.Lighting.momentaryLight(_this.parent.room, _this.x, _this.y, 3, _this.parent.projectileColor, 500, 5, 350);
                 _this.parent.removeLightSource(_this.lightSource);
                 _this.frame = 0;
@@ -17890,7 +17904,7 @@ var WizardFireball = /** @class */ (function (_super) {
         //this.parent.room.updateLighting();
         _this.hasBloom = true;
         _this.bloomColor = "#00BFFF";
-        _this.bloomAlpha = 1;
+        _this.bloomAlpha = 0.5;
         _this.softBloomAlpha = 0;
         return _this;
     }
@@ -18275,6 +18289,8 @@ var beamEffect_1 = __webpack_require__(/*! ./beamEffect */ "./src/beamEffect.ts"
 var environment_1 = __webpack_require__(/*! ./environment */ "./src/environment.ts");
 var pickaxe_1 = __webpack_require__(/*! ./weapon/pickaxe */ "./src/weapon/pickaxe.ts");
 var occultistEnemy_1 = __webpack_require__(/*! ./entity/enemy/occultistEnemy */ "./src/entity/enemy/occultistEnemy.ts");
+var puddle_1 = __webpack_require__(/*! ./tile/decorations/puddle */ "./src/tile/decorations/puddle.ts");
+var decoration_1 = __webpack_require__(/*! ./tile/decorations/decoration */ "./src/tile/decorations/decoration.ts");
 // #endregion
 // #region Enums & Interfaces
 /**
@@ -18496,6 +18512,7 @@ var Room = /** @class */ (function () {
             var numPlants = Math.ceil(numTotalObstacles * rand());
             var numObstacles = numTotalObstacles - numPlants;
             _this.addPlants(numPlants, rand);
+            //this.addDecorations(Game.randTable([0, 0, 0, 1, 1, 2, 3], rand), rand);
             _this.addObstacles(numObstacles, rand);
             var numEnemies = Math.ceil((numEmptyTiles - numTotalObstacles) *
                 Math.min(_this.depth * 0.1 + 0.75, 0.35));
@@ -19561,7 +19578,7 @@ var Room = /** @class */ (function () {
                         _this.bloomOffscreenCtx.globalAlpha =
                             1 * (1 - _this.softVis[x][y]) * _this.roomArray[x][y].softBloomAlpha;
                         _this.bloomOffscreenCtx.fillStyle = _this.roomArray[x][y].bloomColor;
-                        _this.bloomOffscreenCtx.fillRect((x - _this.roomX) * gameConstants_1.GameConstants.TILESIZE, (y - _this.roomY - 0.5) * gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE);
+                        _this.bloomOffscreenCtx.fillRect((x - _this.roomX) * gameConstants_1.GameConstants.TILESIZE, (y - _this.roomY - 0.25) * gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE * 0.75);
                     }
                 }
             }
@@ -19578,8 +19595,8 @@ var Room = /** @class */ (function () {
                 }
             // Draw the blurred shade layer directly without masking
             game_1.Game.ctx.globalCompositeOperation = "screen";
-            game_1.Game.ctx.filter = "blur(7px)";
-            game_1.Game.ctx.globalAlpha = 0.8;
+            game_1.Game.ctx.filter = "blur(8px)";
+            game_1.Game.ctx.globalAlpha = 1;
             game_1.Game.ctx.drawImage(_this.bloomOffscreenCanvas, _this.roomX * gameConstants_1.GameConstants.TILESIZE, _this.roomY * gameConstants_1.GameConstants.TILESIZE);
             _this.bloomOffscreenCtx.clearRect(0, 0, _this.bloomOffscreenCanvas.width, _this.bloomOffscreenCanvas.height);
             game_1.Game.ctx.restore();
@@ -19596,7 +19613,7 @@ var Room = /** @class */ (function () {
             var drawables = new Array();
             var entities = new Array();
             entities = entities.concat(_this.entities, _this.deadEntities);
-            drawables = drawables.concat(tiles, entities, _this.hitwarnings, _this.projectiles, _this.particles, _this.items);
+            drawables = drawables.concat(tiles, _this.decorations, entities, _this.hitwarnings, _this.projectiles, _this.particles, _this.items);
             for (var i in _this.game.players) {
                 if (_this.game.rooms[_this.game.players[i].levelID] === _this) {
                     if (!(skipLocalPlayer &&
@@ -19609,6 +19626,12 @@ var Room = /** @class */ (function () {
                     return -1;
                 }
                 else if (b instanceof floor_1.Floor || b instanceof spawnfloor_1.SpawnFloor) {
+                    return 1;
+                }
+                else if (a instanceof decoration_1.Decoration) {
+                    return -1;
+                }
+                else if (b instanceof decoration_1.Decoration) {
                     return 1;
                 }
                 if (Math.abs(a.drawableY - b.drawableY) < 0.1) {
@@ -20037,6 +20060,7 @@ var Room = /** @class */ (function () {
         this.active = false;
         this.lastLightingUpdate = 0;
         this.walls = Array();
+        this.decorations = Array();
         // Initialize Color Offscreen Canvas
         this.colorOffscreenCanvas = document.createElement("canvas");
         this.colorOffscreenCanvas.width = this.width * gameConstants_1.GameConstants.TILESIZE;
@@ -20477,6 +20501,13 @@ var Room = /** @class */ (function () {
                 mushrooms_1.Mushrooms.add(this, this.game, x, y);
             else
                 chest_1.Chest.add(this, this.game, x, y);
+        }
+    };
+    Room.prototype.addDecorations = function (numDecorations, rand) {
+        var tiles = this.getEmptyTiles();
+        for (var i = 0; i < numDecorations; i++) {
+            var _a = this.getRandomEmptyPosition(tiles), x = _a.x, y = _a.y;
+            this.decorations.push(new puddle_1.Puddle(this, x, y));
         }
     };
     Room.prototype.addResources = function (numResources, rand) {
@@ -21722,6 +21753,178 @@ var CoffinTile = /** @class */ (function (_super) {
     return CoffinTile;
 }(tile_1.Tile));
 exports.CoffinTile = CoffinTile;
+
+
+/***/ }),
+
+/***/ "./src/tile/decorations/decoration.ts":
+/*!********************************************!*\
+  !*** ./src/tile/decorations/decoration.ts ***!
+  \********************************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Decoration = exports.SkinType = void 0;
+var drawable_1 = __webpack_require__(/*! ../../drawable */ "./src/drawable.ts");
+var gameConstants_1 = __webpack_require__(/*! ../../gameConstants */ "./src/gameConstants.ts");
+var game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+var SkinType;
+(function (SkinType) {
+    SkinType[SkinType["DUNGEON"] = 0] = "DUNGEON";
+    SkinType[SkinType["CAVE"] = 1] = "CAVE";
+    SkinType[SkinType["FOREST"] = 2] = "FOREST";
+    SkinType[SkinType["SWAMP"] = 3] = "SWAMP";
+    SkinType[SkinType["GLACIER"] = 4] = "GLACIER";
+    SkinType[SkinType["CASTLE"] = 5] = "CASTLE";
+})(SkinType = exports.SkinType || (exports.SkinType = {}));
+var Decoration = /** @class */ (function (_super) {
+    __extends(Decoration, _super);
+    function Decoration(room, x, y) {
+        var _this = _super.call(this) || this;
+        _this.shadeAmount = function (offsetX, offsetY) {
+            if (offsetX === void 0) { offsetX = 0; }
+            if (offsetY === void 0) { offsetY = 0; }
+            if (gameConstants_1.GameConstants.SMOOTH_LIGHTING)
+                return 0;
+            return _this.room.softVis[_this.x + offsetX][_this.y + offsetY];
+        };
+        _this.isSolid = function () {
+            return false;
+        };
+        _this.canCrushEnemy = function () {
+            return false;
+        };
+        _this.isOpaque = function () {
+            return false;
+        };
+        _this.onCollide = function (player) { };
+        _this.onCollideEnemy = function (enemy) { };
+        _this.tick = function () { };
+        _this.tickEnd = function () { };
+        _this.draw = function (delta) { };
+        _this.drawUnderPlayer = function (delta) {
+            var tileY = 1;
+            if (_this.applySkin)
+                tileY = _this.skin;
+            game_1.Game.drawTile(1, tileY, 1, 1, _this.x, _this.y, 1, 1, _this.room.shadeColor, _this.shadeAmount());
+        };
+        _this.drawAbovePlayer = function (delta) { };
+        _this.drawAboveShading = function (delta) { };
+        _this.skin = room.skin;
+        _this.room = room;
+        _this.x = x;
+        _this.y = y;
+        _this.drawableY = y;
+        _this.isDoor = false;
+        _this.opacity = 1;
+        _this.applySkin = false;
+        return _this;
+    }
+    return Decoration;
+}(drawable_1.Drawable));
+exports.Decoration = Decoration;
+
+
+/***/ }),
+
+/***/ "./src/tile/decorations/puddle.ts":
+/*!****************************************!*\
+  !*** ./src/tile/decorations/puddle.ts ***!
+  \****************************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Puddle = exports.SkinType = void 0;
+var gameConstants_1 = __webpack_require__(/*! ../../gameConstants */ "./src/gameConstants.ts");
+var game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+var decoration_1 = __webpack_require__(/*! ./decoration */ "./src/tile/decorations/decoration.ts");
+var SkinType;
+(function (SkinType) {
+    SkinType[SkinType["DUNGEON"] = 0] = "DUNGEON";
+    SkinType[SkinType["CAVE"] = 1] = "CAVE";
+    SkinType[SkinType["FOREST"] = 2] = "FOREST";
+    SkinType[SkinType["SWAMP"] = 3] = "SWAMP";
+    SkinType[SkinType["GLACIER"] = 4] = "GLACIER";
+    SkinType[SkinType["CASTLE"] = 5] = "CASTLE";
+})(SkinType = exports.SkinType || (exports.SkinType = {}));
+var Puddle = /** @class */ (function (_super) {
+    __extends(Puddle, _super);
+    function Puddle(room, x, y) {
+        var _this = _super.call(this, room, x, y) || this;
+        _this.shadeAmount = function (offsetX, offsetY) {
+            if (offsetX === void 0) { offsetX = 0; }
+            if (offsetY === void 0) { offsetY = 0; }
+            if (gameConstants_1.GameConstants.SMOOTH_LIGHTING)
+                return 0;
+            return _this.room.softVis[_this.x + offsetX][_this.y + offsetY];
+        };
+        _this.isSolid = function () {
+            return false;
+        };
+        _this.canCrushEnemy = function () {
+            return false;
+        };
+        _this.isOpaque = function () {
+            return false;
+        };
+        _this.onCollide = function (player) { };
+        _this.onCollideEnemy = function (enemy) { };
+        _this.tick = function () { };
+        _this.tickEnd = function () { };
+        _this.draw = function (delta) { };
+        _this.drawUnderPlayer = function (delta) {
+            var tileY = 1;
+            if (_this.applySkin)
+                tileY = _this.skin;
+            game_1.Game.drawTile(1, tileY, 1, 1, _this.x, _this.y, 1, 1, _this.room.shadeColor, _this.shadeAmount());
+        };
+        _this.drawAbovePlayer = function (delta) { };
+        _this.drawAboveShading = function (delta) { };
+        _this.skin = room.skin;
+        _this.room = room;
+        _this.x = x;
+        _this.y = y;
+        _this.drawableY = y;
+        _this.isDoor = false;
+        _this.opacity = 1;
+        _this.applySkin = false;
+        return _this;
+    }
+    return Puddle;
+}(decoration_1.Decoration));
+exports.Puddle = Puddle;
 
 
 /***/ }),
