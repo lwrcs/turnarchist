@@ -27,6 +27,9 @@ export class Sound {
   static wooshSound: HTMLAudioElement;
   static initialized: boolean = false;
   static audioMuted: boolean = false;
+  static bombSounds: Array<HTMLAudioElement>;
+  static fuseBurnSound: HTMLAudioElement;
+  static loopHandlers: Map<HTMLAudioElement, EventListener> = new Map();
   static loadSounds = async () => {
     if (Sound.initialized) return;
     Sound.initialized = true;
@@ -145,6 +148,15 @@ export class Sound {
 
     Sound.wooshSound = new Audio("res/SFX/attacks/woosh1.mp3");
     Sound.wooshSound.volume = 0.2;
+
+    Sound.bombSounds = new Array<HTMLAudioElement>();
+    [1, 2].forEach((i) =>
+      Sound.bombSounds.push(new Audio("res/SFX/attacks/explode" + i + ".mp3")),
+    );
+    for (let f of Sound.bombSounds) f.volume = 0.7;
+
+    Sound.fuseBurnSound = new Audio("res/SFX/attacks/fuse.mp3");
+    Sound.fuseBurnSound.volume = 0.2;
   };
 
   private static playSoundSafely(audio: HTMLAudioElement) {
@@ -314,10 +326,23 @@ export class Sound {
     this.playWithReverb(Sound.ambientSound);
   };
 
+  static playFuse = () => {
+    if (Sound.audioMuted) return;
+    Sound.fuseBurnSound.currentTime = 0;
+    this.playWithReverb(Sound.fuseBurnSound);
+  };
+
   static playGore = () => {
     if (Sound.audioMuted) return;
     this.playWithReverb(Sound.goreSound);
     Sound.goreSound.currentTime = 0;
+  };
+
+  static playBomb = () => {
+    if (Sound.audioMuted) return;
+    let f = Game.randTable(Sound.bombSounds, Math.random);
+    this.playWithReverb(f);
+    f.currentTime = 0;
   };
 
   static playMagic = () => {
@@ -334,9 +359,13 @@ export class Sound {
     setTimeout(method, delay);
   };
 
-  static stopSoundWithReverb(audio: HTMLAudioElement) {
-    ReverbEngine.removeReverb(audio);
+  static stopSound(audio: HTMLAudioElement) {
     audio.pause();
     audio.currentTime = 0;
+  }
+
+  static stopSoundWithReverb(audio: HTMLAudioElement) {
+    ReverbEngine.removeReverb(audio);
+    this.stopSound(audio);
   }
 }

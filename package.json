@@ -131,6 +131,7 @@
     "pseudomap": "^1.0.2",
     "psl": "^1.9.0",
     "punycode": "^2.3.1",
-    "reduce-flatten": "^3.0.1"
+    "reduce-flatten": "^3.0.1",
+    "stackblur-canvas": "^2.7.0"
   }
 }

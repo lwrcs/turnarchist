@@ -74,6 +74,7 @@ import { Pickaxe } from "./weapon/pickaxe";
 import { OccultistEnemy } from "./entity/enemy/occultistEnemy";
 import { Puddle } from "./tile/decorations/puddle";
 import { Decoration } from "./tile/decorations/decoration";
+import { Bomb } from "./entity/object/bomb";
 
 // #endregion
 
@@ -98,6 +99,7 @@ export enum EnemyType {
   firewizard = "firewizard",
   spawner = "spawner",
   occultist = "occultist",
+  bomb = "bomb",
   // Add other enemy types here
 }
 
@@ -121,6 +123,7 @@ export const EnemyTypeMap: { [key in EnemyType]: EnemyStatic } = {
   [EnemyType.firewizard]: FireWizardEnemy,
   [EnemyType.spawner]: Spawner,
   [EnemyType.occultist]: OccultistEnemy,
+  [EnemyType.bomb]: Bomb,
   // Add other enemy mappings here
 };
 
@@ -253,6 +256,8 @@ export class Room {
   lastLightingUpdate: number;
   walls: Array<Wall>;
   decorations: Array<Decoration>;
+  blurOffsetX: number = 5;
+  blurOffsetY: number = 5;
 
   // Add a list to keep track of BeamEffect instances
   beamEffects: BeamEffect[] = [];
@@ -303,8 +308,10 @@ export class Room {
     this.decorations = Array<Decoration>();
     // Initialize Color Offscreen Canvas
     this.colorOffscreenCanvas = document.createElement("canvas");
-    this.colorOffscreenCanvas.width = this.width * GameConstants.TILESIZE;
-    this.colorOffscreenCanvas.height = this.height * GameConstants.TILESIZE;
+    this.colorOffscreenCanvas.width =
+      (this.width + 10) * GameConstants.TILESIZE;
+    this.colorOffscreenCanvas.height =
+      (this.height + 10) * GameConstants.TILESIZE;
     const colorCtx = this.colorOffscreenCanvas.getContext("2d");
     if (!colorCtx) {
       throw new Error("Failed to initialize color offscreen canvas context.");
@@ -313,9 +320,10 @@ export class Room {
 
     // Initialize Shade Offscreen Canvas
     this.shadeOffscreenCanvas = document.createElement("canvas");
-    this.shadeOffscreenCanvas.width = (this.width + 2) * GameConstants.TILESIZE;
+    this.shadeOffscreenCanvas.width =
+      (this.width + 10) * GameConstants.TILESIZE;
     this.shadeOffscreenCanvas.height =
-      (this.height + 2) * GameConstants.TILESIZE;
+      (this.height + 10) * GameConstants.TILESIZE;
     const shadeCtx = this.shadeOffscreenCanvas.getContext("2d");
     if (!shadeCtx) {
       throw new Error("Failed to initialize shade offscreen canvas context.");
@@ -324,8 +332,10 @@ export class Room {
 
     // Initialize Bloom Offscreen Canvas
     this.bloomOffscreenCanvas = document.createElement("canvas");
-    this.bloomOffscreenCanvas.width = this.width * GameConstants.TILESIZE;
-    this.bloomOffscreenCanvas.height = this.height * GameConstants.TILESIZE;
+    this.bloomOffscreenCanvas.width =
+      (this.width + 10) * GameConstants.TILESIZE;
+    this.bloomOffscreenCanvas.height =
+      (this.height + 10) * GameConstants.TILESIZE;
     const bloomCtx = this.bloomOffscreenCanvas.getContext("2d");
     if (!bloomCtx) {
       throw new Error("Failed to initialize bloom offscreen canvas context.");
@@ -893,6 +903,14 @@ export class Room {
     }
   }
 
+  addBombs(numBombs: number, rand: () => number) {
+    let tiles = this.getEmptyTiles();
+    for (let i = 0; i < this.getEmptyTiles().length; i++) {
+      const { x, y } = this.getRandomEmptyPosition(tiles);
+      Bomb.add(this, this.game, x, y);
+    }
+  }
+
   private addPlants(numPlants: number, rand: () => number) {
     let tiles = this.getEmptyTiles();
     for (let i = 0; i < numPlants; i++) {
@@ -1372,7 +1390,9 @@ export class Room {
           Math.random() <= 0.2
         ) {
           this.populateCave(rand);
-        } else this.populateDungeon(rand);
+        } else {
+          this.populateDungeon(rand);
+        }
         break;
       case RoomType.BIGDUNGEON:
         this.populateBigDungeon(rand);
@@ -1445,6 +1465,7 @@ export class Room {
   // #region ENTERING / EXITING ROOM METHODS
 
   exitLevel = () => {
+    this.game.onResize(); // stupid hack to keep fps high
     for (let door of this.doors) {
       if (
         door.linkedDoor.lightSource !== null &&
@@ -2026,6 +2047,29 @@ export class Room {
   };
 
   /**
+   * Applies Gaussian blur to the specified offscreen canvas.
+   *
+   * @param {HTMLCanvasElement} canvas - The offscreen canvas to blur.
+   * @param {number} radius - The radius of the blur.
+   */
+  applyGaussianBlur(canvas: HTMLCanvasElement, radius: number): void {
+    const StackBlur = require("stackblur-canvas");
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      throw new Error("Failed to get canvas context for Gaussian blur.");
+    }
+
+    // Get the image data from the canvas
+    const width = canvas.width;
+    const height = canvas.height;
+    //const imageData = ctx.getImageData(0, 0, width, height);
+    let r = radius;
+    if (!GameConstants.BLUR_ENABLED) r = 0;
+    // Apply StackBlur
+    StackBlur.canvasRGBA(canvas, 0, 0, width, height, Math.floor(r / 2));
+  }
+
+  /**
    * Casts a tint from a light source at a specific angle.
    *
    * @param angle - The angle in degrees at which to cast the tint.
@@ -2173,6 +2217,8 @@ export class Room {
     );
 
     let lastFillStyle = "";
+    const offsetX = this.blurOffsetX;
+    const offsetY = this.blurOffsetY;
 
     // Draw all color rectangles without any filters
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
@@ -2188,8 +2234,8 @@ export class Room {
         }
 
         this.colorOffscreenCtx.fillRect(
-          (x - this.roomX) * GameConstants.TILESIZE,
-          (y - this.roomY) * GameConstants.TILESIZE,
+          (x - this.roomX + offsetX) * GameConstants.TILESIZE,
+          (y - this.roomY + offsetY) * GameConstants.TILESIZE,
           GameConstants.TILESIZE,
           GameConstants.TILESIZE,
         );
@@ -2200,23 +2246,36 @@ export class Room {
     Game.ctx.globalCompositeOperation =
       GameConstants.COLOR_LAYER_COMPOSITE_OPERATION as GlobalCompositeOperation;
     //Game.ctx.globalCompositeOperation = "source-over";
-    Game.ctx.globalAlpha = 0.6;
-    Game.ctx.filter = "blur(6px)";
+    Game.ctx.globalAlpha = 0.6; // 0.6;
+    if (!GameConstants.ctxBlurEnabled) {
+      this.applyGaussianBlur(this.colorOffscreenCanvas, 12);
+    } else {
+      Game.ctx.filter = "blur(6px)";
+    }
     Game.ctx.drawImage(
       this.colorOffscreenCanvas,
-      this.roomX * GameConstants.TILESIZE,
-      this.roomY * GameConstants.TILESIZE,
+      (this.roomX - offsetX) * GameConstants.TILESIZE,
+      (this.roomY - offsetY) * GameConstants.TILESIZE,
     );
 
     //draw slight haze
     Game.ctx.globalCompositeOperation = "lighten";
     Game.ctx.globalAlpha = 0.05;
-    Game.ctx.filter = "blur(12px)";
+    if (!GameConstants.ctxBlurEnabled)
+      this.applyGaussianBlur(this.colorOffscreenCanvas, 24);
+    else Game.ctx.filter = "blur(12px)";
     Game.ctx.drawImage(
       this.colorOffscreenCanvas,
-      this.roomX * GameConstants.TILESIZE,
-      this.roomY * GameConstants.TILESIZE,
+      (this.roomX - offsetX) * GameConstants.TILESIZE,
+      (this.roomY - offsetY) * GameConstants.TILESIZE,
     );
+    this.colorOffscreenCtx.clearRect(
+      0,
+      0,
+      this.colorOffscreenCanvas.width,
+      this.colorOffscreenCanvas.height,
+    );
+
     Game.ctx.restore();
   };
 
@@ -2233,6 +2292,8 @@ export class Room {
     );
 
     let lastFillStyle = "";
+    const offsetX = this.blurOffsetX;
+    const offsetY = this.blurOffsetY;
 
     // Draw all shade rectangles without any filters
     for (let x = this.roomX - 2; x < this.roomX + this.width + 4; x++) {
@@ -2354,8 +2415,8 @@ export class Room {
         fillY += 1;
         fillX += 1;
         this.shadeOffscreenCtx.fillRect(
-          (fillX - this.roomX) * GameConstants.TILESIZE,
-          (fillY - this.roomY) * GameConstants.TILESIZE,
+          (fillX - this.roomX + offsetX) * GameConstants.TILESIZE,
+          (fillY - this.roomY + offsetY) * GameConstants.TILESIZE,
           fillWidth * GameConstants.TILESIZE,
           fillHeight * GameConstants.TILESIZE,
         );
@@ -2365,11 +2426,13 @@ export class Room {
     // Draw the blurred shade layer directly without masking
     Game.ctx.globalCompositeOperation = "source-over";
     Game.ctx.globalAlpha = 1;
-    Game.ctx.filter = "blur(5px)";
+    if (!GameConstants.ctxBlurEnabled)
+      this.applyGaussianBlur(this.shadeOffscreenCanvas, 10);
+    else Game.ctx.filter = "blur(5px)";
     Game.ctx.drawImage(
       this.shadeOffscreenCanvas,
-      (this.roomX - 1) * GameConstants.TILESIZE,
-      (this.roomY - 1) * GameConstants.TILESIZE,
+      (this.roomX - offsetX - 1) * GameConstants.TILESIZE,
+      (this.roomY - offsetY - 1) * GameConstants.TILESIZE,
     );
 
     Game.ctx.restore();
@@ -2386,6 +2449,8 @@ export class Room {
       this.bloomOffscreenCanvas.width,
       this.bloomOffscreenCanvas.height,
     );
+    const offsetX = this.blurOffsetX;
+    const offsetY = this.blurOffsetY;
 
     let lastFillStyle = "";
 
@@ -2400,10 +2465,19 @@ export class Room {
           this.bloomOffscreenCtx.fillStyle = e.bloomColor;
 
           this.bloomOffscreenCtx.fillRect(
-            (e.x - e.drawX - this.roomX) * GameConstants.TILESIZE,
-            (e.y - e.drawY - this.roomY - 0.5) * GameConstants.TILESIZE,
-            GameConstants.TILESIZE,
-            GameConstants.TILESIZE,
+            (e.x - e.drawX - this.roomX + offsetX + 0.5 - e.bloomSize / 2) *
+              GameConstants.TILESIZE,
+            (e.y -
+              e.drawY -
+              this.roomY -
+              0.5 +
+              offsetY +
+              0.5 -
+              e.bloomSize / 2) *
+              GameConstants.TILESIZE +
+              e.bloomOffsetY,
+            GameConstants.TILESIZE * e.bloomSize,
+            GameConstants.TILESIZE * e.bloomSize,
           );
         }
       }
@@ -2417,8 +2491,8 @@ export class Room {
           this.bloomOffscreenCtx.fillStyle = this.roomArray[x][y].bloomColor;
 
           this.bloomOffscreenCtx.fillRect(
-            (x - this.roomX) * GameConstants.TILESIZE,
-            (y - this.roomY - 0.25) * GameConstants.TILESIZE,
+            (x - this.roomX + offsetX) * GameConstants.TILESIZE,
+            (y - this.roomY - 0.25 + offsetY) * GameConstants.TILESIZE,
             GameConstants.TILESIZE,
             GameConstants.TILESIZE * 0.75,
           );
@@ -2435,8 +2509,8 @@ export class Room {
           this.bloomOffscreenCtx.fillStyle = p.bloomColor;
 
           this.bloomOffscreenCtx.fillRect(
-            (p.x - this.roomX) * GameConstants.TILESIZE,
-            (p.y - this.roomY) * GameConstants.TILESIZE,
+            (p.x - this.roomX + offsetX) * GameConstants.TILESIZE,
+            (p.y - this.roomY + offsetY) * GameConstants.TILESIZE,
             GameConstants.TILESIZE,
             GameConstants.TILESIZE,
           );
@@ -2444,15 +2518,19 @@ export class Room {
       }
 
     // Draw the blurred shade layer directly without masking
+    if (!GameConstants.ctxBlurEnabled)
+      this.applyGaussianBlur(this.bloomOffscreenCanvas, 16);
+    else Game.ctx.filter = "blur(8px)";
     Game.ctx.globalCompositeOperation = "screen";
-    Game.ctx.filter = "blur(8px)";
+
     Game.ctx.globalAlpha = 1;
     Game.ctx.drawImage(
       this.bloomOffscreenCanvas,
-      this.roomX * GameConstants.TILESIZE,
-      this.roomY * GameConstants.TILESIZE,
+      (this.roomX - offsetX) * GameConstants.TILESIZE,
+      (this.roomY - offsetY) * GameConstants.TILESIZE,
     );
-    this.bloomOffscreenCtx.clearRect(
+    this.bloomOffscreenCtx.fillStyle = "rgba(0, 0, 0, 1)";
+    this.bloomOffscreenCtx.fillRect(
       0,
       0,
       this.bloomOffscreenCanvas.width,
@@ -2663,43 +2741,6 @@ export class Room {
     }
       */
     return maskCanvas;
-  };
-  // src/room.ts
-  applyMaskAndDrawLayer = (
-    offscreenCanvas: HTMLCanvasElement,
-    compositeOperation: GlobalCompositeOperation,
-    alpha: number,
-    maskCanvas: HTMLCanvasElement,
-  ) => {
-    // Save the main context state
-    Game.ctx.save();
-
-    // Set global settings
-    Game.ctx.globalCompositeOperation = compositeOperation;
-    Game.ctx.globalAlpha = alpha;
-    Game.ctx.filter = "blur(5px)";
-
-    // Draw the blurred layer
-    Game.ctx.drawImage(
-      offscreenCanvas,
-      this.roomX * GameConstants.TILESIZE,
-      this.roomY * GameConstants.TILESIZE,
-    );
-
-    Game.ctx.restore();
-    Game.ctx.save();
-
-    // Apply the mask
-
-    Game.ctx.globalAlpha = alpha;
-    Game.ctx.filter = "blur(5px)";
-
-    Game.ctx.globalCompositeOperation = "source-over";
-    Game.ctx.globalAlpha = 0;
-    Game.ctx.drawImage(maskCanvas, 0, 0);
-
-    // Restore the main context state
-    Game.ctx.restore();
   };
 
   //calculate wall info for proper wall rendering
@@ -3245,6 +3286,10 @@ export class Room {
     console.log(`getEmptyWall: Found ${emptyWalls.length} empty walls.`);
     return emptyWalls;
   }
+
+  pointExists = (x: number, y: number) => {
+    return this.roomArray[x] && this.roomArray[x][y];
+  };
 
   /**
    * Removes a specified empty wall from the room.

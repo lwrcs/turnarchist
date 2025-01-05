@@ -665,6 +665,9 @@ export class Game {
           });
         }
         break;
+      case "bomb":
+        this.room.addBombs(1, () => Math.random());
+        break;
       case "col":
         GameConstants.SET_COLOR_LAYER_COMPOSITE_OPERATION(false);
         break;
@@ -795,20 +798,20 @@ export class Game {
     );
   };
 
-  shakeScreen = (shakeX: number, shakeY: number) => {
-    let clampedX = Math.max(-3, Math.min(3, shakeX));
-    let clampedY = Math.max(-3, Math.min(3, shakeY));
-    this.screenShakeX = 0;
-    this.screenShakeY = 0;
-    this.shakeAmountX = 0;
-    this.shakeAmountY = 0;
+  shakeScreen = (shakeX: number, shakeY: number, clamp: boolean = true) => {
+    let finalX = clamp ? Math.max(-3, Math.min(3, shakeX)) : shakeX;
+    let finalY = clamp ? Math.max(-3, Math.min(3, shakeY)) : shakeY;
+    //this.screenShakeX = 0;
+    //this.screenShakeY = 0;
+    //this.shakeAmountX = 0;
+    //this.shakeAmountY = 0;
     this.screenShakeActive = true;
-    this.screenShakeX = clampedX;
-    this.screenShakeY = clampedY;
-    this.shakeAmountX = Math.abs(clampedX);
-    this.shakeAmountY = Math.abs(clampedY);
-    if (clampedX < 0 || clampedY < 0) this.shakeFrame = (3 * Math.PI) / 2;
-    if (clampedX > 0 || clampedY > 0) this.shakeFrame = Math.PI / 2;
+    this.screenShakeX += finalX;
+    this.screenShakeY += finalY;
+    this.shakeAmountX += Math.abs(finalX);
+    this.shakeAmountY += Math.abs(finalY);
+    if (finalX < 0 || finalY < 0) this.shakeFrame = (3 * Math.PI) / 2;
+    if (finalX > 0 || finalY > 0) this.shakeFrame = Math.PI / 2;
     this.screenShakeCutoff = Date.now();
   };
 
@@ -842,11 +845,11 @@ export class Game {
         room.drawShadeLayer();
         room.drawColorLayer();
         room.drawBloomLayer(delta);
+        if (room.active) room.drawOverShade(delta);
       }
     }
     for (const room of this.levels[this.currentDepth].rooms) {
       if (room.active || room.entered) {
-        if (room.active) room.drawOverShade(delta);
       }
     }
   };

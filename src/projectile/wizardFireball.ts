@@ -51,7 +51,7 @@ export class WizardFireball extends Projectile {
     }
 
     if (!this.dead && this.state === 0) {
-      this.bloomAlpha = 0.25;
+      this.bloomAlpha = 1;
     }
 
     this.state++;

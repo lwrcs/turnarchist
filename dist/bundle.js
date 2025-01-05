@@ -2,6 +2,664 @@
 /******/ 	"use strict";
 /******/ 	var __webpack_modules__ = ({
 
+/***/ "./node_modules/stackblur-canvas/dist/stackblur-es.js":
+/*!************************************************************!*\
+  !*** ./node_modules/stackblur-canvas/dist/stackblur-es.js ***!
+  \************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   BlurStack: () => (/* binding */ BlurStack),
+/* harmony export */   canvasRGB: () => (/* binding */ processCanvasRGB),
+/* harmony export */   canvasRGBA: () => (/* binding */ processCanvasRGBA),
+/* harmony export */   image: () => (/* binding */ processImage),
+/* harmony export */   imageDataRGB: () => (/* binding */ processImageDataRGB),
+/* harmony export */   imageDataRGBA: () => (/* binding */ processImageDataRGBA)
+/* harmony export */ });
+function _typeof(obj) {
+  "@babel/helpers - typeof";
+
+  if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") {
+    _typeof = function (obj) {
+      return typeof obj;
+    };
+  } else {
+    _typeof = function (obj) {
+      return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
+    };
+  }
+
+  return _typeof(obj);
+}
+
+function _classCallCheck(instance, Constructor) {
+  if (!(instance instanceof Constructor)) {
+    throw new TypeError("Cannot call a class as a function");
+  }
+}
+
+/* eslint-disable no-bitwise -- used for calculations */
+
+/* eslint-disable unicorn/prefer-query-selector -- aiming at
+  backward-compatibility */
+
+/**
+* StackBlur - a fast almost Gaussian Blur For Canvas
+*
+* In case you find this class useful - especially in commercial projects -
+* I am not totally unhappy for a small donation to my PayPal account
+* mario@quasimondo.de
+*
+* Or support me on flattr:
+* {@link https://flattr.com/thing/72791/StackBlur-a-fast-almost-Gaussian-Blur-Effect-for-CanvasJavascript}.
+*
+* @module StackBlur
+* @author Mario Klingemann
+* Contact: mario@quasimondo.com
+* Website: {@link http://www.quasimondo.com/StackBlurForCanvas/StackBlurDemo.html}
+* Twitter: @quasimondo
+*
+* @copyright (c) 2010 Mario Klingemann
+*
+* Permission is hereby granted, free of charge, to any person
+* obtaining a copy of this software and associated documentation
+* files (the "Software"), to deal in the Software without
+* restriction, including without limitation the rights to use,
+* copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the
+* Software is furnished to do so, subject to the following
+* conditions:
+*
+* The above copyright notice and this permission notice shall be
+* included in all copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+* OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+* NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+* HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+* WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+* FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+* OTHER DEALINGS IN THE SOFTWARE.
+*/
+var mulTable = [512, 512, 456, 512, 328, 456, 335, 512, 405, 328, 271, 456, 388, 335, 292, 512, 454, 405, 364, 328, 298, 271, 496, 456, 420, 388, 360, 335, 312, 292, 273, 512, 482, 454, 428, 405, 383, 364, 345, 328, 312, 298, 284, 271, 259, 496, 475, 456, 437, 420, 404, 388, 374, 360, 347, 335, 323, 312, 302, 292, 282, 273, 265, 512, 497, 482, 468, 454, 441, 428, 417, 405, 394, 383, 373, 364, 354, 345, 337, 328, 320, 312, 305, 298, 291, 284, 278, 271, 265, 259, 507, 496, 485, 475, 465, 456, 446, 437, 428, 420, 412, 404, 396, 388, 381, 374, 367, 360, 354, 347, 341, 335, 329, 323, 318, 312, 307, 302, 297, 292, 287, 282, 278, 273, 269, 265, 261, 512, 505, 497, 489, 482, 475, 468, 461, 454, 447, 441, 435, 428, 422, 417, 411, 405, 399, 394, 389, 383, 378, 373, 368, 364, 359, 354, 350, 345, 341, 337, 332, 328, 324, 320, 316, 312, 309, 305, 301, 298, 294, 291, 287, 284, 281, 278, 274, 271, 268, 265, 262, 259, 257, 507, 501, 496, 491, 485, 480, 475, 470, 465, 460, 456, 451, 446, 442, 437, 433, 428, 424, 420, 416, 412, 408, 404, 400, 396, 392, 388, 385, 381, 377, 374, 370, 367, 363, 360, 357, 354, 350, 347, 344, 341, 338, 335, 332, 329, 326, 323, 320, 318, 315, 312, 310, 307, 304, 302, 299, 297, 294, 292, 289, 287, 285, 282, 280, 278, 275, 273, 271, 269, 267, 265, 263, 261, 259];
+var shgTable = [9, 11, 12, 13, 13, 14, 14, 15, 15, 15, 15, 16, 16, 16, 16, 17, 17, 17, 17, 17, 17, 17, 18, 18, 18, 18, 18, 18, 18, 18, 18, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24];
+/**
+ * @param {string|HTMLImageElement} img
+ * @param {string|HTMLCanvasElement} canvas
+ * @param {Float} radius
+ * @param {boolean} blurAlphaChannel
+ * @param {boolean} useOffset
+ * @param {boolean} skipStyles
+ * @returns {undefined}
+ */
+
+function processImage(img, canvas, radius, blurAlphaChannel, useOffset, skipStyles) {
+  if (typeof img === 'string') {
+    img = document.getElementById(img);
+  }
+
+  if (!img || Object.prototype.toString.call(img).slice(8, -1) === 'HTMLImageElement' && !('naturalWidth' in img)) {
+    return;
+  }
+
+  var dimensionType = useOffset ? 'offset' : 'natural';
+  var w = img[dimensionType + 'Width'];
+  var h = img[dimensionType + 'Height']; // add ImageBitmap support,can blur texture source
+
+  if (Object.prototype.toString.call(img).slice(8, -1) === 'ImageBitmap') {
+    w = img.width;
+    h = img.height;
+  }
+
+  if (typeof canvas === 'string') {
+    canvas = document.getElementById(canvas);
+  }
+
+  if (!canvas || !('getContext' in canvas)) {
+    return;
+  }
+
+  if (!skipStyles) {
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+  }
+
+  canvas.width = w;
+  canvas.height = h;
+  var context = canvas.getContext('2d');
+  context.clearRect(0, 0, w, h);
+  context.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight, 0, 0, w, h);
+
+  if (isNaN(radius) || radius < 1) {
+    return;
+  }
+
+  if (blurAlphaChannel) {
+    processCanvasRGBA(canvas, 0, 0, w, h, radius);
+  } else {
+    processCanvasRGB(canvas, 0, 0, w, h, radius);
+  }
+}
+/**
+ * @param {string|HTMLCanvasElement} canvas
+ * @param {Integer} topX
+ * @param {Integer} topY
+ * @param {Integer} width
+ * @param {Integer} height
+ * @throws {Error|TypeError}
+ * @returns {ImageData} See {@link https://html.spec.whatwg.org/multipage/canvas.html#imagedata}
+ */
+
+
+function getImageDataFromCanvas(canvas, topX, topY, width, height) {
+  if (typeof canvas === 'string') {
+    canvas = document.getElementById(canvas);
+  }
+
+  if (!canvas || _typeof(canvas) !== 'object' || !('getContext' in canvas)) {
+    throw new TypeError('Expecting canvas with `getContext` method ' + 'in processCanvasRGB(A) calls!');
+  }
+
+  var context = canvas.getContext('2d');
+
+  try {
+    return context.getImageData(topX, topY, width, height);
+  } catch (e) {
+    throw new Error('unable to access image data: ' + e);
+  }
+}
+/**
+ * @param {HTMLCanvasElement} canvas
+ * @param {Integer} topX
+ * @param {Integer} topY
+ * @param {Integer} width
+ * @param {Integer} height
+ * @param {Float} radius
+ * @returns {undefined}
+ */
+
+
+function processCanvasRGBA(canvas, topX, topY, width, height, radius) {
+  if (isNaN(radius) || radius < 1) {
+    return;
+  }
+
+  radius |= 0;
+  var imageData = getImageDataFromCanvas(canvas, topX, topY, width, height);
+  imageData = processImageDataRGBA(imageData, topX, topY, width, height, radius);
+  canvas.getContext('2d').putImageData(imageData, topX, topY);
+}
+/**
+ * @param {ImageData} imageData
+ * @param {Integer} topX
+ * @param {Integer} topY
+ * @param {Integer} width
+ * @param {Integer} height
+ * @param {Float} radius
+ * @returns {ImageData}
+ */
+
+
+function processImageDataRGBA(imageData, topX, topY, width, height, radius) {
+  var pixels = imageData.data;
+  var div = 2 * radius + 1; // const w4 = width << 2;
+
+  var widthMinus1 = width - 1;
+  var heightMinus1 = height - 1;
+  var radiusPlus1 = radius + 1;
+  var sumFactor = radiusPlus1 * (radiusPlus1 + 1) / 2;
+  var stackStart = new BlurStack();
+  var stack = stackStart;
+  var stackEnd;
+
+  for (var i = 1; i < div; i++) {
+    stack = stack.next = new BlurStack();
+
+    if (i === radiusPlus1) {
+      stackEnd = stack;
+    }
+  }
+
+  stack.next = stackStart;
+  var stackIn = null,
+      stackOut = null,
+      yw = 0,
+      yi = 0;
+  var mulSum = mulTable[radius];
+  var shgSum = shgTable[radius];
+
+  for (var y = 0; y < height; y++) {
+    stack = stackStart;
+    var pr = pixels[yi],
+        pg = pixels[yi + 1],
+        pb = pixels[yi + 2],
+        pa = pixels[yi + 3];
+
+    for (var _i = 0; _i < radiusPlus1; _i++) {
+      stack.r = pr;
+      stack.g = pg;
+      stack.b = pb;
+      stack.a = pa;
+      stack = stack.next;
+    }
+
+    var rInSum = 0,
+        gInSum = 0,
+        bInSum = 0,
+        aInSum = 0,
+        rOutSum = radiusPlus1 * pr,
+        gOutSum = radiusPlus1 * pg,
+        bOutSum = radiusPlus1 * pb,
+        aOutSum = radiusPlus1 * pa,
+        rSum = sumFactor * pr,
+        gSum = sumFactor * pg,
+        bSum = sumFactor * pb,
+        aSum = sumFactor * pa;
+
+    for (var _i2 = 1; _i2 < radiusPlus1; _i2++) {
+      var p = yi + ((widthMinus1 < _i2 ? widthMinus1 : _i2) << 2);
+      var r = pixels[p],
+          g = pixels[p + 1],
+          b = pixels[p + 2],
+          a = pixels[p + 3];
+      var rbs = radiusPlus1 - _i2;
+      rSum += (stack.r = r) * rbs;
+      gSum += (stack.g = g) * rbs;
+      bSum += (stack.b = b) * rbs;
+      aSum += (stack.a = a) * rbs;
+      rInSum += r;
+      gInSum += g;
+      bInSum += b;
+      aInSum += a;
+      stack = stack.next;
+    }
+
+    stackIn = stackStart;
+    stackOut = stackEnd;
+
+    for (var x = 0; x < width; x++) {
+      var paInitial = aSum * mulSum >>> shgSum;
+      pixels[yi + 3] = paInitial;
+
+      if (paInitial !== 0) {
+        var _a2 = 255 / paInitial;
+
+        pixels[yi] = (rSum * mulSum >>> shgSum) * _a2;
+        pixels[yi + 1] = (gSum * mulSum >>> shgSum) * _a2;
+        pixels[yi + 2] = (bSum * mulSum >>> shgSum) * _a2;
+      } else {
+        pixels[yi] = pixels[yi + 1] = pixels[yi + 2] = 0;
+      }
+
+      rSum -= rOutSum;
+      gSum -= gOutSum;
+      bSum -= bOutSum;
+      aSum -= aOutSum;
+      rOutSum -= stackIn.r;
+      gOutSum -= stackIn.g;
+      bOutSum -= stackIn.b;
+      aOutSum -= stackIn.a;
+
+      var _p = x + radius + 1;
+
+      _p = yw + (_p < widthMinus1 ? _p : widthMinus1) << 2;
+      rInSum += stackIn.r = pixels[_p];
+      gInSum += stackIn.g = pixels[_p + 1];
+      bInSum += stackIn.b = pixels[_p + 2];
+      aInSum += stackIn.a = pixels[_p + 3];
+      rSum += rInSum;
+      gSum += gInSum;
+      bSum += bInSum;
+      aSum += aInSum;
+      stackIn = stackIn.next;
+      var _stackOut = stackOut,
+          _r = _stackOut.r,
+          _g = _stackOut.g,
+          _b = _stackOut.b,
+          _a = _stackOut.a;
+      rOutSum += _r;
+      gOutSum += _g;
+      bOutSum += _b;
+      aOutSum += _a;
+      rInSum -= _r;
+      gInSum -= _g;
+      bInSum -= _b;
+      aInSum -= _a;
+      stackOut = stackOut.next;
+      yi += 4;
+    }
+
+    yw += width;
+  }
+
+  for (var _x = 0; _x < width; _x++) {
+    yi = _x << 2;
+
+    var _pr = pixels[yi],
+        _pg = pixels[yi + 1],
+        _pb = pixels[yi + 2],
+        _pa = pixels[yi + 3],
+        _rOutSum = radiusPlus1 * _pr,
+        _gOutSum = radiusPlus1 * _pg,
+        _bOutSum = radiusPlus1 * _pb,
+        _aOutSum = radiusPlus1 * _pa,
+        _rSum = sumFactor * _pr,
+        _gSum = sumFactor * _pg,
+        _bSum = sumFactor * _pb,
+        _aSum = sumFactor * _pa;
+
+    stack = stackStart;
+
+    for (var _i3 = 0; _i3 < radiusPlus1; _i3++) {
+      stack.r = _pr;
+      stack.g = _pg;
+      stack.b = _pb;
+      stack.a = _pa;
+      stack = stack.next;
+    }
+
+    var yp = width;
+    var _gInSum = 0,
+        _bInSum = 0,
+        _aInSum = 0,
+        _rInSum = 0;
+
+    for (var _i4 = 1; _i4 <= radius; _i4++) {
+      yi = yp + _x << 2;
+
+      var _rbs = radiusPlus1 - _i4;
+
+      _rSum += (stack.r = _pr = pixels[yi]) * _rbs;
+      _gSum += (stack.g = _pg = pixels[yi + 1]) * _rbs;
+      _bSum += (stack.b = _pb = pixels[yi + 2]) * _rbs;
+      _aSum += (stack.a = _pa = pixels[yi + 3]) * _rbs;
+      _rInSum += _pr;
+      _gInSum += _pg;
+      _bInSum += _pb;
+      _aInSum += _pa;
+      stack = stack.next;
+
+      if (_i4 < heightMinus1) {
+        yp += width;
+      }
+    }
+
+    yi = _x;
+    stackIn = stackStart;
+    stackOut = stackEnd;
+
+    for (var _y = 0; _y < height; _y++) {
+      var _p2 = yi << 2;
+
+      pixels[_p2 + 3] = _pa = _aSum * mulSum >>> shgSum;
+
+      if (_pa > 0) {
+        _pa = 255 / _pa;
+        pixels[_p2] = (_rSum * mulSum >>> shgSum) * _pa;
+        pixels[_p2 + 1] = (_gSum * mulSum >>> shgSum) * _pa;
+        pixels[_p2 + 2] = (_bSum * mulSum >>> shgSum) * _pa;
+      } else {
+        pixels[_p2] = pixels[_p2 + 1] = pixels[_p2 + 2] = 0;
+      }
+
+      _rSum -= _rOutSum;
+      _gSum -= _gOutSum;
+      _bSum -= _bOutSum;
+      _aSum -= _aOutSum;
+      _rOutSum -= stackIn.r;
+      _gOutSum -= stackIn.g;
+      _bOutSum -= stackIn.b;
+      _aOutSum -= stackIn.a;
+      _p2 = _x + ((_p2 = _y + radiusPlus1) < heightMinus1 ? _p2 : heightMinus1) * width << 2;
+      _rSum += _rInSum += stackIn.r = pixels[_p2];
+      _gSum += _gInSum += stackIn.g = pixels[_p2 + 1];
+      _bSum += _bInSum += stackIn.b = pixels[_p2 + 2];
+      _aSum += _aInSum += stackIn.a = pixels[_p2 + 3];
+      stackIn = stackIn.next;
+      _rOutSum += _pr = stackOut.r;
+      _gOutSum += _pg = stackOut.g;
+      _bOutSum += _pb = stackOut.b;
+      _aOutSum += _pa = stackOut.a;
+      _rInSum -= _pr;
+      _gInSum -= _pg;
+      _bInSum -= _pb;
+      _aInSum -= _pa;
+      stackOut = stackOut.next;
+      yi += width;
+    }
+  }
+
+  return imageData;
+}
+/**
+ * @param {HTMLCanvasElement} canvas
+ * @param {Integer} topX
+ * @param {Integer} topY
+ * @param {Integer} width
+ * @param {Integer} height
+ * @param {Float} radius
+ * @returns {undefined}
+ */
+
+
+function processCanvasRGB(canvas, topX, topY, width, height, radius) {
+  if (isNaN(radius) || radius < 1) {
+    return;
+  }
+
+  radius |= 0;
+  var imageData = getImageDataFromCanvas(canvas, topX, topY, width, height);
+  imageData = processImageDataRGB(imageData, topX, topY, width, height, radius);
+  canvas.getContext('2d').putImageData(imageData, topX, topY);
+}
+/**
+ * @param {ImageData} imageData
+ * @param {Integer} topX
+ * @param {Integer} topY
+ * @param {Integer} width
+ * @param {Integer} height
+ * @param {Float} radius
+ * @returns {ImageData}
+ */
+
+
+function processImageDataRGB(imageData, topX, topY, width, height, radius) {
+  var pixels = imageData.data;
+  var div = 2 * radius + 1; // const w4 = width << 2;
+
+  var widthMinus1 = width - 1;
+  var heightMinus1 = height - 1;
+  var radiusPlus1 = radius + 1;
+  var sumFactor = radiusPlus1 * (radiusPlus1 + 1) / 2;
+  var stackStart = new BlurStack();
+  var stack = stackStart;
+  var stackEnd;
+
+  for (var i = 1; i < div; i++) {
+    stack = stack.next = new BlurStack();
+
+    if (i === radiusPlus1) {
+      stackEnd = stack;
+    }
+  }
+
+  stack.next = stackStart;
+  var stackIn = null;
+  var stackOut = null;
+  var mulSum = mulTable[radius];
+  var shgSum = shgTable[radius];
+  var p, rbs;
+  var yw = 0,
+      yi = 0;
+
+  for (var y = 0; y < height; y++) {
+    var pr = pixels[yi],
+        pg = pixels[yi + 1],
+        pb = pixels[yi + 2],
+        rOutSum = radiusPlus1 * pr,
+        gOutSum = radiusPlus1 * pg,
+        bOutSum = radiusPlus1 * pb,
+        rSum = sumFactor * pr,
+        gSum = sumFactor * pg,
+        bSum = sumFactor * pb;
+    stack = stackStart;
+
+    for (var _i5 = 0; _i5 < radiusPlus1; _i5++) {
+      stack.r = pr;
+      stack.g = pg;
+      stack.b = pb;
+      stack = stack.next;
+    }
+
+    var rInSum = 0,
+        gInSum = 0,
+        bInSum = 0;
+
+    for (var _i6 = 1; _i6 < radiusPlus1; _i6++) {
+      p = yi + ((widthMinus1 < _i6 ? widthMinus1 : _i6) << 2);
+      rSum += (stack.r = pr = pixels[p]) * (rbs = radiusPlus1 - _i6);
+      gSum += (stack.g = pg = pixels[p + 1]) * rbs;
+      bSum += (stack.b = pb = pixels[p + 2]) * rbs;
+      rInSum += pr;
+      gInSum += pg;
+      bInSum += pb;
+      stack = stack.next;
+    }
+
+    stackIn = stackStart;
+    stackOut = stackEnd;
+
+    for (var x = 0; x < width; x++) {
+      pixels[yi] = rSum * mulSum >>> shgSum;
+      pixels[yi + 1] = gSum * mulSum >>> shgSum;
+      pixels[yi + 2] = bSum * mulSum >>> shgSum;
+      rSum -= rOutSum;
+      gSum -= gOutSum;
+      bSum -= bOutSum;
+      rOutSum -= stackIn.r;
+      gOutSum -= stackIn.g;
+      bOutSum -= stackIn.b;
+      p = yw + ((p = x + radius + 1) < widthMinus1 ? p : widthMinus1) << 2;
+      rInSum += stackIn.r = pixels[p];
+      gInSum += stackIn.g = pixels[p + 1];
+      bInSum += stackIn.b = pixels[p + 2];
+      rSum += rInSum;
+      gSum += gInSum;
+      bSum += bInSum;
+      stackIn = stackIn.next;
+      rOutSum += pr = stackOut.r;
+      gOutSum += pg = stackOut.g;
+      bOutSum += pb = stackOut.b;
+      rInSum -= pr;
+      gInSum -= pg;
+      bInSum -= pb;
+      stackOut = stackOut.next;
+      yi += 4;
+    }
+
+    yw += width;
+  }
+
+  for (var _x2 = 0; _x2 < width; _x2++) {
+    yi = _x2 << 2;
+
+    var _pr2 = pixels[yi],
+        _pg2 = pixels[yi + 1],
+        _pb2 = pixels[yi + 2],
+        _rOutSum2 = radiusPlus1 * _pr2,
+        _gOutSum2 = radiusPlus1 * _pg2,
+        _bOutSum2 = radiusPlus1 * _pb2,
+        _rSum2 = sumFactor * _pr2,
+        _gSum2 = sumFactor * _pg2,
+        _bSum2 = sumFactor * _pb2;
+
+    stack = stackStart;
+
+    for (var _i7 = 0; _i7 < radiusPlus1; _i7++) {
+      stack.r = _pr2;
+      stack.g = _pg2;
+      stack.b = _pb2;
+      stack = stack.next;
+    }
+
+    var _rInSum2 = 0,
+        _gInSum2 = 0,
+        _bInSum2 = 0;
+
+    for (var _i8 = 1, yp = width; _i8 <= radius; _i8++) {
+      yi = yp + _x2 << 2;
+      _rSum2 += (stack.r = _pr2 = pixels[yi]) * (rbs = radiusPlus1 - _i8);
+      _gSum2 += (stack.g = _pg2 = pixels[yi + 1]) * rbs;
+      _bSum2 += (stack.b = _pb2 = pixels[yi + 2]) * rbs;
+      _rInSum2 += _pr2;
+      _gInSum2 += _pg2;
+      _bInSum2 += _pb2;
+      stack = stack.next;
+
+      if (_i8 < heightMinus1) {
+        yp += width;
+      }
+    }
+
+    yi = _x2;
+    stackIn = stackStart;
+    stackOut = stackEnd;
+
+    for (var _y2 = 0; _y2 < height; _y2++) {
+      p = yi << 2;
+      pixels[p] = _rSum2 * mulSum >>> shgSum;
+      pixels[p + 1] = _gSum2 * mulSum >>> shgSum;
+      pixels[p + 2] = _bSum2 * mulSum >>> shgSum;
+      _rSum2 -= _rOutSum2;
+      _gSum2 -= _gOutSum2;
+      _bSum2 -= _bOutSum2;
+      _rOutSum2 -= stackIn.r;
+      _gOutSum2 -= stackIn.g;
+      _bOutSum2 -= stackIn.b;
+      p = _x2 + ((p = _y2 + radiusPlus1) < heightMinus1 ? p : heightMinus1) * width << 2;
+      _rSum2 += _rInSum2 += stackIn.r = pixels[p];
+      _gSum2 += _gInSum2 += stackIn.g = pixels[p + 1];
+      _bSum2 += _bInSum2 += stackIn.b = pixels[p + 2];
+      stackIn = stackIn.next;
+      _rOutSum2 += _pr2 = stackOut.r;
+      _gOutSum2 += _pg2 = stackOut.g;
+      _bOutSum2 += _pb2 = stackOut.b;
+      _rInSum2 -= _pr2;
+      _gInSum2 -= _pg2;
+      _bInSum2 -= _pb2;
+      stackOut = stackOut.next;
+      yi += width;
+    }
+  }
+
+  return imageData;
+}
+/**
+ *
+ */
+
+
+var BlurStack =
+/**
+ * Set properties.
+ */
+function BlurStack() {
+  _classCallCheck(this, BlurStack);
+
+  this.r = 0;
+  this.g = 0;
+  this.b = 0;
+  this.a = 0;
+  this.next = null;
+};
+
+
+
+
+/***/ }),
+
 /***/ "./src/astarclass.ts":
 /*!***************************!*\
   !*** ./src/astarclass.ts ***!
@@ -5489,6 +6147,8 @@ var Entity = /** @class */ (function (_super) {
         _this.bloomColor = "#FFFFFF";
         _this.bloomAlpha = 1;
         _this.softBloomAlpha = 1;
+        _this.bloomSize = 1;
+        _this.bloomOffsetY = 0;
         _this.applyShield = function (shieldHealth) {
             if (shieldHealth === void 0) { shieldHealth = 1; }
             if (!_this.shieldedBefore) {
@@ -5530,6 +6190,8 @@ var Entity = /** @class */ (function (_super) {
         };
         _this.removeLightSource = function (lightSource) {
             _this.room.lightSources = _this.room.lightSources.filter(function (ls) { return ls !== lightSource; });
+            _this.lightSource = null;
+            _this.room.updateLighting();
         };
         _this.behavior = function () { };
         _this.hit = function () {
@@ -5669,6 +6331,7 @@ var Entity = /** @class */ (function (_super) {
             if (_this.cloned)
                 return;
             _this.emitEnemyKilled();
+            _this.removeLightSource(_this.lightSource);
             var deadEntity = _this.clone();
             _this.room.deadEntities.push(deadEntity);
             _this.dead = true;
@@ -6191,7 +6854,7 @@ var Entity = /** @class */ (function (_super) {
         cloned.bloomAlpha = 1;
         cloned.softBloomAlpha = 1;
         cloned.removeLightSource(cloned.lightSource);
-        //cloned.room.updateLighting();
+        cloned.room.updateLighting();
         // Add the cloned entity to deadEntities
         room.deadEntities.push(cloned);
         return cloned;
@@ -6317,6 +6980,168 @@ var Barrel = /** @class */ (function (_super) {
     return Barrel;
 }(entity_1.Entity));
 exports.Barrel = Barrel;
+
+
+/***/ }),
+
+/***/ "./src/entity/object/bomb.ts":
+/*!***********************************!*\
+  !*** ./src/entity/object/bomb.ts ***!
+  \***********************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Bomb = void 0;
+var entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+var game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+var genericParticle_1 = __webpack_require__(/*! ../../particle/genericParticle */ "./src/particle/genericParticle.ts");
+var entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+var sound_1 = __webpack_require__(/*! ../../sound */ "./src/sound.ts");
+var lightSource_1 = __webpack_require__(/*! ../../lightSource */ "./src/lightSource.ts");
+var lighting_1 = __webpack_require__(/*! ../../lighting */ "./src/lighting.ts");
+var explosion_1 = __webpack_require__(/*! ../../projectile/explosion */ "./src/projectile/explosion.ts");
+var utils_1 = __webpack_require__(/*! ../../utils */ "./src/utils.ts");
+var Bomb = /** @class */ (function (_super) {
+    __extends(Bomb, _super);
+    function Bomb(room, game, x, y) {
+        var _this = _super.call(this, room, game, x, y) || this;
+        _this.fuseLength = 4;
+        _this.lit = false;
+        _this.playerHitBy = null;
+        _this.killNoBones = function () {
+            _this.kill();
+        };
+        _this.uniqueKillBehavior = function () {
+            if (_this.cloned)
+                return;
+            //this.room.addEntity(new Explosion(this.room, this.game, this.x, this.y));
+        };
+        _this.tick = function () {
+            if (_this.lit) {
+                _this.fuseLength--;
+                //if (this.fuseLength < 3 && this.fuseLength > 0)
+                if (_this.fuseLength <= 0) {
+                    // Sound.playFuse();
+                    _this.fuseLength = 0;
+                    sound_1.Sound.stopSound(sound_1.Sound.fuseBurnSound);
+                    _this.explode();
+                    sound_1.Sound.playBomb();
+                }
+            }
+        };
+        _this.createLightSource = function () {
+            if (!_this.lit)
+                return;
+            _this.lightSource = new lightSource_1.LightSource(_this.x + 0.5, _this.y + 0.5, 3, [200, 200, 30], 0.75);
+            _this.addLightSource(_this.lightSource);
+            _this.bloomAlpha = 1;
+            _this.hasBloom = true;
+        };
+        _this.hurt = function (playerHitBy, damage) {
+            if (!_this.lit) {
+                _this.lit = true;
+                _this.createLightSource();
+                _this.playerHitBy = playerHitBy;
+                sound_1.Sound.playFuse();
+            }
+        };
+        _this.explode = function () {
+            for (var x = _this.x - 2; x < _this.x + 3; x++) {
+                for (var y = _this.y - 2; y < _this.y + 3; y++) {
+                    if (_this.room.pointExists(x, y) &&
+                        !_this.room.roomArray[x][y].isSolid() &&
+                        utils_1.Utils.distance(_this.x, _this.y, x, y) < 2.5) {
+                        var explosion = new explosion_1.Explosion(_this, x, y, _this.playerHitBy);
+                        _this.room.projectiles.push(explosion);
+                    }
+                }
+            }
+            _this.health = 0;
+            lighting_1.Lighting.momentaryLight(_this.room, _this.x, _this.y, 7, [200, 200, 50], 250, 50, 0);
+            console.log("screen shake");
+            genericParticle_1.GenericParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, "white");
+            _this.kill();
+            setTimeout(function () {
+                _this.game.shakeScreen((Math.random() - 0.5) * 5, (Math.random() - 0.5) * 0, false);
+            }, 100);
+            _this.game.shakeScreen(0, 20, false);
+        };
+        _this.draw = function (delta) {
+            if (_this.dead)
+                return;
+            _this.frame += delta;
+            if (_this.health === 0) {
+                _this.frame = 0;
+            }
+            if (_this.frame > 20)
+                _this.frame = 0;
+            _this.bloomAlpha = (_this.frame / 10) % 2 === 0 ? 1 : 0.5;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = _this.alpha;
+            if (!_this.dead) {
+                _this.updateDrawXY(delta);
+                if (_this.lit) {
+                    game_1.Game.drawObj(_this.tileX +
+                        6 -
+                        Math.min(3, _this.fuseLength) * 2 +
+                        (Math.floor(_this.frame / 10) % 2), _this.tileY, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
+                }
+                else {
+                    game_1.Game.drawObj(_this.tileX - 1, _this.tileY, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY, 1, 2, _this.room.shadeColor, _this.shadeAmount());
+                }
+            }
+            game_1.Game.ctx.restore();
+        };
+        _this.drawTopLayer = function (delta) {
+            _this.drawableY = _this.y;
+        };
+        _this.room = room;
+        _this.health = 1;
+        _this.tileX = 15;
+        _this.tileY = 4;
+        _this.hasShadow = false;
+        _this.chainPushable = false;
+        _this.name = "bomb";
+        _this.frame = 0;
+        _this.hasBloom = false;
+        _this.bloomColor = "yellow";
+        _this.bloomAlpha = 0;
+        _this.bloomSize = 1;
+        _this.bloomOffsetY = -1;
+        _this.health = 1;
+        _this.hitSound = sound_1.Sound.potSmash;
+        _this.imageParticleX = 0;
+        _this.imageParticleY = 29;
+        _this.createLightSource();
+        _this.playerHitBy = null;
+        return _this;
+    }
+    Object.defineProperty(Bomb.prototype, "type", {
+        get: function () {
+            return entity_2.EntityType.PROP;
+        },
+        enumerable: false,
+        configurable: true
+    });
+    return Bomb;
+}(entity_1.Entity));
+exports.Bomb = Bomb;
 
 
 /***/ }),
@@ -7507,7 +8332,9 @@ var Resource = /** @class */ (function (_super) {
     function Resource(room, game, x, y) {
         var _this = _super.call(this, room, game, x, y) || this;
         _this.hurt = function (playerHitBy, damage) {
-            if (playerHitBy.inventory.getWeapon().canMine === true) {
+            if ((playerHitBy !== null &&
+                playerHitBy.inventory.getWeapon().canMine === true) ||
+                playerHitBy === null) {
                 _this.healthBar.hurt();
                 _this.health -= damage;
                 if (_this.health <= 0)
@@ -8120,6 +8947,9 @@ var Game = /** @class */ (function () {
                         });
                     }
                     break;
+                case "bomb":
+                    _this.room.addBombs(1, function () { return Math.random(); });
+                    break;
                 case "col":
                     gameConstants_1.GameConstants.SET_COLOR_LAYER_COMPOSITE_OPERATION(false);
                     break;
@@ -8202,21 +9032,22 @@ var Game = /** @class */ (function () {
             console.log("Scale set to: ".concat(Game.scale));
             console.log("Canvas size: ".concat(gameConstants_1.GameConstants.WIDTH, "px x ").concat(gameConstants_1.GameConstants.HEIGHT, "px"));
         };
-        this.shakeScreen = function (shakeX, shakeY) {
-            var clampedX = Math.max(-3, Math.min(3, shakeX));
-            var clampedY = Math.max(-3, Math.min(3, shakeY));
-            _this.screenShakeX = 0;
-            _this.screenShakeY = 0;
-            _this.shakeAmountX = 0;
-            _this.shakeAmountY = 0;
+        this.shakeScreen = function (shakeX, shakeY, clamp) {
+            if (clamp === void 0) { clamp = true; }
+            var finalX = clamp ? Math.max(-3, Math.min(3, shakeX)) : shakeX;
+            var finalY = clamp ? Math.max(-3, Math.min(3, shakeY)) : shakeY;
+            //this.screenShakeX = 0;
+            //this.screenShakeY = 0;
+            //this.shakeAmountX = 0;
+            //this.shakeAmountY = 0;
             _this.screenShakeActive = true;
-            _this.screenShakeX = clampedX;
-            _this.screenShakeY = clampedY;
-            _this.shakeAmountX = Math.abs(clampedX);
-            _this.shakeAmountY = Math.abs(clampedY);
-            if (clampedX < 0 || clampedY < 0)
+            _this.screenShakeX += finalX;
+            _this.screenShakeY += finalY;
+            _this.shakeAmountX += Math.abs(finalX);
+            _this.shakeAmountY += Math.abs(finalY);
+            if (finalX < 0 || finalY < 0)
                 _this.shakeFrame = (3 * Math.PI) / 2;
-            if (clampedX > 0 || clampedY > 0)
+            if (finalX > 0 || finalY > 0)
                 _this.shakeFrame = Math.PI / 2;
             _this.screenShakeCutoff = Date.now();
         };
@@ -8252,13 +9083,13 @@ var Game = /** @class */ (function () {
                     room.drawShadeLayer();
                     room.drawColorLayer();
                     room.drawBloomLayer(delta);
+                    if (room.active)
+                        room.drawOverShade(delta);
                 }
             }
             for (var _b = 0, _c = _this.levels[_this.currentDepth].rooms; _b < _c.length; _b++) {
                 var room = _c[_b];
                 if (room.active || room.entered) {
-                    if (room.active)
-                        room.drawOverShade(delta);
                 }
             }
         };
@@ -8926,6 +9757,7 @@ var levelConstants_1 = __webpack_require__(/*! ./levelConstants */ "./src/levelC
 var dagger_1 = __webpack_require__(/*! ./weapon/dagger */ "./src/weapon/dagger.ts");
 var spear_1 = __webpack_require__(/*! ./weapon/spear */ "./src/weapon/spear.ts");
 var spellbook_1 = __webpack_require__(/*! ./weapon/spellbook */ "./src/weapon/spellbook.ts");
+var warhammer_1 = __webpack_require__(/*! ./weapon/warhammer */ "./src/weapon/warhammer.ts");
 var hammer_1 = __webpack_require__(/*! ./item/hammer */ "./src/item/hammer.ts");
 var GameConstants = /** @class */ (function () {
     function GameConstants() {
@@ -8969,6 +9801,8 @@ var GameConstants = /** @class */ (function () {
     GameConstants.SHADE_LAYER_COMPOSITE_OPERATION = "screen"; //"soft-light";
     GameConstants.USE_OPTIMIZED_SHADING = false;
     GameConstants.SMOOTH_LIGHTING = false;
+    GameConstants.ctxBlurEnabled = true;
+    GameConstants.BLUR_ENABLED = true;
     GameConstants.COLOR_LAYER_COMPOSITE_OPERATIONS = [
         "soft-light",
         //"addition",
@@ -9045,7 +9879,7 @@ var GameConstants = /** @class */ (function () {
     GameConstants.STARTING_INVENTORY = [dagger_1.Dagger, torch_1.Torch];
     GameConstants.STARTING_DEV_INVENTORY = [
         dagger_1.Dagger,
-        candle_1.Candle,
+        warhammer_1.Warhammer,
         lantern_1.Lantern,
         torch_1.Torch,
         godStone_1.GodStone,
@@ -10800,10 +11634,12 @@ var Inventory = /** @class */ (function () {
                 {
                     switch (num) {
                         case 9:
-                            gameConstants_1.GameConstants.CUSTOM_SHADER_COLOR_ENABLED =
-                                !gameConstants_1.GameConstants.CUSTOM_SHADER_COLOR_ENABLED;
+                            gameConstants_1.GameConstants.ctxBlurEnabled = !gameConstants_1.GameConstants.ctxBlurEnabled;
                             _this.game.pushMessage("Custom shade color is now " +
-                                (gameConstants_1.GameConstants.CUSTOM_SHADER_COLOR_ENABLED ? "on" : "off"));
+                                (gameConstants_1.GameConstants.ctxBlurEnabled ? "on" : "off"));
+                            break;
+                        case 8:
+                            gameConstants_1.GameConstants.BLUR_ENABLED = !gameConstants_1.GameConstants.BLUR_ENABLED;
                             break;
                     }
                 }
@@ -16810,11 +17646,11 @@ var Player = /** @class */ (function (_super) {
             for (var _b = 0, _c = _this.game.level.rooms; _b < _c.length; _b++) {
                 var room = _c[_b];
                 room.roomOnScreen(_this);
-                console.log("On Screen? " + room.onScreen + " levelID: " + room.id);
+                //console.log("On Screen? " + room.onScreen + " levelID: " + room.id);
                 if (room.onScreen)
                     roomsOnScreen++;
             }
-            console.log("Rooms On Screen Currently: " + roomsOnScreen);
+            //console.log("Rooms On Screen Currently: " + roomsOnScreen);
         };
         _this.moveNoSmooth = function (x, y) {
             // doesn't touch smoothing
@@ -17677,6 +18513,82 @@ exports.EnemySpawnAnimation = EnemySpawnAnimation;
 
 /***/ }),
 
+/***/ "./src/projectile/explosion.ts":
+/*!*************************************!*\
+  !*** ./src/projectile/explosion.ts ***!
+  \*************************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Explosion = void 0;
+var projectile_1 = __webpack_require__(/*! ./projectile */ "./src/projectile/projectile.ts");
+var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+var lighting_1 = __webpack_require__(/*! ../lighting */ "./src/lighting.ts");
+var utils_1 = __webpack_require__(/*! ../utils */ "./src/utils.ts");
+var bomb_1 = __webpack_require__(/*! ../entity/object/bomb */ "./src/entity/object/bomb.ts");
+var Explosion = /** @class */ (function (_super) {
+    __extends(Explosion, _super);
+    function Explosion(entity, x, y, playerHitBy) {
+        var _this = _super.call(this, entity, x, y) || this;
+        _this.drawTopLayer = function (delta) {
+            if (_this.dead)
+                return;
+            if (_this.offsetFrame < 0)
+                _this.offsetFrame += 10 * delta;
+            if (_this.offsetFrame >= 0) {
+                _this.frame += 0.25 * delta;
+            }
+            if (_this.frame > 17)
+                _this.dead = true;
+            game_1.Game.drawFX(Math.floor(_this.frame), 6, 1, 2, _this.x, _this.y - 1, 1, 2);
+        };
+        _this.state = 0;
+        _this.frame = 6;
+        _this.parent = entity;
+        _this.offsetFrame =
+            -utils_1.Utils.distance(_this.parent.x, _this.parent.y, _this.x, _this.y) * 100;
+        _this.delay = 0;
+        lighting_1.Lighting.momentaryLight(_this.parent.room, _this.x + 0.5, _this.y + 0.5, 0.5, [255, 100, 0], 350, 20, Math.abs(_this.offsetFrame));
+        var distance = utils_1.Utils.distance(_this.parent.x, _this.parent.y, _this.x, _this.y);
+        var damage = distance === 0 ? 1 : Math.max(0.5, Math.floor((1 / distance) * 4) / 2);
+        console.log("damage:", damage);
+        for (var _i = 0, _a = _this.parent.room.entities; _i < _a.length; _i++) {
+            var entity_1 = _a[_i];
+            if (entity_1.x === _this.x &&
+                entity_1.y === _this.y &&
+                entity_1 !== _this.parent) {
+                if (entity_1 instanceof bomb_1.Bomb) {
+                    entity_1.fuseLength = 1;
+                }
+                entity_1.hurt(playerHitBy, damage);
+                console.log(playerHitBy);
+            }
+        }
+        return _this;
+    }
+    return Explosion;
+}(projectile_1.Projectile));
+exports.Explosion = Explosion;
+
+
+/***/ }),
+
 /***/ "./src/projectile/playerFireball.ts":
 /*!******************************************!*\
   !*** ./src/projectile/playerFireball.ts ***!
@@ -17837,7 +18749,7 @@ var WizardFireball = /** @class */ (function (_super) {
                 _this.dead = true;
             }
             if (!_this.dead && _this.state === 0) {
-                _this.bloomAlpha = 0.25;
+                _this.bloomAlpha = 1;
             }
             _this.state++;
             if (!_this.dead && _this.state === 1) {
@@ -18293,6 +19205,7 @@ var pickaxe_1 = __webpack_require__(/*! ./weapon/pickaxe */ "./src/weapon/pickax
 var occultistEnemy_1 = __webpack_require__(/*! ./entity/enemy/occultistEnemy */ "./src/entity/enemy/occultistEnemy.ts");
 var puddle_1 = __webpack_require__(/*! ./tile/decorations/puddle */ "./src/tile/decorations/puddle.ts");
 var decoration_1 = __webpack_require__(/*! ./tile/decorations/decoration */ "./src/tile/decorations/decoration.ts");
+var bomb_1 = __webpack_require__(/*! ./entity/object/bomb */ "./src/entity/object/bomb.ts");
 // #endregion
 // #region Enums & Interfaces
 /**
@@ -18316,6 +19229,7 @@ var EnemyType;
     EnemyType["firewizard"] = "firewizard";
     EnemyType["spawner"] = "spawner";
     EnemyType["occultist"] = "occultist";
+    EnemyType["bomb"] = "bomb";
     // Add other enemy types here
 })(EnemyType = exports.EnemyType || (exports.EnemyType = {}));
 /**
@@ -18338,6 +19252,7 @@ exports.EnemyTypeMap = (_a = {},
     _a[EnemyType.firewizard] = fireWizard_1.FireWizardEnemy,
     _a[EnemyType.spawner] = spawner_1.Spawner,
     _a[EnemyType.occultist] = occultistEnemy_1.OccultistEnemy,
+    _a[EnemyType.bomb] = bomb_1.Bomb,
     _a);
 var RoomType;
 (function (RoomType) {
@@ -18390,6 +19305,8 @@ var Room = /** @class */ (function () {
         this.shadeColor = "#000000";
         this.wallInfo = new Map();
         this.tunnelDoor = null; // this is the door that connects the start room to the exit room
+        this.blurOffsetX = 5;
+        this.blurOffsetY = 5;
         // Add a list to keep track of BeamEffect instances
         this.beamEffects = [];
         // Add this property to track created mask canvases
@@ -18744,8 +19661,9 @@ var Room = /** @class */ (function () {
                         Math.random() <= 0.2) {
                         _this.populateCave(rand);
                     }
-                    else
+                    else {
                         _this.populateDungeon(rand);
+                    }
                     break;
                 case RoomType.BIGDUNGEON:
                     _this.populateBigDungeon(rand);
@@ -18813,6 +19731,7 @@ var Room = /** @class */ (function () {
         // #endregion
         // #region ENTERING / EXITING ROOM METHODS
         this.exitLevel = function () {
+            _this.game.onResize(); // stupid hack to keep fps high
             for (var _i = 0, _a = _this.doors; _i < _a.length; _i++) {
                 var door = _a[_i];
                 if (door.linkedDoor.lightSource !== null &&
@@ -19398,6 +20317,8 @@ var Room = /** @class */ (function () {
             // Clear the offscreen color canvas
             _this.colorOffscreenCtx.clearRect(0, 0, _this.colorOffscreenCanvas.width, _this.colorOffscreenCanvas.height);
             var lastFillStyle = "";
+            var offsetX = _this.blurOffsetX;
+            var offsetY = _this.blurOffsetY;
             // Draw all color rectangles without any filters
             for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
                 for (var y = _this.roomY; y < _this.roomY + _this.height; y++) {
@@ -19409,21 +20330,30 @@ var Room = /** @class */ (function () {
                         _this.colorOffscreenCtx.fillStyle = fillStyle;
                         lastFillStyle = fillStyle;
                     }
-                    _this.colorOffscreenCtx.fillRect((x - _this.roomX) * gameConstants_1.GameConstants.TILESIZE, (y - _this.roomY) * gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE);
+                    _this.colorOffscreenCtx.fillRect((x - _this.roomX + offsetX) * gameConstants_1.GameConstants.TILESIZE, (y - _this.roomY + offsetY) * gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE);
                 }
             }
             // Draw the blurred color layer directly without masking
             game_1.Game.ctx.globalCompositeOperation =
                 gameConstants_1.GameConstants.COLOR_LAYER_COMPOSITE_OPERATION;
             //Game.ctx.globalCompositeOperation = "source-over";
-            game_1.Game.ctx.globalAlpha = 0.6;
-            game_1.Game.ctx.filter = "blur(6px)";
-            game_1.Game.ctx.drawImage(_this.colorOffscreenCanvas, _this.roomX * gameConstants_1.GameConstants.TILESIZE, _this.roomY * gameConstants_1.GameConstants.TILESIZE);
+            game_1.Game.ctx.globalAlpha = 0.6; // 0.6;
+            if (!gameConstants_1.GameConstants.ctxBlurEnabled) {
+                _this.applyGaussianBlur(_this.colorOffscreenCanvas, 12);
+            }
+            else {
+                game_1.Game.ctx.filter = "blur(6px)";
+            }
+            game_1.Game.ctx.drawImage(_this.colorOffscreenCanvas, (_this.roomX - offsetX) * gameConstants_1.GameConstants.TILESIZE, (_this.roomY - offsetY) * gameConstants_1.GameConstants.TILESIZE);
             //draw slight haze
             game_1.Game.ctx.globalCompositeOperation = "lighten";
             game_1.Game.ctx.globalAlpha = 0.05;
-            game_1.Game.ctx.filter = "blur(12px)";
-            game_1.Game.ctx.drawImage(_this.colorOffscreenCanvas, _this.roomX * gameConstants_1.GameConstants.TILESIZE, _this.roomY * gameConstants_1.GameConstants.TILESIZE);
+            if (!gameConstants_1.GameConstants.ctxBlurEnabled)
+                _this.applyGaussianBlur(_this.colorOffscreenCanvas, 24);
+            else
+                game_1.Game.ctx.filter = "blur(12px)";
+            game_1.Game.ctx.drawImage(_this.colorOffscreenCanvas, (_this.roomX - offsetX) * gameConstants_1.GameConstants.TILESIZE, (_this.roomY - offsetY) * gameConstants_1.GameConstants.TILESIZE);
+            _this.colorOffscreenCtx.clearRect(0, 0, _this.colorOffscreenCanvas.width, _this.colorOffscreenCanvas.height);
             game_1.Game.ctx.restore();
         };
         this.drawShadeLayer = function () {
@@ -19435,6 +20365,8 @@ var Room = /** @class */ (function () {
             // Clear the offscreen shade canvas
             _this.shadeOffscreenCtx.clearRect(0, 0, _this.shadeOffscreenCanvas.width, _this.shadeOffscreenCanvas.height);
             var lastFillStyle = "";
+            var offsetX = _this.blurOffsetX;
+            var offsetY = _this.blurOffsetY;
             // Draw all shade rectangles without any filters
             for (var x = _this.roomX - 2; x < _this.roomX + _this.width + 4; x++) {
                 for (var y = _this.roomY - 2; y < _this.roomY + _this.height + 4; y++) {
@@ -19545,14 +20477,17 @@ var Room = /** @class */ (function () {
                     }
                     fillY += 1;
                     fillX += 1;
-                    _this.shadeOffscreenCtx.fillRect((fillX - _this.roomX) * gameConstants_1.GameConstants.TILESIZE, (fillY - _this.roomY) * gameConstants_1.GameConstants.TILESIZE, fillWidth * gameConstants_1.GameConstants.TILESIZE, fillHeight * gameConstants_1.GameConstants.TILESIZE);
+                    _this.shadeOffscreenCtx.fillRect((fillX - _this.roomX + offsetX) * gameConstants_1.GameConstants.TILESIZE, (fillY - _this.roomY + offsetY) * gameConstants_1.GameConstants.TILESIZE, fillWidth * gameConstants_1.GameConstants.TILESIZE, fillHeight * gameConstants_1.GameConstants.TILESIZE);
                 }
             }
             // Draw the blurred shade layer directly without masking
             game_1.Game.ctx.globalCompositeOperation = "source-over";
             game_1.Game.ctx.globalAlpha = 1;
-            game_1.Game.ctx.filter = "blur(5px)";
-            game_1.Game.ctx.drawImage(_this.shadeOffscreenCanvas, (_this.roomX - 1) * gameConstants_1.GameConstants.TILESIZE, (_this.roomY - 1) * gameConstants_1.GameConstants.TILESIZE);
+            if (!gameConstants_1.GameConstants.ctxBlurEnabled)
+                _this.applyGaussianBlur(_this.shadeOffscreenCanvas, 10);
+            else
+                game_1.Game.ctx.filter = "blur(5px)";
+            game_1.Game.ctx.drawImage(_this.shadeOffscreenCanvas, (_this.roomX - offsetX - 1) * gameConstants_1.GameConstants.TILESIZE, (_this.roomY - offsetY - 1) * gameConstants_1.GameConstants.TILESIZE);
             game_1.Game.ctx.restore();
         };
         this.drawBloomLayer = function (delta) {
@@ -19563,6 +20498,8 @@ var Room = /** @class */ (function () {
             game_1.Game.ctx.save();
             // Clear the offscreen shade canvas
             _this.bloomOffscreenCtx.clearRect(0, 0, _this.bloomOffscreenCanvas.width, _this.bloomOffscreenCanvas.height);
+            var offsetX = _this.blurOffsetX;
+            var offsetY = _this.blurOffsetY;
             var lastFillStyle = "";
             // Draw all shade rectangles without any filters
             var allEntities = _this.entities.concat(_this.deadEntities);
@@ -19574,7 +20511,16 @@ var Room = /** @class */ (function () {
                         _this.bloomOffscreenCtx.globalAlpha =
                             1 * (1 - _this.softVis[e.x][e.y]) * e.softBloomAlpha;
                         _this.bloomOffscreenCtx.fillStyle = e.bloomColor;
-                        _this.bloomOffscreenCtx.fillRect((e.x - e.drawX - _this.roomX) * gameConstants_1.GameConstants.TILESIZE, (e.y - e.drawY - _this.roomY - 0.5) * gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE);
+                        _this.bloomOffscreenCtx.fillRect((e.x - e.drawX - _this.roomX + offsetX + 0.5 - e.bloomSize / 2) *
+                            gameConstants_1.GameConstants.TILESIZE, (e.y -
+                            e.drawY -
+                            _this.roomY -
+                            0.5 +
+                            offsetY +
+                            0.5 -
+                            e.bloomSize / 2) *
+                            gameConstants_1.GameConstants.TILESIZE +
+                            e.bloomOffsetY, gameConstants_1.GameConstants.TILESIZE * e.bloomSize, gameConstants_1.GameConstants.TILESIZE * e.bloomSize);
                     }
                 }
             for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
@@ -19584,7 +20530,7 @@ var Room = /** @class */ (function () {
                         _this.bloomOffscreenCtx.globalAlpha =
                             1 * (1 - _this.softVis[x][y]) * _this.roomArray[x][y].softBloomAlpha;
                         _this.bloomOffscreenCtx.fillStyle = _this.roomArray[x][y].bloomColor;
-                        _this.bloomOffscreenCtx.fillRect((x - _this.roomX) * gameConstants_1.GameConstants.TILESIZE, (y - _this.roomY - 0.25) * gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE * 0.75);
+                        _this.bloomOffscreenCtx.fillRect((x - _this.roomX + offsetX) * gameConstants_1.GameConstants.TILESIZE, (y - _this.roomY - 0.25 + offsetY) * gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE * 0.75);
                     }
                 }
             }
@@ -19596,15 +20542,19 @@ var Room = /** @class */ (function () {
                         _this.bloomOffscreenCtx.globalAlpha =
                             1 * (1 - _this.softVis[p.x][p.y]) * p.softBloomAlpha;
                         _this.bloomOffscreenCtx.fillStyle = p.bloomColor;
-                        _this.bloomOffscreenCtx.fillRect((p.x - _this.roomX) * gameConstants_1.GameConstants.TILESIZE, (p.y - _this.roomY) * gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE);
+                        _this.bloomOffscreenCtx.fillRect((p.x - _this.roomX + offsetX) * gameConstants_1.GameConstants.TILESIZE, (p.y - _this.roomY + offsetY) * gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE);
                     }
                 }
             // Draw the blurred shade layer directly without masking
+            if (!gameConstants_1.GameConstants.ctxBlurEnabled)
+                _this.applyGaussianBlur(_this.bloomOffscreenCanvas, 16);
+            else
+                game_1.Game.ctx.filter = "blur(8px)";
             game_1.Game.ctx.globalCompositeOperation = "screen";
-            game_1.Game.ctx.filter = "blur(8px)";
             game_1.Game.ctx.globalAlpha = 1;
-            game_1.Game.ctx.drawImage(_this.bloomOffscreenCanvas, _this.roomX * gameConstants_1.GameConstants.TILESIZE, _this.roomY * gameConstants_1.GameConstants.TILESIZE);
-            _this.bloomOffscreenCtx.clearRect(0, 0, _this.bloomOffscreenCanvas.width, _this.bloomOffscreenCanvas.height);
+            game_1.Game.ctx.drawImage(_this.bloomOffscreenCanvas, (_this.roomX - offsetX) * gameConstants_1.GameConstants.TILESIZE, (_this.roomY - offsetY) * gameConstants_1.GameConstants.TILESIZE);
+            _this.bloomOffscreenCtx.fillStyle = "rgba(0, 0, 0, 1)";
+            _this.bloomOffscreenCtx.fillRect(0, 0, _this.bloomOffscreenCanvas.width, _this.bloomOffscreenCanvas.height);
             game_1.Game.ctx.restore();
         };
         this.drawEntities = function (delta, skipLocalPlayer) {
@@ -19781,27 +20731,6 @@ var Room = /** @class */ (function () {
             }
               */
             return maskCanvas;
-        };
-        // src/room.ts
-        this.applyMaskAndDrawLayer = function (offscreenCanvas, compositeOperation, alpha, maskCanvas) {
-            // Save the main context state
-            game_1.Game.ctx.save();
-            // Set global settings
-            game_1.Game.ctx.globalCompositeOperation = compositeOperation;
-            game_1.Game.ctx.globalAlpha = alpha;
-            game_1.Game.ctx.filter = "blur(5px)";
-            // Draw the blurred layer
-            game_1.Game.ctx.drawImage(offscreenCanvas, _this.roomX * gameConstants_1.GameConstants.TILESIZE, _this.roomY * gameConstants_1.GameConstants.TILESIZE);
-            game_1.Game.ctx.restore();
-            game_1.Game.ctx.save();
-            // Apply the mask
-            game_1.Game.ctx.globalAlpha = alpha;
-            game_1.Game.ctx.filter = "blur(5px)";
-            game_1.Game.ctx.globalCompositeOperation = "source-over";
-            game_1.Game.ctx.globalAlpha = 0;
-            game_1.Game.ctx.drawImage(maskCanvas, 0, 0);
-            // Restore the main context state
-            game_1.Game.ctx.restore();
         };
         /**
          * Finds and returns the darkest and lightest tiles in the room based on their visibility.
@@ -20040,6 +20969,9 @@ var Room = /** @class */ (function () {
             // If no door exists at the desired position, place it normally
             return room.addDoor(x, y, room, tunnelDoor);
         };
+        this.pointExists = function (x, y) {
+            return _this.roomArray[x] && _this.roomArray[x][y];
+        };
         this.game = game;
         this.roomX = x; //Math.floor(- this.width / 2);
         this.roomY = y; //Math.floor(- this.height / 2);
@@ -20069,8 +21001,10 @@ var Room = /** @class */ (function () {
         this.decorations = Array();
         // Initialize Color Offscreen Canvas
         this.colorOffscreenCanvas = document.createElement("canvas");
-        this.colorOffscreenCanvas.width = this.width * gameConstants_1.GameConstants.TILESIZE;
-        this.colorOffscreenCanvas.height = this.height * gameConstants_1.GameConstants.TILESIZE;
+        this.colorOffscreenCanvas.width =
+            (this.width + 10) * gameConstants_1.GameConstants.TILESIZE;
+        this.colorOffscreenCanvas.height =
+            (this.height + 10) * gameConstants_1.GameConstants.TILESIZE;
         var colorCtx = this.colorOffscreenCanvas.getContext("2d");
         if (!colorCtx) {
             throw new Error("Failed to initialize color offscreen canvas context.");
@@ -20078,9 +21012,10 @@ var Room = /** @class */ (function () {
         this.colorOffscreenCtx = colorCtx;
         // Initialize Shade Offscreen Canvas
         this.shadeOffscreenCanvas = document.createElement("canvas");
-        this.shadeOffscreenCanvas.width = (this.width + 2) * gameConstants_1.GameConstants.TILESIZE;
+        this.shadeOffscreenCanvas.width =
+            (this.width + 10) * gameConstants_1.GameConstants.TILESIZE;
         this.shadeOffscreenCanvas.height =
-            (this.height + 2) * gameConstants_1.GameConstants.TILESIZE;
+            (this.height + 10) * gameConstants_1.GameConstants.TILESIZE;
         var shadeCtx = this.shadeOffscreenCanvas.getContext("2d");
         if (!shadeCtx) {
             throw new Error("Failed to initialize shade offscreen canvas context.");
@@ -20088,8 +21023,10 @@ var Room = /** @class */ (function () {
         this.shadeOffscreenCtx = shadeCtx;
         // Initialize Bloom Offscreen Canvas
         this.bloomOffscreenCanvas = document.createElement("canvas");
-        this.bloomOffscreenCanvas.width = this.width * gameConstants_1.GameConstants.TILESIZE;
-        this.bloomOffscreenCanvas.height = this.height * gameConstants_1.GameConstants.TILESIZE;
+        this.bloomOffscreenCanvas.width =
+            (this.width + 10) * gameConstants_1.GameConstants.TILESIZE;
+        this.bloomOffscreenCanvas.height =
+            (this.height + 10) * gameConstants_1.GameConstants.TILESIZE;
         var bloomCtx = this.bloomOffscreenCanvas.getContext("2d");
         if (!bloomCtx) {
             throw new Error("Failed to initialize bloom offscreen canvas context.");
@@ -20492,6 +21429,13 @@ var Room = /** @class */ (function () {
             }
         }
     };
+    Room.prototype.addBombs = function (numBombs, rand) {
+        var tiles = this.getEmptyTiles();
+        for (var i = 0; i < this.getEmptyTiles().length; i++) {
+            var _a = this.getRandomEmptyPosition(tiles), x = _a.x, y = _a.y;
+            bomb_1.Bomb.add(this, this.game, x, y);
+        }
+    };
     Room.prototype.addPlants = function (numPlants, rand) {
         var tiles = this.getEmptyTiles();
         for (var i = 0; i < numPlants; i++) {
@@ -20588,6 +21532,28 @@ var Room = /** @class */ (function () {
         this.addEnemies(numEnemies, random_1.Random.rand);
         this.addObstacles(numObstacles, random_1.Random.rand);
         this.addPlants(numPlants, random_1.Random.rand);
+    };
+    /**
+     * Applies Gaussian blur to the specified offscreen canvas.
+     *
+     * @param {HTMLCanvasElement} canvas - The offscreen canvas to blur.
+     * @param {number} radius - The radius of the blur.
+     */
+    Room.prototype.applyGaussianBlur = function (canvas, radius) {
+        var StackBlur = __webpack_require__(/*! stackblur-canvas */ "./node_modules/stackblur-canvas/dist/stackblur-es.js");
+        var ctx = canvas.getContext("2d");
+        if (!ctx) {
+            throw new Error("Failed to get canvas context for Gaussian blur.");
+        }
+        // Get the image data from the canvas
+        var width = canvas.width;
+        var height = canvas.height;
+        //const imageData = ctx.getImageData(0, 0, width, height);
+        var r = radius;
+        if (!gameConstants_1.GameConstants.BLUR_ENABLED)
+            r = 0;
+        // Apply StackBlur
+        StackBlur.canvasRGBA(canvas, 0, 0, width, height, Math.floor(r / 2));
     };
     //calculate wall info for proper wall rendering
     Room.prototype.calculateWallInfo = function () {
@@ -20947,18 +21913,22 @@ var Sound = /** @class */ (function () {
             });
         });
     };
-    Sound.stopSoundWithReverb = function (audio) {
-        reverb_1.ReverbEngine.removeReverb(audio);
+    Sound.stopSound = function (audio) {
         audio.pause();
         audio.currentTime = 0;
+    };
+    Sound.stopSoundWithReverb = function (audio) {
+        reverb_1.ReverbEngine.removeReverb(audio);
+        this.stopSound(audio);
     };
     var _a;
     _a = Sound;
     Sound.initialized = false;
     Sound.audioMuted = false;
+    Sound.loopHandlers = new Map();
     Sound.loadSounds = function () { return __awaiter(void 0, void 0, void 0, function () {
-        var _i, _b, f, _c, _d, f, _e, _f, f, _g, _h, f, _j, _k, f, _l, _m, f, _o, _p, f, _q, _r, f, _s, _t, f, _u, _v, f, _w, _x, f, _y, _z, f;
-        return __generator(_a, function (_0) {
+        var _i, _b, f, _c, _d, f, _e, _f, f, _g, _h, f, _j, _k, f, _l, _m, f, _o, _p, f, _q, _r, f, _s, _t, f, _u, _v, f, _w, _x, f, _y, _z, f, _0, _1, f;
+        return __generator(_a, function (_2) {
             if (Sound.initialized)
                 return [2 /*return*/];
             Sound.initialized = true;
@@ -21080,6 +22050,16 @@ var Sound = /** @class */ (function () {
             Sound.magicSound.volume = 0.25;
             Sound.wooshSound = new Audio("res/SFX/attacks/woosh1.mp3");
             Sound.wooshSound.volume = 0.2;
+            Sound.bombSounds = new Array();
+            [1, 2].forEach(function (i) {
+                return Sound.bombSounds.push(new Audio("res/SFX/attacks/explode" + i + ".mp3"));
+            });
+            for (_0 = 0, _1 = Sound.bombSounds; _0 < _1.length; _0++) {
+                f = _1[_0];
+                f.volume = 0.7;
+            }
+            Sound.fuseBurnSound = new Audio("res/SFX/attacks/fuse.mp3");
+            Sound.fuseBurnSound.volume = 0.2;
             return [2 /*return*/];
         });
     }); };
@@ -21238,11 +22218,24 @@ var Sound = /** @class */ (function () {
         }, true);
         _a.playWithReverb(Sound.ambientSound);
     };
+    Sound.playFuse = function () {
+        if (Sound.audioMuted)
+            return;
+        Sound.fuseBurnSound.currentTime = 0;
+        _a.playWithReverb(Sound.fuseBurnSound);
+    };
     Sound.playGore = function () {
         if (Sound.audioMuted)
             return;
         _a.playWithReverb(Sound.goreSound);
         Sound.goreSound.currentTime = 0;
+    };
+    Sound.playBomb = function () {
+        if (Sound.audioMuted)
+            return;
+        var f = game_1.Game.randTable(Sound.bombSounds, Math.random);
+        _a.playWithReverb(f);
+        f.currentTime = 0;
     };
     Sound.playMagic = function () {
         if (Sound.audioMuted)
@@ -23830,6 +24823,16 @@ var Warhammer = /** @class */ (function (_super) {
                 sound_1.Sound.hit();
             sound_1.Sound.playGore();
         };
+        _this.shakeScreen = function () {
+            _this.wielder.slowMotionEnabled = true;
+            if (_this.wielder.game.rooms[_this.wielder.levelID] === _this.wielder.game.room)
+                //this.game.shakeScreen(10 * this.wielder.hitX, 10 * this.wielder.hitY);
+                setTimeout(function () {
+                    _this.game.shakeScreen(0, -10, false);
+                    _this.wielder.hitY = -3;
+                    _this.wielder.slowMotionEnabled = false;
+                }, 150);
+        };
         _this.tileX = 22;
         _this.tileY = 2;
         _this.damage = 3;
@@ -23955,12 +24958,15 @@ var Weapon = /** @class */ (function (_super) {
                 _this.wielder.hitY = 0.5 * (_this.wielder.y - newY);
                 _this.game.rooms[_this.wielder.levelID].particles.push(new slashParticle_1.SlashParticle(newX, newY));
                 _this.game.rooms[_this.wielder.levelID].tick(_this.wielder);
-                if (_this.wielder === _this.game.players[_this.game.localPlayerID])
-                    _this.game.shakeScreen(10 * _this.wielder.hitX, 10 * _this.wielder.hitY);
+                _this.shakeScreen();
                 _this.degrade();
                 //console.log(this.durability);
             }
             return !flag;
+        };
+        _this.shakeScreen = function () {
+            if (_this.wielder.game.rooms[_this.wielder.levelID] === _this.wielder.game.room)
+                _this.game.shakeScreen(10 * _this.wielder.hitX, 10 * _this.wielder.hitY);
         };
         _this.hitSound = function () {
             if (_this.wielder.game.rooms[_this.wielder.levelID] === _this.wielder.game.room)
@@ -24036,6 +25042,35 @@ exports.Weapon = Weapon;
 /******/ 		// Return the exports of the module
 /******/ 		return module.exports;
 /******/ 	}
+/******/ 	
+/************************************************************************/
+/******/ 	/* webpack/runtime/define property getters */
+/******/ 	(() => {
+/******/ 		// define getter functions for harmony exports
+/******/ 		__webpack_require__.d = (exports, definition) => {
+/******/ 			for(var key in definition) {
+/******/ 				if(__webpack_require__.o(definition, key) && !__webpack_require__.o(exports, key)) {
+/******/ 					Object.defineProperty(exports, key, { enumerable: true, get: definition[key] });
+/******/ 				}
+/******/ 			}
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/hasOwnProperty shorthand */
+/******/ 	(() => {
+/******/ 		__webpack_require__.o = (obj, prop) => (Object.prototype.hasOwnProperty.call(obj, prop))
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/make namespace object */
+/******/ 	(() => {
+/******/ 		// define __esModule on exports
+/******/ 		__webpack_require__.r = (exports) => {
+/******/ 			if(typeof Symbol !== 'undefined' && Symbol.toStringTag) {
+/******/ 				Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+/******/ 			}
+/******/ 			Object.defineProperty(exports, '__esModule', { value: true });
+/******/ 		};
+/******/ 	})();
 /******/ 	
 /************************************************************************/
 /******/ 	

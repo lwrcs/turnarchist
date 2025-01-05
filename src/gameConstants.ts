@@ -71,6 +71,8 @@ export class GameConstants {
   static SHADE_LAYER_COMPOSITE_OPERATION = "screen"; //"soft-light";
   static USE_OPTIMIZED_SHADING = false;
   static SMOOTH_LIGHTING = false;
+  static ctxBlurEnabled = true;
+  static BLUR_ENABLED = true;
 
   static readonly COLOR_LAYER_COMPOSITE_OPERATIONS = [
     "soft-light",
@@ -159,7 +161,7 @@ export class GameConstants {
   static readonly STARTING_INVENTORY = [Dagger, Torch];
   static readonly STARTING_DEV_INVENTORY = [
     Dagger,
-    Candle,
+    Warhammer,
     Lantern,
     Torch,
     GodStone,

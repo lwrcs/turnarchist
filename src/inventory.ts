@@ -285,12 +285,14 @@ export class Inventory {
       {
         switch (num) {
           case 9:
-            GameConstants.CUSTOM_SHADER_COLOR_ENABLED =
-              !GameConstants.CUSTOM_SHADER_COLOR_ENABLED;
+            GameConstants.ctxBlurEnabled = !GameConstants.ctxBlurEnabled;
             this.game.pushMessage(
               "Custom shade color is now " +
-                (GameConstants.CUSTOM_SHADER_COLOR_ENABLED ? "on" : "off"),
+                (GameConstants.ctxBlurEnabled ? "on" : "off"),
             );
+            break;
+          case 8:
+            GameConstants.BLUR_ENABLED = !GameConstants.BLUR_ENABLED;
             break;
         }
       }

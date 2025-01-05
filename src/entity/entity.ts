@@ -128,6 +128,8 @@ export class Entity extends Drawable {
   bloomColor: string = "#FFFFFF";
   bloomAlpha: number = 1;
   softBloomAlpha: number = 1;
+  bloomSize: number = 1;
+  bloomOffsetY: number = 0;
   target: { x: number; y: number };
 
   private _imageParticleTiles: { x: number; y: number };
@@ -243,7 +245,7 @@ export class Entity extends Drawable {
     cloned.bloomAlpha = 1;
     cloned.softBloomAlpha = 1;
     cloned.removeLightSource(cloned.lightSource);
-    //cloned.room.updateLighting();
+    cloned.room.updateLighting();
 
     // Add the cloned entity to deadEntities
     room.deadEntities.push(cloned);
@@ -312,6 +314,8 @@ export class Entity extends Drawable {
     this.room.lightSources = this.room.lightSources.filter(
       (ls) => ls !== lightSource,
     );
+    this.lightSource = null;
+    this.room.updateLighting();
   };
 
   behavior = () => {};
@@ -488,11 +492,13 @@ export class Entity extends Drawable {
   kill = () => {
     if (this.cloned) return;
     this.emitEnemyKilled();
+    this.removeLightSource(this.lightSource);
+
     const deadEntity = this.clone();
+
     this.room.deadEntities.push(deadEntity);
     this.dead = true;
     //this.room.entities = this.room.entities.filter((e) => e !== this);
-
     this.dropLoot();
     this.uniqueKillBehavior();
   };

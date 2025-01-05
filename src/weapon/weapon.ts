@@ -124,12 +124,18 @@ export abstract class Weapon extends Equippable {
         new SlashParticle(newX, newY),
       );
       this.game.rooms[this.wielder.levelID].tick(this.wielder);
-      if (this.wielder === this.game.players[this.game.localPlayerID])
-        this.game.shakeScreen(10 * this.wielder.hitX, 10 * this.wielder.hitY);
+      this.shakeScreen();
       this.degrade();
       //console.log(this.durability);
     }
     return !flag;
+  };
+
+  shakeScreen = () => {
+    if (
+      this.wielder.game.rooms[this.wielder.levelID] === this.wielder.game.room
+    )
+      this.game.shakeScreen(10 * this.wielder.hitX, 10 * this.wielder.hitY);
   };
 
   hitSound = () => {
