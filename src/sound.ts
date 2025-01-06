@@ -29,6 +29,8 @@ export class Sound {
   static audioMuted: boolean = false;
   static bombSounds: Array<HTMLAudioElement>;
   static fuseBurnSound: HTMLAudioElement;
+  static fuseLoopSound: HTMLAudioElement;
+  static fuseStartSound: HTMLAudioElement;
   static loopHandlers: Map<HTMLAudioElement, EventListener> = new Map();
   static loadSounds = async () => {
     if (Sound.initialized) return;
@@ -157,6 +159,12 @@ export class Sound {
 
     Sound.fuseBurnSound = new Audio("res/SFX/attacks/fuse.mp3");
     Sound.fuseBurnSound.volume = 0.2;
+
+    Sound.fuseLoopSound = new Audio("res/SFX/attacks/fuseLoop.mp3");
+    Sound.fuseLoopSound.volume = 0.2;
+
+    Sound.fuseStartSound = new Audio("res/SFX/attacks/fuseStart.mp3");
+    Sound.fuseStartSound.volume = 0.2;
   };
 
   private static playSoundSafely(audio: HTMLAudioElement) {
@@ -328,8 +336,47 @@ export class Sound {
 
   static playFuse = () => {
     if (Sound.audioMuted) return;
-    Sound.fuseBurnSound.currentTime = 0;
-    this.playWithReverb(Sound.fuseBurnSound);
+    Sound.fuseStartSound.currentTime = 0;
+
+    // Play the start sound first
+    this.playWithReverb(Sound.fuseStartSound);
+
+    // When start sound ends, begin the loop
+    Sound.fuseStartSound.addEventListener(
+      "ended",
+      () => {
+        Sound.fuseLoopSound.currentTime = 0;
+        this.playWithReverb(Sound.fuseLoopSound);
+      },
+      { once: true },
+    );
+
+    // Set up loop sound to repeat
+    Sound.fuseLoopSound.addEventListener("ended", () => {
+      Sound.fuseLoopSound.currentTime = 0;
+      this.playWithReverb(Sound.fuseLoopSound);
+    });
+
+    // Store the loop handler so we can remove it later
+    const loopHandler = () => {
+      Sound.fuseLoopSound.currentTime = 0;
+      this.playWithReverb(Sound.fuseLoopSound);
+    };
+    Sound.loopHandlers.set(Sound.fuseLoopSound, loopHandler);
+  };
+
+  static stopFuse = () => {
+    Sound.fuseLoopSound.pause();
+    Sound.fuseLoopSound.currentTime = 0;
+    Sound.fuseStartSound.pause();
+    Sound.fuseStartSound.currentTime = 0;
+
+    // Remove the loop handler
+    const handler = Sound.loopHandlers.get(Sound.fuseLoopSound);
+    if (handler) {
+      Sound.fuseLoopSound.removeEventListener("ended", handler);
+      Sound.loopHandlers.delete(Sound.fuseLoopSound);
+    }
   };
 
   static playGore = () => {

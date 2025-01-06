@@ -55,6 +55,9 @@ export class Explosion extends Projectile {
 
         console.log(playerHitBy);
       }
+      if (playerHitBy.x === this.x && playerHitBy.y === this.y) {
+        playerHitBy.hurt(damage, "bomb");
+      }
     }
   }
   drawTopLayer = (delta: number) => {

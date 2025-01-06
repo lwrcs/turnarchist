@@ -382,7 +382,7 @@ export class Game {
   };
 
   keyDownListener = (key: string) => {
-    Game.inputReceived = true;
+    Game.inputReceived = false;
     if (!this.started) {
       this.startedFadeOut = true;
       return;

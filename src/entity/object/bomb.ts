@@ -23,6 +23,8 @@ export class Bomb extends Entity {
   fuseLength: number = 4;
   lit: boolean = false;
   playerHitBy: Player | null = null;
+  fuseSound: HTMLAudioElement;
+  soundPaused: boolean = false;
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
     this.room = room;
@@ -44,6 +46,8 @@ export class Bomb extends Entity {
     this.imageParticleY = 29;
     this.createLightSource();
     this.playerHitBy = null;
+    this.fuseSound = Sound.fuseLoopSound;
+    this.soundPaused = false;
   }
 
   get type() {
@@ -67,7 +71,7 @@ export class Bomb extends Entity {
       if (this.fuseLength <= 0) {
         // Sound.playFuse();
         this.fuseLength = 0;
-        Sound.stopSound(Sound.fuseBurnSound);
+        Sound.stopSound(this.fuseSound);
         this.explode();
         Sound.playBomb();
       }
@@ -98,6 +102,7 @@ export class Bomb extends Entity {
   };
 
   explode = () => {
+    Sound.stopSound(this.fuseSound);
     for (let x = this.x - 2; x < this.x + 3; x++) {
       for (let y = this.y - 2; y < this.y + 3; y++) {
         if (

@@ -7024,6 +7024,7 @@ var Bomb = /** @class */ (function (_super) {
         _this.fuseLength = 4;
         _this.lit = false;
         _this.playerHitBy = null;
+        _this.soundPaused = false;
         _this.killNoBones = function () {
             _this.kill();
         };
@@ -7039,7 +7040,7 @@ var Bomb = /** @class */ (function (_super) {
                 if (_this.fuseLength <= 0) {
                     // Sound.playFuse();
                     _this.fuseLength = 0;
-                    sound_1.Sound.stopSound(sound_1.Sound.fuseBurnSound);
+                    sound_1.Sound.stopSound(_this.fuseSound);
                     _this.explode();
                     sound_1.Sound.playBomb();
                 }
@@ -7062,6 +7063,7 @@ var Bomb = /** @class */ (function (_super) {
             }
         };
         _this.explode = function () {
+            sound_1.Sound.stopSound(_this.fuseSound);
             for (var x = _this.x - 2; x < _this.x + 3; x++) {
                 for (var y = _this.y - 2; y < _this.y + 3; y++) {
                     if (_this.room.pointExists(x, y) &&
@@ -7130,6 +7132,8 @@ var Bomb = /** @class */ (function (_super) {
         _this.imageParticleY = 29;
         _this.createLightSource();
         _this.playerHitBy = null;
+        _this.fuseSound = sound_1.Sound.fuseLoopSound;
+        _this.soundPaused = false;
         return _this;
     }
     Object.defineProperty(Bomb.prototype, "type", {
@@ -8707,7 +8711,7 @@ var Game = /** @class */ (function () {
             _this.levelState = LevelState.LEVEL_GENERATION;
         };
         this.keyDownListener = function (key) {
-            Game.inputReceived = true;
+            Game.inputReceived = false;
             if (!_this.started) {
                 _this.startedFadeOut = true;
                 return;
@@ -9748,7 +9752,6 @@ var candle_1 = __webpack_require__(/*! ./item/candle */ "./src/item/candle.ts");
 var coal_1 = __webpack_require__(/*! ./item/coal */ "./src/item/coal.ts");
 var godStone_1 = __webpack_require__(/*! ./item/godStone */ "./src/item/godStone.ts");
 var heart_1 = __webpack_require__(/*! ./item/heart */ "./src/item/heart.ts");
-var lantern_1 = __webpack_require__(/*! ./item/lantern */ "./src/item/lantern.ts");
 var torch_1 = __webpack_require__(/*! ./item/torch */ "./src/item/torch.ts");
 var weaponBlood_1 = __webpack_require__(/*! ./item/weaponBlood */ "./src/item/weaponBlood.ts");
 var weaponFragments_1 = __webpack_require__(/*! ./item/weaponFragments */ "./src/item/weaponFragments.ts");
@@ -9759,6 +9762,7 @@ var spear_1 = __webpack_require__(/*! ./weapon/spear */ "./src/weapon/spear.ts")
 var spellbook_1 = __webpack_require__(/*! ./weapon/spellbook */ "./src/weapon/spellbook.ts");
 var warhammer_1 = __webpack_require__(/*! ./weapon/warhammer */ "./src/weapon/warhammer.ts");
 var hammer_1 = __webpack_require__(/*! ./item/hammer */ "./src/item/hammer.ts");
+var bombItem_1 = __webpack_require__(/*! ./item/bombItem */ "./src/item/bombItem.ts");
 var GameConstants = /** @class */ (function () {
     function GameConstants() {
     }
@@ -9880,7 +9884,7 @@ var GameConstants = /** @class */ (function () {
     GameConstants.STARTING_DEV_INVENTORY = [
         dagger_1.Dagger,
         warhammer_1.Warhammer,
-        lantern_1.Lantern,
+        bombItem_1.BombItem,
         torch_1.Torch,
         godStone_1.GodStone,
         candle_1.Candle,
@@ -12646,6 +12650,58 @@ exports.BlueGem = BlueGem;
 
 /***/ }),
 
+/***/ "./src/item/bombItem.ts":
+/*!******************************!*\
+  !*** ./src/item/bombItem.ts ***!
+  \******************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BombItem = void 0;
+var sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
+var usable_1 = __webpack_require__(/*! ./usable */ "./src/item/usable.ts");
+//import { Bomb } from "../entity/object/bomb";
+var BombItem = /** @class */ (function (_super) {
+    __extends(BombItem, _super);
+    function BombItem(level, x, y) {
+        var _this = _super.call(this, level, x, y) || this;
+        _this.onUse = function (player) {
+            var Bomb = (__webpack_require__(/*! ../entity/object/bomb */ "./src/entity/object/bomb.ts").Bomb);
+            Bomb.add(player.game.room, player.game, player.x, player.y);
+            player.inventory.removeItem(_this);
+            sound_1.Sound.mine();
+        };
+        _this.tileX = 20;
+        _this.tileY = 2;
+        _this.offsetY = -0.3;
+        _this.name = BombItem.itemName;
+        _this.description = "explodes";
+        return _this;
+    }
+    BombItem.itemName = "bomb";
+    return BombItem;
+}(usable_1.Usable));
+exports.BombItem = BombItem;
+
+
+/***/ }),
+
 /***/ "./src/item/candle.ts":
 /*!****************************!*\
   !*** ./src/item/candle.ts ***!
@@ -12881,6 +12937,7 @@ var lantern_1 = __webpack_require__(/*! ./lantern */ "./src/item/lantern.ts");
 var spellbook_1 = __webpack_require__(/*! ../weapon/spellbook */ "./src/weapon/spellbook.ts");
 var spellbookPage_1 = __webpack_require__(/*! ./spellbookPage */ "./src/item/spellbookPage.ts");
 var backpack_1 = __webpack_require__(/*! ./backpack */ "./src/item/backpack.ts");
+var bombItem_1 = __webpack_require__(/*! ./bombItem */ "./src/item/bombItem.ts");
 exports.ItemTypeMap = {
     dualdagger: dualdagger_1.DualDagger,
     warhammer: warhammer_1.Warhammer,
@@ -12905,6 +12962,7 @@ exports.ItemTypeMap = {
     gold: gold_1.Gold,
     stone: stone_1.Stone,
     coal: coal_1.Coal,
+    bomb: bombItem_1.BombItem,
 };
 var DropTable = /** @class */ (function () {
     function DropTable() {
@@ -12954,6 +13012,7 @@ var DropTable = /** @class */ (function () {
             dropWeight: 15,
             category: ["fuel", "lantern", "resource"],
         },
+        { itemType: "bomb", dropWeight: 300, category: ["bomb", "weapon"] },
     ];
     DropTable.getDrop = function (entity, uniqueTable, useCategory, force, currentDepth) {
         if (uniqueTable === void 0) { uniqueTable = false; }
@@ -18579,6 +18638,9 @@ var Explosion = /** @class */ (function (_super) {
                 entity_1.hurt(playerHitBy, damage);
                 console.log(playerHitBy);
             }
+            if (playerHitBy.x === _this.x && playerHitBy.y === _this.y) {
+                playerHitBy.hurt(damage, "bomb");
+            }
         }
         return _this;
     }
@@ -19206,6 +19268,7 @@ var occultistEnemy_1 = __webpack_require__(/*! ./entity/enemy/occultistEnemy */ 
 var puddle_1 = __webpack_require__(/*! ./tile/decorations/puddle */ "./src/tile/decorations/puddle.ts");
 var decoration_1 = __webpack_require__(/*! ./tile/decorations/decoration */ "./src/tile/decorations/decoration.ts");
 var bomb_1 = __webpack_require__(/*! ./entity/object/bomb */ "./src/entity/object/bomb.ts");
+var sound_1 = __webpack_require__(/*! ./sound */ "./src/sound.ts");
 // #endregion
 // #region Enums & Interfaces
 /**
@@ -19745,8 +19808,31 @@ var Room = /** @class */ (function () {
             _this.active = false;
             _this.updateLighting();
             _this.particles.splice(0, _this.particles.length);
+            _this.disableFuseSounds();
+        };
+        this.disableFuseSounds = function () {
+            for (var _i = 0, _a = _this.entities.filter(function (e) { return e instanceof bomb_1.Bomb; }); _i < _a.length; _i++) {
+                var b = _a[_i];
+                //if (!bomb.soundPaused) {
+                //bomb.soundPaused = true;
+                var bomb = b;
+                sound_1.Sound.stopSound(bomb.fuseSound);
+                //}
+            }
+        };
+        this.enableFuseSounds = function () {
+            for (var _i = 0, _a = _this.entities.filter(function (e) { return e instanceof bomb_1.Bomb; }); _i < _a.length; _i++) {
+                var b = _a[_i];
+                //if (!bomb.soundPaused) {
+                //bomb.soundPaused = true;
+                var bomb = b;
+                if (bomb.lit) {
+                    sound_1.Sound.playWithReverb(bomb.fuseSound);
+                }
+            }
         };
         this.onEnterRoom = function (player) {
+            _this.enableFuseSounds();
             for (var _i = 0, _a = _this.level.rooms; _i < _a.length; _i++) {
                 var room = _a[_i];
                 room.roomOnScreen(player);
@@ -22060,6 +22146,10 @@ var Sound = /** @class */ (function () {
             }
             Sound.fuseBurnSound = new Audio("res/SFX/attacks/fuse.mp3");
             Sound.fuseBurnSound.volume = 0.2;
+            Sound.fuseLoopSound = new Audio("res/SFX/attacks/fuseLoop.mp3");
+            Sound.fuseLoopSound.volume = 0.2;
+            Sound.fuseStartSound = new Audio("res/SFX/attacks/fuseStart.mp3");
+            Sound.fuseStartSound.volume = 0.2;
             return [2 /*return*/];
         });
     }); };
@@ -22221,8 +22311,37 @@ var Sound = /** @class */ (function () {
     Sound.playFuse = function () {
         if (Sound.audioMuted)
             return;
-        Sound.fuseBurnSound.currentTime = 0;
-        _a.playWithReverb(Sound.fuseBurnSound);
+        Sound.fuseStartSound.currentTime = 0;
+        // Play the start sound first
+        _a.playWithReverb(Sound.fuseStartSound);
+        // When start sound ends, begin the loop
+        Sound.fuseStartSound.addEventListener("ended", function () {
+            Sound.fuseLoopSound.currentTime = 0;
+            _a.playWithReverb(Sound.fuseLoopSound);
+        }, { once: true });
+        // Set up loop sound to repeat
+        Sound.fuseLoopSound.addEventListener("ended", function () {
+            Sound.fuseLoopSound.currentTime = 0;
+            _a.playWithReverb(Sound.fuseLoopSound);
+        });
+        // Store the loop handler so we can remove it later
+        var loopHandler = function () {
+            Sound.fuseLoopSound.currentTime = 0;
+            _a.playWithReverb(Sound.fuseLoopSound);
+        };
+        Sound.loopHandlers.set(Sound.fuseLoopSound, loopHandler);
+    };
+    Sound.stopFuse = function () {
+        Sound.fuseLoopSound.pause();
+        Sound.fuseLoopSound.currentTime = 0;
+        Sound.fuseStartSound.pause();
+        Sound.fuseStartSound.currentTime = 0;
+        // Remove the loop handler
+        var handler = Sound.loopHandlers.get(Sound.fuseLoopSound);
+        if (handler) {
+            Sound.fuseLoopSound.removeEventListener("ended", handler);
+            Sound.loopHandlers.delete(Sound.fuseLoopSound);
+        }
     };
     Sound.playGore = function () {
         if (Sound.audioMuted)

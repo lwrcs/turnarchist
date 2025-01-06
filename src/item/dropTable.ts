@@ -23,6 +23,7 @@ import { Lantern } from "./lantern";
 import { Spellbook } from "../weapon/spellbook";
 import { SpellbookPage } from "./spellbookPage";
 import { Backpack } from "./backpack";
+import { BombItem } from "./bombItem";
 
 interface Drop {
   itemType: string;
@@ -63,6 +64,7 @@ export const ItemTypeMap: { [key: string]: typeof Item } = {
   gold: Gold,
   stone: Stone,
   coal: Coal,
+  bomb: BombItem,
 };
 
 export class DropTable {
@@ -117,6 +119,7 @@ export class DropTable {
       dropWeight: 15,
       category: ["fuel", "lantern", "resource"],
     },
+    { itemType: "bomb", dropWeight: 300, category: ["bomb", "weapon"] },
   ];
 
   static getDrop = (

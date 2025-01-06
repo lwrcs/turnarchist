@@ -75,6 +75,7 @@ import { OccultistEnemy } from "./entity/enemy/occultistEnemy";
 import { Puddle } from "./tile/decorations/puddle";
 import { Decoration } from "./tile/decorations/decoration";
 import { Bomb } from "./entity/object/bomb";
+import { Sound } from "./sound";
 
 // #endregion
 
@@ -426,7 +427,7 @@ export class Room {
     }
   }
 
-  removeWall = (x: number, y: number) => {
+  private removeWall = (x: number, y: number) => {
     if (this.roomArray[x][y] instanceof Wall) {
       this.roomArray[x][y] = null;
     }
@@ -434,7 +435,7 @@ export class Room {
     //this.outerWalls = this.outerWalls.filter((w) => w.x !== x && w.y !== y);
   };
 
-  getWallType = (
+  private getWallType = (
     pointX: number,
     pointY: number,
     rectX: number,
@@ -1482,9 +1483,33 @@ export class Room {
     this.updateLighting();
 
     this.particles.splice(0, this.particles.length);
+    this.disableFuseSounds();
+  };
+
+  disableFuseSounds = () => {
+    for (const b of this.entities.filter((e) => e instanceof Bomb)) {
+      //if (!bomb.soundPaused) {
+      //bomb.soundPaused = true;
+      const bomb = b as Bomb;
+      Sound.stopSound(bomb.fuseSound);
+      //}
+    }
+  };
+
+  enableFuseSounds = () => {
+    for (const b of this.entities.filter((e) => e instanceof Bomb)) {
+      //if (!bomb.soundPaused) {
+      //bomb.soundPaused = true;
+
+      const bomb = b as Bomb;
+      if (bomb.lit) {
+        Sound.playWithReverb(bomb.fuseSound);
+      }
+    }
   };
 
   onEnterRoom = (player: Player) => {
+    this.enableFuseSounds();
     for (let room of this.level.rooms) {
       room.roomOnScreen(player);
     }
