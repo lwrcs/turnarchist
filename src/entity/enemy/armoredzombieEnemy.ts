@@ -15,6 +15,8 @@ export class ArmoredzombieEnemy extends Enemy {
   targetPlayer: Player;
   drop: Item;
   static difficulty: number = 2;
+  static tileX: number = 17;
+  static tileY: number = 8;
   constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
     super(room, game, x, y);
     this.ticks = 0;

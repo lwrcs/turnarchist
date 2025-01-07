@@ -20,6 +20,7 @@ import { Warhammer } from "./weapon/warhammer";
 import { Hammer } from "./item/hammer";
 import { SpellbookPage } from "./item/spellbookPage";
 import { BombItem } from "./item/bombItem";
+import { BestiaryBook } from "./item/bestiaryBook";
 
 export class GameConstants {
   static readonly VERSION = "v1.0.4"; //"v0.6.3";
@@ -31,8 +32,8 @@ export class GameConstants {
   static readonly SHADE_LEVELS = 30;
 
   static readonly TILESIZE = 16;
-  static SCALE = 4;
-  static readonly MAX_SCALE = 5;
+  static SCALE = 6;
+  static readonly MAX_SCALE = 10;
   static readonly MIN_SCALE = 1;
 
   static readonly SWIPE_THRESH = 25 ** 2; // (size of swipe threshold circle)^2
@@ -163,7 +164,7 @@ export class GameConstants {
   static readonly STARTING_DEV_INVENTORY = [
     Dagger,
     Warhammer,
-    BombItem,
+    BestiaryBook,
     Torch,
     GodStone,
     Candle,

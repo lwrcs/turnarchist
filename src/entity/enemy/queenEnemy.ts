@@ -14,6 +14,8 @@ export class QueenEnemy extends Enemy {
   targetPlayer: Player;
   drop: Item;
   static difficulty: number = 4;
+  static tileX: number = 23;
+  static tileY: number = 8;
   constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
     super(room, game, x, y);
     this.ticks = 0;

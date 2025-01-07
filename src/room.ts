@@ -77,6 +77,7 @@ import { Decoration } from "./tile/decorations/decoration";
 import { Bomb } from "./entity/object/bomb";
 import { Sound } from "./sound";
 import { Block } from "./entity/object/block";
+import { Bestiary } from "./bestiary";
 
 // #endregion
 
@@ -1809,7 +1810,7 @@ export class Room {
     if (!room.roomArray[x]) return null;
     if (!room.roomArray[x][y]) return null;
     const color = room.col[x][y];
-    const brightness = 1 - room.vis[x][y];
+    const brightness = (1 - room.vis[x][y]) / 4;
     const radius = 9;
     return { color, brightness, radius };
   };
@@ -2058,7 +2059,7 @@ export class Room {
       if (i === 0) {
         intensity = brightness * 0.1;
       } else {
-        intensity = brightness / Math.E ** i;
+        intensity = brightness / Math.E ** (i - 0.25);
       }
       if (intensity < 0.005) intensity = 0;
 
@@ -2143,7 +2144,7 @@ export class Room {
       py,
       radius,
       color,
-      brightness / 5,
+      brightness / 3,
       "cast",
     );
   };
@@ -2172,7 +2173,7 @@ export class Room {
       py,
       radius,
       color,
-      brightness / 5, // added this
+      brightness / 3, // added this
       "unCast",
     );
   };

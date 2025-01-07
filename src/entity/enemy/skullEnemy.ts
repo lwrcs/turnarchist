@@ -18,6 +18,8 @@ export class SkullEnemy extends Enemy {
   readonly REGEN_TICKS = 5;
   drop: Item;
   static difficulty: number = 2;
+  static tileX: number = 5;
+  static tileY: number = 8;
   constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
     super(room, game, x, y);
     this.ticks = 0;

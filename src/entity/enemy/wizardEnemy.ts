@@ -25,6 +25,8 @@ export abstract class WizardEnemy extends Enemy {
   seenPlayer: boolean;
   projectileColor: [number, number, number];
   readonly ATTACK_RADIUS = 5;
+  static tileX: number = 6;
+  static tileY: number = 0;
 
   constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
     super(room, game, x, y);

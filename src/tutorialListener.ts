@@ -5,19 +5,28 @@ import { Game } from "./game";
 import { DownLadder } from "./tile/downLadder";
 import { Door, DoorType } from "./tile/door";
 import { Player } from "./player";
+import { Bestiary } from "./bestiary";
 
 export class TutorialListener {
-  private seenEnemies: Set<typeof Enemy> = new Set();
+  private _seenEnemies: Set<typeof Enemy> = new Set();
+  private _seenEnemyClasses: Set<Enemy> = new Set();
   private pendingNewEnemies: Set<typeof Enemy> = new Set();
   private tutorialCreationTimeout: NodeJS.Timeout | null = null;
   private game: Game;
   private player: Player;
-  private room: Room;
 
   constructor(game: Game) {
     //console.log("Tutorial constructor called");
     this.setupEventListeners();
     this.game = game;
+    this.player = this.game.player;
+  }
+
+  get seenEnemies(): Set<typeof Enemy> {
+    if (this._seenEnemies === undefined) {
+      this._seenEnemies = new Set();
+    }
+    return this._seenEnemies;
   }
 
   private setupEventListeners(): void {
@@ -34,7 +43,9 @@ export class TutorialListener {
       this.addSeenEnemy(data.enemyType);
       this.pendingNewEnemies.add(data.enemyType);
       this.scheduleTutorialCreation();
-    } else {
+
+      this.player.bestiary.addEntry(data.enemyType);
+      console.log(this.player.bestiary.entries);
     }
   }
 
@@ -61,19 +72,21 @@ export class TutorialListener {
   // Method to check if an enemy has been seen before
   hasSeenEnemy(enemyType: typeof Enemy): boolean {
     //console.log(`Checking if enemy has been seen: ${enemyType}`);
-    return this.seenEnemies.has(enemyType);
+    return this._seenEnemies.has(enemyType);
   }
 
   // Method to manually add an enemy to the seen list (useful for testing or manual control)
   addSeenEnemy(enemyType: typeof Enemy): void {
     //console.log(`Adding enemy to seen list: ${enemyType}`);
-    this.seenEnemies.add(enemyType);
+    this._seenEnemies.add(enemyType);
+    this._seenEnemyClasses.add(enemyType.prototype);
   }
 
   // Method to reset the seen enemies list (useful for testing or game resets)
   resetSeenEnemies(): void {
     //console.log("Resetting seen enemies list");
-    this.seenEnemies.clear();
+    this._seenEnemies.clear();
+    this._seenEnemyClasses.clear();
   }
 
   // Method to clean up event listeners when needed

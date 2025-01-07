@@ -24,6 +24,8 @@ export class FrogEnemy extends Enemy {
   jumping: boolean;
   jumpDistance: number;
   static difficulty: number = 1;
+  static tileX: number = 12;
+  static tileY: number = 16;
 
   constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
     super(room, game, x, y);

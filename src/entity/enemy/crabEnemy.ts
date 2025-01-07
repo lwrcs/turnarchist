@@ -16,6 +16,8 @@ export class CrabEnemy extends Enemy {
   targetPlayer: Player;
   drop: Item;
   static difficulty: number = 1;
+  static tileX: number = 8;
+  static tileY: number = 4;
 
   constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
     super(room, game, x, y);

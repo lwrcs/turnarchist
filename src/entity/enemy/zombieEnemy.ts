@@ -26,6 +26,8 @@ export class ZombieEnemy extends Enemy {
   drop: Item;
   dir: Direction;
   static difficulty: number = 1;
+  static tileX: number = 17;
+  static tileY: number = 8;
   constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
     super(room, game, x, y);
     this.ticks = 0;

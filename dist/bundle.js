@@ -1424,6 +1424,223 @@ exports.BeamEffect = BeamEffect;
 
 /***/ }),
 
+/***/ "./src/bestiary.ts":
+/*!*************************!*\
+  !*** ./src/bestiary.ts ***!
+  \*************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Bestiary = void 0;
+var game_1 = __webpack_require__(/*! ./game */ "./src/game.ts");
+var levelConstants_1 = __webpack_require__(/*! ./levelConstants */ "./src/levelConstants.ts");
+var gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/gameConstants.ts");
+var crabEnemy_1 = __webpack_require__(/*! ./entity/enemy/crabEnemy */ "./src/entity/enemy/crabEnemy.ts");
+var frogEnemy_1 = __webpack_require__(/*! ./entity/enemy/frogEnemy */ "./src/entity/enemy/frogEnemy.ts");
+var zombieEnemy_1 = __webpack_require__(/*! ./entity/enemy/zombieEnemy */ "./src/entity/enemy/zombieEnemy.ts");
+var skullEnemy_1 = __webpack_require__(/*! ./entity/enemy/skullEnemy */ "./src/entity/enemy/skullEnemy.ts");
+var energyWizard_1 = __webpack_require__(/*! ./entity/enemy/energyWizard */ "./src/entity/enemy/energyWizard.ts");
+var chargeEnemy_1 = __webpack_require__(/*! ./entity/enemy/chargeEnemy */ "./src/entity/enemy/chargeEnemy.ts");
+var rookEnemy_1 = __webpack_require__(/*! ./entity/enemy/rookEnemy */ "./src/entity/enemy/rookEnemy.ts");
+var bishopEnemy_1 = __webpack_require__(/*! ./entity/enemy/bishopEnemy */ "./src/entity/enemy/bishopEnemy.ts");
+var armoredzombieEnemy_1 = __webpack_require__(/*! ./entity/enemy/armoredzombieEnemy */ "./src/entity/enemy/armoredzombieEnemy.ts");
+var bigSkullEnemy_1 = __webpack_require__(/*! ./entity/enemy/bigSkullEnemy */ "./src/entity/enemy/bigSkullEnemy.ts");
+var queenEnemy_1 = __webpack_require__(/*! ./entity/enemy/queenEnemy */ "./src/entity/enemy/queenEnemy.ts");
+var knightEnemy_1 = __webpack_require__(/*! ./entity/enemy/knightEnemy */ "./src/entity/enemy/knightEnemy.ts");
+var bigKnightEnemy_1 = __webpack_require__(/*! ./entity/enemy/bigKnightEnemy */ "./src/entity/enemy/bigKnightEnemy.ts");
+var fireWizard_1 = __webpack_require__(/*! ./entity/enemy/fireWizard */ "./src/entity/enemy/fireWizard.ts");
+var spawner_1 = __webpack_require__(/*! ./entity/enemy/spawner */ "./src/entity/enemy/spawner.ts");
+var occultistEnemy_1 = __webpack_require__(/*! ./entity/enemy/occultistEnemy */ "./src/entity/enemy/occultistEnemy.ts");
+//enemy typeof to class map
+var enemyClassMap = {
+    CrabEnemy: crabEnemy_1.CrabEnemy,
+    FrogEnemy: frogEnemy_1.FrogEnemy,
+    ZombieEnemy: zombieEnemy_1.ZombieEnemy,
+    SkullEnemy: skullEnemy_1.SkullEnemy,
+    EnergyWizardEnemy: energyWizard_1.EnergyWizardEnemy,
+    ChargeEnemy: chargeEnemy_1.ChargeEnemy,
+    RookEnemy: rookEnemy_1.RookEnemy,
+    BishopEnemy: bishopEnemy_1.BishopEnemy,
+    ArmoredzombieEnemy: armoredzombieEnemy_1.ArmoredzombieEnemy,
+    BigSkullEnemy: bigSkullEnemy_1.BigSkullEnemy,
+    QueenEnemy: queenEnemy_1.QueenEnemy,
+    KnightEnemy: knightEnemy_1.KnightEnemy,
+    BigKnightEnemy: bigKnightEnemy_1.BigKnightEnemy,
+    FireWizardEnemy: fireWizard_1.FireWizardEnemy,
+    Spawner: spawner_1.Spawner,
+    OccultistEnemy: occultistEnemy_1.OccultistEnemy,
+};
+var Bestiary = /** @class */ (function () {
+    function Bestiary(game, player) {
+        var _this = this;
+        this.isOpen = false;
+        this.openTime = Date.now();
+        this.frame = 0;
+        this.activeEntryIndex = 0;
+        /**
+         * Opens the logbook window.
+         */
+        this.open = function () {
+            if (_this.seenEnemies.size === 0)
+                _this.seenEnemies = _this.game.tutorialListener.seenEnemies;
+            _this.isOpen = true;
+            _this.openTime = Date.now();
+        };
+        /**
+         * Closes the logbook window.
+         */
+        this.close = function () {
+            _this.isOpen = false;
+        };
+        this.entryUp = function () {
+            _this.activeEntryIndex =
+                (_this.activeEntryIndex - 1 + _this.entries.length) % _this.entries.length;
+        };
+        this.entryDown = function () {
+            _this.activeEntryIndex = (_this.activeEntryIndex + 1) % _this.entries.length;
+        };
+        /**
+         * Toggles the logbook window's open state.
+         */
+        this.toggleOpen = function () {
+            _this.isOpen ? _this.close() : _this.open();
+        };
+        /**
+         * Adds a new entry to the logbook.
+         * @param enemy The enemy to add.
+         */
+        this.addEntry = function (enemy) {
+            var enemyClass = enemyClassMap[enemy.name];
+            _this.entries.push({
+                name: enemy.name,
+                description: enemyClass.prototype.description,
+                tileX: enemyClass.prototype.tileX,
+                tileY: enemyClass.prototype.tileY,
+            });
+        };
+        /**
+         * Draws the logbook interface.
+         * @param delta The time delta since the last frame.
+         */
+        this.draw = function (delta) {
+            if (!_this.isOpen)
+                return;
+            game_1.Game.ctx.save();
+            // Draw semi-transparent background
+            game_1.Game.ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
+            game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
+            // Define dimensions similar to Inventory
+            var s = Math.min(18, (18 * (Date.now() - _this.openTime)) / 100); // example scaling
+            var b = 2; // border
+            var g = -2; // gap
+            var ob = 1; // outer border
+            var width = 5 * (s + 2 * b + g) - g; // assuming 5 columns
+            var height = 4 * (s + 2 * b + g) - g; // assuming 4 rows
+            var startX = Math.round(0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * width) - ob;
+            var startY = Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT - 0.5 * height) - ob;
+            // Draw main logbook background
+            game_1.Game.ctx.fillStyle = "white";
+            game_1.Game.ctx.fillRect(startX, startY, width + 2 * ob, height + 2 * ob);
+            // Draw logbook entries
+            game_1.Game.ctx.fillStyle = "black";
+            var padding = 10;
+            if (_this.entries.length === 0) {
+                game_1.Game.fillText("No enemies seen yet", startX + padding, startY + padding);
+            }
+            else {
+                _this.entries.forEach(function (entry, index) {
+                    game_1.Game.fillText(entry.name, startX + padding, startY + padding + index * 20);
+                });
+                _this.drawEnemySprite(_this.entries[_this.activeEntryIndex].tileX, _this.entries[_this.activeEntryIndex].tileY, delta);
+            }
+            // Draw logbook button
+            _this.drawLogbookButton(delta);
+            game_1.Game.ctx.restore();
+        };
+        this.drawEnemySprite = function (tileX, tileY, delta) {
+            _this.frame += 0.1 * delta;
+            if (_this.frame >= 4)
+                _this.frame = 0;
+            game_1.Game.drawMob(tileX, tileY, 1, 1, 1, 1, 1, 1, "Black", 0);
+        };
+        /**
+         * Draws the logbook button on the screen.
+         * @param delta The time delta since the last frame.
+         */
+        this.drawLogbookButton = function (delta) {
+            game_1.Game.ctx.save();
+            _this.buttonX = levelConstants_1.LevelConstants.SCREEN_W - 2;
+            _this.buttonY = levelConstants_1.LevelConstants.SCREEN_H - 2.25;
+            game_1.Game.drawFX(0, 0, 2, 2, _this.buttonX, _this.buttonY, 2, 2);
+            game_1.Game.ctx.restore();
+        };
+        /**
+         * Handles mouse down events.
+         * @param x The x-coordinate of the mouse.
+         * @param y The y-coordinate of the mouse.
+         * @param button The mouse button pressed.
+         */
+        this.handleMouseDown = function (x, y, button) {
+            if (button !== 0)
+                return; // Only respond to left click
+            if (_this.isPointInLogbookButton(x, y)) {
+                _this.toggleOpen();
+            }
+        };
+        /**
+         * Handles mouse up events.
+         * @param x The x-coordinate of the mouse.
+         * @param y The y-coordinate of the mouse.
+         * @param button The mouse button released.
+         */
+        this.handleMouseUp = function (x, y, button) {
+            // Implement if needed
+        };
+        /**
+         * Handles hold detection.
+         */
+        this.onHoldDetected = function () {
+            // Implement if needed
+        };
+        /**
+         * Checks if a point is within the logbook button bounds.
+         * @param x The x-coordinate to check.
+         * @param y The y-coordinate to check.
+         * @returns True if the point is within the button bounds, else false.
+         */
+        this.isPointInLogbookButton = function (x, y) {
+            var tX = x / gameConstants_1.GameConstants.TILESIZE;
+            var tY = y / gameConstants_1.GameConstants.TILESIZE;
+            return (tX >= _this.buttonX &&
+                tX <= _this.buttonX + 2 &&
+                tY >= _this.buttonY &&
+                tY <= _this.buttonY + 2);
+        };
+        /**
+         * Updates the logbook state each game tick.
+         */
+        this.tick = function () {
+            if (_this.isOpen) {
+                // Update logbook-related logic here
+            }
+        };
+        this.game = game;
+        this.player = player;
+        this.entries = [];
+        this.activeEntryIndex = 0;
+        this.buttonX =
+            (Math.round(gameConstants_1.GameConstants.WIDTH / 2) + 3) / gameConstants_1.GameConstants.TILESIZE;
+        this.buttonY = 10;
+        this.seenEnemies = new Set();
+    }
+    return Bestiary;
+}());
+exports.Bestiary = Bestiary;
+
+
+/***/ }),
+
 /***/ "./src/drawable.ts":
 /*!*************************!*\
   !*** ./src/drawable.ts ***!
@@ -1705,6 +1922,8 @@ var ArmoredzombieEnemy = /** @class */ (function (_super) {
         return _this;
     }
     ArmoredzombieEnemy.difficulty = 2;
+    ArmoredzombieEnemy.tileX = 17;
+    ArmoredzombieEnemy.tileY = 8;
     return ArmoredzombieEnemy;
 }(enemy_1.Enemy));
 exports.ArmoredzombieEnemy = ArmoredzombieEnemy;
@@ -1965,6 +2184,8 @@ var BigKnightEnemy = /** @class */ (function (_super) {
         return _this;
     }
     BigKnightEnemy.difficulty = 4;
+    BigKnightEnemy.tileX = 29;
+    BigKnightEnemy.tileY = 0;
     return BigKnightEnemy;
 }(enemy_1.Enemy));
 exports.BigKnightEnemy = BigKnightEnemy;
@@ -2258,6 +2479,8 @@ var BigSkullEnemy = /** @class */ (function (_super) {
         return _this;
     }
     BigSkullEnemy.difficulty = 4;
+    BigSkullEnemy.tileX = 21;
+    BigSkullEnemy.tileY = 0;
     return BigSkullEnemy;
 }(enemy_1.Enemy));
 exports.BigSkullEnemy = BigSkullEnemy;
@@ -2506,6 +2729,8 @@ var BishopEnemy = /** @class */ (function (_super) {
         return _this;
     }
     BishopEnemy.difficulty = 2;
+    BishopEnemy.tileX = 31;
+    BishopEnemy.tileY = 8;
     return BishopEnemy;
 }(enemy_1.Enemy));
 exports.BishopEnemy = BishopEnemy;
@@ -2768,6 +2993,8 @@ var ChargeEnemy = /** @class */ (function (_super) {
         return _this;
     }
     ChargeEnemy.difficulty = 3;
+    ChargeEnemy.tileX = 13;
+    ChargeEnemy.tileY = 8;
     return ChargeEnemy;
 }(enemy_1.Enemy));
 exports.ChargeEnemy = ChargeEnemy;
@@ -3016,6 +3243,8 @@ var CrabEnemy = /** @class */ (function (_super) {
         configurable: true
     });
     CrabEnemy.difficulty = 1;
+    CrabEnemy.tileX = 8;
+    CrabEnemy.tileY = 4;
     return CrabEnemy;
 }(enemy_1.Enemy));
 exports.CrabEnemy = CrabEnemy;
@@ -3625,6 +3854,8 @@ var EnergyWizardEnemy = /** @class */ (function (_super) {
         return _this;
     }
     EnergyWizardEnemy.difficulty = 3;
+    EnergyWizardEnemy.tileX = 6;
+    EnergyWizardEnemy.tileY = 0;
     return EnergyWizardEnemy;
 }(wizardEnemy_1.WizardEnemy));
 exports.EnergyWizardEnemy = EnergyWizardEnemy;
@@ -3838,6 +4069,8 @@ var FireWizardEnemy = /** @class */ (function (_super) {
         return _this;
     }
     FireWizardEnemy.difficulty = 3;
+    FireWizardEnemy.tileX = 35;
+    FireWizardEnemy.tileY = 8;
     return FireWizardEnemy;
 }(wizardEnemy_1.WizardEnemy));
 exports.FireWizardEnemy = FireWizardEnemy;
@@ -4192,6 +4425,8 @@ var FrogEnemy = /** @class */ (function (_super) {
         return _this;
     }
     FrogEnemy.difficulty = 1;
+    FrogEnemy.tileX = 12;
+    FrogEnemy.tileY = 16;
     return FrogEnemy;
 }(enemy_1.Enemy));
 exports.FrogEnemy = FrogEnemy;
@@ -4419,6 +4654,8 @@ var KnightEnemy = /** @class */ (function (_super) {
         return _this;
     }
     KnightEnemy.difficulty = 2;
+    KnightEnemy.tileX = 9;
+    KnightEnemy.tileY = 8;
     return KnightEnemy;
 }(enemy_1.Enemy));
 exports.KnightEnemy = KnightEnemy;
@@ -4622,6 +4859,8 @@ var OccultistEnemy = /** @class */ (function (_super) {
         _this.softBloomAlpha = 0;
         return _this;
     }
+    OccultistEnemy.tileX = 55;
+    OccultistEnemy.tileY = 8;
     return OccultistEnemy;
 }(enemy_1.Enemy));
 exports.OccultistEnemy = OccultistEnemy;
@@ -4831,6 +5070,8 @@ var QueenEnemy = /** @class */ (function (_super) {
         return _this;
     }
     QueenEnemy.difficulty = 4;
+    QueenEnemy.tileX = 23;
+    QueenEnemy.tileY = 8;
     return QueenEnemy;
 }(enemy_1.Enemy));
 exports.QueenEnemy = QueenEnemy;
@@ -5027,6 +5268,8 @@ var RookEnemy = /** @class */ (function (_super) {
         return _this;
     }
     RookEnemy.difficulty = 4;
+    RookEnemy.tileX = 23 + 28;
+    RookEnemy.tileY = 8;
     return RookEnemy;
 }(enemy_1.Enemy));
 exports.RookEnemy = RookEnemy;
@@ -5324,6 +5567,8 @@ var SkullEnemy = /** @class */ (function (_super) {
         return _this;
     }
     SkullEnemy.difficulty = 2;
+    SkullEnemy.tileX = 5;
+    SkullEnemy.tileY = 8;
     return SkullEnemy;
 }(enemy_1.Enemy));
 exports.SkullEnemy = SkullEnemy;
@@ -5587,6 +5832,8 @@ var Spawner = /** @class */ (function (_super) {
         _this.name = "reaper";
         return _this;
     }
+    Spawner.tileX = 6;
+    Spawner.tileY = 4;
     return Spawner;
 }(enemy_1.Enemy));
 exports.Spawner = Spawner;
@@ -5807,6 +6054,8 @@ var WizardEnemy = /** @class */ (function (_super) {
         return _this;
     }
     WizardEnemy.difficulty = 3;
+    WizardEnemy.tileX = 6;
+    WizardEnemy.tileY = 0;
     return WizardEnemy;
 }(enemy_1.Enemy));
 exports.WizardEnemy = WizardEnemy;
@@ -6062,6 +6311,8 @@ var ZombieEnemy = /** @class */ (function (_super) {
         return _this;
     }
     ZombieEnemy.difficulty = 1;
+    ZombieEnemy.tileX = 17;
+    ZombieEnemy.tileY = 8;
     return ZombieEnemy;
 }(enemy_1.Enemy));
 exports.ZombieEnemy = ZombieEnemy;
@@ -8780,6 +9031,9 @@ var Game = /** @class */ (function () {
             }
         };
         this.changeLevel = function (player, newLevel) {
+            if (_this.tutorialListener === null) {
+                _this.tutorialListener = new tutorialListener_1.TutorialListener(_this);
+            }
             player.levelID = _this.levels[player.depth].rooms.indexOf(newLevel);
             if (_this.players[_this.localPlayerID] === player) {
                 //this.level.exitLevel();
@@ -9561,7 +9815,7 @@ var Game = /** @class */ (function () {
         reverb_1.ReverbEngine.initialize();
         sound_1.Sound.loadSounds();
         this.started = false;
-        this.tutorialListener = new tutorialListener_1.TutorialListener(this);
+        this.tutorialListener = null;
         this.setupEventListeners();
         eventBus_1.globalEventBus.on(events_1.EVENTS.LEVEL_GENERATION_STARTED, function () {
             _this.levelState = LevelState.LEVEL_GENERATION;
@@ -9758,7 +10012,7 @@ var spear_1 = __webpack_require__(/*! ./weapon/spear */ "./src/weapon/spear.ts")
 var spellbook_1 = __webpack_require__(/*! ./weapon/spellbook */ "./src/weapon/spellbook.ts");
 var warhammer_1 = __webpack_require__(/*! ./weapon/warhammer */ "./src/weapon/warhammer.ts");
 var hammer_1 = __webpack_require__(/*! ./item/hammer */ "./src/item/hammer.ts");
-var bombItem_1 = __webpack_require__(/*! ./item/bombItem */ "./src/item/bombItem.ts");
+var bestiaryBook_1 = __webpack_require__(/*! ./item/bestiaryBook */ "./src/item/bestiaryBook.ts");
 var GameConstants = /** @class */ (function () {
     function GameConstants() {
     }
@@ -9769,8 +10023,8 @@ var GameConstants = /** @class */ (function () {
     GameConstants.ALPHA_ENABLED = true;
     GameConstants.SHADE_LEVELS = 30;
     GameConstants.TILESIZE = 16;
-    GameConstants.SCALE = 4;
-    GameConstants.MAX_SCALE = 5;
+    GameConstants.SCALE = 6;
+    GameConstants.MAX_SCALE = 10;
     GameConstants.MIN_SCALE = 1;
     GameConstants.SWIPE_THRESH = Math.pow(25, 2); // (size of swipe threshold circle)^2
     GameConstants.HOLD_THRESH = 250; // milliseconds
@@ -9880,7 +10134,7 @@ var GameConstants = /** @class */ (function () {
     GameConstants.STARTING_DEV_INVENTORY = [
         dagger_1.Dagger,
         warhammer_1.Warhammer,
-        bombItem_1.BombItem,
+        bestiaryBook_1.BestiaryBook,
         torch_1.Torch,
         godStone_1.GodStone,
         candle_1.Candle,
@@ -12597,6 +12851,57 @@ var Backpack = /** @class */ (function (_super) {
     return Backpack;
 }(usable_1.Usable));
 exports.Backpack = Backpack;
+
+
+/***/ }),
+
+/***/ "./src/item/bestiaryBook.ts":
+/*!**********************************!*\
+  !*** ./src/item/bestiaryBook.ts ***!
+  \**********************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BestiaryBook = void 0;
+var usable_1 = __webpack_require__(/*! ./usable */ "./src/item/usable.ts");
+var bestiary_1 = __webpack_require__(/*! ../bestiary */ "./src/bestiary.ts");
+var BestiaryBook = /** @class */ (function (_super) {
+    __extends(BestiaryBook, _super);
+    function BestiaryBook(level, x, y) {
+        var _this = _super.call(this, level, x, y) || this;
+        _this.onUse = function (player) {
+            if (player.bestiary === null) {
+                player.bestiary = new bestiary_1.Bestiary(player.game, player);
+            }
+            player.bestiary.toggleOpen();
+        };
+        _this.tileX = 8;
+        _this.tileY = 0;
+        _this.offsetY = -0.3;
+        _this.name = BestiaryBook.itemName;
+        _this.description = "opens the bestiary";
+        return _this;
+    }
+    BestiaryBook.itemName = "bestiary book";
+    return BestiaryBook;
+}(usable_1.Usable));
+exports.BestiaryBook = BestiaryBook;
 
 
 /***/ }),
@@ -17091,6 +17396,7 @@ var stats_1 = __webpack_require__(/*! ./stats */ "./src/stats.ts");
 var spellbook_1 = __webpack_require__(/*! ./weapon/spellbook */ "./src/weapon/spellbook.ts");
 var utils_1 = __webpack_require__(/*! ./utils */ "./src/utils.ts");
 var menu_1 = __webpack_require__(/*! ./menu */ "./src/menu.ts");
+var bestiary_1 = __webpack_require__(/*! ./bestiary */ "./src/bestiary.ts");
 var PlayerDirection;
 (function (PlayerDirection) {
     PlayerDirection[PlayerDirection["DOWN"] = 0] = "DOWN";
@@ -17111,6 +17417,8 @@ var Player = /** @class */ (function (_super) {
         _this.isProcessingQueue = false;
         _this.lowHealthFrame = 0;
         _this.drawMoveQueue = [];
+        _this.seenEnemies = new Set();
+        _this.bestiary = null;
         _this.applyStatus = function (enemy, status) {
             if (enemy instanceof enemy_1.Enemy) {
                 if (status.poison) {
@@ -17853,6 +18161,8 @@ var Player = /** @class */ (function (_super) {
             if (!_this.dead) {
                 if (!transitioning)
                     _this.inventory.draw(delta);
+                if (_this.bestiary)
+                    _this.bestiary.draw(delta);
                 //this.actionTab.draw(delta);
                 if (_this.guiHeartFrame > 0)
                     _this.guiHeartFrame += delta;
@@ -18301,6 +18611,7 @@ var Player = /** @class */ (function (_super) {
         _this.slowMotionEnabled = false;
         _this.slowMotionTickDuration = 0;
         _this.justMoved = DrawDirection.Y;
+        _this.bestiary = new bestiary_1.Bestiary(_this.game, _this);
         return _this;
     }
     Object.defineProperty(Player.prototype, "angle", {
@@ -20061,7 +20372,7 @@ var Room = /** @class */ (function () {
             if (!room.roomArray[x][y])
                 return null;
             var color = room.col[x][y];
-            var brightness = 1 - room.vis[x][y];
+            var brightness = (1 - room.vis[x][y]) / 4;
             var radius = 9;
             return { color: color, brightness: brightness, radius: radius };
         };
@@ -20257,7 +20568,7 @@ var Room = /** @class */ (function () {
                     intensity = brightness * 0.1;
                 }
                 else {
-                    intensity = brightness / Math.pow(Math.E, i);
+                    intensity = brightness / Math.pow(Math.E, (i - 0.25));
                 }
                 if (intensity < 0.005)
                     intensity = 0;
@@ -20304,7 +20615,7 @@ var Room = /** @class */ (function () {
          * @param brightness - The brightness of the light source.
          */
         this.castTintAtAngle = function (angle, px, py, radius, color, brightness) {
-            _this.processTintAtAngle(angle, px, py, radius, color, brightness / 5, "cast");
+            _this.processTintAtAngle(angle, px, py, radius, color, brightness / 3, "cast");
         };
         /**
          * Uncasts a tint from a light source at a specific angle.
@@ -20317,7 +20628,7 @@ var Room = /** @class */ (function () {
          * @param brightness - The brightness of the light source.
          */
         this.unCastTintAtAngle = function (angle, px, py, radius, color, brightness) {
-            _this.processTintAtAngle(angle, px, py, radius, color, brightness / 5, // added this
+            _this.processTintAtAngle(angle, px, py, radius, color, brightness / 3, // added this
             "unCast");
         };
         this.sRGBToLinear = function (value) {
@@ -24212,13 +24523,25 @@ exports.TutorialListener = void 0;
 var eventBus_1 = __webpack_require__(/*! ./eventBus */ "./src/eventBus.ts");
 var TutorialListener = /** @class */ (function () {
     function TutorialListener(game) {
-        this.seenEnemies = new Set();
+        this._seenEnemies = new Set();
+        this._seenEnemyClasses = new Set();
         this.pendingNewEnemies = new Set();
         this.tutorialCreationTimeout = null;
         //console.log("Tutorial constructor called");
         this.setupEventListeners();
         this.game = game;
+        this.player = this.game.player;
     }
+    Object.defineProperty(TutorialListener.prototype, "seenEnemies", {
+        get: function () {
+            if (this._seenEnemies === undefined) {
+                this._seenEnemies = new Set();
+            }
+            return this._seenEnemies;
+        },
+        enumerable: false,
+        configurable: true
+    });
     TutorialListener.prototype.setupEventListeners = function () {
         //console.log("Setting up event listeners");
         eventBus_1.globalEventBus.on("EnemySeenPlayer", this.handleEnemySeen.bind(this));
@@ -24229,8 +24552,8 @@ var TutorialListener = /** @class */ (function () {
             this.addSeenEnemy(data.enemyType);
             this.pendingNewEnemies.add(data.enemyType);
             this.scheduleTutorialCreation();
-        }
-        else {
+            this.player.bestiary.addEntry(data.enemyType);
+            console.log(this.player.bestiary.entries);
         }
     };
     TutorialListener.prototype.scheduleTutorialCreation = function () {
@@ -24255,17 +24578,19 @@ var TutorialListener = /** @class */ (function () {
     // Method to check if an enemy has been seen before
     TutorialListener.prototype.hasSeenEnemy = function (enemyType) {
         //console.log(`Checking if enemy has been seen: ${enemyType}`);
-        return this.seenEnemies.has(enemyType);
+        return this._seenEnemies.has(enemyType);
     };
     // Method to manually add an enemy to the seen list (useful for testing or manual control)
     TutorialListener.prototype.addSeenEnemy = function (enemyType) {
         //console.log(`Adding enemy to seen list: ${enemyType}`);
-        this.seenEnemies.add(enemyType);
+        this._seenEnemies.add(enemyType);
+        this._seenEnemyClasses.add(enemyType.prototype);
     };
     // Method to reset the seen enemies list (useful for testing or game resets)
     TutorialListener.prototype.resetSeenEnemies = function () {
         //console.log("Resetting seen enemies list");
-        this.seenEnemies.clear();
+        this._seenEnemies.clear();
+        this._seenEnemyClasses.clear();
     };
     // Method to clean up event listeners when needed
     TutorialListener.prototype.cleanup = function () {

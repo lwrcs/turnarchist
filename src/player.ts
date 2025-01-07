@@ -32,6 +32,7 @@ import { Spellbook } from "./weapon/spellbook";
 import { globalEventBus } from "./eventBus";
 import { Utils } from "./utils";
 import { Menu } from "./menu";
+import { Bestiary } from "./bestiary";
 
 export enum PlayerDirection {
   DOWN,
@@ -112,6 +113,9 @@ export class Player extends Drawable {
     drawX: number;
     drawY: number;
   }[] = [];
+
+  seenEnemies: Set<typeof Enemy> = new Set();
+  bestiary: Bestiary = null;
   constructor(game: Game, x: number, y: number, isLocalPlayer: boolean) {
     super();
 
@@ -242,6 +246,8 @@ export class Player extends Drawable {
     this.slowMotionEnabled = false;
     this.slowMotionTickDuration = 0;
     this.justMoved = DrawDirection.Y;
+
+    this.bestiary = new Bestiary(this.game, this);
   }
 
   get angle(): number {
@@ -1111,6 +1117,7 @@ export class Player extends Drawable {
     Game.ctx.save();
     if (!this.dead) {
       if (!transitioning) this.inventory.draw(delta);
+      if (this.bestiary) this.bestiary.draw(delta);
       //this.actionTab.draw(delta);
 
       if (this.guiHeartFrame > 0) this.guiHeartFrame += delta;

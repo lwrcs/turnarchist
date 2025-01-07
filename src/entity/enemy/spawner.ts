@@ -28,6 +28,8 @@ export class Spawner extends Enemy {
   enemyTable: number[];
   spawnFrequency: number;
   spawnOffset: number;
+  static tileX: number = 6;
+  static tileY: number = 4;
 
   constructor(
     room: Room,

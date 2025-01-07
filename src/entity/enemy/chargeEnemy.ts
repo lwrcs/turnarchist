@@ -26,6 +26,8 @@ export class ChargeEnemy extends Enemy {
   trailFrame: number;
   drop: Item;
   static difficulty: number = 3;
+  static tileX: number = 13;
+  static tileY: number = 8;
 
   constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
     super(room, game, x, y);

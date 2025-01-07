@@ -14,6 +14,8 @@ export class KnightEnemy extends Enemy {
   aggro: boolean;
   drop: Item;
   static difficulty: number = 2;
+  static tileX: number = 9;
+  static tileY: number = 8;
 
   constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
     super(room, game, x, y);

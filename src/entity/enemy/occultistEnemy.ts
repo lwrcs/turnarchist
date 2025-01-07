@@ -14,6 +14,8 @@ export class OccultistEnemy extends Enemy {
   seenPlayer: boolean;
   shieldedEnemies: Enemy[];
   range: number;
+  static tileX: number = 55;
+  static tileY: number = 8;
 
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);

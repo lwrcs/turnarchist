@@ -23,6 +23,8 @@ export class BigSkullEnemy extends Enemy {
   readonly REGEN_TICKS = 5;
   drops: Array<Item>;
   static difficulty: number = 4;
+  static tileX: number = 21;
+  static tileY: number = 0;
 
   constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
     super(room, game, x, y);

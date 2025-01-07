@@ -337,7 +337,8 @@ export class Game {
     Sound.loadSounds();
 
     this.started = false;
-    this.tutorialListener = new TutorialListener(this);
+    this.tutorialListener = null;
+
     this.setupEventListeners();
 
     globalEventBus.on(EVENTS.LEVEL_GENERATION_STARTED, () => {
@@ -447,6 +448,10 @@ export class Game {
   };
 
   changeLevel = (player: Player, newLevel: Room) => {
+    if (this.tutorialListener === null) {
+      this.tutorialListener = new TutorialListener(this);
+    }
+
     player.levelID = this.levels[player.depth].rooms.indexOf(newLevel);
     if (this.players[this.localPlayerID] === player) {
       //this.level.exitLevel();
