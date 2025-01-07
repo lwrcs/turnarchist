@@ -160,7 +160,7 @@ export class Game {
   tutorialListener: TutorialListener;
 
   private focusTimeout: number | null = null;
-  private readonly FOCUS_TIMEOUT_DURATION = 5000; // 5 seconds
+  private readonly FOCUS_TIMEOUT_DURATION = 15000; // 5 seconds
   private wasMuted = false;
   private wasStarted = false;
 
@@ -351,6 +351,18 @@ export class Game {
     // Add focus/blur event listeners
     window.addEventListener("blur", this.handleWindowBlur);
     window.addEventListener("focus", this.handleWindowFocus);
+
+    // Listen for the RecalculateChatWrapping event to update wrapped messages
+    globalEventBus.on("RecalculateChatWrapping", (maxWidth: number) => {
+      this.chatTextBox.wrapAllMessages(maxWidth);
+    });
+
+    // Listen for new chat messages to wrap them immediately
+    globalEventBus.on("ChatMessageSent", (message: string) => {
+      // Wrap the new message
+      const maxWidth = GameConstants.WIDTH - 20; // 10px padding on each side
+      this.chatTextBox.wrapAllMessages(maxWidth);
+    });
   }
 
   updateDepth = (depth: number) => {
@@ -697,19 +709,34 @@ export class Game {
   private setupEventListeners(): void {
     //console.log("Setting up event listeners");
     globalEventBus.on("ChatMessage", this.commandHandler.bind(this));
+    globalEventBus.on("ChatMessageSent", (message: string) => {
+      // Wrap the new message
+      const maxWidth = GameConstants.WIDTH - 20; // 10px padding on each side
+      this.chatTextBox.wrapAllMessages(maxWidth);
+    });
   }
+
+  maxScale = () => {
+    for (let i = GameConstants.MIN_SCALE; i <= GameConstants.MAX_SCALE; i++) {
+      if (window.innerWidth / i < 130) {
+        return i;
+      }
+    }
+    return GameConstants.MAX_SCALE;
+  };
+
   onResize = () => {
     // Determine device pixel ratio
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = window.devicePixelRatio;
     // Define scale adjustment based on device pixel ratio
     let scaleOffset = 0;
-    if (dpr > 1.5) {
-      // High DPI devices like MacBook Air
-      scaleOffset = 2;
-    } else {
-      // Standard DPI devices
-      scaleOffset = 0;
-    }
+    //if (dpr > 1.5) {
+    // High DPI devices like MacBook Air
+    //scaleOffset = 2;
+    //} else {
+    // Standard DPI devices
+    //   scaleOffset = 0;
+    //}
 
     // Calculate maximum possible scale based on window size
     let maxWidthScale = Math.floor(
@@ -718,20 +745,23 @@ export class Game {
     let maxHeightScale = Math.floor(
       window.innerHeight / GameConstants.DEFAULTHEIGHT,
     );
+    const zoomLevel =
+      Math.round((window.outerWidth / window.innerWidth) * 20) / 20;
 
     this.isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     if (this.isMobile) {
+      if (!GameConstants.isMobile) this.pushMessage("Mobile detected");
       GameConstants.isMobile = true;
-      this.pushMessage("Mobile detected");
+
       // Use smaller scale for mobile devices based on screen size
       // Adjust max scale with scaleOffset
-      const integerScale = Math.ceil(GameConstants.SCALE) + scaleOffset;
+      const integerScale = GameConstants.SCALE + scaleOffset;
       Game.scale = Math.min(maxWidthScale, maxHeightScale, integerScale); // Cap at 3 + offset for mobile
     } else {
       GameConstants.isMobile = false;
       // For desktop, use standard scaling logic
       // Ensure GameConstants.SCALE is an integer. If not, round it.
-      const integerScale = Math.ceil(GameConstants.SCALE) + scaleOffset;
+      const integerScale = GameConstants.SCALE + scaleOffset;
       Game.scale = Math.min(maxWidthScale, maxHeightScale, integerScale);
     }
 
@@ -743,17 +773,17 @@ export class Game {
       // Ensure Game.scale is at least 1 and an integer
       Game.scale = Math.max(
         1,
-        Math.min(
-          Math.ceil(maxWidthScale),
-          Math.ceil(maxHeightScale),
-          1 + scaleOffset,
-        ),
+        Math.min(maxWidthScale, maxHeightScale, 1 + scaleOffset),
       );
     }
 
     // Apply device pixel ratio negation by setting scale to compensate for DPI
     const NEGATE_DPR_FACTOR = 1;
-    Game.scale *= NEGATE_DPR_FACTOR / dpr;
+    Game.scale *= NEGATE_DPR_FACTOR / window.devicePixelRatio;
+    console.log(window.devicePixelRatio);
+
+    //Game.scale = Math.ceil(Math.min(Game.scale, this.maxScale()));
+    //GameConstants.SCALE = Game.scale;
 
     // Calculate screen width and height in tiles, ensuring integer values
     LevelConstants.SCREEN_W = Math.floor(
@@ -763,20 +793,20 @@ export class Game {
       window.innerHeight / Game.scale / GameConstants.TILESIZE,
     );
 
-    // Calculate canvas width and height in pixels, ensuring integer values
-    GameConstants.WIDTH = LevelConstants.SCREEN_W * GameConstants.TILESIZE;
-    GameConstants.HEIGHT = LevelConstants.SCREEN_H * GameConstants.TILESIZE;
+    // Calculate canvas width and height in pixels
+    GameConstants.WIDTH = Math.floor(window.innerWidth / Game.scale);
+    GameConstants.HEIGHT = Math.floor(window.innerHeight / Game.scale);
 
-    // Set canvas width and height attributes as integers
+    // Set canvas width and height attributes
     Game.ctx.canvas.setAttribute("width", `${GameConstants.WIDTH}`);
     Game.ctx.canvas.setAttribute("height", `${GameConstants.HEIGHT}`);
 
-    // Set CSS styles with integer pixel values for scaling, applying negated DPR factor
+    // Set CSS styles for scaling, applying negated DPR factor
     Game.ctx.canvas.setAttribute(
       "style",
-      `width: ${Math.round(GameConstants.WIDTH * Game.scale)}px; height: ${Math.round(
-        GameConstants.HEIGHT * Game.scale,
-      )}px;
+      `width: ${GameConstants.WIDTH * Game.scale}px; height: ${
+        GameConstants.HEIGHT * Game.scale
+      }px;
       display: block;
       margin: 0 auto;
       image-rendering: optimizeSpeed; /* Older versions of FF */
@@ -789,6 +819,9 @@ export class Game {
     );
 
     // Optional: Log the new scale and canvas size for debugging
+
+    // After adjusting the scale and canvas size, recalculate chat wrapping
+    this.recalculateChatWrapping();
   };
 
   shakeScreen = (shakeX: number, shakeY: number, clamp: boolean = true) => {
@@ -1259,9 +1292,62 @@ export class Game {
       //for (const i in this.players) this.players[i].updateDrawXY(delta);
     }
     // draw chat
-    let CHAT_X = 10;
-    let CHAT_BOTTOM_Y = GameConstants.HEIGHT - Game.letter_height - 32;
-    let CHAT_OPACITY = 0.5;
+    const CHAT_X = 10;
+    let CHAT_BOTTOM_Y = GameConstants.HEIGHT - Game.letter_height - 28;
+    if (GameConstants.WIDTH < 155) CHAT_BOTTOM_Y -= 10;
+    const CHAT_OPACITY = 0.5;
+    const MAX_CHAT_WIDTH = GameConstants.WIDTH - 20; // 10px padding on each side
+
+    // Initialize cumulative Y position starting from the bottom
+    let cumulativeY = CHAT_BOTTOM_Y;
+
+    for (let i = 0; i < this.chat.length; i++) {
+      const chatMessage = this.chat[i];
+      const wrappedLines = this.chatTextBox.wrappedSentMessages[i] || [
+        chatMessage.message,
+      ];
+
+      // Determine text color based on message type
+      Game.ctx.fillStyle = chatMessage.message.startsWith("/")
+        ? GameConstants.GREEN
+        : "white";
+
+      wrappedLines.forEach((line) => {
+        // Move up by the height of one line plus padding
+        cumulativeY -= Game.letter_height + 2;
+
+        // Calculate opacity based on message age
+        const age = Date.now() - chatMessage.timestamp;
+        if (this.chatOpen) {
+          Game.ctx.globalAlpha = 1;
+        } else {
+          if (age <= GameConstants.CHAT_APPEAR_TIME) {
+            if (GameConstants.ALPHA_ENABLED)
+              Game.ctx.globalAlpha = CHAT_OPACITY;
+          } else if (
+            age <=
+            GameConstants.CHAT_APPEAR_TIME + GameConstants.CHAT_FADE_TIME
+          ) {
+            if (GameConstants.ALPHA_ENABLED)
+              Game.ctx.globalAlpha =
+                CHAT_OPACITY *
+                (1 -
+                  (age - GameConstants.CHAT_APPEAR_TIME) /
+                    GameConstants.CHAT_FADE_TIME);
+          } else {
+            Game.ctx.globalAlpha = 0;
+          }
+        }
+
+        // Render the text line at the calculated position
+        Game.fillText(line, CHAT_X, cumulativeY);
+
+        // Reset global alpha for the next line
+        Game.ctx.globalAlpha = 1;
+      });
+    }
+
+    // Handle chat input
     if (this.chatOpen) {
       Game.ctx.fillStyle = "black";
       if (GameConstants.ALPHA_ENABLED) Game.ctx.globalAlpha = 0.75;
@@ -1270,39 +1356,10 @@ export class Game {
       Game.ctx.globalAlpha = 1;
       Game.ctx.fillStyle = "white";
       Game.fillText(this.chatTextBox.text, CHAT_X, CHAT_BOTTOM_Y);
-      let cursorX = Game.measureText(
+      const cursorX = Game.measureText(
         this.chatTextBox.text.substring(0, this.chatTextBox.cursor),
       ).width;
       Game.ctx.fillRect(CHAT_X + cursorX, CHAT_BOTTOM_Y, 1, Game.letter_height);
-    }
-    for (let i = 0; i < this.chat.length; i++) {
-      Game.ctx.fillStyle = "white";
-      if (this.chat[i][0] === "/") Game.ctx.fillStyle = GameConstants.GREEN;
-      let y =
-        CHAT_BOTTOM_Y - (this.chat.length - 1 - i) * (Game.letter_height + 1);
-      if (this.chatOpen) y -= Game.letter_height + 1;
-
-      let age = Date.now() - this.chat[i].timestamp;
-      if (this.chatOpen) {
-        Game.ctx.globalAlpha = 1;
-      } else {
-        if (age <= GameConstants.CHAT_APPEAR_TIME) {
-          if (GameConstants.ALPHA_ENABLED) Game.ctx.globalAlpha = CHAT_OPACITY;
-        } else if (
-          age <=
-          GameConstants.CHAT_APPEAR_TIME + GameConstants.CHAT_FADE_TIME
-        ) {
-          if (GameConstants.ALPHA_ENABLED)
-            Game.ctx.globalAlpha =
-              CHAT_OPACITY *
-              (1 -
-                (age - GameConstants.CHAT_APPEAR_TIME) /
-                  GameConstants.CHAT_FADE_TIME);
-        } else {
-          Game.ctx.globalAlpha = 0;
-        }
-      }
-      Game.fillText(this.chat[i].message, CHAT_X, y);
     }
 
     // game version
@@ -1617,6 +1674,45 @@ export class Game {
     if (this.focusTimeout) {
       clearTimeout(this.focusTimeout);
     }
+  }
+
+  /**
+   * Splits a given text into multiple lines based on the maximum width.
+   * @param text The text to wrap.
+   * @param maxWidth The maximum width allowed for each line.
+   * @returns An array of strings, each representing a line.
+   */
+  wrapText(text: string, maxWidth: number): string[] {
+    const words = text.split(" ");
+    const lines: string[] = [];
+    let currentLine = "";
+
+    for (const word of words) {
+      const testLine = currentLine ? `${currentLine} ${word}` : word;
+      const testWidth = Game.measureText(testLine).width;
+
+      if (testWidth > maxWidth && currentLine) {
+        lines.push(currentLine);
+        currentLine = word;
+      } else {
+        currentLine = testLine;
+      }
+    }
+
+    if (currentLine) {
+      lines.push(currentLine);
+    }
+
+    return lines;
+  }
+
+  /**
+   * Re-wraps all chat messages based on the current window width.
+   */
+  private recalculateChatWrapping(): void {
+    const padding = 20; // Total horizontal padding (10px on each side)
+    const maxWidth = GameConstants.WIDTH - padding;
+    globalEventBus.emit("RecalculateChatWrapping", maxWidth);
   }
 }
 

@@ -48,7 +48,16 @@ export class Armor extends Equippable {
 
   drawGUI = (delta: number, playerHealth: number) => {
     if (this.rechargeTurnCounter === -1)
-      Game.drawFX(5, 2, 1, 1, playerHealth, LevelConstants.SCREEN_H - 1, 1, 1);
+      Game.drawFX(
+        5,
+        2,
+        0.75,
+        0.75,
+        playerHealth * 0.75 + 0.1,
+        LevelConstants.SCREEN_H - 1,
+        0.75,
+        0.75,
+      );
     else {
       let rechargeProportion =
         1 - this.rechargeTurnCounter / this.RECHARGE_TURNS;
@@ -57,23 +66,23 @@ export class Armor extends Equippable {
         Game.drawFX(
           7,
           2,
-          1,
-          1,
-          playerHealth,
+          0.75,
+          0.75,
+          playerHealth * 0.75 + 0.1,
           LevelConstants.SCREEN_H - 1,
-          1,
-          1,
+          0.75,
+          0.75,
         );
       else
         Game.drawFX(
           8,
           2,
-          1,
-          1,
-          playerHealth,
+          0.75,
+          0.75,
+          playerHealth * 0.75 + 0.1,
           LevelConstants.SCREEN_H - 1,
-          1,
-          1,
+          0.75,
+          0.75,
         );
     }
   };

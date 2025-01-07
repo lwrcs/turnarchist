@@ -1138,41 +1138,52 @@ export class Player extends Drawable {
             GameConstants.TILESIZE;
         }
         let frame = this.guiHeartFrame > 0 ? 1 : 0;
+        let offsetY = GameConstants.WIDTH > 155 ? 0 : -1.25;
+
         if (i >= Math.floor(this.health)) {
           if (i == Math.floor(this.health) && (this.health * 2) % 2 == 1) {
             // draw half heart
             Game.drawFX(
               4,
               2,
-              1,
-              1,
-              i + shake,
-              LevelConstants.SCREEN_H - 1 + shakeY,
-              1,
-              1,
+              0.75,
+              0.75,
+              i / 1.5 + shake + 0.25,
+              GameConstants.HEIGHT / GameConstants.TILESIZE -
+                1 +
+                shakeY +
+                offsetY,
+              0.75,
+              0.75,
             );
           } else {
             Game.drawFX(
               3,
               2,
-              1,
-              1,
-              i + shake,
-              LevelConstants.SCREEN_H - 1 + shakeY,
-              1,
-              1,
+              0.75,
+              0.75,
+              i / 1.5 + shake + 0.25,
+              GameConstants.HEIGHT / GameConstants.TILESIZE -
+                1 +
+                shakeY +
+                offsetY,
+              0.75,
+              0.75,
             );
           }
         } else {
           Game.drawFX(
             frame,
             2,
-            1,
-            1,
-            i + shake,
-            LevelConstants.SCREEN_H - 1 + shakeY,
-            1,
-            1,
+            0.75,
+            0.75,
+            i / 1.5 + shake + 0.25,
+            GameConstants.HEIGHT / GameConstants.TILESIZE -
+              1 +
+              shakeY +
+              offsetY,
+            0.75,
+            0.75,
           );
         }
       }

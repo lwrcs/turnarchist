@@ -403,12 +403,11 @@ export class Inventory {
     if (this.grabbedItem === null) return;
     const { x, y } = MouseCursor.getInstance().getPosition();
 
-    let item = this.grabbedItem;
-    const drawX = x - 0.5 * GameConstants.TILESIZE;
-    const drawY = y - 0.5 * GameConstants.TILESIZE;
+    const drawX = Math.round(x - 0.5 * GameConstants.TILESIZE);
+    const drawY = Math.round(y - 0.5 * GameConstants.TILESIZE);
     const drawXScaled = drawX / GameConstants.TILESIZE;
     const drawYScaled = drawY / GameConstants.TILESIZE;
-    item.drawIcon(delta, drawXScaled, drawYScaled);
+    this.grabbedItem.drawIcon(delta, drawXScaled, drawYScaled);
   };
 
   drop = () => {
@@ -577,15 +576,22 @@ export class Inventory {
   };
 
   drawCoins = (delta: number) => {
-    const coinX = LevelConstants.SCREEN_W - 1;
-    const coinY = LevelConstants.SCREEN_H - 2.75;
+    let coinTileX = 19;
+    if (this.coins === 2) coinTileX = 20;
+    else if (this.coins >= 3) coinTileX = 21;
+    let coinX = GameConstants.WIDTH / GameConstants.TILESIZE - 2.25;
+    let coinY = GameConstants.HEIGHT / GameConstants.TILESIZE - 1.25;
+    if (GameConstants.WIDTH < 170) {
+      //coinX -= 1.25;
+      coinY -= 1.25;
+    }
 
-    Game.drawItem(19, 0, 1, 2, coinX, coinY - 1, 1, 2);
+    Game.drawItem(coinTileX, 0, 1, 2, coinX, coinY - 1, 1, 2);
 
     const countText = `${this.coins}`;
     const width = Game.measureText(countText).width;
-    const countX = 4 - width;
-    const countY = -1;
+    const countX = 10;
+    const countY = 9;
 
     Game.fillTextOutline(
       countText,
@@ -636,52 +642,74 @@ export class Inventory {
     const s = 18; // size of box
     const b = 2; // border
     const g = -2; // gap
-    const hg = 3 + Math.round(0.5 * Math.sin(Date.now() * 0.01) + 0.5); // highlighted growth
+    const hg = 1; // + Math.round(0.5 * Math.sin(Date.now() * 0.01) + 0.5); // highlighted growth
     const ob = 1; // outer border
-    const width = this.cols * (s + 2 * b + g) - g;
-    const height = s + 2 * b;
+    const width = Math.floor(this.cols * (s + 2 * b + g) - g);
+    const height = Math.floor(s + 2 * b);
     const startX = Math.round(0.5 * GameConstants.WIDTH - 0.5 * width);
-    const startY = GameConstants.HEIGHT - height - 5; // 5 pixels from bottom
+    const startY = Math.floor(GameConstants.HEIGHT - height - 2);
 
     // Draw main background
+    /*
     Game.ctx.fillStyle = FULL_OUTLINE;
     Game.ctx.fillRect(startX - ob, startY - 1, width + 2, height + 2);
+    */
+    //Game.ctx.globalCompositeOperation = "xor";
 
     // Draw highlighted background for selected item only if mouse is in bounds
     if (isInBounds || this.mostRecentInput === "keyboard") {
+      /*
       Game.ctx.fillRect(
-        startX + this.selX * (s + 2 * b + g) - hg - ob,
-        startY - hg - ob,
-        s + 2 * b + 2 * hg + 2 * ob,
-        s + 2 * b + 2 * hg + 2 * ob,
+        Math.floor(startX + this.selX * (s + 2 * b + g) - hg - ob),
+        Math.floor(startY - hg - ob),
+        Math.floor(s + 2 * b + 2 * hg + 2 * ob),
+        Math.floor(s + 2 * b + 2 * hg + 2 * ob),
       );
+      */
     }
 
     // Draw individual item slots
     for (let xIdx = 0; xIdx < this.cols; xIdx++) {
-      // Draw slot outline
-      Game.ctx.fillStyle = OUTLINE_COLOR;
-      Game.ctx.fillRect(
-        startX + xIdx * (s + 2 * b + g),
-        startY,
-        s + 2 * b,
-        s + 2 * b,
-      );
+      // Skip drawing normal background and icon if this is the selected slot
+      const idx = xIdx;
 
       // Draw slot background
-      Game.ctx.fillStyle = FILL_COLOR;
-      Game.ctx.fillRect(startX + xIdx * (s + 2 * b + g) + b, startY + b, s, s);
+      if (xIdx !== this.selX) {
+        Game.ctx.fillStyle = FILL_COLOR;
+        Game.ctx.fillRect(
+          Math.floor(startX + xIdx * (s + 2 * b + g) + b),
+          Math.floor(startY + b),
+          Math.floor(s),
+          Math.floor(s),
+        );
 
-      // Draw equip animation (this should always show)
-      const idx = xIdx;
-      Game.ctx.fillStyle = EQUIP_COLOR;
-      const yOff = s * (1 - this.equipAnimAmount[idx]);
-      Game.ctx.fillRect(
-        startX + xIdx * (s + 2 * b + g) + b,
-        startY + b + yOff,
-        s,
-        s - yOff,
-      );
+        Game.ctx.clearRect(
+          Math.floor(startX + xIdx * (s + 2 * b + g) + b + 1),
+          Math.floor(startY + b + 1),
+          Math.floor(s - 2),
+          Math.floor(s - 2),
+        );
+
+        // Draw equip animation (this should always show)
+        Game.ctx.fillStyle = EQUIP_COLOR;
+        Game.ctx.globalAlpha = 0.3;
+        const yOff = Math.floor(s * (1 - this.equipAnimAmount[idx]));
+        Game.ctx.fillRect(
+          Math.floor(startX + xIdx * (s + 2 * b + g) + b),
+          Math.floor(startY + b + yOff),
+          Math.floor(s),
+          Math.floor(s - yOff),
+        );
+        Game.ctx.globalAlpha = 1;
+        /*
+        Game.ctx.clearRect(
+          Math.floor(startX + xIdx * (s + 2 * b + g) + b + 1),
+          Math.floor(startY + b + 1),
+          Math.floor(s - 2),
+          Math.floor(s - 2),
+        );
+        */
+      }
 
       // Draw item icon if exists
       if (idx < this.items.length && this.items[idx] !== null) {
@@ -700,10 +728,10 @@ export class Inventory {
     }
 
     // Draw selection box only if mouse is in bounds
-    if (isInBounds || this.mostRecentInput === "keyboard") {
-      const selStartX = startX + this.selX * (s + 2 * b + g);
-      const selStartY = startY;
-
+    if (true) {
+      const selStartX = Math.floor(startX + this.selX * (s + 2 * b + g));
+      const selStartY = Math.floor(startY);
+      /*
       // Outer selection box (dark)
       Game.ctx.fillStyle = OUTLINE_COLOR;
       Game.ctx.fillRect(
@@ -712,26 +740,45 @@ export class Inventory {
         s + 2 * b + 2 * hg,
         s + 2 * b + 2 * hg,
       );
+      */
 
       // Inner selection box (light grey)
       Game.ctx.fillStyle = FILL_COLOR;
       Game.ctx.fillRect(
-        selStartX + b - hg,
-        selStartY + b - hg,
-        s + 2 * hg,
-        s + 2 * hg,
+        Math.floor(selStartX + b - hg),
+        Math.floor(selStartY + b - hg),
+        Math.floor(s + 2 * hg),
+        Math.floor(s + 2 * hg),
+      );
+
+      Game.ctx.clearRect(
+        Math.floor(startX + this.selX * (s + 2 * b + g) + b),
+        Math.floor(startY + b),
+        Math.floor(s),
+        Math.floor(s),
       );
 
       // Draw equip animation for selected slot with highlight
       const idx = this.selX;
       Game.ctx.fillStyle = EQUIP_COLOR;
+      Game.ctx.globalAlpha = 0.3;
       const yOff = (s + 2 * hg) * (1 - this.equipAnimAmount[idx]);
       Game.ctx.fillRect(
         Math.round(startX + this.selX * (s + 2 * b + g) + b - hg),
         Math.round(startY + b + yOff - hg),
-        s + 2 * hg,
-        s + 2 * hg - yOff,
+        Math.round(s + 2 * hg),
+        Math.round(s + 2 * hg - yOff),
       );
+      Game.ctx.globalAlpha = 1;
+
+      /*
+      Game.ctx.clearRect(
+        Math.floor(startX + this.selX * (s + 2 * b + g) + b),
+        Math.floor(startY + b),
+        Math.floor(s),
+        Math.floor(s),
+      );
+      */
       this.drawUsingItem(delta, startX, startY, s, b, g);
 
       // Redraw the selected item
@@ -798,16 +845,20 @@ export class Inventory {
   };
 
   draw = (delta: number) => {
+    Game.ctx.imageSmoothingEnabled = false;
+    Game.ctx.imageSmoothingQuality = "low";
     const { x, y } = MouseCursor.getInstance().getPosition();
     const isInBounds = this.isPointInInventoryBounds(x, y).inBounds;
-    const s = Math.min(18, (18 * (Date.now() - this.openTime)) / OPEN_TIME); // size of box
+    const s = Math.floor(
+      Math.min(18, (18 * (Date.now() - this.openTime)) / OPEN_TIME),
+    ); // size of box
     const b = 2; // border
     const g = -2; // gap
     const hg = 3 + Math.round(0.5 * Math.sin(Date.now() * 0.01) + 0.5); // highlighted growth
-    const invRows = this.rows + this._expansion;
+    const invRows = Math.floor(this.rows + this._expansion);
     const ob = 1; // outer border
-    const width = this.cols * (s + 2 * b + g) - g;
-    const height = invRows * (s + 2 * b + g) - g;
+    const width = Math.floor(this.cols * (s + 2 * b + g) - g);
+    const height = Math.floor(invRows * (s + 2 * b + g) - g);
     const mainBgX = Math.round(0.5 * GameConstants.WIDTH - 0.5 * width) - ob;
     const mainBgY = Math.round(0.5 * GameConstants.HEIGHT - 0.5 * height) - ob;
 
@@ -825,14 +876,18 @@ export class Inventory {
       Game.ctx.globalAlpha = 1;
 
       // Define dimensions and styling variables (similar to drawQuickbar)
-      const s = Math.min(18, (18 * (Date.now() - this.openTime)) / OPEN_TIME); // size of box
+      const s = Math.floor(
+        Math.min(18, (18 * (Date.now() - this.openTime)) / OPEN_TIME),
+      ); // size of box
       const b = 2; // border
       const g = -2; // gap
-      const hg = 3 + Math.round(0.5 * Math.sin(Date.now() * 0.01) + 0.5); // highlighted growth
+      const hg = Math.floor(
+        3 + Math.round(0.5 * Math.sin(Date.now() * 0.01) + 0.5),
+      ); // highlighted growth
       const invRows = this.rows + this._expansion;
       const ob = 1; // outer border
-      const width = this.cols * (s + 2 * b + g) - g;
-      const height = invRows * (s + 2 * b + g) - g;
+      const width = Math.floor(this.cols * (s + 2 * b + g) - g);
+      const height = Math.floor(invRows * (s + 2 * b + g) - g);
 
       // Draw main inventory background (similar to drawQuickbar)
       Game.ctx.fillStyle = FULL_OUTLINE;
@@ -888,25 +943,27 @@ export class Inventory {
           // Draw equip animation (unique to full inventory view)
           const idx = xIdx + yIdx * this.cols;
           Game.ctx.fillStyle = EQUIP_COLOR;
-          const yOff = s * (1 - this.equipAnimAmount[idx]);
+          const yOff = Math.round(s * (1 - this.equipAnimAmount[idx]));
           Game.ctx.fillRect(slotX + b, slotY + b + yOff, s, s - yOff);
 
           // Draw item icon if exists
           if (idx < this.items.length && this.items[idx] !== null) {
-            const drawX =
+            const drawX = Math.round(
               0.5 * GameConstants.WIDTH -
-              0.5 * width +
-              xIdx * (s + 2 * b + g) +
-              b +
-              Math.floor(0.5 * s) -
-              0.5 * GameConstants.TILESIZE;
-            const drawY =
+                0.5 * width +
+                xIdx * (s + 2 * b + g) +
+                b +
+                Math.floor(0.5 * s) -
+                0.5 * GameConstants.TILESIZE,
+            );
+            const drawY = Math.round(
               0.5 * GameConstants.HEIGHT -
-              0.5 * height +
-              yIdx * (s + 2 * b + g) +
-              b +
-              Math.floor(0.5 * s) -
-              0.5 * GameConstants.TILESIZE;
+                0.5 * height +
+                yIdx * (s + 2 * b + g) +
+                b +
+                Math.floor(0.5 * s) -
+                0.5 * GameConstants.TILESIZE,
+            );
             const drawXScaled = drawX / GameConstants.TILESIZE;
             const drawYScaled = drawY / GameConstants.TILESIZE;
 
@@ -922,20 +979,22 @@ export class Inventory {
           const x = idx % this.cols;
           const y = Math.floor(idx / this.cols);
 
-          const drawX =
+          const drawX = Math.round(
             0.5 * GameConstants.WIDTH -
-            0.5 * width +
-            x * (s + 2 * b + g) +
-            b +
-            Math.floor(0.5 * s) -
-            0.5 * GameConstants.TILESIZE;
-          const drawY =
+              0.5 * width +
+              x * (s + 2 * b + g) +
+              b +
+              Math.floor(0.5 * s) -
+              0.5 * GameConstants.TILESIZE,
+          );
+          const drawY = Math.round(
             0.5 * GameConstants.HEIGHT -
-            0.5 * height +
-            y * (s + 2 * b + g) +
-            b +
-            Math.floor(0.5 * s) -
-            0.5 * GameConstants.TILESIZE;
+              0.5 * height +
+              y * (s + 2 * b + g) +
+              b +
+              Math.floor(0.5 * s) -
+              0.5 * GameConstants.TILESIZE,
+          );
 
           const drawXScaled = drawX / GameConstants.TILESIZE;
           const drawYScaled = drawY / GameConstants.TILESIZE;
@@ -948,14 +1007,18 @@ export class Inventory {
           // Draw selection box
           Game.ctx.fillStyle = OUTLINE_COLOR;
           Game.ctx.fillRect(
-            0.5 * GameConstants.WIDTH -
-              0.5 * width +
-              this.selX * (s + 2 * b + g) -
-              hg,
-            0.5 * GameConstants.HEIGHT -
-              0.5 * height +
-              this.selY * (s + 2 * b + g) -
-              hg,
+            Math.round(
+              0.5 * GameConstants.WIDTH -
+                0.5 * width +
+                this.selX * (s + 2 * b + g) -
+                hg,
+            ),
+            Math.round(
+              0.5 * GameConstants.HEIGHT -
+                0.5 * height +
+                this.selY * (s + 2 * b + g) -
+                hg,
+            ),
             s + 2 * b + 2 * hg,
             s + 2 * b + 2 * hg,
           );
@@ -978,42 +1041,49 @@ export class Inventory {
           Game.ctx.fillRect(slotX, slotY, s + 2 * hg, s + 2 * hg);
 
           // Draw equip animation for selected item (unique to full inventory view)
-          // Draw equip animation for selected item (unique to full inventory view)
           const idx = this.selX + this.selY * this.cols;
           if (idx < this.items.length && this.items[idx] !== null) {
             Game.ctx.fillStyle = EQUIP_COLOR;
-            const yOff = (s + 2 * hg) * (1 - this.equipAnimAmount[idx]);
+            const yOff = Math.round(
+              (s + 2 * hg) * (1 - this.equipAnimAmount[idx]),
+            );
             Game.ctx.fillRect(
-              0.5 * GameConstants.WIDTH -
-                0.5 * width +
-                this.selX * (s + 2 * b + g) +
-                b -
-                hg,
-              0.5 * GameConstants.HEIGHT -
-                0.5 * height +
-                this.selY * (s + 2 * b + g) +
-                b -
-                hg +
-                yOff,
+              Math.round(
+                0.5 * GameConstants.WIDTH -
+                  0.5 * width +
+                  this.selX * (s + 2 * b + g) +
+                  b -
+                  hg,
+              ),
+              Math.round(
+                0.5 * GameConstants.HEIGHT -
+                  0.5 * height +
+                  this.selY * (s + 2 * b + g) +
+                  b -
+                  hg +
+                  yOff,
+              ),
               s + 2 * hg,
               s + 2 * hg - yOff,
             );
 
             // Redraw selected item icon (similar to drawQuickbar)
-            const drawX =
+            const drawX = Math.round(
               0.5 * GameConstants.WIDTH -
-              0.5 * width +
-              this.selX * (s + 2 * b + g) +
-              b +
-              Math.floor(0.5 * s) -
-              0.5 * GameConstants.TILESIZE;
-            const drawY =
+                0.5 * width +
+                this.selX * (s + 2 * b + g) +
+                b +
+                Math.floor(0.5 * s) -
+                0.5 * GameConstants.TILESIZE,
+            );
+            const drawY = Math.round(
               0.5 * GameConstants.HEIGHT -
-              0.5 * height +
-              this.selY * (s + 2 * b + g) +
-              b +
-              Math.floor(0.5 * s) -
-              0.5 * GameConstants.TILESIZE;
+                0.5 * height +
+                this.selY * (s + 2 * b + g) +
+                b +
+                Math.floor(0.5 * s) -
+                0.5 * GameConstants.TILESIZE,
+            );
 
             const drawXScaled = drawX / GameConstants.TILESIZE;
             const drawYScaled = drawY / GameConstants.TILESIZE;
@@ -1050,7 +1120,7 @@ export class Inventory {
         const actionTextWidth = Game.measureText(topPhrase).width;
         Game.fillText(
           topPhrase,
-          0.5 * (GameConstants.WIDTH - actionTextWidth),
+          Math.round(0.5 * (GameConstants.WIDTH - actionTextWidth)),
           5,
         );
 
@@ -1095,13 +1165,13 @@ export class Inventory {
     if (this.isOpen) {
       // Full inventory bounds
       height = (this.rows + this._expansion) * (s + 2 * b + g) - g;
-      startX = 0.5 * GameConstants.WIDTH - 0.5 * width;
-      startY = 0.5 * GameConstants.HEIGHT - 0.5 * height;
+      startX = Math.round(0.5 * GameConstants.WIDTH - 0.5 * width);
+      startY = Math.round(0.5 * GameConstants.HEIGHT - 0.5 * height);
     } else {
       // Quickbar bounds
       height = s + 2 * b;
-      startX = 0.5 * GameConstants.WIDTH - 0.5 * width;
-      startY = GameConstants.HEIGHT - height - 5;
+      startX = Math.round(0.5 * GameConstants.WIDTH - 0.5 * width);
+      startY = Math.round(GameConstants.HEIGHT - height - 5);
     }
 
     const inBounds =
@@ -1126,8 +1196,8 @@ export class Inventory {
     const b = 2; // border
     const g = -2; // gap
     const width = this.cols * (s + 2 * b + g) - g;
-    const startX = 0.5 * GameConstants.WIDTH - 0.5 * width;
-    const startY = GameConstants.HEIGHT - (s + 2 * b) - 5;
+    const startX = Math.round(0.5 * GameConstants.WIDTH - 0.5 * width);
+    const startY = Math.round(GameConstants.HEIGHT - (s + 2 * b) - 5);
     const quickbarHeight = s + 2 * b;
 
     const inBounds =
@@ -1148,9 +1218,9 @@ export class Inventory {
     const tY = y / GameConstants.TILESIZE;
     return (
       tX >= this.buttonX &&
-      tX <= this.buttonX + 2 &&
+      tX <= this.buttonX + 1 &&
       tY >= this.buttonY &&
-      tY <= this.buttonY + 2
+      tY <= this.buttonY + 1
     );
   };
 
@@ -1161,11 +1231,23 @@ export class Inventory {
    */
   drawInventoryButton = (delta: number) => {
     Game.ctx.save(); // Save the current canvas state
-    this.buttonX = LevelConstants.SCREEN_W - 2;
-    this.buttonY = LevelConstants.SCREEN_H - 2.25;
-    Game.drawFX(0, 0, 2, 2, this.buttonX, this.buttonY, 2, 2);
+    this.buttonX = GameConstants.WIDTH / GameConstants.TILESIZE - 1.25;
+    this.buttonY = GameConstants.HEIGHT / GameConstants.TILESIZE - 1.25;
+    if (GameConstants.WIDTH < 145) {
+      //this.buttonX -= 1;
+      this.buttonY -= 1.25;
+    }
+    Game.drawFX(0, 0, 1, 1, this.buttonX, this.buttonY, 1, 1);
 
     Game.ctx.restore(); // Restore the canvas state
+  };
+
+  getQuickbarStartX = () => {
+    const s = 18; // size of box
+    const b = 2; // border
+    const g = -2; // gap
+    const width = Math.floor(this.cols * (s + 2 * b + g) - g);
+    return Math.round(0.5 * GameConstants.WIDTH - 0.5 * width);
   };
 
   handleMouseDown = (x: number, y: number, button: number) => {

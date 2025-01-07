@@ -291,8 +291,8 @@ export class Item extends Drawable {
       const barHeight = 2; // 2 pixels tall
 
       // Calculate the position of the durability bar
-      const barX = Math.round(x * GameConstants.TILESIZE); // Round to nearest pixel
-      const barY = Math.round(
+      const barX = Math.ceil(x * GameConstants.TILESIZE); // Round to nearest pixel
+      const barY = Math.ceil(
         y * GameConstants.TILESIZE + GameConstants.TILESIZE - 2,
       ); // Round to nearest pixel
 

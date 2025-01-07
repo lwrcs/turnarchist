@@ -67,9 +67,10 @@ export class Bestiary {
     this.player = player;
     this.entries = [];
     this.activeEntryIndex = 0;
-    this.buttonX =
-      (Math.round(GameConstants.WIDTH / 2) + 3) / GameConstants.TILESIZE;
-    this.buttonY = 10;
+    this.buttonX = Math.round(
+      (Math.round(GameConstants.WIDTH / 2) + 3) / GameConstants.TILESIZE,
+    );
+    this.buttonY = Math.round(10);
     this.seenEnemies = new Set();
   }
 
@@ -174,7 +175,7 @@ export class Bestiary {
   };
 
   drawEnemySprite = (tileX: number, tileY: number, delta: number) => {
-    this.frame += 0.1 * delta;
+    this.frame += Math.round(0.1 * delta * 10) / 10;
     if (this.frame >= 4) this.frame = 0;
 
     Game.drawMob(tileX, tileY, 1, 1, 1, 1, 1, 1, "Black", 0);

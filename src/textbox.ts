@@ -1,4 +1,5 @@
 import { globalEventBus } from "./eventBus";
+import { Game } from "./game";
 
 export class TextBox {
   text: string;
@@ -11,6 +12,7 @@ export class TextBox {
   private sentMessages: Array<string>;
   private currentMessageIndex: number = -1;
   private readonly MAX_HISTORY: number = 50;
+  wrappedSentMessages: Array<string[]>;
 
   constructor(element: HTMLElement) {
     this.text = "";
@@ -19,6 +21,7 @@ export class TextBox {
     this.escapeCallback = () => {};
     this.element = element;
     this.sentMessages = [];
+    this.wrappedSentMessages = [];
     this.element.addEventListener("touchstart", this.handleTouchStart);
   }
 
@@ -169,13 +172,14 @@ export class TextBox {
         this.sentMessages.shift(); // Remove the oldest message
       }
 
-      console.log(this.sentMessages);
+      // Notify Game to wrap the new message
+      globalEventBus.emit("ChatMessageSent", message);
 
       this.enterCallback();
 
       if (message.startsWith("/")) {
         message = message.substring(1);
-        globalEventBus.emit("ChatMessage", message);
+        globalEventBus.emit("ChatCommand", message);
       }
 
       this.clear();
@@ -185,12 +189,54 @@ export class TextBox {
     }
   }
 
+  public wrapAllMessages(maxWidth: number): void {
+    this.wrappedSentMessages = this.sentMessages.map((msg) =>
+      this.wrapText(msg, maxWidth),
+    );
+    this.updateElement();
+  }
+
+  /**
+   * Splits a given text into multiple lines based on the maximum width.
+   * @param text The text to wrap.
+   * @param maxWidth The maximum width allowed for each line.
+   * @returns An array of strings, each representing a line.
+   */
+  private wrapText(text: string, maxWidth: number): string[] {
+    const words = text.split(" ");
+    const lines: string[] = [];
+    let currentLine = "";
+
+    for (const word of words) {
+      const testLine = currentLine ? `${currentLine} ${word}` : word;
+      const testWidth = Game.measureText(testLine).width;
+
+      if (testWidth > maxWidth && currentLine) {
+        lines.push(currentLine);
+        currentLine = word;
+      } else {
+        currentLine = testLine;
+      }
+    }
+
+    if (currentLine) {
+      lines.push(currentLine);
+    }
+
+    return lines;
+  }
+
   private updateElement(): void {
+    // Update the HTML element with the current text
+    // Modify to handle multiple lines if necessary
     this.element.textContent = this.text;
+
     // Optionally, update cursor position in the UI
   }
 
   private updateCursorPosition(): void {
     // Implement cursor position update in the UI if necessary
   }
+
+  // Optional: Modify other methods if needed to handle wrapped messages
 }
