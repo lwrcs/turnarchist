@@ -19,52 +19,6 @@ export class Rock extends Resource {
     this.hasShadow = false;
     this.chainPushable = false;
     this.name = "rock";
+    this.drop = new Stone(this.room, this.x, this.y);
   }
-
-  hurtCallback = () => {
-    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 24); //rock particle coord 0, 24
-
-    if (this.room === this.game.room) Sound.mine();
-  };
-
-  kill = () => {
-    if (this.room === this.game.room) Sound.breakRock();
-
-    this.dead = true;
-
-    GenericParticle.spawnCluster(
-      this.room,
-      this.x + 0.5,
-      this.y + 0.5,
-      "#9badb7",
-    );
-
-    this.room.items.push(new Stone(this.room, this.x, this.y));
-  };
-  killNoBones = () => {
-    this.kill();
-  };
-
-  draw = (delta: number) => {
-    // not inherited because it doesn't have the 0.5 offset
-    if (!this.dead) {
-      this.updateDrawXY(delta);
-      Game.drawObj(
-        this.tileX,
-        this.tileY,
-        1,
-        2,
-        this.x - this.drawX,
-        this.y - 1 - this.drawY,
-        1,
-        2,
-        this.room.shadeColor,
-        this.shadeAmount(),
-      );
-    }
-  };
-
-  drawTopLayer = (delta: number) => {
-    this.drawableY = this.y;
-  };
 }

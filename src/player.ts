@@ -904,7 +904,6 @@ export class Player extends Drawable {
     if (diffX === 0 && diffY === 0) return;
 
     //this.game.rooms[this.levelID].updateLighting();
-    console.log("_______________________");
     let roomsOnScreen = 0;
     for (let room of this.game.level.rooms) {
       room.roomOnScreen(this);

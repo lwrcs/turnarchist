@@ -22,31 +22,6 @@ export class CoalResource extends Resource {
     this.tileY = 0;
     this.health = 1;
     this.name = "coal";
+    this.drop = new Coal(this.room, this.x, this.y);
   }
-
-  hurtCallback = () => {
-    GenericParticle.spawnCluster(
-      this.room,
-      this.x + 0.5,
-      this.y + 0.5,
-      "#ffffff",
-    );
-
-    if (this.room === this.game.room) Sound.mine();
-  };
-
-  kill = () => {
-    if (this.room === this.game.room) Sound.breakRock();
-
-    this.dead = true;
-
-    this.room.items.push(new Coal(this.room, this.x, this.y));
-  };
-  killNoBones = () => {
-    this.kill();
-  };
-
-  drawTopLayer = (delta: number) => {
-    this.drawableY = this.y;
-  };
 }

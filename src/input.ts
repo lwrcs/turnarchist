@@ -320,7 +320,7 @@ export const Input = {
   swiped: false,
 
   handleTouchStart: function (evt: TouchEvent) {
-    console.log("handleTouchStart triggered");
+    //console.log("handleTouchStart triggered");
     Game.inputReceived = true;
 
     evt.preventDefault();
@@ -348,12 +348,12 @@ export const Input = {
 
     if (!Input._holdCheckInterval) {
       Input._holdCheckInterval = setInterval(Input.checkIsMouseHold, 16);
-      console.log("_holdCheckInterval started");
+      // console.log("_holdCheckInterval started");
     }
   },
 
   handleTouchMove: function (evt) {
-    console.log("handleTouchMove triggered");
+    //console.log("handleTouchMove triggered");
     evt.preventDefault();
 
     Input.currentX = evt.touches[0].clientX;
@@ -392,7 +392,7 @@ export const Input = {
   },
 
   handleTouchEnd: function (evt: TouchEvent) {
-    console.log("handleTouchEnd triggered");
+    //console.log("handleTouchEnd triggered");
     evt.preventDefault();
 
     if (!Input.isTapHold && !Input.swiped) Input.tapListener();
@@ -409,11 +409,11 @@ export const Input = {
     if (Input._holdCheckInterval) {
       clearInterval(Input._holdCheckInterval);
       Input._holdCheckInterval = null;
-      console.log("_holdCheckInterval cleared");
+      //console.log("_holdCheckInterval cleared");
     }
     setTimeout(() => {
       Input.isMouseHold = false;
-      console.log("isMouseHold reset");
+      //console.log("isMouseHold reset");
     }, 50);
   },
 
@@ -426,7 +426,7 @@ export const Input = {
   },
 
   set isMouseHold(value: boolean) {
-    console.log(`isMouseHold set to: ${value}`);
+    //console.log(`isMouseHold set to: ${value}`);
     this._isMouseHold = value;
   },
 

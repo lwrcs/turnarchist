@@ -17,31 +17,6 @@ export class EmeraldResource extends Resource {
     this.tileY = 0;
     this.health = 3;
     this.name = "emerald";
+    this.drop = new GreenGem(this.room, this.x, this.y);
   }
-
-  hurtCallback = () => {
-    GenericParticle.spawnCluster(
-      this.room,
-      this.x + 0.5,
-      this.y + 0.5,
-      "#fbf236",
-    );
-
-    if (this.room === this.game.room) Sound.mine();
-  };
-
-  kill = () => {
-    if (this.room === this.game.room) Sound.breakRock();
-
-    this.dead = true;
-
-    this.room.items.push(new GreenGem(this.room, this.x, this.y));
-  };
-  killNoBones = () => {
-    this.kill();
-  };
-
-  drawTopLayer = (delta: number) => {
-    this.drawableY = this.y;
-  };
 }

@@ -76,6 +76,7 @@ import { Puddle } from "./tile/decorations/puddle";
 import { Decoration } from "./tile/decorations/decoration";
 import { Bomb } from "./entity/object/bomb";
 import { Sound } from "./sound";
+import { Block } from "./entity/object/block";
 
 // #endregion
 
@@ -783,7 +784,7 @@ export class Room {
     ];
     if (this.depth > 0) {
       let spawnerAmount = Game.randTable(spawnerAmounts, rand);
-      console.log(`Adding ${spawnerAmount} spawners`);
+      //console.log(`Adding ${spawnerAmount} spawners`);
       this.addSpawners(spawnerAmount, rand);
     }
     let occultistAmounts = [
@@ -791,15 +792,25 @@ export class Room {
     ];
     if (this.depth > 1) {
       let occultistAmount = Game.randTable(occultistAmounts, rand);
-      console.log(`Adding ${occultistAmount} occultists`);
+      //console.log(`Adding ${occultistAmount} occultists`);
       this.addOccultists(occultistAmount, rand);
     }
+  }
+
+  private addRandomEnemies() {
+    let numEmptyTiles = this.getEmptyTiles().length;
+
+    let numEnemies = Math.ceil(
+      numEmptyTiles * Math.min(this.depth * 0.1 + 0.5, 0.15), //this.depth * 0.01 is starting value
+    );
+    if (numEnemies > numEmptyTiles / 2) numEnemies = numEmptyTiles / 2;
+    this.addEnemies(numEnemies, Math.random);
   }
 
   private addSpawners(numSpawners: number, rand: () => number) {
     let tiles = this.getEmptyTiles();
     if (tiles === null) {
-      console.log(`No tiles left to spawn spawners`);
+      //console.log(`No tiles left to spawn spawners`);
       return;
     }
     for (let i = 0; i < numSpawners; i++) {
@@ -813,7 +824,7 @@ export class Room {
   private addOccultists(numOccultists: number, rand: () => number) {
     let tiles = this.getEmptyTiles();
     if (tiles === null) {
-      console.log(`No tiles left to spawn spawners`);
+      //console.log(`No tiles left to spawn spawners`);
       return;
     }
     for (let i = 0; i < numOccultists; i++) {
@@ -836,7 +847,7 @@ export class Room {
 
     const tiles = this.getEmptyTiles();
     if (!tiles || tiles.length === 0) {
-      console.log(`No tiles left to spawn enemies.`);
+      // console.log(`No tiles left to spawn enemies.`);
       return;
     }
 
@@ -847,13 +858,13 @@ export class Room {
   addNewSpawner = (enemyType: EnemyType): void => {
     const EnemyClass = EnemyTypeMap[enemyType];
     if (!EnemyClass) {
-      console.error(`Enemy type "${enemyType}" is not recognized.`);
+      //console.error(`Enemy type "${enemyType}" is not recognized.`);
       return;
     }
 
     const tiles = this.getEmptyTiles();
     if (!tiles || tiles.length === 0) {
-      console.log(`No tiles left to spawn enemies.`);
+      // console.log(`No tiles left to spawn enemies.`);
       return;
     }
 
@@ -878,7 +889,10 @@ export class Room {
       const env = this.level.environment.type; //bootleg variable to start to vary the environments
       switch (
         Game.randTable(
-          [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 5, 5, 5],
+          [
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 5, 5, 5,
+            6, 6, 6, 6, 6, 6, 6,
+          ],
           rand,
         )
       ) {
@@ -892,13 +906,21 @@ export class Room {
           Barrel.add(this, this.game, x, y);
           break;
         case 3:
+          if (env === EnvType.CAVE) break;
           TombStone.add(this, this.game, x, y, 1);
           break;
         case 4:
+          if (env === EnvType.CAVE) break;
+
           TombStone.add(this, this.game, x, y, 0);
           break;
         case 5:
+          if (env === EnvType.CAVE) break;
+
           Pumpkin.add(this, this.game, x, y);
+          break;
+        case 6:
+          Block.add(this, this.game, x, y);
           break;
       }
     }
@@ -1022,7 +1044,7 @@ export class Room {
   };
 
   populateEmpty = (rand: () => number) => {
-    this.addRandomTorches("medium");
+    this.addTorchesByArea();
   };
 
   populateDungeon = (rand: () => number) => {
@@ -1031,8 +1053,7 @@ export class Room {
 
     if (factor < 30) this.addWallBlocks(rand);
     if (factor % 4 === 0) this.addChasms(rand);
-    this.addRandomTorches("medium");
-
+    this.addTorchesByArea();
     if (factor > 15)
       this.addSpikeTraps(Game.randTable([0, 0, 0, 1, 1, 2, 3], rand), rand);
     let numEmptyTiles = this.getEmptyTiles().length;
@@ -1042,26 +1063,15 @@ export class Room {
     this.addPlants(numPlants, rand);
     //this.addDecorations(Game.randTable([0, 0, 0, 1, 1, 2, 3], rand), rand);
     this.addObstacles(numObstacles, rand);
-    let numEnemies = Math.ceil(
-      (numEmptyTiles - numTotalObstacles) *
-        Math.min(this.depth * 0.1 + 0.75, 0.35), //this.depth * 0.01 is starting value
-    );
-    this.addEnemies(numEnemies, rand);
 
     if (factor <= 6) this.addVendingMachine(rand);
+    this.addRandomEnemies();
 
-    const obstacles = this.checkDoorObstructions();
-    if (obstacles.length > 0) {
-      for (let obstacle of obstacles) {
-        console.log(`Removing obstacle at (${obstacle.x},${obstacle.y})`);
-        this.entities = this.entities.filter((e) => e !== obstacle);
-        obstacle = null;
-      }
-    }
+    this.removeDoorObstructions();
   };
 
   populateBoss = (rand: () => number) => {
-    this.addRandomTorches("medium");
+    this.addTorchesByArea();
 
     this.addSpikeTraps(Game.randTable([0, 0, 0, 1, 1, 2, 5], rand), rand);
     let numEmptyTiles = this.getEmptyTiles().length;
@@ -1070,16 +1080,13 @@ export class Room {
     let numObstacles = numTotalObstacles - numPlants;
     this.addPlants(numPlants, rand);
     this.addObstacles(numObstacles, rand);
-    let numEnemies = Math.ceil(
-      (numEmptyTiles - numTotalObstacles) *
-        Math.min(this.depth * 0.05 + 0.2, 0.5),
-    );
-    this.addEnemies(numEnemies, rand);
+
+    this.addRandomEnemies();
   };
 
   populateBigDungeon = (rand: () => number) => {
     if (Game.rand(1, 4, rand) === 1) this.addChasms(rand);
-    this.addRandomTorches("medium");
+    this.addTorchesByArea();
 
     if (Game.rand(1, 4, rand) === 1)
       this.addPlants(
@@ -1088,20 +1095,14 @@ export class Room {
       );
     if (Game.rand(1, 3, rand) === 1)
       this.addSpikeTraps(Game.randTable([3, 5, 7, 8], rand), rand);
-    let numEmptyTiles = this.getEmptyTiles().length;
-    let numEnemies = Math.ceil(
-      numEmptyTiles *
-        (this.depth * 0.5 + 0.5) *
-        Game.randTable([0.05, 0.05, 0.06, 0.07, 0.1], rand),
-    );
-    this.addEnemies(numEnemies, rand);
-    if (numEnemies > 0)
-      this.addObstacles(numEnemies / Game.rand(1, 2, rand), rand);
-    else this.addObstacles(Game.randTable([0, 0, 1, 1, 2, 3, 5], rand), rand);
+    this.addRandomEnemies();
+
+    this.addObstacles(Game.randTable([0, 0, 1, 1, 2, 3, 5], rand), rand);
+    this.removeDoorObstructions();
   };
 
   populateSpawner = (rand: () => number) => {
-    this.addRandomTorches("medium");
+    this.addTorchesByArea();
 
     Spawner.add(
       this,
@@ -1109,6 +1110,7 @@ export class Room {
       Math.floor(this.roomX + this.width / 2),
       Math.floor(this.roomY + this.height / 2),
     );
+    this.removeDoorObstructions();
   };
 
   populateKeyRoom = (rand: () => number) => {
@@ -1207,6 +1209,7 @@ export class Room {
       Game.randTable([0, 0, 0, 0, 0, 1, 1, 2, 2, 3, 4], rand),
       rand,
     );
+    this.removeDoorObstructions();
   };
 
   populateSpikeCorridor = (rand: () => number) => {
@@ -1215,7 +1218,7 @@ export class Room {
         this.roomArray[x][y] = new SpikeTrap(this, x, y, Game.rand(0, 3, rand));
       }
     }
-
+    this.removeDoorObstructions();
     this.addRandomTorches("medium");
   };
 
@@ -1238,10 +1241,12 @@ export class Room {
       numEmptyTiles * Game.randTable([0.25, 0.3, 0.35], rand),
     );
     this.addEnemies(numEnemies, rand);
-    this.addResources(
-      (numEmptyTiles - numEnemies) * Game.randTable([0.1, 0.2, 0.3], rand),
-      rand,
-    );
+    if (this.level.environment.type === EnvType.CAVE)
+      this.addResources(
+        (numEmptyTiles - numEnemies) * Game.randTable([0.1, 0.2, 0.3], rand),
+        rand,
+      );
+    this.removeDoorObstructions();
   };
 
   populateUpLadder = (rand: () => number) => {
@@ -1305,6 +1310,8 @@ export class Room {
     let upLadder = new UpLadder(this, this.game, x, y);
     upLadder.isRope = true;
     this.roomArray[x][y] = upLadder;
+
+    this.removeDoorObstructions();
   };
 
   populateShop = (rand: () => number) => {
@@ -1316,13 +1323,7 @@ export class Room {
     VendingMachine.add(this, this.game, x - 2, y + 2, new Armor(this, 0, 0));
     VendingMachine.add(this, this.game, x + 2, y + 2, new Spear(this, 0, 0));
 
-    const obstacles = this.checkDoorObstructions();
-    if (obstacles.length > 0) {
-    }
-    for (let obstacle of obstacles) {
-      this.entities = this.entities.filter((e) => e !== obstacle);
-      obstacle = null;
-    }
+    this.removeDoorObstructions();
   };
 
   // Many populate methods start with adding torches using the same pattern
@@ -1332,12 +1333,36 @@ export class Room {
     const torchPatterns = {
       none: [0, 0, 0],
       low: [0, 0, 0, 1, 1],
-      medium: [0, 0, 0, 1, 1, 2, 2, 3, 4],
-      high: [1, 1, 2, 2, 3, 4, 4],
+      medium: [0, 0, 0, 1, 1, 2, 2, 3],
+      high: [1, 1, 2, 2, 3, 3, 4],
     };
     const randTorches = Game.randTable(torchPatterns[intensity], Random.rand);
     this.addTorches(randTorches, Random.rand);
   }
+
+  private addTorchesByArea = () => {
+    let numTorches = Math.max(
+      1,
+      Math.floor(Math.sqrt(this.roomArea) / 3) -
+        Math.floor(Math.sqrt(this.depth)),
+    );
+    if (this.depth === 0) {
+      if (Math.random() < 0.25) {
+        numTorches = 0;
+      }
+    } else {
+      // Exponential falloff starting at depth 1, approaching 90% chance
+      const falloffRate = 0.4; // Controls how quickly it approaches 90%
+      const maxChance = 0.9;
+      const chance =
+        maxChance * (1 - Math.exp(-falloffRate * (this.depth - 1)));
+      if (Math.random() < chance) {
+        numTorches = 0;
+      }
+    }
+    console.log("numTorches:" + numTorches, "roomArea" + this.roomArea);
+    this.addTorches(numTorches, Random.rand);
+  };
 
   // Used in populateDungeon, populateCave, etc. NOT IN USE
   private populateWithEntities(config: {
@@ -1538,7 +1563,7 @@ export class Room {
   };
 
   enterLevelThroughDoor = (player: Player, door: Door, side?: number) => {
-    console.log(door.linkedDoor.x, door.linkedDoor.y, door.x, door.y);
+    // console.log(door.linkedDoor.x, door.linkedDoor.y, door.x, door.y);
     if (door.doorDir === door.linkedDoor.doorDir) {
       door.opened = true;
       player.moveSnap(door.x, door.y + 1);
@@ -3030,7 +3055,7 @@ export class Room {
 
   // checks for obstructions between doors and finds paths avoiding obstacles.
 
-  checkDoorObstructions = () => {
+  removeDoorObstructions = () => {
     let obstacles = [];
     for (const door of this.doors) {
       for (const otherDoor of this.doors) {
@@ -3041,7 +3066,13 @@ export class Room {
         obstacles.push(...pathObstacles);
       }
     }
-    return obstacles;
+    if (obstacles.length > 0) {
+      for (let obstacle of obstacles) {
+        // console.log(`Removing obstacle at (${obstacle.x},${obstacle.y})`);
+        this.entities = this.entities.filter((e) => e !== obstacle);
+        obstacle = null;
+      }
+    }
   };
 
   // avoid blocking doorways with unbreakable entities
@@ -3217,7 +3248,7 @@ export class Room {
       }
 
       if (!direction) {
-        console.log("Invalid door position.");
+        // console.log("Invalid door position.");
         return null;
       }
 
@@ -3254,9 +3285,6 @@ export class Room {
         }
       }
 
-      console.log(
-        `Cannot place door at (${x}, ${y}) without overlapping existing doors.`,
-      );
       return null;
     }
 
@@ -3269,7 +3297,6 @@ export class Room {
    * @returns An array of wall tiles without doors or adjacent doors.
    */
   getEmptyWall(): Wall[] {
-    console.log("getEmptyWall: Starting to find empty walls.");
     const emptyWalls: Wall[] = [];
 
     for (let x = this.roomX + 1; x < this.roomX + this.width - 1; x++) {
@@ -3293,22 +3320,11 @@ export class Room {
 
             if (!hasAdjacentDoor) {
               emptyWalls.push(tile);
-              console.log(`getEmptyWall: Added empty wall at (${x}, ${y}).`);
-            } else {
-              console.log(
-                `getEmptyWall: Skipped wall at (${x}, ${y}) due to adjacent door.`,
-              );
             }
-          } else {
-            console.log(
-              `getEmptyWall: Skipped tile at (${x}, ${y}) because it's a Door.`,
-            );
           }
         }
       }
     }
-
-    console.log(`getEmptyWall: Found ${emptyWalls.length} empty walls.`);
     return emptyWalls;
   }
 
@@ -3322,27 +3338,17 @@ export class Room {
    * @returns An object containing the x and y coordinates of the removed wall.
    */
   removeEmptyWall(wall: Wall): { x: number; y: number } | null {
-    console.log("removeEmptyWall: Attempting to remove a wall.");
-
-    if (!(wall instanceof Wall)) {
-      console.error("removeEmptyWall: Provided tile is not a Wall.");
-      return null;
-    }
+    if (!(wall instanceof Wall)) return null;
 
     const { x, y } = wall;
-    console.log(`removeEmptyWall: Removing wall at (${x}, ${y}).`);
 
     // Replace the wall with a Floor tile to maintain room integrity
     this.roomArray[x][y] = new Floor(this, x, y);
-    console.log(`removeEmptyWall: Replaced wall with Floor at (${x}, ${y}).`);
 
     // Remove from innerWalls or outerWalls if applicable
     const initialInnerWallsCount = this.innerWalls.length;
     this.innerWalls = this.innerWalls.filter((w) => w !== wall);
     const finalInnerWallsCount = this.innerWalls.length;
-    console.log(
-      `removeEmptyWall: Updated innerWalls count from ${initialInnerWallsCount} to ${finalInnerWallsCount}.`,
-    );
 
     return { x, y };
   }
@@ -3351,49 +3357,20 @@ export class Room {
    * Places a VendingMachine in an empty wall.
    */
   placeVendingMachineInWall(): void {
-    console.log(
-      "placeVendingMachineInWall: Attempting to place a VendingMachine.",
-    );
-
     const emptyWalls = this.getEmptyWall();
-
-    if (emptyWalls.length === 0) {
-      console.log(
-        "placeVendingMachineInWall: No available empty walls to place a VendingMachine.",
-      );
-      return;
-    }
+    if (emptyWalls.length === 0) return;
 
     // Select a random empty wall
     const selectedWall = Game.randTable(emptyWalls, Random.rand);
-    console.log(
-      `placeVendingMachineInWall: Selected wall at (${selectedWall.x}, ${selectedWall.y}).`,
-    );
-
-    if (!selectedWall) {
-      console.log("placeVendingMachineInWall: Failed to select an empty wall.");
-      return;
-    }
+    if (!selectedWall) return;
 
     // Remove the selected wall
     const removedWallInfo = this.removeEmptyWall(selectedWall);
-
-    if (!removedWallInfo) {
-      console.log(
-        "placeVendingMachineInWall: Failed to remove the selected wall.",
-      );
-      return;
-    }
+    if (!removedWallInfo) return;
 
     const { x, y } = removedWallInfo;
-    console.log(
-      `placeVendingMachineInWall: Placing VendingMachine at (${x}, ${y}).`,
-    );
 
     // Create and add the VendingMachine
     this.addVendingMachine(Random.rand, x, y);
-    console.log(
-      `placeVendingMachineInWall: VendingMachine placed at (${x}, ${y}).`,
-    );
   }
 }

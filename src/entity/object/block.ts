@@ -6,6 +6,7 @@ import { LevelConstants } from "../../levelConstants";
 import { GenericParticle } from "../../particle/genericParticle";
 import { EntityType } from "../entity";
 import { ImageParticle } from "../../particle/imageParticle";
+import { Sound } from "../../sound";
 
 export class Block extends Entity {
   constructor(room: Room, game: Game, x: number, y: number) {
@@ -15,8 +16,11 @@ export class Block extends Entity {
     this.tileX = 10;
     this.tileY = 2;
     this.hasShadow = false;
-    this.chainPushable = false;
+    this.chainPushable = true;
+    this.pushable = true;
     this.name = "block";
+    this.imageParticleX = 0;
+    this.imageParticleY = 25;
   }
 
   get type() {
@@ -24,10 +28,18 @@ export class Block extends Entity {
   }
 
   kill = () => {
+    Sound.breakRock();
     this.dead = true;
 
-    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 29);
+    ImageParticle.spawnCluster(
+      this.room,
+      this.x + 0.5,
+      this.y + 0.5,
+      this.imageParticleX,
+      this.imageParticleY,
+    );
   };
+
   killNoBones = () => {
     this.kill();
   };

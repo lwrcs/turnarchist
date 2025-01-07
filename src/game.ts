@@ -257,8 +257,6 @@ export class Game {
         if (resourcesLoaded < NUM_RESOURCES) {
           window.setTimeout(checkResourcesLoaded, 500);
         } else {
-          console.log("loaded all images");
-
           // proceed with constructor
 
           Game.scale = GameConstants.SCALE;
@@ -382,7 +380,7 @@ export class Game {
   };
 
   keyDownListener = (key: string) => {
-    Game.inputReceived = false;
+    Game.inputReceived = true;
     if (!this.started) {
       this.startedFadeOut = true;
       return;
@@ -694,12 +692,10 @@ export class Game {
   private setupEventListeners(): void {
     //console.log("Setting up event listeners");
     globalEventBus.on("ChatMessage", this.commandHandler.bind(this));
-    console.log("Event listeners set up");
   }
   onResize = () => {
     // Determine device pixel ratio
     const dpr = window.devicePixelRatio || 1;
-    console.log("dpr:", dpr);
     // Define scale adjustment based on device pixel ratio
     let scaleOffset = 0;
     if (dpr > 1.5) {
@@ -761,10 +757,6 @@ export class Game {
     LevelConstants.SCREEN_H = Math.floor(
       window.innerHeight / Game.scale / GameConstants.TILESIZE,
     );
-    console.log(
-      "levelConstants.SCREEN_W:" + LevelConstants.SCREEN_W,
-      "levelConstants.SCREEN_H" + LevelConstants.SCREEN_H,
-    );
 
     // Calculate canvas width and height in pixels, ensuring integer values
     GameConstants.WIDTH = LevelConstants.SCREEN_W * GameConstants.TILESIZE;
@@ -792,10 +784,6 @@ export class Game {
     );
 
     // Optional: Log the new scale and canvas size for debugging
-    console.log(`Scale set to: ${Game.scale}`);
-    console.log(
-      `Canvas size: ${GameConstants.WIDTH}px x ${GameConstants.HEIGHT}px`,
-    );
   };
 
   shakeScreen = (shakeX: number, shakeY: number, clamp: boolean = true) => {

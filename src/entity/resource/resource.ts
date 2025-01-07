@@ -11,6 +11,7 @@ import { Player } from "../../player";
 import { Pickaxe } from "../../weapon/pickaxe";
 import { Spellbook } from "../../weapon/spellbook";
 import { EntityType } from "../entity";
+import { Sound } from "../../sound";
 
 export class Resource extends Entity {
   constructor(room: Room, game: Game, x: number, y: number) {
@@ -35,17 +36,22 @@ export class Resource extends Entity {
     ) {
       this.healthBar.hurt();
       this.health -= damage;
-      if (this.health <= 0) this.kill();
-      else {
-        this.game.pushMessage("Your weapon fails to damage the rock.");
-        this.hurtCallback();
-      }
-    } else return;
+      Sound.mine();
+    } else {
+      this.game.pushMessage("Your weapon fails to damage the rock.");
+      this.hurtCallback();
+    }
+    if (this.health <= 0) {
+      this.kill();
+    }
   };
 
   kill = () => {
+    Sound.breakRock();
     this.dead = true;
+    this.dropLoot();
   };
+
   killNoBones = () => {
     this.kill();
   };
