@@ -9262,7 +9262,7 @@ var Game = /** @class */ (function () {
                 gameConstants_1.GameConstants.isMobile = true;
                 // Use smaller scale for mobile devices based on screen size
                 // Adjust max scale with scaleOffset
-                var integerScale = gameConstants_1.GameConstants.SCALE + scaleOffset;
+                var integerScale = gameConstants_1.GameConstants.MAX_SCALE - 3 + scaleOffset;
                 Game.scale = Math.min(maxWidthScale, maxHeightScale, integerScale); // Cap at 3 + offset for mobile
             }
             else {
@@ -9298,17 +9298,11 @@ var Game = /** @class */ (function () {
             // Set CSS styles for scaling, applying negated DPR factor
             Game.ctx.canvas.setAttribute("style", "width: ".concat(gameConstants_1.GameConstants.WIDTH * Game.scale, "px; height: ").concat(gameConstants_1.GameConstants.HEIGHT * Game.scale, "px;\n      display: block;\n      margin: 0 auto;\n      image-rendering: optimizeSpeed; /* Older versions of FF */\n      image-rendering: -moz-crisp-edges; /* FF 6.0+ */\n      image-rendering: -webkit-optimize-contrast; /* Safari */\n      image-rendering: -o-crisp-edges; /* OS X & Windows Opera (12.02+) */\n      image-rendering: pixelated; /* Future-browsers */\n      -ms-interpolation-mode: nearest-neighbor; /* IE */\n      "));
             // Optional: Log the new scale and canvas size for debugging
-            // After adjusting the scale and canvas size, recalculate chat wrapping
-            _this.recalculateChatWrapping();
         };
         this.shakeScreen = function (shakeX, shakeY, clamp) {
-            if (clamp === void 0) { clamp = true; }
+            if (clamp === void 0) { clamp = false; }
             var finalX = clamp ? Math.max(-3, Math.min(3, shakeX)) : shakeX;
             var finalY = clamp ? Math.max(-3, Math.min(3, shakeY)) : shakeY;
-            //this.screenShakeX = 0;
-            //this.screenShakeY = 0;
-            //this.shakeAmountX = 0;
-            //this.shakeAmountY = 0;
             _this.screenShakeActive = true;
             _this.screenShakeX += finalX;
             _this.screenShakeY += finalY;
@@ -9572,60 +9566,9 @@ var Game = /** @class */ (function () {
                 _this.players[_this.localPlayerID].drawGUI(delta);
                 //for (const i in this.players) this.players[i].updateDrawXY(delta);
             }
-            // draw chat
             var CHAT_X = 10;
-            var CHAT_BOTTOM_Y = gameConstants_1.GameConstants.HEIGHT - Game.letter_height - 28;
-            if (gameConstants_1.GameConstants.WIDTH < 155)
-                CHAT_BOTTOM_Y -= 10;
+            var CHAT_BOTTOM_Y = gameConstants_1.GameConstants.HEIGHT - Game.letter_height - 32;
             var CHAT_OPACITY = 0.5;
-            var MAX_CHAT_WIDTH = gameConstants_1.GameConstants.WIDTH - 20; // 10px padding on each side
-            // Initialize cumulative Y position starting from the bottom
-            var cumulativeY = CHAT_BOTTOM_Y;
-            var _loop_1 = function (i) {
-                var chatMessage = _this.chat[i];
-                var wrappedLines = _this.chatTextBox.wrappedSentMessages[i] || [
-                    chatMessage.message,
-                ];
-                // Determine text color based on message type
-                Game.ctx.fillStyle = chatMessage.message.startsWith("/")
-                    ? gameConstants_1.GameConstants.GREEN
-                    : "white";
-                wrappedLines.forEach(function (line) {
-                    // Move up by the height of one line plus padding
-                    cumulativeY -= Game.letter_height + 2;
-                    // Calculate opacity based on message age
-                    var age = Date.now() - chatMessage.timestamp;
-                    if (_this.chatOpen) {
-                        Game.ctx.globalAlpha = 1;
-                    }
-                    else {
-                        if (age <= gameConstants_1.GameConstants.CHAT_APPEAR_TIME) {
-                            if (gameConstants_1.GameConstants.ALPHA_ENABLED)
-                                Game.ctx.globalAlpha = CHAT_OPACITY;
-                        }
-                        else if (age <=
-                            gameConstants_1.GameConstants.CHAT_APPEAR_TIME + gameConstants_1.GameConstants.CHAT_FADE_TIME) {
-                            if (gameConstants_1.GameConstants.ALPHA_ENABLED)
-                                Game.ctx.globalAlpha =
-                                    CHAT_OPACITY *
-                                        (1 -
-                                            (age - gameConstants_1.GameConstants.CHAT_APPEAR_TIME) /
-                                                gameConstants_1.GameConstants.CHAT_FADE_TIME);
-                        }
-                        else {
-                            Game.ctx.globalAlpha = 0;
-                        }
-                    }
-                    // Render the text line at the calculated position
-                    Game.fillText(line, CHAT_X, cumulativeY);
-                    // Reset global alpha for the next line
-                    Game.ctx.globalAlpha = 1;
-                });
-            };
-            for (var i = 0; i < _this.chat.length; i++) {
-                _loop_1(i);
-            }
-            // Handle chat input
             if (_this.chatOpen) {
                 Game.ctx.fillStyle = "black";
                 if (gameConstants_1.GameConstants.ALPHA_ENABLED)
@@ -9636,6 +9579,37 @@ var Game = /** @class */ (function () {
                 Game.fillText(_this.chatTextBox.text, CHAT_X, CHAT_BOTTOM_Y);
                 var cursorX = Game.measureText(_this.chatTextBox.text.substring(0, _this.chatTextBox.cursor)).width;
                 Game.ctx.fillRect(CHAT_X + cursorX, CHAT_BOTTOM_Y, 1, Game.letter_height);
+            }
+            for (var i = 0; i < _this.chat.length; i++) {
+                Game.ctx.fillStyle = "white";
+                if (_this.chat[i][0] === "/")
+                    Game.ctx.fillStyle = gameConstants_1.GameConstants.GREEN;
+                var y = CHAT_BOTTOM_Y - (_this.chat.length - 1 - i) * (Game.letter_height + 1);
+                if (_this.chatOpen)
+                    y -= Game.letter_height + 1;
+                var age = Date.now() - _this.chat[i].timestamp;
+                if (_this.chatOpen) {
+                    Game.ctx.globalAlpha = 1;
+                }
+                else {
+                    if (age <= gameConstants_1.GameConstants.CHAT_APPEAR_TIME) {
+                        if (gameConstants_1.GameConstants.ALPHA_ENABLED)
+                            Game.ctx.globalAlpha = CHAT_OPACITY;
+                    }
+                    else if (age <=
+                        gameConstants_1.GameConstants.CHAT_APPEAR_TIME + gameConstants_1.GameConstants.CHAT_FADE_TIME) {
+                        if (gameConstants_1.GameConstants.ALPHA_ENABLED)
+                            Game.ctx.globalAlpha =
+                                CHAT_OPACITY *
+                                    (1 -
+                                        (age - gameConstants_1.GameConstants.CHAT_APPEAR_TIME) /
+                                            gameConstants_1.GameConstants.CHAT_FADE_TIME);
+                    }
+                    else {
+                        Game.ctx.globalAlpha = 0;
+                    }
+                }
+                Game.fillText(_this.chat[i].message, CHAT_X, y);
             }
             // game version
             if (gameConstants_1.GameConstants.ALPHA_ENABLED)
@@ -9665,8 +9639,8 @@ var Game = /** @class */ (function () {
             _this.screenShakeX = Math.sin(_this.shakeFrame * Math.PI) * _this.shakeAmountX;
             _this.screenShakeY = Math.sin(_this.shakeFrame * Math.PI) * _this.shakeAmountY;
             _this.shakeFrame += 0.3 * delta;
-            if (Math.abs(_this.shakeAmountX) < 0.001 &&
-                Math.abs(_this.shakeAmountY) < 0.001) {
+            if (Math.abs(_this.shakeAmountX) < 0.5 &&
+                Math.abs(_this.shakeAmountY) < 0.5) {
                 _this.resetScreenShake();
             }
         };
@@ -9858,26 +9832,10 @@ var Game = /** @class */ (function () {
         // Add focus/blur event listeners
         window.addEventListener("blur", this.handleWindowBlur);
         window.addEventListener("focus", this.handleWindowFocus);
-        // Listen for the RecalculateChatWrapping event to update wrapped messages
-        eventBus_1.globalEventBus.on("RecalculateChatWrapping", function (maxWidth) {
-            _this.chatTextBox.wrapAllMessages(maxWidth);
-        });
-        // Listen for new chat messages to wrap them immediately
-        eventBus_1.globalEventBus.on("ChatMessageSent", function (message) {
-            // Wrap the new message
-            var maxWidth = gameConstants_1.GameConstants.WIDTH - 20; // 10px padding on each side
-            _this.chatTextBox.wrapAllMessages(maxWidth);
-        });
     }
     Game.prototype.setupEventListeners = function () {
-        var _this = this;
         //console.log("Setting up event listeners");
-        eventBus_1.globalEventBus.on("ChatMessage", this.commandHandler.bind(this));
-        eventBus_1.globalEventBus.on("ChatMessageSent", function (message) {
-            // Wrap the new message
-            var maxWidth = gameConstants_1.GameConstants.WIDTH - 20; // 10px padding on each side
-            _this.chatTextBox.wrapAllMessages(maxWidth);
-        });
+        eventBus_1.globalEventBus.on("ChatCommand", this.commandHandler.bind(this));
     };
     Game.prototype.destroy = function () {
         window.removeEventListener("blur", this.handleWindowBlur);
@@ -9885,41 +9843,6 @@ var Game = /** @class */ (function () {
         if (this.focusTimeout) {
             clearTimeout(this.focusTimeout);
         }
-    };
-    /**
-     * Splits a given text into multiple lines based on the maximum width.
-     * @param text The text to wrap.
-     * @param maxWidth The maximum width allowed for each line.
-     * @returns An array of strings, each representing a line.
-     */
-    Game.prototype.wrapText = function (text, maxWidth) {
-        var words = text.split(" ");
-        var lines = [];
-        var currentLine = "";
-        for (var _i = 0, words_1 = words; _i < words_1.length; _i++) {
-            var word = words_1[_i];
-            var testLine = currentLine ? "".concat(currentLine, " ").concat(word) : word;
-            var testWidth = Game.measureText(testLine).width;
-            if (testWidth > maxWidth && currentLine) {
-                lines.push(currentLine);
-                currentLine = word;
-            }
-            else {
-                currentLine = testLine;
-            }
-        }
-        if (currentLine) {
-            lines.push(currentLine);
-        }
-        return lines;
-    };
-    /**
-     * Re-wraps all chat messages based on the current window width.
-     */
-    Game.prototype.recalculateChatWrapping = function () {
-        var padding = 20; // Total horizontal padding (10px on each side)
-        var maxWidth = gameConstants_1.GameConstants.WIDTH - padding;
-        eventBus_1.globalEventBus.emit("RecalculateChatWrapping", maxWidth);
     };
     Game.inputReceived = false;
     Game.letters = "abcdefghijklmnopqrstuvwxyz1234567890,.!?:'()[]%-/";
@@ -17648,9 +17571,6 @@ var Player = /** @class */ (function (_super) {
             if (_this.inventory.isOpen) {
                 _this.inventory.close();
             }
-            else {
-                _this.menu.open = !_this.menu.open;
-            }
         };
         _this.commaListener = function () {
             _this.inventory.mostRecentInput = "keyboard";
@@ -18539,7 +18459,7 @@ var Player = /** @class */ (function (_super) {
             var range = gameConstants_1.GameConstants.TILESIZE;
             _this.hitX = Math.min(Math.max(0.5 * (playerX - otherX), -range), range);
             _this.hitY = Math.min(Math.max(0.5 * (playerY - otherY), -range), range);
-            _this.game.shakeScreen(-_this.hitX * 3 * shakeStrength, -_this.hitY * 3 * shakeStrength);
+            _this.game.shakeScreen(-_this.hitX * 1 * shakeStrength, -_this.hitY * 1 * shakeStrength);
         };
         _this.jump = function (delta) {
             var j = Math.max(Math.abs(_this.drawX), Math.abs(_this.drawY));
@@ -22922,7 +22842,6 @@ exports.statsTracker = new StatsTracker();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.TextBox = void 0;
 var eventBus_1 = __webpack_require__(/*! ./eventBus */ "./src/eventBus.ts");
-var game_1 = __webpack_require__(/*! ./game */ "./src/game.ts");
 var TextBox = /** @class */ (function () {
     function TextBox(element) {
         var _this = this;
@@ -23029,7 +22948,6 @@ var TextBox = /** @class */ (function () {
         this.escapeCallback = function () { };
         this.element = element;
         this.sentMessages = [];
-        this.wrappedSentMessages = [];
         this.element.addEventListener("touchstart", this.handleTouchStart);
     }
     TextBox.prototype.setEnterCallback = function (callback) {
@@ -23066,8 +22984,8 @@ var TextBox = /** @class */ (function () {
             if (this.sentMessages.length > this.MAX_HISTORY) {
                 this.sentMessages.shift(); // Remove the oldest message
             }
-            // Notify Game to wrap the new message
             eventBus_1.globalEventBus.emit("ChatMessageSent", message);
+            console.log(this.sentMessages);
             this.enterCallback();
             if (message.startsWith("/")) {
                 message = message.substring(1);
@@ -23077,40 +22995,6 @@ var TextBox = /** @class */ (function () {
             // Reset the navigation index
             this.currentMessageIndex = -1;
         }
-    };
-    TextBox.prototype.wrapAllMessages = function (maxWidth) {
-        var _this = this;
-        this.wrappedSentMessages = this.sentMessages.map(function (msg) {
-            return _this.wrapText(msg, maxWidth);
-        });
-        this.updateElement();
-    };
-    /**
-     * Splits a given text into multiple lines based on the maximum width.
-     * @param text The text to wrap.
-     * @param maxWidth The maximum width allowed for each line.
-     * @returns An array of strings, each representing a line.
-     */
-    TextBox.prototype.wrapText = function (text, maxWidth) {
-        var words = text.split(" ");
-        var lines = [];
-        var currentLine = "";
-        for (var _i = 0, words_1 = words; _i < words_1.length; _i++) {
-            var word = words_1[_i];
-            var testLine = currentLine ? "".concat(currentLine, " ").concat(word) : word;
-            var testWidth = game_1.Game.measureText(testLine).width;
-            if (testWidth > maxWidth && currentLine) {
-                lines.push(currentLine);
-                currentLine = word;
-            }
-            else {
-                currentLine = testLine;
-            }
-        }
-        if (currentLine) {
-            lines.push(currentLine);
-        }
-        return lines;
     };
     TextBox.prototype.updateElement = function () {
         // Update the HTML element with the current text

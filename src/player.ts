@@ -354,8 +354,6 @@ export class Player extends Drawable {
   escapeListener = () => {
     if (this.inventory.isOpen) {
       this.inventory.close();
-    } else {
-      this.menu.open = !this.menu.open;
     }
   };
   commaListener = () => {
@@ -1430,8 +1428,8 @@ export class Player extends Drawable {
     this.hitY = Math.min(Math.max(0.5 * (playerY - otherY), -range), range);
 
     this.game.shakeScreen(
-      -this.hitX * 3 * shakeStrength,
-      -this.hitY * 3 * shakeStrength,
+      -this.hitX * 1 * shakeStrength,
+      -this.hitY * 1 * shakeStrength,
     );
   };
 
