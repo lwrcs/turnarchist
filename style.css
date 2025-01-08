@@ -1,6 +1,7 @@
 canvas {
-  width: 544px;
-  height: 544px;
+  width: 100%;
+  max-width: 544px;
+  height: auto;
 
   display: block;
   margin: 0 auto;
@@ -19,11 +20,13 @@ body {
   overscroll-behavior-y: contain;
   touch-action: none;
   filter: none;
+  overflow: hidden;
 }
 
 html {
   overscroll-behavior-y: contain;
   touch-action: none;
+  overflow: hidden;
 }
 
 @font-face {
