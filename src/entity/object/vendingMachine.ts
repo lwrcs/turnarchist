@@ -228,6 +228,10 @@ export class VendingMachine extends Entity {
   };
 
   drawTopLayer = (delta: number) => {
+    if (this.open && this.playerOpened.inventory.isOpen) {
+      this.close();
+      return;
+    }
     this.drawableY = this.y;
 
     if (

@@ -78,6 +78,8 @@ export class OccultistEnemy extends Enemy {
         return;
       }
 
+      this.ticks++;
+
       if (this.ticks % 2 === 0) {
         if (enemiesToShield.length > 0) {
           enemiesToShield.forEach((enemy) => {

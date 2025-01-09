@@ -1,7 +1,6 @@
 canvas {
-  width: 100%;
-  max-width: 544px;
-  height: auto;
+  width: 544px;
+  height: 544px;
 
   display: block;
   margin: 0 auto;
@@ -14,6 +13,7 @@ canvas {
 
   -ms-interpolation-mode: nearest-neighbor; /* IE                            */
 }
+
 body {
   background-color: #080808;
   margin: 0;

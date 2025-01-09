@@ -151,7 +151,7 @@ export abstract class Enemy extends Entity {
         active: true,
         hitCount: 0,
         startTick: this.ticks,
-        effectTick: this.ticks % 2,
+        effectTick: this.ticks % 1,
       };
     }
   };
@@ -161,12 +161,13 @@ export abstract class Enemy extends Entity {
       if (
         this.ticks % 3 === this.status.poison.effectTick &&
         this.ticks !== this.status.poison.startTick &&
-        this.health > 1
+        this.health >= 1
       ) {
-        this.hurt(this.targetPlayer, 0.5, "poison");
+        this.hurt(this.targetPlayer, 1, "poison");
         this.shadeColor = "#00FF00";
-        this.status.poison.hitCount++;
+        //this.status.poison.hitCount++;
 
+        /*
         if (this.status.poison.hitCount >= 2) {
           this.status.poison = {
             active: false,
@@ -175,6 +176,7 @@ export abstract class Enemy extends Entity {
             effectTick: 0,
           };
         }
+        */
       }
     }
   };
@@ -182,19 +184,15 @@ export abstract class Enemy extends Entity {
   tickBleed = () => {
     if (this.status.bleed.active && this.targetPlayer) {
       if (
-        this.ticks % 2 === this.status.bleed.effectTick &&
+        this.ticks % 1 === this.status.bleed.effectTick &&
         this.ticks !== this.status.bleed.startTick
       ) {
-        this.targetPlayer.inventory.weapon.damage = Math.max(
-          0.5,
-          this.targetPlayer.inventory.weapon.damage - 0.5,
-        );
         this.hurt(this.targetPlayer, 0.5, "blood");
-        this.targetPlayer.heal(0.5);
+        //this.targetPlayer.heal(0.5);
         this.shadeColor = "#FF0000";
         this.status.bleed.hitCount++;
 
-        if (this.status.bleed.hitCount >= 1) {
+        if (this.status.bleed.hitCount >= 4) {
           this.status.bleed = {
             active: false,
             hitCount: 0,
@@ -207,6 +205,7 @@ export abstract class Enemy extends Entity {
   };
 
   tick = () => {
+    console.log(this.name, this.ticks);
     this.tickPoison();
     this.tickBleed();
     this.behavior();

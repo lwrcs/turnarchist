@@ -50,15 +50,17 @@ export class DamageNumber extends Particle {
       Game.ctx.restore();
       return;
     }
-    if (this.frame > 30) this.alpha *= 0.75;
+    if (this.frame > 15) this.alpha *= 0.95;
+
     this.y -= 0.03 * delta;
     this.frame += delta;
     let width = Game.measureText(this.damage.toString()).width;
-    Game.ctx.globalAlpha = this.alpha;
     if (this.alpha <= 0.002) {
       this.alpha = 0;
       this.dead = true;
     }
+    Game.ctx.globalAlpha = this.alpha;
+
     Game.fillTextOutline(
       this.damage.toString(),
       (this.x + 0.4 + this.xoffset) * GameConstants.TILESIZE - width / 2,

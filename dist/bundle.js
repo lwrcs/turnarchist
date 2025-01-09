@@ -3365,7 +3365,7 @@ var Enemy = /** @class */ (function (_super) {
                     active: true,
                     hitCount: 0,
                     startTick: _this.ticks,
-                    effectTick: _this.ticks % 2,
+                    effectTick: _this.ticks % 1,
                 };
             }
         };
@@ -3373,31 +3373,32 @@ var Enemy = /** @class */ (function (_super) {
             if (_this.status.poison.active && _this.targetPlayer) {
                 if (_this.ticks % 3 === _this.status.poison.effectTick &&
                     _this.ticks !== _this.status.poison.startTick &&
-                    _this.health > 1) {
-                    _this.hurt(_this.targetPlayer, 0.5, "poison");
+                    _this.health >= 1) {
+                    _this.hurt(_this.targetPlayer, 1, "poison");
                     _this.shadeColor = "#00FF00";
-                    _this.status.poison.hitCount++;
-                    if (_this.status.poison.hitCount >= 2) {
-                        _this.status.poison = {
-                            active: false,
-                            hitCount: 0,
-                            startTick: 0,
-                            effectTick: 0,
-                        };
+                    //this.status.poison.hitCount++;
+                    /*
+                    if (this.status.poison.hitCount >= 2) {
+                      this.status.poison = {
+                        active: false,
+                        hitCount: 0,
+                        startTick: 0,
+                        effectTick: 0,
+                      };
                     }
+                    */
                 }
             }
         };
         _this.tickBleed = function () {
             if (_this.status.bleed.active && _this.targetPlayer) {
-                if (_this.ticks % 2 === _this.status.bleed.effectTick &&
+                if (_this.ticks % 1 === _this.status.bleed.effectTick &&
                     _this.ticks !== _this.status.bleed.startTick) {
-                    _this.targetPlayer.inventory.weapon.damage = Math.max(0.5, _this.targetPlayer.inventory.weapon.damage - 0.5);
                     _this.hurt(_this.targetPlayer, 0.5, "blood");
-                    _this.targetPlayer.heal(0.5);
+                    //this.targetPlayer.heal(0.5);
                     _this.shadeColor = "#FF0000";
                     _this.status.bleed.hitCount++;
-                    if (_this.status.bleed.hitCount >= 1) {
+                    if (_this.status.bleed.hitCount >= 4) {
                         _this.status.bleed = {
                             active: false,
                             hitCount: 0,
@@ -3409,6 +3410,7 @@ var Enemy = /** @class */ (function (_super) {
             }
         };
         _this.tick = function () {
+            console.log(_this.name, _this.ticks);
             _this.tickPoison();
             _this.tickBleed();
             _this.behavior();
@@ -4719,6 +4721,7 @@ var OccultistEnemy = /** @class */ (function (_super) {
                     _this.skipNextTurns--;
                     return;
                 }
+                _this.ticks++;
                 if (_this.ticks % 2 === 0) {
                     if (enemiesToShield.length > 0) {
                         enemiesToShield.forEach(function (enemy) {
@@ -5735,8 +5738,7 @@ var Spawner = /** @class */ (function (_super) {
                         }
                     }
                 }
-                if (shouldSpawn)
-                    _this.ticks++;
+                _this.ticks++;
             }
         };
         _this.uniqueKillBehavior = function () {
@@ -8321,6 +8323,10 @@ var VendingMachine = /** @class */ (function (_super) {
             game_1.Game.drawObj(tileX, 0, 1, 2, _this.x, _this.y - 1, 1, 2, _this.room.shadeColor, _this.shadeAmount());
         };
         _this.drawTopLayer = function (delta) {
+            if (_this.open && _this.playerOpened.inventory.isOpen) {
+                _this.close();
+                return;
+            }
             _this.drawableY = _this.y;
             if (_this.open &&
                 _this.playerOpened === _this.game.players[_this.game.localPlayerID]) {
@@ -16938,16 +16944,16 @@ var DamageNumber = /** @class */ (function (_super) {
                 game_1.Game.ctx.restore();
                 return;
             }
-            if (_this.frame > 30)
-                _this.alpha *= 0.75;
+            if (_this.frame > 15)
+                _this.alpha *= 0.95;
             _this.y -= 0.03 * delta;
             _this.frame += delta;
             var width = game_1.Game.measureText(_this.damage.toString()).width;
-            game_1.Game.ctx.globalAlpha = _this.alpha;
             if (_this.alpha <= 0.002) {
                 _this.alpha = 0;
                 _this.dead = true;
             }
+            game_1.Game.ctx.globalAlpha = _this.alpha;
             game_1.Game.fillTextOutline(_this.damage.toString(), (_this.x + 0.4 + _this.xoffset) * gameConstants_1.GameConstants.TILESIZE - width / 2, (_this.y - 0.6) * gameConstants_1.GameConstants.TILESIZE, _this.outlineColor, _this.color);
             game_1.Game.ctx.globalAlpha = 1;
             game_1.Game.ctx.restore();
@@ -25424,14 +25430,19 @@ var Weapon = /** @class */ (function (_super) {
             _this.status = { poison: false, blood: false };
             _this.statusApplicationCount = 0;
         };
-        _this.statusEffect = function (enemy) {
-            if (_this.wielder.applyStatus(enemy, _this.status)) {
-                _this.statusApplicationCount++;
-                var message = _this.status.poison
-                    ? "Your weapon poisons the ".concat(enemy.name)
-                    : "Your cursed weapon draws blood from the ".concat(enemy.name);
-                _this.game.pushMessage(message);
-                //if (this.statusApplicationCount >= 10) this.clearStatus();
+        _this.statusEffect = function (entity) {
+            if (!entity.isEnemy)
+                return;
+            var enemy = entity;
+            if (!enemy.status.poison.active || !enemy.status.bleed.active) {
+                if (_this.wielder.applyStatus(enemy, _this.status)) {
+                    _this.statusApplicationCount++;
+                    var message = _this.status.poison
+                        ? "Your weapon poisons the ".concat(enemy.name)
+                        : "Your cursed weapon draws blood from the ".concat(enemy.name);
+                    _this.game.pushMessage(message);
+                    //if (this.statusApplicationCount >= 10) this.clearStatus();
+                }
             }
         };
         _this.disassemble = function () {

@@ -6,6 +6,7 @@ import { SlashParticle } from "../particle/slashParticle";
 import type { Entity } from "../entity/entity";
 import { GameConstants } from "../gameConstants";
 import { WeaponFragments } from "../item/weaponFragments";
+import { Enemy } from "../entity/enemy/enemy";
 
 interface WeaponStatus {
   poison: boolean;
@@ -68,15 +69,20 @@ export abstract class Weapon extends Equippable {
     this.statusApplicationCount = 0;
   };
 
-  statusEffect = (enemy: Entity) => {
-    if (this.wielder.applyStatus(enemy, this.status)) {
-      this.statusApplicationCount++;
-      const message = this.status.poison
-        ? `Your weapon poisons the ${enemy.name}`
-        : `Your cursed weapon draws blood from the ${enemy.name}`;
-      this.game.pushMessage(message);
+  statusEffect = (entity: Entity) => {
+    if (!entity.isEnemy) return;
+    const enemy = entity as Enemy;
+    if (!enemy.status.poison.active || !enemy.status.bleed.active) {
+      if (this.wielder.applyStatus(enemy, this.status)) {
+        this.statusApplicationCount++;
+        const message = this.status.poison
+          ? `Your weapon poisons the ${enemy.name}`
+          : `Your cursed weapon draws blood from the ${enemy.name}`;
 
-      //if (this.statusApplicationCount >= 10) this.clearStatus();
+        this.game.pushMessage(message);
+
+        //if (this.statusApplicationCount >= 10) this.clearStatus();
+      }
     }
   };
 

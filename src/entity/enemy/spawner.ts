@@ -320,7 +320,7 @@ export class Spawner extends Enemy {
           }
         }
       }
-      if (shouldSpawn) this.ticks++;
+      this.ticks++;
     }
   };
 
