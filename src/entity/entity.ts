@@ -131,6 +131,7 @@ export class Entity extends Drawable {
   bloomSize: number = 1;
   bloomOffsetY: number = 0;
   target: { x: number; y: number };
+  moving: boolean;
 
   private _imageParticleTiles: { x: number; y: number };
   hitSound: () => void;
@@ -197,6 +198,7 @@ export class Entity extends Drawable {
     this.dead = false;
     this.hasBloom = false;
     this.bloomColor = "#FFFFFF";
+    this.moving = false;
   }
 
   static add<

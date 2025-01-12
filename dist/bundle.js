@@ -7070,6 +7070,7 @@ var Entity = /** @class */ (function (_super) {
         _this.dead = false;
         _this.hasBloom = false;
         _this.bloomColor = "#FFFFFF";
+        _this.moving = false;
         return _this;
     }
     Entity.add = function (room, game, x, y) {
@@ -10033,23 +10034,22 @@ var GameConstants = /** @class */ (function () {
     GameConstants.isMobile = false;
     GameConstants.FPS = 120;
     GameConstants.ALPHA_ENABLED = true;
-    GameConstants.SHADE_LEVELS = 30;
+    GameConstants.SHADE_LEVELS = 50;
     GameConstants.TILESIZE = 16;
     GameConstants.SCALE = 6;
     GameConstants.MAX_SCALE = 10;
     GameConstants.MIN_SCALE = 1;
     GameConstants.SWIPE_THRESH = Math.pow(25, 2); // (size of swipe threshold circle)^2
     GameConstants.HOLD_THRESH = 250; // milliseconds
-    GameConstants.KEY_REPEAT_TIME = 250; // millseconds
-    GameConstants.MOVEMENT_COOLDOWN = 125; // milliseconds
-    GameConstants.CHAT_APPEAR_TIME = 5000;
-    GameConstants.CHAT_FADE_TIME = 1000;
+    GameConstants.KEY_REPEAT_TIME = 500; // millseconds
+    GameConstants.MOVEMENT_COOLDOWN = 150; // milliseconds
+    GameConstants.CHAT_APPEAR_TIME = 2500;
+    GameConstants.CHAT_FADE_TIME = 500;
     GameConstants.ANIMATION_SPEED = 1;
     GameConstants.DEFAULTWIDTH = GameConstants.TILESIZE;
     GameConstants.DEFAULTHEIGHT = GameConstants.TILESIZE;
     GameConstants.WIDTH = levelConstants_1.LevelConstants.SCREEN_W * GameConstants.TILESIZE;
     GameConstants.HEIGHT = levelConstants_1.LevelConstants.SCREEN_H * GameConstants.TILESIZE;
-    GameConstants.scrolling = true;
     GameConstants.drawOtherRooms = true;
     GameConstants.SCRIPT_FONT_SIZE = 16;
     GameConstants.FONT_SIZE = 7;
@@ -16893,6 +16893,86 @@ exports.MouseCursor = MouseCursor;
 
 /***/ }),
 
+/***/ "./src/particle/attackAnimation.ts":
+/*!*****************************************!*\
+  !*** ./src/particle/attackAnimation.ts ***!
+  \*****************************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AttackAnimation = void 0;
+var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+var particle_1 = __webpack_require__(/*! ./particle */ "./src/particle/particle.ts");
+var AttackAnimation = /** @class */ (function (_super) {
+    __extends(AttackAnimation, _super);
+    function AttackAnimation(x, y, type, direction) {
+        var _this = _super.call(this) || this;
+        _this.drawTopLayer = function (delta) {
+            if (_this.dead)
+                return;
+            game_1.Game.drawFX(_this.tileX + 2 * Math.round(_this.frame / 2), _this.tileY + _this.tileYOffset, 2, 2, _this.x - 0.5 + _this.xOffset, _this.y - 0.5 + _this.yOffset, 2, 2);
+            _this.frame += 1.5 * delta;
+            if (_this.frame > _this.frames)
+                _this.dead = true;
+        };
+        _this.x = x;
+        _this.y = y - 0.25;
+        _this.dead = false;
+        _this.frame = 0;
+        _this.type = type;
+        _this.xOffset = 0;
+        _this.yOffset = 0;
+        switch (type) {
+            case "dagger":
+                _this.frames = 10;
+                break;
+            case "warhammer":
+                _this.frames = 11;
+                _this.tileX = 12;
+                _this.tileY = 32;
+                _this.yOffset = -0.75;
+                _this.xOffset = -0.1;
+                break;
+        }
+        switch (direction) {
+            case game_1.Direction.DOWN:
+                _this.tileYOffset = 0;
+                break;
+            case game_1.Direction.UP:
+                _this.tileYOffset = 2;
+                break;
+            case game_1.Direction.LEFT:
+                _this.tileYOffset = 2;
+                break;
+            case game_1.Direction.RIGHT:
+                _this.tileYOffset = 3;
+                break;
+        }
+        return _this;
+    }
+    return AttackAnimation;
+}(particle_1.Particle));
+exports.AttackAnimation = AttackAnimation;
+
+
+/***/ }),
+
 /***/ "./src/particle/damageNumber.ts":
 /*!**************************************!*\
   !*** ./src/particle/damageNumber.ts ***!
@@ -17455,7 +17535,6 @@ var inventory_1 = __webpack_require__(/*! ./inventory */ "./src/inventory.ts");
 var sound_1 = __webpack_require__(/*! ./sound */ "./src/sound.ts");
 var levelConstants_1 = __webpack_require__(/*! ./levelConstants */ "./src/levelConstants.ts");
 var map_1 = __webpack_require__(/*! ./map */ "./src/map.ts");
-var slashParticle_1 = __webpack_require__(/*! ./particle/slashParticle */ "./src/particle/slashParticle.ts");
 var healthbar_1 = __webpack_require__(/*! ./healthbar */ "./src/healthbar.ts");
 var drawable_1 = __webpack_require__(/*! ./drawable */ "./src/drawable.ts");
 var hitWarning_1 = __webpack_require__(/*! ./hitWarning */ "./src/hitWarning.ts");
@@ -17467,6 +17546,7 @@ var spellbook_1 = __webpack_require__(/*! ./weapon/spellbook */ "./src/weapon/sp
 var utils_1 = __webpack_require__(/*! ./utils */ "./src/utils.ts");
 var menu_1 = __webpack_require__(/*! ./menu */ "./src/menu.ts");
 var bestiary_1 = __webpack_require__(/*! ./bestiary */ "./src/bestiary.ts");
+var attackAnimation_1 = __webpack_require__(/*! ./particle/attackAnimation */ "./src/particle/attackAnimation.ts");
 var PlayerDirection;
 (function (PlayerDirection) {
     PlayerDirection[PlayerDirection["DOWN"] = 0] = "DOWN";
@@ -17892,7 +17972,7 @@ var Player = /** @class */ (function (_super) {
                                 if (_this.game.levels[_this.depth].rooms[_this.levelID] ===
                                     _this.game.room)
                                     sound_1.Sound.hit();
-                                _this.game.levels[_this.depth].rooms[_this.levelID].particles.push(new slashParticle_1.SlashParticle(e.x, e.y));
+                                _this.game.levels[_this.depth].rooms[_this.levelID].particles.push(new attackAnimation_1.AttackAnimation(e.x, e.y, "warhammer", _this.direction));
                                 _this.shakeScreen(_this.x, _this.y, e.x, e.y);
                                 //this.hitShake(this.x, this.y, e.x, e.y);
                                 _this.game.levels[_this.depth].rooms[_this.levelID].tick(_this);
@@ -19351,6 +19431,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ReverbEngine = void 0;
 var game_1 = __webpack_require__(/*! ./game */ "./src/game.ts");
+var sound_1 = __webpack_require__(/*! ./sound */ "./src/sound.ts");
 var ReverbEngine = /** @class */ (function () {
     function ReverbEngine() {
     }
@@ -19402,6 +19483,8 @@ var ReverbEngine = /** @class */ (function () {
                         _a.sent();
                         ReverbEngine.setDefaultReverb();
                         ReverbEngine.initialized = true;
+                        if (sound_1.Sound.initialized)
+                            sound_1.Sound.audioMuted = false;
                         _a.label = 6;
                     case 6: return [2 /*return*/];
                 }
@@ -22392,7 +22475,7 @@ var Sound = /** @class */ (function () {
     var _a;
     _a = Sound;
     Sound.initialized = false;
-    Sound.audioMuted = false;
+    Sound.audioMuted = true;
     Sound.loopHandlers = new Map();
     Sound.loadSounds = function () { return __awaiter(void 0, void 0, void 0, function () {
         var _i, _b, f, _c, _d, f, _e, _f, f, _g, _h, f, _j, _k, f, _l, _m, f, _o, _p, f, _q, _r, f, _s, _t, f, _u, _v, f, _w, _x, f, _y, _z, f, _0, _1, f;
@@ -22400,6 +22483,8 @@ var Sound = /** @class */ (function () {
             if (Sound.initialized)
                 return [2 /*return*/];
             Sound.initialized = true;
+            if (reverb_1.ReverbEngine.initialized)
+                Sound.audioMuted = false;
             Sound.playerStoneFootsteps = new Array();
             [1, 2, 3].forEach(function (i) {
                 return Sound.playerStoneFootsteps.push(new Audio("res/SFX/footsteps/stone/footstep" + i + ".mp3"));
@@ -25394,9 +25479,9 @@ exports.Weapon = void 0;
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var equippable_1 = __webpack_require__(/*! ../item/equippable */ "./src/item/equippable.ts");
 var sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
-var slashParticle_1 = __webpack_require__(/*! ../particle/slashParticle */ "./src/particle/slashParticle.ts");
 var gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
 var weaponFragments_1 = __webpack_require__(/*! ../item/weaponFragments */ "./src/item/weaponFragments.ts");
+var attackAnimation_1 = __webpack_require__(/*! ../particle/attackAnimation */ "./src/particle/attackAnimation.ts");
 var Weapon = /** @class */ (function (_super) {
     __extends(Weapon, _super);
     function Weapon(level, x, y, status) {
@@ -25479,7 +25564,7 @@ var Weapon = /** @class */ (function (_super) {
                 _this.hitSound();
                 _this.wielder.hitX = 0.5 * (_this.wielder.x - newX);
                 _this.wielder.hitY = 0.5 * (_this.wielder.y - newY);
-                _this.game.rooms[_this.wielder.levelID].particles.push(new slashParticle_1.SlashParticle(newX, newY));
+                _this.game.rooms[_this.wielder.levelID].particles.push(new attackAnimation_1.AttackAnimation(newX, newY, "warhammer", _this.wielder.direction));
                 _this.game.rooms[_this.wielder.levelID].tick(_this.wielder);
                 _this.shakeScreen();
                 _this.degrade();

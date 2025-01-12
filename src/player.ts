@@ -33,6 +33,7 @@ import { globalEventBus } from "./eventBus";
 import { Utils } from "./utils";
 import { Menu } from "./menu";
 import { Bestiary } from "./bestiary";
+import { AttackAnimation } from "./particle/attackAnimation";
 
 export enum PlayerDirection {
   DOWN,
@@ -711,7 +712,7 @@ export class Player extends Drawable {
               )
                 Sound.hit();
               this.game.levels[this.depth].rooms[this.levelID].particles.push(
-                new SlashParticle(e.x, e.y),
+                new AttackAnimation(e.x, e.y, "warhammer", this.direction),
               );
               this.shakeScreen(this.x, this.y, e.x, e.y);
               //this.hitShake(this.x, this.y, e.x, e.y);
@@ -1568,6 +1569,7 @@ export class Player extends Drawable {
     //console.log("Queueing move to:", x, y);
     //console.log("Current queue length:", this.moveQueue.length);
     const move = { x, y, direction };
+
     this.moveQueue.push(move);
     this.startQueueProcessing();
     //console.log("Queue length after push:", this.moveQueue.length);

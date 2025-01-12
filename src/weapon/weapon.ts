@@ -7,6 +7,7 @@ import type { Entity } from "../entity/entity";
 import { GameConstants } from "../gameConstants";
 import { WeaponFragments } from "../item/weaponFragments";
 import { Enemy } from "../entity/enemy/enemy";
+import { AttackAnimation } from "../particle/attackAnimation";
 
 interface WeaponStatus {
   poison: boolean;
@@ -127,7 +128,7 @@ export abstract class Weapon extends Equippable {
       this.wielder.hitX = 0.5 * (this.wielder.x - newX);
       this.wielder.hitY = 0.5 * (this.wielder.y - newY);
       this.game.rooms[this.wielder.levelID].particles.push(
-        new SlashParticle(newX, newY),
+        new AttackAnimation(newX, newY, "warhammer", this.wielder.direction),
       );
       this.game.rooms[this.wielder.levelID].tick(this.wielder);
       this.shakeScreen();

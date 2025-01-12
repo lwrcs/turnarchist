@@ -29,7 +29,7 @@ export class GameConstants {
 
   static readonly FPS = 120;
   static readonly ALPHA_ENABLED = true;
-  static readonly SHADE_LEVELS = 30;
+  static readonly SHADE_LEVELS = 50;
 
   static readonly TILESIZE = 16;
   static SCALE = 6;
@@ -39,18 +39,17 @@ export class GameConstants {
   static readonly SWIPE_THRESH = 25 ** 2; // (size of swipe threshold circle)^2
   static readonly HOLD_THRESH = 250; // milliseconds
 
-  static readonly KEY_REPEAT_TIME = 250; // millseconds
-  static readonly MOVEMENT_COOLDOWN = 125; // milliseconds
+  static readonly KEY_REPEAT_TIME = 500; // millseconds
+  static readonly MOVEMENT_COOLDOWN = 150; // milliseconds
 
-  static readonly CHAT_APPEAR_TIME = 5000;
-  static readonly CHAT_FADE_TIME = 1000;
+  static readonly CHAT_APPEAR_TIME = 2500;
+  static readonly CHAT_FADE_TIME = 500;
   static ANIMATION_SPEED = 1;
 
   static readonly DEFAULTWIDTH = GameConstants.TILESIZE;
   static readonly DEFAULTHEIGHT = GameConstants.TILESIZE;
   static WIDTH = LevelConstants.SCREEN_W * GameConstants.TILESIZE;
   static HEIGHT = LevelConstants.SCREEN_H * GameConstants.TILESIZE;
-  static scrolling = true;
 
   static drawOtherRooms = true;
 

@@ -1,4 +1,5 @@
 import { Game } from "./game";
+import { Sound } from "./sound";
 
 export class ReverbEngine {
   private static audioContext: AudioContext;
@@ -48,6 +49,7 @@ export class ReverbEngine {
       await ReverbEngine.loadReverbBuffer(`res/SFX/impulses/small.mp3`);
       ReverbEngine.setDefaultReverb();
       ReverbEngine.initialized = true;
+      if (Sound.initialized) Sound.audioMuted = false;
     }
   }
 

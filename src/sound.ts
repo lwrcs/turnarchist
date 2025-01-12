@@ -26,7 +26,7 @@ export class Sound {
   static magicSound: HTMLAudioElement;
   static wooshSound: HTMLAudioElement;
   static initialized: boolean = false;
-  static audioMuted: boolean = false;
+  static audioMuted: boolean = true;
   static bombSounds: Array<HTMLAudioElement>;
   static fuseBurnSound: HTMLAudioElement;
   static fuseLoopSound: HTMLAudioElement;
@@ -35,6 +35,7 @@ export class Sound {
   static loadSounds = async () => {
     if (Sound.initialized) return;
     Sound.initialized = true;
+    if (ReverbEngine.initialized) Sound.audioMuted = false;
     Sound.playerStoneFootsteps = new Array<HTMLAudioElement>();
     [1, 2, 3].forEach((i) =>
       Sound.playerStoneFootsteps.push(
