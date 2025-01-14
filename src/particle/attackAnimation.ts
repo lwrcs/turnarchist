@@ -14,6 +14,7 @@ export class AttackAnimation extends Particle {
   frames: number;
   yOffset: number;
   xOffset: number;
+  animationSpeed: number;
 
   constructor(x: number, y: number, type: string, direction: Direction) {
     super();
@@ -24,16 +25,110 @@ export class AttackAnimation extends Particle {
     this.type = type;
     this.xOffset = 0;
     this.yOffset = 0;
+    this.tileX = 12;
+
+    this.animationSpeed = 1;
     switch (type) {
       case "dagger":
-        this.frames = 10;
+        this.frames = 8;
+        this.tileY = 24;
+        this.yOffset = 0;
+        this.xOffset = 0;
+
+        switch (direction) {
+          case Direction.DOWN:
+            this.yOffset -= 0.75;
+            break;
+          case Direction.UP:
+            this.yOffset += 0.5;
+            break;
+          case Direction.LEFT:
+            this.xOffset += 0.8;
+            this.yOffset += 0.25;
+            break;
+          case Direction.RIGHT:
+            this.xOffset -= 0.8;
+            this.yOffset -= 0.25;
+            break;
+        }
+
         break;
       case "warhammer":
-        this.frames = 11;
+        this.frames = 8;
         this.tileX = 12;
         this.tileY = 32;
         this.yOffset = -0.75;
-        this.xOffset = -0.1;
+        this.xOffset = -0;
+        this.frame = -5;
+        this.animationSpeed = 2;
+
+        switch (direction) {
+          case Direction.DOWN:
+            this.yOffset -= 0.25;
+            this.xOffset += 0.125;
+            break;
+          case Direction.UP:
+            this.yOffset += 1;
+            this.xOffset += 0.25;
+            break;
+          case Direction.LEFT:
+            this.xOffset += 0.75;
+            this.yOffset += 0.5;
+            break;
+          case Direction.RIGHT:
+            this.xOffset -= 0.75;
+            this.yOffset += 0.5;
+            break;
+        }
+        break;
+
+      case "dualdagger":
+        this.frames = 8;
+        this.tileY = 40;
+        this.yOffset = 0;
+        this.xOffset = 0;
+
+        switch (direction) {
+          case Direction.DOWN:
+            this.yOffset -= 1;
+            break;
+          case Direction.UP:
+            this.yOffset += 0.5;
+            break;
+          case Direction.LEFT:
+            this.xOffset += 0.8;
+            this.yOffset -= 0.25;
+            break;
+          case Direction.RIGHT:
+            this.xOffset -= 0.8;
+            this.yOffset -= 0.25;
+            break;
+        }
+        break;
+
+      case "dualdagger2":
+        this.frames = 8;
+        this.tileY = 48;
+        this.yOffset = 0;
+        this.xOffset = 0;
+        //this.animationSpeed = 1;
+
+        switch (direction) {
+          case Direction.DOWN:
+            this.yOffset -= 1;
+            break;
+          case Direction.UP:
+            this.yOffset += 0.5;
+            break;
+          case Direction.LEFT:
+            this.xOffset += 0.8;
+            this.yOffset -= 0.25;
+            break;
+          case Direction.RIGHT:
+            this.xOffset -= 0.8;
+            this.yOffset -= 0.25;
+            break;
+        }
         break;
     }
     switch (direction) {
@@ -44,29 +139,35 @@ export class AttackAnimation extends Particle {
         this.tileYOffset = 2;
         break;
       case Direction.LEFT:
-        this.tileYOffset = 2;
+        this.tileYOffset = 4;
         break;
       case Direction.RIGHT:
-        this.tileYOffset = 3;
+        this.tileYOffset = 6;
         break;
     }
   }
 
   drawTopLayer = (delta: number) => {
+    // if (this.frame <= this.frames / 2)
+    this.drawAnimation(delta);
+  };
+
+  drawAnimation = (delta: number) => {
     if (this.dead) return;
+    if (this.frame >= 0) {
+      Game.drawFX(
+        this.tileX + 2 * Math.round(Math.max(0, this.frame) / 2),
+        this.tileY + this.tileYOffset,
+        2,
+        2,
+        this.x - 0.5 + this.xOffset,
+        this.y - 0.5 + this.yOffset,
+        2,
+        2,
+      );
+    }
 
-    Game.drawFX(
-      this.tileX + 2 * Math.round(this.frame / 2),
-      this.tileY + this.tileYOffset,
-      2,
-      2,
-      this.x - 0.5 + this.xOffset,
-      this.y - 0.5 + this.yOffset,
-      2,
-      2,
-    );
-
-    this.frame += 1.5 * delta;
+    this.frame += this.animationSpeed * delta;
     if (this.frame > this.frames) this.dead = true;
   };
 }

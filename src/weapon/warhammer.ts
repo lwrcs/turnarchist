@@ -1,9 +1,11 @@
 import { Weapon } from "./weapon";
 import { Room } from "../room";
 import { Sound } from "../sound";
+import { Direction } from "../game";
 
 export class Warhammer extends Weapon {
   static itemName = "warhammer";
+  hitDelay: number;
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
 
@@ -13,6 +15,7 @@ export class Warhammer extends Weapon {
     this.name = "warhammer";
     this.durability = 25;
     this.durabilityMax = 25;
+    this.hitDelay = 225;
   }
 
   hitSound = () => {
@@ -20,19 +23,28 @@ export class Warhammer extends Weapon {
       this.wielder.game.rooms[this.wielder.levelID] === this.wielder.game.room
     )
       Sound.hit();
-    Sound.playGore();
+    Sound.playWarHammer();
   };
   shakeScreen = () => {
     this.wielder.slowMotionEnabled = true;
 
-    if (
-      this.wielder.game.rooms[this.wielder.levelID] === this.wielder.game.room
-    )
-      //this.game.shakeScreen(10 * this.wielder.hitX, 10 * this.wielder.hitY);
-      setTimeout(() => {
-        this.game.shakeScreen(0, -10, false);
-        this.wielder.hitY = -3;
-        this.wielder.slowMotionEnabled = false;
-      }, 150);
+    setTimeout(() => {
+      this.wielder.slowMotionEnabled = false;
+      this.hitSound();
+      switch (this.wielder.direction) {
+        case Direction.DOWN:
+          this.game.shakeScreen(0, -30, false);
+          break;
+        case Direction.UP:
+          this.game.shakeScreen(0, -30, false);
+          break;
+        case Direction.LEFT:
+          this.game.shakeScreen(-5, -30, false);
+          break;
+        case Direction.RIGHT:
+          this.game.shakeScreen(5, -30, false);
+          break;
+      }
+    }, this.hitDelay);
   };
 }

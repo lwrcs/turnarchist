@@ -2,6 +2,8 @@ import { Weapon } from "./weapon";
 import { Room } from "../room";
 import { Sound } from "../sound";
 import { SlashParticle } from "../particle/slashParticle";
+import { Direction } from "../game";
+import { AttackAnimation } from "../particle/attackAnimation";
 
 export class DualDagger extends Weapon {
   firstAttack: boolean;
@@ -39,9 +41,20 @@ export class DualDagger extends Weapon {
 
       this.wielder.hitX = 0.5 * (this.wielder.x - newX);
       this.wielder.hitY = 0.5 * (this.wielder.y - newY);
-      this.game.rooms[this.wielder.levelID].particles.push(
-        new SlashParticle(newX, newY),
-      );
+      if (this.firstAttack) {
+        this.game.rooms[this.wielder.levelID].particles.push(
+          new AttackAnimation(newX, newY, "dualdagger", this.wielder.direction),
+        );
+      } else {
+        this.game.rooms[this.wielder.levelID].particles.push(
+          new AttackAnimation(
+            newX,
+            newY,
+            "dualdagger2",
+            this.wielder.direction,
+          ),
+        );
+      }
       this.game.rooms[this.wielder.levelID].entities = this.game.rooms[
         this.wielder.levelID
       ].entities.filter((e) => !e.dead);

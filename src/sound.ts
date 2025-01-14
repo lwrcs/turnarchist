@@ -31,6 +31,7 @@ export class Sound {
   static fuseBurnSound: HTMLAudioElement;
   static fuseLoopSound: HTMLAudioElement;
   static fuseStartSound: HTMLAudioElement;
+  static warHammerSound: HTMLAudioElement;
   static loopHandlers: Map<HTMLAudioElement, EventListener> = new Map();
   static loadSounds = async () => {
     if (Sound.initialized) return;
@@ -166,6 +167,9 @@ export class Sound {
 
     Sound.fuseStartSound = new Audio("res/SFX/attacks/fuseStart.mp3");
     Sound.fuseStartSound.volume = 0.2;
+
+    Sound.warHammerSound = new Audio("res/SFX/attacks/warhammer.mp3");
+    Sound.warHammerSound.volume = 1;
   };
 
   private static playSoundSafely(audio: HTMLAudioElement) {
@@ -391,6 +395,12 @@ export class Sound {
     let f = Game.randTable(Sound.bombSounds, Math.random);
     this.playWithReverb(f);
     f.currentTime = 0;
+  };
+
+  static playWarHammer = () => {
+    if (Sound.audioMuted) return;
+    this.playWithReverb(Sound.warHammerSound);
+    Sound.warHammerSound.currentTime = 0;
   };
 
   static playMagic = () => {

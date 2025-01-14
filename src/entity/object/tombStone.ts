@@ -69,7 +69,7 @@ export class TombStone extends Entity {
     this.healthBar.hurt();
     ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 25);
 
-    Sound.delayPlay(Sound.hurt, 0);
+    //Sound.delayPlay(Sound.hurt, 0);
 
     this.health -= 1;
     if (this.health === 1) {

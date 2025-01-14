@@ -21,7 +21,9 @@ export abstract class Weapon extends Equippable {
   damage: number;
   status: WeaponStatus;
   static itemName = "weapon";
+  name: string;
   statusApplicationCount: number;
+  hitDelay: number;
   constructor(level: Room, x: number, y: number, status?: WeaponStatus) {
     super(level, x, y);
 
@@ -35,6 +37,7 @@ export abstract class Weapon extends Equippable {
     this.durabilityMax = 50;
     this.statusApplicationCount = 0;
     this.equipTick = true;
+    this.name = this.constructor.prototype.itemName;
   }
 
   break = () => {
@@ -124,17 +127,18 @@ export abstract class Weapon extends Equippable {
       }
     }
     if (flag) {
-      this.hitSound();
+      //this.hitSound();
       this.wielder.hitX = 0.5 * (this.wielder.x - newX);
       this.wielder.hitY = 0.5 * (this.wielder.y - newY);
       this.game.rooms[this.wielder.levelID].particles.push(
-        new AttackAnimation(newX, newY, "warhammer", this.wielder.direction),
+        new AttackAnimation(newX, newY, this.name, this.wielder.direction),
       );
       this.game.rooms[this.wielder.levelID].tick(this.wielder);
       this.shakeScreen();
       this.degrade();
       //console.log(this.durability);
     }
+
     return !flag;
   };
 

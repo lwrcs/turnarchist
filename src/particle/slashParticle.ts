@@ -6,13 +6,20 @@ export class SlashParticle extends Particle {
   x: number;
   y: number;
   frame: number;
+  type: string;
 
-  constructor(x: number, y: number) {
+  constructor(x: number, y: number, type: string) {
     super();
     this.x = x;
     this.y = y - 0.25;
     this.dead = false;
     this.frame = 0;
+    this.type = type;
+    switch (type) {
+      case "slash":
+        this.frame = 13;
+        break;
+    }
   }
 
   draw = (delta: number) => {

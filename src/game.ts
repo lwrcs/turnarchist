@@ -575,7 +575,7 @@ export class Game {
     ) {
       this.update();
     }
-
+    //delta = 0.1;
     // Render the frame with capped delta
     this.draw(delta * GameConstants.ANIMATION_SPEED * 1);
 
@@ -1343,11 +1343,11 @@ export class Game {
       return;
     }
 
-    this.shakeAmountX *= 0.9 ** delta;
-    this.shakeAmountY *= 0.9 ** delta;
+    this.shakeAmountX *= 0.8 ** delta;
+    this.shakeAmountY *= 0.8 ** delta;
     this.screenShakeX = Math.sin(this.shakeFrame * Math.PI) * this.shakeAmountX;
     this.screenShakeY = Math.sin(this.shakeFrame * Math.PI) * this.shakeAmountY;
-    this.shakeFrame += 0.3 * delta;
+    this.shakeFrame += 0.15 * delta;
 
     if (
       Math.abs(this.shakeAmountX) < 0.5 &&

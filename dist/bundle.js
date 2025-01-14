@@ -8080,7 +8080,7 @@ var TombStone = /** @class */ (function (_super) {
         _this.hurt = function (playerHitBy, damage) {
             _this.healthBar.hurt();
             imageParticle_1.ImageParticle.spawnCluster(_this.room, _this.x + 0.5, _this.y + 0.5, 0, 25);
-            sound_1.Sound.delayPlay(sound_1.Sound.hurt, 0);
+            //Sound.delayPlay(Sound.hurt, 0);
             _this.health -= 1;
             if (_this.health === 1) {
                 var positions = _this.room
@@ -9138,6 +9138,7 @@ var Game = /** @class */ (function () {
                 Math.floor(_this.previousFrameTimestamp / (1000 / 60))) {
                 _this.update();
             }
+            //delta = 0.1;
             // Render the frame with capped delta
             _this.draw(delta * gameConstants_1.GameConstants.ANIMATION_SPEED * 1);
             // Request the next frame
@@ -9641,11 +9642,11 @@ var Game = /** @class */ (function () {
                 _this.resetScreenShake();
                 return;
             }
-            _this.shakeAmountX *= Math.pow(0.9, delta);
-            _this.shakeAmountY *= Math.pow(0.9, delta);
+            _this.shakeAmountX *= Math.pow(0.8, delta);
+            _this.shakeAmountY *= Math.pow(0.8, delta);
             _this.screenShakeX = Math.sin(_this.shakeFrame * Math.PI) * _this.shakeAmountX;
             _this.screenShakeY = Math.sin(_this.shakeFrame * Math.PI) * _this.shakeAmountY;
-            _this.shakeFrame += 0.3 * delta;
+            _this.shakeFrame += 0.15 * delta;
             if (Math.abs(_this.shakeAmountX) < 0.5 &&
                 Math.abs(_this.shakeAmountY) < 0.5) {
                 _this.resetScreenShake();
@@ -10021,11 +10022,11 @@ var weaponFragments_1 = __webpack_require__(/*! ./item/weaponFragments */ "./src
 var weaponPoison_1 = __webpack_require__(/*! ./item/weaponPoison */ "./src/item/weaponPoison.ts");
 var levelConstants_1 = __webpack_require__(/*! ./levelConstants */ "./src/levelConstants.ts");
 var dagger_1 = __webpack_require__(/*! ./weapon/dagger */ "./src/weapon/dagger.ts");
+var dualdagger_1 = __webpack_require__(/*! ./weapon/dualdagger */ "./src/weapon/dualdagger.ts");
 var spear_1 = __webpack_require__(/*! ./weapon/spear */ "./src/weapon/spear.ts");
 var spellbook_1 = __webpack_require__(/*! ./weapon/spellbook */ "./src/weapon/spellbook.ts");
 var warhammer_1 = __webpack_require__(/*! ./weapon/warhammer */ "./src/weapon/warhammer.ts");
 var hammer_1 = __webpack_require__(/*! ./item/hammer */ "./src/item/hammer.ts");
-var bestiaryBook_1 = __webpack_require__(/*! ./item/bestiaryBook */ "./src/item/bestiaryBook.ts");
 var GameConstants = /** @class */ (function () {
     function GameConstants() {
     }
@@ -10146,7 +10147,7 @@ var GameConstants = /** @class */ (function () {
     GameConstants.STARTING_DEV_INVENTORY = [
         dagger_1.Dagger,
         warhammer_1.Warhammer,
-        bestiaryBook_1.BestiaryBook,
+        dualdagger_1.DualDagger,
         torch_1.Torch,
         godStone_1.GodStone,
         candle_1.Candle,
@@ -12921,57 +12922,6 @@ var Backpack = /** @class */ (function (_super) {
     return Backpack;
 }(usable_1.Usable));
 exports.Backpack = Backpack;
-
-
-/***/ }),
-
-/***/ "./src/item/bestiaryBook.ts":
-/*!**********************************!*\
-  !*** ./src/item/bestiaryBook.ts ***!
-  \**********************************/
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        if (typeof b !== "function" && b !== null)
-            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.BestiaryBook = void 0;
-var usable_1 = __webpack_require__(/*! ./usable */ "./src/item/usable.ts");
-var bestiary_1 = __webpack_require__(/*! ../bestiary */ "./src/bestiary.ts");
-var BestiaryBook = /** @class */ (function (_super) {
-    __extends(BestiaryBook, _super);
-    function BestiaryBook(level, x, y) {
-        var _this = _super.call(this, level, x, y) || this;
-        _this.onUse = function (player) {
-            if (player.bestiary === null) {
-                player.bestiary = new bestiary_1.Bestiary(player.game, player);
-            }
-            player.bestiary.toggleOpen();
-        };
-        _this.tileX = 8;
-        _this.tileY = 0;
-        _this.offsetY = -0.3;
-        _this.name = BestiaryBook.itemName;
-        _this.description = "opens the bestiary";
-        return _this;
-    }
-    BestiaryBook.itemName = "bestiary book";
-    return BestiaryBook;
-}(usable_1.Usable));
-exports.BestiaryBook = BestiaryBook;
 
 
 /***/ }),
@@ -16924,10 +16874,16 @@ var AttackAnimation = /** @class */ (function (_super) {
     function AttackAnimation(x, y, type, direction) {
         var _this = _super.call(this) || this;
         _this.drawTopLayer = function (delta) {
+            // if (this.frame <= this.frames / 2)
+            _this.drawAnimation(delta);
+        };
+        _this.drawAnimation = function (delta) {
             if (_this.dead)
                 return;
-            game_1.Game.drawFX(_this.tileX + 2 * Math.round(_this.frame / 2), _this.tileY + _this.tileYOffset, 2, 2, _this.x - 0.5 + _this.xOffset, _this.y - 0.5 + _this.yOffset, 2, 2);
-            _this.frame += 1.5 * delta;
+            if (_this.frame >= 0) {
+                game_1.Game.drawFX(_this.tileX + 2 * Math.round(Math.max(0, _this.frame) / 2), _this.tileY + _this.tileYOffset, 2, 2, _this.x - 0.5 + _this.xOffset, _this.y - 0.5 + _this.yOffset, 2, 2);
+            }
+            _this.frame += _this.animationSpeed * delta;
             if (_this.frame > _this.frames)
                 _this.dead = true;
         };
@@ -16938,16 +16894,102 @@ var AttackAnimation = /** @class */ (function (_super) {
         _this.type = type;
         _this.xOffset = 0;
         _this.yOffset = 0;
+        _this.tileX = 12;
+        _this.animationSpeed = 1;
         switch (type) {
             case "dagger":
-                _this.frames = 10;
+                _this.frames = 8;
+                _this.tileY = 24;
+                _this.yOffset = 0;
+                _this.xOffset = 0;
+                switch (direction) {
+                    case game_1.Direction.DOWN:
+                        _this.yOffset -= 0.75;
+                        break;
+                    case game_1.Direction.UP:
+                        _this.yOffset += 0.5;
+                        break;
+                    case game_1.Direction.LEFT:
+                        _this.xOffset += 0.8;
+                        _this.yOffset += 0.25;
+                        break;
+                    case game_1.Direction.RIGHT:
+                        _this.xOffset -= 0.8;
+                        _this.yOffset -= 0.25;
+                        break;
+                }
                 break;
             case "warhammer":
-                _this.frames = 11;
+                _this.frames = 8;
                 _this.tileX = 12;
                 _this.tileY = 32;
                 _this.yOffset = -0.75;
-                _this.xOffset = -0.1;
+                _this.xOffset = -0;
+                _this.frame = -5;
+                _this.animationSpeed = 2;
+                switch (direction) {
+                    case game_1.Direction.DOWN:
+                        _this.yOffset -= 0.25;
+                        _this.xOffset += 0.125;
+                        break;
+                    case game_1.Direction.UP:
+                        _this.yOffset += 1;
+                        _this.xOffset += 0.25;
+                        break;
+                    case game_1.Direction.LEFT:
+                        _this.xOffset += 0.75;
+                        _this.yOffset += 0.5;
+                        break;
+                    case game_1.Direction.RIGHT:
+                        _this.xOffset -= 0.75;
+                        _this.yOffset += 0.5;
+                        break;
+                }
+                break;
+            case "dualdagger":
+                _this.frames = 8;
+                _this.tileY = 40;
+                _this.yOffset = 0;
+                _this.xOffset = 0;
+                switch (direction) {
+                    case game_1.Direction.DOWN:
+                        _this.yOffset -= 1;
+                        break;
+                    case game_1.Direction.UP:
+                        _this.yOffset += 0.5;
+                        break;
+                    case game_1.Direction.LEFT:
+                        _this.xOffset += 0.8;
+                        _this.yOffset -= 0.25;
+                        break;
+                    case game_1.Direction.RIGHT:
+                        _this.xOffset -= 0.8;
+                        _this.yOffset -= 0.25;
+                        break;
+                }
+                break;
+            case "dualdagger2":
+                _this.frames = 8;
+                _this.tileY = 48;
+                _this.yOffset = 0;
+                _this.xOffset = 0;
+                //this.animationSpeed = 1;
+                switch (direction) {
+                    case game_1.Direction.DOWN:
+                        _this.yOffset -= 1;
+                        break;
+                    case game_1.Direction.UP:
+                        _this.yOffset += 0.5;
+                        break;
+                    case game_1.Direction.LEFT:
+                        _this.xOffset += 0.8;
+                        _this.yOffset -= 0.25;
+                        break;
+                    case game_1.Direction.RIGHT:
+                        _this.xOffset -= 0.8;
+                        _this.yOffset -= 0.25;
+                        break;
+                }
                 break;
         }
         switch (direction) {
@@ -16958,10 +17000,10 @@ var AttackAnimation = /** @class */ (function (_super) {
                 _this.tileYOffset = 2;
                 break;
             case game_1.Direction.LEFT:
-                _this.tileYOffset = 2;
+                _this.tileYOffset = 4;
                 break;
             case game_1.Direction.RIGHT:
-                _this.tileYOffset = 3;
+                _this.tileYOffset = 6;
                 break;
         }
         return _this;
@@ -17392,57 +17434,6 @@ var Particle = /** @class */ (function (_super) {
     return Particle;
 }(drawable_1.Drawable));
 exports.Particle = Particle;
-
-
-/***/ }),
-
-/***/ "./src/particle/slashParticle.ts":
-/*!***************************************!*\
-  !*** ./src/particle/slashParticle.ts ***!
-  \***************************************/
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        if (typeof b !== "function" && b !== null)
-            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.SlashParticle = void 0;
-var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-var particle_1 = __webpack_require__(/*! ./particle */ "./src/particle/particle.ts");
-var SlashParticle = /** @class */ (function (_super) {
-    __extends(SlashParticle, _super);
-    function SlashParticle(x, y) {
-        var _this = _super.call(this) || this;
-        _this.draw = function (delta) {
-            if (_this.dead)
-                return;
-            game_1.Game.drawFX(Math.round(_this.frame), 13, 1, 1, _this.x, _this.y, 1, 1);
-            _this.frame += 0.5 * delta;
-            if (_this.frame > 9)
-                _this.dead = true;
-        };
-        _this.x = x;
-        _this.y = y - 0.25;
-        _this.dead = false;
-        _this.frame = 0;
-        return _this;
-    }
-    return SlashParticle;
-}(particle_1.Particle));
-exports.SlashParticle = SlashParticle;
 
 
 /***/ }),
@@ -22617,6 +22608,8 @@ var Sound = /** @class */ (function () {
             Sound.fuseLoopSound.volume = 0.2;
             Sound.fuseStartSound = new Audio("res/SFX/attacks/fuseStart.mp3");
             Sound.fuseStartSound.volume = 0.2;
+            Sound.warHammerSound = new Audio("res/SFX/attacks/warhammer.mp3");
+            Sound.warHammerSound.volume = 1;
             return [2 /*return*/];
         });
     }); };
@@ -22822,6 +22815,12 @@ var Sound = /** @class */ (function () {
         var f = game_1.Game.randTable(Sound.bombSounds, Math.random);
         _a.playWithReverb(f);
         f.currentTime = 0;
+    };
+    Sound.playWarHammer = function () {
+        if (Sound.audioMuted)
+            return;
+        _a.playWithReverb(Sound.warHammerSound);
+        Sound.warHammerSound.currentTime = 0;
     };
     Sound.playMagic = function () {
         if (Sound.audioMuted)
@@ -24913,7 +24912,7 @@ var __extends = (this && this.__extends) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DualDagger = void 0;
 var weapon_1 = __webpack_require__(/*! ./weapon */ "./src/weapon/weapon.ts");
-var slashParticle_1 = __webpack_require__(/*! ../particle/slashParticle */ "./src/particle/slashParticle.ts");
+var attackAnimation_1 = __webpack_require__(/*! ../particle/attackAnimation */ "./src/particle/attackAnimation.ts");
 var DualDagger = /** @class */ (function (_super) {
     __extends(DualDagger, _super);
     function DualDagger(level, x, y) {
@@ -24935,7 +24934,12 @@ var DualDagger = /** @class */ (function (_super) {
                 _this.hitSound();
                 _this.wielder.hitX = 0.5 * (_this.wielder.x - newX);
                 _this.wielder.hitY = 0.5 * (_this.wielder.y - newY);
-                _this.game.rooms[_this.wielder.levelID].particles.push(new slashParticle_1.SlashParticle(newX, newY));
+                if (_this.firstAttack) {
+                    _this.game.rooms[_this.wielder.levelID].particles.push(new attackAnimation_1.AttackAnimation(newX, newY, "dualdagger", _this.wielder.direction));
+                }
+                else {
+                    _this.game.rooms[_this.wielder.levelID].particles.push(new attackAnimation_1.AttackAnimation(newX, newY, "dualdagger2", _this.wielder.direction));
+                }
                 _this.game.rooms[_this.wielder.levelID].entities = _this.game.rooms[_this.wielder.levelID].entities.filter(function (e) { return !e.dead; });
                 if (!_this.firstAttack) {
                     _this.game.rooms[_this.wielder.levelID].tick(_this.wielder);
@@ -25199,7 +25203,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Spear = void 0;
 var weapon_1 = __webpack_require__(/*! ./weapon */ "./src/weapon/weapon.ts");
 var sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
-var slashParticle_1 = __webpack_require__(/*! ../particle/slashParticle */ "./src/particle/slashParticle.ts");
+var attackAnimation_1 = __webpack_require__(/*! ../particle/attackAnimation */ "./src/particle/attackAnimation.ts");
 var Spear = /** @class */ (function (_super) {
     __extends(Spear, _super);
     function Spear(level, x, y) {
@@ -25237,8 +25241,8 @@ var Spear = /** @class */ (function (_super) {
                 _this.hitSound();
                 _this.wielder.hitX = 0.5 * (_this.wielder.x - newX);
                 _this.wielder.hitY = 0.5 * (_this.wielder.y - newY);
-                _this.game.rooms[_this.wielder.levelID].particles.push(new slashParticle_1.SlashParticle(newX, newY));
-                _this.game.rooms[_this.wielder.levelID].particles.push(new slashParticle_1.SlashParticle(newX2, newY2));
+                _this.game.rooms[_this.wielder.levelID].particles.push(new attackAnimation_1.AttackAnimation(newX, newY, "spear", _this.wielder.direction));
+                _this.game.rooms[_this.wielder.levelID].particles.push(new attackAnimation_1.AttackAnimation(newX2, newY2, "spear", _this.wielder.direction));
                 _this.game.rooms[_this.wielder.levelID].tick(_this.wielder);
                 if (_this.wielder === _this.game.players[_this.game.localPlayerID])
                     _this.game.shakeScreen(10 * _this.wielder.hitX, 10 * _this.wielder.hitY);
@@ -25250,7 +25254,7 @@ var Spear = /** @class */ (function (_super) {
                     sound_1.Sound.hit();
                 _this.wielder.hitX = 0.5 * (_this.wielder.x - newX);
                 _this.wielder.hitY = 0.5 * (_this.wielder.y - newY);
-                _this.game.rooms[_this.wielder.levelID].particles.push(new slashParticle_1.SlashParticle(newX, newY));
+                _this.game.rooms[_this.wielder.levelID].particles.push(new attackAnimation_1.AttackAnimation(newX, newY, "spear", _this.wielder.direction));
                 _this.game.rooms[_this.wielder.levelID].tick(_this.wielder);
                 if (_this.wielder === _this.game.players[_this.game.localPlayerID])
                     _this.game.shakeScreen(10 * _this.wielder.hitX, 10 * _this.wielder.hitY);
@@ -25417,6 +25421,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Warhammer = void 0;
 var weapon_1 = __webpack_require__(/*! ./weapon */ "./src/weapon/weapon.ts");
 var sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
+var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var Warhammer = /** @class */ (function (_super) {
     __extends(Warhammer, _super);
     function Warhammer(level, x, y) {
@@ -25424,17 +25429,28 @@ var Warhammer = /** @class */ (function (_super) {
         _this.hitSound = function () {
             if (_this.wielder.game.rooms[_this.wielder.levelID] === _this.wielder.game.room)
                 sound_1.Sound.hit();
-            sound_1.Sound.playGore();
+            sound_1.Sound.playWarHammer();
         };
         _this.shakeScreen = function () {
             _this.wielder.slowMotionEnabled = true;
-            if (_this.wielder.game.rooms[_this.wielder.levelID] === _this.wielder.game.room)
-                //this.game.shakeScreen(10 * this.wielder.hitX, 10 * this.wielder.hitY);
-                setTimeout(function () {
-                    _this.game.shakeScreen(0, -10, false);
-                    _this.wielder.hitY = -3;
-                    _this.wielder.slowMotionEnabled = false;
-                }, 150);
+            setTimeout(function () {
+                _this.wielder.slowMotionEnabled = false;
+                _this.hitSound();
+                switch (_this.wielder.direction) {
+                    case game_1.Direction.DOWN:
+                        _this.game.shakeScreen(0, -30, false);
+                        break;
+                    case game_1.Direction.UP:
+                        _this.game.shakeScreen(0, -30, false);
+                        break;
+                    case game_1.Direction.LEFT:
+                        _this.game.shakeScreen(-5, -30, false);
+                        break;
+                    case game_1.Direction.RIGHT:
+                        _this.game.shakeScreen(5, -30, false);
+                        break;
+                }
+            }, _this.hitDelay);
         };
         _this.tileX = 22;
         _this.tileY = 2;
@@ -25442,6 +25458,7 @@ var Warhammer = /** @class */ (function (_super) {
         _this.name = "warhammer";
         _this.durability = 25;
         _this.durabilityMax = 25;
+        _this.hitDelay = 225;
         return _this;
     }
     Warhammer.itemName = "warhammer";
@@ -25561,10 +25578,10 @@ var Weapon = /** @class */ (function (_super) {
                 }
             }
             if (flag) {
-                _this.hitSound();
+                //this.hitSound();
                 _this.wielder.hitX = 0.5 * (_this.wielder.x - newX);
                 _this.wielder.hitY = 0.5 * (_this.wielder.y - newY);
-                _this.game.rooms[_this.wielder.levelID].particles.push(new attackAnimation_1.AttackAnimation(newX, newY, "warhammer", _this.wielder.direction));
+                _this.game.rooms[_this.wielder.levelID].particles.push(new attackAnimation_1.AttackAnimation(newX, newY, _this.name, _this.wielder.direction));
                 _this.game.rooms[_this.wielder.levelID].tick(_this.wielder);
                 _this.shakeScreen();
                 _this.degrade();
@@ -25615,6 +25632,7 @@ var Weapon = /** @class */ (function (_super) {
         _this.durabilityMax = 50;
         _this.statusApplicationCount = 0;
         _this.equipTick = true;
+        _this.name = _this.constructor.prototype.itemName;
         return _this;
     }
     Weapon.itemName = "weapon";

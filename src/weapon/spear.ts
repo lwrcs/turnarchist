@@ -3,6 +3,7 @@ import { Room } from "../room";
 import { Sound } from "../sound";
 import { SlashParticle } from "../particle/slashParticle";
 import type { Enemy } from "../entity/enemy/enemy";
+import { AttackAnimation } from "../particle/attackAnimation";
 
 export class Spear extends Weapon {
   static itemName = "spear";
@@ -46,10 +47,10 @@ export class Spear extends Weapon {
       this.wielder.hitX = 0.5 * (this.wielder.x - newX);
       this.wielder.hitY = 0.5 * (this.wielder.y - newY);
       this.game.rooms[this.wielder.levelID].particles.push(
-        new SlashParticle(newX, newY),
+        new AttackAnimation(newX, newY, "spear", this.wielder.direction),
       );
       this.game.rooms[this.wielder.levelID].particles.push(
-        new SlashParticle(newX2, newY2),
+        new AttackAnimation(newX2, newY2, "spear", this.wielder.direction),
       );
       this.game.rooms[this.wielder.levelID].tick(this.wielder);
       if (this.wielder === this.game.players[this.game.localPlayerID])
@@ -65,7 +66,7 @@ export class Spear extends Weapon {
       this.wielder.hitX = 0.5 * (this.wielder.x - newX);
       this.wielder.hitY = 0.5 * (this.wielder.y - newY);
       this.game.rooms[this.wielder.levelID].particles.push(
-        new SlashParticle(newX, newY),
+        new AttackAnimation(newX, newY, "spear", this.wielder.direction),
       );
       this.game.rooms[this.wielder.levelID].tick(this.wielder);
       if (this.wielder === this.game.players[this.game.localPlayerID])
