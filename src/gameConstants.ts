@@ -23,7 +23,7 @@ import { BombItem } from "./item/bombItem";
 import { BestiaryBook } from "./item/bestiaryBook";
 
 export class GameConstants {
-  static readonly VERSION = "v1.0.4"; //"v0.6.3";
+  static readonly VERSION = "v1.0.5"; //"v0.6.3";
   static DEVELOPER_MODE = false;
   static isMobile = false;
 
