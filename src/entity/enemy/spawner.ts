@@ -20,6 +20,7 @@ import { QueenEnemy } from "./queenEnemy";
 import { ArmoredzombieEnemy } from "./armoredzombieEnemy";
 import { RookEnemy } from "./rookEnemy";
 import { RoomType } from "../../room";
+import { ArmoredSkullEnemy } from "./armoredSkullEnemy";
 
 export class Spawner extends Enemy {
   ticks: number;
@@ -36,7 +37,7 @@ export class Spawner extends Enemy {
     game: Game,
     x: number,
     y: number,
-    enemyTable: number[] = [0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14],
+    enemyTable: number[] = [0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14, 16],
   ) {
     super(room, game, x, y);
     this.ticks = 0;
@@ -98,6 +99,9 @@ export class Spawner extends Enemy {
           break;
         case 14:
           this.getDrop(["weapon"]);
+          break;
+        case 16:
+          this.getDrop(["weapon", "equipment"]);
           break;
       }
     } else {
@@ -297,6 +301,14 @@ export class Spawner extends Enemy {
               break;
             case 15:
               spawned = new FireWizardEnemy(
+                this.room,
+                this.game,
+                position.x,
+                position.y,
+              );
+              break;
+            case 16:
+              spawned = new ArmoredSkullEnemy(
                 this.room,
                 this.game,
                 position.x,

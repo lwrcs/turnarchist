@@ -22,6 +22,7 @@ export class Warhammer extends Weapon {
     Sound.hit();
     Sound.playWarHammer();
   };
+
   shakeScreen = () => {
     this.wielder.slowMotionEnabled = true;
 

@@ -5931,10 +5931,11 @@ var queenEnemy_1 = __webpack_require__(/*! ./queenEnemy */ "./src/entity/enemy/q
 var armoredzombieEnemy_1 = __webpack_require__(/*! ./armoredzombieEnemy */ "./src/entity/enemy/armoredzombieEnemy.ts");
 var rookEnemy_1 = __webpack_require__(/*! ./rookEnemy */ "./src/entity/enemy/rookEnemy.ts");
 var room_1 = __webpack_require__(/*! ../../room */ "./src/room.ts");
+var armoredSkullEnemy_1 = __webpack_require__(/*! ./armoredSkullEnemy */ "./src/entity/enemy/armoredSkullEnemy.ts");
 var Spawner = /** @class */ (function (_super) {
     __extends(Spawner, _super);
     function Spawner(room, game, x, y, enemyTable) {
-        if (enemyTable === void 0) { enemyTable = [0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14]; }
+        if (enemyTable === void 0) { enemyTable = [0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14, 16]; }
         var _this = _super.call(this, room, game, x, y) || this;
         _this.hit = function () {
             return 1;
@@ -6039,6 +6040,9 @@ var Spawner = /** @class */ (function (_super) {
                             case 15:
                                 spawned = new fireWizard_1.FireWizardEnemy(_this.room, _this.game, position.x, position.y);
                                 break;
+                            case 16:
+                                spawned = new armoredSkullEnemy_1.ArmoredSkullEnemy(_this.room, _this.game, position.x, position.y);
+                                break;
                         }
                         if (shouldSpawn) {
                             _this.room.projectiles.push(new enemySpawnAnimation_1.EnemySpawnAnimation(_this.room, spawned, position.x, position.y));
@@ -6132,6 +6136,9 @@ var Spawner = /** @class */ (function (_super) {
                     break;
                 case 14:
                     _this.getDrop(["weapon"]);
+                    break;
+                case 16:
+                    _this.getDrop(["weapon", "equipment"]);
                     break;
             }
         }
@@ -19018,12 +19025,24 @@ var Player = /** @class */ (function (_super) {
             input_1.Input.commaListener = function () { return _this.inputHandler(input_1.InputEnum.COMMA); };
             input_1.Input.periodListener = function () { return _this.inputHandler(input_1.InputEnum.PERIOD); };
             input_1.Input.tapListener = function () {
-                if (_this.inventory.isOpen) {
-                    if (_this.inventory.pointInside(input_1.Input.mouseX, input_1.Input.mouseY)) {
+                if (!_this.game.started) {
+                    _this.game.startedFadeOut = true;
+                    return;
+                }
+                var mouseInBounds = _this.inventory.isPointInInventoryBounds(input_1.Input.mouseX, input_1.Input.mouseY).inBounds;
+                if (!_this.inventory.isOpen &&
+                    _this.inventory.isPointInInventoryButton(input_1.Input.mouseX, input_1.Input.mouseY)) {
+                    _this.inventory.open();
+                }
+                else if (_this.inventory.isOpen) {
+                    if (mouseInBounds) {
                         _this.inputHandler(input_1.InputEnum.LEFT_CLICK);
                     }
+                    else if (!mouseInBounds) {
+                        _this.inventory.close();
+                    }
                 }
-                else {
+                {
                     if (_this.inventory.isPointInQuickbarBounds(input_1.Input.mouseX, input_1.Input.mouseY)
                         .inBounds) {
                         if (_this.inventory.pointInside(input_1.Input.mouseX, input_1.Input.mouseY)) {

@@ -182,11 +182,29 @@ export class Player extends Drawable {
       Input.commaListener = () => this.inputHandler(InputEnum.COMMA);
       Input.periodListener = () => this.inputHandler(InputEnum.PERIOD);
       Input.tapListener = () => {
-        if (this.inventory.isOpen) {
-          if (this.inventory.pointInside(Input.mouseX, Input.mouseY)) {
+        if (!this.game.started) {
+          this.game.startedFadeOut = true;
+          return;
+        }
+        const mouseInBounds = this.inventory.isPointInInventoryBounds(
+          Input.mouseX,
+          Input.mouseY,
+        ).inBounds;
+
+        if (
+          !this.inventory.isOpen &&
+          this.inventory.isPointInInventoryButton(Input.mouseX, Input.mouseY)
+        ) {
+          this.inventory.open();
+        } else if (this.inventory.isOpen) {
+          if (mouseInBounds) {
             this.inputHandler(InputEnum.LEFT_CLICK);
+          } else if (!mouseInBounds) {
+            this.inventory.close();
           }
-        } else {
+        }
+
+        {
           if (
             this.inventory.isPointInQuickbarBounds(Input.mouseX, Input.mouseY)
               .inBounds
