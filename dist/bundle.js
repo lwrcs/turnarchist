@@ -25770,8 +25770,7 @@ var Warhammer = /** @class */ (function (_super) {
     function Warhammer(level, x, y) {
         var _this = _super.call(this, level, x, y) || this;
         _this.hitSound = function () {
-            if (_this.wielder.game.rooms[_this.wielder.levelID] === _this.wielder.game.room)
-                sound_1.Sound.hit();
+            sound_1.Sound.hit();
             sound_1.Sound.playWarHammer();
         };
         _this.shakeScreen = function () {
@@ -25913,34 +25912,34 @@ var Weapon = /** @class */ (function (_super) {
         };
         _this.weaponMove = function (newX, newY) {
             var flag = false;
-            var entity = null;
             for (var _i = 0, _a = _this.game.rooms[_this.wielder.levelID].entities; _i < _a.length; _i++) {
                 var e = _a[_i];
                 if (e.destroyable && !e.pushable && e.pointIn(newX, newY)) {
+                    _this.attack(e);
                     flag = true;
-                    entity = e;
                 }
             }
             if (flag) {
                 _this.wielder.busyAnimating = true;
-                _this.attackAnimation(newX, newY, entity);
+                _this.attackAnimation(newX, newY);
+                _this.game.rooms[_this.wielder.levelID].tick(_this.wielder);
+                _this.shakeScreen();
                 _this.degrade();
                 setTimeout(function () {
                     _this.wielder.busyAnimating = false;
-                    entity.hurt(_this.wielder, _this.damage);
-                    _this.statusEffect(entity);
                     _this.hitSound();
                 }, _this.hitDelay);
-                //console.log(this.durability);
             }
             return !flag;
         };
-        _this.attackAnimation = function (newX, newY, entity) {
+        _this.attack = function (enemy) {
+            enemy.hurt(_this.wielder, _this.damage);
+            _this.statusEffect(enemy);
+        };
+        _this.attackAnimation = function (newX, newY) {
             _this.wielder.hitX = 0.5 * (_this.wielder.x - newX);
             _this.wielder.hitY = 0.5 * (_this.wielder.y - newY);
             _this.game.rooms[_this.wielder.levelID].particles.push(new attackAnimation_1.AttackAnimation(newX, newY, _this.name, _this.wielder.direction));
-            _this.game.rooms[_this.wielder.levelID].tick(_this.wielder);
-            _this.shakeScreen();
         };
         _this.shakeScreen = function () {
             if (_this.wielder.game.rooms[_this.wielder.levelID] === _this.wielder.game.room)

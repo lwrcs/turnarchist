@@ -120,39 +120,42 @@ export abstract class Weapon extends Equippable {
 
   weaponMove = (newX: number, newY: number): boolean => {
     let flag = false;
-    let entity: Entity | null = null;
+
     for (let e of this.game.rooms[this.wielder.levelID].entities) {
       if (e.destroyable && !e.pushable && e.pointIn(newX, newY)) {
+        this.attack(e);
         flag = true;
-        entity = e;
       }
     }
+
     if (flag) {
       this.wielder.busyAnimating = true;
-      this.attackAnimation(newX, newY, entity);
+
+      this.attackAnimation(newX, newY);
+      this.game.rooms[this.wielder.levelID].tick(this.wielder);
+      this.shakeScreen();
       this.degrade();
 
       setTimeout(() => {
         this.wielder.busyAnimating = false;
-        entity.hurt(this.wielder, this.damage);
-        this.statusEffect(entity);
+
         this.hitSound();
       }, this.hitDelay);
-      //console.log(this.durability);
     }
-
     return !flag;
   };
 
-  attackAnimation = (newX: number, newY: number, entity: Entity | null) => {
+  attack = (enemy: Entity) => {
+    enemy.hurt(this.wielder, this.damage);
+    this.statusEffect(enemy);
+  };
+
+  attackAnimation = (newX: number, newY: number) => {
     this.wielder.hitX = 0.5 * (this.wielder.x - newX);
     this.wielder.hitY = 0.5 * (this.wielder.y - newY);
     this.game.rooms[this.wielder.levelID].particles.push(
       new AttackAnimation(newX, newY, this.name, this.wielder.direction),
     );
-
-    this.game.rooms[this.wielder.levelID].tick(this.wielder);
-    this.shakeScreen();
   };
 
   shakeScreen = () => {

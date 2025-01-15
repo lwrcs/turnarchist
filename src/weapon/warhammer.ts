@@ -19,10 +19,7 @@ export class Warhammer extends Weapon {
   }
 
   hitSound = () => {
-    if (
-      this.wielder.game.rooms[this.wielder.levelID] === this.wielder.game.room
-    )
-      Sound.hit();
+    Sound.hit();
     Sound.playWarHammer();
   };
   shakeScreen = () => {
