@@ -78,6 +78,7 @@ import { Bomb } from "./entity/object/bomb";
 import { Sound } from "./sound";
 import { Block } from "./entity/object/block";
 import { Bestiary } from "./bestiary";
+import { ArmoredSkullEnemy } from "./entity/enemy/armoredSkullEnemy";
 
 // #endregion
 
@@ -103,6 +104,7 @@ export enum EnemyType {
   spawner = "spawner",
   occultist = "occultist",
   bomb = "bomb",
+  armoredskull = "armoredskull",
   // Add other enemy types here
 }
 
@@ -127,6 +129,7 @@ export const EnemyTypeMap: { [key in EnemyType]: EnemyStatic } = {
   [EnemyType.spawner]: Spawner,
   [EnemyType.occultist]: OccultistEnemy,
   [EnemyType.bomb]: Bomb,
+  [EnemyType.armoredskull]: ArmoredSkullEnemy,
   // Add other enemy mappings here
 };
 

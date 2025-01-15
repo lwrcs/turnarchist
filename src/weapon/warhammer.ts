@@ -30,7 +30,7 @@ export class Warhammer extends Weapon {
 
     setTimeout(() => {
       this.wielder.slowMotionEnabled = false;
-      this.hitSound();
+      //this.hitSound();
       switch (this.wielder.direction) {
         case Direction.DOWN:
           this.game.shakeScreen(0, -30, false);

@@ -107,6 +107,7 @@ export class Player extends Drawable {
   slowMotionTickDuration: number;
   depth: number;
   menu: Menu;
+  busyAnimating: boolean;
   private animationFrameId: number | null = null;
   private isProcessingQueue: boolean = false;
   private lowHealthFrame: number = 0;
@@ -140,6 +141,7 @@ export class Player extends Drawable {
     this.isLocalPlayer = isLocalPlayer;
     this.depth = 0;
     this.menu = new Menu();
+    this.busyAnimating = false;
     if (isLocalPlayer) {
       Input.leftSwipeListener = () => {
         if (
@@ -285,6 +287,7 @@ export class Player extends Drawable {
   };
 
   inputHandler = (input: InputEnum) => {
+    if (this.busyAnimating) return;
     if (this.menu.open) {
       this.menu.inputHandler(input);
       return;
@@ -640,6 +643,7 @@ export class Player extends Drawable {
   };
 
   tryMove = (x: number, y: number) => {
+    if (this.busyAnimating) return;
     let slowMotion = this.slowMotionEnabled;
     let newMove = { x: x, y: y };
     // TODO don't move if hit by enemy
@@ -711,11 +715,9 @@ export class Player extends Drawable {
                 this.game.room
               )
                 Sound.hit();
-              this.game.levels[this.depth].rooms[this.levelID].particles.push(
-                new AttackAnimation(e.x, e.y, "warhammer", this.direction),
-              );
+
               this.shakeScreen(this.x, this.y, e.x, e.y);
-              //this.hitShake(this.x, this.y, e.x, e.y);
+              this.hitShake(this.x, this.y, e.x, e.y);
 
               this.game.levels[this.depth].rooms[this.levelID].tick(this);
               return;

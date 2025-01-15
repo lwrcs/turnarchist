@@ -119,7 +119,7 @@ export class DropTable {
       dropWeight: 15,
       category: ["fuel", "lantern", "resource"],
     },
-    { itemType: "bomb", dropWeight: 30, category: ["bomb", "weapon"] },
+    { itemType: "bomb", dropWeight: 10, category: ["bomb", "weapon"] },
   ];
 
   static getDrop = (

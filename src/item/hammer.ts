@@ -6,6 +6,7 @@ import { Room } from "../room";
 import { Usable } from "./usable";
 import { Weapon } from "../weapon/weapon";
 import { Dagger } from "../weapon/dagger";
+import { WeaponFragments } from "./weaponFragments";
 
 export class Hammer extends Usable {
   static itemName = "hammer";
@@ -30,13 +31,24 @@ export class Hammer extends Usable {
   useOnOther = (player: Player, other: Item) => {
     if (other instanceof Weapon && other.name !== "dagger") {
       other.disassemble();
-      this.level.game.pushMessage(
-        `You dissassemble your ${other.name} into fragments.`,
-      );
     } else if (other.name === "dagger") {
       this.level.game.pushMessage(
         `You probably shouldn't disassemble your dagger...`,
       );
+    } else if (other.name === "hammer" && other !== this) {
+      let hammer = other as Hammer;
+      hammer.disassemble(player);
+      this.level.game.pushMessage(`I only needed one of those anyways...`);
     }
+  };
+
+  disassemble = (player: Player) => {
+    let inventoryX = this.x;
+    let inventoryY = this.y;
+    let numFragments = Math.ceil(Math.random() * 5 + 5);
+    player.inventory.removeItem(this);
+    player.inventory.addItem(
+      new WeaponFragments(this.level, inventoryX, inventoryY, numFragments),
+    );
   };
 }

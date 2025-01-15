@@ -6,6 +6,7 @@ import { PlayerFireball } from "../projectile/playerFireball";
 import type { Entity } from "../entity/entity";
 import { Utils } from "../utils";
 import { Direction } from "../game";
+import { SpellbookPage } from "../item/spellbookPage";
 export class Spellbook extends Weapon {
   targets: Entity[];
   isTargeting: boolean;
@@ -38,6 +39,29 @@ export class Spellbook extends Weapon {
       //console.log(this.targets);
       return this.targets;
     }
+  };
+
+  disassemble = () => {
+    if (this.equipped) {
+      this.game.pushMessage(
+        "I should probably unequip this before I try to disassemble it...",
+      );
+      return;
+    }
+    this.game.pushMessage(
+      `You tear the remaining pages out of your spellbook.`,
+    );
+
+    let inventory = this.wielder.inventory;
+    let inventoryX = this.x;
+    let inventoryY = this.y;
+    let numFragments = Math.floor(this.durability);
+    this.toggleEquip();
+    //inventory.weapon = null;
+    inventory.removeItem(this);
+    inventory.addItem(
+      new SpellbookPage(this.level, inventoryX, inventoryY, numFragments),
+    );
   };
 
   weaponMove = (newX: number, newY: number): boolean => {
