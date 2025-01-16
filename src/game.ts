@@ -737,7 +737,7 @@ export class Game {
       GameConstants.SHADE_LEVELS = 25;
       GameConstants.isMobile = true;
       LevelConstants.LIGHTING_ANGLE_STEP = 10;
-      LevelConstants.LIGHTING_MAX_DISTANCE = 7;
+      LevelConstants.LIGHTING_MAX_DISTANCE = 5;
 
       // Use smaller scale for mobile devices based on screen size
       // Adjust max scale with scaleOffset
