@@ -9582,7 +9582,7 @@ var Game = /** @class */ (function () {
             if (_this.isMobile) {
                 if (!gameConstants_1.GameConstants.isMobile)
                     _this.pushMessage("Mobile detected");
-                gameConstants_1.GameConstants.SHADE_LEVELS = 50;
+                gameConstants_1.GameConstants.SHADE_LEVELS = 35;
                 gameConstants_1.GameConstants.isMobile = true;
                 levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP = 4;
                 levelConstants_1.LevelConstants.LIGHTING_MAX_DISTANCE = 7;
@@ -10257,14 +10257,15 @@ var Game = /** @class */ (function () {
         Game.ctx.fillStyle = fillColor;
         Game.fillText(text, x, y);
     };
-    Game.drawHelper = function (set, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity) {
+    Game.drawHelper = function (set, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity, entity) {
         if (shadeColor === void 0) { shadeColor = "black"; }
         if (shadeOpacity === void 0) { shadeOpacity = 0; }
+        if (entity === void 0) { entity = false; }
         Game.ctx.save(); // Save the current canvas state
         // Snap to nearest shading increment
+        var divisor = entity ? 10 : 1;
         shadeOpacity =
-            Math.round(shadeOpacity * gameConstants_1.GameConstants.SHADE_LEVELS) /
-                gameConstants_1.GameConstants.SHADE_LEVELS;
+            Math.round(shadeOpacity * Math.max(gameConstants_1.GameConstants.SHADE_LEVELS / divisor, 12)) / Math.max(gameConstants_1.GameConstants.SHADE_LEVELS / divisor, 12);
         // Include shadeColor in the cache key
         var key = getShadeCanvasKey(set, sX, sY, sW, sH, shadeOpacity, shadeColor);
         if (!Game.shade_canvases[key]) {
@@ -10293,22 +10294,22 @@ var Game = /** @class */ (function () {
     Game.drawObj = function (sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity) {
         if (shadeColor === void 0) { shadeColor = "black"; }
         if (shadeOpacity === void 0) { shadeOpacity = 0; }
-        Game.drawHelper(Game.objset, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity);
+        Game.drawHelper(Game.objset, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity, true);
     };
     Game.drawMob = function (sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity) {
         if (shadeColor === void 0) { shadeColor = "black"; }
         if (shadeOpacity === void 0) { shadeOpacity = 0; }
-        Game.drawHelper(Game.mobset, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity);
+        Game.drawHelper(Game.mobset, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity, true);
     };
     Game.drawItem = function (sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity) {
         if (shadeColor === void 0) { shadeColor = "black"; }
         if (shadeOpacity === void 0) { shadeOpacity = 0; }
-        Game.drawHelper(Game.itemset, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity);
+        Game.drawHelper(Game.itemset, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity, true);
     };
     Game.drawFX = function (sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity) {
         if (shadeColor === void 0) { shadeColor = "black"; }
         if (shadeOpacity === void 0) { shadeOpacity = 0; }
-        Game.drawHelper(Game.fxset, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity);
+        Game.drawHelper(Game.fxset, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity, true);
     };
     return Game;
 }());
@@ -10353,6 +10354,7 @@ var GameConstants = /** @class */ (function () {
     GameConstants.FPS = 120;
     GameConstants.ALPHA_ENABLED = true;
     GameConstants.SHADE_LEVELS = 50;
+    GameConstants.ENTITY_SHADE_LEVELS = 10;
     GameConstants.TILESIZE = 16;
     GameConstants.SCALE = 6;
     GameConstants.MAX_SCALE = 10;

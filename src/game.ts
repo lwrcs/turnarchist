@@ -734,7 +734,7 @@ export class Game {
     this.isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     if (this.isMobile) {
       if (!GameConstants.isMobile) this.pushMessage("Mobile detected");
-      GameConstants.SHADE_LEVELS = 50;
+      GameConstants.SHADE_LEVELS = 35;
       GameConstants.isMobile = true;
       LevelConstants.LIGHTING_ANGLE_STEP = 4;
       LevelConstants.LIGHTING_MAX_DISTANCE = 7;
@@ -1381,13 +1381,16 @@ export class Game {
     dH: number,
     shadeColor = "black",
     shadeOpacity = 0,
+    entity: boolean = false,
   ) => {
     Game.ctx.save(); // Save the current canvas state
 
     // Snap to nearest shading increment
+    let divisor = entity ? 10 : 1;
     shadeOpacity =
-      Math.round(shadeOpacity * GameConstants.SHADE_LEVELS) /
-      GameConstants.SHADE_LEVELS;
+      Math.round(
+        shadeOpacity * Math.max(GameConstants.SHADE_LEVELS / divisor, 12),
+      ) / Math.max(GameConstants.SHADE_LEVELS / divisor, 12);
 
     // Include shadeColor in the cache key
     let key = getShadeCanvasKey(set, sX, sY, sW, sH, shadeOpacity, shadeColor);
@@ -1504,6 +1507,7 @@ export class Game {
       dH,
       shadeColor,
       shadeOpacity,
+      true,
     );
   };
 
@@ -1531,6 +1535,7 @@ export class Game {
       dH,
       shadeColor,
       shadeOpacity,
+      true,
     );
   };
 
@@ -1558,6 +1563,7 @@ export class Game {
       dH,
       shadeColor,
       shadeOpacity,
+      true,
     );
   };
 
@@ -1585,6 +1591,7 @@ export class Game {
       dH,
       shadeColor,
       shadeOpacity,
+      true,
     );
   };
 
