@@ -9584,11 +9584,11 @@ var Game = /** @class */ (function () {
                     _this.pushMessage("Mobile detected");
                 gameConstants_1.GameConstants.SHADE_LEVELS = 35;
                 gameConstants_1.GameConstants.isMobile = true;
-                levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP = 4;
+                levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP = 2;
                 levelConstants_1.LevelConstants.LIGHTING_MAX_DISTANCE = 7;
                 // Use smaller scale for mobile devices based on screen size
                 // Adjust max scale with scaleOffset
-                var integerScale = gameConstants_1.GameConstants.MAX_SCALE - 3 + scaleOffset;
+                var integerScale = gameConstants_1.GameConstants.MAX_SCALE + scaleOffset;
                 Game.scale = Math.min(maxWidthScale, maxHeightScale, integerScale); // Cap at 3 + offset for mobile
             }
             else {

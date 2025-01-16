@@ -736,12 +736,12 @@ export class Game {
       if (!GameConstants.isMobile) this.pushMessage("Mobile detected");
       GameConstants.SHADE_LEVELS = 35;
       GameConstants.isMobile = true;
-      LevelConstants.LIGHTING_ANGLE_STEP = 4;
+      LevelConstants.LIGHTING_ANGLE_STEP = 2;
       LevelConstants.LIGHTING_MAX_DISTANCE = 7;
 
       // Use smaller scale for mobile devices based on screen size
       // Adjust max scale with scaleOffset
-      const integerScale = GameConstants.MAX_SCALE - 3 + scaleOffset;
+      const integerScale = GameConstants.MAX_SCALE + scaleOffset;
       Game.scale = Math.min(maxWidthScale, maxHeightScale, integerScale); // Cap at 3 + offset for mobile
     } else {
       GameConstants.isMobile = false;
