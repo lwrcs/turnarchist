@@ -21202,9 +21202,10 @@ var Room = /** @class */ (function () {
         this.draw = function (delta) {
             if (_this.active) {
                 hitWarning_1.HitWarning.updateFrame(delta);
+                _this.drawInterval = 4;
             }
             else if (!_this.active) {
-                _this.drawInterval = 30;
+                _this.drawInterval = 12;
             }
             _this.drawTimestamp += delta;
             if (_this.drawTimestamp - _this.lastDraw >= _this.drawInterval) {

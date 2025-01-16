@@ -2258,8 +2258,9 @@ export class Room {
   draw = (delta: number) => {
     if (this.active) {
       HitWarning.updateFrame(delta);
+      this.drawInterval = 4;
     } else if (!this.active) {
-      this.drawInterval = 30;
+      this.drawInterval = 12;
     }
 
     this.drawTimestamp += delta;
