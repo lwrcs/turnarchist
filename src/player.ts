@@ -182,7 +182,9 @@ export class Player extends Drawable {
       Input.commaListener = () => this.inputHandler(InputEnum.COMMA);
       Input.periodListener = () => this.inputHandler(InputEnum.PERIOD);
       Input.tapListener = () => {
-        if (!this.game.started) {
+        if (this.dead) {
+          this.restart();
+        } else if (!this.game.started) {
           this.game.startedFadeOut = true;
           return;
         }
@@ -1248,7 +1250,8 @@ export class Player extends Drawable {
       });
 
       // Line after enemy counts: Restart instruction
-      const restartButton = "Press space or click to restart";
+      let restartButton = "Press space or click to restart";
+      if (GameConstants.isMobile) restartButton = "Tap to restart";
 
       // Calculate total height based on number of lines
       const lineHeight = Game.letter_height + 2; // Adjust spacing as needed

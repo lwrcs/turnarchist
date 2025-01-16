@@ -18705,6 +18705,8 @@ var Player = /** @class */ (function (_super) {
                 });
                 // Line after enemy counts: Restart instruction
                 var restartButton = "Press space or click to restart";
+                if (gameConstants_1.GameConstants.isMobile)
+                    restartButton = "Tap to restart";
                 // Calculate total height based on number of lines
                 var lineHeight_1 = game_1.Game.letter_height + 2; // Adjust spacing as needed
                 var totalHeight = lines_1.length * lineHeight_1 + lineHeight_1; // Additional space for restart button
@@ -19026,7 +19028,10 @@ var Player = /** @class */ (function (_super) {
             input_1.Input.commaListener = function () { return _this.inputHandler(input_1.InputEnum.COMMA); };
             input_1.Input.periodListener = function () { return _this.inputHandler(input_1.InputEnum.PERIOD); };
             input_1.Input.tapListener = function () {
-                if (!_this.game.started) {
+                if (_this.dead) {
+                    _this.restart();
+                }
+                else if (!_this.game.started) {
                     _this.game.startedFadeOut = true;
                     return;
                 }
