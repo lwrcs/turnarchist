@@ -264,6 +264,9 @@ export class Room {
   decorations: Array<Decoration>;
   blurOffsetX: number = 5;
   blurOffsetY: number = 5;
+  lastDraw: number = 0;
+  drawTimestamp: number = 0;
+  drawInterval: number = 4;
 
   // Add a list to keep track of BeamEffect instances
   beamEffects: BeamEffect[] = [];
@@ -2255,9 +2258,17 @@ export class Room {
   draw = (delta: number) => {
     if (this.active) {
       HitWarning.updateFrame(delta);
+    } else if (!this.active) {
+      this.drawInterval = 30;
     }
-    this.fadeRgb(delta);
-    this.fadeLighting(delta);
+
+    this.drawTimestamp += delta;
+
+    if (this.drawTimestamp - this.lastDraw >= this.drawInterval) {
+      this.fadeRgb(delta + this.drawInterval);
+      this.fadeLighting(delta + this.drawInterval);
+      this.lastDraw = this.drawTimestamp;
+    }
   };
   // added a multiplier to the input rgb values to avoid clipping to white
   drawColorLayer = () => {

@@ -9582,10 +9582,10 @@ var Game = /** @class */ (function () {
             if (_this.isMobile) {
                 if (!gameConstants_1.GameConstants.isMobile)
                     _this.pushMessage("Mobile detected");
-                gameConstants_1.GameConstants.SHADE_LEVELS = 25;
+                gameConstants_1.GameConstants.SHADE_LEVELS = 50;
                 gameConstants_1.GameConstants.isMobile = true;
-                levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP = 25;
-                levelConstants_1.LevelConstants.LIGHTING_MAX_DISTANCE = 5;
+                levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP = 4;
+                levelConstants_1.LevelConstants.LIGHTING_MAX_DISTANCE = 7;
                 // Use smaller scale for mobile devices based on screen size
                 // Adjust max scale with scaleOffset
                 var integerScale = gameConstants_1.GameConstants.MAX_SCALE - 3 + scaleOffset;
@@ -20181,6 +20181,9 @@ var Room = /** @class */ (function () {
         this.tunnelDoor = null; // this is the door that connects the start room to the exit room
         this.blurOffsetX = 5;
         this.blurOffsetY = 5;
+        this.lastDraw = 0;
+        this.drawTimestamp = 0;
+        this.drawInterval = 4;
         // Add a list to keep track of BeamEffect instances
         this.beamEffects = [];
         // Add this property to track created mask canvases
@@ -21200,8 +21203,15 @@ var Room = /** @class */ (function () {
             if (_this.active) {
                 hitWarning_1.HitWarning.updateFrame(delta);
             }
-            _this.fadeRgb(delta);
-            _this.fadeLighting(delta);
+            else if (!_this.active) {
+                _this.drawInterval = 30;
+            }
+            _this.drawTimestamp += delta;
+            if (_this.drawTimestamp - _this.lastDraw >= _this.drawInterval) {
+                _this.fadeRgb(delta + _this.drawInterval);
+                _this.fadeLighting(delta + _this.drawInterval);
+                _this.lastDraw = _this.drawTimestamp;
+            }
         };
         // added a multiplier to the input rgb values to avoid clipping to white
         this.drawColorLayer = function () {
