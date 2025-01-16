@@ -848,11 +848,11 @@ export class Game {
         room.drawShadeLayer();
         room.drawColorLayer();
         room.drawBloomLayer(delta);
-        if (room.active) room.drawOverShade(delta);
       }
     }
     for (const room of this.levels[this.currentDepth].rooms) {
-      if (room.active || room.entered) {
+      if (room.active && room.entered) {
+        room.drawOverShade(delta);
       }
     }
   };

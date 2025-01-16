@@ -9669,13 +9669,12 @@ var Game = /** @class */ (function () {
                     room.drawShadeLayer();
                     room.drawColorLayer();
                     room.drawBloomLayer(delta);
-                    if (room.active)
-                        room.drawOverShade(delta);
                 }
             }
             for (var _b = 0, _c = _this.levels[_this.currentDepth].rooms; _b < _c.length; _b++) {
                 var room = _c[_b];
-                if (room.active || room.entered) {
+                if (room.active && room.entered) {
+                    room.drawOverShade(delta);
                 }
             }
         };
@@ -23887,6 +23886,7 @@ var __extends = (this && this.__extends) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Door = exports.DoorType = exports.DoorDir = void 0;
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+var gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
 var tile_1 = __webpack_require__(/*! ./tile */ "./src/tile/tile.ts");
 var key_1 = __webpack_require__(/*! ../item/key */ "./src/item/key.ts");
 var sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
@@ -23909,6 +23909,17 @@ var Door = /** @class */ (function (_super) {
     __extends(Door, _super);
     function Door(room, game, x, y, doorDir, doorType) {
         var _this = _super.call(this, room, x, y) || this;
+        _this.shadeAmount = function (offsetX, offsetY) {
+            if (offsetX === void 0) { offsetX = 0; }
+            if (offsetY === void 0) { offsetY = 0; }
+            if (gameConstants_1.GameConstants.SMOOTH_LIGHTING)
+                return 0;
+            var vis = _this.room.softVis[_this.x + offsetX][_this.y + offsetY];
+            if (_this.opened)
+                return vis / 2;
+            else
+                return vis;
+        };
         _this.openTunnelXOffset = function () {
             if (_this.type === DoorType.TUNNELDOOR) {
                 if (!_this.opened) {

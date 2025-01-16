@@ -103,6 +103,13 @@ export class Door extends Tile {
     }
   }
 
+  shadeAmount = (offsetX: number = 0, offsetY: number = 0) => {
+    if (GameConstants.SMOOTH_LIGHTING) return 0;
+    const vis = this.room.softVis[this.x + offsetX][this.y + offsetY];
+    if (this.opened) return vis / 2;
+    else return vis;
+  };
+
   openTunnelXOffset = () => {
     if (this.type === DoorType.TUNNELDOOR) {
       if (!this.opened) {

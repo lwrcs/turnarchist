@@ -2741,6 +2741,7 @@ export class Room {
   // for stuff rendered on top of the player
   drawTopLayer = (delta: number) => {
     Game.ctx.save();
+
     // gui stuff
 
     // room name
