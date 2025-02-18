@@ -50,7 +50,7 @@ export class DamageNumber extends Particle {
       Game.ctx.restore();
       return;
     }
-    if (this.frame > 15) this.alpha *= 0.95;
+    if (this.frame > 15) this.alpha -= 0.025 * delta;
 
     this.y -= 0.03 * delta;
     this.frame += delta;

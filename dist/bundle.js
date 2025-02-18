@@ -8533,30 +8533,6 @@ var VendingMachine = /** @class */ (function (_super) {
         _this.isInf = false;
         _this.quantity = 1;
         _this.buyAnimAmount = 0;
-        _this.isPointInVendingMachineBounds = function (x, y) {
-            var _a;
-            // First check if this is the currently open vending machine
-            if (!_this.open || _this !== ((_a = _this.playerOpened) === null || _a === void 0 ? void 0 : _a.openVendingMachine))
-                return false;
-            var OPEN_TIME = 200; // Match the constant from drawTopLayer
-            var s = Math.min(18, (18 * (Date.now() - _this.openTime)) / OPEN_TIME); // size of box
-            var b = 2; // border
-            var g = -2; // gap
-            var ob = 1; // outer border
-            // Calculate total width and height of the UI
-            var width = (_this.costItems.length + 2) * (s + 2 * b + g) - g;
-            var height = s + 2 * b + g - g;
-            // Calculate center position (matches drawTopLayer positioning)
-            var cx = (_this.x + 0.5) * gameConstants_1.GameConstants.TILESIZE;
-            var cy = (_this.y - 1.5) * gameConstants_1.GameConstants.TILESIZE;
-            // Calculate bounds
-            var left = Math.round(cx - 0.5 * width) - ob;
-            var right = Math.round(cx - 0.5 * width) - ob + Math.round(width + 2 * ob);
-            var top = Math.round(cy - 0.5 * height) - ob;
-            var bottom = Math.round(cy - 0.5 * height) - ob + Math.round(height + 2 * ob);
-            // Check if point is within bounds
-            return x >= left && x <= right && y >= top && y <= bottom;
-        };
         _this.interact = function (player) {
             if (_this.isInf || _this.quantity > 0) {
                 if (_this.open)
@@ -8764,6 +8740,30 @@ var VendingMachine = /** @class */ (function (_super) {
         enumerable: false,
         configurable: true
     });
+    VendingMachine.isPointInVendingMachineBounds = function (x, y, shop) {
+        var _a;
+        // First check if this is the currently open vending machine
+        if (!shop.open || shop !== ((_a = shop.playerOpened) === null || _a === void 0 ? void 0 : _a.openVendingMachine))
+            return false;
+        var OPEN_TIME = 200; // Match the constant from drawTopLayer
+        var s = Math.min(18, (18 * (Date.now() - shop.openTime)) / OPEN_TIME); // size of box
+        var b = 2; // border
+        var g = -2; // gap
+        var ob = 1; // outer border
+        // Calculate total width and height of the UI
+        var width = (shop.costItems.length + 2) * (s + 2 * b + g) - g;
+        var height = s + 2 * b + g - g;
+        // Calculate center position (matches drawTopLayer positioning)
+        var cx = (shop.x + 0.5) * gameConstants_1.GameConstants.TILESIZE;
+        var cy = (shop.y - 1.5) * gameConstants_1.GameConstants.TILESIZE;
+        // Calculate bounds
+        var left = Math.round(cx - 0.5 * width) - ob;
+        var right = Math.round(cx - 0.5 * width) - ob + Math.round(width + 2 * ob);
+        var top = Math.round(cy - 0.5 * height) - ob;
+        var bottom = Math.round(cy - 0.5 * height) - ob + Math.round(height + 2 * ob);
+        // Check if point is within bounds
+        return x >= left && x <= right && y >= top && y <= bottom;
+    };
     return VendingMachine;
 }(entity_1.Entity));
 exports.VendingMachine = VendingMachine;
@@ -17399,7 +17399,7 @@ var DamageNumber = /** @class */ (function (_super) {
                 return;
             }
             if (_this.frame > 15)
-                _this.alpha *= 0.95;
+                _this.alpha -= 0.025 * delta;
             _this.y -= 0.03 * delta;
             _this.frame += delta;
             var width = game_1.Game.measureText(_this.damage.toString()).width;
@@ -17859,6 +17859,7 @@ var sound_1 = __webpack_require__(/*! ./sound */ "./src/sound.ts");
 var levelConstants_1 = __webpack_require__(/*! ./levelConstants */ "./src/levelConstants.ts");
 var map_1 = __webpack_require__(/*! ./map */ "./src/map.ts");
 var healthbar_1 = __webpack_require__(/*! ./healthbar */ "./src/healthbar.ts");
+var vendingMachine_1 = __webpack_require__(/*! ./entity/object/vendingMachine */ "./src/entity/object/vendingMachine.ts");
 var drawable_1 = __webpack_require__(/*! ./drawable */ "./src/drawable.ts");
 var hitWarning_1 = __webpack_require__(/*! ./hitWarning */ "./src/hitWarning.ts");
 var postProcess_1 = __webpack_require__(/*! ./postProcess */ "./src/postProcess.ts");
@@ -18101,7 +18102,7 @@ var Player = /** @class */ (function (_super) {
                 _this.inventory.toggleOpen();
             }
             if (_this.openVendingMachine) {
-                if (_this.openVendingMachine.isPointInVendingMachineBounds(x, y)) {
+                if (vendingMachine_1.VendingMachine.isPointInVendingMachineBounds(x, y, _this.openVendingMachine)) {
                     _this.openVendingMachine.space();
                 }
                 else {
@@ -19039,9 +19040,15 @@ var Player = /** @class */ (function (_super) {
                     return;
                 }
                 var mouseInBounds = _this.inventory.isPointInInventoryBounds(input_1.Input.mouseX, input_1.Input.mouseY).inBounds;
+                console.log("tap", input_1.Input.mouseX, input_1.Input.mouseY);
                 if (!_this.inventory.isOpen &&
                     _this.inventory.isPointInInventoryButton(input_1.Input.mouseX, input_1.Input.mouseY)) {
                     _this.inventory.open();
+                    console.log("inventory.open()");
+                }
+                if (vendingMachine_1.VendingMachine.isPointInVendingMachineBounds(input_1.Input.mouseX, input_1.Input.mouseY, _this.openVendingMachine)) {
+                    _this.openVendingMachine.space();
+                    //this.mouseLeftClick();
                 }
                 else if (_this.inventory.isOpen) {
                     if (mouseInBounds) {

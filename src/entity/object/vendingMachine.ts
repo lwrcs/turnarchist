@@ -91,24 +91,28 @@ export class VendingMachine extends Entity {
     }
   }
 
-  isPointInVendingMachineBounds = (x: number, y: number): boolean => {
+  static isPointInVendingMachineBounds = (
+    x: number,
+    y: number,
+    shop: VendingMachine,
+  ): boolean => {
     // First check if this is the currently open vending machine
-    if (!this.open || this !== this.playerOpened?.openVendingMachine)
+    if (!shop.open || shop !== shop.playerOpened?.openVendingMachine)
       return false;
 
     const OPEN_TIME = 200; // Match the constant from drawTopLayer
-    const s = Math.min(18, (18 * (Date.now() - this.openTime)) / OPEN_TIME); // size of box
+    const s = Math.min(18, (18 * (Date.now() - shop.openTime)) / OPEN_TIME); // size of box
     const b = 2; // border
     const g = -2; // gap
     const ob = 1; // outer border
 
     // Calculate total width and height of the UI
-    const width = (this.costItems.length + 2) * (s + 2 * b + g) - g;
+    const width = (shop.costItems.length + 2) * (s + 2 * b + g) - g;
     const height = s + 2 * b + g - g;
 
     // Calculate center position (matches drawTopLayer positioning)
-    const cx = (this.x + 0.5) * GameConstants.TILESIZE;
-    const cy = (this.y - 1.5) * GameConstants.TILESIZE;
+    const cx = (shop.x + 0.5) * GameConstants.TILESIZE;
+    const cy = (shop.y - 1.5) * GameConstants.TILESIZE;
 
     // Calculate bounds
     const left = Math.round(cx - 0.5 * width) - ob;
