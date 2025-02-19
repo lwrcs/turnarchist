@@ -19040,15 +19040,9 @@ var Player = /** @class */ (function (_super) {
                     return;
                 }
                 var mouseInBounds = _this.inventory.isPointInInventoryBounds(input_1.Input.mouseX, input_1.Input.mouseY).inBounds;
-                console.log("tap", input_1.Input.mouseX, input_1.Input.mouseY);
                 if (!_this.inventory.isOpen &&
                     _this.inventory.isPointInInventoryButton(input_1.Input.mouseX, input_1.Input.mouseY)) {
                     _this.inventory.open();
-                    console.log("inventory.open()");
-                }
-                if (vendingMachine_1.VendingMachine.isPointInVendingMachineBounds(input_1.Input.mouseX, input_1.Input.mouseY, _this.openVendingMachine)) {
-                    _this.openVendingMachine.space();
-                    //this.mouseLeftClick();
                 }
                 else if (_this.inventory.isOpen) {
                     if (mouseInBounds) {

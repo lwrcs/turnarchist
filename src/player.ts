@@ -192,24 +192,12 @@ export class Player extends Drawable {
           Input.mouseX,
           Input.mouseY,
         ).inBounds;
-        console.log("tap", Input.mouseX, Input.mouseY);
 
         if (
           !this.inventory.isOpen &&
           this.inventory.isPointInInventoryButton(Input.mouseX, Input.mouseY)
         ) {
           this.inventory.open();
-          console.log("inventory.open()");
-        }
-        if (
-          VendingMachine.isPointInVendingMachineBounds(
-            Input.mouseX,
-            Input.mouseY,
-            this.openVendingMachine,
-          )
-        ) {
-          this.openVendingMachine.space();
-          //this.mouseLeftClick();
         } else if (this.inventory.isOpen) {
           if (mouseInBounds) {
             this.inputHandler(InputEnum.LEFT_CLICK);

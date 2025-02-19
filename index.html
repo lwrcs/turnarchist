@@ -16,29 +16,23 @@
       <nav>Turnarchist</nav>
     </header>
     <!-- Video Background -->
-    <video class="hero-video" autoplay loop muted>
-      <source src="res/site/hero.webm" type="video/webm" />
-      <!-- Optionally add other formats like mp4 for fallback -->
-      <source src="res/site/hero.mp4" type="video/mp4" />
-      Your browser does not support the video tag.
-    </video>
-
     <h1>Welcome To Turnarchist</h1>
-    <p>Explore never-ending dungeons in your web browser!</p>
-    <h1></h1>
-    <h1></h1>
-    <h1></h1>
+<!-- Hero Section -->
+<div class="hero-container">
+  <video class="hero-video" autoplay loop muted>
+    <source src="res/site/hero.webm" type="video/webm" />
+    <source src="res/site/hero.mp4" type="video/mp4" />
+    Your browser does not support the video tag.
+  </video>
+  <p class="hero-text">Explore never-ending dungeons in your web browser!<br><span class="small">For free!</span></p>
+</div>
 
-
-    <a href="/play.html" class="btn">Play now!<br></br> <style>
-      small {
-        font-size: 12px;  /* Adjust this value to make text smaller */
-        margin-top: auto;
-        margin-bottom:auto;
-      }
-    </style><small>I know what I'm doing.</small></a><br></br>
-    <a href="/help/" class="btn">I'm new here...</a>
-
+<!-- Main Content (Appears Below Video) -->
+<div class="main-content">
+  <h1>Links to play</h1>
+  <a href="/play.html" class="btn">Play now!<br><span class="small">I know what I'm doing.</span></a>
+  <a href="/help/" class="btn">I'm new here...</a>
+</div>
     
     <footer>© 2025 Turnarchist. All rights reserved.</footer>
   </body>
