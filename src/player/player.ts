@@ -37,6 +37,7 @@ import { AttackAnimation } from "../particle/attackAnimation";
 import { PlayerInputHandler } from "./playerInputHandler";
 import { PlayerActionProcessor } from "./playerActionProcessor";
 import { PlayerMovement } from "./playerMovement";
+import { PlayerRenderer } from "./playerRenderer";
 
 export enum PlayerDirection {
   DOWN,
@@ -56,16 +57,16 @@ export class Player extends Drawable {
   y: number;
   w: number;
   h: number;
-  drawX: number;
-  drawY: number;
-  hitX: number;
-  hitY: number;
-  frame: number;
+  //drawX: number;
+  //drawY: number;
+  //hitX: number;
+  //hitY: number;
+  //frame: number;
   direction: Direction;
   game: Game;
   levelID: number; // which room we're in (level[levelID])
-  flashing: boolean;
-  flashingFrame: number;
+  //flashing: boolean;
+  //flashingFrame: number;
   health: number;
   maxHealth: number;
   healthBar: HealthBar;
@@ -75,7 +76,7 @@ export class Player extends Drawable {
   sightRadius: number;
   defaultSightRadius: number;
   static minSightRadius: number = 2; //hard minimum sight radius that ignores depth
-  guiHeartFrame: number;
+  //guiHeartFrame: number;
   map: Map;
   openVendingMachine: VendingMachine;
   isLocalPlayer: boolean;
@@ -84,28 +85,29 @@ export class Player extends Drawable {
   turnCount: number;
   triedMove: boolean;
   tutorialRoom: boolean;
+  private renderer: PlayerRenderer;
 
   moveRange: number;
   tileCursor: { x: number; y: number };
-  private jumpY: number;
+  //private jumpY: number;
   lightEquipped: boolean;
   lightSource: LightSource;
-  hurtAlpha: number;
-  hurting: boolean; // handles drawing hurt animation
-  hurtingShield: boolean; // handles drawing hurt shield animation
+  //hurtAlpha: number;
+  //hurting: boolean; // handles drawing hurt animation
+  //hurtingShield: boolean; // handles drawing hurt shield animation
   hurtShield: boolean; // handles logic to take damage or not
   lightBrightness: number;
-  sineAngle: number;
-  drawMoveSpeed: number;
-  jumpHeight: number;
+  //sineAngle: number;
+  //drawMoveSpeed: number;
+  //jumpHeight: number;
   moveDistance: number;
   moveQueue: { x: number; y: number; direction: Direction }[];
   lastX: number;
   lastY: number;
-  motionSpeed: number;
-  slowMotionEnabled: boolean;
+  //motionSpeed: number;
+  //slowMotionEnabled: boolean;
   justMoved: DrawDirection;
-  slowMotionTickDuration: number;
+  //slowMotionTickDuration: number;
   depth: number;
   menu: Menu;
   busyAnimating: boolean;
@@ -132,11 +134,11 @@ export class Player extends Drawable {
     this.y = y;
     this.w = 1;
     this.h = 1;
-    this.drawX = 0;
-    this.drawY = 0;
-    this.jumpY = 0;
-    this.jumpHeight = 0.3;
-    this.frame = 0;
+    //this.drawX = 0;
+    //this.drawY = 0;
+    //this.jumpY = 0;
+    //this.jumpHeight = 0.3;
+    //this.frame = 0;
     this.moveDistance = 0;
     this.direction = Direction.UP;
     this.lastX = 0;
@@ -151,10 +153,10 @@ export class Player extends Drawable {
     this.maxHealth = 2;
     this.healthBar = new HealthBar();
     this.dead = false;
-    this.flashing = false;
-    this.flashingFrame = 0;
+    //this.flashing = false;
+    //this.flashingFrame = 0;
     this.lastTickHealth = this.health;
-    this.guiHeartFrame = 0;
+    //this.guiHeartFrame = 0;
 
     this.inventory = new Inventory(game, this);
     this.defaultSightRadius = 3;
@@ -168,28 +170,48 @@ export class Player extends Drawable {
     this.tileCursor = { x: 0, y: 0 };
     this.moveRange = 1;
     this.lightEquipped = false;
-    this.hurting = false;
-    this.hurtingShield = false;
+    //this.hurting = false;
+    //this.hurtingShield = false;
     this.hurtShield = false;
-    this.hurtAlpha = 0.25;
+    //this.hurtAlpha = 0.25;
     this.lightBrightness = 0.3;
-    this.sineAngle = Math.PI / 2;
-    this.drawMoveSpeed = 0.3; // greater than 1 less than 2
+    //this.sineAngle = Math.PI / 2;
+    //this.drawMoveSpeed = 0.3; // greater than 1 less than 2
     this.moveQueue = [];
 
-    this.hitX = 0;
-    this.hitY = 0;
-    this.motionSpeed = 1;
-    this.slowMotionEnabled = false;
-    this.slowMotionTickDuration = 0;
+    //this.hitX = 0;
+    //this.hitY = 0;
+    //this.motionSpeed = 1;
+    //this.slowMotionEnabled = false;
+    //this.slowMotionTickDuration = 0;
     this.justMoved = DrawDirection.Y;
 
     this.inputHandler = new PlayerInputHandler(this);
     this.actionProcessor = new PlayerActionProcessor(this);
     this.movement = new PlayerMovement(this);
+    this.renderer = new PlayerRenderer(this);
 
     this.bestiary = new Bestiary(this.game, this);
   }
+
+  get hitX() {
+    return this.renderer.hitX;
+  }
+  get hitY() {
+    return this.renderer.hitY;
+  }
+
+  get drawX() {
+    return this.renderer.drawX;
+  }
+  get drawY() {
+    return this.renderer.drawY;
+  }
+
+  setHitXY = (newX: number, newY: number, distance = 0.5) => {
+    this.renderer.hitX = distance * (this.x - newX);
+    this.renderer.hitY = distance * (this.y - newY);
+  };
 
   applyStatus = (
     enemy: Entity,
@@ -537,8 +559,6 @@ export class Player extends Drawable {
 
   tryMove = (x: number, y: number) => {
     if (this.busyAnimating) return;
-    let slowMotion = this.slowMotionEnabled;
-    let newMove = { x: x, y: y };
     // TODO don't move if hit by enemy
     this.game.levels[this.depth].rooms[this.levelID].catchUp();
     if (this.dead) return;
@@ -705,18 +725,17 @@ export class Player extends Drawable {
 
     if (this.inventory.getArmor() && this.inventory.getArmor().health > 0) {
       this.inventory.getArmor().hurt(damage);
-      this.hurtingShield = true;
+      this.renderer.hurtShield();
       this.hurtShield = true;
     }
     {
       this.lastHitBy = enemy;
       //console.log("Last Hit by: ", enemy);
       this.healthBar.hurt();
-      this.flashing = true;
+      this.renderer.flash();
       if (!this.hurtShield) this.health -= damage;
       this.hurtShield = false;
-      this.hurting = true;
-      this.hurtAlpha = 0.25;
+      this.renderer.hurt();
       if (this.health <= 0 && !GameConstants.DEVELOPER_MODE) {
         this.dead = true;
       }
@@ -748,25 +767,12 @@ export class Player extends Drawable {
     //this.game.rooms[this.levelID].updateLighting();
   };
 
-  doneMoving = (): boolean => {
-    let EPSILON = 0.01;
-    return Math.abs(this.drawX) < EPSILON && Math.abs(this.drawY) < EPSILON;
+  beginSlowMotion = () => {
+    this.renderer.beginSlowMotion();
   };
 
-  doneHitting = (): boolean => {
-    let EPSILON = 0.01;
-    return Math.abs(this.hitX) < EPSILON && Math.abs(this.hitY) < EPSILON;
-  };
-
-  enableSlowMotion = () => {
-    if (this.motionSpeed < 1 && !this.slowMotionEnabled) {
-      this.motionSpeed *= 1.08;
-      if (this.motionSpeed >= 1) this.motionSpeed = 1;
-    }
-    if (this.slowMotionEnabled && this.motionSpeed > 0.25) {
-      this.motionSpeed *= 0.95;
-      if (this.motionSpeed < 0.25) this.motionSpeed = 0.25;
-    }
+  endSlowMotion = () => {
+    this.renderer.endSlowMotion();
   };
 
   move = (x: number, y: number) => {
@@ -778,8 +784,7 @@ export class Player extends Drawable {
 
     if (this.openVendingMachine) this.openVendingMachine.close();
 
-    this.drawX += x - this.x;
-    this.drawY += y - this.y;
+    this.renderer.setNewDrawXY(x, y);
     this.drawMoveQueue.push({
       drawX: x - this.x,
       drawY: y - this.y,
@@ -824,30 +829,21 @@ export class Player extends Drawable {
     // no smoothing
     this.x = Math.round(x);
     this.y = Math.round(y);
-    this.drawX = 0;
-    this.drawY = 0;
-    this.hitX = 0;
-    this.hitY = 0;
-    this.jumpY = 0;
+    this.renderer.snapDrawStuff();
   };
 
   update = () => {};
-
-  updateSlowMotion = () => {
-    if (this.slowMotionTickDuration > 0) this.slowMotionTickDuration -= 1;
-    if (this.slowMotionTickDuration === 0) this.slowMotionEnabled = false;
-  };
 
   finishTick = () => {
     this.turnCount += 1;
     this.inventory.tick();
 
-    this.flashing = false;
+    this.renderer.disableFlash();
 
     let totalHealthDiff = this.health - this.lastTickHealth;
     this.lastTickHealth = this.health; // update last tick health
     if (totalHealthDiff < 0) {
-      this.flashing = true;
+      this.renderer.flash();
     }
     this.moveDistance = 0;
 
@@ -855,32 +851,8 @@ export class Player extends Drawable {
     //Sets the action tab state to Wait (during enemy turn)
   };
 
-  /**
-   * Draws the player sprite to the canvas.
-   * Added `ctx.save()` at the beginning and `ctx.restore()` at the end
-   * to ensure canvas state is preserved.
-   */
-  drawPlayerSprite = (delta: number) => {
-    Game.ctx.save(); // Save the current canvas state
-
-    this.frame += 0.1 * delta;
-    if (this.frame >= 4) this.frame = 0;
-    Game.drawMob(
-      1 + Math.floor(this.frame),
-      8 + this.direction * 2,
-      1,
-      2,
-      this.x - this.drawX - this.hitX,
-      this.y - 1.45 - this.drawY - this.jumpY - this.hitY,
-      1,
-      2,
-      this.shadeColor(),
-    );
-    if (this.inventory.getArmor() && this.inventory.getArmor().health > 0) {
-      // TODO draw armor
-    }
-
-    Game.ctx.restore(); // Restore the canvas state
+  draw = (delta: number) => {
+    this.renderer.draw(delta);
   };
 
   shadeColor = () => {
@@ -898,62 +870,6 @@ export class Player extends Drawable {
   heal = (amount: number) => {
     this.health += amount;
     if (this.health > this.maxHealth) this.health = this.maxHealth;
-  };
-
-  drawSpellBeam = (delta: number) => {
-    Game.ctx.save();
-    // Clear existing beam effects each frame
-    this.game.levels[this.depth].rooms[this.levelID].beamEffects = [];
-
-    if (this.inventory.getWeapon() instanceof Spellbook) {
-      const spellbook = this.inventory.getWeapon() as Spellbook;
-      if (spellbook.isTargeting) {
-        let targets = spellbook.targets;
-        for (let target of targets) {
-          // Create a new beam effect from the player to the enemy
-          this.game.levels[this.depth].rooms[this.levelID].addBeamEffect(
-            this.x - this.drawX,
-            this.y - this.drawY,
-            target.x - target.drawX,
-            target.y - target.drawY,
-            target,
-          );
-
-          // Retrieve the newly added beam effect
-          const beam =
-            this.game.levels[this.depth].rooms[this.levelID].beamEffects[
-              this.game.levels[this.depth].rooms[this.levelID].beamEffects
-                .length - 1
-            ];
-
-          // Render the beam
-          beam.render(
-            this.x - this.drawX,
-            this.y - this.drawY,
-            target.x - target.drawX,
-            target.y - target.drawY,
-            "cyan",
-            2,
-            delta,
-          );
-        }
-      }
-    }
-    Game.ctx.restore();
-  };
-  draw = (delta: number) => {
-    Game.ctx.save();
-    this.updateDrawXY(delta);
-    this.drawableY = this.y;
-    this.flashingFrame += (delta * 12) / GameConstants.FPS;
-    if (!this.dead) {
-      Game.drawMob(0, 0, 1, 1, this.x - this.drawX, this.y - this.drawY, 1, 1);
-      if (!this.flashing || Math.floor(this.flashingFrame) % 2 === 0) {
-        this.drawPlayerSprite(delta);
-      }
-    }
-    this.drawSpellBeam(delta);
-    Game.ctx.restore();
   };
 
   faceMouse = () => {
@@ -981,274 +897,8 @@ export class Player extends Drawable {
     }
   };
 
-  heartbeat = () => {
-    this.guiHeartFrame = 1;
-  };
-
   tapHoldHandler = () => {
     this.mapToggled = !this.mapToggled;
-  };
-
-  /**
-   * Draws the top layer elements, such as the health bar.
-   * Added `ctx.save()` at the beginning and `ctx.restore()` at the end
-   * to ensure canvas state is preserved.
-   */
-  drawTopLayer = (delta: number) => {
-    Game.ctx.save(); // Save the current canvas state
-
-    this.healthBar.draw(
-      delta,
-      this.health,
-      this.maxHealth,
-      this.x - this.drawX,
-      this.y - this.drawY,
-      !this.flashing || Math.floor(this.flashingFrame) % 2 === 0,
-    );
-
-    Game.ctx.restore(); // Restore the canvas state
-  };
-
-  drawGUI = (delta: number, transitioning: boolean = false) => {
-    Game.ctx.save();
-    if (!this.dead) {
-      if (!transitioning) this.inventory.draw(delta);
-      if (this.bestiary) this.bestiary.draw(delta);
-      //this.actionTab.draw(delta);
-
-      if (this.guiHeartFrame > 0) this.guiHeartFrame += delta;
-      if (this.guiHeartFrame > 5) {
-        this.guiHeartFrame = 0;
-      }
-      for (let i = 0; i < this.maxHealth; i++) {
-        let shake = 0;
-        let shakeY = 0;
-        if (this.health <= 1) {
-          shake =
-            Math.round(Math.sin(Date.now() / 25 / (i + 1)) + i / 2) /
-            2 /
-            GameConstants.TILESIZE;
-          shakeY =
-            Math.round(Math.sin(Date.now() / 25 / (i + 2)) + i / 2) /
-            2 /
-            GameConstants.TILESIZE;
-        }
-        let frame = this.guiHeartFrame > 0 ? 1 : 0;
-        let offsetY = GameConstants.WIDTH > 155 ? 0 : -1.25;
-
-        if (i >= Math.floor(this.health)) {
-          if (i == Math.floor(this.health) && (this.health * 2) % 2 == 1) {
-            // draw half heart
-            Game.drawFX(
-              4,
-              2,
-              0.75,
-              0.75,
-              i / 1.5 + shake + 0.25,
-              GameConstants.HEIGHT / GameConstants.TILESIZE -
-                1 +
-                shakeY +
-                offsetY,
-              0.75,
-              0.75,
-            );
-          } else {
-            Game.drawFX(
-              3,
-              2,
-              0.75,
-              0.75,
-              i / 1.5 + shake + 0.25,
-              GameConstants.HEIGHT / GameConstants.TILESIZE -
-                1 +
-                shakeY +
-                offsetY,
-              0.75,
-              0.75,
-            );
-          }
-        } else {
-          Game.drawFX(
-            frame,
-            2,
-            0.75,
-            0.75,
-            i / 1.5 + shake + 0.25,
-            GameConstants.HEIGHT / GameConstants.TILESIZE -
-              1 +
-              shakeY +
-              offsetY,
-            0.75,
-            0.75,
-          );
-        }
-      }
-      if (this.inventory.getArmor())
-        this.inventory.getArmor().drawGUI(delta, this.maxHealth);
-    } else {
-      Game.ctx.fillStyle = LevelConstants.LEVEL_TEXT_COLOR;
-      const enemies = statsTracker.getStats().enemies;
-      // Count the occurrences of each enemy
-      const enemyCounts = enemies.reduce(
-        (acc, enemy) => {
-          acc[enemy] = (acc[enemy] || 0) + 1;
-          return acc;
-        },
-        {} as Record<string, number>,
-      );
-
-      // Create individual lines
-      const lines: string[] = [];
-
-      // Line 1: Game Over or slain by
-      if (this.lastHitBy !== "enemy") {
-        lines.push(`You were slain by ${this.lastHitBy}.`);
-      } else {
-        lines.push("Game Over");
-      }
-
-      lines.push(
-        `Depth reached: ${this.game.levels[this.depth].rooms[this.levelID].depth}`,
-      );
-
-      // Line 2: Enemies killed
-      lines.push(
-        `${Object.values(enemyCounts).reduce(
-          (a, b) => a + b,
-          0,
-        )} enemies killed in total:`,
-      );
-
-      // Subsequent lines: Each enemy count
-      Object.entries(enemyCounts).forEach(([enemy, count]) => {
-        lines.push(`${enemy} x${count}`);
-      });
-
-      // Line after enemy counts: Restart instruction
-      let restartButton = "Press space or click to restart";
-      if (GameConstants.isMobile) restartButton = "Tap to restart";
-
-      // Calculate total height based on number of lines
-      const lineHeight = Game.letter_height + 2; // Adjust spacing as needed
-      const totalHeight = lines.length * lineHeight + lineHeight; // Additional space for restart button
-
-      // Starting Y position to center the text block
-      let startY = GameConstants.HEIGHT / 2 - totalHeight / 2;
-
-      // Draw each line centered horizontally
-      lines.forEach((line, index) => {
-        const textWidth = Game.measureText(line).width;
-        const spacing =
-          index === 0 || index === 1 || index === lines.length - 1
-            ? lineHeight * 1.5
-            : lineHeight;
-        Game.fillText(line, GameConstants.WIDTH / 2 - textWidth / 2, startY);
-        startY += spacing;
-      });
-
-      // Draw the restart button
-      const restartTextWidth = Game.measureText(restartButton).width;
-      Game.fillText(
-        restartButton,
-        GameConstants.WIDTH / 2 - restartTextWidth / 2,
-        startY,
-      );
-    }
-    PostProcessor.draw(delta);
-    if (this.hurting) this.drawHurt(delta);
-
-    if (this.mapToggled === true) this.map.draw(delta);
-    //this.drawTileCursor(delta);
-    this.setCursorIcon();
-
-    //this.drawInventoryButton(delta);
-    if (this.menu.open) this.menu.drawMenu();
-    Game.ctx.restore();
-  };
-
-  drawHurt = (delta: number) => {
-    Game.ctx.save(); // Save the current canvas state
-    Game.ctx.globalAlpha = this.hurtAlpha;
-    this.hurtAlpha -= (this.hurtAlpha / 10) * delta;
-    if (this.hurtAlpha <= 0.01) {
-      this.hurtAlpha = 0;
-      this.hurting = false;
-      this.hurtingShield = false;
-    }
-    Game.ctx.globalCompositeOperation = "source-over";
-    Game.ctx.fillStyle = "#cc3333"; // bright but not fully saturated red
-    if (this.hurtingShield) {
-      Game.ctx.fillStyle = "#639bff"; // bright but not fully saturated blue
-    }
-
-    Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
-
-    Game.ctx.restore(); // Restore the canvas state
-  };
-
-  drawLowHealth = (delta: number) => {
-    Game.ctx.save();
-    //unused
-    if (this.health <= 1 && !this.dead) {
-      // Calculate pulsating alpha for the vignette effect
-      const lowHealthAlpha = 0.5; //Math.sin(this.lowHealthFrame / 10) * 0.5 + 0.5;
-      Game.ctx.globalAlpha = lowHealthAlpha;
-      this.lowHealthFrame += delta;
-
-      const gradientBottom = Game.ctx.createLinearGradient(
-        0,
-        GameConstants.HEIGHT,
-        0,
-        (GameConstants.HEIGHT * 2) / 3,
-      );
-
-      // Define gradient color stops
-      [gradientBottom].forEach((gradient) => {
-        gradient.addColorStop(0, "#cc3333"); // Solid red at edges
-        gradient.addColorStop(1, "rgba(0, 0, 0, 0)"); // Transparent toward center
-      });
-
-      // Draw the gradients
-      Game.ctx.globalCompositeOperation = "source-over";
-
-      Game.ctx.fillStyle = gradientBottom;
-      Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
-
-      // Reset composite operation and alpha
-      Game.ctx.globalCompositeOperation = "source-over";
-      Game.ctx.globalAlpha = 1.0;
-    } else {
-      this.lowHealthFrame = 0;
-    }
-    Game.ctx.restore();
-  };
-
-  updateDrawXY = (delta: number) => {
-    if (!this.doneMoving()) {
-      this.drawX *= 0.85 ** delta;
-      this.drawY *= 0.85 ** delta;
-      this.drawX = Math.abs(this.drawX) < 0.01 ? 0 : this.drawX;
-      this.drawY = Math.abs(this.drawY) < 0.01 ? 0 : this.drawY;
-    }
-    if (this.doneHitting()) {
-      this.jump(delta);
-    }
-
-    if (!this.doneHitting()) {
-      this.updateHitXY(delta);
-    }
-
-    this.enableSlowMotion();
-    GameConstants.ANIMATION_SPEED = this.motionSpeed;
-  };
-
-  updateHitXY = (delta: number) => {
-    const hitX = this.hitX - this.hitX * 0.3;
-    const hitY = this.hitY - this.hitY * 0.3;
-    this.hitX = Math.min(Math.max(hitX, -1), 1);
-    this.hitY = Math.min(Math.max(hitY, -1), 1);
-    if (Math.abs(hitX) < 0.01) this.hitX = 0;
-    if (Math.abs(hitY) < 0.01) this.hitY = 0;
   };
 
   hitShake = (
@@ -1258,8 +908,9 @@ export class Player extends Drawable {
     otherY: number,
   ) => {
     const range = GameConstants.TILESIZE;
-    this.hitX = Math.min(Math.max(0.5 * (playerX - otherX), -range), range);
-    this.hitY = Math.min(Math.max(0.5 * (playerY - otherY), -range), range);
+    const hitX = Math.min(Math.max(0.5 * (playerX - otherX), -range), range);
+    const hitY = Math.min(Math.max(0.5 * (playerY - otherY), -range), range);
+    this.renderer.setHitXY(hitX, hitY);
   };
 
   shakeScreen = (
@@ -1270,20 +921,14 @@ export class Player extends Drawable {
     shakeStrength: number = 10,
   ) => {
     const range = GameConstants.TILESIZE;
-    this.hitX = Math.min(Math.max(0.5 * (playerX - otherX), -range), range);
-    this.hitY = Math.min(Math.max(0.5 * (playerY - otherY), -range), range);
+    const shakeX = Math.min(Math.max(0.5 * (playerX - otherX), -range), range);
+    const shakeY = Math.min(Math.max(0.5 * (playerY - otherY), -range), range);
+    this.renderer.setHitXY(shakeX, shakeY);
 
     this.game.shakeScreen(
-      -this.hitX * 1 * shakeStrength,
-      -this.hitY * 1 * shakeStrength,
+      -shakeX * 1 * shakeStrength,
+      -shakeY * 1 * shakeStrength,
     );
-  };
-
-  jump = (delta: number) => {
-    let j = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
-    this.jumpY = Math.abs(Math.sin(j * Math.PI) * this.jumpHeight);
-    if (Math.abs(this.jumpY) < 0.01) this.jumpY = 0;
-    if (this.jumpY > this.jumpHeight) this.jumpY = this.jumpHeight;
   };
 
   /**
@@ -1334,5 +979,13 @@ export class Player extends Drawable {
     );
 
     Game.ctx.restore(); // Restore the canvas state
+  };
+
+  updateSlowMotion = () => {
+    this.renderer.updateSlowMotion();
+  };
+
+  drawGUI = (delta: number) => {
+    this.renderer.drawGUI(delta);
   };
 }

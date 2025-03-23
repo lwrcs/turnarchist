@@ -151,8 +151,8 @@ export abstract class Weapon extends Equippable {
   };
 
   attackAnimation = (newX: number, newY: number) => {
-    this.wielder.hitX = 0.5 * (this.wielder.x - newX);
-    this.wielder.hitY = 0.5 * (this.wielder.y - newY);
+    this.wielder.setHitXY(newX, newY);
+
     this.game.rooms[this.wielder.levelID].particles.push(
       new AttackAnimation(newX, newY, this.name, this.wielder.direction),
     );

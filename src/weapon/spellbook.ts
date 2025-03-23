@@ -110,8 +110,9 @@ export class Spellbook extends Weapon {
         this.wielder.game.rooms[this.wielder.levelID] === this.wielder.game.room
       )
         Sound.hit();
-      this.wielder.hitX = 0.5 * (this.wielder.x - newX);
-      this.wielder.hitY = 0.5 * (this.wielder.y - newY);
+      const hitX = 0.5 * (this.wielder.x - newX);
+      const hitY = 0.5 * (this.wielder.y - newY);
+      this.wielder.setHitXY(hitX, hitY);
 
       this.game.rooms[this.wielder.levelID].tick(this.wielder);
       if (this.wielder === this.game.players[this.game.localPlayerID])

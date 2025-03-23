@@ -24,10 +24,10 @@ export class Warhammer extends Weapon {
   };
 
   shakeScreen = () => {
-    this.wielder.slowMotionEnabled = true;
+    this.wielder.beginSlowMotion();
 
     setTimeout(() => {
-      this.wielder.slowMotionEnabled = false;
+      this.wielder.endSlowMotion();
       //this.hitSound();
       switch (this.wielder.direction) {
         case Direction.DOWN:

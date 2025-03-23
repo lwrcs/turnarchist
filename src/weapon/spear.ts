@@ -44,8 +44,8 @@ export class Spear extends Weapon {
     if (!flag && enemyHitCandidates.length > 0) {
       for (const e of enemyHitCandidates) e.hurt(this.wielder, 1);
       this.hitSound();
-      this.wielder.hitX = 0.5 * (this.wielder.x - newX);
-      this.wielder.hitY = 0.5 * (this.wielder.y - newY);
+      this.wielder.setHitXY(newX, newY);
+
       this.game.rooms[this.wielder.levelID].particles.push(
         new AttackAnimation(newX, newY, "spear", this.wielder.direction),
       );
@@ -63,8 +63,8 @@ export class Spear extends Weapon {
         this.wielder.game.room === this.wielder.game.rooms[this.wielder.levelID]
       )
         Sound.hit();
-      this.wielder.hitX = 0.5 * (this.wielder.x - newX);
-      this.wielder.hitY = 0.5 * (this.wielder.y - newY);
+      this.wielder.setHitXY(newX, newY);
+
       this.game.rooms[this.wielder.levelID].particles.push(
         new AttackAnimation(newX, newY, "spear", this.wielder.direction),
       );

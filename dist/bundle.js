@@ -17914,17 +17914,15 @@ var healthbar_1 = __webpack_require__(/*! ../healthbar */ "./src/healthbar.ts");
 var drawable_1 = __webpack_require__(/*! ../drawable */ "./src/drawable.ts");
 var hitWarning_1 = __webpack_require__(/*! ../hitWarning */ "./src/hitWarning.ts");
 var item_1 = __webpack_require__(/*! ../item/item */ "./src/item/item.ts");
-var postProcess_1 = __webpack_require__(/*! ../postProcess */ "./src/postProcess.ts");
 var enemy_1 = __webpack_require__(/*! ../entity/enemy/enemy */ "./src/entity/enemy/enemy.ts");
 var mouseCursor_1 = __webpack_require__(/*! ../mouseCursor */ "./src/mouseCursor.ts");
-var stats_1 = __webpack_require__(/*! ../stats */ "./src/stats.ts");
-var spellbook_1 = __webpack_require__(/*! ../weapon/spellbook */ "./src/weapon/spellbook.ts");
 var utils_1 = __webpack_require__(/*! ../utils */ "./src/utils.ts");
 var menu_1 = __webpack_require__(/*! ../menu */ "./src/menu.ts");
 var bestiary_1 = __webpack_require__(/*! ../bestiary */ "./src/bestiary.ts");
 var playerInputHandler_1 = __webpack_require__(/*! ./playerInputHandler */ "./src/player/playerInputHandler.ts");
 var playerActionProcessor_1 = __webpack_require__(/*! ./playerActionProcessor */ "./src/player/playerActionProcessor.ts");
 var playerMovement_1 = __webpack_require__(/*! ./playerMovement */ "./src/player/playerMovement.ts");
+var playerRenderer_1 = __webpack_require__(/*! ./playerRenderer */ "./src/player/playerRenderer.ts");
 var PlayerDirection;
 (function (PlayerDirection) {
     PlayerDirection[PlayerDirection["DOWN"] = 0] = "DOWN";
@@ -17945,6 +17943,11 @@ var Player = /** @class */ (function (_super) {
         _this.drawMoveQueue = [];
         _this.seenEnemies = new Set();
         _this.bestiary = null;
+        _this.setHitXY = function (newX, newY, distance) {
+            if (distance === void 0) { distance = 0.5; }
+            _this.renderer.hitX = distance * (_this.x - newX);
+            _this.renderer.hitY = distance * (_this.y - newY);
+        };
         _this.applyStatus = function (enemy, status) {
             if (enemy instanceof enemy_1.Enemy) {
                 if (status.poison) {
@@ -18215,8 +18218,6 @@ var Player = /** @class */ (function (_super) {
         _this.tryMove = function (x, y) {
             if (_this.busyAnimating)
                 return;
-            var slowMotion = _this.slowMotionEnabled;
-            var newMove = { x: x, y: y };
             // TODO don't move if hit by enemy
             _this.game.levels[_this.depth].rooms[_this.levelID].catchUp();
             if (_this.dead)
@@ -18364,19 +18365,18 @@ var Player = /** @class */ (function (_super) {
                 sound_1.Sound.hurt();
             if (_this.inventory.getArmor() && _this.inventory.getArmor().health > 0) {
                 _this.inventory.getArmor().hurt(damage);
-                _this.hurtingShield = true;
+                _this.renderer.hurtShield();
                 _this.hurtShield = true;
             }
             {
                 _this.lastHitBy = enemy;
                 //console.log("Last Hit by: ", enemy);
                 _this.healthBar.hurt();
-                _this.flashing = true;
+                _this.renderer.flash();
                 if (!_this.hurtShield)
                     _this.health -= damage;
                 _this.hurtShield = false;
-                _this.hurting = true;
-                _this.hurtAlpha = 0.25;
+                _this.renderer.hurt();
                 if (_this.health <= 0 && !gameConstants_1.GameConstants.DEVELOPER_MODE) {
                     _this.dead = true;
                 }
@@ -18404,25 +18404,11 @@ var Player = /** @class */ (function (_super) {
             }
             //this.game.rooms[this.levelID].updateLighting();
         };
-        _this.doneMoving = function () {
-            var EPSILON = 0.01;
-            return Math.abs(_this.drawX) < EPSILON && Math.abs(_this.drawY) < EPSILON;
+        _this.beginSlowMotion = function () {
+            _this.renderer.beginSlowMotion();
         };
-        _this.doneHitting = function () {
-            var EPSILON = 0.01;
-            return Math.abs(_this.hitX) < EPSILON && Math.abs(_this.hitY) < EPSILON;
-        };
-        _this.enableSlowMotion = function () {
-            if (_this.motionSpeed < 1 && !_this.slowMotionEnabled) {
-                _this.motionSpeed *= 1.08;
-                if (_this.motionSpeed >= 1)
-                    _this.motionSpeed = 1;
-            }
-            if (_this.slowMotionEnabled && _this.motionSpeed > 0.25) {
-                _this.motionSpeed *= 0.95;
-                if (_this.motionSpeed < 0.25)
-                    _this.motionSpeed = 0.25;
-            }
+        _this.endSlowMotion = function () {
+            _this.renderer.endSlowMotion();
         };
         _this.move = function (x, y) {
             _this.updateLastPosition(_this.x, _this.y);
@@ -18431,8 +18417,7 @@ var Player = /** @class */ (function (_super) {
                 sound_1.Sound.playerStoneFootstep();
             if (_this.openVendingMachine)
                 _this.openVendingMachine.close();
-            _this.drawX += x - _this.x;
-            _this.drawY += y - _this.y;
+            _this.renderer.setNewDrawXY(x, y);
             _this.drawMoveQueue.push({
                 drawX: x - _this.x,
                 drawY: y - _this.y,
@@ -18475,47 +18460,24 @@ var Player = /** @class */ (function (_super) {
             // no smoothing
             _this.x = Math.round(x);
             _this.y = Math.round(y);
-            _this.drawX = 0;
-            _this.drawY = 0;
-            _this.hitX = 0;
-            _this.hitY = 0;
-            _this.jumpY = 0;
+            _this.renderer.snapDrawStuff();
         };
         _this.update = function () { };
-        _this.updateSlowMotion = function () {
-            if (_this.slowMotionTickDuration > 0)
-                _this.slowMotionTickDuration -= 1;
-            if (_this.slowMotionTickDuration === 0)
-                _this.slowMotionEnabled = false;
-        };
         _this.finishTick = function () {
             _this.turnCount += 1;
             _this.inventory.tick();
-            _this.flashing = false;
+            _this.renderer.disableFlash();
             var totalHealthDiff = _this.health - _this.lastTickHealth;
             _this.lastTickHealth = _this.health; // update last tick health
             if (totalHealthDiff < 0) {
-                _this.flashing = true;
+                _this.renderer.flash();
             }
             _this.moveDistance = 0;
             //this.actionTab.actionState = ActionState.READY;
             //Sets the action tab state to Wait (during enemy turn)
         };
-        /**
-         * Draws the player sprite to the canvas.
-         * Added `ctx.save()` at the beginning and `ctx.restore()` at the end
-         * to ensure canvas state is preserved.
-         */
-        _this.drawPlayerSprite = function (delta) {
-            game_1.Game.ctx.save(); // Save the current canvas state
-            _this.frame += 0.1 * delta;
-            if (_this.frame >= 4)
-                _this.frame = 0;
-            game_1.Game.drawMob(1 + Math.floor(_this.frame), 8 + _this.direction * 2, 1, 2, _this.x - _this.drawX - _this.hitX, _this.y - 1.45 - _this.drawY - _this.jumpY - _this.hitY, 1, 2, _this.shadeColor());
-            if (_this.inventory.getArmor() && _this.inventory.getArmor().health > 0) {
-                // TODO draw armor
-            }
-            game_1.Game.ctx.restore(); // Restore the canvas state
+        _this.draw = function (delta) {
+            _this.renderer.draw(delta);
         };
         _this.shadeColor = function () {
             if (!gameConstants_1.GameConstants.CUSTOM_SHADER_COLOR_ENABLED) {
@@ -18529,42 +18491,6 @@ var Player = /** @class */ (function (_super) {
             _this.health += amount;
             if (_this.health > _this.maxHealth)
                 _this.health = _this.maxHealth;
-        };
-        _this.drawSpellBeam = function (delta) {
-            game_1.Game.ctx.save();
-            // Clear existing beam effects each frame
-            _this.game.levels[_this.depth].rooms[_this.levelID].beamEffects = [];
-            if (_this.inventory.getWeapon() instanceof spellbook_1.Spellbook) {
-                var spellbook = _this.inventory.getWeapon();
-                if (spellbook.isTargeting) {
-                    var targets = spellbook.targets;
-                    for (var _i = 0, targets_1 = targets; _i < targets_1.length; _i++) {
-                        var target = targets_1[_i];
-                        // Create a new beam effect from the player to the enemy
-                        _this.game.levels[_this.depth].rooms[_this.levelID].addBeamEffect(_this.x - _this.drawX, _this.y - _this.drawY, target.x - target.drawX, target.y - target.drawY, target);
-                        // Retrieve the newly added beam effect
-                        var beam = _this.game.levels[_this.depth].rooms[_this.levelID].beamEffects[_this.game.levels[_this.depth].rooms[_this.levelID].beamEffects
-                            .length - 1];
-                        // Render the beam
-                        beam.render(_this.x - _this.drawX, _this.y - _this.drawY, target.x - target.drawX, target.y - target.drawY, "cyan", 2, delta);
-                    }
-                }
-            }
-            game_1.Game.ctx.restore();
-        };
-        _this.draw = function (delta) {
-            game_1.Game.ctx.save();
-            _this.updateDrawXY(delta);
-            _this.drawableY = _this.y;
-            _this.flashingFrame += (delta * 12) / gameConstants_1.GameConstants.FPS;
-            if (!_this.dead) {
-                game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1);
-                if (!_this.flashing || Math.floor(_this.flashingFrame) % 2 === 0) {
-                    _this.drawPlayerSprite(delta);
-                }
-            }
-            _this.drawSpellBeam(delta);
-            game_1.Game.ctx.restore();
         };
         _this.faceMouse = function () {
             if (!gameConstants_1.GameConstants.MOVE_WITH_MOUSE)
@@ -18593,224 +18519,22 @@ var Player = /** @class */ (function (_super) {
                 _this.direction = game_1.Direction.LEFT;
             }
         };
-        _this.heartbeat = function () {
-            _this.guiHeartFrame = 1;
-        };
         _this.tapHoldHandler = function () {
             _this.mapToggled = !_this.mapToggled;
         };
-        /**
-         * Draws the top layer elements, such as the health bar.
-         * Added `ctx.save()` at the beginning and `ctx.restore()` at the end
-         * to ensure canvas state is preserved.
-         */
-        _this.drawTopLayer = function (delta) {
-            game_1.Game.ctx.save(); // Save the current canvas state
-            _this.healthBar.draw(delta, _this.health, _this.maxHealth, _this.x - _this.drawX, _this.y - _this.drawY, !_this.flashing || Math.floor(_this.flashingFrame) % 2 === 0);
-            game_1.Game.ctx.restore(); // Restore the canvas state
-        };
-        _this.drawGUI = function (delta, transitioning) {
-            if (transitioning === void 0) { transitioning = false; }
-            game_1.Game.ctx.save();
-            if (!_this.dead) {
-                if (!transitioning)
-                    _this.inventory.draw(delta);
-                if (_this.bestiary)
-                    _this.bestiary.draw(delta);
-                //this.actionTab.draw(delta);
-                if (_this.guiHeartFrame > 0)
-                    _this.guiHeartFrame += delta;
-                if (_this.guiHeartFrame > 5) {
-                    _this.guiHeartFrame = 0;
-                }
-                for (var i = 0; i < _this.maxHealth; i++) {
-                    var shake = 0;
-                    var shakeY = 0;
-                    if (_this.health <= 1) {
-                        shake =
-                            Math.round(Math.sin(Date.now() / 25 / (i + 1)) + i / 2) /
-                                2 /
-                                gameConstants_1.GameConstants.TILESIZE;
-                        shakeY =
-                            Math.round(Math.sin(Date.now() / 25 / (i + 2)) + i / 2) /
-                                2 /
-                                gameConstants_1.GameConstants.TILESIZE;
-                    }
-                    var frame = _this.guiHeartFrame > 0 ? 1 : 0;
-                    var offsetY = gameConstants_1.GameConstants.WIDTH > 155 ? 0 : -1.25;
-                    if (i >= Math.floor(_this.health)) {
-                        if (i == Math.floor(_this.health) && (_this.health * 2) % 2 == 1) {
-                            // draw half heart
-                            game_1.Game.drawFX(4, 2, 0.75, 0.75, i / 1.5 + shake + 0.25, gameConstants_1.GameConstants.HEIGHT / gameConstants_1.GameConstants.TILESIZE -
-                                1 +
-                                shakeY +
-                                offsetY, 0.75, 0.75);
-                        }
-                        else {
-                            game_1.Game.drawFX(3, 2, 0.75, 0.75, i / 1.5 + shake + 0.25, gameConstants_1.GameConstants.HEIGHT / gameConstants_1.GameConstants.TILESIZE -
-                                1 +
-                                shakeY +
-                                offsetY, 0.75, 0.75);
-                        }
-                    }
-                    else {
-                        game_1.Game.drawFX(frame, 2, 0.75, 0.75, i / 1.5 + shake + 0.25, gameConstants_1.GameConstants.HEIGHT / gameConstants_1.GameConstants.TILESIZE -
-                            1 +
-                            shakeY +
-                            offsetY, 0.75, 0.75);
-                    }
-                }
-                if (_this.inventory.getArmor())
-                    _this.inventory.getArmor().drawGUI(delta, _this.maxHealth);
-            }
-            else {
-                game_1.Game.ctx.fillStyle = levelConstants_1.LevelConstants.LEVEL_TEXT_COLOR;
-                var enemies = stats_1.statsTracker.getStats().enemies;
-                // Count the occurrences of each enemy
-                var enemyCounts = enemies.reduce(function (acc, enemy) {
-                    acc[enemy] = (acc[enemy] || 0) + 1;
-                    return acc;
-                }, {});
-                // Create individual lines
-                var lines_1 = [];
-                // Line 1: Game Over or slain by
-                if (_this.lastHitBy !== "enemy") {
-                    lines_1.push("You were slain by ".concat(_this.lastHitBy, "."));
-                }
-                else {
-                    lines_1.push("Game Over");
-                }
-                lines_1.push("Depth reached: ".concat(_this.game.levels[_this.depth].rooms[_this.levelID].depth));
-                // Line 2: Enemies killed
-                lines_1.push("".concat(Object.values(enemyCounts).reduce(function (a, b) { return a + b; }, 0), " enemies killed in total:"));
-                // Subsequent lines: Each enemy count
-                Object.entries(enemyCounts).forEach(function (_a) {
-                    var enemy = _a[0], count = _a[1];
-                    lines_1.push("".concat(enemy, " x").concat(count));
-                });
-                // Line after enemy counts: Restart instruction
-                var restartButton = "Press space or click to restart";
-                if (gameConstants_1.GameConstants.isMobile)
-                    restartButton = "Tap to restart";
-                // Calculate total height based on number of lines
-                var lineHeight_1 = game_1.Game.letter_height + 2; // Adjust spacing as needed
-                var totalHeight = lines_1.length * lineHeight_1 + lineHeight_1; // Additional space for restart button
-                // Starting Y position to center the text block
-                var startY_1 = gameConstants_1.GameConstants.HEIGHT / 2 - totalHeight / 2;
-                // Draw each line centered horizontally
-                lines_1.forEach(function (line, index) {
-                    var textWidth = game_1.Game.measureText(line).width;
-                    var spacing = index === 0 || index === 1 || index === lines_1.length - 1
-                        ? lineHeight_1 * 1.5
-                        : lineHeight_1;
-                    game_1.Game.fillText(line, gameConstants_1.GameConstants.WIDTH / 2 - textWidth / 2, startY_1);
-                    startY_1 += spacing;
-                });
-                // Draw the restart button
-                var restartTextWidth = game_1.Game.measureText(restartButton).width;
-                game_1.Game.fillText(restartButton, gameConstants_1.GameConstants.WIDTH / 2 - restartTextWidth / 2, startY_1);
-            }
-            postProcess_1.PostProcessor.draw(delta);
-            if (_this.hurting)
-                _this.drawHurt(delta);
-            if (_this.mapToggled === true)
-                _this.map.draw(delta);
-            //this.drawTileCursor(delta);
-            _this.setCursorIcon();
-            //this.drawInventoryButton(delta);
-            if (_this.menu.open)
-                _this.menu.drawMenu();
-            game_1.Game.ctx.restore();
-        };
-        _this.drawHurt = function (delta) {
-            game_1.Game.ctx.save(); // Save the current canvas state
-            game_1.Game.ctx.globalAlpha = _this.hurtAlpha;
-            _this.hurtAlpha -= (_this.hurtAlpha / 10) * delta;
-            if (_this.hurtAlpha <= 0.01) {
-                _this.hurtAlpha = 0;
-                _this.hurting = false;
-                _this.hurtingShield = false;
-            }
-            game_1.Game.ctx.globalCompositeOperation = "source-over";
-            game_1.Game.ctx.fillStyle = "#cc3333"; // bright but not fully saturated red
-            if (_this.hurtingShield) {
-                game_1.Game.ctx.fillStyle = "#639bff"; // bright but not fully saturated blue
-            }
-            game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
-            game_1.Game.ctx.restore(); // Restore the canvas state
-        };
-        _this.drawLowHealth = function (delta) {
-            game_1.Game.ctx.save();
-            //unused
-            if (_this.health <= 1 && !_this.dead) {
-                // Calculate pulsating alpha for the vignette effect
-                var lowHealthAlpha = 0.5; //Math.sin(this.lowHealthFrame / 10) * 0.5 + 0.5;
-                game_1.Game.ctx.globalAlpha = lowHealthAlpha;
-                _this.lowHealthFrame += delta;
-                var gradientBottom = game_1.Game.ctx.createLinearGradient(0, gameConstants_1.GameConstants.HEIGHT, 0, (gameConstants_1.GameConstants.HEIGHT * 2) / 3);
-                // Define gradient color stops
-                [gradientBottom].forEach(function (gradient) {
-                    gradient.addColorStop(0, "#cc3333"); // Solid red at edges
-                    gradient.addColorStop(1, "rgba(0, 0, 0, 0)"); // Transparent toward center
-                });
-                // Draw the gradients
-                game_1.Game.ctx.globalCompositeOperation = "source-over";
-                game_1.Game.ctx.fillStyle = gradientBottom;
-                game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
-                // Reset composite operation and alpha
-                game_1.Game.ctx.globalCompositeOperation = "source-over";
-                game_1.Game.ctx.globalAlpha = 1.0;
-            }
-            else {
-                _this.lowHealthFrame = 0;
-            }
-            game_1.Game.ctx.restore();
-        };
-        _this.updateDrawXY = function (delta) {
-            if (!_this.doneMoving()) {
-                _this.drawX *= Math.pow(0.85, delta);
-                _this.drawY *= Math.pow(0.85, delta);
-                _this.drawX = Math.abs(_this.drawX) < 0.01 ? 0 : _this.drawX;
-                _this.drawY = Math.abs(_this.drawY) < 0.01 ? 0 : _this.drawY;
-            }
-            if (_this.doneHitting()) {
-                _this.jump(delta);
-            }
-            if (!_this.doneHitting()) {
-                _this.updateHitXY(delta);
-            }
-            _this.enableSlowMotion();
-            gameConstants_1.GameConstants.ANIMATION_SPEED = _this.motionSpeed;
-        };
-        _this.updateHitXY = function (delta) {
-            var hitX = _this.hitX - _this.hitX * 0.3;
-            var hitY = _this.hitY - _this.hitY * 0.3;
-            _this.hitX = Math.min(Math.max(hitX, -1), 1);
-            _this.hitY = Math.min(Math.max(hitY, -1), 1);
-            if (Math.abs(hitX) < 0.01)
-                _this.hitX = 0;
-            if (Math.abs(hitY) < 0.01)
-                _this.hitY = 0;
-        };
         _this.hitShake = function (playerX, playerY, otherX, otherY) {
             var range = gameConstants_1.GameConstants.TILESIZE;
-            _this.hitX = Math.min(Math.max(0.5 * (playerX - otherX), -range), range);
-            _this.hitY = Math.min(Math.max(0.5 * (playerY - otherY), -range), range);
+            var hitX = Math.min(Math.max(0.5 * (playerX - otherX), -range), range);
+            var hitY = Math.min(Math.max(0.5 * (playerY - otherY), -range), range);
+            _this.renderer.setHitXY(hitX, hitY);
         };
         _this.shakeScreen = function (playerX, playerY, otherX, otherY, shakeStrength) {
             if (shakeStrength === void 0) { shakeStrength = 10; }
             var range = gameConstants_1.GameConstants.TILESIZE;
-            _this.hitX = Math.min(Math.max(0.5 * (playerX - otherX), -range), range);
-            _this.hitY = Math.min(Math.max(0.5 * (playerY - otherY), -range), range);
-            _this.game.shakeScreen(-_this.hitX * 1 * shakeStrength, -_this.hitY * 1 * shakeStrength);
-        };
-        _this.jump = function (delta) {
-            var j = Math.max(Math.abs(_this.drawX), Math.abs(_this.drawY));
-            _this.jumpY = Math.abs(Math.sin(j * Math.PI) * _this.jumpHeight);
-            if (Math.abs(_this.jumpY) < 0.01)
-                _this.jumpY = 0;
-            if (_this.jumpY > _this.jumpHeight)
-                _this.jumpY = _this.jumpHeight;
+            var shakeX = Math.min(Math.max(0.5 * (playerX - otherX), -range), range);
+            var shakeY = Math.min(Math.max(0.5 * (playerY - otherY), -range), range);
+            _this.renderer.setHitXY(shakeX, shakeY);
+            _this.game.shakeScreen(-shakeX * 1 * shakeStrength, -shakeY * 1 * shakeStrength);
         };
         /**
          * Draws the tile cursor to the canvas.
@@ -18847,17 +18571,23 @@ var Player = /** @class */ (function (_super) {
             game_1.Game.drawFX(tileX + Math.floor(hitWarning_1.HitWarning.frame), tileY, 1, 1, _this.tileCursor.x, _this.tileCursor.y, 1, 1);
             game_1.Game.ctx.restore(); // Restore the canvas state
         };
+        _this.updateSlowMotion = function () {
+            _this.renderer.updateSlowMotion();
+        };
+        _this.drawGUI = function (delta) {
+            _this.renderer.drawGUI(delta);
+        };
         _this.game = game;
         _this.levelID = 0;
         _this.x = x;
         _this.y = y;
         _this.w = 1;
         _this.h = 1;
-        _this.drawX = 0;
-        _this.drawY = 0;
-        _this.jumpY = 0;
-        _this.jumpHeight = 0.3;
-        _this.frame = 0;
+        //this.drawX = 0;
+        //this.drawY = 0;
+        //this.jumpY = 0;
+        //this.jumpHeight = 0.3;
+        //this.frame = 0;
         _this.moveDistance = 0;
         _this.direction = game_1.Direction.UP;
         _this.lastX = 0;
@@ -18871,10 +18601,10 @@ var Player = /** @class */ (function (_super) {
         _this.maxHealth = 2;
         _this.healthBar = new healthbar_1.HealthBar();
         _this.dead = false;
-        _this.flashing = false;
-        _this.flashingFrame = 0;
+        //this.flashing = false;
+        //this.flashingFrame = 0;
         _this.lastTickHealth = _this.health;
-        _this.guiHeartFrame = 0;
+        //this.guiHeartFrame = 0;
         _this.inventory = new inventory_1.Inventory(game, _this);
         _this.defaultSightRadius = 3;
         _this.sightRadius = levelConstants_1.LevelConstants.LIGHTING_MAX_DISTANCE; //this.defaultSightRadius;
@@ -18886,26 +18616,55 @@ var Player = /** @class */ (function (_super) {
         _this.tileCursor = { x: 0, y: 0 };
         _this.moveRange = 1;
         _this.lightEquipped = false;
-        _this.hurting = false;
-        _this.hurtingShield = false;
+        //this.hurting = false;
+        //this.hurtingShield = false;
         _this.hurtShield = false;
-        _this.hurtAlpha = 0.25;
+        //this.hurtAlpha = 0.25;
         _this.lightBrightness = 0.3;
-        _this.sineAngle = Math.PI / 2;
-        _this.drawMoveSpeed = 0.3; // greater than 1 less than 2
+        //this.sineAngle = Math.PI / 2;
+        //this.drawMoveSpeed = 0.3; // greater than 1 less than 2
         _this.moveQueue = [];
-        _this.hitX = 0;
-        _this.hitY = 0;
-        _this.motionSpeed = 1;
-        _this.slowMotionEnabled = false;
-        _this.slowMotionTickDuration = 0;
+        //this.hitX = 0;
+        //this.hitY = 0;
+        //this.motionSpeed = 1;
+        //this.slowMotionEnabled = false;
+        //this.slowMotionTickDuration = 0;
         _this.justMoved = DrawDirection.Y;
         _this.inputHandler = new playerInputHandler_1.PlayerInputHandler(_this);
         _this.actionProcessor = new playerActionProcessor_1.PlayerActionProcessor(_this);
         _this.movement = new playerMovement_1.PlayerMovement(_this);
+        _this.renderer = new playerRenderer_1.PlayerRenderer(_this);
         _this.bestiary = new bestiary_1.Bestiary(_this.game, _this);
         return _this;
     }
+    Object.defineProperty(Player.prototype, "hitX", {
+        get: function () {
+            return this.renderer.hitX;
+        },
+        enumerable: false,
+        configurable: true
+    });
+    Object.defineProperty(Player.prototype, "hitY", {
+        get: function () {
+            return this.renderer.hitY;
+        },
+        enumerable: false,
+        configurable: true
+    });
+    Object.defineProperty(Player.prototype, "drawX", {
+        get: function () {
+            return this.renderer.drawX;
+        },
+        enumerable: false,
+        configurable: true
+    });
+    Object.defineProperty(Player.prototype, "drawY", {
+        get: function () {
+            return this.renderer.drawY;
+        },
+        enumerable: false,
+        configurable: true
+    });
     Player.minSightRadius = 2; //hard minimum sight radius that ignores depth
     return Player;
 }(drawable_1.Drawable));
@@ -19308,6 +19067,373 @@ var PlayerMovement = /** @class */ (function () {
     return PlayerMovement;
 }());
 exports.PlayerMovement = PlayerMovement;
+
+
+/***/ }),
+
+/***/ "./src/player/playerRenderer.ts":
+/*!**************************************!*\
+  !*** ./src/player/playerRenderer.ts ***!
+  \**************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PlayerRenderer = void 0;
+var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+var gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
+var levelConstants_1 = __webpack_require__(/*! ../levelConstants */ "./src/levelConstants.ts");
+var postProcess_1 = __webpack_require__(/*! ../postProcess */ "./src/postProcess.ts");
+var stats_1 = __webpack_require__(/*! ../stats */ "./src/stats.ts");
+var utils_1 = __webpack_require__(/*! ../utils */ "./src/utils.ts");
+var spellbook_1 = __webpack_require__(/*! ../weapon/spellbook */ "./src/weapon/spellbook.ts");
+var PlayerRenderer = /** @class */ (function () {
+    function PlayerRenderer(player) {
+        var _this = this;
+        this.hurt = function () {
+            _this.hurting = true;
+            _this.hurtAlpha = 0.25;
+        };
+        this.hurtShield = function () {
+            _this.hurtingShield = true;
+        };
+        this.flash = function () {
+            _this.flashing = true;
+        };
+        this.disableFlash = function () {
+            _this.flashing = false;
+        };
+        this.beginSlowMotion = function () {
+            _this.slowMotionEnabled = true;
+        };
+        this.endSlowMotion = function () {
+            _this.slowMotionEnabled = false;
+        };
+        this.setNewDrawXY = function (x, y) {
+            _this.drawX += x - _this.player.x;
+            _this.drawY += y - _this.player.y;
+        };
+        this.enableSlowMotion = function () {
+            if (_this.motionSpeed < 1 && !_this.slowMotionEnabled) {
+                _this.motionSpeed *= 1.08;
+                if (_this.motionSpeed >= 1)
+                    _this.motionSpeed = 1;
+            }
+            if (_this.slowMotionEnabled && _this.motionSpeed > 0.25) {
+                _this.motionSpeed *= 0.95;
+                if (_this.motionSpeed < 0.25)
+                    _this.motionSpeed = 0.25;
+            }
+        };
+        this.updateSlowMotion = function () {
+            if (_this.slowMotionTickDuration > 0)
+                _this.slowMotionTickDuration -= 1;
+            if (_this.slowMotionTickDuration === 0)
+                _this.slowMotionEnabled = false;
+        };
+        /**
+         * Draws the player sprite to the canvas.
+         * Added `ctx.save()` at the beginning and `ctx.restore()` at the end
+         * to ensure canvas state is preserved.
+         */
+        this.drawPlayerSprite = function (delta) {
+            var player = _this.player;
+            game_1.Game.ctx.save(); // Save the current canvas state
+            _this.frame += 0.1 * delta;
+            if (_this.frame >= 4)
+                _this.frame = 0;
+            game_1.Game.drawMob(1 + Math.floor(_this.frame), 8 + player.direction * 2, 1, 2, player.x - _this.drawX - _this.hitX, player.y - 1.45 - _this.drawY - _this.jumpY - _this.hitY, 1, 2, _this.shadeColor());
+            if (player.inventory.getArmor() && player.inventory.getArmor().health > 0) {
+                // TODO draw armor
+            }
+            game_1.Game.ctx.restore(); // Restore the canvas state
+        };
+        this.draw = function (delta) {
+            var player = _this.player;
+            game_1.Game.ctx.save();
+            _this.updateDrawXY(delta);
+            player.drawableY = player.y;
+            _this.flashingFrame += (delta * 12) / gameConstants_1.GameConstants.FPS;
+            if (!player.dead) {
+                game_1.Game.drawMob(0, 0, 1, 1, player.x - _this.drawX, player.y - _this.drawY, 1, 1);
+                if (!_this.flashing || Math.floor(_this.flashingFrame) % 2 === 0) {
+                    _this.drawPlayerSprite(delta);
+                }
+            }
+            _this.drawSpellBeam(delta);
+            game_1.Game.ctx.restore();
+        };
+        this.drawSpellBeam = function (delta) {
+            game_1.Game.ctx.save();
+            // Clear existing beam effects each frame
+            _this.player.game.levels[_this.player.depth].rooms[_this.player.levelID].beamEffects = [];
+            if (_this.player.inventory.getWeapon() instanceof spellbook_1.Spellbook) {
+                var spellbook = _this.player.inventory.getWeapon();
+                if (spellbook.isTargeting) {
+                    var targets = spellbook.targets;
+                    for (var _i = 0, targets_1 = targets; _i < targets_1.length; _i++) {
+                        var target = targets_1[_i];
+                        // Create a new beam effect from the player to the enemy
+                        _this.player.game.levels[_this.player.depth].rooms[_this.player.levelID].addBeamEffect(_this.player.x - _this.drawX, _this.player.y - _this.drawY, target.x - target.drawX, target.y - target.drawY, target);
+                        // Retrieve the newly added beam effect
+                        var beam = _this.player.game.levels[_this.player.depth].rooms[_this.player.levelID].beamEffects[_this.player.game.levels[_this.player.depth].rooms[_this.player.levelID].beamEffects.length - 1];
+                        // Render the beam
+                        beam.render(_this.player.x - _this.drawX, _this.player.y - _this.drawY, target.x - target.drawX, target.y - target.drawY, "cyan", 2, delta);
+                    }
+                }
+            }
+            game_1.Game.ctx.restore();
+        };
+        this.shadeColor = function () {
+            var player = _this.player;
+            if (!gameConstants_1.GameConstants.CUSTOM_SHADER_COLOR_ENABLED) {
+                return "black";
+            }
+            else {
+                return utils_1.Utils.rgbToHex(player.game.levels[player.depth].rooms[player.levelID].col[player.x][player.y][0], player.game.levels[player.depth].rooms[player.levelID].col[player.x][player.y][1], player.game.levels[player.depth].rooms[player.levelID].col[player.x][player.y][2]);
+            }
+        };
+        this.drawTopLayer = function (delta) {
+            game_1.Game.ctx.save(); // Save the current canvas state
+            _this.player.healthBar.draw(delta, _this.player.health, _this.player.maxHealth, _this.player.x - _this.drawX, _this.player.y - _this.drawY, !_this.flashing || Math.floor(_this.flashingFrame) % 2 === 0);
+            game_1.Game.ctx.restore(); // Restore the canvas state
+        };
+        this.updateDrawXY = function (delta) {
+            if (!_this.doneMoving()) {
+                _this.drawX *= Math.pow(0.85, delta);
+                _this.drawY *= Math.pow(0.85, delta);
+                _this.drawX = Math.abs(_this.drawX) < 0.01 ? 0 : _this.drawX;
+                _this.drawY = Math.abs(_this.drawY) < 0.01 ? 0 : _this.drawY;
+            }
+            if (_this.doneHitting()) {
+                _this.jump(delta);
+            }
+            if (!_this.doneHitting()) {
+                _this.updateHitXY(delta);
+            }
+            _this.enableSlowMotion();
+            gameConstants_1.GameConstants.ANIMATION_SPEED = _this.motionSpeed;
+        };
+        this.updateHitXY = function (delta) {
+            var hitX = _this.hitX - _this.hitX * 0.3;
+            var hitY = _this.hitY - _this.hitY * 0.3;
+            _this.hitX = Math.min(Math.max(hitX, -1), 1);
+            _this.hitY = Math.min(Math.max(hitY, -1), 1);
+            if (Math.abs(hitX) < 0.01)
+                _this.hitX = 0;
+            if (Math.abs(hitY) < 0.01)
+                _this.hitY = 0;
+        };
+        this.doneMoving = function () {
+            var EPSILON = 0.01;
+            return Math.abs(_this.drawX) < EPSILON && Math.abs(_this.drawY) < EPSILON;
+        };
+        this.doneHitting = function () {
+            var EPSILON = 0.01;
+            return Math.abs(_this.hitX) < EPSILON && Math.abs(_this.hitY) < EPSILON;
+        };
+        this.snapDrawStuff = function () {
+            _this.drawX = 0;
+            _this.drawY = 0;
+            _this.hitX = 0;
+            _this.hitY = 0;
+            _this.jumpY = 0;
+        };
+        this.setHitXY = function (x, y) {
+            _this.hitX = x;
+            _this.hitY = y;
+        };
+        this.drawGUI = function (delta, transitioning) {
+            if (transitioning === void 0) { transitioning = false; }
+            game_1.Game.ctx.save();
+            if (!_this.player.dead) {
+                if (!transitioning)
+                    _this.player.inventory.draw(delta);
+                if (_this.player.bestiary)
+                    _this.player.bestiary.draw(delta);
+                //this.actionTab.draw(delta);
+                if (_this.guiHeartFrame > 0)
+                    _this.guiHeartFrame += delta;
+                if (_this.guiHeartFrame > 5) {
+                    _this.guiHeartFrame = 0;
+                }
+                for (var i = 0; i < _this.player.maxHealth; i++) {
+                    var shake = 0;
+                    var shakeY = 0;
+                    if (_this.player.health <= 1) {
+                        shake =
+                            Math.round(Math.sin(Date.now() / 25 / (i + 1)) + i / 2) /
+                                2 /
+                                gameConstants_1.GameConstants.TILESIZE;
+                        shakeY =
+                            Math.round(Math.sin(Date.now() / 25 / (i + 2)) + i / 2) /
+                                2 /
+                                gameConstants_1.GameConstants.TILESIZE;
+                    }
+                    var frame = _this.guiHeartFrame > 0 ? 1 : 0;
+                    var offsetY = gameConstants_1.GameConstants.WIDTH > 155 ? 0 : -1.25;
+                    if (i >= Math.floor(_this.player.health)) {
+                        if (i == Math.floor(_this.player.health) &&
+                            (_this.player.health * 2) % 2 == 1) {
+                            // draw half heart
+                            game_1.Game.drawFX(4, 2, 0.75, 0.75, i / 1.5 + shake + 0.25, gameConstants_1.GameConstants.HEIGHT / gameConstants_1.GameConstants.TILESIZE -
+                                1 +
+                                shakeY +
+                                offsetY, 0.75, 0.75);
+                        }
+                        else {
+                            game_1.Game.drawFX(3, 2, 0.75, 0.75, i / 1.5 + shake + 0.25, gameConstants_1.GameConstants.HEIGHT / gameConstants_1.GameConstants.TILESIZE -
+                                1 +
+                                shakeY +
+                                offsetY, 0.75, 0.75);
+                        }
+                    }
+                    else {
+                        game_1.Game.drawFX(frame, 2, 0.75, 0.75, i / 1.5 + shake + 0.25, gameConstants_1.GameConstants.HEIGHT / gameConstants_1.GameConstants.TILESIZE -
+                            1 +
+                            shakeY +
+                            offsetY, 0.75, 0.75);
+                    }
+                }
+                if (_this.player.inventory.getArmor())
+                    _this.player.inventory.getArmor().drawGUI(delta, _this.player.maxHealth);
+            }
+            else {
+                game_1.Game.ctx.fillStyle = levelConstants_1.LevelConstants.LEVEL_TEXT_COLOR;
+                var enemies = stats_1.statsTracker.getStats().enemies;
+                // Count the occurrences of each enemy
+                var enemyCounts = enemies.reduce(function (acc, enemy) {
+                    acc[enemy] = (acc[enemy] || 0) + 1;
+                    return acc;
+                }, {});
+                // Create individual lines
+                var lines_1 = [];
+                // Line 1: Game Over or slain by
+                if (_this.player.lastHitBy !== "enemy") {
+                    lines_1.push("You were slain by ".concat(_this.player.lastHitBy, "."));
+                }
+                else {
+                    lines_1.push("Game Over");
+                }
+                lines_1.push("Depth reached: ".concat(_this.player.game.levels[_this.player.depth].rooms[_this.player.levelID].depth));
+                // Line 2: Enemies killed
+                lines_1.push("".concat(Object.values(enemyCounts).reduce(function (a, b) { return a + b; }, 0), " enemies killed in total:"));
+                // Subsequent lines: Each enemy count
+                Object.entries(enemyCounts).forEach(function (_a) {
+                    var enemy = _a[0], count = _a[1];
+                    lines_1.push("".concat(enemy, " x").concat(count));
+                });
+                // Line after enemy counts: Restart instruction
+                var restartButton = "Press space or click to restart";
+                if (gameConstants_1.GameConstants.isMobile)
+                    restartButton = "Tap to restart";
+                // Calculate total height based on number of lines
+                var lineHeight_1 = game_1.Game.letter_height + 2; // Adjust spacing as needed
+                var totalHeight = lines_1.length * lineHeight_1 + lineHeight_1; // Additional space for restart button
+                // Starting Y position to center the text block
+                var startY_1 = gameConstants_1.GameConstants.HEIGHT / 2 - totalHeight / 2;
+                // Draw each line centered horizontally
+                lines_1.forEach(function (line, index) {
+                    var textWidth = game_1.Game.measureText(line).width;
+                    var spacing = index === 0 || index === 1 || index === lines_1.length - 1
+                        ? lineHeight_1 * 1.5
+                        : lineHeight_1;
+                    game_1.Game.fillText(line, gameConstants_1.GameConstants.WIDTH / 2 - textWidth / 2, startY_1);
+                    startY_1 += spacing;
+                });
+                // Draw the restart button
+                var restartTextWidth = game_1.Game.measureText(restartButton).width;
+                game_1.Game.fillText(restartButton, gameConstants_1.GameConstants.WIDTH / 2 - restartTextWidth / 2, startY_1);
+            }
+            postProcess_1.PostProcessor.draw(delta);
+            if (_this.hurting)
+                _this.drawHurt(delta);
+            if (_this.player.mapToggled === true)
+                _this.player.map.draw(delta);
+            //this.drawTileCursor(delta);
+            _this.player.setCursorIcon();
+            //this.drawInventoryButton(delta);
+            if (_this.player.menu.open)
+                _this.player.menu.drawMenu();
+            game_1.Game.ctx.restore();
+        };
+        this.drawHurt = function (delta) {
+            game_1.Game.ctx.save(); // Save the current canvas state
+            game_1.Game.ctx.globalAlpha = _this.hurtAlpha;
+            _this.hurtAlpha -= (_this.hurtAlpha / 10) * delta;
+            if (_this.hurtAlpha <= 0.01) {
+                _this.hurtAlpha = 0;
+                _this.hurting = false;
+                _this.hurtingShield = false;
+            }
+            game_1.Game.ctx.globalCompositeOperation = "source-over";
+            game_1.Game.ctx.fillStyle = "#cc3333"; // bright but not fully saturated red
+            if (_this.hurtingShield) {
+                game_1.Game.ctx.fillStyle = "#639bff"; // bright but not fully saturated blue
+            }
+            game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
+            game_1.Game.ctx.restore(); // Restore the canvas state
+        };
+        this.drawLowHealth = function (delta) {
+            game_1.Game.ctx.save();
+            //unused
+            if (_this.player.health <= 1 && !_this.player.dead) {
+                // Calculate pulsating alpha for the vignette effect
+                var lowHealthAlpha = 0.5; //Math.sin(this.lowHealthFrame / 10) * 0.5 + 0.5;
+                game_1.Game.ctx.globalAlpha = lowHealthAlpha;
+                _this.lowHealthFrame += delta;
+                var gradientBottom = game_1.Game.ctx.createLinearGradient(0, gameConstants_1.GameConstants.HEIGHT, 0, (gameConstants_1.GameConstants.HEIGHT * 2) / 3);
+                // Define gradient color stops
+                [gradientBottom].forEach(function (gradient) {
+                    gradient.addColorStop(0, "#cc3333"); // Solid red at edges
+                    gradient.addColorStop(1, "rgba(0, 0, 0, 0)"); // Transparent toward center
+                });
+                // Draw the gradients
+                game_1.Game.ctx.globalCompositeOperation = "source-over";
+                game_1.Game.ctx.fillStyle = gradientBottom;
+                game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
+                // Reset composite operation and alpha
+                game_1.Game.ctx.globalCompositeOperation = "source-over";
+                game_1.Game.ctx.globalAlpha = 1.0;
+            }
+            else {
+                _this.lowHealthFrame = 0;
+            }
+            game_1.Game.ctx.restore();
+        };
+        this.heartbeat = function () {
+            _this.guiHeartFrame = 1;
+        };
+        this.jump = function (delta) {
+            var j = Math.max(Math.abs(_this.drawX), Math.abs(_this.drawY));
+            _this.jumpY = Math.abs(Math.sin(j * Math.PI) * _this.jumpHeight);
+            if (Math.abs(_this.jumpY) < 0.01)
+                _this.jumpY = 0;
+            if (_this.jumpY > _this.jumpHeight)
+                _this.jumpY = _this.jumpHeight;
+        };
+        this.player = player;
+        this.jumpY = 0;
+        this.flashingFrame = 0;
+        this.guiHeartFrame = 0;
+        this.motionSpeed = 1;
+        this.hitX = 0;
+        this.hitY = 0;
+        this.drawX = 0;
+        this.drawY = 0;
+        this.hurtAlpha = 0.25;
+        this.jumpHeight = 0.25;
+        this.hurting = false;
+        this.hurtingShield = false;
+        this.slowMotionEnabled = false;
+        this.slowMotionTickDuration = 0;
+        this.flashing = false;
+        this.lowHealthFrame = 0;
+        this.frame = 0;
+    }
+    return PlayerRenderer;
+}());
+exports.PlayerRenderer = PlayerRenderer;
 
 
 /***/ }),
@@ -25470,8 +25596,7 @@ var DualDagger = /** @class */ (function (_super) {
             }
             if (flag) {
                 _this.hitSound();
-                _this.wielder.hitX = 0.5 * (_this.wielder.x - newX);
-                _this.wielder.hitY = 0.5 * (_this.wielder.y - newY);
+                _this.wielder.setHitXY(newX, newY);
                 if (_this.firstAttack) {
                     _this.game.rooms[_this.wielder.levelID].particles.push(new attackAnimation_1.AttackAnimation(newX, newY, "dualdagger", _this.wielder.direction));
                 }
@@ -25488,7 +25613,7 @@ var DualDagger = /** @class */ (function (_super) {
                     _this.game.rooms[_this.wielder.levelID].tickHitWarnings();
                     _this.game.rooms[_this.wielder.levelID].clearDeadStuff();
                     _this.firstAttack = false;
-                    _this.wielder.slowMotionEnabled = true;
+                    _this.wielder.beginSlowMotion();
                 }
                 _this.degrade();
             }
@@ -25684,8 +25809,7 @@ var Shotgun = /** @class */ (function (_super) {
                 //if they're closer do the usual damage
                 //hits all candidates in enemyHitCandidates
                 _this.hitSound();
-                _this.wielder.hitX = 0.5 * (_this.wielder.x - newX);
-                _this.wielder.hitY = 0.5 * (_this.wielder.y - newY);
+                _this.wielder.setHitXY(newX, newY);
                 genericParticle_1.GenericParticle.shotgun(_this.game.rooms[_this.wielder.levelID], _this.wielder.x + 0.5, _this.wielder.y, targetX + 0.5, targetY, "black");
                 genericParticle_1.GenericParticle.shotgun(_this.game.rooms[_this.wielder.levelID], _this.wielder.x + 0.5, _this.wielder.y, targetX + 0.5, targetY, "#ffddff");
                 var gp = new genericParticle_1.GenericParticle(_this.game.rooms[_this.wielder.levelID], 0.5 * (newX + _this.wielder.x) + 0.5, 0.5 * (newY + _this.wielder.y), 0, 1, 0, 0, 0, "white", 0);
@@ -25777,8 +25901,7 @@ var Spear = /** @class */ (function (_super) {
                     e.hurt(_this.wielder, 1);
                 }
                 _this.hitSound();
-                _this.wielder.hitX = 0.5 * (_this.wielder.x - newX);
-                _this.wielder.hitY = 0.5 * (_this.wielder.y - newY);
+                _this.wielder.setHitXY(newX, newY);
                 _this.game.rooms[_this.wielder.levelID].particles.push(new attackAnimation_1.AttackAnimation(newX, newY, "spear", _this.wielder.direction));
                 _this.game.rooms[_this.wielder.levelID].particles.push(new attackAnimation_1.AttackAnimation(newX2, newY2, "spear", _this.wielder.direction));
                 _this.game.rooms[_this.wielder.levelID].tick(_this.wielder);
@@ -25790,8 +25913,7 @@ var Spear = /** @class */ (function (_super) {
             if (flag) {
                 if (_this.wielder.game.room === _this.wielder.game.rooms[_this.wielder.levelID])
                     sound_1.Sound.hit();
-                _this.wielder.hitX = 0.5 * (_this.wielder.x - newX);
-                _this.wielder.hitY = 0.5 * (_this.wielder.y - newY);
+                _this.wielder.setHitXY(newX, newY);
                 _this.game.rooms[_this.wielder.levelID].particles.push(new attackAnimation_1.AttackAnimation(newX, newY, "spear", _this.wielder.direction));
                 _this.game.rooms[_this.wielder.levelID].tick(_this.wielder);
                 if (_this.wielder === _this.game.players[_this.game.localPlayerID])
@@ -25917,8 +26039,9 @@ var Spellbook = /** @class */ (function (_super) {
             if (flag) {
                 if (_this.wielder.game.rooms[_this.wielder.levelID] === _this.wielder.game.room)
                     sound_1.Sound.hit();
-                _this.wielder.hitX = 0.5 * (_this.wielder.x - newX);
-                _this.wielder.hitY = 0.5 * (_this.wielder.y - newY);
+                var hitX = 0.5 * (_this.wielder.x - newX);
+                var hitY = 0.5 * (_this.wielder.y - newY);
+                _this.wielder.setHitXY(hitX, hitY);
                 _this.game.rooms[_this.wielder.levelID].tick(_this.wielder);
                 if (_this.wielder === _this.game.players[_this.game.localPlayerID])
                     _this.game.shakeScreen(10 * _this.wielder.hitX, 10 * _this.wielder.hitY);
@@ -25985,9 +26108,9 @@ var Warhammer = /** @class */ (function (_super) {
             sound_1.Sound.playWarHammer();
         };
         _this.shakeScreen = function () {
-            _this.wielder.slowMotionEnabled = true;
+            _this.wielder.beginSlowMotion();
             setTimeout(function () {
-                _this.wielder.slowMotionEnabled = false;
+                _this.wielder.endSlowMotion();
                 //this.hitSound();
                 switch (_this.wielder.direction) {
                     case game_1.Direction.DOWN:
@@ -26148,8 +26271,7 @@ var Weapon = /** @class */ (function (_super) {
             _this.statusEffect(enemy);
         };
         _this.attackAnimation = function (newX, newY) {
-            _this.wielder.hitX = 0.5 * (_this.wielder.x - newX);
-            _this.wielder.hitY = 0.5 * (_this.wielder.y - newY);
+            _this.wielder.setHitXY(newX, newY);
             _this.game.rooms[_this.wielder.levelID].particles.push(new attackAnimation_1.AttackAnimation(newX, newY, _this.name, _this.wielder.direction));
         };
         _this.shakeScreen = function () {

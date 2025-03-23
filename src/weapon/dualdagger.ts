@@ -39,8 +39,8 @@ export class DualDagger extends Weapon {
     if (flag) {
       this.hitSound();
 
-      this.wielder.hitX = 0.5 * (this.wielder.x - newX);
-      this.wielder.hitY = 0.5 * (this.wielder.y - newY);
+      this.wielder.setHitXY(newX, newY);
+
       if (this.firstAttack) {
         this.game.rooms[this.wielder.levelID].particles.push(
           new AttackAnimation(newX, newY, "dualdagger", this.wielder.direction),
@@ -69,7 +69,7 @@ export class DualDagger extends Weapon {
         this.game.rooms[this.wielder.levelID].tickHitWarnings();
         this.game.rooms[this.wielder.levelID].clearDeadStuff();
         this.firstAttack = false;
-        this.wielder.slowMotionEnabled = true;
+        this.wielder.beginSlowMotion();
       }
       this.degrade();
     }
