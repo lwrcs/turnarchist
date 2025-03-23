@@ -1,6 +1,6 @@
 import { Direction, Game } from "../../game";
 import { Room } from "../../room";
-import { Player } from "../../player";
+import { Player } from "../../player/player";
 import { HitWarning } from "../../hitWarning";
 import { GenericParticle } from "../../particle/genericParticle";
 import { Coin } from "../../item/coin";

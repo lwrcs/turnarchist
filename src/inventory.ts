@@ -8,7 +8,7 @@ import { Coin } from "./item/coin";
 import { Weapon } from "./weapon/weapon";
 import { Room } from "./room";
 import { Usable } from "./item/usable";
-import { Player } from "./player";
+import { Player } from "./player/player";
 import { MouseCursor } from "./mouseCursor";
 import { Input } from "./input";
 

@@ -1,7 +1,7 @@
 import { Direction, Game } from "../game";
 import { Room } from "../room";
 import { Bones } from "../tile/bones";
-import { Player } from "../player";
+import { Player } from "../player/player";
 import { Floor } from "../tile/floor";
 import { HealthBar } from "../healthbar";
 import { Drawable } from "../drawable";

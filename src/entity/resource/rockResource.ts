@@ -3,7 +3,7 @@ import { Game } from "../../game";
 import { Heart } from "../../item/heart";
 import { LevelConstants } from "../../levelConstants";
 import { GenericParticle } from "../../particle/genericParticle";
-import { Player } from "../../player";
+import { Player } from "../../player/player";
 import { Sound } from "../../sound";
 import { Stone } from "../../item/stone";
 import { Resource } from "./resource";

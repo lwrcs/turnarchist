@@ -1,7 +1,7 @@
 import { Projectile } from "./projectile";
 import { Game } from "../game";
 import { WizardEnemy } from "../entity/enemy/wizardEnemy";
-import { Player } from "../player";
+import { Player } from "../player/player";
 import { Entity } from "../entity/entity";
 import { Room } from "../room";
 import { GenericParticle } from "../particle/genericParticle";

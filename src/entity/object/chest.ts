@@ -4,7 +4,7 @@ import { Entity } from "../entity";
 import { Coin } from "../../item/coin";
 import { EntityType } from "../entity";
 import { Random } from "../../random";
-import { Player } from "../../player";
+import { Player } from "../../player/player";
 import { ChestLayer } from "./chestLayer";
 import { ImageParticle } from "../../particle/imageParticle";
 import { Sound } from "../../sound";

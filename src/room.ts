@@ -41,7 +41,7 @@ import { Shotgun } from "./weapon/shotgun";
 import { Heart } from "./item/heart";
 import { Spear } from "./weapon/spear";
 import { Drawable } from "./drawable";
-import { Player, PlayerDirection } from "./player";
+import { Player, PlayerDirection } from "./player/player";
 import { CrabEnemy } from "./entity/enemy/crabEnemy";
 import { ZombieEnemy } from "./entity/enemy/zombieEnemy";
 import { BigSkullEnemy } from "./entity/enemy/bigSkullEnemy";

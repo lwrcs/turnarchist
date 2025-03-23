@@ -5,7 +5,7 @@ import { Enemy } from "./enemy";
 
 import { Utils } from "../../utils";
 import { BeamEffect } from "../../beamEffect";
-import { Player } from "../../player";
+import { Player } from "../../player/player";
 import { ImageParticle } from "../../particle/imageParticle";
 import { Lighting } from "../../lighting";
 

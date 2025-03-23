@@ -15,7 +15,7 @@ import { WizardFireball } from "../../projectile/wizardFireball";
 import { WizardEnemy } from "../enemy/wizardEnemy";
 import { Lighting } from "../../lighting";
 import { PlayerFireball } from "../../projectile/playerFireball";
-import { Player } from "../../player";
+import { Player } from "../../player/player";
 import { Explosion } from "../../projectile/explosion";
 import { Utils } from "../../utils";
 

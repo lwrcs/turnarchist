@@ -2,7 +2,7 @@ import { Game } from "./game";
 import { LevelConstants } from "./levelConstants";
 import { Inventory } from "./inventory";
 import { GameConstants } from "./gameConstants";
-import { Player } from "./player";
+import { Player } from "./player/player";
 
 export enum ActionState {
   READY,

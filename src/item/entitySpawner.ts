@@ -1,5 +1,5 @@
 import { Item } from "./item";
-import { Player, PlayerDirection } from "../player";
+import { Player, PlayerDirection } from "../player/player";
 import { Direction, Game } from "../game";
 import { Room, RoomType } from "../room";
 import { TextParticle } from "../particle/textParticle";

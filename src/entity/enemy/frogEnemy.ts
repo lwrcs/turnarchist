@@ -4,7 +4,7 @@ import { astar } from "../../astarclass";
 import { HitWarning } from "../../hitWarning";
 import { SpikeTrap } from "../../tile/spiketrap";
 import { Coin } from "../../item/coin";
-import { Player } from "../../player";
+import { Player } from "../../player/player";
 import { Item } from "../../item/item";
 import { Enemy } from "./enemy";
 import { Utils } from "../../utils";

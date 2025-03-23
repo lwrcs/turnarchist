@@ -3,7 +3,7 @@ import { Particle } from "./particle";
 import { Direction, Game } from "../game";
 import { GameConstants } from "../gameConstants";
 import { Random } from "../random";
-import { Player, PlayerDirection } from "../player";
+import { Player, PlayerDirection } from "../player/player";
 import { Entity } from "../entity/entity";
 
 export class ImageParticle extends Particle {

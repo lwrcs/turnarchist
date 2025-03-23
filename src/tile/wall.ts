@@ -3,7 +3,6 @@ import { Room, WallDirection } from "../room";
 import { Door, DoorDir } from "./door";
 import { Tile } from "./tile";
 import { WallInfo } from "../room";
-import { Player } from "../player";
 
 export class Wall extends Tile {
   private tileXOffset: number;

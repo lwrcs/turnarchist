@@ -1,5 +1,5 @@
 import { Item } from "./item";
-import { Player } from "../player";
+import { Player } from "../player/player";
 import { Game } from "../game";
 import { Room } from "../room";
 import { TextParticle } from "../particle/textParticle";

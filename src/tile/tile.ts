@@ -1,5 +1,5 @@
 import { Room } from "../room";
-import { Player } from "../player";
+import { Player } from "../player/player";
 import { Entity } from "../entity/entity";
 import { Drawable } from "../drawable";
 import { GameConstants } from "../gameConstants";

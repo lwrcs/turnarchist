@@ -1,39 +1,40 @@
-import { Input, InputEnum } from "./input";
-import { GameConstants } from "./gameConstants";
-import { ChatMessage, Direction, Game, LevelState } from "./game";
-import { Door, DoorType } from "./tile/door";
-import { Trapdoor } from "./tile/trapdoor";
-import { Inventory } from "./inventory";
-import { Sound } from "./sound";
-import { LevelConstants } from "./levelConstants";
-import { Map } from "./map";
-import { SlashParticle } from "./particle/slashParticle";
-import { HealthBar } from "./healthbar";
-import { VendingMachine } from "./entity/object/vendingMachine";
-import { Drawable } from "./drawable";
-import { Random } from "./random";
-import { GenericParticle } from "./particle/genericParticle";
-import { ActionState, ActionTab } from "./actionTab";
-import { HitWarning } from "./hitWarning";
-import { Entity, EntityType } from "./entity/entity";
-import { ZombieEnemy } from "./entity/enemy/zombieEnemy";
-import { Item } from "./item/item";
-import { PostProcessor } from "./postProcess";
-import { Weapon } from "./weapon/weapon";
-import { Room } from "./room";
-import { ImageParticle } from "./particle/imageParticle";
-import { Enemy } from "./entity/enemy/enemy";
-import { MouseCursor } from "./mouseCursor";
-import { Light } from "./item/light";
-import { LightSource } from "./lightSource";
-import { statsTracker } from "./stats";
-import { BeamEffect } from "./beamEffect";
-import { Spellbook } from "./weapon/spellbook";
-import { globalEventBus } from "./eventBus";
-import { Utils } from "./utils";
-import { Menu } from "./menu";
-import { Bestiary } from "./bestiary";
-import { AttackAnimation } from "./particle/attackAnimation";
+import { Input, InputEnum } from "../input";
+import { GameConstants } from "../gameConstants";
+import { ChatMessage, Direction, Game, LevelState } from "../game";
+import { Door, DoorType } from "../tile/door";
+import { Trapdoor } from "../tile/trapdoor";
+import { Inventory } from "../inventory";
+import { Sound } from "../sound";
+import { LevelConstants } from "../levelConstants";
+import { Map } from "../map";
+import { SlashParticle } from "../particle/slashParticle";
+import { HealthBar } from "../healthbar";
+import { VendingMachine } from "../entity/object/vendingMachine";
+import { Drawable } from "../drawable";
+import { Random } from "../random";
+import { GenericParticle } from "../particle/genericParticle";
+import { ActionState, ActionTab } from "../actionTab";
+import { HitWarning } from "../hitWarning";
+import { Entity, EntityType } from "../entity/entity";
+import { ZombieEnemy } from "../entity/enemy/zombieEnemy";
+import { Item } from "../item/item";
+import { PostProcessor } from "../postProcess";
+import { Weapon } from "../weapon/weapon";
+import { Room } from "../room";
+import { ImageParticle } from "../particle/imageParticle";
+import { Enemy } from "../entity/enemy/enemy";
+import { MouseCursor } from "../mouseCursor";
+import { Light } from "../item/light";
+import { LightSource } from "../lightSource";
+import { statsTracker } from "../stats";
+import { BeamEffect } from "../beamEffect";
+import { Spellbook } from "../weapon/spellbook";
+import { globalEventBus } from "../eventBus";
+import { Utils } from "../utils";
+import { Menu } from "../menu";
+import { Bestiary } from "../bestiary";
+import { AttackAnimation } from "../particle/attackAnimation";
+import { PlayerInputHandler } from "./playerInputHandler";
 
 export enum PlayerDirection {
   DOWN,
@@ -77,7 +78,6 @@ export class Player extends Drawable {
   openVendingMachine: VendingMachine;
   isLocalPlayer: boolean;
   mapToggled: boolean;
-  //actionTab: ActionTab;
   lastHitBy: string;
   turnCount: number;
   triedMove: boolean;
@@ -108,6 +108,8 @@ export class Player extends Drawable {
   depth: number;
   menu: Menu;
   busyAnimating: boolean;
+  inputHandler: PlayerInputHandler;
+
   private animationFrameId: number | null = null;
   private isProcessingQueue: boolean = false;
   private lowHealthFrame: number = 0;
@@ -142,94 +144,7 @@ export class Player extends Drawable {
     this.depth = 0;
     this.menu = new Menu();
     this.busyAnimating = false;
-    if (isLocalPlayer) {
-      Input.leftSwipeListener = () => {
-        if (
-          !this.inventory.isPointInQuickbarBounds(Input.mouseX, Input.mouseY)
-            .inBounds &&
-          !this.inventory.isOpen
-        )
-          this.inputHandler(InputEnum.LEFT);
-      };
-
-      Input.rightSwipeListener = () => {
-        if (
-          !this.inventory.isPointInQuickbarBounds(Input.mouseX, Input.mouseY)
-            .inBounds &&
-          !this.inventory.isOpen
-        )
-          this.inputHandler(InputEnum.RIGHT);
-      };
-
-      Input.upSwipeListener = () => {
-        if (
-          !this.inventory.isPointInQuickbarBounds(Input.mouseX, Input.mouseY)
-            .inBounds &&
-          !this.inventory.isOpen
-        )
-          this.inputHandler(InputEnum.UP);
-      };
-
-      Input.downSwipeListener = () => {
-        if (
-          !this.inventory.isPointInQuickbarBounds(Input.mouseX, Input.mouseY)
-            .inBounds &&
-          !this.inventory.isOpen
-        )
-          this.inputHandler(InputEnum.DOWN);
-      };
-
-      Input.commaListener = () => this.inputHandler(InputEnum.COMMA);
-      Input.periodListener = () => this.inputHandler(InputEnum.PERIOD);
-      Input.tapListener = () => {
-        if (this.dead) {
-          this.restart();
-        } else if (!this.game.started) {
-          this.game.startedFadeOut = true;
-          return;
-        }
-        const mouseInBounds = this.inventory.isPointInInventoryBounds(
-          Input.mouseX,
-          Input.mouseY,
-        ).inBounds;
-
-        if (
-          !this.inventory.isOpen &&
-          this.inventory.isPointInInventoryButton(Input.mouseX, Input.mouseY)
-        ) {
-          this.inventory.open();
-        } else if (this.inventory.isOpen) {
-          if (mouseInBounds) {
-            this.inputHandler(InputEnum.LEFT_CLICK);
-          } else if (!mouseInBounds) {
-            this.inventory.close();
-          }
-        }
-
-        {
-          if (
-            this.inventory.isPointInQuickbarBounds(Input.mouseX, Input.mouseY)
-              .inBounds
-          ) {
-            if (this.inventory.pointInside(Input.mouseX, Input.mouseY)) {
-              this.inputHandler(InputEnum.LEFT_CLICK);
-            }
-          }
-        }
-      };
-      Input.mouseMoveListener = () => this.inputHandler(InputEnum.MOUSE_MOVE);
-      Input.mouseLeftClickListeners.push(() =>
-        this.inputHandler(InputEnum.LEFT_CLICK),
-      );
-      Input.mouseRightClickListeners.push(() =>
-        this.inputHandler(InputEnum.RIGHT_CLICK),
-      );
-      Input.numKeyListener = (num: number) =>
-        this.inputHandler(InputEnum.NUMBER_1 + num - 1);
-      Input.equalsListener = () => this.inputHandler(InputEnum.EQUALS);
-      Input.minusListener = () => this.inputHandler(InputEnum.MINUS);
-      Input.escapeListener = () => this.inputHandler(InputEnum.ESCAPE);
-    }
+    this.inputHandler = new PlayerInputHandler(this);
     this.mapToggled = true;
     this.health = 2;
     this.maxHealth = 2;
@@ -306,75 +221,6 @@ export class Player extends Drawable {
     }
   };
 
-  inputHandler = (input: InputEnum) => {
-    if (this.busyAnimating) return;
-    if (this.menu.open) {
-      this.menu.inputHandler(input);
-      return;
-    }
-    if (!this.game.started && input !== InputEnum.MOUSE_MOVE) {
-      this.game.startedFadeOut = true;
-      return;
-    }
-    switch (input) {
-      case InputEnum.I:
-        this.iListener();
-        break;
-      case InputEnum.Q:
-        this.qListener();
-        break;
-      case InputEnum.LEFT:
-        if (!this.ignoreDirectionInput()) this.leftListener(false);
-        break;
-      case InputEnum.RIGHT:
-        if (!this.ignoreDirectionInput()) this.rightListener(false);
-        break;
-      case InputEnum.UP:
-        if (!this.ignoreDirectionInput()) this.upListener(false);
-        break;
-      case InputEnum.DOWN:
-        if (!this.ignoreDirectionInput()) this.downListener(false);
-        break;
-      case InputEnum.SPACE:
-        this.spaceListener();
-        break;
-      case InputEnum.COMMA:
-        this.commaListener();
-        break;
-      case InputEnum.PERIOD:
-        this.periodListener();
-        break;
-      case InputEnum.LEFT_CLICK:
-        this.mouseLeftClick();
-        break;
-      case InputEnum.RIGHT_CLICK:
-        this.mouseRightClick();
-        break;
-      case InputEnum.MOUSE_MOVE:
-        this.mouseMove();
-        break;
-      case InputEnum.NUMBER_1:
-      case InputEnum.NUMBER_2:
-      case InputEnum.NUMBER_3:
-      case InputEnum.NUMBER_4:
-      case InputEnum.NUMBER_5:
-      case InputEnum.NUMBER_6:
-      case InputEnum.NUMBER_7:
-      case InputEnum.NUMBER_8:
-      case InputEnum.NUMBER_9:
-        this.numKeyListener(input);
-        break;
-      case InputEnum.EQUALS:
-        this.plusListener();
-        break;
-      case InputEnum.MINUS:
-        this.minusListener();
-        break;
-      case InputEnum.ESCAPE:
-        this.escapeListener();
-        break;
-    }
-  };
   escapeListener = () => {
     if (this.inventory.isOpen) {
       this.inventory.close();

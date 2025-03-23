@@ -1,5 +1,5 @@
 import { Input, InputEnum } from "./input";
-import { Player } from "./player";
+import { Player } from "./player/player";
 import { MouseCursor } from "./mouseCursor";
 import { GameConstants } from "./gameConstants";
 

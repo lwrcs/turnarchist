@@ -1,4 +1,4 @@
-import { Player } from "../player";
+import { Player } from "../player/player";
 import { ChatMessage, Game } from "../game";
 import { Room } from "../room";
 import { GameConstants } from "../gameConstants";

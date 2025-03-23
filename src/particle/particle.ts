@@ -1,6 +1,6 @@
 import { Drawable } from "../drawable";
 import { Entity } from "../entity/entity";
-import { Player } from "../player";
+import { Player } from "../player/player";
 import { Room } from "../room";
 
 export class Particle extends Drawable {

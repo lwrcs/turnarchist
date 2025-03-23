@@ -2,7 +2,7 @@ import { Item } from "./item";
 import { Equippable } from "./equippable";
 import { Room } from "../room";
 import { Sound } from "../sound";
-import { Player } from "../player";
+import { Player } from "../player/player";
 
 export class Key extends Item {
   static itemName = "key";

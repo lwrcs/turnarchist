@@ -5,7 +5,7 @@ import { Equippable } from "./equippable";
 import { Torch } from "./torch";
 import { Lantern } from "./lantern";
 import { Inventory } from "../inventory";
-import { Player } from "../player";
+import { Player } from "../player/player";
 import { Light } from "./light";
 
 export class Candle extends Light {

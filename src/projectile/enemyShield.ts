@@ -1,6 +1,6 @@
 import { Projectile } from "./projectile";
 import { Game } from "../game";
-import { Player } from "../player";
+import { Player } from "../player/player";
 import { HitWarning } from "../hitWarning";
 import { Entity } from "../entity/entity";
 import { Enemy } from "../entity/enemy/enemy";

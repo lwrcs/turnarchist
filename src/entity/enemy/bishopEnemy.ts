@@ -1,7 +1,7 @@
 import { Entity, EntityDirection } from "../entity";
 import { Game } from "../../game";
 import { Room } from "../../room";
-import { Player } from "../../player";
+import { Player } from "../../player/player";
 import { Item } from "../../item/item";
 import { astar } from "../../astarclass";
 import { SpikeTrap } from "../../tile/spiketrap";

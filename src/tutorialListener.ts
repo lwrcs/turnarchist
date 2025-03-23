@@ -4,7 +4,7 @@ import { Room, RoomType } from "./room";
 import { Game } from "./game";
 import { DownLadder } from "./tile/downLadder";
 import { Door, DoorType } from "./tile/door";
-import { Player } from "./player";
+import { Player } from "./player/player";
 import { Bestiary } from "./bestiary";
 
 export class TutorialListener {

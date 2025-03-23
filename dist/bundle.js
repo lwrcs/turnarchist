@@ -9290,62 +9290,40 @@ var Game = /** @class */ (function () {
                 _this.startedFadeOut = true;
                 return;
             }
+            // Handle global keys
             if (!_this.chatOpen) {
                 switch (key.toUpperCase()) {
                     case "M":
                         sound_1.Sound.audioMuted = !sound_1.Sound.audioMuted;
-                        var message = sound_1.Sound.audioMuted ? "Audio muted" : "Audio unmuted";
-                        _this.pushMessage(message);
-                        break;
+                        _this.pushMessage(sound_1.Sound.audioMuted ? "Audio muted" : "Audio unmuted");
+                        return;
                     case "C":
                         _this.chatOpen = true;
-                        break;
+                        return;
                     case "/":
                         _this.chatOpen = true;
                         _this.chatTextBox.clear();
                         _this.chatTextBox.handleKeyPress(key);
-                        break;
-                    case "A":
-                    case "ARROWLEFT":
-                        _this.players[_this.localPlayerID].inputHandler(input_1.InputEnum.LEFT);
-                        break;
-                    case "D":
-                    case "ARROWRIGHT":
-                        _this.players[_this.localPlayerID].inputHandler(input_1.InputEnum.RIGHT);
-                        break;
-                    case "W":
-                    case "ARROWUP":
-                        _this.players[_this.localPlayerID].inputHandler(input_1.InputEnum.UP);
-                        break;
-                    case "S":
-                    case "ARROWDOWN":
-                        _this.players[_this.localPlayerID].inputHandler(input_1.InputEnum.DOWN);
-                        break;
-                    case " ":
-                        _this.players[_this.localPlayerID].inputHandler(input_1.InputEnum.SPACE);
-                        break;
-                    case "I":
-                        _this.players[_this.localPlayerID].inputHandler(input_1.InputEnum.I);
-                        break;
-                    case "Q":
-                        _this.players[_this.localPlayerID].inputHandler(input_1.InputEnum.Q);
-                        break;
+                        return;
                     case "1":
                         levelGenerator_1.LevelGenerator.ANIMATION_CONSTANT = 1;
-                        break;
+                        return;
                     case "2":
                         levelGenerator_1.LevelGenerator.ANIMATION_CONSTANT = 2;
-                        break;
+                        return;
                     case "3":
                         levelGenerator_1.LevelGenerator.ANIMATION_CONSTANT = 5;
-                        break;
+                        return;
                     case "4":
                         levelGenerator_1.LevelGenerator.ANIMATION_CONSTANT = 10000;
-                        break;
+                        return;
                     case "0":
                         levelGenerator_1.LevelGenerator.ANIMATION_CONSTANT = 0;
-                        break;
+                        return;
                 }
+                // Forward all player input
+                var player = _this.players[_this.localPlayerID];
+                player.inputHandler.handleKeyboardKey(key);
             }
             else {
                 _this.chatTextBox.handleKeyPress(key);
@@ -10538,7 +10516,7 @@ var lantern_1 = __webpack_require__(/*! ./item/lantern */ "./src/item/lantern.ts
 var redgem_1 = __webpack_require__(/*! ./item/redgem */ "./src/item/redgem.ts");
 var torch_1 = __webpack_require__(/*! ./item/torch */ "./src/item/torch.ts");
 var levelGenerator_1 = __webpack_require__(/*! ./levelGenerator */ "./src/levelGenerator.ts");
-var player_1 = __webpack_require__(/*! ./player */ "./src/player.ts");
+var player_1 = __webpack_require__(/*! ./player/player */ "./src/player/player.ts");
 var enemySpawnAnimation_1 = __webpack_require__(/*! ./projectile/enemySpawnAnimation */ "./src/projectile/enemySpawnAnimation.ts");
 var wizardFireball_1 = __webpack_require__(/*! ./projectile/wizardFireball */ "./src/projectile/wizardFireball.ts");
 var random_1 = __webpack_require__(/*! ./random */ "./src/random.ts");
@@ -17887,10 +17865,10 @@ exports.WizardTeleportParticle = WizardTeleportParticle;
 
 /***/ }),
 
-/***/ "./src/player.ts":
-/*!***********************!*\
-  !*** ./src/player.ts ***!
-  \***********************/
+/***/ "./src/player/player.ts":
+/*!******************************!*\
+  !*** ./src/player/player.ts ***!
+  \******************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -17911,28 +17889,29 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Player = exports.PlayerDirection = void 0;
-var input_1 = __webpack_require__(/*! ./input */ "./src/input.ts");
-var gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/gameConstants.ts");
-var game_1 = __webpack_require__(/*! ./game */ "./src/game.ts");
-var door_1 = __webpack_require__(/*! ./tile/door */ "./src/tile/door.ts");
-var trapdoor_1 = __webpack_require__(/*! ./tile/trapdoor */ "./src/tile/trapdoor.ts");
-var inventory_1 = __webpack_require__(/*! ./inventory */ "./src/inventory.ts");
-var sound_1 = __webpack_require__(/*! ./sound */ "./src/sound.ts");
-var levelConstants_1 = __webpack_require__(/*! ./levelConstants */ "./src/levelConstants.ts");
-var map_1 = __webpack_require__(/*! ./map */ "./src/map.ts");
-var healthbar_1 = __webpack_require__(/*! ./healthbar */ "./src/healthbar.ts");
-var vendingMachine_1 = __webpack_require__(/*! ./entity/object/vendingMachine */ "./src/entity/object/vendingMachine.ts");
-var drawable_1 = __webpack_require__(/*! ./drawable */ "./src/drawable.ts");
-var hitWarning_1 = __webpack_require__(/*! ./hitWarning */ "./src/hitWarning.ts");
-var item_1 = __webpack_require__(/*! ./item/item */ "./src/item/item.ts");
-var postProcess_1 = __webpack_require__(/*! ./postProcess */ "./src/postProcess.ts");
-var enemy_1 = __webpack_require__(/*! ./entity/enemy/enemy */ "./src/entity/enemy/enemy.ts");
-var mouseCursor_1 = __webpack_require__(/*! ./mouseCursor */ "./src/mouseCursor.ts");
-var stats_1 = __webpack_require__(/*! ./stats */ "./src/stats.ts");
-var spellbook_1 = __webpack_require__(/*! ./weapon/spellbook */ "./src/weapon/spellbook.ts");
-var utils_1 = __webpack_require__(/*! ./utils */ "./src/utils.ts");
-var menu_1 = __webpack_require__(/*! ./menu */ "./src/menu.ts");
-var bestiary_1 = __webpack_require__(/*! ./bestiary */ "./src/bestiary.ts");
+var input_1 = __webpack_require__(/*! ../input */ "./src/input.ts");
+var gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
+var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+var door_1 = __webpack_require__(/*! ../tile/door */ "./src/tile/door.ts");
+var trapdoor_1 = __webpack_require__(/*! ../tile/trapdoor */ "./src/tile/trapdoor.ts");
+var inventory_1 = __webpack_require__(/*! ../inventory */ "./src/inventory.ts");
+var sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
+var levelConstants_1 = __webpack_require__(/*! ../levelConstants */ "./src/levelConstants.ts");
+var map_1 = __webpack_require__(/*! ../map */ "./src/map.ts");
+var healthbar_1 = __webpack_require__(/*! ../healthbar */ "./src/healthbar.ts");
+var vendingMachine_1 = __webpack_require__(/*! ../entity/object/vendingMachine */ "./src/entity/object/vendingMachine.ts");
+var drawable_1 = __webpack_require__(/*! ../drawable */ "./src/drawable.ts");
+var hitWarning_1 = __webpack_require__(/*! ../hitWarning */ "./src/hitWarning.ts");
+var item_1 = __webpack_require__(/*! ../item/item */ "./src/item/item.ts");
+var postProcess_1 = __webpack_require__(/*! ../postProcess */ "./src/postProcess.ts");
+var enemy_1 = __webpack_require__(/*! ../entity/enemy/enemy */ "./src/entity/enemy/enemy.ts");
+var mouseCursor_1 = __webpack_require__(/*! ../mouseCursor */ "./src/mouseCursor.ts");
+var stats_1 = __webpack_require__(/*! ../stats */ "./src/stats.ts");
+var spellbook_1 = __webpack_require__(/*! ../weapon/spellbook */ "./src/weapon/spellbook.ts");
+var utils_1 = __webpack_require__(/*! ../utils */ "./src/utils.ts");
+var menu_1 = __webpack_require__(/*! ../menu */ "./src/menu.ts");
+var bestiary_1 = __webpack_require__(/*! ../bestiary */ "./src/bestiary.ts");
+var playerInputHandler_1 = __webpack_require__(/*! ./playerInputHandler */ "./src/player/playerInputHandler.ts");
 var PlayerDirection;
 (function (PlayerDirection) {
     PlayerDirection[PlayerDirection["DOWN"] = 0] = "DOWN";
@@ -17965,80 +17944,6 @@ var Player = /** @class */ (function (_super) {
                     enemy.bleed();
                     return true;
                 }
-            }
-        };
-        _this.inputHandler = function (input) {
-            if (_this.busyAnimating)
-                return;
-            if (_this.menu.open) {
-                _this.menu.inputHandler(input);
-                return;
-            }
-            if (!_this.game.started && input !== input_1.InputEnum.MOUSE_MOVE) {
-                _this.game.startedFadeOut = true;
-                return;
-            }
-            switch (input) {
-                case input_1.InputEnum.I:
-                    _this.iListener();
-                    break;
-                case input_1.InputEnum.Q:
-                    _this.qListener();
-                    break;
-                case input_1.InputEnum.LEFT:
-                    if (!_this.ignoreDirectionInput())
-                        _this.leftListener(false);
-                    break;
-                case input_1.InputEnum.RIGHT:
-                    if (!_this.ignoreDirectionInput())
-                        _this.rightListener(false);
-                    break;
-                case input_1.InputEnum.UP:
-                    if (!_this.ignoreDirectionInput())
-                        _this.upListener(false);
-                    break;
-                case input_1.InputEnum.DOWN:
-                    if (!_this.ignoreDirectionInput())
-                        _this.downListener(false);
-                    break;
-                case input_1.InputEnum.SPACE:
-                    _this.spaceListener();
-                    break;
-                case input_1.InputEnum.COMMA:
-                    _this.commaListener();
-                    break;
-                case input_1.InputEnum.PERIOD:
-                    _this.periodListener();
-                    break;
-                case input_1.InputEnum.LEFT_CLICK:
-                    _this.mouseLeftClick();
-                    break;
-                case input_1.InputEnum.RIGHT_CLICK:
-                    _this.mouseRightClick();
-                    break;
-                case input_1.InputEnum.MOUSE_MOVE:
-                    _this.mouseMove();
-                    break;
-                case input_1.InputEnum.NUMBER_1:
-                case input_1.InputEnum.NUMBER_2:
-                case input_1.InputEnum.NUMBER_3:
-                case input_1.InputEnum.NUMBER_4:
-                case input_1.InputEnum.NUMBER_5:
-                case input_1.InputEnum.NUMBER_6:
-                case input_1.InputEnum.NUMBER_7:
-                case input_1.InputEnum.NUMBER_8:
-                case input_1.InputEnum.NUMBER_9:
-                    _this.numKeyListener(input);
-                    break;
-                case input_1.InputEnum.EQUALS:
-                    _this.plusListener();
-                    break;
-                case input_1.InputEnum.MINUS:
-                    _this.minusListener();
-                    break;
-                case input_1.InputEnum.ESCAPE:
-                    _this.escapeListener();
-                    break;
             }
         };
         _this.escapeListener = function () {
@@ -19244,77 +19149,7 @@ var Player = /** @class */ (function (_super) {
         _this.depth = 0;
         _this.menu = new menu_1.Menu();
         _this.busyAnimating = false;
-        if (isLocalPlayer) {
-            input_1.Input.leftSwipeListener = function () {
-                if (!_this.inventory.isPointInQuickbarBounds(input_1.Input.mouseX, input_1.Input.mouseY)
-                    .inBounds &&
-                    !_this.inventory.isOpen)
-                    _this.inputHandler(input_1.InputEnum.LEFT);
-            };
-            input_1.Input.rightSwipeListener = function () {
-                if (!_this.inventory.isPointInQuickbarBounds(input_1.Input.mouseX, input_1.Input.mouseY)
-                    .inBounds &&
-                    !_this.inventory.isOpen)
-                    _this.inputHandler(input_1.InputEnum.RIGHT);
-            };
-            input_1.Input.upSwipeListener = function () {
-                if (!_this.inventory.isPointInQuickbarBounds(input_1.Input.mouseX, input_1.Input.mouseY)
-                    .inBounds &&
-                    !_this.inventory.isOpen)
-                    _this.inputHandler(input_1.InputEnum.UP);
-            };
-            input_1.Input.downSwipeListener = function () {
-                if (!_this.inventory.isPointInQuickbarBounds(input_1.Input.mouseX, input_1.Input.mouseY)
-                    .inBounds &&
-                    !_this.inventory.isOpen)
-                    _this.inputHandler(input_1.InputEnum.DOWN);
-            };
-            input_1.Input.commaListener = function () { return _this.inputHandler(input_1.InputEnum.COMMA); };
-            input_1.Input.periodListener = function () { return _this.inputHandler(input_1.InputEnum.PERIOD); };
-            input_1.Input.tapListener = function () {
-                if (_this.dead) {
-                    _this.restart();
-                }
-                else if (!_this.game.started) {
-                    _this.game.startedFadeOut = true;
-                    return;
-                }
-                var mouseInBounds = _this.inventory.isPointInInventoryBounds(input_1.Input.mouseX, input_1.Input.mouseY).inBounds;
-                if (!_this.inventory.isOpen &&
-                    _this.inventory.isPointInInventoryButton(input_1.Input.mouseX, input_1.Input.mouseY)) {
-                    _this.inventory.open();
-                }
-                else if (_this.inventory.isOpen) {
-                    if (mouseInBounds) {
-                        _this.inputHandler(input_1.InputEnum.LEFT_CLICK);
-                    }
-                    else if (!mouseInBounds) {
-                        _this.inventory.close();
-                    }
-                }
-                {
-                    if (_this.inventory.isPointInQuickbarBounds(input_1.Input.mouseX, input_1.Input.mouseY)
-                        .inBounds) {
-                        if (_this.inventory.pointInside(input_1.Input.mouseX, input_1.Input.mouseY)) {
-                            _this.inputHandler(input_1.InputEnum.LEFT_CLICK);
-                        }
-                    }
-                }
-            };
-            input_1.Input.mouseMoveListener = function () { return _this.inputHandler(input_1.InputEnum.MOUSE_MOVE); };
-            input_1.Input.mouseLeftClickListeners.push(function () {
-                return _this.inputHandler(input_1.InputEnum.LEFT_CLICK);
-            });
-            input_1.Input.mouseRightClickListeners.push(function () {
-                return _this.inputHandler(input_1.InputEnum.RIGHT_CLICK);
-            });
-            input_1.Input.numKeyListener = function (num) {
-                return _this.inputHandler(input_1.InputEnum.NUMBER_1 + num - 1);
-            };
-            input_1.Input.equalsListener = function () { return _this.inputHandler(input_1.InputEnum.EQUALS); };
-            input_1.Input.minusListener = function () { return _this.inputHandler(input_1.InputEnum.MINUS); };
-            input_1.Input.escapeListener = function () { return _this.inputHandler(input_1.InputEnum.ESCAPE); };
-        }
+        _this.inputHandler = new playerInputHandler_1.PlayerInputHandler(_this);
         _this.mapToggled = true;
         _this.health = 2;
         _this.maxHealth = 2;
@@ -19389,6 +19224,189 @@ var Player = /** @class */ (function (_super) {
     return Player;
 }(drawable_1.Drawable));
 exports.Player = Player;
+
+
+/***/ }),
+
+/***/ "./src/player/playerInputHandler.ts":
+/*!******************************************!*\
+  !*** ./src/player/playerInputHandler.ts ***!
+  \******************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PlayerInputHandler = void 0;
+var input_1 = __webpack_require__(/*! ../input */ "./src/input.ts");
+var PlayerInputHandler = /** @class */ (function () {
+    function PlayerInputHandler(player) {
+        this.player = player;
+        if (player.isLocalPlayer) {
+            this.setupListeners();
+        }
+    }
+    PlayerInputHandler.prototype.setupListeners = function () {
+        var _this = this;
+        input_1.Input.leftSwipeListener = function () { return _this.handleInput(input_1.InputEnum.LEFT); };
+        input_1.Input.rightSwipeListener = function () { return _this.handleInput(input_1.InputEnum.RIGHT); };
+        input_1.Input.upSwipeListener = function () { return _this.handleInput(input_1.InputEnum.UP); };
+        input_1.Input.downSwipeListener = function () { return _this.handleInput(input_1.InputEnum.DOWN); };
+        input_1.Input.commaListener = function () { return _this.handleInput(input_1.InputEnum.COMMA); };
+        input_1.Input.periodListener = function () { return _this.handleInput(input_1.InputEnum.PERIOD); };
+        input_1.Input.tapListener = function () { return _this.handleTap(); };
+        input_1.Input.mouseMoveListener = function () { return _this.handleInput(input_1.InputEnum.MOUSE_MOVE); };
+        input_1.Input.mouseLeftClickListeners.push(function () {
+            return _this.handleInput(input_1.InputEnum.LEFT_CLICK);
+        });
+        input_1.Input.mouseRightClickListeners.push(function () {
+            return _this.handleInput(input_1.InputEnum.RIGHT_CLICK);
+        });
+        input_1.Input.numKeyListener = function (num) {
+            return _this.handleInput(input_1.InputEnum.NUMBER_1 + num - 1);
+        };
+        input_1.Input.equalsListener = function () { return _this.handleInput(input_1.InputEnum.EQUALS); };
+        input_1.Input.minusListener = function () { return _this.handleInput(input_1.InputEnum.MINUS); };
+        input_1.Input.escapeListener = function () { return _this.handleInput(input_1.InputEnum.ESCAPE); };
+    };
+    PlayerInputHandler.prototype.handleInput = function (input) {
+        if (this.player.busyAnimating)
+            return;
+        if (this.player.menu.open) {
+            this.player.menu.inputHandler(input);
+            return;
+        }
+        if (!this.player.game.started && input !== input_1.InputEnum.MOUSE_MOVE) {
+            this.player.game.startedFadeOut = true;
+            return;
+        }
+        switch (input) {
+            case input_1.InputEnum.I:
+                this.player.iListener();
+                break;
+            case input_1.InputEnum.Q:
+                this.player.qListener();
+                break;
+            case input_1.InputEnum.LEFT:
+                if (!this.player.ignoreDirectionInput())
+                    this.player.leftListener(false);
+                break;
+            case input_1.InputEnum.RIGHT:
+                if (!this.player.ignoreDirectionInput())
+                    this.player.rightListener(false);
+                break;
+            case input_1.InputEnum.UP:
+                if (!this.player.ignoreDirectionInput())
+                    this.player.upListener(false);
+                break;
+            case input_1.InputEnum.DOWN:
+                if (!this.player.ignoreDirectionInput())
+                    this.player.downListener(false);
+                break;
+            case input_1.InputEnum.SPACE:
+                this.player.spaceListener();
+                break;
+            case input_1.InputEnum.COMMA:
+                this.player.commaListener();
+                break;
+            case input_1.InputEnum.PERIOD:
+                this.player.periodListener();
+                break;
+            case input_1.InputEnum.LEFT_CLICK:
+                this.player.mouseLeftClick();
+                break;
+            case input_1.InputEnum.RIGHT_CLICK:
+                this.player.mouseRightClick();
+                break;
+            case input_1.InputEnum.MOUSE_MOVE:
+                this.player.mouseMove();
+                break;
+            case input_1.InputEnum.NUMBER_1:
+            case input_1.InputEnum.NUMBER_2:
+            case input_1.InputEnum.NUMBER_3:
+            case input_1.InputEnum.NUMBER_4:
+            case input_1.InputEnum.NUMBER_5:
+            case input_1.InputEnum.NUMBER_6:
+            case input_1.InputEnum.NUMBER_7:
+            case input_1.InputEnum.NUMBER_8:
+            case input_1.InputEnum.NUMBER_9:
+                this.player.numKeyListener(input);
+                break;
+            case input_1.InputEnum.EQUALS:
+                this.player.plusListener();
+                break;
+            case input_1.InputEnum.MINUS:
+                this.player.minusListener();
+                break;
+            case input_1.InputEnum.ESCAPE:
+                this.player.escapeListener();
+                break;
+        }
+    };
+    PlayerInputHandler.prototype.handleTap = function () {
+        if (this.player.dead) {
+            this.player.restart();
+            return;
+        }
+        else if (!this.player.game.started) {
+            this.player.game.startedFadeOut = true;
+            return;
+        }
+        var x = input_1.Input.mouseX;
+        var y = input_1.Input.mouseY;
+        var isInInventory = this.player.inventory.isPointInInventoryBounds(x, y).inBounds;
+        var isInQuickbar = this.player.inventory.isPointInQuickbarBounds(x, y).inBounds;
+        if (!this.player.inventory.isOpen &&
+            this.player.inventory.isPointInInventoryButton(x, y)) {
+            this.player.inventory.open();
+        }
+        else if (this.player.inventory.isOpen) {
+            if (isInInventory) {
+                this.handleInput(input_1.InputEnum.LEFT_CLICK);
+            }
+            else {
+                this.player.inventory.close();
+            }
+        }
+        else if (isInQuickbar) {
+            this.handleInput(input_1.InputEnum.LEFT_CLICK);
+        }
+    };
+    PlayerInputHandler.prototype.handleKeyboardKey = function (key) {
+        switch (key.toUpperCase()) {
+            case "A":
+            case "ARROWLEFT":
+                this.handleInput(input_1.InputEnum.LEFT);
+                break;
+            case "D":
+            case "ARROWRIGHT":
+                this.handleInput(input_1.InputEnum.RIGHT);
+                break;
+            case "W":
+            case "ARROWUP":
+                this.handleInput(input_1.InputEnum.UP);
+                break;
+            case "S":
+            case "ARROWDOWN":
+                this.handleInput(input_1.InputEnum.DOWN);
+                break;
+            case " ":
+                this.handleInput(input_1.InputEnum.SPACE);
+                break;
+            case "I":
+                this.handleInput(input_1.InputEnum.I);
+                break;
+            case "Q":
+                this.handleInput(input_1.InputEnum.Q);
+                break;
+            // Possibly add number keys for inventory here too
+            default:
+                // Unknown key; ignore or log if needed
+                break;
+        }
+    };
+    return PlayerInputHandler;
+}());
+exports.PlayerInputHandler = PlayerInputHandler;
 
 
 /***/ }),
@@ -20285,7 +20303,7 @@ var chargeEnemy_1 = __webpack_require__(/*! ./entity/enemy/chargeEnemy */ "./src
 var shotgun_1 = __webpack_require__(/*! ./weapon/shotgun */ "./src/weapon/shotgun.ts");
 var heart_1 = __webpack_require__(/*! ./item/heart */ "./src/item/heart.ts");
 var spear_1 = __webpack_require__(/*! ./weapon/spear */ "./src/weapon/spear.ts");
-var player_1 = __webpack_require__(/*! ./player */ "./src/player.ts");
+var player_1 = __webpack_require__(/*! ./player/player */ "./src/player/player.ts");
 var crabEnemy_1 = __webpack_require__(/*! ./entity/enemy/crabEnemy */ "./src/entity/enemy/crabEnemy.ts");
 var zombieEnemy_1 = __webpack_require__(/*! ./entity/enemy/zombieEnemy */ "./src/entity/enemy/zombieEnemy.ts");
 var bigSkullEnemy_1 = __webpack_require__(/*! ./entity/enemy/bigSkullEnemy */ "./src/entity/enemy/bigSkullEnemy.ts");

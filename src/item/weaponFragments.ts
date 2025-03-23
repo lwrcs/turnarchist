@@ -1,5 +1,5 @@
 import { Item } from "./item";
-import { Player } from "../player";
+import { Player } from "../player/player";
 import { Sound } from "../sound";
 import { Room } from "../room";
 import { Usable } from "./usable";

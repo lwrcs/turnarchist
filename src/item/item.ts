@@ -1,6 +1,6 @@
 import { Game } from "../game";
 import { GameConstants } from "../gameConstants";
-import { Player } from "../player";
+import { Player } from "../player/player";
 import { Room } from "../room";
 import { Sound } from "../sound";
 import { Drawable } from "../drawable";

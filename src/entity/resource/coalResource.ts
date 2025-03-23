@@ -11,7 +11,7 @@ import { Sound } from "../../sound";
 import { Inventory } from "../../inventory";
 import { Weapon } from "../../weapon/weapon";
 import { Pickaxe } from "../../weapon/pickaxe";
-import { Player } from "../../player";
+import { Player } from "../../player/player";
 import { ItemState, ItemType } from "../../gameState";
 
 export class CoalResource extends Resource {

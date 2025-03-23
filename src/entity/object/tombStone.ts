@@ -8,7 +8,7 @@ import { EntityType } from "../entity";
 import { SkullEnemy } from "../enemy/skullEnemy";
 import { Random } from "../../random";
 import { EnemySpawnAnimation } from "../../projectile/enemySpawnAnimation";
-import { Player } from "../../player";
+import { Player } from "../../player/player";
 import { Item } from "../../item/item";
 import { Spellbook } from "../../weapon/spellbook";
 import { Sound } from "../../sound";

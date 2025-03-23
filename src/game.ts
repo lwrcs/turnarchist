@@ -1,6 +1,6 @@
 import { GameConstants } from "./gameConstants";
 import { EnemyType, Room, RoomType } from "./room";
-import { Player } from "./player";
+import { Player } from "./player/player";
 import { Door, DoorType } from "./tile/door";
 import { Sound } from "./sound";
 import { LevelConstants } from "./levelConstants";
@@ -382,66 +382,50 @@ export class Game {
 
   keyDownListener = (key: string) => {
     Game.inputReceived = true;
+
     if (!this.started) {
       this.startedFadeOut = true;
       return;
     }
+
+    // Handle global keys
     if (!this.chatOpen) {
       switch (key.toUpperCase()) {
         case "M":
           Sound.audioMuted = !Sound.audioMuted;
-          const message = Sound.audioMuted ? "Audio muted" : "Audio unmuted";
-          this.pushMessage(message);
-          break;
+          this.pushMessage(Sound.audioMuted ? "Audio muted" : "Audio unmuted");
+          return;
+
         case "C":
           this.chatOpen = true;
-          break;
+          return;
+
         case "/":
           this.chatOpen = true;
           this.chatTextBox.clear();
           this.chatTextBox.handleKeyPress(key);
-          break;
-        case "A":
-        case "ARROWLEFT":
-          this.players[this.localPlayerID].inputHandler(InputEnum.LEFT);
-          break;
-        case "D":
-        case "ARROWRIGHT":
-          this.players[this.localPlayerID].inputHandler(InputEnum.RIGHT);
-          break;
-        case "W":
-        case "ARROWUP":
-          this.players[this.localPlayerID].inputHandler(InputEnum.UP);
-          break;
-        case "S":
-        case "ARROWDOWN":
-          this.players[this.localPlayerID].inputHandler(InputEnum.DOWN);
-          break;
-        case " ":
-          this.players[this.localPlayerID].inputHandler(InputEnum.SPACE);
-          break;
-        case "I":
-          this.players[this.localPlayerID].inputHandler(InputEnum.I);
-          break;
-        case "Q":
-          this.players[this.localPlayerID].inputHandler(InputEnum.Q);
-          break;
+          return;
+
         case "1":
           LevelGenerator.ANIMATION_CONSTANT = 1;
-          break;
+          return;
         case "2":
           LevelGenerator.ANIMATION_CONSTANT = 2;
-          break;
+          return;
         case "3":
           LevelGenerator.ANIMATION_CONSTANT = 5;
-          break;
+          return;
         case "4":
           LevelGenerator.ANIMATION_CONSTANT = 10000;
-          break;
+          return;
         case "0":
           LevelGenerator.ANIMATION_CONSTANT = 0;
-          break;
+          return;
       }
+
+      // Forward all player input
+      const player = this.players[this.localPlayerID];
+      player.inputHandler.handleKeyboardKey(key);
     } else {
       this.chatTextBox.handleKeyPress(key);
     }

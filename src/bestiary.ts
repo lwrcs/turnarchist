@@ -1,5 +1,5 @@
 import { Game } from "./game";
-import { Player } from "./player";
+import { Player } from "./player/player";
 import { Input } from "./input";
 import { MouseCursor } from "./mouseCursor";
 import { LevelConstants } from "./levelConstants";

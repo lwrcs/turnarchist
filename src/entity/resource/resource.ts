@@ -7,7 +7,7 @@ import { Armor } from "../../item/armor";
 import { Entity } from "../entity";
 import { LevelConstants } from "../../levelConstants";
 import { GreenGem } from "../../item/greengem";
-import { Player } from "../../player";
+import { Player } from "../../player/player";
 import { Pickaxe } from "../../weapon/pickaxe";
 import { Spellbook } from "../../weapon/spellbook";
 import { EntityType } from "../entity";
