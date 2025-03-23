@@ -29,7 +29,7 @@ export class GameConstants {
 
   static readonly FPS = 120;
   static readonly ALPHA_ENABLED = true;
-  static SHADE_LEVELS = 50;
+  static SHADE_LEVELS = 10;
   static ENTITY_SHADE_LEVELS = 10;
 
   static readonly TILESIZE = 16;
@@ -42,6 +42,7 @@ export class GameConstants {
 
   static readonly KEY_REPEAT_TIME = 500; // millseconds
   static readonly MOVEMENT_COOLDOWN = 150; // milliseconds
+  static readonly MOVE_WITH_MOUSE = false;
 
   static readonly CHAT_APPEAR_TIME = 2500;
   static readonly CHAT_FADE_TIME = 500;

@@ -105,6 +105,10 @@ export class Inventory {
     this.equipAnimAmount.fill(0);
   };
 
+  get isDragging() {
+    return this._isDragging;
+  }
+
   open = () => {
     this.isOpen = !this.isOpen;
     if (this.isOpen) this.openTime = Date.now();

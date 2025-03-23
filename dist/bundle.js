@@ -9951,7 +9951,7 @@ var Game = /** @class */ (function () {
             if (!_this.started && _this.levelState !== LevelState.LEVEL_GENERATION) {
                 _this.drawStartScreen(delta * 10);
             }
-            mouseCursor_1.MouseCursor.getInstance().draw();
+            mouseCursor_1.MouseCursor.getInstance().draw(delta, _this.isMobile);
             Game.ctx.restore(); // Restore the canvas state
         };
         this.drawScreenShake = function (delta) {
@@ -10353,7 +10353,7 @@ var GameConstants = /** @class */ (function () {
     GameConstants.isMobile = false;
     GameConstants.FPS = 120;
     GameConstants.ALPHA_ENABLED = true;
-    GameConstants.SHADE_LEVELS = 50;
+    GameConstants.SHADE_LEVELS = 10;
     GameConstants.ENTITY_SHADE_LEVELS = 10;
     GameConstants.TILESIZE = 16;
     GameConstants.SCALE = 6;
@@ -10363,6 +10363,7 @@ var GameConstants = /** @class */ (function () {
     GameConstants.HOLD_THRESH = 250; // milliseconds
     GameConstants.KEY_REPEAT_TIME = 500; // millseconds
     GameConstants.MOVEMENT_COOLDOWN = 150; // milliseconds
+    GameConstants.MOVE_WITH_MOUSE = false;
     GameConstants.CHAT_APPEAR_TIME = 2500;
     GameConstants.CHAT_FADE_TIME = 500;
     GameConstants.ANIMATION_SPEED = 1;
@@ -11567,6 +11568,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Input = exports.InputEnum = void 0;
 var gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/gameConstants.ts");
 var game_1 = __webpack_require__(/*! ./game */ "./src/game.ts");
+var mouseCursor_1 = __webpack_require__(/*! ./mouseCursor */ "./src/mouseCursor.ts");
 var InputEnum;
 (function (InputEnum) {
     InputEnum[InputEnum["I"] = 0] = "I";
@@ -11811,6 +11813,7 @@ exports.Input = {
     handleMouseDown: function (event) {
         if (exports.Input.mouseDown)
             return; // Prevent multiple triggers
+        mouseCursor_1.MouseCursor.getInstance().startClickAnim();
         exports.Input.mouseDown = true;
         exports.Input.mouseDownStartTime = Date.now();
         exports.Input.isMouseHold = false;
@@ -13075,6 +13078,13 @@ var Inventory = /** @class */ (function () {
             a(new item({ game: _this.game }, 0, 0));
         });
     }
+    Object.defineProperty(Inventory.prototype, "isDragging", {
+        get: function () {
+            return this._isDragging;
+        },
+        enumerable: false,
+        configurable: true
+    });
     Object.defineProperty(Inventory.prototype, "expansion", {
         get: function () {
             return this._expansion;
@@ -15332,7 +15342,7 @@ var LevelConstants = /** @class */ (function () {
     LevelConstants.MIN_VISIBILITY = 0; // visibility level of places you've already seen
     LevelConstants.LIGHTING_ANGLE_STEP = 2; // how many degrees between each ray, previously 5
     LevelConstants.LIGHTING_MAX_DISTANCE = 7;
-    LevelConstants.LIGHT_RESOLUTION = 0.1; //1 is default
+    //static readonly LIGHT_RESOLUTION = 0.1; //1 is default
     LevelConstants.LEVEL_TEXT_COLOR = "yellow";
     LevelConstants.AMBIENT_LIGHT_COLOR = [12, 15, 12];
     LevelConstants.TORCH_LIGHT_COLOR = [120, 35, 10];
@@ -17128,11 +17138,57 @@ exports.Menu = Menu;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MouseCursor = void 0;
+var game_1 = __webpack_require__(/*! ./game */ "./src/game.ts");
 var input_1 = __webpack_require__(/*! ./input */ "./src/input.ts");
 var gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/gameConstants.ts");
 var MouseCursor = /** @class */ (function () {
     function MouseCursor() {
+        var _this = this;
         this.cursorSize = 5; // Size of the cursor rectangle
+        this.clickX = 0;
+        this.clickY = 0;
+        this.tileX = 6;
+        this.frame = 0;
+        this.setIcon = function (icon) {
+            switch (icon) {
+                case "arrow":
+                    _this.tileX = 8;
+                    break;
+                case "sword":
+                    _this.tileX = 7;
+                    break;
+                case "hand":
+                    _this.tileX = 6;
+                    break;
+                case "wait":
+                    _this.tileX = 9;
+                    break;
+                case "grab":
+                    _this.tileX = 10;
+                    break;
+                case "up":
+                    _this.tileX = 11;
+                    break;
+                case "right":
+                    _this.tileX = 12;
+                    break;
+                case "down":
+                    _this.tileX = 13;
+                    break;
+                case "left":
+                    _this.tileX = 14;
+                    break;
+                case "mine":
+                    _this.tileX = 15;
+                    break;
+            }
+        };
+        this.draw = function (delta, mobile) {
+            if (mobile === void 0) { mobile = false; }
+            if (!mobile)
+                _this.drawCursor();
+            _this.drawAnimation(delta);
+        };
     }
     MouseCursor.getInstance = function () {
         if (!MouseCursor.instance) {
@@ -17140,18 +17196,24 @@ var MouseCursor = /** @class */ (function () {
         }
         return MouseCursor.instance;
     };
-    MouseCursor.prototype.draw = function () {
-        /*
-        Game.ctx.save();
-        Game.ctx.fillStyle = "rgba(255, 0, 0, 0.5)"; // Semi-transparent red
-        Game.ctx.fillRect(
-          Input.mouseX - this.cursorSize / 2,
-          Input.mouseY - this.cursorSize / 2,
-          this.cursorSize,
-          this.cursorSize
-        );
-        Game.ctx.restore();
-        */
+    MouseCursor.prototype.drawCursor = function () {
+        game_1.Game.ctx.save();
+        //Game.ctx.fillRect(Input.mouseX, Input.mouseY, 1, 1);
+        game_1.Game.drawFX(this.tileX, 0, 1, 1, input_1.Input.mouseX / gameConstants_1.GameConstants.TILESIZE - 8 / gameConstants_1.GameConstants.TILESIZE, input_1.Input.mouseY / gameConstants_1.GameConstants.TILESIZE - 8 / gameConstants_1.GameConstants.TILESIZE, 1, 1);
+        game_1.Game.ctx.restore();
+    };
+    MouseCursor.prototype.drawAnimation = function (delta) {
+        if (this.frame > 5) {
+            //14 is max frame for animation
+            return;
+        }
+        game_1.Game.drawFX(9 + Math.ceil(this.frame), 1, 1, 1, this.clickX / gameConstants_1.GameConstants.TILESIZE - 8 / gameConstants_1.GameConstants.TILESIZE, this.clickY / gameConstants_1.GameConstants.TILESIZE - 8 / gameConstants_1.GameConstants.TILESIZE, 1, 1);
+        this.frame = this.frame + delta / 5;
+    };
+    MouseCursor.prototype.startClickAnim = function () {
+        this.frame = 0;
+        this.clickX = input_1.Input.mouseX;
+        this.clickY = input_1.Input.mouseY;
     };
     MouseCursor.prototype.getPosition = function () {
         return { x: input_1.Input.mouseX, y: input_1.Input.mouseY };
@@ -17862,6 +17924,7 @@ var healthbar_1 = __webpack_require__(/*! ./healthbar */ "./src/healthbar.ts");
 var vendingMachine_1 = __webpack_require__(/*! ./entity/object/vendingMachine */ "./src/entity/object/vendingMachine.ts");
 var drawable_1 = __webpack_require__(/*! ./drawable */ "./src/drawable.ts");
 var hitWarning_1 = __webpack_require__(/*! ./hitWarning */ "./src/hitWarning.ts");
+var item_1 = __webpack_require__(/*! ./item/item */ "./src/item/item.ts");
 var postProcess_1 = __webpack_require__(/*! ./postProcess */ "./src/postProcess.ts");
 var enemy_1 = __webpack_require__(/*! ./entity/enemy/enemy */ "./src/entity/enemy/enemy.ts");
 var mouseCursor_1 = __webpack_require__(/*! ./mouseCursor */ "./src/mouseCursor.ts");
@@ -18111,7 +18174,8 @@ var Player = /** @class */ (function (_super) {
                 return;
             }
             var notInInventoryUI = !_this.inventory.isPointInInventoryButton(x, y) &&
-                !_this.inventory.isPointInQuickbarBounds(x, y).inBounds;
+                !_this.inventory.isPointInQuickbarBounds(x, y).inBounds &&
+                !_this.inventory.isOpen;
             if (notInInventoryUI) {
                 _this.moveWithMouse();
             }
@@ -18121,31 +18185,118 @@ var Player = /** @class */ (function (_super) {
             _this.inventory.mouseRightClick();
         };
         _this.mouseMove = function () {
+            //when mouse moves
             _this.inventory.mostRecentInput = "mouse";
             _this.inventory.mouseMove();
-            //this.faceMouse();
+            _this.faceMouse();
             _this.setTileCursorPosition();
         };
-        _this.moveWithMouse = function () {
-            /*
-            this.faceMouse();
-            if (this.moveRangeCheck(this.mouseToTile().x, this.mouseToTile().y)) {
-              this.tryMove(this.mouseToTile().x, this.mouseToTile().y);
-            }
-            */
+        _this.isMouseOnPlayerTile = function () {
+            return _this.mouseToTile().x === _this.x && _this.mouseToTile().y === _this.y;
         };
-        _this.mouseToTile = function () {
+        _this.isMouseAboveFloor = function (offsetY) {
+            if (offsetY === void 0) { offsetY = 0; }
+            return !(!_this.game.room.tileInside(_this.mouseToTile().x, _this.mouseToTile(offsetY).y) ||
+                (_this.game.room.tileInside(_this.mouseToTile().x, _this.mouseToTile(offsetY).y) &&
+                    _this.game.room.roomArray[_this.mouseToTile().x][_this.mouseToTile(offsetY).y].isSolid() &&
+                    !(_this.game.room.roomArray[_this.mouseToTile().x][_this.mouseToTile(offsetY).y] instanceof door_1.Door)));
+        };
+        _this.mouseInLine = function () {
+            var mouseTile = _this.mouseToTile();
+            return mouseTile.x === _this.x || mouseTile.y === _this.y;
+        };
+        _this.canMoveWithMouse = function () {
+            if (!_this.isMouseAboveFloor() && !_this.isMouseAboveFloor(8))
+                return;
+            var mouseTile = _this.mouseToTile();
+            var offsetMouseTile = _this.mouseToTile(8);
+            var y = mouseTile.y;
+            if (_this.isMouseAboveFloor(8) && _this.checkTileForEntity(offsetMouseTile)) {
+                y = offsetMouseTile.y;
+            }
+            // Get mouse tile coordinates
+            // Check if we're on same row or column
+            var sameX = mouseTile.x === _this.x;
+            var sameY = y === _this.y;
+            // If both same, no movement needed
+            if (sameX && sameY)
+                return null;
+            // Check for straight line movements first
+            if (sameX) {
+                if (y < _this.y) {
+                    return { direction: game_1.Direction.UP, x: _this.x, y: _this.y - 1 };
+                }
+                else {
+                    return { direction: game_1.Direction.DOWN, x: _this.x, y: _this.y + 1 };
+                }
+            }
+            if (sameY) {
+                if (mouseTile.x < _this.x) {
+                    return { direction: game_1.Direction.LEFT, x: _this.x - 1, y: _this.y };
+                }
+                else {
+                    return { direction: game_1.Direction.RIGHT, x: _this.x + 1, y: _this.y };
+                }
+            }
+            /*
+            // Fall back to angle-based approach for diagonal mouse positions
+            const playerScreenX = GameConstants.WIDTH / 2;
+            const playerScreenY = GameConstants.HEIGHT / 2;
+            const dx = Input.mouseX - playerScreenX;
+            const dy = Input.mouseY - playerScreenY;
+        
+            let angle = (Math.atan2(-dy, dx) * 180) / Math.PI;
+            if (angle < 0) angle += 360;
+        
+            if (angle >= 310 || angle < 10) {
+              return { direction: Direction.RIGHT, x: this.x + 1, y: this.y };
+            } else if (angle >= 40 && angle < 140) {
+              return { direction: Direction.UP, x: this.x, y: this.y - 1 };
+            } else if (angle >= 130 && angle < 230) {
+              return { direction: Direction.LEFT, x: this.x - 1, y: this.y };
+            } else if (angle >= 220 && angle < 320) {
+              return { direction: Direction.DOWN, x: this.x, y: this.y + 1 };
+            }
+              */
+            return null;
+        };
+        _this.moveWithMouse = function () {
+            if (!gameConstants_1.GameConstants.MOVE_WITH_MOUSE)
+                return;
+            var moveData = _this.canMoveWithMouse();
+            if (moveData) {
+                _this.direction = moveData.direction;
+                _this.tryMove(moveData.x, moveData.y);
+            }
+        };
+        _this.mouseToTile = function (offsetY) {
+            if (offsetY === void 0) { offsetY = 0; }
             // Get screen center coordinates
             var screenCenterX = gameConstants_1.GameConstants.WIDTH / 2;
             var screenCenterY = gameConstants_1.GameConstants.HEIGHT / 2;
             // Convert pixel offset to tile offset (this part was working correctly)
             var tileOffsetX = Math.floor((input_1.Input.mouseX - screenCenterX + gameConstants_1.GameConstants.TILESIZE / 2) /
                 gameConstants_1.GameConstants.TILESIZE);
-            var tileOffsetY = Math.floor((input_1.Input.mouseY - screenCenterY + gameConstants_1.GameConstants.TILESIZE / 2) /
+            var tileOffsetY = Math.floor((input_1.Input.mouseY + offsetY - screenCenterY + gameConstants_1.GameConstants.TILESIZE / 2) /
                 gameConstants_1.GameConstants.TILESIZE);
             return {
                 x: _this.x + tileOffsetX,
                 y: _this.y + tileOffsetY,
+            };
+        };
+        _this.tileToMouse = function (tileX, tileY) {
+            // Get screen center coordinates
+            var screenCenterX = gameConstants_1.GameConstants.WIDTH / 2;
+            var screenCenterY = gameConstants_1.GameConstants.HEIGHT / 2;
+            // Calculate the offset from the center position
+            var tileOffsetX = tileX - _this.x;
+            var tileOffsetY = tileY - _this.y;
+            // Convert tile offset to pixel coordinates
+            var pixelX = screenCenterX + tileOffsetX * gameConstants_1.GameConstants.TILESIZE;
+            var pixelY = screenCenterY + tileOffsetY * gameConstants_1.GameConstants.TILESIZE;
+            return {
+                x: pixelX,
+                y: pixelY,
             };
         };
         _this.tryVaultOver = function (x, y, direction) {
@@ -18167,13 +18318,129 @@ var Player = /** @class */ (function (_super) {
         _this.moveRangeCheck = function (x, y) {
             var dx = Math.abs(_this.x - x);
             var dy = Math.abs(_this.y - y);
-            return dx <= _this.moveRange && dy <= _this.moveRange && dx + dy !== 0;
+            return (dx <= _this.moveRange &&
+                dy <= _this.moveRange &&
+                (dx === 0 || dy === 0) &&
+                dx + dy !== 0);
         };
         _this.setTileCursorPosition = function () {
-            _this.tileCursor = {
-                x: Math.floor(input_1.Input.mouseX / gameConstants_1.GameConstants.TILESIZE),
-                y: Math.floor(input_1.Input.mouseY / gameConstants_1.GameConstants.TILESIZE),
+            var offsetX = Math.floor(gameConstants_1.GameConstants.WIDTH / 2) / gameConstants_1.GameConstants.TILESIZE;
+            var offsetY = Math.floor(gameConstants_1.GameConstants.HEIGHT / 2) / gameConstants_1.GameConstants.TILESIZE;
+            /*
+            this.tileCursor = {
+              x: this.mouseToTile().x - this.x + offsetX - 0.5,
+              y: this.mouseToTile().y - this.y + offsetY - 0.5,
             };
+            */
+            var moveData = _this.canMoveWithMouse();
+            if (moveData) {
+                _this.tileCursor = {
+                    x: moveData.x - _this.x + offsetX - 0.5,
+                    y: moveData.y - _this.y + offsetY - 0.5,
+                };
+            }
+        };
+        _this.enemyInRange = function (eX, eY, range) {
+            // Use nullish coalescing operator for cleaner default value
+            var r = range !== null && range !== void 0 ? range : 1;
+            // Same tile - not in range
+            if (eX === _this.x && eY === _this.y)
+                return false;
+            // Diagonal - not in range
+            if (eX !== _this.x && eY !== _this.y)
+                return false;
+            // Check horizontal range
+            if (eY === _this.y) {
+                return Math.abs(eX - _this.x) <= r;
+            }
+            // Check vertical range
+            if (eX === _this.x) {
+                return Math.abs(eY - _this.y) <= r;
+            }
+            return false;
+        };
+        _this.getDirectionFromCoords = function (inputX, inputY) {
+            // Same position - no direction
+            if (inputX === _this.x && inputY === _this.y)
+                return "";
+            // Diagonal - no direction
+            if (inputX !== _this.x && inputY !== _this.y)
+                return "";
+            // Check horizontal
+            if (inputY === _this.y) {
+                return inputX > _this.x ? "right" : "left";
+            }
+            // Check vertical
+            if (inputX === _this.x) {
+                return inputY > _this.y ? "down" : "up";
+            }
+            return "arrow";
+        };
+        _this.setCursorIcon = function () {
+            // Early return cases
+            if (_this.inventory.isDragging) {
+                mouseCursor_1.MouseCursor.getInstance().setIcon("grab");
+                return;
+            }
+            var cursor = mouseCursor_1.MouseCursor.getInstance();
+            var mousePos = cursor.getPosition();
+            var mouseTile = _this.mouseToTile();
+            // Check cursor states in order of priority
+            var cursorState = _this.getCursorState(mousePos, mouseTile);
+            cursor.setIcon(cursorState);
+        };
+        _this.getCursorState = function (mousePos, mouseTile) {
+            // 1. Check UI interactions
+            if (_this.isMouseInUI(mousePos)) {
+                return "hand";
+            }
+            if (_this.isEntityAttackable(mouseTile)) {
+                return "sword";
+            }
+            // 2. Check game world interactions
+            if (_this.isMouseAboveFloor() && _this.mouseInLine()) {
+                // 2a. Check for attackable entities
+                // 2b. Check for movement target
+                if (_this.enemyInRange(mouseTile.x, mouseTile.y, 1)) {
+                    return _this.getDirectionFromCoords(mouseTile.x, mouseTile.y);
+                }
+                // 2c. Default floor interaction
+                return "hand";
+            }
+            // 3. Default cursor state
+            return "arrow";
+        };
+        _this.isMouseInUI = function (mousePos) {
+            var x = mousePos.x, y = mousePos.y;
+            return (_this.inventory.isPointInInventoryButton(x, y) ||
+                _this.isInventoryItemInteraction(x, y));
+        };
+        _this.isInventoryItemInteraction = function (x, y) {
+            var hasSelectedItem = _this.inventory.itemAtSelectedSlot() instanceof item_1.Item;
+            return ((_this.inventory.isPointInQuickbarBounds(x, y).inBounds &&
+                hasSelectedItem) ||
+                (_this.inventory.isOpen &&
+                    _this.inventory.isPointInInventoryBounds(x, y).inBounds &&
+                    hasSelectedItem));
+        };
+        _this.isEntityAttackable = function (mouseTile) {
+            // Check current tile
+            var currentTileCheck = _this.checkTileForEntity(mouseTile);
+            if (currentTileCheck)
+                return true;
+            // Check tile above with 0.5 tile offset
+            var belowTileCheck = _this.checkTileForEntity({
+                x: mouseTile.x,
+                y: _this.mouseToTile(gameConstants_1.GameConstants.TILESIZE / 2).y,
+            });
+            return belowTileCheck;
+        };
+        _this.checkTileForEntity = function (tile) {
+            return _this.game.room.entities.some(function (entity) {
+                return (entity.x === tile.x &&
+                    entity.y === tile.y &&
+                    _this.enemyInRange(entity.x, entity.y, _this.inventory.weapon.range));
+            });
         };
         _this.restart = function () {
             _this.dead = false;
@@ -18588,6 +18855,8 @@ var Player = /** @class */ (function (_super) {
             game_1.Game.ctx.restore();
         };
         _this.faceMouse = function () {
+            if (!gameConstants_1.GameConstants.MOVE_WITH_MOUSE)
+                return;
             var mousePosition = mouseCursor_1.MouseCursor.getInstance().getPosition();
             var playerPixelPosition = {
                 x: gameConstants_1.GameConstants.WIDTH / 2,
@@ -18735,6 +19004,7 @@ var Player = /** @class */ (function (_super) {
             if (_this.mapToggled === true)
                 _this.map.draw(delta);
             //this.drawTileCursor(delta);
+            _this.setCursorIcon();
             //this.drawInventoryButton(delta);
             if (_this.menu.open)
                 _this.menu.drawMenu();
@@ -18786,59 +19056,6 @@ var Player = /** @class */ (function (_super) {
         };
         _this.updateDrawXY = function (delta) {
             if (!_this.doneMoving()) {
-                /*
-                for (let i = 0; i < this.drawMoveQueue.length; i++) {
-                  let prevX = 0;
-                  let prevY = 0;
-                  if (this.drawMoveQueue.length > 1) {
-                    prevX = this.drawMoveQueue[i - 1]?.drawX;
-                    prevY = this.drawMoveQueue[i - 1]?.drawY;
-                  }
-                  //let threshold = (1 - i / this.drawMoveQueue.length) / 2;
-                  const speed = (i + 1) / (this.drawMoveQueue.length * 20);
-                  if (Math.abs(this.drawMoveQueue[i].drawX) > 0) {
-                    this.drawMoveQueue[i].drawX *=
-                      0.99 -
-                      Math.abs(Math.sin(this.drawMoveQueue[i].drawX * Math.PI)) / 10 -
-                      speed ** delta;
-                  } else if (Math.abs(this.drawMoveQueue[i].drawX) < 0.01) {
-                    this.drawMoveQueue[i].drawX = 0;
-                  }
-                  if (Math.abs(this.drawMoveQueue[i].drawY) > 0) {
-                    this.drawMoveQueue[i].drawY *=
-                      0.99 -
-                      Math.abs(Math.sin(this.drawMoveQueue[i].drawX * Math.PI)) / 10 -
-                      speed ** delta;
-                  } else if (Math.abs(this.drawMoveQueue[i].drawY) < 0.01) {
-                    this.drawMoveQueue[i].drawY = 0;
-                  }
-          
-                  this.drawMoveQueue[i].drawX = Math.min(
-                    Math.max(this.drawMoveQueue[i].drawX, -1),
-                    1,
-                  );
-                  this.drawMoveQueue[i].drawY = Math.min(
-                    Math.max(this.drawMoveQueue[i].drawY, -1),
-                    1,
-                  );
-                }
-          
-                let sumX = 0;
-                let sumY = 0;
-                this.drawMoveQueue.forEach((move) => {
-                  sumX += move.drawX;
-                  sumY += move.drawY;
-                });
-                
-                this.drawX = sumX;
-                this.drawY = sumY;
-                if (
-                  Math.abs(this.drawMoveQueue[0].drawX) < 0.01 &&
-                  Math.abs(this.drawMoveQueue[0].drawY) < 0.01
-                )
-                  this.drawMoveQueue.shift();
-                  
-                  */
                 _this.drawX *= Math.pow(0.85, delta);
                 _this.drawY *= Math.pow(0.85, delta);
                 _this.drawX = Math.abs(_this.drawX) < 0.01 ? 0 : _this.drawX;
@@ -18889,10 +19106,33 @@ var Player = /** @class */ (function (_super) {
          * to ensure canvas state is preserved.
          */
         _this.drawTileCursor = function (delta) {
+            if (_this.inventory.isOpen)
+                return;
             game_1.Game.ctx.save(); // Save the current canvas state
-            var inRange = _this.moveRangeCheck(_this.mouseToTile().x, _this.mouseToTile().y);
-            var tileX = inRange ? 22 : 24;
-            game_1.Game.drawFX(tileX + Math.floor(hitWarning_1.HitWarning.frame), 4, 1, 2, _this.tileCursor.x, _this.tileCursor.y - 1, 1, 2);
+            if (!_this.mouseInLine() ||
+                !_this.isMouseAboveFloor() ||
+                _this.isMouseOnPlayerTile())
+                return;
+            var tileX = 22; //inRange ? 22 : 24;
+            var tileY = 3;
+            var moveData = _this.canMoveWithMouse();
+            if (moveData && moveData.direction !== undefined) {
+                switch (moveData.direction) {
+                    case game_1.Direction.UP:
+                        tileY = 3;
+                        break;
+                    case game_1.Direction.RIGHT:
+                        tileY = 4;
+                        break;
+                    case game_1.Direction.DOWN:
+                        tileY = 5;
+                        break;
+                    case game_1.Direction.LEFT:
+                        tileY = 6;
+                        break;
+                }
+            }
+            game_1.Game.drawFX(tileX + Math.floor(hitWarning_1.HitWarning.frame), tileY, 1, 1, _this.tileCursor.x, _this.tileCursor.y, 1, 1);
             game_1.Game.ctx.restore(); // Restore the canvas state
         };
         _this.queueHandler = function () {

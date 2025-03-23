@@ -536,7 +536,8 @@ export class Player extends Drawable {
     }
     const notInInventoryUI =
       !this.inventory.isPointInInventoryButton(x, y) &&
-      !this.inventory.isPointInQuickbarBounds(x, y).inBounds;
+      !this.inventory.isPointInQuickbarBounds(x, y).inBounds &&
+      !this.inventory.isOpen;
 
     if (notInInventoryUI) {
       this.moveWithMouse();
@@ -548,22 +549,109 @@ export class Player extends Drawable {
   };
 
   mouseMove = () => {
+    //when mouse moves
     this.inventory.mostRecentInput = "mouse";
     this.inventory.mouseMove();
-    //this.faceMouse();
+    this.faceMouse();
     this.setTileCursorPosition();
+  };
+  isMouseOnPlayerTile = () => {
+    return this.mouseToTile().x === this.x && this.mouseToTile().y === this.y;
+  };
+
+  isMouseAboveFloor = (offsetY: number = 0) => {
+    return !(
+      !this.game.room.tileInside(
+        this.mouseToTile().x,
+        this.mouseToTile(offsetY).y,
+      ) ||
+      (this.game.room.tileInside(
+        this.mouseToTile().x,
+        this.mouseToTile(offsetY).y,
+      ) &&
+        this.game.room.roomArray[this.mouseToTile().x][
+          this.mouseToTile(offsetY).y
+        ].isSolid() &&
+        !(
+          this.game.room.roomArray[this.mouseToTile().x][
+            this.mouseToTile(offsetY).y
+          ] instanceof Door
+        ))
+    );
+  };
+
+  mouseInLine = () => {
+    const mouseTile = this.mouseToTile();
+    return mouseTile.x === this.x || mouseTile.y === this.y;
+  };
+
+  canMoveWithMouse = () => {
+    if (!this.isMouseAboveFloor() && !this.isMouseAboveFloor(8)) return;
+
+    const mouseTile = this.mouseToTile();
+    const offsetMouseTile = this.mouseToTile(8);
+    let y = mouseTile.y;
+
+    if (this.isMouseAboveFloor(8) && this.checkTileForEntity(offsetMouseTile)) {
+      y = offsetMouseTile.y;
+    }
+    // Get mouse tile coordinates
+
+    // Check if we're on same row or column
+    const sameX = mouseTile.x === this.x;
+    const sameY = y === this.y;
+
+    // If both same, no movement needed
+    if (sameX && sameY) return null;
+
+    // Check for straight line movements first
+    if (sameX) {
+      if (y < this.y) {
+        return { direction: Direction.UP, x: this.x, y: this.y - 1 };
+      } else {
+        return { direction: Direction.DOWN, x: this.x, y: this.y + 1 };
+      }
+    }
+    if (sameY) {
+      if (mouseTile.x < this.x) {
+        return { direction: Direction.LEFT, x: this.x - 1, y: this.y };
+      } else {
+        return { direction: Direction.RIGHT, x: this.x + 1, y: this.y };
+      }
+    }
+    /*
+    // Fall back to angle-based approach for diagonal mouse positions
+    const playerScreenX = GameConstants.WIDTH / 2;
+    const playerScreenY = GameConstants.HEIGHT / 2;
+    const dx = Input.mouseX - playerScreenX;
+    const dy = Input.mouseY - playerScreenY;
+
+    let angle = (Math.atan2(-dy, dx) * 180) / Math.PI;
+    if (angle < 0) angle += 360;
+
+    if (angle >= 310 || angle < 10) {
+      return { direction: Direction.RIGHT, x: this.x + 1, y: this.y };
+    } else if (angle >= 40 && angle < 140) {
+      return { direction: Direction.UP, x: this.x, y: this.y - 1 };
+    } else if (angle >= 130 && angle < 230) {
+      return { direction: Direction.LEFT, x: this.x - 1, y: this.y };
+    } else if (angle >= 220 && angle < 320) {
+      return { direction: Direction.DOWN, x: this.x, y: this.y + 1 };
+    }
+      */
+    return null;
   };
 
   moveWithMouse = () => {
-    /*
-    this.faceMouse();
-    if (this.moveRangeCheck(this.mouseToTile().x, this.mouseToTile().y)) {
-      this.tryMove(this.mouseToTile().x, this.mouseToTile().y);
+    if (!GameConstants.MOVE_WITH_MOUSE) return;
+    const moveData = this.canMoveWithMouse();
+    if (moveData) {
+      this.direction = moveData.direction;
+      this.tryMove(moveData.x, moveData.y);
     }
-    */
   };
 
-  mouseToTile = () => {
+  mouseToTile = (offsetY: number = 0) => {
     // Get screen center coordinates
     const screenCenterX = GameConstants.WIDTH / 2;
     const screenCenterY = GameConstants.HEIGHT / 2;
@@ -574,13 +662,32 @@ export class Player extends Drawable {
         GameConstants.TILESIZE,
     );
     const tileOffsetY = Math.floor(
-      (Input.mouseY - screenCenterY + GameConstants.TILESIZE / 2) /
+      (Input.mouseY + offsetY - screenCenterY + GameConstants.TILESIZE / 2) /
         GameConstants.TILESIZE,
     );
 
     return {
       x: this.x + tileOffsetX,
       y: this.y + tileOffsetY,
+    };
+  };
+
+  tileToMouse = (tileX, tileY) => {
+    // Get screen center coordinates
+    const screenCenterX = GameConstants.WIDTH / 2;
+    const screenCenterY = GameConstants.HEIGHT / 2;
+
+    // Calculate the offset from the center position
+    const tileOffsetX = tileX - this.x;
+    const tileOffsetY = tileY - this.y;
+
+    // Convert tile offset to pixel coordinates
+    const pixelX = screenCenterX + tileOffsetX * GameConstants.TILESIZE;
+    const pixelY = screenCenterY + tileOffsetY * GameConstants.TILESIZE;
+
+    return {
+      x: pixelX,
+      y: pixelY,
     };
   };
 
@@ -604,14 +711,170 @@ export class Player extends Drawable {
   moveRangeCheck = (x: number, y: number) => {
     const dx = Math.abs(this.x - x);
     const dy = Math.abs(this.y - y);
-    return dx <= this.moveRange && dy <= this.moveRange && dx + dy !== 0;
+    return (
+      dx <= this.moveRange &&
+      dy <= this.moveRange &&
+      (dx === 0 || dy === 0) &&
+      dx + dy !== 0
+    );
   };
 
   setTileCursorPosition = () => {
+    const offsetX =
+      Math.floor(GameConstants.WIDTH / 2) / GameConstants.TILESIZE;
+
+    const offsetY =
+      Math.floor(GameConstants.HEIGHT / 2) / GameConstants.TILESIZE;
+    /*
     this.tileCursor = {
-      x: Math.floor(Input.mouseX / GameConstants.TILESIZE),
-      y: Math.floor(Input.mouseY / GameConstants.TILESIZE),
+      x: this.mouseToTile().x - this.x + offsetX - 0.5,
+      y: this.mouseToTile().y - this.y + offsetY - 0.5,
     };
+    */
+
+    const moveData = this.canMoveWithMouse();
+    if (moveData) {
+      this.tileCursor = {
+        x: moveData.x - this.x + offsetX - 0.5,
+        y: moveData.y - this.y + offsetY - 0.5,
+      };
+    }
+  };
+
+  enemyInRange = (eX: number, eY: number, range: number | null) => {
+    // Use nullish coalescing operator for cleaner default value
+    const r = range ?? 1;
+
+    // Same tile - not in range
+    if (eX === this.x && eY === this.y) return false;
+
+    // Diagonal - not in range
+    if (eX !== this.x && eY !== this.y) return false;
+
+    // Check horizontal range
+    if (eY === this.y) {
+      return Math.abs(eX - this.x) <= r;
+    }
+
+    // Check vertical range
+    if (eX === this.x) {
+      return Math.abs(eY - this.y) <= r;
+    }
+
+    return false;
+  };
+
+  getDirectionFromCoords = (inputX: number, inputY: number): string => {
+    // Same position - no direction
+    if (inputX === this.x && inputY === this.y) return "";
+
+    // Diagonal - no direction
+    if (inputX !== this.x && inputY !== this.y) return "";
+
+    // Check horizontal
+    if (inputY === this.y) {
+      return inputX > this.x ? "right" : "left";
+    }
+
+    // Check vertical
+    if (inputX === this.x) {
+      return inputY > this.y ? "down" : "up";
+    }
+
+    return "arrow";
+  };
+
+  setCursorIcon = () => {
+    // Early return cases
+    if (this.inventory.isDragging) {
+      MouseCursor.getInstance().setIcon("grab");
+      return;
+    }
+
+    const cursor = MouseCursor.getInstance();
+    const mousePos = cursor.getPosition();
+    const mouseTile = this.mouseToTile();
+
+    // Check cursor states in order of priority
+    const cursorState = this.getCursorState(mousePos, mouseTile);
+    cursor.setIcon(cursorState);
+  };
+
+  private getCursorState = (
+    mousePos: { x: number; y: number },
+    mouseTile: { x: number; y: number },
+  ): string => {
+    // 1. Check UI interactions
+    if (this.isMouseInUI(mousePos)) {
+      return "hand";
+    }
+    if (this.isEntityAttackable(mouseTile)) {
+      return "sword";
+    }
+
+    // 2. Check game world interactions
+    if (this.isMouseAboveFloor() && this.mouseInLine()) {
+      // 2a. Check for attackable entities
+
+      // 2b. Check for movement target
+      if (this.enemyInRange(mouseTile.x, mouseTile.y, 1)) {
+        return this.getDirectionFromCoords(mouseTile.x, mouseTile.y);
+      }
+
+      // 2c. Default floor interaction
+      return "hand";
+    }
+
+    // 3. Default cursor state
+    return "arrow";
+  };
+
+  private isMouseInUI = (mousePos: { x: number; y: number }): boolean => {
+    const { x, y } = mousePos;
+
+    return (
+      this.inventory.isPointInInventoryButton(x, y) ||
+      this.isInventoryItemInteraction(x, y)
+    );
+  };
+
+  private isInventoryItemInteraction = (x: number, y: number): boolean => {
+    const hasSelectedItem = this.inventory.itemAtSelectedSlot() instanceof Item;
+
+    return (
+      (this.inventory.isPointInQuickbarBounds(x, y).inBounds &&
+        hasSelectedItem) ||
+      (this.inventory.isOpen &&
+        this.inventory.isPointInInventoryBounds(x, y).inBounds &&
+        hasSelectedItem)
+    );
+  };
+
+  private isEntityAttackable = (mouseTile: {
+    x: number;
+    y: number;
+  }): boolean => {
+    // Check current tile
+    const currentTileCheck = this.checkTileForEntity(mouseTile);
+    if (currentTileCheck) return true;
+
+    // Check tile above with 0.5 tile offset
+    const belowTileCheck = this.checkTileForEntity({
+      x: mouseTile.x,
+      y: this.mouseToTile(GameConstants.TILESIZE / 2).y,
+    });
+
+    return belowTileCheck;
+  };
+
+  private checkTileForEntity = (tile: { x: number; y: number }): boolean => {
+    return this.game.room.entities.some((entity) => {
+      return (
+        entity.x === tile.x &&
+        entity.y === tile.y &&
+        this.enemyInRange(entity.x, entity.y, this.inventory.weapon.range)
+      );
+    });
   };
 
   restart = () => {
@@ -1089,6 +1352,7 @@ export class Player extends Drawable {
   };
 
   faceMouse = () => {
+    if (!GameConstants.MOVE_WITH_MOUSE) return;
     const mousePosition = MouseCursor.getInstance().getPosition();
     const playerPixelPosition = {
       x: GameConstants.WIDTH / 2,
@@ -1290,6 +1554,8 @@ export class Player extends Drawable {
 
     if (this.mapToggled === true) this.map.draw(delta);
     //this.drawTileCursor(delta);
+    this.setCursorIcon();
+
     //this.drawInventoryButton(delta);
     if (this.menu.open) this.menu.drawMenu();
     Game.ctx.restore();
@@ -1354,62 +1620,7 @@ export class Player extends Drawable {
 
   updateDrawXY = (delta: number) => {
     if (!this.doneMoving()) {
-      /*
-      for (let i = 0; i < this.drawMoveQueue.length; i++) {
-        let prevX = 0;
-        let prevY = 0;
-        if (this.drawMoveQueue.length > 1) {
-          prevX = this.drawMoveQueue[i - 1]?.drawX;
-          prevY = this.drawMoveQueue[i - 1]?.drawY;
-        }
-        //let threshold = (1 - i / this.drawMoveQueue.length) / 2;
-        const speed = (i + 1) / (this.drawMoveQueue.length * 20);
-        if (Math.abs(this.drawMoveQueue[i].drawX) > 0) {
-          this.drawMoveQueue[i].drawX *=
-            0.99 -
-            Math.abs(Math.sin(this.drawMoveQueue[i].drawX * Math.PI)) / 10 -
-            speed ** delta;
-        } else if (Math.abs(this.drawMoveQueue[i].drawX) < 0.01) {
-          this.drawMoveQueue[i].drawX = 0;
-        }
-        if (Math.abs(this.drawMoveQueue[i].drawY) > 0) {
-          this.drawMoveQueue[i].drawY *=
-            0.99 -
-            Math.abs(Math.sin(this.drawMoveQueue[i].drawX * Math.PI)) / 10 -
-            speed ** delta;
-        } else if (Math.abs(this.drawMoveQueue[i].drawY) < 0.01) {
-          this.drawMoveQueue[i].drawY = 0;
-        }
-
-        this.drawMoveQueue[i].drawX = Math.min(
-          Math.max(this.drawMoveQueue[i].drawX, -1),
-          1,
-        );
-        this.drawMoveQueue[i].drawY = Math.min(
-          Math.max(this.drawMoveQueue[i].drawY, -1),
-          1,
-        );
-      }
-
-      let sumX = 0;
-      let sumY = 0;
-      this.drawMoveQueue.forEach((move) => {
-        sumX += move.drawX;
-        sumY += move.drawY;
-      });
-      
-      this.drawX = sumX;
-      this.drawY = sumY;
-      if (
-        Math.abs(this.drawMoveQueue[0].drawX) < 0.01 &&
-        Math.abs(this.drawMoveQueue[0].drawY) < 0.01
-      )
-        this.drawMoveQueue.shift();
-        
-        */
-
       this.drawX *= 0.85 ** delta;
-
       this.drawY *= 0.85 ** delta;
       this.drawX = Math.abs(this.drawX) < 0.01 ? 0 : this.drawX;
       this.drawY = Math.abs(this.drawY) < 0.01 ? 0 : this.drawY;
@@ -1476,23 +1687,45 @@ export class Player extends Drawable {
    * to ensure canvas state is preserved.
    */
   drawTileCursor = (delta: number) => {
+    if (this.inventory.isOpen) return;
     Game.ctx.save(); // Save the current canvas state
 
-    const inRange = this.moveRangeCheck(
-      this.mouseToTile().x,
-      this.mouseToTile().y,
-    );
-    let tileX = inRange ? 22 : 24;
+    if (
+      !this.mouseInLine() ||
+      !this.isMouseAboveFloor() ||
+      this.isMouseOnPlayerTile()
+    )
+      return;
+    let tileX = 22; //inRange ? 22 : 24;
+    let tileY = 3;
+
+    const moveData = this.canMoveWithMouse();
+    if (moveData && moveData.direction !== undefined) {
+      switch (moveData.direction) {
+        case Direction.UP:
+          tileY = 3;
+          break;
+        case Direction.RIGHT:
+          tileY = 4;
+          break;
+        case Direction.DOWN:
+          tileY = 5;
+          break;
+        case Direction.LEFT:
+          tileY = 6;
+          break;
+      }
+    }
 
     Game.drawFX(
       tileX + Math.floor(HitWarning.frame),
-      4,
+      tileY,
       1,
-      2,
+      1,
       this.tileCursor.x,
-      this.tileCursor.y - 1,
+      this.tileCursor.y,
       1,
-      2,
+      1,
     );
 
     Game.ctx.restore(); // Restore the canvas state

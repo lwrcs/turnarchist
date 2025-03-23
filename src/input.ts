@@ -1,5 +1,6 @@
 import { GameConstants } from "./gameConstants";
 import { Game } from "./game";
+import { MouseCursor } from "./mouseCursor";
 
 export enum InputEnum {
   I,
@@ -260,7 +261,7 @@ export const Input = {
 
   handleMouseDown: function (event: MouseEvent) {
     if (Input.mouseDown) return; // Prevent multiple triggers
-
+    MouseCursor.getInstance().startClickAnim();
     Input.mouseDown = true;
     Input.mouseDownStartTime = Date.now();
     Input.isMouseHold = false;

@@ -1335,8 +1335,8 @@ export class Game {
     if (!this.started && this.levelState !== LevelState.LEVEL_GENERATION) {
       this.drawStartScreen(delta * 10);
     }
-    MouseCursor.getInstance().draw();
 
+    MouseCursor.getInstance().draw(delta, this.isMobile);
     Game.ctx.restore(); // Restore the canvas state
   };
 
