@@ -1,16 +1,16 @@
-import { Item } from "./item/item";
-import { LevelConstants } from "./levelConstants";
-import { Game } from "./game";
-import { GameConstants } from "./gameConstants";
-import { Equippable } from "./item/equippable";
-import { Armor } from "./item/armor";
-import { Coin } from "./item/coin";
-import { Weapon } from "./weapon/weapon";
-import { Room } from "./room";
-import { Usable } from "./item/usable";
-import { Player } from "./player/player";
-import { MouseCursor } from "./mouseCursor";
-import { Input } from "./input";
+import { Item } from "../item/item";
+import { LevelConstants } from "../levelConstants";
+import { Game } from "../game";
+import { GameConstants } from "../gameConstants";
+import { Equippable } from "../item/equippable";
+import { Armor } from "../item/armor";
+import { Coin } from "../item/coin";
+import { Weapon } from "../weapon/weapon";
+import { Room } from "../room";
+import { Usable } from "../item/usable";
+import { Player } from "../player/player";
+import { MouseCursor } from "../mouseCursor";
+import { Input } from "../input";
 
 let OPEN_TIME = 100; // milliseconds
 // Dark gray color used for the background of inventory slots
@@ -128,6 +128,7 @@ export class Inventory {
   };
 
   close = () => {
+    if (!this.isOpen) return;
     this.isOpen = false;
     if (this.selY > 0) {
       this.selY = 0;
@@ -415,6 +416,7 @@ export class Inventory {
   };
 
   drop = () => {
+    if (!this.isOpen) return;
     let index = this.selX + this.selY * this.cols;
     if (index < 0 || index >= this.items.length) return;
     const item = this.items[index];

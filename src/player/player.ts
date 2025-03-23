@@ -3,7 +3,7 @@ import { GameConstants } from "../gameConstants";
 import { ChatMessage, Direction, Game, LevelState } from "../game";
 import { Door, DoorType } from "../tile/door";
 import { Trapdoor } from "../tile/trapdoor";
-import { Inventory } from "../inventory";
+import { Inventory } from "../inventory/inventory";
 import { Sound } from "../sound";
 import { LevelConstants } from "../levelConstants";
 import { Map } from "../map";
@@ -35,6 +35,8 @@ import { Menu } from "../menu";
 import { Bestiary } from "../bestiary";
 import { AttackAnimation } from "../particle/attackAnimation";
 import { PlayerInputHandler } from "./playerInputHandler";
+import { PlayerActionProcessor } from "./playerActionProcessor";
+import { PlayerMovement } from "./playerMovement";
 
 export enum PlayerDirection {
   DOWN,
@@ -82,8 +84,7 @@ export class Player extends Drawable {
   turnCount: number;
   triedMove: boolean;
   tutorialRoom: boolean;
-  private lastMoveTime: number;
-  private moveCooldown: number;
+
   moveRange: number;
   tileCursor: { x: number; y: number };
   private jumpY: number;
@@ -109,9 +110,9 @@ export class Player extends Drawable {
   menu: Menu;
   busyAnimating: boolean;
   inputHandler: PlayerInputHandler;
+  actionProcessor: PlayerActionProcessor;
+  movement: PlayerMovement;
 
-  private animationFrameId: number | null = null;
-  private isProcessingQueue: boolean = false;
   private lowHealthFrame: number = 0;
   private drawMoveQueue: {
     drawX: number;
@@ -144,7 +145,7 @@ export class Player extends Drawable {
     this.depth = 0;
     this.menu = new Menu();
     this.busyAnimating = false;
-    this.inputHandler = new PlayerInputHandler(this);
+
     this.mapToggled = true;
     this.health = 2;
     this.maxHealth = 2;
@@ -163,8 +164,7 @@ export class Player extends Drawable {
     this.turnCount = 0;
     this.triedMove = false;
     this.tutorialRoom = false;
-    this.lastMoveTime = 0;
-    this.moveCooldown = 100; // Cooldown in milliseconds (adjust as needed)
+
     this.tileCursor = { x: 0, y: 0 };
     this.moveRange = 1;
     this.lightEquipped = false;
@@ -176,7 +176,6 @@ export class Player extends Drawable {
     this.sineAngle = Math.PI / 2;
     this.drawMoveSpeed = 0.3; // greater than 1 less than 2
     this.moveQueue = [];
-    this.isProcessingQueue = false;
 
     this.hitX = 0;
     this.hitY = 0;
@@ -185,24 +184,11 @@ export class Player extends Drawable {
     this.slowMotionTickDuration = 0;
     this.justMoved = DrawDirection.Y;
 
-    this.bestiary = new Bestiary(this.game, this);
-  }
+    this.inputHandler = new PlayerInputHandler(this);
+    this.actionProcessor = new PlayerActionProcessor(this);
+    this.movement = new PlayerMovement(this);
 
-  get angle(): number {
-    if (this.direction !== undefined) {
-      switch (this.direction) {
-        case Direction.UP:
-          return 270;
-        case Direction.RIGHT:
-          return 0;
-        case Direction.DOWN:
-          return 90;
-        case Direction.LEFT:
-          return 180;
-      }
-    } else {
-      return 0;
-    }
+    this.bestiary = new Bestiary(this.game, this);
   }
 
   applyStatus = (
@@ -221,186 +207,13 @@ export class Player extends Drawable {
     }
   };
 
-  escapeListener = () => {
-    if (this.inventory.isOpen) {
-      this.inventory.close();
-    }
-  };
-  commaListener = () => {
-    this.inventory.mostRecentInput = "keyboard";
-    this.inventory.left();
-  };
-  periodListener = () => {
-    this.inventory.mostRecentInput = "keyboard";
-    this.inventory.right();
-  };
-  numKeyListener = (input: InputEnum) => {
-    this.inventory.mostRecentInput = "keyboard";
-    this.inventory.handleNumKey(input - 13);
-  };
-
-  tapListener = () => {
-    this.inventory.mostRecentInput = "mouse";
-    this.inventory.open();
-  };
-  iListener = () => {
-    this.inventory.open();
-  };
-  qListener = () => {
-    if (this.inventory.isOpen) {
-      this.inventory.drop();
-    }
-  };
   ignoreDirectionInput = (): boolean => {
     return (
       !this.inventory.isOpen &&
       (this.dead || this.game.levelState !== LevelState.IN_LEVEL)
     );
   };
-  leftListener = (isLocal: boolean): boolean => {
-    this.inventory.mostRecentInput = "keyboard";
-    if (this.inventory.isOpen) {
-      this.inventory.left();
-      return true;
-    }
-    if (
-      !this.dead &&
-      (!isLocal || this.game.levelState === LevelState.IN_LEVEL)
-    ) {
-      this.left();
-      return true;
-    }
 
-    return false;
-  };
-  rightListener = (isLocal: boolean): boolean => {
-    this.inventory.mostRecentInput = "keyboard";
-    if (this.inventory.isOpen) {
-      this.inventory.right();
-      return true;
-    }
-    if (
-      !this.dead &&
-      (!isLocal || this.game.levelState === LevelState.IN_LEVEL)
-    ) {
-      this.right();
-      return true;
-    }
-
-    return false;
-  };
-  upListener = (isLocal: boolean): boolean => {
-    this.inventory.mostRecentInput = "keyboard";
-    if (this.inventory.isOpen) {
-      this.inventory.up();
-      return true;
-    }
-    if (
-      !this.dead &&
-      (!isLocal || this.game.levelState === LevelState.IN_LEVEL)
-    ) {
-      this.up();
-      return true;
-    }
-
-    return false;
-  };
-  downListener = (isLocal: boolean): boolean => {
-    this.inventory.mostRecentInput = "keyboard";
-    if (this.inventory.isOpen) {
-      this.inventory.down();
-      return true;
-    }
-    if (
-      !this.dead &&
-      (!isLocal || this.game.levelState === LevelState.IN_LEVEL)
-    ) {
-      this.down();
-      return true;
-    }
-
-    return false;
-  };
-  spaceListener = () => {
-    this.inventory.mostRecentInput = "keyboard";
-    if (!this.game.chatOpen) {
-      if (this.dead) {
-        this.restart();
-      } else if (this.openVendingMachine) {
-        this.openVendingMachine.space();
-      } else if (
-        this.inventory.isOpen ||
-        this.game.levelState === LevelState.IN_LEVEL
-      ) {
-        this.inventory.space();
-        return;
-      }
-    }
-  };
-
-  plusListener = () => {
-    0;
-    GameConstants.INCREASE_SCALE();
-    this.game.onResize();
-  };
-  minusListener = () => {
-    GameConstants.DECREASE_SCALE();
-    this.game.onResize();
-  };
-
-  mouseLeftClick = () => {
-    this.inventory.mostRecentInput = "mouse";
-    const mousePos = MouseCursor.getInstance().getPosition();
-    const { x, y } = mousePos;
-
-    if (this.dead) {
-      this.restart();
-      return;
-    }
-
-    if (
-      (this.inventory.isOpen &&
-        !this.inventory.isPointInInventoryBounds(x, y).inBounds) ||
-      this.inventory.isPointInInventoryButton(x, y)
-    ) {
-      this.inventory.toggleOpen();
-    }
-
-    if (this.openVendingMachine) {
-      if (
-        VendingMachine.isPointInVendingMachineBounds(
-          x,
-          y,
-          this.openVendingMachine,
-        )
-      ) {
-        this.openVendingMachine.space();
-      } else {
-        this.inventory.mouseLeftClick();
-      }
-      return;
-    }
-    const notInInventoryUI =
-      !this.inventory.isPointInInventoryButton(x, y) &&
-      !this.inventory.isPointInQuickbarBounds(x, y).inBounds &&
-      !this.inventory.isOpen;
-
-    if (notInInventoryUI) {
-      this.moveWithMouse();
-    }
-  };
-  mouseRightClick = () => {
-    this.inventory.mostRecentInput = "mouse";
-    this.inventory.mouseRightClick();
-  };
-
-  mouseMove = () => {
-    //when mouse moves
-    this.inventory.mostRecentInput = "mouse";
-    this.inventory.mouseMove();
-    this.faceMouse();
-    this.setTileCursorPosition();
-  };
   isMouseOnPlayerTile = () => {
     return this.mouseToTile().x === this.x && this.mouseToTile().y === this.y;
   };
@@ -535,23 +348,6 @@ export class Player extends Drawable {
       x: pixelX,
       y: pixelY,
     };
-  };
-
-  tryVaultOver = (x: number, y: number, direction: PlayerDirection) => {
-    switch (direction) {
-      case PlayerDirection.UP:
-        this.tryMove(x, y - 1);
-        break;
-      case PlayerDirection.DOWN:
-        this.tryMove(x, y + 1);
-        break;
-      case PlayerDirection.LEFT:
-        this.tryMove(x - 1, y);
-        break;
-      case PlayerDirection.RIGHT:
-        this.tryMove(x + 1, y);
-        break;
-    }
   };
 
   moveRangeCheck = (x: number, y: number) => {
@@ -714,11 +510,12 @@ export class Player extends Drawable {
   };
 
   private checkTileForEntity = (tile: { x: number; y: number }): boolean => {
+    const range = this.inventory.weapon?.range ?? 1;
     return this.game.room.entities.some((entity) => {
       return (
         entity.x === tile.x &&
         entity.y === tile.y &&
-        this.enemyInRange(entity.x, entity.y, this.inventory.weapon.range)
+        this.enemyInRange(entity.x, entity.y, range)
       );
     });
   };
@@ -726,45 +523,6 @@ export class Player extends Drawable {
   restart = () => {
     this.dead = false;
     this.game.newGame();
-  };
-
-  left = () => {
-    const { x, y } = { x: this.x - 1, y: this.y };
-    if (this.canMove()) {
-      this.direction = Direction.LEFT;
-      {
-        this.tryMove(x, y);
-      }
-    } else this.queueMove(x, y, Direction.LEFT);
-  };
-  right = () => {
-    const { x, y } = { x: this.x + 1, y: this.y };
-    if (this.canMove()) {
-      this.direction = Direction.RIGHT;
-      {
-        this.tryMove(x, y);
-      }
-    } else this.queueMove(x, y, Direction.RIGHT);
-  };
-  up = () => {
-    const { x, y } = { x: this.x, y: this.y - 1 };
-
-    if (this.canMove()) {
-      this.direction = Direction.UP;
-      {
-        this.tryMove(x, y);
-      }
-    } else this.queueMove(x, y, Direction.UP);
-  };
-  down = () => {
-    const { x, y } = { x: this.x, y: this.y + 1 };
-
-    if (this.canMove()) {
-      this.direction = Direction.DOWN;
-      {
-        this.tryMove(x, y);
-      }
-    } else this.queueMove(x, y, Direction.DOWN);
   };
 
   hit = (): number => {
@@ -923,6 +681,7 @@ export class Player extends Drawable {
       }
     }
   };
+
   private updateLastPosition = (x: number, y: number) => {
     this.lastX = x;
     this.lastY = y;
@@ -1576,123 +1335,4 @@ export class Player extends Drawable {
 
     Game.ctx.restore(); // Restore the canvas state
   };
-
-  private queueHandler = () => {
-    //      console.log("Queue handler running, queue length:", this.moveQueue.length);
-    //console.log("Is processing queue:", this.isProcessingQueue);
-
-    if (!this.isProcessingQueue) {
-      return;
-    }
-
-    const currentTime = Date.now();
-    const timeSinceLastMove = currentTime - this.lastMoveTime;
-    //console.log("Time since last move:", timeSinceLastMove);
-
-    if (currentTime - this.lastMoveTime >= GameConstants.MOVEMENT_COOLDOWN) {
-      if (this.moveQueue.length > 0) {
-        const { x, y, direction } = this.moveQueue.shift();
-        //console.log("Processing move to:", x, y);
-        this.handleMoveLoop({ x, y, direction });
-        this.lastMoveTime = currentTime;
-      } else {
-        //console.log("Queue empty, stopping processing");
-        this.stopQueueProcessing();
-      }
-    } else {
-      //console.log(
-      //  "Waiting for cooldown, remaining time:",
-      //  GameConstants.MOVEMENT_COOLDOWN - timeSinceLastMove
-      //);
-    }
-
-    this.animationFrameId = requestAnimationFrame(this.queueHandler);
-    //console.log("Next animation frame requested:", this.animationFrameId);
-  };
-
-  private startQueueProcessing = () => {
-    //console.log("Attempting to start queue processing");
-    //console.log(
-    //  "Current state - isProcessing:",
-    //  this.isProcessingQueue,
-    //  "animationFrameId:",
-    //  this.animationFrameId
-    //);
-
-    if (!this.isProcessingQueue) {
-      //console.log("Starting queue processing");
-      this.isProcessingQueue = true;
-      this.animationFrameId = requestAnimationFrame(this.queueHandler);
-      //console.log("Animation frame requested:", this.animationFrameId);
-    } else {
-      //console.log("Queue processing already running");
-    }
-  };
-
-  private stopQueueProcessing = () => {
-    //console.log("Stopping queue processing");
-    //console.log(
-    //  "Current state - isProcessing:",
-    //  this.isProcessingQueue,
-    //  "animationFrameId:",
-    //  this.animationFrameId
-    //);
-
-    this.isProcessingQueue = false;
-    if (this.animationFrameId !== null) {
-      //console.log("Canceling animation frame:", this.animationFrameId);
-      cancelAnimationFrame(this.animationFrameId);
-      this.animationFrameId = null;
-    }
-  };
-
-  handleMoveLoop = ({
-    x,
-    y,
-    direction,
-  }: {
-    x: number;
-    y: number;
-    direction: Direction;
-  }) => {
-    switch (direction) {
-      case Direction.RIGHT:
-        this.right();
-        break;
-      case Direction.LEFT:
-        this.left();
-        break;
-      case Direction.DOWN:
-        this.down();
-        break;
-      case Direction.UP:
-        this.up();
-        break;
-    }
-  };
-
-  queueMove = (x: number, y: number, direction: Direction) => {
-    if (!x || !y || this.moveQueue.length > 0) return;
-
-    //console.log("Queueing move to:", x, y);
-    //console.log("Current queue length:", this.moveQueue.length);
-    const move = { x, y, direction };
-
-    this.moveQueue.push(move);
-    this.startQueueProcessing();
-    //console.log("Queue length after push:", this.moveQueue.length);
-  };
-
-  private canMove(): boolean {
-    const currentTime = Date.now();
-    if (
-      currentTime - this.lastMoveTime >=
-      GameConstants.MOVEMENT_COOLDOWN - this.moveQueue.length * 25
-    ) {
-      this.lastMoveTime = currentTime;
-      return true;
-    }
-
-    return false;
-  }
 }

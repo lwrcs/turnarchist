@@ -4,7 +4,7 @@ import { Room } from "../room";
 import { Equippable } from "./equippable";
 import { Torch } from "./torch";
 import { Lantern } from "./lantern";
-import { Inventory } from "../inventory";
+import { Inventory } from "../inventory/inventory";
 import { Player } from "../player/player";
 import { Light } from "./light";
 

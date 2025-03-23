@@ -1,6 +1,6 @@
 import { Game } from "./game";
 import { LevelConstants } from "./levelConstants";
-import { Inventory } from "./inventory";
+import { Inventory } from "./inventory/inventory";
 import { GameConstants } from "./gameConstants";
 import { Player } from "./player/player";
 

@@ -18,7 +18,7 @@ import { WizardEnemy, WizardState } from "./entity/enemy/wizardEnemy";
 import { ZombieEnemy } from "./entity/enemy/zombieEnemy";
 import { Direction, Game } from "./game";
 import { HitWarning } from "./hitWarning";
-import { Inventory } from "./inventory";
+import { Inventory } from "./inventory/inventory";
 import { Armor } from "./item/armor";
 import { BlueGem } from "./item/bluegem";
 import { Candle } from "./item/candle";

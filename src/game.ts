@@ -692,6 +692,16 @@ export class Game {
     return GameConstants.MAX_SCALE;
   };
 
+  increaseScale = () => {
+    GameConstants.INCREASE_SCALE();
+    this.onResize();
+  };
+
+  decreaseScale = () => {
+    GameConstants.DECREASE_SCALE();
+    this.onResize();
+  };
+
   onResize = () => {
     // Determine device pixel ratio
     const dpr = window.devicePixelRatio;

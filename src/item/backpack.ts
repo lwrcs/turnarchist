@@ -4,7 +4,7 @@ import { Game } from "../game";
 import { Sound } from "../sound";
 import { Room } from "../room";
 import { Usable } from "./usable";
-import { Inventory } from "../inventory";
+import { Inventory } from "../inventory/inventory";
 
 export class Backpack extends Usable {
   static itemName = "backpack";

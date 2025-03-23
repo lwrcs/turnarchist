@@ -9540,6 +9540,14 @@ var Game = /** @class */ (function () {
             }
             return gameConstants_1.GameConstants.MAX_SCALE;
         };
+        this.increaseScale = function () {
+            gameConstants_1.GameConstants.INCREASE_SCALE();
+            _this.onResize();
+        };
+        this.decreaseScale = function () {
+            gameConstants_1.GameConstants.DECREASE_SCALE();
+            _this.onResize();
+        };
         this.onResize = function () {
             // Determine device pixel ratio
             var dpr = window.devicePixelRatio;
@@ -10331,7 +10339,7 @@ var GameConstants = /** @class */ (function () {
     GameConstants.isMobile = false;
     GameConstants.FPS = 120;
     GameConstants.ALPHA_ENABLED = true;
-    GameConstants.SHADE_LEVELS = 10;
+    GameConstants.SHADE_LEVELS = 50;
     GameConstants.ENTITY_SHADE_LEVELS = 10;
     GameConstants.TILESIZE = 16;
     GameConstants.SCALE = 6;
@@ -11977,25 +11985,25 @@ window.document
 
 /***/ }),
 
-/***/ "./src/inventory.ts":
-/*!**************************!*\
-  !*** ./src/inventory.ts ***!
-  \**************************/
+/***/ "./src/inventory/inventory.ts":
+/*!************************************!*\
+  !*** ./src/inventory/inventory.ts ***!
+  \************************************/
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Inventory = void 0;
-var item_1 = __webpack_require__(/*! ./item/item */ "./src/item/item.ts");
-var game_1 = __webpack_require__(/*! ./game */ "./src/game.ts");
-var gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/gameConstants.ts");
-var equippable_1 = __webpack_require__(/*! ./item/equippable */ "./src/item/equippable.ts");
-var armor_1 = __webpack_require__(/*! ./item/armor */ "./src/item/armor.ts");
-var coin_1 = __webpack_require__(/*! ./item/coin */ "./src/item/coin.ts");
-var weapon_1 = __webpack_require__(/*! ./weapon/weapon */ "./src/weapon/weapon.ts");
-var usable_1 = __webpack_require__(/*! ./item/usable */ "./src/item/usable.ts");
-var mouseCursor_1 = __webpack_require__(/*! ./mouseCursor */ "./src/mouseCursor.ts");
-var input_1 = __webpack_require__(/*! ./input */ "./src/input.ts");
+var item_1 = __webpack_require__(/*! ../item/item */ "./src/item/item.ts");
+var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+var gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
+var equippable_1 = __webpack_require__(/*! ../item/equippable */ "./src/item/equippable.ts");
+var armor_1 = __webpack_require__(/*! ../item/armor */ "./src/item/armor.ts");
+var coin_1 = __webpack_require__(/*! ../item/coin */ "./src/item/coin.ts");
+var weapon_1 = __webpack_require__(/*! ../weapon/weapon */ "./src/weapon/weapon.ts");
+var usable_1 = __webpack_require__(/*! ../item/usable */ "./src/item/usable.ts");
+var mouseCursor_1 = __webpack_require__(/*! ../mouseCursor */ "./src/mouseCursor.ts");
+var input_1 = __webpack_require__(/*! ../input */ "./src/input.ts");
 var OPEN_TIME = 100; // milliseconds
 // Dark gray color used for the background of inventory slots
 var FILL_COLOR = "#5a595b";
@@ -12053,6 +12061,8 @@ var Inventory = /** @class */ (function () {
             }
         };
         this.close = function () {
+            if (!_this.isOpen)
+                return;
             _this.isOpen = false;
             if (_this.selY > 0) {
                 _this.selY = 0;
@@ -12295,6 +12305,8 @@ var Inventory = /** @class */ (function () {
             _this.grabbedItem.drawIcon(delta, drawXScaled, drawYScaled);
         };
         this.drop = function () {
+            if (!_this.isOpen)
+                return;
             var index = _this.selX + _this.selY * _this.cols;
             if (index < 0 || index >= _this.items.length)
                 return;
@@ -17894,12 +17906,11 @@ var gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameCon
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var door_1 = __webpack_require__(/*! ../tile/door */ "./src/tile/door.ts");
 var trapdoor_1 = __webpack_require__(/*! ../tile/trapdoor */ "./src/tile/trapdoor.ts");
-var inventory_1 = __webpack_require__(/*! ../inventory */ "./src/inventory.ts");
+var inventory_1 = __webpack_require__(/*! ../inventory/inventory */ "./src/inventory/inventory.ts");
 var sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
 var levelConstants_1 = __webpack_require__(/*! ../levelConstants */ "./src/levelConstants.ts");
 var map_1 = __webpack_require__(/*! ../map */ "./src/map.ts");
 var healthbar_1 = __webpack_require__(/*! ../healthbar */ "./src/healthbar.ts");
-var vendingMachine_1 = __webpack_require__(/*! ../entity/object/vendingMachine */ "./src/entity/object/vendingMachine.ts");
 var drawable_1 = __webpack_require__(/*! ../drawable */ "./src/drawable.ts");
 var hitWarning_1 = __webpack_require__(/*! ../hitWarning */ "./src/hitWarning.ts");
 var item_1 = __webpack_require__(/*! ../item/item */ "./src/item/item.ts");
@@ -17912,6 +17923,8 @@ var utils_1 = __webpack_require__(/*! ../utils */ "./src/utils.ts");
 var menu_1 = __webpack_require__(/*! ../menu */ "./src/menu.ts");
 var bestiary_1 = __webpack_require__(/*! ../bestiary */ "./src/bestiary.ts");
 var playerInputHandler_1 = __webpack_require__(/*! ./playerInputHandler */ "./src/player/playerInputHandler.ts");
+var playerActionProcessor_1 = __webpack_require__(/*! ./playerActionProcessor */ "./src/player/playerActionProcessor.ts");
+var playerMovement_1 = __webpack_require__(/*! ./playerMovement */ "./src/player/playerMovement.ts");
 var PlayerDirection;
 (function (PlayerDirection) {
     PlayerDirection[PlayerDirection["DOWN"] = 0] = "DOWN";
@@ -17928,8 +17941,6 @@ var Player = /** @class */ (function (_super) {
     __extends(Player, _super);
     function Player(game, x, y, isLocalPlayer) {
         var _this = _super.call(this) || this;
-        _this.animationFrameId = null;
-        _this.isProcessingQueue = false;
         _this.lowHealthFrame = 0;
         _this.drawMoveQueue = [];
         _this.seenEnemies = new Set();
@@ -17946,155 +17957,9 @@ var Player = /** @class */ (function (_super) {
                 }
             }
         };
-        _this.escapeListener = function () {
-            if (_this.inventory.isOpen) {
-                _this.inventory.close();
-            }
-        };
-        _this.commaListener = function () {
-            _this.inventory.mostRecentInput = "keyboard";
-            _this.inventory.left();
-        };
-        _this.periodListener = function () {
-            _this.inventory.mostRecentInput = "keyboard";
-            _this.inventory.right();
-        };
-        _this.numKeyListener = function (input) {
-            _this.inventory.mostRecentInput = "keyboard";
-            _this.inventory.handleNumKey(input - 13);
-        };
-        _this.tapListener = function () {
-            _this.inventory.mostRecentInput = "mouse";
-            _this.inventory.open();
-        };
-        _this.iListener = function () {
-            _this.inventory.open();
-        };
-        _this.qListener = function () {
-            if (_this.inventory.isOpen) {
-                _this.inventory.drop();
-            }
-        };
         _this.ignoreDirectionInput = function () {
             return (!_this.inventory.isOpen &&
                 (_this.dead || _this.game.levelState !== game_1.LevelState.IN_LEVEL));
-        };
-        _this.leftListener = function (isLocal) {
-            _this.inventory.mostRecentInput = "keyboard";
-            if (_this.inventory.isOpen) {
-                _this.inventory.left();
-                return true;
-            }
-            if (!_this.dead &&
-                (!isLocal || _this.game.levelState === game_1.LevelState.IN_LEVEL)) {
-                _this.left();
-                return true;
-            }
-            return false;
-        };
-        _this.rightListener = function (isLocal) {
-            _this.inventory.mostRecentInput = "keyboard";
-            if (_this.inventory.isOpen) {
-                _this.inventory.right();
-                return true;
-            }
-            if (!_this.dead &&
-                (!isLocal || _this.game.levelState === game_1.LevelState.IN_LEVEL)) {
-                _this.right();
-                return true;
-            }
-            return false;
-        };
-        _this.upListener = function (isLocal) {
-            _this.inventory.mostRecentInput = "keyboard";
-            if (_this.inventory.isOpen) {
-                _this.inventory.up();
-                return true;
-            }
-            if (!_this.dead &&
-                (!isLocal || _this.game.levelState === game_1.LevelState.IN_LEVEL)) {
-                _this.up();
-                return true;
-            }
-            return false;
-        };
-        _this.downListener = function (isLocal) {
-            _this.inventory.mostRecentInput = "keyboard";
-            if (_this.inventory.isOpen) {
-                _this.inventory.down();
-                return true;
-            }
-            if (!_this.dead &&
-                (!isLocal || _this.game.levelState === game_1.LevelState.IN_LEVEL)) {
-                _this.down();
-                return true;
-            }
-            return false;
-        };
-        _this.spaceListener = function () {
-            _this.inventory.mostRecentInput = "keyboard";
-            if (!_this.game.chatOpen) {
-                if (_this.dead) {
-                    _this.restart();
-                }
-                else if (_this.openVendingMachine) {
-                    _this.openVendingMachine.space();
-                }
-                else if (_this.inventory.isOpen ||
-                    _this.game.levelState === game_1.LevelState.IN_LEVEL) {
-                    _this.inventory.space();
-                    return;
-                }
-            }
-        };
-        _this.plusListener = function () {
-            0;
-            gameConstants_1.GameConstants.INCREASE_SCALE();
-            _this.game.onResize();
-        };
-        _this.minusListener = function () {
-            gameConstants_1.GameConstants.DECREASE_SCALE();
-            _this.game.onResize();
-        };
-        _this.mouseLeftClick = function () {
-            _this.inventory.mostRecentInput = "mouse";
-            var mousePos = mouseCursor_1.MouseCursor.getInstance().getPosition();
-            var x = mousePos.x, y = mousePos.y;
-            if (_this.dead) {
-                _this.restart();
-                return;
-            }
-            if ((_this.inventory.isOpen &&
-                !_this.inventory.isPointInInventoryBounds(x, y).inBounds) ||
-                _this.inventory.isPointInInventoryButton(x, y)) {
-                _this.inventory.toggleOpen();
-            }
-            if (_this.openVendingMachine) {
-                if (vendingMachine_1.VendingMachine.isPointInVendingMachineBounds(x, y, _this.openVendingMachine)) {
-                    _this.openVendingMachine.space();
-                }
-                else {
-                    _this.inventory.mouseLeftClick();
-                }
-                return;
-            }
-            var notInInventoryUI = !_this.inventory.isPointInInventoryButton(x, y) &&
-                !_this.inventory.isPointInQuickbarBounds(x, y).inBounds &&
-                !_this.inventory.isOpen;
-            if (notInInventoryUI) {
-                _this.moveWithMouse();
-            }
-        };
-        _this.mouseRightClick = function () {
-            _this.inventory.mostRecentInput = "mouse";
-            _this.inventory.mouseRightClick();
-        };
-        _this.mouseMove = function () {
-            //when mouse moves
-            _this.inventory.mostRecentInput = "mouse";
-            _this.inventory.mouseMove();
-            _this.faceMouse();
-            _this.setTileCursorPosition();
         };
         _this.isMouseOnPlayerTile = function () {
             return _this.mouseToTile().x === _this.x && _this.mouseToTile().y === _this.y;
@@ -18203,22 +18068,6 @@ var Player = /** @class */ (function (_super) {
                 x: pixelX,
                 y: pixelY,
             };
-        };
-        _this.tryVaultOver = function (x, y, direction) {
-            switch (direction) {
-                case PlayerDirection.UP:
-                    _this.tryMove(x, y - 1);
-                    break;
-                case PlayerDirection.DOWN:
-                    _this.tryMove(x, y + 1);
-                    break;
-                case PlayerDirection.LEFT:
-                    _this.tryMove(x - 1, y);
-                    break;
-                case PlayerDirection.RIGHT:
-                    _this.tryMove(x + 1, y);
-                    break;
-            }
         };
         _this.moveRangeCheck = function (x, y) {
             var dx = Math.abs(_this.x - x);
@@ -18341,59 +18190,17 @@ var Player = /** @class */ (function (_super) {
             return belowTileCheck;
         };
         _this.checkTileForEntity = function (tile) {
+            var _a, _b;
+            var range = (_b = (_a = _this.inventory.weapon) === null || _a === void 0 ? void 0 : _a.range) !== null && _b !== void 0 ? _b : 1;
             return _this.game.room.entities.some(function (entity) {
                 return (entity.x === tile.x &&
                     entity.y === tile.y &&
-                    _this.enemyInRange(entity.x, entity.y, _this.inventory.weapon.range));
+                    _this.enemyInRange(entity.x, entity.y, range));
             });
         };
         _this.restart = function () {
             _this.dead = false;
             _this.game.newGame();
-        };
-        _this.left = function () {
-            var _a = { x: _this.x - 1, y: _this.y }, x = _a.x, y = _a.y;
-            if (_this.canMove()) {
-                _this.direction = game_1.Direction.LEFT;
-                {
-                    _this.tryMove(x, y);
-                }
-            }
-            else
-                _this.queueMove(x, y, game_1.Direction.LEFT);
-        };
-        _this.right = function () {
-            var _a = { x: _this.x + 1, y: _this.y }, x = _a.x, y = _a.y;
-            if (_this.canMove()) {
-                _this.direction = game_1.Direction.RIGHT;
-                {
-                    _this.tryMove(x, y);
-                }
-            }
-            else
-                _this.queueMove(x, y, game_1.Direction.RIGHT);
-        };
-        _this.up = function () {
-            var _a = { x: _this.x, y: _this.y - 1 }, x = _a.x, y = _a.y;
-            if (_this.canMove()) {
-                _this.direction = game_1.Direction.UP;
-                {
-                    _this.tryMove(x, y);
-                }
-            }
-            else
-                _this.queueMove(x, y, game_1.Direction.UP);
-        };
-        _this.down = function () {
-            var _a = { x: _this.x, y: _this.y + 1 }, x = _a.x, y = _a.y;
-            if (_this.canMove()) {
-                _this.direction = game_1.Direction.DOWN;
-                {
-                    _this.tryMove(x, y);
-                }
-            }
-            else
-                _this.queueMove(x, y, game_1.Direction.DOWN);
         };
         _this.hit = function () {
             return 1;
@@ -19040,96 +18847,6 @@ var Player = /** @class */ (function (_super) {
             game_1.Game.drawFX(tileX + Math.floor(hitWarning_1.HitWarning.frame), tileY, 1, 1, _this.tileCursor.x, _this.tileCursor.y, 1, 1);
             game_1.Game.ctx.restore(); // Restore the canvas state
         };
-        _this.queueHandler = function () {
-            //      console.log("Queue handler running, queue length:", this.moveQueue.length);
-            //console.log("Is processing queue:", this.isProcessingQueue);
-            if (!_this.isProcessingQueue) {
-                return;
-            }
-            var currentTime = Date.now();
-            var timeSinceLastMove = currentTime - _this.lastMoveTime;
-            //console.log("Time since last move:", timeSinceLastMove);
-            if (currentTime - _this.lastMoveTime >= gameConstants_1.GameConstants.MOVEMENT_COOLDOWN) {
-                if (_this.moveQueue.length > 0) {
-                    var _a = _this.moveQueue.shift(), x = _a.x, y = _a.y, direction = _a.direction;
-                    //console.log("Processing move to:", x, y);
-                    _this.handleMoveLoop({ x: x, y: y, direction: direction });
-                    _this.lastMoveTime = currentTime;
-                }
-                else {
-                    //console.log("Queue empty, stopping processing");
-                    _this.stopQueueProcessing();
-                }
-            }
-            else {
-                //console.log(
-                //  "Waiting for cooldown, remaining time:",
-                //  GameConstants.MOVEMENT_COOLDOWN - timeSinceLastMove
-                //);
-            }
-            _this.animationFrameId = requestAnimationFrame(_this.queueHandler);
-            //console.log("Next animation frame requested:", this.animationFrameId);
-        };
-        _this.startQueueProcessing = function () {
-            //console.log("Attempting to start queue processing");
-            //console.log(
-            //  "Current state - isProcessing:",
-            //  this.isProcessingQueue,
-            //  "animationFrameId:",
-            //  this.animationFrameId
-            //);
-            if (!_this.isProcessingQueue) {
-                //console.log("Starting queue processing");
-                _this.isProcessingQueue = true;
-                _this.animationFrameId = requestAnimationFrame(_this.queueHandler);
-                //console.log("Animation frame requested:", this.animationFrameId);
-            }
-            else {
-                //console.log("Queue processing already running");
-            }
-        };
-        _this.stopQueueProcessing = function () {
-            //console.log("Stopping queue processing");
-            //console.log(
-            //  "Current state - isProcessing:",
-            //  this.isProcessingQueue,
-            //  "animationFrameId:",
-            //  this.animationFrameId
-            //);
-            _this.isProcessingQueue = false;
-            if (_this.animationFrameId !== null) {
-                //console.log("Canceling animation frame:", this.animationFrameId);
-                cancelAnimationFrame(_this.animationFrameId);
-                _this.animationFrameId = null;
-            }
-        };
-        _this.handleMoveLoop = function (_a) {
-            var x = _a.x, y = _a.y, direction = _a.direction;
-            switch (direction) {
-                case game_1.Direction.RIGHT:
-                    _this.right();
-                    break;
-                case game_1.Direction.LEFT:
-                    _this.left();
-                    break;
-                case game_1.Direction.DOWN:
-                    _this.down();
-                    break;
-                case game_1.Direction.UP:
-                    _this.up();
-                    break;
-            }
-        };
-        _this.queueMove = function (x, y, direction) {
-            if (!x || !y || _this.moveQueue.length > 0)
-                return;
-            //console.log("Queueing move to:", x, y);
-            //console.log("Current queue length:", this.moveQueue.length);
-            var move = { x: x, y: y, direction: direction };
-            _this.moveQueue.push(move);
-            _this.startQueueProcessing();
-            //console.log("Queue length after push:", this.moveQueue.length);
-        };
         _this.game = game;
         _this.levelID = 0;
         _this.x = x;
@@ -19149,7 +18866,6 @@ var Player = /** @class */ (function (_super) {
         _this.depth = 0;
         _this.menu = new menu_1.Menu();
         _this.busyAnimating = false;
-        _this.inputHandler = new playerInputHandler_1.PlayerInputHandler(_this);
         _this.mapToggled = true;
         _this.health = 2;
         _this.maxHealth = 2;
@@ -19167,8 +18883,6 @@ var Player = /** @class */ (function (_super) {
         _this.turnCount = 0;
         _this.triedMove = false;
         _this.tutorialRoom = false;
-        _this.lastMoveTime = 0;
-        _this.moveCooldown = 100; // Cooldown in milliseconds (adjust as needed)
         _this.tileCursor = { x: 0, y: 0 };
         _this.moveRange = 1;
         _this.lightEquipped = false;
@@ -19180,50 +18894,65 @@ var Player = /** @class */ (function (_super) {
         _this.sineAngle = Math.PI / 2;
         _this.drawMoveSpeed = 0.3; // greater than 1 less than 2
         _this.moveQueue = [];
-        _this.isProcessingQueue = false;
         _this.hitX = 0;
         _this.hitY = 0;
         _this.motionSpeed = 1;
         _this.slowMotionEnabled = false;
         _this.slowMotionTickDuration = 0;
         _this.justMoved = DrawDirection.Y;
+        _this.inputHandler = new playerInputHandler_1.PlayerInputHandler(_this);
+        _this.actionProcessor = new playerActionProcessor_1.PlayerActionProcessor(_this);
+        _this.movement = new playerMovement_1.PlayerMovement(_this);
         _this.bestiary = new bestiary_1.Bestiary(_this.game, _this);
         return _this;
     }
-    Object.defineProperty(Player.prototype, "angle", {
-        get: function () {
-            if (this.direction !== undefined) {
-                switch (this.direction) {
-                    case game_1.Direction.UP:
-                        return 270;
-                    case game_1.Direction.RIGHT:
-                        return 0;
-                    case game_1.Direction.DOWN:
-                        return 90;
-                    case game_1.Direction.LEFT:
-                        return 180;
-                }
-            }
-            else {
-                return 0;
-            }
-        },
-        enumerable: false,
-        configurable: true
-    });
-    Player.prototype.canMove = function () {
-        var currentTime = Date.now();
-        if (currentTime - this.lastMoveTime >=
-            gameConstants_1.GameConstants.MOVEMENT_COOLDOWN - this.moveQueue.length * 25) {
-            this.lastMoveTime = currentTime;
-            return true;
-        }
-        return false;
-    };
     Player.minSightRadius = 2; //hard minimum sight radius that ignores depth
     return Player;
 }(drawable_1.Drawable));
 exports.Player = Player;
+
+
+/***/ }),
+
+/***/ "./src/player/playerActionProcessor.ts":
+/*!*********************************************!*\
+  !*** ./src/player/playerActionProcessor.ts ***!
+  \*********************************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PlayerActionProcessor = void 0;
+var PlayerActionProcessor = /** @class */ (function () {
+    function PlayerActionProcessor(player) {
+        this.player = player;
+    }
+    PlayerActionProcessor.prototype.process = function (action) {
+        switch (action.type) {
+            case "Move":
+                this.player.movement.move(action.direction);
+                break;
+            case "OpenInventory":
+                this.player.inventory.open();
+                break;
+            case "CloseInventory":
+                this.player.inventory.close();
+                break;
+            case "Restart":
+                this.player.restart();
+                break;
+            case "Attack":
+                // TODO: Route to PlayerCombat module once it's ready
+                console.warn("Attack action received but not yet implemented.");
+                break;
+            case "Interact":
+                this.player.tryMove(action.target.x, action.target.y); // will replace with cleaner interaction API later
+                break;
+        }
+    };
+    return PlayerActionProcessor;
+}());
+exports.PlayerActionProcessor = PlayerActionProcessor;
 
 
 /***/ }),
@@ -19238,6 +18967,9 @@ exports.Player = Player;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PlayerInputHandler = void 0;
 var input_1 = __webpack_require__(/*! ../input */ "./src/input.ts");
+var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+var mouseCursor_1 = __webpack_require__(/*! ../mouseCursor */ "./src/mouseCursor.ts");
+var vendingMachine_1 = __webpack_require__(/*! ../entity/object/vendingMachine */ "./src/entity/object/vendingMachine.ts");
 var PlayerInputHandler = /** @class */ (function () {
     function PlayerInputHandler(player) {
         this.player = player;
@@ -19281,44 +19013,77 @@ var PlayerInputHandler = /** @class */ (function () {
         }
         switch (input) {
             case input_1.InputEnum.I:
-                this.player.iListener();
+                this.player.inventory.open();
                 break;
             case input_1.InputEnum.Q:
-                this.player.qListener();
+                this.player.inventory.drop();
                 break;
             case input_1.InputEnum.LEFT:
                 if (!this.player.ignoreDirectionInput())
-                    this.player.leftListener(false);
+                    this.player.actionProcessor.process({
+                        type: "Move",
+                        direction: game_1.Direction.LEFT,
+                    });
                 break;
             case input_1.InputEnum.RIGHT:
                 if (!this.player.ignoreDirectionInput())
-                    this.player.rightListener(false);
+                    this.player.actionProcessor.process({
+                        type: "Move",
+                        direction: game_1.Direction.RIGHT,
+                    });
                 break;
             case input_1.InputEnum.UP:
                 if (!this.player.ignoreDirectionInput())
-                    this.player.upListener(false);
+                    this.player.actionProcessor.process({
+                        type: "Move",
+                        direction: game_1.Direction.UP,
+                    });
                 break;
             case input_1.InputEnum.DOWN:
                 if (!this.player.ignoreDirectionInput())
-                    this.player.downListener(false);
+                    this.player.actionProcessor.process({
+                        type: "Move",
+                        direction: game_1.Direction.DOWN,
+                    });
                 break;
             case input_1.InputEnum.SPACE:
-                this.player.spaceListener();
+                var player = this.player;
+                player.inventory.mostRecentInput = "keyboard";
+                if (player.game.chatOpen)
+                    return;
+                if (player.dead) {
+                    player.restart();
+                    return;
+                }
+                if (player.openVendingMachine) {
+                    player.openVendingMachine.space();
+                    return;
+                }
+                if (player.inventory.isOpen ||
+                    player.game.levelState === game_1.LevelState.IN_LEVEL) {
+                    player.inventory.space();
+                }
                 break;
             case input_1.InputEnum.COMMA:
-                this.player.commaListener();
+                this.player.inventory.mostRecentInput = "keyboard";
+                this.player.inventory.left();
                 break;
             case input_1.InputEnum.PERIOD:
-                this.player.periodListener();
+                this.player.inventory.mostRecentInput = "keyboard";
+                this.player.inventory.right();
                 break;
             case input_1.InputEnum.LEFT_CLICK:
-                this.player.mouseLeftClick();
+                this.handleMouseLeftClick();
                 break;
             case input_1.InputEnum.RIGHT_CLICK:
-                this.player.mouseRightClick();
+                this.handleMouseRightClick();
                 break;
             case input_1.InputEnum.MOUSE_MOVE:
-                this.player.mouseMove();
+                //when mouse moves
+                this.player.inventory.mostRecentInput = "mouse";
+                this.player.inventory.mouseMove();
+                this.player.faceMouse();
+                this.player.setTileCursorPosition();
                 break;
             case input_1.InputEnum.NUMBER_1:
             case input_1.InputEnum.NUMBER_2:
@@ -19329,17 +19094,53 @@ var PlayerInputHandler = /** @class */ (function () {
             case input_1.InputEnum.NUMBER_7:
             case input_1.InputEnum.NUMBER_8:
             case input_1.InputEnum.NUMBER_9:
-                this.player.numKeyListener(input);
+                this.player.inventory.mostRecentInput = "keyboard";
+                this.player.inventory.handleNumKey(input - 13);
                 break;
             case input_1.InputEnum.EQUALS:
-                this.player.plusListener();
+                this.player.game.increaseScale();
                 break;
             case input_1.InputEnum.MINUS:
-                this.player.minusListener();
+                this.player.game.decreaseScale();
                 break;
             case input_1.InputEnum.ESCAPE:
-                this.player.escapeListener();
+                this.player.inventory.close();
                 break;
+        }
+    };
+    PlayerInputHandler.prototype.handleMouseRightClick = function () {
+        this.player.inventory.mouseRightClick();
+    };
+    PlayerInputHandler.prototype.handleMouseLeftClick = function () {
+        var player = this.player;
+        var cursor = mouseCursor_1.MouseCursor.getInstance();
+        var _a = cursor.getPosition(), x = _a.x, y = _a.y;
+        player.inventory.mostRecentInput = "mouse";
+        if (player.dead) {
+            player.restart();
+            return;
+        }
+        var inventory = player.inventory;
+        var clickedOutsideInventory = (inventory.isOpen &&
+            !inventory.isPointInInventoryBounds(x, y).inBounds) ||
+            inventory.isPointInInventoryButton(x, y);
+        if (clickedOutsideInventory) {
+            inventory.toggleOpen();
+        }
+        if (player.openVendingMachine) {
+            if (vendingMachine_1.VendingMachine.isPointInVendingMachineBounds(x, y, player.openVendingMachine)) {
+                player.openVendingMachine.space();
+            }
+            else {
+                inventory.mouseLeftClick();
+            }
+            return;
+        }
+        var notInInventoryUI = !inventory.isPointInInventoryButton(x, y) &&
+            !inventory.isPointInQuickbarBounds(x, y).inBounds &&
+            !inventory.isOpen;
+        if (notInInventoryUI) {
+            player.moveWithMouse();
         }
     };
     PlayerInputHandler.prototype.handleTap = function () {
@@ -19407,6 +19208,106 @@ var PlayerInputHandler = /** @class */ (function () {
     return PlayerInputHandler;
 }());
 exports.PlayerInputHandler = PlayerInputHandler;
+
+
+/***/ }),
+
+/***/ "./src/player/playerMovement.ts":
+/*!**************************************!*\
+  !*** ./src/player/playerMovement.ts ***!
+  \**************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PlayerMovement = void 0;
+var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+var gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
+var PlayerMovement = /** @class */ (function () {
+    function PlayerMovement(player) {
+        var _this = this;
+        this.moveQueue = [];
+        this.isProcessingQueue = false;
+        this.animationFrameId = null;
+        this.lastMoveTime = 0;
+        this.queueHandler = function () {
+            if (!_this.isProcessingQueue)
+                return;
+            var now = Date.now();
+            var cooldown = gameConstants_1.GameConstants.MOVEMENT_COOLDOWN;
+            if (now - _this.lastMoveTime >= cooldown) {
+                if (_this.moveQueue.length > 0) {
+                    var nextMove = _this.moveQueue.shift();
+                    _this.handleMoveLoop(nextMove);
+                    _this.lastMoveTime = now;
+                }
+                else {
+                    _this.stopQueueProcessing();
+                }
+            }
+            _this.animationFrameId = requestAnimationFrame(_this.queueHandler);
+        };
+        this.player = player;
+    }
+    PlayerMovement.prototype.move = function (direction) {
+        var _a = this.getTargetCoords(direction), x = _a.x, y = _a.y;
+        if (this.canMove()) {
+            this.player.direction = direction;
+            this.player.tryMove(x, y);
+        }
+        else {
+            this.queueMove(x, y, direction);
+        }
+    };
+    PlayerMovement.prototype.getTargetCoords = function (direction) {
+        switch (direction) {
+            case game_1.Direction.LEFT:
+                return { x: this.player.x - 1, y: this.player.y };
+            case game_1.Direction.RIGHT:
+                return { x: this.player.x + 1, y: this.player.y };
+            case game_1.Direction.UP:
+                return { x: this.player.x, y: this.player.y - 1 };
+            case game_1.Direction.DOWN:
+                return { x: this.player.x, y: this.player.y + 1 };
+        }
+    };
+    PlayerMovement.prototype.canMove = function () {
+        var now = Date.now();
+        var cooldown = gameConstants_1.GameConstants.MOVEMENT_COOLDOWN;
+        var adjustedCooldown = cooldown - this.moveQueue.length * 25;
+        if (now - this.lastMoveTime >= adjustedCooldown) {
+            this.lastMoveTime = now;
+            return true;
+        }
+        return false;
+    };
+    PlayerMovement.prototype.queueMove = function (x, y, direction) {
+        if (!x || !y || this.moveQueue.length > 0)
+            return;
+        this.moveQueue.push({ x: x, y: y, direction: direction });
+        this.startQueueProcessing();
+    };
+    PlayerMovement.prototype.handleMoveLoop = function (_a) {
+        var x = _a.x, y = _a.y, direction = _a.direction;
+        this.move(direction);
+    };
+    PlayerMovement.prototype.startQueueProcessing = function () {
+        var _this = this;
+        if (!this.isProcessingQueue) {
+            this.isProcessingQueue = true;
+            this.animationFrameId = requestAnimationFrame(function () { return _this.queueHandler(); });
+        }
+    };
+    PlayerMovement.prototype.stopQueueProcessing = function () {
+        this.isProcessingQueue = false;
+        if (this.animationFrameId !== null) {
+            cancelAnimationFrame(this.animationFrameId);
+            this.animationFrameId = null;
+        }
+    };
+    return PlayerMovement;
+}());
+exports.PlayerMovement = PlayerMovement;
 
 
 /***/ }),

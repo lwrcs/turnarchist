@@ -8,7 +8,7 @@ import { Resource } from "./resource";
 import { GenericParticle } from "../../particle/genericParticle";
 import { Coal } from "../../item/coal";
 import { Sound } from "../../sound";
-import { Inventory } from "../../inventory";
+import { Inventory } from "../../inventory/inventory";
 import { Weapon } from "../../weapon/weapon";
 import { Pickaxe } from "../../weapon/pickaxe";
 import { Player } from "../../player/player";

@@ -1,5 +1,8 @@
 import { Input, InputEnum } from "../input";
 import type { Player } from "./player";
+import { Direction, LevelState } from "../game";
+import { MouseCursor } from "../mouseCursor";
+import { VendingMachine } from "../entity/object/vendingMachine";
 
 export class PlayerInputHandler {
   private player: Player;
@@ -48,43 +51,85 @@ export class PlayerInputHandler {
 
     switch (input) {
       case InputEnum.I:
-        this.player.iListener();
+        this.player.inventory.open();
         break;
       case InputEnum.Q:
-        this.player.qListener();
+        this.player.inventory.drop();
         break;
       case InputEnum.LEFT:
         if (!this.player.ignoreDirectionInput())
-          this.player.leftListener(false);
+          this.player.actionProcessor.process({
+            type: "Move",
+            direction: Direction.LEFT,
+          });
         break;
+
       case InputEnum.RIGHT:
         if (!this.player.ignoreDirectionInput())
-          this.player.rightListener(false);
+          this.player.actionProcessor.process({
+            type: "Move",
+            direction: Direction.RIGHT,
+          });
         break;
+
       case InputEnum.UP:
-        if (!this.player.ignoreDirectionInput()) this.player.upListener(false);
+        if (!this.player.ignoreDirectionInput())
+          this.player.actionProcessor.process({
+            type: "Move",
+            direction: Direction.UP,
+          });
         break;
+
       case InputEnum.DOWN:
         if (!this.player.ignoreDirectionInput())
-          this.player.downListener(false);
+          this.player.actionProcessor.process({
+            type: "Move",
+            direction: Direction.DOWN,
+          });
         break;
       case InputEnum.SPACE:
-        this.player.spaceListener();
+        const player = this.player;
+        player.inventory.mostRecentInput = "keyboard";
+
+        if (player.game.chatOpen) return;
+
+        if (player.dead) {
+          player.restart();
+          return;
+        }
+
+        if (player.openVendingMachine) {
+          player.openVendingMachine.space();
+          return;
+        }
+
+        if (
+          player.inventory.isOpen ||
+          player.game.levelState === LevelState.IN_LEVEL
+        ) {
+          player.inventory.space();
+        }
         break;
       case InputEnum.COMMA:
-        this.player.commaListener();
+        this.player.inventory.mostRecentInput = "keyboard";
+        this.player.inventory.left();
         break;
       case InputEnum.PERIOD:
-        this.player.periodListener();
+        this.player.inventory.mostRecentInput = "keyboard";
+        this.player.inventory.right();
         break;
       case InputEnum.LEFT_CLICK:
-        this.player.mouseLeftClick();
+        this.handleMouseLeftClick();
         break;
       case InputEnum.RIGHT_CLICK:
-        this.player.mouseRightClick();
+        this.handleMouseRightClick();
         break;
       case InputEnum.MOUSE_MOVE:
-        this.player.mouseMove();
+        //when mouse moves
+        this.player.inventory.mostRecentInput = "mouse";
+        this.player.inventory.mouseMove();
+        this.player.faceMouse();
+        this.player.setTileCursorPosition();
         break;
       case InputEnum.NUMBER_1:
       case InputEnum.NUMBER_2:
@@ -95,17 +140,70 @@ export class PlayerInputHandler {
       case InputEnum.NUMBER_7:
       case InputEnum.NUMBER_8:
       case InputEnum.NUMBER_9:
-        this.player.numKeyListener(input);
+        this.player.inventory.mostRecentInput = "keyboard";
+        this.player.inventory.handleNumKey(input - 13);
         break;
       case InputEnum.EQUALS:
-        this.player.plusListener();
+        this.player.game.increaseScale();
         break;
       case InputEnum.MINUS:
-        this.player.minusListener();
+        this.player.game.decreaseScale();
         break;
       case InputEnum.ESCAPE:
-        this.player.escapeListener();
+        this.player.inventory.close();
         break;
+    }
+  }
+
+  handleMouseRightClick() {
+    this.player.inventory.mouseRightClick();
+  }
+
+  handleMouseLeftClick() {
+    const player = this.player;
+    const cursor = MouseCursor.getInstance();
+    const { x, y } = cursor.getPosition();
+
+    player.inventory.mostRecentInput = "mouse";
+
+    if (player.dead) {
+      player.restart();
+      return;
+    }
+
+    const inventory = player.inventory;
+
+    const clickedOutsideInventory =
+      (inventory.isOpen &&
+        !inventory.isPointInInventoryBounds(x, y).inBounds) ||
+      inventory.isPointInInventoryButton(x, y);
+
+    if (clickedOutsideInventory) {
+      inventory.toggleOpen();
+    }
+
+    if (player.openVendingMachine) {
+      if (
+        VendingMachine.isPointInVendingMachineBounds(
+          x,
+          y,
+          player.openVendingMachine,
+        )
+      ) {
+        player.openVendingMachine.space();
+      } else {
+        inventory.mouseLeftClick();
+      }
+      return;
+    }
+
+    const notInInventoryUI =
+      !inventory.isPointInInventoryButton(x, y) &&
+      !inventory.isPointInQuickbarBounds(x, y).inBounds &&
+      !inventory.isOpen;
+
+    if (notInInventoryUI) {
+      player.moveWithMouse();
     }
   }
 
