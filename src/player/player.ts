@@ -7,33 +7,20 @@ import { Inventory } from "../inventory/inventory";
 import { Sound } from "../sound";
 import { LevelConstants } from "../levelConstants";
 import { Map } from "../map";
-import { SlashParticle } from "../particle/slashParticle";
 import { HealthBar } from "../healthbar";
 import { VendingMachine } from "../entity/object/vendingMachine";
 import { Drawable } from "../drawable";
-import { Random } from "../random";
-import { GenericParticle } from "../particle/genericParticle";
-import { ActionState, ActionTab } from "../actionTab";
 import { HitWarning } from "../hitWarning";
 import { Entity, EntityType } from "../entity/entity";
-import { ZombieEnemy } from "../entity/enemy/zombieEnemy";
 import { Item } from "../item/item";
-import { PostProcessor } from "../postProcess";
-import { Weapon } from "../weapon/weapon";
-import { Room } from "../room";
-import { ImageParticle } from "../particle/imageParticle";
+
 import { Enemy } from "../entity/enemy/enemy";
 import { MouseCursor } from "../mouseCursor";
-import { Light } from "../item/light";
 import { LightSource } from "../lightSource";
-import { statsTracker } from "../stats";
-import { BeamEffect } from "../beamEffect";
-import { Spellbook } from "../weapon/spellbook";
-import { globalEventBus } from "../eventBus";
+
 import { Utils } from "../utils";
 import { Menu } from "../menu";
 import { Bestiary } from "../bestiary";
-import { AttackAnimation } from "../particle/attackAnimation";
 import { PlayerInputHandler } from "./playerInputHandler";
 import { PlayerActionProcessor } from "./playerActionProcessor";
 import { PlayerMovement } from "./playerMovement";
@@ -57,16 +44,9 @@ export class Player extends Drawable {
   y: number;
   w: number;
   h: number;
-  //drawX: number;
-  //drawY: number;
-  //hitX: number;
-  //hitY: number;
-  //frame: number;
   direction: Direction;
   game: Game;
   levelID: number; // which room we're in (level[levelID])
-  //flashing: boolean;
-  //flashingFrame: number;
   health: number;
   maxHealth: number;
   healthBar: HealthBar;
@@ -76,7 +56,6 @@ export class Player extends Drawable {
   sightRadius: number;
   defaultSightRadius: number;
   static minSightRadius: number = 2; //hard minimum sight radius that ignores depth
-  //guiHeartFrame: number;
   map: Map;
   openVendingMachine: VendingMachine;
   isLocalPlayer: boolean;
@@ -85,37 +64,28 @@ export class Player extends Drawable {
   turnCount: number;
   triedMove: boolean;
   tutorialRoom: boolean;
-  private renderer: PlayerRenderer;
 
   moveRange: number;
   tileCursor: { x: number; y: number };
-  //private jumpY: number;
   lightEquipped: boolean;
   lightSource: LightSource;
-  //hurtAlpha: number;
-  //hurting: boolean; // handles drawing hurt animation
-  //hurtingShield: boolean; // handles drawing hurt shield animation
   hurtShield: boolean; // handles logic to take damage or not
   lightBrightness: number;
-  //sineAngle: number;
-  //drawMoveSpeed: number;
-  //jumpHeight: number;
   moveDistance: number;
   moveQueue: { x: number; y: number; direction: Direction }[];
   lastX: number;
   lastY: number;
-  //motionSpeed: number;
-  //slowMotionEnabled: boolean;
   justMoved: DrawDirection;
-  //slowMotionTickDuration: number;
   depth: number;
   menu: Menu;
   busyAnimating: boolean;
+
   inputHandler: PlayerInputHandler;
   actionProcessor: PlayerActionProcessor;
   movement: PlayerMovement;
 
-  private lowHealthFrame: number = 0;
+  private renderer: PlayerRenderer;
+
   private drawMoveQueue: {
     drawX: number;
     drawY: number;
@@ -134,11 +104,6 @@ export class Player extends Drawable {
     this.y = y;
     this.w = 1;
     this.h = 1;
-    //this.drawX = 0;
-    //this.drawY = 0;
-    //this.jumpY = 0;
-    //this.jumpHeight = 0.3;
-    //this.frame = 0;
     this.moveDistance = 0;
     this.direction = Direction.UP;
     this.lastX = 0;
@@ -153,16 +118,12 @@ export class Player extends Drawable {
     this.maxHealth = 2;
     this.healthBar = new HealthBar();
     this.dead = false;
-    //this.flashing = false;
-    //this.flashingFrame = 0;
     this.lastTickHealth = this.health;
-    //this.guiHeartFrame = 0;
 
     this.inventory = new Inventory(game, this);
     this.defaultSightRadius = 3;
     this.sightRadius = LevelConstants.LIGHTING_MAX_DISTANCE; //this.defaultSightRadius;
     this.map = new Map(this.game, this);
-    //this.actionTab = new ActionTab(this.inventory, this.game);
     this.turnCount = 0;
     this.triedMove = false;
     this.tutorialRoom = false;
@@ -170,20 +131,11 @@ export class Player extends Drawable {
     this.tileCursor = { x: 0, y: 0 };
     this.moveRange = 1;
     this.lightEquipped = false;
-    //this.hurting = false;
-    //this.hurtingShield = false;
-    this.hurtShield = false;
-    //this.hurtAlpha = 0.25;
-    this.lightBrightness = 0.3;
-    //this.sineAngle = Math.PI / 2;
-    //this.drawMoveSpeed = 0.3; // greater than 1 less than 2
-    this.moveQueue = [];
 
-    //this.hitX = 0;
-    //this.hitY = 0;
-    //this.motionSpeed = 1;
-    //this.slowMotionEnabled = false;
-    //this.slowMotionTickDuration = 0;
+    this.hurtShield = false;
+    this.lightBrightness = 0.3;
+
+    this.moveQueue = [];
     this.justMoved = DrawDirection.Y;
 
     this.inputHandler = new PlayerInputHandler(this);
@@ -227,13 +179,6 @@ export class Player extends Drawable {
         return true;
       }
     }
-  };
-
-  ignoreDirectionInput = (): boolean => {
-    return (
-      !this.inventory.isOpen &&
-      (this.dead || this.game.levelState !== LevelState.IN_LEVEL)
-    );
   };
 
   isMouseOnPlayerTile = () => {
@@ -855,50 +800,9 @@ export class Player extends Drawable {
     this.renderer.draw(delta);
   };
 
-  shadeColor = () => {
-    if (!GameConstants.CUSTOM_SHADER_COLOR_ENABLED) {
-      return "black";
-    } else {
-      return Utils.rgbToHex(
-        this.game.levels[this.depth].rooms[this.levelID].col[this.x][this.y][0],
-        this.game.levels[this.depth].rooms[this.levelID].col[this.x][this.y][1],
-        this.game.levels[this.depth].rooms[this.levelID].col[this.x][this.y][2],
-      );
-    }
-  };
-
   heal = (amount: number) => {
     this.health += amount;
     if (this.health > this.maxHealth) this.health = this.maxHealth;
-  };
-
-  faceMouse = () => {
-    if (!GameConstants.MOVE_WITH_MOUSE) return;
-    const mousePosition = MouseCursor.getInstance().getPosition();
-    const playerPixelPosition = {
-      x: GameConstants.WIDTH / 2,
-      y: GameConstants.HEIGHT / 2,
-    };
-    const dx = mousePosition.x - playerPixelPosition.x;
-    const dy = mousePosition.y - playerPixelPosition.y;
-    const angle = Math.atan2(dy, dx);
-
-    // Convert angle to direction
-    // atan2 returns angle in radians (-π to π)
-    // Divide the circle into 4 sectors for the 4 directions
-    if (angle >= -Math.PI / 4 && angle < Math.PI / 4) {
-      this.direction = Direction.RIGHT;
-    } else if (angle >= Math.PI / 4 && angle < (3 * Math.PI) / 4) {
-      this.direction = Direction.DOWN;
-    } else if (angle >= (-3 * Math.PI) / 4 && angle < -Math.PI / 4) {
-      this.direction = Direction.UP;
-    } else {
-      this.direction = Direction.LEFT;
-    }
-  };
-
-  tapHoldHandler = () => {
-    this.mapToggled = !this.mapToggled;
   };
 
   hitShake = (
@@ -929,56 +833,6 @@ export class Player extends Drawable {
       -shakeX * 1 * shakeStrength,
       -shakeY * 1 * shakeStrength,
     );
-  };
-
-  /**
-   * Draws the tile cursor to the canvas.
-   * Added `ctx.save()` at the beginning and `ctx.restore()` at the end
-   * to ensure canvas state is preserved.
-   */
-  drawTileCursor = (delta: number) => {
-    if (this.inventory.isOpen) return;
-    Game.ctx.save(); // Save the current canvas state
-
-    if (
-      !this.mouseInLine() ||
-      !this.isMouseAboveFloor() ||
-      this.isMouseOnPlayerTile()
-    )
-      return;
-    let tileX = 22; //inRange ? 22 : 24;
-    let tileY = 3;
-
-    const moveData = this.canMoveWithMouse();
-    if (moveData && moveData.direction !== undefined) {
-      switch (moveData.direction) {
-        case Direction.UP:
-          tileY = 3;
-          break;
-        case Direction.RIGHT:
-          tileY = 4;
-          break;
-        case Direction.DOWN:
-          tileY = 5;
-          break;
-        case Direction.LEFT:
-          tileY = 6;
-          break;
-      }
-    }
-
-    Game.drawFX(
-      tileX + Math.floor(HitWarning.frame),
-      tileY,
-      1,
-      1,
-      this.tileCursor.x,
-      this.tileCursor.y,
-      1,
-      1,
-    );
-
-    Game.ctx.restore(); // Restore the canvas state
   };
 
   updateSlowMotion = () => {

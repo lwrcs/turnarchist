@@ -1,5 +1,6 @@
-import { Game } from "../game";
+import { Direction, Game } from "../game";
 import { GameConstants } from "../gameConstants";
+import { HitWarning } from "../hitWarning";
 import { LevelConstants } from "../levelConstants";
 import { PostProcessor } from "../postProcess";
 import { statsTracker } from "../stats";
@@ -502,6 +503,56 @@ export class PlayerRenderer {
 
   heartbeat = () => {
     this.guiHeartFrame = 1;
+  };
+
+  /**
+   * Draws the tile cursor to the canvas.
+   * Added `ctx.save()` at the beginning and `ctx.restore()` at the end
+   * to ensure canvas state is preserved.
+   */
+  drawTileCursor = (delta: number) => {
+    if (this.player.inventory.isOpen) return;
+    Game.ctx.save(); // Save the current canvas state
+
+    if (
+      !this.player.mouseInLine() ||
+      !this.player.isMouseAboveFloor() ||
+      this.player.isMouseOnPlayerTile()
+    )
+      return;
+    let tileX = 22; //inRange ? 22 : 24;
+    let tileY = 3;
+
+    const moveData = this.player.canMoveWithMouse();
+    if (moveData && moveData.direction !== undefined) {
+      switch (moveData.direction) {
+        case Direction.UP:
+          tileY = 3;
+          break;
+        case Direction.RIGHT:
+          tileY = 4;
+          break;
+        case Direction.DOWN:
+          tileY = 5;
+          break;
+        case Direction.LEFT:
+          tileY = 6;
+          break;
+      }
+    }
+
+    Game.drawFX(
+      tileX + Math.floor(HitWarning.frame),
+      tileY,
+      1,
+      1,
+      this.player.tileCursor.x,
+      this.player.tileCursor.y,
+      1,
+      1,
+    );
+
+    Game.ctx.restore(); // Restore the canvas state
   };
 
   jump = (delta: number) => {

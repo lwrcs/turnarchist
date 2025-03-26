@@ -3,6 +3,7 @@ import type { Player } from "./player";
 import { Direction, LevelState } from "../game";
 import { MouseCursor } from "../mouseCursor";
 import { VendingMachine } from "../entity/object/vendingMachine";
+import { GameConstants } from "../gameConstants";
 
 export class PlayerInputHandler {
   private player: Player;
@@ -57,7 +58,7 @@ export class PlayerInputHandler {
         this.player.inventory.drop();
         break;
       case InputEnum.LEFT:
-        if (!this.player.ignoreDirectionInput())
+        if (!this.ignoreDirectionInput())
           this.player.actionProcessor.process({
             type: "Move",
             direction: Direction.LEFT,
@@ -65,7 +66,7 @@ export class PlayerInputHandler {
         break;
 
       case InputEnum.RIGHT:
-        if (!this.player.ignoreDirectionInput())
+        if (!this.ignoreDirectionInput())
           this.player.actionProcessor.process({
             type: "Move",
             direction: Direction.RIGHT,
@@ -73,7 +74,7 @@ export class PlayerInputHandler {
         break;
 
       case InputEnum.UP:
-        if (!this.player.ignoreDirectionInput())
+        if (!this.ignoreDirectionInput())
           this.player.actionProcessor.process({
             type: "Move",
             direction: Direction.UP,
@@ -81,7 +82,7 @@ export class PlayerInputHandler {
         break;
 
       case InputEnum.DOWN:
-        if (!this.player.ignoreDirectionInput())
+        if (!this.ignoreDirectionInput())
           this.player.actionProcessor.process({
             type: "Move",
             direction: Direction.DOWN,
@@ -128,7 +129,7 @@ export class PlayerInputHandler {
         //when mouse moves
         this.player.inventory.mostRecentInput = "mouse";
         this.player.inventory.mouseMove();
-        this.player.faceMouse();
+        this.faceMouse();
         this.player.setTileCursorPosition();
         break;
       case InputEnum.NUMBER_1:
@@ -207,6 +208,14 @@ export class PlayerInputHandler {
     }
   }
 
+  ignoreDirectionInput = (): boolean => {
+    return (
+      this.player.inventory.isOpen ||
+      this.player.dead ||
+      this.player.game.levelState !== LevelState.IN_LEVEL
+    );
+  };
+
   handleTap() {
     if (this.player.dead) {
       this.player.restart();
@@ -276,4 +285,29 @@ export class PlayerInputHandler {
         break;
     }
   }
+
+  faceMouse = () => {
+    if (!GameConstants.MOVE_WITH_MOUSE) return;
+    const mousePosition = MouseCursor.getInstance().getPosition();
+    const playerPixelPosition = {
+      x: GameConstants.WIDTH / 2,
+      y: GameConstants.HEIGHT / 2,
+    };
+    const dx = mousePosition.x - playerPixelPosition.x;
+    const dy = mousePosition.y - playerPixelPosition.y;
+    const angle = Math.atan2(dy, dx);
+
+    // Convert angle to direction
+    // atan2 returns angle in radians (-π to π)
+    // Divide the circle into 4 sectors for the 4 directions
+    if (angle >= -Math.PI / 4 && angle < Math.PI / 4) {
+      this.player.direction = Direction.RIGHT;
+    } else if (angle >= Math.PI / 4 && angle < (3 * Math.PI) / 4) {
+      this.player.direction = Direction.DOWN;
+    } else if (angle >= (-3 * Math.PI) / 4 && angle < -Math.PI / 4) {
+      this.player.direction = Direction.UP;
+    } else {
+      this.player.direction = Direction.LEFT;
+    }
+  };
 }

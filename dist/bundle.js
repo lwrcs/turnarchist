@@ -17916,7 +17916,6 @@ var hitWarning_1 = __webpack_require__(/*! ../hitWarning */ "./src/hitWarning.ts
 var item_1 = __webpack_require__(/*! ../item/item */ "./src/item/item.ts");
 var enemy_1 = __webpack_require__(/*! ../entity/enemy/enemy */ "./src/entity/enemy/enemy.ts");
 var mouseCursor_1 = __webpack_require__(/*! ../mouseCursor */ "./src/mouseCursor.ts");
-var utils_1 = __webpack_require__(/*! ../utils */ "./src/utils.ts");
 var menu_1 = __webpack_require__(/*! ../menu */ "./src/menu.ts");
 var bestiary_1 = __webpack_require__(/*! ../bestiary */ "./src/bestiary.ts");
 var playerInputHandler_1 = __webpack_require__(/*! ./playerInputHandler */ "./src/player/playerInputHandler.ts");
@@ -17939,7 +17938,6 @@ var Player = /** @class */ (function (_super) {
     __extends(Player, _super);
     function Player(game, x, y, isLocalPlayer) {
         var _this = _super.call(this) || this;
-        _this.lowHealthFrame = 0;
         _this.drawMoveQueue = [];
         _this.seenEnemies = new Set();
         _this.bestiary = null;
@@ -17959,10 +17957,6 @@ var Player = /** @class */ (function (_super) {
                     return true;
                 }
             }
-        };
-        _this.ignoreDirectionInput = function () {
-            return (!_this.inventory.isOpen &&
-                (_this.dead || _this.game.levelState !== game_1.LevelState.IN_LEVEL));
         };
         _this.isMouseOnPlayerTile = function () {
             return _this.mouseToTile().x === _this.x && _this.mouseToTile().y === _this.y;
@@ -18479,48 +18473,10 @@ var Player = /** @class */ (function (_super) {
         _this.draw = function (delta) {
             _this.renderer.draw(delta);
         };
-        _this.shadeColor = function () {
-            if (!gameConstants_1.GameConstants.CUSTOM_SHADER_COLOR_ENABLED) {
-                return "black";
-            }
-            else {
-                return utils_1.Utils.rgbToHex(_this.game.levels[_this.depth].rooms[_this.levelID].col[_this.x][_this.y][0], _this.game.levels[_this.depth].rooms[_this.levelID].col[_this.x][_this.y][1], _this.game.levels[_this.depth].rooms[_this.levelID].col[_this.x][_this.y][2]);
-            }
-        };
         _this.heal = function (amount) {
             _this.health += amount;
             if (_this.health > _this.maxHealth)
                 _this.health = _this.maxHealth;
-        };
-        _this.faceMouse = function () {
-            if (!gameConstants_1.GameConstants.MOVE_WITH_MOUSE)
-                return;
-            var mousePosition = mouseCursor_1.MouseCursor.getInstance().getPosition();
-            var playerPixelPosition = {
-                x: gameConstants_1.GameConstants.WIDTH / 2,
-                y: gameConstants_1.GameConstants.HEIGHT / 2,
-            };
-            var dx = mousePosition.x - playerPixelPosition.x;
-            var dy = mousePosition.y - playerPixelPosition.y;
-            var angle = Math.atan2(dy, dx);
-            // Convert angle to direction
-            // atan2 returns angle in radians (-π to π)
-            // Divide the circle into 4 sectors for the 4 directions
-            if (angle >= -Math.PI / 4 && angle < Math.PI / 4) {
-                _this.direction = game_1.Direction.RIGHT;
-            }
-            else if (angle >= Math.PI / 4 && angle < (3 * Math.PI) / 4) {
-                _this.direction = game_1.Direction.DOWN;
-            }
-            else if (angle >= (-3 * Math.PI) / 4 && angle < -Math.PI / 4) {
-                _this.direction = game_1.Direction.UP;
-            }
-            else {
-                _this.direction = game_1.Direction.LEFT;
-            }
-        };
-        _this.tapHoldHandler = function () {
-            _this.mapToggled = !_this.mapToggled;
         };
         _this.hitShake = function (playerX, playerY, otherX, otherY) {
             var range = gameConstants_1.GameConstants.TILESIZE;
@@ -18536,41 +18492,6 @@ var Player = /** @class */ (function (_super) {
             _this.renderer.setHitXY(shakeX, shakeY);
             _this.game.shakeScreen(-shakeX * 1 * shakeStrength, -shakeY * 1 * shakeStrength);
         };
-        /**
-         * Draws the tile cursor to the canvas.
-         * Added `ctx.save()` at the beginning and `ctx.restore()` at the end
-         * to ensure canvas state is preserved.
-         */
-        _this.drawTileCursor = function (delta) {
-            if (_this.inventory.isOpen)
-                return;
-            game_1.Game.ctx.save(); // Save the current canvas state
-            if (!_this.mouseInLine() ||
-                !_this.isMouseAboveFloor() ||
-                _this.isMouseOnPlayerTile())
-                return;
-            var tileX = 22; //inRange ? 22 : 24;
-            var tileY = 3;
-            var moveData = _this.canMoveWithMouse();
-            if (moveData && moveData.direction !== undefined) {
-                switch (moveData.direction) {
-                    case game_1.Direction.UP:
-                        tileY = 3;
-                        break;
-                    case game_1.Direction.RIGHT:
-                        tileY = 4;
-                        break;
-                    case game_1.Direction.DOWN:
-                        tileY = 5;
-                        break;
-                    case game_1.Direction.LEFT:
-                        tileY = 6;
-                        break;
-                }
-            }
-            game_1.Game.drawFX(tileX + Math.floor(hitWarning_1.HitWarning.frame), tileY, 1, 1, _this.tileCursor.x, _this.tileCursor.y, 1, 1);
-            game_1.Game.ctx.restore(); // Restore the canvas state
-        };
         _this.updateSlowMotion = function () {
             _this.renderer.updateSlowMotion();
         };
@@ -18583,11 +18504,6 @@ var Player = /** @class */ (function (_super) {
         _this.y = y;
         _this.w = 1;
         _this.h = 1;
-        //this.drawX = 0;
-        //this.drawY = 0;
-        //this.jumpY = 0;
-        //this.jumpHeight = 0.3;
-        //this.frame = 0;
         _this.moveDistance = 0;
         _this.direction = game_1.Direction.UP;
         _this.lastX = 0;
@@ -18601,34 +18517,20 @@ var Player = /** @class */ (function (_super) {
         _this.maxHealth = 2;
         _this.healthBar = new healthbar_1.HealthBar();
         _this.dead = false;
-        //this.flashing = false;
-        //this.flashingFrame = 0;
         _this.lastTickHealth = _this.health;
-        //this.guiHeartFrame = 0;
         _this.inventory = new inventory_1.Inventory(game, _this);
         _this.defaultSightRadius = 3;
         _this.sightRadius = levelConstants_1.LevelConstants.LIGHTING_MAX_DISTANCE; //this.defaultSightRadius;
         _this.map = new map_1.Map(_this.game, _this);
-        //this.actionTab = new ActionTab(this.inventory, this.game);
         _this.turnCount = 0;
         _this.triedMove = false;
         _this.tutorialRoom = false;
         _this.tileCursor = { x: 0, y: 0 };
         _this.moveRange = 1;
         _this.lightEquipped = false;
-        //this.hurting = false;
-        //this.hurtingShield = false;
         _this.hurtShield = false;
-        //this.hurtAlpha = 0.25;
         _this.lightBrightness = 0.3;
-        //this.sineAngle = Math.PI / 2;
-        //this.drawMoveSpeed = 0.3; // greater than 1 less than 2
         _this.moveQueue = [];
-        //this.hitX = 0;
-        //this.hitY = 0;
-        //this.motionSpeed = 1;
-        //this.slowMotionEnabled = false;
-        //this.slowMotionTickDuration = 0;
         _this.justMoved = DrawDirection.Y;
         _this.inputHandler = new playerInputHandler_1.PlayerInputHandler(_this);
         _this.actionProcessor = new playerActionProcessor_1.PlayerActionProcessor(_this);
@@ -18729,8 +18631,42 @@ var input_1 = __webpack_require__(/*! ../input */ "./src/input.ts");
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var mouseCursor_1 = __webpack_require__(/*! ../mouseCursor */ "./src/mouseCursor.ts");
 var vendingMachine_1 = __webpack_require__(/*! ../entity/object/vendingMachine */ "./src/entity/object/vendingMachine.ts");
+var gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
 var PlayerInputHandler = /** @class */ (function () {
     function PlayerInputHandler(player) {
+        var _this = this;
+        this.ignoreDirectionInput = function () {
+            return (_this.player.inventory.isOpen ||
+                _this.player.dead ||
+                _this.player.game.levelState !== game_1.LevelState.IN_LEVEL);
+        };
+        this.faceMouse = function () {
+            if (!gameConstants_1.GameConstants.MOVE_WITH_MOUSE)
+                return;
+            var mousePosition = mouseCursor_1.MouseCursor.getInstance().getPosition();
+            var playerPixelPosition = {
+                x: gameConstants_1.GameConstants.WIDTH / 2,
+                y: gameConstants_1.GameConstants.HEIGHT / 2,
+            };
+            var dx = mousePosition.x - playerPixelPosition.x;
+            var dy = mousePosition.y - playerPixelPosition.y;
+            var angle = Math.atan2(dy, dx);
+            // Convert angle to direction
+            // atan2 returns angle in radians (-π to π)
+            // Divide the circle into 4 sectors for the 4 directions
+            if (angle >= -Math.PI / 4 && angle < Math.PI / 4) {
+                _this.player.direction = game_1.Direction.RIGHT;
+            }
+            else if (angle >= Math.PI / 4 && angle < (3 * Math.PI) / 4) {
+                _this.player.direction = game_1.Direction.DOWN;
+            }
+            else if (angle >= (-3 * Math.PI) / 4 && angle < -Math.PI / 4) {
+                _this.player.direction = game_1.Direction.UP;
+            }
+            else {
+                _this.player.direction = game_1.Direction.LEFT;
+            }
+        };
         this.player = player;
         if (player.isLocalPlayer) {
             this.setupListeners();
@@ -18778,28 +18714,28 @@ var PlayerInputHandler = /** @class */ (function () {
                 this.player.inventory.drop();
                 break;
             case input_1.InputEnum.LEFT:
-                if (!this.player.ignoreDirectionInput())
+                if (!this.ignoreDirectionInput())
                     this.player.actionProcessor.process({
                         type: "Move",
                         direction: game_1.Direction.LEFT,
                     });
                 break;
             case input_1.InputEnum.RIGHT:
-                if (!this.player.ignoreDirectionInput())
+                if (!this.ignoreDirectionInput())
                     this.player.actionProcessor.process({
                         type: "Move",
                         direction: game_1.Direction.RIGHT,
                     });
                 break;
             case input_1.InputEnum.UP:
-                if (!this.player.ignoreDirectionInput())
+                if (!this.ignoreDirectionInput())
                     this.player.actionProcessor.process({
                         type: "Move",
                         direction: game_1.Direction.UP,
                     });
                 break;
             case input_1.InputEnum.DOWN:
-                if (!this.player.ignoreDirectionInput())
+                if (!this.ignoreDirectionInput())
                     this.player.actionProcessor.process({
                         type: "Move",
                         direction: game_1.Direction.DOWN,
@@ -18841,7 +18777,7 @@ var PlayerInputHandler = /** @class */ (function () {
                 //when mouse moves
                 this.player.inventory.mostRecentInput = "mouse";
                 this.player.inventory.mouseMove();
-                this.player.faceMouse();
+                this.faceMouse();
                 this.player.setTileCursorPosition();
                 break;
             case input_1.InputEnum.NUMBER_1:
@@ -19082,6 +19018,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PlayerRenderer = void 0;
 var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
+var hitWarning_1 = __webpack_require__(/*! ../hitWarning */ "./src/hitWarning.ts");
 var levelConstants_1 = __webpack_require__(/*! ../levelConstants */ "./src/levelConstants.ts");
 var postProcess_1 = __webpack_require__(/*! ../postProcess */ "./src/postProcess.ts");
 var stats_1 = __webpack_require__(/*! ../stats */ "./src/stats.ts");
@@ -19403,6 +19340,41 @@ var PlayerRenderer = /** @class */ (function () {
         };
         this.heartbeat = function () {
             _this.guiHeartFrame = 1;
+        };
+        /**
+         * Draws the tile cursor to the canvas.
+         * Added `ctx.save()` at the beginning and `ctx.restore()` at the end
+         * to ensure canvas state is preserved.
+         */
+        this.drawTileCursor = function (delta) {
+            if (_this.player.inventory.isOpen)
+                return;
+            game_1.Game.ctx.save(); // Save the current canvas state
+            if (!_this.player.mouseInLine() ||
+                !_this.player.isMouseAboveFloor() ||
+                _this.player.isMouseOnPlayerTile())
+                return;
+            var tileX = 22; //inRange ? 22 : 24;
+            var tileY = 3;
+            var moveData = _this.player.canMoveWithMouse();
+            if (moveData && moveData.direction !== undefined) {
+                switch (moveData.direction) {
+                    case game_1.Direction.UP:
+                        tileY = 3;
+                        break;
+                    case game_1.Direction.RIGHT:
+                        tileY = 4;
+                        break;
+                    case game_1.Direction.DOWN:
+                        tileY = 5;
+                        break;
+                    case game_1.Direction.LEFT:
+                        tileY = 6;
+                        break;
+                }
+            }
+            game_1.Game.drawFX(tileX + Math.floor(hitWarning_1.HitWarning.frame), tileY, 1, 1, _this.player.tileCursor.x, _this.player.tileCursor.y, 1, 1);
+            game_1.Game.ctx.restore(); // Restore the canvas state
         };
         this.jump = function (delta) {
             var j = Math.max(Math.abs(_this.drawX), Math.abs(_this.drawY));
