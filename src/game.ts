@@ -1225,7 +1225,7 @@ export class Game {
         Math.round(playerCY - 0.5 * GameConstants.HEIGHT),
       );
 
-      this.players[this.localPlayerID].drawGUI(delta);
+      //this.players[this.localPlayerID].drawGUI(delta);  // removed this to prevent drawing gui during level transition
       //for (const i in this.players) this.players[i].updateDrawXY(delta);
     } else if (this.levelState === LevelState.LEVEL_GENERATION) {
       this.levelgen.draw(delta);

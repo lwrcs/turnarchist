@@ -776,7 +776,7 @@ export class Room {
             }
             break;
           case 14:
-            ZombieEnemy.add(this, this.game, x, y);
+            ArmoredSkullEnemy.add(this, this.game, x, y);
             break;
           case 15:
             FireWizardEnemy.add(this, this.game, x, y);
