@@ -29,8 +29,7 @@ export const enemyMinimumDepth: Record<number, number> = {
   12: 1, // KnightEnemy
   13: 2, // BigKnightEnemy
   14: 2, // FireWizardEnemy
-  15: 2, // ArmoredSkullEnemy
-  16: 2, // ArmoredKnightEnemy
+  15: 2, // ArmoredSkullEnemy  16: 2, // ArmoredKnightEnemy
 };
 /*
 interface enemySpawnPoolData {

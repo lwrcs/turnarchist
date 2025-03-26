@@ -1168,6 +1168,11 @@ export class Game {
           LevelConstants.LEVEL_TRANSITION_TIME_LADDER,
       );
 
+      Game.ctx.translate(
+        Math.round(playerCX - 0.5 * GameConstants.WIDTH),
+        Math.round(playerCY - 0.5 * GameConstants.HEIGHT),
+      );
+
       if (ditherFrame < 7) {
         this.drawRooms(delta);
         this.drawRoomShadeAndColor(delta);
@@ -1220,10 +1225,6 @@ export class Game {
           }
         }
       }
-      Game.ctx.translate(
-        Math.round(playerCX - 0.5 * GameConstants.WIDTH),
-        Math.round(playerCY - 0.5 * GameConstants.HEIGHT),
-      );
 
       //this.players[this.localPlayerID].drawGUI(delta);  // removed this to prevent drawing gui during level transition
       //for (const i in this.players) this.players[i].updateDrawXY(delta);

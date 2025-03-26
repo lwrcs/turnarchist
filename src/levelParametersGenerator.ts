@@ -13,6 +13,7 @@ import { KnightEnemy } from "./entity/enemy/knightEnemy";
 import { BigKnightEnemy } from "./entity/enemy/bigKnightEnemy";
 import { FireWizardEnemy } from "./entity/enemy/fireWizard";
 import { RookEnemy } from "./entity/enemy/rookEnemy";
+import { ArmoredSkullEnemy } from "./entity/enemy/armoredSkullEnemy";
 
 export const enemyClasses = {
   1: CrabEnemy,
@@ -29,6 +30,7 @@ export const enemyClasses = {
   12: KnightEnemy,
   13: BigKnightEnemy,
   14: FireWizardEnemy,
+  15: ArmoredSkullEnemy,
 };
 
 export interface LevelParameters {

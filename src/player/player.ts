@@ -147,17 +147,17 @@ export class Player extends Drawable {
   }
 
   get hitX() {
-    return this.renderer.hitX;
+    return this.renderer?.drawX ?? 0;
   }
   get hitY() {
-    return this.renderer.hitY;
+    return this.renderer?.drawY ?? 0;
   }
 
   get drawX() {
-    return this.renderer.drawX;
+    return this.renderer?.drawX ?? 0;
   }
   get drawY() {
-    return this.renderer.drawY;
+    return this.renderer?.drawY ?? 0;
   }
 
   setHitXY = (newX: number, newY: number, distance = 0.5) => {
