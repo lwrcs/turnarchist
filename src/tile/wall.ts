@@ -1,8 +1,8 @@
 import { Direction, Game } from "../game";
-import { Room, WallDirection } from "../room";
+import { Room, WallDirection } from "../room/room";
 import { Door, DoorDir } from "./door";
 import { Tile } from "./tile";
-import { WallInfo } from "../room";
+import { WallInfo } from "../room/room";
 
 export class Wall extends Tile {
   private tileXOffset: number;

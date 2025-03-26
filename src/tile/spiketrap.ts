@@ -1,6 +1,6 @@
 import { Player } from "../player/player";
 import { Game } from "../game";
-import { Room } from "../room";
+import { Room } from "../room/room";
 import { LevelConstants } from "../levelConstants";
 import { Tile } from "./tile";
 import { Entity } from "../entity/entity";

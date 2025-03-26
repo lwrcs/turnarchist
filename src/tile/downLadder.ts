@@ -1,6 +1,6 @@
 import { Player } from "../player/player";
 import { ChatMessage, Game } from "../game";
-import { Room } from "../room";
+import { Room } from "../room/room";
 import { GameConstants } from "../gameConstants";
 import { SkinType, Tile } from "./tile";
 import { UpLadder } from "./upLadder";

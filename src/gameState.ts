@@ -34,7 +34,7 @@ import { Key } from "./item/key";
 import { Lantern } from "./item/lantern";
 import { RedGem } from "./item/redgem";
 import { Torch } from "./item/torch";
-import { Room } from "./room";
+import { Room } from "./room/room";
 import { LevelGenerator } from "./levelGenerator";
 import { Player, PlayerDirection } from "./player/player";
 import { EnemySpawnAnimation } from "./projectile/enemySpawnAnimation";

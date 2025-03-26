@@ -1,6 +1,6 @@
 import { Entity } from "./entity/entity";
 import { Game } from "./game";
-import { Room } from "./room";
+import { Room } from "./room/room";
 import { Random } from "./random";
 
 //The Populate class will handle distribution of enemies and objects in room.

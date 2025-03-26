@@ -1,6 +1,6 @@
 import { Player } from "../../player/player";
 import { Game } from "../../game";
-import { Room } from "../../room";
+import { Room } from "../../room/room";
 import { Entity } from "../entity";
 import { Item } from "../../item/item";
 import { Key } from "../../item/key";

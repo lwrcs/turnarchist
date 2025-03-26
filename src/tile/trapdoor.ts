@@ -1,5 +1,5 @@
 import { Game } from "../game";
-import { Room } from "../room";
+import { Room } from "../room/room";
 import { Player } from "../player/player";
 import { LevelConstants } from "../levelConstants";
 import { Tile } from "./tile";

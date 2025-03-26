@@ -1,6 +1,6 @@
 import { Game } from "./game";
 import { GameConstants } from "./gameConstants";
-import { Room, RoomType } from "./room";
+import { Room, RoomType } from "./room/room";
 import { Entity, EntityType } from "./entity/entity";
 import { Wall } from "./tile/wall";
 import { Player } from "./player/player";

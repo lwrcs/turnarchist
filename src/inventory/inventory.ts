@@ -6,7 +6,7 @@ import { Equippable } from "../item/equippable";
 import { Armor } from "../item/armor";
 import { Coin } from "../item/coin";
 import { Weapon } from "../weapon/weapon";
-import { Room } from "../room";
+import { Room } from "../room/room";
 import { Usable } from "../item/usable";
 import { Player } from "../player/player";
 import { MouseCursor } from "../mouseCursor";

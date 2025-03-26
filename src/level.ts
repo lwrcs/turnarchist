@@ -1,4 +1,4 @@
-import { Room, RoomType } from "./room";
+import { Room, RoomType } from "./room/room";
 import { Game } from "./game";
 import { Entity, EntityType } from "./entity/entity";
 import { Item } from "./item/item";

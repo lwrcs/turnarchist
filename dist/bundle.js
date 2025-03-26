@@ -5930,7 +5930,7 @@ var fireWizard_1 = __webpack_require__(/*! ./fireWizard */ "./src/entity/enemy/f
 var queenEnemy_1 = __webpack_require__(/*! ./queenEnemy */ "./src/entity/enemy/queenEnemy.ts");
 var armoredzombieEnemy_1 = __webpack_require__(/*! ./armoredzombieEnemy */ "./src/entity/enemy/armoredzombieEnemy.ts");
 var rookEnemy_1 = __webpack_require__(/*! ./rookEnemy */ "./src/entity/enemy/rookEnemy.ts");
-var room_1 = __webpack_require__(/*! ../../room */ "./src/room.ts");
+var room_1 = __webpack_require__(/*! ../../room/room */ "./src/room/room.ts");
 var armoredSkullEnemy_1 = __webpack_require__(/*! ./armoredSkullEnemy */ "./src/entity/enemy/armoredSkullEnemy.ts");
 var Spawner = /** @class */ (function (_super) {
     __extends(Spawner, _super);
@@ -13845,7 +13845,7 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GodStone = void 0;
-var room_1 = __webpack_require__(/*! ../room */ "./src/room.ts");
+var room_1 = __webpack_require__(Object(function webpackMissingModule() { var e = new Error("Cannot find module '../room'"); e.code = 'MODULE_NOT_FOUND'; throw e; }()));
 var usable_1 = __webpack_require__(/*! ./usable */ "./src/item/usable.ts");
 var GodStone = /** @class */ (function (_super) {
     __extends(GodStone, _super);
@@ -15119,7 +15119,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Level = exports.enemyMinimumDepth = void 0;
-var room_1 = __webpack_require__(/*! ./room */ "./src/room.ts");
+var room_1 = __webpack_require__(/*! ./room/room */ "./src/room/room.ts");
 var environment_1 = __webpack_require__(/*! ./environment */ "./src/environment.ts");
 exports.enemyMinimumDepth = {
     1: 0,
@@ -15398,7 +15398,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.LevelGenerator = exports.PartialLevel = void 0;
 var game_1 = __webpack_require__(/*! ./game */ "./src/game.ts");
-var room_1 = __webpack_require__(/*! ./room */ "./src/room.ts");
+var room_1 = __webpack_require__(Object(function webpackMissingModule() { var e = new Error("Cannot find module './room'"); e.code = 'MODULE_NOT_FOUND'; throw e; }()));
 var random_1 = __webpack_require__(/*! ./random */ "./src/random.ts");
 var downLadder_1 = __webpack_require__(/*! ./tile/downLadder */ "./src/tile/downLadder.ts");
 var levelParametersGenerator_1 = __webpack_require__(/*! ./levelParametersGenerator */ "./src/levelParametersGenerator.ts");
@@ -16710,7 +16710,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Map = void 0;
 var game_1 = __webpack_require__(/*! ./game */ "./src/game.ts");
 var gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/gameConstants.ts");
-var room_1 = __webpack_require__(/*! ./room */ "./src/room.ts");
+var room_1 = __webpack_require__(/*! ./room/room */ "./src/room/room.ts");
 var entity_1 = __webpack_require__(/*! ./entity/entity */ "./src/entity/entity.ts");
 var Map = /** @class */ (function () {
     function Map(game, player) {
@@ -20219,10 +20219,10 @@ exports.ReverbEngine = ReverbEngine;
 
 /***/ }),
 
-/***/ "./src/room.ts":
-/*!*********************!*\
-  !*** ./src/room.ts ***!
-  \*********************/
+/***/ "./src/room/room.ts":
+/*!**************************!*\
+  !*** ./src/room/room.ts ***!
+  \**************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -20266,78 +20266,78 @@ var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Room = exports.WallDirection = exports.TurnState = exports.RoomType = exports.EnemyTypeMap = exports.EnemyType = void 0;
 // #region imports
-var wall_1 = __webpack_require__(/*! ./tile/wall */ "./src/tile/wall.ts");
-var levelConstants_1 = __webpack_require__(/*! ./levelConstants */ "./src/levelConstants.ts");
-var floor_1 = __webpack_require__(/*! ./tile/floor */ "./src/tile/floor.ts");
-var game_1 = __webpack_require__(/*! ./game */ "./src/game.ts");
-var door_1 = __webpack_require__(/*! ./tile/door */ "./src/tile/door.ts");
-var tile_1 = __webpack_require__(/*! ./tile/tile */ "./src/tile/tile.ts");
-var knightEnemy_1 = __webpack_require__(/*! ./entity/enemy/knightEnemy */ "./src/entity/enemy/knightEnemy.ts");
-var entity_1 = __webpack_require__(/*! ./entity/entity */ "./src/entity/entity.ts");
-var chest_1 = __webpack_require__(/*! ./entity/object/chest */ "./src/entity/object/chest.ts");
-var goldenKey_1 = __webpack_require__(/*! ./item/goldenKey */ "./src/item/goldenKey.ts");
-var spawnfloor_1 = __webpack_require__(/*! ./tile/spawnfloor */ "./src/tile/spawnfloor.ts");
-var gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/gameConstants.ts");
-var skullEnemy_1 = __webpack_require__(/*! ./entity/enemy/skullEnemy */ "./src/entity/enemy/skullEnemy.ts");
-var barrel_1 = __webpack_require__(/*! ./entity/object/barrel */ "./src/entity/object/barrel.ts");
-var crate_1 = __webpack_require__(/*! ./entity/object/crate */ "./src/entity/object/crate.ts");
-var armor_1 = __webpack_require__(/*! ./item/armor */ "./src/item/armor.ts");
-var spiketrap_1 = __webpack_require__(/*! ./tile/spiketrap */ "./src/tile/spiketrap.ts");
-var fountainTile_1 = __webpack_require__(/*! ./tile/fountainTile */ "./src/tile/fountainTile.ts");
-var coffinTile_1 = __webpack_require__(/*! ./tile/coffinTile */ "./src/tile/coffinTile.ts");
-var pottedPlant_1 = __webpack_require__(/*! ./entity/object/pottedPlant */ "./src/entity/object/pottedPlant.ts");
-var insideLevelDoor_1 = __webpack_require__(/*! ./tile/insideLevelDoor */ "./src/tile/insideLevelDoor.ts");
-var button_1 = __webpack_require__(/*! ./tile/button */ "./src/tile/button.ts");
-var hitWarning_1 = __webpack_require__(/*! ./hitWarning */ "./src/hitWarning.ts");
-var upLadder_1 = __webpack_require__(/*! ./tile/upLadder */ "./src/tile/upLadder.ts");
-var downLadder_1 = __webpack_require__(/*! ./tile/downLadder */ "./src/tile/downLadder.ts");
-var coalResource_1 = __webpack_require__(/*! ./entity/resource/coalResource */ "./src/entity/resource/coalResource.ts");
-var goldResource_1 = __webpack_require__(/*! ./entity/resource/goldResource */ "./src/entity/resource/goldResource.ts");
-var emeraldResource_1 = __webpack_require__(/*! ./entity/resource/emeraldResource */ "./src/entity/resource/emeraldResource.ts");
-var chasm_1 = __webpack_require__(/*! ./tile/chasm */ "./src/tile/chasm.ts");
-var spawner_1 = __webpack_require__(/*! ./entity/enemy/spawner */ "./src/entity/enemy/spawner.ts");
-var vendingMachine_1 = __webpack_require__(/*! ./entity/object/vendingMachine */ "./src/entity/object/vendingMachine.ts");
-var wallTorch_1 = __webpack_require__(/*! ./tile/wallTorch */ "./src/tile/wallTorch.ts");
-var chargeEnemy_1 = __webpack_require__(/*! ./entity/enemy/chargeEnemy */ "./src/entity/enemy/chargeEnemy.ts");
-var shotgun_1 = __webpack_require__(/*! ./weapon/shotgun */ "./src/weapon/shotgun.ts");
-var heart_1 = __webpack_require__(/*! ./item/heart */ "./src/item/heart.ts");
-var spear_1 = __webpack_require__(/*! ./weapon/spear */ "./src/weapon/spear.ts");
-var player_1 = __webpack_require__(/*! ./player/player */ "./src/player/player.ts");
-var crabEnemy_1 = __webpack_require__(/*! ./entity/enemy/crabEnemy */ "./src/entity/enemy/crabEnemy.ts");
-var zombieEnemy_1 = __webpack_require__(/*! ./entity/enemy/zombieEnemy */ "./src/entity/enemy/zombieEnemy.ts");
-var bigSkullEnemy_1 = __webpack_require__(/*! ./entity/enemy/bigSkullEnemy */ "./src/entity/enemy/bigSkullEnemy.ts");
-var random_1 = __webpack_require__(/*! ./random */ "./src/random.ts");
-var lantern_1 = __webpack_require__(/*! ./item/lantern */ "./src/item/lantern.ts");
-var dualdagger_1 = __webpack_require__(/*! ./weapon/dualdagger */ "./src/weapon/dualdagger.ts");
-var pot_1 = __webpack_require__(/*! ./entity/object/pot */ "./src/entity/object/pot.ts");
-var bishopEnemy_1 = __webpack_require__(/*! ./entity/enemy/bishopEnemy */ "./src/entity/enemy/bishopEnemy.ts");
-var rockResource_1 = __webpack_require__(/*! ./entity/resource/rockResource */ "./src/entity/resource/rockResource.ts");
-var mushrooms_1 = __webpack_require__(/*! ./entity/object/mushrooms */ "./src/entity/object/mushrooms.ts");
-var armoredzombieEnemy_1 = __webpack_require__(/*! ./entity/enemy/armoredzombieEnemy */ "./src/entity/enemy/armoredzombieEnemy.ts");
-var tombStone_1 = __webpack_require__(/*! ./entity/object/tombStone */ "./src/entity/object/tombStone.ts");
-var pumpkin_1 = __webpack_require__(/*! ./entity/object/pumpkin */ "./src/entity/object/pumpkin.ts");
-var queenEnemy_1 = __webpack_require__(/*! ./entity/enemy/queenEnemy */ "./src/entity/enemy/queenEnemy.ts");
-var frogEnemy_1 = __webpack_require__(/*! ./entity/enemy/frogEnemy */ "./src/entity/enemy/frogEnemy.ts");
-var bigKnightEnemy_1 = __webpack_require__(/*! ./entity/enemy/bigKnightEnemy */ "./src/entity/enemy/bigKnightEnemy.ts");
-var enemy_1 = __webpack_require__(/*! ./entity/enemy/enemy */ "./src/entity/enemy/enemy.ts");
-var fireWizard_1 = __webpack_require__(/*! ./entity/enemy/fireWizard */ "./src/entity/enemy/fireWizard.ts");
-var energyWizard_1 = __webpack_require__(/*! ./entity/enemy/energyWizard */ "./src/entity/enemy/energyWizard.ts");
-var reverb_1 = __webpack_require__(/*! ./reverb */ "./src/reverb.ts");
-var astarclass_1 = __webpack_require__(/*! ./astarclass */ "./src/astarclass.ts");
-var warhammer_1 = __webpack_require__(/*! ./weapon/warhammer */ "./src/weapon/warhammer.ts");
-var spellbook_1 = __webpack_require__(/*! ./weapon/spellbook */ "./src/weapon/spellbook.ts");
-var torch_1 = __webpack_require__(/*! ./item/torch */ "./src/item/torch.ts");
-var rookEnemy_1 = __webpack_require__(/*! ./entity/enemy/rookEnemy */ "./src/entity/enemy/rookEnemy.ts");
-var beamEffect_1 = __webpack_require__(/*! ./beamEffect */ "./src/beamEffect.ts");
-var environment_1 = __webpack_require__(/*! ./environment */ "./src/environment.ts");
-var pickaxe_1 = __webpack_require__(/*! ./weapon/pickaxe */ "./src/weapon/pickaxe.ts");
-var occultistEnemy_1 = __webpack_require__(/*! ./entity/enemy/occultistEnemy */ "./src/entity/enemy/occultistEnemy.ts");
-var puddle_1 = __webpack_require__(/*! ./tile/decorations/puddle */ "./src/tile/decorations/puddle.ts");
-var decoration_1 = __webpack_require__(/*! ./tile/decorations/decoration */ "./src/tile/decorations/decoration.ts");
-var bomb_1 = __webpack_require__(/*! ./entity/object/bomb */ "./src/entity/object/bomb.ts");
-var sound_1 = __webpack_require__(/*! ./sound */ "./src/sound.ts");
-var block_1 = __webpack_require__(/*! ./entity/object/block */ "./src/entity/object/block.ts");
-var armoredSkullEnemy_1 = __webpack_require__(/*! ./entity/enemy/armoredSkullEnemy */ "./src/entity/enemy/armoredSkullEnemy.ts");
+var wall_1 = __webpack_require__(/*! ../tile/wall */ "./src/tile/wall.ts");
+var levelConstants_1 = __webpack_require__(/*! ../levelConstants */ "./src/levelConstants.ts");
+var floor_1 = __webpack_require__(/*! ../tile/floor */ "./src/tile/floor.ts");
+var game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+var door_1 = __webpack_require__(/*! ../tile/door */ "./src/tile/door.ts");
+var tile_1 = __webpack_require__(/*! ../tile/tile */ "./src/tile/tile.ts");
+var knightEnemy_1 = __webpack_require__(/*! ../entity/enemy/knightEnemy */ "./src/entity/enemy/knightEnemy.ts");
+var entity_1 = __webpack_require__(/*! ../entity/entity */ "./src/entity/entity.ts");
+var chest_1 = __webpack_require__(/*! ../entity/object/chest */ "./src/entity/object/chest.ts");
+var goldenKey_1 = __webpack_require__(/*! ../item/goldenKey */ "./src/item/goldenKey.ts");
+var spawnfloor_1 = __webpack_require__(/*! ../tile/spawnfloor */ "./src/tile/spawnfloor.ts");
+var gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
+var skullEnemy_1 = __webpack_require__(/*! ../entity/enemy/skullEnemy */ "./src/entity/enemy/skullEnemy.ts");
+var barrel_1 = __webpack_require__(/*! ../entity/object/barrel */ "./src/entity/object/barrel.ts");
+var crate_1 = __webpack_require__(/*! ../entity/object/crate */ "./src/entity/object/crate.ts");
+var armor_1 = __webpack_require__(/*! ../item/armor */ "./src/item/armor.ts");
+var spiketrap_1 = __webpack_require__(/*! ../tile/spiketrap */ "./src/tile/spiketrap.ts");
+var fountainTile_1 = __webpack_require__(/*! ../tile/fountainTile */ "./src/tile/fountainTile.ts");
+var coffinTile_1 = __webpack_require__(/*! ../tile/coffinTile */ "./src/tile/coffinTile.ts");
+var pottedPlant_1 = __webpack_require__(/*! ../entity/object/pottedPlant */ "./src/entity/object/pottedPlant.ts");
+var insideLevelDoor_1 = __webpack_require__(/*! ../tile/insideLevelDoor */ "./src/tile/insideLevelDoor.ts");
+var button_1 = __webpack_require__(/*! ../tile/button */ "./src/tile/button.ts");
+var hitWarning_1 = __webpack_require__(/*! ../hitWarning */ "./src/hitWarning.ts");
+var upLadder_1 = __webpack_require__(/*! ../tile/upLadder */ "./src/tile/upLadder.ts");
+var downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/downLadder.ts");
+var coalResource_1 = __webpack_require__(/*! ../entity/resource/coalResource */ "./src/entity/resource/coalResource.ts");
+var goldResource_1 = __webpack_require__(/*! ../entity/resource/goldResource */ "./src/entity/resource/goldResource.ts");
+var emeraldResource_1 = __webpack_require__(/*! ../entity/resource/emeraldResource */ "./src/entity/resource/emeraldResource.ts");
+var chasm_1 = __webpack_require__(/*! ../tile/chasm */ "./src/tile/chasm.ts");
+var spawner_1 = __webpack_require__(/*! ../entity/enemy/spawner */ "./src/entity/enemy/spawner.ts");
+var vendingMachine_1 = __webpack_require__(/*! ../entity/object/vendingMachine */ "./src/entity/object/vendingMachine.ts");
+var wallTorch_1 = __webpack_require__(/*! ../tile/wallTorch */ "./src/tile/wallTorch.ts");
+var chargeEnemy_1 = __webpack_require__(/*! ../entity/enemy/chargeEnemy */ "./src/entity/enemy/chargeEnemy.ts");
+var shotgun_1 = __webpack_require__(/*! ../weapon/shotgun */ "./src/weapon/shotgun.ts");
+var heart_1 = __webpack_require__(/*! ../item/heart */ "./src/item/heart.ts");
+var spear_1 = __webpack_require__(/*! ../weapon/spear */ "./src/weapon/spear.ts");
+var player_1 = __webpack_require__(/*! ../player/player */ "./src/player/player.ts");
+var crabEnemy_1 = __webpack_require__(/*! ../entity/enemy/crabEnemy */ "./src/entity/enemy/crabEnemy.ts");
+var zombieEnemy_1 = __webpack_require__(/*! ../entity/enemy/zombieEnemy */ "./src/entity/enemy/zombieEnemy.ts");
+var bigSkullEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigSkullEnemy */ "./src/entity/enemy/bigSkullEnemy.ts");
+var random_1 = __webpack_require__(/*! ../random */ "./src/random.ts");
+var lantern_1 = __webpack_require__(/*! ../item/lantern */ "./src/item/lantern.ts");
+var dualdagger_1 = __webpack_require__(/*! ../weapon/dualdagger */ "./src/weapon/dualdagger.ts");
+var pot_1 = __webpack_require__(/*! ../entity/object/pot */ "./src/entity/object/pot.ts");
+var bishopEnemy_1 = __webpack_require__(/*! ../entity/enemy/bishopEnemy */ "./src/entity/enemy/bishopEnemy.ts");
+var rockResource_1 = __webpack_require__(/*! ../entity/resource/rockResource */ "./src/entity/resource/rockResource.ts");
+var mushrooms_1 = __webpack_require__(/*! ../entity/object/mushrooms */ "./src/entity/object/mushrooms.ts");
+var armoredzombieEnemy_1 = __webpack_require__(/*! ../entity/enemy/armoredzombieEnemy */ "./src/entity/enemy/armoredzombieEnemy.ts");
+var tombStone_1 = __webpack_require__(/*! ../entity/object/tombStone */ "./src/entity/object/tombStone.ts");
+var pumpkin_1 = __webpack_require__(/*! ../entity/object/pumpkin */ "./src/entity/object/pumpkin.ts");
+var queenEnemy_1 = __webpack_require__(/*! ../entity/enemy/queenEnemy */ "./src/entity/enemy/queenEnemy.ts");
+var frogEnemy_1 = __webpack_require__(/*! ../entity/enemy/frogEnemy */ "./src/entity/enemy/frogEnemy.ts");
+var bigKnightEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigKnightEnemy */ "./src/entity/enemy/bigKnightEnemy.ts");
+var enemy_1 = __webpack_require__(/*! ../entity/enemy/enemy */ "./src/entity/enemy/enemy.ts");
+var fireWizard_1 = __webpack_require__(/*! ../entity/enemy/fireWizard */ "./src/entity/enemy/fireWizard.ts");
+var energyWizard_1 = __webpack_require__(/*! ../entity/enemy/energyWizard */ "./src/entity/enemy/energyWizard.ts");
+var reverb_1 = __webpack_require__(/*! ../reverb */ "./src/reverb.ts");
+var astarclass_1 = __webpack_require__(/*! ../astarclass */ "./src/astarclass.ts");
+var warhammer_1 = __webpack_require__(/*! ../weapon/warhammer */ "./src/weapon/warhammer.ts");
+var spellbook_1 = __webpack_require__(/*! ../weapon/spellbook */ "./src/weapon/spellbook.ts");
+var torch_1 = __webpack_require__(/*! ../item/torch */ "./src/item/torch.ts");
+var rookEnemy_1 = __webpack_require__(/*! ../entity/enemy/rookEnemy */ "./src/entity/enemy/rookEnemy.ts");
+var beamEffect_1 = __webpack_require__(/*! ../beamEffect */ "./src/beamEffect.ts");
+var environment_1 = __webpack_require__(/*! ../environment */ "./src/environment.ts");
+var pickaxe_1 = __webpack_require__(/*! ../weapon/pickaxe */ "./src/weapon/pickaxe.ts");
+var occultistEnemy_1 = __webpack_require__(/*! ../entity/enemy/occultistEnemy */ "./src/entity/enemy/occultistEnemy.ts");
+var puddle_1 = __webpack_require__(/*! ../tile/decorations/puddle */ "./src/tile/decorations/puddle.ts");
+var decoration_1 = __webpack_require__(/*! ../tile/decorations/decoration */ "./src/tile/decorations/decoration.ts");
+var bomb_1 = __webpack_require__(/*! ../entity/object/bomb */ "./src/entity/object/bomb.ts");
+var sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
+var block_1 = __webpack_require__(/*! ../entity/object/block */ "./src/entity/object/block.ts");
+var armoredSkullEnemy_1 = __webpack_require__(/*! ../entity/enemy/armoredSkullEnemy */ "./src/entity/enemy/armoredSkullEnemy.ts");
 // #endregion
 // #region Enums & Interfaces
 /**
@@ -26011,9 +26011,7 @@ var Spellbook = /** @class */ (function (_super) {
             if (flag) {
                 if (_this.wielder.game.rooms[_this.wielder.levelID] === _this.wielder.game.room)
                     sound_1.Sound.hit();
-                var hitX = 0.5 * (_this.wielder.x - newX);
-                var hitY = 0.5 * (_this.wielder.y - newY);
-                _this.wielder.setHitXY(hitX, hitY);
+                _this.wielder.setHitXY(newX, newY);
                 _this.game.rooms[_this.wielder.levelID].tick(_this.wielder);
                 if (_this.wielder === _this.game.players[_this.game.localPlayerID])
                     _this.game.shakeScreen(10 * _this.wielder.hitX, 10 * _this.wielder.hitY);

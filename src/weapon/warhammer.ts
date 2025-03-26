@@ -1,5 +1,5 @@
 import { Weapon } from "./weapon";
-import { Room } from "../room";
+import { Room } from "../room/room";
 import { Sound } from "../sound";
 import { Direction } from "../game";
 

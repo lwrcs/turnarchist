@@ -3,7 +3,7 @@ import { Game } from "../game";
 import { WizardEnemy } from "../entity/enemy/wizardEnemy";
 import { Player } from "../player/player";
 import { Entity } from "../entity/entity";
-import { Room } from "../room";
+import { Room } from "../room/room";
 import { GenericParticle } from "../particle/genericParticle";
 import { Sound } from "../sound";
 import { HitWarning } from "../hitWarning";

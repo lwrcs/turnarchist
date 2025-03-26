@@ -1,6 +1,6 @@
 import { Game } from "../game";
 import { Weapon } from "./weapon";
-import { Room } from "../room";
+import { Room } from "../room/room";
 import { Sound } from "../sound";
 import { PlayerFireball } from "../projectile/playerFireball";
 import type { Entity } from "../entity/entity";
@@ -110,9 +110,7 @@ export class Spellbook extends Weapon {
         this.wielder.game.rooms[this.wielder.levelID] === this.wielder.game.room
       )
         Sound.hit();
-      const hitX = 0.5 * (this.wielder.x - newX);
-      const hitY = 0.5 * (this.wielder.y - newY);
-      this.wielder.setHitXY(hitX, hitY);
+      this.wielder.setHitXY(newX, newY);
 
       this.game.rooms[this.wielder.levelID].tick(this.wielder);
       if (this.wielder === this.game.players[this.game.localPlayerID])

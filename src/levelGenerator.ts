@@ -1,5 +1,5 @@
 import { ChatMessage, Game } from "./game";
-import { Room, RoomType } from "./room";
+import { Room, RoomType } from "./room/room";
 import { Door } from "./tile/door";
 import { LevelConstants } from "./levelConstants";
 import { Random } from "./random";

@@ -1,5 +1,5 @@
 import { Game } from "../game";
-import { Room } from "../room";
+import { Room } from "../room/room";
 import { Equippable } from "./equippable";
 import { GameConstants } from "../gameConstants";
 import { Utils } from "../utils";

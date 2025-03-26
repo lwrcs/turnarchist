@@ -1,7 +1,7 @@
 import { Drawable } from "../drawable";
 import { Entity } from "../entity/entity";
 import { Player } from "../player/player";
-import { Room } from "../room";
+import { Room } from "../room/room";
 
 export class Particle extends Drawable {
   x: number;

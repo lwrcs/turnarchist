@@ -3,7 +3,7 @@ import { Game } from "./game";
 import { GameConstants } from "./gameConstants";
 import { Particle } from "./particle/particle";
 import { Projectile } from "./projectile/projectile";
-import { Room } from "./room";
+import { Room } from "./room/room";
 
 interface Point {
   x: number;

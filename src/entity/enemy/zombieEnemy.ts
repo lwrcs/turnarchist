@@ -1,6 +1,6 @@
 import { Entity, EntityDirection } from "../entity";
 import { Direction, Game } from "../../game";
-import { Room } from "../../room";
+import { Room } from "../../room/room";
 import { Player } from "../../player/player";
 import { HitWarning } from "../../hitWarning";
 import { GenericParticle } from "../../particle/genericParticle";

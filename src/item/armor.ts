@@ -1,6 +1,6 @@
 import { Game } from "../game";
 import { LevelConstants } from "../levelConstants";
-import { Room } from "../room";
+import { Room } from "../room/room";
 import { Equippable } from "./equippable";
 
 export class Armor extends Equippable {

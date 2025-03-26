@@ -1,6 +1,6 @@
 import { Item } from "./item";
 import { Game } from "../game";
-import { Room } from "../room";
+import { Room } from "../room/room";
 import { Sound } from "../sound";
 
 export class Coin extends Item {

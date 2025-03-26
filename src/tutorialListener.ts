@@ -1,6 +1,6 @@
 import { globalEventBus } from "./eventBus";
 import { Enemy } from "./entity/enemy/enemy";
-import { Room, RoomType } from "./room";
+import { Room, RoomType } from "./room/room";
 import { Game } from "./game";
 import { DownLadder } from "./tile/downLadder";
 import { Door, DoorType } from "./tile/door";

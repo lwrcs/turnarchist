@@ -1,6 +1,6 @@
 import { Game } from "../game";
 import { Tile, SkinType } from "./tile";
-import { Room } from "../room";
+import { Room } from "../room/room";
 import { Player } from "../player/player";
 import { InsideLevelDoor } from "./insideLevelDoor";
 import { Entity } from "../entity/entity";

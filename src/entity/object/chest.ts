@@ -1,5 +1,5 @@
 import { Game } from "../../game";
-import { Room } from "../../room";
+import { Room } from "../../room/room";
 import { Entity } from "../entity";
 import { Coin } from "../../item/coin";
 import { EntityType } from "../entity";

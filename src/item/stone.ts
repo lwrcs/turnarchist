@@ -1,7 +1,7 @@
 import { Item } from "./item";
 import { Player } from "../player/player";
 import { Game } from "../game";
-import { Room } from "../room";
+import { Room } from "../room/room";
 import { TextParticle } from "../particle/textParticle";
 import { GameConstants } from "../gameConstants";
 

@@ -1,5 +1,5 @@
 import { Direction, Game } from "../../game";
-import { Room } from "../../room";
+import { Room } from "../../room/room";
 import { astar } from "../../astarclass";
 import { SpikeTrap } from "../../tile/spiketrap";
 import { Player } from "../../player/player";

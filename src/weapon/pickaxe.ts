@@ -1,5 +1,5 @@
 import { Weapon } from "./weapon";
-import { Room } from "../room";
+import { Room } from "../room/room";
 
 export class Pickaxe extends Weapon {
   static itemName = "pickaxe";

@@ -1,5 +1,5 @@
 import { GameConstants } from "./gameConstants";
-import { EnemyType, Room, RoomType } from "./room";
+import { EnemyType, Room, RoomType } from "./room/room";
 import { Player } from "./player/player";
 import { Door, DoorType } from "./tile/door";
 import { Sound } from "./sound";

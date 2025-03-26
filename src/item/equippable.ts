@@ -1,6 +1,6 @@
 import { Item } from "./item";
 import { Game } from "../game";
-import { Room } from "../room";
+import { Room } from "../room/room";
 import { Player } from "../player/player";
 
 export class Equippable extends Item {

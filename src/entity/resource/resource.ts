@@ -1,7 +1,7 @@
 import { Item } from "../../item/item";
 import { Game } from "../../game";
 import { Key } from "../../item/key";
-import { Room } from "../../room";
+import { Room } from "../../room/room";
 import { Heart } from "../../item/heart";
 import { Armor } from "../../item/armor";
 import { Entity } from "../entity";

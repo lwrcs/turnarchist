@@ -1,6 +1,6 @@
 import { Game } from "../game";
 import { Weapon } from "./weapon";
-import { Room } from "../room";
+import { Room } from "../room/room";
 import { Sound } from "../sound";
 import { SlashParticle } from "../particle/slashParticle";
 import { Crate } from "../entity/object/crate";

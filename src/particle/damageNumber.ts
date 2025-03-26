@@ -1,6 +1,6 @@
 import { Game } from "../game";
 import { GameConstants } from "../gameConstants";
-import { Room } from "../room";
+import { Room } from "../room/room";
 import { Particle } from "./particle";
 
 export class DamageNumber extends Particle {

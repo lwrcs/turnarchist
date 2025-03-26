@@ -1,5 +1,5 @@
 import { LightSource } from "./lightSource";
-import { Room } from "./room";
+import { Room } from "./room/room";
 
 export class Lighting {
   static momentaryLight = (

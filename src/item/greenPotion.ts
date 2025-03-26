@@ -2,7 +2,7 @@ import { Item } from "./item";
 import { Player } from "../player/player";
 import { Game } from "../game";
 import { Sound } from "../sound";
-import { Room } from "../room";
+import { Room } from "../room/room";
 import { Usable } from "./usable";
 
 export class GreenPotion extends Usable {

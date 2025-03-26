@@ -1,5 +1,5 @@
 import { Game } from "../../game";
-import { Room } from "../../room";
+import { Room } from "../../room/room";
 import { Floor } from "../../tile/floor";
 import { HitWarning } from "../../hitWarning";
 import { SkullEnemy } from "./skullEnemy";
@@ -19,7 +19,7 @@ import { FireWizardEnemy } from "./fireWizard";
 import { QueenEnemy } from "./queenEnemy";
 import { ArmoredzombieEnemy } from "./armoredzombieEnemy";
 import { RookEnemy } from "./rookEnemy";
-import { RoomType } from "../../room";
+import { RoomType } from "../../room/room";
 import { ArmoredSkullEnemy } from "./armoredSkullEnemy";
 
 export class Spawner extends Enemy {
