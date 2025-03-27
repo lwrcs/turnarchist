@@ -945,14 +945,6 @@ export class Game {
     Game.fillText(text, x, y);
   };
 
-  drawStuff = (delta: number) => {
-    this.room.drawShadeLayer();
-    this.room.drawColorLayer();
-    this.room.drawBloomLayer(delta);
-    //this.room.drawShade(delta);
-    this.room.drawOverShade(delta);
-  };
-
   drawStartScreen = (delta: number) => {
     let startString = "Welcome to Turnarchist";
 

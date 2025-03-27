@@ -7,9 +7,11 @@ import { GameConstants } from "../gameConstants";
 
 export class PlayerInputHandler {
   private player: Player;
+  private mostRecentInput: string;
 
   constructor(player: Player) {
     this.player = player;
+    this.mostRecentInput = "keyboard";
 
     if (player.isLocalPlayer) {
       this.setupListeners();
@@ -90,7 +92,7 @@ export class PlayerInputHandler {
         break;
       case InputEnum.SPACE:
         const player = this.player;
-        player.inventory.mostRecentInput = "keyboard";
+        this.mostRecentInput = "keyboard";
 
         if (player.game.chatOpen) return;
 
@@ -108,15 +110,17 @@ export class PlayerInputHandler {
           player.inventory.isOpen ||
           player.game.levelState === LevelState.IN_LEVEL
         ) {
-          player.inventory.space();
+          this.mostRecentInput = "keyboard";
+
+          player.inventory.itemUse();
         }
         break;
       case InputEnum.COMMA:
-        this.player.inventory.mostRecentInput = "keyboard";
+        this.mostRecentInput = "keyboard";
         this.player.inventory.left();
         break;
       case InputEnum.PERIOD:
-        this.player.inventory.mostRecentInput = "keyboard";
+        this.mostRecentInput = "keyboard";
         this.player.inventory.right();
         break;
       case InputEnum.LEFT_CLICK:
@@ -127,7 +131,7 @@ export class PlayerInputHandler {
         break;
       case InputEnum.MOUSE_MOVE:
         //when mouse moves
-        this.player.inventory.mostRecentInput = "mouse";
+        this.mostRecentInput = "mouse";
         this.player.inventory.mouseMove();
         this.faceMouse();
         this.player.setTileCursorPosition();
@@ -141,8 +145,8 @@ export class PlayerInputHandler {
       case InputEnum.NUMBER_7:
       case InputEnum.NUMBER_8:
       case InputEnum.NUMBER_9:
-        this.player.inventory.mostRecentInput = "keyboard";
-        this.player.inventory.handleNumKey(input - 13);
+        this.mostRecentInput = "keyboard";
+        this.handleNumKey(input - 13);
         break;
       case InputEnum.EQUALS:
         this.player.game.increaseScale();
@@ -156,8 +160,51 @@ export class PlayerInputHandler {
     }
   }
 
+  handleNumKey = (num: number) => {
+    this.mostRecentInput = "keyboard";
+    if (num <= 5) {
+      this.player.inventory.selX = Math.max(
+        0,
+        Math.min(num - 1, this.player.inventory.cols - 1),
+      );
+      this.player.inventory.selY = 0;
+      this.player.inventory.itemUse();
+    } else {
+      if (GameConstants.DEVELOPER_MODE) {
+        switch (num) {
+          case 6:
+            GameConstants.SET_COLOR_LAYER_COMPOSITE_OPERATION(false, true);
+            break;
+          case 7:
+            GameConstants.SET_COLOR_LAYER_COMPOSITE_OPERATION(false);
+            break;
+        }
+      }
+      {
+        switch (num) {
+          case 9:
+            GameConstants.ctxBlurEnabled = !GameConstants.ctxBlurEnabled;
+            this.player.game.pushMessage(
+              "Custom shade color is now " +
+                (GameConstants.ctxBlurEnabled ? "on" : "off"),
+            );
+            break;
+          case 8:
+            GameConstants.BLUR_ENABLED = !GameConstants.BLUR_ENABLED;
+            break;
+        }
+      }
+    }
+  };
+
   handleMouseRightClick() {
-    this.player.inventory.mouseRightClick();
+    this.mostRecentInput = "mouse";
+    const { x, y } = MouseCursor.getInstance().getPosition();
+    const bounds = this.player.inventory.isPointInInventoryBounds(x, y);
+
+    if (bounds.inBounds) {
+      this.player.inventory.drop();
+    }
   }
 
   handleMouseLeftClick() {
@@ -165,7 +212,7 @@ export class PlayerInputHandler {
     const cursor = MouseCursor.getInstance();
     const { x, y } = cursor.getPosition();
 
-    player.inventory.mostRecentInput = "mouse";
+    this.mostRecentInput = "mouse";
 
     if (player.dead) {
       player.restart();
@@ -193,7 +240,9 @@ export class PlayerInputHandler {
       ) {
         player.openVendingMachine.space();
       } else {
-        inventory.mouseLeftClick();
+        this.mostRecentInput = "mouse";
+        const { x, y } = MouseCursor.getInstance().getPosition();
+        const bounds = this.player.inventory.isPointInInventoryBounds(x, y);
       }
       return;
     }

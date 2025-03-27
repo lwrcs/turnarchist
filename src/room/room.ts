@@ -2471,7 +2471,7 @@ export class Room {
         }
         */
 
-        const fillStyle = `rgba(0, 0, 0, ${computedAlpha})`;
+        const fillStyle = `rgba(0, 0, 0, ${computedAlpha * 0.5})`;
 
         if (fillStyle !== lastFillStyle) {
           this.shadeOffscreenCtx.fillStyle = fillStyle;

@@ -233,27 +233,6 @@ export class Inventory {
     }
   };
 
-  mouseLeftClick = () => {
-    this.mostRecentInput = "mouse";
-    const { x, y } = MouseCursor.getInstance().getPosition();
-    const bounds = this.isPointInInventoryBounds(x, y);
-
-    // Only close inventory if clicking outside
-    //if (!this.isPointInInventoryBounds(x, y) && this.open) {
-    //this.close();
-    //}
-  };
-
-  mouseRightClick = () => {
-    this.mostRecentInput = "mouse";
-    const { x, y } = MouseCursor.getInstance().getPosition();
-    const bounds = this.isPointInInventoryBounds(x, y);
-
-    if (bounds.inBounds) {
-      this.drop();
-    }
-  };
-
   leftQuickbar = () => {
     this.mostRecentInput = "keyboard";
 
@@ -268,40 +247,6 @@ export class Inventory {
   spaceQuickbar = () => {
     this.mostRecentInput = "keyboard";
     this.itemUse();
-  };
-
-  handleNumKey = (num: number) => {
-    this.mostRecentInput = "keyboard";
-    if (num <= 5) {
-      this.selX = Math.max(0, Math.min(num - 1, this.cols - 1));
-      this.selY = 0;
-      this.itemUse();
-    } else {
-      if (GameConstants.DEVELOPER_MODE) {
-        switch (num) {
-          case 6:
-            GameConstants.SET_COLOR_LAYER_COMPOSITE_OPERATION(false, true);
-            break;
-          case 7:
-            GameConstants.SET_COLOR_LAYER_COMPOSITE_OPERATION(false);
-            break;
-        }
-      }
-      {
-        switch (num) {
-          case 9:
-            GameConstants.ctxBlurEnabled = !GameConstants.ctxBlurEnabled;
-            this.game.pushMessage(
-              "Custom shade color is now " +
-                (GameConstants.ctxBlurEnabled ? "on" : "off"),
-            );
-            break;
-          case 8:
-            GameConstants.BLUR_ENABLED = !GameConstants.BLUR_ENABLED;
-            break;
-        }
-      }
-    }
   };
 
   mouseMove = () => {

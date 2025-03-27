@@ -186,6 +186,8 @@ export class Player extends Drawable {
   };
 
   isMouseAboveFloor = (offsetY: number = 0) => {
+    if (this.game.levelState === LevelState.LEVEL_GENERATION) return false;
+
     return !(
       !this.game.room.tileInside(
         this.mouseToTile().x,
@@ -245,26 +247,7 @@ export class Player extends Drawable {
         return { direction: Direction.RIGHT, x: this.x + 1, y: this.y };
       }
     }
-    /*
-    // Fall back to angle-based approach for diagonal mouse positions
-    const playerScreenX = GameConstants.WIDTH / 2;
-    const playerScreenY = GameConstants.HEIGHT / 2;
-    const dx = Input.mouseX - playerScreenX;
-    const dy = Input.mouseY - playerScreenY;
 
-    let angle = (Math.atan2(-dy, dx) * 180) / Math.PI;
-    if (angle < 0) angle += 360;
-
-    if (angle >= 310 || angle < 10) {
-      return { direction: Direction.RIGHT, x: this.x + 1, y: this.y };
-    } else if (angle >= 40 && angle < 140) {
-      return { direction: Direction.UP, x: this.x, y: this.y - 1 };
-    } else if (angle >= 130 && angle < 230) {
-      return { direction: Direction.LEFT, x: this.x - 1, y: this.y };
-    } else if (angle >= 220 && angle < 320) {
-      return { direction: Direction.DOWN, x: this.x, y: this.y + 1 };
-    }
-      */
     return null;
   };
 

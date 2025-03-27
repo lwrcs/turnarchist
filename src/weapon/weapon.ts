@@ -133,7 +133,7 @@ export abstract class Weapon extends Equippable {
 
       this.attackAnimation(newX, newY);
       this.game.rooms[this.wielder.levelID].tick(this.wielder);
-      this.shakeScreen();
+      this.shakeScreen(newX, newY);
       this.degrade();
 
       setTimeout(() => {
@@ -158,11 +158,11 @@ export abstract class Weapon extends Equippable {
     );
   };
 
-  shakeScreen = () => {
+  shakeScreen = (eX: number, eY: number) => {
     if (
       this.wielder.game.rooms[this.wielder.levelID] === this.wielder.game.room
     )
-      this.game.shakeScreen(10 * this.wielder.hitX, 10 * this.wielder.hitY);
+      this.wielder.shakeScreen(this.wielder.x, this.wielder.y, eX, eY);
   };
 
   hitSound = () => {

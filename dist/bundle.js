@@ -9668,13 +9668,6 @@ var Game = /** @class */ (function () {
                 }
             }
         };
-        this.drawStuff = function (delta) {
-            _this.room.drawShadeLayer();
-            _this.room.drawColorLayer();
-            _this.room.drawBloomLayer(delta);
-            //this.room.drawShade(delta);
-            _this.room.drawOverShade(delta);
-        };
         this.drawStartScreen = function (delta) {
             var startString = "Welcome to Turnarchist";
             Game.ctx.globalAlpha = _this.startScreenAlpha;
@@ -12161,23 +12154,6 @@ var Inventory = /** @class */ (function () {
                 }
             }
         };
-        this.mouseLeftClick = function () {
-            _this.mostRecentInput = "mouse";
-            var _a = mouseCursor_1.MouseCursor.getInstance().getPosition(), x = _a.x, y = _a.y;
-            var bounds = _this.isPointInInventoryBounds(x, y);
-            // Only close inventory if clicking outside
-            //if (!this.isPointInInventoryBounds(x, y) && this.open) {
-            //this.close();
-            //}
-        };
-        this.mouseRightClick = function () {
-            _this.mostRecentInput = "mouse";
-            var _a = mouseCursor_1.MouseCursor.getInstance().getPosition(), x = _a.x, y = _a.y;
-            var bounds = _this.isPointInInventoryBounds(x, y);
-            if (bounds.inBounds) {
-                _this.drop();
-            }
-        };
         this.leftQuickbar = function () {
             _this.mostRecentInput = "keyboard";
             _this.left();
@@ -12189,38 +12165,6 @@ var Inventory = /** @class */ (function () {
         this.spaceQuickbar = function () {
             _this.mostRecentInput = "keyboard";
             _this.itemUse();
-        };
-        this.handleNumKey = function (num) {
-            _this.mostRecentInput = "keyboard";
-            if (num <= 5) {
-                _this.selX = Math.max(0, Math.min(num - 1, _this.cols - 1));
-                _this.selY = 0;
-                _this.itemUse();
-            }
-            else {
-                if (gameConstants_1.GameConstants.DEVELOPER_MODE) {
-                    switch (num) {
-                        case 6:
-                            gameConstants_1.GameConstants.SET_COLOR_LAYER_COMPOSITE_OPERATION(false, true);
-                            break;
-                        case 7:
-                            gameConstants_1.GameConstants.SET_COLOR_LAYER_COMPOSITE_OPERATION(false);
-                            break;
-                    }
-                }
-                {
-                    switch (num) {
-                        case 9:
-                            gameConstants_1.GameConstants.ctxBlurEnabled = !gameConstants_1.GameConstants.ctxBlurEnabled;
-                            _this.game.pushMessage("Custom shade color is now " +
-                                (gameConstants_1.GameConstants.ctxBlurEnabled ? "on" : "off"));
-                            break;
-                        case 8:
-                            gameConstants_1.GameConstants.BLUR_ENABLED = !gameConstants_1.GameConstants.BLUR_ENABLED;
-                            break;
-                    }
-                }
-            }
         };
         this.mouseMove = function () {
             _this.mostRecentInput = "mouse";
@@ -17966,6 +17910,8 @@ var Player = /** @class */ (function (_super) {
         };
         _this.isMouseAboveFloor = function (offsetY) {
             if (offsetY === void 0) { offsetY = 0; }
+            if (_this.game.levelState === game_1.LevelState.LEVEL_GENERATION)
+                return false;
             return !(!_this.game.room.tileInside(_this.mouseToTile().x, _this.mouseToTile(offsetY).y) ||
                 (_this.game.room.tileInside(_this.mouseToTile().x, _this.mouseToTile(offsetY).y) &&
                     _this.game.room.roomArray[_this.mouseToTile().x][_this.mouseToTile(offsetY).y].isSolid() &&
@@ -18008,26 +17954,6 @@ var Player = /** @class */ (function (_super) {
                     return { direction: game_1.Direction.RIGHT, x: _this.x + 1, y: _this.y };
                 }
             }
-            /*
-            // Fall back to angle-based approach for diagonal mouse positions
-            const playerScreenX = GameConstants.WIDTH / 2;
-            const playerScreenY = GameConstants.HEIGHT / 2;
-            const dx = Input.mouseX - playerScreenX;
-            const dy = Input.mouseY - playerScreenY;
-        
-            let angle = (Math.atan2(-dy, dx) * 180) / Math.PI;
-            if (angle < 0) angle += 360;
-        
-            if (angle >= 310 || angle < 10) {
-              return { direction: Direction.RIGHT, x: this.x + 1, y: this.y };
-            } else if (angle >= 40 && angle < 140) {
-              return { direction: Direction.UP, x: this.x, y: this.y - 1 };
-            } else if (angle >= 130 && angle < 230) {
-              return { direction: Direction.LEFT, x: this.x - 1, y: this.y };
-            } else if (angle >= 220 && angle < 320) {
-              return { direction: Direction.DOWN, x: this.x, y: this.y + 1 };
-            }
-              */
             return null;
         };
         _this.moveWithMouse = function () {
@@ -18642,6 +18568,38 @@ var gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameCon
 var PlayerInputHandler = /** @class */ (function () {
     function PlayerInputHandler(player) {
         var _this = this;
+        this.handleNumKey = function (num) {
+            _this.mostRecentInput = "keyboard";
+            if (num <= 5) {
+                _this.player.inventory.selX = Math.max(0, Math.min(num - 1, _this.player.inventory.cols - 1));
+                _this.player.inventory.selY = 0;
+                _this.player.inventory.itemUse();
+            }
+            else {
+                if (gameConstants_1.GameConstants.DEVELOPER_MODE) {
+                    switch (num) {
+                        case 6:
+                            gameConstants_1.GameConstants.SET_COLOR_LAYER_COMPOSITE_OPERATION(false, true);
+                            break;
+                        case 7:
+                            gameConstants_1.GameConstants.SET_COLOR_LAYER_COMPOSITE_OPERATION(false);
+                            break;
+                    }
+                }
+                {
+                    switch (num) {
+                        case 9:
+                            gameConstants_1.GameConstants.ctxBlurEnabled = !gameConstants_1.GameConstants.ctxBlurEnabled;
+                            _this.player.game.pushMessage("Custom shade color is now " +
+                                (gameConstants_1.GameConstants.ctxBlurEnabled ? "on" : "off"));
+                            break;
+                        case 8:
+                            gameConstants_1.GameConstants.BLUR_ENABLED = !gameConstants_1.GameConstants.BLUR_ENABLED;
+                            break;
+                    }
+                }
+            }
+        };
         this.ignoreDirectionInput = function () {
             return (_this.player.inventory.isOpen ||
                 _this.player.dead ||
@@ -18675,6 +18633,7 @@ var PlayerInputHandler = /** @class */ (function () {
             }
         };
         this.player = player;
+        this.mostRecentInput = "keyboard";
         if (player.isLocalPlayer) {
             this.setupListeners();
         }
@@ -18750,7 +18709,7 @@ var PlayerInputHandler = /** @class */ (function () {
                 break;
             case input_1.InputEnum.SPACE:
                 var player = this.player;
-                player.inventory.mostRecentInput = "keyboard";
+                this.mostRecentInput = "keyboard";
                 if (player.game.chatOpen)
                     return;
                 if (player.dead) {
@@ -18763,15 +18722,16 @@ var PlayerInputHandler = /** @class */ (function () {
                 }
                 if (player.inventory.isOpen ||
                     player.game.levelState === game_1.LevelState.IN_LEVEL) {
-                    player.inventory.space();
+                    this.mostRecentInput = "keyboard";
+                    player.inventory.itemUse();
                 }
                 break;
             case input_1.InputEnum.COMMA:
-                this.player.inventory.mostRecentInput = "keyboard";
+                this.mostRecentInput = "keyboard";
                 this.player.inventory.left();
                 break;
             case input_1.InputEnum.PERIOD:
-                this.player.inventory.mostRecentInput = "keyboard";
+                this.mostRecentInput = "keyboard";
                 this.player.inventory.right();
                 break;
             case input_1.InputEnum.LEFT_CLICK:
@@ -18782,7 +18742,7 @@ var PlayerInputHandler = /** @class */ (function () {
                 break;
             case input_1.InputEnum.MOUSE_MOVE:
                 //when mouse moves
-                this.player.inventory.mostRecentInput = "mouse";
+                this.mostRecentInput = "mouse";
                 this.player.inventory.mouseMove();
                 this.faceMouse();
                 this.player.setTileCursorPosition();
@@ -18796,8 +18756,8 @@ var PlayerInputHandler = /** @class */ (function () {
             case input_1.InputEnum.NUMBER_7:
             case input_1.InputEnum.NUMBER_8:
             case input_1.InputEnum.NUMBER_9:
-                this.player.inventory.mostRecentInput = "keyboard";
-                this.player.inventory.handleNumKey(input - 13);
+                this.mostRecentInput = "keyboard";
+                this.handleNumKey(input - 13);
                 break;
             case input_1.InputEnum.EQUALS:
                 this.player.game.increaseScale();
@@ -18811,13 +18771,18 @@ var PlayerInputHandler = /** @class */ (function () {
         }
     };
     PlayerInputHandler.prototype.handleMouseRightClick = function () {
-        this.player.inventory.mouseRightClick();
+        this.mostRecentInput = "mouse";
+        var _a = mouseCursor_1.MouseCursor.getInstance().getPosition(), x = _a.x, y = _a.y;
+        var bounds = this.player.inventory.isPointInInventoryBounds(x, y);
+        if (bounds.inBounds) {
+            this.player.inventory.drop();
+        }
     };
     PlayerInputHandler.prototype.handleMouseLeftClick = function () {
         var player = this.player;
         var cursor = mouseCursor_1.MouseCursor.getInstance();
         var _a = cursor.getPosition(), x = _a.x, y = _a.y;
-        player.inventory.mostRecentInput = "mouse";
+        this.mostRecentInput = "mouse";
         if (player.dead) {
             player.restart();
             return;
@@ -18834,7 +18799,9 @@ var PlayerInputHandler = /** @class */ (function () {
                 player.openVendingMachine.space();
             }
             else {
-                inventory.mouseLeftClick();
+                this.mostRecentInput = "mouse";
+                var _b = mouseCursor_1.MouseCursor.getInstance().getPosition(), x_1 = _b.x, y_1 = _b.y;
+                var bounds = this.player.inventory.isPointInInventoryBounds(x_1, y_1);
             }
             return;
         }
@@ -21640,7 +21607,7 @@ var Room = /** @class */ (function () {
                       }
                     }
                     */
-                    var fillStyle = "rgba(0, 0, 0, ".concat(computedAlpha, ")");
+                    var fillStyle = "rgba(0, 0, 0, ".concat(computedAlpha * 0.5, ")");
                     if (fillStyle !== lastFillStyle) {
                         _this.shadeOffscreenCtx.fillStyle = fillStyle;
                         lastFillStyle = fillStyle;
@@ -26234,7 +26201,7 @@ var Weapon = /** @class */ (function (_super) {
                 _this.wielder.busyAnimating = true;
                 _this.attackAnimation(newX, newY);
                 _this.game.rooms[_this.wielder.levelID].tick(_this.wielder);
-                _this.shakeScreen();
+                _this.shakeScreen(newX, newY);
                 _this.degrade();
                 setTimeout(function () {
                     _this.wielder.busyAnimating = false;
@@ -26251,9 +26218,9 @@ var Weapon = /** @class */ (function (_super) {
             _this.wielder.setHitXY(newX, newY);
             _this.game.rooms[_this.wielder.levelID].particles.push(new attackAnimation_1.AttackAnimation(newX, newY, _this.name, _this.wielder.direction));
         };
-        _this.shakeScreen = function () {
+        _this.shakeScreen = function (eX, eY) {
             if (_this.wielder.game.rooms[_this.wielder.levelID] === _this.wielder.game.room)
-                _this.game.shakeScreen(10 * _this.wielder.hitX, 10 * _this.wielder.hitY);
+                _this.wielder.shakeScreen(_this.wielder.x, _this.wielder.y, eX, eY);
         };
         _this.hitSound = function () {
             if (_this.wielder.game.rooms[_this.wielder.levelID] === _this.wielder.game.room)
