@@ -186,22 +186,28 @@ export class Player extends Drawable {
   };
 
   isMouseAboveFloor = (offsetY: number = 0) => {
-    if (this.game.levelState === LevelState.LEVEL_GENERATION) return false;
+    if (
+      this.game.levelState === LevelState.LEVEL_GENERATION ||
+      !this.game.started ||
+      this.game.room === null ||
+      this.game.room === undefined
+    )
+      return false;
 
     return !(
-      !this.game.room.tileInside(
+      !this.game.room?.tileInside(
         this.mouseToTile().x,
         this.mouseToTile(offsetY).y,
       ) ||
-      (this.game.room.tileInside(
+      (this.game.room?.tileInside(
         this.mouseToTile().x,
         this.mouseToTile(offsetY).y,
       ) &&
-        this.game.room.roomArray[this.mouseToTile().x][
+        this.game.room?.roomArray[this.mouseToTile().x][
           this.mouseToTile(offsetY).y
         ].isSolid() &&
         !(
-          this.game.room.roomArray[this.mouseToTile().x][
+          this.game.room?.roomArray[this.mouseToTile().x][
             this.mouseToTile(offsetY).y
           ] instanceof Door
         ))

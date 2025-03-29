@@ -20,16 +20,18 @@ export class QueenEnemy extends Enemy {
     super(room, game, x, y);
     this.ticks = 0;
     this.frame = 0;
-    this.health = 1;
-    this.maxHealth = 1;
+    this.health = 2;
+    this.maxHealth = 2;
     this.tileX = 23;
-    this.tileY = 8;
+    this.tileY = 10;
     this.seenPlayer = false;
     this.aggro = false;
     this.name = "queen";
     this.orthogonalAttack = true;
     this.diagonalAttack = true;
     this.jumpHeight = 1;
+    this.imageParticleX = 6;
+    this.imageParticleY = 28; //includes crown particle
     if (drop) this.drop = drop;
     if (Math.random() < this.dropChance) {
       this.getDrop([
@@ -50,6 +52,7 @@ export class QueenEnemy extends Enemy {
   behavior = () => {
     this.lastX = this.x;
     this.lastY = this.y;
+    if (this.health <= 1) this.imageParticleY = 29; //no crown particle
     if (!this.dead) {
       if (this.skipNextTurns > 0) {
         this.skipNextTurns--;
@@ -183,6 +186,7 @@ export class QueenEnemy extends Enemy {
   };
 
   draw = (delta: number) => {
+    const offsetTileY = this.health <= 1 ? 0 : -2;
     if (this.dead) return;
     Game.ctx.save();
     Game.ctx.globalAlpha = this.alpha;
@@ -207,7 +211,7 @@ export class QueenEnemy extends Enemy {
         );
       Game.drawMob(
         this.tileX + Math.floor(this.frame),
-        this.tileY + this.direction * 2,
+        this.tileY + offsetTileY,
         1,
         2,
         this.x - this.drawX,

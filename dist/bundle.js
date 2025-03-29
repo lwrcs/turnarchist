@@ -5217,6 +5217,8 @@ var QueenEnemy = /** @class */ (function (_super) {
         _this.behavior = function () {
             _this.lastX = _this.x;
             _this.lastY = _this.y;
+            if (_this.health <= 1)
+                _this.imageParticleY = 29; //no crown particle
             if (!_this.dead) {
                 if (_this.skipNextTurns > 0) {
                     _this.skipNextTurns--;
@@ -5331,6 +5333,7 @@ var QueenEnemy = /** @class */ (function (_super) {
             _this.jumpY = jumpY;
         };
         _this.draw = function (delta) {
+            var offsetTileY = _this.health <= 1 ? 0 : -2;
             if (_this.dead)
                 return;
             game_1.Game.ctx.save();
@@ -5342,7 +5345,7 @@ var QueenEnemy = /** @class */ (function (_super) {
                     _this.frame = 0;
                 if (_this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, _this.x - _this.drawX, _this.y - _this.drawY, 1, 1, _this.room.shadeColor, _this.shadeAmount());
-                game_1.Game.drawMob(_this.tileX + Math.floor(_this.frame), _this.tileY + _this.direction * 2, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY - _this.jumpY, 1, 2, _this.softShadeColor, _this.shadeAmount() * (1 + _this.jumpY / 3));
+                game_1.Game.drawMob(_this.tileX + Math.floor(_this.frame), _this.tileY + offsetTileY, 1, 2, _this.x - _this.drawX, _this.y - _this.drawYOffset - _this.drawY - _this.jumpY, 1, 2, _this.softShadeColor, _this.shadeAmount() * (1 + _this.jumpY / 3));
             }
             if (!_this.cloned) {
                 if (!_this.seenPlayer) {
@@ -5356,16 +5359,18 @@ var QueenEnemy = /** @class */ (function (_super) {
         };
         _this.ticks = 0;
         _this.frame = 0;
-        _this.health = 1;
-        _this.maxHealth = 1;
+        _this.health = 2;
+        _this.maxHealth = 2;
         _this.tileX = 23;
-        _this.tileY = 8;
+        _this.tileY = 10;
         _this.seenPlayer = false;
         _this.aggro = false;
         _this.name = "queen";
         _this.orthogonalAttack = true;
         _this.diagonalAttack = true;
         _this.jumpHeight = 1;
+        _this.imageParticleX = 6;
+        _this.imageParticleY = 28; //includes crown particle
         if (drop)
             _this.drop = drop;
         if (Math.random() < _this.dropChance) {
@@ -17909,13 +17914,17 @@ var Player = /** @class */ (function (_super) {
             return _this.mouseToTile().x === _this.x && _this.mouseToTile().y === _this.y;
         };
         _this.isMouseAboveFloor = function (offsetY) {
+            var _a, _b, _c, _d;
             if (offsetY === void 0) { offsetY = 0; }
-            if (_this.game.levelState === game_1.LevelState.LEVEL_GENERATION)
+            if (_this.game.levelState === game_1.LevelState.LEVEL_GENERATION ||
+                !_this.game.started ||
+                _this.game.room === null ||
+                _this.game.room === undefined)
                 return false;
-            return !(!_this.game.room.tileInside(_this.mouseToTile().x, _this.mouseToTile(offsetY).y) ||
-                (_this.game.room.tileInside(_this.mouseToTile().x, _this.mouseToTile(offsetY).y) &&
-                    _this.game.room.roomArray[_this.mouseToTile().x][_this.mouseToTile(offsetY).y].isSolid() &&
-                    !(_this.game.room.roomArray[_this.mouseToTile().x][_this.mouseToTile(offsetY).y] instanceof door_1.Door)));
+            return !(!((_a = _this.game.room) === null || _a === void 0 ? void 0 : _a.tileInside(_this.mouseToTile().x, _this.mouseToTile(offsetY).y)) ||
+                (((_b = _this.game.room) === null || _b === void 0 ? void 0 : _b.tileInside(_this.mouseToTile().x, _this.mouseToTile(offsetY).y)) &&
+                    ((_c = _this.game.room) === null || _c === void 0 ? void 0 : _c.roomArray[_this.mouseToTile().x][_this.mouseToTile(offsetY).y].isSolid()) &&
+                    !(((_d = _this.game.room) === null || _d === void 0 ? void 0 : _d.roomArray[_this.mouseToTile().x][_this.mouseToTile(offsetY).y]) instanceof door_1.Door)));
         };
         _this.mouseInLine = function () {
             var mouseTile = _this.mouseToTile();
