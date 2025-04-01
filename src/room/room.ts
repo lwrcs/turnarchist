@@ -1498,7 +1498,11 @@ export class Room {
   // #region ENTERING / EXITING ROOM METHODS
 
   exitLevel = () => {
-    this.game.onResize(); // stupid hack to keep fps high
+    //this.game.onResize(); // stupid hack to keep fps high
+
+    Game.shade_canvases = {};
+    Game.text_rendering_canvases = {};
+
     for (let door of this.doors) {
       if (
         door.linkedDoor.lightSource !== null &&
@@ -2628,6 +2632,7 @@ export class Room {
       this.particles,
       this.items,
     );
+
     for (const i in this.game.players) {
       if (this.game.rooms[this.game.players[i].levelID] === this) {
         if (

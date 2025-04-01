@@ -551,7 +551,7 @@ export class Game {
     }
     times.push(timestamp);
     fps = times.length;
-
+    this.refreshDimensions();
     // Update game logic
     if (
       Math.floor(timestamp / (1000 / 60)) >
@@ -561,6 +561,7 @@ export class Game {
     }
     //delta = 0.1;
     // Render the frame with capped delta
+
     this.draw(delta * GameConstants.ANIMATION_SPEED * 1);
 
     // Request the next frame
@@ -571,6 +572,9 @@ export class Game {
   };
 
   update = () => {
+    console.log("shade canvases:", Object.keys(Game.shade_canvases).length);
+    this.refreshDimensions();
+
     Input.checkIsTapHold();
 
     if (
@@ -700,6 +704,11 @@ export class Game {
   decreaseScale = () => {
     GameConstants.DECREASE_SCALE();
     this.onResize();
+  };
+
+  refreshDimensions = () => {
+    Game.ctx.canvas.setAttribute("width", `${GameConstants.WIDTH}`);
+    Game.ctx.canvas.setAttribute("height", `${GameConstants.HEIGHT}`);
   };
 
   onResize = () => {
@@ -982,6 +991,9 @@ export class Game {
   };
 
   draw = (delta: number) => {
+    //Game.ctx.canvas.setAttribute("role", "presentation");
+
+    Game.ctx.clearRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
     Game.ctx.save(); // Save the current canvas state
 
     // Reset transformations to ensure the black background covers the entire canvas

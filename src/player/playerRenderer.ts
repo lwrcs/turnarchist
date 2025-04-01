@@ -361,6 +361,7 @@ export class PlayerRenderer {
           );
         }
       }
+      this.drawCooldownBar();
       if (this.player.inventory.getArmor())
         this.player.inventory.getArmor().drawGUI(delta, this.player.maxHealth);
     } else {
@@ -441,6 +442,32 @@ export class PlayerRenderer {
 
     //this.drawInventoryButton(delta);
     if (this.player.menu.open) this.player.menu.drawMenu();
+    Game.ctx.restore();
+  };
+
+  drawCooldownBar = () => {
+    Game.ctx.save();
+    if (this.player.cooldownRemaining > 0) {
+      this.player.cooldownRemaining =
+        1 -
+        (Date.now() - this.player.movement.lastMoveTime) /
+          this.player.movement.adjustedCooldown;
+    } else this.player.cooldownRemaining = 0;
+    const tile = GameConstants.TILESIZE;
+    Game.drawFX(
+      12 +
+        Math.max(
+          0,
+          Math.min(14, Math.floor(17 * this.player.cooldownRemaining)),
+        ),
+      2,
+      1,
+      1,
+      0.45,
+      GameConstants.HEIGHT / tile - 2.125,
+      1,
+      1,
+    );
     Game.ctx.restore();
   };
 

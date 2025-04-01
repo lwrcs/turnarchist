@@ -84,6 +84,8 @@ export class Player extends Drawable {
   actionProcessor: PlayerActionProcessor;
   movement: PlayerMovement;
 
+  cooldownRemaining: number;
+
   private renderer: PlayerRenderer;
 
   private drawMoveQueue: {
@@ -144,6 +146,8 @@ export class Player extends Drawable {
     this.renderer = new PlayerRenderer(this);
 
     this.bestiary = new Bestiary(this.game, this);
+
+    this.cooldownRemaining = 0;
   }
 
   get hitX() {
@@ -186,31 +190,23 @@ export class Player extends Drawable {
   };
 
   isMouseAboveFloor = (offsetY: number = 0) => {
+    const mouseX = this.mouseToTile().x;
+    const mouseY = this.mouseToTile(offsetY).y;
     if (
       this.game.levelState === LevelState.LEVEL_GENERATION ||
       !this.game.started ||
-      this.game.room === null ||
-      this.game.room === undefined
+      !this.game.room ||
+      !this.game.room.roomArray ||
+      !Array.isArray(this.game.room.roomArray[mouseX]) ||
+      this.game.room.roomArray[mouseX][mouseY] === undefined
     )
       return false;
 
     return !(
-      !this.game.room?.tileInside(
-        this.mouseToTile().x,
-        this.mouseToTile(offsetY).y,
-      ) ||
-      (this.game.room?.tileInside(
-        this.mouseToTile().x,
-        this.mouseToTile(offsetY).y,
-      ) &&
-        this.game.room?.roomArray[this.mouseToTile().x][
-          this.mouseToTile(offsetY).y
-        ].isSolid() &&
-        !(
-          this.game.room?.roomArray[this.mouseToTile().x][
-            this.mouseToTile(offsetY).y
-          ] instanceof Door
-        ))
+      !this.game.room?.tileInside(mouseX, mouseY) ||
+      (this.game.room?.tileInside(mouseX, mouseY) &&
+        this.game.room?.roomArray[mouseX][mouseY].isSolid() &&
+        !(this.game.room?.roomArray[mouseX][mouseY] instanceof Door))
     );
   };
 

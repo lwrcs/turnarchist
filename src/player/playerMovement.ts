@@ -7,7 +7,8 @@ export class PlayerMovement {
   private moveQueue: { x: number; y: number; direction: Direction }[] = [];
   private isProcessingQueue: boolean = false;
   private animationFrameId: number | null = null;
-  private lastMoveTime: number = 0;
+  lastMoveTime: number = 0;
+  adjustedCooldown: number = 0;
 
   constructor(player: Player) {
     this.player = player;
@@ -20,7 +21,7 @@ export class PlayerMovement {
       this.player.direction = direction;
       this.player.tryMove(x, y);
     } else {
-      this.queueMove(x, y, direction);
+      if (this.canQueue) this.queueMove(x, y, direction);
     }
   }
 
@@ -40,13 +41,26 @@ export class PlayerMovement {
   canMove(): boolean {
     const now = Date.now();
     const cooldown = GameConstants.MOVEMENT_COOLDOWN;
-    const adjustedCooldown = cooldown - this.moveQueue.length * 25;
-
-    if (now - this.lastMoveTime >= adjustedCooldown) {
+    this.adjustedCooldown = cooldown - this.moveQueue.length * 25;
+    this.player.cooldownRemaining =
+      now - this.lastMoveTime / this.adjustedCooldown;
+    if (now - this.lastMoveTime >= this.adjustedCooldown) {
       this.lastMoveTime = now;
       return true;
     }
+    return false;
+  }
 
+  canQueue(): boolean {
+    const now = Date.now();
+    const cooldown = GameConstants.MOVEMENT_COOLDOWN;
+    this.adjustedCooldown = cooldown - this.moveQueue.length * 25;
+    this.player.cooldownRemaining =
+      now - this.lastMoveTime / this.adjustedCooldown;
+    if (now - this.lastMoveTime >= this.adjustedCooldown / 5) {
+      this.lastMoveTime = now;
+      return true;
+    }
     return false;
   }
 

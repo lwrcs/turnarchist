@@ -9432,6 +9432,7 @@ var Game = /** @class */ (function () {
             }
             times.push(timestamp);
             fps = times.length;
+            _this.refreshDimensions();
             // Update game logic
             if (Math.floor(timestamp / (1000 / 60)) >
                 Math.floor(_this.previousFrameTimestamp / (1000 / 60))) {
@@ -9446,6 +9447,8 @@ var Game = /** @class */ (function () {
             _this.previousFrameTimestamp = timestamp;
         };
         this.update = function () {
+            console.log("shade canvases:", Object.keys(Game.shade_canvases).length);
+            _this.refreshDimensions();
             input_1.Input.checkIsTapHold();
             if (input_1.Input.lastPressTime !== 0 &&
                 Date.now() - input_1.Input.lastPressTime > gameConstants_1.GameConstants.KEY_REPEAT_TIME) {
@@ -9553,6 +9556,10 @@ var Game = /** @class */ (function () {
         this.decreaseScale = function () {
             gameConstants_1.GameConstants.DECREASE_SCALE();
             _this.onResize();
+        };
+        this.refreshDimensions = function () {
+            Game.ctx.canvas.setAttribute("width", "".concat(gameConstants_1.GameConstants.WIDTH));
+            Game.ctx.canvas.setAttribute("height", "".concat(gameConstants_1.GameConstants.HEIGHT));
         };
         this.onResize = function () {
             // Determine device pixel ratio
@@ -9700,6 +9707,8 @@ var Game = /** @class */ (function () {
             Game.ctx.globalAlpha = 1;
         };
         this.draw = function (delta) {
+            //Game.ctx.canvas.setAttribute("role", "presentation");
+            Game.ctx.clearRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
             Game.ctx.save(); // Save the current canvas state
             // Reset transformations to ensure the black background covers the entire canvas
             Game.ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -10346,8 +10355,8 @@ var GameConstants = /** @class */ (function () {
     GameConstants.MIN_SCALE = 1;
     GameConstants.SWIPE_THRESH = Math.pow(25, 2); // (size of swipe threshold circle)^2
     GameConstants.HOLD_THRESH = 250; // milliseconds
-    GameConstants.KEY_REPEAT_TIME = 500; // millseconds
-    GameConstants.MOVEMENT_COOLDOWN = 150; // milliseconds
+    GameConstants.KEY_REPEAT_TIME = 300; // millseconds
+    GameConstants.MOVEMENT_COOLDOWN = 200; // milliseconds
     GameConstants.MOVE_WITH_MOUSE = false;
     GameConstants.CHAT_APPEAR_TIME = 2500;
     GameConstants.CHAT_FADE_TIME = 500;
@@ -17916,15 +17925,19 @@ var Player = /** @class */ (function (_super) {
         _this.isMouseAboveFloor = function (offsetY) {
             var _a, _b, _c, _d;
             if (offsetY === void 0) { offsetY = 0; }
+            var mouseX = _this.mouseToTile().x;
+            var mouseY = _this.mouseToTile(offsetY).y;
             if (_this.game.levelState === game_1.LevelState.LEVEL_GENERATION ||
                 !_this.game.started ||
-                _this.game.room === null ||
-                _this.game.room === undefined)
+                !_this.game.room ||
+                !_this.game.room.roomArray ||
+                !Array.isArray(_this.game.room.roomArray[mouseX]) ||
+                _this.game.room.roomArray[mouseX][mouseY] === undefined)
                 return false;
-            return !(!((_a = _this.game.room) === null || _a === void 0 ? void 0 : _a.tileInside(_this.mouseToTile().x, _this.mouseToTile(offsetY).y)) ||
-                (((_b = _this.game.room) === null || _b === void 0 ? void 0 : _b.tileInside(_this.mouseToTile().x, _this.mouseToTile(offsetY).y)) &&
-                    ((_c = _this.game.room) === null || _c === void 0 ? void 0 : _c.roomArray[_this.mouseToTile().x][_this.mouseToTile(offsetY).y].isSolid()) &&
-                    !(((_d = _this.game.room) === null || _d === void 0 ? void 0 : _d.roomArray[_this.mouseToTile().x][_this.mouseToTile(offsetY).y]) instanceof door_1.Door)));
+            return !(!((_a = _this.game.room) === null || _a === void 0 ? void 0 : _a.tileInside(mouseX, mouseY)) ||
+                (((_b = _this.game.room) === null || _b === void 0 ? void 0 : _b.tileInside(mouseX, mouseY)) &&
+                    ((_c = _this.game.room) === null || _c === void 0 ? void 0 : _c.roomArray[mouseX][mouseY].isSolid()) &&
+                    !(((_d = _this.game.room) === null || _d === void 0 ? void 0 : _d.roomArray[mouseX][mouseY]) instanceof door_1.Door)));
         };
         _this.mouseInLine = function () {
             var mouseTile = _this.mouseToTile();
@@ -18475,6 +18488,7 @@ var Player = /** @class */ (function (_super) {
         _this.movement = new playerMovement_1.PlayerMovement(_this);
         _this.renderer = new playerRenderer_1.PlayerRenderer(_this);
         _this.bestiary = new bestiary_1.Bestiary(_this.game, _this);
+        _this.cooldownRemaining = 0;
         return _this;
     }
     Object.defineProperty(Player.prototype, "hitX", {
@@ -18908,6 +18922,7 @@ var PlayerMovement = /** @class */ (function () {
         this.isProcessingQueue = false;
         this.animationFrameId = null;
         this.lastMoveTime = 0;
+        this.adjustedCooldown = 0;
         this.queueHandler = function () {
             if (!_this.isProcessingQueue)
                 return;
@@ -18934,7 +18949,8 @@ var PlayerMovement = /** @class */ (function () {
             this.player.tryMove(x, y);
         }
         else {
-            this.queueMove(x, y, direction);
+            if (this.canQueue)
+                this.queueMove(x, y, direction);
         }
     };
     PlayerMovement.prototype.getTargetCoords = function (direction) {
@@ -18952,8 +18968,22 @@ var PlayerMovement = /** @class */ (function () {
     PlayerMovement.prototype.canMove = function () {
         var now = Date.now();
         var cooldown = gameConstants_1.GameConstants.MOVEMENT_COOLDOWN;
-        var adjustedCooldown = cooldown - this.moveQueue.length * 25;
-        if (now - this.lastMoveTime >= adjustedCooldown) {
+        this.adjustedCooldown = cooldown - this.moveQueue.length * 25;
+        this.player.cooldownRemaining =
+            now - this.lastMoveTime / this.adjustedCooldown;
+        if (now - this.lastMoveTime >= this.adjustedCooldown) {
+            this.lastMoveTime = now;
+            return true;
+        }
+        return false;
+    };
+    PlayerMovement.prototype.canQueue = function () {
+        var now = Date.now();
+        var cooldown = gameConstants_1.GameConstants.MOVEMENT_COOLDOWN;
+        this.adjustedCooldown = cooldown - this.moveQueue.length * 25;
+        this.player.cooldownRemaining =
+            now - this.lastMoveTime / this.adjustedCooldown;
+        if (now - this.lastMoveTime >= this.adjustedCooldown / 5) {
             this.lastMoveTime = now;
             return true;
         }
@@ -19215,6 +19245,7 @@ var PlayerRenderer = /** @class */ (function () {
                             offsetY, 0.75, 0.75);
                     }
                 }
+                _this.drawCooldownBar();
                 if (_this.player.inventory.getArmor())
                     _this.player.inventory.getArmor().drawGUI(delta, _this.player.maxHealth);
             }
@@ -19275,6 +19306,21 @@ var PlayerRenderer = /** @class */ (function () {
             //this.drawInventoryButton(delta);
             if (_this.player.menu.open)
                 _this.player.menu.drawMenu();
+            game_1.Game.ctx.restore();
+        };
+        this.drawCooldownBar = function () {
+            game_1.Game.ctx.save();
+            if (_this.player.cooldownRemaining > 0) {
+                _this.player.cooldownRemaining =
+                    1 -
+                        (Date.now() - _this.player.movement.lastMoveTime) /
+                            _this.player.movement.adjustedCooldown;
+            }
+            else
+                _this.player.cooldownRemaining = 0;
+            var tile = gameConstants_1.GameConstants.TILESIZE;
+            game_1.Game.drawFX(12 +
+                Math.max(0, Math.min(14, Math.floor(17 * _this.player.cooldownRemaining))), 2, 1, 1, 0.45, gameConstants_1.GameConstants.HEIGHT / tile - 2.125, 1, 1);
             game_1.Game.ctx.restore();
         };
         this.drawHurt = function (delta) {
@@ -20846,7 +20892,9 @@ var Room = /** @class */ (function () {
         // #endregion
         // #region ENTERING / EXITING ROOM METHODS
         this.exitLevel = function () {
-            _this.game.onResize(); // stupid hack to keep fps high
+            //this.game.onResize(); // stupid hack to keep fps high
+            game_1.Game.shade_canvases = {};
+            game_1.Game.text_rendering_canvases = {};
             for (var _i = 0, _a = _this.doors; _i < _a.length; _i++) {
                 var door = _a[_i];
                 if (door.linkedDoor.lightSource !== null &&
@@ -26083,7 +26131,7 @@ var Warhammer = /** @class */ (function (_super) {
         };
         _this.tileX = 22;
         _this.tileY = 2;
-        _this.damage = 3;
+        _this.damage = 2;
         _this.name = "warhammer";
         _this.durability = 25;
         _this.durabilityMax = 25;
