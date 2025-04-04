@@ -551,13 +551,19 @@ export class Game {
     }
     times.push(timestamp);
     fps = times.length;
-    this.refreshDimensions();
     // Update game logic
     if (
       Math.floor(timestamp / (1000 / 60)) >
       Math.floor(this.previousFrameTimestamp / (1000 / 60))
     ) {
       this.update();
+    }
+
+    if (
+      Math.floor(timestamp) >
+      Math.floor(this.previousFrameTimestamp) + 1000
+    ) {
+      this.refreshDimensions();
     }
     //delta = 0.1;
     // Render the frame with capped delta
@@ -572,9 +578,7 @@ export class Game {
   };
 
   update = () => {
-    console.log("shade canvases:", Object.keys(Game.shade_canvases).length);
     this.refreshDimensions();
-
     Input.checkIsTapHold();
 
     if (

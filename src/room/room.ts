@@ -2260,11 +2260,13 @@ export class Room {
   };
 
   draw = (delta: number) => {
+    if (!this.onScreen) return;
+
     if (this.active) {
       HitWarning.updateFrame(delta);
       this.drawInterval = 4;
     } else if (!this.active) {
-      this.drawInterval = 12;
+      this.drawInterval = 8;
     }
 
     this.drawTimestamp += delta;
@@ -2277,6 +2279,8 @@ export class Room {
   };
   // added a multiplier to the input rgb values to avoid clipping to white
   drawColorLayer = () => {
+    if (!this.onScreen) return;
+
     Game.ctx.save();
     // Clear the offscreen color canvas
     this.colorOffscreenCtx.clearRect(
@@ -2509,8 +2513,8 @@ export class Room {
   };
 
   drawBloomLayer = (delta: number) => {
-    if (this.game.isMobile) return;
-    if (!this.onScreen) return;
+    if (this.game.isMobile || !this.onScreen) return;
+
     Game.ctx.save();
     // Clear the offscreen shade canvas
     this.bloomOffscreenCtx.clearRect(
@@ -2610,6 +2614,8 @@ export class Room {
   };
 
   drawEntities = (delta: number, skipLocalPlayer?: boolean) => {
+    if (!this.onScreen) return;
+
     Game.ctx.save();
     let tiles = [];
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
@@ -2690,6 +2696,8 @@ export class Room {
   };
 
   drawShade = (delta: number) => {
+    if (!this.onScreen) return;
+
     Game.ctx.save();
     let bestSightRadius = 0;
     for (const p in this.game.players) {

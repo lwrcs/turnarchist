@@ -101,9 +101,12 @@ export class PlayerInputHandler {
           return;
         }
 
-        if (player.openVendingMachine) {
-          player.openVendingMachine.space();
-          return;
+        if (
+          this.player.openVendingMachine &&
+          this.player.openVendingMachine.open
+        ) {
+          this.player.openVendingMachine.space();
+          break;
         }
 
         if (
@@ -286,6 +289,24 @@ export class PlayerInputHandler {
       y,
     ).inBounds;
 
+    if (this.player.openVendingMachine && this.player.openVendingMachine.open) {
+      const isInVMUI = VendingMachine.isPointInVendingMachineBounds(
+        Input.mouseX,
+        Input.mouseY,
+        this.player.openVendingMachine,
+      );
+      if (isInVMUI) {
+        this.player.openVendingMachine.space();
+        return;
+      } else if (!isInVMUI) {
+        this.player.openVendingMachine.close();
+        this.mostRecentInput = "mouse";
+        const { x, y } = MouseCursor.getInstance().getPosition();
+        const bounds = this.player.inventory.isPointInInventoryBounds(x, y);
+      }
+      return;
+    }
+
     if (
       !this.player.inventory.isOpen &&
       this.player.inventory.isPointInInventoryButton(x, y)
@@ -301,6 +322,7 @@ export class PlayerInputHandler {
       this.handleInput(InputEnum.LEFT_CLICK);
     }
   }
+
   handleKeyboardKey(key: string) {
     switch (key.toUpperCase()) {
       case "A":

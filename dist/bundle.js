@@ -8751,24 +8751,9 @@ var VendingMachine = /** @class */ (function (_super) {
         // First check if this is the currently open vending machine
         if (!shop.open || shop !== ((_a = shop.playerOpened) === null || _a === void 0 ? void 0 : _a.openVendingMachine))
             return false;
-        var OPEN_TIME = 200; // Match the constant from drawTopLayer
-        var s = Math.min(18, (18 * (Date.now() - shop.openTime)) / OPEN_TIME); // size of box
-        var b = 2; // border
-        var g = -2; // gap
-        var ob = 1; // outer border
-        // Calculate total width and height of the UI
-        var width = (shop.costItems.length + 2) * (s + 2 * b + g) - g;
-        var height = s + 2 * b + g - g;
-        // Calculate center position (matches drawTopLayer positioning)
-        var cx = (shop.x + 0.5) * gameConstants_1.GameConstants.TILESIZE;
-        var cy = (shop.y - 1.5) * gameConstants_1.GameConstants.TILESIZE;
-        // Calculate bounds
-        var left = Math.round(cx - 0.5 * width) - ob;
-        var right = Math.round(cx - 0.5 * width) - ob + Math.round(width + 2 * ob);
-        var top = Math.round(cy - 0.5 * height) - ob;
-        var bottom = Math.round(cy - 0.5 * height) - ob + Math.round(height + 2 * ob);
-        // Check if point is within bounds
-        return x >= left && x <= right && y >= top && y <= bottom;
+        var w = gameConstants_1.GameConstants.WIDTH;
+        var h = gameConstants_1.GameConstants.HEIGHT;
+        return x >= w * 0.25 && x <= w * 0.75 && y >= h * 0.25 && y <= h * 0.5;
     };
     return VendingMachine;
 }(entity_1.Entity));
@@ -9432,11 +9417,14 @@ var Game = /** @class */ (function () {
             }
             times.push(timestamp);
             fps = times.length;
-            _this.refreshDimensions();
             // Update game logic
             if (Math.floor(timestamp / (1000 / 60)) >
                 Math.floor(_this.previousFrameTimestamp / (1000 / 60))) {
                 _this.update();
+            }
+            if (Math.floor(timestamp) >
+                Math.floor(_this.previousFrameTimestamp) + 1000) {
+                _this.refreshDimensions();
             }
             //delta = 0.1;
             // Render the frame with capped delta
@@ -9447,7 +9435,6 @@ var Game = /** @class */ (function () {
             _this.previousFrameTimestamp = timestamp;
         };
         this.update = function () {
-            console.log("shade canvases:", Object.keys(Game.shade_canvases).length);
             _this.refreshDimensions();
             input_1.Input.checkIsTapHold();
             if (input_1.Input.lastPressTime !== 0 &&
@@ -10347,7 +10334,7 @@ var GameConstants = /** @class */ (function () {
     GameConstants.isMobile = false;
     GameConstants.FPS = 120;
     GameConstants.ALPHA_ENABLED = true;
-    GameConstants.SHADE_LEVELS = 50;
+    GameConstants.SHADE_LEVELS = 25;
     GameConstants.ENTITY_SHADE_LEVELS = 10;
     GameConstants.TILESIZE = 16;
     GameConstants.SCALE = 6;
@@ -18739,9 +18726,10 @@ var PlayerInputHandler = /** @class */ (function () {
                     player.restart();
                     return;
                 }
-                if (player.openVendingMachine) {
-                    player.openVendingMachine.space();
-                    return;
+                if (this.player.openVendingMachine &&
+                    this.player.openVendingMachine.open) {
+                    this.player.openVendingMachine.space();
+                    break;
                 }
                 if (player.inventory.isOpen ||
                     player.game.levelState === game_1.LevelState.IN_LEVEL) {
@@ -18848,6 +18836,20 @@ var PlayerInputHandler = /** @class */ (function () {
         var y = input_1.Input.mouseY;
         var isInInventory = this.player.inventory.isPointInInventoryBounds(x, y).inBounds;
         var isInQuickbar = this.player.inventory.isPointInQuickbarBounds(x, y).inBounds;
+        if (this.player.openVendingMachine && this.player.openVendingMachine.open) {
+            var isInVMUI = vendingMachine_1.VendingMachine.isPointInVendingMachineBounds(input_1.Input.mouseX, input_1.Input.mouseY, this.player.openVendingMachine);
+            if (isInVMUI) {
+                this.player.openVendingMachine.space();
+                return;
+            }
+            else if (!isInVMUI) {
+                this.player.openVendingMachine.close();
+                this.mostRecentInput = "mouse";
+                var _a = mouseCursor_1.MouseCursor.getInstance().getPosition(), x_2 = _a.x, y_2 = _a.y;
+                var bounds = this.player.inventory.isPointInInventoryBounds(x_2, y_2);
+            }
+            return;
+        }
         if (!this.player.inventory.isOpen &&
             this.player.inventory.isPointInInventoryButton(x, y)) {
             this.player.inventory.open();
@@ -21491,12 +21493,14 @@ var Room = /** @class */ (function () {
             return 1 - (0.299 * color[0] + 0.587 * color[1] + 0.114 * color[2]) / 255;
         };
         this.draw = function (delta) {
+            if (!_this.onScreen)
+                return;
             if (_this.active) {
                 hitWarning_1.HitWarning.updateFrame(delta);
                 _this.drawInterval = 4;
             }
             else if (!_this.active) {
-                _this.drawInterval = 12;
+                _this.drawInterval = 8;
             }
             _this.drawTimestamp += delta;
             if (_this.drawTimestamp - _this.lastDraw >= _this.drawInterval) {
@@ -21507,6 +21511,8 @@ var Room = /** @class */ (function () {
         };
         // added a multiplier to the input rgb values to avoid clipping to white
         this.drawColorLayer = function () {
+            if (!_this.onScreen)
+                return;
             game_1.Game.ctx.save();
             // Clear the offscreen color canvas
             _this.colorOffscreenCtx.clearRect(0, 0, _this.colorOffscreenCanvas.width, _this.colorOffscreenCanvas.height);
@@ -21685,9 +21691,7 @@ var Room = /** @class */ (function () {
             game_1.Game.ctx.restore();
         };
         this.drawBloomLayer = function (delta) {
-            if (_this.game.isMobile)
-                return;
-            if (!_this.onScreen)
+            if (_this.game.isMobile || !_this.onScreen)
                 return;
             game_1.Game.ctx.save();
             // Clear the offscreen shade canvas
@@ -21752,6 +21756,8 @@ var Room = /** @class */ (function () {
             game_1.Game.ctx.restore();
         };
         this.drawEntities = function (delta, skipLocalPlayer) {
+            if (!_this.onScreen)
+                return;
             game_1.Game.ctx.save();
             var tiles = [];
             for (var x = _this.roomX; x < _this.roomX + _this.width; x++) {
@@ -21823,6 +21829,8 @@ var Room = /** @class */ (function () {
             }
         };
         this.drawShade = function (delta) {
+            if (!_this.onScreen)
+                return;
             game_1.Game.ctx.save();
             var bestSightRadius = 0;
             for (var p in _this.game.players) {
