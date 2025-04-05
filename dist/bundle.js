@@ -18631,7 +18631,10 @@ var PlayerInputHandler = /** @class */ (function () {
         this.ignoreDirectionInput = function () {
             return (_this.player.inventory.isOpen ||
                 _this.player.dead ||
-                _this.player.game.levelState !== game_1.LevelState.IN_LEVEL);
+                _this.player.game.levelState !== game_1.LevelState.IN_LEVEL ||
+                (_this.player.inventory.isPointInQuickbarBounds(input_1.Input.mouseX, input_1.Input.mouseY)
+                    .inBounds &&
+                    _this.player.game.isMobile));
         };
         this.faceMouse = function () {
             if (!gameConstants_1.GameConstants.MOVE_WITH_MOUSE)

@@ -264,7 +264,10 @@ export class PlayerInputHandler {
     return (
       this.player.inventory.isOpen ||
       this.player.dead ||
-      this.player.game.levelState !== LevelState.IN_LEVEL
+      this.player.game.levelState !== LevelState.IN_LEVEL ||
+      (this.player.inventory.isPointInQuickbarBounds(Input.mouseX, Input.mouseY)
+        .inBounds &&
+        this.player.game.isMobile)
     );
   };
 
