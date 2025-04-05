@@ -491,7 +491,7 @@ export class Entity extends Drawable {
     }
   };
 
-  kill = () => {
+  kill = (player?: Player) => {
     if (this.cloned) return;
     this.emitEnemyKilled();
     this.removeLightSource(this.lightSource);

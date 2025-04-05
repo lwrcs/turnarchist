@@ -29,27 +29,29 @@ export class Resource extends Entity {
   }
 
   hurt = (playerHitBy: Player, damage: number) => {
-    if (
-      (playerHitBy !== null &&
-        playerHitBy.inventory.getWeapon().canMine === true) ||
-      playerHitBy === null
-    ) {
-      this.healthBar.hurt();
-      this.health -= damage;
-      Sound.mine();
-    } else {
-      this.game.pushMessage("Your weapon fails to damage the rock.");
-      this.hurtCallback();
-    }
+    this.healthBar.hurt();
+    this.health -= damage;
+    Sound.mine();
+    this.hurtCallback();
+
     if (this.health <= 0) {
-      this.kill();
+      this.kill(playerHitBy);
     }
   };
 
-  kill = () => {
+  kill = (player?: Player) => {
     Sound.breakRock();
     this.dead = true;
-    this.dropLoot();
+    if (
+      (player !== null && player.inventory.getWeapon().canMine === true) ||
+      player === null
+    ) {
+      this.dropLoot();
+    } else {
+      this.game.pushMessage(
+        "You break the rock, but fail to collect any material from it.",
+      );
+    }
   };
 
   killNoBones = () => {

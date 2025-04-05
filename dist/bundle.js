@@ -6900,7 +6900,7 @@ var Entity = /** @class */ (function (_super) {
                 _this.drop.onDrop();
             }
         };
-        _this.kill = function () {
+        _this.kill = function (player) {
             if (_this.cloned)
                 return;
             _this.emitEnemyKilled();
@@ -8927,25 +8927,24 @@ var Resource = /** @class */ (function (_super) {
     function Resource(room, game, x, y) {
         var _this = _super.call(this, room, game, x, y) || this;
         _this.hurt = function (playerHitBy, damage) {
-            if ((playerHitBy !== null &&
-                playerHitBy.inventory.getWeapon().canMine === true) ||
-                playerHitBy === null) {
-                _this.healthBar.hurt();
-                _this.health -= damage;
-                sound_1.Sound.mine();
-            }
-            else {
-                _this.game.pushMessage("Your weapon fails to damage the rock.");
-                _this.hurtCallback();
-            }
+            _this.healthBar.hurt();
+            _this.health -= damage;
+            sound_1.Sound.mine();
+            _this.hurtCallback();
             if (_this.health <= 0) {
-                _this.kill();
+                _this.kill(playerHitBy);
             }
         };
-        _this.kill = function () {
+        _this.kill = function (player) {
             sound_1.Sound.breakRock();
             _this.dead = true;
-            _this.dropLoot();
+            if ((player !== null && player.inventory.getWeapon().canMine === true) ||
+                player === null) {
+                _this.dropLoot();
+            }
+            else {
+                _this.game.pushMessage("You break the rock, but fail to collect any material from it.");
+            }
         };
         _this.killNoBones = function () {
             _this.kill();
