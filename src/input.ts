@@ -456,6 +456,9 @@ window.addEventListener(
   },
   false,
 );
+
+/** 
+
 window.addEventListener(
   "touchstart",
   function (event) {
@@ -463,6 +466,7 @@ window.addEventListener(
   },
   false,
 );
+
 window.addEventListener(
   "touchend",
   function (event) {
@@ -470,6 +474,8 @@ window.addEventListener(
   },
   false,
 );
+*/
+
 window.document
   .getElementById("gameCanvas")
   .addEventListener("click", (event) => Input.mouseClickListener(event), false);
@@ -489,7 +495,7 @@ window.document
 window.document
   .getElementById("gameCanvas")
   .addEventListener("contextmenu", (event) => event.preventDefault(), false);
-
+/** 
 window.document
   .getElementById("gameCanvas")
   .addEventListener(
@@ -500,3 +506,4 @@ window.document
 window.document
   .getElementById("gameCanvas")
   .addEventListener("touchend", (event) => Input.handleTouchEnd(event), false);
+  */

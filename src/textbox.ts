@@ -20,7 +20,7 @@ export class TextBox {
     this.element = element;
     this.sentMessages = [];
 
-    this.element.addEventListener("touchstart", this.handleTouchStart);
+    //this.element.addEventListener("touchstart", this.handleTouchStart);
   }
 
   public setEnterCallback(callback: () => void): void {
