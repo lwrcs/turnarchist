@@ -79,6 +79,8 @@ import { Sound } from "../sound";
 import { Block } from "../entity/object/block";
 import { Bestiary } from "../bestiary";
 import { ArmoredSkullEnemy } from "../entity/enemy/armoredSkullEnemy";
+import { MummyEnemy } from "../entity/enemy/mummyEnemy";
+import { SpiderEnemy } from "../entity/enemy/spiderEnemy";
 
 // #endregion
 
@@ -105,6 +107,8 @@ export enum EnemyType {
   occultist = "occultist",
   bomb = "bomb",
   armoredskull = "armoredskull",
+  mummy = "mummy",
+  spider = "spider",
   // Add other enemy types here
 }
 
@@ -130,6 +134,8 @@ export const EnemyTypeMap: { [key in EnemyType]: EnemyStatic } = {
   [EnemyType.occultist]: OccultistEnemy,
   [EnemyType.bomb]: Bomb,
   [EnemyType.armoredskull]: ArmoredSkullEnemy,
+  [EnemyType.mummy]: MummyEnemy,
+  [EnemyType.spider]: SpiderEnemy,
   // Add other enemy mappings here
 };
 
@@ -186,16 +192,6 @@ export enum WallDirection {
   TOPRIGHT = "TopRight",
   BOTTOMLEFT = "BottomLeft",
   BOTTOMRIGHT = "BottomRight",
-}
-
-interface RoomDimensions {
-  width: number;
-  height: number;
-}
-
-interface EntitySpawnConfig {
-  name: Entity["name"];
-  weight: number;
 }
 
 export interface EnemyStatic {
