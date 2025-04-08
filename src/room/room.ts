@@ -81,6 +81,7 @@ import { Bestiary } from "../bestiary";
 import { ArmoredSkullEnemy } from "../entity/enemy/armoredSkullEnemy";
 import { MummyEnemy } from "../entity/enemy/mummyEnemy";
 import { SpiderEnemy } from "../entity/enemy/spiderEnemy";
+import { RoomBuilder } from "./roomBuilder";
 
 // #endregion
 
@@ -263,6 +264,7 @@ export class Room {
   lastDraw: number = 0;
   drawTimestamp: number = 0;
   drawInterval: number = 4;
+  builder: RoomBuilder;
 
   // Add a list to keep track of BeamEffect instances
   beamEffects: BeamEffect[] = [];
@@ -388,127 +390,23 @@ export class Room {
 
     //initialize the skin for the given environment
     this.skin = this.level.environment.skin;
-    if (this.type === RoomType.ROPECAVE || this.type === RoomType.CAVE)
+    if (this.type === RoomType.ROPECAVE || this.type === RoomType.CAVE) {
       this.skin = SkinType.CAVE;
-    this.buildEmptyRoom();
+    }
+    this.builder = new RoomBuilder(this);
 
     // #endregion
   }
 
   // #region TILE ADDING METHODS
 
-  private buildEmptyRoom() {
-    // fill in wall and floor
-    for (let x = this.roomX; x < this.roomX + this.width; x++) {
-      for (let y = this.roomY; y < this.roomY + this.height; y++) {
-        if (
-          this.pointInside(
-            x,
-            y,
-            this.roomX + 1,
-            this.roomY + 1,
-            this.width - 2,
-            this.height - 2,
-          )
-        ) {
-          this.roomArray[x][y] = new Floor(this, x, y);
-        } else {
-          this.roomArray[x][y] = new Wall(
-            this,
-            x,
-            y,
-            this.getWallType(
-              x,
-              y,
-              this.roomX,
-              this.roomY,
-              this.width,
-              this.height,
-            ),
-          );
-        }
-      }
-    }
-  }
-
-  private removeWall = (x: number, y: number) => {
+  removeWall = (x: number, y: number) => {
     if (this.roomArray[x][y] instanceof Wall) {
       this.roomArray[x][y] = null;
     }
     //this.innerWalls = this.innerWalls.filter((w) => w.x !== x && w.y !== y);
     //this.outerWalls = this.outerWalls.filter((w) => w.x !== x && w.y !== y);
   };
-
-  private getWallType = (
-    pointX: number,
-    pointY: number,
-    rectX: number,
-    rectY: number,
-    width: number,
-    height: number,
-  ): Array<WallDirection> => {
-    let directions: Array<WallDirection> = [];
-    if (pointY === rectY && pointX >= rectX && pointX <= rectX + width)
-      directions.push(WallDirection.NORTH);
-    if (pointY === rectY + height && pointX >= rectX && pointX <= rectX + width)
-      directions.push(WallDirection.SOUTH);
-    if (pointX === rectX && pointY >= rectY && pointY <= rectY + height)
-      directions.push(WallDirection.WEST);
-    if (pointX === rectX + width && pointY >= rectY && pointY <= rectY + height)
-      directions.push(WallDirection.EAST);
-    return directions;
-  };
-
-  private addWallBlocks(rand: () => number) {
-    let numBlocks = Game.randTable([0, 0, 1, 1, 2, 2, 2, 2, 3], rand);
-    if (this.width > 8 && rand() > 0.5) numBlocks *= 4;
-    for (let i = 0; i < numBlocks; i++) {
-      let blockW = Math.min(
-        Game.randTable([2, 2, 2, 2, 2, 2, 3, 3, 3, 4, 5], rand),
-        this.width - 4,
-      );
-      let blockH = Math.min(blockW + Game.rand(-2, 2, rand), this.height - 4);
-
-      let x = Game.rand(
-        this.roomX + 2,
-        this.roomX + this.width - blockW - 2,
-        rand,
-      );
-      let y = Game.rand(
-        this.roomY + 2,
-        this.roomY + this.height - blockH - 2,
-        rand,
-      );
-      let neighborCount = (wall: Wall) => {
-        let count = 0;
-        for (let xx = wall.x - 1; xx <= wall.x + 1; xx++) {
-          for (let yy = wall.y - 1; yy <= wall.y + 1; yy++) {
-            if (
-              this.roomArray[xx]?.[yy] instanceof Wall &&
-              !(xx === wall.x && yy === wall.y)
-            )
-              count++;
-          }
-        }
-        return count;
-      };
-
-      for (let xx = x; xx < x + blockW; xx++) {
-        for (let yy = y; yy < y + blockH; yy++) {
-          let w = new Wall(this, xx, yy);
-          this.roomArray[xx][yy] = w;
-          this.innerWalls.push(w);
-        }
-      }
-      this.innerWalls.forEach((wall) => {
-        if (neighborCount(wall) <= 1) {
-          this.removeWall(wall.x, wall.y);
-          this.roomArray[wall.x][wall.y] = new Floor(this, wall.x, wall.y);
-          this.innerWalls = this.innerWalls.filter((w) => w !== wall);
-        }
-      });
-    }
-  }
 
   private addTorches(
     numTorches: number,
@@ -1054,7 +952,7 @@ export class Room {
     //this.addChests(10, rand);
     let factor = Game.rand(1, 36, rand);
 
-    if (factor < 30) this.addWallBlocks(rand);
+    if (factor < 30) this.builder.addWallBlocks(rand);
     if (factor % 4 === 0) this.addChasms(rand);
     this.addTorchesByArea();
     if (factor > 15)
@@ -1235,7 +1133,7 @@ export class Room {
   populateCave = (rand: () => number) => {
     let factor = Game.rand(1, 36, rand);
 
-    this.addWallBlocks(rand);
+    this.builder.addWallBlocks(rand);
 
     if (factor > 15)
       this.addSpikeTraps(Game.randTable([0, 0, 0, 1, 1, 2, 5], rand), rand);
@@ -2980,7 +2878,7 @@ export class Room {
 
   // #region UTILITIES
 
-  private pointInside(
+  pointInside(
     x: number,
     y: number,
     rX: number,
