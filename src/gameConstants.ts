@@ -21,6 +21,7 @@ import { Hammer } from "./item/hammer";
 import { SpellbookPage } from "./item/spellbookPage";
 import { BombItem } from "./item/bombItem";
 import { BestiaryBook } from "./item/bestiaryBook";
+import { Greataxe } from "./weapon/greataxe";
 
 export class GameConstants {
   static readonly VERSION = "v1.0.5"; //"v0.6.3";
@@ -164,7 +165,7 @@ export class GameConstants {
   static readonly STARTING_INVENTORY = [Dagger, Torch];
   static readonly STARTING_DEV_INVENTORY = [
     Dagger,
-    Warhammer,
+    Greataxe,
     DualDagger,
     Torch,
     GodStone,

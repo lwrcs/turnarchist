@@ -22,6 +22,8 @@ export class Resource extends Entity {
     this.health = 1;
     this.chainPushable = false;
     this.name = "resource";
+    this.imageParticleX = 0;
+    this.imageParticleY = 25;
   }
 
   get type() {
@@ -33,6 +35,7 @@ export class Resource extends Entity {
     this.health -= damage;
     Sound.mine();
     this.hurtCallback();
+    this.createHitParticles();
 
     if (this.health <= 0) {
       this.kill(playerHitBy);

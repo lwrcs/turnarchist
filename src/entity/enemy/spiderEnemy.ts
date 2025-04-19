@@ -8,6 +8,12 @@ import { GameConstants } from "../../gameConstants";
 import { Enemy } from "./enemy";
 import { Utils } from "../../utils";
 
+enum SpiderState {
+  VISIBLE,
+  HIDING,
+  HIDDEN,
+}
+
 export class SpiderEnemy extends Enemy {
   ticks: number;
   frame: number;
@@ -18,6 +24,8 @@ export class SpiderEnemy extends Enemy {
   static difficulty: number = 1;
   static tileX: number = 8;
   static tileY: number = 4;
+  state: SpiderState;
+  revealTick: number;
 
   constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
     super(room, game, x, y);
@@ -33,8 +41,11 @@ export class SpiderEnemy extends Enemy {
     this.orthogonalAttack = true;
     this.imageParticleX = 3;
     this.imageParticleY = 24;
+    this.state = SpiderState.HIDDEN;
     //if (drop) this.drop = drop;
     this.drawYOffset = 0.175;
+    this.revealTick = 0;
+
     if (Math.random() < this.dropChance) {
       this.getDrop([
         "weapon",
@@ -48,7 +59,7 @@ export class SpiderEnemy extends Enemy {
   }
 
   get alertText() {
-    return `New Enemy Spotted: Crab 
+    return `New Enemy Spotted: Spider 
     Health: ${this.health}
     Attack Pattern: Omnidirectional
     Moves every other turn`;
@@ -56,6 +67,13 @@ export class SpiderEnemy extends Enemy {
 
   hit = (): number => {
     return 1;
+  };
+
+  toggleReveal = () => {
+    let ticksSince = this.ticks - this.revealTick;
+    if (this.state === SpiderState.HIDDEN && ticksSince > 8)
+      this.state = SpiderState.HIDING;
+    this.revealTick = this.ticks;
   };
 
   behavior = () => {
@@ -243,18 +261,21 @@ export class SpiderEnemy extends Enemy {
           this.room.shadeColor,
           this.shadeAmount(),
         );
-      Game.drawMob(
-        this.tileX,
-        this.tileY + this.direction,
-        1,
-        1,
-        this.x - this.drawX + rumbleX,
-        this.y - this.drawYOffset - this.drawY + rumbleY,
-        1 * this.crushX,
-        1 * this.crushY,
-        this.softShadeColor,
-        this.shadeAmount(),
-      );
+      if ((this.state = SpiderState.VISIBLE)) {
+        //only draw when visible
+        Game.drawMob(
+          this.tileX,
+          this.tileY + this.direction,
+          1,
+          1,
+          this.x - this.drawX + rumbleX,
+          this.y - this.drawYOffset - this.drawY + rumbleY,
+          1 * this.crushX,
+          1 * this.crushY,
+          this.softShadeColor,
+          this.shadeAmount(),
+        );
+      }
       if (this.crushed) {
         this.crushAnim(delta);
       }
