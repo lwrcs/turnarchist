@@ -149,8 +149,12 @@ export class VendingMachine extends Entity {
       }
 
       // Create the new item instance
-      let newItem = new (this.item.constructor as { new (): Item })();
-      newItem = newItem.constructor(this.room, this.x, this.y);
+      let newItem = new (this.item.constructor as any)(
+        this.room,
+        this.x,
+        this.y,
+      );
+      //     newItem = newItem.constructor(this.room, this.x, this.y);
 
       // **Attempt to add the item directly to the player's inventory**
       const addedSuccessfully = this.playerOpened.inventory.addItem(newItem);

@@ -24,6 +24,7 @@ import { Spellbook } from "../weapon/spellbook";
 import { SpellbookPage } from "./spellbookPage";
 import { Backpack } from "./backpack";
 import { BombItem } from "./bombItem";
+import { Greataxe } from "../weapon/greataxe";
 
 interface Drop {
   itemType: string;
@@ -37,6 +38,7 @@ export const ItemTypeMap: { [key: string]: typeof Item } = {
   warhammer: Warhammer,
   spear: Spear,
   spellbook: Spellbook,
+  greataxe: Greataxe,
 
   armor: Armor,
 
@@ -71,9 +73,10 @@ export class DropTable {
   static drops: Drop[] = [
     // Weapons
     { itemType: "dualdagger", dropWeight: 1, category: ["weapon", "melee"] },
-    { itemType: "warhammer", dropWeight: 2, category: ["weapon", "melee"] },
-    { itemType: "spear", dropWeight: 5, category: ["weapon", "melee"] },
+    { itemType: "warhammer", dropWeight: 3, category: ["weapon", "melee"] },
+    { itemType: "spear", dropWeight: 3, category: ["weapon", "melee"] },
     { itemType: "spellbook", dropWeight: 1, category: ["weapon", "magic"] },
+    { itemType: "greataxe", dropWeight: 1, category: ["weapon", "melee"] },
 
     // Equipment
     { itemType: "armor", dropWeight: 8, category: ["equipment"] },

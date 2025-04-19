@@ -7672,8 +7672,8 @@ class VendingMachine extends entity_1.Entity {
                     }
                 }
                 // Create the new item instance
-                let newItem = new this.item.constructor();
-                newItem = newItem.constructor(this.room, this.x, this.y);
+                let newItem = new this.item.constructor(this.room, this.x, this.y);
+                //     newItem = newItem.constructor(this.room, this.x, this.y);
                 // **Attempt to add the item directly to the player's inventory**
                 const addedSuccessfully = this.playerOpened.inventory.addItem(newItem);
                 if (!addedSuccessfully) {
@@ -12294,11 +12294,13 @@ const spellbook_1 = __webpack_require__(/*! ../weapon/spellbook */ "./src/weapon
 const spellbookPage_1 = __webpack_require__(/*! ./spellbookPage */ "./src/item/spellbookPage.ts");
 const backpack_1 = __webpack_require__(/*! ./backpack */ "./src/item/backpack.ts");
 const bombItem_1 = __webpack_require__(/*! ./bombItem */ "./src/item/bombItem.ts");
+const greataxe_1 = __webpack_require__(/*! ../weapon/greataxe */ "./src/weapon/greataxe.ts");
 exports.ItemTypeMap = {
     dualdagger: dualdagger_1.DualDagger,
     warhammer: warhammer_1.Warhammer,
     spear: spear_1.Spear,
     spellbook: spellbook_1.Spellbook,
+    greataxe: greataxe_1.Greataxe,
     armor: armor_1.Armor,
     pickaxe: pickaxe_1.Pickaxe,
     hammer: hammer_1.Hammer,
@@ -12327,9 +12329,10 @@ _a = DropTable;
 DropTable.drops = [
     // Weapons
     { itemType: "dualdagger", dropWeight: 1, category: ["weapon", "melee"] },
-    { itemType: "warhammer", dropWeight: 2, category: ["weapon", "melee"] },
-    { itemType: "spear", dropWeight: 5, category: ["weapon", "melee"] },
+    { itemType: "warhammer", dropWeight: 3, category: ["weapon", "melee"] },
+    { itemType: "spear", dropWeight: 3, category: ["weapon", "melee"] },
     { itemType: "spellbook", dropWeight: 1, category: ["weapon", "magic"] },
+    { itemType: "greataxe", dropWeight: 1, category: ["weapon", "melee"] },
     // Equipment
     { itemType: "armor", dropWeight: 8, category: ["equipment"] },
     // Tools
@@ -22657,7 +22660,7 @@ class Greataxe extends weapon_1.Weapon {
                 }
             }, this.hitDelay);
         };
-        this.tileX = 22;
+        this.tileX = 24;
         this.tileY = 2;
         this.damage = 2;
         this.name = "greataxe";

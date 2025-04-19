@@ -10,7 +10,7 @@ export class Greataxe extends Weapon {
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
 
-    this.tileX = 22;
+    this.tileX = 24;
     this.tileY = 2;
     this.damage = 2;
     this.name = "greataxe";
