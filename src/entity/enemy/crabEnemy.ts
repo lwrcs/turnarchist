@@ -55,7 +55,7 @@ export class CrabEnemy extends Enemy {
   }
 
   hit = (): number => {
-    return 1;
+    return 0.5;
   };
 
   behavior = () => {
