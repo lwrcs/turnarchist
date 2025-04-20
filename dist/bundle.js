@@ -22638,7 +22638,7 @@ class SpikeTrap extends tile_1.Tile {
                         this.room.game.rooms[this.room.game.players[i].levelID] &&
                         this.room.game.players[i].x === this.x &&
                         this.room.game.players[i].y === this.y)
-                        this.room.game.players[i].hurt(1, "spike trap");
+                        this.room.game.players[i].hurt(0.5, "spike trap");
                 }
             }
             if (this.tickCount === 3)

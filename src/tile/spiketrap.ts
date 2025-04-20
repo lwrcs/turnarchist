@@ -36,7 +36,7 @@ export class SpikeTrap extends Tile {
           this.room.game.players[i].x === this.x &&
           this.room.game.players[i].y === this.y
         )
-          this.room.game.players[i].hurt(1, "spike trap");
+          this.room.game.players[i].hurt(0.5, "spike trap");
       }
     }
 

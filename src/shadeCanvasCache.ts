@@ -4,7 +4,7 @@ interface ShadeEntry {
   canvas: ShadeCanvas;
   lastUsed: number; // Updated every frame/tick
 }
-
+//NOT IN USE
 export class ShadeCanvasCache {
   private cache: Map<string, ShadeEntry> = new Map();
   private maxSize: number;
