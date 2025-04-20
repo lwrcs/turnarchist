@@ -2564,6 +2564,10 @@ export class Room {
           return 1;
         } else if (b instanceof Entity) {
           return -1;
+        } else if (a instanceof Particle) {
+          return 1;
+        } else if (b instanceof Particle) {
+          return -1;
         } else return 0;
       } else {
         return a.drawableY - b.drawableY;

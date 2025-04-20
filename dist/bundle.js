@@ -13521,7 +13521,7 @@ class Item extends drawable_1.Drawable {
                     Math.round(Math.sin(Date.now() / 25) + 1 / 2) /
                         2 /
                         gameConstants_1.GameConstants.TILESIZE;
-            game_1.Game.drawItem(this.tileX, this.tileY, 1, 2, x + shake, y - 1, this.w, this.h);
+            game_1.Game.drawItem(this.tileX, this.tileY, 1, 2, x + shake, y - 1 + this.iconOffset, this.w, this.h);
             game_1.Game.ctx.globalAlpha = 1;
             let countToUse = count ? count : this.stackCount;
             let countText = countToUse <= 1 ? "" : "" + countToUse;
@@ -13583,6 +13583,7 @@ class Item extends drawable_1.Drawable {
         this.pickupOffsetY = 1;
         this.chestOffsetY = 0;
         this.sineAnimateFactor = 1;
+        this.iconOffset = 0;
     }
     static add(room, x, y, ...rest) {
         return new this(room, x, y, ...rest);
@@ -16001,6 +16002,30 @@ class AttackAnimation extends particle_1.Particle {
                         break;
                 }
                 break;
+            case "spear":
+                this.frames = 5;
+                this.tileY = 32;
+                this.tileX = 22;
+                this.animationSpeed = 0.5;
+                switch (direction) {
+                    case game_1.Direction.DOWN:
+                        this.yOffset -= 0.75;
+                        this.xOffset += 0.125;
+                        break;
+                    case game_1.Direction.UP:
+                        //needs to draw behind player but its fine for now
+                        this.yOffset += 1;
+                        this.xOffset -= 0.125;
+                        break;
+                    case game_1.Direction.LEFT:
+                        this.xOffset += 1;
+                        this.yOffset += 0.25;
+                        break;
+                    case game_1.Direction.RIGHT:
+                        this.xOffset -= 1;
+                        this.yOffset += 0.25;
+                        break;
+                }
         }
         switch (direction) {
             case game_1.Direction.DOWN:
@@ -18550,6 +18575,7 @@ const skullEnemy_1 = __webpack_require__(/*! ../entity/enemy/skullEnemy */ "./sr
 const barrel_1 = __webpack_require__(/*! ../entity/object/barrel */ "./src/entity/object/barrel.ts");
 const crate_1 = __webpack_require__(/*! ../entity/object/crate */ "./src/entity/object/crate.ts");
 const armor_1 = __webpack_require__(/*! ../item/armor */ "./src/item/armor.ts");
+const particle_1 = __webpack_require__(/*! ../particle/particle */ "./src/particle/particle.ts");
 const spiketrap_1 = __webpack_require__(/*! ../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const fountainTile_1 = __webpack_require__(/*! ../tile/fountainTile */ "./src/tile/fountainTile.ts");
 const coffinTile_1 = __webpack_require__(/*! ../tile/coffinTile */ "./src/tile/coffinTile.ts");
@@ -19997,6 +20023,12 @@ class Room {
                         return 1;
                     }
                     else if (b instanceof entity_1.Entity) {
+                        return -1;
+                    }
+                    else if (a instanceof particle_1.Particle) {
+                        return 1;
+                    }
+                    else if (b instanceof particle_1.Particle) {
                         return -1;
                     }
                     else
@@ -23325,6 +23357,8 @@ class Greataxe extends weapon_1.Weapon {
         this.durability = 10;
         this.durabilityMax = 10;
         this.hitDelay = 225;
+        this.offsetY = 0;
+        this.iconOffset = 0.2;
     }
 }
 exports.Greataxe = Greataxe;
@@ -23541,11 +23575,14 @@ class Spear extends weapon_1.Weapon {
                     e.hurt(this.wielder, 1);
                 this.hitSound();
                 this.wielder.setHitXY(newX, newY);
-                this.game.rooms[this.wielder.levelID].particles.push(new attackAnimation_1.AttackAnimation(newX, newY, "spear", this.wielder.direction));
+                //this.game.rooms[this.wielder.levelID].particles.push(
+                //new AttackAnimation(newX, newY, "spear", this.wielder.direction),
+                //);
                 this.game.rooms[this.wielder.levelID].particles.push(new attackAnimation_1.AttackAnimation(newX2, newY2, "spear", this.wielder.direction));
                 this.game.rooms[this.wielder.levelID].tick(this.wielder);
-                if (this.wielder === this.game.players[this.game.localPlayerID])
-                    this.game.shakeScreen(10 * this.wielder.hitX, 10 * this.wielder.hitY);
+                this.shakeScreen(newX, newY);
+                //if (this.wielder === this.game.players[this.game.localPlayerID])
+                //this.game.shakeScreen(10 * this.wielder.hitX, 10 * this.wielder.hitY);
                 this.degrade();
                 return false;
             }
@@ -23553,6 +23590,7 @@ class Spear extends weapon_1.Weapon {
                 if (this.wielder.game.room === this.wielder.game.rooms[this.wielder.levelID])
                     sound_1.Sound.hit();
                 this.wielder.setHitXY(newX, newY);
+                this.shakeScreen(newX, newY);
                 this.game.rooms[this.wielder.levelID].particles.push(new attackAnimation_1.AttackAnimation(newX, newY, "spear", this.wielder.direction));
                 this.game.rooms[this.wielder.levelID].tick(this.wielder);
                 if (this.wielder === this.game.players[this.game.localPlayerID])
@@ -23566,6 +23604,8 @@ class Spear extends weapon_1.Weapon {
         this.name = "spear";
         this.description =
             "Hits enemies in front of you within a range of 2 tiles.";
+        this.iconOffset = 0.1; //default 0
+        this.offsetY = 0; //default -0.25
     }
 }
 exports.Spear = Spear;

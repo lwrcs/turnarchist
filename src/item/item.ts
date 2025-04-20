@@ -37,6 +37,7 @@ export class Item extends Drawable {
   chestOffsetY: number;
   sineAnimateFactor: number;
   stack: number;
+  iconOffset: number;
 
   // Constructor for the Item class
   constructor(level: Room, x: number, y: number) {
@@ -69,6 +70,7 @@ export class Item extends Drawable {
     this.pickupOffsetY = 1;
     this.chestOffsetY = 0;
     this.sineAnimateFactor = 1;
+    this.iconOffset = 0;
   }
 
   static add<
@@ -250,7 +252,7 @@ export class Item extends Drawable {
       1,
       2,
       x + shake,
-      y - 1,
+      y - 1 + this.iconOffset,
       this.w,
       this.h,
     );

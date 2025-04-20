@@ -130,6 +130,36 @@ export class AttackAnimation extends Particle {
             break;
         }
         break;
+
+      case "spear":
+        this.frames = 5;
+        this.tileY = 32;
+        this.tileX = 22;
+        this.animationSpeed = 0.5;
+
+        switch (direction) {
+          case Direction.DOWN:
+            this.yOffset -= 0.75;
+            this.xOffset += 0.125;
+
+            break;
+          case Direction.UP:
+            //needs to draw behind player but its fine for now
+            this.yOffset += 1;
+            this.xOffset -= 0.125;
+
+            break;
+          case Direction.LEFT:
+            this.xOffset += 1;
+            this.yOffset += 0.25;
+
+            break;
+          case Direction.RIGHT:
+            this.xOffset -= 1;
+            this.yOffset += 0.25;
+
+            break;
+        }
     }
     switch (direction) {
       case Direction.DOWN:

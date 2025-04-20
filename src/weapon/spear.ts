@@ -15,6 +15,8 @@ export class Spear extends Weapon {
     this.name = "spear";
     this.description =
       "Hits enemies in front of you within a range of 2 tiles.";
+    this.iconOffset = 0.1; //default 0
+    this.offsetY = 0; //default -0.25
   }
 
   weaponMove = (newX: number, newY: number): boolean => {
@@ -46,15 +48,17 @@ export class Spear extends Weapon {
       this.hitSound();
       this.wielder.setHitXY(newX, newY);
 
-      this.game.rooms[this.wielder.levelID].particles.push(
-        new AttackAnimation(newX, newY, "spear", this.wielder.direction),
-      );
+      //this.game.rooms[this.wielder.levelID].particles.push(
+      //new AttackAnimation(newX, newY, "spear", this.wielder.direction),
+      //);
       this.game.rooms[this.wielder.levelID].particles.push(
         new AttackAnimation(newX2, newY2, "spear", this.wielder.direction),
       );
       this.game.rooms[this.wielder.levelID].tick(this.wielder);
-      if (this.wielder === this.game.players[this.game.localPlayerID])
-        this.game.shakeScreen(10 * this.wielder.hitX, 10 * this.wielder.hitY);
+      this.shakeScreen(newX, newY);
+
+      //if (this.wielder === this.game.players[this.game.localPlayerID])
+      //this.game.shakeScreen(10 * this.wielder.hitX, 10 * this.wielder.hitY);
       this.degrade();
       return false;
     }
@@ -64,6 +68,7 @@ export class Spear extends Weapon {
       )
         Sound.hit();
       this.wielder.setHitXY(newX, newY);
+      this.shakeScreen(newX, newY);
 
       this.game.rooms[this.wielder.levelID].particles.push(
         new AttackAnimation(newX, newY, "spear", this.wielder.direction),
