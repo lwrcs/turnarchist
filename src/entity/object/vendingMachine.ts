@@ -48,48 +48,68 @@ export class VendingMachine extends Entity {
     this.interactable = true;
 
     this.costItems = [];
-
     this.item = item;
     this.name = "vending machine";
+
     if (this.item instanceof Shotgun) {
-      let g = new BlueGem(room, 0, 0);
-      g.stackCount = Game.randTable([7], Random.rand);
-      this.costItems = [g];
+      this.setCost(3);
     } else if (this.item instanceof Heart) {
-      let c = new Coin(room, 0, 0);
-      c.stackCount = 10;
-      this.costItems = [c];
-      this.quantity = 3;
+      this.setCost(1, [new Coin(room, 0, 0)], [9, 10, 11], 3); // Uses default random cost
     } else if (this.item instanceof Spear) {
-      let g = new GreenGem(room, 0, 0);
-      g.stackCount = Game.randTable([5], Random.rand);
-      this.costItems = [g];
+      this.setCost(2); // Uses default random cost
     } else if (this.item instanceof Armor) {
-      let g = new GreenGem(room, 0, 0);
-      g.stackCount = Game.randTable([5], Random.rand);
-      this.costItems = [g];
+      this.setCost(2); // Uses default random cost
     } else if (this.item instanceof DualDagger) {
-      let g = new BlueGem(room, 0, 0);
-      g.stackCount = Game.randTable([5], Random.rand);
-      this.costItems = [g];
+      this.setCost(3); // Uses default random cost
     } else if (this.item instanceof Lantern) {
-      let c = new Coin(room, 0, 0);
-      c.stackCount = Game.randTable([50], Random.rand);
-      this.costItems = [c];
+      this.setCost(2); // Uses default random cost
     } else if (this.item instanceof Warhammer) {
-      let g = new RedGem(room, 0, 0);
-      g.stackCount = Game.randTable([5], Random.rand);
-      this.costItems = [g];
+      this.setCost(2); // Uses default random cost
     } else if (this.item instanceof Spellbook) {
-      let g = new RedGem(room, 0, 0);
-      g.stackCount = Game.randTable([7], Random.rand);
-      this.costItems = [g];
+      this.setCost(3); // Uses default random cost
     } else if (this.item instanceof Torch) {
-      let g = new RedGem(room, 0, 0);
-      g.stackCount = Game.randTable([1], Random.rand);
-      this.costItems = [g];
+      this.setCost(2); // Uses default random cost
     }
   }
+
+  setCost = (
+    value: number = 1,
+    costItems?: Item[],
+    counts?: number[],
+    quantity: number = 1,
+  ) => {
+    //value is arbitrary multiplies the stackcount to adapt to the item
+    if (!costItems || !counts) {
+      // Default behavior: randomly choose between gems and coins
+      const possibleItems = [
+        new BlueGem(this.room, 0, 0),
+        new GreenGem(this.room, 0, 0),
+        new RedGem(this.room, 0, 0),
+        new Coin(this.room, 0, 0),
+      ];
+      const costItem = Game.randTable(possibleItems, Random.rand);
+
+      if (costItem instanceof Coin) {
+        costItem.stackCount = Game.randTable([20, 25, 30], Random.rand);
+      } else {
+        costItem.stackCount = Game.randTable([1, 2, 3], Random.rand);
+      }
+      costItem.stackCount *= value;
+
+      this.costItems = [costItem];
+    } else {
+      // Original behavior for custom costs
+      const randCount = Game.randTable(counts, Random.rand);
+      const costItem = Game.randTable(costItems, Random.rand);
+      costItem.stackCount = randCount;
+      //if (costItem instanceof Coin) {
+      //costItem.stackCount *= Game.randTable([9, 10, 11], Random.rand);
+      //}
+      this.costItems = [costItem];
+    }
+
+    this.quantity = quantity;
+  };
 
   static isPointInVendingMachineBounds = (
     x: number,
