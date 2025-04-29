@@ -16978,21 +16978,117 @@ class PlayerRenderer {
         this.drawPlayerSprite = (delta) => {
             const player = this.player;
             game_1.Game.ctx.save(); // Save the current canvas state
-            this.frame += 0.1 * delta;
-            if (this.frame >= 4)
-                this.frame = 0;
-            game_1.Game.drawMob(1 + Math.floor(this.frame), 8 + player.direction * this.setDrawDirection(), 1, 2, player.x - this.drawX - this.hitX, player.y - 1.45 - this.drawY - this.jumpY - this.hitY, 1, 2, this.shadeColor());
+            if (this.drawSmear()) {
+                game_1.Game.drawMob(this.setSmearFrame().x, this.setSmearFrame().y, 1, 2, player.x - this.drawX - this.hitX, player.y - 1.45 - this.drawY - this.jumpY - this.hitY, 1, 2, this.shadeColor());
+            }
+            else {
+                this.frame += 0.1 * delta;
+                if (this.frame >= 4)
+                    this.frame = 0;
+                game_1.Game.drawMob(1 + Math.floor(this.frame), 8 + player.direction * 2, 1, 2, player.x - this.drawX - this.hitX, player.y - 1.45 - this.drawY - this.jumpY - this.hitY, 1, 2, this.shadeColor());
+            }
             if (player.inventory.getArmor() && player.inventory.getArmor().health > 0) {
                 // TODO draw armor
             }
             game_1.Game.ctx.restore(); // Restore the canvas state
         };
-        this.setDrawDirection = () => {
+        this.drawSmear = () => {
+            if (this.player.direction === this.player.lastDirection)
+                return false;
+            let t = 100;
+            const lastDir = this.player.lastDirection;
+            const dir = this.player.direction;
+            if ((dir === game_1.Direction.UP && lastDir === game_1.Direction.DOWN) ||
+                (dir === game_1.Direction.DOWN && lastDir === game_1.Direction.UP) ||
+                (dir === game_1.Direction.LEFT && lastDir === game_1.Direction.RIGHT) ||
+                (dir === game_1.Direction.RIGHT && lastDir === game_1.Direction.LEFT))
+                t = 150;
             const timeSince = Date.now() - this.player.movement.lastMoveTime;
-            if (timeSince <= 100)
-                return 4;
+            if (timeSince <= t)
+                return true;
             else
-                return 2;
+                return false;
+        };
+        this.setSmearFrame = () => {
+            let tile = { x: 1, y: 18 };
+            const timeSince = Date.now() - this.player.movement.lastMoveTime;
+            const t = 50;
+            if ((this.player.direction === game_1.Direction.UP &&
+                this.player.lastDirection === game_1.Direction.LEFT) ||
+                (this.player.direction === game_1.Direction.LEFT &&
+                    this.player.lastDirection === game_1.Direction.UP)) {
+                tile.x = 3;
+                return tile;
+            }
+            if ((this.player.direction === game_1.Direction.UP &&
+                this.player.lastDirection === game_1.Direction.RIGHT) ||
+                (this.player.direction === game_1.Direction.RIGHT &&
+                    this.player.lastDirection === game_1.Direction.UP)) {
+                tile.x = 4;
+                return tile;
+            }
+            if ((this.player.direction === game_1.Direction.DOWN &&
+                this.player.lastDirection === game_1.Direction.RIGHT) ||
+                (this.player.direction === game_1.Direction.RIGHT &&
+                    this.player.lastDirection === game_1.Direction.DOWN)) {
+                tile.x = 2;
+                return tile;
+            }
+            if ((this.player.direction === game_1.Direction.DOWN &&
+                this.player.lastDirection === game_1.Direction.LEFT) ||
+                (this.player.direction === game_1.Direction.LEFT &&
+                    this.player.lastDirection === game_1.Direction.DOWN)) {
+                tile.x = 1;
+                return tile;
+            }
+            if (this.player.direction === game_1.Direction.DOWN &&
+                this.player.lastDirection === game_1.Direction.UP) {
+                if (timeSince < t)
+                    tile.x = 3;
+                if (timeSince >= t && timeSince < t * 2) {
+                    tile.x = 1;
+                    tile.y = 14;
+                }
+                if (timeSince >= t * 2 && timeSince < t * 3)
+                    tile.x = 1;
+                return tile;
+            }
+            if (this.player.direction === game_1.Direction.LEFT &&
+                this.player.lastDirection === game_1.Direction.RIGHT) {
+                if (timeSince < t)
+                    tile.x = 2;
+                if (timeSince >= t && timeSince < t * 2) {
+                    tile.x = 1;
+                    tile.y = 8;
+                }
+                if (timeSince >= t * 2 && timeSince < t * 3)
+                    tile.x = 1;
+                return tile;
+            }
+            if (this.player.direction === game_1.Direction.UP &&
+                this.player.lastDirection === game_1.Direction.DOWN) {
+                if (timeSince < t)
+                    tile.x = 2;
+                if (timeSince >= t && timeSince < t * 2) {
+                    tile.x = 1;
+                    tile.y = 12;
+                }
+                if (timeSince >= t * 2 && timeSince < t * 3)
+                    tile.x = 4;
+                return tile;
+            }
+            if (this.player.direction === game_1.Direction.RIGHT &&
+                this.player.lastDirection === game_1.Direction.LEFT) {
+                if (timeSince < t)
+                    tile.x = 1;
+                if (timeSince >= t && timeSince < t * 2) {
+                    tile.x = 1;
+                    tile.y = 8;
+                }
+                if (timeSince >= t * 2 && timeSince < t * 3)
+                    tile.x = 2;
+                return tile;
+            }
         };
         this.draw = (delta) => {
             const player = this.player;

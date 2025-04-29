@@ -103,19 +103,33 @@ export class PlayerRenderer {
     const player = this.player;
     Game.ctx.save(); // Save the current canvas state
 
-    this.frame += 0.1 * delta;
-    if (this.frame >= 4) this.frame = 0;
-    Game.drawMob(
-      1 + Math.floor(this.frame),
-      8 + player.direction * this.setDrawDirection(),
-      1,
-      2,
-      player.x - this.drawX - this.hitX,
-      player.y - 1.45 - this.drawY - this.jumpY - this.hitY,
-      1,
-      2,
-      this.shadeColor(),
-    );
+    if (this.drawSmear()) {
+      Game.drawMob(
+        this.setSmearFrame().x,
+        this.setSmearFrame().y,
+        1,
+        2,
+        player.x - this.drawX - this.hitX,
+        player.y - 1.45 - this.drawY - this.jumpY - this.hitY,
+        1,
+        2,
+        this.shadeColor(),
+      );
+    } else {
+      this.frame += 0.1 * delta;
+      if (this.frame >= 4) this.frame = 0;
+      Game.drawMob(
+        1 + Math.floor(this.frame),
+        8 + player.direction * 2,
+        1,
+        2,
+        player.x - this.drawX - this.hitX,
+        player.y - 1.45 - this.drawY - this.jumpY - this.hitY,
+        1,
+        2,
+        this.shadeColor(),
+      );
+    }
     if (player.inventory.getArmor() && player.inventory.getArmor().health > 0) {
       // TODO draw armor
     }
@@ -123,10 +137,112 @@ export class PlayerRenderer {
     Game.ctx.restore(); // Restore the canvas state
   };
 
-  setDrawDirection = () => {
+  drawSmear = () => {
+    if (this.player.direction === this.player.lastDirection) return false;
+    let t = 100;
+    const lastDir = this.player.lastDirection;
+    const dir = this.player.direction;
+    if (
+      (dir === Direction.UP && lastDir === Direction.DOWN) ||
+      (dir === Direction.DOWN && lastDir === Direction.UP) ||
+      (dir === Direction.LEFT && lastDir === Direction.RIGHT) ||
+      (dir === Direction.RIGHT && lastDir === Direction.LEFT)
+    )
+      t = 150;
     const timeSince = Date.now() - this.player.movement.lastMoveTime;
-    if (timeSince <= 100) return 4;
-    else return 2;
+    if (timeSince <= t) return true;
+    else return false;
+  };
+
+  setSmearFrame = () => {
+    let tile = { x: 1, y: 18 };
+    const timeSince = Date.now() - this.player.movement.lastMoveTime;
+    const t = 50;
+
+    if (
+      (this.player.direction === Direction.UP &&
+        this.player.lastDirection === Direction.LEFT) ||
+      (this.player.direction === Direction.LEFT &&
+        this.player.lastDirection === Direction.UP)
+    ) {
+      tile.x = 3;
+      return tile;
+    }
+    if (
+      (this.player.direction === Direction.UP &&
+        this.player.lastDirection === Direction.RIGHT) ||
+      (this.player.direction === Direction.RIGHT &&
+        this.player.lastDirection === Direction.UP)
+    ) {
+      tile.x = 4;
+      return tile;
+    }
+    if (
+      (this.player.direction === Direction.DOWN &&
+        this.player.lastDirection === Direction.RIGHT) ||
+      (this.player.direction === Direction.RIGHT &&
+        this.player.lastDirection === Direction.DOWN)
+    ) {
+      tile.x = 2;
+      return tile;
+    }
+    if (
+      (this.player.direction === Direction.DOWN &&
+        this.player.lastDirection === Direction.LEFT) ||
+      (this.player.direction === Direction.LEFT &&
+        this.player.lastDirection === Direction.DOWN)
+    ) {
+      tile.x = 1;
+      return tile;
+    }
+    if (
+      this.player.direction === Direction.DOWN &&
+      this.player.lastDirection === Direction.UP
+    ) {
+      if (timeSince < t) tile.x = 3;
+      if (timeSince >= t && timeSince < t * 2) {
+        tile.x = 1;
+        tile.y = 14;
+      }
+      if (timeSince >= t * 2 && timeSince < t * 3) tile.x = 1;
+      return tile;
+    }
+    if (
+      this.player.direction === Direction.LEFT &&
+      this.player.lastDirection === Direction.RIGHT
+    ) {
+      if (timeSince < t) tile.x = 2;
+      if (timeSince >= t && timeSince < t * 2) {
+        tile.x = 1;
+        tile.y = 8;
+      }
+      if (timeSince >= t * 2 && timeSince < t * 3) tile.x = 1;
+      return tile;
+    }
+    if (
+      this.player.direction === Direction.UP &&
+      this.player.lastDirection === Direction.DOWN
+    ) {
+      if (timeSince < t) tile.x = 2;
+      if (timeSince >= t && timeSince < t * 2) {
+        tile.x = 1;
+        tile.y = 12;
+      }
+      if (timeSince >= t * 2 && timeSince < t * 3) tile.x = 4;
+      return tile;
+    }
+    if (
+      this.player.direction === Direction.RIGHT &&
+      this.player.lastDirection === Direction.LEFT
+    ) {
+      if (timeSince < t) tile.x = 1;
+      if (timeSince >= t && timeSince < t * 2) {
+        tile.x = 1;
+        tile.y = 8;
+      }
+      if (timeSince >= t * 2 && timeSince < t * 3) tile.x = 2;
+      return tile;
+    }
   };
 
   draw = (delta: number) => {
