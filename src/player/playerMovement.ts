@@ -18,6 +18,7 @@ export class PlayerMovement {
     const { x, y } = this.getTargetCoords(direction);
 
     if (this.canMove()) {
+      this.player.lastDirection = this.player.direction;
       this.player.direction = direction;
       this.player.tryMove(x, y);
     } else {

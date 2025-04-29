@@ -107,7 +107,7 @@ export class PlayerRenderer {
     if (this.frame >= 4) this.frame = 0;
     Game.drawMob(
       1 + Math.floor(this.frame),
-      8 + player.direction * 2,
+      8 + player.direction * this.setDrawDirection(),
       1,
       2,
       player.x - this.drawX - this.hitX,
@@ -121,6 +121,12 @@ export class PlayerRenderer {
     }
 
     Game.ctx.restore(); // Restore the canvas state
+  };
+
+  setDrawDirection = () => {
+    const timeSince = Date.now() - this.player.movement.lastMoveTime;
+    if (timeSince <= 100) return 4;
+    else return 2;
   };
 
   draw = (delta: number) => {

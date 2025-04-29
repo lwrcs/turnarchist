@@ -16363,6 +16363,7 @@ class Player extends drawable_1.Drawable {
         this.h = 1;
         this.moveDistance = 0;
         this.direction = game_1.Direction.UP;
+        this.lastDirection = game_1.Direction.UP;
         this.lastX = 0;
         this.lastY = 0;
         this.isLocalPlayer = isLocalPlayer;
@@ -16836,6 +16837,7 @@ class PlayerMovement {
     move(direction) {
         const { x, y } = this.getTargetCoords(direction);
         if (this.canMove()) {
+            this.player.lastDirection = this.player.direction;
             this.player.direction = direction;
             this.player.tryMove(x, y);
         }
@@ -16979,11 +16981,18 @@ class PlayerRenderer {
             this.frame += 0.1 * delta;
             if (this.frame >= 4)
                 this.frame = 0;
-            game_1.Game.drawMob(1 + Math.floor(this.frame), 8 + player.direction * 2, 1, 2, player.x - this.drawX - this.hitX, player.y - 1.45 - this.drawY - this.jumpY - this.hitY, 1, 2, this.shadeColor());
+            game_1.Game.drawMob(1 + Math.floor(this.frame), 8 + player.direction * this.setDrawDirection(), 1, 2, player.x - this.drawX - this.hitX, player.y - 1.45 - this.drawY - this.jumpY - this.hitY, 1, 2, this.shadeColor());
             if (player.inventory.getArmor() && player.inventory.getArmor().health > 0) {
                 // TODO draw armor
             }
             game_1.Game.ctx.restore(); // Restore the canvas state
+        };
+        this.setDrawDirection = () => {
+            const timeSince = Date.now() - this.player.movement.lastMoveTime;
+            if (timeSince <= 100)
+                return 4;
+            else
+                return 2;
         };
         this.draw = (delta) => {
             const player = this.player;

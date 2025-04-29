@@ -45,6 +45,7 @@ export class Player extends Drawable {
   w: number;
   h: number;
   direction: Direction;
+  lastDirection: Direction;
   game: Game;
   levelID: number; // which room we're in (level[levelID])
   health: number;
@@ -108,6 +109,8 @@ export class Player extends Drawable {
     this.h = 1;
     this.moveDistance = 0;
     this.direction = Direction.UP;
+    this.lastDirection = Direction.UP;
+
     this.lastX = 0;
     this.lastY = 0;
     this.isLocalPlayer = isLocalPlayer;
