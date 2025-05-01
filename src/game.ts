@@ -8,7 +8,7 @@ import { LevelGenerator } from "./levelGenerator";
 import { Input, InputEnum } from "./input";
 import { DownLadder } from "./tile/downLadder";
 import { TextBox } from "./textbox";
-import { GameState, loadGameState } from "./gameState";
+import { createGameState, GameState, loadGameState } from "./gameState";
 import { DoorDir } from "./tile/door";
 import { Enemy } from "./entity/enemy/enemy";
 import { TutorialListener } from "./tutorialListener";
@@ -373,10 +373,11 @@ export class Game {
     this.currentDepth = 0;
     this.encounteredEnemies = [];
     this.levels = [];
-    let gs = new GameState();
+    //gs = new GameState();
     gs.seed = (Math.random() * 4294967296) >>> 0;
     gs.randomState = (Math.random() * 4294967296) >>> 0;
     loadGameState(this, [this.localPlayerID], gs, true);
+
     this.levelState = LevelState.LEVEL_GENERATION;
   };
 
@@ -1641,5 +1642,5 @@ export class Game {
     }
   }
 }
-
-let game = new Game();
+export let game = new Game();
+export let gs = new GameState();
