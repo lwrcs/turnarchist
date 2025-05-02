@@ -121,7 +121,8 @@ export class Game {
   worldCodes: Array<string>;
   private selectedWorldCode: number;
   tutorialActive: boolean;
-  static scale;
+  static scale: number;
+  static interpolatedScale: number;
   static tileset: HTMLImageElement;
   static objset: HTMLImageElement;
   static mobset: HTMLImageElement;
@@ -711,6 +712,40 @@ export class Game {
     this.onResize();
   };
 
+  updateScale = (delta: number) => {
+    if (
+      GameConstants.SOFT_SCALE < GameConstants.SCALE &&
+      Math.abs(GameConstants.SOFT_SCALE - GameConstants.SCALE) >= 0.1
+    ) {
+      GameConstants.SOFT_SCALE +=
+        ((GameConstants.SCALE - GameConstants.SOFT_SCALE) * delta) / 10;
+    }
+    if (
+      GameConstants.SOFT_SCALE > GameConstants.SCALE &&
+      Math.abs(GameConstants.SOFT_SCALE - GameConstants.SCALE) >= 0.1
+    ) {
+      GameConstants.SOFT_SCALE -=
+        ((GameConstants.SOFT_SCALE - GameConstants.SCALE) * delta) / 10;
+    }
+
+    if (
+      GameConstants.SOFT_SCALE < GameConstants.SCALE &&
+      Math.abs(GameConstants.SOFT_SCALE - GameConstants.SCALE) <= 0.1
+    ) {
+      GameConstants.SOFT_SCALE += delta / 25;
+    }
+    if (
+      GameConstants.SOFT_SCALE > GameConstants.SCALE &&
+      Math.abs(GameConstants.SOFT_SCALE - GameConstants.SCALE) <= 0.1
+    ) {
+      GameConstants.SOFT_SCALE -= delta / 25;
+    }
+    if (Math.abs(GameConstants.SOFT_SCALE - GameConstants.SCALE) <= 0.01) {
+      GameConstants.SOFT_SCALE = GameConstants.SCALE;
+    }
+    this.onResize();
+  };
+
   refreshDimensions = () => {
     Game.ctx.canvas.setAttribute("width", `${GameConstants.WIDTH}`);
     Game.ctx.canvas.setAttribute("height", `${GameConstants.HEIGHT}`);
@@ -755,7 +790,7 @@ export class Game {
       GameConstants.isMobile = false;
       // For desktop, use standard scaling logic
       // Ensure GameConstants.SCALE is an integer. If not, round it.
-      const integerScale = GameConstants.SCALE + scaleOffset;
+      const integerScale = GameConstants.SOFT_SCALE + scaleOffset;
       Game.scale = Math.min(maxWidthScale, maxHeightScale, integerScale);
     }
 
@@ -996,6 +1031,9 @@ export class Game {
   };
 
   draw = (delta: number) => {
+    if (GameConstants.SOFT_SCALE !== GameConstants.SCALE) {
+      this.updateScale(delta);
+    }
     //Game.ctx.canvas.setAttribute("role", "presentation");
 
     Game.ctx.clearRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);

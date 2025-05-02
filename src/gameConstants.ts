@@ -35,6 +35,7 @@ export class GameConstants {
 
   static readonly TILESIZE = 16;
   static SCALE = 6;
+  static SOFT_SCALE = 6;
   static readonly MAX_SCALE = 10;
   static readonly MIN_SCALE = 1;
 
