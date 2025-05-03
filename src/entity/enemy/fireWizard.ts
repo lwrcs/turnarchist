@@ -35,16 +35,7 @@ export class FireWizardEnemy extends WizardEnemy {
     this.name = "fire wizard";
     this.projectileColor = [200, 20, 0];
     if (drop) this.drop = drop;
-    if (Math.random() < this.dropChance) {
-      this.getDrop([
-        "weapon",
-        "equipment",
-        "consumable",
-        "gem",
-        "tool",
-        "coin",
-      ]);
-    }
+    this.getDrop(["weapon", "equipment", "consumable", "gem", "tool", "coin"]);
   }
 
   hit = (): number => {

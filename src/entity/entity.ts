@@ -107,7 +107,7 @@ export class Entity extends Drawable {
   hitWarnings: HitWarning[];
   imageParticleX: number = 0;
   imageParticleY: number = 26;
-  dropChance: number = 0.02;
+  dropChance: number = 1;
   isEnemy: boolean;
   shielded: boolean;
   //shieldHealth: number;
@@ -139,6 +139,15 @@ export class Entity extends Drawable {
   constructor(room: Room, game: Game, x: number, y: number) {
     super();
 
+    // Check if we're in cloning mode
+    const isCloning = (this.constructor as any).__isCloning;
+
+    // Set cloned status immediately if we're cloning
+    if (isCloning) {
+      this.cloned = true;
+    } else this.cloned = false;
+
+    // Only set the absolute minimum required properties if cloning
     this.room = room;
     this.x = x;
     this.y = y;
@@ -194,7 +203,6 @@ export class Entity extends Drawable {
     this.dying = false;
     this.dyingFrame = 30;
     this.alpha = 1;
-    this.cloned = false;
     this.dead = false;
     this.hasBloom = false;
     this.bloomColor = "#FFFFFF";
@@ -214,43 +222,45 @@ export class Entity extends Drawable {
   }
 
   static cloneEntity(original: Entity): Entity {
-    const { room, game, x, y } = original;
+    // Set a temporary flag on the constructor to indicate we're cloning
+    (original.constructor as any).__isCloning = true;
 
-    // Create a new instance using the constructor
+    // Create minimal clone
     const cloned = new (original.constructor as typeof Entity)(
-      room,
-      game,
-      x,
-      y,
+      original.room,
+      original.game,
+      original.x,
+      original.y,
     );
 
-    // Assign other properties
-    cloned.cloned = true;
-    cloned.dead = false;
-    cloned.dying = true;
-    cloned.drawableY = original.drawableY;
-    cloned.tileX = original.tileX;
-    cloned.tileY = original.tileY;
-    cloned.frame = original.frame;
-    cloned.isEnemy = original.isEnemy;
-    cloned.hasShadow = original.hasShadow;
-    cloned.skipNextTurns = original.skipNextTurns;
-    cloned.direction = original.direction;
-    cloned.drawX = original.drawX;
-    cloned.drawY = original.drawY;
-    cloned.alpha = original.alpha;
-    cloned.shadeColor = original.shadeColor;
-    cloned.shadeMultiplier = original.shadeMultiplier;
-    cloned.softShadeColor = original.softShadeColor;
-    cloned.hasBloom = original.hasBloom;
-    cloned.bloomColor = original.bloomColor;
-    cloned.bloomAlpha = 1;
-    cloned.softBloomAlpha = 1;
-    cloned.removeLightSource(cloned.lightSource);
-    cloned.room.updateLighting();
+    // Remove the temporary flag
+    delete (original.constructor as any).__isCloning;
 
-    // Add the cloned entity to deadEntities
-    room.deadEntities.push(cloned);
+    // Copy only properties needed for death animation
+    Object.assign(cloned, {
+      cloned: true,
+      dead: false,
+      dying: true,
+      drawableY: original.drawableY,
+      tileX: original.tileX,
+      tileY: original.tileY,
+      frame: original.frame,
+      direction: original.direction,
+      drawX: original.drawX,
+      drawY: original.drawY,
+      alpha: original.alpha,
+      shadeColor: original.shadeColor,
+      shadeMultiplier: original.shadeMultiplier,
+      softShadeColor: original.softShadeColor,
+      hasBloom: original.hasBloom,
+      bloomColor: original.bloomColor,
+      bloomAlpha: 1,
+      softBloomAlpha: 1,
+      dyingFrame: 30,
+    });
+
+    // Add to room's dead entities
+    original.room.deadEntities.push(cloned);
 
     return cloned;
   }
@@ -298,7 +308,8 @@ export class Entity extends Drawable {
   };
 
   getDrop = (useCategory: string[] = [], force: boolean = false) => {
-    DropTable.getDrop(this, false, useCategory, force);
+    if (this.cloned) return;
+    DropTable.getDrop(this, useCategory, force);
     //make monsters drop degraded weapons
     if (this.drop instanceof Weapon && this.type === EntityType.ENEMY) {
       this.drop.durability = Math.floor(
@@ -495,13 +506,13 @@ export class Entity extends Drawable {
     if (this.cloned) return;
     this.emitEnemyKilled();
     this.removeLightSource(this.lightSource);
+    this.dropLoot();
 
     const deadEntity = this.clone();
 
     this.room.deadEntities.push(deadEntity);
     this.dead = true;
     //this.room.entities = this.room.entities.filter((e) => e !== this);
-    this.dropLoot();
     this.uniqueKillBehavior();
   };
 

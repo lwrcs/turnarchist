@@ -40,16 +40,7 @@ export abstract class WizardEnemy extends Enemy {
     this.alertTicks = 0;
     this.name = "wizard bomber";
     if (drop) this.drop = drop;
-    if (Math.random() < this.dropChance) {
-      this.getDrop([
-        "weapon",
-        "equipment",
-        "consumable",
-        "gem",
-        "tool",
-        "coin",
-      ]);
-    }
+    this.getDrop(["weapon", "equipment", "consumable", "gem", "tool", "coin"]);
   }
 
   newLightSource = (

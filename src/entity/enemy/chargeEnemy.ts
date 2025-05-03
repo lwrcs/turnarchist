@@ -46,16 +46,7 @@ export class ChargeEnemy extends Enemy {
 
     this.state = ChargeEnemyState.IDLE;
     if (drop) this.drop = drop;
-    if (Math.random() < this.dropChance) {
-      this.getDrop([
-        "weapon",
-        "equipment",
-        "consumable",
-        "gem",
-        "tool",
-        "coin",
-      ]);
-    }
+    this.getDrop(["weapon", "equipment", "consumable", "gem", "tool", "coin"]);
   }
 
   hit = (): number => {

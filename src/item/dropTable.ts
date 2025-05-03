@@ -28,7 +28,7 @@ import { Greataxe } from "../weapon/greataxe";
 
 interface Drop {
   itemType: string;
-  dropWeight: number;
+  dropRate: number; // 1/x chance of dropping
   category: string[];
   minDepth?: number;
 }
@@ -71,148 +71,183 @@ export const ItemTypeMap: { [key: string]: typeof Item } = {
 
 export class DropTable {
   static drops: Drop[] = [
-    // Weapons
-    { itemType: "dualdagger", dropWeight: 1, category: ["weapon", "melee"] },
-    { itemType: "warhammer", dropWeight: 3, category: ["weapon", "melee"] },
-    { itemType: "spear", dropWeight: 3, category: ["weapon", "melee"] },
-    { itemType: "spellbook", dropWeight: 1, category: ["weapon", "magic"] },
-    { itemType: "greataxe", dropWeight: 1, category: ["weapon", "melee"] },
+    // Weapons - Higher numbers = rarer
+    { itemType: "dualdagger", dropRate: 100, category: ["weapon", "melee"] },
+    { itemType: "warhammer", dropRate: 33, category: ["weapon", "melee"] },
+    { itemType: "spear", dropRate: 33, category: ["weapon", "melee"] },
+    { itemType: "spellbook", dropRate: 100, category: ["weapon", "magic"] },
+    { itemType: "greataxe", dropRate: 100, category: ["weapon", "melee"] },
 
     // Equipment
-    { itemType: "armor", dropWeight: 8, category: ["equipment"] },
+    { itemType: "armor", dropRate: 12, category: ["equipment"] },
 
     // Tools
-    { itemType: "pickaxe", dropWeight: 3, category: ["tool"] },
-    { itemType: "hammer", dropWeight: 3, category: ["tool"] },
+    { itemType: "pickaxe", dropRate: 33, category: ["tool"] },
+    { itemType: "hammer", dropRate: 33, category: ["tool"] },
 
     // Consumables
-    { itemType: "heart", dropWeight: 5, category: ["consumable"] },
-    { itemType: "weaponpoison", dropWeight: 1, category: ["consumable"] },
-    { itemType: "weaponblood", dropWeight: 1, category: ["consumable"] },
+    { itemType: "heart", dropRate: 20, category: ["consumable"] },
+    { itemType: "weaponpoison", dropRate: 100, category: ["consumable"] },
+    { itemType: "weaponblood", dropRate: 100, category: ["consumable"] },
 
-    { itemType: "coin", dropWeight: 100, category: ["coin"] },
+    // Common items
+    { itemType: "coin", dropRate: 1, category: ["coin"] }, // Always drops
 
+    // Crafting materials
     {
       itemType: "weaponfragments",
-      dropWeight: 5,
+      dropRate: 20,
       category: ["consumable", "melee"],
     },
     {
       itemType: "spellbookPage",
-      dropWeight: 2,
+      dropRate: 50,
       category: ["consumable", "magic"],
     },
 
     // Upgrades
-    { itemType: "backpack", dropWeight: 5, category: ["upgrade"] },
+    { itemType: "backpack", dropRate: 20, category: ["upgrade"] },
 
     // Light sources
-    { itemType: "candle", dropWeight: 10, category: ["light"] },
-    { itemType: "torch", dropWeight: 5, category: ["light"] },
-    { itemType: "lantern", dropWeight: 2, category: ["light"] },
+    { itemType: "candle", dropRate: 10, category: ["light"] },
+    { itemType: "torch", dropRate: 20, category: ["light"] },
+    { itemType: "lantern", dropRate: 50, category: ["light"] },
 
     // Gems and minerals
-    { itemType: "redgem", dropWeight: 5, category: ["gem", "resource"] },
-    { itemType: "bluegem", dropWeight: 5, category: ["gem", "resource"] },
-    { itemType: "greengem", dropWeight: 5, category: ["gem", "resource"] },
-    { itemType: "gold", dropWeight: 5, category: ["gem", "resource"] },
-    { itemType: "stone", dropWeight: 5, category: ["gem", "resource"] },
+    { itemType: "redgem", dropRate: 20, category: ["gem", "resource"] },
+    { itemType: "bluegem", dropRate: 20, category: ["gem", "resource"] },
+    { itemType: "greengem", dropRate: 20, category: ["gem", "resource"] },
+    { itemType: "gold", dropRate: 20, category: ["gem", "resource"] },
+    { itemType: "stone", dropRate: 20, category: ["gem", "resource"] },
     {
       itemType: "coal",
-      dropWeight: 15,
+      dropRate: 7,
       category: ["fuel", "lantern", "resource"],
     },
-    { itemType: "bomb", dropWeight: 10, category: ["bomb", "weapon"] },
+    { itemType: "bomb", dropRate: 10, category: ["bomb", "weapon"] },
   ];
 
   static getDrop = (
     entity: Entity,
-    uniqueTable: boolean = false,
     useCategory: string[] = ["coin"],
     force: boolean = false,
-    currentDepth: number = 0,
+    increaseDepth: number = 0,
   ) => {
-    let filteredDropsByCategory: Drop[] = [];
-    let filteredDropsByItem: Drop[] = [];
-    let filteredDropsByDepth: Drop[] = [];
+    if (entity.cloned) return;
+    const currentDepth = entity.room.depth + increaseDepth;
+    const dropChance = entity.dropChance || 1;
+
+    console.log(`\n=== Drop Roll for ${entity.constructor.name} ===`);
+    console.log(`Initial drop chance: ${((1 / dropChance) * 100).toFixed(1)}%`);
+
+    if (!force && dropChance > 1 && Math.random() > 1 / dropChance) {
+      console.log("Failed initial drop chance roll");
+      return null;
+    }
+
+    console.log(`Categories/Items requested:`, useCategory);
+    console.log(`Force:`, force, `Depth:`, currentDepth);
+
+    let filteredDrops: Drop[] = [];
 
     const allCategories = Array.from(
       new Set(this.drops.flatMap((drop) => drop.category)),
     );
     const allItemTypes = Object.keys(ItemTypeMap);
 
-    const allDepth = this.drops.map((drop) => drop.minDepth);
+    // Filter by depth first
+    const depthFilteredDrops = this.drops.filter(
+      (drop) => drop.minDepth === undefined || drop.minDepth <= currentDepth,
+    );
 
     // Separate categories and specific item names from useCategory
     const categories = useCategory.filter((cat) => allCategories.includes(cat));
     const specificItems = useCategory.filter((item) =>
       allItemTypes.includes(item),
     );
-    const itemsByDepth = this.drops.filter(
-      (drop) => drop.minDepth === undefined || drop.minDepth <= currentDepth,
-    );
 
-    // Get drops from specified categories
-    if (categories.length > 0) {
-      filteredDropsByCategory = itemsByDepth.filter((drop) =>
-        drop.category.some((cat) => categories.includes(cat)),
-      );
+    // Build filtered drops list
+    if (categories.length > 0 || specificItems.length > 0) {
+      // Filter by categories
+      const categoryDrops =
+        categories.length > 0
+          ? depthFilteredDrops.filter((drop) =>
+              drop.category.some((cat) => categories.includes(cat)),
+            )
+          : [];
+
+      // Filter by specific items
+      const itemDrops =
+        specificItems.length > 0
+          ? depthFilteredDrops.filter((drop) =>
+              specificItems.includes(drop.itemType),
+            )
+          : [];
+
+      // Combine and remove duplicates
+      const combinedDropsMap: { [key: string]: Drop } = {};
+      [...categoryDrops, ...itemDrops].forEach((drop) => {
+        combinedDropsMap[drop.itemType] = drop;
+      });
+
+      filteredDrops = Object.values(combinedDropsMap);
+    } else {
+      filteredDrops = depthFilteredDrops;
     }
 
-    // Get specific drops by item name
-    if (specificItems.length > 0) {
-      filteredDropsByItem = itemsByDepth.filter((drop) =>
-        specificItems.includes(drop.itemType),
-      );
-    }
-
-    // Combine and remove duplicates
-    const combinedDropsMap: { [key: string]: Drop } = {};
-
-    filteredDropsByCategory.forEach((drop) => {
-      combinedDropsMap[drop.itemType] = drop;
-    });
-
-    filteredDropsByItem.forEach((drop) => {
-      combinedDropsMap[drop.itemType] = drop;
-    });
-
-    let combinedDrops = Object.values(combinedDropsMap);
-
-    // If no categories or specific items matched, use items by depth
-    if (combinedDrops.length === 0) {
-      combinedDrops = itemsByDepth;
-    }
-
-    if (combinedDrops.length === 0) {
+    if (filteredDrops.length === 0) {
+      console.log("No eligible drops found in filtered list");
       if (force) {
-        combinedDrops = itemsByDepth;
-        if (combinedDrops.length === 0) return null;
-      } else return null;
+        filteredDrops = depthFilteredDrops;
+        if (filteredDrops.length === 0) {
+          console.log("No drops available even after force");
+          return null;
+        }
+      } else {
+        return null;
+      }
     }
 
-    const totalWeight = combinedDrops.reduce(
-      (acc, drop) => acc + drop.dropWeight,
-      0,
+    // Sort drops from rarest to most common
+    const sortedDrops = [...filteredDrops].sort(
+      (a, b) => b.dropRate - a.dropRate,
     );
 
-    const randomWeight = Math.floor(Math.random() * totalWeight);
+    console.log(
+      "Eligible drops:",
+      sortedDrops.map((d) => `${d.itemType} (1/${d.dropRate})`),
+    );
 
-    let cumulativeWeight = 0;
-    for (const drop of combinedDrops) {
-      cumulativeWeight += drop.dropWeight;
+    // Try each item in order from rarest to most common
+    for (const drop of sortedDrops) {
+      const roll = Math.random();
+      const threshold = 1 / drop.dropRate;
+      console.log(
+        `Rolling for ${drop.itemType}: ${roll.toFixed(4)} < ${threshold.toFixed(4)} = ${roll < threshold}`,
+      );
 
-      if (randomWeight <= cumulativeWeight) {
+      if (roll < threshold) {
+        console.log(`Success! Dropping ${drop.itemType}`);
         this.addNewItem(drop.itemType, entity);
+        console.log(`Actual item dropped: ${entity.drop?.constructor.name}`);
+        console.log(`Clone?: ${entity.cloned}`);
+
         return;
       }
     }
 
-    if (force && combinedDrops.length > 0) {
-      this.addNewItem(combinedDrops[0].itemType, entity);
+    // If force is true and no drops occurred, guarantee the most common item
+    if (force && sortedDrops.length > 0) {
+      const guaranteedDrop = sortedDrops[sortedDrops.length - 1];
+      console.log(`Force drop: ${guaranteedDrop.itemType}`);
+      this.addNewItem(guaranteedDrop.itemType, entity);
+      console.log(
+        `Actual forced item dropped: ${entity.drop?.constructor.name}`,
+      );
       return;
     }
 
+    console.log("No successful drops");
     return null;
   };
 
@@ -222,10 +257,9 @@ export class DropTable {
       console.error(`Item type "${itemType}" is not recognized.`);
       return;
     }
+    console.log(
+      `Creating new item of type: ${itemType}, class: ${ItemClass.name}`,
+    );
     entity.drop = ItemClass.add(entity.room, entity.x, entity.y);
-    //console.log(
-    //  `Drop for ${entity.constructor.name}:`,
-    //  entity.drop.constructor.name,
-    //);
   };
 }

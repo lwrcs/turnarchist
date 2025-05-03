@@ -30,6 +30,7 @@ export class ZombieEnemy extends Enemy {
   static tileY: number = 8;
   constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
     super(room, game, x, y);
+
     this.ticks = 0;
     this.frame = 0;
     this.health = 1;
@@ -45,9 +46,7 @@ export class ZombieEnemy extends Enemy {
     this.jumpHeight = 0.35;
 
     if (drop) this.drop = drop;
-    if (Math.random() < this.dropChance) {
-      this.getDrop(["consumable", "gem", "tool", "coin"]);
-    }
+    this.getDrop(["consumable", "gem", "tool", "coin"]);
   }
 
   hit = (): number => {

@@ -22,6 +22,8 @@ export class ArmoredSkullEnemy extends Enemy {
   static tileY: number = 8;
   constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
     super(room, game, x, y);
+    if (this.cloned) return;
+
     this.ticks = 0;
     this.frame = 0;
     this.health = 3;
@@ -36,9 +38,7 @@ export class ArmoredSkullEnemy extends Enemy {
     this.name = "armored skeleton";
     this.forwardOnlyAttack = true;
     if (drop) this.drop = drop;
-    if (Math.random() < this.dropChance) {
-      this.getDrop(["weapon", "consumable", "gem", "tool", "coin"]);
-    }
+    this.getDrop(["weapon", "consumable", "gem", "tool", "coin"]);
   }
 
   hit = (): number => {

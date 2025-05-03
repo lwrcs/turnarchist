@@ -32,16 +32,7 @@ export class RookEnemy extends Enemy {
     this.diagonalAttack = false;
     this.jumpHeight = 0.5;
     if (drop) this.drop = drop;
-    if (Math.random() < this.dropChance) {
-      this.getDrop([
-        "weapon",
-        "equipment",
-        "consumable",
-        "gem",
-        "tool",
-        "coin",
-      ]);
-    }
+    this.getDrop(["weapon", "equipment", "consumable", "gem", "tool", "coin"]);
   }
 
   hit = (): number => {

@@ -46,16 +46,7 @@ export class SpiderEnemy extends Enemy {
     this.drawYOffset = 0.175;
     this.revealTick = 0;
 
-    if (Math.random() < this.dropChance) {
-      this.getDrop([
-        "weapon",
-        "equipment",
-        "consumable",
-        "gem",
-        "tool",
-        "coin",
-      ]);
-    }
+    this.getDrop(["weapon", "equipment", "consumable", "gem", "tool", "coin"]);
   }
 
   get alertText() {

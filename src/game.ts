@@ -811,9 +811,6 @@ export class Game {
     Game.scale *= NEGATE_DPR_FACTOR / window.devicePixelRatio;
     console.log(window.devicePixelRatio);
 
-    //Game.scale = Math.ceil(Math.min(Game.scale, this.maxScale()));
-    //GameConstants.SCALE = Game.scale;
-
     // Calculate screen width and height in tiles, ensuring integer values
     LevelConstants.SCREEN_W = Math.floor(
       window.innerWidth / Game.scale / GameConstants.TILESIZE,

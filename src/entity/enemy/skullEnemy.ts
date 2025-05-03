@@ -36,9 +36,7 @@ export class SkullEnemy extends Enemy {
     this.name = "skeleton";
     this.forwardOnlyAttack = true;
     if (drop) this.drop = drop;
-    if (Math.random() < this.dropChance) {
-      this.getDrop(["weapon", "consumable", "gem", "tool", "coin"]);
-    }
+    this.getDrop(["weapon", "consumable", "gem", "tool", "coin"]);
   }
 
   hit = (): number => {

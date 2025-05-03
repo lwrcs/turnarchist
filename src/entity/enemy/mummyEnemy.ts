@@ -45,9 +45,7 @@ export class MummyEnemy extends Enemy {
     this.jumpHeight = 0.35;
 
     if (drop) this.drop = drop;
-    if (Math.random() < this.dropChance) {
-      this.getDrop(["consumable", "gem", "tool", "coin"]);
-    }
+    this.getDrop(["consumable", "gem", "tool", "coin"]);
   }
 
   hit = (): number => {
