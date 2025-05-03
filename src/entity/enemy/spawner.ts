@@ -52,6 +52,7 @@ export class Spawner extends Enemy {
     const randSpawnType = Game.randTable(this.enemyTable, Random.rand);
     this.enemySpawnType = randSpawnType;
     this.spawnOffset = 0;
+    this.dropChance = 1;
 
     if (Math.random() < 0.15) {
       switch (this.enemySpawnType) {

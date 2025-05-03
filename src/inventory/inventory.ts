@@ -530,7 +530,7 @@ export class Inventory {
     let coinTileX = 19;
     if (this.coins === 2) coinTileX = 20;
     else if (this.coins >= 3) coinTileX = 21;
-    let coinX = GameConstants.WIDTH / GameConstants.TILESIZE - 2.25;
+    let coinX = GameConstants.WIDTH / GameConstants.TILESIZE - 2.5;
     let coinY = GameConstants.HEIGHT / GameConstants.TILESIZE - 1.25;
     if (GameConstants.WIDTH < 170) {
       //coinX -= 1.25;

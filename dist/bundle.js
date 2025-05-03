@@ -3804,7 +3804,7 @@ class Enemy extends entity_1.Entity {
         this.jumpHeight = 0.3;
         //this.dir = Direction.South;
         this.name = "generic enemy";
-        this.dropChance = 1;
+        this.dropChance = 10;
         this.status = {
             poison: { active: false, hitCount: 0, startTick: 0, effectTick: 0 },
             bleed: { active: false, hitCount: 0, startTick: 0, effectTick: 0 },
@@ -5862,6 +5862,7 @@ class Spawner extends enemy_1.Enemy {
         const randSpawnType = game_1.Game.randTable(this.enemyTable, random_1.Random.rand);
         this.enemySpawnType = randSpawnType;
         this.spawnOffset = 0;
+        this.dropChance = 1;
         if (Math.random() < 0.15) {
             switch (this.enemySpawnType) {
                 case 0:
@@ -11931,7 +11932,7 @@ class Inventory {
                 coinTileX = 20;
             else if (this.coins >= 3)
                 coinTileX = 21;
-            let coinX = gameConstants_1.GameConstants.WIDTH / gameConstants_1.GameConstants.TILESIZE - 2.25;
+            let coinX = gameConstants_1.GameConstants.WIDTH / gameConstants_1.GameConstants.TILESIZE - 2.5;
             let coinY = gameConstants_1.GameConstants.HEIGHT / gameConstants_1.GameConstants.TILESIZE - 1.25;
             if (gameConstants_1.GameConstants.WIDTH < 170) {
                 //coinX -= 1.25;
@@ -12836,9 +12837,9 @@ class Coin extends item_1.Item {
                     this.stack += otherCoin.stack;
                     this.level.items = this.level.items.filter((x) => x !== otherCoin);
                 }
-                if (this.stack === 2)
+                if (this.stack >= 3)
                     this.tileX = 20;
-                else if (this.stack >= 3)
+                if (this.stack >= 7)
                     this.tileX = 21;
             }
         };
@@ -12931,16 +12932,16 @@ exports.DropTable = DropTable;
 _a = DropTable;
 DropTable.drops = [
     // Weapons - Higher numbers = rarer
-    { itemType: "dualdagger", dropRate: 100, category: ["weapon", "melee"] },
-    { itemType: "warhammer", dropRate: 33, category: ["weapon", "melee"] },
-    { itemType: "spear", dropRate: 33, category: ["weapon", "melee"] },
-    { itemType: "spellbook", dropRate: 100, category: ["weapon", "magic"] },
-    { itemType: "greataxe", dropRate: 100, category: ["weapon", "melee"] },
+    { itemType: "dualdagger", dropRate: 1000, category: ["weapon", "melee"] },
+    { itemType: "warhammer", dropRate: 500, category: ["weapon", "melee"] },
+    { itemType: "spear", dropRate: 500, category: ["weapon", "melee"] },
+    { itemType: "spellbook", dropRate: 500, category: ["weapon", "magic"] },
+    { itemType: "greataxe", dropRate: 1000, category: ["weapon", "melee"] },
     // Equipment
-    { itemType: "armor", dropRate: 12, category: ["equipment"] },
+    { itemType: "armor", dropRate: 350, category: ["equipment"] },
     // Tools
-    { itemType: "pickaxe", dropRate: 33, category: ["tool"] },
-    { itemType: "hammer", dropRate: 33, category: ["tool"] },
+    { itemType: "pickaxe", dropRate: 100, category: ["tool"] },
+    { itemType: "hammer", dropRate: 50, category: ["tool"] },
     // Consumables
     { itemType: "heart", dropRate: 20, category: ["consumable"] },
     { itemType: "weaponpoison", dropRate: 100, category: ["consumable"] },
@@ -12950,34 +12951,34 @@ DropTable.drops = [
     // Crafting materials
     {
         itemType: "weaponfragments",
-        dropRate: 20,
+        dropRate: 100,
         category: ["consumable", "melee"],
     },
     {
         itemType: "spellbookPage",
-        dropRate: 50,
+        dropRate: 100,
         category: ["consumable", "magic"],
     },
     // Upgrades
-    { itemType: "backpack", dropRate: 20, category: ["upgrade"] },
+    { itemType: "backpack", dropRate: 100, category: ["upgrade"] },
     // Light sources
-    { itemType: "candle", dropRate: 10, category: ["light"] },
-    { itemType: "torch", dropRate: 20, category: ["light"] },
-    { itemType: "lantern", dropRate: 50, category: ["light"] },
+    { itemType: "candle", dropRate: 100, category: ["light"] },
+    { itemType: "torch", dropRate: 250, category: ["light"] },
+    { itemType: "lantern", dropRate: 500, category: ["light"] },
     // Gems and minerals
-    { itemType: "redgem", dropRate: 20, category: ["gem", "resource"] },
-    { itemType: "bluegem", dropRate: 20, category: ["gem", "resource"] },
-    { itemType: "greengem", dropRate: 20, category: ["gem", "resource"] },
-    { itemType: "gold", dropRate: 20, category: ["gem", "resource"] },
-    { itemType: "stone", dropRate: 20, category: ["gem", "resource"] },
+    { itemType: "redgem", dropRate: 200, category: ["gem", "resource"] },
+    { itemType: "bluegem", dropRate: 200, category: ["gem", "resource"] },
+    { itemType: "greengem", dropRate: 200, category: ["gem", "resource"] },
+    { itemType: "gold", dropRate: 200, category: ["gem", "resource"] },
+    { itemType: "stone", dropRate: 200, category: ["gem", "resource"] },
     {
         itemType: "coal",
-        dropRate: 7,
+        dropRate: 100,
         category: ["fuel", "lantern", "resource"],
     },
-    { itemType: "bomb", dropRate: 10, category: ["bomb", "weapon"] },
+    { itemType: "bomb", dropRate: 100, category: ["bomb", "weapon"] },
 ];
-DropTable.getDrop = (entity, useCategory = ["coin"], force = false, increaseDepth = 0) => {
+DropTable.getDrop = (entity, useCategory = [], force = false, increaseDepth = 0) => {
     if (entity.cloned)
         return;
     const currentDepth = entity.room.depth + increaseDepth;
@@ -13066,6 +13067,11 @@ DropTable.addNewItem = (itemType, entity) => {
     }
     console.log(`Creating new item of type: ${itemType}, class: ${ItemClass.name}`);
     entity.drop = ItemClass.add(entity.room, entity.x, entity.y);
+    if (entity.drop instanceof coin_1.Coin) {
+        // Create right-skewed distribution for coins (1-10)
+        const baseRoll = Math.random() * Math.random() * 10; // Right skew using multiplication
+        entity.drop.stack += Math.max(1, Math.min(10, Math.floor(baseRoll + 2))); // +2 shifts the curve to target 3-5 range
+    }
 };
 
 

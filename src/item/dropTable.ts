@@ -72,18 +72,18 @@ export const ItemTypeMap: { [key: string]: typeof Item } = {
 export class DropTable {
   static drops: Drop[] = [
     // Weapons - Higher numbers = rarer
-    { itemType: "dualdagger", dropRate: 100, category: ["weapon", "melee"] },
-    { itemType: "warhammer", dropRate: 33, category: ["weapon", "melee"] },
-    { itemType: "spear", dropRate: 33, category: ["weapon", "melee"] },
-    { itemType: "spellbook", dropRate: 100, category: ["weapon", "magic"] },
-    { itemType: "greataxe", dropRate: 100, category: ["weapon", "melee"] },
+    { itemType: "dualdagger", dropRate: 1000, category: ["weapon", "melee"] },
+    { itemType: "warhammer", dropRate: 500, category: ["weapon", "melee"] },
+    { itemType: "spear", dropRate: 500, category: ["weapon", "melee"] },
+    { itemType: "spellbook", dropRate: 500, category: ["weapon", "magic"] },
+    { itemType: "greataxe", dropRate: 1000, category: ["weapon", "melee"] },
 
     // Equipment
-    { itemType: "armor", dropRate: 12, category: ["equipment"] },
+    { itemType: "armor", dropRate: 350, category: ["equipment"] },
 
     // Tools
-    { itemType: "pickaxe", dropRate: 33, category: ["tool"] },
-    { itemType: "hammer", dropRate: 33, category: ["tool"] },
+    { itemType: "pickaxe", dropRate: 100, category: ["tool"] },
+    { itemType: "hammer", dropRate: 50, category: ["tool"] },
 
     // Consumables
     { itemType: "heart", dropRate: 20, category: ["consumable"] },
@@ -96,40 +96,40 @@ export class DropTable {
     // Crafting materials
     {
       itemType: "weaponfragments",
-      dropRate: 20,
+      dropRate: 100,
       category: ["consumable", "melee"],
     },
     {
       itemType: "spellbookPage",
-      dropRate: 50,
+      dropRate: 100,
       category: ["consumable", "magic"],
     },
 
     // Upgrades
-    { itemType: "backpack", dropRate: 20, category: ["upgrade"] },
+    { itemType: "backpack", dropRate: 100, category: ["upgrade"] },
 
     // Light sources
-    { itemType: "candle", dropRate: 10, category: ["light"] },
-    { itemType: "torch", dropRate: 20, category: ["light"] },
-    { itemType: "lantern", dropRate: 50, category: ["light"] },
+    { itemType: "candle", dropRate: 100, category: ["light"] },
+    { itemType: "torch", dropRate: 250, category: ["light"] },
+    { itemType: "lantern", dropRate: 500, category: ["light"] },
 
     // Gems and minerals
-    { itemType: "redgem", dropRate: 20, category: ["gem", "resource"] },
-    { itemType: "bluegem", dropRate: 20, category: ["gem", "resource"] },
-    { itemType: "greengem", dropRate: 20, category: ["gem", "resource"] },
-    { itemType: "gold", dropRate: 20, category: ["gem", "resource"] },
-    { itemType: "stone", dropRate: 20, category: ["gem", "resource"] },
+    { itemType: "redgem", dropRate: 200, category: ["gem", "resource"] },
+    { itemType: "bluegem", dropRate: 200, category: ["gem", "resource"] },
+    { itemType: "greengem", dropRate: 200, category: ["gem", "resource"] },
+    { itemType: "gold", dropRate: 200, category: ["gem", "resource"] },
+    { itemType: "stone", dropRate: 200, category: ["gem", "resource"] },
     {
       itemType: "coal",
-      dropRate: 7,
+      dropRate: 100,
       category: ["fuel", "lantern", "resource"],
     },
-    { itemType: "bomb", dropRate: 10, category: ["bomb", "weapon"] },
+    { itemType: "bomb", dropRate: 100, category: ["bomb", "weapon"] },
   ];
 
   static getDrop = (
     entity: Entity,
-    useCategory: string[] = ["coin"],
+    useCategory: string[] = [],
     force: boolean = false,
     increaseDepth: number = 0,
   ) => {
@@ -261,5 +261,10 @@ export class DropTable {
       `Creating new item of type: ${itemType}, class: ${ItemClass.name}`,
     );
     entity.drop = ItemClass.add(entity.room, entity.x, entity.y);
+    if (entity.drop instanceof Coin) {
+      // Create right-skewed distribution for coins (1-10)
+      const baseRoll = Math.random() * Math.random() * 10; // Right skew using multiplication
+      entity.drop.stack += Math.max(1, Math.min(10, Math.floor(baseRoll + 2))); // +2 shifts the curve to target 3-5 range
+    }
   };
 }

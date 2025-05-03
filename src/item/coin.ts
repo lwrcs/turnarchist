@@ -30,8 +30,8 @@ export class Coin extends Item {
         this.stack += otherCoin.stack;
         this.level.items = this.level.items.filter((x) => x !== otherCoin);
       }
-      if (this.stack === 2) this.tileX = 20;
-      else if (this.stack >= 3) this.tileX = 21;
+      if (this.stack >= 3) this.tileX = 20;
+      if (this.stack >= 7) this.tileX = 21;
     }
   };
   get distanceToBottomRight() {
