@@ -17145,7 +17145,8 @@ class PlayerInputHandler {
             return Math.atan2(dy, dx);
         };
         this.faceMouse = () => {
-            if (!gameConstants_1.GameConstants.MOVE_WITH_MOUSE)
+            if (!gameConstants_1.GameConstants.MOVE_WITH_MOUSE ||
+                this.mostRecentMoveInput === "keyboard")
                 return;
             const angle = this.mouseAngle();
             // Convert angle to direction
@@ -17613,7 +17614,6 @@ class PlayerRenderer {
             else if (this.player.inputHandler.mostRecentMoveInput === "mouse" &&
                 this.mouseDiagonal()) {
                 const angle = (this.player.inputHandler.mouseAngle() * 180) / Math.PI;
-                console.log(angle);
                 let diagonalTile = { x: 1, y: 18 };
                 if (angle > -150 && angle <= -120)
                     diagonalTile = { x: 3, y: 18 };
@@ -17638,7 +17638,6 @@ class PlayerRenderer {
         };
         this.mouseDiagonal = () => {
             const angle = (this.player.inputHandler.mouseAngle() * 180) / Math.PI;
-            console.log(angle);
             if (angle > 30 && angle < 60)
                 return true;
             if (angle > 120 && angle < 150)

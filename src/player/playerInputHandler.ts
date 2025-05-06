@@ -375,7 +375,11 @@ export class PlayerInputHandler {
   };
 
   faceMouse = () => {
-    if (!GameConstants.MOVE_WITH_MOUSE) return;
+    if (
+      !GameConstants.MOVE_WITH_MOUSE ||
+      this.mostRecentMoveInput === "keyboard"
+    )
+      return;
     const angle = this.mouseAngle();
 
     // Convert angle to direction
