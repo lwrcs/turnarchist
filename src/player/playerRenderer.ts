@@ -160,7 +160,6 @@ export class PlayerRenderer {
     Game.ctx.restore(); // Restore the canvas state
   };
 
-  // Check if the mouse is in a diagonal direction to the player for sprite purposes
   mouseDiagonal = () => {
     const angle = (this.player.inputHandler.mouseAngle() * 180) / Math.PI;
     if (angle > 30 && angle < 60) return true;
@@ -170,7 +169,6 @@ export class PlayerRenderer {
     return false;
   };
 
-  //check to see if the player has changed directions, and how long has passed since
   drawSmear = () => {
     if (this.player.direction === this.player.lastDirection) return false;
     let t = 100;
@@ -188,7 +186,6 @@ export class PlayerRenderer {
     else return false;
   };
 
-  //set the smear frame based on the players last direction and time since
   setSmearFrame = () => {
     let tile = { x: 1, y: 18 };
     const timeSince = Date.now() - this.player.movement.lastChangeDirectionTime;
@@ -737,36 +734,6 @@ export class PlayerRenderer {
     );
 
     Game.ctx.restore(); // Restore the canvas state
-  };
-
-  hitShake = (
-    playerX: number,
-    playerY: number,
-    otherX: number,
-    otherY: number,
-  ) => {
-    const range = GameConstants.TILESIZE;
-    const hitX = Math.min(Math.max(0.5 * (playerX - otherX), -range), range);
-    const hitY = Math.min(Math.max(0.5 * (playerY - otherY), -range), range);
-    this.setHitXY(hitX, hitY);
-  };
-
-  shakeScreen = (
-    playerX: number,
-    playerY: number,
-    otherX: number,
-    otherY: number,
-    shakeStrength: number = 10,
-  ) => {
-    const range = GameConstants.TILESIZE;
-    const shakeX = Math.min(Math.max(0.5 * (playerX - otherX), -range), range);
-    const shakeY = Math.min(Math.max(0.5 * (playerY - otherY), -range), range);
-    this.setHitXY(shakeX, shakeY);
-
-    this.player.game.shakeScreen(
-      -shakeX * 1 * shakeStrength,
-      -shakeY * 1 * shakeStrength,
-    );
   };
 
   jump = (delta: number) => {

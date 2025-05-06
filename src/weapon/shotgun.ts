@@ -120,7 +120,7 @@ export class Shotgun extends Weapon {
       //hits all candidates in enemyHitCandidates
 
       this.hitSound();
-      this.wielder.renderer.setHitXY(newX, newY);
+      this.wielder.setHitXY(newX, newY);
 
       GenericParticle.shotgun(
         this.game.rooms[this.wielder.levelID],

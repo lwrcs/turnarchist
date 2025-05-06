@@ -87,7 +87,7 @@ export class Player extends Drawable {
 
   cooldownRemaining: number;
 
-  renderer: PlayerRenderer;
+  private renderer: PlayerRenderer;
 
   private drawMoveQueue: {
     drawX: number;
@@ -166,6 +166,11 @@ export class Player extends Drawable {
   get drawY() {
     return this.renderer?.drawY ?? 0;
   }
+
+  setHitXY = (newX: number, newY: number, distance = 0.5) => {
+    this.renderer.hitX = distance * (this.x - newX);
+    this.renderer.hitY = distance * (this.y - newY);
+  };
 
   applyStatus = (
     enemy: Entity,
@@ -559,8 +564,8 @@ export class Player extends Drawable {
               )
                 Sound.hit();
 
-              this.renderer.shakeScreen(this.x, this.y, e.x, e.y);
-              this.renderer.hitShake(this.x, this.y, e.x, e.y);
+              this.shakeScreen(this.x, this.y, e.x, e.y);
+              this.hitShake(this.x, this.y, e.x, e.y);
 
               this.game.levels[this.depth].rooms[this.levelID].tick(this);
               return;
@@ -625,7 +630,7 @@ export class Player extends Drawable {
         this.game.levels[this.depth].rooms[this.levelID].tick(this);
     } else {
       if (other instanceof Door) {
-        this.renderer.shakeScreen(this.x, this.y, x, y);
+        this.shakeScreen(this.x, this.y, x, y);
 
         if (other.canUnlock(this)) other.unlock(this);
       }
@@ -788,6 +793,36 @@ export class Player extends Drawable {
   heal = (amount: number) => {
     this.health += amount;
     if (this.health > this.maxHealth) this.health = this.maxHealth;
+  };
+
+  hitShake = (
+    playerX: number,
+    playerY: number,
+    otherX: number,
+    otherY: number,
+  ) => {
+    const range = GameConstants.TILESIZE;
+    const hitX = Math.min(Math.max(0.5 * (playerX - otherX), -range), range);
+    const hitY = Math.min(Math.max(0.5 * (playerY - otherY), -range), range);
+    this.renderer.setHitXY(hitX, hitY);
+  };
+
+  shakeScreen = (
+    playerX: number,
+    playerY: number,
+    otherX: number,
+    otherY: number,
+    shakeStrength: number = 10,
+  ) => {
+    const range = GameConstants.TILESIZE;
+    const shakeX = Math.min(Math.max(0.5 * (playerX - otherX), -range), range);
+    const shakeY = Math.min(Math.max(0.5 * (playerY - otherY), -range), range);
+    this.renderer.setHitXY(shakeX, shakeY);
+
+    this.game.shakeScreen(
+      -shakeX * 1 * shakeStrength,
+      -shakeY * 1 * shakeStrength,
+    );
   };
 
   updateSlowMotion = () => {

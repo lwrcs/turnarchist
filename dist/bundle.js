@@ -16440,6 +16440,10 @@ class Player extends drawable_1.Drawable {
         this.drawMoveQueue = [];
         this.seenEnemies = new Set();
         this.bestiary = null;
+        this.setHitXY = (newX, newY, distance = 0.5) => {
+            this.renderer.hitX = distance * (this.x - newX);
+            this.renderer.hitY = distance * (this.y - newY);
+        };
         this.applyStatus = (enemy, status) => {
             if (enemy instanceof enemy_1.Enemy) {
                 if (status.poison) {
@@ -16752,8 +16756,8 @@ class Player extends drawable_1.Drawable {
                                 if (this.game.levels[this.depth].rooms[this.levelID] ===
                                     this.game.room)
                                     sound_1.Sound.hit();
-                                this.renderer.shakeScreen(this.x, this.y, e.x, e.y);
-                                this.renderer.hitShake(this.x, this.y, e.x, e.y);
+                                this.shakeScreen(this.x, this.y, e.x, e.y);
+                                this.hitShake(this.x, this.y, e.x, e.y);
                                 this.game.levels[this.depth].rooms[this.levelID].tick(this);
                                 return;
                             }
@@ -16810,7 +16814,7 @@ class Player extends drawable_1.Drawable {
             }
             else {
                 if (other instanceof door_1.Door) {
-                    this.renderer.shakeScreen(this.x, this.y, x, y);
+                    this.shakeScreen(this.x, this.y, x, y);
                     if (other.canUnlock(this))
                         other.unlock(this);
                 }
@@ -16951,6 +16955,19 @@ class Player extends drawable_1.Drawable {
             this.health += amount;
             if (this.health > this.maxHealth)
                 this.health = this.maxHealth;
+        };
+        this.hitShake = (playerX, playerY, otherX, otherY) => {
+            const range = gameConstants_1.GameConstants.TILESIZE;
+            const hitX = Math.min(Math.max(0.5 * (playerX - otherX), -range), range);
+            const hitY = Math.min(Math.max(0.5 * (playerY - otherY), -range), range);
+            this.renderer.setHitXY(hitX, hitY);
+        };
+        this.shakeScreen = (playerX, playerY, otherX, otherY, shakeStrength = 10) => {
+            const range = gameConstants_1.GameConstants.TILESIZE;
+            const shakeX = Math.min(Math.max(0.5 * (playerX - otherX), -range), range);
+            const shakeY = Math.min(Math.max(0.5 * (playerY - otherY), -range), range);
+            this.renderer.setHitXY(shakeX, shakeY);
+            this.game.shakeScreen(-shakeX * 1 * shakeStrength, -shakeY * 1 * shakeStrength);
         };
         this.updateSlowMotion = () => {
             this.renderer.updateSlowMotion();
@@ -17619,7 +17636,6 @@ class PlayerRenderer {
             }
             game_1.Game.ctx.restore(); // Restore the canvas state
         };
-        // Check if the mouse is in a diagonal direction to the player for sprite purposes
         this.mouseDiagonal = () => {
             const angle = (this.player.inputHandler.mouseAngle() * 180) / Math.PI;
             if (angle > 30 && angle < 60)
@@ -17632,7 +17648,6 @@ class PlayerRenderer {
                 return true;
             return false;
         };
-        //check to see if the player has changed directions, and how long has passed since
         this.drawSmear = () => {
             if (this.player.direction === this.player.lastDirection)
                 return false;
@@ -17650,7 +17665,6 @@ class PlayerRenderer {
             else
                 return false;
         };
-        //set the smear frame based on the players last direction and time since
         this.setSmearFrame = () => {
             let tile = { x: 1, y: 18 };
             const timeSince = Date.now() - this.player.movement.lastChangeDirectionTime;
@@ -18035,19 +18049,6 @@ class PlayerRenderer {
             }
             game_1.Game.drawFX(tileX + Math.floor(hitWarning_1.HitWarning.frame), tileY, 1, 1, this.player.tileCursor.x, this.player.tileCursor.y, 1, 1);
             game_1.Game.ctx.restore(); // Restore the canvas state
-        };
-        this.hitShake = (playerX, playerY, otherX, otherY) => {
-            const range = gameConstants_1.GameConstants.TILESIZE;
-            const hitX = Math.min(Math.max(0.5 * (playerX - otherX), -range), range);
-            const hitY = Math.min(Math.max(0.5 * (playerY - otherY), -range), range);
-            this.setHitXY(hitX, hitY);
-        };
-        this.shakeScreen = (playerX, playerY, otherX, otherY, shakeStrength = 10) => {
-            const range = gameConstants_1.GameConstants.TILESIZE;
-            const shakeX = Math.min(Math.max(0.5 * (playerX - otherX), -range), range);
-            const shakeY = Math.min(Math.max(0.5 * (playerY - otherY), -range), range);
-            this.setHitXY(shakeX, shakeY);
-            this.player.game.shakeScreen(-shakeX * 1 * shakeStrength, -shakeY * 1 * shakeStrength);
         };
         this.jump = (delta) => {
             let j = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
@@ -23369,8 +23370,7 @@ class DualDagger extends weapon_1.Weapon {
             }
             if (flag) {
                 this.hitSound();
-                this.wielder.renderer.setHitXY(newX, newY);
-                this.shakeScreen(newX, newY);
+                this.wielder.setHitXY(newX, newY);
                 if (this.firstAttack) {
                     this.game.rooms[this.wielder.levelID].particles.push(new attackAnimation_1.AttackAnimation(newX, newY, "dualdagger", this.wielder.direction));
                 }
@@ -23619,7 +23619,7 @@ class Shotgun extends weapon_1.Weapon {
                 //if they're closer do the usual damage
                 //hits all candidates in enemyHitCandidates
                 this.hitSound();
-                this.wielder.renderer.setHitXY(newX, newY);
+                this.wielder.setHitXY(newX, newY);
                 genericParticle_1.GenericParticle.shotgun(this.game.rooms[this.wielder.levelID], this.wielder.x + 0.5, this.wielder.y, targetX + 0.5, targetY, "black");
                 genericParticle_1.GenericParticle.shotgun(this.game.rooms[this.wielder.levelID], this.wielder.x + 0.5, this.wielder.y, targetX + 0.5, targetY, "#ffddff");
                 let gp = new genericParticle_1.GenericParticle(this.game.rooms[this.wielder.levelID], 0.5 * (newX + this.wielder.x) + 0.5, 0.5 * (newY + this.wielder.y), 0, 1, 0, 0, 0, "white", 0);
@@ -23690,7 +23690,7 @@ class Spear extends weapon_1.Weapon {
                 for (const e of enemyHitCandidates)
                     e.hurt(this.wielder, 1);
                 this.hitSound();
-                this.wielder.renderer.setHitXY(newX, newY);
+                this.wielder.setHitXY(newX, newY);
                 //this.game.rooms[this.wielder.levelID].particles.push(
                 //new AttackAnimation(newX, newY, "spear", this.wielder.direction),
                 //);
@@ -23705,7 +23705,7 @@ class Spear extends weapon_1.Weapon {
             if (flag) {
                 if (this.wielder.game.room === this.wielder.game.rooms[this.wielder.levelID])
                     sound_1.Sound.hit();
-                this.wielder.renderer.setHitXY(newX, newY);
+                this.wielder.setHitXY(newX, newY);
                 this.shakeScreen(newX, newY);
                 this.game.rooms[this.wielder.levelID].particles.push(new attackAnimation_1.AttackAnimation(newX, newY, "spear", this.wielder.direction));
                 this.game.rooms[this.wielder.levelID].tick(this.wielder);
@@ -23813,7 +23813,7 @@ class Spellbook extends weapon_1.Weapon {
             if (flag) {
                 if (this.wielder.game.rooms[this.wielder.levelID] === this.wielder.game.room)
                     sound_1.Sound.hit();
-                this.wielder.renderer.setHitXY(newX, newY);
+                this.wielder.setHitXY(newX, newY);
                 this.game.rooms[this.wielder.levelID].tick(this.wielder);
                 if (this.wielder === this.game.players[this.game.localPlayerID])
                     this.game.shakeScreen(10 * this.wielder.hitX, 10 * this.wielder.hitY);
@@ -24006,12 +24006,12 @@ class Weapon extends equippable_1.Equippable {
             this.statusEffect(enemy);
         };
         this.attackAnimation = (newX, newY) => {
-            this.wielder.renderer.setHitXY(newX, newY);
+            this.wielder.setHitXY(newX, newY);
             this.game.rooms[this.wielder.levelID].particles.push(new attackAnimation_1.AttackAnimation(newX, newY, this.name, this.wielder.direction));
         };
         this.shakeScreen = (eX, eY) => {
             if (this.wielder.game.rooms[this.wielder.levelID] === this.wielder.game.room)
-                this.wielder.renderer.shakeScreen(this.wielder.x, this.wielder.y, eX, eY);
+                this.wielder.shakeScreen(this.wielder.x, this.wielder.y, eX, eY);
         };
         this.hitSound = () => {
             if (this.wielder.game.rooms[this.wielder.levelID] === this.wielder.game.room)
