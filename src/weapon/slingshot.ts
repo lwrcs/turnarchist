@@ -137,7 +137,7 @@ export class Slingshot extends Weapon {
         this.wielder.game.rooms[this.wielder.levelID] === this.wielder.game.room
       )
         Sound.hit();
-      this.wielder.setHitXY(newX, newY);
+      this.wielder.renderer.setHitXY(newX, newY);
 
       GenericParticle.shotgun(
         this.game.rooms[this.wielder.levelID],

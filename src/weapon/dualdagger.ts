@@ -39,7 +39,8 @@ export class DualDagger extends Weapon {
     if (flag) {
       this.hitSound();
 
-      this.wielder.setHitXY(newX, newY);
+      this.wielder.renderer.setHitXY(newX, newY);
+      this.shakeScreen(newX, newY);
 
       if (this.firstAttack) {
         this.game.rooms[this.wielder.levelID].particles.push(

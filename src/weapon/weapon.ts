@@ -151,7 +151,7 @@ export abstract class Weapon extends Equippable {
   };
 
   attackAnimation = (newX: number, newY: number) => {
-    this.wielder.setHitXY(newX, newY);
+    this.wielder.renderer.setHitXY(newX, newY);
 
     this.game.rooms[this.wielder.levelID].particles.push(
       new AttackAnimation(newX, newY, this.name, this.wielder.direction),
@@ -162,7 +162,7 @@ export abstract class Weapon extends Equippable {
     if (
       this.wielder.game.rooms[this.wielder.levelID] === this.wielder.game.room
     )
-      this.wielder.shakeScreen(this.wielder.x, this.wielder.y, eX, eY);
+      this.wielder.renderer.shakeScreen(this.wielder.x, this.wielder.y, eX, eY);
   };
 
   hitSound = () => {
