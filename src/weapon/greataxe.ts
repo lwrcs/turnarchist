@@ -19,6 +19,7 @@ export class Greataxe extends Weapon {
     this.hitDelay = 225;
     this.offsetY = 0;
     this.iconOffset = 0.2;
+    this.useCost = 10;
   }
 
   hitSound = () => {

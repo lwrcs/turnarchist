@@ -13092,6 +13092,7 @@ class Equippable extends item_1.Item {
     constructor(level, x, y) {
         super(level, x, y);
         this.equipTick = false;
+        this.useCost = 1;
         this.setWielder = (wielder) => {
             this.wielder = wielder;
         };
@@ -13114,7 +13115,7 @@ class Equippable extends item_1.Item {
             game_1.Game.drawItem(this.tileX, this.tileY, 1, 2, x, y - 1, this.w, this.h);
         };
         this.degrade = (degradeAmount = 1) => {
-            this.durability -= degradeAmount;
+            this.durability -= degradeAmount * this.useCost;
             if (this.durability <= 0)
                 this.break();
         };
@@ -23371,6 +23372,7 @@ class DualDagger extends weapon_1.Weapon {
             if (flag) {
                 this.hitSound();
                 this.wielder.setHitXY(newX, newY);
+                this.shakeScreen(newX, newY);
                 if (this.firstAttack) {
                     this.game.rooms[this.wielder.levelID].particles.push(new attackAnimation_1.AttackAnimation(newX, newY, "dualdagger", this.wielder.direction));
                 }
@@ -23397,8 +23399,7 @@ class DualDagger extends weapon_1.Weapon {
         this.tileY = 0;
         this.firstAttack = true;
         this.name = "Dual Daggers";
-        this.durability = 75;
-        this.durabilityMax = 75;
+        this.useCost = 5;
         this.description =
             "After the first attack, enemies will not take their turn until you attack or move again.";
     }
@@ -23475,6 +23476,7 @@ class Greataxe extends weapon_1.Weapon {
         this.hitDelay = 225;
         this.offsetY = 0;
         this.iconOffset = 0.2;
+        this.useCost = 10;
     }
 }
 exports.Greataxe = Greataxe;
@@ -23722,6 +23724,7 @@ class Spear extends weapon_1.Weapon {
             "Hits enemies in front of you within a range of 2 tiles.";
         this.iconOffset = 0.1; //default 0
         this.offsetY = 0; //default -0.25
+        this.useCost = 2;
     }
 }
 exports.Spear = Spear;
@@ -23886,9 +23889,8 @@ class Warhammer extends weapon_1.Weapon {
         this.tileY = 2;
         this.damage = 2;
         this.name = "warhammer";
-        this.durability = 25;
-        this.durabilityMax = 25;
         this.hitDelay = 225;
+        this.useCost = 4;
     }
 }
 exports.Warhammer = Warhammer;

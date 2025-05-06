@@ -7,6 +7,7 @@ export class Equippable extends Item {
   wielder: Player;
   equipped: boolean;
   equipTick: boolean = false;
+  useCost: number = 1;
 
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
@@ -41,7 +42,7 @@ export class Equippable extends Item {
   };
 
   degrade = (degradeAmount: number = 1) => {
-    this.durability -= degradeAmount;
+    this.durability -= degradeAmount * this.useCost;
     if (this.durability <= 0) this.break();
   };
 

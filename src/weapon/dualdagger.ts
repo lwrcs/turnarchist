@@ -16,8 +16,7 @@ export class DualDagger extends Weapon {
     this.tileY = 0;
     this.firstAttack = true;
     this.name = "Dual Daggers";
-    this.durability = 75;
-    this.durabilityMax = 75;
+    this.useCost = 5;
     this.description =
       "After the first attack, enemies will not take their turn until you attack or move again.";
   }
@@ -40,6 +39,7 @@ export class DualDagger extends Weapon {
       this.hitSound();
 
       this.wielder.setHitXY(newX, newY);
+      this.shakeScreen(newX, newY);
 
       if (this.firstAttack) {
         this.game.rooms[this.wielder.levelID].particles.push(

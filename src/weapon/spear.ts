@@ -17,6 +17,7 @@ export class Spear extends Weapon {
       "Hits enemies in front of you within a range of 2 tiles.";
     this.iconOffset = 0.1; //default 0
     this.offsetY = 0; //default -0.25
+    this.useCost = 2;
   }
 
   weaponMove = (newX: number, newY: number): boolean => {
