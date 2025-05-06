@@ -44,7 +44,7 @@ export class GameConstants {
 
   static readonly KEY_REPEAT_TIME = 300; // millseconds
   static readonly MOVEMENT_COOLDOWN = 200; // milliseconds
-  static readonly MOVE_WITH_MOUSE = false;
+  static readonly MOVE_WITH_MOUSE = true;
 
   static readonly CHAT_APPEAR_TIME = 2500;
   static readonly CHAT_FADE_TIME = 500;

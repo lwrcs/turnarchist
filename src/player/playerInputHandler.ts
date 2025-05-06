@@ -8,10 +8,12 @@ import { GameConstants } from "../gameConstants";
 export class PlayerInputHandler {
   private player: Player;
   private mostRecentInput: string;
+  mostRecentMoveInput: string;
 
   constructor(player: Player) {
     this.player = player;
     this.mostRecentInput = "keyboard";
+    this.mostRecentMoveInput = "keyboard";
 
     if (player.isLocalPlayer) {
       this.setupListeners();
@@ -243,6 +245,7 @@ export class PlayerInputHandler {
       ) {
         player.openVendingMachine.space();
       } else {
+        player.openVendingMachine.close();
         this.mostRecentInput = "mouse";
         const { x, y } = MouseCursor.getInstance().getPosition();
         const bounds = this.player.inventory.isPointInInventoryBounds(x, y);
@@ -360,8 +363,7 @@ export class PlayerInputHandler {
     }
   }
 
-  faceMouse = () => {
-    if (!GameConstants.MOVE_WITH_MOUSE) return;
+  mouseAngle = () => {
     const mousePosition = MouseCursor.getInstance().getPosition();
     const playerPixelPosition = {
       x: GameConstants.WIDTH / 2,
@@ -369,11 +371,17 @@ export class PlayerInputHandler {
     };
     const dx = mousePosition.x - playerPixelPosition.x;
     const dy = mousePosition.y - playerPixelPosition.y;
-    const angle = Math.atan2(dy, dx);
+    return Math.atan2(dy, dx);
+  };
+
+  faceMouse = () => {
+    if (!GameConstants.MOVE_WITH_MOUSE) return;
+    const angle = this.mouseAngle();
 
     // Convert angle to direction
     // atan2 returns angle in radians (-π to π)
     // Divide the circle into 4 sectors for the 4 directions
+
     if (angle >= -Math.PI / 4 && angle < Math.PI / 4) {
       this.player.direction = Direction.RIGHT;
     } else if (angle >= Math.PI / 4 && angle < (3 * Math.PI) / 4) {

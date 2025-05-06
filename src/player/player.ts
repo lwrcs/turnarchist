@@ -260,6 +260,8 @@ export class Player extends Drawable {
     if (!GameConstants.MOVE_WITH_MOUSE) return;
     const moveData = this.canMoveWithMouse();
     if (moveData) {
+      this.inputHandler.mostRecentMoveInput = "mouse";
+
       this.direction = moveData.direction;
       this.tryMove(moveData.x, moveData.y);
     }

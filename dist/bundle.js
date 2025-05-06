@@ -9923,7 +9923,7 @@ GameConstants.SWIPE_THRESH = 25 ** 2; // (size of swipe threshold circle)^2
 GameConstants.HOLD_THRESH = 250; // milliseconds
 GameConstants.KEY_REPEAT_TIME = 300; // millseconds
 GameConstants.MOVEMENT_COOLDOWN = 200; // milliseconds
-GameConstants.MOVE_WITH_MOUSE = false;
+GameConstants.MOVE_WITH_MOUSE = true;
 GameConstants.CHAT_APPEAR_TIME = 2500;
 GameConstants.CHAT_FADE_TIME = 500;
 GameConstants.ANIMATION_SPEED = 1;
@@ -16518,6 +16518,7 @@ class Player extends drawable_1.Drawable {
                 return;
             const moveData = this.canMoveWithMouse();
             if (moveData) {
+                this.inputHandler.mostRecentMoveInput = "mouse";
                 this.direction = moveData.direction;
                 this.tryMove(moveData.x, moveData.y);
             }
@@ -17133,9 +17134,7 @@ class PlayerInputHandler {
                     .inBounds &&
                     this.player.game.isMobile));
         };
-        this.faceMouse = () => {
-            if (!gameConstants_1.GameConstants.MOVE_WITH_MOUSE)
-                return;
+        this.mouseAngle = () => {
             const mousePosition = mouseCursor_1.MouseCursor.getInstance().getPosition();
             const playerPixelPosition = {
                 x: gameConstants_1.GameConstants.WIDTH / 2,
@@ -17143,7 +17142,12 @@ class PlayerInputHandler {
             };
             const dx = mousePosition.x - playerPixelPosition.x;
             const dy = mousePosition.y - playerPixelPosition.y;
-            const angle = Math.atan2(dy, dx);
+            return Math.atan2(dy, dx);
+        };
+        this.faceMouse = () => {
+            if (!gameConstants_1.GameConstants.MOVE_WITH_MOUSE)
+                return;
+            const angle = this.mouseAngle();
             // Convert angle to direction
             // atan2 returns angle in radians (-π to π)
             // Divide the circle into 4 sectors for the 4 directions
@@ -17162,6 +17166,7 @@ class PlayerInputHandler {
         };
         this.player = player;
         this.mostRecentInput = "keyboard";
+        this.mostRecentMoveInput = "keyboard";
         if (player.isLocalPlayer) {
             this.setupListeners();
         }
@@ -17321,6 +17326,7 @@ class PlayerInputHandler {
                 player.openVendingMachine.space();
             }
             else {
+                player.openVendingMachine.close();
                 this.mostRecentInput = "mouse";
                 const { x, y } = mouseCursor_1.MouseCursor.getInstance().getPosition();
                 const bounds = this.player.inventory.isPointInInventoryBounds(x, y);
@@ -17433,6 +17439,7 @@ class PlayerMovement {
         this.isProcessingQueue = false;
         this.animationFrameId = null;
         this.lastMoveTime = 0;
+        this.lastChangeDirectionTime = 0;
         this.adjustedCooldown = 0;
         this.queueHandler = () => {
             if (!this.isProcessingQueue)
@@ -17456,6 +17463,7 @@ class PlayerMovement {
     move(direction) {
         const { x, y } = this.getTargetCoords(direction);
         if (this.canMove()) {
+            this.player.inputHandler.mostRecentMoveInput = "keyboard";
             this.player.lastDirection = this.player.direction;
             this.player.direction = direction;
             this.player.tryMove(x, y);
@@ -17485,6 +17493,7 @@ class PlayerMovement {
             now - this.lastMoveTime / this.adjustedCooldown;
         if (now - this.lastMoveTime >= this.adjustedCooldown) {
             this.lastMoveTime = now;
+            this.lastChangeDirectionTime = now;
             return true;
         }
         return false;
@@ -17497,6 +17506,7 @@ class PlayerMovement {
             now - this.lastMoveTime / this.adjustedCooldown;
         if (now - this.lastMoveTime >= this.adjustedCooldown / 5) {
             this.lastMoveTime = now;
+            this.lastChangeDirectionTime = now;
             return true;
         }
         return false;
@@ -17600,6 +17610,21 @@ class PlayerRenderer {
             if (this.drawSmear()) {
                 game_1.Game.drawMob(this.setSmearFrame().x, this.setSmearFrame().y, 1, 2, player.x - this.drawX - this.hitX, player.y - 1.45 - this.drawY - this.jumpY - this.hitY, 1, 2, this.shadeColor());
             }
+            else if (this.player.inputHandler.mostRecentMoveInput === "mouse" &&
+                this.mouseDiagonal()) {
+                const angle = (this.player.inputHandler.mouseAngle() * 180) / Math.PI;
+                console.log(angle);
+                let diagonalTile = { x: 1, y: 18 };
+                if (angle > -150 && angle <= -120)
+                    diagonalTile = { x: 3, y: 18 };
+                if (angle > -60 && angle <= -30)
+                    diagonalTile = { x: 4, y: 18 };
+                if (angle > 30 && angle <= 60)
+                    diagonalTile = { x: 2, y: 18 };
+                if (angle > 120 && angle <= 150)
+                    diagonalTile = { x: 1, y: 18 };
+                game_1.Game.drawMob(diagonalTile.x, diagonalTile.y, 1, 2, player.x - this.drawX - this.hitX, player.y - 1.45 - this.drawY - this.jumpY - this.hitY, 1, 2, this.shadeColor());
+            }
             else {
                 this.frame += 0.1 * delta;
                 if (this.frame >= 4)
@@ -17610,6 +17635,19 @@ class PlayerRenderer {
                 // TODO draw armor
             }
             game_1.Game.ctx.restore(); // Restore the canvas state
+        };
+        this.mouseDiagonal = () => {
+            const angle = (this.player.inputHandler.mouseAngle() * 180) / Math.PI;
+            console.log(angle);
+            if (angle > 30 && angle < 60)
+                return true;
+            if (angle > 120 && angle < 150)
+                return true;
+            if (angle > -150 && angle < -120)
+                return true;
+            if (angle > -60 && angle < -30)
+                return true;
+            return false;
         };
         this.drawSmear = () => {
             if (this.player.direction === this.player.lastDirection)
@@ -17622,7 +17660,7 @@ class PlayerRenderer {
                 (dir === game_1.Direction.LEFT && lastDir === game_1.Direction.RIGHT) ||
                 (dir === game_1.Direction.RIGHT && lastDir === game_1.Direction.LEFT))
                 t = 150;
-            const timeSince = Date.now() - this.player.movement.lastMoveTime;
+            const timeSince = Date.now() - this.player.movement.lastChangeDirectionTime;
             if (timeSince <= t)
                 return true;
             else
@@ -17630,7 +17668,7 @@ class PlayerRenderer {
         };
         this.setSmearFrame = () => {
             let tile = { x: 1, y: 18 };
-            const timeSince = Date.now() - this.player.movement.lastMoveTime;
+            const timeSince = Date.now() - this.player.movement.lastChangeDirectionTime;
             const t = 50;
             if ((this.player.direction === game_1.Direction.UP &&
                 this.player.lastDirection === game_1.Direction.LEFT) ||

@@ -2,6 +2,7 @@ import { Direction, Game } from "../game";
 import { GameConstants } from "../gameConstants";
 import { HitWarning } from "../hitWarning";
 import { LevelConstants } from "../levelConstants";
+import { MouseCursor } from "../mouseCursor";
 import { PostProcessor } from "../postProcess";
 import { statsTracker } from "../stats";
 import { Utils } from "../utils";
@@ -115,6 +116,29 @@ export class PlayerRenderer {
         2,
         this.shadeColor(),
       );
+    } else if (
+      this.player.inputHandler.mostRecentMoveInput === "mouse" &&
+      this.mouseDiagonal()
+    ) {
+      const angle = (this.player.inputHandler.mouseAngle() * 180) / Math.PI;
+      console.log(angle);
+      let diagonalTile = { x: 1, y: 18 };
+      if (angle > -150 && angle <= -120) diagonalTile = { x: 3, y: 18 };
+      if (angle > -60 && angle <= -30) diagonalTile = { x: 4, y: 18 };
+      if (angle > 30 && angle <= 60) diagonalTile = { x: 2, y: 18 };
+      if (angle > 120 && angle <= 150) diagonalTile = { x: 1, y: 18 };
+
+      Game.drawMob(
+        diagonalTile.x,
+        diagonalTile.y,
+        1,
+        2,
+        player.x - this.drawX - this.hitX,
+        player.y - 1.45 - this.drawY - this.jumpY - this.hitY,
+        1,
+        2,
+        this.shadeColor(),
+      );
     } else {
       this.frame += 0.1 * delta;
       if (this.frame >= 4) this.frame = 0;
@@ -137,6 +161,16 @@ export class PlayerRenderer {
     Game.ctx.restore(); // Restore the canvas state
   };
 
+  mouseDiagonal = () => {
+    const angle = (this.player.inputHandler.mouseAngle() * 180) / Math.PI;
+    console.log(angle);
+    if (angle > 30 && angle < 60) return true;
+    if (angle > 120 && angle < 150) return true;
+    if (angle > -150 && angle < -120) return true;
+    if (angle > -60 && angle < -30) return true;
+    return false;
+  };
+
   drawSmear = () => {
     if (this.player.direction === this.player.lastDirection) return false;
     let t = 100;
@@ -149,14 +183,14 @@ export class PlayerRenderer {
       (dir === Direction.RIGHT && lastDir === Direction.LEFT)
     )
       t = 150;
-    const timeSince = Date.now() - this.player.movement.lastMoveTime;
+    const timeSince = Date.now() - this.player.movement.lastChangeDirectionTime;
     if (timeSince <= t) return true;
     else return false;
   };
 
   setSmearFrame = () => {
     let tile = { x: 1, y: 18 };
-    const timeSince = Date.now() - this.player.movement.lastMoveTime;
+    const timeSince = Date.now() - this.player.movement.lastChangeDirectionTime;
     const t = 50;
 
     if (

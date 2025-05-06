@@ -8,6 +8,7 @@ export class PlayerMovement {
   private isProcessingQueue: boolean = false;
   private animationFrameId: number | null = null;
   lastMoveTime: number = 0;
+  lastChangeDirectionTime: number = 0;
   adjustedCooldown: number = 0;
 
   constructor(player: Player) {
@@ -18,6 +19,7 @@ export class PlayerMovement {
     const { x, y } = this.getTargetCoords(direction);
 
     if (this.canMove()) {
+      this.player.inputHandler.mostRecentMoveInput = "keyboard";
       this.player.lastDirection = this.player.direction;
       this.player.direction = direction;
       this.player.tryMove(x, y);
@@ -47,6 +49,7 @@ export class PlayerMovement {
       now - this.lastMoveTime / this.adjustedCooldown;
     if (now - this.lastMoveTime >= this.adjustedCooldown) {
       this.lastMoveTime = now;
+      this.lastChangeDirectionTime = now;
       return true;
     }
     return false;
@@ -60,6 +63,7 @@ export class PlayerMovement {
       now - this.lastMoveTime / this.adjustedCooldown;
     if (now - this.lastMoveTime >= this.adjustedCooldown / 5) {
       this.lastMoveTime = now;
+      this.lastChangeDirectionTime = now;
       return true;
     }
     return false;
