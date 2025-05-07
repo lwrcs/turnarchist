@@ -8426,9 +8426,31 @@ VendingMachine.isPointInVendingMachineBounds = (x, y, shop) => {
     // First check if this is the currently open vending machine
     if (!shop.open || shop !== shop.playerOpened?.openVendingMachine)
         return false;
-    let w = gameConstants_1.GameConstants.WIDTH;
-    let h = gameConstants_1.GameConstants.HEIGHT;
-    return x >= w * 0.25 && x <= w * 0.75 && y >= h * 0.25 && y <= h * 0.5;
+    // Get screen center coordinates
+    const screenCenterX = gameConstants_1.GameConstants.WIDTH / 2;
+    const screenCenterY = gameConstants_1.GameConstants.HEIGHT / 2;
+    // Calculate the offset between player and shop in tile coordinates
+    const offsetX = (shop.x - shop.playerOpened.x) * gameConstants_1.GameConstants.TILESIZE;
+    const offsetY = (shop.y - shop.playerOpened.y) * gameConstants_1.GameConstants.TILESIZE;
+    // Calculate shop's position on screen relative to the centered player
+    const shopScreenX = screenCenterX + offsetX;
+    const shopScreenY = screenCenterY + offsetY;
+    // Use the same calculations as in drawTopLayer to determine bounds
+    let s = 18; // size of box
+    let b = 2; // border
+    let g = -2; // gap
+    let width = (shop.costItems.length + 2) * (s + 2 * b + g) - g;
+    let height = s + 2 * b + g - g;
+    // Calculate the center of the vending machine interface
+    // Note: The -1.5 adjustment for Y matches what's in drawTopLayer
+    let cx = shopScreenX;
+    let cy = shopScreenY - 1.5 * gameConstants_1.GameConstants.TILESIZE;
+    const leftBound = Math.round(cx - 0.5 * width);
+    const rightBound = leftBound + Math.round(width);
+    const topBound = Math.round(cy - 0.5 * height);
+    const bottomBound = topBound + Math.round(height);
+    // Check if the point is within the bounds of the vending machine UI
+    return (x >= leftBound && x <= rightBound && y >= topBound && y <= bottomBound);
 };
 
 
