@@ -8257,11 +8257,22 @@ class VendingMachine extends entity_1.Entity {
                 for (const i of this.costItems) {
                     if (!this.playerOpened.inventory.hasItemCount(i)) {
                         let numOfItem = 0;
-                        this.playerOpened.inventory.items.forEach((item) => {
-                            if (item instanceof i.constructor)
-                                numOfItem++;
-                        });
+                        console.log("Checking inventory for required items...");
+                        console.log("Required item:", i.constructor.itemName);
+                        console.log("Required amount:", i.stackCount);
+                        if (i instanceof coin_1.Coin) {
+                            numOfItem = this.playerOpened.inventory.coinCount();
+                        }
+                        else {
+                            this.playerOpened.inventory.items.forEach((item) => {
+                                if (item instanceof i.constructor) {
+                                    numOfItem += item.stackCount;
+                                }
+                            });
+                        }
+                        console.log("Total found in inventory:", numOfItem);
                         const difference = this.costItems[0].stackCount - numOfItem;
+                        console.log("Difference needed:", difference);
                         const pluralLetter = this.costItems[0].stackCount > 1 ? "s" : "";
                         this.game.pushMessage(`You need ${difference} more ${this.costItems[0].constructor.itemName}${pluralLetter} to buy that. `);
                         return;
@@ -9904,6 +9915,9 @@ const spear_1 = __webpack_require__(/*! ./weapon/spear */ "./src/weapon/spear.ts
 const spellbook_1 = __webpack_require__(/*! ./weapon/spellbook */ "./src/weapon/spellbook.ts");
 const hammer_1 = __webpack_require__(/*! ./item/hammer */ "./src/item/hammer.ts");
 const greataxe_1 = __webpack_require__(/*! ./weapon/greataxe */ "./src/weapon/greataxe.ts");
+const bluegem_1 = __webpack_require__(/*! ./item/bluegem */ "./src/item/bluegem.ts");
+const redgem_1 = __webpack_require__(/*! ./item/redgem */ "./src/item/redgem.ts");
+const greengem_1 = __webpack_require__(/*! ./item/greengem */ "./src/item/greengem.ts");
 class GameConstants {
 }
 exports.GameConstants = GameConstants;
@@ -10022,7 +10036,7 @@ GameConstants.DECREASE_SCALE = () => {
         }
     }
 };
-GameConstants.STARTING_INVENTORY = [dagger_1.Dagger, torch_1.Torch];
+GameConstants.STARTING_INVENTORY = [dagger_1.Dagger, candle_1.Candle];
 GameConstants.STARTING_DEV_INVENTORY = [
     dagger_1.Dagger,
     greataxe_1.Greataxe,
@@ -10040,7 +10054,9 @@ GameConstants.STARTING_DEV_INVENTORY = [
     hammer_1.Hammer,
     coal_1.Coal,
     coal_1.Coal,
-    coal_1.Coal,
+    bluegem_1.BlueGem,
+    redgem_1.RedGem,
+    greengem_1.GreenGem,
     coal_1.Coal,
     coal_1.Coal,
     coal_1.Coal,
@@ -13831,7 +13847,7 @@ class SpellbookPage extends usable_1.Usable {
         };
         this.useOnOther = (player, other) => {
             if (other instanceof equippable_1.Equippable &&
-                other.broken &&
+                other.durabilityMax - other.durability >= 1 &&
                 other.name === "spellbook") {
                 let repairAmount = Math.min(other.durabilityMax - other.durability, this.stackCount);
                 other.durability += repairAmount;

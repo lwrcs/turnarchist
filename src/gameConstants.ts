@@ -22,6 +22,9 @@ import { SpellbookPage } from "./item/spellbookPage";
 import { BombItem } from "./item/bombItem";
 import { BestiaryBook } from "./item/bestiaryBook";
 import { Greataxe } from "./weapon/greataxe";
+import { BlueGem } from "./item/bluegem";
+import { RedGem } from "./item/redgem";
+import { GreenGem } from "./item/greengem";
 
 export class GameConstants {
   static readonly VERSION = "v1.0.5"; //"v0.6.3";
@@ -163,7 +166,7 @@ export class GameConstants {
     }
   };
 
-  static readonly STARTING_INVENTORY = [Dagger, Torch];
+  static readonly STARTING_INVENTORY = [Dagger, Candle];
   static readonly STARTING_DEV_INVENTORY = [
     Dagger,
     Greataxe,
@@ -181,8 +184,10 @@ export class GameConstants {
     Hammer,
     Coal,
     Coal,
+    BlueGem,
+    RedGem,
+    GreenGem,
 
-    Coal,
     Coal,
     Coal,
     Coal,

@@ -31,7 +31,7 @@ export class SpellbookPage extends Usable {
   useOnOther = (player: Player, other: Item) => {
     if (
       other instanceof Equippable &&
-      other.broken &&
+      other.durabilityMax - other.durability >= 1 &&
       other.name === "spellbook"
     ) {
       let repairAmount = Math.min(
