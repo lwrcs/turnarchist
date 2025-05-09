@@ -24,7 +24,7 @@ export class PlayerMovement {
       this.player.direction = direction;
       this.player.tryMove(x, y);
     } else {
-      if (this.canQueue()) this.queueMove(x, y, direction);
+      this.queueMove(x, y, direction);
     }
   }
 
@@ -49,7 +49,8 @@ export class PlayerMovement {
       now - this.lastMoveTime / this.adjustedCooldown;
     if (now - this.lastMoveTime >= this.adjustedCooldown) {
       this.lastMoveTime = now;
-      //this.lastChangeDirectionTime = now;
+      if (this.player.inputHandler.mostRecentMoveInput === "keyboard")
+        this.lastChangeDirectionTime = now;
       return true;
     }
     return false;

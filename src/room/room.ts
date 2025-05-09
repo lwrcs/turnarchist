@@ -1552,6 +1552,7 @@ export class Room {
 
     player.map.saveMapData();
     this.clearDeadStuff();
+    this.updateMovementCooldown();
   };
 
   computerTurn = () => {
@@ -2941,10 +2942,24 @@ export class Room {
     else return undefined;
   };
 
-  checkForNoEnemies = () => {
+  updateMovementCooldown = () => {
+    return;
+    if (this.hasNoEnemies()) {
+      GameConstants.MOVEMENT_COOLDOWN = 50;
+      GameConstants.KEY_REPEAT_TIME = 100;
+    } else {
+      GameConstants.MOVEMENT_COOLDOWN = 200;
+      GameConstants.KEY_REPEAT_TIME = 300;
+    }
+  };
+
+  hasNoEnemies = () => {
     let enemies = this.entities.filter((e) => e instanceof Enemy);
-    if (enemies.length === 0 && this.lastEnemyCount > 0) {
-      // if (this.doors[0].type === DoorType.GUARDEDDOOR) {
+    return enemies.length === 0 && this.lastEnemyCount > 0;
+  };
+
+  checkForNoEnemies = () => {
+    if (this.hasNoEnemies()) {
       this.doors.forEach((d) => {
         if (d.type === DoorType.GUARDEDDOOR) {
           d.unGuard();

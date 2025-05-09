@@ -17488,8 +17488,7 @@ class PlayerMovement {
             this.player.tryMove(x, y);
         }
         else {
-            if (this.canQueue())
-                this.queueMove(x, y, direction);
+            this.queueMove(x, y, direction);
         }
     }
     getTargetCoords(direction) {
@@ -17512,7 +17511,8 @@ class PlayerMovement {
             now - this.lastMoveTime / this.adjustedCooldown;
         if (now - this.lastMoveTime >= this.adjustedCooldown) {
             this.lastMoveTime = now;
-            //this.lastChangeDirectionTime = now;
+            if (this.player.inputHandler.mostRecentMoveInput === "keyboard")
+                this.lastChangeDirectionTime = now;
             return true;
         }
         return false;
@@ -19415,6 +19415,7 @@ class Room {
             this.updateLighting();
             player.map.saveMapData();
             this.clearDeadStuff();
+            this.updateMovementCooldown();
         };
         this.computerTurn = () => {
             // take computer turn
@@ -20411,10 +20412,23 @@ class Room {
             else
                 return undefined;
         };
-        this.checkForNoEnemies = () => {
+        this.updateMovementCooldown = () => {
+            return;
+            if (this.hasNoEnemies()) {
+                gameConstants_1.GameConstants.MOVEMENT_COOLDOWN = 50;
+                gameConstants_1.GameConstants.KEY_REPEAT_TIME = 100;
+            }
+            else {
+                gameConstants_1.GameConstants.MOVEMENT_COOLDOWN = 200;
+                gameConstants_1.GameConstants.KEY_REPEAT_TIME = 300;
+            }
+        };
+        this.hasNoEnemies = () => {
             let enemies = this.entities.filter((e) => e instanceof enemy_1.Enemy);
-            if (enemies.length === 0 && this.lastEnemyCount > 0) {
-                // if (this.doors[0].type === DoorType.GUARDEDDOOR) {
+            return enemies.length === 0 && this.lastEnemyCount > 0;
+        };
+        this.checkForNoEnemies = () => {
+            if (this.hasNoEnemies()) {
                 this.doors.forEach((d) => {
                     if (d.type === door_1.DoorType.GUARDEDDOOR) {
                         d.unGuard();
