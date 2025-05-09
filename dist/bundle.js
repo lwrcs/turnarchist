@@ -12666,8 +12666,8 @@ class Armor extends equippable_1.Equippable {
             // Convert to tile coordinates
             const heartStartX = (quickbarStartX - 7) / gameConstants_1.GameConstants.TILESIZE;
             // Position after the hearts
-            const shieldX = heartStartX + playerMaxHealth / 1.5 + 0.5;
-            let offsetY = gameConstants_1.GameConstants.WIDTH > 155 ? 0 : -1.25;
+            const shieldX = Math.max(heartStartX, -0.2) + playerMaxHealth / 1.5 + 0.5;
+            let offsetY = gameConstants_1.GameConstants.WIDTH > 175 ? 0 : -1.25;
             if (this.rechargeTurnCounter === -1)
                 game_1.Game.drawFX(5, 2, 0.75, 0.75, shieldX, gameConstants_1.GameConstants.HEIGHT / gameConstants_1.GameConstants.TILESIZE - 1 + offsetY, 0.75, 0.75);
             else {
@@ -17892,7 +17892,7 @@ class PlayerRenderer {
                                 gameConstants_1.GameConstants.TILESIZE;
                     }
                     let frame = this.guiHeartFrame > 0 ? 1 : 0;
-                    let offsetY = gameConstants_1.GameConstants.WIDTH > 155 ? 0 : -1.25;
+                    let offsetY = gameConstants_1.GameConstants.WIDTH > 175 ? 0 : -1.25;
                     if (i >= Math.floor(this.player.health)) {
                         if (i == Math.floor(this.player.health) &&
                             (this.player.health * 2) % 2 == 1) {

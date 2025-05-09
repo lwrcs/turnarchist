@@ -477,7 +477,7 @@ export class PlayerRenderer {
             GameConstants.TILESIZE;
         }
         let frame = this.guiHeartFrame > 0 ? 1 : 0;
-        let offsetY = GameConstants.WIDTH > 155 ? 0 : -1.25;
+        let offsetY = GameConstants.WIDTH > 175 ? 0 : -1.25;
 
         if (i >= Math.floor(this.player.health)) {
           if (

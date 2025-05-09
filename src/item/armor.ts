@@ -56,8 +56,9 @@ export class Armor extends Equippable {
     // Convert to tile coordinates
     const heartStartX = (quickbarStartX - 7) / GameConstants.TILESIZE;
     // Position after the hearts
-    const shieldX = heartStartX + playerMaxHealth / 1.5 + 0.5;
-    let offsetY = GameConstants.WIDTH > 155 ? 0 : -1.25;
+
+    const shieldX = Math.max(heartStartX, -0.2) + playerMaxHealth / 1.5 + 0.5;
+    let offsetY = GameConstants.WIDTH > 175 ? 0 : -1.25;
 
     if (this.rechargeTurnCounter === -1)
       Game.drawFX(
