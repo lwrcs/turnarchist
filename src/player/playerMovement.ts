@@ -49,7 +49,7 @@ export class PlayerMovement {
       now - this.lastMoveTime / this.adjustedCooldown;
     if (now - this.lastMoveTime >= this.adjustedCooldown) {
       this.lastMoveTime = now;
-      this.lastChangeDirectionTime = now;
+      //this.lastChangeDirectionTime = now;
       return true;
     }
     return false;
