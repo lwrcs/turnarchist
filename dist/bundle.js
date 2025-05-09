@@ -7677,17 +7677,20 @@ class Chest extends entity_1.Entity {
             this.opening = true;
             sound_1.Sound.chest();
             if (this.drop === null)
-                this.getDrop(["consumable", "gem", "coin"]);
+                this.getDrop(["consumable", "gem", "coin", "tool", "light", "weapon"]);
             if (this.drop.name === "coin") {
-                const stack = Math.ceil(Math.random() * 5);
+                let stack = game_1.Game.randTable([
+                    1, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 6, 6, 6, 6,
+                    6, 7, 7, 7, 7, 7, 8, 8, 8, 8, 9, 9, 9, 10, 10, 11, 12, 13, 14, 15,
+                    100,
+                ], random_1.Random.rand);
+                if (Math.random() < 0.1)
+                    stack *= Math.ceil(Math.random() * 10);
                 this.drop.stackCount = stack;
                 this.drop.stack = stack;
             }
             this.dropLoot();
             this.drop.animateFromChest();
-        };
-        this.rollDrop = () => {
-            return game_1.Game.randTable([1, 1, 1, 1, 1, 1, 1, 2, 3, 4, 5, 2, 2], random_1.Random.rand);
         };
         this.killNoBones = () => {
             this.kill();
@@ -11966,15 +11969,31 @@ class Inventory {
         };
         this.drawCoins = (delta) => {
             let coinTileX = 19;
-            if (this.coins === 2)
+            if (this.coins >= 3)
                 coinTileX = 20;
-            else if (this.coins >= 3)
+            if (this.coins >= 7)
                 coinTileX = 21;
-            let coinX = gameConstants_1.GameConstants.WIDTH / gameConstants_1.GameConstants.TILESIZE - 2.5;
+            // Calculate the right edge of the quickbar
+            const quickbarStartX = this.getQuickbarStartX();
+            const s = 18; // size of box
+            const b = 2; // border
+            const g = -2; // gap
+            const quickbarWidth = this.cols * (s + 2 * b + g) - g;
+            const quickbarRightEdge = quickbarStartX + quickbarWidth;
+            // Position coin slightly to the right of the quickbar
+            let coinX = (quickbarRightEdge + 2) / gameConstants_1.GameConstants.TILESIZE;
             let coinY = gameConstants_1.GameConstants.HEIGHT / gameConstants_1.GameConstants.TILESIZE - 1.25;
-            if (gameConstants_1.GameConstants.WIDTH < 170) {
-                //coinX -= 1.25;
+            // Ensure coin doesn't go off the right edge of the screen
+            const maxCoinX = (gameConstants_1.GameConstants.WIDTH - 36) / gameConstants_1.GameConstants.TILESIZE;
+            if (coinX > maxCoinX) {
+                coinX = maxCoinX;
+            }
+            if (gameConstants_1.GameConstants.WIDTH < 180) {
                 coinY -= 1.25;
+                coinX += 1.15;
+            }
+            if (gameConstants_1.GameConstants.WIDTH < 145) {
+                coinX -= 1.15;
             }
             game_1.Game.drawItem(coinTileX, 0, 1, 2, coinX, coinY - 1, 1, 2);
             const countText = `${this.coins}`;
@@ -12611,8 +12630,8 @@ exports.Inventory = Inventory;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Armor = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-const levelConstants_1 = __webpack_require__(/*! ../levelConstants */ "./src/levelConstants.ts");
 const equippable_1 = __webpack_require__(/*! ./equippable */ "./src/item/equippable.ts");
+const gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
 class Armor extends equippable_1.Equippable {
     constructor(level, x, y) {
         super(level, x, y);
@@ -12642,15 +12661,21 @@ class Armor extends equippable_1.Equippable {
             this.health -= Math.max(damage, 1);
             this.rechargeTurnCounter = this.RECHARGE_TURNS + 1;
         };
-        this.drawGUI = (delta, playerHealth) => {
+        this.drawGUI = (delta, playerMaxHealth, quickbarStartX) => {
+            // Get the quickbar's left edge position (same as in playerRenderer)
+            // Convert to tile coordinates
+            const heartStartX = (quickbarStartX - 7) / gameConstants_1.GameConstants.TILESIZE;
+            // Position after the hearts
+            const shieldX = heartStartX + playerMaxHealth / 1.5 + 0.5;
+            let offsetY = gameConstants_1.GameConstants.WIDTH > 155 ? 0 : -1.25;
             if (this.rechargeTurnCounter === -1)
-                game_1.Game.drawFX(5, 2, 0.75, 0.75, playerHealth * 0.75 + 0.1, levelConstants_1.LevelConstants.SCREEN_H - 1, 0.75, 0.75);
+                game_1.Game.drawFX(5, 2, 0.75, 0.75, shieldX, gameConstants_1.GameConstants.HEIGHT / gameConstants_1.GameConstants.TILESIZE - 1 + offsetY, 0.75, 0.75);
             else {
                 let rechargeProportion = 1 - this.rechargeTurnCounter / this.RECHARGE_TURNS;
                 if (rechargeProportion < 0.5)
-                    game_1.Game.drawFX(7, 2, 0.75, 0.75, playerHealth * 0.75 + 0.1, levelConstants_1.LevelConstants.SCREEN_H - 1, 0.75, 0.75);
+                    game_1.Game.drawFX(7, 2, 0.75, 0.75, shieldX, gameConstants_1.GameConstants.HEIGHT / gameConstants_1.GameConstants.TILESIZE - 1 + offsetY, 0.75, 0.75);
                 else
-                    game_1.Game.drawFX(8, 2, 0.75, 0.75, playerHealth * 0.75 + 0.1, levelConstants_1.LevelConstants.SCREEN_H - 1, 0.75, 0.75);
+                    game_1.Game.drawFX(8, 2, 0.75, 0.75, shieldX, gameConstants_1.GameConstants.HEIGHT / gameConstants_1.GameConstants.TILESIZE - 1 + offsetY, 0.75, 0.75);
             }
         };
         this.health = 1;
@@ -13007,12 +13032,12 @@ DropTable.drops = [
     { itemType: "redgem", dropRate: 200, category: ["gem", "resource"] },
     { itemType: "bluegem", dropRate: 200, category: ["gem", "resource"] },
     { itemType: "greengem", dropRate: 200, category: ["gem", "resource"] },
-    { itemType: "gold", dropRate: 200, category: ["gem", "resource"] },
-    { itemType: "stone", dropRate: 200, category: ["gem", "resource"] },
+    { itemType: "gold", dropRate: 200, category: ["resource"] },
+    { itemType: "stone", dropRate: 200, category: ["resource"] },
     {
         itemType: "coal",
         dropRate: 100,
-        category: ["fuel", "lantern", "resource"],
+        category: ["fuel", "lantern", "resource", "light"],
     },
     { itemType: "bomb", dropRate: 100, category: ["bomb", "weapon"] },
 ];
@@ -13021,80 +13046,33 @@ DropTable.getDrop = (entity, useCategory = [], force = false, increaseDepth = 0)
         return;
     const currentDepth = entity.room.depth + increaseDepth;
     const dropChance = entity.dropChance || 1;
-    console.log(`\n=== Drop Roll for ${entity.constructor.name} ===`);
-    console.log(`Initial drop chance: ${((1 / dropChance) * 100).toFixed(1)}%`);
+    // Skip initial drop chance check if forced
     if (!force && dropChance > 1 && Math.random() > 1 / dropChance) {
-        console.log("Failed initial drop chance roll");
         return null;
     }
-    console.log(`Categories/Items requested:`, useCategory);
-    console.log(`Force:`, force, `Depth:`, currentDepth);
-    let filteredDrops = [];
-    const allCategories = Array.from(new Set(_a.drops.flatMap((drop) => drop.category)));
-    const allItemTypes = Object.keys(exports.ItemTypeMap);
-    // Filter by depth first
-    const depthFilteredDrops = _a.drops.filter((drop) => drop.minDepth === undefined || drop.minDepth <= currentDepth);
-    // Separate categories and specific item names from useCategory
-    const categories = useCategory.filter((cat) => allCategories.includes(cat));
-    const specificItems = useCategory.filter((item) => allItemTypes.includes(item));
-    // Build filtered drops list
-    if (categories.length > 0 || specificItems.length > 0) {
-        // Filter by categories
-        const categoryDrops = categories.length > 0
-            ? depthFilteredDrops.filter((drop) => drop.category.some((cat) => categories.includes(cat)))
-            : [];
-        // Filter by specific items
-        const itemDrops = specificItems.length > 0
-            ? depthFilteredDrops.filter((drop) => specificItems.includes(drop.itemType))
-            : [];
-        // Combine and remove duplicates
-        const combinedDropsMap = {};
-        [...categoryDrops, ...itemDrops].forEach((drop) => {
-            combinedDropsMap[drop.itemType] = drop;
-        });
-        filteredDrops = Object.values(combinedDropsMap);
+    // Filter eligible drops by depth
+    let eligibleDrops = _a.drops.filter((drop) => drop.minDepth === undefined || drop.minDepth <= currentDepth);
+    // Filter by categories or specific items if provided
+    if (useCategory.length > 0) {
+        eligibleDrops = eligibleDrops.filter((drop) => useCategory.includes(drop.itemType) || // Match specific item
+            drop.category.some((cat) => useCategory.includes(cat)));
     }
-    else {
-        filteredDrops = depthFilteredDrops;
+    // Handle case with no eligible drops
+    if (eligibleDrops.length === 0) {
+        return null;
     }
-    if (filteredDrops.length === 0) {
-        console.log("No eligible drops found in filtered list");
-        if (force) {
-            filteredDrops = depthFilteredDrops;
-            if (filteredDrops.length === 0) {
-                console.log("No drops available even after force");
-                return null;
-            }
-        }
-        else {
-            return null;
-        }
-    }
-    // Sort drops from rarest to most common
-    const sortedDrops = [...filteredDrops].sort((a, b) => b.dropRate - a.dropRate);
-    console.log("Eligible drops:", sortedDrops.map((d) => `${d.itemType} (1/${d.dropRate})`));
-    // Try each item in order from rarest to most common
-    for (const drop of sortedDrops) {
-        const roll = Math.random();
-        const threshold = 1 / drop.dropRate;
-        console.log(`Rolling for ${drop.itemType}: ${roll.toFixed(4)} < ${threshold.toFixed(4)} = ${roll < threshold}`);
-        if (roll < threshold) {
-            console.log(`Success! Dropping ${drop.itemType}`);
+    // Try to drop an item based on drop rates
+    for (const drop of eligibleDrops) {
+        if (Math.random() < 1 / drop.dropRate) {
             _a.addNewItem(drop.itemType, entity);
-            console.log(`Actual item dropped: ${entity.drop?.constructor.name}`);
-            console.log(`Clone?: ${entity.cloned}`);
             return;
         }
     }
-    // If force is true and no drops occurred, guarantee the most common item
-    if (force && sortedDrops.length > 0) {
-        const guaranteedDrop = sortedDrops[sortedDrops.length - 1];
-        console.log(`Force drop: ${guaranteedDrop.itemType}`);
-        _a.addNewItem(guaranteedDrop.itemType, entity);
-        console.log(`Actual forced item dropped: ${entity.drop?.constructor.name}`);
-        return;
+    // Force drop the most common item if needed
+    if (force && eligibleDrops.length > 0) {
+        const mostCommonDrop = eligibleDrops.reduce((prev, curr) => prev.dropRate < curr.dropRate ? prev : curr);
+        _a.addNewItem(mostCommonDrop.itemType, entity);
     }
-    console.log("No successful drops");
     return null;
 };
 DropTable.addNewItem = (itemType, entity) => {
@@ -13105,10 +13083,9 @@ DropTable.addNewItem = (itemType, entity) => {
     }
     console.log(`Creating new item of type: ${itemType}, class: ${ItemClass.name}`);
     entity.drop = ItemClass.add(entity.room, entity.x, entity.y);
-    if (entity.drop instanceof coin_1.Coin) {
-        // Create right-skewed distribution for coins (1-10)
-        const baseRoll = Math.random() * Math.random() * 10; // Right skew using multiplication
-        entity.drop.stack += Math.max(1, Math.min(10, Math.floor(baseRoll + 2))); // +2 shifts the curve to target 3-5 range
+    if (entity.drop.name === "coin") {
+        // Create right-skewed distribution for coins (1-15 common, up to 100 rare)
+        entity.drop.stack = Math.floor(Math.pow(Math.random(), 3) * 93 + 7);
     }
 };
 
@@ -17892,6 +17869,15 @@ class PlayerRenderer {
                 if (this.guiHeartFrame > 5) {
                     this.guiHeartFrame = 0;
                 }
+                const armor = this.player.inventory.getArmor();
+                // Get the quickbar's left edge position
+                const quickbarStartX = this.player.inventory.getQuickbarStartX() + (armor ? -34 : -24);
+                // Convert to tile coordinates
+                let heartStartX = quickbarStartX / gameConstants_1.GameConstants.TILESIZE;
+                // Ensure hearts don't go off the left edge of the screen
+                if (heartStartX < 0.25) {
+                    heartStartX = 0.25;
+                }
                 for (let i = 0; i < this.player.maxHealth; i++) {
                     let shake = 0;
                     let shakeY = 0;
@@ -17911,28 +17897,28 @@ class PlayerRenderer {
                         if (i == Math.floor(this.player.health) &&
                             (this.player.health * 2) % 2 == 1) {
                             // draw half heart
-                            game_1.Game.drawFX(4, 2, 0.75, 0.75, i / 1.5 + shake + 0.25, gameConstants_1.GameConstants.HEIGHT / gameConstants_1.GameConstants.TILESIZE -
+                            game_1.Game.drawFX(4, 2, 0.75, 0.75, heartStartX + i / 1.5 + shake, gameConstants_1.GameConstants.HEIGHT / gameConstants_1.GameConstants.TILESIZE -
                                 1 +
                                 shakeY +
                                 offsetY, 0.75, 0.75);
                         }
                         else {
-                            game_1.Game.drawFX(3, 2, 0.75, 0.75, i / 1.5 + shake + 0.25, gameConstants_1.GameConstants.HEIGHT / gameConstants_1.GameConstants.TILESIZE -
+                            game_1.Game.drawFX(3, 2, 0.75, 0.75, heartStartX + i / 1.5 + shake, gameConstants_1.GameConstants.HEIGHT / gameConstants_1.GameConstants.TILESIZE -
                                 1 +
                                 shakeY +
                                 offsetY, 0.75, 0.75);
                         }
                     }
                     else {
-                        game_1.Game.drawFX(frame, 2, 0.75, 0.75, i / 1.5 + shake + 0.25, gameConstants_1.GameConstants.HEIGHT / gameConstants_1.GameConstants.TILESIZE -
+                        game_1.Game.drawFX(frame, 2, 0.75, 0.75, heartStartX + i / 1.5 + shake, gameConstants_1.GameConstants.HEIGHT / gameConstants_1.GameConstants.TILESIZE -
                             1 +
                             shakeY +
                             offsetY, 0.75, 0.75);
                     }
                 }
-                this.drawCooldownBar();
-                if (this.player.inventory.getArmor())
-                    this.player.inventory.getArmor().drawGUI(delta, this.player.maxHealth);
+                //this.drawCooldownBar();
+                if (armor)
+                    armor.drawGUI(delta, this.player.maxHealth, quickbarStartX);
             }
             else {
                 game_1.Game.ctx.fillStyle = levelConstants_1.LevelConstants.LEVEL_TEXT_COLOR;
@@ -18779,7 +18765,6 @@ const torch_1 = __webpack_require__(/*! ../item/torch */ "./src/item/torch.ts");
 const rookEnemy_1 = __webpack_require__(/*! ../entity/enemy/rookEnemy */ "./src/entity/enemy/rookEnemy.ts");
 const beamEffect_1 = __webpack_require__(/*! ../beamEffect */ "./src/beamEffect.ts");
 const environment_1 = __webpack_require__(/*! ../environment */ "./src/environment.ts");
-const pickaxe_1 = __webpack_require__(/*! ../weapon/pickaxe */ "./src/weapon/pickaxe.ts");
 const occultistEnemy_1 = __webpack_require__(/*! ../entity/enemy/occultistEnemy */ "./src/entity/enemy/occultistEnemy.ts");
 const puddle_1 = __webpack_require__(/*! ../tile/decorations/puddle */ "./src/tile/decorations/puddle.ts");
 const decoration_1 = __webpack_require__(/*! ../tile/decorations/decoration */ "./src/tile/decorations/decoration.ts");
@@ -19143,13 +19128,22 @@ class Room {
                 if (tiles.length > 0) {
                     const { x, y } = this.getRandomEmptyPosition(tiles);
                     let chest = new chest_1.Chest(this, this.game, x, y);
+                    /*
                     if (!weaponDropped) {
-                        chest.getDrop(["weapon"], true);
-                        weaponDropped = true;
-                    }
-                    else {
-                        chest.getDrop(["consumable", "gem", "light", "tool", "fuel", "backpack"], true);
-                    }
+                      chest.getDrop(["weapon"], true);
+                      weaponDropped = true;
+                    } else
+                     */
+                    chest.getDrop([
+                        "consumable",
+                        "gem",
+                        "light",
+                        "tool",
+                        "fuel",
+                        "backpack",
+                        "weapon",
+                        "coin",
+                    ], false);
                     tiles.filter((tile) => tile.x !== x && tile.y !== y);
                     this.entities.push(chest);
                 }
@@ -19218,7 +19212,7 @@ class Room {
                         let sign = Math.random() < 0.5 ? -1 : 1;
                         let offsetX = Math.floor(Math.random()) * sign;
                         let offsetY = offsetX !== 0 ? 0 : sign;
-                        this.items.push(new pickaxe_1.Pickaxe(this, x + offsetX, y + offsetY));
+                        //this.items.push(new Pickaxe(this, x + offsetX, y + offsetY));
                     }
                     break;
                 case RoomType.BOSS:

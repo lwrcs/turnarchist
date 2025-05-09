@@ -449,6 +449,20 @@ export class PlayerRenderer {
       if (this.guiHeartFrame > 5) {
         this.guiHeartFrame = 0;
       }
+
+      const armor = this.player.inventory.getArmor();
+
+      // Get the quickbar's left edge position
+      const quickbarStartX =
+        this.player.inventory.getQuickbarStartX() + (armor ? -34 : -24);
+      // Convert to tile coordinates
+      let heartStartX = quickbarStartX / GameConstants.TILESIZE;
+
+      // Ensure hearts don't go off the left edge of the screen
+      if (heartStartX < 0.25) {
+        heartStartX = 0.25;
+      }
+
       for (let i = 0; i < this.player.maxHealth; i++) {
         let shake = 0;
         let shakeY = 0;
@@ -476,7 +490,7 @@ export class PlayerRenderer {
               2,
               0.75,
               0.75,
-              i / 1.5 + shake + 0.25,
+              heartStartX + i / 1.5 + shake,
               GameConstants.HEIGHT / GameConstants.TILESIZE -
                 1 +
                 shakeY +
@@ -490,7 +504,7 @@ export class PlayerRenderer {
               2,
               0.75,
               0.75,
-              i / 1.5 + shake + 0.25,
+              heartStartX + i / 1.5 + shake,
               GameConstants.HEIGHT / GameConstants.TILESIZE -
                 1 +
                 shakeY +
@@ -505,7 +519,7 @@ export class PlayerRenderer {
             2,
             0.75,
             0.75,
-            i / 1.5 + shake + 0.25,
+            heartStartX + i / 1.5 + shake,
             GameConstants.HEIGHT / GameConstants.TILESIZE -
               1 +
               shakeY +
@@ -515,9 +529,8 @@ export class PlayerRenderer {
           );
         }
       }
-      this.drawCooldownBar();
-      if (this.player.inventory.getArmor())
-        this.player.inventory.getArmor().drawGUI(delta, this.player.maxHealth);
+      //this.drawCooldownBar();
+      if (armor) armor.drawGUI(delta, this.player.maxHealth, quickbarStartX);
     } else {
       Game.ctx.fillStyle = LevelConstants.LEVEL_TEXT_COLOR;
       const enemies = statsTracker.getStats().enemies;

@@ -69,18 +69,23 @@ export class Chest extends Entity {
     this.opening = true;
     Sound.chest();
 
-    if (this.drop === null) this.getDrop(["consumable", "gem", "coin"]);
+    if (this.drop === null)
+      this.getDrop(["consumable", "gem", "coin", "tool", "light", "weapon"]);
     if (this.drop.name === "coin") {
-      const stack = Math.ceil(Math.random() * 5);
+      let stack = Game.randTable(
+        [
+          1, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 6, 6, 6, 6,
+          6, 7, 7, 7, 7, 7, 8, 8, 8, 8, 9, 9, 9, 10, 10, 11, 12, 13, 14, 15,
+          100,
+        ],
+        Random.rand,
+      );
+      if (Math.random() < 0.1) stack *= Math.ceil(Math.random() * 10);
       this.drop.stackCount = stack;
       this.drop.stack = stack;
     }
     this.dropLoot();
     this.drop.animateFromChest();
-  };
-
-  rollDrop = (): number => {
-    return Game.randTable([1, 1, 1, 1, 1, 1, 1, 2, 3, 4, 5, 2, 2], Random.rand);
   };
 
   killNoBones = () => {

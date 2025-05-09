@@ -528,13 +528,33 @@ export class Inventory {
 
   drawCoins = (delta: number) => {
     let coinTileX = 19;
-    if (this.coins === 2) coinTileX = 20;
-    else if (this.coins >= 3) coinTileX = 21;
-    let coinX = GameConstants.WIDTH / GameConstants.TILESIZE - 2.5;
+    if (this.coins >= 3) coinTileX = 20;
+    if (this.coins >= 7) coinTileX = 21;
+
+    // Calculate the right edge of the quickbar
+    const quickbarStartX = this.getQuickbarStartX();
+    const s = 18; // size of box
+    const b = 2; // border
+    const g = -2; // gap
+    const quickbarWidth = this.cols * (s + 2 * b + g) - g;
+    const quickbarRightEdge = quickbarStartX + quickbarWidth;
+
+    // Position coin slightly to the right of the quickbar
+    let coinX = (quickbarRightEdge + 2) / GameConstants.TILESIZE;
     let coinY = GameConstants.HEIGHT / GameConstants.TILESIZE - 1.25;
-    if (GameConstants.WIDTH < 170) {
-      //coinX -= 1.25;
+
+    // Ensure coin doesn't go off the right edge of the screen
+    const maxCoinX = (GameConstants.WIDTH - 36) / GameConstants.TILESIZE;
+    if (coinX > maxCoinX) {
+      coinX = maxCoinX;
+    }
+
+    if (GameConstants.WIDTH < 180) {
       coinY -= 1.25;
+      coinX += 1.15;
+    }
+    if (GameConstants.WIDTH < 145) {
+      coinX -= 1.15;
     }
 
     Game.drawItem(coinTileX, 0, 1, 2, coinX, coinY - 1, 1, 2);

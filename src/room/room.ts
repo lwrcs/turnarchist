@@ -1180,16 +1180,26 @@ export class Room {
         const { x, y } = this.getRandomEmptyPosition(tiles);
 
         let chest = new Chest(this, this.game, x, y);
-
+        /*
         if (!weaponDropped) {
           chest.getDrop(["weapon"], true);
           weaponDropped = true;
-        } else {
-          chest.getDrop(
-            ["consumable", "gem", "light", "tool", "fuel", "backpack"],
-            true,
-          );
-        }
+        } else 
+         */
+
+        chest.getDrop(
+          [
+            "consumable",
+            "gem",
+            "light",
+            "tool",
+            "fuel",
+            "backpack",
+            "weapon",
+            "coin",
+          ],
+          false,
+        );
 
         tiles.filter((tile) => tile.x !== x && tile.y !== y);
         this.entities.push(chest);
@@ -1304,7 +1314,7 @@ export class Room {
           let sign = Math.random() < 0.5 ? -1 : 1;
           let offsetX = Math.floor(Math.random()) * sign;
           let offsetY = offsetX !== 0 ? 0 : sign;
-          this.items.push(new Pickaxe(this, x + offsetX, y + offsetY));
+          //this.items.push(new Pickaxe(this, x + offsetX, y + offsetY));
         }
         break;
       case RoomType.BOSS:

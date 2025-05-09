@@ -2,6 +2,7 @@ import { Game } from "../game";
 import { LevelConstants } from "../levelConstants";
 import { Room } from "../room/room";
 import { Equippable } from "./equippable";
+import { GameConstants } from "../gameConstants";
 
 export class Armor extends Equippable {
   health: number;
@@ -46,15 +47,26 @@ export class Armor extends Equippable {
     this.rechargeTurnCounter = this.RECHARGE_TURNS + 1;
   };
 
-  drawGUI = (delta: number, playerHealth: number) => {
+  drawGUI = (
+    delta: number,
+    playerMaxHealth: number,
+    quickbarStartX: number,
+  ) => {
+    // Get the quickbar's left edge position (same as in playerRenderer)
+    // Convert to tile coordinates
+    const heartStartX = (quickbarStartX - 7) / GameConstants.TILESIZE;
+    // Position after the hearts
+    const shieldX = heartStartX + playerMaxHealth / 1.5 + 0.5;
+    let offsetY = GameConstants.WIDTH > 155 ? 0 : -1.25;
+
     if (this.rechargeTurnCounter === -1)
       Game.drawFX(
         5,
         2,
         0.75,
         0.75,
-        playerHealth * 0.75 + 0.1,
-        LevelConstants.SCREEN_H - 1,
+        shieldX,
+        GameConstants.HEIGHT / GameConstants.TILESIZE - 1 + offsetY,
         0.75,
         0.75,
       );
@@ -68,8 +80,8 @@ export class Armor extends Equippable {
           2,
           0.75,
           0.75,
-          playerHealth * 0.75 + 0.1,
-          LevelConstants.SCREEN_H - 1,
+          shieldX,
+          GameConstants.HEIGHT / GameConstants.TILESIZE - 1 + offsetY,
           0.75,
           0.75,
         );
@@ -79,8 +91,8 @@ export class Armor extends Equippable {
           2,
           0.75,
           0.75,
-          playerHealth * 0.75 + 0.1,
-          LevelConstants.SCREEN_H - 1,
+          shieldX,
+          GameConstants.HEIGHT / GameConstants.TILESIZE - 1 + offsetY,
           0.75,
           0.75,
         );
