@@ -7677,14 +7677,14 @@ class Chest extends entity_1.Entity {
             this.opening = true;
             sound_1.Sound.chest();
             if (this.drop === null)
-                this.getDrop(["consumable", "gem", "coin", "tool", "light", "weapon"]);
-            if (this.drop.name === "coin") {
+                this.getDrop(["consumable", "gem", "coin", "tool", "light", "weapon"], true);
+            if (this.drop && this.drop.name === "coin") {
                 let stack = game_1.Game.randTable([
                     1, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 6, 6, 6, 6,
                     6, 7, 7, 7, 7, 7, 8, 8, 8, 8, 9, 9, 9, 10, 10, 11, 12, 13, 14, 15,
                     100,
                 ], random_1.Random.rand);
-                if (Math.random() < 0.1)
+                if (Math.random() < 0.01)
                     stack *= Math.ceil(Math.random() * 10);
                 this.drop.stackCount = stack;
                 this.drop.stack = stack;
@@ -13010,7 +13010,7 @@ DropTable.drops = [
     { itemType: "weaponpoison", dropRate: 100, category: ["consumable"] },
     { itemType: "weaponblood", dropRate: 100, category: ["consumable"] },
     // Common items
-    { itemType: "coin", dropRate: 1, category: ["coin"] },
+    { itemType: "coin", dropRate: 10, category: ["coin"] },
     // Crafting materials
     {
         itemType: "weaponfragments",
@@ -13084,8 +13084,8 @@ DropTable.addNewItem = (itemType, entity) => {
     console.log(`Creating new item of type: ${itemType}, class: ${ItemClass.name}`);
     entity.drop = ItemClass.add(entity.room, entity.x, entity.y);
     if (entity.drop.name === "coin") {
-        // Create right-skewed distribution for coins (1-15 common, up to 100 rare)
-        entity.drop.stack = Math.floor(Math.pow(Math.random(), 3) * 93 + 7);
+        // Generate random number between 0-14 with normal distribution around 7
+        entity.drop.stack = Math.round(Math.min(14, Math.max(0, Math.ceil(7 + (Math.random() + Math.random() + Math.random() - 1.5) * 5))));
     }
 };
 
@@ -13562,7 +13562,7 @@ class Item extends drawable_1.Drawable {
         this.alpha = 1;
         this.scaleFactor = 5;
         this.offsetY = -0.25;
-        this.name = "";
+        this.name = "item";
         this.startY = y;
         this.randomOffset = Math.random();
         this.durability = 50;

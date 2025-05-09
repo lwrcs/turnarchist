@@ -70,8 +70,12 @@ export class Chest extends Entity {
     Sound.chest();
 
     if (this.drop === null)
-      this.getDrop(["consumable", "gem", "coin", "tool", "light", "weapon"]);
-    if (this.drop.name === "coin") {
+      this.getDrop(
+        ["consumable", "gem", "coin", "tool", "light", "weapon"],
+        true,
+      );
+
+    if (this.drop && this.drop.name === "coin") {
       let stack = Game.randTable(
         [
           1, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 6, 6, 6, 6,
@@ -80,7 +84,7 @@ export class Chest extends Entity {
         ],
         Random.rand,
       );
-      if (Math.random() < 0.1) stack *= Math.ceil(Math.random() * 10);
+      if (Math.random() < 0.01) stack *= Math.ceil(Math.random() * 10);
       this.drop.stackCount = stack;
       this.drop.stack = stack;
     }

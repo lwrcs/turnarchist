@@ -59,7 +59,7 @@ export class Item extends Drawable {
     this.alpha = 1;
     this.scaleFactor = 5;
     this.offsetY = -0.25;
-    this.name = "";
+    this.name = "item";
     this.startY = y;
     this.randomOffset = Math.random();
     this.durability = 50;

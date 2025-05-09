@@ -93,7 +93,7 @@ export class DropTable {
     { itemType: "weaponblood", dropRate: 100, category: ["consumable"] },
 
     // Common items
-    { itemType: "coin", dropRate: 1, category: ["coin"] }, // Always drops
+    { itemType: "coin", dropRate: 10, category: ["coin"] }, // Always drops
 
     // Crafting materials
     {
@@ -193,8 +193,18 @@ export class DropTable {
     );
     entity.drop = ItemClass.add(entity.room, entity.x, entity.y);
     if (entity.drop.name === "coin") {
-      // Create right-skewed distribution for coins (1-15 common, up to 100 rare)
-      entity.drop.stack = Math.floor(Math.pow(Math.random(), 3) * 93 + 7);
+      // Generate random number between 0-14 with normal distribution around 7
+      entity.drop.stack = Math.round(
+        Math.min(
+          14,
+          Math.max(
+            0,
+            Math.ceil(
+              7 + (Math.random() + Math.random() + Math.random() - 1.5) * 5,
+            ),
+          ),
+        ),
+      );
     }
   };
 }
