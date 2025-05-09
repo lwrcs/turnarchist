@@ -219,7 +219,7 @@ export class Player extends Drawable {
   };
 
   canMoveWithMouse = () => {
-    if (!this.isMouseAboveFloor() && !this.isMouseAboveFloor(8)) return;
+    if (!this.isMouseAboveFloor() && !this.isMouseAboveFloor(8)) return null;
 
     const mouseTile = this.mouseToTile();
     const offsetMouseTile = this.mouseToTile(8);
@@ -260,10 +260,12 @@ export class Player extends Drawable {
     if (!GameConstants.MOVE_WITH_MOUSE) return;
     const moveData = this.canMoveWithMouse();
     if (moveData) {
-      this.inputHandler.mostRecentMoveInput = "mouse";
+      if (this.movement.canMove()) {
+        this.inputHandler.mostRecentMoveInput = "mouse";
 
-      this.direction = moveData.direction;
-      this.tryMove(moveData.x, moveData.y);
+        this.direction = moveData.direction;
+        this.tryMove(moveData.x, moveData.y);
+      }
     }
   };
 

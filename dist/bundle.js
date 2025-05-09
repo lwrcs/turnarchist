@@ -16496,7 +16496,7 @@ class Player extends drawable_1.Drawable {
         };
         this.canMoveWithMouse = () => {
             if (!this.isMouseAboveFloor() && !this.isMouseAboveFloor(8))
-                return;
+                return null;
             const mouseTile = this.mouseToTile();
             const offsetMouseTile = this.mouseToTile(8);
             let y = mouseTile.y;
@@ -16534,9 +16534,11 @@ class Player extends drawable_1.Drawable {
                 return;
             const moveData = this.canMoveWithMouse();
             if (moveData) {
-                this.inputHandler.mostRecentMoveInput = "mouse";
-                this.direction = moveData.direction;
-                this.tryMove(moveData.x, moveData.y);
+                if (this.movement.canMove()) {
+                    this.inputHandler.mostRecentMoveInput = "mouse";
+                    this.direction = moveData.direction;
+                    this.tryMove(moveData.x, moveData.y);
+                }
             }
         };
         this.mouseToTile = (offsetY = 0) => {
@@ -17486,7 +17488,7 @@ class PlayerMovement {
             this.player.tryMove(x, y);
         }
         else {
-            if (this.canQueue)
+            if (this.canQueue())
                 this.queueMove(x, y, direction);
         }
     }

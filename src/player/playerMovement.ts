@@ -24,7 +24,7 @@ export class PlayerMovement {
       this.player.direction = direction;
       this.player.tryMove(x, y);
     } else {
-      if (this.canQueue) this.queueMove(x, y, direction);
+      if (this.canQueue()) this.queueMove(x, y, direction);
     }
   }
 
