@@ -219,38 +219,43 @@ export class Player extends Drawable {
   };
 
   canMoveWithMouse = () => {
-    if (!this.isMouseAboveFloor() && !this.isMouseAboveFloor(8)) return null;
+    // Check if mouse is over valid floor tile
+    if (!this.isMouseAboveFloor() && !this.isMouseAboveFloor(8)) {
+      return null;
+    }
 
+    // Get mouse position in tile coordinates
     const mouseTile = this.mouseToTile();
     const offsetMouseTile = this.mouseToTile(8);
-    let y = mouseTile.y;
 
+    // Determine target Y coordinate
+    let targetY = mouseTile.y;
     if (this.isMouseAboveFloor(8) && this.checkTileForEntity(offsetMouseTile)) {
-      y = offsetMouseTile.y;
+      targetY = offsetMouseTile.y;
     }
-    // Get mouse tile coordinates
 
-    // Check if we're on same row or column
+    // Check if already at target position
     const sameX = mouseTile.x === this.x;
-    const sameY = y === this.y;
-
-    // If both same, no movement needed
-    if (sameX && sameY) return null;
-
-    // Check for straight line movements first
-    if (sameX) {
-      if (y < this.y) {
-        return { direction: Direction.UP, x: this.x, y: this.y - 1 };
-      } else {
-        return { direction: Direction.DOWN, x: this.x, y: this.y + 1 };
-      }
+    const sameY = targetY === this.y;
+    if (sameX && sameY) {
+      return null;
     }
+
+    // Determine movement direction
+    if (sameX) {
+      // Vertical movement
+      if (targetY < this.y) {
+        return { direction: Direction.UP, x: this.x, y: this.y - 1 };
+      }
+      return { direction: Direction.DOWN, x: this.x, y: this.y + 1 };
+    }
+
     if (sameY) {
+      // Horizontal movement
       if (mouseTile.x < this.x) {
         return { direction: Direction.LEFT, x: this.x - 1, y: this.y };
-      } else {
-        return { direction: Direction.RIGHT, x: this.x + 1, y: this.y };
       }
+      return { direction: Direction.RIGHT, x: this.x + 1, y: this.y };
     }
 
     return null;
@@ -267,10 +272,6 @@ export class Player extends Drawable {
         this.tryMove(moveData.x, moveData.y);
       }
     }
-  };
-
-  drawTileCursor = (delta: number) => {
-    this.renderer.drawTileCursor(delta);
   };
 
   mouseToTile = (offsetY: number = 0) => {
@@ -316,13 +317,40 @@ export class Player extends Drawable {
   setTileCursorPosition = () => {
     const offsetX =
       Math.floor(GameConstants.WIDTH / 2) / GameConstants.TILESIZE;
-
     const offsetY =
       Math.floor(GameConstants.HEIGHT / 2) / GameConstants.TILESIZE;
 
+    const mousePosition = this.mouseToTile();
+
+    // Calculate cursor position relative to center
+    let cursorX = mousePosition.x - this.x + offsetX - 0.5;
+    let cursorY = mousePosition.y - this.y + offsetY - 0.5;
+
+    // Clamp cursor to be no further than 1 tile from center
+    // Center is at (offsetX, offsetY)
+    const centerX = offsetX;
+    const centerY = offsetY;
+
+    // Calculate distance from center (before the 0.5 offset)
+    const distanceX = Math.abs(cursorX + 0.5 - centerX);
+    const distanceY = Math.abs(cursorY + 0.5 - centerY);
+
+    // Clamp if needed
+    if (distanceX > 1) {
+      // Preserve direction but limit distance
+      const direction = cursorX > centerX ? 1 : -1;
+      cursorX = centerX + direction - 0.5; // -0.5 to account for the offset
+    }
+
+    if (distanceY > 1) {
+      // Preserve direction but limit distance
+      const direction = cursorY > centerY ? 1 : -1;
+      cursorY = centerY + direction - 0.5; // -0.5 to account for the offset
+    }
+
     this.tileCursor = {
-      x: this.mouseToTile().x - this.x + offsetX - 0.5,
-      y: this.mouseToTile().y - this.y + offsetY - 0.5,
+      x: cursorX,
+      y: cursorY,
     };
   };
 
@@ -641,51 +669,34 @@ export class Player extends Drawable {
   };
 
   hurt = (damage: number, enemy: string) => {
-    if (this.game.levels[this.depth].rooms[this.levelID] === this.game.room)
+    // Play hurt sound if in current room
+    if (this.game.levels[this.depth].rooms[this.levelID] === this.game.room) {
       Sound.hurt();
+    }
 
+    // Handle armor damage
     if (this.inventory.getArmor() && this.inventory.getArmor().health > 0) {
       this.inventory.getArmor().hurt(damage);
       this.renderer.hurtShield();
       this.hurtShield = true;
     }
-    {
-      this.lastHitBy = enemy;
-      //console.log("Last Hit by: ", enemy);
-      this.healthBar.hurt();
-      this.renderer.flash();
-      if (!this.hurtShield) this.health -= damage;
-      this.hurtShield = false;
-      this.renderer.hurt();
-      if (this.health <= 0 && !GameConstants.DEVELOPER_MODE) {
-        this.dead = true;
-      }
 
-      /*
-      if (this.health <= 0) {
-        this.health = 0;
-        
-        if (!this.game.tutorialActive) {
-          this.dead = true;
-        } else {
-          this.health = 2;
-          this.game.pushMessage("You are dead, but you can try again!");
-        }
-        */
+    // Update player state
+    this.lastHitBy = enemy;
+    this.healthBar.hurt();
+    this.renderer.flash();
+
+    // Apply damage if no shield
+    if (!this.hurtShield) {
+      this.health -= damage;
     }
-  };
+    this.hurtShield = false;
+    this.renderer.hurt();
 
-  dashMove = (x: number, y: number) => {
-    this.x = x;
-    this.y = y;
-
-    for (let i of this.game.levels[this.depth].rooms[this.levelID].items) {
-      if (i.x === x && i.y === y) {
-        i.onPickup(this);
-      }
+    // Check for death
+    if (this.health <= 0 && !GameConstants.DEVELOPER_MODE) {
+      this.dead = true;
     }
-
-    //this.game.rooms[this.levelID].updateLighting();
   };
 
   beginSlowMotion = () => {

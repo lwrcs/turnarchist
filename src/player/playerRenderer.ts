@@ -706,7 +706,11 @@ export class PlayerRenderer {
    * to ensure canvas state is preserved.
    */
   drawTileCursor = (delta: number) => {
-    if (this.player.inventory.isOpen) return;
+    if (
+      this.player.inventory.isOpen ||
+      this.player.inputHandler.mostRecentMoveInput === "keyboard"
+    )
+      return;
     Game.ctx.save(); // Save the current canvas state
 
     if (

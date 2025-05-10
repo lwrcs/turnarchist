@@ -9273,8 +9273,6 @@ class Game {
                 for (const room of sortedRooms) {
                     if (room.active || (room.entered && room.onScreen)) {
                         room.draw(delta);
-                        if (room.active)
-                            this.players[this.localPlayerID].drawTileCursor(delta);
                         room.drawEntities(delta, skipLocalPlayer);
                         //room.drawShade(delta); // this used to come after the color layer
                     }
@@ -9953,8 +9951,8 @@ GameConstants.DEVELOPER_MODE = false;
 GameConstants.isMobile = false;
 GameConstants.FPS = 120;
 GameConstants.ALPHA_ENABLED = true;
-GameConstants.SHADE_LEVELS = 25;
-GameConstants.ENTITY_SHADE_LEVELS = 10;
+GameConstants.SHADE_LEVELS = 50; //25
+GameConstants.ENTITY_SHADE_LEVELS = 15; //10
 GameConstants.TILESIZE = 16;
 GameConstants.SCALE = 6;
 GameConstants.SOFT_SCALE = 6;
@@ -16497,37 +16495,38 @@ class Player extends drawable_1.Drawable {
             return mouseTile.x === this.x || mouseTile.y === this.y;
         };
         this.canMoveWithMouse = () => {
-            if (!this.isMouseAboveFloor() && !this.isMouseAboveFloor(8))
+            // Check if mouse is over valid floor tile
+            if (!this.isMouseAboveFloor() && !this.isMouseAboveFloor(8)) {
                 return null;
+            }
+            // Get mouse position in tile coordinates
             const mouseTile = this.mouseToTile();
             const offsetMouseTile = this.mouseToTile(8);
-            let y = mouseTile.y;
+            // Determine target Y coordinate
+            let targetY = mouseTile.y;
             if (this.isMouseAboveFloor(8) && this.checkTileForEntity(offsetMouseTile)) {
-                y = offsetMouseTile.y;
+                targetY = offsetMouseTile.y;
             }
-            // Get mouse tile coordinates
-            // Check if we're on same row or column
+            // Check if already at target position
             const sameX = mouseTile.x === this.x;
-            const sameY = y === this.y;
-            // If both same, no movement needed
-            if (sameX && sameY)
+            const sameY = targetY === this.y;
+            if (sameX && sameY) {
                 return null;
-            // Check for straight line movements first
+            }
+            // Determine movement direction
             if (sameX) {
-                if (y < this.y) {
+                // Vertical movement
+                if (targetY < this.y) {
                     return { direction: game_1.Direction.UP, x: this.x, y: this.y - 1 };
                 }
-                else {
-                    return { direction: game_1.Direction.DOWN, x: this.x, y: this.y + 1 };
-                }
+                return { direction: game_1.Direction.DOWN, x: this.x, y: this.y + 1 };
             }
             if (sameY) {
+                // Horizontal movement
                 if (mouseTile.x < this.x) {
                     return { direction: game_1.Direction.LEFT, x: this.x - 1, y: this.y };
                 }
-                else {
-                    return { direction: game_1.Direction.RIGHT, x: this.x + 1, y: this.y };
-                }
+                return { direction: game_1.Direction.RIGHT, x: this.x + 1, y: this.y };
             }
             return null;
         };
@@ -16542,9 +16541,6 @@ class Player extends drawable_1.Drawable {
                     this.tryMove(moveData.x, moveData.y);
                 }
             }
-        };
-        this.drawTileCursor = (delta) => {
-            this.renderer.drawTileCursor(delta);
         };
         this.mouseToTile = (offsetY = 0) => {
             // Get screen center coordinates
@@ -16578,9 +16574,31 @@ class Player extends drawable_1.Drawable {
         this.setTileCursorPosition = () => {
             const offsetX = Math.floor(gameConstants_1.GameConstants.WIDTH / 2) / gameConstants_1.GameConstants.TILESIZE;
             const offsetY = Math.floor(gameConstants_1.GameConstants.HEIGHT / 2) / gameConstants_1.GameConstants.TILESIZE;
+            const mousePosition = this.mouseToTile();
+            // Calculate cursor position relative to center
+            let cursorX = mousePosition.x - this.x + offsetX - 0.5;
+            let cursorY = mousePosition.y - this.y + offsetY - 0.5;
+            // Clamp cursor to be no further than 1 tile from center
+            // Center is at (offsetX, offsetY)
+            const centerX = offsetX;
+            const centerY = offsetY;
+            // Calculate distance from center (before the 0.5 offset)
+            const distanceX = Math.abs(cursorX + 0.5 - centerX);
+            const distanceY = Math.abs(cursorY + 0.5 - centerY);
+            // Clamp if needed
+            if (distanceX > 1) {
+                // Preserve direction but limit distance
+                const direction = cursorX > centerX ? 1 : -1;
+                cursorX = centerX + direction - 0.5; // -0.5 to account for the offset
+            }
+            if (distanceY > 1) {
+                // Preserve direction but limit distance
+                const direction = cursorY > centerY ? 1 : -1;
+                cursorY = centerY + direction - 0.5; // -0.5 to account for the offset
+            }
             this.tileCursor = {
-                x: this.mouseToTile().x - this.x + offsetX - 0.5,
-                y: this.mouseToTile().y - this.y + offsetY - 0.5,
+                x: cursorX,
+                y: cursorY,
             };
         };
         this.enemyInRange = (eX, eY, range) => {
@@ -16842,47 +16860,30 @@ class Player extends drawable_1.Drawable {
             }
         };
         this.hurt = (damage, enemy) => {
-            if (this.game.levels[this.depth].rooms[this.levelID] === this.game.room)
+            // Play hurt sound if in current room
+            if (this.game.levels[this.depth].rooms[this.levelID] === this.game.room) {
                 sound_1.Sound.hurt();
+            }
+            // Handle armor damage
             if (this.inventory.getArmor() && this.inventory.getArmor().health > 0) {
                 this.inventory.getArmor().hurt(damage);
                 this.renderer.hurtShield();
                 this.hurtShield = true;
             }
-            {
-                this.lastHitBy = enemy;
-                //console.log("Last Hit by: ", enemy);
-                this.healthBar.hurt();
-                this.renderer.flash();
-                if (!this.hurtShield)
-                    this.health -= damage;
-                this.hurtShield = false;
-                this.renderer.hurt();
-                if (this.health <= 0 && !gameConstants_1.GameConstants.DEVELOPER_MODE) {
-                    this.dead = true;
-                }
-                /*
-                if (this.health <= 0) {
-                  this.health = 0;
-                  
-                  if (!this.game.tutorialActive) {
-                    this.dead = true;
-                  } else {
-                    this.health = 2;
-                    this.game.pushMessage("You are dead, but you can try again!");
-                  }
-                  */
+            // Update player state
+            this.lastHitBy = enemy;
+            this.healthBar.hurt();
+            this.renderer.flash();
+            // Apply damage if no shield
+            if (!this.hurtShield) {
+                this.health -= damage;
             }
-        };
-        this.dashMove = (x, y) => {
-            this.x = x;
-            this.y = y;
-            for (let i of this.game.levels[this.depth].rooms[this.levelID].items) {
-                if (i.x === x && i.y === y) {
-                    i.onPickup(this);
-                }
+            this.hurtShield = false;
+            this.renderer.hurt();
+            // Check for death
+            if (this.health <= 0 && !gameConstants_1.GameConstants.DEVELOPER_MODE) {
+                this.dead = true;
             }
-            //this.game.rooms[this.levelID].updateLighting();
         };
         this.beginSlowMotion = () => {
             this.renderer.beginSlowMotion();
@@ -18047,7 +18048,8 @@ class PlayerRenderer {
          * to ensure canvas state is preserved.
          */
         this.drawTileCursor = (delta) => {
-            if (this.player.inventory.isOpen)
+            if (this.player.inventory.isOpen ||
+                this.player.inputHandler.mostRecentMoveInput === "keyboard")
                 return;
             game_1.Game.ctx.save(); // Save the current canvas state
             if (!this.player.mouseInLine() ||
