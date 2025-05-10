@@ -9273,6 +9273,8 @@ class Game {
                 for (const room of sortedRooms) {
                     if (room.active || (room.entered && room.onScreen)) {
                         room.draw(delta);
+                        if (room.active)
+                            this.players[this.localPlayerID].drawTileCursor(delta);
                         room.drawEntities(delta, skipLocalPlayer);
                         //room.drawShade(delta); // this used to come after the color layer
                     }
@@ -16541,6 +16543,9 @@ class Player extends drawable_1.Drawable {
                 }
             }
         };
+        this.drawTileCursor = (delta) => {
+            this.renderer.drawTileCursor(delta);
+        };
         this.mouseToTile = (offsetY = 0) => {
             // Get screen center coordinates
             const screenCenterX = gameConstants_1.GameConstants.WIDTH / 2;
@@ -16570,30 +16575,13 @@ class Player extends drawable_1.Drawable {
                 y: pixelY,
             };
         };
-        this.moveRangeCheck = (x, y) => {
-            const dx = Math.abs(this.x - x);
-            const dy = Math.abs(this.y - y);
-            return (dx <= this.moveRange &&
-                dy <= this.moveRange &&
-                (dx === 0 || dy === 0) &&
-                dx + dy !== 0);
-        };
         this.setTileCursorPosition = () => {
             const offsetX = Math.floor(gameConstants_1.GameConstants.WIDTH / 2) / gameConstants_1.GameConstants.TILESIZE;
             const offsetY = Math.floor(gameConstants_1.GameConstants.HEIGHT / 2) / gameConstants_1.GameConstants.TILESIZE;
-            /*
             this.tileCursor = {
-              x: this.mouseToTile().x - this.x + offsetX - 0.5,
-              y: this.mouseToTile().y - this.y + offsetY - 0.5,
+                x: this.mouseToTile().x - this.x + offsetX - 0.5,
+                y: this.mouseToTile().y - this.y + offsetY - 0.5,
             };
-            */
-            const moveData = this.canMoveWithMouse();
-            if (moveData) {
-                this.tileCursor = {
-                    x: moveData.x - this.x + offsetX - 0.5,
-                    y: moveData.y - this.y + offsetY - 0.5,
-                };
-            }
         };
         this.enemyInRange = (eX, eY, range) => {
             // Use nullish coalescing operator for cleaner default value
@@ -17457,9 +17445,19 @@ class PlayerMovement {
         this.moveQueue = [];
         this.isProcessingQueue = false;
         this.animationFrameId = null;
+        this.moveRange = 1;
         this.lastMoveTime = 0;
         this.lastChangeDirectionTime = 0;
         this.adjustedCooldown = 0;
+        //unused
+        this.moveRangeCheck = (x, y) => {
+            const dx = Math.abs(this.player.x - x);
+            const dy = Math.abs(this.player.y - y);
+            return (dx <= this.moveRange &&
+                dy <= this.moveRange &&
+                (dx === 0 || dy === 0) &&
+                dx + dy !== 0);
+        };
         this.queueHandler = () => {
             if (!this.isProcessingQueue)
                 return;
@@ -17772,6 +17770,7 @@ class PlayerRenderer {
             this.flashingFrame += (delta * 12) / gameConstants_1.GameConstants.FPS;
             if (!player.dead) {
                 game_1.Game.drawMob(0, 0, 1, 1, player.x - this.drawX, player.y - this.drawY, 1, 1);
+                //this.drawTileCursor(delta);
                 if (!this.flashing || Math.floor(this.flashingFrame) % 2 === 0) {
                     this.drawPlayerSprite(delta);
                 }
@@ -17973,7 +17972,7 @@ class PlayerRenderer {
                 this.drawHurt(delta);
             if (this.player.mapToggled === true)
                 this.player.map.draw(delta);
-            //this.drawTileCursor(delta);
+            this.drawTileCursor(delta);
             this.player.setCursorIcon();
             //this.drawInventoryButton(delta);
             if (this.player.menu.open)
@@ -18055,26 +18054,9 @@ class PlayerRenderer {
                 !this.player.isMouseAboveFloor() ||
                 this.player.isMouseOnPlayerTile())
                 return;
-            let tileX = 22; //inRange ? 22 : 24;
-            let tileY = 3;
-            const moveData = this.player.canMoveWithMouse();
-            if (moveData && moveData.direction !== undefined) {
-                switch (moveData.direction) {
-                    case game_1.Direction.UP:
-                        tileY = 3;
-                        break;
-                    case game_1.Direction.RIGHT:
-                        tileY = 4;
-                        break;
-                    case game_1.Direction.DOWN:
-                        tileY = 5;
-                        break;
-                    case game_1.Direction.LEFT:
-                        tileY = 6;
-                        break;
-                }
-            }
-            game_1.Game.drawFX(tileX + Math.floor(hitWarning_1.HitWarning.frame), tileY, 1, 1, this.player.tileCursor.x, this.player.tileCursor.y, 1, 1);
+            let tileX = 24; //inRange ? 22 : 24;
+            let tileY = 5;
+            game_1.Game.drawFX(tileX + Math.floor(hitWarning_1.HitWarning.frame), tileY, 1, 1, this.player.tileCursor.x + this.player.drawX, this.player.tileCursor.y + this.player.drawY, 1, 1);
             game_1.Game.ctx.restore(); // Restore the canvas state
         };
         this.jump = (delta) => {

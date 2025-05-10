@@ -7,6 +7,7 @@ export class PlayerMovement {
   private moveQueue: { x: number; y: number; direction: Direction }[] = [];
   private isProcessingQueue: boolean = false;
   private animationFrameId: number | null = null;
+  private moveRange: number = 1;
   lastMoveTime: number = 0;
   lastChangeDirectionTime: number = 0;
   adjustedCooldown: number = 0;
@@ -27,6 +28,17 @@ export class PlayerMovement {
       this.queueMove(x, y, direction);
     }
   }
+  //unused
+  moveRangeCheck = (x: number, y: number) => {
+    const dx = Math.abs(this.player.x - x);
+    const dy = Math.abs(this.player.y - y);
+    return (
+      dx <= this.moveRange &&
+      dy <= this.moveRange &&
+      (dx === 0 || dy === 0) &&
+      dx + dy !== 0
+    );
+  };
 
   private getTargetCoords(direction: Direction): { x: number; y: number } {
     switch (direction) {

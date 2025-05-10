@@ -279,7 +279,6 @@ export class PlayerRenderer {
 
   draw = (delta: number) => {
     const player = this.player;
-
     Game.ctx.save();
     this.updateDrawXY(delta);
     player.drawableY = player.y;
@@ -295,6 +294,8 @@ export class PlayerRenderer {
         1,
         1,
       );
+      //this.drawTileCursor(delta);
+
       if (!this.flashing || Math.floor(this.flashingFrame) % 2 === 0) {
         this.drawPlayerSprite(delta);
       }
@@ -604,7 +605,7 @@ export class PlayerRenderer {
     if (this.hurting) this.drawHurt(delta);
 
     if (this.player.mapToggled === true) this.player.map.draw(delta);
-    //this.drawTileCursor(delta);
+    this.drawTileCursor(delta);
     this.player.setCursorIcon();
 
     //this.drawInventoryButton(delta);
@@ -714,34 +715,16 @@ export class PlayerRenderer {
       this.player.isMouseOnPlayerTile()
     )
       return;
-    let tileX = 22; //inRange ? 22 : 24;
-    let tileY = 3;
-
-    const moveData = this.player.canMoveWithMouse();
-    if (moveData && moveData.direction !== undefined) {
-      switch (moveData.direction) {
-        case Direction.UP:
-          tileY = 3;
-          break;
-        case Direction.RIGHT:
-          tileY = 4;
-          break;
-        case Direction.DOWN:
-          tileY = 5;
-          break;
-        case Direction.LEFT:
-          tileY = 6;
-          break;
-      }
-    }
+    let tileX = 24; //inRange ? 22 : 24;
+    let tileY = 5;
 
     Game.drawFX(
       tileX + Math.floor(HitWarning.frame),
       tileY,
       1,
       1,
-      this.player.tileCursor.x,
-      this.player.tileCursor.y,
+      this.player.tileCursor.x + this.player.drawX,
+      this.player.tileCursor.y + this.player.drawY,
       1,
       1,
     );

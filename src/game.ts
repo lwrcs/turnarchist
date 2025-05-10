@@ -878,6 +878,8 @@ export class Game {
       for (const room of sortedRooms) {
         if (room.active || (room.entered && room.onScreen)) {
           room.draw(delta);
+          if (room.active)
+            this.players[this.localPlayerID].drawTileCursor(delta);
           room.drawEntities(delta, skipLocalPlayer);
           //room.drawShade(delta); // this used to come after the color layer
         }

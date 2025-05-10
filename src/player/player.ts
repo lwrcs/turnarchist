@@ -269,6 +269,10 @@ export class Player extends Drawable {
     }
   };
 
+  drawTileCursor = (delta: number) => {
+    this.renderer.drawTileCursor(delta);
+  };
+
   mouseToTile = (offsetY: number = 0) => {
     // Get screen center coordinates
     const screenCenterX = GameConstants.WIDTH / 2;
@@ -309,37 +313,17 @@ export class Player extends Drawable {
     };
   };
 
-  moveRangeCheck = (x: number, y: number) => {
-    const dx = Math.abs(this.x - x);
-    const dy = Math.abs(this.y - y);
-    return (
-      dx <= this.moveRange &&
-      dy <= this.moveRange &&
-      (dx === 0 || dy === 0) &&
-      dx + dy !== 0
-    );
-  };
-
   setTileCursorPosition = () => {
     const offsetX =
       Math.floor(GameConstants.WIDTH / 2) / GameConstants.TILESIZE;
 
     const offsetY =
       Math.floor(GameConstants.HEIGHT / 2) / GameConstants.TILESIZE;
-    /*
+
     this.tileCursor = {
       x: this.mouseToTile().x - this.x + offsetX - 0.5,
       y: this.mouseToTile().y - this.y + offsetY - 0.5,
     };
-    */
-
-    const moveData = this.canMoveWithMouse();
-    if (moveData) {
-      this.tileCursor = {
-        x: moveData.x - this.x + offsetX - 0.5,
-        y: moveData.y - this.y + offsetY - 0.5,
-      };
-    }
   };
 
   enemyInRange = (eX: number, eY: number, range: number | null) => {
