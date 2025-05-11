@@ -7,7 +7,7 @@ import { Usable } from "./usable";
 import { Weapon } from "../weapon/weapon";
 import { Dagger } from "../weapon/dagger";
 import { WeaponFragments } from "./weaponFragments";
-
+import { Geode } from "./geode";
 export class Hammer extends Usable {
   static itemName = "hammer";
   constructor(level: Room, x: number, y: number) {
@@ -39,6 +39,10 @@ export class Hammer extends Usable {
       let hammer = other as Hammer;
       hammer.disassemble(player);
       this.level.game.pushMessage(`I only needed one of those anyways...`);
+    } else if (other.name === "geode") {
+      let geode = other as Geode;
+      geode.split(player.inventory);
+      this.level.game.pushMessage(`You hit the geode with the hammer.`);
     }
   };
 

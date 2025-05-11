@@ -8470,6 +8470,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CoalResource = void 0;
 const resource_1 = __webpack_require__(/*! ./resource */ "./src/entity/resource/resource.ts");
 const coal_1 = __webpack_require__(/*! ../../item/coal */ "./src/item/coal.ts");
+const geode_1 = __webpack_require__(/*! ../../item/geode */ "./src/item/geode.ts");
 class CoalResource extends resource_1.Resource {
     constructor(room, game, x, y) {
         super(room, game, x, y);
@@ -8477,7 +8478,12 @@ class CoalResource extends resource_1.Resource {
         this.tileY = 0;
         this.health = 1;
         this.name = "coal";
-        this.drop = new coal_1.Coal(this.room, this.x, this.y);
+        if (Math.random() < 0.05) {
+            this.drop = new geode_1.Geode(this.room, this.x, this.y);
+        }
+        else {
+            this.drop = new coal_1.Coal(this.room, this.x, this.y);
+        }
     }
 }
 exports.CoalResource = CoalResource;
@@ -8522,6 +8528,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GoldResource = void 0;
 const resource_1 = __webpack_require__(/*! ./resource */ "./src/entity/resource/resource.ts");
 const gold_1 = __webpack_require__(/*! ../../item/gold */ "./src/item/gold.ts");
+const geode_1 = __webpack_require__(/*! ../../item/geode */ "./src/item/geode.ts");
 class GoldResource extends resource_1.Resource {
     constructor(room, game, x, y) {
         super(room, game, x, y);
@@ -8529,7 +8536,12 @@ class GoldResource extends resource_1.Resource {
         this.tileY = 0;
         this.health = 2;
         this.name = "gold";
-        this.drop = new gold_1.Gold(this.room, this.x, this.y);
+        if (Math.random() < 0.05) {
+            this.drop = new geode_1.Geode(this.room, this.x, this.y);
+        }
+        else {
+            this.drop = new gold_1.Gold(this.room, this.x, this.y);
+        }
     }
 }
 exports.GoldResource = GoldResource;
@@ -8566,9 +8578,11 @@ class Resource extends entity_1.Entity {
         this.kill = (player) => {
             sound_1.Sound.breakRock();
             this.dead = true;
-            if ((player !== null && player.inventory.getWeapon().canMine === true) ||
+            if ((player !== null &&
+                player.inventory?.canMine()) /*player.inventory.getWeapon().canMine === true*/ ||
                 player === null) {
                 this.dropLoot();
+                this.game.pushMessage("You use your pickaxe to collect the resource.");
             }
             else {
                 this.game.pushMessage("You break the rock, but fail to collect any material from it.");
@@ -8613,6 +8627,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Rock = void 0;
 const stone_1 = __webpack_require__(/*! ../../item/stone */ "./src/item/stone.ts");
 const resource_1 = __webpack_require__(/*! ./resource */ "./src/entity/resource/resource.ts");
+const geode_1 = __webpack_require__(/*! ../../item/geode */ "./src/item/geode.ts");
 class Rock extends resource_1.Resource {
     constructor(room, game, x, y) {
         super(room, game, x, y);
@@ -8623,7 +8638,12 @@ class Rock extends resource_1.Resource {
         this.hasShadow = false;
         this.chainPushable = false;
         this.name = "rock";
-        this.drop = new stone_1.Stone(this.room, this.x, this.y);
+        if (Math.random() < 0.1) {
+            this.drop = new geode_1.Geode(this.room, this.x, this.y);
+        }
+        else {
+            this.drop = new stone_1.Stone(this.room, this.x, this.y);
+        }
     }
 }
 exports.Rock = Rock;
@@ -9935,7 +9955,6 @@ const weaponFragments_1 = __webpack_require__(/*! ./item/weaponFragments */ "./s
 const weaponPoison_1 = __webpack_require__(/*! ./item/weaponPoison */ "./src/item/weaponPoison.ts");
 const levelConstants_1 = __webpack_require__(/*! ./levelConstants */ "./src/levelConstants.ts");
 const dagger_1 = __webpack_require__(/*! ./weapon/dagger */ "./src/weapon/dagger.ts");
-const dualdagger_1 = __webpack_require__(/*! ./weapon/dualdagger */ "./src/weapon/dualdagger.ts");
 const spear_1 = __webpack_require__(/*! ./weapon/spear */ "./src/weapon/spear.ts");
 const spellbook_1 = __webpack_require__(/*! ./weapon/spellbook */ "./src/weapon/spellbook.ts");
 const hammer_1 = __webpack_require__(/*! ./item/hammer */ "./src/item/hammer.ts");
@@ -9943,6 +9962,7 @@ const greataxe_1 = __webpack_require__(/*! ./weapon/greataxe */ "./src/weapon/gr
 const bluegem_1 = __webpack_require__(/*! ./item/bluegem */ "./src/item/bluegem.ts");
 const redgem_1 = __webpack_require__(/*! ./item/redgem */ "./src/item/redgem.ts");
 const greengem_1 = __webpack_require__(/*! ./item/greengem */ "./src/item/greengem.ts");
+const pickaxe_1 = __webpack_require__(/*! ./weapon/pickaxe */ "./src/weapon/pickaxe.ts");
 class GameConstants {
 }
 exports.GameConstants = GameConstants;
@@ -10065,7 +10085,7 @@ GameConstants.STARTING_INVENTORY = [dagger_1.Dagger, candle_1.Candle];
 GameConstants.STARTING_DEV_INVENTORY = [
     dagger_1.Dagger,
     greataxe_1.Greataxe,
-    dualdagger_1.DualDagger,
+    pickaxe_1.Pickaxe,
     torch_1.Torch,
     godStone_1.GodStone,
     candle_1.Candle,
@@ -11569,6 +11589,7 @@ const weapon_1 = __webpack_require__(/*! ../weapon/weapon */ "./src/weapon/weapo
 const usable_1 = __webpack_require__(/*! ../item/usable */ "./src/item/usable.ts");
 const mouseCursor_1 = __webpack_require__(/*! ../mouseCursor */ "./src/mouseCursor.ts");
 const input_1 = __webpack_require__(/*! ../input */ "./src/input.ts");
+const pickaxe_1 = __webpack_require__(/*! ../weapon/pickaxe */ "./src/weapon/pickaxe.ts");
 let OPEN_TIME = 100; // milliseconds
 // Dark gray color used for the background of inventory slots
 let FILL_COLOR = "#5a595b";
@@ -11887,7 +11908,7 @@ class Inventory {
             return (this.items.filter((i) => i !== null).length >=
                 (this.rows + this._expansion) * this.cols);
         };
-        this.addItem = (item) => {
+        this.addItem = (item, stackCount = null) => {
             if (item === null)
                 return false;
             if (item instanceof coin_1.Coin) {
@@ -11898,6 +11919,9 @@ class Inventory {
                 item.setWielder(this.player);
             }
             if (item.stackable) {
+                if (stackCount) {
+                    item.stackCount = stackCount;
+                }
                 for (let i = 0; i < this.items.length; i++) {
                     if (this.items[i] !== null &&
                         this.items[i].constructor === item.constructor) {
@@ -11923,6 +11947,9 @@ class Inventory {
             if (index !== -1) {
                 this.items[index] = null;
             }
+        };
+        this.canMine = () => {
+            return this.hasItem(pickaxe_1.Pickaxe) !== null;
         };
         this.getArmor = () => {
             return (this.items.find((i) => i instanceof armor_1.Armor && i.equipped) ||
@@ -13154,6 +13181,55 @@ exports.Equippable = Equippable;
 
 /***/ }),
 
+/***/ "./src/item/geode.ts":
+/*!***************************!*\
+  !*** ./src/item/geode.ts ***!
+  \***************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Geode = void 0;
+const item_1 = __webpack_require__(/*! ./item */ "./src/item/item.ts");
+const redgem_1 = __webpack_require__(/*! ./redgem */ "./src/item/redgem.ts");
+const bluegem_1 = __webpack_require__(/*! ./bluegem */ "./src/item/bluegem.ts");
+const greengem_1 = __webpack_require__(/*! ./greengem */ "./src/item/greengem.ts");
+class Geode extends item_1.Item {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.getDescription = () => {
+            return "GEODE\nWhen in doubt hit it with a hammer.";
+        };
+        this.split = (inventory) => {
+            if (Math.random() < 0.2) {
+                this.level.game.pushMessage(`You split the geode but it's stone all the way through.`);
+            }
+            else if (inventory.isFull()) {
+                this.level.game.pushMessage(`You don't have enough space in your inventory to split the geode.`);
+            }
+            else {
+                const numGems = Math.floor(Math.random() * Math.random() * 5) + 1;
+                this.level.game.pushMessage(`You split the geode and it's full of shiny gems!`);
+                let gemTypes = [bluegem_1.BlueGem, redgem_1.RedGem, greengem_1.GreenGem];
+                let gemType = gemTypes[Math.floor(Math.random() * gemTypes.length)];
+                for (let i = 0; i < numGems; i++) {
+                    inventory.addItem(new gemType(this.level, this.x, this.y));
+                }
+                inventory.removeItem(this);
+            }
+        };
+        this.tileX = 15;
+        this.tileY = 2;
+        this.name = Geode.itemName;
+        this.stackable = false;
+    }
+}
+exports.Geode = Geode;
+Geode.itemName = "geode";
+
+
+/***/ }),
+
 /***/ "./src/item/godStone.ts":
 /*!******************************!*\
   !*** ./src/item/godStone.ts ***!
@@ -13310,6 +13386,11 @@ class Hammer extends usable_1.Usable {
                 let hammer = other;
                 hammer.disassemble(player);
                 this.level.game.pushMessage(`I only needed one of those anyways...`);
+            }
+            else if (other.name === "geode") {
+                let geode = other;
+                geode.split(player.inventory);
+                this.level.game.pushMessage(`You hit the geode with the hammer.`);
             }
         };
         this.disassemble = (player) => {
@@ -16495,6 +16576,8 @@ class Player extends drawable_1.Drawable {
             return mouseTile.x === this.x || mouseTile.y === this.y;
         };
         this.canMoveWithMouse = () => {
+            if (this.inventory.isOpen)
+                return null;
             // Check if mouse is over valid floor tile
             if (!this.isMouseAboveFloor() && !this.isMouseAboveFloor(8)) {
                 return null;
@@ -23526,13 +23609,15 @@ Greataxe.itemName = "greataxe";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Pickaxe = void 0;
-const weapon_1 = __webpack_require__(/*! ./weapon */ "./src/weapon/weapon.ts");
-class Pickaxe extends weapon_1.Weapon {
+const item_1 = __webpack_require__(/*! ../item/item */ "./src/item/item.ts");
+class Pickaxe extends item_1.Item {
     constructor(level, x, y) {
         super(level, x, y);
         this.tileX = 30;
         this.tileY = 0;
-        this.canMine = true;
+        this.name = Pickaxe.itemName;
+        this.description = "allows mining rocks without equipping";
+        //this.canMine = true;
     }
 }
 exports.Pickaxe = Pickaxe;

@@ -46,10 +46,12 @@ export class Resource extends Entity {
     Sound.breakRock();
     this.dead = true;
     if (
-      (player !== null && player.inventory.getWeapon().canMine === true) ||
+      (player !== null &&
+        player.inventory?.canMine()) /*player.inventory.getWeapon().canMine === true*/ ||
       player === null
     ) {
       this.dropLoot();
+      this.game.pushMessage("You use your pickaxe to collect the resource.");
     } else {
       this.game.pushMessage(
         "You break the rock, but fail to collect any material from it.",

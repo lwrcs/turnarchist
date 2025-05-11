@@ -8,6 +8,7 @@ import { Sound } from "../../sound";
 import { Stone } from "../../item/stone";
 import { Resource } from "./resource";
 import { ImageParticle } from "../../particle/imageParticle";
+import { Geode } from "../../item/geode";
 
 export class Rock extends Resource {
   constructor(room: Room, game: Game, x: number, y: number) {
@@ -19,6 +20,10 @@ export class Rock extends Resource {
     this.hasShadow = false;
     this.chainPushable = false;
     this.name = "rock";
-    this.drop = new Stone(this.room, this.x, this.y);
+    if (Math.random() < 0.1) {
+      this.drop = new Geode(this.room, this.x, this.y);
+    } else {
+      this.drop = new Stone(this.room, this.x, this.y);
+    }
   }
 }

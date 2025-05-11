@@ -25,6 +25,7 @@ import { Greataxe } from "./weapon/greataxe";
 import { BlueGem } from "./item/bluegem";
 import { RedGem } from "./item/redgem";
 import { GreenGem } from "./item/greengem";
+import { Pickaxe } from "./weapon/pickaxe";
 
 export class GameConstants {
   static readonly VERSION = "v1.0.5"; //"v0.6.3";
@@ -170,7 +171,7 @@ export class GameConstants {
   static readonly STARTING_DEV_INVENTORY = [
     Dagger,
     Greataxe,
-    DualDagger,
+    Pickaxe,
     Torch,
     GodStone,
     Candle,

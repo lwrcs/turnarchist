@@ -219,6 +219,7 @@ export class Player extends Drawable {
   };
 
   canMoveWithMouse = () => {
+    if (this.inventory.isOpen) return null;
     // Check if mouse is over valid floor tile
     if (!this.isMouseAboveFloor() && !this.isMouseAboveFloor(8)) {
       return null;

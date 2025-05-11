@@ -11,6 +11,7 @@ import { Usable } from "../item/usable";
 import { Player } from "../player/player";
 import { MouseCursor } from "../mouseCursor";
 import { Input } from "../input";
+import { Pickaxe } from "../weapon/pickaxe";
 
 let OPEN_TIME = 100; // milliseconds
 // Dark gray color used for the background of inventory slots
@@ -439,7 +440,7 @@ export class Inventory {
     );
   };
 
-  addItem = (item: Item | null): boolean => {
+  addItem = (item: Item | null, stackCount: number | null = null): boolean => {
     if (item === null) return false;
     if (item instanceof Coin) {
       this.coins += item.stack;
@@ -449,6 +450,9 @@ export class Inventory {
       item.setWielder(this.player);
     }
     if (item.stackable) {
+      if (stackCount) {
+        item.stackCount = stackCount;
+      }
       for (let i = 0; i < this.items.length; i++) {
         if (
           this.items[i] !== null &&
@@ -476,6 +480,10 @@ export class Inventory {
     if (index !== -1) {
       this.items[index] = null;
     }
+  };
+
+  canMine = (): boolean => {
+    return this.hasItem(Pickaxe) !== null;
   };
 
   getArmor = (): Armor | null => {
