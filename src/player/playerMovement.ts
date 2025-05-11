@@ -114,7 +114,11 @@ export class PlayerMovement {
     y: number;
     direction: Direction;
   }) {
-    this.move(direction);
+    if (this.player.inputHandler.mostRecentMoveInput === "mouse") {
+      this.moveMouse(direction);
+    } else {
+      this.move(direction);
+    }
   }
 
   private startQueueProcessing() {

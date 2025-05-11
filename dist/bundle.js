@@ -17689,7 +17689,12 @@ class PlayerMovement {
         this.startQueueProcessing();
     }
     handleMoveLoop({ x, y, direction, }) {
-        this.move(direction);
+        if (this.player.inputHandler.mostRecentMoveInput === "mouse") {
+            this.moveMouse(direction);
+        }
+        else {
+            this.move(direction);
+        }
     }
     startQueueProcessing() {
         if (!this.isProcessingQueue) {
