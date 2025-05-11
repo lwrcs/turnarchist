@@ -4884,12 +4884,7 @@ class OccultistEnemy extends enemy_1.Enemy {
         this.behavior = () => {
             this.lastX = this.x;
             this.lastY = this.y;
-            let enemiesToShield = this.room.entities.filter((entity) => entity instanceof enemy_1.Enemy &&
-                utils_1.Utils.distance(this.x, this.y, entity.x, entity.y) <= this.range &&
-                !entity.shielded &&
-                !entity.dead &&
-                entity !== this &&
-                !entity.shieldedBefore);
+            let enemiesToShield = this.enemyShieldCandidates();
             if (!this.dead) {
                 if (this.skipNextTurns > 0) {
                     this.skipNextTurns--;
@@ -4897,21 +4892,9 @@ class OccultistEnemy extends enemy_1.Enemy {
                 }
                 this.ticks++;
                 if (this.ticks % 2 === 0) {
-                    if (enemiesToShield.length > 0) {
-                        enemiesToShield.forEach((enemy) => {
-                            const distance = utils_1.Utils.distance(this.x, this.y, enemy.x, enemy.y);
-                            if (Math.random() * 10 > distance) {
-                                this.applyShieldTo(enemy);
-                            }
-                        });
-                        //this.createBeam(this.shieldedEnemies);
-                    }
+                    this.shieldEnemies(enemiesToShield);
+                    this.updateShieldedEnemies();
                 }
-                this.shieldedEnemies.forEach((enemy) => {
-                    if (enemy.dead) {
-                        this.shieldedEnemies = this.shieldedEnemies.filter((e) => e !== enemy);
-                    }
-                });
             }
             if (this.shieldedEnemies.length > 0) {
                 this.shadeColor = "#2E0854";
@@ -4919,6 +4902,72 @@ class OccultistEnemy extends enemy_1.Enemy {
             else {
                 this.shadeColor = "#000000";
             }
+        };
+        this.onHurt = (damage = 1) => {
+            if (this.health < this.lastHealth &&
+                this.health % 2 === 0 &&
+                this.health > 0) {
+                this.teleport();
+            }
+            this.lastHealth = this.health;
+        };
+        this.teleport = () => {
+            let newTile = this.findFarTile();
+            if (newTile) {
+                this.x = newTile.x;
+                this.y = newTile.y;
+                this.room.updateLighting();
+            }
+        };
+        this.findFarTile = () => {
+            // Get all empty tiles
+            const emptyTiles = this.room.getEmptyTiles();
+            const player = this.getPlayer();
+            // Early return if no player or no empty tiles
+            if (!player || emptyTiles.length === 0) {
+                return null;
+            }
+            // Calculate distances from player
+            const tilesWithDistances = emptyTiles.map((tile) => {
+                const distance = utils_1.Utils.distance(tile.x, tile.y, player.x, player.y);
+                return { tile, distance };
+            });
+            // Sort by distance (farthest first)
+            tilesWithDistances.sort((a, b) => b.distance - a.distance);
+            // Take only the 50% farthest tiles
+            const farTiles = tilesWithDistances.slice(0, Math.floor(tilesWithDistances.length / 2));
+            // If no far tiles available, return null
+            if (farTiles.length === 0) {
+                return null;
+            }
+            // Choose a random tile from the far tiles
+            const randomIndex = Math.floor(Math.random() * farTiles.length);
+            return farTiles[randomIndex].tile;
+        };
+        this.updateShieldedEnemies = () => {
+            this.shieldedEnemies.forEach((enemy) => {
+                if (enemy.dead) {
+                    this.shieldedEnemies = this.shieldedEnemies.filter((e) => e !== enemy);
+                }
+            });
+        };
+        this.shieldEnemies = (enemiesToShield) => {
+            if (enemiesToShield.length > 0) {
+                enemiesToShield.forEach((enemy) => {
+                    const distance = utils_1.Utils.distance(this.x, this.y, enemy.x, enemy.y);
+                    if (Math.random() * 10 > distance) {
+                        this.applyShieldTo(enemy);
+                    }
+                });
+            }
+        };
+        this.enemyShieldCandidates = () => {
+            return this.room.entities.filter((entity) => entity instanceof enemy_1.Enemy &&
+                utils_1.Utils.distance(this.x, this.y, entity.x, entity.y) <= this.range &&
+                !entity.shielded &&
+                !entity.dead &&
+                entity !== this &&
+                !entity.shieldedBefore);
         };
         this.unshieldEnemies = () => {
             if (this.shieldedEnemies.length > 0) {
@@ -5011,6 +5060,7 @@ class OccultistEnemy extends enemy_1.Enemy {
         };
         this.ticks = 0;
         this.health = 6;
+        this.lastHealth = this.health;
         this.maxHealth = 6;
         this.tileX = 55;
         this.tileY = 8;
@@ -6748,6 +6798,7 @@ class Entity extends drawable_1.Drawable {
             else
                 return closestPlayer;
         };
+        this.onHurt = (damage = 1) => { };
         this.hurt = (playerHitBy, damage, type = "none") => {
             this.handleEnemyCase(playerHitBy);
             let hitShield = false;
@@ -6767,6 +6818,7 @@ class Entity extends drawable_1.Drawable {
             */
             this.health -= damage;
             this.maxHealth -= shieldHealth;
+            this.onHurt(damage);
             this.startHurting();
             this.createDamageNumber(damage, type);
             this.playHitSound();
@@ -9966,13 +10018,13 @@ const pickaxe_1 = __webpack_require__(/*! ./weapon/pickaxe */ "./src/weapon/pick
 class GameConstants {
 }
 exports.GameConstants = GameConstants;
-GameConstants.VERSION = "v1.0.5"; //"v0.6.3";
+GameConstants.VERSION = "v1.0.7"; //"v0.6.3";
 GameConstants.DEVELOPER_MODE = false;
 GameConstants.isMobile = false;
 GameConstants.FPS = 120;
 GameConstants.ALPHA_ENABLED = true;
 GameConstants.SHADE_LEVELS = 50; //25
-GameConstants.ENTITY_SHADE_LEVELS = 15; //10
+GameConstants.ENTITY_SHADE_LEVELS = 25; //10
 GameConstants.TILESIZE = 16;
 GameConstants.SCALE = 6;
 GameConstants.SOFT_SCALE = 6;
@@ -9982,6 +10034,7 @@ GameConstants.SWIPE_THRESH = 25 ** 2; // (size of swipe threshold circle)^2
 GameConstants.HOLD_THRESH = 250; // milliseconds
 GameConstants.KEY_REPEAT_TIME = 300; // millseconds
 GameConstants.MOVEMENT_COOLDOWN = 200; // milliseconds
+GameConstants.MOVEMENT_QUEUE_COOLDOWN = 100; // milliseconds
 GameConstants.MOVE_WITH_MOUSE = true;
 GameConstants.CHAT_APPEAR_TIME = 2500;
 GameConstants.CHAT_FADE_TIME = 500;
@@ -16614,15 +16667,15 @@ class Player extends drawable_1.Drawable {
             return null;
         };
         this.moveWithMouse = () => {
+            this.inputHandler.mostRecentMoveInput = "mouse";
             if (!gameConstants_1.GameConstants.MOVE_WITH_MOUSE)
                 return;
             const moveData = this.canMoveWithMouse();
             if (moveData) {
-                if (this.movement.canMove()) {
-                    this.inputHandler.mostRecentMoveInput = "mouse";
-                    this.direction = moveData.direction;
-                    this.tryMove(moveData.x, moveData.y);
-                }
+                this.actionProcessor.process({
+                    type: "MouseMove",
+                    direction: moveData.direction,
+                });
             }
         };
         this.mouseToTile = (offsetY = 0) => {
@@ -17144,6 +17197,9 @@ class PlayerActionProcessor {
             case "Move":
                 this.player.movement.move(action.direction);
                 break;
+            case "MouseMove":
+                this.player.movement.moveMouse(action.direction);
+                break;
             case "OpenInventory":
                 this.player.inventory.open();
                 break;
@@ -17573,6 +17629,19 @@ class PlayerMovement {
             this.queueMove(x, y, direction);
         }
     }
+    moveMouse(direction) {
+        const { x, y } = this.getTargetCoords(direction);
+        console.log("x", x, "y", y);
+        if (this.canMove()) {
+            this.player.inputHandler.mostRecentMoveInput = "mouse";
+            //this.player.lastDirection = this.player.direction;
+            //this.player.direction = direction;
+            this.player.tryMove(x, y);
+        }
+        else {
+            this.queueMove(x, y, direction);
+        }
+    }
     getTargetCoords(direction) {
         switch (direction) {
             case game_1.Direction.LEFT:
@@ -17588,10 +17657,12 @@ class PlayerMovement {
     canMove() {
         const now = Date.now();
         const cooldown = gameConstants_1.GameConstants.MOVEMENT_COOLDOWN;
+        /*
         this.adjustedCooldown = cooldown - this.moveQueue.length * 25;
         this.player.cooldownRemaining =
-            now - this.lastMoveTime / this.adjustedCooldown;
-        if (now - this.lastMoveTime >= this.adjustedCooldown) {
+          now - this.lastMoveTime / this.adjustedCooldown;
+              */
+        if (now - this.lastMoveTime >= cooldown) {
             this.lastMoveTime = now;
             if (this.player.inputHandler.mostRecentMoveInput === "keyboard")
                 this.lastChangeDirectionTime = now;
@@ -17601,18 +17672,17 @@ class PlayerMovement {
     }
     canQueue() {
         const now = Date.now();
-        const cooldown = gameConstants_1.GameConstants.MOVEMENT_COOLDOWN;
-        this.adjustedCooldown = cooldown - this.moveQueue.length * 25;
-        this.player.cooldownRemaining =
-            now - this.lastMoveTime / this.adjustedCooldown;
-        if (now - this.lastMoveTime >= this.adjustedCooldown / 5) {
-            this.lastMoveTime = now;
-            this.lastChangeDirectionTime = now;
+        const cooldown = gameConstants_1.GameConstants.MOVEMENT_QUEUE_COOLDOWN;
+        if (now - this.lastMoveTime >= cooldown) {
+            //this.lastMoveTime = now;
+            //this.lastChangeDirectionTime = now;
             return true;
         }
         return false;
     }
     queueMove(x, y, direction) {
+        if (!this.canQueue())
+            return;
         if (!x || !y || this.moveQueue.length > 0)
             return;
         this.moveQueue.push({ x, y, direction });
@@ -19473,12 +19543,8 @@ class Room {
                 }
             }
             this.turn = TurnState.computerTurn;
-            //player.actionTab.setState(ActionState.WAIT);
-            //sets the action tab state to Ready
             this.playerTurnTime = Date.now();
             this.playerTicked = player;
-            // Update Beam Effects lighting
-            //console.log("updating lighting");
             this.updateLighting();
             player.map.saveMapData();
             this.clearDeadStuff();

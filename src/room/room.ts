@@ -1516,6 +1516,7 @@ export class Room {
   tick = (player: Player) => {
     this.updateLighting();
     player.updateSlowMotion();
+
     this.lastEnemyCount = this.entities.filter(
       (e) => e instanceof Enemy,
     ).length;
@@ -1527,8 +1528,8 @@ export class Room {
     }
 
     this.clearDeadStuff();
-
     this.calculateWallInfo();
+
     this.entities = this.entities.filter((e) => !e.dead);
 
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
@@ -1539,17 +1540,10 @@ export class Room {
 
     this.turn = TurnState.computerTurn;
 
-    //player.actionTab.setState(ActionState.WAIT);
-    //sets the action tab state to Ready
     this.playerTurnTime = Date.now();
     this.playerTicked = player;
 
-    // Update Beam Effects lighting
-
-    //console.log("updating lighting");
-
     this.updateLighting();
-
     player.map.saveMapData();
     this.clearDeadStuff();
     this.updateMovementCooldown();

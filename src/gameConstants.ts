@@ -28,14 +28,14 @@ import { GreenGem } from "./item/greengem";
 import { Pickaxe } from "./weapon/pickaxe";
 
 export class GameConstants {
-  static readonly VERSION = "v1.0.5"; //"v0.6.3";
+  static readonly VERSION = "v1.0.7"; //"v0.6.3";
   static DEVELOPER_MODE = false;
   static isMobile = false;
 
   static readonly FPS = 120;
   static readonly ALPHA_ENABLED = true;
   static SHADE_LEVELS = 50; //25
-  static ENTITY_SHADE_LEVELS = 15; //10
+  static ENTITY_SHADE_LEVELS = 25; //10
 
   static readonly TILESIZE = 16;
   static SCALE = 6;
@@ -48,6 +48,7 @@ export class GameConstants {
 
   static KEY_REPEAT_TIME = 300; // millseconds
   static MOVEMENT_COOLDOWN = 200; // milliseconds
+  static MOVEMENT_QUEUE_COOLDOWN = 100; // milliseconds
   static readonly MOVE_WITH_MOUSE = true;
 
   static readonly CHAT_APPEAR_TIME = 2500;

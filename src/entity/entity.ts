@@ -408,6 +408,8 @@ export class Entity extends Drawable {
     else return closestPlayer;
   };
 
+  onHurt = (damage: number = 1) => {};
+
   hurt = (
     playerHitBy: Player,
     damage: number,
@@ -430,9 +432,9 @@ export class Entity extends Drawable {
       this.shadeColor = this.room.shadeColor;
     }, 100);
     */
-
     this.health -= damage;
     this.maxHealth -= shieldHealth;
+    this.onHurt(damage);
 
     this.startHurting();
     this.createDamageNumber(damage, type);

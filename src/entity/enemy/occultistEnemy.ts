@@ -8,6 +8,7 @@ import { BeamEffect } from "../../beamEffect";
 import { Player } from "../../player/player";
 import { ImageParticle } from "../../particle/imageParticle";
 import { Lighting } from "../../lighting";
+import { Entity } from "../entity";
 
 export class OccultistEnemy extends Enemy {
   ticks: number;
@@ -16,11 +17,13 @@ export class OccultistEnemy extends Enemy {
   range: number;
   static tileX: number = 55;
   static tileY: number = 8;
+  lastHealth: number;
 
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
     this.ticks = 0;
     this.health = 6;
+    this.lastHealth = this.health;
     this.maxHealth = 6;
     this.tileX = 55;
     this.tileY = 8;
@@ -63,15 +66,7 @@ export class OccultistEnemy extends Enemy {
     this.lastX = this.x;
     this.lastY = this.y;
 
-    let enemiesToShield = this.room.entities.filter(
-      (entity) =>
-        entity instanceof Enemy &&
-        Utils.distance(this.x, this.y, entity.x, entity.y) <= this.range &&
-        !entity.shielded &&
-        !entity.dead &&
-        entity !== this &&
-        !entity.shieldedBefore,
-    );
+    let enemiesToShield = this.enemyShieldCandidates();
 
     if (!this.dead) {
       if (this.skipNextTurns > 0) {
@@ -82,25 +77,9 @@ export class OccultistEnemy extends Enemy {
       this.ticks++;
 
       if (this.ticks % 2 === 0) {
-        if (enemiesToShield.length > 0) {
-          enemiesToShield.forEach((enemy) => {
-            const distance = Utils.distance(this.x, this.y, enemy.x, enemy.y);
-            if (Math.random() * 10 > distance) {
-              this.applyShieldTo(enemy as Enemy);
-            }
-          });
-
-          //this.createBeam(this.shieldedEnemies);
-        }
+        this.shieldEnemies(enemiesToShield);
+        this.updateShieldedEnemies();
       }
-
-      this.shieldedEnemies.forEach((enemy) => {
-        if (enemy.dead) {
-          this.shieldedEnemies = this.shieldedEnemies.filter(
-            (e) => e !== enemy,
-          );
-        }
-      });
     }
 
     if (this.shieldedEnemies.length > 0) {
@@ -108,6 +87,91 @@ export class OccultistEnemy extends Enemy {
     } else {
       this.shadeColor = "#000000";
     }
+  };
+
+  onHurt = (damage: number = 1) => {
+    if (
+      this.health < this.lastHealth &&
+      this.health % 2 === 0 &&
+      this.health > 0
+    ) {
+      this.teleport();
+    }
+    this.lastHealth = this.health;
+  };
+
+  teleport = () => {
+    let newTile = this.findFarTile();
+    if (newTile) {
+      this.x = newTile.x;
+      this.y = newTile.y;
+      this.room.updateLighting();
+    }
+  };
+
+  findFarTile = () => {
+    // Get all empty tiles
+    const emptyTiles = this.room.getEmptyTiles();
+    const player = this.getPlayer();
+    // Early return if no player or no empty tiles
+    if (!player || emptyTiles.length === 0) {
+      return null;
+    }
+
+    // Calculate distances from player
+    const tilesWithDistances = emptyTiles.map((tile) => {
+      const distance = Utils.distance(tile.x, tile.y, player.x, player.y);
+      return { tile, distance };
+    });
+
+    // Sort by distance (farthest first)
+    tilesWithDistances.sort((a, b) => b.distance - a.distance);
+
+    // Take only the 50% farthest tiles
+    const farTiles = tilesWithDistances.slice(
+      0,
+      Math.floor(tilesWithDistances.length / 2),
+    );
+
+    // If no far tiles available, return null
+    if (farTiles.length === 0) {
+      return null;
+    }
+
+    // Choose a random tile from the far tiles
+    const randomIndex = Math.floor(Math.random() * farTiles.length);
+    return farTiles[randomIndex].tile;
+  };
+
+  updateShieldedEnemies = () => {
+    this.shieldedEnemies.forEach((enemy) => {
+      if (enemy.dead) {
+        this.shieldedEnemies = this.shieldedEnemies.filter((e) => e !== enemy);
+      }
+    });
+  };
+
+  shieldEnemies = (enemiesToShield: Entity[]) => {
+    if (enemiesToShield.length > 0) {
+      enemiesToShield.forEach((enemy) => {
+        const distance = Utils.distance(this.x, this.y, enemy.x, enemy.y);
+        if (Math.random() * 10 > distance) {
+          this.applyShieldTo(enemy as Enemy);
+        }
+      });
+    }
+  };
+
+  enemyShieldCandidates = () => {
+    return this.room.entities.filter(
+      (entity) =>
+        entity instanceof Enemy &&
+        Utils.distance(this.x, this.y, entity.x, entity.y) <= this.range &&
+        !entity.shielded &&
+        !entity.dead &&
+        entity !== this &&
+        !entity.shieldedBefore,
+    );
   };
 
   unshieldEnemies = () => {

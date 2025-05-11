@@ -14,6 +14,9 @@ export class PlayerActionProcessor {
         this.player.movement.move(action.direction);
         break;
 
+      case "MouseMove":
+        this.player.movement.moveMouse(action.direction);
+        break;
       case "OpenInventory":
         this.player.inventory.open();
         break;

@@ -28,6 +28,20 @@ export class PlayerMovement {
       this.queueMove(x, y, direction);
     }
   }
+
+  moveMouse(direction: Direction): void {
+    const { x, y } = this.getTargetCoords(direction);
+    console.log("x", x, "y", y);
+
+    if (this.canMove()) {
+      this.player.inputHandler.mostRecentMoveInput = "mouse";
+      //this.player.lastDirection = this.player.direction;
+      //this.player.direction = direction;
+      this.player.tryMove(x, y);
+    } else {
+      this.queueMove(x, y, direction);
+    }
+  }
   //unused
   moveRangeCheck = (x: number, y: number) => {
     const dx = Math.abs(this.player.x - x);
@@ -56,10 +70,13 @@ export class PlayerMovement {
   canMove(): boolean {
     const now = Date.now();
     const cooldown = GameConstants.MOVEMENT_COOLDOWN;
+    /*
     this.adjustedCooldown = cooldown - this.moveQueue.length * 25;
     this.player.cooldownRemaining =
       now - this.lastMoveTime / this.adjustedCooldown;
-    if (now - this.lastMoveTime >= this.adjustedCooldown) {
+          */
+
+    if (now - this.lastMoveTime >= cooldown) {
       this.lastMoveTime = now;
       if (this.player.inputHandler.mostRecentMoveInput === "keyboard")
         this.lastChangeDirectionTime = now;
@@ -70,19 +87,18 @@ export class PlayerMovement {
 
   canQueue(): boolean {
     const now = Date.now();
-    const cooldown = GameConstants.MOVEMENT_COOLDOWN;
-    this.adjustedCooldown = cooldown - this.moveQueue.length * 25;
-    this.player.cooldownRemaining =
-      now - this.lastMoveTime / this.adjustedCooldown;
-    if (now - this.lastMoveTime >= this.adjustedCooldown / 5) {
-      this.lastMoveTime = now;
-      this.lastChangeDirectionTime = now;
+    const cooldown = GameConstants.MOVEMENT_QUEUE_COOLDOWN;
+
+    if (now - this.lastMoveTime >= cooldown) {
+      //this.lastMoveTime = now;
+      //this.lastChangeDirectionTime = now;
       return true;
     }
     return false;
   }
 
   queueMove(x: number, y: number, direction: Direction) {
+    if (!this.canQueue()) return;
     if (!x || !y || this.moveQueue.length > 0) return;
 
     this.moveQueue.push({ x, y, direction });
