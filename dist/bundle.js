@@ -16858,7 +16858,8 @@ class Player extends drawable_1.Drawable {
             if (this.busyAnimating)
                 return;
             // TODO don't move if hit by enemy
-            this.game.levels[this.depth].rooms[this.levelID].catchUp();
+            //this.game.levels[this.depth].rooms[this.levelID].catchUp();
+            this.game.room.catchUp();
             if (this.dead)
                 return;
             for (let i = 0; i < 2; i++)
