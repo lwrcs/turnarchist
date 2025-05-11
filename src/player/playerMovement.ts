@@ -16,10 +16,14 @@ export class PlayerMovement {
     this.player = player;
   }
 
-  move(direction: Direction): void {
-    const { x, y } = this.getTargetCoords(direction);
+  move(direction: Direction, targetX?: number, targetY?: number): void {
+    const { x, y } = this.getTargetCoords(direction, targetX, targetY);
 
     if (this.canMove()) {
+      const now = Date.now();
+
+      this.lastMoveTime = now;
+      this.lastChangeDirectionTime = now;
       this.player.inputHandler.mostRecentMoveInput = "keyboard";
       this.player.lastDirection = this.player.direction;
       this.player.direction = direction;
@@ -29,14 +33,16 @@ export class PlayerMovement {
     }
   }
 
-  moveMouse(direction: Direction): void {
-    const { x, y } = this.getTargetCoords(direction);
+  moveMouse(direction: Direction, targetX?: number, targetY?: number): void {
+    const { x, y } = this.getTargetCoords(direction, targetX, targetY);
     console.log("x", x, "y", y);
 
     if (this.canMove()) {
+      const now = Date.now();
+      this.lastMoveTime = now;
       this.player.inputHandler.mostRecentMoveInput = "mouse";
       //this.player.lastDirection = this.player.direction;
-      //this.player.direction = direction;
+      this.player.direction = direction;
       this.player.tryMove(x, y);
     } else {
       this.queueMove(x, y, direction);
@@ -54,7 +60,15 @@ export class PlayerMovement {
     );
   };
 
-  private getTargetCoords(direction: Direction): { x: number; y: number } {
+  private getTargetCoords(
+    direction: Direction,
+    x?: number,
+    y?: number,
+  ): { x: number; y: number } | null {
+    if (x !== undefined && y !== undefined) {
+      return { x, y };
+    }
+
     switch (direction) {
       case Direction.LEFT:
         return { x: this.player.x - 1, y: this.player.y };
@@ -64,6 +78,8 @@ export class PlayerMovement {
         return { x: this.player.x, y: this.player.y - 1 };
       case Direction.DOWN:
         return { x: this.player.x, y: this.player.y + 1 };
+      default:
+        return null;
     }
   }
 
@@ -77,9 +93,6 @@ export class PlayerMovement {
           */
 
     if (now - this.lastMoveTime >= cooldown) {
-      this.lastMoveTime = now;
-      if (this.player.inputHandler.mostRecentMoveInput === "keyboard")
-        this.lastChangeDirectionTime = now;
       return true;
     }
     return false;
@@ -99,7 +112,7 @@ export class PlayerMovement {
 
   queueMove(x: number, y: number, direction: Direction) {
     if (!this.canQueue()) return;
-    if (!x || !y || this.moveQueue.length > 0) return;
+    if (x === undefined || y === undefined || this.moveQueue.length > 0) return;
 
     this.moveQueue.push({ x, y, direction });
     this.startQueueProcessing();
@@ -115,9 +128,9 @@ export class PlayerMovement {
     direction: Direction;
   }) {
     if (this.player.inputHandler.mostRecentMoveInput === "mouse") {
-      this.moveMouse(direction);
+      this.moveMouse(direction, x, y);
     } else {
-      this.move(direction);
+      this.move(direction, x, y);
     }
   }
 

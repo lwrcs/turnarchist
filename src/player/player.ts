@@ -25,6 +25,7 @@ import { PlayerInputHandler } from "./playerInputHandler";
 import { PlayerActionProcessor } from "./playerActionProcessor";
 import { PlayerMovement } from "./playerMovement";
 import { PlayerRenderer } from "./playerRenderer";
+import { Wall } from "../tile/wall";
 
 export enum PlayerDirection {
   DOWN,
@@ -228,6 +229,17 @@ export class Player extends Drawable {
     // Get mouse position in tile coordinates
     const mouseTile = this.mouseToTile();
     const offsetMouseTile = this.mouseToTile(8);
+    if (
+      mouseTile.x === undefined ||
+      mouseTile.y === undefined ||
+      offsetMouseTile.x === undefined ||
+      offsetMouseTile.y === undefined ||
+      !this.game.room.roomArray ||
+      !this.game.room.roomArray[mouseTile.x] ||
+      !this.game.room.roomArray[mouseTile.x][mouseTile.y]
+    ) {
+      return null;
+    }
 
     // Determine target Y coordinate
     let targetY = mouseTile.y;
@@ -266,10 +278,12 @@ export class Player extends Drawable {
     this.inputHandler.mostRecentMoveInput = "mouse";
     if (!GameConstants.MOVE_WITH_MOUSE) return;
     const moveData = this.canMoveWithMouse();
-    if (moveData) {
+    if (moveData !== null) {
       this.actionProcessor.process({
         type: "MouseMove",
         direction: moveData.direction,
+        targetX: moveData.x,
+        targetY: moveData.y,
       });
     }
   };

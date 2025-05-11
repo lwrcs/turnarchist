@@ -66,6 +66,8 @@ export class PlayerInputHandler {
           this.player.actionProcessor.process({
             type: "Move",
             direction: Direction.LEFT,
+            targetX: this.player.x - 1,
+            targetY: this.player.y,
           });
         break;
 
@@ -74,6 +76,8 @@ export class PlayerInputHandler {
           this.player.actionProcessor.process({
             type: "Move",
             direction: Direction.RIGHT,
+            targetX: this.player.x + 1,
+            targetY: this.player.y,
           });
         break;
 
@@ -82,6 +86,8 @@ export class PlayerInputHandler {
           this.player.actionProcessor.process({
             type: "Move",
             direction: Direction.UP,
+            targetX: this.player.x,
+            targetY: this.player.y - 1,
           });
         break;
 
@@ -90,6 +96,8 @@ export class PlayerInputHandler {
           this.player.actionProcessor.process({
             type: "Move",
             direction: Direction.DOWN,
+            targetX: this.player.x,
+            targetY: this.player.y + 1,
           });
         break;
       case InputEnum.SPACE:
@@ -216,6 +224,7 @@ export class PlayerInputHandler {
     const player = this.player;
     const cursor = MouseCursor.getInstance();
     const { x, y } = cursor.getPosition();
+    if (player.game.levelState !== LevelState.IN_LEVEL) return;
 
     this.mostRecentInput = "mouse";
 

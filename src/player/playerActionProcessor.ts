@@ -11,11 +11,19 @@ export class PlayerActionProcessor {
   process(action: PlayerAction) {
     switch (action.type) {
       case "Move":
-        this.player.movement.move(action.direction);
+        this.player.movement.move(
+          action.direction,
+          action.targetX,
+          action.targetY,
+        );
         break;
 
       case "MouseMove":
-        this.player.movement.moveMouse(action.direction);
+        this.player.movement.moveMouse(
+          action.direction,
+          action.targetX,
+          action.targetY,
+        );
         break;
       case "OpenInventory":
         this.player.inventory.open();

@@ -16638,6 +16638,15 @@ class Player extends drawable_1.Drawable {
             // Get mouse position in tile coordinates
             const mouseTile = this.mouseToTile();
             const offsetMouseTile = this.mouseToTile(8);
+            if (mouseTile.x === undefined ||
+                mouseTile.y === undefined ||
+                offsetMouseTile.x === undefined ||
+                offsetMouseTile.y === undefined ||
+                !this.game.room.roomArray ||
+                !this.game.room.roomArray[mouseTile.x] ||
+                !this.game.room.roomArray[mouseTile.x][mouseTile.y]) {
+                return null;
+            }
             // Determine target Y coordinate
             let targetY = mouseTile.y;
             if (this.isMouseAboveFloor(8) && this.checkTileForEntity(offsetMouseTile)) {
@@ -16671,10 +16680,12 @@ class Player extends drawable_1.Drawable {
             if (!gameConstants_1.GameConstants.MOVE_WITH_MOUSE)
                 return;
             const moveData = this.canMoveWithMouse();
-            if (moveData) {
+            if (moveData !== null) {
                 this.actionProcessor.process({
                     type: "MouseMove",
                     direction: moveData.direction,
+                    targetX: moveData.x,
+                    targetY: moveData.y,
                 });
             }
         };
@@ -17196,10 +17207,10 @@ class PlayerActionProcessor {
     process(action) {
         switch (action.type) {
             case "Move":
-                this.player.movement.move(action.direction);
+                this.player.movement.move(action.direction, action.targetX, action.targetY);
                 break;
             case "MouseMove":
-                this.player.movement.moveMouse(action.direction);
+                this.player.movement.moveMouse(action.direction, action.targetX, action.targetY);
                 break;
             case "OpenInventory":
                 this.player.inventory.open();
@@ -17358,6 +17369,8 @@ class PlayerInputHandler {
                     this.player.actionProcessor.process({
                         type: "Move",
                         direction: game_1.Direction.LEFT,
+                        targetX: this.player.x - 1,
+                        targetY: this.player.y,
                     });
                 break;
             case input_1.InputEnum.RIGHT:
@@ -17365,6 +17378,8 @@ class PlayerInputHandler {
                     this.player.actionProcessor.process({
                         type: "Move",
                         direction: game_1.Direction.RIGHT,
+                        targetX: this.player.x + 1,
+                        targetY: this.player.y,
                     });
                 break;
             case input_1.InputEnum.UP:
@@ -17372,6 +17387,8 @@ class PlayerInputHandler {
                     this.player.actionProcessor.process({
                         type: "Move",
                         direction: game_1.Direction.UP,
+                        targetX: this.player.x,
+                        targetY: this.player.y - 1,
                     });
                 break;
             case input_1.InputEnum.DOWN:
@@ -17379,6 +17396,8 @@ class PlayerInputHandler {
                     this.player.actionProcessor.process({
                         type: "Move",
                         direction: game_1.Direction.DOWN,
+                        targetX: this.player.x,
+                        targetY: this.player.y + 1,
                     });
                 break;
             case input_1.InputEnum.SPACE:
@@ -17457,6 +17476,8 @@ class PlayerInputHandler {
         const player = this.player;
         const cursor = mouseCursor_1.MouseCursor.getInstance();
         const { x, y } = cursor.getPosition();
+        if (player.game.levelState !== game_1.LevelState.IN_LEVEL)
+            return;
         this.mostRecentInput = "mouse";
         if (player.dead) {
             player.restart();
@@ -17618,9 +17639,12 @@ class PlayerMovement {
         };
         this.player = player;
     }
-    move(direction) {
-        const { x, y } = this.getTargetCoords(direction);
+    move(direction, targetX, targetY) {
+        const { x, y } = this.getTargetCoords(direction, targetX, targetY);
         if (this.canMove()) {
+            const now = Date.now();
+            this.lastMoveTime = now;
+            this.lastChangeDirectionTime = now;
             this.player.inputHandler.mostRecentMoveInput = "keyboard";
             this.player.lastDirection = this.player.direction;
             this.player.direction = direction;
@@ -17630,20 +17654,25 @@ class PlayerMovement {
             this.queueMove(x, y, direction);
         }
     }
-    moveMouse(direction) {
-        const { x, y } = this.getTargetCoords(direction);
+    moveMouse(direction, targetX, targetY) {
+        const { x, y } = this.getTargetCoords(direction, targetX, targetY);
         console.log("x", x, "y", y);
         if (this.canMove()) {
+            const now = Date.now();
+            this.lastMoveTime = now;
             this.player.inputHandler.mostRecentMoveInput = "mouse";
             //this.player.lastDirection = this.player.direction;
-            //this.player.direction = direction;
+            this.player.direction = direction;
             this.player.tryMove(x, y);
         }
         else {
             this.queueMove(x, y, direction);
         }
     }
-    getTargetCoords(direction) {
+    getTargetCoords(direction, x, y) {
+        if (x !== undefined && y !== undefined) {
+            return { x, y };
+        }
         switch (direction) {
             case game_1.Direction.LEFT:
                 return { x: this.player.x - 1, y: this.player.y };
@@ -17653,6 +17682,8 @@ class PlayerMovement {
                 return { x: this.player.x, y: this.player.y - 1 };
             case game_1.Direction.DOWN:
                 return { x: this.player.x, y: this.player.y + 1 };
+            default:
+                return null;
         }
     }
     canMove() {
@@ -17664,9 +17695,6 @@ class PlayerMovement {
           now - this.lastMoveTime / this.adjustedCooldown;
               */
         if (now - this.lastMoveTime >= cooldown) {
-            this.lastMoveTime = now;
-            if (this.player.inputHandler.mostRecentMoveInput === "keyboard")
-                this.lastChangeDirectionTime = now;
             return true;
         }
         return false;
@@ -17684,17 +17712,17 @@ class PlayerMovement {
     queueMove(x, y, direction) {
         if (!this.canQueue())
             return;
-        if (!x || !y || this.moveQueue.length > 0)
+        if (x === undefined || y === undefined || this.moveQueue.length > 0)
             return;
         this.moveQueue.push({ x, y, direction });
         this.startQueueProcessing();
     }
     handleMoveLoop({ x, y, direction, }) {
         if (this.player.inputHandler.mostRecentMoveInput === "mouse") {
-            this.moveMouse(direction);
+            this.moveMouse(direction, x, y);
         }
         else {
-            this.move(direction);
+            this.move(direction, x, y);
         }
     }
     startQueueProcessing() {
