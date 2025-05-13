@@ -719,7 +719,8 @@ export class Room {
       let spawnTable = this.level
         .getEnemyParameters()
         .enemyTables[this.depth].filter((t) => t !== 7);
-      Spawner.add(this, this.game, x, y, spawnTable);
+      const spawner = Spawner.add(this, this.game, x, y, spawnTable);
+      return spawner;
     }
   }
   private addOccultists(numOccultists: number, rand: () => number) {
@@ -730,7 +731,52 @@ export class Room {
     }
     for (let i = 0; i < numOccultists; i++) {
       const { x, y } = this.getRandomEmptyPosition(tiles);
-      OccultistEnemy.add(this, this.game, x, y);
+      const occultist = OccultistEnemy.add(this, this.game, x, y);
+      return occultist;
+    }
+  }
+
+  private addBosses(depth: number) {
+    let tiles = this.getEmptyTiles();
+    if (tiles === null) {
+      //console.log(`No tiles left to spawn spawners`);
+      return;
+    }
+    const { x, y } = this.getRandomEmptyPosition(tiles);
+    let bosses = ["reaper", "queen", "bigskullenemy"];
+    if (depth > 0) {
+      bosses.push("occultist");
+      bosses.filter((b) => b !== "queen");
+    }
+
+    switch (Game.randTable(bosses, Math.random)) {
+      case "reaper":
+        const spawner = this.addSpawners(1, Math.random);
+        spawner.dropTable = ["weapon", "equipment"];
+        spawner.dropChance = 1;
+        break;
+      case "queen":
+        const queen = QueenEnemy.add(this, this.game, x, y);
+        queen.dropTable = ["weapon", "equipment"];
+        queen.dropChance = 1;
+        break;
+      case "bigskullenemy":
+        const bigSkull = BigSkullEnemy.add(this, this.game, x, y);
+        bigSkull.dropTable = [
+          "weapon",
+          "equipment",
+          "consumable",
+          "gem",
+          "tool",
+        ];
+
+        break;
+      case "occultist":
+        const occultist = this.addOccultists(1, Math.random);
+        occultist.dropTable = ["weapon", "equipment"];
+        occultist.dropChance = 1;
+
+        break;
     }
   }
   //used for spawn commands, implement elsewhere later
@@ -982,6 +1028,7 @@ export class Room {
     this.addPlants(numPlants, rand);
     this.addObstacles(numObstacles, rand);
 
+    this.addBosses(this.depth);
     this.addRandomEnemies();
   };
 
@@ -2975,6 +3022,23 @@ export class Room {
     return { x: tile.x, y: tile.y };
   }
 
+  private getBigRandomEmptyPosition(tiles: Tile[]): {
+    x: number;
+    y: number;
+  } {
+    if (tiles.length === 0) return null;
+    tiles = tiles.filter((t) => {
+      this.getTile(t.x + 1, t.y + 1).isSolid() &&
+        this.getTile(t.x, t.y + 1).isSolid() &&
+        this.getTile(t.x + 1, t.y).isSolid() &&
+        this.getTile(t.x, t.y).isSolid();
+    });
+    const tile = tiles.splice(
+      Game.rand(0, tiles.length - 1, Random.rand),
+      1,
+    )[0];
+    return { x: tile.x, y: tile.y };
+  }
   // Used in populateUpLadder, populateDownLadder, populateRopeHole, populateRopeCave
   private getRoomCenter(): { x: number; y: number } {
     return {

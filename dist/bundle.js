@@ -2653,6 +2653,7 @@ class BigSkullEnemy extends enemy_1.Enemy {
         this.deathParticleColor = "#ffffff";
         this.chainPushable = false;
         this.name = "giant skeleton";
+        this.dropChance = 1;
         this.drops = [];
         if (drop)
             this.drops.push(drop);
@@ -6725,7 +6726,9 @@ class Entity extends drawable_1.Drawable {
         this.getDrop = (useCategory = [], force = false) => {
             if (this.cloned)
                 return;
-            dropTable_1.DropTable.getDrop(this, useCategory, force);
+            const drops = this.dropTable ? this.dropTable : useCategory;
+            if (!this.dropTable)
+                dropTable_1.DropTable.getDrop(this, drops, force);
             //make monsters drop degraded weapons
             if (this.drop instanceof weapon_1.Weapon && this.type === EntityType.ENEMY) {
                 this.drop.durability = Math.floor(Math.random() * 0.31 * this.drop.durabilityMax);
@@ -7357,9 +7360,12 @@ class Entity extends drawable_1.Drawable {
         this.hasBloom = false;
         this.bloomColor = "#FFFFFF";
         this.moving = false;
+        this.dropTable = [];
     }
     static add(room, game, x, y, ...rest) {
-        room.entities.push(new this(room, game, x, y, ...rest));
+        const entity = new this(room, game, x, y, ...rest);
+        room.entities.push(entity);
+        return entity;
     }
     static cloneEntity(original) {
         // Set a temporary flag on the constructor to indicate we're cloning
@@ -13075,11 +13081,11 @@ exports.DropTable = DropTable;
 _a = DropTable;
 DropTable.drops = [
     // Weapons - Higher numbers = rarer
-    { itemType: "dualdagger", dropRate: 1000, category: ["weapon", "melee"] },
-    { itemType: "warhammer", dropRate: 500, category: ["weapon", "melee"] },
-    { itemType: "spear", dropRate: 500, category: ["weapon", "melee"] },
-    { itemType: "spellbook", dropRate: 500, category: ["weapon", "magic"] },
-    { itemType: "greataxe", dropRate: 1000, category: ["weapon", "melee"] },
+    { itemType: "dualdagger", dropRate: 500, category: ["weapon", "melee"] },
+    { itemType: "warhammer", dropRate: 250, category: ["weapon", "melee"] },
+    { itemType: "spear", dropRate: 150, category: ["weapon", "melee"] },
+    { itemType: "spellbook", dropRate: 250, category: ["weapon", "magic"] },
+    { itemType: "greataxe", dropRate: 500, category: ["weapon", "melee"] },
     // Equipment
     { itemType: "armor", dropRate: 350, category: ["equipment"] },
     // Tools
@@ -19184,6 +19190,7 @@ class Room {
             let numObstacles = numTotalObstacles - numPlants;
             this.addPlants(numPlants, rand);
             this.addObstacles(numObstacles, rand);
+            this.addBosses(this.depth);
             this.addRandomEnemies();
         };
         this.populateBigDungeon = (rand) => {
@@ -21053,7 +21060,8 @@ class Room {
             let spawnTable = this.level
                 .getEnemyParameters()
                 .enemyTables[this.depth].filter((t) => t !== 7);
-            spawner_1.Spawner.add(this, this.game, x, y, spawnTable);
+            const spawner = spawner_1.Spawner.add(this, this.game, x, y, spawnTable);
+            return spawner;
         }
     }
     addOccultists(numOccultists, rand) {
@@ -21064,7 +21072,48 @@ class Room {
         }
         for (let i = 0; i < numOccultists; i++) {
             const { x, y } = this.getRandomEmptyPosition(tiles);
-            occultistEnemy_1.OccultistEnemy.add(this, this.game, x, y);
+            const occultist = occultistEnemy_1.OccultistEnemy.add(this, this.game, x, y);
+            return occultist;
+        }
+    }
+    addBosses(depth) {
+        let tiles = this.getEmptyTiles();
+        if (tiles === null) {
+            //console.log(`No tiles left to spawn spawners`);
+            return;
+        }
+        const { x, y } = this.getRandomEmptyPosition(tiles);
+        let bosses = ["reaper", "queen", "bigskullenemy"];
+        if (depth > 0) {
+            bosses.push("occultist");
+            bosses.filter((b) => b !== "queen");
+        }
+        switch (game_1.Game.randTable(bosses, Math.random)) {
+            case "reaper":
+                const spawner = this.addSpawners(1, Math.random);
+                spawner.dropTable = ["weapon", "equipment"];
+                spawner.dropChance = 1;
+                break;
+            case "queen":
+                const queen = queenEnemy_1.QueenEnemy.add(this, this.game, x, y);
+                queen.dropTable = ["weapon", "equipment"];
+                queen.dropChance = 1;
+                break;
+            case "bigskullenemy":
+                const bigSkull = bigSkullEnemy_1.BigSkullEnemy.add(this, this.game, x, y);
+                bigSkull.dropTable = [
+                    "weapon",
+                    "equipment",
+                    "consumable",
+                    "gem",
+                    "tool",
+                ];
+                break;
+            case "occultist":
+                const occultist = this.addOccultists(1, Math.random);
+                occultist.dropTable = ["weapon", "equipment"];
+                occultist.dropChance = 1;
+                break;
         }
     }
     addChests(numChests, rand) {
@@ -21306,6 +21355,18 @@ class Room {
     getRandomEmptyPosition(tiles) {
         if (tiles.length === 0)
             return null;
+        const tile = tiles.splice(game_1.Game.rand(0, tiles.length - 1, random_1.Random.rand), 1)[0];
+        return { x: tile.x, y: tile.y };
+    }
+    getBigRandomEmptyPosition(tiles) {
+        if (tiles.length === 0)
+            return null;
+        tiles = tiles.filter((t) => {
+            this.getTile(t.x + 1, t.y + 1).isSolid() &&
+                this.getTile(t.x, t.y + 1).isSolid() &&
+                this.getTile(t.x + 1, t.y).isSolid() &&
+                this.getTile(t.x, t.y).isSolid();
+        });
         const tile = tiles.splice(game_1.Game.rand(0, tiles.length - 1, random_1.Random.rand), 1)[0];
         return { x: tile.x, y: tile.y };
     }

@@ -74,11 +74,11 @@ export const ItemTypeMap: { [key: string]: typeof Item } = {
 export class DropTable {
   static drops: Drop[] = [
     // Weapons - Higher numbers = rarer
-    { itemType: "dualdagger", dropRate: 1000, category: ["weapon", "melee"] },
-    { itemType: "warhammer", dropRate: 500, category: ["weapon", "melee"] },
-    { itemType: "spear", dropRate: 500, category: ["weapon", "melee"] },
-    { itemType: "spellbook", dropRate: 500, category: ["weapon", "magic"] },
-    { itemType: "greataxe", dropRate: 1000, category: ["weapon", "melee"] },
+    { itemType: "dualdagger", dropRate: 500, category: ["weapon", "melee"] },
+    { itemType: "warhammer", dropRate: 250, category: ["weapon", "melee"] },
+    { itemType: "spear", dropRate: 150, category: ["weapon", "melee"] },
+    { itemType: "spellbook", dropRate: 250, category: ["weapon", "magic"] },
+    { itemType: "greataxe", dropRate: 500, category: ["weapon", "melee"] },
 
     // Equipment
     { itemType: "armor", dropRate: 350, category: ["equipment"] },

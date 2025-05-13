@@ -132,6 +132,7 @@ export class Entity extends Drawable {
   bloomOffsetY: number = 0;
   target: { x: number; y: number };
   moving: boolean;
+  dropTable: string[];
 
   private _imageParticleTiles: { x: number; y: number };
   hitSound: () => void;
@@ -207,6 +208,7 @@ export class Entity extends Drawable {
     this.hasBloom = false;
     this.bloomColor = "#FFFFFF";
     this.moving = false;
+    this.dropTable = [];
   }
 
   static add<
@@ -218,7 +220,9 @@ export class Entity extends Drawable {
       ...rest: any[]
     ) => Entity,
   >(this: T, room: Room, game: Game, x: number, y: number, ...rest: any[]) {
-    room.entities.push(new this(room, game, x, y, ...rest));
+    const entity = new this(room, game, x, y, ...rest);
+    room.entities.push(entity);
+    return entity;
   }
 
   static cloneEntity(original: Entity): Entity {
@@ -309,7 +313,8 @@ export class Entity extends Drawable {
 
   getDrop = (useCategory: string[] = [], force: boolean = false) => {
     if (this.cloned) return;
-    DropTable.getDrop(this, useCategory, force);
+    const drops = this.dropTable ? this.dropTable : useCategory;
+    if (!this.dropTable) DropTable.getDrop(this, drops, force);
     //make monsters drop degraded weapons
     if (this.drop instanceof Weapon && this.type === EntityType.ENEMY) {
       this.drop.durability = Math.floor(

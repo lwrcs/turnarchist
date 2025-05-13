@@ -43,7 +43,7 @@ export class BigSkullEnemy extends Enemy {
     this.deathParticleColor = "#ffffff";
     this.chainPushable = false;
     this.name = "giant skeleton";
-
+    this.dropChance = 1;
     this.drops = [];
     if (drop) this.drops.push(drop);
     while (this.drops.length < 4) {
