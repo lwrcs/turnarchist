@@ -6727,8 +6727,7 @@ class Entity extends drawable_1.Drawable {
             if (this.cloned)
                 return;
             const drops = this.dropTable ? this.dropTable : useCategory;
-            if (!this.dropTable)
-                dropTable_1.DropTable.getDrop(this, drops, force);
+            dropTable_1.DropTable.getDrop(this, drops, force);
             //make monsters drop degraded weapons
             if (this.drop instanceof weapon_1.Weapon && this.type === EntityType.ENEMY) {
                 this.drop.durability = Math.floor(Math.random() * 0.31 * this.drop.durabilityMax);
