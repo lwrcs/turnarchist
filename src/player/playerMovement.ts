@@ -34,7 +34,14 @@ export class PlayerMovement {
   }
 
   moveMouse(direction: Direction, targetX?: number, targetY?: number): void {
-    const { x, y } = this.getTargetCoords(direction, targetX, targetY);
+    // Validate direction is a valid enum value
+    if (!(direction in Direction)) return;
+    if (!this.player) return;
+
+    const coords = this.getTargetCoords(direction, targetX, targetY);
+    if (!coords) return;
+
+    const { x, y } = coords;
     console.log("x", x, "y", y);
 
     if (this.canMove()) {

@@ -17687,7 +17687,15 @@ class PlayerMovement {
         }
     }
     moveMouse(direction, targetX, targetY) {
-        const { x, y } = this.getTargetCoords(direction, targetX, targetY);
+        // Validate direction is a valid enum value
+        if (!(direction in game_1.Direction))
+            return;
+        if (!this.player)
+            return;
+        const coords = this.getTargetCoords(direction, targetX, targetY);
+        if (!coords)
+            return;
+        const { x, y } = coords;
         console.log("x", x, "y", y);
         if (this.canMove()) {
             const now = Date.now();
