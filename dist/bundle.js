@@ -6727,7 +6727,7 @@ class Entity extends drawable_1.Drawable {
             if (this.cloned)
                 return;
             const drops = this.dropTable ? this.dropTable : useCategory;
-            dropTable_1.DropTable.getDrop(this, drops, force);
+            dropTable_1.DropTable.getDrop(this, drops, force, 3);
             //make monsters drop degraded weapons
             if (this.drop instanceof weapon_1.Weapon && this.type === EntityType.ENEMY) {
                 this.drop.durability = Math.floor(Math.random() * 0.31 * this.drop.durabilityMax);
@@ -6866,14 +6866,16 @@ class Entity extends drawable_1.Drawable {
                 coordX = this.x;
                 coordY = this.y;
             }
-            if (this.drop) {
-                this.drop.level = this.room;
-                if (!this.room.roomArray[coordX][coordY].isSolid()) {
-                    this.drop.x = coordX;
-                    this.drop.y = coordY;
-                }
-                this.room.items.push(this.drop);
-                this.drop.onDrop();
+            if (this.drops.length > 0) {
+                this.drops.forEach((drop) => {
+                    drop.level = this.room;
+                    if (!this.room.roomArray[coordX][coordY].isSolid()) {
+                        drop.x = coordX;
+                        drop.y = coordY;
+                    }
+                    this.room.items.push(drop);
+                    drop.onDrop();
+                });
             }
         };
         this.kill = (player) => {
@@ -7360,6 +7362,9 @@ class Entity extends drawable_1.Drawable {
         this.bloomColor = "#FFFFFF";
         this.moving = false;
         this.dropTable = [];
+        this.drops = [];
+        if (this.drop)
+            this.drops.push(this.drop);
     }
     static add(room, game, x, y, ...rest) {
         const entity = new this(room, game, x, y, ...rest);
@@ -7719,14 +7724,15 @@ class Chest extends entity_1.Entity {
             if (this.health === 2 && !this.opening)
                 this.open();
             if (this.health === 1) {
-                this.drop.onPickup(playerHitBy);
+                // Iterate through drops and try to pick them up
+                for (const drop of this.drops) {
+                    drop.onPickup(playerHitBy);
+                    if (drop.pickedUp) {
+                        break; // Exit the loop once an item is successfully picked up
+                    }
+                }
                 this.destroyable = true;
             }
-            if (this.health <= 0) {
-                this.kill();
-            }
-            else
-                this.hurtCallback();
         };
         this.open = () => {
             this.tileX = 0;
@@ -7735,19 +7741,23 @@ class Chest extends entity_1.Entity {
             sound_1.Sound.chest();
             if (this.drop === null)
                 this.getDrop(["consumable", "gem", "coin", "tool", "light", "weapon"], true);
-            if (this.drop && this.drop.name === "coin") {
-                let stack = game_1.Game.randTable([
-                    1, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 6, 6, 6, 6,
-                    6, 7, 7, 7, 7, 7, 8, 8, 8, 8, 9, 9, 9, 10, 10, 11, 12, 13, 14, 15,
-                    100,
-                ], random_1.Random.rand);
-                if (Math.random() < 0.01)
-                    stack *= Math.ceil(Math.random() * 10);
-                this.drop.stackCount = stack;
-                this.drop.stack = stack;
-            }
+            this.drops.forEach((drop) => {
+                if (drop.name === "coin") {
+                    let stack = game_1.Game.randTable([
+                        1, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 6, 6, 6, 6,
+                        6, 7, 7, 7, 7, 7, 8, 8, 8, 8, 9, 9, 9, 10, 10, 11, 12, 13, 14, 15,
+                        100,
+                    ], random_1.Random.rand);
+                    if (Math.random() < 0.01)
+                        stack *= Math.ceil(Math.random() * 10);
+                    drop.stackCount = stack;
+                    drop.stack = stack;
+                }
+            });
             this.dropLoot();
-            this.drop.animateFromChest();
+            this.drops.forEach((drop) => {
+                drop.animateFromChest();
+            });
         };
         this.killNoBones = () => {
             this.kill();
@@ -13126,7 +13136,7 @@ DropTable.drops = [
     },
     { itemType: "bomb", dropRate: 100, category: ["bomb", "weapon"] },
 ];
-DropTable.getDrop = (entity, useCategory = [], force = false, increaseDepth = 0) => {
+DropTable.getDrop = (entity, useCategory = [], force = false, increaseDepth = 0, maxDrops = 1) => {
     if (entity.cloned)
         return;
     const currentDepth = entity.room.depth + increaseDepth;
@@ -13146,32 +13156,47 @@ DropTable.getDrop = (entity, useCategory = [], force = false, increaseDepth = 0)
     if (eligibleDrops.length === 0) {
         return null;
     }
-    // Try to drop an item based on drop rates
+    // Track how many items we've dropped
+    let droppedCount = 0;
+    let droppedItems = [];
+    // Try to drop items based on drop rates, up to maxDrops
     for (const drop of eligibleDrops) {
         if (Math.random() < 1 / drop.dropRate) {
-            _a.addNewItem(drop.itemType, entity);
-            return;
+            const item = _a.addNewItem(drop.itemType, entity);
+            if (item) {
+                droppedItems.push(item);
+                droppedCount++;
+                // Stop if we've reached the maximum number of drops
+                if (droppedCount >= maxDrops) {
+                    break;
+                }
+            }
         }
     }
-    // Force drop the most common item if needed
-    if (force && eligibleDrops.length > 0) {
+    // Force drop the most common item if needed and we haven't dropped anything yet
+    if (force && droppedCount === 0 && eligibleDrops.length > 0) {
         const mostCommonDrop = eligibleDrops.reduce((prev, curr) => prev.dropRate < curr.dropRate ? prev : curr);
-        _a.addNewItem(mostCommonDrop.itemType, entity);
+        const item = _a.addNewItem(mostCommonDrop.itemType, entity);
+        if (item) {
+            droppedItems.push(item);
+        }
     }
-    return null;
+    return droppedItems.length > 0 ? droppedItems : null;
 };
 DropTable.addNewItem = (itemType, entity) => {
     const ItemClass = exports.ItemTypeMap[itemType];
     if (!ItemClass) {
         console.error(`Item type "${itemType}" is not recognized.`);
-        return;
+        return null;
     }
     console.log(`Creating new item of type: ${itemType}, class: ${ItemClass.name}`);
-    entity.drop = ItemClass.add(entity.room, entity.x, entity.y);
-    if (entity.drop.name === "coin") {
+    let drop = ItemClass.add(entity.room, entity.x, entity.y);
+    if (drop.name === "coin") {
         // Generate random number between 0-14 with normal distribution around 7
-        entity.drop.stack = Math.round(Math.min(14, Math.max(0, Math.ceil(7 + (Math.random() + Math.random() + Math.random() - 1.5) * 5))));
+        drop.stack = Math.round(Math.min(14, Math.max(0, Math.ceil(7 + (Math.random() + Math.random() + Math.random() - 1.5) * 5))));
     }
+    entity.drops.push(drop);
+    return drop;
 };
 
 
@@ -13541,6 +13566,7 @@ class Item extends drawable_1.Drawable {
             this.alpha = 0;
             this.inChest = true;
             this.sineAnimateFactor = 0;
+            this.setDrawOffset();
         };
         // Function to play sound when item is picked up
         this.pickupSound = () => {
@@ -13592,10 +13618,11 @@ class Item extends drawable_1.Drawable {
                 }
                 if (this.sineAnimateFactor < 1 && this.chestOffsetY < -0.45)
                     this.sineAnimateFactor += 0.2 * delta;
-                if (this.scaleFactor > 0)
+                if (this.scaleFactor > 0) {
                     this.scaleFactor *= 0.5 ** delta;
-                else
-                    this.scaleFactor = 0;
+                    if (this.scaleFactor < 0.01)
+                        this.scaleFactor = 0;
+                }
                 const scale = 1 / (this.scaleFactor + 1);
                 game_1.Game.ctx.imageSmoothingEnabled = false;
                 game_1.Game.drawItem(0, 0, 1, 1, this.x, this.y, 1, 1);

@@ -133,6 +133,7 @@ export class Entity extends Drawable {
   target: { x: number; y: number };
   moving: boolean;
   dropTable: string[];
+  drops: Item[];
 
   private _imageParticleTiles: { x: number; y: number };
   hitSound: () => void;
@@ -209,6 +210,8 @@ export class Entity extends Drawable {
     this.bloomColor = "#FFFFFF";
     this.moving = false;
     this.dropTable = [];
+    this.drops = [];
+    if (this.drop) this.drops.push(this.drop);
   }
 
   static add<
@@ -314,7 +317,7 @@ export class Entity extends Drawable {
   getDrop = (useCategory: string[] = [], force: boolean = false) => {
     if (this.cloned) return;
     const drops = this.dropTable ? this.dropTable : useCategory;
-    DropTable.getDrop(this, drops, force);
+    DropTable.getDrop(this, drops, force, 3);
     //make monsters drop degraded weapons
     if (this.drop instanceof Weapon && this.type === EntityType.ENEMY) {
       this.drop.durability = Math.floor(
@@ -498,14 +501,16 @@ export class Entity extends Drawable {
       coordX = this.x;
       coordY = this.y;
     }
-    if (this.drop) {
-      this.drop.level = this.room;
-      if (!this.room.roomArray[coordX][coordY].isSolid()) {
-        this.drop.x = coordX;
-        this.drop.y = coordY;
-      }
-      this.room.items.push(this.drop);
-      this.drop.onDrop();
+    if (this.drops.length > 0) {
+      this.drops.forEach((drop) => {
+        drop.level = this.room;
+        if (!this.room.roomArray[coordX][coordY].isSolid()) {
+          drop.x = coordX;
+          drop.y = coordY;
+        }
+        this.room.items.push(drop);
+        drop.onDrop();
+      });
     }
   };
 

@@ -134,6 +134,7 @@ export class DropTable {
     useCategory: string[] = [],
     force: boolean = false,
     increaseDepth: number = 0,
+    maxDrops: number = 1,
   ) => {
     if (entity.cloned) return;
     const currentDepth = entity.room.depth + increaseDepth;
@@ -163,38 +164,53 @@ export class DropTable {
       return null;
     }
 
-    // Try to drop an item based on drop rates
+    // Track how many items we've dropped
+    let droppedCount = 0;
+    let droppedItems = [];
+
+    // Try to drop items based on drop rates, up to maxDrops
     for (const drop of eligibleDrops) {
       if (Math.random() < 1 / drop.dropRate) {
-        this.addNewItem(drop.itemType, entity);
-        return;
+        const item = this.addNewItem(drop.itemType, entity);
+        if (item) {
+          droppedItems.push(item);
+          droppedCount++;
+
+          // Stop if we've reached the maximum number of drops
+          if (droppedCount >= maxDrops) {
+            break;
+          }
+        }
       }
     }
 
-    // Force drop the most common item if needed
-    if (force && eligibleDrops.length > 0) {
+    // Force drop the most common item if needed and we haven't dropped anything yet
+    if (force && droppedCount === 0 && eligibleDrops.length > 0) {
       const mostCommonDrop = eligibleDrops.reduce((prev, curr) =>
         prev.dropRate < curr.dropRate ? prev : curr,
       );
-      this.addNewItem(mostCommonDrop.itemType, entity);
+      const item = this.addNewItem(mostCommonDrop.itemType, entity);
+      if (item) {
+        droppedItems.push(item);
+      }
     }
 
-    return null;
+    return droppedItems.length > 0 ? droppedItems : null;
   };
 
-  static addNewItem = (itemType: string, entity: Entity): void => {
+  static addNewItem = (itemType: string, entity: Entity): Item | null => {
     const ItemClass = ItemTypeMap[itemType];
     if (!ItemClass) {
       console.error(`Item type "${itemType}" is not recognized.`);
-      return;
+      return null;
     }
     console.log(
       `Creating new item of type: ${itemType}, class: ${ItemClass.name}`,
     );
-    entity.drop = ItemClass.add(entity.room, entity.x, entity.y);
-    if (entity.drop.name === "coin") {
+    let drop = ItemClass.add(entity.room, entity.x, entity.y);
+    if (drop.name === "coin") {
       // Generate random number between 0-14 with normal distribution around 7
-      entity.drop.stack = Math.round(
+      drop.stack = Math.round(
         Math.min(
           14,
           Math.max(
@@ -206,5 +222,7 @@ export class DropTable {
         ),
       );
     }
+    entity.drops.push(drop);
+    return drop;
   };
 }

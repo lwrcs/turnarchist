@@ -54,12 +54,15 @@ export class Chest extends Entity {
     if (this.health === 2 && !this.opening) this.open();
 
     if (this.health === 1) {
-      this.drop.onPickup(playerHitBy);
+      // Iterate through drops and try to pick them up
+      for (const drop of this.drops) {
+        drop.onPickup(playerHitBy);
+        if (drop.pickedUp) {
+          break; // Exit the loop once an item is successfully picked up
+        }
+      }
       this.destroyable = true;
     }
-    if (this.health <= 0) {
-      this.kill();
-    } else this.hurtCallback();
   };
 
   private open = () => {
@@ -75,21 +78,25 @@ export class Chest extends Entity {
         true,
       );
 
-    if (this.drop && this.drop.name === "coin") {
-      let stack = Game.randTable(
-        [
-          1, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 6, 6, 6, 6,
-          6, 7, 7, 7, 7, 7, 8, 8, 8, 8, 9, 9, 9, 10, 10, 11, 12, 13, 14, 15,
-          100,
-        ],
-        Random.rand,
-      );
-      if (Math.random() < 0.01) stack *= Math.ceil(Math.random() * 10);
-      this.drop.stackCount = stack;
-      this.drop.stack = stack;
-    }
+    this.drops.forEach((drop) => {
+      if (drop.name === "coin") {
+        let stack = Game.randTable(
+          [
+            1, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 6, 6, 6, 6,
+            6, 7, 7, 7, 7, 7, 8, 8, 8, 8, 9, 9, 9, 10, 10, 11, 12, 13, 14, 15,
+            100,
+          ],
+          Random.rand,
+        );
+        if (Math.random() < 0.01) stack *= Math.ceil(Math.random() * 10);
+        drop.stackCount = stack;
+        drop.stack = stack;
+      }
+    });
     this.dropLoot();
-    this.drop.animateFromChest();
+    this.drops.forEach((drop) => {
+      drop.animateFromChest();
+    });
   };
 
   killNoBones = () => {

@@ -95,6 +95,7 @@ export class Item extends Drawable {
     this.alpha = 0;
     this.inChest = true;
     this.sineAnimateFactor = 0;
+    this.setDrawOffset();
   };
 
   // Function to play sound when item is picked up
@@ -159,8 +160,10 @@ export class Item extends Drawable {
       }
       if (this.sineAnimateFactor < 1 && this.chestOffsetY < -0.45)
         this.sineAnimateFactor += 0.2 * delta;
-      if (this.scaleFactor > 0) this.scaleFactor *= 0.5 ** delta;
-      else this.scaleFactor = 0;
+      if (this.scaleFactor > 0) {
+        this.scaleFactor *= 0.5 ** delta;
+        if (this.scaleFactor < 0.01) this.scaleFactor = 0;
+      }
       const scale = 1 / (this.scaleFactor + 1);
       Game.ctx.imageSmoothingEnabled = false;
 
