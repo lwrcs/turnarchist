@@ -5218,6 +5218,16 @@ class QueenEnemy extends enemy_1.Enemy {
                 }
             }
         };
+        this.onHurt = () => {
+            /*
+            if (this.health > 0) {
+              this.tryMove(this.lastX, this.lastY);
+              this.setDrawXY(this.lastX, this.lastY);
+              this.makeHitWarnings();
+              this.skipNextTurns = 2;
+            }
+            */
+        };
         this.jump = (delta) => {
             let j = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
             let jumpY = Math.abs(Math.sin(j * Math.PI)) * this.jumpHeight;
@@ -5228,7 +5238,9 @@ class QueenEnemy extends enemy_1.Enemy {
             this.jumpY = jumpY;
         };
         this.draw = (delta) => {
-            const offsetTileY = this.health <= 1 ? 0 : -2;
+            let offsetTileY = this.health <= 1 ? 0 : -2;
+            if (this.cloned)
+                offsetTileY = 0;
             if (this.dead)
                 return;
             game_1.Game.ctx.save();

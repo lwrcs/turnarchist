@@ -167,6 +167,17 @@ export class QueenEnemy extends Enemy {
     }
   };
 
+  onHurt = () => {
+    /*
+    if (this.health > 0) {
+      this.tryMove(this.lastX, this.lastY);
+      this.setDrawXY(this.lastX, this.lastY);
+      this.makeHitWarnings();
+      this.skipNextTurns = 2;
+    }
+    */
+  };
+
   jump = (delta: number) => {
     let j = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
 
@@ -177,7 +188,8 @@ export class QueenEnemy extends Enemy {
   };
 
   draw = (delta: number) => {
-    const offsetTileY = this.health <= 1 ? 0 : -2;
+    let offsetTileY = this.health <= 1 ? 0 : -2;
+    if (this.cloned) offsetTileY = 0;
     if (this.dead) return;
     Game.ctx.save();
     Game.ctx.globalAlpha = this.alpha;
