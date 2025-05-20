@@ -2924,6 +2924,8 @@ var ChargeEnemyState;
 class ChargeEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
+        this.maxChargeDistance = 3;
+        this.trailAlpha = 1;
         this.hit = () => {
             return 1;
         };
@@ -2949,58 +2951,65 @@ class ChargeEnemy extends enemy_1.Enemy {
                     let dx = 0;
                     let dy = 0;
                     for (const i in this.game.players) {
-                        if (this.x === this.game.players[i].x) {
-                            if (this.y < this.game.players[i].y)
-                                dy = 1;
-                            else
-                                dy = -1;
-                            for (let yy = this.y; yy !== this.game.players[i].y; yy += dy) {
-                                if (!this.canMoveOver(this.x, yy))
-                                    blocked = true;
+                        // Check if player is within detection range (maxChargeDistance)
+                        const playerX = this.game.players[i].x;
+                        const playerY = this.game.players[i].y;
+                        const distanceX = Math.abs(this.x - playerX);
+                        const distanceY = Math.abs(this.y - playerY);
+                        // Only detect players in straight lines and within maxChargeDistance
+                        if ((this.x === playerX && distanceY <= this.maxChargeDistance) ||
+                            (this.y === playerY && distanceX <= this.maxChargeDistance)) {
+                            if (this.x === playerX) {
+                                if (this.y < playerY)
+                                    dy = 1;
+                                else
+                                    dy = -1;
+                                for (let yy = this.y; yy !== playerY; yy += dy) {
+                                    if (!this.canMoveOver(this.x, yy))
+                                        blocked = true;
+                                }
                             }
-                        }
-                        else if (this.y === this.game.players[i].y) {
-                            if (this.x < this.game.players[i].x)
-                                dx = 1;
-                            else
-                                dx = -1;
-                            for (let xx = this.x; xx !== this.game.players[i].x; xx += dx) {
-                                if (!this.canMoveOver(xx, this.y))
-                                    blocked = true;
+                            else if (this.y === playerY) {
+                                if (this.x < playerX)
+                                    dx = 1;
+                                else
+                                    dx = -1;
+                                for (let xx = this.x; xx !== playerX; xx += dx) {
+                                    if (!this.canMoveOver(xx, this.y))
+                                        blocked = true;
+                                }
                             }
-                        }
-                        if ((dx !== 0 || dy !== 0) && !blocked) {
-                            this.state = ChargeEnemyState.ALERTED;
-                            this.targetX = this.x;
-                            this.targetY = this.y;
-                            while (this.canMoveOver(this.targetX + dx, this.targetY + dy)) {
-                                this.targetX += dx;
-                                this.targetY += dy;
-                                if ((this.targetX === this.game.players[i].x &&
-                                    this.targetY === this.game.players[i].y) ||
-                                    (this.targetX === this.game.players[i].x - 1 &&
-                                        this.targetY === this.game.players[i].y) ||
-                                    (this.targetX === this.game.players[i].x + 1 &&
-                                        this.targetY === this.game.players[i].y) ||
-                                    (this.targetX === this.game.players[i].x &&
-                                        this.targetY === this.game.players[i].y - 1) ||
-                                    (this.targetX === this.game.players[i].x &&
-                                        this.targetY === this.game.players[i].y + 1))
-                                    this.room.hitwarnings.push(new hitWarning_1.HitWarning(this.game, this.targetX, this.targetY, this.x, this.y));
+                            if ((dx !== 0 || dy !== 0) && !blocked) {
+                                this.state = ChargeEnemyState.ALERTED;
+                                this.targetX = this.x;
+                                this.targetY = this.y;
+                                let distanceMoved = 0;
+                                while (this.canMoveOver(this.targetX + dx, this.targetY + dy) &&
+                                    distanceMoved < this.maxChargeDistance) {
+                                    this.targetX += dx;
+                                    this.targetY += dy;
+                                    distanceMoved++;
+                                    if ((this.targetX === playerX && this.targetY === playerY) ||
+                                        (this.targetX === playerX - 1 && this.targetY === playerY) ||
+                                        (this.targetX === playerX + 1 && this.targetY === playerY) ||
+                                        (this.targetX === playerX && this.targetY === playerY - 1) ||
+                                        (this.targetX === playerX && this.targetY === playerY + 1))
+                                        this.room.hitwarnings.push(new hitWarning_1.HitWarning(this.game, this.targetX, this.targetY, this.x, this.y));
+                                }
+                                this.visualTargetX = this.targetX + 0.5 * dx;
+                                this.visualTargetY = this.targetY + 0.5 * dy;
+                                if (dy === 1)
+                                    this.visualTargetY += 0.65;
+                                if (dx > 0)
+                                    this.direction = game_1.Direction.RIGHT;
+                                else if (dx < 0)
+                                    this.direction = game_1.Direction.LEFT;
+                                else if (dy < 0)
+                                    this.direction = game_1.Direction.UP;
+                                else if (dy > 0)
+                                    this.direction = game_1.Direction.DOWN;
+                                break;
                             }
-                            this.visualTargetX = this.targetX + 0.5 * dx;
-                            this.visualTargetY = this.targetY + 0.5 * dy;
-                            if (dy === 1)
-                                this.visualTargetY += 0.65;
-                            if (dx > 0)
-                                this.direction = game_1.Direction.RIGHT;
-                            else if (dx < 0)
-                                this.direction = game_1.Direction.LEFT;
-                            else if (dy < 0)
-                                this.direction = game_1.Direction.UP;
-                            else if (dy > 0)
-                                this.direction = game_1.Direction.DOWN;
-                            break;
                         }
                     }
                 }
@@ -3049,13 +3058,15 @@ class ChargeEnemy extends enemy_1.Enemy {
                     genericParticle_1.GenericParticle.spawnCluster(this.room, this.x - this.drawX + 0.5, this.y - this.drawY + 0.5, "black");
                     genericParticle_1.GenericParticle.spawnCluster(this.room, this.x - this.drawX + 0.5, this.y - this.drawY + 0.5, "white");
                 }
-                if (this.state === ChargeEnemyState.CHARGING) {
-                    this.trailFrame += 0.01 * delta;
+                if (this.state === ChargeEnemyState.CHARGING || this.trailAlpha < 1) {
+                    this.trailFrame += 0.03 * delta;
                     let t = this.trailFrame;
                     if (t >= 0 && t <= 1) {
                         game_1.Game.ctx.strokeStyle = "white";
-                        if (gameConstants_1.GameConstants.ALPHA_ENABLED)
-                            game_1.Game.ctx.globalAlpha = 1 - t;
+                        if (gameConstants_1.GameConstants.ALPHA_ENABLED) {
+                            this.trailAlpha = 1 - t;
+                            game_1.Game.ctx.globalAlpha = this.trailAlpha;
+                        }
                         game_1.Game.ctx.lineWidth = gameConstants_1.GameConstants.TILESIZE * 0.25;
                         game_1.Game.ctx.beginPath();
                         game_1.Game.ctx.moveTo((this.startX + 0.5) * gameConstants_1.GameConstants.TILESIZE, (this.startY + 0.5) * gameConstants_1.GameConstants.TILESIZE);
@@ -3064,6 +3075,8 @@ class ChargeEnemy extends enemy_1.Enemy {
                         game_1.Game.ctx.stroke();
                         game_1.Game.ctx.globalAlpha = 1;
                     }
+                    if (this.trailAlpha <= 0)
+                        this.trailAlpha = 1;
                 }
                 if (this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, this.x - this.drawX, this.y - this.drawY, 1, 1, this.room.shadeColor, this.shadeAmount());
@@ -3077,9 +3090,10 @@ class ChargeEnemy extends enemy_1.Enemy {
                     }
                 }
             }
+            this.drawChargeBeam(delta);
             game_1.Game.ctx.restore();
         };
-        this.drawTopLayer = (delta) => {
+        this.drawChargeBeam = (delta) => {
             if (this.dying)
                 return;
             this.drawableY = this.y;
@@ -3087,7 +3101,7 @@ class ChargeEnemy extends enemy_1.Enemy {
             this.drawX += -0.1 * this.drawX;
             this.drawY += -0.1 * this.drawY;
             if (this.state === ChargeEnemyState.ALERTED) {
-                this.trailFrame += 0.4 * delta;
+                this.trailFrame += 0.2 * delta;
                 if (Math.floor(this.trailFrame) % 2 === 0) {
                     let startX = (this.x + 0.5) * gameConstants_1.GameConstants.TILESIZE;
                     let startY = (this.y - 0.25) * gameConstants_1.GameConstants.TILESIZE;
@@ -3099,12 +3113,37 @@ class ChargeEnemy extends enemy_1.Enemy {
                         startY += 2;
                     else if (this.direction === game_1.Direction.UP)
                         startY -= 8;
+                    // Calculate end coordinates based on direction and max distance
+                    let endX = this.visualTargetX;
+                    let endY = this.visualTargetY;
+                    // Cap the beam length to maxChargeDistance
+                    const dx = this.direction === game_1.Direction.LEFT
+                        ? -1
+                        : this.direction === game_1.Direction.RIGHT
+                            ? 1
+                            : 0;
+                    const dy = this.direction === game_1.Direction.UP
+                        ? -1
+                        : this.direction === game_1.Direction.DOWN
+                            ? 1
+                            : 0;
+                    const distance = Math.max(Math.abs(this.visualTargetX - this.x), Math.abs(this.visualTargetY - this.y));
+                    if (distance > this.maxChargeDistance) {
+                        endX = this.x + dx * this.maxChargeDistance;
+                        endY = this.y + dy * this.maxChargeDistance;
+                        if (dy === 1)
+                            endY += 0.65;
+                        if (dx > 0)
+                            endX += 0.5;
+                        else if (dx < 0)
+                            endX -= 0.5;
+                    }
                     game_1.Game.ctx.strokeStyle = "white";
-                    game_1.Game.ctx.lineWidth = gameConstants_1.GameConstants.TILESIZE * 0.25;
+                    game_1.Game.ctx.lineWidth = gameConstants_1.GameConstants.TILESIZE * 0.1;
                     game_1.Game.ctx.beginPath();
                     game_1.Game.ctx.moveTo(Math.round(startX), Math.round(startY));
                     game_1.Game.ctx.lineCap = "round";
-                    game_1.Game.ctx.lineTo(Math.round((this.visualTargetX + 0.5) * gameConstants_1.GameConstants.TILESIZE), Math.round((this.visualTargetY - 0.25) * gameConstants_1.GameConstants.TILESIZE));
+                    game_1.Game.ctx.lineTo(Math.round((endX + 0.5) * gameConstants_1.GameConstants.TILESIZE), Math.round((endY - 0.25) * gameConstants_1.GameConstants.TILESIZE));
                     game_1.Game.ctx.stroke();
                     game_1.Game.ctx.globalAlpha = 1;
                 }
@@ -3129,7 +3168,7 @@ class ChargeEnemy extends enemy_1.Enemy {
     }
 }
 exports.ChargeEnemy = ChargeEnemy;
-ChargeEnemy.difficulty = 3;
+ChargeEnemy.difficulty = 5;
 ChargeEnemy.tileX = 13;
 ChargeEnemy.tileY = 8;
 
