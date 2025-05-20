@@ -22,7 +22,7 @@ export class Pumpkin extends Entity {
     this.hasShadow = false;
     this.chainPushable = false;
     this.name = "pumpkin";
-    this.drop = new Candle(this.room, this.x, this.y);
+    this.drops.push(new Candle(this.room, this.x, this.y));
     this.imageParticleX = 0;
     this.imageParticleY = 25;
     this.bloomColor = "#FFA500";

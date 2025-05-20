@@ -27,8 +27,8 @@ export class Pot extends Entity {
     this.imageParticleY = 29;
 
     let dropProb = Random.rand();
-    if (dropProb < 0.025) this.drop = new Heart(this.room, this.x, this.y);
-    else this.drop = new Coin(this.room, this.x, this.y);
+    if (dropProb < 0.025) this.drops.push(new Heart(this.room, this.x, this.y));
+    else this.drops.push(new Coin(this.room, this.x, this.y));
   }
 
   get type() {

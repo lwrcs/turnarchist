@@ -6891,6 +6891,7 @@ class Entity extends drawable_1.Drawable {
             }
         };
         this.kill = (player) => {
+            this.dead = true;
             if (this.cloned)
                 return;
             this.emitEnemyKilled();
@@ -6898,7 +6899,6 @@ class Entity extends drawable_1.Drawable {
             this.dropLoot();
             const deadEntity = this.clone();
             this.room.deadEntities.push(deadEntity);
-            this.dead = true;
             //this.room.entities = this.room.entities.filter((e) => e !== this);
             this.uniqueKillBehavior();
         };
@@ -7495,10 +7495,10 @@ class Barrel extends entity_1.Entity {
         this.imageParticleX = 3;
         this.imageParticleY = 25;
         if (Math.random() < 0.1) {
-            this.drop = new weaponFragments_1.WeaponFragments(this.room, this.x, this.y);
+            this.drops.push(new weaponFragments_1.WeaponFragments(this.room, this.x, this.y));
         }
         else {
-            this.drop = new coin_1.Coin(this.room, this.x, this.y);
+            this.drops.push(new coin_1.Coin(this.room, this.x, this.y));
         }
     }
     get type() {
@@ -7524,12 +7524,11 @@ const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ "./src/particle/imageParticle.ts");
 const sound_1 = __webpack_require__(/*! ../../sound */ "./src/sound.ts");
+const geode_1 = __webpack_require__(/*! ../../item/geode */ "./src/item/geode.ts");
 class Block extends entity_1.Entity {
     constructor(room, game, x, y) {
         super(room, game, x, y);
-        this.kill = () => {
-            sound_1.Sound.breakRock();
-            this.dead = true;
+        this.uniqueKillBehavior = () => {
             imageParticle_1.ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, this.imageParticleX, this.imageParticleY);
         };
         this.killNoBones = () => {
@@ -7559,6 +7558,9 @@ class Block extends entity_1.Entity {
         this.name = "block";
         this.imageParticleX = 0;
         this.imageParticleY = 25;
+        this.hitSound = sound_1.Sound.breakRock;
+        if (Math.random() < 0.01)
+            this.drops.push(new geode_1.Geode(this.room, this.x, this.y));
     }
     get type() {
         return entity_2.EntityType.PROP;
@@ -7875,10 +7877,10 @@ class Crate extends entity_1.Entity {
         this.imageParticleX = 3;
         this.imageParticleY = 26;
         if (Math.random() < 0.1) {
-            this.drop = new weaponFragments_1.WeaponFragments(this.room, this.x, this.y, 10);
+            this.drops.push(new weaponFragments_1.WeaponFragments(this.room, this.x, this.y, 10));
         }
         else {
-            this.drop = new coin_1.Coin(this.room, this.x, this.y);
+            this.drops.push(new coin_1.Coin(this.room, this.x, this.y));
         }
     }
     get type() {
@@ -7989,9 +7991,9 @@ class Pot extends entity_1.Entity {
         this.imageParticleY = 29;
         let dropProb = random_1.Random.rand();
         if (dropProb < 0.025)
-            this.drop = new heart_1.Heart(this.room, this.x, this.y);
+            this.drops.push(new heart_1.Heart(this.room, this.x, this.y));
         else
-            this.drop = new coin_1.Coin(this.room, this.x, this.y);
+            this.drops.push(new coin_1.Coin(this.room, this.x, this.y));
     }
     get type() {
         return entity_2.EntityType.PROP;
@@ -8043,12 +8045,6 @@ class PottedPlant extends entity_1.Entity {
         this.drawTopLayer = (delta) => {
             this.drawableY = this.y;
         };
-        this.dropLoot = () => {
-            this.drop.level = this.room;
-            this.drop.x = this.x;
-            this.drop.y = this.y;
-            this.room.items.push(this.drop);
-        };
         this.room = room;
         this.health = 2;
         this.tileX = 3;
@@ -8063,9 +8059,9 @@ class PottedPlant extends entity_1.Entity {
         else {
             let dropProb = random_1.Random.rand();
             if (dropProb < 0.025)
-                this.drop = new heart_1.Heart(this.room, this.x, this.y);
+                this.drops.push(new heart_1.Heart(this.room, this.x, this.y));
             else
-                this.drop = new coin_1.Coin(this.room, this.x, this.y);
+                this.drops.push(new coin_1.Coin(this.room, this.x, this.y));
         }
     }
     get type() {
@@ -8121,7 +8117,7 @@ class Pumpkin extends entity_1.Entity {
         this.hasShadow = false;
         this.chainPushable = false;
         this.name = "pumpkin";
-        this.drop = new candle_1.Candle(this.room, this.x, this.y);
+        this.drops.push(new candle_1.Candle(this.room, this.x, this.y));
         this.imageParticleX = 0;
         this.imageParticleY = 25;
         this.bloomColor = "#FFA500";
@@ -8161,16 +8157,12 @@ const lightSource_1 = __webpack_require__(/*! ../../lightSource */ "./src/lightS
 class TombStone extends entity_1.Entity {
     constructor(room, game, x, y, skinType, drop) {
         super(room, game, x, y);
-        this.kill = () => {
+        this.uniqueKillBehavior = () => {
+            sound_1.Sound.delayPlay(sound_1.Sound.breakRock, 50);
             this.removeLightSource(this.lightSource);
-            this.dead = true;
-            this.dropLoot();
-        };
-        this.hurt = (playerHitBy, damage) => {
-            this.healthBar.hurt();
             imageParticle_1.ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 25);
-            //Sound.delayPlay(Sound.hurt, 0);
-            this.health -= 1;
+        };
+        this.onHurt = (damage = 1) => {
             if (this.health === 1) {
                 const positions = this.room
                     .getEmptyTiles()
@@ -8191,44 +8183,38 @@ class TombStone extends entity_1.Entity {
                 this.tileX += 2;
                 //draw half broken tombstone based on skintype after it takes one damage
             }
-            if (this.health <= 0) {
-                this.kill();
-                sound_1.Sound.delayPlay(sound_1.Sound.breakRock, 50);
-            }
-            else {
-                this.hurtCallback();
-                //Sound.delayPlay(Sound.hit, 0);
-            }
+        };
+        this.killNoBones = () => {
+            this.kill();
         };
         this.draw = (delta) => {
             if (this.dead)
                 return;
+            this.updateDrawXY(delta);
             game_1.Game.ctx.save();
             game_1.Game.ctx.globalAlpha = this.alpha;
-            if (!this.dead) {
-                game_1.Game.drawObj(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
-            }
+            //if (!this.dead || !this.cloned) {{}
+            game_1.Game.drawObj(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
             game_1.Game.ctx.restore();
         };
         this.drawTopLayer = (delta) => {
             this.drawableY = this.y;
-            this.updateDrawXY(delta);
         };
         this.skinType = skinType;
         this.room = room;
         this.health = 2;
-        this.maxHealth = 2;
+        //this.maxHealth = 2;
         this.tileX = 11 + this.skinType;
         this.tileY = 2;
         this.hasShadow = false;
-        this.pushable = false;
-        this.destroyable = true;
-        this.skinType = skinType;
+        //this.pushable = false;
+        //this.destroyable = true;
+        //this.skinType = skinType;
         this.chainPushable = false;
         this.name = "tombstone";
         let dropProb = random_1.Random.rand();
         if (dropProb < 0.05)
-            this.drop = new spellbook_1.Spellbook(this.room, this.x, this.y);
+            this.drops.push(new spellbook_1.Spellbook(this.room, this.x, this.y));
         this.hasBloom = true;
         this.bloomColor = "#05FF05";
         this.bloomAlpha = 1;

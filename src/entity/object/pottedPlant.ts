@@ -27,8 +27,9 @@ export class PottedPlant extends Entity {
     if (drop) this.drop = drop;
     else {
       let dropProb = Random.rand();
-      if (dropProb < 0.025) this.drop = new Heart(this.room, this.x, this.y);
-      else this.drop = new Coin(this.room, this.x, this.y);
+      if (dropProb < 0.025)
+        this.drops.push(new Heart(this.room, this.x, this.y));
+      else this.drops.push(new Coin(this.room, this.x, this.y));
     }
   }
 
@@ -69,12 +70,5 @@ export class PottedPlant extends Entity {
 
   drawTopLayer = (delta: number) => {
     this.drawableY = this.y;
-  };
-
-  dropLoot = () => {
-    this.drop.level = this.room;
-    this.drop.x = this.x;
-    this.drop.y = this.y;
-    this.room.items.push(this.drop);
   };
 }

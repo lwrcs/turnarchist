@@ -23,9 +23,9 @@ export class Crate extends Entity {
     this.imageParticleX = 3;
     this.imageParticleY = 26;
     if (Math.random() < 0.1) {
-      this.drop = new WeaponFragments(this.room, this.x, this.y, 10);
+      this.drops.push(new WeaponFragments(this.room, this.x, this.y, 10));
     } else {
-      this.drop = new Coin(this.room, this.x, this.y);
+      this.drops.push(new Coin(this.room, this.x, this.y));
     }
   }
 

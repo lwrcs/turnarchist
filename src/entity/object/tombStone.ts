@@ -30,17 +30,18 @@ export class TombStone extends Entity {
     this.skinType = skinType;
     this.room = room;
     this.health = 2;
-    this.maxHealth = 2;
+    //this.maxHealth = 2;
     this.tileX = 11 + this.skinType;
     this.tileY = 2;
     this.hasShadow = false;
-    this.pushable = false;
-    this.destroyable = true;
-    this.skinType = skinType;
+    //this.pushable = false;
+    //this.destroyable = true;
+    //this.skinType = skinType;
     this.chainPushable = false;
     this.name = "tombstone";
     let dropProb = Random.rand();
-    if (dropProb < 0.05) this.drop = new Spellbook(this.room, this.x, this.y);
+    if (dropProb < 0.05)
+      this.drops.push(new Spellbook(this.room, this.x, this.y));
     this.hasBloom = true;
     this.bloomColor = "#05FF05";
     this.bloomAlpha = 1;
@@ -59,19 +60,13 @@ export class TombStone extends Entity {
     return EntityType.PROP;
   }
 
-  kill = () => {
+  uniqueKillBehavior = () => {
+    Sound.delayPlay(Sound.breakRock, 50);
     this.removeLightSource(this.lightSource);
-    this.dead = true;
-    this.dropLoot();
+    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 25);
   };
 
-  hurt = (playerHitBy: Player, damage: number) => {
-    this.healthBar.hurt();
-    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 25);
-
-    //Sound.delayPlay(Sound.hurt, 0);
-
-    this.health -= 1;
+  onHurt = (damage: number = 1) => {
     if (this.health === 1) {
       const positions = this.room
         .getEmptyTiles()
@@ -98,39 +93,36 @@ export class TombStone extends Entity {
       this.tileX += 2;
       //draw half broken tombstone based on skintype after it takes one damage
     }
-    if (this.health <= 0) {
-      this.kill();
-      Sound.delayPlay(Sound.breakRock, 50);
-    } else {
-      this.hurtCallback();
-      //Sound.delayPlay(Sound.hit, 0);
-    }
+  };
+
+  killNoBones = () => {
+    this.kill();
   };
 
   draw = (delta: number) => {
     if (this.dead) return;
+    this.updateDrawXY(delta);
+
     Game.ctx.save();
     Game.ctx.globalAlpha = this.alpha;
-    if (!this.dead) {
-      Game.drawObj(
-        this.tileX,
-        this.tileY,
-        1,
-        2,
-        this.x - this.drawX,
-        this.y - this.drawYOffset - this.drawY,
-        1,
-        2,
-        this.room.shadeColor,
-        this.shadeAmount(),
-      );
-    }
+    //if (!this.dead || !this.cloned) {{}
+    Game.drawObj(
+      this.tileX,
+      this.tileY,
+      1,
+      2,
+      this.x - this.drawX,
+      this.y - this.drawYOffset - this.drawY,
+      1,
+      2,
+      this.room.shadeColor,
+      this.shadeAmount(),
+    );
+
     Game.ctx.restore();
   };
 
   drawTopLayer = (delta: number) => {
     this.drawableY = this.y;
-
-    this.updateDrawXY(delta);
   };
 }

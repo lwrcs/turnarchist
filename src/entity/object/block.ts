@@ -7,7 +7,7 @@ import { GenericParticle } from "../../particle/genericParticle";
 import { EntityType } from "../entity";
 import { ImageParticle } from "../../particle/imageParticle";
 import { Sound } from "../../sound";
-
+import { Geode } from "../../item/geode";
 export class Block extends Entity {
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
@@ -21,16 +21,16 @@ export class Block extends Entity {
     this.name = "block";
     this.imageParticleX = 0;
     this.imageParticleY = 25;
+    this.hitSound = Sound.breakRock;
+    if (Math.random() < 0.01)
+      this.drops.push(new Geode(this.room, this.x, this.y));
   }
 
   get type() {
     return EntityType.PROP;
   }
 
-  kill = () => {
-    Sound.breakRock();
-    this.dead = true;
-
+  uniqueKillBehavior = () => {
     ImageParticle.spawnCluster(
       this.room,
       this.x + 0.5,

@@ -515,6 +515,8 @@ export class Entity extends Drawable {
   };
 
   kill = (player?: Player) => {
+    this.dead = true;
+
     if (this.cloned) return;
     this.emitEnemyKilled();
     this.removeLightSource(this.lightSource);
@@ -523,7 +525,6 @@ export class Entity extends Drawable {
     const deadEntity = this.clone();
 
     this.room.deadEntities.push(deadEntity);
-    this.dead = true;
     //this.room.entities = this.room.entities.filter((e) => e !== this);
     this.uniqueKillBehavior();
   };
