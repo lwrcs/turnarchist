@@ -5099,9 +5099,9 @@ class OccultistEnemy extends enemy_1.Enemy {
             game_1.Game.ctx.restore();
         };
         this.ticks = 0;
-        this.health = 6;
+        this.health = 4;
         this.lastHealth = this.health;
-        this.maxHealth = 6;
+        this.maxHealth = 4;
         this.tileX = 55;
         this.tileY = 8;
         this.seenPlayer = true;
