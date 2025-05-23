@@ -195,14 +195,6 @@ export class PlayerInputHandler {
       }
       {
         switch (num) {
-          case 9:
-            break;
-            GameConstants.drawOtherRooms = !GameConstants.drawOtherRooms;
-            this.player.game.pushMessage(
-              "Draw other rooms is now " +
-                (GameConstants.drawOtherRooms ? "on" : "off"),
-            );
-            break;
           case 8:
             GameConstants.BLUR_ENABLED = !GameConstants.BLUR_ENABLED;
             break;
