@@ -61,9 +61,8 @@ export class TombStone extends Entity {
   }
 
   uniqueKillBehavior = () => {
-    Sound.delayPlay(Sound.breakRock, 50);
-    this.removeLightSource(this.lightSource);
     ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 25);
+    Sound.delayPlay(Sound.breakRock, 50);
   };
 
   onHurt = (damage: number = 1) => {
@@ -93,10 +92,6 @@ export class TombStone extends Entity {
       this.tileX += 2;
       //draw half broken tombstone based on skintype after it takes one damage
     }
-  };
-
-  killNoBones = () => {
-    this.kill();
   };
 
   draw = (delta: number) => {

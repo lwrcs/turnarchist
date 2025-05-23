@@ -35,10 +35,6 @@ export class Pot extends Entity {
     return EntityType.PROP;
   }
 
-  killNoBones = () => {
-    this.kill();
-  };
-
   draw = (delta: number) => {
     if (this.dead) return;
     Game.ctx.save();

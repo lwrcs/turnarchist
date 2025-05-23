@@ -328,7 +328,7 @@ export class Entity extends Drawable {
   };
 
   addLightSource = (lightSource: LightSource) => {
-    this.room.lightSources.push(lightSource);
+    if (!this.cloned) this.room.lightSources.push(lightSource);
   };
 
   removeLightSource = (lightSource: LightSource) => {
@@ -518,22 +518,26 @@ export class Entity extends Drawable {
     this.dead = true;
 
     if (this.cloned) return;
+
     this.emitEnemyKilled();
-    this.removeLightSource(this.lightSource);
     this.dropLoot();
 
     const deadEntity = this.clone();
 
     this.room.deadEntities.push(deadEntity);
     //this.room.entities = this.room.entities.filter((e) => e !== this);
+    this.removeLightSource(this.lightSource);
+
     this.uniqueKillBehavior();
   };
 
   uniqueKillBehavior = () => {};
 
   killNoBones = () => {
-    this.dead = true;
-    this.dropLoot();
+    //
+    //this.dead = true;
+    //this.dropLoot();
+    this.kill();
   };
 
   updateHurtFrame = (delta: number) => {

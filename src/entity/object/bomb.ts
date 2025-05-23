@@ -54,10 +54,6 @@ export class Bomb extends Entity {
     return EntityType.PROP;
   }
 
-  killNoBones = () => {
-    this.kill();
-  };
-
   uniqueKillBehavior = () => {
     if (this.cloned) return;
 

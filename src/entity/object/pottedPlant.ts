@@ -37,10 +37,6 @@ export class PottedPlant extends Entity {
     return EntityType.PROP;
   }
 
-  killNoBones = () => {
-    this.dead = true;
-  };
-
   uniqueKillBehavior = () => {
     ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 29);
   };

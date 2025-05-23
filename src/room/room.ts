@@ -2060,7 +2060,8 @@ export class Room {
    * @param {number} radius - The radius of the blur.
    */
   applyGaussianBlur(canvas: HTMLCanvasElement, radius: number): void {
-    const StackBlur = require("stackblur-canvas");
+    //DEPRECATED
+    //const StackBlur = require("stackblur-canvas");
     const ctx = canvas.getContext("2d");
     if (!ctx) {
       throw new Error("Failed to get canvas context for Gaussian blur.");
@@ -2073,7 +2074,7 @@ export class Room {
     let r = radius;
     if (!GameConstants.BLUR_ENABLED) r = 0;
     // Apply StackBlur
-    StackBlur.canvasRGBA(canvas, 0, 0, width, height, Math.floor(r / 2));
+    //StackBlur.canvasRGBA(canvas, 0, 0, width, height, Math.floor(r / 2));
   }
 
   /**
@@ -2267,9 +2268,7 @@ export class Room {
       GameConstants.COLOR_LAYER_COMPOSITE_OPERATION as GlobalCompositeOperation;
     //Game.ctx.globalCompositeOperation = "source-over";
     Game.ctx.globalAlpha = 0.6; // 0.6;
-    if (!GameConstants.ctxBlurEnabled) {
-      this.applyGaussianBlur(this.colorOffscreenCanvas, 12);
-    } else {
+    {
       Game.ctx.filter = "blur(6px)";
     }
     Game.ctx.drawImage(
@@ -2281,9 +2280,7 @@ export class Room {
     //draw slight haze
     Game.ctx.globalCompositeOperation = "lighten";
     Game.ctx.globalAlpha = 0.05;
-    if (!GameConstants.ctxBlurEnabled)
-      this.applyGaussianBlur(this.colorOffscreenCanvas, 24);
-    else Game.ctx.filter = "blur(12px)";
+    Game.ctx.filter = "blur(12px)";
     Game.ctx.drawImage(
       this.colorOffscreenCanvas,
       (this.roomX - offsetX) * GameConstants.TILESIZE,
@@ -2446,9 +2443,7 @@ export class Room {
     // Draw the blurred shade layer directly without masking
     Game.ctx.globalCompositeOperation = "source-over";
     Game.ctx.globalAlpha = 1;
-    if (!GameConstants.ctxBlurEnabled)
-      this.applyGaussianBlur(this.shadeOffscreenCanvas, 10);
-    else Game.ctx.filter = "blur(5px)";
+    Game.ctx.filter = "blur(5px)";
     Game.ctx.drawImage(
       this.shadeOffscreenCanvas,
       (this.roomX - offsetX - 1) * GameConstants.TILESIZE,
@@ -2538,9 +2533,7 @@ export class Room {
       }
 
     // Draw the blurred shade layer directly without masking
-    if (!GameConstants.ctxBlurEnabled)
-      this.applyGaussianBlur(this.bloomOffscreenCanvas, 16);
-    else Game.ctx.filter = "blur(8px)";
+    Game.ctx.filter = "blur(8px)";
     Game.ctx.globalCompositeOperation = "screen";
 
     Game.ctx.globalAlpha = 1;

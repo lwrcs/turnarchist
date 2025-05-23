@@ -43,14 +43,6 @@ export class Pumpkin extends Entity {
     return EntityType.PROP;
   }
 
-  killNoBones = () => {
-    this.kill();
-  };
-
-  uniqueKillBehavior = () => {
-    this.removeLightSource(this.lightSource);
-  };
-
   draw = (delta: number) => {
     if (this.dead) return;
     Game.ctx.save();

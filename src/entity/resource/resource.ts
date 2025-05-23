@@ -59,10 +59,6 @@ export class Resource extends Entity {
     }
   };
 
-  killNoBones = () => {
-    this.kill();
-  };
-
   draw = (delta: number) => {
     if (!this.dead) {
       Game.drawObj(

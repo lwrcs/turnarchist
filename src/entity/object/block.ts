@@ -40,10 +40,6 @@ export class Block extends Entity {
     );
   };
 
-  killNoBones = () => {
-    this.kill();
-  };
-
   draw = (delta: number) => {
     if (this.dead) return;
     Game.ctx.save();

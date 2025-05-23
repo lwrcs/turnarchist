@@ -196,10 +196,11 @@ export class PlayerInputHandler {
       {
         switch (num) {
           case 9:
-            GameConstants.ctxBlurEnabled = !GameConstants.ctxBlurEnabled;
+            break;
+            GameConstants.drawOtherRooms = !GameConstants.drawOtherRooms;
             this.player.game.pushMessage(
-              "Custom shade color is now " +
-                (GameConstants.ctxBlurEnabled ? "on" : "off"),
+              "Draw other rooms is now " +
+                (GameConstants.drawOtherRooms ? "on" : "off"),
             );
             break;
           case 8:
