@@ -194,8 +194,16 @@ export class Player extends Drawable {
   };
 
   isMouseAboveFloor = (offsetY: number = 0) => {
-    const mouseX = this.mouseToTile().x;
-    const mouseY = this.mouseToTile(offsetY).y;
+    const mouseTile = this.mouseToTile(offsetY);
+
+    // Handle undefined coordinates
+    if (mouseTile.x === undefined || mouseTile.y === undefined) {
+      return false;
+    }
+
+    const mouseX = mouseTile.x;
+    const mouseY = mouseTile.y;
+
     if (
       this.game.levelState === LevelState.LEVEL_GENERATION ||
       !this.game.started ||
@@ -216,24 +224,40 @@ export class Player extends Drawable {
 
   mouseInLine = () => {
     const mouseTile = this.mouseToTile();
+
+    // Handle undefined coordinates
+    if (mouseTile.x === undefined || mouseTile.y === undefined) {
+      return false;
+    }
+
     return mouseTile.x === this.x || mouseTile.y === this.y;
   };
 
   canMoveWithMouse = () => {
-    if (this.inventory.isOpen) return null;
-    // Check if mouse is over valid floor tile
-    if (!this.isMouseAboveFloor() && !this.isMouseAboveFloor(8)) {
+    if (this.inventory.isOpen) {
       return null;
     }
 
-    // Get mouse position in tile coordinates
+    const isFloorNormal = this.isMouseAboveFloor();
+    const isFloorOffset = this.isMouseAboveFloor(8);
+
+    if (!isFloorNormal && !isFloorOffset) {
+      return null;
+    }
+
     const mouseTile = this.mouseToTile();
     const offsetMouseTile = this.mouseToTile(8);
+
     if (
       mouseTile.x === undefined ||
       mouseTile.y === undefined ||
       offsetMouseTile.x === undefined ||
-      offsetMouseTile.y === undefined ||
+      offsetMouseTile.y === undefined
+    ) {
+      return null;
+    }
+
+    if (
       !this.game.room.roomArray ||
       !this.game.room.roomArray[mouseTile.x] ||
       !this.game.room.roomArray[mouseTile.x][mouseTile.y]
@@ -241,34 +265,48 @@ export class Player extends Drawable {
       return null;
     }
 
-    // Determine target Y coordinate
     let targetY = mouseTile.y;
-    if (this.isMouseAboveFloor(8) && this.checkTileForEntity(offsetMouseTile)) {
+    const hasEntityAtOffset = this.checkTileForEntity(offsetMouseTile);
+
+    if (isFloorOffset && hasEntityAtOffset) {
       targetY = offsetMouseTile.y;
     }
 
-    // Check if already at target position
     const sameX = mouseTile.x === this.x;
     const sameY = targetY === this.y;
+
     if (sameX && sameY) {
       return null;
     }
 
-    // Determine movement direction
     if (sameX) {
-      // Vertical movement
-      if (targetY < this.y) {
-        return { direction: Direction.UP, x: this.x, y: this.y - 1 };
+      const nextY = targetY < this.y ? this.y - 1 : this.y + 1;
+
+      if (
+        !this.game.room.roomArray[this.x] ||
+        !this.game.room.roomArray[this.x][nextY]
+      ) {
+        return null;
       }
-      return { direction: Direction.DOWN, x: this.x, y: this.y + 1 };
+
+      return targetY < this.y
+        ? { direction: Direction.UP, x: this.x, y: nextY }
+        : { direction: Direction.DOWN, x: this.x, y: nextY };
     }
 
     if (sameY) {
-      // Horizontal movement
-      if (mouseTile.x < this.x) {
-        return { direction: Direction.LEFT, x: this.x - 1, y: this.y };
+      const nextX = mouseTile.x < this.x ? this.x - 1 : this.x + 1;
+
+      if (
+        !this.game.room.roomArray[nextX] ||
+        !this.game.room.roomArray[nextX][this.y]
+      ) {
+        return null;
       }
-      return { direction: Direction.RIGHT, x: this.x + 1, y: this.y };
+
+      return mouseTile.x < this.x
+        ? { direction: Direction.LEFT, x: nextX, y: this.y }
+        : { direction: Direction.RIGHT, x: nextX, y: this.y };
     }
 
     return null;
@@ -289,11 +327,16 @@ export class Player extends Drawable {
   };
 
   mouseToTile = (offsetY: number = 0) => {
+    // Handle undefined mouse coordinates
+    if (Input.mouseX === undefined || Input.mouseY === undefined) {
+      return { x: undefined, y: undefined };
+    }
+
     // Get screen center coordinates
     const screenCenterX = GameConstants.WIDTH / 2;
     const screenCenterY = GameConstants.HEIGHT / 2;
 
-    // Convert pixel offset to tile offset (this part was working correctly)
+    // Convert pixel offset to tile offset
     const tileOffsetX = Math.floor(
       (Input.mouseX - screenCenterX + GameConstants.TILESIZE / 2) /
         GameConstants.TILESIZE,
