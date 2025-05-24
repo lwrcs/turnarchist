@@ -61,7 +61,7 @@ export abstract class Weapon extends Equippable {
   applyStatus = (status: WeaponStatus) => {
     this.status = status;
     if (this.status.blood) {
-      this.damage = Math.max(0.5, this.damage - 0.5);
+      //this.damage = Math.max(0.5, this.damage - 0.5);
     }
   };
 
@@ -76,7 +76,7 @@ export abstract class Weapon extends Equippable {
   statusEffect = (entity: Entity) => {
     if (!entity.isEnemy) return;
     const enemy = entity as Enemy;
-    if (!enemy.status.poison.active || !enemy.status.bleed.active) {
+    if (!enemy.status.poison.active && !enemy.status.bleed.active) {
       if (this.wielder.applyStatus(enemy, this.status)) {
         this.statusApplicationCount++;
         const message = this.status.poison

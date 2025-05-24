@@ -14,7 +14,7 @@ export class Warhammer extends Weapon {
     this.damage = 2;
     this.name = "warhammer";
     this.hitDelay = 225;
-    this.useCost = 4;
+    this.useCost = 2;
   }
 
   hitSound = () => {

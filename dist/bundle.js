@@ -6246,8 +6246,14 @@ class Entity extends drawable_1.Drawable {
             if (this.hitSound)
                 sound_1.Sound.delayPlay(this.hitSound, 250);
         };
-        this.createHitParticles = () => {
-            imageParticle_1.ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, this.imageParticleX, this.imageParticleY);
+        this.createHitParticles = (particleX, particleY) => {
+            if (this.cloned)
+                return;
+            if (!particleX)
+                particleX = this.imageParticleX;
+            if (!particleY)
+                particleY = this.imageParticleY;
+            imageParticle_1.ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, particleX, particleY);
         };
         this.dropLoot = () => {
             let coordX;
@@ -7381,13 +7387,12 @@ const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const heart_1 = __webpack_require__(/*! ../../item/heart */ "./src/item/heart.ts");
 const coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
 const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
-const imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ "./src/particle/imageParticle.ts");
 const random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
 class PottedPlant extends entity_1.Entity {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
         this.uniqueKillBehavior = () => {
-            imageParticle_1.ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 29);
+            this.createHitParticles(0, 29);
         };
         this.draw = (delta) => {
             if (this.dead)
@@ -7506,13 +7511,12 @@ const skullEnemy_1 = __webpack_require__(/*! ../enemy/skullEnemy */ "./src/entit
 const random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
 const spellbook_1 = __webpack_require__(/*! ../../weapon/spellbook */ "./src/weapon/spellbook.ts");
 const sound_1 = __webpack_require__(/*! ../../sound */ "./src/sound.ts");
-const imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ "./src/particle/imageParticle.ts");
 const lightSource_1 = __webpack_require__(/*! ../../lightSource */ "./src/lightSource.ts");
 class TombStone extends entity_1.Entity {
     constructor(room, game, x, y, skinType, drop) {
         super(room, game, x, y);
         this.uniqueKillBehavior = () => {
-            imageParticle_1.ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 25);
+            //ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 25);
             sound_1.Sound.delayPlay(sound_1.Sound.breakRock, 50);
         };
         this.onHurt = (damage = 1) => {
@@ -7569,6 +7573,8 @@ class TombStone extends entity_1.Entity {
         this.bloomColor = "#05FF05";
         this.bloomAlpha = 1;
         this.softBloomAlpha = 0;
+        this.imageParticleX = 0;
+        this.imageParticleY = 25;
         this.lightSource = new lightSource_1.LightSource(this.x + 0.5, this.y + 0.5, 7, [5, 150, 5], 1);
         this.addLightSource(this.lightSource);
     }
@@ -20421,7 +20427,8 @@ class Room {
             const { x, y } = this.getRandomEmptyPosition(tiles);
             let spawnTable = this.level
                 .getEnemyParameters()
-                .enemyTables[this.depth].filter((t) => t !== 7);
+                //spawners should use enemy pools from the previous depth
+                .enemyTables[Math.max(0, this.depth - 1)].filter((t) => t !== 7);
             const spawner = spawner_1.Spawner.add(this, this.game, x, y, spawnTable);
             return spawner;
         }
@@ -23038,7 +23045,7 @@ class DualDagger extends weapon_1.Weapon {
         this.tileY = 0;
         this.firstAttack = true;
         this.name = "Dual Daggers";
-        this.useCost = 5;
+        this.useCost = 2;
         this.description =
             "After the first attack, enemies will not take their turn until you attack or move again.";
     }
@@ -23110,11 +23117,11 @@ class Greataxe extends weapon_1.Weapon {
         this.tileY = 2;
         this.damage = 2;
         this.name = "greataxe";
-        this.durability = 10;
-        this.durabilityMax = 10;
         this.hitDelay = 225;
         this.offsetY = 0;
         this.iconOffset = 0.2;
+        this.durability = 10;
+        this.durabilityMax = 10;
         this.useCost = 10;
     }
 }
@@ -23365,7 +23372,7 @@ class Spear extends weapon_1.Weapon {
             "Hits enemies in front of you within a range of 2 tiles.";
         this.iconOffset = 0.1; //default 0
         this.offsetY = 0; //default -0.25
-        this.useCost = 2;
+        this.useCost = 1;
     }
 }
 exports.Spear = Spear;
@@ -23531,7 +23538,7 @@ class Warhammer extends weapon_1.Weapon {
         this.damage = 2;
         this.name = "warhammer";
         this.hitDelay = 225;
-        this.useCost = 4;
+        this.useCost = 2;
     }
 }
 exports.Warhammer = Warhammer;
@@ -23578,7 +23585,7 @@ class Weapon extends equippable_1.Equippable {
         this.applyStatus = (status) => {
             this.status = status;
             if (this.status.blood) {
-                this.damage = Math.max(0.5, this.damage - 0.5);
+                //this.damage = Math.max(0.5, this.damage - 0.5);
             }
         };
         this.clearStatus = () => {
@@ -23591,7 +23598,7 @@ class Weapon extends equippable_1.Equippable {
             if (!entity.isEnemy)
                 return;
             const enemy = entity;
-            if (!enemy.status.poison.active || !enemy.status.bleed.active) {
+            if (!enemy.status.poison.active && !enemy.status.bleed.active) {
                 if (this.wielder.applyStatus(enemy, this.status)) {
                     this.statusApplicationCount++;
                     const message = this.status.poison

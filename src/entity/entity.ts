@@ -481,13 +481,16 @@ export class Entity extends Drawable {
     if (this.hitSound) Sound.delayPlay(this.hitSound, 250);
   };
 
-  createHitParticles = () => {
+  createHitParticles = (particleX?: number, particleY?: number) => {
+    if (this.cloned) return;
+    if (!particleX) particleX = this.imageParticleX;
+    if (!particleY) particleY = this.imageParticleY;
     ImageParticle.spawnCluster(
       this.room,
       this.x + 0.5,
       this.y + 0.5,
-      this.imageParticleX,
-      this.imageParticleY,
+      particleX,
+      particleY,
     );
   };
 

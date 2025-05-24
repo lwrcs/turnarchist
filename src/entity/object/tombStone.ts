@@ -46,6 +46,8 @@ export class TombStone extends Entity {
     this.bloomColor = "#05FF05";
     this.bloomAlpha = 1;
     this.softBloomAlpha = 0;
+    this.imageParticleX = 0;
+    this.imageParticleY = 25;
     this.lightSource = new LightSource(
       this.x + 0.5,
       this.y + 0.5,
@@ -61,7 +63,7 @@ export class TombStone extends Entity {
   }
 
   uniqueKillBehavior = () => {
-    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 25);
+    //ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 25);
     Sound.delayPlay(Sound.breakRock, 50);
   };
 

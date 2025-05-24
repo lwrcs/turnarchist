@@ -718,7 +718,8 @@ export class Room {
       const { x, y } = this.getRandomEmptyPosition(tiles);
       let spawnTable = this.level
         .getEnemyParameters()
-        .enemyTables[this.depth].filter((t) => t !== 7);
+        //spawners should use enemy pools from the previous depth
+        .enemyTables[Math.max(0, this.depth - 1)].filter((t) => t !== 7);
       const spawner = Spawner.add(this, this.game, x, y, spawnTable);
       return spawner;
     }

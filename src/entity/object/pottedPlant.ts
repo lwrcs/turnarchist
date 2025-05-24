@@ -38,7 +38,7 @@ export class PottedPlant extends Entity {
   }
 
   uniqueKillBehavior = () => {
-    ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 29);
+    this.createHitParticles(0, 29);
   };
 
   draw = (delta: number) => {
