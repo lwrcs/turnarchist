@@ -9731,12 +9731,12 @@ const levelConstants_1 = __webpack_require__(/*! ./levelConstants */ "./src/leve
 const dagger_1 = __webpack_require__(/*! ./weapon/dagger */ "./src/weapon/dagger.ts");
 const spear_1 = __webpack_require__(/*! ./weapon/spear */ "./src/weapon/spear.ts");
 const spellbook_1 = __webpack_require__(/*! ./weapon/spellbook */ "./src/weapon/spellbook.ts");
+const warhammer_1 = __webpack_require__(/*! ./weapon/warhammer */ "./src/weapon/warhammer.ts");
 const hammer_1 = __webpack_require__(/*! ./item/hammer */ "./src/item/hammer.ts");
 const greataxe_1 = __webpack_require__(/*! ./weapon/greataxe */ "./src/weapon/greataxe.ts");
 const bluegem_1 = __webpack_require__(/*! ./item/bluegem */ "./src/item/bluegem.ts");
 const redgem_1 = __webpack_require__(/*! ./item/redgem */ "./src/item/redgem.ts");
 const greengem_1 = __webpack_require__(/*! ./item/greengem */ "./src/item/greengem.ts");
-const pickaxe_1 = __webpack_require__(/*! ./weapon/pickaxe */ "./src/weapon/pickaxe.ts");
 class GameConstants {
 }
 exports.GameConstants = GameConstants;
@@ -9860,7 +9860,7 @@ GameConstants.STARTING_INVENTORY = [dagger_1.Dagger, candle_1.Candle];
 GameConstants.STARTING_DEV_INVENTORY = [
     dagger_1.Dagger,
     greataxe_1.Greataxe,
-    pickaxe_1.Pickaxe,
+    warhammer_1.Warhammer,
     torch_1.Torch,
     godStone_1.GodStone,
     candle_1.Candle,
@@ -23424,6 +23424,12 @@ const weapon_1 = __webpack_require__(/*! ./weapon */ "./src/weapon/weapon.ts");
 class Dagger extends weapon_1.Weapon {
     constructor(level, x, y) {
         super(level, x, y);
+        this.weaponMove = (newX, newY) => {
+            if (this.checkForPushables(newX, newY))
+                return true;
+            const hitSomething = this.executeAttack(newX, newY);
+            return !hitSomething;
+        };
         this.degrade = () => { };
         this.tileX = 22;
         this.tileY = 0;
@@ -23627,81 +23633,61 @@ class Shotgun extends weapon_1.Weapon {
             let range = 3;
             if (!this.game.rooms[this.wielder.levelID].tileInside(newX, newY) ||
                 this.game.rooms[this.wielder.levelID].roomArray[newX][newY].isSolid())
-                //if current position is inside new position OR is solid
                 return true;
             else if (!this.game.rooms[this.wielder.levelID].tileInside(newX2, newY2) ||
                 this.game.rooms[this.wielder.levelID].roomArray[newX2][newY2].isSolid())
-                //if current position is inside new position 2 OR is solid
-                //set range as one
                 range = 1;
             else if (!this.game.rooms[this.wielder.levelID].tileInside(newX3, newY3) ||
                 this.game.rooms[this.wielder.levelID].roomArray[newX3][newY3].isSolid())
-                //if current position is inside new position 3 OR is solid
-                //set range as two
                 range = 2;
             let enemyHitCandidates = [];
             let firstPushable = 4;
             let firstNonPushable = 5;
             let firstNonDestroyable = 5;
             for (let e of this.game.rooms[this.wielder.levelID].entities) {
-                //loop through enemies in this weapons wielders level
                 if (e.pushable) {
-                    //case for pushables
                     if (e.pointIn(newX, newY))
                         return true;
-                    //if pushable is in new position return true
                     if (e.pointIn(newX2, newY2) && range >= 2) {
                         enemyHitCandidates.push({ enemy: e, dist: 2 });
                         firstPushable = 2;
-                        //if pushable is in position 2 set firstPushable var
                     }
                     if (e.pointIn(newX3, newY3) && range >= 3) {
                         enemyHitCandidates.push({ enemy: e, dist: 3 });
                         firstPushable = Math.min(firstPushable, 3);
-                        //if pushable is in position 3 set firstPushable to min of firstPushable and 3
                     }
                 }
                 else if (e.destroyable) {
-                    //case for destroyables
                     if (e.pointIn(newX, newY) && range >= 1) {
                         firstNonPushable = 1;
                         enemyHitCandidates.push({ enemy: e, dist: 1 });
                     }
-                    //if enemy is in new position and range is enough push enemy to hit candidate array
                     if (e.pointIn(newX2, newY2) && range >= 2) {
                         firstNonPushable = Math.min(firstNonPushable, 2);
                         enemyHitCandidates.push({ enemy: e, dist: 2 });
                     }
-                    //if enemy is in new position 2 and range is enough push enemy to hit candidate array
                     if (e.pointIn(newX3, newY3) && range >= 3) {
                         firstNonPushable = Math.min(firstNonPushable, 3);
                         enemyHitCandidates.push({ enemy: e, dist: 3 });
                     }
-                    //if enemy is in new position 3 and range is enough push enemy to hit candidate array
                 }
                 else {
                     if (e.pointIn(newX, newY) && range >= 1) {
                         firstNonDestroyable = 1;
                     }
-                    //if enemy is in new position and range is enough set first non destroyable to 1
                     if (e.pointIn(newX2, newY2) && range >= 2) {
                         firstNonDestroyable = Math.min(firstNonDestroyable, 2);
                     }
-                    //if enemy is in new position and range is enough set first non destroyable to 2
                     if (e.pointIn(newX3, newY3) && range >= 3) {
                         firstNonDestroyable = Math.min(firstNonDestroyable, 3);
                     }
-                    //if enemy is in new position and range is enough set first non destroyable to 3
                 }
             }
             let targetX = newX3;
             let targetY = newY3;
             if (firstNonDestroyable < firstNonPushable &&
-                firstNonDestroyable < firstPushable
-            //if a non destroyable comes before the first non pushable and before the first pushable
-            ) {
+                firstNonDestroyable < firstPushable) {
                 return true;
-                //return true and exit the function
             }
             if (firstNonPushable <= firstPushable) {
                 for (const c of enemyHitCandidates) {
@@ -23712,10 +23698,6 @@ class Shotgun extends weapon_1.Weapon {
                     else
                         e.hurt(this.wielder, 1);
                 }
-                //finally bro
-                //for the array c of enemyHitCandidates if the enemy distance is 3 only do .5 damage
-                //if they're closer do the usual damage
-                //hits all candidates in enemyHitCandidates
                 this.hitSound();
                 this.wielder.setHitXY(newX, newY);
                 genericParticle_1.GenericParticle.shotgun(this.game.rooms[this.wielder.levelID], this.wielder.x + 0.5, this.wielder.y, targetX + 0.5, targetY, "black");
@@ -23723,11 +23705,8 @@ class Shotgun extends weapon_1.Weapon {
                 let gp = new genericParticle_1.GenericParticle(this.game.rooms[this.wielder.levelID], 0.5 * (newX + this.wielder.x) + 0.5, 0.5 * (newY + this.wielder.y), 0, 1, 0, 0, 0, "white", 0);
                 gp.expirationTimer = 10;
                 this.game.rooms[this.wielder.levelID].particles.push(gp);
-                //this.game.levels[this.wielder.levelID].particles.push(new SlashParticle(newX, newY));
-                //this.game.levels[this.wielder.levelID].particles.push(new SlashParticle(newX2, newY2));
-                //this.game.levels[this.wielder.levelID].particles.push(new SlashParticle(newX3, newY3));
                 this.game.rooms[this.wielder.levelID].tick(this.wielder);
-                this.shakeScreen(newX * 10, newY * 10);
+                this.shakeScreen(newX, newY);
                 this.degrade();
                 return false;
             }
@@ -23754,7 +23733,6 @@ Shotgun.itemName = "shotgun";
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Spear = void 0;
 const weapon_1 = __webpack_require__(/*! ./weapon */ "./src/weapon/weapon.ts");
-const attackAnimation_1 = __webpack_require__(/*! ../particle/attackAnimation */ "./src/particle/attackAnimation.ts");
 class Spear extends weapon_1.Weapon {
     constructor(level, x, y) {
         super(level, x, y);
@@ -23763,50 +23741,31 @@ class Spear extends weapon_1.Weapon {
             let newY2 = 2 * newY - this.wielder.y;
             let flag = false;
             let enemyHitCandidates = [];
-            for (let e of this.game.rooms[this.wielder.levelID].entities) {
-                if (e.destroyable) {
-                    if (e.pointIn(newX, newY)) {
-                        if (e.pushable)
-                            return true;
-                        else {
-                            e.hurt(this.wielder, 1);
-                            this.statusEffect(e);
-                            flag = true;
-                        }
-                    }
-                    if (e.pointIn(newX2, newY2) &&
-                        !this.game.rooms[this.wielder.levelID].roomArray[newX][newY].isSolid()) {
-                        //only hit targest 2 tiles away if they are enemies
-                        if (!e.pushable)
-                            enemyHitCandidates.push(e);
-                    }
-                }
+            // Check first tile
+            if (this.checkForPushables(newX, newY))
+                return true;
+            const hitFirstTile = this.hitEntitiesAt(newX, newY);
+            if (hitFirstTile)
+                flag = true;
+            // Check second tile for enemies only (not pushables)
+            if (!this.game.rooms[this.wielder.levelID].roomArray[newX][newY].isSolid()) {
+                const entitiesAtSecondTile = this.getEntitiesAt(newX2, newY2).filter((e) => !e.pushable);
+                enemyHitCandidates = entitiesAtSecondTile;
             }
             if (!flag && enemyHitCandidates.length > 0) {
-                for (const e of enemyHitCandidates)
-                    e.hurt(this.wielder, 1);
-                this.hitSound();
-                this.wielder.setHitXY(newX, newY);
-                //this.game.rooms[this.wielder.levelID].particles.push(
-                //new AttackAnimation(newX, newY, "spear", this.wielder.direction),
-                //);
-                this.game.rooms[this.wielder.levelID].particles.push(new attackAnimation_1.AttackAnimation(newX2, newY2, "spear", this.wielder.direction));
+                for (const e of enemyHitCandidates) {
+                    this.attack(e);
+                }
+                this.attackAnimation(newX2, newY2);
                 this.game.rooms[this.wielder.levelID].tick(this.wielder);
-                this.shakeScreen(newX, newY);
-                //if (this.wielder === this.game.players[this.game.localPlayerID])
-                //this.game.shakeScreen(10 * this.wielder.hitX, 10 * this.wielder.hitY);
+                this.shakeScreen(newX2, newY2);
                 this.degrade();
                 return false;
             }
             if (flag) {
-                this.hitSound();
-                this.wielder.setHitXY(newX, newY);
-                this.shakeScreen(newX, newY);
-                this.game.rooms[this.wielder.levelID].particles.push(new attackAnimation_1.AttackAnimation(newX, newY, "spear", this.wielder.direction));
+                this.attackAnimation(newX, newY);
                 this.game.rooms[this.wielder.levelID].tick(this.wielder);
-                //if (this.wielder === this.game.players[this.game.localPlayerID])
-                //  this.game.shakeScreen(10 * this.wielder.hitX, 10 * this.wielder.hitY);
-                this.shakeScreen(newX * 10, newY * 10);
+                this.shakeScreen(newX, newY);
                 this.degrade();
             }
             return !flag;
@@ -23911,7 +23870,7 @@ class Spellbook extends weapon_1.Weapon {
                 this.hitSound();
                 this.wielder.setHitXY(newX, newY);
                 this.game.rooms[this.wielder.levelID].tick(this.wielder);
-                this.shakeScreen(newX * 10, newY * 10);
+                this.shakeScreen(newX, newY);
                 sound_1.Sound.playMagic();
                 this.degrade();
                 setTimeout(() => {
@@ -23956,11 +23915,16 @@ class Warhammer extends weapon_1.Weapon {
             sound_1.Sound.hit();
             sound_1.Sound.playWarHammer();
         };
+        this.weaponMove = (newX, newY) => {
+            if (this.checkForPushables(newX, newY))
+                return true;
+            const hitSomething = this.executeAttack(newX, newY);
+            return !hitSomething;
+        };
         this.shakeScreen = () => {
             this.wielder.beginSlowMotion();
             setTimeout(() => {
                 this.wielder.endSlowMotion();
-                //this.hitSound();
                 switch (this.wielder.direction) {
                     case game_1.Direction.DOWN:
                         this.game.shakeScreen(0, -30, false);
@@ -24075,25 +24039,10 @@ class Weapon extends equippable_1.Equippable {
             this.equipped = false;
         };
         this.weaponMove = (newX, newY) => {
-            let flag = false;
-            for (let e of this.game.rooms[this.wielder.levelID].entities) {
-                if (e.destroyable && !e.pushable && e.pointIn(newX, newY)) {
-                    this.attack(e);
-                    flag = true;
-                }
-            }
-            if (flag) {
-                this.wielder.busyAnimating = true;
-                this.attackAnimation(newX, newY);
-                this.game.rooms[this.wielder.levelID].tick(this.wielder);
-                this.shakeScreen(newX, newY);
-                this.degrade();
-                setTimeout(() => {
-                    this.wielder.busyAnimating = false;
-                    this.hitSound();
-                }, this.hitDelay);
-            }
-            return !flag;
+            if (this.checkForPushables(newX, newY))
+                return true;
+            const hitSomething = this.executeAttack(newX, newY);
+            return !hitSomething;
         };
         this.attack = (enemy) => {
             enemy.hurt(this.wielder, this.damage);
@@ -24136,6 +24085,14 @@ class Weapon extends equippable_1.Equippable {
             return `${this.name}${broken}\n${status.join(", ")}\n${durability}\n${this.description}\ndamage: ${this.damage}`;
         };
         this.tick = () => { };
+        this.applyHitDelay = (hitSomething) => {
+            if (hitSomething) {
+                this.wielder.busyAnimating = true;
+                setTimeout(() => {
+                    this.wielder.busyAnimating = false;
+                }, this.hitDelay || 0);
+            }
+        };
         if (level)
             this.game = level.game;
         this.canMine = false;
@@ -24164,6 +24121,18 @@ class Weapon extends equippable_1.Equippable {
     checkForPushables(x, y) {
         const pushables = this.getEntitiesAt(x, y).filter((e) => e.pushable);
         return pushables.length > 0;
+    }
+    executeAttack(targetX, targetY, animationName) {
+        const hitSomething = this.hitEntitiesAt(targetX, targetY);
+        this.applyHitDelay(hitSomething);
+        if (hitSomething) {
+            this.wielder.setHitXY(targetX, targetY);
+            this.attackAnimation(targetX, targetY);
+            this.game.rooms[this.wielder.levelID].tick(this.wielder);
+            this.shakeScreen(targetX, targetY);
+            this.degrade();
+        }
+        return hitSomething;
     }
 }
 exports.Weapon = Weapon;

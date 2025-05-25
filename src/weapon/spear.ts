@@ -25,59 +25,42 @@ export class Spear extends Weapon {
     let newY2 = 2 * newY - this.wielder.y;
     let flag = false;
     let enemyHitCandidates = [];
-    for (let e of this.game.rooms[this.wielder.levelID].entities) {
-      if (e.destroyable) {
-        if (e.pointIn(newX, newY)) {
-          if (e.pushable) return true;
-          else {
-            e.hurt(this.wielder, 1);
-            this.statusEffect(e);
-            flag = true;
-          }
-        }
-        if (
-          e.pointIn(newX2, newY2) &&
-          !this.game.rooms[this.wielder.levelID].roomArray[newX][newY].isSolid()
-        ) {
-          //only hit targest 2 tiles away if they are enemies
-          if (!e.pushable) enemyHitCandidates.push(e);
-        }
-      }
-    }
-    if (!flag && enemyHitCandidates.length > 0) {
-      for (const e of enemyHitCandidates) e.hurt(this.wielder, 1);
-      this.hitSound();
-      this.wielder.setHitXY(newX, newY);
 
-      //this.game.rooms[this.wielder.levelID].particles.push(
-      //new AttackAnimation(newX, newY, "spear", this.wielder.direction),
-      //);
-      this.game.rooms[this.wielder.levelID].particles.push(
-        new AttackAnimation(newX2, newY2, "spear", this.wielder.direction),
+    // Check first tile
+    if (this.checkForPushables(newX, newY)) return true;
+
+    const hitFirstTile = this.hitEntitiesAt(newX, newY);
+    if (hitFirstTile) flag = true;
+
+    // Check second tile for enemies only (not pushables)
+    if (
+      !this.game.rooms[this.wielder.levelID].roomArray[newX][newY].isSolid()
+    ) {
+      const entitiesAtSecondTile = this.getEntitiesAt(newX2, newY2).filter(
+        (e) => !e.pushable,
       );
-      this.game.rooms[this.wielder.levelID].tick(this.wielder);
-      this.shakeScreen(newX, newY);
+      enemyHitCandidates = entitiesAtSecondTile;
+    }
 
-      //if (this.wielder === this.game.players[this.game.localPlayerID])
-      //this.game.shakeScreen(10 * this.wielder.hitX, 10 * this.wielder.hitY);
+    if (!flag && enemyHitCandidates.length > 0) {
+      for (const e of enemyHitCandidates) {
+        this.attack(e);
+      }
+
+      this.attackAnimation(newX2, newY2);
+      this.game.rooms[this.wielder.levelID].tick(this.wielder);
+      this.shakeScreen(newX2, newY2);
       this.degrade();
       return false;
     }
+
     if (flag) {
-      this.hitSound();
-
-      this.wielder.setHitXY(newX, newY);
-      this.shakeScreen(newX, newY);
-
-      this.game.rooms[this.wielder.levelID].particles.push(
-        new AttackAnimation(newX, newY, "spear", this.wielder.direction),
-      );
+      this.attackAnimation(newX, newY);
       this.game.rooms[this.wielder.levelID].tick(this.wielder);
-      //if (this.wielder === this.game.players[this.game.localPlayerID])
-      //  this.game.shakeScreen(10 * this.wielder.hitX, 10 * this.wielder.hitY);
-      this.shakeScreen(newX * 10, newY * 10);
+      this.shakeScreen(newX, newY);
       this.degrade();
     }
+
     return !flag;
   };
 }

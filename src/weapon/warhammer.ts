@@ -22,12 +22,19 @@ export class Warhammer extends Weapon {
     Sound.playWarHammer();
   };
 
+  weaponMove = (newX: number, newY: number): boolean => {
+    if (this.checkForPushables(newX, newY)) return true;
+
+    const hitSomething = this.executeAttack(newX, newY);
+
+    return !hitSomething;
+  };
+
   shakeScreen = () => {
     this.wielder.beginSlowMotion();
 
     setTimeout(() => {
       this.wielder.endSlowMotion();
-      //this.hitSound();
       switch (this.wielder.direction) {
         case Direction.DOWN:
           this.game.shakeScreen(0, -30, false);

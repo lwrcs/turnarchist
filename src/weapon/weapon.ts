@@ -119,30 +119,11 @@ export abstract class Weapon extends Equippable {
   };
 
   weaponMove = (newX: number, newY: number): boolean => {
-    let flag = false;
+    if (this.checkForPushables(newX, newY)) return true;
 
-    for (let e of this.game.rooms[this.wielder.levelID].entities) {
-      if (e.destroyable && !e.pushable && e.pointIn(newX, newY)) {
-        this.attack(e);
-        flag = true;
-      }
-    }
+    const hitSomething = this.executeAttack(newX, newY);
 
-    if (flag) {
-      this.wielder.busyAnimating = true;
-
-      this.attackAnimation(newX, newY);
-      this.game.rooms[this.wielder.levelID].tick(this.wielder);
-      this.shakeScreen(newX, newY);
-      this.degrade();
-
-      setTimeout(() => {
-        this.wielder.busyAnimating = false;
-
-        this.hitSound();
-      }, this.hitDelay);
-    }
-    return !flag;
+    return !hitSomething;
   };
 
   attack = (enemy: Entity) => {
@@ -231,5 +212,34 @@ export abstract class Weapon extends Equippable {
   protected checkForPushables(x: number, y: number): boolean {
     const pushables = this.getEntitiesAt(x, y).filter((e) => e.pushable);
     return pushables.length > 0;
+  }
+
+  protected applyHitDelay = (hitSomething: boolean) => {
+    if (hitSomething) {
+      this.wielder.busyAnimating = true;
+      setTimeout(() => {
+        this.wielder.busyAnimating = false;
+      }, this.hitDelay || 0);
+    }
+  };
+
+  protected executeAttack(
+    targetX: number,
+    targetY: number,
+    animationName?: string,
+  ): boolean {
+    const hitSomething = this.hitEntitiesAt(targetX, targetY);
+
+    this.applyHitDelay(hitSomething);
+
+    if (hitSomething) {
+      this.wielder.setHitXY(targetX, targetY);
+      this.attackAnimation(targetX, targetY);
+      this.game.rooms[this.wielder.levelID].tick(this.wielder);
+      this.shakeScreen(targetX, targetY);
+      this.degrade();
+    }
+
+    return hitSomething;
   }
 }

@@ -12,5 +12,13 @@ export class Dagger extends Weapon {
     this.description = "A basic but dependable weapon.";
   }
 
+  weaponMove = (newX: number, newY: number): boolean => {
+    if (this.checkForPushables(newX, newY)) return true;
+
+    const hitSomething = this.executeAttack(newX, newY);
+
+    return !hitSomething;
+  };
+
   degrade = () => {};
 }

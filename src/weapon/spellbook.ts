@@ -110,7 +110,7 @@ export class Spellbook extends Weapon {
       this.wielder.setHitXY(newX, newY);
 
       this.game.rooms[this.wielder.levelID].tick(this.wielder);
-      this.shakeScreen(newX * 10, newY * 10);
+      this.shakeScreen(newX, newY);
       Sound.playMagic();
       this.degrade();
       setTimeout(() => {
