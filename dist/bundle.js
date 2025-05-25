@@ -2082,7 +2082,7 @@ class BigSkullEnemy extends enemy_1.Enemy {
         this.forwardOnlyAttack = true;
         if (drop)
             this.drops.push(drop);
-        while (this.drops.length < 4) {
+        while (this.drops.length < 4 && !this.cloned) {
             this.getDrop();
         }
     }
@@ -2333,14 +2333,15 @@ class BigZombieEnemy extends enemy_1.Enemy {
         this.h = 2;
         this.ticks = 0;
         this.frame = 0;
-        this.health = 1;
-        this.maxHealth = 1;
+        this.health = 2;
+        this.maxHealth = 2;
         this.tileX = 31;
         this.tileY = 12;
         this.seenPlayer = false;
         this.aggro = false;
         this.dir = game_1.Direction.DOWN;
         this.name = "bigzombie";
+        this.chainPushable = false;
         this.forwardOnlyAttack = true;
         this.drawMoveSpeed = 0.2;
         this.jumpHeight = 0.35;
@@ -7634,6 +7635,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Mushrooms = void 0;
 const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const shrooms_1 = __webpack_require__(/*! ../../item/shrooms */ "./src/item/shrooms.ts");
 const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 class Mushrooms extends entity_1.Entity {
     constructor(room, game, x, y) {
@@ -7661,6 +7663,7 @@ class Mushrooms extends entity_1.Entity {
         this.name = "mushrooms";
         this.imageParticleX = 0;
         this.imageParticleY = 30;
+        this.drops.push(new shrooms_1.Shrooms(this.room, this.x, this.y));
     }
     get type() {
         return entity_2.EntityType.PROP;
@@ -13691,6 +13694,44 @@ class RedGem extends item_1.Item {
 }
 exports.RedGem = RedGem;
 RedGem.itemName = "garnet";
+
+
+/***/ }),
+
+/***/ "./src/item/shrooms.ts":
+/*!*****************************!*\
+  !*** ./src/item/shrooms.ts ***!
+  \*****************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Shrooms = void 0;
+const usable_1 = __webpack_require__(/*! ./usable */ "./src/item/usable.ts");
+class Shrooms extends usable_1.Usable {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.onUse = (player) => {
+            if (player.health < player.maxHealth) {
+                player.health = Math.min(player.maxHealth, player.health + 0.5);
+                if (this.stackCount > 1) {
+                    this.stackCount--;
+                }
+                else
+                    player.inventory.removeItem(this);
+                player.game.pushMessage("You eat the mushrooms and feel better.");
+            }
+        };
+        this.getDescription = () => {
+            return "SHROOMS\nI don't think I should eat these...";
+        };
+        this.tileX = 6;
+        this.tileY = 0;
+        this.stackable = true;
+    }
+}
+exports.Shrooms = Shrooms;
+Shrooms.itemName = "mushrooms";
 
 
 /***/ }),
@@ -20841,13 +20882,16 @@ class Room {
             //console.log(`No tiles left to spawn spawners`);
             return;
         }
-        const { x, y } = this.getRandomEmptyPosition(tiles);
-        let bosses = ["reaper", "queen", "bigskullenemy"];
+        let bosses = ["reaper", "queen", "bigskullenemy", "bigzombieenemy"];
         if (depth > 0) {
             bosses.push("occultist");
             bosses.filter((b) => b !== "queen");
         }
-        switch (game_1.Game.randTable(bosses, Math.random)) {
+        const boss = game_1.Game.randTable(bosses, Math.random);
+        const { x, y } = boss.startsWith("big")
+            ? this.getBigRandomEmptyPosition(tiles)
+            : this.getRandomEmptyPosition(tiles);
+        switch (boss) {
             case "reaper":
                 const spawner = this.addSpawners(1, Math.random);
                 spawner.dropTable = ["weapon", "equipment"];
@@ -20872,6 +20916,17 @@ class Room {
                 const occultist = this.addOccultists(1, Math.random);
                 occultist.dropTable = ["weapon", "equipment"];
                 occultist.dropChance = 1;
+                break;
+            case "bigzombieenemy":
+                const bigZombie = bigZombieEnemy_1.BigZombieEnemy.add(this, this.game, x, y);
+                bigZombie.dropTable = [
+                    "weapon",
+                    "equipment",
+                    "consumable",
+                    "gem",
+                    "tool",
+                ];
+                bigZombie.dropChance = 1;
                 break;
         }
     }

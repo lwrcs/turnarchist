@@ -36,14 +36,16 @@ export class BigZombieEnemy extends Enemy {
 
     this.ticks = 0;
     this.frame = 0;
-    this.health = 1;
-    this.maxHealth = 1;
+    this.health = 2;
+    this.maxHealth = 2;
     this.tileX = 31;
     this.tileY = 12;
     this.seenPlayer = false;
     this.aggro = false;
     this.dir = Direction.DOWN;
     this.name = "bigzombie";
+    this.chainPushable = false;
+
     this.forwardOnlyAttack = true;
     this.drawMoveSpeed = 0.2;
     this.jumpHeight = 0.35;

@@ -746,14 +746,19 @@ export class Room {
       //console.log(`No tiles left to spawn spawners`);
       return;
     }
-    const { x, y } = this.getRandomEmptyPosition(tiles);
-    let bosses = ["reaper", "queen", "bigskullenemy"];
+
+    let bosses = ["reaper", "queen", "bigskullenemy", "bigzombieenemy"];
     if (depth > 0) {
       bosses.push("occultist");
       bosses.filter((b) => b !== "queen");
     }
+    const boss = Game.randTable(bosses, Math.random);
 
-    switch (Game.randTable(bosses, Math.random)) {
+    const { x, y } = boss.startsWith("big")
+      ? this.getBigRandomEmptyPosition(tiles)
+      : this.getRandomEmptyPosition(tiles);
+
+    switch (boss) {
       case "reaper":
         const spawner = this.addSpawners(1, Math.random);
         spawner.dropTable = ["weapon", "equipment"];
@@ -780,6 +785,17 @@ export class Room {
         occultist.dropTable = ["weapon", "equipment"];
         occultist.dropChance = 1;
 
+        break;
+      case "bigzombieenemy":
+        const bigZombie = BigZombieEnemy.add(this, this.game, x, y);
+        bigZombie.dropTable = [
+          "weapon",
+          "equipment",
+          "consumable",
+          "gem",
+          "tool",
+        ];
+        bigZombie.dropChance = 1;
         break;
     }
   }

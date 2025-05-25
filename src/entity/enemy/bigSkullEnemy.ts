@@ -53,7 +53,7 @@ export class BigSkullEnemy extends Enemy {
     this.direction = Direction.DOWN;
     this.forwardOnlyAttack = true;
     if (drop) this.drops.push(drop);
-    while (this.drops.length < 4) {
+    while (this.drops.length < 4 && !this.cloned) {
       this.getDrop();
     }
   }
