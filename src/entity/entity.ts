@@ -1009,7 +1009,28 @@ export class Entity extends Drawable {
     return { x, y };
   };
 
-  makeHitWarnings = () => {
+  makeBigHitWarnings = () => {
+    switch (this.direction) {
+      case Direction.LEFT:
+        this.makeHitWarnings(this.x, this.y);
+        this.makeHitWarnings(this.x, this.y + 1);
+        break;
+      case Direction.RIGHT:
+        this.makeHitWarnings(this.x + 1, this.y);
+        this.makeHitWarnings(this.x + 1, this.y + 1);
+        break;
+      case Direction.UP:
+        this.makeHitWarnings(this.x, this.y);
+        this.makeHitWarnings(this.x + 1, this.y);
+        break;
+      case Direction.DOWN:
+        this.makeHitWarnings(this.x, this.y + 1);
+        this.makeHitWarnings(this.x + 1, this.y + 1);
+        break;
+    }
+  };
+
+  makeHitWarnings = (hx: number = this.x, hy: number = this.y) => {
     const cullFactor = 0.45;
     const player: Player = this.getPlayer();
     const orthogonal = this.orthogonalAttack;
@@ -1064,7 +1085,7 @@ export class Entity extends Drawable {
       .map(([dx, dy]) => ({
         x: dx,
         y: dy,
-        distance: Utils.distance(dx, dy, player.x - this.x, player.y - this.y),
+        distance: Utils.distance(dx, dy, player.x - hx, player.y - hy),
       }))
       .sort((a, b) => a.distance - b.distance);
 
@@ -1072,15 +1093,15 @@ export class Entity extends Drawable {
     const culledWarnings = warningCoordinates.slice(0, keepCount);
 
     culledWarnings.forEach(({ x, y }) => {
-      const targetX = this.x + x;
-      const targetY = this.y + y;
+      const targetX = hx + x;
+      const targetY = hy + y;
       if (this.isWithinRoomBounds(targetX, targetY)) {
         const hitWarning = new HitWarning(
           this.game,
           targetX,
           targetY,
-          this.x,
-          this.y,
+          hx,
+          hy,
           true,
           false,
           this,

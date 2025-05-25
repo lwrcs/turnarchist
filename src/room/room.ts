@@ -82,6 +82,7 @@ import { ArmoredSkullEnemy } from "../entity/enemy/armoredSkullEnemy";
 import { MummyEnemy } from "../entity/enemy/mummyEnemy";
 import { SpiderEnemy } from "../entity/enemy/spiderEnemy";
 import { RoomBuilder } from "./roomBuilder";
+import { BigZombieEnemy } from "../entity/enemy/bigZombieEnemy";
 
 // #endregion
 
@@ -110,6 +111,7 @@ export enum EnemyType {
   armoredskull = "armoredskull",
   mummy = "mummy",
   spider = "spider",
+  bigzombie = "bigzombie",
   // Add other enemy types here
 }
 
@@ -137,6 +139,7 @@ export const EnemyTypeMap: { [key in EnemyType]: EnemyStatic } = {
   [EnemyType.armoredskull]: ArmoredSkullEnemy,
   [EnemyType.mummy]: MummyEnemy,
   [EnemyType.spider]: SpiderEnemy,
+  [EnemyType.bigzombie]: BigZombieEnemy,
   // Add other enemy mappings here
 };
 
@@ -799,7 +802,20 @@ export class Room {
       return;
     }
 
-    const { x, y } = this.getRandomEmptyPosition(tiles);
+    let position = this.getRandomEmptyPosition(tiles);
+    if (!position) {
+      return;
+    }
+    let { x, y } = position;
+
+    if (enemyType === EnemyType.bigzombie) {
+      position = this.getBigRandomEmptyPosition(tiles);
+      if (!position) {
+        return;
+      }
+      ({ x, y } = position);
+    }
+
     EnemyClass.add(this, this.game, x, y);
   };
 
@@ -3021,17 +3037,26 @@ export class Room {
     y: number;
   } {
     if (tiles.length === 0) return null;
-    tiles = tiles.filter((t) => {
-      this.getTile(t.x + 1, t.y + 1).isSolid() &&
-        this.getTile(t.x, t.y + 1).isSolid() &&
-        this.getTile(t.x + 1, t.y).isSolid() &&
-        this.getTile(t.x, t.y).isSolid();
+
+    // Create a set for O(1) lookup of tile coordinates
+    const tileSet = new Set(tiles.map((t) => `${t.x},${t.y}`));
+
+    // Find all tiles that can be the top-left corner of a 2x2 patch
+    const bigTilePositions = tiles.filter((t) => {
+      // Check if this tile and the 3 adjacent tiles (right, below, diagonal) are all empty
+      return (
+        tileSet.has(`${t.x + 1},${t.y}`) && // right
+        tileSet.has(`${t.x},${t.y + 1}`) && // below
+        tileSet.has(`${t.x + 1},${t.y + 1}`)
+      ); // diagonal
     });
-    const tile = tiles.splice(
-      Game.rand(0, tiles.length - 1, Random.rand),
-      1,
-    )[0];
-    return { x: tile.x, y: tile.y };
+
+    if (bigTilePositions.length === 0) return null;
+
+    // Randomly select one of the valid 2x2 positions
+    const selectedTile =
+      bigTilePositions[Game.rand(0, bigTilePositions.length - 1, Random.rand)];
+    return { x: selectedTile.x, y: selectedTile.y };
   }
   // Used in populateUpLadder, populateDownLadder, populateRopeHole, populateRopeCave
   private getRoomCenter(): { x: number; y: number } {

@@ -1754,29 +1754,51 @@ BigKnightEnemy.tileY = 0;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BigSkullEnemy = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-const hitWarning_1 = __webpack_require__(/*! ../../hitWarning */ "./src/hitWarning.ts");
-const coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
-const redgem_1 = __webpack_require__(/*! ../../item/redgem */ "./src/item/redgem.ts");
-const spear_1 = __webpack_require__(/*! ../../weapon/spear */ "./src/weapon/spear.ts");
 const gameConstants_1 = __webpack_require__(/*! ../../gameConstants */ "./src/gameConstants.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
-const random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
+const astarclass_1 = __webpack_require__(/*! ../../astarclass */ "./src/astarclass.ts");
+const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
+const imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ "./src/particle/imageParticle.ts");
 class BigSkullEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
         this.REGEN_TICKS = 5;
-        this.addHitWarnings = () => {
-            this.room.hitwarnings.push(new hitWarning_1.HitWarning(this.game, this.x - 1, this.y, this.x, this.y));
-            this.room.hitwarnings.push(new hitWarning_1.HitWarning(this.game, this.x - 1, this.y + 1, this.x, this.y));
-            this.room.hitwarnings.push(new hitWarning_1.HitWarning(this.game, this.x + 2, this.y, this.x, this.y));
-            this.room.hitwarnings.push(new hitWarning_1.HitWarning(this.game, this.x + 2, this.y + 1, this.x, this.y));
-            this.room.hitwarnings.push(new hitWarning_1.HitWarning(this.game, this.x, this.y - 1, this.x, this.y));
-            this.room.hitwarnings.push(new hitWarning_1.HitWarning(this.game, this.x + 1, this.y - 1, this.x, this.y));
-            this.room.hitwarnings.push(new hitWarning_1.HitWarning(this.game, this.x, this.y + 2, this.x, this.y));
-            this.room.hitwarnings.push(new hitWarning_1.HitWarning(this.game, this.x + 1, this.y + 2, this.x, this.y));
-        };
         this.hit = () => {
             return 1;
+        };
+        this.hurt = (playerHitBy, damage, type = "none") => {
+            this.handleEnemyCase(playerHitBy);
+            let hitShield = false;
+            let shieldHealth = 0;
+            if (this.shielded) {
+                shieldHealth = this.shield.health;
+                if (shieldHealth > 0) {
+                    this.shield.hurt(damage);
+                    hitShield = true;
+                }
+            }
+            this.ticksSinceFirstHit = 0;
+            if (this.health == 4)
+                this.unconscious = false;
+            this.health -= damage;
+            this.maxHealth -= shieldHealth;
+            this.startHurting();
+            this.healthBar.hurt();
+            this.createDamageNumber(damage, type);
+            this.playHitSound();
+            if (this.health == 2) {
+                this.unconscious = true;
+                imageParticle_1.ImageParticle.spawnCluster(this.room, this.x + 1, this.y + 1, 3, 28);
+            }
+            else {
+                this.healthBar.hurt();
+            }
+            if (this.health <= 0) {
+                imageParticle_1.ImageParticle.spawnCluster(this.room, this.x + 1, this.y + 1, 0, 24);
+                this.kill();
+            }
+            else
+                this.hurtCallback();
         };
         this.behavior = () => {
             this.lastX = this.x;
@@ -1784,64 +1806,81 @@ class BigSkullEnemy extends enemy_1.Enemy {
             if (!this.dead) {
                 if (this.skipNextTurns > 0) {
                     this.skipNextTurns--;
+                    this.ticks++;
                     return;
                 }
                 if (this.health <= 2) {
+                    this.unconscious = true;
                     this.ticksSinceFirstHit++;
                     if (this.ticksSinceFirstHit >= this.REGEN_TICKS) {
-                        this.health++;
-                        this.ticksSinceFirstHit = 0;
+                        this.healthBar.hurt();
+                        this.health = 4;
+                        this.unconscious = false;
                     }
                     this.ticks++;
+                    return;
                 }
-                else {
-                    this.ticks++;
-                    if (!this.seenPlayer) {
-                        let p = this.nearestPlayer();
-                        if (p !== false) {
-                            let [distance, player] = p;
-                            if (distance <= 4) {
-                                this.targetPlayer = player;
-                                this.facePlayer(player);
-                                this.seenPlayer = true;
-                                if (player === this.game.players[this.game.localPlayerID])
-                                    this.alertTicks = 1;
-                                if (this.health >= 3)
-                                    this.addHitWarnings();
+                this.ticks++;
+                if (!this.seenPlayer) {
+                    this.lookForPlayer();
+                }
+                else if (this.seenPlayer) {
+                    if (this.room.playerTicked === this.targetPlayer) {
+                        this.alertTicks = Math.max(0, this.alertTicks - 1);
+                        let oldX = this.x;
+                        let oldY = this.y;
+                        let disablePositions = Array();
+                        for (const e of this.room.entities) {
+                            if (e !== this) {
+                                // For 2x2 enemy, block all tiles the entity occupies
+                                for (let ex = 0; ex < (e.w || 1); ex++) {
+                                    for (let ey = 0; ey < (e.h || 1); ey++) {
+                                        disablePositions.push({
+                                            x: e.x + ex,
+                                            y: e.y + ey,
+                                        });
+                                    }
+                                }
                             }
                         }
-                    }
-                    else if (this.seenPlayer) {
-                        if (this.room.playerTicked === this.targetPlayer) {
-                            this.alertTicks = Math.max(0, this.alertTicks - 1);
-                            let oldX = this.x;
-                            let oldY = this.y;
-                            let moveX = this.x;
-                            let moveY = this.y;
-                            if (this.ticks % 2 === 0) {
-                                // horizontal preference
-                                if (this.targetPlayer.x >= this.x + this.w)
-                                    moveX++;
-                                else if (this.targetPlayer.x < this.x)
-                                    moveX--;
-                                else if (this.targetPlayer.y >= this.y + this.h)
-                                    moveY++;
-                                else if (this.targetPlayer.y < this.y)
-                                    moveY--;
+                        // Check for spike traps around the 2x2 area
+                        for (let xx = this.x - 1; xx <= this.x + this.w; xx++) {
+                            for (let yy = this.y - 1; yy <= this.y + this.h; yy++) {
+                                if (this.room.roomArray[xx] &&
+                                    this.room.roomArray[xx][yy] &&
+                                    this.room.roomArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
+                                    this.room.roomArray[xx][yy].on) {
+                                    disablePositions.push({ x: xx, y: yy });
+                                }
                             }
-                            else {
-                                // vertical preference
-                                if (this.targetPlayer.y >= this.y + this.h)
-                                    moveY++;
-                                else if (this.targetPlayer.y < this.y)
-                                    moveY--;
-                                else if (this.targetPlayer.x >= this.x + this.w)
-                                    moveX++;
-                                else if (this.targetPlayer.x < this.x)
-                                    moveX--;
+                        }
+                        let grid = [];
+                        for (let x = 0; x < this.room.roomX + this.room.width; x++) {
+                            grid[x] = [];
+                            for (let y = 0; y < this.room.roomY + this.room.height; y++) {
+                                if (this.room.roomArray[x] && this.room.roomArray[x][y])
+                                    grid[x][y] = this.room.roomArray[x][y];
+                                else
+                                    grid[x][y] = false;
                             }
-                            let hitPlayer = false;
-                            if (this.health >= 2.5) {
+                        }
+                        let moves = astarclass_1.astar.AStar.search(grid, this, this.targetPlayer, disablePositions, false, false, true, this.direction, undefined, undefined);
+                        if (moves.length > 0) {
+                            let moveX = moves[0].pos.x;
+                            let moveY = moves[0].pos.y;
+                            let oldDir = this.direction;
+                            let player = this.targetPlayer;
+                            this.facePlayer(player);
+                            if (moveX > oldX)
+                                this.direction = game_1.Direction.RIGHT;
+                            else if (moveX < oldX)
+                                this.direction = game_1.Direction.LEFT;
+                            else if (moveY > oldY)
+                                this.direction = game_1.Direction.DOWN;
+                            else if (moveY < oldY)
+                                this.direction = game_1.Direction.UP;
+                            if (oldDir == this.direction) {
+                                let hitPlayer = false;
                                 let wouldHit = (player, moveX, moveY) => {
                                     return (player.x >= moveX &&
                                         player.x < moveX + this.w &&
@@ -1857,48 +1896,89 @@ class BigSkullEnemy extends enemy_1.Enemy {
                                         if (this.game.players[i] ===
                                             this.game.players[this.game.localPlayerID])
                                             this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                                        hitPlayer = true;
                                     }
                                 }
-                            }
-                            if (!hitPlayer) {
-                                this.tryMove(moveX, moveY);
-                                this.drawX = this.x - oldX;
-                                this.drawY = this.y - oldY;
-                                if (this.x > oldX)
-                                    this.direction = game_1.Direction.RIGHT;
-                                else if (this.x < oldX)
-                                    this.direction = game_1.Direction.LEFT;
-                                else if (this.y > oldY)
-                                    this.direction = game_1.Direction.DOWN;
-                                else if (this.y < oldY)
-                                    this.direction = game_1.Direction.UP;
-                            }
-                            if (this.health < this.maxHealth) {
-                                this.ticksSinceFirstHit++;
-                                if (this.ticksSinceFirstHit >= this.REGEN_TICKS) {
-                                    this.health++;
-                                    this.ticksSinceFirstHit = 0;
+                                if (!hitPlayer) {
+                                    this.tryMove(moveX, moveY);
+                                    this.setDrawXY(oldX, oldY);
+                                    if (this.x > oldX)
+                                        this.direction = game_1.Direction.RIGHT;
+                                    else if (this.x < oldX)
+                                        this.direction = game_1.Direction.LEFT;
+                                    else if (this.y > oldY)
+                                        this.direction = game_1.Direction.DOWN;
+                                    else if (this.y < oldY)
+                                        this.direction = game_1.Direction.UP;
                                 }
                             }
-                            if (this.health >= 2.5)
-                                this.addHitWarnings();
                         }
-                        let targetPlayerOffline = Object.values(this.game.offlinePlayers).indexOf(this.targetPlayer) !== -1;
-                        if (!this.aggro || targetPlayerOffline) {
-                            let p = this.nearestPlayer();
-                            if (p !== false) {
-                                let [distance, player] = p;
-                                if (distance <= 4 &&
-                                    (targetPlayerOffline ||
-                                        distance < this.playerDistance(this.targetPlayer))) {
-                                    if (player !== this.targetPlayer) {
-                                        this.targetPlayer = player;
-                                        this.facePlayer(player);
-                                        if (player === this.game.players[this.game.localPlayerID])
-                                            this.alertTicks = 1;
-                                        if (this.health >= 3)
-                                            this.addHitWarnings();
-                                    }
+                        // Add directional disable positions for forward-only attack
+                        if (this.direction == game_1.Direction.LEFT) {
+                            for (let i = 0; i < this.h; i++) {
+                                disablePositions.push({
+                                    x: this.x,
+                                    y: this.y + i + 1,
+                                });
+                                disablePositions.push({
+                                    x: this.x,
+                                    y: this.y + i - 1,
+                                });
+                            }
+                        }
+                        if (this.direction == game_1.Direction.RIGHT) {
+                            for (let i = 0; i < this.h; i++) {
+                                disablePositions.push({
+                                    x: this.x + this.w - 1,
+                                    y: this.y + i + 1,
+                                });
+                                disablePositions.push({
+                                    x: this.x + this.w - 1,
+                                    y: this.y + i - 1,
+                                });
+                            }
+                        }
+                        if (this.direction == game_1.Direction.DOWN) {
+                            for (let i = 0; i < this.w; i++) {
+                                disablePositions.push({
+                                    x: this.x + i + 1,
+                                    y: this.y + this.h - 1,
+                                });
+                                disablePositions.push({
+                                    x: this.x + i - 1,
+                                    y: this.y + this.h - 1,
+                                });
+                            }
+                        }
+                        if (this.direction == game_1.Direction.UP) {
+                            for (let i = 0; i < this.w; i++) {
+                                disablePositions.push({
+                                    x: this.x + i + 1,
+                                    y: this.y,
+                                });
+                                disablePositions.push({
+                                    x: this.x + i - 1,
+                                    y: this.y,
+                                });
+                            }
+                        }
+                        this.makeBigHitWarnings();
+                    }
+                    let targetPlayerOffline = Object.values(this.game.offlinePlayers).indexOf(this.targetPlayer) !==
+                        -1;
+                    if (!this.aggro || targetPlayerOffline) {
+                        let p = this.nearestPlayer();
+                        if (p !== false) {
+                            let [distance, player] = p;
+                            if (distance <= 4 &&
+                                (targetPlayerOffline ||
+                                    distance < this.playerDistance(this.targetPlayer))) {
+                                if (player !== this.targetPlayer) {
+                                    this.targetPlayer = player;
+                                    this.facePlayer(player);
+                                    if (player === this.game.players[this.game.localPlayerID])
+                                        this.alertTicks = 1;
+                                    this.makeBigHitWarnings();
                                 }
                             }
                         }
@@ -1915,7 +1995,7 @@ class BigSkullEnemy extends enemy_1.Enemy {
                 this.updateDrawXY(delta);
                 this.tileX = 21;
                 this.tileY = 0;
-                if (this.health === 3) {
+                if (this.health <= 3) {
                     this.tileX = 21;
                     this.tileY = 4;
                     if (this.ticksSinceFirstHit >= 3) {
@@ -1925,7 +2005,7 @@ class BigSkullEnemy extends enemy_1.Enemy {
                         }
                     }
                 }
-                else if (this.health === 2) {
+                if (this.health <= 2) {
                     this.tileX = 21;
                     this.tileY = 8;
                     if (this.ticksSinceFirstHit >= 3) {
@@ -1935,7 +2015,7 @@ class BigSkullEnemy extends enemy_1.Enemy {
                         }
                     }
                 }
-                else if (this.health === 1) {
+                if (this.health <= 1 || this.cloned) {
                     this.tileX = 21;
                     this.tileY = 12;
                     if (this.ticksSinceFirstHit >= 3) {
@@ -1990,6 +2070,7 @@ class BigSkullEnemy extends enemy_1.Enemy {
         this.tileY = 0;
         this.seenPlayer = false;
         this.aggro = false;
+        this.unconscious = false;
         this.ticksSinceFirstHit = 0;
         this.flashingFrame = 0;
         this.deathParticleColor = "#ffffff";
@@ -1997,20 +2078,12 @@ class BigSkullEnemy extends enemy_1.Enemy {
         this.name = "giant skeleton";
         this.dropChance = 1;
         this.drops = [];
+        this.direction = game_1.Direction.DOWN;
+        this.forwardOnlyAttack = true;
         if (drop)
             this.drops.push(drop);
         while (this.drops.length < 4) {
-            let dropProb = random_1.Random.rand();
-            if (dropProb < 0.005)
-                this.drops.push(new spear_1.Spear(this.room, this.x, this.y));
-            else if (dropProb < 0.04)
-                this.drops.push(new redgem_1.RedGem(this.room, this.x, this.y));
-            else if (dropProb < 0.075)
-                this.drops.push(new redgem_1.RedGem(this.room, this.x, this.y));
-            else if (dropProb < 0.1)
-                this.drops.push(new redgem_1.RedGem(this.room, this.x, this.y));
-            else
-                this.drops.push(new coin_1.Coin(this.room, this.x, this.y));
+            this.getDrop();
         }
     }
 }
@@ -2018,6 +2091,269 @@ exports.BigSkullEnemy = BigSkullEnemy;
 BigSkullEnemy.difficulty = 4;
 BigSkullEnemy.tileX = 21;
 BigSkullEnemy.tileY = 0;
+
+
+/***/ }),
+
+/***/ "./src/entity/enemy/bigZombieEnemy.ts":
+/*!********************************************!*\
+  !*** ./src/entity/enemy/bigZombieEnemy.ts ***!
+  \********************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BigZombieEnemy = void 0;
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const astarclass_1 = __webpack_require__(/*! ../../astarclass */ "./src/astarclass.ts");
+const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
+const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
+class BigZombieEnemy extends enemy_1.Enemy {
+    constructor(room, game, x, y, drop) {
+        super(room, game, x, y);
+        this.hit = () => {
+            return 1;
+        };
+        this.behavior = () => {
+            // Store the current position
+            this.lastX = this.x;
+            this.lastY = this.y;
+            // If the enemy is not dead
+            if (!this.dead) {
+                // Skip turns if necessary
+                if (this.skipNextTurns > 0) {
+                    this.skipNextTurns--;
+                    return;
+                }
+                // Increment the tick counter
+                this.ticks++;
+                // If the enemy has not seen the player yet
+                if (!this.seenPlayer)
+                    this.lookForPlayer();
+                else if (this.seenPlayer) {
+                    // If the target player has taken their turn
+                    if (this.room.playerTicked === this.targetPlayer) {
+                        // Decrement alert ticks
+                        this.alertTicks = Math.max(0, this.alertTicks - 1);
+                        // Store the old position
+                        let oldX = this.x;
+                        let oldY = this.y;
+                        // Create a list of positions to avoid
+                        let disablePositions = Array();
+                        for (const e of this.room.entities) {
+                            if (e !== this) {
+                                // For 2x2 entity, block all positions the entity occupies
+                                for (let dx = 0; dx < e.w; dx++) {
+                                    for (let dy = 0; dy < e.h; dy++) {
+                                        disablePositions.push({
+                                            x: e.x + dx,
+                                            y: e.y + dy,
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                        // Check spike traps in a larger area for 2x2 entity
+                        for (let xx = this.x - 1; xx <= this.x + this.w; xx++) {
+                            for (let yy = this.y - 1; yy <= this.y + this.h; yy++) {
+                                if (this.room.roomArray[xx] &&
+                                    this.room.roomArray[xx][yy] &&
+                                    this.room.roomArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
+                                    this.room.roomArray[xx][yy].on) {
+                                    disablePositions.push({ x: xx, y: yy });
+                                }
+                            }
+                        }
+                        // Create a grid of the room
+                        let grid = [];
+                        for (let x = 0; x < this.room.roomX + this.room.width; x++) {
+                            grid[x] = [];
+                            for (let y = 0; y < this.room.roomY + this.room.height; y++) {
+                                if (this.room.roomArray[x] && this.room.roomArray[x][y])
+                                    grid[x][y] = this.room.roomArray[x][y];
+                                else
+                                    grid[x][y] = false;
+                            }
+                        }
+                        // Find a path to the target player
+                        let moves = astarclass_1.astar.AStar.search(grid, this, this.targetPlayer, disablePositions, false, false, true, this.direction);
+                        // If there are moves available
+                        if (moves.length > 0) {
+                            let moveX = moves[0].pos.x;
+                            let moveY = moves[0].pos.y;
+                            let oldDir = this.direction;
+                            let player = this.targetPlayer;
+                            // Face the target player
+                            this.facePlayer(player);
+                            // Determine the new direction based on the move
+                            if (moveX > oldX)
+                                this.direction = game_1.Direction.RIGHT;
+                            else if (moveX < oldX)
+                                this.direction = game_1.Direction.LEFT;
+                            else if (moveY > oldY)
+                                this.direction = game_1.Direction.DOWN;
+                            else if (moveY < oldY)
+                                this.direction = game_1.Direction.UP;
+                            // If the direction hasn't changed, attempt to move or attack
+                            if (oldDir == this.direction) {
+                                let hitPlayer = false;
+                                for (const i in this.game.players) {
+                                    if (this.game.rooms[this.game.players[i].levelID] === this.room) {
+                                        // Check if player is within any of the 2x2 positions we're moving to
+                                        let playerHit = false;
+                                        for (let dx = 0; dx < this.w; dx++) {
+                                            for (let dy = 0; dy < this.h; dy++) {
+                                                if (this.game.players[i].x === moveX + dx &&
+                                                    this.game.players[i].y === moveY + dy) {
+                                                    playerHit = true;
+                                                    break;
+                                                }
+                                            }
+                                            if (playerHit)
+                                                break;
+                                        }
+                                        if (playerHit) {
+                                            this.game.players[i].hurt(this.hit(), this.name);
+                                            this.drawX = 0.5 * (this.x - this.game.players[i].x);
+                                            this.drawY = 0.5 * (this.y - this.game.players[i].y);
+                                            if (this.game.players[i] ===
+                                                this.game.players[this.game.localPlayerID])
+                                                this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                                            hitPlayer = true;
+                                        }
+                                    }
+                                }
+                                if (!hitPlayer) {
+                                    // Move to the new position
+                                    this.tryMove(moveX, moveY);
+                                    this.setDrawXY(oldX, oldY);
+                                    if (this.x > oldX)
+                                        this.direction = game_1.Direction.RIGHT;
+                                    else if (this.x < oldX)
+                                        this.direction = game_1.Direction.LEFT;
+                                    else if (this.y > oldY)
+                                        this.direction = game_1.Direction.DOWN;
+                                    else if (this.y < oldY)
+                                        this.direction = game_1.Direction.UP;
+                                }
+                            }
+                        }
+                        // Add positions to avoid based on the current direction
+                        if (this.direction == game_1.Direction.LEFT) {
+                            disablePositions.push({
+                                x: this.x,
+                                y: this.y + 1,
+                            });
+                            disablePositions.push({
+                                x: this.x,
+                                y: this.y - 1,
+                            });
+                        }
+                        if (this.direction == game_1.Direction.RIGHT) {
+                            disablePositions.push({
+                                x: this.x,
+                                y: this.y + 1,
+                            });
+                            disablePositions.push({
+                                x: this.x,
+                                y: this.y - 1,
+                            });
+                        }
+                        if (this.direction == game_1.Direction.DOWN) {
+                            disablePositions.push({
+                                x: this.x + 1,
+                                y: this.y,
+                            });
+                            disablePositions.push({
+                                x: this.x - 1,
+                                y: this.y,
+                            });
+                        }
+                        if (this.direction == game_1.Direction.UP) {
+                            disablePositions.push({
+                                x: this.x + 1,
+                                y: this.y,
+                            });
+                            disablePositions.push({
+                                x: this.x - 1,
+                                y: this.y,
+                            });
+                        }
+                        // Make hit warnings
+                        this.makeBigHitWarnings();
+                    }
+                    // Check if the target player is offline
+                    let targetPlayerOffline = Object.values(this.game.offlinePlayers).indexOf(this.targetPlayer) !==
+                        -1;
+                    // If the enemy is not aggro or the target player is offline, find a new target player
+                    if (!this.aggro || targetPlayerOffline) {
+                        let p = this.nearestPlayer();
+                        if (p !== false) {
+                            let [distance, player] = p;
+                            if (distance <= 4 &&
+                                (targetPlayerOffline ||
+                                    distance < this.playerDistance(this.targetPlayer))) {
+                                if (player !== this.targetPlayer) {
+                                    this.targetPlayer = player;
+                                    this.facePlayer(player);
+                                    if (player === this.game.players[this.game.localPlayerID])
+                                        this.alertTicks = 1;
+                                    this.makeBigHitWarnings();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        };
+        this.draw = (delta) => {
+            if (this.dead)
+                return;
+            //this.updateShadeColor(delta);
+            game_1.Game.ctx.globalAlpha = this.alpha;
+            this.updateDrawXY(delta);
+            this.frame += 0.1 * delta;
+            if (this.frame >= 4)
+                this.frame = 0;
+            if (this.hasShadow)
+                game_1.Game.drawMob(0, 0, 2, 2, this.x - this.drawX, this.y - this.drawY, 2, 2, this.shadeColor, this.shadeAmount());
+            game_1.Game.drawMob(this.tileX, // + Math.floor(this.frame),
+            this.tileY + this.direction * 3, 2, 3, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 2, 3, this.softShadeColor, this.shadeAmount());
+            if (!this.cloned) {
+                if (!this.seenPlayer) {
+                    this.drawSleepingZs(delta);
+                }
+                if (this.alertTicks > 0) {
+                    this.drawExclamation(delta);
+                }
+            }
+            game_1.Game.ctx.globalAlpha = 1;
+        };
+        this.w = 2;
+        this.h = 2;
+        this.ticks = 0;
+        this.frame = 0;
+        this.health = 1;
+        this.maxHealth = 1;
+        this.tileX = 31;
+        this.tileY = 12;
+        this.seenPlayer = false;
+        this.aggro = false;
+        this.dir = game_1.Direction.DOWN;
+        this.name = "bigzombie";
+        this.forwardOnlyAttack = true;
+        this.drawMoveSpeed = 0.2;
+        this.jumpHeight = 0.35;
+        this.drawYOffset = 1.5;
+        if (drop)
+            this.drop = drop;
+        this.getDrop(["consumable", "gem", "tool", "coin"]);
+    }
+}
+exports.BigZombieEnemy = BigZombieEnemy;
+BigZombieEnemy.difficulty = 1;
+BigZombieEnemy.tileX = 21;
+BigZombieEnemy.tileY = 0;
 
 
 /***/ }),
@@ -6625,7 +6961,27 @@ class Entity extends drawable_1.Drawable {
                 return { x: this.x, y: this.y };
             return { x, y };
         };
-        this.makeHitWarnings = () => {
+        this.makeBigHitWarnings = () => {
+            switch (this.direction) {
+                case game_1.Direction.LEFT:
+                    this.makeHitWarnings(this.x, this.y);
+                    this.makeHitWarnings(this.x, this.y + 1);
+                    break;
+                case game_1.Direction.RIGHT:
+                    this.makeHitWarnings(this.x + 1, this.y);
+                    this.makeHitWarnings(this.x + 1, this.y + 1);
+                    break;
+                case game_1.Direction.UP:
+                    this.makeHitWarnings(this.x, this.y);
+                    this.makeHitWarnings(this.x + 1, this.y);
+                    break;
+                case game_1.Direction.DOWN:
+                    this.makeHitWarnings(this.x, this.y + 1);
+                    this.makeHitWarnings(this.x + 1, this.y + 1);
+                    break;
+            }
+        };
+        this.makeHitWarnings = (hx = this.x, hy = this.y) => {
             const cullFactor = 0.45;
             const player = this.getPlayer();
             const orthogonal = this.orthogonalAttack;
@@ -6674,16 +7030,16 @@ class Entity extends drawable_1.Drawable {
                 .map(([dx, dy]) => ({
                 x: dx,
                 y: dy,
-                distance: utils_1.Utils.distance(dx, dy, player.x - this.x, player.y - this.y),
+                distance: utils_1.Utils.distance(dx, dy, player.x - hx, player.y - hy),
             }))
                 .sort((a, b) => a.distance - b.distance);
             const keepCount = Math.ceil(warningCoordinates.length * (1 - cullFactor));
             const culledWarnings = warningCoordinates.slice(0, keepCount);
             culledWarnings.forEach(({ x, y }) => {
-                const targetX = this.x + x;
-                const targetY = this.y + y;
+                const targetX = hx + x;
+                const targetY = hy + y;
                 if (this.isWithinRoomBounds(targetX, targetY)) {
-                    const hitWarning = new hitWarning_1.HitWarning(this.game, targetX, targetY, this.x, this.y, true, false, this);
+                    const hitWarning = new hitWarning_1.HitWarning(this.game, targetX, targetY, hx, hy, true, false, this);
                     this.room.hitwarnings.push(hitWarning);
                     //this.hitWarnings.push(hitWarning);
                 }
@@ -18354,6 +18710,7 @@ const armoredSkullEnemy_1 = __webpack_require__(/*! ../entity/enemy/armoredSkull
 const mummyEnemy_1 = __webpack_require__(/*! ../entity/enemy/mummyEnemy */ "./src/entity/enemy/mummyEnemy.ts");
 const spiderEnemy_1 = __webpack_require__(/*! ../entity/enemy/spiderEnemy */ "./src/entity/enemy/spiderEnemy.ts");
 const roomBuilder_1 = __webpack_require__(/*! ./roomBuilder */ "./src/room/roomBuilder.ts");
+const bigZombieEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigZombieEnemy */ "./src/entity/enemy/bigZombieEnemy.ts");
 // #endregion
 // #region Enums & Interfaces
 /**
@@ -18381,6 +18738,7 @@ var EnemyType;
     EnemyType["armoredskull"] = "armoredskull";
     EnemyType["mummy"] = "mummy";
     EnemyType["spider"] = "spider";
+    EnemyType["bigzombie"] = "bigzombie";
     // Add other enemy types here
 })(EnemyType = exports.EnemyType || (exports.EnemyType = {}));
 /**
@@ -18407,6 +18765,7 @@ exports.EnemyTypeMap = {
     [EnemyType.armoredskull]: armoredSkullEnemy_1.ArmoredSkullEnemy,
     [EnemyType.mummy]: mummyEnemy_1.MummyEnemy,
     [EnemyType.spider]: spiderEnemy_1.SpiderEnemy,
+    [EnemyType.bigzombie]: bigZombieEnemy_1.BigZombieEnemy,
     // Add other enemy mappings here
 };
 var RoomType;
@@ -18527,7 +18886,18 @@ class Room {
                 // console.log(`No tiles left to spawn enemies.`);
                 return;
             }
-            const { x, y } = this.getRandomEmptyPosition(tiles);
+            let position = this.getRandomEmptyPosition(tiles);
+            if (!position) {
+                return;
+            }
+            let { x, y } = position;
+            if (enemyType === EnemyType.bigzombie) {
+                position = this.getBigRandomEmptyPosition(tiles);
+                if (!position) {
+                    return;
+                }
+                ({ x, y } = position);
+            }
             EnemyClass.add(this, this.game, x, y);
         };
         this.addNewSpawner = (enemyType) => {
@@ -20751,14 +21121,20 @@ class Room {
     getBigRandomEmptyPosition(tiles) {
         if (tiles.length === 0)
             return null;
-        tiles = tiles.filter((t) => {
-            this.getTile(t.x + 1, t.y + 1).isSolid() &&
-                this.getTile(t.x, t.y + 1).isSolid() &&
-                this.getTile(t.x + 1, t.y).isSolid() &&
-                this.getTile(t.x, t.y).isSolid();
+        // Create a set for O(1) lookup of tile coordinates
+        const tileSet = new Set(tiles.map((t) => `${t.x},${t.y}`));
+        // Find all tiles that can be the top-left corner of a 2x2 patch
+        const bigTilePositions = tiles.filter((t) => {
+            // Check if this tile and the 3 adjacent tiles (right, below, diagonal) are all empty
+            return (tileSet.has(`${t.x + 1},${t.y}`) && // right
+                tileSet.has(`${t.x},${t.y + 1}`) && // below
+                tileSet.has(`${t.x + 1},${t.y + 1}`)); // diagonal
         });
-        const tile = tiles.splice(game_1.Game.rand(0, tiles.length - 1, random_1.Random.rand), 1)[0];
-        return { x: tile.x, y: tile.y };
+        if (bigTilePositions.length === 0)
+            return null;
+        // Randomly select one of the valid 2x2 positions
+        const selectedTile = bigTilePositions[game_1.Game.rand(0, bigTilePositions.length - 1, random_1.Random.rand)];
+        return { x: selectedTile.x, y: selectedTile.y };
     }
     // Used in populateUpLadder, populateDownLadder, populateRopeHole, populateRopeCave
     getRoomCenter() {
@@ -23140,9 +23516,9 @@ class Greataxe extends weapon_1.Weapon {
         this.hitDelay = 225;
         this.offsetY = 0;
         this.iconOffset = 0.2;
-        this.durability = 10;
-        this.durabilityMax = 10;
-        this.useCost = 10;
+        this.durability = 25;
+        this.durabilityMax = 25;
+        this.useCost = 5;
     }
 }
 exports.Greataxe = Greataxe;
