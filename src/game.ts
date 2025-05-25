@@ -1636,6 +1636,7 @@ export class Game {
   };
 
   private handleWindowBlur = () => {
+    return;
     // Start a timeout when window loses focus
     this.focusTimeout = window.setTimeout(() => {
       // Store current state
@@ -1644,7 +1645,7 @@ export class Game {
 
       // Mute audio and pause game
       Sound.audioMuted = true;
-      this.started = false;
+      //this.started = false;
       this.paused = true;
 
       // Optional: Show a message in chat

@@ -156,8 +156,7 @@ export class Shotgun extends Weapon {
       //this.game.levels[this.wielder.levelID].particles.push(new SlashParticle(newX2, newY2));
       //this.game.levels[this.wielder.levelID].particles.push(new SlashParticle(newX3, newY3));
       this.game.rooms[this.wielder.levelID].tick(this.wielder);
-      if (this.wielder === this.game.players[this.game.localPlayerID])
-        this.game.shakeScreen(10 * this.wielder.hitX, 10 * this.wielder.hitY);
+      this.shakeScreen(newX * 10, newY * 10);
       this.degrade();
 
       return false;

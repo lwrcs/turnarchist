@@ -133,10 +133,7 @@ export class Slingshot extends Weapon {
       //if they're closer do the usual damage
       //hits all candidates in enemyHitCandidates
 
-      if (
-        this.wielder.game.rooms[this.wielder.levelID] === this.wielder.game.room
-      )
-        Sound.hit();
+      this.hitSound();
       this.wielder.setHitXY(newX, newY);
 
       GenericParticle.shotgun(
@@ -173,8 +170,7 @@ export class Slingshot extends Weapon {
       //this.game.levels[this.wielder.levelID].particles.push(new SlashParticle(newX2, newY2));
       //this.game.levels[this.wielder.levelID].particles.push(new SlashParticle(newX3, newY3));
       this.game.rooms[this.wielder.levelID].tick(this.wielder);
-      if (this.wielder === this.game.players[this.game.localPlayerID])
-        this.game.shakeScreen(10 * this.wielder.hitX, 10 * this.wielder.hitY);
+      this.shakeScreen(newX * 10, newY * 10);
 
       return false;
     }

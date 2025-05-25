@@ -7266,15 +7266,11 @@ exports.Block = void 0;
 const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
-const imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ "./src/particle/imageParticle.ts");
 const sound_1 = __webpack_require__(/*! ../../sound */ "./src/sound.ts");
 const geode_1 = __webpack_require__(/*! ../../item/geode */ "./src/item/geode.ts");
 class Block extends entity_1.Entity {
     constructor(room, game, x, y) {
         super(room, game, x, y);
-        this.uniqueKillBehavior = () => {
-            imageParticle_1.ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, this.imageParticleX, this.imageParticleY);
-        };
         this.draw = (delta) => {
             if (this.dead)
                 return;
@@ -9385,6 +9381,7 @@ class Game {
             this.screenShakeActive = false;
         };
         this.handleWindowBlur = () => {
+            return;
             // Start a timeout when window loses focus
             this.focusTimeout = window.setTimeout(() => {
                 // Store current state
@@ -9392,7 +9389,7 @@ class Game {
                 this.wasStarted = this.started;
                 // Mute audio and pause game
                 sound_1.Sound.audioMuted = true;
-                this.started = false;
+                //this.started = false;
                 this.paused = true;
                 // Optional: Show a message in chat
                 this.pushMessage("Game paused - window inactive");
@@ -23730,8 +23727,7 @@ class Shotgun extends weapon_1.Weapon {
                 //this.game.levels[this.wielder.levelID].particles.push(new SlashParticle(newX2, newY2));
                 //this.game.levels[this.wielder.levelID].particles.push(new SlashParticle(newX3, newY3));
                 this.game.rooms[this.wielder.levelID].tick(this.wielder);
-                if (this.wielder === this.game.players[this.game.localPlayerID])
-                    this.game.shakeScreen(10 * this.wielder.hitX, 10 * this.wielder.hitY);
+                this.shakeScreen(newX * 10, newY * 10);
                 this.degrade();
                 return false;
             }
@@ -23758,7 +23754,6 @@ Shotgun.itemName = "shotgun";
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Spear = void 0;
 const weapon_1 = __webpack_require__(/*! ./weapon */ "./src/weapon/weapon.ts");
-const sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
 const attackAnimation_1 = __webpack_require__(/*! ../particle/attackAnimation */ "./src/particle/attackAnimation.ts");
 class Spear extends weapon_1.Weapon {
     constructor(level, x, y) {
@@ -23804,14 +23799,14 @@ class Spear extends weapon_1.Weapon {
                 return false;
             }
             if (flag) {
-                if (this.wielder.game.room === this.wielder.game.rooms[this.wielder.levelID])
-                    sound_1.Sound.hit();
+                this.hitSound();
                 this.wielder.setHitXY(newX, newY);
                 this.shakeScreen(newX, newY);
                 this.game.rooms[this.wielder.levelID].particles.push(new attackAnimation_1.AttackAnimation(newX, newY, "spear", this.wielder.direction));
                 this.game.rooms[this.wielder.levelID].tick(this.wielder);
-                if (this.wielder === this.game.players[this.game.localPlayerID])
-                    this.game.shakeScreen(10 * this.wielder.hitX, 10 * this.wielder.hitY);
+                //if (this.wielder === this.game.players[this.game.localPlayerID])
+                //  this.game.shakeScreen(10 * this.wielder.hitX, 10 * this.wielder.hitY);
+                this.shakeScreen(newX * 10, newY * 10);
                 this.degrade();
             }
             return !flag;
@@ -23913,12 +23908,10 @@ class Spellbook extends weapon_1.Weapon {
                 }
             }
             if (flag) {
-                if (this.wielder.game.rooms[this.wielder.levelID] === this.wielder.game.room)
-                    sound_1.Sound.hit();
+                this.hitSound();
                 this.wielder.setHitXY(newX, newY);
                 this.game.rooms[this.wielder.levelID].tick(this.wielder);
-                if (this.wielder === this.game.players[this.game.localPlayerID])
-                    this.game.shakeScreen(10 * this.wielder.hitX, 10 * this.wielder.hitY);
+                this.shakeScreen(newX * 10, newY * 10);
                 sound_1.Sound.playMagic();
                 this.degrade();
                 setTimeout(() => {
@@ -24154,6 +24147,23 @@ class Weapon extends equippable_1.Equippable {
         this.statusApplicationCount = 0;
         this.equipTick = true;
         this.name = this.constructor.prototype.itemName;
+    }
+    // returns true if nothing was hit, false if the player should move
+    getEntitiesAt(x, y) {
+        return this.game.rooms[this.wielder.levelID].entities.filter((e) => e.destroyable && e.pointIn(x, y));
+    }
+    hitEntitiesAt(x, y) {
+        const entities = this.getEntitiesAt(x, y).filter((e) => !e.pushable);
+        let hitSomething = false;
+        for (const entity of entities) {
+            this.attack(entity);
+            hitSomething = true;
+        }
+        return hitSomething;
+    }
+    checkForPushables(x, y) {
+        const pushables = this.getEntitiesAt(x, y).filter((e) => e.pushable);
+        return pushables.length > 0;
     }
 }
 exports.Weapon = Weapon;

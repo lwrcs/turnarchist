@@ -30,16 +30,6 @@ export class Block extends Entity {
     return EntityType.PROP;
   }
 
-  uniqueKillBehavior = () => {
-    ImageParticle.spawnCluster(
-      this.room,
-      this.x + 0.5,
-      this.y + 0.5,
-      this.imageParticleX,
-      this.imageParticleY,
-    );
-  };
-
   draw = (delta: number) => {
     if (this.dead) return;
     Game.ctx.save();

@@ -209,4 +209,27 @@ export abstract class Weapon extends Equippable {
   tick = () => {};
 
   // returns true if nothing was hit, false if the player should move
+
+  protected getEntitiesAt(x: number, y: number): Entity[] {
+    return this.game.rooms[this.wielder.levelID].entities.filter(
+      (e) => e.destroyable && e.pointIn(x, y),
+    );
+  }
+
+  protected hitEntitiesAt(x: number, y: number): boolean {
+    const entities = this.getEntitiesAt(x, y).filter((e) => !e.pushable);
+    let hitSomething = false;
+
+    for (const entity of entities) {
+      this.attack(entity);
+      hitSomething = true;
+    }
+
+    return hitSomething;
+  }
+
+  protected checkForPushables(x: number, y: number): boolean {
+    const pushables = this.getEntitiesAt(x, y).filter((e) => e.pushable);
+    return pushables.length > 0;
+  }
 }

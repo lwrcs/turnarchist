@@ -64,10 +64,8 @@ export class Spear extends Weapon {
       return false;
     }
     if (flag) {
-      if (
-        this.wielder.game.room === this.wielder.game.rooms[this.wielder.levelID]
-      )
-        Sound.hit();
+      this.hitSound();
+
       this.wielder.setHitXY(newX, newY);
       this.shakeScreen(newX, newY);
 
@@ -75,8 +73,9 @@ export class Spear extends Weapon {
         new AttackAnimation(newX, newY, "spear", this.wielder.direction),
       );
       this.game.rooms[this.wielder.levelID].tick(this.wielder);
-      if (this.wielder === this.game.players[this.game.localPlayerID])
-        this.game.shakeScreen(10 * this.wielder.hitX, 10 * this.wielder.hitY);
+      //if (this.wielder === this.game.players[this.game.localPlayerID])
+      //  this.game.shakeScreen(10 * this.wielder.hitX, 10 * this.wielder.hitY);
+      this.shakeScreen(newX * 10, newY * 10);
       this.degrade();
     }
     return !flag;
