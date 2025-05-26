@@ -6628,12 +6628,6 @@ class Entity extends drawable_1.Drawable {
             this.uniqueKillBehavior();
         };
         this.uniqueKillBehavior = () => { };
-        this.killNoBones = () => {
-            //
-            //this.dead = true;
-            //this.dropLoot();
-            this.kill();
-        };
         this.updateHurtFrame = (delta) => {
             if (this.hurting) {
                 this.hurtFrame -= delta;
@@ -8254,12 +8248,10 @@ class CoalResource extends resource_1.Resource {
         this.tileY = 0;
         this.health = 1;
         this.name = "coal";
-        if (Math.random() < 0.05) {
-            this.drop = new geode_1.Geode(this.room, this.x, this.y);
+        if (Math.random() < 0.1) {
+            this.drops.push(new geode_1.Geode(this.room, this.x, this.y));
         }
-        else {
-            this.drop = new coal_1.Coal(this.room, this.x, this.y);
-        }
+        this.drops.push(new coal_1.Coal(this.room, this.x, this.y));
     }
 }
 exports.CoalResource = CoalResource;
@@ -8278,6 +8270,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.EmeraldResource = void 0;
 const greengem_1 = __webpack_require__(/*! ../../item/greengem */ "./src/item/greengem.ts");
 const resource_1 = __webpack_require__(/*! ./resource */ "./src/entity/resource/resource.ts");
+const geode_1 = __webpack_require__(/*! ../../item/geode */ "./src/item/geode.ts");
 class EmeraldResource extends resource_1.Resource {
     constructor(room, game, x, y) {
         super(room, game, x, y);
@@ -8285,7 +8278,10 @@ class EmeraldResource extends resource_1.Resource {
         this.tileY = 0;
         this.health = 3;
         this.name = "emerald";
-        this.drop = new greengem_1.GreenGem(this.room, this.x, this.y);
+        if (Math.random() < 0.2) {
+            this.drops.push(new geode_1.Geode(this.room, this.x, this.y));
+        }
+        this.drops.push(new greengem_1.GreenGem(this.room, this.x, this.y));
     }
 }
 exports.EmeraldResource = EmeraldResource;
@@ -8312,12 +8308,10 @@ class GoldResource extends resource_1.Resource {
         this.tileY = 0;
         this.health = 2;
         this.name = "gold";
-        if (Math.random() < 0.05) {
-            this.drop = new geode_1.Geode(this.room, this.x, this.y);
+        if (Math.random() < 0.2) {
+            this.drops.push(new geode_1.Geode(this.room, this.x, this.y));
         }
-        else {
-            this.drop = new gold_1.Gold(this.room, this.x, this.y);
-        }
+        this.drops.push(new gold_1.Gold(this.room, this.x, this.y));
     }
 }
 exports.GoldResource = GoldResource;
@@ -8351,9 +8345,17 @@ class Resource extends entity_1.Entity {
                 this.kill(playerHitBy);
             }
         };
-        this.kill = (player) => {
+        this.uniqueKillBehavior = () => {
             sound_1.Sound.breakRock();
+        };
+        this.kill = (player) => {
             this.dead = true;
+            if (this.cloned)
+                return;
+            this.emitEnemyKilled();
+            const deadEntity = this.clone();
+            this.room.deadEntities.push(deadEntity);
+            this.removeLightSource(this.lightSource);
             if ((player !== null &&
                 player.inventory?.canMine()) /*player.inventory.getWeapon().canMine === true*/ ||
                 player === null) {
@@ -8365,9 +8367,15 @@ class Resource extends entity_1.Entity {
             }
         };
         this.draw = (delta) => {
+            if (this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = this.alpha;
             if (!this.dead) {
+                this.updateDrawXY(delta);
                 game_1.Game.drawObj(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - 1 - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
             }
+            game_1.Game.ctx.restore();
         };
         this.drawTopLayer = (delta) => {
             this.drawableY = this.y;
@@ -8398,7 +8406,6 @@ exports.Resource = Resource;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Rock = void 0;
-const stone_1 = __webpack_require__(/*! ../../item/stone */ "./src/item/stone.ts");
 const resource_1 = __webpack_require__(/*! ./resource */ "./src/entity/resource/resource.ts");
 const geode_1 = __webpack_require__(/*! ../../item/geode */ "./src/item/geode.ts");
 class Rock extends resource_1.Resource {
@@ -8411,12 +8418,10 @@ class Rock extends resource_1.Resource {
         this.hasShadow = false;
         this.chainPushable = false;
         this.name = "rock";
-        if (Math.random() < 0.1) {
-            this.drop = new geode_1.Geode(this.room, this.x, this.y);
+        if (Math.random() < 0.2) {
+            this.drops.push(new geode_1.Geode(this.room, this.x, this.y));
         }
-        else {
-            this.drop = new stone_1.Stone(this.room, this.x, this.y);
-        }
+        //this.drops.push(new Stone(this.room, this.x, this.y));
     }
 }
 exports.Rock = Rock;
@@ -9381,7 +9386,6 @@ class Game {
             this.screenShakeActive = false;
         };
         this.handleWindowBlur = () => {
-            return;
             // Start a timeout when window loses focus
             this.focusTimeout = window.setTimeout(() => {
                 // Store current state
@@ -9559,8 +9563,8 @@ class Game {
             this.levelState = LevelState.IN_LEVEL;
         });
         // Add focus/blur event listeners
-        window.addEventListener("blur", this.handleWindowBlur);
-        window.addEventListener("focus", this.handleWindowFocus);
+        //window.addEventListener("blur", this.handleWindowBlur);
+        //window.addEventListener("focus", this.handleWindowFocus);
     }
     setupEventListeners() {
         //console.log("Setting up event listeners");
@@ -9737,6 +9741,7 @@ const greataxe_1 = __webpack_require__(/*! ./weapon/greataxe */ "./src/weapon/gr
 const bluegem_1 = __webpack_require__(/*! ./item/bluegem */ "./src/item/bluegem.ts");
 const redgem_1 = __webpack_require__(/*! ./item/redgem */ "./src/item/redgem.ts");
 const greengem_1 = __webpack_require__(/*! ./item/greengem */ "./src/item/greengem.ts");
+const pickaxe_1 = __webpack_require__(/*! ./weapon/pickaxe */ "./src/weapon/pickaxe.ts");
 class GameConstants {
 }
 exports.GameConstants = GameConstants;
@@ -9755,7 +9760,6 @@ GameConstants.MIN_SCALE = 1;
 GameConstants.SWIPE_THRESH = 25 ** 2; // (size of swipe threshold circle)^2
 GameConstants.HOLD_THRESH = 250; // milliseconds
 GameConstants.KEY_REPEAT_TIME = 300; // millseconds
-GameConstants.MOVEMENT_DANGER_COOLDOWN = 400; // milliseconds
 GameConstants.MOVEMENT_COOLDOWN = 200; // milliseconds
 GameConstants.MOVEMENT_QUEUE_COOLDOWN = 100; // milliseconds
 GameConstants.MOVE_WITH_MOUSE = true;
@@ -9873,7 +9877,7 @@ GameConstants.STARTING_DEV_INVENTORY = [
     heart_1.Heart,
     backpack_1.Backpack,
     hammer_1.Hammer,
-    coal_1.Coal,
+    pickaxe_1.Pickaxe,
     coal_1.Coal,
     bluegem_1.BlueGem,
     redgem_1.RedGem,
@@ -14201,7 +14205,7 @@ class LevelConstants {
 exports.LevelConstants = LevelConstants;
 LevelConstants.SCREEN_W = 1;
 LevelConstants.SCREEN_H = 1;
-LevelConstants.COMPUTER_TURN_DELAY = 300; // milliseconds
+LevelConstants.COMPUTER_TURN_DELAY = 200; // milliseconds (was 300)
 LevelConstants.TURN_TIME = 3000; // milliseconds
 LevelConstants.LEVEL_TRANSITION_TIME = 300; // milliseconds
 LevelConstants.LEVEL_TRANSITION_TIME_LADDER = 1000; // milliseconds

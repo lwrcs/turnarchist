@@ -8,6 +8,7 @@ import { GreenGem } from "../../item/greengem";
 import { Resource } from "./resource";
 import { GenericParticle } from "../../particle/genericParticle";
 import { Sound } from "../../sound";
+import { Geode } from "../../item/geode";
 
 export class EmeraldResource extends Resource {
   constructor(room: Room, game: Game, x: number, y: number) {
@@ -17,6 +18,9 @@ export class EmeraldResource extends Resource {
     this.tileY = 0;
     this.health = 3;
     this.name = "emerald";
-    this.drop = new GreenGem(this.room, this.x, this.y);
+    if (Math.random() < 0.2) {
+      this.drops.push(new Geode(this.room, this.x, this.y));
+    }
+    this.drops.push(new GreenGem(this.room, this.x, this.y));
   }
 }

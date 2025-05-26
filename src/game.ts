@@ -350,8 +350,8 @@ export class Game {
     });
 
     // Add focus/blur event listeners
-    window.addEventListener("blur", this.handleWindowBlur);
-    window.addEventListener("focus", this.handleWindowFocus);
+    //window.addEventListener("blur", this.handleWindowBlur);
+    //window.addEventListener("focus", this.handleWindowFocus);
   }
 
   updateDepth = (depth: number) => {
@@ -1636,7 +1636,6 @@ export class Game {
   };
 
   private handleWindowBlur = () => {
-    return;
     // Start a timeout when window loses focus
     this.focusTimeout = window.setTimeout(() => {
       // Store current state

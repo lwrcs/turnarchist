@@ -20,10 +20,9 @@ export class Rock extends Resource {
     this.hasShadow = false;
     this.chainPushable = false;
     this.name = "rock";
-    if (Math.random() < 0.1) {
-      this.drop = new Geode(this.room, this.x, this.y);
-    } else {
-      this.drop = new Stone(this.room, this.x, this.y);
+    if (Math.random() < 0.2) {
+      this.drops.push(new Geode(this.room, this.x, this.y));
     }
+    //this.drops.push(new Stone(this.room, this.x, this.y));
   }
 }

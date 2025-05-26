@@ -536,13 +536,6 @@ export class Entity extends Drawable {
 
   uniqueKillBehavior = () => {};
 
-  killNoBones = () => {
-    //
-    //this.dead = true;
-    //this.dropLoot();
-    this.kill();
-  };
-
   updateHurtFrame = (delta: number) => {
     if (this.hurting) {
       this.hurtFrame -= delta;

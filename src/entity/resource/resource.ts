@@ -42,9 +42,19 @@ export class Resource extends Entity {
     }
   };
 
-  kill = (player?: Player) => {
+  uniqueKillBehavior = () => {
     Sound.breakRock();
+  };
+
+  kill = (player?: Player) => {
     this.dead = true;
+    if (this.cloned) return;
+
+    this.emitEnemyKilled();
+    const deadEntity = this.clone();
+    this.room.deadEntities.push(deadEntity);
+    this.removeLightSource(this.lightSource);
+
     if (
       (player !== null &&
         player.inventory?.canMine()) /*player.inventory.getWeapon().canMine === true*/ ||
@@ -60,7 +70,14 @@ export class Resource extends Entity {
   };
 
   draw = (delta: number) => {
+    if (this.dead) return;
+    Game.ctx.save();
+
+    Game.ctx.globalAlpha = this.alpha;
+
     if (!this.dead) {
+      this.updateDrawXY(delta);
+
       Game.drawObj(
         this.tileX,
         this.tileY,
@@ -74,6 +91,7 @@ export class Resource extends Entity {
         this.shadeAmount(),
       );
     }
+    Game.ctx.restore();
   };
 
   drawTopLayer = (delta: number) => {
