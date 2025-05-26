@@ -7461,19 +7461,32 @@ class Chest extends entity_1.Entity {
     constructor(room, game, x, y) {
         super(room, game, x, y);
         this.interact = (playerHitBy) => {
-            //this.healthBar.hurt();
-            this.health -= 1;
-            if (this.health === 2 && !this.opening)
+            console.log("Chest interact called with player:", playerHitBy);
+            console.log("Current chest health:", this.health);
+            console.log("Chest opening state:", this.opening);
+            if (this.health === 3 && !this.opening) {
+                console.log("Opening chest for first time");
+                this.health -= 1;
                 this.open();
-            if (this.health === 1) {
+                return;
+            }
+            if (this.health === 2) {
+                console.log("Attempting to pick up drops, current drops:", this.drops);
                 // Iterate through drops and try to pick them up
                 for (const drop of this.drops) {
+                    console.log("Attempting pickup of drop:", drop);
                     drop.onPickup(playerHitBy);
                     if (drop.pickedUp) {
+                        this.drops = this.drops.filter((d) => d !== drop);
+                        console.log("Successfully picked up drop");
                         break; // Exit the loop once an item is successfully picked up
                     }
                 }
-                this.destroyable = true;
+                if (this.drops.length === 0) {
+                    console.log("No more drops, making chest destroyable");
+                    this.health -= 1;
+                    this.destroyable = true;
+                }
             }
         };
         this.open = () => {
@@ -11400,6 +11413,8 @@ class Inventory {
         this._dragStartItem = null;
         this._dragStartSlot = null;
         this.itemEquipAnimations = new Map();
+        this.dragEndTime = Date.now();
+        this.closeTime = Date.now();
         // New state for using items on other items
         this.usingItem = null;
         this.usingItemIndex = null;
@@ -11412,11 +11427,6 @@ class Inventory {
             this.isOpen = !this.isOpen;
             if (this.isOpen)
                 this.openTime = Date.now();
-            if (!this.isOpen) {
-                this.selY = 0;
-                this.usingItem = null;
-                this.usingItemIndex = null;
-            }
         };
         this.toggleOpen = () => {
             if (this.isOpen) {
@@ -11430,6 +11440,7 @@ class Inventory {
             if (!this.isOpen)
                 return;
             this.isOpen = false;
+            this.closeTime = Date.now();
             if (this.selY > 0) {
                 this.selY = 0;
             }
@@ -12343,6 +12354,7 @@ class Inventory {
                 this.dropItem(this.grabbedItem, this._dragStartSlot);
                 this.grabbedItem = null;
                 this.items[this._dragStartSlot] = null;
+                this.dragEndTime = Date.now();
             }
             // Reset all drag/hold state
             this._isDragging = false;
@@ -17145,7 +17157,7 @@ class PlayerInputHandler {
         }
         switch (input) {
             case input_1.InputEnum.I:
-                this.player.inventory.open();
+                this.player.inventory.toggleOpen();
                 break;
             case input_1.InputEnum.Q:
                 this.player.inventory.drop();
@@ -17481,9 +17493,15 @@ class PlayerMovement {
                 return null;
         }
     }
+    inventoryClosedRecently() {
+        const timeSinceDragEnd = Date.now() - this.player.inventory.dragEndTime;
+        const timeSinceClose = Date.now() - this.player.inventory.closeTime;
+        return timeSinceDragEnd < 10 || timeSinceClose < 10;
+    }
     canMove() {
-        if (this.player.game.room.turn === room_1.TurnState.computerTurn &&
-            this.player.game.room.hasEnemyInRadius(this.player.x, this.player.y))
+        if (this.inventoryClosedRecently() ||
+            (this.player.game.room.turn === room_1.TurnState.computerTurn &&
+                this.player.game.room.hasEnemyInRadius(this.player.x, this.player.y)))
             return false;
         const now = Date.now();
         const cooldown = gameConstants_1.GameConstants.MOVEMENT_COOLDOWN;
@@ -17493,6 +17511,8 @@ class PlayerMovement {
         return false;
     }
     canQueue() {
+        if (this.inventoryClosedRecently())
+            return false;
         const now = Date.now();
         const cooldown = gameConstants_1.GameConstants.MOVEMENT_QUEUE_COOLDOWN;
         if (now - this.lastMoveTime >= cooldown) {

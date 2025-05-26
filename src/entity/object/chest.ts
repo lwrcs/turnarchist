@@ -49,19 +49,36 @@ export class Chest extends Entity {
   }
 
   interact = (playerHitBy: Player) => {
-    //this.healthBar.hurt();
-    this.health -= 1;
-    if (this.health === 2 && !this.opening) this.open();
+    console.log("Chest interact called with player:", playerHitBy);
+    console.log("Current chest health:", this.health);
+    console.log("Chest opening state:", this.opening);
 
-    if (this.health === 1) {
+    if (this.health === 3 && !this.opening) {
+      console.log("Opening chest for first time");
+      this.health -= 1;
+      this.open();
+      return;
+    }
+
+    if (this.health === 2) {
+      console.log("Attempting to pick up drops, current drops:", this.drops);
+
       // Iterate through drops and try to pick them up
       for (const drop of this.drops) {
+        console.log("Attempting pickup of drop:", drop);
         drop.onPickup(playerHitBy);
         if (drop.pickedUp) {
+          this.drops = this.drops.filter((d) => d !== drop);
+          console.log("Successfully picked up drop");
           break; // Exit the loop once an item is successfully picked up
         }
       }
-      this.destroyable = true;
+
+      if (this.drops.length === 0) {
+        console.log("No more drops, making chest destroyable");
+        this.health -= 1;
+        this.destroyable = true;
+      }
     }
   };
 

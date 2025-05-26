@@ -56,7 +56,7 @@ export class PlayerInputHandler {
 
     switch (input) {
       case InputEnum.I:
-        this.player.inventory.open();
+        this.player.inventory.toggleOpen();
         break;
       case InputEnum.Q:
         this.player.inventory.drop();

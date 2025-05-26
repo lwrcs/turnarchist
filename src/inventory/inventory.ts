@@ -47,6 +47,10 @@ export class Inventory {
   private _dragStartSlot: number | null = null;
   private itemEquipAnimations: Map<Item, number> = new Map();
 
+  dragEndTime: number = Date.now();
+
+  closeTime: number = Date.now();
+
   // New state for using items on other items
   private usingItem: Usable | null = null;
   private usingItemIndex: number | null = null;
@@ -113,11 +117,6 @@ export class Inventory {
   open = () => {
     this.isOpen = !this.isOpen;
     if (this.isOpen) this.openTime = Date.now();
-    if (!this.isOpen) {
-      this.selY = 0;
-      this.usingItem = null;
-      this.usingItemIndex = null;
-    }
   };
 
   toggleOpen = () => {
@@ -131,6 +130,7 @@ export class Inventory {
   close = () => {
     if (!this.isOpen) return;
     this.isOpen = false;
+    this.closeTime = Date.now();
     if (this.selY > 0) {
       this.selY = 0;
     }
@@ -1250,7 +1250,6 @@ export class Inventory {
     if (this._dragStartItem === null || this._isDragging) {
       return;
     }
-
     this._isDragging = true;
     this.grabbedItem = this._dragStartItem;
 
@@ -1303,6 +1302,7 @@ export class Inventory {
 
       this.grabbedItem = null;
       this.items[this._dragStartSlot] = null;
+      this.dragEndTime = Date.now();
     }
 
     // Reset all drag/hold state

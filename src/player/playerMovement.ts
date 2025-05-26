@@ -90,11 +90,17 @@ export class PlayerMovement {
         return null;
     }
   }
+  inventoryClosedRecently(): boolean {
+    const timeSinceDragEnd = Date.now() - this.player.inventory.dragEndTime;
+    const timeSinceClose = Date.now() - this.player.inventory.closeTime;
+    return timeSinceDragEnd < 10 || timeSinceClose < 10;
+  }
 
   canMove(): boolean {
     if (
-      this.player.game.room.turn === TurnState.computerTurn &&
-      this.player.game.room.hasEnemyInRadius(this.player.x, this.player.y)
+      this.inventoryClosedRecently() ||
+      (this.player.game.room.turn === TurnState.computerTurn &&
+        this.player.game.room.hasEnemyInRadius(this.player.x, this.player.y))
     )
       return false;
     const now = Date.now();
@@ -106,6 +112,7 @@ export class PlayerMovement {
   }
 
   canQueue(): boolean {
+    if (this.inventoryClosedRecently()) return false;
     const now = Date.now();
     const cooldown = GameConstants.MOVEMENT_QUEUE_COOLDOWN;
     if (now - this.lastMoveTime >= cooldown) {
