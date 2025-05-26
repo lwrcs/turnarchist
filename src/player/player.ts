@@ -715,18 +715,6 @@ export class Player extends Drawable {
     this.lastY = y;
   };
 
-  //get cancelHoldMove = () => {};
-
-  wouldHurt = (x: number, y: number) => {
-    for (let h of this.game.levels[this.depth].rooms[this.levelID]
-      .hitwarnings) {
-      if (h instanceof HitWarning && h.x == x && h.y == y) return true;
-      else {
-        return false;
-      }
-    }
-  };
-
   hurt = (damage: number, enemy: string) => {
     // Play hurt sound if in current room
     if (this.game.levels[this.depth].rooms[this.levelID] === this.game.room) {

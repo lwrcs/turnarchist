@@ -1,6 +1,7 @@
 import type { Player } from "./player";
 import { Direction } from "../game";
 import { GameConstants } from "../gameConstants";
+import { TurnState } from "../room/room";
 
 export class PlayerMovement {
   private player: Player;
@@ -91,14 +92,13 @@ export class PlayerMovement {
   }
 
   canMove(): boolean {
+    if (
+      this.player.game.room.turn === TurnState.computerTurn &&
+      this.player.game.room.hasEnemyInRadius(this.player.x, this.player.y)
+    )
+      return false;
     const now = Date.now();
     const cooldown = GameConstants.MOVEMENT_COOLDOWN;
-    /*
-    this.adjustedCooldown = cooldown - this.moveQueue.length * 25;
-    this.player.cooldownRemaining =
-      now - this.lastMoveTime / this.adjustedCooldown;
-          */
-
     if (now - this.lastMoveTime >= cooldown) {
       return true;
     }
@@ -108,10 +108,7 @@ export class PlayerMovement {
   canQueue(): boolean {
     const now = Date.now();
     const cooldown = GameConstants.MOVEMENT_QUEUE_COOLDOWN;
-
     if (now - this.lastMoveTime >= cooldown) {
-      //this.lastMoveTime = now;
-      //this.lastChangeDirectionTime = now;
       return true;
     }
     return false;
@@ -159,11 +156,13 @@ export class PlayerMovement {
     if (!this.isProcessingQueue) return;
 
     const now = Date.now();
+
     const cooldown = GameConstants.MOVEMENT_COOLDOWN;
 
     if (now - this.lastMoveTime >= cooldown) {
       if (this.moveQueue.length > 0) {
         const nextMove = this.moveQueue.shift();
+
         this.handleMoveLoop(nextMove);
         this.lastMoveTime = now;
       } else {

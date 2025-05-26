@@ -9723,12 +9723,12 @@ const candle_1 = __webpack_require__(/*! ./item/candle */ "./src/item/candle.ts"
 const coal_1 = __webpack_require__(/*! ./item/coal */ "./src/item/coal.ts");
 const godStone_1 = __webpack_require__(/*! ./item/godStone */ "./src/item/godStone.ts");
 const heart_1 = __webpack_require__(/*! ./item/heart */ "./src/item/heart.ts");
-const torch_1 = __webpack_require__(/*! ./item/torch */ "./src/item/torch.ts");
 const weaponBlood_1 = __webpack_require__(/*! ./item/weaponBlood */ "./src/item/weaponBlood.ts");
 const weaponFragments_1 = __webpack_require__(/*! ./item/weaponFragments */ "./src/item/weaponFragments.ts");
 const weaponPoison_1 = __webpack_require__(/*! ./item/weaponPoison */ "./src/item/weaponPoison.ts");
 const levelConstants_1 = __webpack_require__(/*! ./levelConstants */ "./src/levelConstants.ts");
 const dagger_1 = __webpack_require__(/*! ./weapon/dagger */ "./src/weapon/dagger.ts");
+const dualdagger_1 = __webpack_require__(/*! ./weapon/dualdagger */ "./src/weapon/dualdagger.ts");
 const spear_1 = __webpack_require__(/*! ./weapon/spear */ "./src/weapon/spear.ts");
 const spellbook_1 = __webpack_require__(/*! ./weapon/spellbook */ "./src/weapon/spellbook.ts");
 const warhammer_1 = __webpack_require__(/*! ./weapon/warhammer */ "./src/weapon/warhammer.ts");
@@ -9755,6 +9755,7 @@ GameConstants.MIN_SCALE = 1;
 GameConstants.SWIPE_THRESH = 25 ** 2; // (size of swipe threshold circle)^2
 GameConstants.HOLD_THRESH = 250; // milliseconds
 GameConstants.KEY_REPEAT_TIME = 300; // millseconds
+GameConstants.MOVEMENT_DANGER_COOLDOWN = 400; // milliseconds
 GameConstants.MOVEMENT_COOLDOWN = 200; // milliseconds
 GameConstants.MOVEMENT_QUEUE_COOLDOWN = 100; // milliseconds
 GameConstants.MOVE_WITH_MOUSE = true;
@@ -9861,7 +9862,7 @@ GameConstants.STARTING_DEV_INVENTORY = [
     dagger_1.Dagger,
     greataxe_1.Greataxe,
     warhammer_1.Warhammer,
-    torch_1.Torch,
+    dualdagger_1.DualDagger,
     godStone_1.GodStone,
     candle_1.Candle,
     spear_1.Spear,
@@ -10832,6 +10833,7 @@ class HitWarning extends drawable_1.Drawable {
         this.isEnemy = isEnemy !== undefined ? isEnemy : true;
         this.pointerOffset = this.getPointerOffset();
         this.removeOverlapping();
+        console.log("hitwarning", this.x, this.y);
     }
     getPointerDir() {
         if (this._pointerDir === null) {
@@ -16339,7 +16341,6 @@ const levelConstants_1 = __webpack_require__(/*! ../levelConstants */ "./src/lev
 const map_1 = __webpack_require__(/*! ../map */ "./src/map.ts");
 const healthbar_1 = __webpack_require__(/*! ../healthbar */ "./src/healthbar.ts");
 const drawable_1 = __webpack_require__(/*! ../drawable */ "./src/drawable.ts");
-const hitWarning_1 = __webpack_require__(/*! ../hitWarning */ "./src/hitWarning.ts");
 const item_1 = __webpack_require__(/*! ../item/item */ "./src/item/item.ts");
 const enemy_1 = __webpack_require__(/*! ../entity/enemy/enemy */ "./src/entity/enemy/enemy.ts");
 const mouseCursor_1 = __webpack_require__(/*! ../mouseCursor */ "./src/mouseCursor.ts");
@@ -16792,17 +16793,6 @@ class Player extends drawable_1.Drawable {
         this.updateLastPosition = (x, y) => {
             this.lastX = x;
             this.lastY = y;
-        };
-        //get cancelHoldMove = () => {};
-        this.wouldHurt = (x, y) => {
-            for (let h of this.game.levels[this.depth].rooms[this.levelID]
-                .hitwarnings) {
-                if (h instanceof hitWarning_1.HitWarning && h.x == x && h.y == y)
-                    return true;
-                else {
-                    return false;
-                }
-            }
         };
         this.hurt = (damage, enemy) => {
             // Play hurt sound if in current room
@@ -17394,6 +17384,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PlayerMovement = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
+const room_1 = __webpack_require__(/*! ../room/room */ "./src/room/room.ts");
 class PlayerMovement {
     constructor(player) {
         this.moveQueue = [];
@@ -17487,13 +17478,11 @@ class PlayerMovement {
         }
     }
     canMove() {
+        if (this.player.game.room.turn === room_1.TurnState.computerTurn &&
+            this.player.game.room.hasEnemyInRadius(this.player.x, this.player.y))
+            return false;
         const now = Date.now();
         const cooldown = gameConstants_1.GameConstants.MOVEMENT_COOLDOWN;
-        /*
-        this.adjustedCooldown = cooldown - this.moveQueue.length * 25;
-        this.player.cooldownRemaining =
-          now - this.lastMoveTime / this.adjustedCooldown;
-              */
         if (now - this.lastMoveTime >= cooldown) {
             return true;
         }
@@ -17503,8 +17492,6 @@ class PlayerMovement {
         const now = Date.now();
         const cooldown = gameConstants_1.GameConstants.MOVEMENT_QUEUE_COOLDOWN;
         if (now - this.lastMoveTime >= cooldown) {
-            //this.lastMoveTime = now;
-            //this.lastChangeDirectionTime = now;
             return true;
         }
         return false;
@@ -20396,6 +20383,44 @@ class Room {
         this.hasNoEnemies = () => {
             let enemies = this.entities.filter((e) => e instanceof enemy_1.Enemy);
             return enemies.length === 0 && this.lastEnemyCount > 0;
+        };
+        this.hasHitwarning = (x, y) => {
+            /*
+            for (const e of this.entities) {
+              if (e instanceof Enemy && e.x === x && e.y === y) danger += 1;
+            }
+            */
+            for (const h of this.hitwarnings) {
+                if (h.x === x && h.y === y && !h.dead)
+                    return true;
+                console.log("hitwarning", h.x, h.y);
+            }
+            return false;
+        };
+        this.hasEnemy = (x, y) => {
+            for (const e of this.entities) {
+                if (e instanceof enemy_1.Enemy && e.x === x && e.y === y)
+                    return true;
+            }
+            return false;
+        };
+        this.hasEnemyInRadius = (x, y) => {
+            const radius = 2;
+            const radiusSquared = radius * radius; // Calculate once
+            for (let dx = -radius; dx <= radius; dx++) {
+                for (let dy = -radius; dy <= radius; dy++) {
+                    // Check if point is within radius (circular check)
+                    if (dx * dx + dy * dy <= radiusSquared) {
+                        const checkX = x + dx;
+                        const checkY = y + dy;
+                        // Add bounds checking if needed
+                        if (this.hasEnemy(checkX, checkY)) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
         };
         this.checkForNoEnemies = () => {
             if (this.hasNoEnemies()) {
@@ -23461,13 +23486,12 @@ class DualDagger extends weapon_1.Weapon {
             this.firstAttack = true;
         };
         this.weaponMove = (newX, newY) => {
+            const entities = this.getEntitiesAt(newX, newY).filter((e) => !e.pushable);
             let flag = false;
-            for (let e of this.game.rooms[this.wielder.levelID].entities) {
-                if (e.destroyable && !e.pushable && e.pointIn(newX, newY)) {
-                    e.hurt(this.wielder, 1);
-                    this.statusEffect(e);
-                    flag = true;
-                }
+            for (let e of entities) {
+                this.attack(e);
+                this.statusEffect(e);
+                flag = true;
             }
             if (flag) {
                 this.hitSound();

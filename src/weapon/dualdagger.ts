@@ -26,18 +26,17 @@ export class DualDagger extends Weapon {
   };
 
   weaponMove = (newX: number, newY: number): boolean => {
+    const entities = this.getEntitiesAt(newX, newY).filter((e) => !e.pushable);
     let flag = false;
-    for (let e of this.game.rooms[this.wielder.levelID].entities) {
-      if (e.destroyable && !e.pushable && e.pointIn(newX, newY)) {
-        e.hurt(this.wielder, 1);
-        this.statusEffect(e);
 
-        flag = true;
-      }
+    for (let e of entities) {
+      this.attack(e);
+      this.statusEffect(e);
+      flag = true;
     }
+
     if (flag) {
       this.hitSound();
-
       this.wielder.setHitXY(newX, newY);
       this.shakeScreen(newX, newY);
 
@@ -55,6 +54,7 @@ export class DualDagger extends Weapon {
           ),
         );
       }
+
       this.game.rooms[this.wielder.levelID].entities = this.game.rooms[
         this.wielder.levelID
       ].entities.filter((e) => !e.dead);
@@ -62,6 +62,7 @@ export class DualDagger extends Weapon {
       if (!this.firstAttack) {
         this.game.rooms[this.wielder.levelID].tick(this.wielder);
       }
+
       if (this.wielder === this.game.players[this.game.localPlayerID])
         this.game.shakeScreen(10 * this.wielder.hitX, 10 * this.wielder.hitY);
 

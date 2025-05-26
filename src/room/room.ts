@@ -3025,6 +3025,47 @@ export class Room {
     return enemies.length === 0 && this.lastEnemyCount > 0;
   };
 
+  hasHitwarning = (x: number, y: number): boolean => {
+    /*
+    for (const e of this.entities) {
+      if (e instanceof Enemy && e.x === x && e.y === y) danger += 1;
+    }
+    */
+    for (const h of this.hitwarnings) {
+      if (h.x === x && h.y === y && !h.dead) return true;
+      console.log("hitwarning", h.x, h.y);
+    }
+    return false;
+  };
+
+  hasEnemy = (x: number, y: number): boolean => {
+    for (const e of this.entities) {
+      if (e instanceof Enemy && e.x === x && e.y === y) return true;
+    }
+    return false;
+  };
+
+  hasEnemyInRadius = (x: number, y: number): boolean => {
+    const radius = 2;
+    const radiusSquared = radius * radius; // Calculate once
+
+    for (let dx = -radius; dx <= radius; dx++) {
+      for (let dy = -radius; dy <= radius; dy++) {
+        // Check if point is within radius (circular check)
+        if (dx * dx + dy * dy <= radiusSquared) {
+          const checkX = x + dx;
+          const checkY = y + dy;
+
+          // Add bounds checking if needed
+          if (this.hasEnemy(checkX, checkY)) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  };
+
   checkForNoEnemies = () => {
     if (this.hasNoEnemies()) {
       this.doors.forEach((d) => {

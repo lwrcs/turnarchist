@@ -47,6 +47,7 @@ export class GameConstants {
   static readonly HOLD_THRESH = 250; // milliseconds
 
   static KEY_REPEAT_TIME = 300; // millseconds
+  static MOVEMENT_DANGER_COOLDOWN = 400; // milliseconds
   static MOVEMENT_COOLDOWN = 200; // milliseconds
   static MOVEMENT_QUEUE_COOLDOWN = 100; // milliseconds
   static readonly MOVE_WITH_MOUSE = true;
@@ -173,7 +174,7 @@ export class GameConstants {
     Dagger,
     Greataxe,
     Warhammer,
-    Torch,
+    DualDagger,
     GodStone,
     Candle,
     Spear,
