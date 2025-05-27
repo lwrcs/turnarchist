@@ -43,7 +43,8 @@ export class Resource extends Entity {
   };
 
   uniqueKillBehavior = () => {
-    Sound.breakRock();
+    if (this.cloned) return;
+    Sound.delayPlay(Sound.breakRock, 50);
   };
 
   kill = (player?: Player) => {
@@ -67,6 +68,7 @@ export class Resource extends Entity {
         "You break the rock, but fail to collect any material from it.",
       );
     }
+    this.uniqueKillBehavior();
   };
 
   draw = (delta: number) => {

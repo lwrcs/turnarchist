@@ -6581,7 +6581,7 @@ class Entity extends drawable_1.Drawable {
         this.handleEnemyCase = (playerHitBy) => { };
         this.playHitSound = () => {
             if (this.hitSound)
-                sound_1.Sound.delayPlay(this.hitSound, 250);
+                sound_1.Sound.delayPlay(this.hitSound, 50);
         };
         this.createHitParticles = (particleX, particleY) => {
             if (this.cloned)
@@ -7265,6 +7265,11 @@ const geode_1 = __webpack_require__(/*! ../../item/geode */ "./src/item/geode.ts
 class Block extends entity_1.Entity {
     constructor(room, game, x, y) {
         super(room, game, x, y);
+        this.uniqueKillBehavior = () => {
+            if (this.cloned)
+                return;
+            sound_1.Sound.delayPlay(sound_1.Sound.breakRock, 50);
+        };
         this.draw = (delta) => {
             if (this.dead)
                 return;
@@ -7289,7 +7294,7 @@ class Block extends entity_1.Entity {
         this.name = "block";
         this.imageParticleX = 0;
         this.imageParticleY = 25;
-        this.hitSound = sound_1.Sound.breakRock;
+        //this.hitSound = Sound.breakRock;
         if (Math.random() < 0.01)
             this.drops.push(new geode_1.Geode(this.room, this.x, this.y));
     }
@@ -7878,7 +7883,8 @@ class TombStone extends entity_1.Entity {
     constructor(room, game, x, y, skinType, drop) {
         super(room, game, x, y);
         this.uniqueKillBehavior = () => {
-            //ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 25);
+            if (this.cloned)
+                return;
             sound_1.Sound.delayPlay(sound_1.Sound.breakRock, 50);
         };
         this.onHurt = (damage = 1) => {
@@ -8359,7 +8365,9 @@ class Resource extends entity_1.Entity {
             }
         };
         this.uniqueKillBehavior = () => {
-            sound_1.Sound.breakRock();
+            if (this.cloned)
+                return;
+            sound_1.Sound.delayPlay(sound_1.Sound.breakRock, 50);
         };
         this.kill = (player) => {
             this.dead = true;
@@ -8378,6 +8386,7 @@ class Resource extends entity_1.Entity {
             else {
                 this.game.pushMessage("You break the rock, but fail to collect any material from it.");
             }
+            this.uniqueKillBehavior();
         };
         this.draw = (delta) => {
             if (this.dead)
@@ -14217,7 +14226,7 @@ class LevelConstants {
 exports.LevelConstants = LevelConstants;
 LevelConstants.SCREEN_W = 1;
 LevelConstants.SCREEN_H = 1;
-LevelConstants.COMPUTER_TURN_DELAY = 200; // milliseconds (was 300)
+LevelConstants.COMPUTER_TURN_DELAY = 250; // milliseconds (was 300)
 LevelConstants.TURN_TIME = 3000; // milliseconds
 LevelConstants.LEVEL_TRANSITION_TIME = 300; // milliseconds
 LevelConstants.LEVEL_TRANSITION_TIME_LADDER = 1000; // milliseconds
@@ -24105,8 +24114,7 @@ class Weapon extends equippable_1.Equippable {
                 this.wielder.shakeScreen(this.wielder.x, this.wielder.y, eX, eY);
         };
         this.hitSound = () => {
-            if (this.wielder.game.rooms[this.wielder.levelID] === this.wielder.game.room)
-                sound_1.Sound.hit();
+            sound_1.Sound.hit();
         };
         this.drawStatus = (x, y) => {
             if (this.status.poison || this.status.blood) {
@@ -24174,6 +24182,7 @@ class Weapon extends equippable_1.Equippable {
         const hitSomething = this.hitEntitiesAt(targetX, targetY);
         this.applyHitDelay(hitSomething);
         if (hitSomething) {
+            this.hitSound();
             this.wielder.setHitXY(targetX, targetY);
             this.attackAnimation(targetX, targetY);
             this.game.rooms[this.wielder.levelID].tick(this.wielder);

@@ -63,7 +63,7 @@ export class TombStone extends Entity {
   }
 
   uniqueKillBehavior = () => {
-    //ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 25);
+    if (this.cloned) return;
     Sound.delayPlay(Sound.breakRock, 50);
   };
 

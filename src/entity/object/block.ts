@@ -21,7 +21,7 @@ export class Block extends Entity {
     this.name = "block";
     this.imageParticleX = 0;
     this.imageParticleY = 25;
-    this.hitSound = Sound.breakRock;
+    //this.hitSound = Sound.breakRock;
     if (Math.random() < 0.01)
       this.drops.push(new Geode(this.room, this.x, this.y));
   }
@@ -29,6 +29,11 @@ export class Block extends Entity {
   get type() {
     return EntityType.PROP;
   }
+
+  uniqueKillBehavior = () => {
+    if (this.cloned) return;
+    Sound.delayPlay(Sound.breakRock, 50);
+  };
 
   draw = (delta: number) => {
     if (this.dead) return;

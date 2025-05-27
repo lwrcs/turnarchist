@@ -147,10 +147,7 @@ export abstract class Weapon extends Equippable {
   };
 
   hitSound = () => {
-    if (
-      this.wielder.game.rooms[this.wielder.levelID] === this.wielder.game.room
-    )
-      Sound.hit();
+    Sound.hit();
   };
 
   drawStatus = (x: number, y: number) => {
@@ -233,6 +230,7 @@ export abstract class Weapon extends Equippable {
     this.applyHitDelay(hitSomething);
 
     if (hitSomething) {
+      this.hitSound();
       this.wielder.setHitXY(targetX, targetY);
       this.attackAnimation(targetX, targetY);
       this.game.rooms[this.wielder.levelID].tick(this.wielder);

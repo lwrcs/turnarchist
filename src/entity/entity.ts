@@ -478,7 +478,7 @@ export class Entity extends Drawable {
   handleEnemyCase = (playerHitBy?: Player) => {};
 
   playHitSound = () => {
-    if (this.hitSound) Sound.delayPlay(this.hitSound, 250);
+    if (this.hitSound) Sound.delayPlay(this.hitSound, 50);
   };
 
   createHitParticles = (particleX?: number, particleY?: number) => {
