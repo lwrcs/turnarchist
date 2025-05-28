@@ -73,8 +73,9 @@ export class Chest extends Entity {
           break; // Exit the loop once an item is successfully picked up
         }
       }
+      const full = playerHitBy.inventory.isFull();
 
-      if (this.drops.length === 0) {
+      if (this.drops.length === 0 || full) {
         console.log("No more drops, making chest destroyable");
         this.health -= 1;
         this.destroyable = true;

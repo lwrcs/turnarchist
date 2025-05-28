@@ -7487,7 +7487,8 @@ class Chest extends entity_1.Entity {
                         break; // Exit the loop once an item is successfully picked up
                     }
                 }
-                if (this.drops.length === 0) {
+                const full = playerHitBy.inventory.isFull();
+                if (this.drops.length === 0 || full) {
                     console.log("No more drops, making chest destroyable");
                     this.health -= 1;
                     this.destroyable = true;
@@ -13316,9 +13317,21 @@ class Item extends drawable_1.Drawable {
                 this.drawableY = this.y;
                 this.alpha = 1;
                 this.pickedUp = player.inventory.addItem(this);
-                if (this.pickedUp)
+                if (this.pickedUp) {
                     this.pickupSound();
+                    this.pickupMessage();
+                }
             }
+        };
+        this.pickupMessage = () => {
+            const name = this.constructor.itemName;
+            let message = this.stackable
+                ? `You find ${this.stackCount} ${name}.`
+                : `You find a ${name}.`;
+            if (this.stackCount > 1 && this.name === "coin") {
+                message = `You find ${this.stackCount} ${name}s.`;
+            }
+            this.level.game.pushMessage(message);
         };
         this.dropFromInventory = () => {
             this.setDrawOffset();
@@ -16834,6 +16847,7 @@ class Player extends drawable_1.Drawable {
             this.lastHitBy = enemy;
             this.healthBar.hurt();
             this.renderer.flash();
+            this.enemyHurtMessage(damage, enemy);
             // Apply damage if no shield
             if (!this.hurtShield) {
                 this.health -= damage;
@@ -16844,6 +16858,9 @@ class Player extends drawable_1.Drawable {
             if (this.health <= 0 && !gameConstants_1.GameConstants.DEVELOPER_MODE) {
                 this.dead = true;
             }
+        };
+        this.enemyHurtMessage = (damage, enemy) => {
+            this.game.pushMessage(`The ${enemy} hits you for ${damage} damage.`);
         };
         this.beginSlowMotion = () => {
             this.renderer.beginSlowMotion();

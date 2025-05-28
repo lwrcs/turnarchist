@@ -732,6 +732,7 @@ export class Player extends Drawable {
     this.lastHitBy = enemy;
     this.healthBar.hurt();
     this.renderer.flash();
+    this.enemyHurtMessage(damage, enemy);
 
     // Apply damage if no shield
     if (!this.hurtShield) {
@@ -744,6 +745,10 @@ export class Player extends Drawable {
     if (this.health <= 0 && !GameConstants.DEVELOPER_MODE) {
       this.dead = true;
     }
+  };
+
+  enemyHurtMessage = (damage: number, enemy: string) => {
+    this.game.pushMessage(`The ${enemy} hits you for ${damage} damage.`);
   };
 
   beginSlowMotion = () => {

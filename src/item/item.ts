@@ -113,8 +113,24 @@ export class Item extends Drawable {
       this.drawableY = this.y;
       this.alpha = 1;
       this.pickedUp = player.inventory.addItem(this);
-      if (this.pickedUp) this.pickupSound();
+      if (this.pickedUp) {
+        this.pickupSound();
+        this.pickupMessage();
+      }
     }
+  };
+
+  pickupMessage = () => {
+    const name = (this.constructor as typeof Item).itemName;
+    let message = this.stackable
+      ? `You find ${this.stackCount} ${name}.`
+      : `You find a ${name}.`;
+
+    if (this.stackCount > 1 && this.name === "coin") {
+      message = `You find ${this.stackCount} ${name}s.`;
+    }
+
+    this.level.game.pushMessage(message);
   };
 
   dropFromInventory = () => {
