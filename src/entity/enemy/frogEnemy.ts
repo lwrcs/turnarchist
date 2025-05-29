@@ -49,7 +49,6 @@ export class FrogEnemy extends Enemy {
     this.orthogonalAttack = true;
     this.diagonalAttack = true;
     this.jumpHeight = 1;
-    this.drawMoveSpeed = 0.2;
     this.imageParticleX = 3;
     this.imageParticleY = 30;
     if (drop) this.drop = drop;
@@ -236,14 +235,12 @@ export class FrogEnemy extends Enemy {
       let j = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
       if (j > 1) {
         this.jumpDistance = 2;
-        this.drawMoveSpeed = 0.2;
       }
       this.jumpY =
         Math.sin((j / this.jumpDistance) * Math.PI) * this.jumpHeight;
       if (this.jumpY < 0.01 && this.jumpY > -0.01) {
         this.jumpY = 0;
         this.jumpDistance = 1;
-        this.drawMoveSpeed = 0.2;
       }
       if (this.jumpY > this.jumpHeight) this.jumpY = this.jumpHeight;
     }

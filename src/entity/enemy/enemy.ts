@@ -49,6 +49,7 @@ export abstract class Enemy extends Entity {
   private startTick: number;
   private poisonHitCount;
   private bleedHitCount;
+  protected alertRange;
 
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
@@ -72,11 +73,13 @@ export abstract class Enemy extends Entity {
       poison: { active: false, hitCount: 0, startTick: 0, effectTick: 0 },
       bleed: { active: false, hitCount: 0, startTick: 0, effectTick: 0 },
     };
+    this.alertRange = 4;
     this.effectStartTick = 1;
     this.startTick = 1;
     this.isEnemy = true;
     this.poisonHitCount = 0;
     this.bleedHitCount = 0;
+    this.drawMoveSpeed = 0.85; //lower is faster
     //this.getDrop(["weapon", "equipment", "consumable", "gem", "tool", "coin"]);
   }
 
@@ -217,23 +220,27 @@ export abstract class Enemy extends Entity {
 
   lookForPlayer = (face: boolean = true) => {
     if (this.seenPlayer) return;
-    let p = this.nearestPlayer();
-    if (p !== false) {
-      let [distance, player] = p;
-      if (distance <= 4) {
-        this.targetPlayer = player;
-        if (face) this.facePlayer(player);
-        this.seenPlayer = true;
-        let type = this.constructor;
-        globalEventBus.emit("EnemySeenPlayer", {
-          enemyType: this.constructor.name,
-          enemyName: this.name,
-        });
-        if (player === this.game.players[this.game.localPlayerID])
-          this.alertTicks = 1;
-        this.makeHitWarnings();
-      }
+
+    const p = this.nearestPlayer();
+    if (p === false) return;
+
+    const [distance, player] = p;
+    if (distance > this.alertRange) return;
+
+    this.targetPlayer = player;
+    if (face) this.facePlayer(player);
+    this.seenPlayer = true;
+
+    globalEventBus.emit("EnemySeenPlayer", {
+      enemyType: this.constructor.name,
+      enemyName: this.name,
+    });
+
+    if (player === this.game.players[this.game.localPlayerID]) {
+      this.alertTicks = 1;
     }
+
+    this.makeHitWarnings();
   };
 
   getDisablePositions = (): Array<astar.Position> => {
@@ -502,8 +509,8 @@ export abstract class Enemy extends Entity {
     this.animateDying(delta);
 
     if (!this.doneMoving()) {
-      this.drawX *= 0.85 ** delta;
-      this.drawY *= 0.85 ** delta;
+      this.drawX *= this.drawMoveSpeed ** delta;
+      this.drawY *= this.drawMoveSpeed ** delta;
 
       this.drawX = Math.abs(this.drawX) < 0.01 ? 0 : this.drawX;
       this.drawY = Math.abs(this.drawY) < 0.01 ? 0 : this.drawY;

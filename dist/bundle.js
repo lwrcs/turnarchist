@@ -2080,6 +2080,8 @@ class BigSkullEnemy extends enemy_1.Enemy {
         this.drops = [];
         this.direction = game_1.Direction.DOWN;
         this.forwardOnlyAttack = true;
+        this.alertRange = 10;
+        this.drawMoveSpeed = 0.9;
         if (drop)
             this.drops.push(drop);
         while (this.drops.length < 4 && !this.cloned) {
@@ -2306,6 +2308,10 @@ class BigZombieEnemy extends enemy_1.Enemy {
                 }
             }
         };
+        this.drawTopLayer = (delta) => {
+            this.drawableY = this.y;
+            this.healthBar.draw(delta, this.health, this.maxHealth, this.x + 0.5, this.y, true);
+        };
         this.draw = (delta) => {
             if (this.dead)
                 return;
@@ -2333,8 +2339,8 @@ class BigZombieEnemy extends enemy_1.Enemy {
         this.h = 2;
         this.ticks = 0;
         this.frame = 0;
-        this.health = 2;
-        this.maxHealth = 2;
+        this.health = 4;
+        this.maxHealth = 4;
         this.tileX = 31;
         this.tileY = 12;
         this.seenPlayer = false;
@@ -2343,9 +2349,10 @@ class BigZombieEnemy extends enemy_1.Enemy {
         this.name = "bigzombie";
         this.chainPushable = false;
         this.forwardOnlyAttack = true;
-        this.drawMoveSpeed = 0.2;
+        this.drawMoveSpeed = 0.9;
         this.jumpHeight = 0.35;
         this.drawYOffset = 1.5;
+        this.alertRange = 10;
         if (drop)
             this.drop = drop;
         this.getDrop(["consumable", "gem", "tool", "coin"]);
@@ -2560,7 +2567,6 @@ class BishopEnemy extends enemy_1.Enemy {
         this.aggro = false;
         this.name = "bishop";
         this.jumpHeight = 1;
-        this.drawMoveSpeed = 0.2;
         this.diagonalAttackRange = 1;
         this.diagonalAttack = true;
         this.orthogonalAttack = false;
@@ -3228,24 +3234,24 @@ class Enemy extends entity_1.Entity {
         this.lookForPlayer = (face = true) => {
             if (this.seenPlayer)
                 return;
-            let p = this.nearestPlayer();
-            if (p !== false) {
-                let [distance, player] = p;
-                if (distance <= 4) {
-                    this.targetPlayer = player;
-                    if (face)
-                        this.facePlayer(player);
-                    this.seenPlayer = true;
-                    let type = this.constructor;
-                    eventBus_1.globalEventBus.emit("EnemySeenPlayer", {
-                        enemyType: this.constructor.name,
-                        enemyName: this.name,
-                    });
-                    if (player === this.game.players[this.game.localPlayerID])
-                        this.alertTicks = 1;
-                    this.makeHitWarnings();
-                }
+            const p = this.nearestPlayer();
+            if (p === false)
+                return;
+            const [distance, player] = p;
+            if (distance > this.alertRange)
+                return;
+            this.targetPlayer = player;
+            if (face)
+                this.facePlayer(player);
+            this.seenPlayer = true;
+            eventBus_1.globalEventBus.emit("EnemySeenPlayer", {
+                enemyType: this.constructor.name,
+                enemyName: this.name,
+            });
+            if (player === this.game.players[this.game.localPlayerID]) {
+                this.alertTicks = 1;
             }
+            this.makeHitWarnings();
         };
         this.getDisablePositions = () => {
             let disablePositions = Array();
@@ -3477,8 +3483,8 @@ class Enemy extends entity_1.Entity {
             this.updateHurtFrame(delta);
             this.animateDying(delta);
             if (!this.doneMoving()) {
-                this.drawX *= 0.85 ** delta;
-                this.drawY *= 0.85 ** delta;
+                this.drawX *= this.drawMoveSpeed ** delta;
+                this.drawY *= this.drawMoveSpeed ** delta;
                 this.drawX = Math.abs(this.drawX) < 0.01 ? 0 : this.drawX;
                 this.drawY = Math.abs(this.drawY) < 0.01 ? 0 : this.drawY;
                 this.jump(delta);
@@ -3528,11 +3534,13 @@ class Enemy extends entity_1.Entity {
             poison: { active: false, hitCount: 0, startTick: 0, effectTick: 0 },
             bleed: { active: false, hitCount: 0, startTick: 0, effectTick: 0 },
         };
+        this.alertRange = 4;
         this.effectStartTick = 1;
         this.startTick = 1;
         this.isEnemy = true;
         this.poisonHitCount = 0;
         this.bleedHitCount = 0;
+        this.drawMoveSpeed = 0.85; //lower is faster
         //this.getDrop(["weapon", "equipment", "consumable", "gem", "tool", "coin"]);
     }
     get lastPlayerPos() {
@@ -3983,14 +3991,12 @@ class FrogEnemy extends enemy_1.Enemy {
                 let j = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
                 if (j > 1) {
                     this.jumpDistance = 2;
-                    this.drawMoveSpeed = 0.2;
                 }
                 this.jumpY =
                     Math.sin((j / this.jumpDistance) * Math.PI) * this.jumpHeight;
                 if (this.jumpY < 0.01 && this.jumpY > -0.01) {
                     this.jumpY = 0;
                     this.jumpDistance = 1;
-                    this.drawMoveSpeed = 0.2;
                 }
                 if (this.jumpY > this.jumpHeight)
                     this.jumpY = this.jumpHeight;
@@ -4122,7 +4128,6 @@ class FrogEnemy extends enemy_1.Enemy {
         this.orthogonalAttack = true;
         this.diagonalAttack = true;
         this.jumpHeight = 1;
-        this.drawMoveSpeed = 0.2;
         this.imageParticleX = 3;
         this.imageParticleY = 30;
         if (drop)
@@ -4560,7 +4565,6 @@ class MummyEnemy extends enemy_1.Enemy {
         this.dir = game_1.Direction.DOWN;
         this.name = "mummy";
         this.forwardOnlyAttack = true;
-        this.drawMoveSpeed = 0.2;
         this.jumpHeight = 0.35;
         if (drop)
             this.drop = drop;
@@ -4825,6 +4829,7 @@ const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts"
 class QueenEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
+        this.justHurt = false;
         this.hit = () => {
             return 1;
         };
@@ -4840,6 +4845,7 @@ class QueenEnemy extends enemy_1.Enemy {
                 }
                 this.ticks++;
                 if (!this.seenPlayer) {
+                    this.justHurt = false;
                     let p = this.nearestPlayer();
                     if (p !== false) {
                         let [distance, player] = p;
@@ -4886,7 +4892,24 @@ class QueenEnemy extends enemy_1.Enemy {
                         let moves = astarclass_1.astar.AStar.search(grid, this, this.targetPlayer, disablePositions, true, //diagonals
                         false, //diagonalsOnly
                         undefined, undefined, undefined, false);
-                        if (moves.length > 0) {
+                        if (this.justHurt) {
+                            // Calculate direction vector from player to queen
+                            let dx = this.x - this.targetPlayer.x;
+                            let dy = this.y - this.targetPlayer.y;
+                            // Normalize the direction vector
+                            let length = Math.sqrt(dx * dx + dy * dy);
+                            if (length > 0) {
+                                dx = Math.round(dx / length);
+                                dy = Math.round(dy / length);
+                            }
+                            // Move one square away from player
+                            let retreatX = this.x + dx;
+                            let retreatY = this.y + dy;
+                            this.tryMove(retreatX, retreatY);
+                            this.setDrawXY(oldX, oldY);
+                            this.justHurt = false;
+                        }
+                        else if (moves.length > 0) {
                             disablePositions.push({ x: oldX + 1, y: oldY });
                             disablePositions.push({ x: oldX - 1, y: oldY });
                             disablePositions.push({ x: oldX, y: oldY + 1 });
@@ -4937,14 +4960,9 @@ class QueenEnemy extends enemy_1.Enemy {
             }
         };
         this.onHurt = () => {
-            /*
             if (this.health > 0) {
-              this.tryMove(this.lastX, this.lastY);
-              this.setDrawXY(this.lastX, this.lastY);
-              this.makeHitWarnings();
-              this.skipNextTurns = 2;
+                this.justHurt = true;
             }
-            */
         };
         this.jump = (delta) => {
             let j = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
@@ -6358,7 +6376,6 @@ class ZombieEnemy extends enemy_1.Enemy {
         this.dir = game_1.Direction.DOWN;
         this.name = "zombie";
         this.forwardOnlyAttack = true;
-        this.drawMoveSpeed = 0.2;
         this.jumpHeight = 0.35;
         if (drop)
             this.drop = drop;
@@ -6503,8 +6520,8 @@ class Entity extends drawable_1.Drawable {
             this.updateShadeColor(delta);
             //this.updateBloom(delta);
             if (!this.doneMoving()) {
-                this.drawX *= 0.9 ** delta;
-                this.drawY *= 0.9 ** delta;
+                this.drawX *= this.drawMoveSpeed ** delta;
+                this.drawY *= this.drawMoveSpeed ** delta;
                 this.drawX = Math.abs(this.drawX) < 0.01 ? 0 : this.drawX;
                 this.drawY = Math.abs(this.drawY) < 0.01 ? 0 : this.drawY;
             }
@@ -7093,7 +7110,7 @@ class Entity extends drawable_1.Drawable {
         this.forwardOnlyAttack = false;
         this.attackRange = 1;
         this.diagonalAttackRange = 1;
-        this.drawMoveSpeed = 0.3;
+        this.drawMoveSpeed = 0.9;
         this.unconscious = false;
         this.dropChance = 0.02;
         this.isEnemy = false;
@@ -7475,24 +7492,20 @@ class Chest extends entity_1.Entity {
                 this.open();
                 return;
             }
-            if (this.health === 2) {
-                console.log("Attempting to pick up drops, current drops:", this.drops);
-                // Iterate through drops and try to pick them up
-                for (const drop of this.drops) {
-                    console.log("Attempting pickup of drop:", drop);
-                    drop.onPickup(playerHitBy);
-                    if (drop.pickedUp) {
-                        this.drops = this.drops.filter((d) => d !== drop);
-                        console.log("Successfully picked up drop");
-                        break; // Exit the loop once an item is successfully picked up
-                    }
-                }
-                const full = playerHitBy.inventory.isFull();
-                if (this.drops.length === 0 || full) {
-                    console.log("No more drops, making chest destroyable");
-                    this.health -= 1;
-                    this.destroyable = true;
-                }
+            if (this.health !== 2)
+                return;
+            // Try to pick up items
+            const pickedUpDrop = this.drops.find((drop) => {
+                drop.onPickup(playerHitBy);
+                return drop.pickedUp;
+            });
+            if (pickedUpDrop) {
+                this.drops = this.drops.filter((d) => d !== pickedUpDrop);
+            }
+            const full = playerHitBy.inventory.isFull();
+            if (this.drops.length === 0 || full) {
+                this.health -= 1;
+                this.destroyable = true;
             }
         };
         this.open = () => {

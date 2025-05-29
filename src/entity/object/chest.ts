@@ -60,26 +60,22 @@ export class Chest extends Entity {
       return;
     }
 
-    if (this.health === 2) {
-      console.log("Attempting to pick up drops, current drops:", this.drops);
+    if (this.health !== 2) return;
 
-      // Iterate through drops and try to pick them up
-      for (const drop of this.drops) {
-        console.log("Attempting pickup of drop:", drop);
-        drop.onPickup(playerHitBy);
-        if (drop.pickedUp) {
-          this.drops = this.drops.filter((d) => d !== drop);
-          console.log("Successfully picked up drop");
-          break; // Exit the loop once an item is successfully picked up
-        }
-      }
-      const full = playerHitBy.inventory.isFull();
+    // Try to pick up items
+    const pickedUpDrop = this.drops.find((drop) => {
+      drop.onPickup(playerHitBy);
+      return drop.pickedUp;
+    });
 
-      if (this.drops.length === 0 || full) {
-        console.log("No more drops, making chest destroyable");
-        this.health -= 1;
-        this.destroyable = true;
-      }
+    if (pickedUpDrop) {
+      this.drops = this.drops.filter((d) => d !== pickedUpDrop);
+    }
+
+    const full = playerHitBy.inventory.isFull();
+    if (this.drops.length === 0 || full) {
+      this.health -= 1;
+      this.destroyable = true;
     }
   };
 

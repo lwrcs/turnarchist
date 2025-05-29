@@ -30,7 +30,6 @@ export class BishopEnemy extends Enemy {
     this.aggro = false;
     this.name = "bishop";
     this.jumpHeight = 1;
-    this.drawMoveSpeed = 0.2;
     this.diagonalAttackRange = 1;
     this.diagonalAttack = true;
     this.orthogonalAttack = false;

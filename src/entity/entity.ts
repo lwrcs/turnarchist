@@ -188,7 +188,7 @@ export class Entity extends Drawable {
     this.forwardOnlyAttack = false;
     this.attackRange = 1;
     this.diagonalAttackRange = 1;
-    this.drawMoveSpeed = 0.3;
+    this.drawMoveSpeed = 0.9;
     this.unconscious = false;
     this.dropChance = 0.02;
     this.isEnemy = false;
@@ -385,8 +385,8 @@ export class Entity extends Drawable {
     //this.updateBloom(delta);
 
     if (!this.doneMoving()) {
-      this.drawX *= 0.9 ** delta;
-      this.drawY *= 0.9 ** delta;
+      this.drawX *= this.drawMoveSpeed ** delta;
+      this.drawY *= this.drawMoveSpeed ** delta;
 
       this.drawX = Math.abs(this.drawX) < 0.01 ? 0 : this.drawX;
       this.drawY = Math.abs(this.drawY) < 0.01 ? 0 : this.drawY;

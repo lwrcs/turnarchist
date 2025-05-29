@@ -16,6 +16,7 @@ export class QueenEnemy extends Enemy {
   static difficulty: number = 4;
   static tileX: number = 23;
   static tileY: number = 8;
+  justHurt: boolean = false;
   constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
     super(room, game, x, y);
     this.ticks = 0;
@@ -43,6 +44,7 @@ export class QueenEnemy extends Enemy {
   behavior = () => {
     this.lastX = this.x;
     this.lastY = this.y;
+
     if (this.health <= 1) this.imageParticleY = 29; //no crown particle
     if (!this.dead) {
       if (this.skipNextTurns > 0) {
@@ -51,6 +53,8 @@ export class QueenEnemy extends Enemy {
       }
       this.ticks++;
       if (!this.seenPlayer) {
+        this.justHurt = false;
+
         let p = this.nearestPlayer();
         if (p !== false) {
           let [distance, player] = p;
@@ -107,7 +111,26 @@ export class QueenEnemy extends Enemy {
             undefined,
             false, //diagonalsOmni
           );
-          if (moves.length > 0) {
+          if (this.justHurt) {
+            // Calculate direction vector from player to queen
+            let dx = this.x - this.targetPlayer.x;
+            let dy = this.y - this.targetPlayer.y;
+
+            // Normalize the direction vector
+            let length = Math.sqrt(dx * dx + dy * dy);
+            if (length > 0) {
+              dx = Math.round(dx / length);
+              dy = Math.round(dy / length);
+            }
+
+            // Move one square away from player
+            let retreatX = this.x + dx;
+            let retreatY = this.y + dy;
+
+            this.tryMove(retreatX, retreatY);
+            this.setDrawXY(oldX, oldY);
+            this.justHurt = false;
+          } else if (moves.length > 0) {
             disablePositions.push({ x: oldX + 1, y: oldY } as astar.Position);
             disablePositions.push({ x: oldX - 1, y: oldY } as astar.Position);
             disablePositions.push({ x: oldX, y: oldY + 1 } as astar.Position);
@@ -168,14 +191,9 @@ export class QueenEnemy extends Enemy {
   };
 
   onHurt = () => {
-    /*
     if (this.health > 0) {
-      this.tryMove(this.lastX, this.lastY);
-      this.setDrawXY(this.lastX, this.lastY);
-      this.makeHitWarnings();
-      this.skipNextTurns = 2;
+      this.justHurt = true;
     }
-    */
   };
 
   jump = (delta: number) => {

@@ -36,8 +36,8 @@ export class BigZombieEnemy extends Enemy {
 
     this.ticks = 0;
     this.frame = 0;
-    this.health = 2;
-    this.maxHealth = 2;
+    this.health = 4;
+    this.maxHealth = 4;
     this.tileX = 31;
     this.tileY = 12;
     this.seenPlayer = false;
@@ -47,9 +47,10 @@ export class BigZombieEnemy extends Enemy {
     this.chainPushable = false;
 
     this.forwardOnlyAttack = true;
-    this.drawMoveSpeed = 0.2;
+    this.drawMoveSpeed = 0.9;
     this.jumpHeight = 0.35;
     this.drawYOffset = 1.5;
+    this.alertRange = 10;
 
     if (drop) this.drop = drop;
     this.getDrop(["consumable", "gem", "tool", "coin"]);
@@ -275,6 +276,19 @@ export class BigZombieEnemy extends Enemy {
         }
       }
     }
+  };
+
+  drawTopLayer = (delta: number) => {
+    this.drawableY = this.y;
+
+    this.healthBar.draw(
+      delta,
+      this.health,
+      this.maxHealth,
+      this.x + 0.5,
+      this.y,
+      true,
+    );
   };
 
   draw = (delta: number) => {
