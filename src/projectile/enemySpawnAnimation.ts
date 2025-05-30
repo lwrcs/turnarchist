@@ -7,6 +7,8 @@ import { Room } from "../room/room";
 import { GenericParticle } from "../particle/genericParticle";
 import { Sound } from "../sound";
 import { HitWarning } from "../hitWarning";
+import { ImageParticle } from "../particle/imageParticle";
+import { LightSource } from "../lightSource";
 
 export class EnemySpawnAnimation extends Projectile {
   readonly ANIM_COUNT = 3;
@@ -20,6 +22,15 @@ export class EnemySpawnAnimation extends Projectile {
     this.room = room;
     this.enemy = enemy;
     this.frame = 0;
+    this.lightSource = new LightSource(
+      this.x + 0.5,
+      this.y + 0.5,
+      1,
+      [0, 50, 150],
+      1,
+    );
+    this.room.lightSources.push(this.lightSource);
+    this.room.updateLighting();
   }
 
   tick = () => {
@@ -39,18 +50,8 @@ export class EnemySpawnAnimation extends Projectile {
       this.dead = true;
       this.enemy.skipNextTurns = 1;
       this.room.entities.push(this.enemy);
-      GenericParticle.spawnCluster(
-        this.room,
-        this.x + 0.5,
-        this.y + 0.5,
-        "#ffffff",
-      );
-      GenericParticle.spawnCluster(
-        this.room,
-        this.x + 0.5,
-        this.y + 0.5,
-        "#ffffff",
-      );
+      this.enemy.createHitParticles();
+      this.lightSource.dead = true;
     } else {
       this.room.hitwarnings.push(
         new HitWarning(this.room.game, this.x, this.y, this.x, this.y),
@@ -76,20 +77,5 @@ export class EnemySpawnAnimation extends Projectile {
         1,
       );
     }
-    if (Math.floor(this.frame * 4) % 2 == 0)
-      this.room.particles.push(
-        new GenericParticle(
-          this.room,
-          this.x + 0.5 + Math.random() * 0.05 - 0.025,
-          this.y + Math.random() * 0.05 - 0.025,
-          0.25,
-          Math.random() * 0.5,
-          0.025 * (Math.random() * 1 - 0.5),
-          0.025 * (Math.random() * 1 - 0.5),
-          0.2 * (Math.random() - 1),
-          "#ffffff",
-          0,
-        ),
-      );
   };
 }

@@ -1,28 +1,26 @@
 import { Entity } from "../entity";
 import { Room } from "../../room/room";
 import { Game } from "../../game";
+import { Heart } from "../../item/heart";
+import { LevelConstants } from "../../levelConstants";
+import { GenericParticle } from "../../particle/genericParticle";
+import { Shrooms } from "../../item/shrooms";
 import { EntityType } from "../entity";
 import { ImageParticle } from "../../particle/imageParticle";
-import { WeaponFragments } from "../../item/weaponFragments";
-import { Coin } from "../../item/coin";
 
-export class Barrel extends Entity {
+export class Bush extends Entity {
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
     this.room = room;
     this.health = 1;
-    this.tileX = 1;
-    this.tileY = 0;
+    this.tileX = 16;
+    this.tileY = 2;
     this.hasShadow = false;
-    this.pushable = true;
-    this.name = "barrel";
-    this.imageParticleX = 3;
-    this.imageParticleY = 25;
-    if (Math.random() < 0.1) {
-      this.drops.push(new WeaponFragments(this.room, this.x, this.y));
-    } else {
-      this.drops.push(new Coin(this.room, this.x, this.y));
-    }
+    this.chainPushable = false;
+    this.name = "bush";
+    this.imageParticleX = 0;
+    this.imageParticleY = 28;
+    //this.drops.push(new Shrooms(this.room, this.x, this.y));
   }
 
   get type() {

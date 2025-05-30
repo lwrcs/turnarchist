@@ -83,6 +83,8 @@ import { MummyEnemy } from "../entity/enemy/mummyEnemy";
 import { SpiderEnemy } from "../entity/enemy/spiderEnemy";
 import { RoomBuilder } from "./roomBuilder";
 import { BigZombieEnemy } from "../entity/enemy/bigZombieEnemy";
+import { Bush } from "../entity/object/bush";
+import { Sprout } from "../entity/object/sprout";
 
 // #endregion
 
@@ -920,10 +922,12 @@ export class Room {
       const { x, y } = this.getRandomEmptyPosition(tiles);
 
       let r = rand();
-      if (r <= 0.45) PottedPlant.add(this, this.game, x, y);
-      else if (r <= 0.65) Pot.add(this, this.game, x, y);
+      if (r <= 0.45) Pot.add(this, this.game, x, y);
+      else if (r <= 0.65) PottedPlant.add(this, this.game, x, y);
       else if (r <= 0.75) Rock.add(this, this.game, x, y);
-      else if (r <= 0.97) Mushrooms.add(this, this.game, x, y);
+      else if (r <= 0.85) Mushrooms.add(this, this.game, x, y);
+      else if (r <= 0.95) Bush.add(this, this.game, x, y);
+      else if (r <= 0.975) Sprout.add(this, this.game, x, y);
       else Chest.add(this, this.game, x, y);
     }
   }
@@ -1705,6 +1709,7 @@ export class Room {
     this.deadEntities = this.deadEntities.filter((e) => !e.dead);
     this.entities = this.entities.filter((e) => !e.dead);
     this.projectiles = this.projectiles.filter((p) => !p.dead);
+    this.lightSources = this.lightSources.filter((ls) => !ls.dead);
     this.hitwarnings = this.hitwarnings.filter((h) => !h.dead);
     this.particles = this.particles.filter((p) => !p.dead);
   };

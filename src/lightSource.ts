@@ -12,6 +12,7 @@ export class LightSource {
   oldR: number;
   oldC: [number, number, number];
   oldB: number;
+  dead: boolean = false;
 
   hasChanged: boolean;
   constructor(

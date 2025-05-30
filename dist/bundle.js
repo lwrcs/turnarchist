@@ -7229,7 +7229,6 @@ class Barrel extends entity_1.Entity {
             if (this.dead)
                 return;
             game_1.Game.ctx.save();
-            //this.updateShadeColor(delta);
             game_1.Game.ctx.globalAlpha = this.alpha;
             if (!this.dead) {
                 this.updateDrawXY(delta);
@@ -7461,6 +7460,55 @@ class Bomb extends entity_1.Entity {
     }
 }
 exports.Bomb = Bomb;
+
+
+/***/ }),
+
+/***/ "./src/entity/object/bush.ts":
+/*!***********************************!*\
+  !*** ./src/entity/object/bush.ts ***!
+  \***********************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Bush = void 0;
+const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+class Bush extends entity_1.Entity {
+    constructor(room, game, x, y) {
+        super(room, game, x, y);
+        this.draw = (delta) => {
+            if (this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = this.alpha;
+            if (!this.dead) {
+                this.updateDrawXY(delta);
+                game_1.Game.drawObj(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
+            }
+            game_1.Game.ctx.restore();
+        };
+        this.drawTopLayer = (delta) => {
+            this.drawableY = this.y;
+        };
+        this.room = room;
+        this.health = 1;
+        this.tileX = 16;
+        this.tileY = 2;
+        this.hasShadow = false;
+        this.chainPushable = false;
+        this.name = "bush";
+        this.imageParticleX = 0;
+        this.imageParticleY = 28;
+        //this.drops.push(new Shrooms(this.room, this.x, this.y));
+    }
+    get type() {
+        return entity_2.EntityType.PROP;
+    }
+}
+exports.Bush = Bush;
 
 
 /***/ }),
@@ -7872,6 +7920,57 @@ class Pumpkin extends entity_1.Entity {
     }
 }
 exports.Pumpkin = Pumpkin;
+
+
+/***/ }),
+
+/***/ "./src/entity/object/sprout.ts":
+/*!*************************************!*\
+  !*** ./src/entity/object/sprout.ts ***!
+  \*************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Sprout = void 0;
+const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+class Sprout extends entity_1.Entity {
+    constructor(room, game, x, y) {
+        super(room, game, x, y);
+        this.draw = (delta) => {
+            if (this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = this.alpha;
+            if (!this.dead) {
+                if (this.hasShadow)
+                    game_1.Game.drawMob(0, 0, 1, 1, this.x - this.drawX, this.y - this.drawY, 1, 1, this.room.shadeColor, this.shadeAmount());
+                this.updateDrawXY(delta);
+                game_1.Game.drawObj(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
+            }
+            game_1.Game.ctx.restore();
+        };
+        this.drawTopLayer = (delta) => {
+            this.drawableY = this.y;
+        };
+        this.room = room;
+        this.health = 1;
+        this.tileX = 17;
+        this.tileY = 2;
+        this.hasShadow = true;
+        this.chainPushable = false;
+        this.name = "sprout";
+        this.imageParticleX = 0;
+        this.imageParticleY = 28;
+        //this.drops.push(new Shrooms(this.room, this.x, this.y));
+    }
+    get type() {
+        return entity_2.EntityType.PROP;
+    }
+}
+exports.Sprout = Sprout;
 
 
 /***/ }),
@@ -9763,6 +9862,7 @@ const candle_1 = __webpack_require__(/*! ./item/candle */ "./src/item/candle.ts"
 const coal_1 = __webpack_require__(/*! ./item/coal */ "./src/item/coal.ts");
 const godStone_1 = __webpack_require__(/*! ./item/godStone */ "./src/item/godStone.ts");
 const heart_1 = __webpack_require__(/*! ./item/heart */ "./src/item/heart.ts");
+const lantern_1 = __webpack_require__(/*! ./item/lantern */ "./src/item/lantern.ts");
 const weaponBlood_1 = __webpack_require__(/*! ./item/weaponBlood */ "./src/item/weaponBlood.ts");
 const weaponFragments_1 = __webpack_require__(/*! ./item/weaponFragments */ "./src/item/weaponFragments.ts");
 const weaponPoison_1 = __webpack_require__(/*! ./item/weaponPoison */ "./src/item/weaponPoison.ts");
@@ -9773,7 +9873,6 @@ const spear_1 = __webpack_require__(/*! ./weapon/spear */ "./src/weapon/spear.ts
 const spellbook_1 = __webpack_require__(/*! ./weapon/spellbook */ "./src/weapon/spellbook.ts");
 const warhammer_1 = __webpack_require__(/*! ./weapon/warhammer */ "./src/weapon/warhammer.ts");
 const hammer_1 = __webpack_require__(/*! ./item/hammer */ "./src/item/hammer.ts");
-const greataxe_1 = __webpack_require__(/*! ./weapon/greataxe */ "./src/weapon/greataxe.ts");
 const bluegem_1 = __webpack_require__(/*! ./item/bluegem */ "./src/item/bluegem.ts");
 const redgem_1 = __webpack_require__(/*! ./item/redgem */ "./src/item/redgem.ts");
 const greengem_1 = __webpack_require__(/*! ./item/greengem */ "./src/item/greengem.ts");
@@ -9781,7 +9880,7 @@ const pickaxe_1 = __webpack_require__(/*! ./weapon/pickaxe */ "./src/weapon/pick
 class GameConstants {
 }
 exports.GameConstants = GameConstants;
-GameConstants.VERSION = "v1.0.7"; //"v0.6.3";
+GameConstants.VERSION = "v1.0.8"; //"v0.6.3";
 GameConstants.DEVELOPER_MODE = false;
 GameConstants.isMobile = false;
 GameConstants.FPS = 120;
@@ -9900,7 +9999,7 @@ GameConstants.DECREASE_SCALE = () => {
 GameConstants.STARTING_INVENTORY = [dagger_1.Dagger, candle_1.Candle];
 GameConstants.STARTING_DEV_INVENTORY = [
     dagger_1.Dagger,
-    greataxe_1.Greataxe,
+    lantern_1.Lantern,
     warhammer_1.Warhammer,
     dualdagger_1.DualDagger,
     godStone_1.GodStone,
@@ -13561,7 +13660,7 @@ class Lantern extends light_1.Light {
             const percentage = Math.round((this.fuel / this.fuelCap) * 100);
             return `LANTERN - Fuel: ${percentage}%, Capacity: ${this.fuelCap / 50}`;
         };
-        this.fuel = 0;
+        this.fuel = 250;
         this.tileX = 29;
         this.tileY = 0;
         this.fuelCap = 250;
@@ -15246,6 +15345,7 @@ exports.LightSource = void 0;
 class LightSource {
     constructor(x, y, r, c = [180, 60, 5], b = 1) {
         this.b = 1;
+        this.dead = false;
         this.updatePosition = (x, y) => {
             this.x = x;
             this.y = y;
@@ -18263,9 +18363,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.EnemySpawnAnimation = void 0;
 const projectile_1 = __webpack_require__(/*! ./projectile */ "./src/projectile/projectile.ts");
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-const genericParticle_1 = __webpack_require__(/*! ../particle/genericParticle */ "./src/particle/genericParticle.ts");
 const sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
 const hitWarning_1 = __webpack_require__(/*! ../hitWarning */ "./src/hitWarning.ts");
+const lightSource_1 = __webpack_require__(/*! ../lightSource */ "./src/lightSource.ts");
 class EnemySpawnAnimation extends projectile_1.Projectile {
     constructor(room, enemy, x, y) {
         super(enemy, x, y);
@@ -18285,8 +18385,8 @@ class EnemySpawnAnimation extends projectile_1.Projectile {
                 this.dead = true;
                 this.enemy.skipNextTurns = 1;
                 this.room.entities.push(this.enemy);
-                genericParticle_1.GenericParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, "#ffffff");
-                genericParticle_1.GenericParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, "#ffffff");
+                this.enemy.createHitParticles();
+                this.lightSource.dead = true;
             }
             else {
                 this.room.hitwarnings.push(new hitWarning_1.HitWarning(this.room.game, this.x, this.y, this.x, this.y));
@@ -18302,12 +18402,13 @@ class EnemySpawnAnimation extends projectile_1.Projectile {
                 let offsetX = 0;
                 game_1.Game.drawFX(Math.floor(this.frame), 27, 1, 1, this.x + Math.round(offsetX) / 16.0, this.y - 0.5, 1, 1);
             }
-            if (Math.floor(this.frame * 4) % 2 == 0)
-                this.room.particles.push(new genericParticle_1.GenericParticle(this.room, this.x + 0.5 + Math.random() * 0.05 - 0.025, this.y + Math.random() * 0.05 - 0.025, 0.25, Math.random() * 0.5, 0.025 * (Math.random() * 1 - 0.5), 0.025 * (Math.random() * 1 - 0.5), 0.2 * (Math.random() - 1), "#ffffff", 0));
         };
         this.room = room;
         this.enemy = enemy;
         this.frame = 0;
+        this.lightSource = new lightSource_1.LightSource(this.x + 0.5, this.y + 0.5, 1, [0, 50, 150], 1);
+        this.room.lightSources.push(this.lightSource);
+        this.room.updateLighting();
     }
 }
 exports.EnemySpawnAnimation = EnemySpawnAnimation;
@@ -18799,6 +18900,8 @@ const mummyEnemy_1 = __webpack_require__(/*! ../entity/enemy/mummyEnemy */ "./sr
 const spiderEnemy_1 = __webpack_require__(/*! ../entity/enemy/spiderEnemy */ "./src/entity/enemy/spiderEnemy.ts");
 const roomBuilder_1 = __webpack_require__(/*! ./roomBuilder */ "./src/room/roomBuilder.ts");
 const bigZombieEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigZombieEnemy */ "./src/entity/enemy/bigZombieEnemy.ts");
+const bush_1 = __webpack_require__(/*! ../entity/object/bush */ "./src/entity/object/bush.ts");
+const sprout_1 = __webpack_require__(/*! ../entity/object/sprout */ "./src/entity/object/sprout.ts");
 // #endregion
 // #region Enums & Interfaces
 /**
@@ -19508,6 +19611,7 @@ class Room {
             this.deadEntities = this.deadEntities.filter((e) => !e.dead);
             this.entities = this.entities.filter((e) => !e.dead);
             this.projectiles = this.projectiles.filter((p) => !p.dead);
+            this.lightSources = this.lightSources.filter((ls) => !ls.dead);
             this.hitwarnings = this.hitwarnings.filter((h) => !h.dead);
             this.particles = this.particles.filter((p) => !p.dead);
         };
@@ -21077,13 +21181,17 @@ class Room {
             const { x, y } = this.getRandomEmptyPosition(tiles);
             let r = rand();
             if (r <= 0.45)
-                pottedPlant_1.PottedPlant.add(this, this.game, x, y);
-            else if (r <= 0.65)
                 pot_1.Pot.add(this, this.game, x, y);
+            else if (r <= 0.65)
+                pottedPlant_1.PottedPlant.add(this, this.game, x, y);
             else if (r <= 0.75)
                 rockResource_1.Rock.add(this, this.game, x, y);
-            else if (r <= 0.97)
+            else if (r <= 0.85)
                 mushrooms_1.Mushrooms.add(this, this.game, x, y);
+            else if (r <= 0.95)
+                bush_1.Bush.add(this, this.game, x, y);
+            else if (r <= 0.975)
+                sprout_1.Sprout.add(this, this.game, x, y);
             else
                 chest_1.Chest.add(this, this.game, x, y);
         }

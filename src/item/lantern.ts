@@ -12,7 +12,7 @@ export class Lantern extends Light {
   static itemName = "lantern";
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
-    this.fuel = 0;
+    this.fuel = 250;
     this.tileX = 29;
     this.tileY = 0;
     this.fuelCap = 250;

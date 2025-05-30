@@ -74,9 +74,7 @@ export class Resource extends Entity {
   draw = (delta: number) => {
     if (this.dead) return;
     Game.ctx.save();
-
     Game.ctx.globalAlpha = this.alpha;
-
     if (!this.dead) {
       this.updateDrawXY(delta);
 
