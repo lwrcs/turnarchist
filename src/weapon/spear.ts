@@ -46,7 +46,7 @@ export class Spear extends Weapon {
       for (const e of enemyHitCandidates) {
         this.attack(e);
       }
-
+      this.hitSound();
       this.attackAnimation(newX2, newY2);
       this.game.rooms[this.wielder.levelID].tick(this.wielder);
       this.shakeScreen(newX2, newY2);
@@ -55,6 +55,7 @@ export class Spear extends Weapon {
     }
 
     if (flag) {
+      this.hitSound();
       this.attackAnimation(newX, newY);
       this.game.rooms[this.wielder.levelID].tick(this.wielder);
       this.shakeScreen(newX, newY);

@@ -659,8 +659,14 @@ export class Entity extends Drawable {
   };
 
   facePlayer = (player: Player) => {
-    let dx = player.x - this.x;
-    let dy = player.y - this.y;
+    // Calculate the center of this entity
+    const entityCenterX = this.x + (this.w - 1) / 2;
+    const entityCenterY = this.y + (this.h - 1) / 2;
+
+    // Calculate distance from entity center to player
+    let dx = player.x - entityCenterX;
+    let dy = player.y - entityCenterY;
+
     if (Math.abs(dx) === Math.abs(dy)) {
       // just moved, already facing player
     } else if (Math.abs(dx) > Math.abs(dy)) {

@@ -3221,7 +3221,6 @@ class Enemy extends entity_1.Entity {
             }
         };
         this.tick = () => {
-            console.log(this.name, this.ticks);
             this.tickPoison();
             this.tickBleed();
             this.behavior();
@@ -6753,8 +6752,12 @@ class Entity extends drawable_1.Drawable {
             return Math.max(Math.abs(this.x - player.x), Math.abs(this.y - player.y));
         };
         this.facePlayer = (player) => {
-            let dx = player.x - this.x;
-            let dy = player.y - this.y;
+            // Calculate the center of this entity
+            const entityCenterX = this.x + (this.w - 1) / 2;
+            const entityCenterY = this.y + (this.h - 1) / 2;
+            // Calculate distance from entity center to player
+            let dx = player.x - entityCenterX;
+            let dy = player.y - entityCenterY;
             if (Math.abs(dx) === Math.abs(dy)) {
                 // just moved, already facing player
             }
@@ -9152,7 +9155,6 @@ class Game {
             // Apply device pixel ratio negation by setting scale to compensate for DPI
             const NEGATE_DPR_FACTOR = 1;
             Game.scale *= NEGATE_DPR_FACTOR / window.devicePixelRatio;
-            console.log(window.devicePixelRatio);
             // Calculate screen width and height in tiles, ensuring integer values
             levelConstants_1.LevelConstants.SCREEN_W = Math.floor(window.innerWidth / Game.scale / gameConstants_1.GameConstants.TILESIZE);
             levelConstants_1.LevelConstants.SCREEN_H = Math.floor(window.innerHeight / Game.scale / gameConstants_1.GameConstants.TILESIZE);
@@ -23951,6 +23953,7 @@ class Spear extends weapon_1.Weapon {
                 for (const e of enemyHitCandidates) {
                     this.attack(e);
                 }
+                this.hitSound();
                 this.attackAnimation(newX2, newY2);
                 this.game.rooms[this.wielder.levelID].tick(this.wielder);
                 this.shakeScreen(newX2, newY2);
@@ -23958,6 +23961,7 @@ class Spear extends weapon_1.Weapon {
                 return false;
             }
             if (flag) {
+                this.hitSound();
                 this.attackAnimation(newX, newY);
                 this.game.rooms[this.wielder.levelID].tick(this.wielder);
                 this.shakeScreen(newX, newY);

@@ -809,7 +809,6 @@ export class Game {
     // Apply device pixel ratio negation by setting scale to compensate for DPI
     const NEGATE_DPR_FACTOR = 1;
     Game.scale *= NEGATE_DPR_FACTOR / window.devicePixelRatio;
-    console.log(window.devicePixelRatio);
 
     // Calculate screen width and height in tiles, ensuring integer values
     LevelConstants.SCREEN_W = Math.floor(

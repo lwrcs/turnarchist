@@ -208,7 +208,6 @@ export abstract class Enemy extends Entity {
   };
 
   tick = () => {
-    console.log(this.name, this.ticks);
     this.tickPoison();
     this.tickBleed();
     this.behavior();
