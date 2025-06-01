@@ -4,7 +4,6 @@ import { Room } from "../room/room";
 import { Sound } from "../sound";
 
 export class Coin extends Item {
-  stack: number;
   static itemName = "coin";
   //checked: boolean;
   constructor(level: Room, x: number, y: number) {
@@ -12,7 +11,7 @@ export class Coin extends Item {
 
     this.tileX = 19;
     this.tileY = 0;
-    this.stack = 1;
+    this.stackCount = 1;
     this.stackable = true;
     this.name = Coin.itemName;
   }
@@ -27,11 +26,11 @@ export class Coin extends Item {
         this.x === otherCoin.x &&
         this.y === otherCoin.y
       ) {
-        this.stack += otherCoin.stack;
+        this.stackCount += otherCoin.stackCount;
         this.level.items = this.level.items.filter((x) => x !== otherCoin);
       }
-      if (this.stack >= 3) this.tileX = 20;
-      if (this.stack >= 7) this.tileX = 21;
+      if (this.stackCount >= 3) this.tileX = 20;
+      if (this.stackCount >= 7) this.tileX = 21;
     }
   };
   get distanceToBottomRight() {

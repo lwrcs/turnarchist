@@ -54,59 +54,55 @@ export class Spawner extends Enemy {
     this.spawnOffset = 0;
     this.dropChance = 1;
 
-    if (Math.random() < 0.15) {
-      switch (this.enemySpawnType) {
-        case 0:
-          this.getDrop(["consumable"]);
-          break;
-        case 1:
-          this.getDrop(["gem"]);
-          break;
-        case 2:
-          this.getDrop(["consumable"]);
-          break;
-        case 3:
-          this.getDrop(["gem"]);
-          break;
-        case 4:
-          this.getDrop(["gem"]);
-          break;
-        case 5:
-          this.getDrop(["consumable"]);
-          break;
-        case 6:
-          this.getDrop(["gem"]);
-          break;
-        case 7:
-          this.getDrop(["gem"]);
-          break;
-        case 8:
-          this.getDrop(["gem"]);
-          break;
-        case 9:
-          this.getDrop(["equipment", "weapon", "tool"]);
-          break;
-        case 10:
-          this.getDrop(["weapon"]);
-          break;
-        case 11:
-          this.getDrop(["weapon"]);
-          break;
-        case 12:
-          this.getDrop(["weapon"]);
-          break;
-        case 13:
-          this.getDrop(["weapon"]);
-          break;
-        case 14:
-          this.getDrop(["weapon"]);
-          break;
-        case 16:
-          this.getDrop(["weapon", "equipment"]);
-          break;
-      }
-    } else {
-      this.getDrop(["consumable", "tool"]);
+    switch (this.enemySpawnType) {
+      case 0:
+        this.getDrop(["consumable"], true);
+        break;
+      case 1:
+        this.getDrop(["gem"], true);
+        break;
+      case 2:
+        this.getDrop(["consumable"], true);
+        break;
+      case 3:
+        this.getDrop(["gem"], true);
+        break;
+      case 4:
+        this.getDrop(["gem"], true);
+        break;
+      case 5:
+        this.getDrop(["consumable"], true);
+        break;
+      case 6:
+        this.getDrop(["gem"], true);
+        break;
+      case 7:
+        this.getDrop(["gem"], true);
+        break;
+      case 8:
+        this.getDrop(["gem"], true);
+        break;
+      case 9:
+        this.getDrop(["equipment", "weapon", "tool"], true);
+        break;
+      case 10:
+        this.getDrop(["weapon"], true);
+        break;
+      case 11:
+        this.getDrop(["weapon"], true);
+        break;
+      case 12:
+        this.getDrop(["weapon"], true);
+        break;
+      case 13:
+        this.getDrop(["weapon"], true);
+        break;
+      case 14:
+        this.getDrop(["weapon"], true);
+        break;
+      case 16:
+        this.getDrop(["weapon", "equipment"], true);
+        break;
     }
     this.name = "reaper";
   }

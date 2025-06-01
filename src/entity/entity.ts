@@ -659,17 +659,79 @@ export class Entity extends Drawable {
   };
 
   facePlayer = (player: Player) => {
-    // Calculate the center of this entity
+    // For 1x1 entities, use the existing perfect logic
+    if (this.w === 1 && this.h === 1) {
+      const entityCenterX = this.x + (this.w - 1) / 2;
+      const entityCenterY = this.y + (this.h - 1) / 2;
+
+      let dx = player.x - entityCenterX;
+      let dy = player.y - entityCenterY;
+
+      if (Math.abs(dx) === Math.abs(dy)) {
+        // just moved, already facing player
+      } else if (Math.abs(dx) > Math.abs(dy)) {
+        if (dx > 0) this.direction = Direction.RIGHT;
+        if (dx < 0) this.direction = Direction.LEFT;
+      } else {
+        if (dy > 0) this.direction = Direction.DOWN;
+        if (dy < 0) this.direction = Direction.UP;
+      }
+      return;
+    }
+
+    // For bigger entities, check if player shares any row or column
+    let sharesRow = false;
+    let sharesColumn = false;
+
+    // Check if player shares any row with the entity
+    for (let y = this.y; y < this.y + this.h; y++) {
+      if (player.y === y) {
+        sharesRow = true;
+        break;
+      }
+    }
+
+    // Check if player shares any column with the entity
+    for (let x = this.x; x < this.x + this.w; x++) {
+      if (player.x === x) {
+        sharesColumn = true;
+        break;
+      }
+    }
+
+    // If sharing both row and column, player is overlapping - don't change direction
+    if (sharesRow && sharesColumn) {
+      return;
+    }
+
+    // If sharing a row, face horizontally
+    if (sharesRow) {
+      if (player.x < this.x) {
+        this.direction = Direction.LEFT;
+      } else if (player.x >= this.x + this.w) {
+        this.direction = Direction.RIGHT;
+      }
+      return;
+    }
+
+    // If sharing a column, face vertically
+    if (sharesColumn) {
+      if (player.y < this.y) {
+        this.direction = Direction.UP;
+      } else if (player.y >= this.y + this.h) {
+        this.direction = Direction.DOWN;
+      }
+      return;
+    }
+
+    // If not sharing any row or column, use distance-based logic
     const entityCenterX = this.x + (this.w - 1) / 2;
     const entityCenterY = this.y + (this.h - 1) / 2;
 
-    // Calculate distance from entity center to player
     let dx = player.x - entityCenterX;
     let dy = player.y - entityCenterY;
 
-    if (Math.abs(dx) === Math.abs(dy)) {
-      // just moved, already facing player
-    } else if (Math.abs(dx) > Math.abs(dy)) {
+    if (Math.abs(dx) > Math.abs(dy)) {
       if (dx > 0) this.direction = Direction.RIGHT;
       if (dx < 0) this.direction = Direction.LEFT;
     } else {

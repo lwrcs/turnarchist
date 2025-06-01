@@ -36,7 +36,6 @@ export class Item extends Drawable {
   inChest: boolean;
   chestOffsetY: number;
   sineAnimateFactor: number;
-  stack: number;
   iconOffset: number;
 
   // Constructor for the Item class

@@ -443,7 +443,7 @@ export class Inventory {
   addItem = (item: Item | null, stackCount: number | null = null): boolean => {
     if (item === null) return false;
     if (item instanceof Coin) {
-      this.coins += item.stack;
+      this.coins += item.stackCount;
       return true;
     }
     if (item instanceof Equippable) {

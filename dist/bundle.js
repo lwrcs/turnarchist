@@ -5687,60 +5687,55 @@ class Spawner extends enemy_1.Enemy {
         this.enemySpawnType = randSpawnType;
         this.spawnOffset = 0;
         this.dropChance = 1;
-        if (Math.random() < 0.15) {
-            switch (this.enemySpawnType) {
-                case 0:
-                    this.getDrop(["consumable"]);
-                    break;
-                case 1:
-                    this.getDrop(["gem"]);
-                    break;
-                case 2:
-                    this.getDrop(["consumable"]);
-                    break;
-                case 3:
-                    this.getDrop(["gem"]);
-                    break;
-                case 4:
-                    this.getDrop(["gem"]);
-                    break;
-                case 5:
-                    this.getDrop(["consumable"]);
-                    break;
-                case 6:
-                    this.getDrop(["gem"]);
-                    break;
-                case 7:
-                    this.getDrop(["gem"]);
-                    break;
-                case 8:
-                    this.getDrop(["gem"]);
-                    break;
-                case 9:
-                    this.getDrop(["equipment", "weapon", "tool"]);
-                    break;
-                case 10:
-                    this.getDrop(["weapon"]);
-                    break;
-                case 11:
-                    this.getDrop(["weapon"]);
-                    break;
-                case 12:
-                    this.getDrop(["weapon"]);
-                    break;
-                case 13:
-                    this.getDrop(["weapon"]);
-                    break;
-                case 14:
-                    this.getDrop(["weapon"]);
-                    break;
-                case 16:
-                    this.getDrop(["weapon", "equipment"]);
-                    break;
-            }
-        }
-        else {
-            this.getDrop(["consumable", "tool"]);
+        switch (this.enemySpawnType) {
+            case 0:
+                this.getDrop(["consumable"], true);
+                break;
+            case 1:
+                this.getDrop(["gem"], true);
+                break;
+            case 2:
+                this.getDrop(["consumable"], true);
+                break;
+            case 3:
+                this.getDrop(["gem"], true);
+                break;
+            case 4:
+                this.getDrop(["gem"], true);
+                break;
+            case 5:
+                this.getDrop(["consumable"], true);
+                break;
+            case 6:
+                this.getDrop(["gem"], true);
+                break;
+            case 7:
+                this.getDrop(["gem"], true);
+                break;
+            case 8:
+                this.getDrop(["gem"], true);
+                break;
+            case 9:
+                this.getDrop(["equipment", "weapon", "tool"], true);
+                break;
+            case 10:
+                this.getDrop(["weapon"], true);
+                break;
+            case 11:
+                this.getDrop(["weapon"], true);
+                break;
+            case 12:
+                this.getDrop(["weapon"], true);
+                break;
+            case 13:
+                this.getDrop(["weapon"], true);
+                break;
+            case 14:
+                this.getDrop(["weapon"], true);
+                break;
+            case 16:
+                this.getDrop(["weapon", "equipment"], true);
+                break;
         }
         this.name = "reaper";
     }
@@ -6778,16 +6773,76 @@ class Entity extends drawable_1.Drawable {
             return Math.max(Math.abs(this.x - player.x), Math.abs(this.y - player.y));
         };
         this.facePlayer = (player) => {
-            // Calculate the center of this entity
+            // For 1x1 entities, use the existing perfect logic
+            if (this.w === 1 && this.h === 1) {
+                const entityCenterX = this.x + (this.w - 1) / 2;
+                const entityCenterY = this.y + (this.h - 1) / 2;
+                let dx = player.x - entityCenterX;
+                let dy = player.y - entityCenterY;
+                if (Math.abs(dx) === Math.abs(dy)) {
+                    // just moved, already facing player
+                }
+                else if (Math.abs(dx) > Math.abs(dy)) {
+                    if (dx > 0)
+                        this.direction = game_1.Direction.RIGHT;
+                    if (dx < 0)
+                        this.direction = game_1.Direction.LEFT;
+                }
+                else {
+                    if (dy > 0)
+                        this.direction = game_1.Direction.DOWN;
+                    if (dy < 0)
+                        this.direction = game_1.Direction.UP;
+                }
+                return;
+            }
+            // For bigger entities, check if player shares any row or column
+            let sharesRow = false;
+            let sharesColumn = false;
+            // Check if player shares any row with the entity
+            for (let y = this.y; y < this.y + this.h; y++) {
+                if (player.y === y) {
+                    sharesRow = true;
+                    break;
+                }
+            }
+            // Check if player shares any column with the entity
+            for (let x = this.x; x < this.x + this.w; x++) {
+                if (player.x === x) {
+                    sharesColumn = true;
+                    break;
+                }
+            }
+            // If sharing both row and column, player is overlapping - don't change direction
+            if (sharesRow && sharesColumn) {
+                return;
+            }
+            // If sharing a row, face horizontally
+            if (sharesRow) {
+                if (player.x < this.x) {
+                    this.direction = game_1.Direction.LEFT;
+                }
+                else if (player.x >= this.x + this.w) {
+                    this.direction = game_1.Direction.RIGHT;
+                }
+                return;
+            }
+            // If sharing a column, face vertically
+            if (sharesColumn) {
+                if (player.y < this.y) {
+                    this.direction = game_1.Direction.UP;
+                }
+                else if (player.y >= this.y + this.h) {
+                    this.direction = game_1.Direction.DOWN;
+                }
+                return;
+            }
+            // If not sharing any row or column, use distance-based logic
             const entityCenterX = this.x + (this.w - 1) / 2;
             const entityCenterY = this.y + (this.h - 1) / 2;
-            // Calculate distance from entity center to player
             let dx = player.x - entityCenterX;
             let dy = player.y - entityCenterY;
-            if (Math.abs(dx) === Math.abs(dy)) {
-                // just moved, already facing player
-            }
-            else if (Math.abs(dx) > Math.abs(dy)) {
+            if (Math.abs(dx) > Math.abs(dy)) {
                 if (dx > 0)
                     this.direction = game_1.Direction.RIGHT;
                 if (dx < 0)
@@ -7615,7 +7670,7 @@ class Chest extends entity_1.Entity {
                     if (Math.random() < 0.01)
                         stack *= Math.ceil(Math.random() * 10);
                     drop.stackCount = stack;
-                    drop.stack = stack;
+                    //drop.stack = stack;
                 }
             });
             this.dropLoot();
@@ -11867,7 +11922,7 @@ class Inventory {
             if (item === null)
                 return false;
             if (item instanceof coin_1.Coin) {
-                this.coins += item.stack;
+                this.coins += item.stackCount;
                 return true;
             }
             if (item instanceof equippable_1.Equippable) {
@@ -12768,12 +12823,12 @@ class Coin extends item_1.Item {
                 if (this !== otherCoin &&
                     this.x === otherCoin.x &&
                     this.y === otherCoin.y) {
-                    this.stack += otherCoin.stack;
+                    this.stackCount += otherCoin.stackCount;
                     this.level.items = this.level.items.filter((x) => x !== otherCoin);
                 }
-                if (this.stack >= 3)
+                if (this.stackCount >= 3)
                     this.tileX = 20;
-                if (this.stack >= 7)
+                if (this.stackCount >= 7)
                     this.tileX = 21;
             }
         };
@@ -12783,7 +12838,7 @@ class Coin extends item_1.Item {
         };
         this.tileX = 19;
         this.tileY = 0;
-        this.stack = 1;
+        this.stackCount = 1;
         this.stackable = true;
         this.name = Coin.itemName;
     }
