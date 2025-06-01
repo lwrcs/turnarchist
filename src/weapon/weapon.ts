@@ -5,7 +5,7 @@ import { Sound } from "../sound";
 import { SlashParticle } from "../particle/slashParticle";
 import type { Entity } from "../entity/entity";
 import { GameConstants } from "../gameConstants";
-import { WeaponFragments } from "../item/weaponFragments";
+import { WeaponFragments } from "../item/usable/weaponFragments";
 import { Enemy } from "../entity/enemy/enemy";
 import { AttackAnimation } from "../particle/attackAnimation";
 

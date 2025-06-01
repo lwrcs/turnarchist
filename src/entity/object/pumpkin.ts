@@ -1,15 +1,15 @@
 import { Entity } from "../entity";
 import { Room } from "../../room/room";
 import { Game } from "../../game";
-import { Heart } from "../../item/heart";
+import { Heart } from "../../item/usable/heart";
 import { LevelConstants } from "../../levelConstants";
 import { GenericParticle } from "../../particle/genericParticle";
-import { Shrooms } from "../../item/shrooms";
+import { Shrooms } from "../../item/usable/shrooms";
 import { EntityType } from "../entity";
 import { LightSource } from "../../lightSource";
 import { Spellbook } from "../../weapon/spellbook";
 import { Random } from "../../random";
-import { Candle } from "../../item/candle";
+import { Candle } from "../../item/light/candle";
 import { ImageParticle } from "../../particle/imageParticle";
 
 export class Pumpkin extends Entity {

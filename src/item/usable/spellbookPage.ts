@@ -1,9 +1,9 @@
-import { Item } from "./item";
-import { Player } from "../player/player";
-import { Sound } from "../sound";
-import { Room } from "../room/room";
+import { Item } from "../item";
+import { Player } from "../../player/player";
+import { Sound } from "../../sound";
+import { Room } from "../../room/room";
 import { Usable } from "./usable";
-import { Equippable } from "./equippable";
+import { Equippable } from "../equippable";
 
 export class SpellbookPage extends Usable {
   static itemName = "weapon fragments";

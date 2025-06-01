@@ -6,7 +6,7 @@ import { PlayerFireball } from "../projectile/playerFireball";
 import type { Entity } from "../entity/entity";
 import { Utils } from "../utils";
 import { Direction } from "../game";
-import { SpellbookPage } from "../item/spellbookPage";
+import { SpellbookPage } from "../item/usable/spellbookPage";
 export class Spellbook extends Weapon {
   targets: Entity[];
   isTargeting: boolean;

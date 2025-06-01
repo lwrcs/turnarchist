@@ -1,12 +1,12 @@
 import { Entity } from "../entity";
 import { Room } from "../../room/room";
 import { Game } from "../../game";
-import { Heart } from "../../item/heart";
+import { Heart } from "../../item/usable/heart";
 import { LevelConstants } from "../../levelConstants";
 import { GenericParticle } from "../../particle/genericParticle";
 import { EntityType } from "../entity";
 import { ImageParticle } from "../../particle/imageParticle";
-import { Candle } from "../../item/candle";
+import { Candle } from "../../item/light/candle";
 import { Random } from "../../random";
 import { Coin } from "../../item/coin";
 import { Sound } from "../../sound";

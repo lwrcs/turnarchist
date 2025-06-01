@@ -1,12 +1,12 @@
-import { Item } from "./item";
-import { Player } from "../player/player";
-import { Game } from "../game";
-import { Room } from "../room/room";
-import { TextParticle } from "../particle/textParticle";
-import { GameConstants } from "../gameConstants";
-import { Usable } from "./usable";
-import { Lantern } from "./lantern";
-import { Light } from "./light";
+import { Item } from "../item";
+import { Player } from "../../player/player";
+import { Game } from "../../game";
+import { Room } from "../../room/room";
+import { TextParticle } from "../../particle/textParticle";
+import { GameConstants } from "../../gameConstants";
+import { Usable } from "../usable/usable";
+import { Lantern } from "../light/lantern";
+import { Light } from "../light/light";
 
 export class Coal extends Usable {
   static itemName = "coal";

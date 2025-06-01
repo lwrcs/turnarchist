@@ -5,15 +5,15 @@ import { Player } from "../../player/player";
 import { HitWarning } from "../../hitWarning";
 import { GenericParticle } from "../../particle/genericParticle";
 import { Coin } from "../../item/coin";
-import { RedGem } from "../../item/redgem";
+import { RedGem } from "../../item/resource/redgem";
 import { Item } from "../../item/item";
 import { Spear } from "../../weapon/spear";
 import { DualDagger } from "../../weapon/dualdagger";
-import { GreenGem } from "../../item/greengem";
+import { GreenGem } from "../../item/resource/greengem";
 import { Random } from "../../random";
 import { astar } from "../../astarclass";
 import { SpikeTrap } from "../../tile/spiketrap";
-import { Pickaxe } from "../../weapon/pickaxe";
+import { Pickaxe } from "../../item/tool/pickaxe";
 import { ImageParticle } from "../../particle/imageParticle";
 import { Enemy } from "./enemy";
 

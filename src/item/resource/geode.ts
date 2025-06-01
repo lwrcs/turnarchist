@@ -1,13 +1,13 @@
-import { Item } from "./item";
-import { Player } from "../player/player";
-import { Game } from "../game";
-import { Room } from "../room/room";
-import { TextParticle } from "../particle/textParticle";
-import { GameConstants } from "../gameConstants";
+import { Item } from "../item";
+import { Player } from "../../player/player";
+import { Game } from "../../game";
+import { Room } from "../../room/room";
+import { TextParticle } from "../../particle/textParticle";
+import { GameConstants } from "../../gameConstants";
 import { RedGem } from "./redgem";
 import { BlueGem } from "./bluegem";
 import { GreenGem } from "./greengem";
-import { Inventory } from "../inventory/inventory";
+import { Inventory } from "../../inventory/inventory";
 export class Geode extends Item {
   static itemName = "geode";
   constructor(level: Room, x: number, y: number) {

@@ -4,7 +4,7 @@ import { Player } from "../../player/player";
 import { HitWarning } from "../../hitWarning";
 import { GenericParticle } from "../../particle/genericParticle";
 import { Coin } from "../../item/coin";
-import { RedGem } from "../../item/redgem";
+import { RedGem } from "../../item/resource/redgem";
 import { Item } from "../../item/item";
 import { Spear } from "../../weapon/spear";
 import { GameConstants } from "../../gameConstants";
@@ -55,7 +55,8 @@ export class BigSkullEnemy extends Enemy {
     this.alertRange = 10;
     this.drawMoveSpeed = 0.9;
     if (drop) this.drops.push(drop);
-    while (this.drops.length < 4 && !this.cloned) {
+    const dropAmount = Math.floor(Math.random() * 3) + 2;
+    while (this.drops.length < dropAmount && !this.cloned) {
       this.getDrop();
     }
   }

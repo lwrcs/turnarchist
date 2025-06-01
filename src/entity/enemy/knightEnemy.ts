@@ -35,7 +35,15 @@ export class KnightEnemy extends Enemy {
     this.imageParticleX = 3;
     this.imageParticleY = 29;
     if (drop) this.drop = drop;
-    this.getDrop(["weapon", "equipment", "consumable", "gem", "tool", "coin"]);
+    this.getDrop([
+      "weapon",
+      "warhammer",
+      "equipment",
+      "consumable",
+      "gem",
+      "tool",
+      "coin",
+    ]);
   }
 
   hit = (): number => {

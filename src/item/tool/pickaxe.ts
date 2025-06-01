@@ -1,6 +1,6 @@
-import { Weapon } from "./weapon";
-import { Room } from "../room/room";
-import { Item } from "../item/item";
+import { Weapon } from "../../weapon/weapon";
+import { Room } from "../../room/room";
+import { Item } from "../item";
 
 export class Pickaxe extends Item {
   static itemName = "pickaxe";

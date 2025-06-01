@@ -1,11 +1,11 @@
-import { Item } from "./item";
-import { Game } from "../game";
-import { Room } from "../room/room";
-import { Equippable } from "./equippable";
+import { Item } from "../item";
+import { Game } from "../../game";
+import { Room } from "../../room/room";
+import { Equippable } from "../equippable";
 import { Torch } from "./torch";
 import { Lantern } from "./lantern";
-import { Inventory } from "../inventory/inventory";
-import { Player } from "../player/player";
+import { Inventory } from "../../inventory/inventory";
+import { Player } from "../../player/player";
 import { Light } from "./light";
 
 export class Candle extends Light {

@@ -1,9 +1,9 @@
-import { Item } from "./item";
-import { Player } from "../player/player";
-import { Game } from "../game";
-import { Room } from "../room/room";
-import { TextParticle } from "../particle/textParticle";
-import { GameConstants } from "../gameConstants";
+import { Item } from "../item";
+import { Player } from "../../player/player";
+import { Game } from "../../game";
+import { Room } from "../../room/room";
+import { TextParticle } from "../../particle/textParticle";
+import { GameConstants } from "../../gameConstants";
 
 export class Gold extends Item {
   static itemName = "gold";

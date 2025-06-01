@@ -4,7 +4,7 @@ import { Direction, Game } from "../game";
 import { Room, RoomType } from "../room/room";
 import { TextParticle } from "../particle/textParticle";
 import { GameConstants } from "../gameConstants";
-import { Usable } from "./usable";
+import { Usable } from "./usable/usable";
 import { DownLadder } from "../tile/downLadder";
 import { Tile } from "../tile/tile";
 import { SpawnFloor } from "../tile/spawnfloor";

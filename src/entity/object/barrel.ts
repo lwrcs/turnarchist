@@ -3,7 +3,7 @@ import { Room } from "../../room/room";
 import { Game } from "../../game";
 import { EntityType } from "../entity";
 import { ImageParticle } from "../../particle/imageParticle";
-import { WeaponFragments } from "../../item/weaponFragments";
+import { WeaponFragments } from "../../item/usable/weaponFragments";
 import { Coin } from "../../item/coin";
 
 export class Barrel extends Entity {

@@ -7,11 +7,11 @@ import { Armor } from "../item/armor";
 import { Coin } from "../item/coin";
 import { Weapon } from "../weapon/weapon";
 import { Room } from "../room/room";
-import { Usable } from "../item/usable";
+import { Usable } from "../item/usable/usable";
 import { Player } from "../player/player";
 import { MouseCursor } from "../mouseCursor";
 import { Input } from "../input";
-import { Pickaxe } from "../weapon/pickaxe";
+import { Pickaxe } from "../item/tool/pickaxe";
 
 let OPEN_TIME = 100; // milliseconds
 // Dark gray color used for the background of inventory slots

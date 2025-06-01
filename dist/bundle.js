@@ -1512,7 +1512,7 @@ exports.BigKnightEnemy = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const hitWarning_1 = __webpack_require__(/*! ../../hitWarning */ "./src/hitWarning.ts");
 const coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
-const redgem_1 = __webpack_require__(/*! ../../item/redgem */ "./src/item/redgem.ts");
+const redgem_1 = __webpack_require__(/*! ../../item/resource/redgem */ "./src/item/resource/redgem.ts");
 const spear_1 = __webpack_require__(/*! ../../weapon/spear */ "./src/weapon/spear.ts");
 const gameConstants_1 = __webpack_require__(/*! ../../gameConstants */ "./src/gameConstants.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
@@ -2084,7 +2084,8 @@ class BigSkullEnemy extends enemy_1.Enemy {
         this.drawMoveSpeed = 0.9;
         if (drop)
             this.drops.push(drop);
-        while (this.drops.length < 4 && !this.cloned) {
+        const dropAmount = Math.floor(Math.random() * 3) + 2;
+        while (this.drops.length < dropAmount && !this.cloned) {
             this.getDrop();
         }
     }
@@ -2312,6 +2313,20 @@ class BigZombieEnemy extends enemy_1.Enemy {
             this.drawableY = this.y;
             this.healthBar.draw(delta, this.health, this.maxHealth, this.x + 0.5, this.y, true);
         };
+        this.dropLoot = () => {
+            let dropOffsets = [
+                { x: 0, y: 0 },
+                { x: 1, y: 0 },
+                { x: 0, y: 1 },
+                { x: 1, y: 1 },
+            ];
+            for (let i = 0; i < this.drops.length; i++) {
+                this.drops[i].level = this.room;
+                this.drops[i].x = this.x + dropOffsets[i].x;
+                this.drops[i].y = this.y + dropOffsets[i].y;
+                this.room.items.push(this.drops[i]);
+            }
+        };
         this.draw = (delta) => {
             if (this.dead)
                 return;
@@ -2355,7 +2370,10 @@ class BigZombieEnemy extends enemy_1.Enemy {
         this.alertRange = 10;
         if (drop)
             this.drop = drop;
-        this.getDrop(["consumable", "gem", "tool", "coin"]);
+        const dropAmount = Math.floor(Math.random() * 3) + 2;
+        while (this.drops.length < dropAmount && !this.cloned) {
+            this.getDrop();
+        }
     }
 }
 exports.BigZombieEnemy = BigZombieEnemy;
@@ -4332,7 +4350,15 @@ class KnightEnemy extends enemy_1.Enemy {
         this.imageParticleY = 29;
         if (drop)
             this.drop = drop;
-        this.getDrop(["weapon", "equipment", "consumable", "gem", "tool", "coin"]);
+        this.getDrop([
+            "weapon",
+            "warhammer",
+            "equipment",
+            "consumable",
+            "gem",
+            "tool",
+            "coin",
+        ]);
     }
 }
 exports.KnightEnemy = KnightEnemy;
@@ -6788,15 +6814,28 @@ class Entity extends drawable_1.Drawable {
             }
         };
         this.draw = (delta) => {
-            if (!this.dead) {
-                game_1.Game.ctx.globalAlpha = this.alpha;
-                if (this.shielded)
-                    if (this.hasShadow) {
-                        game_1.Game.drawFX(0, 0, 1, 1, this.x - this.drawX, this.y - this.drawY, 1, 1, this.shadeColor, this.shadeAmount());
-                    }
-                game_1.Game.drawMob(0, 0, 1, 1, this.x - this.drawX, this.y - this.drawY, 1, 1, this.room.shadeColor, this.shadeAmount());
-                game_1.Game.drawMob(this.tileX, this.tileY + this.direction * 2, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.shadeColor, this.shadeAmount());
+            if (this.dead)
+                return;
+            game_1.Game.ctx.globalAlpha = this.alpha;
+            this.updateDrawXY(delta);
+            if (this.hasShadow) {
+                game_1.Game.drawFX(0, 0, 1, 1, this.x - this.drawX, this.y - this.drawY, 1, 1, this.shadeColor, this.shadeAmount());
             }
+            /*
+            Game.drawMob(
+              0,
+              0,
+              1,
+              1,
+              this.x - this.drawX,
+              this.y - this.drawY,
+              1,
+              1,
+              this.room.shadeColor,
+              this.shadeAmount(),
+            );
+            */
+            game_1.Game.drawMob(this.tileX, this.tileY + this.direction * 2, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.shadeColor, this.shadeAmount());
             /*if (this.crushed) {
               this.crushAnim(delta);
             }*/
@@ -7223,7 +7262,7 @@ exports.Barrel = void 0;
 const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
-const weaponFragments_1 = __webpack_require__(/*! ../../item/weaponFragments */ "./src/item/weaponFragments.ts");
+const weaponFragments_1 = __webpack_require__(/*! ../../item/usable/weaponFragments */ "./src/item/usable/weaponFragments.ts");
 const coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
 class Barrel extends entity_1.Entity {
     constructor(room, game, x, y) {
@@ -7280,7 +7319,7 @@ const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const sound_1 = __webpack_require__(/*! ../../sound */ "./src/sound.ts");
-const geode_1 = __webpack_require__(/*! ../../item/geode */ "./src/item/geode.ts");
+const geode_1 = __webpack_require__(/*! ../../item/resource/geode */ "./src/item/resource/geode.ts");
 class Block extends entity_1.Entity {
     constructor(room, game, x, y) {
         super(room, game, x, y);
@@ -7652,7 +7691,7 @@ exports.Crate = void 0;
 const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
-const weaponFragments_1 = __webpack_require__(/*! ../../item/weaponFragments */ "./src/item/weaponFragments.ts");
+const weaponFragments_1 = __webpack_require__(/*! ../../item/usable/weaponFragments */ "./src/item/usable/weaponFragments.ts");
 const coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
 class Crate extends entity_1.Entity {
     constructor(room, game, x, y) {
@@ -7708,7 +7747,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Mushrooms = void 0;
 const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-const shrooms_1 = __webpack_require__(/*! ../../item/shrooms */ "./src/item/shrooms.ts");
+const shrooms_1 = __webpack_require__(/*! ../../item/usable/shrooms */ "./src/item/usable/shrooms.ts");
 const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 class Mushrooms extends entity_1.Entity {
     constructor(room, game, x, y) {
@@ -7758,7 +7797,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Pot = void 0;
 const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-const heart_1 = __webpack_require__(/*! ../../item/heart */ "./src/item/heart.ts");
+const heart_1 = __webpack_require__(/*! ../../item/usable/heart */ "./src/item/usable/heart.ts");
 const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
 const coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
@@ -7816,7 +7855,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PottedPlant = void 0;
 const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-const heart_1 = __webpack_require__(/*! ../../item/heart */ "./src/item/heart.ts");
+const heart_1 = __webpack_require__(/*! ../../item/usable/heart */ "./src/item/usable/heart.ts");
 const coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
 const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
@@ -7883,7 +7922,7 @@ const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const lightSource_1 = __webpack_require__(/*! ../../lightSource */ "./src/lightSource.ts");
-const candle_1 = __webpack_require__(/*! ../../item/candle */ "./src/item/candle.ts");
+const candle_1 = __webpack_require__(/*! ../../item/light/candle */ "./src/item/light/candle.ts");
 class Pumpkin extends entity_1.Entity {
     constructor(room, game, x, y) {
         super(room, game, x, y);
@@ -8083,20 +8122,20 @@ exports.VendingMachine = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
-const greengem_1 = __webpack_require__(/*! ../../item/greengem */ "./src/item/greengem.ts");
+const greengem_1 = __webpack_require__(/*! ../../item/resource/greengem */ "./src/item/resource/greengem.ts");
 const gameConstants_1 = __webpack_require__(/*! ../../gameConstants */ "./src/gameConstants.ts");
 const shotgun_1 = __webpack_require__(/*! ../../weapon/shotgun */ "./src/weapon/shotgun.ts");
 const armor_1 = __webpack_require__(/*! ../../item/armor */ "./src/item/armor.ts");
-const heart_1 = __webpack_require__(/*! ../../item/heart */ "./src/item/heart.ts");
+const heart_1 = __webpack_require__(/*! ../../item/usable/heart */ "./src/item/usable/heart.ts");
 const spear_1 = __webpack_require__(/*! ../../weapon/spear */ "./src/weapon/spear.ts");
-const bluegem_1 = __webpack_require__(/*! ../../item/bluegem */ "./src/item/bluegem.ts");
+const bluegem_1 = __webpack_require__(/*! ../../item/resource/bluegem */ "./src/item/resource/bluegem.ts");
 const dualdagger_1 = __webpack_require__(/*! ../../weapon/dualdagger */ "./src/weapon/dualdagger.ts");
-const lantern_1 = __webpack_require__(/*! ../../item/lantern */ "./src/item/lantern.ts");
-const redgem_1 = __webpack_require__(/*! ../../item/redgem */ "./src/item/redgem.ts");
+const lantern_1 = __webpack_require__(/*! ../../item/light/lantern */ "./src/item/light/lantern.ts");
+const redgem_1 = __webpack_require__(/*! ../../item/resource/redgem */ "./src/item/resource/redgem.ts");
 const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
 const warhammer_1 = __webpack_require__(/*! ../../weapon/warhammer */ "./src/weapon/warhammer.ts");
-const torch_1 = __webpack_require__(/*! ../../item/torch */ "./src/item/torch.ts");
+const torch_1 = __webpack_require__(/*! ../../item/light/torch */ "./src/item/light/torch.ts");
 const spellbook_1 = __webpack_require__(/*! ../../weapon/spellbook */ "./src/weapon/spellbook.ts");
 let OPEN_TIME = 150;
 let FILL_COLOR = "#5a595b";
@@ -8374,8 +8413,8 @@ VendingMachine.isPointInVendingMachineBounds = (x, y, shop) => {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CoalResource = void 0;
 const resource_1 = __webpack_require__(/*! ./resource */ "./src/entity/resource/resource.ts");
-const coal_1 = __webpack_require__(/*! ../../item/coal */ "./src/item/coal.ts");
-const geode_1 = __webpack_require__(/*! ../../item/geode */ "./src/item/geode.ts");
+const coal_1 = __webpack_require__(/*! ../../item/resource/coal */ "./src/item/resource/coal.ts");
+const geode_1 = __webpack_require__(/*! ../../item/resource/geode */ "./src/item/resource/geode.ts");
 class CoalResource extends resource_1.Resource {
     constructor(room, game, x, y) {
         super(room, game, x, y);
@@ -8403,9 +8442,9 @@ exports.CoalResource = CoalResource;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.EmeraldResource = void 0;
-const greengem_1 = __webpack_require__(/*! ../../item/greengem */ "./src/item/greengem.ts");
+const greengem_1 = __webpack_require__(/*! ../../item/resource/greengem */ "./src/item/resource/greengem.ts");
 const resource_1 = __webpack_require__(/*! ./resource */ "./src/entity/resource/resource.ts");
-const geode_1 = __webpack_require__(/*! ../../item/geode */ "./src/item/geode.ts");
+const geode_1 = __webpack_require__(/*! ../../item/resource/geode */ "./src/item/resource/geode.ts");
 class EmeraldResource extends resource_1.Resource {
     constructor(room, game, x, y) {
         super(room, game, x, y);
@@ -8434,8 +8473,8 @@ exports.EmeraldResource = EmeraldResource;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GoldResource = void 0;
 const resource_1 = __webpack_require__(/*! ./resource */ "./src/entity/resource/resource.ts");
-const gold_1 = __webpack_require__(/*! ../../item/gold */ "./src/item/gold.ts");
-const geode_1 = __webpack_require__(/*! ../../item/geode */ "./src/item/geode.ts");
+const gold_1 = __webpack_require__(/*! ../../item/resource/gold */ "./src/item/resource/gold.ts");
+const geode_1 = __webpack_require__(/*! ../../item/resource/geode */ "./src/item/resource/geode.ts");
 class GoldResource extends resource_1.Resource {
     constructor(room, game, x, y) {
         super(room, game, x, y);
@@ -8545,7 +8584,7 @@ exports.Resource = Resource;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Rock = void 0;
 const resource_1 = __webpack_require__(/*! ./resource */ "./src/entity/resource/resource.ts");
-const geode_1 = __webpack_require__(/*! ../../item/geode */ "./src/item/geode.ts");
+const geode_1 = __webpack_require__(/*! ../../item/resource/geode */ "./src/item/resource/geode.ts");
 class Rock extends resource_1.Resource {
     constructor(room, game, x, y) {
         super(room, game, x, y);
@@ -9860,25 +9899,25 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GameConstants = void 0;
 const armor_1 = __webpack_require__(/*! ./item/armor */ "./src/item/armor.ts");
 const backpack_1 = __webpack_require__(/*! ./item/backpack */ "./src/item/backpack.ts");
-const candle_1 = __webpack_require__(/*! ./item/candle */ "./src/item/candle.ts");
-const coal_1 = __webpack_require__(/*! ./item/coal */ "./src/item/coal.ts");
+const candle_1 = __webpack_require__(/*! ./item/light/candle */ "./src/item/light/candle.ts");
+const coal_1 = __webpack_require__(/*! ./item/resource/coal */ "./src/item/resource/coal.ts");
 const godStone_1 = __webpack_require__(/*! ./item/godStone */ "./src/item/godStone.ts");
-const heart_1 = __webpack_require__(/*! ./item/heart */ "./src/item/heart.ts");
-const lantern_1 = __webpack_require__(/*! ./item/lantern */ "./src/item/lantern.ts");
-const weaponBlood_1 = __webpack_require__(/*! ./item/weaponBlood */ "./src/item/weaponBlood.ts");
-const weaponFragments_1 = __webpack_require__(/*! ./item/weaponFragments */ "./src/item/weaponFragments.ts");
-const weaponPoison_1 = __webpack_require__(/*! ./item/weaponPoison */ "./src/item/weaponPoison.ts");
+const heart_1 = __webpack_require__(/*! ./item/usable/heart */ "./src/item/usable/heart.ts");
+const lantern_1 = __webpack_require__(/*! ./item/light/lantern */ "./src/item/light/lantern.ts");
+const weaponBlood_1 = __webpack_require__(/*! ./item/usable/weaponBlood */ "./src/item/usable/weaponBlood.ts");
+const weaponFragments_1 = __webpack_require__(/*! ./item/usable/weaponFragments */ "./src/item/usable/weaponFragments.ts");
+const weaponPoison_1 = __webpack_require__(/*! ./item/usable/weaponPoison */ "./src/item/usable/weaponPoison.ts");
 const levelConstants_1 = __webpack_require__(/*! ./levelConstants */ "./src/levelConstants.ts");
 const dagger_1 = __webpack_require__(/*! ./weapon/dagger */ "./src/weapon/dagger.ts");
 const dualdagger_1 = __webpack_require__(/*! ./weapon/dualdagger */ "./src/weapon/dualdagger.ts");
 const spear_1 = __webpack_require__(/*! ./weapon/spear */ "./src/weapon/spear.ts");
 const spellbook_1 = __webpack_require__(/*! ./weapon/spellbook */ "./src/weapon/spellbook.ts");
 const warhammer_1 = __webpack_require__(/*! ./weapon/warhammer */ "./src/weapon/warhammer.ts");
-const hammer_1 = __webpack_require__(/*! ./item/hammer */ "./src/item/hammer.ts");
-const bluegem_1 = __webpack_require__(/*! ./item/bluegem */ "./src/item/bluegem.ts");
-const redgem_1 = __webpack_require__(/*! ./item/redgem */ "./src/item/redgem.ts");
-const greengem_1 = __webpack_require__(/*! ./item/greengem */ "./src/item/greengem.ts");
-const pickaxe_1 = __webpack_require__(/*! ./weapon/pickaxe */ "./src/weapon/pickaxe.ts");
+const hammer_1 = __webpack_require__(/*! ./item/tool/hammer */ "./src/item/tool/hammer.ts");
+const bluegem_1 = __webpack_require__(/*! ./item/resource/bluegem */ "./src/item/resource/bluegem.ts");
+const redgem_1 = __webpack_require__(/*! ./item/resource/redgem */ "./src/item/resource/redgem.ts");
+const greengem_1 = __webpack_require__(/*! ./item/resource/greengem */ "./src/item/resource/greengem.ts");
+const pickaxe_1 = __webpack_require__(/*! ./item/tool/pickaxe */ "./src/item/tool/pickaxe.ts");
 class GameConstants {
 }
 exports.GameConstants = GameConstants;
@@ -10058,19 +10097,19 @@ const wizardEnemy_1 = __webpack_require__(/*! ./entity/enemy/wizardEnemy */ "./s
 const zombieEnemy_1 = __webpack_require__(/*! ./entity/enemy/zombieEnemy */ "./src/entity/enemy/zombieEnemy.ts");
 const hitWarning_1 = __webpack_require__(/*! ./hitWarning */ "./src/hitWarning.ts");
 const armor_1 = __webpack_require__(/*! ./item/armor */ "./src/item/armor.ts");
-const bluegem_1 = __webpack_require__(/*! ./item/bluegem */ "./src/item/bluegem.ts");
-const candle_1 = __webpack_require__(/*! ./item/candle */ "./src/item/candle.ts");
-const coal_1 = __webpack_require__(/*! ./item/coal */ "./src/item/coal.ts");
+const bluegem_1 = __webpack_require__(/*! ./item/resource/bluegem */ "./src/item/resource/bluegem.ts");
+const candle_1 = __webpack_require__(/*! ./item/light/candle */ "./src/item/light/candle.ts");
+const coal_1 = __webpack_require__(/*! ./item/resource/coal */ "./src/item/resource/coal.ts");
 const coin_1 = __webpack_require__(/*! ./item/coin */ "./src/item/coin.ts");
 const equippable_1 = __webpack_require__(/*! ./item/equippable */ "./src/item/equippable.ts");
-const gold_1 = __webpack_require__(/*! ./item/gold */ "./src/item/gold.ts");
+const gold_1 = __webpack_require__(/*! ./item/resource/gold */ "./src/item/resource/gold.ts");
 const goldenKey_1 = __webpack_require__(/*! ./item/goldenKey */ "./src/item/goldenKey.ts");
-const greengem_1 = __webpack_require__(/*! ./item/greengem */ "./src/item/greengem.ts");
-const heart_1 = __webpack_require__(/*! ./item/heart */ "./src/item/heart.ts");
+const greengem_1 = __webpack_require__(/*! ./item/resource/greengem */ "./src/item/resource/greengem.ts");
+const heart_1 = __webpack_require__(/*! ./item/usable/heart */ "./src/item/usable/heart.ts");
 const key_1 = __webpack_require__(/*! ./item/key */ "./src/item/key.ts");
-const lantern_1 = __webpack_require__(/*! ./item/lantern */ "./src/item/lantern.ts");
-const redgem_1 = __webpack_require__(/*! ./item/redgem */ "./src/item/redgem.ts");
-const torch_1 = __webpack_require__(/*! ./item/torch */ "./src/item/torch.ts");
+const lantern_1 = __webpack_require__(/*! ./item/light/lantern */ "./src/item/light/lantern.ts");
+const redgem_1 = __webpack_require__(/*! ./item/resource/redgem */ "./src/item/resource/redgem.ts");
+const torch_1 = __webpack_require__(/*! ./item/light/torch */ "./src/item/light/torch.ts");
 const levelGenerator_1 = __webpack_require__(/*! ./levelGenerator */ "./src/levelGenerator.ts");
 const player_1 = __webpack_require__(/*! ./player/player */ "./src/player/player.ts");
 const enemySpawnAnimation_1 = __webpack_require__(/*! ./projectile/enemySpawnAnimation */ "./src/projectile/enemySpawnAnimation.ts");
@@ -10080,7 +10119,7 @@ const dagger_1 = __webpack_require__(/*! ./weapon/dagger */ "./src/weapon/dagger
 const dualdagger_1 = __webpack_require__(/*! ./weapon/dualdagger */ "./src/weapon/dualdagger.ts");
 const shotgun_1 = __webpack_require__(/*! ./weapon/shotgun */ "./src/weapon/shotgun.ts");
 const spear_1 = __webpack_require__(/*! ./weapon/spear */ "./src/weapon/spear.ts");
-const pickaxe_1 = __webpack_require__(/*! ./weapon/pickaxe */ "./src/weapon/pickaxe.ts");
+const pickaxe_1 = __webpack_require__(/*! ./item/tool/pickaxe */ "./src/item/tool/pickaxe.ts");
 const backpack_1 = __webpack_require__(/*! ./item/backpack */ "./src/item/backpack.ts");
 const energyWizard_1 = __webpack_require__(/*! ./entity/enemy/energyWizard */ "./src/entity/enemy/energyWizard.ts");
 const eventBus_1 = __webpack_require__(/*! ./eventBus */ "./src/eventBus.ts");
@@ -11504,10 +11543,10 @@ const equippable_1 = __webpack_require__(/*! ../item/equippable */ "./src/item/e
 const armor_1 = __webpack_require__(/*! ../item/armor */ "./src/item/armor.ts");
 const coin_1 = __webpack_require__(/*! ../item/coin */ "./src/item/coin.ts");
 const weapon_1 = __webpack_require__(/*! ../weapon/weapon */ "./src/weapon/weapon.ts");
-const usable_1 = __webpack_require__(/*! ../item/usable */ "./src/item/usable.ts");
+const usable_1 = __webpack_require__(/*! ../item/usable/usable */ "./src/item/usable/usable.ts");
 const mouseCursor_1 = __webpack_require__(/*! ../mouseCursor */ "./src/mouseCursor.ts");
 const input_1 = __webpack_require__(/*! ../input */ "./src/input.ts");
-const pickaxe_1 = __webpack_require__(/*! ../weapon/pickaxe */ "./src/weapon/pickaxe.ts");
+const pickaxe_1 = __webpack_require__(/*! ../item/tool/pickaxe */ "./src/item/tool/pickaxe.ts");
 let OPEN_TIME = 100; // milliseconds
 // Dark gray color used for the background of inventory slots
 let FILL_COLOR = "#5a595b";
@@ -12644,7 +12683,7 @@ Armor.itemName = "armor";
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Backpack = void 0;
 const sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
-const usable_1 = __webpack_require__(/*! ./usable */ "./src/item/usable.ts");
+const usable_1 = __webpack_require__(/*! ./usable/usable */ "./src/item/usable/usable.ts");
 class Backpack extends usable_1.Usable {
     constructor(level, x, y) {
         super(level, x, y);
@@ -12670,33 +12709,6 @@ Backpack.itemName = "backpack";
 
 /***/ }),
 
-/***/ "./src/item/bluegem.ts":
-/*!*****************************!*\
-  !*** ./src/item/bluegem.ts ***!
-  \*****************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.BlueGem = void 0;
-const item_1 = __webpack_require__(/*! ./item */ "./src/item/item.ts");
-class BlueGem extends item_1.Item {
-    constructor(level, x, y) {
-        super(level, x, y);
-        this.getDescription = () => {
-            return "ZIRCON";
-        };
-        this.tileX = 13;
-        this.tileY = 0;
-        this.stackable = true;
-    }
-}
-exports.BlueGem = BlueGem;
-BlueGem.itemName = "zircon";
-
-
-/***/ }),
-
 /***/ "./src/item/bombItem.ts":
 /*!******************************!*\
   !*** ./src/item/bombItem.ts ***!
@@ -12707,7 +12719,7 @@ BlueGem.itemName = "zircon";
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BombItem = void 0;
 const sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
-const usable_1 = __webpack_require__(/*! ./usable */ "./src/item/usable.ts");
+const usable_1 = __webpack_require__(/*! ./usable/usable */ "./src/item/usable/usable.ts");
 //import { Bomb } from "../entity/object/bomb";
 class BombItem extends usable_1.Usable {
     constructor(level, x, y) {
@@ -12727,91 +12739,6 @@ class BombItem extends usable_1.Usable {
 }
 exports.BombItem = BombItem;
 BombItem.itemName = "bomb";
-
-
-/***/ }),
-
-/***/ "./src/item/candle.ts":
-/*!****************************!*\
-  !*** ./src/item/candle.ts ***!
-  \****************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Candle = void 0;
-const light_1 = __webpack_require__(/*! ./light */ "./src/item/light.ts");
-class Candle extends light_1.Light {
-    constructor(level, x, y) {
-        super(level, x, y);
-        this.fuel = 50; //how many turns before it burns out
-        this.tileX = 27;
-        this.tileY = 0;
-        this.name = "candle";
-        this.fuelCap = 50;
-        this.radius = 4;
-        this.stackable = true;
-        this.maxBrightness = 2;
-        this.maxBrightness = 0.25;
-    }
-}
-exports.Candle = Candle;
-Candle.itemName = "candle";
-
-
-/***/ }),
-
-/***/ "./src/item/coal.ts":
-/*!**************************!*\
-  !*** ./src/item/coal.ts ***!
-  \**************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Coal = void 0;
-const usable_1 = __webpack_require__(/*! ./usable */ "./src/item/usable.ts");
-const lantern_1 = __webpack_require__(/*! ./lantern */ "./src/item/lantern.ts");
-const light_1 = __webpack_require__(/*! ./light */ "./src/item/light.ts");
-class Coal extends usable_1.Usable {
-    constructor(level, x, y) {
-        super(level, x, y);
-        this.onUse = (player) => {
-            let l = player.inventory.hasItem(lantern_1.Lantern);
-            if (l instanceof lantern_1.Lantern) {
-                if (l.fuel <= l.fuelCap - 50) {
-                    player.game.pushMessage("You add some fuel to your lantern.");
-                    this.stackCount -= 1;
-                    if (this.stackCount <= 0) {
-                        player.inventory.removeItem(this);
-                    }
-                }
-            }
-        };
-        this.useOnOther = (player, other) => {
-            if (other instanceof light_1.Light) {
-                if (other.canRefuel && other.fuel <= 0 && other.broken) {
-                    let amountToRefuel = Math.min(this.stackCount * 25, other.fuelCap);
-                    other.fuel += amountToRefuel;
-                    this.stackCount -= amountToRefuel / 25;
-                    other.broken = false;
-                    this.level.game.pushMessage(`You add refuel your ${other.name} with ${amountToRefuel / 25} coal.`);
-                    if (this.stackCount <= 0)
-                        player.inventory.removeItem(this);
-                }
-            }
-        };
-        this.tileX = 17;
-        this.tileY = 0;
-        this.stackable = true;
-        this.stackCount = Math.ceil(Math.random() * 7 + 3);
-        this.name = Coal.itemName;
-        this.description = "A piece of coal. Fuels lantern.";
-        this.canUseOnOther = true;
-    }
-}
-exports.Coal = Coal;
-Coal.itemName = "coal";
 
 
 /***/ }),
@@ -12882,30 +12809,32 @@ var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DropTable = exports.ItemTypeMap = void 0;
 const armor_1 = __webpack_require__(/*! ./armor */ "./src/item/armor.ts");
-const bluegem_1 = __webpack_require__(/*! ./bluegem */ "./src/item/bluegem.ts");
-const candle_1 = __webpack_require__(/*! ./candle */ "./src/item/candle.ts");
+const bluegem_1 = __webpack_require__(/*! ./resource/bluegem */ "./src/item/resource/bluegem.ts");
+const candle_1 = __webpack_require__(/*! ./light/candle */ "./src/item/light/candle.ts");
 const coin_1 = __webpack_require__(/*! ./coin */ "./src/item/coin.ts");
-const greengem_1 = __webpack_require__(/*! ./greengem */ "./src/item/greengem.ts");
-const heart_1 = __webpack_require__(/*! ./heart */ "./src/item/heart.ts");
-const redgem_1 = __webpack_require__(/*! ./redgem */ "./src/item/redgem.ts");
-const weaponFragments_1 = __webpack_require__(/*! ./weaponFragments */ "./src/item/weaponFragments.ts");
+const greengem_1 = __webpack_require__(/*! ./resource/greengem */ "./src/item/resource/greengem.ts");
+const heart_1 = __webpack_require__(/*! ./usable/heart */ "./src/item/usable/heart.ts");
+const redgem_1 = __webpack_require__(/*! ./resource/redgem */ "./src/item/resource/redgem.ts");
+const weaponFragments_1 = __webpack_require__(/*! ./usable/weaponFragments */ "./src/item/usable/weaponFragments.ts");
 const spear_1 = __webpack_require__(/*! ../weapon/spear */ "./src/weapon/spear.ts");
 const warhammer_1 = __webpack_require__(/*! ../weapon/warhammer */ "./src/weapon/warhammer.ts");
 const dualdagger_1 = __webpack_require__(/*! ../weapon/dualdagger */ "./src/weapon/dualdagger.ts");
-const weaponPoison_1 = __webpack_require__(/*! ./weaponPoison */ "./src/item/weaponPoison.ts");
-const weaponBlood_1 = __webpack_require__(/*! ./weaponBlood */ "./src/item/weaponBlood.ts");
-const gold_1 = __webpack_require__(/*! ./gold */ "./src/item/gold.ts");
-const stone_1 = __webpack_require__(/*! ./stone */ "./src/item/stone.ts");
-const pickaxe_1 = __webpack_require__(/*! ../weapon/pickaxe */ "./src/weapon/pickaxe.ts");
-const hammer_1 = __webpack_require__(/*! ./hammer */ "./src/item/hammer.ts");
-const coal_1 = __webpack_require__(/*! ./coal */ "./src/item/coal.ts");
-const torch_1 = __webpack_require__(/*! ./torch */ "./src/item/torch.ts");
-const lantern_1 = __webpack_require__(/*! ./lantern */ "./src/item/lantern.ts");
+const weaponPoison_1 = __webpack_require__(/*! ./usable/weaponPoison */ "./src/item/usable/weaponPoison.ts");
+const weaponBlood_1 = __webpack_require__(/*! ./usable/weaponBlood */ "./src/item/usable/weaponBlood.ts");
+const gold_1 = __webpack_require__(/*! ./resource/gold */ "./src/item/resource/gold.ts");
+const stone_1 = __webpack_require__(/*! ./resource/stone */ "./src/item/resource/stone.ts");
+const pickaxe_1 = __webpack_require__(/*! ./tool/pickaxe */ "./src/item/tool/pickaxe.ts");
+const hammer_1 = __webpack_require__(/*! ./tool/hammer */ "./src/item/tool/hammer.ts");
+const coal_1 = __webpack_require__(/*! ./resource/coal */ "./src/item/resource/coal.ts");
+const torch_1 = __webpack_require__(/*! ./light/torch */ "./src/item/light/torch.ts");
+const lantern_1 = __webpack_require__(/*! ./light/lantern */ "./src/item/light/lantern.ts");
 const spellbook_1 = __webpack_require__(/*! ../weapon/spellbook */ "./src/weapon/spellbook.ts");
-const spellbookPage_1 = __webpack_require__(/*! ./spellbookPage */ "./src/item/spellbookPage.ts");
+const spellbookPage_1 = __webpack_require__(/*! ./usable/spellbookPage */ "./src/item/usable/spellbookPage.ts");
 const backpack_1 = __webpack_require__(/*! ./backpack */ "./src/item/backpack.ts");
 const bombItem_1 = __webpack_require__(/*! ./bombItem */ "./src/item/bombItem.ts");
 const greataxe_1 = __webpack_require__(/*! ../weapon/greataxe */ "./src/weapon/greataxe.ts");
+const utils_1 = __webpack_require__(/*! ../utils */ "./src/utils.ts");
+const geode_1 = __webpack_require__(/*! ./resource/geode */ "./src/item/resource/geode.ts");
 exports.ItemTypeMap = {
     dualdagger: dualdagger_1.DualDagger,
     warhammer: warhammer_1.Warhammer,
@@ -12928,6 +12857,7 @@ exports.ItemTypeMap = {
     redgem: redgem_1.RedGem,
     bluegem: bluegem_1.BlueGem,
     greengem: greengem_1.GreenGem,
+    geode: geode_1.Geode,
     gold: gold_1.Gold,
     stone: stone_1.Stone,
     coal: coal_1.Coal,
@@ -12947,8 +12877,8 @@ DropTable.drops = [
     // Equipment
     { itemType: "armor", dropRate: 350, category: ["equipment"] },
     // Tools
-    { itemType: "pickaxe", dropRate: 100, category: ["tool"] },
-    { itemType: "hammer", dropRate: 50, category: ["tool"] },
+    { itemType: "pickaxe", dropRate: 25, category: ["tool"] },
+    { itemType: "hammer", dropRate: 25, category: ["tool"] },
     // Consumables
     { itemType: "heart", dropRate: 20, category: ["consumable"] },
     { itemType: "weaponpoison", dropRate: 100, category: ["consumable"] },
@@ -12973,9 +12903,10 @@ DropTable.drops = [
     { itemType: "torch", dropRate: 250, category: ["light"] },
     { itemType: "lantern", dropRate: 500, category: ["light"] },
     // Gems and minerals
-    { itemType: "redgem", dropRate: 200, category: ["gem", "resource"] },
-    { itemType: "bluegem", dropRate: 200, category: ["gem", "resource"] },
-    { itemType: "greengem", dropRate: 200, category: ["gem", "resource"] },
+    { itemType: "redgem", dropRate: 25, category: ["gem", "resource"] },
+    { itemType: "bluegem", dropRate: 25, category: ["gem", "resource"] },
+    { itemType: "greengem", dropRate: 25, category: ["gem", "resource"] },
+    { itemType: "geode", dropRate: 100, category: ["gem", "resource"] },
     { itemType: "gold", dropRate: 200, category: ["resource"] },
     { itemType: "stone", dropRate: 200, category: ["resource"] },
     {
@@ -13042,7 +12973,13 @@ DropTable.addNewItem = (itemType, entity) => {
     let drop = ItemClass.add(entity.room, entity.x, entity.y);
     if (drop.name === "coin") {
         // Generate random number between 0-14 with normal distribution around 7
-        drop.stack = Math.round(Math.min(14, Math.max(0, Math.ceil(7 + (Math.random() + Math.random() + Math.random() - 1.5) * 5))));
+        drop.stackCount = utils_1.Utils.randomSineInt(0, 14);
+    }
+    if (drop instanceof bluegem_1.BlueGem ||
+        drop instanceof redgem_1.RedGem ||
+        drop instanceof greengem_1.GreenGem) {
+        // Generate random number between 0-14 with normal distribution around 7
+        drop.stackCount = utils_1.Utils.randomSineInt(0, 7);
     }
     entity.drops.push(drop);
     return drop;
@@ -13113,55 +13050,6 @@ exports.Equippable = Equippable;
 
 /***/ }),
 
-/***/ "./src/item/geode.ts":
-/*!***************************!*\
-  !*** ./src/item/geode.ts ***!
-  \***************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Geode = void 0;
-const item_1 = __webpack_require__(/*! ./item */ "./src/item/item.ts");
-const redgem_1 = __webpack_require__(/*! ./redgem */ "./src/item/redgem.ts");
-const bluegem_1 = __webpack_require__(/*! ./bluegem */ "./src/item/bluegem.ts");
-const greengem_1 = __webpack_require__(/*! ./greengem */ "./src/item/greengem.ts");
-class Geode extends item_1.Item {
-    constructor(level, x, y) {
-        super(level, x, y);
-        this.getDescription = () => {
-            return "GEODE\nWhen in doubt hit it with a hammer.";
-        };
-        this.split = (inventory) => {
-            if (Math.random() < 0.2) {
-                this.level.game.pushMessage(`You split the geode but it's stone all the way through.`);
-            }
-            else if (inventory.isFull()) {
-                this.level.game.pushMessage(`You don't have enough space in your inventory to split the geode.`);
-            }
-            else {
-                const numGems = Math.floor(Math.random() * Math.random() * 5) + 1;
-                this.level.game.pushMessage(`You split the geode and it's full of shiny gems!`);
-                let gemTypes = [bluegem_1.BlueGem, redgem_1.RedGem, greengem_1.GreenGem];
-                let gemType = gemTypes[Math.floor(Math.random() * gemTypes.length)];
-                for (let i = 0; i < numGems; i++) {
-                    inventory.addItem(new gemType(this.level, this.x, this.y));
-                }
-                inventory.removeItem(this);
-            }
-        };
-        this.tileX = 15;
-        this.tileY = 2;
-        this.name = Geode.itemName;
-        this.stackable = false;
-    }
-}
-exports.Geode = Geode;
-Geode.itemName = "geode";
-
-
-/***/ }),
-
 /***/ "./src/item/godStone.ts":
 /*!******************************!*\
   !*** ./src/item/godStone.ts ***!
@@ -13172,7 +13060,7 @@ Geode.itemName = "geode";
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GodStone = void 0;
 const room_1 = __webpack_require__(/*! ../room/room */ "./src/room/room.ts");
-const usable_1 = __webpack_require__(/*! ./usable */ "./src/item/usable.ts");
+const usable_1 = __webpack_require__(/*! ./usable/usable */ "./src/item/usable/usable.ts");
 class GodStone extends usable_1.Usable {
     constructor(level, x, y) {
         super(level, x, y);
@@ -13206,32 +13094,6 @@ exports.GodStone = GodStone;
 
 /***/ }),
 
-/***/ "./src/item/gold.ts":
-/*!**************************!*\
-  !*** ./src/item/gold.ts ***!
-  \**************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Gold = void 0;
-const item_1 = __webpack_require__(/*! ./item */ "./src/item/item.ts");
-class Gold extends item_1.Item {
-    constructor(level, x, y) {
-        super(level, x, y);
-        this.tileX = 18;
-        this.tileY = 0;
-        this.name = Gold.itemName;
-        this.stackable = true;
-        this.description = "A bar of gold";
-    }
-}
-exports.Gold = Gold;
-Gold.itemName = "gold";
-
-
-/***/ }),
-
 /***/ "./src/item/goldenKey.ts":
 /*!*******************************!*\
   !*** ./src/item/goldenKey.ts ***!
@@ -13254,130 +13116,6 @@ class GoldenKey extends equippable_1.Equippable {
 }
 exports.GoldenKey = GoldenKey;
 GoldenKey.itemName = "goldenKey";
-
-
-/***/ }),
-
-/***/ "./src/item/greengem.ts":
-/*!******************************!*\
-  !*** ./src/item/greengem.ts ***!
-  \******************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.GreenGem = void 0;
-const item_1 = __webpack_require__(/*! ./item */ "./src/item/item.ts");
-class GreenGem extends item_1.Item {
-    constructor(level, x, y) {
-        super(level, x, y);
-        this.getDescription = () => {
-            return "PERIDOT";
-        };
-        this.tileX = 11;
-        this.tileY = 0;
-        this.stackable = true;
-    }
-}
-exports.GreenGem = GreenGem;
-GreenGem.itemName = "peridot";
-
-
-/***/ }),
-
-/***/ "./src/item/hammer.ts":
-/*!****************************!*\
-  !*** ./src/item/hammer.ts ***!
-  \****************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Hammer = void 0;
-const sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
-const usable_1 = __webpack_require__(/*! ./usable */ "./src/item/usable.ts");
-const weapon_1 = __webpack_require__(/*! ../weapon/weapon */ "./src/weapon/weapon.ts");
-const weaponFragments_1 = __webpack_require__(/*! ./weaponFragments */ "./src/item/weaponFragments.ts");
-class Hammer extends usable_1.Usable {
-    constructor(level, x, y) {
-        super(level, x, y);
-        this.onUse = (player) => {
-            player.health = Math.min(player.maxHealth, player.health + 1);
-            if (this.level.game.rooms[player.levelID] === this.level.game.room)
-                sound_1.Sound.heal();
-            //this.level.items = this.level.items.filter((x) => x !== this); // removes itself from the level
-        };
-        this.useOnOther = (player, other) => {
-            if (other instanceof weapon_1.Weapon && other.name !== "dagger") {
-                other.disassemble();
-            }
-            else if (other.name === "dagger") {
-                this.level.game.pushMessage(`You probably shouldn't disassemble your dagger...`);
-            }
-            else if (other.name === "hammer" && other !== this) {
-                let hammer = other;
-                hammer.disassemble(player);
-                this.level.game.pushMessage(`I only needed one of those anyways...`);
-            }
-            else if (other.name === "geode") {
-                let geode = other;
-                geode.split(player.inventory);
-                this.level.game.pushMessage(`You hit the geode with the hammer.`);
-            }
-        };
-        this.disassemble = (player) => {
-            let inventoryX = this.x;
-            let inventoryY = this.y;
-            let numFragments = Math.ceil(Math.random() * 5 + 5);
-            player.inventory.removeItem(this);
-            player.inventory.addItem(new weaponFragments_1.WeaponFragments(this.level, inventoryX, inventoryY, numFragments));
-        };
-        this.tileX = 21;
-        this.tileY = 2;
-        this.offsetY = -0.3;
-        this.canUseOnOther = true;
-        this.description = "useful for breaking weapons down into fragments";
-        this.name = Hammer.itemName;
-    }
-}
-exports.Hammer = Hammer;
-Hammer.itemName = "hammer";
-
-
-/***/ }),
-
-/***/ "./src/item/heart.ts":
-/*!***************************!*\
-  !*** ./src/item/heart.ts ***!
-  \***************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Heart = void 0;
-const sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
-const usable_1 = __webpack_require__(/*! ./usable */ "./src/item/usable.ts");
-class Heart extends usable_1.Usable {
-    constructor(level, x, y) {
-        super(level, x, y);
-        this.onUse = (player) => {
-            if (player.health < player.maxHealth) {
-                player.health = Math.min(player.maxHealth, player.health + 1);
-                if (this.level.game.rooms[player.levelID] === this.level.game.room)
-                    sound_1.Sound.heal();
-                player.inventory.removeItem(this);
-            }
-            //this.level.items = this.level.items.filter((x) => x !== this); // removes itself from the level
-        };
-        this.tileX = 8;
-        this.tileY = 0;
-        this.offsetY = -0.3;
-        this.name = Heart.itemName;
-        this.description = "restores 1 health";
-    }
-}
-exports.Heart = Heart;
-Heart.itemName = "health potion";
 
 
 /***/ }),
@@ -13645,16 +13383,46 @@ Key.itemName = "key";
 
 /***/ }),
 
-/***/ "./src/item/lantern.ts":
-/*!*****************************!*\
-  !*** ./src/item/lantern.ts ***!
-  \*****************************/
+/***/ "./src/item/light/candle.ts":
+/*!**********************************!*\
+  !*** ./src/item/light/candle.ts ***!
+  \**********************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Candle = void 0;
+const light_1 = __webpack_require__(/*! ./light */ "./src/item/light/light.ts");
+class Candle extends light_1.Light {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.fuel = 50; //how many turns before it burns out
+        this.tileX = 27;
+        this.tileY = 0;
+        this.name = "candle";
+        this.fuelCap = 50;
+        this.radius = 4;
+        this.stackable = true;
+        this.maxBrightness = 2;
+        this.maxBrightness = 0.25;
+    }
+}
+exports.Candle = Candle;
+Candle.itemName = "candle";
+
+
+/***/ }),
+
+/***/ "./src/item/light/lantern.ts":
+/*!***********************************!*\
+  !*** ./src/item/light/lantern.ts ***!
+  \***********************************/
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Lantern = void 0;
-const light_1 = __webpack_require__(/*! ./light */ "./src/item/light.ts");
+const light_1 = __webpack_require__(/*! ./light */ "./src/item/light/light.ts");
 class Lantern extends light_1.Light {
     constructor(level, x, y) {
         super(level, x, y);
@@ -13680,19 +13448,19 @@ Lantern.itemName = "lantern";
 
 /***/ }),
 
-/***/ "./src/item/light.ts":
-/*!***************************!*\
-  !*** ./src/item/light.ts ***!
-  \***************************/
+/***/ "./src/item/light/light.ts":
+/*!*********************************!*\
+  !*** ./src/item/light/light.ts ***!
+  \*********************************/
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Light = void 0;
-const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-const equippable_1 = __webpack_require__(/*! ./equippable */ "./src/item/equippable.ts");
-const gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
-const utils_1 = __webpack_require__(/*! ../utils */ "./src/utils.ts");
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const equippable_1 = __webpack_require__(/*! ../equippable */ "./src/item/equippable.ts");
+const gameConstants_1 = __webpack_require__(/*! ../../gameConstants */ "./src/gameConstants.ts");
+const utils_1 = __webpack_require__(/*! ../../utils */ "./src/utils.ts");
 class Light extends equippable_1.Equippable {
     constructor(level, x, y) {
         super(level, x, y);
@@ -13822,16 +13590,231 @@ exports.Light = Light;
 
 /***/ }),
 
-/***/ "./src/item/redgem.ts":
-/*!****************************!*\
-  !*** ./src/item/redgem.ts ***!
-  \****************************/
+/***/ "./src/item/light/torch.ts":
+/*!*********************************!*\
+  !*** ./src/item/light/torch.ts ***!
+  \*********************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Torch = void 0;
+const light_1 = __webpack_require__(/*! ./light */ "./src/item/light/light.ts");
+class Torch extends light_1.Light {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.tileX = 28;
+        this.tileY = 0;
+        this.name = "torch";
+        this.fuelCap = 250;
+        this.fuel = 250;
+        this.radius = 7;
+        this.maxBrightness = 5;
+        this.minBrightness = 2;
+    }
+}
+exports.Torch = Torch;
+Torch.itemName = "torch";
+
+
+/***/ }),
+
+/***/ "./src/item/resource/bluegem.ts":
+/*!**************************************!*\
+  !*** ./src/item/resource/bluegem.ts ***!
+  \**************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BlueGem = void 0;
+const item_1 = __webpack_require__(/*! ../item */ "./src/item/item.ts");
+class BlueGem extends item_1.Item {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.getDescription = () => {
+            return "ZIRCON";
+        };
+        this.tileX = 13;
+        this.tileY = 0;
+        this.name = BlueGem.itemName;
+        this.stackable = true;
+    }
+}
+exports.BlueGem = BlueGem;
+BlueGem.itemName = "zircon";
+
+
+/***/ }),
+
+/***/ "./src/item/resource/coal.ts":
+/*!***********************************!*\
+  !*** ./src/item/resource/coal.ts ***!
+  \***********************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Coal = void 0;
+const usable_1 = __webpack_require__(/*! ../usable/usable */ "./src/item/usable/usable.ts");
+const lantern_1 = __webpack_require__(/*! ../light/lantern */ "./src/item/light/lantern.ts");
+const light_1 = __webpack_require__(/*! ../light/light */ "./src/item/light/light.ts");
+class Coal extends usable_1.Usable {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.onUse = (player) => {
+            let l = player.inventory.hasItem(lantern_1.Lantern);
+            if (l instanceof lantern_1.Lantern) {
+                if (l.fuel <= l.fuelCap - 50) {
+                    player.game.pushMessage("You add some fuel to your lantern.");
+                    this.stackCount -= 1;
+                    if (this.stackCount <= 0) {
+                        player.inventory.removeItem(this);
+                    }
+                }
+            }
+        };
+        this.useOnOther = (player, other) => {
+            if (other instanceof light_1.Light) {
+                if (other.canRefuel && other.fuel <= 0 && other.broken) {
+                    let amountToRefuel = Math.min(this.stackCount * 25, other.fuelCap);
+                    other.fuel += amountToRefuel;
+                    this.stackCount -= amountToRefuel / 25;
+                    other.broken = false;
+                    this.level.game.pushMessage(`You add refuel your ${other.name} with ${amountToRefuel / 25} coal.`);
+                    if (this.stackCount <= 0)
+                        player.inventory.removeItem(this);
+                }
+            }
+        };
+        this.tileX = 17;
+        this.tileY = 0;
+        this.stackable = true;
+        this.stackCount = Math.ceil(Math.random() * 7 + 3);
+        this.name = Coal.itemName;
+        this.description = "A piece of coal. Fuels lantern.";
+        this.canUseOnOther = true;
+    }
+}
+exports.Coal = Coal;
+Coal.itemName = "coal";
+
+
+/***/ }),
+
+/***/ "./src/item/resource/geode.ts":
+/*!************************************!*\
+  !*** ./src/item/resource/geode.ts ***!
+  \************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Geode = void 0;
+const item_1 = __webpack_require__(/*! ../item */ "./src/item/item.ts");
+const redgem_1 = __webpack_require__(/*! ./redgem */ "./src/item/resource/redgem.ts");
+const bluegem_1 = __webpack_require__(/*! ./bluegem */ "./src/item/resource/bluegem.ts");
+const greengem_1 = __webpack_require__(/*! ./greengem */ "./src/item/resource/greengem.ts");
+class Geode extends item_1.Item {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.getDescription = () => {
+            return "GEODE\nWhen in doubt hit it with a hammer.";
+        };
+        this.split = (inventory) => {
+            if (Math.random() < 0.2) {
+                this.level.game.pushMessage(`You split the geode but it's stone all the way through.`);
+            }
+            else if (inventory.isFull()) {
+                this.level.game.pushMessage(`You don't have enough space in your inventory to split the geode.`);
+            }
+            else {
+                const numGems = Math.floor(Math.random() * Math.random() * 5) + 1;
+                this.level.game.pushMessage(`You split the geode and it's full of shiny gems!`);
+                let gemTypes = [bluegem_1.BlueGem, redgem_1.RedGem, greengem_1.GreenGem];
+                let gemType = gemTypes[Math.floor(Math.random() * gemTypes.length)];
+                for (let i = 0; i < numGems; i++) {
+                    inventory.addItem(new gemType(this.level, this.x, this.y));
+                }
+                inventory.removeItem(this);
+            }
+        };
+        this.tileX = 15;
+        this.tileY = 2;
+        this.name = Geode.itemName;
+        this.stackable = false;
+    }
+}
+exports.Geode = Geode;
+Geode.itemName = "geode";
+
+
+/***/ }),
+
+/***/ "./src/item/resource/gold.ts":
+/*!***********************************!*\
+  !*** ./src/item/resource/gold.ts ***!
+  \***********************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Gold = void 0;
+const item_1 = __webpack_require__(/*! ../item */ "./src/item/item.ts");
+class Gold extends item_1.Item {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.tileX = 18;
+        this.tileY = 0;
+        this.name = Gold.itemName;
+        this.stackable = true;
+        this.description = "A bar of gold";
+    }
+}
+exports.Gold = Gold;
+Gold.itemName = "gold";
+
+
+/***/ }),
+
+/***/ "./src/item/resource/greengem.ts":
+/*!***************************************!*\
+  !*** ./src/item/resource/greengem.ts ***!
+  \***************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.GreenGem = void 0;
+const item_1 = __webpack_require__(/*! ../item */ "./src/item/item.ts");
+class GreenGem extends item_1.Item {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.getDescription = () => {
+            return "PERIDOT";
+        };
+        this.tileX = 11;
+        this.tileY = 0;
+        this.name = GreenGem.itemName;
+        this.stackable = true;
+    }
+}
+exports.GreenGem = GreenGem;
+GreenGem.itemName = "peridot";
+
+
+/***/ }),
+
+/***/ "./src/item/resource/redgem.ts":
+/*!*************************************!*\
+  !*** ./src/item/resource/redgem.ts ***!
+  \*************************************/
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RedGem = void 0;
-const item_1 = __webpack_require__(/*! ./item */ "./src/item/item.ts");
+const item_1 = __webpack_require__(/*! ../item */ "./src/item/item.ts");
 class RedGem extends item_1.Item {
     constructor(level, x, y) {
         super(level, x, y);
@@ -13840,6 +13823,7 @@ class RedGem extends item_1.Item {
         };
         this.tileX = 12;
         this.tileY = 0;
+        this.name = RedGem.itemName;
         this.stackable = true;
     }
 }
@@ -13849,16 +13833,167 @@ RedGem.itemName = "garnet";
 
 /***/ }),
 
-/***/ "./src/item/shrooms.ts":
-/*!*****************************!*\
-  !*** ./src/item/shrooms.ts ***!
-  \*****************************/
+/***/ "./src/item/resource/stone.ts":
+/*!************************************!*\
+  !*** ./src/item/resource/stone.ts ***!
+  \************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Stone = void 0;
+const item_1 = __webpack_require__(/*! ../item */ "./src/item/item.ts");
+class Stone extends item_1.Item {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.getDescription = () => {
+            return "STONE\nSome fragments of stone.";
+        };
+        this.tileX = 15;
+        this.tileY = 0;
+        this.stackable = true;
+    }
+}
+exports.Stone = Stone;
+Stone.itemName = "stones";
+
+
+/***/ }),
+
+/***/ "./src/item/tool/hammer.ts":
+/*!*********************************!*\
+  !*** ./src/item/tool/hammer.ts ***!
+  \*********************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Hammer = void 0;
+const sound_1 = __webpack_require__(/*! ../../sound */ "./src/sound.ts");
+const usable_1 = __webpack_require__(/*! ../usable/usable */ "./src/item/usable/usable.ts");
+const weapon_1 = __webpack_require__(/*! ../../weapon/weapon */ "./src/weapon/weapon.ts");
+const weaponFragments_1 = __webpack_require__(/*! ../usable/weaponFragments */ "./src/item/usable/weaponFragments.ts");
+class Hammer extends usable_1.Usable {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.onUse = (player) => {
+            player.health = Math.min(player.maxHealth, player.health + 1);
+            if (this.level.game.rooms[player.levelID] === this.level.game.room)
+                sound_1.Sound.heal();
+            //this.level.items = this.level.items.filter((x) => x !== this); // removes itself from the level
+        };
+        this.useOnOther = (player, other) => {
+            if (other instanceof weapon_1.Weapon && other.name !== "dagger") {
+                other.disassemble();
+            }
+            else if (other.name === "dagger") {
+                this.level.game.pushMessage(`You probably shouldn't disassemble your dagger...`);
+            }
+            else if (other.name === "hammer" && other !== this) {
+                let hammer = other;
+                hammer.disassemble(player);
+                this.level.game.pushMessage(`I only needed one of those anyways...`);
+            }
+            else if (other.name === "geode") {
+                let geode = other;
+                geode.split(player.inventory);
+                this.level.game.pushMessage(`You hit the geode with the hammer.`);
+            }
+        };
+        this.disassemble = (player) => {
+            let inventoryX = this.x;
+            let inventoryY = this.y;
+            let numFragments = Math.ceil(Math.random() * 5 + 5);
+            player.inventory.removeItem(this);
+            player.inventory.addItem(new weaponFragments_1.WeaponFragments(this.level, inventoryX, inventoryY, numFragments));
+        };
+        this.tileX = 21;
+        this.tileY = 2;
+        this.offsetY = -0.3;
+        this.canUseOnOther = true;
+        this.description = "useful for breaking weapons down into fragments";
+        this.name = Hammer.itemName;
+    }
+}
+exports.Hammer = Hammer;
+Hammer.itemName = "hammer";
+
+
+/***/ }),
+
+/***/ "./src/item/tool/pickaxe.ts":
+/*!**********************************!*\
+  !*** ./src/item/tool/pickaxe.ts ***!
+  \**********************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Pickaxe = void 0;
+const item_1 = __webpack_require__(/*! ../item */ "./src/item/item.ts");
+class Pickaxe extends item_1.Item {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.tileX = 30;
+        this.tileY = 0;
+        this.name = Pickaxe.itemName;
+        this.description = "allows mining rocks without equipping";
+        //this.canMine = true;
+    }
+}
+exports.Pickaxe = Pickaxe;
+Pickaxe.itemName = "pickaxe";
+
+
+/***/ }),
+
+/***/ "./src/item/usable/heart.ts":
+/*!**********************************!*\
+  !*** ./src/item/usable/heart.ts ***!
+  \**********************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Heart = void 0;
+const sound_1 = __webpack_require__(/*! ../../sound */ "./src/sound.ts");
+const usable_1 = __webpack_require__(/*! ./usable */ "./src/item/usable/usable.ts");
+class Heart extends usable_1.Usable {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.onUse = (player) => {
+            if (player.health < player.maxHealth) {
+                player.health = Math.min(player.maxHealth, player.health + 1);
+                if (this.level.game.rooms[player.levelID] === this.level.game.room)
+                    sound_1.Sound.heal();
+                player.inventory.removeItem(this);
+            }
+            //this.level.items = this.level.items.filter((x) => x !== this); // removes itself from the level
+        };
+        this.tileX = 8;
+        this.tileY = 0;
+        this.offsetY = -0.3;
+        this.name = Heart.itemName;
+        this.stackable = true;
+        this.description = "restores 1 health";
+    }
+}
+exports.Heart = Heart;
+Heart.itemName = "health potion";
+
+
+/***/ }),
+
+/***/ "./src/item/usable/shrooms.ts":
+/*!************************************!*\
+  !*** ./src/item/usable/shrooms.ts ***!
+  \************************************/
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Shrooms = void 0;
-const usable_1 = __webpack_require__(/*! ./usable */ "./src/item/usable.ts");
+const usable_1 = __webpack_require__(/*! ./usable */ "./src/item/usable/usable.ts");
 class Shrooms extends usable_1.Usable {
     constructor(level, x, y) {
         super(level, x, y);
@@ -13887,18 +14022,18 @@ Shrooms.itemName = "mushrooms";
 
 /***/ }),
 
-/***/ "./src/item/spellbookPage.ts":
-/*!***********************************!*\
-  !*** ./src/item/spellbookPage.ts ***!
-  \***********************************/
+/***/ "./src/item/usable/spellbookPage.ts":
+/*!******************************************!*\
+  !*** ./src/item/usable/spellbookPage.ts ***!
+  \******************************************/
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SpellbookPage = void 0;
-const sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
-const usable_1 = __webpack_require__(/*! ./usable */ "./src/item/usable.ts");
-const equippable_1 = __webpack_require__(/*! ./equippable */ "./src/item/equippable.ts");
+const sound_1 = __webpack_require__(/*! ../../sound */ "./src/sound.ts");
+const usable_1 = __webpack_require__(/*! ./usable */ "./src/item/usable/usable.ts");
+const equippable_1 = __webpack_require__(/*! ../equippable */ "./src/item/equippable.ts");
 class SpellbookPage extends usable_1.Usable {
     constructor(level, x, y, stackCount) {
         super(level, x, y);
@@ -13938,72 +14073,16 @@ SpellbookPage.itemName = "weapon fragments";
 
 /***/ }),
 
-/***/ "./src/item/stone.ts":
-/*!***************************!*\
-  !*** ./src/item/stone.ts ***!
-  \***************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Stone = void 0;
-const item_1 = __webpack_require__(/*! ./item */ "./src/item/item.ts");
-class Stone extends item_1.Item {
-    constructor(level, x, y) {
-        super(level, x, y);
-        this.getDescription = () => {
-            return "STONE\nSome fragments of stone.";
-        };
-        this.tileX = 15;
-        this.tileY = 0;
-        this.stackable = true;
-    }
-}
-exports.Stone = Stone;
-Stone.itemName = "stones";
-
-
-/***/ }),
-
-/***/ "./src/item/torch.ts":
-/*!***************************!*\
-  !*** ./src/item/torch.ts ***!
-  \***************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Torch = void 0;
-const light_1 = __webpack_require__(/*! ./light */ "./src/item/light.ts");
-class Torch extends light_1.Light {
-    constructor(level, x, y) {
-        super(level, x, y);
-        this.tileX = 28;
-        this.tileY = 0;
-        this.name = "torch";
-        this.fuelCap = 250;
-        this.fuel = 250;
-        this.radius = 7;
-        this.maxBrightness = 5;
-        this.minBrightness = 2;
-    }
-}
-exports.Torch = Torch;
-Torch.itemName = "torch";
-
-
-/***/ }),
-
-/***/ "./src/item/usable.ts":
-/*!****************************!*\
-  !*** ./src/item/usable.ts ***!
-  \****************************/
+/***/ "./src/item/usable/usable.ts":
+/*!***********************************!*\
+  !*** ./src/item/usable/usable.ts ***!
+  \***********************************/
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Usable = void 0;
-const item_1 = __webpack_require__(/*! ./item */ "./src/item/item.ts");
+const item_1 = __webpack_require__(/*! ../item */ "./src/item/item.ts");
 class Usable extends item_1.Item {
     constructor(level, x, y) {
         super(level, x, y);
@@ -14017,18 +14096,18 @@ exports.Usable = Usable;
 
 /***/ }),
 
-/***/ "./src/item/weaponBlood.ts":
-/*!*********************************!*\
-  !*** ./src/item/weaponBlood.ts ***!
-  \*********************************/
+/***/ "./src/item/usable/weaponBlood.ts":
+/*!****************************************!*\
+  !*** ./src/item/usable/weaponBlood.ts ***!
+  \****************************************/
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.WeaponBlood = void 0;
-const sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
-const usable_1 = __webpack_require__(/*! ./usable */ "./src/item/usable.ts");
-const weapon_1 = __webpack_require__(/*! ../weapon/weapon */ "./src/weapon/weapon.ts");
+const sound_1 = __webpack_require__(/*! ../../sound */ "./src/sound.ts");
+const usable_1 = __webpack_require__(/*! ./usable */ "./src/item/usable/usable.ts");
+const weapon_1 = __webpack_require__(/*! ../../weapon/weapon */ "./src/weapon/weapon.ts");
 class WeaponBlood extends usable_1.Usable {
     constructor(level, x, y) {
         super(level, x, y);
@@ -14060,18 +14139,18 @@ WeaponBlood.itemName = "cursed blood";
 
 /***/ }),
 
-/***/ "./src/item/weaponFragments.ts":
-/*!*************************************!*\
-  !*** ./src/item/weaponFragments.ts ***!
-  \*************************************/
+/***/ "./src/item/usable/weaponFragments.ts":
+/*!********************************************!*\
+  !*** ./src/item/usable/weaponFragments.ts ***!
+  \********************************************/
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.WeaponFragments = void 0;
-const sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
-const usable_1 = __webpack_require__(/*! ./usable */ "./src/item/usable.ts");
-const equippable_1 = __webpack_require__(/*! ./equippable */ "./src/item/equippable.ts");
+const sound_1 = __webpack_require__(/*! ../../sound */ "./src/sound.ts");
+const usable_1 = __webpack_require__(/*! ./usable */ "./src/item/usable/usable.ts");
+const equippable_1 = __webpack_require__(/*! ../equippable */ "./src/item/equippable.ts");
 class WeaponFragments extends usable_1.Usable {
     constructor(level, x, y, stackCount) {
         super(level, x, y);
@@ -14114,18 +14193,18 @@ WeaponFragments.itemName = "weapon fragments";
 
 /***/ }),
 
-/***/ "./src/item/weaponPoison.ts":
-/*!**********************************!*\
-  !*** ./src/item/weaponPoison.ts ***!
-  \**********************************/
+/***/ "./src/item/usable/weaponPoison.ts":
+/*!*****************************************!*\
+  !*** ./src/item/usable/weaponPoison.ts ***!
+  \*****************************************/
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.WeaponPoison = void 0;
-const sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
-const usable_1 = __webpack_require__(/*! ./usable */ "./src/item/usable.ts");
-const weapon_1 = __webpack_require__(/*! ../weapon/weapon */ "./src/weapon/weapon.ts");
+const sound_1 = __webpack_require__(/*! ../../sound */ "./src/sound.ts");
+const usable_1 = __webpack_require__(/*! ./usable */ "./src/item/usable/usable.ts");
+const weapon_1 = __webpack_require__(/*! ../../weapon/weapon */ "./src/weapon/weapon.ts");
 class WeaponPoison extends usable_1.Usable {
     constructor(level, x, y) {
         super(level, x, y);
@@ -18861,14 +18940,14 @@ const vendingMachine_1 = __webpack_require__(/*! ../entity/object/vendingMachine
 const wallTorch_1 = __webpack_require__(/*! ../tile/wallTorch */ "./src/tile/wallTorch.ts");
 const chargeEnemy_1 = __webpack_require__(/*! ../entity/enemy/chargeEnemy */ "./src/entity/enemy/chargeEnemy.ts");
 const shotgun_1 = __webpack_require__(/*! ../weapon/shotgun */ "./src/weapon/shotgun.ts");
-const heart_1 = __webpack_require__(/*! ../item/heart */ "./src/item/heart.ts");
+const heart_1 = __webpack_require__(/*! ../item/usable/heart */ "./src/item/usable/heart.ts");
 const spear_1 = __webpack_require__(/*! ../weapon/spear */ "./src/weapon/spear.ts");
 const player_1 = __webpack_require__(/*! ../player/player */ "./src/player/player.ts");
 const crabEnemy_1 = __webpack_require__(/*! ../entity/enemy/crabEnemy */ "./src/entity/enemy/crabEnemy.ts");
 const zombieEnemy_1 = __webpack_require__(/*! ../entity/enemy/zombieEnemy */ "./src/entity/enemy/zombieEnemy.ts");
 const bigSkullEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigSkullEnemy */ "./src/entity/enemy/bigSkullEnemy.ts");
 const random_1 = __webpack_require__(/*! ../random */ "./src/random.ts");
-const lantern_1 = __webpack_require__(/*! ../item/lantern */ "./src/item/lantern.ts");
+const lantern_1 = __webpack_require__(/*! ../item/light/lantern */ "./src/item/light/lantern.ts");
 const dualdagger_1 = __webpack_require__(/*! ../weapon/dualdagger */ "./src/weapon/dualdagger.ts");
 const pot_1 = __webpack_require__(/*! ../entity/object/pot */ "./src/entity/object/pot.ts");
 const bishopEnemy_1 = __webpack_require__(/*! ../entity/enemy/bishopEnemy */ "./src/entity/enemy/bishopEnemy.ts");
@@ -18887,7 +18966,7 @@ const reverb_1 = __webpack_require__(/*! ../reverb */ "./src/reverb.ts");
 const astarclass_1 = __webpack_require__(/*! ../astarclass */ "./src/astarclass.ts");
 const warhammer_1 = __webpack_require__(/*! ../weapon/warhammer */ "./src/weapon/warhammer.ts");
 const spellbook_1 = __webpack_require__(/*! ../weapon/spellbook */ "./src/weapon/spellbook.ts");
-const torch_1 = __webpack_require__(/*! ../item/torch */ "./src/item/torch.ts");
+const torch_1 = __webpack_require__(/*! ../item/light/torch */ "./src/item/light/torch.ts");
 const rookEnemy_1 = __webpack_require__(/*! ../entity/enemy/rookEnemy */ "./src/entity/enemy/rookEnemy.ts");
 const beamEffect_1 = __webpack_require__(/*! ../beamEffect */ "./src/beamEffect.ts");
 const environment_1 = __webpack_require__(/*! ../environment */ "./src/environment.ts");
@@ -23605,6 +23684,16 @@ Utils.rgbToHex = (r, g, b) => {
     };
     return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 };
+// Generate a random integer with normal distribution
+Utils.randomSineInt = (min, max) => {
+    // Generate random value from 0 to π
+    const x = Math.random() * 2 * Math.PI;
+    // sin(x) gives us values from 0 to 1 with peak at π/2
+    const sinValue = Math.sin(x - Math.PI / 2) + 1;
+    // Map to our integer range
+    const range = max - min + 1;
+    return Math.floor((sinValue / 2) * range) + min;
+};
 
 
 /***/ }),
@@ -23778,32 +23867,6 @@ class Greataxe extends weapon_1.Weapon {
 }
 exports.Greataxe = Greataxe;
 Greataxe.itemName = "greataxe";
-
-
-/***/ }),
-
-/***/ "./src/weapon/pickaxe.ts":
-/*!*******************************!*\
-  !*** ./src/weapon/pickaxe.ts ***!
-  \*******************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Pickaxe = void 0;
-const item_1 = __webpack_require__(/*! ../item/item */ "./src/item/item.ts");
-class Pickaxe extends item_1.Item {
-    constructor(level, x, y) {
-        super(level, x, y);
-        this.tileX = 30;
-        this.tileY = 0;
-        this.name = Pickaxe.itemName;
-        this.description = "allows mining rocks without equipping";
-        //this.canMine = true;
-    }
-}
-exports.Pickaxe = Pickaxe;
-Pickaxe.itemName = "pickaxe";
 
 
 /***/ }),
@@ -23999,7 +24062,7 @@ const sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
 const playerFireball_1 = __webpack_require__(/*! ../projectile/playerFireball */ "./src/projectile/playerFireball.ts");
 const utils_1 = __webpack_require__(/*! ../utils */ "./src/utils.ts");
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-const spellbookPage_1 = __webpack_require__(/*! ../item/spellbookPage */ "./src/item/spellbookPage.ts");
+const spellbookPage_1 = __webpack_require__(/*! ../item/usable/spellbookPage */ "./src/item/usable/spellbookPage.ts");
 class Spellbook extends weapon_1.Weapon {
     constructor(level, x, y) {
         super(level, x, y);
@@ -24167,7 +24230,7 @@ const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const equippable_1 = __webpack_require__(/*! ../item/equippable */ "./src/item/equippable.ts");
 const sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
 const gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
-const weaponFragments_1 = __webpack_require__(/*! ../item/weaponFragments */ "./src/item/weaponFragments.ts");
+const weaponFragments_1 = __webpack_require__(/*! ../item/usable/weaponFragments */ "./src/item/usable/weaponFragments.ts");
 const attackAnimation_1 = __webpack_require__(/*! ../particle/attackAnimation */ "./src/particle/attackAnimation.ts");
 class Weapon extends equippable_1.Equippable {
     constructor(level, x, y, status) {

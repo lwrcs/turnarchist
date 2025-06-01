@@ -1,32 +1,34 @@
 import { Entity } from "../entity/entity";
 import { Armor } from "./armor";
-import { BlueGem } from "./bluegem";
-import { Candle } from "./candle";
+import { BlueGem } from "./resource/bluegem";
+import { Candle } from "./light/candle";
 import { Coin } from "./coin";
-import { GreenGem } from "./greengem";
-import { Heart } from "./heart";
+import { GreenGem } from "./resource/greengem";
+import { Heart } from "./usable/heart";
 import { Item } from "./item";
-import { RedGem } from "./redgem";
-import { WeaponFragments } from "./weaponFragments";
+import { RedGem } from "./resource/redgem";
+import { WeaponFragments } from "./usable/weaponFragments";
 import { Spear } from "../weapon/spear";
 import { Warhammer } from "../weapon/warhammer";
 import { DualDagger } from "../weapon/dualdagger";
-import { WeaponPoison } from "./weaponPoison";
-import { WeaponBlood } from "./weaponBlood";
-import { Gold } from "./gold";
-import { Stone } from "./stone";
-import { Pickaxe } from "../weapon/pickaxe";
-import { Hammer } from "./hammer";
-import { Coal } from "./coal";
-import { Torch } from "./torch";
-import { Lantern } from "./lantern";
+import { WeaponPoison } from "./usable/weaponPoison";
+import { WeaponBlood } from "./usable/weaponBlood";
+import { Gold } from "./resource/gold";
+import { Stone } from "./resource/stone";
+import { Pickaxe } from "./tool/pickaxe";
+import { Hammer } from "./tool/hammer";
+import { Coal } from "./resource/coal";
+import { Torch } from "./light/torch";
+import { Lantern } from "./light/lantern";
 import { Spellbook } from "../weapon/spellbook";
-import { SpellbookPage } from "./spellbookPage";
+import { SpellbookPage } from "./usable/spellbookPage";
 import { Backpack } from "./backpack";
 import { BombItem } from "./bombItem";
 import { Greataxe } from "../weapon/greataxe";
 import { Random } from "../random";
 import { Game } from "../game";
+import { Utils } from "../utils";
+import { Geode } from "./resource/geode";
 
 interface Drop {
   itemType: string;
@@ -65,6 +67,7 @@ export const ItemTypeMap: { [key: string]: typeof Item } = {
   redgem: RedGem,
   bluegem: BlueGem,
   greengem: GreenGem,
+  geode: Geode,
   gold: Gold,
   stone: Stone,
   coal: Coal,
@@ -84,8 +87,8 @@ export class DropTable {
     { itemType: "armor", dropRate: 350, category: ["equipment"] },
 
     // Tools
-    { itemType: "pickaxe", dropRate: 100, category: ["tool"] },
-    { itemType: "hammer", dropRate: 50, category: ["tool"] },
+    { itemType: "pickaxe", dropRate: 25, category: ["tool"] },
+    { itemType: "hammer", dropRate: 25, category: ["tool"] },
 
     // Consumables
     { itemType: "heart", dropRate: 20, category: ["consumable"] },
@@ -116,9 +119,10 @@ export class DropTable {
     { itemType: "lantern", dropRate: 500, category: ["light"] },
 
     // Gems and minerals
-    { itemType: "redgem", dropRate: 200, category: ["gem", "resource"] },
-    { itemType: "bluegem", dropRate: 200, category: ["gem", "resource"] },
-    { itemType: "greengem", dropRate: 200, category: ["gem", "resource"] },
+    { itemType: "redgem", dropRate: 25, category: ["gem", "resource"] },
+    { itemType: "bluegem", dropRate: 25, category: ["gem", "resource"] },
+    { itemType: "greengem", dropRate: 25, category: ["gem", "resource"] },
+    { itemType: "geode", dropRate: 100, category: ["gem", "resource"] },
     { itemType: "gold", dropRate: 200, category: ["resource"] },
     { itemType: "stone", dropRate: 200, category: ["resource"] },
     {
@@ -210,17 +214,15 @@ export class DropTable {
     let drop = ItemClass.add(entity.room, entity.x, entity.y);
     if (drop.name === "coin") {
       // Generate random number between 0-14 with normal distribution around 7
-      drop.stack = Math.round(
-        Math.min(
-          14,
-          Math.max(
-            0,
-            Math.ceil(
-              7 + (Math.random() + Math.random() + Math.random() - 1.5) * 5,
-            ),
-          ),
-        ),
-      );
+      drop.stackCount = Utils.randomSineInt(0, 14);
+    }
+    if (
+      drop instanceof BlueGem ||
+      drop instanceof RedGem ||
+      drop instanceof GreenGem
+    ) {
+      // Generate random number between 0-14 with normal distribution around 7
+      drop.stackCount = Utils.randomSineInt(0, 7);
     }
     entity.drops.push(drop);
     return drop;

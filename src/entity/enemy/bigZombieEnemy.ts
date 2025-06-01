@@ -5,15 +5,15 @@ import { Player } from "../../player/player";
 import { HitWarning } from "../../hitWarning";
 import { GenericParticle } from "../../particle/genericParticle";
 import { Coin } from "../../item/coin";
-import { RedGem } from "../../item/redgem";
+import { RedGem } from "../../item/resource/redgem";
 import { Item } from "../../item/item";
 import { Spear } from "../../weapon/spear";
 import { DualDagger } from "../../weapon/dualdagger";
-import { GreenGem } from "../../item/greengem";
+import { GreenGem } from "../../item/resource/greengem";
 import { Random } from "../../random";
 import { astar } from "../../astarclass";
 import { SpikeTrap } from "../../tile/spiketrap";
-import { Pickaxe } from "../../weapon/pickaxe";
+import { Pickaxe } from "../../item/tool/pickaxe";
 import { ImageParticle } from "../../particle/imageParticle";
 import { Enemy } from "./enemy";
 
@@ -53,7 +53,10 @@ export class BigZombieEnemy extends Enemy {
     this.alertRange = 10;
 
     if (drop) this.drop = drop;
-    this.getDrop(["consumable", "gem", "tool", "coin"]);
+    const dropAmount = Math.floor(Math.random() * 3) + 2;
+    while (this.drops.length < dropAmount && !this.cloned) {
+      this.getDrop();
+    }
   }
 
   hit = (): number => {
@@ -289,6 +292,21 @@ export class BigZombieEnemy extends Enemy {
       this.y,
       true,
     );
+  };
+
+  dropLoot = () => {
+    let dropOffsets = [
+      { x: 0, y: 0 },
+      { x: 1, y: 0 },
+      { x: 0, y: 1 },
+      { x: 1, y: 1 },
+    ];
+    for (let i = 0; i < this.drops.length; i++) {
+      this.drops[i].level = this.room;
+      this.drops[i].x = this.x + dropOffsets[i].x;
+      this.drops[i].y = this.y + dropOffsets[i].y;
+      this.room.items.push(this.drops[i]);
+    }
   };
 
   draw = (delta: number) => {

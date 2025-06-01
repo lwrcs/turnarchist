@@ -2,13 +2,13 @@ import { Item } from "../../item/item";
 import { Game } from "../../game";
 import { Key } from "../../item/key";
 import { Room } from "../../room/room";
-import { Heart } from "../../item/heart";
+import { Heart } from "../../item/usable/heart";
 import { Armor } from "../../item/armor";
 import { Resource } from "./resource";
 import { GenericParticle } from "../../particle/genericParticle";
-import { Gold } from "../../item/gold";
+import { Gold } from "../../item/resource/gold";
 import { Sound } from "../../sound";
-import { Geode } from "../../item/geode";
+import { Geode } from "../../item/resource/geode";
 export class GoldResource extends Resource {
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);

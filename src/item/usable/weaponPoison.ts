@@ -1,16 +1,15 @@
-import { Item } from "./item";
-import { Player } from "../player/player";
-import { Game } from "../game";
-import { Sound } from "../sound";
-import { Room } from "../room/room";
+import { Item } from "../item";
+import { Player } from "../../player/player";
+import { Sound } from "../../sound";
+import { Room } from "../../room/room";
 import { Usable } from "./usable";
-import { Weapon } from "../weapon/weapon";
+import { Weapon } from "../../weapon/weapon";
 
-export class WeaponBlood extends Usable {
-  static itemName = "cursed blood";
+export class WeaponPoison extends Usable {
+  static itemName = "weapon poison";
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
-    this.tileX = 12;
+    this.tileX = 11;
     this.tileY = 4;
     this.offsetY = -0.3;
     this.canUseOnOther = true;
@@ -26,15 +25,16 @@ export class WeaponBlood extends Usable {
 
   useOnOther = (player: Player, other: Item) => {
     if (other instanceof Weapon) {
-      other.applyStatus({ blood: true, poison: false });
+      other.applyStatus({ poison: true, blood: false });
       player.inventory.removeItem(this);
       this.level.game.pushMessage(
-        `You coat your ${other.name} in cursed blood.`,
+        `You apply the poison to your ${other.name}.`,
       );
+      console.log(`weapon poison used on ${other.name}`);
     }
   };
 
   getDescription = () => {
-    return "WEAPON BLOOD\nCan be applied to weapons to deal bleed damage";
+    return "WEAPON POISON\nCan be applied to weapons to deal poison damage";
   };
 }

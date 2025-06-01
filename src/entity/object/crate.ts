@@ -1,12 +1,12 @@
 import { Entity } from "../entity";
 import { Room } from "../../room/room";
 import { Game } from "../../game";
-import { Heart } from "../../item/heart";
+import { Heart } from "../../item/usable/heart";
 import { LevelConstants } from "../../levelConstants";
 import { GenericParticle } from "../../particle/genericParticle";
 import { EntityType } from "../entity";
 import { ImageParticle } from "../../particle/imageParticle";
-import { WeaponFragments } from "../../item/weaponFragments";
+import { WeaponFragments } from "../../item/usable/weaponFragments";
 import { Coin } from "../../item/coin";
 
 export class Crate extends Entity {

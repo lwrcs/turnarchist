@@ -1,8 +1,8 @@
 import { Game } from "../../game";
 import { Room } from "../../room/room";
 import { Resource } from "./resource";
-import { Coal } from "../../item/coal";
-import { Geode } from "../../item/geode";
+import { Coal } from "../../item/resource/coal";
+import { Geode } from "../../item/resource/geode";
 
 export class CoalResource extends Resource {
   constructor(room: Room, game: Game, x: number, y: number) {

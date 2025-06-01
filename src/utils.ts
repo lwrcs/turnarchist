@@ -67,4 +67,17 @@ export class Utils {
 
     return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
   };
+
+  // Generate a random integer with normal distribution
+  static randomSineInt = (min: number, max: number): number => {
+    // Generate random value from 0 to π
+    const x = Math.random() * 2 * Math.PI;
+
+    // sin(x) gives us values from 0 to 1 with peak at π/2
+    const sinValue = Math.sin(x - Math.PI / 2) + 1;
+
+    // Map to our integer range
+    const range = max - min + 1;
+    return Math.floor((sinValue / 2) * range) + min;
+  };
 }

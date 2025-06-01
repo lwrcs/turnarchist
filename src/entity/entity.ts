@@ -694,24 +694,11 @@ export class Entity extends Drawable {
   };
 
   draw = (delta: number) => {
-    if (!this.dead) {
-      Game.ctx.globalAlpha = this.alpha;
-      if (this.shielded)
-        if (this.hasShadow) {
-          Game.drawFX(
-            0,
-            0,
-            1,
-            1,
-            this.x - this.drawX,
-            this.y - this.drawY,
-            1,
-            1,
-            this.shadeColor,
-            this.shadeAmount(),
-          );
-        }
-      Game.drawMob(
+    if (this.dead) return;
+    Game.ctx.globalAlpha = this.alpha;
+    this.updateDrawXY(delta);
+    if (this.hasShadow) {
+      Game.drawFX(
         0,
         0,
         1,
@@ -720,22 +707,37 @@ export class Entity extends Drawable {
         this.y - this.drawY,
         1,
         1,
-        this.room.shadeColor,
-        this.shadeAmount(),
-      );
-      Game.drawMob(
-        this.tileX,
-        this.tileY + this.direction * 2,
-        1,
-        2,
-        this.x - this.drawX,
-        this.y - this.drawYOffset - this.drawY,
-        1,
-        2,
         this.shadeColor,
         this.shadeAmount(),
       );
     }
+    /*
+    Game.drawMob(
+      0,
+      0,
+      1,
+      1,
+      this.x - this.drawX,
+      this.y - this.drawY,
+      1,
+      1,
+      this.room.shadeColor,
+      this.shadeAmount(),
+    );
+    */
+    Game.drawMob(
+      this.tileX,
+      this.tileY + this.direction * 2,
+      1,
+      2,
+      this.x - this.drawX,
+      this.y - this.drawYOffset - this.drawY,
+      1,
+      2,
+      this.shadeColor,
+      this.shadeAmount(),
+    );
+
     /*if (this.crushed) {
       this.crushAnim(delta);
     }*/
