@@ -23,9 +23,10 @@ export class Heart extends Usable {
       player.health = Math.min(player.maxHealth, player.health + 1);
       if (this.level.game.rooms[player.levelID] === this.level.game.room)
         Sound.heal();
-      player.inventory.removeItem(this);
+      if (this.stackCount > 1) {
+        this.stackCount--;
+      } else player.inventory.removeItem(this);
+      player.game.pushMessage("You drink the health potion.");
     }
-
-    //this.level.items = this.level.items.filter((x) => x !== this); // removes itself from the level
   };
 }

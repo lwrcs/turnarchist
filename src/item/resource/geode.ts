@@ -8,6 +8,7 @@ import { RedGem } from "./redgem";
 import { BlueGem } from "./bluegem";
 import { GreenGem } from "./greengem";
 import { Inventory } from "../../inventory/inventory";
+import { Utils } from "../../utils";
 export class Geode extends Item {
   static itemName = "geode";
   constructor(level: Room, x: number, y: number) {
@@ -34,7 +35,7 @@ export class Geode extends Item {
         `You don't have enough space in your inventory to split the geode.`,
       );
     } else {
-      const numGems = Math.floor(Math.random() * Math.random() * 5) + 1;
+      const numGems = Utils.randomSineInt(1, 5);
       this.level.game.pushMessage(
         `You split the geode and it's full of shiny gems!`,
       );

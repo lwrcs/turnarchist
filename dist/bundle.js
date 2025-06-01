@@ -13770,6 +13770,7 @@ const item_1 = __webpack_require__(/*! ../item */ "./src/item/item.ts");
 const redgem_1 = __webpack_require__(/*! ./redgem */ "./src/item/resource/redgem.ts");
 const bluegem_1 = __webpack_require__(/*! ./bluegem */ "./src/item/resource/bluegem.ts");
 const greengem_1 = __webpack_require__(/*! ./greengem */ "./src/item/resource/greengem.ts");
+const utils_1 = __webpack_require__(/*! ../../utils */ "./src/utils.ts");
 class Geode extends item_1.Item {
     constructor(level, x, y) {
         super(level, x, y);
@@ -13784,7 +13785,7 @@ class Geode extends item_1.Item {
                 this.level.game.pushMessage(`You don't have enough space in your inventory to split the geode.`);
             }
             else {
-                const numGems = Math.floor(Math.random() * Math.random() * 5) + 1;
+                const numGems = utils_1.Utils.randomSineInt(1, 5);
                 this.level.game.pushMessage(`You split the geode and it's full of shiny gems!`);
                 let gemTypes = [bluegem_1.BlueGem, redgem_1.RedGem, greengem_1.GreenGem];
                 let gemType = gemTypes[Math.floor(Math.random() * gemTypes.length)];
@@ -14021,9 +14022,13 @@ class Heart extends usable_1.Usable {
                 player.health = Math.min(player.maxHealth, player.health + 1);
                 if (this.level.game.rooms[player.levelID] === this.level.game.room)
                     sound_1.Sound.heal();
-                player.inventory.removeItem(this);
+                if (this.stackCount > 1) {
+                    this.stackCount--;
+                }
+                else
+                    player.inventory.removeItem(this);
+                player.game.pushMessage("You drink the health potion.");
             }
-            //this.level.items = this.level.items.filter((x) => x !== this); // removes itself from the level
         };
         this.tileX = 8;
         this.tileY = 0;
