@@ -2,7 +2,7 @@ import { Entity } from "../entity";
 import { Room } from "../../room/room";
 import { Game } from "../../game";
 import { Heart } from "../../item/usable/heart";
-import { LevelConstants } from "../../levelConstants";
+import { LevelConstants } from "../../level/levelConstants";
 import { GenericParticle } from "../../particle/genericParticle";
 import { Shrooms } from "../../item/usable/shrooms";
 import { EntityType } from "../entity";

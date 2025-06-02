@@ -3,11 +3,11 @@ import { Room } from "../../room/room";
 import { Entity } from "../entity";
 import { Coin } from "../../item/coin";
 import { EntityType } from "../entity";
-import { Random } from "../../random";
+import { Random } from "../../utility/random";
 import { Player } from "../../player/player";
 import { ChestLayer } from "./chestLayer";
 import { ImageParticle } from "../../particle/imageParticle";
-import { Sound } from "../../sound";
+import { Sound } from "../../sound/sound";
 
 export class Chest extends Entity {
   frame: number;

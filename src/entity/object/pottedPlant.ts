@@ -2,14 +2,14 @@ import { Entity } from "../entity";
 import { Room } from "../../room/room";
 import { Game } from "../../game";
 import { Heart } from "../../item/usable/heart";
-import { LevelConstants } from "../../levelConstants";
+import { LevelConstants } from "../../level/levelConstants";
 import { GenericParticle } from "../../particle/genericParticle";
 import { Item } from "../../item/item";
 import { Coin } from "../../item/coin";
 import { EntityType } from "../entity";
 import { ImageParticle } from "../../particle/imageParticle";
-import { Random } from "../../random";
-import { Sound } from "../../sound";
+import { Random } from "../../utility/random";
+import { Sound } from "../../sound/sound";
 
 export class PottedPlant extends Entity {
   drop: Item;

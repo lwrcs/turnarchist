@@ -1,10 +1,10 @@
 import { Item } from "../item";
 import { Player } from "../../player/player";
 import { Game } from "../../game";
-import { Sound } from "../../sound";
+import { Sound } from "../../sound/sound";
 import { Room } from "../../room/room";
 import { Usable } from "./usable";
-import { Weapon } from "../../weapon/weapon";
+import { Weapon } from "../weapon/weapon";
 
 export class WeaponBlood extends Usable {
   static itemName = "cursed blood";

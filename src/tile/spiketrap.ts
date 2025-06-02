@@ -1,12 +1,12 @@
 import { Player } from "../player/player";
 import { Game } from "../game";
 import { Room } from "../room/room";
-import { LevelConstants } from "../levelConstants";
+import { LevelConstants } from "../level/levelConstants";
 import { Tile } from "./tile";
 import { Entity } from "../entity/entity";
 import { Crate } from "../entity/object/crate";
 import { Barrel } from "../entity/object/barrel";
-import { HitWarning } from "../hitWarning";
+import { HitWarning } from "../drawable/hitWarning";
 
 export class SpikeTrap extends Tile {
   on: boolean;

@@ -2,11 +2,11 @@ import { Projectile } from "./projectile";
 import { Game } from "../game";
 import { WizardEnemy } from "../entity/enemy/wizardEnemy";
 import { Player } from "../player/player";
-import { HitWarning } from "../hitWarning";
+import { HitWarning } from "../drawable/hitWarning";
 import { Entity } from "../entity/entity";
 import { Enemy } from "../entity/enemy/enemy";
-import { LightSource } from "../lightSource";
-import { Lighting } from "../lighting";
+import { LightSource } from "../lighting/lightSource";
+import { Lighting } from "../lighting/lighting";
 
 export class WizardFireball extends Projectile {
   state: number;

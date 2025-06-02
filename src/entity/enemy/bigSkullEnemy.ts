@@ -1,17 +1,17 @@
 import { Direction, Game } from "../../game";
 import { Room } from "../../room/room";
 import { Player } from "../../player/player";
-import { HitWarning } from "../../hitWarning";
+import { HitWarning } from "../../drawable/hitWarning";
 import { GenericParticle } from "../../particle/genericParticle";
 import { Coin } from "../../item/coin";
 import { RedGem } from "../../item/resource/redgem";
 import { Item } from "../../item/item";
-import { Spear } from "../../weapon/spear";
-import { GameConstants } from "../../gameConstants";
+import { Spear } from "../../item/weapon/spear";
+import { GameConstants } from "../../game/gameConstants";
 import { DeathParticle } from "../../particle/deathParticle";
 import { Enemy } from "./enemy";
-import { Random } from "../../random";
-import { astar } from "../../astarclass";
+import { Random } from "../../utility/random";
+import { astar } from "../../utility/astarclass";
 import { SpikeTrap } from "../../tile/spiketrap";
 import { ImageParticle } from "../../particle/imageParticle";
 

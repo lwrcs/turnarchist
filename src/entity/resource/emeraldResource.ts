@@ -7,7 +7,7 @@ import { Armor } from "../../item/armor";
 import { GreenGem } from "../../item/resource/greengem";
 import { Resource } from "./resource";
 import { GenericParticle } from "../../particle/genericParticle";
-import { Sound } from "../../sound";
+import { Sound } from "../../sound/sound";
 import { Geode } from "../../item/resource/geode";
 
 export class EmeraldResource extends Resource {

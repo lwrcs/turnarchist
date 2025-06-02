@@ -2,9 +2,9 @@ import { Projectile } from "./projectile";
 import { Game } from "../game";
 import { WizardEnemy } from "../entity/enemy/wizardEnemy";
 import { Player } from "../player/player";
-import { HitWarning } from "../hitWarning";
-import { Lighting } from "../lighting";
-import { Utils } from "../utils";
+import { HitWarning } from "../drawable/hitWarning";
+import { Lighting } from "../lighting/lighting";
+import { Utils } from "../utility/utils";
 import { Entity } from "../entity/entity";
 import { Bomb } from "../entity/object/bomb";
 export class Explosion extends Projectile {

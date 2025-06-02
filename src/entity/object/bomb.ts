@@ -2,22 +2,22 @@ import { Entity } from "../entity";
 import { Room } from "../../room/room";
 import { Game } from "../../game";
 import { Heart } from "../../item/usable/heart";
-import { LevelConstants } from "../../levelConstants";
+import { LevelConstants } from "../../level/levelConstants";
 import { GenericParticle } from "../../particle/genericParticle";
 import { EntityType } from "../entity";
 import { ImageParticle } from "../../particle/imageParticle";
 import { Candle } from "../../item/light/candle";
-import { Random } from "../../random";
+import { Random } from "../../utility/random";
 import { Coin } from "../../item/coin";
-import { Sound } from "../../sound";
-import { LightSource } from "../../lightSource";
+import { Sound } from "../../sound/sound";
+import { LightSource } from "../../lighting/lightSource";
 import { WizardFireball } from "../../projectile/wizardFireball";
 import { WizardEnemy } from "../enemy/wizardEnemy";
-import { Lighting } from "../../lighting";
+import { Lighting } from "../../lighting/lighting";
 import { PlayerFireball } from "../../projectile/playerFireball";
 import { Player } from "../../player/player";
 import { Explosion } from "../../projectile/explosion";
-import { Utils } from "../../utils";
+import { Utils } from "../../utility/utils";
 
 export class Bomb extends Entity {
   fuseLength: number = 4;

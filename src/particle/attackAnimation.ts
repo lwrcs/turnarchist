@@ -1,5 +1,5 @@
 import { Direction, Game } from "../game";
-import { GameConstants } from "../gameConstants";
+import { GameConstants } from "../game/gameConstants";
 import { Particle } from "./particle";
 
 export class AttackAnimation extends Particle {

@@ -1,12 +1,12 @@
 import { Player } from "../player/player";
 import { ChatMessage, Game } from "../game";
 import { Room } from "../room/room";
-import { GameConstants } from "../gameConstants";
+import { GameConstants } from "../game/gameConstants";
 import { SkinType, Tile } from "./tile";
 import { UpLadder } from "./upLadder";
-import { EVENTS } from "../events";
-import { EventEmitter } from "../eventEmitter";
-import { globalEventBus } from "../eventBus";
+import { EVENTS } from "../event/events";
+import { EventEmitter } from "../event/eventEmitter";
+import { globalEventBus } from "../event/eventBus";
 
 export class DownLadder extends Tile {
   linkedLevel: Room;

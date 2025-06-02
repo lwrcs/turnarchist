@@ -3,7 +3,7 @@ import { Player } from "../../player/player";
 import { Game } from "../../game";
 import { Room } from "../../room/room";
 import { TextParticle } from "../../particle/textParticle";
-import { GameConstants } from "../../gameConstants";
+import { GameConstants } from "../../game/gameConstants";
 
 export class RedGem extends Item {
   static itemName = "garnet";

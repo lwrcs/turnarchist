@@ -1,6 +1,6 @@
 // #region imports
 import { Wall } from "../tile/wall";
-import { LevelConstants } from "../levelConstants";
+import { LevelConstants } from "../level/levelConstants";
 import { Floor } from "../tile/floor";
 import { Direction, Game, LevelState } from "../game";
 import { Door, DoorType } from "../tile/door";
@@ -12,7 +12,7 @@ import { Item } from "../item/item";
 import { GoldenKey } from "../item/goldenKey";
 import { SpawnFloor } from "../tile/spawnfloor";
 import { Spike } from "../tile/spike";
-import { GameConstants } from "../gameConstants";
+import { GameConstants } from "../game/gameConstants";
 import { SkullEnemy } from "../entity/enemy/skullEnemy";
 import { Barrel } from "../entity/object/barrel";
 import { Crate } from "../entity/object/crate";
@@ -25,7 +25,7 @@ import { CoffinTile } from "../tile/coffinTile";
 import { PottedPlant } from "../entity/object/pottedPlant";
 import { InsideLevelDoor } from "../tile/insideLevelDoor";
 import { Button } from "../tile/button";
-import { HitWarning } from "../hitWarning";
+import { HitWarning } from "../drawable/hitWarning";
 import { UpLadder } from "../tile/upLadder";
 import { DownLadder } from "../tile/downLadder";
 import { CoalResource } from "../entity/resource/coalResource";
@@ -35,19 +35,19 @@ import { Chasm } from "../tile/chasm";
 import { Spawner } from "../entity/enemy/spawner";
 import { VendingMachine } from "../entity/object/vendingMachine";
 import { WallTorch } from "../tile/wallTorch";
-import { LightSource } from "../lightSource";
+import { LightSource } from "../lighting/lightSource";
 import { ChargeEnemy } from "../entity/enemy/chargeEnemy";
-import { Shotgun } from "../weapon/shotgun";
+import { Shotgun } from "../item/weapon/shotgun";
 import { Heart } from "../item/usable/heart";
-import { Spear } from "../weapon/spear";
-import { Drawable } from "../drawable";
+import { Spear } from "../item/weapon/spear";
+import { Drawable } from "../drawable/drawable";
 import { Player, PlayerDirection } from "../player/player";
 import { CrabEnemy } from "../entity/enemy/crabEnemy";
 import { ZombieEnemy } from "../entity/enemy/zombieEnemy";
 import { BigSkullEnemy } from "../entity/enemy/bigSkullEnemy";
-import { Random } from "../random";
+import { Random } from "../utility/random";
 import { Lantern } from "../item/light/lantern";
-import { DualDagger } from "../weapon/dualdagger";
+import { DualDagger } from "../item/weapon/dualdagger";
 import { Pot } from "../entity/object/pot";
 import { BishopEnemy } from "../entity/enemy/bishopEnemy";
 import { Rock } from "../entity/resource/rockResource";
@@ -61,23 +61,23 @@ import { BigKnightEnemy } from "../entity/enemy/bigKnightEnemy";
 import { Enemy } from "../entity/enemy/enemy";
 import { FireWizardEnemy } from "../entity/enemy/fireWizard";
 import { EnergyWizardEnemy } from "../entity/enemy/energyWizard";
-import { ReverbEngine } from "../reverb";
-import { astar } from "../astarclass";
-import { Level } from "../level";
-import { Warhammer } from "../weapon/warhammer";
-import { Spellbook } from "../weapon/spellbook";
+import { ReverbEngine } from "../sound/reverb";
+import { astar } from "../utility/astarclass";
+import { Level } from "../level/level";
+import { Warhammer } from "../item/weapon/warhammer";
+import { Spellbook } from "../item/weapon/spellbook";
 import { Torch } from "../item/light/torch";
 import { RookEnemy } from "../entity/enemy/rookEnemy";
-import { BeamEffect } from "../beamEffect";
-import { EnvType } from "../environment";
+import { BeamEffect } from "../projectile/beamEffect";
+import { EnvType } from "../level/environment";
 import { Pickaxe } from "../item/tool/pickaxe";
 import { OccultistEnemy } from "../entity/enemy/occultistEnemy";
 import { Puddle } from "../tile/decorations/puddle";
 import { Decoration } from "../tile/decorations/decoration";
 import { Bomb } from "../entity/object/bomb";
-import { Sound } from "../sound";
+import { Sound } from "../sound/sound";
 import { Block } from "../entity/object/block";
-import { Bestiary } from "../bestiary";
+import { Bestiary } from "../game/bestiary";
 import { ArmoredSkullEnemy } from "../entity/enemy/armoredSkullEnemy";
 import { MummyEnemy } from "../entity/enemy/mummyEnemy";
 import { SpiderEnemy } from "../entity/enemy/spiderEnemy";
@@ -2563,7 +2563,8 @@ export class Room {
 
           this.bloomOffscreenCtx.fillRect(
             (p.x - this.roomX + offsetX) * GameConstants.TILESIZE,
-            (p.y - this.roomY + offsetY) * GameConstants.TILESIZE,
+            (p.y - this.roomY + offsetY + p.bloomOffsetY) *
+              GameConstants.TILESIZE,
             GameConstants.TILESIZE,
             GameConstants.TILESIZE,
           );

@@ -1,12 +1,12 @@
 import { Direction, Game } from "../game";
-import { GameConstants } from "../gameConstants";
-import { HitWarning } from "../hitWarning";
-import { LevelConstants } from "../levelConstants";
-import { MouseCursor } from "../mouseCursor";
-import { PostProcessor } from "../postProcess";
-import { statsTracker } from "../stats";
-import { Utils } from "../utils";
-import { Spellbook } from "../weapon/spellbook";
+import { GameConstants } from "../game/gameConstants";
+import { HitWarning } from "../drawable/hitWarning";
+import { LevelConstants } from "../level/levelConstants";
+import { MouseCursor } from "../gui/mouseCursor";
+import { PostProcessor } from "../gui/postProcess";
+import { statsTracker } from "../game/stats";
+import { Utils } from "../utility/utils";
+import { Spellbook } from "../item/weapon/spellbook";
 import { Player } from "./player";
 
 export class PlayerRenderer {

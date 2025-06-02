@@ -5,7 +5,7 @@ import { Player } from "../../player/player";
 import { GenericParticle } from "../../particle/genericParticle";
 import { Item } from "../../item/item";
 import { Enemy } from "./enemy";
-import { astar } from "../../astarclass";
+import { astar } from "../../utility/astarclass";
 import { SpikeTrap } from "../../tile/spiketrap";
 
 export class ArmoredzombieEnemy extends Enemy {

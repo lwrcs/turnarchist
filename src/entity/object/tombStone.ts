@@ -2,18 +2,18 @@ import { Entity } from "../entity";
 import { Room } from "../../room/room";
 import { Game } from "../../game";
 import { Heart } from "../../item/usable/heart";
-import { LevelConstants } from "../../levelConstants";
+import { LevelConstants } from "../../level/levelConstants";
 import { GenericParticle } from "../../particle/genericParticle";
 import { EntityType } from "../entity";
 import { SkullEnemy } from "../enemy/skullEnemy";
-import { Random } from "../../random";
+import { Random } from "../../utility/random";
 import { EnemySpawnAnimation } from "../../projectile/enemySpawnAnimation";
 import { Player } from "../../player/player";
 import { Item } from "../../item/item";
-import { Spellbook } from "../../weapon/spellbook";
-import { Sound } from "../../sound";
+import { Spellbook } from "../../item/weapon/spellbook";
+import { Sound } from "../../sound/sound";
 import { ImageParticle } from "../../particle/imageParticle";
-import { LightSource } from "../../lightSource";
+import { LightSource } from "../../lighting/lightSource";
 
 export class TombStone extends Entity {
   skinType: number;

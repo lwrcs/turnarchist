@@ -1,6 +1,6 @@
 // dragDropHandler.ts
 import { Inventory } from "./inventory";
-import { Input } from "../input";
+import { Input } from "../game/input";
 
 export class DragDropHandler {
   private inventory: Inventory;

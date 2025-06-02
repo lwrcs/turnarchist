@@ -1,8 +1,7 @@
 // inventoryInputHandler.ts
 //NOT IN USE
 import { Inventory } from "./inventory";
-import { Input } from "../input";
-import { MouseCursor } from "../mouseCursor";
+import { Input } from "../game/input";
 
 export class InventoryInputHandler {
   private inventory: Inventory;

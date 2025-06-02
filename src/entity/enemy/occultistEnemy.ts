@@ -3,11 +3,11 @@ import { Room } from "../../room/room";
 
 import { Enemy } from "./enemy";
 
-import { Utils } from "../../utils";
-import { BeamEffect } from "../../beamEffect";
+import { Utils } from "../../utility/utils";
+import { BeamEffect } from "../../projectile/beamEffect";
 import { Player } from "../../player/player";
 import { ImageParticle } from "../../particle/imageParticle";
-import { Lighting } from "../../lighting";
+import { Lighting } from "../../lighting/lighting";
 import { Entity } from "../entity";
 
 export class OccultistEnemy extends Enemy {

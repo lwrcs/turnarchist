@@ -1,7 +1,7 @@
 import { Room } from "../room/room";
 import { Particle } from "./particle";
 import { Game } from "../game";
-import { GameConstants } from "../gameConstants";
+import { GameConstants } from "../game/gameConstants";
 
 export class GenericParticle extends Particle {
   level: Room;

@@ -1,7 +1,7 @@
 import { Player } from "../player/player";
 import { Game } from "../game";
 import { Room } from "../room/room";
-import { GameConstants } from "../gameConstants";
+import { GameConstants } from "../game/gameConstants";
 import { SkinType, Tile } from "./tile";
 
 export class InsideLevelDoor extends Tile {

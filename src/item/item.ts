@@ -1,10 +1,10 @@
 import { Game } from "../game";
-import { GameConstants } from "../gameConstants";
+import { GameConstants } from "../game/gameConstants";
 import { Player } from "../player/player";
 import { Room } from "../room/room";
-import { Sound } from "../sound";
-import { Drawable } from "../drawable";
-import { Utils } from "../utils";
+import { Sound } from "../sound/sound";
+import { Drawable } from "../drawable/drawable";
+import { Utils } from "../utility/utils";
 
 // Item class extends Drawable class and represents an item in the game
 export class Item extends Drawable {

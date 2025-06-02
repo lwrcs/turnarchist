@@ -1,13 +1,13 @@
 import { Direction, Game } from "../../game";
 import { Room } from "../../room/room";
-import { astar } from "../../astarclass";
-import { HitWarning } from "../../hitWarning";
+import { astar } from "../../utility/astarclass";
+import { HitWarning } from "../../drawable/hitWarning";
 import { SpikeTrap } from "../../tile/spiketrap";
 import { Coin } from "../../item/coin";
 import { Player } from "../../player/player";
 import { Item } from "../../item/item";
 import { Enemy } from "./enemy";
-import { Utils } from "../../utils";
+import { Utils } from "../../utility/utils";
 
 export class FrogEnemy extends Enemy {
   ticks: number;

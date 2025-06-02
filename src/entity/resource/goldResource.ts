@@ -7,7 +7,7 @@ import { Armor } from "../../item/armor";
 import { Resource } from "./resource";
 import { GenericParticle } from "../../particle/genericParticle";
 import { Gold } from "../../item/resource/gold";
-import { Sound } from "../../sound";
+import { Sound } from "../../sound/sound";
 import { Geode } from "../../item/resource/geode";
 export class GoldResource extends Resource {
   constructor(room: Room, game: Game, x: number, y: number) {

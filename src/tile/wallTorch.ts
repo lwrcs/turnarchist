@@ -1,8 +1,8 @@
 import { Game } from "../game";
 import { Tile } from "./tile";
 import { Room } from "../room/room";
-import { LightSource } from "../lightSource";
-import { LevelConstants } from "../levelConstants";
+import { LightSource } from "../lighting/lightSource";
+import { LevelConstants } from "../level/levelConstants";
 import { Wall } from "./wall";
 
 export class WallTorch extends Wall {

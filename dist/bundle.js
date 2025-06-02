@@ -2,959 +2,10 @@
 /******/ 	"use strict";
 /******/ 	var __webpack_modules__ = ({
 
-/***/ "./src/astarclass.ts":
-/*!***************************!*\
-  !*** ./src/astarclass.ts ***!
-  \***************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.astar = void 0;
-const game_1 = __webpack_require__(/*! ./game */ "./src/game.ts");
-var astar;
-(function (astar_1) {
-    //================== start graph js
-    /*
-    graph.js http://github.com/bgrins/javascript-astar
-    MIT License
-    Creates a Graph class used in the astar search algorithm.
-    Includes Binary Heap (with modifications) from Marijn Haverbeke
-        URL: http://eloquentjavascript.net/appendix2.html
-        License: http://creativecommons.org/licenses/by/3.0/
-    */
-    let GraphNodeType;
-    (function (GraphNodeType) {
-        GraphNodeType[GraphNodeType["WALL"] = 0] = "WALL";
-        GraphNodeType[GraphNodeType["OPEN"] = 1] = "OPEN";
-    })(GraphNodeType = astar_1.GraphNodeType || (astar_1.GraphNodeType = {}));
-    let getTileCost = (tile) => {
-        if (tile)
-            return tile.isSolid() || tile.isDoor ? 99999999 : 300;
-        else
-            return 99999999;
-    };
-    class Graph {
-        constructor(grid) {
-            this.elements = grid;
-            var nodes = [];
-            var row, rowLength, len = grid.length;
-            for (var x = 0; x < len; ++x) {
-                row = grid[x];
-                rowLength = row.length;
-                nodes[x] = new Array(rowLength); // optimum array with size
-                for (var y = 0; y < rowLength; ++y) {
-                    nodes[x][y] = new GraphNode(x, y, row[y]);
-                }
-            }
-            this.nodes = nodes;
-        }
-        toString() {
-            var graphString = "\n";
-            var nodes = this.nodes;
-            var rowDebug, row, y, l;
-            for (var x = 0, len = nodes.length; x < len;) {
-                rowDebug = "";
-                row = nodes[x++];
-                for (y = 0, l = row.length; y < l;) {
-                    rowDebug += row[y++].type + " ";
-                }
-                graphString = graphString + rowDebug + "\n";
-            }
-            return graphString;
-        }
-    }
-    astar_1.Graph = Graph;
-    class GraphNode {
-        constructor(x, y, type) {
-            this.data = {};
-            this.x = x;
-            this.y = y;
-            this.pos = { x: x, y: y };
-            this.type = type;
-        }
-        toString() {
-            return "[" + this.x + " " + this.y + "]";
-        }
-        isWall() {
-            return this.type == GraphNodeType.WALL;
-        }
-    }
-    astar_1.GraphNode = GraphNode;
-    class BinaryHeap {
-        constructor(scoreFunction) {
-            this.content = [];
-            this.scoreFunction = scoreFunction;
-        }
-        push(node) {
-            // Add the new node to the end of the array.
-            this.content.push(node);
-            // Allow it to sink down.
-            this.sinkDown(this.content.length - 1);
-        }
-        pop() {
-            // Store the first node so we can return it later.
-            var result = this.content[0];
-            // Get the node at the end of the array.
-            var end = this.content.pop();
-            // If there are any elements left, put the end node at the
-            // start, and let it bubble up.
-            if (this.content.length > 0) {
-                this.content[0] = end;
-                this.bubbleUp(0);
-            }
-            return result;
-        }
-        remove(node) {
-            var i = this.content.indexOf(node);
-            // When it is found, the process seen in 'pop' is repeated
-            // to fill up the hole.
-            var end = this.content.pop();
-            if (i !== this.content.length - 1) {
-                this.content[i] = end;
-                if (this.scoreFunction(end) < this.scoreFunction(node))
-                    this.sinkDown(i);
-                else
-                    this.bubbleUp(i);
-            }
-        }
-        size() {
-            return this.content.length;
-        }
-        rescoreElement(node) {
-            this.sinkDown(this.content.indexOf(node));
-        }
-        sinkDown(n) {
-            // Fetch the element that has to be sunk.
-            var element = this.content[n];
-            // When at 0, an element can not sink any further.
-            while (n > 0) {
-                // Compute the parent element's index, and fetch it.
-                var parentN = ((n + 1) >> 1) - 1, parent = this.content[parentN];
-                // Swap the elements if the parent is greater.
-                if (this.scoreFunction(element) < this.scoreFunction(parent)) {
-                    this.content[parentN] = element;
-                    this.content[n] = parent;
-                    // Update 'n' to continue at the new position.
-                    n = parentN;
-                }
-                else {
-                    // Found a parent that is less, no need to sink any further.
-                    break;
-                }
-            }
-        }
-        bubbleUp(n) {
-            // Look up the target element and its score.
-            var length = this.content.length, element = this.content[n], elemScore = this.scoreFunction(element);
-            while (true) {
-                // Compute the indices of the child elements.
-                var child2N = (n + 1) << 1, child1N = child2N - 1;
-                // This is used to store the new position of the element,
-                // if any.
-                var swap = null;
-                // If the first child exists (is inside the array)...
-                if (child1N < length) {
-                    // Look it up and compute its score.
-                    var child1 = this.content[child1N], child1Score = this.scoreFunction(child1);
-                    // If the score is less than our element's, we need to swap.
-                    if (child1Score < elemScore)
-                        swap = child1N;
-                }
-                // Do the same checks for the other child.
-                if (child2N < length) {
-                    var child2 = this.content[child2N], child2Score = this.scoreFunction(child2);
-                    if (child2Score < (swap === null ? elemScore : child1Score))
-                        swap = child2N;
-                }
-                // If the element needs to be moved, swap it, and continue.
-                if (swap !== null) {
-                    this.content[n] = this.content[swap];
-                    this.content[swap] = element;
-                    n = swap;
-                }
-                else {
-                    // Otherwise, we are done.
-                    break;
-                }
-            }
-        }
-    }
-    astar_1.BinaryHeap = BinaryHeap;
-    class AStar {
-        constructor(grid, disablePoints, lastPlayerPosition, enableCost) {
-            this.grid = [];
-            for (var x = 0, xl = grid.length; x < xl; x++) {
-                this.grid[x] = [];
-                for (var y = 0, yl = grid[x].length; y < yl; y++) {
-                    var cost = getTileCost(grid[x][y]);
-                    this.grid[x][y] = {
-                        org: grid[x][y],
-                        f: 0,
-                        g: 0,
-                        h: 0,
-                        cost: cost,
-                        visited: false,
-                        closed: false,
-                        pos: {
-                            x: x,
-                            y: y,
-                        },
-                        parent: null,
-                    };
-                }
-            }
-            if (disablePoints !== undefined) {
-                for (var i = 0; i < disablePoints.length; i++) {
-                    if (disablePoints[i].x >= 0 &&
-                        disablePoints[i].x < this.grid.length &&
-                        disablePoints[i].y >= 0 &&
-                        disablePoints[i].y < this.grid[0].length)
-                        this.grid[disablePoints[i].x][disablePoints[i].y].cost = 99999999;
-                }
-            }
-            if (lastPlayerPosition) {
-                if (lastPlayerPosition.x >= 0 &&
-                    lastPlayerPosition.x < this.grid.length &&
-                    lastPlayerPosition.y >= 0 &&
-                    lastPlayerPosition.y < this.grid[0].length)
-                    this.grid[lastPlayerPosition.x][lastPlayerPosition.y].cost = 0.5;
-            }
-        }
-        heap() {
-            return new BinaryHeap(function (node) {
-                return node.f;
-            });
-        }
-        _find(org) {
-            for (var x = 0; x < this.grid.length; x++)
-                for (var y = 0; y < this.grid[x].length; y++)
-                    if (this.grid[x][y].org == org)
-                        return this.grid[x][y];
-        }
-        _search(start, end, diagonal, diagonalsOnly, turnCostsExtra, turnDirection, heuristic, diagonalsOmni, lastPlayerPosition) {
-            heuristic = heuristic || this.manhattan;
-            diagonal = !!diagonal;
-            diagonalsOnly = !!diagonalsOnly;
-            turnCostsExtra = !!turnCostsExtra;
-            diagonalsOmni = !!diagonalsOmni;
-            var openHeap = this.heap();
-            var _start, _end;
-            if (start.x !== undefined && start.y !== undefined)
-                _start = this.grid[start.x][start.y];
-            else
-                _start = this._find(start);
-            if (end.x !== undefined && end.y !== undefined)
-                _end = this.grid[end.x][end.y];
-            else
-                _end = this._find(end);
-            if (AStar.NO_CHECK_START_POINT == false && _start.cost <= 0)
-                return [];
-            openHeap.push(_start);
-            while (openHeap.size() > 0) {
-                // Grab the lowest f(x) to process next.  Heap keeps this sorted for us.
-                var currentNode = openHeap.pop();
-                // End case -- result has been found, return the traced path.
-                if (currentNode === _end) {
-                    var curr = currentNode;
-                    var ret = [];
-                    while (curr.parent) {
-                        ret.push(curr);
-                        curr = curr.parent;
-                    }
-                    return ret.reverse();
-                }
-                // Normal case -- move currentNode from open to closed, process each of its neighbors.
-                currentNode.closed = true;
-                // Find all neighbors for the current node. Optionally find diagonal neighbors as well (false by default).
-                var neighbors = this.neighbors(currentNode, diagonal, diagonalsOnly, diagonalsOmni);
-                for (var i = 0, il = neighbors.length; i < il; i++) {
-                    var neighbor = neighbors[i];
-                    if (neighbor.closed || neighbor.cost <= 0) {
-                        // Not a valid node to process, skip to next neighbor.
-                        continue;
-                    }
-                    // The g score is the shortest distance from start to current node.
-                    // We need to check if the path we have arrived at this neighbor is the shortest one we have seen yet.
-                    var gScore = currentNode.g + neighbor.cost;
-                    if (turnCostsExtra) {
-                        var isTurn = false;
-                        if (currentNode.parent)
-                            isTurn = !((currentNode.parent.pos.x === currentNode.pos.x &&
-                                currentNode.pos.x === neighbor.pos.x) ||
-                                (currentNode.parent.pos.y === currentNode.pos.y &&
-                                    currentNode.pos.y === neighbor.pos.y));
-                        else {
-                            // initial step
-                            isTurn = true;
-                            if (neighbor.pos.x - currentNode.pos.x === 0 &&
-                                neighbor.pos.y - currentNode.pos.y === -1 &&
-                                turnDirection === game_1.Direction.UP)
-                                isTurn = false;
-                            if (neighbor.pos.x - currentNode.pos.x === 0 &&
-                                neighbor.pos.y - currentNode.pos.y === 1 &&
-                                turnDirection === game_1.Direction.DOWN)
-                                isTurn = false;
-                            if (neighbor.pos.x - currentNode.pos.x === 1 &&
-                                neighbor.pos.y - currentNode.pos.y === 0 &&
-                                turnDirection === game_1.Direction.RIGHT)
-                                isTurn = false;
-                            if (neighbor.pos.x - currentNode.pos.x === -1 &&
-                                neighbor.pos.y - currentNode.pos.y === 0 &&
-                                turnDirection === game_1.Direction.LEFT)
-                                isTurn = false;
-                        }
-                        if (isTurn)
-                            gScore++;
-                    }
-                    var beenVisited = neighbor.visited;
-                    if (!beenVisited || gScore < neighbor.g) {
-                        // Found an optimal (so far) path to this node.  Take score for node to see how good it is.
-                        neighbor.visited = true;
-                        neighbor.parent = currentNode;
-                        neighbor.h =
-                            neighbor.h ||
-                                heuristic(neighbor.pos, _end.pos, lastPlayerPosition);
-                        neighbor.g = gScore;
-                        neighbor.f = neighbor.g + neighbor.h;
-                        if (!beenVisited) {
-                            // Pushing to heap will put it in proper place based on the 'f' value.
-                            openHeap.push(neighbor);
-                        }
-                        else {
-                            // Already seen the node, but since it has been rescored we need to reorder it in the heap
-                            openHeap.rescoreElement(neighbor);
-                        }
-                    }
-                }
-            }
-            // No result was found - empty array signifies failure to find path.
-            return [];
-        }
-        static search(grid, start, end, disablePoints, diagonal, diagonalsOnly, turnCostsExtra, turnDirection, heuristic, diagonalsOmni, lastPlayerPosition) {
-            var astar = new AStar(grid, disablePoints, lastPlayerPosition);
-            return astar._search(start, end, diagonal, diagonalsOnly, turnCostsExtra, turnDirection, heuristic, diagonalsOmni);
-        }
-        manhattan(pos0, pos1) {
-            var d1 = Math.abs(pos1.x - pos0.x);
-            var d2 = Math.abs(pos1.y - pos0.y);
-            var heuristic = d1 + d2;
-            return heuristic;
-        }
-        neighbors(node, diagonals, diagonalsOnly, diagonalsOmni) {
-            var grid = this.grid;
-            var ret = [];
-            var x = node.pos.x;
-            var y = node.pos.y;
-            if (!diagonalsOnly) {
-                // West
-                if (grid[x - 1] && grid[x - 1][y]) {
-                    ret.push(grid[x - 1][y]);
-                }
-                // East
-                if (grid[x + 1] && grid[x + 1][y]) {
-                    ret.push(grid[x + 1][y]);
-                }
-                // South
-                if (grid[x] && grid[x][y - 1]) {
-                    ret.push(grid[x][y - 1]);
-                }
-                // North
-                if (grid[x] && grid[x][y + 1]) {
-                    ret.push(grid[x][y + 1]);
-                }
-            }
-            if (diagonals) {
-                // Southwest
-                if (grid[x - 1] && grid[x - 1][y - 1]) {
-                    ret.push(grid[x - 1][y - 1]);
-                }
-                // Southeast
-                if (grid[x + 1] && grid[x + 1][y - 1]) {
-                    ret.push(grid[x + 1][y - 1]);
-                }
-                // Northwest
-                if (grid[x - 1] && grid[x - 1][y + 1]) {
-                    ret.push(grid[x - 1][y + 1]);
-                }
-                // Northeast
-                if (grid[x + 1] && grid[x + 1][y + 1]) {
-                    ret.push(grid[x + 1][y + 1]);
-                }
-            }
-            function getRandomBoolean() {
-                return Math.random() < 0.5;
-            }
-            if (diagonalsOmni) {
-                const randomBool = getRandomBoolean();
-                // West
-                if (grid[x - 1] && grid[x - 1][y]) {
-                    // Instead of pushing West, choose between Southwest and Northwest
-                    if (randomBool == true) {
-                        ret.push(grid[x - 1][y - 1]);
-                        return;
-                    }
-                    else {
-                        ret.push(grid[x - 1][y + 1]);
-                        return;
-                    }
-                }
-                // East
-                if (grid[x + 1] && grid[x + 1][y]) {
-                    if (randomBool == true) {
-                        ret.push(grid[x + 1][y - 1]);
-                        return;
-                    }
-                    else {
-                        ret.push(grid[x + 1][y + 1]);
-                        return;
-                    }
-                }
-                // South
-                if (grid[x] && grid[x][y - 1]) {
-                    if (randomBool == true) {
-                        ret.push(grid[x - 1][y - 1]);
-                        return;
-                    }
-                    else {
-                        ret.push(grid[x + 1][y - 1]);
-                        return;
-                    }
-                }
-                // North
-                if (grid[x] && grid[x][y + 1]) {
-                    if (randomBool == true) {
-                        ret.push(grid[x - 1][y + 1]);
-                        return;
-                    }
-                    else {
-                        ret.push(grid[x + 1][y + 1]);
-                        return;
-                    }
-                }
-                else {
-                    return;
-                }
-            }
-            return ret;
-        }
-    }
-    AStar.NO_CHECK_START_POINT = false;
-    astar_1.AStar = AStar;
-})(astar = exports.astar || (exports.astar = {}));
-
-
-/***/ }),
-
-/***/ "./src/beamEffect.ts":
-/*!***************************!*\
-  !*** ./src/beamEffect.ts ***!
-  \***************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.BeamEffect = void 0;
-const game_1 = __webpack_require__(/*! ./game */ "./src/game.ts");
-const gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/gameConstants.ts");
-const projectile_1 = __webpack_require__(/*! ./projectile/projectile */ "./src/projectile/projectile.ts");
-class BeamEffect extends projectile_1.Projectile {
-    constructor(x1, y1, x2, y2, parent) {
-        super(parent, x1, y1);
-        this.active = true;
-        this.time = 0;
-        this.alpha = 1;
-        this.gravity = BeamEffect.GRAVITY;
-        this.motionInfluence = BeamEffect.MOTION_INFLUENCE;
-        this.turbulence = BeamEffect.TURBULENCE;
-        this.velocityDecay = BeamEffect.VELOCITY_DECAY;
-        this.angleChange = BeamEffect.ANGLE_CHANGE;
-        this.maxVelocity = BeamEffect.MAX_VELOCITY;
-        this.damping = BeamEffect.DAMPING;
-        this.springStiffness = BeamEffect.SPRING_STIFFNESS;
-        this.springDamping = BeamEffect.SPRING_DAMPING;
-        this.iterations = BeamEffect.ITERATIONS;
-        this.segments = BeamEffect.SEGMENTS;
-        this.tick = () => {
-            if (this.parent.dead) {
-                this.destroy();
-            }
-        };
-        this.draw = (delta) => {
-            this.drawableY = this.y - 0.01;
-            this.render(this.targetX, this.targetY, this.x, this.y, this.color, 2, delta, this.compositeOperation);
-        };
-        const startX = x1 * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
-        const startY = y1 * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
-        const endX = x2 * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
-        const endY = y2 * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
-        this.x = x1;
-        this.y = y1;
-        this.targetX = x2;
-        this.targetY = y2;
-        this.points = this.initializePoints(startX, startY, endX, endY);
-        this.prevStartX = startX;
-        this.prevStartY = startY;
-        this.prevEndX = endX;
-        this.prevEndY = endY;
-        this.color = "cyan";
-        this.compositeOperation = "source-over";
-    }
-    /**
-     * Sets the physics properties for the beam effect.
-     *
-     * @param {number} [gravity] - The gravitational force applied to the beam. Default: 2
-     * @param {number} [motionInfluence] - The influence of motion on the beam. Default: 1
-     * @param {number} [turbulence] - The turbulence applied to the beam. Default: 0.5
-     * @param {number} [velocityDecay] - The rate at which velocity decays. Default: 0.1
-     * @param {number} [angleChange] - The change in angle of the beam. Default: 0.01
-     * @param {number} [maxVelocity] - The maximum velocity of the beam.
-     * @param {number} [damping] - The damping factor for the beam's motion.
-     * @param {number} [springStiffness] - The stiffness of the spring effect.
-     * @param {number} [springDamping] - The damping of the spring effect.
-     * @param {number} [iterations] - The number of iterations for the physics simulation.
-     * @param {number} [segments] - The number of segments for the beam.
-     */
-    setPhysics(gravity, motionInfluence, turbulence, velocityDecay, angleChange, maxVelocity, damping, springStiffness, springDamping, iterations, segments) {
-        this.gravity = gravity ?? BeamEffect.GRAVITY;
-        this.motionInfluence = motionInfluence ?? BeamEffect.MOTION_INFLUENCE;
-        this.turbulence = turbulence ?? BeamEffect.TURBULENCE;
-        this.velocityDecay = velocityDecay ?? BeamEffect.VELOCITY_DECAY;
-        this.angleChange = angleChange ?? BeamEffect.ANGLE_CHANGE;
-        this.maxVelocity = maxVelocity ?? BeamEffect.MAX_VELOCITY;
-        this.damping = damping ?? BeamEffect.DAMPING;
-        this.springStiffness = springStiffness ?? BeamEffect.SPRING_STIFFNESS;
-        this.springDamping = springDamping ?? BeamEffect.SPRING_DAMPING;
-        this.iterations = iterations ?? BeamEffect.ITERATIONS;
-        this.segments = segments ?? BeamEffect.SEGMENTS;
-    }
-    setTarget(x, y, x2, y2) {
-        this.x = x;
-        this.y = y;
-        this.targetX = x2;
-        this.targetY = y2;
-    }
-    render(x1, y1, x2, y2, color = this.color, lineWidth = 2, delta = 1 / 60, compositeOperation = this.compositeOperation) {
-        const startX = this.x * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
-        const startY = this.y * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
-        const endX = this.targetX * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
-        const endY = this.targetY * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
-        const startForceX = (startX - this.prevStartX) * this.motionInfluence * delta;
-        const startForceY = (startY - this.prevStartY) * this.motionInfluence * delta;
-        const endForceX = (endX - this.prevEndX) * this.motionInfluence * delta;
-        const endForceY = (endY - this.prevEndY) * this.motionInfluence * delta;
-        for (let i = 1; i < 4; i++) {
-            const influence = 1 - i / 4;
-            this.points[i].x += startForceX * influence;
-            this.points[i].y += startForceY * influence;
-        }
-        for (let i = this.points.length - 4; i < this.points.length - 1; i++) {
-            const influence = 1 - (this.points.length - i) / 4;
-            this.points[i].x += endForceX * influence;
-            this.points[i].y += endForceY * influence;
-        }
-        this.simulateRope(startX, startY, endX, endY, delta);
-        const ctx = game_1.Game.ctx;
-        ctx.save();
-        game_1.Game.ctx.globalCompositeOperation =
-            compositeOperation;
-        for (let i = 0; i < this.points.length - 1; i++) {
-            const p1 = this.points[i];
-            const p2 = this.points[i + 1];
-            const dx = p2.x - p1.x;
-            const dy = p2.y - p1.y;
-            const steps = Math.max(Math.abs(dx), Math.abs(dy));
-            const xIncrement = dx / steps;
-            const yIncrement = dy / steps;
-            let x = p1.x;
-            let y = p1.y;
-            for (let step = 0; step <= steps; step++) {
-                for (let w = 0; w < lineWidth; w++) {
-                    for (let h = 0; h < lineWidth; h++) {
-                        ctx.fillStyle = color;
-                        ctx.fillRect(Math.round(x + w), Math.round(y + h), 1, 1);
-                    }
-                }
-                x += xIncrement;
-                y += yIncrement;
-            }
-        }
-        ctx.restore();
-        this.prevStartX = startX;
-        this.prevStartY = startY;
-        this.prevEndX = endX;
-        this.prevEndY = endY;
-    }
-    initializePoints(startX, startY, endX, endY) {
-        const points = [];
-        for (let i = 0; i < this.segments; i++) {
-            const t = i / (this.segments - 1);
-            points.push({
-                x: startX + (endX - startX) * t,
-                y: startY + (endY - startY) * t,
-                oldX: startX + (endX - startX) * t,
-                oldY: startY + (endY - startY) * t,
-                velocityX: 0,
-                velocityY: 0,
-                angle: Math.random() * Math.PI * 2,
-            });
-        }
-        return points;
-    }
-    applyTurbulence(point, index) {
-        point.angle += Math.sin(this.time * 0.1 + index * 0.5) * this.angleChange;
-        const turbulenceX = Math.cos(point.angle) * this.turbulence;
-        const turbulenceY = Math.sin(point.angle) * this.turbulence;
-        point.velocityX += turbulenceX;
-        point.velocityY += turbulenceY;
-        point.velocityX = Math.min(Math.max(point.velocityX, -this.maxVelocity), this.maxVelocity);
-        point.velocityY = Math.min(Math.max(point.velocityY, -this.maxVelocity), this.maxVelocity);
-    }
-    simulateRope(startX, startY, endX, endY, delta) {
-        const iterationsThisFrame = Math.ceil(this.iterations * delta);
-        for (let iteration = 0; iteration < iterationsThisFrame; iteration++) {
-            for (let i = 1; i < this.points.length - 1; i++) {
-                const point = this.points[i];
-                const prevPoint = this.points[i - 1];
-                const nextPoint = this.points[i + 1];
-                const springForceXPrev = (prevPoint.x - point.x) * this.springStiffness;
-                const springForceYPrev = (prevPoint.y - point.y) * this.springStiffness;
-                const springForceXNext = (nextPoint.x - point.x) * this.springStiffness;
-                const springForceYNext = (nextPoint.y - point.y) * this.springStiffness;
-                this.applyTurbulence(point, i);
-                point.velocityX =
-                    (point.velocityX + springForceXPrev + springForceXNext) *
-                        this.damping;
-                point.velocityY =
-                    (point.velocityY + springForceYPrev + springForceYNext) *
-                        this.damping;
-                const relativeVXPrev = prevPoint.velocityX - point.velocityX;
-                const relativeVYPrev = prevPoint.velocityY - point.velocityY;
-                const relativeVXNext = nextPoint.velocityX - point.velocityX;
-                const relativeVYNext = nextPoint.velocityY - point.velocityY;
-                point.velocityX +=
-                    (relativeVXPrev + relativeVXNext) * this.springDamping;
-                point.velocityY +=
-                    (relativeVYPrev + relativeVYNext) * this.springDamping;
-                point.oldX = point.x;
-                point.oldY = point.y;
-                point.x += point.velocityX;
-                point.y += point.velocityY + this.gravity;
-            }
-            const segmentLength = Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2)) /
-                (this.segments - 1);
-            for (let constraintIteration = 0; constraintIteration < 2; constraintIteration++) {
-                for (let i = 0; i < this.points.length - 1; i++) {
-                    const p1 = this.points[i];
-                    const p2 = this.points[i + 1];
-                    const dx = p2.x - p1.x;
-                    const dy = p2.y - p1.y;
-                    const distance = Math.sqrt(dx * dx + dy * dy);
-                    const difference = segmentLength - distance;
-                    const percent = difference / distance / 2;
-                    const offsetX = dx * percent;
-                    const offsetY = dy * percent;
-                    if (i > 0) {
-                        p1.x -= offsetX * 1.5;
-                        p1.y -= offsetY * 1.5;
-                    }
-                    if (i < this.points.length - 2) {
-                        p2.x += offsetX * 1.5;
-                        p2.y += offsetY * 1.5;
-                    }
-                }
-            }
-        }
-        this.points[0].x = startX;
-        this.points[0].y = startY;
-        this.points[0].oldX = startX;
-        this.points[0].oldY = startY;
-        this.points[this.points.length - 1].x = endX;
-        this.points[this.points.length - 1].y = endY;
-        this.points[this.points.length - 1].oldX = endX;
-        this.points[this.points.length - 1].oldY = endY;
-    }
-    static renderBeam(x1, y1, x2, y2, color = "cyan", lineWidth = 2, alpha = 1) {
-        const ctx = game_1.Game.ctx;
-        ctx.globalAlpha = alpha;
-        const startX = x1 * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
-        const startY = y1 * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
-        const endX = x2 * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
-        const endY = y2 * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
-        ctx.save();
-        ctx.beginPath();
-        ctx.moveTo(startX, startY);
-        ctx.lineTo(endX, endY);
-        ctx.lineWidth = lineWidth;
-        ctx.strokeStyle = color;
-        ctx.stroke();
-        ctx.restore();
-    }
-    destroy() {
-        this.active = false;
-        this.points = [];
-        this.dead = true;
-    }
-    isActive() {
-        return this.active;
-    }
-}
-exports.BeamEffect = BeamEffect;
-// Number of points that make up the beam (higher = smoother but more expensive)
-// Range: 10-100, recommended: 30
-BeamEffect.SEGMENTS = 30;
-// Downward force applied to each point (0 = no gravity)
-// Range: 0-10, recommended: 2
-BeamEffect.GRAVITY = 2;
-// Physics simulation steps per frame (higher = more accurate but more expensive)
-// Range: 1-10, recommended: 1
-BeamEffect.ITERATIONS = 5;
-// How much the beam reacts to movement of start/end points
-// Range: 0-5, recommended: 1
-BeamEffect.MOTION_INFLUENCE = 1;
-// Amount of random movement applied to points (0 = straight beam)
-// Range: 0-1, recommended: 0.5
-BeamEffect.TURBULENCE = 0.5;
-// How quickly velocity decreases over time
-// Range: 0-1, recommended: 0.5
-BeamEffect.VELOCITY_DECAY = 0.1;
-// How quickly the turbulence angle changes
-// Range: 0-2, recommended: 0.9
-BeamEffect.ANGLE_CHANGE = 0.01; // for turbulence specifically
-// Maximum speed any point can move per frame
-// Range: 10-1000, recommended: 100
-BeamEffect.MAX_VELOCITY = 100;
-// General movement resistance (1 = no damping, 0 = full stop)
-// Range: 0.9-0.999, recommended: 0.8
-BeamEffect.DAMPING = 0.8;
-// How strongly points pull toward their neighbors
-// Range: 0.01-1, recommended: 0.01
-BeamEffect.SPRING_STIFFNESS = 0.01;
-// How quickly spring oscillations settle
-// Range: 0.001-0.1, recommended: 0.1
-BeamEffect.SPRING_DAMPING = 0.1;
-
-
-/***/ }),
-
-/***/ "./src/bestiary.ts":
-/*!*************************!*\
-  !*** ./src/bestiary.ts ***!
-  \*************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Bestiary = void 0;
-const game_1 = __webpack_require__(/*! ./game */ "./src/game.ts");
-const levelConstants_1 = __webpack_require__(/*! ./levelConstants */ "./src/levelConstants.ts");
-const gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/gameConstants.ts");
-const crabEnemy_1 = __webpack_require__(/*! ./entity/enemy/crabEnemy */ "./src/entity/enemy/crabEnemy.ts");
-const frogEnemy_1 = __webpack_require__(/*! ./entity/enemy/frogEnemy */ "./src/entity/enemy/frogEnemy.ts");
-const zombieEnemy_1 = __webpack_require__(/*! ./entity/enemy/zombieEnemy */ "./src/entity/enemy/zombieEnemy.ts");
-const skullEnemy_1 = __webpack_require__(/*! ./entity/enemy/skullEnemy */ "./src/entity/enemy/skullEnemy.ts");
-const energyWizard_1 = __webpack_require__(/*! ./entity/enemy/energyWizard */ "./src/entity/enemy/energyWizard.ts");
-const chargeEnemy_1 = __webpack_require__(/*! ./entity/enemy/chargeEnemy */ "./src/entity/enemy/chargeEnemy.ts");
-const rookEnemy_1 = __webpack_require__(/*! ./entity/enemy/rookEnemy */ "./src/entity/enemy/rookEnemy.ts");
-const bishopEnemy_1 = __webpack_require__(/*! ./entity/enemy/bishopEnemy */ "./src/entity/enemy/bishopEnemy.ts");
-const armoredzombieEnemy_1 = __webpack_require__(/*! ./entity/enemy/armoredzombieEnemy */ "./src/entity/enemy/armoredzombieEnemy.ts");
-const bigSkullEnemy_1 = __webpack_require__(/*! ./entity/enemy/bigSkullEnemy */ "./src/entity/enemy/bigSkullEnemy.ts");
-const queenEnemy_1 = __webpack_require__(/*! ./entity/enemy/queenEnemy */ "./src/entity/enemy/queenEnemy.ts");
-const knightEnemy_1 = __webpack_require__(/*! ./entity/enemy/knightEnemy */ "./src/entity/enemy/knightEnemy.ts");
-const bigKnightEnemy_1 = __webpack_require__(/*! ./entity/enemy/bigKnightEnemy */ "./src/entity/enemy/bigKnightEnemy.ts");
-const fireWizard_1 = __webpack_require__(/*! ./entity/enemy/fireWizard */ "./src/entity/enemy/fireWizard.ts");
-const spawner_1 = __webpack_require__(/*! ./entity/enemy/spawner */ "./src/entity/enemy/spawner.ts");
-const occultistEnemy_1 = __webpack_require__(/*! ./entity/enemy/occultistEnemy */ "./src/entity/enemy/occultistEnemy.ts");
-//enemy typeof to class map
-const enemyClassMap = {
-    CrabEnemy: crabEnemy_1.CrabEnemy,
-    FrogEnemy: frogEnemy_1.FrogEnemy,
-    ZombieEnemy: zombieEnemy_1.ZombieEnemy,
-    SkullEnemy: skullEnemy_1.SkullEnemy,
-    EnergyWizardEnemy: energyWizard_1.EnergyWizardEnemy,
-    ChargeEnemy: chargeEnemy_1.ChargeEnemy,
-    RookEnemy: rookEnemy_1.RookEnemy,
-    BishopEnemy: bishopEnemy_1.BishopEnemy,
-    ArmoredzombieEnemy: armoredzombieEnemy_1.ArmoredzombieEnemy,
-    BigSkullEnemy: bigSkullEnemy_1.BigSkullEnemy,
-    QueenEnemy: queenEnemy_1.QueenEnemy,
-    KnightEnemy: knightEnemy_1.KnightEnemy,
-    BigKnightEnemy: bigKnightEnemy_1.BigKnightEnemy,
-    FireWizardEnemy: fireWizard_1.FireWizardEnemy,
-    Spawner: spawner_1.Spawner,
-    OccultistEnemy: occultistEnemy_1.OccultistEnemy,
-};
-class Bestiary {
-    constructor(game, player) {
-        this.isOpen = false;
-        this.openTime = Date.now();
-        this.frame = 0;
-        this.activeEntryIndex = 0;
-        /**
-         * Opens the logbook window.
-         */
-        this.open = () => {
-            if (this.seenEnemies.size === 0)
-                this.seenEnemies = this.game.tutorialListener.seenEnemies;
-            this.isOpen = true;
-            this.openTime = Date.now();
-        };
-        /**
-         * Closes the logbook window.
-         */
-        this.close = () => {
-            this.isOpen = false;
-        };
-        this.entryUp = () => {
-            this.activeEntryIndex =
-                (this.activeEntryIndex - 1 + this.entries.length) % this.entries.length;
-        };
-        this.entryDown = () => {
-            this.activeEntryIndex = (this.activeEntryIndex + 1) % this.entries.length;
-        };
-        /**
-         * Toggles the logbook window's open state.
-         */
-        this.toggleOpen = () => {
-            this.isOpen ? this.close() : this.open();
-        };
-        /**
-         * Adds a new entry to the logbook.
-         * @param enemy The enemy to add.
-         */
-        this.addEntry = (enemy) => {
-            const enemyClass = enemyClassMap[enemy.name];
-            this.entries.push({
-                name: enemy.name,
-                description: enemyClass.prototype.description,
-                tileX: enemyClass.prototype.tileX,
-                tileY: enemyClass.prototype.tileY,
-            });
-        };
-        /**
-         * Draws the logbook interface.
-         * @param delta The time delta since the last frame.
-         */
-        this.draw = (delta) => {
-            if (!this.isOpen)
-                return;
-            game_1.Game.ctx.save();
-            // Draw semi-transparent background
-            game_1.Game.ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
-            game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
-            // Define dimensions similar to Inventory
-            const s = Math.min(18, (18 * (Date.now() - this.openTime)) / 100); // example scaling
-            const b = 2; // border
-            const g = -2; // gap
-            const ob = 1; // outer border
-            const width = 5 * (s + 2 * b + g) - g; // assuming 5 columns
-            const height = 4 * (s + 2 * b + g) - g; // assuming 4 rows
-            const startX = Math.round(0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * width) - ob;
-            const startY = Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT - 0.5 * height) - ob;
-            // Draw main logbook background
-            game_1.Game.ctx.fillStyle = "white";
-            game_1.Game.ctx.fillRect(startX, startY, width + 2 * ob, height + 2 * ob);
-            // Draw logbook entries
-            game_1.Game.ctx.fillStyle = "black";
-            const padding = 10;
-            if (this.entries.length === 0) {
-                game_1.Game.fillText("No enemies seen yet", startX + padding, startY + padding);
-            }
-            else {
-                this.entries.forEach((entry, index) => {
-                    game_1.Game.fillText(entry.name, startX + padding, startY + padding + index * 20);
-                });
-                this.drawEnemySprite(this.entries[this.activeEntryIndex].tileX, this.entries[this.activeEntryIndex].tileY, delta);
-            }
-            // Draw logbook button
-            this.drawLogbookButton(delta);
-            game_1.Game.ctx.restore();
-        };
-        this.drawEnemySprite = (tileX, tileY, delta) => {
-            this.frame += Math.round(0.1 * delta * 10) / 10;
-            if (this.frame >= 4)
-                this.frame = 0;
-            game_1.Game.drawMob(tileX, tileY, 1, 1, 1, 1, 1, 1, "Black", 0);
-        };
-        /**
-         * Draws the logbook button on the screen.
-         * @param delta The time delta since the last frame.
-         */
-        this.drawLogbookButton = (delta) => {
-            game_1.Game.ctx.save();
-            this.buttonX = levelConstants_1.LevelConstants.SCREEN_W - 2;
-            this.buttonY = levelConstants_1.LevelConstants.SCREEN_H - 2.25;
-            game_1.Game.drawFX(0, 0, 2, 2, this.buttonX, this.buttonY, 2, 2);
-            game_1.Game.ctx.restore();
-        };
-        /**
-         * Handles mouse down events.
-         * @param x The x-coordinate of the mouse.
-         * @param y The y-coordinate of the mouse.
-         * @param button The mouse button pressed.
-         */
-        this.handleMouseDown = (x, y, button) => {
-            if (button !== 0)
-                return; // Only respond to left click
-            if (this.isPointInLogbookButton(x, y)) {
-                this.toggleOpen();
-            }
-        };
-        /**
-         * Handles mouse up events.
-         * @param x The x-coordinate of the mouse.
-         * @param y The y-coordinate of the mouse.
-         * @param button The mouse button released.
-         */
-        this.handleMouseUp = (x, y, button) => {
-            // Implement if needed
-        };
-        /**
-         * Handles hold detection.
-         */
-        this.onHoldDetected = () => {
-            // Implement if needed
-        };
-        /**
-         * Checks if a point is within the logbook button bounds.
-         * @param x The x-coordinate to check.
-         * @param y The y-coordinate to check.
-         * @returns True if the point is within the button bounds, else false.
-         */
-        this.isPointInLogbookButton = (x, y) => {
-            const tX = x / gameConstants_1.GameConstants.TILESIZE;
-            const tY = y / gameConstants_1.GameConstants.TILESIZE;
-            return (tX >= this.buttonX &&
-                tX <= this.buttonX + 2 &&
-                tY >= this.buttonY &&
-                tY <= this.buttonY + 2);
-        };
-        /**
-         * Updates the logbook state each game tick.
-         */
-        this.tick = () => {
-            if (this.isOpen) {
-                // Update logbook-related logic here
-            }
-        };
-        this.game = game;
-        this.player = player;
-        this.entries = [];
-        this.activeEntryIndex = 0;
-        this.buttonX = Math.round((Math.round(gameConstants_1.GameConstants.WIDTH / 2) + 3) / gameConstants_1.GameConstants.TILESIZE);
-        this.buttonY = Math.round(10);
-        this.seenEnemies = new Set();
-    }
-}
-exports.Bestiary = Bestiary;
-
-
-/***/ }),
-
-/***/ "./src/drawable.ts":
-/*!*************************!*\
-  !*** ./src/drawable.ts ***!
-  \*************************/
+/***/ "./src/drawable/drawable.ts":
+/*!**********************************!*\
+  !*** ./src/drawable/drawable.ts ***!
+  \**********************************/
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -989,6 +40,237 @@ exports.Drawable = Drawable;
 
 /***/ }),
 
+/***/ "./src/drawable/healthbar.ts":
+/*!***********************************!*\
+  !*** ./src/drawable/healthbar.ts ***!
+  \***********************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.HealthBar = void 0;
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const levelConstants_1 = __webpack_require__(/*! ../level/levelConstants */ "./src/level/levelConstants.ts");
+class HealthBar {
+    constructor() {
+        this.hurt = () => {
+            this.hurtTimer = Date.now();
+        };
+        this.draw = (delta, hearts, maxHearts, x, y, flashing) => {
+            let t = Date.now() - this.hurtTimer;
+            if (t <= levelConstants_1.LevelConstants.HEALTH_BAR_TOTALTIME) {
+                let fullHearts = Math.floor(hearts);
+                let halfHearts = Math.ceil(hearts - fullHearts);
+                let emptyHearts = maxHearts - fullHearts - halfHearts;
+                // I wouldn't normally use magic numbers here, but these are hardcoded based on the tileset
+                //   (which isn't really parameterizable)
+                let drawWidth = Math.round(Math.min(9, Math.min(0.05 * (levelConstants_1.LevelConstants.HEALTH_BAR_TOTALTIME - t), 0.05 * t)));
+                let drawHeight = Math.round(Math.min(0.5, Math.min(0.003 * (levelConstants_1.LevelConstants.HEALTH_BAR_TOTALTIME - t), 0.003 * t)) * 16) / 16.0;
+                let width = (drawWidth * (maxHearts - 1) + 8) / 16.0;
+                let xxStart = 0.5 + -width / 2;
+                for (let i = 0; i < Math.ceil(0.5 * maxHearts); i++) {
+                    let tileX = 0;
+                    if (!flashing)
+                        tileX = 1.5;
+                    else if (i < fullHearts)
+                        tileX = 0;
+                    else if (i < fullHearts + halfHearts)
+                        tileX = 0.5;
+                    else
+                        tileX = 1;
+                    let xx = (drawWidth * i) / 16.0 + xxStart;
+                    game_1.Game.drawFX(tileX, 8, 0.5, 0.5, x + xx, y - 1 - drawHeight / 2, 0.5, drawHeight);
+                    xx += 9.0 / 16.0;
+                    let j = maxHearts - i - 1;
+                    if (j !== i) {
+                        let tileX = 0;
+                        if (!flashing)
+                            tileX = 1.5;
+                        else if (j < fullHearts)
+                            tileX = 0;
+                        else if (j < fullHearts + halfHearts)
+                            tileX = 0.5;
+                        else
+                            tileX = 1;
+                        let xx = (drawWidth * j) / 16.0 + xxStart;
+                        game_1.Game.drawFX(tileX, 8, 0.5, 0.5, x + xx, y - 1 - drawHeight / 2, 0.5, drawHeight);
+                        xx += 9.0 / 16.0;
+                    }
+                }
+            }
+        };
+        this.hurtTimer = 0;
+    }
+}
+exports.HealthBar = HealthBar;
+
+
+/***/ }),
+
+/***/ "./src/drawable/hitWarning.ts":
+/*!************************************!*\
+  !*** ./src/drawable/hitWarning.ts ***!
+  \************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.HitWarning = void 0;
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const drawable_1 = __webpack_require__(/*! ./drawable */ "./src/drawable/drawable.ts");
+const utils_1 = __webpack_require__(/*! ../utility/utils */ "./src/utility/utils.ts");
+var Direction;
+(function (Direction) {
+    Direction[Direction["North"] = 0] = "North";
+    Direction[Direction["NorthEast"] = 1] = "NorthEast";
+    Direction[Direction["East"] = 2] = "East";
+    Direction[Direction["SouthEast"] = 3] = "SouthEast";
+    Direction[Direction["South"] = 4] = "South";
+    Direction[Direction["SouthWest"] = 5] = "SouthWest";
+    Direction[Direction["West"] = 6] = "West";
+    Direction[Direction["NorthWest"] = 7] = "NorthWest";
+    Direction[Direction["Center"] = 8] = "Center";
+})(Direction || (Direction = {}));
+class HitWarning extends drawable_1.Drawable {
+    constructor(game, x, y, eX, eY, isEnemy, dirOnly = false, parent = null) {
+        super();
+        this.parent = null;
+        this._pointerDir = null;
+        this._pointerOffset = null;
+        this.alpha = 0;
+        this.tickedForDeath = false;
+        this.tick = () => {
+            if (this.tickedForDeath)
+                this.dead = true;
+            this.tickedForDeath = true;
+        };
+        this.removeOverlapping = () => {
+            for (const entity of this.game.room.entities) {
+                if (entity.x === this.x &&
+                    entity.y === this.y &&
+                    entity.pushable === false) {
+                    this.dead = true;
+                    break;
+                }
+            }
+            for (const door of this.game.room.doors) {
+                if (door.x === this.x && door.y === this.y) {
+                    this.dead = true;
+                    break;
+                }
+            }
+        };
+        this.fadeHitwarnings = (delta) => {
+            if (!this.tickedForDeath) {
+                if (this.alpha < 1)
+                    this.alpha += 0.03 * delta;
+                if (this.alpha > 1)
+                    this.alpha = 1;
+            }
+            else {
+                if (this.alpha > 0)
+                    this.alpha -= 0.03 * delta;
+                if (this.alpha < 0)
+                    this.alpha = 0;
+            }
+        };
+        this.draw = (delta) => {
+            this.fadeHitwarnings(delta);
+            if (Math.abs(this.x - this.game.players[this.game.localPlayerID].x) <= 1 &&
+                Math.abs(this.y - this.game.players[this.game.localPlayerID].y) <= 1) {
+                game_1.Game.ctx.globalAlpha = this.alpha;
+                if (this.isEnemy &&
+                    utils_1.Utils.distance(this.x, this.y, this.game.players[this.game.localPlayerID].x, this.game.players[this.game.localPlayerID].y) <= 1) {
+                    // Red Arrow that only renders one square away
+                    game_1.Game.drawFX(this.tileX + Math.floor(HitWarning.frame), this.tileY, 1, 1, this.x + this.pointerOffset.x, this.y + this.pointerOffset.y - this.offsetY, 1, 1);
+                }
+                if (false) {}
+                game_1.Game.ctx.globalAlpha = 1;
+            }
+        };
+        this.drawTopLayer = (delta) => {
+            this.fadeHitwarnings(delta);
+            game_1.Game.ctx.globalAlpha = this.alpha;
+            if (this.isEnemy && this.getPointerDir() !== Direction.North) {
+                //white arrow top layer
+                game_1.Game.drawFX(this.tileX + Math.floor(HitWarning.frame), this.tileY + 1, 1, 1, this.x + this.pointerOffset.x, this.y + this.pointerOffset.y - this.offsetY, 1, 1);
+            }
+            if (utils_1.Utils.distance(this.x, this.y, this.game.players[this.game.localPlayerID].x, this.game.players[this.game.localPlayerID].y) <= 1) {
+                if (!this.dirOnly) {
+                    // Red X that renders 1 square away for top layer
+                    game_1.Game.drawFX(18 + Math.floor(HitWarning.frame), 6, 1, 1, this.x, this.y - this.offsetY + 0, 1, 1);
+                }
+            }
+            game_1.Game.ctx.globalAlpha = 1;
+        };
+        this.x = x;
+        this.y = y;
+        this.dead = false;
+        this.game = game;
+        this.parent = parent;
+        this.tileX = 0;
+        this.tileY = 22;
+        this.eX = eX;
+        this.eY = eY;
+        this.offsetY = 0.2;
+        this.dirOnly = dirOnly;
+        this.isEnemy = isEnemy !== undefined ? isEnemy : true;
+        this.pointerOffset = this.getPointerOffset();
+        this.removeOverlapping();
+        console.log("hitwarning", this.x, this.y);
+    }
+    getPointerDir() {
+        if (this._pointerDir === null) {
+            const dx = this.eX - this.x;
+            const dy = this.eY - this.y;
+            if (dx === 0 && dy === 0) {
+                this._pointerDir = Direction.Center;
+            }
+            else if (dx === 0) {
+                this._pointerDir = dy < 0 ? Direction.South : Direction.North;
+            }
+            else if (dy === 0) {
+                this._pointerDir = dx < 0 ? Direction.East : Direction.West;
+            }
+            else if (dx < 0) {
+                this._pointerDir = dy < 0 ? Direction.SouthEast : Direction.NorthEast;
+            }
+            else {
+                this._pointerDir = dy < 0 ? Direction.SouthWest : Direction.NorthWest;
+            }
+            this.tileX = 0 + 2 * this._pointerDir;
+        }
+        return this._pointerDir;
+    }
+    getPointerOffset() {
+        if (this._pointerOffset === null) {
+            const offsets = {
+                [Direction.North]: { x: 0, y: 0.5 },
+                [Direction.South]: { x: 0, y: -0.6 },
+                [Direction.West]: { x: 0.6, y: 0 },
+                [Direction.East]: { x: -0.6, y: 0 },
+                [Direction.NorthEast]: { x: -0.5, y: 0.5 },
+                [Direction.NorthWest]: { x: 0.5, y: 0.5 },
+                [Direction.SouthEast]: { x: -0.5, y: -0.5 },
+                [Direction.SouthWest]: { x: 0.5, y: -0.5 },
+                [Direction.Center]: { x: 0, y: -0.25 },
+            };
+            this._pointerOffset = offsets[this.getPointerDir()];
+        }
+        return this._pointerOffset;
+    }
+}
+exports.HitWarning = HitWarning;
+HitWarning.frame = 0;
+HitWarning.updateFrame = (delta) => {
+    HitWarning.frame += 0.125 * delta;
+    if (HitWarning.frame >= 2)
+        HitWarning.frame = 0;
+};
+
+
+/***/ }),
+
 /***/ "./src/entity/enemy/armoredSkullEnemy.ts":
 /*!***********************************************!*\
   !*** ./src/entity/enemy/armoredSkullEnemy.ts ***!
@@ -999,7 +281,7 @@ exports.Drawable = Drawable;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ArmoredSkullEnemy = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-const astarclass_1 = __webpack_require__(/*! ../../astarclass */ "./src/astarclass.ts");
+const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ "./src/particle/imageParticle.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
@@ -1289,7 +571,7 @@ exports.ArmoredzombieEnemy = void 0;
 // src/entity/enemy/armoredzombieEnemy.ts
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
-const astarclass_1 = __webpack_require__(/*! ../../astarclass */ "./src/astarclass.ts");
+const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 class ArmoredzombieEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y, drop) {
@@ -1510,13 +792,13 @@ ArmoredzombieEnemy.tileY = 8;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BigKnightEnemy = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-const hitWarning_1 = __webpack_require__(/*! ../../hitWarning */ "./src/hitWarning.ts");
+const hitWarning_1 = __webpack_require__(/*! ../../drawable/hitWarning */ "./src/drawable/hitWarning.ts");
 const coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
 const redgem_1 = __webpack_require__(/*! ../../item/resource/redgem */ "./src/item/resource/redgem.ts");
-const spear_1 = __webpack_require__(/*! ../../weapon/spear */ "./src/weapon/spear.ts");
-const gameConstants_1 = __webpack_require__(/*! ../../gameConstants */ "./src/gameConstants.ts");
+const spear_1 = __webpack_require__(/*! ../../item/weapon/spear */ "./src/item/weapon/spear.ts");
+const gameConstants_1 = __webpack_require__(/*! ../../game/gameConstants */ "./src/game/gameConstants.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
-const random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
 class BigKnightEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
@@ -1754,9 +1036,9 @@ BigKnightEnemy.tileY = 0;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BigSkullEnemy = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-const gameConstants_1 = __webpack_require__(/*! ../../gameConstants */ "./src/gameConstants.ts");
+const gameConstants_1 = __webpack_require__(/*! ../../game/gameConstants */ "./src/game/gameConstants.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
-const astarclass_1 = __webpack_require__(/*! ../../astarclass */ "./src/astarclass.ts");
+const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ "./src/particle/imageParticle.ts");
 class BigSkullEnemy extends enemy_1.Enemy {
@@ -2108,7 +1390,7 @@ BigSkullEnemy.tileY = 0;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BigZombieEnemy = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-const astarclass_1 = __webpack_require__(/*! ../../astarclass */ "./src/astarclass.ts");
+const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 class BigZombieEnemy extends enemy_1.Enemy {
@@ -2394,7 +1676,7 @@ BigZombieEnemy.tileY = 0;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BishopEnemy = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-const astarclass_1 = __webpack_require__(/*! ../../astarclass */ "./src/astarclass.ts");
+const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const door_1 = __webpack_require__(/*! ../../tile/door */ "./src/tile/door.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
@@ -2613,10 +1895,10 @@ BishopEnemy.tileY = 8;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ChargeEnemy = exports.ChargeEnemyState = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-const hitWarning_1 = __webpack_require__(/*! ../../hitWarning */ "./src/hitWarning.ts");
+const hitWarning_1 = __webpack_require__(/*! ../../drawable/hitWarning */ "./src/drawable/hitWarning.ts");
 const door_1 = __webpack_require__(/*! ../../tile/door */ "./src/tile/door.ts");
 const genericParticle_1 = __webpack_require__(/*! ../../particle/genericParticle */ "./src/particle/genericParticle.ts");
-const gameConstants_1 = __webpack_require__(/*! ../../gameConstants */ "./src/gameConstants.ts");
+const gameConstants_1 = __webpack_require__(/*! ../../game/gameConstants */ "./src/game/gameConstants.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 var ChargeEnemyState;
 (function (ChargeEnemyState) {
@@ -2888,9 +2170,9 @@ ChargeEnemy.tileY = 8;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CrabEnemy = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-const astarclass_1 = __webpack_require__(/*! ../../astarclass */ "./src/astarclass.ts");
+const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
-const gameConstants_1 = __webpack_require__(/*! ../../gameConstants */ "./src/gameConstants.ts");
+const gameConstants_1 = __webpack_require__(/*! ../../game/gameConstants */ "./src/game/gameConstants.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 class CrabEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y, drop) {
@@ -3110,10 +2392,10 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Enemy = void 0;
 const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-const astarclass_1 = __webpack_require__(/*! ../../astarclass */ "./src/astarclass.ts");
+const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
-const eventBus_1 = __webpack_require__(/*! ../../eventBus */ "./src/eventBus.ts");
+const eventBus_1 = __webpack_require__(/*! ../../event/eventBus */ "./src/event/eventBus.ts");
 var EnemyState;
 (function (EnemyState) {
     EnemyState[EnemyState["SLEEP"] = 0] = "SLEEP";
@@ -3668,7 +2950,7 @@ const bones_1 = __webpack_require__(/*! ../../tile/bones */ "./src/tile/bones.ts
 const deathParticle_1 = __webpack_require__(/*! ../../particle/deathParticle */ "./src/particle/deathParticle.ts");
 const wizardTeleportParticle_1 = __webpack_require__(/*! ../../particle/wizardTeleportParticle */ "./src/particle/wizardTeleportParticle.ts");
 const wizardFireball_1 = __webpack_require__(/*! ../../projectile/wizardFireball */ "./src/projectile/wizardFireball.ts");
-const random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
 const wizardEnemy_1 = __webpack_require__(/*! ./wizardEnemy */ "./src/entity/enemy/wizardEnemy.ts");
 var WizardState;
 (function (WizardState) {
@@ -3846,12 +3128,12 @@ FireWizardEnemy.tileY = 8;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.FrogEnemy = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-const astarclass_1 = __webpack_require__(/*! ../../astarclass */ "./src/astarclass.ts");
-const hitWarning_1 = __webpack_require__(/*! ../../hitWarning */ "./src/hitWarning.ts");
+const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
+const hitWarning_1 = __webpack_require__(/*! ../../drawable/hitWarning */ "./src/drawable/hitWarning.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
-const utils_1 = __webpack_require__(/*! ../../utils */ "./src/utils.ts");
+const utils_1 = __webpack_require__(/*! ../../utility/utils */ "./src/utility/utils.ts");
 class FrogEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
@@ -4170,7 +3452,7 @@ FrogEnemy.tileY = 16;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.KnightEnemy = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-const astarclass_1 = __webpack_require__(/*! ../../astarclass */ "./src/astarclass.ts");
+const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 class KnightEnemy extends enemy_1.Enemy {
@@ -4379,7 +3661,7 @@ KnightEnemy.tileY = 8;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MummyEnemy = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-const astarclass_1 = __webpack_require__(/*! ../../astarclass */ "./src/astarclass.ts");
+const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 class MummyEnemy extends enemy_1.Enemy {
@@ -4615,9 +3897,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.OccultistEnemy = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
-const utils_1 = __webpack_require__(/*! ../../utils */ "./src/utils.ts");
-const beamEffect_1 = __webpack_require__(/*! ../../beamEffect */ "./src/beamEffect.ts");
-const lighting_1 = __webpack_require__(/*! ../../lighting */ "./src/lighting.ts");
+const utils_1 = __webpack_require__(/*! ../../utility/utils */ "./src/utility/utils.ts");
+const beamEffect_1 = __webpack_require__(/*! ../../projectile/beamEffect */ "./src/projectile/beamEffect.ts");
+const lighting_1 = __webpack_require__(/*! ../../lighting/lighting */ "./src/lighting/lighting.ts");
 class OccultistEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y) {
         super(room, game, x, y);
@@ -4848,7 +4130,7 @@ OccultistEnemy.tileY = 8;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.QueenEnemy = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-const astarclass_1 = __webpack_require__(/*! ../../astarclass */ "./src/astarclass.ts");
+const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 class QueenEnemy extends enemy_1.Enemy {
@@ -5062,7 +4344,7 @@ QueenEnemy.tileY = 8;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RookEnemy = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-const astarclass_1 = __webpack_require__(/*! ../../astarclass */ "./src/astarclass.ts");
+const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 class RookEnemy extends enemy_1.Enemy {
@@ -5232,7 +4514,7 @@ RookEnemy.tileY = 8;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SkullEnemy = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-const astarclass_1 = __webpack_require__(/*! ../../astarclass */ "./src/astarclass.ts");
+const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ "./src/particle/imageParticle.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
@@ -5510,12 +4792,12 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Spawner = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const floor_1 = __webpack_require__(/*! ../../tile/floor */ "./src/tile/floor.ts");
-const hitWarning_1 = __webpack_require__(/*! ../../hitWarning */ "./src/hitWarning.ts");
+const hitWarning_1 = __webpack_require__(/*! ../../drawable/hitWarning */ "./src/drawable/hitWarning.ts");
 const skullEnemy_1 = __webpack_require__(/*! ./skullEnemy */ "./src/entity/enemy/skullEnemy.ts");
 const enemySpawnAnimation_1 = __webpack_require__(/*! ../../projectile/enemySpawnAnimation */ "./src/projectile/enemySpawnAnimation.ts");
 const knightEnemy_1 = __webpack_require__(/*! ./knightEnemy */ "./src/entity/enemy/knightEnemy.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
-const random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
 const energyWizard_1 = __webpack_require__(/*! ./energyWizard */ "./src/entity/enemy/energyWizard.ts");
 const zombieEnemy_1 = __webpack_require__(/*! ./zombieEnemy */ "./src/entity/enemy/zombieEnemy.ts");
 const bishopEnemy_1 = __webpack_require__(/*! ./bishopEnemy */ "./src/entity/enemy/bishopEnemy.ts");
@@ -5757,9 +5039,9 @@ Spawner.tileY = 4;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SpiderEnemy = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-const astarclass_1 = __webpack_require__(/*! ../../astarclass */ "./src/astarclass.ts");
+const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
-const gameConstants_1 = __webpack_require__(/*! ../../gameConstants */ "./src/gameConstants.ts");
+const gameConstants_1 = __webpack_require__(/*! ../../game/gameConstants */ "./src/game/gameConstants.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 var SpiderState;
 (function (SpiderState) {
@@ -5997,9 +5279,9 @@ exports.WizardEnemy = exports.WizardState = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const wizardTeleportParticle_1 = __webpack_require__(/*! ../../particle/wizardTeleportParticle */ "./src/particle/wizardTeleportParticle.ts");
 const wizardFireball_1 = __webpack_require__(/*! ../../projectile/wizardFireball */ "./src/projectile/wizardFireball.ts");
-const random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
-const lightSource_1 = __webpack_require__(/*! ../../lightSource */ "./src/lightSource.ts");
+const lightSource_1 = __webpack_require__(/*! ../../lighting/lightSource */ "./src/lighting/lightSource.ts");
 var WizardState;
 (function (WizardState) {
     WizardState[WizardState["idle"] = 0] = "idle";
@@ -6185,7 +5467,7 @@ WizardEnemy.tileY = 0;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ZombieEnemy = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-const astarclass_1 = __webpack_require__(/*! ../../astarclass */ "./src/astarclass.ts");
+const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 class ZombieEnemy extends enemy_1.Enemy {
@@ -6420,21 +5702,21 @@ ZombieEnemy.tileY = 8;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Entity = exports.EntityType = exports.EntityDirection = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-const healthbar_1 = __webpack_require__(/*! ../healthbar */ "./src/healthbar.ts");
-const drawable_1 = __webpack_require__(/*! ../drawable */ "./src/drawable.ts");
-const gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
-const hitWarning_1 = __webpack_require__(/*! ../hitWarning */ "./src/hitWarning.ts");
-const utils_1 = __webpack_require__(/*! ../utils */ "./src/utils.ts");
-const eventBus_1 = __webpack_require__(/*! ../eventBus */ "./src/eventBus.ts");
-const events_1 = __webpack_require__(/*! ../events */ "./src/events.ts");
+const healthbar_1 = __webpack_require__(/*! ../drawable/healthbar */ "./src/drawable/healthbar.ts");
+const drawable_1 = __webpack_require__(/*! ../drawable/drawable */ "./src/drawable/drawable.ts");
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
+const hitWarning_1 = __webpack_require__(/*! ../drawable/hitWarning */ "./src/drawable/hitWarning.ts");
+const utils_1 = __webpack_require__(/*! ../utility/utils */ "./src/utility/utils.ts");
+const eventBus_1 = __webpack_require__(/*! ../event/eventBus */ "./src/event/eventBus.ts");
+const events_1 = __webpack_require__(/*! ../event/events */ "./src/event/events.ts");
 const damageNumber_1 = __webpack_require__(/*! ../particle/damageNumber */ "./src/particle/damageNumber.ts");
 const downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/downLadder.ts");
 const door_1 = __webpack_require__(/*! ../tile/door */ "./src/tile/door.ts");
 const wall_1 = __webpack_require__(/*! ../tile/wall */ "./src/tile/wall.ts");
 const dropTable_1 = __webpack_require__(/*! ../item/dropTable */ "./src/item/dropTable.ts");
-const weapon_1 = __webpack_require__(/*! ../weapon/weapon */ "./src/weapon/weapon.ts");
+const weapon_1 = __webpack_require__(/*! ../item/weapon/weapon */ "./src/item/weapon/weapon.ts");
 const enemyShield_1 = __webpack_require__(/*! ../projectile/enemyShield */ "./src/projectile/enemyShield.ts");
-const sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
+const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts");
 const imageParticle_1 = __webpack_require__(/*! ../particle/imageParticle */ "./src/particle/imageParticle.ts");
 var EntityDirection;
 (function (EntityDirection) {
@@ -7373,7 +6655,7 @@ exports.Block = void 0;
 const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
-const sound_1 = __webpack_require__(/*! ../../sound */ "./src/sound.ts");
+const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
 const geode_1 = __webpack_require__(/*! ../../item/resource/geode */ "./src/item/resource/geode.ts");
 class Block extends entity_1.Entity {
     constructor(room, game, x, y) {
@@ -7433,11 +6715,11 @@ const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const genericParticle_1 = __webpack_require__(/*! ../../particle/genericParticle */ "./src/particle/genericParticle.ts");
 const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
-const sound_1 = __webpack_require__(/*! ../../sound */ "./src/sound.ts");
-const lightSource_1 = __webpack_require__(/*! ../../lightSource */ "./src/lightSource.ts");
-const lighting_1 = __webpack_require__(/*! ../../lighting */ "./src/lighting.ts");
+const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
+const lightSource_1 = __webpack_require__(/*! ../../lighting/lightSource */ "./src/lighting/lightSource.ts");
+const lighting_1 = __webpack_require__(/*! ../../lighting/lighting */ "./src/lighting/lighting.ts");
 const explosion_1 = __webpack_require__(/*! ../../projectile/explosion */ "./src/projectile/explosion.ts");
-const utils_1 = __webpack_require__(/*! ../../utils */ "./src/utils.ts");
+const utils_1 = __webpack_require__(/*! ../../utility/utils */ "./src/utility/utils.ts");
 class Bomb extends entity_1.Entity {
     constructor(room, game, x, y) {
         super(room, game, x, y);
@@ -7622,8 +6904,8 @@ exports.Chest = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
-const random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
-const sound_1 = __webpack_require__(/*! ../../sound */ "./src/sound.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
+const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
 class Chest extends entity_1.Entity {
     constructor(room, game, x, y) {
         super(room, game, x, y);
@@ -7854,9 +7136,9 @@ const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const heart_1 = __webpack_require__(/*! ../../item/usable/heart */ "./src/item/usable/heart.ts");
 const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
-const random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
 const coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
-const sound_1 = __webpack_require__(/*! ../../sound */ "./src/sound.ts");
+const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
 class Pot extends entity_1.Entity {
     constructor(room, game, x, y) {
         super(room, game, x, y);
@@ -7913,7 +7195,7 @@ const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const heart_1 = __webpack_require__(/*! ../../item/usable/heart */ "./src/item/usable/heart.ts");
 const coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
 const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
-const random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
 class PottedPlant extends entity_1.Entity {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
@@ -7976,7 +7258,7 @@ exports.Pumpkin = void 0;
 const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
-const lightSource_1 = __webpack_require__(/*! ../../lightSource */ "./src/lightSource.ts");
+const lightSource_1 = __webpack_require__(/*! ../../lighting/lightSource */ "./src/lighting/lightSource.ts");
 const candle_1 = __webpack_require__(/*! ../../item/light/candle */ "./src/item/light/candle.ts");
 class Pumpkin extends entity_1.Entity {
     constructor(room, game, x, y) {
@@ -8085,10 +7367,10 @@ const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const skullEnemy_1 = __webpack_require__(/*! ../enemy/skullEnemy */ "./src/entity/enemy/skullEnemy.ts");
-const random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
-const spellbook_1 = __webpack_require__(/*! ../../weapon/spellbook */ "./src/weapon/spellbook.ts");
-const sound_1 = __webpack_require__(/*! ../../sound */ "./src/sound.ts");
-const lightSource_1 = __webpack_require__(/*! ../../lightSource */ "./src/lightSource.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
+const spellbook_1 = __webpack_require__(/*! ../../item/weapon/spellbook */ "./src/item/weapon/spellbook.ts");
+const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
+const lightSource_1 = __webpack_require__(/*! ../../lighting/lightSource */ "./src/lighting/lightSource.ts");
 class TombStone extends entity_1.Entity {
     constructor(room, game, x, y, skinType, drop) {
         super(room, game, x, y);
@@ -8178,20 +7460,20 @@ const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
 const greengem_1 = __webpack_require__(/*! ../../item/resource/greengem */ "./src/item/resource/greengem.ts");
-const gameConstants_1 = __webpack_require__(/*! ../../gameConstants */ "./src/gameConstants.ts");
-const shotgun_1 = __webpack_require__(/*! ../../weapon/shotgun */ "./src/weapon/shotgun.ts");
+const gameConstants_1 = __webpack_require__(/*! ../../game/gameConstants */ "./src/game/gameConstants.ts");
+const shotgun_1 = __webpack_require__(/*! ../../item/weapon/shotgun */ "./src/item/weapon/shotgun.ts");
 const armor_1 = __webpack_require__(/*! ../../item/armor */ "./src/item/armor.ts");
 const heart_1 = __webpack_require__(/*! ../../item/usable/heart */ "./src/item/usable/heart.ts");
-const spear_1 = __webpack_require__(/*! ../../weapon/spear */ "./src/weapon/spear.ts");
+const spear_1 = __webpack_require__(/*! ../../item/weapon/spear */ "./src/item/weapon/spear.ts");
 const bluegem_1 = __webpack_require__(/*! ../../item/resource/bluegem */ "./src/item/resource/bluegem.ts");
-const dualdagger_1 = __webpack_require__(/*! ../../weapon/dualdagger */ "./src/weapon/dualdagger.ts");
+const dualdagger_1 = __webpack_require__(/*! ../../item/weapon/dualdagger */ "./src/item/weapon/dualdagger.ts");
 const lantern_1 = __webpack_require__(/*! ../../item/light/lantern */ "./src/item/light/lantern.ts");
 const redgem_1 = __webpack_require__(/*! ../../item/resource/redgem */ "./src/item/resource/redgem.ts");
 const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
-const random_1 = __webpack_require__(/*! ../../random */ "./src/random.ts");
-const warhammer_1 = __webpack_require__(/*! ../../weapon/warhammer */ "./src/weapon/warhammer.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
+const warhammer_1 = __webpack_require__(/*! ../../item/weapon/warhammer */ "./src/item/weapon/warhammer.ts");
 const torch_1 = __webpack_require__(/*! ../../item/light/torch */ "./src/item/light/torch.ts");
-const spellbook_1 = __webpack_require__(/*! ../../weapon/spellbook */ "./src/weapon/spellbook.ts");
+const spellbook_1 = __webpack_require__(/*! ../../item/weapon/spellbook */ "./src/item/weapon/spellbook.ts");
 let OPEN_TIME = 150;
 let FILL_COLOR = "#5a595b";
 let OUTLINE_COLOR = "#292c36";
@@ -8560,7 +7842,7 @@ exports.Resource = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
-const sound_1 = __webpack_require__(/*! ../../sound */ "./src/sound.ts");
+const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
 class Resource extends entity_1.Entity {
     constructor(room, game, x, y) {
         super(room, game, x, y);
@@ -8661,45 +7943,16 @@ exports.Rock = Rock;
 
 /***/ }),
 
-/***/ "./src/environment.ts":
-/*!****************************!*\
-  !*** ./src/environment.ts ***!
-  \****************************/
-/***/ ((__unused_webpack_module, exports) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Environment = exports.EnvType = void 0;
-var EnvType;
-(function (EnvType) {
-    EnvType[EnvType["DUNGEON"] = 0] = "DUNGEON";
-    EnvType[EnvType["CAVE"] = 1] = "CAVE";
-    EnvType[EnvType["FOREST"] = 2] = "FOREST";
-    EnvType[EnvType["SWAMP"] = 3] = "SWAMP";
-    EnvType[EnvType["GLACIER"] = 4] = "GLACIER";
-    EnvType[EnvType["CASTLE"] = 5] = "CASTLE";
-})(EnvType = exports.EnvType || (exports.EnvType = {}));
-class Environment {
-    constructor(type) {
-        this.type = type;
-        this.skin = this.type;
-    }
-}
-exports.Environment = Environment;
-
-
-/***/ }),
-
-/***/ "./src/eventBus.ts":
-/*!*************************!*\
-  !*** ./src/eventBus.ts ***!
-  \*************************/
+/***/ "./src/event/eventBus.ts":
+/*!*******************************!*\
+  !*** ./src/event/eventBus.ts ***!
+  \*******************************/
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.globalEventBus = void 0;
-const eventEmitter_1 = __webpack_require__(/*! ./eventEmitter */ "./src/eventEmitter.ts");
+const eventEmitter_1 = __webpack_require__(/*! ./eventEmitter */ "./src/event/eventEmitter.ts");
 class EventBus {
     constructor() {
         this.eventEmitter = new eventEmitter_1.EventEmitter();
@@ -8725,10 +7978,10 @@ exports.globalEventBus = EventBus.getInstance();
 
 /***/ }),
 
-/***/ "./src/eventEmitter.ts":
-/*!*****************************!*\
-  !*** ./src/eventEmitter.ts ***!
-  \*****************************/
+/***/ "./src/event/eventEmitter.ts":
+/*!***********************************!*\
+  !*** ./src/event/eventEmitter.ts ***!
+  \***********************************/
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -8764,10 +8017,10 @@ exports.EventEmitter = EventEmitter;
 
 /***/ }),
 
-/***/ "./src/events.ts":
-/*!***********************!*\
-  !*** ./src/events.ts ***!
-  \***********************/
+/***/ "./src/event/events.ts":
+/*!*****************************!*\
+  !*** ./src/event/events.ts ***!
+  \*****************************/
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -8812,21 +8065,21 @@ exports.EVENTS = {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.gs = exports.game = exports.Game = exports.ChatMessage = exports.Direction = exports.LevelState = void 0;
-const gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/gameConstants.ts");
+const gameConstants_1 = __webpack_require__(/*! ./game/gameConstants */ "./src/game/gameConstants.ts");
 const door_1 = __webpack_require__(/*! ./tile/door */ "./src/tile/door.ts");
-const sound_1 = __webpack_require__(/*! ./sound */ "./src/sound.ts");
-const levelConstants_1 = __webpack_require__(/*! ./levelConstants */ "./src/levelConstants.ts");
-const levelGenerator_1 = __webpack_require__(/*! ./levelGenerator */ "./src/levelGenerator.ts");
-const input_1 = __webpack_require__(/*! ./input */ "./src/input.ts");
+const sound_1 = __webpack_require__(/*! ./sound/sound */ "./src/sound/sound.ts");
+const levelConstants_1 = __webpack_require__(/*! ./level/levelConstants */ "./src/level/levelConstants.ts");
+const levelGenerator_1 = __webpack_require__(/*! ./level/levelGenerator */ "./src/level/levelGenerator.ts");
+const input_1 = __webpack_require__(/*! ./game/input */ "./src/game/input.ts");
 const downLadder_1 = __webpack_require__(/*! ./tile/downLadder */ "./src/tile/downLadder.ts");
-const textbox_1 = __webpack_require__(/*! ./textbox */ "./src/textbox.ts");
-const gameState_1 = __webpack_require__(/*! ./gameState */ "./src/gameState.ts");
-const tutorialListener_1 = __webpack_require__(/*! ./tutorialListener */ "./src/tutorialListener.ts");
-const mouseCursor_1 = __webpack_require__(/*! ./mouseCursor */ "./src/mouseCursor.ts");
-const eventBus_1 = __webpack_require__(/*! ./eventBus */ "./src/eventBus.ts");
-const reverb_1 = __webpack_require__(/*! ./reverb */ "./src/reverb.ts");
-const stats_1 = __webpack_require__(/*! ./stats */ "./src/stats.ts");
-const events_1 = __webpack_require__(/*! ./events */ "./src/events.ts");
+const textbox_1 = __webpack_require__(/*! ./game/textbox */ "./src/game/textbox.ts");
+const gameState_1 = __webpack_require__(/*! ./game/gameState */ "./src/game/gameState.ts");
+const tutorialListener_1 = __webpack_require__(/*! ./game/tutorialListener */ "./src/game/tutorialListener.ts");
+const mouseCursor_1 = __webpack_require__(/*! ./gui/mouseCursor */ "./src/gui/mouseCursor.ts");
+const eventBus_1 = __webpack_require__(/*! ./event/eventBus */ "./src/event/eventBus.ts");
+const reverb_1 = __webpack_require__(/*! ./sound/reverb */ "./src/sound/reverb.ts");
+const stats_1 = __webpack_require__(/*! ./game/stats */ "./src/game/stats.ts");
+const events_1 = __webpack_require__(/*! ./event/events */ "./src/event/events.ts");
 const upLadder_1 = __webpack_require__(/*! ./tile/upLadder */ "./src/tile/upLadder.ts");
 var LevelState;
 (function (LevelState) {
@@ -9943,36 +9196,250 @@ exports.gs = new gameState_1.GameState();
 
 /***/ }),
 
-/***/ "./src/gameConstants.ts":
+/***/ "./src/game/bestiary.ts":
 /*!******************************!*\
-  !*** ./src/gameConstants.ts ***!
+  !*** ./src/game/bestiary.ts ***!
   \******************************/
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Bestiary = void 0;
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const levelConstants_1 = __webpack_require__(/*! ../level/levelConstants */ "./src/level/levelConstants.ts");
+const gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/game/gameConstants.ts");
+const crabEnemy_1 = __webpack_require__(/*! ../entity/enemy/crabEnemy */ "./src/entity/enemy/crabEnemy.ts");
+const frogEnemy_1 = __webpack_require__(/*! ../entity/enemy/frogEnemy */ "./src/entity/enemy/frogEnemy.ts");
+const zombieEnemy_1 = __webpack_require__(/*! ../entity/enemy/zombieEnemy */ "./src/entity/enemy/zombieEnemy.ts");
+const skullEnemy_1 = __webpack_require__(/*! ../entity/enemy/skullEnemy */ "./src/entity/enemy/skullEnemy.ts");
+const energyWizard_1 = __webpack_require__(/*! ../entity/enemy/energyWizard */ "./src/entity/enemy/energyWizard.ts");
+const chargeEnemy_1 = __webpack_require__(/*! ../entity/enemy/chargeEnemy */ "./src/entity/enemy/chargeEnemy.ts");
+const rookEnemy_1 = __webpack_require__(/*! ../entity/enemy/rookEnemy */ "./src/entity/enemy/rookEnemy.ts");
+const bishopEnemy_1 = __webpack_require__(/*! ../entity/enemy/bishopEnemy */ "./src/entity/enemy/bishopEnemy.ts");
+const armoredzombieEnemy_1 = __webpack_require__(/*! ../entity/enemy/armoredzombieEnemy */ "./src/entity/enemy/armoredzombieEnemy.ts");
+const bigSkullEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigSkullEnemy */ "./src/entity/enemy/bigSkullEnemy.ts");
+const queenEnemy_1 = __webpack_require__(/*! ../entity/enemy/queenEnemy */ "./src/entity/enemy/queenEnemy.ts");
+const knightEnemy_1 = __webpack_require__(/*! ../entity/enemy/knightEnemy */ "./src/entity/enemy/knightEnemy.ts");
+const bigKnightEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigKnightEnemy */ "./src/entity/enemy/bigKnightEnemy.ts");
+const fireWizard_1 = __webpack_require__(/*! ../entity/enemy/fireWizard */ "./src/entity/enemy/fireWizard.ts");
+const spawner_1 = __webpack_require__(/*! ../entity/enemy/spawner */ "./src/entity/enemy/spawner.ts");
+const occultistEnemy_1 = __webpack_require__(/*! ../entity/enemy/occultistEnemy */ "./src/entity/enemy/occultistEnemy.ts");
+//enemy typeof to class map
+const enemyClassMap = {
+    CrabEnemy: crabEnemy_1.CrabEnemy,
+    FrogEnemy: frogEnemy_1.FrogEnemy,
+    ZombieEnemy: zombieEnemy_1.ZombieEnemy,
+    SkullEnemy: skullEnemy_1.SkullEnemy,
+    EnergyWizardEnemy: energyWizard_1.EnergyWizardEnemy,
+    ChargeEnemy: chargeEnemy_1.ChargeEnemy,
+    RookEnemy: rookEnemy_1.RookEnemy,
+    BishopEnemy: bishopEnemy_1.BishopEnemy,
+    ArmoredzombieEnemy: armoredzombieEnemy_1.ArmoredzombieEnemy,
+    BigSkullEnemy: bigSkullEnemy_1.BigSkullEnemy,
+    QueenEnemy: queenEnemy_1.QueenEnemy,
+    KnightEnemy: knightEnemy_1.KnightEnemy,
+    BigKnightEnemy: bigKnightEnemy_1.BigKnightEnemy,
+    FireWizardEnemy: fireWizard_1.FireWizardEnemy,
+    Spawner: spawner_1.Spawner,
+    OccultistEnemy: occultistEnemy_1.OccultistEnemy,
+};
+class Bestiary {
+    constructor(game, player) {
+        this.isOpen = false;
+        this.openTime = Date.now();
+        this.frame = 0;
+        this.activeEntryIndex = 0;
+        /**
+         * Opens the logbook window.
+         */
+        this.open = () => {
+            if (this.seenEnemies.size === 0)
+                this.seenEnemies = this.game.tutorialListener.seenEnemies;
+            this.isOpen = true;
+            this.openTime = Date.now();
+        };
+        /**
+         * Closes the logbook window.
+         */
+        this.close = () => {
+            this.isOpen = false;
+        };
+        this.entryUp = () => {
+            this.activeEntryIndex =
+                (this.activeEntryIndex - 1 + this.entries.length) % this.entries.length;
+        };
+        this.entryDown = () => {
+            this.activeEntryIndex = (this.activeEntryIndex + 1) % this.entries.length;
+        };
+        /**
+         * Toggles the logbook window's open state.
+         */
+        this.toggleOpen = () => {
+            this.isOpen ? this.close() : this.open();
+        };
+        /**
+         * Adds a new entry to the logbook.
+         * @param enemy The enemy to add.
+         */
+        this.addEntry = (enemy) => {
+            const enemyClass = enemyClassMap[enemy.name];
+            this.entries.push({
+                name: enemy.name,
+                description: enemyClass.prototype.description,
+                tileX: enemyClass.prototype.tileX,
+                tileY: enemyClass.prototype.tileY,
+            });
+        };
+        /**
+         * Draws the logbook interface.
+         * @param delta The time delta since the last frame.
+         */
+        this.draw = (delta) => {
+            if (!this.isOpen)
+                return;
+            game_1.Game.ctx.save();
+            // Draw semi-transparent background
+            game_1.Game.ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
+            game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
+            // Define dimensions similar to Inventory
+            const s = Math.min(18, (18 * (Date.now() - this.openTime)) / 100); // example scaling
+            const b = 2; // border
+            const g = -2; // gap
+            const ob = 1; // outer border
+            const width = 5 * (s + 2 * b + g) - g; // assuming 5 columns
+            const height = 4 * (s + 2 * b + g) - g; // assuming 4 rows
+            const startX = Math.round(0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * width) - ob;
+            const startY = Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT - 0.5 * height) - ob;
+            // Draw main logbook background
+            game_1.Game.ctx.fillStyle = "white";
+            game_1.Game.ctx.fillRect(startX, startY, width + 2 * ob, height + 2 * ob);
+            // Draw logbook entries
+            game_1.Game.ctx.fillStyle = "black";
+            const padding = 10;
+            if (this.entries.length === 0) {
+                game_1.Game.fillText("No enemies seen yet", startX + padding, startY + padding);
+            }
+            else {
+                this.entries.forEach((entry, index) => {
+                    game_1.Game.fillText(entry.name, startX + padding, startY + padding + index * 20);
+                });
+                this.drawEnemySprite(this.entries[this.activeEntryIndex].tileX, this.entries[this.activeEntryIndex].tileY, delta);
+            }
+            // Draw logbook button
+            this.drawLogbookButton(delta);
+            game_1.Game.ctx.restore();
+        };
+        this.drawEnemySprite = (tileX, tileY, delta) => {
+            this.frame += Math.round(0.1 * delta * 10) / 10;
+            if (this.frame >= 4)
+                this.frame = 0;
+            game_1.Game.drawMob(tileX, tileY, 1, 1, 1, 1, 1, 1, "Black", 0);
+        };
+        /**
+         * Draws the logbook button on the screen.
+         * @param delta The time delta since the last frame.
+         */
+        this.drawLogbookButton = (delta) => {
+            game_1.Game.ctx.save();
+            this.buttonX = levelConstants_1.LevelConstants.SCREEN_W - 2;
+            this.buttonY = levelConstants_1.LevelConstants.SCREEN_H - 2.25;
+            game_1.Game.drawFX(0, 0, 2, 2, this.buttonX, this.buttonY, 2, 2);
+            game_1.Game.ctx.restore();
+        };
+        /**
+         * Handles mouse down events.
+         * @param x The x-coordinate of the mouse.
+         * @param y The y-coordinate of the mouse.
+         * @param button The mouse button pressed.
+         */
+        this.handleMouseDown = (x, y, button) => {
+            if (button !== 0)
+                return; // Only respond to left click
+            if (this.isPointInLogbookButton(x, y)) {
+                this.toggleOpen();
+            }
+        };
+        /**
+         * Handles mouse up events.
+         * @param x The x-coordinate of the mouse.
+         * @param y The y-coordinate of the mouse.
+         * @param button The mouse button released.
+         */
+        this.handleMouseUp = (x, y, button) => {
+            // Implement if needed
+        };
+        /**
+         * Handles hold detection.
+         */
+        this.onHoldDetected = () => {
+            // Implement if needed
+        };
+        /**
+         * Checks if a point is within the logbook button bounds.
+         * @param x The x-coordinate to check.
+         * @param y The y-coordinate to check.
+         * @returns True if the point is within the button bounds, else false.
+         */
+        this.isPointInLogbookButton = (x, y) => {
+            const tX = x / gameConstants_1.GameConstants.TILESIZE;
+            const tY = y / gameConstants_1.GameConstants.TILESIZE;
+            return (tX >= this.buttonX &&
+                tX <= this.buttonX + 2 &&
+                tY >= this.buttonY &&
+                tY <= this.buttonY + 2);
+        };
+        /**
+         * Updates the logbook state each game tick.
+         */
+        this.tick = () => {
+            if (this.isOpen) {
+                // Update logbook-related logic here
+            }
+        };
+        this.game = game;
+        this.player = player;
+        this.entries = [];
+        this.activeEntryIndex = 0;
+        this.buttonX = Math.round((Math.round(gameConstants_1.GameConstants.WIDTH / 2) + 3) / gameConstants_1.GameConstants.TILESIZE);
+        this.buttonY = Math.round(10);
+        this.seenEnemies = new Set();
+    }
+}
+exports.Bestiary = Bestiary;
+
+
+/***/ }),
+
+/***/ "./src/game/gameConstants.ts":
+/*!***********************************!*\
+  !*** ./src/game/gameConstants.ts ***!
+  \***********************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GameConstants = void 0;
-const armor_1 = __webpack_require__(/*! ./item/armor */ "./src/item/armor.ts");
-const backpack_1 = __webpack_require__(/*! ./item/backpack */ "./src/item/backpack.ts");
-const candle_1 = __webpack_require__(/*! ./item/light/candle */ "./src/item/light/candle.ts");
-const coal_1 = __webpack_require__(/*! ./item/resource/coal */ "./src/item/resource/coal.ts");
-const godStone_1 = __webpack_require__(/*! ./item/godStone */ "./src/item/godStone.ts");
-const heart_1 = __webpack_require__(/*! ./item/usable/heart */ "./src/item/usable/heart.ts");
-const lantern_1 = __webpack_require__(/*! ./item/light/lantern */ "./src/item/light/lantern.ts");
-const weaponBlood_1 = __webpack_require__(/*! ./item/usable/weaponBlood */ "./src/item/usable/weaponBlood.ts");
-const weaponFragments_1 = __webpack_require__(/*! ./item/usable/weaponFragments */ "./src/item/usable/weaponFragments.ts");
-const weaponPoison_1 = __webpack_require__(/*! ./item/usable/weaponPoison */ "./src/item/usable/weaponPoison.ts");
-const levelConstants_1 = __webpack_require__(/*! ./levelConstants */ "./src/levelConstants.ts");
-const dagger_1 = __webpack_require__(/*! ./weapon/dagger */ "./src/weapon/dagger.ts");
-const dualdagger_1 = __webpack_require__(/*! ./weapon/dualdagger */ "./src/weapon/dualdagger.ts");
-const spear_1 = __webpack_require__(/*! ./weapon/spear */ "./src/weapon/spear.ts");
-const spellbook_1 = __webpack_require__(/*! ./weapon/spellbook */ "./src/weapon/spellbook.ts");
-const warhammer_1 = __webpack_require__(/*! ./weapon/warhammer */ "./src/weapon/warhammer.ts");
-const hammer_1 = __webpack_require__(/*! ./item/tool/hammer */ "./src/item/tool/hammer.ts");
-const bluegem_1 = __webpack_require__(/*! ./item/resource/bluegem */ "./src/item/resource/bluegem.ts");
-const redgem_1 = __webpack_require__(/*! ./item/resource/redgem */ "./src/item/resource/redgem.ts");
-const greengem_1 = __webpack_require__(/*! ./item/resource/greengem */ "./src/item/resource/greengem.ts");
-const pickaxe_1 = __webpack_require__(/*! ./item/tool/pickaxe */ "./src/item/tool/pickaxe.ts");
+const armor_1 = __webpack_require__(/*! ../item/armor */ "./src/item/armor.ts");
+const backpack_1 = __webpack_require__(/*! ../item/backpack */ "./src/item/backpack.ts");
+const candle_1 = __webpack_require__(/*! ../item/light/candle */ "./src/item/light/candle.ts");
+const coal_1 = __webpack_require__(/*! ../item/resource/coal */ "./src/item/resource/coal.ts");
+const godStone_1 = __webpack_require__(/*! ../item/godStone */ "./src/item/godStone.ts");
+const heart_1 = __webpack_require__(/*! ../item/usable/heart */ "./src/item/usable/heart.ts");
+const lantern_1 = __webpack_require__(/*! ../item/light/lantern */ "./src/item/light/lantern.ts");
+const weaponBlood_1 = __webpack_require__(/*! ../item/usable/weaponBlood */ "./src/item/usable/weaponBlood.ts");
+const weaponFragments_1 = __webpack_require__(/*! ../item/usable/weaponFragments */ "./src/item/usable/weaponFragments.ts");
+const weaponPoison_1 = __webpack_require__(/*! ../item/usable/weaponPoison */ "./src/item/usable/weaponPoison.ts");
+const levelConstants_1 = __webpack_require__(/*! ../level/levelConstants */ "./src/level/levelConstants.ts");
+const dagger_1 = __webpack_require__(/*! ../item/weapon/dagger */ "./src/item/weapon/dagger.ts");
+const dualdagger_1 = __webpack_require__(/*! ../item/weapon/dualdagger */ "./src/item/weapon/dualdagger.ts");
+const spear_1 = __webpack_require__(/*! ../item/weapon/spear */ "./src/item/weapon/spear.ts");
+const spellbook_1 = __webpack_require__(/*! ../item/weapon/spellbook */ "./src/item/weapon/spellbook.ts");
+const warhammer_1 = __webpack_require__(/*! ../item/weapon/warhammer */ "./src/item/weapon/warhammer.ts");
+const hammer_1 = __webpack_require__(/*! ../item/tool/hammer */ "./src/item/tool/hammer.ts");
+const bluegem_1 = __webpack_require__(/*! ../item/resource/bluegem */ "./src/item/resource/bluegem.ts");
+const redgem_1 = __webpack_require__(/*! ../item/resource/redgem */ "./src/item/resource/redgem.ts");
+const greengem_1 = __webpack_require__(/*! ../item/resource/greengem */ "./src/item/resource/greengem.ts");
+const pickaxe_1 = __webpack_require__(/*! ../item/tool/pickaxe */ "./src/item/tool/pickaxe.ts");
 class GameConstants {
 }
 exports.GameConstants = GameConstants;
@@ -10124,61 +9591,61 @@ GameConstants.STARTING_DEV_INVENTORY = [
 
 /***/ }),
 
-/***/ "./src/gameState.ts":
-/*!**************************!*\
-  !*** ./src/gameState.ts ***!
-  \**************************/
+/***/ "./src/game/gameState.ts":
+/*!*******************************!*\
+  !*** ./src/game/gameState.ts ***!
+  \*******************************/
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.loadGameState = exports.createGameState = exports.GameState = exports.PlayerState = exports.InventoryState = exports.ItemState = exports.ItemType = exports.LevelState = exports.EnemyState = exports.EnemyType = exports.ProjectileState = exports.ProjectileType = exports.HitWarningState = void 0;
-const barrel_1 = __webpack_require__(/*! ./entity/object/barrel */ "./src/entity/object/barrel.ts");
-const bigSkullEnemy_1 = __webpack_require__(/*! ./entity/enemy/bigSkullEnemy */ "./src/entity/enemy/bigSkullEnemy.ts");
-const chargeEnemy_1 = __webpack_require__(/*! ./entity/enemy/chargeEnemy */ "./src/entity/enemy/chargeEnemy.ts");
-const chest_1 = __webpack_require__(/*! ./entity/object/chest */ "./src/entity/object/chest.ts");
-const coalResource_1 = __webpack_require__(/*! ./entity/resource/coalResource */ "./src/entity/resource/coalResource.ts");
-const crate_1 = __webpack_require__(/*! ./entity/object/crate */ "./src/entity/object/crate.ts");
-const emeraldResource_1 = __webpack_require__(/*! ./entity/resource/emeraldResource */ "./src/entity/resource/emeraldResource.ts");
-const goldResource_1 = __webpack_require__(/*! ./entity/resource/goldResource */ "./src/entity/resource/goldResource.ts");
-const knightEnemy_1 = __webpack_require__(/*! ./entity/enemy/knightEnemy */ "./src/entity/enemy/knightEnemy.ts");
-const pottedPlant_1 = __webpack_require__(/*! ./entity/object/pottedPlant */ "./src/entity/object/pottedPlant.ts");
-const pot_1 = __webpack_require__(/*! ./entity/object/pot */ "./src/entity/object/pot.ts");
-const skullEnemy_1 = __webpack_require__(/*! ./entity/enemy/skullEnemy */ "./src/entity/enemy/skullEnemy.ts");
-const crabEnemy_1 = __webpack_require__(/*! ./entity/enemy/crabEnemy */ "./src/entity/enemy/crabEnemy.ts");
-const spawner_1 = __webpack_require__(/*! ./entity/enemy/spawner */ "./src/entity/enemy/spawner.ts");
-const vendingMachine_1 = __webpack_require__(/*! ./entity/object/vendingMachine */ "./src/entity/object/vendingMachine.ts");
-const wizardEnemy_1 = __webpack_require__(/*! ./entity/enemy/wizardEnemy */ "./src/entity/enemy/wizardEnemy.ts");
-const zombieEnemy_1 = __webpack_require__(/*! ./entity/enemy/zombieEnemy */ "./src/entity/enemy/zombieEnemy.ts");
-const hitWarning_1 = __webpack_require__(/*! ./hitWarning */ "./src/hitWarning.ts");
-const armor_1 = __webpack_require__(/*! ./item/armor */ "./src/item/armor.ts");
-const bluegem_1 = __webpack_require__(/*! ./item/resource/bluegem */ "./src/item/resource/bluegem.ts");
-const candle_1 = __webpack_require__(/*! ./item/light/candle */ "./src/item/light/candle.ts");
-const coal_1 = __webpack_require__(/*! ./item/resource/coal */ "./src/item/resource/coal.ts");
-const coin_1 = __webpack_require__(/*! ./item/coin */ "./src/item/coin.ts");
-const equippable_1 = __webpack_require__(/*! ./item/equippable */ "./src/item/equippable.ts");
-const gold_1 = __webpack_require__(/*! ./item/resource/gold */ "./src/item/resource/gold.ts");
-const goldenKey_1 = __webpack_require__(/*! ./item/goldenKey */ "./src/item/goldenKey.ts");
-const greengem_1 = __webpack_require__(/*! ./item/resource/greengem */ "./src/item/resource/greengem.ts");
-const heart_1 = __webpack_require__(/*! ./item/usable/heart */ "./src/item/usable/heart.ts");
-const key_1 = __webpack_require__(/*! ./item/key */ "./src/item/key.ts");
-const lantern_1 = __webpack_require__(/*! ./item/light/lantern */ "./src/item/light/lantern.ts");
-const redgem_1 = __webpack_require__(/*! ./item/resource/redgem */ "./src/item/resource/redgem.ts");
-const torch_1 = __webpack_require__(/*! ./item/light/torch */ "./src/item/light/torch.ts");
-const levelGenerator_1 = __webpack_require__(/*! ./levelGenerator */ "./src/levelGenerator.ts");
-const player_1 = __webpack_require__(/*! ./player/player */ "./src/player/player.ts");
-const enemySpawnAnimation_1 = __webpack_require__(/*! ./projectile/enemySpawnAnimation */ "./src/projectile/enemySpawnAnimation.ts");
-const wizardFireball_1 = __webpack_require__(/*! ./projectile/wizardFireball */ "./src/projectile/wizardFireball.ts");
-const random_1 = __webpack_require__(/*! ./random */ "./src/random.ts");
-const dagger_1 = __webpack_require__(/*! ./weapon/dagger */ "./src/weapon/dagger.ts");
-const dualdagger_1 = __webpack_require__(/*! ./weapon/dualdagger */ "./src/weapon/dualdagger.ts");
-const shotgun_1 = __webpack_require__(/*! ./weapon/shotgun */ "./src/weapon/shotgun.ts");
-const spear_1 = __webpack_require__(/*! ./weapon/spear */ "./src/weapon/spear.ts");
-const pickaxe_1 = __webpack_require__(/*! ./item/tool/pickaxe */ "./src/item/tool/pickaxe.ts");
-const backpack_1 = __webpack_require__(/*! ./item/backpack */ "./src/item/backpack.ts");
-const energyWizard_1 = __webpack_require__(/*! ./entity/enemy/energyWizard */ "./src/entity/enemy/energyWizard.ts");
-const eventBus_1 = __webpack_require__(/*! ./eventBus */ "./src/eventBus.ts");
-const events_1 = __webpack_require__(/*! ./events */ "./src/events.ts");
+const barrel_1 = __webpack_require__(/*! ../entity/object/barrel */ "./src/entity/object/barrel.ts");
+const bigSkullEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigSkullEnemy */ "./src/entity/enemy/bigSkullEnemy.ts");
+const chargeEnemy_1 = __webpack_require__(/*! ../entity/enemy/chargeEnemy */ "./src/entity/enemy/chargeEnemy.ts");
+const chest_1 = __webpack_require__(/*! ../entity/object/chest */ "./src/entity/object/chest.ts");
+const coalResource_1 = __webpack_require__(/*! ../entity/resource/coalResource */ "./src/entity/resource/coalResource.ts");
+const crate_1 = __webpack_require__(/*! ../entity/object/crate */ "./src/entity/object/crate.ts");
+const emeraldResource_1 = __webpack_require__(/*! ../entity/resource/emeraldResource */ "./src/entity/resource/emeraldResource.ts");
+const goldResource_1 = __webpack_require__(/*! ../entity/resource/goldResource */ "./src/entity/resource/goldResource.ts");
+const knightEnemy_1 = __webpack_require__(/*! ../entity/enemy/knightEnemy */ "./src/entity/enemy/knightEnemy.ts");
+const pottedPlant_1 = __webpack_require__(/*! ../entity/object/pottedPlant */ "./src/entity/object/pottedPlant.ts");
+const pot_1 = __webpack_require__(/*! ../entity/object/pot */ "./src/entity/object/pot.ts");
+const skullEnemy_1 = __webpack_require__(/*! ../entity/enemy/skullEnemy */ "./src/entity/enemy/skullEnemy.ts");
+const crabEnemy_1 = __webpack_require__(/*! ../entity/enemy/crabEnemy */ "./src/entity/enemy/crabEnemy.ts");
+const spawner_1 = __webpack_require__(/*! ../entity/enemy/spawner */ "./src/entity/enemy/spawner.ts");
+const vendingMachine_1 = __webpack_require__(/*! ../entity/object/vendingMachine */ "./src/entity/object/vendingMachine.ts");
+const wizardEnemy_1 = __webpack_require__(/*! ../entity/enemy/wizardEnemy */ "./src/entity/enemy/wizardEnemy.ts");
+const zombieEnemy_1 = __webpack_require__(/*! ../entity/enemy/zombieEnemy */ "./src/entity/enemy/zombieEnemy.ts");
+const hitWarning_1 = __webpack_require__(/*! ../drawable/hitWarning */ "./src/drawable/hitWarning.ts");
+const armor_1 = __webpack_require__(/*! ../item/armor */ "./src/item/armor.ts");
+const bluegem_1 = __webpack_require__(/*! ../item/resource/bluegem */ "./src/item/resource/bluegem.ts");
+const candle_1 = __webpack_require__(/*! ../item/light/candle */ "./src/item/light/candle.ts");
+const coal_1 = __webpack_require__(/*! ../item/resource/coal */ "./src/item/resource/coal.ts");
+const coin_1 = __webpack_require__(/*! ../item/coin */ "./src/item/coin.ts");
+const equippable_1 = __webpack_require__(/*! ../item/equippable */ "./src/item/equippable.ts");
+const gold_1 = __webpack_require__(/*! ../item/resource/gold */ "./src/item/resource/gold.ts");
+const goldenKey_1 = __webpack_require__(/*! ../item/goldenKey */ "./src/item/goldenKey.ts");
+const greengem_1 = __webpack_require__(/*! ../item/resource/greengem */ "./src/item/resource/greengem.ts");
+const heart_1 = __webpack_require__(/*! ../item/usable/heart */ "./src/item/usable/heart.ts");
+const key_1 = __webpack_require__(/*! ../item/key */ "./src/item/key.ts");
+const lantern_1 = __webpack_require__(/*! ../item/light/lantern */ "./src/item/light/lantern.ts");
+const redgem_1 = __webpack_require__(/*! ../item/resource/redgem */ "./src/item/resource/redgem.ts");
+const torch_1 = __webpack_require__(/*! ../item/light/torch */ "./src/item/light/torch.ts");
+const levelGenerator_1 = __webpack_require__(/*! ../level/levelGenerator */ "./src/level/levelGenerator.ts");
+const player_1 = __webpack_require__(/*! ../player/player */ "./src/player/player.ts");
+const enemySpawnAnimation_1 = __webpack_require__(/*! ../projectile/enemySpawnAnimation */ "./src/projectile/enemySpawnAnimation.ts");
+const wizardFireball_1 = __webpack_require__(/*! ../projectile/wizardFireball */ "./src/projectile/wizardFireball.ts");
+const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
+const dagger_1 = __webpack_require__(/*! ../item/weapon/dagger */ "./src/item/weapon/dagger.ts");
+const dualdagger_1 = __webpack_require__(/*! ../item/weapon/dualdagger */ "./src/item/weapon/dualdagger.ts");
+const shotgun_1 = __webpack_require__(/*! ../item/weapon/shotgun */ "./src/item/weapon/shotgun.ts");
+const spear_1 = __webpack_require__(/*! ../item/weapon/spear */ "./src/item/weapon/spear.ts");
+const pickaxe_1 = __webpack_require__(/*! ../item/tool/pickaxe */ "./src/item/tool/pickaxe.ts");
+const backpack_1 = __webpack_require__(/*! ../item/backpack */ "./src/item/backpack.ts");
+const energyWizard_1 = __webpack_require__(/*! ../entity/enemy/energyWizard */ "./src/entity/enemy/energyWizard.ts");
+const eventBus_1 = __webpack_require__(/*! ../event/eventBus */ "./src/event/eventBus.ts");
+const events_1 = __webpack_require__(/*! ../event/events */ "./src/event/events.ts");
 class HitWarningState {
     constructor(hw) {
         this.x = hw.x;
@@ -10865,275 +10332,18 @@ exports.loadGameState = loadGameState;
 
 /***/ }),
 
-/***/ "./src/guiButton.ts":
-/*!**************************!*\
-  !*** ./src/guiButton.ts ***!
-  \**************************/
-/***/ ((__unused_webpack_module, exports) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.guiButton = void 0;
-class guiButton {
-    constructor(x, y, width, height, text, onClick, toggleable = false) {
-        this.toggleable = toggleable;
-        this.toggled = false;
-        this.x = x;
-        this.y = y;
-        this.width = width;
-        this.height = height;
-        this.text = text;
-        this.onClick = onClick;
-    }
-}
-exports.guiButton = guiButton;
-
-
-/***/ }),
-
-/***/ "./src/healthbar.ts":
-/*!**************************!*\
-  !*** ./src/healthbar.ts ***!
-  \**************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.HealthBar = void 0;
-const game_1 = __webpack_require__(/*! ./game */ "./src/game.ts");
-const levelConstants_1 = __webpack_require__(/*! ./levelConstants */ "./src/levelConstants.ts");
-class HealthBar {
-    constructor() {
-        this.hurt = () => {
-            this.hurtTimer = Date.now();
-        };
-        this.draw = (delta, hearts, maxHearts, x, y, flashing) => {
-            let t = Date.now() - this.hurtTimer;
-            if (t <= levelConstants_1.LevelConstants.HEALTH_BAR_TOTALTIME) {
-                let fullHearts = Math.floor(hearts);
-                let halfHearts = Math.ceil(hearts - fullHearts);
-                let emptyHearts = maxHearts - fullHearts - halfHearts;
-                // I wouldn't normally use magic numbers here, but these are hardcoded based on the tileset
-                //   (which isn't really parameterizable)
-                let drawWidth = Math.round(Math.min(9, Math.min(0.05 * (levelConstants_1.LevelConstants.HEALTH_BAR_TOTALTIME - t), 0.05 * t)));
-                let drawHeight = Math.round(Math.min(0.5, Math.min(0.003 * (levelConstants_1.LevelConstants.HEALTH_BAR_TOTALTIME - t), 0.003 * t)) * 16) / 16.0;
-                let width = (drawWidth * (maxHearts - 1) + 8) / 16.0;
-                let xxStart = 0.5 + -width / 2;
-                for (let i = 0; i < Math.ceil(0.5 * maxHearts); i++) {
-                    let tileX = 0;
-                    if (!flashing)
-                        tileX = 1.5;
-                    else if (i < fullHearts)
-                        tileX = 0;
-                    else if (i < fullHearts + halfHearts)
-                        tileX = 0.5;
-                    else
-                        tileX = 1;
-                    let xx = (drawWidth * i) / 16.0 + xxStart;
-                    game_1.Game.drawFX(tileX, 8, 0.5, 0.5, x + xx, y - 1 - drawHeight / 2, 0.5, drawHeight);
-                    xx += 9.0 / 16.0;
-                    let j = maxHearts - i - 1;
-                    if (j !== i) {
-                        let tileX = 0;
-                        if (!flashing)
-                            tileX = 1.5;
-                        else if (j < fullHearts)
-                            tileX = 0;
-                        else if (j < fullHearts + halfHearts)
-                            tileX = 0.5;
-                        else
-                            tileX = 1;
-                        let xx = (drawWidth * j) / 16.0 + xxStart;
-                        game_1.Game.drawFX(tileX, 8, 0.5, 0.5, x + xx, y - 1 - drawHeight / 2, 0.5, drawHeight);
-                        xx += 9.0 / 16.0;
-                    }
-                }
-            }
-        };
-        this.hurtTimer = 0;
-    }
-}
-exports.HealthBar = HealthBar;
-
-
-/***/ }),
-
-/***/ "./src/hitWarning.ts":
+/***/ "./src/game/input.ts":
 /*!***************************!*\
-  !*** ./src/hitWarning.ts ***!
+  !*** ./src/game/input.ts ***!
   \***************************/
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.HitWarning = void 0;
-const game_1 = __webpack_require__(/*! ./game */ "./src/game.ts");
-const drawable_1 = __webpack_require__(/*! ./drawable */ "./src/drawable.ts");
-const utils_1 = __webpack_require__(/*! ./utils */ "./src/utils.ts");
-var Direction;
-(function (Direction) {
-    Direction[Direction["North"] = 0] = "North";
-    Direction[Direction["NorthEast"] = 1] = "NorthEast";
-    Direction[Direction["East"] = 2] = "East";
-    Direction[Direction["SouthEast"] = 3] = "SouthEast";
-    Direction[Direction["South"] = 4] = "South";
-    Direction[Direction["SouthWest"] = 5] = "SouthWest";
-    Direction[Direction["West"] = 6] = "West";
-    Direction[Direction["NorthWest"] = 7] = "NorthWest";
-    Direction[Direction["Center"] = 8] = "Center";
-})(Direction || (Direction = {}));
-class HitWarning extends drawable_1.Drawable {
-    constructor(game, x, y, eX, eY, isEnemy, dirOnly = false, parent = null) {
-        super();
-        this.parent = null;
-        this._pointerDir = null;
-        this._pointerOffset = null;
-        this.alpha = 0;
-        this.tickedForDeath = false;
-        this.tick = () => {
-            if (this.tickedForDeath)
-                this.dead = true;
-            this.tickedForDeath = true;
-        };
-        this.removeOverlapping = () => {
-            for (const entity of this.game.room.entities) {
-                if (entity.x === this.x &&
-                    entity.y === this.y &&
-                    entity.pushable === false) {
-                    this.dead = true;
-                    break;
-                }
-            }
-            for (const door of this.game.room.doors) {
-                if (door.x === this.x && door.y === this.y) {
-                    this.dead = true;
-                    break;
-                }
-            }
-        };
-        this.fadeHitwarnings = (delta) => {
-            if (!this.tickedForDeath) {
-                if (this.alpha < 1)
-                    this.alpha += 0.03 * delta;
-                if (this.alpha > 1)
-                    this.alpha = 1;
-            }
-            else {
-                if (this.alpha > 0)
-                    this.alpha -= 0.03 * delta;
-                if (this.alpha < 0)
-                    this.alpha = 0;
-            }
-        };
-        this.draw = (delta) => {
-            this.fadeHitwarnings(delta);
-            if (Math.abs(this.x - this.game.players[this.game.localPlayerID].x) <= 1 &&
-                Math.abs(this.y - this.game.players[this.game.localPlayerID].y) <= 1) {
-                game_1.Game.ctx.globalAlpha = this.alpha;
-                if (this.isEnemy &&
-                    utils_1.Utils.distance(this.x, this.y, this.game.players[this.game.localPlayerID].x, this.game.players[this.game.localPlayerID].y) <= 1) {
-                    // Red Arrow that only renders one square away
-                    game_1.Game.drawFX(this.tileX + Math.floor(HitWarning.frame), this.tileY, 1, 1, this.x + this.pointerOffset.x, this.y + this.pointerOffset.y - this.offsetY, 1, 1);
-                }
-                if (false) {}
-                game_1.Game.ctx.globalAlpha = 1;
-            }
-        };
-        this.drawTopLayer = (delta) => {
-            this.fadeHitwarnings(delta);
-            game_1.Game.ctx.globalAlpha = this.alpha;
-            if (this.isEnemy && this.getPointerDir() !== Direction.North) {
-                //white arrow top layer
-                game_1.Game.drawFX(this.tileX + Math.floor(HitWarning.frame), this.tileY + 1, 1, 1, this.x + this.pointerOffset.x, this.y + this.pointerOffset.y - this.offsetY, 1, 1);
-            }
-            if (utils_1.Utils.distance(this.x, this.y, this.game.players[this.game.localPlayerID].x, this.game.players[this.game.localPlayerID].y) <= 1) {
-                if (!this.dirOnly) {
-                    // Red X that renders 1 square away for top layer
-                    game_1.Game.drawFX(18 + Math.floor(HitWarning.frame), 6, 1, 1, this.x, this.y - this.offsetY + 0, 1, 1);
-                }
-            }
-            game_1.Game.ctx.globalAlpha = 1;
-        };
-        this.x = x;
-        this.y = y;
-        this.dead = false;
-        this.game = game;
-        this.parent = parent;
-        this.tileX = 0;
-        this.tileY = 22;
-        this.eX = eX;
-        this.eY = eY;
-        this.offsetY = 0.2;
-        this.dirOnly = dirOnly;
-        this.isEnemy = isEnemy !== undefined ? isEnemy : true;
-        this.pointerOffset = this.getPointerOffset();
-        this.removeOverlapping();
-        console.log("hitwarning", this.x, this.y);
-    }
-    getPointerDir() {
-        if (this._pointerDir === null) {
-            const dx = this.eX - this.x;
-            const dy = this.eY - this.y;
-            if (dx === 0 && dy === 0) {
-                this._pointerDir = Direction.Center;
-            }
-            else if (dx === 0) {
-                this._pointerDir = dy < 0 ? Direction.South : Direction.North;
-            }
-            else if (dy === 0) {
-                this._pointerDir = dx < 0 ? Direction.East : Direction.West;
-            }
-            else if (dx < 0) {
-                this._pointerDir = dy < 0 ? Direction.SouthEast : Direction.NorthEast;
-            }
-            else {
-                this._pointerDir = dy < 0 ? Direction.SouthWest : Direction.NorthWest;
-            }
-            this.tileX = 0 + 2 * this._pointerDir;
-        }
-        return this._pointerDir;
-    }
-    getPointerOffset() {
-        if (this._pointerOffset === null) {
-            const offsets = {
-                [Direction.North]: { x: 0, y: 0.5 },
-                [Direction.South]: { x: 0, y: -0.6 },
-                [Direction.West]: { x: 0.6, y: 0 },
-                [Direction.East]: { x: -0.6, y: 0 },
-                [Direction.NorthEast]: { x: -0.5, y: 0.5 },
-                [Direction.NorthWest]: { x: 0.5, y: 0.5 },
-                [Direction.SouthEast]: { x: -0.5, y: -0.5 },
-                [Direction.SouthWest]: { x: 0.5, y: -0.5 },
-                [Direction.Center]: { x: 0, y: -0.25 },
-            };
-            this._pointerOffset = offsets[this.getPointerDir()];
-        }
-        return this._pointerOffset;
-    }
-}
-exports.HitWarning = HitWarning;
-HitWarning.frame = 0;
-HitWarning.updateFrame = (delta) => {
-    HitWarning.frame += 0.125 * delta;
-    if (HitWarning.frame >= 2)
-        HitWarning.frame = 0;
-};
-
-
-/***/ }),
-
-/***/ "./src/input.ts":
-/*!**********************!*\
-  !*** ./src/input.ts ***!
-  \**********************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Input = exports.InputEnum = void 0;
-const gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/gameConstants.ts");
-const game_1 = __webpack_require__(/*! ./game */ "./src/game.ts");
-const mouseCursor_1 = __webpack_require__(/*! ./mouseCursor */ "./src/mouseCursor.ts");
+const gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/game/gameConstants.ts");
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const mouseCursor_1 = __webpack_require__(/*! ../gui/mouseCursor */ "./src/gui/mouseCursor.ts");
 var InputEnum;
 (function (InputEnum) {
     InputEnum[InputEnum["I"] = 0] = "I";
@@ -11582,6 +10792,916 @@ window.document
 
 /***/ }),
 
+/***/ "./src/game/stats.ts":
+/*!***************************!*\
+  !*** ./src/game/stats.ts ***!
+  \***************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.statsTracker = void 0;
+const eventBus_1 = __webpack_require__(/*! ../event/eventBus */ "./src/event/eventBus.ts");
+const events_1 = __webpack_require__(/*! ../event/events */ "./src/event/events.ts");
+class StatsTracker {
+    constructor() {
+        this.stats = {
+            enemiesKilled: 0,
+            damageDone: 0,
+            damageTaken: 0,
+            turnsPassed: 0,
+            coinsCollected: 0,
+            itemsCollected: 0,
+            enemies: [],
+        };
+        this.handleEnemyKilled = (payload) => {
+            this.stats.enemiesKilled += 1;
+            this.stats.enemies.push(payload.enemyId);
+            //console.log(`Enemy killed: ${payload.enemyId}`);
+        };
+        this.handleDamageDone = (payload) => {
+            this.stats.damageDone += payload.amount;
+            //console.log(`Damage done: ${payload.amount}`);
+        };
+        this.handleDamageTaken = (payload) => {
+            this.stats.damageTaken += payload.amount;
+            //console.log(`Damage taken: ${payload.amount}`);
+        };
+        this.handleTurnPassed = () => {
+            this.stats.turnsPassed += 1;
+            //console.log(`Turn passed: ${this.stats.turnsPassed}`);
+        };
+        this.handleCoinCollected = (payload) => {
+            this.stats.coinsCollected += payload.amount;
+            //console.log(`Coins collected: ${payload.amount}`);
+        };
+        this.handleItemCollected = (payload) => {
+            this.stats.itemsCollected += 1;
+            //console.log(`Item collected: ${payload.itemId}`);
+        };
+        this.initializeListeners();
+    }
+    initializeListeners() {
+        eventBus_1.globalEventBus.on(events_1.EVENTS.ENEMY_KILLED, this.handleEnemyKilled);
+        eventBus_1.globalEventBus.on(events_1.EVENTS.DAMAGE_DONE, this.handleDamageDone);
+        eventBus_1.globalEventBus.on(events_1.EVENTS.DAMAGE_TAKEN, this.handleDamageTaken);
+        eventBus_1.globalEventBus.on(events_1.EVENTS.TURN_PASSED, this.handleTurnPassed);
+        eventBus_1.globalEventBus.on(events_1.EVENTS.COIN_COLLECTED, this.handleCoinCollected);
+        eventBus_1.globalEventBus.on(events_1.EVENTS.ITEM_COLLECTED, this.handleItemCollected);
+    }
+    getStats() {
+        return this.stats;
+    }
+    resetStats() {
+        this.stats = {
+            enemiesKilled: 0,
+            damageDone: 0,
+            damageTaken: 0,
+            turnsPassed: 0,
+            coinsCollected: 0,
+            itemsCollected: 0,
+            enemies: [],
+        };
+        //console.log("Stats have been reset.");
+    }
+}
+exports.statsTracker = new StatsTracker();
+
+
+/***/ }),
+
+/***/ "./src/game/textbox.ts":
+/*!*****************************!*\
+  !*** ./src/game/textbox.ts ***!
+  \*****************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.TextBox = void 0;
+const eventBus_1 = __webpack_require__(/*! ../event/eventBus */ "./src/event/eventBus.ts");
+class TextBox {
+    constructor(element) {
+        this.allowedCharacters = "all";
+        this.message = "";
+        this.currentMessageIndex = -1;
+        this.MAX_HISTORY = 50;
+        this.handleKeyPress = (key) => {
+            const fontHas = "abcdefghijklmnopqrstuvwxyz1234567890,.!?:'()[]%-/ ".split("");
+            if (key.length === 1) {
+                key = key.toLowerCase();
+                if (fontHas.includes(key)) {
+                    if (this.allowedCharacters === "all" ||
+                        this.allowedCharacters.includes(key)) {
+                        this.text =
+                            this.text.substring(0, this.cursor) +
+                                key +
+                                this.text.substring(this.cursor, this.text.length);
+                        this.cursor += 1;
+                        this.updateElement();
+                        this.message =
+                            this.message.substring(0, this.cursor - 1) +
+                                key +
+                                this.message.substring(this.cursor - 1, this.message.length);
+                    }
+                }
+                //console.log(`Current message: "${this.message}"`);
+                return;
+            }
+            else {
+                switch (key) {
+                    case "Backspace":
+                        if (this.cursor > 0) {
+                            this.text =
+                                this.text.substring(0, this.cursor - 1) +
+                                    this.text.substring(this.cursor, this.text.length);
+                            this.cursor = Math.max(0, this.cursor - 1);
+                            this.updateElement();
+                            this.message =
+                                this.message.substring(0, this.cursor) +
+                                    this.message.substring(this.cursor + 1, this.message.length);
+                        }
+                        break;
+                    case "Delete":
+                        if (this.cursor < this.text.length) {
+                            this.text =
+                                this.text.substring(0, this.cursor) +
+                                    this.text.substring(this.cursor + 1, this.text.length);
+                            this.updateElement();
+                            this.message =
+                                this.message.substring(0, this.cursor) +
+                                    this.message.substring(this.cursor + 1, this.message.length);
+                        }
+                        break;
+                    case "ArrowLeft":
+                        this.cursor = Math.max(0, this.cursor - 1);
+                        this.updateCursorPosition();
+                        break;
+                    case "ArrowRight":
+                        this.cursor = Math.min(this.text.length, this.cursor + 1);
+                        this.updateCursorPosition();
+                        break;
+                    case "ArrowUp":
+                        if (this.sentMessages.length > 0 &&
+                            this.currentMessageIndex < this.sentMessages.length - 1) {
+                            this.currentMessageIndex++;
+                            this.text =
+                                this.sentMessages[this.sentMessages.length - 1 - this.currentMessageIndex];
+                            this.updateElement();
+                            this.message = this.text;
+                        }
+                        break;
+                    case "ArrowDown":
+                        if (this.currentMessageIndex > 0) {
+                            this.currentMessageIndex--;
+                            this.text =
+                                this.sentMessages[this.sentMessages.length - 1 - this.currentMessageIndex];
+                            this.updateElement();
+                            this.message = this.text;
+                        }
+                        else if (this.currentMessageIndex === 0) {
+                            this.currentMessageIndex = -1;
+                            this.clear();
+                        }
+                        break;
+                    case "Enter":
+                        this.sendMessage();
+                        this.escapeCallback();
+                        break;
+                    case "Escape":
+                        this.escapeCallback();
+                        break;
+                }
+            }
+            //console.log(`Current message: "${this.message}"`);
+        };
+        this.handleTouchStart = (e) => {
+            this.focus();
+            e.preventDefault();
+        };
+        this.text = "";
+        this.cursor = 0;
+        this.enterCallback = () => { };
+        this.escapeCallback = () => { };
+        this.element = element;
+        this.sentMessages = [];
+        //this.element.addEventListener("touchstart", this.handleTouchStart);
+    }
+    setEnterCallback(callback) {
+        this.enterCallback = callback;
+    }
+    setEscapeCallback(callback) {
+        this.escapeCallback = callback;
+    }
+    clear() {
+        this.text = "";
+        this.cursor = 0;
+        this.message = "";
+        this.updateElement();
+    }
+    focus() {
+        // Create a temporary input element to trigger the on-screen keyboard
+        const tempInput = document.createElement("input");
+        tempInput.type = "text";
+        tempInput.style.position = "absolute";
+        tempInput.style.opacity = "0";
+        tempInput.style.zIndex = "-1"; // Ensure it doesn't interfere with the game UI
+        document.body.appendChild(tempInput);
+        tempInput.focus();
+        tempInput.addEventListener("blur", () => {
+            document.body.removeChild(tempInput);
+        });
+    }
+    sendMessage() {
+        let message = this.message.trim();
+        if (message) {
+            // Add the new message to the history
+            this.sentMessages.push(message);
+            // Ensure the history size doesn't exceed the maximum limit
+            if (this.sentMessages.length > this.MAX_HISTORY) {
+                this.sentMessages.shift(); // Remove the oldest message
+            }
+            eventBus_1.globalEventBus.emit("ChatMessageSent", message);
+            console.log(this.sentMessages);
+            this.enterCallback();
+            if (message.startsWith("/")) {
+                message = message.substring(1);
+                eventBus_1.globalEventBus.emit("ChatCommand", message);
+            }
+            this.clear();
+            // Reset the navigation index
+            this.currentMessageIndex = -1;
+        }
+    }
+    updateElement() {
+        // Update the HTML element with the current text
+        // Modify to handle multiple lines if necessary
+        this.element.textContent = this.text;
+        // Optionally, update cursor position in the UI
+    }
+    updateCursorPosition() {
+        // Implement cursor position update in the UI if necessary
+    }
+}
+exports.TextBox = TextBox;
+
+
+/***/ }),
+
+/***/ "./src/game/tutorialListener.ts":
+/*!**************************************!*\
+  !*** ./src/game/tutorialListener.ts ***!
+  \**************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.TutorialListener = void 0;
+const eventBus_1 = __webpack_require__(/*! ../event/eventBus */ "./src/event/eventBus.ts");
+class TutorialListener {
+    constructor(game) {
+        this._seenEnemies = new Set();
+        this._seenEnemyClasses = new Set();
+        this.pendingNewEnemies = new Set();
+        this.tutorialCreationTimeout = null;
+        //console.log("Tutorial constructor called");
+        this.setupEventListeners();
+        this.game = game;
+        this.player = this.game.player;
+    }
+    get seenEnemies() {
+        if (this._seenEnemies === undefined) {
+            this._seenEnemies = new Set();
+        }
+        return this._seenEnemies;
+    }
+    setupEventListeners() {
+        //console.log("Setting up event listeners");
+        eventBus_1.globalEventBus.on("EnemySeenPlayer", this.handleEnemySeen.bind(this));
+    }
+    handleEnemySeen(data) {
+        if (!this.hasSeenEnemy(data.enemyType)) {
+            this.game.pushMessage(`New enemy encountered: ${data.enemyName}`);
+            this.addSeenEnemy(data.enemyType);
+            this.pendingNewEnemies.add(data.enemyType);
+            this.scheduleTutorialCreation();
+            this.player.bestiary.addEntry(data.enemyType);
+            console.log(this.player.bestiary.entries);
+        }
+    }
+    scheduleTutorialCreation() {
+        if (this.tutorialCreationTimeout === null) {
+            this.tutorialCreationTimeout = setTimeout(() => {
+                this.createTutorialRoom(Array.from(this.pendingNewEnemies));
+                //this.game.pushMessage("Defeat the enemies guarding the exits.");
+                this.pendingNewEnemies.clear();
+                this.tutorialCreationTimeout = null;
+            }, 100); // Wait 100ms to collect all new enemies
+        }
+    }
+    createTutorialRoom(enemyTypes) {
+        /*
+        this.game.tutorialActive = true;
+        this.game.room.doors.forEach((door: Door) => {
+          door.guard();
+        });
+        */
+    }
+    // Method to check if an enemy has been seen before
+    hasSeenEnemy(enemyType) {
+        //console.log(`Checking if enemy has been seen: ${enemyType}`);
+        return this._seenEnemies.has(enemyType);
+    }
+    // Method to manually add an enemy to the seen list (useful for testing or manual control)
+    addSeenEnemy(enemyType) {
+        //console.log(`Adding enemy to seen list: ${enemyType}`);
+        this._seenEnemies.add(enemyType);
+        this._seenEnemyClasses.add(enemyType.prototype);
+    }
+    // Method to reset the seen enemies list (useful for testing or game resets)
+    resetSeenEnemies() {
+        //console.log("Resetting seen enemies list");
+        this._seenEnemies.clear();
+        this._seenEnemyClasses.clear();
+    }
+    // Method to clean up event listeners when needed
+    cleanup() {
+        //console.log("Cleaning up event listeners");
+        eventBus_1.globalEventBus.off("EnemySeenPlayer", this.handleEnemySeen.bind(this));
+    }
+}
+exports.TutorialListener = TutorialListener;
+
+
+/***/ }),
+
+/***/ "./src/gui/guiButton.ts":
+/*!******************************!*\
+  !*** ./src/gui/guiButton.ts ***!
+  \******************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.guiButton = void 0;
+class guiButton {
+    constructor(x, y, width, height, text, onClick, toggleable = false) {
+        this.toggleable = toggleable;
+        this.toggled = false;
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        this.text = text;
+        this.onClick = onClick;
+    }
+}
+exports.guiButton = guiButton;
+
+
+/***/ }),
+
+/***/ "./src/gui/map.ts":
+/*!************************!*\
+  !*** ./src/gui/map.ts ***!
+  \************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Map = void 0;
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
+const room_1 = __webpack_require__(/*! ../room/room */ "./src/room/room.ts");
+const entity_1 = __webpack_require__(/*! ../entity/entity */ "./src/entity/entity.ts");
+class Map {
+    constructor(game, player) {
+        this.mapData = [];
+        this.oldMapData = [];
+        this.offsetX = 0;
+        this.offsetY = 0;
+        this.softOffsetX = 0;
+        this.softOffsetY = 0;
+        this.saveMapData = () => {
+            this.clearMap();
+            for (const room of this.game.levels[this.player.depth].rooms) {
+                if (this.game.room.mapGroup === room.mapGroup &&
+                    (room.entered === true || gameConstants_1.GameConstants.DEVELOPER_MODE)) {
+                    this.mapData.push({
+                        room: room,
+                        walls: room.innerWalls,
+                        doors: room.doors,
+                        entities: room.entities,
+                        items: room.items,
+                        players: this.game.players,
+                    });
+                }
+            }
+            const enteredRooms = this.mapData
+                .map((data) => data.room)
+                .filter((room) => room.entered);
+            if (enteredRooms.length > 0) {
+                const sortedByX = [...enteredRooms].sort((a, b) => a.roomX - b.roomX);
+                const sortedByY = [...enteredRooms].sort((a, b) => a.roomY - b.roomY);
+                const maxX = sortedByX[sortedByX.length - 1].roomX;
+                const minY = sortedByY[0].roomY;
+                this.offsetX = maxX;
+                this.offsetY = minY;
+            }
+            else {
+                this.offsetX = 0;
+                this.offsetY = 0;
+            }
+        };
+        this.clearMap = () => {
+            this.mapData = [];
+        };
+        this.saveOldMap = () => {
+            this.oldMapData = [...this.mapData];
+        };
+        this.renderMap = (delta) => {
+            game_1.Game.ctx.save(); // Save the current canvas state
+            this.setInitialCanvasSettings(1);
+            this.translateCanvas(0);
+            for (const data of this.mapData) {
+                this.drawRoom(data, delta);
+            }
+            /*for (const data of this.oldMapData) {
+              this.drawRoom(data);
+            }*/
+            this.resetCanvasTransform();
+            game_1.Game.ctx.restore(); // Restore the canvas state
+        };
+        this.updateOffsetXY = () => {
+            let diffX = this.offsetX - this.softOffsetX;
+            let diffY = this.offsetY - this.softOffsetY;
+            if (Math.abs(diffX) > 0.01) {
+                this.softOffsetX += diffX * 0.1;
+                this.softOffsetX = this.softOffsetX;
+            }
+            else
+                this.softOffsetX = this.offsetX;
+            if (Math.abs(diffY) > 0.01) {
+                this.softOffsetY += diffY * 0.1;
+                this.softOffsetY = this.softOffsetY;
+            }
+            else
+                this.softOffsetY = this.offsetY;
+        };
+        this.draw = (delta) => {
+            this.updateOffsetXY();
+            this.renderMap(delta);
+        };
+        this.setInitialCanvasSettings = (alpha) => {
+            game_1.Game.ctx.globalAlpha = alpha;
+            game_1.Game.ctx.globalCompositeOperation = "source-over";
+        };
+        this.translateCanvas = (offset) => {
+            game_1.Game.ctx.translate(Math.floor(0.95 * gameConstants_1.GameConstants.WIDTH) -
+                //this.game.room.roomX -
+                //Math.floor(0.5 * this.game.room.width) +
+                15 * this.scale -
+                Math.floor(this.softOffsetX), Math.floor(0.05 * gameConstants_1.GameConstants.HEIGHT) -
+                //this.game.room.roomY -
+                //Math.floor(0.5 * this.game.room.height) -
+                1 * this.scale -
+                offset -
+                Math.floor(this.softOffsetY));
+        };
+        this.drawRoom = (data, delta) => {
+            //this.drawUnderRoomPlayers(data.players, delta);
+            this.drawRoomOutline(data.room);
+            this.drawRoomWalls(data.walls);
+            this.drawRoomDoors(data.doors);
+            this.drawRoomEntities(data.entities);
+            this.drawRoomItems(data.items);
+            this.drawRoomPlayers(data.players, delta);
+        };
+        this.drawRoomOutline = (level) => {
+            const s = this.scale;
+            game_1.Game.ctx.fillStyle = "#5A5A5A";
+            game_1.Game.ctx.fillRect(level.roomX * s + 0, level.roomY * s + 0, level.width * s - 0, level.height * s - 0);
+            if (level.type === room_1.RoomType.UPLADDER)
+                game_1.Game.ctx.fillStyle = "#101460";
+            if (level.type === room_1.RoomType.DOWNLADDER)
+                game_1.Game.ctx.fillStyle = "#601410";
+            game_1.Game.ctx.fillStyle = "black";
+            game_1.Game.ctx.fillRect(level.roomX * s + 1, level.roomY * s + 1, level.width * s - 2, level.height * s - 2);
+        };
+        this.drawRoomWalls = (walls) => {
+            const s = this.scale;
+            game_1.Game.ctx.save(); // Save the current canvas state
+            for (const wall of walls) {
+                game_1.Game.ctx.fillStyle = "#404040";
+                game_1.Game.ctx.fillRect(wall.x * s, wall.y * s, 1 * s, 1 * s);
+            }
+            game_1.Game.ctx.restore(); // Restore the canvas state
+        };
+        this.drawRoomDoors = (doors) => {
+            const s = this.scale;
+            game_1.Game.ctx.save(); // Save the current canvas state
+            for (const door of doors) {
+                if (door.opened === false)
+                    game_1.Game.ctx.fillStyle = "#5A5A5A";
+                if (door.opened === true) {
+                    game_1.Game.ctx.fillStyle = "black";
+                    game_1.Game.ctx.fillRect(door.x * s, door.y * s, 1 * s, 1 * s);
+                }
+                game_1.Game.ctx.fillStyle = "#5A5A5A"; // Reset to default after each door
+            }
+            game_1.Game.ctx.restore(); // Restore the canvas state
+        };
+        this.drawRoomPlayers = (players, delta) => {
+            const s = this.scale;
+            game_1.Game.ctx.save(); // Save the current canvas state
+            for (const i in players) {
+                game_1.Game.ctx.fillStyle = "white";
+                if (this.game.levels[players[i].depth].rooms[players[i].levelID]
+                    .mapGroup === this.game.room.mapGroup) {
+                    game_1.Game.ctx.fillRect(players[i].x * s, players[i].y * s, 1 * s, 1 * s);
+                }
+            }
+            game_1.Game.ctx.restore(); // Restore the canvas state
+        };
+        this.drawUnderRoomPlayers = (players, delta) => {
+            const s = this.scale;
+            game_1.Game.ctx.save(); // Save the current canvas state
+            for (const i in players) {
+                this.game.rooms[players[i].levelID].mapGroup === this.game.room.mapGroup;
+                {
+                    if (Math.floor(Date.now() / 300) % 2) {
+                        game_1.Game.ctx.fillStyle = "#4D8C8C";
+                        // Draw 3x3 outline box around player
+                        game_1.Game.ctx.fillRect((players[i].x - 1) * s, (players[i].y - 1) * s, 1 * s, 1 * s); // Top left
+                        game_1.Game.ctx.fillRect(players[i].x * s, (players[i].y - 1) * s, 1 * s, 1 * s); // Top middle
+                        game_1.Game.ctx.fillRect((players[i].x + 1) * s, (players[i].y - 1) * s, 1 * s, 1 * s); // Top right
+                        game_1.Game.ctx.fillRect((players[i].x - 1) * s, players[i].y * s, 1 * s, 1 * s); // Middle left
+                        game_1.Game.ctx.fillRect((players[i].x + 1) * s, players[i].y * s, 1 * s, 1 * s); // Middle right
+                        game_1.Game.ctx.fillRect((players[i].x - 1) * s, (players[i].y + 1) * s, 1 * s, 1 * s); // Bottom left
+                        game_1.Game.ctx.fillRect(players[i].x * s, (players[i].y + 1) * s, 1 * s, 1 * s); // Bottom middle
+                        game_1.Game.ctx.fillRect((players[i].x + 1) * s, (players[i].y + 1) * s, 1 * s, 1 * s); // Bottom right
+                    }
+                }
+            }
+            game_1.Game.ctx.restore(); // Restore the canvas state
+        };
+        this.drawRoomEntities = (entities) => {
+            const s = this.scale;
+            game_1.Game.ctx.save(); // Save the current canvas state
+            for (const enemy of entities) {
+                this.setEntityColor(enemy);
+                game_1.Game.ctx.fillRect(enemy.x * s, enemy.y * s, 1 * s, 1 * s);
+            }
+            game_1.Game.ctx.restore(); // Restore the canvas state
+        };
+        this.setEntityColor = (enemy) => {
+            // No need to save/restore here as only fillStyle is being set
+            if (enemy.type === entity_1.EntityType.ENEMY) {
+                game_1.Game.ctx.fillStyle = "yellow";
+            }
+            if (enemy.type === entity_1.EntityType.PROP) {
+                game_1.Game.ctx.fillStyle = "#847e87";
+            }
+            if (enemy.type === entity_1.EntityType.RESOURCE) {
+                game_1.Game.ctx.fillStyle = "#5a595b";
+            }
+            if (enemy.type === entity_1.EntityType.FRIENDLY) {
+                game_1.Game.ctx.fillStyle = "cyan";
+            }
+        };
+        this.drawRoomItems = (items) => {
+            const s = this.scale;
+            game_1.Game.ctx.save(); // Save the current canvas state
+            for (const item of items) {
+                let x = item.x;
+                let y = item.y;
+                game_1.Game.ctx.fillStyle = "#ac3232";
+                if (!item.pickedUp) {
+                    game_1.Game.ctx.fillRect(item.x * s, item.y * s, 1 * s, 1 * s);
+                }
+            }
+            game_1.Game.ctx.restore(); // Restore the canvas state
+        };
+        this.resetCanvasTransform = () => {
+            game_1.Game.ctx.setTransform(1, 0, 0, 1, 0, 0);
+        };
+        this.game = game;
+        this.scale = 1;
+        this.player = player;
+        //this.depth = player.game.level.depth
+    }
+}
+exports.Map = Map;
+
+
+/***/ }),
+
+/***/ "./src/gui/menu.ts":
+/*!*************************!*\
+  !*** ./src/gui/menu.ts ***!
+  \*************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Menu = void 0;
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const guiButton_1 = __webpack_require__(/*! ./guiButton */ "./src/gui/guiButton.ts");
+const input_1 = __webpack_require__(/*! ../game/input */ "./src/game/input.ts");
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
+class Menu {
+    constructor() {
+        // Example action methods
+        this.startGame = () => {
+            console.log("Game Started");
+            this.close();
+            // Implement game start logic
+        };
+        this.exitGame = () => {
+            console.log("Exit Game");
+            // Implement exit game logic
+        };
+        this.openAudioSettings = () => {
+            console.log("Audio Settings Opened");
+            // Implement audio settings logic
+        };
+        this.openGraphicsSettings = () => {
+            console.log("Graphics Settings Opened");
+            // Implement graphics settings logic
+        };
+        this.openControlsSettings = () => {
+            console.log("Controls Settings Opened");
+            // Implement controls settings logic
+        };
+        this.buttons = [];
+        this.open = false;
+        this.selectedButton = 0;
+        this.subMenus = {};
+        this.currentSubMenu = null;
+        //this.initializeMainMenu();
+    }
+    initializeMainMenu() {
+        this.addButton(new guiButton_1.guiButton(0, 0, 200, 50, "Start Game", this.startGame));
+        this.addButton(new guiButton_1.guiButton(0, 60, 200, 50, "Settings", () => this.openSubMenu("Settings")));
+        this.addButton(new guiButton_1.guiButton(0, 120, 200, 50, "Exit", this.exitGame));
+        this.initializeSettingsMenu();
+        this.positionButtons();
+    }
+    initializeSettingsMenu() {
+        const settingsMenu = new Menu();
+        settingsMenu.addButton(new guiButton_1.guiButton(0, 0, 200, 50, "Audio", this.openAudioSettings));
+        settingsMenu.addButton(new guiButton_1.guiButton(0, 60, 200, 50, "Graphics", this.openGraphicsSettings));
+        settingsMenu.addButton(new guiButton_1.guiButton(0, 120, 200, 50, "Controls", this.openControlsSettings));
+        settingsMenu.addButton(new guiButton_1.guiButton(0, 180, 200, 50, "Back", () => this.closeSubMenu()));
+        settingsMenu.positionButtons();
+        this.subMenus["Settings"] = settingsMenu;
+    }
+    addButton(button) {
+        this.buttons.push(button);
+    }
+    drawMenu() {
+        if (!this.open && !this.currentSubMenu)
+            return;
+        game_1.Game.ctx.save();
+        game_1.Game.ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+        game_1.Game.ctx.fillRect(0, 0, innerWidth, innerHeight);
+        const menuToDraw = this.currentSubMenu
+            ? this.subMenus[this.currentSubMenu]
+            : this;
+        menuToDraw.buttons.forEach((button) => {
+            this.drawButton(button, menuToDraw);
+        });
+        game_1.Game.ctx.restore();
+    }
+    drawButton(button, menu) {
+        game_1.Game.ctx.fillStyle =
+            menu.selectedButton === menu.buttons.indexOf(button)
+                ? "rgba(200, 200, 200, 1)"
+                : "rgba(255, 255, 255, 1)";
+        game_1.Game.ctx.fillRect(button.x, button.y, button.width, button.height);
+        game_1.Game.ctx.fillStyle = "rgba(0, 0, 0, 1)";
+        game_1.Game.ctx.font = "20px Arial";
+        const textWidth = game_1.Game.measureText(button.text).width;
+        const textX = button.x + (button.width - textWidth) / 2;
+        const textY = button.y + button.height / 2 + game_1.Game.letter_height / 2;
+        game_1.Game.fillText(button.text, textX, textY);
+    }
+    inputHandler(input) {
+        if (!this.open)
+            return;
+        switch (input) {
+            case input_1.InputEnum.ESCAPE:
+                if (this.currentSubMenu) {
+                    this.closeSubMenu();
+                }
+                else {
+                    this.open = false;
+                }
+                break;
+            case input_1.InputEnum.UP:
+                this.up();
+                break;
+            case input_1.InputEnum.DOWN:
+                this.down();
+                break;
+            case input_1.InputEnum.SPACE:
+                this.select();
+                break;
+            default:
+                break;
+        }
+    }
+    openSubMenu(menuName) {
+        if (this.subMenus[menuName]) {
+            this.currentSubMenu = menuName;
+            this.selectedButton = 0;
+        }
+    }
+    closeSubMenu() {
+        this.currentSubMenu = null;
+        this.selectedButton = 0;
+    }
+    close() {
+        this.open = false;
+        this.currentSubMenu = null;
+    }
+    select() {
+        const menuToSelect = this.currentSubMenu
+            ? this.subMenus[this.currentSubMenu]
+            : this;
+        if (menuToSelect.open) {
+            menuToSelect.buttons[menuToSelect.selectedButton].onClick();
+        }
+    }
+    up() {
+        const menuToNavigate = this.currentSubMenu
+            ? this.subMenus[this.currentSubMenu]
+            : this;
+        if (menuToNavigate.open) {
+            menuToNavigate.selectedButton =
+                (menuToNavigate.selectedButton - 1 + menuToNavigate.buttons.length) %
+                    menuToNavigate.buttons.length;
+        }
+    }
+    down() {
+        const menuToNavigate = this.currentSubMenu
+            ? this.subMenus[this.currentSubMenu]
+            : this;
+        if (menuToNavigate.open) {
+            menuToNavigate.selectedButton =
+                (menuToNavigate.selectedButton + 1) % menuToNavigate.buttons.length;
+        }
+    }
+    positionButtons() {
+        const startX = (gameConstants_1.GameConstants.WIDTH - 200) / 2;
+        const startY = (gameConstants_1.GameConstants.HEIGHT - this.buttons.length * 60) / 2;
+        this.buttons.forEach((button, index) => {
+            button.x = startX;
+            button.y = startY + index * 60;
+        });
+    }
+}
+exports.Menu = Menu;
+
+
+/***/ }),
+
+/***/ "./src/gui/mouseCursor.ts":
+/*!********************************!*\
+  !*** ./src/gui/mouseCursor.ts ***!
+  \********************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.MouseCursor = void 0;
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const input_1 = __webpack_require__(/*! ../game/input */ "./src/game/input.ts");
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
+class MouseCursor {
+    constructor() {
+        this.cursorSize = 5; // Size of the cursor rectangle
+        this.clickX = 0;
+        this.clickY = 0;
+        this.tileX = 6;
+        this.frame = 0;
+        this.setIcon = (icon) => {
+            switch (icon) {
+                case "arrow":
+                    this.tileX = 8;
+                    break;
+                case "sword":
+                    this.tileX = 7;
+                    break;
+                case "hand":
+                    this.tileX = 6;
+                    break;
+                case "wait":
+                    this.tileX = 9;
+                    break;
+                case "grab":
+                    this.tileX = 10;
+                    break;
+                case "up":
+                    this.tileX = 11;
+                    break;
+                case "right":
+                    this.tileX = 12;
+                    break;
+                case "down":
+                    this.tileX = 13;
+                    break;
+                case "left":
+                    this.tileX = 14;
+                    break;
+                case "mine":
+                    this.tileX = 15;
+                    break;
+            }
+        };
+        this.draw = (delta, mobile = false) => {
+            if (!mobile)
+                this.drawCursor();
+            this.drawAnimation(delta);
+        };
+    }
+    static getInstance() {
+        if (!MouseCursor.instance) {
+            MouseCursor.instance = new MouseCursor();
+        }
+        return MouseCursor.instance;
+    }
+    drawCursor() {
+        game_1.Game.ctx.save();
+        //Game.ctx.fillRect(Input.mouseX, Input.mouseY, 1, 1);
+        game_1.Game.drawFX(this.tileX, 0, 1, 1, input_1.Input.mouseX / gameConstants_1.GameConstants.TILESIZE - 8 / gameConstants_1.GameConstants.TILESIZE, input_1.Input.mouseY / gameConstants_1.GameConstants.TILESIZE - 8 / gameConstants_1.GameConstants.TILESIZE, 1, 1);
+        game_1.Game.ctx.restore();
+    }
+    drawAnimation(delta) {
+        if (this.frame > 5) {
+            //14 is max frame for animation
+            return;
+        }
+        game_1.Game.drawFX(9 + Math.ceil(this.frame), 1, 1, 1, this.clickX / gameConstants_1.GameConstants.TILESIZE - 8 / gameConstants_1.GameConstants.TILESIZE, this.clickY / gameConstants_1.GameConstants.TILESIZE - 8 / gameConstants_1.GameConstants.TILESIZE, 1, 1);
+        this.frame = this.frame + delta / 5;
+    }
+    startClickAnim() {
+        this.frame = 0;
+        this.clickX = input_1.Input.mouseX;
+        this.clickY = input_1.Input.mouseY;
+    }
+    getPosition() {
+        return { x: input_1.Input.mouseX, y: input_1.Input.mouseY };
+    }
+    getTilePosition() {
+        return {
+            x: Math.floor(input_1.Input.mouseX / gameConstants_1.GameConstants.TILESIZE),
+            y: Math.floor(input_1.Input.mouseY / gameConstants_1.GameConstants.TILESIZE),
+        };
+    }
+    getInventoryPosition() {
+        return {
+            x: input_1.Input.mouseX,
+            y: input_1.Input.mouseY,
+        };
+    }
+}
+exports.MouseCursor = MouseCursor;
+
+
+/***/ }),
+
+/***/ "./src/gui/postProcess.ts":
+/*!********************************!*\
+  !*** ./src/gui/postProcess.ts ***!
+  \********************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PostProcessor = void 0;
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
+class PostProcessor {
+}
+exports.PostProcessor = PostProcessor;
+PostProcessor.draw = (delta) => {
+    game_1.Game.ctx.save();
+    game_1.Game.ctx.globalAlpha = 0.15;
+    game_1.Game.ctx.globalCompositeOperation = "screen";
+    // GameConstants.SHADE_LAYER_COMPOSITE_OPERATION as GlobalCompositeOperation; //"soft-light";
+    game_1.Game.ctx.fillStyle = "#006A6E"; //dark teal
+    //Game.ctx.fillStyle = "#003B6F"; //deep underwater blue
+    //Game.ctx.fillStyle = "#2F2F2F"; //smoky fog prison
+    //Game.ctx.fillStyle = "#4a6c4b"; //darker muddy green
+    //Game.ctx.fillStyle = "#800000"; // lighter red for dungeon hell theme
+    game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
+    game_1.Game.ctx.restore();
+};
+
+
+/***/ }),
+
 /***/ "./src/inventory/inventory.ts":
 /*!************************************!*\
   !*** ./src/inventory/inventory.ts ***!
@@ -11593,14 +11713,14 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Inventory = void 0;
 const item_1 = __webpack_require__(/*! ../item/item */ "./src/item/item.ts");
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-const gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
 const equippable_1 = __webpack_require__(/*! ../item/equippable */ "./src/item/equippable.ts");
 const armor_1 = __webpack_require__(/*! ../item/armor */ "./src/item/armor.ts");
 const coin_1 = __webpack_require__(/*! ../item/coin */ "./src/item/coin.ts");
-const weapon_1 = __webpack_require__(/*! ../weapon/weapon */ "./src/weapon/weapon.ts");
+const weapon_1 = __webpack_require__(/*! ../item/weapon/weapon */ "./src/item/weapon/weapon.ts");
 const usable_1 = __webpack_require__(/*! ../item/usable/usable */ "./src/item/usable/usable.ts");
-const mouseCursor_1 = __webpack_require__(/*! ../mouseCursor */ "./src/mouseCursor.ts");
-const input_1 = __webpack_require__(/*! ../input */ "./src/input.ts");
+const mouseCursor_1 = __webpack_require__(/*! ../gui/mouseCursor */ "./src/gui/mouseCursor.ts");
+const input_1 = __webpack_require__(/*! ../game/input */ "./src/game/input.ts");
 const pickaxe_1 = __webpack_require__(/*! ../item/tool/pickaxe */ "./src/item/tool/pickaxe.ts");
 let OPEN_TIME = 100; // milliseconds
 // Dark gray color used for the background of inventory slots
@@ -12669,7 +12789,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Armor = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const equippable_1 = __webpack_require__(/*! ./equippable */ "./src/item/equippable.ts");
-const gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
 class Armor extends equippable_1.Equippable {
     constructor(level, x, y) {
         super(level, x, y);
@@ -12737,7 +12857,7 @@ Armor.itemName = "armor";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Backpack = void 0;
-const sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
+const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts");
 const usable_1 = __webpack_require__(/*! ./usable/usable */ "./src/item/usable/usable.ts");
 class Backpack extends usable_1.Usable {
     constructor(level, x, y) {
@@ -12773,7 +12893,7 @@ Backpack.itemName = "backpack";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BombItem = void 0;
-const sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
+const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts");
 const usable_1 = __webpack_require__(/*! ./usable/usable */ "./src/item/usable/usable.ts");
 //import { Bomb } from "../entity/object/bomb";
 class BombItem extends usable_1.Usable {
@@ -12808,7 +12928,7 @@ BombItem.itemName = "bomb";
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Coin = void 0;
 const item_1 = __webpack_require__(/*! ./item */ "./src/item/item.ts");
-const sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
+const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts");
 class Coin extends item_1.Item {
     //checked: boolean;
     constructor(level, x, y) {
@@ -12871,9 +12991,9 @@ const greengem_1 = __webpack_require__(/*! ./resource/greengem */ "./src/item/re
 const heart_1 = __webpack_require__(/*! ./usable/heart */ "./src/item/usable/heart.ts");
 const redgem_1 = __webpack_require__(/*! ./resource/redgem */ "./src/item/resource/redgem.ts");
 const weaponFragments_1 = __webpack_require__(/*! ./usable/weaponFragments */ "./src/item/usable/weaponFragments.ts");
-const spear_1 = __webpack_require__(/*! ../weapon/spear */ "./src/weapon/spear.ts");
-const warhammer_1 = __webpack_require__(/*! ../weapon/warhammer */ "./src/weapon/warhammer.ts");
-const dualdagger_1 = __webpack_require__(/*! ../weapon/dualdagger */ "./src/weapon/dualdagger.ts");
+const spear_1 = __webpack_require__(/*! ./weapon/spear */ "./src/item/weapon/spear.ts");
+const warhammer_1 = __webpack_require__(/*! ./weapon/warhammer */ "./src/item/weapon/warhammer.ts");
+const dualdagger_1 = __webpack_require__(/*! ./weapon/dualdagger */ "./src/item/weapon/dualdagger.ts");
 const weaponPoison_1 = __webpack_require__(/*! ./usable/weaponPoison */ "./src/item/usable/weaponPoison.ts");
 const weaponBlood_1 = __webpack_require__(/*! ./usable/weaponBlood */ "./src/item/usable/weaponBlood.ts");
 const gold_1 = __webpack_require__(/*! ./resource/gold */ "./src/item/resource/gold.ts");
@@ -12883,12 +13003,12 @@ const hammer_1 = __webpack_require__(/*! ./tool/hammer */ "./src/item/tool/hamme
 const coal_1 = __webpack_require__(/*! ./resource/coal */ "./src/item/resource/coal.ts");
 const torch_1 = __webpack_require__(/*! ./light/torch */ "./src/item/light/torch.ts");
 const lantern_1 = __webpack_require__(/*! ./light/lantern */ "./src/item/light/lantern.ts");
-const spellbook_1 = __webpack_require__(/*! ../weapon/spellbook */ "./src/weapon/spellbook.ts");
+const spellbook_1 = __webpack_require__(/*! ./weapon/spellbook */ "./src/item/weapon/spellbook.ts");
 const spellbookPage_1 = __webpack_require__(/*! ./usable/spellbookPage */ "./src/item/usable/spellbookPage.ts");
 const backpack_1 = __webpack_require__(/*! ./backpack */ "./src/item/backpack.ts");
 const bombItem_1 = __webpack_require__(/*! ./bombItem */ "./src/item/bombItem.ts");
-const greataxe_1 = __webpack_require__(/*! ../weapon/greataxe */ "./src/weapon/greataxe.ts");
-const utils_1 = __webpack_require__(/*! ../utils */ "./src/utils.ts");
+const greataxe_1 = __webpack_require__(/*! ./weapon/greataxe */ "./src/item/weapon/greataxe.ts");
+const utils_1 = __webpack_require__(/*! ../utility/utils */ "./src/utility/utils.ts");
 const geode_1 = __webpack_require__(/*! ./resource/geode */ "./src/item/resource/geode.ts");
 exports.ItemTypeMap = {
     dualdagger: dualdagger_1.DualDagger,
@@ -13185,10 +13305,10 @@ GoldenKey.itemName = "goldenKey";
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Item = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-const gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
-const sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
-const drawable_1 = __webpack_require__(/*! ../drawable */ "./src/drawable.ts");
-const utils_1 = __webpack_require__(/*! ../utils */ "./src/utils.ts");
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
+const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts");
+const drawable_1 = __webpack_require__(/*! ../drawable/drawable */ "./src/drawable/drawable.ts");
+const utils_1 = __webpack_require__(/*! ../utility/utils */ "./src/utility/utils.ts");
 // Item class extends Drawable class and represents an item in the game
 class Item extends drawable_1.Drawable {
     // Constructor for the Item class
@@ -13414,7 +13534,7 @@ exports.Item = Item;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Key = void 0;
 const item_1 = __webpack_require__(/*! ./item */ "./src/item/item.ts");
-const sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
+const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts");
 class Key extends item_1.Item {
     constructor(level, x, y) {
         super(level, x, y);
@@ -13514,8 +13634,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Light = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const equippable_1 = __webpack_require__(/*! ../equippable */ "./src/item/equippable.ts");
-const gameConstants_1 = __webpack_require__(/*! ../../gameConstants */ "./src/gameConstants.ts");
-const utils_1 = __webpack_require__(/*! ../../utils */ "./src/utils.ts");
+const gameConstants_1 = __webpack_require__(/*! ../../game/gameConstants */ "./src/game/gameConstants.ts");
+const utils_1 = __webpack_require__(/*! ../../utility/utils */ "./src/utility/utils.ts");
 class Light extends equippable_1.Equippable {
     constructor(level, x, y) {
         super(level, x, y);
@@ -13770,7 +13890,7 @@ const item_1 = __webpack_require__(/*! ../item */ "./src/item/item.ts");
 const redgem_1 = __webpack_require__(/*! ./redgem */ "./src/item/resource/redgem.ts");
 const bluegem_1 = __webpack_require__(/*! ./bluegem */ "./src/item/resource/bluegem.ts");
 const greengem_1 = __webpack_require__(/*! ./greengem */ "./src/item/resource/greengem.ts");
-const utils_1 = __webpack_require__(/*! ../../utils */ "./src/utils.ts");
+const utils_1 = __webpack_require__(/*! ../../utility/utils */ "./src/utility/utils.ts");
 class Geode extends item_1.Item {
     constructor(level, x, y) {
         super(level, x, y);
@@ -13925,9 +14045,9 @@ Stone.itemName = "stones";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Hammer = void 0;
-const sound_1 = __webpack_require__(/*! ../../sound */ "./src/sound.ts");
+const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
 const usable_1 = __webpack_require__(/*! ../usable/usable */ "./src/item/usable/usable.ts");
-const weapon_1 = __webpack_require__(/*! ../../weapon/weapon */ "./src/weapon/weapon.ts");
+const weapon_1 = __webpack_require__(/*! ../weapon/weapon */ "./src/item/weapon/weapon.ts");
 const weaponFragments_1 = __webpack_require__(/*! ../usable/weaponFragments */ "./src/item/usable/weaponFragments.ts");
 class Hammer extends usable_1.Usable {
     constructor(level, x, y) {
@@ -14012,7 +14132,7 @@ Pickaxe.itemName = "pickaxe";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Heart = void 0;
-const sound_1 = __webpack_require__(/*! ../../sound */ "./src/sound.ts");
+const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
 const usable_1 = __webpack_require__(/*! ./usable */ "./src/item/usable/usable.ts");
 class Heart extends usable_1.Usable {
     constructor(level, x, y) {
@@ -14091,7 +14211,7 @@ Shrooms.itemName = "mushrooms";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SpellbookPage = void 0;
-const sound_1 = __webpack_require__(/*! ../../sound */ "./src/sound.ts");
+const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
 const usable_1 = __webpack_require__(/*! ./usable */ "./src/item/usable/usable.ts");
 const equippable_1 = __webpack_require__(/*! ../equippable */ "./src/item/equippable.ts");
 class SpellbookPage extends usable_1.Usable {
@@ -14165,9 +14285,9 @@ exports.Usable = Usable;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.WeaponBlood = void 0;
-const sound_1 = __webpack_require__(/*! ../../sound */ "./src/sound.ts");
+const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
 const usable_1 = __webpack_require__(/*! ./usable */ "./src/item/usable/usable.ts");
-const weapon_1 = __webpack_require__(/*! ../../weapon/weapon */ "./src/weapon/weapon.ts");
+const weapon_1 = __webpack_require__(/*! ../weapon/weapon */ "./src/item/weapon/weapon.ts");
 class WeaponBlood extends usable_1.Usable {
     constructor(level, x, y) {
         super(level, x, y);
@@ -14208,7 +14328,7 @@ WeaponBlood.itemName = "cursed blood";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.WeaponFragments = void 0;
-const sound_1 = __webpack_require__(/*! ../../sound */ "./src/sound.ts");
+const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
 const usable_1 = __webpack_require__(/*! ./usable */ "./src/item/usable/usable.ts");
 const equippable_1 = __webpack_require__(/*! ../equippable */ "./src/item/equippable.ts");
 class WeaponFragments extends usable_1.Usable {
@@ -14262,9 +14382,9 @@ WeaponFragments.itemName = "weapon fragments";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.WeaponPoison = void 0;
-const sound_1 = __webpack_require__(/*! ../../sound */ "./src/sound.ts");
+const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
 const usable_1 = __webpack_require__(/*! ./usable */ "./src/item/usable/usable.ts");
-const weapon_1 = __webpack_require__(/*! ../../weapon/weapon */ "./src/weapon/weapon.ts");
+const weapon_1 = __webpack_require__(/*! ../weapon/weapon */ "./src/item/weapon/weapon.ts");
 class WeaponPoison extends usable_1.Usable {
     constructor(level, x, y) {
         super(level, x, y);
@@ -14297,17 +14417,751 @@ WeaponPoison.itemName = "weapon poison";
 
 /***/ }),
 
-/***/ "./src/level.ts":
-/*!**********************!*\
-  !*** ./src/level.ts ***!
-  \**********************/
+/***/ "./src/item/weapon/dagger.ts":
+/*!***********************************!*\
+  !*** ./src/item/weapon/dagger.ts ***!
+  \***********************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Dagger = void 0;
+const weapon_1 = __webpack_require__(/*! ./weapon */ "./src/item/weapon/weapon.ts");
+class Dagger extends weapon_1.Weapon {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.weaponMove = (newX, newY) => {
+            if (this.checkForPushables(newX, newY))
+                return true;
+            const hitSomething = this.executeAttack(newX, newY);
+            return !hitSomething;
+        };
+        this.degrade = () => { };
+        this.tileX = 22;
+        this.tileY = 0;
+        this.name = "dagger";
+        this.description = "A basic but dependable weapon.";
+    }
+}
+exports.Dagger = Dagger;
+Dagger.itemName = "dagger";
+
+
+/***/ }),
+
+/***/ "./src/item/weapon/dualdagger.ts":
+/*!***************************************!*\
+  !*** ./src/item/weapon/dualdagger.ts ***!
+  \***************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DualDagger = void 0;
+const weapon_1 = __webpack_require__(/*! ./weapon */ "./src/item/weapon/weapon.ts");
+const attackAnimation_1 = __webpack_require__(/*! ../../particle/attackAnimation */ "./src/particle/attackAnimation.ts");
+class DualDagger extends weapon_1.Weapon {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.tickInInventory = () => {
+            this.firstAttack = true;
+        };
+        this.weaponMove = (newX, newY) => {
+            const entities = this.getEntitiesAt(newX, newY).filter((e) => !e.pushable);
+            let flag = false;
+            for (let e of entities) {
+                this.attack(e);
+                this.statusEffect(e);
+                flag = true;
+            }
+            if (flag) {
+                this.hitSound();
+                this.wielder.setHitXY(newX, newY);
+                this.shakeScreen(newX, newY);
+                if (this.firstAttack) {
+                    this.game.rooms[this.wielder.levelID].particles.push(new attackAnimation_1.AttackAnimation(newX, newY, "dualdagger", this.wielder.direction));
+                }
+                else {
+                    this.game.rooms[this.wielder.levelID].particles.push(new attackAnimation_1.AttackAnimation(newX, newY, "dualdagger2", this.wielder.direction));
+                }
+                this.game.rooms[this.wielder.levelID].entities = this.game.rooms[this.wielder.levelID].entities.filter((e) => !e.dead);
+                if (!this.firstAttack) {
+                    this.game.rooms[this.wielder.levelID].tick(this.wielder);
+                }
+                if (this.wielder === this.game.players[this.game.localPlayerID])
+                    this.game.shakeScreen(10 * this.wielder.hitX, 10 * this.wielder.hitY);
+                if (this.firstAttack) {
+                    this.game.rooms[this.wielder.levelID].tickHitWarnings();
+                    this.game.rooms[this.wielder.levelID].clearDeadStuff();
+                    this.firstAttack = false;
+                    this.wielder.beginSlowMotion();
+                }
+                this.degrade();
+            }
+            return !flag;
+        };
+        this.tileX = 23;
+        this.tileY = 0;
+        this.firstAttack = true;
+        this.name = "Dual Daggers";
+        this.useCost = 2;
+        this.description =
+            "After the first attack, enemies will not take their turn until you attack or move again.";
+    }
+}
+exports.DualDagger = DualDagger;
+DualDagger.itemName = "dual daggers";
+
+
+/***/ }),
+
+/***/ "./src/item/weapon/greataxe.ts":
+/*!*************************************!*\
+  !*** ./src/item/weapon/greataxe.ts ***!
+  \*************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Greataxe = void 0;
+const weapon_1 = __webpack_require__(/*! ./weapon */ "./src/item/weapon/weapon.ts");
+const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+class Greataxe extends weapon_1.Weapon {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.hitSound = () => {
+            sound_1.Sound.hit();
+            sound_1.Sound.playWarHammer();
+        };
+        this.adjustedDamage = () => {
+            let hp = this.wielder?.health / this.wielder?.maxHealth;
+            let damage = 1;
+            if (hp <= 1)
+                damage = 1;
+            if (hp <= 0.75)
+                damage = 2;
+            if (hp <= 0.5)
+                damage = 4;
+            if (hp <= 0.25)
+                damage = 8;
+            return damage;
+        };
+        this.attack = (enemy) => {
+            enemy.hurt(this.wielder, this.adjustedDamage());
+            this.statusEffect(enemy);
+        };
+        this.shakeScreen = () => {
+            this.wielder.beginSlowMotion();
+            setTimeout(() => {
+                this.wielder.endSlowMotion();
+                //this.hitSound();
+                switch (this.wielder.direction) {
+                    case game_1.Direction.DOWN:
+                        this.game.shakeScreen(0, -10 * this.adjustedDamage(), false);
+                        break;
+                    case game_1.Direction.UP:
+                        this.game.shakeScreen(0, -10 * this.adjustedDamage(), false);
+                        break;
+                    case game_1.Direction.LEFT:
+                        this.game.shakeScreen(-5, -10 * this.adjustedDamage(), false);
+                        break;
+                    case game_1.Direction.RIGHT:
+                        this.game.shakeScreen(5, -10 * this.adjustedDamage(), false);
+                        break;
+                }
+            }, this.hitDelay);
+        };
+        this.tileX = 24;
+        this.tileY = 2;
+        this.damage = 2;
+        this.name = "greataxe";
+        this.hitDelay = 225;
+        this.offsetY = 0;
+        this.iconOffset = 0.2;
+        this.durability = 25;
+        this.durabilityMax = 25;
+        this.useCost = 5;
+    }
+}
+exports.Greataxe = Greataxe;
+Greataxe.itemName = "greataxe";
+
+
+/***/ }),
+
+/***/ "./src/item/weapon/shotgun.ts":
+/*!************************************!*\
+  !*** ./src/item/weapon/shotgun.ts ***!
+  \************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Shotgun = void 0;
+const weapon_1 = __webpack_require__(/*! ./weapon */ "./src/item/weapon/weapon.ts");
+const genericParticle_1 = __webpack_require__(/*! ../../particle/genericParticle */ "./src/particle/genericParticle.ts");
+class Shotgun extends weapon_1.Weapon {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.weaponMove = (newX, newY) => {
+            let newX2 = 2 * newX - this.wielder.x;
+            let newY2 = 2 * newY - this.wielder.y;
+            let newX3 = 3 * newX - 2 * this.wielder.x;
+            let newY3 = 3 * newY - 2 * this.wielder.y;
+            let range = 3;
+            if (!this.game.rooms[this.wielder.levelID].tileInside(newX, newY) ||
+                this.game.rooms[this.wielder.levelID].roomArray[newX][newY].isSolid())
+                return true;
+            else if (!this.game.rooms[this.wielder.levelID].tileInside(newX2, newY2) ||
+                this.game.rooms[this.wielder.levelID].roomArray[newX2][newY2].isSolid())
+                range = 1;
+            else if (!this.game.rooms[this.wielder.levelID].tileInside(newX3, newY3) ||
+                this.game.rooms[this.wielder.levelID].roomArray[newX3][newY3].isSolid())
+                range = 2;
+            let enemyHitCandidates = [];
+            let firstPushable = 4;
+            let firstNonPushable = 5;
+            let firstNonDestroyable = 5;
+            for (let e of this.game.rooms[this.wielder.levelID].entities) {
+                if (e.pushable) {
+                    if (e.pointIn(newX, newY))
+                        return true;
+                    if (e.pointIn(newX2, newY2) && range >= 2) {
+                        enemyHitCandidates.push({ enemy: e, dist: 2 });
+                        firstPushable = 2;
+                    }
+                    if (e.pointIn(newX3, newY3) && range >= 3) {
+                        enemyHitCandidates.push({ enemy: e, dist: 3 });
+                        firstPushable = Math.min(firstPushable, 3);
+                    }
+                }
+                else if (e.destroyable) {
+                    if (e.pointIn(newX, newY) && range >= 1) {
+                        firstNonPushable = 1;
+                        enemyHitCandidates.push({ enemy: e, dist: 1 });
+                    }
+                    if (e.pointIn(newX2, newY2) && range >= 2) {
+                        firstNonPushable = Math.min(firstNonPushable, 2);
+                        enemyHitCandidates.push({ enemy: e, dist: 2 });
+                    }
+                    if (e.pointIn(newX3, newY3) && range >= 3) {
+                        firstNonPushable = Math.min(firstNonPushable, 3);
+                        enemyHitCandidates.push({ enemy: e, dist: 3 });
+                    }
+                }
+                else {
+                    if (e.pointIn(newX, newY) && range >= 1) {
+                        firstNonDestroyable = 1;
+                    }
+                    if (e.pointIn(newX2, newY2) && range >= 2) {
+                        firstNonDestroyable = Math.min(firstNonDestroyable, 2);
+                    }
+                    if (e.pointIn(newX3, newY3) && range >= 3) {
+                        firstNonDestroyable = Math.min(firstNonDestroyable, 3);
+                    }
+                }
+            }
+            let targetX = newX3;
+            let targetY = newY3;
+            if (firstNonDestroyable < firstNonPushable &&
+                firstNonDestroyable < firstPushable) {
+                return true;
+            }
+            if (firstNonPushable <= firstPushable) {
+                for (const c of enemyHitCandidates) {
+                    let e = c.enemy;
+                    let d = c.dist;
+                    if (d === 3)
+                        e.hurt(this.wielder, 0.5);
+                    else
+                        e.hurt(this.wielder, 1);
+                }
+                this.hitSound();
+                this.wielder.setHitXY(newX, newY);
+                genericParticle_1.GenericParticle.shotgun(this.game.rooms[this.wielder.levelID], this.wielder.x + 0.5, this.wielder.y, targetX + 0.5, targetY, "black");
+                genericParticle_1.GenericParticle.shotgun(this.game.rooms[this.wielder.levelID], this.wielder.x + 0.5, this.wielder.y, targetX + 0.5, targetY, "#ffddff");
+                let gp = new genericParticle_1.GenericParticle(this.game.rooms[this.wielder.levelID], 0.5 * (newX + this.wielder.x) + 0.5, 0.5 * (newY + this.wielder.y), 0, 1, 0, 0, 0, "white", 0);
+                gp.expirationTimer = 10;
+                this.game.rooms[this.wielder.levelID].particles.push(gp);
+                this.game.rooms[this.wielder.levelID].tick(this.wielder);
+                this.shakeScreen(newX, newY);
+                this.degrade();
+                return false;
+            }
+            return true;
+        };
+        this.tileX = 26;
+        this.tileY = 0;
+        this.name = "shotgun";
+    }
+}
+exports.Shotgun = Shotgun;
+Shotgun.itemName = "shotgun";
+
+
+/***/ }),
+
+/***/ "./src/item/weapon/spear.ts":
+/*!**********************************!*\
+  !*** ./src/item/weapon/spear.ts ***!
+  \**********************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Spear = void 0;
+const weapon_1 = __webpack_require__(/*! ./weapon */ "./src/item/weapon/weapon.ts");
+class Spear extends weapon_1.Weapon {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.weaponMove = (newX, newY) => {
+            let newX2 = 2 * newX - this.wielder.x;
+            let newY2 = 2 * newY - this.wielder.y;
+            let flag = false;
+            let enemyHitCandidates = [];
+            // Check first tile
+            if (this.checkForPushables(newX, newY))
+                return true;
+            const hitFirstTile = this.hitEntitiesAt(newX, newY);
+            if (hitFirstTile)
+                flag = true;
+            // Check second tile for enemies only (not pushables)
+            if (!this.game.rooms[this.wielder.levelID].roomArray[newX][newY].isSolid()) {
+                const entitiesAtSecondTile = this.getEntitiesAt(newX2, newY2).filter((e) => !e.pushable);
+                enemyHitCandidates = entitiesAtSecondTile;
+            }
+            if (!flag && enemyHitCandidates.length > 0) {
+                for (const e of enemyHitCandidates) {
+                    this.attack(e);
+                }
+                this.hitSound();
+                this.attackAnimation(newX2, newY2);
+                this.game.rooms[this.wielder.levelID].tick(this.wielder);
+                this.shakeScreen(newX2, newY2);
+                this.degrade();
+                return false;
+            }
+            if (flag) {
+                this.hitSound();
+                this.attackAnimation(newX, newY);
+                this.game.rooms[this.wielder.levelID].tick(this.wielder);
+                this.shakeScreen(newX, newY);
+                this.degrade();
+            }
+            return !flag;
+        };
+        this.tileX = 24;
+        this.tileY = 0;
+        this.name = "spear";
+        this.description =
+            "Hits enemies in front of you within a range of 2 tiles.";
+        this.iconOffset = 0.1; //default 0
+        this.offsetY = 0; //default -0.25
+        this.useCost = 1;
+    }
+}
+exports.Spear = Spear;
+Spear.itemName = "spear";
+
+
+/***/ }),
+
+/***/ "./src/item/weapon/spellbook.ts":
+/*!**************************************!*\
+  !*** ./src/item/weapon/spellbook.ts ***!
+  \**************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Spellbook = void 0;
+const weapon_1 = __webpack_require__(/*! ./weapon */ "./src/item/weapon/weapon.ts");
+const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
+const playerFireball_1 = __webpack_require__(/*! ../../projectile/playerFireball */ "./src/projectile/playerFireball.ts");
+const utils_1 = __webpack_require__(/*! ../../utility/utils */ "./src/utility/utils.ts");
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const spellbookPage_1 = __webpack_require__(/*! ../usable/spellbookPage */ "./src/item/usable/spellbookPage.ts");
+class Spellbook extends weapon_1.Weapon {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.getTargets = () => {
+            this.targets = [];
+            let entities = this.game.rooms[this.wielder.levelID].entities;
+            this.targets = entities.filter((e) => !e.pushable &&
+                utils_1.Utils.distance(this.wielder.x, this.wielder.y, e.x, e.y) <= this.range);
+            let enemies = this.targets.filter((e) => e.isEnemy === true);
+            //console.log(enemies);
+            if (enemies.length > 0)
+                return enemies;
+            else {
+                //console.log(this.targets);
+                return this.targets;
+            }
+        };
+        this.disassemble = () => {
+            if (this.equipped) {
+                this.game.pushMessage("I should probably unequip this before I try to disassemble it...");
+                return;
+            }
+            this.game.pushMessage(`You tear the remaining pages out of your spellbook.`);
+            let inventory = this.wielder.inventory;
+            let inventoryX = this.x;
+            let inventoryY = this.y;
+            let numFragments = Math.floor(this.durability);
+            this.toggleEquip();
+            //inventory.weapon = null;
+            inventory.removeItem(this);
+            inventory.addItem(new spellbookPage_1.SpellbookPage(this.level, inventoryX, inventoryY, numFragments));
+        };
+        this.weaponMove = (newX, newY) => {
+            this.getTargets();
+            let direction = this.wielder.direction;
+            let flag = false;
+            let targets = this.targets;
+            const isTargetInDirection = (e) => {
+                switch (direction) {
+                    case game_1.Direction.UP:
+                        return e.y <= newY;
+                    case game_1.Direction.RIGHT:
+                        return e.x >= newX;
+                    case game_1.Direction.DOWN:
+                        return e.y >= newY;
+                    case game_1.Direction.LEFT:
+                        return e.x <= newX;
+                    default:
+                        return false;
+                }
+            };
+            if (targets.length > 0) {
+                this.isTargeting = true;
+            }
+            else {
+                this.isTargeting = false;
+            }
+            targets = targets.filter(isTargetInDirection);
+            for (let e of targets) {
+                if (!this.game.rooms[this.wielder.levelID].roomArray[e.x][e.y].isSolid()) {
+                    e.hurt(this.wielder, 1);
+                    this.game.rooms[this.wielder.levelID].projectiles.push(new playerFireball_1.PlayerFireball(this.wielder, e.x, e.y));
+                    flag = true;
+                }
+            }
+            if (flag) {
+                this.hitSound();
+                this.wielder.setHitXY(newX, newY);
+                this.game.rooms[this.wielder.levelID].tick(this.wielder);
+                this.shakeScreen(newX, newY);
+                sound_1.Sound.playMagic();
+                this.degrade();
+                setTimeout(() => {
+                    this.isTargeting = false;
+                }, 100);
+            }
+            return !flag;
+        };
+        this.range = 4;
+        this.tileX = 25;
+        this.tileY = 0;
+        this.canMine = true;
+        this.name = Spellbook.itemName;
+        this.isTargeting = false;
+        this.durability = 5;
+        this.durabilityMax = 10;
+        this.description = "Hits multiple enemies within a range of 4 tiles.";
+    }
+}
+exports.Spellbook = Spellbook;
+Spellbook.itemName = "spellbook";
+
+
+/***/ }),
+
+/***/ "./src/item/weapon/warhammer.ts":
+/*!**************************************!*\
+  !*** ./src/item/weapon/warhammer.ts ***!
+  \**************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Warhammer = void 0;
+const weapon_1 = __webpack_require__(/*! ./weapon */ "./src/item/weapon/weapon.ts");
+const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+class Warhammer extends weapon_1.Weapon {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.hitSound = () => {
+            sound_1.Sound.hit();
+            sound_1.Sound.playWarHammer();
+        };
+        this.weaponMove = (newX, newY) => {
+            if (this.checkForPushables(newX, newY))
+                return true;
+            const hitSomething = this.executeAttack(newX, newY);
+            return !hitSomething;
+        };
+        this.shakeScreen = () => {
+            this.wielder.beginSlowMotion();
+            setTimeout(() => {
+                this.wielder.endSlowMotion();
+                switch (this.wielder.direction) {
+                    case game_1.Direction.DOWN:
+                        this.game.shakeScreen(0, -30, false);
+                        break;
+                    case game_1.Direction.UP:
+                        this.game.shakeScreen(0, -30, false);
+                        break;
+                    case game_1.Direction.LEFT:
+                        this.game.shakeScreen(-5, -30, false);
+                        break;
+                    case game_1.Direction.RIGHT:
+                        this.game.shakeScreen(5, -30, false);
+                        break;
+                }
+            }, this.hitDelay);
+        };
+        this.tileX = 22;
+        this.tileY = 2;
+        this.damage = 2;
+        this.name = "warhammer";
+        this.hitDelay = 225;
+        this.useCost = 2;
+    }
+}
+exports.Warhammer = Warhammer;
+Warhammer.itemName = "warhammer";
+
+
+/***/ }),
+
+/***/ "./src/item/weapon/weapon.ts":
+/*!***********************************!*\
+  !*** ./src/item/weapon/weapon.ts ***!
+  \***********************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Weapon = void 0;
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const equippable_1 = __webpack_require__(/*! ../equippable */ "./src/item/equippable.ts");
+const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
+const gameConstants_1 = __webpack_require__(/*! ../../game/gameConstants */ "./src/game/gameConstants.ts");
+const weaponFragments_1 = __webpack_require__(/*! ../usable/weaponFragments */ "./src/item/usable/weaponFragments.ts");
+const attackAnimation_1 = __webpack_require__(/*! ../../particle/attackAnimation */ "./src/particle/attackAnimation.ts");
+class Weapon extends equippable_1.Equippable {
+    constructor(level, x, y, status) {
+        super(level, x, y);
+        this.break = () => {
+            this.durability = 0;
+            this.wielder.inventory.weapon = null;
+            this.toggleEquip();
+            //this.wielder.inventory.removeItem(this);
+            //this.wielder = null;
+            this.game.pushMessage("Your weapon breaks");
+            if (this.status.poison || this.status.blood) {
+                this.clearStatus();
+            }
+            this.broken = true;
+        };
+        this.coEquippable = (other) => {
+            if (other instanceof Weapon)
+                return false;
+            return true;
+        };
+        this.applyStatus = (status) => {
+            this.status = status;
+            if (this.status.blood) {
+                //this.damage = Math.max(0.5, this.damage - 0.5);
+            }
+        };
+        this.clearStatus = () => {
+            const status = this.status.poison ? "poison" : "bleed";
+            this.game.pushMessage(`Your ${this.name}'s ${status} effect dries up`);
+            this.status = { poison: false, blood: false };
+            this.statusApplicationCount = 0;
+        };
+        this.statusEffect = (entity) => {
+            if (!entity.isEnemy)
+                return;
+            const enemy = entity;
+            if (!enemy.status.poison.active && !enemy.status.bleed.active) {
+                if (this.wielder.applyStatus(enemy, this.status)) {
+                    this.statusApplicationCount++;
+                    const message = this.status.poison
+                        ? `Your weapon poisons the ${enemy.name}`
+                        : `Your cursed weapon draws blood from the ${enemy.name}`;
+                    this.game.pushMessage(message);
+                    //if (this.statusApplicationCount >= 10) this.clearStatus();
+                }
+            }
+        };
+        this.disassemble = () => {
+            if (this.equipped) {
+                this.game.pushMessage("I should probably unequip this before I try to disassemble it...");
+                return;
+            }
+            this.game.pushMessage(`You dissassemble your ${this.name} into fragments.`);
+            let inventory = this.wielder.inventory;
+            let inventoryX = this.x;
+            let inventoryY = this.y;
+            let numFragments = Math.floor(this.durability / 1.5);
+            this.toggleEquip();
+            //inventory.weapon = null;
+            inventory.removeItem(this);
+            inventory.addItem(new weaponFragments_1.WeaponFragments(this.level, inventoryX, inventoryY, numFragments));
+        };
+        this.dropFromInventory = () => {
+            if (this.wielder.inventory.weapon === this)
+                this.wielder.inventory.weapon = null;
+            this.wielder = null;
+            this.equipped = false;
+        };
+        this.weaponMove = (newX, newY) => {
+            if (this.checkForPushables(newX, newY))
+                return true;
+            const hitSomething = this.executeAttack(newX, newY);
+            return !hitSomething;
+        };
+        this.attack = (enemy) => {
+            enemy.hurt(this.wielder, this.damage);
+            this.statusEffect(enemy);
+        };
+        this.attackAnimation = (newX, newY) => {
+            this.wielder.setHitXY(newX, newY);
+            this.game.rooms[this.wielder.levelID].particles.push(new attackAnimation_1.AttackAnimation(newX, newY, this.name, this.wielder.direction));
+        };
+        this.shakeScreen = (eX, eY) => {
+            if (this.wielder.game.rooms[this.wielder.levelID] === this.wielder.game.room)
+                this.wielder.shakeScreen(this.wielder.x, this.wielder.y, eX, eY);
+        };
+        this.hitSound = () => {
+            sound_1.Sound.hit();
+        };
+        this.drawStatus = (x, y) => {
+            if (this.status.poison || this.status.blood) {
+                let tileX = 3;
+                if (this.status.poison) {
+                    tileX = 4;
+                }
+                if (this.status.blood) {
+                    tileX = 3;
+                }
+                game_1.Game.drawFX(tileX, 0, 1, 1, x - 1 / gameConstants_1.GameConstants.TILESIZE, y - 1 / gameConstants_1.GameConstants.TILESIZE, 1, 1);
+            }
+        };
+        this.getDescription = () => {
+            let broken = this.broken ? " (broken)" : "";
+            let status = [];
+            let durability = "";
+            if (this.status.poison)
+                status.push("Poison");
+            if (this.status.blood)
+                status.push(" Bleed");
+            if (this.durability < this.durabilityMax)
+                durability = ` Durability: ${this.durability}/${this.durabilityMax}`;
+            return `${this.name}${broken}\n${status.join(", ")}\n${durability}\n${this.description}\ndamage: ${this.damage}`;
+        };
+        this.tick = () => { };
+        this.applyHitDelay = (hitSomething) => {
+            if (hitSomething) {
+                this.wielder.busyAnimating = true;
+                setTimeout(() => {
+                    this.wielder.busyAnimating = false;
+                }, this.hitDelay || 0);
+            }
+        };
+        if (level)
+            this.game = level.game;
+        this.canMine = false;
+        this.range = 1;
+        this.damage = 1;
+        this.status = status || { poison: false, blood: false };
+        this.durability = 50;
+        this.durabilityMax = 50;
+        this.statusApplicationCount = 0;
+        this.equipTick = true;
+        this.name = this.constructor.prototype.itemName;
+    }
+    // returns true if nothing was hit, false if the player should move
+    getEntitiesAt(x, y) {
+        return this.game.rooms[this.wielder.levelID].entities.filter((e) => e.destroyable && e.pointIn(x, y));
+    }
+    hitEntitiesAt(x, y) {
+        const entities = this.getEntitiesAt(x, y).filter((e) => !e.pushable);
+        let hitSomething = false;
+        for (const entity of entities) {
+            this.attack(entity);
+            hitSomething = true;
+        }
+        return hitSomething;
+    }
+    checkForPushables(x, y) {
+        const pushables = this.getEntitiesAt(x, y).filter((e) => e.pushable);
+        return pushables.length > 0;
+    }
+    executeAttack(targetX, targetY, animationName) {
+        const hitSomething = this.hitEntitiesAt(targetX, targetY);
+        this.applyHitDelay(hitSomething);
+        if (hitSomething) {
+            this.hitSound();
+            this.wielder.setHitXY(targetX, targetY);
+            this.attackAnimation(targetX, targetY);
+            this.game.rooms[this.wielder.levelID].tick(this.wielder);
+            this.shakeScreen(targetX, targetY);
+            this.degrade();
+        }
+        return hitSomething;
+    }
+}
+exports.Weapon = Weapon;
+Weapon.itemName = "weapon";
+
+
+/***/ }),
+
+/***/ "./src/level/environment.ts":
+/*!**********************************!*\
+  !*** ./src/level/environment.ts ***!
+  \**********************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Environment = exports.EnvType = void 0;
+var EnvType;
+(function (EnvType) {
+    EnvType[EnvType["DUNGEON"] = 0] = "DUNGEON";
+    EnvType[EnvType["CAVE"] = 1] = "CAVE";
+    EnvType[EnvType["FOREST"] = 2] = "FOREST";
+    EnvType[EnvType["SWAMP"] = 3] = "SWAMP";
+    EnvType[EnvType["GLACIER"] = 4] = "GLACIER";
+    EnvType[EnvType["CASTLE"] = 5] = "CASTLE";
+})(EnvType = exports.EnvType || (exports.EnvType = {}));
+class Environment {
+    constructor(type) {
+        this.type = type;
+        this.skin = this.type;
+    }
+}
+exports.Environment = Environment;
+
+
+/***/ }),
+
+/***/ "./src/level/level.ts":
+/*!****************************!*\
+  !*** ./src/level/level.ts ***!
+  \****************************/
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Level = exports.enemyMinimumDepth = void 0;
-const room_1 = __webpack_require__(/*! ./room/room */ "./src/room/room.ts");
-const environment_1 = __webpack_require__(/*! ./environment */ "./src/environment.ts");
+const room_1 = __webpack_require__(/*! ../room/room */ "./src/room/room.ts");
+const environment_1 = __webpack_require__(/*! ./environment */ "./src/level/environment.ts");
 exports.enemyMinimumDepth = {
     1: 0,
     2: 1,
@@ -14478,10 +15332,10 @@ exports.Level = Level;
 
 /***/ }),
 
-/***/ "./src/levelConstants.ts":
-/*!*******************************!*\
-  !*** ./src/levelConstants.ts ***!
-  \*******************************/
+/***/ "./src/level/levelConstants.ts":
+/*!*************************************!*\
+  !*** ./src/level/levelConstants.ts ***!
+  \*************************************/
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -14512,22 +15366,22 @@ LevelConstants.TORCH_LIGHT_COLOR = [120, 35, 10];
 
 /***/ }),
 
-/***/ "./src/levelGenerator.ts":
-/*!*******************************!*\
-  !*** ./src/levelGenerator.ts ***!
-  \*******************************/
+/***/ "./src/level/levelGenerator.ts":
+/*!*************************************!*\
+  !*** ./src/level/levelGenerator.ts ***!
+  \*************************************/
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.LevelGenerator = exports.PartialLevel = void 0;
-const game_1 = __webpack_require__(/*! ./game */ "./src/game.ts");
-const room_1 = __webpack_require__(/*! ./room/room */ "./src/room/room.ts");
-const random_1 = __webpack_require__(/*! ./random */ "./src/random.ts");
-const downLadder_1 = __webpack_require__(/*! ./tile/downLadder */ "./src/tile/downLadder.ts");
-const levelParametersGenerator_1 = __webpack_require__(/*! ./levelParametersGenerator */ "./src/levelParametersGenerator.ts");
-const level_1 = __webpack_require__(/*! ./level */ "./src/level.ts");
-const gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/gameConstants.ts");
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const room_1 = __webpack_require__(/*! ../room/room */ "./src/room/room.ts");
+const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
+const downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/downLadder.ts");
+const levelParametersGenerator_1 = __webpack_require__(/*! ./levelParametersGenerator */ "./src/level/levelParametersGenerator.ts");
+const level_1 = __webpack_require__(/*! ./level */ "./src/level/level.ts");
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
 // animation delays in ms
 let ANIMATION_PARTITION_SPLIT_DELAY = 0; // for partition splitting
 let ANIMATION_PATHFINDING_DELAY = 0; // for pathfinding
@@ -15403,32 +16257,32 @@ LevelGenerator.ANIMATION_CONSTANT = 1;
 
 /***/ }),
 
-/***/ "./src/levelParametersGenerator.ts":
-/*!*****************************************!*\
-  !*** ./src/levelParametersGenerator.ts ***!
-  \*****************************************/
+/***/ "./src/level/levelParametersGenerator.ts":
+/*!***********************************************!*\
+  !*** ./src/level/levelParametersGenerator.ts ***!
+  \***********************************************/
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.LevelParameterGenerator = exports.enemyClasses = void 0;
-const crabEnemy_1 = __webpack_require__(/*! ./entity/enemy/crabEnemy */ "./src/entity/enemy/crabEnemy.ts");
-const frogEnemy_1 = __webpack_require__(/*! ./entity/enemy/frogEnemy */ "./src/entity/enemy/frogEnemy.ts");
-const zombieEnemy_1 = __webpack_require__(/*! ./entity/enemy/zombieEnemy */ "./src/entity/enemy/zombieEnemy.ts");
-const skullEnemy_1 = __webpack_require__(/*! ./entity/enemy/skullEnemy */ "./src/entity/enemy/skullEnemy.ts");
-const energyWizard_1 = __webpack_require__(/*! ./entity/enemy/energyWizard */ "./src/entity/enemy/energyWizard.ts");
-const chargeEnemy_1 = __webpack_require__(/*! ./entity/enemy/chargeEnemy */ "./src/entity/enemy/chargeEnemy.ts");
-const bishopEnemy_1 = __webpack_require__(/*! ./entity/enemy/bishopEnemy */ "./src/entity/enemy/bishopEnemy.ts");
-const armoredzombieEnemy_1 = __webpack_require__(/*! ./entity/enemy/armoredzombieEnemy */ "./src/entity/enemy/armoredzombieEnemy.ts");
-const bigSkullEnemy_1 = __webpack_require__(/*! ./entity/enemy/bigSkullEnemy */ "./src/entity/enemy/bigSkullEnemy.ts");
-const queenEnemy_1 = __webpack_require__(/*! ./entity/enemy/queenEnemy */ "./src/entity/enemy/queenEnemy.ts");
-const knightEnemy_1 = __webpack_require__(/*! ./entity/enemy/knightEnemy */ "./src/entity/enemy/knightEnemy.ts");
-const bigKnightEnemy_1 = __webpack_require__(/*! ./entity/enemy/bigKnightEnemy */ "./src/entity/enemy/bigKnightEnemy.ts");
-const fireWizard_1 = __webpack_require__(/*! ./entity/enemy/fireWizard */ "./src/entity/enemy/fireWizard.ts");
-const rookEnemy_1 = __webpack_require__(/*! ./entity/enemy/rookEnemy */ "./src/entity/enemy/rookEnemy.ts");
-const armoredSkullEnemy_1 = __webpack_require__(/*! ./entity/enemy/armoredSkullEnemy */ "./src/entity/enemy/armoredSkullEnemy.ts");
-const mummyEnemy_1 = __webpack_require__(/*! ./entity/enemy/mummyEnemy */ "./src/entity/enemy/mummyEnemy.ts");
-const spiderEnemy_1 = __webpack_require__(/*! ./entity/enemy/spiderEnemy */ "./src/entity/enemy/spiderEnemy.ts");
+const crabEnemy_1 = __webpack_require__(/*! ../entity/enemy/crabEnemy */ "./src/entity/enemy/crabEnemy.ts");
+const frogEnemy_1 = __webpack_require__(/*! ../entity/enemy/frogEnemy */ "./src/entity/enemy/frogEnemy.ts");
+const zombieEnemy_1 = __webpack_require__(/*! ../entity/enemy/zombieEnemy */ "./src/entity/enemy/zombieEnemy.ts");
+const skullEnemy_1 = __webpack_require__(/*! ../entity/enemy/skullEnemy */ "./src/entity/enemy/skullEnemy.ts");
+const energyWizard_1 = __webpack_require__(/*! ../entity/enemy/energyWizard */ "./src/entity/enemy/energyWizard.ts");
+const chargeEnemy_1 = __webpack_require__(/*! ../entity/enemy/chargeEnemy */ "./src/entity/enemy/chargeEnemy.ts");
+const bishopEnemy_1 = __webpack_require__(/*! ../entity/enemy/bishopEnemy */ "./src/entity/enemy/bishopEnemy.ts");
+const armoredzombieEnemy_1 = __webpack_require__(/*! ../entity/enemy/armoredzombieEnemy */ "./src/entity/enemy/armoredzombieEnemy.ts");
+const bigSkullEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigSkullEnemy */ "./src/entity/enemy/bigSkullEnemy.ts");
+const queenEnemy_1 = __webpack_require__(/*! ../entity/enemy/queenEnemy */ "./src/entity/enemy/queenEnemy.ts");
+const knightEnemy_1 = __webpack_require__(/*! ../entity/enemy/knightEnemy */ "./src/entity/enemy/knightEnemy.ts");
+const bigKnightEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigKnightEnemy */ "./src/entity/enemy/bigKnightEnemy.ts");
+const fireWizard_1 = __webpack_require__(/*! ../entity/enemy/fireWizard */ "./src/entity/enemy/fireWizard.ts");
+const rookEnemy_1 = __webpack_require__(/*! ../entity/enemy/rookEnemy */ "./src/entity/enemy/rookEnemy.ts");
+const armoredSkullEnemy_1 = __webpack_require__(/*! ../entity/enemy/armoredSkullEnemy */ "./src/entity/enemy/armoredSkullEnemy.ts");
+const mummyEnemy_1 = __webpack_require__(/*! ../entity/enemy/mummyEnemy */ "./src/entity/enemy/mummyEnemy.ts");
+const spiderEnemy_1 = __webpack_require__(/*! ../entity/enemy/spiderEnemy */ "./src/entity/enemy/spiderEnemy.ts");
 exports.enemyClasses = {
     1: crabEnemy_1.CrabEnemy,
     2: frogEnemy_1.FrogEnemy,
@@ -15474,10 +16328,10 @@ exports.LevelParameterGenerator = LevelParameterGenerator;
 
 /***/ }),
 
-/***/ "./src/lightSource.ts":
-/*!****************************!*\
-  !*** ./src/lightSource.ts ***!
-  \****************************/
+/***/ "./src/lighting/lightSource.ts":
+/*!*************************************!*\
+  !*** ./src/lighting/lightSource.ts ***!
+  \*************************************/
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -15520,16 +16374,16 @@ exports.LightSource = LightSource;
 
 /***/ }),
 
-/***/ "./src/lighting.ts":
-/*!*************************!*\
-  !*** ./src/lighting.ts ***!
-  \*************************/
+/***/ "./src/lighting/lighting.ts":
+/*!**********************************!*\
+  !*** ./src/lighting/lighting.ts ***!
+  \**********************************/
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Lighting = void 0;
-const lightSource_1 = __webpack_require__(/*! ./lightSource */ "./src/lightSource.ts");
+const lightSource_1 = __webpack_require__(/*! ./lightSource */ "./src/lighting/lightSource.ts");
 class Lighting {
 }
 exports.Lighting = Lighting;
@@ -15551,516 +16405,6 @@ Lighting.addLightSource = (room, lightSource) => {
 Lighting.removeLightSource = (room, lightSource) => {
     room.lightSources = room.lightSources.filter((ls) => ls !== lightSource);
 };
-
-
-/***/ }),
-
-/***/ "./src/map.ts":
-/*!********************!*\
-  !*** ./src/map.ts ***!
-  \********************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Map = void 0;
-const game_1 = __webpack_require__(/*! ./game */ "./src/game.ts");
-const gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/gameConstants.ts");
-const room_1 = __webpack_require__(/*! ./room/room */ "./src/room/room.ts");
-const entity_1 = __webpack_require__(/*! ./entity/entity */ "./src/entity/entity.ts");
-class Map {
-    constructor(game, player) {
-        this.mapData = [];
-        this.oldMapData = [];
-        this.offsetX = 0;
-        this.offsetY = 0;
-        this.softOffsetX = 0;
-        this.softOffsetY = 0;
-        this.saveMapData = () => {
-            this.clearMap();
-            for (const room of this.game.levels[this.player.depth].rooms) {
-                if (this.game.room.mapGroup === room.mapGroup &&
-                    (room.entered === true || gameConstants_1.GameConstants.DEVELOPER_MODE)) {
-                    this.mapData.push({
-                        room: room,
-                        walls: room.innerWalls,
-                        doors: room.doors,
-                        entities: room.entities,
-                        items: room.items,
-                        players: this.game.players,
-                    });
-                }
-            }
-            const enteredRooms = this.mapData
-                .map((data) => data.room)
-                .filter((room) => room.entered);
-            if (enteredRooms.length > 0) {
-                const sortedByX = [...enteredRooms].sort((a, b) => a.roomX - b.roomX);
-                const sortedByY = [...enteredRooms].sort((a, b) => a.roomY - b.roomY);
-                const maxX = sortedByX[sortedByX.length - 1].roomX;
-                const minY = sortedByY[0].roomY;
-                this.offsetX = maxX;
-                this.offsetY = minY;
-            }
-            else {
-                this.offsetX = 0;
-                this.offsetY = 0;
-            }
-        };
-        this.clearMap = () => {
-            this.mapData = [];
-        };
-        this.saveOldMap = () => {
-            this.oldMapData = [...this.mapData];
-        };
-        this.renderMap = (delta) => {
-            game_1.Game.ctx.save(); // Save the current canvas state
-            this.setInitialCanvasSettings(1);
-            this.translateCanvas(0);
-            for (const data of this.mapData) {
-                this.drawRoom(data, delta);
-            }
-            /*for (const data of this.oldMapData) {
-              this.drawRoom(data);
-            }*/
-            this.resetCanvasTransform();
-            game_1.Game.ctx.restore(); // Restore the canvas state
-        };
-        this.updateOffsetXY = () => {
-            let diffX = this.offsetX - this.softOffsetX;
-            let diffY = this.offsetY - this.softOffsetY;
-            if (Math.abs(diffX) > 0.01) {
-                this.softOffsetX += diffX * 0.1;
-                this.softOffsetX = this.softOffsetX;
-            }
-            else
-                this.softOffsetX = this.offsetX;
-            if (Math.abs(diffY) > 0.01) {
-                this.softOffsetY += diffY * 0.1;
-                this.softOffsetY = this.softOffsetY;
-            }
-            else
-                this.softOffsetY = this.offsetY;
-        };
-        this.draw = (delta) => {
-            this.updateOffsetXY();
-            this.renderMap(delta);
-        };
-        this.setInitialCanvasSettings = (alpha) => {
-            game_1.Game.ctx.globalAlpha = alpha;
-            game_1.Game.ctx.globalCompositeOperation = "source-over";
-        };
-        this.translateCanvas = (offset) => {
-            game_1.Game.ctx.translate(Math.floor(0.95 * gameConstants_1.GameConstants.WIDTH) -
-                //this.game.room.roomX -
-                //Math.floor(0.5 * this.game.room.width) +
-                15 * this.scale -
-                Math.floor(this.softOffsetX), Math.floor(0.05 * gameConstants_1.GameConstants.HEIGHT) -
-                //this.game.room.roomY -
-                //Math.floor(0.5 * this.game.room.height) -
-                1 * this.scale -
-                offset -
-                Math.floor(this.softOffsetY));
-        };
-        this.drawRoom = (data, delta) => {
-            //this.drawUnderRoomPlayers(data.players, delta);
-            this.drawRoomOutline(data.room);
-            this.drawRoomWalls(data.walls);
-            this.drawRoomDoors(data.doors);
-            this.drawRoomEntities(data.entities);
-            this.drawRoomItems(data.items);
-            this.drawRoomPlayers(data.players, delta);
-        };
-        this.drawRoomOutline = (level) => {
-            const s = this.scale;
-            game_1.Game.ctx.fillStyle = "#5A5A5A";
-            game_1.Game.ctx.fillRect(level.roomX * s + 0, level.roomY * s + 0, level.width * s - 0, level.height * s - 0);
-            if (level.type === room_1.RoomType.UPLADDER)
-                game_1.Game.ctx.fillStyle = "#101460";
-            if (level.type === room_1.RoomType.DOWNLADDER)
-                game_1.Game.ctx.fillStyle = "#601410";
-            game_1.Game.ctx.fillStyle = "black";
-            game_1.Game.ctx.fillRect(level.roomX * s + 1, level.roomY * s + 1, level.width * s - 2, level.height * s - 2);
-        };
-        this.drawRoomWalls = (walls) => {
-            const s = this.scale;
-            game_1.Game.ctx.save(); // Save the current canvas state
-            for (const wall of walls) {
-                game_1.Game.ctx.fillStyle = "#404040";
-                game_1.Game.ctx.fillRect(wall.x * s, wall.y * s, 1 * s, 1 * s);
-            }
-            game_1.Game.ctx.restore(); // Restore the canvas state
-        };
-        this.drawRoomDoors = (doors) => {
-            const s = this.scale;
-            game_1.Game.ctx.save(); // Save the current canvas state
-            for (const door of doors) {
-                if (door.opened === false)
-                    game_1.Game.ctx.fillStyle = "#5A5A5A";
-                if (door.opened === true) {
-                    game_1.Game.ctx.fillStyle = "black";
-                    game_1.Game.ctx.fillRect(door.x * s, door.y * s, 1 * s, 1 * s);
-                }
-                game_1.Game.ctx.fillStyle = "#5A5A5A"; // Reset to default after each door
-            }
-            game_1.Game.ctx.restore(); // Restore the canvas state
-        };
-        this.drawRoomPlayers = (players, delta) => {
-            const s = this.scale;
-            game_1.Game.ctx.save(); // Save the current canvas state
-            for (const i in players) {
-                game_1.Game.ctx.fillStyle = "white";
-                if (this.game.levels[players[i].depth].rooms[players[i].levelID]
-                    .mapGroup === this.game.room.mapGroup) {
-                    game_1.Game.ctx.fillRect(players[i].x * s, players[i].y * s, 1 * s, 1 * s);
-                }
-            }
-            game_1.Game.ctx.restore(); // Restore the canvas state
-        };
-        this.drawUnderRoomPlayers = (players, delta) => {
-            const s = this.scale;
-            game_1.Game.ctx.save(); // Save the current canvas state
-            for (const i in players) {
-                this.game.rooms[players[i].levelID].mapGroup === this.game.room.mapGroup;
-                {
-                    if (Math.floor(Date.now() / 300) % 2) {
-                        game_1.Game.ctx.fillStyle = "#4D8C8C";
-                        // Draw 3x3 outline box around player
-                        game_1.Game.ctx.fillRect((players[i].x - 1) * s, (players[i].y - 1) * s, 1 * s, 1 * s); // Top left
-                        game_1.Game.ctx.fillRect(players[i].x * s, (players[i].y - 1) * s, 1 * s, 1 * s); // Top middle
-                        game_1.Game.ctx.fillRect((players[i].x + 1) * s, (players[i].y - 1) * s, 1 * s, 1 * s); // Top right
-                        game_1.Game.ctx.fillRect((players[i].x - 1) * s, players[i].y * s, 1 * s, 1 * s); // Middle left
-                        game_1.Game.ctx.fillRect((players[i].x + 1) * s, players[i].y * s, 1 * s, 1 * s); // Middle right
-                        game_1.Game.ctx.fillRect((players[i].x - 1) * s, (players[i].y + 1) * s, 1 * s, 1 * s); // Bottom left
-                        game_1.Game.ctx.fillRect(players[i].x * s, (players[i].y + 1) * s, 1 * s, 1 * s); // Bottom middle
-                        game_1.Game.ctx.fillRect((players[i].x + 1) * s, (players[i].y + 1) * s, 1 * s, 1 * s); // Bottom right
-                    }
-                }
-            }
-            game_1.Game.ctx.restore(); // Restore the canvas state
-        };
-        this.drawRoomEntities = (entities) => {
-            const s = this.scale;
-            game_1.Game.ctx.save(); // Save the current canvas state
-            for (const enemy of entities) {
-                this.setEntityColor(enemy);
-                game_1.Game.ctx.fillRect(enemy.x * s, enemy.y * s, 1 * s, 1 * s);
-            }
-            game_1.Game.ctx.restore(); // Restore the canvas state
-        };
-        this.setEntityColor = (enemy) => {
-            // No need to save/restore here as only fillStyle is being set
-            if (enemy.type === entity_1.EntityType.ENEMY) {
-                game_1.Game.ctx.fillStyle = "yellow";
-            }
-            if (enemy.type === entity_1.EntityType.PROP) {
-                game_1.Game.ctx.fillStyle = "#847e87";
-            }
-            if (enemy.type === entity_1.EntityType.RESOURCE) {
-                game_1.Game.ctx.fillStyle = "#5a595b";
-            }
-            if (enemy.type === entity_1.EntityType.FRIENDLY) {
-                game_1.Game.ctx.fillStyle = "cyan";
-            }
-        };
-        this.drawRoomItems = (items) => {
-            const s = this.scale;
-            game_1.Game.ctx.save(); // Save the current canvas state
-            for (const item of items) {
-                let x = item.x;
-                let y = item.y;
-                game_1.Game.ctx.fillStyle = "#ac3232";
-                if (!item.pickedUp) {
-                    game_1.Game.ctx.fillRect(item.x * s, item.y * s, 1 * s, 1 * s);
-                }
-            }
-            game_1.Game.ctx.restore(); // Restore the canvas state
-        };
-        this.resetCanvasTransform = () => {
-            game_1.Game.ctx.setTransform(1, 0, 0, 1, 0, 0);
-        };
-        this.game = game;
-        this.scale = 1;
-        this.player = player;
-        //this.depth = player.game.level.depth
-    }
-}
-exports.Map = Map;
-
-
-/***/ }),
-
-/***/ "./src/menu.ts":
-/*!*********************!*\
-  !*** ./src/menu.ts ***!
-  \*********************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Menu = void 0;
-const game_1 = __webpack_require__(/*! ./game */ "./src/game.ts");
-const guiButton_1 = __webpack_require__(/*! ./guiButton */ "./src/guiButton.ts");
-const input_1 = __webpack_require__(/*! ./input */ "./src/input.ts");
-const gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/gameConstants.ts");
-class Menu {
-    constructor() {
-        // Example action methods
-        this.startGame = () => {
-            console.log("Game Started");
-            this.close();
-            // Implement game start logic
-        };
-        this.exitGame = () => {
-            console.log("Exit Game");
-            // Implement exit game logic
-        };
-        this.openAudioSettings = () => {
-            console.log("Audio Settings Opened");
-            // Implement audio settings logic
-        };
-        this.openGraphicsSettings = () => {
-            console.log("Graphics Settings Opened");
-            // Implement graphics settings logic
-        };
-        this.openControlsSettings = () => {
-            console.log("Controls Settings Opened");
-            // Implement controls settings logic
-        };
-        this.buttons = [];
-        this.open = false;
-        this.selectedButton = 0;
-        this.subMenus = {};
-        this.currentSubMenu = null;
-        //this.initializeMainMenu();
-    }
-    initializeMainMenu() {
-        this.addButton(new guiButton_1.guiButton(0, 0, 200, 50, "Start Game", this.startGame));
-        this.addButton(new guiButton_1.guiButton(0, 60, 200, 50, "Settings", () => this.openSubMenu("Settings")));
-        this.addButton(new guiButton_1.guiButton(0, 120, 200, 50, "Exit", this.exitGame));
-        this.initializeSettingsMenu();
-        this.positionButtons();
-    }
-    initializeSettingsMenu() {
-        const settingsMenu = new Menu();
-        settingsMenu.addButton(new guiButton_1.guiButton(0, 0, 200, 50, "Audio", this.openAudioSettings));
-        settingsMenu.addButton(new guiButton_1.guiButton(0, 60, 200, 50, "Graphics", this.openGraphicsSettings));
-        settingsMenu.addButton(new guiButton_1.guiButton(0, 120, 200, 50, "Controls", this.openControlsSettings));
-        settingsMenu.addButton(new guiButton_1.guiButton(0, 180, 200, 50, "Back", () => this.closeSubMenu()));
-        settingsMenu.positionButtons();
-        this.subMenus["Settings"] = settingsMenu;
-    }
-    addButton(button) {
-        this.buttons.push(button);
-    }
-    drawMenu() {
-        if (!this.open && !this.currentSubMenu)
-            return;
-        game_1.Game.ctx.save();
-        game_1.Game.ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
-        game_1.Game.ctx.fillRect(0, 0, innerWidth, innerHeight);
-        const menuToDraw = this.currentSubMenu
-            ? this.subMenus[this.currentSubMenu]
-            : this;
-        menuToDraw.buttons.forEach((button) => {
-            this.drawButton(button, menuToDraw);
-        });
-        game_1.Game.ctx.restore();
-    }
-    drawButton(button, menu) {
-        game_1.Game.ctx.fillStyle =
-            menu.selectedButton === menu.buttons.indexOf(button)
-                ? "rgba(200, 200, 200, 1)"
-                : "rgba(255, 255, 255, 1)";
-        game_1.Game.ctx.fillRect(button.x, button.y, button.width, button.height);
-        game_1.Game.ctx.fillStyle = "rgba(0, 0, 0, 1)";
-        game_1.Game.ctx.font = "20px Arial";
-        const textWidth = game_1.Game.measureText(button.text).width;
-        const textX = button.x + (button.width - textWidth) / 2;
-        const textY = button.y + button.height / 2 + game_1.Game.letter_height / 2;
-        game_1.Game.fillText(button.text, textX, textY);
-    }
-    inputHandler(input) {
-        if (!this.open)
-            return;
-        switch (input) {
-            case input_1.InputEnum.ESCAPE:
-                if (this.currentSubMenu) {
-                    this.closeSubMenu();
-                }
-                else {
-                    this.open = false;
-                }
-                break;
-            case input_1.InputEnum.UP:
-                this.up();
-                break;
-            case input_1.InputEnum.DOWN:
-                this.down();
-                break;
-            case input_1.InputEnum.SPACE:
-                this.select();
-                break;
-            default:
-                break;
-        }
-    }
-    openSubMenu(menuName) {
-        if (this.subMenus[menuName]) {
-            this.currentSubMenu = menuName;
-            this.selectedButton = 0;
-        }
-    }
-    closeSubMenu() {
-        this.currentSubMenu = null;
-        this.selectedButton = 0;
-    }
-    close() {
-        this.open = false;
-        this.currentSubMenu = null;
-    }
-    select() {
-        const menuToSelect = this.currentSubMenu
-            ? this.subMenus[this.currentSubMenu]
-            : this;
-        if (menuToSelect.open) {
-            menuToSelect.buttons[menuToSelect.selectedButton].onClick();
-        }
-    }
-    up() {
-        const menuToNavigate = this.currentSubMenu
-            ? this.subMenus[this.currentSubMenu]
-            : this;
-        if (menuToNavigate.open) {
-            menuToNavigate.selectedButton =
-                (menuToNavigate.selectedButton - 1 + menuToNavigate.buttons.length) %
-                    menuToNavigate.buttons.length;
-        }
-    }
-    down() {
-        const menuToNavigate = this.currentSubMenu
-            ? this.subMenus[this.currentSubMenu]
-            : this;
-        if (menuToNavigate.open) {
-            menuToNavigate.selectedButton =
-                (menuToNavigate.selectedButton + 1) % menuToNavigate.buttons.length;
-        }
-    }
-    positionButtons() {
-        const startX = (gameConstants_1.GameConstants.WIDTH - 200) / 2;
-        const startY = (gameConstants_1.GameConstants.HEIGHT - this.buttons.length * 60) / 2;
-        this.buttons.forEach((button, index) => {
-            button.x = startX;
-            button.y = startY + index * 60;
-        });
-    }
-}
-exports.Menu = Menu;
-
-
-/***/ }),
-
-/***/ "./src/mouseCursor.ts":
-/*!****************************!*\
-  !*** ./src/mouseCursor.ts ***!
-  \****************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.MouseCursor = void 0;
-const game_1 = __webpack_require__(/*! ./game */ "./src/game.ts");
-const input_1 = __webpack_require__(/*! ./input */ "./src/input.ts");
-const gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/gameConstants.ts");
-class MouseCursor {
-    constructor() {
-        this.cursorSize = 5; // Size of the cursor rectangle
-        this.clickX = 0;
-        this.clickY = 0;
-        this.tileX = 6;
-        this.frame = 0;
-        this.setIcon = (icon) => {
-            switch (icon) {
-                case "arrow":
-                    this.tileX = 8;
-                    break;
-                case "sword":
-                    this.tileX = 7;
-                    break;
-                case "hand":
-                    this.tileX = 6;
-                    break;
-                case "wait":
-                    this.tileX = 9;
-                    break;
-                case "grab":
-                    this.tileX = 10;
-                    break;
-                case "up":
-                    this.tileX = 11;
-                    break;
-                case "right":
-                    this.tileX = 12;
-                    break;
-                case "down":
-                    this.tileX = 13;
-                    break;
-                case "left":
-                    this.tileX = 14;
-                    break;
-                case "mine":
-                    this.tileX = 15;
-                    break;
-            }
-        };
-        this.draw = (delta, mobile = false) => {
-            if (!mobile)
-                this.drawCursor();
-            this.drawAnimation(delta);
-        };
-    }
-    static getInstance() {
-        if (!MouseCursor.instance) {
-            MouseCursor.instance = new MouseCursor();
-        }
-        return MouseCursor.instance;
-    }
-    drawCursor() {
-        game_1.Game.ctx.save();
-        //Game.ctx.fillRect(Input.mouseX, Input.mouseY, 1, 1);
-        game_1.Game.drawFX(this.tileX, 0, 1, 1, input_1.Input.mouseX / gameConstants_1.GameConstants.TILESIZE - 8 / gameConstants_1.GameConstants.TILESIZE, input_1.Input.mouseY / gameConstants_1.GameConstants.TILESIZE - 8 / gameConstants_1.GameConstants.TILESIZE, 1, 1);
-        game_1.Game.ctx.restore();
-    }
-    drawAnimation(delta) {
-        if (this.frame > 5) {
-            //14 is max frame for animation
-            return;
-        }
-        game_1.Game.drawFX(9 + Math.ceil(this.frame), 1, 1, 1, this.clickX / gameConstants_1.GameConstants.TILESIZE - 8 / gameConstants_1.GameConstants.TILESIZE, this.clickY / gameConstants_1.GameConstants.TILESIZE - 8 / gameConstants_1.GameConstants.TILESIZE, 1, 1);
-        this.frame = this.frame + delta / 5;
-    }
-    startClickAnim() {
-        this.frame = 0;
-        this.clickX = input_1.Input.mouseX;
-        this.clickY = input_1.Input.mouseY;
-    }
-    getPosition() {
-        return { x: input_1.Input.mouseX, y: input_1.Input.mouseY };
-    }
-    getTilePosition() {
-        return {
-            x: Math.floor(input_1.Input.mouseX / gameConstants_1.GameConstants.TILESIZE),
-            y: Math.floor(input_1.Input.mouseY / gameConstants_1.GameConstants.TILESIZE),
-        };
-    }
-    getInventoryPosition() {
-        return {
-            x: input_1.Input.mouseX,
-            y: input_1.Input.mouseY,
-        };
-    }
-}
-exports.MouseCursor = MouseCursor;
 
 
 /***/ }),
@@ -16253,7 +16597,7 @@ exports.AttackAnimation = AttackAnimation;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DamageNumber = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-const gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
 const particle_1 = __webpack_require__(/*! ./particle */ "./src/particle/particle.ts");
 class DamageNumber extends particle_1.Particle {
     constructor(room, x, y, damage, color, outlineColor) {
@@ -16322,7 +16666,7 @@ exports.DamageNumber = DamageNumber;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DeathParticle = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-const gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
 const particle_1 = __webpack_require__(/*! ./particle */ "./src/particle/particle.ts");
 class DeathParticle extends particle_1.Particle {
     constructor(x, y) {
@@ -16362,7 +16706,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GenericParticle = void 0;
 const particle_1 = __webpack_require__(/*! ./particle */ "./src/particle/particle.ts");
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-const gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
 class GenericParticle extends particle_1.Particle {
     constructor(level, x, y, z, s, dx, dy, dz, color, delay, expirationTimer, targetX, targetY, targetZ) {
         super();
@@ -16459,7 +16803,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ImageParticle = void 0;
 const particle_1 = __webpack_require__(/*! ./particle */ "./src/particle/particle.ts");
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-const gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
 class ImageParticle extends particle_1.Particle {
     constructor(room, x, y, z, s, dx, dy, dz, tileX, tileY, size, delay, expirationTimer, targetX, targetY, targetZ) {
         super();
@@ -16553,7 +16897,7 @@ ImageParticle.spawnCluster = (level, cx, cy, tileX, tileY) => {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Particle = void 0;
-const drawable_1 = __webpack_require__(/*! ../drawable */ "./src/drawable.ts");
+const drawable_1 = __webpack_require__(/*! ../drawable/drawable */ "./src/drawable/drawable.ts");
 class Particle extends drawable_1.Drawable {
     constructor() {
         super(...arguments);
@@ -16622,22 +16966,22 @@ exports.WizardTeleportParticle = WizardTeleportParticle;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Player = exports.PlayerDirection = void 0;
-const input_1 = __webpack_require__(/*! ../input */ "./src/input.ts");
-const gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
+const input_1 = __webpack_require__(/*! ../game/input */ "./src/game/input.ts");
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const door_1 = __webpack_require__(/*! ../tile/door */ "./src/tile/door.ts");
 const trapdoor_1 = __webpack_require__(/*! ../tile/trapdoor */ "./src/tile/trapdoor.ts");
 const inventory_1 = __webpack_require__(/*! ../inventory/inventory */ "./src/inventory/inventory.ts");
-const sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
-const levelConstants_1 = __webpack_require__(/*! ../levelConstants */ "./src/levelConstants.ts");
-const map_1 = __webpack_require__(/*! ../map */ "./src/map.ts");
-const healthbar_1 = __webpack_require__(/*! ../healthbar */ "./src/healthbar.ts");
-const drawable_1 = __webpack_require__(/*! ../drawable */ "./src/drawable.ts");
+const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts");
+const levelConstants_1 = __webpack_require__(/*! ../level/levelConstants */ "./src/level/levelConstants.ts");
+const map_1 = __webpack_require__(/*! ../gui/map */ "./src/gui/map.ts");
+const healthbar_1 = __webpack_require__(/*! ../drawable/healthbar */ "./src/drawable/healthbar.ts");
+const drawable_1 = __webpack_require__(/*! ../drawable/drawable */ "./src/drawable/drawable.ts");
 const item_1 = __webpack_require__(/*! ../item/item */ "./src/item/item.ts");
 const enemy_1 = __webpack_require__(/*! ../entity/enemy/enemy */ "./src/entity/enemy/enemy.ts");
-const mouseCursor_1 = __webpack_require__(/*! ../mouseCursor */ "./src/mouseCursor.ts");
-const menu_1 = __webpack_require__(/*! ../menu */ "./src/menu.ts");
-const bestiary_1 = __webpack_require__(/*! ../bestiary */ "./src/bestiary.ts");
+const mouseCursor_1 = __webpack_require__(/*! ../gui/mouseCursor */ "./src/gui/mouseCursor.ts");
+const menu_1 = __webpack_require__(/*! ../gui/menu */ "./src/gui/menu.ts");
+const bestiary_1 = __webpack_require__(/*! ../game/bestiary */ "./src/game/bestiary.ts");
 const playerInputHandler_1 = __webpack_require__(/*! ./playerInputHandler */ "./src/player/playerInputHandler.ts");
 const playerActionProcessor_1 = __webpack_require__(/*! ./playerActionProcessor */ "./src/player/playerActionProcessor.ts");
 const playerMovement_1 = __webpack_require__(/*! ./playerMovement */ "./src/player/playerMovement.ts");
@@ -17328,11 +17672,11 @@ exports.PlayerActionProcessor = PlayerActionProcessor;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PlayerInputHandler = void 0;
-const input_1 = __webpack_require__(/*! ../input */ "./src/input.ts");
+const input_1 = __webpack_require__(/*! ../game/input */ "./src/game/input.ts");
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-const mouseCursor_1 = __webpack_require__(/*! ../mouseCursor */ "./src/mouseCursor.ts");
+const mouseCursor_1 = __webpack_require__(/*! ../gui/mouseCursor */ "./src/gui/mouseCursor.ts");
 const vendingMachine_1 = __webpack_require__(/*! ../entity/object/vendingMachine */ "./src/entity/object/vendingMachine.ts");
-const gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
 class PlayerInputHandler {
     constructor(player) {
         this.handleNumKey = (num) => {
@@ -17679,7 +18023,7 @@ exports.PlayerInputHandler = PlayerInputHandler;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PlayerMovement = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-const gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
 const room_1 = __webpack_require__(/*! ../room/room */ "./src/room/room.ts");
 class PlayerMovement {
     constructor(player) {
@@ -17845,13 +18189,13 @@ exports.PlayerMovement = PlayerMovement;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PlayerRenderer = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-const gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
-const hitWarning_1 = __webpack_require__(/*! ../hitWarning */ "./src/hitWarning.ts");
-const levelConstants_1 = __webpack_require__(/*! ../levelConstants */ "./src/levelConstants.ts");
-const postProcess_1 = __webpack_require__(/*! ../postProcess */ "./src/postProcess.ts");
-const stats_1 = __webpack_require__(/*! ../stats */ "./src/stats.ts");
-const utils_1 = __webpack_require__(/*! ../utils */ "./src/utils.ts");
-const spellbook_1 = __webpack_require__(/*! ../weapon/spellbook */ "./src/weapon/spellbook.ts");
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
+const hitWarning_1 = __webpack_require__(/*! ../drawable/hitWarning */ "./src/drawable/hitWarning.ts");
+const levelConstants_1 = __webpack_require__(/*! ../level/levelConstants */ "./src/level/levelConstants.ts");
+const postProcess_1 = __webpack_require__(/*! ../gui/postProcess */ "./src/gui/postProcess.ts");
+const stats_1 = __webpack_require__(/*! ../game/stats */ "./src/game/stats.ts");
+const utils_1 = __webpack_require__(/*! ../utility/utils */ "./src/utility/utils.ts");
+const spellbook_1 = __webpack_require__(/*! ../item/weapon/spellbook */ "./src/item/weapon/spellbook.ts");
 class PlayerRenderer {
     constructor(player) {
         this.hurt = () => {
@@ -18372,33 +18716,293 @@ exports.PlayerRenderer = PlayerRenderer;
 
 /***/ }),
 
-/***/ "./src/postProcess.ts":
-/*!****************************!*\
-  !*** ./src/postProcess.ts ***!
-  \****************************/
+/***/ "./src/projectile/beamEffect.ts":
+/*!**************************************!*\
+  !*** ./src/projectile/beamEffect.ts ***!
+  \**************************************/
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.PostProcessor = void 0;
-const game_1 = __webpack_require__(/*! ./game */ "./src/game.ts");
-const gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/gameConstants.ts");
-class PostProcessor {
+exports.BeamEffect = void 0;
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
+const projectile_1 = __webpack_require__(/*! ./projectile */ "./src/projectile/projectile.ts");
+class BeamEffect extends projectile_1.Projectile {
+    constructor(x1, y1, x2, y2, parent) {
+        super(parent, x1, y1);
+        this.active = true;
+        this.time = 0;
+        this.alpha = 1;
+        this.gravity = BeamEffect.GRAVITY;
+        this.motionInfluence = BeamEffect.MOTION_INFLUENCE;
+        this.turbulence = BeamEffect.TURBULENCE;
+        this.velocityDecay = BeamEffect.VELOCITY_DECAY;
+        this.angleChange = BeamEffect.ANGLE_CHANGE;
+        this.maxVelocity = BeamEffect.MAX_VELOCITY;
+        this.damping = BeamEffect.DAMPING;
+        this.springStiffness = BeamEffect.SPRING_STIFFNESS;
+        this.springDamping = BeamEffect.SPRING_DAMPING;
+        this.iterations = BeamEffect.ITERATIONS;
+        this.segments = BeamEffect.SEGMENTS;
+        this.tick = () => {
+            if (this.parent.dead) {
+                this.destroy();
+            }
+        };
+        this.draw = (delta) => {
+            this.drawableY = this.y - 0.01;
+            this.render(this.targetX, this.targetY, this.x, this.y, this.color, 2, delta, this.compositeOperation);
+        };
+        const startX = x1 * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
+        const startY = y1 * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
+        const endX = x2 * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
+        const endY = y2 * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
+        this.x = x1;
+        this.y = y1;
+        this.targetX = x2;
+        this.targetY = y2;
+        this.points = this.initializePoints(startX, startY, endX, endY);
+        this.prevStartX = startX;
+        this.prevStartY = startY;
+        this.prevEndX = endX;
+        this.prevEndY = endY;
+        this.color = "cyan";
+        this.compositeOperation = "source-over";
+    }
+    /**
+     * Sets the physics properties for the beam effect.
+     *
+     * @param {number} [gravity] - The gravitational force applied to the beam. Default: 2
+     * @param {number} [motionInfluence] - The influence of motion on the beam. Default: 1
+     * @param {number} [turbulence] - The turbulence applied to the beam. Default: 0.5
+     * @param {number} [velocityDecay] - The rate at which velocity decays. Default: 0.1
+     * @param {number} [angleChange] - The change in angle of the beam. Default: 0.01
+     * @param {number} [maxVelocity] - The maximum velocity of the beam.
+     * @param {number} [damping] - The damping factor for the beam's motion.
+     * @param {number} [springStiffness] - The stiffness of the spring effect.
+     * @param {number} [springDamping] - The damping of the spring effect.
+     * @param {number} [iterations] - The number of iterations for the physics simulation.
+     * @param {number} [segments] - The number of segments for the beam.
+     */
+    setPhysics(gravity, motionInfluence, turbulence, velocityDecay, angleChange, maxVelocity, damping, springStiffness, springDamping, iterations, segments) {
+        this.gravity = gravity ?? BeamEffect.GRAVITY;
+        this.motionInfluence = motionInfluence ?? BeamEffect.MOTION_INFLUENCE;
+        this.turbulence = turbulence ?? BeamEffect.TURBULENCE;
+        this.velocityDecay = velocityDecay ?? BeamEffect.VELOCITY_DECAY;
+        this.angleChange = angleChange ?? BeamEffect.ANGLE_CHANGE;
+        this.maxVelocity = maxVelocity ?? BeamEffect.MAX_VELOCITY;
+        this.damping = damping ?? BeamEffect.DAMPING;
+        this.springStiffness = springStiffness ?? BeamEffect.SPRING_STIFFNESS;
+        this.springDamping = springDamping ?? BeamEffect.SPRING_DAMPING;
+        this.iterations = iterations ?? BeamEffect.ITERATIONS;
+        this.segments = segments ?? BeamEffect.SEGMENTS;
+    }
+    setTarget(x, y, x2, y2) {
+        this.x = x;
+        this.y = y;
+        this.targetX = x2;
+        this.targetY = y2;
+    }
+    render(x1, y1, x2, y2, color = this.color, lineWidth = 2, delta = 1 / 60, compositeOperation = this.compositeOperation) {
+        const startX = this.x * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
+        const startY = this.y * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
+        const endX = this.targetX * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
+        const endY = this.targetY * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
+        const startForceX = (startX - this.prevStartX) * this.motionInfluence * delta;
+        const startForceY = (startY - this.prevStartY) * this.motionInfluence * delta;
+        const endForceX = (endX - this.prevEndX) * this.motionInfluence * delta;
+        const endForceY = (endY - this.prevEndY) * this.motionInfluence * delta;
+        for (let i = 1; i < 4; i++) {
+            const influence = 1 - i / 4;
+            this.points[i].x += startForceX * influence;
+            this.points[i].y += startForceY * influence;
+        }
+        for (let i = this.points.length - 4; i < this.points.length - 1; i++) {
+            const influence = 1 - (this.points.length - i) / 4;
+            this.points[i].x += endForceX * influence;
+            this.points[i].y += endForceY * influence;
+        }
+        this.simulateRope(startX, startY, endX, endY, delta);
+        const ctx = game_1.Game.ctx;
+        ctx.save();
+        game_1.Game.ctx.globalCompositeOperation =
+            compositeOperation;
+        for (let i = 0; i < this.points.length - 1; i++) {
+            const p1 = this.points[i];
+            const p2 = this.points[i + 1];
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+            const steps = Math.max(Math.abs(dx), Math.abs(dy));
+            const xIncrement = dx / steps;
+            const yIncrement = dy / steps;
+            let x = p1.x;
+            let y = p1.y;
+            for (let step = 0; step <= steps; step++) {
+                for (let w = 0; w < lineWidth; w++) {
+                    for (let h = 0; h < lineWidth; h++) {
+                        ctx.fillStyle = color;
+                        ctx.fillRect(Math.round(x + w), Math.round(y + h), 1, 1);
+                    }
+                }
+                x += xIncrement;
+                y += yIncrement;
+            }
+        }
+        ctx.restore();
+        this.prevStartX = startX;
+        this.prevStartY = startY;
+        this.prevEndX = endX;
+        this.prevEndY = endY;
+    }
+    initializePoints(startX, startY, endX, endY) {
+        const points = [];
+        for (let i = 0; i < this.segments; i++) {
+            const t = i / (this.segments - 1);
+            points.push({
+                x: startX + (endX - startX) * t,
+                y: startY + (endY - startY) * t,
+                oldX: startX + (endX - startX) * t,
+                oldY: startY + (endY - startY) * t,
+                velocityX: 0,
+                velocityY: 0,
+                angle: Math.random() * Math.PI * 2,
+            });
+        }
+        return points;
+    }
+    applyTurbulence(point, index) {
+        point.angle += Math.sin(this.time * 0.1 + index * 0.5) * this.angleChange;
+        const turbulenceX = Math.cos(point.angle) * this.turbulence;
+        const turbulenceY = Math.sin(point.angle) * this.turbulence;
+        point.velocityX += turbulenceX;
+        point.velocityY += turbulenceY;
+        point.velocityX = Math.min(Math.max(point.velocityX, -this.maxVelocity), this.maxVelocity);
+        point.velocityY = Math.min(Math.max(point.velocityY, -this.maxVelocity), this.maxVelocity);
+    }
+    simulateRope(startX, startY, endX, endY, delta) {
+        const iterationsThisFrame = Math.ceil(this.iterations * delta);
+        for (let iteration = 0; iteration < iterationsThisFrame; iteration++) {
+            for (let i = 1; i < this.points.length - 1; i++) {
+                const point = this.points[i];
+                const prevPoint = this.points[i - 1];
+                const nextPoint = this.points[i + 1];
+                const springForceXPrev = (prevPoint.x - point.x) * this.springStiffness;
+                const springForceYPrev = (prevPoint.y - point.y) * this.springStiffness;
+                const springForceXNext = (nextPoint.x - point.x) * this.springStiffness;
+                const springForceYNext = (nextPoint.y - point.y) * this.springStiffness;
+                this.applyTurbulence(point, i);
+                point.velocityX =
+                    (point.velocityX + springForceXPrev + springForceXNext) *
+                        this.damping;
+                point.velocityY =
+                    (point.velocityY + springForceYPrev + springForceYNext) *
+                        this.damping;
+                const relativeVXPrev = prevPoint.velocityX - point.velocityX;
+                const relativeVYPrev = prevPoint.velocityY - point.velocityY;
+                const relativeVXNext = nextPoint.velocityX - point.velocityX;
+                const relativeVYNext = nextPoint.velocityY - point.velocityY;
+                point.velocityX +=
+                    (relativeVXPrev + relativeVXNext) * this.springDamping;
+                point.velocityY +=
+                    (relativeVYPrev + relativeVYNext) * this.springDamping;
+                point.oldX = point.x;
+                point.oldY = point.y;
+                point.x += point.velocityX;
+                point.y += point.velocityY + this.gravity;
+            }
+            const segmentLength = Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2)) /
+                (this.segments - 1);
+            for (let constraintIteration = 0; constraintIteration < 2; constraintIteration++) {
+                for (let i = 0; i < this.points.length - 1; i++) {
+                    const p1 = this.points[i];
+                    const p2 = this.points[i + 1];
+                    const dx = p2.x - p1.x;
+                    const dy = p2.y - p1.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    const difference = segmentLength - distance;
+                    const percent = difference / distance / 2;
+                    const offsetX = dx * percent;
+                    const offsetY = dy * percent;
+                    if (i > 0) {
+                        p1.x -= offsetX * 1.5;
+                        p1.y -= offsetY * 1.5;
+                    }
+                    if (i < this.points.length - 2) {
+                        p2.x += offsetX * 1.5;
+                        p2.y += offsetY * 1.5;
+                    }
+                }
+            }
+        }
+        this.points[0].x = startX;
+        this.points[0].y = startY;
+        this.points[0].oldX = startX;
+        this.points[0].oldY = startY;
+        this.points[this.points.length - 1].x = endX;
+        this.points[this.points.length - 1].y = endY;
+        this.points[this.points.length - 1].oldX = endX;
+        this.points[this.points.length - 1].oldY = endY;
+    }
+    static renderBeam(x1, y1, x2, y2, color = "cyan", lineWidth = 2, alpha = 1) {
+        const ctx = game_1.Game.ctx;
+        ctx.globalAlpha = alpha;
+        const startX = x1 * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
+        const startY = y1 * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
+        const endX = x2 * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
+        const endY = y2 * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(endX, endY);
+        ctx.lineWidth = lineWidth;
+        ctx.strokeStyle = color;
+        ctx.stroke();
+        ctx.restore();
+    }
+    destroy() {
+        this.active = false;
+        this.points = [];
+        this.dead = true;
+    }
+    isActive() {
+        return this.active;
+    }
 }
-exports.PostProcessor = PostProcessor;
-PostProcessor.draw = (delta) => {
-    game_1.Game.ctx.save();
-    game_1.Game.ctx.globalAlpha = 0.15;
-    game_1.Game.ctx.globalCompositeOperation = "screen";
-    // GameConstants.SHADE_LAYER_COMPOSITE_OPERATION as GlobalCompositeOperation; //"soft-light";
-    game_1.Game.ctx.fillStyle = "#006A6E"; //dark teal
-    //Game.ctx.fillStyle = "#003B6F"; //deep underwater blue
-    //Game.ctx.fillStyle = "#2F2F2F"; //smoky fog prison
-    //Game.ctx.fillStyle = "#4a6c4b"; //darker muddy green
-    //Game.ctx.fillStyle = "#800000"; // lighter red for dungeon hell theme
-    game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
-    game_1.Game.ctx.restore();
-};
+exports.BeamEffect = BeamEffect;
+// Number of points that make up the beam (higher = smoother but more expensive)
+// Range: 10-100, recommended: 30
+BeamEffect.SEGMENTS = 30;
+// Downward force applied to each point (0 = no gravity)
+// Range: 0-10, recommended: 2
+BeamEffect.GRAVITY = 2;
+// Physics simulation steps per frame (higher = more accurate but more expensive)
+// Range: 1-10, recommended: 1
+BeamEffect.ITERATIONS = 5;
+// How much the beam reacts to movement of start/end points
+// Range: 0-5, recommended: 1
+BeamEffect.MOTION_INFLUENCE = 1;
+// Amount of random movement applied to points (0 = straight beam)
+// Range: 0-1, recommended: 0.5
+BeamEffect.TURBULENCE = 0.5;
+// How quickly velocity decreases over time
+// Range: 0-1, recommended: 0.5
+BeamEffect.VELOCITY_DECAY = 0.1;
+// How quickly the turbulence angle changes
+// Range: 0-2, recommended: 0.9
+BeamEffect.ANGLE_CHANGE = 0.01; // for turbulence specifically
+// Maximum speed any point can move per frame
+// Range: 10-1000, recommended: 100
+BeamEffect.MAX_VELOCITY = 100;
+// General movement resistance (1 = no damping, 0 = full stop)
+// Range: 0.9-0.999, recommended: 0.8
+BeamEffect.DAMPING = 0.8;
+// How strongly points pull toward their neighbors
+// Range: 0.01-1, recommended: 0.01
+BeamEffect.SPRING_STIFFNESS = 0.01;
+// How quickly spring oscillations settle
+// Range: 0.001-0.1, recommended: 0.1
+BeamEffect.SPRING_DAMPING = 0.1;
 
 
 /***/ }),
@@ -18414,8 +19018,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.EnemyShield = void 0;
 const projectile_1 = __webpack_require__(/*! ./projectile */ "./src/projectile/projectile.ts");
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-const lighting_1 = __webpack_require__(/*! ../lighting */ "./src/lighting.ts");
-const beamEffect_1 = __webpack_require__(/*! ../beamEffect */ "./src/beamEffect.ts");
+const lighting_1 = __webpack_require__(/*! ../lighting/lighting */ "./src/lighting/lighting.ts");
+const beamEffect_1 = __webpack_require__(/*! ./beamEffect */ "./src/projectile/beamEffect.ts");
 class EnemyShield extends projectile_1.Projectile {
     constructor(parent, x, y, health = 1) {
         super(parent, x, y);
@@ -18504,9 +19108,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.EnemySpawnAnimation = void 0;
 const projectile_1 = __webpack_require__(/*! ./projectile */ "./src/projectile/projectile.ts");
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-const sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
-const hitWarning_1 = __webpack_require__(/*! ../hitWarning */ "./src/hitWarning.ts");
-const lightSource_1 = __webpack_require__(/*! ../lightSource */ "./src/lightSource.ts");
+const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts");
+const hitWarning_1 = __webpack_require__(/*! ../drawable/hitWarning */ "./src/drawable/hitWarning.ts");
+const lightSource_1 = __webpack_require__(/*! ../lighting/lightSource */ "./src/lighting/lightSource.ts");
 class EnemySpawnAnimation extends projectile_1.Projectile {
     constructor(room, enemy, x, y) {
         super(enemy, x, y);
@@ -18547,6 +19151,9 @@ class EnemySpawnAnimation extends projectile_1.Projectile {
         this.room = room;
         this.enemy = enemy;
         this.frame = 0;
+        this.hasBloom = true;
+        this.bloomColor = "#00BFFF";
+        this.bloomOffsetY = -0.5;
         this.lightSource = new lightSource_1.LightSource(this.x + 0.5, this.y + 0.5, 1, [0, 50, 150], 1);
         this.room.lightSources.push(this.lightSource);
         this.room.updateLighting();
@@ -18568,8 +19175,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Explosion = void 0;
 const projectile_1 = __webpack_require__(/*! ./projectile */ "./src/projectile/projectile.ts");
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-const lighting_1 = __webpack_require__(/*! ../lighting */ "./src/lighting.ts");
-const utils_1 = __webpack_require__(/*! ../utils */ "./src/utils.ts");
+const lighting_1 = __webpack_require__(/*! ../lighting/lighting */ "./src/lighting/lighting.ts");
+const utils_1 = __webpack_require__(/*! ../utility/utils */ "./src/utility/utils.ts");
 const bomb_1 = __webpack_require__(/*! ../entity/object/bomb */ "./src/entity/object/bomb.ts");
 class Explosion extends projectile_1.Projectile {
     constructor(entity, x, y, playerHitBy) {
@@ -18628,8 +19235,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PlayerFireball = void 0;
 const projectile_1 = __webpack_require__(/*! ./projectile */ "./src/projectile/projectile.ts");
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-const lighting_1 = __webpack_require__(/*! ../lighting */ "./src/lighting.ts");
-const utils_1 = __webpack_require__(/*! ../utils */ "./src/utils.ts");
+const lighting_1 = __webpack_require__(/*! ../lighting/lighting */ "./src/lighting/lighting.ts");
+const utils_1 = __webpack_require__(/*! ../utility/utils */ "./src/utility/utils.ts");
 class PlayerFireball extends projectile_1.Projectile {
     constructor(parent, x, y) {
         super(parent, x, y);
@@ -18667,7 +19274,7 @@ exports.PlayerFireball = PlayerFireball;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Projectile = void 0;
-const drawable_1 = __webpack_require__(/*! ../drawable */ "./src/drawable.ts");
+const drawable_1 = __webpack_require__(/*! ../drawable/drawable */ "./src/drawable/drawable.ts");
 class Projectile extends drawable_1.Drawable {
     constructor(parent, x, y) {
         super();
@@ -18683,6 +19290,7 @@ class Projectile extends drawable_1.Drawable {
         this.drawableY = y;
         this.hasBloom = false;
         this.bloomColor = "#00BFFF";
+        this.bloomOffsetY = 0;
     }
     get distanceToParent() {
         return Math.abs(this.x - this.parent.x) + Math.abs(this.y - this.parent.y);
@@ -18705,9 +19313,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.WizardFireball = void 0;
 const projectile_1 = __webpack_require__(/*! ./projectile */ "./src/projectile/projectile.ts");
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-const hitWarning_1 = __webpack_require__(/*! ../hitWarning */ "./src/hitWarning.ts");
-const lightSource_1 = __webpack_require__(/*! ../lightSource */ "./src/lightSource.ts");
-const lighting_1 = __webpack_require__(/*! ../lighting */ "./src/lighting.ts");
+const hitWarning_1 = __webpack_require__(/*! ../drawable/hitWarning */ "./src/drawable/hitWarning.ts");
+const lightSource_1 = __webpack_require__(/*! ../lighting/lightSource */ "./src/lighting/lightSource.ts");
+const lighting_1 = __webpack_require__(/*! ../lighting/lighting */ "./src/lighting/lighting.ts");
 class WizardFireball extends projectile_1.Projectile {
     constructor(parent, x, y) {
         super(parent, x, y);
@@ -18799,162 +19407,6 @@ exports.WizardFireball = WizardFireball;
 
 /***/ }),
 
-/***/ "./src/random.ts":
-/*!***********************!*\
-  !*** ./src/random.ts ***!
-  \***********************/
-/***/ ((__unused_webpack_module, exports) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Random = void 0;
-class Random {
-}
-exports.Random = Random;
-Random.setState = (state) => {
-    Random.state = state;
-};
-Random.rand = () => {
-    Random.state ^= Random.state << 21;
-    Random.state ^= Random.state >>> 35;
-    Random.state ^= Random.state << 4;
-    return (Random.state >>> 0) / 4294967296;
-};
-// copy and paste into browser console
-// let state;
-// let rand = () => { state ^= (state << 21); state ^= (state >>> 35); state ^= (state << 4); return (state >>> 0) / 4294967296; }
-
-
-/***/ }),
-
-/***/ "./src/reverb.ts":
-/*!***********************!*\
-  !*** ./src/reverb.ts ***!
-  \***********************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ReverbEngine = void 0;
-const game_1 = __webpack_require__(/*! ./game */ "./src/game.ts");
-const sound_1 = __webpack_require__(/*! ./sound */ "./src/sound.ts");
-class ReverbEngine {
-    // Initialize the AudioContext and ConvolverNode
-    static async initialize() {
-        if (ReverbEngine.initialized)
-            return;
-        let canInitialize = false;
-        if (!game_1.Game.inputReceived) {
-            console.time("initializeReverb");
-            try {
-                await new Promise((resolve) => {
-                    const checkInput = () => {
-                        if (game_1.Game.inputReceived) {
-                            resolve();
-                            canInitialize = true;
-                            console.timeEnd("initializeReverb");
-                        }
-                        else {
-                            requestAnimationFrame(checkInput);
-                        }
-                    };
-                    checkInput();
-                });
-            }
-            catch (error) {
-                console.error("Failed to initialize ReverbEngine:", error);
-                return;
-            }
-        }
-        if (!ReverbEngine.audioContext &&
-            !ReverbEngine.initialized &&
-            canInitialize) {
-            ReverbEngine.audioContext = new (window.AudioContext ||
-                window.webkitAudioContext)();
-            ReverbEngine.convolver = ReverbEngine.audioContext.createConvolver();
-            ReverbEngine.convolver.connect(ReverbEngine.audioContext.destination);
-            await ReverbEngine.loadReverbBuffer(`res/SFX/impulses/small.mp3`);
-            ReverbEngine.setDefaultReverb();
-            ReverbEngine.initialized = true;
-            if (sound_1.Sound.initialized)
-                sound_1.Sound.audioMuted = false;
-        }
-    }
-    // Load a specified impulse response
-    static async loadReverbBuffer(filePath) {
-        try {
-            const response = await fetch(filePath);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const arrayBuffer = await response.arrayBuffer();
-            ReverbEngine.reverbBuffer =
-                await ReverbEngine.audioContext.decodeAudioData(arrayBuffer);
-        }
-        catch (error) {
-            console.error("Error loading reverb buffer:", error);
-        }
-    }
-    // Set the default reverb buffer
-    static setDefaultReverb() {
-        if (ReverbEngine.reverbBuffer) {
-            ReverbEngine.convolver.buffer = ReverbEngine.reverbBuffer;
-        }
-    }
-    /**
-     * Set the reverb characteristics by specifying an impulse response file.
-     * @param filePath - The path to the impulse response file.
-     */
-    static async setReverbImpulse(filePath) {
-        if (!ReverbEngine.initialized)
-            return;
-        try {
-            await ReverbEngine.loadReverbBuffer(filePath);
-            if (ReverbEngine.reverbBuffer) {
-                ReverbEngine.convolver.buffer = ReverbEngine.reverbBuffer;
-            }
-        }
-        catch (error) {
-            console.error("Error setting reverb impulse:", error);
-        }
-    }
-    // Apply reverb to a given HTMLAudioElement
-    static async applyReverb(audioElement) {
-        await ReverbEngine.initialize();
-        if (!ReverbEngine.initialized)
-            return;
-        try {
-            if (ReverbEngine.mediaSources.has(audioElement)) {
-                return;
-            }
-            const track = ReverbEngine.audioContext.createMediaElementSource(audioElement);
-            track.connect(ReverbEngine.convolver);
-            ReverbEngine.mediaSources.set(audioElement, track);
-        }
-        catch (error) {
-            console.error("Error applying reverb:", error);
-        }
-    }
-    // Remove reverb from a given HTMLAudioElement
-    static async removeReverb(audioElement) {
-        await ReverbEngine.initialize();
-        if (!ReverbEngine.initialized)
-            return;
-        const track = ReverbEngine.mediaSources.get(audioElement);
-        if (track) {
-            track.disconnect();
-            ReverbEngine.mediaSources.delete(audioElement);
-        }
-    }
-}
-exports.ReverbEngine = ReverbEngine;
-ReverbEngine.reverbBuffer = null;
-ReverbEngine.mediaSources = new WeakMap();
-ReverbEngine.initialized = false;
-
-
-/***/ }),
-
 /***/ "./src/room/room.ts":
 /*!**************************!*\
   !*** ./src/room/room.ts ***!
@@ -18966,7 +19418,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Room = exports.WallDirection = exports.TurnState = exports.RoomType = exports.EnemyTypeMap = exports.EnemyType = void 0;
 // #region imports
 const wall_1 = __webpack_require__(/*! ../tile/wall */ "./src/tile/wall.ts");
-const levelConstants_1 = __webpack_require__(/*! ../levelConstants */ "./src/levelConstants.ts");
+const levelConstants_1 = __webpack_require__(/*! ../level/levelConstants */ "./src/level/levelConstants.ts");
 const floor_1 = __webpack_require__(/*! ../tile/floor */ "./src/tile/floor.ts");
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const door_1 = __webpack_require__(/*! ../tile/door */ "./src/tile/door.ts");
@@ -18976,7 +19428,7 @@ const entity_1 = __webpack_require__(/*! ../entity/entity */ "./src/entity/entit
 const chest_1 = __webpack_require__(/*! ../entity/object/chest */ "./src/entity/object/chest.ts");
 const goldenKey_1 = __webpack_require__(/*! ../item/goldenKey */ "./src/item/goldenKey.ts");
 const spawnfloor_1 = __webpack_require__(/*! ../tile/spawnfloor */ "./src/tile/spawnfloor.ts");
-const gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
 const skullEnemy_1 = __webpack_require__(/*! ../entity/enemy/skullEnemy */ "./src/entity/enemy/skullEnemy.ts");
 const barrel_1 = __webpack_require__(/*! ../entity/object/barrel */ "./src/entity/object/barrel.ts");
 const crate_1 = __webpack_require__(/*! ../entity/object/crate */ "./src/entity/object/crate.ts");
@@ -18988,7 +19440,7 @@ const coffinTile_1 = __webpack_require__(/*! ../tile/coffinTile */ "./src/tile/c
 const pottedPlant_1 = __webpack_require__(/*! ../entity/object/pottedPlant */ "./src/entity/object/pottedPlant.ts");
 const insideLevelDoor_1 = __webpack_require__(/*! ../tile/insideLevelDoor */ "./src/tile/insideLevelDoor.ts");
 const button_1 = __webpack_require__(/*! ../tile/button */ "./src/tile/button.ts");
-const hitWarning_1 = __webpack_require__(/*! ../hitWarning */ "./src/hitWarning.ts");
+const hitWarning_1 = __webpack_require__(/*! ../drawable/hitWarning */ "./src/drawable/hitWarning.ts");
 const upLadder_1 = __webpack_require__(/*! ../tile/upLadder */ "./src/tile/upLadder.ts");
 const downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/downLadder.ts");
 const coalResource_1 = __webpack_require__(/*! ../entity/resource/coalResource */ "./src/entity/resource/coalResource.ts");
@@ -18999,16 +19451,16 @@ const spawner_1 = __webpack_require__(/*! ../entity/enemy/spawner */ "./src/enti
 const vendingMachine_1 = __webpack_require__(/*! ../entity/object/vendingMachine */ "./src/entity/object/vendingMachine.ts");
 const wallTorch_1 = __webpack_require__(/*! ../tile/wallTorch */ "./src/tile/wallTorch.ts");
 const chargeEnemy_1 = __webpack_require__(/*! ../entity/enemy/chargeEnemy */ "./src/entity/enemy/chargeEnemy.ts");
-const shotgun_1 = __webpack_require__(/*! ../weapon/shotgun */ "./src/weapon/shotgun.ts");
+const shotgun_1 = __webpack_require__(/*! ../item/weapon/shotgun */ "./src/item/weapon/shotgun.ts");
 const heart_1 = __webpack_require__(/*! ../item/usable/heart */ "./src/item/usable/heart.ts");
-const spear_1 = __webpack_require__(/*! ../weapon/spear */ "./src/weapon/spear.ts");
+const spear_1 = __webpack_require__(/*! ../item/weapon/spear */ "./src/item/weapon/spear.ts");
 const player_1 = __webpack_require__(/*! ../player/player */ "./src/player/player.ts");
 const crabEnemy_1 = __webpack_require__(/*! ../entity/enemy/crabEnemy */ "./src/entity/enemy/crabEnemy.ts");
 const zombieEnemy_1 = __webpack_require__(/*! ../entity/enemy/zombieEnemy */ "./src/entity/enemy/zombieEnemy.ts");
 const bigSkullEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigSkullEnemy */ "./src/entity/enemy/bigSkullEnemy.ts");
-const random_1 = __webpack_require__(/*! ../random */ "./src/random.ts");
+const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
 const lantern_1 = __webpack_require__(/*! ../item/light/lantern */ "./src/item/light/lantern.ts");
-const dualdagger_1 = __webpack_require__(/*! ../weapon/dualdagger */ "./src/weapon/dualdagger.ts");
+const dualdagger_1 = __webpack_require__(/*! ../item/weapon/dualdagger */ "./src/item/weapon/dualdagger.ts");
 const pot_1 = __webpack_require__(/*! ../entity/object/pot */ "./src/entity/object/pot.ts");
 const bishopEnemy_1 = __webpack_require__(/*! ../entity/enemy/bishopEnemy */ "./src/entity/enemy/bishopEnemy.ts");
 const rockResource_1 = __webpack_require__(/*! ../entity/resource/rockResource */ "./src/entity/resource/rockResource.ts");
@@ -19022,19 +19474,19 @@ const bigKnightEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigKnightEnemy 
 const enemy_1 = __webpack_require__(/*! ../entity/enemy/enemy */ "./src/entity/enemy/enemy.ts");
 const fireWizard_1 = __webpack_require__(/*! ../entity/enemy/fireWizard */ "./src/entity/enemy/fireWizard.ts");
 const energyWizard_1 = __webpack_require__(/*! ../entity/enemy/energyWizard */ "./src/entity/enemy/energyWizard.ts");
-const reverb_1 = __webpack_require__(/*! ../reverb */ "./src/reverb.ts");
-const astarclass_1 = __webpack_require__(/*! ../astarclass */ "./src/astarclass.ts");
-const warhammer_1 = __webpack_require__(/*! ../weapon/warhammer */ "./src/weapon/warhammer.ts");
-const spellbook_1 = __webpack_require__(/*! ../weapon/spellbook */ "./src/weapon/spellbook.ts");
+const reverb_1 = __webpack_require__(/*! ../sound/reverb */ "./src/sound/reverb.ts");
+const astarclass_1 = __webpack_require__(/*! ../utility/astarclass */ "./src/utility/astarclass.ts");
+const warhammer_1 = __webpack_require__(/*! ../item/weapon/warhammer */ "./src/item/weapon/warhammer.ts");
+const spellbook_1 = __webpack_require__(/*! ../item/weapon/spellbook */ "./src/item/weapon/spellbook.ts");
 const torch_1 = __webpack_require__(/*! ../item/light/torch */ "./src/item/light/torch.ts");
 const rookEnemy_1 = __webpack_require__(/*! ../entity/enemy/rookEnemy */ "./src/entity/enemy/rookEnemy.ts");
-const beamEffect_1 = __webpack_require__(/*! ../beamEffect */ "./src/beamEffect.ts");
-const environment_1 = __webpack_require__(/*! ../environment */ "./src/environment.ts");
+const beamEffect_1 = __webpack_require__(/*! ../projectile/beamEffect */ "./src/projectile/beamEffect.ts");
+const environment_1 = __webpack_require__(/*! ../level/environment */ "./src/level/environment.ts");
 const occultistEnemy_1 = __webpack_require__(/*! ../entity/enemy/occultistEnemy */ "./src/entity/enemy/occultistEnemy.ts");
 const puddle_1 = __webpack_require__(/*! ../tile/decorations/puddle */ "./src/tile/decorations/puddle.ts");
 const decoration_1 = __webpack_require__(/*! ../tile/decorations/decoration */ "./src/tile/decorations/decoration.ts");
 const bomb_1 = __webpack_require__(/*! ../entity/object/bomb */ "./src/entity/object/bomb.ts");
-const sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
+const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts");
 const block_1 = __webpack_require__(/*! ../entity/object/block */ "./src/entity/object/block.ts");
 const armoredSkullEnemy_1 = __webpack_require__(/*! ../entity/enemy/armoredSkullEnemy */ "./src/entity/enemy/armoredSkullEnemy.ts");
 const mummyEnemy_1 = __webpack_require__(/*! ../entity/enemy/mummyEnemy */ "./src/entity/enemy/mummyEnemy.ts");
@@ -20382,7 +20834,8 @@ class Room {
                         this.bloomOffscreenCtx.globalAlpha =
                             1 * (1 - this.softVis[p.x][p.y]) * p.softBloomAlpha;
                         this.bloomOffscreenCtx.fillStyle = p.bloomColor;
-                        this.bloomOffscreenCtx.fillRect((p.x - this.roomX + offsetX) * gameConstants_1.GameConstants.TILESIZE, (p.y - this.roomY + offsetY) * gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE);
+                        this.bloomOffscreenCtx.fillRect((p.x - this.roomX + offsetX) * gameConstants_1.GameConstants.TILESIZE, (p.y - this.roomY + offsetY + p.bloomOffsetY) *
+                            gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE);
                     }
                 }
             // Draw the blurred shade layer directly without masking
@@ -21785,18 +22238,146 @@ exports.RoomBuilder = RoomBuilder;
 
 /***/ }),
 
-/***/ "./src/sound.ts":
-/*!**********************!*\
-  !*** ./src/sound.ts ***!
-  \**********************/
+/***/ "./src/sound/reverb.ts":
+/*!*****************************!*\
+  !*** ./src/sound/reverb.ts ***!
+  \*****************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ReverbEngine = void 0;
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const sound_1 = __webpack_require__(/*! ./sound */ "./src/sound/sound.ts");
+class ReverbEngine {
+    // Initialize the AudioContext and ConvolverNode
+    static async initialize() {
+        if (ReverbEngine.initialized)
+            return;
+        let canInitialize = false;
+        if (!game_1.Game.inputReceived) {
+            console.time("initializeReverb");
+            try {
+                await new Promise((resolve) => {
+                    const checkInput = () => {
+                        if (game_1.Game.inputReceived) {
+                            resolve();
+                            canInitialize = true;
+                            console.timeEnd("initializeReverb");
+                        }
+                        else {
+                            requestAnimationFrame(checkInput);
+                        }
+                    };
+                    checkInput();
+                });
+            }
+            catch (error) {
+                console.error("Failed to initialize ReverbEngine:", error);
+                return;
+            }
+        }
+        if (!ReverbEngine.audioContext &&
+            !ReverbEngine.initialized &&
+            canInitialize) {
+            ReverbEngine.audioContext = new (window.AudioContext ||
+                window.webkitAudioContext)();
+            ReverbEngine.convolver = ReverbEngine.audioContext.createConvolver();
+            ReverbEngine.convolver.connect(ReverbEngine.audioContext.destination);
+            await ReverbEngine.loadReverbBuffer(`res/SFX/impulses/small.mp3`);
+            ReverbEngine.setDefaultReverb();
+            ReverbEngine.initialized = true;
+            if (sound_1.Sound.initialized)
+                sound_1.Sound.audioMuted = false;
+        }
+    }
+    // Load a specified impulse response
+    static async loadReverbBuffer(filePath) {
+        try {
+            const response = await fetch(filePath);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const arrayBuffer = await response.arrayBuffer();
+            ReverbEngine.reverbBuffer =
+                await ReverbEngine.audioContext.decodeAudioData(arrayBuffer);
+        }
+        catch (error) {
+            console.error("Error loading reverb buffer:", error);
+        }
+    }
+    // Set the default reverb buffer
+    static setDefaultReverb() {
+        if (ReverbEngine.reverbBuffer) {
+            ReverbEngine.convolver.buffer = ReverbEngine.reverbBuffer;
+        }
+    }
+    /**
+     * Set the reverb characteristics by specifying an impulse response file.
+     * @param filePath - The path to the impulse response file.
+     */
+    static async setReverbImpulse(filePath) {
+        if (!ReverbEngine.initialized)
+            return;
+        try {
+            await ReverbEngine.loadReverbBuffer(filePath);
+            if (ReverbEngine.reverbBuffer) {
+                ReverbEngine.convolver.buffer = ReverbEngine.reverbBuffer;
+            }
+        }
+        catch (error) {
+            console.error("Error setting reverb impulse:", error);
+        }
+    }
+    // Apply reverb to a given HTMLAudioElement
+    static async applyReverb(audioElement) {
+        await ReverbEngine.initialize();
+        if (!ReverbEngine.initialized)
+            return;
+        try {
+            if (ReverbEngine.mediaSources.has(audioElement)) {
+                return;
+            }
+            const track = ReverbEngine.audioContext.createMediaElementSource(audioElement);
+            track.connect(ReverbEngine.convolver);
+            ReverbEngine.mediaSources.set(audioElement, track);
+        }
+        catch (error) {
+            console.error("Error applying reverb:", error);
+        }
+    }
+    // Remove reverb from a given HTMLAudioElement
+    static async removeReverb(audioElement) {
+        await ReverbEngine.initialize();
+        if (!ReverbEngine.initialized)
+            return;
+        const track = ReverbEngine.mediaSources.get(audioElement);
+        if (track) {
+            track.disconnect();
+            ReverbEngine.mediaSources.delete(audioElement);
+        }
+    }
+}
+exports.ReverbEngine = ReverbEngine;
+ReverbEngine.reverbBuffer = null;
+ReverbEngine.mediaSources = new WeakMap();
+ReverbEngine.initialized = false;
+
+
+/***/ }),
+
+/***/ "./src/sound/sound.ts":
+/*!****************************!*\
+  !*** ./src/sound/sound.ts ***!
+  \****************************/
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Sound = void 0;
-const game_1 = __webpack_require__(/*! ./game */ "./src/game.ts");
-const reverb_1 = __webpack_require__(/*! ./reverb */ "./src/reverb.ts");
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const reverb_1 = __webpack_require__(/*! ./reverb */ "./src/sound/reverb.ts");
 class Sound {
     static playSoundSafely(audio) {
         audio.play().catch((err) => {
@@ -22135,262 +22716,6 @@ Sound.delayPlay = (method, delay) => {
 
 /***/ }),
 
-/***/ "./src/stats.ts":
-/*!**********************!*\
-  !*** ./src/stats.ts ***!
-  \**********************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.statsTracker = void 0;
-const eventBus_1 = __webpack_require__(/*! ./eventBus */ "./src/eventBus.ts");
-const events_1 = __webpack_require__(/*! ./events */ "./src/events.ts");
-class StatsTracker {
-    constructor() {
-        this.stats = {
-            enemiesKilled: 0,
-            damageDone: 0,
-            damageTaken: 0,
-            turnsPassed: 0,
-            coinsCollected: 0,
-            itemsCollected: 0,
-            enemies: [],
-        };
-        this.handleEnemyKilled = (payload) => {
-            this.stats.enemiesKilled += 1;
-            this.stats.enemies.push(payload.enemyId);
-            //console.log(`Enemy killed: ${payload.enemyId}`);
-        };
-        this.handleDamageDone = (payload) => {
-            this.stats.damageDone += payload.amount;
-            //console.log(`Damage done: ${payload.amount}`);
-        };
-        this.handleDamageTaken = (payload) => {
-            this.stats.damageTaken += payload.amount;
-            //console.log(`Damage taken: ${payload.amount}`);
-        };
-        this.handleTurnPassed = () => {
-            this.stats.turnsPassed += 1;
-            //console.log(`Turn passed: ${this.stats.turnsPassed}`);
-        };
-        this.handleCoinCollected = (payload) => {
-            this.stats.coinsCollected += payload.amount;
-            //console.log(`Coins collected: ${payload.amount}`);
-        };
-        this.handleItemCollected = (payload) => {
-            this.stats.itemsCollected += 1;
-            //console.log(`Item collected: ${payload.itemId}`);
-        };
-        this.initializeListeners();
-    }
-    initializeListeners() {
-        eventBus_1.globalEventBus.on(events_1.EVENTS.ENEMY_KILLED, this.handleEnemyKilled);
-        eventBus_1.globalEventBus.on(events_1.EVENTS.DAMAGE_DONE, this.handleDamageDone);
-        eventBus_1.globalEventBus.on(events_1.EVENTS.DAMAGE_TAKEN, this.handleDamageTaken);
-        eventBus_1.globalEventBus.on(events_1.EVENTS.TURN_PASSED, this.handleTurnPassed);
-        eventBus_1.globalEventBus.on(events_1.EVENTS.COIN_COLLECTED, this.handleCoinCollected);
-        eventBus_1.globalEventBus.on(events_1.EVENTS.ITEM_COLLECTED, this.handleItemCollected);
-    }
-    getStats() {
-        return this.stats;
-    }
-    resetStats() {
-        this.stats = {
-            enemiesKilled: 0,
-            damageDone: 0,
-            damageTaken: 0,
-            turnsPassed: 0,
-            coinsCollected: 0,
-            itemsCollected: 0,
-            enemies: [],
-        };
-        //console.log("Stats have been reset.");
-    }
-}
-exports.statsTracker = new StatsTracker();
-
-
-/***/ }),
-
-/***/ "./src/textbox.ts":
-/*!************************!*\
-  !*** ./src/textbox.ts ***!
-  \************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.TextBox = void 0;
-const eventBus_1 = __webpack_require__(/*! ./eventBus */ "./src/eventBus.ts");
-class TextBox {
-    constructor(element) {
-        this.allowedCharacters = "all";
-        this.message = "";
-        this.currentMessageIndex = -1;
-        this.MAX_HISTORY = 50;
-        this.handleKeyPress = (key) => {
-            const fontHas = "abcdefghijklmnopqrstuvwxyz1234567890,.!?:'()[]%-/ ".split("");
-            if (key.length === 1) {
-                key = key.toLowerCase();
-                if (fontHas.includes(key)) {
-                    if (this.allowedCharacters === "all" ||
-                        this.allowedCharacters.includes(key)) {
-                        this.text =
-                            this.text.substring(0, this.cursor) +
-                                key +
-                                this.text.substring(this.cursor, this.text.length);
-                        this.cursor += 1;
-                        this.updateElement();
-                        this.message =
-                            this.message.substring(0, this.cursor - 1) +
-                                key +
-                                this.message.substring(this.cursor - 1, this.message.length);
-                    }
-                }
-                //console.log(`Current message: "${this.message}"`);
-                return;
-            }
-            else {
-                switch (key) {
-                    case "Backspace":
-                        if (this.cursor > 0) {
-                            this.text =
-                                this.text.substring(0, this.cursor - 1) +
-                                    this.text.substring(this.cursor, this.text.length);
-                            this.cursor = Math.max(0, this.cursor - 1);
-                            this.updateElement();
-                            this.message =
-                                this.message.substring(0, this.cursor) +
-                                    this.message.substring(this.cursor + 1, this.message.length);
-                        }
-                        break;
-                    case "Delete":
-                        if (this.cursor < this.text.length) {
-                            this.text =
-                                this.text.substring(0, this.cursor) +
-                                    this.text.substring(this.cursor + 1, this.text.length);
-                            this.updateElement();
-                            this.message =
-                                this.message.substring(0, this.cursor) +
-                                    this.message.substring(this.cursor + 1, this.message.length);
-                        }
-                        break;
-                    case "ArrowLeft":
-                        this.cursor = Math.max(0, this.cursor - 1);
-                        this.updateCursorPosition();
-                        break;
-                    case "ArrowRight":
-                        this.cursor = Math.min(this.text.length, this.cursor + 1);
-                        this.updateCursorPosition();
-                        break;
-                    case "ArrowUp":
-                        if (this.sentMessages.length > 0 &&
-                            this.currentMessageIndex < this.sentMessages.length - 1) {
-                            this.currentMessageIndex++;
-                            this.text =
-                                this.sentMessages[this.sentMessages.length - 1 - this.currentMessageIndex];
-                            this.updateElement();
-                            this.message = this.text;
-                        }
-                        break;
-                    case "ArrowDown":
-                        if (this.currentMessageIndex > 0) {
-                            this.currentMessageIndex--;
-                            this.text =
-                                this.sentMessages[this.sentMessages.length - 1 - this.currentMessageIndex];
-                            this.updateElement();
-                            this.message = this.text;
-                        }
-                        else if (this.currentMessageIndex === 0) {
-                            this.currentMessageIndex = -1;
-                            this.clear();
-                        }
-                        break;
-                    case "Enter":
-                        this.sendMessage();
-                        this.escapeCallback();
-                        break;
-                    case "Escape":
-                        this.escapeCallback();
-                        break;
-                }
-            }
-            //console.log(`Current message: "${this.message}"`);
-        };
-        this.handleTouchStart = (e) => {
-            this.focus();
-            e.preventDefault();
-        };
-        this.text = "";
-        this.cursor = 0;
-        this.enterCallback = () => { };
-        this.escapeCallback = () => { };
-        this.element = element;
-        this.sentMessages = [];
-        //this.element.addEventListener("touchstart", this.handleTouchStart);
-    }
-    setEnterCallback(callback) {
-        this.enterCallback = callback;
-    }
-    setEscapeCallback(callback) {
-        this.escapeCallback = callback;
-    }
-    clear() {
-        this.text = "";
-        this.cursor = 0;
-        this.message = "";
-        this.updateElement();
-    }
-    focus() {
-        // Create a temporary input element to trigger the on-screen keyboard
-        const tempInput = document.createElement("input");
-        tempInput.type = "text";
-        tempInput.style.position = "absolute";
-        tempInput.style.opacity = "0";
-        tempInput.style.zIndex = "-1"; // Ensure it doesn't interfere with the game UI
-        document.body.appendChild(tempInput);
-        tempInput.focus();
-        tempInput.addEventListener("blur", () => {
-            document.body.removeChild(tempInput);
-        });
-    }
-    sendMessage() {
-        let message = this.message.trim();
-        if (message) {
-            // Add the new message to the history
-            this.sentMessages.push(message);
-            // Ensure the history size doesn't exceed the maximum limit
-            if (this.sentMessages.length > this.MAX_HISTORY) {
-                this.sentMessages.shift(); // Remove the oldest message
-            }
-            eventBus_1.globalEventBus.emit("ChatMessageSent", message);
-            console.log(this.sentMessages);
-            this.enterCallback();
-            if (message.startsWith("/")) {
-                message = message.substring(1);
-                eventBus_1.globalEventBus.emit("ChatCommand", message);
-            }
-            this.clear();
-            // Reset the navigation index
-            this.currentMessageIndex = -1;
-        }
-    }
-    updateElement() {
-        // Update the HTML element with the current text
-        // Modify to handle multiple lines if necessary
-        this.element.textContent = this.text;
-        // Optionally, update cursor position in the UI
-    }
-    updateCursorPosition() {
-        // Implement cursor position update in the UI if necessary
-    }
-}
-exports.TextBox = TextBox;
-
-
-/***/ }),
-
 /***/ "./src/tile/bones.ts":
 /*!***************************!*\
   !*** ./src/tile/bones.ts ***!
@@ -22569,8 +22894,8 @@ exports.CoffinTile = CoffinTile;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Decoration = exports.SkinType = void 0;
-const drawable_1 = __webpack_require__(/*! ../../drawable */ "./src/drawable.ts");
-const gameConstants_1 = __webpack_require__(/*! ../../gameConstants */ "./src/gameConstants.ts");
+const drawable_1 = __webpack_require__(/*! ../../drawable/drawable */ "./src/drawable/drawable.ts");
+const gameConstants_1 = __webpack_require__(/*! ../../game/gameConstants */ "./src/game/gameConstants.ts");
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 var SkinType;
 (function (SkinType) {
@@ -22635,7 +22960,7 @@ exports.Decoration = Decoration;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Puddle = exports.SkinType = void 0;
-const gameConstants_1 = __webpack_require__(/*! ../../gameConstants */ "./src/gameConstants.ts");
+const gameConstants_1 = __webpack_require__(/*! ../../game/gameConstants */ "./src/game/gameConstants.ts");
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const decoration_1 = __webpack_require__(/*! ./decoration */ "./src/tile/decorations/decoration.ts");
 var SkinType;
@@ -22702,11 +23027,11 @@ exports.Puddle = Puddle;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Door = exports.DoorType = exports.DoorDir = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-const gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
 const tile_1 = __webpack_require__(/*! ./tile */ "./src/tile/tile.ts");
 const key_1 = __webpack_require__(/*! ../item/key */ "./src/item/key.ts");
-const sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
-const lightSource_1 = __webpack_require__(/*! ../lightSource */ "./src/lightSource.ts");
+const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts");
+const lightSource_1 = __webpack_require__(/*! ../lighting/lightSource */ "./src/lighting/lightSource.ts");
 var DoorDir;
 (function (DoorDir) {
     DoorDir["North"] = "North";
@@ -22974,8 +23299,8 @@ exports.DownLadder = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const tile_1 = __webpack_require__(/*! ./tile */ "./src/tile/tile.ts");
 const upLadder_1 = __webpack_require__(/*! ./upLadder */ "./src/tile/upLadder.ts");
-const events_1 = __webpack_require__(/*! ../events */ "./src/events.ts");
-const eventBus_1 = __webpack_require__(/*! ../eventBus */ "./src/eventBus.ts");
+const events_1 = __webpack_require__(/*! ../event/events */ "./src/event/events.ts");
+const eventBus_1 = __webpack_require__(/*! ../event/eventBus */ "./src/event/eventBus.ts");
 class DownLadder extends tile_1.Tile {
     constructor(room, game, x, y) {
         super(room, x, y);
@@ -23203,7 +23528,7 @@ const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const tile_1 = __webpack_require__(/*! ./tile */ "./src/tile/tile.ts");
 const crate_1 = __webpack_require__(/*! ../entity/object/crate */ "./src/entity/object/crate.ts");
 const barrel_1 = __webpack_require__(/*! ../entity/object/barrel */ "./src/entity/object/barrel.ts");
-const hitWarning_1 = __webpack_require__(/*! ../hitWarning */ "./src/hitWarning.ts");
+const hitWarning_1 = __webpack_require__(/*! ../drawable/hitWarning */ "./src/drawable/hitWarning.ts");
 class SpikeTrap extends tile_1.Tile {
     constructor(room, x, y, tickCount) {
         super(room, x, y);
@@ -23287,8 +23612,8 @@ exports.SpikeTrap = SpikeTrap;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Tile = exports.SkinType = void 0;
-const drawable_1 = __webpack_require__(/*! ../drawable */ "./src/drawable.ts");
-const gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
+const drawable_1 = __webpack_require__(/*! ../drawable/drawable */ "./src/drawable/drawable.ts");
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
 var SkinType;
 (function (SkinType) {
     SkinType[SkinType["DUNGEON"] = 0] = "DUNGEON";
@@ -23539,8 +23864,8 @@ exports.Wall = Wall;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.WallTorch = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-const lightSource_1 = __webpack_require__(/*! ../lightSource */ "./src/lightSource.ts");
-const levelConstants_1 = __webpack_require__(/*! ../levelConstants */ "./src/levelConstants.ts");
+const lightSource_1 = __webpack_require__(/*! ../lighting/lightSource */ "./src/lighting/lightSource.ts");
+const levelConstants_1 = __webpack_require__(/*! ../level/levelConstants */ "./src/level/levelConstants.ts");
 const wall_1 = __webpack_require__(/*! ./wall */ "./src/tile/wall.ts");
 class WallTorch extends wall_1.Wall {
     constructor(room, x, y) {
@@ -23589,97 +23914,482 @@ exports.WallTorch = WallTorch;
 
 /***/ }),
 
-/***/ "./src/tutorialListener.ts":
-/*!*********************************!*\
-  !*** ./src/tutorialListener.ts ***!
-  \*********************************/
+/***/ "./src/utility/astarclass.ts":
+/*!***********************************!*\
+  !*** ./src/utility/astarclass.ts ***!
+  \***********************************/
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.TutorialListener = void 0;
-const eventBus_1 = __webpack_require__(/*! ./eventBus */ "./src/eventBus.ts");
-class TutorialListener {
-    constructor(game) {
-        this._seenEnemies = new Set();
-        this._seenEnemyClasses = new Set();
-        this.pendingNewEnemies = new Set();
-        this.tutorialCreationTimeout = null;
-        //console.log("Tutorial constructor called");
-        this.setupEventListeners();
-        this.game = game;
-        this.player = this.game.player;
-    }
-    get seenEnemies() {
-        if (this._seenEnemies === undefined) {
-            this._seenEnemies = new Set();
+exports.astar = void 0;
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+var astar;
+(function (astar_1) {
+    //================== start graph js
+    /*
+    graph.js http://github.com/bgrins/javascript-astar
+    MIT License
+    Creates a Graph class used in the astar search algorithm.
+    Includes Binary Heap (with modifications) from Marijn Haverbeke
+        URL: http://eloquentjavascript.net/appendix2.html
+        License: http://creativecommons.org/licenses/by/3.0/
+    */
+    let GraphNodeType;
+    (function (GraphNodeType) {
+        GraphNodeType[GraphNodeType["WALL"] = 0] = "WALL";
+        GraphNodeType[GraphNodeType["OPEN"] = 1] = "OPEN";
+    })(GraphNodeType = astar_1.GraphNodeType || (astar_1.GraphNodeType = {}));
+    let getTileCost = (tile) => {
+        if (tile)
+            return tile.isSolid() || tile.isDoor ? 99999999 : 300;
+        else
+            return 99999999;
+    };
+    class Graph {
+        constructor(grid) {
+            this.elements = grid;
+            var nodes = [];
+            var row, rowLength, len = grid.length;
+            for (var x = 0; x < len; ++x) {
+                row = grid[x];
+                rowLength = row.length;
+                nodes[x] = new Array(rowLength); // optimum array with size
+                for (var y = 0; y < rowLength; ++y) {
+                    nodes[x][y] = new GraphNode(x, y, row[y]);
+                }
+            }
+            this.nodes = nodes;
         }
-        return this._seenEnemies;
-    }
-    setupEventListeners() {
-        //console.log("Setting up event listeners");
-        eventBus_1.globalEventBus.on("EnemySeenPlayer", this.handleEnemySeen.bind(this));
-    }
-    handleEnemySeen(data) {
-        if (!this.hasSeenEnemy(data.enemyType)) {
-            this.game.pushMessage(`New enemy encountered: ${data.enemyName}`);
-            this.addSeenEnemy(data.enemyType);
-            this.pendingNewEnemies.add(data.enemyType);
-            this.scheduleTutorialCreation();
-            this.player.bestiary.addEntry(data.enemyType);
-            console.log(this.player.bestiary.entries);
+        toString() {
+            var graphString = "\n";
+            var nodes = this.nodes;
+            var rowDebug, row, y, l;
+            for (var x = 0, len = nodes.length; x < len;) {
+                rowDebug = "";
+                row = nodes[x++];
+                for (y = 0, l = row.length; y < l;) {
+                    rowDebug += row[y++].type + " ";
+                }
+                graphString = graphString + rowDebug + "\n";
+            }
+            return graphString;
         }
     }
-    scheduleTutorialCreation() {
-        if (this.tutorialCreationTimeout === null) {
-            this.tutorialCreationTimeout = setTimeout(() => {
-                this.createTutorialRoom(Array.from(this.pendingNewEnemies));
-                //this.game.pushMessage("Defeat the enemies guarding the exits.");
-                this.pendingNewEnemies.clear();
-                this.tutorialCreationTimeout = null;
-            }, 100); // Wait 100ms to collect all new enemies
+    astar_1.Graph = Graph;
+    class GraphNode {
+        constructor(x, y, type) {
+            this.data = {};
+            this.x = x;
+            this.y = y;
+            this.pos = { x: x, y: y };
+            this.type = type;
+        }
+        toString() {
+            return "[" + this.x + " " + this.y + "]";
+        }
+        isWall() {
+            return this.type == GraphNodeType.WALL;
         }
     }
-    createTutorialRoom(enemyTypes) {
-        /*
-        this.game.tutorialActive = true;
-        this.game.room.doors.forEach((door: Door) => {
-          door.guard();
-        });
-        */
+    astar_1.GraphNode = GraphNode;
+    class BinaryHeap {
+        constructor(scoreFunction) {
+            this.content = [];
+            this.scoreFunction = scoreFunction;
+        }
+        push(node) {
+            // Add the new node to the end of the array.
+            this.content.push(node);
+            // Allow it to sink down.
+            this.sinkDown(this.content.length - 1);
+        }
+        pop() {
+            // Store the first node so we can return it later.
+            var result = this.content[0];
+            // Get the node at the end of the array.
+            var end = this.content.pop();
+            // If there are any elements left, put the end node at the
+            // start, and let it bubble up.
+            if (this.content.length > 0) {
+                this.content[0] = end;
+                this.bubbleUp(0);
+            }
+            return result;
+        }
+        remove(node) {
+            var i = this.content.indexOf(node);
+            // When it is found, the process seen in 'pop' is repeated
+            // to fill up the hole.
+            var end = this.content.pop();
+            if (i !== this.content.length - 1) {
+                this.content[i] = end;
+                if (this.scoreFunction(end) < this.scoreFunction(node))
+                    this.sinkDown(i);
+                else
+                    this.bubbleUp(i);
+            }
+        }
+        size() {
+            return this.content.length;
+        }
+        rescoreElement(node) {
+            this.sinkDown(this.content.indexOf(node));
+        }
+        sinkDown(n) {
+            // Fetch the element that has to be sunk.
+            var element = this.content[n];
+            // When at 0, an element can not sink any further.
+            while (n > 0) {
+                // Compute the parent element's index, and fetch it.
+                var parentN = ((n + 1) >> 1) - 1, parent = this.content[parentN];
+                // Swap the elements if the parent is greater.
+                if (this.scoreFunction(element) < this.scoreFunction(parent)) {
+                    this.content[parentN] = element;
+                    this.content[n] = parent;
+                    // Update 'n' to continue at the new position.
+                    n = parentN;
+                }
+                else {
+                    // Found a parent that is less, no need to sink any further.
+                    break;
+                }
+            }
+        }
+        bubbleUp(n) {
+            // Look up the target element and its score.
+            var length = this.content.length, element = this.content[n], elemScore = this.scoreFunction(element);
+            while (true) {
+                // Compute the indices of the child elements.
+                var child2N = (n + 1) << 1, child1N = child2N - 1;
+                // This is used to store the new position of the element,
+                // if any.
+                var swap = null;
+                // If the first child exists (is inside the array)...
+                if (child1N < length) {
+                    // Look it up and compute its score.
+                    var child1 = this.content[child1N], child1Score = this.scoreFunction(child1);
+                    // If the score is less than our element's, we need to swap.
+                    if (child1Score < elemScore)
+                        swap = child1N;
+                }
+                // Do the same checks for the other child.
+                if (child2N < length) {
+                    var child2 = this.content[child2N], child2Score = this.scoreFunction(child2);
+                    if (child2Score < (swap === null ? elemScore : child1Score))
+                        swap = child2N;
+                }
+                // If the element needs to be moved, swap it, and continue.
+                if (swap !== null) {
+                    this.content[n] = this.content[swap];
+                    this.content[swap] = element;
+                    n = swap;
+                }
+                else {
+                    // Otherwise, we are done.
+                    break;
+                }
+            }
+        }
     }
-    // Method to check if an enemy has been seen before
-    hasSeenEnemy(enemyType) {
-        //console.log(`Checking if enemy has been seen: ${enemyType}`);
-        return this._seenEnemies.has(enemyType);
+    astar_1.BinaryHeap = BinaryHeap;
+    class AStar {
+        constructor(grid, disablePoints, lastPlayerPosition, enableCost) {
+            this.grid = [];
+            for (var x = 0, xl = grid.length; x < xl; x++) {
+                this.grid[x] = [];
+                for (var y = 0, yl = grid[x].length; y < yl; y++) {
+                    var cost = getTileCost(grid[x][y]);
+                    this.grid[x][y] = {
+                        org: grid[x][y],
+                        f: 0,
+                        g: 0,
+                        h: 0,
+                        cost: cost,
+                        visited: false,
+                        closed: false,
+                        pos: {
+                            x: x,
+                            y: y,
+                        },
+                        parent: null,
+                    };
+                }
+            }
+            if (disablePoints !== undefined) {
+                for (var i = 0; i < disablePoints.length; i++) {
+                    if (disablePoints[i].x >= 0 &&
+                        disablePoints[i].x < this.grid.length &&
+                        disablePoints[i].y >= 0 &&
+                        disablePoints[i].y < this.grid[0].length)
+                        this.grid[disablePoints[i].x][disablePoints[i].y].cost = 99999999;
+                }
+            }
+            if (lastPlayerPosition) {
+                if (lastPlayerPosition.x >= 0 &&
+                    lastPlayerPosition.x < this.grid.length &&
+                    lastPlayerPosition.y >= 0 &&
+                    lastPlayerPosition.y < this.grid[0].length)
+                    this.grid[lastPlayerPosition.x][lastPlayerPosition.y].cost = 0.5;
+            }
+        }
+        heap() {
+            return new BinaryHeap(function (node) {
+                return node.f;
+            });
+        }
+        _find(org) {
+            for (var x = 0; x < this.grid.length; x++)
+                for (var y = 0; y < this.grid[x].length; y++)
+                    if (this.grid[x][y].org == org)
+                        return this.grid[x][y];
+        }
+        _search(start, end, diagonal, diagonalsOnly, turnCostsExtra, turnDirection, heuristic, diagonalsOmni, lastPlayerPosition) {
+            heuristic = heuristic || this.manhattan;
+            diagonal = !!diagonal;
+            diagonalsOnly = !!diagonalsOnly;
+            turnCostsExtra = !!turnCostsExtra;
+            diagonalsOmni = !!diagonalsOmni;
+            var openHeap = this.heap();
+            var _start, _end;
+            if (start.x !== undefined && start.y !== undefined)
+                _start = this.grid[start.x][start.y];
+            else
+                _start = this._find(start);
+            if (end.x !== undefined && end.y !== undefined)
+                _end = this.grid[end.x][end.y];
+            else
+                _end = this._find(end);
+            if (AStar.NO_CHECK_START_POINT == false && _start.cost <= 0)
+                return [];
+            openHeap.push(_start);
+            while (openHeap.size() > 0) {
+                // Grab the lowest f(x) to process next.  Heap keeps this sorted for us.
+                var currentNode = openHeap.pop();
+                // End case -- result has been found, return the traced path.
+                if (currentNode === _end) {
+                    var curr = currentNode;
+                    var ret = [];
+                    while (curr.parent) {
+                        ret.push(curr);
+                        curr = curr.parent;
+                    }
+                    return ret.reverse();
+                }
+                // Normal case -- move currentNode from open to closed, process each of its neighbors.
+                currentNode.closed = true;
+                // Find all neighbors for the current node. Optionally find diagonal neighbors as well (false by default).
+                var neighbors = this.neighbors(currentNode, diagonal, diagonalsOnly, diagonalsOmni);
+                for (var i = 0, il = neighbors.length; i < il; i++) {
+                    var neighbor = neighbors[i];
+                    if (neighbor.closed || neighbor.cost <= 0) {
+                        // Not a valid node to process, skip to next neighbor.
+                        continue;
+                    }
+                    // The g score is the shortest distance from start to current node.
+                    // We need to check if the path we have arrived at this neighbor is the shortest one we have seen yet.
+                    var gScore = currentNode.g + neighbor.cost;
+                    if (turnCostsExtra) {
+                        var isTurn = false;
+                        if (currentNode.parent)
+                            isTurn = !((currentNode.parent.pos.x === currentNode.pos.x &&
+                                currentNode.pos.x === neighbor.pos.x) ||
+                                (currentNode.parent.pos.y === currentNode.pos.y &&
+                                    currentNode.pos.y === neighbor.pos.y));
+                        else {
+                            // initial step
+                            isTurn = true;
+                            if (neighbor.pos.x - currentNode.pos.x === 0 &&
+                                neighbor.pos.y - currentNode.pos.y === -1 &&
+                                turnDirection === game_1.Direction.UP)
+                                isTurn = false;
+                            if (neighbor.pos.x - currentNode.pos.x === 0 &&
+                                neighbor.pos.y - currentNode.pos.y === 1 &&
+                                turnDirection === game_1.Direction.DOWN)
+                                isTurn = false;
+                            if (neighbor.pos.x - currentNode.pos.x === 1 &&
+                                neighbor.pos.y - currentNode.pos.y === 0 &&
+                                turnDirection === game_1.Direction.RIGHT)
+                                isTurn = false;
+                            if (neighbor.pos.x - currentNode.pos.x === -1 &&
+                                neighbor.pos.y - currentNode.pos.y === 0 &&
+                                turnDirection === game_1.Direction.LEFT)
+                                isTurn = false;
+                        }
+                        if (isTurn)
+                            gScore++;
+                    }
+                    var beenVisited = neighbor.visited;
+                    if (!beenVisited || gScore < neighbor.g) {
+                        // Found an optimal (so far) path to this node.  Take score for node to see how good it is.
+                        neighbor.visited = true;
+                        neighbor.parent = currentNode;
+                        neighbor.h =
+                            neighbor.h ||
+                                heuristic(neighbor.pos, _end.pos, lastPlayerPosition);
+                        neighbor.g = gScore;
+                        neighbor.f = neighbor.g + neighbor.h;
+                        if (!beenVisited) {
+                            // Pushing to heap will put it in proper place based on the 'f' value.
+                            openHeap.push(neighbor);
+                        }
+                        else {
+                            // Already seen the node, but since it has been rescored we need to reorder it in the heap
+                            openHeap.rescoreElement(neighbor);
+                        }
+                    }
+                }
+            }
+            // No result was found - empty array signifies failure to find path.
+            return [];
+        }
+        static search(grid, start, end, disablePoints, diagonal, diagonalsOnly, turnCostsExtra, turnDirection, heuristic, diagonalsOmni, lastPlayerPosition) {
+            var astar = new AStar(grid, disablePoints, lastPlayerPosition);
+            return astar._search(start, end, diagonal, diagonalsOnly, turnCostsExtra, turnDirection, heuristic, diagonalsOmni);
+        }
+        manhattan(pos0, pos1) {
+            var d1 = Math.abs(pos1.x - pos0.x);
+            var d2 = Math.abs(pos1.y - pos0.y);
+            var heuristic = d1 + d2;
+            return heuristic;
+        }
+        neighbors(node, diagonals, diagonalsOnly, diagonalsOmni) {
+            var grid = this.grid;
+            var ret = [];
+            var x = node.pos.x;
+            var y = node.pos.y;
+            if (!diagonalsOnly) {
+                // West
+                if (grid[x - 1] && grid[x - 1][y]) {
+                    ret.push(grid[x - 1][y]);
+                }
+                // East
+                if (grid[x + 1] && grid[x + 1][y]) {
+                    ret.push(grid[x + 1][y]);
+                }
+                // South
+                if (grid[x] && grid[x][y - 1]) {
+                    ret.push(grid[x][y - 1]);
+                }
+                // North
+                if (grid[x] && grid[x][y + 1]) {
+                    ret.push(grid[x][y + 1]);
+                }
+            }
+            if (diagonals) {
+                // Southwest
+                if (grid[x - 1] && grid[x - 1][y - 1]) {
+                    ret.push(grid[x - 1][y - 1]);
+                }
+                // Southeast
+                if (grid[x + 1] && grid[x + 1][y - 1]) {
+                    ret.push(grid[x + 1][y - 1]);
+                }
+                // Northwest
+                if (grid[x - 1] && grid[x - 1][y + 1]) {
+                    ret.push(grid[x - 1][y + 1]);
+                }
+                // Northeast
+                if (grid[x + 1] && grid[x + 1][y + 1]) {
+                    ret.push(grid[x + 1][y + 1]);
+                }
+            }
+            function getRandomBoolean() {
+                return Math.random() < 0.5;
+            }
+            if (diagonalsOmni) {
+                const randomBool = getRandomBoolean();
+                // West
+                if (grid[x - 1] && grid[x - 1][y]) {
+                    // Instead of pushing West, choose between Southwest and Northwest
+                    if (randomBool == true) {
+                        ret.push(grid[x - 1][y - 1]);
+                        return;
+                    }
+                    else {
+                        ret.push(grid[x - 1][y + 1]);
+                        return;
+                    }
+                }
+                // East
+                if (grid[x + 1] && grid[x + 1][y]) {
+                    if (randomBool == true) {
+                        ret.push(grid[x + 1][y - 1]);
+                        return;
+                    }
+                    else {
+                        ret.push(grid[x + 1][y + 1]);
+                        return;
+                    }
+                }
+                // South
+                if (grid[x] && grid[x][y - 1]) {
+                    if (randomBool == true) {
+                        ret.push(grid[x - 1][y - 1]);
+                        return;
+                    }
+                    else {
+                        ret.push(grid[x + 1][y - 1]);
+                        return;
+                    }
+                }
+                // North
+                if (grid[x] && grid[x][y + 1]) {
+                    if (randomBool == true) {
+                        ret.push(grid[x - 1][y + 1]);
+                        return;
+                    }
+                    else {
+                        ret.push(grid[x + 1][y + 1]);
+                        return;
+                    }
+                }
+                else {
+                    return;
+                }
+            }
+            return ret;
+        }
     }
-    // Method to manually add an enemy to the seen list (useful for testing or manual control)
-    addSeenEnemy(enemyType) {
-        //console.log(`Adding enemy to seen list: ${enemyType}`);
-        this._seenEnemies.add(enemyType);
-        this._seenEnemyClasses.add(enemyType.prototype);
-    }
-    // Method to reset the seen enemies list (useful for testing or game resets)
-    resetSeenEnemies() {
-        //console.log("Resetting seen enemies list");
-        this._seenEnemies.clear();
-        this._seenEnemyClasses.clear();
-    }
-    // Method to clean up event listeners when needed
-    cleanup() {
-        //console.log("Cleaning up event listeners");
-        eventBus_1.globalEventBus.off("EnemySeenPlayer", this.handleEnemySeen.bind(this));
-    }
-}
-exports.TutorialListener = TutorialListener;
+    AStar.NO_CHECK_START_POINT = false;
+    astar_1.AStar = AStar;
+})(astar = exports.astar || (exports.astar = {}));
 
 
 /***/ }),
 
-/***/ "./src/utils.ts":
-/*!**********************!*\
-  !*** ./src/utils.ts ***!
-  \**********************/
+/***/ "./src/utility/random.ts":
+/*!*******************************!*\
+  !*** ./src/utility/random.ts ***!
+  \*******************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Random = void 0;
+class Random {
+}
+exports.Random = Random;
+Random.setState = (state) => {
+    Random.state = state;
+};
+Random.rand = () => {
+    Random.state ^= Random.state << 21;
+    Random.state ^= Random.state >>> 35;
+    Random.state ^= Random.state << 4;
+    return (Random.state >>> 0) / 4294967296;
+};
+// copy and paste into browser console
+// let state;
+// let rand = () => { state ^= (state << 21); state ^= (state >>> 35); state ^= (state << 4); return (state >>> 0) / 4294967296; }
+
+
+/***/ }),
+
+/***/ "./src/utility/utils.ts":
+/*!******************************!*\
+  !*** ./src/utility/utils.ts ***!
+  \******************************/
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -23754,711 +24464,6 @@ Utils.randomSineInt = (min, max) => {
     const range = max - min + 1;
     return Math.floor((sinValue / 2) * range) + min;
 };
-
-
-/***/ }),
-
-/***/ "./src/weapon/dagger.ts":
-/*!******************************!*\
-  !*** ./src/weapon/dagger.ts ***!
-  \******************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Dagger = void 0;
-const weapon_1 = __webpack_require__(/*! ./weapon */ "./src/weapon/weapon.ts");
-class Dagger extends weapon_1.Weapon {
-    constructor(level, x, y) {
-        super(level, x, y);
-        this.weaponMove = (newX, newY) => {
-            if (this.checkForPushables(newX, newY))
-                return true;
-            const hitSomething = this.executeAttack(newX, newY);
-            return !hitSomething;
-        };
-        this.degrade = () => { };
-        this.tileX = 22;
-        this.tileY = 0;
-        this.name = "dagger";
-        this.description = "A basic but dependable weapon.";
-    }
-}
-exports.Dagger = Dagger;
-Dagger.itemName = "dagger";
-
-
-/***/ }),
-
-/***/ "./src/weapon/dualdagger.ts":
-/*!**********************************!*\
-  !*** ./src/weapon/dualdagger.ts ***!
-  \**********************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.DualDagger = void 0;
-const weapon_1 = __webpack_require__(/*! ./weapon */ "./src/weapon/weapon.ts");
-const attackAnimation_1 = __webpack_require__(/*! ../particle/attackAnimation */ "./src/particle/attackAnimation.ts");
-class DualDagger extends weapon_1.Weapon {
-    constructor(level, x, y) {
-        super(level, x, y);
-        this.tickInInventory = () => {
-            this.firstAttack = true;
-        };
-        this.weaponMove = (newX, newY) => {
-            const entities = this.getEntitiesAt(newX, newY).filter((e) => !e.pushable);
-            let flag = false;
-            for (let e of entities) {
-                this.attack(e);
-                this.statusEffect(e);
-                flag = true;
-            }
-            if (flag) {
-                this.hitSound();
-                this.wielder.setHitXY(newX, newY);
-                this.shakeScreen(newX, newY);
-                if (this.firstAttack) {
-                    this.game.rooms[this.wielder.levelID].particles.push(new attackAnimation_1.AttackAnimation(newX, newY, "dualdagger", this.wielder.direction));
-                }
-                else {
-                    this.game.rooms[this.wielder.levelID].particles.push(new attackAnimation_1.AttackAnimation(newX, newY, "dualdagger2", this.wielder.direction));
-                }
-                this.game.rooms[this.wielder.levelID].entities = this.game.rooms[this.wielder.levelID].entities.filter((e) => !e.dead);
-                if (!this.firstAttack) {
-                    this.game.rooms[this.wielder.levelID].tick(this.wielder);
-                }
-                if (this.wielder === this.game.players[this.game.localPlayerID])
-                    this.game.shakeScreen(10 * this.wielder.hitX, 10 * this.wielder.hitY);
-                if (this.firstAttack) {
-                    this.game.rooms[this.wielder.levelID].tickHitWarnings();
-                    this.game.rooms[this.wielder.levelID].clearDeadStuff();
-                    this.firstAttack = false;
-                    this.wielder.beginSlowMotion();
-                }
-                this.degrade();
-            }
-            return !flag;
-        };
-        this.tileX = 23;
-        this.tileY = 0;
-        this.firstAttack = true;
-        this.name = "Dual Daggers";
-        this.useCost = 2;
-        this.description =
-            "After the first attack, enemies will not take their turn until you attack or move again.";
-    }
-}
-exports.DualDagger = DualDagger;
-DualDagger.itemName = "dual daggers";
-
-
-/***/ }),
-
-/***/ "./src/weapon/greataxe.ts":
-/*!********************************!*\
-  !*** ./src/weapon/greataxe.ts ***!
-  \********************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Greataxe = void 0;
-const weapon_1 = __webpack_require__(/*! ./weapon */ "./src/weapon/weapon.ts");
-const sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
-const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-class Greataxe extends weapon_1.Weapon {
-    constructor(level, x, y) {
-        super(level, x, y);
-        this.hitSound = () => {
-            sound_1.Sound.hit();
-            sound_1.Sound.playWarHammer();
-        };
-        this.adjustedDamage = () => {
-            let hp = this.wielder?.health / this.wielder?.maxHealth;
-            let damage = 1;
-            if (hp <= 1)
-                damage = 1;
-            if (hp <= 0.75)
-                damage = 2;
-            if (hp <= 0.5)
-                damage = 4;
-            if (hp <= 0.25)
-                damage = 8;
-            return damage;
-        };
-        this.attack = (enemy) => {
-            enemy.hurt(this.wielder, this.adjustedDamage());
-            this.statusEffect(enemy);
-        };
-        this.shakeScreen = () => {
-            this.wielder.beginSlowMotion();
-            setTimeout(() => {
-                this.wielder.endSlowMotion();
-                //this.hitSound();
-                switch (this.wielder.direction) {
-                    case game_1.Direction.DOWN:
-                        this.game.shakeScreen(0, -10 * this.adjustedDamage(), false);
-                        break;
-                    case game_1.Direction.UP:
-                        this.game.shakeScreen(0, -10 * this.adjustedDamage(), false);
-                        break;
-                    case game_1.Direction.LEFT:
-                        this.game.shakeScreen(-5, -10 * this.adjustedDamage(), false);
-                        break;
-                    case game_1.Direction.RIGHT:
-                        this.game.shakeScreen(5, -10 * this.adjustedDamage(), false);
-                        break;
-                }
-            }, this.hitDelay);
-        };
-        this.tileX = 24;
-        this.tileY = 2;
-        this.damage = 2;
-        this.name = "greataxe";
-        this.hitDelay = 225;
-        this.offsetY = 0;
-        this.iconOffset = 0.2;
-        this.durability = 25;
-        this.durabilityMax = 25;
-        this.useCost = 5;
-    }
-}
-exports.Greataxe = Greataxe;
-Greataxe.itemName = "greataxe";
-
-
-/***/ }),
-
-/***/ "./src/weapon/shotgun.ts":
-/*!*******************************!*\
-  !*** ./src/weapon/shotgun.ts ***!
-  \*******************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Shotgun = void 0;
-const weapon_1 = __webpack_require__(/*! ./weapon */ "./src/weapon/weapon.ts");
-const genericParticle_1 = __webpack_require__(/*! ../particle/genericParticle */ "./src/particle/genericParticle.ts");
-class Shotgun extends weapon_1.Weapon {
-    constructor(level, x, y) {
-        super(level, x, y);
-        this.weaponMove = (newX, newY) => {
-            let newX2 = 2 * newX - this.wielder.x;
-            let newY2 = 2 * newY - this.wielder.y;
-            let newX3 = 3 * newX - 2 * this.wielder.x;
-            let newY3 = 3 * newY - 2 * this.wielder.y;
-            let range = 3;
-            if (!this.game.rooms[this.wielder.levelID].tileInside(newX, newY) ||
-                this.game.rooms[this.wielder.levelID].roomArray[newX][newY].isSolid())
-                return true;
-            else if (!this.game.rooms[this.wielder.levelID].tileInside(newX2, newY2) ||
-                this.game.rooms[this.wielder.levelID].roomArray[newX2][newY2].isSolid())
-                range = 1;
-            else if (!this.game.rooms[this.wielder.levelID].tileInside(newX3, newY3) ||
-                this.game.rooms[this.wielder.levelID].roomArray[newX3][newY3].isSolid())
-                range = 2;
-            let enemyHitCandidates = [];
-            let firstPushable = 4;
-            let firstNonPushable = 5;
-            let firstNonDestroyable = 5;
-            for (let e of this.game.rooms[this.wielder.levelID].entities) {
-                if (e.pushable) {
-                    if (e.pointIn(newX, newY))
-                        return true;
-                    if (e.pointIn(newX2, newY2) && range >= 2) {
-                        enemyHitCandidates.push({ enemy: e, dist: 2 });
-                        firstPushable = 2;
-                    }
-                    if (e.pointIn(newX3, newY3) && range >= 3) {
-                        enemyHitCandidates.push({ enemy: e, dist: 3 });
-                        firstPushable = Math.min(firstPushable, 3);
-                    }
-                }
-                else if (e.destroyable) {
-                    if (e.pointIn(newX, newY) && range >= 1) {
-                        firstNonPushable = 1;
-                        enemyHitCandidates.push({ enemy: e, dist: 1 });
-                    }
-                    if (e.pointIn(newX2, newY2) && range >= 2) {
-                        firstNonPushable = Math.min(firstNonPushable, 2);
-                        enemyHitCandidates.push({ enemy: e, dist: 2 });
-                    }
-                    if (e.pointIn(newX3, newY3) && range >= 3) {
-                        firstNonPushable = Math.min(firstNonPushable, 3);
-                        enemyHitCandidates.push({ enemy: e, dist: 3 });
-                    }
-                }
-                else {
-                    if (e.pointIn(newX, newY) && range >= 1) {
-                        firstNonDestroyable = 1;
-                    }
-                    if (e.pointIn(newX2, newY2) && range >= 2) {
-                        firstNonDestroyable = Math.min(firstNonDestroyable, 2);
-                    }
-                    if (e.pointIn(newX3, newY3) && range >= 3) {
-                        firstNonDestroyable = Math.min(firstNonDestroyable, 3);
-                    }
-                }
-            }
-            let targetX = newX3;
-            let targetY = newY3;
-            if (firstNonDestroyable < firstNonPushable &&
-                firstNonDestroyable < firstPushable) {
-                return true;
-            }
-            if (firstNonPushable <= firstPushable) {
-                for (const c of enemyHitCandidates) {
-                    let e = c.enemy;
-                    let d = c.dist;
-                    if (d === 3)
-                        e.hurt(this.wielder, 0.5);
-                    else
-                        e.hurt(this.wielder, 1);
-                }
-                this.hitSound();
-                this.wielder.setHitXY(newX, newY);
-                genericParticle_1.GenericParticle.shotgun(this.game.rooms[this.wielder.levelID], this.wielder.x + 0.5, this.wielder.y, targetX + 0.5, targetY, "black");
-                genericParticle_1.GenericParticle.shotgun(this.game.rooms[this.wielder.levelID], this.wielder.x + 0.5, this.wielder.y, targetX + 0.5, targetY, "#ffddff");
-                let gp = new genericParticle_1.GenericParticle(this.game.rooms[this.wielder.levelID], 0.5 * (newX + this.wielder.x) + 0.5, 0.5 * (newY + this.wielder.y), 0, 1, 0, 0, 0, "white", 0);
-                gp.expirationTimer = 10;
-                this.game.rooms[this.wielder.levelID].particles.push(gp);
-                this.game.rooms[this.wielder.levelID].tick(this.wielder);
-                this.shakeScreen(newX, newY);
-                this.degrade();
-                return false;
-            }
-            return true;
-        };
-        this.tileX = 26;
-        this.tileY = 0;
-        this.name = "shotgun";
-    }
-}
-exports.Shotgun = Shotgun;
-Shotgun.itemName = "shotgun";
-
-
-/***/ }),
-
-/***/ "./src/weapon/spear.ts":
-/*!*****************************!*\
-  !*** ./src/weapon/spear.ts ***!
-  \*****************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Spear = void 0;
-const weapon_1 = __webpack_require__(/*! ./weapon */ "./src/weapon/weapon.ts");
-class Spear extends weapon_1.Weapon {
-    constructor(level, x, y) {
-        super(level, x, y);
-        this.weaponMove = (newX, newY) => {
-            let newX2 = 2 * newX - this.wielder.x;
-            let newY2 = 2 * newY - this.wielder.y;
-            let flag = false;
-            let enemyHitCandidates = [];
-            // Check first tile
-            if (this.checkForPushables(newX, newY))
-                return true;
-            const hitFirstTile = this.hitEntitiesAt(newX, newY);
-            if (hitFirstTile)
-                flag = true;
-            // Check second tile for enemies only (not pushables)
-            if (!this.game.rooms[this.wielder.levelID].roomArray[newX][newY].isSolid()) {
-                const entitiesAtSecondTile = this.getEntitiesAt(newX2, newY2).filter((e) => !e.pushable);
-                enemyHitCandidates = entitiesAtSecondTile;
-            }
-            if (!flag && enemyHitCandidates.length > 0) {
-                for (const e of enemyHitCandidates) {
-                    this.attack(e);
-                }
-                this.hitSound();
-                this.attackAnimation(newX2, newY2);
-                this.game.rooms[this.wielder.levelID].tick(this.wielder);
-                this.shakeScreen(newX2, newY2);
-                this.degrade();
-                return false;
-            }
-            if (flag) {
-                this.hitSound();
-                this.attackAnimation(newX, newY);
-                this.game.rooms[this.wielder.levelID].tick(this.wielder);
-                this.shakeScreen(newX, newY);
-                this.degrade();
-            }
-            return !flag;
-        };
-        this.tileX = 24;
-        this.tileY = 0;
-        this.name = "spear";
-        this.description =
-            "Hits enemies in front of you within a range of 2 tiles.";
-        this.iconOffset = 0.1; //default 0
-        this.offsetY = 0; //default -0.25
-        this.useCost = 1;
-    }
-}
-exports.Spear = Spear;
-Spear.itemName = "spear";
-
-
-/***/ }),
-
-/***/ "./src/weapon/spellbook.ts":
-/*!*********************************!*\
-  !*** ./src/weapon/spellbook.ts ***!
-  \*********************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Spellbook = void 0;
-const weapon_1 = __webpack_require__(/*! ./weapon */ "./src/weapon/weapon.ts");
-const sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
-const playerFireball_1 = __webpack_require__(/*! ../projectile/playerFireball */ "./src/projectile/playerFireball.ts");
-const utils_1 = __webpack_require__(/*! ../utils */ "./src/utils.ts");
-const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-const spellbookPage_1 = __webpack_require__(/*! ../item/usable/spellbookPage */ "./src/item/usable/spellbookPage.ts");
-class Spellbook extends weapon_1.Weapon {
-    constructor(level, x, y) {
-        super(level, x, y);
-        this.getTargets = () => {
-            this.targets = [];
-            let entities = this.game.rooms[this.wielder.levelID].entities;
-            this.targets = entities.filter((e) => !e.pushable &&
-                utils_1.Utils.distance(this.wielder.x, this.wielder.y, e.x, e.y) <= this.range);
-            let enemies = this.targets.filter((e) => e.isEnemy === true);
-            //console.log(enemies);
-            if (enemies.length > 0)
-                return enemies;
-            else {
-                //console.log(this.targets);
-                return this.targets;
-            }
-        };
-        this.disassemble = () => {
-            if (this.equipped) {
-                this.game.pushMessage("I should probably unequip this before I try to disassemble it...");
-                return;
-            }
-            this.game.pushMessage(`You tear the remaining pages out of your spellbook.`);
-            let inventory = this.wielder.inventory;
-            let inventoryX = this.x;
-            let inventoryY = this.y;
-            let numFragments = Math.floor(this.durability);
-            this.toggleEquip();
-            //inventory.weapon = null;
-            inventory.removeItem(this);
-            inventory.addItem(new spellbookPage_1.SpellbookPage(this.level, inventoryX, inventoryY, numFragments));
-        };
-        this.weaponMove = (newX, newY) => {
-            this.getTargets();
-            let direction = this.wielder.direction;
-            let flag = false;
-            let targets = this.targets;
-            const isTargetInDirection = (e) => {
-                switch (direction) {
-                    case game_1.Direction.UP:
-                        return e.y <= newY;
-                    case game_1.Direction.RIGHT:
-                        return e.x >= newX;
-                    case game_1.Direction.DOWN:
-                        return e.y >= newY;
-                    case game_1.Direction.LEFT:
-                        return e.x <= newX;
-                    default:
-                        return false;
-                }
-            };
-            if (targets.length > 0) {
-                this.isTargeting = true;
-            }
-            else {
-                this.isTargeting = false;
-            }
-            targets = targets.filter(isTargetInDirection);
-            for (let e of targets) {
-                if (!this.game.rooms[this.wielder.levelID].roomArray[e.x][e.y].isSolid()) {
-                    e.hurt(this.wielder, 1);
-                    this.game.rooms[this.wielder.levelID].projectiles.push(new playerFireball_1.PlayerFireball(this.wielder, e.x, e.y));
-                    flag = true;
-                }
-            }
-            if (flag) {
-                this.hitSound();
-                this.wielder.setHitXY(newX, newY);
-                this.game.rooms[this.wielder.levelID].tick(this.wielder);
-                this.shakeScreen(newX, newY);
-                sound_1.Sound.playMagic();
-                this.degrade();
-                setTimeout(() => {
-                    this.isTargeting = false;
-                }, 100);
-            }
-            return !flag;
-        };
-        this.range = 4;
-        this.tileX = 25;
-        this.tileY = 0;
-        this.canMine = true;
-        this.name = Spellbook.itemName;
-        this.isTargeting = false;
-        this.durability = 5;
-        this.durabilityMax = 10;
-        this.description = "Hits multiple enemies within a range of 4 tiles.";
-    }
-}
-exports.Spellbook = Spellbook;
-Spellbook.itemName = "spellbook";
-
-
-/***/ }),
-
-/***/ "./src/weapon/warhammer.ts":
-/*!*********************************!*\
-  !*** ./src/weapon/warhammer.ts ***!
-  \*********************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Warhammer = void 0;
-const weapon_1 = __webpack_require__(/*! ./weapon */ "./src/weapon/weapon.ts");
-const sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
-const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-class Warhammer extends weapon_1.Weapon {
-    constructor(level, x, y) {
-        super(level, x, y);
-        this.hitSound = () => {
-            sound_1.Sound.hit();
-            sound_1.Sound.playWarHammer();
-        };
-        this.weaponMove = (newX, newY) => {
-            if (this.checkForPushables(newX, newY))
-                return true;
-            const hitSomething = this.executeAttack(newX, newY);
-            return !hitSomething;
-        };
-        this.shakeScreen = () => {
-            this.wielder.beginSlowMotion();
-            setTimeout(() => {
-                this.wielder.endSlowMotion();
-                switch (this.wielder.direction) {
-                    case game_1.Direction.DOWN:
-                        this.game.shakeScreen(0, -30, false);
-                        break;
-                    case game_1.Direction.UP:
-                        this.game.shakeScreen(0, -30, false);
-                        break;
-                    case game_1.Direction.LEFT:
-                        this.game.shakeScreen(-5, -30, false);
-                        break;
-                    case game_1.Direction.RIGHT:
-                        this.game.shakeScreen(5, -30, false);
-                        break;
-                }
-            }, this.hitDelay);
-        };
-        this.tileX = 22;
-        this.tileY = 2;
-        this.damage = 2;
-        this.name = "warhammer";
-        this.hitDelay = 225;
-        this.useCost = 2;
-    }
-}
-exports.Warhammer = Warhammer;
-Warhammer.itemName = "warhammer";
-
-
-/***/ }),
-
-/***/ "./src/weapon/weapon.ts":
-/*!******************************!*\
-  !*** ./src/weapon/weapon.ts ***!
-  \******************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Weapon = void 0;
-const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-const equippable_1 = __webpack_require__(/*! ../item/equippable */ "./src/item/equippable.ts");
-const sound_1 = __webpack_require__(/*! ../sound */ "./src/sound.ts");
-const gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/gameConstants.ts");
-const weaponFragments_1 = __webpack_require__(/*! ../item/usable/weaponFragments */ "./src/item/usable/weaponFragments.ts");
-const attackAnimation_1 = __webpack_require__(/*! ../particle/attackAnimation */ "./src/particle/attackAnimation.ts");
-class Weapon extends equippable_1.Equippable {
-    constructor(level, x, y, status) {
-        super(level, x, y);
-        this.break = () => {
-            this.durability = 0;
-            this.wielder.inventory.weapon = null;
-            this.toggleEquip();
-            //this.wielder.inventory.removeItem(this);
-            //this.wielder = null;
-            this.game.pushMessage("Your weapon breaks");
-            if (this.status.poison || this.status.blood) {
-                this.clearStatus();
-            }
-            this.broken = true;
-        };
-        this.coEquippable = (other) => {
-            if (other instanceof Weapon)
-                return false;
-            return true;
-        };
-        this.applyStatus = (status) => {
-            this.status = status;
-            if (this.status.blood) {
-                //this.damage = Math.max(0.5, this.damage - 0.5);
-            }
-        };
-        this.clearStatus = () => {
-            const status = this.status.poison ? "poison" : "bleed";
-            this.game.pushMessage(`Your ${this.name}'s ${status} effect dries up`);
-            this.status = { poison: false, blood: false };
-            this.statusApplicationCount = 0;
-        };
-        this.statusEffect = (entity) => {
-            if (!entity.isEnemy)
-                return;
-            const enemy = entity;
-            if (!enemy.status.poison.active && !enemy.status.bleed.active) {
-                if (this.wielder.applyStatus(enemy, this.status)) {
-                    this.statusApplicationCount++;
-                    const message = this.status.poison
-                        ? `Your weapon poisons the ${enemy.name}`
-                        : `Your cursed weapon draws blood from the ${enemy.name}`;
-                    this.game.pushMessage(message);
-                    //if (this.statusApplicationCount >= 10) this.clearStatus();
-                }
-            }
-        };
-        this.disassemble = () => {
-            if (this.equipped) {
-                this.game.pushMessage("I should probably unequip this before I try to disassemble it...");
-                return;
-            }
-            this.game.pushMessage(`You dissassemble your ${this.name} into fragments.`);
-            let inventory = this.wielder.inventory;
-            let inventoryX = this.x;
-            let inventoryY = this.y;
-            let numFragments = Math.floor(this.durability / 1.5);
-            this.toggleEquip();
-            //inventory.weapon = null;
-            inventory.removeItem(this);
-            inventory.addItem(new weaponFragments_1.WeaponFragments(this.level, inventoryX, inventoryY, numFragments));
-        };
-        this.dropFromInventory = () => {
-            if (this.wielder.inventory.weapon === this)
-                this.wielder.inventory.weapon = null;
-            this.wielder = null;
-            this.equipped = false;
-        };
-        this.weaponMove = (newX, newY) => {
-            if (this.checkForPushables(newX, newY))
-                return true;
-            const hitSomething = this.executeAttack(newX, newY);
-            return !hitSomething;
-        };
-        this.attack = (enemy) => {
-            enemy.hurt(this.wielder, this.damage);
-            this.statusEffect(enemy);
-        };
-        this.attackAnimation = (newX, newY) => {
-            this.wielder.setHitXY(newX, newY);
-            this.game.rooms[this.wielder.levelID].particles.push(new attackAnimation_1.AttackAnimation(newX, newY, this.name, this.wielder.direction));
-        };
-        this.shakeScreen = (eX, eY) => {
-            if (this.wielder.game.rooms[this.wielder.levelID] === this.wielder.game.room)
-                this.wielder.shakeScreen(this.wielder.x, this.wielder.y, eX, eY);
-        };
-        this.hitSound = () => {
-            sound_1.Sound.hit();
-        };
-        this.drawStatus = (x, y) => {
-            if (this.status.poison || this.status.blood) {
-                let tileX = 3;
-                if (this.status.poison) {
-                    tileX = 4;
-                }
-                if (this.status.blood) {
-                    tileX = 3;
-                }
-                game_1.Game.drawFX(tileX, 0, 1, 1, x - 1 / gameConstants_1.GameConstants.TILESIZE, y - 1 / gameConstants_1.GameConstants.TILESIZE, 1, 1);
-            }
-        };
-        this.getDescription = () => {
-            let broken = this.broken ? " (broken)" : "";
-            let status = [];
-            let durability = "";
-            if (this.status.poison)
-                status.push("Poison");
-            if (this.status.blood)
-                status.push(" Bleed");
-            if (this.durability < this.durabilityMax)
-                durability = ` Durability: ${this.durability}/${this.durabilityMax}`;
-            return `${this.name}${broken}\n${status.join(", ")}\n${durability}\n${this.description}\ndamage: ${this.damage}`;
-        };
-        this.tick = () => { };
-        this.applyHitDelay = (hitSomething) => {
-            if (hitSomething) {
-                this.wielder.busyAnimating = true;
-                setTimeout(() => {
-                    this.wielder.busyAnimating = false;
-                }, this.hitDelay || 0);
-            }
-        };
-        if (level)
-            this.game = level.game;
-        this.canMine = false;
-        this.range = 1;
-        this.damage = 1;
-        this.status = status || { poison: false, blood: false };
-        this.durability = 50;
-        this.durabilityMax = 50;
-        this.statusApplicationCount = 0;
-        this.equipTick = true;
-        this.name = this.constructor.prototype.itemName;
-    }
-    // returns true if nothing was hit, false if the player should move
-    getEntitiesAt(x, y) {
-        return this.game.rooms[this.wielder.levelID].entities.filter((e) => e.destroyable && e.pointIn(x, y));
-    }
-    hitEntitiesAt(x, y) {
-        const entities = this.getEntitiesAt(x, y).filter((e) => !e.pushable);
-        let hitSomething = false;
-        for (const entity of entities) {
-            this.attack(entity);
-            hitSomething = true;
-        }
-        return hitSomething;
-    }
-    checkForPushables(x, y) {
-        const pushables = this.getEntitiesAt(x, y).filter((e) => e.pushable);
-        return pushables.length > 0;
-    }
-    executeAttack(targetX, targetY, animationName) {
-        const hitSomething = this.hitEntitiesAt(targetX, targetY);
-        this.applyHitDelay(hitSomething);
-        if (hitSomething) {
-            this.hitSound();
-            this.wielder.setHitXY(targetX, targetY);
-            this.attackAnimation(targetX, targetY);
-            this.game.rooms[this.wielder.levelID].tick(this.wielder);
-            this.shakeScreen(targetX, targetY);
-            this.degrade();
-        }
-        return hitSomething;
-    }
-}
-exports.Weapon = Weapon;
-Weapon.itemName = "weapon";
 
 
 /***/ })

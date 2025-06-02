@@ -3,14 +3,14 @@ import { Player, PlayerDirection } from "../player/player";
 import { Direction, Game } from "../game";
 import { Room, RoomType } from "../room/room";
 import { TextParticle } from "../particle/textParticle";
-import { GameConstants } from "../gameConstants";
+import { GameConstants } from "../game/gameConstants";
 import { Usable } from "./usable/usable";
 import { DownLadder } from "../tile/downLadder";
 import { Tile } from "../tile/tile";
 import { SpawnFloor } from "../tile/spawnfloor";
 import { SpikeTrap } from "../tile/spiketrap";
 import { Entity } from "../entity/entity";
-import { globalEventBus } from "../eventBus";
+import { globalEventBus } from "../event/eventBus";
 import { BishopEnemy } from "../entity/enemy/bishopEnemy";
 import { Enemy } from "../entity/enemy/enemy";
 

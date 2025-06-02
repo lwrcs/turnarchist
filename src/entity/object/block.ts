@@ -2,11 +2,11 @@ import { Entity } from "../entity";
 import { Room } from "../../room/room";
 import { Game } from "../../game";
 import { Heart } from "../../item/usable/heart";
-import { LevelConstants } from "../../levelConstants";
+import { LevelConstants } from "../../level/levelConstants";
 import { GenericParticle } from "../../particle/genericParticle";
 import { EntityType } from "../entity";
 import { ImageParticle } from "../../particle/imageParticle";
-import { Sound } from "../../sound";
+import { Sound } from "../../sound/sound";
 import { Geode } from "../../item/resource/geode";
 export class Block extends Entity {
   constructor(room: Room, game: Game, x: number, y: number) {

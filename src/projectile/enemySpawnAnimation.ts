@@ -5,10 +5,10 @@ import { Player } from "../player/player";
 import { Entity } from "../entity/entity";
 import { Room } from "../room/room";
 import { GenericParticle } from "../particle/genericParticle";
-import { Sound } from "../sound";
-import { HitWarning } from "../hitWarning";
+import { Sound } from "../sound/sound";
+import { HitWarning } from "../drawable/hitWarning";
 import { ImageParticle } from "../particle/imageParticle";
-import { LightSource } from "../lightSource";
+import { LightSource } from "../lighting/lightSource";
 
 export class EnemySpawnAnimation extends Projectile {
   readonly ANIM_COUNT = 3;
@@ -16,12 +16,15 @@ export class EnemySpawnAnimation extends Projectile {
   room: Room;
   enemy: Entity;
   frame: number;
-
   constructor(room: Room, enemy: Entity, x: number, y: number) {
     super(enemy, x, y);
     this.room = room;
     this.enemy = enemy;
     this.frame = 0;
+    this.hasBloom = true;
+    this.bloomColor = "#00BFFF";
+    this.bloomOffsetY = -0.5;
+
     this.lightSource = new LightSource(
       this.x + 0.5,
       this.y + 0.5,

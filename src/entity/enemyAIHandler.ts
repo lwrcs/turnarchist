@@ -1,6 +1,6 @@
 // src/entity/ai/enemyAIHandler.ts
-import { astar } from "./../astarclass";
-import { Direction } from "./../game";
+import { astar } from "../utility/astarclass";
+import { Direction } from "../game";
 import { SpikeTrap } from "./../tile/spiketrap";
 import { Enemy } from "./enemy/enemy";
 

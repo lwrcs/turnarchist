@@ -1,5 +1,5 @@
 import { Game } from "../game";
-import { GameConstants } from "../gameConstants";
+import { GameConstants } from "../game/gameConstants";
 import { Room } from "../room/room";
 import { Particle } from "./particle";
 

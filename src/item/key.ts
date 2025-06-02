@@ -1,7 +1,7 @@
 import { Item } from "./item";
 import { Equippable } from "./equippable";
 import { Room } from "../room/room";
-import { Sound } from "../sound";
+import { Sound } from "../sound/sound";
 import { Player } from "../player/player";
 
 export class Key extends Item {

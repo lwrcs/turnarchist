@@ -1,8 +1,8 @@
 import { Game } from "../game";
-import { LevelConstants } from "../levelConstants";
+import { LevelConstants } from "../level/levelConstants";
 import { Room } from "../room/room";
 import { Equippable } from "./equippable";
-import { GameConstants } from "../gameConstants";
+import { GameConstants } from "../game/gameConstants";
 
 export class Armor extends Equippable {
   health: number;

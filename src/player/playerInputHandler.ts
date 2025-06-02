@@ -1,9 +1,9 @@
-import { Input, InputEnum } from "../input";
+import { Input, InputEnum } from "../game/input";
 import type { Player } from "./player";
 import { Direction, LevelState } from "../game";
-import { MouseCursor } from "../mouseCursor";
+import { MouseCursor } from "../gui/mouseCursor";
 import { VendingMachine } from "../entity/object/vendingMachine";
-import { GameConstants } from "../gameConstants";
+import { GameConstants } from "../game/gameConstants";
 
 export class PlayerInputHandler {
   private player: Player;

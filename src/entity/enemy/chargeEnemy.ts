@@ -1,9 +1,9 @@
 import { Direction, Game } from "../../game";
 import { Room } from "../../room/room";
-import { HitWarning } from "../../hitWarning";
+import { HitWarning } from "../../drawable/hitWarning";
 import { Door } from "../../tile/door";
 import { GenericParticle } from "../../particle/genericParticle";
-import { GameConstants } from "../../gameConstants";
+import { GameConstants } from "../../game/gameConstants";
 import { Item } from "../../item/item";
 import { Enemy } from "./enemy";
 

@@ -1,9 +1,9 @@
 import { Player } from "../player/player";
 import { Entity } from "../entity/entity";
-import { Drawable } from "../drawable";
-import { HitWarning } from "../hitWarning";
+import { Drawable } from "../drawable/drawable";
+import { HitWarning } from "../drawable/hitWarning";
 import { Direction } from "../game";
-import { LightSource } from "../lightSource";
+import { LightSource } from "../lighting/lightSource";
 import { WizardEnemy } from "../entity/enemy/wizardEnemy";
 
 export class Projectile extends Drawable {
@@ -12,6 +12,7 @@ export class Projectile extends Drawable {
   dead: boolean;
   parent: Entity | Player;
   dir: Direction;
+  bloomOffsetY: number;
   lightSource: LightSource;
 
   constructor(parent: Entity | Player, x: number, y: number) {
@@ -24,6 +25,7 @@ export class Projectile extends Drawable {
     this.drawableY = y;
     this.hasBloom = false;
     this.bloomColor = "#00BFFF";
+    this.bloomOffsetY = 0;
   }
 
   get distanceToParent() {

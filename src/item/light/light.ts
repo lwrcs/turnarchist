@@ -1,8 +1,8 @@
 import { Game } from "../../game";
 import { Room } from "../../room/room";
 import { Equippable } from "../equippable";
-import { GameConstants } from "../../gameConstants";
-import { Utils } from "../../utils";
+import { GameConstants } from "../../game/gameConstants";
+import { Utils } from "../../utility/utils";
 
 export abstract class Light extends Equippable {
   fuel: number;

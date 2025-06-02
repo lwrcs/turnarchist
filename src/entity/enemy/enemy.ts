@@ -3,12 +3,12 @@ import { Direction, Game } from "../../game";
 import { Room } from "../../room/room";
 import { Player } from "../../player/player";
 import { Item } from "../../item/item";
-import { astar } from "../../astarclass";
+import { astar } from "../../utility/astarclass";
 import { SpikeTrap } from "../../tile/spiketrap";
 import { EntityType } from "../entity";
 import { ImageParticle } from "../../particle/imageParticle";
-import { globalEventBus } from "../../eventBus";
-import { Sound } from "../../sound";
+import { globalEventBus } from "../../event/eventBus";
+import { Sound } from "../../sound/sound";
 
 enum EnemyState {
   SLEEP,

@@ -1,12 +1,12 @@
 import { Direction, Game } from "../../game";
 import { Room } from "../../room/room";
-import { astar } from "../../astarclass";
+import { astar } from "../../utility/astarclass";
 import { SpikeTrap } from "../../tile/spiketrap";
 import { Player } from "../../player/player";
 import { Item } from "../../item/item";
-import { GameConstants } from "../../gameConstants";
+import { GameConstants } from "../../game/gameConstants";
 import { Enemy } from "./enemy";
-import { Utils } from "../../utils";
+import { Utils } from "../../utility/utils";
 
 export class CrabEnemy extends Enemy {
   ticks: number;

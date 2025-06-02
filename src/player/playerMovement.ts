@@ -1,6 +1,6 @@
 import type { Player } from "./player";
 import { Direction } from "../game";
-import { GameConstants } from "../gameConstants";
+import { GameConstants } from "../game/gameConstants";
 import { TurnState } from "../room/room";
 
 export class PlayerMovement {

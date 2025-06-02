@@ -1,16 +1,16 @@
 import { Item } from "../item/item";
-import { LevelConstants } from "../levelConstants";
+import { LevelConstants } from "../level/levelConstants";
 import { Game } from "../game";
-import { GameConstants } from "../gameConstants";
+import { GameConstants } from "../game/gameConstants";
 import { Equippable } from "../item/equippable";
 import { Armor } from "../item/armor";
 import { Coin } from "../item/coin";
-import { Weapon } from "../weapon/weapon";
+import { Weapon } from "../item/weapon/weapon";
 import { Room } from "../room/room";
 import { Usable } from "../item/usable/usable";
 import { Player } from "../player/player";
-import { MouseCursor } from "../mouseCursor";
-import { Input } from "../input";
+import { MouseCursor } from "../gui/mouseCursor";
+import { Input } from "../game/input";
 import { Pickaxe } from "../item/tool/pickaxe";
 
 let OPEN_TIME = 100; // milliseconds

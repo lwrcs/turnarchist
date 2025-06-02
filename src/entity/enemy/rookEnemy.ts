@@ -2,7 +2,7 @@ import { Game } from "../../game";
 import { Room } from "../../room/room";
 import { Player } from "../../player/player";
 import { Item } from "../../item/item";
-import { astar } from "../../astarclass";
+import { astar } from "../../utility/astarclass";
 import { SpikeTrap } from "../../tile/spiketrap";
 import { Enemy } from "./enemy";
 

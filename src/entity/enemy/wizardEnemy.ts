@@ -5,10 +5,10 @@ import { Bones } from "../../tile/bones";
 import { DeathParticle } from "../../particle/deathParticle";
 import { WizardTeleportParticle } from "../../particle/wizardTeleportParticle";
 import { WizardFireball } from "../../projectile/wizardFireball";
-import { Random } from "../../random";
+import { Random } from "../../utility/random";
 import { Item } from "../../item/item";
 import { Enemy } from "./enemy";
-import { LightSource } from "../../lightSource";
+import { LightSource } from "../../lighting/lightSource";
 
 export enum WizardState {
   idle,

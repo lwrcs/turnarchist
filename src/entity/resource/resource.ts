@@ -5,13 +5,13 @@ import { Room } from "../../room/room";
 import { Heart } from "../../item/usable/heart";
 import { Armor } from "../../item/armor";
 import { Entity } from "../entity";
-import { LevelConstants } from "../../levelConstants";
+import { LevelConstants } from "../../level/levelConstants";
 import { GreenGem } from "../../item/resource/greengem";
 import { Player } from "../../player/player";
 import { Pickaxe } from "../../item/tool/pickaxe";
-import { Spellbook } from "../../weapon/spellbook";
+import { Spellbook } from "../../item/weapon/spellbook";
 import { EntityType } from "../entity";
-import { Sound } from "../../sound";
+import { Sound } from "../../sound/sound";
 
 export class Resource extends Entity {
   constructor(room: Room, game: Game, x: number, y: number) {

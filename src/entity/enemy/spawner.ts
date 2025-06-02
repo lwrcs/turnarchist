@@ -1,12 +1,12 @@
 import { Game } from "../../game";
 import { Room } from "../../room/room";
 import { Floor } from "../../tile/floor";
-import { HitWarning } from "../../hitWarning";
+import { HitWarning } from "../../drawable/hitWarning";
 import { SkullEnemy } from "./skullEnemy";
 import { EnemySpawnAnimation } from "../../projectile/enemySpawnAnimation";
 import { KnightEnemy } from "./knightEnemy";
 import { Enemy } from "./enemy";
-import { Random } from "../../random";
+import { Random } from "../../utility/random";
 import { EnergyWizardEnemy } from "./energyWizard";
 import { ZombieEnemy } from "./zombieEnemy";
 import { BishopEnemy } from "./bishopEnemy";

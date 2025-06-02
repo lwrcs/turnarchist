@@ -3,12 +3,12 @@ import { Player } from "../../player/player";
 import { Game } from "../../game";
 import { Room } from "../../room/room";
 import { TextParticle } from "../../particle/textParticle";
-import { GameConstants } from "../../gameConstants";
+import { GameConstants } from "../../game/gameConstants";
 import { RedGem } from "./redgem";
 import { BlueGem } from "./bluegem";
 import { GreenGem } from "./greengem";
 import { Inventory } from "../../inventory/inventory";
-import { Utils } from "../../utils";
+import { Utils } from "../../utility/utils";
 export class Geode extends Item {
   static itemName = "geode";
   constructor(level: Room, x: number, y: number) {

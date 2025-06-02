@@ -1,12 +1,12 @@
 import { Player } from "../player/player";
 import { Direction, Game } from "../game";
 import { Room } from "../room/room";
-import { GameConstants } from "../gameConstants";
+import { GameConstants } from "../game/gameConstants";
 import { SkinType, Tile } from "./tile";
 import { EntityType } from "../entity/entity";
 import { Key } from "../item/key";
-import { Sound } from "../sound";
-import { LightSource } from "../lightSource";
+import { Sound } from "../sound/sound";
+import { LightSource } from "../lighting/lightSource";
 
 export enum DoorDir {
   North = "North",

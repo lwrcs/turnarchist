@@ -1,11 +1,11 @@
 import { Item } from "../item";
 import { Player } from "../../player/player";
 import { Game } from "../../game";
-import { Sound } from "../../sound";
+import { Sound } from "../../sound/sound";
 import { Room } from "../../room/room";
 import { Usable } from "../usable/usable";
-import { Weapon } from "../../weapon/weapon";
-import { Dagger } from "../../weapon/dagger";
+import { Weapon } from "../weapon/weapon";
+import { Dagger } from "../weapon/dagger";
 import { WeaponFragments } from "../usable/weaponFragments";
 import { Geode } from "../resource/geode";
 export class Hammer extends Usable {

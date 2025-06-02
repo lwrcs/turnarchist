@@ -1,4 +1,4 @@
-import { Weapon } from "../../weapon/weapon";
+import { Weapon } from "../weapon/weapon";
 import { Room } from "../../room/room";
 import { Item } from "../item";
 

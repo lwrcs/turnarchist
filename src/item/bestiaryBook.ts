@@ -1,10 +1,9 @@
 import { Item } from "./item";
 import { Player } from "../player/player";
 import { Game } from "../game";
-import { Sound } from "../sound";
 import { Room } from "../room/room";
 import { Usable } from "./usable/usable";
-import { Bestiary } from "../bestiary";
+import { Bestiary } from "../game/bestiary";
 
 export class BestiaryBook extends Usable {
   static itemName = "bestiary book";

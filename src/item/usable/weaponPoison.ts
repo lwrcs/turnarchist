@@ -1,9 +1,9 @@
 import { Item } from "../item";
 import { Player } from "../../player/player";
-import { Sound } from "../../sound";
+import { Sound } from "../../sound/sound";
 import { Room } from "../../room/room";
 import { Usable } from "./usable";
-import { Weapon } from "../../weapon/weapon";
+import { Weapon } from "../weapon/weapon";
 
 export class WeaponPoison extends Usable {
   static itemName = "weapon poison";

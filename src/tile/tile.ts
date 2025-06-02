@@ -1,8 +1,8 @@
 import { Room } from "../room/room";
 import { Player } from "../player/player";
 import { Entity } from "../entity/entity";
-import { Drawable } from "../drawable";
-import { GameConstants } from "../gameConstants";
+import { Drawable } from "../drawable/drawable";
+import { GameConstants } from "../game/gameConstants";
 
 export enum SkinType {
   DUNGEON = 0,

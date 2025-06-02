@@ -1,8 +1,8 @@
 import { Room } from "../room/room";
 import { Particle } from "./particle";
 import { Direction, Game } from "../game";
-import { GameConstants } from "../gameConstants";
-import { Random } from "../random";
+import { GameConstants } from "../game/gameConstants";
+import { Random } from "../utility/random";
 import { Player, PlayerDirection } from "../player/player";
 import { Entity } from "../entity/entity";
 

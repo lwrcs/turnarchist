@@ -2,14 +2,14 @@ import { Entity } from "../entity";
 import { Room } from "../../room/room";
 import { Game } from "../../game";
 import { Heart } from "../../item/usable/heart";
-import { LevelConstants } from "../../levelConstants";
+import { LevelConstants } from "../../level/levelConstants";
 import { GenericParticle } from "../../particle/genericParticle";
 import { EntityType } from "../entity";
 import { ImageParticle } from "../../particle/imageParticle";
 import { Candle } from "../../item/light/candle";
-import { Random } from "../../random";
+import { Random } from "../../utility/random";
 import { Coin } from "../../item/coin";
-import { Sound } from "../../sound";
+import { Sound } from "../../sound/sound";
 
 export class Pot extends Entity {
   constructor(room: Room, game: Game, x: number, y: number) {

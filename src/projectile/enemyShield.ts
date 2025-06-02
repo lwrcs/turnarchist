@@ -1,14 +1,14 @@
 import { Projectile } from "./projectile";
 import { Game } from "../game";
 import { Player } from "../player/player";
-import { HitWarning } from "../hitWarning";
+import { HitWarning } from "../drawable/hitWarning";
 import { Entity } from "../entity/entity";
 import { Enemy } from "../entity/enemy/enemy";
-import { LightSource } from "../lightSource";
-import { Lighting } from "../lighting";
+import { LightSource } from "../lighting/lightSource";
+import { Lighting } from "../lighting/lighting";
 import { OccultistEnemy } from "../entity/enemy/occultistEnemy";
-import { GameConstants } from "../gameConstants";
-import { BeamEffect } from "../beamEffect";
+import { GameConstants } from "../game/gameConstants";
+import { BeamEffect } from "./beamEffect";
 import { GenericParticle } from "../particle/genericParticle";
 
 export class EnemyShield extends Projectile {
