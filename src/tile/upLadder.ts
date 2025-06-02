@@ -22,7 +22,9 @@ export class UpLadder extends Tile {
       return;
     }
     try {
-      this.linkLevel();
+      if (!this.linkedLevel) {
+        this.linkLevel();
+      }
       this.game.changeLevelThroughLadder(player, this);
     } catch (error) {
       console.error("Error during changeLevelThroughLadder:", error);

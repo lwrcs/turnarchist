@@ -1295,9 +1295,23 @@ export class Room {
     this.addRandomTorches("medium");
 
     const { x, y } = this.getRoomCenter();
-    let d = new DownLadder(this, this.game, x, y);
-    d.isRope = true;
-    this.roomArray[x][y] = d;
+    console.log("About to create DownLadder in rope hole");
+    let d = new DownLadder(this, this.game, x, y, true);
+    console.log("DownLadder created, about to add to room array");
+
+    // Delay adding to room array to avoid triggering side path generation during level setup
+    setTimeout(() => {
+      this.roomArray[x][y] = d;
+      console.log("DownLadder added to room array successfully (delayed)");
+    }, 0);
+
+    console.log("Current room depth:", this.depth, "Current room ID:", this.id);
+    console.log(
+      "Player current depth:",
+      this.game.players[0]?.depth,
+      "Player levelID:",
+      this.game.players[0]?.levelID,
+    );
   };
 
   populateRopeCave = (rand: () => number) => {

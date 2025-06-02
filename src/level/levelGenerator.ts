@@ -11,6 +11,12 @@ import {
 import { Level } from "./level";
 import { GameConstants } from "../game/gameConstants";
 
+enum PathType {
+  MAIN_PATH, // Has exit room (current dungeon)
+  SIDE_PATH, // No exit room (current cave/ropehole)
+  TUTORIAL, // Special case
+}
+
 // animation delays in ms
 let ANIMATION_PARTITION_SPLIT_DELAY = 0; // for partition splitting
 let ANIMATION_PATHFINDING_DELAY = 0; // for pathfinding
@@ -732,7 +738,7 @@ let generate_dungeon_candidate = async (
       if (seen.indexOf(other) === -1) frontier.push(other);
     }
   }
-  /*
+
   // add special rooms
   let added_rope_hole = false;
   for (const p of partialLevel.partitions) {
@@ -751,7 +757,7 @@ let generate_dungeon_candidate = async (
       }
     }
   }
-*/
+
   await new Promise((resolve) =>
     setTimeout(
       resolve,
@@ -1050,6 +1056,19 @@ export class PartialLevel {
   partitions: Array<Partition>;
 }
 
+interface PathParameters {
+  pathType: PathType;
+  mapWidth: number;
+  mapHeight: number;
+  roomCount: { min: number; max: number };
+  splitProbabilities: number[];
+  wallRemoveProbability: number;
+  maxRoomArea: number;
+  softMaxRoomArea: number;
+  connectionStyle: "linear" | "branched";
+  loopDoorCount: { min: number; max: number };
+}
+
 export class LevelGenerator {
   game: Game;
   seed: number;
@@ -1087,8 +1106,8 @@ export class LevelGenerator {
     }
   };
 
-  createLevel = (depth: number) => {
-    let newLevel = new Level(this.game, depth, 100, 100);
+  createLevel = (depth: number, isMainPath: boolean = true) => {
+    let newLevel = new Level(this.game, depth, 100, 100, isMainPath);
     return newLevel;
   };
 
@@ -1150,7 +1169,7 @@ export class LevelGenerator {
   generate = async (
     game: Game,
     depth: number,
-    cave = false,
+    isSidePath = false, // Updated parameter name for clarity
     callback: (linkedLevel: Room) => void,
   ) => {
     this.levelParams = LevelParameterGenerator.getParameters(depth);
@@ -1169,9 +1188,8 @@ export class LevelGenerator {
 
     this.partialLevel = new PartialLevel();
 
-    // Generate partitions based on whether it's a cave or a dungeon
-    if (cave)
-      await generate_cave(this.partialLevel, 20, 20); // You might want to make these dynamic based on params
+    // Generate partitions based on whether it's a side path or main path
+    if (isSidePath) await generate_cave(this.partialLevel, 50, 50);
     else
       await generate_dungeon(
         game,
@@ -1188,17 +1206,21 @@ export class LevelGenerator {
     }
 
     // Get the levels based on the partitions
-    let newLevel = this.createLevel(depth);
+    let newLevel = this.createLevel(depth, !isSidePath); // isMainPath = !isSidePath
 
     this.game.levels.push(newLevel);
     this.game.level = newLevel;
     let rooms = this.getRooms(this.partialLevel.partitions, depth, mapGroup);
 
     newLevel.setRooms(rooms);
-    newLevel.exitRoom.linkExitToStart();
+
+    // Only call linkExitToStart for main paths
+    if (newLevel.exitRoom) {
+      newLevel.exitRoom.linkExitToStart();
+    }
 
     // Update the current floor first level ID if it's not a cave
-    if (!cave) this.currentFloorFirstLevelID = this.game.rooms.length;
+    if (!isSidePath) this.currentFloorFirstLevelID = this.game.rooms.length;
 
     // Add the new levels to the game rooms
     this.game.rooms = rooms;
@@ -1209,11 +1231,11 @@ export class LevelGenerator {
         for (let x = room.roomX; x < room.roomX + room.width; x++) {
           for (let y = room.roomY; y < room.roomY + room.height; y++) {
             let tile = room.roomArray[x][y];
-            if (tile instanceof DownLadder && tile.isRope) {
+            if (tile instanceof DownLadder && tile.isSidePath) {
               tile.generate();
 
               callback(
-                cave
+                isSidePath
                   ? rooms.find((r) => r.type === RoomType.ROPECAVE)
                   : rooms.find((r) => r.type === RoomType.START),
               );
@@ -1226,7 +1248,7 @@ export class LevelGenerator {
 
     // Return the start room or the rope cave room
     callback(
-      cave
+      isSidePath
         ? rooms.find((r) => r.type === RoomType.ROPECAVE)
         : rooms.find((r) => r.type === RoomType.START),
     );
@@ -1287,3 +1309,60 @@ export class LevelGenerator {
     }
   };
 }
+
+const getPathParameters = (
+  pathType: PathType,
+  depth: number,
+): PathParameters => {
+  const baseParams = LevelParameterGenerator.getParameters(depth);
+
+  switch (pathType) {
+    case PathType.MAIN_PATH:
+      return {
+        pathType: PathType.MAIN_PATH,
+        mapWidth: baseParams.mapWidth,
+        mapHeight: baseParams.mapHeight,
+        roomCount: {
+          min: baseParams.minRoomCount,
+          max: baseParams.maxRoomCount,
+        },
+        splitProbabilities: [0.75, 1, 0.5], // Current dungeon split pattern
+        wallRemoveProbability: 0.5,
+        maxRoomArea: baseParams.maxRoomArea,
+        softMaxRoomArea: baseParams.softMaxRoomArea,
+        connectionStyle: "linear",
+        loopDoorCount: { min: 4, max: 8 },
+      };
+
+    case PathType.SIDE_PATH:
+      return {
+        pathType: PathType.SIDE_PATH,
+        mapWidth: 50, // Current cave size
+        mapHeight: 50,
+        roomCount: { min: 5, max: 5 }, // Current cave room count
+        splitProbabilities: [0.75, 1, 0.5], // Same split pattern for now
+        wallRemoveProbability: 0.5,
+        maxRoomArea: 100, // Smaller rooms for caves
+        softMaxRoomArea: 80,
+        connectionStyle: "branched", // More branched for caves
+        loopDoorCount: { min: 4, max: 8 },
+      };
+
+    case PathType.TUTORIAL:
+      return {
+        pathType: PathType.TUTORIAL,
+        mapWidth: 7,
+        mapHeight: 7,
+        roomCount: { min: 1, max: 1 },
+        splitProbabilities: [],
+        wallRemoveProbability: 0,
+        maxRoomArea: 49,
+        softMaxRoomArea: 49,
+        connectionStyle: "linear",
+        loopDoorCount: { min: 0, max: 0 },
+      };
+
+    default:
+      throw new Error(`Unknown path type: ${pathType}`);
+  }
+};

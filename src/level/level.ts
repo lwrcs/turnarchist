@@ -63,32 +63,51 @@ export class Level {
   environment: Environment;
   exitRoom: Room;
   startRoom: Room;
-  //environmentData: environmentData;
-  //enemySpawnPool: Array<entitySpawnData>;
   enemyParameters: EnemyParameters;
-  constructor(game: Game, depth: number, width: number, height: number) {
+  isMainPath: boolean = true;
+
+  constructor(
+    game: Game,
+    depth: number,
+    width: number,
+    height: number,
+    isMainPath: boolean = true,
+  ) {
     this.game = game;
     this.depth = depth;
     this.width = width;
     this.height = height;
     this.rooms = [];
+    this.isMainPath = isMainPath;
     this.initializeLevelArray();
-    //this.loadRoomsIntoLevelArray();
-    //console.log(`level depth: ${this.depth}`);
 
     this.enemyParameters = this.getEnemyParameters();
-    let envType = Math.floor(Math.random() * 3); //multiply by number of environments to choose from
+    let envType = this.isMainPath ? 0 : Math.floor(Math.random() * 2) + 1;
     this.environment = new Environment(envType);
+    let mainPath = this.isMainPath ? "main" : "side";
+    console.log(`${mainPath} path, envType: ${envType}`);
   }
 
   setExitRoom() {
-    this.exitRoom = this.rooms.find(
-      (room) => room.type === RoomType.DOWNLADDER,
-    );
+    if (this.isMainPath) {
+      this.exitRoom = this.rooms.find(
+        (room) => room.type === RoomType.DOWNLADDER,
+      );
+    } else {
+      this.exitRoom = this.rooms.find(
+        (room) => room.type === RoomType.UPLADDER,
+      );
+    }
   }
 
   setStartRoom() {
-    this.startRoom = this.rooms.find((room) => room.type === RoomType.START);
+    if (this.isMainPath) {
+      this.startRoom = this.rooms.find((room) => room.type === RoomType.START);
+    } else {
+      this.startRoom = this.rooms.find(
+        (room) => room.type === RoomType.ROPECAVE,
+      );
+    }
   }
 
   setRooms(rooms: Room[]) {
