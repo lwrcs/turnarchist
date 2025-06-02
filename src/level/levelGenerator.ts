@@ -707,10 +707,10 @@ let generate_dungeon_candidate = async (
 
       // Set open walls for stair and boss connection
       stair.setOpenWall(
-        new PartitionConnection(stair.x + 1, stair.y + 3, boss),
+        new PartitionConnection(stair.x + 1, stair.y + stairRoomHeight, boss),
       );
       boss.setOpenWall(
-        new PartitionConnection(stair.x + 1, stair.y + 3, stair),
+        new PartitionConnection(stair.x + 1, stair.y + stairRoomHeight, stair),
       );
       break;
     }
@@ -828,7 +828,11 @@ let generate_cave_candidate = async (
   map_h: number,
   num_rooms: number,
 ) => {
-  partialLevel.partitions = [new Partition(0, 0, map_w, map_h, "white")];
+  // Offset cave generation by 1000 to avoid overlap with main path dungeons
+  const CAVE_OFFSET = 1000;
+  partialLevel.partitions = [
+    new Partition(CAVE_OFFSET, CAVE_OFFSET, map_w, map_h, "white"),
+  ];
   let grid = [];
 
   for (let i = 0; i < 3; i++)

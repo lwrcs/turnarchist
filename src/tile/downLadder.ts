@@ -41,38 +41,12 @@ export class DownLadder extends Tile {
   generate = async () => {
     if (!this.linkedLevel) {
       const targetDepth = this.room.depth + (this.isSidePath ? 0 : 1);
-      console.log(
-        "DownLadder generate - current depth:",
-        this.room.depth,
-        "target depth:",
-        targetDepth,
-        "isSidePath:",
-        this.isSidePath,
-      );
-      console.log(
-        "Current room ID:",
-        this.room.id,
-        "Current level rooms count:",
-        this.game.levels[this.room.depth].rooms.length,
-      );
 
       await this.game.levelgen.generate(
         this.game,
         targetDepth,
         this.isSidePath,
         (linkedLevel: Room) => {
-          console.log(
-            "Side path generation callback - linkedLevel:",
-            linkedLevel,
-          );
-          console.log(
-            "LinkedLevel mapGroup:",
-            linkedLevel.mapGroup,
-            "depth:",
-            linkedLevel.depth,
-          );
-          console.log("LinkedLevel ID assigned:", linkedLevel.id);
-
           if (this.isSidePath) {
             const level = this.game.levels[targetDepth];
 
@@ -80,29 +54,12 @@ export class DownLadder extends Tile {
               (room) => room.mapGroup === linkedLevel.mapGroup,
             );
 
-            console.log(
-              "Found",
-              sidePathRooms.length,
-              "side path rooms with mapGroup",
-              linkedLevel.mapGroup,
-            );
-
             const startingId = level.rooms.length;
             sidePathRooms.forEach((room, index) => {
               room.id = startingId + index;
               level.rooms.push(room);
             });
-
-            console.log(
-              "Level rooms after adding side path:",
-              level.rooms.length,
-            );
           }
-
-          console.log(
-            "Level rooms after side path generation:",
-            this.game.levels[targetDepth].rooms.length,
-          );
 
           this.linkedLevel = linkedLevel;
           outerLoop: for (
@@ -120,23 +77,13 @@ export class DownLadder extends Tile {
               if (tile instanceof UpLadder) {
                 if (this.isSidePath) {
                   tile.linkedLevel = this.room;
-                  console.log(
-                    "Found UpLadder in side path, linked back to room:",
-                    this.room.id,
-                    "mapGroup:",
-                    this.room.mapGroup,
-                  );
                 } else {
                   tile.linkedLevel = this.game.levels[this.room.depth].exitRoom;
-                  console.log(
-                    "Found UpLadder in main path, linked to exit room",
-                  );
                 }
                 break outerLoop;
               }
             }
           }
-          console.log("Side path generation completed");
         },
       );
     } else {
@@ -149,20 +96,6 @@ export class DownLadder extends Tile {
   }
 
   onCollide = (player: Player) => {
-    console.log(
-      "DownLadder collision - player depth:",
-      player.depth,
-      "player levelID:",
-      player.levelID,
-      "ladder isSidePath:",
-      this.isSidePath,
-    );
-    console.log(
-      "DownLadder collision - linkedLevel exists:",
-      !!this.linkedLevel,
-    );
-    console.log("Current game levels count:", this.game.levels.length);
-
     let allPlayersHere = true;
     for (const i in this.game.players) {
       if (
@@ -176,48 +109,11 @@ export class DownLadder extends Tile {
       }
     }
     if (allPlayersHere) {
-      console.log("All players here, starting level generation");
       globalEventBus.emit(EVENTS.LEVEL_GENERATION_STARTED, {});
       this.generate().then(() => {
-        console.log(
-          "About to change level through ladder - linkedLevel:",
-          this.linkedLevel,
-        );
-        console.log(
-          "LinkedLevel depth:",
-          this.linkedLevel?.depth,
-          "roomX:",
-          this.linkedLevel?.roomX,
-          "roomY:",
-          this.linkedLevel?.roomY,
-        );
-        console.log("LinkedLevel ID:", this.linkedLevel?.id);
-        console.log("LinkedLevel level:", this.linkedLevel?.level);
-        console.log(
-          "Game levels at target depth:",
-          this.game.levels[this.linkedLevel.depth],
-        );
         globalEventBus.emit(EVENTS.LEVEL_GENERATION_COMPLETED, {});
         for (const i in this.game.players) {
-          console.log(
-            "Changing level for player",
-            i,
-            "from depth",
-            this.game.players[i].depth,
-            "to linkedLevel",
-          );
           this.game.changeLevelThroughLadder(this.game.players[i], this);
-          console.log(
-            "After level change - player depth:",
-            this.game.players[i].depth,
-            "player levelID:",
-            this.game.players[i].levelID,
-          );
-          console.log(
-            "Player position:",
-            this.game.players[i].x,
-            this.game.players[i].y,
-          );
         }
       });
     } else {
