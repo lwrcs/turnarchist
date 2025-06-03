@@ -459,10 +459,6 @@ export class Game {
 
     if (this.players[this.localPlayerID] === player) {
       player.levelID = newRoom.id;
-      if (ladder instanceof UpLadder) {
-        this.players[this.localPlayerID].levelID =
-          newRoom.level.rooms.indexOf(newRoom);
-      }
     }
 
     this.updateDepth(newRoom.depth);

@@ -65,6 +65,7 @@ export class Level {
   startRoom: Room;
   enemyParameters: EnemyParameters;
   isMainPath: boolean = true;
+  mapGroup: number;
 
   constructor(
     game: Game,
@@ -72,6 +73,7 @@ export class Level {
     width: number,
     height: number,
     isMainPath: boolean = true,
+    mapGroup: number,
   ) {
     this.game = game;
     this.depth = depth;
@@ -80,6 +82,7 @@ export class Level {
     this.rooms = [];
     this.isMainPath = isMainPath;
     this.initializeLevelArray();
+    this.mapGroup = mapGroup;
 
     this.enemyParameters = this.getEnemyParameters();
     let envType = this.isMainPath ? 0 : Math.floor(Math.random() * 2) + 1;
@@ -114,7 +117,6 @@ export class Level {
     this.rooms = rooms;
     this.setExitRoom();
     this.setStartRoom();
-    this.rooms.filter((room) => room.depth === this.depth);
     rooms.forEach((room) => {
       room.id = this.rooms.indexOf(room);
     });

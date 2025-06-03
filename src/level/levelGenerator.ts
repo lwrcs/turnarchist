@@ -805,7 +805,6 @@ let generate_dungeon_candidate = async (
     let ropeholeRoom = tendrilRooms[tendrilRooms.length - 1];
     ropeholeRoom.type = RoomType.ROPEHOLE;
     ropeholeRoom.fillStyle = "purple";
-    console.log("ADDED ROPEHOLE TO TENDRIL END!!!!!!");
   }
 
   // add stair room
@@ -886,7 +885,6 @@ let generate_dungeon_candidate = async (
       ) {
         p.type = RoomType.ROPEHOLE;
         added_rope_hole = true;
-        console.log("ADDED ROPEHOLE!!!!!!");
       }
     }
   }
@@ -1243,8 +1241,12 @@ export class LevelGenerator {
     }
   };
 
-  createLevel = (depth: number, isMainPath: boolean = true) => {
-    let newLevel = new Level(this.game, depth, 100, 100, isMainPath);
+  createLevel = (
+    depth: number,
+    isMainPath: boolean = true,
+    mapGroup: number,
+  ) => {
+    let newLevel = new Level(this.game, depth, 100, 100, isMainPath, mapGroup);
     return newLevel;
   };
 
@@ -1343,7 +1345,7 @@ export class LevelGenerator {
     }
 
     // Get the levels based on the partitions
-    let newLevel = this.createLevel(depth, !isSidePath); // isMainPath = !isSidePath
+    let newLevel = this.createLevel(depth, !isSidePath, mapGroup); // isMainPath = !isSidePath
 
     this.game.levels.push(newLevel);
     this.game.level = newLevel;
