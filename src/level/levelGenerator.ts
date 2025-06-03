@@ -673,6 +673,141 @@ let generate_dungeon_candidate = async (
     }
   }
 
+  // generate tendril for ropehole
+  const tendrilLength = Math.floor(Random.rand() * 3 + 2); // 2-4 rooms
+  const tendrilRoomSize = 4; // Small rooms for the tendril
+
+  // Pick a random existing room to branch from (prefer rooms with few connections)
+  let branchRooms = partialLevel.partitions.filter(
+    (p) => p.connections.length <= 2,
+  );
+  if (branchRooms.length === 0) branchRooms = partialLevel.partitions;
+
+  let branchRoom = branchRooms[Math.floor(Random.rand() * branchRooms.length)];
+  let branchPoint = branchRoom.get_branch_point();
+
+  // Choose a random direction for the tendril
+  const directions = [
+    { dx: 1, dy: 0 }, // right
+    { dx: -1, dy: 0 }, // left
+    { dx: 0, dy: 1 }, // down
+    { dx: 0, dy: -1 }, // up
+  ];
+  const direction = directions[Math.floor(Random.rand() * directions.length)];
+
+  let tendrilRooms = [];
+  let currentX = branchPoint.x;
+  let currentY = branchPoint.y;
+
+  // Generate tendril rooms
+  for (let i = 0; i < tendrilLength; i++) {
+    // Move in the chosen direction
+    currentX += direction.dx * (tendrilRoomSize + 1);
+    currentY += direction.dy * (tendrilRoomSize + 1);
+
+    // Create new tendril room
+    let tendrilRoom = new Partition(
+      currentX - Math.floor(tendrilRoomSize / 2),
+      currentY - Math.floor(tendrilRoomSize / 2),
+      tendrilRoomSize,
+      tendrilRoomSize,
+      "lightblue",
+    );
+
+    // Check if room would be outside map boundaries
+    if (
+      tendrilRoom.x < 0 ||
+      tendrilRoom.y < 0 ||
+      tendrilRoom.x + tendrilRoom.w >= map_w ||
+      tendrilRoom.y + tendrilRoom.h >= map_h
+    ) {
+      // Try to adjust position to stay within bounds
+      tendrilRoom.x = Math.max(
+        0,
+        Math.min(tendrilRoom.x, map_w - tendrilRoom.w),
+      );
+      tendrilRoom.y = Math.max(
+        0,
+        Math.min(tendrilRoom.y, map_h - tendrilRoom.h),
+      );
+
+      // If still invalid after adjustment, stop generating tendril
+      if (
+        tendrilRoom.x < 0 ||
+        tendrilRoom.y < 0 ||
+        tendrilRoom.x + tendrilRoom.w >= map_w ||
+        tendrilRoom.y + tendrilRoom.h >= map_h
+      ) {
+        break;
+      }
+    }
+
+    // Check for overlaps with existing partitions
+    let overlaps = partialLevel.partitions.some((p) => p.overlaps(tendrilRoom));
+    if (overlaps) {
+      // Try slight offset if there's an overlap
+      let offsetX = Random.rand() > 0.5 ? 2 : -2;
+      let offsetY = Random.rand() > 0.5 ? 2 : -2;
+
+      tendrilRoom.x = Math.max(
+        0,
+        Math.min(tendrilRoom.x + offsetX, map_w - tendrilRoom.w),
+      );
+      tendrilRoom.y = Math.max(
+        0,
+        Math.min(tendrilRoom.y + offsetY, map_h - tendrilRoom.h),
+      );
+
+      // If still overlapping after adjustment, skip this tendril
+      if (partialLevel.partitions.some((p) => p.overlaps(tendrilRoom))) {
+        break;
+      }
+    }
+
+    tendrilRooms.push(tendrilRoom);
+    partialLevel.partitions.push(tendrilRoom);
+
+    // Connect to previous room (either branch room or previous tendril room)
+    let previousRoom = i === 0 ? branchRoom : tendrilRooms[i - 1];
+    let connectionX = Math.floor(
+      (previousRoom.x +
+        previousRoom.w / 2 +
+        tendrilRoom.x +
+        tendrilRoom.w / 2) /
+        2,
+    );
+    let connectionY = Math.floor(
+      (previousRoom.y +
+        previousRoom.h / 2 +
+        tendrilRoom.y +
+        tendrilRoom.h / 2) /
+        2,
+    );
+
+    previousRoom.connections.push(
+      new PartitionConnection(connectionX, connectionY, tendrilRoom),
+    );
+    tendrilRoom.connections.push(
+      new PartitionConnection(connectionX, connectionY, previousRoom),
+    );
+
+    // Set open walls
+    previousRoom.setOpenWall(
+      new PartitionConnection(connectionX, connectionY, tendrilRoom),
+    );
+    tendrilRoom.setOpenWall(
+      new PartitionConnection(connectionX, connectionY, previousRoom),
+    );
+  }
+
+  // Make the last tendril room a ropehole
+  if (tendrilRooms.length > 0) {
+    let ropeholeRoom = tendrilRooms[tendrilRooms.length - 1];
+    ropeholeRoom.type = RoomType.ROPEHOLE;
+    ropeholeRoom.fillStyle = "purple";
+    console.log("ADDED ROPEHOLE TO TENDRIL END!!!!!!");
+  }
+
   // add stair room
   if (!partialLevel.partitions.some((p) => p.type === RoomType.BOSS)) {
     partialLevel.partitions = [];
@@ -746,10 +881,8 @@ let generate_dungeon_candidate = async (
       if (p.distance > 4 && p.area() <= 30 && Random.rand() < 0) {
         p.type = RoomType.TREASURE;
       } else if (
-        !added_rope_hole //&&
-        //p.distance > 1 &&
-        //p.area() <= 40 &&
-        //Random.rand() < 0.5
+        !added_rope_hole &&
+        p.connections.length === 1 // Only rooms with exactly one connection (dead ends)
       ) {
         p.type = RoomType.ROPEHOLE;
         added_rope_hole = true;
@@ -829,7 +962,7 @@ let generate_cave_candidate = async (
   num_rooms: number,
 ) => {
   // Offset cave generation by 1000 to avoid overlap with main path dungeons
-  const CAVE_OFFSET = 1000;
+  const CAVE_OFFSET = 100;
   partialLevel.partitions = [
     new Partition(CAVE_OFFSET, CAVE_OFFSET, map_w, map_h, "white"),
   ];
