@@ -1352,6 +1352,7 @@ export class LevelGenerator {
     let rooms = this.getRooms(this.partialLevel.partitions, depth, mapGroup);
 
     newLevel.setRooms(rooms);
+    newLevel.populator.populateRooms();
 
     // Only call linkExitToStart for main paths
     if (newLevel.exitRoom) {

@@ -864,6 +864,7 @@ export class Room {
   }
 
   private addObstacles(numObstacles: number, rand: () => number) {
+    return;
     // add crates/barrels
     let tiles = this.getEmptyTiles();
     for (let i = 0; i < numObstacles; i++) {
@@ -917,6 +918,7 @@ export class Room {
   }
 
   private addPlants(numPlants: number, rand: () => number) {
+    return;
     let tiles = this.getEmptyTiles();
     for (let i = 0; i < numPlants; i++) {
       const { x, y } = this.getRandomEmptyPosition(tiles);
@@ -3100,7 +3102,7 @@ export class Room {
   };
 
   // This pattern appears in multiple methods like addVendingMachine, addChests, addSpikes, etc.
-  private getRandomEmptyPosition(tiles: Tile[]): { x: number; y: number } {
+  getRandomEmptyPosition(tiles: Tile[]): { x: number; y: number } {
     if (tiles.length === 0) return null;
     const tile = tiles.splice(
       Game.rand(0, tiles.length - 1, Random.rand),

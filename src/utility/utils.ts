@@ -1,3 +1,5 @@
+import { Game } from "../game";
+
 export class Utils {
   static distance = (
     startX: number,
@@ -79,5 +81,46 @@ export class Utils {
     // Map to our integer range
     const range = max - min + 1;
     return Math.floor((sinValue / 2) * range) + min;
+  };
+
+  static randTableWeighted = (table: any[]): any => {
+    // If table is empty, return null
+    if (!table || table.length === 0) return null;
+
+    // Check if items have weight property
+    const hasWeights = table.some(
+      (item) => item && typeof item.weight === "number",
+    );
+
+    if (!hasWeights) {
+      // Fallback to equal probability selection
+      return table[Game.rand(0, table.length - 1, Math.random)];
+    }
+
+    // Calculate total weight
+    const totalWeight = table.reduce((sum, item) => {
+      return sum + (item && typeof item.weight === "number" ? item.weight : 0);
+    }, 0);
+
+    if (totalWeight <= 0) {
+      // If no valid weights, fallback to equal probability
+      return table[Game.rand(0, table.length - 1, Math.random)];
+    }
+
+    // Generate random number between 0 and totalWeight
+    let randomValue = Math.random() * totalWeight;
+
+    // Find the item that corresponds to this random value
+    for (const item of table) {
+      if (item && typeof item.weight === "number") {
+        randomValue -= item.weight;
+        if (randomValue <= 0) {
+          return item;
+        }
+      }
+    }
+
+    // Fallback (should rarely happen due to floating point precision)
+    return table[table.length - 1];
   };
 }

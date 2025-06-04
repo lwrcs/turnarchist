@@ -6,7 +6,8 @@ import { DoorType } from "../tile/door";
 import { Tile } from "../tile/tile";
 import { Enemy } from "../entity/enemy/enemy";
 import { LevelParameterGenerator } from "./levelParametersGenerator";
-import { Environment } from "./environment";
+import { Environment, EnvType } from "./environment";
+import { Populator } from "../room/roomPopulator";
 
 export interface EnemyParameters {
   enemyTables: Record<number, number[]>;
@@ -66,6 +67,7 @@ export class Level {
   enemyParameters: EnemyParameters;
   isMainPath: boolean = true;
   mapGroup: number;
+  populator: Populator;
 
   constructor(
     game: Game,
@@ -83,9 +85,10 @@ export class Level {
     this.isMainPath = isMainPath;
     this.initializeLevelArray();
     this.mapGroup = mapGroup;
+    this.populator = new Populator(this);
 
     this.enemyParameters = this.getEnemyParameters();
-    let envType = this.isMainPath ? 0 : Math.floor(Math.random() * 2) + 1;
+    let envType = this.isMainPath ? EnvType.DUNGEON : EnvType.CAVE;
     this.environment = new Environment(envType);
     let mainPath = this.isMainPath ? "main" : "side";
     console.log(`${mainPath} path, envType: ${envType}`);

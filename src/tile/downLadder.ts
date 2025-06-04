@@ -96,10 +96,6 @@ export class DownLadder extends Tile {
     }
   };
 
-  get linkedRoom() {
-    return this.game.levels[this.depth - 1].exitRoom;
-  }
-
   onCollide = (player: Player) => {
     let allPlayersHere = true;
     for (const i in this.game.players) {

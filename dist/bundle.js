@@ -15121,11 +15121,23 @@ Weapon.itemName = "weapon";
 /*!**********************************!*\
   !*** ./src/level/environment.ts ***!
   \**********************************/
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Environment = exports.EnvType = void 0;
+exports.environmentProps = exports.Environment = exports.EnvType = void 0;
+const barrel_1 = __webpack_require__(/*! ../entity/object/barrel */ "./src/entity/object/barrel.ts");
+const block_1 = __webpack_require__(/*! ../entity/object/block */ "./src/entity/object/block.ts");
+const bush_1 = __webpack_require__(/*! ../entity/object/bush */ "./src/entity/object/bush.ts");
+const chest_1 = __webpack_require__(/*! ../entity/object/chest */ "./src/entity/object/chest.ts");
+const crate_1 = __webpack_require__(/*! ../entity/object/crate */ "./src/entity/object/crate.ts");
+const mushrooms_1 = __webpack_require__(/*! ../entity/object/mushrooms */ "./src/entity/object/mushrooms.ts");
+const pot_1 = __webpack_require__(/*! ../entity/object/pot */ "./src/entity/object/pot.ts");
+const pottedPlant_1 = __webpack_require__(/*! ../entity/object/pottedPlant */ "./src/entity/object/pottedPlant.ts");
+const pumpkin_1 = __webpack_require__(/*! ../entity/object/pumpkin */ "./src/entity/object/pumpkin.ts");
+const sprout_1 = __webpack_require__(/*! ../entity/object/sprout */ "./src/entity/object/sprout.ts");
+const tombStone_1 = __webpack_require__(/*! ../entity/object/tombStone */ "./src/entity/object/tombStone.ts");
+const rockResource_1 = __webpack_require__(/*! ../entity/resource/rockResource */ "./src/entity/resource/rockResource.ts");
 var EnvType;
 (function (EnvType) {
     EnvType[EnvType["DUNGEON"] = 0] = "DUNGEON";
@@ -15142,6 +15154,84 @@ class Environment {
     }
 }
 exports.Environment = Environment;
+const environmentProps = {
+    [EnvType.DUNGEON]: {
+        props: [
+            { class: crate_1.Crate, weight: 1 },
+            { class: barrel_1.Barrel, weight: 1 },
+            { class: tombStone_1.TombStone, weight: 0.1, additionalParams: [1] },
+            { class: tombStone_1.TombStone, weight: 0.1, additionalParams: [0] },
+            { class: pumpkin_1.Pumpkin, weight: 0.25 },
+            { class: block_1.Block, weight: 1 },
+            { class: pot_1.Pot, weight: 0.45 },
+            { class: pottedPlant_1.PottedPlant, weight: 0.2 },
+            { class: rockResource_1.Rock, weight: 0.1 },
+            { class: mushrooms_1.Mushrooms, weight: 0.1 },
+            { class: bush_1.Bush, weight: 0.1 },
+            { class: sprout_1.Sprout, weight: 0.025 },
+            { class: chest_1.Chest, weight: 0.025 },
+        ],
+    },
+    [EnvType.CAVE]: {
+        props: [
+            { class: crate_1.Crate, weight: 10 },
+            { class: barrel_1.Barrel, weight: 5 },
+            { class: block_1.Block, weight: 15 },
+            { class: rockResource_1.Rock, weight: 0.4 },
+            { class: mushrooms_1.Mushrooms, weight: 0.3 },
+            { class: pot_1.Pot, weight: 0.2 },
+            { class: chest_1.Chest, weight: 0.1 },
+        ],
+    },
+    [EnvType.FOREST]: {
+        props: [
+            { class: tombStone_1.TombStone, weight: 3, additionalParams: [1] },
+            { class: tombStone_1.TombStone, weight: 1, additionalParams: [0] },
+            { class: pumpkin_1.Pumpkin, weight: 3 },
+            { class: block_1.Block, weight: 7 },
+            { class: bush_1.Bush, weight: 0.4 },
+            { class: sprout_1.Sprout, weight: 0.25 },
+            { class: mushrooms_1.Mushrooms, weight: 0.2 },
+            { class: rockResource_1.Rock, weight: 0.1 },
+            { class: chest_1.Chest, weight: 0.05 },
+        ],
+    },
+    [EnvType.SWAMP]: {
+        props: [
+            { class: barrel_1.Barrel, weight: 8 },
+            { class: tombStone_1.TombStone, weight: 5, additionalParams: [1] },
+            { class: tombStone_1.TombStone, weight: 2, additionalParams: [0] },
+            { class: block_1.Block, weight: 5 },
+            { class: mushrooms_1.Mushrooms, weight: 0.5 },
+            { class: bush_1.Bush, weight: 0.25 },
+            { class: pot_1.Pot, weight: 0.15 },
+            { class: rockResource_1.Rock, weight: 0.05 },
+            { class: chest_1.Chest, weight: 0.05 },
+        ],
+    },
+    [EnvType.GLACIER]: {
+        props: [
+            { class: block_1.Block, weight: 20 },
+            { class: crate_1.Crate, weight: 5 },
+            { class: rockResource_1.Rock, weight: 0.6 },
+            { class: chest_1.Chest, weight: 0.4 },
+        ],
+    },
+    [EnvType.CASTLE]: {
+        props: [
+            { class: crate_1.Crate, weight: 10 },
+            { class: barrel_1.Barrel, weight: 8 },
+            { class: tombStone_1.TombStone, weight: 4, additionalParams: [1] },
+            { class: tombStone_1.TombStone, weight: 2, additionalParams: [0] },
+            { class: block_1.Block, weight: 6 },
+            { class: pottedPlant_1.PottedPlant, weight: 0.4 },
+            { class: pot_1.Pot, weight: 0.3 },
+            { class: chest_1.Chest, weight: 0.2 },
+            { class: rockResource_1.Rock, weight: 0.1 },
+        ],
+    },
+};
+exports.environmentProps = environmentProps;
 
 
 /***/ }),
@@ -15157,6 +15247,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Level = exports.enemyMinimumDepth = void 0;
 const room_1 = __webpack_require__(/*! ../room/room */ "./src/room/room.ts");
 const environment_1 = __webpack_require__(/*! ./environment */ "./src/level/environment.ts");
+const roomPopulator_1 = __webpack_require__(/*! ../room/roomPopulator */ "./src/room/roomPopulator.ts");
 exports.enemyMinimumDepth = {
     1: 0,
     2: 1,
@@ -15225,8 +15316,9 @@ class Level {
         this.isMainPath = isMainPath;
         this.initializeLevelArray();
         this.mapGroup = mapGroup;
+        this.populator = new roomPopulator_1.Populator(this);
         this.enemyParameters = this.getEnemyParameters();
-        let envType = this.isMainPath ? 0 : Math.floor(Math.random() * 2) + 1;
+        let envType = this.isMainPath ? environment_1.EnvType.DUNGEON : environment_1.EnvType.CAVE;
         this.environment = new environment_1.Environment(envType);
         let mainPath = this.isMainPath ? "main" : "side";
         console.log(`${mainPath} path, envType: ${envType}`);
@@ -16280,6 +16372,7 @@ class LevelGenerator {
             this.game.level = newLevel;
             let rooms = this.getRooms(this.partialLevel.partitions, depth, mapGroup);
             newLevel.setRooms(rooms);
+            newLevel.populator.populateRooms();
             // Only call linkExitToStart for main paths
             if (newLevel.exitRoom) {
                 newLevel.exitRoom.linkExitToStart();
@@ -21876,6 +21969,7 @@ class Room {
         }
     }
     addObstacles(numObstacles, rand) {
+        return;
         // add crates/barrels
         let tiles = this.getEmptyTiles();
         for (let i = 0; i < numObstacles; i++) {
@@ -21924,6 +22018,7 @@ class Room {
         }
     }
     addPlants(numPlants, rand) {
+        return;
         let tiles = this.getEmptyTiles();
         for (let i = 0; i < numPlants; i++) {
             const { x, y } = this.getRandomEmptyPosition(tiles);
@@ -22388,6 +22483,68 @@ class RoomBuilder {
     }
 }
 exports.RoomBuilder = RoomBuilder;
+
+
+/***/ }),
+
+/***/ "./src/room/roomPopulator.ts":
+/*!***********************************!*\
+  !*** ./src/room/roomPopulator.ts ***!
+  \***********************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Populator = void 0;
+const environment_1 = __webpack_require__(/*! ../level/environment */ "./src/level/environment.ts");
+const utils_1 = __webpack_require__(/*! ../utility/utils */ "./src/utility/utils.ts");
+const room_1 = __webpack_require__(/*! ./room */ "./src/room/room.ts");
+class Populator {
+    constructor(level) {
+        this.populateRooms = () => {
+            this.level.rooms.forEach((room) => {
+                if (room.type === room_1.RoomType.START ||
+                    room.type === room_1.RoomType.DOWNLADDER ||
+                    room.type === room_1.RoomType.UPLADDER ||
+                    room.type === room_1.RoomType.ROPEHOLE)
+                    return;
+                // Get environment-specific data
+                const numEmptyTiles = room.getEmptyTiles().length;
+                // Calculate spawn count based on unified density multiplier
+                const numProps = utils_1.Utils.randomSineInt(0, 0.3 * numEmptyTiles);
+                switch (room.type) {
+                    case room_1.RoomType.DUNGEON:
+                        this.populateDungeon(room);
+                        break;
+                    case room_1.RoomType.CAVE:
+                        this.populateCave(room);
+                        break;
+                    default:
+                        this.addProps(room, numProps);
+                        break;
+                }
+            });
+        };
+        this.level = level;
+    }
+    addProps(room, numProps) {
+        const envData = environment_1.environmentProps[room.level.environment.type];
+        let tiles = room.getEmptyTiles();
+        for (let i = 0; i < numProps; i++) {
+            if (tiles.length === 0)
+                break;
+            const { x, y } = room.getRandomEmptyPosition(tiles);
+            const selectedProp = utils_1.Utils.randTableWeighted(envData.props);
+            if (selectedProp && selectedProp.class && selectedProp.class.add) {
+                const args = selectedProp.additionalParams || [];
+                selectedProp.class.add(room, room.game, x, y, ...args);
+            }
+        }
+    }
+    populateDungeon(room) { }
+    populateCave(room) { }
+}
+exports.Populator = Populator;
 
 
 /***/ }),
@@ -23548,9 +23705,6 @@ class DownLadder extends tile_1.Tile {
         this.depth = room.depth;
         this.isSidePath = isSidePath;
     }
-    get linkedRoom() {
-        return this.game.levels[this.depth - 1].exitRoom;
-    }
 }
 exports.DownLadder = DownLadder;
 
@@ -24575,11 +24729,12 @@ Random.rand = () => {
 /*!******************************!*\
   !*** ./src/utility/utils.ts ***!
   \******************************/
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Utils = void 0;
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 class Utils {
 }
 exports.Utils = Utils;
@@ -24648,6 +24803,38 @@ Utils.randomSineInt = (min, max) => {
     // Map to our integer range
     const range = max - min + 1;
     return Math.floor((sinValue / 2) * range) + min;
+};
+Utils.randTableWeighted = (table) => {
+    // If table is empty, return null
+    if (!table || table.length === 0)
+        return null;
+    // Check if items have weight property
+    const hasWeights = table.some((item) => item && typeof item.weight === "number");
+    if (!hasWeights) {
+        // Fallback to equal probability selection
+        return table[game_1.Game.rand(0, table.length - 1, Math.random)];
+    }
+    // Calculate total weight
+    const totalWeight = table.reduce((sum, item) => {
+        return sum + (item && typeof item.weight === "number" ? item.weight : 0);
+    }, 0);
+    if (totalWeight <= 0) {
+        // If no valid weights, fallback to equal probability
+        return table[game_1.Game.rand(0, table.length - 1, Math.random)];
+    }
+    // Generate random number between 0 and totalWeight
+    let randomValue = Math.random() * totalWeight;
+    // Find the item that corresponds to this random value
+    for (const item of table) {
+        if (item && typeof item.weight === "number") {
+            randomValue -= item.weight;
+            if (randomValue <= 0) {
+                return item;
+            }
+        }
+    }
+    // Fallback (should rarely happen due to floating point precision)
+    return table[table.length - 1];
 };
 
 
