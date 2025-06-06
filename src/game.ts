@@ -139,6 +139,8 @@ export class Game {
   static delta: number;
   currentDepth: number;
   previousDepth: number;
+  private ellipsisFrame: number = 0;
+  private ellipsisStartTime: number = 0;
 
   static text_rendering_canvases: Record<string, HTMLCanvasElement>;
   static readonly letters = "abcdefghijklmnopqrstuvwxyz1234567890,.!?:'()[]%-/";
@@ -1265,9 +1267,9 @@ export class Game {
           }
         }
       }
-
       //this.players[this.localPlayerID].drawGUI(delta);  // removed this to prevent drawing gui during level transition
       //for (const i in this.players) this.players[i].updateDrawXY(delta);
+      this.drawTextScreen("loading level");
     } else if (this.levelState === LevelState.LEVEL_GENERATION) {
       this.levelgen.draw(delta);
     } else if (this.levelState === LevelState.IN_LEVEL) {
@@ -1402,6 +1404,30 @@ export class Game {
     this.screenShakeX = 0;
     this.screenShakeY = 0;
     this.screenShakeActive = false;
+  };
+
+  drawTextScreen = (text: string, bg: boolean = true) => {
+    if (bg) {
+      Game.ctx.fillStyle = "rgb(0, 0, 0)";
+      Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
+    }
+    const ellipsis = this.animateEllipsis();
+    const dimensions = Game.measureText(text + ellipsis);
+
+    Game.ctx.fillStyle = "rgb(255, 255, 255)";
+    Game.fillText(
+      text + ellipsis,
+      GameConstants.WIDTH / 2 - dimensions.width / 2,
+      GameConstants.HEIGHT / 2 - dimensions.height / 2,
+    );
+  };
+
+  animateEllipsis = () => {
+    if (Date.now() - this.ellipsisStartTime > 150) {
+      this.ellipsisStartTime = Date.now();
+      this.ellipsisFrame = (this.ellipsisFrame + 1) % 4;
+    }
+    return ".".repeat(this.ellipsisFrame);
   };
 
   static drawHelper = (

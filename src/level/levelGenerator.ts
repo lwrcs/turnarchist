@@ -436,6 +436,145 @@ let populate_grid = (
   //output grid array that indicates which cells are in which partition
 };
 
+let generate_tendrils = (
+  partialLevel: PartialLevel,
+  map_w: number,
+  map_h: number,
+) => {
+  const tendrilLength = Math.floor(Random.rand() * 3 + 2); // 2-4 rooms
+  const tendrilRoomSize = 4; // Small rooms for the tendril
+
+  // Pick a random existing room to branch from (prefer rooms with few connections)
+  let branchRooms = partialLevel.partitions.filter(
+    (p) => p.connections.length <= 2,
+  );
+  if (branchRooms.length === 0) branchRooms = partialLevel.partitions;
+
+  let branchRoom = branchRooms[Math.floor(Random.rand() * branchRooms.length)];
+  let branchPoint = branchRoom.get_branch_point();
+
+  // Choose a random direction for the tendril
+  const directions = [
+    { dx: 1, dy: 0 }, // right
+    { dx: -1, dy: 0 }, // left
+    { dx: 0, dy: 1 }, // down
+    { dx: 0, dy: -1 }, // up
+  ];
+  const direction = directions[Math.floor(Random.rand() * directions.length)];
+
+  let tendrilRooms = [];
+  let currentX = branchPoint.x;
+  let currentY = branchPoint.y;
+
+  // Generate tendril rooms
+  for (let i = 0; i < tendrilLength; i++) {
+    // Move in the chosen direction
+    currentX += direction.dx * (tendrilRoomSize + 1);
+    currentY += direction.dy * (tendrilRoomSize + 1);
+
+    // Create new tendril room
+    let tendrilRoom = new Partition(
+      currentX - Math.floor(tendrilRoomSize / 2),
+      currentY - Math.floor(tendrilRoomSize / 2),
+      tendrilRoomSize,
+      tendrilRoomSize,
+      "lightblue",
+    );
+
+    // Check if room would be outside map boundaries
+    if (
+      tendrilRoom.x < 0 ||
+      tendrilRoom.y < 0 ||
+      tendrilRoom.x + tendrilRoom.w >= map_w ||
+      tendrilRoom.y + tendrilRoom.h >= map_h
+    ) {
+      // Try to adjust position to stay within bounds
+      tendrilRoom.x = Math.max(
+        0,
+        Math.min(tendrilRoom.x, map_w - tendrilRoom.w),
+      );
+      tendrilRoom.y = Math.max(
+        0,
+        Math.min(tendrilRoom.y, map_h - tendrilRoom.h),
+      );
+
+      // If still invalid after adjustment, stop generating tendril
+      if (
+        tendrilRoom.x < 0 ||
+        tendrilRoom.y < 0 ||
+        tendrilRoom.x + tendrilRoom.w >= map_w ||
+        tendrilRoom.y + tendrilRoom.h >= map_h
+      ) {
+        break;
+      }
+    }
+
+    // Check for overlaps with existing partitions
+    let overlaps = partialLevel.partitions.some((p) => p.overlaps(tendrilRoom));
+    if (overlaps) {
+      // Try slight offset if there's an overlap
+      let offsetX = Random.rand() > 0.5 ? 2 : -2;
+      let offsetY = Random.rand() > 0.5 ? 2 : -2;
+
+      tendrilRoom.x = Math.max(
+        0,
+        Math.min(tendrilRoom.x + offsetX, map_w - tendrilRoom.w),
+      );
+      tendrilRoom.y = Math.max(
+        0,
+        Math.min(tendrilRoom.y + offsetY, map_h - tendrilRoom.h),
+      );
+
+      // If still overlapping after adjustment, skip this tendril
+      if (partialLevel.partitions.some((p) => p.overlaps(tendrilRoom))) {
+        break;
+      }
+    }
+
+    tendrilRooms.push(tendrilRoom);
+    partialLevel.partitions.push(tendrilRoom);
+
+    // Connect to previous room (either branch room or previous tendril room)
+    let previousRoom = i === 0 ? branchRoom : tendrilRooms[i - 1];
+    let connectionX = Math.floor(
+      (previousRoom.x +
+        previousRoom.w / 2 +
+        tendrilRoom.x +
+        tendrilRoom.w / 2) /
+        2,
+    );
+    let connectionY = Math.floor(
+      (previousRoom.y +
+        previousRoom.h / 2 +
+        tendrilRoom.y +
+        tendrilRoom.h / 2) /
+        2,
+    );
+
+    previousRoom.connections.push(
+      new PartitionConnection(connectionX, connectionY, tendrilRoom),
+    );
+    tendrilRoom.connections.push(
+      new PartitionConnection(connectionX, connectionY, previousRoom),
+    );
+
+    // Set open walls
+    previousRoom.setOpenWall(
+      new PartitionConnection(connectionX, connectionY, tendrilRoom),
+    );
+    tendrilRoom.setOpenWall(
+      new PartitionConnection(connectionX, connectionY, previousRoom),
+    );
+  }
+
+  // Make the last tendril room a ropehole
+  if (tendrilRooms.length > 0) {
+    let ropeholeRoom = tendrilRooms[tendrilRooms.length - 1];
+    ropeholeRoom.type = RoomType.ROPEHOLE;
+    ropeholeRoom.fillStyle = "purple";
+  }
+};
+
 let generate_dungeon_candidate = async (
   game: Game,
   partialLevel: PartialLevel,
@@ -673,139 +812,8 @@ let generate_dungeon_candidate = async (
     }
   }
 
-  // generate tendril for ropehole
-  const tendrilLength = Math.floor(Random.rand() * 3 + 2); // 2-4 rooms
-  const tendrilRoomSize = 4; // Small rooms for the tendril
-
-  // Pick a random existing room to branch from (prefer rooms with few connections)
-  let branchRooms = partialLevel.partitions.filter(
-    (p) => p.connections.length <= 2,
-  );
-  if (branchRooms.length === 0) branchRooms = partialLevel.partitions;
-
-  let branchRoom = branchRooms[Math.floor(Random.rand() * branchRooms.length)];
-  let branchPoint = branchRoom.get_branch_point();
-
-  // Choose a random direction for the tendril
-  const directions = [
-    { dx: 1, dy: 0 }, // right
-    { dx: -1, dy: 0 }, // left
-    { dx: 0, dy: 1 }, // down
-    { dx: 0, dy: -1 }, // up
-  ];
-  const direction = directions[Math.floor(Random.rand() * directions.length)];
-
-  let tendrilRooms = [];
-  let currentX = branchPoint.x;
-  let currentY = branchPoint.y;
-
-  // Generate tendril rooms
-  for (let i = 0; i < tendrilLength; i++) {
-    // Move in the chosen direction
-    currentX += direction.dx * (tendrilRoomSize + 1);
-    currentY += direction.dy * (tendrilRoomSize + 1);
-
-    // Create new tendril room
-    let tendrilRoom = new Partition(
-      currentX - Math.floor(tendrilRoomSize / 2),
-      currentY - Math.floor(tendrilRoomSize / 2),
-      tendrilRoomSize,
-      tendrilRoomSize,
-      "lightblue",
-    );
-
-    // Check if room would be outside map boundaries
-    if (
-      tendrilRoom.x < 0 ||
-      tendrilRoom.y < 0 ||
-      tendrilRoom.x + tendrilRoom.w >= map_w ||
-      tendrilRoom.y + tendrilRoom.h >= map_h
-    ) {
-      // Try to adjust position to stay within bounds
-      tendrilRoom.x = Math.max(
-        0,
-        Math.min(tendrilRoom.x, map_w - tendrilRoom.w),
-      );
-      tendrilRoom.y = Math.max(
-        0,
-        Math.min(tendrilRoom.y, map_h - tendrilRoom.h),
-      );
-
-      // If still invalid after adjustment, stop generating tendril
-      if (
-        tendrilRoom.x < 0 ||
-        tendrilRoom.y < 0 ||
-        tendrilRoom.x + tendrilRoom.w >= map_w ||
-        tendrilRoom.y + tendrilRoom.h >= map_h
-      ) {
-        break;
-      }
-    }
-
-    // Check for overlaps with existing partitions
-    let overlaps = partialLevel.partitions.some((p) => p.overlaps(tendrilRoom));
-    if (overlaps) {
-      // Try slight offset if there's an overlap
-      let offsetX = Random.rand() > 0.5 ? 2 : -2;
-      let offsetY = Random.rand() > 0.5 ? 2 : -2;
-
-      tendrilRoom.x = Math.max(
-        0,
-        Math.min(tendrilRoom.x + offsetX, map_w - tendrilRoom.w),
-      );
-      tendrilRoom.y = Math.max(
-        0,
-        Math.min(tendrilRoom.y + offsetY, map_h - tendrilRoom.h),
-      );
-
-      // If still overlapping after adjustment, skip this tendril
-      if (partialLevel.partitions.some((p) => p.overlaps(tendrilRoom))) {
-        break;
-      }
-    }
-
-    tendrilRooms.push(tendrilRoom);
-    partialLevel.partitions.push(tendrilRoom);
-
-    // Connect to previous room (either branch room or previous tendril room)
-    let previousRoom = i === 0 ? branchRoom : tendrilRooms[i - 1];
-    let connectionX = Math.floor(
-      (previousRoom.x +
-        previousRoom.w / 2 +
-        tendrilRoom.x +
-        tendrilRoom.w / 2) /
-        2,
-    );
-    let connectionY = Math.floor(
-      (previousRoom.y +
-        previousRoom.h / 2 +
-        tendrilRoom.y +
-        tendrilRoom.h / 2) /
-        2,
-    );
-
-    previousRoom.connections.push(
-      new PartitionConnection(connectionX, connectionY, tendrilRoom),
-    );
-    tendrilRoom.connections.push(
-      new PartitionConnection(connectionX, connectionY, previousRoom),
-    );
-
-    // Set open walls
-    previousRoom.setOpenWall(
-      new PartitionConnection(connectionX, connectionY, tendrilRoom),
-    );
-    tendrilRoom.setOpenWall(
-      new PartitionConnection(connectionX, connectionY, previousRoom),
-    );
-  }
-
-  // Make the last tendril room a ropehole
-  if (tendrilRooms.length > 0) {
-    let ropeholeRoom = tendrilRooms[tendrilRooms.length - 1];
-    ropeholeRoom.type = RoomType.ROPEHOLE;
-    ropeholeRoom.fillStyle = "purple";
-  }
+  // generate tendril for ropehole (can be easily disabled by commenting this line)
+  //generate_tendrils(partialLevel, map_w, map_h);
 
   // add stair room
   if (!partialLevel.partitions.some((p) => p.type === RoomType.BOSS)) {
@@ -1347,8 +1355,13 @@ export class LevelGenerator {
     // Get the levels based on the partitions
     let newLevel = this.createLevel(depth, !isSidePath, mapGroup); // isMainPath = !isSidePath
 
-    this.game.levels.push(newLevel);
-    this.game.level = newLevel;
+    if (isSidePath) {
+      // create Level object ONLY to prepare rooms, but
+      // DO NOT push to game.levels
+    } else {
+      this.game.levels.push(newLevel); // keep current behaviour
+    }
+
     let rooms = this.getRooms(this.partialLevel.partitions, depth, mapGroup);
 
     newLevel.setRooms(rooms);
@@ -1439,13 +1452,7 @@ export class LevelGenerator {
         });
       }
     } else {
-      Game.ctx.fillStyle = "rgb(255, 255, 255)";
-      let dimensions = Game.measureText("generating level...");
-      Game.fillText(
-        "generating level...",
-        GameConstants.WIDTH / 2 - dimensions.width / 2,
-        GameConstants.HEIGHT / 2 - dimensions.height / 2,
-      );
+      this.game.drawTextScreen("generating level");
     }
   };
 }

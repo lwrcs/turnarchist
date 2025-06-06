@@ -113,8 +113,12 @@ export class Item extends Drawable {
       this.alpha = 1;
       this.pickedUp = player.inventory.addItem(this);
       if (this.pickedUp) {
+        if (this.isNewItem(player)) {
+          this.pickupMessage();
+
+          player.inventory.foundItems.push(this);
+        }
         this.pickupSound();
-        this.pickupMessage();
       }
     }
   };
@@ -130,6 +134,15 @@ export class Item extends Drawable {
     }
 
     this.level.game.pushMessage(message);
+  };
+
+  isNewItem = (player: Player) => {
+    for (let item of player.inventory.foundItems) {
+      if (item.constructor === this.constructor) {
+        return false;
+      }
+    }
+    return true;
   };
 
   dropFromInventory = () => {

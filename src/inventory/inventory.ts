@@ -46,6 +46,7 @@ export class Inventory {
   private _dragStartItem: Item | null = null;
   private _dragStartSlot: number | null = null;
   private itemEquipAnimations: Map<Item, number> = new Map();
+  foundItems: Item[] = [];
 
   dragEndTime: number = Date.now();
 
