@@ -35,6 +35,7 @@ export class FireWizardEnemy extends WizardEnemy {
     this.name = "fire wizard";
     this.projectileColor = [200, 20, 0];
     if (drop) this.drop = drop;
+    this.jumpHeight = 0.5;
     this.getDrop(["weapon", "equipment", "consumable", "gem", "tool", "coin"]);
   }
 
@@ -186,8 +187,8 @@ export class FireWizardEnemy extends WizardEnemy {
           this.tileY,
           1,
           2,
-          this.x,
-          this.y - 1.3,
+          this.x - this.drawX,
+          this.y - 1.3 - this.drawY,
           1,
           2,
           this.softShadeColor,
@@ -214,18 +215,5 @@ export class FireWizardEnemy extends WizardEnemy {
         this.drawExclamation(delta);
       }
     }
-  };
-
-  kill = () => {
-    if (this.room.roomArray[this.x][this.y] instanceof Floor) {
-      let b = new Bones(this.room, this.x, this.y);
-      b.skin = this.room.roomArray[this.x][this.y].skin;
-      this.room.roomArray[this.x][this.y] = b;
-    }
-
-    this.dead = true;
-    this.room.particles.push(new DeathParticle(this.x, this.y));
-
-    this.dropLoot();
   };
 }

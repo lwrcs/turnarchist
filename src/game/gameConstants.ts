@@ -38,7 +38,7 @@ export class GameConstants {
   static ENTITY_SHADE_LEVELS = 25; //10
 
   static readonly TILESIZE = 16;
-  static SCALE = 6;
+  static SCALE = null;
   static SOFT_SCALE = 6;
   static readonly MAX_SCALE = 16;
   static readonly MIN_SCALE = 1;
@@ -146,7 +146,7 @@ export class GameConstants {
   static readonly SET_SCALE = () => {
     GameConstants.SCALE++;
     if (GameConstants.SCALE > GameConstants.MAX_SCALE) {
-      GameConstants.SCALE = GameConstants.MIN_SCALE;
+      GameConstants.SCALE = GameConstants.MAX_SCALE;
     }
   };
 
@@ -154,7 +154,7 @@ export class GameConstants {
     if (GameConstants.SCALE < GameConstants.MAX_SCALE) {
       GameConstants.SCALE++;
       if (GameConstants.SCALE > GameConstants.MAX_SCALE) {
-        GameConstants.SCALE = GameConstants.MIN_SCALE;
+        GameConstants.SCALE = GameConstants.MAX_SCALE;
       }
     }
   };
@@ -163,9 +163,29 @@ export class GameConstants {
     if (GameConstants.SCALE > GameConstants.MIN_SCALE) {
       GameConstants.SCALE--;
       if (GameConstants.SCALE < GameConstants.MIN_SCALE) {
-        GameConstants.SCALE = GameConstants.MAX_SCALE;
+        GameConstants.SCALE = GameConstants.MIN_SCALE;
       }
     }
+  };
+
+  static readonly FIND_SCALE = () => {
+    let bestScale = GameConstants.MIN_SCALE;
+    let bestDifference = Infinity;
+
+    const landscape = window.innerWidth > window.innerHeight;
+    const dimensionToUse = landscape ? window.innerWidth : window.innerHeight;
+
+    for (let i = GameConstants.MIN_SCALE; i <= GameConstants.MAX_SCALE; i++) {
+      const tiles = dimensionToUse / (i * GameConstants.TILESIZE);
+      const difference = Math.abs(tiles - 8);
+
+      if (difference < bestDifference) {
+        bestDifference = difference;
+        bestScale = i;
+      }
+    }
+
+    return bestScale;
   };
 
   static readonly STARTING_INVENTORY = [Dagger, Candle];

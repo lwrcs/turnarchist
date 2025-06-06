@@ -753,6 +753,10 @@ export class Game {
     // Determine device pixel ratio
     const dpr = window.devicePixelRatio;
     // Define scale adjustment based on device pixel ratio
+    if (GameConstants.SCALE === null) {
+      GameConstants.SCALE = GameConstants.FIND_SCALE();
+      GameConstants.SOFT_SCALE = GameConstants.SCALE;
+    }
     let scaleOffset = 0;
     //if (dpr > 1.5) {
     // High DPI devices like MacBook Air

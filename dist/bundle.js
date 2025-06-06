@@ -2396,6 +2396,7 @@ const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const eventBus_1 = __webpack_require__(/*! ../../event/eventBus */ "./src/event/eventBus.ts");
+const utils_1 = __webpack_require__(/*! ../../utility/utils */ "./src/utility/utils.ts");
 var EnemyState;
 (function (EnemyState) {
     EnemyState[EnemyState["SLEEP"] = 0] = "SLEEP";
@@ -2794,6 +2795,42 @@ class Enemy extends entity_1.Entity {
             this.drawX += this.x - x;
             this.drawY += this.y - y;
         };
+        this.teleport = () => {
+            let newTile = this.findFarTile();
+            if (newTile) {
+                this.drawX = newTile.x - this.x;
+                this.drawY = newTile.y - this.y;
+                this.x = newTile.x;
+                this.y = newTile.y;
+                this.lightSource.updatePosition(this.x + 0.5, this.y + 0.5);
+                this.room.updateLighting();
+            }
+        };
+        this.findFarTile = () => {
+            // Get all empty tiles
+            const emptyTiles = this.room.getEmptyTiles();
+            const player = this.getPlayer();
+            // Early return if no player or no empty tiles
+            if (!player || emptyTiles.length === 0) {
+                return null;
+            }
+            // Calculate distances from player
+            const tilesWithDistances = emptyTiles.map((tile) => {
+                const distance = utils_1.Utils.distance(tile.x, tile.y, player.x, player.y);
+                return { tile, distance };
+            });
+            // Sort by distance (farthest first)
+            tilesWithDistances.sort((a, b) => b.distance - a.distance);
+            // Take only the 50% farthest tiles
+            const farTiles = tilesWithDistances.slice(0, Math.floor(tilesWithDistances.length / 2));
+            // If no far tiles available, return null
+            if (farTiles.length === 0) {
+                return null;
+            }
+            // Choose a random tile from the far tiles
+            const randomIndex = Math.floor(Math.random() * farTiles.length);
+            return farTiles[randomIndex].tile;
+        };
         this.draw = (delta) => {
             if (!this.dead) {
                 this.updateDrawXY(delta);
@@ -2945,9 +2982,6 @@ EnergyWizardEnemy.tileY = 0;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.FireWizardEnemy = exports.WizardState = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-const floor_1 = __webpack_require__(/*! ../../tile/floor */ "./src/tile/floor.ts");
-const bones_1 = __webpack_require__(/*! ../../tile/bones */ "./src/tile/bones.ts");
-const deathParticle_1 = __webpack_require__(/*! ../../particle/deathParticle */ "./src/particle/deathParticle.ts");
 const wizardTeleportParticle_1 = __webpack_require__(/*! ../../particle/wizardTeleportParticle */ "./src/particle/wizardTeleportParticle.ts");
 const wizardFireball_1 = __webpack_require__(/*! ../../projectile/wizardFireball */ "./src/projectile/wizardFireball.ts");
 const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
@@ -3072,7 +3106,7 @@ class FireWizardEnemy extends wizardEnemy_1.WizardEnemy {
                 if (this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, this.x - this.drawX, this.y - this.drawY, 1, 1, this.room.shadeColor, this.shadeAmount());
                 if (this.frame >= 0) {
-                    game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY, 1, 2, this.x, this.y - 1.3, 1, 2, this.softShadeColor, this.shadeAmount());
+                    game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY, 1, 2, this.x - this.drawX, this.y - 1.3 - this.drawY, 1, 2, this.softShadeColor, this.shadeAmount());
                 }
                 else {
                     game_1.Game.drawMob(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - 1.3 - this.drawY, 1, 2, this.softShadeColor, this.shadeAmount());
@@ -3084,16 +3118,6 @@ class FireWizardEnemy extends wizardEnemy_1.WizardEnemy {
                     this.drawExclamation(delta);
                 }
             }
-        };
-        this.kill = () => {
-            if (this.room.roomArray[this.x][this.y] instanceof floor_1.Floor) {
-                let b = new bones_1.Bones(this.room, this.x, this.y);
-                b.skin = this.room.roomArray[this.x][this.y].skin;
-                this.room.roomArray[this.x][this.y] = b;
-            }
-            this.dead = true;
-            this.room.particles.push(new deathParticle_1.DeathParticle(this.x, this.y));
-            this.dropLoot();
         };
         this.ticks = 0;
         this.health = 1;
@@ -3107,6 +3131,7 @@ class FireWizardEnemy extends wizardEnemy_1.WizardEnemy {
         this.projectileColor = [200, 20, 0];
         if (drop)
             this.drop = drop;
+        this.jumpHeight = 0.5;
         this.getDrop(["weapon", "equipment", "consumable", "gem", "tool", "coin"]);
     }
 }
@@ -3940,39 +3965,6 @@ class OccultistEnemy extends enemy_1.Enemy {
                 this.teleport();
             }
             this.lastHealth = this.health;
-        };
-        this.teleport = () => {
-            let newTile = this.findFarTile();
-            if (newTile) {
-                this.x = newTile.x;
-                this.y = newTile.y;
-                this.room.updateLighting();
-            }
-        };
-        this.findFarTile = () => {
-            // Get all empty tiles
-            const emptyTiles = this.room.getEmptyTiles();
-            const player = this.getPlayer();
-            // Early return if no player or no empty tiles
-            if (!player || emptyTiles.length === 0) {
-                return null;
-            }
-            // Calculate distances from player
-            const tilesWithDistances = emptyTiles.map((tile) => {
-                const distance = utils_1.Utils.distance(tile.x, tile.y, player.x, player.y);
-                return { tile, distance };
-            });
-            // Sort by distance (farthest first)
-            tilesWithDistances.sort((a, b) => b.distance - a.distance);
-            // Take only the 50% farthest tiles
-            const farTiles = tilesWithDistances.slice(0, Math.floor(tilesWithDistances.length / 2));
-            // If no far tiles available, return null
-            if (farTiles.length === 0) {
-                return null;
-            }
-            // Choose a random tile from the far tiles
-            const randomIndex = Math.floor(Math.random() * farTiles.length);
-            return farTiles[randomIndex].tile;
         };
         this.updateShieldedEnemies = () => {
             this.shieldedEnemies.forEach((enemy) => {
@@ -8456,6 +8448,10 @@ class Game {
             // Determine device pixel ratio
             const dpr = window.devicePixelRatio;
             // Define scale adjustment based on device pixel ratio
+            if (gameConstants_1.GameConstants.SCALE === null) {
+                gameConstants_1.GameConstants.SCALE = gameConstants_1.GameConstants.FIND_SCALE();
+                gameConstants_1.GameConstants.SOFT_SCALE = gameConstants_1.GameConstants.SCALE;
+            }
             let scaleOffset = 0;
             //if (dpr > 1.5) {
             // High DPI devices like MacBook Air
@@ -9466,7 +9462,7 @@ GameConstants.ALPHA_ENABLED = true;
 GameConstants.SHADE_LEVELS = 50; //25
 GameConstants.ENTITY_SHADE_LEVELS = 25; //10
 GameConstants.TILESIZE = 16;
-GameConstants.SCALE = 6;
+GameConstants.SCALE = null;
 GameConstants.SOFT_SCALE = 6;
 GameConstants.MAX_SCALE = 16;
 GameConstants.MIN_SCALE = 1;
@@ -9555,14 +9551,14 @@ GameConstants.TOGGLE_USE_OPTIMIZED_SHADING = () => {
 GameConstants.SET_SCALE = () => {
     GameConstants.SCALE++;
     if (GameConstants.SCALE > GameConstants.MAX_SCALE) {
-        GameConstants.SCALE = GameConstants.MIN_SCALE;
+        GameConstants.SCALE = GameConstants.MAX_SCALE;
     }
 };
 GameConstants.INCREASE_SCALE = () => {
     if (GameConstants.SCALE < GameConstants.MAX_SCALE) {
         GameConstants.SCALE++;
         if (GameConstants.SCALE > GameConstants.MAX_SCALE) {
-            GameConstants.SCALE = GameConstants.MIN_SCALE;
+            GameConstants.SCALE = GameConstants.MAX_SCALE;
         }
     }
 };
@@ -9570,9 +9566,24 @@ GameConstants.DECREASE_SCALE = () => {
     if (GameConstants.SCALE > GameConstants.MIN_SCALE) {
         GameConstants.SCALE--;
         if (GameConstants.SCALE < GameConstants.MIN_SCALE) {
-            GameConstants.SCALE = GameConstants.MAX_SCALE;
+            GameConstants.SCALE = GameConstants.MIN_SCALE;
         }
     }
+};
+GameConstants.FIND_SCALE = () => {
+    let bestScale = GameConstants.MIN_SCALE;
+    let bestDifference = Infinity;
+    const landscape = window.innerWidth > window.innerHeight;
+    const dimensionToUse = landscape ? window.innerWidth : window.innerHeight;
+    for (let i = GameConstants.MIN_SCALE; i <= GameConstants.MAX_SCALE; i++) {
+        const tiles = dimensionToUse / (i * GameConstants.TILESIZE);
+        const difference = Math.abs(tiles - 8);
+        if (difference < bestDifference) {
+            bestDifference = difference;
+            bestScale = i;
+        }
+    }
+    return bestScale;
 };
 GameConstants.STARTING_INVENTORY = [dagger_1.Dagger, candle_1.Candle];
 GameConstants.STARTING_DEV_INVENTORY = [
@@ -16957,45 +16968,6 @@ exports.DamageNumber = DamageNumber;
 
 /***/ }),
 
-/***/ "./src/particle/deathParticle.ts":
-/*!***************************************!*\
-  !*** ./src/particle/deathParticle.ts ***!
-  \***************************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.DeathParticle = void 0;
-const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
-const particle_1 = __webpack_require__(/*! ./particle */ "./src/particle/particle.ts");
-class DeathParticle extends particle_1.Particle {
-    constructor(x, y) {
-        super();
-        this.drawTopLayer = (delta) => {
-            if (this.dead)
-                return;
-            let yOffset = Math.max(0, ((this.frame - 3) * 3) / gameConstants_1.GameConstants.TILESIZE);
-            let f = Math.round(this.frame);
-            if (f == 2 || f == 4 || f == 6)
-                game_1.Game.drawMob(2, 0, 1, 2, this.x, this.y - yOffset, 1, 2);
-            else
-                game_1.Game.drawFX(Math.round(this.frame), 4, 1, 2, this.x, this.y - yOffset, 1, 2);
-            this.frame += 0.3 * delta;
-            if (this.frame > 10)
-                this.dead = true;
-        };
-        this.x = x;
-        this.y = y - 1.5;
-        this.dead = false;
-        this.frame = 0;
-    }
-}
-exports.DeathParticle = DeathParticle;
-
-
-/***/ }),
-
 /***/ "./src/particle/genericParticle.ts":
 /*!*****************************************!*\
   !*** ./src/particle/genericParticle.ts ***!
@@ -19617,6 +19589,7 @@ const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const hitWarning_1 = __webpack_require__(/*! ../drawable/hitWarning */ "./src/drawable/hitWarning.ts");
 const lightSource_1 = __webpack_require__(/*! ../lighting/lightSource */ "./src/lighting/lightSource.ts");
 const lighting_1 = __webpack_require__(/*! ../lighting/lighting */ "./src/lighting/lighting.ts");
+const utils_1 = __webpack_require__(/*! ../utility/utils */ "./src/utility/utils.ts");
 class WizardFireball extends projectile_1.Projectile {
     constructor(parent, x, y) {
         super(parent, x, y);
@@ -19698,7 +19671,7 @@ class WizardFireball extends projectile_1.Projectile {
         this.parent.addLightSource(this.lightSource);
         //this.parent.room.updateLighting();
         this.hasBloom = true;
-        this.bloomColor = "#00BFFF";
+        this.bloomColor = utils_1.Utils.rgbToHex(this.parent.projectileColor[0], this.parent.projectileColor[1], this.parent.projectileColor[2]);
         this.bloomAlpha = 0.5;
         this.softBloomAlpha = 0;
     }
@@ -23115,30 +23088,6 @@ Sound.playMagic = () => {
 Sound.delayPlay = (method, delay) => {
     setTimeout(method, delay);
 };
-
-
-/***/ }),
-
-/***/ "./src/tile/bones.ts":
-/*!***************************!*\
-  !*** ./src/tile/bones.ts ***!
-  \***************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Bones = void 0;
-const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-const floor_1 = __webpack_require__(/*! ./floor */ "./src/tile/floor.ts");
-class Bones extends floor_1.Floor {
-    constructor() {
-        super(...arguments);
-        this.draw = (delta) => {
-            game_1.Game.drawTile(7, this.skin, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
-        };
-    }
-}
-exports.Bones = Bones;
 
 
 /***/ }),

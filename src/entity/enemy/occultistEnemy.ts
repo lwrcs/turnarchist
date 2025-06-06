@@ -100,49 +100,6 @@ export class OccultistEnemy extends Enemy {
     this.lastHealth = this.health;
   };
 
-  teleport = () => {
-    let newTile = this.findFarTile();
-    if (newTile) {
-      this.x = newTile.x;
-      this.y = newTile.y;
-      this.room.updateLighting();
-    }
-  };
-
-  findFarTile = () => {
-    // Get all empty tiles
-    const emptyTiles = this.room.getEmptyTiles();
-    const player = this.getPlayer();
-    // Early return if no player or no empty tiles
-    if (!player || emptyTiles.length === 0) {
-      return null;
-    }
-
-    // Calculate distances from player
-    const tilesWithDistances = emptyTiles.map((tile) => {
-      const distance = Utils.distance(tile.x, tile.y, player.x, player.y);
-      return { tile, distance };
-    });
-
-    // Sort by distance (farthest first)
-    tilesWithDistances.sort((a, b) => b.distance - a.distance);
-
-    // Take only the 50% farthest tiles
-    const farTiles = tilesWithDistances.slice(
-      0,
-      Math.floor(tilesWithDistances.length / 2),
-    );
-
-    // If no far tiles available, return null
-    if (farTiles.length === 0) {
-      return null;
-    }
-
-    // Choose a random tile from the far tiles
-    const randomIndex = Math.floor(Math.random() * farTiles.length);
-    return farTiles[randomIndex].tile;
-  };
-
   updateShieldedEnemies = () => {
     this.shieldedEnemies.forEach((enemy) => {
       if (enemy.dead) {

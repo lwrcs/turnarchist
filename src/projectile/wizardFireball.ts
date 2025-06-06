@@ -7,6 +7,7 @@ import { Entity } from "../entity/entity";
 import { Enemy } from "../entity/enemy/enemy";
 import { LightSource } from "../lighting/lightSource";
 import { Lighting } from "../lighting/lighting";
+import { Utils } from "../utility/utils";
 
 export class WizardFireball extends Projectile {
   state: number;
@@ -35,7 +36,11 @@ export class WizardFireball extends Projectile {
     this.parent.addLightSource(this.lightSource);
     //this.parent.room.updateLighting();
     this.hasBloom = true;
-    this.bloomColor = "#00BFFF";
+    this.bloomColor = Utils.rgbToHex(
+      (this.parent as WizardEnemy).projectileColor[0],
+      (this.parent as WizardEnemy).projectileColor[1],
+      (this.parent as WizardEnemy).projectileColor[2],
+    );
     this.bloomAlpha = 0.5;
     this.softBloomAlpha = 0;
   }

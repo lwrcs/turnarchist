@@ -9,6 +9,7 @@ import { EntityType } from "../entity";
 import { ImageParticle } from "../../particle/imageParticle";
 import { globalEventBus } from "../../event/eventBus";
 import { Sound } from "../../sound/sound";
+import { Utils } from "../../utility/utils";
 
 enum EnemyState {
   SLEEP,
@@ -530,6 +531,53 @@ export abstract class Enemy extends Entity {
       y: this.targetPlayer.lastY,
     };
   }
+
+  teleport = () => {
+    let newTile = this.findFarTile();
+    if (newTile) {
+      this.drawX = newTile.x - this.x;
+      this.drawY = newTile.y - this.y;
+
+      this.x = newTile.x;
+      this.y = newTile.y;
+      this.lightSource.updatePosition(this.x + 0.5, this.y + 0.5);
+      this.room.updateLighting();
+    }
+  };
+
+  findFarTile = () => {
+    // Get all empty tiles
+    const emptyTiles = this.room.getEmptyTiles();
+    const player = this.getPlayer();
+    // Early return if no player or no empty tiles
+    if (!player || emptyTiles.length === 0) {
+      return null;
+    }
+
+    // Calculate distances from player
+    const tilesWithDistances = emptyTiles.map((tile) => {
+      const distance = Utils.distance(tile.x, tile.y, player.x, player.y);
+      return { tile, distance };
+    });
+
+    // Sort by distance (farthest first)
+    tilesWithDistances.sort((a, b) => b.distance - a.distance);
+
+    // Take only the 50% farthest tiles
+    const farTiles = tilesWithDistances.slice(
+      0,
+      Math.floor(tilesWithDistances.length / 2),
+    );
+
+    // If no far tiles available, return null
+    if (farTiles.length === 0) {
+      return null;
+    }
+
+    // Choose a random tile from the far tiles
+    const randomIndex = Math.floor(Math.random() * farTiles.length);
+    return farTiles[randomIndex].tile;
+  };
 
   draw = (delta: number) => {
     if (!this.dead) {
