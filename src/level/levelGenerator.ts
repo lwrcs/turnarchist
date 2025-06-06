@@ -10,6 +10,7 @@ import {
 } from "./levelParametersGenerator";
 import { Level } from "./level";
 import { GameConstants } from "../game/gameConstants";
+import { EnvType } from "./environment";
 
 enum PathType {
   MAIN_PATH, // Has exit room (current dungeon)
@@ -979,7 +980,7 @@ let generate_cave_candidate = async (
       partialLevel.partitions,
       0.75,
     );
-  for (let i = 0; i < 3; i++)
+  for (let i = 0; i < 10; i++)
     partialLevel.partitions = await split_partitions(
       partialLevel.partitions,
       1,
@@ -1112,7 +1113,7 @@ let generate_cave = async (
   mapWidth: number,
   mapHeight: number,
 ): Promise<Array<Partition>> => {
-  const numberOfRooms = 5; // don't set this too high or cave generation will time out
+  const numberOfRooms = 10; // don't set this too high or cave generation will time out
 
   do {
     await generate_cave_candidate(

@@ -36,6 +36,9 @@ export class Populator {
         case RoomType.CAVE:
           this.populateCave(room);
           break;
+        case RoomType.FOREST:
+          this.populateForest(room);
+          break;
         default:
           this.populateDefault(room);
           break;
@@ -43,8 +46,10 @@ export class Populator {
     });
   };
 
-  private addProps(room: Room, numProps: number) {
-    const envData = environmentProps[room.level.environment.type];
+  private addProps(room: Room, numProps: number, envType?: EnvType) {
+    const envData = envType
+      ? environmentProps[envType]
+      : environmentProps[room.level.environment.type];
     let tiles = room.getEmptyTiles();
 
     for (let i = 0; i < numProps; i++) {
@@ -69,13 +74,13 @@ export class Populator {
   }
 
   private populateCave(room: Room) {
-    this.populateDefault(room);
+    this.addProps(room, this.getNumProps(room), EnvType.CAVE);
   }
 
   private populateForest(room: Room) {
     if (Math.random() < 0.05) {
       this.populateGraveyard(room);
-    } else this.populateDefault(room);
+    } else this.addProps(room, this.getNumProps(room), EnvType.FOREST);
   }
 
   private getNumProps(room: Room) {

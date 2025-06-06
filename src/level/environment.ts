@@ -12,6 +12,9 @@ import { TombStone } from "../entity/object/tombStone";
 import { Rock } from "../entity/resource/rockResource";
 import { SkinType } from "../tile/tile";
 import { RoomType } from "../room/room";
+import { CoalResource } from "../entity/resource/coalResource";
+import { GoldResource } from "../entity/resource/goldResource";
+import { EmeraldResource } from "../entity/resource/emeraldResource";
 
 export enum EnvType {
   DUNGEON = 0,
@@ -78,9 +81,10 @@ const environmentProps: Record<EnvType, EnvironmentPropData> = {
   },
   [EnvType.CAVE]: {
     props: [
-      { class: Crate, weight: 10 },
-      { class: Barrel, weight: 5 },
-      { class: Block, weight: 15 },
+      { class: CoalResource, weight: 1 },
+      { class: GoldResource, weight: 0.1 },
+      { class: EmeraldResource, weight: 0.05 },
+      { class: Block, weight: 0.2 },
       { class: Rock, weight: 0.4 },
       { class: Mushrooms, weight: 0.3 },
       { class: Pot, weight: 0.2 },

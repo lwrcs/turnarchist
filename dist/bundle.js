@@ -15170,6 +15170,9 @@ const pumpkin_1 = __webpack_require__(/*! ../entity/object/pumpkin */ "./src/ent
 const sprout_1 = __webpack_require__(/*! ../entity/object/sprout */ "./src/entity/object/sprout.ts");
 const tombStone_1 = __webpack_require__(/*! ../entity/object/tombStone */ "./src/entity/object/tombStone.ts");
 const rockResource_1 = __webpack_require__(/*! ../entity/resource/rockResource */ "./src/entity/resource/rockResource.ts");
+const coalResource_1 = __webpack_require__(/*! ../entity/resource/coalResource */ "./src/entity/resource/coalResource.ts");
+const goldResource_1 = __webpack_require__(/*! ../entity/resource/goldResource */ "./src/entity/resource/goldResource.ts");
+const emeraldResource_1 = __webpack_require__(/*! ../entity/resource/emeraldResource */ "./src/entity/resource/emeraldResource.ts");
 var EnvType;
 (function (EnvType) {
     EnvType[EnvType["DUNGEON"] = 0] = "DUNGEON";
@@ -15221,9 +15224,10 @@ const environmentProps = {
     },
     [EnvType.CAVE]: {
         props: [
-            { class: crate_1.Crate, weight: 10 },
-            { class: barrel_1.Barrel, weight: 5 },
-            { class: block_1.Block, weight: 15 },
+            { class: coalResource_1.CoalResource, weight: 1 },
+            { class: goldResource_1.GoldResource, weight: 0.1 },
+            { class: emeraldResource_1.EmeraldResource, weight: 0.05 },
+            { class: block_1.Block, weight: 0.2 },
             { class: rockResource_1.Rock, weight: 0.4 },
             { class: mushrooms_1.Mushrooms, weight: 0.3 },
             { class: pot_1.Pot, weight: 0.2 },
@@ -15365,7 +15369,11 @@ class Level {
         this.mapGroup = mapGroup;
         this.populator = new roomPopulator_1.Populator(this);
         this.enemyParameters = this.getEnemyParameters();
-        let envType = this.isMainPath ? environment_1.EnvType.DUNGEON : environment_1.EnvType.CAVE;
+        let envType = this.isMainPath
+            ? environment_1.EnvType.DUNGEON
+            : Math.random() < 0.5
+                ? environment_1.EnvType.CAVE
+                : environment_1.EnvType.FOREST;
         this.environment = new environment_1.Environment(envType);
         let mainPath = this.isMainPath ? "main" : "side";
         console.log(`${mainPath} path, envType: ${envType}`);
@@ -16187,7 +16195,7 @@ let generate_cave_candidate = async (partialLevel, map_w, map_h, num_rooms) => {
     let grid = [];
     for (let i = 0; i < 3; i++)
         partialLevel.partitions = await split_partitions(partialLevel.partitions, 0.75);
-    for (let i = 0; i < 3; i++)
+    for (let i = 0; i < 10; i++)
         partialLevel.partitions = await split_partitions(partialLevel.partitions, 1);
     for (let i = 0; i < 3; i++)
         partialLevel.partitions = await split_partitions(partialLevel.partitions, 0.5);
@@ -16281,7 +16289,7 @@ let generate_cave_candidate = async (partialLevel, map_w, map_h, num_rooms) => {
     return partialLevel.partitions;
 };
 let generate_cave = async (partialLevel, mapWidth, mapHeight) => {
-    const numberOfRooms = 5; // don't set this too high or cave generation will time out
+    const numberOfRooms = 10; // don't set this too high or cave generation will time out
     do {
         await generate_cave_candidate(partialLevel, mapWidth, mapHeight, numberOfRooms);
     } while (partialLevel.partitions.length < numberOfRooms);
@@ -19871,6 +19879,8 @@ var RoomType;
     RoomType[RoomType["ROPECAVE"] = 21] = "ROPECAVE";
     RoomType[RoomType["TUTORIAL"] = 22] = "TUTORIAL";
     RoomType[RoomType["GRAVEYARD"] = 23] = "GRAVEYARD";
+    RoomType[RoomType["FOREST"] = 24] = "FOREST";
+    RoomType[RoomType["ROPEUP"] = 25] = "ROPEUP";
 })(RoomType = exports.RoomType || (exports.RoomType = {}));
 var TurnState;
 (function (TurnState) {
@@ -21711,6 +21721,9 @@ class Room {
         if (this.type === RoomType.ROPECAVE || this.type === RoomType.CAVE) {
             this.skin = tile_1.SkinType.CAVE;
         }
+        if (this.type === RoomType.ROPEUP || this.type === RoomType.FOREST) {
+            this.skin = tile_1.SkinType.FOREST;
+        }
         this.builder = new roomBuilder_1.RoomBuilder(this);
         // #endregion
     }
@@ -22570,6 +22583,9 @@ class Populator {
                     case room_1.RoomType.CAVE:
                         this.populateCave(room);
                         break;
+                    case room_1.RoomType.FOREST:
+                        this.populateForest(room);
+                        break;
                     default:
                         this.populateDefault(room);
                         break;
@@ -22579,8 +22595,10 @@ class Populator {
         this.level = level;
         this.props = [];
     }
-    addProps(room, numProps) {
-        const envData = environment_1.environmentProps[room.level.environment.type];
+    addProps(room, numProps, envType) {
+        const envData = envType
+            ? environment_1.environmentProps[envType]
+            : environment_1.environmentProps[room.level.environment.type];
         let tiles = room.getEmptyTiles();
         for (let i = 0; i < numProps; i++) {
             if (tiles.length === 0)
@@ -22600,14 +22618,14 @@ class Populator {
         this.populateDefault(room);
     }
     populateCave(room) {
-        this.populateDefault(room);
+        this.addProps(room, this.getNumProps(room), environment_1.EnvType.CAVE);
     }
     populateForest(room) {
         if (Math.random() < 0.05) {
             this.populateGraveyard(room);
         }
         else
-            this.populateDefault(room);
+            this.addProps(room, this.getNumProps(room), environment_1.EnvType.FOREST);
     }
     getNumProps(room) {
         const numEmptyTiles = room.getEmptyTiles().length;

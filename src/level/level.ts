@@ -88,7 +88,11 @@ export class Level {
     this.populator = new Populator(this);
 
     this.enemyParameters = this.getEnemyParameters();
-    let envType = this.isMainPath ? EnvType.DUNGEON : EnvType.CAVE;
+    let envType = this.isMainPath
+      ? EnvType.DUNGEON
+      : Math.random() < 0.5
+        ? EnvType.CAVE
+        : EnvType.FOREST;
     this.environment = new Environment(envType);
     let mainPath = this.isMainPath ? "main" : "side";
     console.log(`${mainPath} path, envType: ${envType}`);

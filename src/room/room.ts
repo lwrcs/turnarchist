@@ -170,6 +170,8 @@ export enum RoomType {
   ROPECAVE,
   TUTORIAL,
   GRAVEYARD,
+  FOREST,
+  ROPEUP,
 }
 
 export enum TurnState {
@@ -399,6 +401,10 @@ export class Room {
     if (this.type === RoomType.ROPECAVE || this.type === RoomType.CAVE) {
       this.skin = SkinType.CAVE;
     }
+    if (this.type === RoomType.ROPEUP || this.type === RoomType.FOREST) {
+      this.skin = SkinType.FOREST;
+    }
+
     this.builder = new RoomBuilder(this);
 
     // #endregion
