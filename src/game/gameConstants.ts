@@ -172,12 +172,11 @@ export class GameConstants {
     let bestScale = GameConstants.MIN_SCALE;
     let bestDifference = Infinity;
 
-    const landscape = window.innerWidth > window.innerHeight;
-    const dimensionToUse = landscape ? window.innerWidth : window.innerHeight;
+    const dimension = window.innerHeight;
 
     for (let i = GameConstants.MIN_SCALE; i <= GameConstants.MAX_SCALE; i++) {
-      const tiles = dimensionToUse / (i * GameConstants.TILESIZE);
-      const difference = Math.abs(tiles - 8);
+      const tiles = dimension / (i * GameConstants.TILESIZE);
+      const difference = Math.abs(tiles - 6);
 
       if (difference < bestDifference) {
         bestDifference = difference;
