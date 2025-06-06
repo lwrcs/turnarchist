@@ -69,7 +69,7 @@ import { Spellbook } from "../item/weapon/spellbook";
 import { Torch } from "../item/light/torch";
 import { RookEnemy } from "../entity/enemy/rookEnemy";
 import { BeamEffect } from "../projectile/beamEffect";
-import { EnvType } from "../level/environment";
+import { EnvType, PropInfo } from "../level/environment";
 import { Pickaxe } from "../item/tool/pickaxe";
 import { OccultistEnemy } from "../entity/enemy/occultistEnemy";
 import { Puddle } from "../tile/decorations/puddle";
@@ -169,6 +169,7 @@ export enum RoomType {
   ROPEHOLE,
   ROPECAVE,
   TUTORIAL,
+  GRAVEYARD,
 }
 
 export enum TurnState {

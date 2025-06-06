@@ -11,6 +11,8 @@ import { Sprout } from "../entity/object/sprout";
 import { TombStone } from "../entity/object/tombStone";
 import { Rock } from "../entity/resource/rockResource";
 import { SkinType } from "../tile/tile";
+import { RoomType } from "../room/room";
+
 export enum EnvType {
   DUNGEON = 0,
   CAVE = 1,
@@ -31,7 +33,7 @@ export class Environment {
 
 interface PropInfo {
   class: any; // The class constructor
-  weight: number; // Spawn weight
+  weight?: number; // Spawn weight
   blacklistedEnvironments?: EnvType[]; // Environments where this prop shouldn't spawn
   additionalParams?: any[]; // Extra constructor parameters if needed
 }
@@ -39,6 +41,22 @@ interface PropInfo {
 interface EnvironmentPropData {
   props: PropInfo[]; // Single category for all props
 }
+
+const props: PropInfo[] = [
+  { class: Crate },
+  { class: Barrel },
+  { class: TombStone, additionalParams: [1] },
+  { class: TombStone, additionalParams: [0] },
+  { class: Pumpkin },
+  { class: Block },
+  { class: Pot },
+  { class: PottedPlant },
+  { class: Bush },
+  { class: Sprout },
+  { class: Mushrooms },
+  { class: Rock },
+  { class: Chest },
+];
 
 const environmentProps: Record<EnvType, EnvironmentPropData> = {
   [EnvType.DUNGEON]: {
@@ -52,7 +70,7 @@ const environmentProps: Record<EnvType, EnvironmentPropData> = {
       { class: Pot, weight: 0.45 },
       { class: PottedPlant, weight: 0.2 },
       { class: Rock, weight: 0.1 },
-      { class: Mushrooms, weight: 0.1 },
+      { class: Mushrooms, weight: 0.25 },
       { class: Bush, weight: 0.1 },
       { class: Sprout, weight: 0.025 },
       { class: Chest, weight: 0.025 },

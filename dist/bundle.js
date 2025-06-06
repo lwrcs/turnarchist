@@ -9448,7 +9448,7 @@ GameConstants.ENTITY_SHADE_LEVELS = 25; //10
 GameConstants.TILESIZE = 16;
 GameConstants.SCALE = 6;
 GameConstants.SOFT_SCALE = 6;
-GameConstants.MAX_SCALE = 10;
+GameConstants.MAX_SCALE = 16;
 GameConstants.MIN_SCALE = 1;
 GameConstants.SWIPE_THRESH = 25 ** 2; // (size of swipe threshold circle)^2
 GameConstants.HOLD_THRESH = 250; // milliseconds
@@ -15154,6 +15154,21 @@ class Environment {
     }
 }
 exports.Environment = Environment;
+const props = [
+    { class: crate_1.Crate },
+    { class: barrel_1.Barrel },
+    { class: tombStone_1.TombStone, additionalParams: [1] },
+    { class: tombStone_1.TombStone, additionalParams: [0] },
+    { class: pumpkin_1.Pumpkin },
+    { class: block_1.Block },
+    { class: pot_1.Pot },
+    { class: pottedPlant_1.PottedPlant },
+    { class: bush_1.Bush },
+    { class: sprout_1.Sprout },
+    { class: mushrooms_1.Mushrooms },
+    { class: rockResource_1.Rock },
+    { class: chest_1.Chest },
+];
 const environmentProps = {
     [EnvType.DUNGEON]: {
         props: [
@@ -15166,7 +15181,7 @@ const environmentProps = {
             { class: pot_1.Pot, weight: 0.45 },
             { class: pottedPlant_1.PottedPlant, weight: 0.2 },
             { class: rockResource_1.Rock, weight: 0.1 },
-            { class: mushrooms_1.Mushrooms, weight: 0.1 },
+            { class: mushrooms_1.Mushrooms, weight: 0.25 },
             { class: bush_1.Bush, weight: 0.1 },
             { class: sprout_1.Sprout, weight: 0.025 },
             { class: chest_1.Chest, weight: 0.025 },
@@ -19817,6 +19832,7 @@ var RoomType;
     RoomType[RoomType["ROPEHOLE"] = 20] = "ROPEHOLE";
     RoomType[RoomType["ROPECAVE"] = 21] = "ROPECAVE";
     RoomType[RoomType["TUTORIAL"] = 22] = "TUTORIAL";
+    RoomType[RoomType["GRAVEYARD"] = 23] = "GRAVEYARD";
 })(RoomType = exports.RoomType || (exports.RoomType = {}));
 var TurnState;
 (function (TurnState) {
@@ -22501,6 +22517,7 @@ const utils_1 = __webpack_require__(/*! ../utility/utils */ "./src/utility/utils
 const room_1 = __webpack_require__(/*! ./room */ "./src/room/room.ts");
 class Populator {
     constructor(level) {
+        this.props = [];
         this.populateRooms = () => {
             this.level.rooms.forEach((room) => {
                 if (room.type === room_1.RoomType.START ||
@@ -22508,10 +22525,6 @@ class Populator {
                     room.type === room_1.RoomType.UPLADDER ||
                     room.type === room_1.RoomType.ROPEHOLE)
                     return;
-                // Get environment-specific data
-                const numEmptyTiles = room.getEmptyTiles().length;
-                // Calculate spawn count based on unified density multiplier
-                const numProps = utils_1.Utils.randomSineInt(0, 0.3 * numEmptyTiles);
                 switch (room.type) {
                     case room_1.RoomType.DUNGEON:
                         this.populateDungeon(room);
@@ -22520,12 +22533,13 @@ class Populator {
                         this.populateCave(room);
                         break;
                     default:
-                        this.addProps(room, numProps);
+                        this.populateDefault(room);
                         break;
                 }
             });
         };
         this.level = level;
+        this.props = [];
     }
     addProps(room, numProps) {
         const envData = environment_1.environmentProps[room.level.environment.type];
@@ -22541,8 +22555,30 @@ class Populator {
             }
         }
     }
-    populateDungeon(room) { }
-    populateCave(room) { }
+    populateDungeon(room) {
+        this.populateDefault(room);
+    }
+    populateGraveyard(room) {
+        this.populateDefault(room);
+    }
+    populateCave(room) {
+        this.populateDefault(room);
+    }
+    populateForest(room) {
+        if (Math.random() < 0.05) {
+            this.populateGraveyard(room);
+        }
+        else
+            this.populateDefault(room);
+    }
+    getNumProps(room) {
+        const numEmptyTiles = room.getEmptyTiles().length;
+        return utils_1.Utils.randomSineInt(0, 0.3 * numEmptyTiles);
+    }
+    populateDefault(room) {
+        const numProps = this.getNumProps(room);
+        this.addProps(room, numProps);
+    }
 }
 exports.Populator = Populator;
 

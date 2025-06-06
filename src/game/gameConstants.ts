@@ -40,7 +40,7 @@ export class GameConstants {
   static readonly TILESIZE = 16;
   static SCALE = 6;
   static SOFT_SCALE = 6;
-  static readonly MAX_SCALE = 10;
+  static readonly MAX_SCALE = 16;
   static readonly MIN_SCALE = 1;
 
   static readonly SWIPE_THRESH = 25 ** 2; // (size of swipe threshold circle)^2

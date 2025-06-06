@@ -12,8 +12,11 @@ import { Room, RoomType } from "./room";
 
 export class Populator {
   level: Level;
+  private props: { x: number; y: number }[] = [];
+
   constructor(level: Level) {
     this.level = level;
+    this.props = [];
   }
 
   populateRooms = () => {
@@ -26,12 +29,6 @@ export class Populator {
       )
         return;
 
-      // Get environment-specific data
-      const numEmptyTiles = room.getEmptyTiles().length;
-
-      // Calculate spawn count based on unified density multiplier
-      const numProps = Utils.randomSineInt(0, 0.3 * numEmptyTiles);
-
       switch (room.type) {
         case RoomType.DUNGEON:
           this.populateDungeon(room);
@@ -40,7 +37,7 @@ export class Populator {
           this.populateCave(room);
           break;
         default:
-          this.addProps(room, numProps);
+          this.populateDefault(room);
           break;
       }
     });
@@ -63,7 +60,31 @@ export class Populator {
     }
   }
 
-  private populateDungeon(room: Room) {}
+  private populateDungeon(room: Room) {
+    this.populateDefault(room);
+  }
 
-  private populateCave(room: Room) {}
+  private populateGraveyard(room: Room) {
+    this.populateDefault(room);
+  }
+
+  private populateCave(room: Room) {
+    this.populateDefault(room);
+  }
+
+  private populateForest(room: Room) {
+    if (Math.random() < 0.05) {
+      this.populateGraveyard(room);
+    } else this.populateDefault(room);
+  }
+
+  private getNumProps(room: Room) {
+    const numEmptyTiles = room.getEmptyTiles().length;
+    return Utils.randomSineInt(0, 0.3 * numEmptyTiles);
+  }
+
+  private populateDefault(room: Room) {
+    const numProps = this.getNumProps(room);
+    this.addProps(room, numProps);
+  }
 }
