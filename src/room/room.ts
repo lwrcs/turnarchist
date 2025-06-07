@@ -3054,6 +3054,11 @@ export class Room {
     return enemies.length === 0 && this.lastEnemyCount > 0;
   };
 
+  roomCleared = () => {
+    const enemies = this.entities.filter((e) => e instanceof Enemy);
+    return enemies.length === 0;
+  };
+
   hasHitwarning = (x: number, y: number): boolean => {
     /*
     for (const e of this.entities) {

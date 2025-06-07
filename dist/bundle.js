@@ -13608,11 +13608,11 @@ const light_1 = __webpack_require__(/*! ./light */ "./src/item/light/light.ts");
 class Candle extends light_1.Light {
     constructor(level, x, y) {
         super(level, x, y);
-        this.fuel = 50; //how many turns before it burns out
+        this.fuel = 100; //how many turns before it burns out
         this.tileX = 27;
         this.tileY = 0;
         this.name = "candle";
-        this.fuelCap = 50;
+        this.fuelCap = 100;
         this.radius = 4;
         this.stackable = true;
         this.maxBrightness = 2;
@@ -13722,9 +13722,15 @@ class Light extends equippable_1.Equippable {
             this.wielder.lightBrightness = 0.5;
         };
         this.burn = () => {
-            // Handle active burning
+            // Handle active burning, don't burn fuel in empty rooms
             if (this.isIgnited()) {
-                this.fuel--;
+                const roomCleared = this.wielder.game.rooms[this.wielder.levelID].roomCleared();
+                if (!roomCleared)
+                    this.fuel--;
+                else
+                    this.fuel -= 0.2;
+                console.log("has enemies", !roomCleared);
+                console.log("fuel", this.fuel);
                 this.setRadius();
                 this.setBrightness();
             }
@@ -13818,8 +13824,8 @@ class Torch extends light_1.Light {
         this.tileX = 28;
         this.tileY = 0;
         this.name = "torch";
-        this.fuelCap = 250;
-        this.fuel = 250;
+        this.fuelCap = 500;
+        this.fuel = 500;
         this.radius = 7;
         this.maxBrightness = 5;
         this.minBrightness = 2;
@@ -21427,6 +21433,10 @@ class Room {
         this.hasNoEnemies = () => {
             let enemies = this.entities.filter((e) => e instanceof enemy_1.Enemy);
             return enemies.length === 0 && this.lastEnemyCount > 0;
+        };
+        this.roomCleared = () => {
+            const enemies = this.entities.filter((e) => e instanceof enemy_1.Enemy);
+            return enemies.length === 0;
         };
         this.hasHitwarning = (x, y) => {
             /*
