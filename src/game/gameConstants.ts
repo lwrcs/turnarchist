@@ -169,14 +169,16 @@ export class GameConstants {
   };
 
   static readonly FIND_SCALE = () => {
+    console.log("devicePixelRatio", window.devicePixelRatio);
     let bestScale = GameConstants.MIN_SCALE;
     let bestDifference = Infinity;
 
-    const dimension = window.innerHeight;
+    const dimension = window.innerHeight * window.devicePixelRatio;
+    console.log("dimension", dimension);
 
     for (let i = GameConstants.MIN_SCALE; i <= GameConstants.MAX_SCALE; i++) {
       const tiles = dimension / (i * GameConstants.TILESIZE);
-      const difference = Math.abs(tiles - 6);
+      const difference = Math.abs(tiles - 12);
 
       if (difference < bestDifference) {
         bestDifference = difference;

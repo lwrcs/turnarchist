@@ -93,11 +93,11 @@ const environmentProps: Record<EnvType, EnvironmentPropData> = {
   },
   [EnvType.FOREST]: {
     props: [
-      { class: TombStone, weight: 3, additionalParams: [1] },
-      { class: TombStone, weight: 1, additionalParams: [0] },
-      { class: Pumpkin, weight: 3 },
-      { class: Block, weight: 7 },
-      { class: Bush, weight: 0.4 },
+      { class: TombStone, weight: 0.1, additionalParams: [1] },
+      { class: TombStone, weight: 0.1, additionalParams: [0] },
+      { class: Pumpkin, weight: 0.25 },
+      { class: Block, weight: 0.1 },
+      { class: Bush, weight: 1 },
       { class: Sprout, weight: 0.25 },
       { class: Mushrooms, weight: 0.2 },
       { class: Rock, weight: 0.1 },

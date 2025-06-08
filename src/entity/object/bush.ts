@@ -13,7 +13,7 @@ export class Bush extends Entity {
     super(room, game, x, y);
     this.room = room;
     this.health = 1;
-    this.tileX = 16;
+    this.tileX = 19;
     this.tileY = 2;
     this.hasShadow = false;
     this.chainPushable = false;
@@ -36,11 +36,11 @@ export class Bush extends Entity {
       Game.drawObj(
         this.tileX,
         this.tileY,
-        1,
         2,
-        this.x - this.drawX,
+        2,
+        this.x - this.drawX - 0.5,
         this.y - this.drawYOffset - this.drawY,
-        1,
+        2,
         2,
         this.room.shadeColor,
         this.shadeAmount(),

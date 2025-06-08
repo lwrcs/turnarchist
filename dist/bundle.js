@@ -6857,7 +6857,7 @@ class Bush extends entity_1.Entity {
             game_1.Game.ctx.globalAlpha = this.alpha;
             if (!this.dead) {
                 this.updateDrawXY(delta);
-                game_1.Game.drawObj(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
+                game_1.Game.drawObj(this.tileX, this.tileY, 2, 2, this.x - this.drawX - 0.5, this.y - this.drawYOffset - this.drawY, 2, 2, this.room.shadeColor, this.shadeAmount());
             }
             game_1.Game.ctx.restore();
         };
@@ -6866,7 +6866,7 @@ class Bush extends entity_1.Entity {
         };
         this.room = room;
         this.health = 1;
-        this.tileX = 16;
+        this.tileX = 19;
         this.tileY = 2;
         this.hasShadow = false;
         this.chainPushable = false;
@@ -9571,12 +9571,14 @@ GameConstants.DECREASE_SCALE = () => {
     }
 };
 GameConstants.FIND_SCALE = () => {
+    console.log("devicePixelRatio", window.devicePixelRatio);
     let bestScale = GameConstants.MIN_SCALE;
     let bestDifference = Infinity;
-    const dimension = window.innerHeight;
+    const dimension = window.innerHeight * window.devicePixelRatio;
+    console.log("dimension", dimension);
     for (let i = GameConstants.MIN_SCALE; i <= GameConstants.MAX_SCALE; i++) {
         const tiles = dimension / (i * GameConstants.TILESIZE);
-        const difference = Math.abs(tiles - 6);
+        const difference = Math.abs(tiles - 12);
         if (difference < bestDifference) {
             bestDifference = difference;
             bestScale = i;
@@ -15252,11 +15254,11 @@ const environmentProps = {
     },
     [EnvType.FOREST]: {
         props: [
-            { class: tombStone_1.TombStone, weight: 3, additionalParams: [1] },
-            { class: tombStone_1.TombStone, weight: 1, additionalParams: [0] },
-            { class: pumpkin_1.Pumpkin, weight: 3 },
-            { class: block_1.Block, weight: 7 },
-            { class: bush_1.Bush, weight: 0.4 },
+            { class: tombStone_1.TombStone, weight: 0.1, additionalParams: [1] },
+            { class: tombStone_1.TombStone, weight: 0.1, additionalParams: [0] },
+            { class: pumpkin_1.Pumpkin, weight: 0.25 },
+            { class: block_1.Block, weight: 0.1 },
+            { class: bush_1.Bush, weight: 1 },
             { class: sprout_1.Sprout, weight: 0.25 },
             { class: mushrooms_1.Mushrooms, weight: 0.2 },
             { class: rockResource_1.Rock, weight: 0.1 },
@@ -22553,11 +22555,14 @@ class Populator {
         this.props = [];
         this.populateRooms = () => {
             this.level.rooms.forEach((room) => {
-                if (room.type === room_1.RoomType.START ||
-                    room.type === room_1.RoomType.DOWNLADDER ||
+                if (room.type === room_1.RoomType.DOWNLADDER ||
                     room.type === room_1.RoomType.UPLADDER ||
                     room.type === room_1.RoomType.ROPEHOLE)
                     return;
+                if (room.type === room_1.RoomType.START) {
+                    this.populateForest(room);
+                    return;
+                }
                 switch (room.type) {
                     case room_1.RoomType.DUNGEON:
                         this.populateDungeon(room);
@@ -22607,7 +22612,7 @@ class Populator {
             this.populateGraveyard(room);
         }
         else
-            this.addProps(room, this.getNumProps(room), environment_1.EnvType.FOREST);
+            this.addProps(room, this.getNumProps(room) * 2, environment_1.EnvType.FOREST);
     }
     getNumProps(room) {
         const numEmptyTiles = room.getEmptyTiles().length;
