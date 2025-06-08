@@ -1576,7 +1576,7 @@ export class Room {
   };
 
   enterLevel = (player: Player) => {
-    this.game.updateLevel();
+    this.game.updateLevel(this);
     player.moveSnap(this.getRoomCenter().x, this.getRoomCenter().y);
     this.onEnterRoom(player);
   };
@@ -1650,7 +1650,6 @@ export class Room {
     this.updateLighting();
     player.map.saveMapData();
     this.clearDeadStuff();
-    this.updateMovementCooldown();
   };
 
   computerTurn = () => {
@@ -3018,6 +3017,7 @@ export class Room {
           !this.roomArray[x][y].isSolid() &&
           !(this.roomArray[x][y] instanceof SpikeTrap) &&
           !(this.roomArray[x][y] instanceof SpawnFloor) &&
+          !(this.roomArray[x][y] instanceof UpLadder) &&
           !(this.roomArray[x][y] instanceof DownLadder)
         ) {
           returnVal.push(this.roomArray[x][y]);
@@ -3033,17 +3033,6 @@ export class Room {
   getTile = (x: number, y: number) => {
     if (this.roomArray[x]) return this.roomArray[x][y];
     else return undefined;
-  };
-
-  updateMovementCooldown = () => {
-    return;
-    if (this.hasNoEnemies()) {
-      GameConstants.MOVEMENT_COOLDOWN = 50;
-      GameConstants.KEY_REPEAT_TIME = 100;
-    } else {
-      GameConstants.MOVEMENT_COOLDOWN = 200;
-      GameConstants.KEY_REPEAT_TIME = 300;
-    }
   };
 
   hasNoEnemies = () => {

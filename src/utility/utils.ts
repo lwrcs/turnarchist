@@ -70,17 +70,67 @@ export class Utils {
     return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
   };
 
-  // Generate a random integer with normal distribution
-  static randomSineInt = (min: number, max: number): number => {
-    // Generate random value from 0 to π
-    const x = Math.random() * 2 * Math.PI;
+  /**
+   * Generates a random integer using a modified cosine distribution that approximates a normal distribution.
+   *
+   * @param min - The minimum value (inclusive) of the range
+   * @param max - The maximum value (inclusive) of the range
+   * @param options - Optional parameters to modify the distribution
+   * @param options.median - The value to skew the distribution towards (must be between min and max).
+   *                        Default is the middle of the range. This acts as the peak of the distribution curve.
+   * @returns A random integer between min and max (inclusive) following the specified distribution
+   *
+   * @example
+   * // Normal bell curve distribution between 0 and 10 (centered at 5)
+   * randomSineInt(0, 10)
+   *
+   * @example
+   * // Distribution skewed towards 7
+   * randomSineInt(0, 10, { median: 7 })
+   */
+  static randomSineInt = (
+    min: number,
+    max: number,
+    options: {
+      median?: number;
+    } = {},
+  ): number => {
+    const roundedMax = Math.ceil(max);
+    const roundedMin = Math.floor(min);
+    const range = roundedMax - roundedMin + 1;
 
-    // sin(x) gives us values from 0 to 1 with peak at π/2
-    const sinValue = Math.sin(x - Math.PI / 2) + 1;
+    const { median = roundedMin + (range - 1) / 2 } = options;
 
-    // Map to our integer range
-    const range = max - min + 1;
-    return Math.floor((sinValue / 2) * range) + min;
+    // Validate median is within range
+    const clampedMedian = Math.min(Math.max(median, roundedMin), roundedMax);
+
+    // Generate two random numbers for a more normal-like distribution
+    const x1 = Math.random() * 2 * Math.PI;
+    const x2 = Math.random() * 2 * Math.PI;
+
+    // Average two cosines to create smoother bell curve, normalized to [0,1]
+    const value = (Math.cos(x1) + Math.cos(x2) + 2) / 4;
+
+    // Calculate the relative median position in [0,1] range
+    const medianPosition = (clampedMedian - roundedMin) / (range - 1);
+
+    // Apply skewing by using a weighted average
+    const weight = 0.7; // How strong the skewing effect should be
+    const skewedValue =
+      value * (1 - weight) +
+      (value < 0.5
+        ? value * (medianPosition / 0.5)
+        : medianPosition + (value - 0.5) * 2 * (1 - medianPosition)) *
+        weight;
+
+    // Ensure we stay within bounds while avoiding edge cases
+    const epsilon = 0.001;
+    const boundedValue = Math.min(Math.max(skewedValue, epsilon), 1 - epsilon);
+
+    // Map to integer range
+    const result = Math.floor(boundedValue * range) + roundedMin;
+
+    return Math.min(Math.max(result, roundedMin), roundedMax);
   };
 
   static randTableWeighted = (table: any[]): any => {

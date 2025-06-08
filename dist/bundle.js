@@ -8068,7 +8068,6 @@ const input_1 = __webpack_require__(/*! ./game/input */ "./src/game/input.ts");
 const downLadder_1 = __webpack_require__(/*! ./tile/downLadder */ "./src/tile/downLadder.ts");
 const textbox_1 = __webpack_require__(/*! ./game/textbox */ "./src/game/textbox.ts");
 const gameState_1 = __webpack_require__(/*! ./game/gameState */ "./src/game/gameState.ts");
-const tutorialListener_1 = __webpack_require__(/*! ./game/tutorialListener */ "./src/game/tutorialListener.ts");
 const mouseCursor_1 = __webpack_require__(/*! ./gui/mouseCursor */ "./src/gui/mouseCursor.ts");
 const eventBus_1 = __webpack_require__(/*! ./event/eventBus */ "./src/event/eventBus.ts");
 const reverb_1 = __webpack_require__(/*! ./sound/reverb */ "./src/sound/reverb.ts");
@@ -8134,8 +8133,10 @@ class Game {
             this.currentDepth = depth;
             this.players[this.localPlayerID].depth = depth;
         };
-        this.updateLevel = () => {
-            this.level = this.levels[this.currentDepth];
+        this.updateLevel = (room) => {
+            if (room && room.level) {
+                this.level = room.level;
+            }
             if (this.level.rooms.length > 0)
                 this.rooms = this.level.rooms;
         };
@@ -8197,18 +8198,6 @@ class Game {
             else {
                 this.chatTextBox.handleKeyPress(key);
             }
-        };
-        this.changeLevel = (player, newLevel) => {
-            if (this.tutorialListener === null) {
-                this.tutorialListener = new tutorialListener_1.TutorialListener(this);
-            }
-            player.levelID = this.levels[player.depth].rooms.indexOf(newLevel);
-            if (this.players[this.localPlayerID] === player) {
-                //this.level.exitLevel();
-                this.room = newLevel;
-            }
-            this.level = this.room.level;
-            newLevel.enterLevel(player);
         };
         this.changeLevelThroughLadder = (player, ladder) => {
             player.map.saveOldMap();
@@ -11071,93 +11060,6 @@ class TextBox {
     }
 }
 exports.TextBox = TextBox;
-
-
-/***/ }),
-
-/***/ "./src/game/tutorialListener.ts":
-/*!**************************************!*\
-  !*** ./src/game/tutorialListener.ts ***!
-  \**************************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.TutorialListener = void 0;
-const eventBus_1 = __webpack_require__(/*! ../event/eventBus */ "./src/event/eventBus.ts");
-class TutorialListener {
-    constructor(game) {
-        this._seenEnemies = new Set();
-        this._seenEnemyClasses = new Set();
-        this.pendingNewEnemies = new Set();
-        this.tutorialCreationTimeout = null;
-        //console.log("Tutorial constructor called");
-        this.setupEventListeners();
-        this.game = game;
-        this.player = this.game.player;
-    }
-    get seenEnemies() {
-        if (this._seenEnemies === undefined) {
-            this._seenEnemies = new Set();
-        }
-        return this._seenEnemies;
-    }
-    setupEventListeners() {
-        //console.log("Setting up event listeners");
-        eventBus_1.globalEventBus.on("EnemySeenPlayer", this.handleEnemySeen.bind(this));
-    }
-    handleEnemySeen(data) {
-        if (!this.hasSeenEnemy(data.enemyType)) {
-            this.game.pushMessage(`New enemy encountered: ${data.enemyName}`);
-            this.addSeenEnemy(data.enemyType);
-            this.pendingNewEnemies.add(data.enemyType);
-            this.scheduleTutorialCreation();
-            this.player.bestiary.addEntry(data.enemyType);
-            console.log(this.player.bestiary.entries);
-        }
-    }
-    scheduleTutorialCreation() {
-        if (this.tutorialCreationTimeout === null) {
-            this.tutorialCreationTimeout = setTimeout(() => {
-                this.createTutorialRoom(Array.from(this.pendingNewEnemies));
-                //this.game.pushMessage("Defeat the enemies guarding the exits.");
-                this.pendingNewEnemies.clear();
-                this.tutorialCreationTimeout = null;
-            }, 100); // Wait 100ms to collect all new enemies
-        }
-    }
-    createTutorialRoom(enemyTypes) {
-        /*
-        this.game.tutorialActive = true;
-        this.game.room.doors.forEach((door: Door) => {
-          door.guard();
-        });
-        */
-    }
-    // Method to check if an enemy has been seen before
-    hasSeenEnemy(enemyType) {
-        //console.log(`Checking if enemy has been seen: ${enemyType}`);
-        return this._seenEnemies.has(enemyType);
-    }
-    // Method to manually add an enemy to the seen list (useful for testing or manual control)
-    addSeenEnemy(enemyType) {
-        //console.log(`Adding enemy to seen list: ${enemyType}`);
-        this._seenEnemies.add(enemyType);
-        this._seenEnemyClasses.add(enemyType.prototype);
-    }
-    // Method to reset the seen enemies list (useful for testing or game resets)
-    resetSeenEnemies() {
-        //console.log("Resetting seen enemies list");
-        this._seenEnemies.clear();
-        this._seenEnemyClasses.clear();
-    }
-    // Method to clean up event listeners when needed
-    cleanup() {
-        //console.log("Cleaning up event listeners");
-        eventBus_1.globalEventBus.off("EnemySeenPlayer", this.handleEnemySeen.bind(this));
-    }
-}
-exports.TutorialListener = TutorialListener;
 
 
 /***/ }),
@@ -15226,14 +15128,14 @@ const environmentProps = {
         props: [
             { class: crate_1.Crate, weight: 1 },
             { class: barrel_1.Barrel, weight: 1 },
-            { class: tombStone_1.TombStone, weight: 0.1, additionalParams: [1] },
-            { class: tombStone_1.TombStone, weight: 0.1, additionalParams: [0] },
-            { class: pumpkin_1.Pumpkin, weight: 0.25 },
+            { class: tombStone_1.TombStone, weight: 0.05, additionalParams: [1] },
+            { class: tombStone_1.TombStone, weight: 0.05, additionalParams: [0] },
+            { class: pumpkin_1.Pumpkin, weight: 0.05 },
             { class: block_1.Block, weight: 1 },
-            { class: pot_1.Pot, weight: 0.45 },
-            { class: pottedPlant_1.PottedPlant, weight: 0.2 },
+            { class: pot_1.Pot, weight: 1 },
+            { class: pottedPlant_1.PottedPlant, weight: 1 },
             { class: rockResource_1.Rock, weight: 0.1 },
-            { class: mushrooms_1.Mushrooms, weight: 0.25 },
+            { class: mushrooms_1.Mushrooms, weight: 0.1 },
             { class: bush_1.Bush, weight: 0.1 },
             { class: sprout_1.Sprout, weight: 0.025 },
             { class: chest_1.Chest, weight: 0.025 },
@@ -15253,12 +15155,12 @@ const environmentProps = {
     },
     [EnvType.FOREST]: {
         props: [
-            { class: tombStone_1.TombStone, weight: 0.1, additionalParams: [1] },
-            { class: tombStone_1.TombStone, weight: 0.1, additionalParams: [0] },
-            { class: pumpkin_1.Pumpkin, weight: 0.25 },
+            { class: tombStone_1.TombStone, weight: 0.05, additionalParams: [1] },
+            { class: tombStone_1.TombStone, weight: 0.05, additionalParams: [0] },
+            { class: pumpkin_1.Pumpkin, weight: 0.05 },
             { class: block_1.Block, weight: 0.1 },
-            { class: bush_1.Bush, weight: 1 },
-            { class: sprout_1.Sprout, weight: 0.25 },
+            { class: bush_1.Bush, weight: 2 },
+            { class: sprout_1.Sprout, weight: 0.05 },
             { class: mushrooms_1.Mushrooms, weight: 0.2 },
             { class: rockResource_1.Rock, weight: 0.1 },
             { class: chest_1.Chest, weight: 0.05 },
@@ -20381,7 +20283,7 @@ class Room {
             this.updateLighting();
         };
         this.enterLevel = (player) => {
-            this.game.updateLevel();
+            this.game.updateLevel(this);
             player.moveSnap(this.getRoomCenter().x, this.getRoomCenter().y);
             this.onEnterRoom(player);
         };
@@ -20442,7 +20344,6 @@ class Room {
             this.updateLighting();
             player.map.saveMapData();
             this.clearDeadStuff();
-            this.updateMovementCooldown();
         };
         this.computerTurn = () => {
             // take computer turn
@@ -21413,6 +21314,7 @@ class Room {
                     if (!this.roomArray[x][y].isSolid() &&
                         !(this.roomArray[x][y] instanceof spiketrap_1.SpikeTrap) &&
                         !(this.roomArray[x][y] instanceof spawnfloor_1.SpawnFloor) &&
+                        !(this.roomArray[x][y] instanceof upLadder_1.UpLadder) &&
                         !(this.roomArray[x][y] instanceof downLadder_1.DownLadder)) {
                         returnVal.push(this.roomArray[x][y]);
                     }
@@ -21428,17 +21330,6 @@ class Room {
                 return this.roomArray[x][y];
             else
                 return undefined;
-        };
-        this.updateMovementCooldown = () => {
-            return;
-            if (this.hasNoEnemies()) {
-                gameConstants_1.GameConstants.MOVEMENT_COOLDOWN = 50;
-                gameConstants_1.GameConstants.KEY_REPEAT_TIME = 100;
-            }
-            else {
-                gameConstants_1.GameConstants.MOVEMENT_COOLDOWN = 200;
-                gameConstants_1.GameConstants.KEY_REPEAT_TIME = 300;
-            }
         };
         this.hasNoEnemies = () => {
             let enemies = this.entities.filter((e) => e instanceof enemy_1.Enemy);
@@ -22571,7 +22462,13 @@ class Populator {
                     room.type === room_1.RoomType.UPLADDER ||
                     room.type === room_1.RoomType.ROPEHOLE)
                     return;
-                switch (room.type) {
+                switch (room.envType) {
+                    case environment_1.EnvType.CAVE:
+                        this.populateCave(room);
+                        break;
+                    case environment_1.EnvType.FOREST:
+                        this.populateForest(room);
+                        break;
                     default:
                         this.populateDefault(room);
                         break;
@@ -22615,11 +22512,13 @@ class Populator {
     }
     getNumProps(room) {
         const numEmptyTiles = room.getEmptyTiles().length;
-        return utils_1.Utils.randomSineInt(0, 0.3 * numEmptyTiles);
+        return utils_1.Utils.randomSineInt(0, numEmptyTiles, {
+            median: 0.3 * numEmptyTiles,
+        });
     }
     populateDefault(room) {
         const numProps = this.getNumProps(room);
-        this.addProps(room, numProps);
+        this.addProps(room, numProps, room.envType);
     }
 }
 exports.Populator = Populator;
@@ -23691,6 +23590,8 @@ class DownLadder extends tile_1.Tile {
             const targetDepth = this.room.depth;
             const level = linkedRoom.level; //this.game.levels[targetDepth];
             const sidePathRooms = this.game.rooms.filter((room) => room.mapGroup === linkedRoom.mapGroup);
+            console.log("sidePathRooms", sidePathRooms.length);
+            console.log("level.rooms.length", level.rooms.length);
             const startingId = level.rooms.length;
             sidePathRooms.forEach((room, index) => {
                 room.id = startingId + index;
@@ -24848,15 +24749,51 @@ Utils.rgbToHex = (r, g, b) => {
     };
     return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 };
-// Generate a random integer with normal distribution
-Utils.randomSineInt = (min, max) => {
-    // Generate random value from 0 to π
-    const x = Math.random() * 2 * Math.PI;
-    // sin(x) gives us values from 0 to 1 with peak at π/2
-    const sinValue = Math.sin(x - Math.PI / 2) + 1;
-    // Map to our integer range
-    const range = max - min + 1;
-    return Math.floor((sinValue / 2) * range) + min;
+/**
+ * Generates a random integer using a modified cosine distribution that approximates a normal distribution.
+ *
+ * @param min - The minimum value (inclusive) of the range
+ * @param max - The maximum value (inclusive) of the range
+ * @param options - Optional parameters to modify the distribution
+ * @param options.median - The value to skew the distribution towards (must be between min and max).
+ *                        Default is the middle of the range. This acts as the peak of the distribution curve.
+ * @returns A random integer between min and max (inclusive) following the specified distribution
+ *
+ * @example
+ * // Normal bell curve distribution between 0 and 10 (centered at 5)
+ * randomSineInt(0, 10)
+ *
+ * @example
+ * // Distribution skewed towards 7
+ * randomSineInt(0, 10, { median: 7 })
+ */
+Utils.randomSineInt = (min, max, options = {}) => {
+    const roundedMax = Math.ceil(max);
+    const roundedMin = Math.floor(min);
+    const range = roundedMax - roundedMin + 1;
+    const { median = roundedMin + (range - 1) / 2 } = options;
+    // Validate median is within range
+    const clampedMedian = Math.min(Math.max(median, roundedMin), roundedMax);
+    // Generate two random numbers for a more normal-like distribution
+    const x1 = Math.random() * 2 * Math.PI;
+    const x2 = Math.random() * 2 * Math.PI;
+    // Average two cosines to create smoother bell curve, normalized to [0,1]
+    const value = (Math.cos(x1) + Math.cos(x2) + 2) / 4;
+    // Calculate the relative median position in [0,1] range
+    const medianPosition = (clampedMedian - roundedMin) / (range - 1);
+    // Apply skewing by using a weighted average
+    const weight = 0.7; // How strong the skewing effect should be
+    const skewedValue = value * (1 - weight) +
+        (value < 0.5
+            ? value * (medianPosition / 0.5)
+            : medianPosition + (value - 0.5) * 2 * (1 - medianPosition)) *
+            weight;
+    // Ensure we stay within bounds while avoiding edge cases
+    const epsilon = 0.001;
+    const boundedValue = Math.min(Math.max(skewedValue, epsilon), 1 - epsilon);
+    // Map to integer range
+    const result = Math.floor(boundedValue * range) + roundedMin;
+    return Math.min(Math.max(result, roundedMin), roundedMax);
 };
 Utils.randTableWeighted = (table) => {
     // If table is empty, return null

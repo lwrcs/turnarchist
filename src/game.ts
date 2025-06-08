@@ -362,8 +362,10 @@ export class Game {
     this.players[this.localPlayerID].depth = depth;
   };
 
-  updateLevel = () => {
-    this.level = this.levels[this.currentDepth];
+  updateLevel = (room: Room) => {
+    if (room && room.level) {
+      this.level = room.level;
+    }
     if (this.level.rooms.length > 0) this.rooms = this.level.rooms;
   };
 
@@ -433,21 +435,6 @@ export class Game {
     } else {
       this.chatTextBox.handleKeyPress(key);
     }
-  };
-
-  changeLevel = (player: Player, newLevel: Room) => {
-    if (this.tutorialListener === null) {
-      this.tutorialListener = new TutorialListener(this);
-    }
-
-    player.levelID = this.levels[player.depth].rooms.indexOf(newLevel);
-    if (this.players[this.localPlayerID] === player) {
-      //this.level.exitLevel();
-
-      this.room = newLevel;
-    }
-    this.level = this.room.level;
-    newLevel.enterLevel(player);
   };
 
   changeLevelThroughLadder = (

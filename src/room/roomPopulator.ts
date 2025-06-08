@@ -29,7 +29,13 @@ export class Populator {
       )
         return;
 
-      switch (room.type) {
+      switch (room.envType) {
+        case EnvType.CAVE:
+          this.populateCave(room);
+          break;
+        case EnvType.FOREST:
+          this.populateForest(room);
+          break;
         default:
           this.populateDefault(room);
           break;
@@ -76,11 +82,13 @@ export class Populator {
 
   private getNumProps(room: Room) {
     const numEmptyTiles = room.getEmptyTiles().length;
-    return Utils.randomSineInt(0, 0.3 * numEmptyTiles);
+    return Utils.randomSineInt(0, numEmptyTiles, {
+      median: 0.3 * numEmptyTiles,
+    });
   }
 
   private populateDefault(room: Room) {
     const numProps = this.getNumProps(room);
-    this.addProps(room, numProps);
+    this.addProps(room, numProps, room.envType);
   }
 }
