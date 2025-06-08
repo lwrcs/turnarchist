@@ -22,27 +22,14 @@ export class Populator {
   populateRooms = () => {
     this.level.rooms.forEach((room) => {
       if (
+        room.type === RoomType.START ||
         room.type === RoomType.DOWNLADDER ||
         room.type === RoomType.UPLADDER ||
         room.type === RoomType.ROPEHOLE
       )
         return;
 
-      if (room.type === RoomType.START) {
-        this.populateForest(room);
-        return;
-      }
-
       switch (room.type) {
-        case RoomType.DUNGEON:
-          this.populateDungeon(room);
-          break;
-        case RoomType.CAVE:
-          this.populateCave(room);
-          break;
-        case RoomType.FOREST:
-          this.populateForest(room);
-          break;
         default:
           this.populateDefault(room);
           break;

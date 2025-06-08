@@ -9,7 +9,7 @@ import { EventEmitter } from "../event/eventEmitter";
 import { globalEventBus } from "../event/eventBus";
 
 export class DownLadder extends Tile {
-  linkedLevel: Room;
+  linkedRoom: Room;
   game: Game;
   isSidePath = false;
   frame: number = 0;
@@ -24,40 +24,40 @@ export class DownLadder extends Tile {
   ) {
     super(room, x, y);
     this.game = game;
-    this.linkedLevel = null;
+    this.linkedRoom = null;
     this.depth = room.depth;
     this.isSidePath = isSidePath;
   }
 
   generate = async () => {
-    if (!this.linkedLevel) {
+    if (!this.linkedRoom) {
       const targetDepth = this.room.depth + (this.isSidePath ? 0 : 1);
       await this.game.levelgen.generate(
         this.game,
         targetDepth,
         this.isSidePath,
-        this.handleLinkedLevel,
+        this.handleLinkedRoom,
       );
     } else {
-      console.log("LinkedLevel already exists:", this.linkedLevel);
+      console.log("LinkedRoom already exists:", this.linkedRoom);
     }
   };
 
-  private handleLinkedLevel = (linkedLevel: Room) => {
+  private handleLinkedRoom = (linkedRoom: Room) => {
     if (this.isSidePath) {
-      this.handleSidePathRooms(linkedLevel);
+      this.handleSidePathRooms(linkedRoom);
     }
 
-    this.linkedLevel = linkedLevel;
+    this.linkedRoom = linkedRoom;
     this.linkUpLadder();
   };
 
-  private handleSidePathRooms = (linkedLevel: Room) => {
+  private handleSidePathRooms = (linkedRoom: Room) => {
     const targetDepth = this.room.depth;
-    const level = this.game.levels[targetDepth];
+    const level = linkedRoom.level; //this.game.levels[targetDepth];
 
     const sidePathRooms = this.game.rooms.filter(
-      (room) => room.mapGroup === linkedLevel.mapGroup,
+      (room) => room.mapGroup === linkedRoom.mapGroup,
     );
 
     const startingId = level.rooms.length;
@@ -69,16 +69,16 @@ export class DownLadder extends Tile {
 
   private linkUpLadder = () => {
     for (
-      let x = this.linkedLevel.roomX;
-      x < this.linkedLevel.roomX + this.linkedLevel.width;
+      let x = this.linkedRoom.roomX;
+      x < this.linkedRoom.roomX + this.linkedRoom.width;
       x++
     ) {
       for (
-        let y = this.linkedLevel.roomY;
-        y < this.linkedLevel.roomY + this.linkedLevel.height;
+        let y = this.linkedRoom.roomY;
+        y < this.linkedRoom.roomY + this.linkedRoom.height;
         y++
       ) {
-        let tile = this.linkedLevel.roomArray[x][y];
+        let tile = this.linkedRoom.roomArray[x][y];
 
         if (tile instanceof UpLadder) {
           this.setUpLadderLink(tile);
@@ -90,9 +90,9 @@ export class DownLadder extends Tile {
 
   private setUpLadderLink = (upLadder: UpLadder) => {
     if (this.isSidePath) {
-      upLadder.linkedLevel = this.room;
+      upLadder.linkedRoom = this.room;
     } else {
-      upLadder.linkedLevel = this.game.levels[this.room.depth].exitRoom;
+      upLadder.linkedRoom = this.game.levels[this.room.depth].exitRoom;
     }
   };
 

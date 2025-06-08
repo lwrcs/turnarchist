@@ -63,7 +63,6 @@ export class HitWarning extends Drawable {
     this.isEnemy = isEnemy !== undefined ? isEnemy : true;
     this.pointerOffset = this.getPointerOffset();
     this.removeOverlapping();
-    console.log("hitwarning", this.x, this.y);
   }
 
   tick = () => {

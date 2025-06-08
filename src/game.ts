@@ -455,9 +455,9 @@ export class Game {
     ladder: UpLadder | DownLadder,
   ) => {
     player.map.saveOldMap();
-    if (ladder instanceof DownLadder && !ladder.linkedLevel) ladder.generate();
+    if (ladder instanceof DownLadder && !ladder.linkedRoom) ladder.generate();
 
-    const newRoom = ladder.linkedLevel;
+    const newRoom = ladder.linkedRoom;
 
     if (this.players[this.localPlayerID] === player) {
       player.levelID = newRoom.id;
@@ -1242,7 +1242,7 @@ export class Game {
         if (this.transitioningLadder) {
           this.prevLevel = this.room;
           this.room.exitLevel();
-          this.room = this.transitioningLadder.linkedLevel;
+          this.room = this.transitioningLadder.linkedRoom;
 
           //this.players[this.localPlayerID].levelID = this.room.id;
           this.room.enterLevel(this.players[this.localPlayerID]);

@@ -208,9 +208,7 @@ export class DropTable {
       console.error(`Item type "${itemType}" is not recognized.`);
       return null;
     }
-    console.log(
-      `Creating new item of type: ${itemType}, class: ${ItemClass.name}`,
-    );
+
     let drop = ItemClass.add(entity.room, entity.x, entity.y);
     if (drop.name === "coin") {
       // Generate random number between 0-14 with normal distribution around 7

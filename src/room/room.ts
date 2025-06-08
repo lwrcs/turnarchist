@@ -273,6 +273,7 @@ export class Room {
   drawTimestamp: number = 0;
   drawInterval: number = 4;
   builder: RoomBuilder;
+  envType: EnvType;
 
   // Add a list to keep track of BeamEffect instances
   beamEffects: BeamEffect[] = [];
@@ -291,6 +292,7 @@ export class Room {
     mapGroup: number,
     level: Level,
     rand = Random.rand,
+    envType: EnvType,
   ) {
     this.game = game;
     this.roomX = x; //Math.floor(- this.width / 2);
@@ -397,13 +399,17 @@ export class Room {
     }
 
     //initialize the skin for the given environment
-    this.skin = this.level.environment.skin;
+    this.envType = envType;
+    this.skin = envType as unknown as SkinType;
+    console.log(`room ${this.id} skin: ${this.skin}`);
+    /*
     if (this.type === RoomType.ROPECAVE || this.type === RoomType.CAVE) {
       this.skin = SkinType.CAVE;
     }
     if (this.type === RoomType.ROPEUP || this.type === RoomType.FOREST) {
       this.skin = SkinType.FOREST;
     }
+    */
 
     this.builder = new RoomBuilder(this);
 
@@ -527,7 +533,7 @@ export class Room {
 
     room.doors.push(d);
     if (room.roomArray[d.x] == undefined) {
-      console.log("door not added");
+      //console.log("door not added");
     }
     room.roomArray[d.x][d.y] = d;
 
@@ -1304,23 +1310,15 @@ export class Room {
     this.addRandomTorches("medium");
 
     const { x, y } = this.getRoomCenter();
-    console.log("About to create DownLadder in rope hole");
+    //console.log("About to create DownLadder in rope hole");
     let d = new DownLadder(this, this.game, x, y, true);
-    console.log("DownLadder created, about to add to room array");
+    //console.log("DownLadder created, about to add to room array");
 
     // Delay adding to room array to avoid triggering side path generation during level setup
     setTimeout(() => {
       this.roomArray[x][y] = d;
-      console.log("DownLadder added to room array successfully (delayed)");
+      //console.log("DownLadder added to room array successfully (delayed)");
     }, 0);
-
-    console.log("Current room depth:", this.depth, "Current room ID:", this.id);
-    console.log(
-      "Player current depth:",
-      this.game.players[0]?.depth,
-      "Player levelID:",
-      this.game.players[0]?.levelID,
-    );
   };
 
   populateRopeCave = (rand: () => number) => {
@@ -1378,7 +1376,6 @@ export class Room {
         numTorches = 0;
       }
     }
-    console.log("numTorches:" + numTorches, "roomArea" + this.roomArea);
     this.addTorches(numTorches, Random.rand);
   };
 
@@ -3067,7 +3064,6 @@ export class Room {
     */
     for (const h of this.hitwarnings) {
       if (h.x === x && h.y === y && !h.dead) return true;
-      console.log("hitwarning", h.x, h.y);
     }
     return false;
   };

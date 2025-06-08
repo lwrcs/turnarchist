@@ -6,7 +6,7 @@ import { SkinType, Tile } from "./tile";
 import { DownLadder } from "./downLadder";
 
 export class UpLadder extends Tile {
-  linkedLevel: Room;
+  linkedRoom: Room;
   game: Game;
   isRope = false;
   depth: number;
@@ -22,8 +22,8 @@ export class UpLadder extends Tile {
       return;
     }
     try {
-      if (!this.linkedLevel) {
-        this.linkLevel();
+      if (!this.linkedRoom) {
+        this.linkRoom();
       }
       this.game.changeLevelThroughLadder(player, this);
     } catch (error) {
@@ -31,8 +31,8 @@ export class UpLadder extends Tile {
     }
   };
 
-  linkLevel = () => {
-    this.linkedLevel = this.game.levels[this.depth - 1].exitRoom;
+  linkRoom = () => {
+    this.linkedRoom = this.game.levels[this.depth - 1].exitRoom;
   };
 
   draw = (delta: number) => {

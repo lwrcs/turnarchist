@@ -76,6 +76,7 @@ export class Level {
     height: number,
     isMainPath: boolean = true,
     mapGroup: number,
+    env: EnvType,
   ) {
     this.game = game;
     this.depth = depth;
@@ -85,17 +86,19 @@ export class Level {
     this.isMainPath = isMainPath;
     this.initializeLevelArray();
     this.mapGroup = mapGroup;
+    this.environment = new Environment(env);
+
     this.populator = new Populator(this);
 
+    console.log(
+      `level ${this.depth} envType: ${env}`,
+      "isMainPath",
+      this.isMainPath,
+    );
+
     this.enemyParameters = this.getEnemyParameters();
-    let envType = this.isMainPath
-      ? EnvType.DUNGEON
-      : Math.random() < 0.5
-        ? EnvType.CAVE
-        : EnvType.FOREST;
-    this.environment = new Environment(envType);
     let mainPath = this.isMainPath ? "main" : "side";
-    console.log(`${mainPath} path, envType: ${envType}`);
+    console.log(`${mainPath} path, envType: ${env}`);
   }
 
   setExitRoom() {
@@ -251,5 +254,12 @@ export class Level {
       [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
     return shuffled.slice(0, Math.min(count, shuffled.length));
+  }
+
+  setRoomSkins() {
+    for (let room of this.rooms) {
+      room.skin = this.environment.skin;
+      console.log(`room ${room.id} skin: ${room.skin}`);
+    }
   }
 }

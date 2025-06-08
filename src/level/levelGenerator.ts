@@ -11,6 +11,7 @@ import {
 import { Level } from "./level";
 import { GameConstants } from "../game/gameConstants";
 import { EnvType } from "./environment";
+import { SkinType } from "../tile/tile";
 
 enum PathType {
   MAIN_PATH, // Has exit room (current dungeon)
@@ -889,8 +890,8 @@ let generate_dungeon_candidate = async (
       if (p.distance > 4 && p.area() <= 30 && Random.rand() < 0) {
         p.type = RoomType.TREASURE;
       } else if (
-        !added_rope_hole &&
-        p.connections.length === 1 // Only rooms with exactly one connection (dead ends)
+        !added_rope_hole
+        //p.connections.length === 1 // Only rooms with exactly one connection (dead ends)
       ) {
         p.type = RoomType.ROPEHOLE;
         added_rope_hole = true;
@@ -1254,8 +1255,17 @@ export class LevelGenerator {
     depth: number,
     isMainPath: boolean = true,
     mapGroup: number,
+    envType: EnvType,
   ) => {
-    let newLevel = new Level(this.game, depth, 100, 100, isMainPath, mapGroup);
+    let newLevel = new Level(
+      this.game,
+      depth,
+      100,
+      100,
+      isMainPath,
+      mapGroup,
+      envType,
+    );
     return newLevel;
   };
 
@@ -1263,6 +1273,7 @@ export class LevelGenerator {
     partitions: Array<Partition>,
     depth: number,
     mapGroup: number,
+    envType: EnvType,
   ): Array<Room> => {
     //this.setOpenWallsForPartitions(partitions, 35, 35); // Using standard map size
 
@@ -1283,6 +1294,7 @@ export class LevelGenerator {
         mapGroup,
         this.game.levels[depth],
         Random.rand,
+        envType,
       );
       rooms.push(room);
     }
@@ -1318,7 +1330,7 @@ export class LevelGenerator {
     game: Game,
     depth: number,
     isSidePath = false, // Updated parameter name for clarity
-    callback: (linkedLevel: Room) => void,
+    callback: (linkedRoom: Room) => void,
   ) => {
     this.levelParams = LevelParameterGenerator.getParameters(depth);
     this.depthReached = depth;
@@ -1347,14 +1359,21 @@ export class LevelGenerator {
         depth,
         this.levelParams,
       );
-
+    let envType = EnvType.DUNGEON;
+    if (isSidePath) {
+      if (Math.random() < 0.5) {
+        envType = EnvType.FOREST;
+      } else {
+        envType = EnvType.CAVE;
+      }
+    }
     // Call this function before get_wall_rooms
     if (check_overlaps(this.partialLevel.partitions)) {
       console.warn("There are overlapping partitions.");
     }
 
     // Get the levels based on the partitions
-    let newLevel = this.createLevel(depth, !isSidePath, mapGroup); // isMainPath = !isSidePath
+    let newLevel = this.createLevel(depth, !isSidePath, mapGroup, envType); // isMainPath = !isSidePath
 
     if (isSidePath) {
       // create Level object ONLY to prepare rooms, but
@@ -1363,10 +1382,16 @@ export class LevelGenerator {
       this.game.levels.push(newLevel); // keep current behaviour
     }
 
-    let rooms = this.getRooms(this.partialLevel.partitions, depth, mapGroup);
+    let rooms = this.getRooms(
+      this.partialLevel.partitions,
+      depth,
+      mapGroup,
+      envType,
+    );
 
     newLevel.setRooms(rooms);
     newLevel.populator.populateRooms();
+    newLevel.setRoomSkins();
 
     // Only call linkExitToStart for main paths
     if (newLevel.exitRoom) {

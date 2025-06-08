@@ -165,6 +165,9 @@ export class FireWizardEnemy extends WizardEnemy {
 
   draw = (delta: number) => {
     this.frame += 0.1 * delta;
+    Game.ctx.save();
+    Game.ctx.globalAlpha = this.alpha;
+
     if (this.frame >= 4) this.frame = 0;
     if (!this.dead) {
       this.updateDrawXY(delta);
@@ -215,5 +218,6 @@ export class FireWizardEnemy extends WizardEnemy {
         this.drawExclamation(delta);
       }
     }
+    Game.ctx.restore();
   };
 }
