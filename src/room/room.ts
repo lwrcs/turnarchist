@@ -3035,9 +3035,20 @@ export class Room {
     else return undefined;
   };
 
+  getBossDoor = () => {
+    for (const door of this.doors) {
+      if (door.linkedDoor.room.type === RoomType.DOWNLADDER)
+        return { x: door.x, y: door.y };
+      console.log("found boss door", door.linkedDoor.room.type);
+    }
+    return null;
+  };
+
   hasNoEnemies = () => {
     let enemies = this.entities.filter((e) => e instanceof Enemy);
-    return enemies.length === 0 && this.lastEnemyCount > 0;
+    const cleared = enemies.length === 0 && this.lastEnemyCount > 0;
+
+    return cleared;
   };
 
   roomCleared = () => {
@@ -3090,8 +3101,14 @@ export class Room {
       this.doors.forEach((d) => {
         if (d.type === DoorType.GUARDEDDOOR) {
           d.unGuard();
+
           this.game.pushMessage(
             "The foes have been slain and the door allows you passage.",
+          );
+          this.game.startCameraAnimation(
+            this.getBossDoor().x,
+            this.getBossDoor().y,
+            175,
           );
         }
       });

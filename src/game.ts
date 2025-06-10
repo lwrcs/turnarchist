@@ -20,6 +20,7 @@ import { Level } from "./level/level";
 import { statsTracker } from "./game/stats";
 import { EVENTS } from "./event/events";
 import { UpLadder } from "./tile/upLadder";
+import { CameraAnimation } from "./game/cameraAnimation";
 
 export enum LevelState {
   IN_LEVEL,
@@ -141,6 +142,7 @@ export class Game {
   previousDepth: number;
   private ellipsisFrame: number = 0;
   private ellipsisStartTime: number = 0;
+  cameraAnimation: CameraAnimation;
 
   cameraTargetX: number;
   cameraTargetY: number;
@@ -331,6 +333,7 @@ export class Game {
           this.players = {};
           this.offlinePlayers = {};
           this.chatOpen = false;
+          this.cameraAnimation = new CameraAnimation(0, 0, 1000, 1, 0, false);
 
           this.screenShakeX = 0;
           this.screenShakeY = 0;
@@ -1389,6 +1392,10 @@ export class Game {
       this.justTransitioned = false;
     }
 
+    if (this.cameraAnimation.active) {
+      speed = 0.075;
+    }
+
     if (Math.abs(dx) > 250 || Math.abs(dy) > 250) {
       speed = 1;
     }
@@ -1407,6 +1414,7 @@ export class Game {
     let player = this.players[this.localPlayerID];
 
     this.targetCamera(player.x - player.drawX, player.y - player.drawY);
+    this.updateCameraAnimation(delta);
     this.updateCamera(delta);
 
     const roundedCameraX = Math.round(this.cameraX - this.screenShakeX);
@@ -1445,6 +1453,27 @@ export class Game {
     this.screenShakeX = 0;
     this.screenShakeY = 0;
     this.screenShakeActive = false;
+  };
+
+  updateCameraAnimation = (delta: number) => {
+    console.log("updating camera animation", this.cameraAnimation.active);
+    if (!this.cameraAnimation.active) return;
+    const elapsed = this.cameraAnimation.frame / this.cameraAnimation.duration;
+
+    if (elapsed < 0.6)
+      this.targetCamera(this.cameraAnimation.x, this.cameraAnimation.y);
+    this.cameraAnimation.frame += delta;
+    if (this.cameraAnimation.frame > this.cameraAnimation.duration)
+      this.cameraAnimation.active = false;
+  };
+
+  startCameraAnimation = (x: number, y: number, duration: number) => {
+    console.log("starting camera animation", x, y, duration);
+    this.cameraAnimation.active = true;
+    this.cameraAnimation.x = x;
+    this.cameraAnimation.y = y;
+    this.cameraAnimation.duration = duration;
+    this.cameraAnimation.frame = 0;
   };
 
   drawTextScreen = (text: string, bg: boolean = true) => {

@@ -8073,6 +8073,7 @@ const eventBus_1 = __webpack_require__(/*! ./event/eventBus */ "./src/event/even
 const reverb_1 = __webpack_require__(/*! ./sound/reverb */ "./src/sound/reverb.ts");
 const stats_1 = __webpack_require__(/*! ./game/stats */ "./src/game/stats.ts");
 const events_1 = __webpack_require__(/*! ./event/events */ "./src/event/events.ts");
+const cameraAnimation_1 = __webpack_require__(/*! ./game/cameraAnimation */ "./src/game/cameraAnimation.ts");
 var LevelState;
 (function (LevelState) {
     LevelState[LevelState["IN_LEVEL"] = 0] = "IN_LEVEL";
@@ -8838,6 +8839,9 @@ class Game {
                 speed = 1;
                 this.justTransitioned = false;
             }
+            if (this.cameraAnimation.active) {
+                speed = 0.075;
+            }
             if (Math.abs(dx) > 250 || Math.abs(dy) > 250) {
                 speed = 1;
             }
@@ -8854,6 +8858,7 @@ class Game {
         this.applyCamera = (delta) => {
             let player = this.players[this.localPlayerID];
             this.targetCamera(player.x - player.drawX, player.y - player.drawY);
+            this.updateCameraAnimation(delta);
             this.updateCamera(delta);
             const roundedCameraX = Math.round(this.cameraX - this.screenShakeX);
             const roundedCameraY = Math.round(this.cameraY - this.screenShakeY);
@@ -8884,6 +8889,25 @@ class Game {
             this.screenShakeX = 0;
             this.screenShakeY = 0;
             this.screenShakeActive = false;
+        };
+        this.updateCameraAnimation = (delta) => {
+            console.log("updating camera animation", this.cameraAnimation.active);
+            if (!this.cameraAnimation.active)
+                return;
+            const elapsed = this.cameraAnimation.frame / this.cameraAnimation.duration;
+            if (elapsed < 0.6)
+                this.targetCamera(this.cameraAnimation.x, this.cameraAnimation.y);
+            this.cameraAnimation.frame += delta;
+            if (this.cameraAnimation.frame > this.cameraAnimation.duration)
+                this.cameraAnimation.active = false;
+        };
+        this.startCameraAnimation = (x, y, duration) => {
+            console.log("starting camera animation", x, y, duration);
+            this.cameraAnimation.active = true;
+            this.cameraAnimation.x = x;
+            this.cameraAnimation.y = y;
+            this.cameraAnimation.duration = duration;
+            this.cameraAnimation.frame = 0;
         };
         this.drawTextScreen = (text, bg = true) => {
             if (bg) {
@@ -9058,6 +9082,7 @@ class Game {
                     this.players = {};
                     this.offlinePlayers = {};
                     this.chatOpen = false;
+                    this.cameraAnimation = new cameraAnimation_1.CameraAnimation(0, 0, 1000, 1, 0, false);
                     this.screenShakeX = 0;
                     this.screenShakeY = 0;
                     this.shakeAmountX = 0;
@@ -9444,6 +9469,35 @@ class Bestiary {
     }
 }
 exports.Bestiary = Bestiary;
+
+
+/***/ }),
+
+/***/ "./src/game/cameraAnimation.ts":
+/*!*************************************!*\
+  !*** ./src/game/cameraAnimation.ts ***!
+  \*************************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CameraAnimation = void 0;
+class CameraAnimation {
+    constructor(x, y, duration, speed, frame, active) {
+        this.x = x;
+        this.y = y;
+        this.duration = duration;
+        this.speed = speed;
+        this.frame = frame;
+        this.active = active;
+        this.x = x;
+        this.y = y;
+        this.speed = speed;
+        this.frame = 0;
+        this.active = false;
+    }
+}
+exports.CameraAnimation = CameraAnimation;
 
 
 /***/ }),
@@ -21368,9 +21422,18 @@ class Room {
             else
                 return undefined;
         };
+        this.getBossDoor = () => {
+            for (const door of this.doors) {
+                if (door.linkedDoor.room.type === RoomType.DOWNLADDER)
+                    return { x: door.x, y: door.y };
+                console.log("found boss door", door.linkedDoor.room.type);
+            }
+            return null;
+        };
         this.hasNoEnemies = () => {
             let enemies = this.entities.filter((e) => e instanceof enemy_1.Enemy);
-            return enemies.length === 0 && this.lastEnemyCount > 0;
+            const cleared = enemies.length === 0 && this.lastEnemyCount > 0;
+            return cleared;
         };
         this.roomCleared = () => {
             const enemies = this.entities.filter((e) => e instanceof enemy_1.Enemy);
@@ -21419,6 +21482,7 @@ class Room {
                     if (d.type === door_1.DoorType.GUARDEDDOOR) {
                         d.unGuard();
                         this.game.pushMessage("The foes have been slain and the door allows you passage.");
+                        this.game.startCameraAnimation(this.getBossDoor().x, this.getBossDoor().y, 175);
                     }
                 });
             }
@@ -23442,8 +23506,12 @@ class Door extends tile_1.Tile {
         this.unGuard = () => {
             if (this.type === DoorType.GUARDEDDOOR) {
                 this.removeLock();
+                sound_1.Sound.unlock();
                 this.game.tutorialActive = false;
             }
+            setTimeout(() => {
+                this.removeLockIcon();
+            }, 1000);
         };
         this.link = (other) => {
             this.linkedDoor = other;

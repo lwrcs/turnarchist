@@ -203,8 +203,13 @@ export class Door extends Tile {
   unGuard = () => {
     if (this.type === DoorType.GUARDEDDOOR) {
       this.removeLock();
+      Sound.unlock();
+
       this.game.tutorialActive = false;
     }
+    setTimeout(() => {
+      this.removeLockIcon();
+    }, 1000);
   };
 
   link = (other: Door) => {
