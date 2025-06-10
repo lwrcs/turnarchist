@@ -31,6 +31,7 @@ export class GameConstants {
   static readonly VERSION = "v1.0.8"; //"v0.6.3";
   static DEVELOPER_MODE = false;
   static isMobile = false;
+  static CAMERA_SPEED = 1; // 1 is instant 0.1 is slow
 
   static readonly FPS = 120;
   static readonly ALPHA_ENABLED = true;

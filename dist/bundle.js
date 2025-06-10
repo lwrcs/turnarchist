@@ -8124,6 +8124,7 @@ class Game {
         this.startScreenAlpha = 1;
         this.ellipsisFrame = 0;
         this.ellipsisStartTime = 0;
+        this.justTransitioned = false;
         this.focusTimeout = null;
         this.FOCUS_TIMEOUT_DURATION = 15000; // 5 seconds
         this.wasMuted = false;
@@ -8688,6 +8689,7 @@ class Game {
                 Game.ctx.translate(-newLevelOffsetX, -newLevelOffsetY);
                 Game.ctx.translate(Math.round(playerCX + playerOffsetX - 0.5 * gameConstants_1.GameConstants.WIDTH), Math.round(playerCY + playerOffsetY - 0.5 * gameConstants_1.GameConstants.HEIGHT));
                 this.players[this.localPlayerID].drawGUI(delta);
+                this.justTransitioned = true;
                 //for (const i in this.players) this.players[i].updateDrawXY(delta);
             }
             else if (this.levelState === LevelState.TRANSITIONING_LADDER) {
@@ -8747,16 +8749,7 @@ class Game {
             else if (this.levelState === LevelState.IN_LEVEL) {
                 // Start of Selection
                 this.drawScreenShake(delta);
-                let playerDrawX = this.players[this.localPlayerID].drawX;
-                let playerDrawY = this.players[this.localPlayerID].drawY;
-                let cameraX = Math.round((this.players[this.localPlayerID].x - playerDrawX + 0.5) *
-                    gameConstants_1.GameConstants.TILESIZE -
-                    0.5 * gameConstants_1.GameConstants.WIDTH -
-                    this.screenShakeX);
-                let cameraY = Math.round((this.players[this.localPlayerID].y - playerDrawY + 0.5) *
-                    gameConstants_1.GameConstants.TILESIZE -
-                    0.5 * gameConstants_1.GameConstants.HEIGHT -
-                    this.screenShakeY);
+                const { cameraX, cameraY } = this.applyCamera(delta);
                 Game.ctx.translate(-cameraX, -cameraY);
                 this.drawRooms(delta);
                 this.drawRoomShadeAndColor(delta);
@@ -8830,6 +8823,44 @@ class Game {
             }
             mouseCursor_1.MouseCursor.getInstance().draw(delta, this.isMobile);
             Game.ctx.restore(); // Restore the canvas state
+        };
+        this.targetCamera = (targetX, targetY) => {
+            let cameraX = Math.round((targetX + 0.5) * gameConstants_1.GameConstants.TILESIZE - 0.5 * gameConstants_1.GameConstants.WIDTH);
+            let cameraY = Math.round((targetY + 0.5) * gameConstants_1.GameConstants.TILESIZE - 0.5 * gameConstants_1.GameConstants.HEIGHT);
+            this.cameraTargetX = cameraX;
+            this.cameraTargetY = cameraY;
+        };
+        this.updateCamera = (delta) => {
+            const dx = this.cameraTargetX - this.cameraX;
+            const dy = this.cameraTargetY - this.cameraY;
+            let speed = gameConstants_1.GameConstants.CAMERA_SPEED;
+            if (this.justTransitioned) {
+                speed = 1;
+                this.justTransitioned = false;
+            }
+            if (Math.abs(dx) > 250 || Math.abs(dy) > 250) {
+                speed = 1;
+            }
+            if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
+                this.cameraX += dx * speed * delta;
+                this.cameraY += dy * speed * delta;
+            }
+            else {
+                this.cameraX = this.cameraTargetX;
+                this.cameraY = this.cameraTargetY;
+            }
+            console.log("camera", this.cameraX, this.cameraY);
+        };
+        this.applyCamera = (delta) => {
+            let player = this.players[this.localPlayerID];
+            this.targetCamera(player.x - player.drawX, player.y - player.drawY);
+            this.updateCamera(delta);
+            const roundedCameraX = Math.round(this.cameraX - this.screenShakeX);
+            const roundedCameraY = Math.round(this.cameraY - this.screenShakeY);
+            return {
+                cameraX: roundedCameraX,
+                cameraY: roundedCameraY,
+            };
         };
         this.drawScreenShake = (delta) => {
             if (!this.screenShakeActive) {
@@ -8977,6 +9008,11 @@ class Game {
             };
             Game.fontsheet.src = "res/font.png";
             this.levelState = LevelState.LEVEL_GENERATION;
+            // Initialize camera properties
+            this.cameraX = 0;
+            this.cameraY = 0;
+            this.cameraTargetX = 0;
+            this.cameraTargetY = 0;
             let checkResourcesLoaded = () => {
                 if (resourcesLoaded < NUM_RESOURCES) {
                     window.setTimeout(checkResourcesLoaded, 500);
@@ -9448,6 +9484,7 @@ exports.GameConstants = GameConstants;
 GameConstants.VERSION = "v1.0.8"; //"v0.6.3";
 GameConstants.DEVELOPER_MODE = false;
 GameConstants.isMobile = false;
+GameConstants.CAMERA_SPEED = 1; // 1 is instant 0.1 is slow
 GameConstants.FPS = 120;
 GameConstants.ALPHA_ENABLED = true;
 GameConstants.SHADE_LEVELS = 50; //25

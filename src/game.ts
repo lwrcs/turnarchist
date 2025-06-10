@@ -142,6 +142,12 @@ export class Game {
   private ellipsisFrame: number = 0;
   private ellipsisStartTime: number = 0;
 
+  cameraTargetX: number;
+  cameraTargetY: number;
+  cameraX: number;
+  cameraY: number;
+  justTransitioned: boolean = false;
+
   static text_rendering_canvases: Record<string, HTMLCanvasElement>;
   static readonly letters = "abcdefghijklmnopqrstuvwxyz1234567890,.!?:'()[]%-/";
   static readonly letter_widths = [
@@ -255,6 +261,12 @@ export class Game {
       Game.fontsheet.src = "res/font.png";
 
       this.levelState = LevelState.LEVEL_GENERATION;
+
+      // Initialize camera properties
+      this.cameraX = 0;
+      this.cameraY = 0;
+      this.cameraTargetX = 0;
+      this.cameraTargetY = 0;
 
       let checkResourcesLoaded = () => {
         if (resourcesLoaded < NUM_RESOURCES) {
@@ -1176,6 +1188,7 @@ export class Game {
       );
 
       this.players[this.localPlayerID].drawGUI(delta);
+      this.justTransitioned = true;
 
       //for (const i in this.players) this.players[i].updateDrawXY(delta);
     } else if (this.levelState === LevelState.TRANSITIONING_LADDER) {
@@ -1268,21 +1281,7 @@ export class Game {
 
       this.drawScreenShake(delta);
 
-      let playerDrawX = this.players[this.localPlayerID].drawX;
-      let playerDrawY = this.players[this.localPlayerID].drawY;
-
-      let cameraX = Math.round(
-        (this.players[this.localPlayerID].x - playerDrawX + 0.5) *
-          GameConstants.TILESIZE -
-          0.5 * GameConstants.WIDTH -
-          this.screenShakeX,
-      );
-      let cameraY = Math.round(
-        (this.players[this.localPlayerID].y - playerDrawY + 0.5) *
-          GameConstants.TILESIZE -
-          0.5 * GameConstants.HEIGHT -
-          this.screenShakeY,
-      );
+      const { cameraX, cameraY } = this.applyCamera(delta);
 
       Game.ctx.translate(-cameraX, -cameraY);
       this.drawRooms(delta);
@@ -1366,6 +1365,57 @@ export class Game {
 
     MouseCursor.getInstance().draw(delta, this.isMobile);
     Game.ctx.restore(); // Restore the canvas state
+  };
+
+  targetCamera = (targetX: number, targetY: number) => {
+    let cameraX = Math.round(
+      (targetX + 0.5) * GameConstants.TILESIZE - 0.5 * GameConstants.WIDTH,
+    );
+    let cameraY = Math.round(
+      (targetY + 0.5) * GameConstants.TILESIZE - 0.5 * GameConstants.HEIGHT,
+    );
+    this.cameraTargetX = cameraX;
+    this.cameraTargetY = cameraY;
+  };
+
+  updateCamera = (delta: number) => {
+    const dx = this.cameraTargetX - this.cameraX;
+    const dy = this.cameraTargetY - this.cameraY;
+
+    let speed = GameConstants.CAMERA_SPEED;
+
+    if (this.justTransitioned) {
+      speed = 1;
+      this.justTransitioned = false;
+    }
+
+    if (Math.abs(dx) > 250 || Math.abs(dy) > 250) {
+      speed = 1;
+    }
+
+    if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
+      this.cameraX += dx * speed * delta;
+      this.cameraY += dy * speed * delta;
+    } else {
+      this.cameraX = this.cameraTargetX;
+      this.cameraY = this.cameraTargetY;
+    }
+    console.log("camera", this.cameraX, this.cameraY);
+  };
+
+  applyCamera = (delta: number) => {
+    let player = this.players[this.localPlayerID];
+
+    this.targetCamera(player.x - player.drawX, player.y - player.drawY);
+    this.updateCamera(delta);
+
+    const roundedCameraX = Math.round(this.cameraX - this.screenShakeX);
+    const roundedCameraY = Math.round(this.cameraY - this.screenShakeY);
+
+    return {
+      cameraX: roundedCameraX,
+      cameraY: roundedCameraY,
+    };
   };
 
   drawScreenShake = (delta: number) => {
