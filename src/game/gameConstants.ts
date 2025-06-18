@@ -26,6 +26,7 @@ import { BlueGem } from "../item/resource/bluegem";
 import { RedGem } from "../item/resource/redgem";
 import { GreenGem } from "../item/resource/greengem";
 import { Pickaxe } from "../item/tool/pickaxe";
+import { Geode } from "../item/resource/geode";
 
 export class GameConstants {
   static readonly VERSION = "v1.0.8"; //"v0.6.3";
@@ -195,24 +196,17 @@ export class GameConstants {
     Warhammer,
     DualDagger,
     GodStone,
-    Candle,
     Spear,
     WeaponPoison,
     WeaponBlood,
-    Spellbook,
     Armor,
-    Heart,
     Backpack,
     Hammer,
     Pickaxe,
     Coal,
-    BlueGem,
-    RedGem,
-    GreenGem,
-
-    Coal,
-    Coal,
-    Coal,
+    Geode,
+    Geode,
+    Geode,
 
     WeaponFragments,
     WeaponFragments,

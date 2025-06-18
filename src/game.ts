@@ -1400,14 +1400,14 @@ export class Game {
       speed = 1;
     }
 
-    if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
+    if ((Math.abs(dx) > 1 || Math.abs(dy) > 1) && speed !== 1) {
       this.cameraX += dx * speed * delta;
       this.cameraY += dy * speed * delta;
     } else {
       this.cameraX = this.cameraTargetX;
       this.cameraY = this.cameraTargetY;
     }
-    console.log("camera", this.cameraX, this.cameraY);
+    //console.log("camera", this.cameraX, this.cameraY);
   };
 
   applyCamera = (delta: number) => {
@@ -1456,7 +1456,7 @@ export class Game {
   };
 
   updateCameraAnimation = (delta: number) => {
-    console.log("updating camera animation", this.cameraAnimation.active);
+    //console.log("updating camera animation", this.cameraAnimation.active);
     if (!this.cameraAnimation.active) return;
     const elapsed = this.cameraAnimation.frame / this.cameraAnimation.duration;
 
@@ -1468,7 +1468,7 @@ export class Game {
   };
 
   startCameraAnimation = (x: number, y: number, duration: number) => {
-    console.log("starting camera animation", x, y, duration);
+    //console.log("starting camera animation", x, y, duration);
     this.cameraAnimation.active = true;
     this.cameraAnimation.x = x;
     this.cameraAnimation.y = y;

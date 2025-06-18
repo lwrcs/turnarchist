@@ -30,18 +30,19 @@ export class Geode extends Item {
       this.level.game.pushMessage(
         `You split the geode but it's stone all the way through.`,
       );
+      inventory.removeItem(this);
     } else if (inventory.isFull()) {
       this.level.game.pushMessage(
         `You don't have enough space in your inventory to split the geode.`,
       );
     } else {
-      const numGems = Utils.randomSineInt(1, 5);
-      this.level.game.pushMessage(
-        `You split the geode and it's full of shiny gems!`,
-      );
-
+      const numGems = Utils.randomSineInt(1, 5, { median: 1 });
       let gemTypes = [BlueGem, RedGem, GreenGem];
       let gemType = gemTypes[Math.floor(Math.random() * gemTypes.length)];
+      this.level.game.pushMessage(
+        `You split the geode and find ${numGems} ${gemType.itemName}.`,
+      );
+
       for (let i = 0; i < numGems; i++) {
         inventory.addItem(new gemType(this.level, this.x, this.y));
       }

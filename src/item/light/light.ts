@@ -88,8 +88,7 @@ export abstract class Light extends Equippable {
         this.wielder.game.rooms[this.wielder.levelID].roomCleared();
       if (!roomCleared) this.fuel--;
       else this.fuel -= 0.2;
-      console.log("has enemies", !roomCleared);
-      console.log("fuel", this.fuel);
+
       this.setRadius();
       this.setBrightness();
     }

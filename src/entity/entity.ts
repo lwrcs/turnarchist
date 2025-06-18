@@ -223,6 +223,17 @@ export class Entity extends Drawable {
       ...rest: any[]
     ) => Entity,
   >(this: T, room: Room, game: Game, x: number, y: number, ...rest: any[]) {
+    // Safety checks: verify tile exists and is not solid
+    if (!room.roomArray[x] || !room.roomArray[x][y]) {
+      console.warn(`Cannot add entity: tile at (${x}, ${y}) does not exist`);
+      return null;
+    }
+
+    if (room.roomArray[x][y].isSolid()) {
+      console.warn(`Cannot add entity: tile at (${x}, ${y}) is solid`);
+      return null;
+    }
+
     const entity = new this(room, game, x, y, ...rest);
     room.entities.push(entity);
     return entity;

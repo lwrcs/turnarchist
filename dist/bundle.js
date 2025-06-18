@@ -6510,6 +6510,15 @@ class Entity extends drawable_1.Drawable {
             this.drops.push(this.drop);
     }
     static add(room, game, x, y, ...rest) {
+        // Safety checks: verify tile exists and is not solid
+        if (!room.roomArray[x] || !room.roomArray[x][y]) {
+            console.warn(`Cannot add entity: tile at (${x}, ${y}) does not exist`);
+            return null;
+        }
+        if (room.roomArray[x][y].isSolid()) {
+            console.warn(`Cannot add entity: tile at (${x}, ${y}) is solid`);
+            return null;
+        }
         const entity = new this(room, game, x, y, ...rest);
         room.entities.push(entity);
         return entity;
@@ -8845,7 +8854,7 @@ class Game {
             if (Math.abs(dx) > 250 || Math.abs(dy) > 250) {
                 speed = 1;
             }
-            if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
+            if ((Math.abs(dx) > 1 || Math.abs(dy) > 1) && speed !== 1) {
                 this.cameraX += dx * speed * delta;
                 this.cameraY += dy * speed * delta;
             }
@@ -8853,7 +8862,7 @@ class Game {
                 this.cameraX = this.cameraTargetX;
                 this.cameraY = this.cameraTargetY;
             }
-            console.log("camera", this.cameraX, this.cameraY);
+            //console.log("camera", this.cameraX, this.cameraY);
         };
         this.applyCamera = (delta) => {
             let player = this.players[this.localPlayerID];
@@ -8891,7 +8900,7 @@ class Game {
             this.screenShakeActive = false;
         };
         this.updateCameraAnimation = (delta) => {
-            console.log("updating camera animation", this.cameraAnimation.active);
+            //console.log("updating camera animation", this.cameraAnimation.active);
             if (!this.cameraAnimation.active)
                 return;
             const elapsed = this.cameraAnimation.frame / this.cameraAnimation.duration;
@@ -8902,7 +8911,7 @@ class Game {
                 this.cameraAnimation.active = false;
         };
         this.startCameraAnimation = (x, y, duration) => {
-            console.log("starting camera animation", x, y, duration);
+            //console.log("starting camera animation", x, y, duration);
             this.cameraAnimation.active = true;
             this.cameraAnimation.x = x;
             this.cameraAnimation.y = y;
@@ -9516,7 +9525,6 @@ const backpack_1 = __webpack_require__(/*! ../item/backpack */ "./src/item/backp
 const candle_1 = __webpack_require__(/*! ../item/light/candle */ "./src/item/light/candle.ts");
 const coal_1 = __webpack_require__(/*! ../item/resource/coal */ "./src/item/resource/coal.ts");
 const godStone_1 = __webpack_require__(/*! ../item/godStone */ "./src/item/godStone.ts");
-const heart_1 = __webpack_require__(/*! ../item/usable/heart */ "./src/item/usable/heart.ts");
 const lantern_1 = __webpack_require__(/*! ../item/light/lantern */ "./src/item/light/lantern.ts");
 const weaponBlood_1 = __webpack_require__(/*! ../item/usable/weaponBlood */ "./src/item/usable/weaponBlood.ts");
 const weaponFragments_1 = __webpack_require__(/*! ../item/usable/weaponFragments */ "./src/item/usable/weaponFragments.ts");
@@ -9525,13 +9533,10 @@ const levelConstants_1 = __webpack_require__(/*! ../level/levelConstants */ "./s
 const dagger_1 = __webpack_require__(/*! ../item/weapon/dagger */ "./src/item/weapon/dagger.ts");
 const dualdagger_1 = __webpack_require__(/*! ../item/weapon/dualdagger */ "./src/item/weapon/dualdagger.ts");
 const spear_1 = __webpack_require__(/*! ../item/weapon/spear */ "./src/item/weapon/spear.ts");
-const spellbook_1 = __webpack_require__(/*! ../item/weapon/spellbook */ "./src/item/weapon/spellbook.ts");
 const warhammer_1 = __webpack_require__(/*! ../item/weapon/warhammer */ "./src/item/weapon/warhammer.ts");
 const hammer_1 = __webpack_require__(/*! ../item/tool/hammer */ "./src/item/tool/hammer.ts");
-const bluegem_1 = __webpack_require__(/*! ../item/resource/bluegem */ "./src/item/resource/bluegem.ts");
-const redgem_1 = __webpack_require__(/*! ../item/resource/redgem */ "./src/item/resource/redgem.ts");
-const greengem_1 = __webpack_require__(/*! ../item/resource/greengem */ "./src/item/resource/greengem.ts");
 const pickaxe_1 = __webpack_require__(/*! ../item/tool/pickaxe */ "./src/item/tool/pickaxe.ts");
+const geode_1 = __webpack_require__(/*! ../item/resource/geode */ "./src/item/resource/geode.ts");
 class GameConstants {
 }
 exports.GameConstants = GameConstants;
@@ -9673,23 +9678,17 @@ GameConstants.STARTING_DEV_INVENTORY = [
     warhammer_1.Warhammer,
     dualdagger_1.DualDagger,
     godStone_1.GodStone,
-    candle_1.Candle,
     spear_1.Spear,
     weaponPoison_1.WeaponPoison,
     weaponBlood_1.WeaponBlood,
-    spellbook_1.Spellbook,
     armor_1.Armor,
-    heart_1.Heart,
     backpack_1.Backpack,
     hammer_1.Hammer,
     pickaxe_1.Pickaxe,
     coal_1.Coal,
-    bluegem_1.BlueGem,
-    redgem_1.RedGem,
-    greengem_1.GreenGem,
-    coal_1.Coal,
-    coal_1.Coal,
-    coal_1.Coal,
+    geode_1.Geode,
+    geode_1.Geode,
+    geode_1.Geode,
     weaponFragments_1.WeaponFragments,
     weaponFragments_1.WeaponFragments,
     weaponFragments_1.WeaponFragments,
@@ -13723,8 +13722,6 @@ class Light extends equippable_1.Equippable {
                     this.fuel--;
                 else
                     this.fuel -= 0.2;
-                console.log("has enemies", !roomCleared);
-                console.log("fuel", this.fuel);
                 this.setRadius();
                 this.setBrightness();
             }
@@ -13937,15 +13934,16 @@ class Geode extends item_1.Item {
         this.split = (inventory) => {
             if (Math.random() < 0.2) {
                 this.level.game.pushMessage(`You split the geode but it's stone all the way through.`);
+                inventory.removeItem(this);
             }
             else if (inventory.isFull()) {
                 this.level.game.pushMessage(`You don't have enough space in your inventory to split the geode.`);
             }
             else {
-                const numGems = utils_1.Utils.randomSineInt(1, 5);
-                this.level.game.pushMessage(`You split the geode and it's full of shiny gems!`);
+                const numGems = utils_1.Utils.randomSineInt(1, 5, { median: 1 });
                 let gemTypes = [bluegem_1.BlueGem, redgem_1.RedGem, greengem_1.GreenGem];
                 let gemType = gemTypes[Math.floor(Math.random() * gemTypes.length)];
+                this.level.game.pushMessage(`You split the geode and find ${numGems} ${gemType.itemName}.`);
                 for (let i = 0; i < numGems; i++) {
                     inventory.addItem(new gemType(this.level, this.x, this.y));
                 }
@@ -22613,9 +22611,12 @@ class Populator {
     }
     getNumProps(room) {
         const numEmptyTiles = room.getEmptyTiles().length;
-        return utils_1.Utils.randomSineInt(0, numEmptyTiles, {
-            median: 0.3 * numEmptyTiles,
+        const numProps = utils_1.Utils.randomSineInt(0, numEmptyTiles, {
+            median: Math.ceil(0.2 * numEmptyTiles),
         });
+        const percentFull = Math.round((numProps / numEmptyTiles) * 100);
+        console.log("percentFull", `${percentFull}%`);
+        return numProps;
     }
     populateDefault(room) {
         const numProps = this.getNumProps(room);

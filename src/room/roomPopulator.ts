@@ -82,9 +82,12 @@ export class Populator {
 
   private getNumProps(room: Room) {
     const numEmptyTiles = room.getEmptyTiles().length;
-    return Utils.randomSineInt(0, numEmptyTiles, {
-      median: 0.3 * numEmptyTiles,
+    const numProps = Utils.randomSineInt(0, numEmptyTiles, {
+      median: Math.ceil(0.2 * numEmptyTiles),
     });
+    const percentFull = Math.round((numProps / numEmptyTiles) * 100);
+    console.log("percentFull", `${percentFull}%`);
+    return numProps;
   }
 
   private populateDefault(room: Room) {
