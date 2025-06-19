@@ -14114,6 +14114,10 @@ class Hammer extends usable_1.Usable {
                 geode.split(player.inventory);
                 this.level.game.pushMessage(`You hit the geode with the hammer.`);
             }
+            else if (other.name === "pickaxe") {
+                let pickaxe = other;
+                pickaxe.disassemble(player);
+            }
         };
         this.disassemble = (player) => {
             let inventoryX = this.x;
@@ -14145,10 +14149,18 @@ Hammer.itemName = "hammer";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Pickaxe = void 0;
-const item_1 = __webpack_require__(/*! ../item */ "./src/item/item.ts");
-class Pickaxe extends item_1.Item {
+const usable_1 = __webpack_require__(/*! ../usable/usable */ "./src/item/usable/usable.ts");
+const weaponFragments_1 = __webpack_require__(/*! ../usable/weaponFragments */ "./src/item/usable/weaponFragments.ts");
+class Pickaxe extends usable_1.Usable {
     constructor(level, x, y) {
         super(level, x, y);
+        this.disassemble = (player) => {
+            let inventoryX = this.x;
+            let inventoryY = this.y;
+            let numFragments = Math.ceil(Math.random() * 5 + 5);
+            player.inventory.removeItem(this);
+            player.inventory.addItem(new weaponFragments_1.WeaponFragments(this.level, inventoryX, inventoryY, numFragments));
+        };
         this.tileX = 30;
         this.tileY = 0;
         this.name = Pickaxe.itemName;
@@ -20220,13 +20232,8 @@ class Room {
             this.name = "";
             switch (this.type) {
                 case RoomType.START:
-                    //this.addNewEnemy(EnemyType.zombie);
-                    //this.addNewEnemy(EnemyType.occultist);
-                    //this.addNewEnemy(EnemyType.occultist);
-                    //   this.addNewEnemy(EnemyType.occultist);
                     if (this.depth !== 0) {
                         this.populateUpLadder(rand);
-                        //this.addVendingMachine(rand, this.roomX + 1, this.roomY + 1);
                         this.placeVendingMachineInWall();
                     }
                     this.populateEmpty(rand);
@@ -22552,19 +22559,23 @@ class Populator {
                     room.type === room_1.RoomType.UPLADDER ||
                     room.type === room_1.RoomType.ROPEHOLE)
                     return;
-                switch (room.envType) {
-                    case environment_1.EnvType.CAVE:
-                        this.populateCave(room);
-                        break;
-                    case environment_1.EnvType.FOREST:
-                        this.populateForest(room);
-                        break;
-                    default:
-                        this.populateDefault(room);
-                        break;
-                }
+                this.populateByEnvironment(room);
             });
         };
+        this.populateByEnvironment = (room) => {
+            switch (room.envType) {
+                case environment_1.EnvType.CAVE:
+                    this.populateCave(room);
+                    break;
+                case environment_1.EnvType.FOREST:
+                    this.populateForest(room);
+                    break;
+                default:
+                    this.populateDefault(room);
+                    break;
+            }
+        };
+        this.populateByType = (room) => { };
         this.level = level;
         this.props = [];
         this.medianDensity = Math.random() * 0.5 + 0.25;
@@ -24098,6 +24109,7 @@ class UpLadder extends tile_1.Tile {
     constructor(room, game, x, y) {
         super(room, x, y);
         this.isRope = false;
+        this.frame = 0;
         this.onCollide = (player) => {
             if (!this.game) {
                 console.error("Game instance is undefined in UpLadder:", this);
@@ -24127,6 +24139,13 @@ class UpLadder extends tile_1.Tile {
             if (!this.isRope)
                 game_1.Game.drawTile(xx, yy, 1, 1, this.x, this.y - 1, 1, 1, this.room.shadeColor, this.shadeAmount());
             game_1.Game.drawTile(xx, yy + 1, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
+        };
+        this.drawAboveShading = (delta) => {
+            if (this.frame > 100)
+                this.frame = 0;
+            this.frame += 1 * delta;
+            let multiplier = 0.125;
+            game_1.Game.drawFX(2, 2, 1, 1, this.x, this.y - 1.25 + multiplier * Math.sin((this.frame * Math.PI) / 50), 1, 1);
         };
         this.drawAbovePlayer = (delta) => {
             if (this.isRope)

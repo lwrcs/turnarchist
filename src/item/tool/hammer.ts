@@ -8,6 +8,7 @@ import { Weapon } from "../weapon/weapon";
 import { Dagger } from "../weapon/dagger";
 import { WeaponFragments } from "../usable/weaponFragments";
 import { Geode } from "../resource/geode";
+import { Pickaxe } from "./pickaxe";
 export class Hammer extends Usable {
   static itemName = "hammer";
   constructor(level: Room, x: number, y: number) {
@@ -43,6 +44,9 @@ export class Hammer extends Usable {
       let geode = other as Geode;
       geode.split(player.inventory);
       this.level.game.pushMessage(`You hit the geode with the hammer.`);
+    } else if (other.name === "pickaxe") {
+      let pickaxe = other as Pickaxe;
+      pickaxe.disassemble(player);
     }
   };
 

@@ -31,19 +31,25 @@ export class Populator {
       )
         return;
 
-      switch (room.envType) {
-        case EnvType.CAVE:
-          this.populateCave(room);
-          break;
-        case EnvType.FOREST:
-          this.populateForest(room);
-          break;
-        default:
-          this.populateDefault(room);
-          break;
-      }
+      this.populateByEnvironment(room);
     });
   };
+
+  populateByEnvironment = (room: Room) => {
+    switch (room.envType) {
+      case EnvType.CAVE:
+        this.populateCave(room);
+        break;
+      case EnvType.FOREST:
+        this.populateForest(room);
+        break;
+      default:
+        this.populateDefault(room);
+        break;
+    }
+  };
+
+  populateByType = (room: Room) => {};
 
   private addProps(room: Room, numProps: number, envType?: EnvType) {
     const envData = envType

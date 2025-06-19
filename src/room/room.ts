@@ -1391,15 +1391,8 @@ export class Room {
     this.name = "";
     switch (this.type) {
       case RoomType.START:
-        //this.addNewEnemy(EnemyType.zombie);
-        //this.addNewEnemy(EnemyType.occultist);
-        //this.addNewEnemy(EnemyType.occultist);
-
-        //   this.addNewEnemy(EnemyType.occultist);
-
         if (this.depth !== 0) {
           this.populateUpLadder(rand);
-          //this.addVendingMachine(rand, this.roomX + 1, this.roomY + 1);
           this.placeVendingMachineInWall();
         }
 
