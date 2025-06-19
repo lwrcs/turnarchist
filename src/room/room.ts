@@ -85,6 +85,7 @@ import { RoomBuilder } from "./roomBuilder";
 import { BigZombieEnemy } from "../entity/enemy/bigZombieEnemy";
 import { Bush } from "../entity/object/bush";
 import { Sprout } from "../entity/object/sprout";
+import { Candle } from "../item/light/candle";
 
 // #endregion
 
@@ -981,7 +982,10 @@ export class Room {
 
     let table =
       this.depth > 0
-        ? [1, 1, 1, 1, 1, 1, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+        ? [
+            1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 1, 1, 1, 2, 2, 1, 1, 3, 4, 5, 5, 5,
+            5, 5,
+          ]
         : [1, 1, 1];
     let type = Game.randTable(table, rand);
     switch (type) {
@@ -989,27 +993,15 @@ export class Room {
         VendingMachine.add(this, this.game, x, y, new Heart(this, x, y));
         break;
       case 2:
-        VendingMachine.add(this, this.game, x, y, new Lantern(this, x, y));
+        VendingMachine.add(this, this.game, x, y, new Candle(this, x, y));
         break;
       case 3:
         VendingMachine.add(this, this.game, x, y, new Armor(this, x, y));
         break;
       case 4:
-        VendingMachine.add(this, this.game, x, y, new DualDagger(this, x, y));
-        break;
-      case 5:
         VendingMachine.add(this, this.game, x, y, new Spear(this, x, y));
         break;
-      case 6:
-        VendingMachine.add(this, this.game, x, y, new Shotgun(this, x, y));
-        break;
-      case 7:
-        VendingMachine.add(this, this.game, x, y, new Warhammer(this, x, y));
-        break;
-      case 8:
-        VendingMachine.add(this, this.game, x, y, new Spellbook(this, x, y));
-        break;
-      case 9:
+      case 5:
         VendingMachine.add(this, this.game, x, y, new Torch(this, x, y));
         break;
     }

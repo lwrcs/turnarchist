@@ -23,6 +23,7 @@ import { Random } from "../../utility/random";
 import { Warhammer } from "../../item/weapon/warhammer";
 import { Torch } from "../../item/light/torch";
 import { Spellbook } from "../../item/weapon/spellbook";
+import { Candle } from "../../item/light/candle";
 
 let OPEN_TIME = 150;
 let FILL_COLOR = "#5a595b";
@@ -58,7 +59,7 @@ export class VendingMachine extends Entity {
     } else if (this.item instanceof Spear) {
       this.setCost(2); // Uses default random cost
     } else if (this.item instanceof Armor) {
-      this.setCost(2); // Uses default random cost
+      this.setCost(3); // Uses default random cost
     } else if (this.item instanceof DualDagger) {
       this.setCost(3); // Uses default random cost
     } else if (this.item instanceof Lantern) {
@@ -69,6 +70,8 @@ export class VendingMachine extends Entity {
       this.setCost(3); // Uses default random cost
     } else if (this.item instanceof Torch) {
       this.setCost(2); // Uses default random cost
+    } else if (this.item instanceof Candle) {
+      this.setCost(1, [new Coin(room, 0, 0)], [9, 10, 11], 2);
     }
   }
 

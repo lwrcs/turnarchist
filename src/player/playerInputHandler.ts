@@ -43,7 +43,8 @@ export class PlayerInputHandler {
   }
 
   handleInput(input: InputEnum) {
-    if (this.player.busyAnimating) return;
+    if (this.player.busyAnimating || this.player.game.cameraAnimation.active)
+      return;
     if (this.player.menu.open) {
       this.player.menu.inputHandler(input);
       return;

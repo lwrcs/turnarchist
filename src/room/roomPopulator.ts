@@ -12,11 +12,13 @@ import { Room, RoomType } from "./room";
 
 export class Populator {
   level: Level;
+  medianDensity: number;
   private props: { x: number; y: number }[] = [];
 
   constructor(level: Level) {
     this.level = level;
     this.props = [];
+    this.medianDensity = Math.random() * 0.5 + 0.25;
   }
 
   populateRooms = () => {
@@ -75,15 +77,14 @@ export class Populator {
   }
 
   private populateForest(room: Room) {
-    if (Math.random() < 0.05) {
-      this.populateGraveyard(room);
-    } else this.addProps(room, this.getNumProps(room) * 2, EnvType.FOREST);
+    this.addProps(room, this.getNumProps(room, 0.75), EnvType.FOREST);
   }
 
-  private getNumProps(room: Room) {
+  private getNumProps(room: Room, medianDensity?: number) {
+    medianDensity = medianDensity || this.medianDensity;
     const numEmptyTiles = room.getEmptyTiles().length;
-    const numProps = Utils.randomSineInt(0, numEmptyTiles, {
-      median: Math.ceil(0.2 * numEmptyTiles),
+    const numProps = Utils.randomNormalInt(0, numEmptyTiles, {
+      median: Math.ceil(medianDensity * numEmptyTiles),
     });
     const percentFull = Math.round((numProps / numEmptyTiles) * 100);
     console.log("percentFull", `${percentFull}%`);

@@ -72,7 +72,6 @@ const environmentProps: Record<EnvType, EnvironmentPropData> = {
       { class: Block, weight: 1 },
       { class: Pot, weight: 1 },
       { class: PottedPlant, weight: 1 },
-      { class: Rock, weight: 0.1 },
       { class: Mushrooms, weight: 0.1 },
       { class: Bush, weight: 0.1 },
       { class: Sprout, weight: 0.025 },

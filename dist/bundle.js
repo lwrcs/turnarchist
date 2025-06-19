@@ -7477,6 +7477,7 @@ const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/
 const warhammer_1 = __webpack_require__(/*! ../../item/weapon/warhammer */ "./src/item/weapon/warhammer.ts");
 const torch_1 = __webpack_require__(/*! ../../item/light/torch */ "./src/item/light/torch.ts");
 const spellbook_1 = __webpack_require__(/*! ../../item/weapon/spellbook */ "./src/item/weapon/spellbook.ts");
+const candle_1 = __webpack_require__(/*! ../../item/light/candle */ "./src/item/light/candle.ts");
 let OPEN_TIME = 150;
 let FILL_COLOR = "#5a595b";
 let OUTLINE_COLOR = "#292c36";
@@ -7686,7 +7687,7 @@ class VendingMachine extends entity_1.Entity {
             this.setCost(2); // Uses default random cost
         }
         else if (this.item instanceof armor_1.Armor) {
-            this.setCost(2); // Uses default random cost
+            this.setCost(3); // Uses default random cost
         }
         else if (this.item instanceof dualdagger_1.DualDagger) {
             this.setCost(3); // Uses default random cost
@@ -7702,6 +7703,9 @@ class VendingMachine extends entity_1.Entity {
         }
         else if (this.item instanceof torch_1.Torch) {
             this.setCost(2); // Uses default random cost
+        }
+        else if (this.item instanceof candle_1.Candle) {
+            this.setCost(1, [new coin_1.Coin(room, 0, 0)], [9, 10, 11], 2);
         }
     }
     get type() {
@@ -9540,7 +9544,7 @@ const geode_1 = __webpack_require__(/*! ../item/resource/geode */ "./src/item/re
 class GameConstants {
 }
 exports.GameConstants = GameConstants;
-GameConstants.VERSION = "v1.0.8"; //"v0.6.3";
+GameConstants.VERSION = "v1.0.9"; //"v0.6.3";
 GameConstants.DEVELOPER_MODE = false;
 GameConstants.isMobile = false;
 GameConstants.CAMERA_SPEED = 1; // 1 is instant 0.1 is slow
@@ -15223,7 +15227,6 @@ const environmentProps = {
             { class: block_1.Block, weight: 1 },
             { class: pot_1.Pot, weight: 1 },
             { class: pottedPlant_1.PottedPlant, weight: 1 },
-            { class: rockResource_1.Rock, weight: 0.1 },
             { class: mushrooms_1.Mushrooms, weight: 0.1 },
             { class: bush_1.Bush, weight: 0.1 },
             { class: sprout_1.Sprout, weight: 0.025 },
@@ -18052,7 +18055,7 @@ class PlayerInputHandler {
         input_1.Input.escapeListener = () => this.handleInput(input_1.InputEnum.ESCAPE);
     }
     handleInput(input) {
-        if (this.player.busyAnimating)
+        if (this.player.busyAnimating || this.player.game.cameraAnimation.active)
             return;
         if (this.player.menu.open) {
             this.player.menu.inputHandler(input);
@@ -19742,8 +19745,6 @@ const crabEnemy_1 = __webpack_require__(/*! ../entity/enemy/crabEnemy */ "./src/
 const zombieEnemy_1 = __webpack_require__(/*! ../entity/enemy/zombieEnemy */ "./src/entity/enemy/zombieEnemy.ts");
 const bigSkullEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigSkullEnemy */ "./src/entity/enemy/bigSkullEnemy.ts");
 const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
-const lantern_1 = __webpack_require__(/*! ../item/light/lantern */ "./src/item/light/lantern.ts");
-const dualdagger_1 = __webpack_require__(/*! ../item/weapon/dualdagger */ "./src/item/weapon/dualdagger.ts");
 const pot_1 = __webpack_require__(/*! ../entity/object/pot */ "./src/entity/object/pot.ts");
 const bishopEnemy_1 = __webpack_require__(/*! ../entity/enemy/bishopEnemy */ "./src/entity/enemy/bishopEnemy.ts");
 const rockResource_1 = __webpack_require__(/*! ../entity/resource/rockResource */ "./src/entity/resource/rockResource.ts");
@@ -19759,8 +19760,6 @@ const fireWizard_1 = __webpack_require__(/*! ../entity/enemy/fireWizard */ "./sr
 const energyWizard_1 = __webpack_require__(/*! ../entity/enemy/energyWizard */ "./src/entity/enemy/energyWizard.ts");
 const reverb_1 = __webpack_require__(/*! ../sound/reverb */ "./src/sound/reverb.ts");
 const astarclass_1 = __webpack_require__(/*! ../utility/astarclass */ "./src/utility/astarclass.ts");
-const warhammer_1 = __webpack_require__(/*! ../item/weapon/warhammer */ "./src/item/weapon/warhammer.ts");
-const spellbook_1 = __webpack_require__(/*! ../item/weapon/spellbook */ "./src/item/weapon/spellbook.ts");
 const torch_1 = __webpack_require__(/*! ../item/light/torch */ "./src/item/light/torch.ts");
 const rookEnemy_1 = __webpack_require__(/*! ../entity/enemy/rookEnemy */ "./src/entity/enemy/rookEnemy.ts");
 const beamEffect_1 = __webpack_require__(/*! ../projectile/beamEffect */ "./src/projectile/beamEffect.ts");
@@ -19778,6 +19777,7 @@ const roomBuilder_1 = __webpack_require__(/*! ./roomBuilder */ "./src/room/roomB
 const bigZombieEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigZombieEnemy */ "./src/entity/enemy/bigZombieEnemy.ts");
 const bush_1 = __webpack_require__(/*! ../entity/object/bush */ "./src/entity/object/bush.ts");
 const sprout_1 = __webpack_require__(/*! ../entity/object/sprout */ "./src/entity/object/sprout.ts");
+const candle_1 = __webpack_require__(/*! ../item/light/candle */ "./src/item/light/candle.ts");
 // #endregion
 // #region Enums & Interfaces
 /**
@@ -22116,7 +22116,10 @@ class Room {
         let x = placeX ? placeX : pos.x;
         let y = placeY ? placeY : pos.y;
         let table = this.depth > 0
-            ? [1, 1, 1, 1, 1, 1, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+            ? [
+                1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 1, 1, 1, 2, 2, 1, 1, 3, 4, 5, 5, 5,
+                5, 5,
+            ]
             : [1, 1, 1];
         let type = game_1.Game.randTable(table, rand);
         switch (type) {
@@ -22124,27 +22127,15 @@ class Room {
                 vendingMachine_1.VendingMachine.add(this, this.game, x, y, new heart_1.Heart(this, x, y));
                 break;
             case 2:
-                vendingMachine_1.VendingMachine.add(this, this.game, x, y, new lantern_1.Lantern(this, x, y));
+                vendingMachine_1.VendingMachine.add(this, this.game, x, y, new candle_1.Candle(this, x, y));
                 break;
             case 3:
                 vendingMachine_1.VendingMachine.add(this, this.game, x, y, new armor_1.Armor(this, x, y));
                 break;
             case 4:
-                vendingMachine_1.VendingMachine.add(this, this.game, x, y, new dualdagger_1.DualDagger(this, x, y));
-                break;
-            case 5:
                 vendingMachine_1.VendingMachine.add(this, this.game, x, y, new spear_1.Spear(this, x, y));
                 break;
-            case 6:
-                vendingMachine_1.VendingMachine.add(this, this.game, x, y, new shotgun_1.Shotgun(this, x, y));
-                break;
-            case 7:
-                vendingMachine_1.VendingMachine.add(this, this.game, x, y, new warhammer_1.Warhammer(this, x, y));
-                break;
-            case 8:
-                vendingMachine_1.VendingMachine.add(this, this.game, x, y, new spellbook_1.Spellbook(this, x, y));
-                break;
-            case 9:
+            case 5:
                 vendingMachine_1.VendingMachine.add(this, this.game, x, y, new torch_1.Torch(this, x, y));
                 break;
         }
@@ -22576,6 +22567,7 @@ class Populator {
         };
         this.level = level;
         this.props = [];
+        this.medianDensity = Math.random() * 0.5 + 0.25;
     }
     addProps(room, numProps, envType) {
         const envData = envType
@@ -22603,16 +22595,13 @@ class Populator {
         this.addProps(room, this.getNumProps(room), environment_1.EnvType.CAVE);
     }
     populateForest(room) {
-        if (Math.random() < 0.05) {
-            this.populateGraveyard(room);
-        }
-        else
-            this.addProps(room, this.getNumProps(room) * 2, environment_1.EnvType.FOREST);
+        this.addProps(room, this.getNumProps(room, 0.75), environment_1.EnvType.FOREST);
     }
-    getNumProps(room) {
+    getNumProps(room, medianDensity) {
+        medianDensity = medianDensity || this.medianDensity;
         const numEmptyTiles = room.getEmptyTiles().length;
-        const numProps = utils_1.Utils.randomSineInt(0, numEmptyTiles, {
-            median: Math.ceil(0.2 * numEmptyTiles),
+        const numProps = utils_1.Utils.randomNormalInt(0, numEmptyTiles, {
+            median: Math.ceil(medianDensity * numEmptyTiles),
         });
         const percentFull = Math.round((numProps / numEmptyTiles) * 100);
         console.log("percentFull", `${percentFull}%`);
@@ -24932,6 +24921,45 @@ Utils.randTableWeighted = (table) => {
     }
     // Fallback (should rarely happen due to floating point precision)
     return table[table.length - 1];
+};
+/**
+ * Generates a random integer using a real normal distribution.
+ *
+ * @param min - The value that represents -2 standard deviations from the mean
+ * @param max - The value that represents +2 standard deviations from the mean
+ * @param options - Optional parameters to modify the distribution
+ * @param options.median - The mean of the distribution (center point).
+ *                        Default is the middle of the range.
+ * @returns A random integer following a normal distribution, with negative values clamped to 0
+ *
+ * @example
+ * // Normal distribution centered at 5, with min/max representing ±2 std devs
+ * randomNormalInt(0, 10)
+ *
+ * @example
+ * // Normal distribution centered at 7
+ * randomNormalInt(0, 10, { median: 7 })
+ */
+Utils.randomNormalInt = (min, max, options = {}) => {
+    const { median = min + (max - min) / 2 } = options;
+    // Calculate standard deviation: (max - min) / 4 since min/max are ±2 std devs
+    const standardDeviation = (max - min) / 5;
+    // Box-Muller transform to generate normal distribution
+    // Generate two uniform random numbers
+    let u1 = Math.random();
+    let u2 = Math.random();
+    // Ensure u1 is not 0 to avoid log(0)
+    while (u1 === 0) {
+        u1 = Math.random();
+    }
+    // Box-Muller transformation
+    const z0 = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+    // Scale and shift to desired mean and standard deviation
+    const normalValue = z0 * standardDeviation + median;
+    // Clamp negative values to 0
+    const clampedValue = Math.max(0, normalValue);
+    // Round to integer
+    return Math.round(clampedValue);
 };
 
 

@@ -173,4 +173,57 @@ export class Utils {
     // Fallback (should rarely happen due to floating point precision)
     return table[table.length - 1];
   };
+
+  /**
+   * Generates a random integer using a real normal distribution.
+   *
+   * @param min - The value that represents -2 standard deviations from the mean
+   * @param max - The value that represents +2 standard deviations from the mean
+   * @param options - Optional parameters to modify the distribution
+   * @param options.median - The mean of the distribution (center point).
+   *                        Default is the middle of the range.
+   * @returns A random integer following a normal distribution, with negative values clamped to 0
+   *
+   * @example
+   * // Normal distribution centered at 5, with min/max representing ±2 std devs
+   * randomNormalInt(0, 10)
+   *
+   * @example
+   * // Normal distribution centered at 7
+   * randomNormalInt(0, 10, { median: 7 })
+   */
+  static randomNormalInt = (
+    min: number,
+    max: number,
+    options: {
+      median?: number;
+    } = {},
+  ): number => {
+    const { median = min + (max - min) / 2 } = options;
+
+    // Calculate standard deviation: (max - min) / 4 since min/max are ±2 std devs
+    const standardDeviation = (max - min) / 5;
+
+    // Box-Muller transform to generate normal distribution
+    // Generate two uniform random numbers
+    let u1 = Math.random();
+    let u2 = Math.random();
+
+    // Ensure u1 is not 0 to avoid log(0)
+    while (u1 === 0) {
+      u1 = Math.random();
+    }
+
+    // Box-Muller transformation
+    const z0 = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+
+    // Scale and shift to desired mean and standard deviation
+    const normalValue = z0 * standardDeviation + median;
+
+    // Clamp negative values to 0
+    const clampedValue = Math.max(0, normalValue);
+
+    // Round to integer
+    return Math.round(clampedValue);
+  };
 }
