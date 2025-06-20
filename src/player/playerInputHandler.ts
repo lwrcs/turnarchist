@@ -7,13 +7,15 @@ import { GameConstants } from "../game/gameConstants";
 
 export class PlayerInputHandler {
   private player: Player;
-  private mostRecentInput: string;
+  mostRecentInput: string;
   mostRecentMoveInput: string;
+  moveStartTime: number;
 
   constructor(player: Player) {
     this.player = player;
     this.mostRecentInput = "keyboard";
     this.mostRecentMoveInput = "keyboard";
+    this.moveStartTime = 0;
 
     if (player.isLocalPlayer) {
       this.setupListeners();
@@ -103,7 +105,7 @@ export class PlayerInputHandler {
         break;
       case InputEnum.SPACE:
         const player = this.player;
-        this.mostRecentInput = "keyboard";
+        this.setMostRecentInput("keyboard");
 
         if (player.game.chatOpen) return;
 
@@ -124,17 +126,17 @@ export class PlayerInputHandler {
           player.inventory.isOpen ||
           player.game.levelState === LevelState.IN_LEVEL
         ) {
-          this.mostRecentInput = "keyboard";
+          this.setMostRecentInput("keyboard");
 
           player.inventory.itemUse();
         }
         break;
       case InputEnum.COMMA:
-        this.mostRecentInput = "keyboard";
+        this.setMostRecentInput("keyboard");
         this.player.inventory.left();
         break;
       case InputEnum.PERIOD:
-        this.mostRecentInput = "keyboard";
+        this.setMostRecentInput("keyboard");
         this.player.inventory.right();
         break;
       case InputEnum.LEFT_CLICK:
@@ -145,7 +147,7 @@ export class PlayerInputHandler {
         break;
       case InputEnum.MOUSE_MOVE:
         //when mouse moves
-        this.mostRecentInput = "mouse";
+        this.setMostRecentInput("mouse");
         this.player.inventory.mouseMove();
         this.faceMouse();
         this.player.setTileCursorPosition();
@@ -159,7 +161,7 @@ export class PlayerInputHandler {
       case InputEnum.NUMBER_7:
       case InputEnum.NUMBER_8:
       case InputEnum.NUMBER_9:
-        this.mostRecentInput = "keyboard";
+        this.setMostRecentInput("keyboard");
         this.handleNumKey(input - 13);
         break;
       case InputEnum.EQUALS:
@@ -175,7 +177,7 @@ export class PlayerInputHandler {
   }
 
   handleNumKey = (num: number) => {
-    this.mostRecentInput = "keyboard";
+    this.setMostRecentInput("keyboard");
     if (num <= 5) {
       this.player.inventory.selX = Math.max(
         0,
@@ -205,7 +207,7 @@ export class PlayerInputHandler {
   };
 
   handleMouseRightClick() {
-    this.mostRecentInput = "mouse";
+    this.setMostRecentInput("mouse");
     const { x, y } = MouseCursor.getInstance().getPosition();
     const bounds = this.player.inventory.isPointInInventoryBounds(x, y);
 
@@ -220,7 +222,7 @@ export class PlayerInputHandler {
     const { x, y } = cursor.getPosition();
     if (player.game.levelState !== LevelState.IN_LEVEL) return;
 
-    this.mostRecentInput = "mouse";
+    this.setMostRecentInput("mouse");
 
     if (player.dead) {
       player.restart();
@@ -249,7 +251,7 @@ export class PlayerInputHandler {
         player.openVendingMachine.space();
       } else {
         player.openVendingMachine.close();
-        this.mostRecentInput = "mouse";
+        this.setMostRecentInput("mouse");
         const { x, y } = MouseCursor.getInstance().getPosition();
         const bounds = this.player.inventory.isPointInInventoryBounds(x, y);
       }
@@ -309,7 +311,7 @@ export class PlayerInputHandler {
         return;
       } else if (!isInVMUI) {
         this.player.openVendingMachine.close();
-        this.mostRecentInput = "mouse";
+        this.setMostRecentInput("mouse");
         const { x, y } = MouseCursor.getInstance().getPosition();
         const bounds = this.player.inventory.isPointInInventoryBounds(x, y);
       }
@@ -365,6 +367,13 @@ export class PlayerInputHandler {
         break;
     }
   }
+
+  setMostRecentInput = (input: string) => {
+    this.mostRecentInput = input;
+  };
+  setMostRecentMoveInput = (input: string) => {
+    this.mostRecentMoveInput = input;
+  };
 
   mouseAngle = () => {
     const mousePosition = MouseCursor.getInstance().getPosition();

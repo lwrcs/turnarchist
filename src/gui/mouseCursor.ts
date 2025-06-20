@@ -8,6 +8,10 @@ export class MouseCursor {
   private clickX: number = 0;
   private clickY: number = 0;
   private tileX: number = 6;
+  private lastMouseX: number = 0;
+  private lastMouseY: number = 0;
+  private posChangeTime: number = Date.now();
+  private cursorTimeout: number = 5000;
 
   private constructor() {}
   private frame: number = 0;
@@ -21,6 +25,17 @@ export class MouseCursor {
 
   public drawCursor(): void {
     Game.ctx.save();
+    const timeSinceChange = Date.now() - this.posChangeTime;
+    const fadeStartTime = this.cursorTimeout - 200; // Start fade 200ms before timeout
+
+    let alpha: number = 1;
+    if (timeSinceChange > fadeStartTime) {
+      // Only fade in the last 200ms
+      const fadeProgress = (timeSinceChange - fadeStartTime) / 200;
+      alpha = 1 - fadeProgress;
+    }
+
+    Game.ctx.globalAlpha = alpha;
 
     //Game.ctx.fillRect(Input.mouseX, Input.mouseY, 1, 1);
     Game.drawFX(
@@ -33,6 +48,7 @@ export class MouseCursor {
       1,
       1,
     );
+
     Game.ctx.restore();
   }
 
@@ -95,16 +111,19 @@ export class MouseCursor {
     }
   };
 
-  public draw = (
-    delta: number,
-    mobile: boolean = false,
-    isMouseInput: boolean = true,
-  ) => {
-    if (!mobile && isMouseInput) this.drawCursor();
+  public draw = (delta: number, mobile: boolean = false) => {
+    if (!mobile && Date.now() - this.posChangeTime < this.cursorTimeout)
+      this.drawCursor();
     this.drawAnimation(delta);
   };
 
   public getPosition(): { x: number; y: number } {
+    if (Input.mouseX !== this.lastMouseX || Input.mouseY !== this.lastMouseY) {
+      this.posChangeTime = Date.now();
+    }
+
+    this.lastMouseX = Input.mouseX;
+    this.lastMouseY = Input.mouseY;
     return { x: Input.mouseX, y: Input.mouseY };
   }
 

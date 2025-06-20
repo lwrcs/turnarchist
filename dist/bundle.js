@@ -8452,25 +8452,15 @@ class Game {
             Game.ctx.canvas.setAttribute("height", `${gameConstants_1.GameConstants.HEIGHT}`);
         };
         this.onResize = () => {
-            // Determine device pixel ratio
-            const dpr = window.devicePixelRatio;
             // Define scale adjustment based on device pixel ratio
             if (gameConstants_1.GameConstants.SCALE === null) {
                 gameConstants_1.GameConstants.SCALE = gameConstants_1.GameConstants.FIND_SCALE();
                 gameConstants_1.GameConstants.SOFT_SCALE = gameConstants_1.GameConstants.SCALE;
             }
             let scaleOffset = 0;
-            //if (dpr > 1.5) {
-            // High DPI devices like MacBook Air
-            //scaleOffset = 2;
-            //} else {
-            // Standard DPI devices
-            //   scaleOffset = 0;
-            //}
             // Calculate maximum possible scale based on window size
             let maxWidthScale = Math.floor(window.innerWidth / gameConstants_1.GameConstants.DEFAULTWIDTH);
             let maxHeightScale = Math.floor(window.innerHeight / gameConstants_1.GameConstants.DEFAULTHEIGHT);
-            const zoomLevel = Math.round((window.outerWidth / window.innerWidth) * 20) / 20;
             this.isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
             if (this.isMobile) {
                 if (!gameConstants_1.GameConstants.isMobile)
@@ -8481,7 +8471,7 @@ class Game {
                 levelConstants_1.LevelConstants.LIGHTING_MAX_DISTANCE = 7;
                 // Use smaller scale for mobile devices based on screen size
                 // Adjust max scale with scaleOffset
-                const integerScale = gameConstants_1.GameConstants.MAX_SCALE + scaleOffset;
+                const integerScale = gameConstants_1.GameConstants.SCALE + scaleOffset;
                 Game.scale = Math.min(maxWidthScale, maxHeightScale, integerScale); // Cap at 3 + offset for mobile
             }
             else {
@@ -11608,6 +11598,10 @@ class MouseCursor {
         this.clickX = 0;
         this.clickY = 0;
         this.tileX = 6;
+        this.lastMouseX = 0;
+        this.lastMouseY = 0;
+        this.posChangeTime = Date.now();
+        this.cursorTimeout = 5000;
         this.frame = 0;
         this.setIcon = (icon) => {
             switch (icon) {
@@ -11643,8 +11637,8 @@ class MouseCursor {
                     break;
             }
         };
-        this.draw = (delta, mobile = false, isMouseInput = true) => {
-            if (!mobile && isMouseInput)
+        this.draw = (delta, mobile = false) => {
+            if (!mobile && Date.now() - this.posChangeTime < this.cursorTimeout)
                 this.drawCursor();
             this.drawAnimation(delta);
         };
@@ -11657,6 +11651,15 @@ class MouseCursor {
     }
     drawCursor() {
         game_1.Game.ctx.save();
+        const timeSinceChange = Date.now() - this.posChangeTime;
+        const fadeStartTime = this.cursorTimeout - 200; // Start fade 200ms before timeout
+        let alpha = 1;
+        if (timeSinceChange > fadeStartTime) {
+            // Only fade in the last 200ms
+            const fadeProgress = (timeSinceChange - fadeStartTime) / 200;
+            alpha = 1 - fadeProgress;
+        }
+        game_1.Game.ctx.globalAlpha = alpha;
         //Game.ctx.fillRect(Input.mouseX, Input.mouseY, 1, 1);
         game_1.Game.drawFX(this.tileX, 0, 1, 1, input_1.Input.mouseX / gameConstants_1.GameConstants.TILESIZE - 8 / gameConstants_1.GameConstants.TILESIZE, input_1.Input.mouseY / gameConstants_1.GameConstants.TILESIZE - 8 / gameConstants_1.GameConstants.TILESIZE, 1, 1);
         game_1.Game.ctx.restore();
@@ -11675,6 +11678,11 @@ class MouseCursor {
         this.clickY = input_1.Input.mouseY;
     }
     getPosition() {
+        if (input_1.Input.mouseX !== this.lastMouseX || input_1.Input.mouseY !== this.lastMouseY) {
+            this.posChangeTime = Date.now();
+        }
+        this.lastMouseX = input_1.Input.mouseX;
+        this.lastMouseY = input_1.Input.mouseY;
         return { x: input_1.Input.mouseX, y: input_1.Input.mouseY };
     }
     getTilePosition() {
@@ -17405,7 +17413,7 @@ class Player extends drawable_1.Drawable {
             return null;
         };
         this.moveWithMouse = () => {
-            this.inputHandler.mostRecentMoveInput = "mouse";
+            this.inputHandler.setMostRecentMoveInput("mouse");
             if (!gameConstants_1.GameConstants.MOVE_WITH_MOUSE)
                 return;
             const moveData = this.canMoveWithMouse();
@@ -17979,7 +17987,7 @@ const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/
 class PlayerInputHandler {
     constructor(player) {
         this.handleNumKey = (num) => {
-            this.mostRecentInput = "keyboard";
+            this.setMostRecentInput("keyboard");
             if (num <= 5) {
                 this.player.inventory.selX = Math.max(0, Math.min(num - 1, this.player.inventory.cols - 1));
                 this.player.inventory.selY = 0;
@@ -18012,6 +18020,12 @@ class PlayerInputHandler {
                 (this.player.inventory.isPointInQuickbarBounds(input_1.Input.mouseX, input_1.Input.mouseY)
                     .inBounds &&
                     this.player.game.isMobile));
+        };
+        this.setMostRecentInput = (input) => {
+            this.mostRecentInput = input;
+        };
+        this.setMostRecentMoveInput = (input) => {
+            this.mostRecentMoveInput = input;
         };
         this.mouseAngle = () => {
             const mousePosition = mouseCursor_1.MouseCursor.getInstance().getPosition();
@@ -18047,6 +18061,7 @@ class PlayerInputHandler {
         this.player = player;
         this.mostRecentInput = "keyboard";
         this.mostRecentMoveInput = "keyboard";
+        this.moveStartTime = 0;
         if (player.isLocalPlayer) {
             this.setupListeners();
         }
@@ -18123,7 +18138,7 @@ class PlayerInputHandler {
                 break;
             case input_1.InputEnum.SPACE:
                 const player = this.player;
-                this.mostRecentInput = "keyboard";
+                this.setMostRecentInput("keyboard");
                 if (player.game.chatOpen)
                     return;
                 if (player.dead) {
@@ -18137,16 +18152,16 @@ class PlayerInputHandler {
                 }
                 if (player.inventory.isOpen ||
                     player.game.levelState === game_1.LevelState.IN_LEVEL) {
-                    this.mostRecentInput = "keyboard";
+                    this.setMostRecentInput("keyboard");
                     player.inventory.itemUse();
                 }
                 break;
             case input_1.InputEnum.COMMA:
-                this.mostRecentInput = "keyboard";
+                this.setMostRecentInput("keyboard");
                 this.player.inventory.left();
                 break;
             case input_1.InputEnum.PERIOD:
-                this.mostRecentInput = "keyboard";
+                this.setMostRecentInput("keyboard");
                 this.player.inventory.right();
                 break;
             case input_1.InputEnum.LEFT_CLICK:
@@ -18157,7 +18172,7 @@ class PlayerInputHandler {
                 break;
             case input_1.InputEnum.MOUSE_MOVE:
                 //when mouse moves
-                this.mostRecentInput = "mouse";
+                this.setMostRecentInput("mouse");
                 this.player.inventory.mouseMove();
                 this.faceMouse();
                 this.player.setTileCursorPosition();
@@ -18171,7 +18186,7 @@ class PlayerInputHandler {
             case input_1.InputEnum.NUMBER_7:
             case input_1.InputEnum.NUMBER_8:
             case input_1.InputEnum.NUMBER_9:
-                this.mostRecentInput = "keyboard";
+                this.setMostRecentInput("keyboard");
                 this.handleNumKey(input - 13);
                 break;
             case input_1.InputEnum.EQUALS:
@@ -18186,7 +18201,7 @@ class PlayerInputHandler {
         }
     }
     handleMouseRightClick() {
-        this.mostRecentInput = "mouse";
+        this.setMostRecentInput("mouse");
         const { x, y } = mouseCursor_1.MouseCursor.getInstance().getPosition();
         const bounds = this.player.inventory.isPointInInventoryBounds(x, y);
         if (bounds.inBounds) {
@@ -18199,7 +18214,7 @@ class PlayerInputHandler {
         const { x, y } = cursor.getPosition();
         if (player.game.levelState !== game_1.LevelState.IN_LEVEL)
             return;
-        this.mostRecentInput = "mouse";
+        this.setMostRecentInput("mouse");
         if (player.dead) {
             player.restart();
             return;
@@ -18217,7 +18232,7 @@ class PlayerInputHandler {
             }
             else {
                 player.openVendingMachine.close();
-                this.mostRecentInput = "mouse";
+                this.setMostRecentInput("mouse");
                 const { x, y } = mouseCursor_1.MouseCursor.getInstance().getPosition();
                 const bounds = this.player.inventory.isPointInInventoryBounds(x, y);
             }
@@ -18251,7 +18266,7 @@ class PlayerInputHandler {
             }
             else if (!isInVMUI) {
                 this.player.openVendingMachine.close();
-                this.mostRecentInput = "mouse";
+                this.setMostRecentInput("mouse");
                 const { x, y } = mouseCursor_1.MouseCursor.getInstance().getPosition();
                 const bounds = this.player.inventory.isPointInInventoryBounds(x, y);
             }
@@ -18367,7 +18382,7 @@ class PlayerMovement {
             const now = Date.now();
             this.lastMoveTime = now;
             this.lastChangeDirectionTime = now;
-            this.player.inputHandler.mostRecentMoveInput = "keyboard";
+            this.player.inputHandler.setMostRecentMoveInput("keyboard");
             this.player.lastDirection = this.player.direction;
             this.player.direction = direction;
             this.player.tryMove(x, y);
@@ -18390,7 +18405,7 @@ class PlayerMovement {
         if (this.canMove()) {
             const now = Date.now();
             this.lastMoveTime = now;
-            this.player.inputHandler.mostRecentMoveInput = "mouse";
+            this.player.inputHandler.setMostRecentMoveInput("mouse");
             //this.player.lastDirection = this.player.direction;
             this.player.direction = direction;
             this.player.tryMove(x, y);

@@ -25,7 +25,8 @@ export class PlayerMovement {
 
       this.lastMoveTime = now;
       this.lastChangeDirectionTime = now;
-      this.player.inputHandler.mostRecentMoveInput = "keyboard";
+      this.player.inputHandler.setMostRecentMoveInput("keyboard");
+
       this.player.lastDirection = this.player.direction;
       this.player.direction = direction;
       this.player.tryMove(x, y);
@@ -48,7 +49,7 @@ export class PlayerMovement {
     if (this.canMove()) {
       const now = Date.now();
       this.lastMoveTime = now;
-      this.player.inputHandler.mostRecentMoveInput = "mouse";
+      this.player.inputHandler.setMostRecentMoveInput("mouse");
       //this.player.lastDirection = this.player.direction;
       this.player.direction = direction;
       this.player.tryMove(x, y);

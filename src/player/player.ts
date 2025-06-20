@@ -313,7 +313,7 @@ export class Player extends Drawable {
   };
 
   moveWithMouse = () => {
-    this.inputHandler.mostRecentMoveInput = "mouse";
+    this.inputHandler.setMostRecentMoveInput("mouse");
     if (!GameConstants.MOVE_WITH_MOUSE) return;
     const moveData = this.canMoveWithMouse();
     if (moveData !== null) {

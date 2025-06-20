@@ -752,21 +752,12 @@ export class Game {
   };
 
   onResize = () => {
-    // Determine device pixel ratio
-    const dpr = window.devicePixelRatio;
     // Define scale adjustment based on device pixel ratio
     if (GameConstants.SCALE === null) {
       GameConstants.SCALE = GameConstants.FIND_SCALE();
       GameConstants.SOFT_SCALE = GameConstants.SCALE;
     }
     let scaleOffset = 0;
-    //if (dpr > 1.5) {
-    // High DPI devices like MacBook Air
-    //scaleOffset = 2;
-    //} else {
-    // Standard DPI devices
-    //   scaleOffset = 0;
-    //}
 
     // Calculate maximum possible scale based on window size
     let maxWidthScale = Math.floor(
@@ -775,8 +766,6 @@ export class Game {
     let maxHeightScale = Math.floor(
       window.innerHeight / GameConstants.DEFAULTHEIGHT,
     );
-    const zoomLevel =
-      Math.round((window.outerWidth / window.innerWidth) * 20) / 20;
 
     this.isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     if (this.isMobile) {
@@ -788,7 +777,7 @@ export class Game {
 
       // Use smaller scale for mobile devices based on screen size
       // Adjust max scale with scaleOffset
-      const integerScale = GameConstants.MAX_SCALE + scaleOffset;
+      const integerScale = GameConstants.SCALE + scaleOffset;
       Game.scale = Math.min(maxWidthScale, maxHeightScale, integerScale); // Cap at 3 + offset for mobile
     } else {
       GameConstants.isMobile = false;
