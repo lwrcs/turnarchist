@@ -4963,6 +4963,7 @@ class Spawner extends enemy_1.Enemy {
         this.enemySpawnType = randSpawnType;
         this.spawnOffset = 0;
         this.dropChance = 1;
+        this.chainPushable = false;
         switch (this.enemySpawnType) {
             case 0:
                 this.getDrop(["consumable"], true);
@@ -11642,8 +11643,8 @@ class MouseCursor {
                     break;
             }
         };
-        this.draw = (delta, mobile = false) => {
-            if (!mobile)
+        this.draw = (delta, mobile = false, isMouseInput = true) => {
+            if (!mobile && isMouseInput)
                 this.drawCursor();
             this.drawAnimation(delta);
         };
@@ -20665,7 +20666,22 @@ class Room {
                             lightColor = levelConstants_1.LevelConstants.TORCH_LIGHT_COLOR;
                             lightBrightness = player.lightBrightness;
                         }
-                        this.castTintAtAngle(i, player.x + 0.5, player.y + 0.5, 
+                        let offsetX = 0;
+                        let offsetY = 0;
+                        switch (player.direction) {
+                            case game_1.Direction.UP:
+                                offsetY = -0;
+                                break;
+                            case game_1.Direction.DOWN:
+                                offsetY = 0;
+                                break;
+                            case game_1.Direction.LEFT:
+                                offsetX = -0;
+                                break;
+                            case game_1.Direction.RIGHT:
+                                offsetX = 0;
+                        }
+                        this.castTintAtAngle(i, player.x + 0.5 + offsetX, player.y + 0.5 + offsetY, 
                         /*
                         Math.min(
                           Math.max(

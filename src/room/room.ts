@@ -1905,10 +1905,25 @@ export class Room {
             lightColor = LevelConstants.TORCH_LIGHT_COLOR;
             lightBrightness = player.lightBrightness;
           }
+          let offsetX = 0;
+          let offsetY = 0;
+          switch (player.direction) {
+            case Direction.UP:
+              offsetY = -0;
+              break;
+            case Direction.DOWN:
+              offsetY = 0;
+              break;
+            case Direction.LEFT:
+              offsetX = -0;
+              break;
+            case Direction.RIGHT:
+              offsetX = 0;
+          }
           this.castTintAtAngle(
             i,
-            player.x + 0.5,
-            player.y + 0.5,
+            player.x + 0.5 + offsetX,
+            player.y + 0.5 + offsetY,
             /*
             Math.min(
               Math.max(

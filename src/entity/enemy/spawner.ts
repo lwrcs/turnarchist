@@ -53,6 +53,7 @@ export class Spawner extends Enemy {
     this.enemySpawnType = randSpawnType;
     this.spawnOffset = 0;
     this.dropChance = 1;
+    this.chainPushable = false;
 
     switch (this.enemySpawnType) {
       case 0:

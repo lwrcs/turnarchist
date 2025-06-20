@@ -95,8 +95,12 @@ export class MouseCursor {
     }
   };
 
-  public draw = (delta: number, mobile: boolean = false) => {
-    if (!mobile) this.drawCursor();
+  public draw = (
+    delta: number,
+    mobile: boolean = false,
+    isMouseInput: boolean = true,
+  ) => {
+    if (!mobile && isMouseInput) this.drawCursor();
     this.drawAnimation(delta);
   };
 
