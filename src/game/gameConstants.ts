@@ -170,15 +170,16 @@ export class GameConstants {
     }
   };
 
-  static readonly FIND_SCALE = () => {
+  static readonly FIND_SCALE = (isMobile: boolean) => {
     let bestScale = GameConstants.MIN_SCALE;
     let bestDifference = Infinity;
-
-    const dimension = window.innerHeight * window.devicePixelRatio;
+    const measure = isMobile ? window.innerWidth : window.innerHeight;
+    const dimension = measure * window.devicePixelRatio;
+    const tileMeasure = isMobile ? 8 : 12;
 
     for (let i = GameConstants.MIN_SCALE; i <= GameConstants.MAX_SCALE; i++) {
       const tiles = dimension / (i * GameConstants.TILESIZE);
-      const difference = Math.abs(tiles - 12);
+      const difference = Math.abs(tiles - tileMeasure);
 
       if (difference < bestDifference) {
         bestDifference = difference;

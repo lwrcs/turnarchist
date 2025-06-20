@@ -694,8 +694,11 @@ export class Game {
   }
 
   maxScale = () => {
+    let dimension = window.innerWidth;
+    let measure = 130;
+
     for (let i = GameConstants.MIN_SCALE; i <= GameConstants.MAX_SCALE; i++) {
-      if (window.innerWidth / i < 130) {
+      if (dimension / i < measure) {
         return i;
       }
     }
@@ -752,9 +755,10 @@ export class Game {
   };
 
   onResize = () => {
+    this.isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     // Define scale adjustment based on device pixel ratio
     if (GameConstants.SCALE === null) {
-      GameConstants.SCALE = GameConstants.FIND_SCALE();
+      GameConstants.SCALE = GameConstants.FIND_SCALE(this.isMobile);
       GameConstants.SOFT_SCALE = GameConstants.SCALE;
     }
     let scaleOffset = 0;
@@ -767,7 +771,6 @@ export class Game {
       window.innerHeight / GameConstants.DEFAULTHEIGHT,
     );
 
-    this.isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     if (this.isMobile) {
       if (!GameConstants.isMobile) this.pushMessage("Mobile detected");
       GameConstants.SHADE_LEVELS = 35;
@@ -777,7 +780,7 @@ export class Game {
 
       // Use smaller scale for mobile devices based on screen size
       // Adjust max scale with scaleOffset
-      const integerScale = GameConstants.SCALE + scaleOffset;
+      const integerScale = GameConstants.SOFT_SCALE + scaleOffset;
       Game.scale = Math.min(maxWidthScale, maxHeightScale, integerScale); // Cap at 3 + offset for mobile
     } else {
       GameConstants.isMobile = false;

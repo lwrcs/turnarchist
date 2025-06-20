@@ -8408,8 +8408,10 @@ class Game {
             }
         };
         this.maxScale = () => {
+            let dimension = window.innerWidth;
+            let measure = 130;
             for (let i = gameConstants_1.GameConstants.MIN_SCALE; i <= gameConstants_1.GameConstants.MAX_SCALE; i++) {
-                if (window.innerWidth / i < 130) {
+                if (dimension / i < measure) {
                     return i;
                 }
             }
@@ -8452,16 +8454,16 @@ class Game {
             Game.ctx.canvas.setAttribute("height", `${gameConstants_1.GameConstants.HEIGHT}`);
         };
         this.onResize = () => {
+            this.isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
             // Define scale adjustment based on device pixel ratio
             if (gameConstants_1.GameConstants.SCALE === null) {
-                gameConstants_1.GameConstants.SCALE = gameConstants_1.GameConstants.FIND_SCALE();
+                gameConstants_1.GameConstants.SCALE = gameConstants_1.GameConstants.FIND_SCALE(this.isMobile);
                 gameConstants_1.GameConstants.SOFT_SCALE = gameConstants_1.GameConstants.SCALE;
             }
             let scaleOffset = 0;
             // Calculate maximum possible scale based on window size
             let maxWidthScale = Math.floor(window.innerWidth / gameConstants_1.GameConstants.DEFAULTWIDTH);
             let maxHeightScale = Math.floor(window.innerHeight / gameConstants_1.GameConstants.DEFAULTHEIGHT);
-            this.isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
             if (this.isMobile) {
                 if (!gameConstants_1.GameConstants.isMobile)
                     this.pushMessage("Mobile detected");
@@ -8471,7 +8473,7 @@ class Game {
                 levelConstants_1.LevelConstants.LIGHTING_MAX_DISTANCE = 7;
                 // Use smaller scale for mobile devices based on screen size
                 // Adjust max scale with scaleOffset
-                const integerScale = gameConstants_1.GameConstants.SCALE + scaleOffset;
+                const integerScale = gameConstants_1.GameConstants.SOFT_SCALE + scaleOffset;
                 Game.scale = Math.min(maxWidthScale, maxHeightScale, integerScale); // Cap at 3 + offset for mobile
             }
             else {
@@ -9652,13 +9654,15 @@ GameConstants.DECREASE_SCALE = () => {
         }
     }
 };
-GameConstants.FIND_SCALE = () => {
+GameConstants.FIND_SCALE = (isMobile) => {
     let bestScale = GameConstants.MIN_SCALE;
     let bestDifference = Infinity;
-    const dimension = window.innerHeight * window.devicePixelRatio;
+    const measure = isMobile ? window.innerWidth : window.innerHeight;
+    const dimension = measure * window.devicePixelRatio;
+    const tileMeasure = isMobile ? 8 : 12;
     for (let i = GameConstants.MIN_SCALE; i <= GameConstants.MAX_SCALE; i++) {
         const tiles = dimension / (i * GameConstants.TILESIZE);
-        const difference = Math.abs(tiles - 12);
+        const difference = Math.abs(tiles - tileMeasure);
         if (difference < bestDifference) {
             bestDifference = difference;
             bestScale = i;
