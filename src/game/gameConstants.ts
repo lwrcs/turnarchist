@@ -173,7 +173,10 @@ export class GameConstants {
   static readonly FIND_SCALE = (isMobile: boolean) => {
     let bestScale = GameConstants.MIN_SCALE;
     let bestDifference = Infinity;
-    const measure = isMobile ? window.innerWidth : window.innerHeight;
+    const measure =
+      !isMobile || screen.orientation.type === "landscape-primary"
+        ? window.innerHeight
+        : window.innerWidth;
     const dimension = measure * window.devicePixelRatio;
     const tileMeasure = isMobile ? 8 : 12;
 

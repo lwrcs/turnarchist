@@ -9657,7 +9657,9 @@ GameConstants.DECREASE_SCALE = () => {
 GameConstants.FIND_SCALE = (isMobile) => {
     let bestScale = GameConstants.MIN_SCALE;
     let bestDifference = Infinity;
-    const measure = isMobile ? window.innerWidth : window.innerHeight;
+    const measure = !isMobile || screen.orientation.type === "landscape-primary"
+        ? window.innerHeight
+        : window.innerWidth;
     const dimension = measure * window.devicePixelRatio;
     const tileMeasure = isMobile ? 8 : 12;
     for (let i = GameConstants.MIN_SCALE; i <= GameConstants.MAX_SCALE; i++) {
