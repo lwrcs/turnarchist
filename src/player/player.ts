@@ -764,7 +764,7 @@ export class Player extends Drawable {
 
     //this.actionTab.setState(ActionState.MOVE);
     if (this.game.levels[this.depth].rooms[this.levelID] === this.game.room)
-      Sound.playerStoneFootstep();
+      Sound.playerStoneFootstep(this.game.room.envType);
 
     if (this.openVendingMachine) this.openVendingMachine.close();
 

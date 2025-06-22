@@ -18,7 +18,7 @@ export class Populator {
   constructor(level: Level) {
     this.level = level;
     this.props = [];
-    this.medianDensity = Math.random() * 0.5 + 0.25;
+    this.medianDensity = Math.random() * 0.5;
   }
 
   populateRooms = () => {

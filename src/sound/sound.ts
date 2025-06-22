@@ -3,6 +3,8 @@ import { ReverbEngine } from "./reverb";
 
 export class Sound {
   static playerStoneFootsteps: Array<HTMLAudioElement>;
+  static playerGrassFootsteps: Array<HTMLAudioElement>;
+  static playerDirtFootsteps: Array<HTMLAudioElement>;
   static enemyFootsteps: Array<HTMLAudioElement>;
   static hitSounds: Array<HTMLAudioElement>;
   static enemySpawnSound: HTMLAudioElement;
@@ -44,6 +46,22 @@ export class Sound {
       ),
     );
     for (let f of Sound.playerStoneFootsteps) f.volume = 1.0;
+
+    Sound.playerGrassFootsteps = new Array<HTMLAudioElement>();
+    [1, 2, 3, 6].forEach((i) =>
+      Sound.playerGrassFootsteps.push(
+        new Audio("res/SFX/footsteps/grass/footstep" + i + ".mp3"),
+      ),
+    );
+    for (let f of Sound.playerGrassFootsteps) f.volume = 1.0;
+
+    Sound.playerDirtFootsteps = new Array<HTMLAudioElement>();
+    [1, 2, 3, 4, 5].forEach((i) =>
+      Sound.playerDirtFootsteps.push(
+        new Audio("res/SFX/footsteps/dirt/footstep" + i + ".mp3"),
+      ),
+    );
+    for (let f of Sound.playerDirtFootsteps) f.volume = 1.0;
 
     Sound.enemyFootsteps = new Array<HTMLAudioElement>();
     [1, 2, 3, 4, 5].forEach((i) =>
@@ -188,9 +206,13 @@ export class Sound {
     this.playSoundSafely(audio);
   }
 
-  static playerStoneFootstep = async () => {
+  static playerStoneFootstep = async (environment: number) => {
     if (Sound.audioMuted) return;
-    let f = Game.randTable(Sound.playerStoneFootsteps, Math.random);
+    let sound = Sound.playerStoneFootsteps;
+    if (environment === 2) sound = Sound.playerGrassFootsteps;
+    if (environment === 1) sound = Sound.playerDirtFootsteps;
+
+    let f = Game.randTable(sound, Math.random);
     await this.playWithReverb(f);
     f.currentTime = 0;
     f.play();

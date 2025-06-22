@@ -8,6 +8,7 @@ import { Enemy } from "../entity/enemy/enemy";
 import { LevelParameterGenerator } from "./levelParametersGenerator";
 import { Environment, EnvType } from "./environment";
 import { Populator } from "../room/roomPopulator";
+import { GameplaySettings } from "../game/gameplaySettings";
 
 export interface EnemyParameters {
   enemyTables: Record<number, number[]>;
@@ -201,7 +202,9 @@ export class Level {
     );
 
     // Decide how many new enemies to introduce (1 or 2)
-    const newEnemiesToAddCount = Math.min(newEnemies.length, 2);
+    const newEnemiesToAddCount = GameplaySettings.LIMIT_ENEMY_TYPES
+      ? Math.min(newEnemies.length, 2)
+      : newEnemies.length;
     const newEnemiesToAdd = this.getRandomElements(
       newEnemies,
       newEnemiesToAddCount,
@@ -217,7 +220,9 @@ export class Level {
     const enemyPoolIds = this.game.encounteredEnemies.slice();
 
     // Determine the number of enemy types for the current depth
-    const numberOfTypes = this.getNumberOfEnemyTypes(depth);
+    const numberOfTypes = GameplaySettings.LIMIT_ENEMY_TYPES
+      ? this.getNumberOfEnemyTypes(depth)
+      : enemyPoolIds.length;
 
     // Select the final set of enemy IDs for the pool
     const selectedEnemyIds = this.getRandomElements(

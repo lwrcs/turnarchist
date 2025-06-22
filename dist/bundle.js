@@ -10439,6 +10439,23 @@ exports.loadGameState = loadGameState;
 
 /***/ }),
 
+/***/ "./src/game/gameplaySettings.ts":
+/*!**************************************!*\
+  !*** ./src/game/gameplaySettings.ts ***!
+  \**************************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.GameplaySettings = void 0;
+class GameplaySettings {
+}
+exports.GameplaySettings = GameplaySettings;
+GameplaySettings.LIMIT_ENEMY_TYPES = false;
+
+
+/***/ }),
+
 /***/ "./src/game/input.ts":
 /*!***************************!*\
   !*** ./src/game/input.ts ***!
@@ -15337,6 +15354,7 @@ exports.Level = exports.enemyMinimumDepth = void 0;
 const room_1 = __webpack_require__(/*! ../room/room */ "./src/room/room.ts");
 const environment_1 = __webpack_require__(/*! ./environment */ "./src/level/environment.ts");
 const roomPopulator_1 = __webpack_require__(/*! ../room/roomPopulator */ "./src/room/roomPopulator.ts");
+const gameplaySettings_1 = __webpack_require__(/*! ../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
 exports.enemyMinimumDepth = {
     1: 0,
     2: 1,
@@ -15474,7 +15492,9 @@ class Level {
         // Determine which enemies are new (not yet encountered)
         const newEnemies = availableEnemies.filter((id) => !this.game.encounteredEnemies.includes(id));
         // Decide how many new enemies to introduce (1 or 2)
-        const newEnemiesToAddCount = Math.min(newEnemies.length, 2);
+        const newEnemiesToAddCount = gameplaySettings_1.GameplaySettings.LIMIT_ENEMY_TYPES
+            ? Math.min(newEnemies.length, 2)
+            : newEnemies.length;
         const newEnemiesToAdd = this.getRandomElements(newEnemies, newEnemiesToAddCount);
         // Add the new enemies to encounteredEnemies
         this.game.encounteredEnemies.push(...newEnemiesToAdd);
@@ -15483,7 +15503,9 @@ class Level {
         // Combine encountered enemies to form the enemy pool
         const enemyPoolIds = this.game.encounteredEnemies.slice();
         // Determine the number of enemy types for the current depth
-        const numberOfTypes = this.getNumberOfEnemyTypes(depth);
+        const numberOfTypes = gameplaySettings_1.GameplaySettings.LIMIT_ENEMY_TYPES
+            ? this.getNumberOfEnemyTypes(depth)
+            : enemyPoolIds.length;
         // Select the final set of enemy IDs for the pool
         const selectedEnemyIds = this.getRandomElements(enemyPoolIds, numberOfTypes);
         // Ensure uniqueness and limit based on available enemies
@@ -17783,7 +17805,7 @@ class Player extends drawable_1.Drawable {
             this.updateLastPosition(this.x, this.y);
             //this.actionTab.setState(ActionState.MOVE);
             if (this.game.levels[this.depth].rooms[this.levelID] === this.game.room)
-                sound_1.Sound.playerStoneFootstep();
+                sound_1.Sound.playerStoneFootstep(this.game.room.envType);
             if (this.openVendingMachine)
                 this.openVendingMachine.close();
             this.renderer.setNewDrawXY(x, y);
@@ -22615,7 +22637,7 @@ class Populator {
         this.populateByType = (room) => { };
         this.level = level;
         this.props = [];
-        this.medianDensity = Math.random() * 0.5 + 0.25;
+        this.medianDensity = Math.random() * 0.5;
     }
     addProps(room, numProps, envType) {
         const envData = envType
@@ -22845,6 +22867,14 @@ Sound.loadSounds = async () => {
     [1, 2, 3].forEach((i) => Sound.playerStoneFootsteps.push(new Audio("res/SFX/footsteps/stone/footstep" + i + ".mp3")));
     for (let f of Sound.playerStoneFootsteps)
         f.volume = 1.0;
+    Sound.playerGrassFootsteps = new Array();
+    [1, 2, 3, 6].forEach((i) => Sound.playerGrassFootsteps.push(new Audio("res/SFX/footsteps/grass/footstep" + i + ".mp3")));
+    for (let f of Sound.playerGrassFootsteps)
+        f.volume = 1.0;
+    Sound.playerDirtFootsteps = new Array();
+    [1, 2, 3, 4, 5].forEach((i) => Sound.playerDirtFootsteps.push(new Audio("res/SFX/footsteps/dirt/footstep" + i + ".mp3")));
+    for (let f of Sound.playerDirtFootsteps)
+        f.volume = 1.0;
     Sound.enemyFootsteps = new Array();
     [1, 2, 3, 4, 5].forEach((i) => Sound.enemyFootsteps.push(new Audio("res/SFX/footsteps/enemy/enemyfootstep" + i + ".mp3")));
     for (let f of Sound.enemyFootsteps)
@@ -22926,10 +22956,15 @@ Sound.loadSounds = async () => {
     Sound.warHammerSound = new Audio("res/SFX/attacks/warhammer.mp3");
     Sound.warHammerSound.volume = 1;
 };
-Sound.playerStoneFootstep = async () => {
+Sound.playerStoneFootstep = async (environment) => {
     if (Sound.audioMuted)
         return;
-    let f = game_1.Game.randTable(Sound.playerStoneFootsteps, Math.random);
+    let sound = Sound.playerStoneFootsteps;
+    if (environment === 2)
+        sound = Sound.playerGrassFootsteps;
+    if (environment === 1)
+        sound = Sound.playerDirtFootsteps;
+    let f = game_1.Game.randTable(sound, Math.random);
     await _a.playWithReverb(f);
     f.currentTime = 0;
     f.play();
