@@ -215,8 +215,13 @@ p {
   flex-wrap: wrap;
   justify-content: center;
   align-items: center;
-  margin-top: 40px;
+  margin-top: 200px;
   padding: 0 20px;
+}
+
+.social-media-container .btn {
+  padding: 12px; /* Reduced from 20px */
+  font-size: 0.6em; /* Reduced from 0.8em */
 }
 
 .social-item {
