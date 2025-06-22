@@ -119,6 +119,123 @@ p {
   background: white;
   transform: scale(1.05);
 }
+
+.discord-btn {
+  background: #5865f2 !important; /* Discord's official brand color */
+  color: white !important;
+  border-radius: 8px; /* Rounded corners */
+}
+
+.discord-btn:hover {
+  background: #4752c4 !important; /* Darker shade for hover effect */
+  color: white !important;
+  transform: scale(1.05);
+}
+
+.discord-section {
+  margin-top: 40px; /* Adds space above the Discord section */
+}
+
+.instagram-section {
+  margin-top: 20px; /* Space between Discord and Instagram */
+}
+
+.instagram-btn {
+  background: linear-gradient(
+    45deg,
+    #ffff00 0%,
+    #ff6347 25%,
+    #ff0000 50%,
+    #ff0080 75%,
+    #8a2be2 100%
+  ) !important;
+  color: white !important;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.instagram-btn::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    45deg,
+    #8a2be2 0%,
+    #ff0080 25%,
+    #ff0000 50%,
+    #ff6347 75%,
+    #ffff00 100%
+  );
+  border-radius: 8px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: -1;
+}
+
+.instagram-btn:hover::before {
+  opacity: 1;
+}
+
+.instagram-btn:hover {
+  color: white !important;
+  transform: scale(1.05);
+}
+
+.tiktok-section {
+  margin-top: 20px; /* Space between Instagram and TikTok */
+}
+
+.tiktok-btn {
+  background: #000000 !important;
+  color: white !important;
+  border-radius: 8px;
+  position: relative;
+  z-index: 1;
+  transition: all 0.3s ease;
+  box-shadow:
+    6px 6px 0 0 #ff0050,
+    -6px -6px 0 0 #25f4ee;
+}
+
+.tiktok-btn:hover {
+  color: white !important;
+  transform: scale(1.05);
+  box-shadow:
+    -6px -6px 0 0 #ff0050,
+    6px 6px 0 0 #25f4ee;
+}
+
+/* Social Media Container */
+.social-media-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  margin-top: 40px;
+  padding: 0 20px;
+}
+
+.social-item {
+  flex: 0 1 auto;
+  margin: 0 5px 10px 5px;
+}
+
+/* Responsive design for mobile */
+@media (max-width: 768px) {
+  .social-media-container {
+    flex-direction: column;
+  }
+
+  .social-item {
+    margin: 0 0 15px 0;
+    width: 100%;
+  }
+}
+
 footer {
   position: center;
 
