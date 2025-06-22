@@ -10452,6 +10452,7 @@ class GameplaySettings {
 }
 exports.GameplaySettings = GameplaySettings;
 GameplaySettings.LIMIT_ENEMY_TYPES = false;
+GameplaySettings.MEDIAN_ROOM_DENSITY = 0.25;
 
 
 /***/ }),
@@ -19750,6 +19751,142 @@ exports.WizardFireball = WizardFireball;
 
 /***/ }),
 
+/***/ "./src/room/propClusterer.ts":
+/*!***********************************!*\
+  !*** ./src/room/propClusterer.ts ***!
+  \***********************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PropClusterer = void 0;
+/**
+ * Handles clustering logic for prop placement
+ */
+class PropClusterer {
+    constructor(room, options = {}) {
+        this.placedPositions = [];
+        this.availableTiles = [];
+        this.room = room;
+        this.options = {
+            falloffExponent: options.falloffExponent ?? 2,
+            baseScore: options.baseScore ?? 0.1,
+            maxInfluenceDistance: options.maxInfluenceDistance ?? 10,
+            useSeedPosition: options.useSeedPosition ?? false,
+            seedPosition: options.seedPosition ?? { x: 0, y: 0 },
+        };
+    }
+    /**
+     * Generates clustered positions for the specified number of props
+     */
+    generateClusteredPositions(numProps) {
+        this.placedPositions = [];
+        this.availableTiles = this.getAvailableTiles();
+        if (this.availableTiles.length === 0) {
+            return [];
+        }
+        // Initialize with seed position or random position
+        if (this.options.useSeedPosition &&
+            this.isValidPosition(this.options.seedPosition)) {
+            this.placePosition(this.options.seedPosition);
+        }
+        else if (this.availableTiles.length > 0) {
+            const randomIndex = Math.floor(Math.random() * this.availableTiles.length);
+            const randomPosition = this.availableTiles.splice(randomIndex, 1)[0];
+            this.placedPositions.push(randomPosition);
+        }
+        // Generate remaining positions
+        for (let i = 1; i < numProps && this.availableTiles.length > 0; i++) {
+            const position = this.selectNextPosition();
+            if (position) {
+                this.placePosition(position);
+            }
+            else {
+                break; // No valid positions left
+            }
+        }
+        return [...this.placedPositions];
+    }
+    /**
+     * Gets all available tiles in the room
+     */
+    getAvailableTiles() {
+        const tiles = this.room.getEmptyTiles();
+        return tiles.map((tile) => ({ x: tile.x, y: tile.y }));
+    }
+    /**
+     * Checks if a position is valid and available
+     */
+    isValidPosition(position) {
+        return this.availableTiles.some((tile) => tile.x === position.x && tile.y === position.y);
+    }
+    /**
+     * Places a position and removes it from available tiles
+     */
+    placePosition(position) {
+        this.placedPositions.push(position);
+        this.availableTiles = this.availableTiles.filter((tile) => !(tile.x === position.x && tile.y === position.y));
+    }
+    /**
+     * Selects the next position based on clustering algorithm
+     */
+    selectNextPosition() {
+        if (this.availableTiles.length === 0) {
+            return null;
+        }
+        // Score each available tile based on proximity to placed entities
+        const scoredTiles = this.availableTiles.map((tile) => ({
+            position: tile,
+            score: this.calculateTileScore(tile),
+        }));
+        // Normalize scores to create probability weights
+        const totalScore = scoredTiles.reduce((sum, tile) => sum + tile.score, 0);
+        if (totalScore <= 0) {
+            // Fallback to uniform distribution if all scores are 0
+            const randomIndex = Math.floor(Math.random() * this.availableTiles.length);
+            return this.availableTiles.splice(randomIndex, 1)[0];
+        }
+        // Perform weighted random selection
+        const randomValue = Math.random() * totalScore;
+        let cumulativeScore = 0;
+        for (const tile of scoredTiles) {
+            cumulativeScore += tile.score;
+            if (cumulativeScore >= randomValue) {
+                return tile.position;
+            }
+        }
+        // Fallback to last tile
+        return scoredTiles[scoredTiles.length - 1].position;
+    }
+    /**
+     * Calculates the score for a tile based on its proximity to placed entities
+     */
+    calculateTileScore(tile) {
+        let score = this.options.baseScore;
+        for (const placed of this.placedPositions) {
+            const distance = this.calculateDistance(tile, placed);
+            if (distance <= this.options.maxInfluenceDistance) {
+                // Use inverse power function for falloff
+                const influence = 1 / Math.pow(distance, this.options.falloffExponent);
+                score += influence;
+            }
+        }
+        return score;
+    }
+    /**
+     * Calculates Euclidean distance between two positions
+     */
+    calculateDistance(pos1, pos2) {
+        const dx = pos1.x - pos2.x;
+        const dy = pos1.y - pos2.y;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+}
+exports.PropClusterer = PropClusterer;
+
+
+/***/ }),
+
 /***/ "./src/room/room.ts":
 /*!**************************!*\
   !*** ./src/room/room.ts ***!
@@ -22605,8 +22742,10 @@ exports.RoomBuilder = RoomBuilder;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Populator = void 0;
+const gameplaySettings_1 = __webpack_require__(/*! ../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
 const environment_1 = __webpack_require__(/*! ../level/environment */ "./src/level/environment.ts");
 const utils_1 = __webpack_require__(/*! ../utility/utils */ "./src/utility/utils.ts");
+const propClusterer_1 = __webpack_require__(/*! ./propClusterer */ "./src/room/propClusterer.ts");
 const room_1 = __webpack_require__(/*! ./room */ "./src/room/room.ts");
 class Populator {
     constructor(level) {
@@ -22637,7 +22776,7 @@ class Populator {
         this.populateByType = (room) => { };
         this.level = level;
         this.props = [];
-        this.medianDensity = Math.random() * 0.5;
+        this.medianDensity = gameplaySettings_1.GameplaySettings.MEDIAN_ROOM_DENSITY;
     }
     addProps(room, numProps, envType) {
         const envData = envType
@@ -22655,6 +22794,27 @@ class Populator {
             }
         }
     }
+    /**
+     * Adds props with clustering behavior - entities are more likely to be placed near existing entities
+     * @param room - The room to populate
+     * @param numProps - Number of props to place
+     * @param envType - Environment type for prop selection
+     * @param clusteringOptions - Optional clustering configuration
+     */
+    addPropsWithClustering(room, numProps, envType, clusteringOptions) {
+        const envData = envType
+            ? environment_1.environmentProps[envType]
+            : environment_1.environmentProps[room.level.environment.type];
+        const clusterer = new propClusterer_1.PropClusterer(room, clusteringOptions);
+        const positions = clusterer.generateClusteredPositions(numProps);
+        for (const { x, y } of positions) {
+            const selectedProp = utils_1.Utils.randTableWeighted(envData.props);
+            if (selectedProp && selectedProp.class && selectedProp.class.add) {
+                const args = selectedProp.additionalParams || [];
+                selectedProp.class.add(room, room.game, x, y, ...args);
+            }
+        }
+    }
     populateDungeon(room) {
         this.populateDefault(room);
     }
@@ -22662,10 +22822,24 @@ class Populator {
         this.populateDefault(room);
     }
     populateCave(room) {
-        this.addProps(room, this.getNumProps(room), environment_1.EnvType.CAVE);
+        const numProps = this.getNumProps(room);
+        //this.addProps(room, numProps, room.envType);
+        this.addPropsWithClustering(room, numProps, room.envType, {
+            falloffExponent: 2,
+            baseScore: 0.1,
+            maxInfluenceDistance: 12,
+            useSeedPosition: false,
+        });
     }
     populateForest(room) {
-        this.addProps(room, this.getNumProps(room, 0.75), environment_1.EnvType.FOREST);
+        const numProps = this.getNumProps(room, 0.75);
+        //this.addProps(room, numProps, room.envType);
+        this.addPropsWithClustering(room, numProps, room.envType, {
+            falloffExponent: 2,
+            baseScore: 0.1,
+            maxInfluenceDistance: 12,
+            useSeedPosition: false,
+        });
     }
     getNumProps(room, medianDensity) {
         medianDensity = medianDensity || this.medianDensity;
@@ -22679,7 +22853,13 @@ class Populator {
     }
     populateDefault(room) {
         const numProps = this.getNumProps(room);
-        this.addProps(room, numProps, room.envType);
+        //this.addProps(room, numProps, room.envType);
+        this.addPropsWithClustering(room, numProps, room.envType, {
+            falloffExponent: 2,
+            baseScore: 0.1,
+            maxInfluenceDistance: 12,
+            useSeedPosition: false,
+        });
     }
 }
 exports.Populator = Populator;

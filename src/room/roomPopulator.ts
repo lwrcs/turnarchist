@@ -4,10 +4,12 @@ import { Crate } from "../entity/object/crate";
 import { Pumpkin } from "../entity/object/pumpkin";
 import { TombStone } from "../entity/object/tombStone";
 import { Game } from "../game";
+import { GameplaySettings } from "../game/gameplaySettings";
 import { EnvType, environmentProps, PropInfo } from "../level/environment";
 import { Level } from "../level/level";
 import { Random } from "../utility/random";
 import { Utils } from "../utility/utils";
+import { ClusteringOptions, PropClusterer } from "./propClusterer";
 import { Room, RoomType } from "./room";
 
 export class Populator {
@@ -18,7 +20,7 @@ export class Populator {
   constructor(level: Level) {
     this.level = level;
     this.props = [];
-    this.medianDensity = Math.random() * 0.5;
+    this.medianDensity = GameplaySettings.MEDIAN_ROOM_DENSITY;
   }
 
   populateRooms = () => {
@@ -70,6 +72,36 @@ export class Populator {
     }
   }
 
+  /**
+   * Adds props with clustering behavior - entities are more likely to be placed near existing entities
+   * @param room - The room to populate
+   * @param numProps - Number of props to place
+   * @param envType - Environment type for prop selection
+   * @param clusteringOptions - Optional clustering configuration
+   */
+  private addPropsWithClustering(
+    room: Room,
+    numProps: number,
+    envType?: EnvType,
+    clusteringOptions?: ClusteringOptions,
+  ) {
+    const envData = envType
+      ? environmentProps[envType]
+      : environmentProps[room.level.environment.type];
+
+    const clusterer = new PropClusterer(room, clusteringOptions);
+    const positions = clusterer.generateClusteredPositions(numProps);
+
+    for (const { x, y } of positions) {
+      const selectedProp = Utils.randTableWeighted(envData.props);
+
+      if (selectedProp && selectedProp.class && selectedProp.class.add) {
+        const args = selectedProp.additionalParams || [];
+        selectedProp.class.add(room, room.game, x, y, ...args);
+      }
+    }
+  }
+
   private populateDungeon(room: Room) {
     this.populateDefault(room);
   }
@@ -79,11 +111,25 @@ export class Populator {
   }
 
   private populateCave(room: Room) {
-    this.addProps(room, this.getNumProps(room), EnvType.CAVE);
+    const numProps = this.getNumProps(room);
+    //this.addProps(room, numProps, room.envType);
+    this.addPropsWithClustering(room, numProps, room.envType, {
+      falloffExponent: 2,
+      baseScore: 0.1,
+      maxInfluenceDistance: 12,
+      useSeedPosition: false,
+    });
   }
 
   private populateForest(room: Room) {
-    this.addProps(room, this.getNumProps(room, 0.75), EnvType.FOREST);
+    const numProps = this.getNumProps(room, 0.75);
+    //this.addProps(room, numProps, room.envType);
+    this.addPropsWithClustering(room, numProps, room.envType, {
+      falloffExponent: 2,
+      baseScore: 0.1,
+      maxInfluenceDistance: 12,
+      useSeedPosition: false,
+    });
   }
 
   private getNumProps(room: Room, medianDensity?: number) {
@@ -99,6 +145,12 @@ export class Populator {
 
   private populateDefault(room: Room) {
     const numProps = this.getNumProps(room);
-    this.addProps(room, numProps, room.envType);
+    //this.addProps(room, numProps, room.envType);
+    this.addPropsWithClustering(room, numProps, room.envType, {
+      falloffExponent: 2,
+      baseScore: 0.1,
+      maxInfluenceDistance: 12,
+      useSeedPosition: false,
+    });
   }
 }
