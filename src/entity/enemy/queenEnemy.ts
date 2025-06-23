@@ -126,6 +126,35 @@ export class QueenEnemy extends Enemy {
             // Move one square away from player
             let retreatX = this.x + dx;
             let retreatY = this.y + dy;
+            if (!this.room.isTileEmpty(retreatX, retreatY)) {
+              // Calculate diagonal retreat positions
+              let diagonal1X = this.x + dx - dy;
+              let diagonal1Y = this.y + dy + dx;
+              let diagonal2X = this.x + dx + dy;
+              let diagonal2Y = this.y + dy - dx;
+
+              // Randomly choose which diagonal to check first
+              let checkFirst = Math.random() < 0.5;
+              let firstX = checkFirst ? diagonal1X : diagonal2X;
+              let firstY = checkFirst ? diagonal1Y : diagonal2Y;
+              let secondX = checkFirst ? diagonal2X : diagonal1X;
+              let secondY = checkFirst ? diagonal2Y : diagonal1Y;
+
+              // Check first diagonal
+              if (this.room.isTileEmpty(firstX, firstY)) {
+                retreatX = firstX;
+                retreatY = firstY;
+              }
+              // Check second diagonal if first is blocked
+              else if (this.room.isTileEmpty(secondX, secondY)) {
+                retreatX = secondX;
+                retreatY = secondY;
+              }
+              // If both diagonals are blocked, don't move
+              else {
+                return;
+              }
+            }
 
             this.tryMove(retreatX, retreatY);
             this.setDrawXY(oldX, oldY);

@@ -3075,6 +3075,47 @@ export class Room {
     return false;
   };
 
+  /**
+   * Checks if a tile at the given coordinates is empty (not solid and no entities).
+   * This is a comprehensive check that combines tile solidity and entity presence.
+   *
+   * @param x - The x-coordinate to check
+   * @param y - The y-coordinate to check
+   * @returns True if the tile is empty (walkable and no entities), false otherwise
+   */
+  isTileEmpty = (x: number, y: number): boolean => {
+    // First check if the position exists in the room array
+    if (!this.roomArray[x] || !this.roomArray[x][y]) {
+      return false;
+    }
+
+    const tile = this.roomArray[x][y];
+
+    // Check if the tile is solid
+    if (tile.isSolid()) {
+      return false;
+    }
+
+    // Check for specific tile types that should be considered non-empty
+    if (
+      tile instanceof SpikeTrap ||
+      tile instanceof SpawnFloor ||
+      tile instanceof UpLadder ||
+      tile instanceof DownLadder
+    ) {
+      return false;
+    }
+
+    // Check if there are any entities at this position
+    for (const entity of this.entities) {
+      if (entity.pointIn(x, y)) {
+        return false;
+      }
+    }
+
+    return true;
+  };
+
   hasEnemyInRadius = (x: number, y: number): boolean => {
     const radius = 2;
     const radiusSquared = radius * radius; // Calculate once
