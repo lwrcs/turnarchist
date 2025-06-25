@@ -7882,6 +7882,8 @@ class Resource extends entity_1.Entity {
     constructor(room, game, x, y) {
         super(room, game, x, y);
         this.hurt = (playerHitBy, damage) => {
+            if (!playerHitBy.inventory?.getWeapon().canMine)
+                return;
             this.healthBar.hurt();
             this.health -= damage;
             sound_1.Sound.mine();
@@ -7904,9 +7906,7 @@ class Resource extends entity_1.Entity {
             const deadEntity = this.clone();
             this.room.deadEntities.push(deadEntity);
             this.removeLightSource(this.lightSource);
-            if ((player !== null &&
-                player.inventory?.canMine()) /*player.inventory.getWeapon().canMine === true*/ ||
-                player === null) {
+            if ((player !== null && player.inventory?.canMine()) || player === null) {
                 this.dropLoot();
                 this.game.pushMessage("You use your pickaxe to collect the resource.");
             }
@@ -11944,6 +11944,8 @@ class Inventory {
                     // Existing equipping logic
                     item.toggleEquip();
                     if (item instanceof weapon_1.Weapon) {
+                        if (item.broken)
+                            return;
                         this.weapon = item.equipped ? item : null;
                     }
                     if (item.equipped) {
@@ -13269,8 +13271,9 @@ class Equippable extends item_1.Item {
             return true;
         };
         this.toggleEquip = () => {
-            this.equipped = !this.equipped;
-            if (this.broken) {
+            if (!this.broken)
+                this.equipped = !this.equipped;
+            else {
                 this.equipped = false;
                 let pronoun = this.name.endsWith("s") ? "them" : "it";
                 this.level.game.pushMessage("You'll have to fix your " +
@@ -14209,23 +14212,15 @@ Hammer.itemName = "hammer";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Pickaxe = void 0;
-const usable_1 = __webpack_require__(/*! ../usable/usable */ "./src/item/usable/usable.ts");
-const weaponFragments_1 = __webpack_require__(/*! ../usable/weaponFragments */ "./src/item/usable/weaponFragments.ts");
-class Pickaxe extends usable_1.Usable {
+const weapon_1 = __webpack_require__(/*! ../weapon/weapon */ "./src/item/weapon/weapon.ts");
+class Pickaxe extends weapon_1.Weapon {
     constructor(level, x, y) {
         super(level, x, y);
-        this.disassemble = (player) => {
-            let inventoryX = this.x;
-            let inventoryY = this.y;
-            let numFragments = Math.ceil(Math.random() * 5 + 5);
-            player.inventory.removeItem(this);
-            player.inventory.addItem(new weaponFragments_1.WeaponFragments(this.level, inventoryX, inventoryY, numFragments));
-        };
         this.tileX = 30;
         this.tileY = 0;
         this.name = Pickaxe.itemName;
         this.description = "allows mining rocks without equipping";
-        //this.canMine = true;
+        this.canMine = true;
     }
 }
 exports.Pickaxe = Pickaxe;

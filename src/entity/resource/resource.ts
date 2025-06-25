@@ -31,6 +31,7 @@ export class Resource extends Entity {
   }
 
   hurt = (playerHitBy: Player, damage: number) => {
+    if (!playerHitBy.inventory?.getWeapon().canMine) return;
     this.healthBar.hurt();
     this.health -= damage;
     Sound.mine();
@@ -56,11 +57,7 @@ export class Resource extends Entity {
     this.room.deadEntities.push(deadEntity);
     this.removeLightSource(this.lightSource);
 
-    if (
-      (player !== null &&
-        player.inventory?.canMine()) /*player.inventory.getWeapon().canMine === true*/ ||
-      player === null
-    ) {
+    if ((player !== null && player.inventory?.canMine()) || player === null) {
       this.dropLoot();
       this.game.pushMessage("You use your pickaxe to collect the resource.");
     } else {

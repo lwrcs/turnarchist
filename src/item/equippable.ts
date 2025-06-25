@@ -23,8 +23,8 @@ export class Equippable extends Item {
   };
 
   toggleEquip = () => {
-    this.equipped = !this.equipped;
-    if (this.broken) {
+    if (!this.broken) this.equipped = !this.equipped;
+    else {
       this.equipped = false;
       let pronoun = this.name.endsWith("s") ? "them" : "it";
       this.level.game.pushMessage(
