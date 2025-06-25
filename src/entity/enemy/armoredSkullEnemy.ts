@@ -38,7 +38,7 @@ export class ArmoredSkullEnemy extends Enemy {
     this.name = "armored skeleton";
     this.forwardOnlyAttack = true;
     if (drop) this.drop = drop;
-    this.getDrop(["weapon", "consumable", "gem", "tool", "coin"]);
+    this.getDrop(["weapon", "consumable", "tool", "coin"]);
   }
 
   hit = (): number => {

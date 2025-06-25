@@ -45,7 +45,7 @@ export class ZombieEnemy extends Enemy {
     this.jumpHeight = 0.35;
 
     if (drop) this.drop = drop;
-    this.getDrop(["consumable", "gem", "tool", "coin"]);
+    this.getDrop(["consumable", "tool", "coin"]);
   }
 
   hit = (): number => {

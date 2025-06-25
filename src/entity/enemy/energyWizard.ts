@@ -31,7 +31,7 @@ export class EnergyWizardEnemy extends WizardEnemy {
     this.projectileColor = [0, 50, 150];
 
     if (drop) this.drop = drop;
-    this.getDrop(["weapon", "equipment", "consumable", "gem", "tool", "coin"]);
+    this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
   }
 
   draw = (delta: number) => {

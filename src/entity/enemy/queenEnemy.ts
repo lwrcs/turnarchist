@@ -34,7 +34,7 @@ export class QueenEnemy extends Enemy {
     this.imageParticleX = 6;
     this.imageParticleY = 28; //includes crown particle
     if (drop) this.drop = drop;
-    this.getDrop(["weapon", "equipment", "consumable", "gem", "tool", "coin"]);
+    this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
   }
 
   hit = (): number => {

@@ -49,7 +49,7 @@ export class OccultistEnemy extends Enemy {
     this.bloomColor = "#2E0854";
     this.bloomAlpha = 1;
     this.softBloomAlpha = 0;
-    this.getDrop(["weapon", "equipment", "consumable", "gem", "tool", "coin"]);
+    this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
   }
 
   hit = (): number => {

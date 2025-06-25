@@ -547,7 +547,7 @@ class ArmoredSkullEnemy extends enemy_1.Enemy {
         this.forwardOnlyAttack = true;
         if (drop)
             this.drop = drop;
-        this.getDrop(["weapon", "consumable", "gem", "tool", "coin"]);
+        this.getDrop(["weapon", "consumable", "tool", "coin"]);
     }
 }
 exports.ArmoredSkullEnemy = ArmoredSkullEnemy;
@@ -770,7 +770,7 @@ class ArmoredzombieEnemy extends enemy_1.Enemy {
         this.forwardOnlyAttack = true;
         if (drop)
             this.drop = drop;
-        this.getDrop(["weapon", "equipment", "consumable", "gem", "tool", "coin"]);
+        this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
     }
 }
 exports.ArmoredzombieEnemy = ArmoredzombieEnemy;
@@ -1873,7 +1873,7 @@ class BishopEnemy extends enemy_1.Enemy {
         this.imageParticleY = 26;
         if (drop)
             this.drop = drop;
-        this.getDrop(["weapon", "equipment", "consumable", "gem", "tool", "coin"]);
+        this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
     }
 }
 exports.BishopEnemy = BishopEnemy;
@@ -2148,7 +2148,7 @@ class ChargeEnemy extends enemy_1.Enemy {
         this.state = ChargeEnemyState.IDLE;
         if (drop)
             this.drop = drop;
-        this.getDrop(["weapon", "equipment", "consumable", "gem", "tool", "coin"]);
+        this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
     }
 }
 exports.ChargeEnemy = ChargeEnemy;
@@ -2363,7 +2363,7 @@ class CrabEnemy extends enemy_1.Enemy {
         this.imageParticleY = 24;
         //if (drop) this.drop = drop;
         this.drawYOffset = 0.175;
-        this.getDrop(["weapon", "equipment", "consumable", "gem", "tool", "coin"]);
+        this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
     }
     get alertText() {
         return `New Enemy Spotted: Crab 
@@ -2960,7 +2960,7 @@ class EnergyWizardEnemy extends wizardEnemy_1.WizardEnemy {
         this.projectileColor = [0, 50, 150];
         if (drop)
             this.drop = drop;
-        this.getDrop(["weapon", "equipment", "consumable", "gem", "tool", "coin"]);
+        this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
     }
 }
 exports.EnergyWizardEnemy = EnergyWizardEnemy;
@@ -3134,7 +3134,7 @@ class FireWizardEnemy extends wizardEnemy_1.WizardEnemy {
         if (drop)
             this.drop = drop;
         this.jumpHeight = 0.5;
-        this.getDrop(["weapon", "equipment", "consumable", "gem", "tool", "coin"]);
+        this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
     }
 }
 exports.FireWizardEnemy = FireWizardEnemy;
@@ -3458,7 +3458,7 @@ class FrogEnemy extends enemy_1.Enemy {
         this.imageParticleY = 30;
         if (drop)
             this.drop = drop;
-        this.getDrop(["weapon", "consumable", "gem", "tool", "coin", "poison"]);
+        this.getDrop(["weapon", "consumable", "tool", "coin", "poison"]);
     }
 }
 exports.FrogEnemy = FrogEnemy;
@@ -3664,7 +3664,6 @@ class KnightEnemy extends enemy_1.Enemy {
             "warhammer",
             "equipment",
             "consumable",
-            "gem",
             "tool",
             "coin",
         ]);
@@ -3902,7 +3901,7 @@ class MummyEnemy extends enemy_1.Enemy {
         this.jumpHeight = 0.35;
         if (drop)
             this.drop = drop;
-        this.getDrop(["consumable", "gem", "tool", "coin"]);
+        this.getDrop(["consumable", "tool", "coin"]);
     }
 }
 exports.MummyEnemy = MummyEnemy;
@@ -4104,7 +4103,7 @@ class OccultistEnemy extends enemy_1.Enemy {
         this.bloomColor = "#2E0854";
         this.bloomAlpha = 1;
         this.softBloomAlpha = 0;
-        this.getDrop(["weapon", "equipment", "consumable", "gem", "tool", "coin"]);
+        this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
     }
 }
 exports.OccultistEnemy = OccultistEnemy;
@@ -4344,7 +4343,7 @@ class QueenEnemy extends enemy_1.Enemy {
         this.imageParticleY = 28; //includes crown particle
         if (drop)
             this.drop = drop;
-        this.getDrop(["weapon", "equipment", "consumable", "gem", "tool", "coin"]);
+        this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
     }
 }
 exports.QueenEnemy = QueenEnemy;
@@ -4514,7 +4513,7 @@ class RookEnemy extends enemy_1.Enemy {
         this.jumpHeight = 0.5;
         if (drop)
             this.drop = drop;
-        this.getDrop(["weapon", "equipment", "consumable", "gem", "tool", "coin"]);
+        this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
     }
 }
 exports.RookEnemy = RookEnemy;
@@ -4791,7 +4790,7 @@ class SkullEnemy extends enemy_1.Enemy {
         this.forwardOnlyAttack = true;
         if (drop)
             this.drop = drop;
-        this.getDrop(["weapon", "consumable", "gem", "tool", "coin"]);
+        this.getDrop(["weapon", "consumable", "tool", "coin"]);
     }
 }
 exports.SkullEnemy = SkullEnemy;
@@ -4985,7 +4984,7 @@ class Spawner extends enemy_1.Enemy {
         this.seenPlayer = true;
         this.spawnFrequency = 4;
         this.room.currentSpawnerCount++;
-        this.enemyTable = enemyTable.filter((t) => t !== 7);
+        this.enemyTable = enemyTable; //enemyTable.filter((t) => t !== 7);
         const randSpawnType = game_1.Game.randTable(this.enemyTable, random_1.Random.rand);
         this.enemySpawnType = randSpawnType;
         this.spawnOffset = 0;
@@ -5272,7 +5271,7 @@ class SpiderEnemy extends enemy_1.Enemy {
         //if (drop) this.drop = drop;
         this.drawYOffset = 0.175;
         this.revealTick = 0;
-        this.getDrop(["weapon", "equipment", "consumable", "gem", "tool", "coin"]);
+        this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
     }
     get alertText() {
         return `New Enemy Spotted: Spider 
@@ -5468,7 +5467,7 @@ class WizardEnemy extends enemy_1.Enemy {
         this.name = "wizard bomber";
         if (drop)
             this.drop = drop;
-        this.getDrop(["weapon", "equipment", "consumable", "gem", "tool", "coin"]);
+        this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
     }
 }
 exports.WizardEnemy = WizardEnemy;
@@ -5703,7 +5702,7 @@ class ZombieEnemy extends enemy_1.Enemy {
         this.jumpHeight = 0.35;
         if (drop)
             this.drop = drop;
-        this.getDrop(["consumable", "gem", "tool", "coin"]);
+        this.getDrop(["consumable", "tool", "coin"]);
     }
 }
 exports.ZombieEnemy = ZombieEnemy;

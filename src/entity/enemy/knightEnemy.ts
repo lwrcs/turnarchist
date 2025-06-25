@@ -40,7 +40,6 @@ export class KnightEnemy extends Enemy {
       "warhammer",
       "equipment",
       "consumable",
-      "gem",
       "tool",
       "coin",
     ]);

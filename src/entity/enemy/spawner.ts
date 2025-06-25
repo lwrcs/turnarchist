@@ -48,7 +48,7 @@ export class Spawner extends Enemy {
     this.seenPlayer = true;
     this.spawnFrequency = 4;
     this.room.currentSpawnerCount++;
-    this.enemyTable = enemyTable.filter((t) => t !== 7);
+    this.enemyTable = enemyTable; //enemyTable.filter((t) => t !== 7);
     const randSpawnType = Game.randTable(this.enemyTable, Random.rand);
     this.enemySpawnType = randSpawnType;
     this.spawnOffset = 0;
