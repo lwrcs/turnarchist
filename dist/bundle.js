@@ -5768,6 +5768,8 @@ class Entity extends drawable_1.Drawable {
         this.softBloomAlpha = 1;
         this.bloomSize = 1;
         this.bloomOffsetY = 0;
+        this.opaque = false;
+        this.opacity = 0;
         this.applyShield = (shieldHealth = 1) => {
             if (!this.shieldedBefore) {
                 this.shield = new enemyShield_1.EnemyShield(this, this.x, this.y, shieldHealth);
@@ -6714,11 +6716,12 @@ class Block extends entity_1.Entity {
         this.tileX = 10;
         this.tileY = 2;
         this.hasShadow = false;
-        this.chainPushable = true;
-        this.pushable = true;
+        this.chainPushable = false;
+        //this.pushable = true;
         this.name = "block";
         this.imageParticleX = 0;
         this.imageParticleY = 25;
+        this.opaque = true;
         //this.hitSound = Sound.breakRock;
         if (Math.random() < 0.01)
             this.drops.push(new geode_1.Geode(this.room, this.x, this.y));
@@ -6911,6 +6914,7 @@ class Bush extends entity_1.Entity {
         this.name = "bush";
         this.imageParticleX = 0;
         this.imageParticleY = 28;
+        this.opaque = true;
         //this.drops.push(new Shrooms(this.room, this.x, this.y));
     }
     get type() {
@@ -8426,6 +8430,10 @@ class Game {
                     break;
                 case "rooms":
                     gameConstants_1.GameConstants.drawOtherRooms = !gameConstants_1.GameConstants.drawOtherRooms;
+                    break;
+                case "opq":
+                    gameConstants_1.GameConstants.ENEMIES_BLOCK_LIGHT = !gameConstants_1.GameConstants.ENEMIES_BLOCK_LIGHT;
+                    break;
                 default:
                     if (command.startsWith("new ")) {
                         this.room.addNewEnemy(command.slice(4));
@@ -9608,6 +9616,7 @@ GameConstants.USE_OPTIMIZED_SHADING = false;
 GameConstants.SMOOTH_LIGHTING = false;
 GameConstants.ctxBlurEnabled = true;
 GameConstants.BLUR_ENABLED = true;
+GameConstants.ENEMIES_BLOCK_LIGHT = false;
 GameConstants.COLOR_LAYER_COMPOSITE_OPERATIONS = [
     "soft-light",
     //"addition",
@@ -9657,6 +9666,9 @@ GameConstants.SET_COLOR_LAYER_COMPOSITE_OPERATION = (shade, back = false) => {
 };
 GameConstants.TOGGLE_USE_OPTIMIZED_SHADING = () => {
     GameConstants.USE_OPTIMIZED_SHADING = !GameConstants.USE_OPTIMIZED_SHADING;
+};
+GameConstants.TOGGLE_ENEMIES_BLOCK_LIGHT = () => {
+    GameConstants.ENEMIES_BLOCK_LIGHT = !GameConstants.ENEMIES_BLOCK_LIGHT;
 };
 GameConstants.SET_SCALE = () => {
     GameConstants.SCALE++;
@@ -16278,12 +16290,8 @@ let generate_cave_candidate = async (partialLevel, map_w, map_h, num_rooms) => {
         new Partition(CAVE_OFFSET, CAVE_OFFSET, map_w, map_h, "white"),
     ];
     let grid = [];
-    for (let i = 0; i < 3; i++)
+    for (let i = 0; i < 9; i++)
         partialLevel.partitions = await split_partitions(partialLevel.partitions, 0.75);
-    for (let i = 0; i < 10; i++)
-        partialLevel.partitions = await split_partitions(partialLevel.partitions, 1);
-    for (let i = 0; i < 3; i++)
-        partialLevel.partitions = await split_partitions(partialLevel.partitions, 0.5);
     grid = populate_grid(partialLevel.partitions, grid, map_w, map_h);
     partialLevel.partitions.sort((a, b) => a.area() - b.area());
     if (partialLevel.partitions.length === 0) {
@@ -16374,7 +16382,7 @@ let generate_cave_candidate = async (partialLevel, map_w, map_h, num_rooms) => {
     return partialLevel.partitions;
 };
 let generate_cave = async (partialLevel, mapWidth, mapHeight) => {
-    const numberOfRooms = 10; // don't set this too high or cave generation will time out
+    const numberOfRooms = 8; // don't set this too high or cave generation will time out // changed to 3 from 10 to test
     do {
         await generate_cave_candidate(partialLevel, mapWidth, mapHeight, numberOfRooms);
     } while (partialLevel.partitions.length < numberOfRooms);
@@ -20983,12 +20991,8 @@ class Room {
                 if (!this.isPositionInRoom(currentX, currentY))
                     return; // Outside the room
                 const tile = this.roomArray[currentX][currentY];
-                if (tile.isOpaque()) {
+                if (tile.isOpaque())
                     return; // Stop processing through opaque tiles
-                }
-                else if (Math.random() < 1 - tile.opacity) {
-                    return;
-                }
                 // Handle i=0 separately to ensure correct intensity
                 let intensity;
                 if (i === 0) {
@@ -21006,6 +21010,50 @@ class Room {
                 }
                 if (!this.renderBuffer[currentX][currentY]) {
                     this.renderBuffer[currentX][currentY] = [];
+                }
+                if (gameConstants_1.GameConstants.ENEMIES_BLOCK_LIGHT) {
+                    //begin processing opaque entities
+                    const entity = this.entities.find((e) => e.x === currentX && e.y === currentY && e.opaque);
+                    if (entity) {
+                        //intensity = intensity * (1 - entity.opacity);
+                        // Set the intensity for this tile and then terminate to create shadow effect
+                        const weightedLinearColor = [
+                            linearColor[0],
+                            linearColor[1],
+                            linearColor[2],
+                            intensity,
+                        ];
+                        if (action === "cast") {
+                            this.renderBuffer[currentX][currentY].push(weightedLinearColor);
+                        }
+                        else if (action === "unCast") {
+                            this.renderBuffer[currentX][currentY] = this.renderBuffer[currentX][currentY].filter((colorEntry) => !(Math.abs(colorEntry[0] - weightedLinearColor[0]) < 0.0001 &&
+                                Math.abs(colorEntry[1] - weightedLinearColor[1]) < 0.0001 &&
+                                Math.abs(colorEntry[2] - weightedLinearColor[2]) < 0.0001 &&
+                                Math.abs(colorEntry[3] - weightedLinearColor[3]) < 0.0001));
+                        }
+                        return; // Terminate after processing the opaque entity
+                    }
+                }
+                //end processing opaque entities
+                // Process inner walls like entities - terminate after processing
+                if (tile instanceof wall_1.Wall && tile.isInnerWall()) {
+                    const weightedLinearColor = [
+                        linearColor[0],
+                        linearColor[1],
+                        linearColor[2],
+                        intensity,
+                    ];
+                    if (action === "cast") {
+                        this.renderBuffer[currentX][currentY].push(weightedLinearColor);
+                    }
+                    else if (action === "unCast") {
+                        this.renderBuffer[currentX][currentY] = this.renderBuffer[currentX][currentY].filter((colorEntry) => !(Math.abs(colorEntry[0] - weightedLinearColor[0]) < 0.0001 &&
+                            Math.abs(colorEntry[1] - weightedLinearColor[1]) < 0.0001 &&
+                            Math.abs(colorEntry[2] - weightedLinearColor[2]) < 0.0001 &&
+                            Math.abs(colorEntry[3] - weightedLinearColor[3]) < 0.0001));
+                    }
+                    return; // Terminate after processing the inner wall
                 }
                 const weightedLinearColor = [
                     linearColor[0],
@@ -24493,6 +24541,10 @@ class Wall extends tile_1.Tile {
             return ((!wallInfo.isTopWall && !wallInfo.isInnerWall) ||
                 wallInfo.isLeftWall ||
                 wallInfo.isRightWall);
+        };
+        this.isInnerWall = () => {
+            const wallInfo = this.wallInfo();
+            return wallInfo?.isInnerWall || false;
         };
         this.wallInfo = () => {
             return this.room.wallInfo.get(`${this.x},${this.y}`);

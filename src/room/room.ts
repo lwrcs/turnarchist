@@ -2061,11 +2061,7 @@ export class Room {
       if (!this.isPositionInRoom(currentX, currentY)) return; // Outside the room
 
       const tile = this.roomArray[currentX][currentY];
-      if (tile.isOpaque()) {
-        return; // Stop processing through opaque tiles
-      } else if (Math.random() < 1 - tile.opacity) {
-        return;
-      }
+      if (tile.isOpaque()) return; // Stop processing through opaque tiles
 
       // Handle i=0 separately to ensure correct intensity
       let intensity: number;
@@ -2083,6 +2079,68 @@ export class Room {
       }
       if (!this.renderBuffer[currentX][currentY]) {
         this.renderBuffer[currentX][currentY] = [];
+      }
+
+      if (GameConstants.ENEMIES_BLOCK_LIGHT) {
+        //begin processing opaque entities
+        const entity = this.entities.find(
+          (e) => e.x === currentX && e.y === currentY && e.opaque,
+        );
+        if (entity) {
+          //intensity = intensity * (1 - entity.opacity);
+          // Set the intensity for this tile and then terminate to create shadow effect
+          const weightedLinearColor: [number, number, number, number] = [
+            linearColor[0],
+            linearColor[1],
+            linearColor[2],
+            intensity,
+          ];
+
+          if (action === "cast") {
+            this.renderBuffer[currentX][currentY].push(weightedLinearColor);
+          } else if (action === "unCast") {
+            this.renderBuffer[currentX][currentY] = this.renderBuffer[currentX][
+              currentY
+            ].filter(
+              (colorEntry) =>
+                !(
+                  Math.abs(colorEntry[0] - weightedLinearColor[0]) < 0.0001 &&
+                  Math.abs(colorEntry[1] - weightedLinearColor[1]) < 0.0001 &&
+                  Math.abs(colorEntry[2] - weightedLinearColor[2]) < 0.0001 &&
+                  Math.abs(colorEntry[3] - weightedLinearColor[3]) < 0.0001
+                ),
+            );
+          }
+          return; // Terminate after processing the opaque entity
+        }
+      }
+      //end processing opaque entities
+
+      // Process inner walls like entities - terminate after processing
+      if (tile instanceof Wall && tile.isInnerWall()) {
+        const weightedLinearColor: [number, number, number, number] = [
+          linearColor[0],
+          linearColor[1],
+          linearColor[2],
+          intensity,
+        ];
+
+        if (action === "cast") {
+          this.renderBuffer[currentX][currentY].push(weightedLinearColor);
+        } else if (action === "unCast") {
+          this.renderBuffer[currentX][currentY] = this.renderBuffer[currentX][
+            currentY
+          ].filter(
+            (colorEntry) =>
+              !(
+                Math.abs(colorEntry[0] - weightedLinearColor[0]) < 0.0001 &&
+                Math.abs(colorEntry[1] - weightedLinearColor[1]) < 0.0001 &&
+                Math.abs(colorEntry[2] - weightedLinearColor[2]) < 0.0001 &&
+                Math.abs(colorEntry[3] - weightedLinearColor[3]) < 0.0001
+              ),
+          );
+        }
+        return; // Terminate after processing the inner wall
       }
 
       const weightedLinearColor: [number, number, number, number] = [

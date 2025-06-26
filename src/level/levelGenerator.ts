@@ -976,20 +976,10 @@ let generate_cave_candidate = async (
   ];
   let grid = [];
 
-  for (let i = 0; i < 3; i++)
+  for (let i = 0; i < 9; i++)
     partialLevel.partitions = await split_partitions(
       partialLevel.partitions,
       0.75,
-    );
-  for (let i = 0; i < 10; i++)
-    partialLevel.partitions = await split_partitions(
-      partialLevel.partitions,
-      1,
-    );
-  for (let i = 0; i < 3; i++)
-    partialLevel.partitions = await split_partitions(
-      partialLevel.partitions,
-      0.5,
     );
   grid = populate_grid(partialLevel.partitions, grid, map_w, map_h);
 
@@ -1114,7 +1104,7 @@ let generate_cave = async (
   mapWidth: number,
   mapHeight: number,
 ): Promise<Array<Partition>> => {
-  const numberOfRooms = 10; // don't set this too high or cave generation will time out
+  const numberOfRooms = 8; // don't set this too high or cave generation will time out // changed to 3 from 10 to test
 
   do {
     await generate_cave_candidate(

@@ -20,6 +20,7 @@ export class Bush extends Entity {
     this.name = "bush";
     this.imageParticleX = 0;
     this.imageParticleY = 28;
+    this.opaque = true;
     //this.drops.push(new Shrooms(this.room, this.x, this.y));
   }
 

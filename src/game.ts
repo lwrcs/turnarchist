@@ -680,6 +680,10 @@ export class Game {
         break;
       case "rooms":
         GameConstants.drawOtherRooms = !GameConstants.drawOtherRooms;
+        break;
+      case "opq":
+        GameConstants.ENEMIES_BLOCK_LIGHT = !GameConstants.ENEMIES_BLOCK_LIGHT;
+        break;
       default:
         if (command.startsWith("new ")) {
           this.room.addNewEnemy(command.slice(4) as EnemyType);

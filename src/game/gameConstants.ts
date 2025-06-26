@@ -85,6 +85,7 @@ export class GameConstants {
   static SMOOTH_LIGHTING = false;
   static ctxBlurEnabled = true;
   static BLUR_ENABLED = true;
+  static ENEMIES_BLOCK_LIGHT = false;
 
   static readonly COLOR_LAYER_COMPOSITE_OPERATIONS = [
     "soft-light",
@@ -143,6 +144,10 @@ export class GameConstants {
 
   static readonly TOGGLE_USE_OPTIMIZED_SHADING = () => {
     GameConstants.USE_OPTIMIZED_SHADING = !GameConstants.USE_OPTIMIZED_SHADING;
+  };
+
+  static readonly TOGGLE_ENEMIES_BLOCK_LIGHT = () => {
+    GameConstants.ENEMIES_BLOCK_LIGHT = !GameConstants.ENEMIES_BLOCK_LIGHT;
   };
 
   static readonly SET_SCALE = () => {

@@ -37,6 +37,11 @@ export class Wall extends Tile {
     );
   };
 
+  isInnerWall = (): boolean => {
+    const wallInfo = this.wallInfo();
+    return wallInfo?.isInnerWall || false;
+  };
+
   get direction() {
     let directions = [];
     if (this.room.roomArray[this.x - 1][this.y] == null)

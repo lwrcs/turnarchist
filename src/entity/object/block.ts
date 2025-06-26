@@ -16,11 +16,12 @@ export class Block extends Entity {
     this.tileX = 10;
     this.tileY = 2;
     this.hasShadow = false;
-    this.chainPushable = true;
-    this.pushable = true;
+    this.chainPushable = false;
+    //this.pushable = true;
     this.name = "block";
     this.imageParticleX = 0;
     this.imageParticleY = 25;
+    this.opaque = true;
     //this.hitSound = Sound.breakRock;
     if (Math.random() < 0.01)
       this.drops.push(new Geode(this.room, this.x, this.y));

@@ -134,6 +134,8 @@ export class Entity extends Drawable {
   moving: boolean;
   dropTable: string[];
   drops: Item[];
+  opaque: boolean = false;
+  opacity: number = 0;
 
   private _imageParticleTiles: { x: number; y: number };
   hitSound: () => void;
