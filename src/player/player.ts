@@ -81,6 +81,7 @@ export class Player extends Drawable {
   depth: number;
   menu: Menu;
   busyAnimating: boolean;
+  lightColor: [number, number, number];
 
   inputHandler: PlayerInputHandler;
   actionProcessor: PlayerActionProcessor;
@@ -137,6 +138,7 @@ export class Player extends Drawable {
     this.tileCursor = { x: 0, y: 0 };
     this.moveRange = 1;
     this.lightEquipped = false;
+    this.lightColor = LevelConstants.AMBIENT_LIGHT_COLOR;
 
     this.hurtShield = false;
     this.lightBrightness = 0.3;

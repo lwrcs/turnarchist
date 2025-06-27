@@ -3,6 +3,7 @@ import { Room } from "../../room/room";
 import { Equippable } from "../equippable";
 import { GameConstants } from "../../game/gameConstants";
 import { Utils } from "../../utility/utils";
+import { LevelConstants } from "../../level/levelConstants";
 
 export abstract class Light extends Equippable {
   fuel: number;
@@ -11,6 +12,7 @@ export abstract class Light extends Equippable {
   maxBrightness: number;
   minBrightness: number;
   canRefuel: boolean = false;
+  color: [number, number, number];
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
 
@@ -22,6 +24,7 @@ export abstract class Light extends Equippable {
     this.minBrightness = 2;
     this.radius = 6;
     this.equipped = false;
+    this.color = LevelConstants.TORCH_LIGHT_COLOR;
   }
 
   updateLighting = () => {
@@ -55,10 +58,12 @@ export abstract class Light extends Equippable {
         //this.setRadius();
         this.setBrightness();
         this.wielder.lightEquipped = true;
+        this.wielder.lightColor = this.color;
       } else {
         //this.resetRadius();
         this.resetBrightness();
         this.wielder.lightEquipped = false;
+        this.wielder.lightColor = LevelConstants.AMBIENT_LIGHT_COLOR;
       }
     } else {
       this.wielder.game.pushMessage(

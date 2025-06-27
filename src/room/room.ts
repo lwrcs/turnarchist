@@ -460,6 +460,17 @@ export class Room {
         }
       }
     }
+    let bottomWalls = [];
+    // Separate loop for bottom wall
+    for (let xx = this.roomX + 1; xx < this.roomX + this.width - 2; xx++) {
+      const yy = this.roomY + this.height - 1; // Bottom wall
+      if (
+        this.roomArray[xx][yy] instanceof Wall &&
+        !(this.roomArray[xx][yy + 1] instanceof Wall)
+      ) {
+        bottomWalls.push(this.roomArray[xx][yy]);
+      }
+    }
 
     for (let i = 0; i < numTorches; i++) {
       if (walls.length == 0) return;
@@ -468,6 +479,14 @@ export class Room {
       const x = t.x;
       const y = t.y;
       this.roomArray[x][y] = new WallTorch(this, x, y);
+    }
+    for (let i = 0; i < numTorches; i++) {
+      if (bottomWalls.length == 0) return;
+      const randomIndex = Game.rand(0, bottomWalls.length - 1, rand);
+      const t = bottomWalls.splice(randomIndex, 1)[0];
+      const x = t.x;
+      const y = t.y;
+      this.roomArray[x][y] = new WallTorch(this, x, y, true);
     }
   }
 
@@ -1902,7 +1921,7 @@ export class Room {
           let lightColor = LevelConstants.AMBIENT_LIGHT_COLOR;
           let lightBrightness = 5;
           if (player.lightEquipped) {
-            lightColor = LevelConstants.TORCH_LIGHT_COLOR;
+            lightColor = player.lightColor;
             lightBrightness = player.lightBrightness;
           }
           let offsetX = 0;

@@ -9565,7 +9565,7 @@ const backpack_1 = __webpack_require__(/*! ../item/backpack */ "./src/item/backp
 const candle_1 = __webpack_require__(/*! ../item/light/candle */ "./src/item/light/candle.ts");
 const coal_1 = __webpack_require__(/*! ../item/resource/coal */ "./src/item/resource/coal.ts");
 const godStone_1 = __webpack_require__(/*! ../item/godStone */ "./src/item/godStone.ts");
-const lantern_1 = __webpack_require__(/*! ../item/light/lantern */ "./src/item/light/lantern.ts");
+const torch_1 = __webpack_require__(/*! ../item/light/torch */ "./src/item/light/torch.ts");
 const weaponBlood_1 = __webpack_require__(/*! ../item/usable/weaponBlood */ "./src/item/usable/weaponBlood.ts");
 const weaponFragments_1 = __webpack_require__(/*! ../item/usable/weaponFragments */ "./src/item/usable/weaponFragments.ts");
 const weaponPoison_1 = __webpack_require__(/*! ../item/usable/weaponPoison */ "./src/item/usable/weaponPoison.ts");
@@ -9573,10 +9573,10 @@ const levelConstants_1 = __webpack_require__(/*! ../level/levelConstants */ "./s
 const dagger_1 = __webpack_require__(/*! ../item/weapon/dagger */ "./src/item/weapon/dagger.ts");
 const dualdagger_1 = __webpack_require__(/*! ../item/weapon/dualdagger */ "./src/item/weapon/dualdagger.ts");
 const spear_1 = __webpack_require__(/*! ../item/weapon/spear */ "./src/item/weapon/spear.ts");
-const warhammer_1 = __webpack_require__(/*! ../item/weapon/warhammer */ "./src/item/weapon/warhammer.ts");
 const hammer_1 = __webpack_require__(/*! ../item/tool/hammer */ "./src/item/tool/hammer.ts");
 const pickaxe_1 = __webpack_require__(/*! ../item/tool/pickaxe */ "./src/item/tool/pickaxe.ts");
 const geode_1 = __webpack_require__(/*! ../item/resource/geode */ "./src/item/resource/geode.ts");
+const glowBugs_1 = __webpack_require__(/*! ../item/light/glowBugs */ "./src/item/light/glowBugs.ts");
 class GameConstants {
 }
 exports.GameConstants = GameConstants;
@@ -9722,8 +9722,8 @@ GameConstants.FIND_SCALE = (isMobile) => {
 GameConstants.STARTING_INVENTORY = [dagger_1.Dagger, candle_1.Candle];
 GameConstants.STARTING_DEV_INVENTORY = [
     dagger_1.Dagger,
-    lantern_1.Lantern,
-    warhammer_1.Warhammer,
+    glowBugs_1.GlowBugs,
+    torch_1.Torch,
     dualdagger_1.DualDagger,
     godStone_1.GodStone,
     spear_1.Spear,
@@ -13741,6 +13741,38 @@ Candle.itemName = "candle";
 
 /***/ }),
 
+/***/ "./src/item/light/glowBugs.ts":
+/*!************************************!*\
+  !*** ./src/item/light/glowBugs.ts ***!
+  \************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.GlowBugs = void 0;
+const light_1 = __webpack_require__(/*! ./light */ "./src/item/light/light.ts");
+class GlowBugs extends light_1.Light {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.fuel = 100; //how many turns before it burns out
+        this.tileX = 27;
+        this.tileY = 0;
+        this.name = "glow bugs";
+        this.fuelCap = 100;
+        this.radius = 6;
+        this.stackable = true;
+        this.maxBrightness = 2;
+        this.maxBrightness = 0.25;
+        //teal blue green rgb 0-255
+        this.color = [5, 75, 75];
+    }
+}
+exports.GlowBugs = GlowBugs;
+GlowBugs.itemName = "glow bugs";
+
+
+/***/ }),
+
 /***/ "./src/item/light/lantern.ts":
 /*!***********************************!*\
   !*** ./src/item/light/lantern.ts ***!
@@ -13789,6 +13821,7 @@ const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const equippable_1 = __webpack_require__(/*! ../equippable */ "./src/item/equippable.ts");
 const gameConstants_1 = __webpack_require__(/*! ../../game/gameConstants */ "./src/game/gameConstants.ts");
 const utils_1 = __webpack_require__(/*! ../../utility/utils */ "./src/utility/utils.ts");
+const levelConstants_1 = __webpack_require__(/*! ../../level/levelConstants */ "./src/level/levelConstants.ts");
 class Light extends equippable_1.Equippable {
     constructor(level, x, y) {
         super(level, x, y);
@@ -13816,11 +13849,13 @@ class Light extends equippable_1.Equippable {
                     //this.setRadius();
                     this.setBrightness();
                     this.wielder.lightEquipped = true;
+                    this.wielder.lightColor = this.color;
                 }
                 else {
                     //this.resetRadius();
                     this.resetBrightness();
                     this.wielder.lightEquipped = false;
+                    this.wielder.lightColor = levelConstants_1.LevelConstants.AMBIENT_LIGHT_COLOR;
                 }
             }
             else {
@@ -13912,6 +13947,7 @@ class Light extends equippable_1.Equippable {
         this.minBrightness = 2;
         this.radius = 6;
         this.equipped = false;
+        this.color = levelConstants_1.LevelConstants.TORCH_LIGHT_COLOR;
     }
     get fuelPercentage() {
         return this.fuel / this.fuelCap;
@@ -17998,6 +18034,7 @@ class Player extends drawable_1.Drawable {
         this.tileCursor = { x: 0, y: 0 };
         this.moveRange = 1;
         this.lightEquipped = false;
+        this.lightColor = levelConstants_1.LevelConstants.AMBIENT_LIGHT_COLOR;
         this.hurtShield = false;
         this.lightBrightness = 0.3;
         this.moveQueue = [];
@@ -20934,7 +20971,7 @@ class Room {
                         let lightColor = levelConstants_1.LevelConstants.AMBIENT_LIGHT_COLOR;
                         let lightBrightness = 5;
                         if (player.lightEquipped) {
-                            lightColor = levelConstants_1.LevelConstants.TORCH_LIGHT_COLOR;
+                            lightColor = player.lightColor;
                             lightBrightness = player.lightBrightness;
                         }
                         let offsetX = 0;
@@ -22098,6 +22135,15 @@ class Room {
                 }
             }
         }
+        let bottomWalls = [];
+        // Separate loop for bottom wall
+        for (let xx = this.roomX + 1; xx < this.roomX + this.width - 2; xx++) {
+            const yy = this.roomY + this.height - 1; // Bottom wall
+            if (this.roomArray[xx][yy] instanceof wall_1.Wall &&
+                !(this.roomArray[xx][yy + 1] instanceof wall_1.Wall)) {
+                bottomWalls.push(this.roomArray[xx][yy]);
+            }
+        }
         for (let i = 0; i < numTorches; i++) {
             if (walls.length == 0)
                 return;
@@ -22106,6 +22152,15 @@ class Room {
             const x = t.x;
             const y = t.y;
             this.roomArray[x][y] = new wallTorch_1.WallTorch(this, x, y);
+        }
+        for (let i = 0; i < numTorches; i++) {
+            if (bottomWalls.length == 0)
+                return;
+            const randomIndex = game_1.Game.rand(0, bottomWalls.length - 1, rand);
+            const t = bottomWalls.splice(randomIndex, 1)[0];
+            const x = t.x;
+            const y = t.y;
+            this.roomArray[x][y] = new wallTorch_1.WallTorch(this, x, y, true);
         }
     }
     addChasms(rand) {
@@ -24713,7 +24768,7 @@ const lightSource_1 = __webpack_require__(/*! ../lighting/lightSource */ "./src/
 const levelConstants_1 = __webpack_require__(/*! ../level/levelConstants */ "./src/level/levelConstants.ts");
 const wall_1 = __webpack_require__(/*! ./wall */ "./src/tile/wall.ts");
 class WallTorch extends wall_1.Wall {
-    constructor(room, x, y) {
+    constructor(room, x, y, isBottomWall) {
         super(room, x, y);
         this.isSolid = () => {
             return true;
@@ -24742,10 +24797,17 @@ class WallTorch extends wall_1.Wall {
                     wallInfo.innerWallType === "surroundedInner"
                     ? 0
                     : 6;
-            game_1.Game.drawTile(0, this.skin, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
-            game_1.Game.drawFX(Math.floor(this.frame), 32, 1, 2, this.x, this.y - 1, 1, 2);
+            if (!this.isBottomWall) {
+                game_1.Game.drawTile(0, this.skin, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
+            }
+            game_1.Game.drawFX(Math.floor(this.frame), 32, 1, 2, this.x, this.y - 1 - this.torchOffset, 1, 2);
+            if (this.isBottomWall) {
+                game_1.Game.drawTile(0, this.skin, 1, 1, this.x, this.y - 0.6, 1, 1, this.room.shadeColor, this.shadeAmount());
+            }
         };
-        this.room.lightSources.push(new lightSource_1.LightSource(this.x + 0.5, this.y + 0.5, 5, levelConstants_1.LevelConstants.TORCH_LIGHT_COLOR, 1.5));
+        this.isBottomWall = isBottomWall;
+        this.torchOffset = isBottomWall ? 1 : 0;
+        this.room.lightSources.push(new lightSource_1.LightSource(this.x + 0.5, this.y + 0.5 - this.torchOffset, 5, levelConstants_1.LevelConstants.TORCH_LIGHT_COLOR, 1.5));
         this.frame = Math.random() * 12;
         this.tileYOffset = 6;
         this.hasBloom = true;

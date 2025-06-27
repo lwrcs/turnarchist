@@ -27,6 +27,7 @@ import { RedGem } from "../item/resource/redgem";
 import { GreenGem } from "../item/resource/greengem";
 import { Pickaxe } from "../item/tool/pickaxe";
 import { Geode } from "../item/resource/geode";
+import { GlowBugs } from "../item/light/glowBugs";
 
 export class GameConstants {
   static readonly VERSION = "v1.0.9"; //"v0.6.3";
@@ -201,8 +202,8 @@ export class GameConstants {
   static readonly STARTING_INVENTORY = [Dagger, Candle];
   static readonly STARTING_DEV_INVENTORY = [
     Dagger,
-    Lantern,
-    Warhammer,
+    GlowBugs,
+    Torch,
     DualDagger,
     GodStone,
     Spear,

@@ -8,13 +8,18 @@ import { Wall } from "./wall";
 export class WallTorch extends Wall {
   frame: number;
   private tileYOffset: number;
+  private isBottomWall: boolean;
+  private torchOffset: number;
 
-  constructor(room: Room, x: number, y: number) {
+  constructor(room: Room, x: number, y: number, isBottomWall?: boolean) {
     super(room, x, y);
+
+    this.isBottomWall = isBottomWall;
+    this.torchOffset = isBottomWall ? 1 : 0;
     this.room.lightSources.push(
       new LightSource(
         this.x + 0.5,
-        this.y + 0.5,
+        this.y + 0.5 - this.torchOffset,
         5,
         LevelConstants.TORCH_LIGHT_COLOR,
         1.5,
@@ -56,20 +61,45 @@ export class WallTorch extends Wall {
       wallInfo.innerWallType === "surroundedInner"
         ? 0
         : 6;
+    if (!this.isBottomWall) {
+      Game.drawTile(
+        0,
+        this.skin,
+        1,
+        1,
+        this.x,
+        this.y,
+        1,
+        1,
+        this.room.shadeColor,
+        this.shadeAmount(),
+      );
+    }
 
-    Game.drawTile(
-      0,
-      this.skin,
+    Game.drawFX(
+      Math.floor(this.frame),
+      32,
       1,
-      1,
+      2,
       this.x,
-      this.y,
+      this.y - 1 - this.torchOffset,
       1,
-      1,
-      this.room.shadeColor,
-      this.shadeAmount(),
+      2,
     );
 
-    Game.drawFX(Math.floor(this.frame), 32, 1, 2, this.x, this.y - 1, 1, 2);
+    if (this.isBottomWall) {
+      Game.drawTile(
+        0,
+        this.skin,
+        1,
+        1,
+        this.x,
+        this.y - 0.6,
+        1,
+        1,
+        this.room.shadeColor,
+        this.shadeAmount(),
+      );
+    }
   };
 }
