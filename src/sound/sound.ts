@@ -35,6 +35,23 @@ export class Sound {
   static fuseStartSound: HTMLAudioElement;
   static warHammerSound: HTMLAudioElement;
   static loopHandlers: Map<HTMLAudioElement, EventListener> = new Map();
+  static currentlyPlaying: Array<HTMLAudioElement> = [];
+
+  static toggleMute() {
+    Sound.audioMuted = !Sound.audioMuted;
+    Sound.ambientSound.removeEventListener("ended", Sound.ambientSound.onended);
+    Sound.ambientSound.pause();
+    if (Sound.audioMuted) {
+      Sound.currentlyPlaying.forEach((audio) => {
+        audio.pause();
+      });
+      Sound.currentlyPlaying = [];
+    } else {
+      Sound.ambientSound.addEventListener("ended", Sound.ambientSound.onended);
+      Sound.ambientSound.play();
+    }
+  }
+
   static loadSounds = async () => {
     if (Sound.initialized) return;
     Sound.initialized = true;
@@ -202,6 +219,8 @@ export class Sound {
 
   static async playWithReverb(audio: HTMLAudioElement) {
     await ReverbEngine.initialize();
+    Sound.currentlyPlaying.push(audio);
+
     ReverbEngine.applyReverb(audio);
     this.playSoundSafely(audio);
   }

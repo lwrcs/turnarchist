@@ -4,6 +4,8 @@ import { Direction, LevelState } from "../game";
 import { MouseCursor } from "../gui/mouseCursor";
 import { VendingMachine } from "../entity/object/vendingMachine";
 import { GameConstants } from "../game/gameConstants";
+import { MuteButton } from "../gui/muteButton";
+import { Sound } from "../sound/sound";
 
 export class PlayerInputHandler {
   private player: Player;
@@ -240,6 +242,12 @@ export class PlayerInputHandler {
       inventory.toggleOpen();
     }
 
+    // Check if click is on mute button
+    if (this.isPointInMuteButtonBounds(x, y)) {
+      this.handleMuteButtonClick();
+      return;
+    }
+
     if (player.openVendingMachine) {
       if (
         VendingMachine.isPointInVendingMachineBounds(
@@ -408,4 +416,18 @@ export class PlayerInputHandler {
       this.player.direction = Direction.LEFT;
     }
   };
+
+  // Dummy methods for mute button functionality
+  isPointInMuteButtonBounds(x: number, y: number): boolean {
+    const tile = GameConstants.TILESIZE;
+    //mute button is at the top left of the screen right below the fps counter and is 1 tile wide and tall
+    return x >= 0 && x <= tile && y >= 0 && y <= tile * 1.5;
+  }
+
+  handleMuteButtonClick() {
+    MuteButton.toggleMute();
+    this.player.game.pushMessage(
+      Sound.audioMuted ? "Audio muted" : "Audio unmuted",
+    );
+  }
 }

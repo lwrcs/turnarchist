@@ -21,6 +21,7 @@ import { statsTracker } from "./game/stats";
 import { EVENTS } from "./event/events";
 import { UpLadder } from "./tile/upLadder";
 import { CameraAnimation } from "./game/cameraAnimation";
+import { Tips } from "./tips";
 
 export enum LevelState {
   IN_LEVEL,
@@ -149,6 +150,8 @@ export class Game {
   cameraX: number;
   cameraY: number;
   justTransitioned: boolean = false;
+
+  tip: string = Tips.getRandomTip();
 
   static text_rendering_canvases: Record<string, HTMLCanvasElement>;
   static readonly letters = "abcdefghijklmnopqrstuvwxyz1234567890,.!?:'()[]%-/";
@@ -413,7 +416,7 @@ export class Game {
     if (!this.chatOpen) {
       switch (key.toUpperCase()) {
         case "M":
-          Sound.audioMuted = !Sound.audioMuted;
+          Sound.toggleMute();
           this.pushMessage(Sound.audioMuted ? "Audio muted" : "Audio unmuted");
           return;
 
@@ -1025,6 +1028,20 @@ export class Game {
     );
 
     Game.ctx.globalAlpha = 1;
+  };
+
+  drawTipScreen = (delta: number) => {
+    let tip = this.tip;
+
+    Game.ctx.fillStyle = "black";
+    Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
+    Game.ctx.fillStyle = LevelConstants.LEVEL_TEXT_COLOR;
+
+    Game.fillText(
+      tip,
+      GameConstants.WIDTH / 2 - Game.measureText(tip).width / 2,
+      GameConstants.HEIGHT / 2 - Game.letter_height + 2,
+    );
   };
 
   draw = (delta: number) => {
