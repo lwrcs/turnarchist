@@ -299,6 +299,12 @@ export class PlayerInputHandler {
     const x = Input.mouseX;
     const y = Input.mouseY;
 
+    // Check if tap is on mute button
+    if (this.isPointInMuteButtonBounds(x, y)) {
+      this.handleMuteButtonClick();
+      return;
+    }
+
     const isInInventory = this.player.inventory.isPointInInventoryBounds(
       x,
       y,

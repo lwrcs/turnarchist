@@ -9565,18 +9565,17 @@ const backpack_1 = __webpack_require__(/*! ../item/backpack */ "./src/item/backp
 const candle_1 = __webpack_require__(/*! ../item/light/candle */ "./src/item/light/candle.ts");
 const coal_1 = __webpack_require__(/*! ../item/resource/coal */ "./src/item/resource/coal.ts");
 const godStone_1 = __webpack_require__(/*! ../item/godStone */ "./src/item/godStone.ts");
+const lantern_1 = __webpack_require__(/*! ../item/light/lantern */ "./src/item/light/lantern.ts");
 const torch_1 = __webpack_require__(/*! ../item/light/torch */ "./src/item/light/torch.ts");
 const weaponBlood_1 = __webpack_require__(/*! ../item/usable/weaponBlood */ "./src/item/usable/weaponBlood.ts");
 const weaponFragments_1 = __webpack_require__(/*! ../item/usable/weaponFragments */ "./src/item/usable/weaponFragments.ts");
 const weaponPoison_1 = __webpack_require__(/*! ../item/usable/weaponPoison */ "./src/item/usable/weaponPoison.ts");
 const levelConstants_1 = __webpack_require__(/*! ../level/levelConstants */ "./src/level/levelConstants.ts");
 const dagger_1 = __webpack_require__(/*! ../item/weapon/dagger */ "./src/item/weapon/dagger.ts");
-const dualdagger_1 = __webpack_require__(/*! ../item/weapon/dualdagger */ "./src/item/weapon/dualdagger.ts");
 const spear_1 = __webpack_require__(/*! ../item/weapon/spear */ "./src/item/weapon/spear.ts");
 const hammer_1 = __webpack_require__(/*! ../item/tool/hammer */ "./src/item/tool/hammer.ts");
 const pickaxe_1 = __webpack_require__(/*! ../item/tool/pickaxe */ "./src/item/tool/pickaxe.ts");
 const geode_1 = __webpack_require__(/*! ../item/resource/geode */ "./src/item/resource/geode.ts");
-const glowBugs_1 = __webpack_require__(/*! ../item/light/glowBugs */ "./src/item/light/glowBugs.ts");
 class GameConstants {
 }
 exports.GameConstants = GameConstants;
@@ -9722,9 +9721,9 @@ GameConstants.FIND_SCALE = (isMobile) => {
 GameConstants.STARTING_INVENTORY = [dagger_1.Dagger, candle_1.Candle];
 GameConstants.STARTING_DEV_INVENTORY = [
     dagger_1.Dagger,
-    glowBugs_1.GlowBugs,
+    candle_1.Candle,
     torch_1.Torch,
-    dualdagger_1.DualDagger,
+    lantern_1.Lantern,
     godStone_1.GodStone,
     spear_1.Spear,
     weaponPoison_1.WeaponPoison,
@@ -13737,38 +13736,6 @@ class Candle extends light_1.Light {
 }
 exports.Candle = Candle;
 Candle.itemName = "candle";
-
-
-/***/ }),
-
-/***/ "./src/item/light/glowBugs.ts":
-/*!************************************!*\
-  !*** ./src/item/light/glowBugs.ts ***!
-  \************************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.GlowBugs = void 0;
-const light_1 = __webpack_require__(/*! ./light */ "./src/item/light/light.ts");
-class GlowBugs extends light_1.Light {
-    constructor(level, x, y) {
-        super(level, x, y);
-        this.fuel = 100; //how many turns before it burns out
-        this.tileX = 27;
-        this.tileY = 0;
-        this.name = "glow bugs";
-        this.fuelCap = 100;
-        this.radius = 6;
-        this.stackable = true;
-        this.maxBrightness = 2;
-        this.maxBrightness = 0.25;
-        //teal blue green rgb 0-255
-        this.color = [5, 75, 75];
-    }
-}
-exports.GlowBugs = GlowBugs;
-GlowBugs.itemName = "glow bugs";
 
 
 /***/ }),
@@ -18403,6 +18370,11 @@ class PlayerInputHandler {
         }
         const x = input_1.Input.mouseX;
         const y = input_1.Input.mouseY;
+        // Check if tap is on mute button
+        if (this.isPointInMuteButtonBounds(x, y)) {
+            this.handleMuteButtonClick();
+            return;
+        }
         const isInInventory = this.player.inventory.isPointInInventoryBounds(x, y).inBounds;
         const isInQuickbar = this.player.inventory.isPointInQuickbarBounds(x, y).inBounds;
         if (this.player.openVendingMachine && this.player.openVendingMachine.open) {
