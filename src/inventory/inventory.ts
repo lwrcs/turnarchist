@@ -1234,6 +1234,8 @@ export class Inventory {
   };
 
   handleMouseDown = (x: number, y: number, button: number) => {
+    if (this.player.menu.open) return;
+
     // Ignore if not left click
     if (button !== 0) return;
 
@@ -1282,6 +1284,8 @@ export class Inventory {
   };
 
   handleMouseUp = (x: number, y: number, button: number) => {
+    if (this.player.menu.open) return;
+
     // Ignore if not left click
     if (button !== 0) return;
 

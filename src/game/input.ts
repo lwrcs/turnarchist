@@ -236,6 +236,10 @@ export const Input = {
       let scaledX = Math.floor(x / Game.scale);
       let scaledY = Math.floor(y / Game.scale);
 
+      console.log(
+        `Input.mouseClickListener: raw x: ${x}, y: ${y}, scale: ${Game.scale}, scaledX: ${scaledX}, scaledY: ${scaledY}`,
+      );
+
       if (event.button === 0) {
         Input.mouseLeftClickListener(scaledX, scaledY);
       } else if (event.button === 2) {

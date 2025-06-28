@@ -2,87 +2,136 @@ import { Game } from "../game";
 import { guiButton } from "./guiButton";
 import { InputEnum } from "../game/input";
 import { GameConstants } from "../game/gameConstants";
+import { MouseCursor } from "../gui/mouseCursor";
 
 export class Menu {
   buttons: guiButton[];
+  closeButton: guiButton;
   open: boolean;
   selectedButton: number;
-  subMenus: { [key: string]: Menu };
-  currentSubMenu: string | null;
 
   constructor() {
     this.buttons = [];
     this.open = false;
     this.selectedButton = 0;
-    this.subMenus = {};
-    this.currentSubMenu = null;
-    //this.initializeMainMenu();
+    this.initializeCloseButton();
+    this.initializeMainMenu();
+  }
+
+  initializeCloseButton() {
+    // Create a square close button - we'll position it properly in positionButtons()
+    const closeButtonSize = 15; // Square button
+    this.closeButton = new guiButton(
+      0,
+      0,
+      closeButtonSize,
+      closeButtonSize,
+      "X",
+      () => this.close(),
+    );
   }
 
   initializeMainMenu() {
-    this.addButton(new guiButton(0, 0, 200, 50, "Start Game", this.startGame));
+    // Don't set fixed dimensions - let positionButtons() calculate optimal sizes
+    this.addButton(new guiButton(0, 0, 0, 0, "Start Game", this.startGame));
+    this.addButton(new guiButton(0, 0, 0, 0, "Settings", this.openSettings));
     this.addButton(
-      new guiButton(0, 60, 200, 50, "Settings", () =>
-        this.openSubMenu("Settings"),
-      ),
+      new guiButton(0, 0, 0, 0, "Test Button 1", this.testButton1),
     );
-    this.addButton(new guiButton(0, 120, 200, 50, "Exit", this.exitGame));
-    this.initializeSettingsMenu();
+    this.addButton(
+      new guiButton(0, 0, 0, 0, "Test Button 2", this.testButton2),
+    );
+    this.addButton(new guiButton(0, 0, 0, 0, "Exit", this.exitGame));
     this.positionButtons();
-  }
-
-  initializeSettingsMenu() {
-    const settingsMenu = new Menu();
-    settingsMenu.addButton(
-      new guiButton(0, 0, 200, 50, "Audio", this.openAudioSettings),
-    );
-    settingsMenu.addButton(
-      new guiButton(0, 60, 200, 50, "Graphics", this.openGraphicsSettings),
-    );
-    settingsMenu.addButton(
-      new guiButton(0, 120, 200, 50, "Controls", this.openControlsSettings),
-    );
-    settingsMenu.addButton(
-      new guiButton(0, 180, 200, 50, "Back", () => this.closeSubMenu()),
-    );
-    settingsMenu.positionButtons();
-    this.subMenus["Settings"] = settingsMenu;
   }
 
   addButton(button: guiButton) {
     this.buttons.push(button);
   }
 
-  drawMenu() {
-    if (!this.open && !this.currentSubMenu) return;
+  draw() {
+    if (!this.open) return;
 
     Game.ctx.save();
     Game.ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
-    Game.ctx.fillRect(0, 0, innerWidth, innerHeight);
+    Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
 
-    const menuToDraw = this.currentSubMenu
-      ? this.subMenus[this.currentSubMenu]
-      : this;
-    menuToDraw.buttons.forEach((button) => {
-      this.drawButton(button, menuToDraw);
+    // Draw main menu buttons
+    this.buttons.forEach((button) => {
+      this.drawButton(button);
     });
+
+    // Draw close button
+    this.drawCloseButton();
+
     Game.ctx.restore();
   }
 
-  drawButton(button: guiButton, menu: Menu) {
+  drawButton(button: guiButton) {
+    Game.ctx.save();
+    Game.ctx.imageSmoothingEnabled = false;
+
+    // Clear any stroke settings to prevent unwanted outlines
+    Game.ctx.strokeStyle = "transparent";
+    Game.ctx.lineWidth = 0;
+
     Game.ctx.fillStyle =
-      menu.selectedButton === menu.buttons.indexOf(button)
-        ? "rgba(200, 200, 200, 1)"
-        : "rgba(255, 255, 255, 1)";
-    Game.ctx.fillRect(button.x, button.y, button.width, button.height);
+      this.selectedButton === this.buttons.indexOf(button)
+        ? "rgba(75, 75, 75, 1)"
+        : "rgba(100, 100, 100, 1)";
+
+    // Round coordinates to prevent anti-aliasing outlines
+    Game.ctx.fillRect(
+      Math.round(button.x),
+      Math.round(button.y),
+      Math.round(button.width),
+      Math.round(button.height),
+    );
+
     Game.ctx.fillStyle = "rgba(0, 0, 0, 1)";
-    Game.ctx.font = "20px Arial";
 
     const textWidth = Game.measureText(button.text).width;
     const textX = button.x + (button.width - textWidth) / 2;
-    const textY = button.y + button.height / 2 + Game.letter_height / 2;
 
-    Game.fillText(button.text, textX, textY);
+    // Center text vertically in the button, accounting for varying button heights
+    const textY = button.y + button.height / 2 - Game.letter_height / 2;
+
+    Game.fillText(button.text, Math.round(textX), Math.round(textY));
+    Game.ctx.restore();
+  }
+
+  drawCloseButton() {
+    Game.ctx.save();
+    Game.ctx.imageSmoothingEnabled = false;
+
+    // Close button styling - make it red-ish for better visibility
+    Game.ctx.fillStyle = "rgba(220, 60, 60, 1)"; // Red background
+    Game.ctx.fillRect(
+      Math.round(this.closeButton.x),
+      Math.round(this.closeButton.y),
+      Math.round(this.closeButton.width),
+      Math.round(this.closeButton.height),
+    );
+
+    // Border for the close button
+    Game.ctx.strokeStyle = "rgba(0, 0, 0, 1)";
+    Game.ctx.lineWidth = 1;
+    Game.ctx.strokeRect(
+      this.closeButton.x,
+      this.closeButton.y,
+      this.closeButton.width,
+      this.closeButton.height,
+    );
+
+    // Draw X text
+    Game.ctx.fillStyle = "rgba(255, 255, 255, 1)"; // White X
+    const textWidth = Game.measureText(this.closeButton.text).width;
+    const textX = this.closeButton.x + (this.closeButton.width - textWidth) / 2;
+    const textY =
+      this.closeButton.y + this.closeButton.height / 2 - Game.letter_height / 2;
+
+    Game.fillText(this.closeButton.text, textX, textY);
+    Game.ctx.restore();
   }
 
   inputHandler(input: InputEnum) {
@@ -90,11 +139,7 @@ export class Menu {
 
     switch (input) {
       case InputEnum.ESCAPE:
-        if (this.currentSubMenu) {
-          this.closeSubMenu();
-        } else {
-          this.open = false;
-        }
+        this.open = false;
         break;
       case InputEnum.UP:
         this.up();
@@ -105,59 +150,98 @@ export class Menu {
       case InputEnum.SPACE:
         this.select();
         break;
+      case InputEnum.LEFT_CLICK:
+        // Handle mouse clicks by getting current mouse position and calling mouseInputHandler
+        const { x, y } = MouseCursor.getInstance().getPosition();
+        console.log(
+          `Menu.inputHandler received LEFT_CLICK, delegating to mouseInputHandler with x: ${x}, y: ${y}`,
+        );
+        this.mouseInputHandler(x, y);
+        break;
+      case InputEnum.RIGHT_CLICK:
+        // Handle right clicks if needed (for now just log)
+        console.log("Menu.inputHandler received RIGHT_CLICK");
+        break;
       default:
         break;
     }
   }
 
-  openSubMenu(menuName: string) {
-    if (this.subMenus[menuName]) {
-      this.currentSubMenu = menuName;
-      this.selectedButton = 0;
-    }
-  }
+  mouseInputHandler(x: number, y: number) {
+    console.log(
+      `Menu.mouseInputHandler called with x: ${x}, y: ${y}, menu.open: ${this.open}`,
+    );
 
-  closeSubMenu() {
-    this.currentSubMenu = null;
-    this.selectedButton = 0;
+    if (!this.open) {
+      console.log("Menu not open, returning early");
+      return;
+    }
+
+    // Check close button first
+    if (this.isPointInCloseButton(x, y)) {
+      console.log("Close button clicked!");
+      this.closeButton.onClick();
+      return;
+    }
+
+    // Check main menu buttons
+    const bounds = this.isPointInMenuBounds(x, y);
+    console.log(`Menu bounds check result:`, bounds);
+
+    if (bounds.inBounds && bounds.buttonIndex >= 0) {
+      const button = this.buttons[bounds.buttonIndex];
+      console.log(`Button ${bounds.buttonIndex} (${button.text}) clicked!`);
+      this.selectedButton = bounds.buttonIndex;
+      button.onClick();
+    } else {
+      console.log("Click was not on any menu button");
+    }
   }
 
   close() {
     this.open = false;
-    this.currentSubMenu = null;
+  }
+
+  openMenu() {
+    console.log("Menu.openMenu() called");
+    this.open = true;
+    this.selectedButton = 0;
+    console.log(`Menu opened, buttons positioned at:`);
+    this.buttons.forEach((button, index) => {
+      console.log(
+        `  Button ${index} (${button.text}): x: ${button.x}, y: ${button.y}, width: ${button.width}, height: ${button.height}`,
+      );
+    });
+  }
+
+  toggleOpen() {
+    if (this.open) {
+      this.close();
+    } else {
+      this.openMenu();
+    }
   }
 
   select() {
-    const menuToSelect = this.currentSubMenu
-      ? this.subMenus[this.currentSubMenu]
-      : this;
-    if (menuToSelect.open) {
-      menuToSelect.buttons[menuToSelect.selectedButton].onClick();
+    if (this.buttons[this.selectedButton]) {
+      this.buttons[this.selectedButton].onClick();
     }
   }
 
   up() {
-    const menuToNavigate = this.currentSubMenu
-      ? this.subMenus[this.currentSubMenu]
-      : this;
-    if (menuToNavigate.open) {
-      menuToNavigate.selectedButton =
-        (menuToNavigate.selectedButton - 1 + menuToNavigate.buttons.length) %
-        menuToNavigate.buttons.length;
+    if (this.buttons.length > 0) {
+      this.selectedButton =
+        (this.selectedButton - 1 + this.buttons.length) % this.buttons.length;
     }
   }
 
   down() {
-    const menuToNavigate = this.currentSubMenu
-      ? this.subMenus[this.currentSubMenu]
-      : this;
-    if (menuToNavigate.open) {
-      menuToNavigate.selectedButton =
-        (menuToNavigate.selectedButton + 1) % menuToNavigate.buttons.length;
+    if (this.buttons.length > 0) {
+      this.selectedButton = (this.selectedButton + 1) % this.buttons.length;
     }
   }
 
-  // Example action methods
+  // Action methods
   startGame = () => {
     console.log("Game Started");
     this.close();
@@ -169,27 +253,102 @@ export class Menu {
     // Implement exit game logic
   };
 
-  openAudioSettings = () => {
-    console.log("Audio Settings Opened");
-    // Implement audio settings logic
+  openSettings = () => {
+    console.log("Settings clicked - submenus disabled for now");
+    // Implement settings logic later
   };
 
-  openGraphicsSettings = () => {
-    console.log("Graphics Settings Opened");
-    // Implement graphics settings logic
+  testButton1 = () => {
+    console.log("Test Button 1 clicked!");
+    // Add any test functionality here
   };
 
-  openControlsSettings = () => {
-    console.log("Controls Settings Opened");
-    // Implement controls settings logic
+  testButton2 = () => {
+    console.log("Test Button 2 clicked!");
+    // Add any test functionality here
   };
 
   positionButtons() {
-    const startX = (GameConstants.WIDTH - 200) / 2;
-    const startY = (GameConstants.HEIGHT - this.buttons.length * 60) / 2;
+    const screenWidth = GameConstants.WIDTH;
+    const screenHeight = GameConstants.HEIGHT;
+    const buttonCount = this.buttons.length;
+
+    // Position close button in top right corner
+    const closeButtonMargin = 10;
+    this.closeButton.x =
+      screenWidth - this.closeButton.width - closeButtonMargin;
+    this.closeButton.y = closeButtonMargin;
+
+    // Button sizing - make them responsive to screen size
+    const maxButtonWidth = Math.min(200, screenWidth * 0.6); // Max 60% of screen width
+
+    // Calculate available space
+    const horizontalMargin = (screenWidth - maxButtonWidth) / 2;
+    const verticalMargin = 20; // Top and bottom margin
+    const availableHeight = screenHeight - verticalMargin * 2;
+
+    // Divide available height equally among buttons
+    const heightPerButtonSlot = availableHeight / buttonCount;
+
+    // Make each button take up ~80% of its slot, leaving 20% for spacing
+    // Don't enforce minimum height if it would cause overlap
+    const buttonHeight = Math.floor(heightPerButtonSlot * 0.8);
+
+    console.log(`Menu.positionButtons: 
+      Screen: ${screenWidth}x${screenHeight}
+      Close button: ${this.closeButton.x}, ${this.closeButton.y} (${this.closeButton.width}x${this.closeButton.height})
+      Button count: ${buttonCount}
+      Available height: ${availableHeight}
+      Height per slot: ${heightPerButtonSlot}
+      Button height: ${buttonHeight}
+      Button width: ${maxButtonWidth}`);
+
+    // Update button dimensions and positions
     this.buttons.forEach((button, index) => {
-      button.x = startX;
-      button.y = startY + index * 60;
+      button.x = horizontalMargin;
+      button.y =
+        verticalMargin +
+        index * heightPerButtonSlot +
+        (heightPerButtonSlot - buttonHeight) / 2;
+      button.width = maxButtonWidth;
+      button.height = buttonHeight;
+
+      console.log(`  Button ${index} (${button.text}): 
+        x: ${button.x}, y: ${button.y}, 
+        width: ${button.width}, height: ${button.height}
+        Bottom: ${button.y + button.height}`);
     });
+  }
+
+  isPointInMenuBounds(
+    x: number,
+    y: number,
+  ): { inBounds: boolean; buttonIndex: number } {
+    if (!this.open) {
+      return { inBounds: false, buttonIndex: -1 };
+    }
+
+    for (let i = 0; i < this.buttons.length; i++) {
+      const button = this.buttons[i];
+      if (
+        x >= button.x &&
+        x <= button.x + button.width &&
+        y >= button.y &&
+        y <= button.y + button.height
+      ) {
+        return { inBounds: true, buttonIndex: i };
+      }
+    }
+
+    return { inBounds: false, buttonIndex: -1 };
+  }
+
+  isPointInCloseButton(x: number, y: number): boolean {
+    return (
+      x >= this.closeButton.x &&
+      x <= this.closeButton.x + this.closeButton.width &&
+      y >= this.closeButton.y &&
+      y <= this.closeButton.y + this.closeButton.height
+    );
   }
 }

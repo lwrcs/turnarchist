@@ -443,6 +443,7 @@ export class PlayerRenderer {
     Game.ctx.save();
     if (!this.player.dead) {
       if (!transitioning) this.player.inventory.draw(delta);
+      //if (this.player.menu.open) this.player.menu.draw();
       if (this.player.bestiary) this.player.bestiary.draw(delta);
       //this.actionTab.draw(delta);
 
@@ -609,7 +610,7 @@ export class PlayerRenderer {
     this.player.setCursorIcon();
 
     //this.drawInventoryButton(delta);
-    if (this.player.menu.open) this.player.menu.drawMenu();
+    if (this.player.menu.open) this.player.menu.draw();
     Game.ctx.restore();
   };
 

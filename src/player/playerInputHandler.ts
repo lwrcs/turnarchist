@@ -179,6 +179,7 @@ export class PlayerInputHandler {
   }
 
   handleNumKey = (num: number) => {
+    if (this.player.menu.open) return;
     this.setMostRecentInput("keyboard");
     if (num <= 5) {
       this.player.inventory.selX = Math.max(
@@ -222,11 +223,22 @@ export class PlayerInputHandler {
     const player = this.player;
     const cursor = MouseCursor.getInstance();
     const { x, y } = cursor.getPosition();
-    if (player.game.levelState !== LevelState.IN_LEVEL) return;
+    console.log(
+      `PlayerInputHandler.handleMouseLeftClick: cursor position x: ${x}, y: ${y}`,
+    );
+    console.log(
+      `  Game level state: ${player.game.levelState}, menu.open: ${this.player.menu.open}`,
+    );
+
+    if (player.game.levelState !== LevelState.IN_LEVEL) {
+      console.log("Not in level, returning early");
+      return;
+    }
 
     this.setMostRecentInput("mouse");
 
     if (player.dead) {
+      console.log("Player is dead, restarting");
       player.restart();
       return;
     }
@@ -239,12 +251,31 @@ export class PlayerInputHandler {
       inventory.isPointInInventoryButton(x, y);
 
     if (clickedOutsideInventory) {
+      console.log("Clicked outside inventory, toggling");
       inventory.toggleOpen();
     }
 
     // Check if click is on mute button
     if (this.isPointInMuteButtonBounds(x, y)) {
+      console.log("Clicked on mute button");
       this.handleMuteButtonClick();
+      return;
+    }
+
+    if (this.player.menu.open) {
+      console.log(
+        `Menu is open, calling menu.mouseInputHandler with x: ${x}, y: ${y}`,
+      );
+      this.player.menu.mouseInputHandler(x, y);
+      return;
+    } else {
+      console.log("Menu is not open, continuing with other input handling");
+    }
+
+    // Check if click is on menu button
+    if (this.isPointInMenuButtonBounds(x, y)) {
+      console.log("Clicked on menu button");
+      this.handleMenuButtonClick();
       return;
     }
 
@@ -281,6 +312,7 @@ export class PlayerInputHandler {
       this.player.inventory.isOpen ||
       this.player.dead ||
       this.player.game.levelState !== LevelState.IN_LEVEL ||
+      this.player.menu.open ||
       (this.player.inventory.isPointInQuickbarBounds(Input.mouseX, Input.mouseY)
         .inBounds &&
         this.player.game.isMobile)
@@ -296,12 +328,23 @@ export class PlayerInputHandler {
       return;
     }
 
+    if (this.player.menu.open) {
+      this.player.menu.mouseInputHandler(Input.mouseX, Input.mouseY);
+      return;
+    }
+
     const x = Input.mouseX;
     const y = Input.mouseY;
 
     // Check if tap is on mute button
     if (this.isPointInMuteButtonBounds(x, y)) {
       this.handleMuteButtonClick();
+      return;
+    }
+
+    // Check if tap is on menu button
+    if (this.isPointInMenuButtonBounds(x, y)) {
+      this.handleMenuButtonClick();
       return;
     }
 
@@ -435,5 +478,20 @@ export class PlayerInputHandler {
     this.player.game.pushMessage(
       Sound.audioMuted ? "Audio muted" : "Audio unmuted",
     );
+  }
+
+  isPointInMenuButtonBounds(x: number, y: number): boolean {
+    const tile = GameConstants.TILESIZE;
+    //menu button is at the top right of the screen and is 1 tile wide and tall
+    return (
+      x >= GameConstants.WIDTH - tile &&
+      x <= GameConstants.WIDTH &&
+      y >= 0 &&
+      y <= tile
+    );
+  }
+
+  handleMenuButtonClick() {
+    this.player.menu.toggleOpen();
   }
 }

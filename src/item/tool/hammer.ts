@@ -46,7 +46,7 @@ export class Hammer extends Usable {
       this.level.game.pushMessage(`You hit the geode with the hammer.`);
     } else if (other.name === "pickaxe") {
       let pickaxe = other as Pickaxe;
-      pickaxe.disassemble(player);
+      pickaxe.disassemble();
     }
   };
 

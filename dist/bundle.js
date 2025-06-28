@@ -8490,6 +8490,12 @@ class Game {
             Game.ctx.canvas.setAttribute("height", `${gameConstants_1.GameConstants.HEIGHT}`);
         };
         this.onResize = () => {
+            if (this.localPlayerID !== undefined &&
+                this.players?.[this.localPlayerID] &&
+                this.players?.[this.localPlayerID]?.menu &&
+                this.players?.[this.localPlayerID]?.menu?.open) {
+                this.players[this.localPlayerID].menu.positionButtons();
+            }
             this.isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
             // Define scale adjustment based on device pixel ratio
             if (gameConstants_1.GameConstants.SCALE === null) {
@@ -10737,6 +10743,7 @@ exports.Input = {
             let y = event.clientY - rect.top;
             let scaledX = Math.floor(x / game_1.Game.scale);
             let scaledY = Math.floor(y / game_1.Game.scale);
+            console.log(`Input.mouseClickListener: raw x: ${x}, y: ${y}, scale: ${game_1.Game.scale}, scaledX: ${scaledX}, scaledY: ${scaledY}`);
             if (event.button === 0) {
                 exports.Input.mouseLeftClickListener(scaledX, scaledY);
             }
@@ -11493,9 +11500,10 @@ const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const guiButton_1 = __webpack_require__(/*! ./guiButton */ "./src/gui/guiButton.ts");
 const input_1 = __webpack_require__(/*! ../game/input */ "./src/game/input.ts");
 const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
+const mouseCursor_1 = __webpack_require__(/*! ../gui/mouseCursor */ "./src/gui/mouseCursor.ts");
 class Menu {
     constructor() {
-        // Example action methods
+        // Action methods
         this.startGame = () => {
             console.log("Game Started");
             this.close();
@@ -11505,82 +11513,99 @@ class Menu {
             console.log("Exit Game");
             // Implement exit game logic
         };
-        this.openAudioSettings = () => {
-            console.log("Audio Settings Opened");
-            // Implement audio settings logic
+        this.openSettings = () => {
+            console.log("Settings clicked - submenus disabled for now");
+            // Implement settings logic later
         };
-        this.openGraphicsSettings = () => {
-            console.log("Graphics Settings Opened");
-            // Implement graphics settings logic
+        this.testButton1 = () => {
+            console.log("Test Button 1 clicked!");
+            // Add any test functionality here
         };
-        this.openControlsSettings = () => {
-            console.log("Controls Settings Opened");
-            // Implement controls settings logic
+        this.testButton2 = () => {
+            console.log("Test Button 2 clicked!");
+            // Add any test functionality here
         };
         this.buttons = [];
         this.open = false;
         this.selectedButton = 0;
-        this.subMenus = {};
-        this.currentSubMenu = null;
-        //this.initializeMainMenu();
+        this.initializeCloseButton();
+        this.initializeMainMenu();
+    }
+    initializeCloseButton() {
+        // Create a square close button - we'll position it properly in positionButtons()
+        const closeButtonSize = 15; // Square button
+        this.closeButton = new guiButton_1.guiButton(0, 0, closeButtonSize, closeButtonSize, "X", () => this.close());
     }
     initializeMainMenu() {
-        this.addButton(new guiButton_1.guiButton(0, 0, 200, 50, "Start Game", this.startGame));
-        this.addButton(new guiButton_1.guiButton(0, 60, 200, 50, "Settings", () => this.openSubMenu("Settings")));
-        this.addButton(new guiButton_1.guiButton(0, 120, 200, 50, "Exit", this.exitGame));
-        this.initializeSettingsMenu();
+        // Don't set fixed dimensions - let positionButtons() calculate optimal sizes
+        this.addButton(new guiButton_1.guiButton(0, 0, 0, 0, "Start Game", this.startGame));
+        this.addButton(new guiButton_1.guiButton(0, 0, 0, 0, "Settings", this.openSettings));
+        this.addButton(new guiButton_1.guiButton(0, 0, 0, 0, "Test Button 1", this.testButton1));
+        this.addButton(new guiButton_1.guiButton(0, 0, 0, 0, "Test Button 2", this.testButton2));
+        this.addButton(new guiButton_1.guiButton(0, 0, 0, 0, "Exit", this.exitGame));
         this.positionButtons();
-    }
-    initializeSettingsMenu() {
-        const settingsMenu = new Menu();
-        settingsMenu.addButton(new guiButton_1.guiButton(0, 0, 200, 50, "Audio", this.openAudioSettings));
-        settingsMenu.addButton(new guiButton_1.guiButton(0, 60, 200, 50, "Graphics", this.openGraphicsSettings));
-        settingsMenu.addButton(new guiButton_1.guiButton(0, 120, 200, 50, "Controls", this.openControlsSettings));
-        settingsMenu.addButton(new guiButton_1.guiButton(0, 180, 200, 50, "Back", () => this.closeSubMenu()));
-        settingsMenu.positionButtons();
-        this.subMenus["Settings"] = settingsMenu;
     }
     addButton(button) {
         this.buttons.push(button);
     }
-    drawMenu() {
-        if (!this.open && !this.currentSubMenu)
+    draw() {
+        if (!this.open)
             return;
         game_1.Game.ctx.save();
         game_1.Game.ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
-        game_1.Game.ctx.fillRect(0, 0, innerWidth, innerHeight);
-        const menuToDraw = this.currentSubMenu
-            ? this.subMenus[this.currentSubMenu]
-            : this;
-        menuToDraw.buttons.forEach((button) => {
-            this.drawButton(button, menuToDraw);
+        game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
+        // Draw main menu buttons
+        this.buttons.forEach((button) => {
+            this.drawButton(button);
         });
+        // Draw close button
+        this.drawCloseButton();
         game_1.Game.ctx.restore();
     }
-    drawButton(button, menu) {
+    drawButton(button) {
+        game_1.Game.ctx.save();
+        game_1.Game.ctx.imageSmoothingEnabled = false;
+        // Clear any stroke settings to prevent unwanted outlines
+        game_1.Game.ctx.strokeStyle = "transparent";
+        game_1.Game.ctx.lineWidth = 0;
         game_1.Game.ctx.fillStyle =
-            menu.selectedButton === menu.buttons.indexOf(button)
-                ? "rgba(200, 200, 200, 1)"
-                : "rgba(255, 255, 255, 1)";
-        game_1.Game.ctx.fillRect(button.x, button.y, button.width, button.height);
+            this.selectedButton === this.buttons.indexOf(button)
+                ? "rgba(75, 75, 75, 1)"
+                : "rgba(100, 100, 100, 1)";
+        // Round coordinates to prevent anti-aliasing outlines
+        game_1.Game.ctx.fillRect(Math.round(button.x), Math.round(button.y), Math.round(button.width), Math.round(button.height));
         game_1.Game.ctx.fillStyle = "rgba(0, 0, 0, 1)";
-        game_1.Game.ctx.font = "20px Arial";
         const textWidth = game_1.Game.measureText(button.text).width;
         const textX = button.x + (button.width - textWidth) / 2;
-        const textY = button.y + button.height / 2 + game_1.Game.letter_height / 2;
-        game_1.Game.fillText(button.text, textX, textY);
+        // Center text vertically in the button, accounting for varying button heights
+        const textY = button.y + button.height / 2 - game_1.Game.letter_height / 2;
+        game_1.Game.fillText(button.text, Math.round(textX), Math.round(textY));
+        game_1.Game.ctx.restore();
+    }
+    drawCloseButton() {
+        game_1.Game.ctx.save();
+        game_1.Game.ctx.imageSmoothingEnabled = false;
+        // Close button styling - make it red-ish for better visibility
+        game_1.Game.ctx.fillStyle = "rgba(220, 60, 60, 1)"; // Red background
+        game_1.Game.ctx.fillRect(Math.round(this.closeButton.x), Math.round(this.closeButton.y), Math.round(this.closeButton.width), Math.round(this.closeButton.height));
+        // Border for the close button
+        game_1.Game.ctx.strokeStyle = "rgba(0, 0, 0, 1)";
+        game_1.Game.ctx.lineWidth = 1;
+        game_1.Game.ctx.strokeRect(this.closeButton.x, this.closeButton.y, this.closeButton.width, this.closeButton.height);
+        // Draw X text
+        game_1.Game.ctx.fillStyle = "rgba(255, 255, 255, 1)"; // White X
+        const textWidth = game_1.Game.measureText(this.closeButton.text).width;
+        const textX = this.closeButton.x + (this.closeButton.width - textWidth) / 2;
+        const textY = this.closeButton.y + this.closeButton.height / 2 - game_1.Game.letter_height / 2;
+        game_1.Game.fillText(this.closeButton.text, textX, textY);
+        game_1.Game.ctx.restore();
     }
     inputHandler(input) {
         if (!this.open)
             return;
         switch (input) {
             case input_1.InputEnum.ESCAPE:
-                if (this.currentSubMenu) {
-                    this.closeSubMenu();
-                }
-                else {
-                    this.open = false;
-                }
+                this.open = false;
                 break;
             case input_1.InputEnum.UP:
                 this.up();
@@ -11591,58 +11616,144 @@ class Menu {
             case input_1.InputEnum.SPACE:
                 this.select();
                 break;
+            case input_1.InputEnum.LEFT_CLICK:
+                // Handle mouse clicks by getting current mouse position and calling mouseInputHandler
+                const { x, y } = mouseCursor_1.MouseCursor.getInstance().getPosition();
+                console.log(`Menu.inputHandler received LEFT_CLICK, delegating to mouseInputHandler with x: ${x}, y: ${y}`);
+                this.mouseInputHandler(x, y);
+                break;
+            case input_1.InputEnum.RIGHT_CLICK:
+                // Handle right clicks if needed (for now just log)
+                console.log("Menu.inputHandler received RIGHT_CLICK");
+                break;
             default:
                 break;
         }
     }
-    openSubMenu(menuName) {
-        if (this.subMenus[menuName]) {
-            this.currentSubMenu = menuName;
-            this.selectedButton = 0;
+    mouseInputHandler(x, y) {
+        console.log(`Menu.mouseInputHandler called with x: ${x}, y: ${y}, menu.open: ${this.open}`);
+        if (!this.open) {
+            console.log("Menu not open, returning early");
+            return;
         }
-    }
-    closeSubMenu() {
-        this.currentSubMenu = null;
-        this.selectedButton = 0;
+        // Check close button first
+        if (this.isPointInCloseButton(x, y)) {
+            console.log("Close button clicked!");
+            this.closeButton.onClick();
+            return;
+        }
+        // Check main menu buttons
+        const bounds = this.isPointInMenuBounds(x, y);
+        console.log(`Menu bounds check result:`, bounds);
+        if (bounds.inBounds && bounds.buttonIndex >= 0) {
+            const button = this.buttons[bounds.buttonIndex];
+            console.log(`Button ${bounds.buttonIndex} (${button.text}) clicked!`);
+            this.selectedButton = bounds.buttonIndex;
+            button.onClick();
+        }
+        else {
+            console.log("Click was not on any menu button");
+        }
     }
     close() {
         this.open = false;
-        this.currentSubMenu = null;
+    }
+    openMenu() {
+        console.log("Menu.openMenu() called");
+        this.open = true;
+        this.selectedButton = 0;
+        console.log(`Menu opened, buttons positioned at:`);
+        this.buttons.forEach((button, index) => {
+            console.log(`  Button ${index} (${button.text}): x: ${button.x}, y: ${button.y}, width: ${button.width}, height: ${button.height}`);
+        });
+    }
+    toggleOpen() {
+        if (this.open) {
+            this.close();
+        }
+        else {
+            this.openMenu();
+        }
     }
     select() {
-        const menuToSelect = this.currentSubMenu
-            ? this.subMenus[this.currentSubMenu]
-            : this;
-        if (menuToSelect.open) {
-            menuToSelect.buttons[menuToSelect.selectedButton].onClick();
+        if (this.buttons[this.selectedButton]) {
+            this.buttons[this.selectedButton].onClick();
         }
     }
     up() {
-        const menuToNavigate = this.currentSubMenu
-            ? this.subMenus[this.currentSubMenu]
-            : this;
-        if (menuToNavigate.open) {
-            menuToNavigate.selectedButton =
-                (menuToNavigate.selectedButton - 1 + menuToNavigate.buttons.length) %
-                    menuToNavigate.buttons.length;
+        if (this.buttons.length > 0) {
+            this.selectedButton =
+                (this.selectedButton - 1 + this.buttons.length) % this.buttons.length;
         }
     }
     down() {
-        const menuToNavigate = this.currentSubMenu
-            ? this.subMenus[this.currentSubMenu]
-            : this;
-        if (menuToNavigate.open) {
-            menuToNavigate.selectedButton =
-                (menuToNavigate.selectedButton + 1) % menuToNavigate.buttons.length;
+        if (this.buttons.length > 0) {
+            this.selectedButton = (this.selectedButton + 1) % this.buttons.length;
         }
     }
     positionButtons() {
-        const startX = (gameConstants_1.GameConstants.WIDTH - 200) / 2;
-        const startY = (gameConstants_1.GameConstants.HEIGHT - this.buttons.length * 60) / 2;
+        const screenWidth = gameConstants_1.GameConstants.WIDTH;
+        const screenHeight = gameConstants_1.GameConstants.HEIGHT;
+        const buttonCount = this.buttons.length;
+        // Position close button in top right corner
+        const closeButtonMargin = 10;
+        this.closeButton.x =
+            screenWidth - this.closeButton.width - closeButtonMargin;
+        this.closeButton.y = closeButtonMargin;
+        // Button sizing - make them responsive to screen size
+        const maxButtonWidth = Math.min(200, screenWidth * 0.6); // Max 60% of screen width
+        // Calculate available space
+        const horizontalMargin = (screenWidth - maxButtonWidth) / 2;
+        const verticalMargin = 20; // Top and bottom margin
+        const availableHeight = screenHeight - verticalMargin * 2;
+        // Divide available height equally among buttons
+        const heightPerButtonSlot = availableHeight / buttonCount;
+        // Make each button take up ~80% of its slot, leaving 20% for spacing
+        // Don't enforce minimum height if it would cause overlap
+        const buttonHeight = Math.floor(heightPerButtonSlot * 0.8);
+        console.log(`Menu.positionButtons: 
+      Screen: ${screenWidth}x${screenHeight}
+      Close button: ${this.closeButton.x}, ${this.closeButton.y} (${this.closeButton.width}x${this.closeButton.height})
+      Button count: ${buttonCount}
+      Available height: ${availableHeight}
+      Height per slot: ${heightPerButtonSlot}
+      Button height: ${buttonHeight}
+      Button width: ${maxButtonWidth}`);
+        // Update button dimensions and positions
         this.buttons.forEach((button, index) => {
-            button.x = startX;
-            button.y = startY + index * 60;
+            button.x = horizontalMargin;
+            button.y =
+                verticalMargin +
+                    index * heightPerButtonSlot +
+                    (heightPerButtonSlot - buttonHeight) / 2;
+            button.width = maxButtonWidth;
+            button.height = buttonHeight;
+            console.log(`  Button ${index} (${button.text}): 
+        x: ${button.x}, y: ${button.y}, 
+        width: ${button.width}, height: ${button.height}
+        Bottom: ${button.y + button.height}`);
         });
+    }
+    isPointInMenuBounds(x, y) {
+        if (!this.open) {
+            return { inBounds: false, buttonIndex: -1 };
+        }
+        for (let i = 0; i < this.buttons.length; i++) {
+            const button = this.buttons[i];
+            if (x >= button.x &&
+                x <= button.x + button.width &&
+                y >= button.y &&
+                y <= button.y + button.height) {
+                return { inBounds: true, buttonIndex: i };
+            }
+        }
+        return { inBounds: false, buttonIndex: -1 };
+    }
+    isPointInCloseButton(x, y) {
+        return (x >= this.closeButton.x &&
+            x <= this.closeButton.x + this.closeButton.width &&
+            y >= this.closeButton.y &&
+            y <= this.closeButton.y + this.closeButton.height);
     }
 }
 exports.Menu = Menu;
@@ -12765,6 +12876,8 @@ class Inventory {
             return Math.round(0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * width);
         };
         this.handleMouseDown = (x, y, button) => {
+            if (this.player.menu.open)
+                return;
             // Ignore if not left click
             if (button !== 0)
                 return;
@@ -12809,6 +12922,8 @@ class Inventory {
             }
         };
         this.handleMouseUp = (x, y, button) => {
+            if (this.player.menu.open)
+                return;
             // Ignore if not left click
             if (button !== 0)
                 return;
@@ -14238,7 +14353,7 @@ class Hammer extends usable_1.Usable {
             }
             else if (other.name === "pickaxe") {
                 let pickaxe = other;
-                pickaxe.disassemble(player);
+                pickaxe.disassemble();
             }
         };
         this.disassemble = (player) => {
@@ -18096,6 +18211,8 @@ const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts"
 class PlayerInputHandler {
     constructor(player) {
         this.handleNumKey = (num) => {
+            if (this.player.menu.open)
+                return;
             this.setMostRecentInput("keyboard");
             if (num <= 5) {
                 this.player.inventory.selX = Math.max(0, Math.min(num - 1, this.player.inventory.cols - 1));
@@ -18126,6 +18243,7 @@ class PlayerInputHandler {
             return (this.player.inventory.isOpen ||
                 this.player.dead ||
                 this.player.game.levelState !== game_1.LevelState.IN_LEVEL ||
+                this.player.menu.open ||
                 (this.player.inventory.isPointInQuickbarBounds(input_1.Input.mouseX, input_1.Input.mouseY)
                     .inBounds &&
                     this.player.game.isMobile));
@@ -18321,10 +18439,15 @@ class PlayerInputHandler {
         const player = this.player;
         const cursor = mouseCursor_1.MouseCursor.getInstance();
         const { x, y } = cursor.getPosition();
-        if (player.game.levelState !== game_1.LevelState.IN_LEVEL)
+        console.log(`PlayerInputHandler.handleMouseLeftClick: cursor position x: ${x}, y: ${y}`);
+        console.log(`  Game level state: ${player.game.levelState}, menu.open: ${this.player.menu.open}`);
+        if (player.game.levelState !== game_1.LevelState.IN_LEVEL) {
+            console.log("Not in level, returning early");
             return;
+        }
         this.setMostRecentInput("mouse");
         if (player.dead) {
+            console.log("Player is dead, restarting");
             player.restart();
             return;
         }
@@ -18333,11 +18456,27 @@ class PlayerInputHandler {
             !inventory.isPointInInventoryBounds(x, y).inBounds) ||
             inventory.isPointInInventoryButton(x, y);
         if (clickedOutsideInventory) {
+            console.log("Clicked outside inventory, toggling");
             inventory.toggleOpen();
         }
         // Check if click is on mute button
         if (this.isPointInMuteButtonBounds(x, y)) {
+            console.log("Clicked on mute button");
             this.handleMuteButtonClick();
+            return;
+        }
+        if (this.player.menu.open) {
+            console.log(`Menu is open, calling menu.mouseInputHandler with x: ${x}, y: ${y}`);
+            this.player.menu.mouseInputHandler(x, y);
+            return;
+        }
+        else {
+            console.log("Menu is not open, continuing with other input handling");
+        }
+        // Check if click is on menu button
+        if (this.isPointInMenuButtonBounds(x, y)) {
+            console.log("Clicked on menu button");
+            this.handleMenuButtonClick();
             return;
         }
         if (player.openVendingMachine) {
@@ -18368,11 +18507,20 @@ class PlayerInputHandler {
             this.player.game.startedFadeOut = true;
             return;
         }
+        if (this.player.menu.open) {
+            this.player.menu.mouseInputHandler(input_1.Input.mouseX, input_1.Input.mouseY);
+            return;
+        }
         const x = input_1.Input.mouseX;
         const y = input_1.Input.mouseY;
         // Check if tap is on mute button
         if (this.isPointInMuteButtonBounds(x, y)) {
             this.handleMuteButtonClick();
+            return;
+        }
+        // Check if tap is on menu button
+        if (this.isPointInMenuButtonBounds(x, y)) {
+            this.handleMenuButtonClick();
             return;
         }
         const isInInventory = this.player.inventory.isPointInInventoryBounds(x, y).inBounds;
@@ -18449,6 +18597,17 @@ class PlayerInputHandler {
     handleMuteButtonClick() {
         muteButton_1.MuteButton.toggleMute();
         this.player.game.pushMessage(sound_1.Sound.audioMuted ? "Audio muted" : "Audio unmuted");
+    }
+    isPointInMenuButtonBounds(x, y) {
+        const tile = gameConstants_1.GameConstants.TILESIZE;
+        //menu button is at the top right of the screen and is 1 tile wide and tall
+        return (x >= gameConstants_1.GameConstants.WIDTH - tile &&
+            x <= gameConstants_1.GameConstants.WIDTH &&
+            y >= 0 &&
+            y <= tile);
+    }
+    handleMenuButtonClick() {
+        this.player.menu.toggleOpen();
     }
 }
 exports.PlayerInputHandler = PlayerInputHandler;
@@ -18928,6 +19087,7 @@ class PlayerRenderer {
             if (!this.player.dead) {
                 if (!transitioning)
                     this.player.inventory.draw(delta);
+                //if (this.player.menu.open) this.player.menu.draw();
                 if (this.player.bestiary)
                     this.player.bestiary.draw(delta);
                 //this.actionTab.draw(delta);
@@ -19042,7 +19202,7 @@ class PlayerRenderer {
             this.player.setCursorIcon();
             //this.drawInventoryButton(delta);
             if (this.player.menu.open)
-                this.player.menu.drawMenu();
+                this.player.menu.draw();
             game_1.Game.ctx.restore();
         };
         this.drawCooldownBar = () => {

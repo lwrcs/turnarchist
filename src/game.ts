@@ -762,6 +762,14 @@ export class Game {
   };
 
   onResize = () => {
+    if (
+      this.localPlayerID !== undefined &&
+      this.players?.[this.localPlayerID] &&
+      this.players?.[this.localPlayerID]?.menu &&
+      this.players?.[this.localPlayerID]?.menu?.open
+    ) {
+      this.players[this.localPlayerID].menu.positionButtons();
+    }
     this.isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     // Define scale adjustment based on device pixel ratio
     if (GameConstants.SCALE === null) {
