@@ -13,6 +13,7 @@ import { MouseCursor } from "../gui/mouseCursor";
 import { Input } from "../game/input";
 import { Pickaxe } from "../item/tool/pickaxe";
 import { MuteButton } from "../gui/muteButton";
+import { Menu } from "../gui/menu";
 
 let OPEN_TIME = 100; // milliseconds
 // Dark gray color used for the background of inventory slots
@@ -849,7 +850,7 @@ export class Inventory {
     this.drawQuickbar(delta);
     this.updateEquipAnimAmount(delta);
     this.drawInventoryButton(delta);
-    MuteButton.draw();
+    Menu.drawOpenMenuButton();
 
     if (this.isOpen) {
       // Draw semi-transparent background for full inventory

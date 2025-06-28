@@ -11265,12 +11265,13 @@ exports.guiButton = void 0;
 const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts");
 const muteButton_1 = __webpack_require__(/*! ./muteButton */ "./src/gui/muteButton.ts");
 class guiButton {
-    constructor(x, y, width, height, text, onClick, toggleable = false) {
+    constructor(x, y, width, height, text, onClick, toggleable = false, parent) {
         // Add a method to update the button's own text based on mute state
         this.toggleMuteText = () => {
             // 'this' refers to the guiButton instance
-            this.text = !sound_1.Sound.audioMuted ? "Unmute Sound" : "Mute Sound";
             muteButton_1.MuteButton.toggleMute();
+            this.text = sound_1.Sound.audioMuted ? "Sound Muted" : "Sound Unmuted";
+            this.parent.player.game.pushMessage(this.text);
         };
         this.toggleable = toggleable;
         this.toggled = false;
@@ -11280,6 +11281,7 @@ class guiButton {
         this.height = height;
         this.text = text;
         this.onClick = onClick;
+        this.parent = parent;
     }
 }
 exports.guiButton = guiButton;
@@ -11538,6 +11540,7 @@ const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/
 const mouseCursor_1 = __webpack_require__(/*! ../gui/mouseCursor */ "./src/gui/mouseCursor.ts");
 class Menu {
     constructor(player) {
+        this.selectionTimeoutId = null;
         // Action methods
         this.startGame = () => {
             console.log("Game Started");
@@ -11569,18 +11572,35 @@ class Menu {
         this.initializeMainMenu();
         this.player = player;
     }
+    static drawOpenMenuButton() {
+        game_1.Game.ctx.save();
+        game_1.Game.ctx.fillStyle = "rgba(255, 255, 0, 1)";
+        game_1.Game.ctx.globalAlpha = 0.1;
+        // Position in top right corner, 2 tiles away from right edge
+        const buttonWidth = Math.round(gameConstants_1.GameConstants.TILESIZE * 1.5 - 2);
+        const buttonHeight = Math.round(gameConstants_1.GameConstants.TILESIZE / 2 - 1);
+        const rightMargin = 2 * gameConstants_1.GameConstants.TILESIZE; // 2 tiles from right edge
+        const buttonX = 1;
+        const buttonY = gameConstants_1.GameConstants.TILESIZE / 2;
+        game_1.Game.ctx.fillRect(buttonX, buttonY, buttonWidth, buttonHeight);
+        game_1.Game.ctx.globalAlpha = 1;
+        game_1.Game.ctx.fillStyle = "rgb(0, 0, 0)"; //yellow text
+        game_1.Game.fillText("Menu", buttonX + 1, buttonY + 1);
+        game_1.Game.ctx.restore();
+    }
     initializeCloseButton() {
-        // Create a square close button - we'll position it properly in positionButtons()
-        const closeButtonSize = 15; // Square button
-        this.closeButton = new guiButton_1.guiButton(0, 0, closeButtonSize, closeButtonSize, "X", () => this.close());
+        // Match the menu button dimensions
+        const buttonWidth = Math.round(gameConstants_1.GameConstants.TILESIZE * 1.5 - 2);
+        const buttonHeight = Math.round(gameConstants_1.GameConstants.TILESIZE / 2 - 1);
+        this.closeButton = new guiButton_1.guiButton(0, 0, Math.round(buttonWidth), Math.round(buttonHeight), "X", () => this.close(), false, this);
     }
     initializeMainMenu() {
         // Don't set fixed dimensions - let positionButtons() calculate optimal sizes
         //this.addButton(new guiButton(0, 0, 0, 0, "Start Game", this.startGame));
         //this.addButton(new guiButton(0, 0, 0, 0, "Settings", this.openSettings));
-        this.addButton(new guiButton_1.guiButton(0, 0, 0, 0, "- Scale", this.scaleDown));
-        this.addButton(new guiButton_1.guiButton(0, 0, 0, 0, "+ Scale", this.scaleUp));
-        const muteButton = new guiButton_1.guiButton(0, 0, 0, 0, "Mute Sound", () => { });
+        this.addButton(new guiButton_1.guiButton(0, 0, 0, 0, "- Scale", this.scaleDown, false, this));
+        this.addButton(new guiButton_1.guiButton(0, 0, 0, 0, "+ Scale", this.scaleUp, false, this));
+        const muteButton = new guiButton_1.guiButton(0, 0, 0, 0, "Mute Sound", () => { }, false, this);
         muteButton.onClick = muteButton.toggleMuteText;
         this.addButton(muteButton);
         //this.addButton(new guiButton(0, 0, 0, 0, "Exit", this.exitGame));
@@ -11689,7 +11709,17 @@ class Menu {
         if (bounds.inBounds && bounds.buttonIndex >= 0) {
             const button = this.buttons[bounds.buttonIndex];
             console.log(`Button ${bounds.buttonIndex} (${button.text}) clicked!`);
+            // Clear any existing timeout
+            if (this.selectionTimeoutId !== null) {
+                clearTimeout(this.selectionTimeoutId);
+            }
+            // Set the selected button for visual feedback
             this.selectedButton = bounds.buttonIndex;
+            // Set timeout to reset selection after 100ms
+            this.selectionTimeoutId = setTimeout(() => {
+                this.selectedButton = -1; // Reset to invalid index so no button appears selected
+                this.selectionTimeoutId = null;
+            }, 100);
             button.onClick();
         }
         else {
@@ -11702,7 +11732,7 @@ class Menu {
     openMenu() {
         console.log("Menu.openMenu() called");
         this.open = true;
-        this.selectedButton = 0;
+        this.selectedButton = -1;
         console.log(`Menu opened, buttons positioned at:`);
         this.buttons.forEach((button, index) => {
             console.log(`  Button ${index} (${button.text}): x: ${button.x}, y: ${button.y}, width: ${button.width}, height: ${button.height}`);
@@ -11736,11 +11766,9 @@ class Menu {
         const screenWidth = gameConstants_1.GameConstants.WIDTH;
         const screenHeight = gameConstants_1.GameConstants.HEIGHT;
         const buttonCount = this.buttons.length;
-        // Position close button in top right corner
-        const closeButtonMargin = 10;
-        this.closeButton.x =
-            screenWidth - this.closeButton.width - closeButtonMargin;
-        this.closeButton.y = closeButtonMargin;
+        // Position close button to match menu button position
+        this.closeButton.x = 1;
+        this.closeButton.y = gameConstants_1.GameConstants.TILESIZE / 2;
         // Button sizing - make them responsive to screen size
         const maxButtonWidth = Math.min(200, screenWidth * 0.6); // Max 60% of screen width
         // Calculate available space
@@ -11752,7 +11780,10 @@ class Menu {
         const buttonSlots = buttonCount - (scaleButtonIndices.length > 0 ? 1 : 0); // Scale buttons share one slot
         const heightPerButtonSlot = availableHeight / buttonSlots;
         // Make each button take up ~80% of its slot, leaving 20% for spacing
-        const buttonHeight = Math.floor(heightPerButtonSlot * 0.8);
+        // Add maximum height constraint - reduce by 40% from what could be very tall buttons
+        const maxButtonHeight = 30; // Maximum button height in pixels
+        const calculatedHeight = Math.floor(heightPerButtonSlot * 0.8);
+        const buttonHeight = Math.min(calculatedHeight, maxButtonHeight);
         console.log(`Menu.positionButtons: 
       Screen: ${screenWidth}x${screenHeight}
       Close button: ${this.closeButton.x}, ${this.closeButton.y} (${this.closeButton.width}x${this.closeButton.height})
@@ -12055,7 +12086,7 @@ const usable_1 = __webpack_require__(/*! ../item/usable/usable */ "./src/item/us
 const mouseCursor_1 = __webpack_require__(/*! ../gui/mouseCursor */ "./src/gui/mouseCursor.ts");
 const input_1 = __webpack_require__(/*! ../game/input */ "./src/game/input.ts");
 const pickaxe_1 = __webpack_require__(/*! ../item/tool/pickaxe */ "./src/item/tool/pickaxe.ts");
-const muteButton_1 = __webpack_require__(/*! ../gui/muteButton */ "./src/gui/muteButton.ts");
+const menu_1 = __webpack_require__(/*! ../gui/menu */ "./src/gui/menu.ts");
 let OPEN_TIME = 100; // milliseconds
 // Dark gray color used for the background of inventory slots
 let FILL_COLOR = "#5a595b";
@@ -12688,7 +12719,7 @@ class Inventory {
             this.drawQuickbar(delta);
             this.updateEquipAnimAmount(delta);
             this.drawInventoryButton(delta);
-            muteButton_1.MuteButton.draw();
+            menu_1.Menu.drawOpenMenuButton();
             if (this.isOpen) {
                 // Draw semi-transparent background for full inventory
                 game_1.Game.ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
@@ -18545,12 +18576,6 @@ class PlayerInputHandler {
             console.log("Clicked outside inventory, toggling");
             inventory.toggleOpen();
         }
-        // Check if click is on mute button
-        if (this.isPointInMuteButtonBounds(x, y)) {
-            console.log("Clicked on mute button");
-            this.handleMuteButtonClick();
-            return;
-        }
         if (this.player.menu.open) {
             console.log(`Menu is open, calling menu.mouseInputHandler with x: ${x}, y: ${y}`);
             this.player.menu.mouseInputHandler(x, y);
@@ -18599,11 +18624,6 @@ class PlayerInputHandler {
         }
         const x = input_1.Input.mouseX;
         const y = input_1.Input.mouseY;
-        // Check if tap is on mute button
-        if (this.isPointInMuteButtonBounds(x, y)) {
-            this.handleMuteButtonClick();
-            return;
-        }
         // Check if tap is on menu button
         if (this.isPointInMenuButtonBounds(x, y)) {
             this.handleMenuButtonClick();
@@ -18686,11 +18706,8 @@ class PlayerInputHandler {
     }
     isPointInMenuButtonBounds(x, y) {
         const tile = gameConstants_1.GameConstants.TILESIZE;
-        //menu button is at the top right of the screen and is 1 tile wide and tall
-        return (x >= gameConstants_1.GameConstants.WIDTH - tile &&
-            x <= gameConstants_1.GameConstants.WIDTH &&
-            y >= 0 &&
-            y <= tile);
+        //menu button is at the top left of the screen right below the fps counter and is 1 tile wide and tall
+        return x >= 0 && x <= tile * 1.5 && y >= 0 && y <= tile;
     }
     handleMenuButtonClick() {
         this.player.menu.toggleOpen();

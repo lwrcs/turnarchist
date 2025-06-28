@@ -255,13 +255,6 @@ export class PlayerInputHandler {
       inventory.toggleOpen();
     }
 
-    // Check if click is on mute button
-    if (this.isPointInMuteButtonBounds(x, y)) {
-      console.log("Clicked on mute button");
-      this.handleMuteButtonClick();
-      return;
-    }
-
     if (this.player.menu.open) {
       console.log(
         `Menu is open, calling menu.mouseInputHandler with x: ${x}, y: ${y}`,
@@ -335,12 +328,6 @@ export class PlayerInputHandler {
 
     const x = Input.mouseX;
     const y = Input.mouseY;
-
-    // Check if tap is on mute button
-    if (this.isPointInMuteButtonBounds(x, y)) {
-      this.handleMuteButtonClick();
-      return;
-    }
 
     // Check if tap is on menu button
     if (this.isPointInMenuButtonBounds(x, y)) {
@@ -482,13 +469,8 @@ export class PlayerInputHandler {
 
   isPointInMenuButtonBounds(x: number, y: number): boolean {
     const tile = GameConstants.TILESIZE;
-    //menu button is at the top right of the screen and is 1 tile wide and tall
-    return (
-      x >= GameConstants.WIDTH - tile &&
-      x <= GameConstants.WIDTH &&
-      y >= 0 &&
-      y <= tile
-    );
+    //menu button is at the top left of the screen right below the fps counter and is 1 tile wide and tall
+    return x >= 0 && x <= tile * 1.5 && y >= 0 && y <= tile;
   }
 
   handleMenuButtonClick() {

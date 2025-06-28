@@ -13,6 +13,7 @@ export class Menu {
   open: boolean;
   selectedButton: number;
   player: Player;
+  selectionTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   constructor(player: Player) {
     this.buttons = [];
@@ -23,16 +24,40 @@ export class Menu {
     this.player = player;
   }
 
+  static drawOpenMenuButton() {
+    Game.ctx.save();
+    Game.ctx.fillStyle = "rgba(255, 255, 0, 1)";
+    Game.ctx.globalAlpha = 0.1;
+
+    // Position in top right corner, 2 tiles away from right edge
+    const buttonWidth = Math.round(GameConstants.TILESIZE * 1.5 - 2);
+    const buttonHeight = Math.round(GameConstants.TILESIZE / 2 - 1);
+    const rightMargin = 2 * GameConstants.TILESIZE; // 2 tiles from right edge
+    const buttonX = 1;
+    const buttonY = GameConstants.TILESIZE / 2;
+
+    Game.ctx.fillRect(buttonX, buttonY, buttonWidth, buttonHeight);
+    Game.ctx.globalAlpha = 1;
+
+    Game.ctx.fillStyle = "rgb(0, 0, 0)"; //yellow text
+    Game.fillText("Menu", buttonX + 1, buttonY + 1);
+    Game.ctx.restore();
+  }
+
   initializeCloseButton() {
-    // Create a square close button - we'll position it properly in positionButtons()
-    const closeButtonSize = 15; // Square button
+    // Match the menu button dimensions
+    const buttonWidth = Math.round(GameConstants.TILESIZE * 1.5 - 2);
+    const buttonHeight = Math.round(GameConstants.TILESIZE / 2 - 1);
+
     this.closeButton = new guiButton(
       0,
       0,
-      closeButtonSize,
-      closeButtonSize,
+      Math.round(buttonWidth),
+      Math.round(buttonHeight),
       "X",
       () => this.close(),
+      false,
+      this,
     );
   }
 
@@ -40,9 +65,22 @@ export class Menu {
     // Don't set fixed dimensions - let positionButtons() calculate optimal sizes
     //this.addButton(new guiButton(0, 0, 0, 0, "Start Game", this.startGame));
     //this.addButton(new guiButton(0, 0, 0, 0, "Settings", this.openSettings));
-    this.addButton(new guiButton(0, 0, 0, 0, "- Scale", this.scaleDown));
-    this.addButton(new guiButton(0, 0, 0, 0, "+ Scale", this.scaleUp));
-    const muteButton = new guiButton(0, 0, 0, 0, "Mute Sound", () => {});
+    this.addButton(
+      new guiButton(0, 0, 0, 0, "- Scale", this.scaleDown, false, this),
+    );
+    this.addButton(
+      new guiButton(0, 0, 0, 0, "+ Scale", this.scaleUp, false, this),
+    );
+    const muteButton = new guiButton(
+      0,
+      0,
+      0,
+      0,
+      "Mute Sound",
+      () => {},
+      false,
+      this,
+    );
     muteButton.onClick = muteButton.toggleMuteText;
     this.addButton(muteButton);
     //this.addButton(new guiButton(0, 0, 0, 0, "Exit", this.exitGame));
@@ -195,7 +233,21 @@ export class Menu {
     if (bounds.inBounds && bounds.buttonIndex >= 0) {
       const button = this.buttons[bounds.buttonIndex];
       console.log(`Button ${bounds.buttonIndex} (${button.text}) clicked!`);
+
+      // Clear any existing timeout
+      if (this.selectionTimeoutId !== null) {
+        clearTimeout(this.selectionTimeoutId);
+      }
+
+      // Set the selected button for visual feedback
       this.selectedButton = bounds.buttonIndex;
+
+      // Set timeout to reset selection after 100ms
+      this.selectionTimeoutId = setTimeout(() => {
+        this.selectedButton = -1; // Reset to invalid index so no button appears selected
+        this.selectionTimeoutId = null;
+      }, 100);
+
       button.onClick();
     } else {
       console.log("Click was not on any menu button");
@@ -209,7 +261,7 @@ export class Menu {
   openMenu() {
     console.log("Menu.openMenu() called");
     this.open = true;
-    this.selectedButton = 0;
+    this.selectedButton = -1;
     console.log(`Menu opened, buttons positioned at:`);
     this.buttons.forEach((button, index) => {
       console.log(
@@ -279,11 +331,9 @@ export class Menu {
     const screenHeight = GameConstants.HEIGHT;
     const buttonCount = this.buttons.length;
 
-    // Position close button in top right corner
-    const closeButtonMargin = 10;
-    this.closeButton.x =
-      screenWidth - this.closeButton.width - closeButtonMargin;
-    this.closeButton.y = closeButtonMargin;
+    // Position close button to match menu button position
+    this.closeButton.x = 1;
+    this.closeButton.y = GameConstants.TILESIZE / 2;
 
     // Button sizing - make them responsive to screen size
     const maxButtonWidth = Math.min(200, screenWidth * 0.6); // Max 60% of screen width
@@ -299,7 +349,10 @@ export class Menu {
     const heightPerButtonSlot = availableHeight / buttonSlots;
 
     // Make each button take up ~80% of its slot, leaving 20% for spacing
-    const buttonHeight = Math.floor(heightPerButtonSlot * 0.8);
+    // Add maximum height constraint - reduce by 40% from what could be very tall buttons
+    const maxButtonHeight = 30; // Maximum button height in pixels
+    const calculatedHeight = Math.floor(heightPerButtonSlot * 0.8);
+    const buttonHeight = Math.min(calculatedHeight, maxButtonHeight);
 
     console.log(`Menu.positionButtons: 
       Screen: ${screenWidth}x${screenHeight}

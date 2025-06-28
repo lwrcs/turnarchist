@@ -1,4 +1,5 @@
 import { Sound } from "../sound/sound";
+import { Menu } from "./menu";
 import { MuteButton } from "./muteButton";
 
 export class guiButton {
@@ -9,6 +10,7 @@ export class guiButton {
   width: number;
   height: number;
   text: string;
+  parent: Menu;
   onClick: () => void;
   constructor(
     x: number,
@@ -18,6 +20,7 @@ export class guiButton {
     text: string,
     onClick: () => void,
     toggleable: boolean = false,
+    parent: Menu,
   ) {
     this.toggleable = toggleable;
     this.toggled = false;
@@ -27,12 +30,15 @@ export class guiButton {
     this.height = height;
     this.text = text;
     this.onClick = onClick;
+    this.parent = parent;
   }
 
   // Add a method to update the button's own text based on mute state
   toggleMuteText = () => {
     // 'this' refers to the guiButton instance
-    this.text = !Sound.audioMuted ? "Unmute Sound" : "Mute Sound";
     MuteButton.toggleMute();
+
+    this.text = Sound.audioMuted ? "Sound Muted" : "Sound Unmuted";
+    this.parent.player.game.pushMessage(this.text);
   };
 }
