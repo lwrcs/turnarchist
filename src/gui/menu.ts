@@ -3,19 +3,24 @@ import { guiButton } from "./guiButton";
 import { InputEnum } from "../game/input";
 import { GameConstants } from "../game/gameConstants";
 import { MouseCursor } from "../gui/mouseCursor";
+import { MuteButton } from "./muteButton";
+import { Sound } from "../sound/sound";
+import { Player } from "../player/player";
 
 export class Menu {
   buttons: guiButton[];
   closeButton: guiButton;
   open: boolean;
   selectedButton: number;
+  player: Player;
 
-  constructor() {
+  constructor(player: Player) {
     this.buttons = [];
     this.open = false;
     this.selectedButton = 0;
     this.initializeCloseButton();
     this.initializeMainMenu();
+    this.player = player;
   }
 
   initializeCloseButton() {
@@ -33,15 +38,14 @@ export class Menu {
 
   initializeMainMenu() {
     // Don't set fixed dimensions - let positionButtons() calculate optimal sizes
-    this.addButton(new guiButton(0, 0, 0, 0, "Start Game", this.startGame));
-    this.addButton(new guiButton(0, 0, 0, 0, "Settings", this.openSettings));
-    this.addButton(
-      new guiButton(0, 0, 0, 0, "Test Button 1", this.testButton1),
-    );
-    this.addButton(
-      new guiButton(0, 0, 0, 0, "Test Button 2", this.testButton2),
-    );
-    this.addButton(new guiButton(0, 0, 0, 0, "Exit", this.exitGame));
+    //this.addButton(new guiButton(0, 0, 0, 0, "Start Game", this.startGame));
+    //this.addButton(new guiButton(0, 0, 0, 0, "Settings", this.openSettings));
+    this.addButton(new guiButton(0, 0, 0, 0, "- Scale", this.scaleDown));
+    this.addButton(new guiButton(0, 0, 0, 0, "+ Scale", this.scaleUp));
+    const muteButton = new guiButton(0, 0, 0, 0, "Mute Sound", () => {});
+    muteButton.onClick = muteButton.toggleMuteText;
+    this.addButton(muteButton);
+    //this.addButton(new guiButton(0, 0, 0, 0, "Exit", this.exitGame));
     this.positionButtons();
   }
 
@@ -258,14 +262,16 @@ export class Menu {
     // Implement settings logic later
   };
 
-  testButton1 = () => {
-    console.log("Test Button 1 clicked!");
-    // Add any test functionality here
+  scaleUp = () => {
+    this.player.game.increaseScale();
+    console.log("Scale Up clicked!");
+    // Add scale up functionality here
   };
 
-  testButton2 = () => {
-    console.log("Test Button 2 clicked!");
-    // Add any test functionality here
+  scaleDown = () => {
+    this.player.game.decreaseScale();
+    console.log("Scale Down clicked!");
+    // Add scale down functionality here
   };
 
   positionButtons() {
@@ -287,37 +293,73 @@ export class Menu {
     const verticalMargin = 20; // Top and bottom margin
     const availableHeight = screenHeight - verticalMargin * 2;
 
-    // Divide available height equally among buttons
-    const heightPerButtonSlot = availableHeight / buttonCount;
+    // Calculate button slots (scale buttons share one slot)
+    const scaleButtonIndices = this.getScaleButtonIndices();
+    const buttonSlots = buttonCount - (scaleButtonIndices.length > 0 ? 1 : 0); // Scale buttons share one slot
+    const heightPerButtonSlot = availableHeight / buttonSlots;
 
     // Make each button take up ~80% of its slot, leaving 20% for spacing
-    // Don't enforce minimum height if it would cause overlap
     const buttonHeight = Math.floor(heightPerButtonSlot * 0.8);
 
     console.log(`Menu.positionButtons: 
       Screen: ${screenWidth}x${screenHeight}
       Close button: ${this.closeButton.x}, ${this.closeButton.y} (${this.closeButton.width}x${this.closeButton.height})
       Button count: ${buttonCount}
+      Button slots: ${buttonSlots}
       Available height: ${availableHeight}
       Height per slot: ${heightPerButtonSlot}
       Button height: ${buttonHeight}
       Button width: ${maxButtonWidth}`);
 
     // Update button dimensions and positions
-    this.buttons.forEach((button, index) => {
-      button.x = horizontalMargin;
-      button.y =
-        verticalMargin +
-        index * heightPerButtonSlot +
-        (heightPerButtonSlot - buttonHeight) / 2;
-      button.width = maxButtonWidth;
-      button.height = buttonHeight;
+    let currentSlot = 0;
+    for (let i = 0; i < this.buttons.length; i++) {
+      const button = this.buttons[i];
 
-      console.log(`  Button ${index} (${button.text}): 
+      if (button.text === "- Scale" || button.text === "+ Scale") {
+        // Handle scale buttons specially - they share one slot side by side
+        const isMinusButton = button.text === "- Scale";
+        const buttonWidth = Math.floor(maxButtonWidth / 2) - 2; // Split width with small gap
+
+        button.x = horizontalMargin + (isMinusButton ? 0 : buttonWidth + 4);
+        button.y =
+          verticalMargin +
+          currentSlot * heightPerButtonSlot +
+          (heightPerButtonSlot - buttonHeight) / 2;
+        button.width = buttonWidth;
+        button.height = buttonHeight;
+
+        // Only advance slot after both scale buttons are positioned
+        if (button.text === "+ Scale") {
+          currentSlot++;
+        }
+      } else {
+        // Regular button positioning
+        button.x = horizontalMargin;
+        button.y =
+          verticalMargin +
+          currentSlot * heightPerButtonSlot +
+          (heightPerButtonSlot - buttonHeight) / 2;
+        button.width = maxButtonWidth;
+        button.height = buttonHeight;
+        currentSlot++;
+      }
+
+      console.log(`  Button ${i} (${button.text}): 
         x: ${button.x}, y: ${button.y}, 
         width: ${button.width}, height: ${button.height}
         Bottom: ${button.y + button.height}`);
+    }
+  }
+
+  getScaleButtonIndices(): number[] {
+    const indices: number[] = [];
+    this.buttons.forEach((button, index) => {
+      if (button.text === "- Scale" || button.text === "+ Scale") {
+        indices.push(index);
+      }
     });
+    return indices;
   }
 
   isPointInMenuBounds(

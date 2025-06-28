@@ -7,6 +7,8 @@ export class MouseCursor {
   private cursorSize: number = 5; // Size of the cursor rectangle
   private clickX: number = 0;
   private clickY: number = 0;
+  private rawClickX: number = 0;
+  private rawClickY: number = 0;
   private tileX: number = 6;
   private lastMouseX: number = 0;
   private lastMouseY: number = 0;
@@ -74,6 +76,18 @@ export class MouseCursor {
     this.frame = 0;
     this.clickX = Input.mouseX;
     this.clickY = Input.mouseY;
+    this.rawClickX = Input.rawMouseX;
+    this.rawClickY = Input.rawMouseY;
+  }
+
+  public recalculateClickPosition(): void {
+    if (this.rawClickX !== undefined && this.rawClickY !== undefined) {
+      const canvas = document.getElementById("gameCanvas") as HTMLCanvasElement;
+      const rect = canvas.getBoundingClientRect();
+
+      this.clickX = Math.floor(this.rawClickX / Game.scale);
+      this.clickY = Math.floor(this.rawClickY / Game.scale);
+    }
   }
 
   public setIcon = (icon: string) => {

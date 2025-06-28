@@ -8456,34 +8456,46 @@ class Game {
         this.increaseScale = () => {
             gameConstants_1.GameConstants.INCREASE_SCALE();
             this.onResize();
+            // Recalculate mouse position for new scale
+            input_1.Input.recalculateMousePosition();
         };
         this.decreaseScale = () => {
             gameConstants_1.GameConstants.DECREASE_SCALE();
             this.onResize();
+            // Recalculate mouse position for new scale
+            input_1.Input.recalculateMousePosition();
         };
         this.updateScale = (delta) => {
-            if (gameConstants_1.GameConstants.SOFT_SCALE < gameConstants_1.GameConstants.SCALE &&
-                Math.abs(gameConstants_1.GameConstants.SOFT_SCALE - gameConstants_1.GameConstants.SCALE) >= 0.1) {
-                gameConstants_1.GameConstants.SOFT_SCALE +=
-                    ((gameConstants_1.GameConstants.SCALE - gameConstants_1.GameConstants.SOFT_SCALE) * delta) / 10;
+            if (gameConstants_1.GameConstants.smoothScaling) {
+                if (gameConstants_1.GameConstants.SOFT_SCALE < gameConstants_1.GameConstants.SCALE &&
+                    Math.abs(gameConstants_1.GameConstants.SOFT_SCALE - gameConstants_1.GameConstants.SCALE) >= 0.1) {
+                    gameConstants_1.GameConstants.SOFT_SCALE +=
+                        ((gameConstants_1.GameConstants.SCALE - gameConstants_1.GameConstants.SOFT_SCALE) * delta) / 10;
+                }
+                if (gameConstants_1.GameConstants.SOFT_SCALE > gameConstants_1.GameConstants.SCALE &&
+                    Math.abs(gameConstants_1.GameConstants.SOFT_SCALE - gameConstants_1.GameConstants.SCALE) >= 0.1) {
+                    gameConstants_1.GameConstants.SOFT_SCALE -=
+                        ((gameConstants_1.GameConstants.SOFT_SCALE - gameConstants_1.GameConstants.SCALE) * delta) / 10;
+                }
+                if (gameConstants_1.GameConstants.SOFT_SCALE < gameConstants_1.GameConstants.SCALE &&
+                    Math.abs(gameConstants_1.GameConstants.SOFT_SCALE - gameConstants_1.GameConstants.SCALE) <= 0.1) {
+                    gameConstants_1.GameConstants.SOFT_SCALE += delta / 25;
+                }
+                if (gameConstants_1.GameConstants.SOFT_SCALE > gameConstants_1.GameConstants.SCALE &&
+                    Math.abs(gameConstants_1.GameConstants.SOFT_SCALE - gameConstants_1.GameConstants.SCALE) <= 0.1) {
+                    gameConstants_1.GameConstants.SOFT_SCALE -= delta / 25;
+                }
+                if (Math.abs(gameConstants_1.GameConstants.SOFT_SCALE - gameConstants_1.GameConstants.SCALE) <= 0.01) {
+                    gameConstants_1.GameConstants.SOFT_SCALE = gameConstants_1.GameConstants.SCALE;
+                }
             }
-            if (gameConstants_1.GameConstants.SOFT_SCALE > gameConstants_1.GameConstants.SCALE &&
-                Math.abs(gameConstants_1.GameConstants.SOFT_SCALE - gameConstants_1.GameConstants.SCALE) >= 0.1) {
-                gameConstants_1.GameConstants.SOFT_SCALE -=
-                    ((gameConstants_1.GameConstants.SOFT_SCALE - gameConstants_1.GameConstants.SCALE) * delta) / 10;
-            }
-            if (gameConstants_1.GameConstants.SOFT_SCALE < gameConstants_1.GameConstants.SCALE &&
-                Math.abs(gameConstants_1.GameConstants.SOFT_SCALE - gameConstants_1.GameConstants.SCALE) <= 0.1) {
-                gameConstants_1.GameConstants.SOFT_SCALE += delta / 25;
-            }
-            if (gameConstants_1.GameConstants.SOFT_SCALE > gameConstants_1.GameConstants.SCALE &&
-                Math.abs(gameConstants_1.GameConstants.SOFT_SCALE - gameConstants_1.GameConstants.SCALE) <= 0.1) {
-                gameConstants_1.GameConstants.SOFT_SCALE -= delta / 25;
-            }
-            if (Math.abs(gameConstants_1.GameConstants.SOFT_SCALE - gameConstants_1.GameConstants.SCALE) <= 0.01) {
+            else {
+                //GameConstants.SCALE = Math.floor(GameConstants.SCALE);
                 gameConstants_1.GameConstants.SOFT_SCALE = gameConstants_1.GameConstants.SCALE;
             }
             this.onResize();
+            // Recalculate mouse position for new scale
+            input_1.Input.recalculateMousePosition();
         };
         this.refreshDimensions = () => {
             Game.ctx.canvas.setAttribute("width", `${gameConstants_1.GameConstants.WIDTH}`);
@@ -8492,8 +8504,7 @@ class Game {
         this.onResize = () => {
             if (this.localPlayerID !== undefined &&
                 this.players?.[this.localPlayerID] &&
-                this.players?.[this.localPlayerID]?.menu &&
-                this.players?.[this.localPlayerID]?.menu?.open) {
+                this.players?.[this.localPlayerID]?.menu) {
                 this.players[this.localPlayerID].menu.positionButtons();
             }
             this.isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
@@ -8645,6 +8656,7 @@ class Game {
         this.draw = (delta) => {
             if (gameConstants_1.GameConstants.SOFT_SCALE !== gameConstants_1.GameConstants.SCALE) {
                 this.updateScale(delta);
+                this.onResize();
             }
             //Game.ctx.canvas.setAttribute("role", "presentation");
             Game.ctx.clearRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
@@ -9598,6 +9610,7 @@ GameConstants.SCALE = null;
 GameConstants.SOFT_SCALE = 6;
 GameConstants.MAX_SCALE = 16;
 GameConstants.MIN_SCALE = 1;
+GameConstants.smoothScaling = false;
 GameConstants.SWIPE_THRESH = 25 ** 2; // (size of swipe threshold circle)^2
 GameConstants.HOLD_THRESH = 250; // milliseconds
 GameConstants.KEY_REPEAT_TIME = 300; // millseconds
@@ -10627,6 +10640,8 @@ exports.Input = {
     MINUS: "Minus",
     EQUALS: "Equal",
     ESCAPE: "Escape",
+    rawMouseX: 0,
+    rawMouseY: 0,
     isDown: function (keyCode) {
         return this._pressed[keyCode];
     },
@@ -10759,9 +10774,21 @@ exports.Input = {
             .getBoundingClientRect();
         let x = event.clientX - rect.left;
         let y = event.clientY - rect.top;
+        // Store raw coordinates
+        exports.Input.rawMouseX = x;
+        exports.Input.rawMouseY = y;
+        // Calculate scaled coordinates
         exports.Input.mouseX = Math.floor(x / game_1.Game.scale);
         exports.Input.mouseY = Math.floor(y / game_1.Game.scale);
         exports.Input.mouseMoveListener(exports.Input.mouseX, exports.Input.mouseY);
+    },
+    recalculateMousePosition: function () {
+        if (exports.Input.rawMouseX !== undefined && exports.Input.rawMouseY !== undefined) {
+            exports.Input.mouseX = Math.floor(exports.Input.rawMouseX / game_1.Game.scale);
+            exports.Input.mouseY = Math.floor(exports.Input.rawMouseY / game_1.Game.scale);
+            // Also recalculate click animation position
+            mouseCursor_1.MouseCursor.getInstance().recalculateClickPosition();
+        }
     },
     handleMouseDown: function (event) {
         if (exports.Input.mouseDown)
@@ -11230,13 +11257,21 @@ exports.TextBox = TextBox;
 /*!******************************!*\
   !*** ./src/gui/guiButton.ts ***!
   \******************************/
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.guiButton = void 0;
+const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts");
+const muteButton_1 = __webpack_require__(/*! ./muteButton */ "./src/gui/muteButton.ts");
 class guiButton {
     constructor(x, y, width, height, text, onClick, toggleable = false) {
+        // Add a method to update the button's own text based on mute state
+        this.toggleMuteText = () => {
+            // 'this' refers to the guiButton instance
+            this.text = !sound_1.Sound.audioMuted ? "Unmute Sound" : "Mute Sound";
+            muteButton_1.MuteButton.toggleMute();
+        };
         this.toggleable = toggleable;
         this.toggled = false;
         this.x = x;
@@ -11502,7 +11537,7 @@ const input_1 = __webpack_require__(/*! ../game/input */ "./src/game/input.ts");
 const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
 const mouseCursor_1 = __webpack_require__(/*! ../gui/mouseCursor */ "./src/gui/mouseCursor.ts");
 class Menu {
-    constructor() {
+    constructor(player) {
         // Action methods
         this.startGame = () => {
             console.log("Game Started");
@@ -11517,19 +11552,22 @@ class Menu {
             console.log("Settings clicked - submenus disabled for now");
             // Implement settings logic later
         };
-        this.testButton1 = () => {
-            console.log("Test Button 1 clicked!");
-            // Add any test functionality here
+        this.scaleUp = () => {
+            this.player.game.increaseScale();
+            console.log("Scale Up clicked!");
+            // Add scale up functionality here
         };
-        this.testButton2 = () => {
-            console.log("Test Button 2 clicked!");
-            // Add any test functionality here
+        this.scaleDown = () => {
+            this.player.game.decreaseScale();
+            console.log("Scale Down clicked!");
+            // Add scale down functionality here
         };
         this.buttons = [];
         this.open = false;
         this.selectedButton = 0;
         this.initializeCloseButton();
         this.initializeMainMenu();
+        this.player = player;
     }
     initializeCloseButton() {
         // Create a square close button - we'll position it properly in positionButtons()
@@ -11538,11 +11576,14 @@ class Menu {
     }
     initializeMainMenu() {
         // Don't set fixed dimensions - let positionButtons() calculate optimal sizes
-        this.addButton(new guiButton_1.guiButton(0, 0, 0, 0, "Start Game", this.startGame));
-        this.addButton(new guiButton_1.guiButton(0, 0, 0, 0, "Settings", this.openSettings));
-        this.addButton(new guiButton_1.guiButton(0, 0, 0, 0, "Test Button 1", this.testButton1));
-        this.addButton(new guiButton_1.guiButton(0, 0, 0, 0, "Test Button 2", this.testButton2));
-        this.addButton(new guiButton_1.guiButton(0, 0, 0, 0, "Exit", this.exitGame));
+        //this.addButton(new guiButton(0, 0, 0, 0, "Start Game", this.startGame));
+        //this.addButton(new guiButton(0, 0, 0, 0, "Settings", this.openSettings));
+        this.addButton(new guiButton_1.guiButton(0, 0, 0, 0, "- Scale", this.scaleDown));
+        this.addButton(new guiButton_1.guiButton(0, 0, 0, 0, "+ Scale", this.scaleUp));
+        const muteButton = new guiButton_1.guiButton(0, 0, 0, 0, "Mute Sound", () => { });
+        muteButton.onClick = muteButton.toggleMuteText;
+        this.addButton(muteButton);
+        //this.addButton(new guiButton(0, 0, 0, 0, "Exit", this.exitGame));
         this.positionButtons();
     }
     addButton(button) {
@@ -11706,33 +11747,66 @@ class Menu {
         const horizontalMargin = (screenWidth - maxButtonWidth) / 2;
         const verticalMargin = 20; // Top and bottom margin
         const availableHeight = screenHeight - verticalMargin * 2;
-        // Divide available height equally among buttons
-        const heightPerButtonSlot = availableHeight / buttonCount;
+        // Calculate button slots (scale buttons share one slot)
+        const scaleButtonIndices = this.getScaleButtonIndices();
+        const buttonSlots = buttonCount - (scaleButtonIndices.length > 0 ? 1 : 0); // Scale buttons share one slot
+        const heightPerButtonSlot = availableHeight / buttonSlots;
         // Make each button take up ~80% of its slot, leaving 20% for spacing
-        // Don't enforce minimum height if it would cause overlap
         const buttonHeight = Math.floor(heightPerButtonSlot * 0.8);
         console.log(`Menu.positionButtons: 
       Screen: ${screenWidth}x${screenHeight}
       Close button: ${this.closeButton.x}, ${this.closeButton.y} (${this.closeButton.width}x${this.closeButton.height})
       Button count: ${buttonCount}
+      Button slots: ${buttonSlots}
       Available height: ${availableHeight}
       Height per slot: ${heightPerButtonSlot}
       Button height: ${buttonHeight}
       Button width: ${maxButtonWidth}`);
         // Update button dimensions and positions
-        this.buttons.forEach((button, index) => {
-            button.x = horizontalMargin;
-            button.y =
-                verticalMargin +
-                    index * heightPerButtonSlot +
-                    (heightPerButtonSlot - buttonHeight) / 2;
-            button.width = maxButtonWidth;
-            button.height = buttonHeight;
-            console.log(`  Button ${index} (${button.text}): 
+        let currentSlot = 0;
+        for (let i = 0; i < this.buttons.length; i++) {
+            const button = this.buttons[i];
+            if (button.text === "- Scale" || button.text === "+ Scale") {
+                // Handle scale buttons specially - they share one slot side by side
+                const isMinusButton = button.text === "- Scale";
+                const buttonWidth = Math.floor(maxButtonWidth / 2) - 2; // Split width with small gap
+                button.x = horizontalMargin + (isMinusButton ? 0 : buttonWidth + 4);
+                button.y =
+                    verticalMargin +
+                        currentSlot * heightPerButtonSlot +
+                        (heightPerButtonSlot - buttonHeight) / 2;
+                button.width = buttonWidth;
+                button.height = buttonHeight;
+                // Only advance slot after both scale buttons are positioned
+                if (button.text === "+ Scale") {
+                    currentSlot++;
+                }
+            }
+            else {
+                // Regular button positioning
+                button.x = horizontalMargin;
+                button.y =
+                    verticalMargin +
+                        currentSlot * heightPerButtonSlot +
+                        (heightPerButtonSlot - buttonHeight) / 2;
+                button.width = maxButtonWidth;
+                button.height = buttonHeight;
+                currentSlot++;
+            }
+            console.log(`  Button ${i} (${button.text}): 
         x: ${button.x}, y: ${button.y}, 
         width: ${button.width}, height: ${button.height}
         Bottom: ${button.y + button.height}`);
+        }
+    }
+    getScaleButtonIndices() {
+        const indices = [];
+        this.buttons.forEach((button, index) => {
+            if (button.text === "- Scale" || button.text === "+ Scale") {
+                indices.push(index);
+            }
         });
+        return indices;
     }
     isPointInMenuBounds(x, y) {
         if (!this.open) {
@@ -11778,6 +11852,8 @@ class MouseCursor {
         this.cursorSize = 5; // Size of the cursor rectangle
         this.clickX = 0;
         this.clickY = 0;
+        this.rawClickX = 0;
+        this.rawClickY = 0;
         this.tileX = 6;
         this.lastMouseX = 0;
         this.lastMouseY = 0;
@@ -11857,6 +11933,16 @@ class MouseCursor {
         this.frame = 0;
         this.clickX = input_1.Input.mouseX;
         this.clickY = input_1.Input.mouseY;
+        this.rawClickX = input_1.Input.rawMouseX;
+        this.rawClickY = input_1.Input.rawMouseY;
+    }
+    recalculateClickPosition() {
+        if (this.rawClickX !== undefined && this.rawClickY !== undefined) {
+            const canvas = document.getElementById("gameCanvas");
+            const rect = canvas.getBoundingClientRect();
+            this.clickX = Math.floor(this.rawClickX / game_1.Game.scale);
+            this.clickY = Math.floor(this.rawClickY / game_1.Game.scale);
+        }
     }
     getPosition() {
         if (input_1.Input.mouseX !== this.lastMouseX || input_1.Input.mouseY !== this.lastMouseY) {
@@ -18098,7 +18184,7 @@ class Player extends drawable_1.Drawable {
         this.lastY = 0;
         this.isLocalPlayer = isLocalPlayer;
         this.depth = 0;
-        this.menu = new menu_1.Menu();
+        this.menu = new menu_1.Menu(this);
         this.busyAnimating = false;
         this.mapToggled = true;
         this.health = 2;
@@ -19085,12 +19171,9 @@ class PlayerRenderer {
         this.drawGUI = (delta, transitioning = false) => {
             game_1.Game.ctx.save();
             if (!this.player.dead) {
-                if (!transitioning)
-                    this.player.inventory.draw(delta);
                 //if (this.player.menu.open) this.player.menu.draw();
                 if (this.player.bestiary)
                     this.player.bestiary.draw(delta);
-                //this.actionTab.draw(delta);
                 if (this.guiHeartFrame > 0)
                     this.guiHeartFrame += delta;
                 if (this.guiHeartFrame > 5) {
@@ -19146,6 +19229,8 @@ class PlayerRenderer {
                 //this.drawCooldownBar();
                 if (armor)
                     armor.drawGUI(delta, this.player.maxHealth, quickbarStartX);
+                if (!transitioning)
+                    this.player.inventory.draw(delta);
             }
             else {
                 game_1.Game.ctx.fillStyle = levelConstants_1.LevelConstants.LEVEL_TEXT_COLOR;

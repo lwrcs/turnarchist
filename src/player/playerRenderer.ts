@@ -442,10 +442,8 @@ export class PlayerRenderer {
   drawGUI = (delta: number, transitioning: boolean = false) => {
     Game.ctx.save();
     if (!this.player.dead) {
-      if (!transitioning) this.player.inventory.draw(delta);
       //if (this.player.menu.open) this.player.menu.draw();
       if (this.player.bestiary) this.player.bestiary.draw(delta);
-      //this.actionTab.draw(delta);
 
       if (this.guiHeartFrame > 0) this.guiHeartFrame += delta;
       if (this.guiHeartFrame > 5) {
@@ -533,6 +531,7 @@ export class PlayerRenderer {
       }
       //this.drawCooldownBar();
       if (armor) armor.drawGUI(delta, this.player.maxHealth, quickbarStartX);
+      if (!transitioning) this.player.inventory.draw(delta);
     } else {
       Game.ctx.fillStyle = LevelConstants.LEVEL_TEXT_COLOR;
       const enemies = statsTracker.getStats().enemies;

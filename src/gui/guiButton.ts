@@ -1,3 +1,6 @@
+import { Sound } from "../sound/sound";
+import { MuteButton } from "./muteButton";
+
 export class guiButton {
   toggleable: boolean;
   toggled: boolean;
@@ -25,4 +28,11 @@ export class guiButton {
     this.text = text;
     this.onClick = onClick;
   }
+
+  // Add a method to update the button's own text based on mute state
+  toggleMuteText = () => {
+    // 'this' refers to the guiButton instance
+    this.text = !Sound.audioMuted ? "Unmute Sound" : "Mute Sound";
+    MuteButton.toggleMute();
+  };
 }

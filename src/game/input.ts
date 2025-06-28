@@ -114,6 +114,9 @@ export const Input = {
   EQUALS: "Equal",
   ESCAPE: "Escape",
 
+  rawMouseX: 0,
+  rawMouseY: 0,
+
   isDown: function (keyCode: string) {
     return this._pressed[keyCode];
   },
@@ -257,10 +260,25 @@ export const Input = {
     let x = event.clientX - rect.left;
     let y = event.clientY - rect.top;
 
+    // Store raw coordinates
+    Input.rawMouseX = x;
+    Input.rawMouseY = y;
+
+    // Calculate scaled coordinates
     Input.mouseX = Math.floor(x / Game.scale);
     Input.mouseY = Math.floor(y / Game.scale);
 
     Input.mouseMoveListener(Input.mouseX, Input.mouseY);
+  },
+
+  recalculateMousePosition: function () {
+    if (Input.rawMouseX !== undefined && Input.rawMouseY !== undefined) {
+      Input.mouseX = Math.floor(Input.rawMouseX / Game.scale);
+      Input.mouseY = Math.floor(Input.rawMouseY / Game.scale);
+
+      // Also recalculate click animation position
+      MouseCursor.getInstance().recalculateClickPosition();
+    }
   },
 
   handleMouseDown: function (event: MouseEvent) {

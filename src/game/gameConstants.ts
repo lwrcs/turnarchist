@@ -45,6 +45,7 @@ export class GameConstants {
   static SOFT_SCALE = 6;
   static readonly MAX_SCALE = 16;
   static readonly MIN_SCALE = 1;
+  static smoothScaling = false;
 
   static readonly SWIPE_THRESH = 25 ** 2; // (size of swipe threshold circle)^2
   static readonly HOLD_THRESH = 250; // milliseconds

@@ -117,7 +117,7 @@ export class Player extends Drawable {
     this.lastY = 0;
     this.isLocalPlayer = isLocalPlayer;
     this.depth = 0;
-    this.menu = new Menu();
+    this.menu = new Menu(this);
     this.busyAnimating = false;
 
     this.mapToggled = true;

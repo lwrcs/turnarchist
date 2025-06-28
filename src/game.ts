@@ -715,45 +715,57 @@ export class Game {
   increaseScale = () => {
     GameConstants.INCREASE_SCALE();
     this.onResize();
+    // Recalculate mouse position for new scale
+    Input.recalculateMousePosition();
   };
 
   decreaseScale = () => {
     GameConstants.DECREASE_SCALE();
     this.onResize();
+    // Recalculate mouse position for new scale
+    Input.recalculateMousePosition();
   };
 
   updateScale = (delta: number) => {
-    if (
-      GameConstants.SOFT_SCALE < GameConstants.SCALE &&
-      Math.abs(GameConstants.SOFT_SCALE - GameConstants.SCALE) >= 0.1
-    ) {
-      GameConstants.SOFT_SCALE +=
-        ((GameConstants.SCALE - GameConstants.SOFT_SCALE) * delta) / 10;
-    }
-    if (
-      GameConstants.SOFT_SCALE > GameConstants.SCALE &&
-      Math.abs(GameConstants.SOFT_SCALE - GameConstants.SCALE) >= 0.1
-    ) {
-      GameConstants.SOFT_SCALE -=
-        ((GameConstants.SOFT_SCALE - GameConstants.SCALE) * delta) / 10;
-    }
+    if (GameConstants.smoothScaling) {
+      if (
+        GameConstants.SOFT_SCALE < GameConstants.SCALE &&
+        Math.abs(GameConstants.SOFT_SCALE - GameConstants.SCALE) >= 0.1
+      ) {
+        GameConstants.SOFT_SCALE +=
+          ((GameConstants.SCALE - GameConstants.SOFT_SCALE) * delta) / 10;
+      }
+      if (
+        GameConstants.SOFT_SCALE > GameConstants.SCALE &&
+        Math.abs(GameConstants.SOFT_SCALE - GameConstants.SCALE) >= 0.1
+      ) {
+        GameConstants.SOFT_SCALE -=
+          ((GameConstants.SOFT_SCALE - GameConstants.SCALE) * delta) / 10;
+      }
 
-    if (
-      GameConstants.SOFT_SCALE < GameConstants.SCALE &&
-      Math.abs(GameConstants.SOFT_SCALE - GameConstants.SCALE) <= 0.1
-    ) {
-      GameConstants.SOFT_SCALE += delta / 25;
-    }
-    if (
-      GameConstants.SOFT_SCALE > GameConstants.SCALE &&
-      Math.abs(GameConstants.SOFT_SCALE - GameConstants.SCALE) <= 0.1
-    ) {
-      GameConstants.SOFT_SCALE -= delta / 25;
-    }
-    if (Math.abs(GameConstants.SOFT_SCALE - GameConstants.SCALE) <= 0.01) {
+      if (
+        GameConstants.SOFT_SCALE < GameConstants.SCALE &&
+        Math.abs(GameConstants.SOFT_SCALE - GameConstants.SCALE) <= 0.1
+      ) {
+        GameConstants.SOFT_SCALE += delta / 25;
+      }
+      if (
+        GameConstants.SOFT_SCALE > GameConstants.SCALE &&
+        Math.abs(GameConstants.SOFT_SCALE - GameConstants.SCALE) <= 0.1
+      ) {
+        GameConstants.SOFT_SCALE -= delta / 25;
+      }
+      if (Math.abs(GameConstants.SOFT_SCALE - GameConstants.SCALE) <= 0.01) {
+        GameConstants.SOFT_SCALE = GameConstants.SCALE;
+      }
+    } else {
+      //GameConstants.SCALE = Math.floor(GameConstants.SCALE);
       GameConstants.SOFT_SCALE = GameConstants.SCALE;
     }
+
     this.onResize();
+    // Recalculate mouse position for new scale
+    Input.recalculateMousePosition();
   };
 
   refreshDimensions = () => {
@@ -765,8 +777,7 @@ export class Game {
     if (
       this.localPlayerID !== undefined &&
       this.players?.[this.localPlayerID] &&
-      this.players?.[this.localPlayerID]?.menu &&
-      this.players?.[this.localPlayerID]?.menu?.open
+      this.players?.[this.localPlayerID]?.menu
     ) {
       this.players[this.localPlayerID].menu.positionButtons();
     }
@@ -1055,6 +1066,7 @@ export class Game {
   draw = (delta: number) => {
     if (GameConstants.SOFT_SCALE !== GameConstants.SCALE) {
       this.updateScale(delta);
+      this.onResize();
     }
     //Game.ctx.canvas.setAttribute("role", "presentation");
 
