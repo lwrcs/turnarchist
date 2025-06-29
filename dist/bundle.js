@@ -4832,6 +4832,7 @@ const armoredzombieEnemy_1 = __webpack_require__(/*! ./armoredzombieEnemy */ "./
 const rookEnemy_1 = __webpack_require__(/*! ./rookEnemy */ "./src/entity/enemy/rookEnemy.ts");
 const room_1 = __webpack_require__(/*! ../../room/room */ "./src/room/room.ts");
 const armoredSkullEnemy_1 = __webpack_require__(/*! ./armoredSkullEnemy */ "./src/entity/enemy/armoredSkullEnemy.ts");
+const gameplaySettings_1 = __webpack_require__(/*! ../../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
 class Spawner extends enemy_1.Enemy {
     constructor(room, game, x, y, enemyTable = [0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14, 16]) {
         super(room, game, x, y);
@@ -4839,7 +4840,12 @@ class Spawner extends enemy_1.Enemy {
             return 1;
         };
         this.setSpawnFrequency = () => {
-            this.spawnFrequency = Math.min(12, 4 * this.room.currentSpawnerCount);
+            if (gameplaySettings_1.GameplaySettings.UNLIMITED_SPAWNERS) {
+                this.spawnFrequency = 3;
+            }
+            else {
+                this.spawnFrequency = Math.min(12, 4 * this.room.currentSpawnerCount);
+            }
             const spawners = this.room.entities.filter((e) => e instanceof Spawner);
             this.spawnOffset = (spawners.indexOf(this) + 1) * 4;
         };
@@ -10516,8 +10522,9 @@ exports.GameplaySettings = void 0;
 class GameplaySettings {
 }
 exports.GameplaySettings = GameplaySettings;
-GameplaySettings.LIMIT_ENEMY_TYPES = false;
+GameplaySettings.LIMIT_ENEMY_TYPES = true;
 GameplaySettings.MEDIAN_ROOM_DENSITY = 0.25;
+GameplaySettings.UNLIMITED_SPAWNERS = true;
 
 
 /***/ }),
@@ -11580,19 +11587,20 @@ class Menu {
         const buttonWidth = Math.round(gameConstants_1.GameConstants.TILESIZE * 1.5 - 2);
         const buttonHeight = Math.round(gameConstants_1.GameConstants.TILESIZE / 2 - 1);
         const rightMargin = 2 * gameConstants_1.GameConstants.TILESIZE; // 2 tiles from right edge
-        const buttonX = 1;
+        const buttonX = gameConstants_1.GameConstants.WIDTH / 2;
         const buttonY = gameConstants_1.GameConstants.TILESIZE / 2;
-        game_1.Game.ctx.fillRect(buttonX, buttonY, buttonWidth, buttonHeight);
+        game_1.Game.drawFX(18, 0, 1, 1, 0, 0.5, 1, 1);
+        //Game.ctx.fillRect(buttonX, buttonY, buttonWidth, buttonHeight);
         game_1.Game.ctx.globalAlpha = 1;
         game_1.Game.ctx.fillStyle = "rgb(0, 0, 0)"; //yellow text
-        game_1.Game.fillText("Menu", buttonX + 1, buttonY + 1);
+        //Game.fillText("Menu", buttonX + 1, buttonY + 1);
         game_1.Game.ctx.restore();
     }
     initializeCloseButton() {
         // Match the menu button dimensions
         const buttonWidth = Math.round(gameConstants_1.GameConstants.TILESIZE * 1.5 - 2);
-        const buttonHeight = Math.round(gameConstants_1.GameConstants.TILESIZE / 2 - 1);
-        this.closeButton = new guiButton_1.guiButton(0, 0, Math.round(buttonWidth), Math.round(buttonHeight), "X", () => this.close(), false, this);
+        const buttonHeight = Math.round(gameConstants_1.GameConstants.TILESIZE * 1.5 - 2);
+        this.closeButton = new guiButton_1.guiButton(0, -1, Math.round(buttonWidth), Math.round(buttonHeight), "X", () => this.close(), false, this);
     }
     initializeMainMenu() {
         // Don't set fixed dimensions - let positionButtons() calculate optimal sizes
@@ -18518,8 +18526,10 @@ class PlayerInputHandler {
                 //when mouse moves
                 this.setMostRecentInput("mouse");
                 this.player.inventory.mouseMove();
-                this.faceMouse();
-                this.player.setTileCursorPosition();
+                if (!this.ignoreDirectionInput()) {
+                    this.faceMouse();
+                    this.player.setTileCursorPosition();
+                }
                 break;
             case input_1.InputEnum.NUMBER_1:
             case input_1.InputEnum.NUMBER_2:

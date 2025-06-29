@@ -21,6 +21,7 @@ import { ArmoredzombieEnemy } from "./armoredzombieEnemy";
 import { RookEnemy } from "./rookEnemy";
 import { RoomType } from "../../room/room";
 import { ArmoredSkullEnemy } from "./armoredSkullEnemy";
+import { GameplaySettings } from "../../game/gameplaySettings";
 
 export class Spawner extends Enemy {
   ticks: number;
@@ -113,7 +114,11 @@ export class Spawner extends Enemy {
   };
 
   setSpawnFrequency = () => {
-    this.spawnFrequency = Math.min(12, 4 * this.room.currentSpawnerCount);
+    if (GameplaySettings.UNLIMITED_SPAWNERS) {
+      this.spawnFrequency = 3;
+    } else {
+      this.spawnFrequency = Math.min(12, 4 * this.room.currentSpawnerCount);
+    }
     const spawners = this.room.entities.filter((e) => e instanceof Spawner);
     this.spawnOffset = (spawners.indexOf(this) + 1) * 4;
   };

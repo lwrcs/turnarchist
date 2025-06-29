@@ -33,25 +33,27 @@ export class Menu {
     const buttonWidth = Math.round(GameConstants.TILESIZE * 1.5 - 2);
     const buttonHeight = Math.round(GameConstants.TILESIZE / 2 - 1);
     const rightMargin = 2 * GameConstants.TILESIZE; // 2 tiles from right edge
-    const buttonX = 1;
+    const buttonX = GameConstants.WIDTH / 2;
     const buttonY = GameConstants.TILESIZE / 2;
 
-    Game.ctx.fillRect(buttonX, buttonY, buttonWidth, buttonHeight);
+    Game.drawFX(18, 0, 1, 1, 0, 0.5, 1, 1);
+
+    //Game.ctx.fillRect(buttonX, buttonY, buttonWidth, buttonHeight);
     Game.ctx.globalAlpha = 1;
 
     Game.ctx.fillStyle = "rgb(0, 0, 0)"; //yellow text
-    Game.fillText("Menu", buttonX + 1, buttonY + 1);
+    //Game.fillText("Menu", buttonX + 1, buttonY + 1);
     Game.ctx.restore();
   }
 
   initializeCloseButton() {
     // Match the menu button dimensions
     const buttonWidth = Math.round(GameConstants.TILESIZE * 1.5 - 2);
-    const buttonHeight = Math.round(GameConstants.TILESIZE / 2 - 1);
+    const buttonHeight = Math.round(GameConstants.TILESIZE * 1.5 - 2);
 
     this.closeButton = new guiButton(
       0,
-      0,
+      -1,
       Math.round(buttonWidth),
       Math.round(buttonHeight),
       "X",

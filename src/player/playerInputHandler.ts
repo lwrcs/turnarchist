@@ -151,8 +151,10 @@ export class PlayerInputHandler {
         //when mouse moves
         this.setMostRecentInput("mouse");
         this.player.inventory.mouseMove();
-        this.faceMouse();
-        this.player.setTileCursorPosition();
+        if (!this.ignoreDirectionInput()) {
+          this.faceMouse();
+          this.player.setTileCursorPosition();
+        }
         break;
       case InputEnum.NUMBER_1:
       case InputEnum.NUMBER_2:
