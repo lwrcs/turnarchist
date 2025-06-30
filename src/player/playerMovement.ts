@@ -18,15 +18,17 @@ export class PlayerMovement {
   }
 
   move(direction: Direction, targetX?: number, targetY?: number): void {
-    const { x, y } = this.getTargetCoords(direction, targetX, targetY);
+    if (!(direction in Direction) || !this.player) return;
+
+    const coords = this.getTargetCoords(direction, targetX, targetY);
+    if (!coords) return;
+    const { x, y } = coords;
 
     if (this.canMove()) {
       const now = Date.now();
-
       this.lastMoveTime = now;
       this.lastChangeDirectionTime = now;
       this.player.inputHandler.setMostRecentMoveInput("keyboard");
-
       this.player.lastDirection = this.player.direction;
       this.player.direction = direction;
       this.player.tryMove(x, y);
@@ -36,21 +38,17 @@ export class PlayerMovement {
   }
 
   moveMouse(direction: Direction, targetX?: number, targetY?: number): void {
-    // Validate direction is a valid enum value
-    if (!(direction in Direction)) return;
-    if (!this.player) return;
+    if (!(direction in Direction) || !this.player) return;
 
     const coords = this.getTargetCoords(direction, targetX, targetY);
     if (!coords) return;
-
+    console.log("coords", coords.x, coords.y);
     const { x, y } = coords;
-    console.log("x", x, "y", y);
-
+    if (x === undefined || y === undefined) return;
     if (this.canMove()) {
       const now = Date.now();
       this.lastMoveTime = now;
       this.player.inputHandler.setMostRecentMoveInput("mouse");
-      //this.player.lastDirection = this.player.direction;
       this.player.direction = direction;
       this.player.tryMove(x, y);
     } else {

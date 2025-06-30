@@ -568,21 +568,22 @@ export class Player extends Drawable {
   tryMove = (x: number, y: number) => {
     if (this.busyAnimating) return;
     // TODO don't move if hit by enemy
-    //this.game.levels[this.depth].rooms[this.levelID].catchUp();
-    this.game.room.catchUp();
+    this.game.levels[this.depth].rooms[this.levelID].catchUp();
+    //this.game.room.catchUp();
+    if (!this.game.room) console.warn("oi bruv, game.room isn't even there!");
 
     if (this.dead) return;
 
-    for (let i = 0; i < 2; i++)
-      if (
-        this.inventory.hasWeapon() &&
-        !this.inventory.getWeapon().weaponMove(x, y)
-      ) {
-        //for (let h of this.game.levels[this.levelID].hitwarnings) {
-        //if (newMove instanceof HitWarning)
-        return;
-        //}
-      }
+    //for (let i = 0; i < 2; i++) //no idea why we would loop this...
+    if (
+      this.inventory.hasWeapon() &&
+      !this.inventory.getWeapon().weaponMove(x, y)
+    ) {
+      //for (let h of this.game.levels[this.levelID].hitwarnings) {
+      //if (newMove instanceof HitWarning)
+      return;
+      //}
+    }
 
     for (let e of this.game.levels[this.depth].rooms[this.levelID].entities) {
       e.lastX = e.x;

@@ -17956,18 +17956,20 @@ class Player extends drawable_1.Drawable {
             if (this.busyAnimating)
                 return;
             // TODO don't move if hit by enemy
-            //this.game.levels[this.depth].rooms[this.levelID].catchUp();
-            this.game.room.catchUp();
+            this.game.levels[this.depth].rooms[this.levelID].catchUp();
+            //this.game.room.catchUp();
+            if (!this.game.room)
+                console.warn("oi bruv, game.room isn't even there!");
             if (this.dead)
                 return;
-            for (let i = 0; i < 2; i++)
-                if (this.inventory.hasWeapon() &&
-                    !this.inventory.getWeapon().weaponMove(x, y)) {
-                    //for (let h of this.game.levels[this.levelID].hitwarnings) {
-                    //if (newMove instanceof HitWarning)
-                    return;
-                    //}
-                }
+            //for (let i = 0; i < 2; i++) //no idea why we would loop this...
+            if (this.inventory.hasWeapon() &&
+                !this.inventory.getWeapon().weaponMove(x, y)) {
+                //for (let h of this.game.levels[this.levelID].hitwarnings) {
+                //if (newMove instanceof HitWarning)
+                return;
+                //}
+            }
             for (let e of this.game.levels[this.depth].rooms[this.levelID].entities) {
                 e.lastX = e.x;
                 e.lastY = e.y;
@@ -18778,7 +18780,12 @@ class PlayerMovement {
         this.player = player;
     }
     move(direction, targetX, targetY) {
-        const { x, y } = this.getTargetCoords(direction, targetX, targetY);
+        if (!(direction in game_1.Direction) || !this.player)
+            return;
+        const coords = this.getTargetCoords(direction, targetX, targetY);
+        if (!coords)
+            return;
+        const { x, y } = coords;
         if (this.canMove()) {
             const now = Date.now();
             this.lastMoveTime = now;
@@ -18793,21 +18800,19 @@ class PlayerMovement {
         }
     }
     moveMouse(direction, targetX, targetY) {
-        // Validate direction is a valid enum value
-        if (!(direction in game_1.Direction))
-            return;
-        if (!this.player)
+        if (!(direction in game_1.Direction) || !this.player)
             return;
         const coords = this.getTargetCoords(direction, targetX, targetY);
         if (!coords)
             return;
+        console.log("coords", coords.x, coords.y);
         const { x, y } = coords;
-        console.log("x", x, "y", y);
+        if (x === undefined || y === undefined)
+            return;
         if (this.canMove()) {
             const now = Date.now();
             this.lastMoveTime = now;
             this.player.inputHandler.setMostRecentMoveInput("mouse");
-            //this.player.lastDirection = this.player.direction;
             this.player.direction = direction;
             this.player.tryMove(x, y);
         }
