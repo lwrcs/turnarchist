@@ -566,12 +566,19 @@ export class Player extends Drawable {
   };
 
   tryMove = (x: number, y: number) => {
-    if (this.busyAnimating) return;
+    if (
+      this.busyAnimating ||
+      this.game.levelState === LevelState.TRANSITIONING ||
+      this.game.levelState === LevelState.TRANSITIONING_LADDER
+    )
+      return;
     // TODO don't move if hit by enemy
     this.game.levels[this.depth].rooms[this.levelID].catchUp();
     //this.game.room.catchUp();
-    if (!this.game.room) console.warn("oi bruv, game.room isn't even there!");
-
+    if (!this.game.room) {
+      console.warn("oi bruv, game.room isn't even there!");
+      return;
+    }
     if (this.dead) return;
 
     //for (let i = 0; i < 2; i++) //no idea why we would loop this...
@@ -699,6 +706,10 @@ export class Player extends Drawable {
     }
     let other =
       this.game.levels[this.depth].rooms[this.levelID].roomArray[x][y];
+    if (!other) {
+      console.warn("oi bruv, tile to check for collision isn't even there!");
+      return;
+    }
     if (!other.isSolid()) {
       this.move(x, y);
       other.onCollide(this);

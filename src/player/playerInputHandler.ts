@@ -50,6 +50,16 @@ export class PlayerInputHandler {
   handleInput(input: InputEnum) {
     if (this.player.busyAnimating || this.player.game.cameraAnimation.active)
       return;
+
+    // Block input during level transitions, except for mouse movement
+    if (
+      (this.player.game.levelState === LevelState.TRANSITIONING ||
+        this.player.game.levelState === LevelState.TRANSITIONING_LADDER) &&
+      input !== InputEnum.MOUSE_MOVE
+    ) {
+      return;
+    }
+
     if (this.player.menu.open) {
       this.player.menu.inputHandler(input);
       return;

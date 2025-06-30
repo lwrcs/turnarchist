@@ -9644,8 +9644,8 @@ const backpack_1 = __webpack_require__(/*! ../item/backpack */ "./src/item/backp
 const candle_1 = __webpack_require__(/*! ../item/light/candle */ "./src/item/light/candle.ts");
 const coal_1 = __webpack_require__(/*! ../item/resource/coal */ "./src/item/resource/coal.ts");
 const godStone_1 = __webpack_require__(/*! ../item/godStone */ "./src/item/godStone.ts");
+const heart_1 = __webpack_require__(/*! ../item/usable/heart */ "./src/item/usable/heart.ts");
 const lantern_1 = __webpack_require__(/*! ../item/light/lantern */ "./src/item/light/lantern.ts");
-const torch_1 = __webpack_require__(/*! ../item/light/torch */ "./src/item/light/torch.ts");
 const weaponBlood_1 = __webpack_require__(/*! ../item/usable/weaponBlood */ "./src/item/usable/weaponBlood.ts");
 const weaponFragments_1 = __webpack_require__(/*! ../item/usable/weaponFragments */ "./src/item/usable/weaponFragments.ts");
 const weaponPoison_1 = __webpack_require__(/*! ../item/usable/weaponPoison */ "./src/item/usable/weaponPoison.ts");
@@ -9805,7 +9805,7 @@ GameConstants.STARTING_INVENTORY = [dagger_1.Dagger, candle_1.Candle];
 GameConstants.STARTING_DEV_INVENTORY = [
     dagger_1.Dagger,
     candle_1.Candle,
-    torch_1.Torch,
+    heart_1.Heart,
     lantern_1.Lantern,
     godStone_1.GodStone,
     spear_1.Spear,
@@ -18002,13 +18002,17 @@ class Player extends drawable_1.Drawable {
             return true;
         };
         this.tryMove = (x, y) => {
-            if (this.busyAnimating)
+            if (this.busyAnimating ||
+                this.game.levelState === game_1.LevelState.TRANSITIONING ||
+                this.game.levelState === game_1.LevelState.TRANSITIONING_LADDER)
                 return;
             // TODO don't move if hit by enemy
             this.game.levels[this.depth].rooms[this.levelID].catchUp();
             //this.game.room.catchUp();
-            if (!this.game.room)
+            if (!this.game.room) {
                 console.warn("oi bruv, game.room isn't even there!");
+                return;
+            }
             if (this.dead)
                 return;
             //for (let i = 0; i < 2; i++) //no idea why we would loop this...
@@ -18116,6 +18120,10 @@ class Player extends drawable_1.Drawable {
                 }
             }
             let other = this.game.levels[this.depth].rooms[this.levelID].roomArray[x][y];
+            if (!other) {
+                console.warn("oi bruv, tile to check for collision isn't even there!");
+                return;
+            }
             if (!other.isSolid()) {
                 this.move(x, y);
                 other.onCollide(this);
@@ -18490,6 +18498,12 @@ class PlayerInputHandler {
     handleInput(input) {
         if (this.player.busyAnimating || this.player.game.cameraAnimation.active)
             return;
+        // Block input during level transitions, except for mouse movement
+        if ((this.player.game.levelState === game_1.LevelState.TRANSITIONING ||
+            this.player.game.levelState === game_1.LevelState.TRANSITIONING_LADDER) &&
+            input !== input_1.InputEnum.MOUSE_MOVE) {
+            return;
+        }
         if (this.player.menu.open) {
             this.player.menu.inputHandler(input);
             return;
