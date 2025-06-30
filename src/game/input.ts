@@ -1,6 +1,7 @@
 import { GameConstants } from "./gameConstants";
 import { Game } from "../game";
 import { MouseCursor } from "../gui/mouseCursor";
+import { Direction } from "../game";
 
 export enum InputEnum {
   I,
@@ -376,7 +377,6 @@ export const Input = {
   },
 
   handleTouchMove: function (evt) {
-    //console.log("handleTouchMove triggered");
     evt.preventDefault();
 
     Input.currentX = evt.touches[0].clientX;
@@ -392,37 +392,48 @@ export const Input = {
     var xDiff = Input.xDown - Input.currentX;
     var yDiff = Input.yDown - Input.currentY;
 
-    // we have not swiped yet
-    // check if we've swiped
+    // Check if we've swiped
     if (xDiff ** 2 + yDiff ** 2 >= GameConstants.SWIPE_THRESH) {
       if (Math.abs(xDiff) > Math.abs(yDiff)) {
-        /*most significant*/
         if (xDiff > 0) {
           Input.leftSwipeListener();
+          Input.lastSwipeDirection = Direction.LEFT;
         } else {
           Input.rightSwipeListener();
+          Input.lastSwipeDirection = Direction.RIGHT;
         }
         Input.swiped = true;
+        Input.lastSwipeTime = Date.now();
+        Input.swipeHoldActive = true;
+        Input.swipeHoldRepeating = false; // Start in non-repeating state
       } else {
         if (yDiff > 0) {
           Input.upSwipeListener();
+          Input.lastSwipeDirection = Direction.UP;
         } else {
           Input.downSwipeListener();
+          Input.lastSwipeDirection = Direction.DOWN;
         }
         Input.swiped = true;
+        Input.lastSwipeTime = Date.now();
+        Input.swipeHoldActive = true;
+        Input.swipeHoldRepeating = false; // Start in non-repeating state
       }
     }
   },
 
   handleTouchEnd: function (evt: TouchEvent) {
-    //console.log("handleTouchEnd triggered");
     evt.preventDefault();
 
     if (!Input.isTapHold && !Input.swiped) Input.tapListener();
     Input.isTapHold = false;
     Input.tapStartTime = null;
 
-    //if (Input.swiped) return;
+    // Reset swipe hold tracking
+    Input.swipeHoldActive = false;
+    Input.swipeHoldRepeating = false;
+    Input.lastSwipeTime = 0;
+    Input.lastSwipeDirection = null;
 
     // Also unify with mouseUp logic, again forcing button=0
     Input.mouseDown = false;
@@ -463,6 +474,12 @@ export const Input = {
   HOLD_THRESH: 200, // Adjust this value as needed
 
   holdCallback: null as (() => void) | null,
+
+  // Swipe hold tracking
+  lastSwipeTime: 0,
+  lastSwipeDirection: null as Direction | null,
+  swipeHoldActive: false,
+  swipeHoldRepeating: false, // Track if we're in repeat mode yet
 };
 window.addEventListener(
   "keyup",

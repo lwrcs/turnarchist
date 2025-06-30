@@ -8354,12 +8354,45 @@ class Game {
         this.update = () => {
             this.refreshDimensions();
             input_1.Input.checkIsTapHold();
+            // Existing key repeat
             if (input_1.Input.lastPressTime !== 0 &&
                 Date.now() - input_1.Input.lastPressTime > gameConstants_1.GameConstants.KEY_REPEAT_TIME) {
                 input_1.Input.onKeydown({
                     repeat: false,
                     key: input_1.Input.lastPressKey,
                 });
+            }
+            // Swipe hold repeat with initial delay
+            if (input_1.Input.swipeHoldActive && input_1.Input.lastSwipeTime !== 0) {
+                const timeSinceSwipe = Date.now() - input_1.Input.lastSwipeTime;
+                if (!input_1.Input.swipeHoldRepeating) {
+                    // Check if we've waited long enough for initial delay
+                    if (timeSinceSwipe > gameConstants_1.GameConstants.SWIPE_HOLD_INITIAL_DELAY) {
+                        input_1.Input.swipeHoldRepeating = true;
+                        input_1.Input.lastSwipeTime = Date.now(); // Reset timer for repeat timing
+                    }
+                }
+                else {
+                    // We're in repeat mode, check if it's time to repeat
+                    if (timeSinceSwipe > gameConstants_1.GameConstants.SWIPE_HOLD_REPEAT_TIME) {
+                        // Trigger the swipe listener again based on last direction
+                        switch (input_1.Input.lastSwipeDirection) {
+                            case Direction.LEFT:
+                                input_1.Input.leftSwipeListener();
+                                break;
+                            case Direction.RIGHT:
+                                input_1.Input.rightSwipeListener();
+                                break;
+                            case Direction.UP:
+                                input_1.Input.upSwipeListener();
+                                break;
+                            case Direction.DOWN:
+                                input_1.Input.downSwipeListener();
+                                break;
+                        }
+                        input_1.Input.lastSwipeTime = Date.now(); // Reset timer for next repeat
+                    }
+                }
             }
             if (this.levelState === LevelState.TRANSITIONING) {
                 if (Date.now() - this.transitionStartTime >=
@@ -9620,6 +9653,8 @@ GameConstants.smoothScaling = false;
 GameConstants.SWIPE_THRESH = 25 ** 2; // (size of swipe threshold circle)^2
 GameConstants.HOLD_THRESH = 250; // milliseconds
 GameConstants.KEY_REPEAT_TIME = 300; // millseconds
+GameConstants.SWIPE_HOLD_REPEAT_TIME = 300;
+GameConstants.SWIPE_HOLD_INITIAL_DELAY = 150;
 GameConstants.MOVEMENT_COOLDOWN = 200; // milliseconds
 GameConstants.MOVEMENT_QUEUE_COOLDOWN = 100; // milliseconds
 GameConstants.MOVE_WITH_MOUSE = true;
@@ -10541,6 +10576,7 @@ exports.Input = exports.InputEnum = void 0;
 const gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/game/gameConstants.ts");
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const mouseCursor_1 = __webpack_require__(/*! ../gui/mouseCursor */ "./src/gui/mouseCursor.ts");
+const game_2 = __webpack_require__(/*! ../game */ "./src/game.ts");
 var InputEnum;
 (function (InputEnum) {
     InputEnum[InputEnum["I"] = 0] = "I";
@@ -10874,7 +10910,6 @@ exports.Input = {
         }
     },
     handleTouchMove: function (evt) {
-        //console.log("handleTouchMove triggered");
         evt.preventDefault();
         exports.Input.currentX = evt.touches[0].clientX;
         exports.Input.currentY = evt.touches[0].clientY;
@@ -10886,38 +10921,49 @@ exports.Input = {
             return;
         var xDiff = exports.Input.xDown - exports.Input.currentX;
         var yDiff = exports.Input.yDown - exports.Input.currentY;
-        // we have not swiped yet
-        // check if we've swiped
+        // Check if we've swiped
         if (xDiff ** 2 + yDiff ** 2 >= gameConstants_1.GameConstants.SWIPE_THRESH) {
             if (Math.abs(xDiff) > Math.abs(yDiff)) {
-                /*most significant*/
                 if (xDiff > 0) {
                     exports.Input.leftSwipeListener();
+                    exports.Input.lastSwipeDirection = game_2.Direction.LEFT;
                 }
                 else {
                     exports.Input.rightSwipeListener();
+                    exports.Input.lastSwipeDirection = game_2.Direction.RIGHT;
                 }
                 exports.Input.swiped = true;
+                exports.Input.lastSwipeTime = Date.now();
+                exports.Input.swipeHoldActive = true;
+                exports.Input.swipeHoldRepeating = false; // Start in non-repeating state
             }
             else {
                 if (yDiff > 0) {
                     exports.Input.upSwipeListener();
+                    exports.Input.lastSwipeDirection = game_2.Direction.UP;
                 }
                 else {
                     exports.Input.downSwipeListener();
+                    exports.Input.lastSwipeDirection = game_2.Direction.DOWN;
                 }
                 exports.Input.swiped = true;
+                exports.Input.lastSwipeTime = Date.now();
+                exports.Input.swipeHoldActive = true;
+                exports.Input.swipeHoldRepeating = false; // Start in non-repeating state
             }
         }
     },
     handleTouchEnd: function (evt) {
-        //console.log("handleTouchEnd triggered");
         evt.preventDefault();
         if (!exports.Input.isTapHold && !exports.Input.swiped)
             exports.Input.tapListener();
         exports.Input.isTapHold = false;
         exports.Input.tapStartTime = null;
-        //if (Input.swiped) return;
+        // Reset swipe hold tracking
+        exports.Input.swipeHoldActive = false;
+        exports.Input.swipeHoldRepeating = false;
+        exports.Input.lastSwipeTime = 0;
+        exports.Input.lastSwipeDirection = null;
         // Also unify with mouseUp logic, again forcing button=0
         exports.Input.mouseDown = false;
         exports.Input.mouseDownStartTime = null;
@@ -10948,6 +10994,11 @@ exports.Input = {
     mouseDownStartTime: null,
     HOLD_THRESH: 200,
     holdCallback: null,
+    // Swipe hold tracking
+    lastSwipeTime: 0,
+    lastSwipeDirection: null,
+    swipeHoldActive: false,
+    swipeHoldRepeating: false, // Track if we're in repeat mode yet
 };
 window.addEventListener("keyup", function (event) {
     exports.Input.onKeyup(event);

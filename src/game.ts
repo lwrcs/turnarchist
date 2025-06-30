@@ -586,6 +586,7 @@ export class Game {
     this.refreshDimensions();
     Input.checkIsTapHold();
 
+    // Existing key repeat
     if (
       Input.lastPressTime !== 0 &&
       Date.now() - Input.lastPressTime > GameConstants.KEY_REPEAT_TIME
@@ -594,6 +595,39 @@ export class Game {
         repeat: false,
         key: Input.lastPressKey,
       } as KeyboardEvent);
+    }
+
+    // Swipe hold repeat with initial delay
+    if (Input.swipeHoldActive && Input.lastSwipeTime !== 0) {
+      const timeSinceSwipe = Date.now() - Input.lastSwipeTime;
+
+      if (!Input.swipeHoldRepeating) {
+        // Check if we've waited long enough for initial delay
+        if (timeSinceSwipe > GameConstants.SWIPE_HOLD_INITIAL_DELAY) {
+          Input.swipeHoldRepeating = true;
+          Input.lastSwipeTime = Date.now(); // Reset timer for repeat timing
+        }
+      } else {
+        // We're in repeat mode, check if it's time to repeat
+        if (timeSinceSwipe > GameConstants.SWIPE_HOLD_REPEAT_TIME) {
+          // Trigger the swipe listener again based on last direction
+          switch (Input.lastSwipeDirection) {
+            case Direction.LEFT:
+              Input.leftSwipeListener();
+              break;
+            case Direction.RIGHT:
+              Input.rightSwipeListener();
+              break;
+            case Direction.UP:
+              Input.upSwipeListener();
+              break;
+            case Direction.DOWN:
+              Input.downSwipeListener();
+              break;
+          }
+          Input.lastSwipeTime = Date.now(); // Reset timer for next repeat
+        }
+      }
     }
 
     if (this.levelState === LevelState.TRANSITIONING) {

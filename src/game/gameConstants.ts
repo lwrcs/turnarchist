@@ -51,6 +51,8 @@ export class GameConstants {
   static readonly HOLD_THRESH = 250; // milliseconds
 
   static KEY_REPEAT_TIME = 300; // millseconds
+  static SWIPE_HOLD_REPEAT_TIME = 300;
+  static SWIPE_HOLD_INITIAL_DELAY = 150;
   static MOVEMENT_COOLDOWN = 200; // milliseconds
   static MOVEMENT_QUEUE_COOLDOWN = 100; // milliseconds
   static readonly MOVE_WITH_MOUSE = true;
