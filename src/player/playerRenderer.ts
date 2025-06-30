@@ -118,7 +118,8 @@ export class PlayerRenderer {
       );
     } else if (
       this.player.inputHandler.mostRecentMoveInput === "mouse" &&
-      this.mouseDiagonal()
+      this.mouseDiagonal() &&
+      !GameConstants.isMobile
     ) {
       const angle = (this.player.inputHandler.mouseAngle() * 180) / Math.PI;
       let diagonalTile = { x: 1, y: 18 };
@@ -708,7 +709,8 @@ export class PlayerRenderer {
   drawTileCursor = (delta: number) => {
     if (
       this.player.inventory.isOpen ||
-      this.player.inputHandler.mostRecentMoveInput === "keyboard"
+      this.player.inputHandler.mostRecentMoveInput === "keyboard" ||
+      GameConstants.isMobile
     )
       return;
     Game.ctx.save(); // Save the current canvas state

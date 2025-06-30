@@ -197,14 +197,11 @@ export class Menu {
       case InputEnum.LEFT_CLICK:
         // Handle mouse clicks by getting current mouse position and calling mouseInputHandler
         const { x, y } = MouseCursor.getInstance().getPosition();
-        console.log(
-          `Menu.inputHandler received LEFT_CLICK, delegating to mouseInputHandler with x: ${x}, y: ${y}`,
-        );
+
         this.mouseInputHandler(x, y);
         break;
       case InputEnum.RIGHT_CLICK:
         // Handle right clicks if needed (for now just log)
-        console.log("Menu.inputHandler received RIGHT_CLICK");
         break;
       default:
         break;
@@ -212,29 +209,21 @@ export class Menu {
   }
 
   mouseInputHandler(x: number, y: number) {
-    console.log(
-      `Menu.mouseInputHandler called with x: ${x}, y: ${y}, menu.open: ${this.open}`,
-    );
-
     if (!this.open) {
-      console.log("Menu not open, returning early");
       return;
     }
 
     // Check close button first
     if (this.isPointInCloseButton(x, y)) {
-      console.log("Close button clicked!");
       this.closeButton.onClick();
       return;
     }
 
     // Check main menu buttons
     const bounds = this.isPointInMenuBounds(x, y);
-    console.log(`Menu bounds check result:`, bounds);
 
     if (bounds.inBounds && bounds.buttonIndex >= 0) {
       const button = this.buttons[bounds.buttonIndex];
-      console.log(`Button ${bounds.buttonIndex} (${button.text}) clicked!`);
 
       // Clear any existing timeout
       if (this.selectionTimeoutId !== null) {
@@ -252,7 +241,6 @@ export class Menu {
 
       button.onClick();
     } else {
-      console.log("Click was not on any menu button");
     }
   }
 
@@ -261,15 +249,9 @@ export class Menu {
   }
 
   openMenu() {
-    console.log("Menu.openMenu() called");
     this.open = true;
     this.selectedButton = -1;
-    console.log(`Menu opened, buttons positioned at:`);
-    this.buttons.forEach((button, index) => {
-      console.log(
-        `  Button ${index} (${button.text}): x: ${button.x}, y: ${button.y}, width: ${button.width}, height: ${button.height}`,
-      );
-    });
+    this.buttons.forEach((button, index) => {});
   }
 
   toggleOpen() {
@@ -301,30 +283,25 @@ export class Menu {
 
   // Action methods
   startGame = () => {
-    console.log("Game Started");
     this.close();
     // Implement game start logic
   };
 
   exitGame = () => {
-    console.log("Exit Game");
     // Implement exit game logic
   };
 
   openSettings = () => {
-    console.log("Settings clicked - submenus disabled for now");
     // Implement settings logic later
   };
 
   scaleUp = () => {
     this.player.game.increaseScale();
-    console.log("Scale Up clicked!");
     // Add scale up functionality here
   };
 
   scaleDown = () => {
     this.player.game.decreaseScale();
-    console.log("Scale Down clicked!");
     // Add scale down functionality here
   };
 
@@ -355,16 +332,6 @@ export class Menu {
     const maxButtonHeight = 30; // Maximum button height in pixels
     const calculatedHeight = Math.floor(heightPerButtonSlot * 0.8);
     const buttonHeight = Math.min(calculatedHeight, maxButtonHeight);
-
-    console.log(`Menu.positionButtons: 
-      Screen: ${screenWidth}x${screenHeight}
-      Close button: ${this.closeButton.x}, ${this.closeButton.y} (${this.closeButton.width}x${this.closeButton.height})
-      Button count: ${buttonCount}
-      Button slots: ${buttonSlots}
-      Available height: ${availableHeight}
-      Height per slot: ${heightPerButtonSlot}
-      Button height: ${buttonHeight}
-      Button width: ${maxButtonWidth}`);
 
     // Update button dimensions and positions
     let currentSlot = 0;
@@ -399,11 +366,6 @@ export class Menu {
         button.height = buttonHeight;
         currentSlot++;
       }
-
-      console.log(`  Button ${i} (${button.text}): 
-        x: ${button.x}, y: ${button.y}, 
-        width: ${button.width}, height: ${button.height}
-        Bottom: ${button.y + button.height}`);
     }
   }
 

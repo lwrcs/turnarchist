@@ -87,6 +87,12 @@ export const Input = {
   lastPressTime: 0,
   lastPressKey: "",
 
+  // Add mouse repeat tracking
+  lastMouseDownTime: 0,
+  lastMouseDownX: 0,
+  lastMouseDownY: 0,
+  mouseDownHandled: false,
+
   SPACE: "Space",
   LEFT: "ArrowLeft",
   UP: "ArrowUp",
@@ -300,6 +306,10 @@ export const Input = {
     Input.mouseDown = false;
     Input.mouseDownStartTime = null;
     Input.mouseUpListener(Input.mouseX, Input.mouseY, event.button);
+
+    // Reset mouse repeat tracking
+    Input.lastMouseDownTime = 0;
+    Input.mouseDownHandled = false;
 
     // Clear hold check interval
     if (Input._holdCheckInterval) {
@@ -515,9 +525,6 @@ window.addEventListener(
 );
 */
 
-window.document
-  .getElementById("gameCanvas")
-  .addEventListener("click", (event) => Input.mouseClickListener(event), false);
 window.document
   .getElementById("gameCanvas")
   .addEventListener("mousemove", (event) => Input.updateMousePos(event), false);

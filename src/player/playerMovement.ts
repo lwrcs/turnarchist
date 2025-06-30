@@ -38,11 +38,11 @@ export class PlayerMovement {
   }
 
   moveMouse(direction: Direction, targetX?: number, targetY?: number): void {
-    if (!(direction in Direction) || !this.player) return;
+    if (!(direction in Direction) || !this.player || GameConstants.isMobile)
+      return;
 
     const coords = this.getTargetCoords(direction, targetX, targetY);
     if (!coords) return;
-    console.log("coords", coords.x, coords.y);
     const { x, y } = coords;
     if (x === undefined || y === undefined) return;
     if (this.canMove()) {

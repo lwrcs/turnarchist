@@ -12,6 +12,7 @@ export class PlayerInputHandler {
   mostRecentInput: string;
   mostRecentMoveInput: string;
   moveStartTime: number;
+  private mouseHoldInitialDirection: Direction | null = null;
 
   constructor(player: Player) {
     this.player = player;
@@ -33,11 +34,11 @@ export class PlayerInputHandler {
     Input.periodListener = () => this.handleInput(InputEnum.PERIOD);
     Input.tapListener = () => this.handleTap();
     Input.mouseMoveListener = () => this.handleInput(InputEnum.MOUSE_MOVE);
-    Input.mouseLeftClickListeners.push(() =>
-      this.handleInput(InputEnum.LEFT_CLICK),
-    );
     Input.mouseRightClickListeners.push(() =>
       this.handleInput(InputEnum.RIGHT_CLICK),
+    );
+    Input.mouseDownListeners.push((x: number, y: number, button: number) =>
+      this.handleMouseDown(x, y, button),
     );
     Input.numKeyListener = (num) =>
       this.handleInput(InputEnum.NUMBER_1 + num - 1);
@@ -151,7 +152,37 @@ export class PlayerInputHandler {
         //when mouse moves
         this.setMostRecentInput("mouse");
         this.player.inventory.mouseMove();
-        if (!this.ignoreDirectionInput()) {
+
+        // Check if mouse hold should be cancelled
+        if (Input.mouseDown && Input.mouseDownHandled) {
+          let shouldCancelHold = false;
+
+          // Check distance from initial position
+          const dx = Input.mouseX - Input.lastMouseDownX;
+          const dy = Input.mouseY - Input.lastMouseDownY;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          const maxHoldDistance = GameConstants.TILESIZE * 1.5; // 1.5 tiles
+
+          if (distance > maxHoldDistance) {
+            shouldCancelHold = true;
+          }
+
+          // Check if player direction changed from initial
+          if (
+            this.mouseHoldInitialDirection !== null &&
+            this.player.direction !== this.mouseHoldInitialDirection
+          ) {
+            shouldCancelHold = true;
+          }
+
+          if (shouldCancelHold) {
+            Input.mouseDownHandled = false;
+            Input.lastMouseDownTime = 0;
+            this.mouseHoldInitialDirection = null;
+          }
+        }
+
+        if (!this.ignoreDirectionInput() || GameConstants.isMobile) {
           this.faceMouse();
           this.player.setTileCursorPosition();
         }
@@ -221,26 +252,116 @@ export class PlayerInputHandler {
     }
   }
 
+  handleMouseDown(x: number, y: number, button: number) {
+    if (button !== 0) return; // Only handle left mouse button
+
+    const player = this.player;
+
+    if (player.game.levelState !== LevelState.IN_LEVEL) {
+      Input.mouseDownHandled = false;
+      return;
+    }
+
+    this.setMostRecentInput("mouse");
+
+    // Handle dead player restart
+    if (player.dead) {
+      player.restart();
+      Input.mouseDownHandled = true;
+      return;
+    }
+
+    // Handle game not started
+    if (!player.game.started) {
+      player.game.startedFadeOut = true;
+      Input.mouseDownHandled = true;
+      return;
+    }
+
+    // Store mouse down info for repeat
+    Input.lastMouseDownTime = Date.now();
+    Input.lastMouseDownX = x;
+    Input.lastMouseDownY = y;
+
+    const inventory = player.inventory;
+
+    // Handle inventory toggle when clicking outside or on inventory button
+    const clickedOutsideInventory =
+      (inventory.isOpen &&
+        !inventory.isPointInInventoryBounds(x, y).inBounds) ||
+      inventory.isPointInInventoryButton(x, y);
+
+    if (clickedOutsideInventory) {
+      inventory.toggleOpen();
+      Input.mouseDownHandled = true;
+      return;
+    }
+
+    // Handle menu
+    if (this.player.menu.open) {
+      this.player.menu.mouseInputHandler(x, y);
+      Input.mouseDownHandled = true;
+      return;
+    }
+
+    // Check if click is on menu button
+    if (this.isPointInMenuButtonBounds(x, y)) {
+      this.handleMenuButtonClick();
+      Input.mouseDownHandled = true;
+      return;
+    }
+
+    // Handle vending machine
+    if (player.openVendingMachine) {
+      if (
+        VendingMachine.isPointInVendingMachineBounds(
+          x,
+          y,
+          player.openVendingMachine,
+        )
+      ) {
+        player.openVendingMachine.space();
+      } else {
+        player.openVendingMachine.close();
+      }
+      Input.mouseDownHandled = true;
+      return;
+    }
+
+    // Check if this is a UI interaction
+    const isUIInteraction =
+      inventory.isPointInInventoryButton(x, y) ||
+      inventory.isPointInQuickbarBounds(x, y).inBounds ||
+      inventory.isOpen ||
+      this.isPointInMenuButtonBounds(x, y);
+
+    if (!isUIInteraction) {
+      // Handle movement
+      if (!player.busyAnimating && !player.game.cameraAnimation.active) {
+        // Store the initial direction when starting mouse hold for movement
+        this.mouseHoldInitialDirection = this.player.direction;
+        player.moveWithMouse();
+        Input.mouseDownHandled = true;
+      } else {
+        Input.mouseDownHandled = false;
+      }
+    } else {
+      Input.mouseDownHandled = false;
+    }
+  }
+
   handleMouseLeftClick() {
     const player = this.player;
     const cursor = MouseCursor.getInstance();
     const { x, y } = cursor.getPosition();
-    console.log(
-      `PlayerInputHandler.handleMouseLeftClick: cursor position x: ${x}, y: ${y}`,
-    );
-    console.log(
-      `  Game level state: ${player.game.levelState}, menu.open: ${this.player.menu.open}`,
-    );
 
     if (player.game.levelState !== LevelState.IN_LEVEL) {
-      console.log("Not in level, returning early");
       return;
     }
 
     this.setMostRecentInput("mouse");
 
     if (player.dead) {
-      console.log("Player is dead, restarting");
       player.restart();
       return;
     }
@@ -253,23 +374,17 @@ export class PlayerInputHandler {
       inventory.isPointInInventoryButton(x, y);
 
     if (clickedOutsideInventory) {
-      console.log("Clicked outside inventory, toggling");
       inventory.toggleOpen();
     }
 
     if (this.player.menu.open) {
-      console.log(
-        `Menu is open, calling menu.mouseInputHandler with x: ${x}, y: ${y}`,
-      );
       this.player.menu.mouseInputHandler(x, y);
       return;
     } else {
-      console.log("Menu is not open, continuing with other input handling");
     }
 
     // Check if click is on menu button
     if (this.isPointInMenuButtonBounds(x, y)) {
-      console.log("Clicked on menu button");
       this.handleMenuButtonClick();
       return;
     }
@@ -297,7 +412,8 @@ export class PlayerInputHandler {
       !inventory.isPointInQuickbarBounds(x, y).inBounds &&
       !inventory.isOpen;
 
-    if (notInInventoryUI) {
+    // Only handle movement if it wasn't already handled on mousedown
+    if (notInInventoryUI && !Input.mouseDownHandled) {
       player.moveWithMouse();
     }
   }
@@ -315,6 +431,11 @@ export class PlayerInputHandler {
   };
 
   handleTap() {
+    // If the interaction was already handled by mouseDown, don't process it again
+    if (Input.mouseDownHandled) {
+      return;
+    }
+
     if (this.player.dead) {
       this.player.restart();
       return;
@@ -435,7 +556,8 @@ export class PlayerInputHandler {
   faceMouse = () => {
     if (
       !GameConstants.MOVE_WITH_MOUSE ||
-      this.mostRecentMoveInput === "keyboard"
+      this.mostRecentMoveInput === "keyboard" ||
+      GameConstants.isMobile
     )
       return;
     const angle = this.mouseAngle();

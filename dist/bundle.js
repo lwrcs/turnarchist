@@ -8362,6 +8362,24 @@ class Game {
                     key: input_1.Input.lastPressKey,
                 });
             }
+            // Add mouse repeat for movement
+            if (input_1.Input.mouseDown &&
+                input_1.Input.mouseDownHandled &&
+                input_1.Input.lastMouseDownTime !== 0 &&
+                Date.now() - input_1.Input.lastMouseDownTime > gameConstants_1.GameConstants.KEY_REPEAT_TIME) {
+                // Re-trigger mouse movement
+                const player = this.players[this.localPlayerID];
+                if (player &&
+                    player.game.levelState === LevelState.IN_LEVEL &&
+                    !player.dead &&
+                    !player.menu.open &&
+                    !player.busyAnimating &&
+                    !player.game.cameraAnimation.active) {
+                    // Update mouse position and trigger movement
+                    player.moveWithMouse();
+                    input_1.Input.lastMouseDownTime = Date.now(); // Reset timer for next repeat
+                }
+            }
             // Swipe hold repeat with initial delay
             if (input_1.Input.swipeHoldActive && input_1.Input.lastSwipeTime !== 0) {
                 const timeSinceSwipe = Date.now() - input_1.Input.lastSwipeTime;
@@ -8546,7 +8564,11 @@ class Game {
                 this.players?.[this.localPlayerID]?.menu) {
                 this.players[this.localPlayerID].menu.positionButtons();
             }
-            this.isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+            this.isMobile =
+                /iPhone|iPad|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini|Mobile|mobile|CriOS/i.test(navigator.userAgent);
+            gameConstants_1.GameConstants.isIOS =
+                /iPhone|iPad|iPod/i.test(navigator.userAgent) &&
+                    !navigator.userAgent.includes("Chrome DevTools");
             // Define scale adjustment based on device pixel ratio
             if (gameConstants_1.GameConstants.SCALE === null) {
                 gameConstants_1.GameConstants.SCALE = gameConstants_1.GameConstants.FIND_SCALE(this.isMobile);
@@ -8557,7 +8579,7 @@ class Game {
             let maxWidthScale = Math.floor(window.innerWidth / gameConstants_1.GameConstants.DEFAULTWIDTH);
             let maxHeightScale = Math.floor(window.innerHeight / gameConstants_1.GameConstants.DEFAULTHEIGHT);
             if (this.isMobile) {
-                if (!gameConstants_1.GameConstants.isMobile)
+                if (this.isMobile)
                     this.pushMessage("Mobile detected");
                 gameConstants_1.GameConstants.SHADE_LEVELS = 35;
                 gameConstants_1.GameConstants.isMobile = true;
@@ -9639,6 +9661,7 @@ exports.GameConstants = GameConstants;
 GameConstants.VERSION = "v1.0.9"; //"v0.6.3";
 GameConstants.DEVELOPER_MODE = false;
 GameConstants.isMobile = false;
+GameConstants.isIOS = false;
 GameConstants.CAMERA_SPEED = 1; // 1 is instant 0.1 is slow
 GameConstants.FPS = 120;
 GameConstants.ALPHA_ENABLED = true;
@@ -10656,6 +10679,11 @@ exports.Input = {
     mouseDown: false,
     lastPressTime: 0,
     lastPressKey: "",
+    // Add mouse repeat tracking
+    lastMouseDownTime: 0,
+    lastMouseDownX: 0,
+    lastMouseDownY: 0,
+    mouseDownHandled: false,
     SPACE: "Space",
     LEFT: "ArrowLeft",
     UP: "ArrowUp",
@@ -10850,6 +10878,9 @@ exports.Input = {
         exports.Input.mouseDown = false;
         exports.Input.mouseDownStartTime = null;
         exports.Input.mouseUpListener(exports.Input.mouseX, exports.Input.mouseY, event.button);
+        // Reset mouse repeat tracking
+        exports.Input.lastMouseDownTime = 0;
+        exports.Input.mouseDownHandled = false;
         // Clear hold check interval
         if (exports.Input._holdCheckInterval) {
             clearInterval(exports.Input._holdCheckInterval);
@@ -11024,9 +11055,6 @@ window.addEventListener(
   false,
 );
 */
-window.document
-    .getElementById("gameCanvas")
-    .addEventListener("click", (event) => exports.Input.mouseClickListener(event), false);
 window.document
     .getElementById("gameCanvas")
     .addEventListener("mousemove", (event) => exports.Input.updateMousePos(event), false);
@@ -11601,26 +11629,21 @@ class Menu {
         this.selectionTimeoutId = null;
         // Action methods
         this.startGame = () => {
-            console.log("Game Started");
             this.close();
             // Implement game start logic
         };
         this.exitGame = () => {
-            console.log("Exit Game");
             // Implement exit game logic
         };
         this.openSettings = () => {
-            console.log("Settings clicked - submenus disabled for now");
             // Implement settings logic later
         };
         this.scaleUp = () => {
             this.player.game.increaseScale();
-            console.log("Scale Up clicked!");
             // Add scale up functionality here
         };
         this.scaleDown = () => {
             this.player.game.decreaseScale();
-            console.log("Scale Down clicked!");
             // Add scale down functionality here
         };
         this.buttons = [];
@@ -11739,35 +11762,28 @@ class Menu {
             case input_1.InputEnum.LEFT_CLICK:
                 // Handle mouse clicks by getting current mouse position and calling mouseInputHandler
                 const { x, y } = mouseCursor_1.MouseCursor.getInstance().getPosition();
-                console.log(`Menu.inputHandler received LEFT_CLICK, delegating to mouseInputHandler with x: ${x}, y: ${y}`);
                 this.mouseInputHandler(x, y);
                 break;
             case input_1.InputEnum.RIGHT_CLICK:
                 // Handle right clicks if needed (for now just log)
-                console.log("Menu.inputHandler received RIGHT_CLICK");
                 break;
             default:
                 break;
         }
     }
     mouseInputHandler(x, y) {
-        console.log(`Menu.mouseInputHandler called with x: ${x}, y: ${y}, menu.open: ${this.open}`);
         if (!this.open) {
-            console.log("Menu not open, returning early");
             return;
         }
         // Check close button first
         if (this.isPointInCloseButton(x, y)) {
-            console.log("Close button clicked!");
             this.closeButton.onClick();
             return;
         }
         // Check main menu buttons
         const bounds = this.isPointInMenuBounds(x, y);
-        console.log(`Menu bounds check result:`, bounds);
         if (bounds.inBounds && bounds.buttonIndex >= 0) {
             const button = this.buttons[bounds.buttonIndex];
-            console.log(`Button ${bounds.buttonIndex} (${button.text}) clicked!`);
             // Clear any existing timeout
             if (this.selectionTimeoutId !== null) {
                 clearTimeout(this.selectionTimeoutId);
@@ -11782,20 +11798,15 @@ class Menu {
             button.onClick();
         }
         else {
-            console.log("Click was not on any menu button");
         }
     }
     close() {
         this.open = false;
     }
     openMenu() {
-        console.log("Menu.openMenu() called");
         this.open = true;
         this.selectedButton = -1;
-        console.log(`Menu opened, buttons positioned at:`);
-        this.buttons.forEach((button, index) => {
-            console.log(`  Button ${index} (${button.text}): x: ${button.x}, y: ${button.y}, width: ${button.width}, height: ${button.height}`);
-        });
+        this.buttons.forEach((button, index) => { });
     }
     toggleOpen() {
         if (this.open) {
@@ -11843,15 +11854,6 @@ class Menu {
         const maxButtonHeight = 30; // Maximum button height in pixels
         const calculatedHeight = Math.floor(heightPerButtonSlot * 0.8);
         const buttonHeight = Math.min(calculatedHeight, maxButtonHeight);
-        console.log(`Menu.positionButtons: 
-      Screen: ${screenWidth}x${screenHeight}
-      Close button: ${this.closeButton.x}, ${this.closeButton.y} (${this.closeButton.width}x${this.closeButton.height})
-      Button count: ${buttonCount}
-      Button slots: ${buttonSlots}
-      Available height: ${availableHeight}
-      Height per slot: ${heightPerButtonSlot}
-      Button height: ${buttonHeight}
-      Button width: ${maxButtonWidth}`);
         // Update button dimensions and positions
         let currentSlot = 0;
         for (let i = 0; i < this.buttons.length; i++) {
@@ -11883,10 +11885,6 @@ class Menu {
                 button.height = buttonHeight;
                 currentSlot++;
             }
-            console.log(`  Button ${i} (${button.text}): 
-        x: ${button.x}, y: ${button.y}, 
-        width: ${button.width}, height: ${button.height}
-        Bottom: ${button.y + button.height}`);
         }
     }
     getScaleButtonIndices() {
@@ -15935,7 +15933,7 @@ class LevelConstants {
 exports.LevelConstants = LevelConstants;
 LevelConstants.SCREEN_W = 1;
 LevelConstants.SCREEN_H = 1;
-LevelConstants.COMPUTER_TURN_DELAY = 250; // milliseconds (was 300)
+LevelConstants.COMPUTER_TURN_DELAY = 1000; // milliseconds (was 300)
 LevelConstants.TURN_TIME = 3000; // milliseconds
 LevelConstants.LEVEL_TRANSITION_TIME = 300; // milliseconds
 LevelConstants.LEVEL_TRANSITION_TIME_LADDER = 1000; // milliseconds
@@ -18388,6 +18386,7 @@ const muteButton_1 = __webpack_require__(/*! ../gui/muteButton */ "./src/gui/mut
 const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts");
 class PlayerInputHandler {
     constructor(player) {
+        this.mouseHoldInitialDirection = null;
         this.handleNumKey = (num) => {
             if (this.player.menu.open)
                 return;
@@ -18444,7 +18443,8 @@ class PlayerInputHandler {
         };
         this.faceMouse = () => {
             if (!gameConstants_1.GameConstants.MOVE_WITH_MOUSE ||
-                this.mostRecentMoveInput === "keyboard")
+                this.mostRecentMoveInput === "keyboard" ||
+                gameConstants_1.GameConstants.isMobile)
                 return;
             const angle = this.mouseAngle();
             // Convert angle to direction
@@ -18480,8 +18480,8 @@ class PlayerInputHandler {
         input_1.Input.periodListener = () => this.handleInput(input_1.InputEnum.PERIOD);
         input_1.Input.tapListener = () => this.handleTap();
         input_1.Input.mouseMoveListener = () => this.handleInput(input_1.InputEnum.MOUSE_MOVE);
-        input_1.Input.mouseLeftClickListeners.push(() => this.handleInput(input_1.InputEnum.LEFT_CLICK));
         input_1.Input.mouseRightClickListeners.push(() => this.handleInput(input_1.InputEnum.RIGHT_CLICK));
+        input_1.Input.mouseDownListeners.push((x, y, button) => this.handleMouseDown(x, y, button));
         input_1.Input.numKeyListener = (num) => this.handleInput(input_1.InputEnum.NUMBER_1 + num - 1);
         input_1.Input.equalsListener = () => this.handleInput(input_1.InputEnum.EQUALS);
         input_1.Input.minusListener = () => this.handleInput(input_1.InputEnum.MINUS);
@@ -18579,7 +18579,29 @@ class PlayerInputHandler {
                 //when mouse moves
                 this.setMostRecentInput("mouse");
                 this.player.inventory.mouseMove();
-                if (!this.ignoreDirectionInput()) {
+                // Check if mouse hold should be cancelled
+                if (input_1.Input.mouseDown && input_1.Input.mouseDownHandled) {
+                    let shouldCancelHold = false;
+                    // Check distance from initial position
+                    const dx = input_1.Input.mouseX - input_1.Input.lastMouseDownX;
+                    const dy = input_1.Input.mouseY - input_1.Input.lastMouseDownY;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    const maxHoldDistance = gameConstants_1.GameConstants.TILESIZE * 1.5; // 1.5 tiles
+                    if (distance > maxHoldDistance) {
+                        shouldCancelHold = true;
+                    }
+                    // Check if player direction changed from initial
+                    if (this.mouseHoldInitialDirection !== null &&
+                        this.player.direction !== this.mouseHoldInitialDirection) {
+                        shouldCancelHold = true;
+                    }
+                    if (shouldCancelHold) {
+                        input_1.Input.mouseDownHandled = false;
+                        input_1.Input.lastMouseDownTime = 0;
+                        this.mouseHoldInitialDirection = null;
+                    }
+                }
+                if (!this.ignoreDirectionInput() || gameConstants_1.GameConstants.isMobile) {
                     this.faceMouse();
                     this.player.setTileCursorPosition();
                 }
@@ -18615,19 +18637,94 @@ class PlayerInputHandler {
             this.player.inventory.drop();
         }
     }
+    handleMouseDown(x, y, button) {
+        if (button !== 0)
+            return; // Only handle left mouse button
+        const player = this.player;
+        if (player.game.levelState !== game_1.LevelState.IN_LEVEL) {
+            input_1.Input.mouseDownHandled = false;
+            return;
+        }
+        this.setMostRecentInput("mouse");
+        // Handle dead player restart
+        if (player.dead) {
+            player.restart();
+            input_1.Input.mouseDownHandled = true;
+            return;
+        }
+        // Handle game not started
+        if (!player.game.started) {
+            player.game.startedFadeOut = true;
+            input_1.Input.mouseDownHandled = true;
+            return;
+        }
+        // Store mouse down info for repeat
+        input_1.Input.lastMouseDownTime = Date.now();
+        input_1.Input.lastMouseDownX = x;
+        input_1.Input.lastMouseDownY = y;
+        const inventory = player.inventory;
+        // Handle inventory toggle when clicking outside or on inventory button
+        const clickedOutsideInventory = (inventory.isOpen &&
+            !inventory.isPointInInventoryBounds(x, y).inBounds) ||
+            inventory.isPointInInventoryButton(x, y);
+        if (clickedOutsideInventory) {
+            inventory.toggleOpen();
+            input_1.Input.mouseDownHandled = true;
+            return;
+        }
+        // Handle menu
+        if (this.player.menu.open) {
+            this.player.menu.mouseInputHandler(x, y);
+            input_1.Input.mouseDownHandled = true;
+            return;
+        }
+        // Check if click is on menu button
+        if (this.isPointInMenuButtonBounds(x, y)) {
+            this.handleMenuButtonClick();
+            input_1.Input.mouseDownHandled = true;
+            return;
+        }
+        // Handle vending machine
+        if (player.openVendingMachine) {
+            if (vendingMachine_1.VendingMachine.isPointInVendingMachineBounds(x, y, player.openVendingMachine)) {
+                player.openVendingMachine.space();
+            }
+            else {
+                player.openVendingMachine.close();
+            }
+            input_1.Input.mouseDownHandled = true;
+            return;
+        }
+        // Check if this is a UI interaction
+        const isUIInteraction = inventory.isPointInInventoryButton(x, y) ||
+            inventory.isPointInQuickbarBounds(x, y).inBounds ||
+            inventory.isOpen ||
+            this.isPointInMenuButtonBounds(x, y);
+        if (!isUIInteraction) {
+            // Handle movement
+            if (!player.busyAnimating && !player.game.cameraAnimation.active) {
+                // Store the initial direction when starting mouse hold for movement
+                this.mouseHoldInitialDirection = this.player.direction;
+                player.moveWithMouse();
+                input_1.Input.mouseDownHandled = true;
+            }
+            else {
+                input_1.Input.mouseDownHandled = false;
+            }
+        }
+        else {
+            input_1.Input.mouseDownHandled = false;
+        }
+    }
     handleMouseLeftClick() {
         const player = this.player;
         const cursor = mouseCursor_1.MouseCursor.getInstance();
         const { x, y } = cursor.getPosition();
-        console.log(`PlayerInputHandler.handleMouseLeftClick: cursor position x: ${x}, y: ${y}`);
-        console.log(`  Game level state: ${player.game.levelState}, menu.open: ${this.player.menu.open}`);
         if (player.game.levelState !== game_1.LevelState.IN_LEVEL) {
-            console.log("Not in level, returning early");
             return;
         }
         this.setMostRecentInput("mouse");
         if (player.dead) {
-            console.log("Player is dead, restarting");
             player.restart();
             return;
         }
@@ -18636,20 +18733,16 @@ class PlayerInputHandler {
             !inventory.isPointInInventoryBounds(x, y).inBounds) ||
             inventory.isPointInInventoryButton(x, y);
         if (clickedOutsideInventory) {
-            console.log("Clicked outside inventory, toggling");
             inventory.toggleOpen();
         }
         if (this.player.menu.open) {
-            console.log(`Menu is open, calling menu.mouseInputHandler with x: ${x}, y: ${y}`);
             this.player.menu.mouseInputHandler(x, y);
             return;
         }
         else {
-            console.log("Menu is not open, continuing with other input handling");
         }
         // Check if click is on menu button
         if (this.isPointInMenuButtonBounds(x, y)) {
-            console.log("Clicked on menu button");
             this.handleMenuButtonClick();
             return;
         }
@@ -18668,11 +18761,16 @@ class PlayerInputHandler {
         const notInInventoryUI = !inventory.isPointInInventoryButton(x, y) &&
             !inventory.isPointInQuickbarBounds(x, y).inBounds &&
             !inventory.isOpen;
-        if (notInInventoryUI) {
+        // Only handle movement if it wasn't already handled on mousedown
+        if (notInInventoryUI && !input_1.Input.mouseDownHandled) {
             player.moveWithMouse();
         }
     }
     handleTap() {
+        // If the interaction was already handled by mouseDown, don't process it again
+        if (input_1.Input.mouseDownHandled) {
+            return;
+        }
         if (this.player.dead) {
             this.player.restart();
             return;
@@ -18851,12 +18949,11 @@ class PlayerMovement {
         }
     }
     moveMouse(direction, targetX, targetY) {
-        if (!(direction in game_1.Direction) || !this.player)
+        if (!(direction in game_1.Direction) || !this.player || gameConstants_1.GameConstants.isMobile)
             return;
         const coords = this.getTargetCoords(direction, targetX, targetY);
         if (!coords)
             return;
-        console.log("coords", coords.x, coords.y);
         const { x, y } = coords;
         if (x === undefined || y === undefined)
             return;
@@ -19022,7 +19119,8 @@ class PlayerRenderer {
                 game_1.Game.drawMob(this.setSmearFrame().x, this.setSmearFrame().y, 1, 2, player.x - this.drawX - this.hitX, player.y - 1.45 - this.drawY - this.jumpY - this.hitY, 1, 2, this.shadeColor());
             }
             else if (this.player.inputHandler.mostRecentMoveInput === "mouse" &&
-                this.mouseDiagonal()) {
+                this.mouseDiagonal() &&
+                !gameConstants_1.GameConstants.isMobile) {
                 const angle = (this.player.inputHandler.mouseAngle() * 180) / Math.PI;
                 let diagonalTile = { x: 1, y: 18 };
                 if (angle > -150 && angle <= -120)
@@ -19442,7 +19540,8 @@ class PlayerRenderer {
          */
         this.drawTileCursor = (delta) => {
             if (this.player.inventory.isOpen ||
-                this.player.inputHandler.mostRecentMoveInput === "keyboard")
+                this.player.inputHandler.mostRecentMoveInput === "keyboard" ||
+                gameConstants_1.GameConstants.isMobile)
                 return;
             game_1.Game.ctx.save(); // Save the current canvas state
             if (!this.player.mouseInLine() ||
@@ -21616,7 +21715,7 @@ class Room {
             game_1.Game.ctx.restore();
         };
         this.drawShadeLayer = () => {
-            if (this.game.isMobile)
+            if (gameConstants_1.GameConstants.isIOS)
                 return;
             if (!this.onScreen)
                 return;
@@ -21747,7 +21846,7 @@ class Room {
             game_1.Game.ctx.restore();
         };
         this.drawBloomLayer = (delta) => {
-            if (this.game.isMobile || !this.onScreen)
+            if (gameConstants_1.GameConstants.isIOS || !this.onScreen)
                 return;
             game_1.Game.ctx.save();
             // Clear the offscreen shade canvas

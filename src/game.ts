@@ -597,6 +597,29 @@ export class Game {
       } as KeyboardEvent);
     }
 
+    // Add mouse repeat for movement
+    if (
+      Input.mouseDown &&
+      Input.mouseDownHandled &&
+      Input.lastMouseDownTime !== 0 &&
+      Date.now() - Input.lastMouseDownTime > GameConstants.KEY_REPEAT_TIME
+    ) {
+      // Re-trigger mouse movement
+      const player = this.players[this.localPlayerID];
+      if (
+        player &&
+        player.game.levelState === LevelState.IN_LEVEL &&
+        !player.dead &&
+        !player.menu.open &&
+        !player.busyAnimating &&
+        !player.game.cameraAnimation.active
+      ) {
+        // Update mouse position and trigger movement
+        player.moveWithMouse();
+        Input.lastMouseDownTime = Date.now(); // Reset timer for next repeat
+      }
+    }
+
     // Swipe hold repeat with initial delay
     if (Input.swipeHoldActive && Input.lastSwipeTime !== 0) {
       const timeSinceSwipe = Date.now() - Input.lastSwipeTime;
@@ -815,7 +838,15 @@ export class Game {
     ) {
       this.players[this.localPlayerID].menu.positionButtons();
     }
-    this.isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    this.isMobile =
+      /iPhone|iPad|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini|Mobile|mobile|CriOS/i.test(
+        navigator.userAgent,
+      );
+
+    GameConstants.isIOS =
+      /iPhone|iPad|iPod/i.test(navigator.userAgent) &&
+      !navigator.userAgent.includes("Chrome DevTools");
+
     // Define scale adjustment based on device pixel ratio
     if (GameConstants.SCALE === null) {
       GameConstants.SCALE = GameConstants.FIND_SCALE(this.isMobile);
@@ -832,7 +863,7 @@ export class Game {
     );
 
     if (this.isMobile) {
-      if (!GameConstants.isMobile) this.pushMessage("Mobile detected");
+      if (this.isMobile) this.pushMessage("Mobile detected");
       GameConstants.SHADE_LEVELS = 35;
       GameConstants.isMobile = true;
       LevelConstants.LIGHTING_ANGLE_STEP = 2;

@@ -2431,7 +2431,7 @@ export class Room {
   };
 
   drawShadeLayer = () => {
-    if (this.game.isMobile) return;
+    if (GameConstants.isIOS) return;
     if (!this.onScreen) return;
     Game.ctx.save();
     // Clear the offscreen shade canvas
@@ -2588,7 +2588,7 @@ export class Room {
   };
 
   drawBloomLayer = (delta: number) => {
-    if (this.game.isMobile || !this.onScreen) return;
+    if (GameConstants.isIOS || !this.onScreen) return;
 
     Game.ctx.save();
     // Clear the offscreen shade canvas
