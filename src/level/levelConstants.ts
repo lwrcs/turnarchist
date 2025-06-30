@@ -4,7 +4,7 @@ export class LevelConstants {
   static SCREEN_W = 1;
   static SCREEN_H = 1;
 
-  static readonly COMPUTER_TURN_DELAY = 1000; // milliseconds (was 300)
+  static readonly COMPUTER_TURN_DELAY = 250; // milliseconds (was 300)
   static readonly TURN_TIME = 3000; // milliseconds
   static readonly LEVEL_TRANSITION_TIME = 300; // milliseconds
   static readonly LEVEL_TRANSITION_TIME_LADDER = 1000; // milliseconds

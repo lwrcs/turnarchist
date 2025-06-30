@@ -15933,7 +15933,7 @@ class LevelConstants {
 exports.LevelConstants = LevelConstants;
 LevelConstants.SCREEN_W = 1;
 LevelConstants.SCREEN_H = 1;
-LevelConstants.COMPUTER_TURN_DELAY = 1000; // milliseconds (was 300)
+LevelConstants.COMPUTER_TURN_DELAY = 250; // milliseconds (was 300)
 LevelConstants.TURN_TIME = 3000; // milliseconds
 LevelConstants.LEVEL_TRANSITION_TIME = 300; // milliseconds
 LevelConstants.LEVEL_TRANSITION_TIME_LADDER = 1000; // milliseconds
