@@ -9845,18 +9845,20 @@ const armor_1 = __webpack_require__(/*! ../item/armor */ "./src/item/armor.ts");
 const backpack_1 = __webpack_require__(/*! ../item/backpack */ "./src/item/backpack.ts");
 const candle_1 = __webpack_require__(/*! ../item/light/candle */ "./src/item/light/candle.ts");
 const coal_1 = __webpack_require__(/*! ../item/resource/coal */ "./src/item/resource/coal.ts");
-const godStone_1 = __webpack_require__(/*! ../item/godStone */ "./src/item/godStone.ts");
-const heart_1 = __webpack_require__(/*! ../item/usable/heart */ "./src/item/usable/heart.ts");
-const lantern_1 = __webpack_require__(/*! ../item/light/lantern */ "./src/item/light/lantern.ts");
 const weaponBlood_1 = __webpack_require__(/*! ../item/usable/weaponBlood */ "./src/item/usable/weaponBlood.ts");
 const weaponFragments_1 = __webpack_require__(/*! ../item/usable/weaponFragments */ "./src/item/usable/weaponFragments.ts");
 const weaponPoison_1 = __webpack_require__(/*! ../item/usable/weaponPoison */ "./src/item/usable/weaponPoison.ts");
 const levelConstants_1 = __webpack_require__(/*! ../level/levelConstants */ "./src/level/levelConstants.ts");
 const dagger_1 = __webpack_require__(/*! ../item/weapon/dagger */ "./src/item/weapon/dagger.ts");
+const dualdagger_1 = __webpack_require__(/*! ../item/weapon/dualdagger */ "./src/item/weapon/dualdagger.ts");
 const spear_1 = __webpack_require__(/*! ../item/weapon/spear */ "./src/item/weapon/spear.ts");
+const spellbook_1 = __webpack_require__(/*! ../item/weapon/spellbook */ "./src/item/weapon/spellbook.ts");
+const warhammer_1 = __webpack_require__(/*! ../item/weapon/warhammer */ "./src/item/weapon/warhammer.ts");
 const hammer_1 = __webpack_require__(/*! ../item/tool/hammer */ "./src/item/tool/hammer.ts");
+const spellbookPage_1 = __webpack_require__(/*! ../item/usable/spellbookPage */ "./src/item/usable/spellbookPage.ts");
+const greataxe_1 = __webpack_require__(/*! ../item/weapon/greataxe */ "./src/item/weapon/greataxe.ts");
 const pickaxe_1 = __webpack_require__(/*! ../item/tool/pickaxe */ "./src/item/tool/pickaxe.ts");
-const geode_1 = __webpack_require__(/*! ../item/resource/geode */ "./src/item/resource/geode.ts");
+const shotgun_1 = __webpack_require__(/*! ../item/weapon/shotgun */ "./src/item/weapon/shotgun.ts");
 class GameConstants {
 }
 exports.GameConstants = GameConstants;
@@ -10006,11 +10008,12 @@ GameConstants.FIND_SCALE = (isMobile) => {
 GameConstants.STARTING_INVENTORY = [dagger_1.Dagger, candle_1.Candle];
 GameConstants.STARTING_DEV_INVENTORY = [
     dagger_1.Dagger,
-    candle_1.Candle,
-    heart_1.Heart,
-    lantern_1.Lantern,
-    godStone_1.GodStone,
+    warhammer_1.Warhammer,
+    dualdagger_1.DualDagger,
+    shotgun_1.Shotgun,
+    spellbook_1.Spellbook,
     spear_1.Spear,
+    greataxe_1.Greataxe,
     weaponPoison_1.WeaponPoison,
     weaponBlood_1.WeaponBlood,
     armor_1.Armor,
@@ -10018,9 +10021,10 @@ GameConstants.STARTING_DEV_INVENTORY = [
     hammer_1.Hammer,
     pickaxe_1.Pickaxe,
     coal_1.Coal,
-    geode_1.Geode,
-    geode_1.Geode,
-    geode_1.Geode,
+    spellbookPage_1.SpellbookPage,
+    spellbookPage_1.SpellbookPage,
+    spellbookPage_1.SpellbookPage,
+    spellbookPage_1.SpellbookPage,
     weaponFragments_1.WeaponFragments,
     weaponFragments_1.WeaponFragments,
     weaponFragments_1.WeaponFragments,
@@ -13853,50 +13857,6 @@ class Equippable extends item_1.Item {
     }
 }
 exports.Equippable = Equippable;
-
-
-/***/ }),
-
-/***/ "./src/item/godStone.ts":
-/*!******************************!*\
-  !*** ./src/item/godStone.ts ***!
-  \******************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.GodStone = void 0;
-const room_1 = __webpack_require__(/*! ../room/room */ "./src/room/room.ts");
-const usable_1 = __webpack_require__(/*! ./usable/usable */ "./src/item/usable/usable.ts");
-class GodStone extends usable_1.Usable {
-    constructor(level, x, y) {
-        super(level, x, y);
-        this.onUse = (player) => {
-            this.teleportToExit(player);
-        };
-        this.teleportToExit = (player) => {
-            let downLadders = this.room.game.rooms.filter((room) => room.type === room_1.RoomType.DOWNLADDER);
-            console.log("downLadders", downLadders);
-            const room = downLadders[downLadders.length - 1];
-            this.room.game.rooms.forEach((room) => {
-                room.entered = true;
-                room.calculateWallInfo();
-            });
-            room.game.changeLevelThroughDoor(player, room.doors[0], 1);
-            player.x = room.roomX + 2;
-            player.y = room.roomY + 3;
-        };
-        this.getDescription = () => {
-            return "YOU SHOULD NOT HAVE THIS";
-        };
-        this.room = level;
-        this.count = 0;
-        this.tileX = 31;
-        this.tileY = 0;
-        this.stackable = true;
-    }
-}
-exports.GodStone = GodStone;
 
 
 /***/ }),

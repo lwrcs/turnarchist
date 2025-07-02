@@ -28,6 +28,7 @@ import { GreenGem } from "../item/resource/greengem";
 import { Pickaxe } from "../item/tool/pickaxe";
 import { Geode } from "../item/resource/geode";
 import { GlowBugs } from "../item/light/glowBugs";
+import { Shotgun } from "../item/weapon/shotgun";
 
 export class GameConstants {
   static readonly VERSION = "v1.0.9"; //"v0.6.3";
@@ -206,11 +207,12 @@ export class GameConstants {
   static readonly STARTING_INVENTORY = [Dagger, Candle];
   static readonly STARTING_DEV_INVENTORY = [
     Dagger,
-    Candle,
-    Heart,
-    Lantern,
-    GodStone,
+    Warhammer,
+    DualDagger,
+    Shotgun,
+    Spellbook,
     Spear,
+    Greataxe,
     WeaponPoison,
     WeaponBlood,
     Armor,
@@ -218,9 +220,11 @@ export class GameConstants {
     Hammer,
     Pickaxe,
     Coal,
-    Geode,
-    Geode,
-    Geode,
+
+    SpellbookPage,
+    SpellbookPage,
+    SpellbookPage,
+    SpellbookPage,
 
     WeaponFragments,
     WeaponFragments,
