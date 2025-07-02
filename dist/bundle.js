@@ -6205,8 +6205,15 @@ class Entity extends drawable_1.Drawable {
             return this.softShadeColor;
         };
         this.emitEnemyKilled = () => {
+            let depthMultiplier = Math.log((this.room.depth + 1) * 5);
+            console.log(depthMultiplier);
+            let multiplier = 1;
+            if (this.isEnemy)
+                multiplier = 5;
+            const xp = Math.ceil(this.maxHealth * multiplier * depthMultiplier);
             eventBus_1.globalEventBus.emit(events_1.EVENTS.ENEMY_KILLED, {
                 enemyId: this.name,
+                xp: xp,
             });
         };
         this.doneMoving = () => {
@@ -9845,6 +9852,7 @@ const armor_1 = __webpack_require__(/*! ../item/armor */ "./src/item/armor.ts");
 const backpack_1 = __webpack_require__(/*! ../item/backpack */ "./src/item/backpack.ts");
 const candle_1 = __webpack_require__(/*! ../item/light/candle */ "./src/item/light/candle.ts");
 const coal_1 = __webpack_require__(/*! ../item/resource/coal */ "./src/item/resource/coal.ts");
+const godStone_1 = __webpack_require__(/*! ../item/godStone */ "./src/item/godStone.ts");
 const weaponBlood_1 = __webpack_require__(/*! ../item/usable/weaponBlood */ "./src/item/usable/weaponBlood.ts");
 const weaponFragments_1 = __webpack_require__(/*! ../item/usable/weaponFragments */ "./src/item/usable/weaponFragments.ts");
 const weaponPoison_1 = __webpack_require__(/*! ../item/usable/weaponPoison */ "./src/item/usable/weaponPoison.ts");
@@ -9852,7 +9860,6 @@ const levelConstants_1 = __webpack_require__(/*! ../level/levelConstants */ "./s
 const dagger_1 = __webpack_require__(/*! ../item/weapon/dagger */ "./src/item/weapon/dagger.ts");
 const dualdagger_1 = __webpack_require__(/*! ../item/weapon/dualdagger */ "./src/item/weapon/dualdagger.ts");
 const spear_1 = __webpack_require__(/*! ../item/weapon/spear */ "./src/item/weapon/spear.ts");
-const spellbook_1 = __webpack_require__(/*! ../item/weapon/spellbook */ "./src/item/weapon/spellbook.ts");
 const warhammer_1 = __webpack_require__(/*! ../item/weapon/warhammer */ "./src/item/weapon/warhammer.ts");
 const hammer_1 = __webpack_require__(/*! ../item/tool/hammer */ "./src/item/tool/hammer.ts");
 const spellbookPage_1 = __webpack_require__(/*! ../item/usable/spellbookPage */ "./src/item/usable/spellbookPage.ts");
@@ -10011,7 +10018,7 @@ GameConstants.STARTING_DEV_INVENTORY = [
     warhammer_1.Warhammer,
     dualdagger_1.DualDagger,
     shotgun_1.Shotgun,
-    spellbook_1.Spellbook,
+    godStone_1.GodStone,
     spear_1.Spear,
     greataxe_1.Greataxe,
     weaponPoison_1.WeaponPoison,
@@ -11310,10 +11317,14 @@ class StatsTracker {
             coinsCollected: 0,
             itemsCollected: 0,
             enemies: [],
+            xp: 0,
+            level: 1,
         };
         this.handleEnemyKilled = (payload) => {
             this.stats.enemiesKilled += 1;
             this.stats.enemies.push(payload.enemyId);
+            this.stats.xp += payload.xp;
+            this.stats.level = Math.floor(this.stats.xp / 100) + 1;
             //console.log(`Enemy killed: ${payload.enemyId}`);
         };
         this.handleDamageDone = (payload) => {
@@ -11349,6 +11360,9 @@ class StatsTracker {
     getStats() {
         return this.stats;
     }
+    getXp() {
+        return this.stats.xp;
+    }
     resetStats() {
         this.stats = {
             enemiesKilled: 0,
@@ -11358,6 +11372,8 @@ class StatsTracker {
             coinsCollected: 0,
             itemsCollected: 0,
             enemies: [],
+            xp: 0,
+            level: 1,
         };
         //console.log("Stats have been reset.");
     }
@@ -12329,6 +12345,37 @@ PostProcessor.draw = (delta) => {
 
 /***/ }),
 
+/***/ "./src/gui/xpCounter.ts":
+/*!******************************!*\
+  !*** ./src/gui/xpCounter.ts ***!
+  \******************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.XPCounter = void 0;
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const stats_1 = __webpack_require__(/*! ../game/stats */ "./src/game/stats.ts");
+class XPCounter {
+    constructor() {
+        this.xp = 0;
+        this.level = 1;
+    }
+    static draw(delta) {
+        const xp = stats_1.statsTracker.getXp();
+        // draw the xp counter
+        game_1.Game.ctx.save();
+        game_1.Game.ctx.fillStyle = "rgba(255, 255, 0, 1)";
+        game_1.Game.ctx.globalAlpha = 0.1;
+        game_1.Game.fillText(`XP: ${xp}`, 10, 10);
+        game_1.Game.ctx.restore();
+    }
+}
+exports.XPCounter = XPCounter;
+
+
+/***/ }),
+
 /***/ "./src/inventory/inventory.ts":
 /*!************************************!*\
   !*** ./src/inventory/inventory.ts ***!
@@ -12350,6 +12397,7 @@ const mouseCursor_1 = __webpack_require__(/*! ../gui/mouseCursor */ "./src/gui/m
 const input_1 = __webpack_require__(/*! ../game/input */ "./src/game/input.ts");
 const pickaxe_1 = __webpack_require__(/*! ../item/tool/pickaxe */ "./src/item/tool/pickaxe.ts");
 const menu_1 = __webpack_require__(/*! ../gui/menu */ "./src/gui/menu.ts");
+const xpCounter_1 = __webpack_require__(/*! ../gui/xpCounter */ "./src/gui/xpCounter.ts");
 let OPEN_TIME = 100; // milliseconds
 // Dark gray color used for the background of inventory slots
 let FILL_COLOR = "#5a595b";
@@ -12983,6 +13031,7 @@ class Inventory {
             this.updateEquipAnimAmount(delta);
             this.drawInventoryButton(delta);
             menu_1.Menu.drawOpenMenuButton();
+            xpCounter_1.XPCounter.draw(delta);
             if (this.isOpen) {
                 // Draw semi-transparent background for full inventory
                 game_1.Game.ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
@@ -13857,6 +13906,50 @@ class Equippable extends item_1.Item {
     }
 }
 exports.Equippable = Equippable;
+
+
+/***/ }),
+
+/***/ "./src/item/godStone.ts":
+/*!******************************!*\
+  !*** ./src/item/godStone.ts ***!
+  \******************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.GodStone = void 0;
+const room_1 = __webpack_require__(/*! ../room/room */ "./src/room/room.ts");
+const usable_1 = __webpack_require__(/*! ./usable/usable */ "./src/item/usable/usable.ts");
+class GodStone extends usable_1.Usable {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.onUse = (player) => {
+            this.teleportToExit(player);
+        };
+        this.teleportToExit = (player) => {
+            let downLadders = this.room.game.rooms.filter((room) => room.type === room_1.RoomType.DOWNLADDER);
+            console.log("downLadders", downLadders);
+            const room = downLadders[downLadders.length - 1];
+            this.room.game.rooms.forEach((room) => {
+                room.entered = true;
+                room.calculateWallInfo();
+            });
+            room.game.changeLevelThroughDoor(player, room.doors[0], 1);
+            player.x = room.roomX + 2;
+            player.y = room.roomY + 3;
+        };
+        this.getDescription = () => {
+            return "YOU SHOULD NOT HAVE THIS";
+        };
+        this.room = level;
+        this.count = 0;
+        this.tileX = 31;
+        this.tileY = 0;
+        this.stackable = true;
+    }
+}
+exports.GodStone = GodStone;
 
 
 /***/ }),

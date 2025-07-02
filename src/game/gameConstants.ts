@@ -210,7 +210,7 @@ export class GameConstants {
     Warhammer,
     DualDagger,
     Shotgun,
-    Spellbook,
+    GodStone,
     Spear,
     Greataxe,
     WeaponPoison,

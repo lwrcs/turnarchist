@@ -9,6 +9,8 @@ interface Stats {
   coinsCollected: number;
   itemsCollected: number;
   enemies: string[];
+  xp: number;
+  level: number;
 }
 
 class StatsTracker {
@@ -20,6 +22,8 @@ class StatsTracker {
     coinsCollected: 0,
     itemsCollected: 0,
     enemies: [],
+    xp: 0,
+    level: 1,
   };
 
   constructor() {
@@ -40,6 +44,8 @@ class StatsTracker {
   ): void => {
     this.stats.enemiesKilled += 1;
     this.stats.enemies.push(payload.enemyId);
+    this.stats.xp += payload.xp;
+    this.stats.level = Math.floor(this.stats.xp / 100) + 1;
     //console.log(`Enemy killed: ${payload.enemyId}`);
   };
 
@@ -80,6 +86,10 @@ class StatsTracker {
     return this.stats;
   }
 
+  public getXp(): number {
+    return this.stats.xp;
+  }
+
   public resetStats(): void {
     this.stats = {
       enemiesKilled: 0,
@@ -89,6 +99,8 @@ class StatsTracker {
       coinsCollected: 0,
       itemsCollected: 0,
       enemies: [],
+      xp: 0,
+      level: 1,
     };
     //console.log("Stats have been reset.");
   }

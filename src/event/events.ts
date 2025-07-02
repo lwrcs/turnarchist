@@ -59,6 +59,7 @@ export interface EnemySeenPlayerEvent {
 
 export interface EnemyKilledEvent {
   enemyId: string;
+  xp: number;
 }
 
 export interface DamageDoneEvent {
