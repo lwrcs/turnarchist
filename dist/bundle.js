@@ -2407,44 +2407,6 @@ var EnemyState;
 class Enemy extends entity_1.Entity {
     constructor(room, game, x, y) {
         super(room, game, x, y);
-        this.tryMove = (x, y, collide = true) => {
-            let pointWouldBeIn = (someX, someY) => {
-                return (someX >= x && someX < x + this.w && someY >= y && someY < y + this.h);
-            };
-            let entityCollide = (entity) => {
-                if (entity.x >= x + this.w || entity.x + entity.w <= x)
-                    return false;
-                if (entity.y >= y + this.h || entity.y + entity.h <= y)
-                    return false;
-                return true;
-            };
-            for (const e of this.room.entities) {
-                if (e !== this && entityCollide(e) && collide) {
-                    return;
-                }
-            }
-            for (const i in this.game.players) {
-                if (pointWouldBeIn(this.game.players[i].x, this.game.players[i].y)) {
-                    return;
-                }
-            }
-            let tiles = [];
-            for (let xx = 0; xx < this.w; xx++) {
-                for (let yy = 0; yy < this.h; yy++) {
-                    if (!this.room.roomArray[x + xx][y + yy].isSolid()) {
-                        tiles.push(this.room.roomArray[x + xx][y + yy]);
-                    }
-                    else {
-                        return;
-                    }
-                }
-            }
-            for (let tile of tiles) {
-                tile.onCollideEnemy(this);
-            }
-            this.x = x;
-            this.y = y;
-        };
         this.hit = () => {
             return 1;
         };
@@ -3465,6 +3427,109 @@ exports.FrogEnemy = FrogEnemy;
 FrogEnemy.difficulty = 1;
 FrogEnemy.tileX = 12;
 FrogEnemy.tileY = 16;
+
+
+/***/ }),
+
+/***/ "./src/entity/enemy/glowBugEnemy.ts":
+/*!******************************************!*\
+  !*** ./src/entity/enemy/glowBugEnemy.ts ***!
+  \******************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.GlowBugEnemy = void 0;
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const gameConstants_1 = __webpack_require__(/*! ../../game/gameConstants */ "./src/game/gameConstants.ts");
+const glowBugs_1 = __webpack_require__(/*! ../../item/light/glowBugs */ "./src/item/light/glowBugs.ts");
+const lightSource_1 = __webpack_require__(/*! ../../lighting/lightSource */ "./src/lighting/lightSource.ts");
+const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+class GlowBugEnemy extends entity_1.Entity {
+    constructor(room, game, x, y, drop) {
+        super(room, game, x, y);
+        this.hit = () => {
+            return 0.5;
+        };
+        this.behavior = () => {
+            this.lastX = this.x;
+            this.lastY = this.y;
+            this.seenPlayer = true;
+            this.aggro = true;
+            if (!this.dead) {
+                if (this.skipNextTurns > 0) {
+                    this.skipNextTurns--;
+                    return;
+                }
+                this.wander();
+                this.lightSource.x = this.x + 0.5;
+                this.lightSource.y = this.y + 0.5;
+                this.room.updateLighting();
+            }
+        };
+        this.draw = (delta) => {
+            if (this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = this.alpha;
+            if (!this.dead) {
+                this.updateDrawXY(delta);
+                this.frame += 0.15 * delta;
+                if (this.frame >= 4)
+                    this.frame = 0;
+                this.tileX = 8 + this.frame;
+                if (this.hasShadow)
+                    game_1.Game.drawMob(0, 0, 1, 1, this.x - this.drawX, this.y - this.drawY, 1, 1, this.room.shadeColor, this.shadeAmount());
+                game_1.Game.drawMob(Math.floor(this.tileX), this.tileY, 1, 1, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 1, this.softShadeColor, this.shadeAmount());
+                if (this.crushed) {
+                    this.crushAnim(delta);
+                }
+            }
+            if (!this.cloned) {
+                if (!this.seenPlayer) {
+                    this.drawSleepingZs(delta, 0, 0.75 * gameConstants_1.GameConstants.TILESIZE);
+                }
+                if (this.alertTicks > 0) {
+                    this.drawExclamation(delta, 0, 0.75 * gameConstants_1.GameConstants.TILESIZE);
+                }
+            }
+            game_1.Game.ctx.restore();
+        };
+        this.ticks = 0;
+        this.frame = 0;
+        this.health = 1;
+        this.maxHealth = 1;
+        this.tileX = 8;
+        this.tileY = 0;
+        this.seenPlayer = false;
+        this.aggro = false;
+        this.name = "glowbug";
+        this.orthogonalAttack = true;
+        this.imageParticleX = 3;
+        this.imageParticleY = 24;
+        //if (drop) this.drop = drop;
+        this.drawYOffset = 1;
+        this.hasShadow = true;
+        this.hasHitParticles = false;
+        this.hasDamageNumbers = false;
+        this.hasBloom = true;
+        this.bloomAlpha = 1;
+        this.bloomColor = "#054B4B";
+        this.lightSource = new lightSource_1.LightSource(this.x + 0.5, this.y + 0.5, 6, [5, 75, 75]);
+        this.addLightSource(this.lightSource);
+        this.drops = [new glowBugs_1.GlowBugs(this.room, this.x, this.y)]; //this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
+    }
+    get alertText() {
+        return `New Enemy Spotted: Crab 
+    Health: ${this.health}
+    Attack Pattern: Omnidirectional
+    Moves every other turn`;
+    }
+}
+exports.GlowBugEnemy = GlowBugEnemy;
+GlowBugEnemy.difficulty = 1;
+GlowBugEnemy.tileX = 8;
+GlowBugEnemy.tileY = 4;
 
 
 /***/ }),
@@ -5776,6 +5841,8 @@ class Entity extends drawable_1.Drawable {
         this.bloomOffsetY = 0;
         this.opaque = false;
         this.opacity = 0;
+        this.hasHitParticles = true;
+        this.hasDamageNumbers = true;
         this.applyShield = (shieldHealth = 1) => {
             if (!this.shieldedBefore) {
                 this.shield = new enemyShield_1.EnemyShield(this, this.x, this.y, shieldHealth);
@@ -5861,6 +5928,45 @@ class Entity extends drawable_1.Drawable {
             this.drawX += this.x - x;
             this.drawY += this.y - y;
         };
+        this.tryMove = (x, y, collide = true) => {
+            let pointWouldBeIn = (someX, someY) => {
+                return (someX >= x && someX < x + this.w && someY >= y && someY < y + this.h);
+            };
+            let entityCollide = (entity) => {
+                if (entity.x >= x + this.w || entity.x + entity.w <= x)
+                    return false;
+                if (entity.y >= y + this.h || entity.y + entity.h <= y)
+                    return false;
+                return true;
+            };
+            for (const e of this.room.entities) {
+                if (e !== this && entityCollide(e) && collide) {
+                    return;
+                }
+            }
+            for (const i in this.game.players) {
+                if (pointWouldBeIn(this.game.players[i].x, this.game.players[i].y)) {
+                    return;
+                }
+            }
+            let tiles = [];
+            for (let xx = 0; xx < this.w; xx++) {
+                for (let yy = 0; yy < this.h; yy++) {
+                    if (!this.room.roomArray[x + xx][y + yy].isSolid() &&
+                        !(this.room.roomArray[x + xx][y + yy] instanceof door_1.Door)) {
+                        tiles.push(this.room.roomArray[x + xx][y + yy]);
+                    }
+                    else {
+                        return;
+                    }
+                }
+            }
+            for (let tile of tiles) {
+                tile.onCollideEnemy(this);
+            }
+            this.x = x;
+            this.y = y;
+        };
         this.getPlayer = () => {
             const maxDistance = 138291380921; // pulled this straight outta my ass
             let closestDistance = maxDistance;
@@ -5901,7 +6007,8 @@ class Entity extends drawable_1.Drawable {
             this.maxHealth -= shieldHealth;
             this.onHurt(damage);
             this.startHurting();
-            this.createDamageNumber(damage, type);
+            if (this.hasDamageNumbers)
+                this.createDamageNumber(damage, type);
             this.playHitSound();
             this.healthBar.hurt();
             if (type === "none" || this.health <= 0 || !this.isEnemy) {
@@ -5913,6 +6020,48 @@ class Entity extends drawable_1.Drawable {
             }
             else
                 this.hurtCallback();
+        };
+        this.wander = () => {
+            // Store old position to check if move was successful
+            const oldX = this.x;
+            const oldY = this.y;
+            // Try up to 4 times to find a valid move
+            for (let attempts = 0; attempts < 4; attempts++) {
+                // Choose a random direction
+                const directions = [
+                    game_1.Direction.UP,
+                    game_1.Direction.DOWN,
+                    game_1.Direction.LEFT,
+                    game_1.Direction.RIGHT,
+                ];
+                const randomDirection = directions[Math.floor(Math.random() * directions.length)];
+                // Calculate target position based on direction
+                let targetX = this.x;
+                let targetY = this.y;
+                switch (randomDirection) {
+                    case game_1.Direction.UP:
+                        targetY = this.y - 1;
+                        break;
+                    case game_1.Direction.DOWN:
+                        targetY = this.y + 1;
+                        break;
+                    case game_1.Direction.LEFT:
+                        targetX = this.x - 1;
+                        break;
+                    case game_1.Direction.RIGHT:
+                        targetX = this.x + 1;
+                        break;
+                }
+                // Try to move to the target position
+                this.tryMove(targetX, targetY);
+                this.setDrawXY(oldX, oldY);
+                // If the move was successful, update direction and drawing, then break
+                if (this.x !== oldX || this.y !== oldY) {
+                    this.direction = randomDirection;
+                    this.setDrawXY(targetX, targetY);
+                    break;
+                }
+            }
         };
         this.startHurting = () => {
             this.hurting = true;
@@ -5933,6 +6082,8 @@ class Entity extends drawable_1.Drawable {
         };
         this.createHitParticles = (particleX, particleY) => {
             if (this.cloned)
+                return;
+            if (!this.hasHitParticles)
                 return;
             if (!particleX)
                 particleX = this.imageParticleX;
@@ -7483,6 +7634,57 @@ class TombStone extends entity_1.Entity {
     }
 }
 exports.TombStone = TombStone;
+
+
+/***/ }),
+
+/***/ "./src/entity/object/tree.ts":
+/*!***********************************!*\
+  !*** ./src/entity/object/tree.ts ***!
+  \***********************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Tree = void 0;
+const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+class Tree extends entity_1.Entity {
+    constructor(room, game, x, y) {
+        super(room, game, x, y);
+        this.draw = (delta) => {
+            if (this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = this.alpha;
+            if (!this.dead) {
+                this.updateDrawXY(delta);
+                game_1.Game.drawObj(this.tileX, this.tileY, 2, 3, this.x - this.drawX - 0.5, this.y - this.drawYOffset - this.drawY - 1, 2, 3, this.room.shadeColor, this.shadeAmount());
+            }
+            game_1.Game.ctx.restore();
+        };
+        this.drawTopLayer = (delta) => {
+            this.drawableY = this.y;
+        };
+        this.room = room;
+        this.health = 1;
+        this.tileX = 14;
+        this.tileY = 6;
+        this.hasShadow = false;
+        this.chainPushable = false;
+        this.name = "tree";
+        this.imageParticleX = 0;
+        this.imageParticleY = 28;
+        this.opaque = true;
+        //this.drawableY = 0.1;
+        //this.drops.push(new Shrooms(this.room, this.x, this.y));
+    }
+    get type() {
+        return entity_2.EntityType.PROP;
+    }
+}
+exports.Tree = Tree;
 
 
 /***/ }),
@@ -14029,6 +14231,38 @@ Candle.itemName = "candle";
 
 /***/ }),
 
+/***/ "./src/item/light/glowBugs.ts":
+/*!************************************!*\
+  !*** ./src/item/light/glowBugs.ts ***!
+  \************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.GlowBugs = void 0;
+const light_1 = __webpack_require__(/*! ./light */ "./src/item/light/light.ts");
+class GlowBugs extends light_1.Light {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.fuel = 100; //how many turns before it burns out
+        this.tileX = 27;
+        this.tileY = 0;
+        this.name = "glow bugs";
+        this.fuelCap = 100;
+        this.radius = 6;
+        this.stackable = true;
+        this.maxBrightness = 2;
+        this.maxBrightness = 0.25;
+        //teal blue green rgb 0-255
+        this.color = [5, 75, 75];
+    }
+}
+exports.GlowBugs = GlowBugs;
+GlowBugs.itemName = "glow bugs";
+
+
+/***/ }),
+
 /***/ "./src/item/light/lantern.ts":
 /*!***********************************!*\
   !*** ./src/item/light/lantern.ts ***!
@@ -15600,6 +15834,8 @@ const rockResource_1 = __webpack_require__(/*! ../entity/resource/rockResource *
 const coalResource_1 = __webpack_require__(/*! ../entity/resource/coalResource */ "./src/entity/resource/coalResource.ts");
 const goldResource_1 = __webpack_require__(/*! ../entity/resource/goldResource */ "./src/entity/resource/goldResource.ts");
 const emeraldResource_1 = __webpack_require__(/*! ../entity/resource/emeraldResource */ "./src/entity/resource/emeraldResource.ts");
+const glowBugEnemy_1 = __webpack_require__(/*! ../entity/enemy/glowBugEnemy */ "./src/entity/enemy/glowBugEnemy.ts");
+const tree_1 = __webpack_require__(/*! ../entity/object/tree */ "./src/entity/object/tree.ts");
 var EnvType;
 (function (EnvType) {
     EnvType[EnvType["DUNGEON"] = 0] = "DUNGEON";
@@ -15630,6 +15866,8 @@ const props = [
     { class: mushrooms_1.Mushrooms },
     { class: rockResource_1.Rock },
     { class: chest_1.Chest },
+    { class: glowBugEnemy_1.GlowBugEnemy },
+    { class: tree_1.Tree },
 ];
 const environmentProps = {
     [EnvType.DUNGEON]: {
@@ -15665,12 +15903,14 @@ const environmentProps = {
             { class: tombStone_1.TombStone, weight: 0.05, additionalParams: [1] },
             { class: tombStone_1.TombStone, weight: 0.05, additionalParams: [0] },
             { class: pumpkin_1.Pumpkin, weight: 0.05 },
-            { class: block_1.Block, weight: 0.1 },
+            //{ class: Block, weight: 0.1 },
             { class: bush_1.Bush, weight: 2 },
             { class: sprout_1.Sprout, weight: 0.05 },
             { class: mushrooms_1.Mushrooms, weight: 0.2 },
             { class: rockResource_1.Rock, weight: 0.1 },
             { class: chest_1.Chest, weight: 0.05 },
+            { class: glowBugEnemy_1.GlowBugEnemy, weight: 0.05 },
+            { class: tree_1.Tree, weight: 0.1 },
         ],
     },
     [EnvType.SWAMP]: {
@@ -20512,6 +20752,7 @@ const bigZombieEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigZombieEnemy 
 const bush_1 = __webpack_require__(/*! ../entity/object/bush */ "./src/entity/object/bush.ts");
 const sprout_1 = __webpack_require__(/*! ../entity/object/sprout */ "./src/entity/object/sprout.ts");
 const candle_1 = __webpack_require__(/*! ../item/light/candle */ "./src/item/light/candle.ts");
+const glowBugEnemy_1 = __webpack_require__(/*! ../entity/enemy/glowBugEnemy */ "./src/entity/enemy/glowBugEnemy.ts");
 // #endregion
 // #region Enums & Interfaces
 /**
@@ -20540,6 +20781,7 @@ var EnemyType;
     EnemyType["mummy"] = "mummy";
     EnemyType["spider"] = "spider";
     EnemyType["bigzombie"] = "bigzombie";
+    EnemyType["glowbug"] = "glowbug";
     // Add other enemy types here
 })(EnemyType = exports.EnemyType || (exports.EnemyType = {}));
 /**
@@ -20567,6 +20809,7 @@ exports.EnemyTypeMap = {
     [EnemyType.mummy]: mummyEnemy_1.MummyEnemy,
     [EnemyType.spider]: spiderEnemy_1.SpiderEnemy,
     [EnemyType.bigzombie]: bigZombieEnemy_1.BigZombieEnemy,
+    [EnemyType.glowbug]: glowBugEnemy_1.GlowBugEnemy,
     // Add other enemy mappings here
 };
 var RoomType;

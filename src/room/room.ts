@@ -86,6 +86,7 @@ import { BigZombieEnemy } from "../entity/enemy/bigZombieEnemy";
 import { Bush } from "../entity/object/bush";
 import { Sprout } from "../entity/object/sprout";
 import { Candle } from "../item/light/candle";
+import { GlowBugEnemy } from "../entity/enemy/glowBugEnemy";
 
 // #endregion
 
@@ -115,6 +116,7 @@ export enum EnemyType {
   mummy = "mummy",
   spider = "spider",
   bigzombie = "bigzombie",
+  glowbug = "glowbug",
   // Add other enemy types here
 }
 
@@ -143,6 +145,7 @@ export const EnemyTypeMap: { [key in EnemyType]: EnemyStatic } = {
   [EnemyType.mummy]: MummyEnemy,
   [EnemyType.spider]: SpiderEnemy,
   [EnemyType.bigzombie]: BigZombieEnemy,
+  [EnemyType.glowbug]: GlowBugEnemy,
   // Add other enemy mappings here
 };
 

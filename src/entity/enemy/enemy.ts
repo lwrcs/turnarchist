@@ -10,6 +10,7 @@ import { ImageParticle } from "../../particle/imageParticle";
 import { globalEventBus } from "../../event/eventBus";
 import { Sound } from "../../sound/sound";
 import { Utils } from "../../utility/utils";
+import { Door } from "../../tile/door";
 
 enum EnemyState {
   SLEEP,
@@ -83,44 +84,6 @@ export abstract class Enemy extends Entity {
     this.drawMoveSpeed = 0.85; //lower is faster
     //this.getDrop(["weapon", "equipment", "consumable", "gem", "tool", "coin"]);
   }
-
-  readonly tryMove = (x: number, y: number, collide: boolean = true) => {
-    let pointWouldBeIn = (someX: number, someY: number): boolean => {
-      return (
-        someX >= x && someX < x + this.w && someY >= y && someY < y + this.h
-      );
-    };
-    let entityCollide = (entity: Entity): boolean => {
-      if (entity.x >= x + this.w || entity.x + entity.w <= x) return false;
-      if (entity.y >= y + this.h || entity.y + entity.h <= y) return false;
-      return true;
-    };
-    for (const e of this.room.entities) {
-      if (e !== this && entityCollide(e) && collide) {
-        return;
-      }
-    }
-    for (const i in this.game.players) {
-      if (pointWouldBeIn(this.game.players[i].x, this.game.players[i].y)) {
-        return;
-      }
-    }
-    let tiles = [];
-    for (let xx = 0; xx < this.w; xx++) {
-      for (let yy = 0; yy < this.h; yy++) {
-        if (!this.room.roomArray[x + xx][y + yy].isSolid()) {
-          tiles.push(this.room.roomArray[x + xx][y + yy]);
-        } else {
-          return;
-        }
-      }
-    }
-    for (let tile of tiles) {
-      tile.onCollideEnemy(this);
-    }
-    this.x = x;
-    this.y = y;
-  };
 
   hit = (): number => {
     return 1;

@@ -136,6 +136,8 @@ export class Entity extends Drawable {
   drops: Item[];
   opaque: boolean = false;
   opacity: number = 0;
+  hasHitParticles: boolean = true;
+  hasDamageNumbers: boolean = true;
 
   private _imageParticleTiles: { x: number; y: number };
   hitSound: () => void;
@@ -411,6 +413,47 @@ export class Entity extends Drawable {
     this.drawY += this.y - y;
   };
 
+  readonly tryMove = (x: number, y: number, collide: boolean = true) => {
+    let pointWouldBeIn = (someX: number, someY: number): boolean => {
+      return (
+        someX >= x && someX < x + this.w && someY >= y && someY < y + this.h
+      );
+    };
+    let entityCollide = (entity: Entity): boolean => {
+      if (entity.x >= x + this.w || entity.x + entity.w <= x) return false;
+      if (entity.y >= y + this.h || entity.y + entity.h <= y) return false;
+      return true;
+    };
+    for (const e of this.room.entities) {
+      if (e !== this && entityCollide(e) && collide) {
+        return;
+      }
+    }
+    for (const i in this.game.players) {
+      if (pointWouldBeIn(this.game.players[i].x, this.game.players[i].y)) {
+        return;
+      }
+    }
+    let tiles = [];
+    for (let xx = 0; xx < this.w; xx++) {
+      for (let yy = 0; yy < this.h; yy++) {
+        if (
+          !this.room.roomArray[x + xx][y + yy].isSolid() &&
+          !(this.room.roomArray[x + xx][y + yy] instanceof Door)
+        ) {
+          tiles.push(this.room.roomArray[x + xx][y + yy]);
+        } else {
+          return;
+        }
+      }
+    }
+    for (let tile of tiles) {
+      tile.onCollideEnemy(this);
+    }
+    this.x = x;
+    this.y = y;
+  };
+
   readonly getPlayer = () => {
     const maxDistance = 138291380921; // pulled this straight outta my ass
     let closestDistance = maxDistance;
@@ -458,7 +501,7 @@ export class Entity extends Drawable {
     this.onHurt(damage);
 
     this.startHurting();
-    this.createDamageNumber(damage, type);
+    if (this.hasDamageNumbers) this.createDamageNumber(damage, type);
     this.playHitSound();
 
     this.healthBar.hurt();
@@ -471,6 +514,55 @@ export class Entity extends Drawable {
       this.kill();
       this.bloomAlpha = 0;
     } else this.hurtCallback();
+  };
+
+  wander = () => {
+    // Store old position to check if move was successful
+    const oldX = this.x;
+    const oldY = this.y;
+
+    // Try up to 4 times to find a valid move
+    for (let attempts = 0; attempts < 4; attempts++) {
+      // Choose a random direction
+      const directions = [
+        Direction.UP,
+        Direction.DOWN,
+        Direction.LEFT,
+        Direction.RIGHT,
+      ];
+      const randomDirection =
+        directions[Math.floor(Math.random() * directions.length)];
+
+      // Calculate target position based on direction
+      let targetX = this.x;
+      let targetY = this.y;
+
+      switch (randomDirection) {
+        case Direction.UP:
+          targetY = this.y - 1;
+          break;
+        case Direction.DOWN:
+          targetY = this.y + 1;
+          break;
+        case Direction.LEFT:
+          targetX = this.x - 1;
+          break;
+        case Direction.RIGHT:
+          targetX = this.x + 1;
+          break;
+      }
+
+      // Try to move to the target position
+      this.tryMove(targetX, targetY);
+      this.setDrawXY(oldX, oldY);
+
+      // If the move was successful, update direction and drawing, then break
+      if (this.x !== oldX || this.y !== oldY) {
+        this.direction = randomDirection;
+        this.setDrawXY(targetX, targetY);
+        break;
+      }
+    }
   };
 
   startHurting = () => {
@@ -496,6 +588,7 @@ export class Entity extends Drawable {
 
   createHitParticles = (particleX?: number, particleY?: number) => {
     if (this.cloned) return;
+    if (!this.hasHitParticles) return;
     if (!particleX) particleX = this.imageParticleX;
     if (!particleY) particleY = this.imageParticleY;
     ImageParticle.spawnCluster(

@@ -15,6 +15,8 @@ import { RoomType } from "../room/room";
 import { CoalResource } from "../entity/resource/coalResource";
 import { GoldResource } from "../entity/resource/goldResource";
 import { EmeraldResource } from "../entity/resource/emeraldResource";
+import { GlowBugEnemy } from "../entity/enemy/glowBugEnemy";
+import { Tree } from "../entity/object/tree";
 
 export enum EnvType {
   DUNGEON = 0,
@@ -59,6 +61,8 @@ const props: PropInfo[] = [
   { class: Mushrooms },
   { class: Rock },
   { class: Chest },
+  { class: GlowBugEnemy },
+  { class: Tree },
 ];
 
 const environmentProps: Record<EnvType, EnvironmentPropData> = {
@@ -95,12 +99,14 @@ const environmentProps: Record<EnvType, EnvironmentPropData> = {
       { class: TombStone, weight: 0.05, additionalParams: [1] },
       { class: TombStone, weight: 0.05, additionalParams: [0] },
       { class: Pumpkin, weight: 0.05 },
-      { class: Block, weight: 0.1 },
+      //{ class: Block, weight: 0.1 },
       { class: Bush, weight: 2 },
       { class: Sprout, weight: 0.05 },
       { class: Mushrooms, weight: 0.2 },
       { class: Rock, weight: 0.1 },
       { class: Chest, weight: 0.05 },
+      { class: GlowBugEnemy, weight: 0.05 },
+      { class: Tree, weight: 0.1 },
     ],
   },
   [EnvType.SWAMP]: {
