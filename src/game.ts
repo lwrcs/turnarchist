@@ -22,6 +22,7 @@ import { EVENTS } from "./event/events";
 import { UpLadder } from "./tile/upLadder";
 import { CameraAnimation } from "./game/cameraAnimation";
 import { Tips } from "./tips";
+import { GameplaySettings } from "./game/gameplaySettings";
 
 export enum LevelState {
   IN_LEVEL,
@@ -45,9 +46,59 @@ export enum Direction {
 export class ChatMessage {
   message: string;
   timestamp: number;
+  private cachedLines: string[] | null = null;
+  private cachedWidth: number = -1;
+
   constructor(message: string) {
     this.message = message;
     this.timestamp = Date.now();
+  }
+
+  // Get wrapped lines for the given max width, with caching
+  getWrappedLines(maxWidth: number): string[] {
+    if (this.cachedLines && this.cachedWidth === maxWidth) {
+      return this.cachedLines;
+    }
+
+    this.cachedLines = this.wrapText(this.message, maxWidth);
+    this.cachedWidth = maxWidth;
+    return this.cachedLines;
+  }
+
+  private wrapText(text: string, maxWidth: number): string[] {
+    if (text === "") return [""];
+
+    const words = text.split(" ");
+    const lines: string[] = [];
+    let currentLine = "";
+
+    for (const word of words) {
+      const testLine = currentLine === "" ? word : currentLine + " " + word;
+
+      if (Game.measureText(testLine).width <= maxWidth) {
+        currentLine = testLine;
+      } else {
+        if (currentLine !== "") {
+          lines.push(currentLine);
+          currentLine = word;
+        } else {
+          // Single word is too long, just add it anyway
+          lines.push(word);
+        }
+      }
+    }
+
+    if (currentLine !== "") {
+      lines.push(currentLine);
+    }
+
+    return lines.length > 0 ? lines : [""];
+  }
+
+  // Clear cache when screen resizes
+  clearCache(): void {
+    this.cachedLines = null;
+    this.cachedWidth = -1;
   }
 }
 
@@ -177,6 +228,8 @@ export class Game {
   private readonly FOCUS_TIMEOUT_DURATION = 15000; // 5 seconds
   private wasMuted = false;
   private wasStarted = false;
+
+  private lastChatWidth: number = 0;
 
   constructor() {
     window.addEventListener("load", () => {
@@ -744,6 +797,11 @@ export class Game {
       case "opq":
         GameConstants.ENEMIES_BLOCK_LIGHT = !GameConstants.ENEMIES_BLOCK_LIGHT;
         break;
+      case "peace":
+        GameplaySettings.NO_ENEMIES = !GameplaySettings.NO_ENEMIES;
+        this.newGame();
+        this.pushMessage(`Peaceful mode is now ${GameplaySettings.NO_ENEMIES}`);
+        break;
       default:
         if (command.startsWith("new ")) {
           this.room.addNewEnemy(command.slice(4) as EnemyType);
@@ -930,7 +988,12 @@ export class Game {
       `,
     );
 
-    // Optional: Log the new scale and canvas size for debugging
+    // Clear chat cache if width changed
+    const newChatWidth = GameConstants.WIDTH - 20; // Account for margins
+    if (newChatWidth !== this.lastChatWidth) {
+      this.chat.forEach((msg) => msg.clearCache());
+      this.lastChatWidth = newChatWidth;
+    }
   };
 
   shakeScreen = (shakeX: number, shakeY: number, clamp: boolean = false) => {
@@ -1399,51 +1462,7 @@ export class Game {
       this.players[this.localPlayerID].drawGUI(delta);
       //for (const i in this.players) this.players[i].updateDrawXY(delta);
     }
-    let CHAT_X = 10;
-    let CHAT_BOTTOM_Y = GameConstants.HEIGHT - Game.letter_height - 32;
-    let CHAT_OPACITY = 0.5;
-    if (this.chatOpen) {
-      Game.ctx.fillStyle = "black";
-      if (GameConstants.ALPHA_ENABLED) Game.ctx.globalAlpha = 0.75;
-      Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
-
-      Game.ctx.globalAlpha = 1;
-      Game.ctx.fillStyle = "white";
-      Game.fillText(this.chatTextBox.text, CHAT_X, CHAT_BOTTOM_Y);
-      const cursorX = Game.measureText(
-        this.chatTextBox.text.substring(0, this.chatTextBox.cursor),
-      ).width;
-      Game.ctx.fillRect(CHAT_X + cursorX, CHAT_BOTTOM_Y, 1, Game.letter_height);
-    }
-    for (let i = 0; i < this.chat.length; i++) {
-      Game.ctx.fillStyle = "white";
-      if (this.chat[i][0] === "/") Game.ctx.fillStyle = GameConstants.GREEN;
-      let y =
-        CHAT_BOTTOM_Y - (this.chat.length - 1 - i) * (Game.letter_height + 1);
-      if (this.chatOpen) y -= Game.letter_height + 1;
-
-      let age = Date.now() - this.chat[i].timestamp;
-      if (this.chatOpen) {
-        Game.ctx.globalAlpha = 1;
-      } else {
-        if (age <= GameConstants.CHAT_APPEAR_TIME) {
-          if (GameConstants.ALPHA_ENABLED) Game.ctx.globalAlpha = CHAT_OPACITY;
-        } else if (
-          age <=
-          GameConstants.CHAT_APPEAR_TIME + GameConstants.CHAT_FADE_TIME
-        ) {
-          if (GameConstants.ALPHA_ENABLED)
-            Game.ctx.globalAlpha =
-              CHAT_OPACITY *
-              (1 -
-                (age - GameConstants.CHAT_APPEAR_TIME) /
-                  GameConstants.CHAT_FADE_TIME);
-        } else {
-          Game.ctx.globalAlpha = 0;
-        }
-      }
-      Game.fillText(this.chat[i].message, CHAT_X, y);
-    }
+    this.drawChat(delta);
 
     // game version
     if (GameConstants.ALPHA_ENABLED) Game.ctx.globalAlpha = 0.1;
@@ -1466,6 +1485,97 @@ export class Game {
 
     MouseCursor.getInstance().draw(delta, this.isMobile);
     Game.ctx.restore(); // Restore the canvas state
+  };
+
+  drawChat = (delta: number) => {
+    const CHAT_X = 5;
+    const CHAT_BOTTOM_Y = GameConstants.HEIGHT - Game.letter_height - 38;
+    const CHAT_OPACITY = this.players?.[this.localPlayerID]?.inventory.isOpen
+      ? 0.05
+      : 1;
+    const CHAT_MAX_WIDTH = GameConstants.WIDTH - 5; // Leave some margin
+    const LINE_HEIGHT = Game.letter_height + 1;
+
+    if (this.chatOpen) {
+      Game.ctx.fillStyle = "black";
+      if (GameConstants.ALPHA_ENABLED) Game.ctx.globalAlpha = 0.75;
+      Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
+
+      Game.ctx.globalAlpha = 1;
+      Game.ctx.fillStyle = "white";
+      Game.fillText(this.chatTextBox.text, CHAT_X, CHAT_BOTTOM_Y);
+      const cursorX = Game.measureText(
+        this.chatTextBox.text.substring(0, this.chatTextBox.cursor),
+      ).width;
+      Game.ctx.fillRect(CHAT_X + cursorX, CHAT_BOTTOM_Y, 1, Game.letter_height);
+    }
+
+    // Calculate total height needed for all visible messages
+    let totalHeight = 0;
+    const messageHeights: number[] = [];
+
+    for (let i = 0; i < this.chat.length; i++) {
+      const lines = this.chat[i].getWrappedLines(CHAT_MAX_WIDTH);
+      const messageHeight = lines.length * LINE_HEIGHT;
+      messageHeights.push(messageHeight);
+      totalHeight += messageHeight;
+    }
+
+    // Draw messages from bottom to top
+    let currentY = CHAT_BOTTOM_Y;
+    if (this.chatOpen) {
+      currentY -= LINE_HEIGHT; // Account for input line
+    }
+
+    for (let i = this.chat.length - 1; i >= 0; i--) {
+      const message = this.chat[i];
+      const lines = message.getWrappedLines(CHAT_MAX_WIDTH);
+      const messageHeight = messageHeights[i];
+
+      // Calculate opacity based on age
+      const age = Date.now() - message.timestamp;
+      let alpha = 1;
+
+      if (!this.chatOpen) {
+        if (age <= GameConstants.CHAT_APPEAR_TIME) {
+          alpha = GameConstants.ALPHA_ENABLED ? CHAT_OPACITY : 1;
+        } else if (
+          age <=
+          GameConstants.CHAT_APPEAR_TIME + GameConstants.CHAT_FADE_TIME
+        ) {
+          alpha = GameConstants.ALPHA_ENABLED
+            ? CHAT_OPACITY *
+              (1 -
+                (age - GameConstants.CHAT_APPEAR_TIME) /
+                  GameConstants.CHAT_FADE_TIME)
+            : 1;
+        } else {
+          alpha = 0;
+        }
+      }
+
+      if (alpha > 0) {
+        // Set message color
+        Game.ctx.fillStyle = "white";
+        //if (message.message[0] === "/") {
+        //  Game.ctx.fillStyle = GameConstants.GREEN;
+        //}
+        Game.ctx.globalAlpha = alpha;
+
+        // Draw each line of the message from bottom to top
+        let lineY = currentY;
+        for (let lineIndex = lines.length - 1; lineIndex >= 0; lineIndex--) {
+          Game.fillText(lines[lineIndex], CHAT_X, lineY);
+          lineY -= LINE_HEIGHT;
+        }
+      }
+
+      // Move up by this message's height
+      currentY -= messageHeight;
+    }
+
+    // Reset alpha
+    Game.ctx.globalAlpha = 1;
   };
 
   targetCamera = (targetX: number, targetY: number) => {

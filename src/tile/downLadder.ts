@@ -29,6 +29,10 @@ export class DownLadder extends Tile {
     this.isSidePath = isSidePath;
   }
 
+  getName = () => {
+    return this.isSidePath ? "rope down" : "staircase down";
+  };
+
   generate = async () => {
     if (!this.linkedRoom) {
       const targetDepth = this.room.depth + (this.isSidePath ? 0 : 1);

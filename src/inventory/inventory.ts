@@ -551,10 +551,10 @@ export class Inventory {
     const g = -2; // gap
     const quickbarWidth = this.cols * (s + 2 * b + g) - g;
     const quickbarRightEdge = quickbarStartX + quickbarWidth;
-
+    console.log(Game.measureText(this.coins.toString()).width);
     // Position coin slightly to the right of the quickbar
-    let coinX = (quickbarRightEdge + 2) / GameConstants.TILESIZE;
-    let coinY = GameConstants.HEIGHT / GameConstants.TILESIZE - 1.25;
+    let coinX = (quickbarRightEdge - 5) / GameConstants.TILESIZE - 1;
+    let coinY = GameConstants.HEIGHT / GameConstants.TILESIZE - 1.3;
 
     // Ensure coin doesn't go off the right edge of the screen
     const maxCoinX = (GameConstants.WIDTH - 36) / GameConstants.TILESIZE;
@@ -565,6 +565,8 @@ export class Inventory {
     if (GameConstants.WIDTH < 180) {
       coinY -= 1.25;
       coinX += 1.15;
+    } else {
+      coinX += 1.5;
     }
     if (GameConstants.WIDTH < 145) {
       coinX -= 1.15;
@@ -579,8 +581,11 @@ export class Inventory {
 
     Game.fillTextOutline(
       countText,
-      coinX * GameConstants.TILESIZE + countX,
-      coinY * GameConstants.TILESIZE + countY,
+      coinX * GameConstants.TILESIZE +
+        countX -
+        Game.measureText(this.coins.toString()).width +
+        5,
+      coinY * GameConstants.TILESIZE + countY + 2,
       GameConstants.OUTLINE,
       "white",
     );

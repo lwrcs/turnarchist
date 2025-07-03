@@ -9,6 +9,7 @@ export class GoldenKey extends Equippable {
 
     this.tileX = 6;
     this.tileY = 0;
+    this.name = "goldenKey";
   }
 
   getDescription = (): string => {

@@ -27,6 +27,7 @@ import { ImageParticle } from "../particle/imageParticle";
 import { Enemy } from "./enemy/enemy";
 import { Particle } from "../particle/particle";
 import { DeathParticle } from "../particle/deathParticle";
+import { GameplaySettings } from "../game/gameplaySettings";
 
 export enum EntityDirection {
   DOWN,
@@ -297,6 +298,10 @@ export class Entity extends Drawable {
 
     return cloned;
   }
+
+  hoverText = () => {
+    return this.name;
+  };
 
   get imageParticleTiles() {
     return this._imageParticleTiles;

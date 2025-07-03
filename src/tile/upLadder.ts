@@ -32,6 +32,10 @@ export class UpLadder extends Tile {
     }
   };
 
+  getName = () => {
+    return this.isRope ? "rope up" : "staircase up";
+  };
+
   linkRoom = () => {
     this.linkedRoom = this.game.levels[this.depth - 1].exitRoom;
   };

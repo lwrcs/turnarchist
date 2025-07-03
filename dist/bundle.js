@@ -4906,7 +4906,7 @@ class Spawner extends enemy_1.Enemy {
         };
         this.setSpawnFrequency = () => {
             if (gameplaySettings_1.GameplaySettings.UNLIMITED_SPAWNERS) {
-                this.spawnFrequency = 3;
+                this.spawnFrequency = 4;
             }
             else {
                 this.spawnFrequency = Math.min(12, 4 * this.room.currentSpawnerCount);
@@ -5843,6 +5843,9 @@ class Entity extends drawable_1.Drawable {
         this.opacity = 0;
         this.hasHitParticles = true;
         this.hasDamageNumbers = true;
+        this.hoverText = () => {
+            return this.name;
+        };
         this.applyShield = (shieldHealth = 1) => {
             if (!this.shieldedBefore) {
                 this.shield = new enemyShield_1.EnemyShield(this, this.x, this.y, shieldHealth);
@@ -8334,6 +8337,7 @@ const stats_1 = __webpack_require__(/*! ./game/stats */ "./src/game/stats.ts");
 const events_1 = __webpack_require__(/*! ./event/events */ "./src/event/events.ts");
 const cameraAnimation_1 = __webpack_require__(/*! ./game/cameraAnimation */ "./src/game/cameraAnimation.ts");
 const tips_1 = __webpack_require__(/*! ./tips */ "./src/tips.ts");
+const gameplaySettings_1 = __webpack_require__(/*! ./game/gameplaySettings */ "./src/game/gameplaySettings.ts");
 var LevelState;
 (function (LevelState) {
     LevelState[LevelState["IN_LEVEL"] = 0] = "IN_LEVEL";
@@ -8355,8 +8359,51 @@ var Direction;
 })(Direction = exports.Direction || (exports.Direction = {}));
 class ChatMessage {
     constructor(message) {
+        this.cachedLines = null;
+        this.cachedWidth = -1;
         this.message = message;
         this.timestamp = Date.now();
+    }
+    // Get wrapped lines for the given max width, with caching
+    getWrappedLines(maxWidth) {
+        if (this.cachedLines && this.cachedWidth === maxWidth) {
+            return this.cachedLines;
+        }
+        this.cachedLines = this.wrapText(this.message, maxWidth);
+        this.cachedWidth = maxWidth;
+        return this.cachedLines;
+    }
+    wrapText(text, maxWidth) {
+        if (text === "")
+            return [""];
+        const words = text.split(" ");
+        const lines = [];
+        let currentLine = "";
+        for (const word of words) {
+            const testLine = currentLine === "" ? word : currentLine + " " + word;
+            if (Game.measureText(testLine).width <= maxWidth) {
+                currentLine = testLine;
+            }
+            else {
+                if (currentLine !== "") {
+                    lines.push(currentLine);
+                    currentLine = word;
+                }
+                else {
+                    // Single word is too long, just add it anyway
+                    lines.push(word);
+                }
+            }
+        }
+        if (currentLine !== "") {
+            lines.push(currentLine);
+        }
+        return lines.length > 0 ? lines : [""];
+    }
+    // Clear cache when screen resizes
+    clearCache() {
+        this.cachedLines = null;
+        this.cachedWidth = -1;
     }
 }
 exports.ChatMessage = ChatMessage;
@@ -8391,6 +8438,7 @@ class Game {
         this.FOCUS_TIMEOUT_DURATION = 15000; // 5 seconds
         this.wasMuted = false;
         this.wasStarted = false;
+        this.lastChatWidth = 0;
         this.updateDepth = (depth) => {
             this.previousDepth = this.currentDepth;
             this.currentDepth = depth;
@@ -8702,6 +8750,11 @@ class Game {
                 case "opq":
                     gameConstants_1.GameConstants.ENEMIES_BLOCK_LIGHT = !gameConstants_1.GameConstants.ENEMIES_BLOCK_LIGHT;
                     break;
+                case "peace":
+                    gameplaySettings_1.GameplaySettings.NO_ENEMIES = !gameplaySettings_1.GameplaySettings.NO_ENEMIES;
+                    this.newGame();
+                    this.pushMessage(`Peaceful mode is now ${gameplaySettings_1.GameplaySettings.NO_ENEMIES}`);
+                    break;
                 default:
                     if (command.startsWith("new ")) {
                         this.room.addNewEnemy(command.slice(4));
@@ -8837,7 +8890,12 @@ class Game {
       image-rendering: pixelated; /* Future-browsers */
       -ms-interpolation-mode: nearest-neighbor; /* IE */
       `);
-            // Optional: Log the new scale and canvas size for debugging
+            // Clear chat cache if width changed
+            const newChatWidth = gameConstants_1.GameConstants.WIDTH - 20; // Account for margins
+            if (newChatWidth !== this.lastChatWidth) {
+                this.chat.forEach((msg) => msg.clearCache());
+                this.lastChatWidth = newChatWidth;
+            }
         };
         this.shakeScreen = (shakeX, shakeY, clamp = false) => {
             let finalX = clamp ? Math.max(-3, Math.min(3, shakeX)) : shakeX;
@@ -9099,51 +9157,7 @@ class Game {
                 this.players[this.localPlayerID].drawGUI(delta);
                 //for (const i in this.players) this.players[i].updateDrawXY(delta);
             }
-            let CHAT_X = 10;
-            let CHAT_BOTTOM_Y = gameConstants_1.GameConstants.HEIGHT - Game.letter_height - 32;
-            let CHAT_OPACITY = 0.5;
-            if (this.chatOpen) {
-                Game.ctx.fillStyle = "black";
-                if (gameConstants_1.GameConstants.ALPHA_ENABLED)
-                    Game.ctx.globalAlpha = 0.75;
-                Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
-                Game.ctx.globalAlpha = 1;
-                Game.ctx.fillStyle = "white";
-                Game.fillText(this.chatTextBox.text, CHAT_X, CHAT_BOTTOM_Y);
-                const cursorX = Game.measureText(this.chatTextBox.text.substring(0, this.chatTextBox.cursor)).width;
-                Game.ctx.fillRect(CHAT_X + cursorX, CHAT_BOTTOM_Y, 1, Game.letter_height);
-            }
-            for (let i = 0; i < this.chat.length; i++) {
-                Game.ctx.fillStyle = "white";
-                if (this.chat[i][0] === "/")
-                    Game.ctx.fillStyle = gameConstants_1.GameConstants.GREEN;
-                let y = CHAT_BOTTOM_Y - (this.chat.length - 1 - i) * (Game.letter_height + 1);
-                if (this.chatOpen)
-                    y -= Game.letter_height + 1;
-                let age = Date.now() - this.chat[i].timestamp;
-                if (this.chatOpen) {
-                    Game.ctx.globalAlpha = 1;
-                }
-                else {
-                    if (age <= gameConstants_1.GameConstants.CHAT_APPEAR_TIME) {
-                        if (gameConstants_1.GameConstants.ALPHA_ENABLED)
-                            Game.ctx.globalAlpha = CHAT_OPACITY;
-                    }
-                    else if (age <=
-                        gameConstants_1.GameConstants.CHAT_APPEAR_TIME + gameConstants_1.GameConstants.CHAT_FADE_TIME) {
-                        if (gameConstants_1.GameConstants.ALPHA_ENABLED)
-                            Game.ctx.globalAlpha =
-                                CHAT_OPACITY *
-                                    (1 -
-                                        (age - gameConstants_1.GameConstants.CHAT_APPEAR_TIME) /
-                                            gameConstants_1.GameConstants.CHAT_FADE_TIME);
-                    }
-                    else {
-                        Game.ctx.globalAlpha = 0;
-                    }
-                }
-                Game.fillText(this.chat[i].message, CHAT_X, y);
-            }
+            this.drawChat(delta);
             // game version
             if (gameConstants_1.GameConstants.ALPHA_ENABLED)
                 Game.ctx.globalAlpha = 0.1;
@@ -9161,6 +9175,83 @@ class Game {
             }
             mouseCursor_1.MouseCursor.getInstance().draw(delta, this.isMobile);
             Game.ctx.restore(); // Restore the canvas state
+        };
+        this.drawChat = (delta) => {
+            const CHAT_X = 5;
+            const CHAT_BOTTOM_Y = gameConstants_1.GameConstants.HEIGHT - Game.letter_height - 38;
+            const CHAT_OPACITY = this.players?.[this.localPlayerID]?.inventory.isOpen
+                ? 0.05
+                : 1;
+            const CHAT_MAX_WIDTH = gameConstants_1.GameConstants.WIDTH - 5; // Leave some margin
+            const LINE_HEIGHT = Game.letter_height + 1;
+            if (this.chatOpen) {
+                Game.ctx.fillStyle = "black";
+                if (gameConstants_1.GameConstants.ALPHA_ENABLED)
+                    Game.ctx.globalAlpha = 0.75;
+                Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
+                Game.ctx.globalAlpha = 1;
+                Game.ctx.fillStyle = "white";
+                Game.fillText(this.chatTextBox.text, CHAT_X, CHAT_BOTTOM_Y);
+                const cursorX = Game.measureText(this.chatTextBox.text.substring(0, this.chatTextBox.cursor)).width;
+                Game.ctx.fillRect(CHAT_X + cursorX, CHAT_BOTTOM_Y, 1, Game.letter_height);
+            }
+            // Calculate total height needed for all visible messages
+            let totalHeight = 0;
+            const messageHeights = [];
+            for (let i = 0; i < this.chat.length; i++) {
+                const lines = this.chat[i].getWrappedLines(CHAT_MAX_WIDTH);
+                const messageHeight = lines.length * LINE_HEIGHT;
+                messageHeights.push(messageHeight);
+                totalHeight += messageHeight;
+            }
+            // Draw messages from bottom to top
+            let currentY = CHAT_BOTTOM_Y;
+            if (this.chatOpen) {
+                currentY -= LINE_HEIGHT; // Account for input line
+            }
+            for (let i = this.chat.length - 1; i >= 0; i--) {
+                const message = this.chat[i];
+                const lines = message.getWrappedLines(CHAT_MAX_WIDTH);
+                const messageHeight = messageHeights[i];
+                // Calculate opacity based on age
+                const age = Date.now() - message.timestamp;
+                let alpha = 1;
+                if (!this.chatOpen) {
+                    if (age <= gameConstants_1.GameConstants.CHAT_APPEAR_TIME) {
+                        alpha = gameConstants_1.GameConstants.ALPHA_ENABLED ? CHAT_OPACITY : 1;
+                    }
+                    else if (age <=
+                        gameConstants_1.GameConstants.CHAT_APPEAR_TIME + gameConstants_1.GameConstants.CHAT_FADE_TIME) {
+                        alpha = gameConstants_1.GameConstants.ALPHA_ENABLED
+                            ? CHAT_OPACITY *
+                                (1 -
+                                    (age - gameConstants_1.GameConstants.CHAT_APPEAR_TIME) /
+                                        gameConstants_1.GameConstants.CHAT_FADE_TIME)
+                            : 1;
+                    }
+                    else {
+                        alpha = 0;
+                    }
+                }
+                if (alpha > 0) {
+                    // Set message color
+                    Game.ctx.fillStyle = "white";
+                    //if (message.message[0] === "/") {
+                    //  Game.ctx.fillStyle = GameConstants.GREEN;
+                    //}
+                    Game.ctx.globalAlpha = alpha;
+                    // Draw each line of the message from bottom to top
+                    let lineY = currentY;
+                    for (let lineIndex = lines.length - 1; lineIndex >= 0; lineIndex--) {
+                        Game.fillText(lines[lineIndex], CHAT_X, lineY);
+                        lineY -= LINE_HEIGHT;
+                    }
+                }
+                // Move up by this message's height
+                currentY -= messageHeight;
+            }
+            // Reset alpha
+            Game.ctx.globalAlpha = 1;
         };
         this.targetCamera = (targetX, targetY) => {
             let cameraX = Math.round((targetX + 0.5) * gameConstants_1.GameConstants.TILESIZE - 0.5 * gameConstants_1.GameConstants.WIDTH);
@@ -10796,6 +10887,7 @@ exports.GameplaySettings = GameplaySettings;
 GameplaySettings.LIMIT_ENEMY_TYPES = true;
 GameplaySettings.MEDIAN_ROOM_DENSITY = 0.25;
 GameplaySettings.UNLIMITED_SPAWNERS = true;
+GameplaySettings.NO_ENEMIES = false;
 
 
 /***/ }),
@@ -11593,6 +11685,81 @@ class guiButton {
     }
 }
 exports.guiButton = guiButton;
+
+
+/***/ }),
+
+/***/ "./src/gui/hoverText.ts":
+/*!******************************!*\
+  !*** ./src/gui/hoverText.ts ***!
+  \******************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.HoverText = void 0;
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
+const input_1 = __webpack_require__(/*! ../game/input */ "./src/game/input.ts");
+class HoverText {
+    static getHoverText(x, y, room, player) {
+        console.log("Getting hover text for position:", x, y);
+        // Handle undefined mouse coordinates
+        if (input_1.Input.mouseX === undefined || input_1.Input.mouseY === undefined) {
+            console.log("Mouse coordinates undefined, returning empty array");
+            return [];
+        }
+        // Get screen center coordinates
+        const screenCenterX = gameConstants_1.GameConstants.WIDTH / 2;
+        const screenCenterY = gameConstants_1.GameConstants.HEIGHT / 2;
+        console.log("Screen center:", screenCenterX, screenCenterY);
+        // Convert pixel offset to tile offset
+        const tileOffsetX = Math.floor((input_1.Input.mouseX - screenCenterX + gameConstants_1.GameConstants.TILESIZE / 2) /
+            gameConstants_1.GameConstants.TILESIZE);
+        const tileOffsetY = Math.floor((input_1.Input.mouseY - screenCenterY + gameConstants_1.GameConstants.TILESIZE / 2) /
+            gameConstants_1.GameConstants.TILESIZE);
+        console.log("Calculated tile offsets:", tileOffsetX, tileOffsetY);
+        const offsetX = x + tileOffsetX;
+        const offsetY = y + tileOffsetY;
+        const strings = [];
+        console.log("Checking entities...");
+        for (const entity of room.entities) {
+            if (entity.x === offsetX && entity.y === offsetY) {
+                console.log("Found matching entity:", entity.hoverText);
+                strings.push(entity.hoverText());
+            }
+        }
+        console.log("Checking items...");
+        for (const item of room.items) {
+            if (item.x === offsetX && item.y === offsetY) {
+                console.log("Found matching item:", item.hoverText);
+                strings.push(item.hoverText());
+            }
+        }
+        const tile = room.getTile(offsetX, offsetY);
+        if (tile) {
+            strings.push(tile.getName());
+        }
+        console.log("Returning hover texts:", strings);
+        return strings;
+    }
+    static draw(delta, x, y, room, player) {
+        console.log("Drawing hover text at:", x, y);
+        const strings = HoverText.getHoverText(x, y, room, player);
+        if (strings.length === 0) {
+            console.log("No hover text to draw");
+            return;
+        }
+        for (const string of strings) {
+            const offsetY = strings.indexOf(string) * 6;
+            console.log("Drawing text:", string);
+            game_1.Game.ctx.fillStyle = "yellow";
+            game_1.Game.ctx.globalAlpha = 0.1;
+            game_1.Game.fillText(string, 1, 20 + offsetY);
+        }
+    }
+}
+exports.HoverText = HoverText;
 
 
 /***/ }),
@@ -12816,9 +12983,10 @@ class Inventory {
             const g = -2; // gap
             const quickbarWidth = this.cols * (s + 2 * b + g) - g;
             const quickbarRightEdge = quickbarStartX + quickbarWidth;
+            console.log(game_1.Game.measureText(this.coins.toString()).width);
             // Position coin slightly to the right of the quickbar
-            let coinX = (quickbarRightEdge + 2) / gameConstants_1.GameConstants.TILESIZE;
-            let coinY = gameConstants_1.GameConstants.HEIGHT / gameConstants_1.GameConstants.TILESIZE - 1.25;
+            let coinX = (quickbarRightEdge - 5) / gameConstants_1.GameConstants.TILESIZE - 1;
+            let coinY = gameConstants_1.GameConstants.HEIGHT / gameConstants_1.GameConstants.TILESIZE - 1.3;
             // Ensure coin doesn't go off the right edge of the screen
             const maxCoinX = (gameConstants_1.GameConstants.WIDTH - 36) / gameConstants_1.GameConstants.TILESIZE;
             if (coinX > maxCoinX) {
@@ -12828,6 +12996,9 @@ class Inventory {
                 coinY -= 1.25;
                 coinX += 1.15;
             }
+            else {
+                coinX += 1.5;
+            }
             if (gameConstants_1.GameConstants.WIDTH < 145) {
                 coinX -= 1.15;
             }
@@ -12836,7 +13007,10 @@ class Inventory {
             const width = game_1.Game.measureText(countText).width;
             const countX = 10;
             const countY = 9;
-            game_1.Game.fillTextOutline(countText, coinX * gameConstants_1.GameConstants.TILESIZE + countX, coinY * gameConstants_1.GameConstants.TILESIZE + countY, gameConstants_1.GameConstants.OUTLINE, "white");
+            game_1.Game.fillTextOutline(countText, coinX * gameConstants_1.GameConstants.TILESIZE +
+                countX -
+                game_1.Game.measureText(this.coins.toString()).width +
+                5, coinY * gameConstants_1.GameConstants.TILESIZE + countY + 2, gameConstants_1.GameConstants.OUTLINE, "white");
             /*
             const turnCountText = `${this.player.turnCount}`;
             Game.fillTextOutline(
@@ -13525,6 +13699,7 @@ class Armor extends equippable_1.Equippable {
         this.rechargeTurnCounter = -1;
         this.tileX = 5;
         this.tileY = 0;
+        this.name = "armor";
     }
 }
 exports.Armor = Armor;
@@ -13972,6 +14147,7 @@ class GoldenKey extends equippable_1.Equippable {
         };
         this.tileX = 6;
         this.tileY = 0;
+        this.name = "goldenKey";
     }
 }
 exports.GoldenKey = GoldenKey;
@@ -13999,6 +14175,9 @@ class Item extends drawable_1.Drawable {
     // Constructor for the Item class
     constructor(level, x, y) {
         super();
+        this.hoverText = () => {
+            return this.name;
+        };
         // Empty tick function to be overridden by subclasses
         this.tick = () => { };
         // Empty tick function for inventory behavior to be overridden by subclasses
@@ -14246,6 +14425,7 @@ class Key extends item_1.Item {
         };
         this.tileX = 1;
         this.tileY = 0;
+        this.name = "key";
     }
 }
 exports.Key = Key;
@@ -18708,13 +18888,6 @@ class PlayerInputHandler {
                             break;
                     }
                 }
-                {
-                    switch (num) {
-                        case 8:
-                            gameConstants_1.GameConstants.BLUR_ENABLED = !gameConstants_1.GameConstants.BLUR_ENABLED;
-                            break;
-                    }
-                }
             }
         };
         this.ignoreDirectionInput = () => {
@@ -19371,6 +19544,7 @@ const postProcess_1 = __webpack_require__(/*! ../gui/postProcess */ "./src/gui/p
 const stats_1 = __webpack_require__(/*! ../game/stats */ "./src/game/stats.ts");
 const utils_1 = __webpack_require__(/*! ../utility/utils */ "./src/utility/utils.ts");
 const spellbook_1 = __webpack_require__(/*! ../item/weapon/spellbook */ "./src/item/weapon/spellbook.ts");
+const hoverText_1 = __webpack_require__(/*! ../gui/hoverText */ "./src/gui/hoverText.ts");
 class PlayerRenderer {
     constructor(player) {
         this.hurt = () => {
@@ -19719,6 +19893,7 @@ class PlayerRenderer {
                     armor.drawGUI(delta, this.player.maxHealth, quickbarStartX);
                 if (!transitioning)
                     this.player.inventory.draw(delta);
+                hoverText_1.HoverText.draw(delta, this.player.x, this.player.y, this.player.game.levels[this.player.depth].rooms[this.player.levelID], this.player);
             }
             else {
                 game_1.Game.ctx.fillStyle = levelConstants_1.LevelConstants.LEVEL_TEXT_COLOR;
@@ -20806,6 +20981,7 @@ const bush_1 = __webpack_require__(/*! ../entity/object/bush */ "./src/entity/ob
 const sprout_1 = __webpack_require__(/*! ../entity/object/sprout */ "./src/entity/object/sprout.ts");
 const candle_1 = __webpack_require__(/*! ../item/light/candle */ "./src/item/light/candle.ts");
 const glowBugEnemy_1 = __webpack_require__(/*! ../entity/enemy/glowBugEnemy */ "./src/entity/enemy/glowBugEnemy.ts");
+const gameplaySettings_1 = __webpack_require__(/*! ../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
 // #endregion
 // #region Enums & Interfaces
 /**
@@ -22911,6 +23087,8 @@ class Room {
     // #region ADDING ENTITIES
     // Function to add enemies to the room
     addEnemies(numEnemies, rand) {
+        if (gameplaySettings_1.GameplaySettings.NO_ENEMIES === true)
+            return;
         // Get all empty tiles in the room
         let tiles = this.getEmptyTiles();
         if (tiles === null)
@@ -23090,6 +23268,8 @@ class Room {
         }
     }
     addBosses(depth) {
+        if (gameplaySettings_1.GameplaySettings.NO_ENEMIES === true)
+            return;
         let tiles = this.getEmptyTiles();
         if (tiles === null) {
             //console.log(`No tiles left to spawn spawners`);
@@ -24873,6 +25053,9 @@ class DownLadder extends tile_1.Tile {
         super(room, x, y);
         this.isSidePath = false;
         this.frame = 0;
+        this.getName = () => {
+            return this.isSidePath ? "rope down" : "staircase down";
+        };
         this.generate = async () => {
             if (!this.linkedRoom) {
                 const targetDepth = this.room.depth + (this.isSidePath ? 0 : 1);
@@ -25191,6 +25374,7 @@ class SpikeTrap extends tile_1.Tile {
         this.on = false;
         this.frame = 0;
         this.t = 0;
+        this.name = "spike trap";
     }
 }
 exports.SpikeTrap = SpikeTrap;
@@ -25221,6 +25405,10 @@ var SkinType;
 class Tile extends drawable_1.Drawable {
     constructor(room, x, y) {
         super();
+        this.name = "";
+        this.getName = () => {
+            return this.name;
+        };
         this.hasPlayer = (player) => {
             if (player.x === this.x && player.y === this.y)
                 return true;
@@ -25321,6 +25509,9 @@ class UpLadder extends tile_1.Tile {
             catch (error) {
                 console.error("Error during changeLevelThroughLadder:", error);
             }
+        };
+        this.getName = () => {
+            return this.isRope ? "rope up" : "staircase up";
         };
         this.linkRoom = () => {
             this.linkedRoom = this.game.levels[this.depth - 1].exitRoom;

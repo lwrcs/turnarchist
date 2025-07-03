@@ -78,6 +78,10 @@ export class Item extends Drawable {
     return new this(room, x, y, ...rest);
   }
 
+  hoverText = () => {
+    return this.name;
+  };
+
   // Empty tick function to be overridden by subclasses
   tick = () => {};
   // Empty tick function for inventory behavior to be overridden by subclasses

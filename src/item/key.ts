@@ -11,6 +11,7 @@ export class Key extends Item {
 
     this.tileX = 1;
     this.tileY = 0;
+    this.name = "key";
   }
 
   getDescription = (): string => {

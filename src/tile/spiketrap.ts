@@ -21,6 +21,7 @@ export class SpikeTrap extends Tile {
     this.on = false;
     this.frame = 0;
     this.t = 0;
+    this.name = "spike trap";
   }
 
   tick = () => {

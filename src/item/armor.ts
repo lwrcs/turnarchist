@@ -16,6 +16,7 @@ export class Armor extends Equippable {
     this.rechargeTurnCounter = -1;
     this.tileX = 5;
     this.tileY = 0;
+    this.name = "armor";
   }
 
   coEquippable = (other: Equippable): boolean => {

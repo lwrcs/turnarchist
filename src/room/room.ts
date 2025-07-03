@@ -87,6 +87,7 @@ import { Bush } from "../entity/object/bush";
 import { Sprout } from "../entity/object/sprout";
 import { Candle } from "../item/light/candle";
 import { GlowBugEnemy } from "../entity/enemy/glowBugEnemy";
+import { GameplaySettings } from "../game/gameplaySettings";
 
 // #endregion
 
@@ -581,6 +582,7 @@ export class Room {
 
   // Function to add enemies to the room
   private addEnemies(numEnemies: number, rand: () => number) {
+    if (GameplaySettings.NO_ENEMIES === true) return;
     // Get all empty tiles in the room
     let tiles = this.getEmptyTiles();
     if (tiles === null) return;
@@ -779,6 +781,7 @@ export class Room {
   }
 
   private addBosses(depth: number) {
+    if (GameplaySettings.NO_ENEMIES === true) return;
     let tiles = this.getEmptyTiles();
     if (tiles === null) {
       //console.log(`No tiles left to spawn spawners`);

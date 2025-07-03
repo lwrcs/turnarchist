@@ -115,7 +115,7 @@ export class Spawner extends Enemy {
 
   setSpawnFrequency = () => {
     if (GameplaySettings.UNLIMITED_SPAWNERS) {
-      this.spawnFrequency = 3;
+      this.spawnFrequency = 4;
     } else {
       this.spawnFrequency = Math.min(12, 4 * this.room.currentSpawnerCount);
     }

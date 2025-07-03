@@ -8,6 +8,7 @@ import { statsTracker } from "../game/stats";
 import { Utils } from "../utility/utils";
 import { Spellbook } from "../item/weapon/spellbook";
 import { Player } from "./player";
+import { HoverText } from "../gui/hoverText";
 
 export class PlayerRenderer {
   private player: Player;
@@ -533,6 +534,13 @@ export class PlayerRenderer {
       //this.drawCooldownBar();
       if (armor) armor.drawGUI(delta, this.player.maxHealth, quickbarStartX);
       if (!transitioning) this.player.inventory.draw(delta);
+      HoverText.draw(
+        delta,
+        this.player.x,
+        this.player.y,
+        this.player.game.levels[this.player.depth].rooms[this.player.levelID],
+        this.player,
+      );
     } else {
       Game.ctx.fillStyle = LevelConstants.LEVEL_TEXT_COLOR;
       const enemies = statsTracker.getStats().enemies;

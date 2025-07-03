@@ -242,13 +242,6 @@ export class PlayerInputHandler {
             break;
         }
       }
-      {
-        switch (num) {
-          case 8:
-            GameConstants.BLUR_ENABLED = !GameConstants.BLUR_ENABLED;
-            break;
-        }
-      }
     }
   };
 
