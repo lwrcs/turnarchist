@@ -15210,6 +15210,8 @@ class Hourglass extends usable_1.Usable {
     constructor(level, x, y) {
         super(level, x, y);
         this.onUse = (player) => {
+            if (this.broken)
+                return;
             player.stall();
             player.game.pushMessage("turn skipped");
             this.durability -= 1;

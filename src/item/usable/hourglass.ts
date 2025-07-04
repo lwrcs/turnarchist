@@ -16,6 +16,7 @@ export class Hourglass extends Usable {
   }
 
   onUse = (player: Player) => {
+    if (this.broken) return;
     player.stall();
     player.game.pushMessage("turn skipped");
     this.durability -= 1;
