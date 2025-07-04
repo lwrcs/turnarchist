@@ -1786,7 +1786,10 @@ class BishopEnemy extends enemy_1.Enemy {
                             const dy = Math.abs(move.pos.y - this.y);
                             return dx === 1 && dy === 1;
                         });
-                        if (moves.length > 0) {
+                        if (this.justHurt) {
+                            this.retreat(oldX, oldY);
+                        }
+                        else if (moves.length > 0) {
                             let moveX = moves[0].pos.x;
                             let moveY = moves[0].pos.y;
                             let hitPlayer = false;
@@ -1837,6 +1840,7 @@ class BishopEnemy extends enemy_1.Enemy {
                 return;
             game_1.Game.ctx.save();
             game_1.Game.ctx.globalAlpha = this.alpha;
+            let offsetTileY = this.health <= 1 || this.cloned === true ? 2 : 0;
             if (!this.dead) {
                 this.updateDrawXY(delta);
                 this.frame += 0.1 * delta;
@@ -1844,7 +1848,7 @@ class BishopEnemy extends enemy_1.Enemy {
                     this.frame = 0;
                 if (this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, this.x - this.drawX, this.y - this.drawY, 1, 1, this.room.shadeColor, this.shadeAmount());
-                game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount() * (1 + this.jumpY / 3));
+                game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY + offsetTileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount() * (1 + this.jumpY / 3));
             }
             if (!this.cloned) {
                 if (!this.seenPlayer) {
@@ -1858,8 +1862,8 @@ class BishopEnemy extends enemy_1.Enemy {
         };
         this.ticks = 0;
         this.frame = 0;
-        this.health = 1;
-        this.maxHealth = 1;
+        this.health = 2;
+        this.maxHealth = 2;
         this.tileX = 31;
         this.tileY = 8;
         this.seenPlayer = false;
@@ -2407,6 +2411,7 @@ var EnemyState;
 class Enemy extends entity_1.Entity {
     constructor(room, game, x, y) {
         super(room, game, x, y);
+        this.justHurt = false;
         this.hit = () => {
             return 1;
         };
@@ -2731,6 +2736,101 @@ class Enemy extends entity_1.Entity {
                 }
             }
         };
+        this.onHurt = (damage = 1, type = "none") => {
+            if (this.health > 0) {
+                if (type === "none") {
+                    this.justHurt = true;
+                }
+            }
+        };
+        this.retreat = (oldX, oldY) => {
+            // Calculate direction vector from player to enemy
+            let dx = this.x - this.targetPlayer.x;
+            let dy = this.y - this.targetPlayer.y;
+            // Normalize the direction vector
+            let length = Math.sqrt(dx * dx + dy * dy);
+            if (length > 0) {
+                dx = Math.round(dx / length);
+                dy = Math.round(dy / length);
+            }
+            let retreatX = this.x;
+            let retreatY = this.y;
+            let foundValidRetreat = false;
+            // Determine retreat behavior based on attack properties
+            if (this.orthogonalAttack && this.diagonalAttack) {
+                // Both enabled: use current behavior (try orthogonal first, then diagonal)
+                retreatX = this.x + dx;
+                retreatY = this.y + dy;
+                if (this.room.isTileEmpty(retreatX, retreatY)) {
+                    foundValidRetreat = true;
+                }
+                else {
+                    // Try diagonal positions
+                    let diagonal1X = this.x + dx - dy;
+                    let diagonal1Y = this.y + dy + dx;
+                    let diagonal2X = this.x + dx + dy;
+                    let diagonal2Y = this.y + dy - dx;
+                    // Randomly choose which diagonal to check first
+                    let checkFirst = Math.random() < 0.5;
+                    let firstX = checkFirst ? diagonal1X : diagonal2X;
+                    let firstY = checkFirst ? diagonal1Y : diagonal2Y;
+                    let secondX = checkFirst ? diagonal2X : diagonal1X;
+                    let secondY = checkFirst ? diagonal2Y : diagonal1Y;
+                    // Check first diagonal
+                    if (this.room.isTileEmpty(firstX, firstY)) {
+                        retreatX = firstX;
+                        retreatY = firstY;
+                        foundValidRetreat = true;
+                    }
+                    // Check second diagonal if first is blocked
+                    else if (this.room.isTileEmpty(secondX, secondY)) {
+                        retreatX = secondX;
+                        retreatY = secondY;
+                        foundValidRetreat = true;
+                    }
+                }
+            }
+            else if (this.orthogonalAttack) {
+                // Only orthogonal retreat allowed
+                retreatX = this.x + dx;
+                retreatY = this.y + dy;
+                if (this.room.isTileEmpty(retreatX, retreatY)) {
+                    foundValidRetreat = true;
+                }
+            }
+            else if (this.diagonalAttack) {
+                // Only diagonal retreat allowed
+                let diagonal1X = this.x + dx - dy;
+                let diagonal1Y = this.y + dy + dx;
+                let diagonal2X = this.x + dx + dy;
+                let diagonal2Y = this.y + dy - dx;
+                // Randomly choose which diagonal to check first
+                let checkFirst = Math.random() < 0.5;
+                let firstX = checkFirst ? diagonal1X : diagonal2X;
+                let firstY = checkFirst ? diagonal1Y : diagonal2Y;
+                let secondX = checkFirst ? diagonal2X : diagonal1X;
+                let secondY = checkFirst ? diagonal2Y : diagonal1Y;
+                // Check first diagonal
+                if (this.room.isTileEmpty(firstX, firstY)) {
+                    retreatX = firstX;
+                    retreatY = firstY;
+                    foundValidRetreat = true;
+                }
+                // Check second diagonal if first is blocked
+                else if (this.room.isTileEmpty(secondX, secondY)) {
+                    retreatX = secondX;
+                    retreatY = secondY;
+                    foundValidRetreat = true;
+                }
+            }
+            // If neither orthogonalAttack nor diagonalAttack is true, don't retreat
+            // Only move if we found a valid retreat position
+            if (foundValidRetreat) {
+                this.tryMove(retreatX, retreatY);
+                this.setDrawXY(oldX, oldY);
+            }
+            this.justHurt = false;
+        };
         this.jump = (delta) => {
             let j = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
             this.jumpY = Math.abs(Math.sin(j * Math.PI)) * this.jumpHeight;
@@ -2838,6 +2938,9 @@ class Enemy extends entity_1.Entity {
         this.poisonHitCount = 0;
         this.bleedHitCount = 0;
         this.drawMoveSpeed = 0.85; //lower is faster
+        this.justHurt = false;
+        this.orthogonalAttack = false;
+        this.diagonalAttack = false;
         //this.getDrop(["weapon", "equipment", "consumable", "gem", "tool", "coin"]);
     }
     get lastPlayerPos() {
@@ -4269,48 +4372,7 @@ class QueenEnemy extends enemy_1.Enemy {
                         false, //diagonalsOnly
                         undefined, undefined, undefined, false);
                         if (this.justHurt) {
-                            // Calculate direction vector from player to queen
-                            let dx = this.x - this.targetPlayer.x;
-                            let dy = this.y - this.targetPlayer.y;
-                            // Normalize the direction vector
-                            let length = Math.sqrt(dx * dx + dy * dy);
-                            if (length > 0) {
-                                dx = Math.round(dx / length);
-                                dy = Math.round(dy / length);
-                            }
-                            // Move one square away from player
-                            let retreatX = this.x + dx;
-                            let retreatY = this.y + dy;
-                            if (!this.room.isTileEmpty(retreatX, retreatY)) {
-                                // Calculate diagonal retreat positions
-                                let diagonal1X = this.x + dx - dy;
-                                let diagonal1Y = this.y + dy + dx;
-                                let diagonal2X = this.x + dx + dy;
-                                let diagonal2Y = this.y + dy - dx;
-                                // Randomly choose which diagonal to check first
-                                let checkFirst = Math.random() < 0.5;
-                                let firstX = checkFirst ? diagonal1X : diagonal2X;
-                                let firstY = checkFirst ? diagonal1Y : diagonal2Y;
-                                let secondX = checkFirst ? diagonal2X : diagonal1X;
-                                let secondY = checkFirst ? diagonal2Y : diagonal1Y;
-                                // Check first diagonal
-                                if (this.room.isTileEmpty(firstX, firstY)) {
-                                    retreatX = firstX;
-                                    retreatY = firstY;
-                                }
-                                // Check second diagonal if first is blocked
-                                else if (this.room.isTileEmpty(secondX, secondY)) {
-                                    retreatX = secondX;
-                                    retreatY = secondY;
-                                }
-                                // If both diagonals are blocked, don't move
-                                else {
-                                    return;
-                                }
-                            }
-                            this.tryMove(retreatX, retreatY);
-                            this.setDrawXY(oldX, oldY);
-                            this.justHurt = false;
+                            this.retreat(oldX, oldY);
                         }
                         else if (moves.length > 0) {
                             disablePositions.push({ x: oldX + 1, y: oldY });
@@ -4360,11 +4422,6 @@ class QueenEnemy extends enemy_1.Enemy {
                         }
                     }
                 }
-            }
-        };
-        this.onHurt = () => {
-            if (this.health > 0) {
-                this.justHurt = true;
             }
         };
         this.jump = (delta) => {
@@ -4506,7 +4563,10 @@ class RookEnemy extends enemy_1.Enemy {
                         false, //diagonalsOnly
                         undefined, undefined, undefined, false, //diagonalsOmni
                         this.lastPlayerPos);
-                        if (moves.length > 0) {
+                        if (this.justHurt) {
+                            this.retreat(oldX, oldY);
+                        }
+                        else if (moves.length > 0) {
                             let moveX = moves[0].pos.x;
                             let moveY = moves[0].pos.y;
                             let hitPlayer = false;
@@ -4556,6 +4616,7 @@ class RookEnemy extends enemy_1.Enemy {
                 return;
             game_1.Game.ctx.save();
             game_1.Game.ctx.globalAlpha = this.alpha;
+            let offsetTileY = this.health <= 1 || this.cloned === true ? 2 : 0;
             if (!this.dead) {
                 this.updateDrawXY(delta);
                 this.frame += 0.1 * delta;
@@ -4563,7 +4624,7 @@ class RookEnemy extends enemy_1.Enemy {
                     this.frame = 0;
                 if (this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, this.x - this.drawX, this.y - this.drawY, 1, 1, this.room.shadeColor, this.shadeAmount());
-                game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount());
+                game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY + offsetTileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount());
             }
             if (!this.cloned) {
                 if (!this.seenPlayer) {
@@ -4577,8 +4638,8 @@ class RookEnemy extends enemy_1.Enemy {
         };
         this.ticks = 0;
         this.frame = 0;
-        this.health = 1;
-        this.maxHealth = 1;
+        this.health = 2;
+        this.maxHealth = 2;
         this.tileX = 23 + 28;
         this.tileY = 8;
         this.seenPlayer = false;
@@ -5999,7 +6060,7 @@ class Entity extends drawable_1.Drawable {
             else
                 return closestPlayer;
         };
-        this.onHurt = (damage = 1) => { };
+        this.onHurt = (damage = 1, type = "none") => { };
         this.hurt = (playerHitBy, damage, type = "none") => {
             this.handleEnemyCase(playerHitBy);
             let hitShield = false;
@@ -6019,7 +6080,7 @@ class Entity extends drawable_1.Drawable {
             */
             this.health -= damage;
             this.maxHealth -= shieldHealth;
-            this.onHurt(damage);
+            this.onHurt(damage, type);
             this.startHurting();
             if (this.hasDamageNumbers)
                 this.createDamageNumber(damage, type);
@@ -6225,10 +6286,11 @@ class Entity extends drawable_1.Drawable {
             if (this.isEnemy)
                 multiplier = 5;
             const xp = Math.ceil(this.maxHealth * multiplier * depthMultiplier);
-            eventBus_1.globalEventBus.emit(events_1.EVENTS.ENEMY_KILLED, {
-                enemyId: this.name,
-                xp: xp,
-            });
+            if (this.isEnemy)
+                eventBus_1.globalEventBus.emit(events_1.EVENTS.ENEMY_KILLED, {
+                    enemyId: this.name,
+                    xp: xp,
+                });
         };
         this.doneMoving = () => {
             let EPSILON = 0.01;
@@ -9961,7 +10023,6 @@ const weaponFragments_1 = __webpack_require__(/*! ../item/usable/weaponFragments
 const weaponPoison_1 = __webpack_require__(/*! ../item/usable/weaponPoison */ "./src/item/usable/weaponPoison.ts");
 const levelConstants_1 = __webpack_require__(/*! ../level/levelConstants */ "./src/level/levelConstants.ts");
 const dagger_1 = __webpack_require__(/*! ../item/weapon/dagger */ "./src/item/weapon/dagger.ts");
-const dualdagger_1 = __webpack_require__(/*! ../item/weapon/dualdagger */ "./src/item/weapon/dualdagger.ts");
 const spear_1 = __webpack_require__(/*! ../item/weapon/spear */ "./src/item/weapon/spear.ts");
 const spellbook_1 = __webpack_require__(/*! ../item/weapon/spellbook */ "./src/item/weapon/spellbook.ts");
 const warhammer_1 = __webpack_require__(/*! ../item/weapon/warhammer */ "./src/item/weapon/warhammer.ts");
@@ -9970,6 +10031,7 @@ const spellbookPage_1 = __webpack_require__(/*! ../item/usable/spellbookPage */ 
 const greataxe_1 = __webpack_require__(/*! ../item/weapon/greataxe */ "./src/item/weapon/greataxe.ts");
 const pickaxe_1 = __webpack_require__(/*! ../item/tool/pickaxe */ "./src/item/tool/pickaxe.ts");
 const scythe_1 = __webpack_require__(/*! ../item/weapon/scythe */ "./src/item/weapon/scythe.ts");
+const hourglass_1 = __webpack_require__(/*! ../item/usable/hourglass */ "./src/item/usable/hourglass.ts");
 class GameConstants {
 }
 exports.GameConstants = GameConstants;
@@ -10120,7 +10182,7 @@ GameConstants.STARTING_INVENTORY = [dagger_1.Dagger, candle_1.Candle];
 GameConstants.STARTING_DEV_INVENTORY = [
     dagger_1.Dagger,
     warhammer_1.Warhammer,
-    dualdagger_1.DualDagger,
+    hourglass_1.Hourglass,
     scythe_1.Scythe,
     godStone_1.GodStone,
     spear_1.Spear,
@@ -10948,6 +11010,7 @@ var InputEnum;
     InputEnum[InputEnum["MINUS"] = 23] = "MINUS";
     InputEnum[InputEnum["EQUALS"] = 24] = "EQUALS";
     InputEnum[InputEnum["ESCAPE"] = 25] = "ESCAPE";
+    InputEnum[InputEnum["F"] = 26] = "F";
 })(InputEnum = exports.InputEnum || (exports.InputEnum = {}));
 exports.Input = {
     _pressed: {},
@@ -10987,6 +11050,7 @@ exports.Input = {
     equalsListener: function () { },
     minusListener: function () { },
     escapeListener: function () { },
+    fListener: function () { },
     mouseLeftClickListeners: [],
     mouseRightClickListeners: [],
     mouseMoveListeners: [],
@@ -11031,6 +11095,7 @@ exports.Input = {
     MINUS: "Minus",
     EQUALS: "Equal",
     ESCAPE: "Escape",
+    F: "KeyF",
     rawMouseX: 0,
     rawMouseY: 0,
     isDown: function (keyCode) {
@@ -11108,6 +11173,9 @@ exports.Input = {
                 break;
             case exports.Input.ESCAPE:
                 exports.Input.escapeListener();
+                break;
+            case exports.Input.F:
+                exports.Input.fListener();
                 break;
         }
     },
@@ -15128,6 +15196,43 @@ Heart.itemName = "health potion";
 
 /***/ }),
 
+/***/ "./src/item/usable/hourglass.ts":
+/*!**************************************!*\
+  !*** ./src/item/usable/hourglass.ts ***!
+  \**************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Hourglass = void 0;
+const usable_1 = __webpack_require__(/*! ./usable */ "./src/item/usable/usable.ts");
+class Hourglass extends usable_1.Usable {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.onUse = (player) => {
+            player.stall();
+            player.game.pushMessage("turn skipped");
+            this.durability -= 1;
+            if (this.durability <= 0) {
+                this.broken = true;
+            }
+            //this.level.items = this.level.items.filter((x) => x !== this); // removes itself from the level
+        };
+        this.getDescription = () => {
+            return "HOURGLASS\nSkips a turn";
+        };
+        this.tileX = 0;
+        this.tileY = 2;
+        this.offsetY = -0.3;
+        this.durability = 30;
+        this.durabilityMax = 30;
+    }
+}
+exports.Hourglass = Hourglass;
+
+
+/***/ }),
+
 /***/ "./src/item/usable/shrooms.ts":
 /*!************************************!*\
   !*** ./src/item/usable/shrooms.ts ***!
@@ -18412,6 +18517,10 @@ class Player extends drawable_1.Drawable {
             }
             return null;
         };
+        this.stall = () => {
+            this.game.room.tick(this);
+            this.shakeScreen(this.x - 0.5, this.y, this.x + 0.5, this.y, 10);
+        };
         this.moveWithMouse = () => {
             this.inputHandler.setMostRecentMoveInput("mouse");
             if (!gameConstants_1.GameConstants.MOVE_WITH_MOUSE)
@@ -19092,6 +19201,7 @@ class PlayerInputHandler {
         input_1.Input.equalsListener = () => this.handleInput(input_1.InputEnum.EQUALS);
         input_1.Input.minusListener = () => this.handleInput(input_1.InputEnum.MINUS);
         input_1.Input.escapeListener = () => this.handleInput(input_1.InputEnum.ESCAPE);
+        input_1.Input.fListener = () => this.handleInput(input_1.InputEnum.F);
     }
     handleInput(input) {
         if (this.player.busyAnimating || this.player.game.cameraAnimation.active)
@@ -19116,6 +19226,9 @@ class PlayerInputHandler {
                 break;
             case input_1.InputEnum.Q:
                 this.player.inventory.drop();
+                break;
+            case input_1.InputEnum.F:
+                this.player.stall();
                 break;
             case input_1.InputEnum.LEFT:
                 if (!this.ignoreDirectionInput())

@@ -52,6 +52,9 @@ export abstract class Enemy extends Entity {
   private poisonHitCount;
   private bleedHitCount;
   protected alertRange;
+  justHurt: boolean = false;
+  orthogonalAttack: boolean;
+  diagonalAttack: boolean;
 
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
@@ -82,6 +85,9 @@ export abstract class Enemy extends Entity {
     this.poisonHitCount = 0;
     this.bleedHitCount = 0;
     this.drawMoveSpeed = 0.85; //lower is faster
+    this.justHurt = false;
+    this.orthogonalAttack = false;
+    this.diagonalAttack = false;
     //this.getDrop(["weapon", "equipment", "consumable", "gem", "tool", "coin"]);
   }
 
@@ -457,6 +463,114 @@ export abstract class Enemy extends Entity {
         }
       }
     }
+  };
+
+  onHurt = (
+    damage: number = 1,
+    type: "none" | "poison" | "blood" | "heal" = "none",
+  ) => {
+    if (this.health > 0) {
+      if (type === "none") {
+        this.justHurt = true;
+      }
+    }
+  };
+
+  retreat = (oldX: number, oldY: number) => {
+    // Calculate direction vector from player to enemy
+    let dx = this.x - this.targetPlayer.x;
+    let dy = this.y - this.targetPlayer.y;
+
+    // Normalize the direction vector
+    let length = Math.sqrt(dx * dx + dy * dy);
+    if (length > 0) {
+      dx = Math.round(dx / length);
+      dy = Math.round(dy / length);
+    }
+
+    let retreatX = this.x;
+    let retreatY = this.y;
+    let foundValidRetreat = false;
+
+    // Determine retreat behavior based on attack properties
+    if (this.orthogonalAttack && this.diagonalAttack) {
+      // Both enabled: use current behavior (try orthogonal first, then diagonal)
+      retreatX = this.x + dx;
+      retreatY = this.y + dy;
+
+      if (this.room.isTileEmpty(retreatX, retreatY)) {
+        foundValidRetreat = true;
+      } else {
+        // Try diagonal positions
+        let diagonal1X = this.x + dx - dy;
+        let diagonal1Y = this.y + dy + dx;
+        let diagonal2X = this.x + dx + dy;
+        let diagonal2Y = this.y + dy - dx;
+
+        // Randomly choose which diagonal to check first
+        let checkFirst = Math.random() < 0.5;
+        let firstX = checkFirst ? diagonal1X : diagonal2X;
+        let firstY = checkFirst ? diagonal1Y : diagonal2Y;
+        let secondX = checkFirst ? diagonal2X : diagonal1X;
+        let secondY = checkFirst ? diagonal2Y : diagonal1Y;
+
+        // Check first diagonal
+        if (this.room.isTileEmpty(firstX, firstY)) {
+          retreatX = firstX;
+          retreatY = firstY;
+          foundValidRetreat = true;
+        }
+        // Check second diagonal if first is blocked
+        else if (this.room.isTileEmpty(secondX, secondY)) {
+          retreatX = secondX;
+          retreatY = secondY;
+          foundValidRetreat = true;
+        }
+      }
+    } else if (this.orthogonalAttack) {
+      // Only orthogonal retreat allowed
+      retreatX = this.x + dx;
+      retreatY = this.y + dy;
+
+      if (this.room.isTileEmpty(retreatX, retreatY)) {
+        foundValidRetreat = true;
+      }
+    } else if (this.diagonalAttack) {
+      // Only diagonal retreat allowed
+      let diagonal1X = this.x + dx - dy;
+      let diagonal1Y = this.y + dy + dx;
+      let diagonal2X = this.x + dx + dy;
+      let diagonal2Y = this.y + dy - dx;
+
+      // Randomly choose which diagonal to check first
+      let checkFirst = Math.random() < 0.5;
+      let firstX = checkFirst ? diagonal1X : diagonal2X;
+      let firstY = checkFirst ? diagonal1Y : diagonal2Y;
+      let secondX = checkFirst ? diagonal2X : diagonal1X;
+      let secondY = checkFirst ? diagonal2Y : diagonal1Y;
+
+      // Check first diagonal
+      if (this.room.isTileEmpty(firstX, firstY)) {
+        retreatX = firstX;
+        retreatY = firstY;
+        foundValidRetreat = true;
+      }
+      // Check second diagonal if first is blocked
+      else if (this.room.isTileEmpty(secondX, secondY)) {
+        retreatX = secondX;
+        retreatY = secondY;
+        foundValidRetreat = true;
+      }
+    }
+    // If neither orthogonalAttack nor diagonalAttack is true, don't retreat
+
+    // Only move if we found a valid retreat position
+    if (foundValidRetreat) {
+      this.tryMove(retreatX, retreatY);
+      this.setDrawXY(oldX, oldY);
+    }
+
+    this.justHurt = false;
   };
 
   jump = (delta: number) => {

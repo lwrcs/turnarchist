@@ -314,6 +314,11 @@ export class Player extends Drawable {
     return null;
   };
 
+  stall = () => {
+    this.game.room.tick(this);
+    this.shakeScreen(this.x - 0.5, this.y, this.x + 0.5, this.y, 10);
+  };
+
   moveWithMouse = () => {
     this.inputHandler.setMostRecentMoveInput("mouse");
     if (!GameConstants.MOVE_WITH_MOUSE) return;

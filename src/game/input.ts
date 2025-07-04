@@ -30,6 +30,7 @@ export enum InputEnum {
   MINUS,
   EQUALS,
   ESCAPE,
+  F,
 }
 
 export const Input = {
@@ -71,6 +72,7 @@ export const Input = {
   equalsListener: function () {},
   minusListener: function () {},
   escapeListener: function () {},
+  fListener: function () {},
   mouseLeftClickListeners: [],
   mouseRightClickListeners: [],
   mouseMoveListeners: [],
@@ -120,6 +122,7 @@ export const Input = {
   MINUS: "Minus",
   EQUALS: "Equal",
   ESCAPE: "Escape",
+  F: "KeyF",
 
   rawMouseX: 0,
   rawMouseY: 0,
@@ -198,6 +201,9 @@ export const Input = {
         break;
       case Input.ESCAPE:
         Input.escapeListener();
+        break;
+      case Input.F:
+        Input.fListener();
         break;
     }
   },

@@ -477,7 +477,10 @@ export class Entity extends Drawable {
     else return closestPlayer;
   };
 
-  onHurt = (damage: number = 1) => {};
+  onHurt = (
+    damage: number = 1,
+    type: "none" | "poison" | "blood" | "heal" = "none",
+  ) => {};
 
   hurt = (
     playerHitBy: Player,
@@ -503,7 +506,7 @@ export class Entity extends Drawable {
     */
     this.health -= damage;
     this.maxHealth -= shieldHealth;
-    this.onHurt(damage);
+    this.onHurt(damage, type);
 
     this.startHurting();
     if (this.hasDamageNumbers) this.createDamageNumber(damage, type);
@@ -743,10 +746,11 @@ export class Entity extends Drawable {
     let multiplier = 1;
     if (this.isEnemy) multiplier = 5;
     const xp = Math.ceil(this.maxHealth * multiplier * depthMultiplier);
-    globalEventBus.emit(EVENTS.ENEMY_KILLED, {
-      enemyId: this.name,
-      xp: xp,
-    });
+    if (this.isEnemy)
+      globalEventBus.emit(EVENTS.ENEMY_KILLED, {
+        enemyId: this.name,
+        xp: xp,
+      });
   };
 
   doneMoving = (): boolean => {

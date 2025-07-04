@@ -45,6 +45,7 @@ export class PlayerInputHandler {
     Input.equalsListener = () => this.handleInput(InputEnum.EQUALS);
     Input.minusListener = () => this.handleInput(InputEnum.MINUS);
     Input.escapeListener = () => this.handleInput(InputEnum.ESCAPE);
+    Input.fListener = () => this.handleInput(InputEnum.F);
   }
 
   handleInput(input: InputEnum) {
@@ -76,6 +77,9 @@ export class PlayerInputHandler {
         break;
       case InputEnum.Q:
         this.player.inventory.drop();
+        break;
+      case InputEnum.F:
+        this.player.stall();
         break;
       case InputEnum.LEFT:
         if (!this.ignoreDirectionInput())
