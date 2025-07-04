@@ -25,26 +25,44 @@ export class Scythe extends Weapon {
   };
 
   weaponMove = (newX: number, newY: number): boolean => {
-    let leftPos = { x: newX, y: newY };
-    let rightPos = { x: newX, y: newY };
-    let positions = [leftPos, rightPos];
+    let leftCorner = { x: newX, y: newY };
+    let rightCorner = { x: newX, y: newY };
+    let leftEdge = { x: newX, y: newY };
+    let rightEdge = { x: newX, y: newY };
+    let positions = [leftCorner, rightCorner, leftEdge, rightEdge];
 
     switch (this.wielder.direction) {
       case Direction.DOWN:
-        leftPos.x = newX - 1;
-        rightPos.x = newX + 1;
+        leftCorner.x = newX - 1;
+        rightCorner.x = newX + 1;
+        leftEdge.x = newX - 1;
+        rightEdge.x = newX + 1;
+        leftEdge.y = newY - 1;
+        rightEdge.y = newY - 1;
         break;
       case Direction.UP:
-        leftPos.x = newX + 1;
-        rightPos.x = newX - 1;
+        leftCorner.x = newX + 1;
+        rightCorner.x = newX - 1;
+        leftEdge.x = newX + 1;
+        rightEdge.x = newX - 1;
+        leftEdge.y = newY + 1;
+        rightEdge.y = newY + 1;
         break;
       case Direction.LEFT:
-        leftPos.y = newY + 1;
-        rightPos.y = newY - 1;
+        leftCorner.y = newY + 1;
+        rightCorner.y = newY - 1;
+        leftEdge.y = newY + 1;
+        rightEdge.y = newY - 1;
+        leftEdge.x = newX + 1;
+        rightEdge.x = newX + 1;
         break;
       case Direction.RIGHT:
-        leftPos.y = newY - 1;
-        rightPos.y = newY + 1;
+        leftCorner.y = newY - 1;
+        rightCorner.y = newY + 1;
+        leftEdge.y = newY - 1;
+        rightEdge.y = newY + 1;
+        leftEdge.x = newX - 1;
+        rightEdge.x = newX - 1;
         break;
     }
 
@@ -58,7 +76,8 @@ export class Scythe extends Weapon {
             pos.y
           ].isSolid()
         ) {
-          this.executeAttack(pos.x, pos.y);
+          const damage = positions.indexOf(pos) <= 1 ? 1 : 1;
+          this.executeAttack(pos.x, pos.y, false, damage);
         }
       }
     }
@@ -67,10 +86,10 @@ export class Scythe extends Weapon {
   };
 
   shakeScreen = () => {
-    this.wielder.beginSlowMotion();
+    //this.wielder.beginSlowMotion();
 
     setTimeout(() => {
-      this.wielder.endSlowMotion();
+      //this.wielder.endSlowMotion();
       switch (this.wielder.direction) {
         case Direction.DOWN:
           this.game.shakeScreen(0, -5, false);

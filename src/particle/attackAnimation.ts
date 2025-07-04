@@ -160,6 +160,33 @@ export class AttackAnimation extends Particle {
 
             break;
         }
+        break;
+
+      case "scythe":
+        this.frames = 6;
+        this.tileY = 40;
+        this.tileX = 0;
+        this.animationSpeed = 0.75;
+
+        switch (direction) {
+          case Direction.DOWN:
+            this.yOffset -= 0.75;
+            this.xOffset += 0;
+            break;
+          case Direction.UP:
+            this.yOffset += 0.75;
+            this.xOffset -= 0;
+            break;
+          case Direction.LEFT:
+            this.xOffset += 0.75;
+            this.yOffset += 0;
+            break;
+          case Direction.RIGHT:
+            this.xOffset -= 0.75;
+            this.yOffset -= 0;
+            break;
+        }
+        break;
     }
     switch (direction) {
       case Direction.DOWN:

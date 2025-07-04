@@ -126,8 +126,8 @@ export abstract class Weapon extends Equippable {
     return !hitSomething;
   };
 
-  attack = (enemy: Entity) => {
-    enemy.hurt(this.wielder, this.damage);
+  attack = (enemy: Entity, damage?: number) => {
+    enemy.hurt(this.wielder, damage || this.damage);
     this.statusEffect(enemy);
   };
 
@@ -194,12 +194,12 @@ export abstract class Weapon extends Equippable {
     );
   }
 
-  protected hitEntitiesAt(x: number, y: number): boolean {
+  protected hitEntitiesAt(x: number, y: number, damage?: number): boolean {
     const entities = this.getEntitiesAt(x, y).filter((e) => !e.pushable);
     let hitSomething = false;
 
     for (const entity of entities) {
-      this.attack(entity);
+      this.attack(entity, damage);
       hitSomething = true;
     }
 
@@ -223,16 +223,18 @@ export abstract class Weapon extends Equippable {
   protected executeAttack(
     targetX: number,
     targetY: number,
+    animated: boolean = true,
+    damage: number = this.damage,
     animationName?: string,
   ): boolean {
-    const hitSomething = this.hitEntitiesAt(targetX, targetY);
+    const hitSomething = this.hitEntitiesAt(targetX, targetY, damage);
 
     this.applyHitDelay(hitSomething);
 
     if (hitSomething) {
       this.hitSound();
       this.wielder.setHitXY(targetX, targetY);
-      this.attackAnimation(targetX, targetY);
+      if (animated) this.attackAnimation(targetX, targetY);
       this.game.rooms[this.wielder.levelID].tick(this.wielder);
       this.shakeScreen(targetX, targetY);
       this.degrade();

@@ -15541,7 +15541,7 @@ class DualDagger extends weapon_1.Weapon {
             const entities = this.getEntitiesAt(newX, newY).filter((e) => !e.pushable);
             let flag = false;
             for (let e of entities) {
-                this.attack(e);
+                this.attack(e, this.damage);
                 this.statusEffect(e);
                 flag = true;
             }
@@ -15681,25 +15681,43 @@ class Scythe extends weapon_1.Weapon {
             //Sound.playScythe();
         };
         this.weaponMove = (newX, newY) => {
-            let leftPos = { x: newX, y: newY };
-            let rightPos = { x: newX, y: newY };
-            let positions = [leftPos, rightPos];
+            let leftCorner = { x: newX, y: newY };
+            let rightCorner = { x: newX, y: newY };
+            let leftEdge = { x: newX, y: newY };
+            let rightEdge = { x: newX, y: newY };
+            let positions = [leftCorner, rightCorner, leftEdge, rightEdge];
             switch (this.wielder.direction) {
                 case game_1.Direction.DOWN:
-                    leftPos.x = newX - 1;
-                    rightPos.x = newX + 1;
+                    leftCorner.x = newX - 1;
+                    rightCorner.x = newX + 1;
+                    leftEdge.x = newX - 1;
+                    rightEdge.x = newX + 1;
+                    leftEdge.y = newY - 1;
+                    rightEdge.y = newY - 1;
                     break;
                 case game_1.Direction.UP:
-                    leftPos.x = newX + 1;
-                    rightPos.x = newX - 1;
+                    leftCorner.x = newX + 1;
+                    rightCorner.x = newX - 1;
+                    leftEdge.x = newX + 1;
+                    rightEdge.x = newX - 1;
+                    leftEdge.y = newY + 1;
+                    rightEdge.y = newY + 1;
                     break;
                 case game_1.Direction.LEFT:
-                    leftPos.y = newY + 1;
-                    rightPos.y = newY - 1;
+                    leftCorner.y = newY + 1;
+                    rightCorner.y = newY - 1;
+                    leftEdge.y = newY + 1;
+                    rightEdge.y = newY - 1;
+                    leftEdge.x = newX + 1;
+                    rightEdge.x = newX + 1;
                     break;
                 case game_1.Direction.RIGHT:
-                    leftPos.y = newY - 1;
-                    rightPos.y = newY + 1;
+                    leftCorner.y = newY - 1;
+                    rightCorner.y = newY + 1;
+                    leftEdge.y = newY - 1;
+                    rightEdge.y = newY + 1;
+                    leftEdge.x = newX - 1;
+                    rightEdge.x = newX - 1;
                     break;
             }
             if (this.checkForPushables(newX, newY))
@@ -15708,16 +15726,17 @@ class Scythe extends weapon_1.Weapon {
             if (hitSomething) {
                 for (const pos of positions) {
                     if (!this.game.rooms[this.wielder.levelID].roomArray[pos.x][pos.y].isSolid()) {
-                        this.executeAttack(pos.x, pos.y);
+                        const damage = positions.indexOf(pos) <= 1 ? 1 : 1;
+                        this.executeAttack(pos.x, pos.y, false, damage);
                     }
                 }
             }
             return !hitSomething;
         };
         this.shakeScreen = () => {
-            this.wielder.beginSlowMotion();
+            //this.wielder.beginSlowMotion();
             setTimeout(() => {
-                this.wielder.endSlowMotion();
+                //this.wielder.endSlowMotion();
                 switch (this.wielder.direction) {
                     case game_1.Direction.DOWN:
                         this.game.shakeScreen(0, -5, false);
@@ -15893,7 +15912,7 @@ class Spear extends weapon_1.Weapon {
             }
             if (!flag && enemyHitCandidates.length > 0) {
                 for (const e of enemyHitCandidates) {
-                    this.attack(e);
+                    this.attack(e, 1);
                 }
                 this.hitSound();
                 this.attackAnimation(newX2, newY2);
@@ -16185,8 +16204,8 @@ class Weapon extends equippable_1.Equippable {
             const hitSomething = this.executeAttack(newX, newY);
             return !hitSomething;
         };
-        this.attack = (enemy) => {
-            enemy.hurt(this.wielder, this.damage);
+        this.attack = (enemy, damage) => {
+            enemy.hurt(this.wielder, damage || this.damage);
             this.statusEffect(enemy);
         };
         this.attackAnimation = (newX, newY) => {
@@ -16249,11 +16268,11 @@ class Weapon extends equippable_1.Equippable {
     getEntitiesAt(x, y) {
         return this.game.rooms[this.wielder.levelID].entities.filter((e) => e.destroyable && e.pointIn(x, y));
     }
-    hitEntitiesAt(x, y) {
+    hitEntitiesAt(x, y, damage) {
         const entities = this.getEntitiesAt(x, y).filter((e) => !e.pushable);
         let hitSomething = false;
         for (const entity of entities) {
-            this.attack(entity);
+            this.attack(entity, damage);
             hitSomething = true;
         }
         return hitSomething;
@@ -16262,13 +16281,14 @@ class Weapon extends equippable_1.Equippable {
         const pushables = this.getEntitiesAt(x, y).filter((e) => e.pushable);
         return pushables.length > 0;
     }
-    executeAttack(targetX, targetY, animationName) {
-        const hitSomething = this.hitEntitiesAt(targetX, targetY);
+    executeAttack(targetX, targetY, animated = true, damage = this.damage, animationName) {
+        const hitSomething = this.hitEntitiesAt(targetX, targetY, damage);
         this.applyHitDelay(hitSomething);
         if (hitSomething) {
             this.hitSound();
             this.wielder.setHitXY(targetX, targetY);
-            this.attackAnimation(targetX, targetY);
+            if (animated)
+                this.attackAnimation(targetX, targetY);
             this.game.rooms[this.wielder.levelID].tick(this.wielder);
             this.shakeScreen(targetX, targetY);
             this.degrade();
@@ -18018,6 +18038,31 @@ class AttackAnimation extends particle_1.Particle {
                         this.yOffset += 0.25;
                         break;
                 }
+                break;
+            case "scythe":
+                this.frames = 6;
+                this.tileY = 40;
+                this.tileX = 0;
+                this.animationSpeed = 0.75;
+                switch (direction) {
+                    case game_1.Direction.DOWN:
+                        this.yOffset -= 0.75;
+                        this.xOffset += 0;
+                        break;
+                    case game_1.Direction.UP:
+                        this.yOffset += 0.75;
+                        this.xOffset -= 0;
+                        break;
+                    case game_1.Direction.LEFT:
+                        this.xOffset += 0.75;
+                        this.yOffset += 0;
+                        break;
+                    case game_1.Direction.RIGHT:
+                        this.xOffset -= 0.75;
+                        this.yOffset -= 0;
+                        break;
+                }
+                break;
         }
         switch (direction) {
             case game_1.Direction.DOWN:
@@ -18085,7 +18130,8 @@ class DamageNumber extends particle_1.Particle {
                 this.dead = true;
             }
             game_1.Game.ctx.globalAlpha = this.alpha;
-            game_1.Game.fillTextOutline(this.damage.toString(), (this.x + 0.4 + this.xoffset) * gameConstants_1.GameConstants.TILESIZE - width / 2, (this.y - 0.6) * gameConstants_1.GameConstants.TILESIZE, this.outlineColor, this.color);
+            console.log(this.damage),
+                game_1.Game.fillTextOutline(this.damage.toString(), (this.x + 0.4 + this.xoffset) * gameConstants_1.GameConstants.TILESIZE - width / 2, (this.y - 0.6) * gameConstants_1.GameConstants.TILESIZE, this.outlineColor, this.color);
             game_1.Game.ctx.globalAlpha = 1;
             game_1.Game.ctx.restore();
         };

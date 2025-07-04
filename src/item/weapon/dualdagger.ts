@@ -30,7 +30,7 @@ export class DualDagger extends Weapon {
     let flag = false;
 
     for (let e of entities) {
-      this.attack(e);
+      this.attack(e, this.damage);
       this.statusEffect(e);
       flag = true;
     }

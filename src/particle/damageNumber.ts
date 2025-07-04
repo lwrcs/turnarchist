@@ -60,14 +60,14 @@ export class DamageNumber extends Particle {
       this.dead = true;
     }
     Game.ctx.globalAlpha = this.alpha;
-
-    Game.fillTextOutline(
-      this.damage.toString(),
-      (this.x + 0.4 + this.xoffset) * GameConstants.TILESIZE - width / 2,
-      (this.y - 0.6) * GameConstants.TILESIZE,
-      this.outlineColor,
-      this.color,
-    );
+    console.log(this.damage),
+      Game.fillTextOutline(
+        this.damage.toString(),
+        (this.x + 0.4 + this.xoffset) * GameConstants.TILESIZE - width / 2,
+        (this.y - 0.6) * GameConstants.TILESIZE,
+        this.outlineColor,
+        this.color,
+      );
 
     Game.ctx.globalAlpha = 1;
 
