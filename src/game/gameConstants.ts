@@ -213,6 +213,8 @@ export class GameConstants {
     GodStone,
     Spear,
     Greataxe,
+    Spellbook,
+    Lantern,
     WeaponPoison,
     WeaponBlood,
     Armor,
