@@ -88,6 +88,7 @@ import { Sprout } from "../entity/object/sprout";
 import { Candle } from "../item/light/candle";
 import { GlowBugEnemy } from "../entity/enemy/glowBugEnemy";
 import { GameplaySettings } from "../game/gameplaySettings";
+import { ItemGroup } from "../item/itemGroup";
 
 // #endregion
 
@@ -441,8 +442,13 @@ export class Room {
 
     if (x && y) {
       console.log("Checking wall info for torch placement");
-      const leftOpen = !this.wallInfo.get(`${x - 1},${y}`)?.isLeftWall;
-      const rightOpen = !this.wallInfo.get(`${x + 1},${y}`)?.isRightWall;
+      this.calculateWallInfo();
+      const leftWallInfo = this.wallInfo.get(`${x - 1},${y}`);
+      const rightWallInfo = this.wallInfo.get(`${x + 1},${y}`);
+      const leftTile = this.roomArray[x - 1]?.[y];
+      const rightTile = this.roomArray[x + 1]?.[y];
+      const leftOpen = leftWallInfo?.isLeftWall === false;
+      const rightOpen = rightWallInfo?.isRightWall === false;
 
       console.log(`Left wall open: ${leftOpen}, Right wall open: ${rightOpen}`);
 
@@ -1227,6 +1233,22 @@ export class Room {
         tiles.filter((tile) => tile.x !== x && tile.y !== y);
         this.entities.push(chest);
       }
+    }
+    if (this.depth === 0) this.populateWeaponGroup(tiles);
+  };
+
+  populateWeaponGroup = (tiles: Tile[]) => {
+    const emptyTile = this.getRandomEmptyPosition(tiles);
+    const emptyTile2 = this.getRandomEmptyPosition(tiles, emptyTile);
+
+    const weapons = new ItemGroup([
+      new Spear(this, emptyTile.x, emptyTile.y),
+      new Warhammer(this, emptyTile2.x, emptyTile2.y),
+    ]);
+    for (const item of weapons.items) {
+      item.grouped = true;
+      item.group = weapons;
+      this.items.push(item);
     }
   };
 
@@ -3110,12 +3132,18 @@ export class Room {
   };
 
   // This pattern appears in multiple methods like addVendingMachine, addChests, addSpikes, etc.
-  getRandomEmptyPosition(tiles: Tile[]): { x: number; y: number } {
+  getRandomEmptyPosition(
+    tiles: Tile[],
+    ignore?: { x: number; y: number },
+  ): { x: number; y: number } {
     if (tiles.length === 0) return null;
     const tile = tiles.splice(
       Game.rand(0, tiles.length - 1, Random.rand),
       1,
     )[0];
+    if (ignore && tile.x === ignore.x && tile.y === ignore.y) {
+      return this.getRandomEmptyPosition(tiles, ignore);
+    }
     return { x: tile.x, y: tile.y };
   }
 

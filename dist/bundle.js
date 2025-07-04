@@ -14168,6 +14168,7 @@ class Item extends drawable_1.Drawable {
     // Constructor for the Item class
     constructor(level, x, y) {
         super();
+        this.group = null;
         this.hoverText = () => {
             return this.name;
         };
@@ -14208,6 +14209,11 @@ class Item extends drawable_1.Drawable {
                     }
                     this.pickupSound();
                 }
+            }
+            if (this.grouped) {
+                this.group.destroyOtherItems(this);
+                this.grouped = false;
+                this.group = null;
             }
         };
         this.pickupMessage = () => {
@@ -14382,12 +14388,45 @@ class Item extends drawable_1.Drawable {
         this.chestOffsetY = 0;
         this.sineAnimateFactor = 1;
         this.iconOffset = 0;
+        this.grouped = false;
+        this.group = null;
     }
     static add(room, x, y, ...rest) {
         return new this(room, x, y, ...rest);
     }
+    destroy() {
+        this.pickedUp = true;
+        //this.level.items = this.level.items.filter((x) => x !== this);
+    }
 }
 exports.Item = Item;
+
+
+/***/ }),
+
+/***/ "./src/item/itemGroup.ts":
+/*!*******************************!*\
+  !*** ./src/item/itemGroup.ts ***!
+  \*******************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ItemGroup = void 0;
+class ItemGroup {
+    constructor(items) {
+        this.items = items;
+    }
+    destroyOtherItems(item) {
+        for (const i of this.items) {
+            if (i !== item) {
+                i.destroy();
+            }
+        }
+        item.level.game.pushMessage(`You choose to keep the ${item.name}.`);
+    }
+}
+exports.ItemGroup = ItemGroup;
 
 
 /***/ }),
@@ -20948,6 +20987,7 @@ const fireWizard_1 = __webpack_require__(/*! ../entity/enemy/fireWizard */ "./sr
 const energyWizard_1 = __webpack_require__(/*! ../entity/enemy/energyWizard */ "./src/entity/enemy/energyWizard.ts");
 const reverb_1 = __webpack_require__(/*! ../sound/reverb */ "./src/sound/reverb.ts");
 const astarclass_1 = __webpack_require__(/*! ../utility/astarclass */ "./src/utility/astarclass.ts");
+const warhammer_1 = __webpack_require__(/*! ../item/weapon/warhammer */ "./src/item/weapon/warhammer.ts");
 const torch_1 = __webpack_require__(/*! ../item/light/torch */ "./src/item/light/torch.ts");
 const rookEnemy_1 = __webpack_require__(/*! ../entity/enemy/rookEnemy */ "./src/entity/enemy/rookEnemy.ts");
 const beamEffect_1 = __webpack_require__(/*! ../projectile/beamEffect */ "./src/projectile/beamEffect.ts");
@@ -20964,6 +21004,7 @@ const bigZombieEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigZombieEnemy 
 const candle_1 = __webpack_require__(/*! ../item/light/candle */ "./src/item/light/candle.ts");
 const glowBugEnemy_1 = __webpack_require__(/*! ../entity/enemy/glowBugEnemy */ "./src/entity/enemy/glowBugEnemy.ts");
 const gameplaySettings_1 = __webpack_require__(/*! ../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
+const itemGroup_1 = __webpack_require__(/*! ../item/itemGroup */ "./src/item/itemGroup.ts");
 // #endregion
 // #region Enums & Interfaces
 /**
@@ -21324,6 +21365,21 @@ class Room {
                     tiles.filter((tile) => tile.x !== x && tile.y !== y);
                     this.entities.push(chest);
                 }
+            }
+            if (this.depth === 0)
+                this.populateWeaponGroup(tiles);
+        };
+        this.populateWeaponGroup = (tiles) => {
+            const emptyTile = this.getRandomEmptyPosition(tiles);
+            const emptyTile2 = this.getRandomEmptyPosition(tiles, emptyTile);
+            const weapons = new itemGroup_1.ItemGroup([
+                new spear_1.Spear(this, emptyTile.x, emptyTile.y),
+                new warhammer_1.Warhammer(this, emptyTile2.x, emptyTile2.y),
+            ]);
+            for (const item of weapons.items) {
+                item.grouped = true;
+                item.group = weapons;
+                this.items.push(item);
             }
         };
         this.populateRopeHole = (rand) => {
@@ -22939,8 +22995,13 @@ class Room {
         }
         if (x && y) {
             console.log("Checking wall info for torch placement");
-            const leftOpen = !this.wallInfo.get(`${x - 1},${y}`)?.isLeftWall;
-            const rightOpen = !this.wallInfo.get(`${x + 1},${y}`)?.isRightWall;
+            this.calculateWallInfo();
+            const leftWallInfo = this.wallInfo.get(`${x - 1},${y}`);
+            const rightWallInfo = this.wallInfo.get(`${x + 1},${y}`);
+            const leftTile = this.roomArray[x - 1]?.[y];
+            const rightTile = this.roomArray[x + 1]?.[y];
+            const leftOpen = leftWallInfo?.isLeftWall === false;
+            const rightOpen = rightWallInfo?.isRightWall === false;
             console.log(`Left wall open: ${leftOpen}, Right wall open: ${rightOpen}`);
             if (leftOpen) {
                 console.log(`Placing torch on left wall at x:${x - 1}, y:${y}`);
@@ -23430,10 +23491,13 @@ class Room {
         return true;
     }
     // This pattern appears in multiple methods like addVendingMachine, addChests, addSpikes, etc.
-    getRandomEmptyPosition(tiles) {
+    getRandomEmptyPosition(tiles, ignore) {
         if (tiles.length === 0)
             return null;
         const tile = tiles.splice(game_1.Game.rand(0, tiles.length - 1, random_1.Random.rand), 1)[0];
+        if (ignore && tile.x === ignore.x && tile.y === ignore.y) {
+            return this.getRandomEmptyPosition(tiles, ignore);
+        }
         return { x: tile.x, y: tile.y };
     }
     getBigRandomEmptyPosition(tiles) {

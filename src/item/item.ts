@@ -5,6 +5,7 @@ import { Room } from "../room/room";
 import { Sound } from "../sound/sound";
 import { Drawable } from "../drawable/drawable";
 import { Utils } from "../utility/utils";
+import { ItemGroup } from "./itemGroup";
 
 // Item class extends Drawable class and represents an item in the game
 export class Item extends Drawable {
@@ -37,6 +38,8 @@ export class Item extends Drawable {
   chestOffsetY: number;
   sineAnimateFactor: number;
   iconOffset: number;
+  grouped: boolean;
+  group: ItemGroup = null;
 
   // Constructor for the Item class
   constructor(level: Room, x: number, y: number) {
@@ -70,6 +73,8 @@ export class Item extends Drawable {
     this.chestOffsetY = 0;
     this.sineAnimateFactor = 1;
     this.iconOffset = 0;
+    this.grouped = false;
+    this.group = null;
   }
 
   static add<
@@ -125,6 +130,11 @@ export class Item extends Drawable {
         this.pickupSound();
       }
     }
+    if (this.grouped) {
+      this.group.destroyOtherItems(this);
+      this.grouped = false;
+      this.group = null;
+    }
   };
 
   pickupMessage = () => {
@@ -175,6 +185,11 @@ export class Item extends Drawable {
       );
     }
   };
+
+  destroy() {
+    this.pickedUp = true;
+    //this.level.items = this.level.items.filter((x) => x !== this);
+  }
 
   // Function to draw the item
   draw = (delta: number) => {
