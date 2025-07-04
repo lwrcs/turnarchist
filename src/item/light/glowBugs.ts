@@ -14,7 +14,7 @@ export class GlowBugs extends Light {
     super(level, x, y);
     this.fuel = 100; //how many turns before it burns out
     this.tileX = 27;
-    this.tileY = 0;
+    this.tileY = 2;
     this.name = "glow bugs";
     this.fuelCap = 100;
     this.radius = 6;

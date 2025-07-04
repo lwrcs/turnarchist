@@ -29,6 +29,7 @@ import { Pickaxe } from "../item/tool/pickaxe";
 import { Geode } from "../item/resource/geode";
 import { GlowBugs } from "../item/light/glowBugs";
 import { Shotgun } from "../item/weapon/shotgun";
+import { Scythe } from "../item/weapon/scythe";
 
 export class GameConstants {
   static readonly VERSION = "v1.0.9"; //"v0.6.3";
@@ -209,7 +210,7 @@ export class GameConstants {
     Dagger,
     Warhammer,
     DualDagger,
-    Shotgun,
+    Scythe,
     GodStone,
     Spear,
     Greataxe,

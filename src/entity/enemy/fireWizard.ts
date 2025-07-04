@@ -126,14 +126,27 @@ export class FireWizardEnemy extends WizardEnemy {
                 ),
             );
 
+            if (
+              emptyTiles.length === 0 ||
+              Object.keys(this.game.players).length === 0
+            ) {
+              this.state = WizardState.idle;
+              break;
+            }
+
             let optimalDist = Game.randTable(
               [2, 2, 3, 3, 3, 3, 3],
               Random.rand,
             );
-            // pick a random player to target
             let player_ids = [];
             for (const i in this.game.players) player_ids.push(i);
             let target_player_id = Game.randTable(player_ids, Random.rand);
+
+            if (!this.game.players[target_player_id]) {
+              this.state = WizardState.idle;
+              break;
+            }
+
             for (let t of emptyTiles) {
               let newPos = t;
               let dist =
@@ -144,10 +157,15 @@ export class FireWizardEnemy extends WizardEnemy {
                 bestPos = newPos;
               }
             }
+
+            if (!bestPos) {
+              bestPos = emptyTiles[0];
+            }
+
             this.tryMove(bestPos.x, bestPos.y);
             this.drawX = this.x - oldX;
             this.drawY = this.y - oldY;
-            this.frame = 0; // trigger teleport animation
+            this.frame = 0;
             this.room.particles.push(new WizardTeleportParticle(oldX, oldY));
             if (this.withinAttackingRangeOfPlayer()) {
               this.state = WizardState.attack;

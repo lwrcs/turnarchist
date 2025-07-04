@@ -3024,12 +3024,20 @@ class FireWizardEnemy extends wizardEnemy_1.WizardEnemy {
                             let bestPos;
                             let emptyTiles = this.shuffle(this.room.getEmptyTiles());
                             emptyTiles = emptyTiles.filter((tile) => !this.room.projectiles.some((projectile) => projectile.x === tile.x && projectile.y === tile.y));
+                            if (emptyTiles.length === 0 ||
+                                Object.keys(this.game.players).length === 0) {
+                                this.state = WizardState.idle;
+                                break;
+                            }
                             let optimalDist = game_1.Game.randTable([2, 2, 3, 3, 3, 3, 3], random_1.Random.rand);
-                            // pick a random player to target
                             let player_ids = [];
                             for (const i in this.game.players)
                                 player_ids.push(i);
                             let target_player_id = game_1.Game.randTable(player_ids, random_1.Random.rand);
+                            if (!this.game.players[target_player_id]) {
+                                this.state = WizardState.idle;
+                                break;
+                            }
                             for (let t of emptyTiles) {
                                 let newPos = t;
                                 let dist = Math.abs(newPos.x - this.game.players[target_player_id].x) +
@@ -3039,10 +3047,13 @@ class FireWizardEnemy extends wizardEnemy_1.WizardEnemy {
                                     bestPos = newPos;
                                 }
                             }
+                            if (!bestPos) {
+                                bestPos = emptyTiles[0];
+                            }
                             this.tryMove(bestPos.x, bestPos.y);
                             this.drawX = this.x - oldX;
                             this.drawY = this.y - oldY;
-                            this.frame = 0; // trigger teleport animation
+                            this.frame = 0;
                             this.room.particles.push(new wizardTeleportParticle_1.WizardTeleportParticle(oldX, oldY));
                             if (this.withinAttackingRangeOfPlayer()) {
                                 this.state = WizardState.attack;
@@ -9958,7 +9969,7 @@ const hammer_1 = __webpack_require__(/*! ../item/tool/hammer */ "./src/item/tool
 const spellbookPage_1 = __webpack_require__(/*! ../item/usable/spellbookPage */ "./src/item/usable/spellbookPage.ts");
 const greataxe_1 = __webpack_require__(/*! ../item/weapon/greataxe */ "./src/item/weapon/greataxe.ts");
 const pickaxe_1 = __webpack_require__(/*! ../item/tool/pickaxe */ "./src/item/tool/pickaxe.ts");
-const shotgun_1 = __webpack_require__(/*! ../item/weapon/shotgun */ "./src/item/weapon/shotgun.ts");
+const scythe_1 = __webpack_require__(/*! ../item/weapon/scythe */ "./src/item/weapon/scythe.ts");
 class GameConstants {
 }
 exports.GameConstants = GameConstants;
@@ -10110,7 +10121,7 @@ GameConstants.STARTING_DEV_INVENTORY = [
     dagger_1.Dagger,
     warhammer_1.Warhammer,
     dualdagger_1.DualDagger,
-    shotgun_1.Shotgun,
+    scythe_1.Scythe,
     godStone_1.GodStone,
     spear_1.Spear,
     greataxe_1.Greataxe,
@@ -14511,7 +14522,7 @@ class GlowBugs extends light_1.Light {
         super(level, x, y);
         this.fuel = 100; //how many turns before it burns out
         this.tileX = 27;
-        this.tileY = 0;
+        this.tileY = 2;
         this.name = "glow bugs";
         this.fuelCap = 100;
         this.radius = 6;
@@ -15539,6 +15550,95 @@ class Greataxe extends weapon_1.Weapon {
 }
 exports.Greataxe = Greataxe;
 Greataxe.itemName = "greataxe";
+
+
+/***/ }),
+
+/***/ "./src/item/weapon/scythe.ts":
+/*!***********************************!*\
+  !*** ./src/item/weapon/scythe.ts ***!
+  \***********************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Scythe = void 0;
+const weapon_1 = __webpack_require__(/*! ./weapon */ "./src/item/weapon/weapon.ts");
+const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+class Scythe extends weapon_1.Weapon {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.hitSound = () => {
+            sound_1.Sound.hit();
+            //Sound.playScythe();
+        };
+        this.weaponMove = (newX, newY) => {
+            let leftPos = { x: newX, y: newY };
+            let rightPos = { x: newX, y: newY };
+            let positions = [leftPos, rightPos];
+            switch (this.wielder.direction) {
+                case game_1.Direction.DOWN:
+                    leftPos.x = newX - 1;
+                    rightPos.x = newX + 1;
+                    break;
+                case game_1.Direction.UP:
+                    leftPos.x = newX + 1;
+                    rightPos.x = newX - 1;
+                    break;
+                case game_1.Direction.LEFT:
+                    leftPos.y = newY + 1;
+                    rightPos.y = newY - 1;
+                    break;
+                case game_1.Direction.RIGHT:
+                    leftPos.y = newY - 1;
+                    rightPos.y = newY + 1;
+                    break;
+            }
+            if (this.checkForPushables(newX, newY))
+                return true;
+            const hitSomething = this.executeAttack(newX, newY);
+            if (hitSomething) {
+                for (const pos of positions) {
+                    if (!this.game.rooms[this.wielder.levelID].roomArray[pos.x][pos.y].isSolid()) {
+                        this.executeAttack(pos.x, pos.y);
+                    }
+                }
+            }
+            return !hitSomething;
+        };
+        this.shakeScreen = () => {
+            this.wielder.beginSlowMotion();
+            setTimeout(() => {
+                this.wielder.endSlowMotion();
+                switch (this.wielder.direction) {
+                    case game_1.Direction.DOWN:
+                        this.game.shakeScreen(0, -5, false);
+                        break;
+                    case game_1.Direction.UP:
+                        this.game.shakeScreen(0, -5, false);
+                        break;
+                    case game_1.Direction.LEFT:
+                        this.game.shakeScreen(-5, -5, false);
+                        break;
+                    case game_1.Direction.RIGHT:
+                        this.game.shakeScreen(5, -5, false);
+                        break;
+                }
+            }, this.hitDelay);
+        };
+        this.tileX = 23;
+        this.tileY = 2;
+        this.damage = 1;
+        this.name = "scythe";
+        this.hitDelay = 150;
+        this.useCost = 2;
+        this.offsetY = 0;
+        this.iconOffset = 0.2;
+    }
+}
+exports.Scythe = Scythe;
+Scythe.itemName = "scythe";
 
 
 /***/ }),
