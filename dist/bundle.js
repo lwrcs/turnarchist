@@ -9944,6 +9944,7 @@ const backpack_1 = __webpack_require__(/*! ../item/backpack */ "./src/item/backp
 const candle_1 = __webpack_require__(/*! ../item/light/candle */ "./src/item/light/candle.ts");
 const coal_1 = __webpack_require__(/*! ../item/resource/coal */ "./src/item/resource/coal.ts");
 const godStone_1 = __webpack_require__(/*! ../item/godStone */ "./src/item/godStone.ts");
+const lantern_1 = __webpack_require__(/*! ../item/light/lantern */ "./src/item/light/lantern.ts");
 const weaponBlood_1 = __webpack_require__(/*! ../item/usable/weaponBlood */ "./src/item/usable/weaponBlood.ts");
 const weaponFragments_1 = __webpack_require__(/*! ../item/usable/weaponFragments */ "./src/item/usable/weaponFragments.ts");
 const weaponPoison_1 = __webpack_require__(/*! ../item/usable/weaponPoison */ "./src/item/usable/weaponPoison.ts");
@@ -9951,6 +9952,7 @@ const levelConstants_1 = __webpack_require__(/*! ../level/levelConstants */ "./s
 const dagger_1 = __webpack_require__(/*! ../item/weapon/dagger */ "./src/item/weapon/dagger.ts");
 const dualdagger_1 = __webpack_require__(/*! ../item/weapon/dualdagger */ "./src/item/weapon/dualdagger.ts");
 const spear_1 = __webpack_require__(/*! ../item/weapon/spear */ "./src/item/weapon/spear.ts");
+const spellbook_1 = __webpack_require__(/*! ../item/weapon/spellbook */ "./src/item/weapon/spellbook.ts");
 const warhammer_1 = __webpack_require__(/*! ../item/weapon/warhammer */ "./src/item/weapon/warhammer.ts");
 const hammer_1 = __webpack_require__(/*! ../item/tool/hammer */ "./src/item/tool/hammer.ts");
 const spellbookPage_1 = __webpack_require__(/*! ../item/usable/spellbookPage */ "./src/item/usable/spellbookPage.ts");
@@ -10112,6 +10114,8 @@ GameConstants.STARTING_DEV_INVENTORY = [
     godStone_1.GodStone,
     spear_1.Spear,
     greataxe_1.Greataxe,
+    spellbook_1.Spellbook,
+    lantern_1.Lantern,
     weaponPoison_1.WeaponPoison,
     weaponBlood_1.WeaponBlood,
     armor_1.Armor,
@@ -11703,36 +11707,28 @@ const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/
 const input_1 = __webpack_require__(/*! ../game/input */ "./src/game/input.ts");
 class HoverText {
     static getHoverText(x, y, room, player) {
-        console.log("Getting hover text for position:", x, y);
         // Handle undefined mouse coordinates
         if (input_1.Input.mouseX === undefined || input_1.Input.mouseY === undefined) {
-            console.log("Mouse coordinates undefined, returning empty array");
             return [];
         }
         // Get screen center coordinates
         const screenCenterX = gameConstants_1.GameConstants.WIDTH / 2;
         const screenCenterY = gameConstants_1.GameConstants.HEIGHT / 2;
-        console.log("Screen center:", screenCenterX, screenCenterY);
         // Convert pixel offset to tile offset
         const tileOffsetX = Math.floor((input_1.Input.mouseX - screenCenterX + gameConstants_1.GameConstants.TILESIZE / 2) /
             gameConstants_1.GameConstants.TILESIZE);
         const tileOffsetY = Math.floor((input_1.Input.mouseY - screenCenterY + gameConstants_1.GameConstants.TILESIZE / 2) /
             gameConstants_1.GameConstants.TILESIZE);
-        console.log("Calculated tile offsets:", tileOffsetX, tileOffsetY);
         const offsetX = x + tileOffsetX;
         const offsetY = y + tileOffsetY;
         const strings = [];
-        console.log("Checking entities...");
         for (const entity of room.entities) {
             if (entity.x === offsetX && entity.y === offsetY) {
-                console.log("Found matching entity:", entity.hoverText);
                 strings.push(entity.hoverText());
             }
         }
-        console.log("Checking items...");
         for (const item of room.items) {
             if (item.x === offsetX && item.y === offsetY) {
-                console.log("Found matching item:", item.hoverText);
                 strings.push(item.hoverText());
             }
         }
@@ -11740,23 +11736,21 @@ class HoverText {
         if (tile) {
             strings.push(tile.getName());
         }
-        console.log("Returning hover texts:", strings);
         return strings;
     }
     static draw(delta, x, y, room, player) {
-        console.log("Drawing hover text at:", x, y);
         const strings = HoverText.getHoverText(x, y, room, player);
         if (strings.length === 0) {
-            console.log("No hover text to draw");
             return;
         }
+        game_1.Game.ctx.save();
         for (const string of strings) {
             const offsetY = strings.indexOf(string) * 6;
-            console.log("Drawing text:", string);
             game_1.Game.ctx.fillStyle = "yellow";
             game_1.Game.ctx.globalAlpha = 0.1;
             game_1.Game.fillText(string, 1, 20 + offsetY);
         }
+        game_1.Game.ctx.restore();
     }
 }
 exports.HoverText = HoverText;
@@ -12983,7 +12977,6 @@ class Inventory {
             const g = -2; // gap
             const quickbarWidth = this.cols * (s + 2 * b + g) - g;
             const quickbarRightEdge = quickbarStartX + quickbarWidth;
-            console.log(game_1.Game.measureText(this.coins.toString()).width);
             // Position coin slightly to the right of the quickbar
             let coinX = (quickbarRightEdge - 5) / gameConstants_1.GameConstants.TILESIZE - 1;
             let coinY = gameConstants_1.GameConstants.HEIGHT / gameConstants_1.GameConstants.TILESIZE - 1.3;
@@ -20918,14 +20911,11 @@ const goldenKey_1 = __webpack_require__(/*! ../item/goldenKey */ "./src/item/gol
 const spawnfloor_1 = __webpack_require__(/*! ../tile/spawnfloor */ "./src/tile/spawnfloor.ts");
 const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
 const skullEnemy_1 = __webpack_require__(/*! ../entity/enemy/skullEnemy */ "./src/entity/enemy/skullEnemy.ts");
-const barrel_1 = __webpack_require__(/*! ../entity/object/barrel */ "./src/entity/object/barrel.ts");
 const crate_1 = __webpack_require__(/*! ../entity/object/crate */ "./src/entity/object/crate.ts");
 const armor_1 = __webpack_require__(/*! ../item/armor */ "./src/item/armor.ts");
 const particle_1 = __webpack_require__(/*! ../particle/particle */ "./src/particle/particle.ts");
 const spiketrap_1 = __webpack_require__(/*! ../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const fountainTile_1 = __webpack_require__(/*! ../tile/fountainTile */ "./src/tile/fountainTile.ts");
-const coffinTile_1 = __webpack_require__(/*! ../tile/coffinTile */ "./src/tile/coffinTile.ts");
-const pottedPlant_1 = __webpack_require__(/*! ../entity/object/pottedPlant */ "./src/entity/object/pottedPlant.ts");
 const insideLevelDoor_1 = __webpack_require__(/*! ../tile/insideLevelDoor */ "./src/tile/insideLevelDoor.ts");
 const button_1 = __webpack_require__(/*! ../tile/button */ "./src/tile/button.ts");
 const hitWarning_1 = __webpack_require__(/*! ../drawable/hitWarning */ "./src/drawable/hitWarning.ts");
@@ -20947,13 +20937,9 @@ const crabEnemy_1 = __webpack_require__(/*! ../entity/enemy/crabEnemy */ "./src/
 const zombieEnemy_1 = __webpack_require__(/*! ../entity/enemy/zombieEnemy */ "./src/entity/enemy/zombieEnemy.ts");
 const bigSkullEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigSkullEnemy */ "./src/entity/enemy/bigSkullEnemy.ts");
 const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
-const pot_1 = __webpack_require__(/*! ../entity/object/pot */ "./src/entity/object/pot.ts");
 const bishopEnemy_1 = __webpack_require__(/*! ../entity/enemy/bishopEnemy */ "./src/entity/enemy/bishopEnemy.ts");
 const rockResource_1 = __webpack_require__(/*! ../entity/resource/rockResource */ "./src/entity/resource/rockResource.ts");
-const mushrooms_1 = __webpack_require__(/*! ../entity/object/mushrooms */ "./src/entity/object/mushrooms.ts");
 const armoredzombieEnemy_1 = __webpack_require__(/*! ../entity/enemy/armoredzombieEnemy */ "./src/entity/enemy/armoredzombieEnemy.ts");
-const tombStone_1 = __webpack_require__(/*! ../entity/object/tombStone */ "./src/entity/object/tombStone.ts");
-const pumpkin_1 = __webpack_require__(/*! ../entity/object/pumpkin */ "./src/entity/object/pumpkin.ts");
 const queenEnemy_1 = __webpack_require__(/*! ../entity/enemy/queenEnemy */ "./src/entity/enemy/queenEnemy.ts");
 const frogEnemy_1 = __webpack_require__(/*! ../entity/enemy/frogEnemy */ "./src/entity/enemy/frogEnemy.ts");
 const bigKnightEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigKnightEnemy */ "./src/entity/enemy/bigKnightEnemy.ts");
@@ -20967,18 +20953,14 @@ const rookEnemy_1 = __webpack_require__(/*! ../entity/enemy/rookEnemy */ "./src/
 const beamEffect_1 = __webpack_require__(/*! ../projectile/beamEffect */ "./src/projectile/beamEffect.ts");
 const environment_1 = __webpack_require__(/*! ../level/environment */ "./src/level/environment.ts");
 const occultistEnemy_1 = __webpack_require__(/*! ../entity/enemy/occultistEnemy */ "./src/entity/enemy/occultistEnemy.ts");
-const puddle_1 = __webpack_require__(/*! ../tile/decorations/puddle */ "./src/tile/decorations/puddle.ts");
 const decoration_1 = __webpack_require__(/*! ../tile/decorations/decoration */ "./src/tile/decorations/decoration.ts");
 const bomb_1 = __webpack_require__(/*! ../entity/object/bomb */ "./src/entity/object/bomb.ts");
 const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts");
-const block_1 = __webpack_require__(/*! ../entity/object/block */ "./src/entity/object/block.ts");
 const armoredSkullEnemy_1 = __webpack_require__(/*! ../entity/enemy/armoredSkullEnemy */ "./src/entity/enemy/armoredSkullEnemy.ts");
 const mummyEnemy_1 = __webpack_require__(/*! ../entity/enemy/mummyEnemy */ "./src/entity/enemy/mummyEnemy.ts");
 const spiderEnemy_1 = __webpack_require__(/*! ../entity/enemy/spiderEnemy */ "./src/entity/enemy/spiderEnemy.ts");
 const roomBuilder_1 = __webpack_require__(/*! ./roomBuilder */ "./src/room/roomBuilder.ts");
 const bigZombieEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigZombieEnemy */ "./src/entity/enemy/bigZombieEnemy.ts");
-const bush_1 = __webpack_require__(/*! ../entity/object/bush */ "./src/entity/object/bush.ts");
-const sprout_1 = __webpack_require__(/*! ../entity/object/sprout */ "./src/entity/object/sprout.ts");
 const candle_1 = __webpack_require__(/*! ../item/light/candle */ "./src/item/light/candle.ts");
 const glowBugEnemy_1 = __webpack_require__(/*! ../entity/enemy/glowBugEnemy */ "./src/entity/enemy/glowBugEnemy.ts");
 const gameplaySettings_1 = __webpack_require__(/*! ../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
@@ -21043,32 +21025,32 @@ exports.EnemyTypeMap = {
 };
 var RoomType;
 (function (RoomType) {
-    RoomType[RoomType["START"] = 0] = "START";
-    RoomType[RoomType["DUNGEON"] = 1] = "DUNGEON";
-    RoomType[RoomType["BOSS"] = 2] = "BOSS";
-    RoomType[RoomType["BIGDUNGEON"] = 3] = "BIGDUNGEON";
-    RoomType[RoomType["TREASURE"] = 4] = "TREASURE";
-    RoomType[RoomType["FOUNTAIN"] = 5] = "FOUNTAIN";
-    RoomType[RoomType["COFFIN"] = 6] = "COFFIN";
-    RoomType[RoomType["GRASS"] = 7] = "GRASS";
-    RoomType[RoomType["PUZZLE"] = 8] = "PUZZLE";
-    RoomType[RoomType["KEYROOM"] = 9] = "KEYROOM";
-    RoomType[RoomType["CHESSBOARD"] = 10] = "CHESSBOARD";
-    RoomType[RoomType["MAZE"] = 11] = "MAZE";
-    RoomType[RoomType["CORRIDOR"] = 12] = "CORRIDOR";
-    RoomType[RoomType["SPIKECORRIDOR"] = 13] = "SPIKECORRIDOR";
-    RoomType[RoomType["UPLADDER"] = 14] = "UPLADDER";
-    RoomType[RoomType["DOWNLADDER"] = 15] = "DOWNLADDER";
-    RoomType[RoomType["SHOP"] = 16] = "SHOP";
-    RoomType[RoomType["BIGCAVE"] = 17] = "BIGCAVE";
-    RoomType[RoomType["CAVE"] = 18] = "CAVE";
-    RoomType[RoomType["SPAWNER"] = 19] = "SPAWNER";
-    RoomType[RoomType["ROPEHOLE"] = 20] = "ROPEHOLE";
-    RoomType[RoomType["ROPECAVE"] = 21] = "ROPECAVE";
-    RoomType[RoomType["TUTORIAL"] = 22] = "TUTORIAL";
-    RoomType[RoomType["GRAVEYARD"] = 23] = "GRAVEYARD";
-    RoomType[RoomType["FOREST"] = 24] = "FOREST";
-    RoomType[RoomType["ROPEUP"] = 25] = "ROPEUP";
+    RoomType["START"] = "START";
+    RoomType["DUNGEON"] = "DUNGEON";
+    RoomType["BOSS"] = "BOSS";
+    RoomType["BIGDUNGEON"] = "BIGDUNGEON";
+    RoomType["TREASURE"] = "TREASURE";
+    RoomType["FOUNTAIN"] = "FOUNTAIN";
+    RoomType["COFFIN"] = "COFFIN";
+    RoomType["GRASS"] = "GRASS";
+    RoomType["PUZZLE"] = "PUZZLE";
+    RoomType["KEYROOM"] = "KEYROOM";
+    RoomType["CHESSBOARD"] = "CHESSBOARD";
+    RoomType["MAZE"] = "MAZE";
+    RoomType["CORRIDOR"] = "CORRIDOR";
+    RoomType["SPIKECORRIDOR"] = "SPIKECORRIDOR";
+    RoomType["UPLADDER"] = "UPLADDER";
+    RoomType["DOWNLADDER"] = "DOWNLADDER";
+    RoomType["SHOP"] = "SHOP";
+    RoomType["BIGCAVE"] = "BIGCAVE";
+    RoomType["CAVE"] = "CAVE";
+    RoomType["SPAWNER"] = "SPAWNER";
+    RoomType["ROPEHOLE"] = "ROPEHOLE";
+    RoomType["ROPECAVE"] = "ROPECAVE";
+    RoomType["TUTORIAL"] = "TUTORIAL";
+    RoomType["GRAVEYARD"] = "GRAVEYARD";
+    RoomType["FOREST"] = "FOREST";
+    RoomType["ROPEUP"] = "ROPEUP";
 })(RoomType = exports.RoomType || (exports.RoomType = {}));
 var TurnState;
 (function (TurnState) {
@@ -21215,27 +21197,16 @@ class Room {
             this.addTorchesByArea();
             if (factor > 15)
                 this.addSpikeTraps(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 3], rand), rand);
-            let numEmptyTiles = this.getEmptyTiles().length;
-            let numTotalObstacles = Math.floor(numEmptyTiles * 0.35 * rand());
-            let numPlants = Math.ceil(numTotalObstacles * rand());
-            let numObstacles = numTotalObstacles - numPlants;
-            this.addPlants(numPlants, rand);
-            //this.addDecorations(Game.randTable([0, 0, 0, 1, 1, 2, 3], rand), rand);
-            this.addObstacles(numObstacles, rand);
             if (factor <= 6)
                 this.addVendingMachine(rand);
             this.addRandomEnemies();
             this.removeDoorObstructions();
         };
         this.populateBoss = (rand) => {
+            const bossDoor = this.getBossDoor();
+            this.addDoorTorches(bossDoor.x, bossDoor.y, bossDoor.doorDir);
             this.addTorchesByArea();
             this.addSpikeTraps(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 5], rand), rand);
-            let numEmptyTiles = this.getEmptyTiles().length;
-            let numTotalObstacles = Math.floor(numEmptyTiles * 0.2);
-            let numPlants = Math.floor(numTotalObstacles * rand());
-            let numObstacles = numTotalObstacles - numPlants;
-            this.addPlants(numPlants, rand);
-            this.addObstacles(numObstacles, rand);
             this.addBosses(this.depth);
             this.addRandomEnemies();
         };
@@ -21243,12 +21214,9 @@ class Room {
             if (game_1.Game.rand(1, 4, rand) === 1)
                 this.addChasms(rand);
             this.addTorchesByArea();
-            if (game_1.Game.rand(1, 4, rand) === 1)
-                this.addPlants(game_1.Game.randTable([0, 0, 0, 0, 0, 1, 1, 2, 2, 3, 4], rand), rand);
             if (game_1.Game.rand(1, 3, rand) === 1)
                 this.addSpikeTraps(game_1.Game.randTable([3, 5, 7, 8], rand), rand);
             this.addRandomEnemies();
-            this.addObstacles(game_1.Game.randTable([0, 0, 1, 1, 2, 3, 5], rand), rand);
             this.removeDoorObstructions();
         };
         this.populateSpawner = (rand) => {
@@ -21269,17 +21237,6 @@ class Room {
                     this.roomArray[x][y] = new fountainTile_1.FountainTile(this, x, y, x - (centerX - 1), y - (centerY - 1));
                 }
             }
-            this.addPlants(game_1.Game.randTable([0, 0, 1, 2], rand), rand);
-        };
-        this.placeCoffin = (x, y) => {
-            this.roomArray[x][y] = new coffinTile_1.CoffinTile(this, x, y, 0);
-            this.roomArray[x][y + 1] = new coffinTile_1.CoffinTile(this, x, y + 1, 1);
-        };
-        this.populateCoffin = (rand) => {
-            this.addRandomTorches("medium");
-            this.placeCoffin(Math.floor(this.roomX + this.width / 2 - 2), Math.floor(this.roomY + this.height / 2));
-            this.placeCoffin(Math.floor(this.roomX + this.width / 2), Math.floor(this.roomY + this.height / 2));
-            this.placeCoffin(Math.floor(this.roomX + this.width / 2) + 2, Math.floor(this.roomY + this.height / 2));
         };
         this.populatePuzzle = (rand) => {
             let d;
@@ -21306,7 +21263,6 @@ class Room {
                 if (t)
                     this.entities.push(new crate_1.Crate(this, this.game, t.x, t.y));
             }
-            this.addPlants(game_1.Game.randTable([0, 0, 0, 0, 0, 1, 1, 2, 2, 3, 4], rand), rand);
             this.removeDoorObstructions();
         };
         this.populateSpikeCorridor = (rand) => {
@@ -21317,11 +21273,6 @@ class Room {
             }
             this.removeDoorObstructions();
             this.addRandomTorches("medium");
-        };
-        this.populateTreasure = (rand) => {
-            this.addRandomTorches("medium");
-            this.addChests(game_1.Game.randTable([4, 4, 5, 5, 5, 6, 8], rand), rand);
-            this.addPlants(game_1.Game.randTable([0, 1, 2, 4, 5, 6], rand), rand);
         };
         this.populateCave = (rand) => {
             let factor = game_1.Game.rand(1, 36, rand);
@@ -21432,13 +21383,6 @@ class Room {
                     }
                     this.populateEmpty(rand);
                     this.name = "FLOOR " + -this.depth;
-                    if (this.level.environment.type === environment_1.EnvType.CAVE) {
-                        const { x, y } = this.getRoomCenter();
-                        let sign = Math.random() < 0.5 ? -1 : 1;
-                        let offsetX = Math.floor(Math.random()) * sign;
-                        let offsetY = offsetX !== 0 ? 0 : sign;
-                        //this.items.push(new Pickaxe(this, x + offsetX, y + offsetY));
-                    }
                     break;
                 case RoomType.BOSS:
                     this.populateBoss(rand);
@@ -21459,9 +21403,6 @@ class Room {
                 case RoomType.FOUNTAIN:
                     this.populateFountain(rand);
                     break;
-                case RoomType.COFFIN:
-                    this.populateCoffin(rand);
-                    break;
                 case RoomType.PUZZLE:
                     this.populatePuzzle(rand);
                     break;
@@ -21469,7 +21410,6 @@ class Room {
                     this.populateSpikeCorridor(rand);
                     break;
                 case RoomType.TREASURE:
-                    this.populateTreasure(rand);
                     break;
                 case RoomType.KEYROOM:
                     this.populateKeyRoom(rand);
@@ -21497,17 +21437,6 @@ class Room {
                     this.populateRopeCave(rand);
                     break;
                 case RoomType.SHOP:
-                    /* shop rates:
-                     * 10 coal for an gold coin
-                     * 1 gold for 10 coins
-                     * 1 emerald for 100 coins
-                     *
-                     * shop items:
-                     * 1 empty heart   4 ^ (maxHealth + maxHealth ^ 1.05 ^ maxHealth - 2.05) coins
-                     * fill all hearts  1 coin
-                     * better torch    5 ^ (torchLevel + 1.05 ^ torchLevel - 2.05) coins
-                     * weapons
-                     */
                     this.populateShop(rand);
                     break;
                 case RoomType.SPAWNER:
@@ -21556,6 +21485,7 @@ class Room {
             }
         };
         this.onEnterRoom = (player) => {
+            console.log("roomType", this.type.toString());
             this.enableFuseSounds();
             for (let room of this.level.rooms) {
                 room.roomOnScreen(player);
@@ -22679,7 +22609,7 @@ class Room {
         this.getBossDoor = () => {
             for (const door of this.doors) {
                 if (door.linkedDoor.room.type === RoomType.DOWNLADDER)
-                    return { x: door.x, y: door.y };
+                    return { x: door.x, y: door.y, doorDir: door.doorDir };
                 console.log("found boss door", door.linkedDoor.room.type);
             }
             return null;
@@ -23001,6 +22931,27 @@ class Room {
         this.builder = new roomBuilder_1.RoomBuilder(this);
         // #endregion
     }
+    addDoorTorches(x, y, doorDir) {
+        console.log(`Adding door torches at x:${x}, y:${y}, direction:${doorDir}`);
+        if (doorDir !== game_1.Direction.UP && doorDir !== game_1.Direction.DOWN) {
+            console.log("Door direction not UP/DOWN, skipping torch placement");
+            return;
+        }
+        if (x && y) {
+            console.log("Checking wall info for torch placement");
+            const leftOpen = !this.wallInfo.get(`${x - 1},${y}`)?.isLeftWall;
+            const rightOpen = !this.wallInfo.get(`${x + 1},${y}`)?.isRightWall;
+            console.log(`Left wall open: ${leftOpen}, Right wall open: ${rightOpen}`);
+            if (leftOpen) {
+                console.log(`Placing torch on left wall at x:${x - 1}, y:${y}`);
+                this.roomArray[x - 1][y] = new wallTorch_1.WallTorch(this, x - 1, y);
+            }
+            if (rightOpen) {
+                console.log(`Placing torch on right wall at x:${x + 1}, y:${y}`);
+                this.roomArray[x + 1][y] = new wallTorch_1.WallTorch(this, x + 1, y);
+            }
+        }
+    }
     addTorches(numTorches, rand, placeX, placeY) {
         if (this.level.environment.type === environment_1.EnvType.FOREST &&
             this.type !== RoomType.DOWNLADDER)
@@ -23029,18 +22980,21 @@ class Room {
                 bottomWalls.push(this.roomArray[xx][yy]);
             }
         }
-        for (let i = 0; i < numTorches; i++) {
+        // Randomly distribute torches between walls and bottom walls
+        const wallTorches = game_1.Game.rand(0, numTorches, rand);
+        const bottomWallTorches = numTorches - wallTorches;
+        for (let i = 0; i < wallTorches; i++) {
             if (walls.length == 0)
-                return;
+                break;
             const randomIndex = game_1.Game.rand(0, walls.length - 1, rand);
             const t = walls.splice(randomIndex, 1)[0];
             const x = t.x;
             const y = t.y;
             this.roomArray[x][y] = new wallTorch_1.WallTorch(this, x, y);
         }
-        for (let i = 0; i < numTorches; i++) {
+        for (let i = 0; i < bottomWallTorches; i++) {
             if (bottomWalls.length == 0)
-                return;
+                break;
             const randomIndex = game_1.Game.rand(0, bottomWalls.length - 1, rand);
             const t = bottomWalls.splice(randomIndex, 1)[0];
             const x = t.x;
@@ -23331,82 +23285,11 @@ class Room {
             this.entities.push(new chest_1.Chest(this, this.game, x, y));
         }
     }
-    addObstacles(numObstacles, rand) {
-        return;
-        // add crates/barrels
-        let tiles = this.getEmptyTiles();
-        for (let i = 0; i < numObstacles; i++) {
-            const { x, y } = this.getRandomEmptyPosition(tiles);
-            const env = this.level.environment.type; //bootleg variable to start to vary the environments
-            switch (game_1.Game.randTable([
-                1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 5, 5, 5,
-                6, 6, 6, 6, 6, 6, 6,
-            ], rand)) {
-                case 1:
-                    if (env === environment_1.EnvType.FOREST)
-                        break;
-                    crate_1.Crate.add(this, this.game, x, y);
-                    break;
-                case 2:
-                    if (env === environment_1.EnvType.FOREST)
-                        break;
-                    barrel_1.Barrel.add(this, this.game, x, y);
-                    break;
-                case 3:
-                    if (env === environment_1.EnvType.CAVE)
-                        break;
-                    tombStone_1.TombStone.add(this, this.game, x, y, 1);
-                    break;
-                case 4:
-                    if (env === environment_1.EnvType.CAVE)
-                        break;
-                    tombStone_1.TombStone.add(this, this.game, x, y, 0);
-                    break;
-                case 5:
-                    if (env === environment_1.EnvType.CAVE)
-                        break;
-                    pumpkin_1.Pumpkin.add(this, this.game, x, y);
-                    break;
-                case 6:
-                    block_1.Block.add(this, this.game, x, y);
-                    break;
-            }
-        }
-    }
     addBombs(numBombs, rand) {
         let tiles = this.getEmptyTiles();
         for (let i = 0; i < this.getEmptyTiles().length; i++) {
             const { x, y } = this.getRandomEmptyPosition(tiles);
             bomb_1.Bomb.add(this, this.game, x, y);
-        }
-    }
-    addPlants(numPlants, rand) {
-        return;
-        let tiles = this.getEmptyTiles();
-        for (let i = 0; i < numPlants; i++) {
-            const { x, y } = this.getRandomEmptyPosition(tiles);
-            let r = rand();
-            if (r <= 0.45)
-                pot_1.Pot.add(this, this.game, x, y);
-            else if (r <= 0.65)
-                pottedPlant_1.PottedPlant.add(this, this.game, x, y);
-            else if (r <= 0.75)
-                rockResource_1.Rock.add(this, this.game, x, y);
-            else if (r <= 0.85)
-                mushrooms_1.Mushrooms.add(this, this.game, x, y);
-            else if (r <= 0.95)
-                bush_1.Bush.add(this, this.game, x, y);
-            else if (r <= 0.975)
-                sprout_1.Sprout.add(this, this.game, x, y);
-            else
-                chest_1.Chest.add(this, this.game, x, y);
-        }
-    }
-    addDecorations(numDecorations, rand) {
-        let tiles = this.getEmptyTiles();
-        for (let i = 0; i < numDecorations; i++) {
-            const { x, y } = this.getRandomEmptyPosition(tiles);
-            this.decorations.push(new puddle_1.Puddle(this, x, y));
         }
     }
     addResources(numResources, rand) {
@@ -23461,16 +23344,6 @@ class Room {
         };
         const randTorches = game_1.Game.randTable(torchPatterns[intensity], random_1.Random.rand);
         this.addTorches(randTorches, random_1.Random.rand);
-    }
-    // Used in populateDungeon, populateCave, etc. NOT IN USE
-    populateWithEntities(config) {
-        const numEmptyTiles = this.getEmptyTiles().length;
-        const numEnemies = Math.ceil(numEmptyTiles * config.enemyDensity);
-        const numObstacles = Math.ceil(numEmptyTiles * config.obstacleDensity);
-        const numPlants = Math.ceil(numEmptyTiles * config.plantDensity);
-        this.addEnemies(numEnemies, random_1.Random.rand);
-        this.addObstacles(numObstacles, random_1.Random.rand);
-        this.addPlants(numPlants, random_1.Random.rand);
     }
     /**
      * Applies Gaussian blur to the specified offscreen canvas.
@@ -24585,49 +24458,6 @@ exports.Chasm = Chasm;
 
 /***/ }),
 
-/***/ "./src/tile/coffinTile.ts":
-/*!********************************!*\
-  !*** ./src/tile/coffinTile.ts ***!
-  \********************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.CoffinTile = void 0;
-const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-const tile_1 = __webpack_require__(/*! ./tile */ "./src/tile/tile.ts");
-class CoffinTile extends tile_1.Tile {
-    constructor(room, x, y, subTileY) {
-        super(room, x, y);
-        this.isSolid = () => {
-            return true;
-        };
-        this.canCrushEnemy = () => {
-            return true;
-        };
-        this.draw = (delta) => {
-            if (this.subTileY === 0) {
-                game_1.Game.drawTile(0, 5, 1, 1, this.x - 1, this.y - 1, 1, 1, this.room.shadeColor, this.shadeAmount());
-                game_1.Game.drawTile(1, 5, 1, 1, this.x, this.y - 1, 1, 1, this.room.shadeColor, this.shadeAmount());
-                game_1.Game.drawTile(2, 5, 1, 1, this.x + 1, this.y - 1, 1, 1, this.room.shadeColor, this.shadeAmount());
-                game_1.Game.drawTile(0, 6, 1, 1, this.x - 1, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
-                game_1.Game.drawTile(1, 6, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
-                game_1.Game.drawTile(2, 6, 1, 1, this.x + 1, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
-            }
-            else {
-                game_1.Game.drawTile(0, 7, 1, 1, this.x - 1, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
-                game_1.Game.drawTile(1, 7, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
-                game_1.Game.drawTile(2, 7, 1, 1, this.x + 1, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
-            }
-        };
-        this.subTileY = subTileY;
-    }
-}
-exports.CoffinTile = CoffinTile;
-
-
-/***/ }),
-
 /***/ "./src/tile/decorations/decoration.ts":
 /*!********************************************!*\
   !*** ./src/tile/decorations/decoration.ts ***!
@@ -24694,72 +24524,6 @@ exports.Decoration = Decoration;
 
 /***/ }),
 
-/***/ "./src/tile/decorations/puddle.ts":
-/*!****************************************!*\
-  !*** ./src/tile/decorations/puddle.ts ***!
-  \****************************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Puddle = exports.SkinType = void 0;
-const gameConstants_1 = __webpack_require__(/*! ../../game/gameConstants */ "./src/game/gameConstants.ts");
-const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-const decoration_1 = __webpack_require__(/*! ./decoration */ "./src/tile/decorations/decoration.ts");
-var SkinType;
-(function (SkinType) {
-    SkinType[SkinType["DUNGEON"] = 0] = "DUNGEON";
-    SkinType[SkinType["CAVE"] = 1] = "CAVE";
-    SkinType[SkinType["FOREST"] = 2] = "FOREST";
-    SkinType[SkinType["SWAMP"] = 3] = "SWAMP";
-    SkinType[SkinType["GLACIER"] = 4] = "GLACIER";
-    SkinType[SkinType["CASTLE"] = 5] = "CASTLE";
-})(SkinType = exports.SkinType || (exports.SkinType = {}));
-class Puddle extends decoration_1.Decoration {
-    constructor(room, x, y) {
-        super(room, x, y);
-        this.shadeAmount = (offsetX = 0, offsetY = 0) => {
-            if (gameConstants_1.GameConstants.SMOOTH_LIGHTING)
-                return 0;
-            return this.room.softVis[this.x + offsetX][this.y + offsetY];
-        };
-        this.isSolid = () => {
-            return false;
-        };
-        this.canCrushEnemy = () => {
-            return false;
-        };
-        this.isOpaque = () => {
-            return false;
-        };
-        this.onCollide = (player) => { };
-        this.onCollideEnemy = (enemy) => { };
-        this.tick = () => { };
-        this.tickEnd = () => { };
-        this.draw = (delta) => { };
-        this.drawUnderPlayer = (delta) => {
-            let tileY = 1;
-            if (this.applySkin)
-                tileY = this.skin;
-            game_1.Game.drawTile(1, tileY, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
-        };
-        this.drawAbovePlayer = (delta) => { };
-        this.drawAboveShading = (delta) => { };
-        this.skin = room.skin;
-        this.room = room;
-        this.x = x;
-        this.y = y;
-        this.drawableY = y;
-        this.isDoor = false;
-        this.opacity = 1;
-        this.applySkin = false;
-    }
-}
-exports.Puddle = Puddle;
-
-
-/***/ }),
-
 /***/ "./src/tile/door.ts":
 /*!**************************!*\
   !*** ./src/tile/door.ts ***!
@@ -24775,6 +24539,7 @@ const tile_1 = __webpack_require__(/*! ./tile */ "./src/tile/tile.ts");
 const key_1 = __webpack_require__(/*! ../item/key */ "./src/item/key.ts");
 const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts");
 const lightSource_1 = __webpack_require__(/*! ../lighting/lightSource */ "./src/lighting/lightSource.ts");
+const gameplaySettings_1 = __webpack_require__(/*! ../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
 var DoorDir;
 (function (DoorDir) {
     DoorDir["North"] = "North";
@@ -25010,6 +24775,8 @@ class Door extends tile_1.Tile {
         this.room.lightSources.push(this.lightSource);
         switch (this.type) {
             case DoorType.GUARDEDDOOR:
+                if (gameplaySettings_1.GameplaySettings.NO_ENEMIES)
+                    break;
                 this.guard();
                 break;
             case DoorType.LOCKEDDOOR:

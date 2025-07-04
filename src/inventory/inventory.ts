@@ -551,7 +551,6 @@ export class Inventory {
     const g = -2; // gap
     const quickbarWidth = this.cols * (s + 2 * b + g) - g;
     const quickbarRightEdge = quickbarStartX + quickbarWidth;
-    console.log(Game.measureText(this.coins.toString()).width);
     // Position coin slightly to the right of the quickbar
     let coinX = (quickbarRightEdge - 5) / GameConstants.TILESIZE - 1;
     let coinY = GameConstants.HEIGHT / GameConstants.TILESIZE - 1.3;

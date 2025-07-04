@@ -7,6 +7,7 @@ import { EntityType } from "../entity/entity";
 import { Key } from "../item/key";
 import { Sound } from "../sound/sound";
 import { LightSource } from "../lighting/lightSource";
+import { GameplaySettings } from "../game/gameplaySettings";
 
 export enum DoorDir {
   North = "North",
@@ -84,6 +85,7 @@ export class Door extends Tile {
 
     switch (this.type) {
       case DoorType.GUARDEDDOOR:
+        if (GameplaySettings.NO_ENEMIES) break;
         this.guard();
         break;
       case DoorType.LOCKEDDOOR:

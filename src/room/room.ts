@@ -151,32 +151,32 @@ export const EnemyTypeMap: { [key in EnemyType]: EnemyStatic } = {
 };
 
 export enum RoomType {
-  START,
-  DUNGEON,
-  BOSS,
-  BIGDUNGEON,
-  TREASURE,
-  FOUNTAIN,
-  COFFIN,
-  GRASS,
-  PUZZLE,
-  KEYROOM,
-  CHESSBOARD,
-  MAZE,
-  CORRIDOR,
-  SPIKECORRIDOR,
-  UPLADDER,
-  DOWNLADDER,
-  SHOP,
-  BIGCAVE,
-  CAVE,
-  SPAWNER,
-  ROPEHOLE,
-  ROPECAVE,
-  TUTORIAL,
-  GRAVEYARD,
-  FOREST,
-  ROPEUP,
+  START = "START",
+  DUNGEON = "DUNGEON",
+  BOSS = "BOSS",
+  BIGDUNGEON = "BIGDUNGEON",
+  TREASURE = "TREASURE",
+  FOUNTAIN = "FOUNTAIN",
+  COFFIN = "COFFIN",
+  GRASS = "GRASS",
+  PUZZLE = "PUZZLE",
+  KEYROOM = "KEYROOM",
+  CHESSBOARD = "CHESSBOARD",
+  MAZE = "MAZE",
+  CORRIDOR = "CORRIDOR",
+  SPIKECORRIDOR = "SPIKECORRIDOR",
+  UPLADDER = "UPLADDER",
+  DOWNLADDER = "DOWNLADDER",
+  SHOP = "SHOP",
+  BIGCAVE = "BIGCAVE",
+  CAVE = "CAVE",
+  SPAWNER = "SPAWNER",
+  ROPEHOLE = "ROPEHOLE",
+  ROPECAVE = "ROPECAVE",
+  TUTORIAL = "TUTORIAL",
+  GRAVEYARD = "GRAVEYARD",
+  FOREST = "FOREST",
+  ROPEUP = "ROPEUP",
 }
 
 export enum TurnState {
@@ -431,6 +431,33 @@ export class Room {
     //this.outerWalls = this.outerWalls.filter((w) => w.x !== x && w.y !== y);
   };
 
+  private addDoorTorches(x: number, y: number, doorDir: Direction) {
+    console.log(`Adding door torches at x:${x}, y:${y}, direction:${doorDir}`);
+
+    if (doorDir !== Direction.UP && doorDir !== Direction.DOWN) {
+      console.log("Door direction not UP/DOWN, skipping torch placement");
+      return;
+    }
+
+    if (x && y) {
+      console.log("Checking wall info for torch placement");
+      const leftOpen = !this.wallInfo.get(`${x - 1},${y}`)?.isLeftWall;
+      const rightOpen = !this.wallInfo.get(`${x + 1},${y}`)?.isRightWall;
+
+      console.log(`Left wall open: ${leftOpen}, Right wall open: ${rightOpen}`);
+
+      if (leftOpen) {
+        console.log(`Placing torch on left wall at x:${x - 1}, y:${y}`);
+        this.roomArray[x - 1][y] = new WallTorch(this, x - 1, y);
+      }
+
+      if (rightOpen) {
+        console.log(`Placing torch on right wall at x:${x + 1}, y:${y}`);
+        this.roomArray[x + 1][y] = new WallTorch(this, x + 1, y);
+      }
+    }
+  }
+
   private addTorches(
     numTorches: number,
     rand: () => number,
@@ -476,16 +503,20 @@ export class Room {
       }
     }
 
-    for (let i = 0; i < numTorches; i++) {
-      if (walls.length == 0) return;
+    // Randomly distribute torches between walls and bottom walls
+    const wallTorches = Game.rand(0, numTorches, rand);
+    const bottomWallTorches = numTorches - wallTorches;
+
+    for (let i = 0; i < wallTorches; i++) {
+      if (walls.length == 0) break;
       const randomIndex = Game.rand(0, walls.length - 1, rand);
       const t = walls.splice(randomIndex, 1)[0];
       const x = t.x;
       const y = t.y;
       this.roomArray[x][y] = new WallTorch(this, x, y);
     }
-    for (let i = 0; i < numTorches; i++) {
-      if (bottomWalls.length == 0) return;
+    for (let i = 0; i < bottomWallTorches; i++) {
+      if (bottomWalls.length == 0) break;
       const randomIndex = Game.rand(0, bottomWalls.length - 1, rand);
       const t = bottomWalls.splice(randomIndex, 1)[0];
       const x = t.x;
@@ -902,82 +933,11 @@ export class Room {
     }
   }
 
-  private addObstacles(numObstacles: number, rand: () => number) {
-    return;
-    // add crates/barrels
-    let tiles = this.getEmptyTiles();
-    for (let i = 0; i < numObstacles; i++) {
-      const { x, y } = this.getRandomEmptyPosition(tiles);
-      const env = this.level.environment.type; //bootleg variable to start to vary the environments
-      switch (
-        Game.randTable(
-          [
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 5, 5, 5,
-            6, 6, 6, 6, 6, 6, 6,
-          ],
-          rand,
-        )
-      ) {
-        case 1:
-          if (env === EnvType.FOREST) break;
-          Crate.add(this, this.game, x, y);
-          break;
-        case 2:
-          if (env === EnvType.FOREST) break;
-
-          Barrel.add(this, this.game, x, y);
-          break;
-        case 3:
-          if (env === EnvType.CAVE) break;
-          TombStone.add(this, this.game, x, y, 1);
-          break;
-        case 4:
-          if (env === EnvType.CAVE) break;
-
-          TombStone.add(this, this.game, x, y, 0);
-          break;
-        case 5:
-          if (env === EnvType.CAVE) break;
-
-          Pumpkin.add(this, this.game, x, y);
-          break;
-        case 6:
-          Block.add(this, this.game, x, y);
-          break;
-      }
-    }
-  }
-
   addBombs(numBombs: number, rand: () => number) {
     let tiles = this.getEmptyTiles();
     for (let i = 0; i < this.getEmptyTiles().length; i++) {
       const { x, y } = this.getRandomEmptyPosition(tiles);
       Bomb.add(this, this.game, x, y);
-    }
-  }
-
-  private addPlants(numPlants: number, rand: () => number) {
-    return;
-    let tiles = this.getEmptyTiles();
-    for (let i = 0; i < numPlants; i++) {
-      const { x, y } = this.getRandomEmptyPosition(tiles);
-
-      let r = rand();
-      if (r <= 0.45) Pot.add(this, this.game, x, y);
-      else if (r <= 0.65) PottedPlant.add(this, this.game, x, y);
-      else if (r <= 0.75) Rock.add(this, this.game, x, y);
-      else if (r <= 0.85) Mushrooms.add(this, this.game, x, y);
-      else if (r <= 0.95) Bush.add(this, this.game, x, y);
-      else if (r <= 0.975) Sprout.add(this, this.game, x, y);
-      else Chest.add(this, this.game, x, y);
-    }
-  }
-
-  private addDecorations(numDecorations: number, rand: () => number) {
-    let tiles = this.getEmptyTiles();
-    for (let i = 0; i < numDecorations; i++) {
-      const { x, y } = this.getRandomEmptyPosition(tiles);
-      this.decorations.push(new Puddle(this, x, y));
     }
   }
 
@@ -1072,13 +1032,6 @@ export class Room {
     this.addTorchesByArea();
     if (factor > 15)
       this.addSpikeTraps(Game.randTable([0, 0, 0, 1, 1, 2, 3], rand), rand);
-    let numEmptyTiles = this.getEmptyTiles().length;
-    let numTotalObstacles = Math.floor(numEmptyTiles * 0.35 * rand());
-    let numPlants = Math.ceil(numTotalObstacles * rand());
-    let numObstacles = numTotalObstacles - numPlants;
-    this.addPlants(numPlants, rand);
-    //this.addDecorations(Game.randTable([0, 0, 0, 1, 1, 2, 3], rand), rand);
-    this.addObstacles(numObstacles, rand);
 
     if (factor <= 6) this.addVendingMachine(rand);
     this.addRandomEnemies();
@@ -1087,16 +1040,10 @@ export class Room {
   };
 
   populateBoss = (rand: () => number) => {
+    const bossDoor = this.getBossDoor();
+    this.addDoorTorches(bossDoor.x, bossDoor.y, bossDoor.doorDir);
     this.addTorchesByArea();
-
     this.addSpikeTraps(Game.randTable([0, 0, 0, 1, 1, 2, 5], rand), rand);
-    let numEmptyTiles = this.getEmptyTiles().length;
-    let numTotalObstacles = Math.floor(numEmptyTiles * 0.2);
-    let numPlants = Math.floor(numTotalObstacles * rand());
-    let numObstacles = numTotalObstacles - numPlants;
-    this.addPlants(numPlants, rand);
-    this.addObstacles(numObstacles, rand);
-
     this.addBosses(this.depth);
     this.addRandomEnemies();
   };
@@ -1105,16 +1052,10 @@ export class Room {
     if (Game.rand(1, 4, rand) === 1) this.addChasms(rand);
     this.addTorchesByArea();
 
-    if (Game.rand(1, 4, rand) === 1)
-      this.addPlants(
-        Game.randTable([0, 0, 0, 0, 0, 1, 1, 2, 2, 3, 4], rand),
-        rand,
-      );
     if (Game.rand(1, 3, rand) === 1)
       this.addSpikeTraps(Game.randTable([3, 5, 7, 8], rand), rand);
     this.addRandomEnemies();
 
-    this.addObstacles(Game.randTable([0, 0, 1, 1, 2, 3, 5], rand), rand);
     this.removeDoorObstructions();
   };
 
@@ -1158,30 +1099,6 @@ export class Room {
         );
       }
     }
-
-    this.addPlants(Game.randTable([0, 0, 1, 2], rand), rand);
-  };
-
-  placeCoffin = (x: number, y: number) => {
-    this.roomArray[x][y] = new CoffinTile(this, x, y, 0);
-    this.roomArray[x][y + 1] = new CoffinTile(this, x, y + 1, 1);
-  };
-
-  populateCoffin = (rand: () => number) => {
-    this.addRandomTorches("medium");
-
-    this.placeCoffin(
-      Math.floor(this.roomX + this.width / 2 - 2),
-      Math.floor(this.roomY + this.height / 2),
-    );
-    this.placeCoffin(
-      Math.floor(this.roomX + this.width / 2),
-      Math.floor(this.roomY + this.height / 2),
-    );
-    this.placeCoffin(
-      Math.floor(this.roomX + this.width / 2) + 2,
-      Math.floor(this.roomY + this.height / 2),
-    );
   };
 
   populatePuzzle = (rand: () => number) => {
@@ -1222,10 +1139,7 @@ export class Room {
       )[0];
       if (t) this.entities.push(new Crate(this, this.game, t.x, t.y));
     }
-    this.addPlants(
-      Game.randTable([0, 0, 0, 0, 0, 1, 1, 2, 2, 3, 4], rand),
-      rand,
-    );
+
     this.removeDoorObstructions();
   };
 
@@ -1237,13 +1151,6 @@ export class Room {
     }
     this.removeDoorObstructions();
     this.addRandomTorches("medium");
-  };
-
-  populateTreasure = (rand: () => number) => {
-    this.addRandomTorches("medium");
-
-    this.addChests(Game.randTable([4, 4, 5, 5, 5, 6, 8], rand), rand);
-    this.addPlants(Game.randTable([0, 1, 2, 4, 5, 6], rand), rand);
   };
 
   populateCave = (rand: () => number) => {
@@ -1396,22 +1303,6 @@ export class Room {
     this.addTorches(numTorches, Random.rand);
   };
 
-  // Used in populateDungeon, populateCave, etc. NOT IN USE
-  private populateWithEntities(config: {
-    enemyDensity: number;
-    obstacleDensity: number;
-    plantDensity: number;
-  }): void {
-    const numEmptyTiles = this.getEmptyTiles().length;
-    const numEnemies = Math.ceil(numEmptyTiles * config.enemyDensity);
-    const numObstacles = Math.ceil(numEmptyTiles * config.obstacleDensity);
-    const numPlants = Math.ceil(numEmptyTiles * config.plantDensity);
-
-    this.addEnemies(numEnemies, Random.rand);
-    this.addObstacles(numObstacles, Random.rand);
-    this.addPlants(numPlants, Random.rand);
-  }
-
   populate = (rand: () => number) => {
     this.name = "";
     switch (this.type) {
@@ -1423,13 +1314,7 @@ export class Room {
 
         this.populateEmpty(rand);
         this.name = "FLOOR " + -this.depth;
-        if (this.level.environment.type === EnvType.CAVE) {
-          const { x, y } = this.getRoomCenter();
-          let sign = Math.random() < 0.5 ? -1 : 1;
-          let offsetX = Math.floor(Math.random()) * sign;
-          let offsetY = offsetX !== 0 ? 0 : sign;
-          //this.items.push(new Pickaxe(this, x + offsetX, y + offsetY));
-        }
+
         break;
       case RoomType.BOSS:
         this.populateBoss(rand);
@@ -1451,9 +1336,6 @@ export class Room {
       case RoomType.FOUNTAIN:
         this.populateFountain(rand);
         break;
-      case RoomType.COFFIN:
-        this.populateCoffin(rand);
-        break;
       case RoomType.PUZZLE:
         this.populatePuzzle(rand);
         break;
@@ -1461,7 +1343,6 @@ export class Room {
         this.populateSpikeCorridor(rand);
         break;
       case RoomType.TREASURE:
-        this.populateTreasure(rand);
         break;
       case RoomType.KEYROOM:
         this.populateKeyRoom(rand);
@@ -1490,18 +1371,6 @@ export class Room {
         this.populateRopeCave(rand);
         break;
       case RoomType.SHOP:
-        /* shop rates:
-         * 10 coal for an gold coin
-         * 1 gold for 10 coins
-         * 1 emerald for 100 coins
-         *
-         * shop items:
-         * 1 empty heart   4 ^ (maxHealth + maxHealth ^ 1.05 ^ maxHealth - 2.05) coins
-         * fill all hearts  1 coin
-         * better torch    5 ^ (torchLevel + 1.05 ^ torchLevel - 2.05) coins
-         * weapons
-         */
-
         this.populateShop(rand);
         break;
       case RoomType.SPAWNER:
@@ -1563,6 +1432,7 @@ export class Room {
   };
 
   onEnterRoom = (player: Player) => {
+    console.log("roomType", this.type.toString());
     this.enableFuseSounds();
     for (let room of this.level.rooms) {
       room.roomOnScreen(player);
@@ -3121,7 +2991,7 @@ export class Room {
   getBossDoor = () => {
     for (const door of this.doors) {
       if (door.linkedDoor.room.type === RoomType.DOWNLADDER)
-        return { x: door.x, y: door.y };
+        return { x: door.x, y: door.y, doorDir: door.doorDir };
       console.log("found boss door", door.linkedDoor.room.type);
     }
     return null;
