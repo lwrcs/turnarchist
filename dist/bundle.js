@@ -5133,56 +5133,58 @@ class Spawner extends enemy_1.Enemy {
         this.spawnOffset = 0;
         this.dropChance = 1;
         this.chainPushable = false;
+        this.getDrop(["reaper"], true);
+        /*
         switch (this.enemySpawnType) {
-            case 0:
-                this.getDrop(["consumable"], true);
-                break;
-            case 1:
-                this.getDrop(["gem"], true);
-                break;
-            case 2:
-                this.getDrop(["consumable"], true);
-                break;
-            case 3:
-                this.getDrop(["gem"], true);
-                break;
-            case 4:
-                this.getDrop(["gem"], true);
-                break;
-            case 5:
-                this.getDrop(["consumable"], true);
-                break;
-            case 6:
-                this.getDrop(["gem"], true);
-                break;
-            case 7:
-                this.getDrop(["gem"], true);
-                break;
-            case 8:
-                this.getDrop(["gem"], true);
-                break;
-            case 9:
-                this.getDrop(["equipment", "weapon", "tool"], true);
-                break;
-            case 10:
-                this.getDrop(["weapon"], true);
-                break;
-            case 11:
-                this.getDrop(["weapon"], true);
-                break;
-            case 12:
-                this.getDrop(["weapon"], true);
-                break;
-            case 13:
-                this.getDrop(["weapon"], true);
-                break;
-            case 14:
-                this.getDrop(["weapon"], true);
-                break;
-            case 16:
-                this.getDrop(["weapon", "equipment"], true);
-                break;
-        }
+          case 0:
+            this.getDrop(["consumable"], true);
+            break;
+          case 1:
+            this.getDrop(["gem"], true);
+            break;
+          case 2:
+            this.getDrop(["consumable"], true);
+            break;
+          case 3:
+            this.getDrop(["gem"], true);
+            break;
+          case 4:
+            this.getDrop(["gem"], true);
+            break;
+          case 5:
+            this.getDrop(["consumable"], true);
+            break;
+          case 6:
+            this.getDrop(["gem"], true);
+            break;
+          case 7:
+            this.getDrop(["gem"], true);
+            break;
+          case 8:
+            this.getDrop(["gem"], true);
+            break;
+          case 9:
+            this.getDrop(["equipment", "weapon", "tool"], true);
+            break;
+          case 10:
+            this.getDrop(["weapon"], true);
+            break;
+          case 11:
+            this.getDrop(["weapon"], true);
+            break;
+          case 12:
+            this.getDrop(["weapon"], true);
+            break;
+          case 13:
+            this.getDrop(["weapon"], true);
+            break;
+          case 14:
+            this.getDrop(["weapon"], true);
+            break;
+          case 16:
+            this.getDrop(["weapon", "equipment"], true);
+            break;
+        }*/
         this.name = "reaper";
     }
 }
@@ -13942,12 +13944,16 @@ const bombItem_1 = __webpack_require__(/*! ./bombItem */ "./src/item/bombItem.ts
 const greataxe_1 = __webpack_require__(/*! ./weapon/greataxe */ "./src/item/weapon/greataxe.ts");
 const utils_1 = __webpack_require__(/*! ../utility/utils */ "./src/utility/utils.ts");
 const geode_1 = __webpack_require__(/*! ./resource/geode */ "./src/item/resource/geode.ts");
+const scythe_1 = __webpack_require__(/*! ./weapon/scythe */ "./src/item/weapon/scythe.ts");
+const hourglass_1 = __webpack_require__(/*! ./usable/hourglass */ "./src/item/usable/hourglass.ts");
 exports.ItemTypeMap = {
     dualdagger: dualdagger_1.DualDagger,
     warhammer: warhammer_1.Warhammer,
     spear: spear_1.Spear,
     spellbook: spellbook_1.Spellbook,
     greataxe: greataxe_1.Greataxe,
+    scythe: scythe_1.Scythe,
+    hourglass: hourglass_1.Hourglass,
     armor: armor_1.Armor,
     pickaxe: pickaxe_1.Pickaxe,
     hammer: hammer_1.Hammer,
@@ -13980,12 +13986,18 @@ DropTable.drops = [
     { itemType: "warhammer", dropRate: 250, category: ["weapon", "melee"] },
     { itemType: "spear", dropRate: 150, category: ["weapon", "melee"] },
     { itemType: "spellbook", dropRate: 250, category: ["weapon", "magic"] },
-    { itemType: "greataxe", dropRate: 500, category: ["weapon", "melee"] },
+    { itemType: "greataxe", dropRate: 50, category: ["weapon", "melee"] },
+    {
+        itemType: "scythe",
+        dropRate: 10,
+        category: ["weapon", "melee", "reaper"],
+    },
     // Equipment
     { itemType: "armor", dropRate: 350, category: ["equipment"] },
     // Tools
     { itemType: "pickaxe", dropRate: 25, category: ["tool"] },
     { itemType: "hammer", dropRate: 25, category: ["tool"] },
+    { itemType: "hourglass", dropRate: 10, category: ["tool", "reaper"] },
     // Consumables
     { itemType: "heart", dropRate: 20, category: ["consumable"] },
     { itemType: "weaponpoison", dropRate: 100, category: ["consumable"] },
@@ -15912,7 +15924,7 @@ class Spear extends weapon_1.Weapon {
             }
             if (!flag && enemyHitCandidates.length > 0) {
                 for (const e of enemyHitCandidates) {
-                    this.attack(e, 1);
+                    this.attack(e);
                 }
                 this.hitSound();
                 this.attackAnimation(newX2, newY2);

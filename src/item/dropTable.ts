@@ -29,6 +29,8 @@ import { Random } from "../utility/random";
 import { Game } from "../game";
 import { Utils } from "../utility/utils";
 import { Geode } from "./resource/geode";
+import { Scythe } from "./weapon/scythe";
+import { Hourglass } from "./usable/hourglass";
 
 interface Drop {
   itemType: string;
@@ -43,6 +45,8 @@ export const ItemTypeMap: { [key: string]: typeof Item } = {
   spear: Spear,
   spellbook: Spellbook,
   greataxe: Greataxe,
+  scythe: Scythe,
+  hourglass: Hourglass,
 
   armor: Armor,
 
@@ -81,7 +85,12 @@ export class DropTable {
     { itemType: "warhammer", dropRate: 250, category: ["weapon", "melee"] },
     { itemType: "spear", dropRate: 150, category: ["weapon", "melee"] },
     { itemType: "spellbook", dropRate: 250, category: ["weapon", "magic"] },
-    { itemType: "greataxe", dropRate: 500, category: ["weapon", "melee"] },
+    { itemType: "greataxe", dropRate: 50, category: ["weapon", "melee"] },
+    {
+      itemType: "scythe",
+      dropRate: 10,
+      category: ["weapon", "melee", "reaper"],
+    },
 
     // Equipment
     { itemType: "armor", dropRate: 350, category: ["equipment"] },
@@ -89,6 +98,8 @@ export class DropTable {
     // Tools
     { itemType: "pickaxe", dropRate: 25, category: ["tool"] },
     { itemType: "hammer", dropRate: 25, category: ["tool"] },
+
+    { itemType: "hourglass", dropRate: 10, category: ["tool", "reaper"] },
 
     // Consumables
     { itemType: "heart", dropRate: 20, category: ["consumable"] },

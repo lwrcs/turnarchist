@@ -44,7 +44,7 @@ export class Spear extends Weapon {
 
     if (!flag && enemyHitCandidates.length > 0) {
       for (const e of enemyHitCandidates) {
-        this.attack(e, 1);
+        this.attack(e);
       }
       this.hitSound();
       this.attackAnimation(newX2, newY2);
