@@ -40,7 +40,7 @@ export class Item extends Drawable {
   iconOffset: number;
   grouped: boolean;
   group: ItemGroup = null;
-
+  degradeable: boolean = true;
   // Constructor for the Item class
   constructor(level: Room, x: number, y: number) {
     super();
@@ -251,7 +251,7 @@ export class Item extends Drawable {
   };
 
   degrade = () => {
-    this.durability -= 1;
+    if (this.degradeable) this.durability -= 1;
   };
 
   // Function to draw the top layer of the item

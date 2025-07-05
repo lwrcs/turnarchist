@@ -91,6 +91,12 @@ export abstract class Weapon extends Equippable {
   };
 
   disassemble = () => {
+    if (!this.degradeable) {
+      this.game.pushMessage(
+        "You can't disassemble this item because it's not degradeable.",
+      );
+      return;
+    }
     if (this.equipped) {
       this.game.pushMessage(
         "I should probably unequip this before I try to disassemble it...",

@@ -89,7 +89,7 @@ export class DropTable {
     {
       itemType: "scythe",
       dropRate: 10,
-      category: ["weapon", "melee", "reaper"],
+      category: ["reaper"],
     },
 
     // Equipment
@@ -99,7 +99,7 @@ export class DropTable {
     { itemType: "pickaxe", dropRate: 25, category: ["tool"] },
     { itemType: "hammer", dropRate: 25, category: ["tool"] },
 
-    { itemType: "hourglass", dropRate: 10, category: ["tool", "reaper"] },
+    { itemType: "hourglass", dropRate: 10, category: ["reaper"] },
 
     // Consumables
     { itemType: "heart", dropRate: 20, category: ["consumable"] },

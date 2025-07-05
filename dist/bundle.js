@@ -13990,14 +13990,14 @@ DropTable.drops = [
     {
         itemType: "scythe",
         dropRate: 10,
-        category: ["weapon", "melee", "reaper"],
+        category: ["reaper"],
     },
     // Equipment
     { itemType: "armor", dropRate: 350, category: ["equipment"] },
     // Tools
     { itemType: "pickaxe", dropRate: 25, category: ["tool"] },
     { itemType: "hammer", dropRate: 25, category: ["tool"] },
-    { itemType: "hourglass", dropRate: 10, category: ["tool", "reaper"] },
+    { itemType: "hourglass", dropRate: 10, category: ["reaper"] },
     // Consumables
     { itemType: "heart", dropRate: 20, category: ["consumable"] },
     { itemType: "weaponpoison", dropRate: 100, category: ["consumable"] },
@@ -14145,6 +14145,8 @@ class Equippable extends item_1.Item {
             game_1.Game.drawItem(this.tileX, this.tileY, 1, 2, x, y - 1, this.w, this.h);
         };
         this.degrade = (degradeAmount = 1) => {
+            if (!this.degradeable)
+                return;
             this.durability -= degradeAmount * this.useCost;
             if (this.durability <= 0)
                 this.break();
@@ -14260,6 +14262,7 @@ class Item extends drawable_1.Drawable {
     constructor(level, x, y) {
         super();
         this.group = null;
+        this.degradeable = true;
         this.hoverText = () => {
             return this.name;
         };
@@ -14386,7 +14389,8 @@ class Item extends drawable_1.Drawable {
             }
         };
         this.degrade = () => {
-            this.durability -= 1;
+            if (this.degradeable)
+                this.durability -= 1;
         };
         // Function to draw the top layer of the item
         this.drawTopLayer = (delta) => {
@@ -14514,7 +14518,9 @@ class ItemGroup {
                 i.destroy();
             }
         }
+        item.degradeable = false;
         item.level.game.pushMessage(`You choose to keep the ${item.name}.`);
+        item.level.game.pushMessage(`This one won't break.`);
     }
 }
 exports.ItemGroup = ItemGroup;
@@ -16190,6 +16196,10 @@ class Weapon extends equippable_1.Equippable {
             }
         };
         this.disassemble = () => {
+            if (!this.degradeable) {
+                this.game.pushMessage("You can't disassemble this item because it's not degradeable.");
+                return;
+            }
             if (this.equipped) {
                 this.game.pushMessage("I should probably unequip this before I try to disassemble it...");
                 return;

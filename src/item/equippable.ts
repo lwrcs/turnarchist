@@ -42,6 +42,7 @@ export class Equippable extends Item {
   };
 
   degrade = (degradeAmount: number = 1) => {
+    if (!this.degradeable) return;
     this.durability -= degradeAmount * this.useCost;
     if (this.durability <= 0) this.break();
   };
