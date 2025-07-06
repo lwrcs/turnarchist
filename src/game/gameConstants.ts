@@ -31,6 +31,7 @@ import { GlowBugs } from "../item/light/glowBugs";
 import { Shotgun } from "../item/weapon/shotgun";
 import { Scythe } from "../item/weapon/scythe";
 import { Hourglass } from "../item/usable/hourglass";
+import { Gold } from "../item/resource/gold";
 
 export class GameConstants {
   static readonly VERSION = "v1.0.9"; //"v0.6.3";
@@ -224,6 +225,9 @@ export class GameConstants {
     Hammer,
     Pickaxe,
     Coal,
+    Gold,
+    GreenGem,
+    GreenGem,
 
     SpellbookPage,
     SpellbookPage,

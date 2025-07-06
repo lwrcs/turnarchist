@@ -15,5 +15,6 @@ export class ItemGroup {
     item.degradeable = false;
     item.level.game.pushMessage(`You choose to keep the ${item.name}.`);
     item.level.game.pushMessage(`This one won't break.`);
+    item.description += " Unbreakable.";
   }
 }

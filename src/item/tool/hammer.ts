@@ -9,6 +9,8 @@ import { Dagger } from "../weapon/dagger";
 import { WeaponFragments } from "../usable/weaponFragments";
 import { Geode } from "../resource/geode";
 import { Pickaxe } from "./pickaxe";
+import { GoldBar } from "../resource/goldBar";
+import { Gold } from "../resource/gold";
 export class Hammer extends Usable {
   static itemName = "hammer";
   constructor(level: Room, x: number, y: number) {
@@ -47,6 +49,14 @@ export class Hammer extends Usable {
     } else if (other.name === "pickaxe") {
       let pickaxe = other as Pickaxe;
       pickaxe.disassemble();
+    } else if (other.name === "gold bar") {
+      let goldBar = other as GoldBar;
+      goldBar.smith(player);
+      this.level.game.pushMessage(`You hammer the gold bar into a ring.`);
+    } else if (other.name === "gold") {
+      let gold = other as Gold;
+      gold.smelt(player);
+      this.level.game.pushMessage(`You form the raw gold into a bar.`);
     }
   };
 

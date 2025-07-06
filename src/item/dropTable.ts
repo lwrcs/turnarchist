@@ -36,6 +36,7 @@ interface Drop {
   itemType: string;
   dropRate: number; // 1/x chance of dropping
   category: string[];
+  unique?: boolean;
   minDepth?: number;
 }
 
@@ -81,25 +82,51 @@ export const ItemTypeMap: { [key: string]: typeof Item } = {
 export class DropTable {
   static drops: Drop[] = [
     // Weapons - Higher numbers = rarer
-    { itemType: "dualdagger", dropRate: 500, category: ["weapon", "melee"] },
-    { itemType: "warhammer", dropRate: 250, category: ["weapon", "melee"] },
-    { itemType: "spear", dropRate: 150, category: ["weapon", "melee"] },
-    { itemType: "spellbook", dropRate: 250, category: ["weapon", "magic"] },
-    { itemType: "greataxe", dropRate: 50, category: ["weapon", "melee"] },
+    {
+      itemType: "dualdagger",
+      dropRate: 500,
+      category: ["weapon", "melee"],
+      unique: true,
+    },
+    {
+      itemType: "warhammer",
+      dropRate: 250,
+      category: ["weapon", "melee"],
+      unique: true,
+    },
+    {
+      itemType: "spear",
+      dropRate: 150,
+      category: ["weapon", "melee"],
+      unique: true,
+    },
+    {
+      itemType: "spellbook",
+      dropRate: 250,
+      category: ["weapon", "magic"],
+      unique: true,
+    },
+    {
+      itemType: "greataxe",
+      dropRate: 500,
+      category: ["weapon", "melee"],
+      unique: true,
+    },
     {
       itemType: "scythe",
       dropRate: 10,
       category: ["reaper"],
+      unique: true,
     },
 
     // Equipment
-    { itemType: "armor", dropRate: 350, category: ["equipment"] },
+    { itemType: "armor", dropRate: 350, category: ["equipment"], unique: true },
 
     // Tools
     { itemType: "pickaxe", dropRate: 25, category: ["tool"] },
     { itemType: "hammer", dropRate: 25, category: ["tool"] },
 
-    { itemType: "hourglass", dropRate: 10, category: ["reaper"] },
+    { itemType: "hourglass", dropRate: 10, category: ["reaper"], unique: true },
 
     // Consumables
     { itemType: "heart", dropRate: 20, category: ["consumable"] },
@@ -164,6 +191,13 @@ export class DropTable {
     let eligibleDrops = this.drops.filter(
       (drop) => drop.minDepth === undefined || drop.minDepth <= currentDepth,
     );
+
+    // Filter out unique items if no categories are specified (default drop table)
+    if (useCategory.length === 0) {
+      eligibleDrops = eligibleDrops.filter(
+        (drop) => drop.unique === undefined || drop.unique === false,
+      );
+    }
 
     // Filter by categories or specific items if provided
     if (useCategory.length > 0) {

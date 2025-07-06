@@ -227,9 +227,9 @@ export class VendingMachine extends Entity {
 
       if (!addedSuccessfully) {
         // If adding the item failed, refund the cost items
-        for (const i of this.costItems) {
-          this.playerOpened.inventory.addItem(i);
-        }
+        //for (const i of this.costItems) {
+        //this.playerOpened.inventory.addItem(i);
+        //}
         this.game.pushMessage(
           "Your inventory is full. Cannot purchase the item.",
         );

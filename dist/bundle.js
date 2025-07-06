@@ -7897,9 +7897,9 @@ class VendingMachine extends entity_1.Entity {
                 const addedSuccessfully = this.playerOpened.inventory.addItem(newItem);
                 if (!addedSuccessfully) {
                     // If adding the item failed, refund the cost items
-                    for (const i of this.costItems) {
-                        this.playerOpened.inventory.addItem(i);
-                    }
+                    //for (const i of this.costItems) {
+                    //this.playerOpened.inventory.addItem(i);
+                    //}
                     this.game.pushMessage("Your inventory is full. Cannot purchase the item.");
                     return;
                 }
@@ -10031,9 +10031,11 @@ const warhammer_1 = __webpack_require__(/*! ../item/weapon/warhammer */ "./src/i
 const hammer_1 = __webpack_require__(/*! ../item/tool/hammer */ "./src/item/tool/hammer.ts");
 const spellbookPage_1 = __webpack_require__(/*! ../item/usable/spellbookPage */ "./src/item/usable/spellbookPage.ts");
 const greataxe_1 = __webpack_require__(/*! ../item/weapon/greataxe */ "./src/item/weapon/greataxe.ts");
+const greengem_1 = __webpack_require__(/*! ../item/resource/greengem */ "./src/item/resource/greengem.ts");
 const pickaxe_1 = __webpack_require__(/*! ../item/tool/pickaxe */ "./src/item/tool/pickaxe.ts");
 const scythe_1 = __webpack_require__(/*! ../item/weapon/scythe */ "./src/item/weapon/scythe.ts");
 const hourglass_1 = __webpack_require__(/*! ../item/usable/hourglass */ "./src/item/usable/hourglass.ts");
+const gold_1 = __webpack_require__(/*! ../item/resource/gold */ "./src/item/resource/gold.ts");
 class GameConstants {
 }
 exports.GameConstants = GameConstants;
@@ -10198,6 +10200,9 @@ GameConstants.STARTING_DEV_INVENTORY = [
     hammer_1.Hammer,
     pickaxe_1.Pickaxe,
     coal_1.Coal,
+    gold_1.Gold,
+    greengem_1.GreenGem,
+    greengem_1.GreenGem,
     spellbookPage_1.SpellbookPage,
     spellbookPage_1.SpellbookPage,
     spellbookPage_1.SpellbookPage,
@@ -12156,18 +12161,18 @@ class Menu {
         this.buttons.push(button);
     }
     draw() {
-        if (!this.open)
-            return;
-        game_1.Game.ctx.save();
-        game_1.Game.ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
-        game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
-        // Draw main menu buttons
-        this.buttons.forEach((button) => {
-            this.drawButton(button);
-        });
-        // Draw close button
-        this.drawCloseButton();
-        game_1.Game.ctx.restore();
+        if (this.open) {
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+            game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
+            // Draw main menu buttons
+            this.buttons.forEach((button) => {
+                this.drawButton(button);
+            });
+            // Draw close button
+            this.drawCloseButton();
+            game_1.Game.ctx.restore();
+        }
     }
     drawButton(button) {
         game_1.Game.ctx.save();
@@ -12940,6 +12945,24 @@ class Inventory {
                     return;
                 if (i.constructor === item.constructor) {
                     i.stackCount -= item.stackCount;
+                    if (i.stackCount <= 0) {
+                        this.items[idx] = null;
+                    }
+                }
+            });
+        };
+        this.subtractItem = (item, count) => {
+            if (item === null)
+                return;
+            if (item instanceof coin_1.Coin) {
+                this.subtractCoins(item.stackCount);
+                return;
+            }
+            this.items.forEach((i, idx) => {
+                if (i === null)
+                    return;
+                if (i.constructor === item.constructor) {
+                    i.stackCount -= count;
                     if (i.stackCount <= 0) {
                         this.items[idx] = null;
                     }
@@ -13982,22 +14005,48 @@ exports.DropTable = DropTable;
 _a = DropTable;
 DropTable.drops = [
     // Weapons - Higher numbers = rarer
-    { itemType: "dualdagger", dropRate: 500, category: ["weapon", "melee"] },
-    { itemType: "warhammer", dropRate: 250, category: ["weapon", "melee"] },
-    { itemType: "spear", dropRate: 150, category: ["weapon", "melee"] },
-    { itemType: "spellbook", dropRate: 250, category: ["weapon", "magic"] },
-    { itemType: "greataxe", dropRate: 50, category: ["weapon", "melee"] },
+    {
+        itemType: "dualdagger",
+        dropRate: 500,
+        category: ["weapon", "melee"],
+        unique: true,
+    },
+    {
+        itemType: "warhammer",
+        dropRate: 250,
+        category: ["weapon", "melee"],
+        unique: true,
+    },
+    {
+        itemType: "spear",
+        dropRate: 150,
+        category: ["weapon", "melee"],
+        unique: true,
+    },
+    {
+        itemType: "spellbook",
+        dropRate: 250,
+        category: ["weapon", "magic"],
+        unique: true,
+    },
+    {
+        itemType: "greataxe",
+        dropRate: 500,
+        category: ["weapon", "melee"],
+        unique: true,
+    },
     {
         itemType: "scythe",
         dropRate: 10,
         category: ["reaper"],
+        unique: true,
     },
     // Equipment
-    { itemType: "armor", dropRate: 350, category: ["equipment"] },
+    { itemType: "armor", dropRate: 350, category: ["equipment"], unique: true },
     // Tools
     { itemType: "pickaxe", dropRate: 25, category: ["tool"] },
     { itemType: "hammer", dropRate: 25, category: ["tool"] },
-    { itemType: "hourglass", dropRate: 10, category: ["reaper"] },
+    { itemType: "hourglass", dropRate: 10, category: ["reaper"], unique: true },
     // Consumables
     { itemType: "heart", dropRate: 20, category: ["consumable"] },
     { itemType: "weaponpoison", dropRate: 100, category: ["consumable"] },
@@ -14046,6 +14095,10 @@ DropTable.getDrop = (entity, useCategory = [], force = false, increaseDepth = 0,
     }
     // Filter eligible drops by depth
     let eligibleDrops = _a.drops.filter((drop) => drop.minDepth === undefined || drop.minDepth <= currentDepth);
+    // Filter out unique items if no categories are specified (default drop table)
+    if (useCategory.length === 0) {
+        eligibleDrops = eligibleDrops.filter((drop) => drop.unique === undefined || drop.unique === false);
+    }
     // Filter by categories or specific items if provided
     if (useCategory.length > 0) {
         eligibleDrops = eligibleDrops.filter((drop) => useCategory.includes(drop.itemType) || // Match specific item
@@ -14521,9 +14574,69 @@ class ItemGroup {
         item.degradeable = false;
         item.level.game.pushMessage(`You choose to keep the ${item.name}.`);
         item.level.game.pushMessage(`This one won't break.`);
+        item.description += " Unbreakable.";
     }
 }
 exports.ItemGroup = ItemGroup;
+
+
+/***/ }),
+
+/***/ "./src/item/jewelry/emeraldRing.ts":
+/*!*****************************************!*\
+  !*** ./src/item/jewelry/emeraldRing.ts ***!
+  \*****************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.EmeraldRing = void 0;
+const equippable_1 = __webpack_require__(/*! ../equippable */ "./src/item/equippable.ts");
+class EmeraldRing extends equippable_1.Equippable {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.tileX = 17;
+        this.tileY = 2;
+        this.name = EmeraldRing.itemName;
+        this.stackable = false;
+        this.description = "A ring of emerald";
+    }
+}
+exports.EmeraldRing = EmeraldRing;
+EmeraldRing.itemName = "emerald ring";
+
+
+/***/ }),
+
+/***/ "./src/item/jewelry/goldRing.ts":
+/*!**************************************!*\
+  !*** ./src/item/jewelry/goldRing.ts ***!
+  \**************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.GoldRing = void 0;
+const equippable_1 = __webpack_require__(/*! ../equippable */ "./src/item/equippable.ts");
+const emeraldRing_1 = __webpack_require__(/*! ./emeraldRing */ "./src/item/jewelry/emeraldRing.ts");
+class GoldRing extends equippable_1.Equippable {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.embed = (player, gem) => {
+            player.inventory.subtractItem(gem, 1);
+            player.inventory.removeItem(this);
+            player.inventory.addItem(new emeraldRing_1.EmeraldRing(this.level, this.x, this.y));
+            this.level.game.pushMessage(`You embed the gem into the ring.`);
+        };
+        this.tileX = 19;
+        this.tileY = 2;
+        this.name = GoldRing.itemName;
+        this.stackable = false;
+        this.description = "Embed a gem within this ring to imbue it with magic.";
+    }
+}
+exports.GoldRing = GoldRing;
+GoldRing.itemName = "gold ring";
 
 
 /***/ }),
@@ -14983,9 +15096,14 @@ Geode.itemName = "geode";
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Gold = void 0;
 const item_1 = __webpack_require__(/*! ../item */ "./src/item/item.ts");
+const goldBar_1 = __webpack_require__(/*! ./goldBar */ "./src/item/resource/goldBar.ts");
 class Gold extends item_1.Item {
     constructor(level, x, y) {
         super(level, x, y);
+        this.smelt = (player) => {
+            player.inventory.removeItem(this);
+            player.inventory.addItem(new goldBar_1.GoldBar(this.level, this.x, this.y));
+        };
         this.tileX = 18;
         this.tileY = 0;
         this.name = Gold.itemName;
@@ -14999,6 +15117,37 @@ Gold.itemName = "gold";
 
 /***/ }),
 
+/***/ "./src/item/resource/goldBar.ts":
+/*!**************************************!*\
+  !*** ./src/item/resource/goldBar.ts ***!
+  \**************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.GoldBar = void 0;
+const item_1 = __webpack_require__(/*! ../item */ "./src/item/item.ts");
+const goldRing_1 = __webpack_require__(/*! ../jewelry/goldRing */ "./src/item/jewelry/goldRing.ts");
+class GoldBar extends item_1.Item {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.smith = (player) => {
+            player.inventory.removeItem(this);
+            player.inventory.addItem(new goldRing_1.GoldRing(this.level, this.x, this.y));
+        };
+        this.tileX = 18;
+        this.tileY = 2;
+        this.name = GoldBar.itemName;
+        this.stackable = true;
+        this.description = "A bar of gold";
+    }
+}
+exports.GoldBar = GoldBar;
+GoldBar.itemName = "gold bar";
+
+
+/***/ }),
+
 /***/ "./src/item/resource/greengem.ts":
 /*!***************************************!*\
   !*** ./src/item/resource/greengem.ts ***!
@@ -15008,21 +15157,28 @@ Gold.itemName = "gold";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GreenGem = void 0;
-const item_1 = __webpack_require__(/*! ../item */ "./src/item/item.ts");
-class GreenGem extends item_1.Item {
+const usable_1 = __webpack_require__(/*! ../usable/usable */ "./src/item/usable/usable.ts");
+class GreenGem extends usable_1.Usable {
     constructor(level, x, y) {
         super(level, x, y);
+        this.useOnOther = (player, other) => {
+            if (other.name === "gold ring") {
+                let goldRing = other;
+                goldRing.embed(player, this);
+            }
+        };
         this.getDescription = () => {
-            return "PERIDOT";
+            return "An emerald gem. Embed it into a gold ring to imbue it with magic.";
         };
         this.tileX = 11;
         this.tileY = 0;
         this.name = GreenGem.itemName;
+        this.canUseOnOther = true;
         this.stackable = true;
     }
 }
 exports.GreenGem = GreenGem;
-GreenGem.itemName = "peridot";
+GreenGem.itemName = "emerald";
 
 
 /***/ }),
@@ -15124,6 +15280,16 @@ class Hammer extends usable_1.Usable {
             else if (other.name === "pickaxe") {
                 let pickaxe = other;
                 pickaxe.disassemble();
+            }
+            else if (other.name === "gold bar") {
+                let goldBar = other;
+                goldBar.smith(player);
+                this.level.game.pushMessage(`You hammer the gold bar into a ring.`);
+            }
+            else if (other.name === "gold") {
+                let gold = other;
+                gold.smelt(player);
+                this.level.game.pushMessage(`You form the raw gold into a bar.`);
             }
         };
         this.disassemble = (player) => {
@@ -18903,9 +19069,17 @@ class Player extends drawable_1.Drawable {
                     }
                 }
             }
-            let other = this.game.levels[this.depth].rooms[this.levelID].roomArray[x][y];
+            let other = this.game.levels[this.depth].rooms[this.levelID]?.roomArray?.[x]?.[y];
             if (!other) {
                 console.warn("oi bruv, tile to check for collision isn't even there!");
+                return;
+            }
+            if (!this.game.levels[this.depth].rooms[this.levelID]) {
+                console.warn("oi bruv, room to check for collision isn't even there!");
+                return;
+            }
+            if (!this.game.levels[this.depth].rooms[this.levelID].roomArray) {
+                console.warn("oi bruv, level to check for collision isn't even there!");
                 return;
             }
             if (!other.isSolid()) {
@@ -19764,7 +19938,7 @@ class PlayerMovement {
         }
     }
     getTargetCoords(direction, x, y) {
-        if (x !== undefined && y !== undefined) {
+        if (x !== undefined && y !== undefined && x !== null && y !== null) {
             return { x, y };
         }
         switch (direction) {

@@ -94,21 +94,21 @@ export class Menu {
   }
 
   draw() {
-    if (!this.open) return;
+    if (this.open) {
+      Game.ctx.save();
+      Game.ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+      Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
 
-    Game.ctx.save();
-    Game.ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
-    Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
+      // Draw main menu buttons
+      this.buttons.forEach((button) => {
+        this.drawButton(button);
+      });
 
-    // Draw main menu buttons
-    this.buttons.forEach((button) => {
-      this.drawButton(button);
-    });
+      // Draw close button
+      this.drawCloseButton();
 
-    // Draw close button
-    this.drawCloseButton();
-
-    Game.ctx.restore();
+      Game.ctx.restore();
+    }
   }
 
   drawButton(button: guiButton) {

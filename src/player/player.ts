@@ -710,9 +710,17 @@ export class Player extends Drawable {
       }
     }
     let other =
-      this.game.levels[this.depth].rooms[this.levelID].roomArray[x][y];
+      this.game.levels[this.depth].rooms[this.levelID]?.roomArray?.[x]?.[y];
     if (!other) {
       console.warn("oi bruv, tile to check for collision isn't even there!");
+      return;
+    }
+    if (!this.game.levels[this.depth].rooms[this.levelID]) {
+      console.warn("oi bruv, room to check for collision isn't even there!");
+      return;
+    }
+    if (!this.game.levels[this.depth].rooms[this.levelID].roomArray) {
+      console.warn("oi bruv, level to check for collision isn't even there!");
       return;
     }
     if (!other.isSolid()) {

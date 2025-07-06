@@ -72,7 +72,7 @@ export class PlayerMovement {
     x?: number,
     y?: number,
   ): { x: number; y: number } | null {
-    if (x !== undefined && y !== undefined) {
+    if (x !== undefined && y !== undefined && x !== null && y !== null) {
       return { x, y };
     }
 

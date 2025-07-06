@@ -426,6 +426,23 @@ export class Inventory {
     });
   };
 
+  subtractItem = (item: Item | null, count: number) => {
+    if (item === null) return;
+    if (item instanceof Coin) {
+      this.subtractCoins(item.stackCount);
+      return;
+    }
+    this.items.forEach((i, idx) => {
+      if (i === null) return;
+      if (i.constructor === item.constructor) {
+        i.stackCount -= count;
+        if (i.stackCount <= 0) {
+          this.items[idx] = null;
+        }
+      }
+    });
+  };
+
   coinCount = (): number => {
     return this.coins;
   };
