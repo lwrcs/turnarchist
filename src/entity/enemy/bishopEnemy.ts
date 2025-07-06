@@ -36,6 +36,7 @@ export class BishopEnemy extends Enemy {
     this.imageParticleX = 0;
     this.imageParticleY = 26;
     if (drop) this.drop = drop;
+    this.armored = true;
     this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
   }
 

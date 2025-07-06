@@ -16,7 +16,7 @@ export class Sound {
   static genericPickupSound: HTMLAudioElement;
   static pushSounds: Array<HTMLAudioElement>;
   static healSound: HTMLAudioElement;
-  static music: HTMLAudioElement;
+  static forestMusic: Array<HTMLAudioElement>;
   static graveSound: HTMLAudioElement;
   static ambientSound: HTMLAudioElement;
   static goreSound: HTMLAudioElement;
@@ -34,6 +34,13 @@ export class Sound {
   static fuseLoopSound: HTMLAudioElement;
   static fuseStartSound: HTMLAudioElement;
   static warHammerSound: HTMLAudioElement;
+  static sliceSound: Array<HTMLAudioElement>;
+  static shortSliceSound: Array<HTMLAudioElement>;
+  static backpackSound: HTMLAudioElement;
+  static smithSound: HTMLAudioElement;
+  static bushSounds: Array<HTMLAudioElement>;
+  static parrySounds: Array<HTMLAudioElement>;
+
   static loopHandlers: Map<HTMLAudioElement, EventListener> = new Map();
   static currentlyPlaying: Array<HTMLAudioElement> = [];
 
@@ -151,7 +158,12 @@ export class Sound {
     Sound.healSound = new Audio("res/SFX/items/powerup1.mp3");
     Sound.healSound.volume = 0.5;
 
-    Sound.music = new Audio("res/bewitched.mp3");
+    Sound.forestMusic = new Array<HTMLAudioElement>();
+    [1].forEach((i) =>
+      Sound.forestMusic.push(new Audio("res/music/forest" + i + ".mp3")),
+    );
+    for (let f of Sound.forestMusic) f.volume = 0.5;
+
     Sound.graveSound = new Audio("res/SFX/attacks/skelespawn.mp3");
     Sound.ambientSound = new Audio("res/SFX/ambient/ambientDark2.mp3");
     Sound.ambientSound.volume = 1;
@@ -205,6 +217,38 @@ export class Sound {
 
     Sound.warHammerSound = new Audio("res/SFX/attacks/warhammer.mp3");
     Sound.warHammerSound.volume = 1;
+
+    Sound.sliceSound = new Array<HTMLAudioElement>();
+    [1, 2, 3].forEach((i) =>
+      Sound.sliceSound.push(new Audio("res/SFX/attacks/slice" + i + ".mp3")),
+    );
+    for (let f of Sound.sliceSound) f.volume = 0.5;
+
+    Sound.shortSliceSound = new Array<HTMLAudioElement>();
+    [1, 2, 3].forEach((i) =>
+      Sound.shortSliceSound.push(
+        new Audio("res/SFX/attacks/sliceShort" + i + ".mp3"),
+      ),
+    );
+    for (let f of Sound.shortSliceSound) f.volume = 0.5;
+
+    Sound.backpackSound = new Audio("res/SFX/items/backpack.mp3");
+    Sound.backpackSound.volume = 0.75;
+
+    Sound.smithSound = new Audio("res/SFX/items/smith.mp3");
+    Sound.smithSound.volume = 0.5;
+
+    Sound.bushSounds = new Array<HTMLAudioElement>();
+    [1, 2].forEach((i) =>
+      Sound.bushSounds.push(new Audio("res/SFX/objects/plantHit" + i + ".mp3")),
+    );
+    for (let f of Sound.bushSounds) f.volume = 0.75;
+
+    Sound.parrySounds = new Array<HTMLAudioElement>();
+    [1, 2].forEach((i) =>
+      Sound.parrySounds.push(new Audio("res/SFX/attacks/parry" + i + ".mp3")),
+    );
+    for (let f of Sound.parrySounds) f.volume = 0.5;
   };
 
   private static playSoundSafely(audio: HTMLAudioElement) {
@@ -280,7 +324,7 @@ export class Sound {
   static potSmash = () => {
     if (Sound.audioMuted) return;
     let f = Game.randTable(Sound.potSmashSounds, Math.random);
-    this.playWithReverb(f);
+    this.delayPlay(() => this.playWithReverb(f), 100);
     f.currentTime = 0;
   };
 
@@ -345,19 +389,25 @@ export class Sound {
     f.currentTime = 0;
   };
 
-  static playMusic = () => {
+  static playForestMusic = (index: number) => {
     if (Sound.audioMuted) return;
-    /*
-    Sound.music.addEventListener(
+
+    const music = Sound.forestMusic[index];
+    if (music.paused) {
+      music.currentTime = 0;
+      Sound.playSoundSafely(music);
+    } else {
+      music.play();
+    }
+    music.addEventListener(
       "ended",
       () => {
-        Sound.music.currentTime = 0;
-        Sound.playSoundSafely(Sound.music);
+        music.currentTime = 0;
+        Sound.playSoundSafely(music);
       },
-      false
+      false,
     );
-    Sound.playSoundSafely(Sound.music);
-    */
+    Sound.playSoundSafely(music);
   };
 
   static doorOpen = () => {
@@ -452,6 +502,46 @@ export class Sound {
     this.playWithReverb(woosh);
     f.currentTime = 0;
     woosh.currentTime = 0;
+  };
+
+  static playSlice = () => {
+    if (Sound.audioMuted) return;
+    let f = Game.randTable(Sound.sliceSound, Math.random);
+    this.playWithReverb(f);
+    f.currentTime = 0;
+  };
+
+  static playShortSlice = () => {
+    if (Sound.audioMuted) return;
+    let f = Game.randTable(Sound.shortSliceSound, Math.random);
+    this.playWithReverb(f);
+    f.currentTime = 0;
+  };
+
+  static playBackpack = () => {
+    if (Sound.audioMuted) return;
+    this.playWithReverb(Sound.backpackSound);
+    Sound.backpackSound.currentTime = 0;
+  };
+
+  static playSmith = () => {
+    if (Sound.audioMuted) return;
+    this.playWithReverb(Sound.smithSound);
+    Sound.smithSound.currentTime = 0;
+  };
+
+  static playBush = () => {
+    if (Sound.audioMuted) return;
+    let f = Game.randTable(Sound.bushSounds, Math.random);
+    this.delayPlay(() => this.playWithReverb(f), 100);
+    f.currentTime = 0;
+  };
+
+  static playParry = () => {
+    if (Sound.audioMuted) return;
+    let f = Game.randTable(Sound.parrySounds, Math.random);
+    this.delayPlay(() => this.playWithReverb(f), 100);
+    f.currentTime = 0;
   };
 
   static delayPlay = (method: () => void, delay: number) => {

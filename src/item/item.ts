@@ -128,12 +128,13 @@ export class Item extends Drawable {
           player.inventory.foundItems.push(this);
         }
         this.pickupSound();
+
+        if (this.grouped) {
+          this.group.destroyOtherItems(this);
+          this.grouped = false;
+          this.group = null;
+        }
       }
-    }
-    if (this.grouped) {
-      this.group.destroyOtherItems(this);
-      this.grouped = false;
-      this.group = null;
     }
   };
 

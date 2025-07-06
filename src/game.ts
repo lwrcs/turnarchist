@@ -750,6 +750,7 @@ export class Game {
   commandHandler = (command: string): void => {
     const player = this.room.game.players[0];
     command = command.toLowerCase();
+    let enabled = "";
     switch (command) {
       case "devmode":
         GameConstants.DEVELOPER_MODE = !GameConstants.DEVELOPER_MODE;
@@ -786,21 +787,38 @@ export class Game {
         this.onResize();
         break;
       case "shd":
-        GameConstants.SET_COLOR_LAYER_COMPOSITE_OPERATION(false, true);
+        GameConstants.SHADE_ENABLED = !GameConstants.SHADE_ENABLED;
+        enabled = GameConstants.SHADE_ENABLED ? "enabled" : "disabled";
+        this.pushMessage(`Shade is now ${enabled}`);
+        break;
+      case "shdop":
+        GameConstants.SET_SHADE_LAYER_COMPOSITE_OPERATION(false);
         break;
       case "smooth":
         GameConstants.SMOOTH_LIGHTING = !GameConstants.SMOOTH_LIGHTING;
+        enabled = GameConstants.SMOOTH_LIGHTING ? "enabled" : "disabled";
+        this.pushMessage(`Smooth lighting is now ${enabled}`);
         break;
       case "rooms":
         GameConstants.drawOtherRooms = !GameConstants.drawOtherRooms;
+        enabled = GameConstants.drawOtherRooms ? "enabled" : "disabled";
+        this.pushMessage(`Drawing other rooms is now ${enabled}`);
         break;
       case "opq":
         GameConstants.ENEMIES_BLOCK_LIGHT = !GameConstants.ENEMIES_BLOCK_LIGHT;
+        enabled = GameConstants.ENEMIES_BLOCK_LIGHT ? "enabled" : "disabled";
+        this.pushMessage(`Enemies block light is now ${enabled}`);
         break;
       case "peace":
         GameplaySettings.NO_ENEMIES = !GameplaySettings.NO_ENEMIES;
         this.newGame();
-        this.pushMessage(`Peaceful mode is now ${GameplaySettings.NO_ENEMIES}`);
+        enabled = GameplaySettings.NO_ENEMIES ? "enabled" : "disabled";
+        this.pushMessage(`Peaceful mode is now ${enabled}`);
+        break;
+      case "equip":
+        GameplaySettings.EQUIP_USES_TURN = !GameplaySettings.EQUIP_USES_TURN;
+        enabled = GameplaySettings.EQUIP_USES_TURN ? "enabled" : "disabled";
+        this.pushMessage(`Equipping an item takes a turn is now ${enabled}`);
         break;
       default:
         if (command.startsWith("new ")) {

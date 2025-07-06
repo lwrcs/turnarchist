@@ -7,6 +7,7 @@ import { UpLadder } from "./upLadder";
 import { EVENTS } from "../event/events";
 import { EventEmitter } from "../event/eventEmitter";
 import { globalEventBus } from "../event/eventBus";
+import { Sound } from "../sound/sound";
 
 export class DownLadder extends Tile {
   linkedRoom: Room;
@@ -54,6 +55,7 @@ export class DownLadder extends Tile {
 
     this.linkedRoom = linkedRoom;
     this.linkUpLadder();
+    if (this.linkedRoom.envType === 2) Sound.playForestMusic(0);
   };
 
   private handleSidePathRooms = (linkedRoom: Room) => {

@@ -284,6 +284,7 @@ const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ "./src/particle/imageParticle.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
+const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
 class ArmoredSkullEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
@@ -311,6 +312,8 @@ class ArmoredSkullEnemy extends enemy_1.Enemy {
             this.healthBar.hurt();
             this.createDamageNumber(damage, type);
             this.playHitSound();
+            if (this.health === 2)
+                sound_1.Sound.playParry();
             if (this.health === 1) {
                 this.unconscious = true;
                 imageParticle_1.ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 3, 28);
@@ -545,6 +548,7 @@ class ArmoredSkullEnemy extends enemy_1.Enemy {
         this.deathParticleColor = "#ffffff";
         this.name = "armored skeleton";
         this.forwardOnlyAttack = true;
+        this.armored = true;
         if (drop)
             this.drop = drop;
         this.getDrop(["weapon", "consumable", "tool", "coin"]);
@@ -760,7 +764,7 @@ class ArmoredzombieEnemy extends enemy_1.Enemy {
         this.ticks = 0;
         this.frame = 0;
         this.health = 2;
-        this.maxHealth = 1;
+        this.maxHealth = 2;
         this.tileX = 17;
         this.tileY = 8;
         this.seenPlayer = false;
@@ -768,6 +772,7 @@ class ArmoredzombieEnemy extends enemy_1.Enemy {
         this.deathParticleColor = "#ffffff";
         this.name = "armored zombie";
         this.forwardOnlyAttack = true;
+        this.armored = true;
         if (drop)
             this.drop = drop;
         this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
@@ -1877,6 +1882,7 @@ class BishopEnemy extends enemy_1.Enemy {
         this.imageParticleY = 26;
         if (drop)
             this.drop = drop;
+        this.armored = true;
         this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
     }
 }
@@ -4476,6 +4482,7 @@ class QueenEnemy extends enemy_1.Enemy {
         this.imageParticleY = 28; //includes crown particle
         if (drop)
             this.drop = drop;
+        this.armored = true;
         this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
     }
 }
@@ -4650,6 +4657,7 @@ class RookEnemy extends enemy_1.Enemy {
         this.jumpHeight = 0.5;
         if (drop)
             this.drop = drop;
+        this.armored = true;
         this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
     }
 }
@@ -5917,6 +5925,7 @@ class Entity extends drawable_1.Drawable {
         this.opacity = 0;
         this.hasHitParticles = true;
         this.hasDamageNumbers = true;
+        this.armored = false;
         this.hoverText = () => {
             return this.name;
         };
@@ -6080,6 +6089,8 @@ class Entity extends drawable_1.Drawable {
               this.shadeColor = this.room.shadeColor;
             }, 100);
             */
+            if (this.armored && this.health === this.maxHealth)
+                sound_1.Sound.playParry();
             this.health -= damage;
             this.maxHealth -= shieldHealth;
             this.onHurt(damage, type);
@@ -7130,6 +7141,7 @@ exports.Bush = void 0;
 const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
 class Bush extends entity_1.Entity {
     constructor(room, game, x, y) {
         super(room, game, x, y);
@@ -7157,6 +7169,7 @@ class Bush extends entity_1.Entity {
         this.imageParticleX = 0;
         this.imageParticleY = 28;
         this.opaque = true;
+        this.hitSound = sound_1.Sound.playBush;
         //this.drops.push(new Shrooms(this.room, this.x, this.y));
     }
     get type() {
@@ -8778,6 +8791,7 @@ class Game {
         this.commandHandler = (command) => {
             const player = this.room.game.players[0];
             command = command.toLowerCase();
+            let enabled = "";
             switch (command) {
                 case "devmode":
                     gameConstants_1.GameConstants.DEVELOPER_MODE = !gameConstants_1.GameConstants.DEVELOPER_MODE;
@@ -8814,21 +8828,38 @@ class Game {
                     this.onResize();
                     break;
                 case "shd":
-                    gameConstants_1.GameConstants.SET_COLOR_LAYER_COMPOSITE_OPERATION(false, true);
+                    gameConstants_1.GameConstants.SHADE_ENABLED = !gameConstants_1.GameConstants.SHADE_ENABLED;
+                    enabled = gameConstants_1.GameConstants.SHADE_ENABLED ? "enabled" : "disabled";
+                    this.pushMessage(`Shade is now ${enabled}`);
+                    break;
+                case "shdop":
+                    gameConstants_1.GameConstants.SET_SHADE_LAYER_COMPOSITE_OPERATION(false);
                     break;
                 case "smooth":
                     gameConstants_1.GameConstants.SMOOTH_LIGHTING = !gameConstants_1.GameConstants.SMOOTH_LIGHTING;
+                    enabled = gameConstants_1.GameConstants.SMOOTH_LIGHTING ? "enabled" : "disabled";
+                    this.pushMessage(`Smooth lighting is now ${enabled}`);
                     break;
                 case "rooms":
                     gameConstants_1.GameConstants.drawOtherRooms = !gameConstants_1.GameConstants.drawOtherRooms;
+                    enabled = gameConstants_1.GameConstants.drawOtherRooms ? "enabled" : "disabled";
+                    this.pushMessage(`Drawing other rooms is now ${enabled}`);
                     break;
                 case "opq":
                     gameConstants_1.GameConstants.ENEMIES_BLOCK_LIGHT = !gameConstants_1.GameConstants.ENEMIES_BLOCK_LIGHT;
+                    enabled = gameConstants_1.GameConstants.ENEMIES_BLOCK_LIGHT ? "enabled" : "disabled";
+                    this.pushMessage(`Enemies block light is now ${enabled}`);
                     break;
                 case "peace":
                     gameplaySettings_1.GameplaySettings.NO_ENEMIES = !gameplaySettings_1.GameplaySettings.NO_ENEMIES;
                     this.newGame();
-                    this.pushMessage(`Peaceful mode is now ${gameplaySettings_1.GameplaySettings.NO_ENEMIES}`);
+                    enabled = gameplaySettings_1.GameplaySettings.NO_ENEMIES ? "enabled" : "disabled";
+                    this.pushMessage(`Peaceful mode is now ${enabled}`);
+                    break;
+                case "equip":
+                    gameplaySettings_1.GameplaySettings.EQUIP_USES_TURN = !gameplaySettings_1.GameplaySettings.EQUIP_USES_TURN;
+                    enabled = gameplaySettings_1.GameplaySettings.EQUIP_USES_TURN ? "enabled" : "disabled";
+                    this.pushMessage(`Equipping an item takes a turn is now ${enabled}`);
                     break;
                 default:
                     if (command.startsWith("new ")) {
@@ -10058,7 +10089,7 @@ GameConstants.SWIPE_THRESH = 25 ** 2; // (size of swipe threshold circle)^2
 GameConstants.HOLD_THRESH = 250; // milliseconds
 GameConstants.KEY_REPEAT_TIME = 300; // millseconds
 GameConstants.SWIPE_HOLD_REPEAT_TIME = 300;
-GameConstants.SWIPE_HOLD_INITIAL_DELAY = 150;
+GameConstants.SWIPE_HOLD_INITIAL_DELAY = 10;
 GameConstants.MOVEMENT_COOLDOWN = 200; // milliseconds
 GameConstants.MOVEMENT_QUEUE_COOLDOWN = 100; // milliseconds
 GameConstants.MOVE_WITH_MOUSE = true;
@@ -10082,13 +10113,22 @@ GameConstants.HIT_ENEMY_TEXT_COLOR = "#76428a";
 GameConstants.HEALTH_BUFF_COLOR = "#d77bba";
 GameConstants.MISS_COLOR = "#639bff";
 GameConstants.CUSTOM_SHADER_COLOR_ENABLED = false;
+GameConstants.SHADE_ENABLED = true;
 GameConstants.COLOR_LAYER_COMPOSITE_OPERATION = "soft-light"; //"soft-light";
-GameConstants.SHADE_LAYER_COMPOSITE_OPERATION = "screen"; //"soft-light";
+GameConstants.SHADE_LAYER_COMPOSITE_OPERATION = "source-over"; //"soft-light";
 GameConstants.USE_OPTIMIZED_SHADING = false;
 GameConstants.SMOOTH_LIGHTING = false;
 GameConstants.ctxBlurEnabled = true;
 GameConstants.BLUR_ENABLED = true;
 GameConstants.ENEMIES_BLOCK_LIGHT = false;
+GameConstants.SHADE_LAYER_COMPOSITE_OPERATIONS = [
+    "source-over",
+    "screen",
+    "multiply",
+    "overlay",
+    "darken",
+    "lighten",
+];
 GameConstants.COLOR_LAYER_COMPOSITE_OPERATIONS = [
     "soft-light",
     //"addition",
@@ -10107,11 +10147,8 @@ GameConstants.COLOR_LAYER_COMPOSITE_OPERATIONS = [
     //"soft-light",
     //"lighten",
 ];
-GameConstants.SET_COLOR_LAYER_COMPOSITE_OPERATION = (shade, back = false) => {
-    let operation = shade
-        ? GameConstants.SHADE_LAYER_COMPOSITE_OPERATION
-        : GameConstants.COLOR_LAYER_COMPOSITE_OPERATION;
-    const currentIndex = GameConstants.COLOR_LAYER_COMPOSITE_OPERATIONS.indexOf(operation);
+GameConstants.SET_COLOR_LAYER_COMPOSITE_OPERATION = (back = false) => {
+    const currentIndex = GameConstants.COLOR_LAYER_COMPOSITE_OPERATIONS.indexOf(GameConstants.COLOR_LAYER_COMPOSITE_OPERATION);
     let nextIndex;
     if (back) {
         // Decrement the index to move backward in the operations array
@@ -10127,14 +10164,30 @@ GameConstants.SET_COLOR_LAYER_COMPOSITE_OPERATION = (shade, back = false) => {
             (currentIndex + 1) %
                 GameConstants.COLOR_LAYER_COMPOSITE_OPERATIONS.length;
     }
-    operation = GameConstants.COLOR_LAYER_COMPOSITE_OPERATIONS[nextIndex];
-    if (shade) {
-        GameConstants.SHADE_LAYER_COMPOSITE_OPERATION = operation;
+    GameConstants.COLOR_LAYER_COMPOSITE_OPERATION =
+        GameConstants.COLOR_LAYER_COMPOSITE_OPERATIONS[nextIndex];
+    console.log(`Color layer composite operation set to ${GameConstants.COLOR_LAYER_COMPOSITE_OPERATION}`);
+};
+GameConstants.SET_SHADE_LAYER_COMPOSITE_OPERATION = (back = false) => {
+    const currentIndex = GameConstants.SHADE_LAYER_COMPOSITE_OPERATIONS.indexOf(GameConstants.SHADE_LAYER_COMPOSITE_OPERATION);
+    let nextIndex;
+    if (back) {
+        // Decrement the index to move backward in the operations array
+        nextIndex =
+            (currentIndex -
+                1 +
+                GameConstants.SHADE_LAYER_COMPOSITE_OPERATIONS.length) %
+                GameConstants.SHADE_LAYER_COMPOSITE_OPERATIONS.length;
     }
     else {
-        GameConstants.COLOR_LAYER_COMPOSITE_OPERATION = operation;
+        // Increment the index to move forward in the operations array
+        nextIndex =
+            (currentIndex + 1) %
+                GameConstants.SHADE_LAYER_COMPOSITE_OPERATIONS.length;
     }
-    console.log(`Color layer composite operation set to ${operation}`);
+    GameConstants.SHADE_LAYER_COMPOSITE_OPERATION =
+        GameConstants.SHADE_LAYER_COMPOSITE_OPERATIONS[nextIndex];
+    console.log(`Shade layer composite operation set to ${GameConstants.SHADE_LAYER_COMPOSITE_OPERATION}`);
 };
 GameConstants.TOGGLE_USE_OPTIMIZED_SHADING = () => {
     GameConstants.USE_OPTIMIZED_SHADING = !GameConstants.USE_OPTIMIZED_SHADING;
@@ -10972,6 +11025,8 @@ GameplaySettings.LIMIT_ENEMY_TYPES = true;
 GameplaySettings.MEDIAN_ROOM_DENSITY = 0.25;
 GameplaySettings.UNLIMITED_SPAWNERS = true;
 GameplaySettings.NO_ENEMIES = false;
+GameplaySettings.EQUIP_USES_TURN = false;
+GameplaySettings.UNBREAKABLE_ITEMGROUP_LOOT = false;
 
 
 /***/ }),
@@ -13821,7 +13876,7 @@ class Backpack extends usable_1.Usable {
         super(level, x, y);
         this.onUse = (player) => {
             if (this.level.game.rooms[player.levelID] === this.level.game.room)
-                sound_1.Sound.heal();
+                sound_1.Sound.playBackpack();
             player.inventory.removeItem(this);
             player.inventory.expansion += 1;
             this.level.game.pushMessage("You equip the backpack, increasing the amount you can carry.");
@@ -14170,6 +14225,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Equippable = void 0;
 const item_1 = __webpack_require__(/*! ./item */ "./src/item/item.ts");
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const gameplaySettings_1 = __webpack_require__(/*! ../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
 class Equippable extends item_1.Item {
     constructor(level, x, y) {
         super(level, x, y);
@@ -14182,8 +14238,11 @@ class Equippable extends item_1.Item {
             return true;
         };
         this.toggleEquip = () => {
-            if (!this.broken)
+            if (!this.broken) {
                 this.equipped = !this.equipped;
+                if (gameplaySettings_1.GameplaySettings.EQUIP_USES_TURN && this.equipped === true)
+                    this.wielder?.stall();
+            }
             else {
                 this.equipped = false;
                 let pronoun = this.name.endsWith("s") ? "them" : "it";
@@ -14355,12 +14414,12 @@ class Item extends drawable_1.Drawable {
                         player.inventory.foundItems.push(this);
                     }
                     this.pickupSound();
+                    if (this.grouped) {
+                        this.group.destroyOtherItems(this);
+                        this.grouped = false;
+                        this.group = null;
+                    }
                 }
-            }
-            if (this.grouped) {
-                this.group.destroyOtherItems(this);
-                this.grouped = false;
-                this.group = null;
             }
         };
         this.pickupMessage = () => {
@@ -14556,11 +14615,12 @@ exports.Item = Item;
 /*!*******************************!*\
   !*** ./src/item/itemGroup.ts ***!
   \*******************************/
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ItemGroup = void 0;
+const gameplaySettings_1 = __webpack_require__(/*! ../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
 class ItemGroup {
     constructor(items) {
         this.items = items;
@@ -14571,10 +14631,12 @@ class ItemGroup {
                 i.destroy();
             }
         }
-        item.degradeable = false;
         item.level.game.pushMessage(`You choose to keep the ${item.name}.`);
-        item.level.game.pushMessage(`This one won't break.`);
-        item.description += " Unbreakable.";
+        if (gameplaySettings_1.GameplaySettings.UNBREAKABLE_ITEMGROUP_LOOT) {
+            item.degradeable = false;
+            item.level.game.pushMessage(`This one won't break.`);
+            item.description += " Unbreakable.";
+        }
     }
 }
 exports.ItemGroup = ItemGroup;
@@ -15056,15 +15118,11 @@ class Geode extends item_1.Item {
             return "GEODE\nWhen in doubt hit it with a hammer.";
         };
         this.split = (inventory) => {
-            if (Math.random() < 0.2) {
-                this.level.game.pushMessage(`You split the geode but it's stone all the way through.`);
-                inventory.removeItem(this);
-            }
-            else if (inventory.isFull()) {
+            if (inventory.isFull()) {
                 this.level.game.pushMessage(`You don't have enough space in your inventory to split the geode.`);
             }
             else {
-                const numGems = utils_1.Utils.randomSineInt(1, 5, { median: 1 });
+                const numGems = Math.min(1, utils_1.Utils.randomNormalInt(1, 3));
                 let gemTypes = [bluegem_1.BlueGem, redgem_1.RedGem, greengem_1.GreenGem];
                 let gemType = gemTypes[Math.floor(Math.random() * gemTypes.length)];
                 this.level.game.pushMessage(`You split the geode and find ${numGems} ${gemType.itemName}.`);
@@ -15097,12 +15155,14 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Gold = void 0;
 const item_1 = __webpack_require__(/*! ../item */ "./src/item/item.ts");
 const goldBar_1 = __webpack_require__(/*! ./goldBar */ "./src/item/resource/goldBar.ts");
+const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
 class Gold extends item_1.Item {
     constructor(level, x, y) {
         super(level, x, y);
         this.smelt = (player) => {
             player.inventory.removeItem(this);
             player.inventory.addItem(new goldBar_1.GoldBar(this.level, this.x, this.y));
+            sound_1.Sound.playSmith();
         };
         this.tileX = 18;
         this.tileY = 0;
@@ -15128,12 +15188,14 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GoldBar = void 0;
 const item_1 = __webpack_require__(/*! ../item */ "./src/item/item.ts");
 const goldRing_1 = __webpack_require__(/*! ../jewelry/goldRing */ "./src/item/jewelry/goldRing.ts");
+const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
 class GoldBar extends item_1.Item {
     constructor(level, x, y) {
         super(level, x, y);
         this.smith = (player) => {
             player.inventory.removeItem(this);
             player.inventory.addItem(new goldRing_1.GoldRing(this.level, this.x, this.y));
+            sound_1.Sound.playSmith();
         };
         this.tileX = 18;
         this.tileY = 2;
@@ -15862,7 +15924,7 @@ class Scythe extends weapon_1.Weapon {
         super(level, x, y);
         this.hitSound = () => {
             sound_1.Sound.hit();
-            //Sound.playScythe();
+            sound_1.Sound.playSlice();
         };
         this.weaponMove = (newX, newY) => {
             let leftCorner = { x: newX, y: newY };
@@ -15911,7 +15973,7 @@ class Scythe extends weapon_1.Weapon {
                 for (const pos of positions) {
                     if (!this.game.rooms[this.wielder.levelID].roomArray[pos.x][pos.y].isSolid()) {
                         const damage = positions.indexOf(pos) <= 1 ? 1 : 1;
-                        this.executeAttack(pos.x, pos.y, false, damage);
+                        this.executeAttack(pos.x, pos.y, false, damage, false, false);
                     }
                 }
             }
@@ -16240,6 +16302,97 @@ Spellbook.itemName = "spellbook";
 
 /***/ }),
 
+/***/ "./src/item/weapon/sword.ts":
+/*!**********************************!*\
+  !*** ./src/item/weapon/sword.ts ***!
+  \**********************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Sword = void 0;
+const weapon_1 = __webpack_require__(/*! ./weapon */ "./src/item/weapon/weapon.ts");
+const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+class Sword extends weapon_1.Weapon {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.hitSound = () => {
+            sound_1.Sound.hit();
+            sound_1.Sound.playShortSlice();
+        };
+        this.weaponMove = (newX, newY) => {
+            let leftCorner = { x: newX, y: newY };
+            let rightCorner = { x: newX, y: newY };
+            let positions = [leftCorner, rightCorner];
+            switch (this.wielder.direction) {
+                case game_1.Direction.DOWN:
+                    leftCorner.x = newX - 1;
+                    rightCorner.x = newX + 1;
+                    break;
+                case game_1.Direction.UP:
+                    leftCorner.x = newX + 1;
+                    rightCorner.x = newX - 1;
+                    break;
+                case game_1.Direction.LEFT:
+                    leftCorner.y = newY + 1;
+                    rightCorner.y = newY - 1;
+                    break;
+                case game_1.Direction.RIGHT:
+                    leftCorner.y = newY - 1;
+                    rightCorner.y = newY + 1;
+                    break;
+            }
+            if (this.checkForPushables(newX, newY))
+                return true;
+            const hitSomething = this.executeAttack(newX, newY);
+            if (hitSomething) {
+                for (const pos of positions) {
+                    if (!this.game.rooms[this.wielder.levelID].roomArray[pos.x][pos.y].isSolid()) {
+                        const damage = 1;
+                        this.executeAttack(pos.x, pos.y, false, damage, false, false, false);
+                    }
+                }
+            }
+            return !hitSomething;
+        };
+        this.shakeScreen = () => {
+            //this.wielder.beginSlowMotion();
+            setTimeout(() => {
+                //this.wielder.endSlowMotion();
+                switch (this.wielder.direction) {
+                    case game_1.Direction.DOWN:
+                        this.game.shakeScreen(0, -5, false);
+                        break;
+                    case game_1.Direction.UP:
+                        this.game.shakeScreen(0, -5, false);
+                        break;
+                    case game_1.Direction.LEFT:
+                        this.game.shakeScreen(-5, -5, false);
+                        break;
+                    case game_1.Direction.RIGHT:
+                        this.game.shakeScreen(5, -5, false);
+                        break;
+                }
+            }, this.hitDelay);
+        };
+        this.tileX = 28;
+        this.tileY = 2;
+        this.damage = 1;
+        this.name = "sword";
+        //this.hitDelay = 150;
+        this.degradeable = false;
+        this.useCost = 2;
+        this.offsetY = 0;
+        //this.iconOffset = 0.2;
+    }
+}
+exports.Sword = Sword;
+Sword.itemName = "sword";
+
+
+/***/ }),
+
 /***/ "./src/item/weapon/warhammer.ts":
 /*!**************************************!*\
   !*** ./src/item/weapon/warhammer.ts ***!
@@ -16351,7 +16504,7 @@ class Weapon extends equippable_1.Equippable {
                 return;
             const enemy = entity;
             if (!enemy.status.poison.active && !enemy.status.bleed.active) {
-                if (this.wielder.applyStatus(enemy, this.status)) {
+                if (this.wielder.applyStatus(enemy, this.status) && enemy.health > 0) {
                     this.statusApplicationCount++;
                     const message = this.status.poison
                         ? `Your weapon poisons the ${enemy.name}`
@@ -16469,17 +16622,20 @@ class Weapon extends equippable_1.Equippable {
         const pushables = this.getEntitiesAt(x, y).filter((e) => e.pushable);
         return pushables.length > 0;
     }
-    executeAttack(targetX, targetY, animated = true, damage = this.damage, animationName) {
+    executeAttack(targetX, targetY, animated = true, damage = this.damage, shakeScreen = true, sound = true, mainAttack = true) {
         const hitSomething = this.hitEntitiesAt(targetX, targetY, damage);
         this.applyHitDelay(hitSomething);
         if (hitSomething) {
-            this.hitSound();
+            if (sound)
+                this.hitSound();
             this.wielder.setHitXY(targetX, targetY);
             if (animated)
                 this.attackAnimation(targetX, targetY);
             this.game.rooms[this.wielder.levelID].tick(this.wielder);
-            this.shakeScreen(targetX, targetY);
-            this.degrade();
+            if (shakeScreen)
+                this.shakeScreen(targetX, targetY);
+            if (mainAttack)
+                this.degrade();
         }
         return hitSomething;
     }
@@ -18754,8 +18910,13 @@ class Player extends drawable_1.Drawable {
             return null;
         };
         this.stall = () => {
-            this.game.room.tick(this);
-            this.shakeScreen(this.x - 0.5, this.y, this.x + 0.5, this.y, 10);
+            if (!this.game.started || !this.game.room || !this.renderer)
+                return;
+            if (this.game.levelState === game_1.LevelState.IN_LEVEL) {
+                this.game?.room?.tick(this);
+                this.shakeScreen(this.x - 0.5, this.y, this.x + 0.5, this.y, 5);
+                this.game.pushMessage("Equipping an item takes a turn.");
+            }
         };
         this.moveWithMouse = () => {
             this.inputHandler.setMostRecentMoveInput("mouse");
@@ -19366,10 +19527,10 @@ class PlayerInputHandler {
                 if (gameConstants_1.GameConstants.DEVELOPER_MODE) {
                     switch (num) {
                         case 6:
-                            gameConstants_1.GameConstants.SET_COLOR_LAYER_COMPOSITE_OPERATION(false, true);
+                            gameConstants_1.GameConstants.SET_SHADE_LAYER_COMPOSITE_OPERATION(true);
                             break;
                         case 7:
-                            gameConstants_1.GameConstants.SET_COLOR_LAYER_COMPOSITE_OPERATION(false);
+                            gameConstants_1.GameConstants.SET_SHADE_LAYER_COMPOSITE_OPERATION(false);
                             break;
                     }
                 }
@@ -21462,6 +21623,7 @@ const candle_1 = __webpack_require__(/*! ../item/light/candle */ "./src/item/lig
 const glowBugEnemy_1 = __webpack_require__(/*! ../entity/enemy/glowBugEnemy */ "./src/entity/enemy/glowBugEnemy.ts");
 const gameplaySettings_1 = __webpack_require__(/*! ../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
 const itemGroup_1 = __webpack_require__(/*! ../item/itemGroup */ "./src/item/itemGroup.ts");
+const sword_1 = __webpack_require__(/*! ../item/weapon/sword */ "./src/item/weapon/sword.ts");
 // #endregion
 // #region Enums & Interfaces
 /**
@@ -21829,9 +21991,11 @@ class Room {
         this.populateWeaponGroup = (tiles) => {
             const emptyTile = this.getRandomEmptyPosition(tiles);
             const emptyTile2 = this.getRandomEmptyPosition(tiles, emptyTile);
+            const emptyTile3 = this.getRandomEmptyPosition(tiles, emptyTile2);
             const weapons = new itemGroup_1.ItemGroup([
                 new spear_1.Spear(this, emptyTile.x, emptyTile.y),
                 new warhammer_1.Warhammer(this, emptyTile2.x, emptyTile2.y),
+                new sword_1.Sword(this, emptyTile3.x, emptyTile3.y),
             ]);
             for (const item of weapons.items) {
                 item.grouped = true;
@@ -22644,11 +22808,13 @@ class Room {
             game_1.Game.ctx.restore();
         };
         this.drawShadeLayer = () => {
-            if (gameConstants_1.GameConstants.isIOS)
+            if (gameConstants_1.GameConstants.isIOS || !gameConstants_1.GameConstants.SHADE_ENABLED)
                 return;
             if (!this.onScreen)
                 return;
             game_1.Game.ctx.save();
+            game_1.Game.ctx.globalCompositeOperation =
+                gameConstants_1.GameConstants.SHADE_LAYER_COMPOSITE_OPERATION;
             // Clear the offscreen shade canvas
             this.shadeOffscreenCtx.clearRect(0, 0, this.shadeOffscreenCanvas.width, this.shadeOffscreenCanvas.height);
             let lastFillStyle = "";
@@ -22768,7 +22934,6 @@ class Room {
                 }
             }
             // Draw the blurred shade layer directly without masking
-            game_1.Game.ctx.globalCompositeOperation = "source-over";
             game_1.Game.ctx.globalAlpha = 1;
             game_1.Game.ctx.filter = "blur(5px)";
             game_1.Game.ctx.drawImage(this.shadeOffscreenCanvas, (this.roomX - offsetX - 1) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY - 1) * gameConstants_1.GameConstants.TILESIZE);
@@ -24618,7 +24783,10 @@ Sound.loadSounds = async () => {
         f.volume = 1.0;
     Sound.healSound = new Audio("res/SFX/items/powerup1.mp3");
     Sound.healSound.volume = 0.5;
-    Sound.music = new Audio("res/bewitched.mp3");
+    Sound.forestMusic = new Array();
+    [1].forEach((i) => Sound.forestMusic.push(new Audio("res/music/forest" + i + ".mp3")));
+    for (let f of Sound.forestMusic)
+        f.volume = 0.5;
     Sound.graveSound = new Audio("res/SFX/attacks/skelespawn.mp3");
     Sound.ambientSound = new Audio("res/SFX/ambient/ambientDark2.mp3");
     Sound.ambientSound.volume = 1;
@@ -24654,6 +24822,26 @@ Sound.loadSounds = async () => {
     Sound.fuseStartSound.volume = 0.2;
     Sound.warHammerSound = new Audio("res/SFX/attacks/warhammer.mp3");
     Sound.warHammerSound.volume = 1;
+    Sound.sliceSound = new Array();
+    [1, 2, 3].forEach((i) => Sound.sliceSound.push(new Audio("res/SFX/attacks/slice" + i + ".mp3")));
+    for (let f of Sound.sliceSound)
+        f.volume = 0.5;
+    Sound.shortSliceSound = new Array();
+    [1, 2, 3].forEach((i) => Sound.shortSliceSound.push(new Audio("res/SFX/attacks/sliceShort" + i + ".mp3")));
+    for (let f of Sound.shortSliceSound)
+        f.volume = 0.5;
+    Sound.backpackSound = new Audio("res/SFX/items/backpack.mp3");
+    Sound.backpackSound.volume = 0.75;
+    Sound.smithSound = new Audio("res/SFX/items/smith.mp3");
+    Sound.smithSound.volume = 0.5;
+    Sound.bushSounds = new Array();
+    [1, 2].forEach((i) => Sound.bushSounds.push(new Audio("res/SFX/objects/plantHit" + i + ".mp3")));
+    for (let f of Sound.bushSounds)
+        f.volume = 0.75;
+    Sound.parrySounds = new Array();
+    [1, 2].forEach((i) => Sound.parrySounds.push(new Audio("res/SFX/attacks/parry" + i + ".mp3")));
+    for (let f of Sound.parrySounds)
+        f.volume = 0.5;
 };
 Sound.playerStoneFootstep = async (environment) => {
     if (Sound.audioMuted)
@@ -24711,7 +24899,7 @@ Sound.potSmash = () => {
     if (Sound.audioMuted)
         return;
     let f = game_1.Game.randTable(Sound.potSmashSounds, Math.random);
-    _a.playWithReverb(f);
+    _a.delayPlay(() => _a.playWithReverb(f), 100);
     f.currentTime = 0;
 };
 Sound.pickupCoin = () => {
@@ -24775,20 +24963,22 @@ Sound.unlock = () => {
     _a.playWithReverb(f);
     f.currentTime = 0;
 };
-Sound.playMusic = () => {
+Sound.playForestMusic = (index) => {
     if (Sound.audioMuted)
         return;
-    /*
-    Sound.music.addEventListener(
-      "ended",
-      () => {
-        Sound.music.currentTime = 0;
-        Sound.playSoundSafely(Sound.music);
-      },
-      false
-    );
-    Sound.playSoundSafely(Sound.music);
-    */
+    const music = Sound.forestMusic[index];
+    if (music.paused) {
+        music.currentTime = 0;
+        Sound.playSoundSafely(music);
+    }
+    else {
+        music.play();
+    }
+    music.addEventListener("ended", () => {
+        music.currentTime = 0;
+        Sound.playSoundSafely(music);
+    }, false);
+    Sound.playSoundSafely(music);
 };
 Sound.doorOpen = () => {
     if (Sound.audioMuted)
@@ -24869,6 +25059,46 @@ Sound.playMagic = () => {
     _a.playWithReverb(woosh);
     f.currentTime = 0;
     woosh.currentTime = 0;
+};
+Sound.playSlice = () => {
+    if (Sound.audioMuted)
+        return;
+    let f = game_1.Game.randTable(Sound.sliceSound, Math.random);
+    _a.playWithReverb(f);
+    f.currentTime = 0;
+};
+Sound.playShortSlice = () => {
+    if (Sound.audioMuted)
+        return;
+    let f = game_1.Game.randTable(Sound.shortSliceSound, Math.random);
+    _a.playWithReverb(f);
+    f.currentTime = 0;
+};
+Sound.playBackpack = () => {
+    if (Sound.audioMuted)
+        return;
+    _a.playWithReverb(Sound.backpackSound);
+    Sound.backpackSound.currentTime = 0;
+};
+Sound.playSmith = () => {
+    if (Sound.audioMuted)
+        return;
+    _a.playWithReverb(Sound.smithSound);
+    Sound.smithSound.currentTime = 0;
+};
+Sound.playBush = () => {
+    if (Sound.audioMuted)
+        return;
+    let f = game_1.Game.randTable(Sound.bushSounds, Math.random);
+    _a.delayPlay(() => _a.playWithReverb(f), 100);
+    f.currentTime = 0;
+};
+Sound.playParry = () => {
+    if (Sound.audioMuted)
+        return;
+    let f = game_1.Game.randTable(Sound.parrySounds, Math.random);
+    _a.delayPlay(() => _a.playWithReverb(f), 100);
+    f.currentTime = 0;
 };
 Sound.delayPlay = (method, delay) => {
     setTimeout(method, delay);
@@ -25336,6 +25566,7 @@ const tile_1 = __webpack_require__(/*! ./tile */ "./src/tile/tile.ts");
 const upLadder_1 = __webpack_require__(/*! ./upLadder */ "./src/tile/upLadder.ts");
 const events_1 = __webpack_require__(/*! ../event/events */ "./src/event/events.ts");
 const eventBus_1 = __webpack_require__(/*! ../event/eventBus */ "./src/event/eventBus.ts");
+const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts");
 class DownLadder extends tile_1.Tile {
     constructor(room, game, x, y, isSidePath = false) {
         super(room, x, y);
@@ -25359,6 +25590,8 @@ class DownLadder extends tile_1.Tile {
             }
             this.linkedRoom = linkedRoom;
             this.linkUpLadder();
+            if (this.linkedRoom.envType === 2)
+                sound_1.Sound.playForestMusic(0);
         };
         this.handleSidePathRooms = (linkedRoom) => {
             const targetDepth = this.room.depth;

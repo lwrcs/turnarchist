@@ -139,6 +139,7 @@ export class Entity extends Drawable {
   opacity: number = 0;
   hasHitParticles: boolean = true;
   hasDamageNumbers: boolean = true;
+  armored: boolean = false;
 
   private _imageParticleTiles: { x: number; y: number };
   hitSound: () => void;
@@ -504,6 +505,9 @@ export class Entity extends Drawable {
       this.shadeColor = this.room.shadeColor;
     }, 100);
     */
+
+    if (this.armored && this.health === this.maxHealth) Sound.playParry();
+
     this.health -= damage;
     this.maxHealth -= shieldHealth;
     this.onHurt(damage, type);

@@ -77,7 +77,7 @@ export abstract class Weapon extends Equippable {
     if (!entity.isEnemy) return;
     const enemy = entity as Enemy;
     if (!enemy.status.poison.active && !enemy.status.bleed.active) {
-      if (this.wielder.applyStatus(enemy, this.status)) {
+      if (this.wielder.applyStatus(enemy, this.status) && enemy.health > 0) {
         this.statusApplicationCount++;
         const message = this.status.poison
           ? `Your weapon poisons the ${enemy.name}`
@@ -231,19 +231,21 @@ export abstract class Weapon extends Equippable {
     targetY: number,
     animated: boolean = true,
     damage: number = this.damage,
-    animationName?: string,
+    shakeScreen: boolean = true,
+    sound: boolean = true,
+    mainAttack: boolean = true,
   ): boolean {
     const hitSomething = this.hitEntitiesAt(targetX, targetY, damage);
 
     this.applyHitDelay(hitSomething);
 
     if (hitSomething) {
-      this.hitSound();
+      if (sound) this.hitSound();
       this.wielder.setHitXY(targetX, targetY);
       if (animated) this.attackAnimation(targetX, targetY);
       this.game.rooms[this.wielder.levelID].tick(this.wielder);
-      this.shakeScreen(targetX, targetY);
-      this.degrade();
+      if (shakeScreen) this.shakeScreen(targetX, targetY);
+      if (mainAttack) this.degrade();
     }
 
     return hitSomething;

@@ -89,6 +89,7 @@ import { Candle } from "../item/light/candle";
 import { GlowBugEnemy } from "../entity/enemy/glowBugEnemy";
 import { GameplaySettings } from "../game/gameplaySettings";
 import { ItemGroup } from "../item/itemGroup";
+import { Sword } from "../item/weapon/sword";
 
 // #endregion
 
@@ -1240,10 +1241,12 @@ export class Room {
   populateWeaponGroup = (tiles: Tile[]) => {
     const emptyTile = this.getRandomEmptyPosition(tiles);
     const emptyTile2 = this.getRandomEmptyPosition(tiles, emptyTile);
+    const emptyTile3 = this.getRandomEmptyPosition(tiles, emptyTile2);
 
     const weapons = new ItemGroup([
       new Spear(this, emptyTile.x, emptyTile.y),
       new Warhammer(this, emptyTile2.x, emptyTile2.y),
+      new Sword(this, emptyTile3.x, emptyTile3.y),
     ]);
     for (const item of weapons.items) {
       item.grouped = true;
@@ -2329,9 +2332,13 @@ export class Room {
   };
 
   drawShadeLayer = () => {
-    if (GameConstants.isIOS) return;
+    if (GameConstants.isIOS || !GameConstants.SHADE_ENABLED) return;
     if (!this.onScreen) return;
+
     Game.ctx.save();
+
+    Game.ctx.globalCompositeOperation =
+      GameConstants.SHADE_LAYER_COMPOSITE_OPERATION as GlobalCompositeOperation;
     // Clear the offscreen shade canvas
     this.shadeOffscreenCtx.clearRect(
       0,
@@ -2473,7 +2480,7 @@ export class Room {
     }
 
     // Draw the blurred shade layer directly without masking
-    Game.ctx.globalCompositeOperation = "source-over";
+
     Game.ctx.globalAlpha = 1;
     Game.ctx.filter = "blur(5px)";
     Game.ctx.drawImage(

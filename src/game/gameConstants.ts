@@ -57,7 +57,7 @@ export class GameConstants {
 
   static KEY_REPEAT_TIME = 300; // millseconds
   static SWIPE_HOLD_REPEAT_TIME = 300;
-  static SWIPE_HOLD_INITIAL_DELAY = 150;
+  static SWIPE_HOLD_INITIAL_DELAY = 10;
   static MOVEMENT_COOLDOWN = 200; // milliseconds
   static MOVEMENT_QUEUE_COOLDOWN = 100; // milliseconds
   static readonly MOVE_WITH_MOUSE = true;
@@ -87,14 +87,23 @@ export class GameConstants {
   static readonly MISS_COLOR = "#639bff";
 
   static CUSTOM_SHADER_COLOR_ENABLED = false;
-
+  static SHADE_ENABLED = true;
   static COLOR_LAYER_COMPOSITE_OPERATION = "soft-light"; //"soft-light";
-  static SHADE_LAYER_COMPOSITE_OPERATION = "screen"; //"soft-light";
+  static SHADE_LAYER_COMPOSITE_OPERATION = "source-over"; //"soft-light";
   static USE_OPTIMIZED_SHADING = false;
   static SMOOTH_LIGHTING = false;
   static ctxBlurEnabled = true;
   static BLUR_ENABLED = true;
   static ENEMIES_BLOCK_LIGHT = false;
+
+  static readonly SHADE_LAYER_COMPOSITE_OPERATIONS = [
+    "source-over",
+    "screen",
+    "multiply",
+    "overlay",
+    "darken",
+    "lighten",
+  ];
 
   static readonly COLOR_LAYER_COMPOSITE_OPERATIONS = [
     "soft-light",
@@ -116,14 +125,11 @@ export class GameConstants {
   ];
 
   static readonly SET_COLOR_LAYER_COMPOSITE_OPERATION = (
-    shade?: boolean,
     back: boolean = false,
   ) => {
-    let operation = shade
-      ? GameConstants.SHADE_LAYER_COMPOSITE_OPERATION
-      : GameConstants.COLOR_LAYER_COMPOSITE_OPERATION;
-    const currentIndex =
-      GameConstants.COLOR_LAYER_COMPOSITE_OPERATIONS.indexOf(operation);
+    const currentIndex = GameConstants.COLOR_LAYER_COMPOSITE_OPERATIONS.indexOf(
+      GameConstants.COLOR_LAYER_COMPOSITE_OPERATION,
+    );
     let nextIndex;
 
     if (back) {
@@ -140,15 +146,42 @@ export class GameConstants {
         GameConstants.COLOR_LAYER_COMPOSITE_OPERATIONS.length;
     }
 
-    operation = GameConstants.COLOR_LAYER_COMPOSITE_OPERATIONS[nextIndex];
+    GameConstants.COLOR_LAYER_COMPOSITE_OPERATION =
+      GameConstants.COLOR_LAYER_COMPOSITE_OPERATIONS[nextIndex];
 
-    if (shade) {
-      GameConstants.SHADE_LAYER_COMPOSITE_OPERATION = operation;
+    console.log(
+      `Color layer composite operation set to ${GameConstants.COLOR_LAYER_COMPOSITE_OPERATION}`,
+    );
+  };
+
+  static readonly SET_SHADE_LAYER_COMPOSITE_OPERATION = (
+    back: boolean = false,
+  ) => {
+    const currentIndex = GameConstants.SHADE_LAYER_COMPOSITE_OPERATIONS.indexOf(
+      GameConstants.SHADE_LAYER_COMPOSITE_OPERATION,
+    );
+    let nextIndex;
+
+    if (back) {
+      // Decrement the index to move backward in the operations array
+      nextIndex =
+        (currentIndex -
+          1 +
+          GameConstants.SHADE_LAYER_COMPOSITE_OPERATIONS.length) %
+        GameConstants.SHADE_LAYER_COMPOSITE_OPERATIONS.length;
     } else {
-      GameConstants.COLOR_LAYER_COMPOSITE_OPERATION = operation;
+      // Increment the index to move forward in the operations array
+      nextIndex =
+        (currentIndex + 1) %
+        GameConstants.SHADE_LAYER_COMPOSITE_OPERATIONS.length;
     }
 
-    console.log(`Color layer composite operation set to ${operation}`);
+    GameConstants.SHADE_LAYER_COMPOSITE_OPERATION =
+      GameConstants.SHADE_LAYER_COMPOSITE_OPERATIONS[nextIndex];
+
+    console.log(
+      `Shade layer composite operation set to ${GameConstants.SHADE_LAYER_COMPOSITE_OPERATION}`,
+    );
   };
 
   static readonly TOGGLE_USE_OPTIMIZED_SHADING = () => {

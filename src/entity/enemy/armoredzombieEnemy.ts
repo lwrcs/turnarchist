@@ -24,7 +24,7 @@ export class ArmoredzombieEnemy extends Enemy {
     this.ticks = 0;
     this.frame = 0;
     this.health = 2;
-    this.maxHealth = 1;
+    this.maxHealth = 2;
     this.tileX = 17;
     this.tileY = 8;
     this.seenPlayer = false;
@@ -32,6 +32,7 @@ export class ArmoredzombieEnemy extends Enemy {
     this.deathParticleColor = "#ffffff";
     this.name = "armored zombie";
     this.forwardOnlyAttack = true;
+    this.armored = true;
 
     if (drop) this.drop = drop;
     this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);

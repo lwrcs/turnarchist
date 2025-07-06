@@ -7,6 +7,7 @@ import { GenericParticle } from "../../particle/genericParticle";
 import { Shrooms } from "../../item/usable/shrooms";
 import { EntityType } from "../entity";
 import { ImageParticle } from "../../particle/imageParticle";
+import { Sound } from "../../sound/sound";
 
 export class Bush extends Entity {
   constructor(room: Room, game: Game, x: number, y: number) {
@@ -21,6 +22,7 @@ export class Bush extends Entity {
     this.imageParticleX = 0;
     this.imageParticleY = 28;
     this.opaque = true;
+    this.hitSound = Sound.playBush;
     //this.drops.push(new Shrooms(this.room, this.x, this.y));
   }
 

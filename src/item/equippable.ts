@@ -2,6 +2,7 @@ import { Item } from "./item";
 import { Game } from "../game";
 import { Room } from "../room/room";
 import { Player } from "../player/player";
+import { GameplaySettings } from "../game/gameplaySettings";
 
 export class Equippable extends Item {
   wielder: Player;
@@ -23,8 +24,11 @@ export class Equippable extends Item {
   };
 
   toggleEquip = () => {
-    if (!this.broken) this.equipped = !this.equipped;
-    else {
+    if (!this.broken) {
+      this.equipped = !this.equipped;
+      if (GameplaySettings.EQUIP_USES_TURN && this.equipped === true)
+        this.wielder?.stall();
+    } else {
       this.equipped = false;
       let pronoun = this.name.endsWith("s") ? "them" : "it";
       this.level.game.pushMessage(

@@ -1,3 +1,4 @@
+import { GameplaySettings } from "../game/gameplaySettings";
 import { Item } from "./item";
 
 export class ItemGroup {
@@ -12,9 +13,12 @@ export class ItemGroup {
         i.destroy();
       }
     }
-    item.degradeable = false;
     item.level.game.pushMessage(`You choose to keep the ${item.name}.`);
-    item.level.game.pushMessage(`This one won't break.`);
-    item.description += " Unbreakable.";
+
+    if (GameplaySettings.UNBREAKABLE_ITEMGROUP_LOOT) {
+      item.degradeable = false;
+      item.level.game.pushMessage(`This one won't break.`);
+      item.description += " Unbreakable.";
+    }
   }
 }

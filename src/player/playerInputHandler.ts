@@ -239,10 +239,10 @@ export class PlayerInputHandler {
       if (GameConstants.DEVELOPER_MODE) {
         switch (num) {
           case 6:
-            GameConstants.SET_COLOR_LAYER_COMPOSITE_OPERATION(false, true);
+            GameConstants.SET_SHADE_LAYER_COMPOSITE_OPERATION(true);
             break;
           case 7:
-            GameConstants.SET_COLOR_LAYER_COMPOSITE_OPERATION(false);
+            GameConstants.SET_SHADE_LAYER_COMPOSITE_OPERATION(false);
             break;
         }
       }

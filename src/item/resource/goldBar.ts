@@ -5,6 +5,7 @@ import { Room } from "../../room/room";
 import { TextParticle } from "../../particle/textParticle";
 import { GameConstants } from "../../game/gameConstants";
 import { GoldRing } from "../jewelry/goldRing";
+import { Sound } from "../../sound/sound";
 
 export class GoldBar extends Item {
   static itemName = "gold bar";
@@ -21,5 +22,6 @@ export class GoldBar extends Item {
   smith = (player: Player) => {
     player.inventory.removeItem(this);
     player.inventory.addItem(new GoldRing(this.level, this.x, this.y));
+    Sound.playSmith();
   };
 }

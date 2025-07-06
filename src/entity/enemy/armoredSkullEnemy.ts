@@ -6,6 +6,7 @@ import { astar } from "../../utility/astarclass";
 import { SpikeTrap } from "../../tile/spiketrap";
 import { ImageParticle } from "../../particle/imageParticle";
 import { Enemy } from "./enemy";
+import { Sound } from "../../sound/sound";
 
 export class ArmoredSkullEnemy extends Enemy {
   frame: number;
@@ -37,6 +38,7 @@ export class ArmoredSkullEnemy extends Enemy {
     this.deathParticleColor = "#ffffff";
     this.name = "armored skeleton";
     this.forwardOnlyAttack = true;
+    this.armored = true;
     if (drop) this.drop = drop;
     this.getDrop(["weapon", "consumable", "tool", "coin"]);
   }
@@ -70,6 +72,7 @@ export class ArmoredSkullEnemy extends Enemy {
     this.healthBar.hurt();
     this.createDamageNumber(damage, type);
     this.playHitSound();
+    if (this.health === 2) Sound.playParry();
 
     if (this.health === 1) {
       this.unconscious = true;

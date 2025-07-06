@@ -315,8 +315,12 @@ export class Player extends Drawable {
   };
 
   stall = () => {
-    this.game.room.tick(this);
-    this.shakeScreen(this.x - 0.5, this.y, this.x + 0.5, this.y, 10);
+    if (!this.game.started || !this.game.room || !this.renderer) return;
+    if (this.game.levelState === LevelState.IN_LEVEL) {
+      this.game?.room?.tick(this);
+      this.shakeScreen(this.x - 0.5, this.y, this.x + 0.5, this.y, 5);
+      this.game.pushMessage("Equipping an item takes a turn.");
+    }
   };
 
   moveWithMouse = () => {
