@@ -66,7 +66,7 @@ export class Sound {
     Sound.playerStoneFootsteps = new Array<HTMLAudioElement>();
     [1, 2, 3].forEach((i) =>
       Sound.playerStoneFootsteps.push(
-        new Audio("res/SFX/footsteps/stone/footstep" + i + ".wav"),
+        new Audio("res/SFX/footsteps/stone/footstep" + i + ".mp3"),
       ),
     );
     for (let f of Sound.playerStoneFootsteps) f.volume = 1.0;
@@ -263,7 +263,23 @@ export class Sound {
 
   static async playWithReverb(audio: HTMLAudioElement) {
     await ReverbEngine.initialize();
+
+    // Clean up finished sounds before adding new ones
+    Sound.currentlyPlaying = Sound.currentlyPlaying.filter(
+      (a) => !a.ended && !a.paused,
+    );
+
     Sound.currentlyPlaying.push(audio);
+
+    // Auto-remove when sound ends
+    audio.addEventListener(
+      "ended",
+      () => {
+        const index = Sound.currentlyPlaying.indexOf(audio);
+        if (index > -1) Sound.currentlyPlaying.splice(index, 1);
+      },
+      { once: true },
+    );
 
     ReverbEngine.applyReverb(audio);
     this.playSoundSafely(audio);
@@ -276,9 +292,8 @@ export class Sound {
     if (environment === 1) sound = Sound.playerDirtFootsteps;
 
     let f = Game.randTable(sound, Math.random);
-    await this.playWithReverb(f);
-    f.currentTime = 0;
-    f.play();
+    f.currentTime = 0; // Set BEFORE playback
+    await this.playWithReverb(f); // Only play once
   };
 
   static enemyFootstep = () => {
@@ -304,8 +319,8 @@ export class Sound {
   static hurt = () => {
     if (Sound.audioMuted) return;
     let f = Game.randTable(Sound.hurtSounds, Math.random);
+    f.currentTime = 0; // Move BEFORE playWithReverb
     this.playWithReverb(f);
-    f.currentTime = 0;
   };
 
   static enemySpawn = () => {
@@ -396,18 +411,16 @@ export class Sound {
     if (music.paused) {
       music.currentTime = 0;
       Sound.playSoundSafely(music);
-    } else {
-      music.play();
+
+      music.addEventListener(
+        "ended",
+        () => {
+          music.currentTime = 0;
+          Sound.playSoundSafely(music);
+        },
+        { once: true },
+      );
     }
-    music.addEventListener(
-      "ended",
-      () => {
-        music.currentTime = 0;
-        Sound.playSoundSafely(music);
-      },
-      false,
-    );
-    Sound.playSoundSafely(music);
   };
 
   static doorOpen = () => {

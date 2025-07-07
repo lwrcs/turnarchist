@@ -24709,7 +24709,15 @@ class Sound {
     }
     static async playWithReverb(audio) {
         await reverb_1.ReverbEngine.initialize();
+        // Clean up finished sounds before adding new ones
+        Sound.currentlyPlaying = Sound.currentlyPlaying.filter((a) => !a.ended && !a.paused);
         Sound.currentlyPlaying.push(audio);
+        // Auto-remove when sound ends
+        audio.addEventListener("ended", () => {
+            const index = Sound.currentlyPlaying.indexOf(audio);
+            if (index > -1)
+                Sound.currentlyPlaying.splice(index, 1);
+        }, { once: true });
         reverb_1.ReverbEngine.applyReverb(audio);
         this.playSoundSafely(audio);
     }
@@ -24735,7 +24743,7 @@ Sound.loadSounds = async () => {
     if (reverb_1.ReverbEngine.initialized)
         Sound.audioMuted = false;
     Sound.playerStoneFootsteps = new Array();
-    [1, 2, 3].forEach((i) => Sound.playerStoneFootsteps.push(new Audio("res/SFX/footsteps/stone/footstep" + i + ".wav")));
+    [1, 2, 3].forEach((i) => Sound.playerStoneFootsteps.push(new Audio("res/SFX/footsteps/stone/footstep" + i + ".mp3")));
     for (let f of Sound.playerStoneFootsteps)
         f.volume = 1.0;
     Sound.playerGrassFootsteps = new Array();
@@ -24859,9 +24867,8 @@ Sound.playerStoneFootstep = async (environment) => {
     if (environment === 1)
         sound = Sound.playerDirtFootsteps;
     let f = game_1.Game.randTable(sound, Math.random);
-    await _a.playWithReverb(f);
-    f.currentTime = 0;
-    f.play();
+    f.currentTime = 0; // Set BEFORE playback
+    await _a.playWithReverb(f); // Only play once
 };
 Sound.enemyFootstep = () => {
     if (Sound.audioMuted)
@@ -24886,8 +24893,8 @@ Sound.hurt = () => {
     if (Sound.audioMuted)
         return;
     let f = game_1.Game.randTable(Sound.hurtSounds, Math.random);
+    f.currentTime = 0; // Move BEFORE playWithReverb
     _a.playWithReverb(f);
-    f.currentTime = 0;
 };
 Sound.enemySpawn = () => {
     if (Sound.audioMuted)
@@ -24977,15 +24984,11 @@ Sound.playForestMusic = (index) => {
     if (music.paused) {
         music.currentTime = 0;
         Sound.playSoundSafely(music);
+        music.addEventListener("ended", () => {
+            music.currentTime = 0;
+            Sound.playSoundSafely(music);
+        }, { once: true });
     }
-    else {
-        music.play();
-    }
-    music.addEventListener("ended", () => {
-        music.currentTime = 0;
-        Sound.playSoundSafely(music);
-    }, false);
-    Sound.playSoundSafely(music);
 };
 Sound.doorOpen = () => {
     if (Sound.audioMuted)
