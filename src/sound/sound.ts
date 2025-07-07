@@ -66,7 +66,7 @@ export class Sound {
     Sound.playerStoneFootsteps = new Array<HTMLAudioElement>();
     [1, 2, 3].forEach((i) =>
       Sound.playerStoneFootsteps.push(
-        new Audio("res/SFX/footsteps/stone/footstep" + i + ".mp3"),
+        new Audio("res/SFX/footsteps/stone/footstep" + i + ".wav"),
       ),
     );
     for (let f of Sound.playerStoneFootsteps) f.volume = 1.0;

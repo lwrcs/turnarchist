@@ -24735,7 +24735,7 @@ Sound.loadSounds = async () => {
     if (reverb_1.ReverbEngine.initialized)
         Sound.audioMuted = false;
     Sound.playerStoneFootsteps = new Array();
-    [1, 2, 3].forEach((i) => Sound.playerStoneFootsteps.push(new Audio("res/SFX/footsteps/stone/footstep" + i + ".mp3")));
+    [1, 2, 3].forEach((i) => Sound.playerStoneFootsteps.push(new Audio("res/SFX/footsteps/stone/footstep" + i + ".wav")));
     for (let f of Sound.playerStoneFootsteps)
         f.volume = 1.0;
     Sound.playerGrassFootsteps = new Array();
