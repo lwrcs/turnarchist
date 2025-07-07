@@ -1435,24 +1435,17 @@ export class Room {
   };
 
   disableFuseSounds = () => {
-    for (const b of this.entities.filter((e) => e instanceof Bomb)) {
-      //if (!bomb.soundPaused) {
-      //bomb.soundPaused = true;
-      const bomb = b as Bomb;
-      Sound.stopSound(bomb.fuseSound);
-      //}
-    }
+    // Stop all fuse sounds when leaving the room
+    Sound.stopFuse();
   };
 
   enableFuseSounds = () => {
-    for (const b of this.entities.filter((e) => e instanceof Bomb)) {
-      //if (!bomb.soundPaused) {
-      //bomb.soundPaused = true;
-
-      const bomb = b as Bomb;
-      if (bomb.lit) {
-        Sound.playWithReverb(bomb.fuseSound);
-      }
+    // Check if there are any lit bombs and restart fuse sound if needed
+    const litBombs = this.entities.filter(
+      (e) => e instanceof Bomb && (e as Bomb).lit,
+    );
+    if (litBombs.length > 0) {
+      Sound.playFuse();
     }
   };
 
