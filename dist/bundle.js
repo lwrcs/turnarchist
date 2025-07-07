@@ -24625,8 +24625,15 @@ class ReverbEngine {
             console.error("Error setting reverb impulse:", error);
         }
     }
+    // Add mobile detection
+    static isMobile() {
+        return (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768);
+    }
     // Apply reverb to a given HTMLAudioElement
     static async applyReverb(audioElement) {
+        // Skip reverb entirely on mobile
+        if (ReverbEngine.isMobile())
+            return;
         await ReverbEngine.initialize();
         if (!ReverbEngine.initialized)
             return;
@@ -24786,7 +24793,7 @@ Sound.loadSounds = async () => {
     Sound.forestMusic = new Array();
     [1].forEach((i) => Sound.forestMusic.push(new Audio("res/music/forest" + i + ".mp3")));
     for (let f of Sound.forestMusic)
-        f.volume = 0.5;
+        f.volume = 0.25;
     Sound.graveSound = new Audio("res/SFX/attacks/skelespawn.mp3");
     Sound.ambientSound = new Audio("res/SFX/ambient/ambientDark2.mp3");
     Sound.ambientSound.volume = 1;

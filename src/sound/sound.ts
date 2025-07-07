@@ -162,7 +162,7 @@ export class Sound {
     [1].forEach((i) =>
       Sound.forestMusic.push(new Audio("res/music/forest" + i + ".mp3")),
     );
-    for (let f of Sound.forestMusic) f.volume = 0.5;
+    for (let f of Sound.forestMusic) f.volume = 0.25;
 
     Sound.graveSound = new Audio("res/SFX/attacks/skelespawn.mp3");
     Sound.ambientSound = new Audio("res/SFX/ambient/ambientDark2.mp3");
