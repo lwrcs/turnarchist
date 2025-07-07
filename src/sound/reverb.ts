@@ -1,22 +1,18 @@
 import { Game } from "../game";
-
-export interface AudioBufferConfig {
-  buffer: AudioBuffer;
-  volume: number;
-  loop?: boolean;
-  loopStart?: number;
-  loopEnd?: number;
-}
+import { Sound } from "./sound";
 
 export class ReverbEngine {
   private static audioContext: AudioContext;
   private static convolver: ConvolverNode;
   private static reverbBuffer: AudioBuffer | null = null;
-  private static currentSources: Set<AudioBufferSourceNode> = new Set();
+  private static mediaSources: WeakMap<
+    HTMLAudioElement,
+    MediaElementAudioSourceNode
+  > = new WeakMap();
   static initialized: boolean = false;
 
   // Initialize the AudioContext and ConvolverNode
-  public static async initialize(): Promise<void> {
+  public static async initialize() {
     if (ReverbEngine.initialized) return;
     let canInitialize = false;
 
@@ -53,11 +49,12 @@ export class ReverbEngine {
       await ReverbEngine.loadReverbBuffer(`res/SFX/impulses/small.mp3`);
       ReverbEngine.setDefaultReverb();
       ReverbEngine.initialized = true;
+      if (Sound.initialized) Sound.audioMuted = false;
     }
   }
 
   // Load a specified impulse response
-  private static async loadReverbBuffer(filePath: string): Promise<void> {
+  private static async loadReverbBuffer(filePath: string) {
     try {
       const response = await fetch(filePath);
 
@@ -74,7 +71,7 @@ export class ReverbEngine {
   }
 
   // Set the default reverb buffer
-  private static setDefaultReverb(): void {
+  private static setDefaultReverb() {
     if (ReverbEngine.reverbBuffer) {
       ReverbEngine.convolver.buffer = ReverbEngine.reverbBuffer;
     }
@@ -96,154 +93,44 @@ export class ReverbEngine {
     }
   }
 
-  /**
-   * Get the initialized AudioContext
-   */
-  public static getAudioContext(): AudioContext | null {
-    return ReverbEngine.audioContext || null;
+  // Add mobile detection
+  private static isMobile(): boolean {
+    return (
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        navigator.userAgent,
+      ) || window.innerWidth <= 768
+    );
   }
 
-  /**
-   * Play an AudioBuffer with reverb applied
-   * @param config - Audio buffer configuration including buffer, volume, and loop settings
-   * @param delay - Optional delay in seconds before playing
-   * @returns AudioBufferSourceNode that was created
-   */
-  public static async playBufferWithReverb(
-    config: AudioBufferConfig,
-    delay: number = 0,
-  ): Promise<AudioBufferSourceNode | null> {
+  // Apply reverb to a given HTMLAudioElement
+  public static async applyReverb(audioElement: HTMLAudioElement) {
+    // Skip reverb entirely on mobile
+    if (ReverbEngine.isMobile()) return;
+
     await ReverbEngine.initialize();
-    if (!ReverbEngine.initialized || !ReverbEngine.audioContext) return null;
-
+    if (!ReverbEngine.initialized) return;
     try {
-      const source = ReverbEngine.audioContext.createBufferSource();
-      const gainNode = ReverbEngine.audioContext.createGain();
+      if (ReverbEngine.mediaSources.has(audioElement)) {
+        return;
+      }
 
-      source.buffer = config.buffer;
-      source.loop = config.loop || false;
-      if (config.loopStart !== undefined) source.loopStart = config.loopStart;
-      if (config.loopEnd !== undefined) source.loopEnd = config.loopEnd;
-
-      gainNode.gain.value = config.volume;
-
-      source.connect(gainNode);
-      gainNode.connect(ReverbEngine.convolver);
-
-      // Track the source
-      ReverbEngine.currentSources.add(source);
-
-      // Clean up when the source ends
-      source.addEventListener("ended", () => {
-        ReverbEngine.currentSources.delete(source);
-        source.disconnect();
-        gainNode.disconnect();
-      });
-
-      source.start(ReverbEngine.audioContext.currentTime + delay);
-      return source;
+      const track =
+        ReverbEngine.audioContext.createMediaElementSource(audioElement);
+      track.connect(ReverbEngine.convolver);
+      ReverbEngine.mediaSources.set(audioElement, track);
     } catch (error) {
-      console.error("Error playing buffer with reverb:", error);
-      return null;
+      console.error("Error applying reverb:", error);
     }
   }
 
-  /**
-   * Play an AudioBuffer without reverb (direct to destination)
-   * @param config - Audio buffer configuration
-   * @param delay - Optional delay in seconds before playing
-   * @returns AudioBufferSourceNode that was created
-   */
-  public static async playBufferDirect(
-    config: AudioBufferConfig,
-    delay: number = 0,
-  ): Promise<AudioBufferSourceNode | null> {
+  // Remove reverb from a given HTMLAudioElement
+  public static async removeReverb(audioElement: HTMLAudioElement) {
     await ReverbEngine.initialize();
-    if (!ReverbEngine.initialized || !ReverbEngine.audioContext) return null;
-
-    try {
-      const source = ReverbEngine.audioContext.createBufferSource();
-      const gainNode = ReverbEngine.audioContext.createGain();
-
-      source.buffer = config.buffer;
-      source.loop = config.loop || false;
-      if (config.loopStart !== undefined) source.loopStart = config.loopStart;
-      if (config.loopEnd !== undefined) source.loopEnd = config.loopEnd;
-
-      gainNode.gain.value = config.volume;
-
-      source.connect(gainNode);
-      gainNode.connect(ReverbEngine.audioContext.destination);
-
-      // Track the source
-      ReverbEngine.currentSources.add(source);
-
-      // Clean up when the source ends
-      source.addEventListener("ended", () => {
-        ReverbEngine.currentSources.delete(source);
-        source.disconnect();
-        gainNode.disconnect();
-      });
-
-      source.start(ReverbEngine.audioContext.currentTime + delay);
-      return source;
-    } catch (error) {
-      console.error("Error playing buffer direct:", error);
-      return null;
-    }
-  }
-
-  /**
-   * Stop a specific audio source
-   * @param source - The AudioBufferSourceNode to stop
-   */
-  public static stopSource(source: AudioBufferSourceNode): void {
-    if (ReverbEngine.currentSources.has(source)) {
-      try {
-        source.stop();
-      } catch (error) {
-        // Source may already be stopped
-      }
-      ReverbEngine.currentSources.delete(source);
-    }
-  }
-
-  /**
-   * Stop all currently playing audio sources
-   */
-  public static stopAllSources(): void {
-    ReverbEngine.currentSources.forEach((source) => {
-      try {
-        source.stop();
-      } catch (error) {
-        // Source may already be stopped
-      }
-    });
-    ReverbEngine.currentSources.clear();
-  }
-
-  /**
-   * Load an audio file and return its AudioBuffer
-   * @param filePath - Path to the audio file
-   * @returns Promise that resolves to AudioBuffer or null if failed
-   */
-  public static async loadAudioBuffer(
-    filePath: string,
-  ): Promise<AudioBuffer | null> {
-    await ReverbEngine.initialize();
-    if (!ReverbEngine.audioContext) return null;
-
-    try {
-      const response = await fetch(filePath);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const arrayBuffer = await response.arrayBuffer();
-      return await ReverbEngine.audioContext.decodeAudioData(arrayBuffer);
-    } catch (error) {
-      console.error(`Error loading audio buffer from ${filePath}:`, error);
-      return null;
+    if (!ReverbEngine.initialized) return;
+    const track = ReverbEngine.mediaSources.get(audioElement);
+    if (track) {
+      track.disconnect();
+      ReverbEngine.mediaSources.delete(audioElement);
     }
   }
 }

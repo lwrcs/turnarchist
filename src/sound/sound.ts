@@ -1,663 +1,560 @@
 import { Game } from "../game";
-import { ReverbEngine, AudioBufferConfig } from "./reverb";
-
-interface BufferCollection {
-  buffers: AudioBuffer[];
-  volume: number;
-}
+import { ReverbEngine } from "./reverb";
 
 export class Sound {
-  // Audio buffer collections for different sound types
-  static playerStoneFootsteps: BufferCollection;
-  static playerGrassFootsteps: BufferCollection;
-  static playerDirtFootsteps: BufferCollection;
-  static enemyFootsteps: BufferCollection;
-  static hitSounds: BufferCollection;
-  static chestSounds: BufferCollection;
-  static coinPickupSounds: BufferCollection;
-  static miningSounds: BufferCollection;
-  static hurtSounds: BufferCollection;
-  static pushSounds: BufferCollection;
-  static forestMusic: BufferCollection;
-  static swingSounds: BufferCollection;
-  static unlockSounds: BufferCollection;
-  static doorOpenSounds: BufferCollection;
-  static potSmashSounds: BufferCollection;
-  static bombSounds: BufferCollection;
-  static sliceSound: BufferCollection;
-  static shortSliceSound: BufferCollection;
-  static bushSounds: BufferCollection;
-  static parrySounds: BufferCollection;
-
-  // Single audio buffers
-  static enemySpawnSound: { buffer: AudioBuffer; volume: number };
-  static breakRockSound: { buffer: AudioBuffer; volume: number };
-  static genericPickupSound: { buffer: AudioBuffer; volume: number };
-  static healSound: { buffer: AudioBuffer; volume: number };
-  static graveSound: { buffer: AudioBuffer; volume: number };
-  static ambientSound: { buffer: AudioBuffer; volume: number };
-  static goreSound: { buffer: AudioBuffer; volume: number };
-  static keyPickupSound: { buffer: AudioBuffer; volume: number };
-  static magicSound: { buffer: AudioBuffer; volume: number };
-  static wooshSound: { buffer: AudioBuffer; volume: number };
-  static fuseBurnSound: { buffer: AudioBuffer; volume: number };
-  static fuseLoopSound: { buffer: AudioBuffer; volume: number };
-  static fuseStartSound: { buffer: AudioBuffer; volume: number };
-  static warHammerSound: { buffer: AudioBuffer; volume: number };
-  static backpackSound: { buffer: AudioBuffer; volume: number };
-  static smithSound: { buffer: AudioBuffer; volume: number };
-
+  static playerStoneFootsteps: Array<HTMLAudioElement>;
+  static playerGrassFootsteps: Array<HTMLAudioElement>;
+  static playerDirtFootsteps: Array<HTMLAudioElement>;
+  static enemyFootsteps: Array<HTMLAudioElement>;
+  static hitSounds: Array<HTMLAudioElement>;
+  static enemySpawnSound: HTMLAudioElement;
+  static chestSounds: Array<HTMLAudioElement>;
+  static coinPickupSounds: Array<HTMLAudioElement>;
+  static miningSounds: Array<HTMLAudioElement>;
+  static breakRockSound: HTMLAudioElement;
+  static hurtSounds: Array<HTMLAudioElement>;
+  static genericPickupSound: HTMLAudioElement;
+  static pushSounds: Array<HTMLAudioElement>;
+  static healSound: HTMLAudioElement;
+  static forestMusic: Array<HTMLAudioElement>;
+  static graveSound: HTMLAudioElement;
+  static ambientSound: HTMLAudioElement;
+  static goreSound: HTMLAudioElement;
+  static swingSounds: Array<HTMLAudioElement>;
+  static unlockSounds: Array<HTMLAudioElement>;
+  static doorOpenSounds: Array<HTMLAudioElement>;
+  static potSmashSounds: Array<HTMLAudioElement>;
+  static keyPickupSound: HTMLAudioElement;
+  static magicSound: HTMLAudioElement;
+  static wooshSound: HTMLAudioElement;
   static initialized: boolean = false;
   static audioMuted: boolean = true;
+  static bombSounds: Array<HTMLAudioElement>;
+  static fuseBurnSound: HTMLAudioElement;
+  static fuseLoopSound: HTMLAudioElement;
+  static fuseStartSound: HTMLAudioElement;
+  static warHammerSound: HTMLAudioElement;
+  static sliceSound: Array<HTMLAudioElement>;
+  static shortSliceSound: Array<HTMLAudioElement>;
+  static backpackSound: HTMLAudioElement;
+  static smithSound: HTMLAudioElement;
+  static bushSounds: Array<HTMLAudioElement>;
+  static parrySounds: Array<HTMLAudioElement>;
 
-  // Track current playing sources for management
-  static currentlyPlaying: Set<AudioBufferSourceNode> = new Set();
-  static loopingSources: Map<string, AudioBufferSourceNode> = new Map();
+  static loopHandlers: Map<HTMLAudioElement, EventListener> = new Map();
+  static currentlyPlaying: Array<HTMLAudioElement> = [];
 
-  static toggleMute(): void {
+  static toggleMute() {
     Sound.audioMuted = !Sound.audioMuted;
-
+    Sound.ambientSound.removeEventListener("ended", Sound.ambientSound.onended);
+    Sound.ambientSound.pause();
     if (Sound.audioMuted) {
-      // Stop all currently playing sounds
-      Sound.currentlyPlaying.forEach((source) => {
-        ReverbEngine.stopSource(source);
+      Sound.currentlyPlaying.forEach((audio) => {
+        audio.pause();
       });
-      Sound.currentlyPlaying.clear();
-
-      // Stop looping sounds
-      Sound.loopingSources.forEach((source) => {
-        ReverbEngine.stopSource(source);
-      });
-      Sound.loopingSources.clear();
+      Sound.currentlyPlaying = [];
     } else {
-      // Restart ambient sound
-      Sound.playAmbient();
+      Sound.ambientSound.addEventListener("ended", Sound.ambientSound.onended);
+      Sound.ambientSound.play();
     }
   }
 
-  /**
-   * Load all sound buffers
-   */
-  static loadSounds = async (): Promise<void> => {
+  static loadSounds = async () => {
     if (Sound.initialized) return;
     Sound.initialized = true;
+    if (ReverbEngine.initialized) Sound.audioMuted = false;
+    Sound.playerStoneFootsteps = new Array<HTMLAudioElement>();
+    [1, 2, 3].forEach((i) =>
+      Sound.playerStoneFootsteps.push(
+        new Audio("res/SFX/footsteps/stone/footstep" + i + ".mp3"),
+      ),
+    );
+    for (let f of Sound.playerStoneFootsteps) f.volume = 1.0;
 
+    Sound.playerGrassFootsteps = new Array<HTMLAudioElement>();
+    [1, 2, 3, 6].forEach((i) =>
+      Sound.playerGrassFootsteps.push(
+        new Audio("res/SFX/footsteps/grass/footstep" + i + ".mp3"),
+      ),
+    );
+    for (let f of Sound.playerGrassFootsteps) f.volume = 1.0;
+
+    Sound.playerDirtFootsteps = new Array<HTMLAudioElement>();
+    [1, 2, 3, 4, 5].forEach((i) =>
+      Sound.playerDirtFootsteps.push(
+        new Audio("res/SFX/footsteps/dirt/footstep" + i + ".mp3"),
+      ),
+    );
+    for (let f of Sound.playerDirtFootsteps) f.volume = 1.0;
+
+    Sound.enemyFootsteps = new Array<HTMLAudioElement>();
+    [1, 2, 3, 4, 5].forEach((i) =>
+      Sound.enemyFootsteps.push(
+        new Audio("res/SFX/footsteps/enemy/enemyfootstep" + i + ".mp3"),
+      ),
+    );
+    for (let f of Sound.enemyFootsteps) f.volume = 1.0;
+
+    Sound.swingSounds = new Array<HTMLAudioElement>();
+    [1, 2, 3, 4].forEach((i) =>
+      Sound.swingSounds.push(new Audio("res/SFX/attacks/swing" + i + ".mp3")),
+    );
+    for (let f of Sound.swingSounds) {
+      (f.volume = 0.5), f.load;
+      //f.play();
+    }
+
+    Sound.hitSounds = new Array<HTMLAudioElement>();
+    [1, 2].forEach((i) =>
+      Sound.hitSounds.push(new Audio("res/SFX/attacks/hurt" + i + ".mp3")),
+    );
+    for (let f of Sound.hitSounds) {
+      (f.volume = 0.5), f.load;
+      //f.play();
+    }
+    Sound.enemySpawnSound = new Audio("res/SFX/attacks/enemyspawn.mp3");
+    Sound.enemySpawnSound.volume = 0.7;
+
+    Sound.chestSounds = new Array<HTMLAudioElement>();
+    [1, 2, 3].forEach((i) =>
+      Sound.chestSounds.push(new Audio("res/SFX/chest/chest" + i + ".mp3")),
+    );
+    for (let f of Sound.chestSounds) f.volume = 0.5;
+
+    Sound.coinPickupSounds = new Array<HTMLAudioElement>();
+    [1, 2, 3, 4].forEach((i) =>
+      Sound.coinPickupSounds.push(
+        new Audio("res/SFX/items/coins" + i + ".mp3"),
+      ),
+    );
+    for (let f of Sound.coinPickupSounds) f.volume = 1.0;
+
+    Sound.miningSounds = new Array<HTMLAudioElement>();
+    [1, 2, 3, 4].forEach((i) =>
+      Sound.miningSounds.push(
+        new Audio("res/SFX/resources/Pickaxe" + i + ".mp3"),
+      ),
+    );
+    for (let f of Sound.miningSounds) f.volume = 0.3;
+
+    Sound.hurtSounds = new Array<HTMLAudioElement>();
+    [1].forEach((i) =>
+      Sound.hurtSounds.push(new Audio("res/SFX/attacks/hit.mp3")),
+    );
+    for (let f of Sound.hurtSounds) f.volume = 0.3;
+
+    Sound.genericPickupSound = new Audio("res/SFX/items/pickup.mp3");
+    Sound.genericPickupSound.volume = 1.0;
+
+    Sound.breakRockSound = new Audio("res/SFX/resources/rockbreak.mp3");
+    Sound.breakRockSound.volume = 1.0;
+
+    Sound.pushSounds = new Array<HTMLAudioElement>();
+    [1, 2].forEach((i) =>
+      Sound.pushSounds.push(new Audio("res/SFX/pushing/push" + i + ".mp3")),
+    );
+    for (let f of Sound.pushSounds) f.volume = 1.0;
+
+    Sound.healSound = new Audio("res/SFX/items/powerup1.mp3");
+    Sound.healSound.volume = 0.5;
+
+    Sound.forestMusic = new Array<HTMLAudioElement>();
+    [1].forEach((i) =>
+      Sound.forestMusic.push(new Audio("res/music/forest" + i + ".mp3")),
+    );
+    for (let f of Sound.forestMusic) f.volume = 0.25;
+
+    Sound.graveSound = new Audio("res/SFX/attacks/skelespawn.mp3");
+    Sound.ambientSound = new Audio("res/SFX/ambient/ambientDark2.mp3");
+    Sound.ambientSound.volume = 1;
+
+    Sound.goreSound = new Audio(`res/SFX/misc Unused/gore2.mp3`);
+    Sound.goreSound.volume = 0.5;
+
+    Sound.unlockSounds = new Array<HTMLAudioElement>();
+    [1].forEach((i) =>
+      Sound.unlockSounds.push(new Audio("res/SFX/door/unlock" + i + ".mp3")),
+    );
+    for (let f of Sound.unlockSounds) f.volume = 0.5;
+
+    Sound.doorOpenSounds = new Array<HTMLAudioElement>();
+    [1, 2].forEach((i) =>
+      Sound.doorOpenSounds.push(new Audio("res/SFX/door/open" + i + ".mp3")),
+    );
+    for (let f of Sound.doorOpenSounds) f.volume = 0.5;
+
+    Sound.keyPickupSound = new Audio("res/SFX/items/keyPickup.mp3");
+    Sound.keyPickupSound.volume = 1.0;
+
+    Sound.potSmashSounds = new Array<HTMLAudioElement>();
+    [1, 2, 3].forEach((i) =>
+      Sound.potSmashSounds.push(
+        new Audio("res/SFX/objects/potSmash" + i + ".mp3"),
+      ),
+    );
+    for (let f of Sound.potSmashSounds) f.volume = 0.5;
+
+    Sound.magicSound = new Audio("res/SFX/attacks/magic2.mp3");
+    Sound.magicSound.volume = 0.25;
+
+    Sound.wooshSound = new Audio("res/SFX/attacks/woosh1.mp3");
+    Sound.wooshSound.volume = 0.2;
+
+    Sound.bombSounds = new Array<HTMLAudioElement>();
+    [1, 2].forEach((i) =>
+      Sound.bombSounds.push(new Audio("res/SFX/attacks/explode" + i + ".mp3")),
+    );
+    for (let f of Sound.bombSounds) f.volume = 0.7;
+
+    Sound.fuseBurnSound = new Audio("res/SFX/attacks/fuse.mp3");
+    Sound.fuseBurnSound.volume = 0.2;
+
+    Sound.fuseLoopSound = new Audio("res/SFX/attacks/fuseLoop.mp3");
+    Sound.fuseLoopSound.volume = 0.2;
+
+    Sound.fuseStartSound = new Audio("res/SFX/attacks/fuseStart.mp3");
+    Sound.fuseStartSound.volume = 0.2;
+
+    Sound.warHammerSound = new Audio("res/SFX/attacks/warhammer.mp3");
+    Sound.warHammerSound.volume = 1;
+
+    Sound.sliceSound = new Array<HTMLAudioElement>();
+    [1, 2, 3].forEach((i) =>
+      Sound.sliceSound.push(new Audio("res/SFX/attacks/slice" + i + ".mp3")),
+    );
+    for (let f of Sound.sliceSound) f.volume = 0.5;
+
+    Sound.shortSliceSound = new Array<HTMLAudioElement>();
+    [1, 2, 3].forEach((i) =>
+      Sound.shortSliceSound.push(
+        new Audio("res/SFX/attacks/sliceShort" + i + ".mp3"),
+      ),
+    );
+    for (let f of Sound.shortSliceSound) f.volume = 0.5;
+
+    Sound.backpackSound = new Audio("res/SFX/items/backpack.mp3");
+    Sound.backpackSound.volume = 0.75;
+
+    Sound.smithSound = new Audio("res/SFX/items/smith.mp3");
+    Sound.smithSound.volume = 0.5;
+
+    Sound.bushSounds = new Array<HTMLAudioElement>();
+    [1, 2].forEach((i) =>
+      Sound.bushSounds.push(new Audio("res/SFX/objects/plantHit" + i + ".mp3")),
+    );
+    for (let f of Sound.bushSounds) f.volume = 0.75;
+
+    Sound.parrySounds = new Array<HTMLAudioElement>();
+    [1, 2].forEach((i) =>
+      Sound.parrySounds.push(new Audio("res/SFX/attacks/parry" + i + ".mp3")),
+    );
+    for (let f of Sound.parrySounds) f.volume = 0.5;
+  };
+
+  private static playSoundSafely(audio: HTMLAudioElement) {
+    audio.play().catch((err) => {
+      if (err.name === "NotAllowedError") {
+        console.warn("Audio playback requires user interaction first");
+      } else {
+        console.error("Error playing sound:", err);
+      }
+    });
+  }
+
+  static async playWithReverb(audio: HTMLAudioElement) {
     await ReverbEngine.initialize();
-    Sound.audioMuted = false;
+    Sound.currentlyPlaying.push(audio);
 
-    try {
-      // Load footstep sounds
-      Sound.playerStoneFootsteps = {
-        buffers: await Sound.loadBufferArray(
-          "res/SFX/footsteps/stone/footstep",
-          [1, 2, 3],
-          ".mp3",
-        ),
-        volume: 1.0,
-      };
+    ReverbEngine.applyReverb(audio);
+    this.playSoundSafely(audio);
+  }
 
-      Sound.playerGrassFootsteps = {
-        buffers: await Sound.loadBufferArray(
-          "res/SFX/footsteps/grass/footstep",
-          [1, 2, 3, 6],
-          ".mp3",
-        ),
-        volume: 1.0,
-      };
+  static playerStoneFootstep = async (environment: number) => {
+    if (Sound.audioMuted) return;
+    let sound = Sound.playerStoneFootsteps;
+    if (environment === 2) sound = Sound.playerGrassFootsteps;
+    if (environment === 1) sound = Sound.playerDirtFootsteps;
 
-      Sound.playerDirtFootsteps = {
-        buffers: await Sound.loadBufferArray(
-          "res/SFX/footsteps/dirt/footstep",
-          [1, 2, 3, 4, 5],
-          ".mp3",
-        ),
-        volume: 1.0,
-      };
-
-      Sound.enemyFootsteps = {
-        buffers: await Sound.loadBufferArray(
-          "res/SFX/footsteps/enemy/enemyfootstep",
-          [1, 2, 3, 4, 5],
-          ".mp3",
-        ),
-        volume: 1.0,
-      };
-
-      // Load combat sounds
-      Sound.swingSounds = {
-        buffers: await Sound.loadBufferArray(
-          "res/SFX/attacks/swing",
-          [1, 2, 3, 4],
-          ".mp3",
-        ),
-        volume: 0.5,
-      };
-
-      Sound.hitSounds = {
-        buffers: await Sound.loadBufferArray(
-          "res/SFX/attacks/hurt",
-          [1, 2],
-          ".mp3",
-        ),
-        volume: 0.5,
-      };
-
-      Sound.hurtSounds = {
-        buffers: await Sound.loadSingleBuffer("res/SFX/attacks/hit.mp3").then(
-          (buffer) => [buffer],
-        ),
-        volume: 0.3,
-      };
-
-      Sound.sliceSound = {
-        buffers: await Sound.loadBufferArray(
-          "res/SFX/attacks/slice",
-          [1, 2, 3],
-          ".mp3",
-        ),
-        volume: 0.5,
-      };
-
-      Sound.shortSliceSound = {
-        buffers: await Sound.loadBufferArray(
-          "res/SFX/attacks/sliceShort",
-          [1, 2, 3],
-          ".mp3",
-        ),
-        volume: 0.5,
-      };
-
-      Sound.parrySounds = {
-        buffers: await Sound.loadBufferArray(
-          "res/SFX/attacks/parry",
-          [1, 2],
-          ".mp3",
-        ),
-        volume: 0.5,
-      };
-
-      Sound.bombSounds = {
-        buffers: await Sound.loadBufferArray(
-          "res/SFX/attacks/explode",
-          [1, 2],
-          ".mp3",
-        ),
-        volume: 0.7,
-      };
-
-      // Load interaction sounds
-      Sound.chestSounds = {
-        buffers: await Sound.loadBufferArray(
-          "res/SFX/chest/chest",
-          [1, 2, 3],
-          ".mp3",
-        ),
-        volume: 0.5,
-      };
-
-      Sound.coinPickupSounds = {
-        buffers: await Sound.loadBufferArray(
-          "res/SFX/items/coins",
-          [1, 2, 3, 4],
-          ".mp3",
-        ),
-        volume: 1.0,
-      };
-
-      Sound.miningSounds = {
-        buffers: await Sound.loadBufferArray(
-          "res/SFX/resources/Pickaxe",
-          [1, 2, 3, 4],
-          ".mp3",
-        ),
-        volume: 0.3,
-      };
-
-      Sound.pushSounds = {
-        buffers: await Sound.loadBufferArray(
-          "res/SFX/pushing/push",
-          [1, 2],
-          ".mp3",
-        ),
-        volume: 1.0,
-      };
-
-      Sound.unlockSounds = {
-        buffers: await Sound.loadBufferArray(
-          "res/SFX/door/unlock",
-          [1],
-          ".mp3",
-        ),
-        volume: 0.5,
-      };
-
-      Sound.doorOpenSounds = {
-        buffers: await Sound.loadBufferArray(
-          "res/SFX/door/open",
-          [1, 2],
-          ".mp3",
-        ),
-        volume: 0.5,
-      };
-
-      Sound.potSmashSounds = {
-        buffers: await Sound.loadBufferArray(
-          "res/SFX/objects/potSmash",
-          [1, 2, 3],
-          ".mp3",
-        ),
-        volume: 0.5,
-      };
-
-      Sound.bushSounds = {
-        buffers: await Sound.loadBufferArray(
-          "res/SFX/objects/plantHit",
-          [1, 2],
-          ".mp3",
-        ),
-        volume: 0.75,
-      };
-
-      // Load music
-      Sound.forestMusic = {
-        buffers: await Sound.loadBufferArray("res/music/forest", [1], ".mp3"),
-        volume: 0.25,
-      };
-
-      // Load single sounds
-      const singleSounds = [
-        {
-          prop: "enemySpawnSound",
-          path: "res/SFX/attacks/enemyspawn.mp3",
-          volume: 0.7,
-        },
-        {
-          prop: "breakRockSound",
-          path: "res/SFX/resources/rockbreak.mp3",
-          volume: 1.0,
-        },
-        {
-          prop: "genericPickupSound",
-          path: "res/SFX/items/pickup.mp3",
-          volume: 1.0,
-        },
-        { prop: "healSound", path: "res/SFX/items/powerup1.mp3", volume: 0.5 },
-        {
-          prop: "graveSound",
-          path: "res/SFX/attacks/skelespawn.mp3",
-          volume: 0.3,
-        },
-        {
-          prop: "ambientSound",
-          path: "res/SFX/ambient/ambientDark2.mp3",
-          volume: 1.0,
-        },
-        {
-          prop: "goreSound",
-          path: "res/SFX/misc Unused/gore2.mp3",
-          volume: 0.5,
-        },
-        {
-          prop: "keyPickupSound",
-          path: "res/SFX/items/keyPickup.mp3",
-          volume: 1.0,
-        },
-        {
-          prop: "magicSound",
-          path: "res/SFX/attacks/magic2.mp3",
-          volume: 0.25,
-        },
-        { prop: "wooshSound", path: "res/SFX/attacks/woosh1.mp3", volume: 0.2 },
-        {
-          prop: "fuseBurnSound",
-          path: "res/SFX/attacks/fuse.mp3",
-          volume: 0.2,
-        },
-        {
-          prop: "fuseLoopSound",
-          path: "res/SFX/attacks/fuseLoop.mp3",
-          volume: 0.2,
-        },
-        {
-          prop: "fuseStartSound",
-          path: "res/SFX/attacks/fuseStart.mp3",
-          volume: 0.2,
-        },
-        {
-          prop: "warHammerSound",
-          path: "res/SFX/attacks/warhammer.mp3",
-          volume: 1.0,
-        },
-        {
-          prop: "backpackSound",
-          path: "res/SFX/items/backpack.mp3",
-          volume: 0.75,
-        },
-        { prop: "smithSound", path: "res/SFX/items/smith.mp3", volume: 0.5 },
-      ];
-
-      for (const sound of singleSounds) {
-        const buffer = await Sound.loadSingleBuffer(sound.path);
-        if (buffer) {
-          (Sound as any)[sound.prop] = { buffer, volume: sound.volume };
-        }
-      }
-    } catch (error) {
-      console.error("Error loading sounds:", error);
-    }
+    let f = Game.randTable(sound, Math.random);
+    await this.playWithReverb(f);
+    f.currentTime = 0;
+    f.play();
   };
 
-  /**
-   * Load a single audio buffer
-   */
-  private static async loadSingleBuffer(
-    path: string,
-  ): Promise<AudioBuffer | null> {
-    return await ReverbEngine.loadAudioBuffer(path);
-  }
-
-  /**
-   * Load an array of audio buffers
-   */
-  private static async loadBufferArray(
-    basePath: string,
-    indices: number[],
-    extension: string,
-  ): Promise<AudioBuffer[]> {
-    const buffers: AudioBuffer[] = [];
-
-    for (const index of indices) {
-      const path = `${basePath}${index}${extension}`;
-      const buffer = await Sound.loadSingleBuffer(path);
-      if (buffer) {
-        buffers.push(buffer);
-      }
-    }
-
-    return buffers;
-  }
-
-  /**
-   * Play a sound with reverb (internal method)
-   */
-  private static async playWithReverb(
-    config: AudioBufferConfig,
-    delay: number = 0,
-  ): Promise<AudioBufferSourceNode | null> {
-    if (Sound.audioMuted) return null;
-
-    const source = await ReverbEngine.playBufferWithReverb(config, delay);
-    if (source) {
-      Sound.currentlyPlaying.add(source);
-      source.addEventListener("ended", () => {
-        Sound.currentlyPlaying.delete(source);
-      });
-    }
-    return source;
-  }
-
-  /**
-   * Play a random sound from a collection
-   */
-  private static async playRandomFromCollection(
-    collection: BufferCollection,
-    delay: number = 0,
-  ): Promise<AudioBufferSourceNode | null> {
-    if (collection.buffers.length === 0) return null;
-
-    const buffer = Game.randTable(collection.buffers, Math.random);
-    return await Sound.playWithReverb(
-      {
-        buffer,
-        volume: collection.volume,
-      },
-      delay,
-    );
-  }
-
-  /**
-   * Play a single sound
-   */
-  private static async playSingle(
-    sound: { buffer: AudioBuffer; volume: number },
-    delay: number = 0,
-  ): Promise<AudioBufferSourceNode | null> {
-    return await Sound.playWithReverb(
-      {
-        buffer: sound.buffer,
-        volume: sound.volume,
-      },
-      delay,
-    );
-  }
-
-  // Public API methods (maintain same interface as before)
-  static playerStoneFootstep = async (environment: number): Promise<void> => {
+  static enemyFootstep = () => {
     if (Sound.audioMuted) return;
-
-    let collection = Sound.playerStoneFootsteps;
-    if (environment === 2) collection = Sound.playerGrassFootsteps;
-    if (environment === 1) collection = Sound.playerDirtFootsteps;
-
-    await Sound.playRandomFromCollection(collection);
+    let f = Game.randTable(Sound.enemyFootsteps, Math.random);
+    this.playWithReverb(f);
+    f.currentTime = 0;
   };
 
-  static enemyFootstep = async (): Promise<void> => {
+  static hit = () => {
     if (Sound.audioMuted) return;
-    await Sound.playRandomFromCollection(Sound.enemyFootsteps);
-  };
+    let f = Game.randTable(Sound.swingSounds, Math.random);
+    this.playWithReverb(f);
+    f.currentTime = 0;
 
-  static hit = async (): Promise<void> => {
-    if (Sound.audioMuted) return;
-    await Sound.playRandomFromCollection(Sound.swingSounds);
-
-    setTimeout(async () => {
-      await Sound.playRandomFromCollection(Sound.hitSounds);
+    setTimeout(() => {
+      let f = Game.randTable(Sound.hitSounds, Math.random);
+      this.playWithReverb(f);
+      f.currentTime = 0;
     }, 100);
   };
 
-  static hurt = async (): Promise<void> => {
+  static hurt = () => {
     if (Sound.audioMuted) return;
-    await Sound.playRandomFromCollection(Sound.hurtSounds);
+    let f = Game.randTable(Sound.hurtSounds, Math.random);
+    this.playWithReverb(f);
+    f.currentTime = 0;
   };
 
-  static enemySpawn = async (): Promise<void> => {
+  static enemySpawn = () => {
     if (Sound.audioMuted) return;
-    await Sound.playSingle(Sound.enemySpawnSound);
+    this.playWithReverb(Sound.enemySpawnSound);
+    Sound.enemySpawnSound.currentTime = 0;
   };
 
-  static chest = async (): Promise<void> => {
+  static chest = () => {
     if (Sound.audioMuted) return;
-    await Sound.playRandomFromCollection(Sound.chestSounds);
+    let f = Game.randTable(Sound.chestSounds, Math.random);
+    this.playWithReverb(f);
+    f.currentTime = 0;
   };
 
-  static potSmash = async (): Promise<void> => {
+  static potSmash = () => {
     if (Sound.audioMuted) return;
-    await Sound.playRandomFromCollection(Sound.potSmashSounds, 0.1);
+    let f = Game.randTable(Sound.potSmashSounds, Math.random);
+    this.delayPlay(() => this.playWithReverb(f), 100);
+    f.currentTime = 0;
   };
 
-  static pickupCoin = async (): Promise<void> => {
+  static pickupCoin = () => {
     if (Sound.audioMuted) return;
-    await Sound.playRandomFromCollection(Sound.coinPickupSounds);
+    let f = Game.randTable(Sound.coinPickupSounds, Math.random);
+    this.playWithReverb(f);
+    f.currentTime = 0;
   };
 
-  static mine = async (): Promise<void> => {
+  static mine = () => {
     if (Sound.audioMuted) return;
-    await Sound.playRandomFromCollection(Sound.miningSounds);
+    let f = Game.randTable(Sound.miningSounds, Math.random);
+    this.playWithReverb(f);
+    f.currentTime = 0;
   };
 
-  static breakRock = async (): Promise<void> => {
+  static breakRock = () => {
     if (Sound.audioMuted) return;
-    await Sound.playSingle(Sound.breakRockSound, 0.1);
+    setTimeout(() => {
+      this.playWithReverb(Sound.breakRockSound);
+    }, 100);
+    Sound.breakRockSound.currentTime = 0;
   };
 
-  static heal = async (): Promise<void> => {
+  static heal = () => {
     if (Sound.audioMuted) return;
-    await Sound.playSingle(Sound.healSound);
+    this.playWithReverb(Sound.healSound);
+    Sound.healSound.currentTime = 0;
   };
 
-  static genericPickup = async (): Promise<void> => {
+  static genericPickup = () => {
     if (Sound.audioMuted) return;
-    await Sound.playSingle(Sound.genericPickupSound);
+    this.playWithReverb(Sound.genericPickupSound);
+    Sound.genericPickupSound.currentTime = 0;
   };
 
-  static keyPickup = async (): Promise<void> => {
+  static keyPickup = () => {
     if (Sound.audioMuted) return;
-    await Sound.playSingle(Sound.keyPickupSound);
+    this.playWithReverb(Sound.keyPickupSound);
+    Sound.keyPickupSound.currentTime = 0;
   };
 
-  static push = async (): Promise<void> => {
+  static push = () => {
     if (Sound.audioMuted) return;
-    await Sound.playRandomFromCollection(Sound.pushSounds);
+    let f = Game.randTable(Sound.pushSounds, Math.random);
+    this.playWithReverb(f);
+    f.currentTime = 0;
   };
 
-  static skeleSpawn = async (): Promise<void> => {
+  static skeleSpawn = () => {
     if (Sound.audioMuted) return;
-    await Sound.playSingle(Sound.graveSound);
+    this.playWithReverb(Sound.graveSound);
+    Sound.graveSound.currentTime = 0;
+    Sound.graveSound.volume = 0.3;
   };
 
-  static unlock = async (): Promise<void> => {
+  static unlock = () => {
     if (Sound.audioMuted) return;
-    await Sound.playRandomFromCollection(Sound.unlockSounds);
+    let f = Game.randTable(Sound.unlockSounds, Math.random);
+    this.playWithReverb(f);
+    f.currentTime = 0;
   };
 
-  static playForestMusic = async (index: number): Promise<void> => {
-    if (Sound.audioMuted || index >= Sound.forestMusic.buffers.length) return;
+  static playForestMusic = (index: number) => {
+    if (Sound.audioMuted) return;
 
-    // Stop current music if playing
-    const currentMusic = Sound.loopingSources.get("forestMusic");
-    if (currentMusic) {
-      ReverbEngine.stopSource(currentMusic);
+    const music = Sound.forestMusic[index];
+    if (music.paused) {
+      music.currentTime = 0;
+      Sound.playSoundSafely(music);
+    } else {
+      music.play();
     }
+    music.addEventListener(
+      "ended",
+      () => {
+        music.currentTime = 0;
+        Sound.playSoundSafely(music);
+      },
+      false,
+    );
+    Sound.playSoundSafely(music);
+  };
 
-    const source = await ReverbEngine.playBufferWithReverb({
-      buffer: Sound.forestMusic.buffers[index],
-      volume: Sound.forestMusic.volume,
-      loop: true,
+  static doorOpen = () => {
+    if (Sound.audioMuted) return;
+    let f = Game.randTable(Sound.doorOpenSounds, Math.random);
+    this.playWithReverb(f);
+    f.currentTime = 0;
+  };
+
+  static playAmbient = () => {
+    if (Sound.audioMuted) return;
+    Sound.ambientSound.addEventListener(
+      "ended",
+      () => {
+        Sound.ambientSound.currentTime = 0;
+        this.playWithReverb(Sound.ambientSound);
+      },
+      true,
+    );
+    this.playWithReverb(Sound.ambientSound);
+  };
+
+  static playFuse = () => {
+    if (Sound.audioMuted) return;
+    Sound.fuseStartSound.currentTime = 0;
+
+    // Play the start sound first
+    this.playWithReverb(Sound.fuseStartSound);
+
+    // When start sound ends, begin the loop
+    Sound.fuseStartSound.addEventListener(
+      "ended",
+      () => {
+        Sound.fuseLoopSound.currentTime = 0;
+        this.playWithReverb(Sound.fuseLoopSound);
+      },
+      { once: true },
+    );
+
+    // Set up loop sound to repeat
+    Sound.fuseLoopSound.addEventListener("ended", () => {
+      Sound.fuseLoopSound.currentTime = 0;
+      this.playWithReverb(Sound.fuseLoopSound);
     });
 
-    if (source) {
-      Sound.loopingSources.set("forestMusic", source);
+    // Store the loop handler so we can remove it later
+    const loopHandler = () => {
+      Sound.fuseLoopSound.currentTime = 0;
+      this.playWithReverb(Sound.fuseLoopSound);
+    };
+    Sound.loopHandlers.set(Sound.fuseLoopSound, loopHandler);
+  };
+
+  static stopFuse = () => {
+    Sound.fuseLoopSound.pause();
+    Sound.fuseLoopSound.currentTime = 0;
+    Sound.fuseStartSound.pause();
+    Sound.fuseStartSound.currentTime = 0;
+
+    // Remove the loop handler
+    const handler = Sound.loopHandlers.get(Sound.fuseLoopSound);
+    if (handler) {
+      Sound.fuseLoopSound.removeEventListener("ended", handler);
+      Sound.loopHandlers.delete(Sound.fuseLoopSound);
     }
   };
 
-  static doorOpen = async (): Promise<void> => {
+  static playGore = () => {
     if (Sound.audioMuted) return;
-    await Sound.playRandomFromCollection(Sound.doorOpenSounds);
+    this.playWithReverb(Sound.goreSound);
+    Sound.goreSound.currentTime = 0;
   };
 
-  static playAmbient = async (): Promise<void> => {
+  static playBomb = () => {
     if (Sound.audioMuted) return;
-
-    // Stop current ambient if playing
-    const currentAmbient = Sound.loopingSources.get("ambient");
-    if (currentAmbient) {
-      ReverbEngine.stopSource(currentAmbient);
-    }
-
-    const source = await ReverbEngine.playBufferWithReverb({
-      buffer: Sound.ambientSound.buffer,
-      volume: Sound.ambientSound.volume,
-      loop: true,
-    });
-
-    if (source) {
-      Sound.loopingSources.set("ambient", source);
-    }
+    let f = Game.randTable(Sound.bombSounds, Math.random);
+    this.playWithReverb(f);
+    f.currentTime = 0;
   };
 
-  static playFuse = async (): Promise<void> => {
+  static playWarHammer = () => {
     if (Sound.audioMuted) return;
-
-    // Play start sound first
-    const startSource = await Sound.playSingle(Sound.fuseStartSound);
-
-    if (startSource) {
-      startSource.addEventListener("ended", async () => {
-        // When start sound ends, begin the loop
-        const loopSource = await ReverbEngine.playBufferWithReverb({
-          buffer: Sound.fuseLoopSound.buffer,
-          volume: Sound.fuseLoopSound.volume,
-          loop: true,
-        });
-
-        if (loopSource) {
-          Sound.loopingSources.set("fuse", loopSource);
-        }
-      });
-    }
+    this.playWithReverb(Sound.warHammerSound);
+    Sound.warHammerSound.currentTime = 0;
   };
 
-  static stopFuse = (): void => {
-    const fuseSource = Sound.loopingSources.get("fuse");
-    if (fuseSource) {
-      ReverbEngine.stopSource(fuseSource);
-      Sound.loopingSources.delete("fuse");
-    }
-  };
-
-  static playGore = async (): Promise<void> => {
+  static playMagic = () => {
     if (Sound.audioMuted) return;
-    await Sound.playSingle(Sound.goreSound);
+    let f = Sound.magicSound;
+    let woosh = Sound.wooshSound;
+    this.playWithReverb(f);
+    this.playWithReverb(woosh);
+    f.currentTime = 0;
+    woosh.currentTime = 0;
   };
 
-  static playBomb = async (): Promise<void> => {
+  static playSlice = () => {
     if (Sound.audioMuted) return;
-    await Sound.playRandomFromCollection(Sound.bombSounds);
+    let f = Game.randTable(Sound.sliceSound, Math.random);
+    this.playWithReverb(f);
+    f.currentTime = 0;
   };
 
-  static playWarHammer = async (): Promise<void> => {
+  static playShortSlice = () => {
     if (Sound.audioMuted) return;
-    await Sound.playSingle(Sound.warHammerSound);
+    let f = Game.randTable(Sound.shortSliceSound, Math.random);
+    this.playWithReverb(f);
+    f.currentTime = 0;
   };
 
-  static playMagic = async (): Promise<void> => {
+  static playBackpack = () => {
     if (Sound.audioMuted) return;
-    await Sound.playSingle(Sound.magicSound);
-    await Sound.playSingle(Sound.wooshSound);
+    this.playWithReverb(Sound.backpackSound);
+    Sound.backpackSound.currentTime = 0;
   };
 
-  static playSlice = async (): Promise<void> => {
+  static playSmith = () => {
     if (Sound.audioMuted) return;
-    await Sound.playRandomFromCollection(Sound.sliceSound);
+    this.playWithReverb(Sound.smithSound);
+    Sound.smithSound.currentTime = 0;
   };
 
-  static playShortSlice = async (): Promise<void> => {
+  static playBush = () => {
     if (Sound.audioMuted) return;
-    await Sound.playRandomFromCollection(Sound.shortSliceSound);
+    let f = Game.randTable(Sound.bushSounds, Math.random);
+    this.delayPlay(() => this.playWithReverb(f), 100);
+    f.currentTime = 0;
   };
 
-  static playBackpack = async (): Promise<void> => {
+  static playParry = () => {
     if (Sound.audioMuted) return;
-    await Sound.playSingle(Sound.backpackSound);
+    let f = Game.randTable(Sound.parrySounds, Math.random);
+    this.delayPlay(() => this.playWithReverb(f), 100);
+    f.currentTime = 0;
   };
 
-  static playSmith = async (): Promise<void> => {
-    if (Sound.audioMuted) return;
-    await Sound.playSingle(Sound.smithSound);
-  };
-
-  static playBush = async (): Promise<void> => {
-    if (Sound.audioMuted) return;
-    await Sound.playRandomFromCollection(Sound.bushSounds, 0.1);
-  };
-
-  static playParry = async (): Promise<void> => {
-    if (Sound.audioMuted) return;
-    await Sound.playRandomFromCollection(Sound.parrySounds, 0.1);
-  };
-
-  static delayPlay = (method: () => void, delay: number): void => {
+  static delayPlay = (method: () => void, delay: number) => {
     setTimeout(method, delay);
   };
 
-  static stopSound(source: AudioBufferSourceNode): void {
-    ReverbEngine.stopSource(source);
+  static stopSound(audio: HTMLAudioElement) {
+    audio.pause();
+    audio.currentTime = 0;
   }
 
-  static stopAllSounds(): void {
-    ReverbEngine.stopAllSources();
-    Sound.currentlyPlaying.clear();
-    Sound.loopingSources.clear();
+  static stopSoundWithReverb(audio: HTMLAudioElement) {
+    ReverbEngine.removeReverb(audio);
+    this.stopSound(audio);
   }
 }
