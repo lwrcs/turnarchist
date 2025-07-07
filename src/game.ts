@@ -232,7 +232,7 @@ export class Game {
   private lastChatWidth: number = 0;
 
   constructor() {
-    window.addEventListener("load", async () => {
+    window.addEventListener("load", () => {
       let canvas = document.getElementById("gameCanvas");
       Game.ctx = (canvas as HTMLCanvasElement).getContext("2d", {
         alpha: false,
@@ -326,7 +326,7 @@ export class Game {
       this.cameraTargetX = 0;
       this.cameraTargetY = 0;
 
-      let checkResourcesLoaded = async () => {
+      let checkResourcesLoaded = () => {
         if (resourcesLoaded < NUM_RESOURCES) {
           window.setTimeout(checkResourcesLoaded, 500);
         } else {
