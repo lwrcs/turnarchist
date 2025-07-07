@@ -402,13 +402,12 @@ export class Game {
           this.levels = [];
           this.encounteredEnemies = [];
           this.newGame();
+          Sound.loadSounds();
         }
       };
       checkResourcesLoaded();
     });
     ReverbEngine.initialize();
-
-    Sound.loadSounds();
 
     this.started = false;
     this.tutorialListener = null;

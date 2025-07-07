@@ -9625,12 +9625,12 @@ class Game {
                     this.levels = [];
                     this.encounteredEnemies = [];
                     this.newGame();
+                    sound_1.Sound.loadSounds();
                 }
             };
             checkResourcesLoaded();
         });
         reverb_1.ReverbEngine.initialize();
-        sound_1.Sound.loadSounds();
         this.started = false;
         this.tutorialListener = null;
         this.setupEventListeners();
