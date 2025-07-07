@@ -9486,7 +9486,7 @@ class Game {
                 this.pushMessage("Game resumed");
             }
         };
-        window.addEventListener("load", () => {
+        window.addEventListener("load", async () => {
             let canvas = document.getElementById("gameCanvas");
             Game.ctx = canvas.getContext("2d", {
                 alpha: false,
@@ -9568,7 +9568,7 @@ class Game {
             this.cameraY = 0;
             this.cameraTargetX = 0;
             this.cameraTargetY = 0;
-            let checkResourcesLoaded = () => {
+            let checkResourcesLoaded = async () => {
                 if (resourcesLoaded < NUM_RESOURCES) {
                     window.setTimeout(checkResourcesLoaded, 500);
                 }
