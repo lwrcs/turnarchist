@@ -93,20 +93,8 @@ export class ReverbEngine {
     }
   }
 
-  // Add mobile detection
-  private static isMobile(): boolean {
-    return (
-      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-        navigator.userAgent,
-      ) || window.innerWidth <= 768
-    );
-  }
-
   // Apply reverb to a given HTMLAudioElement
   public static async applyReverb(audioElement: HTMLAudioElement) {
-    // Skip reverb entirely on mobile
-    if (ReverbEngine.isMobile()) return;
-
     await ReverbEngine.initialize();
     if (!ReverbEngine.initialized) return;
     try {
