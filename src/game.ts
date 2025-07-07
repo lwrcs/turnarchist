@@ -232,7 +232,7 @@ export class Game {
   private lastChatWidth: number = 0;
 
   constructor() {
-    window.addEventListener("load", async () => {
+    window.addEventListener("load", () => {
       let canvas = document.getElementById("gameCanvas");
       Game.ctx = (canvas as HTMLCanvasElement).getContext("2d", {
         alpha: false,
@@ -326,7 +326,7 @@ export class Game {
       this.cameraTargetX = 0;
       this.cameraTargetY = 0;
 
-      let checkResourcesLoaded = async () => {
+      let checkResourcesLoaded = () => {
         if (resourcesLoaded < NUM_RESOURCES) {
           window.setTimeout(checkResourcesLoaded, 500);
         } else {
@@ -402,25 +402,13 @@ export class Game {
           this.levels = [];
           this.encounteredEnemies = [];
           this.newGame();
-
-          // Load sounds asynchronously
-          console.log("Starting to load sounds...");
-          Sound.loadSounds()
-            .then(() => {
-              console.log("Sound loading completed");
-            })
-            .catch((error) => {
-              console.error("Sound loading failed:", error);
-            });
         }
       };
       checkResourcesLoaded();
     });
-
-    // Initialize reverb and sound loading
     ReverbEngine.initialize();
 
-    //Sound.loadSounds();
+    Sound.loadSounds();
 
     this.started = false;
     this.tutorialListener = null;

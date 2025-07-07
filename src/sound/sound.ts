@@ -59,285 +59,196 @@ export class Sound {
     }
   }
 
-  private static isMobile(): boolean {
-    return /iPhone|iPad|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(
-      navigator.userAgent,
-    );
-  }
-
-  // Helper function to preload and decode audio arrays
-  private static async preloadAudioArray(
-    basePath: string,
-    indices: number[],
-    volume: number = 1.0,
-  ): Promise<HTMLAudioElement[]> {
-    const audioArray: HTMLAudioElement[] = [];
-
-    if (Sound.isMobile()) {
-      // Mobile: preload and force decode
-      const preloadPromises = indices.map(async (i) => {
-        const audio = new Audio(`${basePath}${i}.mp3`);
-        audio.preload = "auto";
-        audio.volume = volume;
-        audio.load();
-
-        // Force decode by playing silently
-        return new Promise<HTMLAudioElement>((resolve) => {
-          const onCanPlay = async () => {
-            try {
-              const originalVolume = audio.volume;
-              audio.volume = 0;
-              await audio.play();
-              audio.pause();
-              audio.currentTime = 0;
-              audio.volume = originalVolume;
-              resolve(audio);
-            } catch (error) {
-              console.warn(`Failed to preload ${basePath}${i}.mp3:`, error);
-              resolve(audio); // Still return the audio element
-            }
-          };
-
-          audio.addEventListener("canplaythrough", onCanPlay, { once: true });
-          audio.addEventListener("error", () => resolve(audio), { once: true });
-        });
-      });
-
-      const loadedAudio = await Promise.all(preloadPromises);
-      audioArray.push(...loadedAudio);
-    } else {
-      // Desktop: normal loading
-      indices.forEach((i) => {
-        const audio = new Audio(`${basePath}${i}.mp3`);
-        audio.volume = volume;
-        audioArray.push(audio);
-      });
-    }
-
-    return audioArray;
-  }
-
-  // Helper function for single audio files
-  private static async preloadSingleAudio(
-    path: string,
-    volume: number = 1.0,
-  ): Promise<HTMLAudioElement> {
-    const audio = new Audio(path);
-    audio.volume = volume;
-
-    if (Sound.isMobile()) {
-      audio.preload = "auto";
-      audio.load();
-
-      return new Promise<HTMLAudioElement>((resolve) => {
-        const onCanPlay = async () => {
-          try {
-            const originalVolume = audio.volume;
-            audio.volume = 0;
-            await audio.play();
-            audio.pause();
-            audio.currentTime = 0;
-            audio.volume = originalVolume;
-            resolve(audio);
-          } catch (error) {
-            console.warn(`Failed to preload ${path}:`, error);
-            resolve(audio);
-          }
-        };
-
-        audio.addEventListener("canplaythrough", onCanPlay, { once: true });
-        audio.addEventListener("error", () => resolve(audio), { once: true });
-      });
-    }
-
-    return audio;
-  }
-
   static loadSounds = async () => {
     if (Sound.initialized) return;
     Sound.initialized = true;
     if (ReverbEngine.initialized) Sound.audioMuted = false;
+    Sound.playerStoneFootsteps = new Array<HTMLAudioElement>();
+    [1, 2, 3].forEach((i) =>
+      Sound.playerStoneFootsteps.push(
+        new Audio("res/SFX/footsteps/stone/footstep" + i + ".mp3"),
+      ),
+    );
+    for (let f of Sound.playerStoneFootsteps) f.volume = 1.0;
 
-    try {
-      console.log("Loading sounds...");
+    Sound.playerGrassFootsteps = new Array<HTMLAudioElement>();
+    [1, 2, 3, 6].forEach((i) =>
+      Sound.playerGrassFootsteps.push(
+        new Audio("res/SFX/footsteps/grass/footstep" + i + ".mp3"),
+      ),
+    );
+    for (let f of Sound.playerGrassFootsteps) f.volume = 1.0;
 
-      // Use helper functions for all sound arrays
-      Sound.playerStoneFootsteps = await Sound.preloadAudioArray(
-        "res/SFX/footsteps/stone/footstep",
-        [1, 2, 3],
-        1.0,
-      );
+    Sound.playerDirtFootsteps = new Array<HTMLAudioElement>();
+    [1, 2, 3, 4, 5].forEach((i) =>
+      Sound.playerDirtFootsteps.push(
+        new Audio("res/SFX/footsteps/dirt/footstep" + i + ".mp3"),
+      ),
+    );
+    for (let f of Sound.playerDirtFootsteps) f.volume = 1.0;
 
-      Sound.playerGrassFootsteps = await Sound.preloadAudioArray(
-        "res/SFX/footsteps/grass/footstep",
-        [1, 2, 3, 6],
-        1.0,
-      );
+    Sound.enemyFootsteps = new Array<HTMLAudioElement>();
+    [1, 2, 3, 4, 5].forEach((i) =>
+      Sound.enemyFootsteps.push(
+        new Audio("res/SFX/footsteps/enemy/enemyfootstep" + i + ".mp3"),
+      ),
+    );
+    for (let f of Sound.enemyFootsteps) f.volume = 1.0;
 
-      Sound.playerDirtFootsteps = await Sound.preloadAudioArray(
-        "res/SFX/footsteps/dirt/footstep",
-        [1, 2, 3, 4, 5],
-        1.0,
-      );
-
-      Sound.enemyFootsteps = await Sound.preloadAudioArray(
-        "res/SFX/footsteps/enemy/enemyfootstep",
-        [1, 2, 3, 4, 5],
-        1.0,
-      );
-
-      Sound.swingSounds = await Sound.preloadAudioArray(
-        "res/SFX/attacks/swing",
-        [1, 2, 3, 4],
-        0.5,
-      );
-
-      Sound.hitSounds = await Sound.preloadAudioArray(
-        "res/SFX/attacks/hurt",
-        [1, 2],
-        0.5,
-      );
-
-      Sound.chestSounds = await Sound.preloadAudioArray(
-        "res/SFX/chest/chest",
-        [1, 2, 3],
-        0.5,
-      );
-
-      Sound.coinPickupSounds = await Sound.preloadAudioArray(
-        "res/SFX/items/coins",
-        [1, 2, 3, 4],
-        1.0,
-      );
-
-      Sound.miningSounds = await Sound.preloadAudioArray(
-        "res/SFX/resources/Pickaxe",
-        [1, 2, 3, 4],
-        0.3,
-      );
-
-      Sound.unlockSounds = await Sound.preloadAudioArray(
-        "res/SFX/door/unlock",
-        [1],
-        0.5,
-      );
-
-      Sound.doorOpenSounds = await Sound.preloadAudioArray(
-        "res/SFX/door/open",
-        [1, 2],
-        0.5,
-      );
-
-      Sound.potSmashSounds = await Sound.preloadAudioArray(
-        "res/SFX/objects/potSmash",
-        [1, 2, 3],
-        0.5,
-      );
-
-      Sound.bombSounds = await Sound.preloadAudioArray(
-        "res/SFX/attacks/explode",
-        [1, 2],
-        0.7,
-      );
-
-      Sound.sliceSound = await Sound.preloadAudioArray(
-        "res/SFX/attacks/slice",
-        [1, 2, 3],
-        0.5,
-      );
-
-      Sound.shortSliceSound = await Sound.preloadAudioArray(
-        "res/SFX/attacks/sliceShort",
-        [1, 2, 3],
-        0.5,
-      );
-
-      Sound.bushSounds = await Sound.preloadAudioArray(
-        "res/SFX/objects/plantHit",
-        [1, 2],
-        0.75,
-      );
-
-      Sound.parrySounds = await Sound.preloadAudioArray(
-        "res/SFX/attacks/parry",
-        [1, 2],
-        0.5,
-      );
-
-      // Single audio files
-      Sound.enemySpawnSound = await Sound.preloadSingleAudio(
-        "res/SFX/attacks/enemyspawn.mp3",
-        0.7,
-      );
-      Sound.breakRockSound = await Sound.preloadSingleAudio(
-        "res/SFX/resources/rockbreak.mp3",
-        1.0,
-      );
-      Sound.genericPickupSound = await Sound.preloadSingleAudio(
-        "res/SFX/items/pickup.mp3",
-        1.0,
-      );
-      Sound.healSound = await Sound.preloadSingleAudio(
-        "res/SFX/items/powerup1.mp3",
-        0.5,
-      );
-      Sound.graveSound = await Sound.preloadSingleAudio(
-        "res/SFX/attacks/skelespawn.mp3",
-        0.3,
-      );
-      Sound.ambientSound = await Sound.preloadSingleAudio(
-        "res/SFX/ambient/ambientDark2.mp3",
-        1.0,
-      );
-      Sound.goreSound = await Sound.preloadSingleAudio(
-        "res/SFX/misc Unused/gore2.mp3",
-        0.5,
-      );
-      Sound.keyPickupSound = await Sound.preloadSingleAudio(
-        "res/SFX/items/keyPickup.mp3",
-        1.0,
-      );
-      Sound.magicSound = await Sound.preloadSingleAudio(
-        "res/SFX/attacks/magic2.mp3",
-        0.25,
-      );
-      Sound.wooshSound = await Sound.preloadSingleAudio(
-        "res/SFX/attacks/woosh1.mp3",
-        0.2,
-      );
-      Sound.fuseBurnSound = await Sound.preloadSingleAudio(
-        "res/SFX/attacks/fuse.mp3",
-        0.2,
-      );
-      Sound.fuseLoopSound = await Sound.preloadSingleAudio(
-        "res/SFX/attacks/fuseLoop.mp3",
-        0.2,
-      );
-      Sound.fuseStartSound = await Sound.preloadSingleAudio(
-        "res/SFX/attacks/fuseStart.mp3",
-        0.2,
-      );
-      Sound.warHammerSound = await Sound.preloadSingleAudio(
-        "res/SFX/attacks/warhammer.mp3",
-        1.0,
-      );
-      Sound.backpackSound = await Sound.preloadSingleAudio(
-        "res/SFX/items/backpack.mp3",
-        0.75,
-      );
-      Sound.smithSound = await Sound.preloadSingleAudio(
-        "res/SFX/items/smith.mp3",
-        0.5,
-      );
-
-      // Music (don't preload these as they're large)
-      Sound.forestMusic = [new Audio("res/music/forest1.mp3")];
-      Sound.forestMusic.forEach((music) => (music.volume = 0.25));
-
-      console.log("All sounds loaded and preloaded for mobile");
-    } catch (error) {
-      console.error("Error loading sounds:", error);
+    Sound.swingSounds = new Array<HTMLAudioElement>();
+    [1, 2, 3, 4].forEach((i) =>
+      Sound.swingSounds.push(new Audio("res/SFX/attacks/swing" + i + ".mp3")),
+    );
+    for (let f of Sound.swingSounds) {
+      (f.volume = 0.5), f.load;
+      //f.play();
     }
+
+    Sound.hitSounds = new Array<HTMLAudioElement>();
+    [1, 2].forEach((i) =>
+      Sound.hitSounds.push(new Audio("res/SFX/attacks/hurt" + i + ".mp3")),
+    );
+    for (let f of Sound.hitSounds) {
+      (f.volume = 0.5), f.load;
+      //f.play();
+    }
+    Sound.enemySpawnSound = new Audio("res/SFX/attacks/enemyspawn.mp3");
+    Sound.enemySpawnSound.volume = 0.7;
+
+    Sound.chestSounds = new Array<HTMLAudioElement>();
+    [1, 2, 3].forEach((i) =>
+      Sound.chestSounds.push(new Audio("res/SFX/chest/chest" + i + ".mp3")),
+    );
+    for (let f of Sound.chestSounds) f.volume = 0.5;
+
+    Sound.coinPickupSounds = new Array<HTMLAudioElement>();
+    [1, 2, 3, 4].forEach((i) =>
+      Sound.coinPickupSounds.push(
+        new Audio("res/SFX/items/coins" + i + ".mp3"),
+      ),
+    );
+    for (let f of Sound.coinPickupSounds) f.volume = 1.0;
+
+    Sound.miningSounds = new Array<HTMLAudioElement>();
+    [1, 2, 3, 4].forEach((i) =>
+      Sound.miningSounds.push(
+        new Audio("res/SFX/resources/Pickaxe" + i + ".mp3"),
+      ),
+    );
+    for (let f of Sound.miningSounds) f.volume = 0.3;
+
+    Sound.hurtSounds = new Array<HTMLAudioElement>();
+    [1].forEach((i) =>
+      Sound.hurtSounds.push(new Audio("res/SFX/attacks/hit.mp3")),
+    );
+    for (let f of Sound.hurtSounds) f.volume = 0.3;
+
+    Sound.genericPickupSound = new Audio("res/SFX/items/pickup.mp3");
+    Sound.genericPickupSound.volume = 1.0;
+
+    Sound.breakRockSound = new Audio("res/SFX/resources/rockbreak.mp3");
+    Sound.breakRockSound.volume = 1.0;
+
+    Sound.pushSounds = new Array<HTMLAudioElement>();
+    [1, 2].forEach((i) =>
+      Sound.pushSounds.push(new Audio("res/SFX/pushing/push" + i + ".mp3")),
+    );
+    for (let f of Sound.pushSounds) f.volume = 1.0;
+
+    Sound.healSound = new Audio("res/SFX/items/powerup1.mp3");
+    Sound.healSound.volume = 0.5;
+
+    Sound.forestMusic = new Array<HTMLAudioElement>();
+    [1].forEach((i) =>
+      Sound.forestMusic.push(new Audio("res/music/forest" + i + ".mp3")),
+    );
+    for (let f of Sound.forestMusic) f.volume = 0.25;
+
+    Sound.graveSound = new Audio("res/SFX/attacks/skelespawn.mp3");
+    Sound.ambientSound = new Audio("res/SFX/ambient/ambientDark2.mp3");
+    Sound.ambientSound.volume = 1;
+
+    Sound.goreSound = new Audio(`res/SFX/misc Unused/gore2.mp3`);
+    Sound.goreSound.volume = 0.5;
+
+    Sound.unlockSounds = new Array<HTMLAudioElement>();
+    [1].forEach((i) =>
+      Sound.unlockSounds.push(new Audio("res/SFX/door/unlock" + i + ".mp3")),
+    );
+    for (let f of Sound.unlockSounds) f.volume = 0.5;
+
+    Sound.doorOpenSounds = new Array<HTMLAudioElement>();
+    [1, 2].forEach((i) =>
+      Sound.doorOpenSounds.push(new Audio("res/SFX/door/open" + i + ".mp3")),
+    );
+    for (let f of Sound.doorOpenSounds) f.volume = 0.5;
+
+    Sound.keyPickupSound = new Audio("res/SFX/items/keyPickup.mp3");
+    Sound.keyPickupSound.volume = 1.0;
+
+    Sound.potSmashSounds = new Array<HTMLAudioElement>();
+    [1, 2, 3].forEach((i) =>
+      Sound.potSmashSounds.push(
+        new Audio("res/SFX/objects/potSmash" + i + ".mp3"),
+      ),
+    );
+    for (let f of Sound.potSmashSounds) f.volume = 0.5;
+
+    Sound.magicSound = new Audio("res/SFX/attacks/magic2.mp3");
+    Sound.magicSound.volume = 0.25;
+
+    Sound.wooshSound = new Audio("res/SFX/attacks/woosh1.mp3");
+    Sound.wooshSound.volume = 0.2;
+
+    Sound.bombSounds = new Array<HTMLAudioElement>();
+    [1, 2].forEach((i) =>
+      Sound.bombSounds.push(new Audio("res/SFX/attacks/explode" + i + ".mp3")),
+    );
+    for (let f of Sound.bombSounds) f.volume = 0.7;
+
+    Sound.fuseBurnSound = new Audio("res/SFX/attacks/fuse.mp3");
+    Sound.fuseBurnSound.volume = 0.2;
+
+    Sound.fuseLoopSound = new Audio("res/SFX/attacks/fuseLoop.mp3");
+    Sound.fuseLoopSound.volume = 0.2;
+
+    Sound.fuseStartSound = new Audio("res/SFX/attacks/fuseStart.mp3");
+    Sound.fuseStartSound.volume = 0.2;
+
+    Sound.warHammerSound = new Audio("res/SFX/attacks/warhammer.mp3");
+    Sound.warHammerSound.volume = 1;
+
+    Sound.sliceSound = new Array<HTMLAudioElement>();
+    [1, 2, 3].forEach((i) =>
+      Sound.sliceSound.push(new Audio("res/SFX/attacks/slice" + i + ".mp3")),
+    );
+    for (let f of Sound.sliceSound) f.volume = 0.5;
+
+    Sound.shortSliceSound = new Array<HTMLAudioElement>();
+    [1, 2, 3].forEach((i) =>
+      Sound.shortSliceSound.push(
+        new Audio("res/SFX/attacks/sliceShort" + i + ".mp3"),
+      ),
+    );
+    for (let f of Sound.shortSliceSound) f.volume = 0.5;
+
+    Sound.backpackSound = new Audio("res/SFX/items/backpack.mp3");
+    Sound.backpackSound.volume = 0.75;
+
+    Sound.smithSound = new Audio("res/SFX/items/smith.mp3");
+    Sound.smithSound.volume = 0.5;
+
+    Sound.bushSounds = new Array<HTMLAudioElement>();
+    [1, 2].forEach((i) =>
+      Sound.bushSounds.push(new Audio("res/SFX/objects/plantHit" + i + ".mp3")),
+    );
+    for (let f of Sound.bushSounds) f.volume = 0.75;
+
+    Sound.parrySounds = new Array<HTMLAudioElement>();
+    [1, 2].forEach((i) =>
+      Sound.parrySounds.push(new Audio("res/SFX/attacks/parry" + i + ".mp3")),
+    );
+    for (let f of Sound.parrySounds) f.volume = 0.5;
   };
 
   private static playSoundSafely(audio: HTMLAudioElement) {
