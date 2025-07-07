@@ -4,6 +4,7 @@ import { Room } from "../room/room";
 import { GameConstants } from "../game/gameConstants";
 import { SkinType, Tile } from "./tile";
 import { DownLadder } from "./downLadder";
+import { Sound } from "../sound/sound";
 
 export class UpLadder extends Tile {
   linkedRoom: Room;
@@ -27,6 +28,7 @@ export class UpLadder extends Tile {
         this.linkRoom();
       }
       this.game.changeLevelThroughLadder(player, this);
+      Sound.forestMusic[0].pause();
     } catch (error) {
       console.error("Error during changeLevelThroughLadder:", error);
     }

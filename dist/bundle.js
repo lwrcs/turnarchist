@@ -26018,6 +26018,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UpLadder = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const tile_1 = __webpack_require__(/*! ./tile */ "./src/tile/tile.ts");
+const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts");
 class UpLadder extends tile_1.Tile {
     constructor(room, game, x, y) {
         super(room, x, y);
@@ -26033,6 +26034,7 @@ class UpLadder extends tile_1.Tile {
                     this.linkRoom();
                 }
                 this.game.changeLevelThroughLadder(player, this);
+                sound_1.Sound.forestMusic[0].pause();
             }
             catch (error) {
                 console.error("Error during changeLevelThroughLadder:", error);
