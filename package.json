@@ -63,6 +63,7 @@
     "has-ansi": "^4.0.1",
     "has-flag": "^4.0.0",
     "has-unicode": "^2.0.1",
+    "howler": "^2.2.4",
     "http-proxy-agent": "^4.0.1",
     "https-proxy-agent": "^5.0.1",
     "human-signals": "^2.1.0",
