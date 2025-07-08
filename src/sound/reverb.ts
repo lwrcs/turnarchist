@@ -9,29 +9,22 @@ export class ReverbEngine {
   private static gainNodes: Map<number, GainNode> = new Map(); // Fixed: Use Map instead of WeakMap
   static initialized: boolean = false;
 
-  // Initialize the AudioContext and ConvolverNode
+  static isMobile(): boolean {
+    return Sound.isMobile;
+  }
+
   public static async initialize() {
     if (ReverbEngine.initialized) return;
-
-    // Don't initialize reverb on mobile devices to avoid issues
-    if (Sound.isMobile) {
-      console.log("Skipping reverb initialization on mobile");
-      ReverbEngine.initialized = true;
-      if (Sound.initialized) Sound.audioMuted = false;
-      return;
-    }
 
     let canInitialize = Game.inputReceived;
 
     if (!canInitialize) {
-      console.time("initializeReverb");
       try {
         await new Promise<void>((resolve) => {
           const checkInput = () => {
             if (Game.inputReceived) {
               resolve();
               canInitialize = true;
-              console.timeEnd("initializeReverb");
             } else {
               requestAnimationFrame(checkInput);
             }
@@ -39,7 +32,7 @@ export class ReverbEngine {
           checkInput();
         });
       } catch (error) {
-        console.error("Failed to initialize ReverbEngine:", error);
+        console.error("Failed to wait for input:", error);
         return;
       }
     }
@@ -50,20 +43,33 @@ export class ReverbEngine {
       canInitialize
     ) {
       try {
-        // Use Howler's audio context
+        // Wait for Howler to initialize its context
+        if (!Howler.ctx) {
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
+
         ReverbEngine.audioContext =
           Howler.ctx ||
           new (window.AudioContext || (window as any).webkitAudioContext)();
 
+        // Resume context if suspended (mobile)
+        if (ReverbEngine.audioContext.state === "suspended") {
+          await ReverbEngine.audioContext.resume();
+        }
+
         ReverbEngine.convolver = ReverbEngine.audioContext.createConvolver();
         ReverbEngine.convolver.connect(ReverbEngine.audioContext.destination);
+
         await ReverbEngine.loadReverbBuffer(`res/SFX/impulses/small.mp3`);
         ReverbEngine.setDefaultReverb();
         ReverbEngine.initialized = true;
+
         if (Sound.initialized) Sound.audioMuted = false;
+
+        console.log("ReverbEngine initialized successfully");
       } catch (error) {
         console.error("Failed to initialize ReverbEngine:", error);
-        // Fallback: mark as initialized even if reverb failed
+        // Mark as initialized anyway to prevent repeated attempts
         ReverbEngine.initialized = true;
         if (Sound.initialized) Sound.audioMuted = false;
       }
@@ -110,50 +116,43 @@ export class ReverbEngine {
     }
   }
 
-  // Add mobile detection
-  private static isMobile(): boolean {
-    return (
-      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-        navigator.userAgent,
-      ) || window.innerWidth <= 768
-    );
-  }
-
   // Apply reverb to a given Howl sound
   public static applyReverb(sound: Howl): number {
-    // Skip reverb entirely on mobile
-    if (ReverbEngine.isMobile()) return sound.play();
-
     if (!ReverbEngine.initialized) return sound.play();
 
     try {
       const soundId = sound.play();
-      const gainNode = ReverbEngine.audioContext.createGain();
 
-      // POTENTIAL FIX: Set gain node to match the Howl's volume
-      gainNode.gain.setValueAtTime(
-        sound.volume(),
-        ReverbEngine.audioContext.currentTime,
-      );
+      // Only apply reverb processing if we have a valid context
+      if (ReverbEngine.audioContext && ReverbEngine.convolver) {
+        const gainNode = ReverbEngine.audioContext.createGain();
+        gainNode.gain.setValueAtTime(
+          sound.volume() * 0.7,
+          ReverbEngine.audioContext.currentTime,
+        );
+        gainNode.connect(ReverbEngine.convolver);
 
-      gainNode.connect(ReverbEngine.convolver);
-      ReverbEngine.gainNodes.set(soundId, gainNode);
+        ReverbEngine.gainNodes.set(soundId, gainNode);
 
-      sound.once("play", () => {
-        try {
-          const soundInstance = (sound as any)._sounds.find(
-            (s: any) => s._id === soundId,
-          );
-          if (soundInstance && soundInstance._node) {
-            if (soundInstance._node.bufferSource) {
+        // Apply reverb routing when sound starts playing
+        sound.once("play", () => {
+          try {
+            const soundInstance = (sound as any)._sounds.find(
+              (s: any) => s._id === soundId,
+            );
+            if (
+              soundInstance &&
+              soundInstance._node &&
+              soundInstance._node.bufferSource
+            ) {
               soundInstance._node.bufferSource.disconnect();
               soundInstance._node.bufferSource.connect(gainNode);
             }
+          } catch (error) {
+            // Silently fail - reverb is not critical
           }
-        } catch (error) {
-          console.warn("Could not apply reverb to sound:", error);
-        }
-      });
+        });
+      }
 
       return soundId;
     } catch (error) {

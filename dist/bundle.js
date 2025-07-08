@@ -27950,28 +27950,20 @@ const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const sound_1 = __webpack_require__(/*! ./sound */ "./src/sound/sound.ts");
 const howler_1 = __webpack_require__(/*! howler */ "./node_modules/howler/dist/howler.js");
 class ReverbEngine {
-    // Initialize the AudioContext and ConvolverNode
+    static isMobile() {
+        return sound_1.Sound.isMobile;
+    }
     static async initialize() {
         if (ReverbEngine.initialized)
             return;
-        // Don't initialize reverb on mobile devices to avoid issues
-        if (sound_1.Sound.isMobile) {
-            console.log("Skipping reverb initialization on mobile");
-            ReverbEngine.initialized = true;
-            if (sound_1.Sound.initialized)
-                sound_1.Sound.audioMuted = false;
-            return;
-        }
         let canInitialize = game_1.Game.inputReceived;
         if (!canInitialize) {
-            console.time("initializeReverb");
             try {
                 await new Promise((resolve) => {
                     const checkInput = () => {
                         if (game_1.Game.inputReceived) {
                             resolve();
                             canInitialize = true;
-                            console.timeEnd("initializeReverb");
                         }
                         else {
                             requestAnimationFrame(checkInput);
@@ -27981,7 +27973,7 @@ class ReverbEngine {
                 });
             }
             catch (error) {
-                console.error("Failed to initialize ReverbEngine:", error);
+                console.error("Failed to wait for input:", error);
                 return;
             }
         }
@@ -27989,10 +27981,17 @@ class ReverbEngine {
             !ReverbEngine.initialized &&
             canInitialize) {
             try {
-                // Use Howler's audio context
+                // Wait for Howler to initialize its context
+                if (!howler_1.Howler.ctx) {
+                    await new Promise((resolve) => setTimeout(resolve, 100));
+                }
                 ReverbEngine.audioContext =
                     howler_1.Howler.ctx ||
                         new (window.AudioContext || window.webkitAudioContext)();
+                // Resume context if suspended (mobile)
+                if (ReverbEngine.audioContext.state === "suspended") {
+                    await ReverbEngine.audioContext.resume();
+                }
                 ReverbEngine.convolver = ReverbEngine.audioContext.createConvolver();
                 ReverbEngine.convolver.connect(ReverbEngine.audioContext.destination);
                 await ReverbEngine.loadReverbBuffer(`res/SFX/impulses/small.mp3`);
@@ -28000,10 +27999,11 @@ class ReverbEngine {
                 ReverbEngine.initialized = true;
                 if (sound_1.Sound.initialized)
                     sound_1.Sound.audioMuted = false;
+                console.log("ReverbEngine initialized successfully");
             }
             catch (error) {
                 console.error("Failed to initialize ReverbEngine:", error);
-                // Fallback: mark as initialized even if reverb failed
+                // Mark as initialized anyway to prevent repeated attempts
                 ReverbEngine.initialized = true;
                 if (sound_1.Sound.initialized)
                     sound_1.Sound.audioMuted = false;
@@ -28048,38 +28048,34 @@ class ReverbEngine {
             console.error("Error setting reverb impulse:", error);
         }
     }
-    // Add mobile detection
-    static isMobile() {
-        return (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768);
-    }
     // Apply reverb to a given Howl sound
     static applyReverb(sound) {
-        // Skip reverb entirely on mobile
-        if (ReverbEngine.isMobile())
-            return sound.play();
         if (!ReverbEngine.initialized)
             return sound.play();
         try {
             const soundId = sound.play();
-            const gainNode = ReverbEngine.audioContext.createGain();
-            // POTENTIAL FIX: Set gain node to match the Howl's volume
-            gainNode.gain.setValueAtTime(sound.volume(), ReverbEngine.audioContext.currentTime);
-            gainNode.connect(ReverbEngine.convolver);
-            ReverbEngine.gainNodes.set(soundId, gainNode);
-            sound.once("play", () => {
-                try {
-                    const soundInstance = sound._sounds.find((s) => s._id === soundId);
-                    if (soundInstance && soundInstance._node) {
-                        if (soundInstance._node.bufferSource) {
+            // Only apply reverb processing if we have a valid context
+            if (ReverbEngine.audioContext && ReverbEngine.convolver) {
+                const gainNode = ReverbEngine.audioContext.createGain();
+                gainNode.gain.setValueAtTime(sound.volume() * 0.7, ReverbEngine.audioContext.currentTime);
+                gainNode.connect(ReverbEngine.convolver);
+                ReverbEngine.gainNodes.set(soundId, gainNode);
+                // Apply reverb routing when sound starts playing
+                sound.once("play", () => {
+                    try {
+                        const soundInstance = sound._sounds.find((s) => s._id === soundId);
+                        if (soundInstance &&
+                            soundInstance._node &&
+                            soundInstance._node.bufferSource) {
                             soundInstance._node.bufferSource.disconnect();
                             soundInstance._node.bufferSource.connect(gainNode);
                         }
                     }
-                }
-                catch (error) {
-                    console.warn("Could not apply reverb to sound:", error);
-                }
-            });
+                    catch (error) {
+                        // Silently fail - reverb is not critical
+                    }
+                });
+            }
             return soundId;
         }
         catch (error) {
@@ -28145,62 +28141,30 @@ class Sound {
         return Sound.isMobile;
     }
     static async enableAudioForMobile() {
-        if (!Sound.isMobile)
+        if (Sound.audioContextResumed)
             return;
         try {
-            // Resume AudioContext if it exists and is suspended
             if (howler_1.Howler.ctx && howler_1.Howler.ctx.state === "suspended") {
-                console.log("Resuming suspended AudioContext...");
                 await howler_1.Howler.ctx.resume();
                 Sound.audioContextResumed = true;
+                console.log("AudioContext resumed");
             }
-            // Play a short silent sound to unlock audio on iOS
-            const silentSound = new howler_1.Howl({
-                src: [
-                    "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvGUgBze8jvLNeyok",
-                ],
-                volume: 0.01,
-                html5: Sound.isMobile,
-                preload: true,
-            });
-            const playPromise = silentSound.play();
-            if (playPromise) {
-                await playPromise;
-                silentSound.stop();
-            }
-            console.log("Mobile audio enabled successfully");
         }
         catch (error) {
-            console.warn("Could not enable mobile audio:", error);
+            console.warn("Could not resume AudioContext:", error);
         }
     }
     static addMobileAudioHandlers() {
-        if (!Sound.isMobile)
-            return;
         const enableAudio = async () => {
-            if (Sound.pendingAudioEnable)
-                return;
-            Sound.pendingAudioEnable = true;
-            try {
-                await Sound.enableAudioForMobile();
-                // Unmute audio if it was muted due to mobile restrictions
-                if (Sound.audioMuted && reverb_1.ReverbEngine.initialized) {
-                    Sound.audioMuted = false;
-                    howler_1.Howler.mute(false);
-                }
-            }
-            catch (error) {
-                console.error("Failed to enable mobile audio:", error);
-            }
-            finally {
-                Sound.pendingAudioEnable = false;
+            await Sound.enableAudioForMobile();
+            if (Sound.audioMuted && reverb_1.ReverbEngine.initialized) {
+                Sound.audioMuted = false;
+                howler_1.Howler.mute(false);
             }
         };
-        // Add event listeners for user interaction
-        const events = ["touchstart", "touchend", "mousedown", "keydown", "click"];
+        const events = ["touchstart", "click", "keydown"];
         const handler = () => {
             enableAudio();
-            // Remove handlers after first interaction
             events.forEach((event) => {
                 document.removeEventListener(event, handler);
             });
@@ -28216,8 +28180,7 @@ class Sound {
         }
         else {
             howler_1.Howler.mute(false);
-            // On mobile, try to enable audio when unmuting
-            if (Sound.isMobile && !Sound.audioContextResumed) {
+            if (Sound.isMobile) {
                 Sound.enableAudioForMobile();
             }
         }
@@ -28226,42 +28189,35 @@ class Sound {
         if (Sound.audioMuted)
             return null;
         try {
-            if (Sound.currentlyPlaying.size > 8 && priority < Sound.PRIORITY.COMBAT) {
-                console.warn("Too many sounds playing, skipping lower priority sound");
+            // Simple volume-based priority system
+            if (Sound.currentlyPlaying.size > 10 &&
+                priority < Sound.PRIORITY.COMBAT) {
                 return null;
             }
-            // On mobile with HTML5 audio, skip reverb to avoid issues
-            if (Sound.isMobile) {
-                try {
-                    return sound.play();
-                }
-                catch (error) {
-                    console.warn("Failed to play sound on mobile:", error);
-                    return null;
-                }
+            let soundId = null;
+            // Always try to use reverb if available and not on mobile
+            if (reverb_1.ReverbEngine.initialized && !Sound.isMobile) {
+                soundId = reverb_1.ReverbEngine.applyReverb(sound);
             }
-            // Use reverb on desktop
-            const soundId = reverb_1.ReverbEngine.applyReverb(sound);
+            else {
+                soundId = sound.play();
+            }
             if (soundId) {
                 Sound.currentlyPlaying.add(soundId);
+                // Clean up tracking
                 sound.once("end", () => {
                     Sound.currentlyPlaying.delete(soundId);
                 });
+                // Fallback cleanup
                 setTimeout(() => {
                     Sound.currentlyPlaying.delete(soundId);
-                }, 10000);
+                }, 5000);
             }
             return soundId;
         }
         catch (error) {
-            console.error("Error playing sound with reverb:", error);
-            try {
-                return sound.play();
-            }
-            catch (fallbackError) {
-                console.error("Fallback play also failed:", fallbackError);
-                return null;
-            }
+            console.error("Error playing sound:", error);
+            return null;
         }
     }
     static stopSound(sound) {
@@ -28290,12 +28246,12 @@ Sound.PRIORITY = {
 };
 Sound.isMobile = false;
 Sound.audioContextResumed = false;
-Sound.pendingAudioEnable = false;
+Sound.forestMusicId = null;
+Sound.ambientSoundId = null;
 Sound.loadSounds = async () => {
     if (Sound.initialized)
         return;
     Sound.initialized = true;
-    // Detect mobile and set up handlers
     Sound.detectMobile();
     if (Sound.isMobile) {
         Sound.addMobileAudioHandlers();
@@ -28303,92 +28259,76 @@ Sound.loadSounds = async () => {
     if (reverb_1.ReverbEngine.initialized) {
         Sound.audioMuted = false;
     }
-    else if (Sound.isMobile) {
-        // On mobile, keep audio muted until user interaction
-        Sound.audioMuted = true;
-    }
+    // Optimized Howl creation - always use Web Audio API for better performance
     const createHowlArray = (basePath, indices, volume = 1.0, maxConcurrent = 3) => {
         return indices.map((i) => {
-            const howl = new howler_1.Howl({
+            return new howler_1.Howl({
                 src: [`${basePath}${i}.mp3`],
                 volume: volume,
                 preload: true,
-                html5: Sound.isMobile,
+                html5: false,
                 pool: maxConcurrent,
             });
-            console.log(`Created ${basePath}${i}.mp3 with volume:`, volume, "actual volume:", howl.volume(), "html5:", Sound.isMobile);
-            return howl;
         });
     };
     const createHowl = (src, volume = 1.0, loop = false, maxConcurrent = 2) => {
-        const howl = new howler_1.Howl({
+        return new howler_1.Howl({
             src: [src],
             volume: volume,
             preload: true,
             loop: loop,
-            html5: Sound.isMobile,
+            html5: false,
             pool: maxConcurrent,
         });
-        console.log(`Created ${src} with volume:`, volume, "actual volume:", howl.volume(), "html5:", Sound.isMobile);
-        return howl;
     };
     try {
-        // Test with a few sounds first
-        console.log("=== DEBUGGING VOLUME SETTINGS ===");
-        Sound.magicSound = createHowl("res/SFX/attacks/magic2.mp3", 0.25, false, 2);
-        Sound.warHammerSound = createHowl("res/SFX/attacks/warhammer.mp3", 1, false, 2);
-        Sound.healSound = createHowl("res/SFX/items/powerup1.mp3", 0.5, false, 1);
-        // Let's also try setting volume AFTER creation
-        console.log("=== TESTING POST-CREATION VOLUME SETTING ===");
-        Sound.magicSound.volume(0.25);
-        Sound.warHammerSound.volume(1);
-        Sound.healSound.volume(0.5);
-        console.log("After manual setting - Magic:", Sound.magicSound.volume());
-        console.log("After manual setting - WarHammer:", Sound.warHammerSound.volume());
-        console.log("After manual setting - Heal:", Sound.healSound.volume());
-        // EXACT ORIGINAL VOLUMES - Load footstep sounds
-        Sound.playerStoneFootsteps = createHowlArray("res/SFX/footsteps/stone/footstep", [1, 2, 3], 1.0, 2);
-        Sound.playerGrassFootsteps = createHowlArray("res/SFX/footsteps/grass/footstep", [1, 2, 3, 6], 1.0, 2);
-        Sound.playerDirtFootsteps = createHowlArray("res/SFX/footsteps/dirt/footstep", [1, 2, 3, 4, 5], 1.0, 2);
-        Sound.enemyFootsteps = createHowlArray("res/SFX/footsteps/enemy/enemyfootstep", [1, 2, 3, 4, 5], 1.0, 3);
-        // EXACT ORIGINAL VOLUMES - Load combat sounds
-        Sound.swingSounds = createHowlArray("res/SFX/attacks/swing", [1, 2, 3, 4], 0.5, 4);
-        Sound.hitSounds = createHowlArray("res/SFX/attacks/hurt", [1, 2], 0.5, 3);
-        Sound.hurtSounds = [createHowl("res/SFX/attacks/hit.mp3", 0.3, false, 3)]; // Original: 0.3
-        Sound.sliceSound = createHowlArray("res/SFX/attacks/slice", [1, 2, 3], 0.5, 3);
-        Sound.shortSliceSound = createHowlArray("res/SFX/attacks/sliceShort", [1, 2, 3], 0.5, 3);
-        Sound.parrySounds = createHowlArray("res/SFX/attacks/parry", [1, 2], 0.5, 2);
-        // EXACT ORIGINAL VOLUMES - Load single sounds
-        Sound.enemySpawnSound = createHowl("res/SFX/attacks/enemyspawn.mp3", 0.7, false, 2);
-        Sound.wooshSound = createHowl("res/SFX/attacks/woosh1.mp3", 0.2, false, 2);
-        // EXACT ORIGINAL VOLUMES - Load interaction sounds
-        Sound.chestSounds = createHowlArray("res/SFX/chest/chest", [1, 2, 3], 0.5, 2);
-        Sound.coinPickupSounds = createHowlArray("res/SFX/items/coins", [1, 2, 3, 4], 1.0, 3);
-        Sound.genericPickupSound = createHowl("res/SFX/items/pickup.mp3", 1.0, false, 2);
-        Sound.keyPickupSound = createHowl("res/SFX/items/keyPickup.mp3", 1.0, false, 1);
-        Sound.backpackSound = createHowl("res/SFX/items/backpack.mp3", 0.75, false, 1);
-        Sound.smithSound = createHowl("res/SFX/items/smith.mp3", 0.5, false, 1);
-        // EXACT ORIGINAL VOLUMES - Load mining sounds
-        Sound.miningSounds = createHowlArray("res/SFX/resources/Pickaxe", [1, 2, 3, 4], 0.3, 2);
-        Sound.breakRockSound = createHowl("res/SFX/resources/rockbreak.mp3", 1.0, false, 1);
-        // EXACT ORIGINAL VOLUMES - Load door sounds
-        Sound.unlockSounds = createHowlArray("res/SFX/door/unlock", [1], 0.5, 1);
-        Sound.doorOpenSounds = createHowlArray("res/SFX/door/open", [1, 2], 0.5, 2);
-        // EXACT ORIGINAL VOLUMES - Load object sounds
-        Sound.potSmashSounds = createHowlArray("res/SFX/objects/potSmash", [1, 2, 3], 0.5, 2);
-        Sound.bushSounds = createHowlArray("res/SFX/objects/plantHit", [1, 2], 0.75, 2);
-        Sound.pushSounds = createHowlArray("res/SFX/pushing/push", [1, 2], 1.0, 2);
-        // EXACT ORIGINAL VOLUMES - Load bomb sounds
-        Sound.bombSounds = createHowlArray("res/SFX/attacks/explode", [1, 2], 0.7, 2);
-        Sound.fuseBurnSound = createHowl("res/SFX/attacks/fuse.mp3", 0.2, false, 1);
+        // Load all sounds with optimized settings
+        Sound.magicSound = createHowl("res/SFX/attacks/magic2.mp3", 0.25, false, 3);
+        Sound.warHammerSound = createHowl("res/SFX/attacks/warhammer.mp3", 1, false, 3);
+        Sound.healSound = createHowl("res/SFX/items/powerup1.mp3", 0.5, false, 2);
+        // Footstep sounds
+        Sound.playerStoneFootsteps = createHowlArray("res/SFX/footsteps/stone/footstep", [1, 2, 3], 1.0, 4);
+        Sound.playerGrassFootsteps = createHowlArray("res/SFX/footsteps/grass/footstep", [1, 2, 3, 6], 1.0, 4);
+        Sound.playerDirtFootsteps = createHowlArray("res/SFX/footsteps/dirt/footstep", [1, 2, 3, 4, 5], 1.0, 4);
+        Sound.enemyFootsteps = createHowlArray("res/SFX/footsteps/enemy/enemyfootstep", [1, 2, 3, 4, 5], 1.0, 4);
+        // Combat sounds
+        Sound.swingSounds = createHowlArray("res/SFX/attacks/swing", [1, 2, 3, 4], 0.5, 6);
+        Sound.hitSounds = createHowlArray("res/SFX/attacks/hurt", [1, 2], 0.5, 4);
+        Sound.hurtSounds = [createHowl("res/SFX/attacks/hit.mp3", 0.3, false, 4)];
+        Sound.sliceSound = createHowlArray("res/SFX/attacks/slice", [1, 2, 3], 0.5, 4);
+        Sound.shortSliceSound = createHowlArray("res/SFX/attacks/sliceShort", [1, 2, 3], 0.5, 4);
+        Sound.parrySounds = createHowlArray("res/SFX/attacks/parry", [1, 2], 0.5, 3);
+        // Single sounds
+        Sound.enemySpawnSound = createHowl("res/SFX/attacks/enemyspawn.mp3", 0.7, false, 3);
+        Sound.wooshSound = createHowl("res/SFX/attacks/woosh1.mp3", 0.2, false, 3);
+        // Interaction sounds
+        Sound.chestSounds = createHowlArray("res/SFX/chest/chest", [1, 2, 3], 0.5, 3);
+        Sound.coinPickupSounds = createHowlArray("res/SFX/items/coins", [1, 2, 3, 4], 1.0, 5);
+        Sound.genericPickupSound = createHowl("res/SFX/items/pickup.mp3", 1.0, false, 3);
+        Sound.keyPickupSound = createHowl("res/SFX/items/keyPickup.mp3", 1.0, false, 2);
+        Sound.backpackSound = createHowl("res/SFX/items/backpack.mp3", 0.75, false, 2);
+        Sound.smithSound = createHowl("res/SFX/items/smith.mp3", 0.5, false, 2);
+        // Mining sounds
+        Sound.miningSounds = createHowlArray("res/SFX/resources/Pickaxe", [1, 2, 3, 4], 0.3, 3);
+        Sound.breakRockSound = createHowl("res/SFX/resources/rockbreak.mp3", 1.0, false, 2);
+        // Door sounds
+        Sound.unlockSounds = createHowlArray("res/SFX/door/unlock", [1], 0.5, 2);
+        Sound.doorOpenSounds = createHowlArray("res/SFX/door/open", [1, 2], 0.5, 3);
+        // Object sounds
+        Sound.potSmashSounds = createHowlArray("res/SFX/objects/potSmash", [1, 2, 3], 0.5, 3);
+        Sound.bushSounds = createHowlArray("res/SFX/objects/plantHit", [1, 2], 0.75, 3);
+        Sound.pushSounds = createHowlArray("res/SFX/pushing/push", [1, 2], 1.0, 3);
+        // Bomb sounds
+        Sound.bombSounds = createHowlArray("res/SFX/attacks/explode", [1, 2], 0.7, 3);
+        Sound.fuseBurnSound = createHowl("res/SFX/attacks/fuse.mp3", 0.2, false, 2);
         Sound.fuseLoopSound = createHowl("res/SFX/attacks/fuseLoop.mp3", 0.2, true, 1);
-        Sound.fuseStartSound = createHowl("res/SFX/attacks/fuseStart.mp3", 0.2, false, 1);
-        // EXACT ORIGINAL VOLUMES - Load ambient sounds
+        Sound.fuseStartSound = createHowl("res/SFX/attacks/fuseStart.mp3", 0.2, false, 2);
+        // Ambient sounds - critical for mobile
         Sound.forestMusic = createHowl("res/music/forest1.mp3", 0.25, true, 1);
-        Sound.graveSound = createHowl("res/SFX/attacks/skelespawn.mp3", 1.0, false, 1); // NOTE: Volume set to 0.3 in skeleSpawn method
-        Sound.ambientSound = createHowl("res/SFX/ambient/ambientDark2.mp3", 1.0, true, 1); // Original: volume = 1 (not 1.0)
-        Sound.goreSound = createHowl("res/SFX/misc Unused/gore2.mp3", 0.5, false, 1);
-        console.log("All sounds loaded successfully with original volumes");
+        Sound.graveSound = createHowl("res/SFX/attacks/skelespawn.mp3", 1.0, false, 2);
+        Sound.ambientSound = createHowl("res/SFX/ambient/ambientDark2.mp3", 0.3, true, 1); // Reduced volume
+        Sound.goreSound = createHowl("res/SFX/misc Unused/gore2.mp3", 0.5, false, 2);
+        console.log("All sounds loaded successfully");
     }
     catch (error) {
         console.error("Error loading sounds:", error);
@@ -28501,16 +28441,16 @@ Sound.playForestMusic = (index = 0) => {
     if (Sound.audioMuted)
         return;
     try {
-        // On mobile, check if audio context is ready
-        if (Sound.isMobile && !Sound.audioContextResumed) {
-            Sound.enableAudioForMobile().then(() => {
-                if (!Sound.audioMuted) {
-                    Sound.forestMusic.play();
-                }
-            });
-            return;
+        // Stop any existing forest music
+        if (Sound.forestMusicId) {
+            Sound.forestMusic.stop(Sound.forestMusicId);
         }
-        Sound.forestMusic.play();
+        // Play new instance
+        Sound.forestMusicId = Sound.forestMusic.play();
+        // Handle mobile audio context
+        if (Sound.isMobile && !Sound.audioContextResumed) {
+            Sound.enableAudioForMobile();
+        }
     }
     catch (error) {
         console.error("Error playing forest music:", error);
@@ -28525,8 +28465,21 @@ Sound.doorOpen = () => {
 Sound.playAmbient = () => {
     if (Sound.audioMuted)
         return;
-    if (!Sound.ambientSound.playing()) {
-        Sound.ambientSound.play();
+    try {
+        // Only play if not already playing
+        if (!Sound.ambientSoundId ||
+            !Sound.ambientSound.playing(Sound.ambientSoundId)) {
+            Sound.ambientSoundId = Sound.ambientSound.play();
+        }
+    }
+    catch (error) {
+        console.error("Error playing ambient sound:", error);
+    }
+};
+Sound.stopAmbient = () => {
+    if (Sound.ambientSoundId) {
+        Sound.ambientSound.stop(Sound.ambientSoundId);
+        Sound.ambientSoundId = null;
     }
 };
 Sound.playFuse = () => {
