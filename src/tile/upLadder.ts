@@ -28,7 +28,7 @@ export class UpLadder extends Tile {
         this.linkRoom();
       }
       this.game.changeLevelThroughLadder(player, this);
-      Sound.forestMusic[0].pause();
+      Sound.forestMusic.pause();
     } catch (error) {
       console.error("Error during changeLevelThroughLadder:", error);
     }

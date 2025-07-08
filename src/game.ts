@@ -521,6 +521,8 @@ export class Game {
       player.levelID = newRoom.id;
     }
 
+    if (newRoom.envType === 2) Sound.playForestMusic();
+
     this.updateDepth(newRoom.depth);
 
     this.levelState = LevelState.TRANSITIONING_LADDER;

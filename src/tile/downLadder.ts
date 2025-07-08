@@ -55,7 +55,6 @@ export class DownLadder extends Tile {
 
     this.linkedRoom = linkedRoom;
     this.linkUpLadder();
-    if (this.linkedRoom.envType === 2) Sound.playForestMusic(0);
   };
 
   private handleSidePathRooms = (linkedRoom: Room) => {

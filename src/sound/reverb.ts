@@ -12,6 +12,15 @@ export class ReverbEngine {
   // Initialize the AudioContext and ConvolverNode
   public static async initialize() {
     if (ReverbEngine.initialized) return;
+
+    // Don't initialize reverb on mobile devices to avoid issues
+    if (Sound.isMobile) {
+      console.log("Skipping reverb initialization on mobile");
+      ReverbEngine.initialized = true;
+      if (Sound.initialized) Sound.audioMuted = false;
+      return;
+    }
+
     let canInitialize = Game.inputReceived;
 
     if (!canInitialize) {
@@ -54,6 +63,9 @@ export class ReverbEngine {
         if (Sound.initialized) Sound.audioMuted = false;
       } catch (error) {
         console.error("Failed to initialize ReverbEngine:", error);
+        // Fallback: mark as initialized even if reverb failed
+        ReverbEngine.initialized = true;
+        if (Sound.initialized) Sound.audioMuted = false;
       }
     }
   }

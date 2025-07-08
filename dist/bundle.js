@@ -11914,6 +11914,8 @@ class Game {
             if (this.players[this.localPlayerID] === player) {
                 player.levelID = newRoom.id;
             }
+            if (newRoom.envType === 2)
+                sound_1.Sound.playForestMusic();
             this.updateDepth(newRoom.depth);
             this.levelState = LevelState.TRANSITIONING_LADDER;
             this.transitionStartTime = Date.now();
@@ -27952,6 +27954,14 @@ class ReverbEngine {
     static async initialize() {
         if (ReverbEngine.initialized)
             return;
+        // Don't initialize reverb on mobile devices to avoid issues
+        if (sound_1.Sound.isMobile) {
+            console.log("Skipping reverb initialization on mobile");
+            ReverbEngine.initialized = true;
+            if (sound_1.Sound.initialized)
+                sound_1.Sound.audioMuted = false;
+            return;
+        }
         let canInitialize = game_1.Game.inputReceived;
         if (!canInitialize) {
             console.time("initializeReverb");
@@ -27993,6 +28003,10 @@ class ReverbEngine {
             }
             catch (error) {
                 console.error("Failed to initialize ReverbEngine:", error);
+                // Fallback: mark as initialized even if reverb failed
+                ReverbEngine.initialized = true;
+                if (sound_1.Sound.initialized)
+                    sound_1.Sound.audioMuted = false;
             }
         }
     }
@@ -28124,6 +28138,77 @@ const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const reverb_1 = __webpack_require__(/*! ./reverb */ "./src/sound/reverb.ts");
 const howler_1 = __webpack_require__(/*! howler */ "./node_modules/howler/dist/howler.js");
 class Sound {
+    static detectMobile() {
+        const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+        Sound.isMobile =
+            /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+        return Sound.isMobile;
+    }
+    static async enableAudioForMobile() {
+        if (!Sound.isMobile)
+            return;
+        try {
+            // Resume AudioContext if it exists and is suspended
+            if (howler_1.Howler.ctx && howler_1.Howler.ctx.state === "suspended") {
+                console.log("Resuming suspended AudioContext...");
+                await howler_1.Howler.ctx.resume();
+                Sound.audioContextResumed = true;
+            }
+            // Play a short silent sound to unlock audio on iOS
+            const silentSound = new howler_1.Howl({
+                src: [
+                    "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvGUgBze8jvLNeyok",
+                ],
+                volume: 0.01,
+                html5: Sound.isMobile,
+                preload: true,
+            });
+            const playPromise = silentSound.play();
+            if (playPromise) {
+                await playPromise;
+                silentSound.stop();
+            }
+            console.log("Mobile audio enabled successfully");
+        }
+        catch (error) {
+            console.warn("Could not enable mobile audio:", error);
+        }
+    }
+    static addMobileAudioHandlers() {
+        if (!Sound.isMobile)
+            return;
+        const enableAudio = async () => {
+            if (Sound.pendingAudioEnable)
+                return;
+            Sound.pendingAudioEnable = true;
+            try {
+                await Sound.enableAudioForMobile();
+                // Unmute audio if it was muted due to mobile restrictions
+                if (Sound.audioMuted && reverb_1.ReverbEngine.initialized) {
+                    Sound.audioMuted = false;
+                    howler_1.Howler.mute(false);
+                }
+            }
+            catch (error) {
+                console.error("Failed to enable mobile audio:", error);
+            }
+            finally {
+                Sound.pendingAudioEnable = false;
+            }
+        };
+        // Add event listeners for user interaction
+        const events = ["touchstart", "touchend", "mousedown", "keydown", "click"];
+        const handler = () => {
+            enableAudio();
+            // Remove handlers after first interaction
+            events.forEach((event) => {
+                document.removeEventListener(event, handler);
+            });
+        };
+        events.forEach((event) => {
+            document.addEventListener(event, handler, { once: true });
+        });
+    }
     static toggleMute() {
         Sound.audioMuted = !Sound.audioMuted;
         if (Sound.audioMuted) {
@@ -28131,6 +28216,10 @@ class Sound {
         }
         else {
             howler_1.Howler.mute(false);
+            // On mobile, try to enable audio when unmuting
+            if (Sound.isMobile && !Sound.audioContextResumed) {
+                Sound.enableAudioForMobile();
+            }
         }
     }
     static playWithReverb(sound, priority = Sound.PRIORITY.INTERACTIONS) {
@@ -28141,6 +28230,17 @@ class Sound {
                 console.warn("Too many sounds playing, skipping lower priority sound");
                 return null;
             }
+            // On mobile with HTML5 audio, skip reverb to avoid issues
+            if (Sound.isMobile) {
+                try {
+                    return sound.play();
+                }
+                catch (error) {
+                    console.warn("Failed to play sound on mobile:", error);
+                    return null;
+                }
+            }
+            // Use reverb on desktop
             const soundId = reverb_1.ReverbEngine.applyReverb(sound);
             if (soundId) {
                 Sound.currentlyPlaying.add(soundId);
@@ -28155,7 +28255,13 @@ class Sound {
         }
         catch (error) {
             console.error("Error playing sound with reverb:", error);
-            return sound.play();
+            try {
+                return sound.play();
+            }
+            catch (fallbackError) {
+                console.error("Fallback play also failed:", fallbackError);
+                return null;
+            }
         }
     }
     static stopSound(sound) {
@@ -28182,23 +28288,35 @@ Sound.PRIORITY = {
     COMBAT: 4,
     CRITICAL: 5,
 };
+Sound.isMobile = false;
+Sound.audioContextResumed = false;
+Sound.pendingAudioEnable = false;
 Sound.loadSounds = async () => {
     if (Sound.initialized)
         return;
     Sound.initialized = true;
-    if (reverb_1.ReverbEngine.initialized)
+    // Detect mobile and set up handlers
+    Sound.detectMobile();
+    if (Sound.isMobile) {
+        Sound.addMobileAudioHandlers();
+    }
+    if (reverb_1.ReverbEngine.initialized) {
         Sound.audioMuted = false;
+    }
+    else if (Sound.isMobile) {
+        // On mobile, keep audio muted until user interaction
+        Sound.audioMuted = true;
+    }
     const createHowlArray = (basePath, indices, volume = 1.0, maxConcurrent = 3) => {
         return indices.map((i) => {
             const howl = new howler_1.Howl({
                 src: [`${basePath}${i}.mp3`],
                 volume: volume,
                 preload: true,
-                html5: false,
+                html5: Sound.isMobile,
                 pool: maxConcurrent,
             });
-            // DEBUG: Check if volume was set correctly
-            console.log(`Created ${basePath}${i}.mp3 with volume:`, volume, "actual volume:", howl.volume());
+            console.log(`Created ${basePath}${i}.mp3 with volume:`, volume, "actual volume:", howl.volume(), "html5:", Sound.isMobile);
             return howl;
         });
     };
@@ -28208,11 +28326,10 @@ Sound.loadSounds = async () => {
             volume: volume,
             preload: true,
             loop: loop,
-            html5: false,
+            html5: Sound.isMobile,
             pool: maxConcurrent,
         });
-        // DEBUG: Check if volume was set correctly
-        console.log(`Created ${src} with volume:`, volume, "actual volume:", howl.volume());
+        console.log(`Created ${src} with volume:`, volume, "actual volume:", howl.volume(), "html5:", Sound.isMobile);
         return howl;
     };
     try {
@@ -28383,8 +28500,20 @@ Sound.unlock = () => {
 Sound.playForestMusic = (index = 0) => {
     if (Sound.audioMuted)
         return;
-    if (!Sound.forestMusic.playing()) {
+    try {
+        // On mobile, check if audio context is ready
+        if (Sound.isMobile && !Sound.audioContextResumed) {
+            Sound.enableAudioForMobile().then(() => {
+                if (!Sound.audioMuted) {
+                    Sound.forestMusic.play();
+                }
+            });
+            return;
+        }
         Sound.forestMusic.play();
+    }
+    catch (error) {
+        console.error("Error playing forest music:", error);
     }
 };
 Sound.doorOpen = () => {
@@ -28939,7 +29068,6 @@ const tile_1 = __webpack_require__(/*! ./tile */ "./src/tile/tile.ts");
 const upLadder_1 = __webpack_require__(/*! ./upLadder */ "./src/tile/upLadder.ts");
 const events_1 = __webpack_require__(/*! ../event/events */ "./src/event/events.ts");
 const eventBus_1 = __webpack_require__(/*! ../event/eventBus */ "./src/event/eventBus.ts");
-const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts");
 class DownLadder extends tile_1.Tile {
     constructor(room, game, x, y, isSidePath = false) {
         super(room, x, y);
@@ -28963,8 +29091,6 @@ class DownLadder extends tile_1.Tile {
             }
             this.linkedRoom = linkedRoom;
             this.linkUpLadder();
-            if (this.linkedRoom.envType === 2)
-                sound_1.Sound.playForestMusic(0);
         };
         this.handleSidePathRooms = (linkedRoom) => {
             const targetDepth = this.room.depth;
@@ -29408,7 +29534,7 @@ class UpLadder extends tile_1.Tile {
                     this.linkRoom();
                 }
                 this.game.changeLevelThroughLadder(player, this);
-                sound_1.Sound.forestMusic[0].pause();
+                sound_1.Sound.forestMusic.pause();
             }
             catch (error) {
                 console.error("Error during changeLevelThroughLadder:", error);
