@@ -19,6 +19,7 @@ export class GodStone extends Usable {
 
     this.stackable = true;
   }
+
   onUse = (player: Player): void => {
     this.teleportToExit(player);
   };

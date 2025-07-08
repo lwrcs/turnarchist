@@ -153,6 +153,7 @@ export abstract class Weapon extends Equippable {
   };
 
   hitSound = () => {
+    Sound.swing();
     Sound.hit();
   };
 

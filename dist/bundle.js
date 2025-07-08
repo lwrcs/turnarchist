@@ -11112,6 +11112,7 @@ exports.Tree = void 0;
 const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+const apple_1 = __webpack_require__(/*! ../../item/usable/apple */ "./src/item/usable/apple.ts");
 class Tree extends entity_1.Entity {
     constructor(room, game, x, y) {
         super(room, game, x, y);
@@ -11139,6 +11140,8 @@ class Tree extends entity_1.Entity {
         this.imageParticleX = 0;
         this.imageParticleY = 28;
         this.opaque = true;
+        if (Math.random() < 0.5)
+            this.drops.push(new apple_1.Apple(this.room, this.x, this.y));
         //this.drawableY = 0.1;
         //this.drops.push(new Shrooms(this.room, this.x, this.y));
     }
@@ -13430,22 +13433,19 @@ const candle_1 = __webpack_require__(/*! ../item/light/candle */ "./src/item/lig
 const coal_1 = __webpack_require__(/*! ../item/resource/coal */ "./src/item/resource/coal.ts");
 const godStone_1 = __webpack_require__(/*! ../item/godStone */ "./src/item/godStone.ts");
 const lantern_1 = __webpack_require__(/*! ../item/light/lantern */ "./src/item/light/lantern.ts");
-const weaponBlood_1 = __webpack_require__(/*! ../item/usable/weaponBlood */ "./src/item/usable/weaponBlood.ts");
 const weaponFragments_1 = __webpack_require__(/*! ../item/usable/weaponFragments */ "./src/item/usable/weaponFragments.ts");
-const weaponPoison_1 = __webpack_require__(/*! ../item/usable/weaponPoison */ "./src/item/usable/weaponPoison.ts");
 const levelConstants_1 = __webpack_require__(/*! ../level/levelConstants */ "./src/level/levelConstants.ts");
 const dagger_1 = __webpack_require__(/*! ../item/weapon/dagger */ "./src/item/weapon/dagger.ts");
+const dualdagger_1 = __webpack_require__(/*! ../item/weapon/dualdagger */ "./src/item/weapon/dualdagger.ts");
 const spear_1 = __webpack_require__(/*! ../item/weapon/spear */ "./src/item/weapon/spear.ts");
 const spellbook_1 = __webpack_require__(/*! ../item/weapon/spellbook */ "./src/item/weapon/spellbook.ts");
 const warhammer_1 = __webpack_require__(/*! ../item/weapon/warhammer */ "./src/item/weapon/warhammer.ts");
 const hammer_1 = __webpack_require__(/*! ../item/tool/hammer */ "./src/item/tool/hammer.ts");
 const spellbookPage_1 = __webpack_require__(/*! ../item/usable/spellbookPage */ "./src/item/usable/spellbookPage.ts");
 const greataxe_1 = __webpack_require__(/*! ../item/weapon/greataxe */ "./src/item/weapon/greataxe.ts");
-const greengem_1 = __webpack_require__(/*! ../item/resource/greengem */ "./src/item/resource/greengem.ts");
 const pickaxe_1 = __webpack_require__(/*! ../item/tool/pickaxe */ "./src/item/tool/pickaxe.ts");
 const scythe_1 = __webpack_require__(/*! ../item/weapon/scythe */ "./src/item/weapon/scythe.ts");
-const hourglass_1 = __webpack_require__(/*! ../item/usable/hourglass */ "./src/item/usable/hourglass.ts");
-const gold_1 = __webpack_require__(/*! ../item/resource/gold */ "./src/item/resource/gold.ts");
+const apple_1 = __webpack_require__(/*! ../item/usable/apple */ "./src/item/usable/apple.ts");
 class GameConstants {
 }
 exports.GameConstants = GameConstants;
@@ -13618,23 +13618,19 @@ GameConstants.STARTING_INVENTORY = [dagger_1.Dagger, candle_1.Candle];
 GameConstants.STARTING_DEV_INVENTORY = [
     dagger_1.Dagger,
     warhammer_1.Warhammer,
-    hourglass_1.Hourglass,
+    dualdagger_1.DualDagger,
     scythe_1.Scythe,
     godStone_1.GodStone,
     spear_1.Spear,
     greataxe_1.Greataxe,
     spellbook_1.Spellbook,
     lantern_1.Lantern,
-    weaponPoison_1.WeaponPoison,
-    weaponBlood_1.WeaponBlood,
     armor_1.Armor,
     backpack_1.Backpack,
     hammer_1.Hammer,
     pickaxe_1.Pickaxe,
     coal_1.Coal,
-    gold_1.Gold,
-    greengem_1.GreenGem,
-    greengem_1.GreenGem,
+    apple_1.Apple,
     spellbookPage_1.SpellbookPage,
     spellbookPage_1.SpellbookPage,
     spellbookPage_1.SpellbookPage,
@@ -18822,6 +18818,47 @@ Pickaxe.itemName = "pickaxe";
 
 /***/ }),
 
+/***/ "./src/item/usable/apple.ts":
+/*!**********************************!*\
+  !*** ./src/item/usable/apple.ts ***!
+  \**********************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Apple = void 0;
+const usable_1 = __webpack_require__(/*! ./usable */ "./src/item/usable/usable.ts");
+const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
+class Apple extends usable_1.Usable {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.onUse = (player) => {
+            if (player.health < player.maxHealth) {
+                player.health = Math.min(player.maxHealth, player.health + 0.5);
+                sound_1.Sound.playEat();
+                if (this.stackCount > 1) {
+                    this.stackCount--;
+                }
+                else
+                    player.inventory.removeItem(this);
+                player.game.pushMessage("You eat the apple and feel better.");
+            }
+        };
+        this.getDescription = () => {
+            return "APPLE\nAppears nutritious.";
+        };
+        this.tileX = 6;
+        this.tileY = 2;
+        this.stackable = true;
+    }
+}
+exports.Apple = Apple;
+Apple.itemName = "apple";
+
+
+/***/ }),
+
 /***/ "./src/item/usable/heart.ts":
 /*!**********************************!*\
   !*** ./src/item/usable/heart.ts ***!
@@ -19209,10 +19246,15 @@ Dagger.itemName = "dagger";
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DualDagger = void 0;
 const weapon_1 = __webpack_require__(/*! ./weapon */ "./src/item/weapon/weapon.ts");
+const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
 const attackAnimation_1 = __webpack_require__(/*! ../../particle/attackAnimation */ "./src/particle/attackAnimation.ts");
 class DualDagger extends weapon_1.Weapon {
     constructor(level, x, y) {
         super(level, x, y);
+        this.hitSound = () => {
+            sound_1.Sound.swing();
+            sound_1.Sound.playShortSlice();
+        };
         this.tickInInventory = () => {
             this.firstAttack = true;
         };
@@ -19282,7 +19324,7 @@ class Greataxe extends weapon_1.Weapon {
     constructor(level, x, y) {
         super(level, x, y);
         this.hitSound = () => {
-            sound_1.Sound.hit();
+            sound_1.Sound.swing();
             sound_1.Sound.playWarHammer();
         };
         this.adjustedDamage = () => {
@@ -19358,7 +19400,8 @@ class Scythe extends weapon_1.Weapon {
     constructor(level, x, y) {
         super(level, x, y);
         this.hitSound = () => {
-            sound_1.Sound.hit();
+            sound_1.Sound.swing();
+            //Sound.hit();
             sound_1.Sound.playSlice();
         };
         this.weaponMove = (newX, newY) => {
@@ -19849,7 +19892,7 @@ class Warhammer extends weapon_1.Weapon {
     constructor(level, x, y) {
         super(level, x, y);
         this.hitSound = () => {
-            sound_1.Sound.hit(true);
+            sound_1.Sound.swing();
             sound_1.Sound.playWarHammer();
         };
         this.weaponMove = (newX, newY) => {
@@ -19999,6 +20042,7 @@ class Weapon extends equippable_1.Equippable {
                 this.wielder.shakeScreen(this.wielder.x, this.wielder.y, eX, eY);
         };
         this.hitSound = () => {
+            sound_1.Sound.swing();
             sound_1.Sound.hit();
         };
         this.drawStatus = (x, y) => {
@@ -22720,6 +22764,7 @@ class Player extends drawable_1.Drawable {
             // Play hurt sound if in current room
             if (this.game.levels[this.depth].rooms[this.levelID] === this.game.room) {
                 sound_1.Sound.hurt();
+                sound_1.Sound.playGrunt();
             }
             // Handle armor damage
             if (this.inventory.getArmor() && this.inventory.getArmor().health > 0) {
@@ -28447,6 +28492,7 @@ Sound.loadSounds = async () => {
         Sound.sliceSound = createHowlArray("res/SFX/attacks/slice", [1, 2, 3], 0.5, 4);
         Sound.shortSliceSound = createHowlArray("res/SFX/attacks/sliceShort", [1, 2, 3], 0.5, 4);
         Sound.parrySounds = createHowlArray("res/SFX/attacks/parry", [1, 2], 0.5, 3);
+        Sound.gruntSounds = createHowlArray("res/SFX/attacks/grunt", [1], 0.35, 1);
         // Single sounds
         Sound.enemySpawnSound = createHowl("res/SFX/attacks/enemyspawn.mp3", 0.7, false, 3);
         Sound.wooshSound = createHowl("res/SFX/attacks/woosh1.mp3", 0.2, false, 3);
@@ -28500,12 +28546,16 @@ Sound.enemyFootstep = () => {
     let f = game_1.Game.randTable(Sound.enemyFootsteps, Math.random);
     _a.playWithReverb(f, Sound.PRIORITY.FOOTSTEPS);
 };
-Sound.hit = (hard = false) => {
+Sound.swing = () => {
     if (Sound.audioMuted)
         return;
     let f = game_1.Game.randTable(Sound.swingSounds, Math.random);
     _a.playWithReverb(f, Sound.PRIORITY.COMBAT);
-    let sounds = Sound.hitSounds.slice(hard ? 2 : 0, hard ? 3 : 1);
+};
+Sound.hit = (hard = false) => {
+    if (Sound.audioMuted)
+        return;
+    let sounds = Sound.hitSounds.slice(hard ? 2 : 0, hard ? 3 : 2);
     setTimeout(() => {
         let f = game_1.Game.randTable(sounds, Math.random);
         _a.playWithReverb(f, Sound.PRIORITY.COMBAT);
@@ -28658,7 +28708,9 @@ Sound.playBomb = () => {
 Sound.playWarHammer = () => {
     if (Sound.audioMuted)
         return;
-    _a.playWithReverb(Sound.warHammerSound, Sound.PRIORITY.COMBAT);
+    _a.delayPlay(() => {
+        _a.playWithReverb(Sound.hitSounds[2], Sound.PRIORITY.COMBAT);
+    }, 200);
 };
 Sound.playMagic = () => {
     if (Sound.audioMuted)
@@ -28705,6 +28757,12 @@ Sound.playEat = () => {
         return;
     let f = game_1.Game.randTable(Sound.eatSounds, Math.random);
     _a.playWithReverb(f, Sound.PRIORITY.INTERACTIONS);
+};
+Sound.playGrunt = () => {
+    if (Sound.audioMuted)
+        return;
+    let f = game_1.Game.randTable(Sound.gruntSounds, Math.random);
+    _a.playWithReverb(f, Sound.PRIORITY.COMBAT);
 };
 Sound.delayPlay = (method, delay) => {
     setTimeout(method, delay);

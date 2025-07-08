@@ -21,6 +21,11 @@ export class DualDagger extends Weapon {
       "After the first attack, enemies will not take their turn until you attack or move again.";
   }
 
+  hitSound = () => {
+    Sound.swing();
+    Sound.playShortSlice();
+  };
+
   tickInInventory = () => {
     this.firstAttack = true;
   };

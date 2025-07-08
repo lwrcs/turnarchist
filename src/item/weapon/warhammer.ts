@@ -18,7 +18,7 @@ export class Warhammer extends Weapon {
   }
 
   hitSound = () => {
-    Sound.hit(true);
+    Sound.swing();
     Sound.playWarHammer();
   };
 

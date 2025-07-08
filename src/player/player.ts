@@ -750,6 +750,7 @@ export class Player extends Drawable {
     // Play hurt sound if in current room
     if (this.game.levels[this.depth].rooms[this.levelID] === this.game.room) {
       Sound.hurt();
+      Sound.playGrunt();
     }
 
     // Handle armor damage

@@ -20,7 +20,8 @@ export class Scythe extends Weapon {
   }
 
   hitSound = () => {
-    Sound.hit();
+    Sound.swing();
+    //Sound.hit();
     Sound.playSlice();
   };
 

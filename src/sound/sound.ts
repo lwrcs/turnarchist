@@ -42,6 +42,7 @@ export class Sound {
   static bushSounds: Array<Howl>;
   static parrySounds: Array<Howl>;
   static eatSounds: Array<Howl>;
+  static gruntSounds: Array<Howl>;
 
   static currentlyPlaying: Set<number> = new Set();
 
@@ -236,6 +237,12 @@ export class Sound {
         [1, 2],
         0.5,
         3,
+      );
+      Sound.gruntSounds = createHowlArray(
+        "res/SFX/attacks/grunt",
+        [1],
+        0.35,
+        1,
       );
 
       // Single sounds
@@ -442,12 +449,16 @@ export class Sound {
     this.playWithReverb(f, Sound.PRIORITY.FOOTSTEPS);
   };
 
-  static hit = (hard: boolean = false) => {
+  static swing = () => {
     if (Sound.audioMuted) return;
     let f = Game.randTable(Sound.swingSounds, Math.random);
     this.playWithReverb(f, Sound.PRIORITY.COMBAT);
+  };
 
-    let sounds = Sound.hitSounds.slice(hard ? 2 : 0, hard ? 3 : 1);
+  static hit = (hard: boolean = false) => {
+    if (Sound.audioMuted) return;
+
+    let sounds = Sound.hitSounds.slice(hard ? 2 : 0, hard ? 3 : 2);
 
     setTimeout(() => {
       let f = Game.randTable(sounds, Math.random);
@@ -612,7 +623,9 @@ export class Sound {
 
   static playWarHammer = () => {
     if (Sound.audioMuted) return;
-    this.playWithReverb(Sound.warHammerSound, Sound.PRIORITY.COMBAT);
+    this.delayPlay(() => {
+      this.playWithReverb(Sound.hitSounds[2], Sound.PRIORITY.COMBAT);
+    }, 200);
   };
 
   static playMagic = () => {
@@ -662,6 +675,12 @@ export class Sound {
     if (Sound.audioMuted) return;
     let f = Game.randTable(Sound.eatSounds, Math.random);
     this.playWithReverb(f, Sound.PRIORITY.INTERACTIONS);
+  };
+
+  static playGrunt = () => {
+    if (Sound.audioMuted) return;
+    let f = Game.randTable(Sound.gruntSounds, Math.random);
+    this.playWithReverb(f, Sound.PRIORITY.COMBAT);
   };
 
   static delayPlay = (method: () => void, delay: number) => {

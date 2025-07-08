@@ -32,6 +32,8 @@ import { Shotgun } from "../item/weapon/shotgun";
 import { Scythe } from "../item/weapon/scythe";
 import { Hourglass } from "../item/usable/hourglass";
 import { Gold } from "../item/resource/gold";
+import { Sword } from "../item/weapon/sword";
+import { Apple } from "../item/usable/apple";
 
 export class GameConstants {
   static readonly VERSION = "v1.0.9"; //"v0.6.3";
@@ -244,23 +246,19 @@ export class GameConstants {
   static readonly STARTING_DEV_INVENTORY = [
     Dagger,
     Warhammer,
-    Hourglass,
+    DualDagger,
     Scythe,
     GodStone,
     Spear,
     Greataxe,
     Spellbook,
     Lantern,
-    WeaponPoison,
-    WeaponBlood,
     Armor,
     Backpack,
     Hammer,
     Pickaxe,
     Coal,
-    Gold,
-    GreenGem,
-    GreenGem,
+    Apple,
 
     SpellbookPage,
     SpellbookPage,

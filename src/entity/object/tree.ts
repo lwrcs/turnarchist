@@ -7,6 +7,7 @@ import { GenericParticle } from "../../particle/genericParticle";
 import { Shrooms } from "../../item/usable/shrooms";
 import { EntityType } from "../entity";
 import { ImageParticle } from "../../particle/imageParticle";
+import { Apple } from "../../item/usable/apple";
 
 export class Tree extends Entity {
   constructor(room: Room, game: Game, x: number, y: number) {
@@ -22,6 +23,8 @@ export class Tree extends Entity {
     this.imageParticleX = 0;
     this.imageParticleY = 28;
     this.opaque = true;
+    if (Math.random() < 0.5)
+      this.drops.push(new Apple(this.room, this.x, this.y));
     //this.drawableY = 0.1;
     //this.drops.push(new Shrooms(this.room, this.x, this.y));
   }

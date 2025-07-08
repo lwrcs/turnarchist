@@ -25,7 +25,7 @@ export class Greataxe extends Weapon {
   }
 
   hitSound = () => {
-    Sound.hit();
+    Sound.swing();
     Sound.playWarHammer();
   };
 
