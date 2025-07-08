@@ -7420,6 +7420,8 @@ class OccultistEnemy extends enemy_1.Enemy {
             else {
                 this.shadeColor = "#000000";
             }
+            this.runAway();
+            this.lightSource.updatePosition(this.x + 0.5, this.y + 0.5);
         };
         this.onHurt = (damage = 1) => {
             if (this.health < this.lastHealth &&
@@ -9177,6 +9179,7 @@ const weapon_1 = __webpack_require__(/*! ../item/weapon/weapon */ "./src/item/we
 const enemyShield_1 = __webpack_require__(/*! ../projectile/enemyShield */ "./src/projectile/enemyShield.ts");
 const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts");
 const imageParticle_1 = __webpack_require__(/*! ../particle/imageParticle */ "./src/particle/imageParticle.ts");
+const coin_1 = __webpack_require__(/*! ../item/coin */ "./src/item/coin.ts");
 var EntityDirection;
 (function (EntityDirection) {
     EntityDirection[EntityDirection["DOWN"] = 0] = "DOWN";
@@ -9436,6 +9439,66 @@ class Entity extends drawable_1.Drawable {
                 }
             }
         };
+        this.runAway = () => {
+            const player = this.getPlayer();
+            if (!player) {
+                this.wander();
+                return;
+            }
+            const distance = utils_1.Utils.distance(this.x, this.y, player.x, player.y);
+            if (distance > 10) {
+                this.wander();
+                return;
+            }
+            // Store old position to check if move was successful
+            const oldX = this.x;
+            const oldY = this.y;
+            // Calculate all possible positions with their distances
+            const newPositions = [
+                { x: this.x - 1, y: this.y },
+                { x: this.x + 1, y: this.y },
+                { x: this.x, y: this.y - 1 },
+                { x: this.x, y: this.y + 1 },
+            ].map((position) => ({
+                position,
+                distance: utils_1.Utils.distance(player.x, player.y, position.x, position.y),
+            }));
+            // Sort by distance (furthest first)
+            newPositions.sort((a, b) => b.distance - a.distance);
+            // Choose either furthest or second furthest
+            const chooseSecondFurthest = Math.random() < 0.3;
+            const chosenPosition = chooseSecondFurthest && newPositions.length > 1
+                ? newPositions[1].position
+                : newPositions[0].position;
+            const targetX = chosenPosition.x;
+            const targetY = chosenPosition.y;
+            // Try to move to the target position
+            this.tryMove(targetX, targetY);
+            this.setDrawXY(oldX, oldY);
+            // If the move was successful, update direction and drawing
+            if (this.x !== oldX || this.y !== oldY) {
+                // Set direction based on actual movement
+                const dx = this.x - oldX;
+                const dy = this.y - oldY;
+                if (dx > 0) {
+                    this.direction = game_1.Direction.RIGHT;
+                }
+                else if (dx < 0) {
+                    this.direction = game_1.Direction.LEFT;
+                }
+                else if (dy > 0) {
+                    this.direction = game_1.Direction.DOWN;
+                }
+                else if (dy < 0) {
+                    this.direction = game_1.Direction.UP;
+                }
+                this.setDrawXY(targetX, targetY);
+            }
+            else {
+                // If we couldn't move away, just wander
+                this.wander();
+            }
+        };
         this.startHurting = () => {
             this.hurting = true;
             this.hurtFrame += 15;
@@ -9474,6 +9537,9 @@ class Entity extends drawable_1.Drawable {
             else {
                 coordX = this.x;
                 coordY = this.y;
+            }
+            if (this.drops.length === 0) {
+                this.drops.push(new coin_1.Coin(this.room, this.x, this.y));
             }
             if (this.drops.length > 0) {
                 this.drops.forEach((drop) => {
@@ -17531,13 +17597,13 @@ DropTable.addNewItem = (itemType, entity) => {
     let drop = ItemClass.add(entity.room, entity.x, entity.y);
     if (drop.name === "coin") {
         // Generate random number between 0-14 with normal distribution around 7
-        drop.stackCount = utils_1.Utils.randomSineInt(0, 14);
+        drop.stackCount = utils_1.Utils.randomNormalInt(0, 14);
     }
     if (drop instanceof bluegem_1.BlueGem ||
         drop instanceof redgem_1.RedGem ||
         drop instanceof greengem_1.GreenGem) {
         // Generate random number between 0-14 with normal distribution around 7
-        drop.stackCount = utils_1.Utils.randomSineInt(0, 7);
+        drop.stackCount = utils_1.Utils.randomNormalInt(0, 5);
     }
     entity.drops.push(drop);
     return drop;
@@ -18849,12 +18915,14 @@ exports.Hourglass = Hourglass;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Shrooms = void 0;
 const usable_1 = __webpack_require__(/*! ./usable */ "./src/item/usable/usable.ts");
+const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
 class Shrooms extends usable_1.Usable {
     constructor(level, x, y) {
         super(level, x, y);
         this.onUse = (player) => {
             if (player.health < player.maxHealth) {
                 player.health = Math.min(player.maxHealth, player.health + 0.5);
+                sound_1.Sound.playEat();
                 if (this.stackCount > 1) {
                     this.stackCount--;
                 }
@@ -19781,7 +19849,7 @@ class Warhammer extends weapon_1.Weapon {
     constructor(level, x, y) {
         super(level, x, y);
         this.hitSound = () => {
-            sound_1.Sound.hit();
+            sound_1.Sound.hit(true);
             sound_1.Sound.playWarHammer();
         };
         this.weaponMove = (newX, newY) => {
@@ -28366,6 +28434,7 @@ Sound.loadSounds = async () => {
         Sound.magicSound = createHowl("res/SFX/attacks/magic2.mp3", 0.25, false, 3);
         Sound.warHammerSound = createHowl("res/SFX/attacks/warhammer.mp3", 1, false, 3);
         Sound.healSound = createHowl("res/SFX/items/powerup1.mp3", 0.5, false, 2);
+        Sound.eatSounds = createHowlArray("res/SFX/items/eat", [1, 2], 1.0, 5);
         // Footstep sounds
         Sound.playerStoneFootsteps = createHowlArray("res/SFX/footsteps/stone/footstep", [1, 2, 3], 1.0, 4);
         Sound.playerGrassFootsteps = createHowlArray("res/SFX/footsteps/grass/footstep", [1, 2, 3, 6], 1.0, 4);
@@ -28373,7 +28442,7 @@ Sound.loadSounds = async () => {
         Sound.enemyFootsteps = createHowlArray("res/SFX/footsteps/enemy/enemyfootstep", [1, 2, 3, 4, 5], 1.0, 4);
         // Combat sounds
         Sound.swingSounds = createHowlArray("res/SFX/attacks/swing", [1, 2, 3, 4], 0.5, 6);
-        Sound.hitSounds = createHowlArray("res/SFX/attacks/hurt", [1, 2], 0.5, 4);
+        Sound.hitSounds = createHowlArray("res/SFX/attacks/hurt", [1, 2, 3, 4], 0.5, 4);
         Sound.hurtSounds = [createHowl("res/SFX/attacks/hit.mp3", 0.3, false, 4)];
         Sound.sliceSound = createHowlArray("res/SFX/attacks/slice", [1, 2, 3], 0.5, 4);
         Sound.shortSliceSound = createHowlArray("res/SFX/attacks/sliceShort", [1, 2, 3], 0.5, 4);
@@ -28431,13 +28500,14 @@ Sound.enemyFootstep = () => {
     let f = game_1.Game.randTable(Sound.enemyFootsteps, Math.random);
     _a.playWithReverb(f, Sound.PRIORITY.FOOTSTEPS);
 };
-Sound.hit = () => {
+Sound.hit = (hard = false) => {
     if (Sound.audioMuted)
         return;
     let f = game_1.Game.randTable(Sound.swingSounds, Math.random);
     _a.playWithReverb(f, Sound.PRIORITY.COMBAT);
+    let sounds = Sound.hitSounds.slice(hard ? 2 : 0, hard ? 3 : 1);
     setTimeout(() => {
-        let f = game_1.Game.randTable(Sound.hitSounds, Math.random);
+        let f = game_1.Game.randTable(sounds, Math.random);
         _a.playWithReverb(f, Sound.PRIORITY.COMBAT);
     }, 100);
 };
@@ -28629,6 +28699,12 @@ Sound.playParry = () => {
         return;
     let f = game_1.Game.randTable(Sound.parrySounds, Math.random);
     _a.delayPlay(() => _a.playWithReverb(f, Sound.PRIORITY.CRITICAL), 100);
+};
+Sound.playEat = () => {
+    if (Sound.audioMuted)
+        return;
+    let f = game_1.Game.randTable(Sound.eatSounds, Math.random);
+    _a.playWithReverb(f, Sound.PRIORITY.INTERACTIONS);
 };
 Sound.delayPlay = (method, delay) => {
     setTimeout(method, delay);

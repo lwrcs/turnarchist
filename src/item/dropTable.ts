@@ -257,7 +257,7 @@ export class DropTable {
     let drop = ItemClass.add(entity.room, entity.x, entity.y);
     if (drop.name === "coin") {
       // Generate random number between 0-14 with normal distribution around 7
-      drop.stackCount = Utils.randomSineInt(0, 14);
+      drop.stackCount = Utils.randomNormalInt(0, 14);
     }
     if (
       drop instanceof BlueGem ||
@@ -265,7 +265,7 @@ export class DropTable {
       drop instanceof GreenGem
     ) {
       // Generate random number between 0-14 with normal distribution around 7
-      drop.stackCount = Utils.randomSineInt(0, 7);
+      drop.stackCount = Utils.randomNormalInt(0, 5);
     }
     entity.drops.push(drop);
     return drop;

@@ -5,10 +5,9 @@ import { Room } from "../../room/room";
 import { TextParticle } from "../../particle/textParticle";
 import { GameConstants } from "../../game/gameConstants";
 import { Usable } from "./usable";
-import { Sound } from "../../sound/sound";
 
-export class Shrooms extends Usable {
-  static itemName = "mushrooms";
+export class Apple extends Usable {
+  static itemName = "apple";
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
 
@@ -21,15 +20,14 @@ export class Shrooms extends Usable {
   onUse = (player: Player) => {
     if (player.health < player.maxHealth) {
       player.health = Math.min(player.maxHealth, player.health + 0.5);
-      Sound.playEat();
       if (this.stackCount > 1) {
         this.stackCount--;
       } else player.inventory.removeItem(this);
-      player.game.pushMessage("You eat the mushrooms and feel better.");
+      player.game.pushMessage("You eat the apple and feel better.");
     }
   };
 
   getDescription = (): string => {
-    return "SHROOMS\nI don't think I should eat these...";
+    return "APPLE\nAppears nutritious.";
   };
 }

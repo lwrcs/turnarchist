@@ -28,6 +28,7 @@ import { Enemy } from "./enemy/enemy";
 import { Particle } from "../particle/particle";
 import { DeathParticle } from "../particle/deathParticle";
 import { GameplaySettings } from "../game/gameplaySettings";
+import { Coin } from "../item/coin";
 
 export enum EntityDirection {
   DOWN,
@@ -577,6 +578,74 @@ export class Entity extends Drawable {
     }
   };
 
+  runAway = () => {
+    const player = this.getPlayer();
+    if (!player) {
+      this.wander();
+      return;
+    }
+
+    const distance = Utils.distance(this.x, this.y, player.x, player.y);
+    if (distance > 10) {
+      this.wander();
+      return;
+    }
+
+    // Store old position to check if move was successful
+    const oldX = this.x;
+    const oldY = this.y;
+
+    // Calculate all possible positions with their distances
+    const newPositions = [
+      { x: this.x - 1, y: this.y },
+      { x: this.x + 1, y: this.y },
+      { x: this.x, y: this.y - 1 },
+      { x: this.x, y: this.y + 1 },
+    ].map((position) => ({
+      position,
+      distance: Utils.distance(player.x, player.y, position.x, position.y),
+    }));
+
+    // Sort by distance (furthest first)
+    newPositions.sort((a, b) => b.distance - a.distance);
+
+    // Choose either furthest or second furthest
+    const chooseSecondFurthest = Math.random() < 0.3;
+    const chosenPosition =
+      chooseSecondFurthest && newPositions.length > 1
+        ? newPositions[1].position
+        : newPositions[0].position;
+
+    const targetX = chosenPosition.x;
+    const targetY = chosenPosition.y;
+
+    // Try to move to the target position
+    this.tryMove(targetX, targetY);
+    this.setDrawXY(oldX, oldY);
+
+    // If the move was successful, update direction and drawing
+    if (this.x !== oldX || this.y !== oldY) {
+      // Set direction based on actual movement
+      const dx = this.x - oldX;
+      const dy = this.y - oldY;
+
+      if (dx > 0) {
+        this.direction = Direction.RIGHT;
+      } else if (dx < 0) {
+        this.direction = Direction.LEFT;
+      } else if (dy > 0) {
+        this.direction = Direction.DOWN;
+      } else if (dy < 0) {
+        this.direction = Direction.UP;
+      }
+
+      this.setDrawXY(targetX, targetY);
+    } else {
+      // If we couldn't move away, just wander
+      this.wander();
+    }
+  };
+
   startHurting = () => {
     this.hurting = true;
     this.hurtFrame += 15;
@@ -621,6 +690,10 @@ export class Entity extends Drawable {
     } else {
       coordX = this.x;
       coordY = this.y;
+    }
+
+    if (this.drops.length === 0) {
+      this.drops.push(new Coin(this.room, this.x, this.y));
     }
     if (this.drops.length > 0) {
       this.drops.forEach((drop) => {

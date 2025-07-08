@@ -87,6 +87,8 @@ export class OccultistEnemy extends Enemy {
     } else {
       this.shadeColor = "#000000";
     }
+    this.runAway();
+    this.lightSource.updatePosition(this.x + 0.5, this.y + 0.5);
   };
 
   onHurt = (damage: number = 1) => {

@@ -41,6 +41,7 @@ export class Sound {
   static smithSound: Howl;
   static bushSounds: Array<Howl>;
   static parrySounds: Array<Howl>;
+  static eatSounds: Array<Howl>;
 
   static currentlyPlaying: Set<number> = new Set();
 
@@ -177,7 +178,7 @@ export class Sound {
         3,
       );
       Sound.healSound = createHowl("res/SFX/items/powerup1.mp3", 0.5, false, 2);
-
+      Sound.eatSounds = createHowlArray("res/SFX/items/eat", [1, 2], 1.0, 5);
       // Footstep sounds
       Sound.playerStoneFootsteps = createHowlArray(
         "res/SFX/footsteps/stone/footstep",
@@ -211,7 +212,12 @@ export class Sound {
         0.5,
         6,
       );
-      Sound.hitSounds = createHowlArray("res/SFX/attacks/hurt", [1, 2], 0.5, 4);
+      Sound.hitSounds = createHowlArray(
+        "res/SFX/attacks/hurt",
+        [1, 2, 3, 4],
+        0.5,
+        4,
+      );
       Sound.hurtSounds = [createHowl("res/SFX/attacks/hit.mp3", 0.3, false, 4)];
       Sound.sliceSound = createHowlArray(
         "res/SFX/attacks/slice",
@@ -436,13 +442,15 @@ export class Sound {
     this.playWithReverb(f, Sound.PRIORITY.FOOTSTEPS);
   };
 
-  static hit = () => {
+  static hit = (hard: boolean = false) => {
     if (Sound.audioMuted) return;
     let f = Game.randTable(Sound.swingSounds, Math.random);
     this.playWithReverb(f, Sound.PRIORITY.COMBAT);
 
+    let sounds = Sound.hitSounds.slice(hard ? 2 : 0, hard ? 3 : 1);
+
     setTimeout(() => {
-      let f = Game.randTable(Sound.hitSounds, Math.random);
+      let f = Game.randTable(sounds, Math.random);
       this.playWithReverb(f, Sound.PRIORITY.COMBAT);
     }, 100);
   };
@@ -648,6 +656,12 @@ export class Sound {
     if (Sound.audioMuted) return;
     let f = Game.randTable(Sound.parrySounds, Math.random);
     this.delayPlay(() => this.playWithReverb(f, Sound.PRIORITY.CRITICAL), 100);
+  };
+
+  static playEat = () => {
+    if (Sound.audioMuted) return;
+    let f = Game.randTable(Sound.eatSounds, Math.random);
+    this.playWithReverb(f, Sound.PRIORITY.INTERACTIONS);
   };
 
   static delayPlay = (method: () => void, delay: number) => {
