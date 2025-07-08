@@ -8,10 +8,43 @@ export class ReverbEngine {
   private static reverbBuffer: AudioBuffer | null = null;
   private static gainNodes: Map<number, GainNode> = new Map();
   private static originalRefreshBuffer: any;
+  private static mobileUnlockAttempted: boolean = false;
   static initialized: boolean = false;
 
   static isMobile(): boolean {
     return Sound.isMobile;
+  }
+
+  // Mobile-specific audio context unlock
+  private static async unlockMobileAudio(): Promise<void> {
+    if (ReverbEngine.mobileUnlockAttempted || !ReverbEngine.isMobile()) {
+      return;
+    }
+
+    ReverbEngine.mobileUnlockAttempted = true;
+
+    try {
+      // Create a silent buffer and play it to unlock the audio context
+      const buffer = ReverbEngine.audioContext.createBuffer(1, 1, 22050);
+      const source = ReverbEngine.audioContext.createBufferSource();
+      source.buffer = buffer;
+      source.connect(ReverbEngine.audioContext.destination);
+
+      if (typeof source.start === "undefined") {
+        (source as any).noteOn(0);
+      } else {
+        source.start(0);
+      }
+
+      // Resume the context
+      if (ReverbEngine.audioContext.state === "suspended") {
+        await ReverbEngine.audioContext.resume();
+      }
+
+      console.log("[REVERB-MOBILE] Audio context unlocked for mobile");
+    } catch (error) {
+      console.warn("[REVERB-MOBILE] Failed to unlock audio context:", error);
+    }
   }
 
   // Helper function to get sound identifier for logging
@@ -41,6 +74,7 @@ export class ReverbEngine {
 
     let canInitialize = Game.inputReceived;
 
+    // For mobile, we need to be extra careful about timing
     if (!canInitialize) {
       try {
         await new Promise<void>((resolve) => {
@@ -75,9 +109,15 @@ export class ReverbEngine {
           Howler.ctx ||
           new (window.AudioContext || (window as any).webkitAudioContext)();
 
-        // Resume context if suspended (mobile)
+        // Mobile-specific: Unlock audio context immediately after user interaction
+        if (ReverbEngine.isMobile()) {
+          await ReverbEngine.unlockMobileAudio();
+        }
+
+        // Resume context if suspended (common on mobile)
         if (ReverbEngine.audioContext.state === "suspended") {
           await ReverbEngine.audioContext.resume();
+          console.log("[REVERB-MOBILE] Audio context resumed");
         }
 
         // Set up the convolver
@@ -100,6 +140,21 @@ export class ReverbEngine {
               sound._id,
             );
 
+            // Mobile check: ensure audio context is not suspended
+            if (
+              ReverbEngine.isMobile() &&
+              ReverbEngine.audioContext.state === "suspended"
+            ) {
+              ReverbEngine.audioContext.resume().then(() => {
+                ReverbEngine.logStep(
+                  "A-MOBILE",
+                  soundName,
+                  "Resumed suspended context",
+                  sound._id,
+                );
+              });
+            }
+
             // Call the original method first
             ReverbEngine.originalRefreshBuffer.call(this, sound);
 
@@ -119,7 +174,7 @@ export class ReverbEngine {
               let gainNode = ReverbEngine.gainNodes.get(sound._id);
               if (!gainNode) {
                 gainNode = ReverbEngine.audioContext.createGain();
-                const volume = (this as any)._volume || 1.0; // Use original volume, no reduction
+                const volume = (this as any)._volume || 1.0;
                 gainNode.gain.setValueAtTime(
                   volume,
                   ReverbEngine.audioContext.currentTime,
@@ -149,8 +204,9 @@ export class ReverbEngine {
         ReverbEngine.initialized = true;
         if (Sound.initialized) Sound.audioMuted = false;
 
+        const deviceType = ReverbEngine.isMobile() ? "MOBILE" : "DESKTOP";
         console.log(
-          "ReverbEngine connection intercept initialized successfully",
+          `ReverbEngine connection intercept initialized successfully on ${deviceType}`,
         );
       } catch (error) {
         console.error("Failed to initialize ReverbEngine:", error);
@@ -217,6 +273,16 @@ export class ReverbEngine {
         "Not initialized, playing without reverb",
       );
       return sound.play();
+    }
+
+    // Mobile check: ensure we have an active audio context
+    if (
+      ReverbEngine.isMobile() &&
+      ReverbEngine.audioContext.state !== "running"
+    ) {
+      ReverbEngine.audioContext.resume().catch((error) => {
+        console.warn("[REVERB-MOBILE] Could not resume audio context:", error);
+      });
     }
 
     // Just call play normally - our _refreshBuffer hook will handle the rest
