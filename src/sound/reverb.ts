@@ -6,11 +6,34 @@ export class ReverbEngine {
   private static audioContext: AudioContext;
   private static convolver: ConvolverNode;
   private static reverbBuffer: AudioBuffer | null = null;
-  private static gainNodes: Map<number, GainNode> = new Map(); // Fixed: Use Map instead of WeakMap
+  private static gainNodes: Map<number, GainNode> = new Map();
+  private static originalRefreshBuffer: any;
   static initialized: boolean = false;
 
   static isMobile(): boolean {
     return Sound.isMobile;
+  }
+
+  // Helper function to get sound identifier for logging
+  private static getSoundName(sound: Howl): string {
+    const src = (sound as any)._src;
+    if (Array.isArray(src) && src.length > 0) {
+      return src[0].split("/").pop() || "unknown";
+    } else if (typeof src === "string") {
+      return src.split("/").pop() || "unknown";
+    }
+    return "unknown";
+  }
+
+  // General logging function to avoid repetition
+  private static logStep(
+    step: string,
+    soundName: string,
+    message: string,
+    soundId?: number,
+  ) {
+    const idStr = soundId !== undefined ? ` [ID:${soundId}]` : "";
+    console.log(`[REVERB-${step}] ${soundName}${idStr}: ${message}`);
   }
 
   public static async initialize() {
@@ -57,19 +80,80 @@ export class ReverbEngine {
           await ReverbEngine.audioContext.resume();
         }
 
+        // Set up the convolver
         ReverbEngine.convolver = ReverbEngine.audioContext.createConvolver();
         ReverbEngine.convolver.connect(ReverbEngine.audioContext.destination);
 
         await ReverbEngine.loadReverbBuffer(`res/SFX/impulses/small.mp3`);
         ReverbEngine.setDefaultReverb();
-        ReverbEngine.initialized = true;
 
+        // HOOK INTO _refreshBuffer METHOD
+        if (!ReverbEngine.originalRefreshBuffer) {
+          ReverbEngine.originalRefreshBuffer = Howl.prototype._refreshBuffer;
+
+          Howl.prototype._refreshBuffer = function (sound: any) {
+            const soundName = ReverbEngine.getSoundName(this);
+            ReverbEngine.logStep(
+              "A",
+              soundName,
+              "Intercepted _refreshBuffer",
+              sound._id,
+            );
+
+            // Call the original method first
+            ReverbEngine.originalRefreshBuffer.call(this, sound);
+
+            // Now intercept the connection and add our reverb routing
+            if (sound._node && sound._node.bufferSource) {
+              ReverbEngine.logStep(
+                "B",
+                soundName,
+                "Setting up reverb routing",
+                sound._id,
+              );
+
+              // Disconnect from the original destination
+              sound._node.bufferSource.disconnect();
+
+              // Create or get gain node for this sound
+              let gainNode = ReverbEngine.gainNodes.get(sound._id);
+              if (!gainNode) {
+                gainNode = ReverbEngine.audioContext.createGain();
+                const volume = (this as any)._volume || 1.0; // Use original volume, no reduction
+                gainNode.gain.setValueAtTime(
+                  volume,
+                  ReverbEngine.audioContext.currentTime,
+                );
+                gainNode.connect(ReverbEngine.convolver);
+                ReverbEngine.gainNodes.set(sound._id, gainNode);
+                ReverbEngine.logStep(
+                  "C",
+                  soundName,
+                  `Created gain node with volume ${volume}`,
+                  sound._id,
+                );
+              }
+
+              // Connect buffer source to our gain node instead of the original destination
+              sound._node.bufferSource.connect(gainNode);
+              ReverbEngine.logStep(
+                "D",
+                soundName,
+                "Connected to reverb gain node",
+                sound._id,
+              );
+            }
+          };
+        }
+
+        ReverbEngine.initialized = true;
         if (Sound.initialized) Sound.audioMuted = false;
 
-        console.log("ReverbEngine initialized successfully");
+        console.log(
+          "ReverbEngine connection intercept initialized successfully",
+        );
       } catch (error) {
         console.error("Failed to initialize ReverbEngine:", error);
-        // Mark as initialized anyway to prevent repeated attempts
         ReverbEngine.initialized = true;
         if (Sound.initialized) Sound.audioMuted = false;
       }
@@ -116,73 +200,68 @@ export class ReverbEngine {
     }
   }
 
-  // Apply reverb to a given Howl sound
+  // CONNECTION INTERCEPT APPROACH: The _refreshBuffer hook handles everything
   public static applyReverb(sound: Howl): number {
-    if (!ReverbEngine.initialized) return sound.play();
+    const soundName = ReverbEngine.getSoundName(sound);
 
-    try {
-      const soundId = sound.play();
+    ReverbEngine.logStep(
+      "E",
+      soundName,
+      "CONNECTION INTERCEPT - _refreshBuffer hook will handle reverb",
+    );
 
-      // Only apply reverb processing if we have a valid context
-      if (ReverbEngine.audioContext && ReverbEngine.convolver) {
-        const gainNode = ReverbEngine.audioContext.createGain();
-        gainNode.gain.setValueAtTime(
-          sound.volume() * 0.7,
-          ReverbEngine.audioContext.currentTime,
-        );
-        gainNode.connect(ReverbEngine.convolver);
-
-        ReverbEngine.gainNodes.set(soundId, gainNode);
-
-        // Apply reverb routing when sound starts playing
-        sound.once("play", () => {
-          try {
-            const soundInstance = (sound as any)._sounds.find(
-              (s: any) => s._id === soundId,
-            );
-            if (
-              soundInstance &&
-              soundInstance._node &&
-              soundInstance._node.bufferSource
-            ) {
-              soundInstance._node.bufferSource.disconnect();
-              soundInstance._node.bufferSource.connect(gainNode);
-            }
-          } catch (error) {
-            // Silently fail - reverb is not critical
-          }
-        });
-      }
-
-      return soundId;
-    } catch (error) {
-      console.error("Error applying reverb:", error);
+    if (!ReverbEngine.initialized) {
+      ReverbEngine.logStep(
+        "E1",
+        soundName,
+        "Not initialized, playing without reverb",
+      );
       return sound.play();
     }
+
+    // Just call play normally - our _refreshBuffer hook will handle the rest
+    return sound.play();
   }
 
   // Remove reverb from a given Howl sound
   public static removeReverb(sound: Howl) {
-    if (!ReverbEngine.initialized) return;
+    const soundName = ReverbEngine.getSoundName(sound);
 
-    // Clean up all gain nodes for this sound
-    const soundIds = (sound as any)._sounds.map((s: any) => s._id);
-    soundIds.forEach((id: number) => {
-      const gainNode = ReverbEngine.gainNodes.get(id);
+    // Clean up any gain nodes associated with this sound
+    for (const [soundId, gainNode] of ReverbEngine.gainNodes.entries()) {
       if (gainNode) {
         gainNode.disconnect();
-        ReverbEngine.gainNodes.delete(id);
+        ReverbEngine.gainNodes.delete(soundId);
       }
-    });
+    }
+
+    ReverbEngine.logStep(
+      "R",
+      soundName,
+      "Reverb removed and gain nodes cleaned up",
+    );
   }
 
   // Cleanup method
   public static cleanup() {
+    console.log("[REVERB-CLEANUP] Starting cleanup");
+
+    // Restore original _refreshBuffer method
+    if (ReverbEngine.originalRefreshBuffer) {
+      Howl.prototype._refreshBuffer = ReverbEngine.originalRefreshBuffer;
+    }
+
     // Clean up all gain nodes
-    ReverbEngine.gainNodes.forEach((gainNode) => {
-      gainNode.disconnect();
-    });
+    for (const [soundId, gainNode] of ReverbEngine.gainNodes.entries()) {
+      if (gainNode) {
+        gainNode.disconnect();
+      }
+    }
     ReverbEngine.gainNodes.clear();
+
+    if (ReverbEngine.convolver) {
+      ReverbEngine.convolver.disconnect();
+    }
 
     if (
       ReverbEngine.audioContext &&
@@ -191,5 +270,7 @@ export class ReverbEngine {
       ReverbEngine.audioContext.close();
     }
     ReverbEngine.initialized = false;
+
+    console.log("[REVERB-CLEANUP] Cleanup completed");
   }
 }

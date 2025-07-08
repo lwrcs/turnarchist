@@ -261,7 +261,7 @@ export class Sound {
       );
       Sound.genericPickupSound = createHowl(
         "res/SFX/items/pickup.mp3",
-        1.0,
+        0.8,
         false,
         3,
       );
