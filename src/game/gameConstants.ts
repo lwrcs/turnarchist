@@ -97,7 +97,8 @@ export class GameConstants {
   static SMOOTH_LIGHTING = false;
   static ctxBlurEnabled = true;
   static BLUR_ENABLED = true;
-  static USE_WEBGL_BLUR = true;
+  static USE_WEBGL_BLUR = false;
+  static HIGH_QUALITY_BLUR = true; // true = 49 samples, false = 13 samples for performance
   static ENEMIES_BLOCK_LIGHT = false;
 
   static readonly SHADE_LAYER_COMPOSITE_OPERATIONS = [
@@ -200,6 +201,13 @@ export class GameConstants {
     GameConstants.USE_WEBGL_BLUR = !GameConstants.USE_WEBGL_BLUR;
     console.log(
       `WebGL blur is now ${GameConstants.USE_WEBGL_BLUR ? "enabled" : "disabled"}`,
+    );
+  };
+
+  static readonly TOGGLE_HIGH_QUALITY_BLUR = () => {
+    GameConstants.HIGH_QUALITY_BLUR = !GameConstants.HIGH_QUALITY_BLUR;
+    console.log(
+      `High quality blur: ${GameConstants.HIGH_QUALITY_BLUR ? "ON (49 samples)" : "OFF (13 samples)"}`,
     );
   };
 

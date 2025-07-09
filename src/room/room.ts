@@ -2308,22 +2308,22 @@ export class Room {
       Game.ctx.globalCompositeOperation = "soft-light";
       Game.ctx.globalAlpha = 0.6;
 
-      // Apply 8px blur using WebGL
-      const blurred8px = blurRenderer.applyBlur(this.colorOffscreenCanvas, 8);
+      // Apply 6px blur using WebGL (reduced from 8px)
+      const blurred6px = blurRenderer.applyBlur(this.colorOffscreenCanvas, 6);
       Game.ctx.drawImage(
-        blurred8px,
+        blurred6px,
         (this.roomX - offsetX) * GameConstants.TILESIZE,
         (this.roomY - offsetY) * GameConstants.TILESIZE,
       );
 
       //draw slight haze
       Game.ctx.globalCompositeOperation = "lighten";
-      Game.ctx.globalAlpha = 0.08;
+      Game.ctx.globalAlpha = 0.05; // Reduced from 0.08
 
-      // Apply 16px blur using WebGL
-      const blurred16px = blurRenderer.applyBlur(this.colorOffscreenCanvas, 16);
+      // Apply 12px blur using WebGL
+      const blurred12px = blurRenderer.applyBlur(this.colorOffscreenCanvas, 12);
       Game.ctx.drawImage(
-        blurred16px,
+        blurred12px,
         (this.roomX - offsetX) * GameConstants.TILESIZE,
         (this.roomY - offsetY) * GameConstants.TILESIZE,
       );
@@ -2489,10 +2489,10 @@ export class Room {
 
       Game.ctx.globalAlpha = 1;
 
-      // Apply 7px blur using WebGL
-      const blurred7px = blurRenderer.applyBlur(this.shadeOffscreenCanvas, 7);
+      // Apply 5px blur using WebGL (reduced from 7px)
+      const blurred5px = blurRenderer.applyBlur(this.shadeOffscreenCanvas, 5);
       Game.ctx.drawImage(
-        blurred7px,
+        blurred5px,
         (this.roomX - offsetX - 1) * GameConstants.TILESIZE,
         (this.roomY - offsetY - 1) * GameConstants.TILESIZE,
       );
@@ -2606,10 +2606,10 @@ export class Room {
       Game.ctx.globalCompositeOperation = "screen";
       Game.ctx.globalAlpha = 1;
 
-      // Apply 12px blur using WebGL
-      const blurred12px = blurRenderer.applyBlur(this.bloomOffscreenCanvas, 12);
+      // Apply 8px blur using WebGL (reduced from 12px)
+      const blurred8px = blurRenderer.applyBlur(this.bloomOffscreenCanvas, 8);
       Game.ctx.drawImage(
-        blurred12px,
+        blurred8px,
         (this.roomX - offsetX) * GameConstants.TILESIZE,
         (this.roomY - offsetY) * GameConstants.TILESIZE,
       );

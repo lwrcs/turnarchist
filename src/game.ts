@@ -825,6 +825,9 @@ export class Game {
       case "webgl":
         GameConstants.TOGGLE_USE_WEBGL_BLUR();
         break;
+      case "hq":
+        GameConstants.TOGGLE_HIGH_QUALITY_BLUR();
+        break;
       default:
         if (command.startsWith("new ")) {
           this.room.addNewEnemy(command.slice(4) as EnemyType);
@@ -949,6 +952,7 @@ export class Game {
       GameConstants.isMobile = true;
       LevelConstants.LIGHTING_ANGLE_STEP = 2;
       LevelConstants.LIGHTING_MAX_DISTANCE = 7;
+      GameConstants.USE_WEBGL_BLUR = true;
 
       // Use smaller scale for mobile devices based on screen size
       // Adjust max scale with scaleOffset
