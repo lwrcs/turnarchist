@@ -12242,6 +12242,9 @@ class Game {
                     enabled = gameplaySettings_1.GameplaySettings.EQUIP_USES_TURN ? "enabled" : "disabled";
                     this.pushMessage(`Equipping an item takes a turn is now ${enabled}`);
                     break;
+                case "webgl":
+                    gameConstants_1.GameConstants.TOGGLE_USE_WEBGL_BLUR();
+                    break;
                 default:
                     if (command.startsWith("new ")) {
                         this.room.addNewEnemy(command.slice(4));
@@ -13501,6 +13504,7 @@ GameConstants.USE_OPTIMIZED_SHADING = false;
 GameConstants.SMOOTH_LIGHTING = false;
 GameConstants.ctxBlurEnabled = true;
 GameConstants.BLUR_ENABLED = true;
+GameConstants.USE_WEBGL_BLUR = true;
 GameConstants.ENEMIES_BLOCK_LIGHT = false;
 GameConstants.SHADE_LAYER_COMPOSITE_OPERATIONS = [
     "source-over",
@@ -13575,6 +13579,10 @@ GameConstants.TOGGLE_USE_OPTIMIZED_SHADING = () => {
 };
 GameConstants.TOGGLE_ENEMIES_BLOCK_LIGHT = () => {
     GameConstants.ENEMIES_BLOCK_LIGHT = !GameConstants.ENEMIES_BLOCK_LIGHT;
+};
+GameConstants.TOGGLE_USE_WEBGL_BLUR = () => {
+    GameConstants.USE_WEBGL_BLUR = !GameConstants.USE_WEBGL_BLUR;
+    console.log(`WebGL blur is now ${GameConstants.USE_WEBGL_BLUR ? "enabled" : "disabled"}`);
 };
 GameConstants.SET_SCALE = () => {
     GameConstants.SCALE++;
@@ -16032,6 +16040,238 @@ PostProcessor.draw = (delta) => {
     game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
     game_1.Game.ctx.restore();
 };
+
+
+/***/ }),
+
+/***/ "./src/gui/webglBlurRenderer.ts":
+/*!**************************************!*\
+  !*** ./src/gui/webglBlurRenderer.ts ***!
+  \**************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.WebGLBlurRenderer = void 0;
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
+class WebGLBlurRenderer {
+    constructor() {
+        // Vertex shader source
+        this.vertexShaderSource = `
+    precision mediump float;
+    attribute vec2 a_position;
+    attribute vec2 a_texCoord;
+    uniform mediump vec2 u_resolution;
+    varying vec2 v_texCoord;
+    
+    void main() {
+      vec2 zeroToOne = a_position / u_resolution;
+      vec2 zeroToTwo = zeroToOne * 2.0;
+      vec2 clipSpace = zeroToTwo - 1.0;
+      gl_Position = vec4(clipSpace * vec2(1, -1), 0, 1);
+      v_texCoord = a_texCoord;
+    }
+  `;
+        // Fragment shader source - Increased blur strength
+        this.fragmentShaderSource = `
+    precision mediump float;
+    uniform sampler2D u_texture;
+    uniform mediump vec2 u_resolution;
+    uniform mediump vec2 u_direction;
+    uniform mediump float u_radius;
+    varying vec2 v_texCoord;
+    
+    void main() {
+      vec2 texelSize = 1.0 / u_resolution;
+      vec4 color = vec4(0.0);
+      float totalWeight = 0.0;
+      
+      // Increased blur strength with better sigma calculation
+      float sigma = u_radius * 0.4;
+      float twoSigmaSquare = 2.0 * sigma * sigma;
+      
+      // Increased sample range for stronger blur
+      for (float i = -24.0; i <= 24.0; i++) {
+        if (abs(i) > u_radius) continue;
+        
+        vec2 offset = u_direction * texelSize * i;
+        float weight = exp(-i * i / twoSigmaSquare);
+        
+        color += texture2D(u_texture, v_texCoord + offset) * weight;
+        totalWeight += weight;
+      }
+      
+      gl_FragColor = color / totalWeight;
+    }
+  `;
+        this.canvas = document.createElement("canvas");
+        this.canvas.width = gameConstants_1.GameConstants.WIDTH;
+        this.canvas.height = gameConstants_1.GameConstants.HEIGHT;
+        const context = this.canvas.getContext("webgl");
+        const experimentalContext = this.canvas.getContext("experimental-webgl");
+        this.gl = context || experimentalContext;
+        if (!this.gl) {
+            throw new Error("WebGL not supported");
+        }
+        this.initShaders();
+        this.initBuffers();
+        this.initTextures();
+    }
+    static getInstance() {
+        if (!WebGLBlurRenderer.instance) {
+            WebGLBlurRenderer.instance = new WebGLBlurRenderer();
+        }
+        return WebGLBlurRenderer.instance;
+    }
+    initShaders() {
+        const vertexShader = this.createShader(this.gl.VERTEX_SHADER, this.vertexShaderSource);
+        const fragmentShader = this.createShader(this.gl.FRAGMENT_SHADER, this.fragmentShaderSource);
+        this.shaderProgram = this.gl.createProgram();
+        this.gl.attachShader(this.shaderProgram, vertexShader);
+        this.gl.attachShader(this.shaderProgram, fragmentShader);
+        this.gl.linkProgram(this.shaderProgram);
+        if (!this.gl.getProgramParameter(this.shaderProgram, this.gl.LINK_STATUS)) {
+            throw new Error("Unable to initialize the shader program: " +
+                this.gl.getProgramInfoLog(this.shaderProgram));
+        }
+        this.positionLocation = this.gl.getAttribLocation(this.shaderProgram, "a_position");
+        this.texCoordLocation = this.gl.getAttribLocation(this.shaderProgram, "a_texCoord");
+        this.resolutionLocation = this.gl.getUniformLocation(this.shaderProgram, "u_resolution");
+        this.textureLocation = this.gl.getUniformLocation(this.shaderProgram, "u_texture");
+        this.directionLocation = this.gl.getUniformLocation(this.shaderProgram, "u_direction");
+        this.radiusLocation = this.gl.getUniformLocation(this.shaderProgram, "u_radius");
+    }
+    createShader(type, source) {
+        const shader = this.gl.createShader(type);
+        this.gl.shaderSource(shader, source);
+        this.gl.compileShader(shader);
+        if (!this.gl.getShaderParameter(shader, this.gl.COMPILE_STATUS)) {
+            throw new Error("An error occurred compiling the shaders: " +
+                this.gl.getShaderInfoLog(shader));
+        }
+        return shader;
+    }
+    initBuffers() {
+        this.positionBuffer = this.gl.createBuffer();
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.positionBuffer);
+        this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array([
+            0,
+            0,
+            this.canvas.width,
+            0,
+            0,
+            this.canvas.height,
+            0,
+            this.canvas.height,
+            this.canvas.width,
+            0,
+            this.canvas.width,
+            this.canvas.height,
+        ]), this.gl.STATIC_DRAW);
+        this.texCoordBuffer = this.gl.createBuffer();
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.texCoordBuffer);
+        this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array([0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1]), this.gl.STATIC_DRAW);
+    }
+    initTextures() {
+        this.texture = this.gl.createTexture();
+        this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
+        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
+        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE);
+        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR);
+        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.LINEAR);
+        this.tempTexture = this.gl.createTexture();
+        this.gl.bindTexture(this.gl.TEXTURE_2D, this.tempTexture);
+        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
+        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE);
+        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR);
+        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.LINEAR);
+        this.framebuffer = this.gl.createFramebuffer();
+        this.tempFramebuffer = this.gl.createFramebuffer();
+    }
+    /**
+     * Apply blur to a canvas and return the result as a new canvas
+     * @param sourceCanvas - The source canvas to blur
+     * @param blurRadius - The blur radius in pixels (will be multiplied for stronger effect)
+     * @returns A new canvas with the blurred result
+     */
+    applyBlur(sourceCanvas, blurRadius) {
+        const width = sourceCanvas.width;
+        const height = sourceCanvas.height;
+        // Increase blur strength by multiplying the radius
+        const enhancedRadius = blurRadius * 1.5;
+        if (this.canvas.width !== width || this.canvas.height !== height) {
+            this.canvas.width = width;
+            this.canvas.height = height;
+            this.gl.viewport(0, 0, width, height);
+            // Update position buffer for new dimensions
+            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.positionBuffer);
+            this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array([
+                0,
+                0,
+                width,
+                0,
+                0,
+                height,
+                0,
+                height,
+                width,
+                0,
+                width,
+                height,
+            ]), this.gl.STATIC_DRAW);
+        }
+        this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
+        this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, sourceCanvas);
+        this.gl.bindTexture(this.gl.TEXTURE_2D, this.tempTexture);
+        this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, width, height, 0, this.gl.RGBA, this.gl.UNSIGNED_BYTE, null);
+        this.gl.useProgram(this.shaderProgram);
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.positionBuffer);
+        this.gl.enableVertexAttribArray(this.positionLocation);
+        this.gl.vertexAttribPointer(this.positionLocation, 2, this.gl.FLOAT, false, 0, 0);
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.texCoordBuffer);
+        this.gl.enableVertexAttribArray(this.texCoordLocation);
+        this.gl.vertexAttribPointer(this.texCoordLocation, 2, this.gl.FLOAT, false, 0, 0);
+        this.gl.uniform2f(this.resolutionLocation, width, height);
+        this.gl.uniform1i(this.textureLocation, 0);
+        this.gl.uniform1f(this.radiusLocation, enhancedRadius);
+        // First pass: horizontal blur
+        this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, this.tempFramebuffer);
+        this.gl.framebufferTexture2D(this.gl.FRAMEBUFFER, this.gl.COLOR_ATTACHMENT0, this.gl.TEXTURE_2D, this.tempTexture, 0);
+        this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
+        this.gl.uniform2f(this.directionLocation, 1.0, 0.0);
+        this.gl.drawArrays(this.gl.TRIANGLES, 0, 6);
+        // Second pass: vertical blur
+        this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, this.framebuffer);
+        this.gl.framebufferTexture2D(this.gl.FRAMEBUFFER, this.gl.COLOR_ATTACHMENT0, this.gl.TEXTURE_2D, this.texture, 0);
+        this.gl.bindTexture(this.gl.TEXTURE_2D, this.tempTexture);
+        this.gl.uniform2f(this.directionLocation, 0.0, 1.0);
+        this.gl.drawArrays(this.gl.TRIANGLES, 0, 6);
+        // Final pass: render to screen
+        this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
+        this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
+        this.gl.drawArrays(this.gl.TRIANGLES, 0, 6);
+        // Create properly sized result canvas
+        const resultCanvas = document.createElement("canvas");
+        resultCanvas.width = width;
+        resultCanvas.height = height;
+        const resultCtx = resultCanvas.getContext("2d");
+        resultCtx.drawImage(this.canvas, 0, 0, width, height, 0, 0, width, height);
+        return resultCanvas;
+    }
+    dispose() {
+        if (this.gl) {
+            this.gl.deleteProgram(this.shaderProgram);
+            this.gl.deleteBuffer(this.positionBuffer);
+            this.gl.deleteBuffer(this.texCoordBuffer);
+            this.gl.deleteTexture(this.texture);
+            this.gl.deleteTexture(this.tempTexture);
+            this.gl.deleteFramebuffer(this.framebuffer);
+            this.gl.deleteFramebuffer(this.tempFramebuffer);
+        }
+    }
+}
+exports.WebGLBlurRenderer = WebGLBlurRenderer;
 
 
 /***/ }),
@@ -25139,6 +25379,7 @@ const glowBugEnemy_1 = __webpack_require__(/*! ../entity/enemy/glowBugEnemy */ "
 const gameplaySettings_1 = __webpack_require__(/*! ../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
 const itemGroup_1 = __webpack_require__(/*! ../item/itemGroup */ "./src/item/itemGroup.ts");
 const sword_1 = __webpack_require__(/*! ../item/weapon/sword */ "./src/item/weapon/sword.ts");
+const webglBlurRenderer_1 = __webpack_require__(/*! ../gui/webglBlurRenderer */ "./src/gui/webglBlurRenderer.ts");
 // #endregion
 // #region Enums & Interfaces
 /**
@@ -26305,20 +26546,42 @@ class Room {
                     this.colorOffscreenCtx.fillRect((x - this.roomX + offsetX) * gameConstants_1.GameConstants.TILESIZE, (y - this.roomY + offsetY) * gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE);
                 }
             }
-            // Draw the blurred color layer directly without masking
-            game_1.Game.ctx.globalCompositeOperation =
-                gameConstants_1.GameConstants.COLOR_LAYER_COMPOSITE_OPERATION;
-            //Game.ctx.globalCompositeOperation = "source-over";
-            game_1.Game.ctx.globalAlpha = 0.6; // 0.6;
-            {
-                game_1.Game.ctx.filter = "blur(6px)";
+            // Choose blur method based on setting
+            if (gameConstants_1.GameConstants.USE_WEBGL_BLUR) {
+                // Use WebGL blur (keep original WebGL settings)
+                const blurRenderer = webglBlurRenderer_1.WebGLBlurRenderer.getInstance();
+                // Draw the blurred color layer with soft-light blend mode
+                game_1.Game.ctx.globalCompositeOperation = "soft-light";
+                game_1.Game.ctx.globalAlpha = 0.6;
+                // Apply 8px blur using WebGL
+                const blurred8px = blurRenderer.applyBlur(this.colorOffscreenCanvas, 8);
+                game_1.Game.ctx.drawImage(blurred8px, (this.roomX - offsetX) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY) * gameConstants_1.GameConstants.TILESIZE);
+                //draw slight haze
+                game_1.Game.ctx.globalCompositeOperation = "lighten";
+                game_1.Game.ctx.globalAlpha = 0.08;
+                // Apply 16px blur using WebGL
+                const blurred16px = blurRenderer.applyBlur(this.colorOffscreenCanvas, 16);
+                game_1.Game.ctx.drawImage(blurred16px, (this.roomX - offsetX) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY) * gameConstants_1.GameConstants.TILESIZE);
             }
-            game_1.Game.ctx.drawImage(this.colorOffscreenCanvas, (this.roomX - offsetX) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY) * gameConstants_1.GameConstants.TILESIZE);
-            //draw slight haze
-            game_1.Game.ctx.globalCompositeOperation = "lighten";
-            game_1.Game.ctx.globalAlpha = 0.05;
-            game_1.Game.ctx.filter = "blur(12px)";
-            game_1.Game.ctx.drawImage(this.colorOffscreenCanvas, (this.roomX - offsetX) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY) * gameConstants_1.GameConstants.TILESIZE);
+            else {
+                // Use Canvas2D blur (fallback) - matching original settings
+                // Draw the blurred color layer directly without masking
+                game_1.Game.ctx.globalCompositeOperation =
+                    gameConstants_1.GameConstants.COLOR_LAYER_COMPOSITE_OPERATION;
+                game_1.Game.ctx.globalAlpha = 0.6;
+                if (gameConstants_1.GameConstants.ctxBlurEnabled) {
+                    game_1.Game.ctx.filter = "blur(6px)";
+                }
+                game_1.Game.ctx.drawImage(this.colorOffscreenCanvas, (this.roomX - offsetX) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY) * gameConstants_1.GameConstants.TILESIZE);
+                // Draw slight haze
+                game_1.Game.ctx.globalCompositeOperation = "lighten";
+                game_1.Game.ctx.globalAlpha = 0.05;
+                if (gameConstants_1.GameConstants.ctxBlurEnabled) {
+                    game_1.Game.ctx.filter = "blur(12px)";
+                }
+                game_1.Game.ctx.drawImage(this.colorOffscreenCanvas, (this.roomX - offsetX) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY) * gameConstants_1.GameConstants.TILESIZE);
+                game_1.Game.ctx.filter = "none";
+            }
             this.colorOffscreenCtx.clearRect(0, 0, this.colorOffscreenCanvas.width, this.colorOffscreenCanvas.height);
             game_1.Game.ctx.restore();
         };
@@ -26332,9 +26595,9 @@ class Room {
                 gameConstants_1.GameConstants.SHADE_LAYER_COMPOSITE_OPERATION;
             // Clear the offscreen shade canvas
             this.shadeOffscreenCtx.clearRect(0, 0, this.shadeOffscreenCanvas.width, this.shadeOffscreenCanvas.height);
-            let lastFillStyle = "";
             const offsetX = this.blurOffsetX;
             const offsetY = this.blurOffsetY;
+            let lastFillStyle = "";
             // Draw all shade rectangles without any filters
             for (let x = this.roomX - 2; x < this.roomX + this.width + 4; x++) {
                 for (let y = this.roomY - 2; y < this.roomY + this.height + 4; y++) {
@@ -26343,10 +26606,8 @@ class Room {
                         this.roomArray[x][y] &&
                         this.roomArray[x][y] instanceof wallTorch_1.WallTorch)
                         continue;
-                    //if (alpha === 0) continue; // Skip if no visibility adjustment
                     let factor = !gameConstants_1.GameConstants.SMOOTH_LIGHTING ? 2 : 0.5;
                     let computedAlpha = alpha ** factor;
-                    // if (computedAlpha <= 0) continue; // Skip if alpha is effectively zero
                     let fillX = x;
                     let fillY = y;
                     let fillWidth = 1;
@@ -26400,44 +26661,6 @@ class Room {
                             }
                         }
                     }
-                    /*
-                    if (
-                      this.roomArray[x] &&
-                      this.roomArray[x][y] &&
-                      this.roomArray[x][y] instanceof Door &&
-                      !(this.roomArray[x][y] as Door).opened &&
-                      !(this.roomArray[x][y] as Door).linkedDoor.room.entered
-                    ) {
-                      //computedAlpha = 1;
-                      switch ((this.roomArray[x][y] as Door).doorDir) {
-                        case Direction.UP:
-                          fillY = y - 0.75;
-                          fillX = x - 0.5;
-                          fillHeight = 2;
-                          fillWidth = 1.5;
-            
-                          break;
-                        case Direction.DOWN:
-                          fillX = x;
-                          fillY = y + 0.5;
-                          fillHeight = 2;
-                          fillWidth = 1.5;
-                          break;
-                        case Direction.LEFT:
-                          fillX = x;
-                          fillY = y - 0.5;
-                          fillWidth = 2;
-                          fillHeight = 2;
-                          break;
-                        case Direction.RIGHT:
-                          fillX = x - 0.5;
-                          fillY = y - 0.5;
-                          fillWidth = 2;
-                          fillHeight = 2;
-                          break;
-                      }
-                    }
-                    */
                     const fillStyle = `rgba(0, 0, 0, ${computedAlpha * 0.5})`;
                     if (fillStyle !== lastFillStyle) {
                         this.shadeOffscreenCtx.fillStyle = fillStyle;
@@ -26448,10 +26671,25 @@ class Room {
                     this.shadeOffscreenCtx.fillRect((fillX - this.roomX + offsetX) * gameConstants_1.GameConstants.TILESIZE, (fillY - this.roomY + offsetY) * gameConstants_1.GameConstants.TILESIZE, fillWidth * gameConstants_1.GameConstants.TILESIZE, fillHeight * gameConstants_1.GameConstants.TILESIZE);
                 }
             }
-            // Draw the blurred shade layer directly without masking
-            game_1.Game.ctx.globalAlpha = 1;
-            game_1.Game.ctx.filter = "blur(5px)";
-            game_1.Game.ctx.drawImage(this.shadeOffscreenCanvas, (this.roomX - offsetX - 1) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY - 1) * gameConstants_1.GameConstants.TILESIZE);
+            // Choose blur method based on setting
+            if (gameConstants_1.GameConstants.USE_WEBGL_BLUR) {
+                // Use WebGL blur (keep original WebGL settings)
+                const blurRenderer = webglBlurRenderer_1.WebGLBlurRenderer.getInstance();
+                game_1.Game.ctx.globalAlpha = 1;
+                // Apply 7px blur using WebGL
+                const blurred7px = blurRenderer.applyBlur(this.shadeOffscreenCanvas, 7);
+                game_1.Game.ctx.drawImage(blurred7px, (this.roomX - offsetX - 1) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY - 1) * gameConstants_1.GameConstants.TILESIZE);
+            }
+            else {
+                // Use Canvas2D blur (fallback) - matching original settings
+                // Draw the blurred shade layer directly without masking
+                game_1.Game.ctx.globalAlpha = 1;
+                if (gameConstants_1.GameConstants.ctxBlurEnabled) {
+                    game_1.Game.ctx.filter = "blur(5px)";
+                }
+                game_1.Game.ctx.drawImage(this.shadeOffscreenCanvas, (this.roomX - offsetX - 1) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY - 1) * gameConstants_1.GameConstants.TILESIZE);
+                game_1.Game.ctx.filter = "none";
+            }
             game_1.Game.ctx.restore();
         };
         this.drawBloomLayer = (delta) => {
@@ -26463,7 +26701,7 @@ class Room {
             const offsetX = this.blurOffsetX;
             const offsetY = this.blurOffsetY;
             let lastFillStyle = "";
-            // Draw all shade rectangles without any filters
+            // Draw all bloom rectangles without any filters
             const allEntities = this.entities.concat(this.deadEntities);
             if (allEntities.length > 0)
                 for (let e of this.entities) {
@@ -26506,11 +26744,27 @@ class Room {
                             gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE);
                     }
                 }
-            // Draw the blurred shade layer directly without masking
-            game_1.Game.ctx.filter = "blur(8px)";
-            game_1.Game.ctx.globalCompositeOperation = "screen";
-            game_1.Game.ctx.globalAlpha = 1;
-            game_1.Game.ctx.drawImage(this.bloomOffscreenCanvas, (this.roomX - offsetX) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY) * gameConstants_1.GameConstants.TILESIZE);
+            // Choose blur method based on setting
+            if (gameConstants_1.GameConstants.USE_WEBGL_BLUR) {
+                // Use WebGL blur (keep original WebGL settings)
+                const blurRenderer = webglBlurRenderer_1.WebGLBlurRenderer.getInstance();
+                game_1.Game.ctx.globalCompositeOperation = "screen";
+                game_1.Game.ctx.globalAlpha = 1;
+                // Apply 12px blur using WebGL
+                const blurred12px = blurRenderer.applyBlur(this.bloomOffscreenCanvas, 12);
+                game_1.Game.ctx.drawImage(blurred12px, (this.roomX - offsetX) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY) * gameConstants_1.GameConstants.TILESIZE);
+            }
+            else {
+                // Use Canvas2D blur (fallback) - matching original settings
+                // Draw the blurred shade layer directly without masking
+                game_1.Game.ctx.globalCompositeOperation = "screen";
+                game_1.Game.ctx.globalAlpha = 1;
+                if (gameConstants_1.GameConstants.ctxBlurEnabled) {
+                    game_1.Game.ctx.filter = "blur(8px)";
+                }
+                game_1.Game.ctx.drawImage(this.bloomOffscreenCanvas, (this.roomX - offsetX) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY) * gameConstants_1.GameConstants.TILESIZE);
+                game_1.Game.ctx.filter = "none";
+            }
             this.bloomOffscreenCtx.fillStyle = "rgba(0, 0, 0, 1)";
             this.bloomOffscreenCtx.fillRect(0, 0, this.bloomOffscreenCanvas.width, this.bloomOffscreenCanvas.height);
             game_1.Game.ctx.restore();

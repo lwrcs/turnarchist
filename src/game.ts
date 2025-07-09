@@ -822,6 +822,9 @@ export class Game {
         enabled = GameplaySettings.EQUIP_USES_TURN ? "enabled" : "disabled";
         this.pushMessage(`Equipping an item takes a turn is now ${enabled}`);
         break;
+      case "webgl":
+        GameConstants.TOGGLE_USE_WEBGL_BLUR();
+        break;
       default:
         if (command.startsWith("new ")) {
           this.room.addNewEnemy(command.slice(4) as EnemyType);

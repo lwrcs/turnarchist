@@ -34,6 +34,7 @@ import { Hourglass } from "../item/usable/hourglass";
 import { Gold } from "../item/resource/gold";
 import { Sword } from "../item/weapon/sword";
 import { Apple } from "../item/usable/apple";
+import { WebGLBlurRenderer } from "../gui/webglBlurRenderer";
 
 export class GameConstants {
   static readonly VERSION = "v1.0.9"; //"v0.6.3";
@@ -96,6 +97,7 @@ export class GameConstants {
   static SMOOTH_LIGHTING = false;
   static ctxBlurEnabled = true;
   static BLUR_ENABLED = true;
+  static USE_WEBGL_BLUR = true;
   static ENEMIES_BLOCK_LIGHT = false;
 
   static readonly SHADE_LAYER_COMPOSITE_OPERATIONS = [
@@ -192,6 +194,13 @@ export class GameConstants {
 
   static readonly TOGGLE_ENEMIES_BLOCK_LIGHT = () => {
     GameConstants.ENEMIES_BLOCK_LIGHT = !GameConstants.ENEMIES_BLOCK_LIGHT;
+  };
+
+  static readonly TOGGLE_USE_WEBGL_BLUR = () => {
+    GameConstants.USE_WEBGL_BLUR = !GameConstants.USE_WEBGL_BLUR;
+    console.log(
+      `WebGL blur is now ${GameConstants.USE_WEBGL_BLUR ? "enabled" : "disabled"}`,
+    );
   };
 
   static readonly SET_SCALE = () => {

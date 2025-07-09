@@ -90,6 +90,7 @@ import { GlowBugEnemy } from "../entity/enemy/glowBugEnemy";
 import { GameplaySettings } from "../game/gameplaySettings";
 import { ItemGroup } from "../item/itemGroup";
 import { Sword } from "../item/weapon/sword";
+import { WebGLBlurRenderer } from "../gui/webglBlurRenderer";
 
 // #endregion
 
@@ -2298,29 +2299,69 @@ export class Room {
       }
     }
 
-    // Draw the blurred color layer directly without masking
-    Game.ctx.globalCompositeOperation =
-      GameConstants.COLOR_LAYER_COMPOSITE_OPERATION as GlobalCompositeOperation;
-    //Game.ctx.globalCompositeOperation = "source-over";
-    Game.ctx.globalAlpha = 0.6; // 0.6;
-    {
-      Game.ctx.filter = "blur(6px)";
-    }
-    Game.ctx.drawImage(
-      this.colorOffscreenCanvas,
-      (this.roomX - offsetX) * GameConstants.TILESIZE,
-      (this.roomY - offsetY) * GameConstants.TILESIZE,
-    );
+    // Choose blur method based on setting
+    if (GameConstants.USE_WEBGL_BLUR) {
+      // Use WebGL blur (keep original WebGL settings)
+      const blurRenderer = WebGLBlurRenderer.getInstance();
 
-    //draw slight haze
-    Game.ctx.globalCompositeOperation = "lighten";
-    Game.ctx.globalAlpha = 0.05;
-    Game.ctx.filter = "blur(12px)";
-    Game.ctx.drawImage(
-      this.colorOffscreenCanvas,
-      (this.roomX - offsetX) * GameConstants.TILESIZE,
-      (this.roomY - offsetY) * GameConstants.TILESIZE,
-    );
+      // Draw the blurred color layer with soft-light blend mode
+      Game.ctx.globalCompositeOperation = "soft-light";
+      Game.ctx.globalAlpha = 0.6;
+
+      // Apply 8px blur using WebGL
+      const blurred8px = blurRenderer.applyBlur(this.colorOffscreenCanvas, 8);
+      Game.ctx.drawImage(
+        blurred8px,
+        (this.roomX - offsetX) * GameConstants.TILESIZE,
+        (this.roomY - offsetY) * GameConstants.TILESIZE,
+      );
+
+      //draw slight haze
+      Game.ctx.globalCompositeOperation = "lighten";
+      Game.ctx.globalAlpha = 0.08;
+
+      // Apply 16px blur using WebGL
+      const blurred16px = blurRenderer.applyBlur(this.colorOffscreenCanvas, 16);
+      Game.ctx.drawImage(
+        blurred16px,
+        (this.roomX - offsetX) * GameConstants.TILESIZE,
+        (this.roomY - offsetY) * GameConstants.TILESIZE,
+      );
+    } else {
+      // Use Canvas2D blur (fallback) - matching original settings
+
+      // Draw the blurred color layer directly without masking
+      Game.ctx.globalCompositeOperation =
+        GameConstants.COLOR_LAYER_COMPOSITE_OPERATION as GlobalCompositeOperation;
+      Game.ctx.globalAlpha = 0.6;
+
+      if (GameConstants.ctxBlurEnabled) {
+        Game.ctx.filter = "blur(6px)";
+      }
+
+      Game.ctx.drawImage(
+        this.colorOffscreenCanvas,
+        (this.roomX - offsetX) * GameConstants.TILESIZE,
+        (this.roomY - offsetY) * GameConstants.TILESIZE,
+      );
+
+      // Draw slight haze
+      Game.ctx.globalCompositeOperation = "lighten";
+      Game.ctx.globalAlpha = 0.05;
+
+      if (GameConstants.ctxBlurEnabled) {
+        Game.ctx.filter = "blur(12px)";
+      }
+
+      Game.ctx.drawImage(
+        this.colorOffscreenCanvas,
+        (this.roomX - offsetX) * GameConstants.TILESIZE,
+        (this.roomY - offsetY) * GameConstants.TILESIZE,
+      );
+
+      Game.ctx.filter = "none";
+    }
+
     this.colorOffscreenCtx.clearRect(
       0,
       0,
@@ -2339,6 +2380,7 @@ export class Room {
 
     Game.ctx.globalCompositeOperation =
       GameConstants.SHADE_LAYER_COMPOSITE_OPERATION as GlobalCompositeOperation;
+
     // Clear the offscreen shade canvas
     this.shadeOffscreenCtx.clearRect(
       0,
@@ -2347,9 +2389,10 @@ export class Room {
       this.shadeOffscreenCanvas.height,
     );
 
-    let lastFillStyle = "";
     const offsetX = this.blurOffsetX;
     const offsetY = this.blurOffsetY;
+
+    let lastFillStyle = "";
 
     // Draw all shade rectangles without any filters
     for (let x = this.roomX - 2; x < this.roomX + this.width + 4; x++) {
@@ -2362,10 +2405,8 @@ export class Room {
           this.roomArray[x][y] instanceof WallTorch
         )
           continue;
-        //if (alpha === 0) continue; // Skip if no visibility adjustment
         let factor = !GameConstants.SMOOTH_LIGHTING ? 2 : 0.5;
         let computedAlpha = alpha ** factor;
-        // if (computedAlpha <= 0) continue; // Skip if alpha is effectively zero
 
         let fillX = x;
         let fillY = y;
@@ -2422,44 +2463,6 @@ export class Room {
             }
           }
         }
-        /*
-        if (
-          this.roomArray[x] &&
-          this.roomArray[x][y] &&
-          this.roomArray[x][y] instanceof Door &&
-          !(this.roomArray[x][y] as Door).opened &&
-          !(this.roomArray[x][y] as Door).linkedDoor.room.entered
-        ) {
-          //computedAlpha = 1;
-          switch ((this.roomArray[x][y] as Door).doorDir) {
-            case Direction.UP:
-              fillY = y - 0.75;
-              fillX = x - 0.5;
-              fillHeight = 2;
-              fillWidth = 1.5;
-
-              break;
-            case Direction.DOWN:
-              fillX = x;
-              fillY = y + 0.5;
-              fillHeight = 2;
-              fillWidth = 1.5;
-              break;
-            case Direction.LEFT:
-              fillX = x;
-              fillY = y - 0.5;
-              fillWidth = 2;
-              fillHeight = 2;
-              break;
-            case Direction.RIGHT:
-              fillX = x - 0.5;
-              fillY = y - 0.5;
-              fillWidth = 2;
-              fillHeight = 2;
-              break;
-          }
-        }
-        */
 
         const fillStyle = `rgba(0, 0, 0, ${computedAlpha * 0.5})`;
 
@@ -2479,15 +2482,38 @@ export class Room {
       }
     }
 
-    // Draw the blurred shade layer directly without masking
+    // Choose blur method based on setting
+    if (GameConstants.USE_WEBGL_BLUR) {
+      // Use WebGL blur (keep original WebGL settings)
+      const blurRenderer = WebGLBlurRenderer.getInstance();
 
-    Game.ctx.globalAlpha = 1;
-    Game.ctx.filter = "blur(5px)";
-    Game.ctx.drawImage(
-      this.shadeOffscreenCanvas,
-      (this.roomX - offsetX - 1) * GameConstants.TILESIZE,
-      (this.roomY - offsetY - 1) * GameConstants.TILESIZE,
-    );
+      Game.ctx.globalAlpha = 1;
+
+      // Apply 7px blur using WebGL
+      const blurred7px = blurRenderer.applyBlur(this.shadeOffscreenCanvas, 7);
+      Game.ctx.drawImage(
+        blurred7px,
+        (this.roomX - offsetX - 1) * GameConstants.TILESIZE,
+        (this.roomY - offsetY - 1) * GameConstants.TILESIZE,
+      );
+    } else {
+      // Use Canvas2D blur (fallback) - matching original settings
+
+      // Draw the blurred shade layer directly without masking
+      Game.ctx.globalAlpha = 1;
+
+      if (GameConstants.ctxBlurEnabled) {
+        Game.ctx.filter = "blur(5px)";
+      }
+
+      Game.ctx.drawImage(
+        this.shadeOffscreenCanvas,
+        (this.roomX - offsetX - 1) * GameConstants.TILESIZE,
+        (this.roomY - offsetY - 1) * GameConstants.TILESIZE,
+      );
+
+      Game.ctx.filter = "none";
+    }
 
     Game.ctx.restore();
   };
@@ -2508,7 +2534,7 @@ export class Room {
 
     let lastFillStyle = "";
 
-    // Draw all shade rectangles without any filters
+    // Draw all bloom rectangles without any filters
     const allEntities = this.entities.concat(this.deadEntities);
     if (allEntities.length > 0)
       for (let e of this.entities) {
@@ -2572,16 +2598,41 @@ export class Room {
         }
       }
 
-    // Draw the blurred shade layer directly without masking
-    Game.ctx.filter = "blur(8px)";
-    Game.ctx.globalCompositeOperation = "screen";
+    // Choose blur method based on setting
+    if (GameConstants.USE_WEBGL_BLUR) {
+      // Use WebGL blur (keep original WebGL settings)
+      const blurRenderer = WebGLBlurRenderer.getInstance();
 
-    Game.ctx.globalAlpha = 1;
-    Game.ctx.drawImage(
-      this.bloomOffscreenCanvas,
-      (this.roomX - offsetX) * GameConstants.TILESIZE,
-      (this.roomY - offsetY) * GameConstants.TILESIZE,
-    );
+      Game.ctx.globalCompositeOperation = "screen";
+      Game.ctx.globalAlpha = 1;
+
+      // Apply 12px blur using WebGL
+      const blurred12px = blurRenderer.applyBlur(this.bloomOffscreenCanvas, 12);
+      Game.ctx.drawImage(
+        blurred12px,
+        (this.roomX - offsetX) * GameConstants.TILESIZE,
+        (this.roomY - offsetY) * GameConstants.TILESIZE,
+      );
+    } else {
+      // Use Canvas2D blur (fallback) - matching original settings
+
+      // Draw the blurred shade layer directly without masking
+      Game.ctx.globalCompositeOperation = "screen";
+      Game.ctx.globalAlpha = 1;
+
+      if (GameConstants.ctxBlurEnabled) {
+        Game.ctx.filter = "blur(8px)";
+      }
+
+      Game.ctx.drawImage(
+        this.bloomOffscreenCanvas,
+        (this.roomX - offsetX) * GameConstants.TILESIZE,
+        (this.roomY - offsetY) * GameConstants.TILESIZE,
+      );
+
+      Game.ctx.filter = "none";
+    }
+
     this.bloomOffscreenCtx.fillStyle = "rgba(0, 0, 0, 1)";
     this.bloomOffscreenCtx.fillRect(
       0,
