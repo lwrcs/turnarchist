@@ -78,7 +78,7 @@ export class Scythe extends Weapon {
           ].isSolid()
         ) {
           const damage = positions.indexOf(pos) <= 1 ? 1 : 1;
-          this.executeAttack(pos.x, pos.y, false, damage, false, false);
+          this.applyHitDelay(this.hitEntitiesAt(pos.x, pos.y, damage));
         }
       }
     }

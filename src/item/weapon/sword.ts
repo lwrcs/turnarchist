@@ -65,7 +65,7 @@ export class Sword extends Weapon {
           ].isSolid()
         ) {
           const damage = 1;
-          this.executeAttack(pos.x, pos.y, false, damage, false, false, false);
+          this.hitEntitiesAt(pos.x, pos.y, damage);
         }
       }
     }

@@ -19451,7 +19451,7 @@ class Scythe extends weapon_1.Weapon {
                 for (const pos of positions) {
                     if (!this.game.rooms[this.wielder.levelID].roomArray[pos.x][pos.y].isSolid()) {
                         const damage = positions.indexOf(pos) <= 1 ? 1 : 1;
-                        this.executeAttack(pos.x, pos.y, false, damage, false, false);
+                        this.applyHitDelay(this.hitEntitiesAt(pos.x, pos.y, damage));
                     }
                 }
             }
@@ -19832,7 +19832,7 @@ class Sword extends weapon_1.Weapon {
                 for (const pos of positions) {
                     if (!this.game.rooms[this.wielder.levelID].roomArray[pos.x][pos.y].isSolid()) {
                         const damage = 1;
-                        this.executeAttack(pos.x, pos.y, false, damage, false, false, false);
+                        this.hitEntitiesAt(pos.x, pos.y, damage);
                     }
                 }
             }
