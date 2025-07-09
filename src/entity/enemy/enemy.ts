@@ -617,7 +617,7 @@ export abstract class Enemy extends Entity {
 
       this.x = newTile.x;
       this.y = newTile.y;
-      this.lightSource.updatePosition(this.x + 0.5, this.y + 0.5);
+      this.lightSource?.updatePosition(this.x + 0.5, this.y + 0.5);
       this.room.updateLighting();
     }
   };

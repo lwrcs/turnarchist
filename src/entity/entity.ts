@@ -357,7 +357,7 @@ export class Entity extends Drawable {
     this.room.lightSources = this.room.lightSources.filter(
       (ls) => ls !== lightSource,
     );
-    this.lightSource = null;
+    //this.lightSource = null;
     this.room.updateLighting();
   };
 

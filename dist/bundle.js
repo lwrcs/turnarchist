@@ -6139,7 +6139,7 @@ class Enemy extends entity_1.Entity {
                 this.drawY = newTile.y - this.y;
                 this.x = newTile.x;
                 this.y = newTile.y;
-                this.lightSource.updatePosition(this.x + 0.5, this.y + 0.5);
+                this.lightSource?.updatePosition(this.x + 0.5, this.y + 0.5);
                 this.room.updateLighting();
             }
         };
@@ -7421,7 +7421,9 @@ class OccultistEnemy extends enemy_1.Enemy {
                 this.shadeColor = "#000000";
             }
             this.runAway();
-            this.lightSource.updatePosition(this.x + 0.5, this.y + 0.5);
+            if (this.lightSource) {
+                this.lightSource.updatePosition(this.x + 0.5, this.y + 0.5);
+            }
         };
         this.onHurt = (damage = 1) => {
             if (this.health < this.lastHealth &&
@@ -9259,7 +9261,7 @@ class Entity extends drawable_1.Drawable {
         };
         this.removeLightSource = (lightSource) => {
             this.room.lightSources = this.room.lightSources.filter((ls) => ls !== lightSource);
-            this.lightSource = null;
+            //this.lightSource = null;
             this.room.updateLighting();
         };
         this.behavior = () => { };
