@@ -90,10 +90,10 @@ export class WebGLBlurRenderer {
       float totalWeight = 0.0;
       
       // Performance blur with 13 samples
-      float sigma = u_radius * 0.4;
+      float sigma = u_radius * 0.9;
       float twoSigmaSquare = 2.0 * sigma * sigma;
       
-      for (float i = -6.0; i <= 6.0; i++) {
+      for (float i = -12.0; i <= 12.0; i++) {
         if (abs(i) > u_radius) continue;
         
         vec2 offset = texelSize * i;

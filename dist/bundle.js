@@ -13509,7 +13509,7 @@ GameConstants.SMOOTH_LIGHTING = false;
 GameConstants.ctxBlurEnabled = true;
 GameConstants.BLUR_ENABLED = true;
 GameConstants.USE_WEBGL_BLUR = false;
-GameConstants.HIGH_QUALITY_BLUR = true; // true = 49 samples, false = 13 samples for performance
+GameConstants.HIGH_QUALITY_BLUR = false; // true = 49 samples, false = 13 samples for performance
 GameConstants.ENEMIES_BLOCK_LIGHT = false;
 GameConstants.SHADE_LAYER_COMPOSITE_OPERATIONS = [
     "source-over",
@@ -16131,10 +16131,10 @@ class WebGLBlurRenderer {
       float totalWeight = 0.0;
       
       // Performance blur with 13 samples
-      float sigma = u_radius * 0.4;
+      float sigma = u_radius * 0.9;
       float twoSigmaSquare = 2.0 * sigma * sigma;
       
-      for (float i = -6.0; i <= 6.0; i++) {
+      for (float i = -12.0; i <= 12.0; i++) {
         if (abs(i) > u_radius) continue;
         
         vec2 offset = texelSize * i;

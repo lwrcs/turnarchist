@@ -98,7 +98,7 @@ export class GameConstants {
   static ctxBlurEnabled = true;
   static BLUR_ENABLED = true;
   static USE_WEBGL_BLUR = false;
-  static HIGH_QUALITY_BLUR = true; // true = 49 samples, false = 13 samples for performance
+  static HIGH_QUALITY_BLUR = false; // true = 49 samples, false = 13 samples for performance
   static ENEMIES_BLOCK_LIGHT = false;
 
   static readonly SHADE_LAYER_COMPOSITE_OPERATIONS = [
