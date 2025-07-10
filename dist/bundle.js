@@ -20304,6 +20304,7 @@ const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.
 const gameConstants_1 = __webpack_require__(/*! ../../game/gameConstants */ "./src/game/gameConstants.ts");
 const weaponFragments_1 = __webpack_require__(/*! ../usable/weaponFragments */ "./src/item/usable/weaponFragments.ts");
 const attackAnimation_1 = __webpack_require__(/*! ../../particle/attackAnimation */ "./src/particle/attackAnimation.ts");
+const game_2 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 class Weapon extends equippable_1.Equippable {
     constructor(level, x, y, status) {
         super(level, x, y);
@@ -20457,8 +20458,30 @@ class Weapon extends equippable_1.Equippable {
         return hitSomething;
     }
     checkForPushables(x, y) {
+        const direction = this.wielder.direction;
+        let behindX = x;
+        let behindY = y;
+        switch (direction) {
+            case game_2.Direction.DOWN:
+                behindY += 1;
+                break;
+            case game_2.Direction.UP:
+                behindY -= 1;
+                break;
+            case game_2.Direction.LEFT:
+                behindX -= 1;
+                break;
+            case game_2.Direction.RIGHT:
+                behindX += 1;
+                break;
+        }
+        const unpushables = this.getEntitiesAt(behindX, behindY).filter((e) => !e.pushable);
+        const hasUnpushablesBehind = unpushables.length > 0;
+        const behindTile = this.game.rooms[this.wielder.levelID].roomArray[behindX]?.[behindY];
+        const isSolidBehind = !behindTile || behindTile.isSolid();
         const pushables = this.getEntitiesAt(x, y).filter((e) => e.pushable);
-        return pushables.length > 0;
+        const hasSpaceToPush = !isSolidBehind && !hasUnpushablesBehind;
+        return pushables.length > 0 && hasSpaceToPush;
     }
     executeAttack(targetX, targetY, animated = true, damage = this.damage, shakeScreen = true, sound = true, mainAttack = true) {
         const hitSomething = this.hitEntitiesAt(targetX, targetY, damage);
@@ -22253,6 +22276,30 @@ class AttackAnimation extends particle_1.Particle {
                         break;
                 }
                 break;
+            case "sword":
+                this.frames = 6;
+                this.tileY = 48;
+                this.tileX = 0;
+                this.animationSpeed = 0.75;
+                switch (direction) {
+                    case game_1.Direction.DOWN:
+                        this.yOffset -= 0.95;
+                        this.xOffset += 0;
+                        break;
+                    case game_1.Direction.UP:
+                        this.yOffset += 0.95;
+                        this.xOffset -= 0;
+                        break;
+                    case game_1.Direction.LEFT:
+                        this.xOffset += 0.95;
+                        this.yOffset += 0;
+                        break;
+                    case game_1.Direction.RIGHT:
+                        this.xOffset -= 0.95;
+                        this.yOffset -= 0;
+                        break;
+                }
+                break;
         }
         switch (direction) {
             case game_1.Direction.DOWN:
@@ -23029,6 +23076,7 @@ class Player extends drawable_1.Drawable {
                             (this.game.levels[this.depth].rooms[this.levelID].roomArray[nextX][nextY].canCrushEnemy() ||
                                 enemyEnd)) {
                             if (e.destroyable) {
+                                //fallback if no weapon equipped
                                 e.hurt(this, e.health, "none");
                                 if (this.game.levels[this.depth].rooms[this.levelID] ===
                                     this.game.room)

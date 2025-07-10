@@ -8,6 +8,7 @@ import { GameConstants } from "../../game/gameConstants";
 import { WeaponFragments } from "../usable/weaponFragments";
 import { Enemy } from "../../entity/enemy/enemy";
 import { AttackAnimation } from "../../particle/attackAnimation";
+import { Direction } from "../../game";
 
 interface WeaponStatus {
   poison: boolean;
@@ -214,8 +215,37 @@ export abstract class Weapon extends Equippable {
   }
 
   protected checkForPushables(x: number, y: number): boolean {
+    const direction = this.wielder.direction;
+    let behindX = x;
+    let behindY = y;
+    switch (direction) {
+      case Direction.DOWN:
+        behindY += 1;
+        break;
+      case Direction.UP:
+        behindY -= 1;
+        break;
+      case Direction.LEFT:
+        behindX -= 1;
+        break;
+      case Direction.RIGHT:
+        behindX += 1;
+        break;
+    }
+
+    const unpushables = this.getEntitiesAt(behindX, behindY).filter(
+      (e) => !e.pushable,
+    );
+    const hasUnpushablesBehind = unpushables.length > 0;
+
+    const behindTile =
+      this.game.rooms[this.wielder.levelID].roomArray[behindX]?.[behindY];
+    const isSolidBehind = !behindTile || behindTile.isSolid();
+
     const pushables = this.getEntitiesAt(x, y).filter((e) => e.pushable);
-    return pushables.length > 0;
+    const hasSpaceToPush = !isSolidBehind && !hasUnpushablesBehind;
+
+    return pushables.length > 0 && hasSpaceToPush;
   }
 
   protected applyHitDelay = (hitSomething: boolean) => {

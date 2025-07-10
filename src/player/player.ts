@@ -649,6 +649,7 @@ export class Player extends Drawable {
               enemyEnd)
           ) {
             if (e.destroyable) {
+              //fallback if no weapon equipped
               e.hurt(this, e.health, "none");
               if (
                 this.game.levels[this.depth].rooms[this.levelID] ===

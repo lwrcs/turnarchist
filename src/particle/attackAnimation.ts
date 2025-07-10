@@ -187,6 +187,32 @@ export class AttackAnimation extends Particle {
             break;
         }
         break;
+
+      case "sword":
+        this.frames = 6;
+        this.tileY = 48;
+        this.tileX = 0;
+        this.animationSpeed = 0.75;
+
+        switch (direction) {
+          case Direction.DOWN:
+            this.yOffset -= 0.95;
+            this.xOffset += 0;
+            break;
+          case Direction.UP:
+            this.yOffset += 0.95;
+            this.xOffset -= 0;
+            break;
+          case Direction.LEFT:
+            this.xOffset += 0.95;
+            this.yOffset += 0;
+            break;
+          case Direction.RIGHT:
+            this.xOffset -= 0.95;
+            this.yOffset -= 0;
+            break;
+        }
+        break;
     }
     switch (direction) {
       case Direction.DOWN:
