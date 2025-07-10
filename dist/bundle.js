@@ -13510,6 +13510,7 @@ GameConstants.ctxBlurEnabled = true;
 GameConstants.BLUR_ENABLED = true;
 GameConstants.USE_WEBGL_BLUR = false;
 GameConstants.HIGH_QUALITY_BLUR = false; // true = 49 samples, false = 13 samples for performance
+GameConstants.BLUR_DOWNSAMPLE_FACTOR = 8; // Blur at 1/4 size for performance (1 = full size, 4 = quarter size)
 GameConstants.ENEMIES_BLOCK_LIGHT = false;
 GameConstants.SHADE_LAYER_COMPOSITE_OPERATIONS = [
     "source-over",
@@ -16066,6 +16067,11 @@ exports.WebGLBlurRenderer = void 0;
 const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
 class WebGLBlurRenderer {
     constructor() {
+        // Add texture size tracking for texSubImage2D optimization
+        this.textureWidth = 0;
+        this.textureHeight = 0;
+        this.tempTextureWidth = 0;
+        this.tempTextureHeight = 0;
         // Cache for result canvases to avoid recreation
         this.resultCanvasCache = new Map();
         this.maxCacheSize = 10;
@@ -16150,6 +16156,12 @@ class WebGLBlurRenderer {
         this.canvas = document.createElement("canvas");
         this.canvas.width = gameConstants_1.GameConstants.WIDTH;
         this.canvas.height = gameConstants_1.GameConstants.HEIGHT;
+        // Initialize downsampling canvas
+        this.downsampleCanvas = document.createElement("canvas");
+        this.downsampleCtx = this.downsampleCanvas.getContext("2d");
+        if (!this.downsampleCtx) {
+            throw new Error("Failed to initialize downsample canvas context.");
+        }
         const context = this.canvas.getContext("webgl", {
             antialias: false,
             depth: false,
@@ -16208,27 +16220,29 @@ class WebGLBlurRenderer {
             throw new Error("Unable to initialize performance shader program: " +
                 this.gl.getProgramInfoLog(this.performanceShaderProgram));
         }
-        // Clean up shaders after linking
-        this.gl.deleteShader(vertexShader);
-        this.gl.deleteShader(highQualityFragmentShader);
-        this.gl.deleteShader(performanceFragmentShader);
-        // Set initial shader program
+        // Set default to high quality
+        this.currentShaderProgram = this.highQualityShaderProgram;
         this.updateShaderProgram();
     }
     updateShaderProgram() {
-        this.currentShaderProgram = gameConstants_1.GameConstants.HIGH_QUALITY_BLUR
+        const useHighQuality = gameConstants_1.GameConstants.HIGH_QUALITY_BLUR;
+        const targetProgram = useHighQuality
             ? this.highQualityShaderProgram
             : this.performanceShaderProgram;
-        this.gl.useProgram(this.currentShaderProgram);
-        // Cache uniform and attribute locations for current shader
-        this.positionLocation = this.gl.getAttribLocation(this.currentShaderProgram, "a_position");
-        this.texCoordLocation = this.gl.getAttribLocation(this.currentShaderProgram, "a_texCoord");
-        this.resolutionLocation = this.gl.getUniformLocation(this.currentShaderProgram, "u_resolution");
-        this.textureLocation = this.gl.getUniformLocation(this.currentShaderProgram, "u_texture");
-        this.directionLocation = this.gl.getUniformLocation(this.currentShaderProgram, "u_direction");
-        this.radiusLocation = this.gl.getUniformLocation(this.currentShaderProgram, "u_radius");
-        // Set texture uniform
-        this.gl.uniform1i(this.textureLocation, 0);
+        if (this.currentShaderProgram !== targetProgram) {
+            this.currentShaderProgram = targetProgram;
+            this.gl.useProgram(this.currentShaderProgram);
+            // Get attribute locations
+            this.positionLocation = this.gl.getAttribLocation(this.currentShaderProgram, "a_position");
+            this.texCoordLocation = this.gl.getAttribLocation(this.currentShaderProgram, "a_texCoord");
+            // Get uniform locations
+            this.resolutionLocation = this.gl.getUniformLocation(this.currentShaderProgram, "u_resolution");
+            this.textureLocation = this.gl.getUniformLocation(this.currentShaderProgram, "u_texture");
+            this.directionLocation = this.gl.getUniformLocation(this.currentShaderProgram, "u_direction");
+            this.radiusLocation = this.gl.getUniformLocation(this.currentShaderProgram, "u_radius");
+            // Set texture unit
+            this.gl.uniform1i(this.textureLocation, 0);
+        }
     }
     createShader(type, source) {
         const shader = this.gl.createShader(type);
@@ -16237,27 +16251,29 @@ class WebGLBlurRenderer {
         if (!this.gl.getShaderParameter(shader, this.gl.COMPILE_STATUS)) {
             const error = this.gl.getShaderInfoLog(shader);
             this.gl.deleteShader(shader);
-            throw new Error("An error occurred compiling the shaders: " + error);
+            throw new Error("Unable to compile shader: " + error);
         }
         return shader;
     }
     initBuffers() {
+        // Position buffer
         this.positionBuffer = this.gl.createBuffer();
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.positionBuffer);
         this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array([
             0,
             0,
-            this.canvas.width,
+            gameConstants_1.GameConstants.WIDTH,
             0,
             0,
-            this.canvas.height,
+            gameConstants_1.GameConstants.HEIGHT,
             0,
-            this.canvas.height,
-            this.canvas.width,
+            gameConstants_1.GameConstants.HEIGHT,
+            gameConstants_1.GameConstants.WIDTH,
             0,
-            this.canvas.width,
-            this.canvas.height,
+            gameConstants_1.GameConstants.WIDTH,
+            gameConstants_1.GameConstants.HEIGHT,
         ]), this.gl.STATIC_DRAW);
+        // Texture coordinate buffer
         this.texCoordBuffer = this.gl.createBuffer();
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.texCoordBuffer);
         this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array([0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1]), this.gl.STATIC_DRAW);
@@ -16278,6 +16294,29 @@ class WebGLBlurRenderer {
         this.framebuffer = this.gl.createFramebuffer();
         this.tempFramebuffer = this.gl.createFramebuffer();
     }
+    // Optimized texture allocation/update method
+    updateTexture(texture, width, height, currentWidth, currentHeight, data = null) {
+        this.gl.bindTexture(this.gl.TEXTURE_2D, texture);
+        // Only reallocate if dimensions changed
+        if (currentWidth !== width || currentHeight !== height) {
+            // Reallocate texture with new dimensions
+            if (data) {
+                // Use 6-parameter overload for HTMLCanvasElement
+                this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, data);
+            }
+            else {
+                // Use 9-parameter overload for null data
+                this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, width, height, 0, this.gl.RGBA, this.gl.UNSIGNED_BYTE, null);
+            }
+            return { width, height };
+        }
+        else if (data) {
+            // Reuse existing texture, just update the content
+            this.gl.texSubImage2D(this.gl.TEXTURE_2D, 0, 0, 0, this.gl.RGBA, this.gl.UNSIGNED_BYTE, data);
+            return { width: currentWidth, height: currentHeight };
+        }
+        return { width: currentWidth, height: currentHeight };
+    }
     getCachedCanvas(width, height) {
         const key = `${width}x${height}`;
         let canvas = this.resultCanvasCache.get(key);
@@ -16295,13 +16334,44 @@ class WebGLBlurRenderer {
         return canvas;
     }
     /**
-     * Apply blur with configurable quality (49 or 13 samples)
+     * Apply blur with downsampling and texSubImage2D optimization
      */
     applyBlur(sourceCanvas, blurRadius) {
-        const width = sourceCanvas.width;
-        const height = sourceCanvas.height;
+        const originalWidth = sourceCanvas.width;
+        const originalHeight = sourceCanvas.height;
+        // Calculate downsampled dimensions
+        const downsampleFactor = gameConstants_1.GameConstants.BLUR_DOWNSAMPLE_FACTOR;
+        const downsampledWidth = Math.max(1, Math.floor(originalWidth / downsampleFactor));
+        const downsampledHeight = Math.max(1, Math.floor(originalHeight / downsampleFactor));
+        // Prepare downsampled canvas
+        if (this.downsampleCanvas.width !== downsampledWidth ||
+            this.downsampleCanvas.height !== downsampledHeight) {
+            this.downsampleCanvas.width = downsampledWidth;
+            this.downsampleCanvas.height = downsampledHeight;
+        }
+        // Downsample the source canvas using canvas 2D (GPU accelerated)
+        this.downsampleCtx.clearRect(0, 0, downsampledWidth, downsampledHeight);
+        this.downsampleCtx.drawImage(sourceCanvas, 0, 0, originalWidth, originalHeight, 0, 0, downsampledWidth, downsampledHeight);
+        // Apply blur to the downsampled canvas
+        const blurredDownsampledCanvas = this.applyBlurToCanvas(this.downsampleCanvas, blurRadius / downsampleFactor, // Adjust blur radius for smaller canvas
+        downsampledWidth, downsampledHeight);
+        // Return result at original size - the caller will handle upscaling
+        // For now, we'll create a canvas at original size and let the GPU upscale
+        const resultCanvas = this.getCachedCanvas(originalWidth, originalHeight);
+        const resultCtx = resultCanvas.getContext("2d");
+        resultCtx.clearRect(0, 0, originalWidth, originalHeight);
+        // Use bilinear filtering for upscaling (GPU accelerated)
+        resultCtx.imageSmoothingEnabled = true;
+        resultCtx.imageSmoothingQuality = "high";
+        resultCtx.drawImage(blurredDownsampledCanvas, 0, 0, downsampledWidth, downsampledHeight, 0, 0, originalWidth, originalHeight);
+        return resultCanvas;
+    }
+    /**
+     * Internal method to apply blur to a specific canvas
+     */
+    applyBlurToCanvas(sourceCanvas, blurRadius, width, height) {
         // Reduce the multiplier significantly for bloom visibility
-        const enhancedRadius = blurRadius * 1; // Reduced from 2.5 to 1.0
+        const enhancedRadius = blurRadius * 1;
         // Update shader program if quality setting changed
         const expectedShader = gameConstants_1.GameConstants.HIGH_QUALITY_BLUR
             ? this.highQualityShaderProgram
@@ -16330,10 +16400,13 @@ class WebGLBlurRenderer {
                 height,
             ]), this.gl.STATIC_DRAW);
         }
-        this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
-        this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, sourceCanvas);
-        this.gl.bindTexture(this.gl.TEXTURE_2D, this.tempTexture);
-        this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, width, height, 0, this.gl.RGBA, this.gl.UNSIGNED_BYTE, null);
+        // OPTIMIZED: Use texSubImage2D to avoid GPU memory reallocation
+        const updatedTexture = this.updateTexture(this.texture, width, height, this.textureWidth, this.textureHeight, sourceCanvas);
+        this.textureWidth = updatedTexture.width;
+        this.textureHeight = updatedTexture.height;
+        const updatedTempTexture = this.updateTexture(this.tempTexture, width, height, this.tempTextureWidth, this.tempTextureHeight, null);
+        this.tempTextureWidth = updatedTempTexture.width;
+        this.tempTextureHeight = updatedTempTexture.height;
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.positionBuffer);
         this.gl.enableVertexAttribArray(this.positionLocation);
         this.gl.vertexAttribPointer(this.positionLocation, 2, this.gl.FLOAT, false, 0, 0);
@@ -16358,12 +16431,7 @@ class WebGLBlurRenderer {
         this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
         this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
         this.gl.drawArrays(this.gl.TRIANGLES, 0, 6);
-        // Get cached result canvas
-        const resultCanvas = this.getCachedCanvas(width, height);
-        const resultCtx = resultCanvas.getContext("2d");
-        resultCtx.clearRect(0, 0, width, height);
-        resultCtx.drawImage(this.canvas, 0, 0);
-        return resultCanvas;
+        return this.canvas;
     }
     clearCache() {
         this.resultCanvasCache.clear();
