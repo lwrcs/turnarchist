@@ -8,12 +8,14 @@ import { Shrooms } from "../../item/usable/shrooms";
 import { EntityType } from "../entity";
 import { ImageParticle } from "../../particle/imageParticle";
 import { Apple } from "../../item/usable/apple";
+import { Sound } from "../../sound/sound";
 
 export class Tree extends Entity {
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
     this.room = room;
-    this.health = 1;
+    this.health = 2;
+    this.maxHealth = 2;
 
     this.tileX = 14;
     this.tileY = 6;
@@ -23,6 +25,7 @@ export class Tree extends Entity {
     this.imageParticleX = 0;
     this.imageParticleY = 28;
     this.opaque = true;
+    this.hitSound = Sound.playBush;
     if (Math.random() < 0.5)
       this.drops.push(new Apple(this.room, this.x, this.y));
     //this.drawableY = 0.1;
@@ -34,6 +37,8 @@ export class Tree extends Entity {
   }
 
   draw = (delta: number) => {
+    this.tileX = this.health === 2 ? 14 : 16;
+    if (this.cloned === true) this.tileX = 16;
     if (this.dead) return;
     Game.ctx.save();
     Game.ctx.globalAlpha = this.alpha;

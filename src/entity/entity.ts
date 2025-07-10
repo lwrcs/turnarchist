@@ -692,7 +692,7 @@ export class Entity extends Drawable {
       coordY = this.y;
     }
 
-    if (this.drops.length === 0) {
+    if (this.drops.length === 0 && this.isEnemy) {
       this.drops.push(new Coin(this.room, this.x, this.y));
     }
     if (this.drops.length > 0) {

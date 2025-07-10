@@ -178,7 +178,7 @@ export class Sound {
         false,
         3,
       );
-      Sound.healSound = createHowl("res/SFX/items/powerup1.mp3", 0.5, false, 2);
+      Sound.healSound = createHowl("res/SFX/items/powerup1.mp3", 0.5, false, 1);
       Sound.eatSounds = createHowlArray("res/SFX/items/eat", [1, 2], 1.0, 5);
       // Footstep sounds
       Sound.playerStoneFootsteps = createHowlArray(
@@ -219,7 +219,7 @@ export class Sound {
         0.5,
         4,
       );
-      Sound.hurtSounds = [createHowl("res/SFX/attacks/hit.mp3", 0.3, false, 4)];
+      Sound.hurtSounds = [createHowl("res/SFX/attacks/hit.mp3", 0.3, false, 0)];
       Sound.sliceSound = createHowlArray(
         "res/SFX/attacks/slice",
         [1, 2, 3],

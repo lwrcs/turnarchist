@@ -9540,7 +9540,7 @@ class Entity extends drawable_1.Drawable {
                 coordX = this.x;
                 coordY = this.y;
             }
-            if (this.drops.length === 0) {
+            if (this.drops.length === 0 && this.isEnemy) {
                 this.drops.push(new coin_1.Coin(this.room, this.x, this.y));
             }
             if (this.drops.length > 0) {
@@ -11115,10 +11115,14 @@ const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const apple_1 = __webpack_require__(/*! ../../item/usable/apple */ "./src/item/usable/apple.ts");
+const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
 class Tree extends entity_1.Entity {
     constructor(room, game, x, y) {
         super(room, game, x, y);
         this.draw = (delta) => {
+            this.tileX = this.health === 2 ? 14 : 16;
+            if (this.cloned === true)
+                this.tileX = 16;
             if (this.dead)
                 return;
             game_1.Game.ctx.save();
@@ -11133,7 +11137,8 @@ class Tree extends entity_1.Entity {
             this.drawableY = this.y;
         };
         this.room = room;
-        this.health = 1;
+        this.health = 2;
+        this.maxHealth = 2;
         this.tileX = 14;
         this.tileY = 6;
         this.hasShadow = false;
@@ -11142,6 +11147,7 @@ class Tree extends entity_1.Entity {
         this.imageParticleX = 0;
         this.imageParticleY = 28;
         this.opaque = true;
+        this.hitSound = sound_1.Sound.playBush;
         if (Math.random() < 0.5)
             this.drops.push(new apple_1.Apple(this.room, this.x, this.y));
         //this.drawableY = 0.1;
@@ -25607,6 +25613,7 @@ const gameplaySettings_1 = __webpack_require__(/*! ../game/gameplaySettings */ "
 const itemGroup_1 = __webpack_require__(/*! ../item/itemGroup */ "./src/item/itemGroup.ts");
 const sword_1 = __webpack_require__(/*! ../item/weapon/sword */ "./src/item/weapon/sword.ts");
 const webglBlurRenderer_1 = __webpack_require__(/*! ../gui/webglBlurRenderer */ "./src/gui/webglBlurRenderer.ts");
+const utils_1 = __webpack_require__(/*! ../utility/utils */ "./src/utility/utils.ts");
 // #endregion
 // #region Enums & Interfaces
 /**
@@ -27867,9 +27874,16 @@ class Room {
     }
     addRandomEnemies() {
         let numEmptyTiles = this.getEmptyTiles().length;
-        let numEnemies = Math.ceil(numEmptyTiles * Math.min(this.depth * 0.1 + 0.5, 0.15));
-        if (numEnemies > numEmptyTiles / 2)
-            numEnemies = numEmptyTiles / 2;
+        /*
+        let numEnemies = Math.ceil(
+          numEmptyTiles * Math.min(this.depth * 0.1 + 0.5, 0.15), //this.depth * 0.01 is starting value
+        );
+        */
+        const factor = Math.min((this.depth + 2) * 0.05, 0.3);
+        const numEnemies = Math.ceil(Math.max(utils_1.Utils.randomNormalInt(0, numEmptyTiles * factor), numEmptyTiles * factor));
+        console.log(`numEnemies: ${numEnemies}`);
+        console.log(`factor: ${factor}`);
+        //if (numEnemies > numEmptyTiles / 2) numEnemies = numEmptyTiles / 2;
         this.addEnemies(numEnemies, Math.random);
     }
     addSpawners(numSpawners, rand) {
@@ -28961,7 +28975,7 @@ Sound.loadSounds = async () => {
         // Load all sounds with optimized settings
         Sound.magicSound = createHowl("res/SFX/attacks/magic2.mp3", 0.25, false, 3);
         Sound.warHammerSound = createHowl("res/SFX/attacks/warhammer.mp3", 1, false, 3);
-        Sound.healSound = createHowl("res/SFX/items/powerup1.mp3", 0.5, false, 2);
+        Sound.healSound = createHowl("res/SFX/items/powerup1.mp3", 0.5, false, 1);
         Sound.eatSounds = createHowlArray("res/SFX/items/eat", [1, 2], 1.0, 5);
         // Footstep sounds
         Sound.playerStoneFootsteps = createHowlArray("res/SFX/footsteps/stone/footstep", [1, 2, 3], 1.0, 4);
@@ -28971,7 +28985,7 @@ Sound.loadSounds = async () => {
         // Combat sounds
         Sound.swingSounds = createHowlArray("res/SFX/attacks/swing", [1, 2, 3, 4], 0.5, 6);
         Sound.hitSounds = createHowlArray("res/SFX/attacks/hurt", [1, 2, 3, 4], 0.5, 4);
-        Sound.hurtSounds = [createHowl("res/SFX/attacks/hit.mp3", 0.3, false, 4)];
+        Sound.hurtSounds = [createHowl("res/SFX/attacks/hit.mp3", 0.3, false, 0)];
         Sound.sliceSound = createHowlArray("res/SFX/attacks/slice", [1, 2, 3], 0.5, 4);
         Sound.shortSliceSound = createHowlArray("res/SFX/attacks/sliceShort", [1, 2, 3], 0.5, 4);
         Sound.parrySounds = createHowlArray("res/SFX/attacks/parry", [1, 2], 0.5, 3);

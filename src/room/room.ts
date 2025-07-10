@@ -91,6 +91,7 @@ import { GameplaySettings } from "../game/gameplaySettings";
 import { ItemGroup } from "../item/itemGroup";
 import { Sword } from "../item/weapon/sword";
 import { WebGLBlurRenderer } from "../gui/webglBlurRenderer";
+import { Utils } from "../utility/utils";
 
 // #endregion
 
@@ -782,11 +783,21 @@ export class Room {
 
   private addRandomEnemies() {
     let numEmptyTiles = this.getEmptyTiles().length;
-
+    /*
     let numEnemies = Math.ceil(
       numEmptyTiles * Math.min(this.depth * 0.1 + 0.5, 0.15), //this.depth * 0.01 is starting value
     );
-    if (numEnemies > numEmptyTiles / 2) numEnemies = numEmptyTiles / 2;
+    */
+    const factor = Math.min((this.depth + 2) * 0.05, 0.3);
+    const numEnemies = Math.ceil(
+      Math.max(
+        Utils.randomNormalInt(0, numEmptyTiles * factor),
+        numEmptyTiles * factor,
+      ),
+    );
+    console.log(`numEnemies: ${numEnemies}`);
+    console.log(`factor: ${factor}`);
+    //if (numEnemies > numEmptyTiles / 2) numEnemies = numEmptyTiles / 2;
     this.addEnemies(numEnemies, Math.random);
   }
 
