@@ -25741,7 +25741,6 @@ class Room {
             bloom8px: null,
             isValid: false,
             lastLightingUpdate: 0,
-            lastCacheUpdate: 0,
         };
         // #region TILE ADDING METHODS
         this.removeWall = (x, y) => {
@@ -26809,21 +26808,25 @@ class Room {
                     game_1.Game.ctx.drawImage(this.blurCache.color12px, (this.roomX - offsetX) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY) * gameConstants_1.GameConstants.TILESIZE);
                 }
                 else {
-                    // Generate new blur and potentially cache if conditions are met
+                    // Generate new blur and cache if inactive
                     game_1.Game.ctx.globalCompositeOperation = "soft-light";
                     game_1.Game.ctx.globalAlpha = 0.6;
                     // Apply 6px blur using WebGL
                     const blurred6px = blurRenderer.applyBlur(this.colorOffscreenCanvas, 6);
                     game_1.Game.ctx.drawImage(blurred6px, (this.roomX - offsetX) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY) * gameConstants_1.GameConstants.TILESIZE);
-                    // Cache the result if conditions are met
-                    this.cacheBlurResult("color6px", blurred6px);
+                    // Cache the result if room is inactive
+                    if (!this.active) {
+                        this.cacheBlurResult("color6px", blurred6px);
+                    }
                     game_1.Game.ctx.globalCompositeOperation = "lighten";
                     game_1.Game.ctx.globalAlpha = 0.05;
                     // Apply 12px blur using WebGL
                     const blurred12px = blurRenderer.applyBlur(this.colorOffscreenCanvas, 12);
                     game_1.Game.ctx.drawImage(blurred12px, (this.roomX - offsetX) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY) * gameConstants_1.GameConstants.TILESIZE);
-                    // Cache the result if conditions are met
-                    this.cacheBlurResult("color12px", blurred12px);
+                    // Cache the result if room is inactive
+                    if (!this.active) {
+                        this.cacheBlurResult("color12px", blurred12px);
+                    }
                 }
             }
             else {
@@ -26944,13 +26947,15 @@ class Room {
                     game_1.Game.ctx.drawImage(this.blurCache.shade5px, (this.roomX - offsetX - 1) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY - 1) * gameConstants_1.GameConstants.TILESIZE);
                 }
                 else {
-                    // Generate new blur and potentially cache if conditions are met
+                    // Generate new blur and cache if inactive
                     game_1.Game.ctx.globalAlpha = 1;
                     // Apply 5px blur using WebGL
                     const blurred5px = blurRenderer.applyBlur(this.shadeOffscreenCanvas, 5);
                     game_1.Game.ctx.drawImage(blurred5px, (this.roomX - offsetX - 1) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY - 1) * gameConstants_1.GameConstants.TILESIZE);
-                    // Cache the result if conditions are met
-                    this.cacheBlurResult("shade5px", blurred5px);
+                    // Cache the result if room is inactive
+                    if (!this.active) {
+                        this.cacheBlurResult("shade5px", blurred5px);
+                    }
                 }
             }
             else {
@@ -27028,14 +27033,16 @@ class Room {
                     game_1.Game.ctx.drawImage(this.blurCache.bloom8px, (this.roomX - offsetX) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY) * gameConstants_1.GameConstants.TILESIZE);
                 }
                 else {
-                    // Generate new blur and potentially cache if conditions are met
+                    // Generate new blur and cache if inactive
                     game_1.Game.ctx.globalCompositeOperation = "screen";
                     game_1.Game.ctx.globalAlpha = 1;
                     // Apply 8px blur using WebGL
                     const blurred8px = blurRenderer.applyBlur(this.bloomOffscreenCanvas, 8);
                     game_1.Game.ctx.drawImage(blurred8px, (this.roomX - offsetX) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY) * gameConstants_1.GameConstants.TILESIZE);
-                    // Cache the result if conditions are met
-                    this.cacheBlurResult("bloom8px", blurred8px);
+                    // Cache the result if room is inactive
+                    if (!this.active) {
+                        this.cacheBlurResult("bloom8px", blurred8px);
+                    }
                 }
             }
             else {
@@ -27556,27 +27563,14 @@ class Room {
         this.invalidateBlurCache = () => {
             this.blurCache.isValid = false;
             this.blurCache.lastLightingUpdate = this.lastLightingUpdate;
-            // Don't update lastCacheUpdate here - let it be updated only when actually caching
         };
         this.shouldUseBlurCache = () => {
-            const now = Date.now();
-            const timeSinceLastUpdate = now - this.blurCache.lastCacheUpdate;
-            const minUpdateInterval = 1000 / 6; // 1/6 second = ~167ms
             return (!this.active &&
                 this.blurCache.isValid &&
-                timeSinceLastUpdate < minUpdateInterval);
-        };
-        this.shouldUpdateBlurCache = () => {
-            const now = Date.now();
-            const timeSinceLastUpdate = now - this.blurCache.lastCacheUpdate;
-            const minUpdateInterval = 1000 / 6; // 1/6 second = ~167ms
-            return (!this.active &&
-                (!this.blurCache.isValid ||
-                    this.blurCache.lastLightingUpdate !== this.lastLightingUpdate ||
-                    timeSinceLastUpdate >= minUpdateInterval));
+                this.blurCache.lastLightingUpdate === this.lastLightingUpdate);
         };
         this.cacheBlurResult = (type, canvas) => {
-            if (this.shouldUpdateBlurCache()) {
+            if (!this.active) {
                 // Clone the canvas to cache it
                 const cachedCanvas = document.createElement("canvas");
                 cachedCanvas.width = canvas.width;
@@ -27587,7 +27581,6 @@ class Room {
                     this.blurCache[type] = cachedCanvas;
                     this.blurCache.isValid = true;
                     this.blurCache.lastLightingUpdate = this.lastLightingUpdate;
-                    this.blurCache.lastCacheUpdate = Date.now(); // Update cache timestamp
                 }
             }
         };
