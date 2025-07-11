@@ -218,16 +218,6 @@ export interface EnemyStatic {
 
 // #endregion
 
-// Add this interface after the existing interfaces
-interface BlurCache {
-  color6px: HTMLCanvasElement | null;
-  color12px: HTMLCanvasElement | null;
-  shade5px: HTMLCanvasElement | null;
-  bloom8px: HTMLCanvasElement | null;
-  isValid: boolean;
-  lastLightingUpdate: number;
-}
-
 export class Room {
   roomArray: Tile[][];
 
@@ -299,16 +289,6 @@ export class Room {
 
   // Add this property to track created mask canvases
   private maskCanvases: HTMLCanvasElement[] = [];
-
-  // Add blur cache property
-  private blurCache: BlurCache = {
-    color6px: null,
-    color12px: null,
-    shade5px: null,
-    bloom8px: null,
-    isValid: false,
-    lastLightingUpdate: 0,
-  };
 
   constructor(
     game: Game,
@@ -1508,7 +1488,6 @@ export class Room {
     player.map.saveMapData();
     this.setReverb();
     this.active = true;
-    this.invalidateBlurCache(); // Invalidate cache when room becomes active
 
     this.updateLighting();
   };
@@ -1813,10 +1792,6 @@ export class Room {
 
   updateLighting = () => {
     if (!this.onScreen) return;
-
-    // Invalidate cache when lighting is updated
-    this.invalidateBlurCache();
-
     // Start timing the initial setup
     //console.time("updateLighting: Initial Setup");
     this.updateDoorLightSources();
@@ -2337,70 +2312,36 @@ export class Room {
 
     // Choose blur method based on setting
     if (GameConstants.USE_WEBGL_BLUR) {
-      // Use WebGL blur with caching
+      // Use WebGL blur (keep original WebGL settings)
       const blurRenderer = WebGLBlurRenderer.getInstance();
 
-      // Check if we can use cached results
-      if (
-        this.shouldUseBlurCache() &&
-        this.blurCache.color6px &&
-        this.blurCache.color12px
-      ) {
-        // Use cached blurred results
-        Game.ctx.globalCompositeOperation = "soft-light";
-        Game.ctx.globalAlpha = 0.6;
-        Game.ctx.drawImage(
-          this.blurCache.color6px,
-          (this.roomX - offsetX) * GameConstants.TILESIZE,
-          (this.roomY - offsetY) * GameConstants.TILESIZE,
-        );
+      // Draw the blurred color layer with soft-light blend mode
+      Game.ctx.globalCompositeOperation = "soft-light";
+      Game.ctx.globalAlpha = 0.6;
 
-        Game.ctx.globalCompositeOperation = "lighten";
-        Game.ctx.globalAlpha = 0.05;
-        Game.ctx.drawImage(
-          this.blurCache.color12px,
-          (this.roomX - offsetX) * GameConstants.TILESIZE,
-          (this.roomY - offsetY) * GameConstants.TILESIZE,
-        );
-      } else {
-        // Generate new blur and cache if inactive
-        Game.ctx.globalCompositeOperation = "soft-light";
-        Game.ctx.globalAlpha = 0.6;
+      // Apply 6px blur using WebGL (reduced from 8px)
+      const blurred6px = blurRenderer.applyBlur(this.colorOffscreenCanvas, 6);
+      Game.ctx.drawImage(
+        blurred6px,
+        (this.roomX - offsetX) * GameConstants.TILESIZE,
+        (this.roomY - offsetY) * GameConstants.TILESIZE,
+      );
 
-        // Apply 6px blur using WebGL
-        const blurred6px = blurRenderer.applyBlur(this.colorOffscreenCanvas, 6);
-        Game.ctx.drawImage(
-          blurred6px,
-          (this.roomX - offsetX) * GameConstants.TILESIZE,
-          (this.roomY - offsetY) * GameConstants.TILESIZE,
-        );
+      //draw slight haze
+      Game.ctx.globalCompositeOperation = "lighten";
+      Game.ctx.globalAlpha = 0.05; // Reduced from 0.08
 
-        // Cache the result if room is inactive
-        if (!this.active) {
-          this.cacheBlurResult("color6px", blurred6px);
-        }
-
-        Game.ctx.globalCompositeOperation = "lighten";
-        Game.ctx.globalAlpha = 0.05;
-
-        // Apply 12px blur using WebGL
-        const blurred12px = blurRenderer.applyBlur(
-          this.colorOffscreenCanvas,
-          12,
-        );
-        Game.ctx.drawImage(
-          blurred12px,
-          (this.roomX - offsetX) * GameConstants.TILESIZE,
-          (this.roomY - offsetY) * GameConstants.TILESIZE,
-        );
-
-        // Cache the result if room is inactive
-        if (!this.active) {
-          this.cacheBlurResult("color12px", blurred12px);
-        }
-      }
+      // Apply 12px blur using WebGL
+      const blurred12px = blurRenderer.applyBlur(this.colorOffscreenCanvas, 12);
+      Game.ctx.drawImage(
+        blurred12px,
+        (this.roomX - offsetX) * GameConstants.TILESIZE,
+        (this.roomY - offsetY) * GameConstants.TILESIZE,
+      );
     } else {
       // Use Canvas2D blur (fallback) - matching original settings
+
+      // Draw the blurred color layer directly without masking
       Game.ctx.globalCompositeOperation =
         GameConstants.COLOR_LAYER_COMPOSITE_OPERATION as GlobalCompositeOperation;
       Game.ctx.globalAlpha = 0.6;
@@ -2554,37 +2495,22 @@ export class Room {
 
     // Choose blur method based on setting
     if (GameConstants.USE_WEBGL_BLUR) {
-      // Use WebGL blur with caching
+      // Use WebGL blur (keep original WebGL settings)
       const blurRenderer = WebGLBlurRenderer.getInstance();
 
-      // Check if we can use cached results
-      if (this.shouldUseBlurCache() && this.blurCache.shade5px) {
-        // Use cached blurred result
-        Game.ctx.globalAlpha = 1;
-        Game.ctx.drawImage(
-          this.blurCache.shade5px,
-          (this.roomX - offsetX - 1) * GameConstants.TILESIZE,
-          (this.roomY - offsetY - 1) * GameConstants.TILESIZE,
-        );
-      } else {
-        // Generate new blur and cache if inactive
-        Game.ctx.globalAlpha = 1;
+      Game.ctx.globalAlpha = 1;
 
-        // Apply 5px blur using WebGL
-        const blurred5px = blurRenderer.applyBlur(this.shadeOffscreenCanvas, 5);
-        Game.ctx.drawImage(
-          blurred5px,
-          (this.roomX - offsetX - 1) * GameConstants.TILESIZE,
-          (this.roomY - offsetY - 1) * GameConstants.TILESIZE,
-        );
-
-        // Cache the result if room is inactive
-        if (!this.active) {
-          this.cacheBlurResult("shade5px", blurred5px);
-        }
-      }
+      // Apply 5px blur using WebGL (reduced from 7px)
+      const blurred5px = blurRenderer.applyBlur(this.shadeOffscreenCanvas, 5);
+      Game.ctx.drawImage(
+        blurred5px,
+        (this.roomX - offsetX - 1) * GameConstants.TILESIZE,
+        (this.roomY - offsetY - 1) * GameConstants.TILESIZE,
+      );
     } else {
       // Use Canvas2D blur (fallback) - matching original settings
+
+      // Draw the blurred shade layer directly without masking
       Game.ctx.globalAlpha = 1;
 
       if (GameConstants.ctxBlurEnabled) {
@@ -2685,39 +2611,23 @@ export class Room {
 
     // Choose blur method based on setting
     if (GameConstants.USE_WEBGL_BLUR) {
-      // Use WebGL blur with caching
+      // Use WebGL blur (keep original WebGL settings)
       const blurRenderer = WebGLBlurRenderer.getInstance();
 
-      // Check if we can use cached results
-      if (this.shouldUseBlurCache() && this.blurCache.bloom8px) {
-        // Use cached blurred result
-        Game.ctx.globalCompositeOperation = "screen";
-        Game.ctx.globalAlpha = 1;
-        Game.ctx.drawImage(
-          this.blurCache.bloom8px,
-          (this.roomX - offsetX) * GameConstants.TILESIZE,
-          (this.roomY - offsetY) * GameConstants.TILESIZE,
-        );
-      } else {
-        // Generate new blur and cache if inactive
-        Game.ctx.globalCompositeOperation = "screen";
-        Game.ctx.globalAlpha = 1;
+      Game.ctx.globalCompositeOperation = "screen";
+      Game.ctx.globalAlpha = 1;
 
-        // Apply 8px blur using WebGL
-        const blurred8px = blurRenderer.applyBlur(this.bloomOffscreenCanvas, 8);
-        Game.ctx.drawImage(
-          blurred8px,
-          (this.roomX - offsetX) * GameConstants.TILESIZE,
-          (this.roomY - offsetY) * GameConstants.TILESIZE,
-        );
-
-        // Cache the result if room is inactive
-        if (!this.active) {
-          this.cacheBlurResult("bloom8px", blurred8px);
-        }
-      }
+      // Apply 8px blur using WebGL (reduced from 12px)
+      const blurred8px = blurRenderer.applyBlur(this.bloomOffscreenCanvas, 8);
+      Game.ctx.drawImage(
+        blurred8px,
+        (this.roomX - offsetX) * GameConstants.TILESIZE,
+        (this.roomY - offsetY) * GameConstants.TILESIZE,
+      );
     } else {
       // Use Canvas2D blur (fallback) - matching original settings
+
+      // Draw the blurred shade layer directly without masking
       Game.ctx.globalCompositeOperation = "screen";
       Game.ctx.globalAlpha = 1;
 
@@ -3677,37 +3587,4 @@ export class Room {
     // Create and add the VendingMachine
     this.addVendingMachine(Random.rand, x, y);
   }
-
-  // Add methods to manage blur cache
-  private invalidateBlurCache = () => {
-    this.blurCache.isValid = false;
-    this.blurCache.lastLightingUpdate = this.lastLightingUpdate;
-  };
-
-  private shouldUseBlurCache = (): boolean => {
-    return (
-      !this.active &&
-      this.blurCache.isValid &&
-      this.blurCache.lastLightingUpdate === this.lastLightingUpdate
-    );
-  };
-
-  private cacheBlurResult = (
-    type: "color6px" | "color12px" | "shade5px" | "bloom8px",
-    canvas: HTMLCanvasElement,
-  ) => {
-    if (!this.active) {
-      // Clone the canvas to cache it
-      const cachedCanvas = document.createElement("canvas");
-      cachedCanvas.width = canvas.width;
-      cachedCanvas.height = canvas.height;
-      const ctx = cachedCanvas.getContext("2d");
-      if (ctx) {
-        ctx.drawImage(canvas, 0, 0);
-        this.blurCache[type] = cachedCanvas;
-        this.blurCache.isValid = true;
-        this.blurCache.lastLightingUpdate = this.lastLightingUpdate;
-      }
-    }
-  };
 }
