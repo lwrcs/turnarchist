@@ -42,6 +42,7 @@ export class Door extends Tile {
   drawTopOf: boolean;
   lightSource: LightSource;
   alpha: number;
+  keyID: number;
   constructor(
     room: Room,
     game: Game,
@@ -69,7 +70,7 @@ export class Door extends Tile {
     let lightOffsetX = 0;
     let lightOffsetY = 0;
     this.alpha = 1;
-
+    this.keyID = 0;
     switch (this.doorDir) {
       case Direction.UP:
         lightOffsetY = -0.5;
@@ -154,8 +155,13 @@ export class Door extends Tile {
     if (this.type === DoorType.LOCKEDDOOR) {
       let k = player.inventory.hasItem(Key);
       if (k !== null) {
-        this.game.pushMessage("You use the key to unlock the door.");
-        return true;
+        if (k.doorID === this.keyID) {
+          this.game.pushMessage("You use the key to unlock the door.");
+          return true;
+        } else {
+          this.game.pushMessage("The key doesn't fit the lock.");
+          return false;
+        }
       } else
         this.game.pushMessage("The door is locked tightly and won't budge.");
       return false;
@@ -346,7 +352,7 @@ export class Door extends Tile {
   drawAbovePlayer = (delta: number) => {};
 
   drawAboveShading = (delta: number) => {
-    if (this.type === DoorType.TUNNELDOOR) return;
+    //if (this.type === DoorType.TUNNELDOOR) return;
     if (this.frame > 100) this.frame = 0;
     this.frame += 1 * delta;
     Game.ctx.globalAlpha = this.iconAlpha;

@@ -18559,6 +18559,7 @@ class Key extends item_1.Item {
         this.tileX = 1;
         this.tileY = 0;
         this.name = "key";
+        this.doorID = 0;
     }
 }
 exports.Key = Key;
@@ -26629,7 +26630,7 @@ class Room {
                 }
                 //end processing opaque entities
                 // Process inner walls like entities - terminate after processing
-                if (tile instanceof wall_1.Wall && tile.isInnerWall()) {
+                if (tile instanceof wall_1.Wall && tile.isOpaque() && tile.isInnerWall()) {
                     const weightedLinearColor = [
                         linearColor[0],
                         linearColor[1],
@@ -26645,7 +26646,7 @@ class Room {
                             Math.abs(colorEntry[2] - weightedLinearColor[2]) < 0.0001 &&
                             Math.abs(colorEntry[3] - weightedLinearColor[3]) < 0.0001));
                     }
-                    return; // Terminate after processing the inner wall
+                    return; // Terminate after processing the opaque wall
                 }
                 const weightedLinearColor = [
                     linearColor[0],
@@ -29602,8 +29603,14 @@ class Door extends tile_1.Tile {
             if (this.type === DoorType.LOCKEDDOOR) {
                 let k = player.inventory.hasItem(key_1.Key);
                 if (k !== null) {
-                    this.game.pushMessage("You use the key to unlock the door.");
-                    return true;
+                    if (k.doorID === this.keyID) {
+                        this.game.pushMessage("You use the key to unlock the door.");
+                        return true;
+                    }
+                    else {
+                        this.game.pushMessage("The key doesn't fit the lock.");
+                        return false;
+                    }
                 }
                 else
                     this.game.pushMessage("The door is locked tightly and won't budge.");
@@ -29710,8 +29717,7 @@ class Door extends tile_1.Tile {
         };
         this.drawAbovePlayer = (delta) => { };
         this.drawAboveShading = (delta) => {
-            if (this.type === DoorType.TUNNELDOOR)
-                return;
+            //if (this.type === DoorType.TUNNELDOOR) return;
             if (this.frame > 100)
                 this.frame = 0;
             this.frame += 1 * delta;
@@ -29758,6 +29764,7 @@ class Door extends tile_1.Tile {
         let lightOffsetX = 0;
         let lightOffsetY = 0;
         this.alpha = 1;
+        this.keyID = 0;
         switch (this.doorDir) {
             case game_1.Direction.UP:
                 lightOffsetY = -0.5;

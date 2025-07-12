@@ -2074,7 +2074,7 @@ export class Room {
       //end processing opaque entities
 
       // Process inner walls like entities - terminate after processing
-      if (tile instanceof Wall && tile.isInnerWall()) {
+      if (tile instanceof Wall && tile.isOpaque() && tile.isInnerWall()) {
         const weightedLinearColor: [number, number, number, number] = [
           linearColor[0],
           linearColor[1],
@@ -2097,7 +2097,7 @@ export class Room {
               ),
           );
         }
-        return; // Terminate after processing the inner wall
+        return; // Terminate after processing the opaque wall
       }
 
       const weightedLinearColor: [number, number, number, number] = [

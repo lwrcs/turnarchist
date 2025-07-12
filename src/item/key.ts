@@ -6,12 +6,14 @@ import { Player } from "../player/player";
 
 export class Key extends Item {
   static itemName = "key";
+  doorID: number;
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
 
     this.tileX = 1;
     this.tileY = 0;
     this.name = "key";
+    this.doorID = 0;
   }
 
   getDescription = (): string => {
