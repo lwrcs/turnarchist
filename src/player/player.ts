@@ -26,6 +26,8 @@ import { PlayerActionProcessor } from "./playerActionProcessor";
 import { PlayerMovement } from "./playerMovement";
 import { PlayerRenderer } from "./playerRenderer";
 import { Wall } from "../tile/wall";
+import { UpLadder } from "../tile/upLadder";
+import { DownLadder } from "../tile/downLadder";
 
 export enum PlayerDirection {
   DOWN,
@@ -729,6 +731,17 @@ export class Player extends Drawable {
       return;
     }
     if (!other.isSolid()) {
+      if (other instanceof UpLadder || other instanceof DownLadder) {
+        console.log("unlocking ladder");
+        const locked = other.isLocked();
+        if (locked) {
+          this.shakeScreen(this.x, this.y, x, y);
+          if (other.lockable.canUnlock(this)) {
+            other.lockable.unlock(this);
+          }
+          return;
+        }
+      }
       this.move(x, y);
       other.onCollide(this);
       if (!(other instanceof Door || other instanceof Trapdoor))

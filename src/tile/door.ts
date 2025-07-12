@@ -157,6 +157,7 @@ export class Door extends Tile {
       if (k !== null) {
         if (k.doorID === this.keyID) {
           this.game.pushMessage("You use the key to unlock the door.");
+
           return true;
         } else {
           this.game.pushMessage("The key doesn't fit the lock.");

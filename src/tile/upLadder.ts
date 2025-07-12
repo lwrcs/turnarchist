@@ -5,6 +5,7 @@ import { GameConstants } from "../game/gameConstants";
 import { SkinType, Tile } from "./tile";
 import { DownLadder } from "./downLadder";
 import { Sound } from "../sound/sound";
+import { Lockable, LockType } from "./lockable";
 
 export class UpLadder extends Tile {
   linkedRoom: Room;
@@ -12,10 +13,25 @@ export class UpLadder extends Tile {
   isRope = false;
   depth: number;
   frame: number = 0;
-  constructor(room: Room, game: Game, x: number, y: number) {
+  lockable: Lockable;
+  keyID: number;
+  constructor(
+    room: Room,
+    game: Game,
+    x: number,
+    y: number,
+    lockType: LockType = LockType.NONE,
+  ) {
     super(room, x, y);
     this.game = game;
     this.depth = room.depth;
+    this.keyID = 0;
+
+    // Initialize lockable with default config
+    this.lockable = new Lockable(game, {
+      lockType: lockType,
+      isTopDoor: true,
+    });
   }
 
   onCollide = (player: Player) => {
@@ -23,6 +39,15 @@ export class UpLadder extends Tile {
       console.error("Game instance is undefined in UpLadder:", this);
       return;
     }
+
+    // Check if locked
+    if (this.lockable.isLocked()) {
+      if (this.lockable.canUnlock(player)) {
+        this.lockable.unlock(player);
+      }
+      return;
+    }
+
     try {
       if (!this.linkedRoom) {
         this.linkRoom();
@@ -90,6 +115,13 @@ export class UpLadder extends Tile {
   };
 
   drawAboveShading = (delta: number) => {
+    // Update lockable animation
+    this.lockable.update(delta);
+
+    // Draw lock icon
+    this.lockable.drawIcon(this.x, this.y, delta);
+
+    // Original floating animation
     if (this.frame > 100) this.frame = 0;
     this.frame += 1 * delta;
     let multiplier = 0.125;
@@ -121,4 +153,20 @@ export class UpLadder extends Tile {
         this.shadeAmount(),
       );
   };
+
+  // Lockable interface methods
+  lock(lockType: LockType = LockType.LOCKED) {
+    this.lockable = new Lockable(this.game, {
+      lockType: lockType,
+      isTopDoor: true,
+    });
+  }
+
+  setKeyID(keyID: number) {
+    this.lockable.setKeyID(keyID);
+  }
+
+  isLocked(): boolean {
+    return this.lockable.isLocked();
+  }
 }

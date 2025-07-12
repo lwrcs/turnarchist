@@ -10,6 +10,9 @@ import { Environment } from "./environment";
 import { EnvType } from "../constants/environmentTypes";
 import { Populator } from "../room/roomPopulator";
 import { GameplaySettings } from "../game/gameplaySettings";
+import { DownLadder } from "../tile/downLadder";
+import { Key } from "../item/key";
+import { Lockable } from "../tile/lockable";
 
 export interface EnemyParameters {
   enemyTables: Record<number, number[]>;
@@ -101,6 +104,42 @@ export class Level {
     this.enemyParameters = this.getEnemyParameters();
     let mainPath = this.isMainPath ? "main" : "side";
     console.log(`${mainPath} path, envType: ${env}`);
+  }
+  getDownLadder(): DownLadder | null {
+    for (const room of this.rooms) {
+      for (let x = room.roomX; x < room.roomX + room.width; x++) {
+        for (let y = room.roomY; y < room.roomY + room.height; y++) {
+          const tile = room.roomArray[x][y];
+          if (
+            tile instanceof DownLadder &&
+            tile.isSidePath === !this.isMainPath
+          ) {
+            return tile;
+          }
+        }
+      }
+    }
+
+    console.error("No down ladder found");
+    return null;
+  }
+
+  distributeKeys() {
+    const downLadder = this.getDownLadder();
+    if (!downLadder) {
+      console.error("No down ladder found");
+      return;
+    }
+
+    const randomRoom =
+      this.rooms[Math.floor(Math.random() * this.rooms.length)];
+    const randomTile =
+      randomRoom.getEmptyTiles()[randomRoom.getEmptyTiles().length - 1];
+
+    const key = new Key(randomRoom, randomTile.x, randomTile.y);
+    randomRoom.items.push(key);
+    Lockable.setKey(downLadder, key);
+    //this.game.player.inventory.addItem(key);
   }
 
   setExitRoom() {

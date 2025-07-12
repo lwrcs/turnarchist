@@ -10,6 +10,7 @@ import { globalEventBus } from "../event/eventBus";
 import { Sound } from "../sound/sound";
 import { EnvType } from "../constants/environmentTypes";
 import { LightSource } from "../lighting/lightSource";
+import { Lockable, LockType } from "./lockable";
 
 export class DownLadder extends Tile {
   linkedRoom: Room;
@@ -19,6 +20,8 @@ export class DownLadder extends Tile {
   depth: number;
   environment: EnvType;
   lightSource: LightSource;
+  lockable: Lockable;
+  keyID: number;
 
   constructor(
     room: Room,
@@ -27,6 +30,7 @@ export class DownLadder extends Tile {
     y: number,
     isSidePath: boolean = false,
     environment: EnvType = EnvType.DUNGEON,
+    lockType: LockType = LockType.NONE,
   ) {
     super(room, x, y);
     this.game = game;
@@ -34,6 +38,14 @@ export class DownLadder extends Tile {
     this.depth = room.depth;
     this.isSidePath = isSidePath;
     this.environment = environment;
+    this.keyID = 0;
+
+    // Initialize lockable with the passed lockType
+    this.lockable = new Lockable(game, {
+      lockType: LockType.LOCKED,
+      isTopDoor: false,
+    });
+
     if (this.environment === EnvType.FOREST) {
       this.lightSource = new LightSource(
         this.x + 0.5,
@@ -75,7 +87,7 @@ export class DownLadder extends Tile {
 
   private handleSidePathRooms = (linkedRoom: Room) => {
     const targetDepth = this.room.depth;
-    const level = linkedRoom.level; //this.game.levels[targetDepth];
+    const level = linkedRoom.level;
 
     const sidePathRooms = this.game.rooms.filter(
       (room) => room.mapGroup === linkedRoom.mapGroup,
@@ -141,7 +153,7 @@ export class DownLadder extends Tile {
       });
     } else {
       if (player === this.game.players[this.game.localPlayerID])
-        this.game.chat.push(new ChatMessage("all players must be present"));
+        this.game.pushMessage("all players must be present");
     }
   };
 
@@ -177,21 +189,33 @@ export class DownLadder extends Tile {
   };
 
   drawAboveShading = (delta: number) => {
+    // Update lockable animation
+    this.lockable.update(delta);
+
+    // Draw lock icon
+    this.lockable.drawIcon(this.x, this.y, delta);
+
+    // Original floating animation
     if (this.frame > 100) this.frame = 0;
     this.frame += 1 * delta;
     let multiplier = 0.125;
-
-    Game.drawFX(
-      2,
-      2,
-      1,
-      1,
-      this.x,
-      this.y - 1.25 + multiplier * Math.sin((this.frame * Math.PI) / 50),
-      1,
-      1,
-    );
   };
 
   drawAbovePlayer = (delta: number) => {};
+
+  // Lockable interface methods
+  lock(lockType: LockType = LockType.LOCKED) {
+    this.lockable = new Lockable(this.game, {
+      lockType: lockType,
+      isTopDoor: false,
+    });
+  }
+
+  setKeyID(keyID: number) {
+    this.lockable.setKeyID(keyID);
+  }
+
+  isLocked(): boolean {
+    return this.lockable.isLocked();
+  }
 }

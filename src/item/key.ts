@@ -17,12 +17,14 @@ export class Key extends Item {
   }
 
   getDescription = (): string => {
-    return "KEY\nAn iron key.";
+    const ID = this.doorID === 0 ? "" : "ID: " + this.doorID.toString();
+    return `KEY\nAn iron key. ${ID}`;
   };
 
   onPickup = (player: Player) => {
     if (!this.pickedUp) {
       this.pickedUp = player.inventory.addItem(this);
+      this.level.game.pushMessage("You found a key!");
       if (this.pickedUp) Sound.keyPickup();
     }
   };

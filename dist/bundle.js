@@ -13470,6 +13470,7 @@ const backpack_1 = __webpack_require__(/*! ../item/backpack */ "./src/item/backp
 const candle_1 = __webpack_require__(/*! ../item/light/candle */ "./src/item/light/candle.ts");
 const coal_1 = __webpack_require__(/*! ../item/resource/coal */ "./src/item/resource/coal.ts");
 const godStone_1 = __webpack_require__(/*! ../item/godStone */ "./src/item/godStone.ts");
+const key_1 = __webpack_require__(/*! ../item/key */ "./src/item/key.ts");
 const lantern_1 = __webpack_require__(/*! ../item/light/lantern */ "./src/item/light/lantern.ts");
 const weaponFragments_1 = __webpack_require__(/*! ../item/usable/weaponFragments */ "./src/item/usable/weaponFragments.ts");
 const levelConstants_1 = __webpack_require__(/*! ../level/levelConstants */ "./src/level/levelConstants.ts");
@@ -13680,6 +13681,7 @@ GameConstants.STARTING_DEV_INVENTORY = [
     pickaxe_1.Pickaxe,
     coal_1.Coal,
     apple_1.Apple,
+    key_1.Key,
     spellbookPage_1.SpellbookPage,
     spellbookPage_1.SpellbookPage,
     spellbookPage_1.SpellbookPage,
@@ -14417,15 +14419,17 @@ const loadGameState = (game, activeUsernames, gameState, newWorld) => {
         random_1.Random.setState(gameState.randomState);
         game.room.updateLighting();
         let p = game.players[game.localPlayerID];
-        game.room.items.push(new key_1.Key(game.room, p.x - 1, p.y + 1));
+        //game.room.items.push(new Key(game.room, p.x - 1, p.y + 1));
         //choose one door to lock
+        /*
         let locked = false;
         game.room.doors.forEach((door) => {
-            if (!locked) {
-                door.lock();
-                locked = true;
-            }
+          if (!locked) {
+            door.lock();
+            locked = true;
+          }
         });
+        */
         game.chat = [];
     });
 };
@@ -18570,11 +18574,13 @@ class Key extends item_1.Item {
     constructor(level, x, y) {
         super(level, x, y);
         this.getDescription = () => {
-            return "KEY\nAn iron key.";
+            const ID = this.doorID === 0 ? "" : "ID: " + this.doorID.toString();
+            return `KEY\nAn iron key. ${ID}`;
         };
         this.onPickup = (player) => {
             if (!this.pickedUp) {
                 this.pickedUp = player.inventory.addItem(this);
+                this.level.game.pushMessage("You found a key!");
                 if (this.pickedUp)
                     sound_1.Sound.keyPickup();
             }
@@ -20755,6 +20761,9 @@ const room_1 = __webpack_require__(/*! ../room/room */ "./src/room/room.ts");
 const environment_1 = __webpack_require__(/*! ./environment */ "./src/level/environment.ts");
 const roomPopulator_1 = __webpack_require__(/*! ../room/roomPopulator */ "./src/room/roomPopulator.ts");
 const gameplaySettings_1 = __webpack_require__(/*! ../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
+const downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/downLadder.ts");
+const key_1 = __webpack_require__(/*! ../item/key */ "./src/item/key.ts");
+const lockable_1 = __webpack_require__(/*! ../tile/lockable */ "./src/tile/lockable.ts");
 exports.enemyMinimumDepth = {
     1: 0,
     2: 1,
@@ -20829,6 +20838,34 @@ class Level {
         this.enemyParameters = this.getEnemyParameters();
         let mainPath = this.isMainPath ? "main" : "side";
         console.log(`${mainPath} path, envType: ${env}`);
+    }
+    getDownLadder() {
+        for (const room of this.rooms) {
+            for (let x = room.roomX; x < room.roomX + room.width; x++) {
+                for (let y = room.roomY; y < room.roomY + room.height; y++) {
+                    const tile = room.roomArray[x][y];
+                    if (tile instanceof downLadder_1.DownLadder &&
+                        tile.isSidePath === !this.isMainPath) {
+                        return tile;
+                    }
+                }
+            }
+        }
+        console.error("No down ladder found");
+        return null;
+    }
+    distributeKeys() {
+        const downLadder = this.getDownLadder();
+        if (!downLadder) {
+            console.error("No down ladder found");
+            return;
+        }
+        const randomRoom = this.rooms[Math.floor(Math.random() * this.rooms.length)];
+        const randomTile = randomRoom.getEmptyTiles()[randomRoom.getEmptyTiles().length - 1];
+        const key = new key_1.Key(randomRoom, randomTile.x, randomTile.y);
+        randomRoom.items.push(key);
+        lockable_1.Lockable.setKey(downLadder, key);
+        //this.game.player.inventory.addItem(key);
     }
     setExitRoom() {
         if (this.isMainPath) {
@@ -21899,6 +21936,7 @@ class LevelGenerator {
             newLevel.setRooms(rooms);
             newLevel.populator.populateRooms();
             newLevel.setRoomSkins();
+            newLevel.distributeKeys();
             // Only call linkExitToStart for main paths
             if (newLevel.exitRoom) {
                 newLevel.exitRoom.linkExitToStart();
@@ -22771,6 +22809,8 @@ const playerInputHandler_1 = __webpack_require__(/*! ./playerInputHandler */ "./
 const playerActionProcessor_1 = __webpack_require__(/*! ./playerActionProcessor */ "./src/player/playerActionProcessor.ts");
 const playerMovement_1 = __webpack_require__(/*! ./playerMovement */ "./src/player/playerMovement.ts");
 const playerRenderer_1 = __webpack_require__(/*! ./playerRenderer */ "./src/player/playerRenderer.ts");
+const upLadder_1 = __webpack_require__(/*! ../tile/upLadder */ "./src/tile/upLadder.ts");
+const downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/downLadder.ts");
 var PlayerDirection;
 (function (PlayerDirection) {
     PlayerDirection[PlayerDirection["DOWN"] = 0] = "DOWN";
@@ -23226,6 +23266,17 @@ class Player extends drawable_1.Drawable {
                 return;
             }
             if (!other.isSolid()) {
+                if (other instanceof upLadder_1.UpLadder || other instanceof downLadder_1.DownLadder) {
+                    console.log("unlocking ladder");
+                    const locked = other.isLocked();
+                    if (locked) {
+                        this.shakeScreen(this.x, this.y, x, y);
+                        if (other.lockable.canUnlock(this)) {
+                            other.lockable.unlock(this);
+                        }
+                        return;
+                    }
+                }
                 this.move(x, y);
                 other.onCollide(this);
                 if (!(other instanceof door_1.Door || other instanceof trapdoor_1.Trapdoor))
@@ -29831,8 +29882,9 @@ const events_1 = __webpack_require__(/*! ../event/events */ "./src/event/events.
 const eventBus_1 = __webpack_require__(/*! ../event/eventBus */ "./src/event/eventBus.ts");
 const environmentTypes_1 = __webpack_require__(/*! ../constants/environmentTypes */ "./src/constants/environmentTypes.ts");
 const lightSource_1 = __webpack_require__(/*! ../lighting/lightSource */ "./src/lighting/lightSource.ts");
+const lockable_1 = __webpack_require__(/*! ./lockable */ "./src/tile/lockable.ts");
 class DownLadder extends tile_1.Tile {
-    constructor(room, game, x, y, isSidePath = false, environment = environmentTypes_1.EnvType.DUNGEON) {
+    constructor(room, game, x, y, isSidePath = false, environment = environmentTypes_1.EnvType.DUNGEON, lockType = lockable_1.LockType.NONE) {
         super(room, x, y);
         this.isSidePath = false;
         this.frame = 0;
@@ -29857,7 +29909,7 @@ class DownLadder extends tile_1.Tile {
         };
         this.handleSidePathRooms = (linkedRoom) => {
             const targetDepth = this.room.depth;
-            const level = linkedRoom.level; //this.game.levels[targetDepth];
+            const level = linkedRoom.level;
             const sidePathRooms = this.game.rooms.filter((room) => room.mapGroup === linkedRoom.mapGroup);
             console.log("sidePathRooms", sidePathRooms.length);
             console.log("level.rooms.length", level.rooms.length);
@@ -29906,7 +29958,7 @@ class DownLadder extends tile_1.Tile {
             }
             else {
                 if (player === this.game.players[this.game.localPlayerID])
-                    this.game.chat.push(new game_1.ChatMessage("all players must be present"));
+                    this.game.pushMessage("all players must be present");
             }
         };
         this.draw = (delta) => {
@@ -29919,11 +29971,15 @@ class DownLadder extends tile_1.Tile {
             game_1.Game.drawTile(xx, this.skin, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
         };
         this.drawAboveShading = (delta) => {
+            // Update lockable animation
+            this.lockable.update(delta);
+            // Draw lock icon
+            this.lockable.drawIcon(this.x, this.y, delta);
+            // Original floating animation
             if (this.frame > 100)
                 this.frame = 0;
             this.frame += 1 * delta;
             let multiplier = 0.125;
-            game_1.Game.drawFX(2, 2, 1, 1, this.x, this.y - 1.25 + multiplier * Math.sin((this.frame * Math.PI) / 50), 1, 1);
         };
         this.drawAbovePlayer = (delta) => { };
         this.game = game;
@@ -29931,10 +29987,29 @@ class DownLadder extends tile_1.Tile {
         this.depth = room.depth;
         this.isSidePath = isSidePath;
         this.environment = environment;
+        this.keyID = 0;
+        // Initialize lockable with the passed lockType
+        this.lockable = new lockable_1.Lockable(game, {
+            lockType: lockable_1.LockType.LOCKED,
+            isTopDoor: false,
+        });
         if (this.environment === environmentTypes_1.EnvType.FOREST) {
             this.lightSource = new lightSource_1.LightSource(this.x + 0.5, this.y + 0.5, 6, [0, 100, 100]);
             this.room.lightSources.push(this.lightSource);
         }
+    }
+    // Lockable interface methods
+    lock(lockType = lockable_1.LockType.LOCKED) {
+        this.lockable = new lockable_1.Lockable(this.game, {
+            lockType: lockType,
+            isTopDoor: false,
+        });
+    }
+    setKeyID(keyID) {
+        this.lockable.setKeyID(keyID);
+    }
+    isLocked() {
+        return this.lockable.isLocked();
     }
 }
 exports.DownLadder = DownLadder;
@@ -30052,6 +30127,199 @@ class InsideLevelDoor extends tile_1.Tile {
     }
 }
 exports.InsideLevelDoor = InsideLevelDoor;
+
+
+/***/ }),
+
+/***/ "./src/tile/lockable.ts":
+/*!******************************!*\
+  !*** ./src/tile/lockable.ts ***!
+  \******************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Lockable = exports.LockType = void 0;
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const key_1 = __webpack_require__(/*! ../item/key */ "./src/item/key.ts");
+const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts");
+var LockType;
+(function (LockType) {
+    LockType[LockType["NONE"] = 0] = "NONE";
+    LockType[LockType["LOCKED"] = 1] = "LOCKED";
+    LockType[LockType["GUARDED"] = 2] = "GUARDED";
+    LockType[LockType["TUNNEL"] = 3] = "TUNNEL";
+})(LockType = exports.LockType || (exports.LockType = {}));
+class Lockable {
+    constructor(game, config) {
+        this.locked = false;
+        this.unlocking = false;
+        this.iconAlpha = 1;
+        this.iconYOffset = 0;
+        this.frame = 0;
+        this.game = game;
+        this.lockType = config.lockType;
+        this.keyID = config.keyID || 0;
+        this.iconTileX = config.iconTileX || 2;
+        this.iconXOffset = config.iconXOffset || 0;
+        this.isTopDoor = config.isTopDoor || false;
+        this.initializeLockState();
+    }
+    initializeLockState() {
+        switch (this.lockType) {
+            case LockType.LOCKED:
+                this.lock();
+                break;
+            case LockType.GUARDED:
+                this.guard();
+                break;
+            case LockType.TUNNEL:
+                this.lock();
+                this.iconTileX = 10;
+                this.iconXOffset = 1 / 32;
+                break;
+            case LockType.NONE:
+                this.removeLock();
+                break;
+        }
+    }
+    isLocked() {
+        return this.locked;
+    }
+    isUnlocking() {
+        return this.unlocking;
+    }
+    lock() {
+        this.locked = true;
+        this.iconTileX = 10;
+        this.iconXOffset = 1 / 32;
+    }
+    guard() {
+        this.lockType = LockType.GUARDED;
+        this.locked = true;
+        this.iconTileX = 9;
+        this.iconXOffset = 1 / 32;
+    }
+    removeLock() {
+        this.lockType = LockType.NONE;
+        this.locked = false;
+    }
+    removeLockIcon() {
+        this.iconYOffset = 0;
+        this.unlocking = false;
+        this.iconTileX = 2;
+        this.iconXOffset = 0;
+        this.iconAlpha = 1;
+    }
+    canUnlock(player) {
+        if (this.lockType === LockType.LOCKED) {
+            const key = player.inventory.hasItem(key_1.Key);
+            if (key !== null) {
+                if (key.doorID === this.keyID) {
+                    this.game.pushMessage("You use the key to unlock.");
+                    return true;
+                }
+                else {
+                    this.game.pushMessage("The key doesn't fit the lock.");
+                    return false;
+                }
+            }
+            else {
+                this.game.pushMessage("It's locked tightly and won't budge.");
+                return false;
+            }
+        }
+        if (this.lockType === LockType.GUARDED) {
+            // Check if room has no enemies - access through game.room
+            const hasEnemies = this.game.room.entities.some((entity) => entity.constructor.name.includes("Enemy") && !entity.dead);
+            if (hasEnemies) {
+                this.game.pushMessage("There are still remaining foes guarding this...");
+                return false;
+            }
+        }
+        return true;
+    }
+    unlock(player) {
+        if (this.lockType === LockType.LOCKED) {
+            const key = player.inventory.hasItem(key_1.Key);
+            if (key !== null) {
+                player.inventory.removeItem(key);
+                sound_1.Sound.unlock();
+                this.removeLock();
+                this.unlocking = true;
+            }
+        }
+        else if (this.lockType === LockType.TUNNEL) {
+            this.locked = false;
+            this.unlocking = true;
+        }
+    }
+    unGuard() {
+        if (this.lockType === LockType.GUARDED) {
+            this.removeLock();
+            sound_1.Sound.unlock();
+            this.game.tutorialActive = false;
+        }
+        setTimeout(() => {
+            this.removeLockIcon();
+        }, 1000);
+    }
+    update(delta) {
+        if (this.frame > 100)
+            this.frame = 0;
+        this.frame += 1 * delta;
+    }
+    drawIcon(x, y, delta) {
+        game_1.Game.ctx.globalAlpha = this.iconAlpha;
+        let multiplier = 0.125;
+        if (this.unlocking) {
+            this.iconAlpha *= 0.92 ** delta;
+            this.iconYOffset -= 0.035 * delta;
+            multiplier = 0;
+            if (this.iconAlpha <= 0.01) {
+                this.removeLockIcon();
+            }
+        }
+        const iconY = this.isTopDoor ? y - 1.25 : y - 1.25;
+        // Only draw the arrow if not unlocking and lockType is NONE
+        if (this.lockType === LockType.NONE && !this.unlocking) {
+            game_1.Game.drawFX(2, 2, 1, 1, x, y - 1.25 + multiplier * Math.sin((this.frame * Math.PI) / 50), 1, 1);
+            return;
+        }
+        // Draw the lock icon (even when unlocking, to show the fade animation)
+        game_1.Game.drawFX(this.iconTileX, 2, 1, 1, x + this.iconXOffset, iconY +
+            multiplier * Math.sin((this.frame * Math.PI) / 50) +
+            this.iconYOffset, 1, 1);
+        game_1.Game.ctx.globalAlpha = 1;
+    }
+    setKeyID(keyID) {
+        this.keyID = keyID;
+    }
+    getLockType() {
+        return this.lockType;
+    }
+    // Static methods from KeyManager
+    static setKey(door, key) {
+        if (door.keyID !== 0)
+            return;
+        door.keyID = Lockable.generateID();
+        door.lockable.setKeyID(door.keyID);
+        key.doorID = door.keyID;
+    }
+    static getKey(door) {
+        return door.keyID;
+    }
+    static checkKey(door, key) {
+        if (door.keyID !== key.doorID)
+            return false;
+        return true;
+    }
+    static generateID() {
+        return Math.floor(Math.random() * 1000000);
+    }
+}
+exports.Lockable = Lockable;
 
 
 /***/ }),
@@ -30289,14 +30557,22 @@ exports.UpLadder = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const tile_1 = __webpack_require__(/*! ./tile */ "./src/tile/tile.ts");
 const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts");
+const lockable_1 = __webpack_require__(/*! ./lockable */ "./src/tile/lockable.ts");
 class UpLadder extends tile_1.Tile {
-    constructor(room, game, x, y) {
+    constructor(room, game, x, y, lockType = lockable_1.LockType.NONE) {
         super(room, x, y);
         this.isRope = false;
         this.frame = 0;
         this.onCollide = (player) => {
             if (!this.game) {
                 console.error("Game instance is undefined in UpLadder:", this);
+                return;
+            }
+            // Check if locked
+            if (this.lockable.isLocked()) {
+                if (this.lockable.canUnlock(player)) {
+                    this.lockable.unlock(player);
+                }
                 return;
             }
             try {
@@ -30329,6 +30605,11 @@ class UpLadder extends tile_1.Tile {
             game_1.Game.drawTile(xx, yy + 1, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
         };
         this.drawAboveShading = (delta) => {
+            // Update lockable animation
+            this.lockable.update(delta);
+            // Draw lock icon
+            this.lockable.drawIcon(this.x, this.y, delta);
+            // Original floating animation
             if (this.frame > 100)
                 this.frame = 0;
             this.frame += 1 * delta;
@@ -30341,6 +30622,25 @@ class UpLadder extends tile_1.Tile {
         };
         this.game = game;
         this.depth = room.depth;
+        this.keyID = 0;
+        // Initialize lockable with default config
+        this.lockable = new lockable_1.Lockable(game, {
+            lockType: lockType,
+            isTopDoor: true,
+        });
+    }
+    // Lockable interface methods
+    lock(lockType = lockable_1.LockType.LOCKED) {
+        this.lockable = new lockable_1.Lockable(this.game, {
+            lockType: lockType,
+            isTopDoor: true,
+        });
+    }
+    setKeyID(keyID) {
+        this.lockable.setKeyID(keyID);
+    }
+    isLocked() {
+        return this.lockable.isLocked();
     }
 }
 exports.UpLadder = UpLadder;

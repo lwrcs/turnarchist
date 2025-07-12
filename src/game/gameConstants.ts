@@ -277,6 +277,7 @@ export class GameConstants {
     Pickaxe,
     Coal,
     Apple,
+    Key,
 
     SpellbookPage,
     SpellbookPage,

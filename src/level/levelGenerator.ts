@@ -1378,6 +1378,8 @@ export class LevelGenerator {
     newLevel.populator.populateRooms();
     newLevel.setRoomSkins();
 
+    newLevel.distributeKeys();
+
     // Only call linkExitToStart for main paths
     if (newLevel.exitRoom) {
       newLevel.exitRoom.linkExitToStart();

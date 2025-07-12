@@ -831,9 +831,10 @@ export const loadGameState = (
     Random.setState(gameState.randomState);
     game.room.updateLighting();
     let p = game.players[game.localPlayerID];
-    game.room.items.push(new Key(game.room, p.x - 1, p.y + 1));
+    //game.room.items.push(new Key(game.room, p.x - 1, p.y + 1));
 
     //choose one door to lock
+    /*
     let locked = false;
     game.room.doors.forEach((door) => {
       if (!locked) {
@@ -841,6 +842,7 @@ export const loadGameState = (
         locked = true;
       }
     });
+    */
 
     game.chat = [];
   });
