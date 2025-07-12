@@ -17,15 +17,7 @@ import { GoldResource } from "../entity/resource/goldResource";
 import { EmeraldResource } from "../entity/resource/emeraldResource";
 import { GlowBugEnemy } from "../entity/enemy/glowBugEnemy";
 import { Tree } from "../entity/object/tree";
-
-export enum EnvType {
-  DUNGEON = 0,
-  CAVE = 1,
-  FOREST = 2,
-  SWAMP = 3,
-  GLACIER = 4,
-  CASTLE = 5,
-}
+import { EnvType } from "../constants/environmentTypes";
 
 export class Environment {
   type: EnvType;

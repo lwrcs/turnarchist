@@ -6,7 +6,8 @@ import { DoorType } from "../tile/door";
 import { Tile } from "../tile/tile";
 import { Enemy } from "../entity/enemy/enemy";
 import { LevelParameterGenerator } from "./levelParametersGenerator";
-import { Environment, EnvType } from "./environment";
+import { Environment } from "./environment";
+import { EnvType } from "../constants/environmentTypes";
 import { Populator } from "../room/roomPopulator";
 import { GameplaySettings } from "../game/gameplaySettings";
 

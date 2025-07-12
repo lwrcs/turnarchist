@@ -69,7 +69,7 @@ import { Spellbook } from "../item/weapon/spellbook";
 import { Torch } from "../item/light/torch";
 import { RookEnemy } from "../entity/enemy/rookEnemy";
 import { BeamEffect } from "../projectile/beamEffect";
-import { EnvType, PropInfo } from "../level/environment";
+import { EnvType } from "../constants/environmentTypes";
 import { Pickaxe } from "../item/tool/pickaxe";
 import { OccultistEnemy } from "../entity/enemy/occultistEnemy";
 import { Puddle } from "../tile/decorations/puddle";
@@ -1291,8 +1291,10 @@ export class Room {
     this.addRandomTorches("medium");
 
     const { x, y } = this.getRoomCenter();
+
+    const environment = this.depth < 1 ? EnvType.FOREST : EnvType.CAVE;
     //console.log("About to create DownLadder in rope hole");
-    let d = new DownLadder(this, this.game, x, y, true);
+    let d = new DownLadder(this, this.game, x, y, true, environment);
     //console.log("DownLadder created, about to add to room array");
 
     // Delay adding to room array to avoid triggering side path generation during level setup

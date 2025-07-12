@@ -10,7 +10,7 @@ import {
 } from "./levelParametersGenerator";
 import { Level } from "./level";
 import { GameConstants } from "../game/gameConstants";
-import { EnvType } from "./environment";
+import { EnvType } from "../constants/environmentTypes";
 import { SkinType } from "../tile/tile";
 
 enum PathType {
@@ -1321,6 +1321,7 @@ export class LevelGenerator {
     depth: number,
     isSidePath = false, // Updated parameter name for clarity
     callback: (linkedRoom: Room) => void,
+    environment: EnvType = EnvType.DUNGEON,
   ) => {
     this.levelParams = LevelParameterGenerator.getParameters(depth);
     this.depthReached = depth;
@@ -1349,14 +1350,8 @@ export class LevelGenerator {
         depth,
         this.levelParams,
       );
-    let envType = EnvType.DUNGEON;
-    if (isSidePath) {
-      if (Math.random() < 0.5) {
-        envType = EnvType.FOREST;
-      } else {
-        envType = EnvType.CAVE;
-      }
-    }
+    let envType = environment;
+
     // Call this function before get_wall_rooms
     if (check_overlaps(this.partialLevel.partitions)) {
       console.warn("There are overlapping partitions.");

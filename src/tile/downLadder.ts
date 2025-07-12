@@ -8,6 +8,8 @@ import { EVENTS } from "../event/events";
 import { EventEmitter } from "../event/eventEmitter";
 import { globalEventBus } from "../event/eventBus";
 import { Sound } from "../sound/sound";
+import { EnvType } from "../constants/environmentTypes";
+import { LightSource } from "../lighting/lightSource";
 
 export class DownLadder extends Tile {
   linkedRoom: Room;
@@ -15,6 +17,8 @@ export class DownLadder extends Tile {
   isSidePath = false;
   frame: number = 0;
   depth: number;
+  environment: EnvType;
+  lightSource: LightSource;
 
   constructor(
     room: Room,
@@ -22,12 +26,23 @@ export class DownLadder extends Tile {
     x: number,
     y: number,
     isSidePath: boolean = false,
+    environment: EnvType = EnvType.DUNGEON,
   ) {
     super(room, x, y);
     this.game = game;
     this.linkedRoom = null;
     this.depth = room.depth;
     this.isSidePath = isSidePath;
+    this.environment = environment;
+    if (this.environment === EnvType.FOREST) {
+      this.lightSource = new LightSource(
+        this.x + 0.5,
+        this.y + 0.5,
+        6,
+        [0, 100, 100],
+      );
+      this.room.lightSources.push(this.lightSource);
+    }
   }
 
   getName = () => {
@@ -42,6 +57,7 @@ export class DownLadder extends Tile {
         targetDepth,
         this.isSidePath,
         this.handleLinkedRoom,
+        this.environment,
       );
     } else {
       console.log("LinkedRoom already exists:", this.linkedRoom);
@@ -132,6 +148,7 @@ export class DownLadder extends Tile {
   draw = (delta: number) => {
     let xx = 4;
     if (this.isSidePath) xx = 16;
+    if (this.environment === EnvType.FOREST) xx = 16;
 
     Game.drawTile(
       1,

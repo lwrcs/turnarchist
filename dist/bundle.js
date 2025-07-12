@@ -3260,6 +3260,29 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 /***/ }),
 
+/***/ "./src/constants/environmentTypes.ts":
+/*!*******************************************!*\
+  !*** ./src/constants/environmentTypes.ts ***!
+  \*******************************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.EnvType = void 0;
+var EnvType;
+(function (EnvType) {
+    EnvType[EnvType["DUNGEON"] = 0] = "DUNGEON";
+    EnvType[EnvType["CAVE"] = 1] = "CAVE";
+    EnvType[EnvType["FOREST"] = 2] = "FOREST";
+    EnvType[EnvType["SWAMP"] = 3] = "SWAMP";
+    EnvType[EnvType["GLACIER"] = 4] = "GLACIER";
+    EnvType[EnvType["CASTLE"] = 5] = "CASTLE";
+})(EnvType = exports.EnvType || (exports.EnvType = {}));
+
+
+/***/ }),
+
 /***/ "./src/drawable/drawable.ts":
 /*!**********************************!*\
   !*** ./src/drawable/drawable.ts ***!
@@ -20591,7 +20614,7 @@ Weapon.itemName = "weapon";
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.environmentProps = exports.Environment = exports.EnvType = void 0;
+exports.environmentProps = exports.Environment = void 0;
 const barrel_1 = __webpack_require__(/*! ../entity/object/barrel */ "./src/entity/object/barrel.ts");
 const block_1 = __webpack_require__(/*! ../entity/object/block */ "./src/entity/object/block.ts");
 const bush_1 = __webpack_require__(/*! ../entity/object/bush */ "./src/entity/object/bush.ts");
@@ -20609,15 +20632,7 @@ const goldResource_1 = __webpack_require__(/*! ../entity/resource/goldResource *
 const emeraldResource_1 = __webpack_require__(/*! ../entity/resource/emeraldResource */ "./src/entity/resource/emeraldResource.ts");
 const glowBugEnemy_1 = __webpack_require__(/*! ../entity/enemy/glowBugEnemy */ "./src/entity/enemy/glowBugEnemy.ts");
 const tree_1 = __webpack_require__(/*! ../entity/object/tree */ "./src/entity/object/tree.ts");
-var EnvType;
-(function (EnvType) {
-    EnvType[EnvType["DUNGEON"] = 0] = "DUNGEON";
-    EnvType[EnvType["CAVE"] = 1] = "CAVE";
-    EnvType[EnvType["FOREST"] = 2] = "FOREST";
-    EnvType[EnvType["SWAMP"] = 3] = "SWAMP";
-    EnvType[EnvType["GLACIER"] = 4] = "GLACIER";
-    EnvType[EnvType["CASTLE"] = 5] = "CASTLE";
-})(EnvType = exports.EnvType || (exports.EnvType = {}));
+const environmentTypes_1 = __webpack_require__(/*! ../constants/environmentTypes */ "./src/constants/environmentTypes.ts");
 class Environment {
     constructor(type) {
         this.type = type;
@@ -20643,7 +20658,7 @@ const props = [
     { class: tree_1.Tree },
 ];
 const environmentProps = {
-    [EnvType.DUNGEON]: {
+    [environmentTypes_1.EnvType.DUNGEON]: {
         props: [
             { class: crate_1.Crate, weight: 1 },
             { class: barrel_1.Barrel, weight: 1 },
@@ -20659,7 +20674,7 @@ const environmentProps = {
             { class: chest_1.Chest, weight: 0.025 },
         ],
     },
-    [EnvType.CAVE]: {
+    [environmentTypes_1.EnvType.CAVE]: {
         props: [
             { class: coalResource_1.CoalResource, weight: 1 },
             { class: goldResource_1.GoldResource, weight: 0.1 },
@@ -20671,7 +20686,7 @@ const environmentProps = {
             { class: chest_1.Chest, weight: 0.1 },
         ],
     },
-    [EnvType.FOREST]: {
+    [environmentTypes_1.EnvType.FOREST]: {
         props: [
             { class: tombStone_1.TombStone, weight: 0.05, additionalParams: [1] },
             { class: tombStone_1.TombStone, weight: 0.05, additionalParams: [0] },
@@ -20686,7 +20701,7 @@ const environmentProps = {
             { class: tree_1.Tree, weight: 0.1 },
         ],
     },
-    [EnvType.SWAMP]: {
+    [environmentTypes_1.EnvType.SWAMP]: {
         props: [
             { class: barrel_1.Barrel, weight: 8 },
             { class: tombStone_1.TombStone, weight: 5, additionalParams: [1] },
@@ -20699,7 +20714,7 @@ const environmentProps = {
             { class: chest_1.Chest, weight: 0.05 },
         ],
     },
-    [EnvType.GLACIER]: {
+    [environmentTypes_1.EnvType.GLACIER]: {
         props: [
             { class: block_1.Block, weight: 20 },
             { class: crate_1.Crate, weight: 5 },
@@ -20707,7 +20722,7 @@ const environmentProps = {
             { class: chest_1.Chest, weight: 0.4 },
         ],
     },
-    [EnvType.CASTLE]: {
+    [environmentTypes_1.EnvType.CASTLE]: {
         props: [
             { class: crate_1.Crate, weight: 10 },
             { class: barrel_1.Barrel, weight: 8 },
@@ -20985,7 +21000,7 @@ const downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/d
 const levelParametersGenerator_1 = __webpack_require__(/*! ./levelParametersGenerator */ "./src/level/levelParametersGenerator.ts");
 const level_1 = __webpack_require__(/*! ./level */ "./src/level/level.ts");
 const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
-const environment_1 = __webpack_require__(/*! ./environment */ "./src/level/environment.ts");
+const environmentTypes_1 = __webpack_require__(/*! ../constants/environmentTypes */ "./src/constants/environmentTypes.ts");
 var PathType;
 (function (PathType) {
     PathType[PathType["MAIN_PATH"] = 0] = "MAIN_PATH";
@@ -21850,7 +21865,7 @@ class LevelGenerator {
             this.seed = seed;
         };
         this.generate = async (game, depth, isSidePath = false, // Updated parameter name for clarity
-        callback) => {
+        callback, environment = environmentTypes_1.EnvType.DUNGEON) => {
             this.levelParams = levelParametersGenerator_1.LevelParameterGenerator.getParameters(depth);
             this.depthReached = depth;
             // Set the random state based on the seed and depth
@@ -21866,15 +21881,7 @@ class LevelGenerator {
                 await generate_cave(this.partialLevel, 50, 50);
             else
                 await generate_dungeon(game, this.partialLevel, this.levelParams.mapWidth, this.levelParams.mapHeight, depth, this.levelParams);
-            let envType = environment_1.EnvType.DUNGEON;
-            if (isSidePath) {
-                if (Math.random() < 0.5) {
-                    envType = environment_1.EnvType.FOREST;
-                }
-                else {
-                    envType = environment_1.EnvType.CAVE;
-                }
-            }
+            let envType = environment;
             // Call this function before get_wall_rooms
             if (check_overlaps(this.partialLevel.partitions)) {
                 console.warn("There are overlapping partitions.");
@@ -25598,7 +25605,7 @@ const warhammer_1 = __webpack_require__(/*! ../item/weapon/warhammer */ "./src/i
 const torch_1 = __webpack_require__(/*! ../item/light/torch */ "./src/item/light/torch.ts");
 const rookEnemy_1 = __webpack_require__(/*! ../entity/enemy/rookEnemy */ "./src/entity/enemy/rookEnemy.ts");
 const beamEffect_1 = __webpack_require__(/*! ../projectile/beamEffect */ "./src/projectile/beamEffect.ts");
-const environment_1 = __webpack_require__(/*! ../level/environment */ "./src/level/environment.ts");
+const environmentTypes_1 = __webpack_require__(/*! ../constants/environmentTypes */ "./src/constants/environmentTypes.ts");
 const occultistEnemy_1 = __webpack_require__(/*! ../entity/enemy/occultistEnemy */ "./src/entity/enemy/occultistEnemy.ts");
 const decoration_1 = __webpack_require__(/*! ../tile/decorations/decoration */ "./src/tile/decorations/decoration.ts");
 const bomb_1 = __webpack_require__(/*! ../entity/object/bomb */ "./src/entity/object/bomb.ts");
@@ -25941,7 +25948,7 @@ class Room {
             let numEmptyTiles = this.getEmptyTiles().length;
             let numEnemies = Math.ceil(numEmptyTiles * game_1.Game.randTable([0.25, 0.3, 0.35], rand));
             this.addEnemies(numEnemies, rand);
-            if (this.level.environment.type === environment_1.EnvType.CAVE)
+            if (this.level.environment.type === environmentTypes_1.EnvType.CAVE)
                 this.addResources((numEmptyTiles - numEnemies) * game_1.Game.randTable([0.1, 0.2, 0.3], rand), rand);
             this.removeDoorObstructions();
         };
@@ -26005,8 +26012,9 @@ class Room {
         this.populateRopeHole = (rand) => {
             this.addRandomTorches("medium");
             const { x, y } = this.getRoomCenter();
+            const environment = this.depth < 1 ? environmentTypes_1.EnvType.FOREST : environmentTypes_1.EnvType.CAVE;
             //console.log("About to create DownLadder in rope hole");
-            let d = new downLadder_1.DownLadder(this, this.game, x, y, true);
+            let d = new downLadder_1.DownLadder(this, this.game, x, y, true, environment);
             //console.log("DownLadder created, about to add to room array");
             // Delay adding to room array to avoid triggering side path generation during level setup
             setTimeout(() => {
@@ -26065,7 +26073,7 @@ class Room {
                     this.name = "BOSS";
                     break;
                 case RoomType.DUNGEON:
-                    if (this.level.environment.type === environment_1.EnvType.CAVE &&
+                    if (this.level.environment.type === environmentTypes_1.EnvType.CAVE &&
                         Math.random() <= 0.2) {
                         this.populateCave(rand);
                     }
@@ -27721,7 +27729,7 @@ class Room {
         }
     }
     addTorches(numTorches, rand, placeX, placeY) {
-        if (this.level.environment.type === environment_1.EnvType.FOREST &&
+        if (this.level.environment.type === environmentTypes_1.EnvType.FOREST &&
             this.type !== RoomType.DOWNLADDER)
             return;
         if (placeX !== undefined &&
@@ -27796,7 +27804,7 @@ class Room {
     }
     // ... start of file ...
     addSpikeTraps(numSpikes, rand) {
-        if (this.level.environment.type === environment_1.EnvType.FOREST)
+        if (this.level.environment.type === environmentTypes_1.EnvType.FOREST)
             return;
         // add spikes
         let tiles = this.getEmptyTiles();
@@ -28505,6 +28513,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Populator = void 0;
 const gameplaySettings_1 = __webpack_require__(/*! ../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
 const environment_1 = __webpack_require__(/*! ../level/environment */ "./src/level/environment.ts");
+const environmentTypes_1 = __webpack_require__(/*! ../constants/environmentTypes */ "./src/constants/environmentTypes.ts");
 const utils_1 = __webpack_require__(/*! ../utility/utils */ "./src/utility/utils.ts");
 const propClusterer_1 = __webpack_require__(/*! ./propClusterer */ "./src/room/propClusterer.ts");
 const room_1 = __webpack_require__(/*! ./room */ "./src/room/room.ts");
@@ -28523,10 +28532,10 @@ class Populator {
         };
         this.populateByEnvironment = (room) => {
             switch (room.envType) {
-                case environment_1.EnvType.CAVE:
+                case environmentTypes_1.EnvType.CAVE:
                     this.populateCave(room);
                     break;
-                case environment_1.EnvType.FOREST:
+                case environmentTypes_1.EnvType.FOREST:
                     this.populateForest(room);
                     break;
                 default:
@@ -29820,8 +29829,10 @@ const tile_1 = __webpack_require__(/*! ./tile */ "./src/tile/tile.ts");
 const upLadder_1 = __webpack_require__(/*! ./upLadder */ "./src/tile/upLadder.ts");
 const events_1 = __webpack_require__(/*! ../event/events */ "./src/event/events.ts");
 const eventBus_1 = __webpack_require__(/*! ../event/eventBus */ "./src/event/eventBus.ts");
+const environmentTypes_1 = __webpack_require__(/*! ../constants/environmentTypes */ "./src/constants/environmentTypes.ts");
+const lightSource_1 = __webpack_require__(/*! ../lighting/lightSource */ "./src/lighting/lightSource.ts");
 class DownLadder extends tile_1.Tile {
-    constructor(room, game, x, y, isSidePath = false) {
+    constructor(room, game, x, y, isSidePath = false, environment = environmentTypes_1.EnvType.DUNGEON) {
         super(room, x, y);
         this.isSidePath = false;
         this.frame = 0;
@@ -29831,7 +29842,7 @@ class DownLadder extends tile_1.Tile {
         this.generate = async () => {
             if (!this.linkedRoom) {
                 const targetDepth = this.room.depth + (this.isSidePath ? 0 : 1);
-                await this.game.levelgen.generate(this.game, targetDepth, this.isSidePath, this.handleLinkedRoom);
+                await this.game.levelgen.generate(this.game, targetDepth, this.isSidePath, this.handleLinkedRoom, this.environment);
             }
             else {
                 console.log("LinkedRoom already exists:", this.linkedRoom);
@@ -29902,6 +29913,8 @@ class DownLadder extends tile_1.Tile {
             let xx = 4;
             if (this.isSidePath)
                 xx = 16;
+            if (this.environment === environmentTypes_1.EnvType.FOREST)
+                xx = 16;
             game_1.Game.drawTile(1, this.skin, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
             game_1.Game.drawTile(xx, this.skin, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
         };
@@ -29917,6 +29930,11 @@ class DownLadder extends tile_1.Tile {
         this.linkedRoom = null;
         this.depth = room.depth;
         this.isSidePath = isSidePath;
+        this.environment = environment;
+        if (this.environment === environmentTypes_1.EnvType.FOREST) {
+            this.lightSource = new lightSource_1.LightSource(this.x + 0.5, this.y + 0.5, 6, [0, 100, 100]);
+            this.room.lightSources.push(this.lightSource);
+        }
     }
 }
 exports.DownLadder = DownLadder;
