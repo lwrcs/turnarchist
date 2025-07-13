@@ -12,15 +12,13 @@ import { EnvType } from "../constants/environmentTypes";
 import { LightSource } from "../lighting/lightSource";
 import { Lockable, LockType } from "./lockable";
 import { Key } from "../item/key";
+import { Passageway } from "./passageway";
 
-export class DownLadder extends Tile {
+export class DownLadder extends Passageway {
   linkedRoom: Room;
-  game: Game;
   isSidePath = false;
-  frame: number = 0;
   depth: number;
   environment: EnvType;
-  lightSource: LightSource;
   lockable: Lockable;
 
   constructor(
@@ -32,8 +30,7 @@ export class DownLadder extends Tile {
     environment: EnvType = EnvType.DUNGEON,
     lockType: LockType = LockType.NONE,
   ) {
-    super(room, x, y);
-    this.game = game;
+    super(room, game, x, y);
     this.linkedRoom = null;
     this.depth = room.depth;
     this.isSidePath = isSidePath;
@@ -46,15 +43,7 @@ export class DownLadder extends Tile {
       isTopDoor: false,
     });
 
-    if (this.environment === EnvType.FOREST) {
-      this.lightSource = new LightSource(
-        this.x + 0.5,
-        this.y + 0.5,
-        6,
-        [0, 100, 100],
-      );
-      this.room.lightSources.push(this.lightSource);
-    }
+    this.addLightSource();
   }
 
   getName = () => {
@@ -159,8 +148,11 @@ export class DownLadder extends Tile {
 
   draw = (delta: number) => {
     let xx = 4;
-    if (this.isSidePath) xx = 16;
-    if (this.environment === EnvType.FOREST) xx = 16;
+    if (this.isSidePath) {
+      xx = 16;
+      if (this.lockable.isLocked()) xx = 17;
+    }
+    //if (this.environment === EnvType.FOREST) xx = 16;
 
     Game.drawTile(
       1,
@@ -195,10 +187,8 @@ export class DownLadder extends Tile {
     // Draw lock icon
     this.lockable.drawIcon(this.x, this.y, delta);
 
-    // Original floating animation
-    if (this.frame > 100) this.frame = 0;
-    this.frame += 1 * delta;
-    let multiplier = 0.125;
+    // Update frame using parent method
+    this.updateFrame(delta);
   };
 
   drawAbovePlayer = (delta: number) => {};

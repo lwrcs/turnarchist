@@ -734,11 +734,14 @@ export class Player extends Drawable {
       if (other instanceof UpLadder || other instanceof DownLadder) {
         console.log("unlocking ladder");
         const locked = other.isLocked();
+
         if (locked) {
           this.shakeScreen(this.x, this.y, x, y);
           if (other.lockable.canUnlock(this)) {
             other.lockable.unlock(this);
           }
+          other.addLightSource();
+          this.game.room.updateLighting();
           return;
         }
       }

@@ -227,38 +227,14 @@ export class Lockable {
     Game.ctx.globalAlpha = 1;
   }
 
-  setKeyID(keyID: number) {
-    this.keyID = keyID;
-  }
-
-  getLockType(): LockType {
-    return this.lockType;
-  }
-
-  // Static methods from KeyManager
   setKey(key: Key) {
-    //if (this.keyID !== 0) return;
     this.keyID = Lockable.generateID();
     key.doorID = this.keyID;
     console.log("keyID", this.keyID);
     console.log("key.doorID", key.doorID);
   }
 
-  static getKey(door: Door) {
-    return door.keyID;
-  }
-
-  static checkKey(door: Door, key: Key) {
-    if (door.keyID !== key.doorID) return false;
-    return true;
-  }
-
   static generateID() {
     return Math.floor(Math.random() * 1000000);
-  }
-
-  public updateLockState(newLockType: LockType) {
-    this.lockType = newLockType;
-    this.initializeLockState();
   }
 }

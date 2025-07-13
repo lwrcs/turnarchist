@@ -6,15 +6,14 @@ import { SkinType, Tile } from "./tile";
 import { DownLadder } from "./downLadder";
 import { Sound } from "../sound/sound";
 import { Lockable, LockType } from "./lockable";
+import { Passageway } from "./passageway";
 
-export class UpLadder extends Tile {
+export class UpLadder extends Passageway {
   linkedRoom: Room;
-  game: Game;
   isRope = false;
   depth: number;
-  frame: number = 0;
   lockable: Lockable;
-  keyID: number;
+
   constructor(
     room: Room,
     game: Game,
@@ -22,10 +21,8 @@ export class UpLadder extends Tile {
     y: number,
     lockType: LockType = LockType.NONE,
   ) {
-    super(room, x, y);
-    this.game = game;
+    super(room, game, x, y);
     this.depth = room.depth;
-    this.keyID = 0;
 
     // Initialize lockable with default config
     this.lockable = new Lockable(game, {
@@ -87,7 +84,7 @@ export class UpLadder extends Tile {
       this.room.shadeColor,
       this.shadeAmount(),
     );
-    if (!this.isRope)
+    if (!this.isRope) {
       Game.drawTile(
         xx,
         yy,
@@ -100,6 +97,20 @@ export class UpLadder extends Tile {
         this.room.shadeColor,
         this.shadeAmount(),
       );
+    } else {
+      Game.drawTile(
+        xx,
+        yy + 0,
+        1,
+        2,
+        this.x,
+        this.y - 1,
+        1,
+        2,
+        this.room.shadeColor,
+        this.shadeAmount(),
+      );
+    }
     Game.drawTile(
       xx,
       yy + 1,

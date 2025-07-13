@@ -107,7 +107,8 @@ export class Level {
   }
   getDownLadder(room: Room): DownLadder {
     console.log("Looking for down ladder...");
-    if (room.type !== RoomType.ROPEHOLE) {
+
+    if (!room || room.type !== RoomType.ROPEHOLE) {
       console.error("Room is not a rope hole");
       return null;
     }

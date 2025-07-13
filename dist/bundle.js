@@ -20840,7 +20840,7 @@ class Level {
     }
     getDownLadder(room) {
         console.log("Looking for down ladder...");
-        if (room.type !== room_1.RoomType.ROPEHOLE) {
+        if (!room || room.type !== room_1.RoomType.ROPEHOLE) {
             console.error("Room is not a rope hole");
             return null;
         }
@@ -23284,6 +23284,8 @@ class Player extends drawable_1.Drawable {
                         if (other.lockable.canUnlock(this)) {
                             other.lockable.unlock(this);
                         }
+                        other.addLightSource();
+                        this.game.room.updateLighting();
                         return;
                     }
                 }
@@ -29603,11 +29605,11 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Door = exports.DoorType = exports.DoorDir = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
-const tile_1 = __webpack_require__(/*! ./tile */ "./src/tile/tile.ts");
 const key_1 = __webpack_require__(/*! ../item/key */ "./src/item/key.ts");
 const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts");
 const lightSource_1 = __webpack_require__(/*! ../lighting/lightSource */ "./src/lighting/lightSource.ts");
 const gameplaySettings_1 = __webpack_require__(/*! ../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
+const passageway_1 = __webpack_require__(/*! ./passageway */ "./src/tile/passageway.ts");
 var DoorDir;
 (function (DoorDir) {
     DoorDir["North"] = "North";
@@ -29622,9 +29624,9 @@ var DoorType;
     DoorType[DoorType["GUARDEDDOOR"] = 2] = "GUARDEDDOOR";
     DoorType[DoorType["TUNNELDOOR"] = 3] = "TUNNELDOOR";
 })(DoorType = exports.DoorType || (exports.DoorType = {}));
-class Door extends tile_1.Tile {
+class Door extends passageway_1.Passageway {
     constructor(room, game, x, y, doorDir, doorType) {
-        super(room, x, y);
+        super(room, game, x, y);
         this.shadeAmount = (offsetX = 0, offsetY = 0) => {
             if (gameConstants_1.GameConstants.SMOOTH_LIGHTING)
                 return 0;
@@ -29788,9 +29790,7 @@ class Door extends tile_1.Tile {
         this.drawAbovePlayer = (delta) => { };
         this.drawAboveShading = (delta) => {
             //if (this.type === DoorType.TUNNELDOOR) return;
-            if (this.frame > 100)
-                this.frame = 0;
-            this.frame += 1 * delta;
+            this.updateFrame(delta);
             game_1.Game.ctx.globalAlpha = this.iconAlpha;
             let multiplier = 0.125;
             if (this.unlocking === true) {
@@ -29816,7 +29816,6 @@ class Door extends tile_1.Tile {
             }
             game_1.Game.ctx.globalAlpha = 1;
         };
-        this.game = game;
         this.opened = false;
         this.doorDir = doorDir;
         this.locked = false;
@@ -29827,14 +29826,12 @@ class Door extends tile_1.Tile {
         this.iconYOffset = 0;
         this.unlocking = false;
         this.iconAlpha = 1;
-        this.frame = 0;
         this.tileXOffset = 0;
         this.tileX = 2;
         this.drawTopOf = true;
         let lightOffsetX = 0;
         let lightOffsetY = 0;
         this.alpha = 1;
-        this.keyID = 0;
         switch (this.doorDir) {
             case game_1.Direction.UP:
                 lightOffsetY = -0.5;
@@ -29886,18 +29883,16 @@ exports.Door = Door;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DownLadder = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-const tile_1 = __webpack_require__(/*! ./tile */ "./src/tile/tile.ts");
 const upLadder_1 = __webpack_require__(/*! ./upLadder */ "./src/tile/upLadder.ts");
 const events_1 = __webpack_require__(/*! ../event/events */ "./src/event/events.ts");
 const eventBus_1 = __webpack_require__(/*! ../event/eventBus */ "./src/event/eventBus.ts");
 const environmentTypes_1 = __webpack_require__(/*! ../constants/environmentTypes */ "./src/constants/environmentTypes.ts");
-const lightSource_1 = __webpack_require__(/*! ../lighting/lightSource */ "./src/lighting/lightSource.ts");
 const lockable_1 = __webpack_require__(/*! ./lockable */ "./src/tile/lockable.ts");
-class DownLadder extends tile_1.Tile {
+const passageway_1 = __webpack_require__(/*! ./passageway */ "./src/tile/passageway.ts");
+class DownLadder extends passageway_1.Passageway {
     constructor(room, game, x, y, isSidePath = false, environment = environmentTypes_1.EnvType.DUNGEON, lockType = lockable_1.LockType.NONE) {
-        super(room, x, y);
+        super(room, game, x, y);
         this.isSidePath = false;
-        this.frame = 0;
         this.getName = () => {
             return this.isSidePath ? "rope down" : "staircase down";
         };
@@ -29973,10 +29968,12 @@ class DownLadder extends tile_1.Tile {
         };
         this.draw = (delta) => {
             let xx = 4;
-            if (this.isSidePath)
+            if (this.isSidePath) {
                 xx = 16;
-            if (this.environment === environmentTypes_1.EnvType.FOREST)
-                xx = 16;
+                if (this.lockable.isLocked())
+                    xx = 17;
+            }
+            //if (this.environment === EnvType.FOREST) xx = 16;
             game_1.Game.drawTile(1, this.skin, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
             game_1.Game.drawTile(xx, this.skin, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
         };
@@ -29985,14 +29982,10 @@ class DownLadder extends tile_1.Tile {
             this.lockable.update(delta);
             // Draw lock icon
             this.lockable.drawIcon(this.x, this.y, delta);
-            // Original floating animation
-            if (this.frame > 100)
-                this.frame = 0;
-            this.frame += 1 * delta;
-            let multiplier = 0.125;
+            // Update frame using parent method
+            this.updateFrame(delta);
         };
         this.drawAbovePlayer = (delta) => { };
-        this.game = game;
         this.linkedRoom = null;
         this.depth = room.depth;
         this.isSidePath = isSidePath;
@@ -30003,10 +29996,7 @@ class DownLadder extends tile_1.Tile {
             lockType: lock,
             isTopDoor: false,
         });
-        if (this.environment === environmentTypes_1.EnvType.FOREST) {
-            this.lightSource = new lightSource_1.LightSource(this.x + 0.5, this.y + 0.5, 6, [0, 100, 100]);
-            this.room.lightSources.push(this.lightSource);
-        }
+        this.addLightSource();
     }
     isLocked() {
         return this.lockable.isLocked();
@@ -30308,37 +30298,59 @@ class Lockable {
             this.iconYOffset, 1, 1);
         game_1.Game.ctx.globalAlpha = 1;
     }
-    setKeyID(keyID) {
-        this.keyID = keyID;
-    }
-    getLockType() {
-        return this.lockType;
-    }
-    // Static methods from KeyManager
     setKey(key) {
-        //if (this.keyID !== 0) return;
         this.keyID = Lockable.generateID();
         key.doorID = this.keyID;
         console.log("keyID", this.keyID);
         console.log("key.doorID", key.doorID);
     }
-    static getKey(door) {
-        return door.keyID;
-    }
-    static checkKey(door, key) {
-        if (door.keyID !== key.doorID)
-            return false;
-        return true;
-    }
     static generateID() {
         return Math.floor(Math.random() * 1000000);
     }
-    updateLockState(newLockType) {
-        this.lockType = newLockType;
-        this.initializeLockState();
-    }
 }
 exports.Lockable = Lockable;
+
+
+/***/ }),
+
+/***/ "./src/tile/passageway.ts":
+/*!********************************!*\
+  !*** ./src/tile/passageway.ts ***!
+  \********************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Passageway = void 0;
+const tile_1 = __webpack_require__(/*! ./tile */ "./src/tile/tile.ts");
+const lightSource_1 = __webpack_require__(/*! ../lighting/lightSource */ "./src/lighting/lightSource.ts");
+const environmentTypes_1 = __webpack_require__(/*! ../constants/environmentTypes */ "./src/constants/environmentTypes.ts");
+class Passageway extends tile_1.Tile {
+    constructor(room, game, x, y) {
+        super(room, x, y);
+        this.addLightSource = () => {
+            if (this.environment === environmentTypes_1.EnvType.FOREST && !this.lockable.isLocked()) {
+                this.lightSource = new lightSource_1.LightSource(this.x + 0.5, this.y + 0.5, 6, [0, 100, 100]);
+                this.room.lightSources.push(this.lightSource);
+            }
+        };
+        this.game = game;
+        this.frame = 0;
+        this.keyID = 0;
+    }
+    // Common frame animation logic
+    updateFrame(delta) {
+        if (this.frame > 100)
+            this.frame = 0;
+        this.frame += 1 * delta;
+    }
+    // Common floating animation calculation
+    getFloatingOffset() {
+        return 0.125 * Math.sin((this.frame * Math.PI) / 50);
+    }
+}
+exports.Passageway = Passageway;
 
 
 /***/ }),
@@ -30574,14 +30586,13 @@ exports.Trapdoor = Trapdoor;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UpLadder = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-const tile_1 = __webpack_require__(/*! ./tile */ "./src/tile/tile.ts");
 const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts");
 const lockable_1 = __webpack_require__(/*! ./lockable */ "./src/tile/lockable.ts");
-class UpLadder extends tile_1.Tile {
+const passageway_1 = __webpack_require__(/*! ./passageway */ "./src/tile/passageway.ts");
+class UpLadder extends passageway_1.Passageway {
     constructor(room, game, x, y, lockType = lockable_1.LockType.NONE) {
-        super(room, x, y);
+        super(room, game, x, y);
         this.isRope = false;
-        this.frame = 0;
         this.onCollide = (player) => {
             if (!this.game) {
                 console.error("Game instance is undefined in UpLadder:", this);
@@ -30619,8 +30630,12 @@ class UpLadder extends tile_1.Tile {
                 yy = 1;
             }
             game_1.Game.drawTile(1, this.skin, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
-            if (!this.isRope)
+            if (!this.isRope) {
                 game_1.Game.drawTile(xx, yy, 1, 1, this.x, this.y - 1, 1, 1, this.room.shadeColor, this.shadeAmount());
+            }
+            else {
+                game_1.Game.drawTile(xx, yy + 0, 1, 2, this.x, this.y - 1, 1, 2, this.room.shadeColor, this.shadeAmount());
+            }
             game_1.Game.drawTile(xx, yy + 1, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
         };
         this.drawAboveShading = (delta) => {
@@ -30639,9 +30654,7 @@ class UpLadder extends tile_1.Tile {
             if (this.isRope)
                 game_1.Game.drawTile(16, 1, 1, 1, this.x, this.y - 1, 1, 1, this.room.shadeColor, this.shadeAmount());
         };
-        this.game = game;
         this.depth = room.depth;
-        this.keyID = 0;
         // Initialize lockable with default config
         this.lockable = new lockable_1.Lockable(game, {
             lockType: lockType,

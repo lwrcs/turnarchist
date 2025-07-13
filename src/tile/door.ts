@@ -8,6 +8,7 @@ import { Key } from "../item/key";
 import { Sound } from "../sound/sound";
 import { LightSource } from "../lighting/lightSource";
 import { GameplaySettings } from "../game/gameplaySettings";
+import { Passageway } from "./passageway";
 
 export enum DoorDir {
   North = "North",
@@ -23,9 +24,8 @@ export enum DoorType {
   TUNNELDOOR,
 }
 
-export class Door extends Tile {
+export class Door extends Passageway {
   linkedDoor: Door;
-  game: Game;
   opened: boolean;
   doorDir: Direction;
   guarded: boolean;
@@ -36,13 +36,11 @@ export class Door extends Tile {
   iconYOffset: number;
   unlocking: boolean;
   iconAlpha: number;
-  frame: number;
   tileXOffset: number;
   tileX: number;
   drawTopOf: boolean;
-  lightSource: LightSource;
   alpha: number;
-  keyID: number;
+
   constructor(
     room: Room,
     game: Game,
@@ -51,8 +49,7 @@ export class Door extends Tile {
     doorDir: Direction,
     doorType: DoorType,
   ) {
-    super(room, x, y);
-    this.game = game;
+    super(room, game, x, y);
     this.opened = false;
     this.doorDir = doorDir;
     this.locked = false;
@@ -63,14 +60,13 @@ export class Door extends Tile {
     this.iconYOffset = 0;
     this.unlocking = false;
     this.iconAlpha = 1;
-    this.frame = 0;
     this.tileXOffset = 0;
     this.tileX = 2;
     this.drawTopOf = true;
     let lightOffsetX = 0;
     let lightOffsetY = 0;
     this.alpha = 1;
-    this.keyID = 0;
+
     switch (this.doorDir) {
       case Direction.UP:
         lightOffsetY = -0.5;
@@ -230,6 +226,7 @@ export class Door extends Tile {
       return true;
     } else false;
   };
+
   canCrushEnemy = (): boolean => {
     return true;
   };
@@ -354,8 +351,7 @@ export class Door extends Tile {
 
   drawAboveShading = (delta: number) => {
     //if (this.type === DoorType.TUNNELDOOR) return;
-    if (this.frame > 100) this.frame = 0;
-    this.frame += 1 * delta;
+    this.updateFrame(delta);
     Game.ctx.globalAlpha = this.iconAlpha;
     let multiplier = 0.125;
     if (this.unlocking === true) {
