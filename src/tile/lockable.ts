@@ -28,7 +28,7 @@ export class Lockable {
   private iconYOffset: number = 0;
   private frame: number = 0;
   private lockType: LockType;
-  private keyID: number;
+  private keyID: number = 0;
   private iconTileX: number;
   private iconXOffset: number;
   private isTopDoor: boolean;
@@ -100,19 +100,22 @@ export class Lockable {
 
   canUnlock(player: Player): boolean {
     if (this.lockType === LockType.LOCKED) {
-      const key = player.inventory.hasItem(Key);
+      const key = this.hasKeyWithID(this.keyID, player);
+      console.log(this.keyID);
       if (key !== null) {
-        if (key.doorID === this.keyID) {
-          this.game.pushMessage("You use the key to unlock.");
-          return true;
-        } else {
-          this.game.pushMessage("The key doesn't fit the lock.");
-          return false;
-        }
+        this.game.pushMessage("You use the key to unlock.");
+        console.log("keyID", key.doorID, "doorID", this.keyID);
+        return true;
+      }
+
+      // If no matching key, check if player has any key at all
+      const hasAnyKey = player.inventory.hasItem(Key);
+      if (hasAnyKey) {
+        this.game.pushMessage("The key doesn't fit the lock.");
       } else {
         this.game.pushMessage("It's locked tightly and won't budge.");
-        return false;
       }
+      return false;
     }
 
     if (this.lockType === LockType.GUARDED) {
@@ -133,7 +136,7 @@ export class Lockable {
 
   unlock(player: Player) {
     if (this.lockType === LockType.LOCKED) {
-      const key = player.inventory.hasItem(Key);
+      const key = this.hasKeyWithID(this.keyID, player);
       if (key !== null) {
         player.inventory.removeItem(key);
         Sound.unlock();
@@ -144,6 +147,21 @@ export class Lockable {
       this.locked = false;
       this.unlocking = true;
     }
+  }
+
+  hasKeyWithID(keyID: number, player: Player) {
+    const inventory = player.inventory;
+    console.log("inventory.items", inventory.items);
+    for (const item of inventory.items) {
+      if (item instanceof Key) {
+        console.log("keyID", keyID, "item.doorID", item.doorID);
+
+        if (item.doorID === keyID) {
+          return item;
+        }
+      }
+    }
+    return null;
   }
 
   unGuard() {
@@ -218,11 +236,12 @@ export class Lockable {
   }
 
   // Static methods from KeyManager
-  static setKey(door: Door | DownLadder | UpLadder, key: Key) {
-    if (door.keyID !== 0) return;
-    door.keyID = Lockable.generateID();
-    (door as DownLadder | UpLadder).lockable.setKeyID(door.keyID);
-    key.doorID = door.keyID;
+  setKey(key: Key) {
+    //if (this.keyID !== 0) return;
+    this.keyID = Lockable.generateID();
+    key.doorID = this.keyID;
+    console.log("keyID", this.keyID);
+    console.log("key.doorID", key.doorID);
   }
 
   static getKey(door: Door) {
@@ -236,5 +255,10 @@ export class Lockable {
 
   static generateID() {
     return Math.floor(Math.random() * 1000000);
+  }
+
+  public updateLockState(newLockType: LockType) {
+    this.lockType = newLockType;
+    this.initializeLockState();
   }
 }

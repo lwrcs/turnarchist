@@ -20763,7 +20763,6 @@ const roomPopulator_1 = __webpack_require__(/*! ../room/roomPopulator */ "./src/
 const gameplaySettings_1 = __webpack_require__(/*! ../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
 const downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/downLadder.ts");
 const key_1 = __webpack_require__(/*! ../item/key */ "./src/item/key.ts");
-const lockable_1 = __webpack_require__(/*! ../tile/lockable */ "./src/tile/lockable.ts");
 exports.enemyMinimumDepth = {
     1: 0,
     2: 1,
@@ -20839,13 +20838,23 @@ class Level {
         let mainPath = this.isMainPath ? "main" : "side";
         console.log(`${mainPath} path, envType: ${env}`);
     }
-    getDownLadder() {
-        for (const room of this.rooms) {
+    getDownLadder(room) {
+        console.log("Looking for down ladder...");
+        if (room.type !== room_1.RoomType.ROPEHOLE) {
+            console.error("Room is not a rope hole");
+            return null;
+        }
+        // Then check ROPEHOLE rooms
+        //let room = this.rooms.find((room) => room.type === RoomType.ROPEHOLE);
+        console.log("Found rope hole room:", room ? "yes" : "no");
+        if (room) {
+            console.log("Searching rope hole room at", room.roomX, room.roomY);
             for (let x = room.roomX; x < room.roomX + room.width; x++) {
                 for (let y = room.roomY; y < room.roomY + room.height; y++) {
                     const tile = room.roomArray[x][y];
-                    if (tile instanceof downLadder_1.DownLadder &&
-                        tile.isSidePath === !this.isMainPath) {
+                    console.log("tile", tile.x, tile.y, tile);
+                    if (tile instanceof downLadder_1.DownLadder) {
+                        console.log("Found down ladder at", x, y);
                         return tile;
                     }
                 }
@@ -20855,7 +20864,7 @@ class Level {
         return null;
     }
     distributeKeys() {
-        const downLadder = this.getDownLadder();
+        const downLadder = this.getDownLadder(this.rooms?.find((r) => r.type === room_1.RoomType.ROPEHOLE));
         if (!downLadder) {
             console.error("No down ladder found");
             return;
@@ -20863,8 +20872,8 @@ class Level {
         const randomRoom = this.rooms[Math.floor(Math.random() * this.rooms.length)];
         const randomTile = randomRoom.getEmptyTiles()[randomRoom.getEmptyTiles().length - 1];
         const key = new key_1.Key(randomRoom, randomTile.x, randomTile.y);
+        downLadder.lockable.setKey(key);
         randomRoom.items.push(key);
-        lockable_1.Lockable.setKey(downLadder, key);
         //this.game.player.inventory.addItem(key);
     }
     setExitRoom() {
@@ -21936,7 +21945,6 @@ class LevelGenerator {
             newLevel.setRooms(rooms);
             newLevel.populator.populateRooms();
             newLevel.setRoomSkins();
-            newLevel.distributeKeys();
             // Only call linkExitToStart for main paths
             if (newLevel.exitRoom) {
                 newLevel.exitRoom.linkExitToStart();
@@ -21957,12 +21965,14 @@ class LevelGenerator {
                                 callback(isSidePath
                                     ? rooms.find((r) => r.type === room_1.RoomType.ROPECAVE)
                                     : rooms.find((r) => r.type === room_1.RoomType.START));
-                                return;
                             }
                         }
                     }
                 }
             }
+            setTimeout(() => {
+                newLevel.distributeKeys();
+            }, 0);
             // Return the start room or the rope cave room
             callback(isSidePath
                 ? rooms.find((r) => r.type === room_1.RoomType.ROPECAVE)
@@ -29987,26 +29997,16 @@ class DownLadder extends tile_1.Tile {
         this.depth = room.depth;
         this.isSidePath = isSidePath;
         this.environment = environment;
-        this.keyID = 0;
+        const lock = isSidePath ? lockable_1.LockType.LOCKED : lockable_1.LockType.NONE;
         // Initialize lockable with the passed lockType
         this.lockable = new lockable_1.Lockable(game, {
-            lockType: lockable_1.LockType.LOCKED,
+            lockType: lock,
             isTopDoor: false,
         });
         if (this.environment === environmentTypes_1.EnvType.FOREST) {
             this.lightSource = new lightSource_1.LightSource(this.x + 0.5, this.y + 0.5, 6, [0, 100, 100]);
             this.room.lightSources.push(this.lightSource);
         }
-    }
-    // Lockable interface methods
-    lock(lockType = lockable_1.LockType.LOCKED) {
-        this.lockable = new lockable_1.Lockable(this.game, {
-            lockType: lockType,
-            isTopDoor: false,
-        });
-    }
-    setKeyID(keyID) {
-        this.lockable.setKeyID(keyID);
     }
     isLocked() {
         return this.lockable.isLocked();
@@ -30158,6 +30158,7 @@ class Lockable {
         this.iconAlpha = 1;
         this.iconYOffset = 0;
         this.frame = 0;
+        this.keyID = 0;
         this.game = game;
         this.lockType = config.lockType;
         this.keyID = config.keyID || 0;
@@ -30214,21 +30215,22 @@ class Lockable {
     }
     canUnlock(player) {
         if (this.lockType === LockType.LOCKED) {
-            const key = player.inventory.hasItem(key_1.Key);
+            const key = this.hasKeyWithID(this.keyID, player);
+            console.log(this.keyID);
             if (key !== null) {
-                if (key.doorID === this.keyID) {
-                    this.game.pushMessage("You use the key to unlock.");
-                    return true;
-                }
-                else {
-                    this.game.pushMessage("The key doesn't fit the lock.");
-                    return false;
-                }
+                this.game.pushMessage("You use the key to unlock.");
+                console.log("keyID", key.doorID, "doorID", this.keyID);
+                return true;
+            }
+            // If no matching key, check if player has any key at all
+            const hasAnyKey = player.inventory.hasItem(key_1.Key);
+            if (hasAnyKey) {
+                this.game.pushMessage("The key doesn't fit the lock.");
             }
             else {
                 this.game.pushMessage("It's locked tightly and won't budge.");
-                return false;
             }
+            return false;
         }
         if (this.lockType === LockType.GUARDED) {
             // Check if room has no enemies - access through game.room
@@ -30242,7 +30244,7 @@ class Lockable {
     }
     unlock(player) {
         if (this.lockType === LockType.LOCKED) {
-            const key = player.inventory.hasItem(key_1.Key);
+            const key = this.hasKeyWithID(this.keyID, player);
             if (key !== null) {
                 player.inventory.removeItem(key);
                 sound_1.Sound.unlock();
@@ -30254,6 +30256,19 @@ class Lockable {
             this.locked = false;
             this.unlocking = true;
         }
+    }
+    hasKeyWithID(keyID, player) {
+        const inventory = player.inventory;
+        console.log("inventory.items", inventory.items);
+        for (const item of inventory.items) {
+            if (item instanceof key_1.Key) {
+                console.log("keyID", keyID, "item.doorID", item.doorID);
+                if (item.doorID === keyID) {
+                    return item;
+                }
+            }
+        }
+        return null;
     }
     unGuard() {
         if (this.lockType === LockType.GUARDED) {
@@ -30300,12 +30315,12 @@ class Lockable {
         return this.lockType;
     }
     // Static methods from KeyManager
-    static setKey(door, key) {
-        if (door.keyID !== 0)
-            return;
-        door.keyID = Lockable.generateID();
-        door.lockable.setKeyID(door.keyID);
-        key.doorID = door.keyID;
+    setKey(key) {
+        //if (this.keyID !== 0) return;
+        this.keyID = Lockable.generateID();
+        key.doorID = this.keyID;
+        console.log("keyID", this.keyID);
+        console.log("key.doorID", key.doorID);
     }
     static getKey(door) {
         return door.keyID;
@@ -30317,6 +30332,10 @@ class Lockable {
     }
     static generateID() {
         return Math.floor(Math.random() * 1000000);
+    }
+    updateLockState(newLockType) {
+        this.lockType = newLockType;
+        this.initializeLockState();
     }
 }
 exports.Lockable = Lockable;
@@ -30628,16 +30647,6 @@ class UpLadder extends tile_1.Tile {
             lockType: lockType,
             isTopDoor: true,
         });
-    }
-    // Lockable interface methods
-    lock(lockType = lockable_1.LockType.LOCKED) {
-        this.lockable = new lockable_1.Lockable(this.game, {
-            lockType: lockType,
-            isTopDoor: true,
-        });
-    }
-    setKeyID(keyID) {
-        this.lockable.setKeyID(keyID);
     }
     isLocked() {
         return this.lockable.isLocked();

@@ -1378,8 +1378,6 @@ export class LevelGenerator {
     newLevel.populator.populateRooms();
     newLevel.setRoomSkins();
 
-    newLevel.distributeKeys();
-
     // Only call linkExitToStart for main paths
     if (newLevel.exitRoom) {
       newLevel.exitRoom.linkExitToStart();
@@ -1390,7 +1388,6 @@ export class LevelGenerator {
 
     // Add the new levels to the game rooms
     this.game.rooms = rooms;
-
     // // Generate the rope hole if it exists
     for (let room of rooms) {
       if (room.type === RoomType.ROPEHOLE) {
@@ -1405,12 +1402,15 @@ export class LevelGenerator {
                   ? rooms.find((r) => r.type === RoomType.ROPECAVE)
                   : rooms.find((r) => r.type === RoomType.START),
               );
-              return;
             }
           }
         }
       }
     }
+
+    setTimeout(() => {
+      newLevel.distributeKeys();
+    }, 0);
 
     // Return the start room or the rope cave room
     callback(

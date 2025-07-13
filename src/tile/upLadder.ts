@@ -154,18 +154,6 @@ export class UpLadder extends Tile {
       );
   };
 
-  // Lockable interface methods
-  lock(lockType: LockType = LockType.LOCKED) {
-    this.lockable = new Lockable(this.game, {
-      lockType: lockType,
-      isTopDoor: true,
-    });
-  }
-
-  setKeyID(keyID: number) {
-    this.lockable.setKeyID(keyID);
-  }
-
   isLocked(): boolean {
     return this.lockable.isLocked();
   }

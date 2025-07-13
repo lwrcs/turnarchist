@@ -11,6 +11,7 @@ import { Sound } from "../sound/sound";
 import { EnvType } from "../constants/environmentTypes";
 import { LightSource } from "../lighting/lightSource";
 import { Lockable, LockType } from "./lockable";
+import { Key } from "../item/key";
 
 export class DownLadder extends Tile {
   linkedRoom: Room;
@@ -21,7 +22,6 @@ export class DownLadder extends Tile {
   environment: EnvType;
   lightSource: LightSource;
   lockable: Lockable;
-  keyID: number;
 
   constructor(
     room: Room,
@@ -38,11 +38,11 @@ export class DownLadder extends Tile {
     this.depth = room.depth;
     this.isSidePath = isSidePath;
     this.environment = environment;
-    this.keyID = 0;
+    const lock = isSidePath ? LockType.LOCKED : LockType.NONE;
 
     // Initialize lockable with the passed lockType
     this.lockable = new Lockable(game, {
-      lockType: LockType.LOCKED,
+      lockType: lock,
       isTopDoor: false,
     });
 
@@ -202,18 +202,6 @@ export class DownLadder extends Tile {
   };
 
   drawAbovePlayer = (delta: number) => {};
-
-  // Lockable interface methods
-  lock(lockType: LockType = LockType.LOCKED) {
-    this.lockable = new Lockable(this.game, {
-      lockType: lockType,
-      isTopDoor: false,
-    });
-  }
-
-  setKeyID(keyID: number) {
-    this.lockable.setKeyID(keyID);
-  }
 
   isLocked(): boolean {
     return this.lockable.isLocked();

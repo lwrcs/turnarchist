@@ -105,15 +105,25 @@ export class Level {
     let mainPath = this.isMainPath ? "main" : "side";
     console.log(`${mainPath} path, envType: ${env}`);
   }
-  getDownLadder(): DownLadder | null {
-    for (const room of this.rooms) {
+  getDownLadder(room: Room): DownLadder {
+    console.log("Looking for down ladder...");
+    if (room.type !== RoomType.ROPEHOLE) {
+      console.error("Room is not a rope hole");
+      return null;
+    }
+
+    // Then check ROPEHOLE rooms
+    //let room = this.rooms.find((room) => room.type === RoomType.ROPEHOLE);
+    console.log("Found rope hole room:", room ? "yes" : "no");
+
+    if (room) {
+      console.log("Searching rope hole room at", room.roomX, room.roomY);
       for (let x = room.roomX; x < room.roomX + room.width; x++) {
         for (let y = room.roomY; y < room.roomY + room.height; y++) {
           const tile = room.roomArray[x][y];
-          if (
-            tile instanceof DownLadder &&
-            tile.isSidePath === !this.isMainPath
-          ) {
+          console.log("tile", tile.x, tile.y, tile);
+          if (tile instanceof DownLadder) {
+            console.log("Found down ladder at", x, y);
             return tile;
           }
         }
@@ -125,7 +135,9 @@ export class Level {
   }
 
   distributeKeys() {
-    const downLadder = this.getDownLadder();
+    const downLadder = this.getDownLadder(
+      this.rooms?.find((r) => r.type === RoomType.ROPEHOLE),
+    );
     if (!downLadder) {
       console.error("No down ladder found");
       return;
@@ -137,8 +149,9 @@ export class Level {
       randomRoom.getEmptyTiles()[randomRoom.getEmptyTiles().length - 1];
 
     const key = new Key(randomRoom, randomTile.x, randomTile.y);
+    downLadder.lockable.setKey(key);
+
     randomRoom.items.push(key);
-    Lockable.setKey(downLadder, key);
     //this.game.player.inventory.addItem(key);
   }
 
