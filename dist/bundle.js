@@ -20734,6 +20734,305 @@ exports.environmentProps = environmentProps;
 
 /***/ }),
 
+/***/ "./src/level/generationVisualizer.ts":
+/*!*******************************************!*\
+  !*** ./src/level/generationVisualizer.ts ***!
+  \*******************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.GenerationVisualizer = void 0;
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
+class GenerationVisualizer {
+    constructor(game) {
+        this.game = game;
+        this.debugMode = document.cookie.includes("showgeneration=true");
+        this.animationConfig = {
+            partitionSplitDelay: this.debugMode ? 10 : 0,
+            pathfindingDelay: this.debugMode ? 100 : 0,
+            largeStepDelay: this.debugMode ? 100 : 0,
+            animationConstant: 1,
+            enabled: this.debugMode,
+        };
+        this.visualizationState = {
+            currentStep: "initializing",
+            progress: 0,
+            partitions: [],
+            centerX: 0,
+            centerY: 0,
+        };
+    }
+    /**
+     * Updates the animation configuration
+     */
+    updateAnimationConfig(config) {
+        this.animationConfig = { ...this.animationConfig, ...config };
+    }
+    /**
+     * Sets the visualization state for rendering
+     */
+    setVisualizationState(partitions, centerX, centerY, step = "generating", progress = 0) {
+        this.visualizationState = {
+            currentStep: step,
+            progress,
+            partitions,
+            centerX,
+            centerY,
+        };
+    }
+    /**
+     * Draws the current generation state
+     */
+    draw(delta) {
+        // Clear the canvas
+        game_1.Game.ctx.fillStyle = "rgba(0, 0, 0, 1)";
+        game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
+        if (this.debugMode) {
+            this.drawGenerationProgress(delta);
+        }
+        else {
+            this.drawSimpleLoadingScreen();
+        }
+    }
+    /**
+     * Draws detailed generation progress for debug mode
+     */
+    drawGenerationProgress(delta) {
+        if (this.visualizationState.partitions.length > 0) {
+            // Draw all partitions
+            this.visualizationState.partitions.forEach((partition) => {
+                this.drawPartition(partition, delta, this.visualizationState.centerX, this.visualizationState.centerY);
+            });
+            // Draw progress information
+            this.drawProgressInfo();
+        }
+    }
+    /**
+     * Draws a simple loading screen for normal mode
+     */
+    drawSimpleLoadingScreen() {
+        this.game.drawTextScreen("generating level");
+    }
+    /**
+     * Draws an individual partition
+     */
+    drawPartition(partition, delta, levelCenterX, levelCenterY) {
+        // Draw partition rectangle
+        game_1.Game.ctx.fillStyle = partition.fillStyle;
+        game_1.Game.ctx.fillRect(Math.round(gameConstants_1.GameConstants.WIDTH / 2 + partition.x - levelCenterX), Math.round(gameConstants_1.GameConstants.HEIGHT / 2 + partition.y - levelCenterY), partition.w, partition.h);
+        // Draw connections
+        this.drawPartitionConnections(partition, levelCenterX, levelCenterY);
+        // Draw partition info if in debug mode
+        if (this.debugMode) {
+            this.drawPartitionInfo(partition, levelCenterX, levelCenterY);
+        }
+    }
+    /**
+     * Draws connections for a partition
+     */
+    drawPartitionConnections(partition, levelCenterX, levelCenterY) {
+        game_1.Game.ctx.fillStyle = "white";
+        for (let connection of partition.connections) {
+            game_1.Game.ctx.fillRect(Math.round(gameConstants_1.GameConstants.WIDTH / 2 + connection.x - levelCenterX), Math.round(gameConstants_1.GameConstants.HEIGHT / 2 + connection.y - levelCenterY), 1, 1);
+        }
+    }
+    /**
+     * Draws debug information for a partition
+     */
+    drawPartitionInfo(partition, levelCenterX, levelCenterY) {
+        const x = Math.round(gameConstants_1.GameConstants.WIDTH / 2 + partition.x - levelCenterX);
+        const y = Math.round(gameConstants_1.GameConstants.HEIGHT / 2 + partition.y - levelCenterY);
+        game_1.Game.ctx.fillStyle = "yellow";
+        game_1.Game.ctx.font = "8px Arial";
+        game_1.Game.ctx.fillText(`${partition.type}`, x + 2, y + 10);
+        game_1.Game.ctx.fillText(`D:${partition.distance}`, x + 2, y + 20);
+    }
+    /**
+     * Draws progress information overlay
+     */
+    drawProgressInfo() {
+        game_1.Game.ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+        game_1.Game.ctx.fillRect(10, 10, 200, 60);
+        game_1.Game.ctx.fillStyle = "white";
+        game_1.Game.ctx.font = "12px Arial";
+        game_1.Game.ctx.fillText(`Step: ${this.visualizationState.currentStep}`, 20, 30);
+        game_1.Game.ctx.fillText(`Partitions: ${this.visualizationState.partitions.length}`, 20, 45);
+        game_1.Game.ctx.fillText(`Progress: ${Math.round(this.visualizationState.progress * 100)}%`, 20, 60);
+    }
+    /**
+     * Creates an animation delay promise
+     */
+    async createAnimationDelay(delayType) {
+        if (!this.animationConfig.enabled) {
+            return Promise.resolve();
+        }
+        let delay = 0;
+        switch (delayType) {
+            case "partition":
+                delay =
+                    this.animationConfig.animationConstant *
+                        this.animationConfig.partitionSplitDelay;
+                break;
+            case "pathfinding":
+                delay =
+                    this.animationConfig.animationConstant *
+                        this.animationConfig.pathfindingDelay;
+                break;
+            case "large":
+                delay =
+                    this.animationConfig.animationConstant *
+                        this.animationConfig.largeStepDelay;
+                break;
+        }
+        return new Promise((resolve) => setTimeout(resolve, delay));
+    }
+    /**
+     * Updates partition visual styles during generation
+     */
+    updatePartitionStyles(partitions) {
+        // Sort partitions by area for consistent styling
+        const sortedPartitions = [...partitions].sort((a, b) => a.area() - b.area());
+        if (sortedPartitions.length === 0)
+            return;
+        const minArea = sortedPartitions[0].area();
+        const maxArea = sortedPartitions[sortedPartitions.length - 1].area();
+        // Apply area-based styling
+        partitions.forEach((partition) => {
+            if (partition.type === "START") {
+                partition.fillStyle = "rgb(0, 255, 0)";
+            }
+            else if (partition.type === "BOSS") {
+                partition.fillStyle = "rgb(255, 0, 0)";
+            }
+            else if (partition.type === "DOWNLADDER") {
+                partition.fillStyle = "blue";
+            }
+            else if (partition.type === "ROPEHOLE") {
+                partition.fillStyle = "purple";
+            }
+            else {
+                // Default area-based styling
+                const normalizedArea = maxArea > minArea
+                    ? (partition.area() - minArea) / (maxArea - minArea)
+                    : 0;
+                const opacity = 0.3 + normalizedArea * 0.7;
+                partition.fillStyle = `rgba(128, 128, 128, ${opacity})`;
+            }
+        });
+    }
+    /**
+     * Visualizes partition layout in console (for debugging)
+     */
+    visualizePartitionsInConsole(partitions, mapWidth, mapHeight) {
+        if (!this.debugMode)
+            return;
+        const grid = Array.from({ length: mapHeight }, () => Array(mapWidth).fill(" . "));
+        const maxIndex = partitions.length - 1;
+        const padLength = maxIndex.toString().length;
+        partitions.forEach((partition, index) => {
+            const paddedIndex = index.toString().padStart(padLength, " ");
+            for (let x = partition.x; x < partition.x + partition.w; x++) {
+                for (let y = partition.y; y < partition.y + partition.h; y++) {
+                    if (x >= 0 && x < mapWidth && y >= 0 && y < mapHeight) {
+                        grid[y][x] = ` ${paddedIndex} `;
+                    }
+                }
+            }
+        });
+        console.log("Partition Layout:");
+        console.log("   " + [...Array(mapWidth)].map((_, i) => i % 10).join("  ") + " X");
+        grid.forEach((row, index) => {
+            const paddedIndex = index.toString().padStart(2, " ");
+            console.log(`${paddedIndex} ${row.join("")}`);
+        });
+        console.log("Y");
+    }
+    /**
+     * Logs generation progress messages
+     */
+    logGenerationStep(step, details) {
+        if (!this.debugMode)
+            return;
+        const message = details ? `${step}: ${details}` : step;
+        console.log(`[GenerationVisualizer] ${message}`);
+        if (this.game && this.game.pushMessage) {
+            this.game.pushMessage(message);
+        }
+    }
+    /**
+     * Creates visual effects for specific generation events
+     */
+    createVisualEffect(effectType, partition) {
+        if (!this.debugMode)
+            return;
+        switch (effectType) {
+            case "partition_split":
+                if (partition) {
+                    // Temporarily highlight the partition
+                    const originalStyle = partition.fillStyle;
+                    partition.fillStyle = "yellow";
+                    setTimeout(() => {
+                        partition.fillStyle = originalStyle;
+                    }, 200);
+                }
+                break;
+            case "room_connected":
+                if (partition) {
+                    partition.fillStyle = "lightgreen";
+                }
+                break;
+            case "boss_found":
+                if (partition) {
+                    partition.fillStyle = "rgb(255, 0, 0)";
+                }
+                this.logGenerationStep("Boss room found!");
+                break;
+            case "generation_complete":
+                this.logGenerationStep("Generation complete!");
+                break;
+        }
+    }
+    /**
+     * Updates the current generation progress
+     */
+    updateProgress(step, progress) {
+        this.visualizationState.currentStep = step;
+        this.visualizationState.progress = Math.max(0, Math.min(1, progress));
+        this.logGenerationStep(step, `${Math.round(progress * 100)}%`);
+    }
+    /**
+     * Resets the visualizer state
+     */
+    reset() {
+        this.visualizationState = {
+            currentStep: "initializing",
+            progress: 0,
+            partitions: [],
+            centerX: 0,
+            centerY: 0,
+        };
+    }
+    /**
+     * Gets the current animation configuration
+     */
+    getAnimationConfig() {
+        return { ...this.animationConfig };
+    }
+    /**
+     * Gets the current visualization state
+     */
+    getVisualizationState() {
+        return { ...this.visualizationState };
+    }
+}
+exports.GenerationVisualizer = GenerationVisualizer;
+
+
+/***/ }),
+
 /***/ "./src/level/level.ts":
 /*!****************************!*\
   !*** ./src/level/level.ts ***!
@@ -21018,7 +21317,7 @@ LevelConstants.TORCH_LIGHT_COLOR = [120, 35, 10];
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.LevelGenerator = exports.PartialLevel = void 0;
+exports.LevelGenerator = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const room_1 = __webpack_require__(/*! ../room/room */ "./src/room/room.ts");
 const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
@@ -21027,810 +21326,8 @@ const levelParametersGenerator_1 = __webpack_require__(/*! ./levelParametersGene
 const level_1 = __webpack_require__(/*! ./level */ "./src/level/level.ts");
 const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
 const environmentTypes_1 = __webpack_require__(/*! ../constants/environmentTypes */ "./src/constants/environmentTypes.ts");
-var PathType;
-(function (PathType) {
-    PathType[PathType["MAIN_PATH"] = 0] = "MAIN_PATH";
-    PathType[PathType["SIDE_PATH"] = 1] = "SIDE_PATH";
-    PathType[PathType["TUTORIAL"] = 2] = "TUTORIAL";
-})(PathType || (PathType = {}));
-// animation delays in ms
-let ANIMATION_PARTITION_SPLIT_DELAY = 0; // for partition splitting
-let ANIMATION_PATHFINDING_DELAY = 0; // for pathfinding
-let ANIMATION_LARGE_DELAY = 0; // in between larger steps
-if (document.cookie.includes("showgeneration=true")) {
-    ANIMATION_PARTITION_SPLIT_DELAY = 10; // for partition splitting
-    ANIMATION_PATHFINDING_DELAY = 100; // for pathfinding
-    ANIMATION_LARGE_DELAY = 100; // in between larger steps
-}
-class PartitionConnection {
-    constructor(x, y, other) {
-        this.x = x;
-        this.y = y;
-        this.other = other;
-    }
-}
-class Partition {
-    constructor(x, y, w, h, fillStyle) {
-        this.split = async () => {
-            await new Promise((resolve) => setTimeout(resolve, LevelGenerator.ANIMATION_CONSTANT * ANIMATION_PARTITION_SPLIT_DELAY));
-            // Reset open walls when a partition is split
-            this.isTopOpen = true;
-            this.isRightOpen = true;
-            this.isBottomOpen = true;
-            this.isLeftOpen = true;
-            // This function generates a random number around the center (0.5) within a certain width (0.6).
-            // It uses the Random.rand() function to generate a random number between 0 and 1, subtracts 0.5 to center it around 0,
-            // multiplies it by the width to scale it, and then adds the center (0.5) to shift it back to being between 0 and 1.
-            let rand_mid = () => {
-                let center = 0.5;
-                let width = 0.6;
-                return (random_1.Random.rand() - 0.5) * width + center;
-            };
-            let sizeRange = () => {
-                let sizes = [
-                    { size: 1, probability: 0.2 },
-                    { size: 3, probability: 0.6 },
-                    { size: 10, probability: 0.2 },
-                ];
-                let rand = random_1.Random.rand();
-                let sum = 0;
-                for (let size of sizes) {
-                    sum += size.probability;
-                    if (rand <= sum)
-                        return size.size;
-                }
-                return sizes[sizes.length - 1].size;
-            };
-            let MIN_SIZE = 4;
-            if (this.w > this.h) {
-                //if the partitions width is greater than its height
-                let w1 = Math.floor(rand_mid() * this.w);
-                //choose a random tile within the width of the tiles
-                let w2 = this.w - w1 - 1;
-                //The remaining border - 1
-                if (w1 < MIN_SIZE || w2 < MIN_SIZE)
-                    return [this];
-                //if either of these are less than the min size: return an array with this Partition
-                return [
-                    new Partition(this.x, this.y, w1, this.h, this.fillStyle),
-                    new Partition(this.x + w1 + 1, this.y, w2, this.h, this.fillStyle),
-                ];
-                //return an array with two new partitions
-            }
-            else {
-                let h1 = Math.floor(rand_mid() * this.h);
-                let h2 = this.h - h1 - 1;
-                if (h1 < MIN_SIZE || h2 < MIN_SIZE)
-                    return [this];
-                return [
-                    new Partition(this.x, this.y, this.w, h1, this.fillStyle),
-                    new Partition(this.x, this.y + h1 + 1, this.w, h2, this.fillStyle),
-                ];
-                //identical code for case where height > width
-            }
-        };
-        this.point_in = (x, y) => {
-            //given the input argument x,y coordinates output boolean
-            return (x >= this.x && x < this.x + this.w && y >= this.y && y < this.y + this.h);
-            //only return true if both input x and input y are within the partitions x and y
-        };
-        this.point_next_to = (x, y) => {
-            return ((x >= this.x - 1 &&
-                x < this.x + this.w + 1 &&
-                y >= this.y &&
-                y < this.y + this.h) ||
-                (x >= this.x &&
-                    x < this.x + this.w &&
-                    y >= this.y - 1 &&
-                    y < this.y + this.h + 1));
-            //return true if the input x and y are next to any point of the partition
-        };
-        this.area = () => {
-            return this.w * this.h;
-            //return the damn area
-        };
-        this.overlaps = (other) => {
-            return (other.x < this.x + this.w + 1 &&
-                other.x + other.w > this.x - 1 &&
-                other.y < this.y + this.h + 1 &&
-                other.y + other.h > this.y - 1);
-            //takes another partition instance as argument
-            //returns true if any points of each overlap
-        };
-        this.setOpenWall = (connection) => {
-            if (connection.y === this.y - 1 &&
-                connection.x >= this.x &&
-                connection.x < this.x + this.w) {
-                this.isTopOpen = false;
-            }
-            if (connection.y === this.y + this.h &&
-                connection.x >= this.x &&
-                connection.x < this.x + this.w) {
-                this.isBottomOpen = false;
-            }
-            if (connection.x === this.x + this.w &&
-                connection.y >= this.y &&
-                connection.y < this.y + this.h) {
-                this.isRightOpen = false;
-            }
-            if (connection.x === this.x - 1 &&
-                connection.y >= this.y &&
-                connection.y < this.y + this.h) {
-                this.isLeftOpen = false;
-            }
-        };
-        this.get_branch_point = () => {
-            let points = [];
-            for (let x = this.x; x < this.x + this.w; x++) {
-                //count up from the partitions x to its width
-                points.push({ x: x, y: this.y - 1 /*one row above partition*/ });
-                points.push({ x: x, y: this.y + this.h /*one row below partition*/ });
-            } // pushes the points above and below the partition
-            for (let y = this.y; y < this.y + this.h; y++) {
-                points.push({ x: this.x - 1, y: y });
-                points.push({ x: this.x + this.w, y: y });
-            } //pushes points to left and right of the partition
-            points = points.filter((p) => !this.connections.some((c) => Math.abs(c.x - p.x) + Math.abs(c.y - p.y) <= 1));
-            points.sort(() => 0.5 - random_1.Random.rand());
-            return points[0]; //return first object of x y points in array points
-        };
-        this.draw = (delta, levelCenterX, levelCenterY) => {
-            game_1.Game.ctx.fillStyle = this.fillStyle;
-            game_1.Game.ctx.fillRect(Math.round(gameConstants_1.GameConstants.WIDTH / 2 + this.x - levelCenterX), Math.round(gameConstants_1.GameConstants.HEIGHT / 2 + this.y - levelCenterY), this.w, this.h);
-            for (let connection of this.connections) {
-                game_1.Game.ctx.fillRect(Math.round(gameConstants_1.GameConstants.WIDTH / 2 + connection.x - levelCenterX), Math.round(gameConstants_1.GameConstants.HEIGHT / 2 + connection.y - levelCenterY), 1, 1);
-            }
-        };
-        this.x = x;
-        this.y = y;
-        this.w = w;
-        this.h = h;
-        this.fillStyle = fillStyle;
-        this.type = room_1.RoomType.DUNGEON;
-        this.connections = [];
-        this.distance = 1000;
-        this.isTopOpen = true;
-        this.isRightOpen = true;
-        this.isBottomOpen = true;
-        this.isLeftOpen = true;
-        this.pathIndex = 0;
-    }
-} //end of Partition class
-let split_partitions = async (partitions, prob) => {
-    for (let partition of partitions) {
-        if (random_1.Random.rand() < prob) {
-            partitions = partitions.filter((p) => p !== partition); // remove partition
-            partitions = partitions.concat(await partition.split()); // add splits
-        }
-    }
-    return partitions;
-    //takes input partitions array, randomly removes partitions and adds splits, output modified partitions array
-};
-let split_partition = async (partition, prob) => {
-    if (random_1.Random.rand() < prob) {
-        return await partition.split();
-    }
-    else {
-        return [partition];
-    }
-    // Takes a single partition and probability
-    // Returns an array with either the split partitions or the original partition
-};
-let reduce_dimensions = (partition, params) => {
-    let reduceY = 0;
-    let reduceX = 0;
-    let translateX = 0;
-    let translateY = 0;
-    partition.connections.forEach((connection) => {
-        if (connection.y === partition.y)
-            reduceY++, translateY++;
-        if (connection.y === partition.y + partition.h)
-            reduceY++;
-        if (connection.x === partition.x)
-            reduceX++, translateX++;
-        if (connection.x === partition.x + partition.w)
-            reduceX++;
-    });
-    if (partition.w > 7) {
-        partition.w -= translateX;
-        partition.x += translateX;
-    }
-    if (partition.h > 7) {
-        partition.h -= translateY;
-        partition.y += translateY;
-    }
-};
-let get_wall_rooms = (partitions, mapWidth, mapHeight) => {
-    return partitions.filter((partition, index) => {
-        // Helper function to check if a specific path is clear
-        const isPathClear = (direction) => {
-            switch (direction) {
-                case "left":
-                    for (let y = partition.y; y < partition.y + partition.h; y++) {
-                        let blocked = partitions.some((other) => {
-                            if (other === partition)
-                                return false;
-                            // Check if other partition overlaps this y-coordinate and is to the left
-                            return (other.y <= y &&
-                                y < other.y + other.h &&
-                                other.x + other.w > 0 &&
-                                other.x + other.w <= partition.x);
-                        });
-                        if (!blocked)
-                            return true; // Found at least one y without a blocker
-                    }
-                    return false;
-                case "right":
-                    for (let y = partition.y; y < partition.y + partition.h; y++) {
-                        let blocked = partitions.some((other) => {
-                            if (other === partition)
-                                return false;
-                            // Check if other partition overlaps this y-coordinate and is to the right
-                            return (other.y <= y &&
-                                y < other.y + other.h &&
-                                other.x < mapWidth &&
-                                other.x >= partition.x + partition.w);
-                        });
-                        if (!blocked)
-                            return true;
-                    }
-                    return false;
-                case "top":
-                    for (let x = partition.x; x < partition.x + partition.w; x++) {
-                        let blocked = partitions.some((other) => {
-                            if (other === partition)
-                                return false;
-                            // Check if other partition overlaps this x-coordinate and is above
-                            return (other.x <= x &&
-                                x < other.x + other.w &&
-                                other.y + other.h > 0 &&
-                                other.y + other.h <= partition.y);
-                        });
-                        if (!blocked)
-                            return true;
-                    }
-                    return false;
-                case "bottom":
-                    for (let x = partition.x; x < partition.x + partition.w; x++) {
-                        let blocked = partitions.some((other) => {
-                            if (other === partition)
-                                return false;
-                            // Check if other partition overlaps this x-coordinate and is below
-                            return (other.x <= x &&
-                                x < other.x + other.w &&
-                                other.y < mapHeight &&
-                                other.y >= partition.y + partition.h);
-                        });
-                        if (!blocked)
-                            return true;
-                    }
-                    return false;
-                default:
-                    return false;
-            }
-        };
-        const hasLeftPath = isPathClear("left");
-        const hasRightPath = isPathClear("right");
-        const hasTopPath = isPathClear("top");
-        const hasBottomPath = isPathClear("bottom");
-        // Count the number of open paths
-        const openPaths = [
-            hasLeftPath,
-            hasRightPath,
-            hasTopPath,
-            hasBottomPath,
-        ].filter(Boolean).length;
-        // Define wall rooms as those with exactly one open path
-        const isWallRoom = openPaths === 1;
-        return isWallRoom;
-    });
-};
-let remove_wall_rooms = (partitions, w, h, prob = 1.0) => {
-    // Get all wall rooms
-    const wallRooms = get_wall_rooms(partitions, w, h);
-    // Remove wall rooms based on probability
-    for (const wallRoom of wallRooms) {
-        if (random_1.Random.rand() < prob) {
-            partitions = partitions.filter((p) => p !== wallRoom);
-        }
-    }
-    return partitions;
-};
-let populate_grid = (partitions, grid, w, h) => {
-    for (let x = 0; x < w; x++) {
-        //loop through the horizontal tiles
-        grid[x] = []; //empty array at x index
-        for (let y = 0; y < h; y++) {
-            grid[x][y] = false;
-            for (const partition of partitions) {
-                if (partition.point_in(x, y))
-                    grid[x][y] = partition;
-            }
-        }
-    }
-    return grid;
-    //input grid array, partitions array and width and height
-    //output grid array that indicates which cells are in which partition
-};
-let generate_tendrils = (partialLevel, map_w, map_h) => {
-    const tendrilLength = Math.floor(random_1.Random.rand() * 3 + 2); // 2-4 rooms
-    const tendrilRoomSize = 4; // Small rooms for the tendril
-    // Pick a random existing room to branch from (prefer rooms with few connections)
-    let branchRooms = partialLevel.partitions.filter((p) => p.connections.length <= 2);
-    if (branchRooms.length === 0)
-        branchRooms = partialLevel.partitions;
-    let branchRoom = branchRooms[Math.floor(random_1.Random.rand() * branchRooms.length)];
-    let branchPoint = branchRoom.get_branch_point();
-    // Choose a random direction for the tendril
-    const directions = [
-        { dx: 1, dy: 0 },
-        { dx: -1, dy: 0 },
-        { dx: 0, dy: 1 },
-        { dx: 0, dy: -1 }, // up
-    ];
-    const direction = directions[Math.floor(random_1.Random.rand() * directions.length)];
-    let tendrilRooms = [];
-    let currentX = branchPoint.x;
-    let currentY = branchPoint.y;
-    // Generate tendril rooms
-    for (let i = 0; i < tendrilLength; i++) {
-        // Move in the chosen direction
-        currentX += direction.dx * (tendrilRoomSize + 1);
-        currentY += direction.dy * (tendrilRoomSize + 1);
-        // Create new tendril room
-        let tendrilRoom = new Partition(currentX - Math.floor(tendrilRoomSize / 2), currentY - Math.floor(tendrilRoomSize / 2), tendrilRoomSize, tendrilRoomSize, "lightblue");
-        // Check if room would be outside map boundaries
-        if (tendrilRoom.x < 0 ||
-            tendrilRoom.y < 0 ||
-            tendrilRoom.x + tendrilRoom.w >= map_w ||
-            tendrilRoom.y + tendrilRoom.h >= map_h) {
-            // Try to adjust position to stay within bounds
-            tendrilRoom.x = Math.max(0, Math.min(tendrilRoom.x, map_w - tendrilRoom.w));
-            tendrilRoom.y = Math.max(0, Math.min(tendrilRoom.y, map_h - tendrilRoom.h));
-            // If still invalid after adjustment, stop generating tendril
-            if (tendrilRoom.x < 0 ||
-                tendrilRoom.y < 0 ||
-                tendrilRoom.x + tendrilRoom.w >= map_w ||
-                tendrilRoom.y + tendrilRoom.h >= map_h) {
-                break;
-            }
-        }
-        // Check for overlaps with existing partitions
-        let overlaps = partialLevel.partitions.some((p) => p.overlaps(tendrilRoom));
-        if (overlaps) {
-            // Try slight offset if there's an overlap
-            let offsetX = random_1.Random.rand() > 0.5 ? 2 : -2;
-            let offsetY = random_1.Random.rand() > 0.5 ? 2 : -2;
-            tendrilRoom.x = Math.max(0, Math.min(tendrilRoom.x + offsetX, map_w - tendrilRoom.w));
-            tendrilRoom.y = Math.max(0, Math.min(tendrilRoom.y + offsetY, map_h - tendrilRoom.h));
-            // If still overlapping after adjustment, skip this tendril
-            if (partialLevel.partitions.some((p) => p.overlaps(tendrilRoom))) {
-                break;
-            }
-        }
-        tendrilRooms.push(tendrilRoom);
-        partialLevel.partitions.push(tendrilRoom);
-        // Connect to previous room (either branch room or previous tendril room)
-        let previousRoom = i === 0 ? branchRoom : tendrilRooms[i - 1];
-        let connectionX = Math.floor((previousRoom.x +
-            previousRoom.w / 2 +
-            tendrilRoom.x +
-            tendrilRoom.w / 2) /
-            2);
-        let connectionY = Math.floor((previousRoom.y +
-            previousRoom.h / 2 +
-            tendrilRoom.y +
-            tendrilRoom.h / 2) /
-            2);
-        previousRoom.connections.push(new PartitionConnection(connectionX, connectionY, tendrilRoom));
-        tendrilRoom.connections.push(new PartitionConnection(connectionX, connectionY, previousRoom));
-        // Set open walls
-        previousRoom.setOpenWall(new PartitionConnection(connectionX, connectionY, tendrilRoom));
-        tendrilRoom.setOpenWall(new PartitionConnection(connectionX, connectionY, previousRoom));
-    }
-    // Make the last tendril room a ropehole
-    if (tendrilRooms.length > 0) {
-        let ropeholeRoom = tendrilRooms[tendrilRooms.length - 1];
-        ropeholeRoom.type = room_1.RoomType.ROPEHOLE;
-        ropeholeRoom.fillStyle = "purple";
-    }
-};
-let generate_dungeon_candidate = async (game, partialLevel, map_w, map_h, depth, params) => {
-    const { minRoomCount, maxRoomCount, maxRoomArea, splitProbabilities, wallRemoveProbability, softMaxRoomArea, } = params;
-    partialLevel.partitions = [new Partition(0, 0, map_w, map_h, "white")];
-    let grid = [];
-    // Use splitProbabilities for splitting
-    while (partialLevel.partitions.length < params.maxRoomCount) {
-        for (let i = 0; i < splitProbabilities.length; i++) {
-            partialLevel.partitions = await split_partitions(partialLevel.partitions, splitProbabilities[i]);
-        }
-    }
-    for (let i = 0; i < 100; i++) {
-        partialLevel.partitions.forEach(async (partition) => {
-            let roomArea = Math.random() > 0.95 ? softMaxRoomArea : maxRoomArea; //Math.random() > 0.95 ? params.softMaxRoomArea : params.maxRoomArea;
-            if (partition.area() > roomArea) {
-                partialLevel.partitions = partialLevel.partitions.filter((p) => p !== partition);
-                partialLevel.partitions = partialLevel.partitions.concat(await split_partition(partition, 0.5));
-            }
-        });
-    }
-    //visualize_partialLevel.partitions(partialLevel.partitions, map_w, map_h);
-    partialLevel.partitions = remove_wall_rooms(partialLevel.partitions, map_w, map_h, wallRemoveProbability);
-    await new Promise((resolve) => setTimeout(resolve, LevelGenerator.ANIMATION_CONSTANT * ANIMATION_LARGE_DELAY));
-    // Remove wall rooms based on probability
-    /*
-    if (partitions.length > params.minRoomCount) {
-      for (let i = 0; i < 1; i++) {
-        partitions = remove_wall_rooms(partitions, map_w, map_h, wallRemoveProbability);
-      }
-    }
-    
-    /*
-      partitions = partitions.filter((p) => {
-        if (p.area() > maxRoomArea && partitions.length > params.minRoomCount) {
-          return false;
-        }
-        return true;
-      });
-     
-      while (partitions.length > maxRoomCount) {
-        partitions.pop();
-      }
-    */
-    // Check if we have any partitions before proceeding
-    if (partialLevel.partitions.length === 0) {
-        partialLevel.partitions = [];
-        return;
-    }
-    //populate the grid with partitions
-    partialLevel.partitions.sort((a, b) => a.area() - b.area());
-    // shade each partition's fillStyle based on its area, medium gray for smallest, white for largest
-    partialLevel.partitions.forEach((partition) => {
-        partition.fillStyle = `rgba(128, 128, 128, ${partition.area() / partialLevel.partitions[0].area()})`;
-    });
-    await new Promise((resolve) => setTimeout(resolve, LevelGenerator.ANIMATION_CONSTANT * ANIMATION_LARGE_DELAY));
-    // Make sure we have at least one partition before assigning spawn
-    if (partialLevel.partitions.length === 0) {
-        partialLevel.partitions = [];
-        return;
-    }
-    let spawn = partialLevel.partitions[0];
-    if (!spawn) {
-        partialLevel.partitions = [];
-        return;
-    }
-    spawn.type = room_1.RoomType.START;
-    spawn.fillStyle = "rgb(0, 255, 0)";
-    if (partialLevel.partitions.length > 1) {
-        partialLevel.partitions[partialLevel.partitions.length - 1].type =
-            room_1.RoomType.BOSS;
-        partialLevel.partitions[partialLevel.partitions.length - 1].fillStyle =
-            "red";
-    }
-    await new Promise((resolve) => setTimeout(resolve, LevelGenerator.ANIMATION_CONSTANT * ANIMATION_LARGE_DELAY));
-    let connected = [spawn];
-    let frontier = [spawn];
-    let found_boss = false;
-    // connect rooms until we find the boss
-    while (frontier.length > 0 && !found_boss) {
-        let room = frontier[0];
-        if (room !== spawn)
-            room.fillStyle = "green";
-        frontier.splice(0, 1);
-        let doors_found = 0;
-        const num_doors = Math.floor(random_1.Random.rand() * 2 + 1);
-        let tries = 0;
-        const max_tries = 1000;
-        while (doors_found < num_doors && tries < max_tries) {
-            let point = room.get_branch_point();
-            for (const p of partialLevel.partitions) {
-                if (p !== room &&
-                    connected.indexOf(p) === -1 &&
-                    p.point_next_to(point.x, point.y)) {
-                    room.connections.push(new PartitionConnection(point.x, point.y, p));
-                    p.connections.push(new PartitionConnection(point.x, point.y, room));
-                    // Set open walls based on connection
-                    room.setOpenWall(new PartitionConnection(point.x, point.y, p));
-                    p.setOpenWall(new PartitionConnection(point.x, point.y, room));
-                    frontier.push(p);
-                    connected.push(p);
-                    doors_found++;
-                    if (p.type === room_1.RoomType.BOSS) {
-                        found_boss = true;
-                        p.fillStyle = "rgb(255, 0, 0)";
-                    }
-                    break;
-                }
-            }
-            tries++;
-        }
-        await new Promise((resolve) => setTimeout(resolve, LevelGenerator.ANIMATION_CONSTANT * ANIMATION_PATHFINDING_DELAY));
-    }
-    // remove rooms we haven't connected to yet
-    for (const partition of partialLevel.partitions) {
-        if (partition.connections.length === 0)
-            partialLevel.partitions = partialLevel.partitions.filter((p) => p !== partition);
-    }
-    await new Promise((resolve) => setTimeout(resolve, LevelGenerator.ANIMATION_CONSTANT * ANIMATION_LARGE_DELAY));
-    grid = populate_grid(partialLevel.partitions, grid, map_w, map_h); // recalculate with removed rooms
-    // make sure we haven't removed all the rooms
-    if (partialLevel.partitions.length === 0) {
-        partialLevel.partitions = [];
-        return; // for now just return an empty list so we can retry
-    }
-    // make some loops
-    let num_loop_doors = Math.floor(random_1.Random.rand() * 4 + 4);
-    for (let i = 0; i < num_loop_doors; i++) {
-        let roomIndex = Math.floor(random_1.Random.rand() * partialLevel.partitions.length);
-        let room = partialLevel.partitions[roomIndex];
-        let found_door = false;
-        let tries = 0;
-        const max_tries = 10;
-        let not_already_connected = partialLevel.partitions.filter((p) => !room.connections.some((c) => c.other === p));
-        while (!found_door && tries < max_tries) {
-            let point = room.get_branch_point();
-            for (const p of not_already_connected) {
-                if (p !== room && p.point_next_to(point.x, point.y)) {
-                    room.connections.push(new PartitionConnection(point.x, point.y, p));
-                    p.connections.push(new PartitionConnection(point.x, point.y, room));
-                    // Set open walls based on connection
-                    room.setOpenWall(new PartitionConnection(point.x, point.y, p));
-                    p.setOpenWall(new PartitionConnection(point.x, point.y, room));
-                    found_door = true;
-                    break;
-                }
-            }
-            tries++;
-        }
-    }
-    // generate tendril for ropehole (can be easily disabled by commenting this line)
-    //generate_tendrils(partialLevel, map_w, map_h);
-    // add stair room
-    if (!partialLevel.partitions.some((p) => p.type === room_1.RoomType.BOSS)) {
-        partialLevel.partitions = [];
-        return;
-    }
-    let boss = partialLevel.partitions.find((p) => p.type === room_1.RoomType.BOSS);
-    let found_stair = false;
-    const max_stair_tries = 5;
-    const stairRoomWidth = 5;
-    const stairRoomHeight = 5;
-    for (let stair_tries = 0; stair_tries < max_stair_tries; stair_tries++) {
-        let stair = new Partition(game_1.Game.rand(boss.x - 1, boss.x + boss.w - 2, random_1.Random.rand), boss.y - stairRoomHeight - 1, stairRoomWidth, stairRoomHeight, "white");
-        stair.type = room_1.RoomType.DOWNLADDER;
-        stair.fillStyle = "blue";
-        if (!partialLevel.partitions.some((p) => p.overlaps(stair))) {
-            found_stair = true;
-            partialLevel.partitions.push(stair);
-            stair.connections.push(new PartitionConnection(stair.x + 1, stair.y + stairRoomHeight, boss));
-            boss.connections.push(new PartitionConnection(stair.x + 1, stair.y + stairRoomHeight, stair));
-            // Set open walls for stair and boss connection
-            stair.setOpenWall(new PartitionConnection(stair.x + 1, stair.y + stairRoomHeight, boss));
-            boss.setOpenWall(new PartitionConnection(stair.x + 1, stair.y + stairRoomHeight, stair));
-            break;
-        }
-    }
-    if (!found_stair) {
-        console.log("No stair found");
-        partialLevel.partitions = [];
-        //game.pushMessage("No stair found");
-        return;
-    }
-    // calculate room distances
-    frontier = [spawn];
-    let seen = [];
-    spawn.distance = 0;
-    while (frontier.length > 0) {
-        let room = frontier[0];
-        frontier.splice(0, 1);
-        seen.push(room);
-        for (let c of room.connections) {
-            let other = c.other;
-            other.distance = Math.min(other.distance, room.distance + 1);
-            if (seen.indexOf(other) === -1)
-                frontier.push(other);
-        }
-    }
-    // add special rooms
-    let added_rope_hole = false;
-    for (const p of partialLevel.partitions) {
-        if (p.type === room_1.RoomType.DUNGEON) {
-            if (p.distance > 4 && p.area() <= 30 && random_1.Random.rand() < 0) {
-                p.type = room_1.RoomType.TREASURE;
-            }
-            else if (!added_rope_hole
-            //p.connections.length === 1 // Only rooms with exactly one connection (dead ends)
-            ) {
-                p.type = room_1.RoomType.ROPEHOLE;
-                added_rope_hole = true;
-            }
-        }
-    }
-    await new Promise((resolve) => setTimeout(resolve, 10 * LevelGenerator.ANIMATION_CONSTANT * ANIMATION_LARGE_DELAY));
-};
-let generate_dungeon = async (game, partialLevel, map_w, map_h, depth, params) => {
-    let passes_checks = false;
-    let tries = 0;
-    while (!passes_checks) {
-        await generate_dungeon_candidate(game, partialLevel, map_w, map_h, depth, params);
-        passes_checks = true;
-        if (partialLevel.partitions.length < params.minRoomCount) {
-            passes_checks = false;
-            if (document.cookie.includes("showgeneration=true"))
-                game.pushMessage("Not enough rooms");
-        }
-        else if (!partialLevel.partitions.some((p) => p.type === room_1.RoomType.BOSS)) {
-            passes_checks = false;
-            if (document.cookie.includes("showgeneration=true"))
-                game.pushMessage("Boss room unreachable");
-        }
-        else if (partialLevel.partitions.find((p) => p.type === room_1.RoomType.BOSS).distance < 3) {
-            passes_checks = false;
-            if (document.cookie.includes("showgeneration=true"))
-                game.pushMessage("Boss room too close to spawn");
-        }
-        tries++;
-        //if (tries > 100) break;
-    }
-    //game.pushMessage("Dungeon passed all checks");
-    await new Promise((resolve) => setTimeout(resolve, 10 * LevelGenerator.ANIMATION_CONSTANT * ANIMATION_LARGE_DELAY));
-    console.log("finished generation");
-    //partialLevel.partitions.forEach((partition) => reduce_dimensions(partition, params));
-};
-let generate_cave_candidate = async (partialLevel, map_w, map_h, num_rooms) => {
-    // Offset cave generation by 1000 to avoid overlap with main path dungeons
-    const CAVE_OFFSET = 100;
-    partialLevel.partitions = [
-        new Partition(CAVE_OFFSET, CAVE_OFFSET, map_w, map_h, "white"),
-    ];
-    let grid = [];
-    for (let i = 0; i < 9; i++)
-        partialLevel.partitions = await split_partitions(partialLevel.partitions, 0.75);
-    grid = populate_grid(partialLevel.partitions, grid, map_w, map_h);
-    partialLevel.partitions.sort((a, b) => a.area() - b.area());
-    if (partialLevel.partitions.length === 0) {
-        throw new Error("No partitions generated."); // Throw an error if no partitions
-    }
-    let spawn = partialLevel.partitions[0];
-    spawn.type = room_1.RoomType.ROPECAVE;
-    for (let i = 1; i < partialLevel.partitions.length; i++)
-        partialLevel.partitions[i].type = room_1.RoomType.CAVE;
-    let connected = [spawn];
-    let frontier = [spawn];
-    // connect rooms until we hit num_rooms
-    while (frontier.length > 0 && connected.length < num_rooms) {
-        let room = frontier[0];
-        frontier.splice(0, 1);
-        let doors_found = 0;
-        const num_doors = Math.floor(random_1.Random.rand() * 2 + 1);
-        let tries = 0;
-        const max_tries = 1000;
-        while (doors_found < num_doors &&
-            tries < max_tries &&
-            connected.length < num_rooms) {
-            let point = room.get_branch_point();
-            if (!point) {
-            }
-            for (const p of partialLevel.partitions) {
-                if (p !== room &&
-                    connected.indexOf(p) === -1 &&
-                    p.point_next_to(point.x, point.y)) {
-                    room.connections.push(new PartitionConnection(point.x, point.y, p));
-                    p.connections.push(new PartitionConnection(point.x, point.y, room));
-                    frontier.push(p);
-                    connected.push(p);
-                    doors_found++;
-                    break;
-                }
-            }
-            tries++;
-        }
-    }
-    // remove rooms we haven't connected to yet
-    partialLevel.partitions = partialLevel.partitions.filter((partition) => partition.connections.length > 0);
-    grid = populate_grid(partialLevel.partitions, grid, map_w, map_h); // recalculate with removed rooms
-    // make sure we haven't removed all the rooms
-    if (partialLevel.partitions.length === 0) {
-        throw new Error("No valid rooms after filtering."); // Throw an error if no valid rooms
-    }
-    // make some loops
-    let num_loop_doors = Math.floor(random_1.Random.rand() * 4 + 4);
-    for (let i = 0; i < num_loop_doors; i++) {
-        let roomIndex = Math.floor(random_1.Random.rand() * partialLevel.partitions.length);
-        let room = partialLevel.partitions[roomIndex];
-        let found_door = false;
-        let tries = 0;
-        const max_tries = 100;
-        let not_already_connected = partialLevel.partitions.filter((p) => !room.connections.some((c) => c.other === p));
-        while (!found_door && tries < max_tries) {
-            let point = room.get_branch_point();
-            if (!point) {
-                break; // Skip if no valid branch point found
-            }
-            for (const p of not_already_connected) {
-                if (p !== room && p.point_next_to(point.x, point.y)) {
-                    room.connections.push(new PartitionConnection(point.x, point.y, p));
-                    p.connections.push(new PartitionConnection(point.x, point.y, room));
-                    found_door = true;
-                    break;
-                }
-            }
-            tries++;
-        }
-    }
-    // calculate room distances
-    frontier = [spawn];
-    let seen = [];
-    spawn.distance = 0;
-    while (frontier.length > 0) {
-        let room = frontier[0];
-        frontier.splice(0, 1);
-        seen.push(room);
-        for (let c of room.connections) {
-            let other = c.other;
-            other.distance = Math.min(other.distance, room.distance + 1);
-            if (seen.indexOf(other) === -1)
-                frontier.push(other);
-        }
-    }
-    return partialLevel.partitions;
-};
-let generate_cave = async (partialLevel, mapWidth, mapHeight) => {
-    const numberOfRooms = 8; // don't set this too high or cave generation will time out // changed to 3 from 10 to test
-    do {
-        await generate_cave_candidate(partialLevel, mapWidth, mapHeight, numberOfRooms);
-    } while (partialLevel.partitions.length < numberOfRooms);
-    return partialLevel.partitions;
-};
-let generate_tutorial = (height = 7, width = 7) => {
-    let partitions;
-    partitions = [new Partition(0, 0, height, width, "white")];
-    partitions[0].type = room_1.RoomType.TUTORIAL;
-    return partitions;
-};
-let visualize_partitions = (partitions, mapWidth, mapHeight) => {
-    // Create grid with padded spaces
-    const grid = Array.from({ length: mapHeight }, () => Array(mapWidth).fill(" . "));
-    // Calculate the maximum number of digits needed
-    const maxIndex = partitions.length - 1;
-    const padLength = maxIndex.toString().length;
-    partitions.forEach((partition, index) => {
-        // Pad the index number with spaces to maintain consistent width
-        const paddedIndex = index.toString().padStart(padLength, " ");
-        for (let x = partition.x; x < partition.x + partition.w; x++) {
-            for (let y = partition.y; y < partition.y + partition.h; y++) {
-                if (x >= 0 && x < mapWidth && y >= 0 && y < mapHeight) {
-                    grid[y][x] = ` ${paddedIndex} `; // Pad numbers with spaces
-                }
-            }
-        }
-    });
-    console.log("Partition Layout:");
-    console.log("   " + [...Array(mapWidth)].map((_, i) => i % 10).join("  ") + " X"); // Column headers
-    grid.forEach((row, index) => {
-        const paddedIndex = index.toString().padStart(2, " ");
-        console.log(`${paddedIndex} ${row.join("")}`);
-    });
-    console.log("Y");
-};
-let check_overlaps = (partitions) => {
-    for (let i = 0; i < partitions.length; i++) {
-        for (let j = i + 1; j < partitions.length; j++) {
-            const a = partitions[i];
-            const b = partitions[j];
-            if (a.x < b.x + b.w &&
-                a.x + a.w > b.x &&
-                a.y < b.y + b.h &&
-                a.y + a.h > b.y) {
-                return true;
-            }
-        }
-    }
-    return false;
-};
-class PartialLevel {
-}
-exports.PartialLevel = PartialLevel;
+const partitionGenerator_1 = __webpack_require__(/*! ./partitionGenerator */ "./src/level/partitionGenerator.ts");
+const levelValidator_1 = __webpack_require__(/*! ./levelValidator */ "./src/level/levelValidator.ts");
 class LevelGenerator {
     constructor() {
         this.depthReached = 0;
@@ -21862,11 +21359,9 @@ class LevelGenerator {
             return newLevel;
         };
         this.getRooms = (partitions, depth, mapGroup, envType) => {
-            //this.setOpenWallsForPartitions(partitions, 35, 35); // Using standard map size
             let rooms = [];
             for (let i = 0; i < partitions.length; i++) {
                 let partition = partitions[i];
-                // Pass open walls information to the Room constructor
                 let room = new room_1.Room(this.game, partition.x - 1, partition.y - 1, partition.w + 2, partition.h + 2, partition.type, depth, mapGroup, this.game.levels[depth], random_1.Random.rand, envType);
                 rooms.push(room);
             }
@@ -21890,8 +21385,17 @@ class LevelGenerator {
         this.setSeed = (seed) => {
             this.seed = seed;
         };
-        this.generate = async (game, depth, isSidePath = false, // Updated parameter name for clarity
-        callback, environment = environmentTypes_1.EnvType.DUNGEON) => {
+        this.generate = async (game, depth, isSidePath = false, callback, environment = environmentTypes_1.EnvType.DUNGEON) => {
+            // Initialize components with game instance
+            if (!this.partitionGenerator) {
+                this.partitionGenerator = new partitionGenerator_1.PartitionGenerator(game);
+            }
+            if (!this.validator) {
+                this.validator = new levelValidator_1.LevelValidator(game);
+            }
+            if (!this.visualizer) {
+                this.visualizer = this.partitionGenerator.getVisualizer();
+            }
             this.levelParams = levelParametersGenerator_1.LevelParameterGenerator.getParameters(depth);
             this.depthReached = depth;
             // Set the random state based on the seed and depth
@@ -21901,27 +21405,34 @@ class LevelGenerator {
             let mapGroup = this.game.rooms.length > 0
                 ? this.game.rooms[this.game.rooms.length - 1].mapGroup + 1
                 : 0;
-            this.partialLevel = new PartialLevel();
             // Generate partitions based on whether it's a side path or main path
-            if (isSidePath)
-                await generate_cave(this.partialLevel, 50, 50);
-            else
-                await generate_dungeon(game, this.partialLevel, this.levelParams.mapWidth, this.levelParams.mapHeight, depth, this.levelParams);
-            let envType = environment;
-            // Call this function before get_wall_rooms
-            if (check_overlaps(this.partialLevel.partitions)) {
-                console.warn("There are overlapping partitions.");
+            let partitions;
+            if (isSidePath) {
+                partitions = await this.partitionGenerator.generateCavePartitions(50, 50);
             }
+            else {
+                partitions = await this.partitionGenerator.generateDungeonPartitions(game, this.levelParams.mapWidth, this.levelParams.mapHeight, depth, this.levelParams);
+            }
+            // Use validator instead of direct overlap checking
+            const overlapValidation = this.validator.validateNoOverlaps(partitions);
+            if (!overlapValidation.isValid) {
+                console.warn(`Overlap validation failed: ${overlapValidation.errorMessage}`);
+            }
+            let envType = environment;
+            // Check for overlaps
+            // if (this.partitionGenerator.checkOverlaps(partitions)) { // This line is removed as per the new_code
+            //   console.warn("There are overlapping partitions.");
+            // }
             // Get the levels based on the partitions
-            let newLevel = this.createLevel(depth, !isSidePath, mapGroup, envType); // isMainPath = !isSidePath
+            let newLevel = this.createLevel(depth, !isSidePath, mapGroup, envType);
             if (isSidePath) {
                 // create Level object ONLY to prepare rooms, but
                 // DO NOT push to game.levels
             }
             else {
-                this.game.levels.push(newLevel); // keep current behaviour
+                this.game.levels.push(newLevel);
             }
-            let rooms = this.getRooms(this.partialLevel.partitions, depth, mapGroup, envType);
+            let rooms = this.getRooms(partitions, depth, mapGroup, envType);
             newLevel.setRooms(rooms);
             newLevel.populator.populateRooms();
             newLevel.setRoomSkins();
@@ -21934,7 +21445,7 @@ class LevelGenerator {
                 this.currentFloorFirstLevelID = this.game.rooms.length;
             // Add the new levels to the game rooms
             this.game.rooms = rooms;
-            // // Generate the rope hole if it exists
+            // Generate the rope hole if it exists
             for (let room of rooms) {
                 if (room.type === room_1.RoomType.ROPEHOLE) {
                     for (let x = room.roomX; x < room.roomX + room.width; x++) {
@@ -21979,19 +21490,19 @@ class LevelGenerator {
             }
         };
         this.draw = (delta) => {
-            game_1.Game.ctx.fillStyle = "rgba(0, 0, 0, 1)";
-            game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
-            if (document.cookie.includes("showgeneration=true")) {
-                if (this.partialLevel.partitions) {
-                    this.partialLevel.partitions.forEach((partition) => {
-                        partition.draw(delta, this.levelParams.mapWidth / 2, this.levelParams.mapHeight / 2);
-                    });
-                }
+            if (this.visualizer) {
+                this.visualizer.draw(delta);
             }
             else {
+                // Fallback if visualizer not initialized
+                game_1.Game.ctx.fillStyle = "rgba(0, 0, 0, 1)";
+                game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
                 this.game.drawTextScreen("generating level");
             }
         };
+        // Don't initialize partitionGenerator here yet since we need game instance
+        this.validator = null;
+        this.visualizer = null;
     }
 }
 exports.LevelGenerator = LevelGenerator;
@@ -21999,9 +21510,9 @@ LevelGenerator.ANIMATION_CONSTANT = 1;
 const getPathParameters = (pathType, depth) => {
     const baseParams = levelParametersGenerator_1.LevelParameterGenerator.getParameters(depth);
     switch (pathType) {
-        case PathType.MAIN_PATH:
+        case partitionGenerator_1.PathType.MAIN_PATH:
             return {
-                pathType: PathType.MAIN_PATH,
+                pathType: partitionGenerator_1.PathType.MAIN_PATH,
                 mapWidth: baseParams.mapWidth,
                 mapHeight: baseParams.mapHeight,
                 roomCount: {
@@ -22015,9 +21526,9 @@ const getPathParameters = (pathType, depth) => {
                 connectionStyle: "linear",
                 loopDoorCount: { min: 4, max: 8 },
             };
-        case PathType.SIDE_PATH:
+        case partitionGenerator_1.PathType.SIDE_PATH:
             return {
-                pathType: PathType.SIDE_PATH,
+                pathType: partitionGenerator_1.PathType.SIDE_PATH,
                 mapWidth: 50,
                 mapHeight: 50,
                 roomCount: { min: 5, max: 5 },
@@ -22028,9 +21539,9 @@ const getPathParameters = (pathType, depth) => {
                 connectionStyle: "branched",
                 loopDoorCount: { min: 4, max: 8 },
             };
-        case PathType.TUTORIAL:
+        case partitionGenerator_1.PathType.TUTORIAL:
             return {
-                pathType: PathType.TUTORIAL,
+                pathType: partitionGenerator_1.PathType.TUTORIAL,
                 mapWidth: 7,
                 mapHeight: 7,
                 roomCount: { min: 1, max: 1 },
@@ -22117,6 +21628,961 @@ class LevelParameterGenerator {
     }
 }
 exports.LevelParameterGenerator = LevelParameterGenerator;
+
+
+/***/ }),
+
+/***/ "./src/level/levelValidator.ts":
+/*!*************************************!*\
+  !*** ./src/level/levelValidator.ts ***!
+  \*************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.LevelValidator = exports.ValidationErrorType = void 0;
+const room_1 = __webpack_require__(/*! ../room/room */ "./src/room/room.ts");
+var ValidationErrorType;
+(function (ValidationErrorType) {
+    ValidationErrorType["INSUFFICIENT_ROOMS"] = "INSUFFICIENT_ROOMS";
+    ValidationErrorType["BOSS_ROOM_MISSING"] = "BOSS_ROOM_MISSING";
+    ValidationErrorType["BOSS_TOO_CLOSE"] = "BOSS_TOO_CLOSE";
+    ValidationErrorType["OVERLAPPING_PARTITIONS"] = "OVERLAPPING_PARTITIONS";
+    ValidationErrorType["EMPTY_PARTITIONS"] = "EMPTY_PARTITIONS";
+    ValidationErrorType["STAIR_ROOM_MISSING"] = "STAIR_ROOM_MISSING";
+    ValidationErrorType["INSUFFICIENT_CAVE_ROOMS"] = "INSUFFICIENT_CAVE_ROOMS";
+})(ValidationErrorType = exports.ValidationErrorType || (exports.ValidationErrorType = {}));
+class LevelValidator {
+    constructor(game, enableDebugMessages = false) {
+        this.game = game;
+        this.enableDebugMessages =
+            enableDebugMessages || document.cookie.includes("showgeneration=true");
+    }
+    /**
+     * Validates dungeon partitions against the provided parameters
+     */
+    validateDungeonPartitions(partitions, params) {
+        // Check for empty partitions
+        const emptyCheck = this.validateNotEmpty(partitions);
+        if (!emptyCheck.isValid)
+            return emptyCheck;
+        // Check minimum room count
+        const roomCountCheck = this.validateMinimumRoomCount(partitions, params.minRoomCount);
+        if (!roomCountCheck.isValid)
+            return roomCountCheck;
+        // Check boss room existence
+        const bossExistenceCheck = this.validateBossRoomExists(partitions);
+        if (!bossExistenceCheck.isValid)
+            return bossExistenceCheck;
+        // Check boss room distance
+        const bossDistanceCheck = this.validateBossRoomDistance(partitions, 3);
+        if (!bossDistanceCheck.isValid)
+            return bossDistanceCheck;
+        // Check for overlapping partitions
+        const overlapCheck = this.validateNoOverlaps(partitions);
+        if (!overlapCheck.isValid)
+            return overlapCheck;
+        // Check for stair room (required for dungeon completion)
+        const stairCheck = this.validateStairRoomExists(partitions);
+        if (!stairCheck.isValid)
+            return stairCheck;
+        return { isValid: true };
+    }
+    /**
+     * Validates cave partitions
+     */
+    validateCavePartitions(partitions, requiredRoomCount) {
+        // Check for empty partitions
+        const emptyCheck = this.validateNotEmpty(partitions);
+        if (!emptyCheck.isValid)
+            return emptyCheck;
+        // Check minimum room count for caves
+        const roomCountCheck = this.validateMinimumRoomCount(partitions, requiredRoomCount);
+        if (!roomCountCheck.isValid) {
+            return {
+                isValid: false,
+                errorMessage: `Cave needs at least ${requiredRoomCount} rooms, got ${partitions.length}`,
+                errorType: ValidationErrorType.INSUFFICIENT_CAVE_ROOMS,
+            };
+        }
+        // Check for overlapping partitions
+        const overlapCheck = this.validateNoOverlaps(partitions);
+        if (!overlapCheck.isValid)
+            return overlapCheck;
+        // Validate that we have a rope cave starting room
+        const ropeCaveCheck = this.validateRopeCaveExists(partitions);
+        if (!ropeCaveCheck.isValid)
+            return ropeCaveCheck;
+        return { isValid: true };
+    }
+    /**
+     * Validates tutorial partitions
+     */
+    validateTutorialPartitions(partitions) {
+        // Check for empty partitions
+        const emptyCheck = this.validateNotEmpty(partitions);
+        if (!emptyCheck.isValid)
+            return emptyCheck;
+        // Tutorial should have exactly 1 room
+        if (partitions.length !== 1) {
+            return {
+                isValid: false,
+                errorMessage: `Tutorial should have exactly 1 room, got ${partitions.length}`,
+                errorType: ValidationErrorType.INSUFFICIENT_ROOMS,
+            };
+        }
+        // Check that the room is marked as tutorial
+        const tutorialRoom = partitions[0];
+        if (tutorialRoom.type !== room_1.RoomType.TUTORIAL) {
+            return {
+                isValid: false,
+                errorMessage: "Tutorial room is not marked with TUTORIAL type",
+                errorType: ValidationErrorType.INSUFFICIENT_ROOMS,
+            };
+        }
+        return { isValid: true };
+    }
+    /**
+     * Validates that partitions array is not empty
+     */
+    validateNotEmpty(partitions) {
+        if (!partitions || partitions.length === 0) {
+            const errorMessage = "No partitions generated";
+            this.logValidationError(errorMessage);
+            return {
+                isValid: false,
+                errorMessage,
+                errorType: ValidationErrorType.EMPTY_PARTITIONS,
+            };
+        }
+        return { isValid: true };
+    }
+    /**
+     * Validates minimum room count requirement
+     */
+    validateMinimumRoomCount(partitions, minRoomCount) {
+        if (partitions.length < minRoomCount) {
+            const errorMessage = `Not enough rooms: need ${minRoomCount}, got ${partitions.length}`;
+            this.logValidationError(errorMessage);
+            return {
+                isValid: false,
+                errorMessage,
+                errorType: ValidationErrorType.INSUFFICIENT_ROOMS,
+            };
+        }
+        return { isValid: true };
+    }
+    /**
+     * Validates that a boss room exists
+     */
+    validateBossRoomExists(partitions) {
+        const hasBossRoom = partitions.some((p) => p.type === room_1.RoomType.BOSS);
+        if (!hasBossRoom) {
+            const errorMessage = "Boss room unreachable or missing";
+            this.logValidationError(errorMessage);
+            return {
+                isValid: false,
+                errorMessage,
+                errorType: ValidationErrorType.BOSS_ROOM_MISSING,
+            };
+        }
+        return { isValid: true };
+    }
+    /**
+     * Validates that boss room is at minimum distance from spawn
+     */
+    validateBossRoomDistance(partitions, minDistance) {
+        const bossRoom = partitions.find((p) => p.type === room_1.RoomType.BOSS);
+        if (!bossRoom) {
+            return this.validateBossRoomExists(partitions); // This will return the appropriate error
+        }
+        if (bossRoom.distance < minDistance) {
+            const errorMessage = `Boss room too close to spawn: distance ${bossRoom.distance}, minimum ${minDistance}`;
+            this.logValidationError(errorMessage);
+            return {
+                isValid: false,
+                errorMessage,
+                errorType: ValidationErrorType.BOSS_TOO_CLOSE,
+            };
+        }
+        return { isValid: true };
+    }
+    /**
+     * Validates that partitions don't overlap
+     */
+    validateNoOverlaps(partitions) {
+        for (let i = 0; i < partitions.length; i++) {
+            for (let j = i + 1; j < partitions.length; j++) {
+                const a = partitions[i];
+                const b = partitions[j];
+                if (a.x < b.x + b.w &&
+                    a.x + a.w > b.x &&
+                    a.y < b.y + b.h &&
+                    a.y + a.h > b.y) {
+                    const errorMessage = `Overlapping partitions detected: partition ${i} overlaps with partition ${j}`;
+                    this.logValidationError(errorMessage);
+                    return {
+                        isValid: false,
+                        errorMessage,
+                        errorType: ValidationErrorType.OVERLAPPING_PARTITIONS,
+                    };
+                }
+            }
+        }
+        return { isValid: true };
+    }
+    /**
+     * Validates that a stair room exists for dungeon completion
+     */
+    validateStairRoomExists(partitions) {
+        const hasStairRoom = partitions.some((p) => p.type === room_1.RoomType.DOWNLADDER);
+        if (!hasStairRoom) {
+            const errorMessage = "Stair room missing - dungeon cannot be completed";
+            this.logValidationError(errorMessage);
+            return {
+                isValid: false,
+                errorMessage,
+                errorType: ValidationErrorType.STAIR_ROOM_MISSING,
+            };
+        }
+        return { isValid: true };
+    }
+    /**
+     * Validates that a rope cave starting room exists
+     */
+    validateRopeCaveExists(partitions) {
+        const hasRopeCave = partitions.some((p) => p.type === room_1.RoomType.ROPECAVE);
+        if (!hasRopeCave) {
+            const errorMessage = "Rope cave starting room missing";
+            this.logValidationError(errorMessage);
+            return {
+                isValid: false,
+                errorMessage,
+                errorType: ValidationErrorType.INSUFFICIENT_CAVE_ROOMS,
+            };
+        }
+        return { isValid: true };
+    }
+    /**
+     * Validates room connectivity by checking that all rooms have connections
+     */
+    validateConnectivity(partitions) {
+        const unconnectedRooms = partitions.filter((partition) => partition.connections.length === 0);
+        if (unconnectedRooms.length > 0) {
+            const errorMessage = `Found ${unconnectedRooms.length} unconnected rooms`;
+            this.logValidationError(errorMessage);
+            return {
+                isValid: false,
+                errorMessage,
+                errorType: ValidationErrorType.INSUFFICIENT_ROOMS,
+            };
+        }
+        return { isValid: true };
+    }
+    /**
+     * Validates that required room types are present
+     */
+    validateRequiredRoomTypes(partitions, requiredTypes) {
+        const presentTypes = new Set(partitions.map((p) => p.type));
+        const missingTypes = requiredTypes.filter((type) => !presentTypes.has(type));
+        if (missingTypes.length > 0) {
+            const errorMessage = `Missing required room types: ${missingTypes.join(", ")}`;
+            this.logValidationError(errorMessage);
+            return {
+                isValid: false,
+                errorMessage,
+                errorType: ValidationErrorType.INSUFFICIENT_ROOMS,
+            };
+        }
+        return { isValid: true };
+    }
+    /**
+     * Comprehensive validation for partition quality
+     */
+    validatePartitionQuality(partitions) {
+        // Check for degenerate partitions (too small)
+        const minSize = 4;
+        const tooSmallPartitions = partitions.filter((p) => p.w < minSize || p.h < minSize);
+        if (tooSmallPartitions.length > 0) {
+            const errorMessage = `Found ${tooSmallPartitions.length} partitions smaller than minimum size ${minSize}`;
+            this.logValidationError(errorMessage);
+            return {
+                isValid: false,
+                errorMessage,
+                errorType: ValidationErrorType.INSUFFICIENT_ROOMS,
+            };
+        }
+        // Check for partitions with negative dimensions
+        const invalidPartitions = partitions.filter((p) => p.w <= 0 || p.h <= 0 || p.x < 0 || p.y < 0);
+        if (invalidPartitions.length > 0) {
+            const errorMessage = `Found ${invalidPartitions.length} partitions with invalid dimensions`;
+            this.logValidationError(errorMessage);
+            return {
+                isValid: false,
+                errorMessage,
+                errorType: ValidationErrorType.INSUFFICIENT_ROOMS,
+            };
+        }
+        return { isValid: true };
+    }
+    /**
+     * Logs validation errors if debug messages are enabled
+     */
+    logValidationError(message) {
+        if (this.enableDebugMessages) {
+            console.warn(`[LevelValidator] ${message}`);
+            if (this.game && this.game.pushMessage) {
+                this.game.pushMessage(message);
+            }
+        }
+    }
+    /**
+     * Validates and provides detailed reporting for debugging
+     */
+    validateWithDetailedReport(partitions, params, type = "dungeon") {
+        const details = [];
+        details.push(`Validating ${type} with ${partitions.length} partitions`);
+        if (type === "dungeon") {
+            details.push(`Required minimum rooms: ${params.minRoomCount}`);
+            details.push(`Required maximum rooms: ${params.maxRoomCount}`);
+        }
+        const result = type === "dungeon"
+            ? this.validateDungeonPartitions(partitions, params)
+            : type === "cave"
+                ? this.validateCavePartitions(partitions, 8)
+                : this.validateTutorialPartitions(partitions);
+        if (!result.isValid) {
+            details.push(`Validation failed: ${result.errorMessage}`);
+        }
+        else {
+            details.push("Validation passed");
+        }
+        return {
+            ...result,
+            details,
+        };
+    }
+}
+exports.LevelValidator = LevelValidator;
+
+
+/***/ }),
+
+/***/ "./src/level/partitionGenerator.ts":
+/*!*****************************************!*\
+  !*** ./src/level/partitionGenerator.ts ***!
+  \*****************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PartitionGenerator = exports.PartialLevel = exports.Partition = exports.PartitionConnection = exports.PathType = void 0;
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const room_1 = __webpack_require__(/*! ../room/room */ "./src/room/room.ts");
+const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
+const levelValidator_1 = __webpack_require__(/*! ./levelValidator */ "./src/level/levelValidator.ts");
+const generationVisualizer_1 = __webpack_require__(/*! ./generationVisualizer */ "./src/level/generationVisualizer.ts");
+var PathType;
+(function (PathType) {
+    PathType[PathType["MAIN_PATH"] = 0] = "MAIN_PATH";
+    PathType[PathType["SIDE_PATH"] = 1] = "SIDE_PATH";
+    PathType[PathType["TUTORIAL"] = 2] = "TUTORIAL";
+})(PathType = exports.PathType || (exports.PathType = {}));
+class PartitionConnection {
+    constructor(x, y, other) {
+        this.x = x;
+        this.y = y;
+        this.other = other;
+    }
+}
+exports.PartitionConnection = PartitionConnection;
+class Partition {
+    constructor(x, y, w, h, fillStyle) {
+        this.split = async () => {
+            // Remove the setTimeout - animation is now handled by visualizer
+            // The visualizer will handle the delay through createAnimationDelay('partition')
+            // Reset open walls when a partition is split
+            this.isTopOpen = true;
+            this.isRightOpen = true;
+            this.isBottomOpen = true;
+            this.isLeftOpen = true;
+            // This function generates a random number around the center (0.5) within a certain width (0.6).
+            let rand_mid = () => {
+                let center = 0.5;
+                let width = 0.6;
+                return (random_1.Random.rand() - 0.5) * width + center;
+            };
+            let MIN_SIZE = 4;
+            if (this.w > this.h) {
+                let w1 = Math.floor(rand_mid() * this.w);
+                let w2 = this.w - w1 - 1;
+                if (w1 < MIN_SIZE || w2 < MIN_SIZE)
+                    return [this];
+                return [
+                    new Partition(this.x, this.y, w1, this.h, this.fillStyle),
+                    new Partition(this.x + w1 + 1, this.y, w2, this.h, this.fillStyle),
+                ];
+            }
+            else {
+                let h1 = Math.floor(rand_mid() * this.h);
+                let h2 = this.h - h1 - 1;
+                if (h1 < MIN_SIZE || h2 < MIN_SIZE)
+                    return [this];
+                return [
+                    new Partition(this.x, this.y, this.w, h1, this.fillStyle),
+                    new Partition(this.x, this.y + h1 + 1, this.w, h2, this.fillStyle),
+                ];
+            }
+        };
+        this.point_in = (x, y) => {
+            return (x >= this.x && x < this.x + this.w && y >= this.y && y < this.y + this.h);
+        };
+        this.point_next_to = (x, y) => {
+            return ((x >= this.x - 1 &&
+                x < this.x + this.w + 1 &&
+                y >= this.y &&
+                y < this.y + this.h) ||
+                (x >= this.x &&
+                    x < this.x + this.w &&
+                    y >= this.y - 1 &&
+                    y < this.y + this.h + 1));
+        };
+        this.area = () => {
+            return this.w * this.h;
+        };
+        this.overlaps = (other) => {
+            return (other.x < this.x + this.w + 1 &&
+                other.x + other.w > this.x - 1 &&
+                other.y < this.y + this.h + 1 &&
+                other.y + other.h > this.y - 1);
+        };
+        this.setOpenWall = (connection) => {
+            if (connection.y === this.y - 1 &&
+                connection.x >= this.x &&
+                connection.x < this.x + this.w) {
+                this.isTopOpen = false;
+            }
+            if (connection.y === this.y + this.h &&
+                connection.x >= this.x &&
+                connection.x < this.x + this.w) {
+                this.isBottomOpen = false;
+            }
+            if (connection.x === this.x + this.w &&
+                connection.y >= this.y &&
+                connection.y < this.y + this.h) {
+                this.isRightOpen = false;
+            }
+            if (connection.x === this.x - 1 &&
+                connection.y >= this.y &&
+                connection.y < this.y + this.h) {
+                this.isLeftOpen = false;
+            }
+        };
+        this.get_branch_point = () => {
+            let points = [];
+            for (let x = this.x; x < this.x + this.w; x++) {
+                points.push({ x: x, y: this.y - 1 });
+                points.push({ x: x, y: this.y + this.h });
+            }
+            for (let y = this.y; y < this.y + this.h; y++) {
+                points.push({ x: this.x - 1, y: y });
+                points.push({ x: this.x + this.w, y: y });
+            }
+            points = points.filter((p) => !this.connections.some((c) => Math.abs(c.x - p.x) + Math.abs(c.y - p.y) <= 1));
+            points.sort(() => 0.5 - random_1.Random.rand());
+            return points[0];
+        };
+        this.x = x;
+        this.y = y;
+        this.w = w;
+        this.h = h;
+        this.fillStyle = fillStyle;
+        this.type = room_1.RoomType.DUNGEON;
+        this.connections = [];
+        this.distance = 1000;
+        this.isTopOpen = true;
+        this.isRightOpen = true;
+        this.isBottomOpen = true;
+        this.isLeftOpen = true;
+        this.pathIndex = 0;
+    }
+}
+exports.Partition = Partition;
+class PartialLevel {
+    constructor() {
+        this.partitions = [];
+    }
+}
+exports.PartialLevel = PartialLevel;
+class PartitionGenerator {
+    constructor(game) {
+        this.validator = new levelValidator_1.LevelValidator(game);
+        this.visualizer = new generationVisualizer_1.GenerationVisualizer(game);
+    }
+    async generateDungeonPartitions(game, mapWidth, mapHeight, depth, params) {
+        const partialLevel = new PartialLevel();
+        let validationResult;
+        let attempts = 0;
+        this.visualizer.updateProgress("Starting dungeon generation", 0);
+        do {
+            attempts++;
+            this.visualizer.updateProgress(`Generating candidate ${attempts}`, attempts * 0.1);
+            await this.generateDungeonCandidate(game, partialLevel, mapWidth, mapHeight, depth, params);
+            validationResult = this.validator.validateDungeonPartitions(partialLevel.partitions, params);
+            // Update visualization state
+            this.visualizer.setVisualizationState(partialLevel.partitions, mapWidth / 2, mapHeight / 2, "validating", 0.8);
+            // If validation fails, the loop will continue and regenerate
+        } while (!validationResult.isValid);
+        this.visualizer.updateProgress("Finalizing generation", 0.9);
+        await this.visualizer.createAnimationDelay("large");
+        this.visualizer.createVisualEffect("generation_complete");
+        this.visualizer.updateProgress("Generation complete", 1.0);
+        console.log("finished generation");
+        return partialLevel.partitions;
+    }
+    async generateCavePartitions(mapWidth, mapHeight) {
+        const partialLevel = new PartialLevel();
+        const numberOfRooms = 8;
+        let validationResult;
+        let attempts = 0;
+        this.visualizer.updateProgress("Starting cave generation", 0);
+        do {
+            attempts++;
+            this.visualizer.updateProgress(`Generating cave candidate ${attempts}`, attempts * 0.1);
+            await this.generateCaveCandidate(partialLevel, mapWidth, mapHeight, numberOfRooms);
+            validationResult = this.validator.validateCavePartitions(partialLevel.partitions, numberOfRooms);
+            // Update visualization state
+            this.visualizer.setVisualizationState(partialLevel.partitions, mapWidth / 2, mapHeight / 2, "validating cave", 0.8);
+            // If validation fails, the loop will continue and regenerate
+        } while (!validationResult.isValid);
+        this.visualizer.updateProgress("Cave generation complete", 1.0);
+        return partialLevel.partitions;
+    }
+    generateTutorialPartitions(height = 7, width = 7) {
+        const partitions = [new Partition(0, 0, height, width, "white")];
+        partitions[0].type = room_1.RoomType.TUTORIAL;
+        // Validate tutorial partitions
+        const validationResult = this.validator.validateTutorialPartitions(partitions);
+        if (!validationResult.isValid) {
+            throw new Error(`Tutorial validation failed: ${validationResult.errorMessage}`);
+        }
+        return partitions;
+    }
+    async generateDungeonCandidate(game, partialLevel, map_w, map_h, depth, params) {
+        const { minRoomCount, maxRoomCount, maxRoomArea, splitProbabilities, wallRemoveProbability, softMaxRoomArea, } = params;
+        partialLevel.partitions = [new Partition(0, 0, map_w, map_h, "white")];
+        this.visualizer.updateProgress("Splitting partitions", 0.1);
+        this.visualizer.setVisualizationState(partialLevel.partitions, map_w / 2, map_h / 2, "splitting");
+        // Use splitProbabilities for splitting
+        while (partialLevel.partitions.length < params.maxRoomCount) {
+            for (let i = 0; i < splitProbabilities.length; i++) {
+                partialLevel.partitions = await this.splitPartitions(partialLevel.partitions, splitProbabilities[i]);
+                // Update visualization after each split
+                this.visualizer.setVisualizationState(partialLevel.partitions, map_w / 2, map_h / 2, "splitting", 0.1 + (i / splitProbabilities.length) * 0.2);
+            }
+        }
+        for (let i = 0; i < 100; i++) {
+            partialLevel.partitions.forEach(async (partition) => {
+                let roomArea = Math.random() > 0.95 ? softMaxRoomArea : maxRoomArea;
+                if (partition.area() > roomArea) {
+                    partialLevel.partitions = partialLevel.partitions.filter((p) => p !== partition);
+                    partialLevel.partitions = partialLevel.partitions.concat(await this.splitPartition(partition, 0.5));
+                }
+            });
+        }
+        this.visualizer.updateProgress("Removing wall rooms", 0.4);
+        partialLevel.partitions = this.removeWallRooms(partialLevel.partitions, map_w, map_h, wallRemoveProbability);
+        await this.visualizer.createAnimationDelay("large");
+        if (partialLevel.partitions.length === 0) {
+            partialLevel.partitions = [];
+            return;
+        }
+        this.visualizer.updateProgress("Assigning room types", 0.5);
+        // Sort and assign room types
+        partialLevel.partitions.sort((a, b) => a.area() - b.area());
+        this.visualizer.updatePartitionStyles(partialLevel.partitions);
+        if (partialLevel.partitions.length === 0) {
+            partialLevel.partitions = [];
+            return;
+        }
+        let spawn = partialLevel.partitions[0];
+        if (!spawn) {
+            partialLevel.partitions = [];
+            return;
+        }
+        spawn.type = room_1.RoomType.START;
+        spawn.fillStyle = "rgb(0, 255, 0)";
+        if (partialLevel.partitions.length > 1) {
+            partialLevel.partitions[partialLevel.partitions.length - 1].type =
+                room_1.RoomType.BOSS;
+            partialLevel.partitions[partialLevel.partitions.length - 1].fillStyle =
+                "red";
+        }
+        this.visualizer.updateProgress("Connecting partitions", 0.6);
+        await this.connectPartitions(partialLevel, spawn);
+        this.visualizer.updateProgress("Adding loop connections", 0.7);
+        if (partialLevel.partitions.length > 0) {
+            await this.addLoopConnections(partialLevel);
+        }
+        this.visualizer.updateProgress("Adding stair room", 0.8);
+        if (partialLevel.partitions.length > 0) {
+            await this.addStairRoom(partialLevel, game);
+        }
+        this.visualizer.updateProgress("Calculating distances", 0.9);
+        if (partialLevel.partitions.length > 0) {
+            await this.calculateDistances(partialLevel, spawn);
+            await this.addSpecialRooms(partialLevel);
+        }
+    }
+    async generateCaveCandidate(partialLevel, map_w, map_h, num_rooms) {
+        const CAVE_OFFSET = 100;
+        partialLevel.partitions = [
+            new Partition(CAVE_OFFSET, CAVE_OFFSET, map_w, map_h, "white"),
+        ];
+        for (let i = 0; i < 9; i++) {
+            partialLevel.partitions = await this.splitPartitions(partialLevel.partitions, 0.75);
+        }
+        partialLevel.partitions.sort((a, b) => a.area() - b.area());
+        if (partialLevel.partitions.length === 0) {
+            throw new Error("No partitions generated.");
+        }
+        let spawn = partialLevel.partitions[0];
+        spawn.type = room_1.RoomType.ROPECAVE;
+        for (let i = 1; i < partialLevel.partitions.length; i++) {
+            partialLevel.partitions[i].type = room_1.RoomType.CAVE;
+        }
+        await this.connectCavePartitions(partialLevel, spawn, num_rooms);
+        await this.addCaveLoops(partialLevel);
+        await this.calculateDistances(partialLevel, spawn);
+    }
+    async splitPartitions(partitions, prob) {
+        for (let partition of partitions) {
+            if (random_1.Random.rand() < prob) {
+                this.visualizer.createVisualEffect("partition_split", partition);
+                partitions = partitions.filter((p) => p !== partition);
+                partitions = partitions.concat(await partition.split());
+            }
+        }
+        return partitions;
+    }
+    async splitPartition(partition, prob) {
+        if (random_1.Random.rand() < prob) {
+            return await partition.split();
+        }
+        else {
+            return [partition];
+        }
+    }
+    getWallRooms(partitions, mapWidth, mapHeight) {
+        return partitions.filter((partition) => {
+            const isPathClear = (direction) => {
+                switch (direction) {
+                    case "left":
+                        for (let y = partition.y; y < partition.y + partition.h; y++) {
+                            let blocked = partitions.some((other) => {
+                                if (other === partition)
+                                    return false;
+                                return (other.y <= y &&
+                                    y < other.y + other.h &&
+                                    other.x + other.w > 0 &&
+                                    other.x + other.w <= partition.x);
+                            });
+                            if (!blocked)
+                                return true;
+                        }
+                        return false;
+                    case "right":
+                        for (let y = partition.y; y < partition.y + partition.h; y++) {
+                            let blocked = partitions.some((other) => {
+                                if (other === partition)
+                                    return false;
+                                return (other.y <= y &&
+                                    y < other.y + other.h &&
+                                    other.x < mapWidth &&
+                                    other.x >= partition.x + partition.w);
+                            });
+                            if (!blocked)
+                                return true;
+                        }
+                        return false;
+                    case "top":
+                        for (let x = partition.x; x < partition.x + partition.w; x++) {
+                            let blocked = partitions.some((other) => {
+                                if (other === partition)
+                                    return false;
+                                return (other.x <= x &&
+                                    x < other.x + other.w &&
+                                    other.y + other.h > 0 &&
+                                    other.y + other.h <= partition.y);
+                            });
+                            if (!blocked)
+                                return true;
+                        }
+                        return false;
+                    case "bottom":
+                        for (let x = partition.x; x < partition.x + partition.w; x++) {
+                            let blocked = partitions.some((other) => {
+                                if (other === partition)
+                                    return false;
+                                return (other.x <= x &&
+                                    x < other.x + other.w &&
+                                    other.y < mapHeight &&
+                                    other.y >= partition.y + partition.h);
+                            });
+                            if (!blocked)
+                                return true;
+                        }
+                        return false;
+                    default:
+                        return false;
+                }
+            };
+            const openPaths = [
+                isPathClear("left"),
+                isPathClear("right"),
+                isPathClear("top"),
+                isPathClear("bottom"),
+            ].filter(Boolean).length;
+            return openPaths === 1;
+        });
+    }
+    removeWallRooms(partitions, w, h, prob = 1.0) {
+        const wallRooms = this.getWallRooms(partitions, w, h);
+        for (const wallRoom of wallRooms) {
+            if (random_1.Random.rand() < prob) {
+                partitions = partitions.filter((p) => p !== wallRoom);
+            }
+        }
+        return partitions;
+    }
+    async connectPartitions(partialLevel, spawn) {
+        let connected = [spawn];
+        let frontier = [spawn];
+        let found_boss = false;
+        while (frontier.length > 0 && !found_boss) {
+            let room = frontier[0];
+            if (room !== spawn) {
+                this.visualizer.createVisualEffect("room_connected", room);
+            }
+            frontier.splice(0, 1);
+            let doors_found = 0;
+            const num_doors = Math.floor(random_1.Random.rand() * 2 + 1);
+            let tries = 0;
+            const max_tries = 1000;
+            while (doors_found < num_doors && tries < max_tries) {
+                let point = room.get_branch_point();
+                for (const p of partialLevel.partitions) {
+                    if (p !== room &&
+                        connected.indexOf(p) === -1 &&
+                        p.point_next_to(point.x, point.y)) {
+                        room.connections.push(new PartitionConnection(point.x, point.y, p));
+                        p.connections.push(new PartitionConnection(point.x, point.y, room));
+                        room.setOpenWall(new PartitionConnection(point.x, point.y, p));
+                        p.setOpenWall(new PartitionConnection(point.x, point.y, room));
+                        frontier.push(p);
+                        connected.push(p);
+                        doors_found++;
+                        if (p.type === room_1.RoomType.BOSS) {
+                            found_boss = true;
+                            this.visualizer.createVisualEffect("boss_found", p);
+                        }
+                        break;
+                    }
+                }
+                tries++;
+            }
+            await this.visualizer.createAnimationDelay("pathfinding");
+        }
+        // Remove unconnected rooms
+        for (const partition of partialLevel.partitions) {
+            if (partition.connections.length === 0) {
+                partialLevel.partitions = partialLevel.partitions.filter((p) => p !== partition);
+            }
+        }
+    }
+    async connectCavePartitions(partialLevel, spawn, num_rooms) {
+        let connected = [spawn];
+        let frontier = [spawn];
+        while (frontier.length > 0 && connected.length < num_rooms) {
+            let room = frontier[0];
+            frontier.splice(0, 1);
+            let doors_found = 0;
+            const num_doors = Math.floor(random_1.Random.rand() * 2 + 1);
+            let tries = 0;
+            const max_tries = 1000;
+            while (doors_found < num_doors &&
+                tries < max_tries &&
+                connected.length < num_rooms) {
+                let point = room.get_branch_point();
+                if (!point)
+                    break;
+                for (const p of partialLevel.partitions) {
+                    if (p !== room &&
+                        connected.indexOf(p) === -1 &&
+                        p.point_next_to(point.x, point.y)) {
+                        room.connections.push(new PartitionConnection(point.x, point.y, p));
+                        p.connections.push(new PartitionConnection(point.x, point.y, room));
+                        frontier.push(p);
+                        connected.push(p);
+                        doors_found++;
+                        break;
+                    }
+                }
+                tries++;
+            }
+        }
+        // Remove unconnected rooms
+        partialLevel.partitions = partialLevel.partitions.filter((partition) => partition.connections.length > 0);
+        if (partialLevel.partitions.length === 0) {
+            throw new Error("No valid rooms after filtering.");
+        }
+    }
+    async addLoopConnections(partialLevel) {
+        // Check if we have any partitions to work with
+        if (partialLevel.partitions.length === 0) {
+            return;
+        }
+        let num_loop_doors = Math.floor(random_1.Random.rand() * 4 + 4);
+        for (let i = 0; i < num_loop_doors; i++) {
+            // Double-check array length in case partitions were removed during iteration
+            if (partialLevel.partitions.length === 0) {
+                break;
+            }
+            let roomIndex = Math.floor(random_1.Random.rand() * partialLevel.partitions.length);
+            let room = partialLevel.partitions[roomIndex];
+            // Safety check to ensure room exists
+            if (!room) {
+                continue;
+            }
+            let found_door = false;
+            let tries = 0;
+            const max_tries = 10;
+            let not_already_connected = partialLevel.partitions.filter((p) => p && !room.connections.some((c) => c.other === p));
+            while (!found_door && tries < max_tries) {
+                let point = room.get_branch_point();
+                if (!point) {
+                    break; // Skip if no valid branch point found
+                }
+                for (const p of not_already_connected) {
+                    if (p && p !== room && p.point_next_to(point.x, point.y)) {
+                        room.connections.push(new PartitionConnection(point.x, point.y, p));
+                        p.connections.push(new PartitionConnection(point.x, point.y, room));
+                        room.setOpenWall(new PartitionConnection(point.x, point.y, p));
+                        p.setOpenWall(new PartitionConnection(point.x, point.y, room));
+                        found_door = true;
+                        break;
+                    }
+                }
+                tries++;
+            }
+        }
+    }
+    async addCaveLoops(partialLevel) {
+        // Check if we have any partitions to work with
+        if (partialLevel.partitions.length === 0) {
+            return;
+        }
+        let num_loop_doors = Math.floor(random_1.Random.rand() * 4 + 4);
+        for (let i = 0; i < num_loop_doors; i++) {
+            // Double-check array length in case partitions were removed during iteration
+            if (partialLevel.partitions.length === 0) {
+                break;
+            }
+            let roomIndex = Math.floor(random_1.Random.rand() * partialLevel.partitions.length);
+            let room = partialLevel.partitions[roomIndex];
+            // Safety check to ensure room exists
+            if (!room) {
+                continue;
+            }
+            let found_door = false;
+            let tries = 0;
+            const max_tries = 100;
+            let not_already_connected = partialLevel.partitions.filter((p) => p && !room.connections.some((c) => c.other === p));
+            while (!found_door && tries < max_tries) {
+                let point = room.get_branch_point();
+                if (!point) {
+                    break; // Skip if no valid branch point found
+                }
+                for (const p of not_already_connected) {
+                    if (p && p !== room && p.point_next_to(point.x, point.y)) {
+                        room.connections.push(new PartitionConnection(point.x, point.y, p));
+                        p.connections.push(new PartitionConnection(point.x, point.y, room));
+                        found_door = true;
+                        break;
+                    }
+                }
+                tries++;
+            }
+        }
+    }
+    async addStairRoom(partialLevel, game) {
+        if (!partialLevel.partitions.some((p) => p.type === room_1.RoomType.BOSS)) {
+            partialLevel.partitions = [];
+            return;
+        }
+        let boss = partialLevel.partitions.find((p) => p.type === room_1.RoomType.BOSS);
+        let found_stair = false;
+        const max_stair_tries = 5;
+        const stairRoomWidth = 5;
+        const stairRoomHeight = 5;
+        for (let stair_tries = 0; stair_tries < max_stair_tries; stair_tries++) {
+            let stair = new Partition(game_1.Game.rand(boss.x - 1, boss.x + boss.w - 2, random_1.Random.rand), boss.y - stairRoomHeight - 1, stairRoomWidth, stairRoomHeight, "white");
+            stair.type = room_1.RoomType.DOWNLADDER;
+            stair.fillStyle = "blue";
+            if (!partialLevel.partitions.some((p) => p.overlaps(stair))) {
+                found_stair = true;
+                partialLevel.partitions.push(stair);
+                stair.connections.push(new PartitionConnection(stair.x + 1, stair.y + stairRoomHeight, boss));
+                boss.connections.push(new PartitionConnection(stair.x + 1, stair.y + stairRoomHeight, stair));
+                stair.setOpenWall(new PartitionConnection(stair.x + 1, stair.y + stairRoomHeight, boss));
+                boss.setOpenWall(new PartitionConnection(stair.x + 1, stair.y + stairRoomHeight, stair));
+                break;
+            }
+        }
+        if (!found_stair) {
+            console.log("No stair found");
+            partialLevel.partitions = [];
+        }
+    }
+    async calculateDistances(partialLevel, spawn) {
+        let frontier = [spawn];
+        let seen = [];
+        spawn.distance = 0;
+        while (frontier.length > 0) {
+            let room = frontier[0];
+            frontier.splice(0, 1);
+            seen.push(room);
+            for (let c of room.connections) {
+                let other = c.other;
+                other.distance = Math.min(other.distance, room.distance + 1);
+                if (seen.indexOf(other) === -1)
+                    frontier.push(other);
+            }
+        }
+    }
+    async addSpecialRooms(partialLevel) {
+        let added_rope_hole = false;
+        for (const p of partialLevel.partitions) {
+            if (p.type === room_1.RoomType.DUNGEON) {
+                if (p.distance > 4 && p.area() <= 30 && random_1.Random.rand() < 0) {
+                    p.type = room_1.RoomType.TREASURE;
+                }
+                else if (!added_rope_hole) {
+                    p.type = room_1.RoomType.ROPEHOLE;
+                    added_rope_hole = true;
+                }
+            }
+        }
+        await this.visualizer.createAnimationDelay("large");
+    }
+    // Add method to get visualizer (for external access)
+    getVisualizer() {
+        return this.visualizer;
+    }
+}
+exports.PartitionGenerator = PartitionGenerator;
 
 
 /***/ }),
