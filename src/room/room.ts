@@ -430,7 +430,6 @@ export class Room {
     //initialize the skin for the given environment
     this.envType = envType;
     this.skin = envType as unknown as SkinType;
-    console.log(`room ${this.id} skin: ${this.skin}`);
     /*
     if (this.type === RoomType.ROPECAVE || this.type === RoomType.CAVE) {
       this.skin = SkinType.CAVE;
@@ -456,15 +455,11 @@ export class Room {
   };
 
   private addDoorTorches(x: number, y: number, doorDir: Direction) {
-    console.log(`Adding door torches at x:${x}, y:${y}, direction:${doorDir}`);
-
     if (doorDir !== Direction.UP && doorDir !== Direction.DOWN) {
-      console.log("Door direction not UP/DOWN, skipping torch placement");
       return;
     }
 
     if (x && y) {
-      console.log("Checking wall info for torch placement");
       this.calculateWallInfo();
       const leftWallInfo = this.wallInfo.get(`${x - 1},${y}`);
       const rightWallInfo = this.wallInfo.get(`${x + 1},${y}`);
@@ -473,15 +468,11 @@ export class Room {
       const leftOpen = leftWallInfo?.isLeftWall === false;
       const rightOpen = rightWallInfo?.isRightWall === false;
 
-      console.log(`Left wall open: ${leftOpen}, Right wall open: ${rightOpen}`);
-
       if (leftOpen) {
-        console.log(`Placing torch on left wall at x:${x - 1}, y:${y}`);
         this.roomArray[x - 1][y] = new WallTorch(this, x - 1, y);
       }
 
       if (rightOpen) {
-        console.log(`Placing torch on right wall at x:${x + 1}, y:${y}`);
         this.roomArray[x + 1][y] = new WallTorch(this, x + 1, y);
       }
     }
@@ -815,8 +806,6 @@ export class Room {
         numEmptyTiles * factor,
       ),
     );
-    console.log(`numEnemies: ${numEnemies}`);
-    console.log(`factor: ${factor}`);
     //if (numEnemies > numEmptyTiles / 2) numEnemies = numEmptyTiles / 2;
     this.addEnemies(numEnemies, Math.random);
   }
@@ -1491,7 +1480,6 @@ export class Room {
   };
 
   onEnterRoom = (player: Player) => {
-    console.log("roomType", this.type.toString());
     this.enableFuseSounds();
     for (let room of this.level.rooms) {
       room.roomOnScreen(player);
@@ -3175,7 +3163,6 @@ export class Room {
     for (const door of this.doors) {
       if (door.linkedDoor.room.type === RoomType.DOWNLADDER)
         return { x: door.x, y: door.y, doorDir: door.doorDir };
-      console.log("found boss door", door.linkedDoor.room.type);
     }
     return null;
   };

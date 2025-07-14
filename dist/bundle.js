@@ -7486,7 +7486,6 @@ class OccultistEnemy extends enemy_1.Enemy {
                 for (let enemy of this.shieldedEnemies) {
                     if (!enemy.cloned) {
                         enemy.removeShield();
-                        console.log("unshielded enemy:", enemy.name);
                     }
                 }
                 this.shieldedEnemies = [];
@@ -7509,7 +7508,6 @@ class OccultistEnemy extends enemy_1.Enemy {
                 beam.springDamping = 0.01;
                 beam.drawableY = enemy.drawableY;
                 this.room.projectiles.push(beam);
-                console.log("beam created");
             }
         };
         this.createBeam = (enemies) => {
@@ -7526,7 +7524,6 @@ class OccultistEnemy extends enemy_1.Enemy {
                     beam.springDamping = 0.1;
                     beam.drawableY = enemy.drawableY;
                     this.room.projectiles.push(beam);
-                    console.log("beam created");
                 }
             }
         };
@@ -10440,7 +10437,6 @@ class Bomb extends entity_1.Entity {
             }
             this.health = 0;
             lighting_1.Lighting.momentaryLight(this.room, this.x, this.y, 7, [200, 200, 50], 250, 50, 0);
-            console.log("screen shake");
             genericParticle_1.GenericParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, "white");
             this.kill();
             setTimeout(() => {
@@ -10580,11 +10576,7 @@ class Chest extends entity_1.Entity {
     constructor(room, game, x, y) {
         super(room, game, x, y);
         this.interact = (playerHitBy) => {
-            console.log("Chest interact called with player:", playerHitBy);
-            console.log("Current chest health:", this.health);
-            console.log("Chest opening state:", this.opening);
             if (this.health === 3 && !this.opening) {
-                console.log("Opening chest for first time");
                 this.health -= 1;
                 this.open();
                 return;
@@ -11281,9 +11273,6 @@ class VendingMachine extends entity_1.Entity {
                 for (const i of this.costItems) {
                     if (!this.playerOpened.inventory.hasItemCount(i)) {
                         let numOfItem = 0;
-                        console.log("Checking inventory for required items...");
-                        console.log("Required item:", i.constructor.itemName);
-                        console.log("Required amount:", i.stackCount);
                         if (i instanceof coin_1.Coin) {
                             numOfItem = this.playerOpened.inventory.coinCount();
                         }
@@ -11294,9 +11283,7 @@ class VendingMachine extends entity_1.Entity {
                                 }
                             });
                         }
-                        console.log("Total found in inventory:", numOfItem);
                         const difference = this.costItems[0].stackCount - numOfItem;
-                        console.log("Difference needed:", difference);
                         const pluralLetter = this.costItems[0].stackCount > 1 ? "s" : "";
                         this.game.pushMessage(`You need ${difference} more ${this.costItems[0].constructor.itemName}${pluralLetter} to buy that. `);
                         return;
@@ -20833,28 +20820,21 @@ class Level {
         this.mapGroup = mapGroup;
         this.environment = new environment_1.Environment(env);
         this.populator = new roomPopulator_1.Populator(this);
-        console.log(`level ${this.depth} envType: ${env}`, "isMainPath", this.isMainPath);
         this.enemyParameters = this.getEnemyParameters();
         let mainPath = this.isMainPath ? "main" : "side";
-        console.log(`${mainPath} path, envType: ${env}`);
     }
     getDownLadder(room) {
-        console.log("Looking for down ladder...");
         if (!room || room.type !== room_1.RoomType.ROPEHOLE) {
             console.error("Room is not a rope hole");
             return null;
         }
         // Then check ROPEHOLE rooms
         //let room = this.rooms.find((room) => room.type === RoomType.ROPEHOLE);
-        console.log("Found rope hole room:", room ? "yes" : "no");
         if (room) {
-            console.log("Searching rope hole room at", room.roomX, room.roomY);
             for (let x = room.roomX; x < room.roomX + room.width; x++) {
                 for (let y = room.roomY; y < room.roomY + room.height; y++) {
                     const tile = room.roomArray[x][y];
-                    console.log("tile", tile.x, tile.y, tile);
                     if (tile instanceof downLadder_1.DownLadder) {
-                        console.log("Found down ladder at", x, y);
                         return tile;
                     }
                 }
@@ -22498,8 +22478,7 @@ class DamageNumber extends particle_1.Particle {
                 this.dead = true;
             }
             game_1.Game.ctx.globalAlpha = this.alpha;
-            console.log(this.damage),
-                game_1.Game.fillTextOutline(this.damage.toString(), (this.x + 0.4 + this.xoffset) * gameConstants_1.GameConstants.TILESIZE - width / 2, (this.y - 0.6) * gameConstants_1.GameConstants.TILESIZE, this.outlineColor, this.color);
+            game_1.Game.fillTextOutline(this.damage.toString(), (this.x + 0.4 + this.xoffset) * gameConstants_1.GameConstants.TILESIZE - width / 2, (this.y - 0.6) * gameConstants_1.GameConstants.TILESIZE, this.outlineColor, this.color);
             game_1.Game.ctx.globalAlpha = 1;
             game_1.Game.ctx.restore();
         };
@@ -23277,7 +23256,6 @@ class Player extends drawable_1.Drawable {
             }
             if (!other.isSolid()) {
                 if (other instanceof upLadder_1.UpLadder || other instanceof downLadder_1.DownLadder) {
-                    console.log("unlocking ladder");
                     const locked = other.isLocked();
                     if (locked) {
                         this.shakeScreen(this.x, this.y, x, y);
@@ -25258,7 +25236,6 @@ class Explosion extends projectile_1.Projectile {
         lighting_1.Lighting.momentaryLight(this.parent.room, this.x + 0.5, this.y + 0.5, 0.5, [255, 100, 0], 350, 20, Math.abs(this.offsetFrame));
         const distance = utils_1.Utils.distance(this.parent.x, this.parent.y, this.x, this.y);
         let damage = distance === 0 ? 1 : Math.max(0.5, Math.floor((1 / distance) * 4) / 2);
-        console.log("damage:", damage);
         for (let entity of this.parent.room.entities) {
             if (entity.x === this.x &&
                 entity.y === this.y &&
@@ -25267,7 +25244,6 @@ class Explosion extends projectile_1.Projectile {
                     entity.fuseLength = 1;
                 }
                 entity.hurt(playerHitBy, damage);
-                console.log(playerHitBy);
             }
             if (playerHitBy.x === this.x && playerHitBy.y === this.y) {
                 playerHitBy.hurt(damage, "bomb");
@@ -26232,7 +26208,6 @@ class Room {
             }
         };
         this.onEnterRoom = (player) => {
-            console.log("roomType", this.type.toString());
             this.enableFuseSounds();
             for (let room of this.level.rooms) {
                 room.roomOnScreen(player);
@@ -27419,7 +27394,6 @@ class Room {
             for (const door of this.doors) {
                 if (door.linkedDoor.room.type === RoomType.DOWNLADDER)
                     return { x: door.x, y: door.y, doorDir: door.doorDir };
-                console.log("found boss door", door.linkedDoor.room.type);
             }
             return null;
         };
@@ -27753,7 +27727,6 @@ class Room {
         //initialize the skin for the given environment
         this.envType = envType;
         this.skin = envType;
-        console.log(`room ${this.id} skin: ${this.skin}`);
         /*
         if (this.type === RoomType.ROPECAVE || this.type === RoomType.CAVE) {
           this.skin = SkinType.CAVE;
@@ -27766,13 +27739,10 @@ class Room {
         // #endregion
     }
     addDoorTorches(x, y, doorDir) {
-        console.log(`Adding door torches at x:${x}, y:${y}, direction:${doorDir}`);
         if (doorDir !== game_1.Direction.UP && doorDir !== game_1.Direction.DOWN) {
-            console.log("Door direction not UP/DOWN, skipping torch placement");
             return;
         }
         if (x && y) {
-            console.log("Checking wall info for torch placement");
             this.calculateWallInfo();
             const leftWallInfo = this.wallInfo.get(`${x - 1},${y}`);
             const rightWallInfo = this.wallInfo.get(`${x + 1},${y}`);
@@ -27780,13 +27750,10 @@ class Room {
             const rightTile = this.roomArray[x + 1]?.[y];
             const leftOpen = leftWallInfo?.isLeftWall === false;
             const rightOpen = rightWallInfo?.isRightWall === false;
-            console.log(`Left wall open: ${leftOpen}, Right wall open: ${rightOpen}`);
             if (leftOpen) {
-                console.log(`Placing torch on left wall at x:${x - 1}, y:${y}`);
                 this.roomArray[x - 1][y] = new wallTorch_1.WallTorch(this, x - 1, y);
             }
             if (rightOpen) {
-                console.log(`Placing torch on right wall at x:${x + 1}, y:${y}`);
                 this.roomArray[x + 1][y] = new wallTorch_1.WallTorch(this, x + 1, y);
             }
         }
@@ -28034,8 +28001,6 @@ class Room {
         */
         const factor = Math.min((this.depth + 2) * 0.05, 0.3);
         const numEnemies = Math.ceil(Math.max(utils_1.Utils.randomNormalInt(0, numEmptyTiles * factor), numEmptyTiles * factor));
-        console.log(`numEnemies: ${numEnemies}`);
-        console.log(`factor: ${factor}`);
         //if (numEnemies > numEmptyTiles / 2) numEnemies = numEmptyTiles / 2;
         this.addEnemies(numEnemies, Math.random);
     }
@@ -28739,7 +28704,6 @@ class ReverbEngine {
             if (ReverbEngine.audioContext.state === "suspended") {
                 await ReverbEngine.audioContext.resume();
             }
-            console.log("[REVERB-MOBILE] Audio context unlocked for mobile");
         }
         catch (error) {
             console.warn("[REVERB-MOBILE] Failed to unlock audio context:", error);
@@ -28759,7 +28723,6 @@ class ReverbEngine {
     // General logging function to avoid repetition
     static logStep(step, soundName, message, soundId) {
         const idStr = soundId !== undefined ? ` [ID:${soundId}]` : "";
-        console.log(`[REVERB-${step}] ${soundName}${idStr}: ${message}`);
     }
     static async initialize() {
         if (ReverbEngine.initialized)
@@ -28804,7 +28767,6 @@ class ReverbEngine {
                 // Resume context if suspended (common on mobile)
                 if (ReverbEngine.audioContext.state === "suspended") {
                     await ReverbEngine.audioContext.resume();
-                    console.log("[REVERB-MOBILE] Audio context resumed");
                 }
                 // Set up the convolver
                 ReverbEngine.convolver = ReverbEngine.audioContext.createConvolver();
@@ -28851,7 +28813,6 @@ class ReverbEngine {
                 if (sound_1.Sound.initialized)
                     sound_1.Sound.audioMuted = false;
                 const deviceType = ReverbEngine.isMobile() ? "MOBILE" : "DESKTOP";
-                console.log(`ReverbEngine connection intercept initialized successfully on ${deviceType}`);
             }
             catch (error) {
                 console.error("Failed to initialize ReverbEngine:", error);
@@ -28931,7 +28892,6 @@ class ReverbEngine {
     }
     // Cleanup method
     static cleanup() {
-        console.log("[REVERB-CLEANUP] Starting cleanup");
         // Restore original _refreshBuffer method
         if (ReverbEngine.originalRefreshBuffer) {
             howler_1.Howl.prototype._refreshBuffer = ReverbEngine.originalRefreshBuffer;
@@ -28951,7 +28911,6 @@ class ReverbEngine {
             ReverbEngine.audioContext.close();
         }
         ReverbEngine.initialized = false;
-        console.log("[REVERB-CLEANUP] Cleanup completed");
     }
 }
 exports.ReverbEngine = ReverbEngine;
@@ -29916,8 +29875,6 @@ class DownLadder extends passageway_1.Passageway {
             const targetDepth = this.room.depth;
             const level = linkedRoom.level;
             const sidePathRooms = this.game.rooms.filter((room) => room.mapGroup === linkedRoom.mapGroup);
-            console.log("sidePathRooms", sidePathRooms.length);
-            console.log("level.rooms.length", level.rooms.length);
             const startingId = level.rooms.length;
             sidePathRooms.forEach((room, index) => {
                 room.id = startingId + index;
@@ -30249,10 +30206,8 @@ class Lockable {
     }
     hasKeyWithID(keyID, player) {
         const inventory = player.inventory;
-        console.log("inventory.items", inventory.items);
         for (const item of inventory.items) {
             if (item instanceof key_1.Key) {
-                console.log("keyID", keyID, "item.doorID", item.doorID);
                 if (item.doorID === keyID) {
                     return item;
                 }
@@ -30301,8 +30256,6 @@ class Lockable {
     setKey(key) {
         this.keyID = Lockable.generateID();
         key.doorID = this.keyID;
-        console.log("keyID", this.keyID);
-        console.log("key.doorID", key.doorID);
     }
     static generateID() {
         return Math.floor(Math.random() * 1000000);

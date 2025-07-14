@@ -40,8 +40,6 @@ export class ReverbEngine {
       if (ReverbEngine.audioContext.state === "suspended") {
         await ReverbEngine.audioContext.resume();
       }
-
-      console.log("[REVERB-MOBILE] Audio context unlocked for mobile");
     } catch (error) {
       console.warn("[REVERB-MOBILE] Failed to unlock audio context:", error);
     }
@@ -66,7 +64,6 @@ export class ReverbEngine {
     soundId?: number,
   ) {
     const idStr = soundId !== undefined ? ` [ID:${soundId}]` : "";
-    console.log(`[REVERB-${step}] ${soundName}${idStr}: ${message}`);
   }
 
   public static async initialize() {
@@ -117,7 +114,6 @@ export class ReverbEngine {
         // Resume context if suspended (common on mobile)
         if (ReverbEngine.audioContext.state === "suspended") {
           await ReverbEngine.audioContext.resume();
-          console.log("[REVERB-MOBILE] Audio context resumed");
         }
 
         // Set up the convolver
@@ -205,9 +201,6 @@ export class ReverbEngine {
         if (Sound.initialized) Sound.audioMuted = false;
 
         const deviceType = ReverbEngine.isMobile() ? "MOBILE" : "DESKTOP";
-        console.log(
-          `ReverbEngine connection intercept initialized successfully on ${deviceType}`,
-        );
       } catch (error) {
         console.error("Failed to initialize ReverbEngine:", error);
         ReverbEngine.initialized = true;
@@ -310,8 +303,6 @@ export class ReverbEngine {
 
   // Cleanup method
   public static cleanup() {
-    console.log("[REVERB-CLEANUP] Starting cleanup");
-
     // Restore original _refreshBuffer method
     if (ReverbEngine.originalRefreshBuffer) {
       Howl.prototype._refreshBuffer = ReverbEngine.originalRefreshBuffer;
@@ -336,7 +327,5 @@ export class ReverbEngine {
       ReverbEngine.audioContext.close();
     }
     ReverbEngine.initialized = false;
-
-    console.log("[REVERB-CLEANUP] Cleanup completed");
   }
 }

@@ -123,7 +123,6 @@ export class Bomb extends Entity {
       0,
     );
 
-    console.log("screen shake");
     GenericParticle.spawnCluster(
       this.room,
       this.x + 0.5,

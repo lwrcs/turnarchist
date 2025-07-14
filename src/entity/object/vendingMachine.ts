@@ -188,9 +188,7 @@ export class VendingMachine extends Entity {
       for (const i of this.costItems) {
         if (!this.playerOpened.inventory.hasItemCount(i)) {
           let numOfItem = 0;
-          console.log("Checking inventory for required items...");
-          console.log("Required item:", (i.constructor as any).itemName);
-          console.log("Required amount:", i.stackCount);
+
           if (i instanceof Coin) {
             numOfItem = this.playerOpened.inventory.coinCount();
           } else {
@@ -201,9 +199,7 @@ export class VendingMachine extends Entity {
             });
           }
 
-          console.log("Total found in inventory:", numOfItem);
           const difference = this.costItems[0].stackCount - numOfItem;
-          console.log("Difference needed:", difference);
 
           const pluralLetter = this.costItems[0].stackCount > 1 ? "s" : "";
 

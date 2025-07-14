@@ -81,8 +81,6 @@ export class DownLadder extends Passageway {
     const sidePathRooms = this.game.rooms.filter(
       (room) => room.mapGroup === linkedRoom.mapGroup,
     );
-    console.log("sidePathRooms", sidePathRooms.length);
-    console.log("level.rooms.length", level.rooms.length);
     const startingId = level.rooms.length;
     sidePathRooms.forEach((room, index) => {
       room.id = startingId + index;

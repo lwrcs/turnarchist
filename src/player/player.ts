@@ -732,7 +732,6 @@ export class Player extends Drawable {
     }
     if (!other.isSolid()) {
       if (other instanceof UpLadder || other instanceof DownLadder) {
-        console.log("unlocking ladder");
         const locked = other.isLocked();
 
         if (locked) {

@@ -49,12 +49,7 @@ export class Chest extends Entity {
   }
 
   interact = (playerHitBy: Player) => {
-    console.log("Chest interact called with player:", playerHitBy);
-    console.log("Current chest health:", this.health);
-    console.log("Chest opening state:", this.opening);
-
     if (this.health === 3 && !this.opening) {
-      console.log("Opening chest for first time");
       this.health -= 1;
       this.open();
       return;

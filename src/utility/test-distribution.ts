@@ -41,7 +41,6 @@ function randomSineInt(
 
   // Check if clamping would change the result
   if (result < roundedMin || result > roundedMax) {
-    console.log("CLAMPING NEEDED:", { result, roundedMin, roundedMax });
   }
 
   return Math.min(Math.max(result, roundedMin), roundedMax);
@@ -66,12 +65,9 @@ function runDistributionTest(
   }
 
   // Print distribution
-  console.log(`\n${description}:`);
-  console.log("Distribution (value: count, percentage):");
   counts.forEach((count, index) => {
     const value = index + min;
     const percentage = ((count / sampleSize) * 100).toFixed(2);
-    console.log(`${value}: ${count} (${percentage}%)`);
   });
 }
 
@@ -81,10 +77,6 @@ const max = 10;
 const range = max - min + 1;
 const quarterPoint = min + Math.floor(range * 0.25);
 const threeQuarterPoint = min + Math.floor(range * 0.75);
-
-console.log(
-  "Testing with 100,000 samples per distribution to check for out-of-bounds results...",
-);
 
 // Test 1: Normal distribution (centered)
 runDistributionTest(min, max, {}, "Normal Distribution (centered)");

@@ -140,7 +140,6 @@ export class OccultistEnemy extends Enemy {
       for (let enemy of this.shieldedEnemies) {
         if (!enemy.cloned) {
           enemy.removeShield();
-          console.log("unshielded enemy:", enemy.name);
         }
       }
       this.shieldedEnemies = [];
@@ -164,7 +163,6 @@ export class OccultistEnemy extends Enemy {
       beam.springDamping = 0.01;
       beam.drawableY = enemy.drawableY;
       this.room.projectiles.push(beam);
-      console.log("beam created");
     }
   };
 
@@ -182,7 +180,6 @@ export class OccultistEnemy extends Enemy {
         beam.springDamping = 0.1;
         beam.drawableY = enemy.drawableY;
         this.room.projectiles.push(beam);
-        console.log("beam created");
       }
     }
   };

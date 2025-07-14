@@ -151,11 +151,8 @@ export class Lockable {
 
   hasKeyWithID(keyID: number, player: Player) {
     const inventory = player.inventory;
-    console.log("inventory.items", inventory.items);
     for (const item of inventory.items) {
       if (item instanceof Key) {
-        console.log("keyID", keyID, "item.doorID", item.doorID);
-
         if (item.doorID === keyID) {
           return item;
         }
@@ -230,8 +227,6 @@ export class Lockable {
   setKey(key: Key) {
     this.keyID = Lockable.generateID();
     key.doorID = this.keyID;
-    console.log("keyID", this.keyID);
-    console.log("key.doorID", key.doorID);
   }
 
   static generateID() {

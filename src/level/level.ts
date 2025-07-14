@@ -95,19 +95,10 @@ export class Level {
 
     this.populator = new Populator(this);
 
-    console.log(
-      `level ${this.depth} envType: ${env}`,
-      "isMainPath",
-      this.isMainPath,
-    );
-
     this.enemyParameters = this.getEnemyParameters();
     let mainPath = this.isMainPath ? "main" : "side";
-    console.log(`${mainPath} path, envType: ${env}`);
   }
   getDownLadder(room: Room): DownLadder {
-    console.log("Looking for down ladder...");
-
     if (!room || room.type !== RoomType.ROPEHOLE) {
       console.error("Room is not a rope hole");
       return null;
@@ -115,16 +106,12 @@ export class Level {
 
     // Then check ROPEHOLE rooms
     //let room = this.rooms.find((room) => room.type === RoomType.ROPEHOLE);
-    console.log("Found rope hole room:", room ? "yes" : "no");
 
     if (room) {
-      console.log("Searching rope hole room at", room.roomX, room.roomY);
       for (let x = room.roomX; x < room.roomX + room.width; x++) {
         for (let y = room.roomY; y < room.roomY + room.height; y++) {
           const tile = room.roomArray[x][y];
-          console.log("tile", tile.x, tile.y, tile);
           if (tile instanceof DownLadder) {
-            console.log("Found down ladder at", x, y);
             return tile;
           }
         }
