@@ -35,6 +35,10 @@ export class Tree extends Entity {
   get type() {
     return EntityType.PROP;
   }
+  uniqueKillBehavior = () => {
+    if (this.cloned) return;
+    Sound.playWood();
+  };
 
   draw = (delta: number) => {
     this.tileX = this.health === 2 ? 14 : 16;

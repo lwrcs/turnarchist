@@ -522,6 +522,7 @@ export class Game {
     }
 
     if (newRoom.envType === 2) Sound.playForestMusic();
+    if (newRoom.envType === 1) Sound.playCaveMusic();
 
     this.updateDepth(newRoom.depth);
 

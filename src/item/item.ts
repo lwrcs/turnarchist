@@ -166,8 +166,10 @@ export class Item extends Drawable {
 
   // Function to get the amount of shade at the item's location
   shadeAmount = () => {
-    if (!this.x || !this.y) return 0;
-    else return this.level.softVis[this.x][this.y];
+    const x = this.x ? this.x : 0;
+    const y = this.y ? this.y : 0;
+    if (!x || !y) return 0;
+    else return this.level.softVis[x][y];
   };
 
   drawStatus = (x: number, y: number) => {};

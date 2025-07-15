@@ -18,6 +18,7 @@ export class Sound {
   static pushSounds: Array<Howl>;
   static healSound: Howl;
   static forestMusic: Howl;
+  static caveMusic: Howl;
   static graveSound: Howl;
   static ambientSound: Howl;
   static goreSound: Howl;
@@ -43,6 +44,8 @@ export class Sound {
   static parrySounds: Array<Howl>;
   static eatSounds: Array<Howl>;
   static gruntSounds: Array<Howl>;
+  static lockedSound: Howl;
+  static woodSound: Howl;
 
   static currentlyPlaying: Set<number> = new Set();
 
@@ -57,6 +60,7 @@ export class Sound {
   static isMobile: boolean = false;
   static audioContextResumed: boolean = false;
   static forestMusicId: number | null = null;
+  static caveMusicId: number | null = null;
   static ambientSoundId: number | null = null;
 
   static detectMobile() {
@@ -291,7 +295,18 @@ export class Sound {
         2,
       );
       Sound.smithSound = createHowl("res/SFX/items/smith.mp3", 0.5, false, 2);
-
+      Sound.lockedSound = createHowl(
+        "res/SFX/door/locked1.mp3",
+        0.75,
+        false,
+        2,
+      );
+      Sound.woodSound = createHowl(
+        "res/SFX/objects/woodHit1.mp3",
+        1.25,
+        false,
+        2,
+      );
       // Mining sounds
       Sound.miningSounds = createHowlArray(
         "res/SFX/resources/Pickaxe",
@@ -363,6 +378,7 @@ export class Sound {
 
       // Ambient sounds - critical for mobile
       Sound.forestMusic = createHowl("res/music/forest1.mp3", 0.25, true, 1);
+      Sound.caveMusic = createHowl("res/music/cave1.mp3", 0.25, true, 1);
       Sound.graveSound = createHowl(
         "res/SFX/attacks/skelespawn.mp3",
         1.0,
@@ -545,6 +561,27 @@ export class Sound {
     this.playWithReverb(f, Sound.PRIORITY.INTERACTIONS);
   };
 
+  static playCaveMusic = (index: number = 0) => {
+    if (Sound.audioMuted) return;
+
+    try {
+      // Stop any existing forest music
+      if (Sound.caveMusicId) {
+        Sound.caveMusic.stop(Sound.caveMusicId);
+      }
+
+      // Play new instance
+      Sound.caveMusicId = Sound.caveMusic.play();
+
+      // Handle mobile audio context
+      if (Sound.isMobile && !Sound.audioContextResumed) {
+        Sound.enableAudioForMobile();
+      }
+    } catch (error) {
+      console.error("Error playing cave music:", error);
+    }
+  };
+
   static playForestMusic = (index: number = 0) => {
     if (Sound.audioMuted) return;
 
@@ -681,6 +718,18 @@ export class Sound {
     if (Sound.audioMuted) return;
     let f = Game.randTable(Sound.gruntSounds, Math.random);
     this.playWithReverb(f, Sound.PRIORITY.COMBAT);
+  };
+
+  static playLocked = () => {
+    if (Sound.audioMuted) return;
+    this.playWithReverb(Sound.lockedSound, Sound.PRIORITY.INTERACTIONS);
+  };
+
+  static playWood = () => {
+    if (Sound.audioMuted) return;
+    this.delayPlay(() => {
+      this.playWithReverb(Sound.woodSound, Sound.PRIORITY.INTERACTIONS);
+    }, 150);
   };
 
   static delayPlay = (method: () => void, delay: number) => {

@@ -738,6 +738,8 @@ export class Player extends Drawable {
           this.shakeScreen(this.x, this.y, x, y);
           if (other.lockable.canUnlock(this)) {
             other.lockable.unlock(this);
+          } else {
+            Sound.playLocked();
           }
           other.addLightSource();
           this.game.room.updateLighting();
@@ -752,7 +754,11 @@ export class Player extends Drawable {
       if (other instanceof Door) {
         this.shakeScreen(this.x, this.y, x, y);
 
-        if (other.canUnlock(this)) other.unlock(this);
+        if (other.canUnlock(this)) {
+          other.unlock(this);
+        } else {
+          Sound.playLocked();
+        }
       }
     }
   };

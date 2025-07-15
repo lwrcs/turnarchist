@@ -11134,6 +11134,11 @@ const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.
 class Tree extends entity_1.Entity {
     constructor(room, game, x, y) {
         super(room, game, x, y);
+        this.uniqueKillBehavior = () => {
+            if (this.cloned)
+                return;
+            sound_1.Sound.playWood();
+        };
         this.draw = (delta) => {
             this.tileX = this.health === 2 ? 14 : 16;
             if (this.cloned === true)
@@ -12003,6 +12008,8 @@ class Game {
             }
             if (newRoom.envType === 2)
                 sound_1.Sound.playForestMusic();
+            if (newRoom.envType === 1)
+                sound_1.Sound.playCaveMusic();
             this.updateDepth(newRoom.depth);
             this.levelState = LevelState.TRANSITIONING_LADDER;
             this.transitionStartTime = Date.now();
@@ -18284,10 +18291,12 @@ class Item extends drawable_1.Drawable {
         };
         // Function to get the amount of shade at the item's location
         this.shadeAmount = () => {
-            if (!this.x || !this.y)
+            const x = this.x ? this.x : 0;
+            const y = this.y ? this.y : 0;
+            if (!x || !y)
                 return 0;
             else
-                return this.level.softVis[this.x][this.y];
+                return this.level.softVis[x][y];
         };
         this.drawStatus = (x, y) => { };
         this.drawBrokenSymbol = (x, y) => {
@@ -21148,8 +21157,12 @@ class Level {
             console.error("No down ladder found");
             return;
         }
-        const randomRoom = this.rooms[Math.floor(Math.random() * this.rooms.length)];
-        const randomTile = randomRoom.getEmptyTiles()[randomRoom.getEmptyTiles().length - 1];
+        const rooms = this.rooms.filter((r) => r.type !== room_1.RoomType.START &&
+            r.type !== room_1.RoomType.DOWNLADDER &&
+            r.type !== room_1.RoomType.ROPEHOLE);
+        const randomRoom = rooms[Math.floor(Math.random() * rooms.length)];
+        const randomIndex = Math.floor(Math.random() * randomRoom.getEmptyTiles().length);
+        const randomTile = randomRoom.getEmptyTiles()[randomIndex];
         const key = new key_1.Key(randomRoom, randomTile.x, randomTile.y);
         downLadder.lockable.setKey(key);
         randomRoom.items.push(key);
@@ -23728,6 +23741,9 @@ class Player extends drawable_1.Drawable {
                         if (other.lockable.canUnlock(this)) {
                             other.lockable.unlock(this);
                         }
+                        else {
+                            sound_1.Sound.playLocked();
+                        }
                         other.addLightSource();
                         this.game.room.updateLighting();
                         return;
@@ -23741,8 +23757,12 @@ class Player extends drawable_1.Drawable {
             else {
                 if (other instanceof door_1.Door) {
                     this.shakeScreen(this.x, this.y, x, y);
-                    if (other.canUnlock(this))
+                    if (other.canUnlock(this)) {
                         other.unlock(this);
+                    }
+                    else {
+                        sound_1.Sound.playLocked();
+                    }
                 }
             }
         };
@@ -26127,6 +26147,7 @@ const itemGroup_1 = __webpack_require__(/*! ../item/itemGroup */ "./src/item/ite
 const sword_1 = __webpack_require__(/*! ../item/weapon/sword */ "./src/item/weapon/sword.ts");
 const webglBlurRenderer_1 = __webpack_require__(/*! ../gui/webglBlurRenderer */ "./src/gui/webglBlurRenderer.ts");
 const utils_1 = __webpack_require__(/*! ../utility/utils */ "./src/utility/utils.ts");
+const tree_1 = __webpack_require__(/*! ../entity/object/tree */ "./src/entity/object/tree.ts");
 // #endregion
 // #region Enums & Interfaces
 /**
@@ -26156,6 +26177,7 @@ var EnemyType;
     EnemyType["spider"] = "spider";
     EnemyType["bigzombie"] = "bigzombie";
     EnemyType["glowbug"] = "glowbug";
+    EnemyType["tree"] = "tree";
     // Add other enemy types here
 })(EnemyType = exports.EnemyType || (exports.EnemyType = {}));
 /**
@@ -26184,6 +26206,7 @@ exports.EnemyTypeMap = {
     [EnemyType.spider]: spiderEnemy_1.SpiderEnemy,
     [EnemyType.bigzombie]: bigZombieEnemy_1.BigZombieEnemy,
     [EnemyType.glowbug]: glowBugEnemy_1.GlowBugEnemy,
+    [EnemyType.tree]: tree_1.Tree,
     // Add other enemy mappings here
 };
 var RoomType;
@@ -29516,6 +29539,7 @@ Sound.PRIORITY = {
 Sound.isMobile = false;
 Sound.audioContextResumed = false;
 Sound.forestMusicId = null;
+Sound.caveMusicId = null;
 Sound.ambientSoundId = null;
 Sound.loadSounds = async () => {
     if (Sound.initialized)
@@ -29579,6 +29603,8 @@ Sound.loadSounds = async () => {
         Sound.keyPickupSound = createHowl("res/SFX/items/keyPickup.mp3", 1.0, false, 2);
         Sound.backpackSound = createHowl("res/SFX/items/backpack.mp3", 0.75, false, 2);
         Sound.smithSound = createHowl("res/SFX/items/smith.mp3", 0.5, false, 2);
+        Sound.lockedSound = createHowl("res/SFX/door/locked1.mp3", 0.75, false, 2);
+        Sound.woodSound = createHowl("res/SFX/objects/woodHit1.mp3", 1.25, false, 2);
         // Mining sounds
         Sound.miningSounds = createHowlArray("res/SFX/resources/Pickaxe", [1, 2, 3, 4], 0.3, 3);
         Sound.breakRockSound = createHowl("res/SFX/resources/rockbreak.mp3", 1.0, false, 2);
@@ -29596,6 +29622,7 @@ Sound.loadSounds = async () => {
         Sound.fuseStartSound = createHowl("res/SFX/attacks/fuseStart.mp3", 0.2, false, 2);
         // Ambient sounds - critical for mobile
         Sound.forestMusic = createHowl("res/music/forest1.mp3", 0.25, true, 1);
+        Sound.caveMusic = createHowl("res/music/cave1.mp3", 0.25, true, 1);
         Sound.graveSound = createHowl("res/SFX/attacks/skelespawn.mp3", 1.0, false, 2);
         Sound.ambientSound = createHowl("res/SFX/ambient/ambientDark2.mp3", 0.3, true, 1); // Reduced volume
         Sound.goreSound = createHowl("res/SFX/misc Unused/gore2.mp3", 0.5, false, 2);
@@ -29712,6 +29739,25 @@ Sound.unlock = () => {
         return;
     let f = game_1.Game.randTable(Sound.unlockSounds, Math.random);
     _a.playWithReverb(f, Sound.PRIORITY.INTERACTIONS);
+};
+Sound.playCaveMusic = (index = 0) => {
+    if (Sound.audioMuted)
+        return;
+    try {
+        // Stop any existing forest music
+        if (Sound.caveMusicId) {
+            Sound.caveMusic.stop(Sound.caveMusicId);
+        }
+        // Play new instance
+        Sound.caveMusicId = Sound.caveMusic.play();
+        // Handle mobile audio context
+        if (Sound.isMobile && !Sound.audioContextResumed) {
+            Sound.enableAudioForMobile();
+        }
+    }
+    catch (error) {
+        console.error("Error playing cave music:", error);
+    }
 };
 Sound.playForestMusic = (index = 0) => {
     if (Sound.audioMuted)
@@ -29839,6 +29885,18 @@ Sound.playGrunt = () => {
         return;
     let f = game_1.Game.randTable(Sound.gruntSounds, Math.random);
     _a.playWithReverb(f, Sound.PRIORITY.COMBAT);
+};
+Sound.playLocked = () => {
+    if (Sound.audioMuted)
+        return;
+    _a.playWithReverb(Sound.lockedSound, Sound.PRIORITY.INTERACTIONS);
+};
+Sound.playWood = () => {
+    if (Sound.audioMuted)
+        return;
+    _a.delayPlay(() => {
+        _a.playWithReverb(Sound.woodSound, Sound.PRIORITY.INTERACTIONS);
+    }, 150);
 };
 Sound.delayPlay = (method, delay) => {
     setTimeout(method, delay);

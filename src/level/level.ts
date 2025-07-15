@@ -131,10 +131,18 @@ export class Level {
       return;
     }
 
-    const randomRoom =
-      this.rooms[Math.floor(Math.random() * this.rooms.length)];
-    const randomTile =
-      randomRoom.getEmptyTiles()[randomRoom.getEmptyTiles().length - 1];
+    const rooms = this.rooms.filter(
+      (r) =>
+        r.type !== RoomType.START &&
+        r.type !== RoomType.DOWNLADDER &&
+        r.type !== RoomType.ROPEHOLE,
+    );
+
+    const randomRoom = rooms[Math.floor(Math.random() * rooms.length)];
+    const randomIndex = Math.floor(
+      Math.random() * randomRoom.getEmptyTiles().length,
+    );
+    const randomTile = randomRoom.getEmptyTiles()[randomIndex];
 
     const key = new Key(randomRoom, randomTile.x, randomTile.y);
     downLadder.lockable.setKey(key);

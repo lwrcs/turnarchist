@@ -92,6 +92,7 @@ import { ItemGroup } from "../item/itemGroup";
 import { Sword } from "../item/weapon/sword";
 import { WebGLBlurRenderer } from "../gui/webglBlurRenderer";
 import { Utils } from "../utility/utils";
+import { Tree } from "../entity/object/tree";
 
 // #endregion
 
@@ -122,6 +123,7 @@ export enum EnemyType {
   spider = "spider",
   bigzombie = "bigzombie",
   glowbug = "glowbug",
+  tree = "tree",
   // Add other enemy types here
 }
 
@@ -151,6 +153,7 @@ export const EnemyTypeMap: { [key in EnemyType]: EnemyStatic } = {
   [EnemyType.spider]: SpiderEnemy,
   [EnemyType.bigzombie]: BigZombieEnemy,
   [EnemyType.glowbug]: GlowBugEnemy,
+  [EnemyType.tree]: Tree,
   // Add other enemy mappings here
 };
 
