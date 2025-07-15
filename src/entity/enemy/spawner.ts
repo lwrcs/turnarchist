@@ -114,18 +114,21 @@ export class Spawner extends Enemy {
     return 1;
   };
 
-  setSpawnFrequency = () => {
+  setSpawnFrequency = (maxHealth: number = 1) => {
     if (GameplaySettings.UNLIMITED_SPAWNERS) {
       this.spawnFrequency = 4;
     } else {
       this.spawnFrequency = Math.min(12, 4 * this.room.currentSpawnerCount);
     }
+    if (GameplaySettings.THROTTLE_SPAWNERS) {
+      this.spawnFrequency = 3 + maxHealth;
+    }
+
     const spawners = this.room.entities.filter((e) => e instanceof Spawner);
     this.spawnOffset = (spawners.indexOf(this) + 1) * 4;
   };
 
   behavior = () => {
-    this.setSpawnFrequency();
     let shouldSpawn = true;
     this.lastX = this.x;
     this.lastY = this.y;
@@ -159,6 +162,7 @@ export class Spawner extends Enemy {
           const position = Game.randTable(positions, Random.rand);
 
           let spawned;
+
           switch (this.enemySpawnType) {
             case 1:
               spawned = new CrabEnemy(
@@ -321,6 +325,8 @@ export class Spawner extends Enemy {
               break;
           }
 
+          this.setSpawnFrequency(spawned.maxHealth);
+
           if (shouldSpawn) {
             this.room.projectiles.push(
               new EnemySpawnAnimation(
@@ -336,6 +342,7 @@ export class Spawner extends Enemy {
           }
         }
       }
+
       this.ticks++;
     }
   };

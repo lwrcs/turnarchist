@@ -5699,6 +5699,7 @@ const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/
 const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const eventBus_1 = __webpack_require__(/*! ../../event/eventBus */ "./src/event/eventBus.ts");
 const utils_1 = __webpack_require__(/*! ../../utility/utils */ "./src/utility/utils.ts");
+const stunAnimation_1 = __webpack_require__(/*! ../../projectile/stunAnimation */ "./src/projectile/stunAnimation.ts");
 var EnemyState;
 (function (EnemyState) {
     EnemyState[EnemyState["SLEEP"] = 0] = "SLEEP";
@@ -6041,6 +6042,13 @@ class Enemy extends entity_1.Entity {
                     this.justHurt = true;
                 }
             }
+        };
+        this.stun = () => {
+            if (this.stunned)
+                return;
+            this.stunned = true;
+            this.unconscious = true;
+            new stunAnimation_1.StunAnimation(this, this.x, this.y);
         };
         this.retreat = (oldX, oldY) => {
             // Calculate direction vector from player to enemy
@@ -7874,7 +7882,7 @@ class RookEnemy extends enemy_1.Enemy {
                         undefined, undefined, undefined, false, //diagonalsOmni
                         this.lastPlayerPos);
                         if (this.justHurt) {
-                            this.retreat(oldX, oldY);
+                            this.stun();
                         }
                         else if (moves.length > 0) {
                             let moveX = moves[0].pos.x;
@@ -8289,18 +8297,20 @@ class Spawner extends enemy_1.Enemy {
         this.hit = () => {
             return 1;
         };
-        this.setSpawnFrequency = () => {
+        this.setSpawnFrequency = (maxHealth = 1) => {
             if (gameplaySettings_1.GameplaySettings.UNLIMITED_SPAWNERS) {
                 this.spawnFrequency = 4;
             }
             else {
                 this.spawnFrequency = Math.min(12, 4 * this.room.currentSpawnerCount);
             }
+            if (gameplaySettings_1.GameplaySettings.THROTTLE_SPAWNERS) {
+                this.spawnFrequency = 3 + maxHealth;
+            }
             const spawners = this.room.entities.filter((e) => e instanceof Spawner);
             this.spawnOffset = (spawners.indexOf(this) + 1) * 4;
         };
         this.behavior = () => {
-            this.setSpawnFrequency();
             let shouldSpawn = true;
             this.lastX = this.x;
             this.lastY = this.y;
@@ -8398,6 +8408,7 @@ class Spawner extends enemy_1.Enemy {
                                 spawned = new armoredSkullEnemy_1.ArmoredSkullEnemy(this.room, this.game, position.x, position.y);
                                 break;
                         }
+                        this.setSpawnFrequency(spawned.maxHealth);
                         if (shouldSpawn) {
                             this.room.projectiles.push(new enemySpawnAnimation_1.EnemySpawnAnimation(this.room, spawned, position.x, position.y));
                             this.room.hitwarnings.push(new hitWarning_1.HitWarning(this.game, position.x, position.y, this.x, this.y));
@@ -9236,6 +9247,8 @@ class Entity extends drawable_1.Drawable {
         this.hasHitParticles = true;
         this.hasDamageNumbers = true;
         this.armored = false;
+        this.justHurt = false;
+        this.stunned = false;
         this.hoverText = () => {
             return this.name;
         };
@@ -14448,6 +14461,7 @@ exports.GameplaySettings = GameplaySettings;
 GameplaySettings.LIMIT_ENEMY_TYPES = true;
 GameplaySettings.MEDIAN_ROOM_DENSITY = 0.25;
 GameplaySettings.UNLIMITED_SPAWNERS = true;
+GameplaySettings.THROTTLE_SPAWNERS = true;
 GameplaySettings.NO_ENEMIES = false;
 GameplaySettings.EQUIP_USES_TURN = false;
 GameplaySettings.UNBREAKABLE_ITEMGROUP_LOOT = false;
@@ -23623,6 +23637,9 @@ class Player extends drawable_1.Drawable {
                 return;
                 //}
             }
+            else if (!this.inventory.hasWeapon()) {
+                this.game.pushMessage("No weapon equipped.");
+            }
             for (let e of this.game.levels[this.depth].rooms[this.levelID].entities) {
                 e.lastX = e.x;
                 e.lastY = e.y;
@@ -25818,6 +25835,57 @@ class Projectile extends drawable_1.Drawable {
     setTarget(x, y, x2, y2) { }
 }
 exports.Projectile = Projectile;
+
+
+/***/ }),
+
+/***/ "./src/projectile/stunAnimation.ts":
+/*!*****************************************!*\
+  !*** ./src/projectile/stunAnimation.ts ***!
+  \*****************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.StunAnimation = void 0;
+const projectile_1 = __webpack_require__(/*! ./projectile */ "./src/projectile/projectile.ts");
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+class StunAnimation extends projectile_1.Projectile {
+    constructor(parent, x, y) {
+        super(parent, x, y);
+        this.ticks = 0;
+        this.remove = () => {
+            this.parent.room.projectiles = this.parent.room.projectiles.filter((projectile) => projectile !== this);
+        };
+        this.tick = () => {
+            if (this.ticks > 0) {
+                this.remove();
+                this.parent.unconscious = false;
+                this.parent.justHurt = false;
+            }
+            this.ticks++;
+        };
+        this.drawTopLayer = (delta) => {
+            if (this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = 1;
+            this.frame += 0.2 * delta;
+            if (this.frame > 4)
+                this.frame = 0;
+            //this.drawableY = this.parent.drawableY + 0.05;
+            //Game.ctx.globalCompositeOperation = "difference";
+            //if (this.parent.shielded) {
+            game_1.Game.drawFX(19 + Math.floor(this.frame), 0, 1, 1, this.parent.x - this.parent.drawX, this.parent.y - this.parent.drawY - 1.25, 1, 1);
+            //}
+            game_1.Game.ctx.restore();
+        };
+        this.frame = 0;
+        this.parent.room.projectiles.push(this);
+    }
+}
+exports.StunAnimation = StunAnimation;
 
 
 /***/ }),

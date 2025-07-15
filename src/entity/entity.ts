@@ -141,6 +141,8 @@ export class Entity extends Drawable {
   hasHitParticles: boolean = true;
   hasDamageNumbers: boolean = true;
   armored: boolean = false;
+  justHurt: boolean = false;
+  stunned: boolean = false;
 
   private _imageParticleTiles: { x: number; y: number };
   hitSound: () => void;

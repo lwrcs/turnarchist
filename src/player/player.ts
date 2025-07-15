@@ -601,6 +601,8 @@ export class Player extends Drawable {
       //if (newMove instanceof HitWarning)
       return;
       //}
+    } else if (!this.inventory.hasWeapon()) {
+      this.game.pushMessage("No weapon equipped.");
     }
 
     for (let e of this.game.levels[this.depth].rooms[this.levelID].entities) {

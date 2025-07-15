@@ -5,6 +5,7 @@ import { Item } from "../../item/item";
 import { astar } from "../../utility/astarclass";
 import { SpikeTrap } from "../../tile/spiketrap";
 import { Enemy } from "./enemy";
+import { StunAnimation } from "../../projectile/stunAnimation";
 
 export class RookEnemy extends Enemy {
   frame: number;
@@ -109,7 +110,7 @@ export class RookEnemy extends Enemy {
             this.lastPlayerPos,
           );
           if (this.justHurt) {
-            this.retreat(oldX, oldY);
+            this.stun();
           } else if (moves.length > 0) {
             let moveX = moves[0].pos.x;
 

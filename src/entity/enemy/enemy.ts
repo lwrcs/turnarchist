@@ -11,6 +11,7 @@ import { globalEventBus } from "../../event/eventBus";
 import { Sound } from "../../sound/sound";
 import { Utils } from "../../utility/utils";
 import { Door } from "../../tile/door";
+import { StunAnimation } from "../../projectile/stunAnimation";
 
 enum EnemyState {
   SLEEP,
@@ -474,6 +475,13 @@ export abstract class Enemy extends Entity {
         this.justHurt = true;
       }
     }
+  };
+
+  stun = () => {
+    if (this.stunned) return;
+    this.stunned = true;
+    this.unconscious = true;
+    new StunAnimation(this, this.x, this.y);
   };
 
   retreat = (oldX: number, oldY: number) => {
