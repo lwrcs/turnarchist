@@ -12,11 +12,13 @@ import { Random } from "../utility/random";
 import { Utils } from "../utility/utils";
 import { ClusteringOptions, PropClusterer } from "./propClusterer";
 import { Room, RoomType } from "./room";
+import { DownladderMaker } from "../entity/downladderMaker";
 
 export class Populator {
   level: Level;
   medianDensity: number;
   private props: { x: number; y: number }[] = [];
+  addedDownladder: boolean = false;
 
   constructor(level: Level) {
     this.level = level;
@@ -36,6 +38,8 @@ export class Populator {
 
       this.populateByEnvironment(room);
     });
+    this.addDownladder();
+    //this.level.distributeKeys();
   };
 
   populateByEnvironment = (room: Room) => {
@@ -50,6 +54,35 @@ export class Populator {
         this.populateDefault(room);
         break;
     }
+  };
+
+  addDownladder = () => {
+    const rooms = this.level.rooms.filter(
+      (room) =>
+        room.type !== RoomType.START &&
+        room.type !== RoomType.DOWNLADDER &&
+        room.type !== RoomType.UPLADDER &&
+        room.type !== RoomType.ROPEHOLE &&
+        room.type !== RoomType.BOSS,
+    );
+
+    const downLadderRoom = rooms[Math.floor(Math.random() * rooms.length)];
+    if (downLadderRoom.getEmptyTiles().length === 0) return;
+
+    const x = downLadderRoom.getRandomEmptyPosition(
+      downLadderRoom.getEmptyTiles(),
+    ).x;
+    const y = downLadderRoom.getRandomEmptyPosition(
+      downLadderRoom.getEmptyTiles(),
+    ).y;
+    if (x === undefined || y === undefined) return;
+    const downLadder = new DownladderMaker(
+      downLadderRoom,
+      this.level.game,
+      downLadderRoom.getRandomEmptyPosition(downLadderRoom.getEmptyTiles()).x,
+      downLadderRoom.getRandomEmptyPosition(downLadderRoom.getEmptyTiles()).y,
+    );
+    downLadderRoom.entities.push(downLadder);
   };
 
   populateByType = (room: Room) => {};

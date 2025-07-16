@@ -3554,6 +3554,41 @@ HitWarning.updateFrame = (delta) => {
 
 /***/ }),
 
+/***/ "./src/entity/downladderMaker.ts":
+/*!***************************************!*\
+  !*** ./src/entity/downladderMaker.ts ***!
+  \***************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DownladderMaker = void 0;
+const entity_1 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
+const downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/downLadder.ts");
+const lockable_1 = __webpack_require__(/*! ../tile/lockable */ "./src/tile/lockable.ts");
+const environmentTypes_1 = __webpack_require__(/*! ../constants/environmentTypes */ "./src/constants/environmentTypes.ts");
+class DownladderMaker extends entity_1.Entity {
+    constructor(room, game, x, y) {
+        super(room, game, x, y);
+        this.createDownladder = () => {
+            const newTile = new downLadder_1.DownLadder(this.room, this.game, this.x, this.y, true, 2, lockable_1.LockType.NONE);
+            this.room.roomArray[this.x][this.y] = newTile;
+        };
+        this.draw = (delta) => { };
+        this.drawTopLayer = (delta) => { };
+        this.room = room;
+        if (this.room.level.environment.type === environmentTypes_1.EnvType.DUNGEON)
+            this.createDownladder();
+        this.name = "DownladderMaker";
+        this.dead = true;
+    }
+}
+exports.DownladderMaker = DownladderMaker;
+
+
+/***/ }),
+
 /***/ "./src/entity/enemy/armoredSkullEnemy.ts":
 /*!***********************************************!*\
   !*** ./src/entity/enemy/armoredSkullEnemy.ts ***!
@@ -13477,7 +13512,6 @@ const backpack_1 = __webpack_require__(/*! ../item/backpack */ "./src/item/backp
 const candle_1 = __webpack_require__(/*! ../item/light/candle */ "./src/item/light/candle.ts");
 const coal_1 = __webpack_require__(/*! ../item/resource/coal */ "./src/item/resource/coal.ts");
 const godStone_1 = __webpack_require__(/*! ../item/godStone */ "./src/item/godStone.ts");
-const key_1 = __webpack_require__(/*! ../item/key */ "./src/item/key.ts");
 const lantern_1 = __webpack_require__(/*! ../item/light/lantern */ "./src/item/light/lantern.ts");
 const weaponFragments_1 = __webpack_require__(/*! ../item/usable/weaponFragments */ "./src/item/usable/weaponFragments.ts");
 const levelConstants_1 = __webpack_require__(/*! ../level/levelConstants */ "./src/level/levelConstants.ts");
@@ -13518,6 +13552,7 @@ GameConstants.SWIPE_HOLD_INITIAL_DELAY = 10;
 GameConstants.MOVEMENT_COOLDOWN = 200; // milliseconds
 GameConstants.MOVEMENT_QUEUE_COOLDOWN = 100; // milliseconds
 GameConstants.MOVE_WITH_MOUSE = true;
+GameConstants.SLOW_INPUTS_NEAR_ENEMIES = false;
 GameConstants.CHAT_APPEAR_TIME = 2500;
 GameConstants.CHAT_FADE_TIME = 500;
 GameConstants.ANIMATION_SPEED = 1;
@@ -13688,7 +13723,6 @@ GameConstants.STARTING_DEV_INVENTORY = [
     pickaxe_1.Pickaxe,
     coal_1.Coal,
     apple_1.Apple,
-    key_1.Key,
     spellbookPage_1.SpellbookPage,
     spellbookPage_1.SpellbookPage,
     spellbookPage_1.SpellbookPage,
@@ -21127,7 +21161,19 @@ class Level {
             for (let room of this.rooms) {
                 for (let x = room.roomX; x < room.roomX + room.width; x++) {
                     for (let y = room.roomY; y < room.roomY + room.height; y++) {
-                        this.levelArray[x][y] = room.roomArray[x][y];
+                        // Add bounds checking
+                        if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
+                            // Ensure room array has valid tiles at these coordinates
+                            if (room.roomArray[x] && room.roomArray[x][y]) {
+                                this.levelArray[x][y] = room.roomArray[x][y];
+                            }
+                            else {
+                                console.warn(`Room array missing tile at (${x}, ${y}) for room ${room.id}`);
+                            }
+                        }
+                        else {
+                            console.warn(`Room coordinates (${x}, ${y}) are outside level bounds (${this.width}, ${this.height})`);
+                        }
                     }
                 }
             }
@@ -21166,20 +21212,51 @@ class Level {
         return null;
     }
     distributeKeys() {
-        const downLadder = this.getDownLadder(this.rooms?.find((r) => r.type === room_1.RoomType.ROPEHOLE));
+        console.log("Starting distributeKeys - searching entire level array for down ladders");
+        // Search the entire level array for down ladders
+        let downLadder = null;
+        for (let room of this.rooms) {
+            for (let x = room.roomX; x < room.roomX + room.width; x++) {
+                for (let y = room.roomY; y < room.roomY + room.height; y++) {
+                    const tile = room.roomArray[x][y];
+                    if (tile instanceof downLadder_1.DownLadder) {
+                        console.log(`Found down ladder at position (${x}, ${y})`);
+                        downLadder = tile;
+                        break;
+                    }
+                }
+                if (downLadder)
+                    break;
+            }
+        }
         if (!downLadder) {
-            console.error("No down ladder found");
+            console.error("No down ladder found in level array");
             return;
         }
+        console.log("Down ladder found, proceeding with key distribution");
+        this.distributeKey(downLadder);
+    }
+    distributeKey(downLadder) {
         const rooms = this.rooms.filter((r) => r.type !== room_1.RoomType.START &&
             r.type !== room_1.RoomType.DOWNLADDER &&
             r.type !== room_1.RoomType.ROPEHOLE);
+        console.log(`Found ${rooms.length} eligible rooms for key placement`);
+        if (rooms.length === 0) {
+            console.error("No eligible rooms found for key placement");
+            return;
+        }
         const randomRoom = rooms[Math.floor(Math.random() * rooms.length)];
-        const randomIndex = Math.floor(Math.random() * randomRoom.getEmptyTiles().length);
-        const randomTile = randomRoom.getEmptyTiles()[randomIndex];
+        console.log(`Selected room ${randomRoom.id} for key placement`);
+        const emptyTiles = randomRoom.getEmptyTiles();
+        console.log(`Room has ${emptyTiles.length} empty tiles`);
+        const randomIndex = Math.floor(Math.random() * emptyTiles.length);
+        const randomTile = emptyTiles[randomIndex];
+        console.log(`Placing key at tile position (${randomTile.x}, ${randomTile.y})`);
         const key = new key_1.Key(randomRoom, randomTile.x, randomTile.y);
         downLadder.lockable.setKey(key);
         randomRoom.items.push(key);
+        console.log("key.doorID", key.doorID, "downLadder.keyID", downLadder.lockable.keyID);
+        console.log("Key successfully distributed and linked to down ladder");
         //this.game.player.inventory.addItem(key);
     }
     setExitRoom() {
@@ -21463,6 +21540,7 @@ class LevelGenerator {
             newLevel.setRooms(rooms);
             newLevel.populator.populateRooms();
             newLevel.setRoomSkins();
+            //newLevel.loadRoomsIntoLevelArray();
             // Only call linkExitToStart for main paths
             if (newLevel.exitRoom) {
                 newLevel.exitRoom.linkExitToStart();
@@ -21488,9 +21566,6 @@ class LevelGenerator {
                     }
                 }
             }
-            setTimeout(() => {
-                newLevel.distributeKeys();
-            }, 0);
             // Return the start room or the rope cave room
             callback(isSidePath
                 ? rooms.find((r) => r.type === room_1.RoomType.ROPECAVE)
@@ -22595,11 +22670,10 @@ class PartitionGenerator {
             if (p.type === room_1.RoomType.DUNGEON) {
                 if (p.distance > 4 && p.area() <= 30 && random_1.Random.rand() < 0) {
                     p.type = room_1.RoomType.TREASURE;
-                }
-                else if (!added_rope_hole) {
-                    p.type = room_1.RoomType.ROPEHOLE;
-                    added_rope_hole = true;
-                }
+                } /*else if (!added_rope_hole) {
+                  p.type = RoomType.ROPEHOLE;
+                  added_rope_hole = true;
+                }*/
             }
         }
         await this.visualizer.createAnimationDelay("large");
@@ -24651,12 +24725,21 @@ class PlayerMovement {
         return timeSinceDragEnd < 10 || timeSinceClose < 10;
     }
     canMove() {
-        if (this.inventoryClosedRecently() ||
-            (this.player.game.room.turn === room_1.TurnState.computerTurn &&
-                this.player.game.room.hasEnemyInRadius(this.player.x, this.player.y)))
+        if (this.inventoryClosedRecently())
             return false;
+        // Only block movement during computer turn if slow inputs setting is enabled
+        if (gameConstants_1.GameConstants.SLOW_INPUTS_NEAR_ENEMIES &&
+            this.player.game.room.turn === room_1.TurnState.computerTurn &&
+            this.player.game.room.hasEnemyInRadius(this.player.x, this.player.y)) {
+            return false;
+        }
         const now = Date.now();
-        const cooldown = gameConstants_1.GameConstants.MOVEMENT_COOLDOWN;
+        let cooldown = gameConstants_1.GameConstants.MOVEMENT_COOLDOWN;
+        // Apply slower cooldown when enemies are nearby and setting is enabled
+        if (gameConstants_1.GameConstants.SLOW_INPUTS_NEAR_ENEMIES &&
+            this.player.game.room.hasEnemyInRadius(this.player.x, this.player.y)) {
+            cooldown *= 2; // Double the cooldown when enemies are nearby
+        }
         if (now - this.lastMoveTime >= cooldown) {
             return true;
         }
@@ -24666,7 +24749,12 @@ class PlayerMovement {
         if (this.inventoryClosedRecently())
             return false;
         const now = Date.now();
-        const cooldown = gameConstants_1.GameConstants.MOVEMENT_QUEUE_COOLDOWN;
+        let cooldown = gameConstants_1.GameConstants.MOVEMENT_QUEUE_COOLDOWN;
+        // Apply slower queue cooldown when enemies are nearby and setting is enabled
+        if (gameConstants_1.GameConstants.SLOW_INPUTS_NEAR_ENEMIES &&
+            this.player.game.room.hasEnemyInRadius(this.player.x, this.player.y)) {
+            cooldown *= 2; // Double the queue cooldown when enemies are nearby
+        }
         if (now - this.lastMoveTime >= cooldown) {
             return true;
         }
@@ -25859,7 +25947,7 @@ class StunAnimation extends projectile_1.Projectile {
             this.parent.room.projectiles = this.parent.room.projectiles.filter((projectile) => projectile !== this);
         };
         this.tick = () => {
-            if (this.ticks > 0) {
+            if (this.ticks > 1 || this.parent.dead === true) {
                 this.remove();
                 this.parent.unconscious = false;
                 this.parent.justHurt = false;
@@ -25870,14 +25958,15 @@ class StunAnimation extends projectile_1.Projectile {
             if (this.dead)
                 return;
             game_1.Game.ctx.save();
-            game_1.Game.ctx.globalAlpha = 1;
+            game_1.Game.ctx.globalCompositeOperation = "screen";
+            game_1.Game.ctx.globalAlpha = 0.5;
             this.frame += 0.2 * delta;
             if (this.frame > 4)
                 this.frame = 0;
             //this.drawableY = this.parent.drawableY + 0.05;
             //Game.ctx.globalCompositeOperation = "difference";
             //if (this.parent.shielded) {
-            game_1.Game.drawFX(19 + Math.floor(this.frame), 0, 1, 1, this.parent.x - this.parent.drawX, this.parent.y - this.parent.drawY - 1.25, 1, 1);
+            game_1.Game.drawFX(19 + Math.floor(this.frame), 0, 1, 1, this.parent.x - this.parent.drawX, this.parent.y - this.parent.drawY - 1.4, 1, 1);
             //}
             game_1.Game.ctx.restore();
         };
@@ -26784,7 +26873,18 @@ class Room {
         };
         this.enterLevel = (player) => {
             this.game.updateLevel(this);
-            player.moveSnap(this.getRoomCenter().x, this.getRoomCenter().y);
+            let x = this.getRoomCenter().x;
+            let y = this.getRoomCenter().y;
+            // Use different variable names to avoid shadowing
+            for (let i = this.roomX; i < this.roomX + this.width; i++) {
+                for (let j = this.roomY; j < this.roomY + this.height; j++) {
+                    if (this.roomArray[i]?.[j] instanceof downLadder_1.DownLadder) {
+                        x = this.roomArray[i][j].x;
+                        y = this.roomArray[i][j].y;
+                    }
+                }
+            }
+            player.moveSnap(x, y);
             this.onEnterRoom(player);
         };
         this.enterLevelThroughDoor = (player, door, side) => {
@@ -29102,9 +29202,11 @@ const environmentTypes_1 = __webpack_require__(/*! ../constants/environmentTypes
 const utils_1 = __webpack_require__(/*! ../utility/utils */ "./src/utility/utils.ts");
 const propClusterer_1 = __webpack_require__(/*! ./propClusterer */ "./src/room/propClusterer.ts");
 const room_1 = __webpack_require__(/*! ./room */ "./src/room/room.ts");
+const downladderMaker_1 = __webpack_require__(/*! ../entity/downladderMaker */ "./src/entity/downladderMaker.ts");
 class Populator {
     constructor(level) {
         this.props = [];
+        this.addedDownladder = false;
         this.populateRooms = () => {
             this.level.rooms.forEach((room) => {
                 if (room.type === room_1.RoomType.START ||
@@ -29114,6 +29216,8 @@ class Populator {
                     return;
                 this.populateByEnvironment(room);
             });
+            this.addDownladder();
+            //this.level.distributeKeys();
         };
         this.populateByEnvironment = (room) => {
             switch (room.envType) {
@@ -29127,6 +29231,22 @@ class Populator {
                     this.populateDefault(room);
                     break;
             }
+        };
+        this.addDownladder = () => {
+            const rooms = this.level.rooms.filter((room) => room.type !== room_1.RoomType.START &&
+                room.type !== room_1.RoomType.DOWNLADDER &&
+                room.type !== room_1.RoomType.UPLADDER &&
+                room.type !== room_1.RoomType.ROPEHOLE &&
+                room.type !== room_1.RoomType.BOSS);
+            const downLadderRoom = rooms[Math.floor(Math.random() * rooms.length)];
+            if (downLadderRoom.getEmptyTiles().length === 0)
+                return;
+            const x = downLadderRoom.getRandomEmptyPosition(downLadderRoom.getEmptyTiles()).x;
+            const y = downLadderRoom.getRandomEmptyPosition(downLadderRoom.getEmptyTiles()).y;
+            if (x === undefined || y === undefined)
+                return;
+            const downLadder = new downladderMaker_1.DownladderMaker(downLadderRoom, this.level.game, downLadderRoom.getRandomEmptyPosition(downLadderRoom.getEmptyTiles()).x, downLadderRoom.getRandomEmptyPosition(downLadderRoom.getEmptyTiles()).y);
+            downLadderRoom.entities.push(downLadder);
         };
         this.populateByType = (room) => { };
         this.level = level;
@@ -30226,7 +30346,7 @@ class Door extends passageway_1.Passageway {
             if (this.type === DoorType.LOCKEDDOOR) {
                 let k = player.inventory.hasItem(key_1.Key);
                 if (k !== null) {
-                    if (k.doorID === this.keyID) {
+                    if (k.doorID === this.lockable.keyID) {
                         this.game.pushMessage("You use the key to unlock the door.");
                         return true;
                     }
@@ -30545,6 +30665,10 @@ class DownLadder extends passageway_1.Passageway {
             lockType: lock,
             isTopDoor: false,
         });
+        if (this.lockable.isLocked()) {
+            console.log("adding key to downladder");
+            this.game.levels[this.depth].distributeKey(this);
+        }
         this.addLightSource();
     }
     isLocked() {
@@ -30758,7 +30882,7 @@ class Lockable {
             console.log(this.keyID);
             if (key !== null) {
                 this.game.pushMessage("You use the key to unlock.");
-                console.log("keyID", key.doorID, "doorID", this.keyID);
+                console.log("key.doorID", key.doorID, "lock.keyID", this.keyID);
                 return true;
             }
             // If no matching key, check if player has any key at all

@@ -96,14 +96,28 @@ export class PlayerMovement {
   }
 
   canMove(): boolean {
+    if (this.inventoryClosedRecently()) return false;
+
+    // Only block movement during computer turn if slow inputs setting is enabled
     if (
-      this.inventoryClosedRecently() ||
-      (this.player.game.room.turn === TurnState.computerTurn &&
-        this.player.game.room.hasEnemyInRadius(this.player.x, this.player.y))
-    )
+      GameConstants.SLOW_INPUTS_NEAR_ENEMIES &&
+      this.player.game.room.turn === TurnState.computerTurn &&
+      this.player.game.room.hasEnemyInRadius(this.player.x, this.player.y)
+    ) {
       return false;
+    }
+
     const now = Date.now();
-    const cooldown = GameConstants.MOVEMENT_COOLDOWN;
+    let cooldown = GameConstants.MOVEMENT_COOLDOWN;
+
+    // Apply slower cooldown when enemies are nearby and setting is enabled
+    if (
+      GameConstants.SLOW_INPUTS_NEAR_ENEMIES &&
+      this.player.game.room.hasEnemyInRadius(this.player.x, this.player.y)
+    ) {
+      cooldown *= 2; // Double the cooldown when enemies are nearby
+    }
+
     if (now - this.lastMoveTime >= cooldown) {
       return true;
     }
@@ -113,7 +127,16 @@ export class PlayerMovement {
   canQueue(): boolean {
     if (this.inventoryClosedRecently()) return false;
     const now = Date.now();
-    const cooldown = GameConstants.MOVEMENT_QUEUE_COOLDOWN;
+    let cooldown = GameConstants.MOVEMENT_QUEUE_COOLDOWN;
+
+    // Apply slower queue cooldown when enemies are nearby and setting is enabled
+    if (
+      GameConstants.SLOW_INPUTS_NEAR_ENEMIES &&
+      this.player.game.room.hasEnemyInRadius(this.player.x, this.player.y)
+    ) {
+      cooldown *= 2; // Double the queue cooldown when enemies are nearby
+    }
+
     if (now - this.lastMoveTime >= cooldown) {
       return true;
     }

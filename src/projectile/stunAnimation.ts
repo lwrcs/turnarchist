@@ -32,7 +32,7 @@ export class StunAnimation extends Projectile {
   };
 
   tick = () => {
-    if (this.ticks > 0) {
+    if (this.ticks > 1 || this.parent.dead === true) {
       this.remove();
       this.parent.unconscious = false;
       this.parent.justHurt = false;
@@ -43,7 +43,8 @@ export class StunAnimation extends Projectile {
   drawTopLayer = (delta: number) => {
     if (this.dead) return;
     Game.ctx.save();
-    Game.ctx.globalAlpha = 1;
+    Game.ctx.globalCompositeOperation = "screen";
+    Game.ctx.globalAlpha = 0.5;
     this.frame += 0.2 * delta;
     if (this.frame > 4) this.frame = 0;
 
@@ -56,7 +57,7 @@ export class StunAnimation extends Projectile {
       1,
       1,
       this.parent.x - this.parent.drawX,
-      this.parent.y - this.parent.drawY - 1.25,
+      this.parent.y - this.parent.drawY - 1.4,
       1,
       1,
     );

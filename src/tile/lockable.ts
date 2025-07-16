@@ -28,7 +28,7 @@ export class Lockable {
   private iconYOffset: number = 0;
   private frame: number = 0;
   private lockType: LockType;
-  private keyID: number = 0;
+  keyID: number = 0;
   private iconTileX: number;
   private iconXOffset: number;
   private isTopDoor: boolean;
@@ -104,7 +104,7 @@ export class Lockable {
       console.log(this.keyID);
       if (key !== null) {
         this.game.pushMessage("You use the key to unlock.");
-        console.log("keyID", key.doorID, "doorID", this.keyID);
+        console.log("key.doorID", key.doorID, "lock.keyID", this.keyID);
         return true;
       }
 

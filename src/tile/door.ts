@@ -151,7 +151,7 @@ export class Door extends Passageway {
     if (this.type === DoorType.LOCKEDDOOR) {
       let k = player.inventory.hasItem(Key);
       if (k !== null) {
-        if (k.doorID === this.keyID) {
+        if (k.doorID === this.lockable.keyID) {
           this.game.pushMessage("You use the key to unlock the door.");
 
           return true;

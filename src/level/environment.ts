@@ -18,6 +18,7 @@ import { EmeraldResource } from "../entity/resource/emeraldResource";
 import { GlowBugEnemy } from "../entity/enemy/glowBugEnemy";
 import { Tree } from "../entity/object/tree";
 import { EnvType } from "../constants/environmentTypes";
+import { DownladderMaker } from "../entity/downladderMaker";
 
 export class Environment {
   type: EnvType;

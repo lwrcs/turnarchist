@@ -216,6 +216,7 @@ export class LevelGenerator {
     newLevel.setRooms(rooms);
     newLevel.populator.populateRooms();
     newLevel.setRoomSkins();
+    //newLevel.loadRoomsIntoLevelArray();
 
     // Only call linkExitToStart for main paths
     if (newLevel.exitRoom) {
@@ -247,10 +248,6 @@ export class LevelGenerator {
         }
       }
     }
-
-    setTimeout(() => {
-      newLevel.distributeKeys();
-    }, 0);
 
     // Return the start room or the rope cave room
     callback(

@@ -1508,7 +1508,21 @@ export class Room {
 
   enterLevel = (player: Player) => {
     this.game.updateLevel(this);
-    player.moveSnap(this.getRoomCenter().x, this.getRoomCenter().y);
+
+    let x = this.getRoomCenter().x;
+    let y = this.getRoomCenter().y;
+
+    // Use different variable names to avoid shadowing
+    for (let i = this.roomX; i < this.roomX + this.width; i++) {
+      for (let j = this.roomY; j < this.roomY + this.height; j++) {
+        if (this.roomArray[i]?.[j] instanceof DownLadder) {
+          x = this.roomArray[i][j].x;
+          y = this.roomArray[i][j].y;
+        }
+      }
+    }
+
+    player.moveSnap(x, y);
     this.onEnterRoom(player);
   };
 

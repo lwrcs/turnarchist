@@ -64,6 +64,7 @@ export class GameConstants {
   static MOVEMENT_COOLDOWN = 200; // milliseconds
   static MOVEMENT_QUEUE_COOLDOWN = 100; // milliseconds
   static readonly MOVE_WITH_MOUSE = true;
+  static SLOW_INPUTS_NEAR_ENEMIES = false;
 
   static readonly CHAT_APPEAR_TIME = 2500;
   static readonly CHAT_FADE_TIME = 500;
@@ -277,7 +278,6 @@ export class GameConstants {
     Pickaxe,
     Coal,
     Apple,
-    Key,
 
     SpellbookPage,
     SpellbookPage,

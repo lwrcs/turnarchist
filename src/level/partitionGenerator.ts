@@ -908,10 +908,10 @@ export class PartitionGenerator {
       if (p.type === RoomType.DUNGEON) {
         if (p.distance > 4 && p.area() <= 30 && Random.rand() < 0) {
           p.type = RoomType.TREASURE;
-        } else if (!added_rope_hole) {
+        } /*else if (!added_rope_hole) {
           p.type = RoomType.ROPEHOLE;
           added_rope_hole = true;
-        }
+        }*/
       }
     }
 
