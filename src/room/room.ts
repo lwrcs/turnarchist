@@ -637,6 +637,7 @@ export class Room {
   // Function to add enemies to the room
   private addEnemies(numEnemies: number, rand: () => number) {
     if (GameplaySettings.NO_ENEMIES === true) return;
+    if (this.envType === EnvType.FOREST) numEnemies /= 2;
     // Get all empty tiles in the room
     let tiles = this.getEmptyTiles();
     if (tiles === null) return;

@@ -129,10 +129,6 @@ export class LevelGenerator {
       });
     });
 
-    for (let room of rooms) {
-      room.populate(Random.rand);
-    }
-
     return rooms;
   };
 

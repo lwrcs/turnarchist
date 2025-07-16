@@ -21481,9 +21481,6 @@ class LevelGenerator {
                     doors_added.push(door);
                 });
             });
-            for (let room of rooms) {
-                room.populate(random_1.Random.rand);
-            }
             return rooms;
         };
         this.setSeed = (seed) => {
@@ -28506,6 +28503,8 @@ class Room {
     addEnemies(numEnemies, rand) {
         if (gameplaySettings_1.GameplaySettings.NO_ENEMIES === true)
             return;
+        if (this.envType === environmentTypes_1.EnvType.FOREST)
+            numEnemies /= 2;
         // Get all empty tiles in the room
         let tiles = this.getEmptyTiles();
         if (tiles === null)
@@ -29199,6 +29198,7 @@ exports.Populator = void 0;
 const gameplaySettings_1 = __webpack_require__(/*! ../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
 const environment_1 = __webpack_require__(/*! ../level/environment */ "./src/level/environment.ts");
 const environmentTypes_1 = __webpack_require__(/*! ../constants/environmentTypes */ "./src/constants/environmentTypes.ts");
+const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
 const utils_1 = __webpack_require__(/*! ../utility/utils */ "./src/utility/utils.ts");
 const propClusterer_1 = __webpack_require__(/*! ./propClusterer */ "./src/room/propClusterer.ts");
 const room_1 = __webpack_require__(/*! ./room */ "./src/room/room.ts");
@@ -29208,6 +29208,9 @@ class Populator {
         this.props = [];
         this.addedDownladder = false;
         this.populateRooms = () => {
+            for (let room of this.level.rooms) {
+                room.populate(random_1.Random.rand);
+            }
             this.level.rooms.forEach((room) => {
                 if (room.type === room_1.RoomType.START ||
                     room.type === room_1.RoomType.DOWNLADDER ||
@@ -29233,6 +29236,8 @@ class Populator {
             }
         };
         this.addDownladder = () => {
+            if (this.level.environment.type !== environmentTypes_1.EnvType.DUNGEON)
+                return;
             const rooms = this.level.rooms.filter((room) => room.type !== room_1.RoomType.START &&
                 room.type !== room_1.RoomType.DOWNLADDER &&
                 room.type !== room_1.RoomType.UPLADDER &&

@@ -27,6 +27,9 @@ export class Populator {
   }
 
   populateRooms = () => {
+    for (let room of this.level.rooms) {
+      room.populate(Random.rand);
+    }
     this.level.rooms.forEach((room) => {
       if (
         room.type === RoomType.START ||
@@ -39,6 +42,7 @@ export class Populator {
       this.populateByEnvironment(room);
     });
     this.addDownladder();
+
     //this.level.distributeKeys();
   };
 
@@ -57,6 +61,7 @@ export class Populator {
   };
 
   addDownladder = () => {
+    if (this.level.environment.type !== EnvType.DUNGEON) return;
     const rooms = this.level.rooms.filter(
       (room) =>
         room.type !== RoomType.START &&
