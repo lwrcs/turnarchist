@@ -750,7 +750,14 @@ export class Player extends Drawable {
       }
       this.move(x, y);
       other.onCollide(this);
-      if (!(other instanceof Door || other instanceof Trapdoor))
+      if (
+        !(
+          other instanceof Door ||
+          other instanceof Trapdoor ||
+          other instanceof UpLadder ||
+          other instanceof DownLadder
+        )
+      )
         this.game.levels[this.depth].rooms[this.levelID].tick(this);
     } else {
       if (other instanceof Door) {

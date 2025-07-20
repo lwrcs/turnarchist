@@ -12053,6 +12053,9 @@ class Game {
             const newRoom = ladder.linkedRoom;
             if (this.players[this.localPlayerID] === player) {
                 player.levelID = newRoom.id;
+                // Immediately deactivate the old room like door transitions do
+                this.prevLevel = this.room;
+                this.prevLevel.exitLevel();
             }
             if (newRoom.envType === 2)
                 sound_1.Sound.playForestMusic();
@@ -12225,7 +12228,11 @@ class Game {
             if (this.levelState !== LevelState.LEVEL_GENERATION) {
                 for (const i in this.players) {
                     this.players[i].update();
-                    this.levels[this.players[i].depth].rooms[this.players[i].levelID].update();
+                    // Don't update rooms during level transitions
+                    if (this.levelState !== LevelState.TRANSITIONING &&
+                        this.levelState !== LevelState.TRANSITIONING_LADDER) {
+                        this.levels[this.players[i].depth].rooms[this.players[i].levelID].update();
+                    }
                     if (this.players[i].dead) {
                         for (const j in this.players) {
                             this.players[j].dead = true;
@@ -12680,10 +12687,10 @@ class Game {
                 }
                 else if (ditherFrame >= 7 + deadFrames) {
                     if (this.transitioningLadder) {
-                        this.prevLevel = this.room;
-                        this.room.exitLevel();
+                        // this.prevLevel = this.room;
+                        // this.room.exitLevel();
                         this.room = this.transitioningLadder.linkedRoom;
-                        //this.players[this.localPlayerID].levelID = this.room.id;
+                        // this.players[this.localPlayerID].levelID = this.room.id;
                         this.room.enterLevel(this.players[this.localPlayerID]);
                         this.transitioningLadder = null;
                     }
@@ -23839,7 +23846,10 @@ class Player extends drawable_1.Drawable {
                 }
                 this.move(x, y);
                 other.onCollide(this);
-                if (!(other instanceof door_1.Door || other instanceof trapdoor_1.Trapdoor))
+                if (!(other instanceof door_1.Door ||
+                    other instanceof trapdoor_1.Trapdoor ||
+                    other instanceof upLadder_1.UpLadder ||
+                    other instanceof downLadder_1.DownLadder))
                     this.game.levels[this.depth].rooms[this.levelID].tick(this);
             }
             else {
@@ -26870,14 +26880,19 @@ class Room {
         };
         this.enterLevel = (player) => {
             this.game.updateLevel(this);
-            let x = this.getRoomCenter().x;
-            let y = this.getRoomCenter().y;
+            let roomCenter = this.getRoomCenter();
+            if (this.roomArray[roomCenter.x][roomCenter.y].isSolid()) {
+                roomCenter = this.getRandomEmptyPosition(this.getEmptyTiles());
+            }
+            let x = roomCenter.x;
+            let y = roomCenter.y;
             // Use different variable names to avoid shadowing
             for (let i = this.roomX; i < this.roomX + this.width; i++) {
                 for (let j = this.roomY; j < this.roomY + this.height; j++) {
-                    if (this.roomArray[i]?.[j] instanceof downLadder_1.DownLadder) {
-                        x = this.roomArray[i][j].x;
-                        y = this.roomArray[i][j].y;
+                    const tile = this.roomArray[i]?.[j];
+                    if (tile instanceof downLadder_1.DownLadder) {
+                        x = tile.x;
+                        y = tile.y;
                     }
                 }
             }
@@ -30664,7 +30679,7 @@ class DownLadder extends passageway_1.Passageway {
         this.depth = room.depth;
         this.isSidePath = isSidePath;
         this.environment = environment;
-        const lock = isSidePath ? lockable_1.LockType.LOCKED : lockable_1.LockType.NONE;
+        const lock = isSidePath ? lockable_1.LockType.NONE : lockable_1.LockType.NONE;
         // Initialize lockable with the passed lockType
         this.lockable = new lockable_1.Lockable(game, {
             lockType: lock,

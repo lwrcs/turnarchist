@@ -1509,16 +1509,22 @@ export class Room {
 
   enterLevel = (player: Player) => {
     this.game.updateLevel(this);
+    let roomCenter = this.getRoomCenter();
 
-    let x = this.getRoomCenter().x;
-    let y = this.getRoomCenter().y;
+    if (this.roomArray[roomCenter.x][roomCenter.y].isSolid()) {
+      roomCenter = this.getRandomEmptyPosition(this.getEmptyTiles());
+    }
+
+    let x = roomCenter.x;
+    let y = roomCenter.y;
 
     // Use different variable names to avoid shadowing
     for (let i = this.roomX; i < this.roomX + this.width; i++) {
       for (let j = this.roomY; j < this.roomY + this.height; j++) {
-        if (this.roomArray[i]?.[j] instanceof DownLadder) {
-          x = this.roomArray[i][j].x;
-          y = this.roomArray[i][j].y;
+        const tile = this.roomArray[i]?.[j];
+        if (tile instanceof DownLadder) {
+          x = tile.x;
+          y = tile.y;
         }
       }
     }
