@@ -37,7 +37,7 @@ import { Apple } from "../item/usable/apple";
 import { WebGLBlurRenderer } from "../gui/webglBlurRenderer";
 
 export class GameConstants {
-  static readonly VERSION = "v1.0.9"; //"v0.6.3";
+  static readonly VERSION = "v1.1.0"; //"v0.6.3";
   static DEVELOPER_MODE = false;
   static isMobile = false;
   static isIOS = false;

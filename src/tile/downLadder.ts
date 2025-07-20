@@ -35,7 +35,7 @@ export class DownLadder extends Passageway {
     this.depth = room.depth;
     this.isSidePath = isSidePath;
     this.environment = environment;
-    const lock = isSidePath ? LockType.NONE : LockType.NONE;
+    const lock = isSidePath ? LockType.LOCKED : LockType.NONE;
 
     // Initialize lockable with the passed lockType
     this.lockable = new Lockable(game, {

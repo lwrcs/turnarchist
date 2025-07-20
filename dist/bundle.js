@@ -13536,7 +13536,7 @@ const apple_1 = __webpack_require__(/*! ../item/usable/apple */ "./src/item/usab
 class GameConstants {
 }
 exports.GameConstants = GameConstants;
-GameConstants.VERSION = "v1.0.9"; //"v0.6.3";
+GameConstants.VERSION = "v1.1.0"; //"v0.6.3";
 GameConstants.DEVELOPER_MODE = false;
 GameConstants.isMobile = false;
 GameConstants.isIOS = false;
@@ -30679,7 +30679,7 @@ class DownLadder extends passageway_1.Passageway {
         this.depth = room.depth;
         this.isSidePath = isSidePath;
         this.environment = environment;
-        const lock = isSidePath ? lockable_1.LockType.NONE : lockable_1.LockType.NONE;
+        const lock = isSidePath ? lockable_1.LockType.LOCKED : lockable_1.LockType.NONE;
         // Initialize lockable with the passed lockType
         this.lockable = new lockable_1.Lockable(game, {
             lockType: lock,
