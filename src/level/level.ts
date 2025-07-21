@@ -370,7 +370,6 @@ export class Level {
   setRoomSkins() {
     for (let room of this.rooms) {
       room.skin = this.environment.skin;
-      console.log(`room ${room.id} skin: ${room.skin}`);
     }
   }
 }

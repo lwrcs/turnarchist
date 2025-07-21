@@ -690,7 +690,11 @@ export class Player extends Drawable {
               ].canCrushEnemy() ||
               enemyEnd
             ) {
-              pushedEnemies[pushedEnemies.length - 1].crush();
+              const pushedEnemy = pushedEnemies[pushedEnemies.length - 1];
+              pushedEnemy.crush();
+              if (pushedEnemy.isEnemy) {
+                Sound.playSquish();
+              }
               if (
                 this.game.levels[this.depth].rooms[this.levelID] ===
                 this.game.room

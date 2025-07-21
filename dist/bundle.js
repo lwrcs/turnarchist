@@ -15405,6 +15405,28 @@ class Map {
         this.offsetY = 0;
         this.softOffsetX = 0;
         this.softOffsetY = 0;
+        // Add helper method to collect down ladders from room array
+        this.getDownLaddersFromRoom = (room) => {
+            const downLadders = [];
+            // Safely iterate through the room array to find down ladders
+            if (room.roomArray) {
+                for (let x = room.roomX; x < room.roomX + room.width; x++) {
+                    for (let y = room.roomY; y < room.roomY + room.height; y++) {
+                        // Check bounds to avoid undefined access
+                        if (room.roomArray[x] && room.roomArray[x][y]) {
+                            const tile = room.roomArray[x][y];
+                            // Check if tile is a DownLadder instance
+                            if (tile &&
+                                tile.constructor &&
+                                tile.constructor.name === "DownLadder") {
+                                downLadders.push(tile);
+                            }
+                        }
+                    }
+                }
+            }
+            return downLadders;
+        };
         this.saveMapData = () => {
             this.clearMap();
             for (const room of this.game.levels[this.player.depth].rooms) {
@@ -15417,6 +15439,7 @@ class Map {
                         entities: room.entities,
                         items: room.items,
                         players: this.game.players,
+                        downLadders: this.getDownLaddersFromRoom(room), // Add down ladders to map data
                     });
                 }
             }
@@ -15499,6 +15522,7 @@ class Map {
             this.drawRoomEntities(data.entities);
             this.drawRoomItems(data.items);
             this.drawRoomPlayers(data.players, delta);
+            this.drawRoomDownLadders(data.downLadders);
         };
         this.drawRoomOutline = (level) => {
             const s = this.scale;
@@ -15574,6 +15598,15 @@ class Map {
             for (const enemy of entities) {
                 this.setEntityColor(enemy);
                 game_1.Game.ctx.fillRect(enemy.x * s, enemy.y * s, 1 * s, 1 * s);
+            }
+            game_1.Game.ctx.restore(); // Restore the canvas state
+        };
+        this.drawRoomDownLadders = (downLadders) => {
+            const s = this.scale;
+            game_1.Game.ctx.save(); // Save the current canvas state
+            for (const downLadder of downLadders) {
+                game_1.Game.ctx.fillStyle = "#00FFFF";
+                game_1.Game.ctx.fillRect(downLadder.x * s, downLadder.y * s, 1 * s, 1 * s);
             }
             game_1.Game.ctx.restore(); // Restore the canvas state
         };
@@ -21375,7 +21408,6 @@ class Level {
     setRoomSkins() {
         for (let room of this.rooms) {
             room.skin = this.environment.skin;
-            console.log(`room ${room.id} skin: ${room.skin}`);
         }
     }
 }
@@ -23788,7 +23820,11 @@ class Player extends drawable_1.Drawable {
                             }
                             if (this.game.levels[this.depth].rooms[this.levelID].roomArray[nextX][nextY].canCrushEnemy() ||
                                 enemyEnd) {
-                                pushedEnemies[pushedEnemies.length - 1].crush();
+                                const pushedEnemy = pushedEnemies[pushedEnemies.length - 1];
+                                pushedEnemy.crush();
+                                if (pushedEnemy.isEnemy) {
+                                    sound_1.Sound.playSquish();
+                                }
                                 if (this.game.levels[this.depth].rooms[this.levelID] ===
                                     this.game.room)
                                     sound_1.Sound.hit();
@@ -24243,7 +24279,8 @@ class PlayerInputHandler {
                 this.player.inventory.drop();
                 break;
             case input_1.InputEnum.F:
-                this.player.stall();
+                //this.player.game.newGame();
+                //this.player.stall();
                 break;
             case input_1.InputEnum.LEFT:
                 if (!this.ignoreDirectionInput())
@@ -26253,11 +26290,13 @@ const goldenKey_1 = __webpack_require__(/*! ../item/goldenKey */ "./src/item/gol
 const spawnfloor_1 = __webpack_require__(/*! ../tile/spawnfloor */ "./src/tile/spawnfloor.ts");
 const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
 const skullEnemy_1 = __webpack_require__(/*! ../entity/enemy/skullEnemy */ "./src/entity/enemy/skullEnemy.ts");
+const barrel_1 = __webpack_require__(/*! ../entity/object/barrel */ "./src/entity/object/barrel.ts");
 const crate_1 = __webpack_require__(/*! ../entity/object/crate */ "./src/entity/object/crate.ts");
 const armor_1 = __webpack_require__(/*! ../item/armor */ "./src/item/armor.ts");
 const particle_1 = __webpack_require__(/*! ../particle/particle */ "./src/particle/particle.ts");
 const spiketrap_1 = __webpack_require__(/*! ../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const fountainTile_1 = __webpack_require__(/*! ../tile/fountainTile */ "./src/tile/fountainTile.ts");
+const pottedPlant_1 = __webpack_require__(/*! ../entity/object/pottedPlant */ "./src/entity/object/pottedPlant.ts");
 const insideLevelDoor_1 = __webpack_require__(/*! ../tile/insideLevelDoor */ "./src/tile/insideLevelDoor.ts");
 const button_1 = __webpack_require__(/*! ../tile/button */ "./src/tile/button.ts");
 const hitWarning_1 = __webpack_require__(/*! ../drawable/hitWarning */ "./src/drawable/hitWarning.ts");
@@ -26282,6 +26321,7 @@ const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/ran
 const bishopEnemy_1 = __webpack_require__(/*! ../entity/enemy/bishopEnemy */ "./src/entity/enemy/bishopEnemy.ts");
 const rockResource_1 = __webpack_require__(/*! ../entity/resource/rockResource */ "./src/entity/resource/rockResource.ts");
 const armoredzombieEnemy_1 = __webpack_require__(/*! ../entity/enemy/armoredzombieEnemy */ "./src/entity/enemy/armoredzombieEnemy.ts");
+const tombStone_1 = __webpack_require__(/*! ../entity/object/tombStone */ "./src/entity/object/tombStone.ts");
 const queenEnemy_1 = __webpack_require__(/*! ../entity/enemy/queenEnemy */ "./src/entity/enemy/queenEnemy.ts");
 const frogEnemy_1 = __webpack_require__(/*! ../entity/enemy/frogEnemy */ "./src/entity/enemy/frogEnemy.ts");
 const bigKnightEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigKnightEnemy */ "./src/entity/enemy/bigKnightEnemy.ts");
@@ -26299,6 +26339,7 @@ const occultistEnemy_1 = __webpack_require__(/*! ../entity/enemy/occultistEnemy 
 const decoration_1 = __webpack_require__(/*! ../tile/decorations/decoration */ "./src/tile/decorations/decoration.ts");
 const bomb_1 = __webpack_require__(/*! ../entity/object/bomb */ "./src/entity/object/bomb.ts");
 const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts");
+const block_1 = __webpack_require__(/*! ../entity/object/block */ "./src/entity/object/block.ts");
 const armoredSkullEnemy_1 = __webpack_require__(/*! ../entity/enemy/armoredSkullEnemy */ "./src/entity/enemy/armoredSkullEnemy.ts");
 const mummyEnemy_1 = __webpack_require__(/*! ../entity/enemy/mummyEnemy */ "./src/entity/enemy/mummyEnemy.ts");
 const spiderEnemy_1 = __webpack_require__(/*! ../entity/enemy/spiderEnemy */ "./src/entity/enemy/spiderEnemy.ts");
@@ -28162,11 +28203,11 @@ class Room {
             for (const door of this.doors) {
                 for (const otherDoor of this.doors) {
                     if (door === otherDoor || door === null || otherDoor === null)
-                        break;
+                        continue; // Fixed: use continue instead of break
                     const pathObstacles = this.findPath(door, otherDoor);
                     if (pathObstacles.length > 0) {
+                        obstacles.push(...pathObstacles); // Fixed: actually collect the obstacles
                     }
-                    obstacles.push(...pathObstacles);
                 }
             }
             if (obstacles.length > 0) {
@@ -28178,33 +28219,108 @@ class Room {
             }
         };
         // avoid blocking doorways with unbreakable entities
-        this.findPath = (startTile, targetTile) => {
+        this.findPath = (startTile, targetTile, additionalBlockedPositions) => {
             let disablePositions = Array();
             let obstacleCandidates = [];
+            // Expand entity types that can block paths
             for (const e of this.entities) {
-                if (e instanceof vendingMachine_1.VendingMachine || e instanceof rockResource_1.Rock) {
+                if (e instanceof vendingMachine_1.VendingMachine ||
+                    e instanceof rockResource_1.Rock ||
+                    e instanceof barrel_1.Barrel ||
+                    e instanceof crate_1.Crate ||
+                    e instanceof block_1.Block ||
+                    e instanceof tombStone_1.TombStone ||
+                    e instanceof pottedPlant_1.PottedPlant) {
                     disablePositions.push({ x: e.x, y: e.y });
                     obstacleCandidates.push(e);
                 }
             }
-            // Create a grid of the room
+            // Add any additional blocked positions (for testing if a position would block)
+            if (additionalBlockedPositions) {
+                disablePositions.push(...additionalBlockedPositions);
+            }
+            // Create a grid of the room - Fixed bounds
             let grid = [];
-            for (let x = 0; x < this.roomX + this.width; x++) {
+            for (let x = 0; x < this.width; x++) {
                 grid[x] = [];
-                for (let y = 0; y < this.roomY + this.height; y++) {
-                    if (this.roomArray[x] && this.roomArray[x][y])
-                        grid[x][y] = this.roomArray[x][y];
+                for (let y = 0; y < this.height; y++) {
+                    const roomX = this.roomX + x;
+                    const roomY = this.roomY + y;
+                    if (this.roomArray[roomX] && this.roomArray[roomX][roomY])
+                        grid[x][y] = this.roomArray[roomX][roomY];
                     else
                         grid[x][y] = false;
                 }
             }
-            let moves = astarclass_1.astar.AStar.search(grid, startTile, targetTile, disablePositions, false, false, false);
+            // Adjust start and target positions to grid coordinates
+            const startGridPos = {
+                x: startTile.x - this.roomX,
+                y: startTile.y - this.roomY,
+            };
+            const targetGridPos = {
+                x: targetTile.x - this.roomX,
+                y: targetTile.y - this.roomY,
+            };
+            // Adjust disabled positions to grid coordinates
+            const gridDisabledPositions = disablePositions.map((pos) => ({
+                x: pos.x - this.roomX,
+                y: pos.y - this.roomY,
+            }));
+            let moves = astarclass_1.astar.AStar.search(grid, startGridPos, targetGridPos, gridDisabledPositions, false, false, false);
             if (moves.length === 0) {
                 return obstacleCandidates;
             }
             else {
                 return [];
             }
+        };
+        /**
+         * Checks if placing an entity at the given coordinates would block any door-to-door paths.
+         * This is useful for preventing placement of objects that would obstruct navigation.
+         *
+         * @param x - The x-coordinate to test
+         * @param y - The y-coordinate to test
+         * @returns True if placing an entity here would block a door, false otherwise
+         */
+        this.wouldBlockDoor = (x, y) => {
+            // If there are fewer than 2 doors, no paths to block
+            if (this.doors.length < 2) {
+                return false;
+            }
+            // Test each pair of doors
+            for (let i = 0; i < this.doors.length; i++) {
+                for (let j = i + 1; j < this.doors.length; j++) {
+                    const door1 = this.doors[i];
+                    const door2 = this.doors[j];
+                    if (!door1 || !door2)
+                        continue;
+                    // First test: can we find a path WITHOUT the blocking position?
+                    const obstaclesWithoutBlock = this.findPath(door1, door2);
+                    // If there's already no path without our test position, skip this door pair
+                    if (obstaclesWithoutBlock.length > 0) {
+                        continue;
+                    }
+                    // Second test: can we find a path WITH the blocking position?
+                    const additionalBlockedPos = [{ x, y }];
+                    const obstaclesWithBlock = this.findPath(door1, door2, additionalBlockedPos);
+                    // If path existed without block but doesn't exist with block, then this position blocks the door
+                    if (obstaclesWithBlock.length > 0) {
+                        console.warn("DOOR WOULD BE BLOCKED!");
+                        return true;
+                    }
+                }
+            }
+            return false;
+        };
+        /**
+         * Gets empty tiles that don't block door-to-door paths.
+         * This is a filtered version of getEmptyTiles() that excludes positions that would obstruct navigation.
+         *
+         * @returns Array of tiles that are empty and don't block door paths
+         */
+        this.getEmptyTilesNotBlockingDoors = () => {
+            const emptyTiles = this.getEmptyTiles();
+            return emptyTiles.filter((tile) => !this.wouldBlockDoor(tile.x, tile.y));
         };
         // #endregion
         /**
@@ -29259,13 +29375,18 @@ class Populator {
                 room.type !== room_1.RoomType.ROPEHOLE &&
                 room.type !== room_1.RoomType.BOSS);
             const downLadderRoom = rooms[Math.floor(Math.random() * rooms.length)];
-            if (downLadderRoom.getEmptyTiles().length === 0)
+            console.log(`Selected room for downladder: Type=${downLadderRoom.type}, Doors=${downLadderRoom.doors.length}`);
+            // Use the new method to get empty tiles that don't block doors
+            const validTiles = downLadderRoom.getEmptyTilesNotBlockingDoors();
+            if (validTiles.length === 0) {
+                console.warn("No valid positions for downladder that don't block doors");
                 return;
-            const x = downLadderRoom.getRandomEmptyPosition(downLadderRoom.getEmptyTiles()).x;
-            const y = downLadderRoom.getRandomEmptyPosition(downLadderRoom.getEmptyTiles()).y;
-            if (x === undefined || y === undefined)
+            }
+            const position = downLadderRoom.getRandomEmptyPosition(validTiles);
+            if (position.x === undefined || position.y === undefined)
                 return;
-            const downLadder = new downladderMaker_1.DownladderMaker(downLadderRoom, this.level.game, downLadderRoom.getRandomEmptyPosition(downLadderRoom.getEmptyTiles()).x, downLadderRoom.getRandomEmptyPosition(downLadderRoom.getEmptyTiles()).y);
+            console.log(`Placing downladder at position (${position.x}, ${position.y})`);
+            const downLadder = new downladderMaker_1.DownladderMaker(downLadderRoom, this.level.game, position.x, position.y);
             downLadderRoom.entities.push(downLadder);
         };
         this.populateByType = (room) => { };
@@ -29343,7 +29464,7 @@ class Populator {
             median: Math.ceil(medianDensity * numEmptyTiles),
         });
         const percentFull = Math.round((numProps / numEmptyTiles) * 100);
-        console.log("percentFull", `${percentFull}%`);
+        //console.log("percentFull", `${percentFull}%`);
         return numProps;
     }
     populateDefault(room) {
@@ -29813,6 +29934,7 @@ Sound.loadSounds = async () => {
         Sound.smithSound = createHowl("res/SFX/items/smith.mp3", 0.5, false, 2);
         Sound.lockedSound = createHowl("res/SFX/door/locked1.mp3", 0.75, false, 2);
         Sound.woodSound = createHowl("res/SFX/objects/woodHit1.mp3", 1.25, false, 2);
+        Sound.squishSound = createHowl("res/SFX/attacks/squish1.mp3", 0.75, false, 2);
         // Mining sounds
         Sound.miningSounds = createHowlArray("res/SFX/resources/Pickaxe", [1, 2, 3, 4], 0.3, 3);
         Sound.breakRockSound = createHowl("res/SFX/resources/rockbreak.mp3", 1.0, false, 2);
@@ -30105,6 +30227,11 @@ Sound.playWood = () => {
     _a.delayPlay(() => {
         _a.playWithReverb(Sound.woodSound, Sound.PRIORITY.INTERACTIONS);
     }, 150);
+};
+Sound.playSquish = () => {
+    if (Sound.audioMuted)
+        return;
+    _a.playWithReverb(Sound.squishSound, Sound.PRIORITY.INTERACTIONS);
 };
 Sound.delayPlay = (method, delay) => {
     setTimeout(method, delay);

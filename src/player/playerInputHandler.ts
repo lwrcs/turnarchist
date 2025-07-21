@@ -79,7 +79,8 @@ export class PlayerInputHandler {
         this.player.inventory.drop();
         break;
       case InputEnum.F:
-        this.player.stall();
+        //this.player.game.newGame();
+        //this.player.stall();
         break;
       case InputEnum.LEFT:
         if (!this.ignoreDirectionInput())

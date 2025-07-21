@@ -3376,11 +3376,11 @@ export class Room {
     let obstacles = [];
     for (const door of this.doors) {
       for (const otherDoor of this.doors) {
-        if (door === otherDoor || door === null || otherDoor === null) break;
+        if (door === otherDoor || door === null || otherDoor === null) continue; // Fixed: use continue instead of break
         const pathObstacles = this.findPath(door, otherDoor);
         if (pathObstacles.length > 0) {
+          obstacles.push(...pathObstacles); // Fixed: actually collect the obstacles
         }
-        obstacles.push(...pathObstacles);
       }
     }
     if (obstacles.length > 0) {
@@ -3393,42 +3393,139 @@ export class Room {
   };
 
   // avoid blocking doorways with unbreakable entities
-  findPath = (startTile: Tile, targetTile: Tile): Array<Entity> => {
+  findPath = (
+    startTile: Tile,
+    targetTile: Tile,
+    additionalBlockedPositions?: astar.Position[],
+  ): Array<Entity> => {
     let disablePositions = Array<astar.Position>();
     let obstacleCandidates = [];
 
+    // Expand entity types that can block paths
     for (const e of this.entities) {
-      if (e instanceof VendingMachine || e instanceof Rock) {
+      if (
+        e instanceof VendingMachine ||
+        e instanceof Rock ||
+        e instanceof Barrel ||
+        e instanceof Crate ||
+        e instanceof Block ||
+        e instanceof TombStone ||
+        e instanceof PottedPlant
+      ) {
         disablePositions.push({ x: e.x, y: e.y } as astar.Position);
         obstacleCandidates.push(e);
       }
     }
 
-    // Create a grid of the room
+    // Add any additional blocked positions (for testing if a position would block)
+    if (additionalBlockedPositions) {
+      disablePositions.push(...additionalBlockedPositions);
+    }
+
+    // Create a grid of the room - Fixed bounds
     let grid = [];
-    for (let x = 0; x < this.roomX + this.width; x++) {
+    for (let x = 0; x < this.width; x++) {
       grid[x] = [];
-      for (let y = 0; y < this.roomY + this.height; y++) {
-        if (this.roomArray[x] && this.roomArray[x][y])
-          grid[x][y] = this.roomArray[x][y];
+      for (let y = 0; y < this.height; y++) {
+        const roomX = this.roomX + x;
+        const roomY = this.roomY + y;
+        if (this.roomArray[roomX] && this.roomArray[roomX][roomY])
+          grid[x][y] = this.roomArray[roomX][roomY];
         else grid[x][y] = false;
       }
     }
 
+    // Adjust start and target positions to grid coordinates
+    const startGridPos = {
+      x: startTile.x - this.roomX,
+      y: startTile.y - this.roomY,
+    };
+    const targetGridPos = {
+      x: targetTile.x - this.roomX,
+      y: targetTile.y - this.roomY,
+    };
+
+    // Adjust disabled positions to grid coordinates
+    const gridDisabledPositions = disablePositions.map((pos) => ({
+      x: pos.x - this.roomX,
+      y: pos.y - this.roomY,
+    }));
+
     let moves = astar.AStar.search(
       grid,
-      startTile,
-      targetTile,
-      disablePositions,
+      startGridPos,
+      targetGridPos,
+      gridDisabledPositions,
       false,
       false,
       false,
     );
+
     if (moves.length === 0) {
       return obstacleCandidates;
     } else {
       return [];
     }
+  };
+
+  /**
+   * Checks if placing an entity at the given coordinates would block any door-to-door paths.
+   * This is useful for preventing placement of objects that would obstruct navigation.
+   *
+   * @param x - The x-coordinate to test
+   * @param y - The y-coordinate to test
+   * @returns True if placing an entity here would block a door, false otherwise
+   */
+  wouldBlockDoor = (x: number, y: number): boolean => {
+    // If there are fewer than 2 doors, no paths to block
+    if (this.doors.length < 2) {
+      return false;
+    }
+
+    // Test each pair of doors
+    for (let i = 0; i < this.doors.length; i++) {
+      for (let j = i + 1; j < this.doors.length; j++) {
+        const door1 = this.doors[i];
+        const door2 = this.doors[j];
+
+        if (!door1 || !door2) continue;
+
+        // First test: can we find a path WITHOUT the blocking position?
+        const obstaclesWithoutBlock = this.findPath(door1, door2);
+
+        // If there's already no path without our test position, skip this door pair
+        if (obstaclesWithoutBlock.length > 0) {
+          continue;
+        }
+
+        // Second test: can we find a path WITH the blocking position?
+        const additionalBlockedPos = [{ x, y }];
+        const obstaclesWithBlock = this.findPath(
+          door1,
+          door2,
+          additionalBlockedPos,
+        );
+
+        // If path existed without block but doesn't exist with block, then this position blocks the door
+        if (obstaclesWithBlock.length > 0) {
+          console.warn("DOOR WOULD BE BLOCKED!");
+          return true;
+        }
+      }
+    }
+
+    return false;
+  };
+
+  /**
+   * Gets empty tiles that don't block door-to-door paths.
+   * This is a filtered version of getEmptyTiles() that excludes positions that would obstruct navigation.
+   *
+   * @returns Array of tiles that are empty and don't block door paths
+   */
+  getEmptyTilesNotBlockingDoors = (): Tile[] => {
+    const emptyTiles = this.getEmptyTiles();
+    return emptyTiles.filter((tile) => !this.wouldBlockDoor(tile.x, tile.y));
   };
 
   // #endregion

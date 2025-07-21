@@ -72,20 +72,31 @@ export class Populator {
     );
 
     const downLadderRoom = rooms[Math.floor(Math.random() * rooms.length)];
-    if (downLadderRoom.getEmptyTiles().length === 0) return;
 
-    const x = downLadderRoom.getRandomEmptyPosition(
-      downLadderRoom.getEmptyTiles(),
-    ).x;
-    const y = downLadderRoom.getRandomEmptyPosition(
-      downLadderRoom.getEmptyTiles(),
-    ).y;
-    if (x === undefined || y === undefined) return;
+    console.log(
+      `Selected room for downladder: Type=${downLadderRoom.type}, Doors=${downLadderRoom.doors.length}`,
+    );
+
+    // Use the new method to get empty tiles that don't block doors
+    const validTiles = downLadderRoom.getEmptyTilesNotBlockingDoors();
+
+    if (validTiles.length === 0) {
+      console.warn("No valid positions for downladder that don't block doors");
+      return;
+    }
+
+    const position = downLadderRoom.getRandomEmptyPosition(validTiles);
+    if (position.x === undefined || position.y === undefined) return;
+
+    console.log(
+      `Placing downladder at position (${position.x}, ${position.y})`,
+    );
+
     const downLadder = new DownladderMaker(
       downLadderRoom,
       this.level.game,
-      downLadderRoom.getRandomEmptyPosition(downLadderRoom.getEmptyTiles()).x,
-      downLadderRoom.getRandomEmptyPosition(downLadderRoom.getEmptyTiles()).y,
+      position.x,
+      position.y,
     );
     downLadderRoom.entities.push(downLadder);
   };
@@ -178,7 +189,7 @@ export class Populator {
       median: Math.ceil(medianDensity * numEmptyTiles),
     });
     const percentFull = Math.round((numProps / numEmptyTiles) * 100);
-    console.log("percentFull", `${percentFull}%`);
+    //console.log("percentFull", `${percentFull}%`);
     return numProps;
   }
 

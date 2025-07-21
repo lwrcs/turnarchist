@@ -25,6 +25,33 @@ export class Map {
     //this.depth = player.game.level.depth
   }
 
+  // Add helper method to collect down ladders from room array
+  getDownLaddersFromRoom = (room: Room): any[] => {
+    const downLadders: any[] = [];
+
+    // Safely iterate through the room array to find down ladders
+    if (room.roomArray) {
+      for (let x = room.roomX; x < room.roomX + room.width; x++) {
+        for (let y = room.roomY; y < room.roomY + room.height; y++) {
+          // Check bounds to avoid undefined access
+          if (room.roomArray[x] && room.roomArray[x][y]) {
+            const tile = room.roomArray[x][y];
+            // Check if tile is a DownLadder instance
+            if (
+              tile &&
+              tile.constructor &&
+              tile.constructor.name === "DownLadder"
+            ) {
+              downLadders.push(tile);
+            }
+          }
+        }
+      }
+    }
+
+    return downLadders;
+  };
+
   saveMapData = () => {
     this.clearMap();
     for (const room of this.game.levels[this.player.depth].rooms) {
@@ -39,6 +66,7 @@ export class Map {
           entities: room.entities,
           items: room.items,
           players: this.game.players,
+          downLadders: this.getDownLaddersFromRoom(room), // Add down ladders to map data
         });
       }
     }
@@ -135,6 +163,7 @@ export class Map {
     this.drawRoomEntities(data.entities);
     this.drawRoomItems(data.items);
     this.drawRoomPlayers(data.players, delta);
+    this.drawRoomDownLadders(data.downLadders);
   };
 
   drawRoomOutline = (level) => {
@@ -265,6 +294,16 @@ export class Map {
     for (const enemy of entities) {
       this.setEntityColor(enemy);
       Game.ctx.fillRect(enemy.x * s, enemy.y * s, 1 * s, 1 * s);
+    }
+    Game.ctx.restore(); // Restore the canvas state
+  };
+
+  drawRoomDownLadders = (downLadders) => {
+    const s = this.scale;
+    Game.ctx.save(); // Save the current canvas state
+    for (const downLadder of downLadders) {
+      Game.ctx.fillStyle = "#00FFFF";
+      Game.ctx.fillRect(downLadder.x * s, downLadder.y * s, 1 * s, 1 * s);
     }
     Game.ctx.restore(); // Restore the canvas state
   };

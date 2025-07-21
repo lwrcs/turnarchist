@@ -46,6 +46,7 @@ export class Sound {
   static gruntSounds: Array<Howl>;
   static lockedSound: Howl;
   static woodSound: Howl;
+  static squishSound: Howl;
 
   static currentlyPlaying: Set<number> = new Set();
 
@@ -304,6 +305,12 @@ export class Sound {
       Sound.woodSound = createHowl(
         "res/SFX/objects/woodHit1.mp3",
         1.25,
+        false,
+        2,
+      );
+      Sound.squishSound = createHowl(
+        "res/SFX/attacks/squish1.mp3",
+        0.75,
         false,
         2,
       );
@@ -730,6 +737,11 @@ export class Sound {
     this.delayPlay(() => {
       this.playWithReverb(Sound.woodSound, Sound.PRIORITY.INTERACTIONS);
     }, 150);
+  };
+
+  static playSquish = () => {
+    if (Sound.audioMuted) return;
+    this.playWithReverb(Sound.squishSound, Sound.PRIORITY.INTERACTIONS);
   };
 
   static delayPlay = (method: () => void, delay: number) => {
