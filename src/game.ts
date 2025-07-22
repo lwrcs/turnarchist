@@ -943,6 +943,13 @@ export class Game {
       /iPhone|iPad|iPod/i.test(navigator.userAgent) &&
       !navigator.userAgent.includes("Chrome DevTools");
 
+    // Detect Safari browser and enable WebGL blur
+    const isSafari =
+      /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+    if (isSafari) {
+      GameConstants.USE_WEBGL_BLUR = true;
+    }
+
     // Define scale adjustment based on device pixel ratio
     if (GameConstants.SCALE === null) {
       GameConstants.SCALE = GameConstants.FIND_SCALE(this.isMobile);
