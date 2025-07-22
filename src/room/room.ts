@@ -623,7 +623,11 @@ export class Room {
   // ... start of file ...
 
   private addSpikeTraps(numSpikes: number, rand: () => number) {
-    if (this.level.environment.type === EnvType.FOREST) return;
+    if (
+      this.level.environment.type === EnvType.FOREST ||
+      this.envType === EnvType.FOREST
+    )
+      return;
     // add spikes
     let tiles = this.getEmptyTiles();
     for (let i = 0; i < numSpikes; i++) {

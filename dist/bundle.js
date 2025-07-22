@@ -14454,6 +14454,8 @@ const loadGameState = (game, activeUsernames, gameState, newWorld) => {
                         Math.floor(game.rooms[game.levelgen.currentFloorFirstLevelID].height / 2);
                 game.room = game.rooms[game.levelgen.currentFloorFirstLevelID];
                 game.room.enterLevel(game.players[game.localPlayerID]);
+                game.players[game.localPlayerID].map.updateSeenTiles();
+                game.players[game.localPlayerID].map.saveMapData();
             }
             else {
                 game.room = game.rooms[game.players[game.localPlayerID].levelID];
@@ -14464,6 +14466,8 @@ const loadGameState = (game, activeUsernames, gameState, newWorld) => {
             game.players[game.localPlayerID] = new player_1.Player(game, 0, 0, true);
             game.room = game.rooms[game.players[game.localPlayerID].levelID];
             game.room.enterLevel(game.players[game.localPlayerID]);
+            game.players[game.localPlayerID].map.updateSeenTiles();
+            game.players[game.localPlayerID].map.saveMapData();
         }
         random_1.Random.setState(gameState.randomState);
         game.room.updateLighting();
@@ -15406,6 +15410,9 @@ class Map {
         this.offsetY = 0;
         this.softOffsetX = 0;
         this.softOffsetY = 0;
+        // Fog of war properties - now stored per mapGroup
+        this.seenTilesByMapGroup = new globalThis.Map();
+        this.visibilityRadius = 4;
         // Add helper method to collect down ladders from room array
         this.getDownLaddersFromRoom = (room) => {
             const downLadders = [];
@@ -15430,8 +15437,9 @@ class Map {
         };
         this.saveMapData = () => {
             this.clearMap();
+            const currentMapGroup = this.game.room.mapGroup.toString();
             for (const room of this.game.levels[this.player.depth].rooms) {
-                if (this.game.room.mapGroup === room.mapGroup &&
+                if (currentMapGroup === room.mapGroup.toString() &&
                     (room.entered === true || gameConstants_1.GameConstants.DEVELOPER_MODE)) {
                     this.mapData.push({
                         room: room,
@@ -15440,7 +15448,8 @@ class Map {
                         entities: room.entities,
                         items: room.items,
                         players: this.game.players,
-                        downLadders: this.getDownLaddersFromRoom(room), // Add down ladders to map data
+                        downLadders: this.getDownLaddersFromRoom(room),
+                        seenTiles: this.seenTilesByMapGroup.get(currentMapGroup) || new Set(), // Add seen tiles to map data
                     });
                 }
             }
@@ -15495,7 +15504,37 @@ class Map {
             else
                 this.softOffsetY = this.offsetY;
         };
+        // Fog of war methods
+        this.updateSeenTiles = () => {
+            const playerX = Math.floor(this.player.x);
+            const playerY = Math.floor(this.player.y);
+            const currentMapGroup = this.game.room.mapGroup.toString();
+            // Get or create seen tiles set for current map group
+            if (!this.seenTilesByMapGroup.has(currentMapGroup)) {
+                this.seenTilesByMapGroup.set(currentMapGroup, new Set());
+            }
+            const seenTiles = this.seenTilesByMapGroup.get(currentMapGroup);
+            // Add tiles within circular radius around player to seen tiles
+            for (let dx = -this.visibilityRadius; dx <= this.visibilityRadius; dx++) {
+                for (let dy = -this.visibilityRadius; dy <= this.visibilityRadius; dy++) {
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    if (distance <= this.visibilityRadius) {
+                        const tileKey = `${playerX + dx},${playerY + dy}`;
+                        seenTiles.add(tileKey);
+                    }
+                }
+            }
+        };
+        this.isTileSeen = (x, y) => {
+            const currentMapGroup = this.game.room.mapGroup.toString();
+            const seenTiles = this.seenTilesByMapGroup.get(currentMapGroup);
+            if (!seenTiles)
+                return false;
+            const tileKey = `${Math.floor(x)},${Math.floor(y)}`;
+            return seenTiles.has(tileKey);
+        };
         this.draw = (delta) => {
+            this.updateSeenTiles(); // Update fog of war
             this.updateOffsetXY();
             this.renderMap(delta);
         };
@@ -15524,6 +15563,31 @@ class Map {
             this.drawRoomItems(data.items);
             this.drawRoomPlayers(data.players, delta);
             this.drawRoomDownLadders(data.downLadders);
+            // Render fog of war on top of everything
+            this.drawFogOfWar(data.room);
+        };
+        // Add fog of war overlay method
+        this.drawFogOfWar = (room) => {
+            const s = this.scale;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.fillStyle = "#1a1a1a";
+            // Use the seen tiles from the current mapData if available
+            const currentMapGroup = this.game.room.mapGroup.toString();
+            let seenTiles = this.seenTilesByMapGroup.get(currentMapGroup);
+            // If we have mapData, use the seen tiles from there (for consistency)
+            if (this.mapData.length > 0 && this.mapData[0].seenTiles) {
+                seenTiles = this.mapData[0].seenTiles;
+            }
+            // Draw fog over all tiles in the room that haven't been seen
+            for (let x = room.roomX; x < room.roomX + room.width; x++) {
+                for (let y = room.roomY; y < room.roomY + room.height; y++) {
+                    const tileKey = `${Math.floor(x)},${Math.floor(y)}`;
+                    if (!seenTiles || !seenTiles.has(tileKey)) {
+                        game_1.Game.ctx.fillRect(x * s, y * s, 1 * s, 1 * s);
+                    }
+                }
+            }
+            game_1.Game.ctx.restore();
         };
         this.drawRoomOutline = (level) => {
             const s = this.scale;
@@ -28648,7 +28712,8 @@ class Room {
     }
     // ... start of file ...
     addSpikeTraps(numSpikes, rand) {
-        if (this.level.environment.type === environmentTypes_1.EnvType.FOREST)
+        if (this.level.environment.type === environmentTypes_1.EnvType.FOREST ||
+            this.envType === environmentTypes_1.EnvType.FOREST)
             return;
         // add spikes
         let tiles = this.getEmptyTiles();

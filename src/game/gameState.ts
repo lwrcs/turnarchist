@@ -819,6 +819,8 @@ export const loadGameState = (
         game.room = game.rooms[game.levelgen.currentFloorFirstLevelID];
 
         game.room.enterLevel(game.players[game.localPlayerID]);
+        game.players[game.localPlayerID].map.updateSeenTiles();
+        game.players[game.localPlayerID].map.saveMapData();
       } else {
         game.room = game.rooms[game.players[game.localPlayerID].levelID];
       }
@@ -827,6 +829,8 @@ export const loadGameState = (
       game.players[game.localPlayerID] = new Player(game, 0, 0, true);
       game.room = game.rooms[game.players[game.localPlayerID].levelID];
       game.room.enterLevel(game.players[game.localPlayerID]);
+      game.players[game.localPlayerID].map.updateSeenTiles();
+      game.players[game.localPlayerID].map.saveMapData();
     }
     Random.setState(gameState.randomState);
     game.room.updateLighting();

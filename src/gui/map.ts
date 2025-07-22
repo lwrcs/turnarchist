@@ -18,6 +18,12 @@ export class Map {
   softOffsetX: number = 0;
   softOffsetY: number = 0;
   player: Player;
+
+  // Fog of war properties - now stored per mapGroup
+  seenTilesByMapGroup: globalThis.Map<string, Set<string>> =
+    new globalThis.Map();
+  visibilityRadius: number = 4;
+
   constructor(game: Game, player: Player) {
     this.game = game;
     this.scale = 1;
@@ -54,9 +60,11 @@ export class Map {
 
   saveMapData = () => {
     this.clearMap();
+    const currentMapGroup = this.game.room.mapGroup.toString();
+
     for (const room of this.game.levels[this.player.depth].rooms) {
       if (
-        this.game.room.mapGroup === room.mapGroup &&
+        currentMapGroup === room.mapGroup.toString() &&
         (room.entered === true || GameConstants.DEVELOPER_MODE)
       ) {
         this.mapData.push({
@@ -67,6 +75,8 @@ export class Map {
           items: room.items,
           players: this.game.players,
           downLadders: this.getDownLaddersFromRoom(room), // Add down ladders to map data
+          seenTiles:
+            this.seenTilesByMapGroup.get(currentMapGroup) || new Set<string>(), // Add seen tiles to map data
         });
       }
     }
@@ -127,7 +137,41 @@ export class Map {
     } else this.softOffsetY = this.offsetY;
   };
 
+  // Fog of war methods
+  updateSeenTiles = () => {
+    const playerX = Math.floor(this.player.x);
+    const playerY = Math.floor(this.player.y);
+    const currentMapGroup = this.game.room.mapGroup.toString();
+
+    // Get or create seen tiles set for current map group
+    if (!this.seenTilesByMapGroup.has(currentMapGroup)) {
+      this.seenTilesByMapGroup.set(currentMapGroup, new Set<string>());
+    }
+    const seenTiles = this.seenTilesByMapGroup.get(currentMapGroup)!;
+
+    // Add tiles within circular radius around player to seen tiles
+    for (let dx = -this.visibilityRadius; dx <= this.visibilityRadius; dx++) {
+      for (let dy = -this.visibilityRadius; dy <= this.visibilityRadius; dy++) {
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance <= this.visibilityRadius) {
+          const tileKey = `${playerX + dx},${playerY + dy}`;
+          seenTiles.add(tileKey);
+        }
+      }
+    }
+  };
+
+  isTileSeen = (x: number, y: number): boolean => {
+    const currentMapGroup = this.game.room.mapGroup.toString();
+    const seenTiles = this.seenTilesByMapGroup.get(currentMapGroup);
+    if (!seenTiles) return false;
+
+    const tileKey = `${Math.floor(x)},${Math.floor(y)}`;
+    return seenTiles.has(tileKey);
+  };
+
   draw = (delta: number) => {
+    this.updateSeenTiles(); // Update fog of war
     this.updateOffsetXY();
     this.renderMap(delta);
   };
@@ -164,6 +208,37 @@ export class Map {
     this.drawRoomItems(data.items);
     this.drawRoomPlayers(data.players, delta);
     this.drawRoomDownLadders(data.downLadders);
+
+    // Render fog of war on top of everything
+    this.drawFogOfWar(data.room);
+  };
+
+  // Add fog of war overlay method
+  drawFogOfWar = (room) => {
+    const s = this.scale;
+    Game.ctx.save();
+    Game.ctx.fillStyle = "#1a1a1a";
+
+    // Use the seen tiles from the current mapData if available
+    const currentMapGroup = this.game.room.mapGroup.toString();
+    let seenTiles = this.seenTilesByMapGroup.get(currentMapGroup);
+
+    // If we have mapData, use the seen tiles from there (for consistency)
+    if (this.mapData.length > 0 && this.mapData[0].seenTiles) {
+      seenTiles = this.mapData[0].seenTiles;
+    }
+
+    // Draw fog over all tiles in the room that haven't been seen
+    for (let x = room.roomX; x < room.roomX + room.width; x++) {
+      for (let y = room.roomY; y < room.roomY + room.height; y++) {
+        const tileKey = `${Math.floor(x)},${Math.floor(y)}`;
+        if (!seenTiles || !seenTiles.has(tileKey)) {
+          Game.ctx.fillRect(x * s, y * s, 1 * s, 1 * s);
+        }
+      }
+    }
+
+    Game.ctx.restore();
   };
 
   drawRoomOutline = (level) => {
