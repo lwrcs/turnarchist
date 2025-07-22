@@ -69,7 +69,16 @@ export class Scythe extends Weapon {
 
     if (this.checkForPushables(newX, newY)) return true;
 
-    const hitSomething = this.executeAttack(newX, newY);
+    const hitSomething = this.executeAttack(
+      newX,
+      newY,
+      true,
+      1,
+      true,
+      true,
+      true,
+      false,
+    );
     if (hitSomething) {
       for (const pos of positions) {
         if (
@@ -81,6 +90,7 @@ export class Scythe extends Weapon {
           this.applyHitDelay(this.hitEntitiesAt(pos.x, pos.y, damage));
         }
       }
+      this.game.rooms[this.wielder.levelID].tick(this.wielder);
     }
 
     return !hitSomething;

@@ -265,6 +265,7 @@ export abstract class Weapon extends Equippable {
     shakeScreen: boolean = true,
     sound: boolean = true,
     mainAttack: boolean = true,
+    shouldTick: boolean = true,
   ): boolean {
     const hitSomething = this.hitEntitiesAt(targetX, targetY, damage);
 
@@ -274,7 +275,7 @@ export abstract class Weapon extends Equippable {
       if (sound) this.hitSound();
       this.wielder.setHitXY(targetX, targetY);
       if (animated) this.attackAnimation(targetX, targetY);
-      this.game.rooms[this.wielder.levelID].tick(this.wielder);
+      if (shouldTick) this.game.rooms[this.wielder.levelID].tick(this.wielder);
       if (shakeScreen) this.shakeScreen(targetX, targetY);
       if (mainAttack) this.degrade();
     }

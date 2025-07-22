@@ -340,7 +340,10 @@ export class Entity extends Drawable {
 
   getDrop = (useCategory: string[] = [], force: boolean = false) => {
     if (this.cloned) return;
-    const drops = this.dropTable ? this.dropTable : useCategory;
+    const drops =
+      this.dropTable && this.dropTable.length > 0
+        ? this.dropTable
+        : useCategory;
     DropTable.getDrop(this, drops, force, 3);
     //make monsters drop degraded weapons
     if (this.drop instanceof Weapon && this.type === EntityType.ENEMY) {

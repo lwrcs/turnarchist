@@ -23,7 +23,7 @@ export class TombStone extends Entity {
     game: Game,
     x: number,
     y: number,
-    skinType: number,
+    skinType: number = 0,
     drop?: Item,
   ) {
     super(room, game, x, y);
@@ -39,8 +39,8 @@ export class TombStone extends Entity {
     //this.skinType = skinType;
     this.chainPushable = false;
     this.name = "tombstone";
-    let dropProb = Random.rand();
-    if (dropProb < 0.05)
+    let dropProb = Math.random();
+    if (dropProb < 0.25)
       this.drops.push(new Spellbook(this.room, this.x, this.y));
     this.hasBloom = true;
     this.bloomColor = "#05FF05";

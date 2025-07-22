@@ -55,7 +55,7 @@ export class Spawner extends Enemy {
     this.spawnOffset = 0;
     this.dropChance = 1;
     this.chainPushable = false;
-    this.getDrop(["reaper"], true);
+    this.getDrop(["reaper"], false);
     /*
     switch (this.enemySpawnType) {
       case 0:

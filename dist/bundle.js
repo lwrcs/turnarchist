@@ -8492,7 +8492,7 @@ class Spawner extends enemy_1.Enemy {
         this.spawnOffset = 0;
         this.dropChance = 1;
         this.chainPushable = false;
-        this.getDrop(["reaper"], true);
+        this.getDrop(["reaper"], false);
         /*
         switch (this.enemySpawnType) {
           case 0:
@@ -9315,7 +9315,9 @@ class Entity extends drawable_1.Drawable {
         this.getDrop = (useCategory = [], force = false) => {
             if (this.cloned)
                 return;
-            const drops = this.dropTable ? this.dropTable : useCategory;
+            const drops = this.dropTable && this.dropTable.length > 0
+                ? this.dropTable
+                : useCategory;
             dropTable_1.DropTable.getDrop(this, drops, force, 3);
             //make monsters drop degraded weapons
             if (this.drop instanceof weapon_1.Weapon && this.type === EntityType.ENEMY) {
@@ -11084,12 +11086,11 @@ const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const skullEnemy_1 = __webpack_require__(/*! ../enemy/skullEnemy */ "./src/entity/enemy/skullEnemy.ts");
-const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
 const spellbook_1 = __webpack_require__(/*! ../../item/weapon/spellbook */ "./src/item/weapon/spellbook.ts");
 const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
 const lightSource_1 = __webpack_require__(/*! ../../lighting/lightSource */ "./src/lighting/lightSource.ts");
 class TombStone extends entity_1.Entity {
-    constructor(room, game, x, y, skinType, drop) {
+    constructor(room, game, x, y, skinType = 0, drop) {
         super(room, game, x, y);
         this.uniqueKillBehavior = () => {
             if (this.cloned)
@@ -11143,8 +11144,8 @@ class TombStone extends entity_1.Entity {
         //this.skinType = skinType;
         this.chainPushable = false;
         this.name = "tombstone";
-        let dropProb = random_1.Random.rand();
-        if (dropProb < 0.05)
+        let dropProb = Math.random();
+        if (dropProb < 0.25)
             this.drops.push(new spellbook_1.Spellbook(this.room, this.x, this.y));
         this.hasBloom = true;
         this.bloomColor = "#05FF05";
@@ -18070,27 +18071,36 @@ DropTable.drops = [
     { itemType: "bomb", dropRate: 100, category: ["bomb", "weapon"] },
 ];
 DropTable.getDrop = (entity, useCategory = [], force = false, increaseDepth = 0, maxDrops = 1) => {
-    if (entity.cloned)
+    console.log(`getDrop called: entity=${entity.name}, categories=${useCategory}, force=${force}`);
+    if (entity.cloned) {
+        console.log("Skipping: entity is cloned");
         return;
+    }
     const currentDepth = entity.room.depth + increaseDepth;
     const dropChance = entity.dropChance || 1;
     // Skip initial drop chance check if forced
     if (!force && dropChance > 1 && Math.random() > 1 / dropChance) {
+        console.log("Skipping: failed initial drop chance");
         return null;
     }
     // Filter eligible drops by depth
     let eligibleDrops = _a.drops.filter((drop) => drop.minDepth === undefined || drop.minDepth <= currentDepth);
+    console.log(`After depth filter: ${eligibleDrops.length} drops`);
     // Filter out unique items if no categories are specified (default drop table)
     if (useCategory.length === 0) {
         eligibleDrops = eligibleDrops.filter((drop) => drop.unique === undefined || drop.unique === false);
+        console.log(`After unique filter: ${eligibleDrops.length} drops`);
     }
     // Filter by categories or specific items if provided
     if (useCategory.length > 0) {
         eligibleDrops = eligibleDrops.filter((drop) => useCategory.includes(drop.itemType) || // Match specific item
             drop.category.some((cat) => useCategory.includes(cat)));
+        console.log(`After category filter: ${eligibleDrops.length} drops`);
+        console.log(`Eligible drops: ${eligibleDrops.map((d) => d.itemType).join(", ")}`);
     }
     // Handle case with no eligible drops
     if (eligibleDrops.length === 0) {
+        console.log("No eligible drops found");
         return null;
     }
     // Track how many items we've dropped
@@ -18098,9 +18108,13 @@ DropTable.getDrop = (entity, useCategory = [], force = false, increaseDepth = 0,
     let droppedItems = [];
     // Try to drop items based on drop rates, up to maxDrops
     for (const drop of eligibleDrops) {
-        if (Math.random() < 1 / drop.dropRate) {
+        const randomRoll = Math.random();
+        const threshold = 1 / drop.dropRate;
+        console.log(`Rolling for ${drop.itemType}: ${randomRoll} < ${threshold} = ${randomRoll < threshold}`);
+        if (randomRoll < threshold) {
             const item = _a.addNewItem(drop.itemType, entity);
             if (item) {
+                console.log(`Successfully dropped ${drop.itemType}`);
                 droppedItems.push(item);
                 droppedCount++;
                 // Stop if we've reached the maximum number of drops
@@ -18108,16 +18122,26 @@ DropTable.getDrop = (entity, useCategory = [], force = false, increaseDepth = 0,
                     break;
                 }
             }
+            else {
+                console.log(`Failed to create item ${drop.itemType}`);
+            }
         }
     }
     // Force drop the most common item if needed and we haven't dropped anything yet
     if (force && droppedCount === 0 && eligibleDrops.length > 0) {
+        console.log("Force dropping most common item");
         const mostCommonDrop = eligibleDrops.reduce((prev, curr) => prev.dropRate < curr.dropRate ? prev : curr);
+        console.log(`Force dropping: ${mostCommonDrop.itemType}`);
         const item = _a.addNewItem(mostCommonDrop.itemType, entity);
         if (item) {
+            console.log(`Successfully force dropped ${mostCommonDrop.itemType}`);
             droppedItems.push(item);
         }
+        else {
+            console.log(`Failed to create forced item ${mostCommonDrop.itemType}`);
+        }
     }
+    console.log(`Final result: ${droppedItems.length} items dropped`);
     return droppedItems.length > 0 ? droppedItems : null;
 };
 DropTable.addNewItem = (itemType, entity) => {
@@ -19987,7 +20011,7 @@ class Scythe extends weapon_1.Weapon {
             }
             if (this.checkForPushables(newX, newY))
                 return true;
-            const hitSomething = this.executeAttack(newX, newY);
+            const hitSomething = this.executeAttack(newX, newY, true, 1, true, true, true, false);
             if (hitSomething) {
                 for (const pos of positions) {
                     if (!this.game.rooms[this.wielder.levelID].roomArray[pos.x][pos.y].isSolid()) {
@@ -19995,6 +20019,7 @@ class Scythe extends weapon_1.Weapon {
                         this.applyHitDelay(this.hitEntitiesAt(pos.x, pos.y, damage));
                     }
                 }
+                this.game.rooms[this.wielder.levelID].tick(this.wielder);
             }
             return !hitSomething;
         };
@@ -20368,7 +20393,7 @@ class Sword extends weapon_1.Weapon {
             }
             if (this.checkForPushables(newX, newY))
                 return true;
-            const hitSomething = this.executeAttack(newX, newY);
+            const hitSomething = this.executeAttack(newX, newY, true, 1, true, true, true, false);
             if (hitSomething) {
                 for (const pos of positions) {
                     if (!this.game.rooms[this.wielder.levelID].roomArray[pos.x][pos.y].isSolid()) {
@@ -20376,6 +20401,7 @@ class Sword extends weapon_1.Weapon {
                         this.hitEntitiesAt(pos.x, pos.y, damage);
                     }
                 }
+                this.game.rooms[this.wielder.levelID].tick(this.wielder);
             }
             return !hitSomething;
         };
@@ -20671,7 +20697,7 @@ class Weapon extends equippable_1.Equippable {
         const hasSpaceToPush = !isSolidBehind && !hasUnpushablesBehind;
         return pushables.length > 0 && hasSpaceToPush;
     }
-    executeAttack(targetX, targetY, animated = true, damage = this.damage, shakeScreen = true, sound = true, mainAttack = true) {
+    executeAttack(targetX, targetY, animated = true, damage = this.damage, shakeScreen = true, sound = true, mainAttack = true, shouldTick = true) {
         const hitSomething = this.hitEntitiesAt(targetX, targetY, damage);
         this.applyHitDelay(hitSomething);
         if (hitSomething) {
@@ -20680,7 +20706,8 @@ class Weapon extends equippable_1.Equippable {
             this.wielder.setHitXY(targetX, targetY);
             if (animated)
                 this.attackAnimation(targetX, targetY);
-            this.game.rooms[this.wielder.levelID].tick(this.wielder);
+            if (shouldTick)
+                this.game.rooms[this.wielder.levelID].tick(this.wielder);
             if (shakeScreen)
                 this.shakeScreen(targetX, targetY);
             if (mainAttack)
@@ -20752,8 +20779,8 @@ const environmentProps = {
         props: [
             { class: crate_1.Crate, weight: 1 },
             { class: barrel_1.Barrel, weight: 1 },
-            { class: tombStone_1.TombStone, weight: 0.05, additionalParams: [1] },
-            { class: tombStone_1.TombStone, weight: 0.05, additionalParams: [0] },
+            { class: tombStone_1.TombStone, weight: 0.01, additionalParams: [1] },
+            { class: tombStone_1.TombStone, weight: 0.01, additionalParams: [0] },
             { class: pumpkin_1.Pumpkin, weight: 0.05 },
             { class: block_1.Block, weight: 1 },
             { class: pot_1.Pot, weight: 1 },
@@ -20778,8 +20805,8 @@ const environmentProps = {
     },
     [environmentTypes_1.EnvType.FOREST]: {
         props: [
-            { class: tombStone_1.TombStone, weight: 0.05, additionalParams: [1] },
-            { class: tombStone_1.TombStone, weight: 0.05, additionalParams: [0] },
+            { class: tombStone_1.TombStone, weight: 0.035, additionalParams: [1] },
+            { class: tombStone_1.TombStone, weight: 0.035, additionalParams: [0] },
             { class: pumpkin_1.Pumpkin, weight: 0.05 },
             //{ class: Block, weight: 0.1 },
             { class: bush_1.Bush, weight: 2 },
@@ -26383,6 +26410,7 @@ var EnemyType;
     EnemyType["bigzombie"] = "bigzombie";
     EnemyType["glowbug"] = "glowbug";
     EnemyType["tree"] = "tree";
+    EnemyType["tombStone"] = "tombstone";
     // Add other enemy types here
 })(EnemyType = exports.EnemyType || (exports.EnemyType = {}));
 /**
@@ -26412,6 +26440,7 @@ exports.EnemyTypeMap = {
     [EnemyType.bigzombie]: bigZombieEnemy_1.BigZombieEnemy,
     [EnemyType.glowbug]: glowBugEnemy_1.GlowBugEnemy,
     [EnemyType.tree]: tree_1.Tree,
+    [EnemyType.tombStone]: tombStone_1.TombStone,
     // Add other enemy mappings here
 };
 var RoomType;

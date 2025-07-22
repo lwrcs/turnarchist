@@ -124,6 +124,7 @@ export enum EnemyType {
   bigzombie = "bigzombie",
   glowbug = "glowbug",
   tree = "tree",
+  tombStone = "tombstone",
   // Add other enemy types here
 }
 
@@ -154,6 +155,7 @@ export const EnemyTypeMap: { [key in EnemyType]: EnemyStatic } = {
   [EnemyType.bigzombie]: BigZombieEnemy,
   [EnemyType.glowbug]: GlowBugEnemy,
   [EnemyType.tree]: Tree,
+  [EnemyType.tombStone]: TombStone,
   // Add other enemy mappings here
 };
 
