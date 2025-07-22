@@ -14,6 +14,10 @@ export class Menu {
   selectedButton: number;
   player: Player;
   selectionTimeoutId: ReturnType<typeof setTimeout> | null = null;
+  // Add debouncing properties
+  private lastButtonClickTime: number = 0;
+  private lastButtonClickIndex: number = -1;
+  private readonly BUTTON_CLICK_DEBOUNCE_TIME = 150; // milliseconds
 
   constructor(player: Player) {
     this.buttons = [];
@@ -215,6 +219,15 @@ export class Menu {
 
     // Check close button first
     if (this.isPointInCloseButton(x, y)) {
+      // Add debouncing for close button too
+      const currentTime = Date.now();
+      if (
+        currentTime - this.lastButtonClickTime <
+        this.BUTTON_CLICK_DEBOUNCE_TIME
+      ) {
+        return;
+      }
+      this.lastButtonClickTime = currentTime;
       this.closeButton.onClick();
       return;
     }
@@ -224,6 +237,19 @@ export class Menu {
 
     if (bounds.inBounds && bounds.buttonIndex >= 0) {
       const button = this.buttons[bounds.buttonIndex];
+      const currentTime = Date.now();
+
+      // Debounce check: prevent multiple rapid clicks on the same button
+      if (
+        bounds.buttonIndex === this.lastButtonClickIndex &&
+        currentTime - this.lastButtonClickTime < this.BUTTON_CLICK_DEBOUNCE_TIME
+      ) {
+        return; // Ignore this click as it's too soon after the last one
+      }
+
+      // Update debounce tracking
+      this.lastButtonClickTime = currentTime;
+      this.lastButtonClickIndex = bounds.buttonIndex;
 
       // Clear any existing timeout
       if (this.selectionTimeoutId !== null) {
@@ -240,7 +266,6 @@ export class Menu {
       }, 100);
 
       button.onClick();
-    } else {
     }
   }
 

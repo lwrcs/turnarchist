@@ -11992,6 +11992,14 @@ class Game {
             this.player = this.players[this.localPlayerID];
         };
         this.newGame = () => {
+            // Clear all input listeners to prevent duplicates from previous game instances
+            input_1.Input.mouseDownListeners.length = 0;
+            input_1.Input.mouseUpListeners.length = 0;
+            input_1.Input.mouseMoveListeners.length = 0;
+            input_1.Input.mouseLeftClickListeners.length = 0;
+            input_1.Input.mouseRightClickListeners.length = 0;
+            input_1.Input.touchStartListeners.length = 0;
+            input_1.Input.touchEndListeners.length = 0;
             stats_1.statsTracker.resetStats();
             this.currentDepth = 0;
             this.encounteredEnemies = [];
@@ -12419,7 +12427,7 @@ class Game {
             let maxHeightScale = Math.floor(window.innerHeight / gameConstants_1.GameConstants.DEFAULTHEIGHT);
             if (this.isMobile) {
                 if (this.isMobile)
-                    this.pushMessage("Mobile detected");
+                    console.log("Mobile detected");
                 gameConstants_1.GameConstants.SHADE_LEVELS = 35;
                 gameConstants_1.GameConstants.isMobile = true;
                 levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP = 2;
@@ -15740,6 +15748,10 @@ const mouseCursor_1 = __webpack_require__(/*! ../gui/mouseCursor */ "./src/gui/m
 class Menu {
     constructor(player) {
         this.selectionTimeoutId = null;
+        // Add debouncing properties
+        this.lastButtonClickTime = 0;
+        this.lastButtonClickIndex = -1;
+        this.BUTTON_CLICK_DEBOUNCE_TIME = 150; // milliseconds
         // Action methods
         this.startGame = () => {
             this.close();
@@ -15890,6 +15902,13 @@ class Menu {
         }
         // Check close button first
         if (this.isPointInCloseButton(x, y)) {
+            // Add debouncing for close button too
+            const currentTime = Date.now();
+            if (currentTime - this.lastButtonClickTime <
+                this.BUTTON_CLICK_DEBOUNCE_TIME) {
+                return;
+            }
+            this.lastButtonClickTime = currentTime;
             this.closeButton.onClick();
             return;
         }
@@ -15897,6 +15916,15 @@ class Menu {
         const bounds = this.isPointInMenuBounds(x, y);
         if (bounds.inBounds && bounds.buttonIndex >= 0) {
             const button = this.buttons[bounds.buttonIndex];
+            const currentTime = Date.now();
+            // Debounce check: prevent multiple rapid clicks on the same button
+            if (bounds.buttonIndex === this.lastButtonClickIndex &&
+                currentTime - this.lastButtonClickTime < this.BUTTON_CLICK_DEBOUNCE_TIME) {
+                return; // Ignore this click as it's too soon after the last one
+            }
+            // Update debounce tracking
+            this.lastButtonClickTime = currentTime;
+            this.lastButtonClickIndex = bounds.buttonIndex;
             // Clear any existing timeout
             if (this.selectionTimeoutId !== null) {
                 clearTimeout(this.selectionTimeoutId);
@@ -15909,8 +15937,6 @@ class Menu {
                 this.selectionTimeoutId = null;
             }, 100);
             button.onClick();
-        }
-        else {
         }
     }
     close() {

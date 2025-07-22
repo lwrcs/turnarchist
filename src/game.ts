@@ -445,6 +445,15 @@ export class Game {
   };
 
   newGame = () => {
+    // Clear all input listeners to prevent duplicates from previous game instances
+    Input.mouseDownListeners.length = 0;
+    Input.mouseUpListeners.length = 0;
+    Input.mouseMoveListeners.length = 0;
+    Input.mouseLeftClickListeners.length = 0;
+    Input.mouseRightClickListeners.length = 0;
+    Input.touchStartListeners.length = 0;
+    Input.touchEndListeners.length = 0;
+
     statsTracker.resetStats();
     this.currentDepth = 0;
     this.encounteredEnemies = [];
@@ -966,7 +975,7 @@ export class Game {
     );
 
     if (this.isMobile) {
-      if (this.isMobile) this.pushMessage("Mobile detected");
+      if (this.isMobile) console.log("Mobile detected");
       GameConstants.SHADE_LEVELS = 35;
       GameConstants.isMobile = true;
       LevelConstants.LIGHTING_ANGLE_STEP = 2;
