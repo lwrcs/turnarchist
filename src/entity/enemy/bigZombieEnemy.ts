@@ -206,6 +206,8 @@ export class BigZombieEnemy extends Enemy {
                 else if (this.y < oldY) this.direction = Direction.UP;
               }
             }
+          } else {
+            this.facePlayer(this.targetPlayer);
           }
 
           // Add positions to avoid based on the current direction

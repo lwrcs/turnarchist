@@ -451,7 +451,8 @@ export class Entity extends Drawable {
       for (let yy = 0; yy < this.h; yy++) {
         if (
           !this.room.roomArray[x + xx][y + yy].isSolid() &&
-          !(this.room.roomArray[x + xx][y + yy] instanceof Door)
+          !(this.room.roomArray[x + xx][y + yy] instanceof Door) &&
+          !(this.room.roomArray[x + xx][y + yy] instanceof DownLadder)
         ) {
           tiles.push(this.room.roomArray[x + xx][y + yy]);
         } else {
@@ -884,45 +885,29 @@ export class Entity extends Drawable {
     }
 
     // For bigger entities, check if player shares any row or column
-    let sharesRow = false;
-    let sharesColumn = false;
-
-    // Check if player shares any row with the entity
-    for (let y = this.y; y < this.y + this.h; y++) {
-      if (player.y === y) {
-        sharesRow = true;
-        break;
-      }
-    }
-
-    // Check if player shares any column with the entity
-    for (let x = this.x; x < this.x + this.w; x++) {
-      if (player.x === x) {
-        sharesColumn = true;
-        break;
-      }
-    }
+    const sharesRow = player.y >= this.y && player.y < this.y + this.h;
+    const sharesColumn = player.x >= this.x && player.x < this.x + this.w;
 
     // If sharing both row and column, player is overlapping - don't change direction
     if (sharesRow && sharesColumn) {
       return;
     }
 
-    // If sharing a row, face horizontally
-    if (sharesRow) {
+    // If sharing a row but not a column, face horizontally toward player
+    if (sharesRow && !sharesColumn) {
       if (player.x < this.x) {
         this.direction = Direction.LEFT;
-      } else if (player.x >= this.x + this.w) {
+      } else {
         this.direction = Direction.RIGHT;
       }
       return;
     }
 
-    // If sharing a column, face vertically
-    if (sharesColumn) {
+    // If sharing a column but not a row, face vertically toward player
+    if (sharesColumn && !sharesRow) {
       if (player.y < this.y) {
         this.direction = Direction.UP;
-      } else if (player.y >= this.y + this.h) {
+      } else {
         this.direction = Direction.DOWN;
       }
       return;
@@ -1298,6 +1283,7 @@ export class Entity extends Drawable {
   };
 
   makeHitWarnings = (hx: number = this.x, hy: number = this.y) => {
+    if (this.unconscious) return;
     const cullFactor = 0.45;
     const player: Player = this.getPlayer();
     const orthogonal = this.orthogonalAttack;

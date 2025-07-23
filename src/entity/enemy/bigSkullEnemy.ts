@@ -238,6 +238,8 @@ export class BigSkullEnemy extends Enemy {
                 else if (this.y < oldY) this.direction = Direction.UP;
               }
             }
+          } else {
+            this.facePlayer(this.targetPlayer);
           }
 
           // Add directional disable positions for forward-only attack

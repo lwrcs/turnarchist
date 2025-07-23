@@ -4522,6 +4522,9 @@ class BigSkullEnemy extends enemy_1.Enemy {
                                 }
                             }
                         }
+                        else {
+                            this.facePlayer(this.targetPlayer);
+                        }
                         // Add directional disable positions for forward-only attack
                         if (this.direction == game_1.Direction.LEFT) {
                             for (let i = 0; i < this.h; i++) {
@@ -4850,6 +4853,9 @@ class BigZombieEnemy extends enemy_1.Enemy {
                                         this.direction = game_1.Direction.UP;
                                 }
                             }
+                        }
+                        else {
+                            this.facePlayer(this.targetPlayer);
                         }
                         // Add positions to avoid based on the current direction
                         if (this.direction == game_1.Direction.LEFT) {
@@ -9399,7 +9405,8 @@ class Entity extends drawable_1.Drawable {
             for (let xx = 0; xx < this.w; xx++) {
                 for (let yy = 0; yy < this.h; yy++) {
                     if (!this.room.roomArray[x + xx][y + yy].isSolid() &&
-                        !(this.room.roomArray[x + xx][y + yy] instanceof door_1.Door)) {
+                        !(this.room.roomArray[x + xx][y + yy] instanceof door_1.Door) &&
+                        !(this.room.roomArray[x + xx][y + yy] instanceof downLadder_1.DownLadder)) {
                         tiles.push(this.room.roomArray[x + xx][y + yy]);
                     }
                     else {
@@ -9778,42 +9785,28 @@ class Entity extends drawable_1.Drawable {
                 return;
             }
             // For bigger entities, check if player shares any row or column
-            let sharesRow = false;
-            let sharesColumn = false;
-            // Check if player shares any row with the entity
-            for (let y = this.y; y < this.y + this.h; y++) {
-                if (player.y === y) {
-                    sharesRow = true;
-                    break;
-                }
-            }
-            // Check if player shares any column with the entity
-            for (let x = this.x; x < this.x + this.w; x++) {
-                if (player.x === x) {
-                    sharesColumn = true;
-                    break;
-                }
-            }
+            const sharesRow = player.y >= this.y && player.y < this.y + this.h;
+            const sharesColumn = player.x >= this.x && player.x < this.x + this.w;
             // If sharing both row and column, player is overlapping - don't change direction
             if (sharesRow && sharesColumn) {
                 return;
             }
-            // If sharing a row, face horizontally
-            if (sharesRow) {
+            // If sharing a row but not a column, face horizontally toward player
+            if (sharesRow && !sharesColumn) {
                 if (player.x < this.x) {
                     this.direction = game_1.Direction.LEFT;
                 }
-                else if (player.x >= this.x + this.w) {
+                else {
                     this.direction = game_1.Direction.RIGHT;
                 }
                 return;
             }
-            // If sharing a column, face vertically
-            if (sharesColumn) {
+            // If sharing a column but not a row, face vertically toward player
+            if (sharesColumn && !sharesRow) {
                 if (player.y < this.y) {
                     this.direction = game_1.Direction.UP;
                 }
-                else if (player.y >= this.y + this.h) {
+                else {
                     this.direction = game_1.Direction.DOWN;
                 }
                 return;
@@ -10072,6 +10065,8 @@ class Entity extends drawable_1.Drawable {
             }
         };
         this.makeHitWarnings = (hx = this.x, hy = this.y) => {
+            if (this.unconscious)
+                return;
             const cullFactor = 0.45;
             const player = this.getPlayer();
             const orthogonal = this.orthogonalAttack;
