@@ -20285,23 +20285,32 @@ class Spear extends weapon_1.Weapon {
             if (this.checkForPushables(newX, newY))
                 return true;
             const hitFirstTile = this.hitEntitiesAt(newX, newY);
-            if (hitFirstTile)
+            if (hitFirstTile) {
                 flag = true;
-            // Check second tile for enemies only (not pushables)
-            if (!this.game.rooms[this.wielder.levelID].roomArray[newX][newY].isSolid()) {
-                const entitiesAtSecondTile = this.getEntitiesAt(newX2, newY2).filter((e) => !e.pushable);
-                enemyHitCandidates = entitiesAtSecondTile;
-            }
-            if (!flag && enemyHitCandidates.length > 0) {
-                for (const e of enemyHitCandidates) {
-                    this.attack(e);
+                // If we hit the first tile, also check the second tile (like sword does with adjacent tiles)
+                if (!this.game.rooms[this.wielder.levelID].roomArray[newX2] ||
+                    !this.game.rooms[this.wielder.levelID].roomArray[newX2][newY2] ||
+                    !this.game.rooms[this.wielder.levelID].roomArray[newX2][newY2].isSolid()) {
+                    this.hitEntitiesAt(newX2, newY2);
                 }
-                this.hitSound();
-                this.attackAnimation(newX2, newY2);
-                this.game.rooms[this.wielder.levelID].tick(this.wielder);
-                this.shakeScreen(newX2, newY2);
-                this.degrade();
-                return false;
+            }
+            // Check second tile for enemies only (not pushables) - only if first tile didn't hit
+            if (!flag) {
+                if (!this.game.rooms[this.wielder.levelID].roomArray[newX][newY].isSolid()) {
+                    const entitiesAtSecondTile = this.getEntitiesAt(newX2, newY2).filter((e) => !e.pushable);
+                    enemyHitCandidates = entitiesAtSecondTile;
+                }
+                if (enemyHitCandidates.length > 0) {
+                    for (const e of enemyHitCandidates) {
+                        this.attack(e);
+                    }
+                    this.hitSound();
+                    this.attackAnimation(newX2, newY2);
+                    this.game.rooms[this.wielder.levelID].tick(this.wielder);
+                    this.shakeScreen(newX2, newY2);
+                    this.degrade();
+                    return false;
+                }
             }
             if (flag) {
                 this.hitSound();
