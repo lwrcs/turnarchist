@@ -20279,47 +20279,56 @@ class Spear extends weapon_1.Weapon {
         this.weaponMove = (newX, newY) => {
             let newX2 = 2 * newX - this.wielder.x;
             let newY2 = 2 * newY - this.wielder.y;
-            let flag = false;
-            let enemyHitCandidates = [];
-            // Check first tile
-            if (this.checkForPushables(newX, newY))
+            let hitEnemies = false;
+            // Check if there are any pushables at first tile - these completely block the spear
+            const pushables = this.getEntitiesAt(newX, newY).filter((e) => e.pushable);
+            if (pushables.length > 0)
                 return true;
-            const hitFirstTile = this.hitEntitiesAt(newX, newY);
-            if (hitFirstTile) {
-                flag = true;
-                // If we hit the first tile, also check the second tile (like sword does with adjacent tiles)
-                if (!this.game.rooms[this.wielder.levelID].roomArray[newX2] ||
-                    !this.game.rooms[this.wielder.levelID].roomArray[newX2][newY2] ||
-                    !this.game.rooms[this.wielder.levelID].roomArray[newX2][newY2].isSolid()) {
-                    this.hitEntitiesAt(newX2, newY2);
+            // Get entities at both tiles
+            const entitiesAtFirstTile = this.getEntitiesAt(newX, newY);
+            const entitiesAtSecondTile = this.getEntitiesAt(newX2, newY2);
+            // Check if first tile has non-enemy entities that would block the spear
+            const nonEnemiesAtFirstTile = entitiesAtFirstTile.filter((e) => !e.pushable && !e.isEnemy);
+            if (nonEnemiesAtFirstTile.length > 0) {
+                // Hit non-enemy entities at first tile and stop (blocked)
+                for (const entity of nonEnemiesAtFirstTile) {
+                    this.attack(entity);
                 }
-            }
-            // Check second tile for enemies only (not pushables) - only if first tile didn't hit
-            if (!flag) {
-                if (!this.game.rooms[this.wielder.levelID].roomArray[newX][newY].isSolid()) {
-                    const entitiesAtSecondTile = this.getEntitiesAt(newX2, newY2).filter((e) => !e.pushable);
-                    enemyHitCandidates = entitiesAtSecondTile;
-                }
-                if (enemyHitCandidates.length > 0) {
-                    for (const e of enemyHitCandidates) {
-                        this.attack(e);
-                    }
-                    this.hitSound();
-                    this.attackAnimation(newX2, newY2);
-                    this.game.rooms[this.wielder.levelID].tick(this.wielder);
-                    this.shakeScreen(newX2, newY2);
-                    this.degrade();
-                    return false;
-                }
-            }
-            if (flag) {
                 this.hitSound();
                 this.attackAnimation(newX, newY);
                 this.game.rooms[this.wielder.levelID].tick(this.wielder);
                 this.shakeScreen(newX, newY);
                 this.degrade();
+                return false;
             }
-            return !flag;
+            // Hit all enemies at first tile (spear penetrates through)
+            const enemiesAtFirstTile = entitiesAtFirstTile.filter((e) => !e.pushable && e.isEnemy);
+            if (enemiesAtFirstTile.length > 0) {
+                for (const enemy of enemiesAtFirstTile) {
+                    this.attack(enemy);
+                }
+                hitEnemies = true;
+            }
+            // Hit all enemies at second tile (if tile is valid and not solid)
+            if (this.game.rooms[this.wielder.levelID].roomArray[newX2] &&
+                this.game.rooms[this.wielder.levelID].roomArray[newX2][newY2] &&
+                !this.game.rooms[this.wielder.levelID].roomArray[newX2][newY2].isSolid()) {
+                const enemiesAtSecondTile = entitiesAtSecondTile.filter((e) => !e.pushable && e.isEnemy);
+                if (enemiesAtSecondTile.length > 0) {
+                    for (const enemy of enemiesAtSecondTile) {
+                        this.attack(enemy);
+                    }
+                    hitEnemies = true;
+                }
+            }
+            if (hitEnemies) {
+                this.hitSound();
+                this.attackAnimation(newX2, newY2); // Show animation at the furthest point
+                this.game.rooms[this.wielder.levelID].tick(this.wielder);
+                this.shakeScreen(newX2, newY2);
+                this.degrade();
+            }
+            return !hitEnemies;
         };
         this.tileX = 24;
         this.tileY = 0;
@@ -28463,6 +28472,12 @@ class Room {
          * @returns The created Door object or null if placement failed.
          */
         this.addDoorWithOffset = (x, y, room = this, tunnelDoor = false) => {
+            // Helper function to check if any vending machine is at a position
+            const hasVendingMachineAt = (checkX, checkY) => {
+                return room.entities.some((entity) => entity instanceof vendingMachine_1.VendingMachine &&
+                    entity.x === checkX &&
+                    entity.y === checkY);
+            };
             // Check if a door already exists at the desired position
             if (room.roomArray[x]?.[y] instanceof door_1.Door) {
                 // Determine the direction based on the door's position
@@ -28486,17 +28501,18 @@ class Room {
                 // Define possible offset adjustments based on door direction
                 const offsetOptions = [];
                 switch (direction) {
-                    case game_1.Direction.RIGHT | game_1.Direction.LEFT:
+                    case game_1.Direction.RIGHT:
+                    case game_1.Direction.LEFT:
                         // Offsets along the y-axis for vertical walls
                         offsetOptions.push({ dx: 0, dy: 1 }, { dx: 0, dy: -1 });
-                        break;
-                    case game_1.Direction.UP | game_1.Direction.DOWN:
-                        // Offsets along the x-axis for horizontal walls
-                        offsetOptions.push({ dx: 1, dy: 0 }, { dx: -1, dy: 0 });
                         break;
                 }
                 // Shuffle the offset options to randomize placement
                 const shuffledOffsets = offsetOptions.sort(() => Math.random() - 0.5);
+                // Check if original position has vending machine
+                if (hasVendingMachineAt(x, y)) {
+                    return null;
+                }
                 for (const offset of shuffledOffsets) {
                     const newX = x + offset.dx;
                     const newY = y + offset.dy;
@@ -28505,14 +28521,20 @@ class Room {
                         newX < room.roomX + room.width - 1 &&
                         newY > room.roomY &&
                         newY < room.roomY + room.height - 1;
-                    if (isWithinBounds && !(room.roomArray[newX]?.[newY] instanceof door_1.Door)) {
+                    if (isWithinBounds &&
+                        !(room.roomArray[newX]?.[newY] instanceof door_1.Door) &&
+                        !hasVendingMachineAt(newX, newY)) {
                         // Offset the door placement
                         return room.addDoor(newX, newY, room, tunnelDoor);
                     }
                 }
                 return null;
             }
-            // If no door exists at the desired position, place it normally
+            // Check for vending machine at original position before placing door normally
+            if (hasVendingMachineAt(x, y)) {
+                return null;
+            }
+            // If no door exists at the desired position and no vending machine, place it normally
             return room.addDoor(x, y, room, tunnelDoor);
         };
         this.pointExists = (x, y) => {
@@ -31881,6 +31903,7 @@ exports.Tips = Tips;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.astar = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/downLadder.ts");
 var astar;
 (function (astar_1) {
     //================== start graph js
@@ -31899,7 +31922,9 @@ var astar;
     })(GraphNodeType = astar_1.GraphNodeType || (astar_1.GraphNodeType = {}));
     let getTileCost = (tile) => {
         if (tile)
-            return tile.isSolid() || tile.isDoor ? 99999999 : 300;
+            return tile.isSolid() || tile.isDoor || tile instanceof downLadder_1.DownLadder
+                ? 99999999
+                : 300;
         else
             return 99999999;
     };

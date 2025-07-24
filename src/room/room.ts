@@ -3653,6 +3653,16 @@ export class Room {
     room: Room = this,
     tunnelDoor: boolean = false,
   ) => {
+    // Helper function to check if any vending machine is at a position
+    const hasVendingMachineAt = (checkX: number, checkY: number): boolean => {
+      return room.entities.some(
+        (entity) =>
+          entity instanceof VendingMachine &&
+          entity.x === checkX &&
+          entity.y === checkY,
+      );
+    };
+
     // Check if a door already exists at the desired position
     if (room.roomArray[x]?.[y] instanceof Door) {
       // Determine the direction based on the door's position
@@ -3675,18 +3685,20 @@ export class Room {
       // Define possible offset adjustments based on door direction
       const offsetOptions: Array<{ dx: number; dy: number }> = [];
       switch (direction) {
-        case Direction.RIGHT | Direction.LEFT:
+        case Direction.RIGHT:
+        case Direction.LEFT:
           // Offsets along the y-axis for vertical walls
           offsetOptions.push({ dx: 0, dy: 1 }, { dx: 0, dy: -1 });
-          break;
-        case Direction.UP | Direction.DOWN:
-          // Offsets along the x-axis for horizontal walls
-          offsetOptions.push({ dx: 1, dy: 0 }, { dx: -1, dy: 0 });
           break;
       }
 
       // Shuffle the offset options to randomize placement
       const shuffledOffsets = offsetOptions.sort(() => Math.random() - 0.5);
+
+      // Check if original position has vending machine
+      if (hasVendingMachineAt(x, y)) {
+        return null;
+      }
 
       for (const offset of shuffledOffsets) {
         const newX = x + offset.dx;
@@ -3699,7 +3711,11 @@ export class Room {
           newY > room.roomY &&
           newY < room.roomY + room.height - 1;
 
-        if (isWithinBounds && !(room.roomArray[newX]?.[newY] instanceof Door)) {
+        if (
+          isWithinBounds &&
+          !(room.roomArray[newX]?.[newY] instanceof Door) &&
+          !hasVendingMachineAt(newX, newY)
+        ) {
           // Offset the door placement
           return room.addDoor(newX, newY, room, tunnelDoor);
         }
@@ -3708,7 +3724,12 @@ export class Room {
       return null;
     }
 
-    // If no door exists at the desired position, place it normally
+    // Check for vending machine at original position before placing door normally
+    if (hasVendingMachineAt(x, y)) {
+      return null;
+    }
+
+    // If no door exists at the desired position and no vending machine, place it normally
     return room.addDoor(x, y, room, tunnelDoor);
   };
 

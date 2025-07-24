@@ -1,5 +1,6 @@
 import { EntityDirection } from "../entity/entity";
 import { Direction } from "../game";
+import { DownLadder } from "../tile/downLadder";
 import { SpikeTrap } from "../tile/spiketrap";
 import { Wall } from "../tile/wall";
 
@@ -25,7 +26,10 @@ export namespace astar {
   }
 
   let getTileCost = (tile) => {
-    if (tile) return tile.isSolid() || tile.isDoor ? 99999999 : 300;
+    if (tile)
+      return tile.isSolid() || tile.isDoor || tile instanceof DownLadder
+        ? 99999999
+        : 300;
     else return 99999999;
   };
 

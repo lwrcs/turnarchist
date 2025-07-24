@@ -23,58 +23,69 @@ export class Spear extends Weapon {
   weaponMove = (newX: number, newY: number): boolean => {
     let newX2 = 2 * newX - this.wielder.x;
     let newY2 = 2 * newY - this.wielder.y;
-    let flag = false;
-    let enemyHitCandidates = [];
+    let hitEnemies = false;
 
-    // Check first tile
-    if (this.checkForPushables(newX, newY)) return true;
+    // Check if there are any pushables at first tile - these completely block the spear
+    const pushables = this.getEntitiesAt(newX, newY).filter((e) => e.pushable);
+    if (pushables.length > 0) return true;
 
-    const hitFirstTile = this.hitEntitiesAt(newX, newY);
-    if (hitFirstTile) {
-      flag = true;
+    // Get entities at both tiles
+    const entitiesAtFirstTile = this.getEntitiesAt(newX, newY);
+    const entitiesAtSecondTile = this.getEntitiesAt(newX2, newY2);
 
-      // If we hit the first tile, also check the second tile (like sword does with adjacent tiles)
-      if (
-        !this.game.rooms[this.wielder.levelID].roomArray[newX2] ||
-        !this.game.rooms[this.wielder.levelID].roomArray[newX2][newY2] ||
-        !this.game.rooms[this.wielder.levelID].roomArray[newX2][newY2].isSolid()
-      ) {
-        this.hitEntitiesAt(newX2, newY2);
+    // Check if first tile has non-enemy entities that would block the spear
+    const nonEnemiesAtFirstTile = entitiesAtFirstTile.filter(
+      (e) => !e.pushable && !e.isEnemy,
+    );
+    if (nonEnemiesAtFirstTile.length > 0) {
+      // Hit non-enemy entities at first tile and stop (blocked)
+      for (const entity of nonEnemiesAtFirstTile) {
+        this.attack(entity);
       }
-    }
-
-    // Check second tile for enemies only (not pushables) - only if first tile didn't hit
-    if (!flag) {
-      if (
-        !this.game.rooms[this.wielder.levelID].roomArray[newX][newY].isSolid()
-      ) {
-        const entitiesAtSecondTile = this.getEntitiesAt(newX2, newY2).filter(
-          (e) => !e.pushable,
-        );
-        enemyHitCandidates = entitiesAtSecondTile;
-      }
-
-      if (enemyHitCandidates.length > 0) {
-        for (const e of enemyHitCandidates) {
-          this.attack(e);
-        }
-        this.hitSound();
-        this.attackAnimation(newX2, newY2);
-        this.game.rooms[this.wielder.levelID].tick(this.wielder);
-        this.shakeScreen(newX2, newY2);
-        this.degrade();
-        return false;
-      }
-    }
-
-    if (flag) {
       this.hitSound();
       this.attackAnimation(newX, newY);
       this.game.rooms[this.wielder.levelID].tick(this.wielder);
       this.shakeScreen(newX, newY);
       this.degrade();
+      return false;
     }
 
-    return !flag;
+    // Hit all enemies at first tile (spear penetrates through)
+    const enemiesAtFirstTile = entitiesAtFirstTile.filter(
+      (e) => !e.pushable && e.isEnemy,
+    );
+    if (enemiesAtFirstTile.length > 0) {
+      for (const enemy of enemiesAtFirstTile) {
+        this.attack(enemy);
+      }
+      hitEnemies = true;
+    }
+
+    // Hit all enemies at second tile (if tile is valid and not solid)
+    if (
+      this.game.rooms[this.wielder.levelID].roomArray[newX2] &&
+      this.game.rooms[this.wielder.levelID].roomArray[newX2][newY2] &&
+      !this.game.rooms[this.wielder.levelID].roomArray[newX2][newY2].isSolid()
+    ) {
+      const enemiesAtSecondTile = entitiesAtSecondTile.filter(
+        (e) => !e.pushable && e.isEnemy,
+      );
+      if (enemiesAtSecondTile.length > 0) {
+        for (const enemy of enemiesAtSecondTile) {
+          this.attack(enemy);
+        }
+        hitEnemies = true;
+      }
+    }
+
+    if (hitEnemies) {
+      this.hitSound();
+      this.attackAnimation(newX2, newY2); // Show animation at the furthest point
+      this.game.rooms[this.wielder.levelID].tick(this.wielder);
+      this.shakeScreen(newX2, newY2);
+      this.degrade();
+    }
+
+    return !hitEnemies;
   };
 }

@@ -12,6 +12,7 @@ import { Sound } from "../../sound/sound";
 import { Utils } from "../../utility/utils";
 import { Door } from "../../tile/door";
 import { StunAnimation } from "../../projectile/stunAnimation";
+import { DownLadder } from "../../tile/downLadder";
 
 enum EnemyState {
   SLEEP,
