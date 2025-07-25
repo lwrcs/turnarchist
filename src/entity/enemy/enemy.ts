@@ -511,10 +511,12 @@ export abstract class Enemy extends Entity {
         foundValidRetreat = true;
       } else {
         // Try diagonal positions
-        let diagonal1X = this.x + dx - dy;
-        let diagonal1Y = this.y + dy + dx;
-        let diagonal2X = this.x + dx + dy;
-        let diagonal2Y = this.y + dy - dx;
+        if (dy === 0) dy = Math.random() < 0.5 ? 1 : -1;
+        if (dx === 0) dx = Math.random() < 0.5 ? 1 : -1;
+        let diagonal1X = this.x - dy;
+        let diagonal1Y = this.y + dx;
+        let diagonal2X = this.x + dy;
+        let diagonal2Y = this.y - dx;
 
         // Randomly choose which diagonal to check first
         let checkFirst = Math.random() < 0.5;
@@ -545,11 +547,13 @@ export abstract class Enemy extends Entity {
         foundValidRetreat = true;
       }
     } else if (this.diagonalAttack) {
+      if (dy === 0) dy = Math.random() < 0.5 ? 1 : -1;
+      if (dx === 0) dx = Math.random() < 0.5 ? 1 : -1;
       // Only diagonal retreat allowed
-      let diagonal1X = this.x + dx - dy;
-      let diagonal1Y = this.y + dy + dx;
-      let diagonal2X = this.x + dx + dy;
-      let diagonal2Y = this.y + dy - dx;
+      let diagonal1X = this.x - dy;
+      let diagonal1Y = this.y + dx;
+      let diagonal2X = this.x + dy;
+      let diagonal2Y = this.y - dx;
 
       // Randomly choose which diagonal to check first
       let checkFirst = Math.random() < 0.5;

@@ -26,44 +26,40 @@ export class Scythe extends Weapon {
   };
 
   weaponMove = (newX: number, newY: number): boolean => {
-    let leftCorner = { x: newX, y: newY };
-    let rightCorner = { x: newX, y: newY };
-    let leftEdge = { x: newX, y: newY };
-    let rightEdge = { x: newX, y: newY };
-    let positions = [leftCorner, rightCorner, leftEdge, rightEdge];
+    let positions: { x: number; y: number }[] = [];
 
     switch (this.wielder.direction) {
       case Direction.DOWN:
-        leftCorner.x = newX - 1;
-        rightCorner.x = newX + 1;
-        leftEdge.x = newX - 1;
-        rightEdge.x = newX + 1;
-        leftEdge.y = newY - 1;
-        rightEdge.y = newY - 1;
+        positions = [
+          { x: newX - 1, y: newY }, // leftCorner
+          { x: newX + 1, y: newY }, // rightCorner
+          { x: newX - 1, y: newY - 1 }, // leftEdge
+          { x: newX + 1, y: newY - 1 }, // rightEdge
+        ];
         break;
       case Direction.UP:
-        leftCorner.x = newX + 1;
-        rightCorner.x = newX - 1;
-        leftEdge.x = newX + 1;
-        rightEdge.x = newX - 1;
-        leftEdge.y = newY + 1;
-        rightEdge.y = newY + 1;
+        positions = [
+          { x: newX + 1, y: newY }, // leftCorner
+          { x: newX - 1, y: newY }, // rightCorner
+          { x: newX + 1, y: newY + 1 }, // leftEdge
+          { x: newX - 1, y: newY + 1 }, // rightEdge
+        ];
         break;
       case Direction.LEFT:
-        leftCorner.y = newY + 1;
-        rightCorner.y = newY - 1;
-        leftEdge.y = newY + 1;
-        rightEdge.y = newY - 1;
-        leftEdge.x = newX + 1;
-        rightEdge.x = newX + 1;
+        positions = [
+          { x: newX, y: newY + 1 }, // leftCorner
+          { x: newX, y: newY - 1 }, // rightCorner
+          { x: newX + 1, y: newY + 1 }, // leftEdge
+          { x: newX + 1, y: newY - 1 }, // rightEdge
+        ];
         break;
       case Direction.RIGHT:
-        leftCorner.y = newY - 1;
-        rightCorner.y = newY + 1;
-        leftEdge.y = newY - 1;
-        rightEdge.y = newY + 1;
-        leftEdge.x = newX - 1;
-        rightEdge.x = newX - 1;
+        positions = [
+          { x: newX, y: newY - 1 }, // leftCorner
+          { x: newX, y: newY + 1 }, // rightCorner
+          { x: newX - 1, y: newY - 1 }, // leftEdge
+          { x: newX - 1, y: newY + 1 }, // rightEdge
+        ];
         break;
     }
 
@@ -80,14 +76,15 @@ export class Scythe extends Weapon {
       false,
     );
     if (hitSomething) {
-      for (const pos of positions) {
-        if (
-          !this.game.rooms[this.wielder.levelID].roomArray[pos.x][
-            pos.y
-          ].isSolid()
-        ) {
-          const damage = positions.indexOf(pos) <= 1 ? 1 : 1;
-          this.applyHitDelay(this.hitEntitiesAt(pos.x, pos.y, damage));
+      if (positions.length > 0) {
+        for (const pos of positions) {
+          if (
+            !this.game.rooms[this.wielder.levelID].roomArray[pos.x][
+              pos.y
+            ].isSolid()
+          ) {
+            this.hitEntitiesAt(pos.x, pos.y, 1);
+          }
         }
       }
       this.game.rooms[this.wielder.levelID].tick(this.wielder);

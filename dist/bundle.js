@@ -6114,10 +6114,14 @@ class Enemy extends entity_1.Entity {
                 }
                 else {
                     // Try diagonal positions
-                    let diagonal1X = this.x + dx - dy;
-                    let diagonal1Y = this.y + dy + dx;
-                    let diagonal2X = this.x + dx + dy;
-                    let diagonal2Y = this.y + dy - dx;
+                    if (dy === 0)
+                        dy = Math.random() < 0.5 ? 1 : -1;
+                    if (dx === 0)
+                        dx = Math.random() < 0.5 ? 1 : -1;
+                    let diagonal1X = this.x - dy;
+                    let diagonal1Y = this.y + dx;
+                    let diagonal2X = this.x + dy;
+                    let diagonal2Y = this.y - dx;
                     // Randomly choose which diagonal to check first
                     let checkFirst = Math.random() < 0.5;
                     let firstX = checkFirst ? diagonal1X : diagonal2X;
@@ -6147,11 +6151,15 @@ class Enemy extends entity_1.Entity {
                 }
             }
             else if (this.diagonalAttack) {
+                if (dy === 0)
+                    dy = Math.random() < 0.5 ? 1 : -1;
+                if (dx === 0)
+                    dx = Math.random() < 0.5 ? 1 : -1;
                 // Only diagonal retreat allowed
-                let diagonal1X = this.x + dx - dy;
-                let diagonal1Y = this.y + dy + dx;
-                let diagonal2X = this.x + dx + dy;
-                let diagonal2Y = this.y + dy - dx;
+                let diagonal1X = this.x - dy;
+                let diagonal1Y = this.y + dx;
+                let diagonal2X = this.x + dy;
+                let diagonal2Y = this.y - dx;
                 // Randomly choose which diagonal to check first
                 let checkFirst = Math.random() < 0.5;
                 let firstX = checkFirst ? diagonal1X : diagonal2X;
@@ -13529,13 +13537,12 @@ const candle_1 = __webpack_require__(/*! ../item/light/candle */ "./src/item/lig
 const coal_1 = __webpack_require__(/*! ../item/resource/coal */ "./src/item/resource/coal.ts");
 const godStone_1 = __webpack_require__(/*! ../item/godStone */ "./src/item/godStone.ts");
 const lantern_1 = __webpack_require__(/*! ../item/light/lantern */ "./src/item/light/lantern.ts");
+const torch_1 = __webpack_require__(/*! ../item/light/torch */ "./src/item/light/torch.ts");
 const weaponFragments_1 = __webpack_require__(/*! ../item/usable/weaponFragments */ "./src/item/usable/weaponFragments.ts");
 const levelConstants_1 = __webpack_require__(/*! ../level/levelConstants */ "./src/level/levelConstants.ts");
 const dagger_1 = __webpack_require__(/*! ../item/weapon/dagger */ "./src/item/weapon/dagger.ts");
-const dualdagger_1 = __webpack_require__(/*! ../item/weapon/dualdagger */ "./src/item/weapon/dualdagger.ts");
 const spear_1 = __webpack_require__(/*! ../item/weapon/spear */ "./src/item/weapon/spear.ts");
 const spellbook_1 = __webpack_require__(/*! ../item/weapon/spellbook */ "./src/item/weapon/spellbook.ts");
-const warhammer_1 = __webpack_require__(/*! ../item/weapon/warhammer */ "./src/item/weapon/warhammer.ts");
 const hammer_1 = __webpack_require__(/*! ../item/tool/hammer */ "./src/item/tool/hammer.ts");
 const spellbookPage_1 = __webpack_require__(/*! ../item/usable/spellbookPage */ "./src/item/usable/spellbookPage.ts");
 const greataxe_1 = __webpack_require__(/*! ../item/weapon/greataxe */ "./src/item/weapon/greataxe.ts");
@@ -13725,14 +13732,14 @@ GameConstants.FIND_SCALE = (isMobile) => {
 GameConstants.STARTING_INVENTORY = [dagger_1.Dagger, candle_1.Candle];
 GameConstants.STARTING_DEV_INVENTORY = [
     dagger_1.Dagger,
-    warhammer_1.Warhammer,
-    dualdagger_1.DualDagger,
-    scythe_1.Scythe,
+    candle_1.Candle,
+    torch_1.Torch,
+    lantern_1.Lantern,
     godStone_1.GodStone,
     spear_1.Spear,
     greataxe_1.Greataxe,
     spellbook_1.Spellbook,
-    lantern_1.Lantern,
+    scythe_1.Scythe,
     armor_1.Armor,
     backpack_1.Backpack,
     hammer_1.Hammer,
@@ -20060,53 +20067,50 @@ class Scythe extends weapon_1.Weapon {
             sound_1.Sound.playSlice();
         };
         this.weaponMove = (newX, newY) => {
-            let leftCorner = { x: newX, y: newY };
-            let rightCorner = { x: newX, y: newY };
-            let leftEdge = { x: newX, y: newY };
-            let rightEdge = { x: newX, y: newY };
-            let positions = [leftCorner, rightCorner, leftEdge, rightEdge];
+            let positions = [];
             switch (this.wielder.direction) {
                 case game_1.Direction.DOWN:
-                    leftCorner.x = newX - 1;
-                    rightCorner.x = newX + 1;
-                    leftEdge.x = newX - 1;
-                    rightEdge.x = newX + 1;
-                    leftEdge.y = newY - 1;
-                    rightEdge.y = newY - 1;
+                    positions = [
+                        { x: newX - 1, y: newY },
+                        { x: newX + 1, y: newY },
+                        { x: newX - 1, y: newY - 1 },
+                        { x: newX + 1, y: newY - 1 }, // rightEdge
+                    ];
                     break;
                 case game_1.Direction.UP:
-                    leftCorner.x = newX + 1;
-                    rightCorner.x = newX - 1;
-                    leftEdge.x = newX + 1;
-                    rightEdge.x = newX - 1;
-                    leftEdge.y = newY + 1;
-                    rightEdge.y = newY + 1;
+                    positions = [
+                        { x: newX + 1, y: newY },
+                        { x: newX - 1, y: newY },
+                        { x: newX + 1, y: newY + 1 },
+                        { x: newX - 1, y: newY + 1 }, // rightEdge
+                    ];
                     break;
                 case game_1.Direction.LEFT:
-                    leftCorner.y = newY + 1;
-                    rightCorner.y = newY - 1;
-                    leftEdge.y = newY + 1;
-                    rightEdge.y = newY - 1;
-                    leftEdge.x = newX + 1;
-                    rightEdge.x = newX + 1;
+                    positions = [
+                        { x: newX, y: newY + 1 },
+                        { x: newX, y: newY - 1 },
+                        { x: newX + 1, y: newY + 1 },
+                        { x: newX + 1, y: newY - 1 }, // rightEdge
+                    ];
                     break;
                 case game_1.Direction.RIGHT:
-                    leftCorner.y = newY - 1;
-                    rightCorner.y = newY + 1;
-                    leftEdge.y = newY - 1;
-                    rightEdge.y = newY + 1;
-                    leftEdge.x = newX - 1;
-                    rightEdge.x = newX - 1;
+                    positions = [
+                        { x: newX, y: newY - 1 },
+                        { x: newX, y: newY + 1 },
+                        { x: newX - 1, y: newY - 1 },
+                        { x: newX - 1, y: newY + 1 }, // rightEdge
+                    ];
                     break;
             }
             if (this.checkForPushables(newX, newY))
                 return true;
             const hitSomething = this.executeAttack(newX, newY, true, 1, true, true, true, false);
             if (hitSomething) {
-                for (const pos of positions) {
-                    if (!this.game.rooms[this.wielder.levelID].roomArray[pos.x][pos.y].isSolid()) {
-                        const damage = positions.indexOf(pos) <= 1 ? 1 : 1;
-                        this.applyHitDelay(this.hitEntitiesAt(pos.x, pos.y, damage));
+                if (positions.length > 0) {
+                    for (const pos of positions) {
+                        if (!this.game.rooms[this.wielder.levelID].roomArray[pos.x][pos.y].isSolid()) {
+                            this.hitEntitiesAt(pos.x, pos.y, 1);
+                        }
                     }
                 }
                 this.game.rooms[this.wielder.levelID].tick(this.wielder);
