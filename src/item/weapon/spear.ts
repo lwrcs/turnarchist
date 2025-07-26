@@ -18,6 +18,7 @@ export class Spear extends Weapon {
     this.iconOffset = 0.1; //default 0
     this.offsetY = 0; //default -0.25
     this.useCost = 1;
+    this.degradeable = false;
   }
 
   weaponMove = (newX: number, newY: number): boolean => {

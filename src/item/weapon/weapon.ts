@@ -25,6 +25,8 @@ export abstract class Weapon extends Equippable {
   name: string;
   statusApplicationCount: number;
   hitDelay: number;
+  cooldown: number;
+  cooldownMax: number;
   constructor(level: Room, x: number, y: number, status?: WeaponStatus) {
     super(level, x, y);
 
@@ -39,6 +41,8 @@ export abstract class Weapon extends Equippable {
     this.statusApplicationCount = 0;
     this.equipTick = true;
     this.name = this.constructor.prototype.itemName;
+    this.cooldown = 0;
+    this.cooldownMax = 0;
   }
 
   break = () => {
@@ -192,7 +196,20 @@ export abstract class Weapon extends Equippable {
     return `${this.name}${broken}\n${status.join(", ")}\n${durability}\n${this.description}\ndamage: ${this.damage}`;
   };
 
-  tick = () => {};
+  tick = () => {
+    this.updateCooldown();
+  };
+
+  updateCooldown = () => {
+    if (this.cooldown > 0) {
+      this.cooldown--;
+      if (this.cooldown > 0 && this.equipped) {
+        this.equipped = false;
+        this.wielder.inventory.weapon = this.previousWeapon;
+        this.previousWeapon.equipped = true;
+      }
+    }
+  };
 
   // returns true if nothing was hit, false if the player should move
 

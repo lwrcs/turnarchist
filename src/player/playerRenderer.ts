@@ -308,50 +308,16 @@ export class PlayerRenderer {
 
   drawSpellBeam = (delta: number) => {
     Game.ctx.save();
-    // Clear existing beam effects each frame
-    this.player.game.levels[this.player.depth].rooms[
-      this.player.levelID
-    ].beamEffects = [];
 
     if (this.player.inventory.getWeapon() instanceof Spellbook) {
       const spellbook = this.player.inventory.getWeapon() as Spellbook;
-      if (spellbook.isTargeting) {
-        let targets = spellbook.targets;
-        for (let target of targets) {
-          // Create a new beam effect from the player to the enemy
-          this.player.game.levels[this.player.depth].rooms[
-            this.player.levelID
-          ].addBeamEffect(
-            this.player.x - this.drawX,
-            this.player.y - this.drawY,
-            target.x - target.drawX,
-            target.y - target.drawY,
-            target,
-          );
-
-          // Retrieve the newly added beam effect
-          const beam =
-            this.player.game.levels[this.player.depth].rooms[
-              this.player.levelID
-            ].beamEffects[
-              this.player.game.levels[this.player.depth].rooms[
-                this.player.levelID
-              ].beamEffects.length - 1
-            ];
-
-          // Render the beam
-          beam.render(
-            this.player.x - this.drawX,
-            this.player.y - this.drawY,
-            target.x - target.drawX,
-            target.y - target.drawY,
-            "cyan",
-            2,
-            delta,
-          );
-        }
-      }
+      spellbook.drawBeams(
+        this.player.x - this.drawX,
+        this.player.y - this.drawY,
+        delta,
+      );
     }
+
     Game.ctx.restore();
   };
 

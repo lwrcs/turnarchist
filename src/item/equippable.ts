@@ -3,12 +3,16 @@ import { Game } from "../game";
 import { Room } from "../room/room";
 import { Player } from "../player/player";
 import { GameplaySettings } from "../game/gameplaySettings";
+import { Weapon } from "./weapon/weapon";
 
 export class Equippable extends Item {
   wielder: Player;
   equipped: boolean;
   equipTick: boolean = false;
   useCost: number = 1;
+  cooldown: number = 0;
+  cooldownMax: number = 0;
+  previousWeapon: Weapon | null = null;
 
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
@@ -24,11 +28,16 @@ export class Equippable extends Item {
   };
 
   toggleEquip = () => {
-    if (!this.broken) {
+    if (!this.broken && this.cooldown === 0) {
+      if (!this.equipped && this.wielder.inventory?.weapon) {
+        this.previousWeapon = this.wielder.inventory.weapon;
+      }
+
       this.equipped = !this.equipped;
+
       if (GameplaySettings.EQUIP_USES_TURN && this.equipped === true)
         this.wielder?.stall();
-    } else {
+    } else if (this.broken) {
       this.equipped = false;
       let pronoun = this.name.endsWith("s") ? "them" : "it";
       this.level.game.pushMessage(
@@ -38,6 +47,8 @@ export class Equippable extends Item {
           pronoun +
           ".",
       );
+    } else if (this.cooldown > 0) {
+      this.level.game.pushMessage("Cooldown: " + this.cooldown);
     }
   };
 

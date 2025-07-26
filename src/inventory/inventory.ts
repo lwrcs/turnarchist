@@ -220,7 +220,7 @@ export class Inventory {
         // Existing equipping logic
         item.toggleEquip();
         if (item instanceof Weapon) {
-          if (item.broken) return;
+          if (item.broken || item.cooldown > 0) return;
           this.weapon = item.equipped ? item : null;
         }
         if (item.equipped) {

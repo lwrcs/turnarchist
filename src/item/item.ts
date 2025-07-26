@@ -41,6 +41,7 @@ export class Item extends Drawable {
   grouped: boolean;
   group: ItemGroup = null;
   degradeable: boolean = true;
+  cooldown: number = 0;
   // Constructor for the Item class
   constructor(level: Room, x: number, y: number) {
     super();
@@ -299,6 +300,10 @@ export class Item extends Drawable {
         2 /
         GameConstants.TILESIZE;
 
+    if (this.cooldown > 0) {
+      Game.ctx.globalAlpha = 0.35;
+    }
+
     Game.drawItem(
       this.tileX,
       this.tileY,
@@ -324,8 +329,22 @@ export class Item extends Drawable {
       GameConstants.OUTLINE,
       "white",
     );
+    this.drawCooldown(x, y);
+
     this.drawStatus(x, y);
     this.drawBrokenSymbol(x, y);
+  };
+
+  drawCooldown = (x: number, y: number) => {
+    if (this.cooldown > 0) {
+      Game.fillTextOutline(
+        this.cooldown.toString(),
+        x * GameConstants.TILESIZE + 10,
+        y * GameConstants.TILESIZE + 10,
+        GameConstants.OUTLINE,
+        "white",
+      );
+    }
   };
 
   // Function to draw the item's durability bar with color transitioning from green to red

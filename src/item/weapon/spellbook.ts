@@ -22,6 +22,7 @@ export class Spellbook extends Weapon {
     this.durability = 5;
     this.durabilityMax = 10;
     this.description = "Hits multiple enemies within a range of 4 tiles.";
+    this.degradeable = false;
   }
 
   getTargets = () => {
@@ -30,7 +31,9 @@ export class Spellbook extends Weapon {
     this.targets = entities.filter(
       (e) =>
         !e.pushable &&
-        Utils.distance(this.wielder.x, this.wielder.y, e.x, e.y) <= this.range,
+        Utils.distance(this.wielder.x, this.wielder.y, e.x, e.y) <=
+          this.range &&
+        e.destroyable,
     );
     let enemies = this.targets.filter((e) => e.isEnemy === true);
     //console.log(enemies);
@@ -91,6 +94,9 @@ export class Spellbook extends Weapon {
 
     targets = targets.filter(isTargetInDirection);
 
+    // Store only the targets that actually get hit
+    const actuallyHitTargets: Entity[] = [];
+
     for (let e of targets) {
       if (
         !this.game.rooms[this.wielder.levelID].roomArray[e.x][e.y].isSolid()
@@ -101,9 +107,14 @@ export class Spellbook extends Weapon {
           new PlayerFireball(this.wielder, e.x, e.y),
         );
 
+        // Add to the list of actually hit targets
+        actuallyHitTargets.push(e);
         flag = true;
       }
     }
+
+    // Update this.targets to only contain targets that were actually hit
+    this.targets = actuallyHitTargets;
 
     if (flag) {
       this.hitSound();
@@ -112,11 +123,47 @@ export class Spellbook extends Weapon {
       this.game.rooms[this.wielder.levelID].tick(this.wielder);
       this.shakeScreen(newX, newY);
       Sound.playMagic();
-      this.degrade();
+      //this.degrade();
+
       setTimeout(() => {
         this.isTargeting = false;
       }, 100);
     }
     return !flag;
+  };
+
+  drawBeams = (playerDrawX: number, playerDrawY: number, delta: number) => {
+    // Clear existing beam effects each frame
+    this.game.rooms[this.wielder.levelID].beamEffects = [];
+
+    if (this.isTargeting) {
+      for (let target of this.targets) {
+        // Create a new beam effect from the player to the enemy
+        this.game.rooms[this.wielder.levelID].addBeamEffect(
+          playerDrawX,
+          playerDrawY,
+          target.x - (target as any).drawX,
+          target.y - (target as any).drawY,
+          target,
+        );
+
+        // Retrieve the newly added beam effect
+        const beam =
+          this.game.rooms[this.wielder.levelID].beamEffects[
+            this.game.rooms[this.wielder.levelID].beamEffects.length - 1
+          ];
+
+        // Render the beam
+        beam.render(
+          playerDrawX,
+          playerDrawY,
+          target.x - (target as any).drawX,
+          target.y - (target as any).drawY,
+          "cyan",
+          2,
+          delta,
+        );
+      }
+    }
   };
 }

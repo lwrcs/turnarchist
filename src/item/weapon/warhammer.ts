@@ -15,6 +15,7 @@ export class Warhammer extends Weapon {
     this.name = "warhammer";
     this.hitDelay = 225;
     this.useCost = 2;
+    this.cooldownMax = 10;
   }
 
   hitSound = () => {
@@ -26,7 +27,9 @@ export class Warhammer extends Weapon {
     if (this.checkForPushables(newX, newY)) return true;
 
     const hitSomething = this.executeAttack(newX, newY);
-
+    if (hitSomething) {
+      this.cooldown = this.cooldownMax;
+    }
     return !hitSomething;
   };
 

@@ -13537,12 +13537,12 @@ const candle_1 = __webpack_require__(/*! ../item/light/candle */ "./src/item/lig
 const coal_1 = __webpack_require__(/*! ../item/resource/coal */ "./src/item/resource/coal.ts");
 const godStone_1 = __webpack_require__(/*! ../item/godStone */ "./src/item/godStone.ts");
 const lantern_1 = __webpack_require__(/*! ../item/light/lantern */ "./src/item/light/lantern.ts");
-const torch_1 = __webpack_require__(/*! ../item/light/torch */ "./src/item/light/torch.ts");
 const weaponFragments_1 = __webpack_require__(/*! ../item/usable/weaponFragments */ "./src/item/usable/weaponFragments.ts");
 const levelConstants_1 = __webpack_require__(/*! ../level/levelConstants */ "./src/level/levelConstants.ts");
 const dagger_1 = __webpack_require__(/*! ../item/weapon/dagger */ "./src/item/weapon/dagger.ts");
 const spear_1 = __webpack_require__(/*! ../item/weapon/spear */ "./src/item/weapon/spear.ts");
 const spellbook_1 = __webpack_require__(/*! ../item/weapon/spellbook */ "./src/item/weapon/spellbook.ts");
+const warhammer_1 = __webpack_require__(/*! ../item/weapon/warhammer */ "./src/item/weapon/warhammer.ts");
 const hammer_1 = __webpack_require__(/*! ../item/tool/hammer */ "./src/item/tool/hammer.ts");
 const spellbookPage_1 = __webpack_require__(/*! ../item/usable/spellbookPage */ "./src/item/usable/spellbookPage.ts");
 const greataxe_1 = __webpack_require__(/*! ../item/weapon/greataxe */ "./src/item/weapon/greataxe.ts");
@@ -13733,7 +13733,7 @@ GameConstants.STARTING_INVENTORY = [dagger_1.Dagger, candle_1.Candle];
 GameConstants.STARTING_DEV_INVENTORY = [
     dagger_1.Dagger,
     candle_1.Candle,
-    torch_1.Torch,
+    warhammer_1.Warhammer,
     lantern_1.Lantern,
     godStone_1.GodStone,
     spear_1.Spear,
@@ -16862,7 +16862,7 @@ class Inventory {
                     // Existing equipping logic
                     item.toggleEquip();
                     if (item instanceof weapon_1.Weapon) {
-                        if (item.broken)
+                        if (item.broken || item.cooldown > 0)
                             return;
                         this.weapon = item.equipped ? item : null;
                     }
@@ -18283,6 +18283,9 @@ class Equippable extends item_1.Item {
         super(level, x, y);
         this.equipTick = false;
         this.useCost = 1;
+        this.cooldown = 0;
+        this.cooldownMax = 0;
+        this.previousWeapon = null;
         this.setWielder = (wielder) => {
             this.wielder = wielder;
         };
@@ -18290,12 +18293,15 @@ class Equippable extends item_1.Item {
             return true;
         };
         this.toggleEquip = () => {
-            if (!this.broken) {
+            if (!this.broken && this.cooldown === 0) {
+                if (!this.equipped && this.wielder.inventory?.weapon) {
+                    this.previousWeapon = this.wielder.inventory.weapon;
+                }
                 this.equipped = !this.equipped;
                 if (gameplaySettings_1.GameplaySettings.EQUIP_USES_TURN && this.equipped === true)
                     this.wielder?.stall();
             }
-            else {
+            else if (this.broken) {
                 this.equipped = false;
                 let pronoun = this.name.endsWith("s") ? "them" : "it";
                 this.level.game.pushMessage("You'll have to fix your " +
@@ -18303,6 +18309,9 @@ class Equippable extends item_1.Item {
                     " before you can use " +
                     pronoun +
                     ".");
+            }
+            else if (this.cooldown > 0) {
+                this.level.game.pushMessage("Cooldown: " + this.cooldown);
             }
         };
         this.drawEquipped = (delta, x, y) => {
@@ -18430,6 +18439,7 @@ class Item extends drawable_1.Drawable {
         super();
         this.group = null;
         this.degradeable = true;
+        this.cooldown = 0;
         this.hoverText = () => {
             return this.name;
         };
@@ -18589,6 +18599,9 @@ class Item extends drawable_1.Drawable {
                     Math.round(Math.sin(Date.now() / 25) + 1 / 2) /
                         2 /
                         gameConstants_1.GameConstants.TILESIZE;
+            if (this.cooldown > 0) {
+                game_1.Game.ctx.globalAlpha = 0.35;
+            }
             game_1.Game.drawItem(this.tileX, this.tileY, 1, 2, x + shake, y - 1 + this.iconOffset, this.w, this.h);
             game_1.Game.ctx.globalAlpha = 1;
             let countToUse = count ? count : this.stackCount;
@@ -18597,8 +18610,14 @@ class Item extends drawable_1.Drawable {
             let countX = 16 - width;
             let countY = 10;
             game_1.Game.fillTextOutline(countText, x * gameConstants_1.GameConstants.TILESIZE + countX, y * gameConstants_1.GameConstants.TILESIZE + countY, gameConstants_1.GameConstants.OUTLINE, "white");
+            this.drawCooldown(x, y);
             this.drawStatus(x, y);
             this.drawBrokenSymbol(x, y);
+        };
+        this.drawCooldown = (x, y) => {
+            if (this.cooldown > 0) {
+                game_1.Game.fillTextOutline(this.cooldown.toString(), x * gameConstants_1.GameConstants.TILESIZE + 10, y * gameConstants_1.GameConstants.TILESIZE + 10, gameConstants_1.GameConstants.OUTLINE, "white");
+            }
         };
         // Function to draw the item's durability bar with color transitioning from green to red
         this.drawDurability = (x, y) => {
@@ -20342,6 +20361,7 @@ class Spear extends weapon_1.Weapon {
         this.iconOffset = 0.1; //default 0
         this.offsetY = 0; //default -0.25
         this.useCost = 1;
+        this.degradeable = false;
     }
 }
 exports.Spear = Spear;
@@ -20373,7 +20393,9 @@ class Spellbook extends weapon_1.Weapon {
             this.targets = [];
             let entities = this.game.rooms[this.wielder.levelID].entities;
             this.targets = entities.filter((e) => !e.pushable &&
-                utils_1.Utils.distance(this.wielder.x, this.wielder.y, e.x, e.y) <= this.range);
+                utils_1.Utils.distance(this.wielder.x, this.wielder.y, e.x, e.y) <=
+                    this.range &&
+                e.destroyable);
             let enemies = this.targets.filter((e) => e.isEnemy === true);
             //console.log(enemies);
             if (enemies.length > 0)
@@ -20424,25 +20446,45 @@ class Spellbook extends weapon_1.Weapon {
                 this.isTargeting = false;
             }
             targets = targets.filter(isTargetInDirection);
+            // Store only the targets that actually get hit
+            const actuallyHitTargets = [];
             for (let e of targets) {
                 if (!this.game.rooms[this.wielder.levelID].roomArray[e.x][e.y].isSolid()) {
                     e.hurt(this.wielder, 1);
                     this.game.rooms[this.wielder.levelID].projectiles.push(new playerFireball_1.PlayerFireball(this.wielder, e.x, e.y));
+                    // Add to the list of actually hit targets
+                    actuallyHitTargets.push(e);
                     flag = true;
                 }
             }
+            // Update this.targets to only contain targets that were actually hit
+            this.targets = actuallyHitTargets;
             if (flag) {
                 this.hitSound();
                 this.wielder.setHitXY(newX, newY);
                 this.game.rooms[this.wielder.levelID].tick(this.wielder);
                 this.shakeScreen(newX, newY);
                 sound_1.Sound.playMagic();
-                this.degrade();
+                //this.degrade();
                 setTimeout(() => {
                     this.isTargeting = false;
                 }, 100);
             }
             return !flag;
+        };
+        this.drawBeams = (playerDrawX, playerDrawY, delta) => {
+            // Clear existing beam effects each frame
+            this.game.rooms[this.wielder.levelID].beamEffects = [];
+            if (this.isTargeting) {
+                for (let target of this.targets) {
+                    // Create a new beam effect from the player to the enemy
+                    this.game.rooms[this.wielder.levelID].addBeamEffect(playerDrawX, playerDrawY, target.x - target.drawX, target.y - target.drawY, target);
+                    // Retrieve the newly added beam effect
+                    const beam = this.game.rooms[this.wielder.levelID].beamEffects[this.game.rooms[this.wielder.levelID].beamEffects.length - 1];
+                    // Render the beam
+                    beam.render(playerDrawX, playerDrawY, target.x - target.drawX, target.y - target.drawY, "cyan", 2, delta);
+                }
+            }
         };
         this.range = 4;
         this.tileX = 25;
@@ -20453,6 +20495,7 @@ class Spellbook extends weapon_1.Weapon {
         this.durability = 5;
         this.durabilityMax = 10;
         this.description = "Hits multiple enemies within a range of 4 tiles.";
+        this.degradeable = false;
     }
 }
 exports.Spellbook = Spellbook;
@@ -20578,6 +20621,9 @@ class Warhammer extends weapon_1.Weapon {
             if (this.checkForPushables(newX, newY))
                 return true;
             const hitSomething = this.executeAttack(newX, newY);
+            if (hitSomething) {
+                this.cooldown = this.cooldownMax;
+            }
             return !hitSomething;
         };
         this.shakeScreen = () => {
@@ -20606,6 +20652,7 @@ class Warhammer extends weapon_1.Weapon {
         this.name = "warhammer";
         this.hitDelay = 225;
         this.useCost = 2;
+        this.cooldownMax = 10;
     }
 }
 exports.Warhammer = Warhammer;
@@ -20749,7 +20796,19 @@ class Weapon extends equippable_1.Equippable {
                 durability = ` Durability: ${this.durability}/${this.durabilityMax}`;
             return `${this.name}${broken}\n${status.join(", ")}\n${durability}\n${this.description}\ndamage: ${this.damage}`;
         };
-        this.tick = () => { };
+        this.tick = () => {
+            this.updateCooldown();
+        };
+        this.updateCooldown = () => {
+            if (this.cooldown > 0) {
+                this.cooldown--;
+                if (this.cooldown > 0 && this.equipped) {
+                    this.equipped = false;
+                    this.wielder.inventory.weapon = this.previousWeapon;
+                    this.previousWeapon.equipped = true;
+                }
+            }
+        };
         this.applyHitDelay = (hitSomething) => {
             if (hitSomething) {
                 this.wielder.busyAnimating = true;
@@ -20769,6 +20828,8 @@ class Weapon extends equippable_1.Equippable {
         this.statusApplicationCount = 0;
         this.equipTick = true;
         this.name = this.constructor.prototype.itemName;
+        this.cooldown = 0;
+        this.cooldownMax = 0;
     }
     // returns true if nothing was hit, false if the player should move
     getEntitiesAt(x, y) {
@@ -25205,21 +25266,9 @@ class PlayerRenderer {
         };
         this.drawSpellBeam = (delta) => {
             game_1.Game.ctx.save();
-            // Clear existing beam effects each frame
-            this.player.game.levels[this.player.depth].rooms[this.player.levelID].beamEffects = [];
             if (this.player.inventory.getWeapon() instanceof spellbook_1.Spellbook) {
                 const spellbook = this.player.inventory.getWeapon();
-                if (spellbook.isTargeting) {
-                    let targets = spellbook.targets;
-                    for (let target of targets) {
-                        // Create a new beam effect from the player to the enemy
-                        this.player.game.levels[this.player.depth].rooms[this.player.levelID].addBeamEffect(this.player.x - this.drawX, this.player.y - this.drawY, target.x - target.drawX, target.y - target.drawY, target);
-                        // Retrieve the newly added beam effect
-                        const beam = this.player.game.levels[this.player.depth].rooms[this.player.levelID].beamEffects[this.player.game.levels[this.player.depth].rooms[this.player.levelID].beamEffects.length - 1];
-                        // Render the beam
-                        beam.render(this.player.x - this.drawX, this.player.y - this.drawY, target.x - target.drawX, target.y - target.drawY, "cyan", 2, delta);
-                    }
-                }
+                spellbook.drawBeams(this.player.x - this.drawX, this.player.y - this.drawY, delta);
             }
             game_1.Game.ctx.restore();
         };
@@ -27147,6 +27196,12 @@ class Room {
             this.entities = this.entities.filter((e) => !e.dead);
             for (const i of this.items) {
                 i.tick();
+            }
+            for (const p in this.game.players) {
+                for (const i of this.game.players[p].inventory.items) {
+                    if (i)
+                        i.tick();
+                }
             }
             for (const h of this.hitwarnings) {
                 if (!this.roomArray[h.x] ||

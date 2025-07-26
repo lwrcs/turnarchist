@@ -1620,6 +1620,12 @@ export class Room {
       i.tick();
     }
 
+    for (const p in this.game.players) {
+      for (const i of this.game.players[p].inventory.items) {
+        if (i) i.tick();
+      }
+    }
+
     for (const h of this.hitwarnings) {
       if (
         !this.roomArray[h.x] ||
