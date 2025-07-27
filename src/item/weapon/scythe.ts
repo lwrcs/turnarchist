@@ -17,6 +17,7 @@ export class Scythe extends Weapon {
     this.useCost = 2;
     this.offsetY = 0;
     this.iconOffset = 0.2;
+    this.degradeable = false;
   }
 
   hitSound = () => {

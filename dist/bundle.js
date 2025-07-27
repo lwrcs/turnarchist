@@ -20164,6 +20164,7 @@ class Scythe extends weapon_1.Weapon {
         this.useCost = 2;
         this.offsetY = 0;
         this.iconOffset = 0.2;
+        this.degradeable = false;
     }
 }
 exports.Scythe = Scythe;
@@ -20466,6 +20467,7 @@ class Spellbook extends weapon_1.Weapon {
                 this.shakeScreen(newX, newY);
                 sound_1.Sound.playMagic();
                 //this.degrade();
+                this.cooldown = this.cooldownMax;
                 setTimeout(() => {
                     this.isTargeting = false;
                 }, 100);
@@ -20492,10 +20494,11 @@ class Spellbook extends weapon_1.Weapon {
         this.canMine = true;
         this.name = Spellbook.itemName;
         this.isTargeting = false;
-        this.durability = 5;
+        this.durability = 10;
         this.durabilityMax = 10;
         this.description = "Hits multiple enemies within a range of 4 tiles.";
         this.degradeable = false;
+        this.cooldownMax = 25;
     }
 }
 exports.Spellbook = Spellbook;
@@ -20653,6 +20656,7 @@ class Warhammer extends weapon_1.Weapon {
         this.hitDelay = 225;
         this.useCost = 2;
         this.cooldownMax = 10;
+        this.degradeable = false;
     }
 }
 exports.Warhammer = Warhammer;
@@ -20804,8 +20808,17 @@ class Weapon extends equippable_1.Equippable {
                 this.cooldown--;
                 if (this.cooldown > 0 && this.equipped) {
                     this.equipped = false;
-                    this.wielder.inventory.weapon = this.previousWeapon;
-                    this.previousWeapon.equipped = true;
+                    const hasPreviousWeapon = this.wielder.inventory.items.some((item) => item === this.previousWeapon);
+                    if (hasPreviousWeapon &&
+                        this.previousWeapon !== null &&
+                        this.previousWeapon.broken === false &&
+                        this.previousWeapon.cooldown === 0) {
+                        this.wielder.inventory.weapon = this.previousWeapon;
+                        this.previousWeapon.equipped = true;
+                    }
+                    else {
+                        this.wielder.inventory.weapon = null;
+                    }
                 }
             }
         };

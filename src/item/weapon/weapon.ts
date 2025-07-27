@@ -205,8 +205,20 @@ export abstract class Weapon extends Equippable {
       this.cooldown--;
       if (this.cooldown > 0 && this.equipped) {
         this.equipped = false;
-        this.wielder.inventory.weapon = this.previousWeapon;
-        this.previousWeapon.equipped = true;
+        const hasPreviousWeapon = this.wielder.inventory.items.some(
+          (item) => item === this.previousWeapon,
+        );
+        if (
+          hasPreviousWeapon &&
+          this.previousWeapon !== null &&
+          this.previousWeapon.broken === false &&
+          this.previousWeapon.cooldown === 0
+        ) {
+          this.wielder.inventory.weapon = this.previousWeapon;
+          this.previousWeapon.equipped = true;
+        } else {
+          this.wielder.inventory.weapon = null;
+        }
       }
     }
   };
