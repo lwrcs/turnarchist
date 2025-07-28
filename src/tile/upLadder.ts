@@ -51,6 +51,7 @@ export class UpLadder extends Passageway {
       }
       this.game.changeLevelThroughLadder(player, this);
       Sound.forestMusic.pause();
+      Sound.caveMusic.pause();
     } catch (error) {
       console.error("Error during changeLevelThroughLadder:", error);
     }

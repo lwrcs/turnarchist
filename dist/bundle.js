@@ -27301,7 +27301,6 @@ const door_1 = __webpack_require__(/*! ../tile/door */ "./src/tile/door.ts");
 const knightEnemy_1 = __webpack_require__(/*! ../entity/enemy/knightEnemy */ "./src/entity/enemy/knightEnemy.ts");
 const entity_1 = __webpack_require__(/*! ../entity/entity */ "./src/entity/entity.ts");
 const chest_1 = __webpack_require__(/*! ../entity/object/chest */ "./src/entity/object/chest.ts");
-const goldenKey_1 = __webpack_require__(/*! ../item/goldenKey */ "./src/item/goldenKey.ts");
 const spawnfloor_1 = __webpack_require__(/*! ../tile/spawnfloor */ "./src/tile/spawnfloor.ts");
 const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
 const skullEnemy_1 = __webpack_require__(/*! ../entity/enemy/skullEnemy */ "./src/entity/enemy/skullEnemy.ts");
@@ -27310,10 +27309,7 @@ const crate_1 = __webpack_require__(/*! ../entity/object/crate */ "./src/entity/
 const armor_1 = __webpack_require__(/*! ../item/armor */ "./src/item/armor.ts");
 const particle_1 = __webpack_require__(/*! ../particle/particle */ "./src/particle/particle.ts");
 const spiketrap_1 = __webpack_require__(/*! ../tile/spiketrap */ "./src/tile/spiketrap.ts");
-const fountainTile_1 = __webpack_require__(/*! ../tile/fountainTile */ "./src/tile/fountainTile.ts");
 const pottedPlant_1 = __webpack_require__(/*! ../entity/object/pottedPlant */ "./src/entity/object/pottedPlant.ts");
-const insideLevelDoor_1 = __webpack_require__(/*! ../tile/insideLevelDoor */ "./src/tile/insideLevelDoor.ts");
-const button_1 = __webpack_require__(/*! ../tile/button */ "./src/tile/button.ts");
 const hitWarning_1 = __webpack_require__(/*! ../drawable/hitWarning */ "./src/drawable/hitWarning.ts");
 const upLadder_1 = __webpack_require__(/*! ../tile/upLadder */ "./src/tile/upLadder.ts");
 const downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/downLadder.ts");
@@ -27325,7 +27321,6 @@ const spawner_1 = __webpack_require__(/*! ../entity/enemy/spawner */ "./src/enti
 const vendingMachine_1 = __webpack_require__(/*! ../entity/object/vendingMachine */ "./src/entity/object/vendingMachine.ts");
 const wallTorch_1 = __webpack_require__(/*! ../tile/wallTorch */ "./src/tile/wallTorch.ts");
 const chargeEnemy_1 = __webpack_require__(/*! ../entity/enemy/chargeEnemy */ "./src/entity/enemy/chargeEnemy.ts");
-const shotgun_1 = __webpack_require__(/*! ../item/weapon/shotgun */ "./src/item/weapon/shotgun.ts");
 const heart_1 = __webpack_require__(/*! ../item/usable/heart */ "./src/item/usable/heart.ts");
 const spear_1 = __webpack_require__(/*! ../item/weapon/spear */ "./src/item/weapon/spear.ts");
 const player_1 = __webpack_require__(/*! ../player/player */ "./src/player/player.ts");
@@ -27345,12 +27340,10 @@ const fireWizard_1 = __webpack_require__(/*! ../entity/enemy/fireWizard */ "./sr
 const energyWizard_1 = __webpack_require__(/*! ../entity/enemy/energyWizard */ "./src/entity/enemy/energyWizard.ts");
 const reverb_1 = __webpack_require__(/*! ../sound/reverb */ "./src/sound/reverb.ts");
 const astarclass_1 = __webpack_require__(/*! ../utility/astarclass */ "./src/utility/astarclass.ts");
-const warhammer_1 = __webpack_require__(/*! ../item/weapon/warhammer */ "./src/item/weapon/warhammer.ts");
 const torch_1 = __webpack_require__(/*! ../item/light/torch */ "./src/item/light/torch.ts");
 const rookEnemy_1 = __webpack_require__(/*! ../entity/enemy/rookEnemy */ "./src/entity/enemy/rookEnemy.ts");
 const beamEffect_1 = __webpack_require__(/*! ../projectile/beamEffect */ "./src/projectile/beamEffect.ts");
 const environmentTypes_1 = __webpack_require__(/*! ../constants/environmentTypes */ "./src/constants/environmentTypes.ts");
-const pickaxe_1 = __webpack_require__(/*! ../item/tool/pickaxe */ "./src/item/tool/pickaxe.ts");
 const occultistEnemy_1 = __webpack_require__(/*! ../entity/enemy/occultistEnemy */ "./src/entity/enemy/occultistEnemy.ts");
 const decoration_1 = __webpack_require__(/*! ../tile/decorations/decoration */ "./src/tile/decorations/decoration.ts");
 const bomb_1 = __webpack_require__(/*! ../entity/object/bomb */ "./src/entity/object/bomb.ts");
@@ -27364,8 +27357,6 @@ const bigZombieEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigZombieEnemy 
 const candle_1 = __webpack_require__(/*! ../item/light/candle */ "./src/item/light/candle.ts");
 const glowBugEnemy_1 = __webpack_require__(/*! ../entity/enemy/glowBugEnemy */ "./src/entity/enemy/glowBugEnemy.ts");
 const gameplaySettings_1 = __webpack_require__(/*! ../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
-const itemGroup_1 = __webpack_require__(/*! ../item/itemGroup */ "./src/item/itemGroup.ts");
-const sword_1 = __webpack_require__(/*! ../item/weapon/sword */ "./src/item/weapon/sword.ts");
 const webglBlurRenderer_1 = __webpack_require__(/*! ../gui/webglBlurRenderer */ "./src/gui/webglBlurRenderer.ts");
 const utils_1 = __webpack_require__(/*! ../utility/utils */ "./src/utility/utils.ts");
 const tree_1 = __webpack_require__(/*! ../entity/object/tree */ "./src/entity/object/tree.ts");
@@ -27590,7 +27581,7 @@ class Room {
             spawner_1.Spawner.add(this, this.game, x, y);
         };
         // #endregion
-        // #region POPULATING METHODS
+        // #region ENTERING / EXITING ROOM METHODS
         this.linkExitToStart = () => {
             //if (this.type === RoomType.ROPEHOLE) return;
             if (this.addDoorWithOffset(this.level.startRoom.roomX +
@@ -27601,296 +27592,6 @@ class Room {
                 this.tunnelDoor.linkedDoor.linkedDoor = this.tunnelDoor;
             }
         };
-        this.populateEmpty = (rand) => {
-            this.addTorchesByArea();
-        };
-        this.populateTreasure = (rand) => {
-            this.addChests(10, rand);
-            this.addTorchesByArea();
-        };
-        this.populateDungeon = (rand) => {
-            //this.addChests(10, rand);
-            let factor = game_1.Game.rand(1, 36, rand);
-            if (factor < 30)
-                this.builder.addWallBlocks(rand);
-            if (factor % 4 === 0)
-                this.addChasms(rand);
-            this.addTorchesByArea();
-            if (factor > 15)
-                this.addSpikeTraps(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 3], rand), rand);
-            if (factor <= 6)
-                this.addVendingMachine(rand);
-            this.addRandomEnemies();
-            this.removeDoorObstructions();
-        };
-        this.populateBoss = (rand) => {
-            const bossDoor = this.getBossDoor();
-            this.addDoorTorches(bossDoor.x, bossDoor.y, bossDoor.doorDir);
-            this.addTorchesByArea();
-            this.addSpikeTraps(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 5], rand), rand);
-            this.addBosses(this.depth);
-            this.addRandomEnemies();
-        };
-        this.populateBigDungeon = (rand) => {
-            if (game_1.Game.rand(1, 4, rand) === 1)
-                this.addChasms(rand);
-            this.addTorchesByArea();
-            if (game_1.Game.rand(1, 3, rand) === 1)
-                this.addSpikeTraps(game_1.Game.randTable([3, 5, 7, 8], rand), rand);
-            this.addRandomEnemies();
-            this.removeDoorObstructions();
-        };
-        this.populateSpawner = (rand) => {
-            this.addTorchesByArea();
-            spawner_1.Spawner.add(this, this.game, Math.floor(this.roomX + this.width / 2), Math.floor(this.roomY + this.height / 2));
-            this.removeDoorObstructions();
-        };
-        this.populateKeyRoom = (rand) => {
-            this.addRandomTorches("medium");
-            this.items.push(new goldenKey_1.GoldenKey(this, Math.floor(this.roomX + this.width / 2), Math.floor(this.roomY + this.height / 2)));
-        };
-        this.populateFountain = (rand) => {
-            this.addRandomTorches("medium");
-            let centerX = Math.floor(this.roomX + this.width / 2);
-            let centerY = Math.floor(this.roomY + this.height / 2);
-            for (let x = centerX - 1; x <= centerX + 1; x++) {
-                for (let y = centerY - 1; y <= centerY + 1; y++) {
-                    this.roomArray[x][y] = new fountainTile_1.FountainTile(this, x, y, x - (centerX - 1), y - (centerY - 1));
-                }
-            }
-        };
-        this.populatePuzzle = (rand) => {
-            let d;
-            for (let x = this.roomX; x < this.roomX + this.width; x++) {
-                let y = this.roomY + Math.floor(this.height / 2);
-                if (x === this.roomX + Math.floor(this.width / 2)) {
-                    d = new insideLevelDoor_1.InsideLevelDoor(this, this.game, x, y + 1);
-                    this.roomArray[x][y + 1] = d;
-                }
-                else {
-                    this.roomArray[x][y] = new wall_1.Wall(this, x, y);
-                }
-            }
-            let x = game_1.Game.rand(this.roomX, this.roomX + this.width - 1, rand);
-            let y = game_1.Game.rand(this.roomY + Math.floor(this.height / 2) + 3, this.roomY + this.height - 2, rand);
-            this.roomArray[x][y] = new button_1.Button(this, x, y, d);
-            let crateTiles = this.getEmptyTiles().filter((t) => t.x >= this.roomX + 1 &&
-                t.x <= this.roomX + this.width - 2 &&
-                t.y >= this.roomY + Math.floor(this.height / 2) + 3 &&
-                t.y <= this.roomY + this.height - 2);
-            let numCrates = game_1.Game.randTable([1, 2, 2, 3, 4], rand);
-            for (let i = 0; i < numCrates; i++) {
-                let t = crateTiles.splice(game_1.Game.rand(0, crateTiles.length - 1, rand), 1)[0];
-                if (t)
-                    this.entities.push(new crate_1.Crate(this, this.game, t.x, t.y));
-            }
-            this.removeDoorObstructions();
-        };
-        this.populateSpikeCorridor = (rand) => {
-            for (let x = this.roomX; x < this.roomX + this.width; x++) {
-                for (let y = this.roomY + 1; y < this.roomY + this.height - 1; y++) {
-                    this.roomArray[x][y] = new spiketrap_1.SpikeTrap(this, x, y, game_1.Game.rand(0, 3, rand));
-                }
-            }
-            this.removeDoorObstructions();
-            this.addRandomTorches("medium");
-        };
-        this.populateCave = (rand) => {
-            let factor = game_1.Game.rand(1, 36, rand);
-            this.builder.addWallBlocks(rand);
-            if (factor > 15)
-                this.addSpikeTraps(game_1.Game.randTable([0, 0, 0, 1, 1, 2, 5], rand), rand);
-            let numEmptyTiles = this.getEmptyTiles().length;
-            let numEnemies = Math.ceil(numEmptyTiles * game_1.Game.randTable([0.25, 0.3, 0.35], rand));
-            this.addEnemies(numEnemies, rand);
-            if (this.level.environment.type === environmentTypes_1.EnvType.CAVE)
-                this.addResources((numEmptyTiles - numEnemies) * game_1.Game.randTable([0.1, 0.2, 0.3], rand), rand);
-            this.removeDoorObstructions();
-        };
-        this.populateUpLadder = (rand) => {
-            this.addRandomTorches("medium");
-            const { x, y } = this.getRoomCenter();
-            this.roomArray[x - 1][y - 1] = new upLadder_1.UpLadder(this, this.game, x - 1, y - 1);
-        };
-        this.populateDownLadder = (rand) => {
-            this.addTorches(1, rand, this.roomX + 3, this.roomY);
-            const { x, y } = this.getRoomCenter();
-            this.roomArray[x + 1][y - 1] = new downLadder_1.DownLadder(this, this.game, x + 1, y - 1);
-            const numChests = Math.ceil(Math.random() * 5);
-            let tiles = this.getEmptyTiles();
-            tiles = tiles.filter((tile) => tile.x !== x || tile.y !== y);
-            let weaponDropped = false;
-            let toolDropped = false;
-            let lightDropped = false;
-            for (let i = 0; i < numChests; i++) {
-                if (tiles.length > 0) {
-                    const { x, y } = this.getRandomEmptyPosition(tiles);
-                    let chest = new chest_1.Chest(this, this.game, x, y);
-                    /*
-                    if (!weaponDropped) {
-                      chest.getDrop(["weapon"], true);
-                      weaponDropped = true;
-                    } else
-                     */
-                    chest.getDrop([
-                        "consumable",
-                        "gem",
-                        "light",
-                        "tool",
-                        "fuel",
-                        "backpack",
-                        "weapon",
-                        "coin",
-                    ], false);
-                    tiles.filter((tile) => tile.x !== x && tile.y !== y);
-                    this.entities.push(chest);
-                }
-            }
-            if (this.depth === 0)
-                this.populateWeaponGroup(tiles);
-        };
-        this.populateWeaponGroup = (tiles) => {
-            const emptyTile = this.getRandomEmptyPosition(tiles);
-            const emptyTile2 = this.getRandomEmptyPosition(tiles, emptyTile);
-            const emptyTile3 = this.getRandomEmptyPosition(tiles, emptyTile2);
-            const weapons = new itemGroup_1.ItemGroup([
-                new spear_1.Spear(this, emptyTile.x, emptyTile.y),
-                new warhammer_1.Warhammer(this, emptyTile2.x, emptyTile2.y),
-                new sword_1.Sword(this, emptyTile3.x, emptyTile3.y),
-            ]);
-            for (const item of weapons.items) {
-                item.grouped = true;
-                item.group = weapons;
-                this.items.push(item);
-            }
-        };
-        this.populateRopeHole = (rand) => {
-            this.addRandomTorches("medium");
-            const { x, y } = this.getRoomCenter();
-            const environment = this.depth < 1 ? environmentTypes_1.EnvType.FOREST : environmentTypes_1.EnvType.CAVE;
-            //console.log("About to create DownLadder in rope hole");
-            let d = new downLadder_1.DownLadder(this, this.game, x, y, true, environment);
-            //console.log("DownLadder created, about to add to room array");
-            // Delay adding to room array to avoid triggering side path generation during level setup
-            setTimeout(() => {
-                this.roomArray[x][y] = d;
-                //console.log("DownLadder added to room array successfully (delayed)");
-            }, 0);
-        };
-        this.populateRopeCave = (rand) => {
-            const { x, y } = this.getRoomCenter();
-            let upLadder = new upLadder_1.UpLadder(this, this.game, x, y);
-            upLadder.isRope = true;
-            this.roomArray[x][y] = upLadder;
-            if (this.envType === environmentTypes_1.EnvType.CAVE)
-                this.placeVendingMachineInWall(new pickaxe_1.Pickaxe(this, 0, 0));
-            else
-                this.placeVendingMachineInWall();
-            this.removeDoorObstructions();
-        };
-        this.populateShop = (rand) => {
-            this.addTorches(2, rand);
-            const { x, y } = this.getRoomCenter();
-            vendingMachine_1.VendingMachine.add(this, this.game, x - 2, y - 1, new shotgun_1.Shotgun(this, 0, 0));
-            vendingMachine_1.VendingMachine.add(this, this.game, x + 2, y - 1, new heart_1.Heart(this, 0, 0));
-            vendingMachine_1.VendingMachine.add(this, this.game, x - 2, y + 2, new armor_1.Armor(this, 0, 0));
-            vendingMachine_1.VendingMachine.add(this, this.game, x + 2, y + 2, new spear_1.Spear(this, 0, 0));
-            this.removeDoorObstructions();
-        };
-        this.addTorchesByArea = () => {
-            let numTorches = Math.max(1, Math.floor(Math.sqrt(this.roomArea) / 3) -
-                Math.floor(Math.sqrt(this.depth)));
-            if (this.depth === 0) {
-                if (Math.random() < 0.25) {
-                    numTorches = 0;
-                }
-            }
-            else {
-                // Exponential falloff starting at depth 1, approaching 90% chance
-                const falloffRate = 0.4; // Controls how quickly it approaches 90%
-                const maxChance = 0.9;
-                const chance = maxChance * (1 - Math.exp(-falloffRate * (this.depth - 1)));
-                if (Math.random() < chance) {
-                    numTorches = 0;
-                }
-            }
-            this.addTorches(numTorches, random_1.Random.rand);
-        };
-        this.populate = (rand) => {
-            this.name = "";
-            switch (this.type) {
-                case RoomType.START:
-                    if (this.depth !== 0) {
-                        this.populateUpLadder(rand);
-                        this.placeVendingMachineInWall();
-                    }
-                    this.populateEmpty(rand);
-                    this.name = "FLOOR " + -this.depth;
-                    break;
-                case RoomType.BOSS:
-                    this.populateBoss(rand);
-                    this.name = "BOSS";
-                    break;
-                case RoomType.DUNGEON:
-                    if (this.level.environment.type === environmentTypes_1.EnvType.CAVE &&
-                        Math.random() <= 0.2) {
-                        this.populateCave(rand);
-                    }
-                    else {
-                        this.populateDungeon(rand);
-                    }
-                    break;
-                case RoomType.BIGDUNGEON:
-                    this.populateBigDungeon(rand);
-                    break;
-                case RoomType.FOUNTAIN:
-                    this.populateFountain(rand);
-                    break;
-                case RoomType.PUZZLE:
-                    this.populatePuzzle(rand);
-                    break;
-                case RoomType.SPIKECORRIDOR:
-                    this.populateSpikeCorridor(rand);
-                    break;
-                case RoomType.TREASURE:
-                    this.populateTreasure(rand);
-                    break;
-                case RoomType.KEYROOM:
-                    this.populateKeyRoom(rand);
-                    break;
-                case RoomType.GRASS:
-                    this.populateDungeon(rand);
-                    break;
-                case RoomType.BIGCAVE:
-                    this.populateCave(rand);
-                case RoomType.CAVE:
-                    this.populateCave(rand);
-                    break;
-                case RoomType.UPLADDER:
-                    this.populateUpLadder(rand);
-                    this.name = "FLOOR " + -this.depth;
-                    break;
-                case RoomType.DOWNLADDER:
-                    this.populateDownLadder(rand);
-                    this.name = "FLOOR " + -this.depth;
-                    break;
-                case RoomType.ROPEHOLE:
-                    this.populateRopeHole(rand);
-                    break;
-                case RoomType.ROPECAVE:
-                    this.populateRopeCave(rand);
-                    break;
-                case RoomType.SHOP:
-                    this.populateShop(rand);
-                    break;
-                case RoomType.SPAWNER:
-                    this.populateSpawner(rand);
-                    break;
-            }
-            this.message = this.name;
-        };
-        // #endregion
-        // #region ENTERING / EXITING ROOM METHODS
         this.exitLevel = () => {
             //this.game.onResize(); // stupid hack to keep fps high
             game_1.Game.shade_canvases = {};
@@ -29988,17 +29689,6 @@ class Room {
                 break;
         }
     }
-    // Many populate methods start with adding torches using the same pattern
-    addRandomTorches(intensity = "medium") {
-        const torchPatterns = {
-            none: [0, 0, 0],
-            low: [0, 0, 0, 1, 1],
-            medium: [0, 0, 0, 1, 1, 2, 2, 3],
-            high: [1, 1, 2, 2, 3, 3, 4],
-        };
-        const randTorches = game_1.Game.randTable(torchPatterns[intensity], random_1.Random.rand);
-        this.addTorches(randTorches, random_1.Random.rand);
-    }
     /**
      * Applies Gaussian blur to the specified offscreen canvas.
      *
@@ -30382,6 +30072,8 @@ exports.RoomBuilder = RoomBuilder;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Populator = void 0;
+const crate_1 = __webpack_require__(/*! ../entity/object/crate */ "./src/entity/object/crate.ts");
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const gameplaySettings_1 = __webpack_require__(/*! ../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
 const environment_1 = __webpack_require__(/*! ../level/environment */ "./src/level/environment.ts");
 const environmentTypes_1 = __webpack_require__(/*! ../constants/environmentTypes */ "./src/constants/environmentTypes.ts");
@@ -30390,13 +30082,60 @@ const utils_1 = __webpack_require__(/*! ../utility/utils */ "./src/utility/utils
 const propClusterer_1 = __webpack_require__(/*! ./propClusterer */ "./src/room/propClusterer.ts");
 const room_1 = __webpack_require__(/*! ./room */ "./src/room/room.ts");
 const downladderMaker_1 = __webpack_require__(/*! ../entity/downladderMaker */ "./src/entity/downladderMaker.ts");
+const game_2 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const wallTorch_1 = __webpack_require__(/*! ../tile/wallTorch */ "./src/tile/wallTorch.ts");
+const wall_1 = __webpack_require__(/*! ../tile/wall */ "./src/tile/wall.ts");
+const spiketrap_1 = __webpack_require__(/*! ../tile/spiketrap */ "./src/tile/spiketrap.ts");
+const chasm_1 = __webpack_require__(/*! ../tile/chasm */ "./src/tile/chasm.ts");
+const floor_1 = __webpack_require__(/*! ../tile/floor */ "./src/tile/floor.ts");
+const spawnfloor_1 = __webpack_require__(/*! ../tile/spawnfloor */ "./src/tile/spawnfloor.ts");
+const vendingMachine_1 = __webpack_require__(/*! ../entity/object/vendingMachine */ "./src/entity/object/vendingMachine.ts");
+const chest_1 = __webpack_require__(/*! ../entity/object/chest */ "./src/entity/object/chest.ts");
+const bomb_1 = __webpack_require__(/*! ../entity/object/bomb */ "./src/entity/object/bomb.ts");
+const heart_1 = __webpack_require__(/*! ../item/usable/heart */ "./src/item/usable/heart.ts");
+const candle_1 = __webpack_require__(/*! ../item/light/candle */ "./src/item/light/candle.ts");
+const armor_1 = __webpack_require__(/*! ../item/armor */ "./src/item/armor.ts");
+const spear_1 = __webpack_require__(/*! ../item/weapon/spear */ "./src/item/weapon/spear.ts");
+const torch_1 = __webpack_require__(/*! ../item/light/torch */ "./src/item/light/torch.ts");
+const goldenKey_1 = __webpack_require__(/*! ../item/goldenKey */ "./src/item/goldenKey.ts");
+const fountainTile_1 = __webpack_require__(/*! ../tile/fountainTile */ "./src/tile/fountainTile.ts");
+const insideLevelDoor_1 = __webpack_require__(/*! ../tile/insideLevelDoor */ "./src/tile/insideLevelDoor.ts");
+const button_1 = __webpack_require__(/*! ../tile/button */ "./src/tile/button.ts");
+const upLadder_1 = __webpack_require__(/*! ../tile/upLadder */ "./src/tile/upLadder.ts");
+const downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/downLadder.ts");
+const itemGroup_1 = __webpack_require__(/*! ../item/itemGroup */ "./src/item/itemGroup.ts");
+const warhammer_1 = __webpack_require__(/*! ../item/weapon/warhammer */ "./src/item/weapon/warhammer.ts");
+const sword_1 = __webpack_require__(/*! ../item/weapon/sword */ "./src/item/weapon/sword.ts");
+const pickaxe_1 = __webpack_require__(/*! ../item/tool/pickaxe */ "./src/item/tool/pickaxe.ts");
+const shotgun_1 = __webpack_require__(/*! ../item/weapon/shotgun */ "./src/item/weapon/shotgun.ts");
+const crabEnemy_1 = __webpack_require__(/*! ../entity/enemy/crabEnemy */ "./src/entity/enemy/crabEnemy.ts");
+const frogEnemy_1 = __webpack_require__(/*! ../entity/enemy/frogEnemy */ "./src/entity/enemy/frogEnemy.ts");
+const zombieEnemy_1 = __webpack_require__(/*! ../entity/enemy/zombieEnemy */ "./src/entity/enemy/zombieEnemy.ts");
+const skullEnemy_1 = __webpack_require__(/*! ../entity/enemy/skullEnemy */ "./src/entity/enemy/skullEnemy.ts");
+const energyWizard_1 = __webpack_require__(/*! ../entity/enemy/energyWizard */ "./src/entity/enemy/energyWizard.ts");
+const chargeEnemy_1 = __webpack_require__(/*! ../entity/enemy/chargeEnemy */ "./src/entity/enemy/chargeEnemy.ts");
+const rookEnemy_1 = __webpack_require__(/*! ../entity/enemy/rookEnemy */ "./src/entity/enemy/rookEnemy.ts");
+const bishopEnemy_1 = __webpack_require__(/*! ../entity/enemy/bishopEnemy */ "./src/entity/enemy/bishopEnemy.ts");
+const armoredzombieEnemy_1 = __webpack_require__(/*! ../entity/enemy/armoredzombieEnemy */ "./src/entity/enemy/armoredzombieEnemy.ts");
+const bigSkullEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigSkullEnemy */ "./src/entity/enemy/bigSkullEnemy.ts");
+const queenEnemy_1 = __webpack_require__(/*! ../entity/enemy/queenEnemy */ "./src/entity/enemy/queenEnemy.ts");
+const knightEnemy_1 = __webpack_require__(/*! ../entity/enemy/knightEnemy */ "./src/entity/enemy/knightEnemy.ts");
+const bigKnightEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigKnightEnemy */ "./src/entity/enemy/bigKnightEnemy.ts");
+const armoredSkullEnemy_1 = __webpack_require__(/*! ../entity/enemy/armoredSkullEnemy */ "./src/entity/enemy/armoredSkullEnemy.ts");
+const fireWizard_1 = __webpack_require__(/*! ../entity/enemy/fireWizard */ "./src/entity/enemy/fireWizard.ts");
+const occultistEnemy_1 = __webpack_require__(/*! ../entity/enemy/occultistEnemy */ "./src/entity/enemy/occultistEnemy.ts");
+const spawner_1 = __webpack_require__(/*! ../entity/enemy/spawner */ "./src/entity/enemy/spawner.ts");
+const bigZombieEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigZombieEnemy */ "./src/entity/enemy/bigZombieEnemy.ts");
+const coalResource_1 = __webpack_require__(/*! ../entity/resource/coalResource */ "./src/entity/resource/coalResource.ts");
+const goldResource_1 = __webpack_require__(/*! ../entity/resource/goldResource */ "./src/entity/resource/goldResource.ts");
+const emeraldResource_1 = __webpack_require__(/*! ../entity/resource/emeraldResource */ "./src/entity/resource/emeraldResource.ts");
 class Populator {
     constructor(level) {
         this.props = [];
         this.addedDownladder = false;
         this.populateRooms = () => {
             for (let room of this.level.rooms) {
-                room.populate(random_1.Random.rand);
+                this.populate(room, random_1.Random.rand);
             }
             this.level.rooms.forEach((room) => {
                 if (room.type === room_1.RoomType.START ||
@@ -30412,13 +30151,13 @@ class Populator {
         this.populateByEnvironment = (room) => {
             switch (room.envType) {
                 case environmentTypes_1.EnvType.CAVE:
-                    this.populateCave(room);
+                    this.populateCaveEnvironment(room);
                     break;
                 case environmentTypes_1.EnvType.FOREST:
-                    this.populateForest(room);
+                    this.populateForestEnvironment(room);
                     break;
                 default:
-                    this.populateDefault(room);
+                    this.populateDefaultEnvironment(room);
                     break;
             }
         };
@@ -30446,6 +30185,298 @@ class Populator {
             downLadderRoom.entities.push(downLadder);
         };
         this.populateByType = (room) => { };
+        // #endregion
+        // #region POPULATING METHODS
+        this.populateEmpty = (room, rand) => {
+            this.addTorchesByArea(room);
+        };
+        this.populateTreasure = (room, rand) => {
+            this.addChests(room, 10, rand);
+            this.addTorchesByArea(room);
+        };
+        this.populateDungeon = (room, rand) => {
+            //this.addChests(10, rand);
+            let factor = game_1.Game.rand(1, 36, rand);
+            if (factor < 30)
+                room.builder.addWallBlocks(rand);
+            if (factor % 4 === 0)
+                this.addChasms(room, rand);
+            this.addTorchesByArea(room);
+            if (factor > 15)
+                this.addSpikeTraps(room, game_1.Game.randTable([0, 0, 0, 1, 1, 2, 3], rand), rand);
+            if (factor <= 6)
+                this.addVendingMachine(room, rand);
+            this.addRandomEnemies(room);
+            room.removeDoorObstructions();
+        };
+        this.populateBoss = (room, rand) => {
+            const bossDoor = room.getBossDoor();
+            this.addDoorTorches(room, bossDoor.x, bossDoor.y, bossDoor.doorDir);
+            this.addTorchesByArea(room);
+            this.addSpikeTraps(room, game_1.Game.randTable([0, 0, 0, 1, 1, 2, 5], rand), rand);
+            this.addBosses(room, room.depth);
+            this.addRandomEnemies(room);
+        };
+        this.populateBigDungeon = (room, rand) => {
+            if (game_1.Game.rand(1, 4, rand) === 1)
+                this.addChasms(room, rand);
+            this.addTorchesByArea(room);
+            if (game_1.Game.rand(1, 3, rand) === 1)
+                this.addSpikeTraps(room, game_1.Game.randTable([3, 5, 7, 8], rand), rand);
+            this.addRandomEnemies(room);
+            room.removeDoorObstructions();
+        };
+        this.populateSpawner = (room, rand) => {
+            this.addTorchesByArea(room);
+            spawner_1.Spawner.add(room, room.game, Math.floor(room.roomX + room.width / 2), Math.floor(room.roomY + room.height / 2));
+            room.removeDoorObstructions();
+        };
+        this.populateKeyRoom = (room, rand) => {
+            this.addRandomTorches(room, "medium");
+            room.items.push(new goldenKey_1.GoldenKey(room, Math.floor(room.roomX + room.width / 2), Math.floor(room.roomY + room.height / 2)));
+        };
+        this.populateFountain = (room, rand) => {
+            this.addRandomTorches(room, "medium");
+            let centerX = Math.floor(room.roomX + room.width / 2);
+            let centerY = Math.floor(room.roomY + room.height / 2);
+            for (let x = centerX - 1; x <= centerX + 1; x++) {
+                for (let y = centerY - 1; y <= centerY + 1; y++) {
+                    room.roomArray[x][y] = new fountainTile_1.FountainTile(room, x, y, x - (centerX - 1), y - (centerY - 1));
+                }
+            }
+        };
+        this.populatePuzzle = (room, rand) => {
+            let d;
+            for (let x = room.roomX; x < room.roomX + room.width; x++) {
+                let y = room.roomY + Math.floor(room.height / 2);
+                if (x === room.roomX + Math.floor(room.width / 2)) {
+                    d = new insideLevelDoor_1.InsideLevelDoor(room, room.game, x, y + 1);
+                    room.roomArray[x][y + 1] = d;
+                }
+                else {
+                    room.roomArray[x][y] = new wall_1.Wall(room, x, y);
+                }
+            }
+            let x = game_1.Game.rand(room.roomX, room.roomX + room.width - 1, rand);
+            let y = game_1.Game.rand(room.roomY + Math.floor(room.height / 2) + 3, room.roomY + room.height - 2, rand);
+            room.roomArray[x][y] = new button_1.Button(room, x, y, d);
+            let crateTiles = room
+                .getEmptyTiles()
+                .filter((t) => t.x >= room.roomX + 1 &&
+                t.x <= room.roomX + room.width - 2 &&
+                t.y >= room.roomY + Math.floor(room.height / 2) + 3 &&
+                t.y <= room.roomY + room.height - 2);
+            let numCrates = game_1.Game.randTable([1, 2, 2, 3, 4], rand);
+            for (let i = 0; i < numCrates; i++) {
+                let t = crateTiles.splice(game_1.Game.rand(0, crateTiles.length - 1, rand), 1)[0];
+                if (t)
+                    room.entities.push(new crate_1.Crate(room, room.game, t.x, t.y));
+            }
+            room.removeDoorObstructions();
+        };
+        this.populateSpikeCorridor = (room, rand) => {
+            for (let x = room.roomX; x < room.roomX + room.width; x++) {
+                for (let y = room.roomY + 1; y < room.roomY + room.height - 1; y++) {
+                    room.roomArray[x][y] = new spiketrap_1.SpikeTrap(room, x, y, game_1.Game.rand(0, 3, rand));
+                }
+            }
+            room.removeDoorObstructions();
+            this.addRandomTorches(room, "medium");
+        };
+        this.populateCave = (room, rand) => {
+            let factor = game_1.Game.rand(1, 36, rand);
+            room.builder.addWallBlocks(rand);
+            if (factor > 15)
+                this.addSpikeTraps(room, game_1.Game.randTable([0, 0, 0, 1, 1, 2, 5], rand), rand);
+            let numEmptyTiles = room.getEmptyTiles().length;
+            let numEnemies = Math.ceil(numEmptyTiles * game_1.Game.randTable([0.25, 0.3, 0.35], rand));
+            this.addEnemies(room, numEnemies, rand);
+            if (room.level.environment.type === environmentTypes_1.EnvType.CAVE)
+                this.addResources(room, (numEmptyTiles - numEnemies) * game_1.Game.randTable([0.1, 0.2, 0.3], rand), rand);
+            room.removeDoorObstructions();
+        };
+        this.populateUpLadder = (room, rand) => {
+            this.addRandomTorches(room, "medium");
+            const { x, y } = room.getRoomCenter();
+            room.roomArray[x - 1][y - 1] = new upLadder_1.UpLadder(room, room.game, x - 1, y - 1);
+        };
+        this.populateDownLadder = (room, rand) => {
+            this.addTorches(room, 1, rand, room.roomX + 3, room.roomY);
+            const { x, y } = room.getRoomCenter();
+            room.roomArray[x + 1][y - 1] = new downLadder_1.DownLadder(room, room.game, x + 1, y - 1);
+            const numChests = Math.ceil(Math.random() * 5);
+            let tiles = room.getEmptyTiles();
+            tiles = tiles.filter((tile) => tile.x !== x || tile.y !== y);
+            let weaponDropped = false;
+            let toolDropped = false;
+            let lightDropped = false;
+            for (let i = 0; i < numChests; i++) {
+                if (tiles.length > 0) {
+                    const { x, y } = room.getRandomEmptyPosition(tiles);
+                    let chest = new chest_1.Chest(room, room.game, x, y);
+                    /*
+                    if (!weaponDropped) {
+                      chest.getDrop(["weapon"], true);
+                      weaponDropped = true;
+                    } else
+                     */
+                    chest.getDrop([
+                        "consumable",
+                        "gem",
+                        "light",
+                        "tool",
+                        "fuel",
+                        "backpack",
+                        "weapon",
+                        "coin",
+                    ], false);
+                    tiles.filter((tile) => tile.x !== x && tile.y !== y);
+                    room.entities.push(chest);
+                }
+            }
+            if (room.depth === 0)
+                this.populateWeaponGroup(room, tiles);
+        };
+        this.populateWeaponGroup = (room, tiles) => {
+            const emptyTile = room.getRandomEmptyPosition(tiles);
+            const emptyTile2 = room.getRandomEmptyPosition(tiles, emptyTile);
+            const emptyTile3 = room.getRandomEmptyPosition(tiles, emptyTile2);
+            const weapons = new itemGroup_1.ItemGroup([
+                new spear_1.Spear(room, emptyTile.x, emptyTile.y),
+                new warhammer_1.Warhammer(room, emptyTile2.x, emptyTile2.y),
+                new sword_1.Sword(room, emptyTile3.x, emptyTile3.y),
+            ]);
+            for (const item of weapons.items) {
+                item.grouped = true;
+                item.group = weapons;
+                room.items.push(item);
+            }
+        };
+        this.populateRopeHole = (room, rand) => {
+            this.addRandomTorches(room, "medium");
+            const { x, y } = room.getRoomCenter();
+            const environment = room.depth < 1 ? environmentTypes_1.EnvType.FOREST : environmentTypes_1.EnvType.CAVE;
+            //console.log("About to create DownLadder in rope hole");
+            let d = new downLadder_1.DownLadder(room, room.game, x, y, true, environment);
+            //console.log("DownLadder created, about to add to room array");
+            // Delay adding to room array to avoid triggering side path generation during level setup
+            setTimeout(() => {
+                room.roomArray[x][y] = d;
+                //console.log("DownLadder added to room array successfully (delayed)");
+            }, 0);
+        };
+        this.populateRopeCave = (room, rand) => {
+            const { x, y } = room.getRoomCenter();
+            let upLadder = new upLadder_1.UpLadder(room, room.game, x, y);
+            upLadder.isRope = true;
+            room.roomArray[x][y] = upLadder;
+            if (room.envType === environmentTypes_1.EnvType.CAVE)
+                this.placeVendingMachineInWall(room, new pickaxe_1.Pickaxe(room, 0, 0));
+            else
+                this.placeVendingMachineInWall(room);
+            room.removeDoorObstructions();
+        };
+        this.populateShop = (room, rand) => {
+            this.addTorches(room, 2, rand);
+            const { x, y } = room.getRoomCenter();
+            vendingMachine_1.VendingMachine.add(room, room.game, x - 2, y - 1, new shotgun_1.Shotgun(room, 0, 0));
+            vendingMachine_1.VendingMachine.add(room, room.game, x + 2, y - 1, new heart_1.Heart(room, 0, 0));
+            vendingMachine_1.VendingMachine.add(room, room.game, x - 2, y + 2, new armor_1.Armor(room, 0, 0));
+            vendingMachine_1.VendingMachine.add(room, room.game, x + 2, y + 2, new spear_1.Spear(room, 0, 0));
+            room.removeDoorObstructions();
+        };
+        this.addTorchesByArea = (room) => {
+            let numTorches = Math.max(1, Math.floor(Math.sqrt(room.roomArea) / 3) -
+                Math.floor(Math.sqrt(room.depth)));
+            if (room.depth === 0) {
+                if (Math.random() < 0.25) {
+                    numTorches = 0;
+                }
+            }
+            else {
+                // Exponential falloff starting at depth 1, approaching 90% chance
+                const falloffRate = 0.4; // Controls how quickly it approaches 90%
+                const maxChance = 0.9;
+                const chance = maxChance * (1 - Math.exp(-falloffRate * (room.depth - 1)));
+                if (Math.random() < chance) {
+                    numTorches = 0;
+                }
+            }
+            this.addTorches(room, numTorches, random_1.Random.rand);
+        };
+        this.populate = (room, rand) => {
+            room.name = "";
+            switch (room.type) {
+                case room_1.RoomType.START:
+                    if (room.depth !== 0) {
+                        this.populateUpLadder(room, rand);
+                        this.placeVendingMachineInWall(room);
+                    }
+                    this.populateEmpty(room, rand);
+                    room.name = "FLOOR " + -room.depth;
+                    break;
+                case room_1.RoomType.BOSS:
+                    this.populateBoss(room, rand);
+                    room.name = "BOSS";
+                    break;
+                case room_1.RoomType.DUNGEON:
+                    if (room.level.environment.type === environmentTypes_1.EnvType.CAVE &&
+                        Math.random() <= 0.2) {
+                        this.populateCave(room, rand);
+                    }
+                    else {
+                        this.populateDungeon(room, rand);
+                    }
+                    break;
+                case room_1.RoomType.BIGDUNGEON:
+                    this.populateBigDungeon(room, rand);
+                    break;
+                case room_1.RoomType.FOUNTAIN:
+                    this.populateFountain(room, rand);
+                    break;
+                case room_1.RoomType.PUZZLE:
+                    this.populatePuzzle(room, rand);
+                    break;
+                case room_1.RoomType.SPIKECORRIDOR:
+                    this.populateSpikeCorridor(room, rand);
+                    break;
+                case room_1.RoomType.TREASURE:
+                    this.populateTreasure(room, rand);
+                    break;
+                case room_1.RoomType.KEYROOM:
+                    this.populateKeyRoom(room, rand);
+                    break;
+                case room_1.RoomType.GRASS:
+                    this.populateDungeon(room, rand);
+                    break;
+                case room_1.RoomType.BIGCAVE:
+                    this.populateCave(room, rand);
+                case room_1.RoomType.CAVE:
+                    this.populateCave(room, rand);
+                    break;
+                case room_1.RoomType.UPLADDER:
+                    this.populateUpLadder(room, rand);
+                    room.name = "FLOOR " + -room.depth;
+                    break;
+                case room_1.RoomType.DOWNLADDER:
+                    this.populateDownLadder(room, rand);
+                    room.name = "FLOOR " + -room.depth;
+                    break;
+                case room_1.RoomType.ROPEHOLE:
+                    this.populateRopeHole(room, rand);
+                    break;
+                case room_1.RoomType.ROPECAVE:
+                    this.populateRopeCave(room, rand);
+                    break;
+                case room_1.RoomType.SHOP:
+                    this.populateShop(room, rand);
+                    break;
+                case room_1.RoomType.SPAWNER:
+                    this.populateSpawner(room, rand);
+                    break;
+            }
+            room.message = room.name;
+        };
         this.level = level;
         this.props = [];
         this.medianDensity = gameplaySettings_1.GameplaySettings.MEDIAN_ROOM_DENSITY;
@@ -30487,13 +30518,10 @@ class Populator {
             }
         }
     }
-    populateDungeon(room) {
-        this.populateDefault(room);
+    populateDungeonEnvironment(room) {
+        this.populateDefaultEnvironment(room);
     }
-    populateGraveyard(room) {
-        this.populateDefault(room);
-    }
-    populateCave(room) {
+    populateCaveEnvironment(room) {
         const numProps = this.getNumProps(room);
         //this.addProps(room, numProps, room.envType);
         this.addPropsWithClustering(room, numProps, room.envType, {
@@ -30503,7 +30531,7 @@ class Populator {
             useSeedPosition: false,
         });
     }
-    populateForest(room) {
+    populateForestEnvironment(room) {
         const numProps = this.getNumProps(room, 0.75);
         //this.addProps(room, numProps, room.envType);
         this.addPropsWithClustering(room, numProps, room.envType, {
@@ -30523,7 +30551,7 @@ class Populator {
         //console.log("percentFull", `${percentFull}%`);
         return numProps;
     }
-    populateDefault(room) {
+    populateDefaultEnvironment(room) {
         const numProps = this.getNumProps(room);
         //this.addProps(room, numProps, room.envType);
         this.addPropsWithClustering(room, numProps, room.envType, {
@@ -30532,6 +30560,455 @@ class Populator {
             maxInfluenceDistance: 12,
             useSeedPosition: false,
         });
+    }
+    // #region TILE ADDING METHODS
+    addDoorTorches(room, x, y, doorDir) {
+        if (doorDir !== game_2.Direction.UP && doorDir !== game_2.Direction.DOWN) {
+            return;
+        }
+        if (x && y) {
+            room.calculateWallInfo();
+            const leftWallInfo = room.wallInfo.get(`${x - 1},${y}`);
+            const rightWallInfo = room.wallInfo.get(`${x + 1},${y}`);
+            const leftTile = room.roomArray[x - 1]?.[y];
+            const rightTile = room.roomArray[x + 1]?.[y];
+            const leftOpen = leftWallInfo?.isLeftWall === false;
+            const rightOpen = rightWallInfo?.isRightWall === false;
+            if (leftOpen) {
+                room.roomArray[x - 1][y] = new wallTorch_1.WallTorch(room, x - 1, y);
+            }
+            if (rightOpen) {
+                room.roomArray[x + 1][y] = new wallTorch_1.WallTorch(room, x + 1, y);
+            }
+        }
+    }
+    addTorches(room, numTorches, rand, placeX, placeY) {
+        if (room.level.environment.type === environmentTypes_1.EnvType.FOREST &&
+            room.type !== room_1.RoomType.DOWNLADDER)
+            return;
+        if (placeX !== undefined &&
+            placeY !== undefined &&
+            room.roomArray[placeX]?.[placeY] instanceof wall_1.Wall) {
+            room.roomArray[placeX][placeY] = new wallTorch_1.WallTorch(room, placeX, placeY);
+            return;
+        }
+        let walls = [];
+        for (let xx = room.roomX + 1; xx < room.roomX + room.width - 2; xx++) {
+            for (let yy = room.roomY; yy < room.roomY + room.height - 1; yy++) {
+                if (room.roomArray[xx][yy] instanceof wall_1.Wall &&
+                    !(room.roomArray[xx][yy + 1] instanceof wall_1.Wall)) {
+                    walls.push(room.roomArray[xx][yy]);
+                }
+            }
+        }
+        let bottomWalls = [];
+        // Separate loop for bottom wall
+        for (let xx = room.roomX + 1; xx < room.roomX + room.width - 2; xx++) {
+            const yy = room.roomY + room.height - 1; // Bottom wall
+            if (room.roomArray[xx][yy] instanceof wall_1.Wall &&
+                !(room.roomArray[xx][yy + 1] instanceof wall_1.Wall)) {
+                bottomWalls.push(room.roomArray[xx][yy]);
+            }
+        }
+        // Randomly distribute torches between walls and bottom walls
+        const wallTorches = game_1.Game.rand(0, numTorches, rand);
+        const bottomWallTorches = numTorches - wallTorches;
+        for (let i = 0; i < wallTorches; i++) {
+            if (walls.length == 0)
+                break;
+            const randomIndex = game_1.Game.rand(0, walls.length - 1, rand);
+            const t = walls.splice(randomIndex, 1)[0];
+            const x = t.x;
+            const y = t.y;
+            room.roomArray[x][y] = new wallTorch_1.WallTorch(room, x, y);
+        }
+        for (let i = 0; i < bottomWallTorches; i++) {
+            if (bottomWalls.length == 0)
+                break;
+            const randomIndex = game_1.Game.rand(0, bottomWalls.length - 1, rand);
+            const t = bottomWalls.splice(randomIndex, 1)[0];
+            const x = t.x;
+            const y = t.y;
+            room.roomArray[x][y] = new wallTorch_1.WallTorch(room, x, y, true);
+        }
+    }
+    addChasms(room, rand) {
+        // add chasms
+        let w = game_1.Game.rand(2, 4, rand);
+        let h = game_1.Game.rand(2, 4, rand);
+        let xmin = room.roomX + 2;
+        let xmax = room.roomX + room.width - w - 2;
+        let ymin = room.roomY + 2;
+        let ymax = room.roomY + room.height - h - 2;
+        if (xmax < xmin || ymax < ymin)
+            return;
+        let x = game_1.Game.rand(xmin, xmax, rand);
+        let y = game_1.Game.rand(ymin, ymax, rand);
+        for (let xx = x - 1; xx < x + w + 1; xx++) {
+            for (let yy = y - 1; yy < y + h + 1; yy++) {
+                // add a floor border
+                if (xx === x - 1 || xx === x + w || yy === y - 1 || yy === y + h) {
+                    if (!(room.roomArray[xx][yy] instanceof spawnfloor_1.SpawnFloor))
+                        room.roomArray[xx][yy] = new floor_1.Floor(room, xx, yy);
+                }
+                else
+                    room.roomArray[xx][yy] = new chasm_1.Chasm(room, xx, yy, xx === x, xx === x + w - 1, yy === y, yy === y + h - 1);
+            }
+        }
+    }
+    addSpikeTraps(room, numSpikes, rand) {
+        if (room.level.environment.type === environmentTypes_1.EnvType.FOREST ||
+            room.envType === environmentTypes_1.EnvType.FOREST)
+            return;
+        // add spikes
+        let tiles = room.getEmptyTiles();
+        for (let i = 0; i < numSpikes; i++) {
+            const { x, y } = room.getRandomEmptyPosition(tiles);
+            room.roomArray[x][y] = new spiketrap_1.SpikeTrap(room, x, y);
+        }
+    }
+    // #endregion
+    // #region ADDING ENTITIES
+    // Function to add enemies to the room
+    addEnemies(room, numEnemies, rand) {
+        if (gameplaySettings_1.GameplaySettings.NO_ENEMIES === true)
+            return;
+        if (room.envType === environmentTypes_1.EnvType.FOREST)
+            numEnemies /= 2;
+        // Get all empty tiles in the room
+        let tiles = room.getEmptyTiles();
+        if (tiles === null)
+            return;
+        //don't put enemies near the entrances so you don't get screwed instantly
+        // Create a Set to store coordinates that should be excluded
+        const excludedCoords = new Set();
+        // For each door, add coordinates in a 5x5 area around it to excluded set
+        for (const door of room.doors) {
+            for (let dx = -2; dx <= 2; dx++) {
+                for (let dy = -2; dy <= 2; dy++) {
+                    excludedCoords.add(`${door.x + dx},${door.y + dy}`);
+                }
+            }
+        }
+        // Filter tiles that aren't in the excluded set
+        tiles = tiles.filter((tile) => !excludedCoords.has(`${tile.x},${tile.y}`));
+        // Loop through the number of enemies to be added
+        for (let i = 0; i < numEnemies; i++) {
+            let rerolls = 1;
+            if (tiles.length === 0) {
+                console.log(`No tiles left to spawn enemies`);
+                break;
+            }
+            let emptyTiles = room.getRandomEmptyPosition(tiles);
+            if (emptyTiles.x === null || emptyTiles.y === null) {
+                i = numEnemies;
+                break;
+            }
+            const { x, y } = emptyTiles;
+            // Define the enemy tables for each depth level
+            let tables = room.level.enemyParameters.enemyTables;
+            // Define the maximum depth level
+            let max_depth_table = room.level.enemyParameters.maxDepthTable;
+            // Get the current depth level, capped at the maximum
+            let d = Math.min(room.depth, max_depth_table);
+            // If there is a table for the current depth level
+            if (tables[d] && tables[d].length > 0) {
+                // Function to add an enemy to the room
+                let addEnemy = (enemy) => {
+                    // Check if the enemy overlaps with any other enemies
+                    for (let xx = 0; xx < enemy.w; xx++) {
+                        for (let yy = 0; yy < enemy.h; yy++) {
+                            if (!tiles.some((tt) => tt.x === x + xx && tt.y === y + yy)) {
+                                // If it does, increment the enemy count and return false
+                                numEnemies++;
+                                return false;
+                            }
+                        }
+                    }
+                    // If it doesn't, add the enemy to the room, remove the tiles used from the available pool, and return true
+                    room.entities.push(enemy);
+                    for (let xx = 0; xx < enemy.w; xx++) {
+                        for (let yy = 0; yy < enemy.h; yy++) {
+                            tiles = tiles.filter((t) => !(t.x === x + xx && t.y === y + yy));
+                        }
+                    }
+                    return true;
+                };
+                // Randomly select an enemy type from the table
+                let type = game_1.Game.randTable(tables[d], Math.random);
+                switch (type) {
+                    case 1:
+                        crabEnemy_1.CrabEnemy.add(room, room.game, x, y);
+                        break;
+                    case 2:
+                        frogEnemy_1.FrogEnemy.add(room, room.game, x, y);
+                        break;
+                    case 3:
+                        zombieEnemy_1.ZombieEnemy.add(room, room.game, x, y);
+                        break;
+                    case 4:
+                        skullEnemy_1.SkullEnemy.add(room, room.game, x, y);
+                        break;
+                    case 5:
+                        energyWizard_1.EnergyWizardEnemy.add(room, room.game, x, y);
+                        break;
+                    case 6:
+                        chargeEnemy_1.ChargeEnemy.add(room, room.game, x, y);
+                        break;
+                    case 7:
+                        rookEnemy_1.RookEnemy.add(room, room.game, x, y);
+                        break;
+                    case 8:
+                        bishopEnemy_1.BishopEnemy.add(room, room.game, x, y);
+                        break;
+                    case 9:
+                        armoredzombieEnemy_1.ArmoredzombieEnemy.add(room, room.game, x, y);
+                        break;
+                    case 10:
+                        if (addEnemy(new bigSkullEnemy_1.BigSkullEnemy(room, room.game, x, y))) {
+                            // clear out some space
+                            for (let xx = 0; xx < 2; xx++) {
+                                for (let yy = 0; yy < 2; yy++) {
+                                    room.roomArray[x + xx][y + yy] = new floor_1.Floor(room, x + xx, y + yy); // remove any walls
+                                }
+                            }
+                        }
+                        break;
+                    case 11:
+                        queenEnemy_1.QueenEnemy.add(room, room.game, x, y);
+                        break;
+                    case 12:
+                        knightEnemy_1.KnightEnemy.add(room, room.game, x, y);
+                        break;
+                    case 13:
+                        if (addEnemy(new bigKnightEnemy_1.BigKnightEnemy(room, room.game, x, y))) {
+                            // clear out some space
+                            for (let xx = 0; xx < 2; xx++) {
+                                for (let yy = 0; yy < 2; yy++) {
+                                    room.roomArray[x + xx][y + yy] = new floor_1.Floor(room, x + xx, y + yy); // remove any walls
+                                }
+                            }
+                        }
+                        break;
+                    case 14:
+                        armoredSkullEnemy_1.ArmoredSkullEnemy.add(room, room.game, x, y);
+                        break;
+                    case 15:
+                        fireWizard_1.FireWizardEnemy.add(room, room.game, x, y);
+                        break;
+                }
+            }
+        }
+        let spawnerAmounts = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2,
+            2, 2, 3, 3, 4, 5, 3,
+        ];
+        if (room.depth > 0) {
+            let spawnerAmount = game_1.Game.randTable(spawnerAmounts, rand);
+            //console.log(`Adding ${spawnerAmount} spawners`);
+            this.addSpawners(room, spawnerAmount, rand);
+        }
+        let occultistAmounts = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1,
+        ];
+        if (room.depth > 1) {
+            let occultistAmount = game_1.Game.randTable(occultistAmounts, rand);
+            //console.log(`Adding ${occultistAmount} occultists`);
+            this.addOccultists(room, occultistAmount, rand);
+        }
+    }
+    addRandomEnemies(room) {
+        let numEmptyTiles = room.getEmptyTiles().length;
+        /*
+        let numEnemies = Math.ceil(
+          numEmptyTiles * Math.min(room.depth * 0.1 + 0.5, 0.15), //room.depth * 0.01 is starting value
+        );
+        */
+        const factor = Math.min((room.depth + 2) * 0.05, 0.3);
+        const numEnemies = Math.ceil(Math.max(utils_1.Utils.randomNormalInt(0, numEmptyTiles * factor), numEmptyTiles * factor));
+        //if (numEnemies > numEmptyTiles / 2) numEnemies = numEmptyTiles / 2;
+        this.addEnemies(room, numEnemies, Math.random);
+    }
+    addSpawners(room, numSpawners, rand) {
+        let tiles = room.getEmptyTiles();
+        if (tiles === null) {
+            //console.log(`No tiles left to spawn spawners`);
+            return;
+        }
+        for (let i = 0; i < numSpawners; i++) {
+            const { x, y } = room.getRandomEmptyPosition(tiles);
+            let spawnTable = room.level
+                .getEnemyParameters()
+                //spawners should use enemy pools from the previous depth
+                .enemyTables[Math.max(0, room.depth - 1)].filter((t) => t !== 7);
+            const spawner = spawner_1.Spawner.add(room, room.game, x, y, spawnTable);
+            return spawner;
+        }
+    }
+    addOccultists(room, numOccultists, rand) {
+        let tiles = room.getEmptyTiles();
+        if (tiles === null) {
+            //console.log(`No tiles left to spawn spawners`);
+            return;
+        }
+        for (let i = 0; i < numOccultists; i++) {
+            const { x, y } = room.getRandomEmptyPosition(tiles);
+            const occultist = occultistEnemy_1.OccultistEnemy.add(room, room.game, x, y);
+            return occultist;
+        }
+    }
+    addBosses(room, depth) {
+        if (gameplaySettings_1.GameplaySettings.NO_ENEMIES === true)
+            return;
+        let tiles = room.getEmptyTiles();
+        if (tiles === null) {
+            //console.log(`No tiles left to spawn spawners`);
+            return;
+        }
+        let bosses = ["reaper", "queen", "bigskullenemy", "bigzombieenemy"];
+        if (depth > 0) {
+            bosses.push("occultist");
+            bosses.filter((b) => b !== "queen");
+        }
+        const boss = game_1.Game.randTable(bosses, Math.random);
+        const { x, y } = boss.startsWith("big")
+            ? room.getBigRandomEmptyPosition(tiles)
+            : room.getRandomEmptyPosition(tiles);
+        switch (boss) {
+            case "reaper":
+                const spawner = this.addSpawners(room, 1, Math.random);
+                spawner.dropTable = ["weapon", "equipment"];
+                spawner.dropChance = 1;
+                break;
+            case "queen":
+                const queen = queenEnemy_1.QueenEnemy.add(room, room.game, x, y);
+                queen.dropTable = ["weapon", "equipment"];
+                queen.dropChance = 1;
+                break;
+            case "bigskullenemy":
+                const bigSkull = bigSkullEnemy_1.BigSkullEnemy.add(room, room.game, x, y);
+                bigSkull.dropTable = [
+                    "weapon",
+                    "equipment",
+                    "consumable",
+                    "gem",
+                    "tool",
+                ];
+                break;
+            case "occultist":
+                const occultist = this.addOccultists(room, 1, Math.random);
+                occultist.dropTable = ["weapon", "equipment"];
+                occultist.dropChance = 1;
+                break;
+            case "bigzombieenemy":
+                const bigZombie = bigZombieEnemy_1.BigZombieEnemy.add(room, room.game, x, y);
+                bigZombie.dropTable = [
+                    "weapon",
+                    "equipment",
+                    "consumable",
+                    "gem",
+                    "tool",
+                ];
+                bigZombie.dropChance = 1;
+                break;
+        }
+    }
+    addChests(room, numChests, rand) {
+        // add chests
+        let tiles = room.getEmptyTiles();
+        for (let i = 0; i < numChests; i++) {
+            const position = room.getRandomEmptyPosition(tiles);
+            if (!position) {
+                // No more empty tiles available, break out of loop
+                break;
+            }
+            const { x, y } = position;
+            room.entities.push(new chest_1.Chest(room, room.game, x, y));
+        }
+    }
+    addBombs(room, numBombs, rand) {
+        let tiles = room.getEmptyTiles();
+        for (let i = 0; i < room.getEmptyTiles().length; i++) {
+            const { x, y } = room.getRandomEmptyPosition(tiles);
+            bomb_1.Bomb.add(room, room.game, x, y);
+        }
+    }
+    addResources(room, numResources, rand) {
+        let tiles = room.getEmptyTiles();
+        for (let i = 0; i < numResources; i++) {
+            const { x, y } = room.getRandomEmptyPosition(tiles);
+            let r = rand();
+            if (r <= (10 - room.depth ** 3) / 10)
+                coalResource_1.CoalResource.add(room, room.game, x, y);
+            else if (r <= (10 - (room.depth - 2) ** 3) / 10)
+                goldResource_1.GoldResource.add(room, room.game, x, y);
+            else
+                emeraldResource_1.EmeraldResource.add(room, room.game, x, y);
+        }
+    }
+    addVendingMachine(room, rand, placeX, placeY, item) {
+        const pos = room.getRandomEmptyPosition(room.getEmptyTiles());
+        let x = placeX ? placeX : pos.x;
+        let y = placeY ? placeY : pos.y;
+        let table = room.depth > 0
+            ? [
+                1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 1, 1, 1, 2, 2, 1, 1, 3, 4, 5, 5, 5,
+                5, 5,
+            ]
+            : [1, 1, 1];
+        let type = game_1.Game.randTable(table, rand);
+        if (item) {
+            vendingMachine_1.VendingMachine.add(room, room.game, x, y, item);
+            return;
+        }
+        switch (type) {
+            case 1:
+                vendingMachine_1.VendingMachine.add(room, room.game, x, y, new heart_1.Heart(room, x, y));
+                break;
+            case 2:
+                vendingMachine_1.VendingMachine.add(room, room.game, x, y, new candle_1.Candle(room, x, y));
+                break;
+            case 3:
+                vendingMachine_1.VendingMachine.add(room, room.game, x, y, new armor_1.Armor(room, x, y));
+                break;
+            case 4:
+                vendingMachine_1.VendingMachine.add(room, room.game, x, y, new spear_1.Spear(room, x, y));
+                break;
+            case 5:
+                vendingMachine_1.VendingMachine.add(room, room.game, x, y, new torch_1.Torch(room, x, y));
+                break;
+        }
+    }
+    // Many populate methods start with adding torches using the same pattern
+    addRandomTorches(room, intensity = "medium") {
+        const torchPatterns = {
+            none: [0, 0, 0],
+            low: [0, 0, 0, 1, 1],
+            medium: [0, 0, 0, 1, 1, 2, 2, 3],
+            high: [1, 1, 2, 2, 3, 3, 4],
+        };
+        const randTorches = game_1.Game.randTable(torchPatterns[intensity], random_1.Random.rand);
+        this.addTorches(room, randTorches, random_1.Random.rand);
+    }
+    /**
+     * Places a VendingMachine in an empty wall.
+     */
+    placeVendingMachineInWall(room, item) {
+        const emptyWalls = room.getEmptyWall();
+        if (emptyWalls.length === 0)
+            return;
+        // Select a random empty wall
+        const selectedWall = game_1.Game.randTable(emptyWalls, random_1.Random.rand);
+        if (!selectedWall)
+            return;
+        // Remove the selected wall
+        const removedWallInfo = room.removeEmptyWall(selectedWall);
+        if (!removedWallInfo)
+            return;
+        const { x, y } = removedWallInfo;
+        // Create and add the VendingMachine
+        this.addVendingMachine(room, random_1.Random.rand, x, y, item);
     }
 }
 exports.Populator = Populator;
@@ -32486,6 +32963,7 @@ class UpLadder extends passageway_1.Passageway {
                 }
                 this.game.changeLevelThroughLadder(player, this);
                 sound_1.Sound.forestMusic.pause();
+                sound_1.Sound.caveMusic.pause();
             }
             catch (error) {
                 console.error("Error during changeLevelThroughLadder:", error);
