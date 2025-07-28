@@ -1002,6 +1002,7 @@ export class Room {
     rand: () => number,
     placeX?: number,
     placeY?: number,
+    item?: Item,
   ) {
     const pos = this.getRandomEmptyPosition(this.getEmptyTiles());
 
@@ -1016,6 +1017,10 @@ export class Room {
           ]
         : [1, 1, 1];
     let type = Game.randTable(table, rand);
+    if (item) {
+      VendingMachine.add(this, this.game, x, y, item);
+      return;
+    }
     switch (type) {
       case 1:
         VendingMachine.add(this, this.game, x, y, new Heart(this, x, y));
@@ -1318,6 +1323,9 @@ export class Room {
     let upLadder = new UpLadder(this, this.game, x, y);
     upLadder.isRope = true;
     this.roomArray[x][y] = upLadder;
+    if (this.envType === EnvType.CAVE)
+      this.placeVendingMachineInWall(new Pickaxe(this, 0, 0));
+    else this.placeVendingMachineInWall();
 
     this.removeDoorObstructions();
   };
@@ -3814,7 +3822,7 @@ export class Room {
   /**
    * Places a VendingMachine in an empty wall.
    */
-  placeVendingMachineInWall(): void {
+  placeVendingMachineInWall(item?: Item): void {
     const emptyWalls = this.getEmptyWall();
     if (emptyWalls.length === 0) return;
 
@@ -3829,7 +3837,7 @@ export class Room {
     const { x, y } = removedWallInfo;
 
     // Create and add the VendingMachine
-    this.addVendingMachine(Random.rand, x, y);
+    this.addVendingMachine(Random.rand, x, y, item);
   }
 
   // Add methods to manage blur cache

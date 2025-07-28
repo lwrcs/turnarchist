@@ -3572,7 +3572,11 @@ class DownladderMaker extends entity_1.Entity {
     constructor(room, game, x, y) {
         super(room, game, x, y);
         this.createDownladder = () => {
-            const newTile = new downLadder_1.DownLadder(this.room, this.game, this.x, this.y, true, 2, lockable_1.LockType.NONE);
+            let environment = this.room.depth < 1 ? environmentTypes_1.EnvType.FOREST : environmentTypes_1.EnvType.CAVE;
+            if (this.room.depth > 1) {
+                environment = Math.random() < 0.5 ? environmentTypes_1.EnvType.FOREST : environmentTypes_1.EnvType.CAVE;
+            }
+            const newTile = new downLadder_1.DownLadder(this.room, this.game, this.x, this.y, true, environment, lockable_1.LockType.NONE);
             this.room.roomArray[this.x][this.y] = newTile;
         };
         this.draw = (delta) => { };
@@ -11263,6 +11267,8 @@ const warhammer_1 = __webpack_require__(/*! ../../item/weapon/warhammer */ "./sr
 const torch_1 = __webpack_require__(/*! ../../item/light/torch */ "./src/item/light/torch.ts");
 const spellbook_1 = __webpack_require__(/*! ../../item/weapon/spellbook */ "./src/item/weapon/spellbook.ts");
 const candle_1 = __webpack_require__(/*! ../../item/light/candle */ "./src/item/light/candle.ts");
+const pickaxe_1 = __webpack_require__(/*! ../../item/tool/pickaxe */ "./src/item/tool/pickaxe.ts");
+const utils_1 = __webpack_require__(/*! ../../utility/utils */ "./src/utility/utils.ts");
 let OPEN_TIME = 150;
 let FILL_COLOR = "#5a595b";
 let OUTLINE_COLOR = "#292c36";
@@ -11486,6 +11492,9 @@ class VendingMachine extends entity_1.Entity {
         }
         else if (this.item instanceof candle_1.Candle) {
             this.setCost(1, [new coin_1.Coin(room, 0, 0)], [9, 10, 11], 2);
+        }
+        else if (this.item instanceof pickaxe_1.Pickaxe) {
+            this.setCost(1, [new coin_1.Coin(room, 0, 0)], [utils_1.Utils.randomNormalInt(15, 25)]);
         }
     }
     get type() {
@@ -27341,6 +27350,7 @@ const torch_1 = __webpack_require__(/*! ../item/light/torch */ "./src/item/light
 const rookEnemy_1 = __webpack_require__(/*! ../entity/enemy/rookEnemy */ "./src/entity/enemy/rookEnemy.ts");
 const beamEffect_1 = __webpack_require__(/*! ../projectile/beamEffect */ "./src/projectile/beamEffect.ts");
 const environmentTypes_1 = __webpack_require__(/*! ../constants/environmentTypes */ "./src/constants/environmentTypes.ts");
+const pickaxe_1 = __webpack_require__(/*! ../item/tool/pickaxe */ "./src/item/tool/pickaxe.ts");
 const occultistEnemy_1 = __webpack_require__(/*! ../entity/enemy/occultistEnemy */ "./src/entity/enemy/occultistEnemy.ts");
 const decoration_1 = __webpack_require__(/*! ../tile/decorations/decoration */ "./src/tile/decorations/decoration.ts");
 const bomb_1 = __webpack_require__(/*! ../entity/object/bomb */ "./src/entity/object/bomb.ts");
@@ -27772,6 +27782,10 @@ class Room {
             let upLadder = new upLadder_1.UpLadder(this, this.game, x, y);
             upLadder.isRope = true;
             this.roomArray[x][y] = upLadder;
+            if (this.envType === environmentTypes_1.EnvType.CAVE)
+                this.placeVendingMachineInWall(new pickaxe_1.Pickaxe(this, 0, 0));
+            else
+                this.placeVendingMachineInWall();
             this.removeDoorObstructions();
         };
         this.populateShop = (rand) => {
@@ -29941,7 +29955,7 @@ class Room {
                 emeraldResource_1.EmeraldResource.add(this, this.game, x, y);
         }
     }
-    addVendingMachine(rand, placeX, placeY) {
+    addVendingMachine(rand, placeX, placeY, item) {
         const pos = this.getRandomEmptyPosition(this.getEmptyTiles());
         let x = placeX ? placeX : pos.x;
         let y = placeY ? placeY : pos.y;
@@ -29952,6 +29966,10 @@ class Room {
             ]
             : [1, 1, 1];
         let type = game_1.Game.randTable(table, rand);
+        if (item) {
+            vendingMachine_1.VendingMachine.add(this, this.game, x, y, item);
+            return;
+        }
         switch (type) {
             case 1:
                 vendingMachine_1.VendingMachine.add(this, this.game, x, y, new heart_1.Heart(this, x, y));
@@ -30246,7 +30264,7 @@ class Room {
     /**
      * Places a VendingMachine in an empty wall.
      */
-    placeVendingMachineInWall() {
+    placeVendingMachineInWall(item) {
         const emptyWalls = this.getEmptyWall();
         if (emptyWalls.length === 0)
             return;
@@ -30260,7 +30278,7 @@ class Room {
             return;
         const { x, y } = removedWallInfo;
         // Create and add the VendingMachine
-        this.addVendingMachine(random_1.Random.rand, x, y);
+        this.addVendingMachine(random_1.Random.rand, x, y, item);
     }
 }
 exports.Room = Room;
@@ -31739,6 +31757,7 @@ exports.Door = Door;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DownLadder = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
 const upLadder_1 = __webpack_require__(/*! ./upLadder */ "./src/tile/upLadder.ts");
 const events_1 = __webpack_require__(/*! ../event/events */ "./src/event/events.ts");
 const eventBus_1 = __webpack_require__(/*! ../event/eventBus */ "./src/event/eventBus.ts");
@@ -31844,7 +31863,9 @@ class DownLadder extends passageway_1.Passageway {
         this.depth = room.depth;
         this.isSidePath = isSidePath;
         this.environment = environment;
-        const lock = isSidePath ? lockable_1.LockType.LOCKED : lockable_1.LockType.NONE;
+        const lock = isSidePath && !gameConstants_1.GameConstants.DEVELOPER_MODE
+            ? lockable_1.LockType.LOCKED
+            : lockable_1.LockType.NONE;
         // Initialize lockable with the passed lockType
         this.lockable = new lockable_1.Lockable(game, {
             lockType: lock,

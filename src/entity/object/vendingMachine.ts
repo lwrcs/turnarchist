@@ -24,6 +24,8 @@ import { Warhammer } from "../../item/weapon/warhammer";
 import { Torch } from "../../item/light/torch";
 import { Spellbook } from "../../item/weapon/spellbook";
 import { Candle } from "../../item/light/candle";
+import { Pickaxe } from "../../item/tool/pickaxe";
+import { Utils } from "../../utility/utils";
 
 let OPEN_TIME = 150;
 let FILL_COLOR = "#5a595b";
@@ -72,6 +74,8 @@ export class VendingMachine extends Entity {
       this.setCost(2); // Uses default random cost
     } else if (this.item instanceof Candle) {
       this.setCost(1, [new Coin(room, 0, 0)], [9, 10, 11], 2);
+    } else if (this.item instanceof Pickaxe) {
+      this.setCost(1, [new Coin(room, 0, 0)], [Utils.randomNormalInt(15, 25)]);
     }
   }
 

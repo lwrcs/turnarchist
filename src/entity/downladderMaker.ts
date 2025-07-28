@@ -25,13 +25,17 @@ export class DownladderMaker extends Entity {
   }
 
   createDownladder = () => {
+    let environment = this.room.depth < 1 ? EnvType.FOREST : EnvType.CAVE;
+    if (this.room.depth > 1) {
+      environment = Math.random() < 0.5 ? EnvType.FOREST : EnvType.CAVE;
+    }
     const newTile = new DownLadder(
       this.room,
       this.game,
       this.x,
       this.y,
       true,
-      2,
+      environment,
       LockType.NONE,
     );
     this.room.roomArray[this.x][this.y] = newTile;
