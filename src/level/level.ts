@@ -173,6 +173,13 @@ export class Level {
     const emptyTiles = randomRoom.getEmptyTiles();
     console.log(`Room has ${emptyTiles.length} empty tiles`);
 
+    if (emptyTiles.length === 0) {
+      console.error(
+        `No empty tiles found in room ${randomRoom.id} for key placement`,
+      );
+      return;
+    }
+
     const randomIndex = Math.floor(Math.random() * emptyTiles.length);
     const randomTile = emptyTiles[randomIndex];
 

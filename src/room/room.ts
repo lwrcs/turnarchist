@@ -966,7 +966,12 @@ export class Room {
     // add chests
     let tiles = this.getEmptyTiles();
     for (let i = 0; i < numChests; i++) {
-      const { x, y } = this.getRandomEmptyPosition(tiles);
+      const position = this.getRandomEmptyPosition(tiles);
+      if (!position) {
+        // No more empty tiles available, break out of loop
+        break;
+      }
+      const { x, y } = position;
       this.entities.push(new Chest(this, this.game, x, y));
     }
   }
@@ -1058,6 +1063,11 @@ export class Room {
   };
 
   populateEmpty = (rand: () => number) => {
+    this.addTorchesByArea();
+  };
+
+  populateTreasure = (rand: () => number) => {
+    this.addChests(10, rand);
     this.addTorchesByArea();
   };
 
@@ -1401,6 +1411,7 @@ export class Room {
         this.populateSpikeCorridor(rand);
         break;
       case RoomType.TREASURE:
+        this.populateTreasure(rand);
         break;
       case RoomType.KEYROOM:
         this.populateKeyRoom(rand);
@@ -3319,7 +3330,7 @@ export class Room {
   getRandomEmptyPosition(
     tiles: Tile[],
     ignore?: { x: number; y: number },
-  ): { x: number; y: number } {
+  ): { x: number; y: number } | null {
     if (tiles.length === 0) return null;
     const tile = tiles.splice(
       Game.rand(0, tiles.length - 1, Random.rand),

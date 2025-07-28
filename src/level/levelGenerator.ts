@@ -21,6 +21,7 @@ import {
 } from "./partitionGenerator";
 import { LevelValidator, ValidationResult } from "./levelValidator";
 import { GenerationVisualizer } from "./generationVisualizer";
+import { PngPartitionGenerator } from "./pngPartitionGenerator";
 
 export class LevelGenerator {
   game: Game;
@@ -33,11 +34,13 @@ export class LevelGenerator {
   static ANIMATION_CONSTANT = 1;
   private validator: LevelValidator;
   private visualizer: GenerationVisualizer;
+  private pngPartitionGenerator: PngPartitionGenerator;
 
   constructor() {
     // Don't initialize partitionGenerator here yet since we need game instance
     this.validator = null;
     this.visualizer = null;
+    this.pngPartitionGenerator = new PngPartitionGenerator();
   }
 
   private setOpenWallsForPartitions = (
@@ -170,16 +173,58 @@ export class LevelGenerator {
 
     // Generate partitions based on whether it's a side path or main path
     let partitions: Partition[];
-    if (isSidePath) {
-      partitions = await this.partitionGenerator.generateCavePartitions(50, 50);
+
+    const shouldUsePNG = GameConstants.USE_PNG_LEVELS && !isSidePath;
+    const rollPNG = Random.rand() < 0.25;
+    if (shouldUsePNG && rollPNG) {
+      // Use PNG-based level generation for MAIN PATHS ONLY
+      const pngUrl = await this.selectRandomLevelForDepth(depth);
+
+      if (pngUrl) {
+        console.log(`Using PNG level generation from: ${pngUrl}`);
+        partitions = await this.pngPartitionGenerator.generatePartitionsFromPng(
+          pngUrl,
+          game,
+          depth,
+          isSidePath,
+        );
+      }
+
+      // Fallback to procedural generation if PNG generation fails or no PNG found
+      if (!pngUrl || partitions.length === 0) {
+        if (!pngUrl) {
+          console.warn(
+            `No PNG levels found for depth ${depth}, falling back to procedural generation`,
+          );
+        } else {
+          console.warn(
+            "PNG generation failed, falling back to procedural generation",
+          );
+        }
+        partitions = await this.partitionGenerator.generateDungeonPartitions(
+          game,
+          this.levelParams.mapWidth,
+          this.levelParams.mapHeight,
+          depth,
+          this.levelParams,
+        );
+      }
     } else {
-      partitions = await this.partitionGenerator.generateDungeonPartitions(
-        game,
-        this.levelParams.mapWidth,
-        this.levelParams.mapHeight,
-        depth,
-        this.levelParams,
-      );
+      // Use procedural generation for side paths OR when PNG is disabled
+      if (isSidePath) {
+        partitions = await this.partitionGenerator.generateCavePartitions(
+          50,
+          50,
+        );
+      } else {
+        partitions = await this.partitionGenerator.generateDungeonPartitions(
+          game,
+          this.levelParams.mapWidth,
+          this.levelParams.mapHeight,
+          depth,
+          this.levelParams,
+        );
+      }
     }
 
     // Use validator instead of direct overlap checking
@@ -293,6 +338,61 @@ export class LevelGenerator {
       this.game.drawTextScreen("generating level");
     }
   };
+
+  private async selectRandomLevelForDepth(
+    depth: number,
+  ): Promise<string | null> {
+    console.log(`Looking for PNG levels for depth ${depth}...`);
+
+    // Try to find available variations for this depth
+    const availableVariations: string[] = [];
+    const maxVariations = 10; // Check up to 10 variations per depth
+
+    for (let variation = 0; variation < maxVariations; variation++) {
+      const filename = `${depth}_${variation}.png`;
+      const fullPath = `res/levels/${filename}`;
+
+      // Check if file exists by trying to load it
+      if (await this.checkImageExists(fullPath)) {
+        availableVariations.push(fullPath);
+        console.log(`  ✓ Found variation: ${filename}`);
+      }
+    }
+
+    if (availableVariations.length === 0) {
+      console.log(`  ❌ No PNG levels found for depth ${depth}`);
+      return null;
+    }
+
+    // Randomly select one of the available variations
+    const selectedIndex = Math.floor(
+      Random.rand() * availableVariations.length,
+    );
+    const selectedPath = availableVariations[selectedIndex];
+
+    console.log(
+      `  🎲 Selected ${selectedPath} (${selectedIndex + 1}/${availableVariations.length} available)`,
+    );
+    return selectedPath;
+  }
+
+  private async checkImageExists(imagePath: string): Promise<boolean> {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        resolve(true);
+      };
+      img.onerror = () => {
+        resolve(false);
+      };
+      // Set a timeout to avoid hanging
+      setTimeout(() => {
+        resolve(false);
+      }, 1000);
+
+      img.src = imagePath;
+    });
+  }
 }
 
 const getPathParameters = (

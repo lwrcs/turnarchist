@@ -103,6 +103,8 @@ export class GameConstants {
   static BLUR_DOWNSAMPLE_FACTOR = 8; // Blur at 1/4 size for performance (1 = full size, 4 = quarter size)
   static ENEMIES_BLOCK_LIGHT = false;
 
+  static USE_PNG_LEVELS = true;
+
   static readonly SHADE_LAYER_COMPOSITE_OPERATIONS = [
     "source-over",
     "screen",
