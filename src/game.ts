@@ -10,6 +10,7 @@ import { DownLadder } from "./tile/downLadder";
 import { TextBox } from "./game/textbox";
 import { createGameState, GameState, loadGameState } from "./game/gameState";
 import { DoorDir } from "./tile/door";
+import { LevelImageGenerator } from "./level/levelImageGenerator";
 import { Enemy } from "./entity/enemy/enemy";
 import { TutorialListener } from "./game/tutorialListener";
 import { MouseCursor } from "./gui/mouseCursor";
@@ -203,7 +204,7 @@ export class Game {
   justTransitioned: boolean = false;
 
   tip: string = Tips.getRandomTip();
-
+  private currentLevelGenerator: LevelImageGenerator | null = null;
   static text_rendering_canvases: Record<string, HTMLCanvasElement>;
   static readonly letters = "abcdefghijklmnopqrstuvwxyz1234567890,.!?:'()[]%-/";
   static readonly letter_widths = [
@@ -844,14 +845,23 @@ export class Game {
         this.pushMessage(`Equipping an item takes a turn is now ${enabled}`);
         break;
       case "webgl":
-        GameConstants.TOGGLE_USE_WEBGL_BLUR();
-        break;
       case "hq":
         GameConstants.TOGGLE_HIGH_QUALITY_BLUR();
+        break;
+      case "genroom":
+        this.generateAndShowRoomLayout();
+        break;
+      case "cleargen":
+        this.currentLevelGenerator = null;
+        this.pushMessage("Cleared generated level display");
         break;
       default:
         if (command.startsWith("new ")) {
           this.room.addNewEnemy(command.slice(4) as EnemyType);
+        } else if (command.startsWith("fill")) {
+          while (this.room.getEmptyTiles().length > 0) {
+            this.room.addNewEnemy(command.slice(5) as EnemyType);
+          }
         }
         break;
     }
@@ -860,6 +870,65 @@ export class Game {
   private setupEventListeners(): void {
     //console.log("Setting up event listeners");
     globalEventBus.on("ChatCommand", this.commandHandler.bind(this));
+  }
+
+  private generateAndShowRoomLayout(): void {
+    // Generate different patterns
+    const patterns: ("center" | "split" | "corners")[] = [
+      "center",
+      "split",
+      "corners",
+    ];
+    const pattern = patterns[Math.floor(Math.random() * patterns.length)];
+
+    // Generate level with random parameters
+    const numRooms = 8 + Math.floor(Math.random() * 12); // 8-20 rooms
+    const width = 60 + Math.floor(Math.random() * 40); // 60-100 width
+    const height = 50 + Math.floor(Math.random() * 30); // 50-80 height
+
+    const generator = LevelImageGenerator.generateRandomLevel(
+      width,
+      height,
+      numRooms,
+      Math.random,
+      pattern,
+    );
+
+    // Check accessibility
+    const accessible = generator.areRoomsAccessible();
+    const accessibilityText = accessible
+      ? "✓ All rooms accessible"
+      : "✗ Some rooms inaccessible";
+
+    // Store generator for drawing
+    this.currentLevelGenerator = generator;
+
+    this.pushMessage(
+      `Generated ${numRooms} rooms (${pattern} pattern) - ${accessibilityText}`,
+    );
+    this.pushMessage("Level layout shown on screen. Use '/cleargen' to clear.");
+
+    // Save PNG with organized filename
+    const timestamp = new Date()
+      .toISOString()
+      .slice(0, 19)
+      .replace(/[T:]/g, "_");
+    const filename = `${pattern}_${width}x${height}_${numRooms}rooms_${timestamp}.png`;
+
+    generator.savePNG(filename);
+    this.pushMessage(`PNG saved as: generated_levels/${filename}`);
+    this.pushMessage("Check browser downloads or console for data URL");
+
+    // Log detailed info for developers
+    if (GameConstants.DEVELOPER_MODE) {
+      console.log("Generated level details:", {
+        pattern,
+        dimensions: `${width}x${height}`,
+        numRooms,
+        accessible,
+        rooms: generator.getRooms(),
+      });
+    }
   }
 
   maxScale = () => {
@@ -1536,6 +1605,11 @@ export class Game {
     Game.ctx.globalAlpha = 1;
     if (!this.started && this.levelState !== LevelState.LEVEL_GENERATION) {
       this.drawStartScreen(delta * 10);
+    }
+
+    // Draw level generator if active
+    if (this.currentLevelGenerator) {
+      this.currentLevelGenerator.draw(10, 10, 3);
     }
 
     MouseCursor.getInstance().draw(delta, this.isMobile);

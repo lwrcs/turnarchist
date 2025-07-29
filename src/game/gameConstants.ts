@@ -35,6 +35,8 @@ import { Gold } from "../item/resource/gold";
 import { Sword } from "../item/weapon/sword";
 import { Apple } from "../item/usable/apple";
 import { WebGLBlurRenderer } from "../gui/webglBlurRenderer";
+import { ScytheBlade } from "../item/weapon/scytheBlade";
+import { ScytheHandle } from "../item/weapon/scytheHandle";
 
 export class GameConstants {
   static readonly VERSION = "v1.1.0"; //"v0.6.3";
@@ -280,6 +282,9 @@ export class GameConstants {
     Pickaxe,
     Coal,
     Apple,
+
+    ScytheBlade,
+    ScytheHandle,
 
     SpellbookPage,
     SpellbookPage,

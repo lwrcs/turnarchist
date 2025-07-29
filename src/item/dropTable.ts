@@ -31,6 +31,8 @@ import { Utils } from "../utility/utils";
 import { Geode } from "./resource/geode";
 import { Scythe } from "./weapon/scythe";
 import { Hourglass } from "./usable/hourglass";
+import { ScytheHandle } from "./weapon/scytheHandle";
+import { ScytheBlade } from "./weapon/scytheBlade";
 
 interface Drop {
   itemType: string;
@@ -48,6 +50,9 @@ export const ItemTypeMap: { [key: string]: typeof Item } = {
   greataxe: Greataxe,
   scythe: Scythe,
   hourglass: Hourglass,
+
+  scytheblade: ScytheBlade,
+  scythehandle: ScytheHandle,
 
   armor: Armor,
 
@@ -114,7 +119,19 @@ export class DropTable {
     },
     {
       itemType: "scythe",
-      dropRate: 10,
+      dropRate: 25,
+      category: ["reaper"],
+      unique: true,
+    },
+    {
+      itemType: "scytheblade",
+      dropRate: 5,
+      category: ["reaper"],
+      unique: true,
+    },
+    {
+      itemType: "scythehandle",
+      dropRate: 5,
       category: ["reaper"],
       unique: true,
     },

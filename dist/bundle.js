@@ -11879,6 +11879,7 @@ const input_1 = __webpack_require__(/*! ./game/input */ "./src/game/input.ts");
 const downLadder_1 = __webpack_require__(/*! ./tile/downLadder */ "./src/tile/downLadder.ts");
 const textbox_1 = __webpack_require__(/*! ./game/textbox */ "./src/game/textbox.ts");
 const gameState_1 = __webpack_require__(/*! ./game/gameState */ "./src/game/gameState.ts");
+const levelImageGenerator_1 = __webpack_require__(/*! ./level/levelImageGenerator */ "./src/level/levelImageGenerator.ts");
 const mouseCursor_1 = __webpack_require__(/*! ./gui/mouseCursor */ "./src/gui/mouseCursor.ts");
 const eventBus_1 = __webpack_require__(/*! ./event/eventBus */ "./src/event/eventBus.ts");
 const reverb_1 = __webpack_require__(/*! ./sound/reverb */ "./src/sound/reverb.ts");
@@ -11983,6 +11984,7 @@ class Game {
         this.ellipsisStartTime = 0;
         this.justTransitioned = false;
         this.tip = tips_1.Tips.getRandomTip();
+        this.currentLevelGenerator = null;
         this.focusTimeout = null;
         this.FOCUS_TIMEOUT_DURATION = 15000; // 5 seconds
         this.wasMuted = false;
@@ -12342,14 +12344,24 @@ class Game {
                     this.pushMessage(`Equipping an item takes a turn is now ${enabled}`);
                     break;
                 case "webgl":
-                    gameConstants_1.GameConstants.TOGGLE_USE_WEBGL_BLUR();
-                    break;
                 case "hq":
                     gameConstants_1.GameConstants.TOGGLE_HIGH_QUALITY_BLUR();
+                    break;
+                case "genroom":
+                    this.generateAndShowRoomLayout();
+                    break;
+                case "cleargen":
+                    this.currentLevelGenerator = null;
+                    this.pushMessage("Cleared generated level display");
                     break;
                 default:
                     if (command.startsWith("new ")) {
                         this.room.addNewEnemy(command.slice(4));
+                    }
+                    else if (command.startsWith("fill")) {
+                        while (this.room.getEmptyTiles().length > 0) {
+                            this.room.addNewEnemy(command.slice(5));
+                        }
                     }
                     break;
             }
@@ -12771,6 +12783,10 @@ class Game {
             if (!this.started && this.levelState !== LevelState.LEVEL_GENERATION) {
                 this.drawStartScreen(delta * 10);
             }
+            // Draw level generator if active
+            if (this.currentLevelGenerator) {
+                this.currentLevelGenerator.draw(10, 10, 3);
+            }
             mouseCursor_1.MouseCursor.getInstance().draw(delta, this.isMobile);
             Game.ctx.restore(); // Restore the canvas state
         };
@@ -13142,6 +13158,48 @@ class Game {
     setupEventListeners() {
         //console.log("Setting up event listeners");
         eventBus_1.globalEventBus.on("ChatCommand", this.commandHandler.bind(this));
+    }
+    generateAndShowRoomLayout() {
+        // Generate different patterns
+        const patterns = [
+            "center",
+            "split",
+            "corners",
+        ];
+        const pattern = patterns[Math.floor(Math.random() * patterns.length)];
+        // Generate level with random parameters
+        const numRooms = 8 + Math.floor(Math.random() * 12); // 8-20 rooms
+        const width = 60 + Math.floor(Math.random() * 40); // 60-100 width
+        const height = 50 + Math.floor(Math.random() * 30); // 50-80 height
+        const generator = levelImageGenerator_1.LevelImageGenerator.generateRandomLevel(width, height, numRooms, Math.random, pattern);
+        // Check accessibility
+        const accessible = generator.areRoomsAccessible();
+        const accessibilityText = accessible
+            ? "✓ All rooms accessible"
+            : "✗ Some rooms inaccessible";
+        // Store generator for drawing
+        this.currentLevelGenerator = generator;
+        this.pushMessage(`Generated ${numRooms} rooms (${pattern} pattern) - ${accessibilityText}`);
+        this.pushMessage("Level layout shown on screen. Use '/cleargen' to clear.");
+        // Save PNG with organized filename
+        const timestamp = new Date()
+            .toISOString()
+            .slice(0, 19)
+            .replace(/[T:]/g, "_");
+        const filename = `${pattern}_${width}x${height}_${numRooms}rooms_${timestamp}.png`;
+        generator.savePNG(filename);
+        this.pushMessage(`PNG saved as: generated_levels/${filename}`);
+        this.pushMessage("Check browser downloads or console for data URL");
+        // Log detailed info for developers
+        if (gameConstants_1.GameConstants.DEVELOPER_MODE) {
+            console.log("Generated level details:", {
+                pattern,
+                dimensions: `${width}x${height}`,
+                numRooms,
+                accessible,
+                rooms: generator.getRooms(),
+            });
+        }
     }
     destroy() {
         window.removeEventListener("blur", this.handleWindowBlur);
@@ -13558,6 +13616,8 @@ const greataxe_1 = __webpack_require__(/*! ../item/weapon/greataxe */ "./src/ite
 const pickaxe_1 = __webpack_require__(/*! ../item/tool/pickaxe */ "./src/item/tool/pickaxe.ts");
 const scythe_1 = __webpack_require__(/*! ../item/weapon/scythe */ "./src/item/weapon/scythe.ts");
 const apple_1 = __webpack_require__(/*! ../item/usable/apple */ "./src/item/usable/apple.ts");
+const scytheBlade_1 = __webpack_require__(/*! ../item/weapon/scytheBlade */ "./src/item/weapon/scytheBlade.ts");
+const scytheHandle_1 = __webpack_require__(/*! ../item/weapon/scytheHandle */ "./src/item/weapon/scytheHandle.ts");
 class GameConstants {
 }
 exports.GameConstants = GameConstants;
@@ -13756,6 +13816,8 @@ GameConstants.STARTING_DEV_INVENTORY = [
     pickaxe_1.Pickaxe,
     coal_1.Coal,
     apple_1.Apple,
+    scytheBlade_1.ScytheBlade,
+    scytheHandle_1.ScytheHandle,
     spellbookPage_1.SpellbookPage,
     spellbookPage_1.SpellbookPage,
     spellbookPage_1.SpellbookPage,
@@ -18062,6 +18124,8 @@ const utils_1 = __webpack_require__(/*! ../utility/utils */ "./src/utility/utils
 const geode_1 = __webpack_require__(/*! ./resource/geode */ "./src/item/resource/geode.ts");
 const scythe_1 = __webpack_require__(/*! ./weapon/scythe */ "./src/item/weapon/scythe.ts");
 const hourglass_1 = __webpack_require__(/*! ./usable/hourglass */ "./src/item/usable/hourglass.ts");
+const scytheHandle_1 = __webpack_require__(/*! ./weapon/scytheHandle */ "./src/item/weapon/scytheHandle.ts");
+const scytheBlade_1 = __webpack_require__(/*! ./weapon/scytheBlade */ "./src/item/weapon/scytheBlade.ts");
 exports.ItemTypeMap = {
     dualdagger: dualdagger_1.DualDagger,
     warhammer: warhammer_1.Warhammer,
@@ -18070,6 +18134,8 @@ exports.ItemTypeMap = {
     greataxe: greataxe_1.Greataxe,
     scythe: scythe_1.Scythe,
     hourglass: hourglass_1.Hourglass,
+    scytheblade: scytheBlade_1.ScytheBlade,
+    scythehandle: scytheHandle_1.ScytheHandle,
     armor: armor_1.Armor,
     pickaxe: pickaxe_1.Pickaxe,
     hammer: hammer_1.Hammer,
@@ -18130,7 +18196,19 @@ DropTable.drops = [
     },
     {
         itemType: "scythe",
-        dropRate: 10,
+        dropRate: 25,
+        category: ["reaper"],
+        unique: true,
+    },
+    {
+        itemType: "scytheblade",
+        dropRate: 5,
+        category: ["reaper"],
+        unique: true,
+    },
+    {
+        itemType: "scythehandle",
+        dropRate: 5,
         category: ["reaper"],
         unique: true,
     },
@@ -20183,6 +20261,84 @@ Scythe.itemName = "scythe";
 
 /***/ }),
 
+/***/ "./src/item/weapon/scytheBlade.ts":
+/*!****************************************!*\
+  !*** ./src/item/weapon/scytheBlade.ts ***!
+  \****************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ScytheBlade = void 0;
+const usable_1 = __webpack_require__(/*! ../usable/usable */ "./src/item/usable/usable.ts");
+const scythe_1 = __webpack_require__(/*! ./scythe */ "./src/item/weapon/scythe.ts");
+const scytheHandle_1 = __webpack_require__(/*! ./scytheHandle */ "./src/item/weapon/scytheHandle.ts");
+class ScytheBlade extends usable_1.Usable {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.useOnOther = (player, other) => {
+            if (other instanceof scytheHandle_1.ScytheHandle) {
+                player.inventory.removeItem(this);
+                player.inventory.removeItem(other);
+                player.game.pushMessage("You combine the scythe blade and handle.");
+                const scythe = new scythe_1.Scythe(player.game.rooms[player.levelID], player.x, player.y);
+                player.inventory.addItem(scythe);
+            }
+        };
+        this.tileX = 30;
+        this.tileY = 2;
+        this.stackable = false;
+        this.name = ScytheBlade.itemName;
+        this.description = "The blade of a scythe. Find the handle to use it.";
+        this.canUseOnOther = true;
+    }
+}
+exports.ScytheBlade = ScytheBlade;
+ScytheBlade.itemName = "scythe blade";
+
+
+/***/ }),
+
+/***/ "./src/item/weapon/scytheHandle.ts":
+/*!*****************************************!*\
+  !*** ./src/item/weapon/scytheHandle.ts ***!
+  \*****************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ScytheHandle = void 0;
+const usable_1 = __webpack_require__(/*! ../usable/usable */ "./src/item/usable/usable.ts");
+const scythe_1 = __webpack_require__(/*! ./scythe */ "./src/item/weapon/scythe.ts");
+const scytheBlade_1 = __webpack_require__(/*! ./scytheBlade */ "./src/item/weapon/scytheBlade.ts");
+class ScytheHandle extends usable_1.Usable {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.useOnOther = (player, other) => {
+            if (other instanceof scytheBlade_1.ScytheBlade) {
+                player.inventory.removeItem(this);
+                player.inventory.removeItem(other);
+                player.game.pushMessage("You combine the scythe blade and handle.");
+                const scythe = new scythe_1.Scythe(player.game.rooms[player.levelID], player.x, player.y);
+                player.inventory.addItem(scythe);
+            }
+        };
+        this.tileX = 29;
+        this.tileY = 2;
+        this.stackable = false;
+        this.name = ScytheHandle.itemName;
+        this.description = "The handle of a scythe. Find the blade to use it.";
+        this.canUseOnOther = true;
+    }
+}
+exports.ScytheHandle = ScytheHandle;
+ScytheHandle.itemName = "scythe handle";
+
+
+/***/ }),
+
 /***/ "./src/item/weapon/shotgun.ts":
 /*!************************************!*\
   !*** ./src/item/weapon/shotgun.ts ***!
@@ -21986,6 +22142,393 @@ const getPathParameters = (pathType, depth) => {
             throw new Error(`Unknown path type: ${pathType}`);
     }
 };
+
+
+/***/ }),
+
+/***/ "./src/level/levelImageGenerator.ts":
+/*!******************************************!*\
+  !*** ./src/level/levelImageGenerator.ts ***!
+  \******************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.LevelImageGenerator = void 0;
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const utils_1 = __webpack_require__(/*! ../utility/utils */ "./src/utility/utils.ts");
+class LevelImageGenerator {
+    constructor(width = 100, height = 100) {
+        this.rooms = [];
+        this.settled = false;
+        this.width = width;
+        this.height = height;
+        this.canvas = document.createElement("canvas");
+        this.canvas.width = width;
+        this.canvas.height = height;
+        this.ctx = this.canvas.getContext("2d");
+        // Disable image smoothing for pixel-perfect rendering
+        this.ctx.imageSmoothingEnabled = false;
+        this.ctx.webkitImageSmoothingEnabled = false;
+        this.ctx.mozImageSmoothingEnabled = false;
+        this.ctx.msImageSmoothingEnabled = false;
+    }
+    // Generate room size using normal distribution for rectangles
+    generateRoomSize() {
+        const minSize = 2;
+        const maxSize = 25;
+        // Use normal distribution for both width and height independently
+        // This creates rectangles with varied proportions
+        const width = Math.max(minSize, Math.min(maxSize, utils_1.Utils.randomNormalInt(minSize, maxSize, { median: 6 })));
+        const height = Math.max(minSize, Math.min(maxSize, utils_1.Utils.randomNormalInt(minSize, maxSize, { median: 6 })));
+        return { width, height };
+    }
+    // Calculate mass based on room size (larger rooms = more mass)
+    calculateMass(width, height) {
+        return width * height * 0.1;
+    }
+    // Generate rooms with physics properties
+    generateRooms(numRooms, rand = Math.random, startingPattern = "center") {
+        this.rooms = [];
+        this.settled = false;
+        for (let i = 0; i < numRooms; i++) {
+            const { width, height } = this.generateRoomSize();
+            const mass = this.calculateMass(width, height);
+            let x, y;
+            // Different starting patterns
+            switch (startingPattern) {
+                case "split":
+                    if (i < numRooms / 2) {
+                        // Top right
+                        x = this.width * 0.6 + rand() * this.width * 0.3;
+                        y = this.height * 0.1 + rand() * this.height * 0.3;
+                    }
+                    else {
+                        // Bottom left
+                        x = this.width * 0.1 + rand() * this.width * 0.3;
+                        y = this.height * 0.6 + rand() * this.height * 0.3;
+                    }
+                    break;
+                case "corners":
+                    const corner = Math.floor(rand() * 4);
+                    switch (corner) {
+                        case 0: // Top left
+                            x = this.width * 0.1 + rand() * this.width * 0.2;
+                            y = this.height * 0.1 + rand() * this.height * 0.2;
+                            break;
+                        case 1: // Top right
+                            x = this.width * 0.7 + rand() * this.width * 0.2;
+                            y = this.height * 0.1 + rand() * this.height * 0.2;
+                            break;
+                        case 2: // Bottom left
+                            x = this.width * 0.1 + rand() * this.width * 0.2;
+                            y = this.height * 0.7 + rand() * this.height * 0.2;
+                            break;
+                        case 3: // Bottom right
+                            x = this.width * 0.7 + rand() * this.width * 0.2;
+                            y = this.height * 0.7 + rand() * this.height * 0.2;
+                            break;
+                    }
+                    break;
+                default: // center
+                    x = this.width * 0.3 + rand() * this.width * 0.4;
+                    y = this.height * 0.3 + rand() * this.height * 0.4;
+            }
+            this.rooms.push({
+                x,
+                y,
+                width,
+                height,
+                vx: 0,
+                vy: 0,
+                mass,
+                id: i,
+            });
+        }
+    }
+    // Check if two rooms collide (including 1-pixel border requirement)
+    roomsCollide(room1, room2) {
+        return !(room1.x + room1.width + 1 <= room2.x ||
+            room2.x + room2.width + 1 <= room1.x ||
+            room1.y + room1.height + 1 <= room2.y ||
+            room2.y + room2.height + 1 <= room1.y);
+    }
+    // Check if two rooms should be snapped together (very close)
+    shouldSnap(room1, room2) {
+        const SNAP_DISTANCE = 3; // If closer than this, snap together
+        // Check horizontal snapping
+        const horizontalGap = Math.min(Math.abs(room1.x + room1.width + 1 - room2.x), Math.abs(room2.x + room2.width + 1 - room1.x));
+        // Check vertical snapping
+        const verticalGap = Math.min(Math.abs(room1.y + room1.height + 1 - room2.y), Math.abs(room2.y + room2.height + 1 - room1.y));
+        const overlapsHorizontally = !(room1.x + room1.width < room2.x || room2.x + room2.width < room1.x);
+        const overlapsVertically = !(room1.y + room1.height < room2.y || room2.y + room2.height < room1.y);
+        return ((horizontalGap < SNAP_DISTANCE && overlapsVertically) ||
+            (verticalGap < SNAP_DISTANCE && overlapsHorizontally));
+    }
+    // Snap two rooms together with proper 1-pixel border
+    snapRooms(room1, room2) {
+        const overlapsHorizontally = !(room1.x + room1.width < room2.x || room2.x + room2.width < room1.x);
+        const overlapsVertically = !(room1.y + room1.height < room2.y || room2.y + room2.height < room1.y);
+        if (overlapsHorizontally) {
+            // Snap vertically
+            if (room1.y < room2.y) {
+                // room1 above room2
+                const targetY = room1.y + room1.height + 1;
+                room2.y = targetY;
+                room2.vy = 0;
+                room1.vy = 0;
+            }
+            else {
+                // room2 above room1
+                const targetY = room2.y + room2.height + 1;
+                room1.y = targetY;
+                room1.vy = 0;
+                room2.vy = 0;
+            }
+        }
+        else if (overlapsVertically) {
+            // Snap horizontally
+            if (room1.x < room2.x) {
+                // room1 left of room2
+                const targetX = room1.x + room1.width + 1;
+                room2.x = targetX;
+                room2.vx = 0;
+                room1.vx = 0;
+            }
+            else {
+                // room2 left of room1
+                const targetX = room2.x + room2.width + 1;
+                room1.x = targetX;
+                room1.vx = 0;
+                room2.vx = 0;
+            }
+        }
+    }
+    // Apply collision response between two rooms
+    resolveCollision(room1, room2) {
+        // Calculate overlap
+        const overlapX = Math.min(room1.x + room1.width + 1 - room2.x, room2.x + room2.width + 1 - room1.x);
+        const overlapY = Math.min(room1.y + room1.height + 1 - room2.y, room2.y + room2.height + 1 - room1.y);
+        // Resolve collision by moving along the axis with minimum overlap
+        if (overlapX < overlapY) {
+            // Horizontal separation
+            const direction = room1.x < room2.x ? -1 : 1;
+            const totalMass = room1.mass + room2.mass;
+            const separation = overlapX / 2;
+            room1.x += direction * separation * (room2.mass / totalMass);
+            room2.x -= direction * separation * (room1.mass / totalMass);
+            // Add some velocity for natural movement
+            room1.vx += direction * 0.1 * (room2.mass / totalMass);
+            room2.vx -= direction * 0.1 * (room1.mass / totalMass);
+        }
+        else {
+            // Vertical separation
+            const direction = room1.y < room2.y ? -1 : 1;
+            const totalMass = room1.mass + room2.mass;
+            const separation = overlapY / 2;
+            room1.y += direction * separation * (room2.mass / totalMass);
+            room2.y -= direction * separation * (room1.mass / totalMass);
+            // Add some velocity for natural movement
+            room1.vy += direction * 0.1 * (room2.mass / totalMass);
+            room2.vy -= direction * 0.1 * (room1.mass / totalMass);
+        }
+    }
+    // Run physics simulation
+    simulatePhysics(iterations = 1000) {
+        const damping = 0.95;
+        const minVelocity = 0.01;
+        for (let iter = 0; iter < iterations; iter++) {
+            let hasMovement = false;
+            // Apply forces and resolve collisions
+            for (let i = 0; i < this.rooms.length; i++) {
+                for (let j = i + 1; j < this.rooms.length; j++) {
+                    if (this.roomsCollide(this.rooms[i], this.rooms[j])) {
+                        this.resolveCollision(this.rooms[i], this.rooms[j]);
+                        hasMovement = true;
+                    }
+                }
+            }
+            // Apply snapping every iteration - rooms that are close enough stick together
+            for (let i = 0; i < this.rooms.length; i++) {
+                for (let j = i + 1; j < this.rooms.length; j++) {
+                    if (this.shouldSnap(this.rooms[i], this.rooms[j])) {
+                        this.snapRooms(this.rooms[i], this.rooms[j]);
+                    }
+                }
+            }
+            // Update positions and apply damping
+            for (const room of this.rooms) {
+                room.x += room.vx;
+                room.y += room.vy;
+                room.vx *= damping;
+                room.vy *= damping;
+                // Keep rooms within bounds
+                room.x = Math.max(1, Math.min(this.width - room.width - 1, room.x));
+                room.y = Math.max(1, Math.min(this.height - room.height - 1, room.y));
+                if (Math.abs(room.vx) > minVelocity ||
+                    Math.abs(room.vy) > minVelocity) {
+                    hasMovement = true;
+                }
+            }
+            // Check if system has settled
+            if (!hasMovement) {
+                console.log(`Physics settled after ${iter} iterations`);
+                break;
+            }
+        }
+        // Final pass: ensure all positions are integers for pixel-perfect rendering
+        for (const room of this.rooms) {
+            room.x = Math.round(room.x);
+            room.y = Math.round(room.y);
+        }
+        this.settled = true;
+    }
+    // Generate PNG image data
+    generatePNG() {
+        // Clear canvas with transparent background
+        this.ctx.clearRect(0, 0, this.width, this.height);
+        // Ensure pixel-perfect rendering
+        this.ctx.imageSmoothingEnabled = false;
+        // Draw white rectangles for rooms
+        this.ctx.fillStyle = "white";
+        for (const room of this.rooms) {
+            this.ctx.fillRect(Math.floor(room.x), Math.floor(room.y), room.width, room.height);
+        }
+        return this.canvas;
+    }
+    // Save PNG to organized directory structure
+    savePNG(filename) {
+        const canvas = this.generatePNG();
+        const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+        const finalFilename = filename || `level_${timestamp}.png`;
+        // Create organized download
+        const link = document.createElement("a");
+        link.download = `generated_levels/${finalFilename}`;
+        link.href = canvas.toDataURL("image/png");
+        // Add to page temporarily and click
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        // Also log the data URL for manual saving if needed
+        console.log(`Generated level PNG (${this.width}x${this.height}):`, link.href);
+        console.log(`Suggested save path: generated_levels/${finalFilename}`);
+    }
+    // Draw the level using Game.ctx for debugging/visualization
+    draw(offsetX = 0, offsetY = 0, scale = 2) {
+        if (!game_1.Game.ctx)
+            return;
+        game_1.Game.ctx.save();
+        // Disable smoothing for pixel-perfect rendering
+        game_1.Game.ctx.imageSmoothingEnabled = false;
+        game_1.Game.ctx.webkitImageSmoothingEnabled = false;
+        game_1.Game.ctx.mozImageSmoothingEnabled = false;
+        game_1.Game.ctx.msImageSmoothingEnabled = false;
+        // Clear area
+        game_1.Game.ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
+        game_1.Game.ctx.fillRect(offsetX, offsetY, this.width * scale, this.height * scale);
+        // Draw grid for reference
+        game_1.Game.ctx.strokeStyle = "rgba(100, 100, 100, 0.3)";
+        game_1.Game.ctx.lineWidth = 1;
+        for (let x = 0; x <= this.width; x += 10) {
+            game_1.Game.ctx.beginPath();
+            game_1.Game.ctx.moveTo(offsetX + x * scale, offsetY);
+            game_1.Game.ctx.lineTo(offsetX + x * scale, offsetY + this.height * scale);
+            game_1.Game.ctx.stroke();
+        }
+        for (let y = 0; y <= this.height; y += 10) {
+            game_1.Game.ctx.beginPath();
+            game_1.Game.ctx.moveTo(offsetX, offsetY + y * scale);
+            game_1.Game.ctx.lineTo(offsetX + this.width * scale, offsetY + y * scale);
+            game_1.Game.ctx.stroke();
+        }
+        // Draw rooms with different colors to show rectangles better
+        for (const room of this.rooms) {
+            // Room fill - use different colors for different aspect ratios
+            const aspectRatio = room.width / room.height;
+            let hue;
+            if (aspectRatio > 1.5) {
+                // Wide rectangle - blue tones
+                hue = 200 + ((room.id * 30) % 60);
+            }
+            else if (aspectRatio < 0.67) {
+                // Tall rectangle - red tones
+                hue = 0 + ((room.id * 30) % 60);
+            }
+            else {
+                // Square-ish - green tones
+                hue = 100 + ((room.id * 30) % 60);
+            }
+            game_1.Game.ctx.fillStyle = `hsl(${hue}, 70%, 60%)`;
+            game_1.Game.ctx.fillRect(offsetX + Math.floor(room.x) * scale, offsetY + Math.floor(room.y) * scale, room.width * scale, room.height * scale);
+            // Room border
+            game_1.Game.ctx.strokeStyle = "white";
+            game_1.Game.ctx.lineWidth = 1;
+            game_1.Game.ctx.strokeRect(offsetX + Math.floor(room.x) * scale, offsetY + Math.floor(room.y) * scale, room.width * scale, room.height * scale);
+            // Room ID and dimensions text
+            if (scale >= 2) {
+                game_1.Game.ctx.fillStyle = "white";
+                game_1.Game.ctx.font = "10px monospace";
+                game_1.Game.ctx.textAlign = "center";
+                game_1.Game.ctx.fillText(`${room.id}`, offsetX + (room.x + room.width / 2) * scale, offsetY + (room.y + room.height / 2) * scale - 2);
+                // Show dimensions for rectangles
+                if (scale >= 3) {
+                    game_1.Game.ctx.font = "8px monospace";
+                    game_1.Game.ctx.fillText(`${room.width}×${room.height}`, offsetX + (room.x + room.width / 2) * scale, offsetY + (room.y + room.height / 2) * scale + 8);
+                }
+            }
+        }
+        game_1.Game.ctx.restore();
+    }
+    // Generate a complete random level
+    static generateRandomLevel(width = 80, height = 60, numRooms = 15, rand = Math.random, pattern = "center") {
+        const generator = new LevelImageGenerator(width, height);
+        generator.generateRooms(numRooms, rand, pattern);
+        generator.simulatePhysics();
+        return generator;
+    }
+    // Get room data for external use
+    getRooms() {
+        return [...this.rooms];
+    }
+    // Check if rooms are accessible (basic connectivity check)
+    areRoomsAccessible() {
+        if (this.rooms.length === 0)
+            return true;
+        if (this.rooms.length === 1)
+            return true;
+        // Simple flood fill to check connectivity
+        const visited = new Set();
+        const queue = [0]; // Start with first room
+        visited.add(0);
+        while (queue.length > 0) {
+            const currentId = queue.shift();
+            const currentRoom = this.rooms[currentId];
+            // Check adjacent rooms (exactly 1 pixel apart = touching with 1px border)
+            for (let i = 0; i < this.rooms.length; i++) {
+                if (visited.has(i))
+                    continue;
+                const otherRoom = this.rooms[i];
+                // Check if rooms are exactly adjacent (1 pixel gap)
+                const horizontallyAdjacent = Math.abs(currentRoom.x + currentRoom.width + 1 - otherRoom.x) < 1 ||
+                    Math.abs(otherRoom.x + otherRoom.width + 1 - currentRoom.x) < 1;
+                const verticallyAdjacent = Math.abs(currentRoom.y + currentRoom.height + 1 - otherRoom.y) < 1 ||
+                    Math.abs(otherRoom.y + otherRoom.height + 1 - currentRoom.y) < 1;
+                const overlapsHorizontally = !(currentRoom.x + currentRoom.width < otherRoom.x ||
+                    otherRoom.x + otherRoom.width < currentRoom.x);
+                const overlapsVertically = !(currentRoom.y + currentRoom.height < otherRoom.y ||
+                    otherRoom.y + otherRoom.height < currentRoom.y);
+                if ((horizontallyAdjacent && overlapsVertically) ||
+                    (verticallyAdjacent && overlapsHorizontally)) {
+                    visited.add(i);
+                    queue.push(i);
+                }
+            }
+        }
+        return visited.size === this.rooms.length;
+    }
+}
+exports.LevelImageGenerator = LevelImageGenerator;
 
 
 /***/ }),
