@@ -19,6 +19,8 @@ import { GlowBugEnemy } from "../entity/enemy/glowBugEnemy";
 import { Tree } from "../entity/object/tree";
 import { EnvType } from "../constants/environmentTypes";
 import { DownladderMaker } from "../entity/downladderMaker";
+import { DecoBlock } from "../entity/object/decoBlock";
+import { Furnace } from "../entity/object/furnace";
 
 export class Environment {
   type: EnvType;
@@ -56,6 +58,8 @@ const props: PropInfo[] = [
   { class: Chest },
   { class: GlowBugEnemy },
   { class: Tree },
+  { class: DecoBlock },
+  { class: Furnace },
 ];
 
 const environmentProps: Record<EnvType, EnvironmentPropData> = {
@@ -73,6 +77,8 @@ const environmentProps: Record<EnvType, EnvironmentPropData> = {
       { class: Bush, weight: 0.1 },
       { class: Sprout, weight: 0.025 },
       { class: Chest, weight: 0.025 },
+      { class: DecoBlock, weight: 0.05 },
+      { class: Furnace, weight: 0.05 },
     ],
   },
   [EnvType.CAVE]: {

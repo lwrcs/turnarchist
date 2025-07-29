@@ -6,15 +6,15 @@ import { TextParticle } from "../../particle/textParticle";
 import { GameConstants } from "../../game/gameConstants";
 import { Equippable } from "../equippable";
 
-export class EmeraldRing extends Equippable {
-  static itemName = "emerald ring";
+export class AmberRing extends Equippable {
+  static itemName = "amber ring";
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
 
-    this.tileX = 11;
+    this.tileX = 14;
     this.tileY = 2;
-    this.name = EmeraldRing.itemName;
+    this.name = AmberRing.itemName;
     this.stackable = false;
-    this.description = "A ring of emerald";
+    this.description = "A ring of amber";
   }
 }

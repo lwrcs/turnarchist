@@ -10793,6 +10793,113 @@ exports.Crate = Crate;
 
 /***/ }),
 
+/***/ "./src/entity/object/decoBlock.ts":
+/*!****************************************!*\
+  !*** ./src/entity/object/decoBlock.ts ***!
+  \****************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DecoBlock = void 0;
+const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+class DecoBlock extends entity_1.Entity {
+    constructor(room, game, x, y) {
+        super(room, game, x, y);
+        this.draw = (delta) => {
+            if (this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = this.alpha;
+            if (!this.dead) {
+                this.updateDrawXY(delta);
+                game_1.Game.drawObj(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
+            }
+            game_1.Game.ctx.restore();
+        };
+        this.drawTopLayer = (delta) => {
+            this.drawableY = this.y;
+        };
+        this.room = room;
+        this.health = 1;
+        this.tileX = 1;
+        this.tileY = 4;
+        this.hasShadow = false;
+        this.pushable = true;
+        this.name = "deco block";
+        this.imageParticleX = 3;
+        this.imageParticleY = 25;
+    }
+    get type() {
+        return entity_2.EntityType.PROP;
+    }
+}
+exports.DecoBlock = DecoBlock;
+
+
+/***/ }),
+
+/***/ "./src/entity/object/furnace.ts":
+/*!**************************************!*\
+  !*** ./src/entity/object/furnace.ts ***!
+  \**************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Furnace = void 0;
+const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+const lightSource_1 = __webpack_require__(/*! ../../lighting/lightSource */ "./src/lighting/lightSource.ts");
+const torch_1 = __webpack_require__(/*! ../../item/light/torch */ "./src/item/light/torch.ts");
+class Furnace extends entity_1.Entity {
+    constructor(room, game, x, y) {
+        super(room, game, x, y);
+        this.draw = (delta) => {
+            if (this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = this.alpha;
+            if (!this.dead) {
+                this.updateDrawXY(delta);
+                game_1.Game.drawObj(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
+            }
+            game_1.Game.ctx.restore();
+        };
+        this.drawTopLayer = (delta) => {
+            this.drawableY = this.y;
+        };
+        this.room = room;
+        this.health = 1;
+        this.tileX = 2;
+        this.tileY = 4;
+        this.hasShadow = false;
+        this.chainPushable = false;
+        this.name = "furnace";
+        this.drops.push(new torch_1.Torch(this.room, this.x, this.y));
+        this.imageParticleX = 0;
+        this.imageParticleY = 25;
+        this.bloomColor = "#FFA500";
+        this.hasBloom = true;
+        this.bloomAlpha = 1;
+        this.softBloomAlpha = 0;
+        this.lightSource = new lightSource_1.LightSource(this.x + 0.5, this.y + 0.5, 7, [200, 30, 1], 4);
+        this.addLightSource(this.lightSource);
+    }
+    get type() {
+        return entity_2.EntityType.PROP;
+    }
+}
+exports.Furnace = Furnace;
+
+
+/***/ }),
+
 /***/ "./src/entity/object/mushrooms.ts":
 /*!****************************************!*\
   !*** ./src/entity/object/mushrooms.ts ***!
@@ -13604,20 +13711,19 @@ const candle_1 = __webpack_require__(/*! ../item/light/candle */ "./src/item/lig
 const coal_1 = __webpack_require__(/*! ../item/resource/coal */ "./src/item/resource/coal.ts");
 const godStone_1 = __webpack_require__(/*! ../item/godStone */ "./src/item/godStone.ts");
 const lantern_1 = __webpack_require__(/*! ../item/light/lantern */ "./src/item/light/lantern.ts");
-const weaponFragments_1 = __webpack_require__(/*! ../item/usable/weaponFragments */ "./src/item/usable/weaponFragments.ts");
 const levelConstants_1 = __webpack_require__(/*! ../level/levelConstants */ "./src/level/levelConstants.ts");
 const dagger_1 = __webpack_require__(/*! ../item/weapon/dagger */ "./src/item/weapon/dagger.ts");
-const spear_1 = __webpack_require__(/*! ../item/weapon/spear */ "./src/item/weapon/spear.ts");
 const spellbook_1 = __webpack_require__(/*! ../item/weapon/spellbook */ "./src/item/weapon/spellbook.ts");
 const warhammer_1 = __webpack_require__(/*! ../item/weapon/warhammer */ "./src/item/weapon/warhammer.ts");
 const hammer_1 = __webpack_require__(/*! ../item/tool/hammer */ "./src/item/tool/hammer.ts");
-const spellbookPage_1 = __webpack_require__(/*! ../item/usable/spellbookPage */ "./src/item/usable/spellbookPage.ts");
-const greataxe_1 = __webpack_require__(/*! ../item/weapon/greataxe */ "./src/item/weapon/greataxe.ts");
+const bluegem_1 = __webpack_require__(/*! ../item/resource/bluegem */ "./src/item/resource/bluegem.ts");
+const redgem_1 = __webpack_require__(/*! ../item/resource/redgem */ "./src/item/resource/redgem.ts");
+const greengem_1 = __webpack_require__(/*! ../item/resource/greengem */ "./src/item/resource/greengem.ts");
 const pickaxe_1 = __webpack_require__(/*! ../item/tool/pickaxe */ "./src/item/tool/pickaxe.ts");
 const scythe_1 = __webpack_require__(/*! ../item/weapon/scythe */ "./src/item/weapon/scythe.ts");
-const apple_1 = __webpack_require__(/*! ../item/usable/apple */ "./src/item/usable/apple.ts");
-const scytheBlade_1 = __webpack_require__(/*! ../item/weapon/scytheBlade */ "./src/item/weapon/scytheBlade.ts");
-const scytheHandle_1 = __webpack_require__(/*! ../item/weapon/scytheHandle */ "./src/item/weapon/scytheHandle.ts");
+const gold_1 = __webpack_require__(/*! ../item/resource/gold */ "./src/item/resource/gold.ts");
+const orangegem_1 = __webpack_require__(/*! ../item/resource/orangegem */ "./src/item/resource/orangegem.ts");
+const goldRing_1 = __webpack_require__(/*! ../item/jewelry/goldRing */ "./src/item/jewelry/goldRing.ts");
 class GameConstants {
 }
 exports.GameConstants = GameConstants;
@@ -13806,8 +13912,6 @@ GameConstants.STARTING_DEV_INVENTORY = [
     warhammer_1.Warhammer,
     lantern_1.Lantern,
     godStone_1.GodStone,
-    spear_1.Spear,
-    greataxe_1.Greataxe,
     spellbook_1.Spellbook,
     scythe_1.Scythe,
     armor_1.Armor,
@@ -13815,16 +13919,14 @@ GameConstants.STARTING_DEV_INVENTORY = [
     hammer_1.Hammer,
     pickaxe_1.Pickaxe,
     coal_1.Coal,
-    apple_1.Apple,
-    scytheBlade_1.ScytheBlade,
-    scytheHandle_1.ScytheHandle,
-    spellbookPage_1.SpellbookPage,
-    spellbookPage_1.SpellbookPage,
-    spellbookPage_1.SpellbookPage,
-    spellbookPage_1.SpellbookPage,
-    weaponFragments_1.WeaponFragments,
-    weaponFragments_1.WeaponFragments,
-    weaponFragments_1.WeaponFragments,
+    bluegem_1.BlueGem,
+    orangegem_1.OrangeGem,
+    redgem_1.RedGem,
+    greengem_1.GreenGem,
+    goldRing_1.GoldRing,
+    gold_1.Gold,
+    gold_1.Gold,
+    gold_1.Gold,
 ];
 
 
@@ -18809,6 +18911,60 @@ exports.ItemGroup = ItemGroup;
 
 /***/ }),
 
+/***/ "./src/item/jewelry/ZirconRing.ts":
+/*!****************************************!*\
+  !*** ./src/item/jewelry/ZirconRing.ts ***!
+  \****************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ZirconRing = void 0;
+const equippable_1 = __webpack_require__(/*! ../equippable */ "./src/item/equippable.ts");
+class ZirconRing extends equippable_1.Equippable {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.tileX = 13;
+        this.tileY = 2;
+        this.name = ZirconRing.itemName;
+        this.stackable = false;
+        this.description = "A ring of zircon";
+    }
+}
+exports.ZirconRing = ZirconRing;
+ZirconRing.itemName = "zircon ring";
+
+
+/***/ }),
+
+/***/ "./src/item/jewelry/amberRing.ts":
+/*!***************************************!*\
+  !*** ./src/item/jewelry/amberRing.ts ***!
+  \***************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AmberRing = void 0;
+const equippable_1 = __webpack_require__(/*! ../equippable */ "./src/item/equippable.ts");
+class AmberRing extends equippable_1.Equippable {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.tileX = 14;
+        this.tileY = 2;
+        this.name = AmberRing.itemName;
+        this.stackable = false;
+        this.description = "A ring of amber";
+    }
+}
+exports.AmberRing = AmberRing;
+AmberRing.itemName = "amber ring";
+
+
+/***/ }),
+
 /***/ "./src/item/jewelry/emeraldRing.ts":
 /*!*****************************************!*\
   !*** ./src/item/jewelry/emeraldRing.ts ***!
@@ -18823,7 +18979,7 @@ const equippable_1 = __webpack_require__(/*! ../equippable */ "./src/item/equipp
 class EmeraldRing extends equippable_1.Equippable {
     constructor(level, x, y) {
         super(level, x, y);
-        this.tileX = 17;
+        this.tileX = 11;
         this.tileY = 2;
         this.name = EmeraldRing.itemName;
         this.stackable = false;
@@ -18832,6 +18988,33 @@ class EmeraldRing extends equippable_1.Equippable {
 }
 exports.EmeraldRing = EmeraldRing;
 EmeraldRing.itemName = "emerald ring";
+
+
+/***/ }),
+
+/***/ "./src/item/jewelry/garnetRing.ts":
+/*!****************************************!*\
+  !*** ./src/item/jewelry/garnetRing.ts ***!
+  \****************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.GarnetRing = void 0;
+const equippable_1 = __webpack_require__(/*! ../equippable */ "./src/item/equippable.ts");
+class GarnetRing extends equippable_1.Equippable {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.tileX = 12;
+        this.tileY = 2;
+        this.name = GarnetRing.itemName;
+        this.stackable = false;
+        this.description = "A ring of garnet";
+    }
+}
+exports.GarnetRing = GarnetRing;
+GarnetRing.itemName = "garnet ring";
 
 
 /***/ }),
@@ -18848,13 +19031,29 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GoldRing = void 0;
 const equippable_1 = __webpack_require__(/*! ../equippable */ "./src/item/equippable.ts");
 const emeraldRing_1 = __webpack_require__(/*! ./emeraldRing */ "./src/item/jewelry/emeraldRing.ts");
+const ZirconRing_1 = __webpack_require__(/*! ./ZirconRing */ "./src/item/jewelry/ZirconRing.ts");
+const amberRing_1 = __webpack_require__(/*! ./amberRing */ "./src/item/jewelry/amberRing.ts");
+const garnetRing_1 = __webpack_require__(/*! ./garnetRing */ "./src/item/jewelry/garnetRing.ts");
 class GoldRing extends equippable_1.Equippable {
     constructor(level, x, y) {
         super(level, x, y);
         this.embed = (player, gem) => {
             player.inventory.subtractItem(gem, 1);
             player.inventory.removeItem(this);
-            player.inventory.addItem(new emeraldRing_1.EmeraldRing(this.level, this.x, this.y));
+            switch (gem.name) {
+                case "emerald":
+                    player.inventory.addItem(new emeraldRing_1.EmeraldRing(this.level, this.x, this.y));
+                    break;
+                case "zircon":
+                    player.inventory.addItem(new ZirconRing_1.ZirconRing(this.level, this.x, this.y));
+                    break;
+                case "amber":
+                    player.inventory.addItem(new amberRing_1.AmberRing(this.level, this.x, this.y));
+                    break;
+                case "garnet":
+                    player.inventory.addItem(new garnetRing_1.GarnetRing(this.level, this.x, this.y));
+                    break;
+            }
             this.level.game.pushMessage(`You embed the gem into the ring.`);
         };
         this.tileX = 19;
@@ -19200,16 +19399,23 @@ Torch.itemName = "torch";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BlueGem = void 0;
-const item_1 = __webpack_require__(/*! ../item */ "./src/item/item.ts");
-class BlueGem extends item_1.Item {
+const usable_1 = __webpack_require__(/*! ../usable/usable */ "./src/item/usable/usable.ts");
+class BlueGem extends usable_1.Usable {
     constructor(level, x, y) {
         super(level, x, y);
+        this.useOnOther = (player, other) => {
+            if (other.name === "gold ring") {
+                let goldRing = other;
+                goldRing.embed(player, this);
+            }
+        };
         this.getDescription = () => {
-            return "ZIRCON";
+            return "A gem of zircon. Embed it into a gold ring to imbue it with magic.";
         };
         this.tileX = 13;
         this.tileY = 0;
         this.name = BlueGem.itemName;
+        this.canUseOnOther = true;
         this.stackable = true;
     }
 }
@@ -19340,15 +19546,18 @@ class Gold extends item_1.Item {
     constructor(level, x, y) {
         super(level, x, y);
         this.smelt = (player) => {
-            player.inventory.removeItem(this);
-            player.inventory.addItem(new goldBar_1.GoldBar(this.level, this.x, this.y));
-            sound_1.Sound.playSmith();
+            if (this.stackCount >= 3) {
+                player.inventory.subtractItem(this, 3);
+                player.inventory.addItem(new goldBar_1.GoldBar(this.level, this.x, this.y));
+                sound_1.Sound.playSmith();
+                this.level.game.pushMessage(`You smelt the gold ore into a gold bar.`);
+            }
         };
         this.tileX = 18;
         this.tileY = 0;
         this.name = Gold.itemName;
         this.stackable = true;
-        this.description = "A bar of gold";
+        this.description = "Some gold ore";
     }
 }
 exports.Gold = Gold;
@@ -19427,6 +19636,42 @@ GreenGem.itemName = "emerald";
 
 /***/ }),
 
+/***/ "./src/item/resource/orangegem.ts":
+/*!****************************************!*\
+  !*** ./src/item/resource/orangegem.ts ***!
+  \****************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.OrangeGem = void 0;
+const usable_1 = __webpack_require__(/*! ../usable/usable */ "./src/item/usable/usable.ts");
+class OrangeGem extends usable_1.Usable {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.useOnOther = (player, other) => {
+            if (other.name === "gold ring") {
+                let goldRing = other;
+                goldRing.embed(player, this);
+            }
+        };
+        this.getDescription = () => {
+            return "An amber gem. Embed it into a gold ring to imbue it with magic.";
+        };
+        this.tileX = 13;
+        this.tileY = 0;
+        this.name = OrangeGem.itemName;
+        this.canUseOnOther = true;
+        this.stackable = true;
+    }
+}
+exports.OrangeGem = OrangeGem;
+OrangeGem.itemName = "amber";
+
+
+/***/ }),
+
 /***/ "./src/item/resource/redgem.ts":
 /*!*************************************!*\
   !*** ./src/item/resource/redgem.ts ***!
@@ -19437,16 +19682,23 @@ GreenGem.itemName = "emerald";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RedGem = void 0;
-const item_1 = __webpack_require__(/*! ../item */ "./src/item/item.ts");
-class RedGem extends item_1.Item {
+const usable_1 = __webpack_require__(/*! ../usable/usable */ "./src/item/usable/usable.ts");
+class RedGem extends usable_1.Usable {
     constructor(level, x, y) {
         super(level, x, y);
+        this.useOnOther = (player, other) => {
+            if (other.name === "gold ring") {
+                let goldRing = other;
+                goldRing.embed(player, this);
+            }
+        };
         this.getDescription = () => {
-            return "GARNET";
+            return "A garnet gem. Embed it into a gold ring to imbue it with magic.";
         };
         this.tileX = 12;
         this.tileY = 0;
         this.name = RedGem.itemName;
+        this.canUseOnOther = true;
         this.stackable = true;
     }
 }
@@ -19536,7 +19788,6 @@ class Hammer extends usable_1.Usable {
             else if (other.name === "gold") {
                 let gold = other;
                 gold.smelt(player);
-                this.level.game.pushMessage(`You form the raw gold into a bar.`);
             }
         };
         this.disassemble = (player) => {
@@ -21102,6 +21353,8 @@ const emeraldResource_1 = __webpack_require__(/*! ../entity/resource/emeraldReso
 const glowBugEnemy_1 = __webpack_require__(/*! ../entity/enemy/glowBugEnemy */ "./src/entity/enemy/glowBugEnemy.ts");
 const tree_1 = __webpack_require__(/*! ../entity/object/tree */ "./src/entity/object/tree.ts");
 const environmentTypes_1 = __webpack_require__(/*! ../constants/environmentTypes */ "./src/constants/environmentTypes.ts");
+const decoBlock_1 = __webpack_require__(/*! ../entity/object/decoBlock */ "./src/entity/object/decoBlock.ts");
+const furnace_1 = __webpack_require__(/*! ../entity/object/furnace */ "./src/entity/object/furnace.ts");
 class Environment {
     constructor(type) {
         this.type = type;
@@ -21125,6 +21378,8 @@ const props = [
     { class: chest_1.Chest },
     { class: glowBugEnemy_1.GlowBugEnemy },
     { class: tree_1.Tree },
+    { class: decoBlock_1.DecoBlock },
+    { class: furnace_1.Furnace },
 ];
 const environmentProps = {
     [environmentTypes_1.EnvType.DUNGEON]: {
@@ -21141,6 +21396,8 @@ const environmentProps = {
             { class: bush_1.Bush, weight: 0.1 },
             { class: sprout_1.Sprout, weight: 0.025 },
             { class: chest_1.Chest, weight: 0.025 },
+            { class: decoBlock_1.DecoBlock, weight: 0.05 },
+            { class: furnace_1.Furnace, weight: 0.05 },
         ],
     },
     [environmentTypes_1.EnvType.CAVE]: {

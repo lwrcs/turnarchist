@@ -7,14 +7,15 @@ import { GameConstants } from "../../game/gameConstants";
 import { GoldRing } from "../jewelry/goldRing";
 import { Usable } from "../usable/usable";
 
-export class RedGem extends Usable {
-  static itemName = "garnet";
+export class OrangeGem extends Usable {
+  static itemName = "amber";
+
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
 
-    this.tileX = 12;
+    this.tileX = 13;
     this.tileY = 0;
-    this.name = RedGem.itemName;
+    this.name = OrangeGem.itemName;
     this.canUseOnOther = true;
 
     this.stackable = true;
@@ -28,6 +29,6 @@ export class RedGem extends Usable {
   };
 
   getDescription = (): string => {
-    return "A garnet gem. Embed it into a gold ring to imbue it with magic.";
+    return "An amber gem. Embed it into a gold ring to imbue it with magic.";
   };
 }

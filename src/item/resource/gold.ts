@@ -16,12 +16,15 @@ export class Gold extends Item {
     this.tileY = 0;
     this.name = Gold.itemName;
     this.stackable = true;
-    this.description = "A bar of gold";
+    this.description = "Some gold ore";
   }
 
   smelt = (player: Player) => {
-    player.inventory.removeItem(this);
-    player.inventory.addItem(new GoldBar(this.level, this.x, this.y));
-    Sound.playSmith();
+    if (this.stackCount >= 3) {
+      player.inventory.subtractItem(this, 3);
+      player.inventory.addItem(new GoldBar(this.level, this.x, this.y));
+      Sound.playSmith();
+      this.level.game.pushMessage(`You smelt the gold ore into a gold bar.`);
+    }
   };
 }
