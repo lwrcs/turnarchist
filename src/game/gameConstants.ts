@@ -289,5 +289,14 @@ export class GameConstants {
     Gold,
     Gold,
     Gold,
+    Gold,
+    Gold,
+    Gold,
+    Gold,
+    Gold,
+    Gold,
+    Gold,
+    Gold,
+    Gold,
   ];
 }

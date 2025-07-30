@@ -34,7 +34,7 @@ export class CrabEnemy extends Enemy {
     this.imageParticleX = 3;
     this.imageParticleY = 24;
     //if (drop) this.drop = drop;
-    this.drawYOffset = 0.175;
+    this.drawYOffset = 0.75;
     this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
   }
 

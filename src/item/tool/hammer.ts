@@ -52,7 +52,6 @@ export class Hammer extends Usable {
     } else if (other.name === "gold bar") {
       let goldBar = other as GoldBar;
       goldBar.smith(player);
-      this.level.game.pushMessage(`You hammer the gold bar into a ring.`);
     } else if (other.name === "gold") {
       let gold = other as Gold;
       gold.smelt(player);

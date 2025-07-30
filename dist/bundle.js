@@ -13927,6 +13927,15 @@ GameConstants.STARTING_DEV_INVENTORY = [
     gold_1.Gold,
     gold_1.Gold,
     gold_1.Gold,
+    gold_1.Gold,
+    gold_1.Gold,
+    gold_1.Gold,
+    gold_1.Gold,
+    gold_1.Gold,
+    gold_1.Gold,
+    gold_1.Gold,
+    gold_1.Gold,
+    gold_1.Gold,
 ];
 
 
@@ -19085,8 +19094,9 @@ class Key extends item_1.Item {
     constructor(level, x, y) {
         super(level, x, y);
         this.getDescription = () => {
-            const ID = this.doorID === 0 ? "" : "ID: " + this.doorID.toString();
-            return `KEY\nAn iron key. ${ID}`;
+            //const ID = this.doorID === 0 ? "" : "ID: " + this.doorID.toString();
+            const depth = this.depth !== null ? "Depth: " + this.depth.toString() : "";
+            return `KEY\nA key. ${depth}`;
         };
         this.onPickup = (player) => {
             if (!this.pickedUp) {
@@ -19094,12 +19104,16 @@ class Key extends item_1.Item {
                 this.level.game.pushMessage("You found a key!");
                 if (this.pickedUp)
                     sound_1.Sound.keyPickup();
+                if (this.depth === null)
+                    this.depth = player.depth;
+                console.log(this.depth);
             }
         };
         this.tileX = 1;
         this.tileY = 0;
         this.name = "key";
         this.doorID = 0;
+        this.depth = null;
     }
 }
 exports.Key = Key;
@@ -19583,15 +19597,16 @@ class GoldBar extends item_1.Item {
     constructor(level, x, y) {
         super(level, x, y);
         this.smith = (player) => {
-            player.inventory.removeItem(this);
+            player.inventory.subtractItem(this, 1);
             player.inventory.addItem(new goldRing_1.GoldRing(this.level, this.x, this.y));
+            this.level.game.pushMessage(`You hammer the gold bar into a ring.`);
             sound_1.Sound.playSmith();
         };
         this.tileX = 18;
         this.tileY = 2;
         this.name = GoldBar.itemName;
         this.stackable = true;
-        this.description = "A bar of gold";
+        this.description = "A bar of gold. Hit it with a hammer to make a ring.";
     }
 }
 exports.GoldBar = GoldBar;
@@ -19659,7 +19674,7 @@ class OrangeGem extends usable_1.Usable {
         this.getDescription = () => {
             return "An amber gem. Embed it into a gold ring to imbue it with magic.";
         };
-        this.tileX = 13;
+        this.tileX = 14;
         this.tileY = 0;
         this.name = OrangeGem.itemName;
         this.canUseOnOther = true;
@@ -19783,7 +19798,6 @@ class Hammer extends usable_1.Usable {
             else if (other.name === "gold bar") {
                 let goldBar = other;
                 goldBar.smith(player);
-                this.level.game.pushMessage(`You hammer the gold bar into a ring.`);
             }
             else if (other.name === "gold") {
                 let gold = other;

@@ -13,7 +13,7 @@ export class OrangeGem extends Usable {
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
 
-    this.tileX = 13;
+    this.tileX = 14;
     this.tileY = 0;
     this.name = OrangeGem.itemName;
     this.canUseOnOther = true;

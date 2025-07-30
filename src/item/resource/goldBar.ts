@@ -16,12 +16,14 @@ export class GoldBar extends Item {
     this.tileY = 2;
     this.name = GoldBar.itemName;
     this.stackable = true;
-    this.description = "A bar of gold";
+    this.description = "A bar of gold. Hit it with a hammer to make a ring.";
   }
 
   smith = (player: Player) => {
-    player.inventory.removeItem(this);
+    player.inventory.subtractItem(this, 1);
     player.inventory.addItem(new GoldRing(this.level, this.x, this.y));
+    this.level.game.pushMessage(`You hammer the gold bar into a ring.`);
+
     Sound.playSmith();
   };
 }
