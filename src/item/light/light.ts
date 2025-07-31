@@ -42,6 +42,13 @@ export abstract class Light extends Equippable {
     return false;
   };
 
+  dropFromInventory = () => {
+    console.log("onDrop");
+    if (this.equipped) {
+      this.toggleEquip();
+    }
+  };
+
   setRadius = () => {
     this.wielder.sightRadius = this.radius + this.fuelPercentage * this.radius;
   };

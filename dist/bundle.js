@@ -19105,12 +19105,13 @@ class Key extends item_1.Item {
         this.onPickup = (player) => {
             if (!this.pickedUp) {
                 this.pickedUp = player.inventory.addItem(this);
-                this.level.game.pushMessage("You found a key!");
-                if (this.pickedUp)
+                if (this.pickedUp) {
+                    this.level.game.pushMessage("You found a key!");
                     sound_1.Sound.keyPickup();
-                if (this.depth === null)
-                    this.depth = player.depth;
-                console.log(this.depth);
+                    if (this.depth === null)
+                        this.depth = player.depth;
+                    console.log(this.depth);
+                }
             }
         };
         this.tileX = 1;
@@ -19253,6 +19254,12 @@ class Light extends equippable_1.Equippable {
                 return true;
             }
             return false;
+        };
+        this.dropFromInventory = () => {
+            console.log("onDrop");
+            if (this.equipped) {
+                this.toggleEquip();
+            }
         };
         this.setRadius = () => {
             this.wielder.sightRadius = this.radius + this.fuelPercentage * this.radius;
