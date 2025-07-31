@@ -119,7 +119,7 @@ export class DropTable {
     },
     {
       itemType: "scythe",
-      dropRate: 25,
+      dropRate: 500,
       category: ["reaper"],
       unique: true,
     },

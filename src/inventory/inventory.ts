@@ -621,7 +621,7 @@ export class Inventory {
     const s = Math.min(18, (18 * (Date.now() - this.openTime)) / OPEN_TIME); // size of box
     const b = 2; // border
     const g = -2; // gap
-    const hg = 3 + Math.round(0.5 * Math.sin(Date.now() * 0.01) + 0.5); // highlighted growth
+    const hg = 1 + Math.round(0.5 * Math.sin(Date.now() * 0.01) + 0.5); // highlighted growth
     const ob = 1; // outer border
     const width = this.cols * (s + 2 * b + g) - g;
     const height = (this.rows + this._expansion) * (s + 2 * b + g) - g;
@@ -736,6 +736,7 @@ export class Inventory {
     if (true) {
       const selStartX = Math.floor(startX + this.selX * (s + 2 * b + g));
       const selStartY = Math.floor(startY);
+      const hg2 = isInBounds ? hg : 0;
       /*
       // Outer selection box (dark)
       Game.ctx.fillStyle = OUTLINE_COLOR;
@@ -750,29 +751,32 @@ export class Inventory {
       // Inner selection box (light grey)
       Game.ctx.fillStyle = FILL_COLOR;
       Game.ctx.fillRect(
-        Math.floor(selStartX + b - hg),
-        Math.floor(selStartY + b - hg),
-        Math.floor(s + 2 * hg),
-        Math.floor(s + 2 * hg),
+        Math.floor(selStartX + b - hg2),
+        Math.floor(selStartY + b - hg2),
+        Math.floor(s + 2 * hg2),
+        Math.floor(s + 2 * hg2),
       );
 
+      // Clear inner rectangle - use normal size when not in bounds
+      const clearSize = isInBounds ? s : s - 2;
+      const selOffset = isInBounds ? 0 : 1;
       Game.ctx.clearRect(
-        Math.floor(startX + this.selX * (s + 2 * b + g) + b),
-        Math.floor(startY + b),
-        Math.floor(s),
-        Math.floor(s),
+        Math.floor(startX + this.selX * (s + 2 * b + g) + b + selOffset),
+        Math.floor(startY + b + selOffset),
+        Math.floor(clearSize),
+        Math.floor(clearSize),
       );
 
       // Draw equip animation for selected slot with highlight
       const idx = this.selX;
       Game.ctx.fillStyle = EQUIP_COLOR;
       Game.ctx.globalAlpha = 0.3;
-      const yOff = (s + 2 * hg) * (1 - this.equipAnimAmount[idx]);
+      const yOff = (s + 2 * hg2) * (1 - this.equipAnimAmount[idx]);
       Game.ctx.fillRect(
-        Math.round(startX + this.selX * (s + 2 * b + g) + b - hg),
-        Math.round(startY + b + yOff - hg),
-        Math.round(s + 2 * hg),
-        Math.round(s + 2 * hg - yOff),
+        Math.round(startX + this.selX * (s + 2 * b + g) + b - hg2),
+        Math.round(startY + b + yOff - hg2),
+        Math.round(s + 2 * hg2),
+        Math.round(s + 2 * hg2 - yOff),
       );
       Game.ctx.globalAlpha = 1;
 
@@ -859,7 +863,7 @@ export class Inventory {
     ); // size of box
     const b = 2; // border
     const g = -2; // gap
-    const hg = 3 + Math.round(0.5 * Math.sin(Date.now() * 0.01) + 0.5); // highlighted growth
+    const hg = 1 + Math.round(0.5 * Math.sin(Date.now() * 0.01) + 0.5); // highlighted growth
     const invRows = Math.floor(this.rows + this._expansion);
     const ob = 1; // outer border
     const width = Math.floor(this.cols * (s + 2 * b + g) - g);
@@ -889,7 +893,7 @@ export class Inventory {
       const b = 2; // border
       const g = -2; // gap
       const hg = Math.floor(
-        3 + Math.round(0.5 * Math.sin(Date.now() * 0.01) + 0.5),
+        1 + Math.round(0.5 * Math.sin(Date.now() * 0.01) + 0.5),
       ); // highlighted growth
       const invRows = this.rows + this._expansion;
       const ob = 1; // outer border
@@ -1161,7 +1165,7 @@ export class Inventory {
       : 18;
     const b = 2; // border
     const g = -2; // gap
-    const hg = 3 + Math.round(0.5 * Math.sin(Date.now() * 0.01) + 0.5); // highlighted growth
+    const hg = 1 + Math.round(0.5 * Math.sin(Date.now() * 0.01) + 0.5); // highlighted growth
     const ob = 1; // outer border
     const width = this.cols * (s + 2 * b + g) - g;
 
