@@ -125,13 +125,13 @@ export class DropTable {
     },
     {
       itemType: "scytheblade",
-      dropRate: 5,
+      dropRate: 10,
       category: ["reaper"],
       unique: true,
     },
     {
       itemType: "scythehandle",
-      dropRate: 5,
+      dropRate: 10,
       category: ["reaper"],
       unique: true,
     },
@@ -195,12 +195,7 @@ export class DropTable {
     increaseDepth: number = 0,
     maxDrops: number = 1,
   ) => {
-    console.log(
-      `getDrop called: entity=${entity.name}, categories=${useCategory}, force=${force}`,
-    );
-
     if (entity.cloned) {
-      console.log("Skipping: entity is cloned");
       return;
     }
 
@@ -209,7 +204,6 @@ export class DropTable {
 
     // Skip initial drop chance check if forced
     if (!force && dropChance > 1 && Math.random() > 1 / dropChance) {
-      console.log("Skipping: failed initial drop chance");
       return null;
     }
 
@@ -217,14 +211,12 @@ export class DropTable {
     let eligibleDrops = this.drops.filter(
       (drop) => drop.minDepth === undefined || drop.minDepth <= currentDepth,
     );
-    console.log(`After depth filter: ${eligibleDrops.length} drops`);
 
     // Filter out unique items if no categories are specified (default drop table)
     if (useCategory.length === 0) {
       eligibleDrops = eligibleDrops.filter(
         (drop) => drop.unique === undefined || drop.unique === false,
       );
-      console.log(`After unique filter: ${eligibleDrops.length} drops`);
     }
 
     // Filter by categories or specific items if provided
@@ -234,15 +226,10 @@ export class DropTable {
           useCategory.includes(drop.itemType) || // Match specific item
           drop.category.some((cat) => useCategory.includes(cat)), // Match category
       );
-      console.log(`After category filter: ${eligibleDrops.length} drops`);
-      console.log(
-        `Eligible drops: ${eligibleDrops.map((d) => d.itemType).join(", ")}`,
-      );
     }
 
     // Handle case with no eligible drops
     if (eligibleDrops.length === 0) {
-      console.log("No eligible drops found");
       return null;
     }
 
@@ -254,14 +241,10 @@ export class DropTable {
     for (const drop of eligibleDrops) {
       const randomRoll = Math.random();
       const threshold = 1 / drop.dropRate;
-      console.log(
-        `Rolling for ${drop.itemType}: ${randomRoll} < ${threshold} = ${randomRoll < threshold}`,
-      );
 
       if (randomRoll < threshold) {
         const item = this.addNewItem(drop.itemType, entity);
         if (item) {
-          console.log(`Successfully dropped ${drop.itemType}`);
           droppedItems.push(item);
           droppedCount++;
 
@@ -270,28 +253,21 @@ export class DropTable {
             break;
           }
         } else {
-          console.log(`Failed to create item ${drop.itemType}`);
         }
       }
     }
 
     // Force drop the most common item if needed and we haven't dropped anything yet
     if (force && droppedCount === 0 && eligibleDrops.length > 0) {
-      console.log("Force dropping most common item");
       const mostCommonDrop = eligibleDrops.reduce((prev, curr) =>
         prev.dropRate < curr.dropRate ? prev : curr,
       );
-      console.log(`Force dropping: ${mostCommonDrop.itemType}`);
       const item = this.addNewItem(mostCommonDrop.itemType, entity);
       if (item) {
-        console.log(`Successfully force dropped ${mostCommonDrop.itemType}`);
         droppedItems.push(item);
-      } else {
-        console.log(`Failed to create forced item ${mostCommonDrop.itemType}`);
       }
     }
 
-    console.log(`Final result: ${droppedItems.length} items dropped`);
     return droppedItems.length > 0 ? droppedItems : null;
   };
 

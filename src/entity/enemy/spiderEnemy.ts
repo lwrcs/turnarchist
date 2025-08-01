@@ -33,7 +33,7 @@ export class SpiderEnemy extends Enemy {
     this.frame = 0;
     this.health = 1;
     this.maxHealth = 1;
-    this.tileX = 8;
+    this.tileX = 11;
     this.tileY = 4;
     this.seenPlayer = false;
     this.aggro = false;
@@ -41,9 +41,9 @@ export class SpiderEnemy extends Enemy {
     this.orthogonalAttack = true;
     this.imageParticleX = 3;
     this.imageParticleY = 24;
-    this.state = SpiderState.HIDDEN;
+    this.state = SpiderState.VISIBLE;
     //if (drop) this.drop = drop;
-    this.drawYOffset = 0.175;
+    this.drawYOffset = 1.2;
     this.revealTick = 0;
 
     this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
@@ -229,11 +229,23 @@ export class SpiderEnemy extends Enemy {
     if (!this.dead) {
       this.updateDrawXY(delta);
       if (this.ticks % 2 === 0) {
-        this.tileX = 9;
+        this.tileX = 11;
         this.tileY = 4;
       } else {
-        this.tileX = 8;
+        this.tileX = 11;
         this.tileY = 4;
+      }
+      switch (this.direction) {
+        case Direction.UP:
+          this.tileX = 13;
+          break;
+        case Direction.LEFT:
+          this.tileX = 13;
+          this.tileY = 6;
+          break;
+        case Direction.RIGHT:
+          this.tileY = 6;
+          break;
       }
       let rumbleX = this.rumble(this.rumbling, this.frame, this.direction).x;
       let rumbleY = this.rumble(this.rumbling, this.frame, this.direction).y;
@@ -252,17 +264,17 @@ export class SpiderEnemy extends Enemy {
           this.room.shadeColor,
           this.shadeAmount(),
         );
-      if ((this.state = SpiderState.VISIBLE)) {
+      if (this.state === SpiderState.VISIBLE) {
         //only draw when visible
         Game.drawMob(
           this.tileX,
-          this.tileY + this.direction,
-          1,
-          1,
-          this.x - this.drawX + rumbleX,
+          this.tileY, // + this.direction,
+          2,
+          2,
+          this.x - this.drawX + rumbleX - 0.5,
           this.y - this.drawYOffset - this.drawY + rumbleY,
-          1 * this.crushX,
-          1 * this.crushY,
+          2 * this.crushX,
+          2 * this.crushY,
           this.softShadeColor,
           this.shadeAmount(),
         );

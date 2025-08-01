@@ -8746,12 +8746,24 @@ class SpiderEnemy extends enemy_1.Enemy {
             if (!this.dead) {
                 this.updateDrawXY(delta);
                 if (this.ticks % 2 === 0) {
-                    this.tileX = 9;
+                    this.tileX = 11;
                     this.tileY = 4;
                 }
                 else {
-                    this.tileX = 8;
+                    this.tileX = 11;
                     this.tileY = 4;
+                }
+                switch (this.direction) {
+                    case game_1.Direction.UP:
+                        this.tileX = 13;
+                        break;
+                    case game_1.Direction.LEFT:
+                        this.tileX = 13;
+                        this.tileY = 6;
+                        break;
+                    case game_1.Direction.RIGHT:
+                        this.tileY = 6;
+                        break;
                 }
                 let rumbleX = this.rumble(this.rumbling, this.frame, this.direction).x;
                 let rumbleY = this.rumble(this.rumbling, this.frame, this.direction).y;
@@ -8760,9 +8772,10 @@ class SpiderEnemy extends enemy_1.Enemy {
                     this.frame = 0;
                 if (this.hasShadow)
                     game_1.Game.drawMob(0, 0, 1, 1, this.x - this.drawX, this.y - 0.25 - this.drawY, 1, 1, this.room.shadeColor, this.shadeAmount());
-                if ((this.state = SpiderState.VISIBLE)) {
+                if (this.state === SpiderState.VISIBLE) {
                     //only draw when visible
-                    game_1.Game.drawMob(this.tileX, this.tileY + this.direction, 1, 1, this.x - this.drawX + rumbleX, this.y - this.drawYOffset - this.drawY + rumbleY, 1 * this.crushX, 1 * this.crushY, this.softShadeColor, this.shadeAmount());
+                    game_1.Game.drawMob(this.tileX, this.tileY, // + this.direction,
+                    2, 2, this.x - this.drawX + rumbleX - 0.5, this.y - this.drawYOffset - this.drawY + rumbleY, 2 * this.crushX, 2 * this.crushY, this.softShadeColor, this.shadeAmount());
                 }
                 if (this.crushed) {
                     this.crushAnim(delta);
@@ -8782,7 +8795,7 @@ class SpiderEnemy extends enemy_1.Enemy {
         this.frame = 0;
         this.health = 1;
         this.maxHealth = 1;
-        this.tileX = 8;
+        this.tileX = 11;
         this.tileY = 4;
         this.seenPlayer = false;
         this.aggro = false;
@@ -8790,9 +8803,9 @@ class SpiderEnemy extends enemy_1.Enemy {
         this.orthogonalAttack = true;
         this.imageParticleX = 3;
         this.imageParticleY = 24;
-        this.state = SpiderState.HIDDEN;
+        this.state = SpiderState.VISIBLE;
         //if (drop) this.drop = drop;
-        this.drawYOffset = 0.175;
+        this.drawYOffset = 1.2;
         this.revealTick = 0;
         this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
     }
@@ -18317,13 +18330,13 @@ DropTable.drops = [
     },
     {
         itemType: "scytheblade",
-        dropRate: 5,
+        dropRate: 10,
         category: ["reaper"],
         unique: true,
     },
     {
         itemType: "scythehandle",
-        dropRate: 5,
+        dropRate: 10,
         category: ["reaper"],
         unique: true,
     },
@@ -18371,36 +18384,28 @@ DropTable.drops = [
     { itemType: "bomb", dropRate: 100, category: ["bomb", "weapon"] },
 ];
 DropTable.getDrop = (entity, useCategory = [], force = false, increaseDepth = 0, maxDrops = 1) => {
-    console.log(`getDrop called: entity=${entity.name}, categories=${useCategory}, force=${force}`);
     if (entity.cloned) {
-        console.log("Skipping: entity is cloned");
         return;
     }
     const currentDepth = entity.room.depth + increaseDepth;
     const dropChance = entity.dropChance || 1;
     // Skip initial drop chance check if forced
     if (!force && dropChance > 1 && Math.random() > 1 / dropChance) {
-        console.log("Skipping: failed initial drop chance");
         return null;
     }
     // Filter eligible drops by depth
     let eligibleDrops = _a.drops.filter((drop) => drop.minDepth === undefined || drop.minDepth <= currentDepth);
-    console.log(`After depth filter: ${eligibleDrops.length} drops`);
     // Filter out unique items if no categories are specified (default drop table)
     if (useCategory.length === 0) {
         eligibleDrops = eligibleDrops.filter((drop) => drop.unique === undefined || drop.unique === false);
-        console.log(`After unique filter: ${eligibleDrops.length} drops`);
     }
     // Filter by categories or specific items if provided
     if (useCategory.length > 0) {
         eligibleDrops = eligibleDrops.filter((drop) => useCategory.includes(drop.itemType) || // Match specific item
             drop.category.some((cat) => useCategory.includes(cat)));
-        console.log(`After category filter: ${eligibleDrops.length} drops`);
-        console.log(`Eligible drops: ${eligibleDrops.map((d) => d.itemType).join(", ")}`);
     }
     // Handle case with no eligible drops
     if (eligibleDrops.length === 0) {
-        console.log("No eligible drops found");
         return null;
     }
     // Track how many items we've dropped
@@ -18410,11 +18415,9 @@ DropTable.getDrop = (entity, useCategory = [], force = false, increaseDepth = 0,
     for (const drop of eligibleDrops) {
         const randomRoll = Math.random();
         const threshold = 1 / drop.dropRate;
-        console.log(`Rolling for ${drop.itemType}: ${randomRoll} < ${threshold} = ${randomRoll < threshold}`);
         if (randomRoll < threshold) {
             const item = _a.addNewItem(drop.itemType, entity);
             if (item) {
-                console.log(`Successfully dropped ${drop.itemType}`);
                 droppedItems.push(item);
                 droppedCount++;
                 // Stop if we've reached the maximum number of drops
@@ -18423,25 +18426,17 @@ DropTable.getDrop = (entity, useCategory = [], force = false, increaseDepth = 0,
                 }
             }
             else {
-                console.log(`Failed to create item ${drop.itemType}`);
             }
         }
     }
     // Force drop the most common item if needed and we haven't dropped anything yet
     if (force && droppedCount === 0 && eligibleDrops.length > 0) {
-        console.log("Force dropping most common item");
         const mostCommonDrop = eligibleDrops.reduce((prev, curr) => prev.dropRate < curr.dropRate ? prev : curr);
-        console.log(`Force dropping: ${mostCommonDrop.itemType}`);
         const item = _a.addNewItem(mostCommonDrop.itemType, entity);
         if (item) {
-            console.log(`Successfully force dropped ${mostCommonDrop.itemType}`);
             droppedItems.push(item);
         }
-        else {
-            console.log(`Failed to create forced item ${mostCommonDrop.itemType}`);
-        }
     }
-    console.log(`Final result: ${droppedItems.length} items dropped`);
     return droppedItems.length > 0 ? droppedItems : null;
 };
 DropTable.addNewItem = (itemType, entity) => {
@@ -21359,7 +21354,7 @@ Weapon.itemName = "weapon";
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.environmentProps = exports.Environment = void 0;
+exports.environmentData = exports.enemyMinimumDepth = exports.Environment = exports.enemyClassToId = void 0;
 const barrel_1 = __webpack_require__(/*! ../entity/object/barrel */ "./src/entity/object/barrel.ts");
 const block_1 = __webpack_require__(/*! ../entity/object/block */ "./src/entity/object/block.ts");
 const bush_1 = __webpack_require__(/*! ../entity/object/bush */ "./src/entity/object/bush.ts");
@@ -21380,6 +21375,44 @@ const tree_1 = __webpack_require__(/*! ../entity/object/tree */ "./src/entity/ob
 const environmentTypes_1 = __webpack_require__(/*! ../constants/environmentTypes */ "./src/constants/environmentTypes.ts");
 const decoBlock_1 = __webpack_require__(/*! ../entity/object/decoBlock */ "./src/entity/object/decoBlock.ts");
 const furnace_1 = __webpack_require__(/*! ../entity/object/furnace */ "./src/entity/object/furnace.ts");
+// Enemy imports
+const crabEnemy_1 = __webpack_require__(/*! ../entity/enemy/crabEnemy */ "./src/entity/enemy/crabEnemy.ts");
+const frogEnemy_1 = __webpack_require__(/*! ../entity/enemy/frogEnemy */ "./src/entity/enemy/frogEnemy.ts");
+const zombieEnemy_1 = __webpack_require__(/*! ../entity/enemy/zombieEnemy */ "./src/entity/enemy/zombieEnemy.ts");
+const skullEnemy_1 = __webpack_require__(/*! ../entity/enemy/skullEnemy */ "./src/entity/enemy/skullEnemy.ts");
+const energyWizard_1 = __webpack_require__(/*! ../entity/enemy/energyWizard */ "./src/entity/enemy/energyWizard.ts");
+const chargeEnemy_1 = __webpack_require__(/*! ../entity/enemy/chargeEnemy */ "./src/entity/enemy/chargeEnemy.ts");
+const rookEnemy_1 = __webpack_require__(/*! ../entity/enemy/rookEnemy */ "./src/entity/enemy/rookEnemy.ts");
+const bishopEnemy_1 = __webpack_require__(/*! ../entity/enemy/bishopEnemy */ "./src/entity/enemy/bishopEnemy.ts");
+const armoredzombieEnemy_1 = __webpack_require__(/*! ../entity/enemy/armoredzombieEnemy */ "./src/entity/enemy/armoredzombieEnemy.ts");
+const bigSkullEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigSkullEnemy */ "./src/entity/enemy/bigSkullEnemy.ts");
+const queenEnemy_1 = __webpack_require__(/*! ../entity/enemy/queenEnemy */ "./src/entity/enemy/queenEnemy.ts");
+const knightEnemy_1 = __webpack_require__(/*! ../entity/enemy/knightEnemy */ "./src/entity/enemy/knightEnemy.ts");
+const bigKnightEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigKnightEnemy */ "./src/entity/enemy/bigKnightEnemy.ts");
+const armoredSkullEnemy_1 = __webpack_require__(/*! ../entity/enemy/armoredSkullEnemy */ "./src/entity/enemy/armoredSkullEnemy.ts");
+const fireWizard_1 = __webpack_require__(/*! ../entity/enemy/fireWizard */ "./src/entity/enemy/fireWizard.ts");
+const mummyEnemy_1 = __webpack_require__(/*! ../entity/enemy/mummyEnemy */ "./src/entity/enemy/mummyEnemy.ts");
+const spiderEnemy_1 = __webpack_require__(/*! ../entity/enemy/spiderEnemy */ "./src/entity/enemy/spiderEnemy.ts");
+// Enemy ID mapping for integration with level progression system
+exports.enemyClassToId = new Map([
+    [crabEnemy_1.CrabEnemy, 1],
+    [frogEnemy_1.FrogEnemy, 2],
+    [zombieEnemy_1.ZombieEnemy, 3],
+    [skullEnemy_1.SkullEnemy, 4],
+    [energyWizard_1.EnergyWizardEnemy, 5],
+    [chargeEnemy_1.ChargeEnemy, 6],
+    [rookEnemy_1.RookEnemy, 7],
+    [bishopEnemy_1.BishopEnemy, 8],
+    [armoredzombieEnemy_1.ArmoredzombieEnemy, 9],
+    [bigSkullEnemy_1.BigSkullEnemy, 10],
+    [queenEnemy_1.QueenEnemy, 11],
+    [knightEnemy_1.KnightEnemy, 12],
+    [bigKnightEnemy_1.BigKnightEnemy, 13],
+    [fireWizard_1.FireWizardEnemy, 14],
+    [armoredSkullEnemy_1.ArmoredSkullEnemy, 15],
+    [mummyEnemy_1.MummyEnemy, 16],
+    [spiderEnemy_1.SpiderEnemy, 17],
+]);
 class Environment {
     constructor(type) {
         this.type = type;
@@ -21387,26 +21420,10 @@ class Environment {
     }
 }
 exports.Environment = Environment;
-const props = [
-    { class: crate_1.Crate },
-    { class: barrel_1.Barrel },
-    { class: tombStone_1.TombStone, additionalParams: [1] },
-    { class: tombStone_1.TombStone, additionalParams: [0] },
-    { class: pumpkin_1.Pumpkin },
-    { class: block_1.Block },
-    { class: pot_1.Pot },
-    { class: pottedPlant_1.PottedPlant },
-    { class: bush_1.Bush },
-    { class: sprout_1.Sprout },
-    { class: mushrooms_1.Mushrooms },
-    { class: rockResource_1.Rock },
-    { class: chest_1.Chest },
-    { class: glowBugEnemy_1.GlowBugEnemy },
-    { class: tree_1.Tree },
-    { class: decoBlock_1.DecoBlock },
-    { class: furnace_1.Furnace },
-];
-const environmentProps = {
+// Import the enemy minimum depth from level.ts
+var level_1 = __webpack_require__(/*! ./level */ "./src/level/level.ts");
+Object.defineProperty(exports, "enemyMinimumDepth", ({ enumerable: true, get: function () { return level_1.enemyMinimumDepth; } }));
+const environmentData = {
     [environmentTypes_1.EnvType.DUNGEON]: {
         props: [
             { class: crate_1.Crate, weight: 1 },
@@ -21424,6 +21441,37 @@ const environmentProps = {
             { class: decoBlock_1.DecoBlock, weight: 0.05 },
             { class: furnace_1.Furnace, weight: 0.05 },
         ],
+        enemies: [
+            // Early game enemies (depth 0+)
+            { class: crabEnemy_1.CrabEnemy, weight: 1.0, minDepth: 0 },
+            { class: zombieEnemy_1.ZombieEnemy, weight: 1.2, minDepth: 0 },
+            { class: skullEnemy_1.SkullEnemy, weight: 1.0, minDepth: 0 },
+            // Mid game enemies (depth 1+)
+            { class: energyWizard_1.EnergyWizardEnemy, weight: 0.1, minDepth: 1 },
+            { class: rookEnemy_1.RookEnemy, weight: 0.6, minDepth: 1 },
+            { class: bishopEnemy_1.BishopEnemy, weight: 0.6, minDepth: 1 },
+            { class: armoredzombieEnemy_1.ArmoredzombieEnemy, weight: 0.8, minDepth: 1 },
+            { class: knightEnemy_1.KnightEnemy, weight: 0.7, minDepth: 1 },
+            // Late game enemies (depth 2+)
+            { class: chargeEnemy_1.ChargeEnemy, weight: 0.5, minDepth: 2 },
+            {
+                class: bigSkullEnemy_1.BigSkullEnemy,
+                weight: 0.1,
+                minDepth: 2,
+                specialSpawnLogic: "clearFloor",
+                size: { w: 2, h: 2 },
+            },
+            { class: queenEnemy_1.QueenEnemy, weight: 0.2, minDepth: 2 },
+            {
+                class: bigKnightEnemy_1.BigKnightEnemy,
+                weight: 0.1,
+                minDepth: 2,
+                specialSpawnLogic: "clearFloor",
+                size: { w: 2, h: 2 },
+            },
+            { class: fireWizard_1.FireWizardEnemy, weight: 0.1, minDepth: 2 },
+            { class: armoredSkullEnemy_1.ArmoredSkullEnemy, weight: 0.5, minDepth: 2 },
+        ],
     },
     [environmentTypes_1.EnvType.CAVE]: {
         props: [
@@ -21436,13 +21484,32 @@ const environmentProps = {
             { class: pot_1.Pot, weight: 0.2 },
             { class: chest_1.Chest, weight: 0.1 },
         ],
+        enemies: [
+            // Cave-dwelling creatures
+            { class: crabEnemy_1.CrabEnemy, weight: 1.5, minDepth: 0 },
+            { class: spiderEnemy_1.SpiderEnemy, weight: 1.2, minDepth: 0 },
+            { class: skullEnemy_1.SkullEnemy, weight: 0.8, minDepth: 0 },
+            // Mid depth cave enemies
+            { class: chargeEnemy_1.ChargeEnemy, weight: 1.0, minDepth: 2 },
+            { class: armoredzombieEnemy_1.ArmoredzombieEnemy, weight: 0.6, minDepth: 1 },
+            { class: energyWizard_1.EnergyWizardEnemy, weight: 0.5, minDepth: 1 },
+            // Deep cave threats
+            {
+                class: bigSkullEnemy_1.BigSkullEnemy,
+                weight: 0.15,
+                minDepth: 2,
+                specialSpawnLogic: "clearFloor",
+                size: { w: 2, h: 2 },
+            },
+            { class: armoredSkullEnemy_1.ArmoredSkullEnemy, weight: 0.7, minDepth: 2 },
+            //{ class: MummyEnemy, weight: 0.4, minDepth: 2 }, // Ancient cave mummies
+        ],
     },
     [environmentTypes_1.EnvType.FOREST]: {
         props: [
             { class: tombStone_1.TombStone, weight: 0.035, additionalParams: [1] },
             { class: tombStone_1.TombStone, weight: 0.035, additionalParams: [0] },
             { class: pumpkin_1.Pumpkin, weight: 0.05 },
-            //{ class: Block, weight: 0.1 },
             { class: bush_1.Bush, weight: 2 },
             { class: sprout_1.Sprout, weight: 0.05 },
             { class: mushrooms_1.Mushrooms, weight: 0.2 },
@@ -21450,6 +21517,19 @@ const environmentProps = {
             { class: chest_1.Chest, weight: 0.05 },
             { class: glowBugEnemy_1.GlowBugEnemy, weight: 0.05 },
             { class: tree_1.Tree, weight: 0.1 },
+        ],
+        enemies: [
+            // Nature creatures (higher weights)
+            { class: glowBugEnemy_1.GlowBugEnemy, weight: 1.5, minDepth: 0 },
+            { class: frogEnemy_1.FrogEnemy, weight: 1.8, minDepth: 1 },
+            { class: spiderEnemy_1.SpiderEnemy, weight: 1.2, minDepth: 0 },
+            // Less common forest enemies
+            { class: crabEnemy_1.CrabEnemy, weight: 0.3, minDepth: 0 },
+            { class: zombieEnemy_1.ZombieEnemy, weight: 0.2, minDepth: 2 },
+            { class: skullEnemy_1.SkullEnemy, weight: 0.1, minDepth: 2 },
+            // Rare magical forest creatures
+            { class: energyWizard_1.EnergyWizardEnemy, weight: 0.4, minDepth: 1 },
+            { class: chargeEnemy_1.ChargeEnemy, weight: 0.3, minDepth: 2 }, // Charging forest beasts
         ],
     },
     [environmentTypes_1.EnvType.SWAMP]: {
@@ -21464,6 +21544,20 @@ const environmentProps = {
             { class: rockResource_1.Rock, weight: 0.05 },
             { class: chest_1.Chest, weight: 0.05 },
         ],
+        enemies: [
+            // Decay and poison themed enemies
+            { class: zombieEnemy_1.ZombieEnemy, weight: 1.8, minDepth: 0 },
+            { class: frogEnemy_1.FrogEnemy, weight: 1.5, minDepth: 1 },
+            { class: mummyEnemy_1.MummyEnemy, weight: 1.0, minDepth: 2 },
+            { class: armoredzombieEnemy_1.ArmoredzombieEnemy, weight: 1.2, minDepth: 1 },
+            // Other swamp dwellers
+            { class: crabEnemy_1.CrabEnemy, weight: 0.8, minDepth: 0 },
+            { class: skullEnemy_1.SkullEnemy, weight: 1.0, minDepth: 0 },
+            { class: spiderEnemy_1.SpiderEnemy, weight: 0.6, minDepth: 0 },
+            // Powerful swamp creatures
+            { class: armoredSkullEnemy_1.ArmoredSkullEnemy, weight: 0.8, minDepth: 2 },
+            { class: energyWizard_1.EnergyWizardEnemy, weight: 0.3, minDepth: 1 }, // Swamp witches
+        ],
     },
     [environmentTypes_1.EnvType.GLACIER]: {
         props: [
@@ -21471,6 +21565,32 @@ const environmentProps = {
             { class: crate_1.Crate, weight: 5 },
             { class: rockResource_1.Rock, weight: 0.6 },
             { class: chest_1.Chest, weight: 0.4 },
+        ],
+        enemies: [
+            // Ice and cold themed enemies
+            { class: crabEnemy_1.CrabEnemy, weight: 1.0, minDepth: 0 },
+            { class: chargeEnemy_1.ChargeEnemy, weight: 1.2, minDepth: 2 },
+            { class: knightEnemy_1.KnightEnemy, weight: 1.0, minDepth: 1 },
+            {
+                class: bigKnightEnemy_1.BigKnightEnemy,
+                weight: 0.15,
+                minDepth: 2,
+                specialSpawnLogic: "clearFloor",
+                size: { w: 2, h: 2 },
+            },
+            // Hardy creatures that survive cold
+            { class: armoredzombieEnemy_1.ArmoredzombieEnemy, weight: 0.8, minDepth: 1 },
+            { class: armoredSkullEnemy_1.ArmoredSkullEnemy, weight: 0.9, minDepth: 2 },
+            { class: rookEnemy_1.RookEnemy, weight: 0.7, minDepth: 1 },
+            { class: bishopEnemy_1.BishopEnemy, weight: 0.7, minDepth: 1 },
+            // Rare glacier threats
+            {
+                class: bigSkullEnemy_1.BigSkullEnemy,
+                weight: 0.1,
+                minDepth: 2,
+                specialSpawnLogic: "clearFloor",
+                size: { w: 2, h: 2 },
+            },
         ],
     },
     [environmentTypes_1.EnvType.CASTLE]: {
@@ -21485,9 +21605,30 @@ const environmentProps = {
             { class: chest_1.Chest, weight: 0.2 },
             { class: rockResource_1.Rock, weight: 0.1 },
         ],
+        enemies: [
+            // Royal guards and castle defenders
+            { class: knightEnemy_1.KnightEnemy, weight: 2.0, minDepth: 1 },
+            {
+                class: bigKnightEnemy_1.BigKnightEnemy,
+                weight: 0.2,
+                minDepth: 2,
+                specialSpawnLogic: "clearFloor",
+                size: { w: 2, h: 2 },
+            },
+            { class: rookEnemy_1.RookEnemy, weight: 1.5, minDepth: 1 },
+            { class: bishopEnemy_1.BishopEnemy, weight: 1.5, minDepth: 1 },
+            { class: queenEnemy_1.QueenEnemy, weight: 0.5, minDepth: 2 },
+            // Castle undead
+            { class: armoredzombieEnemy_1.ArmoredzombieEnemy, weight: 1.0, minDepth: 1 },
+            { class: armoredSkullEnemy_1.ArmoredSkullEnemy, weight: 1.0, minDepth: 2 },
+            // Other castle inhabitants
+            { class: energyWizard_1.EnergyWizardEnemy, weight: 0.1, minDepth: 1 },
+            { class: fireWizard_1.FireWizardEnemy, weight: 0.1, minDepth: 2 },
+            { class: chargeEnemy_1.ChargeEnemy, weight: 0.4, minDepth: 2 }, // War beasts
+        ],
     },
 };
-exports.environmentProps = environmentProps;
+exports.environmentData = environmentData;
 
 
 /***/ }),
@@ -21804,7 +21945,6 @@ exports.Level = exports.enemyMinimumDepth = void 0;
 const room_1 = __webpack_require__(/*! ../room/room */ "./src/room/room.ts");
 const environment_1 = __webpack_require__(/*! ./environment */ "./src/level/environment.ts");
 const roomPopulator_1 = __webpack_require__(/*! ../room/roomPopulator */ "./src/room/roomPopulator.ts");
-const gameplaySettings_1 = __webpack_require__(/*! ../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
 const downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/downLadder.ts");
 const key_1 = __webpack_require__(/*! ../item/key */ "./src/item/key.ts");
 exports.enemyMinimumDepth = {
@@ -21994,81 +22134,12 @@ class Level {
      * @returns An object conforming to the EnemyParameters interface.
      */
     getEnemyParameters() {
-        let currentDepth = this.depth;
-        // Generate the enemy pool based on current depth
-        const enemyPoolIds = this.generateEnemyPoolIds(currentDepth);
-        // Create enemyTables where each level maps to the enemyPoolIds
-        const enemyTables = {};
-        for (let tableDepth = 0; tableDepth <= currentDepth; tableDepth++) {
-            // Assign the same pool for all tables up to current depth
-            enemyTables[tableDepth] = enemyPoolIds;
-        }
-        const newEnemies = enemyTables[currentDepth].filter((id) => !this.game.encounteredEnemies.includes(id));
-        this.game.encounteredEnemies.push(...newEnemies);
-        //console.log(
-        //`encounteredEnemies for depth ${this.depth}: ${this.game.encounteredEnemies}`,
-        //);
+        // This can now be simplified or deprecated since Populator handles everything
         return {
-            enemyTables,
-            maxDepthTable: currentDepth,
+            enemyTables: {},
+            maxDepthTable: this.depth,
             minDepths: exports.enemyMinimumDepth,
         };
-    }
-    /**
-     * Generates the enemy pool IDs based on the current depth, introducing up to 2 new enemies each level.
-     * @param depth The current depth level.
-     * @returns An array of selected enemy IDs.
-     */
-    generateEnemyPoolIds(depth) {
-        const availableEnemies = Object.entries(exports.enemyMinimumDepth)
-            .filter(([enemyId, minDepth]) => depth >= minDepth)
-            .map(([enemyId]) => Number(enemyId));
-        // Determine which enemies are new (not yet encountered)
-        const newEnemies = availableEnemies.filter((id) => !this.game.encounteredEnemies.includes(id));
-        // Decide how many new enemies to introduce (1 or 2)
-        const newEnemiesToAddCount = gameplaySettings_1.GameplaySettings.LIMIT_ENEMY_TYPES
-            ? Math.min(newEnemies.length, 2)
-            : newEnemies.length;
-        const newEnemiesToAdd = this.getRandomElements(newEnemies, newEnemiesToAddCount);
-        // Add the new enemies to encounteredEnemies
-        this.game.encounteredEnemies.push(...newEnemiesToAdd);
-        // Log the newly added enemies for debugging
-        // console.log(`New enemies introduced at depth ${depth}: ${newEnemiesToAdd}`);
-        // Combine encountered enemies to form the enemy pool
-        const enemyPoolIds = this.game.encounteredEnemies.slice();
-        // Determine the number of enemy types for the current depth
-        const numberOfTypes = gameplaySettings_1.GameplaySettings.LIMIT_ENEMY_TYPES
-            ? this.getNumberOfEnemyTypes(depth)
-            : enemyPoolIds.length;
-        // Select the final set of enemy IDs for the pool
-        const selectedEnemyIds = this.getRandomElements(enemyPoolIds, numberOfTypes);
-        // Ensure uniqueness and limit based on available enemies
-        return Array.from(new Set(selectedEnemyIds)).slice(0, numberOfTypes);
-    }
-    /**
-     * Determines the number of enemy types allowed based on the current depth.
-     * @param depth The current depth level.
-     * @returns The number of enemy types.
-     */
-    getNumberOfEnemyTypes(depth) {
-        // Example logic: depth 0 -> 2 types, depth 1 -> 4, depth 2 -> 6, etc.
-        let numberOfTypes = depth === 0 ? 2 : Math.ceil(Math.sqrt(depth + 1)) + 4;
-        //console.log(`numberOfTypes: ${numberOfTypes}`);
-        return numberOfTypes;
-    }
-    /**
-     * Utility function to get random elements from an array.
-     * @param array The array to select from.
-     * @param count The number of elements to select.
-     * @returns An array of randomly selected elements.
-     */
-    getRandomElements(array, count) {
-        const shuffled = [...array];
-        for (let i = shuffled.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-        }
-        return shuffled.slice(0, Math.min(count, shuffled.length));
     }
     setRoomSkins() {
         for (let room of this.rooms) {
@@ -30372,10 +30443,9 @@ class Room {
         }
         for (let i = 0; i < numSpawners; i++) {
             const { x, y } = this.getRandomEmptyPosition(tiles);
-            let spawnTable = this.level
-                .getEnemyParameters()
-                //spawners should use enemy pools from the previous depth
-                .enemyTables[Math.max(0, this.depth - 1)].filter((t) => t !== 7);
+            let spawnTable = this.level.populator
+                .getEnemyPoolForDepth(Math.max(0, this.depth - 1))
+                .filter((t) => t !== 7);
             const spawner = spawner_1.Spawner.add(this, this.game, x, y, spawnTable);
             return spawner;
         }
@@ -30933,27 +31003,19 @@ const warhammer_1 = __webpack_require__(/*! ../item/weapon/warhammer */ "./src/i
 const sword_1 = __webpack_require__(/*! ../item/weapon/sword */ "./src/item/weapon/sword.ts");
 const pickaxe_1 = __webpack_require__(/*! ../item/tool/pickaxe */ "./src/item/tool/pickaxe.ts");
 const shotgun_1 = __webpack_require__(/*! ../item/weapon/shotgun */ "./src/item/weapon/shotgun.ts");
-const crabEnemy_1 = __webpack_require__(/*! ../entity/enemy/crabEnemy */ "./src/entity/enemy/crabEnemy.ts");
-const frogEnemy_1 = __webpack_require__(/*! ../entity/enemy/frogEnemy */ "./src/entity/enemy/frogEnemy.ts");
-const zombieEnemy_1 = __webpack_require__(/*! ../entity/enemy/zombieEnemy */ "./src/entity/enemy/zombieEnemy.ts");
-const skullEnemy_1 = __webpack_require__(/*! ../entity/enemy/skullEnemy */ "./src/entity/enemy/skullEnemy.ts");
-const energyWizard_1 = __webpack_require__(/*! ../entity/enemy/energyWizard */ "./src/entity/enemy/energyWizard.ts");
-const chargeEnemy_1 = __webpack_require__(/*! ../entity/enemy/chargeEnemy */ "./src/entity/enemy/chargeEnemy.ts");
-const rookEnemy_1 = __webpack_require__(/*! ../entity/enemy/rookEnemy */ "./src/entity/enemy/rookEnemy.ts");
-const bishopEnemy_1 = __webpack_require__(/*! ../entity/enemy/bishopEnemy */ "./src/entity/enemy/bishopEnemy.ts");
-const armoredzombieEnemy_1 = __webpack_require__(/*! ../entity/enemy/armoredzombieEnemy */ "./src/entity/enemy/armoredzombieEnemy.ts");
 const bigSkullEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigSkullEnemy */ "./src/entity/enemy/bigSkullEnemy.ts");
 const queenEnemy_1 = __webpack_require__(/*! ../entity/enemy/queenEnemy */ "./src/entity/enemy/queenEnemy.ts");
-const knightEnemy_1 = __webpack_require__(/*! ../entity/enemy/knightEnemy */ "./src/entity/enemy/knightEnemy.ts");
-const bigKnightEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigKnightEnemy */ "./src/entity/enemy/bigKnightEnemy.ts");
-const armoredSkullEnemy_1 = __webpack_require__(/*! ../entity/enemy/armoredSkullEnemy */ "./src/entity/enemy/armoredSkullEnemy.ts");
-const fireWizard_1 = __webpack_require__(/*! ../entity/enemy/fireWizard */ "./src/entity/enemy/fireWizard.ts");
 const occultistEnemy_1 = __webpack_require__(/*! ../entity/enemy/occultistEnemy */ "./src/entity/enemy/occultistEnemy.ts");
 const spawner_1 = __webpack_require__(/*! ../entity/enemy/spawner */ "./src/entity/enemy/spawner.ts");
 const bigZombieEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigZombieEnemy */ "./src/entity/enemy/bigZombieEnemy.ts");
 const coalResource_1 = __webpack_require__(/*! ../entity/resource/coalResource */ "./src/entity/resource/coalResource.ts");
 const goldResource_1 = __webpack_require__(/*! ../entity/resource/goldResource */ "./src/entity/resource/goldResource.ts");
 const emeraldResource_1 = __webpack_require__(/*! ../entity/resource/emeraldResource */ "./src/entity/resource/emeraldResource.ts");
+// Add after the imports, create a reverse mapping from ID to enemy name
+const enemyIdToName = {};
+for (const [enemyClass, id] of environment_1.enemyClassToId.entries()) {
+    enemyIdToName[id] = enemyClass.name;
+}
 class Populator {
     constructor(level) {
         this.props = [];
@@ -31003,7 +31065,9 @@ class Populator {
                 return;
             }
             const position = downLadderRoom.getRandomEmptyPosition(validTiles);
-            if (position.x === undefined || position.y === undefined)
+            if (position === null ||
+                position.x === undefined ||
+                position.y === undefined)
                 return;
             console.log(`Placing downladder at position (${position.x}, ${position.y})`);
             const downLadder = new downladderMaker_1.DownladderMaker(downLadderRoom, this.level.game, position.x, position.y);
@@ -31031,7 +31095,6 @@ class Populator {
                 this.addSpikeTraps(room, game_1.Game.randTable([0, 0, 0, 1, 1, 2, 3], rand), rand);
             if (factor <= 6)
                 this.addVendingMachine(room, rand);
-            this.addRandomEnemies(room);
             room.removeDoorObstructions();
         };
         this.populateBoss = (room, rand) => {
@@ -31040,7 +31103,6 @@ class Populator {
             this.addTorchesByArea(room);
             this.addSpikeTraps(room, game_1.Game.randTable([0, 0, 0, 1, 1, 2, 5], rand), rand);
             this.addBosses(room, room.depth);
-            this.addRandomEnemies(room);
         };
         this.populateBigDungeon = (room, rand) => {
             if (game_1.Game.rand(1, 4, rand) === 1)
@@ -31048,7 +31110,6 @@ class Populator {
             this.addTorchesByArea(room);
             if (game_1.Game.rand(1, 3, rand) === 1)
                 this.addSpikeTraps(room, game_1.Game.randTable([3, 5, 7, 8], rand), rand);
-            this.addRandomEnemies(room);
             room.removeDoorObstructions();
         };
         this.populateSpawner = (room, rand) => {
@@ -31115,7 +31176,7 @@ class Populator {
                 this.addSpikeTraps(room, game_1.Game.randTable([0, 0, 0, 1, 1, 2, 5], rand), rand);
             let numEmptyTiles = room.getEmptyTiles().length;
             let numEnemies = Math.ceil(numEmptyTiles * game_1.Game.randTable([0.25, 0.3, 0.35], rand));
-            this.addEnemies(room, numEnemies, rand);
+            this.addEnemiesUnified(room, numEnemies, room.envType); // Use unified system directly
             if (room.level.environment.type === environmentTypes_1.EnvType.CAVE)
                 this.addResources(room, (numEmptyTiles - numEnemies) * game_1.Game.randTable([0.1, 0.2, 0.3], rand), rand);
             room.removeDoorObstructions();
@@ -31137,7 +31198,10 @@ class Populator {
             let lightDropped = false;
             for (let i = 0; i < numChests; i++) {
                 if (tiles.length > 0) {
-                    const { x, y } = room.getRandomEmptyPosition(tiles);
+                    const position = room.getRandomEmptyPosition(tiles);
+                    if (position === null)
+                        break;
+                    const { x, y } = position;
                     let chest = new chest_1.Chest(room, room.game, x, y);
                     /*
                     if (!weaponDropped) {
@@ -31305,16 +31369,21 @@ class Populator {
         this.level = level;
         this.props = [];
         this.medianDensity = gameplaySettings_1.GameplaySettings.MEDIAN_ROOM_DENSITY;
+        // Calculate enemy pool once for this level
+        this.levelEnemyPoolIds = this.generateEnemyPoolIds(this.level.depth);
     }
     addProps(room, numProps, envType) {
         const envData = envType
-            ? environment_1.environmentProps[envType]
-            : environment_1.environmentProps[room.level.environment.type];
+            ? environment_1.environmentData[envType]
+            : environment_1.environmentData[room.level.environment.type];
         let tiles = room.getEmptyTiles();
         for (let i = 0; i < numProps; i++) {
             if (tiles.length === 0)
                 break;
-            const { x, y } = room.getRandomEmptyPosition(tiles);
+            const position = room.getRandomEmptyPosition(tiles);
+            if (position === null)
+                break;
+            const { x, y } = position;
             const selectedProp = utils_1.Utils.randTableWeighted(envData.props);
             if (selectedProp && selectedProp.class && selectedProp.class.add) {
                 const args = selectedProp.additionalParams || [];
@@ -31331,8 +31400,8 @@ class Populator {
      */
     addPropsWithClustering(room, numProps, envType, clusteringOptions) {
         const envData = envType
-            ? environment_1.environmentProps[envType]
-            : environment_1.environmentProps[room.level.environment.type];
+            ? environment_1.environmentData[envType]
+            : environment_1.environmentData[room.level.environment.type];
         const clusterer = new propClusterer_1.PropClusterer(room, clusteringOptions);
         const positions = clusterer.generateClusteredPositions(numProps);
         for (const { x, y } of positions) {
@@ -31355,6 +31424,8 @@ class Populator {
             maxInfluenceDistance: 12,
             useSeedPosition: false,
         });
+        // ADD: Enemies after props, based on remaining space
+        this.addRandomEnemies(room);
     }
     populateForestEnvironment(room) {
         const numProps = this.getNumProps(room, 0.75);
@@ -31365,6 +31436,8 @@ class Populator {
             maxInfluenceDistance: 12,
             useSeedPosition: false,
         });
+        // ADD: Enemies after props, based on remaining space
+        this.addRandomEnemies(room);
     }
     getNumProps(room, medianDensity) {
         medianDensity = medianDensity || this.medianDensity;
@@ -31385,6 +31458,8 @@ class Populator {
             maxInfluenceDistance: 12,
             useSeedPosition: false,
         });
+        // ADD: Enemies after props, based on remaining space
+        this.addRandomEnemies(room);
     }
     // #region TILE ADDING METHODS
     addDoorTorches(room, x, y, doorDir) {
@@ -31488,26 +31563,61 @@ class Populator {
         // add spikes
         let tiles = room.getEmptyTiles();
         for (let i = 0; i < numSpikes; i++) {
-            const { x, y } = room.getRandomEmptyPosition(tiles);
+            const position = room.getRandomEmptyPosition(tiles);
+            if (position === null)
+                break;
+            const { x, y } = position;
             room.roomArray[x][y] = new spiketrap_1.SpikeTrap(room, x, y);
         }
     }
     // #endregion
     // #region ADDING ENTITIES
-    // Function to add enemies to the room
-    addEnemies(room, numEnemies, rand) {
+    /**
+     * Elegant enemy spawning that combines environment selection with progression control
+     */
+    addEnemiesUnified(room, numEnemies, envType) {
         if (gameplaySettings_1.GameplaySettings.NO_ENEMIES === true)
             return;
-        if (room.envType === environmentTypes_1.EnvType.FOREST)
-            numEnemies /= 2;
-        // Get all empty tiles in the room
-        let tiles = room.getEmptyTiles();
-        if (tiles === null)
+        // Get filtered enemies using our centralized logic
+        const availableEnemies = this.getAvailableEnemiesForRoom(room, envType);
+        if (availableEnemies.length === 0) {
+            console.log(`No enemies available for environment ${envType || room.level.environment.type} at depth ${room.depth}`);
             return;
-        //don't put enemies near the entrances so you don't get screwed instantly
-        // Create a Set to store coordinates that should be excluded
+        }
+        // Use existing spawning logic with filtered enemies
+        this.spawnEnemiesFromPool(room, numEnemies, availableEnemies);
+        // Add special enemies (spawners, occultists)
+        this.addSpecialEnemies(room);
+    }
+    /**
+     * Core method: Get available enemies filtered by environment and progression
+     */
+    getAvailableEnemiesForRoom(room, envType) {
+        const environment = envType || room.level.environment.type;
+        const envData = environment_1.environmentData[environment];
+        // Use pre-calculated enemy pool instead of generating it for each room
+        const allowedEnemyIds = this.levelEnemyPoolIds;
+        // Filter environment enemies by allowed pool and add IDs
+        const availableEnemies = envData.enemies
+            .map((enemy) => ({
+            ...enemy,
+            id: environment_1.enemyClassToId.get(enemy.class), // Add ID dynamically
+        }))
+            .filter((enemy) => enemy.id &&
+            allowedEnemyIds.includes(enemy.id) &&
+            (enemy.minDepth ?? 0) <= room.depth);
+        console.log(`Depth ${room.depth}, Env ${environment}: Pool [${allowedEnemyIds.map((id) => enemyIdToName[id] || `Unknown(${id})`).join(", ")}] -> Available [${availableEnemies.map((e) => enemyIdToName[e.id] || `Unknown(${e.id})`).join(", ")}]`);
+        return availableEnemies;
+    }
+    /**
+     * Spawn enemies from the filtered pool using existing logic
+     */
+    spawnEnemiesFromPool(room, numEnemies, enemyPool) {
+        let tiles = room.getEmptyTiles();
+        if (tiles.length === 0)
+            return;
+        // Existing door avoidance logic
         const excludedCoords = new Set();
-        // For each door, add coordinates in a 5x5 area around it to excluded set
         for (const door of room.doors) {
             for (let dx = -2; dx <= 2; dx++) {
                 for (let dy = -2; dy <= 2; dy++) {
@@ -31515,194 +31625,239 @@ class Populator {
                 }
             }
         }
-        // Filter tiles that aren't in the excluded set
         tiles = tiles.filter((tile) => !excludedCoords.has(`${tile.x},${tile.y}`));
-        // Loop through the number of enemies to be added
+        // Spawn enemies
         for (let i = 0; i < numEnemies; i++) {
-            let rerolls = 1;
-            if (tiles.length === 0) {
-                console.log(`No tiles left to spawn enemies`);
+            if (tiles.length === 0)
                 break;
-            }
-            let emptyTiles = room.getRandomEmptyPosition(tiles);
-            if (emptyTiles.x === null || emptyTiles.y === null) {
-                i = numEnemies;
+            const position = room.getRandomEmptyPosition(tiles);
+            if (position === null)
                 break;
-            }
-            const { x, y } = emptyTiles;
-            // Define the enemy tables for each depth level
-            let tables = room.level.enemyParameters.enemyTables;
-            // Define the maximum depth level
-            let max_depth_table = room.level.enemyParameters.maxDepthTable;
-            // Get the current depth level, capped at the maximum
-            let d = Math.min(room.depth, max_depth_table);
-            // If there is a table for the current depth level
-            if (tables[d] && tables[d].length > 0) {
-                // Function to add an enemy to the room
-                let addEnemy = (enemy) => {
-                    // Check if the enemy overlaps with any other enemies
-                    for (let xx = 0; xx < enemy.w; xx++) {
-                        for (let yy = 0; yy < enemy.h; yy++) {
-                            if (!tiles.some((tt) => tt.x === x + xx && tt.y === y + yy)) {
-                                // If it does, increment the enemy count and return false
-                                numEnemies++;
-                                return false;
-                            }
-                        }
-                    }
-                    // If it doesn't, add the enemy to the room, remove the tiles used from the available pool, and return true
+            const { x, y } = position;
+            const selectedEnemy = utils_1.Utils.randTableWeighted(enemyPool);
+            if (!selectedEnemy?.class?.add)
+                continue;
+            const args = selectedEnemy.additionalParams || [];
+            // Handle special spawn logic
+            if (selectedEnemy.specialSpawnLogic === "clearFloor") {
+                const enemy = new selectedEnemy.class(room, room.game, x, y, ...args);
+                if (this.canPlaceBigEnemy(room, enemy, x, y, tiles)) {
                     room.entities.push(enemy);
-                    for (let xx = 0; xx < enemy.w; xx++) {
-                        for (let yy = 0; yy < enemy.h; yy++) {
-                            tiles = tiles.filter((t) => !(t.x === x + xx && t.y === y + yy));
-                        }
-                    }
-                    return true;
-                };
-                // Randomly select an enemy type from the table
-                let type = game_1.Game.randTable(tables[d], Math.random);
-                switch (type) {
-                    case 1:
-                        crabEnemy_1.CrabEnemy.add(room, room.game, x, y);
-                        break;
-                    case 2:
-                        frogEnemy_1.FrogEnemy.add(room, room.game, x, y);
-                        break;
-                    case 3:
-                        zombieEnemy_1.ZombieEnemy.add(room, room.game, x, y);
-                        break;
-                    case 4:
-                        skullEnemy_1.SkullEnemy.add(room, room.game, x, y);
-                        break;
-                    case 5:
-                        energyWizard_1.EnergyWizardEnemy.add(room, room.game, x, y);
-                        break;
-                    case 6:
-                        chargeEnemy_1.ChargeEnemy.add(room, room.game, x, y);
-                        break;
-                    case 7:
-                        rookEnemy_1.RookEnemy.add(room, room.game, x, y);
-                        break;
-                    case 8:
-                        bishopEnemy_1.BishopEnemy.add(room, room.game, x, y);
-                        break;
-                    case 9:
-                        armoredzombieEnemy_1.ArmoredzombieEnemy.add(room, room.game, x, y);
-                        break;
-                    case 10:
-                        if (addEnemy(new bigSkullEnemy_1.BigSkullEnemy(room, room.game, x, y))) {
-                            // clear out some space
-                            for (let xx = 0; xx < 2; xx++) {
-                                for (let yy = 0; yy < 2; yy++) {
-                                    room.roomArray[x + xx][y + yy] = new floor_1.Floor(room, x + xx, y + yy); // remove any walls
-                                }
-                            }
-                        }
-                        break;
-                    case 11:
-                        queenEnemy_1.QueenEnemy.add(room, room.game, x, y);
-                        break;
-                    case 12:
-                        knightEnemy_1.KnightEnemy.add(room, room.game, x, y);
-                        break;
-                    case 13:
-                        if (addEnemy(new bigKnightEnemy_1.BigKnightEnemy(room, room.game, x, y))) {
-                            // clear out some space
-                            for (let xx = 0; xx < 2; xx++) {
-                                for (let yy = 0; yy < 2; yy++) {
-                                    room.roomArray[x + xx][y + yy] = new floor_1.Floor(room, x + xx, y + yy); // remove any walls
-                                }
-                            }
-                        }
-                        break;
-                    case 14:
-                        armoredSkullEnemy_1.ArmoredSkullEnemy.add(room, room.game, x, y);
-                        break;
-                    case 15:
-                        fireWizard_1.FireWizardEnemy.add(room, room.game, x, y);
-                        break;
+                    this.clearFloorForBigEnemy(room, x, y, enemy.w, enemy.h);
+                    this.removeTilesForEnemy(tiles, x, y, enemy.w, enemy.h);
+                }
+                else {
+                    numEnemies++; // Retry
+                }
+            }
+            else {
+                selectedEnemy.class.add(room, room.game, x, y, ...args);
+                tiles = tiles.filter((t) => !(t.x === x && t.y === y));
+            }
+        }
+    }
+    /**
+     * Add special enemies (spawners, occultists) - extracted for clarity
+     */
+    addSpecialEnemies(room) {
+        // Spawner logic - now based on room area and probability
+        if (room.depth > 0) {
+            this.addSpawners(room, random_1.Random.rand);
+        }
+        // Occultist logic - now based on room area and probability
+        if (room.depth > 1) {
+            this.addOccultists(room, random_1.Random.rand);
+        }
+    }
+    // === ENEMY POOL GENERATION LOGIC (moved from Level) ===
+    /**
+     * Generate enemy pool IDs based on depth and progression rules
+     */
+    generateEnemyPoolIds(depth) {
+        const availableEnemies = Object.entries(environment_1.enemyMinimumDepth)
+            .filter(([enemyId, minDepth]) => depth >= minDepth)
+            .map(([enemyId]) => Number(enemyId));
+        // Get new enemies not yet encountered
+        const newEnemies = availableEnemies.filter((id) => !this.level.game.encounteredEnemies.includes(id));
+        // Add 1-2 new enemies per level (if limiting is enabled)
+        const newEnemiesToAddCount = gameplaySettings_1.GameplaySettings.LIMIT_ENEMY_TYPES
+            ? Math.min(newEnemies.length, 2)
+            : newEnemies.length;
+        const newEnemiesToAdd = this.getRandomElements(newEnemies, newEnemiesToAddCount);
+        this.level.game.encounteredEnemies.push(...newEnemiesToAdd);
+        // Get current enemy pool
+        const enemyPoolIds = this.level.game.encounteredEnemies.slice();
+        // Limit variety if setting is enabled
+        const numberOfTypes = gameplaySettings_1.GameplaySettings.LIMIT_ENEMY_TYPES
+            ? this.getNumberOfEnemyTypes(depth)
+            : enemyPoolIds.length;
+        const selectedEnemyIds = this.getRandomElements(enemyPoolIds, numberOfTypes);
+        return Array.from(new Set(selectedEnemyIds)).slice(0, numberOfTypes);
+    }
+    /**
+     * Public method to get enemy pool for spawners and other external use
+     */
+    getEnemyPoolForDepth(depth) {
+        // Use pre-calculated pool instead of generating new one, but filter by depth if different
+        if (depth === this.level.depth) {
+            return this.levelEnemyPoolIds;
+        }
+        // If a different depth is requested, generate it on demand (for spawners that might spawn at different depths)
+        return this.generateEnemyPoolIds(depth);
+    }
+    /**
+     * Calculate number of enemy types for depth
+     */
+    getNumberOfEnemyTypes(depth) {
+        return depth === 0 ? 2 : Math.ceil(Math.sqrt(depth + 1)) + 4;
+    }
+    /**
+     * Utility: Get random elements from array
+     */
+    getRandomElements(array, count) {
+        const shuffled = [...array];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled.slice(0, Math.min(count, shuffled.length));
+    }
+    /**
+     * Check if a big enemy can be placed at the given position
+     */
+    canPlaceBigEnemy(room, enemy, x, y, tiles) {
+        for (let xx = 0; xx < enemy.w; xx++) {
+            for (let yy = 0; yy < enemy.h; yy++) {
+                if (!tiles.some((tile) => tile.x === x + xx && tile.y === y + yy)) {
+                    return false;
                 }
             }
         }
-        let spawnerAmounts = [
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2,
-            2, 2, 3, 3, 4, 5, 3,
-        ];
-        if (room.depth > 0) {
-            let spawnerAmount = game_1.Game.randTable(spawnerAmounts, rand);
-            //console.log(`Adding ${spawnerAmount} spawners`);
-            this.addSpawners(room, spawnerAmount, rand);
+        return true;
+    }
+    /**
+     * Clear floor tiles for big enemies (preserves existing logic)
+     */
+    clearFloorForBigEnemy(room, x, y, w, h) {
+        for (let xx = 0; xx < w; xx++) {
+            for (let yy = 0; yy < h; yy++) {
+                room.roomArray[x + xx][y + yy] = new floor_1.Floor(room, x + xx, y + yy);
+            }
         }
-        let occultistAmounts = [
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1,
-        ];
-        if (room.depth > 1) {
-            let occultistAmount = game_1.Game.randTable(occultistAmounts, rand);
-            //console.log(`Adding ${occultistAmount} occultists`);
-            this.addOccultists(room, occultistAmount, rand);
+    }
+    /**
+     * Remove tiles that are now occupied by an enemy
+     */
+    removeTilesForEnemy(tiles, x, y, w, h) {
+        for (let xx = 0; xx < w; xx++) {
+            for (let yy = 0; yy < h; yy++) {
+                const index = tiles.findIndex((t) => t.x === x + xx && t.y === y + yy);
+                if (index !== -1)
+                    tiles.splice(index, 1);
+            }
         }
     }
     addRandomEnemies(room) {
         let numEmptyTiles = room.getEmptyTiles().length;
-        /*
-        let numEnemies = Math.ceil(
-          numEmptyTiles * Math.min(room.depth * 0.1 + 0.5, 0.15), //room.depth * 0.01 is starting value
-        );
-        */
         const factor = Math.min((room.depth + 2) * 0.05, 0.3);
         const numEnemies = Math.ceil(Math.max(utils_1.Utils.randomNormalInt(0, numEmptyTiles * factor), numEmptyTiles * factor));
-        //if (numEnemies > numEmptyTiles / 2) numEnemies = numEmptyTiles / 2;
-        this.addEnemies(room, numEnemies, Math.random);
+        // Apply forest reduction (moved from old addEnemies method)
+        const adjustedEnemies = room.envType === environmentTypes_1.EnvType.FOREST ? Math.floor(numEnemies / 2) : numEnemies;
+        this.addEnemiesUnified(room, adjustedEnemies, room.envType);
     }
-    addSpawners(room, numSpawners, rand) {
+    addSpawners(room, rand, numSpawners) {
         let tiles = room.getEmptyTiles();
-        if (tiles === null) {
-            //console.log(`No tiles left to spawn spawners`);
+        if (tiles.length === 0) {
             return;
         }
-        for (let i = 0; i < numSpawners; i++) {
-            const { x, y } = room.getRandomEmptyPosition(tiles);
-            let spawnTable = room.level
-                .getEnemyParameters()
-                //spawners should use enemy pools from the previous depth
-                .enemyTables[Math.max(0, room.depth - 1)].filter((t) => t !== 7);
-            const spawner = spawner_1.Spawner.add(room, room.game, x, y, spawnTable);
-            return spawner;
+        let lastSpawner = null;
+        // If numSpawners is provided, force generate that many
+        if (numSpawners !== undefined) {
+            for (let i = 0; i < numSpawners; i++) {
+                const position = room.getRandomEmptyPosition(tiles);
+                if (position === null)
+                    break;
+                const { x, y } = position;
+                const spawnTable = this.getEnemyPoolForDepth(Math.max(0, room.depth - 1)).filter((t) => t !== 7);
+                lastSpawner = spawner_1.Spawner.add(room, room.game, x, y, spawnTable);
+                // Remove used tile
+                tiles = tiles.filter((t) => !(t.x === x && t.y === y));
+            }
         }
+        else {
+            // Original random spawner logic
+            const maxPossibleSpawners = Math.ceil(room.roomArea / 50);
+            for (let i = 0; i < maxPossibleSpawners; i++) {
+                if (rand() > 0.1)
+                    continue;
+                const position = room.getRandomEmptyPosition(tiles);
+                if (position === null)
+                    break;
+                const { x, y } = position;
+                const spawnTable = this.getEnemyPoolForDepth(Math.max(0, room.depth - 1)).filter((t) => t !== 7);
+                lastSpawner = spawner_1.Spawner.add(room, room.game, x, y, spawnTable);
+                tiles = tiles.filter((t) => !(t.x === x && t.y === y));
+            }
+        }
+        return lastSpawner;
     }
-    addOccultists(room, numOccultists, rand) {
+    addOccultists(room, rand, numOccultists) {
         let tiles = room.getEmptyTiles();
-        if (tiles === null) {
-            //console.log(`No tiles left to spawn spawners`);
+        if (tiles.length === 0) {
             return;
         }
-        for (let i = 0; i < numOccultists; i++) {
-            const { x, y } = room.getRandomEmptyPosition(tiles);
-            const occultist = occultistEnemy_1.OccultistEnemy.add(room, room.game, x, y);
-            return occultist;
+        let lastOccultist = null;
+        // If numOccultists is provided, force generate that many
+        if (numOccultists !== undefined) {
+            for (let i = 0; i < numOccultists; i++) {
+                const position = room.getRandomEmptyPosition(tiles);
+                if (position === null)
+                    break;
+                const { x, y } = position;
+                lastOccultist = occultistEnemy_1.OccultistEnemy.add(room, room.game, x, y);
+                // Remove used tile
+                tiles = tiles.filter((t) => !(t.x === x && t.y === y));
+            }
         }
+        else {
+            // Original random occultist logic
+            const maxPossibleOccultists = Math.floor(room.roomArea / 200);
+            for (let i = 0; i < maxPossibleOccultists; i++) {
+                if (rand() > 0.1)
+                    continue;
+                const position = room.getRandomEmptyPosition(tiles);
+                if (position === null)
+                    break;
+                const { x, y } = position;
+                lastOccultist = occultistEnemy_1.OccultistEnemy.add(room, room.game, x, y);
+                tiles = tiles.filter((t) => !(t.x === x && t.y === y));
+            }
+        }
+        return lastOccultist;
     }
     addBosses(room, depth) {
         if (gameplaySettings_1.GameplaySettings.NO_ENEMIES === true)
             return;
         let tiles = room.getEmptyTiles();
-        if (tiles === null) {
+        if (tiles.length === 0) {
             //console.log(`No tiles left to spawn spawners`);
             return;
         }
         let bosses = ["reaper", "queen", "bigskullenemy", "bigzombieenemy"];
         if (depth > 0) {
             bosses.push("occultist");
-            bosses.filter((b) => b !== "queen");
+            bosses = bosses.filter((b) => b !== "queen");
         }
         const boss = game_1.Game.randTable(bosses, Math.random);
-        const { x, y } = boss.startsWith("big")
+        const position = boss.startsWith("big")
             ? room.getBigRandomEmptyPosition(tiles)
             : room.getRandomEmptyPosition(tiles);
+        if (position === null)
+            return;
+        const { x, y } = position;
         switch (boss) {
             case "reaper":
-                const spawner = this.addSpawners(room, 1, Math.random);
+                const spawner = this.addSpawners(room, random_1.Random.rand, 1);
                 spawner.dropTable = ["weapon", "equipment"];
                 spawner.dropChance = 1;
                 break;
@@ -31722,7 +31877,7 @@ class Populator {
                 ];
                 break;
             case "occultist":
-                const occultist = this.addOccultists(room, 1, Math.random);
+                const occultist = this.addOccultists(room, random_1.Random.rand, 1);
                 occultist.dropTable = ["weapon", "equipment"];
                 occultist.dropChance = 1;
                 break;
@@ -31755,14 +31910,20 @@ class Populator {
     addBombs(room, numBombs, rand) {
         let tiles = room.getEmptyTiles();
         for (let i = 0; i < room.getEmptyTiles().length; i++) {
-            const { x, y } = room.getRandomEmptyPosition(tiles);
+            const position = room.getRandomEmptyPosition(tiles);
+            if (position === null)
+                break;
+            const { x, y } = position;
             bomb_1.Bomb.add(room, room.game, x, y);
         }
     }
     addResources(room, numResources, rand) {
         let tiles = room.getEmptyTiles();
         for (let i = 0; i < numResources; i++) {
-            const { x, y } = room.getRandomEmptyPosition(tiles);
+            const position = room.getRandomEmptyPosition(tiles);
+            if (position === null)
+                break;
+            const { x, y } = position;
             let r = rand();
             if (r <= (10 - room.depth ** 3) / 10)
                 coalResource_1.CoalResource.add(room, room.game, x, y);
@@ -31774,6 +31935,8 @@ class Populator {
     }
     addVendingMachine(room, rand, placeX, placeY, item) {
         const pos = room.getRandomEmptyPosition(room.getEmptyTiles());
+        if (pos === null)
+            return;
         let x = placeX ? placeX : pos.x;
         let y = placeY ? placeY : pos.y;
         let table = room.depth > 0
