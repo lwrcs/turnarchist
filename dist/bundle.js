@@ -7452,7 +7452,7 @@ class MummyEnemy extends enemy_1.Enemy {
 exports.MummyEnemy = MummyEnemy;
 MummyEnemy.difficulty = 1;
 MummyEnemy.tileX = 17;
-MummyEnemy.tileY = 8;
+MummyEnemy.tileY = 16;
 
 
 /***/ }),

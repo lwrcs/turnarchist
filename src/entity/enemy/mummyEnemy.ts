@@ -27,7 +27,7 @@ export class MummyEnemy extends Enemy {
   dir: Direction;
   static difficulty: number = 1;
   static tileX: number = 17;
-  static tileY: number = 8;
+  static tileY: number = 16;
   constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
     super(room, game, x, y);
     this.ticks = 0;
