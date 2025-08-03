@@ -15,7 +15,7 @@ export class Warhammer extends Weapon {
     this.name = "warhammer";
     this.hitDelay = 225;
     this.useCost = 2;
-    this.cooldownMax = 10;
+    //this.cooldownMax = 10;
     this.degradeable = false;
   }
 

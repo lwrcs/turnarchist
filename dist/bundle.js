@@ -21130,7 +21130,7 @@ class Warhammer extends weapon_1.Weapon {
         this.name = "warhammer";
         this.hitDelay = 225;
         this.useCost = 2;
-        this.cooldownMax = 10;
+        //this.cooldownMax = 10;
         this.degradeable = false;
     }
 }
@@ -22121,7 +22121,11 @@ class Level {
         const rooms = this.rooms.filter((r) => r.type !== room_1.RoomType.START &&
             r.type !== room_1.RoomType.DOWNLADDER &&
             r.type !== room_1.RoomType.ROPEHOLE);
-        const disableCoords = { DownLadder: downLadder.x, UpLadder: downLadder.x };
+        const disableCoords = {
+            disableX: downLadder.x,
+            disableY: downLadder.y,
+            disableRoom: downLadder.room,
+        };
         console.log(`Found ${rooms.length} eligible rooms for key placement`);
         if (rooms.length === 0) {
             console.error("No eligible rooms found for key placement");
@@ -22129,9 +22133,10 @@ class Level {
         }
         const randomRoom = rooms[Math.floor(Math.random() * rooms.length)];
         console.log(`Selected room ${randomRoom.id} for key placement`);
-        const emptyTiles = randomRoom
-            .getEmptyTiles()
-            .filter((t) => !disableCoords[t.x][t.y]);
+        let emptyTiles = randomRoom.getEmptyTiles();
+        if (disableCoords.disableRoom === randomRoom) {
+            emptyTiles = emptyTiles.filter((t) => t.x !== disableCoords.disableX && t.y !== disableCoords.disableY);
+        }
         console.log(`Room has ${emptyTiles.length} empty tiles`);
         if (emptyTiles.length === 0) {
             console.error(`No empty tiles found in room ${randomRoom.id} for key placement`);
@@ -29864,10 +29869,10 @@ class Room {
                 this.doors.forEach((d) => {
                     if (d.type === door_1.DoorType.GUARDEDDOOR) {
                         d.unGuard();
-                        this.game.pushMessage("The foes have been slain and the door allows you passage.");
-                        this.game.startCameraAnimation(this.getBossDoor().x, this.getBossDoor().y, 175);
                     }
                 });
+                this.game.pushMessage("The foes have been slain and the door allows you passage.");
+                this.game.startCameraAnimation(this.getBossDoor().x, this.getBossDoor().y, 175);
             }
         };
         // checks for obstructions between doors and finds paths avoiding obstacles.
@@ -32953,19 +32958,10 @@ exports.Chasm = Chasm;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Decoration = exports.SkinType = void 0;
+exports.Decoration = void 0;
 const drawable_1 = __webpack_require__(/*! ../../drawable/drawable */ "./src/drawable/drawable.ts");
 const gameConstants_1 = __webpack_require__(/*! ../../game/gameConstants */ "./src/game/gameConstants.ts");
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-var SkinType;
-(function (SkinType) {
-    SkinType[SkinType["DUNGEON"] = 0] = "DUNGEON";
-    SkinType[SkinType["CAVE"] = 1] = "CAVE";
-    SkinType[SkinType["FOREST"] = 2] = "FOREST";
-    SkinType[SkinType["SWAMP"] = 3] = "SWAMP";
-    SkinType[SkinType["GLACIER"] = 4] = "GLACIER";
-    SkinType[SkinType["CASTLE"] = 5] = "CASTLE";
-})(SkinType = exports.SkinType || (exports.SkinType = {}));
 class Decoration extends drawable_1.Drawable {
     constructor(room, x, y) {
         super();
@@ -33956,9 +33952,9 @@ var SkinType;
     SkinType[SkinType["DUNGEON"] = 0] = "DUNGEON";
     SkinType[SkinType["CAVE"] = 1] = "CAVE";
     SkinType[SkinType["FOREST"] = 2] = "FOREST";
-    SkinType[SkinType["SWAMP"] = 3] = "SWAMP";
+    SkinType[SkinType["CASTLE"] = 3] = "CASTLE";
     SkinType[SkinType["GLACIER"] = 4] = "GLACIER";
-    SkinType[SkinType["CASTLE"] = 5] = "CASTLE";
+    SkinType[SkinType["SWAMP"] = 5] = "SWAMP";
 })(SkinType = exports.SkinType || (exports.SkinType = {}));
 class Tile extends drawable_1.Drawable {
     constructor(room, x, y) {

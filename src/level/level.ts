@@ -160,7 +160,11 @@ export class Level {
         r.type !== RoomType.ROPEHOLE,
     );
 
-    const disableCoords = { DownLadder: downLadder.x, UpLadder: downLadder.x };
+    const disableCoords = {
+      disableX: downLadder.x,
+      disableY: downLadder.y,
+      disableRoom: downLadder.room,
+    };
 
     console.log(`Found ${rooms.length} eligible rooms for key placement`);
 
@@ -172,9 +176,12 @@ export class Level {
     const randomRoom = rooms[Math.floor(Math.random() * rooms.length)];
     console.log(`Selected room ${randomRoom.id} for key placement`);
 
-    const emptyTiles = randomRoom
-      .getEmptyTiles()
-      .filter((t) => !disableCoords[t.x][t.y]);
+    let emptyTiles = randomRoom.getEmptyTiles();
+    if (disableCoords.disableRoom === randomRoom) {
+      emptyTiles = emptyTiles.filter(
+        (t) => t.x !== disableCoords.disableX && t.y !== disableCoords.disableY,
+      );
+    }
 
     console.log(`Room has ${emptyTiles.length} empty tiles`);
 

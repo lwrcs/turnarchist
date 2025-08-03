@@ -2925,17 +2925,16 @@ export class Room {
       this.doors.forEach((d) => {
         if (d.type === DoorType.GUARDEDDOOR) {
           d.unGuard();
-
-          this.game.pushMessage(
-            "The foes have been slain and the door allows you passage.",
-          );
-          this.game.startCameraAnimation(
-            this.getBossDoor().x,
-            this.getBossDoor().y,
-            175,
-          );
         }
       });
+      this.game.pushMessage(
+        "The foes have been slain and the door allows you passage.",
+      );
+      this.game.startCameraAnimation(
+        this.getBossDoor().x,
+        this.getBossDoor().y,
+        175,
+      );
     }
   };
 

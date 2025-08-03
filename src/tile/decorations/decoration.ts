@@ -4,15 +4,7 @@ import { Entity } from "../../entity/entity";
 import { Drawable } from "../../drawable/drawable";
 import { GameConstants } from "../../game/gameConstants";
 import { Game } from "../../game";
-
-export enum SkinType {
-  DUNGEON = 0,
-  CAVE = 1,
-  FOREST = 2,
-  SWAMP = 3,
-  GLACIER = 4,
-  CASTLE = 5,
-}
+import { SkinType } from "../../tile/tile";
 
 export abstract class Decoration extends Drawable {
   x: number;
