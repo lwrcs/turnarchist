@@ -29866,13 +29866,17 @@ class Room {
         };
         this.checkForNoEnemies = () => {
             if (this.hasNoEnemies()) {
+                let bossFlag = false;
                 this.doors.forEach((d) => {
                     if (d.type === door_1.DoorType.GUARDEDDOOR) {
                         d.unGuard();
+                        bossFlag = true;
                         this.game.startCameraAnimation(this.getBossDoor().x, this.getBossDoor().y, 175);
                     }
                 });
-                this.game.pushMessage("The foes have been slain and the door allows you passage.");
+                if (bossFlag) {
+                    this.game.pushMessage("The foes have been slain and the door allows you passage.");
+                }
             }
         };
         // checks for obstructions between doors and finds paths avoiding obstacles.

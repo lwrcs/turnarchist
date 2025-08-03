@@ -2922,9 +2922,11 @@ export class Room {
 
   checkForNoEnemies = () => {
     if (this.hasNoEnemies()) {
+      let bossFlag = false;
       this.doors.forEach((d) => {
         if (d.type === DoorType.GUARDEDDOOR) {
           d.unGuard();
+          bossFlag = true;
           this.game.startCameraAnimation(
             this.getBossDoor().x,
             this.getBossDoor().y,
@@ -2932,9 +2934,11 @@ export class Room {
           );
         }
       });
-      this.game.pushMessage(
-        "The foes have been slain and the door allows you passage.",
-      );
+      if (bossFlag) {
+        this.game.pushMessage(
+          "The foes have been slain and the door allows you passage.",
+        );
+      }
     }
   };
 
