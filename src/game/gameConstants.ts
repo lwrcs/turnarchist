@@ -39,6 +39,7 @@ import { ScytheBlade } from "../item/weapon/scytheBlade";
 import { ScytheHandle } from "../item/weapon/scytheHandle";
 import { OrangeGem } from "../item/resource/orangegem";
 import { GoldRing } from "../item/jewelry/goldRing";
+import { FishingRod } from "../item/tool/fishingRod";
 
 export class GameConstants {
   static readonly VERSION = "v1.1.0"; //"v0.6.3";
@@ -271,7 +272,7 @@ export class GameConstants {
   static readonly STARTING_DEV_INVENTORY = [
     Dagger,
     Candle,
-    Warhammer,
+    FishingRod,
     Lantern,
     GodStone,
     Spellbook,

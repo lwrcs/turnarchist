@@ -15,6 +15,7 @@ import { Pickaxe } from "../item/tool/pickaxe";
 import { MuteButton } from "../gui/muteButton";
 import { Menu } from "../gui/menu";
 import { XPCounter } from "../gui/xpCounter";
+import { FishingRod } from "../item/tool/fishingRod";
 
 let OPEN_TIME = 100; // milliseconds
 // Dark gray color used for the background of inventory slots
@@ -506,6 +507,10 @@ export class Inventory {
 
   canMine = (): boolean => {
     return this.hasItem(Pickaxe) !== null;
+  };
+
+  canFish = (): boolean => {
+    return this.hasItem(FishingRod) !== null;
   };
 
   getArmor = (): Armor | null => {

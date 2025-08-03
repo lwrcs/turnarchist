@@ -10856,6 +10856,114 @@ exports.DecoBlock = DecoBlock;
 
 /***/ }),
 
+/***/ "./src/entity/object/fishingSpot.ts":
+/*!******************************************!*\
+  !*** ./src/entity/object/fishingSpot.ts ***!
+  \******************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.FishingSpot = void 0;
+const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const heart_1 = __webpack_require__(/*! ../../item/usable/heart */ "./src/item/usable/heart.ts");
+const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
+const coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
+const fish_1 = __webpack_require__(/*! ../../item/usable/fish */ "./src/item/usable/fish.ts");
+class FishingSpot extends entity_1.Entity {
+    constructor(room, game, x, y) {
+        super(room, game, x, y);
+        this.fishCount = 0;
+        this.active = false;
+        this.fish = (player) => {
+            if (!player.inventory.canFish()) {
+                this.game.pushMessage("You need a fishing rod to fish.");
+                return;
+            }
+            if (!this.active) {
+                this.game.pushMessage("There aren't any fish here.");
+                return;
+            }
+            this.game.pushMessage("Fishing...");
+            let message = "";
+            if (this.tryFish()) {
+                let added = player.inventory.addItem(new fish_1.Fish(this.room, this.x, this.y));
+                if (added === false) {
+                    this.room.items.push(new fish_1.Fish(this.room, player.x, player.y));
+                }
+                message = "You catch a fish.";
+                this.fishCount--;
+                if (this.fishCount <= 0) {
+                    this.active = false;
+                }
+            }
+            else {
+                message = "You don't catch anything.";
+            }
+            player.busyAnimating = true;
+            setTimeout(() => {
+                player.busyAnimating = false;
+                this.room.game.pushMessage(message);
+            }, 1200);
+            this.room.tick(player);
+        };
+        this.tryFish = () => {
+            if (random_1.Random.rand() < 0.3) {
+                return true;
+            }
+            else {
+                return false;
+            }
+        };
+        this.interact = (player) => {
+            this.fish(player);
+        };
+        this.draw = (delta) => {
+            if (this.dead || !this.active)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = this.alpha;
+            if (!this.dead) {
+                this.updateDrawXY(delta);
+                game_1.Game.drawObj(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
+            }
+            game_1.Game.ctx.restore();
+        };
+        this.drawTopLayer = (delta) => {
+            this.drawableY = this.y;
+        };
+        this.room = room;
+        this.health = 1;
+        this.tileX = 11;
+        this.tileY = 0;
+        this.hasShadow = false;
+        this.chainPushable = false;
+        this.name = "fishing spot";
+        this.fishCount = Math.floor(random_1.Random.rand() * 3);
+        this.active = this.fishCount > 0;
+        //this.hitSound = Sound.potSmash;
+        this.imageParticleX = 0;
+        this.imageParticleY = 29;
+        this.destroyable = false;
+        this.interactable = true;
+        let dropProb = random_1.Random.rand();
+        if (dropProb < 0.025)
+            this.drops.push(new heart_1.Heart(this.room, this.x, this.y));
+        else
+            this.drops.push(new coin_1.Coin(this.room, this.x, this.y));
+    }
+    get type() {
+        return entity_2.EntityType.PROP;
+    }
+}
+exports.FishingSpot = FishingSpot;
+
+
+/***/ }),
+
 /***/ "./src/entity/object/furnace.ts":
 /*!**************************************!*\
   !*** ./src/entity/object/furnace.ts ***!
@@ -13731,7 +13839,6 @@ const lantern_1 = __webpack_require__(/*! ../item/light/lantern */ "./src/item/l
 const levelConstants_1 = __webpack_require__(/*! ../level/levelConstants */ "./src/level/levelConstants.ts");
 const dagger_1 = __webpack_require__(/*! ../item/weapon/dagger */ "./src/item/weapon/dagger.ts");
 const spellbook_1 = __webpack_require__(/*! ../item/weapon/spellbook */ "./src/item/weapon/spellbook.ts");
-const warhammer_1 = __webpack_require__(/*! ../item/weapon/warhammer */ "./src/item/weapon/warhammer.ts");
 const hammer_1 = __webpack_require__(/*! ../item/tool/hammer */ "./src/item/tool/hammer.ts");
 const bluegem_1 = __webpack_require__(/*! ../item/resource/bluegem */ "./src/item/resource/bluegem.ts");
 const redgem_1 = __webpack_require__(/*! ../item/resource/redgem */ "./src/item/resource/redgem.ts");
@@ -13741,6 +13848,7 @@ const scythe_1 = __webpack_require__(/*! ../item/weapon/scythe */ "./src/item/we
 const gold_1 = __webpack_require__(/*! ../item/resource/gold */ "./src/item/resource/gold.ts");
 const orangegem_1 = __webpack_require__(/*! ../item/resource/orangegem */ "./src/item/resource/orangegem.ts");
 const goldRing_1 = __webpack_require__(/*! ../item/jewelry/goldRing */ "./src/item/jewelry/goldRing.ts");
+const fishingRod_1 = __webpack_require__(/*! ../item/tool/fishingRod */ "./src/item/tool/fishingRod.ts");
 class GameConstants {
 }
 exports.GameConstants = GameConstants;
@@ -13926,7 +14034,7 @@ GameConstants.STARTING_INVENTORY = [dagger_1.Dagger, candle_1.Candle];
 GameConstants.STARTING_DEV_INVENTORY = [
     dagger_1.Dagger,
     candle_1.Candle,
-    warhammer_1.Warhammer,
+    fishingRod_1.FishingRod,
     lantern_1.Lantern,
     godStone_1.GodStone,
     spellbook_1.Spellbook,
@@ -16957,6 +17065,7 @@ const input_1 = __webpack_require__(/*! ../game/input */ "./src/game/input.ts");
 const pickaxe_1 = __webpack_require__(/*! ../item/tool/pickaxe */ "./src/item/tool/pickaxe.ts");
 const menu_1 = __webpack_require__(/*! ../gui/menu */ "./src/gui/menu.ts");
 const xpCounter_1 = __webpack_require__(/*! ../gui/xpCounter */ "./src/gui/xpCounter.ts");
+const fishingRod_1 = __webpack_require__(/*! ../item/tool/fishingRod */ "./src/item/tool/fishingRod.ts");
 let OPEN_TIME = 100; // milliseconds
 // Dark gray color used for the background of inventory slots
 let FILL_COLOR = "#5a595b";
@@ -17336,6 +17445,9 @@ class Inventory {
         };
         this.canMine = () => {
             return this.hasItem(pickaxe_1.Pickaxe) !== null;
+        };
+        this.canFish = () => {
+            return this.hasItem(fishingRod_1.FishingRod) !== null;
         };
         this.getArmor = () => {
             return (this.items.find((i) => i instanceof armor_1.Armor && i.equipped) ||
@@ -19795,6 +19907,33 @@ Stone.itemName = "stones";
 
 /***/ }),
 
+/***/ "./src/item/tool/fishingRod.ts":
+/*!*************************************!*\
+  !*** ./src/item/tool/fishingRod.ts ***!
+  \*************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.FishingRod = void 0;
+const item_1 = __webpack_require__(/*! ../item */ "./src/item/item.ts");
+class FishingRod extends item_1.Item {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.tileX = 31;
+        this.tileY = 2;
+        this.offsetY = -0.1;
+        this.description = "useful for catching fish";
+        this.name = FishingRod.itemName;
+    }
+}
+exports.FishingRod = FishingRod;
+FishingRod.itemName = "fishing rod";
+
+
+/***/ }),
+
 /***/ "./src/item/tool/hammer.ts":
 /*!*********************************!*\
   !*** ./src/item/tool/hammer.ts ***!
@@ -19933,6 +20072,47 @@ class Apple extends usable_1.Usable {
 }
 exports.Apple = Apple;
 Apple.itemName = "apple";
+
+
+/***/ }),
+
+/***/ "./src/item/usable/fish.ts":
+/*!*********************************!*\
+  !*** ./src/item/usable/fish.ts ***!
+  \*********************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Fish = void 0;
+const usable_1 = __webpack_require__(/*! ./usable */ "./src/item/usable/usable.ts");
+const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
+class Fish extends usable_1.Usable {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.onUse = (player) => {
+            if (player.health < player.maxHealth) {
+                player.health = Math.min(player.maxHealth, player.health + 0.5);
+                sound_1.Sound.playEat();
+                if (this.stackCount > 1) {
+                    this.stackCount--;
+                }
+                else
+                    player.inventory.removeItem(this);
+                player.game.pushMessage("You eat the fish and feel better.");
+            }
+        };
+        this.getDescription = () => {
+            return "FISH\nLooks spiky.";
+        };
+        this.tileX = 6;
+        this.tileY = 0;
+        this.stackable = true;
+    }
+}
+exports.Fish = Fish;
+Fish.itemName = "fish";
 
 
 /***/ }),
@@ -33786,9 +33966,13 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Pool = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const tile_1 = __webpack_require__(/*! ./tile */ "./src/tile/tile.ts");
+const fishingSpot_1 = __webpack_require__(/*! ../entity/object/fishingSpot */ "./src/entity/object/fishingSpot.ts");
 class Pool extends tile_1.Tile {
     constructor(room, x, y, leftEdge, rightEdge, topEdge, bottomEdge) {
         super(room, x, y);
+        this.interact = () => {
+            this.room.game.pushMessage("You jump into the pool.");
+        };
         this.isSolid = () => {
             return true;
         };
@@ -33811,6 +33995,9 @@ class Pool extends tile_1.Tile {
         else if (bottomEdge)
             this.tileY++;
         this.topEdge = topEdge;
+        if (rightEdge || leftEdge || topEdge || bottomEdge) {
+            this.room.entities.push(new fishingSpot_1.FishingSpot(this.room, this.room.game, this.x, this.y));
+        }
     }
 }
 exports.Pool = Pool;
