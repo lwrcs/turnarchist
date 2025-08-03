@@ -855,6 +855,11 @@ export class Game {
         this.currentLevelGenerator = null;
         this.pushMessage("Cleared generated level display");
         break;
+      case "post":
+        PostProcessor.settings.enabled = !PostProcessor.settings.enabled;
+        enabled = PostProcessor.settings.enabled ? "enabled" : "disabled";
+        this.pushMessage(`Post processor is now ${enabled}`);
+        break;
       default:
         if (command.startsWith("new ")) {
           this.room.addNewEnemy(command.slice(4) as EnemyType);

@@ -70,6 +70,7 @@ import { BigZombieEnemy } from "../entity/enemy/bigZombieEnemy";
 import { CoalResource } from "../entity/resource/coalResource";
 import { GoldResource } from "../entity/resource/goldResource";
 import { EmeraldResource } from "../entity/resource/emeraldResource";
+import { Pool } from "../tile/pool";
 
 // Add after the imports, create a reverse mapping from ID to enemy name
 const enemyIdToName: Record<number, string> = {};
@@ -396,6 +397,38 @@ export class Populator {
             room.roomArray[xx][yy] = new Floor(room, xx, yy);
         } else
           room.roomArray[xx][yy] = new Chasm(
+            room,
+            xx,
+            yy,
+            xx === x,
+            xx === x + w - 1,
+            yy === y,
+            yy === y + h - 1,
+          );
+      }
+    }
+  }
+
+  private addPools(room: Room, rand: () => number) {
+    // add chasms
+    let w = Game.rand(2, 4, rand);
+    let h = Game.rand(2, 4, rand);
+    let xmin = room.roomX + 2;
+    let xmax = room.roomX + room.width - w - 2;
+    let ymin = room.roomY + 2;
+    let ymax = room.roomY + room.height - h - 2;
+    if (xmax < xmin || ymax < ymin) return;
+    let x = Game.rand(xmin, xmax, rand);
+    let y = Game.rand(ymin, ymax, rand);
+
+    for (let xx = x - 1; xx < x + w + 1; xx++) {
+      for (let yy = y - 1; yy < y + h + 1; yy++) {
+        // add a floor border
+        if (xx === x - 1 || xx === x + w || yy === y - 1 || yy === y + h) {
+          if (!(room.roomArray[xx][yy] instanceof SpawnFloor))
+            room.roomArray[xx][yy] = new Floor(room, xx, yy);
+        } else
+          room.roomArray[xx][yy] = new Pool(
             room,
             xx,
             yy,
@@ -967,6 +1000,7 @@ export class Populator {
 
     if (factor < 30) room.builder.addWallBlocks(rand);
     if (factor % 4 === 0) this.addChasms(room, rand);
+    if (factor % 3 === 0) this.addPools(room, rand);
     this.addTorchesByArea(room);
     if (factor > 15)
       this.addSpikeTraps(
@@ -975,7 +1009,7 @@ export class Populator {
         rand,
       );
 
-    if (factor <= 6) this.addVendingMachine(room, rand);
+    if (factor <= 6) this.placeVendingMachineInWall(room);
 
     room.removeDoorObstructions();
   };

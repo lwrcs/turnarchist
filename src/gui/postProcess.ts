@@ -1,14 +1,37 @@
 import { Game } from "../game";
 import { GameConstants } from "../game/gameConstants";
 
+interface Settings {
+  enabled: boolean;
+  globalAlpha: number;
+  fillStyle: string;
+  globalCompositeOperation: GlobalCompositeOperation;
+}
+
 export class PostProcessor {
+  static settings: Settings = {
+    enabled: true,
+    globalAlpha: 0.15,
+    fillStyle: "#006A6E",
+    globalCompositeOperation: "screen",
+  };
+
+  static underwater: boolean = false;
+
   static draw = (delta: number) => {
+    if (!PostProcessor.settings.enabled) return;
+    if (PostProcessor.underwater) {
+      PostProcessor.settings.globalAlpha = 0.3;
+      PostProcessor.settings.fillStyle = "#003B6F"; //deep underwater blue
+      PostProcessor.settings.globalCompositeOperation = "source-over";
+    }
     Game.ctx.save();
-    Game.ctx.globalAlpha = 0.15;
-    Game.ctx.globalCompositeOperation = "screen";
+    Game.ctx.globalAlpha = PostProcessor.settings.globalAlpha;
+    Game.ctx.globalCompositeOperation =
+      PostProcessor.settings.globalCompositeOperation;
     // GameConstants.SHADE_LAYER_COMPOSITE_OPERATION as GlobalCompositeOperation; //"soft-light";
 
-    Game.ctx.fillStyle = "#006A6E"; //dark teal
+    Game.ctx.fillStyle = PostProcessor.settings.fillStyle;
     //Game.ctx.fillStyle = "#003B6F"; //deep underwater blue
     //Game.ctx.fillStyle = "#2F2F2F"; //smoky fog prison
 

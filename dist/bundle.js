@@ -11999,6 +11999,7 @@ const textbox_1 = __webpack_require__(/*! ./game/textbox */ "./src/game/textbox.
 const gameState_1 = __webpack_require__(/*! ./game/gameState */ "./src/game/gameState.ts");
 const levelImageGenerator_1 = __webpack_require__(/*! ./level/levelImageGenerator */ "./src/level/levelImageGenerator.ts");
 const mouseCursor_1 = __webpack_require__(/*! ./gui/mouseCursor */ "./src/gui/mouseCursor.ts");
+const postProcess_1 = __webpack_require__(/*! ./gui/postProcess */ "./src/gui/postProcess.ts");
 const eventBus_1 = __webpack_require__(/*! ./event/eventBus */ "./src/event/eventBus.ts");
 const reverb_1 = __webpack_require__(/*! ./sound/reverb */ "./src/sound/reverb.ts");
 const stats_1 = __webpack_require__(/*! ./game/stats */ "./src/game/stats.ts");
@@ -12471,6 +12472,11 @@ class Game {
                 case "cleargen":
                     this.currentLevelGenerator = null;
                     this.pushMessage("Cleared generated level display");
+                    break;
+                case "post":
+                    postProcess_1.PostProcessor.settings.enabled = !postProcess_1.PostProcessor.settings.enabled;
+                    enabled = postProcess_1.PostProcessor.settings.enabled ? "enabled" : "disabled";
+                    this.pushMessage(`Post processor is now ${enabled}`);
                     break;
                 default:
                     if (command.startsWith("new ")) {
@@ -16463,12 +16469,27 @@ const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/
 class PostProcessor {
 }
 exports.PostProcessor = PostProcessor;
+PostProcessor.settings = {
+    enabled: true,
+    globalAlpha: 0.15,
+    fillStyle: "#006A6E",
+    globalCompositeOperation: "screen",
+};
+PostProcessor.underwater = false;
 PostProcessor.draw = (delta) => {
+    if (!PostProcessor.settings.enabled)
+        return;
+    if (PostProcessor.underwater) {
+        PostProcessor.settings.globalAlpha = 0.3;
+        PostProcessor.settings.fillStyle = "#003B6F"; //deep underwater blue
+        PostProcessor.settings.globalCompositeOperation = "source-over";
+    }
     game_1.Game.ctx.save();
-    game_1.Game.ctx.globalAlpha = 0.15;
-    game_1.Game.ctx.globalCompositeOperation = "screen";
+    game_1.Game.ctx.globalAlpha = PostProcessor.settings.globalAlpha;
+    game_1.Game.ctx.globalCompositeOperation =
+        PostProcessor.settings.globalCompositeOperation;
     // GameConstants.SHADE_LAYER_COMPOSITE_OPERATION as GlobalCompositeOperation; //"soft-light";
-    game_1.Game.ctx.fillStyle = "#006A6E"; //dark teal
+    game_1.Game.ctx.fillStyle = PostProcessor.settings.fillStyle;
     //Game.ctx.fillStyle = "#003B6F"; //deep underwater blue
     //Game.ctx.fillStyle = "#2F2F2F"; //smoky fog prison
     //Game.ctx.fillStyle = "#4a6c4b"; //darker muddy green
@@ -22100,6 +22121,7 @@ class Level {
         const rooms = this.rooms.filter((r) => r.type !== room_1.RoomType.START &&
             r.type !== room_1.RoomType.DOWNLADDER &&
             r.type !== room_1.RoomType.ROPEHOLE);
+        const disableCoords = { DownLadder: downLadder.x, UpLadder: downLadder.x };
         console.log(`Found ${rooms.length} eligible rooms for key placement`);
         if (rooms.length === 0) {
             console.error("No eligible rooms found for key placement");
@@ -22107,7 +22129,9 @@ class Level {
         }
         const randomRoom = rooms[Math.floor(Math.random() * rooms.length)];
         console.log(`Selected room ${randomRoom.id} for key placement`);
-        const emptyTiles = randomRoom.getEmptyTiles();
+        const emptyTiles = randomRoom
+            .getEmptyTiles()
+            .filter((t) => !disableCoords[t.x][t.y]);
         console.log(`Room has ${emptyTiles.length} empty tiles`);
         if (emptyTiles.length === 0) {
             console.error(`No empty tiles found in room ${randomRoom.id} for key placement`);
@@ -31030,6 +31054,7 @@ const bigZombieEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigZombieEnemy 
 const coalResource_1 = __webpack_require__(/*! ../entity/resource/coalResource */ "./src/entity/resource/coalResource.ts");
 const goldResource_1 = __webpack_require__(/*! ../entity/resource/goldResource */ "./src/entity/resource/goldResource.ts");
 const emeraldResource_1 = __webpack_require__(/*! ../entity/resource/emeraldResource */ "./src/entity/resource/emeraldResource.ts");
+const pool_1 = __webpack_require__(/*! ../tile/pool */ "./src/tile/pool.ts");
 // Add after the imports, create a reverse mapping from ID to enemy name
 const enemyIdToName = {};
 for (const [enemyClass, id] of environment_1.enemyClassToId.entries()) {
@@ -31109,11 +31134,13 @@ class Populator {
                 room.builder.addWallBlocks(rand);
             if (factor % 4 === 0)
                 this.addChasms(room, rand);
+            if (factor % 3 === 0)
+                this.addPools(room, rand);
             this.addTorchesByArea(room);
             if (factor > 15)
                 this.addSpikeTraps(room, game_1.Game.randTable([0, 0, 0, 1, 1, 2, 3], rand), rand);
             if (factor <= 6)
-                this.addVendingMachine(room, rand);
+                this.placeVendingMachineInWall(room);
             room.removeDoorObstructions();
         };
         this.populateBoss = (room, rand) => {
@@ -31572,6 +31599,30 @@ class Populator {
                 }
                 else
                     room.roomArray[xx][yy] = new chasm_1.Chasm(room, xx, yy, xx === x, xx === x + w - 1, yy === y, yy === y + h - 1);
+            }
+        }
+    }
+    addPools(room, rand) {
+        // add chasms
+        let w = game_1.Game.rand(2, 4, rand);
+        let h = game_1.Game.rand(2, 4, rand);
+        let xmin = room.roomX + 2;
+        let xmax = room.roomX + room.width - w - 2;
+        let ymin = room.roomY + 2;
+        let ymax = room.roomY + room.height - h - 2;
+        if (xmax < xmin || ymax < ymin)
+            return;
+        let x = game_1.Game.rand(xmin, xmax, rand);
+        let y = game_1.Game.rand(ymin, ymax, rand);
+        for (let xx = x - 1; xx < x + w + 1; xx++) {
+            for (let yy = y - 1; yy < y + h + 1; yy++) {
+                // add a floor border
+                if (xx === x - 1 || xx === x + w || yy === y - 1 || yy === y + h) {
+                    if (!(room.roomArray[xx][yy] instanceof spawnfloor_1.SpawnFloor))
+                        room.roomArray[xx][yy] = new floor_1.Floor(room, xx, yy);
+                }
+                else
+                    room.roomArray[xx][yy] = new pool_1.Pool(room, xx, yy, xx === x, xx === x + w - 1, yy === y, yy === y + h - 1);
             }
         }
     }
@@ -33719,6 +33770,50 @@ class Passageway extends tile_1.Tile {
     }
 }
 exports.Passageway = Passageway;
+
+
+/***/ }),
+
+/***/ "./src/tile/pool.ts":
+/*!**************************!*\
+  !*** ./src/tile/pool.ts ***!
+  \**************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Pool = void 0;
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const tile_1 = __webpack_require__(/*! ./tile */ "./src/tile/tile.ts");
+class Pool extends tile_1.Tile {
+    constructor(room, x, y, leftEdge, rightEdge, topEdge, bottomEdge) {
+        super(room, x, y);
+        this.isSolid = () => {
+            return true;
+        };
+        this.canCrushEnemy = () => {
+            return true;
+        };
+        this.draw = (delta) => {
+            if (this.topEdge)
+                game_1.Game.drawTile(22, 3, 1, 2, this.x, this.y, 1, 2, this.room.shadeColor, this.shadeAmount());
+            game_1.Game.drawTile(this.tileX, this.tileY, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
+        };
+        this.tileX = this.skin === 1 ? 24 : 20;
+        this.tileY = 4;
+        if (leftEdge)
+            this.tileX--;
+        else if (rightEdge)
+            this.tileX++;
+        if (topEdge)
+            this.tileY--;
+        else if (bottomEdge)
+            this.tileY++;
+        this.topEdge = topEdge;
+    }
+}
+exports.Pool = Pool;
 
 
 /***/ }),
