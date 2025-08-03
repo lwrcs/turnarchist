@@ -29869,10 +29869,10 @@ class Room {
                 this.doors.forEach((d) => {
                     if (d.type === door_1.DoorType.GUARDEDDOOR) {
                         d.unGuard();
+                        this.game.startCameraAnimation(this.getBossDoor().x, this.getBossDoor().y, 175);
                     }
                 });
                 this.game.pushMessage("The foes have been slain and the door allows you passage.");
-                this.game.startCameraAnimation(this.getBossDoor().x, this.getBossDoor().y, 175);
             }
         };
         // checks for obstructions between doors and finds paths avoiding obstacles.
