@@ -119,6 +119,8 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: CrabEnemy, weight: 1.0, minDepth: 0 },
       { class: ZombieEnemy, weight: 1.2, minDepth: 0 },
       { class: SkullEnemy, weight: 1.0, minDepth: 0 },
+      { class: SpiderEnemy, weight: 1.0, minDepth: 0 },
+      { class: MummyEnemy, weight: 1.0, minDepth: 0 },
 
       // Mid game enemies (depth 1+)
       { class: EnergyWizardEnemy, weight: 0.1, minDepth: 1 },
@@ -198,13 +200,13 @@ const environmentData: Record<EnvType, EnvironmentData> = {
     enemies: [
       // Nature creatures (higher weights)
       { class: GlowBugEnemy, weight: 1.5, minDepth: 0 },
-      { class: FrogEnemy, weight: 1.8, minDepth: 1 }, // Frogs love forests
-      { class: SpiderEnemy, weight: 1.2, minDepth: 0 }, // Forest spiders
+      { class: FrogEnemy, weight: 0.25, minDepth: 0 }, // Frogs love forests
+      { class: SpiderEnemy, weight: 0.25, minDepth: 0 }, // Forest spiders
 
       // Less common forest enemies
       { class: CrabEnemy, weight: 0.3, minDepth: 0 }, // Rare in forest
-      { class: ZombieEnemy, weight: 0.2, minDepth: 2 }, // Very rare undead
-      { class: SkullEnemy, weight: 0.1, minDepth: 2 }, // Ancient forest spirits
+      { class: ZombieEnemy, weight: 0.2, minDepth: 0 }, // Very rare undead
+      { class: SkullEnemy, weight: 0.1, minDepth: 0 }, // Ancient forest spirits
 
       // Rare magical forest creatures
       { class: EnergyWizardEnemy, weight: 0.4, minDepth: 1 }, // Forest wizards

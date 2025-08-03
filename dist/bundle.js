@@ -8807,6 +8807,7 @@ class SpiderEnemy extends enemy_1.Enemy {
         //if (drop) this.drop = drop;
         this.drawYOffset = 1.2;
         this.revealTick = 0;
+        this.hasShadow = true;
         this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
     }
     get alertText() {
@@ -11793,10 +11794,7 @@ class Resource extends entity_1.Entity {
             this.removeLightSource(this.lightSource);
             if ((player !== null && player.inventory?.canMine()) || player === null) {
                 this.dropLoot();
-                this.game.pushMessage("You use your pickaxe to collect the resource.");
-            }
-            else {
-                this.game.pushMessage("You break the rock, but fail to collect any material from it.");
+                //this.game.pushMessage("You use your pickaxe to collect the resource.");
             }
             this.uniqueKillBehavior();
         };
@@ -14722,6 +14720,25 @@ GameplaySettings.THROTTLE_SPAWNERS = true;
 GameplaySettings.NO_ENEMIES = false;
 GameplaySettings.EQUIP_USES_TURN = false;
 GameplaySettings.UNBREAKABLE_ITEMGROUP_LOOT = false;
+// === ENEMY POOL SETTINGS ===
+// Enemy Type Progression
+GameplaySettings.NEW_ENEMIES_PER_LEVEL = 2; // How many new enemy types to add per level when LIMIT_ENEMY_TYPES is true
+GameplaySettings.ENEMY_TYPES_BASE_COUNT = 4; // Base number added to sqrt formula for enemy type calculation
+GameplaySettings.DEPTH_ZERO_ENEMY_TYPES = 3; // Number of enemy types available at depth 0
+// Special Enemy Depth Requirements
+GameplaySettings.SPAWNER_MIN_DEPTH = 0; // Minimum depth before spawners can appear (depth > this value)
+GameplaySettings.OCCULTIST_MIN_DEPTH = 1; // Minimum depth before occultists can appear (depth > this value)
+// Special Enemy Spawn Probabilities
+GameplaySettings.SPAWNER_SPAWN_CHANCE = 0.1; // Probability per attempt to spawn a spawner (10%)
+GameplaySettings.OCCULTIST_SPAWN_CHANCE = 0.1; // Probability per attempt to spawn an occultist (10%)
+// Special Enemy Area Thresholds
+GameplaySettings.SPAWNER_AREA_THRESHOLD = 50; // Room area divided by this = max possible spawners
+GameplaySettings.OCCULTIST_AREA_THRESHOLD = 200; // Room area divided by this = max possible occultists
+// Enemy Density Settings
+GameplaySettings.ENEMY_DENSITY_DEPTH_MULTIPLIER = 0.05; // Multiplied by (depth + 2) for base density
+GameplaySettings.ENEMY_DENSITY_DEPTH_OFFSET = 2; // Added to depth before multiplying
+GameplaySettings.MAX_ENEMY_DENSITY = 0.3; // Maximum enemy density cap
+GameplaySettings.FOREST_ENEMY_REDUCTION = 0.5; // Multiplier for enemy count in forest environments
 
 
 /***/ }),
@@ -21446,6 +21463,8 @@ const environmentData = {
             { class: crabEnemy_1.CrabEnemy, weight: 1.0, minDepth: 0 },
             { class: zombieEnemy_1.ZombieEnemy, weight: 1.2, minDepth: 0 },
             { class: skullEnemy_1.SkullEnemy, weight: 1.0, minDepth: 0 },
+            { class: spiderEnemy_1.SpiderEnemy, weight: 1.0, minDepth: 0 },
+            { class: mummyEnemy_1.MummyEnemy, weight: 1.0, minDepth: 0 },
             // Mid game enemies (depth 1+)
             { class: energyWizard_1.EnergyWizardEnemy, weight: 0.1, minDepth: 1 },
             { class: rookEnemy_1.RookEnemy, weight: 0.6, minDepth: 1 },
@@ -21521,12 +21540,12 @@ const environmentData = {
         enemies: [
             // Nature creatures (higher weights)
             { class: glowBugEnemy_1.GlowBugEnemy, weight: 1.5, minDepth: 0 },
-            { class: frogEnemy_1.FrogEnemy, weight: 1.8, minDepth: 1 },
-            { class: spiderEnemy_1.SpiderEnemy, weight: 1.2, minDepth: 0 },
+            { class: frogEnemy_1.FrogEnemy, weight: 0.25, minDepth: 0 },
+            { class: spiderEnemy_1.SpiderEnemy, weight: 0.25, minDepth: 0 },
             // Less common forest enemies
             { class: crabEnemy_1.CrabEnemy, weight: 0.3, minDepth: 0 },
-            { class: zombieEnemy_1.ZombieEnemy, weight: 0.2, minDepth: 2 },
-            { class: skullEnemy_1.SkullEnemy, weight: 0.1, minDepth: 2 },
+            { class: zombieEnemy_1.ZombieEnemy, weight: 0.2, minDepth: 0 },
+            { class: skullEnemy_1.SkullEnemy, weight: 0.1, minDepth: 0 },
             // Rare magical forest creatures
             { class: energyWizard_1.EnergyWizardEnemy, weight: 0.4, minDepth: 1 },
             { class: chargeEnemy_1.ChargeEnemy, weight: 0.3, minDepth: 2 }, // Charging forest beasts
@@ -31661,11 +31680,11 @@ class Populator {
      */
     addSpecialEnemies(room) {
         // Spawner logic - now based on room area and probability
-        if (room.depth > 0) {
+        if (room.depth > gameplaySettings_1.GameplaySettings.SPAWNER_MIN_DEPTH) {
             this.addSpawners(room, random_1.Random.rand);
         }
         // Occultist logic - now based on room area and probability
-        if (room.depth > 1) {
+        if (room.depth > gameplaySettings_1.GameplaySettings.OCCULTIST_MIN_DEPTH) {
             this.addOccultists(room, random_1.Random.rand);
         }
     }
@@ -31681,7 +31700,7 @@ class Populator {
         const newEnemies = availableEnemies.filter((id) => !this.level.game.encounteredEnemies.includes(id));
         // Add 1-2 new enemies per level (if limiting is enabled)
         const newEnemiesToAddCount = gameplaySettings_1.GameplaySettings.LIMIT_ENEMY_TYPES
-            ? Math.min(newEnemies.length, 2)
+            ? Math.min(newEnemies.length, gameplaySettings_1.GameplaySettings.NEW_ENEMIES_PER_LEVEL)
             : newEnemies.length;
         const newEnemiesToAdd = this.getRandomElements(newEnemies, newEnemiesToAddCount);
         this.level.game.encounteredEnemies.push(...newEnemiesToAdd);
@@ -31709,7 +31728,10 @@ class Populator {
      * Calculate number of enemy types for depth
      */
     getNumberOfEnemyTypes(depth) {
-        return depth === 0 ? 2 : Math.ceil(Math.sqrt(depth + 1)) + 4;
+        return depth === 0
+            ? gameplaySettings_1.GameplaySettings.DEPTH_ZERO_ENEMY_TYPES
+            : Math.ceil(Math.sqrt(depth + 1)) +
+                gameplaySettings_1.GameplaySettings.ENEMY_TYPES_BASE_COUNT;
     }
     /**
      * Utility: Get random elements from array
@@ -31758,11 +31780,17 @@ class Populator {
         }
     }
     addRandomEnemies(room) {
-        let numEmptyTiles = room.getEmptyTiles().length;
-        const factor = Math.min((room.depth + 2) * 0.05, 0.3);
-        const numEnemies = Math.ceil(Math.max(utils_1.Utils.randomNormalInt(0, numEmptyTiles * factor), numEmptyTiles * factor));
+        const numEmptyTiles = room.getEmptyTiles().length;
+        const meanValue = (room.roomArea + numEmptyTiles) / 2;
+        const factor = Math.min((room.depth + gameplaySettings_1.GameplaySettings.ENEMY_DENSITY_DEPTH_OFFSET) *
+            gameplaySettings_1.GameplaySettings.ENEMY_DENSITY_DEPTH_MULTIPLIER, gameplaySettings_1.GameplaySettings.MAX_ENEMY_DENSITY);
+        const baseEnemyCount = Math.ceil(Math.max(utils_1.Utils.randomNormalInt(0, meanValue * factor), meanValue * factor));
+        // Cap at the number of empty tiles (hard limit)
+        const numEnemies = Math.min(baseEnemyCount, numEmptyTiles);
         // Apply forest reduction (moved from old addEnemies method)
-        const adjustedEnemies = room.envType === environmentTypes_1.EnvType.FOREST ? Math.floor(numEnemies / 2) : numEnemies;
+        const adjustedEnemies = room.envType === environmentTypes_1.EnvType.FOREST
+            ? Math.floor(numEnemies * gameplaySettings_1.GameplaySettings.FOREST_ENEMY_REDUCTION)
+            : numEnemies;
         this.addEnemiesUnified(room, adjustedEnemies, room.envType);
     }
     addSpawners(room, rand, numSpawners) {
@@ -31785,10 +31813,10 @@ class Populator {
             }
         }
         else {
-            // Original random spawner logic
-            const maxPossibleSpawners = Math.ceil(room.roomArea / 50);
+            // Original random spawner logic with configurable parameters
+            const maxPossibleSpawners = Math.ceil(room.roomArea / gameplaySettings_1.GameplaySettings.SPAWNER_AREA_THRESHOLD);
             for (let i = 0; i < maxPossibleSpawners; i++) {
-                if (rand() > 0.1)
+                if (rand() > gameplaySettings_1.GameplaySettings.SPAWNER_SPAWN_CHANCE)
                     continue;
                 const position = room.getRandomEmptyPosition(tiles);
                 if (position === null)
@@ -31820,10 +31848,10 @@ class Populator {
             }
         }
         else {
-            // Original random occultist logic
-            const maxPossibleOccultists = Math.floor(room.roomArea / 200);
+            // Original random occultist logic with configurable parameters
+            const maxPossibleOccultists = Math.floor(room.roomArea / gameplaySettings_1.GameplaySettings.OCCULTIST_AREA_THRESHOLD);
             for (let i = 0; i < maxPossibleOccultists; i++) {
-                if (rand() > 0.1)
+                if (rand() > gameplaySettings_1.GameplaySettings.OCCULTIST_SPAWN_CHANCE)
                     continue;
                 const position = room.getRandomEmptyPosition(tiles);
                 if (position === null)

@@ -59,11 +59,7 @@ export class Resource extends Entity {
 
     if ((player !== null && player.inventory?.canMine()) || player === null) {
       this.dropLoot();
-      this.game.pushMessage("You use your pickaxe to collect the resource.");
-    } else {
-      this.game.pushMessage(
-        "You break the rock, but fail to collect any material from it.",
-      );
+      //this.game.pushMessage("You use your pickaxe to collect the resource.");
     }
     this.uniqueKillBehavior();
   };

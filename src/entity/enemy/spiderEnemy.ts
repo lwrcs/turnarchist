@@ -45,6 +45,7 @@ export class SpiderEnemy extends Enemy {
     //if (drop) this.drop = drop;
     this.drawYOffset = 1.2;
     this.revealTick = 0;
+    this.hasShadow = true;
 
     this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
   }

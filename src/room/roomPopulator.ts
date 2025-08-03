@@ -539,12 +539,12 @@ export class Populator {
    */
   private addSpecialEnemies(room: Room) {
     // Spawner logic - now based on room area and probability
-    if (room.depth > 0) {
+    if (room.depth > GameplaySettings.SPAWNER_MIN_DEPTH) {
       this.addSpawners(room, Random.rand);
     }
 
     // Occultist logic - now based on room area and probability
-    if (room.depth > 1) {
+    if (room.depth > GameplaySettings.OCCULTIST_MIN_DEPTH) {
       this.addOccultists(room, Random.rand);
     }
   }
@@ -566,7 +566,7 @@ export class Populator {
 
     // Add 1-2 new enemies per level (if limiting is enabled)
     const newEnemiesToAddCount = GameplaySettings.LIMIT_ENEMY_TYPES
-      ? Math.min(newEnemies.length, 2)
+      ? Math.min(newEnemies.length, GameplaySettings.NEW_ENEMIES_PER_LEVEL)
       : newEnemies.length;
 
     const newEnemiesToAdd = this.getRandomElements(
@@ -606,7 +606,10 @@ export class Populator {
    * Calculate number of enemy types for depth
    */
   private getNumberOfEnemyTypes(depth: number): number {
-    return depth === 0 ? 2 : Math.ceil(Math.sqrt(depth + 1)) + 4;
+    return depth === 0
+      ? GameplaySettings.DEPTH_ZERO_ENEMY_TYPES
+      : Math.ceil(Math.sqrt(depth + 1)) +
+          GameplaySettings.ENEMY_TYPES_BASE_COUNT;
   }
 
   /**
@@ -677,18 +680,30 @@ export class Populator {
   }
 
   private addRandomEnemies(room: Room) {
-    let numEmptyTiles = room.getEmptyTiles().length;
-    const factor = Math.min((room.depth + 2) * 0.05, 0.3);
-    const numEnemies = Math.ceil(
+    const numEmptyTiles = room.getEmptyTiles().length;
+    const meanValue = (room.roomArea + numEmptyTiles) / 2;
+
+    const factor = Math.min(
+      (room.depth + GameplaySettings.ENEMY_DENSITY_DEPTH_OFFSET) *
+        GameplaySettings.ENEMY_DENSITY_DEPTH_MULTIPLIER,
+      GameplaySettings.MAX_ENEMY_DENSITY,
+    );
+
+    const baseEnemyCount = Math.ceil(
       Math.max(
-        Utils.randomNormalInt(0, numEmptyTiles * factor),
-        numEmptyTiles * factor,
+        Utils.randomNormalInt(0, meanValue * factor),
+        meanValue * factor,
       ),
     );
 
+    // Cap at the number of empty tiles (hard limit)
+    const numEnemies = Math.min(baseEnemyCount, numEmptyTiles);
+
     // Apply forest reduction (moved from old addEnemies method)
     const adjustedEnemies =
-      room.envType === EnvType.FOREST ? Math.floor(numEnemies / 2) : numEnemies;
+      room.envType === EnvType.FOREST
+        ? Math.floor(numEnemies * GameplaySettings.FOREST_ENEMY_REDUCTION)
+        : numEnemies;
 
     this.addEnemiesUnified(room, adjustedEnemies, room.envType);
   }
@@ -718,11 +733,13 @@ export class Populator {
         tiles = tiles.filter((t) => !(t.x === x && t.y === y));
       }
     } else {
-      // Original random spawner logic
-      const maxPossibleSpawners = Math.ceil(room.roomArea / 50);
+      // Original random spawner logic with configurable parameters
+      const maxPossibleSpawners = Math.ceil(
+        room.roomArea / GameplaySettings.SPAWNER_AREA_THRESHOLD,
+      );
 
       for (let i = 0; i < maxPossibleSpawners; i++) {
-        if (rand() > 0.1) continue;
+        if (rand() > GameplaySettings.SPAWNER_SPAWN_CHANCE) continue;
 
         const position = room.getRandomEmptyPosition(tiles);
         if (position === null) break;
@@ -765,11 +782,13 @@ export class Populator {
         tiles = tiles.filter((t) => !(t.x === x && t.y === y));
       }
     } else {
-      // Original random occultist logic
-      const maxPossibleOccultists = Math.floor(room.roomArea / 200);
+      // Original random occultist logic with configurable parameters
+      const maxPossibleOccultists = Math.floor(
+        room.roomArea / GameplaySettings.OCCULTIST_AREA_THRESHOLD,
+      );
 
       for (let i = 0; i < maxPossibleOccultists; i++) {
-        if (rand() > 0.1) continue;
+        if (rand() > GameplaySettings.OCCULTIST_SPAWN_CHANCE) continue;
 
         const position = room.getRandomEmptyPosition(tiles);
         if (position === null) break;
