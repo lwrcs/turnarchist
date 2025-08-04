@@ -2125,8 +2125,9 @@ export class Room {
           this.roomArray[x][y] instanceof WallTorch
         )
           continue;
-        let factor = !GameConstants.SMOOTH_LIGHTING ? 2 : 0.5;
-        let computedAlpha = alpha ** factor;
+        let factor = !GameConstants.SMOOTH_LIGHTING ? 2 : 2;
+        let smoothFactor = !GameConstants.SMOOTH_LIGHTING ? 0 : 2;
+        let computedAlpha = alpha ** factor * smoothFactor;
 
         let fillX = x;
         let fillY = y;
@@ -3431,7 +3432,11 @@ export class Room {
    * Places a VendingMachine in an empty wall.
    */
   placeVendingMachineInWall(item?: Item): void {
-    const emptyWalls = this.getEmptyWall();
+    let emptyWalls = this.getEmptyWall();
+    emptyWalls = emptyWalls.filter((wall) => {
+      const wallInfo = wall.wallInfo();
+      return wallInfo && !wallInfo.isInnerWall;
+    });
     if (emptyWalls.length === 0) return;
 
     // Select a random empty wall
@@ -3460,6 +3465,15 @@ export class Room {
       this.blurCache.isValid &&
       this.blurCache.lastLightingUpdate === this.lastLightingUpdate
     );
+  };
+
+  readonly getPlayer = () => {
+    for (const i in this.game.players) {
+      if (this.game.rooms[this.game.players[i].levelID] === this) {
+        return this.game.players[i];
+      }
+    }
+    return null;
   };
 
   private cacheBlurResult = (

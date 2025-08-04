@@ -57,6 +57,19 @@ import { EnergyWizardEnemy } from "../entity/enemy/energyWizard";
 import { Level } from "../level/level";
 import { globalEventBus } from "../event/eventBus";
 import { EVENTS } from "../event/events";
+import { ArmoredSkullEnemy } from "../entity/enemy/armoredSkullEnemy";
+import { ArmoredzombieEnemy } from "../entity/enemy/armoredzombieEnemy";
+import { BigKnightEnemy } from "../entity/enemy/bigKnightEnemy";
+import { BigZombieEnemy } from "../entity/enemy/bigZombieEnemy";
+import { BishopEnemy } from "../entity/enemy/bishopEnemy";
+import { FireWizardEnemy } from "../entity/enemy/fireWizard";
+import { FrogEnemy } from "../entity/enemy/frogEnemy";
+import { GlowBugEnemy } from "../entity/enemy/glowBugEnemy";
+import { MummyEnemy } from "../entity/enemy/mummyEnemy";
+import { OccultistEnemy } from "../entity/enemy/occultistEnemy";
+import { QueenEnemy } from "../entity/enemy/queenEnemy";
+import { RookEnemy } from "../entity/enemy/rookEnemy";
+import { SpiderEnemy } from "../entity/enemy/spiderEnemy";
 
 export class HitWarningState {
   x: number;
@@ -144,8 +157,23 @@ export enum EnemyType {
   CRAB,
   SPAWNER,
   VENDINGMACHINE,
-  WIZARD,
+  WIZARD, // WIZARD is the abstract class so don't use this
   ZOMBIE,
+  // ↓ NEW TYPES -------------------------------------------------------------
+  ARMOREDSKULL,
+  ARMOREDZOMBIE,
+  BIGKNIGHT,
+  BIGZOMBIE,
+  BISHOP,
+  ENERGYWIZARD,
+  FIREWIZARD,
+  FROG,
+  GLOWBUG,
+  MUMMY,
+  OCCULTIST,
+  QUEEN,
+  ROOK,
+  SPIDER,
 }
 
 export class EnemyState {
@@ -328,6 +356,21 @@ export class EnemyState {
           );
       }
     }
+    if (enemy instanceof ArmoredSkullEnemy) this.type = EnemyType.ARMOREDSKULL;
+    if (enemy instanceof ArmoredzombieEnemy)
+      this.type = EnemyType.ARMOREDZOMBIE;
+    if (enemy instanceof BigKnightEnemy) this.type = EnemyType.BIGKNIGHT;
+    if (enemy instanceof BigZombieEnemy) this.type = EnemyType.BIGZOMBIE;
+    if (enemy instanceof BishopEnemy) this.type = EnemyType.BISHOP;
+    if (enemy instanceof EnergyWizardEnemy) this.type = EnemyType.ENERGYWIZARD;
+    if (enemy instanceof FireWizardEnemy) this.type = EnemyType.FIREWIZARD;
+    if (enemy instanceof FrogEnemy) this.type = EnemyType.FROG;
+    if (enemy instanceof GlowBugEnemy) this.type = EnemyType.GLOWBUG;
+    if (enemy instanceof MummyEnemy) this.type = EnemyType.MUMMY;
+    if (enemy instanceof OccultistEnemy) this.type = EnemyType.OCCULTIST;
+    if (enemy instanceof QueenEnemy) this.type = EnemyType.QUEEN;
+    if (enemy instanceof RookEnemy) this.type = EnemyType.ROOK;
+    if (enemy instanceof SpiderEnemy) this.type = EnemyType.SPIDER;
   }
 }
 
@@ -421,12 +464,7 @@ let loadEnemy = (es: EnemyState, game: Game): Entity => {
     enemy.isInf = es.isInf;
     enemy.quantity = es.quantity;
   }
-  if (es.type === EnemyType.WIZARD) {
-    enemy = new EnergyWizardEnemy(level, game, es.x, es.y);
-    enemy.ticks = es.ticks;
-    enemy.state = es.wizardState;
-    enemy.seenPlayer = es.seenPlayer;
-  }
+
   if (es.type === EnemyType.ZOMBIE) {
     enemy = new ZombieEnemy(level, game, es.x, es.y);
     enemy.ticks = es.ticks;
@@ -437,6 +475,34 @@ let loadEnemy = (es: EnemyState, game: Game): Entity => {
         enemy.targetPlayer = game.offlinePlayers[es.targetPlayerID];
     }
   }
+  if (es.type === EnemyType.ARMOREDSKULL)
+    enemy = new ArmoredSkullEnemy(level, game, es.x, es.y);
+  if (es.type === EnemyType.ARMOREDZOMBIE)
+    enemy = new ArmoredzombieEnemy(level, game, es.x, es.y);
+  if (es.type === EnemyType.BIGKNIGHT)
+    enemy = new BigKnightEnemy(level, game, es.x, es.y);
+  if (es.type === EnemyType.BIGZOMBIE)
+    enemy = new BigZombieEnemy(level, game, es.x, es.y);
+  if (es.type === EnemyType.BISHOP)
+    enemy = new BishopEnemy(level, game, es.x, es.y);
+  if (es.type === EnemyType.ENERGYWIZARD)
+    enemy = new EnergyWizardEnemy(level, game, es.x, es.y);
+  if (es.type === EnemyType.FIREWIZARD)
+    enemy = new FireWizardEnemy(level, game, es.x, es.y);
+  if (es.type === EnemyType.FROG)
+    enemy = new FrogEnemy(level, game, es.x, es.y);
+  if (es.type === EnemyType.GLOWBUG)
+    enemy = new GlowBugEnemy(level, game, es.x, es.y);
+  if (es.type === EnemyType.MUMMY)
+    enemy = new MummyEnemy(level, game, es.x, es.y);
+  if (es.type === EnemyType.OCCULTIST)
+    enemy = new OccultistEnemy(level, game, es.x, es.y);
+  if (es.type === EnemyType.QUEEN)
+    enemy = new QueenEnemy(level, game, es.x, es.y);
+  if (es.type === EnemyType.ROOK)
+    enemy = new RookEnemy(level, game, es.x, es.y);
+  if (es.type === EnemyType.SPIDER)
+    enemy = new SpiderEnemy(level, game, es.x, es.y);
 
   enemy.x = es.x;
   enemy.y = es.y;

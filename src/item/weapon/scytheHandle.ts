@@ -23,6 +23,16 @@ export class ScytheHandle extends Usable {
     this.canUseOnOther = true;
   }
 
+  onDrop = () => {
+    if (this.level.game.lastDroppedScythePiece === "handle") {
+      this.level.game.lastDroppedScythePiece = null;
+      this.level.items.push(new ScytheBlade(this.level, this.x, this.y));
+      this.level.items = this.level.items.filter((item) => item !== this);
+    } else if (this.level.game.lastDroppedScythePiece === null) {
+      this.level.game.lastDroppedScythePiece = "handle";
+    }
+  };
+
   useOnOther = (player: Player, other: Item) => {
     if (other instanceof ScytheBlade) {
       player.inventory.removeItem(this);

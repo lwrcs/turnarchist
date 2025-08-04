@@ -9680,6 +9680,8 @@ class Entity extends drawable_1.Drawable {
             }
         };
         this.shadeAmount = () => {
+            if (gameConstants_1.GameConstants.SMOOTH_LIGHTING)
+                return 0;
             let softVis = this.room.softVis[this.x][this.y] * 1;
             if (this.shadeMultiplier > 1)
                 return Math.min(1, softVis * this.shadeMultiplier);
@@ -10937,7 +10939,7 @@ class FishingSpot extends entity_1.Entity {
             this.frame += 0.12 * delta;
             if (this.frame >= 9)
                 this.frame = 0;
-            game_1.Game.drawFX(23 + Math.floor(this.frame), 0, 1, 1, this.x - this.drawX, this.y - this.drawY, 1, 1);
+            game_1.Game.drawFX(23 + Math.floor(this.frame), 0, 1, 1, this.x - this.drawX, this.y - this.drawY, 1, 1, this.room.shadeColor, this.shadeAmount());
         };
         this.drawTopLayer = (delta) => {
             this.drawableY = this.y;
@@ -10949,7 +10951,7 @@ class FishingSpot extends entity_1.Entity {
         this.hasShadow = false;
         this.chainPushable = false;
         this.name = "fishing spot";
-        this.fishCount = Math.floor(random_1.Random.rand() * 3);
+        this.fishCount = Math.floor(random_1.Random.rand() * 6) - 3;
         this.active = this.fishCount > 0;
         this.startFrame = Math.floor(random_1.Random.rand() * 9);
         //this.hitSound = Sound.potSmash;
@@ -12218,6 +12220,7 @@ class Game {
         this.ellipsisFrame = 0;
         this.ellipsisStartTime = 0;
         this.justTransitioned = false;
+        this.lastDroppedScythePiece = null;
         this.tip = tips_1.Tips.getRandomTip();
         this.currentLevelGenerator = null;
         this.focusTimeout = null;
@@ -14130,6 +14133,19 @@ const backpack_1 = __webpack_require__(/*! ../item/backpack */ "./src/item/backp
 const energyWizard_1 = __webpack_require__(/*! ../entity/enemy/energyWizard */ "./src/entity/enemy/energyWizard.ts");
 const eventBus_1 = __webpack_require__(/*! ../event/eventBus */ "./src/event/eventBus.ts");
 const events_1 = __webpack_require__(/*! ../event/events */ "./src/event/events.ts");
+const armoredSkullEnemy_1 = __webpack_require__(/*! ../entity/enemy/armoredSkullEnemy */ "./src/entity/enemy/armoredSkullEnemy.ts");
+const armoredzombieEnemy_1 = __webpack_require__(/*! ../entity/enemy/armoredzombieEnemy */ "./src/entity/enemy/armoredzombieEnemy.ts");
+const bigKnightEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigKnightEnemy */ "./src/entity/enemy/bigKnightEnemy.ts");
+const bigZombieEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigZombieEnemy */ "./src/entity/enemy/bigZombieEnemy.ts");
+const bishopEnemy_1 = __webpack_require__(/*! ../entity/enemy/bishopEnemy */ "./src/entity/enemy/bishopEnemy.ts");
+const fireWizard_1 = __webpack_require__(/*! ../entity/enemy/fireWizard */ "./src/entity/enemy/fireWizard.ts");
+const frogEnemy_1 = __webpack_require__(/*! ../entity/enemy/frogEnemy */ "./src/entity/enemy/frogEnemy.ts");
+const glowBugEnemy_1 = __webpack_require__(/*! ../entity/enemy/glowBugEnemy */ "./src/entity/enemy/glowBugEnemy.ts");
+const mummyEnemy_1 = __webpack_require__(/*! ../entity/enemy/mummyEnemy */ "./src/entity/enemy/mummyEnemy.ts");
+const occultistEnemy_1 = __webpack_require__(/*! ../entity/enemy/occultistEnemy */ "./src/entity/enemy/occultistEnemy.ts");
+const queenEnemy_1 = __webpack_require__(/*! ../entity/enemy/queenEnemy */ "./src/entity/enemy/queenEnemy.ts");
+const rookEnemy_1 = __webpack_require__(/*! ../entity/enemy/rookEnemy */ "./src/entity/enemy/rookEnemy.ts");
+const spiderEnemy_1 = __webpack_require__(/*! ../entity/enemy/spiderEnemy */ "./src/entity/enemy/spiderEnemy.ts");
 class HitWarningState {
     constructor(hw) {
         this.x = hw.x;
@@ -14200,6 +14216,21 @@ var EnemyType;
     EnemyType[EnemyType["VENDINGMACHINE"] = 13] = "VENDINGMACHINE";
     EnemyType[EnemyType["WIZARD"] = 14] = "WIZARD";
     EnemyType[EnemyType["ZOMBIE"] = 15] = "ZOMBIE";
+    // ↓ NEW TYPES -------------------------------------------------------------
+    EnemyType[EnemyType["ARMOREDSKULL"] = 16] = "ARMOREDSKULL";
+    EnemyType[EnemyType["ARMOREDZOMBIE"] = 17] = "ARMOREDZOMBIE";
+    EnemyType[EnemyType["BIGKNIGHT"] = 18] = "BIGKNIGHT";
+    EnemyType[EnemyType["BIGZOMBIE"] = 19] = "BIGZOMBIE";
+    EnemyType[EnemyType["BISHOP"] = 20] = "BISHOP";
+    EnemyType[EnemyType["ENERGYWIZARD"] = 21] = "ENERGYWIZARD";
+    EnemyType[EnemyType["FIREWIZARD"] = 22] = "FIREWIZARD";
+    EnemyType[EnemyType["FROG"] = 23] = "FROG";
+    EnemyType[EnemyType["GLOWBUG"] = 24] = "GLOWBUG";
+    EnemyType[EnemyType["MUMMY"] = 25] = "MUMMY";
+    EnemyType[EnemyType["OCCULTIST"] = 26] = "OCCULTIST";
+    EnemyType[EnemyType["QUEEN"] = 27] = "QUEEN";
+    EnemyType[EnemyType["ROOK"] = 28] = "ROOK";
+    EnemyType[EnemyType["SPIDER"] = 29] = "SPIDER";
 })(EnemyType = exports.EnemyType || (exports.EnemyType = {}));
 class EnemyState {
     constructor(enemy, game) {
@@ -14327,6 +14358,34 @@ class EnemyState {
                     this.targetPlayerID = Object.keys(game.offlinePlayers).find((key) => game.offlinePlayers[key] === enemy.targetPlayer);
             }
         }
+        if (enemy instanceof armoredSkullEnemy_1.ArmoredSkullEnemy)
+            this.type = EnemyType.ARMOREDSKULL;
+        if (enemy instanceof armoredzombieEnemy_1.ArmoredzombieEnemy)
+            this.type = EnemyType.ARMOREDZOMBIE;
+        if (enemy instanceof bigKnightEnemy_1.BigKnightEnemy)
+            this.type = EnemyType.BIGKNIGHT;
+        if (enemy instanceof bigZombieEnemy_1.BigZombieEnemy)
+            this.type = EnemyType.BIGZOMBIE;
+        if (enemy instanceof bishopEnemy_1.BishopEnemy)
+            this.type = EnemyType.BISHOP;
+        if (enemy instanceof energyWizard_1.EnergyWizardEnemy)
+            this.type = EnemyType.ENERGYWIZARD;
+        if (enemy instanceof fireWizard_1.FireWizardEnemy)
+            this.type = EnemyType.FIREWIZARD;
+        if (enemy instanceof frogEnemy_1.FrogEnemy)
+            this.type = EnemyType.FROG;
+        if (enemy instanceof glowBugEnemy_1.GlowBugEnemy)
+            this.type = EnemyType.GLOWBUG;
+        if (enemy instanceof mummyEnemy_1.MummyEnemy)
+            this.type = EnemyType.MUMMY;
+        if (enemy instanceof occultistEnemy_1.OccultistEnemy)
+            this.type = EnemyType.OCCULTIST;
+        if (enemy instanceof queenEnemy_1.QueenEnemy)
+            this.type = EnemyType.QUEEN;
+        if (enemy instanceof rookEnemy_1.RookEnemy)
+            this.type = EnemyType.ROOK;
+        if (enemy instanceof spiderEnemy_1.SpiderEnemy)
+            this.type = EnemyType.SPIDER;
     }
 }
 exports.EnemyState = EnemyState;
@@ -14426,12 +14485,6 @@ let loadEnemy = (es, game) => {
         enemy.isInf = es.isInf;
         enemy.quantity = es.quantity;
     }
-    if (es.type === EnemyType.WIZARD) {
-        enemy = new energyWizard_1.EnergyWizardEnemy(level, game, es.x, es.y);
-        enemy.ticks = es.ticks;
-        enemy.state = es.wizardState;
-        enemy.seenPlayer = es.seenPlayer;
-    }
     if (es.type === EnemyType.ZOMBIE) {
         enemy = new zombieEnemy_1.ZombieEnemy(level, game, es.x, es.y);
         enemy.ticks = es.ticks;
@@ -14442,6 +14495,34 @@ let loadEnemy = (es, game) => {
                 enemy.targetPlayer = game.offlinePlayers[es.targetPlayerID];
         }
     }
+    if (es.type === EnemyType.ARMOREDSKULL)
+        enemy = new armoredSkullEnemy_1.ArmoredSkullEnemy(level, game, es.x, es.y);
+    if (es.type === EnemyType.ARMOREDZOMBIE)
+        enemy = new armoredzombieEnemy_1.ArmoredzombieEnemy(level, game, es.x, es.y);
+    if (es.type === EnemyType.BIGKNIGHT)
+        enemy = new bigKnightEnemy_1.BigKnightEnemy(level, game, es.x, es.y);
+    if (es.type === EnemyType.BIGZOMBIE)
+        enemy = new bigZombieEnemy_1.BigZombieEnemy(level, game, es.x, es.y);
+    if (es.type === EnemyType.BISHOP)
+        enemy = new bishopEnemy_1.BishopEnemy(level, game, es.x, es.y);
+    if (es.type === EnemyType.ENERGYWIZARD)
+        enemy = new energyWizard_1.EnergyWizardEnemy(level, game, es.x, es.y);
+    if (es.type === EnemyType.FIREWIZARD)
+        enemy = new fireWizard_1.FireWizardEnemy(level, game, es.x, es.y);
+    if (es.type === EnemyType.FROG)
+        enemy = new frogEnemy_1.FrogEnemy(level, game, es.x, es.y);
+    if (es.type === EnemyType.GLOWBUG)
+        enemy = new glowBugEnemy_1.GlowBugEnemy(level, game, es.x, es.y);
+    if (es.type === EnemyType.MUMMY)
+        enemy = new mummyEnemy_1.MummyEnemy(level, game, es.x, es.y);
+    if (es.type === EnemyType.OCCULTIST)
+        enemy = new occultistEnemy_1.OccultistEnemy(level, game, es.x, es.y);
+    if (es.type === EnemyType.QUEEN)
+        enemy = new queenEnemy_1.QueenEnemy(level, game, es.x, es.y);
+    if (es.type === EnemyType.ROOK)
+        enemy = new rookEnemy_1.RookEnemy(level, game, es.x, es.y);
+    if (es.type === EnemyType.SPIDER)
+        enemy = new spiderEnemy_1.SpiderEnemy(level, game, es.x, es.y);
     enemy.x = es.x;
     enemy.y = es.y;
     enemy.health = es.health;
@@ -18869,12 +18950,9 @@ class Item extends drawable_1.Drawable {
         };
         // Function to get the amount of shade at the item's location
         this.shadeAmount = () => {
-            const x = this.x ? this.x : 0;
-            const y = this.y ? this.y : 0;
-            if (!x || !y)
+            if (gameConstants_1.GameConstants.SMOOTH_LIGHTING)
                 return 0;
-            else
-                return this.level.softVis[x][y];
+            return this.level.softVis[this.x][this.y];
         };
         this.drawStatus = (x, y) => { };
         this.drawBrokenSymbol = (x, y) => {
@@ -20777,6 +20855,16 @@ const scytheHandle_1 = __webpack_require__(/*! ./scytheHandle */ "./src/item/wea
 class ScytheBlade extends usable_1.Usable {
     constructor(level, x, y) {
         super(level, x, y);
+        this.onDrop = () => {
+            if (this.level.game.lastDroppedScythePiece === "blade") {
+                this.level.game.lastDroppedScythePiece = null;
+                this.level.items.push(new scytheHandle_1.ScytheHandle(this.level, this.x, this.y));
+                this.level.items = this.level.items.filter((item) => item !== this);
+            }
+            else if (this.level.game.lastDroppedScythePiece === null) {
+                this.level.game.lastDroppedScythePiece = "blade";
+            }
+        };
         this.useOnOther = (player, other) => {
             if (other instanceof scytheHandle_1.ScytheHandle) {
                 player.inventory.removeItem(this);
@@ -20816,6 +20904,16 @@ const scytheBlade_1 = __webpack_require__(/*! ./scytheBlade */ "./src/item/weapo
 class ScytheHandle extends usable_1.Usable {
     constructor(level, x, y) {
         super(level, x, y);
+        this.onDrop = () => {
+            if (this.level.game.lastDroppedScythePiece === "handle") {
+                this.level.game.lastDroppedScythePiece = null;
+                this.level.items.push(new scytheBlade_1.ScytheBlade(this.level, this.x, this.y));
+                this.level.items = this.level.items.filter((item) => item !== this);
+            }
+            else if (this.level.game.lastDroppedScythePiece === null) {
+                this.level.game.lastDroppedScythePiece = "handle";
+            }
+        };
         this.useOnOther = (player, other) => {
             if (other instanceof scytheBlade_1.ScytheBlade) {
                 player.inventory.removeItem(this);
@@ -29497,8 +29595,9 @@ class Room {
                         this.roomArray[x][y] &&
                         this.roomArray[x][y] instanceof wallTorch_1.WallTorch)
                         continue;
-                    let factor = !gameConstants_1.GameConstants.SMOOTH_LIGHTING ? 2 : 0.5;
-                    let computedAlpha = alpha ** factor;
+                    let factor = !gameConstants_1.GameConstants.SMOOTH_LIGHTING ? 2 : 2;
+                    let smoothFactor = !gameConstants_1.GameConstants.SMOOTH_LIGHTING ? 0 : 2;
+                    let computedAlpha = alpha ** factor * smoothFactor;
                     let fillX = x;
                     let fillY = y;
                     let fillWidth = 1;
@@ -30285,6 +30384,14 @@ class Room {
             return (!this.active &&
                 this.blurCache.isValid &&
                 this.blurCache.lastLightingUpdate === this.lastLightingUpdate);
+        };
+        this.getPlayer = () => {
+            for (const i in this.game.players) {
+                if (this.game.rooms[this.game.players[i].levelID] === this) {
+                    return this.game.players[i];
+                }
+            }
+            return null;
         };
         this.cacheBlurResult = (type, canvas) => {
             if (!this.active) {
@@ -31093,7 +31200,11 @@ class Room {
      * Places a VendingMachine in an empty wall.
      */
     placeVendingMachineInWall(item) {
-        const emptyWalls = this.getEmptyWall();
+        let emptyWalls = this.getEmptyWall();
+        emptyWalls = emptyWalls.filter((wall) => {
+            const wallInfo = wall.wallInfo();
+            return wallInfo && !wallInfo.isInnerWall;
+        });
         if (emptyWalls.length === 0)
             return;
         // Select a random empty wall
@@ -35071,6 +35182,23 @@ exports.Random = Random;
 Random.setState = (state) => {
     Random.state = state;
 };
+/**
+ * Generates a pseudorandom floating-point number using a xorshift algorithm.
+ *
+ * This method implements a 32-bit xorshift PRNG that modifies the internal state
+ * using three XOR operations with bit shifts (21 left, 35 right, 4 left).
+ * The algorithm is fast and suitable for games but should not be used for
+ * cryptographic purposes.
+ *
+ * @returns {number} A pseudorandom floating-point number in the range [0, 1).
+ *                   The value is uniformly distributed across this range.
+ *
+ * @example
+ * Random.setState(12345); // Set initial seed
+ * const randomValue = Random.rand(); // Returns something like 0.7234567891
+ *
+ * @see https://en.wikipedia.org/wiki/Xorshift for algorithm details
+ */
 Random.rand = () => {
     Random.state ^= Random.state << 21;
     Random.state ^= Random.state >>> 35;

@@ -26,7 +26,7 @@ export class FishingSpot extends Entity {
     this.hasShadow = false;
     this.chainPushable = false;
     this.name = "fishing spot";
-    this.fishCount = Math.floor(Random.rand() * 3);
+    this.fishCount = Math.floor(Random.rand() * 6) - 3;
     this.active = this.fishCount > 0;
     this.startFrame = Math.floor(Random.rand() * 9);
 
@@ -114,6 +114,8 @@ export class FishingSpot extends Entity {
       this.y - this.drawY,
       1,
       1,
+      this.room.shadeColor,
+      this.shadeAmount(),
     );
   };
 
