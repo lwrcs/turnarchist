@@ -133,8 +133,8 @@ export class Bomb extends Entity {
 
     setTimeout(() => {
       this.game.shakeScreen(
-        (Math.random() - 0.5) * 5,
-        (Math.random() - 0.5) * 0,
+        (Random.rand() - 0.5) * 5,
+        (Random.rand() - 0.5) * 0,
         false,
       );
     }, 100);

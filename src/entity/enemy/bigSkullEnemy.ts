@@ -55,7 +55,7 @@ export class BigSkullEnemy extends Enemy {
     this.alertRange = 10;
     this.drawMoveSpeed = 0.9;
     if (drop) this.drops.push(drop);
-    const dropAmount = Math.floor(Math.random() * 3) + 2;
+    const dropAmount = Math.floor(Random.rand() * 3) + 2;
     while (this.drops.length < dropAmount && !this.cloned) {
       this.getDrop();
     }

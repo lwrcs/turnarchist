@@ -53,7 +53,7 @@ export class BigZombieEnemy extends Enemy {
     this.alertRange = 10;
 
     if (drop) this.drop = drop;
-    const dropAmount = Math.floor(Math.random() * 3) + 2;
+    const dropAmount = Math.floor(Random.rand() * 3) + 2;
     while (this.drops.length < dropAmount && !this.cloned) {
       this.getDrop();
     }

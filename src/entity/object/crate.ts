@@ -8,6 +8,7 @@ import { EntityType } from "../entity";
 import { ImageParticle } from "../../particle/imageParticle";
 import { WeaponFragments } from "../../item/usable/weaponFragments";
 import { Coin } from "../../item/coin";
+import { Random } from "../../utility/random";
 
 export class Crate extends Entity {
   constructor(room: Room, game: Game, x: number, y: number) {
@@ -22,7 +23,7 @@ export class Crate extends Entity {
     this.name = "crate";
     this.imageParticleX = 3;
     this.imageParticleY = 26;
-    if (Math.random() < 0.1) {
+    if (Random.rand() < 0.1) {
       this.drops.push(new WeaponFragments(this.room, this.x, this.y, 10));
     } else {
       this.drops.push(new Coin(this.room, this.x, this.y));

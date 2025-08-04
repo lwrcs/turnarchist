@@ -9,6 +9,7 @@ import { Stone } from "../../item/resource/stone";
 import { Resource } from "./resource";
 import { ImageParticle } from "../../particle/imageParticle";
 import { Geode } from "../../item/resource/geode";
+import { Random } from "../../utility/random";
 
 export class Rock extends Resource {
   constructor(room: Room, game: Game, x: number, y: number) {
@@ -20,7 +21,7 @@ export class Rock extends Resource {
     this.hasShadow = false;
     this.chainPushable = false;
     this.name = "rock";
-    if (Math.random() < 0.2) {
+    if (Random.rand() < 0.2) {
       this.drops.push(new Geode(this.room, this.x, this.y));
     }
     //this.drops.push(new Stone(this.room, this.x, this.y));

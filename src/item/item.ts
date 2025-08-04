@@ -6,6 +6,7 @@ import { Sound } from "../sound/sound";
 import { Drawable } from "../drawable/drawable";
 import { Utils } from "../utility/utils";
 import { ItemGroup } from "./itemGroup";
+import { Random } from "../utility/random";
 
 // Item class extends Drawable class and represents an item in the game
 export class Item extends Drawable {
@@ -64,7 +65,7 @@ export class Item extends Drawable {
     this.offsetY = -0.25;
     this.name = "item";
     this.startY = y;
-    this.randomOffset = Math.random();
+    this.randomOffset = Random.rand();
     this.durability = 50;
     this.durabilityMax = 50;
     this.broken = false;

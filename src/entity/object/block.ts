@@ -8,6 +8,7 @@ import { EntityType } from "../entity";
 import { ImageParticle } from "../../particle/imageParticle";
 import { Sound } from "../../sound/sound";
 import { Geode } from "../../item/resource/geode";
+import { Random } from "../../utility/random";
 export class Block extends Entity {
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
@@ -23,7 +24,7 @@ export class Block extends Entity {
     this.imageParticleY = 25;
     this.opaque = true;
     //this.hitSound = Sound.breakRock;
-    if (Math.random() < 0.01)
+    if (Random.rand() < 0.01)
       this.drops.push(new Geode(this.room, this.x, this.y));
   }
 

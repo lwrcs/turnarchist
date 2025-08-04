@@ -4,6 +4,7 @@ import { GameConstants } from "../game/gameConstants";
 import { Particle } from "../particle/particle";
 import { Projectile } from "./projectile";
 import { Room } from "../room/room";
+import { Random } from "../utility/random";
 
 interface Point {
   x: number;
@@ -243,7 +244,7 @@ export class BeamEffect extends Projectile {
         oldY: startY + (endY - startY) * t,
         velocityX: 0,
         velocityY: 0,
-        angle: Math.random() * Math.PI * 2,
+        angle: Random.rand() * Math.PI * 2,
       });
     }
     return points;

@@ -12,6 +12,7 @@ import { Tile } from "../tile/tile";
 import { DownLadder } from "../tile/downLadder";
 import { LockType } from "../tile/lockable";
 import { EnvType } from "../constants/environmentTypes";
+import { Random } from "../utility/random";
 
 export class DownladderMaker extends Entity {
   constructor(room: Room, game: Game, x: number, y: number) {
@@ -27,7 +28,7 @@ export class DownladderMaker extends Entity {
   createDownladder = () => {
     let environment = this.room.depth < 1 ? EnvType.FOREST : EnvType.CAVE;
     if (this.room.depth > 1) {
-      environment = Math.random() < 0.5 ? EnvType.FOREST : EnvType.CAVE;
+      environment = Random.rand() < 0.5 ? EnvType.FOREST : EnvType.CAVE;
     }
     const newTile = new DownLadder(
       this.room,

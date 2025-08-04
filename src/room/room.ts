@@ -709,7 +709,7 @@ export class Room {
         };
 
         // Randomly select an enemy type from the table
-        let type = Game.randTable(tables[d], Math.random);
+        let type = Game.randTable(tables[d], Random.rand);
 
         switch (type) {
           case 1:
@@ -817,7 +817,7 @@ export class Room {
       ),
     );
     //if (numEnemies > numEmptyTiles / 2) numEnemies = numEmptyTiles / 2;
-    this.addEnemies(numEnemies, Math.random);
+    this.addEnemies(numEnemies, Random.rand);
   }
 
   private addSpawners(numSpawners: number, rand: () => number) {
@@ -861,7 +861,7 @@ export class Room {
       bosses.push("occultist");
       bosses.filter((b) => b !== "queen");
     }
-    const boss = Game.randTable(bosses, Math.random);
+    const boss = Game.randTable(bosses, Random.rand);
 
     const { x, y } = boss.startsWith("big")
       ? this.getBigRandomEmptyPosition(tiles)
@@ -869,7 +869,7 @@ export class Room {
 
     switch (boss) {
       case "reaper":
-        const spawner = this.addSpawners(1, Math.random);
+        const spawner = this.addSpawners(1, Random.rand);
         spawner.dropTable = ["weapon", "equipment"];
         spawner.dropChance = 1;
         break;
@@ -890,7 +890,7 @@ export class Room {
 
         break;
       case "occultist":
-        const occultist = this.addOccultists(1, Math.random);
+        const occultist = this.addOccultists(1, Random.rand);
         occultist.dropTable = ["weapon", "equipment"];
         occultist.dropChance = 1;
 
@@ -3327,7 +3327,7 @@ export class Room {
       }
 
       // Shuffle the offset options to randomize placement
-      const shuffledOffsets = offsetOptions.sort(() => Math.random() - 0.5);
+      const shuffledOffsets = offsetOptions.sort(() => Random.rand() - 0.5);
 
       // Check if original position has vending machine
       if (hasVendingMachineAt(x, y)) {

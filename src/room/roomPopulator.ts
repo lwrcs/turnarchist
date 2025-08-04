@@ -139,7 +139,7 @@ export class Populator {
         room.type !== RoomType.BOSS,
     );
 
-    const downLadderRoom = rooms[Math.floor(Math.random() * rooms.length)];
+    const downLadderRoom = rooms[Math.floor(Random.rand() * rooms.length)];
 
     console.log(
       `Selected room for downladder: Type=${downLadderRoom.type}, Doors=${downLadderRoom.doors.length}`,
@@ -651,7 +651,7 @@ export class Populator {
   private getRandomElements<T>(array: T[], count: number): T[] {
     const shuffled = [...array];
     for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
+      const j = Math.floor(Random.rand() * (i + 1));
       [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
     return shuffled.slice(0, Math.min(count, shuffled.length));
@@ -848,7 +848,7 @@ export class Populator {
       bosses.push("occultist");
       bosses = bosses.filter((b) => b !== "queen");
     }
-    const boss = Game.randTable(bosses, Math.random);
+    const boss = Game.randTable(bosses, Random.rand);
 
     const position = boss.startsWith("big")
       ? room.getBigRandomEmptyPosition(tiles)
@@ -1171,7 +1171,7 @@ export class Populator {
       y - 1,
     );
 
-    const numChests = Math.ceil(Math.random() * 5);
+    const numChests = Math.ceil(Random.rand() * 5);
 
     let tiles = room.getEmptyTiles();
     tiles = tiles.filter((tile) => tile.x !== x || tile.y !== y);
@@ -1293,7 +1293,7 @@ export class Populator {
         Math.floor(Math.sqrt(room.depth)),
     );
     if (room.depth === 0) {
-      if (Math.random() < 0.25) {
+      if (Random.rand() < 0.25) {
         numTorches = 0;
       }
     } else {
@@ -1302,7 +1302,7 @@ export class Populator {
       const maxChance = 0.9;
       const chance =
         maxChance * (1 - Math.exp(-falloffRate * (room.depth - 1)));
-      if (Math.random() < chance) {
+      if (Random.rand() < chance) {
         numTorches = 0;
       }
     }
@@ -1329,7 +1329,7 @@ export class Populator {
       case RoomType.DUNGEON:
         if (
           room.level.environment.type === EnvType.CAVE &&
-          Math.random() <= 0.2
+          Random.rand() <= 0.2
         ) {
           this.populateCave(room, rand);
         } else {

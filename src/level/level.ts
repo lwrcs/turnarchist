@@ -13,6 +13,7 @@ import { GameplaySettings } from "../game/gameplaySettings";
 import { DownLadder } from "../tile/downLadder";
 import { Key } from "../item/key";
 import { Lockable } from "../tile/lockable";
+import { Random } from "../utility/random";
 
 export interface EnemyParameters {
   enemyTables: Record<number, number[]>;
@@ -173,7 +174,7 @@ export class Level {
       return;
     }
 
-    const randomRoom = rooms[Math.floor(Math.random() * rooms.length)];
+    const randomRoom = rooms[Math.floor(Random.rand() * rooms.length)];
     console.log(`Selected room ${randomRoom.id} for key placement`);
 
     let emptyTiles = randomRoom.getEmptyTiles();
@@ -192,7 +193,7 @@ export class Level {
       return;
     }
 
-    const randomIndex = Math.floor(Math.random() * emptyTiles.length);
+    const randomIndex = Math.floor(Random.rand() * emptyTiles.length);
     const randomTile = emptyTiles[randomIndex];
 
     console.log(

@@ -512,7 +512,7 @@ export namespace astar {
         }
       }
       function getRandomBoolean(): boolean {
-        return Math.random() < 0.5;
+        return Random.rand() < 0.5;
       }
       if (diagonalsOmni) {
         const randomBool: boolean = getRandomBoolean();
@@ -813,7 +813,7 @@ export class BeamEffect extends Projectile {
         oldY: startY + (endY - startY) * t,
         velocityX: 0,
         velocityY: 0,
-        angle: Math.random() * Math.PI * 2,
+        angle: Random.rand() * Math.PI * 2,
       });
     }
     return points;
@@ -1305,7 +1305,7 @@ export class ArmoredSkullEnemy extends Enemy {
     this.name = "armored skeleton";
     this.forwardOnlyAttack = true;
     if (drop) this.drop = drop;
-    if (Math.random() < this.dropChance) {
+    if (Random.rand() < this.dropChance) {
       this.getDrop(["weapon", "consumable", "gem", "tool", "coin"]);
     }
   }
@@ -1641,7 +1641,7 @@ export class ArmoredzombieEnemy extends Enemy {
     this.forwardOnlyAttack = true;
 
     if (drop) this.drop = drop;
-    if (Math.random() < this.dropChance) {
+    if (Random.rand() < this.dropChance) {
       this.getDrop([
         "weapon",
         "equipment",
@@ -2554,7 +2554,7 @@ export class BishopEnemy extends Enemy {
     this.imageParticleX = 0;
     this.imageParticleY = 26;
     if (drop) this.drop = drop;
-    if (Math.random() < this.dropChance) {
+    if (Random.rand() < this.dropChance) {
       this.getDrop([
         "weapon",
         "equipment",
@@ -2830,7 +2830,7 @@ export class ChargeEnemy extends Enemy {
 
     this.state = ChargeEnemyState.IDLE;
     if (drop) this.drop = drop;
-    if (Math.random() < this.dropChance) {
+    if (Random.rand() < this.dropChance) {
       this.getDrop([
         "weapon",
         "equipment",
@@ -3122,7 +3122,7 @@ export class CrabEnemy extends Enemy {
     this.imageParticleY = 24;
     //if (drop) this.drop = drop;
     this.drawYOffset = 0.175;
-    if (Math.random() < this.dropChance) {
+    if (Random.rand() < this.dropChance) {
       this.getDrop([
         "weapon",
         "equipment",
@@ -3968,7 +3968,7 @@ export class EnergyWizardEnemy extends WizardEnemy {
     this.projectileColor = [0, 50, 150];
 
     if (drop) this.drop = drop;
-    if (Math.random() < this.dropChance) {
+    if (Random.rand() < this.dropChance) {
       this.getDrop([
         "weapon",
         "equipment",
@@ -4083,7 +4083,7 @@ export class FireWizardEnemy extends WizardEnemy {
     this.name = "fire wizard";
     this.projectileColor = [200, 20, 0];
     if (drop) this.drop = drop;
-    if (Math.random() < this.dropChance) {
+    if (Random.rand() < this.dropChance) {
       this.getDrop([
         "weapon",
         "equipment",
@@ -4344,7 +4344,7 @@ export class FrogEnemy extends Enemy {
     this.imageParticleX = 3;
     this.imageParticleY = 30;
     if (drop) this.drop = drop;
-    if (Math.random() < this.dropChance) {
+    if (Random.rand() < this.dropChance) {
       this.getDrop(["weapon", "consumable", "gem", "tool", "coin", "poison"]);
     }
   }
@@ -4726,7 +4726,7 @@ export class KnightEnemy extends Enemy {
     this.imageParticleX = 3;
     this.imageParticleY = 29;
     if (drop) this.drop = drop;
-    if (Math.random() < this.dropChance) {
+    if (Random.rand() < this.dropChance) {
       this.getDrop([
         "weapon",
         "equipment",
@@ -5023,7 +5023,7 @@ export class OccultistEnemy extends Enemy {
         if (enemiesToShield.length > 0) {
           enemiesToShield.forEach((enemy) => {
             const distance = Utils.distance(this.x, this.y, enemy.x, enemy.y);
-            if (Math.random() * 10 > distance) {
+            if (Random.rand() * 10 > distance) {
               this.applyShieldTo(enemy as Enemy);
             }
           });
@@ -5207,7 +5207,7 @@ export class QueenEnemy extends Enemy {
     this.diagonalAttack = true;
     this.jumpHeight = 1;
     if (drop) this.drop = drop;
-    if (Math.random() < this.dropChance) {
+    if (Random.rand() < this.dropChance) {
       this.getDrop([
         "weapon",
         "equipment",
@@ -5442,7 +5442,7 @@ export class RookEnemy extends Enemy {
     this.diagonalAttack = false;
     this.jumpHeight = 0.5;
     if (drop) this.drop = drop;
-    if (Math.random() < this.dropChance) {
+    if (Random.rand() < this.dropChance) {
       this.getDrop([
         "weapon",
         "equipment",
@@ -5670,7 +5670,7 @@ export class SkullEnemy extends Enemy {
     this.name = "skeleton";
     this.forwardOnlyAttack = true;
     if (drop) this.drop = drop;
-    if (Math.random() < this.dropChance) {
+    if (Random.rand() < this.dropChance) {
       this.getDrop(["weapon", "consumable", "gem", "tool", "coin"]);
     }
   }
@@ -6019,7 +6019,7 @@ export class Spawner extends Enemy {
     this.enemySpawnType = randSpawnType;
     this.spawnOffset = 0;
 
-    if (Math.random() < 0.15) {
+    if (Random.rand() < 0.15) {
       switch (this.enemySpawnType) {
         case 0:
           this.getDrop(["consumable"]);
@@ -6396,7 +6396,7 @@ export abstract class WizardEnemy extends Enemy {
     this.alertTicks = 0;
     this.name = "wizard bomber";
     if (drop) this.drop = drop;
-    if (Math.random() < this.dropChance) {
+    if (Random.rand() < this.dropChance) {
       this.getDrop([
         "weapon",
         "equipment",
@@ -6666,7 +6666,7 @@ export class ZombieEnemy extends Enemy {
     this.jumpHeight = 0.35;
 
     if (drop) this.drop = drop;
-    if (Math.random() < this.dropChance) {
+    if (Random.rand() < this.dropChance) {
       this.getDrop(["consumable", "gem", "tool", "coin"]);
     }
   }
@@ -7218,7 +7218,7 @@ export class Entity extends Drawable {
     //make monsters drop degraded weapons
     if (this.drop instanceof Weapon && this.type === EntityType.ENEMY) {
       this.drop.durability = Math.floor(
-        Math.random() * 0.31 * this.drop.durabilityMax,
+        Random.rand() * 0.31 * this.drop.durabilityMax,
       );
       this.drop.durabilityMax;
     }
@@ -7879,8 +7879,8 @@ export class Entity extends Drawable {
   getOpenTile = (): { x: number; y: number } => {
     let x, y;
     do {
-      x = Math.floor(Math.random() * 3 + this.x - 1);
-      y = Math.floor(Math.random() * 3 + this.y - 1);
+      x = Math.floor(Random.rand() * 3 + this.x - 1);
+      y = Math.floor(Random.rand() * 3 + this.y - 1);
     } while (
       (x === this.x && y === this.y) ||
       this.room.roomArray[x][y].isSolid() ||
@@ -8010,7 +8010,7 @@ export class Barrel extends Entity {
     this.name = "barrel";
     this.imageParticleX = 3;
     this.imageParticleY = 25;
-    if (Math.random() < 0.1) {
+    if (Random.rand() < 0.1) {
       this.drop = new WeaponFragments(this.room, this.x, this.y);
     } else {
       this.drop = new Coin(this.room, this.x, this.y);
@@ -8271,8 +8271,8 @@ export class Bomb extends Entity {
 
     setTimeout(() => {
       this.game.shakeScreen(
-        (Math.random() - 0.5) * 5,
-        (Math.random() - 0.5) * 0,
+        (Random.rand() - 0.5) * 5,
+        (Random.rand() - 0.5) * 0,
         false,
       );
     }, 100);
@@ -8406,7 +8406,7 @@ export class Chest extends Entity {
 
     if (this.drop === null) this.getDrop(["consumable", "gem", "coin"]);
     if (this.drop.name === "coin") {
-      const stack = Math.ceil(Math.random() * 5);
+      const stack = Math.ceil(Random.rand() * 5);
       this.drop.stackCount = stack;
       this.drop.stack = stack;
     }
@@ -8484,7 +8484,7 @@ export class Crate extends Entity {
     this.name = "crate";
     this.imageParticleX = 3;
     this.imageParticleY = 26;
-    if (Math.random() < 0.1) {
+    if (Random.rand() < 0.1) {
       this.drop = new WeaponFragments(this.room, this.x, this.y, 10);
     } else {
       this.drop = new Coin(this.room, this.x, this.y);
@@ -10085,8 +10085,8 @@ export class Game {
     this.encounteredEnemies = [];
     this.levels = [];
     let gs = new GameState();
-    gs.seed = (Math.random() * 4294967296) >>> 0;
-    gs.randomState = (Math.random() * 4294967296) >>> 0;
+    gs.seed = (Random.rand() * 4294967296) >>> 0;
+    gs.randomState = (Random.rand() * 4294967296) >>> 0;
     loadGameState(this, [this.localPlayerID], gs, true);
     this.levelState = LevelState.LEVEL_GENERATION;
   };
@@ -10380,7 +10380,7 @@ export class Game {
         }
         break;
       case "bomb":
-        this.room.addBombs(1, () => Math.random());
+        this.room.addBombs(1, () => Random.rand());
         break;
       case "col":
         GameConstants.SET_COLOR_LAYER_COMPOSITE_OPERATION(false);
@@ -14889,7 +14889,7 @@ export class Coal extends Usable {
     this.tileX = 17;
     this.tileY = 0;
     this.stackable = true;
-    this.stackCount = Math.ceil(Math.random() * 7 + 3);
+    this.stackCount = Math.ceil(Random.rand() * 7 + 3);
     this.name = Coal.itemName;
     this.description = "A piece of coal. Fuels lantern.";
     this.canUseOnOther = true;
@@ -15171,7 +15171,7 @@ export class DropTable {
       0,
     );
 
-    const randomWeight = Math.floor(Math.random() * totalWeight);
+    const randomWeight = Math.floor(Random.rand() * totalWeight);
 
     let cumulativeWeight = 0;
     for (const drop of combinedDrops) {
@@ -15431,7 +15431,7 @@ export class Hammer extends Usable {
   disassemble = (player: Player) => {
     let inventoryX = this.x;
     let inventoryY = this.y;
-    let numFragments = Math.ceil(Math.random() * 5 + 5);
+    let numFragments = Math.ceil(Random.rand() * 5 + 5);
     player.inventory.removeItem(this);
     player.inventory.addItem(
       new WeaponFragments(this.level, inventoryX, inventoryY, numFragments),
@@ -15536,7 +15536,7 @@ export class Item extends Drawable {
     this.offsetY = -0.25;
     this.name = "";
     this.startY = y;
-    this.randomOffset = Math.random();
+    this.randomOffset = Random.rand();
     this.durability = 50;
     this.durabilityMax = 50;
     this.broken = false;
@@ -16057,7 +16057,7 @@ export class SpellbookPage extends Usable {
     this.name = "spellbook pages";
     this.canUseOnOther = true;
     this.stackable = true;
-    this.stackCount = stackCount || Math.ceil(Math.random() * 3);
+    this.stackCount = stackCount || Math.ceil(Random.rand() * 3);
     this.description = "Can be used to restore power to a depleted spellbook";
   }
 
@@ -16219,7 +16219,7 @@ export class WeaponFragments extends Usable {
     this.name = "weapon fragments";
     this.canUseOnOther = true;
     this.stackable = true;
-    this.stackCount = stackCount || Math.ceil(Math.random() * 10) + 7;
+    this.stackCount = stackCount || Math.ceil(Random.rand() * 10) + 7;
     this.description = "Can be used to repair broken weapons";
   }
 
@@ -16381,7 +16381,7 @@ export class Level {
     //console.log(`level depth: ${this.depth}`);
 
     this.enemyParameters = this.getEnemyParameters();
-    let envType = Math.floor(Math.random() * 3); //multiply by number of environments to choose from
+    let envType = Math.floor(Random.rand() * 3); //multiply by number of environments to choose from
     this.environment = new Environment(envType);
   }
 
@@ -16523,7 +16523,7 @@ export class Level {
   getRandomElements<T>(array: T[], count: number): T[] {
     const shuffled = [...array];
     for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
+      const j = Math.floor(Random.rand() * (i + 1));
       [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
     return shuffled.slice(0, Math.min(count, shuffled.length));
@@ -17024,7 +17024,7 @@ let generate_dungeon_candidate = async (
   }
   for (let i = 0; i < 100; i++) {
     partialLevel.partitions.forEach(async (partition) => {
-      let roomArea = Math.random() > 0.95 ? softMaxRoomArea : maxRoomArea; //Math.random() > 0.95 ? params.softMaxRoomArea : params.maxRoomArea;
+      let roomArea = Random.rand() > 0.95 ? softMaxRoomArea : maxRoomArea; //Random.rand() > 0.95 ? params.softMaxRoomArea : params.maxRoomArea;
       if (partition.area() > roomArea) {
         partialLevel.partitions = partialLevel.partitions.filter(
           (p) => p !== partition,
@@ -18867,7 +18867,7 @@ export class DamageNumber extends Particle {
     else this.color = "red";
     if (outlineColor) this.outlineColor = outlineColor;
     else this.outlineColor = GameConstants.OUTLINE;
-    this.xoffset = Math.random() * 0.2;
+    this.xoffset = Random.rand() * 0.2;
   }
   getXoffset = () => {
     if (this.room.particles.length > 0) {
@@ -18994,15 +18994,15 @@ export class GenericParticle extends Particle {
           cx,
           cy,
           0,
-          Math.random() * 0.5 + 0.3,
+          Random.rand() * 0.5 + 0.3,
           0,
           0,
           0,
           color,
           0,
           10000000,
-          tx + Math.random() - 0.5,
-          ty + Math.random() - 0.5,
+          tx + Random.rand() - 0.5,
+          ty + Random.rand() - 0.5,
           0,
         ),
       );
@@ -19019,13 +19019,13 @@ export class GenericParticle extends Particle {
       level.particles.push(
         new GenericParticle(
           level,
-          cx + Math.random() * 0.05 - 0.025,
-          cy + Math.random() * 0.05 - 0.025,
-          Math.random() * 0.5,
+          cx + Random.rand() * 0.05 - 0.025,
+          cy + Random.rand() * 0.05 - 0.025,
+          Random.rand() * 0.5,
           0.0625 * (i + 8),
-          0.025 * (Math.random() * 2 - 1),
-          0.025 * (Math.random() * 2 - 1),
-          0.2 * (Math.random() - 1),
+          0.025 * (Random.rand() * 2 - 1),
+          0.025 * (Random.rand() * 2 - 1),
+          0.2 * (Random.rand() - 1),
           color,
           0,
         ),
@@ -19168,7 +19168,7 @@ export class ImageParticle extends Particle {
           cx,
           cy,
           0,
-          Math.random() * 0.5 + 0.3,
+          Random.rand() * 0.5 + 0.3,
           0,
           0,
           0,
@@ -19187,17 +19187,17 @@ export class ImageParticle extends Particle {
     tileX: number,
     tileY: number,
   ) => {
-    for (let i = Math.floor(Math.random() * 3); i < 5; i++) {
+    for (let i = Math.floor(Random.rand() * 3); i < 5; i++) {
       level.particles.push(
         new ImageParticle(
           level,
-          cx + Math.random() * 0.05 - 0.025, // x
-          cy + Math.random() * 0.05 - 0.025, // y
-          Math.random() * 0.5, // z
+          cx + Random.rand() * 0.05 - 0.025, // x
+          cy + Random.rand() * 0.05 - 0.025, // y
+          Random.rand() * 0.5, // z
           0.0625 * (i + 8), // s
-          0.025 * (Math.random() * 2 - 1), //dx
-          0.025 * (Math.random() * 2 - 1), //dy
-          0.2 * (Math.random() - 1), //dz
+          0.025 * (Random.rand() * 2 - 1), //dx
+          0.025 * (Random.rand() * 2 - 1), //dy
+          0.2 * (Random.rand() - 1), //dz
           tileX,
           tileY,
           [2, 1, 0, 1, 2, 2, 2][i], //size
@@ -21438,13 +21438,13 @@ export class EnemySpawnAnimation extends Projectile {
       this.room.particles.push(
         new GenericParticle(
           this.room,
-          this.x + 0.5 + Math.random() * 0.05 - 0.025,
-          this.y + Math.random() * 0.05 - 0.025,
+          this.x + 0.5 + Random.rand() * 0.05 - 0.025,
+          this.y + Random.rand() * 0.05 - 0.025,
           0.25,
-          Math.random() * 0.5,
-          0.025 * (Math.random() * 1 - 0.5),
-          0.025 * (Math.random() * 1 - 0.5),
-          0.2 * (Math.random() - 1),
+          Random.rand() * 0.5,
+          0.025 * (Random.rand() * 1 - 0.5),
+          0.025 * (Random.rand() * 1 - 0.5),
+          0.2 * (Random.rand() - 1),
           "#ffffff",
           0,
         ),
@@ -21709,7 +21709,7 @@ export class WizardFireball extends Projectile {
       );
       this.parent.removeLightSource(this.lightSource);
       this.frame = 0;
-      this.delay = Game.rand(0, 10, Math.random);
+      this.delay = Game.rand(0, 10, Random.rand);
     }
   };
 
@@ -22635,7 +22635,7 @@ export class Room {
         };
 
         // Randomly select an enemy type from the table
-        let type = Game.randTable(tables[d], Math.random);
+        let type = Game.randTable(tables[d], Random.rand);
 
         switch (type) {
           case 1:
@@ -22735,7 +22735,7 @@ export class Room {
       numEmptyTiles * Math.min(this.depth * 0.1 + 0.5, 0.15), //this.depth * 0.01 is starting value
     );
     if (numEnemies > numEmptyTiles / 2) numEnemies = numEmptyTiles / 2;
-    this.addEnemies(numEnemies, Math.random);
+    this.addEnemies(numEnemies, Random.rand);
   }
 
   private addSpawners(numSpawners: number, rand: () => number) {
@@ -23198,7 +23198,7 @@ export class Room {
       y - 1,
     );
 
-    const numChests = Math.ceil(Math.random() * 5);
+    const numChests = Math.ceil(Random.rand() * 5);
 
     let tiles = this.getEmptyTiles();
     tiles = tiles.filter((tile) => tile.x !== x || tile.y !== y);
@@ -23278,7 +23278,7 @@ export class Room {
         Math.floor(Math.sqrt(this.depth)),
     );
     if (this.depth === 0) {
-      if (Math.random() < 0.25) {
+      if (Random.rand() < 0.25) {
         numTorches = 0;
       }
     } else {
@@ -23287,7 +23287,7 @@ export class Room {
       const maxChance = 0.9;
       const chance =
         maxChance * (1 - Math.exp(-falloffRate * (this.depth - 1)));
-      if (Math.random() < chance) {
+      if (Random.rand() < chance) {
         numTorches = 0;
       }
     }
@@ -23331,8 +23331,8 @@ export class Room {
         this.name = "FLOOR " + -this.depth;
         if (this.level.environment.type === EnvType.CAVE) {
           const { x, y } = this.getRoomCenter();
-          let sign = Math.random() < 0.5 ? -1 : 1;
-          let offsetX = Math.floor(Math.random()) * sign;
+          let sign = Random.rand() < 0.5 ? -1 : 1;
+          let offsetX = Math.floor(Random.rand()) * sign;
           let offsetY = offsetX !== 0 ? 0 : sign;
           this.items.push(new Pickaxe(this, x + offsetX, y + offsetY));
         }
@@ -23344,7 +23344,7 @@ export class Room {
       case RoomType.DUNGEON:
         if (
           this.level.environment.type === EnvType.CAVE &&
-          Math.random() <= 0.2
+          Random.rand() <= 0.2
         ) {
           this.populateCave(rand);
         } else {
@@ -23980,7 +23980,7 @@ export class Room {
       const tile = this.roomArray[currentX][currentY];
       if (tile.isOpaque()) {
         return; // Stop processing through opaque tiles
-      } else if (Math.random() < 1 - tile.opacity) {
+      } else if (Random.rand() < 1 - tile.opacity) {
         return;
       }
 
@@ -25207,7 +25207,7 @@ export class Room {
       }
 
       // Shuffle the offset options to randomize placement
-      const shuffledOffsets = offsetOptions.sort(() => Math.random() - 0.5);
+      const shuffledOffsets = offsetOptions.sort(() => Random.rand() - 0.5);
 
       for (const offset of shuffledOffsets) {
         const newX = x + offset.dx;
@@ -25510,7 +25510,7 @@ export class Sound {
 
   static playerStoneFootstep = async () => {
     if (Sound.audioMuted) return;
-    let f = Game.randTable(Sound.playerStoneFootsteps, Math.random);
+    let f = Game.randTable(Sound.playerStoneFootsteps, Random.rand);
     await this.playWithReverb(f);
     f.currentTime = 0;
     f.play();
@@ -25518,19 +25518,19 @@ export class Sound {
 
   static enemyFootstep = () => {
     if (Sound.audioMuted) return;
-    let f = Game.randTable(Sound.enemyFootsteps, Math.random);
+    let f = Game.randTable(Sound.enemyFootsteps, Random.rand);
     this.playWithReverb(f);
     f.currentTime = 0;
   };
 
   static hit = () => {
     if (Sound.audioMuted) return;
-    let f = Game.randTable(Sound.swingSounds, Math.random);
+    let f = Game.randTable(Sound.swingSounds, Random.rand);
     this.playWithReverb(f);
     f.currentTime = 0;
 
     setTimeout(() => {
-      let f = Game.randTable(Sound.hitSounds, Math.random);
+      let f = Game.randTable(Sound.hitSounds, Random.rand);
       this.playWithReverb(f);
       f.currentTime = 0;
     }, 100);
@@ -25538,7 +25538,7 @@ export class Sound {
 
   static hurt = () => {
     if (Sound.audioMuted) return;
-    let f = Game.randTable(Sound.hurtSounds, Math.random);
+    let f = Game.randTable(Sound.hurtSounds, Random.rand);
     this.playWithReverb(f);
     f.currentTime = 0;
   };
@@ -25551,28 +25551,28 @@ export class Sound {
 
   static chest = () => {
     if (Sound.audioMuted) return;
-    let f = Game.randTable(Sound.chestSounds, Math.random);
+    let f = Game.randTable(Sound.chestSounds, Random.rand);
     this.playWithReverb(f);
     f.currentTime = 0;
   };
 
   static potSmash = () => {
     if (Sound.audioMuted) return;
-    let f = Game.randTable(Sound.potSmashSounds, Math.random);
+    let f = Game.randTable(Sound.potSmashSounds, Random.rand);
     this.playWithReverb(f);
     f.currentTime = 0;
   };
 
   static pickupCoin = () => {
     if (Sound.audioMuted) return;
-    let f = Game.randTable(Sound.coinPickupSounds, Math.random);
+    let f = Game.randTable(Sound.coinPickupSounds, Random.rand);
     this.playWithReverb(f);
     f.currentTime = 0;
   };
 
   static mine = () => {
     if (Sound.audioMuted) return;
-    let f = Game.randTable(Sound.miningSounds, Math.random);
+    let f = Game.randTable(Sound.miningSounds, Random.rand);
     this.playWithReverb(f);
     f.currentTime = 0;
   };
@@ -25605,7 +25605,7 @@ export class Sound {
 
   static push = () => {
     if (Sound.audioMuted) return;
-    let f = Game.randTable(Sound.pushSounds, Math.random);
+    let f = Game.randTable(Sound.pushSounds, Random.rand);
     this.playWithReverb(f);
     f.currentTime = 0;
   };
@@ -25619,7 +25619,7 @@ export class Sound {
 
   static unlock = () => {
     if (Sound.audioMuted) return;
-    let f = Game.randTable(Sound.unlockSounds, Math.random);
+    let f = Game.randTable(Sound.unlockSounds, Random.rand);
     this.playWithReverb(f);
     f.currentTime = 0;
   };
@@ -25641,7 +25641,7 @@ export class Sound {
 
   static doorOpen = () => {
     if (Sound.audioMuted) return;
-    let f = Game.randTable(Sound.doorOpenSounds, Math.random);
+    let f = Game.randTable(Sound.doorOpenSounds, Random.rand);
     this.playWithReverb(f);
     f.currentTime = 0;
   };
@@ -25712,7 +25712,7 @@ export class Sound {
 
   static playBomb = () => {
     if (Sound.audioMuted) return;
-    let f = Game.randTable(Sound.bombSounds, Math.random);
+    let f = Game.randTable(Sound.bombSounds, Random.rand);
     this.playWithReverb(f);
     f.currentTime = 0;
   };
@@ -27090,19 +27090,19 @@ export class Floor extends Tile {
     if (this.skin == SkinType.DUNGEON)
       this.variation = Game.randTable(
         [1, 1, 1, 1, 1, 1, 8, 8, 8, 9, 10, 10, 10, 10, 10, 12],
-        Math.random,
+        Random.rand,
       );
     if (this.skin == SkinType.CAVE)
-      //this.variation = Game.randTable([1, 1, 1, 1, 8, 9, 10, 12], Math.random);
+      //this.variation = Game.randTable([1, 1, 1, 1, 8, 9, 10, 12], Random.rand);
       this.variation = Game.randTable(
         [1, 1, 1, 1, 1, 1, 8, 8, 8, 9, 10, 10, 10, 10, 10, 12],
-        Math.random,
+        Random.rand,
       );
     if (this.skin == SkinType.FOREST)
-      //this.variation = Game.randTable([1, 1, 1, 1, 8, 9, 10, 12], Math.random);
+      //this.variation = Game.randTable([1, 1, 1, 1, 8, 9, 10, 12], Random.rand);
       this.variation = Game.randTable(
         [1, 1, 1, 1, 1, 1, 8, 8, 8, 9, 10, 10, 10, 10, 10, 12],
-        Math.random,
+        Random.rand,
       );
   }
 
@@ -27294,13 +27294,13 @@ export class SpawnFloor extends Tile {
     if (this.skin == SkinType.DUNGEON)
       this.variation = Game.randTable(
         [1, 1, 1, 1, 1, 1, 8, 8, 8, 9, 10, 10, 10, 10, 10, 12],
-        Math.random,
+        Random.rand,
       );
     if (this.skin == SkinType.CAVE)
-      //this.variation = Game.randTable([1, 1, 1, 1, 8, 9, 10, 12], Math.random);
+      //this.variation = Game.randTable([1, 1, 1, 1, 8, 9, 10, 12], Random.rand);
       this.variation = Game.randTable(
         [1, 1, 1, 1, 1, 1, 8, 8, 8, 9, 10, 10, 10, 10, 10, 12],
-        Math.random,
+        Random.rand,
       );
   }
 
@@ -27815,7 +27815,7 @@ export class WallTorch extends Wall {
         1.5,
       ),
     );
-    this.frame = Math.random() * 12;
+    this.frame = Random.rand() * 12;
     this.tileYOffset = 6;
     this.hasBloom = true;
     this.bloomColor = "#FFA500";

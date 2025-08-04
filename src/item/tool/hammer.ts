@@ -11,6 +11,7 @@ import { Geode } from "../resource/geode";
 import { Pickaxe } from "./pickaxe";
 import { GoldBar } from "../resource/goldBar";
 import { Gold } from "../resource/gold";
+import { Random } from "../../utility/random";
 export class Hammer extends Usable {
   static itemName = "hammer";
   constructor(level: Room, x: number, y: number) {
@@ -61,7 +62,7 @@ export class Hammer extends Usable {
   disassemble = (player: Player) => {
     let inventoryX = this.x;
     let inventoryY = this.y;
-    let numFragments = Math.ceil(Math.random() * 5 + 5);
+    let numFragments = Math.ceil(Random.rand() * 5 + 5);
     player.inventory.removeItem(this);
     player.inventory.addItem(
       new WeaponFragments(this.level, inventoryX, inventoryY, numFragments),

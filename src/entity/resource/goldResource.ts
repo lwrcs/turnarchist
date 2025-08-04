@@ -9,6 +9,7 @@ import { GenericParticle } from "../../particle/genericParticle";
 import { Gold } from "../../item/resource/gold";
 import { Sound } from "../../sound/sound";
 import { Geode } from "../../item/resource/geode";
+import { Random } from "../../utility/random";
 export class GoldResource extends Resource {
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
@@ -17,7 +18,7 @@ export class GoldResource extends Resource {
     this.tileY = 0;
     this.health = 2;
     this.name = "gold";
-    if (Math.random() < 0.2) {
+    if (Random.rand() < 0.2) {
       this.drops.push(new Geode(this.room, this.x, this.y));
     }
 

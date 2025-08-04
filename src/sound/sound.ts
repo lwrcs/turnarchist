@@ -1,4 +1,5 @@
 import { Game } from "../game";
+import { Random } from "../utility/random";
 import { ReverbEngine } from "./reverb";
 import { Howl, Howler } from "howler";
 
@@ -482,19 +483,19 @@ export class Sound {
     if (environment === 2) sound = Sound.playerGrassFootsteps;
     if (environment === 1) sound = Sound.playerDirtFootsteps;
 
-    let f = Game.randTable(sound, Math.random);
+    let f = Game.randTable(sound, Random.rand);
     this.playWithReverb(f, Sound.PRIORITY.FOOTSTEPS);
   };
 
   static enemyFootstep = () => {
     if (Sound.audioMuted) return;
-    let f = Game.randTable(Sound.enemyFootsteps, Math.random);
+    let f = Game.randTable(Sound.enemyFootsteps, Random.rand);
     this.playWithReverb(f, Sound.PRIORITY.FOOTSTEPS);
   };
 
   static swing = () => {
     if (Sound.audioMuted) return;
-    let f = Game.randTable(Sound.swingSounds, Math.random);
+    let f = Game.randTable(Sound.swingSounds, Random.rand);
     this.playWithReverb(f, Sound.PRIORITY.COMBAT);
   };
 
@@ -504,14 +505,14 @@ export class Sound {
     let sounds = Sound.hitSounds.slice(hard ? 2 : 0, hard ? 3 : 2);
 
     setTimeout(() => {
-      let f = Game.randTable(sounds, Math.random);
+      let f = Game.randTable(sounds, Random.rand);
       this.playWithReverb(f, Sound.PRIORITY.COMBAT);
     }, 100);
   };
 
   static hurt = () => {
     if (Sound.audioMuted) return;
-    let f = Game.randTable(Sound.hurtSounds, Math.random);
+    let f = Game.randTable(Sound.hurtSounds, Random.rand);
     this.playWithReverb(f, Sound.PRIORITY.CRITICAL);
   };
 
@@ -522,13 +523,13 @@ export class Sound {
 
   static chest = () => {
     if (Sound.audioMuted) return;
-    let f = Game.randTable(Sound.chestSounds, Math.random);
+    let f = Game.randTable(Sound.chestSounds, Random.rand);
     this.playWithReverb(f, Sound.PRIORITY.INTERACTIONS);
   };
 
   static potSmash = () => {
     if (Sound.audioMuted) return;
-    let f = Game.randTable(Sound.potSmashSounds, Math.random);
+    let f = Game.randTable(Sound.potSmashSounds, Random.rand);
     this.delayPlay(
       () => this.playWithReverb(f, Sound.PRIORITY.INTERACTIONS),
       100,
@@ -537,13 +538,13 @@ export class Sound {
 
   static pickupCoin = () => {
     if (Sound.audioMuted) return;
-    let f = Game.randTable(Sound.coinPickupSounds, Math.random);
+    let f = Game.randTable(Sound.coinPickupSounds, Random.rand);
     this.playWithReverb(f, Sound.PRIORITY.INTERACTIONS);
   };
 
   static mine = () => {
     if (Sound.audioMuted) return;
-    let f = Game.randTable(Sound.miningSounds, Math.random);
+    let f = Game.randTable(Sound.miningSounds, Random.rand);
     this.playWithReverb(f, Sound.PRIORITY.INTERACTIONS);
   };
 
@@ -571,7 +572,7 @@ export class Sound {
 
   static push = () => {
     if (Sound.audioMuted) return;
-    let f = Game.randTable(Sound.pushSounds, Math.random);
+    let f = Game.randTable(Sound.pushSounds, Random.rand);
     this.playWithReverb(f, Sound.PRIORITY.INTERACTIONS);
   };
 
@@ -584,7 +585,7 @@ export class Sound {
 
   static unlock = () => {
     if (Sound.audioMuted) return;
-    let f = Game.randTable(Sound.unlockSounds, Math.random);
+    let f = Game.randTable(Sound.unlockSounds, Random.rand);
     this.playWithReverb(f, Sound.PRIORITY.INTERACTIONS);
   };
 
@@ -632,7 +633,7 @@ export class Sound {
 
   static doorOpen = () => {
     if (Sound.audioMuted) return;
-    let f = Game.randTable(Sound.doorOpenSounds, Math.random);
+    let f = Game.randTable(Sound.doorOpenSounds, Random.rand);
     this.playWithReverb(f, Sound.PRIORITY.INTERACTIONS);
   };
 
@@ -681,7 +682,7 @@ export class Sound {
 
   static playBomb = () => {
     if (Sound.audioMuted) return;
-    let f = Game.randTable(Sound.bombSounds, Math.random);
+    let f = Game.randTable(Sound.bombSounds, Random.rand);
     this.playWithReverb(f, Sound.PRIORITY.CRITICAL);
   };
 
@@ -700,13 +701,13 @@ export class Sound {
 
   static playSlice = () => {
     if (Sound.audioMuted) return;
-    let f = Game.randTable(Sound.sliceSound, Math.random);
+    let f = Game.randTable(Sound.sliceSound, Random.rand);
     this.playWithReverb(f, Sound.PRIORITY.COMBAT);
   };
 
   static playShortSlice = () => {
     if (Sound.audioMuted) return;
-    let f = Game.randTable(Sound.shortSliceSound, Math.random);
+    let f = Game.randTable(Sound.shortSliceSound, Random.rand);
     this.playWithReverb(f, Sound.PRIORITY.COMBAT);
   };
 
@@ -722,7 +723,7 @@ export class Sound {
 
   static playBush = () => {
     if (Sound.audioMuted) return;
-    let f = Game.randTable(Sound.bushSounds, Math.random);
+    let f = Game.randTable(Sound.bushSounds, Random.rand);
     this.delayPlay(
       () => this.playWithReverb(f, Sound.PRIORITY.INTERACTIONS),
       100,
@@ -731,19 +732,19 @@ export class Sound {
 
   static playParry = () => {
     if (Sound.audioMuted) return;
-    let f = Game.randTable(Sound.parrySounds, Math.random);
+    let f = Game.randTable(Sound.parrySounds, Random.rand);
     this.delayPlay(() => this.playWithReverb(f, Sound.PRIORITY.CRITICAL), 100);
   };
 
   static playEat = () => {
     if (Sound.audioMuted) return;
-    let f = Game.randTable(Sound.eatSounds, Math.random);
+    let f = Game.randTable(Sound.eatSounds, Random.rand);
     this.playWithReverb(f, Sound.PRIORITY.INTERACTIONS);
   };
 
   static playGrunt = () => {
     if (Sound.audioMuted) return;
-    let f = Game.randTable(Sound.gruntSounds, Math.random);
+    let f = Game.randTable(Sound.gruntSounds, Random.rand);
     this.playWithReverb(f, Sound.PRIORITY.COMBAT);
   };
 
@@ -766,7 +767,7 @@ export class Sound {
 
   static playFishingCast = () => {
     if (Sound.audioMuted) return;
-    let f = Game.randTable(Sound.fishingCastSounds, Math.random);
+    let f = Game.randTable(Sound.fishingCastSounds, Random.rand);
     this.playWithReverb(f, Sound.PRIORITY.INTERACTIONS);
   };
 
@@ -777,7 +778,7 @@ export class Sound {
 
   static playFishingCatch = () => {
     if (Sound.audioMuted) return;
-    let f = Game.randTable(Sound.fishingCatchSounds, Math.random);
+    let f = Game.randTable(Sound.fishingCatchSounds, Random.rand);
     this.delayPlay(
       () => this.playWithReverb(f, Sound.PRIORITY.INTERACTIONS),
       100,

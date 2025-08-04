@@ -5,6 +5,7 @@ import { Sound } from "../sound/sound";
 import { Door } from "./door";
 import { DownLadder } from "./downLadder";
 import { UpLadder } from "./upLadder";
+import { Random } from "../utility/random";
 
 export enum LockType {
   NONE = 0,
@@ -230,6 +231,6 @@ export class Lockable {
   }
 
   static generateID() {
-    return Math.floor(Math.random() * 1000000);
+    return Math.floor(Random.rand() * 1000000);
   }
 }

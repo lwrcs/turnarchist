@@ -8,6 +8,7 @@ import { Enemy } from "../entity/enemy/enemy";
 import { LightSource } from "../lighting/lightSource";
 import { Lighting } from "../lighting/lighting";
 import { Utils } from "../utility/utils";
+import { Random } from "../utility/random";
 
 export class WizardFireball extends Projectile {
   state: number;
@@ -92,7 +93,7 @@ export class WizardFireball extends Projectile {
       );
       this.parent.removeLightSource(this.lightSource);
       this.frame = 0;
-      this.delay = Game.rand(0, 10, Math.random);
+      this.delay = Game.rand(0, 10, Random.rand);
     }
   };
 

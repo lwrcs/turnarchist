@@ -3568,13 +3568,14 @@ const entity_1 = __webpack_require__(/*! ./entity */ "./src/entity/entity.ts");
 const downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/downLadder.ts");
 const lockable_1 = __webpack_require__(/*! ../tile/lockable */ "./src/tile/lockable.ts");
 const environmentTypes_1 = __webpack_require__(/*! ../constants/environmentTypes */ "./src/constants/environmentTypes.ts");
+const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
 class DownladderMaker extends entity_1.Entity {
     constructor(room, game, x, y) {
         super(room, game, x, y);
         this.createDownladder = () => {
             let environment = this.room.depth < 1 ? environmentTypes_1.EnvType.FOREST : environmentTypes_1.EnvType.CAVE;
             if (this.room.depth > 1) {
-                environment = Math.random() < 0.5 ? environmentTypes_1.EnvType.FOREST : environmentTypes_1.EnvType.CAVE;
+                environment = random_1.Random.rand() < 0.5 ? environmentTypes_1.EnvType.FOREST : environmentTypes_1.EnvType.CAVE;
             }
             const newTile = new downLadder_1.DownLadder(this.room, this.game, this.x, this.y, true, environment, lockable_1.LockType.NONE);
             this.room.roomArray[this.x][this.y] = newTile;
@@ -4369,6 +4370,7 @@ exports.BigSkullEnemy = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const gameConstants_1 = __webpack_require__(/*! ../../game/gameConstants */ "./src/game/gameConstants.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
 const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ "./src/particle/imageParticle.ts");
@@ -4700,7 +4702,7 @@ class BigSkullEnemy extends enemy_1.Enemy {
         this.drawMoveSpeed = 0.9;
         if (drop)
             this.drops.push(drop);
-        const dropAmount = Math.floor(Math.random() * 3) + 2;
+        const dropAmount = Math.floor(random_1.Random.rand() * 3) + 2;
         while (this.drops.length < dropAmount && !this.cloned) {
             this.getDrop();
         }
@@ -4725,6 +4727,7 @@ BigSkullEnemy.tileY = 0;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BigZombieEnemy = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
 const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
@@ -4990,7 +4993,7 @@ class BigZombieEnemy extends enemy_1.Enemy {
         this.alertRange = 10;
         if (drop)
             this.drop = drop;
-        const dropAmount = Math.floor(Math.random() * 3) + 2;
+        const dropAmount = Math.floor(random_1.Random.rand() * 3) + 2;
         while (this.drops.length < dropAmount && !this.cloned) {
             this.getDrop();
         }
@@ -5745,6 +5748,7 @@ const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const eventBus_1 = __webpack_require__(/*! ../../event/eventBus */ "./src/event/eventBus.ts");
 const utils_1 = __webpack_require__(/*! ../../utility/utils */ "./src/utility/utils.ts");
 const stunAnimation_1 = __webpack_require__(/*! ../../projectile/stunAnimation */ "./src/projectile/stunAnimation.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
 var EnemyState;
 (function (EnemyState) {
     EnemyState[EnemyState["SLEEP"] = 0] = "SLEEP";
@@ -6119,15 +6123,15 @@ class Enemy extends entity_1.Entity {
                 else {
                     // Try diagonal positions
                     if (dy === 0)
-                        dy = Math.random() < 0.5 ? 1 : -1;
+                        dy = random_1.Random.rand() < 0.5 ? 1 : -1;
                     if (dx === 0)
-                        dx = Math.random() < 0.5 ? 1 : -1;
+                        dx = random_1.Random.rand() < 0.5 ? 1 : -1;
                     let diagonal1X = this.x - dy;
                     let diagonal1Y = this.y + dx;
                     let diagonal2X = this.x + dy;
                     let diagonal2Y = this.y - dx;
                     // Randomly choose which diagonal to check first
-                    let checkFirst = Math.random() < 0.5;
+                    let checkFirst = random_1.Random.rand() < 0.5;
                     let firstX = checkFirst ? diagonal1X : diagonal2X;
                     let firstY = checkFirst ? diagonal1Y : diagonal2Y;
                     let secondX = checkFirst ? diagonal2X : diagonal1X;
@@ -6156,16 +6160,16 @@ class Enemy extends entity_1.Entity {
             }
             else if (this.diagonalAttack) {
                 if (dy === 0)
-                    dy = Math.random() < 0.5 ? 1 : -1;
+                    dy = random_1.Random.rand() < 0.5 ? 1 : -1;
                 if (dx === 0)
-                    dx = Math.random() < 0.5 ? 1 : -1;
+                    dx = random_1.Random.rand() < 0.5 ? 1 : -1;
                 // Only diagonal retreat allowed
                 let diagonal1X = this.x - dy;
                 let diagonal1Y = this.y + dx;
                 let diagonal2X = this.x + dy;
                 let diagonal2Y = this.y - dx;
                 // Randomly choose which diagonal to check first
-                let checkFirst = Math.random() < 0.5;
+                let checkFirst = random_1.Random.rand() < 0.5;
                 let firstX = checkFirst ? diagonal1X : diagonal2X;
                 let firstY = checkFirst ? diagonal1Y : diagonal2Y;
                 let secondX = checkFirst ? diagonal2X : diagonal1X;
@@ -6249,7 +6253,7 @@ class Enemy extends entity_1.Entity {
                 return null;
             }
             // Choose a random tile from the far tiles
-            const randomIndex = Math.floor(Math.random() * farTiles.length);
+            const randomIndex = Math.floor(random_1.Random.rand() * farTiles.length);
             return farTiles[randomIndex].tile;
         };
         this.draw = (delta) => {
@@ -7472,6 +7476,7 @@ const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts"
 const utils_1 = __webpack_require__(/*! ../../utility/utils */ "./src/utility/utils.ts");
 const beamEffect_1 = __webpack_require__(/*! ../../projectile/beamEffect */ "./src/projectile/beamEffect.ts");
 const lighting_1 = __webpack_require__(/*! ../../lighting/lighting */ "./src/lighting/lighting.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
 class OccultistEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y) {
         super(room, game, x, y);
@@ -7528,7 +7533,7 @@ class OccultistEnemy extends enemy_1.Enemy {
             if (enemiesToShield.length > 0) {
                 enemiesToShield.forEach((enemy) => {
                     const distance = utils_1.Utils.distance(this.x, this.y, enemy.x, enemy.y);
-                    if (Math.random() * 10 > distance) {
+                    if (random_1.Random.rand() * 10 > distance) {
                         this.applyShieldTo(enemy);
                     }
                 });
@@ -9280,6 +9285,7 @@ const enemyShield_1 = __webpack_require__(/*! ../projectile/enemyShield */ "./sr
 const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts");
 const imageParticle_1 = __webpack_require__(/*! ../particle/imageParticle */ "./src/particle/imageParticle.ts");
 const coin_1 = __webpack_require__(/*! ../item/coin */ "./src/item/coin.ts");
+const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
 var EntityDirection;
 (function (EntityDirection) {
     EntityDirection[EntityDirection["DOWN"] = 0] = "DOWN";
@@ -9353,7 +9359,7 @@ class Entity extends drawable_1.Drawable {
             dropTable_1.DropTable.getDrop(this, drops, force, 3);
             //make monsters drop degraded weapons
             if (this.drop instanceof weapon_1.Weapon && this.type === EntityType.ENEMY) {
-                this.drop.durability = Math.floor(Math.random() * 0.31 * this.drop.durabilityMax);
+                this.drop.durability = Math.floor(random_1.Random.rand() * 0.31 * this.drop.durabilityMax);
                 this.drop.durabilityMax;
             }
         };
@@ -9515,7 +9521,7 @@ class Entity extends drawable_1.Drawable {
                     game_1.Direction.LEFT,
                     game_1.Direction.RIGHT,
                 ];
-                const randomDirection = directions[Math.floor(Math.random() * directions.length)];
+                const randomDirection = directions[Math.floor(random_1.Random.rand() * directions.length)];
                 // Calculate target position based on direction
                 let targetX = this.x;
                 let targetY = this.y;
@@ -9571,7 +9577,7 @@ class Entity extends drawable_1.Drawable {
             // Sort by distance (furthest first)
             newPositions.sort((a, b) => b.distance - a.distance);
             // Choose either furthest or second furthest
-            const chooseSecondFurthest = Math.random() < 0.3;
+            const chooseSecondFurthest = random_1.Random.rand() < 0.3;
             const chosenPosition = chooseSecondFurthest && newPositions.length > 1
                 ? newPositions[1].position
                 : newPositions[0].position;
@@ -10060,8 +10066,8 @@ class Entity extends drawable_1.Drawable {
         this.getOpenTile = () => {
             let x, y;
             do {
-                x = Math.floor(Math.random() * 3 + this.x - 1);
-                y = Math.floor(Math.random() * 3 + this.y - 1);
+                x = Math.floor(random_1.Random.rand() * 3 + this.x - 1);
+                y = Math.floor(random_1.Random.rand() * 3 + this.y - 1);
             } while ((x === this.x && y === this.y) ||
                 this.room.roomArray[x][y].isSolid() ||
                 this.room.roomArray[x][y] instanceof downLadder_1.DownLadder ||
@@ -10333,6 +10339,7 @@ const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const weaponFragments_1 = __webpack_require__(/*! ../../item/usable/weaponFragments */ "./src/item/usable/weaponFragments.ts");
 const coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
 class Barrel extends entity_1.Entity {
     constructor(room, game, x, y) {
         super(room, game, x, y);
@@ -10359,7 +10366,7 @@ class Barrel extends entity_1.Entity {
         this.name = "barrel";
         this.imageParticleX = 3;
         this.imageParticleY = 25;
-        if (Math.random() < 0.1) {
+        if (random_1.Random.rand() < 0.1) {
             this.drops.push(new weaponFragments_1.WeaponFragments(this.room, this.x, this.y));
         }
         else {
@@ -10390,6 +10397,7 @@ const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
 const geode_1 = __webpack_require__(/*! ../../item/resource/geode */ "./src/item/resource/geode.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
 class Block extends entity_1.Entity {
     constructor(room, game, x, y) {
         super(room, game, x, y);
@@ -10424,7 +10432,7 @@ class Block extends entity_1.Entity {
         this.imageParticleY = 25;
         this.opaque = true;
         //this.hitSound = Sound.breakRock;
-        if (Math.random() < 0.01)
+        if (random_1.Random.rand() < 0.01)
             this.drops.push(new geode_1.Geode(this.room, this.x, this.y));
     }
     get type() {
@@ -10450,6 +10458,7 @@ const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const genericParticle_1 = __webpack_require__(/*! ../../particle/genericParticle */ "./src/particle/genericParticle.ts");
 const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
 const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
 const lightSource_1 = __webpack_require__(/*! ../../lighting/lightSource */ "./src/lighting/lightSource.ts");
 const lighting_1 = __webpack_require__(/*! ../../lighting/lighting */ "./src/lighting/lighting.ts");
@@ -10513,7 +10522,7 @@ class Bomb extends entity_1.Entity {
             genericParticle_1.GenericParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, "white");
             this.kill();
             setTimeout(() => {
-                this.game.shakeScreen((Math.random() - 0.5) * 5, (Math.random() - 0.5) * 0, false);
+                this.game.shakeScreen((random_1.Random.rand() - 0.5) * 5, (random_1.Random.rand() - 0.5) * 0, false);
             }, 100);
             this.game.shakeScreen(0, 20, false);
         };
@@ -10684,8 +10693,8 @@ class Chest extends entity_1.Entity {
                         6, 7, 7, 7, 7, 7, 8, 8, 8, 8, 9, 9, 9, 10, 10, 11, 12, 13, 14, 15,
                         100,
                     ], random_1.Random.rand);
-                    if (Math.random() < 0.01)
-                        stack *= Math.ceil(Math.random() * 10);
+                    if (random_1.Random.rand() < 0.01)
+                        stack *= Math.ceil(random_1.Random.rand() * 10);
                     drop.stackCount = stack;
                     //drop.stack = stack;
                 }
@@ -10751,6 +10760,46 @@ exports.Chest = Chest;
 
 /***/ }),
 
+/***/ "./src/entity/object/chestLayer.ts":
+/*!*****************************************!*\
+  !*** ./src/entity/object/chestLayer.ts ***!
+  \*****************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ChestLayer = void 0;
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+class ChestLayer extends entity_1.Entity {
+    constructor(room, game, x, y) {
+        super(room, game, x, y);
+        this.setDrawableY = () => {
+            for (let i of this.room.items)
+                if (i.x === this.x && i.y === this.y)
+                    this.drawableY ===
+                        this.room.roomArray[this.x][this.y].drawableY + 0.001;
+        };
+        this.draw = (delta) => {
+            this.drawableY = this.y - 0.01;
+            this.setDrawableY;
+            if (!this.dead) {
+                game_1.Game.drawObj(0, 4, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
+            }
+        };
+        this.x = x;
+        this.y = y;
+        this.game = game;
+        this.room = room;
+        this.frame = 0;
+    }
+}
+exports.ChestLayer = ChestLayer;
+
+
+/***/ }),
+
 /***/ "./src/entity/object/crate.ts":
 /*!************************************!*\
   !*** ./src/entity/object/crate.ts ***!
@@ -10766,6 +10815,7 @@ const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const weaponFragments_1 = __webpack_require__(/*! ../../item/usable/weaponFragments */ "./src/item/usable/weaponFragments.ts");
 const coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
 class Crate extends entity_1.Entity {
     constructor(room, game, x, y) {
         super(room, game, x, y);
@@ -10793,7 +10843,7 @@ class Crate extends entity_1.Entity {
         this.name = "crate";
         this.imageParticleX = 3;
         this.imageParticleY = 26;
-        if (Math.random() < 0.1) {
+        if (random_1.Random.rand() < 0.1) {
             this.drops.push(new weaponFragments_1.WeaponFragments(this.room, this.x, this.y, 10));
         }
         else {
@@ -11332,6 +11382,7 @@ const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const skullEnemy_1 = __webpack_require__(/*! ../enemy/skullEnemy */ "./src/entity/enemy/skullEnemy.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
 const spellbook_1 = __webpack_require__(/*! ../../item/weapon/spellbook */ "./src/item/weapon/spellbook.ts");
 const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
 const lightSource_1 = __webpack_require__(/*! ../../lighting/lightSource */ "./src/lighting/lightSource.ts");
@@ -11390,7 +11441,7 @@ class TombStone extends entity_1.Entity {
         //this.skinType = skinType;
         this.chainPushable = false;
         this.name = "tombstone";
-        let dropProb = Math.random();
+        let dropProb = random_1.Random.rand();
         if (dropProb < 0.25)
             this.drops.push(new spellbook_1.Spellbook(this.room, this.x, this.y));
         this.hasBloom = true;
@@ -11426,6 +11477,7 @@ const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const apple_1 = __webpack_require__(/*! ../../item/usable/apple */ "./src/item/usable/apple.ts");
 const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
 class Tree extends entity_1.Entity {
     constructor(room, game, x, y) {
         super(room, game, x, y);
@@ -11463,7 +11515,7 @@ class Tree extends entity_1.Entity {
         this.imageParticleY = 28;
         this.opaque = true;
         this.hitSound = sound_1.Sound.playBush;
-        if (Math.random() < 0.5)
+        if (random_1.Random.rand() < 0.5)
             this.drops.push(new apple_1.Apple(this.room, this.x, this.y));
         //this.drawableY = 0.1;
         //this.drops.push(new Shrooms(this.room, this.x, this.y));
@@ -11788,6 +11840,7 @@ exports.CoalResource = void 0;
 const resource_1 = __webpack_require__(/*! ./resource */ "./src/entity/resource/resource.ts");
 const coal_1 = __webpack_require__(/*! ../../item/resource/coal */ "./src/item/resource/coal.ts");
 const geode_1 = __webpack_require__(/*! ../../item/resource/geode */ "./src/item/resource/geode.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
 class CoalResource extends resource_1.Resource {
     constructor(room, game, x, y) {
         super(room, game, x, y);
@@ -11795,7 +11848,7 @@ class CoalResource extends resource_1.Resource {
         this.tileY = 0;
         this.health = 1;
         this.name = "coal";
-        if (Math.random() < 0.1) {
+        if (random_1.Random.rand() < 0.1) {
             this.drops.push(new geode_1.Geode(this.room, this.x, this.y));
         }
         this.drops.push(new coal_1.Coal(this.room, this.x, this.y));
@@ -11819,6 +11872,7 @@ exports.EmeraldResource = void 0;
 const greengem_1 = __webpack_require__(/*! ../../item/resource/greengem */ "./src/item/resource/greengem.ts");
 const resource_1 = __webpack_require__(/*! ./resource */ "./src/entity/resource/resource.ts");
 const geode_1 = __webpack_require__(/*! ../../item/resource/geode */ "./src/item/resource/geode.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
 class EmeraldResource extends resource_1.Resource {
     constructor(room, game, x, y) {
         super(room, game, x, y);
@@ -11826,7 +11880,7 @@ class EmeraldResource extends resource_1.Resource {
         this.tileY = 0;
         this.health = 3;
         this.name = "emerald";
-        if (Math.random() < 0.2) {
+        if (random_1.Random.rand() < 0.2) {
             this.drops.push(new geode_1.Geode(this.room, this.x, this.y));
         }
         this.drops.push(new greengem_1.GreenGem(this.room, this.x, this.y));
@@ -11850,6 +11904,7 @@ exports.GoldResource = void 0;
 const resource_1 = __webpack_require__(/*! ./resource */ "./src/entity/resource/resource.ts");
 const gold_1 = __webpack_require__(/*! ../../item/resource/gold */ "./src/item/resource/gold.ts");
 const geode_1 = __webpack_require__(/*! ../../item/resource/geode */ "./src/item/resource/geode.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
 class GoldResource extends resource_1.Resource {
     constructor(room, game, x, y) {
         super(room, game, x, y);
@@ -11857,7 +11912,7 @@ class GoldResource extends resource_1.Resource {
         this.tileY = 0;
         this.health = 2;
         this.name = "gold";
-        if (Math.random() < 0.2) {
+        if (random_1.Random.rand() < 0.2) {
             this.drops.push(new geode_1.Geode(this.room, this.x, this.y));
         }
         this.drops.push(new gold_1.Gold(this.room, this.x, this.y));
@@ -11959,6 +12014,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Rock = void 0;
 const resource_1 = __webpack_require__(/*! ./resource */ "./src/entity/resource/resource.ts");
 const geode_1 = __webpack_require__(/*! ../../item/resource/geode */ "./src/item/resource/geode.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
 class Rock extends resource_1.Resource {
     constructor(room, game, x, y) {
         super(room, game, x, y);
@@ -11969,7 +12025,7 @@ class Rock extends resource_1.Resource {
         this.hasShadow = false;
         this.chainPushable = false;
         this.name = "rock";
-        if (Math.random() < 0.2) {
+        if (random_1.Random.rand() < 0.2) {
             this.drops.push(new geode_1.Geode(this.room, this.x, this.y));
         }
         //this.drops.push(new Stone(this.room, this.x, this.y));
@@ -12125,6 +12181,7 @@ const events_1 = __webpack_require__(/*! ./event/events */ "./src/event/events.t
 const cameraAnimation_1 = __webpack_require__(/*! ./game/cameraAnimation */ "./src/game/cameraAnimation.ts");
 const tips_1 = __webpack_require__(/*! ./tips */ "./src/tips.ts");
 const gameplaySettings_1 = __webpack_require__(/*! ./game/gameplaySettings */ "./src/game/gameplaySettings.ts");
+const random_1 = __webpack_require__(/*! ./utility/random */ "./src/utility/random.ts");
 var LevelState;
 (function (LevelState) {
     LevelState[LevelState["IN_LEVEL"] = 0] = "IN_LEVEL";
@@ -12228,6 +12285,7 @@ class Game {
         this.wasMuted = false;
         this.wasStarted = false;
         this.lastChatWidth = 0;
+        this.savedGameState = null;
         this.updateDepth = (depth) => {
             this.previousDepth = this.currentDepth;
             this.currentDepth = depth;
@@ -12538,7 +12596,7 @@ class Game {
                     }
                     break;
                 case "bomb":
-                    this.room.addBombs(1, () => Math.random());
+                    this.room.addBombs(1, () => random_1.Random.rand());
                     break;
                 case "col":
                     gameConstants_1.GameConstants.SET_COLOR_LAYER_COMPOSITE_OPERATION(false);
@@ -12596,6 +12654,70 @@ class Game {
                     postProcess_1.PostProcessor.settings.enabled = !postProcess_1.PostProcessor.settings.enabled;
                     enabled = postProcess_1.PostProcessor.settings.enabled ? "enabled" : "disabled";
                     this.pushMessage(`Post processor is now ${enabled}`);
+                    break;
+                case "save":
+                    try {
+                        this.savedGameState = (0, gameState_1.createGameState)(this);
+                        this.pushMessage("Game state saved successfully!");
+                        console.log("Saved game state:", this.savedGameState);
+                    }
+                    catch (error) {
+                        this.pushMessage("Error saving game state: " + error.message);
+                        console.error("Save error:", error);
+                    }
+                    break;
+                case "load":
+                    if (!this.savedGameState) {
+                        this.pushMessage("No saved game state found. Use 'save' command first.");
+                        return;
+                    }
+                    try {
+                        // Get current active usernames (for multiplayer support)
+                        const activeUsernames = Object.keys(this.players);
+                        (0, gameState_1.loadGameState)(this, activeUsernames, this.savedGameState, false);
+                        this.pushMessage("Game state loaded successfully!");
+                        console.log("Loaded game state");
+                    }
+                    catch (error) {
+                        this.pushMessage("Error loading game state: " + error.message);
+                        console.error("Load error:", error);
+                    }
+                    break;
+                case "saveinfo":
+                    if (!this.savedGameState) {
+                        this.pushMessage("No saved game state found.");
+                        return;
+                    }
+                    this.pushMessage(`Saved state - Seed: ${this.savedGameState.seed}, Depth: ${this.savedGameState.level.depth}, Players: ${Object.keys(this.savedGameState.players).length}`);
+                    console.log("Saved game state details:", this.savedGameState);
+                    break;
+                case "currentinfo":
+                    this.pushMessage(`Current state - Seed: ${this.levelgen.seed}, Depth: ${this.level.depth}, Players: ${Object.keys(this.players).length}`);
+                    console.log("Current game state details:", {
+                        seed: this.levelgen.seed,
+                        depth: this.level.depth,
+                        players: Object.keys(this.players),
+                        rooms: this.rooms.length,
+                    });
+                    break;
+                case "testsave":
+                    // Save current state, make some changes, then load to verify
+                    try {
+                        this.savedGameState = (0, gameState_1.createGameState)(this);
+                        const originalHealth = this.players[this.localPlayerID].health;
+                        const originalX = this.players[this.localPlayerID].x;
+                        const originalY = this.players[this.localPlayerID].y;
+                        // Make some changes
+                        this.players[this.localPlayerID].health = Math.max(1, this.players[this.localPlayerID].health - 1);
+                        this.players[this.localPlayerID].x += 1;
+                        this.players[this.localPlayerID].y += 1;
+                        this.pushMessage(`Changes made - Health: ${originalHealth} -> ${this.players[this.localPlayerID].health}, Pos: (${originalX},${originalY}) -> (${this.players[this.localPlayerID].x},${this.players[this.localPlayerID].y})`);
+                        this.pushMessage("Use 'load' to restore the saved state");
+                    }
+                    catch (error) {
+                        this.pushMessage("Error in test save: " + error.message);
+                        console.error("Test save error:", error);
+                    }
                     break;
                 default:
                     if (command.startsWith("new ")) {
@@ -12915,7 +13037,7 @@ class Game {
                         Game.drawFX(7 - ditherFrame, 10, 1, 1, x, y, 1, 1);
                       }
                     }
-                  
+            
                   */
                 }
                 Game.ctx.translate(-levelOffsetX, -levelOffsetY);
@@ -13409,12 +13531,12 @@ class Game {
             "split",
             "corners",
         ];
-        const pattern = patterns[Math.floor(Math.random() * patterns.length)];
+        const pattern = patterns[Math.floor(random_1.Random.rand() * patterns.length)];
         // Generate level with random parameters
-        const numRooms = 8 + Math.floor(Math.random() * 12); // 8-20 rooms
-        const width = 60 + Math.floor(Math.random() * 40); // 60-100 width
-        const height = 50 + Math.floor(Math.random() * 30); // 50-80 height
-        const generator = levelImageGenerator_1.LevelImageGenerator.generateRandomLevel(width, height, numRooms, Math.random, pattern);
+        const numRooms = 8 + Math.floor(random_1.Random.rand() * 12); // 8-20 rooms
+        const width = 60 + Math.floor(random_1.Random.rand() * 40); // 60-100 width
+        const height = 50 + Math.floor(random_1.Random.rand() * 30); // 50-80 height
+        const generator = levelImageGenerator_1.LevelImageGenerator.generateRandomLevel(width, height, numRooms, random_1.Random.rand, pattern);
         // Check accessibility
         const accessible = generator.areRoomsAccessible();
         const accessibilityText = accessible
@@ -14086,7 +14208,7 @@ GameConstants.STARTING_DEV_INVENTORY = [
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.loadGameState = exports.createGameState = exports.GameState = exports.PlayerState = exports.InventoryState = exports.ItemState = exports.ItemType = exports.LevelState = exports.EnemyState = exports.EnemyType = exports.ProjectileState = exports.ProjectileType = exports.HitWarningState = void 0;
+exports.loadGameState = exports.createGameState = exports.GameState = exports.LevelState = exports.PlayerState = exports.InventoryState = exports.ItemState = exports.ItemType = exports.RoomState = exports.EnemyState = exports.EnemyType = exports.ProjectileState = exports.ProjectileType = exports.HitWarningState = void 0;
 const barrel_1 = __webpack_require__(/*! ../entity/object/barrel */ "./src/entity/object/barrel.ts");
 const bigSkullEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigSkullEnemy */ "./src/entity/enemy/bigSkullEnemy.ts");
 const chargeEnemy_1 = __webpack_require__(/*! ../entity/enemy/chargeEnemy */ "./src/entity/enemy/chargeEnemy.ts");
@@ -14130,7 +14252,10 @@ const shotgun_1 = __webpack_require__(/*! ../item/weapon/shotgun */ "./src/item/
 const spear_1 = __webpack_require__(/*! ../item/weapon/spear */ "./src/item/weapon/spear.ts");
 const pickaxe_1 = __webpack_require__(/*! ../item/tool/pickaxe */ "./src/item/tool/pickaxe.ts");
 const backpack_1 = __webpack_require__(/*! ../item/backpack */ "./src/item/backpack.ts");
+const pumpkin_1 = __webpack_require__(/*! ../entity/object/pumpkin */ "./src/entity/object/pumpkin.ts");
+const block_1 = __webpack_require__(/*! ../entity/object/block */ "./src/entity/object/block.ts");
 const energyWizard_1 = __webpack_require__(/*! ../entity/enemy/energyWizard */ "./src/entity/enemy/energyWizard.ts");
+const level_1 = __webpack_require__(/*! ../level/level */ "./src/level/level.ts");
 const eventBus_1 = __webpack_require__(/*! ../event/eventBus */ "./src/event/eventBus.ts");
 const events_1 = __webpack_require__(/*! ../event/events */ "./src/event/events.ts");
 const armoredSkullEnemy_1 = __webpack_require__(/*! ../entity/enemy/armoredSkullEnemy */ "./src/entity/enemy/armoredSkullEnemy.ts");
@@ -14146,6 +14271,52 @@ const occultistEnemy_1 = __webpack_require__(/*! ../entity/enemy/occultistEnemy 
 const queenEnemy_1 = __webpack_require__(/*! ../entity/enemy/queenEnemy */ "./src/entity/enemy/queenEnemy.ts");
 const rookEnemy_1 = __webpack_require__(/*! ../entity/enemy/rookEnemy */ "./src/entity/enemy/rookEnemy.ts");
 const spiderEnemy_1 = __webpack_require__(/*! ../entity/enemy/spiderEnemy */ "./src/entity/enemy/spiderEnemy.ts");
+const apple_1 = __webpack_require__(/*! ../item/usable/apple */ "./src/item/usable/apple.ts");
+const bestiaryBook_1 = __webpack_require__(/*! ../item/bestiaryBook */ "./src/item/bestiaryBook.ts");
+const bombItem_1 = __webpack_require__(/*! ../item/bombItem */ "./src/item/bombItem.ts");
+const entitySpawner_1 = __webpack_require__(/*! ../item/entitySpawner */ "./src/item/entitySpawner.ts");
+const fish_1 = __webpack_require__(/*! ../item/usable/fish */ "./src/item/usable/fish.ts");
+const fishingRod_1 = __webpack_require__(/*! ../item/tool/fishingRod */ "./src/item/tool/fishingRod.ts");
+const geode_1 = __webpack_require__(/*! ../item/resource/geode */ "./src/item/resource/geode.ts");
+const glowBugs_1 = __webpack_require__(/*! ../item/light/glowBugs */ "./src/item/light/glowBugs.ts");
+const godStone_1 = __webpack_require__(/*! ../item/godStone */ "./src/item/godStone.ts");
+const goldBar_1 = __webpack_require__(/*! ../item/resource/goldBar */ "./src/item/resource/goldBar.ts");
+const goldRing_1 = __webpack_require__(/*! ../item/jewelry/goldRing */ "./src/item/jewelry/goldRing.ts");
+const garnetRing_1 = __webpack_require__(/*! ../item/jewelry/garnetRing */ "./src/item/jewelry/garnetRing.ts");
+const zirconRing_1 = __webpack_require__(/*! ../item/jewelry/zirconRing */ "./src/item/jewelry/zirconRing.ts");
+const emeraldRing_1 = __webpack_require__(/*! ../item/jewelry/emeraldRing */ "./src/item/jewelry/emeraldRing.ts");
+const amberRing_1 = __webpack_require__(/*! ../item/jewelry/amberRing */ "./src/item/jewelry/amberRing.ts");
+const greenPotion_1 = __webpack_require__(/*! ../item/usable/greenPotion */ "./src/item/usable/greenPotion.ts");
+const greataxe_1 = __webpack_require__(/*! ../item/weapon/greataxe */ "./src/item/weapon/greataxe.ts");
+const hourglass_1 = __webpack_require__(/*! ../item/usable/hourglass */ "./src/item/usable/hourglass.ts");
+const orangegem_1 = __webpack_require__(/*! ../item/resource/orangegem */ "./src/item/resource/orangegem.ts");
+const scythe_1 = __webpack_require__(/*! ../item/weapon/scythe */ "./src/item/weapon/scythe.ts");
+const scytheHandle_1 = __webpack_require__(/*! ../item/weapon/scytheHandle */ "./src/item/weapon/scytheHandle.ts");
+const scytheBlade_1 = __webpack_require__(/*! ../item/weapon/scytheBlade */ "./src/item/weapon/scytheBlade.ts");
+const shrooms_1 = __webpack_require__(/*! ../item/usable/shrooms */ "./src/item/usable/shrooms.ts");
+const slingshot_1 = __webpack_require__(/*! ../item/weapon/slingshot */ "./src/item/weapon/slingshot.ts");
+const spellbook_1 = __webpack_require__(/*! ../item/weapon/spellbook */ "./src/item/weapon/spellbook.ts");
+const spellbookPage_1 = __webpack_require__(/*! ../item/usable/spellbookPage */ "./src/item/usable/spellbookPage.ts");
+const stone_1 = __webpack_require__(/*! ../item/resource/stone */ "./src/item/resource/stone.ts");
+const sword_1 = __webpack_require__(/*! ../item/weapon/sword */ "./src/item/weapon/sword.ts");
+const warhammer_1 = __webpack_require__(/*! ../item/weapon/warhammer */ "./src/item/weapon/warhammer.ts");
+const weaponBlood_1 = __webpack_require__(/*! ../item/usable/weaponBlood */ "./src/item/usable/weaponBlood.ts");
+const weaponPoison_1 = __webpack_require__(/*! ../item/usable/weaponPoison */ "./src/item/usable/weaponPoison.ts");
+const weaponFragments_1 = __webpack_require__(/*! ../item/usable/weaponFragments */ "./src/item/usable/weaponFragments.ts");
+const bluePotion_1 = __webpack_require__(/*! ../item/usable/bluePotion */ "./src/item/usable/bluePotion.ts");
+const bush_1 = __webpack_require__(/*! ../entity/object/bush */ "./src/entity/object/bush.ts");
+const fishingSpot_1 = __webpack_require__(/*! ../entity/object/fishingSpot */ "./src/entity/object/fishingSpot.ts");
+const furnace_1 = __webpack_require__(/*! ../entity/object/furnace */ "./src/entity/object/furnace.ts");
+const sprout_1 = __webpack_require__(/*! ../entity/object/sprout */ "./src/entity/object/sprout.ts");
+const tombStone_1 = __webpack_require__(/*! ../entity/object/tombStone */ "./src/entity/object/tombStone.ts");
+const decoBlock_1 = __webpack_require__(/*! ../entity/object/decoBlock */ "./src/entity/object/decoBlock.ts");
+const tree_1 = __webpack_require__(/*! ../entity/object/tree */ "./src/entity/object/tree.ts");
+const chestLayer_1 = __webpack_require__(/*! ../entity/object/chestLayer */ "./src/entity/object/chestLayer.ts");
+const bomb_1 = __webpack_require__(/*! ../entity/object/bomb */ "./src/entity/object/bomb.ts");
+const downladderMaker_1 = __webpack_require__(/*! ../entity/downladderMaker */ "./src/entity/downladderMaker.ts");
+const rockResource_1 = __webpack_require__(/*! ../entity/resource/rockResource */ "./src/entity/resource/rockResource.ts");
+const hammer_1 = __webpack_require__(/*! ../item/tool/hammer */ "./src/item/tool/hammer.ts");
+const environmentTypes_1 = __webpack_require__(/*! ../constants/environmentTypes */ "./src/constants/environmentTypes.ts");
 class HitWarningState {
     constructor(hw) {
         this.x = hw.x;
@@ -14171,13 +14342,13 @@ class ProjectileState {
         this.dead = projectile.dead;
         if (projectile instanceof enemySpawnAnimation_1.EnemySpawnAnimation) {
             this.type = ProjectileType.SPAWN;
-            this.levelID = game.rooms.indexOf(projectile.room);
+            this.roomID = game.rooms.indexOf(projectile.room);
             this.enemySpawn = new EnemyState(projectile.enemy, game);
         }
         if (projectile instanceof wizardFireball_1.WizardFireball) {
             this.type = ProjectileType.WIZARD;
             this.wizardState = projectile.state;
-            this.levelID = game.rooms.indexOf(projectile.parent.room);
+            this.roomID = game.rooms.indexOf(projectile.parent.room);
             this.wizardParentID = projectile.parent.room.entities.indexOf(projectile.parent);
         }
     }
@@ -14185,14 +14356,14 @@ class ProjectileState {
 exports.ProjectileState = ProjectileState;
 let loadProjectile = (ps, game) => {
     if (ps.type === ProjectileType.SPAWN) {
-        let level = game.rooms[ps.levelID];
+        let room = game.rooms[ps.roomID];
         let enemy = loadEnemy(ps.enemySpawn, game);
-        let p = new enemySpawnAnimation_1.EnemySpawnAnimation(level, enemy, ps.x, ps.y);
+        let p = new enemySpawnAnimation_1.EnemySpawnAnimation(room, enemy, ps.x, ps.y);
         p.dead = ps.dead;
         return p;
     }
     if (ps.type === ProjectileType.WIZARD) {
-        let wizard = game.rooms[ps.levelID].entities[ps.wizardParentID];
+        let wizard = game.rooms[ps.roomID].entities[ps.wizardParentID];
         let p = new wizardFireball_1.WizardFireball(wizard, ps.x, ps.y);
         p.state = ps.wizardState;
         return p;
@@ -14210,34 +14381,49 @@ var EnemyType;
     EnemyType[EnemyType["GOLD"] = 7] = "GOLD";
     EnemyType[EnemyType["KNIGHT"] = 8] = "KNIGHT";
     EnemyType[EnemyType["PLANT"] = 9] = "PLANT";
-    EnemyType[EnemyType["SKULL"] = 10] = "SKULL";
-    EnemyType[EnemyType["CRAB"] = 11] = "CRAB";
-    EnemyType[EnemyType["SPAWNER"] = 12] = "SPAWNER";
-    EnemyType[EnemyType["VENDINGMACHINE"] = 13] = "VENDINGMACHINE";
-    EnemyType[EnemyType["WIZARD"] = 14] = "WIZARD";
-    EnemyType[EnemyType["ZOMBIE"] = 15] = "ZOMBIE";
-    // ↓ NEW TYPES -------------------------------------------------------------
-    EnemyType[EnemyType["ARMOREDSKULL"] = 16] = "ARMOREDSKULL";
-    EnemyType[EnemyType["ARMOREDZOMBIE"] = 17] = "ARMOREDZOMBIE";
-    EnemyType[EnemyType["BIGKNIGHT"] = 18] = "BIGKNIGHT";
-    EnemyType[EnemyType["BIGZOMBIE"] = 19] = "BIGZOMBIE";
-    EnemyType[EnemyType["BISHOP"] = 20] = "BISHOP";
-    EnemyType[EnemyType["ENERGYWIZARD"] = 21] = "ENERGYWIZARD";
-    EnemyType[EnemyType["FIREWIZARD"] = 22] = "FIREWIZARD";
-    EnemyType[EnemyType["FROG"] = 23] = "FROG";
-    EnemyType[EnemyType["GLOWBUG"] = 24] = "GLOWBUG";
-    EnemyType[EnemyType["MUMMY"] = 25] = "MUMMY";
-    EnemyType[EnemyType["OCCULTIST"] = 26] = "OCCULTIST";
-    EnemyType[EnemyType["QUEEN"] = 27] = "QUEEN";
-    EnemyType[EnemyType["ROOK"] = 28] = "ROOK";
-    EnemyType[EnemyType["SPIDER"] = 29] = "SPIDER";
+    EnemyType[EnemyType["POT"] = 10] = "POT";
+    EnemyType[EnemyType["SKULL"] = 11] = "SKULL";
+    EnemyType[EnemyType["CRAB"] = 12] = "CRAB";
+    EnemyType[EnemyType["SPAWNER"] = 13] = "SPAWNER";
+    EnemyType[EnemyType["VENDINGMACHINE"] = 14] = "VENDINGMACHINE";
+    EnemyType[EnemyType["WIZARD"] = 15] = "WIZARD";
+    EnemyType[EnemyType["ZOMBIE"] = 16] = "ZOMBIE";
+    EnemyType[EnemyType["ARMOREDSKULL"] = 17] = "ARMOREDSKULL";
+    EnemyType[EnemyType["ARMOREDZOMBIE"] = 18] = "ARMOREDZOMBIE";
+    EnemyType[EnemyType["BIGKNIGHT"] = 19] = "BIGKNIGHT";
+    EnemyType[EnemyType["BIGZOMBIE"] = 20] = "BIGZOMBIE";
+    EnemyType[EnemyType["BISHOP"] = 21] = "BISHOP";
+    EnemyType[EnemyType["ENERGYWIZARD"] = 22] = "ENERGYWIZARD";
+    EnemyType[EnemyType["FIREWIZARD"] = 23] = "FIREWIZARD";
+    EnemyType[EnemyType["FROG"] = 24] = "FROG";
+    EnemyType[EnemyType["GLOWBUG"] = 25] = "GLOWBUG";
+    EnemyType[EnemyType["MUMMY"] = 26] = "MUMMY";
+    EnemyType[EnemyType["OCCULTIST"] = 27] = "OCCULTIST";
+    EnemyType[EnemyType["QUEEN"] = 28] = "QUEEN";
+    EnemyType[EnemyType["ROOK"] = 29] = "ROOK";
+    EnemyType[EnemyType["SPIDER"] = 30] = "SPIDER";
+    EnemyType[EnemyType["BUSH"] = 31] = "BUSH";
+    EnemyType[EnemyType["FISHING_SPOT"] = 32] = "FISHING_SPOT";
+    EnemyType[EnemyType["FURNACE"] = 33] = "FURNACE";
+    EnemyType[EnemyType["PUMPKIN"] = 34] = "PUMPKIN";
+    EnemyType[EnemyType["SPROUT"] = 35] = "SPROUT";
+    EnemyType[EnemyType["TOMBSTONE"] = 36] = "TOMBSTONE";
+    EnemyType[EnemyType["DECO_BLOCK"] = 37] = "DECO_BLOCK";
+    EnemyType[EnemyType["TREE"] = 38] = "TREE";
+    EnemyType[EnemyType["CHEST_LAYER"] = 39] = "CHEST_LAYER";
+    EnemyType[EnemyType["BOMB"] = 40] = "BOMB";
+    EnemyType[EnemyType["BLOCK"] = 41] = "BLOCK";
+    EnemyType[EnemyType["DOWNLADDER_MAKER"] = 42] = "DOWNLADDER_MAKER";
+    EnemyType[EnemyType["ROCK"] = 43] = "ROCK";
 })(EnemyType = exports.EnemyType || (exports.EnemyType = {}));
 class EnemyState {
     constructor(enemy, game) {
-        this.levelID = game.rooms.indexOf(enemy.room);
+        this.roomID = game.rooms.indexOf(enemy.room);
         this.x = enemy.x;
         this.y = enemy.y;
         this.health = enemy.health;
+        this.maxHealth = enemy.maxHealth;
+        this.unconscious = enemy.unconscious;
         this.direction = enemy.direction;
         this.dead = enemy.dead;
         this.skipNextTurns = enemy.skipNextTurns;
@@ -14260,8 +14446,11 @@ class EnemyState {
                     this.targetPlayerID = Object.keys(game.offlinePlayers).find((key) => game.offlinePlayers[key] === enemy.targetPlayer);
             }
             this.drops = [];
-            for (const d of enemy.drops)
-                this.drops.push(new ItemState(d, game));
+            for (const d of enemy.drops) {
+                if (d) {
+                    this.drops.push(new ItemState(d, game));
+                }
+            }
         }
         if (enemy instanceof chargeEnemy_1.ChargeEnemy) {
             this.type = EnemyType.CHARGE;
@@ -14297,7 +14486,7 @@ class EnemyState {
         if (enemy instanceof pottedPlant_1.PottedPlant)
             this.type = EnemyType.PLANT;
         if (enemy instanceof pot_1.Pot)
-            this.type = EnemyType.PLANT;
+            this.type = EnemyType.POT;
         if (enemy instanceof skullEnemy_1.SkullEnemy) {
             this.type = EnemyType.SKULL;
             this.ticks = enemy.ticks;
@@ -14336,9 +14525,14 @@ class EnemyState {
             }
             this.open = enemy.open;
             this.costItems = [];
-            for (const item of enemy.costItems)
-                this.costItems.push(new ItemState(item, game));
-            this.item = new ItemState(enemy.item, game);
+            for (const item of enemy.costItems) {
+                if (item) {
+                    this.costItems.push(new ItemState(item, game));
+                }
+            }
+            if (enemy.item) {
+                this.item = new ItemState(enemy.item, game);
+            }
             this.isInf = enemy.isInf;
             this.quantity = enemy.quantity;
         }
@@ -14386,16 +14580,42 @@ class EnemyState {
             this.type = EnemyType.ROOK;
         if (enemy instanceof spiderEnemy_1.SpiderEnemy)
             this.type = EnemyType.SPIDER;
+        if (enemy instanceof bush_1.Bush)
+            this.type = EnemyType.BUSH;
+        if (enemy instanceof fishingSpot_1.FishingSpot)
+            this.type = EnemyType.FISHING_SPOT;
+        if (enemy instanceof furnace_1.Furnace)
+            this.type = EnemyType.FURNACE;
+        if (enemy instanceof pumpkin_1.Pumpkin)
+            this.type = EnemyType.PUMPKIN;
+        if (enemy instanceof sprout_1.Sprout)
+            this.type = EnemyType.SPROUT;
+        if (enemy instanceof tombStone_1.TombStone)
+            this.type = EnemyType.TOMBSTONE;
+        if (enemy instanceof decoBlock_1.DecoBlock)
+            this.type = EnemyType.DECO_BLOCK;
+        if (enemy instanceof tree_1.Tree)
+            this.type = EnemyType.TREE;
+        if (enemy instanceof chestLayer_1.ChestLayer)
+            this.type = EnemyType.CHEST_LAYER;
+        if (enemy instanceof bomb_1.Bomb)
+            this.type = EnemyType.BOMB;
+        if (enemy instanceof block_1.Block)
+            this.type = EnemyType.BLOCK;
+        if (enemy instanceof downladderMaker_1.DownladderMaker)
+            this.type = EnemyType.DOWNLADDER_MAKER;
+        if (enemy instanceof rockResource_1.Rock)
+            this.type = EnemyType.ROCK;
     }
 }
 exports.EnemyState = EnemyState;
 let loadEnemy = (es, game) => {
     let enemy;
-    let level = game.rooms[es.levelID];
+    let room = game.rooms[es.roomID];
     if (es.type === EnemyType.BARREL)
-        enemy = new barrel_1.Barrel(level, game, es.x, es.y);
+        enemy = new barrel_1.Barrel(room, game, es.x, es.y);
     if (es.type === EnemyType.BIGSKULL) {
-        enemy = new bigSkullEnemy_1.BigSkullEnemy(level, game, es.x, es.y);
+        enemy = new bigSkullEnemy_1.BigSkullEnemy(room, game, es.x, es.y);
         enemy.ticks = es.ticks;
         enemy.ticksSinceFirstHit = es.ticksSinceFirstHit;
         enemy.seenPlayer = es.seenPlayer;
@@ -14405,11 +14625,14 @@ let loadEnemy = (es, game) => {
                 enemy.targetPlayer = game.offlinePlayers[es.targetPlayerID];
         }
         enemy.drops = [];
-        for (const d of es.drops)
-            enemy.drops.push(loadItem(d, game));
+        for (const d of es.drops) {
+            if (d) {
+                enemy.drops.push(loadItem(d, game));
+            }
+        }
     }
     if (es.type === EnemyType.CHARGE) {
-        enemy = new chargeEnemy_1.ChargeEnemy(level, game, es.x, es.y);
+        enemy = new chargeEnemy_1.ChargeEnemy(room, game, es.x, es.y);
         enemy.ticks = es.ticks;
         enemy.state = es.chargeEnemyState;
         enemy.startX = es.startX;
@@ -14420,17 +14643,17 @@ let loadEnemy = (es, game) => {
         enemy.visualTargetY = es.visualTargetY;
     }
     if (es.type === EnemyType.CHEST)
-        enemy = new chest_1.Chest(level, game, es.x, es.y);
+        enemy = new chest_1.Chest(room, game, es.x, es.y);
     if (es.type === EnemyType.COAL)
-        enemy = new coalResource_1.CoalResource(level, game, es.x, es.y);
+        enemy = new coalResource_1.CoalResource(room, game, es.x, es.y);
     if (es.type === EnemyType.CRATE)
-        enemy = new crate_1.Crate(level, game, es.x, es.y);
+        enemy = new crate_1.Crate(room, game, es.x, es.y);
     if (es.type === EnemyType.EMERALD)
-        enemy = new emeraldResource_1.EmeraldResource(level, game, es.x, es.y);
+        enemy = new emeraldResource_1.EmeraldResource(room, game, es.x, es.y);
     if (es.type === EnemyType.GOLD)
-        enemy = new goldResource_1.GoldResource(level, game, es.x, es.y);
+        enemy = new goldResource_1.GoldResource(room, game, es.x, es.y);
     if (es.type === EnemyType.KNIGHT) {
-        enemy = new knightEnemy_1.KnightEnemy(level, game, es.x, es.y);
+        enemy = new knightEnemy_1.KnightEnemy(room, game, es.x, es.y);
         enemy.ticks = es.ticks;
         enemy.seenPlayer = es.seenPlayer;
         if (es.seenPlayer) {
@@ -14440,11 +14663,11 @@ let loadEnemy = (es, game) => {
         }
     }
     if (es.type === EnemyType.PLANT)
-        enemy = new pottedPlant_1.PottedPlant(level, game, es.x, es.y);
-    if (es.type === EnemyType.PLANT)
-        enemy = new pot_1.Pot(level, game, es.x, es.y);
+        enemy = new pottedPlant_1.PottedPlant(room, game, es.x, es.y);
+    if (es.type === EnemyType.POT)
+        enemy = new pot_1.Pot(room, game, es.x, es.y);
     if (es.type === EnemyType.SKULL) {
-        enemy = new skullEnemy_1.SkullEnemy(level, game, es.x, es.y);
+        enemy = new skullEnemy_1.SkullEnemy(room, game, es.x, es.y);
         enemy.ticks = es.ticks;
         enemy.ticksSinceFirstHit = es.ticksSinceFirstHit;
         enemy.seenPlayer = es.seenPlayer;
@@ -14455,7 +14678,7 @@ let loadEnemy = (es, game) => {
         }
     }
     if (es.type === EnemyType.CRAB) {
-        enemy = new crabEnemy_1.CrabEnemy(level, game, es.x, es.y);
+        enemy = new crabEnemy_1.CrabEnemy(room, game, es.x, es.y);
         enemy.ticks = es.ticks;
         enemy.seenPlayer = es.seenPlayer;
         if (es.seenPlayer) {
@@ -14465,14 +14688,14 @@ let loadEnemy = (es, game) => {
         }
     }
     if (es.type === EnemyType.SPAWNER) {
-        enemy = new spawner_1.Spawner(level, game, es.x, es.y, [es.enemySpawnType]);
+        enemy = new spawner_1.Spawner(room, game, es.x, es.y, [es.enemySpawnType]);
         enemy.ticks = es.ticks;
         enemy.seenPlayer = es.seenPlayer;
         enemy.enemySpawnType = es.enemySpawnType;
     }
     if (es.type === EnemyType.VENDINGMACHINE) {
         let item = loadItem(es.item, game);
-        enemy = new vendingMachine_1.VendingMachine(level, game, es.x, es.y, item);
+        enemy = new vendingMachine_1.VendingMachine(room, game, es.x, es.y, item);
         if (es.isPlayerOpened) {
             enemy.playerOpened = game.players[es.playerOpenedID];
             if (!enemy.playerOpened)
@@ -14480,13 +14703,16 @@ let loadEnemy = (es, game) => {
         }
         enemy.open = es.open;
         enemy.costItems = [];
-        for (const item of es.costItems)
-            enemy.costItems.push(loadItem(item, game));
+        for (const item of es.costItems) {
+            if (item) {
+                enemy.costItems.push(loadItem(item, game));
+            }
+        }
         enemy.isInf = es.isInf;
         enemy.quantity = es.quantity;
     }
     if (es.type === EnemyType.ZOMBIE) {
-        enemy = new zombieEnemy_1.ZombieEnemy(level, game, es.x, es.y);
+        enemy = new zombieEnemy_1.ZombieEnemy(room, game, es.x, es.y);
         enemy.ticks = es.ticks;
         enemy.seenPlayer = es.seenPlayer;
         if (es.seenPlayer) {
@@ -14496,36 +14722,68 @@ let loadEnemy = (es, game) => {
         }
     }
     if (es.type === EnemyType.ARMOREDSKULL)
-        enemy = new armoredSkullEnemy_1.ArmoredSkullEnemy(level, game, es.x, es.y);
+        enemy = new armoredSkullEnemy_1.ArmoredSkullEnemy(room, game, es.x, es.y);
     if (es.type === EnemyType.ARMOREDZOMBIE)
-        enemy = new armoredzombieEnemy_1.ArmoredzombieEnemy(level, game, es.x, es.y);
+        enemy = new armoredzombieEnemy_1.ArmoredzombieEnemy(room, game, es.x, es.y);
     if (es.type === EnemyType.BIGKNIGHT)
-        enemy = new bigKnightEnemy_1.BigKnightEnemy(level, game, es.x, es.y);
+        enemy = new bigKnightEnemy_1.BigKnightEnemy(room, game, es.x, es.y);
     if (es.type === EnemyType.BIGZOMBIE)
-        enemy = new bigZombieEnemy_1.BigZombieEnemy(level, game, es.x, es.y);
+        enemy = new bigZombieEnemy_1.BigZombieEnemy(room, game, es.x, es.y);
     if (es.type === EnemyType.BISHOP)
-        enemy = new bishopEnemy_1.BishopEnemy(level, game, es.x, es.y);
+        enemy = new bishopEnemy_1.BishopEnemy(room, game, es.x, es.y);
     if (es.type === EnemyType.ENERGYWIZARD)
-        enemy = new energyWizard_1.EnergyWizardEnemy(level, game, es.x, es.y);
+        enemy = new energyWizard_1.EnergyWizardEnemy(room, game, es.x, es.y);
     if (es.type === EnemyType.FIREWIZARD)
-        enemy = new fireWizard_1.FireWizardEnemy(level, game, es.x, es.y);
+        enemy = new fireWizard_1.FireWizardEnemy(room, game, es.x, es.y);
     if (es.type === EnemyType.FROG)
-        enemy = new frogEnemy_1.FrogEnemy(level, game, es.x, es.y);
+        enemy = new frogEnemy_1.FrogEnemy(room, game, es.x, es.y);
     if (es.type === EnemyType.GLOWBUG)
-        enemy = new glowBugEnemy_1.GlowBugEnemy(level, game, es.x, es.y);
+        enemy = new glowBugEnemy_1.GlowBugEnemy(room, game, es.x, es.y);
     if (es.type === EnemyType.MUMMY)
-        enemy = new mummyEnemy_1.MummyEnemy(level, game, es.x, es.y);
+        enemy = new mummyEnemy_1.MummyEnemy(room, game, es.x, es.y);
     if (es.type === EnemyType.OCCULTIST)
-        enemy = new occultistEnemy_1.OccultistEnemy(level, game, es.x, es.y);
+        enemy = new occultistEnemy_1.OccultistEnemy(room, game, es.x, es.y);
     if (es.type === EnemyType.QUEEN)
-        enemy = new queenEnemy_1.QueenEnemy(level, game, es.x, es.y);
+        enemy = new queenEnemy_1.QueenEnemy(room, game, es.x, es.y);
     if (es.type === EnemyType.ROOK)
-        enemy = new rookEnemy_1.RookEnemy(level, game, es.x, es.y);
+        enemy = new rookEnemy_1.RookEnemy(room, game, es.x, es.y);
     if (es.type === EnemyType.SPIDER)
-        enemy = new spiderEnemy_1.SpiderEnemy(level, game, es.x, es.y);
+        enemy = new spiderEnemy_1.SpiderEnemy(room, game, es.x, es.y);
+    if (es.type === EnemyType.BUSH)
+        enemy = new bush_1.Bush(room, game, es.x, es.y);
+    if (es.type === EnemyType.FISHING_SPOT)
+        enemy = new fishingSpot_1.FishingSpot(room, game, es.x, es.y);
+    if (es.type === EnemyType.FURNACE)
+        enemy = new furnace_1.Furnace(room, game, es.x, es.y);
+    if (es.type === EnemyType.PUMPKIN)
+        enemy = new pumpkin_1.Pumpkin(room, game, es.x, es.y);
+    if (es.type === EnemyType.SPROUT)
+        enemy = new sprout_1.Sprout(room, game, es.x, es.y);
+    if (es.type === EnemyType.TOMBSTONE)
+        enemy = new tombStone_1.TombStone(room, game, es.x, es.y);
+    if (es.type === EnemyType.DECO_BLOCK)
+        enemy = new decoBlock_1.DecoBlock(room, game, es.x, es.y);
+    if (es.type === EnemyType.TREE)
+        enemy = new tree_1.Tree(room, game, es.x, es.y);
+    if (es.type === EnemyType.CHEST_LAYER)
+        enemy = new chestLayer_1.ChestLayer(room, game, es.x, es.y);
+    if (es.type === EnemyType.BOMB)
+        enemy = new bomb_1.Bomb(room, game, es.x, es.y);
+    if (es.type === EnemyType.BLOCK)
+        enemy = new block_1.Block(room, game, es.x, es.y);
+    if (es.type === EnemyType.DOWNLADDER_MAKER)
+        enemy = new downladderMaker_1.DownladderMaker(room, game, es.x, es.y);
+    if (es.type === EnemyType.ROCK)
+        enemy = new rockResource_1.Rock(room, game, es.x, es.y);
+    if (!enemy) {
+        console.error("Unknown enemy type:", es.type, "EnemyType enum value:", EnemyType[es.type], "Falling back to barrel");
+        enemy = new barrel_1.Barrel(room, game, es.x, es.y);
+    }
     enemy.x = es.x;
     enemy.y = es.y;
     enemy.health = es.health;
+    enemy.maxHealth = es.maxHealth;
+    enemy.unconscious = es.unconscious;
     enemy.direction = es.direction;
     enemy.dead = es.dead;
     enemy.skipNextTurns = es.skipNextTurns;
@@ -14534,41 +14792,51 @@ let loadEnemy = (es, game) => {
     enemy.alertTicks = es.alertTicks;
     return enemy;
 };
-class LevelState {
-    constructor(level, game) {
-        this.levelID = game.rooms.indexOf(level);
-        this.entered = level.entered;
+class RoomState {
+    constructor(room, game) {
+        this.roomID = game.rooms.indexOf(room);
+        this.entered = room.entered;
+        this.active = room.active;
+        this.onScreen = room.onScreen;
         this.enemies = [];
         this.items = [];
         this.projectiles = [];
         this.hitwarnings = [];
-        for (const enemy of level.entities)
+        for (const enemy of room.entities)
             this.enemies.push(new EnemyState(enemy, game));
-        for (const item of level.items)
-            this.items.push(new ItemState(item, game));
-        for (const projectile of level.projectiles)
+        for (const item of room.items) {
+            if (item) {
+                this.items.push(new ItemState(item, game));
+            }
+        }
+        for (const projectile of room.projectiles)
             this.projectiles.push(new ProjectileState(projectile, game));
-        for (const hw of level.hitwarnings)
+        for (const hw of room.hitwarnings)
             this.hitwarnings.push(new HitWarningState(hw));
     }
 }
-exports.LevelState = LevelState;
-let loadLevel = (level, levelState, game) => {
-    level.entered = levelState.entered;
-    level.entities = [];
-    level.items = [];
-    level.projectiles = [];
-    level.hitwarnings = [];
-    for (const enemy of levelState.enemies)
-        level.entities.push(loadEnemy(enemy, game));
-    for (const item of levelState.items)
-        level.items.push(loadItem(item, game));
-    for (const projectile of levelState.projectiles)
-        level.projectiles.push(loadProjectile(projectile, game));
-    for (const hw of levelState.hitwarnings)
-        level.hitwarnings.push(loadHitWarning(hw, game));
+exports.RoomState = RoomState;
+let loadRoom = (room, roomState, game) => {
+    room.entered = roomState.entered;
+    room.active = roomState.active;
+    room.onScreen = roomState.onScreen;
+    room.entities = [];
+    room.items = [];
+    room.projectiles = [];
+    room.hitwarnings = [];
+    for (const enemy of roomState.enemies)
+        room.entities.push(loadEnemy(enemy, game));
+    for (const item of roomState.items) {
+        if (item) {
+            room.items.push(loadItem(item, game));
+        }
+    }
+    for (const projectile of roomState.projectiles)
+        room.projectiles.push(loadProjectile(projectile, game));
+    for (const hw of roomState.hitwarnings)
+        room.hitwarnings.push(loadHitWarning(hw, game));
+    // Reset lighting state to prevent recursion issues
 };
-//use the other one
 var ItemType;
 (function (ItemType) {
     ItemType[ItemType["ARMOR"] = 0] = "ARMOR";
@@ -14599,9 +14867,38 @@ var ItemType;
     ItemType[ItemType["MUSHROOMS"] = 25] = "MUSHROOMS";
     ItemType[ItemType["STONE"] = 26] = "STONE";
     ItemType[ItemType["BLUE_POTION"] = 27] = "BLUE_POTION";
+    ItemType[ItemType["APPLE"] = 28] = "APPLE";
+    ItemType[ItemType["BESTIARY_BOOK"] = 29] = "BESTIARY_BOOK";
+    ItemType[ItemType["BOMB_ITEM"] = 30] = "BOMB_ITEM";
+    ItemType[ItemType["ENTITY_SPAWNER"] = 31] = "ENTITY_SPAWNER";
+    ItemType[ItemType["FISH"] = 32] = "FISH";
+    ItemType[ItemType["FISHING_ROD"] = 33] = "FISHING_ROD";
+    ItemType[ItemType["GEODE"] = 34] = "GEODE";
+    ItemType[ItemType["GLOW_BUGS"] = 35] = "GLOW_BUGS";
+    ItemType[ItemType["GOD_STONE"] = 36] = "GOD_STONE";
+    ItemType[ItemType["GOLD_BAR"] = 37] = "GOLD_BAR";
+    ItemType[ItemType["GOLD_RING"] = 38] = "GOLD_RING";
+    ItemType[ItemType["GARNET_RING"] = 39] = "GARNET_RING";
+    ItemType[ItemType["ZIRCON_RING"] = 40] = "ZIRCON_RING";
+    ItemType[ItemType["EMERALD_RING"] = 41] = "EMERALD_RING";
+    ItemType[ItemType["AMBER_RING"] = 42] = "AMBER_RING";
+    ItemType[ItemType["GREEN_POTION"] = 43] = "GREEN_POTION";
+    ItemType[ItemType["GREATAXE"] = 44] = "GREATAXE";
+    ItemType[ItemType["HOURGLASS"] = 45] = "HOURGLASS";
+    ItemType[ItemType["ORANGE_GEM"] = 46] = "ORANGE_GEM";
+    ItemType[ItemType["SCYTHE"] = 47] = "SCYTHE";
+    ItemType[ItemType["SCYTHE_HANDLE"] = 48] = "SCYTHE_HANDLE";
+    ItemType[ItemType["SCYTHE_BLADE"] = 49] = "SCYTHE_BLADE";
+    ItemType[ItemType["SLINGSHOT"] = 50] = "SLINGSHOT";
+    ItemType[ItemType["SPELLBOOK_PAGE"] = 51] = "SPELLBOOK_PAGE";
+    ItemType[ItemType["SWORD"] = 52] = "SWORD";
 })(ItemType = exports.ItemType || (exports.ItemType = {}));
 class ItemState {
     constructor(item, game) {
+        // Add null check at the beginning
+        if (!item) {
+            throw new Error("Cannot create ItemState from null item");
+        }
         if (item instanceof armor_1.Armor)
             this.type = ItemType.ARMOR;
         if (item instanceof bluegem_1.BlueGem)
@@ -14640,63 +14937,195 @@ class ItemState {
             this.type = ItemType.PICKAXE;
         if (item instanceof backpack_1.Backpack)
             this.type = ItemType.BACKPACK;
+        // Add new item type checks:
+        if (item instanceof apple_1.Apple)
+            this.type = ItemType.APPLE;
+        if (item instanceof bestiaryBook_1.BestiaryBook)
+            this.type = ItemType.BESTIARY_BOOK;
+        if (item instanceof bombItem_1.BombItem)
+            this.type = ItemType.BOMB_ITEM;
+        if (item instanceof entitySpawner_1.EntitySpawner)
+            this.type = ItemType.ENTITY_SPAWNER;
+        if (item instanceof fish_1.Fish)
+            this.type = ItemType.FISH;
+        if (item instanceof fishingRod_1.FishingRod)
+            this.type = ItemType.FISHING_ROD;
+        if (item instanceof geode_1.Geode)
+            this.type = ItemType.GEODE;
+        if (item instanceof glowBugs_1.GlowBugs)
+            this.type = ItemType.GLOW_BUGS;
+        if (item instanceof godStone_1.GodStone)
+            this.type = ItemType.GOD_STONE;
+        if (item instanceof goldBar_1.GoldBar)
+            this.type = ItemType.GOLD_BAR;
+        if (item instanceof goldRing_1.GoldRing)
+            this.type = ItemType.GOLD_RING;
+        if (item instanceof garnetRing_1.GarnetRing)
+            this.type = ItemType.GARNET_RING;
+        if (item instanceof zirconRing_1.ZirconRing)
+            this.type = ItemType.ZIRCON_RING;
+        if (item instanceof emeraldRing_1.EmeraldRing)
+            this.type = ItemType.EMERALD_RING;
+        if (item instanceof amberRing_1.AmberRing)
+            this.type = ItemType.AMBER_RING;
+        if (item instanceof greenPotion_1.GreenPotion)
+            this.type = ItemType.GREEN_POTION;
+        if (item instanceof greataxe_1.Greataxe)
+            this.type = ItemType.GREATAXE;
+        if (item instanceof hourglass_1.Hourglass)
+            this.type = ItemType.HOURGLASS;
+        if (item instanceof orangegem_1.OrangeGem)
+            this.type = ItemType.ORANGE_GEM;
+        if (item instanceof scythe_1.Scythe)
+            this.type = ItemType.SCYTHE;
+        if (item instanceof scytheHandle_1.ScytheHandle)
+            this.type = ItemType.SCYTHE_HANDLE;
+        if (item instanceof scytheBlade_1.ScytheBlade)
+            this.type = ItemType.SCYTHE_BLADE;
+        if (item instanceof shrooms_1.Shrooms)
+            this.type = ItemType.MUSHROOMS; // Maps to existing MUSHROOMS
+        if (item instanceof slingshot_1.Slingshot)
+            this.type = ItemType.SLINGSHOT;
+        if (item instanceof spellbook_1.Spellbook)
+            this.type = ItemType.SPELLBOOK; // Maps to existing SPELLBOOK
+        if (item instanceof spellbookPage_1.SpellbookPage)
+            this.type = ItemType.SPELLBOOK_PAGE;
+        if (item instanceof stone_1.Stone)
+            this.type = ItemType.STONE; // Maps to existing STONE
+        if (item instanceof sword_1.Sword)
+            this.type = ItemType.SWORD;
+        if (item instanceof warhammer_1.Warhammer)
+            this.type = ItemType.WARHAMMER; // Maps to existing WARHAMMER
+        if (item instanceof weaponBlood_1.WeaponBlood)
+            this.type = ItemType.WEAPON_BLOOD; // Maps to existing WEAPON_BLOOD
+        if (item instanceof weaponPoison_1.WeaponPoison)
+            this.type = ItemType.WEAPON_POISON; // Maps to existing WEAPON_POISON
+        if (item instanceof weaponFragments_1.WeaponFragments)
+            this.type = ItemType.WEAPON_FRAGMENTS; // Maps to existing WEAPON_FRAGMENTS
+        if (item instanceof bluePotion_1.BluePotion)
+            this.type = ItemType.BLUE_POTION; // Maps to existing BLUE_POTION
         this.equipped = item instanceof equippable_1.Equippable && item.equipped;
         this.x = item.x;
         this.y = item.y;
-        this.levelID = game.rooms.indexOf(item.level);
-        if (this.levelID === -1)
-            this.levelID = 0;
+        this.roomID = game.rooms.indexOf(item.level);
         this.stackCount = item.stackCount;
         this.pickedUp = item.pickedUp;
     }
 }
 exports.ItemState = ItemState;
 let loadItem = (i, game, player) => {
-    let level = game.rooms[i.levelID];
+    let room = i.roomID !== -1 ? game.rooms[i.roomID] : null;
     let item;
     if (i.type === ItemType.ARMOR)
-        item = new armor_1.Armor(level, i.x, i.y);
+        item = new armor_1.Armor(room, i.x, i.y);
     if (i.type === ItemType.BLUEGEM)
-        item = new bluegem_1.BlueGem(level, i.x, i.y);
+        item = new bluegem_1.BlueGem(room, i.x, i.y);
     if (i.type === ItemType.CANDLE)
-        item = new candle_1.Candle(level, i.x, i.y);
+        item = new candle_1.Candle(room, i.x, i.y);
     if (i.type === ItemType.COAL)
-        item = new coal_1.Coal(level, i.x, i.y);
+        item = new coal_1.Coal(room, i.x, i.y);
     if (i.type === ItemType.COIN)
-        item = new coin_1.Coin(level, i.x, i.y);
+        item = new coin_1.Coin(room, i.x, i.y);
     if (i.type === ItemType.GOLD)
-        item = new gold_1.Gold(level, i.x, i.y);
+        item = new gold_1.Gold(room, i.x, i.y);
     if (i.type === ItemType.GOLDENKEY)
-        item = new goldenKey_1.GoldenKey(level, i.x, i.y);
+        item = new goldenKey_1.GoldenKey(room, i.x, i.y);
     if (i.type === ItemType.GREENGEM)
-        item = new greengem_1.GreenGem(level, i.x, i.y);
+        item = new greengem_1.GreenGem(room, i.x, i.y);
     if (i.type === ItemType.HEART)
-        item = new heart_1.Heart(level, i.x, i.y);
+        item = new heart_1.Heart(room, i.x, i.y);
     if (i.type === ItemType.KEY)
-        item = new key_1.Key(level, i.x, i.y);
+        item = new key_1.Key(room, i.x, i.y);
     if (i.type === ItemType.LANTERN)
-        item = new lantern_1.Lantern(level, i.x, i.y);
+        item = new lantern_1.Lantern(room, i.x, i.y);
     if (i.type === ItemType.REDGEM)
-        item = new redgem_1.RedGem(level, i.x, i.y);
+        item = new redgem_1.RedGem(room, i.x, i.y);
     if (i.type === ItemType.TORCH)
-        item = new torch_1.Torch(level, i.x, i.y);
-    if (i.type === ItemType.DAGGER) {
-        item = new dagger_1.Dagger(level, i.x, i.y);
-    }
-    if (i.type === ItemType.DUALDAGGER) {
-        item = new dualdagger_1.DualDagger(level, i.x, i.y);
-    }
-    if (i.type === ItemType.SHOTGUN) {
-        item = new shotgun_1.Shotgun(level, i.x, i.y);
-    }
-    if (i.type === ItemType.SPEAR) {
-        item = new spear_1.Spear(level, i.x, i.y);
-    }
-    if (i.type === ItemType.PICKAXE) {
-        item = new pickaxe_1.Pickaxe(level, i.x, i.y);
-    }
-    if (i.type === ItemType.BACKPACK) {
-        item = new backpack_1.Backpack(level, i.x, i.y);
+        item = new torch_1.Torch(room, i.x, i.y);
+    if (i.type === ItemType.DAGGER)
+        item = new dagger_1.Dagger(room, i.x, i.y);
+    if (i.type === ItemType.DUALDAGGER)
+        item = new dualdagger_1.DualDagger(room, i.x, i.y);
+    if (i.type === ItemType.SHOTGUN)
+        item = new shotgun_1.Shotgun(room, i.x, i.y);
+    if (i.type === ItemType.SPEAR)
+        item = new spear_1.Spear(room, i.x, i.y);
+    if (i.type === ItemType.PICKAXE)
+        item = new pickaxe_1.Pickaxe(room, i.x, i.y);
+    if (i.type === ItemType.BACKPACK)
+        item = new backpack_1.Backpack(room, i.x, i.y);
+    // Add new item loading cases:
+    if (i.type === ItemType.APPLE)
+        item = new apple_1.Apple(room, i.x, i.y);
+    if (i.type === ItemType.BESTIARY_BOOK)
+        item = new bestiaryBook_1.BestiaryBook(room, i.x, i.y);
+    if (i.type === ItemType.BOMB_ITEM)
+        item = new bombItem_1.BombItem(room, i.x, i.y);
+    if (i.type === ItemType.ENTITY_SPAWNER)
+        item = new entitySpawner_1.EntitySpawner(room, i.x, i.y);
+    if (i.type === ItemType.FISH)
+        item = new fish_1.Fish(room, i.x, i.y);
+    if (i.type === ItemType.FISHING_ROD)
+        item = new fishingRod_1.FishingRod(room, i.x, i.y);
+    if (i.type === ItemType.GEODE)
+        item = new geode_1.Geode(room, i.x, i.y);
+    if (i.type === ItemType.GLOW_BUGS)
+        item = new glowBugs_1.GlowBugs(room, i.x, i.y);
+    if (i.type === ItemType.GOD_STONE)
+        item = new godStone_1.GodStone(room, i.x, i.y);
+    if (i.type === ItemType.GOLD_BAR)
+        item = new goldBar_1.GoldBar(room, i.x, i.y);
+    if (i.type === ItemType.GOLD_RING)
+        item = new goldRing_1.GoldRing(room, i.x, i.y);
+    if (i.type === ItemType.GARNET_RING)
+        item = new garnetRing_1.GarnetRing(room, i.x, i.y);
+    if (i.type === ItemType.ZIRCON_RING)
+        item = new zirconRing_1.ZirconRing(room, i.x, i.y);
+    if (i.type === ItemType.EMERALD_RING)
+        item = new emeraldRing_1.EmeraldRing(room, i.x, i.y);
+    if (i.type === ItemType.AMBER_RING)
+        item = new amberRing_1.AmberRing(room, i.x, i.y);
+    if (i.type === ItemType.GREEN_POTION)
+        item = new greenPotion_1.GreenPotion(room, i.x, i.y);
+    if (i.type === ItemType.GREATAXE)
+        item = new greataxe_1.Greataxe(room, i.x, i.y);
+    if (i.type === ItemType.HOURGLASS)
+        item = new hourglass_1.Hourglass(room, i.x, i.y);
+    if (i.type === ItemType.ORANGE_GEM)
+        item = new orangegem_1.OrangeGem(room, i.x, i.y);
+    if (i.type === ItemType.SCYTHE)
+        item = new scythe_1.Scythe(room, i.x, i.y);
+    if (i.type === ItemType.SCYTHE_HANDLE)
+        item = new scytheHandle_1.ScytheHandle(room, i.x, i.y);
+    if (i.type === ItemType.SCYTHE_BLADE)
+        item = new scytheBlade_1.ScytheBlade(room, i.x, i.y);
+    if (i.type === ItemType.MUSHROOMS)
+        item = new shrooms_1.Shrooms(room, i.x, i.y);
+    if (i.type === ItemType.SLINGSHOT)
+        item = new slingshot_1.Slingshot(room, i.x, i.y);
+    if (i.type === ItemType.SPELLBOOK)
+        item = new spellbook_1.Spellbook(room, i.x, i.y);
+    if (i.type === ItemType.SPELLBOOK_PAGE)
+        item = new spellbookPage_1.SpellbookPage(room, i.x, i.y);
+    if (i.type === ItemType.STONE)
+        item = new stone_1.Stone(room, i.x, i.y);
+    if (i.type === ItemType.SWORD)
+        item = new sword_1.Sword(room, i.x, i.y);
+    if (i.type === ItemType.BLUE_POTION)
+        item = new bluePotion_1.BluePotion(room, i.x, i.y);
+    if (i.type === ItemType.WEAPON_FRAGMENTS)
+        item = new weaponFragments_1.WeaponFragments(room, i.x, i.y);
+    if (i.type === ItemType.WARHAMMER)
+        item = new warhammer_1.Warhammer(room, i.x, i.y);
+    if (i.type === ItemType.HAMMER)
+        item = new hammer_1.Hammer(room, i.x, i.y);
+    if (i.type === ItemType.WEAPON_POISON)
+        item = new weaponPoison_1.WeaponPoison(room, i.x, i.y);
+    if (i.type === ItemType.WEAPON_BLOOD)
+        item = new weaponBlood_1.WeaponBlood(room, i.x, i.y);
+    if (!item) {
+        console.error("Unknown item type:", i.type, "ItemType enum value:", ItemType[i.type], "Falling back to coal");
+        item = new coal_1.Coal(room, i.x, i.y);
     }
     if (i.equipped)
         item.equipped = true;
@@ -14722,7 +15151,10 @@ class InventoryState {
         this.selY = inventory.selY;
         this.items = Array();
         for (const item of inventory.items) {
-            this.items.push(new ItemState(item, game));
+            // Filter out null items
+            if (item) {
+                this.items.push(new ItemState(item, game));
+            }
         }
     }
 }
@@ -14736,17 +15168,27 @@ let loadInventory = (inventory, i, game) => {
     inventory.selY = i.selY;
     inventory.equipAnimAmount = i.equipAnimAmount.map((x) => x);
     inventory.coins = i.coins;
-    for (const item of i.items)
-        inventory.items.push(loadItem(item, game, inventory.player));
-    if (i.isWeaponEquipped)
+    // Load items - make sure to maintain proper inventory structure
+    for (const itemState of i.items) {
+        if (itemState) {
+            // Additional null check
+            const loadedItem = loadItem(itemState, game, inventory.player);
+            if (loadedItem) {
+                inventory.items.push(loadedItem);
+            }
+        }
+    }
+    // Set weapon reference after all items are loaded
+    if (i.isWeaponEquipped && i.weaponI < inventory.items.length) {
         inventory.weapon = inventory.items[i.weaponI];
+    }
 };
 class PlayerState {
     constructor(player, game) {
         this.x = player.x;
         this.y = player.y;
         this.dead = player.dead;
-        this.levelID = player.levelID;
+        this.roomID = player.levelID;
         this.direction = player.direction;
         this.health = player.health;
         this.maxHealth = player.maxHealth;
@@ -14755,7 +15197,7 @@ class PlayerState {
         this.hasOpenVendingMachine = false;
         if (player.openVendingMachine) {
             this.hasOpenVendingMachine = true;
-            this.openVendingMachineLevelID = game.rooms.indexOf(player.openVendingMachine.room);
+            this.openVendingMachineRoomID = game.rooms.indexOf(player.openVendingMachine.room);
             this.openVendingMachineID =
                 player.openVendingMachine.room.entities.indexOf(player.openVendingMachine);
         }
@@ -14766,7 +15208,7 @@ exports.PlayerState = PlayerState;
 let loadPlayer = (id, p, game) => {
     let player = new player_1.Player(game, p.x, p.y, id === game.localPlayerID);
     player.dead = p.dead;
-    player.levelID = p.levelID;
+    player.levelID = p.roomID;
     if (player.levelID < game.levelgen.currentFloorFirstLevelID) {
         // catch up to the current level
         player.levelID = game.levelgen.currentFloorFirstLevelID;
@@ -14783,20 +15225,43 @@ let loadPlayer = (id, p, game) => {
     player.lastTickHealth = p.lastTickHealth;
     loadInventory(player.inventory, p.inventory, game);
     if (p.hasOpenVendingMachine) {
-        player.openVendingMachine = game.rooms[p.openVendingMachineLevelID]
-            .entities[p.openVendingMachineID];
+        player.openVendingMachine = game.rooms[p.openVendingMachineRoomID].entities[p.openVendingMachineID];
     }
     player.sightRadius = p.sightRadius;
+    // Set the player's room reference (this might be needed by some player methods)
+    // Note: This will be set properly when the game.room is assigned in loadGameState
+    // but we can set it here for consistency
+    // player.room = game.rooms[player.levelID]; // Only if Player class has a room property
     return player;
+};
+class LevelState {
+    constructor(level) {
+        this.depth = level.depth;
+        this.width = level.width;
+        this.height = level.height;
+        this.isMainPath = level.isMainPath;
+        this.mapGroup = level.mapGroup;
+        this.envType = level.environment.type;
+    }
+}
+exports.LevelState = LevelState;
+const loadLevel = (level, levelState) => {
+    level.depth = levelState.depth;
+    level.width = levelState.width;
+    level.height = levelState.height;
+    level.isMainPath = levelState.isMainPath;
+    level.mapGroup = levelState.mapGroup;
+    level.environment.type = levelState.envType;
+    level.environment.skin = levelState.envType;
 };
 class GameState {
     constructor() {
         this.seed = 0;
         this.randomState = 0;
-        this.depth = 0;
         this.players = {};
         this.offlinePlayers = {};
-        this.levels = [];
+        this.level = null;
+        this.rooms = [];
     }
 }
 exports.GameState = GameState;
@@ -14804,15 +15269,15 @@ const createGameState = (game) => {
     let gs = new GameState();
     gs.seed = game.levelgen.seed; // random state for generating levels
     gs.randomState = random_1.Random.state; // current random state
-    gs.depth = game.level.depth;
+    gs.level = new LevelState(game.level);
     for (const i in game.players)
         gs.players[i] = new PlayerState(game.players[i], game);
     for (const i in game.offlinePlayers) {
         gs.offlinePlayers[i] = new PlayerState(game.offlinePlayers[i], game);
     }
-    for (let level of game.rooms) {
-        level.catchUp();
-        gs.levels.push(new LevelState(level, game));
+    for (let room of game.rooms) {
+        room.catchUp();
+        gs.rooms.push(new RoomState(room, game));
     }
     return gs;
 };
@@ -14821,12 +15286,23 @@ const loadGameState = (game, activeUsernames, gameState, newWorld) => {
     game.rooms = Array();
     game.levelgen = new levelGenerator_1.LevelGenerator();
     game.levelgen.setSeed(gameState.seed);
+    // If gameState.level is null, we need to create a default level state
+    if (!gameState.level) {
+        // This is a simplified assumption. We create a new level with default parameters
+        // since we don't have a level object to create a state from.
+        // This part might need adjustment based on how a "default" level is defined.
+        const tempLevel = new level_1.Level(game, 0, 1, 1, true, 0, environmentTypes_1.EnvType.DUNGEON);
+        gameState.level = new LevelState(tempLevel);
+    }
     if (newWorld)
-        gameState.depth = 0;
+        gameState.level.depth = 0;
     eventBus_1.globalEventBus.emit(events_1.EVENTS.LEVEL_GENERATION_STARTED, {});
-    game.levelgen.generateFirstNFloors(game, gameState.depth).then(() => {
+    game.levelgen.generateFirstNFloors(game, gameState.level.depth).then(() => {
         eventBus_1.globalEventBus.emit(events_1.EVENTS.LEVEL_GENERATION_COMPLETED, {});
         if (!newWorld) {
+            if (gameState.level) {
+                loadLevel(game.level, gameState.level);
+            }
             if (gameState.players) {
                 for (const i in gameState.players) {
                     if (activeUsernames.includes(i))
@@ -14845,10 +15321,10 @@ const loadGameState = (game, activeUsernames, gameState, newWorld) => {
                         game.offlinePlayers[i] = loadPlayer(i, gameState.offlinePlayers[i], game);
                 }
             }
-            for (let levelState of gameState.levels) {
+            for (let roomState of gameState.rooms) {
                 for (let i = 0; i < game.rooms.length; i++) {
-                    if (i === levelState.levelID) {
-                        loadLevel(game.rooms[i], levelState, game);
+                    if (i === roomState.roomID) {
+                        loadRoom(game.rooms[i], roomState, game);
                     }
                 }
             }
@@ -14870,7 +15346,24 @@ const loadGameState = (game, activeUsernames, gameState, newWorld) => {
                 game.players[game.localPlayerID].map.saveMapData();
             }
             else {
-                game.room = game.rooms[game.players[game.localPlayerID].levelID];
+                // Set the current room based on the loaded player's levelID
+                const localPlayer = game.players[game.localPlayerID];
+                game.room = game.rooms[localPlayer.levelID];
+                // Properly initialize the room for the loaded player
+                // Update the game level reference
+                game.updateLevel(game.room);
+                // Do the room setup without moving the player (keep saved position)
+                game.room.onEnterRoom(localPlayer);
+                // Update the player's map data
+                localPlayer.map.updateSeenTiles();
+                localPlayer.map.saveMapData();
+                // Optional: Add validation after the room setup
+                const tile = game.room.roomArray[localPlayer.x]?.[localPlayer.y];
+                if (!tile || tile.isSolid()) {
+                    console.warn("Player loaded in invalid position, moving to room center");
+                    const roomCenter = game.room.getRoomCenter();
+                    localPlayer.moveSnap(roomCenter.x, roomCenter.y);
+                }
             }
         }
         else {
@@ -18360,6 +18853,40 @@ Backpack.itemName = "backpack";
 
 /***/ }),
 
+/***/ "./src/item/bestiaryBook.ts":
+/*!**********************************!*\
+  !*** ./src/item/bestiaryBook.ts ***!
+  \**********************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BestiaryBook = void 0;
+const usable_1 = __webpack_require__(/*! ./usable/usable */ "./src/item/usable/usable.ts");
+const bestiary_1 = __webpack_require__(/*! ../game/bestiary */ "./src/game/bestiary.ts");
+class BestiaryBook extends usable_1.Usable {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.onUse = (player) => {
+            if (player.bestiary === null) {
+                player.bestiary = new bestiary_1.Bestiary(player.game, player);
+            }
+            player.bestiary.toggleOpen();
+        };
+        this.tileX = 8;
+        this.tileY = 0;
+        this.offsetY = -0.3;
+        this.name = BestiaryBook.itemName;
+        this.description = "opens the bestiary";
+    }
+}
+exports.BestiaryBook = BestiaryBook;
+BestiaryBook.itemName = "bestiary book";
+
+
+/***/ }),
+
 /***/ "./src/item/bombItem.ts":
 /*!******************************!*\
   !*** ./src/item/bombItem.ts ***!
@@ -18487,6 +19014,7 @@ const spellbookPage_1 = __webpack_require__(/*! ./usable/spellbookPage */ "./src
 const backpack_1 = __webpack_require__(/*! ./backpack */ "./src/item/backpack.ts");
 const bombItem_1 = __webpack_require__(/*! ./bombItem */ "./src/item/bombItem.ts");
 const greataxe_1 = __webpack_require__(/*! ./weapon/greataxe */ "./src/item/weapon/greataxe.ts");
+const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
 const utils_1 = __webpack_require__(/*! ../utility/utils */ "./src/utility/utils.ts");
 const geode_1 = __webpack_require__(/*! ./resource/geode */ "./src/item/resource/geode.ts");
 const scythe_1 = __webpack_require__(/*! ./weapon/scythe */ "./src/item/weapon/scythe.ts");
@@ -18632,7 +19160,7 @@ DropTable.getDrop = (entity, useCategory = [], force = false, increaseDepth = 0,
     const currentDepth = entity.room.depth + increaseDepth;
     const dropChance = entity.dropChance || 1;
     // Skip initial drop chance check if forced
-    if (!force && dropChance > 1 && Math.random() > 1 / dropChance) {
+    if (!force && dropChance > 1 && random_1.Random.rand() > 1 / dropChance) {
         return null;
     }
     // Filter eligible drops by depth
@@ -18655,7 +19183,7 @@ DropTable.getDrop = (entity, useCategory = [], force = false, increaseDepth = 0,
     let droppedItems = [];
     // Try to drop items based on drop rates, up to maxDrops
     for (const drop of eligibleDrops) {
-        const randomRoll = Math.random();
+        const randomRoll = random_1.Random.rand();
         const threshold = 1 / drop.dropRate;
         if (randomRoll < threshold) {
             const item = _a.addNewItem(drop.itemType, entity);
@@ -18701,6 +19229,66 @@ DropTable.addNewItem = (itemType, entity) => {
     entity.drops.push(drop);
     return drop;
 };
+
+
+/***/ }),
+
+/***/ "./src/item/entitySpawner.ts":
+/*!***********************************!*\
+  !*** ./src/item/entitySpawner.ts ***!
+  \***********************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.EntitySpawner = void 0;
+const usable_1 = __webpack_require__(/*! ./usable/usable */ "./src/item/usable/usable.ts");
+const entity_1 = __webpack_require__(/*! ../entity/entity */ "./src/entity/entity.ts");
+const eventBus_1 = __webpack_require__(/*! ../event/eventBus */ "./src/event/eventBus.ts");
+const bishopEnemy_1 = __webpack_require__(/*! ../entity/enemy/bishopEnemy */ "./src/entity/enemy/bishopEnemy.ts");
+class EntitySpawner extends usable_1.Usable {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.onUse = (player) => { };
+        this.spawnEntity = (entity) => {
+            entity_1.Entity.add(this.room, this.player.game, this.player.x, this.player.y);
+            //console.log("Entity spawned");
+        };
+        this.commandHandler = (command) => {
+            const player = this.room.game.players[0];
+            command = command.toLowerCase();
+            if (!command.startsWith("/new")) {
+                return;
+            }
+            switch (command.split(" ")[1]) {
+                case "bishop":
+                    this.spawnEntity(new bishopEnemy_1.BishopEnemy(this.room, this.player.game, this.player.x, this.player.y));
+                    break;
+                default:
+                    //console.log(`Unknown command: ${command}`);
+                    break;
+            }
+            //console.log(`Command executed: ${command}`);
+        };
+        this.getDescription = () => {
+            return "YOU SHOULD NOT HAVE THIS";
+        };
+        this.room = level;
+        this.count = 0;
+        this.tileX = 31;
+        this.tileY = 0;
+        this.setupEventListeners();
+        this.player = this.room.game.players[0];
+        this.stackable = false;
+    }
+    setupEventListeners() {
+        //console.log("Setting up event listeners");
+        eventBus_1.globalEventBus.on("ChatMessage", this.commandHandler.bind(this));
+        //console.log("Event listeners set up");
+    }
+}
+exports.EntitySpawner = EntitySpawner;
 
 
 /***/ }),
@@ -18872,6 +19460,7 @@ const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/
 const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts");
 const drawable_1 = __webpack_require__(/*! ../drawable/drawable */ "./src/drawable/drawable.ts");
 const utils_1 = __webpack_require__(/*! ../utility/utils */ "./src/utility/utils.ts");
+const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
 // Item class extends Drawable class and represents an item in the game
 class Item extends drawable_1.Drawable {
     // Constructor for the Item class
@@ -19098,7 +19687,7 @@ class Item extends drawable_1.Drawable {
         this.offsetY = -0.25;
         this.name = "item";
         this.startY = y;
-        this.randomOffset = Math.random();
+        this.randomOffset = random_1.Random.rand();
         this.durability = 50;
         this.durabilityMax = 50;
         this.broken = false;
@@ -19154,33 +19743,6 @@ class ItemGroup {
     }
 }
 exports.ItemGroup = ItemGroup;
-
-
-/***/ }),
-
-/***/ "./src/item/jewelry/ZirconRing.ts":
-/*!****************************************!*\
-  !*** ./src/item/jewelry/ZirconRing.ts ***!
-  \****************************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ZirconRing = void 0;
-const equippable_1 = __webpack_require__(/*! ../equippable */ "./src/item/equippable.ts");
-class ZirconRing extends equippable_1.Equippable {
-    constructor(level, x, y) {
-        super(level, x, y);
-        this.tileX = 13;
-        this.tileY = 2;
-        this.name = ZirconRing.itemName;
-        this.stackable = false;
-        this.description = "A ring of zircon";
-    }
-}
-exports.ZirconRing = ZirconRing;
-ZirconRing.itemName = "zircon ring";
 
 
 /***/ }),
@@ -19278,7 +19840,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GoldRing = void 0;
 const equippable_1 = __webpack_require__(/*! ../equippable */ "./src/item/equippable.ts");
 const emeraldRing_1 = __webpack_require__(/*! ./emeraldRing */ "./src/item/jewelry/emeraldRing.ts");
-const ZirconRing_1 = __webpack_require__(/*! ./ZirconRing */ "./src/item/jewelry/ZirconRing.ts");
+const zirconRing_1 = __webpack_require__(/*! ./zirconRing */ "./src/item/jewelry/zirconRing.ts");
 const amberRing_1 = __webpack_require__(/*! ./amberRing */ "./src/item/jewelry/amberRing.ts");
 const garnetRing_1 = __webpack_require__(/*! ./garnetRing */ "./src/item/jewelry/garnetRing.ts");
 class GoldRing extends equippable_1.Equippable {
@@ -19292,7 +19854,7 @@ class GoldRing extends equippable_1.Equippable {
                     player.inventory.addItem(new emeraldRing_1.EmeraldRing(this.level, this.x, this.y));
                     break;
                 case "zircon":
-                    player.inventory.addItem(new ZirconRing_1.ZirconRing(this.level, this.x, this.y));
+                    player.inventory.addItem(new zirconRing_1.ZirconRing(this.level, this.x, this.y));
                     break;
                 case "amber":
                     player.inventory.addItem(new amberRing_1.AmberRing(this.level, this.x, this.y));
@@ -19312,6 +19874,33 @@ class GoldRing extends equippable_1.Equippable {
 }
 exports.GoldRing = GoldRing;
 GoldRing.itemName = "gold ring";
+
+
+/***/ }),
+
+/***/ "./src/item/jewelry/zirconRing.ts":
+/*!****************************************!*\
+  !*** ./src/item/jewelry/zirconRing.ts ***!
+  \****************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ZirconRing = void 0;
+const equippable_1 = __webpack_require__(/*! ../equippable */ "./src/item/equippable.ts");
+class ZirconRing extends equippable_1.Equippable {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.tileX = 13;
+        this.tileY = 2;
+        this.name = ZirconRing.itemName;
+        this.stackable = false;
+        this.description = "A ring of zircon";
+    }
+}
+exports.ZirconRing = ZirconRing;
+ZirconRing.itemName = "zircon ring";
 
 
 /***/ }),
@@ -19697,6 +20286,7 @@ exports.Coal = void 0;
 const usable_1 = __webpack_require__(/*! ../usable/usable */ "./src/item/usable/usable.ts");
 const lantern_1 = __webpack_require__(/*! ../light/lantern */ "./src/item/light/lantern.ts");
 const light_1 = __webpack_require__(/*! ../light/light */ "./src/item/light/light.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
 class Coal extends usable_1.Usable {
     constructor(level, x, y) {
         super(level, x, y);
@@ -19728,7 +20318,7 @@ class Coal extends usable_1.Usable {
         this.tileX = 17;
         this.tileY = 0;
         this.stackable = true;
-        this.stackCount = Math.ceil(Math.random() * 7 + 3);
+        this.stackCount = Math.ceil(random_1.Random.rand() * 7 + 3);
         this.name = Coal.itemName;
         this.description = "A piece of coal. Fuels lantern.";
         this.canUseOnOther = true;
@@ -19755,6 +20345,7 @@ const redgem_1 = __webpack_require__(/*! ./redgem */ "./src/item/resource/redgem
 const bluegem_1 = __webpack_require__(/*! ./bluegem */ "./src/item/resource/bluegem.ts");
 const greengem_1 = __webpack_require__(/*! ./greengem */ "./src/item/resource/greengem.ts");
 const utils_1 = __webpack_require__(/*! ../../utility/utils */ "./src/utility/utils.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
 class Geode extends item_1.Item {
     constructor(level, x, y) {
         super(level, x, y);
@@ -19768,7 +20359,7 @@ class Geode extends item_1.Item {
             else {
                 const numGems = Math.min(1, utils_1.Utils.randomNormalInt(1, 3));
                 let gemTypes = [bluegem_1.BlueGem, redgem_1.RedGem, greengem_1.GreenGem];
-                let gemType = gemTypes[Math.floor(Math.random() * gemTypes.length)];
+                let gemType = gemTypes[Math.floor(random_1.Random.rand() * gemTypes.length)];
                 this.level.game.pushMessage(`You split the geode and find ${numGems} ${gemType.itemName}.`);
                 for (let i = 0; i < numGems; i++) {
                     inventory.addItem(new gemType(this.level, this.x, this.y));
@@ -20037,6 +20628,7 @@ const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.
 const usable_1 = __webpack_require__(/*! ../usable/usable */ "./src/item/usable/usable.ts");
 const weapon_1 = __webpack_require__(/*! ../weapon/weapon */ "./src/item/weapon/weapon.ts");
 const weaponFragments_1 = __webpack_require__(/*! ../usable/weaponFragments */ "./src/item/usable/weaponFragments.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
 class Hammer extends usable_1.Usable {
     constructor(level, x, y) {
         super(level, x, y);
@@ -20079,7 +20671,7 @@ class Hammer extends usable_1.Usable {
         this.disassemble = (player) => {
             let inventoryX = this.x;
             let inventoryY = this.y;
-            let numFragments = Math.ceil(Math.random() * 5 + 5);
+            let numFragments = Math.ceil(random_1.Random.rand() * 5 + 5);
             player.inventory.removeItem(this);
             player.inventory.addItem(new weaponFragments_1.WeaponFragments(this.level, inventoryX, inventoryY, numFragments));
         };
@@ -20165,6 +20757,41 @@ Apple.itemName = "apple";
 
 /***/ }),
 
+/***/ "./src/item/usable/bluePotion.ts":
+/*!***************************************!*\
+  !*** ./src/item/usable/bluePotion.ts ***!
+  \***************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BluePotion = void 0;
+const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
+const usable_1 = __webpack_require__(/*! ./usable */ "./src/item/usable/usable.ts");
+class BluePotion extends usable_1.Usable {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.onUse = (player) => {
+            player.health = Math.min(player.maxHealth, player.health + 1);
+            if (this.level.game.rooms[player.levelID] === this.level.game.room)
+                sound_1.Sound.heal();
+            player.inventory.removeItem(this);
+            //this.level.items = this.level.items.filter((x) => x !== this); // removes itself from the level
+        };
+        this.getDescription = () => {
+            return "HEALTH POTION\nRestores 1 heart";
+        };
+        this.tileX = 9;
+        this.tileY = 0;
+        this.offsetY = -0.3;
+    }
+}
+exports.BluePotion = BluePotion;
+
+
+/***/ }),
+
 /***/ "./src/item/usable/fish.ts":
 /*!*********************************!*\
   !*** ./src/item/usable/fish.ts ***!
@@ -20202,6 +20829,41 @@ class Fish extends usable_1.Usable {
 }
 exports.Fish = Fish;
 Fish.itemName = "fish";
+
+
+/***/ }),
+
+/***/ "./src/item/usable/greenPotion.ts":
+/*!****************************************!*\
+  !*** ./src/item/usable/greenPotion.ts ***!
+  \****************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.GreenPotion = void 0;
+const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
+const usable_1 = __webpack_require__(/*! ./usable */ "./src/item/usable/usable.ts");
+class GreenPotion extends usable_1.Usable {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.onUse = (player) => {
+            player.health = Math.min(player.maxHealth, player.health + 1);
+            if (this.level.game.rooms[player.levelID] === this.level.game.room)
+                sound_1.Sound.heal();
+            player.inventory.removeItem(this);
+            //this.level.items = this.level.items.filter((x) => x !== this); // removes itself from the level
+        };
+        this.getDescription = () => {
+            return "GREEN POTION\nRestores 1 heart";
+        };
+        this.tileX = 7;
+        this.tileY = 0;
+        this.offsetY = -0.3;
+    }
+}
+exports.GreenPotion = GreenPotion;
 
 
 /***/ }),
@@ -20342,6 +21004,7 @@ exports.SpellbookPage = void 0;
 const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
 const usable_1 = __webpack_require__(/*! ./usable */ "./src/item/usable/usable.ts");
 const equippable_1 = __webpack_require__(/*! ../equippable */ "./src/item/equippable.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
 class SpellbookPage extends usable_1.Usable {
     constructor(level, x, y, stackCount) {
         super(level, x, y);
@@ -20371,7 +21034,7 @@ class SpellbookPage extends usable_1.Usable {
         this.name = "spellbook pages";
         this.canUseOnOther = true;
         this.stackable = true;
-        this.stackCount = stackCount || Math.ceil(Math.random() * 3);
+        this.stackCount = stackCount || Math.ceil(random_1.Random.rand() * 3);
         this.description = "Can be used to restore power to a depleted spellbook";
     }
 }
@@ -20462,6 +21125,7 @@ exports.WeaponFragments = void 0;
 const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
 const usable_1 = __webpack_require__(/*! ./usable */ "./src/item/usable/usable.ts");
 const equippable_1 = __webpack_require__(/*! ../equippable */ "./src/item/equippable.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
 class WeaponFragments extends usable_1.Usable {
     constructor(level, x, y, stackCount) {
         super(level, x, y);
@@ -20494,7 +21158,7 @@ class WeaponFragments extends usable_1.Usable {
         this.name = "weapon fragments";
         this.canUseOnOther = true;
         this.stackable = true;
-        this.stackCount = stackCount || Math.ceil(Math.random() * 10) + 7;
+        this.stackCount = stackCount || Math.ceil(random_1.Random.rand() * 10) + 7;
         this.description = "Can be used to repair broken weapons";
     }
 }
@@ -21046,6 +21710,155 @@ class Shotgun extends weapon_1.Weapon {
 }
 exports.Shotgun = Shotgun;
 Shotgun.itemName = "shotgun";
+
+
+/***/ }),
+
+/***/ "./src/item/weapon/slingshot.ts":
+/*!**************************************!*\
+  !*** ./src/item/weapon/slingshot.ts ***!
+  \**************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Slingshot = void 0;
+const weapon_1 = __webpack_require__(/*! ./weapon */ "./src/item/weapon/weapon.ts");
+const genericParticle_1 = __webpack_require__(/*! ../../particle/genericParticle */ "./src/particle/genericParticle.ts");
+class Slingshot extends weapon_1.Weapon {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.weaponMove = (newX, newY) => {
+            let nextX = [newX];
+            let nextY = [newY];
+            //define arrays for coords beginning with function arguments
+            let range = 1;
+            let l = 0;
+            for (let i = 0; i < 5; i++ //loop through range
+            ) {
+                if (newX === this.wielder.x) {
+                    nextX.push(newX), nextY.push(nextY[l] + (newY - this.wielder.y));
+                }
+                if (newY === this.wielder.y) {
+                    nextX.push(nextX[l] + (newX - this.wielder.x)), nextY.push(newY);
+                }
+                // push nex coordinates to array of possible moves
+                l++;
+            }
+            if (!this.game.rooms[this.wielder.levelID].tileInside(newX, newY) ||
+                this.game.rooms[this.wielder.levelID].roomArray[newX][newY].isSolid()) {
+                //if current position is inside new position OR is solid
+                return true;
+            }
+            let c = 1;
+            for (let i = 0; i < 5; i++) {
+                if (!this.game.rooms[this.wielder.levelID].tileInside(nextX[c], nextY[c]) ||
+                    this.game.rooms[this.wielder.levelID].roomArray[nextX[c]][nextY[c]].isSolid()) {
+                    range = c;
+                    //exit the function if wall is detected
+                }
+                c++;
+                //increase the range each loop until
+            }
+            //range = 15;
+            let enemyHitCandidates = [];
+            let firstPushable = range + 1;
+            let firstNonPushable = range + 2;
+            let firstNonDestroyable = range + 2;
+            for (let e of this.game.rooms[this.wielder.levelID].entities) {
+                //loop through enemies in this weapons wielders level
+                if (e.pushable) {
+                    let p = 2;
+                    //case for pushables
+                    if (e.pointIn(newX, newY))
+                        return true;
+                    //if pushable is in new position return true
+                    for (let i = 0; i < 15; i++) {
+                        if (e.pointIn(nextX[p - 1], nextY[p - 1]) && range >= p) {
+                            //enemyHitCandidates.push({ enemy: e, dist: p });
+                            firstPushable = Math.min(firstPushable, p);
+                        }
+                        p++; //run that shit back
+                    }
+                }
+                else if (e.destroyable) {
+                    //case for destroyables
+                    if (e.pointIn(newX, newY) && range >= 1) {
+                        firstNonPushable = 1;
+                        enemyHitCandidates.push({ enemy: e, dist: 1 });
+                    }
+                    let d = 2;
+                    for (let i = 0; i < 15; i++) {
+                        if (e.pointIn(nextX[d - 1], nextY[d - 1]) && range >= d) {
+                            firstNonPushable = Math.min(firstNonPushable, d);
+                            enemyHitCandidates.push({ enemy: e, dist: d });
+                        }
+                        d++;
+                    }
+                }
+                else {
+                    if (e.pointIn(newX, newY) && range >= 1) {
+                        firstNonDestroyable = 1;
+                    }
+                    let n = 2;
+                    for (let i = 0; i < 15; i++) {
+                        if (e.pointIn(nextX[n - 1], nextY[n - 1]) && range >= n) {
+                            firstNonDestroyable = Math.min(firstNonDestroyable, n);
+                        }
+                        n++;
+                        //if enemy is in new position and range is enough set first non destroyable to 3
+                    }
+                }
+            }
+            //enemyHitCandidates.splice(1, enemyHitCandidates.length - 1);
+            let targetX = newX; //nextX[range];
+            let targetY = newY; //nextY[range];
+            if (firstNonDestroyable < firstNonPushable &&
+                firstNonDestroyable < firstPushable
+            //if a non destroyable comes before the first non pushable and before the first pushable
+            ) {
+                return true;
+                //return true and exit the function
+            }
+            if (firstNonPushable <= firstPushable) {
+                if (enemyHitCandidates.length > 0) {
+                    const closestEnemy = enemyHitCandidates.reduce((minEnemy, currentEnemy) => {
+                        if (currentEnemy.dist < minEnemy.dist) {
+                            return currentEnemy;
+                        }
+                        else
+                            return minEnemy;
+                    });
+                    closestEnemy.enemy.hurt(this.wielder, 1);
+                }
+                //finally bro
+                //for the array c of enemyHitCandidates if the enemy distance is 3 only do .5 damage
+                //if they're closer do the usual damage
+                //hits all candidates in enemyHitCandidates
+                this.hitSound();
+                this.wielder.setHitXY(newX, newY);
+                genericParticle_1.GenericParticle.shotgun(this.game.rooms[this.wielder.levelID], this.wielder.x + 0.5, this.wielder.y, targetX + 0.5, targetY, "black");
+                genericParticle_1.GenericParticle.shotgun(this.game.rooms[this.wielder.levelID], this.wielder.x + 0.5, this.wielder.y, targetX + 0.5, targetY, "#ffddff");
+                let gp = new genericParticle_1.GenericParticle(this.game.rooms[this.wielder.levelID], 0.5 * (newX + this.wielder.x) + 0.5, 0.5 * (newY + this.wielder.y), 0, 1, 0, 0, 0, "white", 0);
+                gp.expirationTimer = 10;
+                this.game.rooms[this.wielder.levelID].particles.push(gp);
+                //this.game.levels[this.wielder.levelID].particles.push(new SlashParticle(newX, newY));
+                //this.game.levels[this.wielder.levelID].particles.push(new SlashParticle(newX2, newY2));
+                //this.game.levels[this.wielder.levelID].particles.push(new SlashParticle(newX3, newY3));
+                this.game.rooms[this.wielder.levelID].tick(this.wielder);
+                this.shakeScreen(newX * 10, newY * 10);
+                return false;
+            }
+            return true;
+        };
+        this.tileX = 26;
+        this.tileY = 0;
+        this.name = "Slingshot";
+    }
+}
+exports.Slingshot = Slingshot;
+Slingshot.itemName = "slingshot";
 
 
 /***/ }),
@@ -22276,6 +23089,7 @@ const environment_1 = __webpack_require__(/*! ./environment */ "./src/level/envi
 const roomPopulator_1 = __webpack_require__(/*! ../room/roomPopulator */ "./src/room/roomPopulator.ts");
 const downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/downLadder.ts");
 const key_1 = __webpack_require__(/*! ../item/key */ "./src/item/key.ts");
+const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
 exports.enemyMinimumDepth = {
     1: 0,
     2: 1,
@@ -22420,7 +23234,7 @@ class Level {
             console.error("No eligible rooms found for key placement");
             return;
         }
-        const randomRoom = rooms[Math.floor(Math.random() * rooms.length)];
+        const randomRoom = rooms[Math.floor(random_1.Random.rand() * rooms.length)];
         console.log(`Selected room ${randomRoom.id} for key placement`);
         let emptyTiles = randomRoom.getEmptyTiles();
         if (disableCoords.disableRoom === randomRoom) {
@@ -22431,7 +23245,7 @@ class Level {
             console.error(`No empty tiles found in room ${randomRoom.id} for key placement`);
             return;
         }
-        const randomIndex = Math.floor(Math.random() * emptyTiles.length);
+        const randomIndex = Math.floor(random_1.Random.rand() * emptyTiles.length);
         const randomTile = emptyTiles[randomIndex];
         console.log(`Placing key at tile position (${randomTile.x}, ${randomTile.y})`);
         const key = new key_1.Key(randomRoom, randomTile.x, randomTile.y);
@@ -22848,6 +23662,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.LevelImageGenerator = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const utils_1 = __webpack_require__(/*! ../utility/utils */ "./src/utility/utils.ts");
+const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
 class LevelImageGenerator {
     constructor(width = 100, height = 100) {
         this.rooms = [];
@@ -22879,7 +23694,7 @@ class LevelImageGenerator {
         return width * height * 0.1;
     }
     // Generate rooms with physics properties
-    generateRooms(numRooms, rand = Math.random, startingPattern = "center") {
+    generateRooms(numRooms, rand = random_1.Random.rand, startingPattern = "center") {
         this.rooms = [];
         this.settled = false;
         for (let i = 0; i < numRooms; i++) {
@@ -23171,7 +23986,7 @@ class LevelImageGenerator {
         game_1.Game.ctx.restore();
     }
     // Generate a complete random level
-    static generateRandomLevel(width = 80, height = 60, numRooms = 15, rand = Math.random, pattern = "center") {
+    static generateRandomLevel(width = 80, height = 60, numRooms = 15, rand = random_1.Random.rand, pattern = "center") {
         const generator = new LevelImageGenerator(width, height);
         generator.generateRooms(numRooms, rand, pattern);
         generator.simulatePhysics();
@@ -23848,7 +24663,7 @@ class PartitionGenerator {
         }
         for (let i = 0; i < 100; i++) {
             partialLevel.partitions.forEach(async (partition) => {
-                let roomArea = Math.random() > 0.95 ? softMaxRoomArea : maxRoomArea;
+                let roomArea = random_1.Random.rand() > 0.95 ? softMaxRoomArea : maxRoomArea;
                 if (partition.area() > roomArea) {
                     partialLevel.partitions = partialLevel.partitions.filter((p) => p !== partition);
                     partialLevel.partitions = partialLevel.partitions.concat(await this.splitPartition(partition, 0.5));
@@ -25307,6 +26122,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DamageNumber = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
+const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
 const particle_1 = __webpack_require__(/*! ./particle */ "./src/particle/particle.ts");
 class DamageNumber extends particle_1.Particle {
     constructor(room, x, y, damage, color, outlineColor) {
@@ -25357,7 +26173,7 @@ class DamageNumber extends particle_1.Particle {
             this.outlineColor = outlineColor;
         else
             this.outlineColor = gameConstants_1.GameConstants.OUTLINE;
-        this.xoffset = Math.random() * 0.2;
+        this.xoffset = random_1.Random.rand() * 0.2;
     }
 }
 exports.DamageNumber = DamageNumber;
@@ -25378,6 +26194,7 @@ exports.GenericParticle = void 0;
 const particle_1 = __webpack_require__(/*! ./particle */ "./src/particle/particle.ts");
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
+const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
 class GenericParticle extends particle_1.Particle {
     constructor(level, x, y, z, s, dx, dy, dz, color, delay, expirationTimer, targetX, targetY, targetZ) {
         super();
@@ -25451,12 +26268,12 @@ class GenericParticle extends particle_1.Particle {
 exports.GenericParticle = GenericParticle;
 GenericParticle.shotgun = (level, cx, cy, tx, ty, color) => {
     for (let i = 0; i < 4; i++) {
-        level.particles.push(new GenericParticle(level, cx, cy, 0, Math.random() * 0.5 + 0.3, 0, 0, 0, color, 0, 10000000, tx + Math.random() - 0.5, ty + Math.random() - 0.5, 0));
+        level.particles.push(new GenericParticle(level, cx, cy, 0, random_1.Random.rand() * 0.5 + 0.3, 0, 0, 0, color, 0, 10000000, tx + random_1.Random.rand() - 0.5, ty + random_1.Random.rand() - 0.5, 0));
     }
 };
 GenericParticle.spawnCluster = (level, cx, cy, color) => {
     for (let i = 0; i < 4; i++) {
-        level.particles.push(new GenericParticle(level, cx + Math.random() * 0.05 - 0.025, cy + Math.random() * 0.05 - 0.025, Math.random() * 0.5, 0.0625 * (i + 8), 0.025 * (Math.random() * 2 - 1), 0.025 * (Math.random() * 2 - 1), 0.2 * (Math.random() - 1), color, 0));
+        level.particles.push(new GenericParticle(level, cx + random_1.Random.rand() * 0.05 - 0.025, cy + random_1.Random.rand() * 0.05 - 0.025, random_1.Random.rand() * 0.5, 0.0625 * (i + 8), 0.025 * (random_1.Random.rand() * 2 - 1), 0.025 * (random_1.Random.rand() * 2 - 1), 0.2 * (random_1.Random.rand() - 1), color, 0));
     }
 };
 
@@ -25476,6 +26293,7 @@ exports.ImageParticle = void 0;
 const particle_1 = __webpack_require__(/*! ./particle */ "./src/particle/particle.ts");
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
+const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
 class ImageParticle extends particle_1.Particle {
     constructor(room, x, y, z, s, dx, dy, dz, tileX, tileY, size, delay, expirationTimer, targetX, targetY, targetZ) {
         super();
@@ -25541,18 +26359,18 @@ class ImageParticle extends particle_1.Particle {
 exports.ImageParticle = ImageParticle;
 ImageParticle.shotgun = (room, cx, cy, tx, ty, tileX, tileY) => {
     for (let i = 0; i < 4; i++) {
-        room.particles.push(new ImageParticle(room, cx, cy, 0, Math.random() * 0.5 + 0.3, 0, 0, 0, tileX, tileY, 0));
+        room.particles.push(new ImageParticle(room, cx, cy, 0, random_1.Random.rand() * 0.5 + 0.3, 0, 0, 0, tileX, tileY, 0));
     }
 };
 ImageParticle.spawnCluster = (level, cx, cy, tileX, tileY) => {
-    for (let i = Math.floor(Math.random() * 3); i < 5; i++) {
-        level.particles.push(new ImageParticle(level, cx + Math.random() * 0.05 - 0.025, // x
-        cy + Math.random() * 0.05 - 0.025, // y
-        Math.random() * 0.5, // z
+    for (let i = Math.floor(random_1.Random.rand() * 3); i < 5; i++) {
+        level.particles.push(new ImageParticle(level, cx + random_1.Random.rand() * 0.05 - 0.025, // x
+        cy + random_1.Random.rand() * 0.05 - 0.025, // y
+        random_1.Random.rand() * 0.5, // z
         0.0625 * (i + 8), // s
-        0.025 * (Math.random() * 2 - 1), //dx
-        0.025 * (Math.random() * 2 - 1), //dy
-        0.2 * (Math.random() - 1), //dz
+        0.025 * (random_1.Random.rand() * 2 - 1), //dx
+        0.025 * (random_1.Random.rand() * 2 - 1), //dy
+        0.2 * (random_1.Random.rand() - 1), //dz
         tileX, tileY, [2, 1, 0, 1, 2, 2, 2][i]));
     }
 };
@@ -27642,6 +28460,7 @@ exports.BeamEffect = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
 const projectile_1 = __webpack_require__(/*! ./projectile */ "./src/projectile/projectile.ts");
+const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
 class BeamEffect extends projectile_1.Projectile {
     constructor(x1, y1, x2, y2, parent) {
         super(parent, x1, y1);
@@ -27780,7 +28599,7 @@ class BeamEffect extends projectile_1.Projectile {
                 oldY: startY + (endY - startY) * t,
                 velocityX: 0,
                 velocityY: 0,
-                angle: Math.random() * Math.PI * 2,
+                angle: random_1.Random.rand() * Math.PI * 2,
             });
         }
         return points;
@@ -28287,6 +29106,7 @@ const hitWarning_1 = __webpack_require__(/*! ../drawable/hitWarning */ "./src/dr
 const lightSource_1 = __webpack_require__(/*! ../lighting/lightSource */ "./src/lighting/lightSource.ts");
 const lighting_1 = __webpack_require__(/*! ../lighting/lighting */ "./src/lighting/lighting.ts");
 const utils_1 = __webpack_require__(/*! ../utility/utils */ "./src/utility/utils.ts");
+const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
 class WizardFireball extends projectile_1.Projectile {
     constructor(parent, x, y) {
         super(parent, x, y);
@@ -28314,7 +29134,7 @@ class WizardFireball extends projectile_1.Projectile {
                 lighting_1.Lighting.momentaryLight(this.parent.room, this.x, this.y, 3, this.parent.projectileColor, 500, 5, 350);
                 this.parent.removeLightSource(this.lightSource);
                 this.frame = 0;
-                this.delay = game_1.Game.rand(0, 10, Math.random);
+                this.delay = game_1.Game.rand(0, 10, random_1.Random.rand);
             }
         };
         this.hitPlayer = (player) => {
@@ -28382,12 +29202,13 @@ exports.WizardFireball = WizardFireball;
 /*!***********************************!*\
   !*** ./src/room/propClusterer.ts ***!
   \***********************************/
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PropClusterer = void 0;
+const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
 /**
  * Handles clustering logic for prop placement
  */
@@ -28419,7 +29240,7 @@ class PropClusterer {
             this.placePosition(this.options.seedPosition);
         }
         else if (this.availableTiles.length > 0) {
-            const randomIndex = Math.floor(Math.random() * this.availableTiles.length);
+            const randomIndex = Math.floor(random_1.Random.rand() * this.availableTiles.length);
             const randomPosition = this.availableTiles.splice(randomIndex, 1)[0];
             this.placedPositions.push(randomPosition);
         }
@@ -28471,11 +29292,11 @@ class PropClusterer {
         const totalScore = scoredTiles.reduce((sum, tile) => sum + tile.score, 0);
         if (totalScore <= 0) {
             // Fallback to uniform distribution if all scores are 0
-            const randomIndex = Math.floor(Math.random() * this.availableTiles.length);
+            const randomIndex = Math.floor(random_1.Random.rand() * this.availableTiles.length);
             return this.availableTiles.splice(randomIndex, 1)[0];
         }
         // Perform weighted random selection
-        const randomValue = Math.random() * totalScore;
+        const randomValue = random_1.Random.rand() * totalScore;
         let cumulativeScore = 0;
         for (const tile of scoredTiles) {
             cumulativeScore += tile.score;
@@ -30343,7 +31164,7 @@ class Room {
                         break;
                 }
                 // Shuffle the offset options to randomize placement
-                const shuffledOffsets = offsetOptions.sort(() => Math.random() - 0.5);
+                const shuffledOffsets = offsetOptions.sort(() => random_1.Random.rand() - 0.5);
                 // Check if original position has vending machine
                 if (hasVendingMachineAt(x, y)) {
                     return null;
@@ -30690,7 +31511,7 @@ class Room {
                     return true;
                 };
                 // Randomly select an enemy type from the table
-                let type = game_1.Game.randTable(tables[d], Math.random);
+                let type = game_1.Game.randTable(tables[d], random_1.Random.rand);
                 switch (type) {
                     case 1:
                         crabEnemy_1.CrabEnemy.add(this, this.game, x, y);
@@ -30783,7 +31604,7 @@ class Room {
         const factor = Math.min((this.depth + 2) * 0.05, 0.3);
         const numEnemies = Math.ceil(Math.max(utils_1.Utils.randomNormalInt(0, numEmptyTiles * factor), numEmptyTiles * factor));
         //if (numEnemies > numEmptyTiles / 2) numEnemies = numEmptyTiles / 2;
-        this.addEnemies(numEnemies, Math.random);
+        this.addEnemies(numEnemies, random_1.Random.rand);
     }
     addSpawners(numSpawners, rand) {
         let tiles = this.getEmptyTiles();
@@ -30825,13 +31646,13 @@ class Room {
             bosses.push("occultist");
             bosses.filter((b) => b !== "queen");
         }
-        const boss = game_1.Game.randTable(bosses, Math.random);
+        const boss = game_1.Game.randTable(bosses, random_1.Random.rand);
         const { x, y } = boss.startsWith("big")
             ? this.getBigRandomEmptyPosition(tiles)
             : this.getRandomEmptyPosition(tiles);
         switch (boss) {
             case "reaper":
-                const spawner = this.addSpawners(1, Math.random);
+                const spawner = this.addSpawners(1, random_1.Random.rand);
                 spawner.dropTable = ["weapon", "equipment"];
                 spawner.dropChance = 1;
                 break;
@@ -30851,7 +31672,7 @@ class Room {
                 ];
                 break;
             case "occultist":
-                const occultist = this.addOccultists(1, Math.random);
+                const occultist = this.addOccultists(1, random_1.Random.rand);
                 occultist.dropTable = ["weapon", "equipment"];
                 occultist.dropChance = 1;
                 break;
@@ -31411,7 +32232,7 @@ class Populator {
                 room.type !== room_1.RoomType.UPLADDER &&
                 room.type !== room_1.RoomType.ROPEHOLE &&
                 room.type !== room_1.RoomType.BOSS);
-            const downLadderRoom = rooms[Math.floor(Math.random() * rooms.length)];
+            const downLadderRoom = rooms[Math.floor(random_1.Random.rand() * rooms.length)];
             console.log(`Selected room for downladder: Type=${downLadderRoom.type}, Doors=${downLadderRoom.doors.length}`);
             // Use the new method to get empty tiles that don't block doors
             const validTiles = downLadderRoom.getEmptyTilesNotBlockingDoors();
@@ -31547,7 +32368,7 @@ class Populator {
             this.addTorches(room, 1, rand, room.roomX + 3, room.roomY);
             const { x, y } = room.getRoomCenter();
             room.roomArray[x + 1][y - 1] = new downLadder_1.DownLadder(room, room.game, x + 1, y - 1);
-            const numChests = Math.ceil(Math.random() * 5);
+            const numChests = Math.ceil(random_1.Random.rand() * 5);
             let tiles = room.getEmptyTiles();
             tiles = tiles.filter((tile) => tile.x !== x || tile.y !== y);
             let weaponDropped = false;
@@ -31635,7 +32456,7 @@ class Populator {
             let numTorches = Math.max(1, Math.floor(Math.sqrt(room.roomArea) / 3) -
                 Math.floor(Math.sqrt(room.depth)));
             if (room.depth === 0) {
-                if (Math.random() < 0.25) {
+                if (random_1.Random.rand() < 0.25) {
                     numTorches = 0;
                 }
             }
@@ -31644,7 +32465,7 @@ class Populator {
                 const falloffRate = 0.4; // Controls how quickly it approaches 90%
                 const maxChance = 0.9;
                 const chance = maxChance * (1 - Math.exp(-falloffRate * (room.depth - 1)));
-                if (Math.random() < chance) {
+                if (random_1.Random.rand() < chance) {
                     numTorches = 0;
                 }
             }
@@ -31667,7 +32488,7 @@ class Populator {
                     break;
                 case room_1.RoomType.DUNGEON:
                     if (room.level.environment.type === environmentTypes_1.EnvType.CAVE &&
-                        Math.random() <= 0.2) {
+                        random_1.Random.rand() <= 0.2) {
                         this.populateCave(room, rand);
                     }
                     else {
@@ -32101,7 +32922,7 @@ class Populator {
     getRandomElements(array, count) {
         const shuffled = [...array];
         for (let i = shuffled.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
+            const j = Math.floor(random_1.Random.rand() * (i + 1));
             [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
         }
         return shuffled.slice(0, Math.min(count, shuffled.length));
@@ -32238,7 +33059,7 @@ class Populator {
             bosses.push("occultist");
             bosses = bosses.filter((b) => b !== "queen");
         }
-        const boss = game_1.Game.randTable(bosses, Math.random);
+        const boss = game_1.Game.randTable(bosses, random_1.Random.rand);
         const position = boss.startsWith("big")
             ? room.getBigRandomEmptyPosition(tiles)
             : room.getRandomEmptyPosition(tiles);
@@ -32663,6 +33484,7 @@ var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Sound = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
 const reverb_1 = __webpack_require__(/*! ./reverb */ "./src/sound/reverb.ts");
 const howler_1 = __webpack_require__(/*! howler */ "./node_modules/howler/dist/howler.js");
 class Sound {
@@ -32884,19 +33706,19 @@ Sound.playerStoneFootstep = (environment) => {
         sound = Sound.playerGrassFootsteps;
     if (environment === 1)
         sound = Sound.playerDirtFootsteps;
-    let f = game_1.Game.randTable(sound, Math.random);
+    let f = game_1.Game.randTable(sound, random_1.Random.rand);
     _a.playWithReverb(f, Sound.PRIORITY.FOOTSTEPS);
 };
 Sound.enemyFootstep = () => {
     if (Sound.audioMuted)
         return;
-    let f = game_1.Game.randTable(Sound.enemyFootsteps, Math.random);
+    let f = game_1.Game.randTable(Sound.enemyFootsteps, random_1.Random.rand);
     _a.playWithReverb(f, Sound.PRIORITY.FOOTSTEPS);
 };
 Sound.swing = () => {
     if (Sound.audioMuted)
         return;
-    let f = game_1.Game.randTable(Sound.swingSounds, Math.random);
+    let f = game_1.Game.randTable(Sound.swingSounds, random_1.Random.rand);
     _a.playWithReverb(f, Sound.PRIORITY.COMBAT);
 };
 Sound.hit = (hard = false) => {
@@ -32904,14 +33726,14 @@ Sound.hit = (hard = false) => {
         return;
     let sounds = Sound.hitSounds.slice(hard ? 2 : 0, hard ? 3 : 2);
     setTimeout(() => {
-        let f = game_1.Game.randTable(sounds, Math.random);
+        let f = game_1.Game.randTable(sounds, random_1.Random.rand);
         _a.playWithReverb(f, Sound.PRIORITY.COMBAT);
     }, 100);
 };
 Sound.hurt = () => {
     if (Sound.audioMuted)
         return;
-    let f = game_1.Game.randTable(Sound.hurtSounds, Math.random);
+    let f = game_1.Game.randTable(Sound.hurtSounds, random_1.Random.rand);
     _a.playWithReverb(f, Sound.PRIORITY.CRITICAL);
 };
 Sound.enemySpawn = () => {
@@ -32922,25 +33744,25 @@ Sound.enemySpawn = () => {
 Sound.chest = () => {
     if (Sound.audioMuted)
         return;
-    let f = game_1.Game.randTable(Sound.chestSounds, Math.random);
+    let f = game_1.Game.randTable(Sound.chestSounds, random_1.Random.rand);
     _a.playWithReverb(f, Sound.PRIORITY.INTERACTIONS);
 };
 Sound.potSmash = () => {
     if (Sound.audioMuted)
         return;
-    let f = game_1.Game.randTable(Sound.potSmashSounds, Math.random);
+    let f = game_1.Game.randTable(Sound.potSmashSounds, random_1.Random.rand);
     _a.delayPlay(() => _a.playWithReverb(f, Sound.PRIORITY.INTERACTIONS), 100);
 };
 Sound.pickupCoin = () => {
     if (Sound.audioMuted)
         return;
-    let f = game_1.Game.randTable(Sound.coinPickupSounds, Math.random);
+    let f = game_1.Game.randTable(Sound.coinPickupSounds, random_1.Random.rand);
     _a.playWithReverb(f, Sound.PRIORITY.INTERACTIONS);
 };
 Sound.mine = () => {
     if (Sound.audioMuted)
         return;
-    let f = game_1.Game.randTable(Sound.miningSounds, Math.random);
+    let f = game_1.Game.randTable(Sound.miningSounds, random_1.Random.rand);
     _a.playWithReverb(f, Sound.PRIORITY.INTERACTIONS);
 };
 Sound.breakRock = () => {
@@ -32968,7 +33790,7 @@ Sound.keyPickup = () => {
 Sound.push = () => {
     if (Sound.audioMuted)
         return;
-    let f = game_1.Game.randTable(Sound.pushSounds, Math.random);
+    let f = game_1.Game.randTable(Sound.pushSounds, random_1.Random.rand);
     _a.playWithReverb(f, Sound.PRIORITY.INTERACTIONS);
 };
 Sound.skeleSpawn = () => {
@@ -32981,7 +33803,7 @@ Sound.skeleSpawn = () => {
 Sound.unlock = () => {
     if (Sound.audioMuted)
         return;
-    let f = game_1.Game.randTable(Sound.unlockSounds, Math.random);
+    let f = game_1.Game.randTable(Sound.unlockSounds, random_1.Random.rand);
     _a.playWithReverb(f, Sound.PRIORITY.INTERACTIONS);
 };
 Sound.playCaveMusic = (index = 0) => {
@@ -33025,7 +33847,7 @@ Sound.playForestMusic = (index = 0) => {
 Sound.doorOpen = () => {
     if (Sound.audioMuted)
         return;
-    let f = game_1.Game.randTable(Sound.doorOpenSounds, Math.random);
+    let f = game_1.Game.randTable(Sound.doorOpenSounds, random_1.Random.rand);
     _a.playWithReverb(f, Sound.PRIORITY.INTERACTIONS);
 };
 Sound.playAmbient = () => {
@@ -33068,7 +33890,7 @@ Sound.playGore = () => {
 Sound.playBomb = () => {
     if (Sound.audioMuted)
         return;
-    let f = game_1.Game.randTable(Sound.bombSounds, Math.random);
+    let f = game_1.Game.randTable(Sound.bombSounds, random_1.Random.rand);
     _a.playWithReverb(f, Sound.PRIORITY.CRITICAL);
 };
 Sound.playWarHammer = () => {
@@ -33087,13 +33909,13 @@ Sound.playMagic = () => {
 Sound.playSlice = () => {
     if (Sound.audioMuted)
         return;
-    let f = game_1.Game.randTable(Sound.sliceSound, Math.random);
+    let f = game_1.Game.randTable(Sound.sliceSound, random_1.Random.rand);
     _a.playWithReverb(f, Sound.PRIORITY.COMBAT);
 };
 Sound.playShortSlice = () => {
     if (Sound.audioMuted)
         return;
-    let f = game_1.Game.randTable(Sound.shortSliceSound, Math.random);
+    let f = game_1.Game.randTable(Sound.shortSliceSound, random_1.Random.rand);
     _a.playWithReverb(f, Sound.PRIORITY.COMBAT);
 };
 Sound.playBackpack = () => {
@@ -33109,25 +33931,25 @@ Sound.playSmith = () => {
 Sound.playBush = () => {
     if (Sound.audioMuted)
         return;
-    let f = game_1.Game.randTable(Sound.bushSounds, Math.random);
+    let f = game_1.Game.randTable(Sound.bushSounds, random_1.Random.rand);
     _a.delayPlay(() => _a.playWithReverb(f, Sound.PRIORITY.INTERACTIONS), 100);
 };
 Sound.playParry = () => {
     if (Sound.audioMuted)
         return;
-    let f = game_1.Game.randTable(Sound.parrySounds, Math.random);
+    let f = game_1.Game.randTable(Sound.parrySounds, random_1.Random.rand);
     _a.delayPlay(() => _a.playWithReverb(f, Sound.PRIORITY.CRITICAL), 100);
 };
 Sound.playEat = () => {
     if (Sound.audioMuted)
         return;
-    let f = game_1.Game.randTable(Sound.eatSounds, Math.random);
+    let f = game_1.Game.randTable(Sound.eatSounds, random_1.Random.rand);
     _a.playWithReverb(f, Sound.PRIORITY.INTERACTIONS);
 };
 Sound.playGrunt = () => {
     if (Sound.audioMuted)
         return;
-    let f = game_1.Game.randTable(Sound.gruntSounds, Math.random);
+    let f = game_1.Game.randTable(Sound.gruntSounds, random_1.Random.rand);
     _a.playWithReverb(f, Sound.PRIORITY.COMBAT);
 };
 Sound.playLocked = () => {
@@ -33150,7 +33972,7 @@ Sound.playSquish = () => {
 Sound.playFishingCast = () => {
     if (Sound.audioMuted)
         return;
-    let f = game_1.Game.randTable(Sound.fishingCastSounds, Math.random);
+    let f = game_1.Game.randTable(Sound.fishingCastSounds, random_1.Random.rand);
     _a.playWithReverb(f, Sound.PRIORITY.INTERACTIONS);
 };
 Sound.playFishingReel = () => {
@@ -33161,7 +33983,7 @@ Sound.playFishingReel = () => {
 Sound.playFishingCatch = () => {
     if (Sound.audioMuted)
         return;
-    let f = game_1.Game.randTable(Sound.fishingCatchSounds, Math.random);
+    let f = game_1.Game.randTable(Sound.fishingCatchSounds, random_1.Random.rand);
     _a.delayPlay(() => _a.playWithReverb(f, Sound.PRIORITY.INTERACTIONS), 100);
 };
 Sound.delayPlay = (method, delay) => {
@@ -33764,6 +34586,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Floor = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const tile_1 = __webpack_require__(/*! ./tile */ "./src/tile/tile.ts");
+const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
 class Floor extends tile_1.Tile {
     constructor(room, x, y) {
         super(room, x, y);
@@ -33772,13 +34595,13 @@ class Floor extends tile_1.Tile {
         };
         this.variation = 1;
         if (this.skin == tile_1.SkinType.DUNGEON)
-            this.variation = game_1.Game.randTable([1, 1, 1, 1, 1, 1, 8, 8, 8, 9, 10, 10, 10, 10, 10, 12], Math.random);
+            this.variation = game_1.Game.randTable([1, 1, 1, 1, 1, 1, 8, 8, 8, 9, 10, 10, 10, 10, 10, 12], random_1.Random.rand);
         if (this.skin == tile_1.SkinType.CAVE)
-            //this.variation = Game.randTable([1, 1, 1, 1, 8, 9, 10, 12], Math.random);
-            this.variation = game_1.Game.randTable([1, 1, 1, 1, 1, 1, 8, 8, 8, 9, 10, 10, 10, 10, 10, 12], Math.random);
+            //this.variation = Game.randTable([1, 1, 1, 1, 8, 9, 10, 12], Random.rand);
+            this.variation = game_1.Game.randTable([1, 1, 1, 1, 1, 1, 8, 8, 8, 9, 10, 10, 10, 10, 10, 12], random_1.Random.rand);
         if (this.skin == tile_1.SkinType.FOREST)
-            //this.variation = Game.randTable([1, 1, 1, 1, 8, 9, 10, 12], Math.random);
-            this.variation = game_1.Game.randTable([1, 1, 1, 1, 1, 1, 8, 8, 8, 9, 10, 10, 10, 10, 10, 12], Math.random);
+            //this.variation = Game.randTable([1, 1, 1, 1, 8, 9, 10, 12], Random.rand);
+            this.variation = game_1.Game.randTable([1, 1, 1, 1, 1, 1, 8, 8, 8, 9, 10, 10, 10, 10, 10, 12], random_1.Random.rand);
     }
 }
 exports.Floor = Floor;
@@ -33879,6 +34702,7 @@ exports.Lockable = exports.LockType = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const key_1 = __webpack_require__(/*! ../item/key */ "./src/item/key.ts");
 const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts");
+const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
 var LockType;
 (function (LockType) {
     LockType[LockType["NONE"] = 0] = "NONE";
@@ -34046,7 +34870,7 @@ class Lockable {
         key.doorID = this.keyID;
     }
     static generateID() {
-        return Math.floor(Math.random() * 1000000);
+        return Math.floor(random_1.Random.rand() * 1000000);
     }
 }
 exports.Lockable = Lockable;
@@ -34159,6 +34983,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SpawnFloor = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const tile_1 = __webpack_require__(/*! ./tile */ "./src/tile/tile.ts");
+const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
 class SpawnFloor extends tile_1.Tile {
     constructor(room, x, y) {
         super(room, x, y);
@@ -34167,10 +34992,10 @@ class SpawnFloor extends tile_1.Tile {
         };
         this.variation = 1;
         if (this.skin == tile_1.SkinType.DUNGEON)
-            this.variation = game_1.Game.randTable([1, 1, 1, 1, 1, 1, 8, 8, 8, 9, 10, 10, 10, 10, 10, 12], Math.random);
+            this.variation = game_1.Game.randTable([1, 1, 1, 1, 1, 1, 8, 8, 8, 9, 10, 10, 10, 10, 10, 12], random_1.Random.rand);
         if (this.skin == tile_1.SkinType.CAVE)
-            //this.variation = Game.randTable([1, 1, 1, 1, 8, 9, 10, 12], Math.random);
-            this.variation = game_1.Game.randTable([1, 1, 1, 1, 1, 1, 8, 8, 8, 9, 10, 10, 10, 10, 10, 12], Math.random);
+            //this.variation = Game.randTable([1, 1, 1, 1, 8, 9, 10, 12], Random.rand);
+            this.variation = game_1.Game.randTable([1, 1, 1, 1, 1, 1, 8, 8, 8, 9, 10, 10, 10, 10, 10, 12], random_1.Random.rand);
     }
 }
 exports.SpawnFloor = SpawnFloor;
@@ -34584,6 +35409,7 @@ const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const lightSource_1 = __webpack_require__(/*! ../lighting/lightSource */ "./src/lighting/lightSource.ts");
 const levelConstants_1 = __webpack_require__(/*! ../level/levelConstants */ "./src/level/levelConstants.ts");
 const wall_1 = __webpack_require__(/*! ./wall */ "./src/tile/wall.ts");
+const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
 class WallTorch extends wall_1.Wall {
     constructor(room, x, y, isBottomWall) {
         super(room, x, y);
@@ -34625,7 +35451,7 @@ class WallTorch extends wall_1.Wall {
         this.isBottomWall = isBottomWall;
         this.torchOffset = isBottomWall ? 1 : 0;
         this.room.lightSources.push(new lightSource_1.LightSource(this.x + 0.5, this.y + 0.5 - this.torchOffset, 5, levelConstants_1.LevelConstants.TORCH_LIGHT_COLOR, 1.5));
-        this.frame = Math.random() * 12;
+        this.frame = random_1.Random.rand() * 12;
         this.tileYOffset = 6;
         this.hasBloom = true;
         this.bloomColor = "#FFA500";
@@ -34642,12 +35468,13 @@ exports.WallTorch = WallTorch;
 /*!*********************!*\
   !*** ./src/tips.ts ***!
   \*********************/
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Tips = void 0;
+const random_1 = __webpack_require__(/*! ./utility/random */ "./src/utility/random.ts");
 const tips = [
     "Too dark? Equip a light source to light up the area around you.",
     "Red X's show dangerous tiles, stay off of them to avoid taking damage.",
@@ -34710,7 +35537,7 @@ const tips = [
 ];
 class Tips {
     static getRandomTip() {
-        return tips[Math.floor(Math.random() * tips.length)];
+        return tips[Math.floor(random_1.Random.rand() * tips.length)];
     }
 }
 exports.Tips = Tips;
@@ -34730,6 +35557,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.astar = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/downLadder.ts");
+const random_1 = __webpack_require__(/*! ./random */ "./src/utility/random.ts");
 var astar;
 (function (astar_1) {
     //================== start graph js
@@ -35103,7 +35931,7 @@ var astar;
                 }
             }
             function getRandomBoolean() {
-                return Math.random() < 0.5;
+                return random_1.Random.rand() < 0.5;
             }
             if (diagonalsOmni) {
                 const randomBool = getRandomBoolean();
@@ -35223,6 +36051,7 @@ Random.rand = () => {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Utils = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const random_1 = __webpack_require__(/*! ./random */ "./src/utility/random.ts");
 class Utils {
 }
 exports.Utils = Utils;
@@ -35308,8 +36137,8 @@ Utils.randomSineInt = (min, max, options = {}) => {
     // Validate median is within range
     const clampedMedian = Math.min(Math.max(median, roundedMin), roundedMax);
     // Generate two random numbers for a more normal-like distribution
-    const x1 = Math.random() * 2 * Math.PI;
-    const x2 = Math.random() * 2 * Math.PI;
+    const x1 = random_1.Random.rand() * 2 * Math.PI;
+    const x2 = random_1.Random.rand() * 2 * Math.PI;
     // Average two cosines to create smoother bell curve, normalized to [0,1]
     const value = (Math.cos(x1) + Math.cos(x2) + 2) / 4;
     // Calculate the relative median position in [0,1] range
@@ -35336,7 +36165,7 @@ Utils.randTableWeighted = (table) => {
     const hasWeights = table.some((item) => item && typeof item.weight === "number");
     if (!hasWeights) {
         // Fallback to equal probability selection
-        return table[game_1.Game.rand(0, table.length - 1, Math.random)];
+        return table[game_1.Game.rand(0, table.length - 1, random_1.Random.rand)];
     }
     // Calculate total weight
     const totalWeight = table.reduce((sum, item) => {
@@ -35344,10 +36173,10 @@ Utils.randTableWeighted = (table) => {
     }, 0);
     if (totalWeight <= 0) {
         // If no valid weights, fallback to equal probability
-        return table[game_1.Game.rand(0, table.length - 1, Math.random)];
+        return table[game_1.Game.rand(0, table.length - 1, random_1.Random.rand)];
     }
     // Generate random number between 0 and totalWeight
-    let randomValue = Math.random() * totalWeight;
+    let randomValue = random_1.Random.rand() * totalWeight;
     // Find the item that corresponds to this random value
     for (const item of table) {
         if (item && typeof item.weight === "number") {
@@ -35384,11 +36213,11 @@ Utils.randomNormalInt = (min, max, options = {}) => {
     const standardDeviation = (max - min) / 5;
     // Box-Muller transform to generate normal distribution
     // Generate two uniform random numbers
-    let u1 = Math.random();
-    let u2 = Math.random();
+    let u1 = random_1.Random.rand();
+    let u2 = random_1.Random.rand();
     // Ensure u1 is not 0 to avoid log(0)
     while (u1 === 0) {
-        u1 = Math.random();
+        u1 = random_1.Random.rand();
     }
     // Box-Muller transformation
     const z0 = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);

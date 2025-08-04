@@ -1,3 +1,4 @@
+import { Random } from "../utility/random";
 import { Room } from "./room";
 
 /**
@@ -55,7 +56,7 @@ export class PropClusterer {
       this.placePosition(this.options.seedPosition);
     } else if (this.availableTiles.length > 0) {
       const randomIndex = Math.floor(
-        Math.random() * this.availableTiles.length,
+        Random.rand() * this.availableTiles.length,
       );
       const randomPosition = this.availableTiles.splice(randomIndex, 1)[0];
       this.placedPositions.push(randomPosition);
@@ -121,13 +122,13 @@ export class PropClusterer {
     if (totalScore <= 0) {
       // Fallback to uniform distribution if all scores are 0
       const randomIndex = Math.floor(
-        Math.random() * this.availableTiles.length,
+        Random.rand() * this.availableTiles.length,
       );
       return this.availableTiles.splice(randomIndex, 1)[0];
     }
 
     // Perform weighted random selection
-    const randomValue = Math.random() * totalScore;
+    const randomValue = Random.rand() * totalScore;
     let cumulativeScore = 0;
 
     for (const tile of scoredTiles) {

@@ -9,6 +9,7 @@ import { BlueGem } from "./bluegem";
 import { GreenGem } from "./greengem";
 import { Inventory } from "../../inventory/inventory";
 import { Utils } from "../../utility/utils";
+import { Random } from "../../utility/random";
 export class Geode extends Item {
   static itemName = "geode";
   constructor(level: Room, x: number, y: number) {
@@ -33,7 +34,7 @@ export class Geode extends Item {
     } else {
       const numGems = Math.min(1, Utils.randomNormalInt(1, 3));
       let gemTypes = [BlueGem, RedGem, GreenGem];
-      let gemType = gemTypes[Math.floor(Math.random() * gemTypes.length)];
+      let gemType = gemTypes[Math.floor(Random.rand() * gemTypes.length)];
       this.level.game.pushMessage(
         `You split the geode and find ${numGems} ${gemType.itemName}.`,
       );

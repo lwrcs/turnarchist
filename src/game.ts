@@ -24,6 +24,7 @@ import { UpLadder } from "./tile/upLadder";
 import { CameraAnimation } from "./game/cameraAnimation";
 import { Tips } from "./tips";
 import { GameplaySettings } from "./game/gameplaySettings";
+import { Random } from "./utility/random";
 
 export enum LevelState {
   IN_LEVEL,
@@ -232,6 +233,7 @@ export class Game {
   private wasStarted = false;
 
   private lastChatWidth: number = 0;
+  private savedGameState: GameState | null = null;
 
   constructor() {
     window.addEventListener("load", () => {
@@ -802,7 +804,7 @@ export class Game {
         }
         break;
       case "bomb":
-        this.room.addBombs(1, () => Math.random());
+        this.room.addBombs(1, () => Random.rand());
         break;
       case "col":
         GameConstants.SET_COLOR_LAYER_COMPOSITE_OPERATION(false);
@@ -861,6 +863,84 @@ export class Game {
         enabled = PostProcessor.settings.enabled ? "enabled" : "disabled";
         this.pushMessage(`Post processor is now ${enabled}`);
         break;
+      case "save":
+        try {
+          this.savedGameState = createGameState(this);
+          this.pushMessage("Game state saved successfully!");
+          console.log("Saved game state:", this.savedGameState);
+        } catch (error) {
+          this.pushMessage("Error saving game state: " + error.message);
+          console.error("Save error:", error);
+        }
+        break;
+
+      case "load":
+        if (!this.savedGameState) {
+          this.pushMessage(
+            "No saved game state found. Use 'save' command first.",
+          );
+          return;
+        }
+        try {
+          // Get current active usernames (for multiplayer support)
+          const activeUsernames = Object.keys(this.players);
+          loadGameState(this, activeUsernames, this.savedGameState, false);
+          this.pushMessage("Game state loaded successfully!");
+          console.log("Loaded game state");
+        } catch (error) {
+          this.pushMessage("Error loading game state: " + error.message);
+          console.error("Load error:", error);
+        }
+        break;
+
+      case "saveinfo":
+        if (!this.savedGameState) {
+          this.pushMessage("No saved game state found.");
+          return;
+        }
+        this.pushMessage(
+          `Saved state - Seed: ${this.savedGameState.seed}, Depth: ${this.savedGameState.level.depth}, Players: ${Object.keys(this.savedGameState.players).length}`,
+        );
+        console.log("Saved game state details:", this.savedGameState);
+        break;
+
+      case "currentinfo":
+        this.pushMessage(
+          `Current state - Seed: ${this.levelgen.seed}, Depth: ${this.level.depth}, Players: ${Object.keys(this.players).length}`,
+        );
+        console.log("Current game state details:", {
+          seed: this.levelgen.seed,
+          depth: this.level.depth,
+          players: Object.keys(this.players),
+          rooms: this.rooms.length,
+        });
+        break;
+
+      case "testsave":
+        // Save current state, make some changes, then load to verify
+        try {
+          this.savedGameState = createGameState(this);
+          const originalHealth = this.players[this.localPlayerID].health;
+          const originalX = this.players[this.localPlayerID].x;
+          const originalY = this.players[this.localPlayerID].y;
+
+          // Make some changes
+          this.players[this.localPlayerID].health = Math.max(
+            1,
+            this.players[this.localPlayerID].health - 1,
+          );
+          this.players[this.localPlayerID].x += 1;
+          this.players[this.localPlayerID].y += 1;
+
+          this.pushMessage(
+            `Changes made - Health: ${originalHealth} -> ${this.players[this.localPlayerID].health}, Pos: (${originalX},${originalY}) -> (${this.players[this.localPlayerID].x},${this.players[this.localPlayerID].y})`,
+          );
+          this.pushMessage("Use 'load' to restore the saved state");
+        } catch (error) {
+          this.pushMessage("Error in test save: " + error.message);
+          console.error("Test save error:", error);
+        }
+        break;
       default:
         if (command.startsWith("new ")) {
           this.room.addNewEnemy(command.slice(4) as EnemyType);
@@ -885,18 +965,18 @@ export class Game {
       "split",
       "corners",
     ];
-    const pattern = patterns[Math.floor(Math.random() * patterns.length)];
+    const pattern = patterns[Math.floor(Random.rand() * patterns.length)];
 
     // Generate level with random parameters
-    const numRooms = 8 + Math.floor(Math.random() * 12); // 8-20 rooms
-    const width = 60 + Math.floor(Math.random() * 40); // 60-100 width
-    const height = 50 + Math.floor(Math.random() * 30); // 50-80 height
+    const numRooms = 8 + Math.floor(Random.rand() * 12); // 8-20 rooms
+    const width = 60 + Math.floor(Random.rand() * 40); // 60-100 width
+    const height = 50 + Math.floor(Random.rand() * 30); // 50-80 height
 
     const generator = LevelImageGenerator.generateRandomLevel(
       width,
       height,
       numRooms,
-      Math.random,
+      Random.rand,
       pattern,
     );
 
@@ -1438,7 +1518,7 @@ export class Game {
             Game.drawFX(7 - ditherFrame, 10, 1, 1, x, y, 1, 1);
           }
         }
-      
+
       */
       }
       Game.ctx.translate(-levelOffsetX, -levelOffsetY);

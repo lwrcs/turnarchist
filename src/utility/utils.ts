@@ -1,4 +1,5 @@
 import { Game } from "../game";
+import { Random } from "./random";
 
 export class Utils {
   static distance = (
@@ -105,8 +106,8 @@ export class Utils {
     const clampedMedian = Math.min(Math.max(median, roundedMin), roundedMax);
 
     // Generate two random numbers for a more normal-like distribution
-    const x1 = Math.random() * 2 * Math.PI;
-    const x2 = Math.random() * 2 * Math.PI;
+    const x1 = Random.rand() * 2 * Math.PI;
+    const x2 = Random.rand() * 2 * Math.PI;
 
     // Average two cosines to create smoother bell curve, normalized to [0,1]
     const value = (Math.cos(x1) + Math.cos(x2) + 2) / 4;
@@ -144,7 +145,7 @@ export class Utils {
 
     if (!hasWeights) {
       // Fallback to equal probability selection
-      return table[Game.rand(0, table.length - 1, Math.random)];
+      return table[Game.rand(0, table.length - 1, Random.rand)];
     }
 
     // Calculate total weight
@@ -154,11 +155,11 @@ export class Utils {
 
     if (totalWeight <= 0) {
       // If no valid weights, fallback to equal probability
-      return table[Game.rand(0, table.length - 1, Math.random)];
+      return table[Game.rand(0, table.length - 1, Random.rand)];
     }
 
     // Generate random number between 0 and totalWeight
-    let randomValue = Math.random() * totalWeight;
+    let randomValue = Random.rand() * totalWeight;
 
     // Find the item that corresponds to this random value
     for (const item of table) {
@@ -206,12 +207,12 @@ export class Utils {
 
     // Box-Muller transform to generate normal distribution
     // Generate two uniform random numbers
-    let u1 = Math.random();
-    let u2 = Math.random();
+    let u1 = Random.rand();
+    let u2 = Random.rand();
 
     // Ensure u1 is not 0 to avoid log(0)
     while (u1 === 0) {
-      u1 = Math.random();
+      u1 = Random.rand();
     }
 
     // Box-Muller transformation

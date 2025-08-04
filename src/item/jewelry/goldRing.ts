@@ -6,7 +6,7 @@ import { TextParticle } from "../../particle/textParticle";
 import { GameConstants } from "../../game/gameConstants";
 import { Equippable } from "../equippable";
 import { EmeraldRing } from "./emeraldRing";
-import { ZirconRing } from "./ZirconRing";
+import { ZirconRing } from "./zirconRing";
 import { AmberRing } from "./amberRing";
 import { GarnetRing } from "./garnetRing";
 

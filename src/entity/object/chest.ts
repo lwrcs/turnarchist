@@ -97,7 +97,7 @@ export class Chest extends Entity {
           ],
           Random.rand,
         );
-        if (Math.random() < 0.01) stack *= Math.ceil(Math.random() * 10);
+        if (Random.rand() < 0.01) stack *= Math.ceil(Random.rand() * 10);
         drop.stackCount = stack;
         //drop.stack = stack;
       }

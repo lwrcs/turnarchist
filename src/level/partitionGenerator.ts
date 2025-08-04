@@ -376,7 +376,7 @@ export class PartitionGenerator {
 
     for (let i = 0; i < 100; i++) {
       partialLevel.partitions.forEach(async (partition) => {
-        let roomArea = Math.random() > 0.95 ? softMaxRoomArea : maxRoomArea;
+        let roomArea = Random.rand() > 0.95 ? softMaxRoomArea : maxRoomArea;
         if (partition.area() > roomArea) {
           partialLevel.partitions = partialLevel.partitions.filter(
             (p) => p !== partition,

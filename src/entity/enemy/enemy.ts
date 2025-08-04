@@ -13,6 +13,7 @@ import { Utils } from "../../utility/utils";
 import { Door } from "../../tile/door";
 import { StunAnimation } from "../../projectile/stunAnimation";
 import { DownLadder } from "../../tile/downLadder";
+import { Random } from "../../utility/random";
 
 enum EnemyState {
   SLEEP,
@@ -511,15 +512,15 @@ export abstract class Enemy extends Entity {
         foundValidRetreat = true;
       } else {
         // Try diagonal positions
-        if (dy === 0) dy = Math.random() < 0.5 ? 1 : -1;
-        if (dx === 0) dx = Math.random() < 0.5 ? 1 : -1;
+        if (dy === 0) dy = Random.rand() < 0.5 ? 1 : -1;
+        if (dx === 0) dx = Random.rand() < 0.5 ? 1 : -1;
         let diagonal1X = this.x - dy;
         let diagonal1Y = this.y + dx;
         let diagonal2X = this.x + dy;
         let diagonal2Y = this.y - dx;
 
         // Randomly choose which diagonal to check first
-        let checkFirst = Math.random() < 0.5;
+        let checkFirst = Random.rand() < 0.5;
         let firstX = checkFirst ? diagonal1X : diagonal2X;
         let firstY = checkFirst ? diagonal1Y : diagonal2Y;
         let secondX = checkFirst ? diagonal2X : diagonal1X;
@@ -547,8 +548,8 @@ export abstract class Enemy extends Entity {
         foundValidRetreat = true;
       }
     } else if (this.diagonalAttack) {
-      if (dy === 0) dy = Math.random() < 0.5 ? 1 : -1;
-      if (dx === 0) dx = Math.random() < 0.5 ? 1 : -1;
+      if (dy === 0) dy = Random.rand() < 0.5 ? 1 : -1;
+      if (dx === 0) dx = Random.rand() < 0.5 ? 1 : -1;
       // Only diagonal retreat allowed
       let diagonal1X = this.x - dy;
       let diagonal1Y = this.y + dx;
@@ -556,7 +557,7 @@ export abstract class Enemy extends Entity {
       let diagonal2Y = this.y - dx;
 
       // Randomly choose which diagonal to check first
-      let checkFirst = Math.random() < 0.5;
+      let checkFirst = Random.rand() < 0.5;
       let firstX = checkFirst ? diagonal1X : diagonal2X;
       let firstY = checkFirst ? diagonal1Y : diagonal2Y;
       let secondX = checkFirst ? diagonal2X : diagonal1X;
@@ -665,7 +666,7 @@ export abstract class Enemy extends Entity {
     }
 
     // Choose a random tile from the far tiles
-    const randomIndex = Math.floor(Math.random() * farTiles.length);
+    const randomIndex = Math.floor(Random.rand() * farTiles.length);
     return farTiles[randomIndex].tile;
   };
 

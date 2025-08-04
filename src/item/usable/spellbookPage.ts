@@ -4,6 +4,7 @@ import { Sound } from "../../sound/sound";
 import { Room } from "../../room/room";
 import { Usable } from "./usable";
 import { Equippable } from "../equippable";
+import { Random } from "../../utility/random";
 
 export class SpellbookPage extends Usable {
   static itemName = "weapon fragments";
@@ -15,7 +16,7 @@ export class SpellbookPage extends Usable {
     this.name = "spellbook pages";
     this.canUseOnOther = true;
     this.stackable = true;
-    this.stackCount = stackCount || Math.ceil(Math.random() * 3);
+    this.stackCount = stackCount || Math.ceil(Random.rand() * 3);
     this.description = "Can be used to restore power to a depleted spellbook";
   }
 

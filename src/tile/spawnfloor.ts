@@ -1,6 +1,7 @@
 import { Game } from "../game";
 import { Tile, SkinType } from "./tile";
 import { Room } from "../room/room";
+import { Random } from "../utility/random";
 
 export class SpawnFloor extends Tile {
   // all are in grid units
@@ -12,13 +13,13 @@ export class SpawnFloor extends Tile {
     if (this.skin == SkinType.DUNGEON)
       this.variation = Game.randTable(
         [1, 1, 1, 1, 1, 1, 8, 8, 8, 9, 10, 10, 10, 10, 10, 12],
-        Math.random,
+        Random.rand,
       );
     if (this.skin == SkinType.CAVE)
-      //this.variation = Game.randTable([1, 1, 1, 1, 8, 9, 10, 12], Math.random);
+      //this.variation = Game.randTable([1, 1, 1, 1, 8, 9, 10, 12], Random.rand);
       this.variation = Game.randTable(
         [1, 1, 1, 1, 1, 1, 8, 8, 8, 9, 10, 10, 10, 10, 10, 12],
-        Math.random,
+        Random.rand,
       );
   }
 

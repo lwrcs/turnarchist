@@ -7,6 +7,7 @@ import { GameConstants } from "../../game/gameConstants";
 import { Usable } from "../usable/usable";
 import { Lantern } from "../light/lantern";
 import { Light } from "../light/light";
+import { Random } from "../../utility/random";
 
 export class Coal extends Usable {
   static itemName = "coal";
@@ -16,7 +17,7 @@ export class Coal extends Usable {
     this.tileX = 17;
     this.tileY = 0;
     this.stackable = true;
-    this.stackCount = Math.ceil(Math.random() * 7 + 3);
+    this.stackCount = Math.ceil(Random.rand() * 7 + 3);
     this.name = Coal.itemName;
     this.description = "A piece of coal. Fuels lantern.";
     this.canUseOnOther = true;

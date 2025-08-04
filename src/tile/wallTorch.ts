@@ -4,6 +4,7 @@ import { Room } from "../room/room";
 import { LightSource } from "../lighting/lightSource";
 import { LevelConstants } from "../level/levelConstants";
 import { Wall } from "./wall";
+import { Random } from "../utility/random";
 
 export class WallTorch extends Wall {
   frame: number;
@@ -25,7 +26,7 @@ export class WallTorch extends Wall {
         1.5,
       ),
     );
-    this.frame = Math.random() * 12;
+    this.frame = Random.rand() * 12;
     this.tileYOffset = 6;
     this.hasBloom = true;
     this.bloomColor = "#FFA500";

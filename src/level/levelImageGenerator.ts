@@ -1,6 +1,7 @@
 import { GameConstants } from "../game/gameConstants";
 import { Game } from "../game";
 import { Utils } from "../utility/utils";
+import { Random } from "../utility/random";
 
 interface Room {
   x: number;
@@ -63,7 +64,7 @@ export class LevelImageGenerator {
   // Generate rooms with physics properties
   generateRooms(
     numRooms: number,
-    rand: () => number = Math.random,
+    rand: () => number = Random.rand,
     startingPattern: "center" | "split" | "corners" = "center",
   ): void {
     this.rooms = [];
@@ -461,7 +462,7 @@ export class LevelImageGenerator {
     width: number = 80,
     height: number = 60,
     numRooms: number = 15,
-    rand: () => number = Math.random,
+    rand: () => number = Random.rand,
     pattern: "center" | "split" | "corners" = "center",
   ): LevelImageGenerator {
     const generator = new LevelImageGenerator(width, height);

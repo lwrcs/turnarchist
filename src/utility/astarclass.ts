@@ -3,6 +3,7 @@ import { Direction } from "../game";
 import { DownLadder } from "../tile/downLadder";
 import { SpikeTrap } from "../tile/spiketrap";
 import { Wall } from "../tile/wall";
+import { Random } from "./random";
 
 export namespace astar {
   //================== start graph js
@@ -515,7 +516,7 @@ export namespace astar {
         }
       }
       function getRandomBoolean(): boolean {
-        return Math.random() < 0.5;
+        return Random.rand() < 0.5;
       }
       if (diagonalsOmni) {
         const randomBool: boolean = getRandomBoolean();

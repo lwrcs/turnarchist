@@ -29,6 +29,7 @@ import { Particle } from "../particle/particle";
 import { DeathParticle } from "../particle/deathParticle";
 import { GameplaySettings } from "../game/gameplaySettings";
 import { Coin } from "../item/coin";
+import { Random } from "../utility/random";
 
 export enum EntityDirection {
   DOWN,
@@ -348,7 +349,7 @@ export class Entity extends Drawable {
     //make monsters drop degraded weapons
     if (this.drop instanceof Weapon && this.type === EntityType.ENEMY) {
       this.drop.durability = Math.floor(
-        Math.random() * 0.31 * this.drop.durabilityMax,
+        Random.rand() * 0.31 * this.drop.durabilityMax,
       );
       this.drop.durabilityMax;
     }
@@ -550,7 +551,7 @@ export class Entity extends Drawable {
         Direction.RIGHT,
       ];
       const randomDirection =
-        directions[Math.floor(Math.random() * directions.length)];
+        directions[Math.floor(Random.rand() * directions.length)];
 
       // Calculate target position based on direction
       let targetX = this.x;
@@ -616,7 +617,7 @@ export class Entity extends Drawable {
     newPositions.sort((a, b) => b.distance - a.distance);
 
     // Choose either furthest or second furthest
-    const chooseSecondFurthest = Math.random() < 0.3;
+    const chooseSecondFurthest = Random.rand() < 0.3;
     const chosenPosition =
       chooseSecondFurthest && newPositions.length > 1
         ? newPositions[1].position
@@ -1247,8 +1248,8 @@ export class Entity extends Drawable {
   getOpenTile = (): { x: number; y: number } => {
     let x, y;
     do {
-      x = Math.floor(Math.random() * 3 + this.x - 1);
-      y = Math.floor(Math.random() * 3 + this.y - 1);
+      x = Math.floor(Random.rand() * 3 + this.x - 1);
+      y = Math.floor(Random.rand() * 3 + this.y - 1);
     } while (
       (x === this.x && y === this.y) ||
       this.room.roomArray[x][y].isSolid() ||

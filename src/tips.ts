@@ -1,3 +1,5 @@
+import { Random } from "./utility/random";
+
 const tips = [
   "Too dark? Equip a light source to light up the area around you.",
 
@@ -118,6 +120,6 @@ const tips = [
 
 export class Tips {
   static getRandomTip(): string {
-    return tips[Math.floor(Math.random() * tips.length)];
+    return tips[Math.floor(Random.rand() * tips.length)];
   }
 }

@@ -41,7 +41,7 @@ export class ImageParticle extends Particle {
           cx,
           cy,
           0,
-          Math.random() * 0.5 + 0.3,
+          Random.rand() * 0.5 + 0.3,
           0,
           0,
           0,
@@ -60,17 +60,17 @@ export class ImageParticle extends Particle {
     tileX: number,
     tileY: number,
   ) => {
-    for (let i = Math.floor(Math.random() * 3); i < 5; i++) {
+    for (let i = Math.floor(Random.rand() * 3); i < 5; i++) {
       level.particles.push(
         new ImageParticle(
           level,
-          cx + Math.random() * 0.05 - 0.025, // x
-          cy + Math.random() * 0.05 - 0.025, // y
-          Math.random() * 0.5, // z
+          cx + Random.rand() * 0.05 - 0.025, // x
+          cy + Random.rand() * 0.05 - 0.025, // y
+          Random.rand() * 0.5, // z
           0.0625 * (i + 8), // s
-          0.025 * (Math.random() * 2 - 1), //dx
-          0.025 * (Math.random() * 2 - 1), //dy
-          0.2 * (Math.random() - 1), //dz
+          0.025 * (Random.rand() * 2 - 1), //dx
+          0.025 * (Random.rand() * 2 - 1), //dy
+          0.2 * (Random.rand() - 1), //dz
           tileX,
           tileY,
           [2, 1, 0, 1, 2, 2, 2][i], //size

@@ -1,3 +1,5 @@
+import { Random } from "./random";
+
 // Generate a random integer with a cosine-based distribution
 function randomSineInt(
   min: number,
@@ -14,8 +16,8 @@ function randomSineInt(
   const clampedMedian = Math.min(Math.max(median, roundedMin), roundedMax);
 
   // Generate two random numbers for a more normal-like distribution
-  const x1 = Math.random() * 2 * Math.PI;
-  const x2 = Math.random() * 2 * Math.PI;
+  const x1 = Random.rand() * 2 * Math.PI;
+  const x2 = Random.rand() * 2 * Math.PI;
 
   // Average two cosines to create smoother bell curve, normalized to [0,1]
   const value = (Math.cos(x1) + Math.cos(x2) + 2) / 4;

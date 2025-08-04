@@ -206,7 +206,7 @@ export class DropTable {
     const dropChance = entity.dropChance || 1;
 
     // Skip initial drop chance check if forced
-    if (!force && dropChance > 1 && Math.random() > 1 / dropChance) {
+    if (!force && dropChance > 1 && Random.rand() > 1 / dropChance) {
       return null;
     }
 
@@ -242,7 +242,7 @@ export class DropTable {
 
     // Try to drop items based on drop rates, up to maxDrops
     for (const drop of eligibleDrops) {
-      const randomRoll = Math.random();
+      const randomRoll = Random.rand();
       const threshold = 1 / drop.dropRate;
 
       if (randomRoll < threshold) {

@@ -9,6 +9,7 @@ import { Player } from "../../player/player";
 import { ImageParticle } from "../../particle/imageParticle";
 import { Lighting } from "../../lighting/lighting";
 import { Entity } from "../entity";
+import { Random } from "../../utility/random";
 
 export class OccultistEnemy extends Enemy {
   ticks: number;
@@ -116,7 +117,7 @@ export class OccultistEnemy extends Enemy {
     if (enemiesToShield.length > 0) {
       enemiesToShield.forEach((enemy) => {
         const distance = Utils.distance(this.x, this.y, enemy.x, enemy.y);
-        if (Math.random() * 10 > distance) {
+        if (Random.rand() * 10 > distance) {
           this.applyShieldTo(enemy as Enemy);
         }
       });

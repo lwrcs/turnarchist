@@ -1,5 +1,6 @@
 import { Game } from "../game";
 import { GameConstants } from "../game/gameConstants";
+import { Random } from "../utility/random";
 import { Particle } from "./particle";
 
 export class TextParticle extends Particle {
@@ -29,7 +30,7 @@ export class TextParticle extends Particle {
     this.color = color;
     this.dead = false;
     this.time = 0;
-    if (delay === undefined) this.delay = Game.rand(0, 10, Math.random);
+    if (delay === undefined) this.delay = Game.rand(0, 10, Random.rand);
     // up to a 10 tick delay
     else this.delay = delay;
   }
