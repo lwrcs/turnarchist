@@ -47,6 +47,9 @@ export class Sound {
   static lockedSound: Howl;
   static woodSound: Howl;
   static squishSound: Howl;
+  static fishingCastSounds: Array<Howl>;
+  static fishingReelSound: Howl;
+  static fishingCatchSounds: Array<Howl>;
 
   static currentlyPlaying: Set<number> = new Set();
 
@@ -356,7 +359,24 @@ export class Sound {
         1.0,
         3,
       );
-
+      Sound.fishingCastSounds = createHowlArray(
+        "res/SFX/fishing/cast",
+        [1, 2],
+        0.5,
+        3,
+      );
+      Sound.fishingReelSound = createHowl(
+        "res/SFX/fishing/catch.mp3",
+        0.5,
+        false,
+        2,
+      );
+      Sound.fishingCatchSounds = createHowlArray(
+        "res/SFX/fishing/splash",
+        [1, 2],
+        0.85,
+        3,
+      );
       // Bomb sounds
       Sound.bombSounds = createHowlArray(
         "res/SFX/attacks/explode",
@@ -742,6 +762,26 @@ export class Sound {
   static playSquish = () => {
     if (Sound.audioMuted) return;
     this.playWithReverb(Sound.squishSound, Sound.PRIORITY.INTERACTIONS);
+  };
+
+  static playFishingCast = () => {
+    if (Sound.audioMuted) return;
+    let f = Game.randTable(Sound.fishingCastSounds, Math.random);
+    this.playWithReverb(f, Sound.PRIORITY.INTERACTIONS);
+  };
+
+  static playFishingReel = () => {
+    if (Sound.audioMuted) return;
+    this.playWithReverb(Sound.fishingReelSound, Sound.PRIORITY.INTERACTIONS);
+  };
+
+  static playFishingCatch = () => {
+    if (Sound.audioMuted) return;
+    let f = Game.randTable(Sound.fishingCatchSounds, Math.random);
+    this.delayPlay(
+      () => this.playWithReverb(f, Sound.PRIORITY.INTERACTIONS),
+      100,
+    );
   };
 
   static delayPlay = (method: () => void, delay: number) => {

@@ -12,8 +12,8 @@ export class Fish extends Usable {
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
 
-    this.tileX = 6;
-    this.tileY = 0;
+    this.tileX = 5;
+    this.tileY = 2;
 
     this.stackable = true;
   }

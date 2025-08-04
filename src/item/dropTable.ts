@@ -33,6 +33,7 @@ import { Scythe } from "./weapon/scythe";
 import { Hourglass } from "./usable/hourglass";
 import { ScytheHandle } from "./weapon/scytheHandle";
 import { ScytheBlade } from "./weapon/scytheBlade";
+import { FishingRod } from "./tool/fishingRod";
 
 interface Drop {
   itemType: string;
@@ -50,6 +51,7 @@ export const ItemTypeMap: { [key: string]: typeof Item } = {
   greataxe: Greataxe,
   scythe: Scythe,
   hourglass: Hourglass,
+  fishingrod: FishingRod,
 
   scytheblade: ScytheBlade,
   scythehandle: ScytheHandle,
@@ -142,6 +144,7 @@ export class DropTable {
     // Tools
     { itemType: "pickaxe", dropRate: 25, category: ["tool"] },
     { itemType: "hammer", dropRate: 25, category: ["tool"] },
+    { itemType: "fishingrod", dropRate: 10, category: ["tool"] },
 
     { itemType: "hourglass", dropRate: 10, category: ["reaper"], unique: true },
 

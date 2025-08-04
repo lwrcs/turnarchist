@@ -16,6 +16,7 @@ import { Fish } from "../../item/usable/fish";
 export class FishingSpot extends Entity {
   fishCount: number = 0;
   active: boolean = false;
+  startFrame: number = 0;
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
     this.room = room;
@@ -27,6 +28,7 @@ export class FishingSpot extends Entity {
     this.name = "fishing spot";
     this.fishCount = Math.floor(Random.rand() * 3);
     this.active = this.fishCount > 0;
+    this.startFrame = Math.floor(Random.rand() * 9);
 
     //this.hitSound = Sound.potSmash;
     this.imageParticleX = 0;
@@ -52,26 +54,32 @@ export class FishingSpot extends Entity {
       return;
     }
     this.game.pushMessage("Fishing...");
-    let message = "";
-
-    if (this.tryFish()) {
-      let added = player.inventory.addItem(new Fish(this.room, this.x, this.y));
-      if (added === false) {
-        this.room.items.push(new Fish(this.room, player.x, player.y));
-      }
-      message = "You catch a fish.";
-      this.fishCount--;
-      if (this.fishCount <= 0) {
-        this.active = false;
-      }
-    } else {
-      message = "You don't catch anything.";
-    }
 
     player.busyAnimating = true;
+    player.setHitXY(this.x, this.y, 0.5);
+    Sound.playFishingCast();
     setTimeout(() => {
-      player.busyAnimating = false;
+      let message = "";
+      Sound.playFishingReel();
+
+      if (this.tryFish()) {
+        let added = player.inventory.addItem(
+          new Fish(this.room, this.x, this.y),
+        );
+        if (added === false) {
+          this.room.items.push(new Fish(this.room, player.x, player.y));
+        }
+        message = "You catch a fish.";
+        Sound.playFishingCatch();
+        this.fishCount--;
+        if (this.fishCount <= 0) {
+          this.active = false;
+        }
+      } else {
+        message = "You don't catch anything.";
+      }
       this.room.game.pushMessage(message);
+      player.busyAnimating = false;
     }, 1200);
 
     this.room.tick(player);
@@ -91,24 +99,22 @@ export class FishingSpot extends Entity {
 
   draw = (delta: number) => {
     if (this.dead || !this.active) return;
-    Game.ctx.save();
-    Game.ctx.globalAlpha = this.alpha;
-    if (!this.dead) {
-      this.updateDrawXY(delta);
-      Game.drawObj(
-        this.tileX,
-        this.tileY,
-        1,
-        2,
-        this.x - this.drawX,
-        this.y - this.drawYOffset - this.drawY,
-        1,
-        2,
-        this.room.shadeColor,
-        this.shadeAmount(),
-      );
+    if (this.startFrame !== 0) {
+      this.frame = this.startFrame;
+      this.startFrame = 0;
     }
-    Game.ctx.restore();
+    this.frame += 0.12 * delta;
+    if (this.frame >= 9) this.frame = 0;
+    Game.drawFX(
+      23 + Math.floor(this.frame),
+      0,
+      1,
+      1,
+      this.x - this.drawX,
+      this.y - this.drawY,
+      1,
+      1,
+    );
   };
 
   drawTopLayer = (delta: number) => {

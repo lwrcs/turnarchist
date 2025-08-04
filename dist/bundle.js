@@ -10872,12 +10872,14 @@ const heart_1 = __webpack_require__(/*! ../../item/usable/heart */ "./src/item/u
 const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
 const coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
+const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
 const fish_1 = __webpack_require__(/*! ../../item/usable/fish */ "./src/item/usable/fish.ts");
 class FishingSpot extends entity_1.Entity {
     constructor(room, game, x, y) {
         super(room, game, x, y);
         this.fishCount = 0;
         this.active = false;
+        this.startFrame = 0;
         this.fish = (player) => {
             if (!player.inventory.canFish()) {
                 this.game.pushMessage("You need a fishing rod to fish.");
@@ -10888,25 +10890,29 @@ class FishingSpot extends entity_1.Entity {
                 return;
             }
             this.game.pushMessage("Fishing...");
-            let message = "";
-            if (this.tryFish()) {
-                let added = player.inventory.addItem(new fish_1.Fish(this.room, this.x, this.y));
-                if (added === false) {
-                    this.room.items.push(new fish_1.Fish(this.room, player.x, player.y));
-                }
-                message = "You catch a fish.";
-                this.fishCount--;
-                if (this.fishCount <= 0) {
-                    this.active = false;
-                }
-            }
-            else {
-                message = "You don't catch anything.";
-            }
             player.busyAnimating = true;
+            player.setHitXY(this.x, this.y, 0.5);
+            sound_1.Sound.playFishingCast();
             setTimeout(() => {
-                player.busyAnimating = false;
+                let message = "";
+                sound_1.Sound.playFishingReel();
+                if (this.tryFish()) {
+                    let added = player.inventory.addItem(new fish_1.Fish(this.room, this.x, this.y));
+                    if (added === false) {
+                        this.room.items.push(new fish_1.Fish(this.room, player.x, player.y));
+                    }
+                    message = "You catch a fish.";
+                    sound_1.Sound.playFishingCatch();
+                    this.fishCount--;
+                    if (this.fishCount <= 0) {
+                        this.active = false;
+                    }
+                }
+                else {
+                    message = "You don't catch anything.";
+                }
                 this.room.game.pushMessage(message);
+                player.busyAnimating = false;
             }, 1200);
             this.room.tick(player);
         };
@@ -10924,13 +10930,14 @@ class FishingSpot extends entity_1.Entity {
         this.draw = (delta) => {
             if (this.dead || !this.active)
                 return;
-            game_1.Game.ctx.save();
-            game_1.Game.ctx.globalAlpha = this.alpha;
-            if (!this.dead) {
-                this.updateDrawXY(delta);
-                game_1.Game.drawObj(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
+            if (this.startFrame !== 0) {
+                this.frame = this.startFrame;
+                this.startFrame = 0;
             }
-            game_1.Game.ctx.restore();
+            this.frame += 0.12 * delta;
+            if (this.frame >= 9)
+                this.frame = 0;
+            game_1.Game.drawFX(23 + Math.floor(this.frame), 0, 1, 1, this.x - this.drawX, this.y - this.drawY, 1, 1);
         };
         this.drawTopLayer = (delta) => {
             this.drawableY = this.y;
@@ -10944,6 +10951,7 @@ class FishingSpot extends entity_1.Entity {
         this.name = "fishing spot";
         this.fishCount = Math.floor(random_1.Random.rand() * 3);
         this.active = this.fishCount > 0;
+        this.startFrame = Math.floor(random_1.Random.rand() * 9);
         //this.hitSound = Sound.potSmash;
         this.imageParticleX = 0;
         this.imageParticleY = 29;
@@ -18404,6 +18412,7 @@ const scythe_1 = __webpack_require__(/*! ./weapon/scythe */ "./src/item/weapon/s
 const hourglass_1 = __webpack_require__(/*! ./usable/hourglass */ "./src/item/usable/hourglass.ts");
 const scytheHandle_1 = __webpack_require__(/*! ./weapon/scytheHandle */ "./src/item/weapon/scytheHandle.ts");
 const scytheBlade_1 = __webpack_require__(/*! ./weapon/scytheBlade */ "./src/item/weapon/scytheBlade.ts");
+const fishingRod_1 = __webpack_require__(/*! ./tool/fishingRod */ "./src/item/tool/fishingRod.ts");
 exports.ItemTypeMap = {
     dualdagger: dualdagger_1.DualDagger,
     warhammer: warhammer_1.Warhammer,
@@ -18412,6 +18421,7 @@ exports.ItemTypeMap = {
     greataxe: greataxe_1.Greataxe,
     scythe: scythe_1.Scythe,
     hourglass: hourglass_1.Hourglass,
+    fishingrod: fishingRod_1.FishingRod,
     scytheblade: scytheBlade_1.ScytheBlade,
     scythehandle: scytheHandle_1.ScytheHandle,
     armor: armor_1.Armor,
@@ -18495,6 +18505,7 @@ DropTable.drops = [
     // Tools
     { itemType: "pickaxe", dropRate: 25, category: ["tool"] },
     { itemType: "hammer", dropRate: 25, category: ["tool"] },
+    { itemType: "fishingrod", dropRate: 10, category: ["tool"] },
     { itemType: "hourglass", dropRate: 10, category: ["reaper"], unique: true },
     // Consumables
     { itemType: "heart", dropRate: 20, category: ["consumable"] },
@@ -20106,8 +20117,8 @@ class Fish extends usable_1.Usable {
         this.getDescription = () => {
             return "FISH\nLooks spiky.";
         };
-        this.tileX = 6;
-        this.tileY = 0;
+        this.tileX = 5;
+        this.tileY = 2;
         this.stackable = true;
     }
 }
@@ -32734,6 +32745,9 @@ Sound.loadSounds = async () => {
         Sound.potSmashSounds = createHowlArray("res/SFX/objects/potSmash", [1, 2, 3], 0.5, 3);
         Sound.bushSounds = createHowlArray("res/SFX/objects/plantHit", [1, 2], 0.75, 3);
         Sound.pushSounds = createHowlArray("res/SFX/pushing/push", [1, 2], 1.0, 3);
+        Sound.fishingCastSounds = createHowlArray("res/SFX/fishing/cast", [1, 2], 0.5, 3);
+        Sound.fishingReelSound = createHowl("res/SFX/fishing/catch.mp3", 0.5, false, 2);
+        Sound.fishingCatchSounds = createHowlArray("res/SFX/fishing/splash", [1, 2], 0.85, 3);
         // Bomb sounds
         Sound.bombSounds = createHowlArray("res/SFX/attacks/explode", [1, 2], 0.7, 3);
         Sound.fuseBurnSound = createHowl("res/SFX/attacks/fuse.mp3", 0.2, false, 2);
@@ -33021,6 +33035,23 @@ Sound.playSquish = () => {
     if (Sound.audioMuted)
         return;
     _a.playWithReverb(Sound.squishSound, Sound.PRIORITY.INTERACTIONS);
+};
+Sound.playFishingCast = () => {
+    if (Sound.audioMuted)
+        return;
+    let f = game_1.Game.randTable(Sound.fishingCastSounds, Math.random);
+    _a.playWithReverb(f, Sound.PRIORITY.INTERACTIONS);
+};
+Sound.playFishingReel = () => {
+    if (Sound.audioMuted)
+        return;
+    _a.playWithReverb(Sound.fishingReelSound, Sound.PRIORITY.INTERACTIONS);
+};
+Sound.playFishingCatch = () => {
+    if (Sound.audioMuted)
+        return;
+    let f = game_1.Game.randTable(Sound.fishingCatchSounds, Math.random);
+    _a.delayPlay(() => _a.playWithReverb(f, Sound.PRIORITY.INTERACTIONS), 100);
 };
 Sound.delayPlay = (method, delay) => {
     setTimeout(method, delay);
