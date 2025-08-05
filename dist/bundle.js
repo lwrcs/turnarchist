@@ -9279,6 +9279,7 @@ const damageNumber_1 = __webpack_require__(/*! ../particle/damageNumber */ "./sr
 const downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/downLadder.ts");
 const door_1 = __webpack_require__(/*! ../tile/door */ "./src/tile/door.ts");
 const wall_1 = __webpack_require__(/*! ../tile/wall */ "./src/tile/wall.ts");
+const IdGenerator_1 = __webpack_require__(/*! ../globalStateManager/IdGenerator */ "./src/globalStateManager/IdGenerator.ts");
 const dropTable_1 = __webpack_require__(/*! ../item/dropTable */ "./src/item/dropTable.ts");
 const weapon_1 = __webpack_require__(/*! ../item/weapon/weapon */ "./src/item/weapon/weapon.ts");
 const enemyShield_1 = __webpack_require__(/*! ../projectile/enemyShield */ "./src/projectile/enemyShield.ts");
@@ -10170,6 +10171,7 @@ class Entity extends drawable_1.Drawable {
             const tileExists = this.room.roomArray[x] && this.room.roomArray[x][y] !== undefined;
             return xInBounds && yInBounds && tileExists;
         };
+        this.globalId = IdGenerator_1.IdGenerator.generate("EN");
         // Check if we're in cloning mode
         const isCloning = this.constructor.__isCloning;
         // Set cloned status immediately if we're cloning
@@ -12182,6 +12184,7 @@ const cameraAnimation_1 = __webpack_require__(/*! ./game/cameraAnimation */ "./s
 const tips_1 = __webpack_require__(/*! ./tips */ "./src/tips.ts");
 const gameplaySettings_1 = __webpack_require__(/*! ./game/gameplaySettings */ "./src/game/gameplaySettings.ts");
 const random_1 = __webpack_require__(/*! ./utility/random */ "./src/utility/random.ts");
+const IdGenerator_1 = __webpack_require__(/*! ./globalStateManager/IdGenerator */ "./src/globalStateManager/IdGenerator.ts");
 var LevelState;
 (function (LevelState) {
     LevelState[LevelState["IN_LEVEL"] = 0] = "IN_LEVEL";
@@ -13362,6 +13365,7 @@ class Game {
                 this.pushMessage("Game resumed");
             }
         };
+        this.globalId = IdGenerator_1.IdGenerator.generate("G");
         window.addEventListener("load", () => {
             let canvas = document.getElementById("gameCanvas");
             Game.ctx = canvas.getContext("2d", {
@@ -16209,6 +16213,72 @@ exports.TextBox = TextBox;
 
 /***/ }),
 
+/***/ "./src/globalStateManager/IdGenerator.ts":
+/*!***********************************************!*\
+  !*** ./src/globalStateManager/IdGenerator.ts ***!
+  \***********************************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.IdGenerator = void 0;
+/**
+ * Global, monotonic ID generator.
+ * ------------------------------------------------------------------
+ * • Uses a 64-bit counter encoded in base-36 for compact, url-safe IDs.
+ * • Optional prefix lets you create type hints: "IT-abc" for items,
+ *   "EN-def" for entities, etc.  All prefixes still share one namespace.
+ * • Keeps an in-memory registry so any accidental duplication throws
+ *   immediately—very useful during integration and debugging.
+ * ------------------------------------------------------------------
+ */
+class IdGenerator {
+    /**
+     * Generate a fresh globally-unique ID.
+     * @param prefix Optional type prefix, e.g. "IT" for Item.
+     */
+    static generate(prefix = "") {
+        let id;
+        // Loop is almost always single-pass; guarantees collision-free result.
+        do {
+            const raw = (this._next++).toString(36); // base-36 for brevity
+            id = prefix ? `${prefix}-${raw}` : raw;
+        } while (this._registry.has(id));
+        this._registry.add(id);
+        return id;
+    }
+    /**
+     * Reserve an existing ID during deserialization.
+     * Throws if that ID is already in use for this session.
+     */
+    static reserve(existingId) {
+        if (this._registry.has(existingId)) {
+            throw new Error(`Duplicate ID detected while reserving: ${existingId}`);
+        }
+        this._registry.add(existingId);
+    }
+    /** Quick check: has the ID been claimed already? */
+    static isReserved(id) {
+        return this._registry.has(id);
+    }
+    /**
+     * Reset generator and registry—intended only for automated tests.
+     */
+    static resetForTest() {
+        this._next = BigInt(1);
+        this._registry.clear();
+    }
+}
+exports.IdGenerator = IdGenerator;
+/** Next numeric value to assign (BigInt for 64-bit range). */
+IdGenerator._next = BigInt(1);
+/** Registry of every ID produced or reserved this session. */
+IdGenerator._registry = new Set();
+
+
+/***/ }),
+
 /***/ "./src/gui/guiButton.ts":
 /*!******************************!*\
   !*** ./src/gui/guiButton.ts ***!
@@ -17648,6 +17718,7 @@ const pickaxe_1 = __webpack_require__(/*! ../item/tool/pickaxe */ "./src/item/to
 const menu_1 = __webpack_require__(/*! ../gui/menu */ "./src/gui/menu.ts");
 const xpCounter_1 = __webpack_require__(/*! ../gui/xpCounter */ "./src/gui/xpCounter.ts");
 const fishingRod_1 = __webpack_require__(/*! ../item/tool/fishingRod */ "./src/item/tool/fishingRod.ts");
+const IdGenerator_1 = __webpack_require__(/*! ../globalStateManager/IdGenerator */ "./src/globalStateManager/IdGenerator.ts");
 let OPEN_TIME = 100; // milliseconds
 // Dark gray color used for the background of inventory slots
 let FILL_COLOR = "#5a595b";
@@ -18683,6 +18754,7 @@ class Inventory {
             }
             this.grabbedItem = null;
         };
+        this.globalId = IdGenerator_1.IdGenerator.generate("INV");
         this.game = game;
         this.player = player;
         this.buttonX =
@@ -19461,6 +19533,7 @@ const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts"
 const drawable_1 = __webpack_require__(/*! ../drawable/drawable */ "./src/drawable/drawable.ts");
 const utils_1 = __webpack_require__(/*! ../utility/utils */ "./src/utility/utils.ts");
 const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
+const IdGenerator_1 = __webpack_require__(/*! ../globalStateManager/IdGenerator */ "./src/globalStateManager/IdGenerator.ts");
 // Item class extends Drawable class and represents an item in the game
 class Item extends drawable_1.Drawable {
     // Constructor for the Item class
@@ -19669,6 +19742,7 @@ class Item extends drawable_1.Drawable {
                 game_1.Game.ctx.fillStyle = "white";
             }
         };
+        this.globalId = IdGenerator_1.IdGenerator.generate("IT");
         // Initialize properties
         this.level = level;
         this.x = x;
@@ -26481,6 +26555,7 @@ const playerMovement_1 = __webpack_require__(/*! ./playerMovement */ "./src/play
 const playerRenderer_1 = __webpack_require__(/*! ./playerRenderer */ "./src/player/playerRenderer.ts");
 const upLadder_1 = __webpack_require__(/*! ../tile/upLadder */ "./src/tile/upLadder.ts");
 const downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/downLadder.ts");
+const IdGenerator_1 = __webpack_require__(/*! ../globalStateManager/IdGenerator */ "./src/globalStateManager/IdGenerator.ts");
 var PlayerDirection;
 (function (PlayerDirection) {
     PlayerDirection[PlayerDirection["DOWN"] = 0] = "DOWN";
@@ -27110,6 +27185,7 @@ class Player extends drawable_1.Drawable {
         this.drawGUI = (delta) => {
             this.renderer.drawGUI(delta);
         };
+        this.globalId = IdGenerator_1.IdGenerator.generate("P");
         this.game = game;
         this.levelID = 0;
         this.x = x;
@@ -29011,6 +29087,7 @@ exports.PlayerFireball = PlayerFireball;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Projectile = void 0;
 const drawable_1 = __webpack_require__(/*! ../drawable/drawable */ "./src/drawable/drawable.ts");
+const IdGenerator_1 = __webpack_require__(/*! ../globalStateManager/IdGenerator */ "./src/globalStateManager/IdGenerator.ts");
 class Projectile extends drawable_1.Drawable {
     constructor(parent, x, y) {
         super();
@@ -29019,6 +29096,7 @@ class Projectile extends drawable_1.Drawable {
         this.tick = () => { };
         this.draw = (delta) => { };
         this.drawTopLayer = (delta) => { };
+        this.globalId = IdGenerator_1.IdGenerator.generate("PROJ");
         this.x = x;
         this.y = y;
         this.dead = false;
@@ -29414,6 +29492,7 @@ const gameplaySettings_1 = __webpack_require__(/*! ../game/gameplaySettings */ "
 const webglBlurRenderer_1 = __webpack_require__(/*! ../gui/webglBlurRenderer */ "./src/gui/webglBlurRenderer.ts");
 const utils_1 = __webpack_require__(/*! ../utility/utils */ "./src/utility/utils.ts");
 const tree_1 = __webpack_require__(/*! ../entity/object/tree */ "./src/entity/object/tree.ts");
+const IdGenerator_1 = __webpack_require__(/*! ../globalStateManager/IdGenerator */ "./src/globalStateManager/IdGenerator.ts");
 // #endregion
 // #region Enums & Interfaces
 /**
@@ -31229,6 +31308,7 @@ class Room {
                 }
             }
         };
+        this.globalId = IdGenerator_1.IdGenerator.generate("R");
         this.game = game;
         this.roomX = x; //Math.floor(- this.width / 2);
         this.roomY = y; //Math.floor(- this.height / 2);
@@ -35105,6 +35185,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Tile = exports.SkinType = void 0;
 const drawable_1 = __webpack_require__(/*! ../drawable/drawable */ "./src/drawable/drawable.ts");
 const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
+const IdGenerator_1 = __webpack_require__(/*! ../globalStateManager/IdGenerator */ "./src/globalStateManager/IdGenerator.ts");
 var SkinType;
 (function (SkinType) {
     SkinType[SkinType["DUNGEON"] = 0] = "DUNGEON";
@@ -35149,6 +35230,7 @@ class Tile extends drawable_1.Drawable {
         this.drawUnderPlayer = (delta) => { };
         this.drawAbovePlayer = (delta) => { };
         this.drawAboveShading = (delta) => { };
+        this.globalId = IdGenerator_1.IdGenerator.generate("T");
         this.skin = room.skin;
         this.room = room;
         this.x = x;

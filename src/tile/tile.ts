@@ -3,6 +3,7 @@ import { Player } from "../player/player";
 import { Entity } from "../entity/entity";
 import { Drawable } from "../drawable/drawable";
 import { GameConstants } from "../game/gameConstants";
+import { IdGenerator } from "../globalStateManager/IdGenerator";
 
 export enum SkinType {
   DUNGEON = 0,
@@ -14,6 +15,7 @@ export enum SkinType {
 }
 
 export abstract class Tile extends Drawable {
+  globalId: string;
   x: number;
   y: number;
   room: Room;
@@ -24,6 +26,7 @@ export abstract class Tile extends Drawable {
 
   constructor(room: Room, x: number, y: number) {
     super();
+    this.globalId = IdGenerator.generate("T");
     this.skin = room.skin;
     this.room = room;
     this.x = x;

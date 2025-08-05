@@ -5,8 +5,10 @@ import { HitWarning } from "../drawable/hitWarning";
 import { Direction } from "../game";
 import { LightSource } from "../lighting/lightSource";
 import { WizardEnemy } from "../entity/enemy/wizardEnemy";
+import { IdGenerator } from "../globalStateManager/IdGenerator";
 
 export class Projectile extends Drawable {
+  globalId: string;
   x: number;
   y: number;
   dead: boolean;
@@ -17,6 +19,7 @@ export class Projectile extends Drawable {
 
   constructor(parent: Entity | Player, x: number, y: number) {
     super();
+    this.globalId = IdGenerator.generate("PROJ");
 
     this.x = x;
     this.y = y;

@@ -28,6 +28,7 @@ import { PlayerRenderer } from "./playerRenderer";
 import { Wall } from "../tile/wall";
 import { UpLadder } from "../tile/upLadder";
 import { DownLadder } from "../tile/downLadder";
+import { IdGenerator } from "../globalStateManager/IdGenerator";
 
 export enum PlayerDirection {
   DOWN,
@@ -42,6 +43,7 @@ enum DrawDirection {
 }
 
 export class Player extends Drawable {
+  globalId: string;
   id: string;
   x: number;
   y: number;
@@ -102,6 +104,7 @@ export class Player extends Drawable {
   bestiary: Bestiary = null;
   constructor(game: Game, x: number, y: number, isLocalPlayer: boolean) {
     super();
+    this.globalId = IdGenerator.generate("P");
 
     this.game = game;
 

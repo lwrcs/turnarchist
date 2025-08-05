@@ -16,6 +16,7 @@ import { MuteButton } from "../gui/muteButton";
 import { Menu } from "../gui/menu";
 import { XPCounter } from "../gui/xpCounter";
 import { FishingRod } from "../item/tool/fishingRod";
+import { IdGenerator } from "../globalStateManager/IdGenerator";
 
 let OPEN_TIME = 100; // milliseconds
 // Dark gray color used for the background of inventory slots
@@ -28,6 +29,7 @@ let EQUIP_COLOR = "#85a8e6";
 let FULL_OUTLINE = "white";
 
 export class Inventory {
+  globalId: string;
   player: Player;
   items: Array<Item | null>;
   rows = 4;
@@ -66,6 +68,7 @@ export class Inventory {
   private buttonX: number;
 
   constructor(game: Game, player: Player) {
+    this.globalId = IdGenerator.generate("INV");
     this.game = game;
     this.player = player;
 

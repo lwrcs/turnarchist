@@ -18,6 +18,7 @@ import { DownLadder } from "../tile/downLadder";
 import { Door } from "../tile/door";
 import { Wall } from "../tile/wall";
 import { Lighting } from "../lighting/lighting";
+import { IdGenerator } from "../globalStateManager/IdGenerator";
 
 import { DropTable } from "../item/dropTable";
 import { Weapon } from "../item/weapon/weapon";
@@ -61,6 +62,7 @@ export interface bloomData {
 }
 
 export class Entity extends Drawable {
+  globalId: string;
   room: Room;
   x: number;
   y: number;
@@ -150,6 +152,7 @@ export class Entity extends Drawable {
 
   constructor(room: Room, game: Game, x: number, y: number) {
     super();
+    this.globalId = IdGenerator.generate("EN");
 
     // Check if we're in cloning mode
     const isCloning = (this.constructor as any).__isCloning;

@@ -93,6 +93,7 @@ import { Sword } from "../item/weapon/sword";
 import { WebGLBlurRenderer } from "../gui/webglBlurRenderer";
 import { Utils } from "../utility/utils";
 import { Tree } from "../entity/object/tree";
+import { IdGenerator } from "../globalStateManager/IdGenerator";
 
 // #endregion
 
@@ -234,6 +235,7 @@ interface BlurCache {
 }
 
 export class Room {
+  globalId: string;
   roomArray: Tile[][];
 
   softVis: number[][]; // this is the one we use for drawing (includes smoothing)
@@ -328,6 +330,7 @@ export class Room {
     rand = Random.rand,
     envType: EnvType,
   ) {
+    this.globalId = IdGenerator.generate("R");
     this.game = game;
     this.roomX = x; //Math.floor(- this.width / 2);
     this.roomY = y; //Math.floor(- this.height / 2);

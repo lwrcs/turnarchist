@@ -25,6 +25,7 @@ import { CameraAnimation } from "./game/cameraAnimation";
 import { Tips } from "./tips";
 import { GameplaySettings } from "./game/gameplaySettings";
 import { Random } from "./utility/random";
+import { IdGenerator } from "./globalStateManager/IdGenerator";
 
 export enum LevelState {
   IN_LEVEL,
@@ -135,6 +136,7 @@ const times = [];
 let fps = 60;
 
 export class Game {
+  globalId: string;
   static ctx: CanvasRenderingContext2D;
   static shade_canvases: Record<string, HTMLCanvasElement>;
   prevLevel: Room; // for transitions
@@ -236,6 +238,8 @@ export class Game {
   private savedGameState: GameState | null = null;
 
   constructor() {
+    this.globalId = IdGenerator.generate("G");
+
     window.addEventListener("load", () => {
       let canvas = document.getElementById("gameCanvas");
       Game.ctx = (canvas as HTMLCanvasElement).getContext("2d", {

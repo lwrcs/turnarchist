@@ -7,10 +7,12 @@ import { Drawable } from "../drawable/drawable";
 import { Utils } from "../utility/utils";
 import { ItemGroup } from "./itemGroup";
 import { Random } from "../utility/random";
+import { IdGenerator } from "../globalStateManager/IdGenerator";
 
 // Item class extends Drawable class and represents an item in the game
 export class Item extends Drawable {
   // Item properties
+  globalId: string;
   x: number; // x-coordinate of the item
   y: number; // y-coordinate of the item
   w: number; // width of the item
@@ -46,6 +48,7 @@ export class Item extends Drawable {
   // Constructor for the Item class
   constructor(level: Room, x: number, y: number) {
     super();
+    this.globalId = IdGenerator.generate("IT");
 
     // Initialize properties
     this.level = level;
