@@ -94,6 +94,7 @@ import { WebGLBlurRenderer } from "../gui/webglBlurRenderer";
 import { Utils } from "../utility/utils";
 import { Tree } from "../entity/object/tree";
 import { IdGenerator } from "../globalStateManager/IdGenerator";
+import { GlobalStateManager } from "../globalStateManager/GlobalStateManager"; // NEW
 
 // #endregion
 
@@ -331,6 +332,8 @@ export class Room {
     envType: EnvType,
   ) {
     this.globalId = IdGenerator.generate("R");
+    GlobalStateManager.instance.registerRoom(this); // NEW
+
     this.game = game;
     this.roomX = x; //Math.floor(- this.width / 2);
     this.roomY = y; //Math.floor(- this.height / 2);

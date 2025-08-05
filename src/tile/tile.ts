@@ -4,6 +4,8 @@ import { Entity } from "../entity/entity";
 import { Drawable } from "../drawable/drawable";
 import { GameConstants } from "../game/gameConstants";
 import { IdGenerator } from "../globalStateManager/IdGenerator";
+import { GlobalStateManager } from "../globalStateManager/GlobalStateManager";
+import { TypeRegistry } from "../globalStateManager/TypeRegistry";
 
 export enum SkinType {
   DUNGEON = 0,
@@ -15,6 +17,7 @@ export enum SkinType {
 }
 
 export abstract class Tile extends Drawable {
+  static readonly SAVE_KEY = "Tile";
   globalId: string;
   x: number;
   y: number;
@@ -27,6 +30,7 @@ export abstract class Tile extends Drawable {
   constructor(room: Room, x: number, y: number) {
     super();
     this.globalId = IdGenerator.generate("T");
+    GlobalStateManager.instance.registerTile(this);
     this.skin = room.skin;
     this.room = room;
     this.x = x;
@@ -68,4 +72,8 @@ export abstract class Tile extends Drawable {
   drawUnderPlayer = (delta: number) => {};
   drawAbovePlayer = (delta: number) => {};
   drawAboveShading = (delta: number) => {};
+
+  protected serializeExtra(): any | undefined {
+    return undefined;
+  }
 }

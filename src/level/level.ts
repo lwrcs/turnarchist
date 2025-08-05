@@ -14,6 +14,8 @@ import { DownLadder } from "../tile/downLadder";
 import { Key } from "../item/key";
 import { Lockable } from "../tile/lockable";
 import { Random } from "../utility/random";
+import { IdGenerator } from "../globalStateManager/IdGenerator";
+import { GlobalStateManager } from "../globalStateManager/GlobalStateManager";
 
 export interface EnemyParameters {
   enemyTables: Record<number, number[]>;
@@ -61,6 +63,7 @@ interface entitySpawnData {
 */
 
 export class Level {
+  globalId: string;
   depth: number;
   levelArray: (Tile | null)[][];
   width: number;
@@ -84,6 +87,8 @@ export class Level {
     mapGroup: number,
     env: EnvType,
   ) {
+    this.globalId = IdGenerator.generate("L");
+    GlobalStateManager.instance.registerLevel(this);
     this.game = game;
     this.depth = depth;
     this.width = width;

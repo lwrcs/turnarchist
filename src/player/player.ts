@@ -29,6 +29,7 @@ import { Wall } from "../tile/wall";
 import { UpLadder } from "../tile/upLadder";
 import { DownLadder } from "../tile/downLadder";
 import { IdGenerator } from "../globalStateManager/IdGenerator";
+import { GlobalStateManager } from "../globalStateManager/GlobalStateManager";
 
 export enum PlayerDirection {
   DOWN,
@@ -105,6 +106,7 @@ export class Player extends Drawable {
   constructor(game: Game, x: number, y: number, isLocalPlayer: boolean) {
     super();
     this.globalId = IdGenerator.generate("P");
+    GlobalStateManager.instance.registerPlayer(this);
 
     this.game = game;
 

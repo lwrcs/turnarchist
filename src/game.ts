@@ -26,6 +26,7 @@ import { Tips } from "./tips";
 import { GameplaySettings } from "./game/gameplaySettings";
 import { Random } from "./utility/random";
 import { IdGenerator } from "./globalStateManager/IdGenerator";
+import { GlobalStateManager } from "./globalStateManager/GlobalStateManager"; // NEW
 
 export enum LevelState {
   IN_LEVEL,
@@ -239,6 +240,7 @@ export class Game {
 
   constructor() {
     this.globalId = IdGenerator.generate("G");
+    GlobalStateManager.instance.registerGame(this); // NEW
 
     window.addEventListener("load", () => {
       let canvas = document.getElementById("gameCanvas");
