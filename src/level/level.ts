@@ -83,6 +83,7 @@ export class Level {
     isMainPath: boolean = true,
     mapGroup: number,
     env: EnvType,
+    skipPopulation: boolean = false,
   ) {
     this.game = game;
     this.depth = depth;
@@ -93,11 +94,12 @@ export class Level {
     this.initializeLevelArray();
     this.mapGroup = mapGroup;
     this.environment = new Environment(env);
-
-    this.populator = new Populator(this);
+    if (!skipPopulation) {
+      this.populator = new Populator(this);
+    }
 
     this.enemyParameters = this.getEnemyParameters();
-    let mainPath = this.isMainPath ? "main" : "side";
+    //let mainPath = this.isMainPath ? "main" : "side";
   }
   getDownLadder(room: Room): DownLadder {
     if (!room || room.type !== RoomType.ROPEHOLE) {
@@ -124,10 +126,6 @@ export class Level {
   }
 
   distributeKeys() {
-    console.log(
-      "Starting distributeKeys - searching entire level array for down ladders",
-    );
-
     // Search the entire level array for down ladders
     let downLadder: DownLadder | null = null;
     for (let room of this.rooms) {
@@ -149,7 +147,6 @@ export class Level {
       return;
     }
 
-    console.log("Down ladder found, proceeding with key distribution");
     this.distributeKey(downLadder);
   }
 
@@ -167,15 +164,12 @@ export class Level {
       disableRoom: downLadder.room,
     };
 
-    console.log(`Found ${rooms.length} eligible rooms for key placement`);
-
     if (rooms.length === 0) {
       console.error("No eligible rooms found for key placement");
       return;
     }
 
     const randomRoom = rooms[Math.floor(Random.rand() * rooms.length)];
-    console.log(`Selected room ${randomRoom.id} for key placement`);
 
     let emptyTiles = randomRoom.getEmptyTiles();
     if (disableCoords.disableRoom === randomRoom) {
@@ -183,8 +177,6 @@ export class Level {
         (t) => t.x !== disableCoords.disableX && t.y !== disableCoords.disableY,
       );
     }
-
-    console.log(`Room has ${emptyTiles.length} empty tiles`);
 
     if (emptyTiles.length === 0) {
       console.error(
@@ -196,20 +188,10 @@ export class Level {
     const randomIndex = Math.floor(Random.rand() * emptyTiles.length);
     const randomTile = emptyTiles[randomIndex];
 
-    console.log(
-      `Placing key at tile position (${randomTile.x}, ${randomTile.y})`,
-    );
-
     const key = new Key(randomRoom, randomTile.x, randomTile.y);
     downLadder.lockable.setKey(key);
 
     randomRoom.items.push(key);
-    console.log(
-      "key.doorID",
-      key.doorID,
-      "downLadder.keyID",
-      downLadder.lockable.keyID,
-    );
     console.log("Key successfully distributed and linked to down ladder");
     //this.game.player.inventory.addItem(key);
   }

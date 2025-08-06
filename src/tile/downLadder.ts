@@ -46,12 +46,6 @@ export class DownLadder extends Passageway {
       isTopDoor: false,
     });
 
-    if (this.lockable.isLocked()) {
-      console.log("adding key to downladder");
-
-      this.game.levels[this.depth].distributeKey(this);
-    }
-
     this.addLightSource();
   }
 

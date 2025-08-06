@@ -195,7 +195,7 @@ export class Game {
   private startScreenAlpha = 1;
   static delta: number;
   currentDepth: number;
-  previousDepth: number;
+  //previousDepth: number;
   private ellipsisFrame: number = 0;
   private ellipsisStartTime: number = 0;
   cameraAnimation: CameraAnimation;
@@ -436,7 +436,7 @@ export class Game {
   }
 
   updateDepth = (depth: number) => {
-    this.previousDepth = this.currentDepth;
+    //this.previousDepth = this.currentDepth;
     this.currentDepth = depth;
     this.players[this.localPlayerID].depth = depth;
   };
@@ -452,7 +452,7 @@ export class Game {
     this.player = this.players[this.localPlayerID];
   };
 
-  newGame = () => {
+  newGame = (seed?: number) => {
     // Clear all input listeners to prevent duplicates from previous game instances
     Input.mouseDownListeners.length = 0;
     Input.mouseUpListeners.length = 0;
@@ -467,8 +467,8 @@ export class Game {
     this.encounteredEnemies = [];
     this.levels = [];
     //gs = new GameState();
-    gs.seed = (Math.random() * 4294967296) >>> 0;
-    gs.randomState = (Math.random() * 4294967296) >>> 0;
+    gs.seed = seed ?? (Math.random() * 4294967296) >>> 0;
+    gs.randomState = seed ?? (Math.random() * 4294967296) >>> 0;
     loadGameState(this, [this.localPlayerID], gs, true);
 
     this.levelState = LevelState.LEVEL_GENERATION;
@@ -778,17 +778,49 @@ export class Game {
     this.chat.push(new ChatMessage(message));
   };
 
+  // Add this helper function before the commandHandler
+  private convertSeedToNumber = (seed: string): number => {
+    // If it's already a number, parse and return it
+    if (/^\d+$/.test(seed)) {
+      return parseInt(seed);
+    }
+
+    // Convert letters to numbers using character codes
+    let hash = 0;
+    for (let i = 0; i < seed.length; i++) {
+      const char = seed.charCodeAt(i);
+      hash = (hash << 5) - hash + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+
+    // Ensure positive number
+    return Math.abs(hash);
+  };
+
   commandHandler = (command: string): void => {
     const player = this.room.game.players[0];
     command = command.toLowerCase();
     let enabled = "";
+
+    // Handle "new" command with optional seed parameter
+    if (command.startsWith("new")) {
+      if (command.startsWith("new ")) {
+        const seedInput = command.slice(4).trim();
+        const seedNumber = this.convertSeedToNumber(seedInput);
+        this.pushMessage(
+          `Starting new game with seed: ${seedInput} (${seedNumber})`,
+        );
+        this.newGame(seedNumber);
+      } else if (command === "new") {
+        this.newGame();
+      }
+      return;
+    }
+
     switch (command) {
       case "devmode":
         GameConstants.DEVELOPER_MODE = !GameConstants.DEVELOPER_MODE;
         console.log(`Developer mode is now ${GameConstants.DEVELOPER_MODE}`);
-        break;
-      case "new":
-        this.newGame();
         break;
       case "dev":
         GameConstants.DEVELOPER_MODE = !GameConstants.DEVELOPER_MODE;

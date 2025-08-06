@@ -76,6 +76,7 @@ export class LevelGenerator {
     isMainPath: boolean = true,
     mapGroup: number,
     envType: EnvType,
+    skipPopulation: boolean = false,
   ) => {
     let newLevel = new Level(
       this.game,
@@ -85,6 +86,7 @@ export class LevelGenerator {
       isMainPath,
       mapGroup,
       envType,
+      skipPopulation,
     );
     return newLevel;
   };
@@ -145,6 +147,7 @@ export class LevelGenerator {
     isSidePath = false,
     callback: (linkedRoom: Room) => void,
     environment: EnvType = EnvType.DUNGEON,
+    skipPopulation = false, // Add this parameter
   ) => {
     // Initialize components with game instance
     if (!this.partitionGenerator) {
@@ -243,7 +246,13 @@ export class LevelGenerator {
     // }
 
     // Get the levels based on the partitions
-    let newLevel = this.createLevel(depth, !isSidePath, mapGroup, envType);
+    let newLevel = this.createLevel(
+      depth,
+      !isSidePath,
+      mapGroup,
+      envType,
+      skipPopulation,
+    );
 
     if (isSidePath) {
       // create Level object ONLY to prepare rooms, but
@@ -255,7 +264,9 @@ export class LevelGenerator {
     let rooms = this.getRooms(partitions, depth, mapGroup, envType);
 
     newLevel.setRooms(rooms);
-    newLevel.populator.populateRooms();
+    if (!skipPopulation) {
+      newLevel.populator.populateRooms();
+    }
     newLevel.setRoomSkins();
     //newLevel.loadRoomsIntoLevelArray();
 
@@ -268,7 +279,7 @@ export class LevelGenerator {
     if (!isSidePath) this.currentFloorFirstLevelID = this.game.rooms.length;
 
     // Add the new levels to the game rooms
-    this.game.rooms = rooms;
+    this.game.rooms.push(...rooms);
 
     // Generate the rope hole if it exists
     for (let room of rooms) {
@@ -298,10 +309,17 @@ export class LevelGenerator {
     );
   };
 
-  generateFirstNFloors = async (game, numFloors) => {
-    await this.generate(game, 0, false, () => {});
+  generateFirstNFloors = async (game, numFloors, skipPopulation = false) => {
+    await this.generate(
+      game,
+      0,
+      false,
+      () => {},
+      EnvType.DUNGEON,
+      skipPopulation,
+    );
     for (let i = 0; i < numFloors; i++) {
-      let foundRoom = this.game.rooms
+      let foundRoom = game.rooms
         .slice()
         .reverse()
         .find((room) => room.type === RoomType.DOWNLADDER);

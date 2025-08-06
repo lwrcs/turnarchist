@@ -30,7 +30,7 @@ export class DownladderMaker extends Entity {
     if (this.room.depth > 1) {
       environment = Random.rand() < 0.5 ? EnvType.FOREST : EnvType.CAVE;
     }
-    const newTile = new DownLadder(
+    let newTile = new DownLadder(
       this.room,
       this.game,
       this.x,
@@ -39,6 +39,12 @@ export class DownladderMaker extends Entity {
       environment,
       LockType.NONE,
     );
+
+    if (newTile.lockable.isLocked()) {
+      console.log("adding key to downladder");
+
+      this.game.levels[this.room.depth].distributeKey(newTile);
+    }
     this.room.roomArray[this.x][this.y] = newTile;
   };
 

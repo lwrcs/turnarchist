@@ -3577,7 +3577,11 @@ class DownladderMaker extends entity_1.Entity {
             if (this.room.depth > 1) {
                 environment = random_1.Random.rand() < 0.5 ? environmentTypes_1.EnvType.FOREST : environmentTypes_1.EnvType.CAVE;
             }
-            const newTile = new downLadder_1.DownLadder(this.room, this.game, this.x, this.y, true, environment, lockable_1.LockType.NONE);
+            let newTile = new downLadder_1.DownLadder(this.room, this.game, this.x, this.y, true, environment, lockable_1.LockType.NONE);
+            if (newTile.lockable.isLocked()) {
+                console.log("adding key to downladder");
+                this.game.levels[this.room.depth].distributeKey(newTile);
+            }
             this.room.roomArray[this.x][this.y] = newTile;
         };
         this.draw = (delta) => { };
@@ -12277,6 +12281,7 @@ class Game {
         this.localPlayerID = "localplayer";
         this.loginMessage = "";
         this.startScreenAlpha = 1;
+        //previousDepth: number;
         this.ellipsisFrame = 0;
         this.ellipsisStartTime = 0;
         this.justTransitioned = false;
@@ -12290,7 +12295,7 @@ class Game {
         this.lastChatWidth = 0;
         this.savedGameState = null;
         this.updateDepth = (depth) => {
-            this.previousDepth = this.currentDepth;
+            //this.previousDepth = this.currentDepth;
             this.currentDepth = depth;
             this.players[this.localPlayerID].depth = depth;
         };
@@ -12304,7 +12309,7 @@ class Game {
         this.setPlayer = () => {
             this.player = this.players[this.localPlayerID];
         };
-        this.newGame = () => {
+        this.newGame = (seed) => {
             // Clear all input listeners to prevent duplicates from previous game instances
             input_1.Input.mouseDownListeners.length = 0;
             input_1.Input.mouseUpListeners.length = 0;
@@ -12318,8 +12323,8 @@ class Game {
             this.encounteredEnemies = [];
             this.levels = [];
             //gs = new GameState();
-            exports.gs.seed = (Math.random() * 4294967296) >>> 0;
-            exports.gs.randomState = (Math.random() * 4294967296) >>> 0;
+            exports.gs.seed = seed ?? (Math.random() * 4294967296) >>> 0;
+            exports.gs.randomState = seed ?? (Math.random() * 4294967296) >>> 0;
             (0, gameState_1.loadGameState)(this, [this.localPlayerID], exports.gs, true);
             this.levelState = LevelState.LEVEL_GENERATION;
         };
@@ -12569,17 +12574,43 @@ class Game {
         this.pushMessage = (message) => {
             this.chat.push(new ChatMessage(message));
         };
+        // Add this helper function before the commandHandler
+        this.convertSeedToNumber = (seed) => {
+            // If it's already a number, parse and return it
+            if (/^\d+$/.test(seed)) {
+                return parseInt(seed);
+            }
+            // Convert letters to numbers using character codes
+            let hash = 0;
+            for (let i = 0; i < seed.length; i++) {
+                const char = seed.charCodeAt(i);
+                hash = (hash << 5) - hash + char;
+                hash = hash & hash; // Convert to 32-bit integer
+            }
+            // Ensure positive number
+            return Math.abs(hash);
+        };
         this.commandHandler = (command) => {
             const player = this.room.game.players[0];
             command = command.toLowerCase();
             let enabled = "";
+            // Handle "new" command with optional seed parameter
+            if (command.startsWith("new")) {
+                if (command.startsWith("new ")) {
+                    const seedInput = command.slice(4).trim();
+                    const seedNumber = this.convertSeedToNumber(seedInput);
+                    this.pushMessage(`Starting new game with seed: ${seedInput} (${seedNumber})`);
+                    this.newGame(seedNumber);
+                }
+                else if (command === "new") {
+                    this.newGame();
+                }
+                return;
+            }
             switch (command) {
                 case "devmode":
                     gameConstants_1.GameConstants.DEVELOPER_MODE = !gameConstants_1.GameConstants.DEVELOPER_MODE;
                     console.log(`Developer mode is now ${gameConstants_1.GameConstants.DEVELOPER_MODE}`);
-                    break;
-                case "new":
-                    this.newGame();
                     break;
                 case "dev":
                     gameConstants_1.GameConstants.DEVELOPER_MODE = !gameConstants_1.GameConstants.DEVELOPER_MODE;
@@ -14254,8 +14285,10 @@ const dagger_1 = __webpack_require__(/*! ../item/weapon/dagger */ "./src/item/we
 const dualdagger_1 = __webpack_require__(/*! ../item/weapon/dualdagger */ "./src/item/weapon/dualdagger.ts");
 const shotgun_1 = __webpack_require__(/*! ../item/weapon/shotgun */ "./src/item/weapon/shotgun.ts");
 const spear_1 = __webpack_require__(/*! ../item/weapon/spear */ "./src/item/weapon/spear.ts");
+const weapon_1 = __webpack_require__(/*! ../item/weapon/weapon */ "./src/item/weapon/weapon.ts");
 const pickaxe_1 = __webpack_require__(/*! ../item/tool/pickaxe */ "./src/item/tool/pickaxe.ts");
 const backpack_1 = __webpack_require__(/*! ../item/backpack */ "./src/item/backpack.ts");
+const mushrooms_1 = __webpack_require__(/*! ../entity/object/mushrooms */ "./src/entity/object/mushrooms.ts");
 const pumpkin_1 = __webpack_require__(/*! ../entity/object/pumpkin */ "./src/entity/object/pumpkin.ts");
 const block_1 = __webpack_require__(/*! ../entity/object/block */ "./src/entity/object/block.ts");
 const energyWizard_1 = __webpack_require__(/*! ../entity/enemy/energyWizard */ "./src/entity/enemy/energyWizard.ts");
@@ -14419,6 +14452,7 @@ var EnemyType;
     EnemyType[EnemyType["BLOCK"] = 41] = "BLOCK";
     EnemyType[EnemyType["DOWNLADDER_MAKER"] = 42] = "DOWNLADDER_MAKER";
     EnemyType[EnemyType["ROCK"] = 43] = "ROCK";
+    EnemyType[EnemyType["MUSHROOMS"] = 44] = "MUSHROOMS";
 })(EnemyType = exports.EnemyType || (exports.EnemyType = {}));
 class EnemyState {
     constructor(enemy, game) {
@@ -14610,6 +14644,8 @@ class EnemyState {
             this.type = EnemyType.DOWNLADDER_MAKER;
         if (enemy instanceof rockResource_1.Rock)
             this.type = EnemyType.ROCK;
+        if (enemy instanceof mushrooms_1.Mushrooms)
+            this.type = EnemyType.MUSHROOMS;
     }
 }
 exports.EnemyState = EnemyState;
@@ -14779,6 +14815,8 @@ let loadEnemy = (es, game) => {
         enemy = new downladderMaker_1.DownladderMaker(room, game, es.x, es.y);
     if (es.type === EnemyType.ROCK)
         enemy = new rockResource_1.Rock(room, game, es.x, es.y);
+    if (es.type === EnemyType.MUSHROOMS)
+        enemy = new mushrooms_1.Mushrooms(room, game, es.x, es.y);
     if (!enemy) {
         console.error("Unknown enemy type:", es.type, "EnemyType enum value:", EnemyType[es.type], "Falling back to barrel");
         enemy = new barrel_1.Barrel(room, game, es.x, es.y);
@@ -15131,6 +15169,10 @@ let loadItem = (i, game, player) => {
         console.error("Unknown item type:", i.type, "ItemType enum value:", ItemType[i.type], "Falling back to coal");
         item = new coal_1.Coal(room, i.x, i.y);
     }
+    // ✅ FIX: For inventory items (room is null), set game reference manually
+    if (!room && item instanceof weapon_1.Weapon) {
+        item.game = game;
+    }
     if (i.equipped)
         item.equipped = true;
     if (item instanceof equippable_1.Equippable)
@@ -15153,18 +15195,34 @@ class InventoryState {
         this.coins = inventory.coins;
         this.selX = inventory.selX;
         this.selY = inventory.selY;
-        this.items = Array();
+        this.items = Array(inventory.cols * inventory.rows);
+        for (let idx = 0; idx < inventory.cols * inventory.rows; idx++) {
+            this.items[idx] = null;
+        }
         for (const item of inventory.items) {
-            // Filter out null items
             if (item) {
-                this.items.push(new ItemState(item, game));
+                this.items[inventory.items.indexOf(item)] = new ItemState(item, game);
             }
         }
     }
 }
 exports.InventoryState = InventoryState;
 let loadInventory = (inventory, i, game) => {
-    inventory.clear();
+    inventory.clear(); // keeps correct length
+    for (let idx = 0; idx < i.items.length; idx++) {
+        const itemState = i.items[idx];
+        if (itemState) {
+            const loadedItem = loadItem(itemState, game, inventory.player);
+            inventory.items[idx] = loadedItem;
+            if (loadedItem instanceof weapon_1.Weapon && inventory.weapon === null) {
+                loadedItem.toggleEquip();
+                inventory.weapon = loadedItem;
+            }
+        }
+        else {
+            inventory.items[idx] = null;
+        }
+    }
     inventory.isOpen = i.isOpen;
     inventory.cols = i.cols;
     inventory.rows = i.rows;
@@ -15172,16 +15230,6 @@ let loadInventory = (inventory, i, game) => {
     inventory.selY = i.selY;
     inventory.equipAnimAmount = i.equipAnimAmount.map((x) => x);
     inventory.coins = i.coins;
-    // Load items - make sure to maintain proper inventory structure
-    for (const itemState of i.items) {
-        if (itemState) {
-            // Additional null check
-            const loadedItem = loadItem(itemState, game, inventory.player);
-            if (loadedItem) {
-                inventory.items.push(loadedItem);
-            }
-        }
-    }
     // Set weapon reference after all items are loaded
     if (i.isWeaponEquipped && i.weaponI < inventory.items.length) {
         inventory.weapon = inventory.items[i.weaponI];
@@ -15270,130 +15318,408 @@ class GameState {
 }
 exports.GameState = GameState;
 const createGameState = (game) => {
-    let gs = new GameState();
-    gs.seed = game.levelgen.seed; // random state for generating levels
-    gs.randomState = random_1.Random.state; // current random state
-    gs.level = new LevelState(game.level);
-    for (const i in game.players)
-        gs.players[i] = new PlayerState(game.players[i], game);
-    for (const i in game.offlinePlayers) {
-        gs.offlinePlayers[i] = new PlayerState(game.offlinePlayers[i], game);
+    console.log("🔄 SAVE: Starting createGameState");
+    console.log("🔄 SAVE: Game object:", {
+        localPlayerID: game.localPlayerID,
+        levelgenSeed: game.levelgen?.seed,
+        levelDepth: game.level?.depth,
+        playersCount: Object.keys(game.players).length,
+        offlinePlayersCount: Object.keys(game.offlinePlayers).length,
+        roomsCount: game.rooms?.length,
+        randomState: random_1.Random.state,
+    });
+    try {
+        let gs = new GameState();
+        console.log("🔄 SAVE: Created empty GameState");
+        // Save basic game properties
+        gs.seed = game.levelgen.seed;
+        gs.randomState = random_1.Random.state;
+        console.log("🔄 SAVE: Set seed and random state:", {
+            seed: gs.seed,
+            randomState: gs.randomState,
+        });
+        // Save level state
+        if (game.level) {
+            gs.level = new LevelState(game.level);
+            console.log("🔄 SAVE: Created LevelState:", {
+                depth: gs.level.depth,
+                width: gs.level.width,
+                height: gs.level.height,
+                isMainPath: gs.level.isMainPath,
+                mapGroup: gs.level.mapGroup,
+                envType: gs.level.envType,
+            });
+        }
+        else {
+            console.warn("🔄 SAVE: No game.level found!");
+        }
+        // Save players
+        console.log("🔄 SAVE: Processing players...");
+        for (const i in game.players) {
+            try {
+                console.log(`🔄 SAVE: Processing player ${i}:`, {
+                    x: game.players[i].x,
+                    y: game.players[i].y,
+                    health: game.players[i].health,
+                    levelID: game.players[i].levelID,
+                    inventoryItemsCount: game.players[i].inventory?.items?.length || 0,
+                });
+                gs.players[i] = new PlayerState(game.players[i], game);
+                console.log(`✅ SAVE: Successfully saved player ${i}`);
+            }
+            catch (error) {
+                console.error(`❌ SAVE: Error saving player ${i}:`, error);
+                throw error;
+            }
+        }
+        // Save offline players
+        console.log("🔄 SAVE: Processing offline players...");
+        for (const i in game.offlinePlayers) {
+            try {
+                console.log(`🔄 SAVE: Processing offline player ${i}:`, {
+                    x: game.offlinePlayers[i].x,
+                    y: game.offlinePlayers[i].y,
+                    health: game.offlinePlayers[i].health,
+                    levelID: game.offlinePlayers[i].levelID,
+                });
+                gs.offlinePlayers[i] = new PlayerState(game.offlinePlayers[i], game);
+                console.log(`✅ SAVE: Successfully saved offline player ${i}`);
+            }
+            catch (error) {
+                console.error(`❌ SAVE: Error saving offline player ${i}:`, error);
+                throw error;
+            }
+        }
+        // Save rooms
+        console.log("🔄 SAVE: Processing rooms...");
+        for (let roomIndex = 0; roomIndex < game.rooms.length; roomIndex++) {
+            const room = game.rooms[roomIndex];
+            try {
+                console.log(`🔄 SAVE: Processing room ${roomIndex}:`, {
+                    entered: room.entered,
+                    active: room.active,
+                    entitiesCount: room.entities?.length || 0,
+                    itemsCount: room.items?.length || 0,
+                    projectilesCount: room.projectiles?.length || 0,
+                    hitwarningsCount: room.hitwarnings?.length || 0,
+                });
+                room.catchUp();
+                const roomState = new RoomState(room, game);
+                gs.rooms.push(roomState);
+                console.log(`✅ SAVE: Successfully saved room ${roomIndex}`, {
+                    enemiesCount: roomState.enemies.length,
+                    itemsCount: roomState.items.length,
+                    projectilesCount: roomState.projectiles.length,
+                    hitwarningsCount: roomState.hitwarnings.length,
+                });
+            }
+            catch (error) {
+                console.error(`❌ SAVE: Error saving room ${roomIndex}:`, error);
+                throw error;
+            }
+        }
+        console.log("✅ SAVE: GameState creation completed successfully");
+        console.log("🔄 SAVE: Final GameState summary:", {
+            seed: gs.seed,
+            randomState: gs.randomState,
+            levelDepth: gs.level?.depth,
+            playersCount: Object.keys(gs.players).length,
+            offlinePlayersCount: Object.keys(gs.offlinePlayers).length,
+            roomsCount: gs.rooms.length,
+        });
+        return gs;
     }
-    for (let room of game.rooms) {
-        room.catchUp();
-        gs.rooms.push(new RoomState(room, game));
+    catch (error) {
+        console.error("❌ SAVE: Fatal error in createGameState:", error);
+        throw error;
     }
-    return gs;
 };
 exports.createGameState = createGameState;
 const loadGameState = (game, activeUsernames, gameState, newWorld) => {
-    game.rooms = Array();
-    game.levelgen = new levelGenerator_1.LevelGenerator();
-    game.levelgen.setSeed(gameState.seed);
-    // If gameState.level is null, we need to create a default level state
-    if (!gameState.level) {
-        // This is a simplified assumption. We create a new level with default parameters
-        // since we don't have a level object to create a state from.
-        // This part might need adjustment based on how a "default" level is defined.
-        const tempLevel = new level_1.Level(game, 0, 1, 1, true, 0, environmentTypes_1.EnvType.DUNGEON);
-        gameState.level = new LevelState(tempLevel);
-    }
-    if (newWorld)
-        gameState.level.depth = 0;
-    eventBus_1.globalEventBus.emit(events_1.EVENTS.LEVEL_GENERATION_STARTED, {});
-    game.levelgen.generateFirstNFloors(game, gameState.level.depth).then(() => {
-        eventBus_1.globalEventBus.emit(events_1.EVENTS.LEVEL_GENERATION_COMPLETED, {});
-        if (!newWorld) {
-            if (gameState.level) {
-                loadLevel(game.level, gameState.level);
-            }
-            if (gameState.players) {
-                for (const i in gameState.players) {
-                    if (activeUsernames.includes(i))
-                        game.players[i] = loadPlayer(i, gameState.players[i], game);
-                    else
-                        game.offlinePlayers[i] = loadPlayer(i, gameState.players[i], game);
+    console.log("🔄 LOAD: Starting loadGameState");
+    console.log("🔄 LOAD: Parameters:", {
+        activeUsernames,
+        newWorld,
+        localPlayerID: game.localPlayerID,
+    });
+    console.log("🔄 LOAD: GameState to load:", {
+        seed: gameState.seed,
+        randomState: gameState.randomState,
+        levelDepth: gameState.level?.depth,
+        playersCount: Object.keys(gameState.players || {}).length,
+        offlinePlayersCount: Object.keys(gameState.offlinePlayers || {}).length,
+        roomsCount: gameState.rooms?.length || 0,
+    });
+    try {
+        // Clear existing rooms
+        console.log("🔄 LOAD: Clearing existing rooms");
+        game.rooms = []; // Use standard array syntax
+        game.levels = [];
+        // Initialize level generator
+        console.log("🔄 LOAD: Initializing level generator");
+        game.levelgen = new levelGenerator_1.LevelGenerator();
+        game.levelgen.setSeed(gameState.seed);
+        console.log("🔄 LOAD: Set level generator seed:", gameState.seed);
+        // Handle missing level state
+        if (!gameState.level) {
+            console.warn("🔄 LOAD: No level state found, creating default");
+            const tempLevel = new level_1.Level(game, 0, 1, 1, true, 0, environmentTypes_1.EnvType.DUNGEON);
+            gameState.level = new LevelState(tempLevel);
+        }
+        else {
+            console.log("🔄 LOAD: Found level state:", {
+                depth: gameState.level.depth,
+                width: gameState.level.width,
+                height: gameState.level.height,
+                envType: gameState.level.envType,
+            });
+        }
+        if (newWorld) {
+            console.log("🔄 LOAD: New world flag set, resetting depth to 0");
+            gameState.level.depth = 0;
+        }
+        console.log("🔄 LOAD: Emitting LEVEL_GENERATION_STARTED event");
+        eventBus_1.globalEventBus.emit(events_1.EVENTS.LEVEL_GENERATION_STARTED, {});
+        console.log(`🔄 LOAD: Starting level generation for depth ${gameState.level.depth}`);
+        return game.levelgen
+            .generateFirstNFloors(game, gameState.level.depth, !newWorld)
+            .then(() => {
+            console.log("✅ LOAD: Level generation completed");
+            console.log("🔄 LOAD: Generated rooms count:", game.rooms.length);
+            eventBus_1.globalEventBus.emit(events_1.EVENTS.LEVEL_GENERATION_COMPLETED, {});
+            if (!newWorld) {
+                console.log("🔄 LOAD: Loading existing world state");
+                // Load level
+                if (gameState.level) {
+                    console.log("🔄 LOAD: Loading level state");
+                    loadLevel(game.level, gameState.level);
+                    console.log("✅ LOAD: Level state loaded");
                 }
-            }
-            if (gameState.offlinePlayers) {
-                for (const i in gameState.offlinePlayers) {
-                    if (i === game.localPlayerID)
-                        game.players[i] = loadPlayer(i, gameState.offlinePlayers[i], game);
-                    else if (activeUsernames.includes(i))
-                        game.players[i] = loadPlayer(i, gameState.offlinePlayers[i], game);
-                    else
-                        game.offlinePlayers[i] = loadPlayer(i, gameState.offlinePlayers[i], game);
+                // Load players
+                if (gameState.players) {
+                    console.log("🔄 LOAD: Loading players");
+                    for (const i in gameState.players) {
+                        try {
+                            console.log(`🔄 LOAD: Loading player ${i}`, {
+                                isActive: activeUsernames.includes(i),
+                                x: gameState.players[i].x,
+                                y: gameState.players[i].y,
+                                roomID: gameState.players[i].roomID,
+                            });
+                            if (activeUsernames.includes(i)) {
+                                game.players[i] = loadPlayer(i, gameState.players[i], game);
+                                console.log(`✅ LOAD: Loaded active player ${i}`);
+                            }
+                            else {
+                                game.offlinePlayers[i] = loadPlayer(i, gameState.players[i], game);
+                                console.log(`✅ LOAD: Loaded offline player ${i}`);
+                            }
+                        }
+                        catch (error) {
+                            console.error(`❌ LOAD: Error loading player ${i}:`, error);
+                            throw error;
+                        }
+                    }
                 }
-            }
-            for (let roomState of gameState.rooms) {
-                for (let i = 0; i < game.rooms.length; i++) {
-                    if (i === roomState.roomID) {
-                        loadRoom(game.rooms[i], roomState, game);
+                // Load offline players
+                if (gameState.offlinePlayers) {
+                    console.log("🔄 LOAD: Loading offline players");
+                    for (const i in gameState.offlinePlayers) {
+                        try {
+                            console.log(`🔄 LOAD: Loading offline player ${i}`, {
+                                isLocalPlayer: i === game.localPlayerID,
+                                isActive: activeUsernames.includes(i),
+                                x: gameState.offlinePlayers[i].x,
+                                y: gameState.offlinePlayers[i].y,
+                                roomID: gameState.offlinePlayers[i].roomID,
+                            });
+                            if (i === game.localPlayerID) {
+                                game.players[i] = loadPlayer(i, gameState.offlinePlayers[i], game);
+                                console.log(`✅ LOAD: Loaded local player ${i} from offline players`);
+                            }
+                            else if (activeUsernames.includes(i)) {
+                                game.players[i] = loadPlayer(i, gameState.offlinePlayers[i], game);
+                                console.log(`✅ LOAD: Loaded active player ${i} from offline players`);
+                            }
+                            else {
+                                game.offlinePlayers[i] = loadPlayer(i, gameState.offlinePlayers[i], game);
+                                console.log(`✅ LOAD: Kept offline player ${i}`);
+                            }
+                        }
+                        catch (error) {
+                            console.error(`❌ LOAD: Error loading offline player ${i}:`, error);
+                            throw error;
+                        }
+                    }
+                }
+                // Load rooms
+                console.log("🔄 LOAD: Loading room states");
+                for (let roomState of gameState.rooms) {
+                    try {
+                        console.log(`🔄 LOAD: Loading room ${roomState.roomID}`, {
+                            entered: roomState.entered,
+                            active: roomState.active,
+                            enemiesCount: roomState.enemies?.length || 0,
+                            itemsCount: roomState.items?.length || 0,
+                        });
+                        for (let i = 0; i < game.rooms.length; i++) {
+                            if (i === roomState.roomID) {
+                                loadRoom(game.rooms[i], roomState, game);
+                                console.log(`✅ LOAD: Loaded room ${roomState.roomID}`);
+                                break;
+                            }
+                        }
+                    }
+                    catch (error) {
+                        console.error(`❌ LOAD: Error loading room ${roomState.roomID}:`, error);
+                        throw error;
+                    }
+                }
+                // Handle local player setup
+                const localPlayerInSaved = game.localPlayerID in gameState.players;
+                const localPlayerInOffline = game.localPlayerID in gameState.offlinePlayers;
+                console.log("🔄 LOAD: Local player status:", {
+                    localPlayerID: game.localPlayerID,
+                    inSavedPlayers: localPlayerInSaved,
+                    inOfflinePlayers: localPlayerInOffline,
+                });
+                if (!localPlayerInSaved && !localPlayerInOffline) {
+                    console.log("🔄 LOAD: Creating new local player (not found in saved state)");
+                    game.players[game.localPlayerID] = new player_1.Player(game, 0, 0, true);
+                    game.players[game.localPlayerID].levelID =
+                        game.levelgen.currentFloorFirstLevelID;
+                    const spawnRoom = game.rooms[game.levelgen.currentFloorFirstLevelID];
+                    game.players[game.localPlayerID].x =
+                        spawnRoom.roomX + Math.floor(spawnRoom.width / 2);
+                    game.players[game.localPlayerID].y =
+                        spawnRoom.roomY + Math.floor(spawnRoom.height / 2);
+                    game.room = spawnRoom;
+                    console.log("🔄 LOAD: New player spawn location:", {
+                        levelID: game.players[game.localPlayerID].levelID,
+                        x: game.players[game.localPlayerID].x,
+                        y: game.players[game.localPlayerID].y,
+                    });
+                    game.room.enterLevel(game.players[game.localPlayerID]);
+                    game.players[game.localPlayerID].map.updateSeenTiles();
+                    game.players[game.localPlayerID].map.saveMapData();
+                    console.log("✅ LOAD: New local player created and initialized");
+                }
+                else {
+                    console.log("🔄 LOAD: Setting up existing local player");
+                    const localPlayer = game.players[game.localPlayerID];
+                    console.log("🔄 LOAD: Local player info:", {
+                        x: localPlayer.x,
+                        y: localPlayer.y,
+                        levelID: localPlayer.levelID,
+                        health: localPlayer.health,
+                    });
+                    if (localPlayer.levelID >= 0 &&
+                        localPlayer.levelID < game.rooms.length) {
+                        console.log("🔄 LOAD: Room assignment details:", {
+                            levelID: localPlayer.levelID,
+                            totalRooms: game.rooms.length,
+                            roomExists: !!game.rooms[localPlayer.levelID],
+                        });
+                        game.room = game.rooms[localPlayer.levelID];
+                        console.log("🔄 LOAD: Set current room to:", localPlayer.levelID);
+                        // Verify the assignment worked
+                        const roomIndex = game.rooms.indexOf(game.room);
+                        console.log("🔄 LOAD: Room assignment verification:", {
+                            assignedRoom: !!game.room,
+                            roomFoundInArray: roomIndex,
+                            roomsArrayLength: game.rooms.length,
+                            gameRoomSameAsArrayRoom: game.room === game.rooms[localPlayer.levelID],
+                        });
+                        // Update game level reference WITH preserveRooms flag
+                        game.updateLevel(game.room); // ✅ Pass true to preserve rooms
+                        console.log("🔄 LOAD: Updated game level reference");
+                        // NOW load the level state after game.level is set
+                        if (gameState.level && game.level) {
+                            console.log("🔄 LOAD: Loading level state");
+                            loadLevel(game.level, gameState.level);
+                            console.log("✅ LOAD: Level state loaded");
+                        }
+                        // Verify after updateLevel
+                        const roomIndexAfterUpdate = game.rooms.indexOf(game.room);
+                        console.log("🔄 LOAD: After updateLevel verification:", {
+                            roomFoundInArray: roomIndexAfterUpdate,
+                            gameRoomSameAsArrayRoom: game.room === game.rooms[localPlayer.levelID],
+                        });
+                        // Setup room without moving player
+                        game.room.onEnterRoom(localPlayer);
+                        console.log("🔄 LOAD: Entered room for local player");
+                        // Verify after onEnterRoom
+                        const roomIndexAfterEnter = game.rooms.indexOf(game.room);
+                        console.log("🔄 LOAD: After onEnterRoom verification:", {
+                            roomFoundInArray: roomIndexAfterEnter,
+                            gameRoomSameAsArrayRoom: game.room === game.rooms[localPlayer.levelID],
+                        });
+                        // Update map
+                        localPlayer.map.updateSeenTiles();
+                        localPlayer.map.saveMapData();
+                        console.log("🔄 LOAD: Updated player map data");
+                        // Final verification before position check
+                        const roomIndexFinal = game.rooms.indexOf(game.room);
+                        console.log("🔄 LOAD: Final room verification before position check:", {
+                            roomFoundInArray: roomIndexFinal,
+                            gameRoomSameAsArrayRoom: game.room === game.rooms[localPlayer.levelID],
+                        });
+                        // Validate player position
+                        const tile = game.room.roomArray[localPlayer.x]?.[localPlayer.y];
+                        if (!tile || tile.isSolid()) {
+                            console.warn("🔄 LOAD: Player in invalid position, moving to room center");
+                            const roomCenter = game.room.getRoomCenter();
+                            localPlayer.moveSnap(roomCenter.x, roomCenter.y);
+                            console.log("🔄 LOAD: Moved player to room center:", roomCenter);
+                        }
+                        else {
+                            console.log("✅ LOAD: Player position is valid");
+                        }
+                    }
+                    else {
+                        console.error("❌ LOAD: Invalid levelID for local player:", localPlayer.levelID);
+                        throw new Error(`Invalid levelID ${localPlayer.levelID} for local player`);
                     }
                 }
             }
-            if (!(game.localPlayerID in gameState.players) &&
-                !(game.localPlayerID in gameState.offlinePlayers)) {
-                // we're not in the gamestate, create a new player
+            else {
+                console.log("🔄 LOAD: Starting new world");
                 game.players[game.localPlayerID] = new player_1.Player(game, 0, 0, true);
-                game.players[game.localPlayerID].levelID =
-                    game.levelgen.currentFloorFirstLevelID;
-                game.players[game.localPlayerID].x =
-                    game.rooms[game.levelgen.currentFloorFirstLevelID].roomX +
-                        Math.floor(game.rooms[game.levelgen.currentFloorFirstLevelID].width / 2);
-                game.players[game.localPlayerID].y =
-                    game.rooms[game.levelgen.currentFloorFirstLevelID].roomY +
-                        Math.floor(game.rooms[game.levelgen.currentFloorFirstLevelID].height / 2);
-                game.room = game.rooms[game.levelgen.currentFloorFirstLevelID];
+                game.room = game.rooms[game.players[game.localPlayerID].levelID];
                 game.room.enterLevel(game.players[game.localPlayerID]);
                 game.players[game.localPlayerID].map.updateSeenTiles();
                 game.players[game.localPlayerID].map.saveMapData();
+                console.log("✅ LOAD: New world created");
             }
-            else {
-                // Set the current room based on the loaded player's levelID
-                const localPlayer = game.players[game.localPlayerID];
-                game.room = game.rooms[localPlayer.levelID];
-                // Properly initialize the room for the loaded player
-                // Update the game level reference
-                game.updateLevel(game.room);
-                // Do the room setup without moving the player (keep saved position)
-                game.room.onEnterRoom(localPlayer);
-                // Update the player's map data
-                localPlayer.map.updateSeenTiles();
-                localPlayer.map.saveMapData();
-                // Optional: Add validation after the room setup
-                const tile = game.room.roomArray[localPlayer.x]?.[localPlayer.y];
-                if (!tile || tile.isSolid()) {
-                    console.warn("Player loaded in invalid position, moving to room center");
-                    const roomCenter = game.room.getRoomCenter();
-                    localPlayer.moveSnap(roomCenter.x, roomCenter.y);
-                }
-            }
-        }
-        else {
-            // stub game state, start a new world
-            game.players[game.localPlayerID] = new player_1.Player(game, 0, 0, true);
-            game.room = game.rooms[game.players[game.localPlayerID].levelID];
-            game.room.enterLevel(game.players[game.localPlayerID]);
-            game.players[game.localPlayerID].map.updateSeenTiles();
-            game.players[game.localPlayerID].map.saveMapData();
-        }
-        random_1.Random.setState(gameState.randomState);
-        game.room.updateLighting();
-        let p = game.players[game.localPlayerID];
-        //game.room.items.push(new Key(game.room, p.x - 1, p.y + 1));
-        //choose one door to lock
-        /*
-        let locked = false;
-        game.room.doors.forEach((door) => {
-          if (!locked) {
-            door.lock();
-            locked = true;
-          }
+            // Restore random state
+            console.log("🔄 LOAD: Restoring random state:", gameState.randomState);
+            random_1.Random.setState(gameState.randomState);
+            // Update lighting
+            console.log("🔄 LOAD: Updating room lighting");
+            game.room.updateLighting();
+            // Clear chat
+            game.chat = [];
+            console.log("🔄 LOAD: Cleared chat");
+            console.log("✅ LOAD: GameState loading completed successfully");
+            console.log("🔄 LOAD: Final state:", {
+                currentRoomID: game.rooms.indexOf(game.room),
+                localPlayerPos: {
+                    x: game.players[game.localPlayerID]?.x,
+                    y: game.players[game.localPlayerID]?.y,
+                },
+                playersCount: Object.keys(game.players).length,
+                offlinePlayersCount: Object.keys(game.offlinePlayers).length,
+            });
+        })
+            .catch((error) => {
+            console.error("❌ LOAD: Error in level generation:", error);
+            throw error;
         });
-        */
-        game.chat = [];
-    });
+    }
+    catch (error) {
+        console.error("❌ LOAD: Fatal error in loadGameState:", error);
+        throw error;
+    }
 };
 exports.loadGameState = loadGameState;
 
@@ -22417,7 +22743,15 @@ class Weapon extends equippable_1.Equippable {
         };
         this.attackAnimation = (newX, newY) => {
             this.wielder.setHitXY(newX, newY);
-            this.game.rooms[this.wielder.levelID].particles.push(new attackAnimation_1.AttackAnimation(newX, newY, this.name, this.wielder.direction));
+            if (!this.game?.rooms?.[this.wielder.levelID]) {
+                console.error("🔫 WEAPON: Cannot add particle - invalid room state", {
+                    levelID: this.wielder.levelID,
+                    roomsLength: this.game?.rooms?.length,
+                });
+            }
+            else {
+                this.game.rooms[this.wielder.levelID].particles.push(new attackAnimation_1.AttackAnimation(newX, newY, this.name, this.wielder.direction));
+            }
         };
         this.shakeScreen = (eX, eY) => {
             if (this.wielder.game.rooms[this.wielder.levelID] === this.wielder.game.room)
@@ -22497,6 +22831,42 @@ class Weapon extends equippable_1.Equippable {
     }
     // returns true if nothing was hit, false if the player should move
     getEntitiesAt(x, y) {
+        console.log("🔫 WEAPON: getEntitiesAt called", {
+            gameExists: !!this.game,
+            levelsExists: !!this.game?.levels,
+            levelsLength: this.game?.levels?.length,
+            wielderExists: !!this.wielder,
+            wielderDepth: this.wielder?.depth,
+            wielderLevelID: this.wielder?.levelID,
+            roomsExists: !!this.game?.rooms,
+            roomsLength: this.game?.rooms?.length,
+        });
+        if (!this.game) {
+            console.error("🔫 WEAPON: this.game is undefined");
+            return [];
+        }
+        if (!this.game.rooms) {
+            console.error("🔫 WEAPON: this.game.rooms is undefined");
+            return [];
+        }
+        if (!this.wielder) {
+            console.error("🔫 WEAPON: this.wielder is undefined");
+            return [];
+        }
+        if (this.wielder.levelID >= this.game.rooms.length) {
+            console.error("🔫 WEAPON: wielder.levelID out of bounds", {
+                levelID: this.wielder.levelID,
+                roomsLength: this.game.rooms.length,
+            });
+            return [];
+        }
+        if (!this.game.rooms[this.wielder.levelID]) {
+            console.error("🔫 WEAPON: room at levelID is undefined", {
+                levelID: this.wielder.levelID,
+                room: this.game.rooms[this.wielder.levelID],
+            });
+            return [];
+        }
         return this.game.rooms[this.wielder.levelID].entities.filter((e) => e.destroyable && e.pointIn(x, y));
     }
     hitEntitiesAt(x, y, damage) {
@@ -22526,6 +22896,10 @@ class Weapon extends equippable_1.Equippable {
                 behindX += 1;
                 break;
         }
+        if (!this.game?.rooms?.[this.wielder.levelID]) {
+            console.error("🔫 WEAPON: Cannot check pushables - invalid room state");
+            return false;
+        }
         const unpushables = this.getEntitiesAt(behindX, behindY).filter((e) => !e.pushable);
         const hasUnpushablesBehind = unpushables.length > 0;
         const behindTile = this.game.rooms[this.wielder.levelID].roomArray[behindX]?.[behindY];
@@ -22543,8 +22917,14 @@ class Weapon extends equippable_1.Equippable {
             this.wielder.setHitXY(targetX, targetY);
             if (animated)
                 this.attackAnimation(targetX, targetY);
-            if (shouldTick)
-                this.game.rooms[this.wielder.levelID].tick(this.wielder);
+            if (shouldTick) {
+                if (!this.game?.rooms?.[this.wielder.levelID]) {
+                    console.error("🔫 WEAPON: Cannot tick room - invalid room state");
+                }
+                else if (shouldTick) {
+                    this.game.rooms[this.wielder.levelID].tick(this.wielder);
+                }
+            }
             if (shakeScreen)
                 this.shakeScreen(targetX, targetY);
             if (mainAttack)
@@ -23203,7 +23583,7 @@ interface entitySpawnData {
 }
 */
 class Level {
-    constructor(game, depth, width, height, isMainPath = true, mapGroup, env) {
+    constructor(game, depth, width, height, isMainPath = true, mapGroup, env, skipPopulation = false) {
         this.isMainPath = true;
         this.initializeLevelArray = () => {
             // Create a 300x300 grid for depth 0
@@ -23245,9 +23625,11 @@ class Level {
         this.initializeLevelArray();
         this.mapGroup = mapGroup;
         this.environment = new environment_1.Environment(env);
-        this.populator = new roomPopulator_1.Populator(this);
+        if (!skipPopulation) {
+            this.populator = new roomPopulator_1.Populator(this);
+        }
         this.enemyParameters = this.getEnemyParameters();
-        let mainPath = this.isMainPath ? "main" : "side";
+        //let mainPath = this.isMainPath ? "main" : "side";
     }
     getDownLadder(room) {
         if (!room || room.type !== room_1.RoomType.ROPEHOLE) {
@@ -23270,7 +23652,6 @@ class Level {
         return null;
     }
     distributeKeys() {
-        console.log("Starting distributeKeys - searching entire level array for down ladders");
         // Search the entire level array for down ladders
         let downLadder = null;
         for (let room of this.rooms) {
@@ -23291,7 +23672,6 @@ class Level {
             console.error("No down ladder found in level array");
             return;
         }
-        console.log("Down ladder found, proceeding with key distribution");
         this.distributeKey(downLadder);
     }
     distributeKey(downLadder) {
@@ -23303,29 +23683,24 @@ class Level {
             disableY: downLadder.y,
             disableRoom: downLadder.room,
         };
-        console.log(`Found ${rooms.length} eligible rooms for key placement`);
         if (rooms.length === 0) {
             console.error("No eligible rooms found for key placement");
             return;
         }
         const randomRoom = rooms[Math.floor(random_1.Random.rand() * rooms.length)];
-        console.log(`Selected room ${randomRoom.id} for key placement`);
         let emptyTiles = randomRoom.getEmptyTiles();
         if (disableCoords.disableRoom === randomRoom) {
             emptyTiles = emptyTiles.filter((t) => t.x !== disableCoords.disableX && t.y !== disableCoords.disableY);
         }
-        console.log(`Room has ${emptyTiles.length} empty tiles`);
         if (emptyTiles.length === 0) {
             console.error(`No empty tiles found in room ${randomRoom.id} for key placement`);
             return;
         }
         const randomIndex = Math.floor(random_1.Random.rand() * emptyTiles.length);
         const randomTile = emptyTiles[randomIndex];
-        console.log(`Placing key at tile position (${randomTile.x}, ${randomTile.y})`);
         const key = new key_1.Key(randomRoom, randomTile.x, randomTile.y);
         downLadder.lockable.setKey(key);
         randomRoom.items.push(key);
-        console.log("key.doorID", key.doorID, "downLadder.keyID", downLadder.lockable.keyID);
         console.log("Key successfully distributed and linked to down ladder");
         //this.game.player.inventory.addItem(key);
     }
@@ -23459,8 +23834,8 @@ class LevelGenerator {
                 }
             }
         };
-        this.createLevel = (depth, isMainPath = true, mapGroup, envType) => {
-            let newLevel = new level_1.Level(this.game, depth, 100, 100, isMainPath, mapGroup, envType);
+        this.createLevel = (depth, isMainPath = true, mapGroup, envType, skipPopulation = false) => {
+            let newLevel = new level_1.Level(this.game, depth, 100, 100, isMainPath, mapGroup, envType, skipPopulation);
             return newLevel;
         };
         this.getRooms = (partitions, depth, mapGroup, envType) => {
@@ -23487,7 +23862,7 @@ class LevelGenerator {
         this.setSeed = (seed) => {
             this.seed = seed;
         };
-        this.generate = async (game, depth, isSidePath = false, callback, environment = environmentTypes_1.EnvType.DUNGEON) => {
+        this.generate = async (game, depth, isSidePath = false, callback, environment = environmentTypes_1.EnvType.DUNGEON, skipPopulation = false) => {
             // Initialize components with game instance
             if (!this.partitionGenerator) {
                 this.partitionGenerator = new partitionGenerator_1.PartitionGenerator(game);
@@ -23549,7 +23924,7 @@ class LevelGenerator {
             //   console.warn("There are overlapping partitions.");
             // }
             // Get the levels based on the partitions
-            let newLevel = this.createLevel(depth, !isSidePath, mapGroup, envType);
+            let newLevel = this.createLevel(depth, !isSidePath, mapGroup, envType, skipPopulation);
             if (isSidePath) {
                 // create Level object ONLY to prepare rooms, but
                 // DO NOT push to game.levels
@@ -23559,7 +23934,9 @@ class LevelGenerator {
             }
             let rooms = this.getRooms(partitions, depth, mapGroup, envType);
             newLevel.setRooms(rooms);
-            newLevel.populator.populateRooms();
+            if (!skipPopulation) {
+                newLevel.populator.populateRooms();
+            }
             newLevel.setRoomSkins();
             //newLevel.loadRoomsIntoLevelArray();
             // Only call linkExitToStart for main paths
@@ -23570,7 +23947,7 @@ class LevelGenerator {
             if (!isSidePath)
                 this.currentFloorFirstLevelID = this.game.rooms.length;
             // Add the new levels to the game rooms
-            this.game.rooms = rooms;
+            this.game.rooms.push(...rooms);
             // Generate the rope hole if it exists
             for (let room of rooms) {
                 if (room.type === room_1.RoomType.ROPEHOLE) {
@@ -23592,10 +23969,10 @@ class LevelGenerator {
                 ? rooms.find((r) => r.type === room_1.RoomType.ROPECAVE)
                 : rooms.find((r) => r.type === room_1.RoomType.START));
         };
-        this.generateFirstNFloors = async (game, numFloors) => {
-            await this.generate(game, 0, false, () => { });
+        this.generateFirstNFloors = async (game, numFloors, skipPopulation = false) => {
+            await this.generate(game, 0, false, () => { }, environmentTypes_1.EnvType.DUNGEON, skipPopulation);
             for (let i = 0; i < numFloors; i++) {
-                let foundRoom = this.game.rooms
+                let foundRoom = game.rooms
                     .slice()
                     .reverse()
                     .find((room) => room.type === room_1.RoomType.DOWNLADDER);
@@ -34639,10 +35016,6 @@ class DownLadder extends passageway_1.Passageway {
             lockType: lock,
             isTopDoor: false,
         });
-        if (this.lockable.isLocked()) {
-            console.log("adding key to downladder");
-            this.game.levels[this.depth].distributeKey(this);
-        }
         this.addLightSource();
     }
     isLocked() {

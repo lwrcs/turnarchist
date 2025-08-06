@@ -145,9 +145,16 @@ export abstract class Weapon extends Equippable {
   attackAnimation = (newX: number, newY: number) => {
     this.wielder.setHitXY(newX, newY);
 
-    this.game.rooms[this.wielder.levelID].particles.push(
-      new AttackAnimation(newX, newY, this.name, this.wielder.direction),
-    );
+    if (!this.game?.rooms?.[this.wielder.levelID]) {
+      console.error("🔫 WEAPON: Cannot add particle - invalid room state", {
+        levelID: this.wielder.levelID,
+        roomsLength: this.game?.rooms?.length,
+      });
+    } else {
+      this.game.rooms[this.wielder.levelID].particles.push(
+        new AttackAnimation(newX, newY, this.name, this.wielder.direction),
+      );
+    }
   };
 
   shakeScreen = (eX: number, eY: number) => {
@@ -226,6 +233,48 @@ export abstract class Weapon extends Equippable {
   // returns true if nothing was hit, false if the player should move
 
   protected getEntitiesAt(x: number, y: number): Entity[] {
+    console.log("🔫 WEAPON: getEntitiesAt called", {
+      gameExists: !!this.game,
+      levelsExists: !!this.game?.levels,
+      levelsLength: this.game?.levels?.length,
+      wielderExists: !!this.wielder,
+      wielderDepth: this.wielder?.depth,
+      wielderLevelID: this.wielder?.levelID,
+      roomsExists: !!this.game?.rooms,
+      roomsLength: this.game?.rooms?.length,
+    });
+
+    if (!this.game) {
+      console.error("🔫 WEAPON: this.game is undefined");
+      return [];
+    }
+
+    if (!this.game.rooms) {
+      console.error("🔫 WEAPON: this.game.rooms is undefined");
+      return [];
+    }
+
+    if (!this.wielder) {
+      console.error("🔫 WEAPON: this.wielder is undefined");
+      return [];
+    }
+
+    if (this.wielder.levelID >= this.game.rooms.length) {
+      console.error("🔫 WEAPON: wielder.levelID out of bounds", {
+        levelID: this.wielder.levelID,
+        roomsLength: this.game.rooms.length,
+      });
+      return [];
+    }
+
+    if (!this.game.rooms[this.wielder.levelID]) {
+      console.error("🔫 WEAPON: room at levelID is undefined", {
+        levelID: this.wielder.levelID,
+        room: this.game.rooms[this.wielder.levelID],
+      });
+      return [];
+    }
+
     return this.game.rooms[this.wielder.levelID].entities.filter(
       (e) => e.destroyable && e.pointIn(x, y),
     );
@@ -260,6 +309,11 @@ export abstract class Weapon extends Equippable {
       case Direction.RIGHT:
         behindX += 1;
         break;
+    }
+
+    if (!this.game?.rooms?.[this.wielder.levelID]) {
+      console.error("🔫 WEAPON: Cannot check pushables - invalid room state");
+      return false;
     }
 
     const unpushables = this.getEntitiesAt(behindX, behindY).filter(
@@ -304,7 +358,13 @@ export abstract class Weapon extends Equippable {
       if (sound) this.hitSound();
       this.wielder.setHitXY(targetX, targetY);
       if (animated) this.attackAnimation(targetX, targetY);
-      if (shouldTick) this.game.rooms[this.wielder.levelID].tick(this.wielder);
+      if (shouldTick) {
+        if (!this.game?.rooms?.[this.wielder.levelID]) {
+          console.error("🔫 WEAPON: Cannot tick room - invalid room state");
+        } else if (shouldTick) {
+          this.game.rooms[this.wielder.levelID].tick(this.wielder);
+        }
+      }
       if (shakeScreen) this.shakeScreen(targetX, targetY);
       if (mainAttack) this.degrade();
     }
