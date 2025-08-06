@@ -9287,7 +9287,6 @@ const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts"
 const imageParticle_1 = __webpack_require__(/*! ../particle/imageParticle */ "./src/particle/imageParticle.ts");
 const coin_1 = __webpack_require__(/*! ../item/coin */ "./src/item/coin.ts");
 const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
-const GlobalStateManager_1 = __webpack_require__(/*! ../globalStateManager/GlobalStateManager */ "./src/globalStateManager/GlobalStateManager.ts");
 var EntityDirection;
 (function (EntityDirection) {
     EntityDirection[EntityDirection["DOWN"] = 0] = "DOWN";
@@ -10173,7 +10172,6 @@ class Entity extends drawable_1.Drawable {
             return xInBounds && yInBounds && tileExists;
         };
         this.globalId = IdGenerator_1.IdGenerator.generate("EN");
-        GlobalStateManager_1.GlobalStateManager.instance.registerEntity(this);
         // Check if we're in cloning mode
         const isCloning = this.constructor.__isCloning;
         // Set cloned status immediately if we're cloning
@@ -10324,7 +10322,6 @@ class Entity extends drawable_1.Drawable {
     }
 }
 exports.Entity = Entity;
-Entity.SAVE_KEY = "Entity";
 
 
 /***/ }),
@@ -12188,7 +12185,6 @@ const tips_1 = __webpack_require__(/*! ./tips */ "./src/tips.ts");
 const gameplaySettings_1 = __webpack_require__(/*! ./game/gameplaySettings */ "./src/game/gameplaySettings.ts");
 const random_1 = __webpack_require__(/*! ./utility/random */ "./src/utility/random.ts");
 const IdGenerator_1 = __webpack_require__(/*! ./globalStateManager/IdGenerator */ "./src/globalStateManager/IdGenerator.ts");
-const GlobalStateManager_1 = __webpack_require__(/*! ./globalStateManager/GlobalStateManager */ "./src/globalStateManager/GlobalStateManager.ts"); // NEW
 var LevelState;
 (function (LevelState) {
     LevelState[LevelState["IN_LEVEL"] = 0] = "IN_LEVEL";
@@ -13370,7 +13366,6 @@ class Game {
             }
         };
         this.globalId = IdGenerator_1.IdGenerator.generate("G");
-        GlobalStateManager_1.GlobalStateManager.instance.registerGame(this); // NEW
         window.addEventListener("load", () => {
             let canvas = document.getElementById("gameCanvas");
             Game.ctx = canvas.getContext("2d", {
@@ -16218,165 +16213,6 @@ exports.TextBox = TextBox;
 
 /***/ }),
 
-/***/ "./src/globalStateManager/GlobalStateManager.ts":
-/*!******************************************************!*\
-  !*** ./src/globalStateManager/GlobalStateManager.ts ***!
-  \******************************************************/
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.GlobalStateManager = void 0;
-/**
- * Phase-0 Global State Manager
- *  – Keeps master maps keyed by each object’s `globalId`.
- *  – Provides basic CRUD & snapshot utilities.
- *  – NO side-effects: nothing auto-registers yet.
- *
- * Later phases will:
- *  • Auto-register from constructors.
- *  • Emit events on add/remove.
- *  • Handle incremental dirty-flag tracking.
- */
-class GlobalStateManager {
-    constructor() {
-        /* ---------- Master tables ---------- */
-        this.games = new Map();
-        this.levels = new Map();
-        this.rooms = new Map();
-        this.entities = new Map();
-        this.items = new Map();
-        this.inventories = new Map();
-        this.tiles = new Map();
-        this.projectiles = new Map();
-        this.players = new Map();
-    }
-    /* ---------- Singleton accessor ---------- */
-    static get instance() {
-        if (!this._instance)
-            this._instance = new GlobalStateManager();
-        return this._instance;
-    }
-    /* ---------- Registration helpers ---------- */
-    registerGame(g) {
-        this.games.set(g.globalId, g);
-    }
-    registerLevel(l) {
-        this.levels.set(l.globalId, l);
-    }
-    registerRoom(r) {
-        this.rooms.set(r.globalId, r);
-    }
-    registerEntity(e) {
-        this.entities.set(e.globalId, e);
-    }
-    registerItem(i) {
-        this.items.set(i.globalId, i);
-    }
-    registerInventory(inv) {
-        this.inventories.set(inv.globalId, inv);
-    }
-    registerTile(t) {
-        this.tiles.set(t.globalId, t);
-    }
-    registerProjectile(p) {
-        this.projectiles.set(p.globalId, p);
-    }
-    registerPlayer(pl) {
-        this.players.set(pl.globalId, pl);
-    }
-    /* ---------- Lookup shortcuts ---------- */
-    getGame(id) {
-        return this.games.get(id);
-    }
-    getLevel(id) {
-        return this.levels.get(id);
-    }
-    getRoom(id) {
-        return this.rooms.get(id);
-    }
-    getEntity(id) {
-        return this.entities.get(id);
-    }
-    getItem(id) {
-        return this.items.get(id);
-    }
-    getInventory(id) {
-        return this.inventories.get(id);
-    }
-    getTile(id) {
-        return this.tiles.get(id);
-    }
-    getProjectile(id) {
-        return this.projectiles.get(id);
-    }
-    getPlayer(id) {
-        return this.players.get(id);
-    }
-    /* ---------- Hydration / reset ---------- */
-    /** Clear every registry map – used before loading a save-file. */
-    reset() {
-        this.games.clear();
-        this.levels.clear();
-        this.rooms.clear();
-        this.entities.clear();
-        this.items.clear();
-        this.inventories.clear();
-        this.tiles.clear();
-        this.projectiles.clear();
-        this.players.clear();
-    }
-    /* ---------- Snapshot (naïve JSON) ---------- */
-    snapshot() {
-        // Only structural data for now; transient fields stay out.
-        return {
-            games: [...this.games.values()].map((g) => ({ id: g.globalId })),
-            levels: [...this.levels.values()].map((l) => ({
-                id: l.globalId,
-                depth: l.depth,
-            })),
-            rooms: [...this.rooms.values()].map((r) => ({
-                id: r.globalId,
-                depth: r.depth,
-            })),
-            entities: [...this.entities.values()].map((e) => ({
-                id: e.globalId,
-                x: e.x,
-                y: e.y,
-            })),
-            items: [...this.items.values()].map((i) => ({
-                id: i.globalId,
-                x: i.x,
-                y: i.y,
-                stack: i.stackCount,
-            })),
-            inventories: [...this.inventories.values()].map((inv) => ({
-                id: inv.globalId,
-            })),
-            tiles: [...this.tiles.values()].map((t) => ({
-                id: t.globalId,
-                x: t.x,
-                y: t.y,
-            })),
-            projectiles: [...this.projectiles.values()].map((p) => ({
-                id: p.globalId,
-                x: p.x,
-                y: p.y,
-            })),
-            players: [...this.players.values()].map((pl) => ({
-                id: pl.globalId,
-                x: pl.x,
-                y: pl.y,
-            })),
-        };
-    }
-}
-exports.GlobalStateManager = GlobalStateManager;
-
-
-/***/ }),
-
 /***/ "./src/globalStateManager/IdGenerator.ts":
 /*!***********************************************!*\
   !*** ./src/globalStateManager/IdGenerator.ts ***!
@@ -16439,54 +16275,6 @@ exports.IdGenerator = IdGenerator;
 IdGenerator._next = BigInt(1);
 /** Registry of every ID produced or reserved this session. */
 IdGenerator._registry = new Set();
-
-
-/***/ }),
-
-/***/ "./src/globalStateManager/TypeRegistry.ts":
-/*!************************************************!*\
-  !*** ./src/globalStateManager/TypeRegistry.ts ***!
-  \************************************************/
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.TypeRegistry = void 0;
-class TypeRegistry {
-    /* ---------- Registration helpers ---------- */
-    static registerItem(key, ctor) {
-        this.itemCtors.set(key, ctor);
-    }
-    static registerEntity(key, ctor) {
-        this.entityCtors.set(key, ctor);
-    }
-    static registerProjectile(key, ctor) {
-        this.projectileCtors.set(key, ctor);
-    }
-    static registerTile(key, ctor) {
-        this.tileCtors.set(key, ctor);
-    }
-    /* ---------- Lookup ---------- */
-    static itemCtor(key) {
-        return this.itemCtors.get(key);
-    }
-    static entityCtor(key) {
-        return this.entityCtors.get(key);
-    }
-    static projectileCtor(key) {
-        return this.projectileCtors.get(key);
-    }
-    static tileCtor(key) {
-        return this.tileCtors.get(key);
-    }
-}
-exports.TypeRegistry = TypeRegistry;
-/* Individual maps keep runtime typing clean */
-TypeRegistry.itemCtors = new Map();
-TypeRegistry.entityCtors = new Map();
-TypeRegistry.projectileCtors = new Map();
-TypeRegistry.tileCtors = new Map();
 
 
 /***/ }),
@@ -17931,7 +17719,6 @@ const menu_1 = __webpack_require__(/*! ../gui/menu */ "./src/gui/menu.ts");
 const xpCounter_1 = __webpack_require__(/*! ../gui/xpCounter */ "./src/gui/xpCounter.ts");
 const fishingRod_1 = __webpack_require__(/*! ../item/tool/fishingRod */ "./src/item/tool/fishingRod.ts");
 const IdGenerator_1 = __webpack_require__(/*! ../globalStateManager/IdGenerator */ "./src/globalStateManager/IdGenerator.ts");
-const GlobalStateManager_1 = __webpack_require__(/*! ../globalStateManager/GlobalStateManager */ "./src/globalStateManager/GlobalStateManager.ts");
 let OPEN_TIME = 100; // milliseconds
 // Dark gray color used for the background of inventory slots
 let FILL_COLOR = "#5a595b";
@@ -18968,7 +18755,6 @@ class Inventory {
             this.grabbedItem = null;
         };
         this.globalId = IdGenerator_1.IdGenerator.generate("INV");
-        GlobalStateManager_1.GlobalStateManager.instance.registerInventory(this);
         this.game = game;
         this.player = player;
         this.buttonX =
@@ -19748,8 +19534,6 @@ const drawable_1 = __webpack_require__(/*! ../drawable/drawable */ "./src/drawab
 const utils_1 = __webpack_require__(/*! ../utility/utils */ "./src/utility/utils.ts");
 const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
 const IdGenerator_1 = __webpack_require__(/*! ../globalStateManager/IdGenerator */ "./src/globalStateManager/IdGenerator.ts");
-const GlobalStateManager_1 = __webpack_require__(/*! ../globalStateManager/GlobalStateManager */ "./src/globalStateManager/GlobalStateManager.ts");
-const TypeRegistry_1 = __webpack_require__(/*! ../globalStateManager/TypeRegistry */ "./src/globalStateManager/TypeRegistry.ts");
 // Item class extends Drawable class and represents an item in the game
 class Item extends drawable_1.Drawable {
     // Constructor for the Item class
@@ -19862,6 +19646,7 @@ class Item extends drawable_1.Drawable {
                 const scale = 1 / (this.scaleFactor + 1);
                 game_1.Game.ctx.imageSmoothingEnabled = false;
                 game_1.Game.drawItem(0, 0, 1, 1, this.x, this.y, 1, 1);
+                this.frame += (delta * (Math.PI * 2)) / 60;
                 game_1.Game.drawItem(this.tileX, this.tileY, 1, 2, this.x + this.w * (scale * -0.5 + 0.5) + this.drawOffset, this.y +
                     this.sineAnimateFactor * Math.sin(this.frame) * 0.07 -
                     1 +
@@ -19958,7 +19743,6 @@ class Item extends drawable_1.Drawable {
             }
         };
         this.globalId = IdGenerator_1.IdGenerator.generate("IT");
-        GlobalStateManager_1.GlobalStateManager.instance.registerItem(this);
         // Initialize properties
         this.level = level;
         this.x = x;
@@ -19999,9 +19783,6 @@ class Item extends drawable_1.Drawable {
     }
 }
 exports.Item = Item;
-// Item properties
-Item.SAVE_KEY = "Item";
-TypeRegistry_1.TypeRegistry.registerItem(Item.SAVE_KEY, Item);
 
 
 /***/ }),
@@ -23383,8 +23164,6 @@ const roomPopulator_1 = __webpack_require__(/*! ../room/roomPopulator */ "./src/
 const downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/downLadder.ts");
 const key_1 = __webpack_require__(/*! ../item/key */ "./src/item/key.ts");
 const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
-const IdGenerator_1 = __webpack_require__(/*! ../globalStateManager/IdGenerator */ "./src/globalStateManager/IdGenerator.ts");
-const GlobalStateManager_1 = __webpack_require__(/*! ../globalStateManager/GlobalStateManager */ "./src/globalStateManager/GlobalStateManager.ts");
 exports.enemyMinimumDepth = {
     1: 0,
     2: 1,
@@ -23457,8 +23236,6 @@ class Level {
                 }
             }
         };
-        this.globalId = IdGenerator_1.IdGenerator.generate("L");
-        GlobalStateManager_1.GlobalStateManager.instance.registerLevel(this);
         this.game = game;
         this.depth = depth;
         this.width = width;
@@ -26779,7 +26556,6 @@ const playerRenderer_1 = __webpack_require__(/*! ./playerRenderer */ "./src/play
 const upLadder_1 = __webpack_require__(/*! ../tile/upLadder */ "./src/tile/upLadder.ts");
 const downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/downLadder.ts");
 const IdGenerator_1 = __webpack_require__(/*! ../globalStateManager/IdGenerator */ "./src/globalStateManager/IdGenerator.ts");
-const GlobalStateManager_1 = __webpack_require__(/*! ../globalStateManager/GlobalStateManager */ "./src/globalStateManager/GlobalStateManager.ts");
 var PlayerDirection;
 (function (PlayerDirection) {
     PlayerDirection[PlayerDirection["DOWN"] = 0] = "DOWN";
@@ -27410,7 +27186,6 @@ class Player extends drawable_1.Drawable {
             this.renderer.drawGUI(delta);
         };
         this.globalId = IdGenerator_1.IdGenerator.generate("P");
-        GlobalStateManager_1.GlobalStateManager.instance.registerPlayer(this);
         this.game = game;
         this.levelID = 0;
         this.x = x;
@@ -29313,8 +29088,6 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Projectile = void 0;
 const drawable_1 = __webpack_require__(/*! ../drawable/drawable */ "./src/drawable/drawable.ts");
 const IdGenerator_1 = __webpack_require__(/*! ../globalStateManager/IdGenerator */ "./src/globalStateManager/IdGenerator.ts");
-const GlobalStateManager_1 = __webpack_require__(/*! ../globalStateManager/GlobalStateManager */ "./src/globalStateManager/GlobalStateManager.ts");
-const TypeRegistry_1 = __webpack_require__(/*! ../globalStateManager/TypeRegistry */ "./src/globalStateManager/TypeRegistry.ts");
 class Projectile extends drawable_1.Drawable {
     constructor(parent, x, y) {
         super();
@@ -29324,7 +29097,6 @@ class Projectile extends drawable_1.Drawable {
         this.draw = (delta) => { };
         this.drawTopLayer = (delta) => { };
         this.globalId = IdGenerator_1.IdGenerator.generate("PROJ");
-        GlobalStateManager_1.GlobalStateManager.instance.registerProjectile(this);
         this.x = x;
         this.y = y;
         this.dead = false;
@@ -29338,13 +29110,8 @@ class Projectile extends drawable_1.Drawable {
         return Math.abs(this.x - this.parent.x) + Math.abs(this.y - this.parent.y);
     }
     setTarget(x, y, x2, y2) { }
-    serializeExtra() {
-        return undefined;
-    }
 }
 exports.Projectile = Projectile;
-Projectile.SAVE_KEY = "Projectile";
-TypeRegistry_1.TypeRegistry.registerProjectile(Projectile.SAVE_KEY, Projectile);
 
 
 /***/ }),
@@ -29726,7 +29493,6 @@ const webglBlurRenderer_1 = __webpack_require__(/*! ../gui/webglBlurRenderer */ 
 const utils_1 = __webpack_require__(/*! ../utility/utils */ "./src/utility/utils.ts");
 const tree_1 = __webpack_require__(/*! ../entity/object/tree */ "./src/entity/object/tree.ts");
 const IdGenerator_1 = __webpack_require__(/*! ../globalStateManager/IdGenerator */ "./src/globalStateManager/IdGenerator.ts");
-const GlobalStateManager_1 = __webpack_require__(/*! ../globalStateManager/GlobalStateManager */ "./src/globalStateManager/GlobalStateManager.ts"); // NEW
 // #endregion
 // #region Enums & Interfaces
 /**
@@ -31543,7 +31309,6 @@ class Room {
             }
         };
         this.globalId = IdGenerator_1.IdGenerator.generate("R");
-        GlobalStateManager_1.GlobalStateManager.instance.registerRoom(this); // NEW
         this.game = game;
         this.roomX = x; //Math.floor(- this.width / 2);
         this.roomY = y; //Math.floor(- this.height / 2);
@@ -35421,7 +35186,6 @@ exports.Tile = exports.SkinType = void 0;
 const drawable_1 = __webpack_require__(/*! ../drawable/drawable */ "./src/drawable/drawable.ts");
 const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
 const IdGenerator_1 = __webpack_require__(/*! ../globalStateManager/IdGenerator */ "./src/globalStateManager/IdGenerator.ts");
-const GlobalStateManager_1 = __webpack_require__(/*! ../globalStateManager/GlobalStateManager */ "./src/globalStateManager/GlobalStateManager.ts");
 var SkinType;
 (function (SkinType) {
     SkinType[SkinType["DUNGEON"] = 0] = "DUNGEON";
@@ -35467,7 +35231,6 @@ class Tile extends drawable_1.Drawable {
         this.drawAbovePlayer = (delta) => { };
         this.drawAboveShading = (delta) => { };
         this.globalId = IdGenerator_1.IdGenerator.generate("T");
-        GlobalStateManager_1.GlobalStateManager.instance.registerTile(this);
         this.skin = room.skin;
         this.room = room;
         this.x = x;
@@ -35476,12 +35239,8 @@ class Tile extends drawable_1.Drawable {
         this.isDoor = false;
         this.opacity = 1;
     }
-    serializeExtra() {
-        return undefined;
-    }
 }
 exports.Tile = Tile;
-Tile.SAVE_KEY = "Tile";
 
 
 /***/ }),

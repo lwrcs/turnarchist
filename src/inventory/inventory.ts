@@ -17,7 +17,6 @@ import { Menu } from "../gui/menu";
 import { XPCounter } from "../gui/xpCounter";
 import { FishingRod } from "../item/tool/fishingRod";
 import { IdGenerator } from "../globalStateManager/IdGenerator";
-import { GlobalStateManager } from "../globalStateManager/GlobalStateManager";
 
 let OPEN_TIME = 100; // milliseconds
 // Dark gray color used for the background of inventory slots
@@ -70,7 +69,6 @@ export class Inventory {
 
   constructor(game: Game, player: Player) {
     this.globalId = IdGenerator.generate("INV");
-    GlobalStateManager.instance.registerInventory(this);
     this.game = game;
     this.player = player;
 

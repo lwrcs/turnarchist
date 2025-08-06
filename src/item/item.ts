@@ -8,13 +8,10 @@ import { Utils } from "../utility/utils";
 import { ItemGroup } from "./itemGroup";
 import { Random } from "../utility/random";
 import { IdGenerator } from "../globalStateManager/IdGenerator";
-import { GlobalStateManager } from "../globalStateManager/GlobalStateManager";
-import { TypeRegistry } from "../globalStateManager/TypeRegistry";
 
 // Item class extends Drawable class and represents an item in the game
 export class Item extends Drawable {
   // Item properties
-  static readonly SAVE_KEY = "Item";
   globalId: string;
   x: number; // x-coordinate of the item
   y: number; // y-coordinate of the item
@@ -52,7 +49,6 @@ export class Item extends Drawable {
   constructor(level: Room, x: number, y: number) {
     super();
     this.globalId = IdGenerator.generate("IT");
-    GlobalStateManager.instance.registerItem(this);
 
     // Initialize properties
     this.level = level;
@@ -225,6 +221,7 @@ export class Item extends Drawable {
       Game.ctx.imageSmoothingEnabled = false;
 
       Game.drawItem(0, 0, 1, 1, this.x, this.y, 1, 1);
+      this.frame += (delta * (Math.PI * 2)) / 60;
       Game.drawItem(
         this.tileX,
         this.tileY,
@@ -387,4 +384,3 @@ export class Item extends Drawable {
     }
   };
 }
-TypeRegistry.registerItem(Item.SAVE_KEY, Item);

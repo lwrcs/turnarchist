@@ -31,8 +31,6 @@ import { DeathParticle } from "../particle/deathParticle";
 import { GameplaySettings } from "../game/gameplaySettings";
 import { Coin } from "../item/coin";
 import { Random } from "../utility/random";
-import { GlobalStateManager } from "../globalStateManager/GlobalStateManager";
-import { TypeRegistry } from "../globalStateManager/TypeRegistry";
 
 export enum EntityDirection {
   DOWN,
@@ -64,7 +62,6 @@ export interface bloomData {
 }
 
 export class Entity extends Drawable {
-  static readonly SAVE_KEY = "Entity";
   globalId: string;
   room: Room;
   x: number;
@@ -156,7 +153,6 @@ export class Entity extends Drawable {
   constructor(room: Room, game: Game, x: number, y: number) {
     super();
     this.globalId = IdGenerator.generate("EN");
-    GlobalStateManager.instance.registerEntity(this);
 
     // Check if we're in cloning mode
     const isCloning = (this.constructor as any).__isCloning;
