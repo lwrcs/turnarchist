@@ -58,8 +58,8 @@ export class WallTorch extends Wall {
     if (this.frame >= 12) this.frame = 0;
 
     this.tileYOffset =
-      wallInfo.innerWallType === "bottomInner" ||
-      wallInfo.innerWallType === "surroundedInner"
+      wallInfo?.innerWallType === "bottomInner" ||
+      wallInfo?.innerWallType === "surroundedInner"
         ? 0
         : 6;
     if (!this.isBottomWall) {

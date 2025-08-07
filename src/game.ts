@@ -468,7 +468,7 @@ export class Game {
     this.levels = [];
     //gs = new GameState();
     gs.seed = seed ?? (Math.random() * 4294967296) >>> 0;
-    gs.randomState = seed ?? (Math.random() * 4294967296) >>> 0;
+    gs.randomState = gs.seed;
     loadGameState(this, [this.localPlayerID], gs, true);
 
     this.levelState = LevelState.LEVEL_GENERATION;

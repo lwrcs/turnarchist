@@ -1,6 +1,7 @@
 import { Game } from "../game";
 import { Floor } from "../tile/floor";
 import { Wall } from "../tile/wall";
+import { Random } from "../utility/random";
 import { Room, WallDirection } from "./room";
 
 export class RoomBuilder {

@@ -1280,6 +1280,13 @@ export const loadGameState = (
     if (newWorld) {
       console.log("🔄 LOAD: New world flag set, resetting depth to 0");
       gameState.level.depth = 0;
+    } else {
+      // Restore random state BEFORE level generation for existing worlds
+      console.log(
+        "🔄 LOAD: Restoring random state before level generation:",
+        gameState.randomState,
+      );
+      Random.setState(gameState.randomState);
     }
 
     console.log("🔄 LOAD: Emitting LEVEL_GENERATION_STARTED event");
@@ -1288,6 +1295,7 @@ export const loadGameState = (
     console.log(
       `🔄 LOAD: Starting level generation for depth ${gameState.level.depth}`,
     );
+
     return game.levelgen
       .generateFirstNFloors(game, gameState.level.depth, !newWorld)
       .then(() => {
@@ -1298,260 +1306,131 @@ export const loadGameState = (
         if (!newWorld) {
           console.log("🔄 LOAD: Loading existing world state");
 
-          // Load level
-          if (gameState.level) {
-            console.log("🔄 LOAD: Loading level state");
-            loadLevel(game.level, gameState.level);
-            console.log("✅ LOAD: Level state loaded");
-          }
-
           // Load players
-          if (gameState.players) {
-            console.log("🔄 LOAD: Loading players");
-            for (const i in gameState.players) {
-              try {
-                console.log(`🔄 LOAD: Loading player ${i}`, {
-                  isActive: activeUsernames.includes(i),
-                  x: gameState.players[i].x,
-                  y: gameState.players[i].y,
-                  roomID: gameState.players[i].roomID,
-                });
-
-                if (activeUsernames.includes(i)) {
-                  game.players[i] = loadPlayer(i, gameState.players[i], game);
-                  console.log(`✅ LOAD: Loaded active player ${i}`);
-                } else {
-                  game.offlinePlayers[i] = loadPlayer(
-                    i,
-                    gameState.players[i],
-                    game,
-                  );
-                  console.log(`✅ LOAD: Loaded offline player ${i}`);
-                }
-              } catch (error) {
-                console.error(`❌ LOAD: Error loading player ${i}:`, error);
-                throw error;
-              }
-            }
-          }
-
-          // Load offline players
-          if (gameState.offlinePlayers) {
-            console.log("🔄 LOAD: Loading offline players");
-            for (const i in gameState.offlinePlayers) {
-              try {
-                console.log(`🔄 LOAD: Loading offline player ${i}`, {
-                  isLocalPlayer: i === game.localPlayerID,
-                  isActive: activeUsernames.includes(i),
-                  x: gameState.offlinePlayers[i].x,
-                  y: gameState.offlinePlayers[i].y,
-                  roomID: gameState.offlinePlayers[i].roomID,
-                });
-
-                if (i === game.localPlayerID) {
-                  game.players[i] = loadPlayer(
-                    i,
-                    gameState.offlinePlayers[i],
-                    game,
-                  );
-                  console.log(
-                    `✅ LOAD: Loaded local player ${i} from offline players`,
-                  );
-                } else if (activeUsernames.includes(i)) {
-                  game.players[i] = loadPlayer(
-                    i,
-                    gameState.offlinePlayers[i],
-                    game,
-                  );
-                  console.log(
-                    `✅ LOAD: Loaded active player ${i} from offline players`,
-                  );
-                } else {
-                  game.offlinePlayers[i] = loadPlayer(
-                    i,
-                    gameState.offlinePlayers[i],
-                    game,
-                  );
-                  console.log(`✅ LOAD: Kept offline player ${i}`);
-                }
-              } catch (error) {
-                console.error(
-                  `❌ LOAD: Error loading offline player ${i}:`,
-                  error,
-                );
-                throw error;
-              }
-            }
-          }
-
-          // Load rooms
-          console.log("🔄 LOAD: Loading room states");
-          for (let roomState of gameState.rooms) {
+          console.log("🔄 LOAD: Loading players...");
+          for (const playerId in gameState.players) {
             try {
-              console.log(`🔄 LOAD: Loading room ${roomState.roomID}`, {
-                entered: roomState.entered,
-                active: roomState.active,
-                enemiesCount: roomState.enemies?.length || 0,
-                itemsCount: roomState.items?.length || 0,
+              console.log(`🔄 LOAD: Loading player ${playerId}:`, {
+                x: gameState.players[playerId].x,
+                y: gameState.players[playerId].y,
+                health: gameState.players[playerId].health,
+                roomID: gameState.players[playerId].roomID,
               });
 
-              for (let i = 0; i < game.rooms.length; i++) {
-                if (i === roomState.roomID) {
-                  loadRoom(game.rooms[i], roomState, game);
-                  console.log(`✅ LOAD: Loaded room ${roomState.roomID}`);
-                  break;
-                }
-              }
+              const player = loadPlayer(
+                playerId,
+                gameState.players[playerId],
+                game,
+              );
+              game.players[playerId] = player;
+              console.log(`✅ LOAD: Successfully loaded player ${playerId}`);
             } catch (error) {
               console.error(
-                `❌ LOAD: Error loading room ${roomState.roomID}:`,
+                `❌ LOAD: Error loading player ${playerId}:`,
                 error,
               );
               throw error;
             }
           }
 
-          // Handle local player setup
-          const localPlayerInSaved = game.localPlayerID in gameState.players;
-          const localPlayerInOffline =
-            game.localPlayerID in gameState.offlinePlayers;
-
-          console.log("🔄 LOAD: Local player status:", {
-            localPlayerID: game.localPlayerID,
-            inSavedPlayers: localPlayerInSaved,
-            inOfflinePlayers: localPlayerInOffline,
-          });
-
-          if (!localPlayerInSaved && !localPlayerInOffline) {
-            console.log(
-              "🔄 LOAD: Creating new local player (not found in saved state)",
-            );
-            game.players[game.localPlayerID] = new Player(game, 0, 0, true);
-            game.players[game.localPlayerID].levelID =
-              game.levelgen.currentFloorFirstLevelID;
-
-            const spawnRoom =
-              game.rooms[game.levelgen.currentFloorFirstLevelID];
-            game.players[game.localPlayerID].x =
-              spawnRoom.roomX + Math.floor(spawnRoom.width / 2);
-            game.players[game.localPlayerID].y =
-              spawnRoom.roomY + Math.floor(spawnRoom.height / 2);
-            game.room = spawnRoom;
-
-            console.log("🔄 LOAD: New player spawn location:", {
-              levelID: game.players[game.localPlayerID].levelID,
-              x: game.players[game.localPlayerID].x,
-              y: game.players[game.localPlayerID].y,
-            });
-
-            game.room.enterLevel(game.players[game.localPlayerID]);
-            game.players[game.localPlayerID].map.updateSeenTiles();
-            game.players[game.localPlayerID].map.saveMapData();
-            console.log("✅ LOAD: New local player created and initialized");
-          } else {
-            console.log("🔄 LOAD: Setting up existing local player");
-            const localPlayer = game.players[game.localPlayerID];
-
-            console.log("🔄 LOAD: Local player info:", {
-              x: localPlayer.x,
-              y: localPlayer.y,
-              levelID: localPlayer.levelID,
-              health: localPlayer.health,
-            });
-
-            if (
-              localPlayer.levelID >= 0 &&
-              localPlayer.levelID < game.rooms.length
-            ) {
-              console.log("🔄 LOAD: Room assignment details:", {
-                levelID: localPlayer.levelID,
-                totalRooms: game.rooms.length,
-                roomExists: !!game.rooms[localPlayer.levelID],
-              });
-
-              game.room = game.rooms[localPlayer.levelID];
-              console.log("🔄 LOAD: Set current room to:", localPlayer.levelID);
-
-              // Verify the assignment worked
-              const roomIndex = game.rooms.indexOf(game.room);
-              console.log("🔄 LOAD: Room assignment verification:", {
-                assignedRoom: !!game.room,
-                roomFoundInArray: roomIndex,
-                roomsArrayLength: game.rooms.length,
-                gameRoomSameAsArrayRoom:
-                  game.room === game.rooms[localPlayer.levelID],
-              });
-
-              // Update game level reference WITH preserveRooms flag
-              game.updateLevel(game.room); // ✅ Pass true to preserve rooms
-              console.log("🔄 LOAD: Updated game level reference");
-
-              // NOW load the level state after game.level is set
-              if (gameState.level && game.level) {
-                console.log("🔄 LOAD: Loading level state");
-                loadLevel(game.level, gameState.level);
-                console.log("✅ LOAD: Level state loaded");
-              }
-
-              // Verify after updateLevel
-              const roomIndexAfterUpdate = game.rooms.indexOf(game.room);
-              console.log("🔄 LOAD: After updateLevel verification:", {
-                roomFoundInArray: roomIndexAfterUpdate,
-                gameRoomSameAsArrayRoom:
-                  game.room === game.rooms[localPlayer.levelID],
-              });
-
-              // Setup room without moving player
-              game.room.onEnterRoom(localPlayer);
-              console.log("🔄 LOAD: Entered room for local player");
-
-              // Verify after onEnterRoom
-              const roomIndexAfterEnter = game.rooms.indexOf(game.room);
-              console.log("🔄 LOAD: After onEnterRoom verification:", {
-                roomFoundInArray: roomIndexAfterEnter,
-                gameRoomSameAsArrayRoom:
-                  game.room === game.rooms[localPlayer.levelID],
-              });
-
-              // Update map
-              localPlayer.map.updateSeenTiles();
-              localPlayer.map.saveMapData();
-              console.log("🔄 LOAD: Updated player map data");
-
-              // Final verification before position check
-              const roomIndexFinal = game.rooms.indexOf(game.room);
-              console.log(
-                "🔄 LOAD: Final room verification before position check:",
-                {
-                  roomFoundInArray: roomIndexFinal,
-                  gameRoomSameAsArrayRoom:
-                    game.room === game.rooms[localPlayer.levelID],
-                },
+          // Load offline players
+          console.log("🔄 LOAD: Loading offline players...");
+          for (const playerId in gameState.offlinePlayers) {
+            try {
+              console.log(`🔄 LOAD: Loading offline player ${playerId}`);
+              const offlinePlayer = loadPlayer(
+                playerId,
+                gameState.offlinePlayers[playerId],
+                game,
               );
+              game.offlinePlayers[playerId] = offlinePlayer;
+              console.log(
+                `✅ LOAD: Successfully loaded offline player ${playerId}`,
+              );
+            } catch (error) {
+              console.error(
+                `❌ LOAD: Error loading offline player ${playerId}:`,
+                error,
+              );
+              throw error;
+            }
+          }
 
-              // Validate player position
-              const tile = game.room.roomArray[localPlayer.x]?.[localPlayer.y];
-              if (!tile || tile.isSolid()) {
-                console.warn(
-                  "🔄 LOAD: Player in invalid position, moving to room center",
-                );
-                const roomCenter = game.room.getRoomCenter();
-                localPlayer.moveSnap(roomCenter.x, roomCenter.y);
+          // Load room states
+          console.log("🔄 LOAD: Loading room states...");
+          try {
+            for (const roomState of gameState.rooms) {
+              const room = game.rooms.find((r) => r.id === roomState.roomID);
+              if (room) {
                 console.log(
-                  "🔄 LOAD: Moved player to room center:",
-                  roomCenter,
+                  `🔄 LOAD: Loading state for room ${roomState.roomID}`,
+                );
+                loadRoom(room, roomState, game);
+                console.log(
+                  `✅ LOAD: Successfully loaded room ${roomState.roomID}`,
                 );
               } else {
-                console.log("✅ LOAD: Player position is valid");
+                console.warn(
+                  `🔄 LOAD: Room ${roomState.roomID} not found in generated rooms`,
+                );
               }
-            } else {
-              console.error(
-                "❌ LOAD: Invalid levelID for local player:",
-                localPlayer.levelID,
-              );
-              throw new Error(
-                `Invalid levelID ${localPlayer.levelID} for local player`,
-              );
+            }
+            console.log("✅ LOAD: All room states loaded successfully");
+          } catch (error) {
+            console.error("❌ LOAD: Error loading room states:", error);
+            throw error;
+          }
+
+          // Set local player and current room
+          console.log("🔄 LOAD: Setting up local player and current room");
+          if (activeUsernames.includes(game.localPlayerID)) {
+            const localPlayer = game.players[game.localPlayerID];
+            if (localPlayer) {
+              console.log("🔄 LOAD: Found local player:", {
+                id: game.localPlayerID,
+                x: localPlayer.x,
+                y: localPlayer.y,
+                levelID: localPlayer.levelID,
+              });
+
+              if (localPlayer.levelID < game.rooms.length) {
+                game.room = game.rooms[localPlayer.levelID];
+                game.room.enterLevel(localPlayer);
+                localPlayer.map.updateSeenTiles();
+                console.log(
+                  "🔄 LOAD: Set current room and updated player map:",
+                  {
+                    roomID: game.room.id,
+                    roomType: game.room.type,
+                    playerPosition: { x: localPlayer.x, y: localPlayer.y },
+                  },
+                );
+
+                // Validate player position
+                const tile =
+                  game.room.roomArray[localPlayer.x]?.[localPlayer.y];
+                if (!tile || tile.isSolid()) {
+                  console.warn(
+                    "🔄 LOAD: Player in invalid position, moving to room center",
+                  );
+                  const roomCenter = game.room.getRoomCenter();
+                  localPlayer.moveSnap(roomCenter.x, roomCenter.y);
+                  console.log(
+                    "🔄 LOAD: Moved player to room center:",
+                    roomCenter,
+                  );
+                } else {
+                  console.log("✅ LOAD: Player position is valid");
+                }
+              } else {
+                console.error(
+                  "❌ LOAD: Invalid levelID for local player:",
+                  localPlayer.levelID,
+                );
+                throw new Error(
+                  `Invalid levelID ${localPlayer.levelID} for local player`,
+                );
+              }
             }
           }
         } else {
@@ -1564,10 +1443,6 @@ export const loadGameState = (
           console.log("✅ LOAD: New world created");
         }
 
-        // Restore random state
-        console.log("🔄 LOAD: Restoring random state:", gameState.randomState);
-        Random.setState(gameState.randomState);
-
         // Update lighting
         console.log("🔄 LOAD: Updating room lighting");
         game.room.updateLighting();
@@ -1578,17 +1453,16 @@ export const loadGameState = (
 
         console.log("✅ LOAD: GameState loading completed successfully");
         console.log("🔄 LOAD: Final state:", {
-          currentRoomID: game.rooms.indexOf(game.room),
-          localPlayerPos: {
-            x: game.players[game.localPlayerID]?.x,
-            y: game.players[game.localPlayerID]?.y,
-          },
+          currentRoomID: game.room?.id,
           playersCount: Object.keys(game.players).length,
-          offlinePlayersCount: Object.keys(game.offlinePlayers).length,
+          roomsCount: game.rooms.length,
+          randomState: Random.state,
         });
+
+        return game;
       })
       .catch((error) => {
-        console.error("❌ LOAD: Error in level generation:", error);
+        console.error("❌ LOAD: Level generation failed:", error);
         throw error;
       });
   } catch (error) {

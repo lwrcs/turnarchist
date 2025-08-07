@@ -84,8 +84,9 @@ export class Populator {
   private props: { x: number; y: number }[] = [];
   addedDownladder: boolean = false;
   private levelEnemyPoolIds: number[]; // Add this property to store the calculated enemy pool
+  private skipPopulation: boolean = false;
 
-  constructor(level: Level) {
+  constructor(level: Level, skipPopulation: boolean = false) {
     this.level = level;
     this.props = [];
     this.medianDensity = GameplaySettings.MEDIAN_ROOM_DENSITY;
@@ -95,9 +96,16 @@ export class Populator {
   }
 
   populateRooms = () => {
+    this.level.rooms.forEach((room) => {
+      this.addEnvironmentalFeatures(room, Random.rand);
+    });
+
+    if (this.skipPopulation) return;
+
     for (let room of this.level.rooms) {
       this.populate(room, Random.rand);
     }
+
     this.level.rooms.forEach((room) => {
       if (
         room.type === RoomType.START ||
@@ -109,6 +117,9 @@ export class Populator {
 
       this.populateByEnvironment(room);
     });
+
+    // Centralized torch, spike, and pool addition
+
     this.addDownladder();
 
     //this.level.distributeKeys();
@@ -377,8 +388,17 @@ export class Populator {
     }
   }
 
-  private addChasms(room: Room, rand: () => number) {
-    // add chasms
+  private addRectangularTileArea<
+    T extends new (
+      room: Room,
+      x: number,
+      y: number,
+      leftEdge: boolean,
+      rightEdge: boolean,
+      topEdge: boolean,
+      bottomEdge: boolean,
+    ) => any,
+  >(room: Room, rand: () => number, TileClass: T) {
     let w = Game.rand(2, 4, rand);
     let h = Game.rand(2, 4, rand);
     let xmin = room.roomX + 2;
@@ -393,10 +413,11 @@ export class Populator {
       for (let yy = y - 1; yy < y + h + 1; yy++) {
         // add a floor border
         if (xx === x - 1 || xx === x + w || yy === y - 1 || yy === y + h) {
-          if (!(room.roomArray[xx][yy] instanceof SpawnFloor))
+          const tile = room.roomArray[xx][yy];
+          if (!(tile instanceof SpawnFloor && !tile.isSolid()))
             room.roomArray[xx][yy] = new Floor(room, xx, yy);
         } else
-          room.roomArray[xx][yy] = new Chasm(
+          room.roomArray[xx][yy] = new TileClass(
             room,
             xx,
             yy,
@@ -409,36 +430,12 @@ export class Populator {
     }
   }
 
-  private addPools(room: Room, rand: () => number) {
-    // add chasms
-    let w = Game.rand(2, 4, rand);
-    let h = Game.rand(2, 4, rand);
-    let xmin = room.roomX + 2;
-    let xmax = room.roomX + room.width - w - 2;
-    let ymin = room.roomY + 2;
-    let ymax = room.roomY + room.height - h - 2;
-    if (xmax < xmin || ymax < ymin) return;
-    let x = Game.rand(xmin, xmax, rand);
-    let y = Game.rand(ymin, ymax, rand);
+  private addChasms(room: Room, rand: () => number) {
+    this.addRectangularTileArea(room, rand, Chasm);
+  }
 
-    for (let xx = x - 1; xx < x + w + 1; xx++) {
-      for (let yy = y - 1; yy < y + h + 1; yy++) {
-        // add a floor border
-        if (xx === x - 1 || xx === x + w || yy === y - 1 || yy === y + h) {
-          if (!(room.roomArray[xx][yy] instanceof SpawnFloor))
-            room.roomArray[xx][yy] = new Floor(room, xx, yy);
-        } else
-          room.roomArray[xx][yy] = new Pool(
-            room,
-            xx,
-            yy,
-            xx === x,
-            xx === x + w - 1,
-            yy === y,
-            yy === y + h - 1,
-          );
-      }
-    }
+  private addPools(room: Room, rand: () => number) {
+    this.addRectangularTileArea(room, rand, Pool);
   }
 
   private addSpikeTraps(room: Room, numSpikes: number, rand: () => number) {
@@ -816,7 +813,7 @@ export class Populator {
       }
     } else {
       // Original random occultist logic with configurable parameters
-      const maxPossibleOccultists = Math.floor(
+      const maxPossibleOccultists = Math.ceil(
         room.roomArea / GameplaySettings.OCCULTIST_AREA_THRESHOLD,
       );
 
@@ -986,28 +983,22 @@ export class Populator {
   // #region POPULATING METHODS
 
   populateEmpty = (room: Room, rand: () => number) => {
-    this.addTorchesByArea(room);
+    // Removed: this.addTorchesByArea(room);
   };
 
   populateTreasure = (room: Room, rand: () => number) => {
     this.addChests(room, 10, rand);
-    this.addTorchesByArea(room);
+    // Removed: this.addTorchesByArea(room);
   };
 
   populateDungeon = (room: Room, rand: () => number) => {
     //this.addChests(10, rand);
     let factor = Game.rand(1, 36, rand);
 
-    if (factor < 30) room.builder.addWallBlocks(rand);
-    if (factor % 4 === 0) this.addChasms(room, rand);
-    if (factor % 3 === 0) this.addPools(room, rand);
-    this.addTorchesByArea(room);
-    if (factor > 15)
-      this.addSpikeTraps(
-        room,
-        Game.randTable([0, 0, 0, 1, 1, 2, 3], rand),
-        rand,
-      );
+    // Removed: if (factor % 4 === 0) this.addChasms(room, rand);
+    // Removed: if (factor % 3 === 0) this.addPools(room, rand);
+    // Removed: this.addTorchesByArea(room);
+    // Removed: if (factor > 15) this.addSpikeTraps(...);
 
     if (factor <= 6) this.placeVendingMachineInWall(room);
 
@@ -1015,25 +1006,23 @@ export class Populator {
   };
 
   populateBoss = (room: Room, rand: () => number) => {
-    const bossDoor = room.getBossDoor();
-    this.addDoorTorches(room, bossDoor.x, bossDoor.y, bossDoor.doorDir);
-    this.addTorchesByArea(room);
-    this.addSpikeTraps(room, Game.randTable([0, 0, 0, 1, 1, 2, 5], rand), rand);
+    // Removed: const bossDoor = room.getBossDoor();
+    // Removed: this.addDoorTorches(room, bossDoor.x, bossDoor.y, bossDoor.doorDir);
+    // Removed: this.addTorchesByArea(room);
+    // Removed: this.addSpikeTraps(room, Game.randTable([0, 0, 0, 1, 1, 2, 5], rand), rand);
     this.addBosses(room, room.depth);
   };
 
   populateBigDungeon = (room: Room, rand: () => number) => {
-    if (Game.rand(1, 4, rand) === 1) this.addChasms(room, rand);
-    this.addTorchesByArea(room);
-
-    if (Game.rand(1, 3, rand) === 1)
-      this.addSpikeTraps(room, Game.randTable([3, 5, 7, 8], rand), rand);
+    // Removed: if (Game.rand(1, 4, rand) === 1) this.addChasms(room, rand);
+    // Removed: this.addTorchesByArea(room);
+    // Removed: if (Game.rand(1, 3, rand) === 1) this.addSpikeTraps(...);
 
     room.removeDoorObstructions();
   };
 
   populateSpawner = (room: Room, rand: () => number) => {
-    this.addTorchesByArea(room);
+    // Removed: this.addTorchesByArea(room);
 
     Spawner.add(
       room,
@@ -1045,7 +1034,7 @@ export class Populator {
   };
 
   populateKeyRoom = (room: Room, rand: () => number) => {
-    this.addRandomTorches(room, "medium");
+    // Removed: this.addRandomTorches(room, "medium");
 
     room.items.push(
       new GoldenKey(
@@ -1057,7 +1046,7 @@ export class Populator {
   };
 
   populateFountain = (room: Room, rand: () => number) => {
-    this.addRandomTorches(room, "medium");
+    // Removed: this.addRandomTorches(room, "medium");
 
     let centerX = Math.floor(room.roomX + room.width / 2);
     let centerY = Math.floor(room.roomY + room.height / 2);
@@ -1125,20 +1114,13 @@ export class Populator {
       }
     }
     room.removeDoorObstructions();
-    this.addRandomTorches(room, "medium");
+    // Removed: this.addRandomTorches(room, "medium");
   };
 
   populateCave = (room: Room, rand: () => number) => {
     let factor = Game.rand(1, 36, rand);
 
-    room.builder.addWallBlocks(rand);
-
-    if (factor > 15)
-      this.addSpikeTraps(
-        room,
-        Game.randTable([0, 0, 0, 1, 1, 2, 5], rand),
-        rand,
-      );
+    // Removed: if (factor > 15) this.addSpikeTraps(...);
     let numEmptyTiles = room.getEmptyTiles().length;
     let numEnemies = Math.ceil(
       numEmptyTiles * Game.randTable([0.25, 0.3, 0.35], rand),
@@ -1154,14 +1136,14 @@ export class Populator {
   };
 
   populateUpLadder = (room: Room, rand: () => number) => {
-    this.addRandomTorches(room, "medium");
+    // Removed: this.addRandomTorches(room, "medium");
 
     const { x, y } = room.getRoomCenter();
     room.roomArray[x - 1][y - 1] = new UpLadder(room, room.game, x - 1, y - 1);
   };
 
   populateDownLadder = (room: Room, rand: () => number) => {
-    this.addTorches(room, 1, rand, room.roomX + 3, room.roomY);
+    // Removed: this.addTorches(room, 1, rand, room.roomX + 3, room.roomY);
 
     const { x, y } = room.getRoomCenter();
     room.roomArray[x + 1][y - 1] = new DownLadder(
@@ -1231,7 +1213,7 @@ export class Populator {
   };
 
   populateRopeHole = (room: Room, rand: () => number) => {
-    this.addRandomTorches(room, "medium");
+    // Removed: this.addRandomTorches(room, "medium");
 
     const { x, y } = room.getRoomCenter();
 
@@ -1261,7 +1243,6 @@ export class Populator {
 
   populateShop = (room: Room, rand: () => number) => {
     this.addTorches(room, 2, rand);
-
     const { x, y } = room.getRoomCenter();
     VendingMachine.add(room, room.game, x - 2, y - 1, new Shotgun(room, 0, 0));
     VendingMachine.add(room, room.game, x + 2, y - 1, new Heart(room, 0, 0));
@@ -1308,6 +1289,125 @@ export class Populator {
     }
     this.addTorches(room, numTorches, Random.rand);
   };
+
+  /**
+   * Centralized method to add torches, spikes, and pools based on room type
+   */
+  private addEnvironmentalFeatures(room: Room, rand: () => number) {
+    const factor = Game.rand(1, 36, rand);
+
+    switch (room.type) {
+      case RoomType.START:
+        if (room.depth !== 0) {
+          // No torches for start rooms with upladder
+        } else {
+          this.addTorchesByArea(room);
+        }
+        break;
+
+      case RoomType.BOSS:
+        const bossDoor = room.getBossDoor();
+        this.addDoorTorches(room, bossDoor.x, bossDoor.y, bossDoor.doorDir);
+        this.addTorchesByArea(room);
+        this.addSpikeTraps(
+          room,
+          Game.randTable([0, 0, 0, 1, 1, 2, 5], rand),
+          rand,
+        );
+        break;
+
+      case RoomType.DUNGEON:
+        if (factor < 20) room.builder.addWallBlocks(rand);
+
+        if (factor % 4 === 0) this.addChasms(room, rand);
+        if (factor % 3 === 0) this.addPools(room, rand);
+
+        this.addTorchesByArea(room);
+        if (factor > 15)
+          this.addSpikeTraps(
+            room,
+            Game.randTable([0, 0, 0, 1, 1, 2, 3], rand),
+            rand,
+          );
+        break;
+
+      case RoomType.BIGDUNGEON:
+        if (factor < 5) room.builder.addWallBlocks(rand);
+
+        if (Game.rand(1, 4, rand) === 1) this.addChasms(room, rand);
+        this.addTorchesByArea(room);
+        if (Game.rand(1, 3, rand) === 1)
+          this.addSpikeTraps(room, Game.randTable([3, 5, 7, 8], rand), rand);
+        break;
+
+      case RoomType.CAVE:
+        if (factor < 30) room.builder.addWallBlocks(rand);
+        if (factor % 4 === 0) this.addChasms(room, rand);
+        if (factor % 3 === 0) this.addPools(room, rand);
+
+      case RoomType.BIGCAVE:
+        if (factor > 15)
+          this.addSpikeTraps(
+            room,
+            Game.randTable([0, 0, 0, 1, 1, 2, 5], rand),
+            rand,
+          );
+        // Caves don't get torches by default
+        break;
+
+      case RoomType.TREASURE:
+        this.addTorchesByArea(room);
+        break;
+
+      case RoomType.SPAWNER:
+        this.addTorchesByArea(room);
+        break;
+
+      case RoomType.UPLADDER:
+        this.addRandomTorches(room, "medium");
+        break;
+
+      case RoomType.DOWNLADDER:
+        this.addTorches(room, 1, rand, room.roomX + 3, room.roomY);
+        break;
+
+      case RoomType.ROPEHOLE:
+        this.addRandomTorches(room, "medium");
+        break;
+
+      case RoomType.FOUNTAIN:
+        this.addRandomTorches(room, "medium");
+        break;
+
+      case RoomType.KEYROOM:
+        this.addRandomTorches(room, "medium");
+        break;
+
+      case RoomType.SPIKECORRIDOR:
+        this.addRandomTorches(room, "medium");
+        break;
+
+      case RoomType.SHOP:
+        this.addTorches(room, 2, rand);
+        break;
+
+      case RoomType.GRASS:
+        if (factor % 4 === 0) this.addChasms(room, rand);
+        if (factor % 3 === 0) this.addPools(room, rand);
+        this.addTorchesByArea(room);
+        if (factor > 15)
+          this.addSpikeTraps(
+            room,
+            Game.randTable([0, 0, 0, 1, 1, 2, 3], rand),
+            rand,
+          );
+        break;
+
+      default:
+        // No environmental features for other room types
+        break;
+    }
+  }
 
   populate = (room: Room, rand: () => number) => {
     room.name = "";

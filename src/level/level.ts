@@ -74,6 +74,7 @@ export class Level {
   isMainPath: boolean = true;
   mapGroup: number;
   populator: Populator;
+  skipPopulation: boolean = false;
 
   constructor(
     game: Game,
@@ -94,9 +95,8 @@ export class Level {
     this.initializeLevelArray();
     this.mapGroup = mapGroup;
     this.environment = new Environment(env);
-    if (!skipPopulation) {
-      this.populator = new Populator(this);
-    }
+    this.populator = new Populator(this, skipPopulation);
+    this.skipPopulation = skipPopulation;
 
     this.enemyParameters = this.getEnemyParameters();
     //let mainPath = this.isMainPath ? "main" : "side";
@@ -125,32 +125,9 @@ export class Level {
     return null;
   }
 
-  distributeKeys() {
-    // Search the entire level array for down ladders
-    let downLadder: DownLadder | null = null;
-    for (let room of this.rooms) {
-      for (let x = room.roomX; x < room.roomX + room.width; x++) {
-        for (let y = room.roomY; y < room.roomY + room.height; y++) {
-          const tile = room.roomArray[x][y];
-          if (tile instanceof DownLadder) {
-            console.log(`Found down ladder at position (${x}, ${y})`);
-            downLadder = tile;
-            break;
-          }
-        }
-        if (downLadder) break;
-      }
-    }
-
-    if (!downLadder) {
-      console.error("No down ladder found in level array");
-      return;
-    }
-
-    this.distributeKey(downLadder);
-  }
-
   distributeKey(downLadder: DownLadder) {
+    if (this.skipPopulation) return;
+
     const rooms = this.rooms.filter(
       (r) =>
         r.type !== RoomType.START &&
