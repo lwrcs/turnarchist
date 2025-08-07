@@ -14245,7 +14245,7 @@ GameConstants.STARTING_DEV_INVENTORY = [
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.loadGameState = exports.createGameState = exports.GameState = exports.LevelState = exports.PlayerState = exports.InventoryState = exports.ItemState = exports.ItemType = exports.RoomState = exports.EnemyState = exports.EnemyType = exports.ProjectileState = exports.ProjectileType = exports.HitWarningState = void 0;
+exports.TileState = exports.TileType = exports.loadGameState = exports.createGameState = exports.GameState = exports.LevelState = exports.PlayerState = exports.InventoryState = exports.ItemState = exports.ItemType = exports.RoomState = exports.EnemyState = exports.EnemyType = exports.ProjectileState = exports.ProjectileType = exports.HitWarningState = void 0;
 const barrel_1 = __webpack_require__(/*! ../entity/object/barrel */ "./src/entity/object/barrel.ts");
 const bigSkullEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigSkullEnemy */ "./src/entity/enemy/bigSkullEnemy.ts");
 const chargeEnemy_1 = __webpack_require__(/*! ../entity/enemy/chargeEnemy */ "./src/entity/enemy/chargeEnemy.ts");
@@ -14356,6 +14356,19 @@ const downladderMaker_1 = __webpack_require__(/*! ../entity/downladderMaker */ "
 const rockResource_1 = __webpack_require__(/*! ../entity/resource/rockResource */ "./src/entity/resource/rockResource.ts");
 const hammer_1 = __webpack_require__(/*! ../item/tool/hammer */ "./src/item/tool/hammer.ts");
 const environmentTypes_1 = __webpack_require__(/*! ../constants/environmentTypes */ "./src/constants/environmentTypes.ts");
+const floor_1 = __webpack_require__(/*! ../tile/floor */ "./src/tile/floor.ts");
+const wall_1 = __webpack_require__(/*! ../tile/wall */ "./src/tile/wall.ts");
+const wallTorch_1 = __webpack_require__(/*! ../tile/wallTorch */ "./src/tile/wallTorch.ts");
+const door_1 = __webpack_require__(/*! ../tile/door */ "./src/tile/door.ts");
+const downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/downLadder.ts");
+const upLadder_1 = __webpack_require__(/*! ../tile/upLadder */ "./src/tile/upLadder.ts");
+const pool_1 = __webpack_require__(/*! ../tile/pool */ "./src/tile/pool.ts");
+const chasm_1 = __webpack_require__(/*! ../tile/chasm */ "./src/tile/chasm.ts");
+const spawnfloor_1 = __webpack_require__(/*! ../tile/spawnfloor */ "./src/tile/spawnfloor.ts");
+const spiketrap_1 = __webpack_require__(/*! ../tile/spiketrap */ "./src/tile/spiketrap.ts");
+const spike_1 = __webpack_require__(/*! ../tile/spike */ "./src/tile/spike.ts");
+const trapdoor_1 = __webpack_require__(/*! ../tile/trapdoor */ "./src/tile/trapdoor.ts");
+const bones_1 = __webpack_require__(/*! ../tile/bones */ "./src/tile/bones.ts");
 class HitWarningState {
     constructor(hw) {
         this.x = hw.x;
@@ -14846,6 +14859,20 @@ class RoomState {
         this.items = [];
         this.projectiles = [];
         this.hitwarnings = [];
+        // Save only chasms, pools, and walls
+        this.tiles = [];
+        for (let x = room.roomX - 1; x < room.roomX + room.width + 1; x++) {
+            this.tiles[x] = [];
+            for (let y = room.roomY - 1; y < room.roomY + room.height + 1; y++) {
+                const tile = room.roomArray[x]?.[y];
+                if (tile && this.shouldSaveTile(tile)) {
+                    this.tiles[x][y] = new TileState(tile, game);
+                }
+                else {
+                    this.tiles[x][y] = null;
+                }
+            }
+        }
         for (const enemy of room.entities)
             this.enemies.push(new EnemyState(enemy, game));
         for (const item of room.items) {
@@ -14858,12 +14885,29 @@ class RoomState {
         for (const hw of room.hitwarnings)
             this.hitwarnings.push(new HitWarningState(hw));
     }
+    // Helper method to determine which tiles should be saved
+    shouldSaveTile(tile) {
+        return (tile instanceof chasm_1.Chasm || tile instanceof pool_1.Pool || tile instanceof wall_1.Wall);
+    }
 }
 exports.RoomState = RoomState;
 let loadRoom = (room, roomState, game) => {
     room.entered = roomState.entered;
     room.active = roomState.active;
     room.onScreen = roomState.onScreen;
+    // Load only saved tiles (chasms, pools, walls), overwriting generated tiles
+    if (roomState.tiles) {
+        for (let x = room.roomX - 1; x < room.roomX + room.width + 1; x++) {
+            for (let y = room.roomY - 1; y < room.roomY + room.height + 1; y++) {
+                const tileState = roomState.tiles[x]?.[y];
+                if (tileState) {
+                    // Only overwrite if we have a saved tile (chasms, pools, walls)
+                    room.roomArray[x][y] = loadTile(tileState, room, game);
+                }
+                // If no saved tile state, keep the generated tile as-is
+            }
+        }
+    }
     room.entities = [];
     room.items = [];
     room.projectiles = [];
@@ -14880,6 +14924,7 @@ let loadRoom = (room, roomState, game) => {
     for (const hw of roomState.hitwarnings)
         room.hitwarnings.push(loadHitWarning(hw, game));
     // Reset lighting state to prevent recursion issues
+    room.updateLighting();
 };
 var ItemType;
 (function (ItemType) {
@@ -15623,6 +15668,152 @@ const loadGameState = (game, activeUsernames, gameState, newWorld) => {
     }
 };
 exports.loadGameState = loadGameState;
+var TileType;
+(function (TileType) {
+    TileType[TileType["FLOOR"] = 0] = "FLOOR";
+    TileType[TileType["WALL"] = 1] = "WALL";
+    TileType[TileType["WALL_TORCH"] = 2] = "WALL_TORCH";
+    TileType[TileType["DOOR"] = 3] = "DOOR";
+    TileType[TileType["DOWN_LADDER"] = 4] = "DOWN_LADDER";
+    TileType[TileType["UP_LADDER"] = 5] = "UP_LADDER";
+    TileType[TileType["POOL"] = 6] = "POOL";
+    TileType[TileType["CHASM"] = 7] = "CHASM";
+    TileType[TileType["SPAWN_FLOOR"] = 8] = "SPAWN_FLOOR";
+    TileType[TileType["SPIKE_TRAP"] = 9] = "SPIKE_TRAP";
+    TileType[TileType["SPIKE"] = 10] = "SPIKE";
+    TileType[TileType["TRAP_DOOR"] = 11] = "TRAP_DOOR";
+    TileType[TileType["BONES"] = 12] = "BONES";
+})(TileType = exports.TileType || (exports.TileType = {}));
+class TileState {
+    constructor(tile, game) {
+        // Add null check at the beginning
+        if (!tile) {
+            throw new Error("Cannot create TileState from null tile");
+        }
+        this.x = tile.x;
+        this.y = tile.y;
+        this.properties = {};
+        // Determine tile type and extract relevant properties
+        if (tile instanceof floor_1.Floor) {
+            this.type = TileType.FLOOR;
+        }
+        else if (tile instanceof wallTorch_1.WallTorch) {
+            this.type = TileType.WALL_TORCH;
+            this.properties.isBottomWall = tile.isBottomWall;
+            this.properties.frame = tile.frame;
+        }
+        else if (tile instanceof wall_1.Wall) {
+            this.type = TileType.WALL;
+        }
+        else if (tile instanceof door_1.Door) {
+            this.type = TileType.DOOR;
+            this.properties.doorType = tile.doorType;
+            this.properties.isOpen = tile.isOpen;
+            this.properties.doorDir = tile.doorDir;
+            this.properties.tunnelDoor = tile.tunnelDoor;
+        }
+        else if (tile instanceof downLadder_1.DownLadder) {
+            this.type = TileType.DOWN_LADDER;
+            this.properties.isSidePath = tile.isSidePath;
+            this.properties.environment = tile.environment;
+            this.properties.lockType = tile.lockable?.lockType;
+        }
+        else if (tile instanceof upLadder_1.UpLadder) {
+            this.type = TileType.UP_LADDER;
+        }
+        else if (tile instanceof pool_1.Pool) {
+            this.type = TileType.POOL;
+            // Reconstruct edge information from tileX, tileY values
+            const baseTileX = tile.skin === 1 ? 24 : 20;
+            const baseTileY = 4;
+            this.properties.leftEdge = tile.tileX < baseTileX;
+            this.properties.rightEdge = tile.tileX > baseTileX;
+            this.properties.topEdge = tile.topEdge; // This is stored
+            this.properties.bottomEdge = tile.tileY > baseTileY;
+        }
+        else if (tile instanceof chasm_1.Chasm) {
+            this.type = TileType.CHASM;
+            // Reconstruct edge information from tileX, tileY values
+            const baseTileX = tile.skin === 1 ? 24 : 20;
+            const baseTileY = 1;
+            this.properties.leftEdge = tile.tileX < baseTileX;
+            this.properties.rightEdge = tile.tileX > baseTileX;
+            this.properties.topEdge = tile.topEdge; // This is stored
+            this.properties.bottomEdge = tile.tileY > baseTileY;
+        }
+        else if (tile instanceof spawnfloor_1.SpawnFloor) {
+            this.type = TileType.SPAWN_FLOOR;
+        }
+        else if (tile instanceof spiketrap_1.SpikeTrap) {
+            this.type = TileType.SPIKE_TRAP;
+            this.properties.triggered = tile.triggered;
+        }
+        else if (tile instanceof spike_1.Spike) {
+            this.type = TileType.SPIKE;
+        }
+        else if (tile instanceof trapdoor_1.Trapdoor) {
+            this.type = TileType.TRAP_DOOR;
+        }
+        else if (tile instanceof bones_1.Bones) {
+            this.type = TileType.BONES;
+        }
+        else {
+            // Default fallback
+            this.type = TileType.FLOOR;
+            console.warn("Unknown tile type, defaulting to FLOOR:", tile.constructor.name);
+        }
+    }
+}
+exports.TileState = TileState;
+let loadTile = (ts, room, game) => {
+    let tile;
+    switch (ts.type) {
+        case TileType.FLOOR:
+            tile = new floor_1.Floor(room, ts.x, ts.y);
+            break;
+        case TileType.WALL:
+            tile = new wall_1.Wall(room, ts.x, ts.y);
+            break;
+        case TileType.WALL_TORCH:
+            tile = new wallTorch_1.WallTorch(room, ts.x, ts.y, ts.properties.isBottomWall);
+            tile.frame = ts.properties.frame || 0;
+            break;
+        case TileType.DOOR:
+            tile = new door_1.Door(room, game, ts.x, ts.y, ts.properties.doorDir, ts.properties.doorType);
+            tile.isOpen = ts.properties.isOpen || false;
+            break;
+        case TileType.DOWN_LADDER:
+            tile = new downLadder_1.DownLadder(room, game, ts.x, ts.y, ts.properties.isSidePath || false, ts.properties.environment, ts.properties.lockType);
+            break;
+        case TileType.UP_LADDER:
+            tile = new upLadder_1.UpLadder(room, game, ts.x, ts.y);
+            break;
+        case TileType.POOL:
+            tile = new pool_1.Pool(room, ts.x, ts.y, ts.properties.leftEdge || false, ts.properties.rightEdge || false, ts.properties.topEdge || false, ts.properties.bottomEdge || false);
+            break;
+        case TileType.CHASM:
+            tile = new chasm_1.Chasm(room, ts.x, ts.y, ts.properties.leftEdge || false, ts.properties.rightEdge || false, ts.properties.topEdge || false, ts.properties.bottomEdge || false);
+            break;
+        case TileType.SPAWN_FLOOR:
+            tile = new spawnfloor_1.SpawnFloor(room, ts.x, ts.y);
+            break;
+        case TileType.SPIKE_TRAP:
+            tile = new spiketrap_1.SpikeTrap(room, ts.x, ts.y);
+            tile.triggered = ts.properties.triggered || false;
+            break;
+        case TileType.SPIKE:
+            tile = new spike_1.Spike(room, ts.x, ts.y);
+            break;
+        case TileType.BONES:
+            tile = new bones_1.Bones(room, ts.x, ts.y);
+            break;
+        default:
+            console.error("Unknown tile type:", ts.type, "TileType enum value:", TileType[ts.type], "Falling back to floor");
+            tile = new floor_1.Floor(room, ts.x, ts.y);
+            break;
+    }
+    return tile;
+};
 
 
 /***/ }),
@@ -34401,6 +34592,31 @@ Sound.delayPlay = (method, delay) => {
 
 /***/ }),
 
+/***/ "./src/tile/bones.ts":
+/*!***************************!*\
+  !*** ./src/tile/bones.ts ***!
+  \***************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Bones = void 0;
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const floor_1 = __webpack_require__(/*! ./floor */ "./src/tile/floor.ts");
+class Bones extends floor_1.Floor {
+    constructor() {
+        super(...arguments);
+        this.draw = (delta) => {
+            game_1.Game.drawTile(7, this.skin, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
+        };
+    }
+}
+exports.Bones = Bones;
+
+
+/***/ }),
+
 /***/ "./src/tile/button.ts":
 /*!****************************!*\
   !*** ./src/tile/button.ts ***!
@@ -35403,6 +35619,34 @@ class SpawnFloor extends tile_1.Tile {
     }
 }
 exports.SpawnFloor = SpawnFloor;
+
+
+/***/ }),
+
+/***/ "./src/tile/spike.ts":
+/*!***************************!*\
+  !*** ./src/tile/spike.ts ***!
+  \***************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Spike = void 0;
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const tile_1 = __webpack_require__(/*! ./tile */ "./src/tile/tile.ts");
+class Spike extends tile_1.Tile {
+    constructor() {
+        super(...arguments);
+        this.onCollide = (player) => {
+            player.hurt(1, "spike");
+        };
+        this.draw = (delta) => {
+            game_1.Game.drawTile(11, 0, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
+        };
+    }
+}
+exports.Spike = Spike;
 
 
 /***/ }),

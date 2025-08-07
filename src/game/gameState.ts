@@ -119,6 +119,29 @@ import { EnvType } from "../constants/environmentTypes";
 import { SkinType } from "../tile/tile";
 import { Enemy } from "../entity/enemy/enemy";
 
+// Add tile imports
+import { Tile } from "../tile/tile";
+import { Floor } from "../tile/floor";
+import { Wall } from "../tile/wall";
+import { WallTorch } from "../tile/wallTorch";
+import { Door } from "../tile/door";
+import { DownLadder } from "../tile/downLadder";
+import { UpLadder } from "../tile/upLadder";
+import { Pool } from "../tile/pool";
+import { Chasm } from "../tile/chasm";
+import { SpawnFloor } from "../tile/spawnfloor";
+import { SpikeTrap } from "../tile/spiketrap";
+import { Spike } from "../tile/spike";
+import { Trapdoor } from "../tile/trapdoor";
+import { InsideLevelDoor } from "../tile/insideLevelDoor";
+import { GoldenDoor } from "../tile/goldenDoor";
+import { FountainTile } from "../tile/fountainTile";
+import { Button } from "../tile/button";
+import { CoffinTile } from "../tile/coffinTile";
+import { Bones } from "../tile/bones";
+import { Puddle } from "../tile/decorations/puddle";
+import { Decoration } from "../tile/decorations/decoration";
+
 export class HitWarningState {
   x: number;
   y: number;
@@ -651,6 +674,7 @@ export class RoomState {
   active: boolean;
   onScreen: boolean;
   lightingUpdateInProgress?: boolean;
+  tiles: Array<Array<TileState | null>>; // Only save specific tile types
 
   constructor(room: Room, game: Game) {
     this.roomID = game.rooms.indexOf(room);
@@ -661,6 +685,21 @@ export class RoomState {
     this.items = [];
     this.projectiles = [];
     this.hitwarnings = [];
+
+    // Save only chasms, pools, and walls
+    this.tiles = [];
+    for (let x = room.roomX - 1; x < room.roomX + room.width + 1; x++) {
+      this.tiles[x] = [];
+      for (let y = room.roomY - 1; y < room.roomY + room.height + 1; y++) {
+        const tile = room.roomArray[x]?.[y];
+        if (tile && this.shouldSaveTile(tile)) {
+          this.tiles[x][y] = new TileState(tile, game);
+        } else {
+          this.tiles[x][y] = null;
+        }
+      }
+    }
+
     for (const enemy of room.entities)
       this.enemies.push(new EnemyState(enemy, game));
     for (const item of room.items) {
@@ -673,12 +712,34 @@ export class RoomState {
     for (const hw of room.hitwarnings)
       this.hitwarnings.push(new HitWarningState(hw));
   }
+
+  // Helper method to determine which tiles should be saved
+  private shouldSaveTile(tile: Tile): boolean {
+    return (
+      tile instanceof Chasm || tile instanceof Pool || tile instanceof Wall
+    );
+  }
 }
 
 let loadRoom = (room: Room, roomState: RoomState, game: Game) => {
   room.entered = roomState.entered;
   room.active = roomState.active;
   room.onScreen = roomState.onScreen;
+
+  // Load only saved tiles (chasms, pools, walls), overwriting generated tiles
+  if (roomState.tiles) {
+    for (let x = room.roomX - 1; x < room.roomX + room.width + 1; x++) {
+      for (let y = room.roomY - 1; y < room.roomY + room.height + 1; y++) {
+        const tileState = roomState.tiles[x]?.[y];
+        if (tileState) {
+          // Only overwrite if we have a saved tile (chasms, pools, walls)
+          room.roomArray[x][y] = loadTile(tileState, room, game);
+        }
+        // If no saved tile state, keep the generated tile as-is
+      }
+    }
+  }
+
   room.entities = [];
   room.items = [];
   room.projectiles = [];
@@ -696,6 +757,7 @@ let loadRoom = (room: Room, roomState: RoomState, game: Game) => {
     room.hitwarnings.push(loadHitWarning(hw, game));
 
   // Reset lighting state to prevent recursion issues
+  room.updateLighting();
 };
 
 export enum ItemType {
@@ -1469,4 +1531,190 @@ export const loadGameState = (
     console.error("❌ LOAD: Fatal error in loadGameState:", error);
     throw error;
   }
+};
+
+export enum TileType {
+  FLOOR,
+  WALL,
+  WALL_TORCH,
+  DOOR,
+  DOWN_LADDER,
+  UP_LADDER,
+  POOL,
+  CHASM,
+  SPAWN_FLOOR,
+  SPIKE_TRAP,
+  SPIKE,
+  TRAP_DOOR,
+  BONES,
+}
+export class TileState {
+  type: TileType;
+  x: number;
+  y: number;
+  // Store tile-specific properties as a generic object
+  properties: Record<string, any>;
+
+  constructor(tile: Tile, game: Game) {
+    // Add null check at the beginning
+    if (!tile) {
+      throw new Error("Cannot create TileState from null tile");
+    }
+
+    this.x = tile.x;
+    this.y = tile.y;
+    this.properties = {};
+
+    // Determine tile type and extract relevant properties
+    if (tile instanceof Floor) {
+      this.type = TileType.FLOOR;
+    } else if (tile instanceof WallTorch) {
+      this.type = TileType.WALL_TORCH;
+      this.properties.isBottomWall = (tile as any).isBottomWall;
+      this.properties.frame = (tile as any).frame;
+    } else if (tile instanceof Wall) {
+      this.type = TileType.WALL;
+    } else if (tile instanceof Door) {
+      this.type = TileType.DOOR;
+      this.properties.doorType = (tile as any).doorType;
+      this.properties.isOpen = (tile as any).isOpen;
+      this.properties.doorDir = (tile as any).doorDir;
+      this.properties.tunnelDoor = (tile as any).tunnelDoor;
+    } else if (tile instanceof DownLadder) {
+      this.type = TileType.DOWN_LADDER;
+      this.properties.isSidePath = (tile as any).isSidePath;
+      this.properties.environment = (tile as any).environment;
+      this.properties.lockType = (tile as any).lockable?.lockType;
+    } else if (tile instanceof UpLadder) {
+      this.type = TileType.UP_LADDER;
+    } else if (tile instanceof Pool) {
+      this.type = TileType.POOL;
+      // Reconstruct edge information from tileX, tileY values
+      const baseTileX = (tile as any).skin === 1 ? 24 : 20;
+      const baseTileY = 4;
+      this.properties.leftEdge = (tile as any).tileX < baseTileX;
+      this.properties.rightEdge = (tile as any).tileX > baseTileX;
+      this.properties.topEdge = (tile as any).topEdge; // This is stored
+      this.properties.bottomEdge = (tile as any).tileY > baseTileY;
+    } else if (tile instanceof Chasm) {
+      this.type = TileType.CHASM;
+      // Reconstruct edge information from tileX, tileY values
+      const baseTileX = (tile as any).skin === 1 ? 24 : 20;
+      const baseTileY = 1;
+      this.properties.leftEdge = (tile as any).tileX < baseTileX;
+      this.properties.rightEdge = (tile as any).tileX > baseTileX;
+      this.properties.topEdge = (tile as any).topEdge; // This is stored
+      this.properties.bottomEdge = (tile as any).tileY > baseTileY;
+    } else if (tile instanceof SpawnFloor) {
+      this.type = TileType.SPAWN_FLOOR;
+    } else if (tile instanceof SpikeTrap) {
+      this.type = TileType.SPIKE_TRAP;
+      this.properties.triggered = (tile as any).triggered;
+    } else if (tile instanceof Spike) {
+      this.type = TileType.SPIKE;
+    } else if (tile instanceof Trapdoor) {
+      this.type = TileType.TRAP_DOOR;
+    } else if (tile instanceof Bones) {
+      this.type = TileType.BONES;
+    } else {
+      // Default fallback
+      this.type = TileType.FLOOR;
+      console.warn(
+        "Unknown tile type, defaulting to FLOOR:",
+        tile.constructor.name,
+      );
+    }
+  }
+}
+
+let loadTile = (ts: TileState, room: Room, game: Game): Tile => {
+  let tile: Tile;
+
+  switch (ts.type) {
+    case TileType.FLOOR:
+      tile = new Floor(room, ts.x, ts.y);
+      break;
+    case TileType.WALL:
+      tile = new Wall(room, ts.x, ts.y);
+      break;
+    case TileType.WALL_TORCH:
+      tile = new WallTorch(room, ts.x, ts.y, ts.properties.isBottomWall);
+      (tile as any).frame = ts.properties.frame || 0;
+      break;
+    case TileType.DOOR:
+      tile = new Door(
+        room,
+        game,
+        ts.x,
+        ts.y,
+        ts.properties.doorDir,
+        ts.properties.doorType,
+      );
+      (tile as any).isOpen = ts.properties.isOpen || false;
+      break;
+    case TileType.DOWN_LADDER:
+      tile = new DownLadder(
+        room,
+        game,
+        ts.x,
+        ts.y,
+        ts.properties.isSidePath || false,
+        ts.properties.environment,
+        ts.properties.lockType,
+      );
+      break;
+    case TileType.UP_LADDER:
+      tile = new UpLadder(room, game, ts.x, ts.y);
+      break;
+    case TileType.POOL:
+      tile = new Pool(
+        room,
+        ts.x,
+        ts.y,
+        ts.properties.leftEdge || false,
+        ts.properties.rightEdge || false,
+        ts.properties.topEdge || false,
+        ts.properties.bottomEdge || false,
+      );
+      break;
+    case TileType.CHASM:
+      tile = new Chasm(
+        room,
+        ts.x,
+        ts.y,
+        ts.properties.leftEdge || false,
+        ts.properties.rightEdge || false,
+        ts.properties.topEdge || false,
+        ts.properties.bottomEdge || false,
+      );
+      break;
+    case TileType.SPAWN_FLOOR:
+      tile = new SpawnFloor(room, ts.x, ts.y);
+      break;
+
+    case TileType.SPIKE_TRAP:
+      tile = new SpikeTrap(room, ts.x, ts.y);
+      (tile as any).triggered = ts.properties.triggered || false;
+      break;
+    case TileType.SPIKE:
+      tile = new Spike(room, ts.x, ts.y);
+      break;
+
+    case TileType.BONES:
+      tile = new Bones(room, ts.x, ts.y);
+      break;
+
+    default:
+      console.error(
+        "Unknown tile type:",
+        ts.type,
+        "TileType enum value:",
+        TileType[ts.type],
+        "Falling back to floor",
+      );
+      tile = new Floor(room, ts.x, ts.y);
+      break;
+  }
+
+  return tile;
 };
