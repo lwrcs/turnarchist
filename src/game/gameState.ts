@@ -681,6 +681,8 @@ export class RoomState {
   roomID: number;
   roomGID?: string;
   entered: boolean;
+  envType?: EnvType;
+  skin?: SkinType;
   enemies: Array<EnemyState>;
   items: Array<ItemState>;
   projectiles: Array<ProjectileState>;
@@ -688,14 +690,18 @@ export class RoomState {
   active: boolean;
   onScreen: boolean;
   lightingUpdateInProgress?: boolean;
+  mapGroup: number;
   tiles: Array<Array<TileState | null>>; // Only save specific tile types
 
   constructor(room: Room, game: Game) {
     this.roomID = game.rooms.indexOf(room);
     this.roomGID = room.globalId;
     this.entered = room.entered;
+    this.envType = room.envType;
+    this.skin = room.skin;
     this.active = room.active;
     this.onScreen = room.onScreen;
+    this.mapGroup = room.mapGroup;
     this.enemies = [];
     this.items = [];
     this.projectiles = [];
@@ -738,8 +744,13 @@ export class RoomState {
 
 let loadRoom = (room: Room, roomState: RoomState, game: Game) => {
   room.entered = roomState.entered;
+  if (roomState.envType !== undefined) {
+    room.envType = roomState.envType as EnvType;
+    room.skin = room.envType as unknown as SkinType;
+  }
   room.active = roomState.active;
   room.onScreen = roomState.onScreen;
+  room.skin = roomState.skin;
 
   // Load only saved tiles (chasms, pools, walls), overwriting generated tiles
   if (roomState.tiles) {
@@ -772,6 +783,7 @@ let loadRoom = (room: Room, roomState: RoomState, game: Game) => {
     room.hitwarnings.push(loadHitWarning(hw, game));
 
   // Reset lighting state to prevent recursion issues
+  room.calculateWallInfo();
   room.updateLighting();
 };
 
@@ -1096,6 +1108,8 @@ export class PlayerState {
   dead: boolean;
   roomID: number;
   roomGID?: string;
+  mapGroup?: number;
+  roomIndexInGroup?: number;
   direction: Direction;
   health: number;
   maxHealth: number;
@@ -1114,6 +1128,14 @@ export class PlayerState {
     this.dead = player.dead;
     this.roomID = player.levelID;
     this.roomGID = game.rooms[player.levelID]?.globalId;
+    this.mapGroup = game.rooms[player.levelID]?.mapGroup;
+    const playerRoom = game.rooms[player.levelID];
+    if (playerRoom) {
+      const groupRooms = game.rooms
+        .filter((r) => r.mapGroup === playerRoom.mapGroup)
+        .sort((a, b) => a.id - b.id);
+      this.roomIndexInGroup = groupRooms.findIndex((r) => r === playerRoom);
+    }
     this.direction = player.direction;
     this.health = player.health;
     this.maxHealth = player.maxHealth;
@@ -1144,14 +1166,56 @@ let loadPlayer = (id: string, p: PlayerState, game: Game): Player => {
   if (p.roomGID && game.roomsById?.has(p.roomGID)) {
     const room = game.roomsById.get(p.roomGID);
     player.levelID = game.rooms.indexOf(room);
+    console.log("🧭 LOAD: Player resolved by roomGID", {
+      id,
+      gid: p.roomGID,
+      levelID: player.levelID,
+    });
   } else {
-    // Fall back to spatial resolution by saved coordinates to avoid index drift
-    const coordRoom = game.rooms.find((r) => r.tileInside(p.x, p.y));
-    if (coordRoom) {
-      player.levelID = game.rooms.indexOf(coordRoom);
-    } else {
-      player.levelID = p.roomID;
+    // Sidepath-aware resolution: prefer group match and relative order
+    let resolvedRoom: Room | undefined;
+    if (p.mapGroup !== undefined) {
+      const groupRooms = game.rooms
+        .filter((r) => r.mapGroup === p.mapGroup)
+        .sort((a, b) => a.id - b.id);
+      console.log("🧭 LOAD: Player candidate group rooms", {
+        id,
+        mapGroup: p.mapGroup,
+        count: groupRooms.length,
+      });
+      if (groupRooms.length) {
+        if (
+          p.roomIndexInGroup !== undefined &&
+          p.roomIndexInGroup < groupRooms.length
+        ) {
+          resolvedRoom = groupRooms[p.roomIndexInGroup];
+          console.log("🧭 LOAD: Player resolved by roomIndexInGroup", { id });
+        } else {
+          resolvedRoom =
+            groupRooms.find((r) => r.id === p.roomID) || groupRooms[0];
+          console.log(
+            "🧭 LOAD: Player resolved by id in group or first of group",
+            { id },
+          );
+        }
+      }
     }
+    if (!resolvedRoom) {
+      const coord = game.rooms.find((r) => r.tileInside(p.x, p.y));
+      if (coord) {
+        resolvedRoom = coord;
+        console.log("🧭 LOAD: Player resolved by spatial coords", { id });
+      }
+    }
+    if (!resolvedRoom) {
+      resolvedRoom = game.rooms[p.roomID];
+      console.log("🧭 LOAD: Player resolved by index", { id });
+    }
+    player.levelID = resolvedRoom ? game.rooms.indexOf(resolvedRoom) : 0;
+    console.log("🧭 LOAD: Player final levelID", {
+      id,
+      levelID: player.levelID,
+    });
   }
   // Ensure player depth matches the currently generated level depth
   if (game.level) {
@@ -1277,12 +1341,16 @@ export const createGameState = (game: Game): GameState => {
     console.log("🔄 SAVE: Processing players...");
     for (const i in game.players) {
       try {
+        const pr = game.players[i];
+        const playerRoom = game.rooms[pr.levelID];
         console.log(`🔄 SAVE: Processing player ${i}:`, {
-          x: game.players[i].x,
-          y: game.players[i].y,
-          health: game.players[i].health,
-          levelID: game.players[i].levelID,
-          inventoryItemsCount: game.players[i].inventory?.items?.length || 0,
+          x: pr.x,
+          y: pr.y,
+          health: pr.health,
+          levelID: pr.levelID,
+          roomGID: playerRoom?.globalId,
+          mapGroup: playerRoom?.mapGroup,
+          inventoryItemsCount: pr.inventory?.items?.length || 0,
         });
         gs.players[i] = new PlayerState(game.players[i], game);
         console.log(`✅ SAVE: Successfully saved player ${i}`);
@@ -1312,12 +1380,22 @@ export const createGameState = (game: Game): GameState => {
 
     // Save rooms
     console.log("🔄 SAVE: Processing rooms...");
+    try {
+      const groupCounts: Record<number, number> = {};
+      for (const r of game.rooms) {
+        groupCounts[r.mapGroup] = (groupCounts[r.mapGroup] || 0) + 1;
+      }
+      console.log("🧭 SAVE: Group distribution:", groupCounts);
+    } catch {}
     for (let roomIndex = 0; roomIndex < game.rooms.length; roomIndex++) {
       const room = game.rooms[roomIndex];
       try {
         console.log(`🔄 SAVE: Processing room ${roomIndex}:`, {
           entered: room.entered,
           active: room.active,
+          id: room.id,
+          gid: room.globalId,
+          mapGroup: room.mapGroup,
           entitiesCount: room.entities?.length || 0,
           itemsCount: room.items?.length || 0,
           projectilesCount: room.projectiles?.length || 0,
@@ -1428,10 +1506,91 @@ export const loadGameState = (
 
     return game.levelgen
       .generateFirstNFloors(game, gameState.level.depth, !newWorld)
-      .then(() => {
+      .then(async () => {
         console.log("✅ LOAD: Level generation completed");
         console.log("🔄 LOAD: Generated rooms count:", game.rooms.length);
         globalEventBus.emit(EVENTS.LEVEL_GENERATION_COMPLETED, {});
+
+        // Ensure sidepath groups from save exist before hydrating state
+        try {
+          // Log current group distribution before any sidepath gen
+          try {
+            const groupCounts: Record<number, number> = {} as any;
+            for (const r of game.rooms) {
+              groupCounts[r.mapGroup] = (groupCounts[r.mapGroup] || 0) + 1;
+            }
+            console.log("🧭 LOAD: Current group distribution:", groupCounts);
+          } catch {}
+
+          const savedGroups: number[] = Array.from(
+            new Set(
+              (gameState.rooms || [])
+                .map((rs) => (rs as any).mapGroup)
+                .filter((g) => typeof g === "number"),
+            ),
+          ) as number[];
+          console.log("🧭 LOAD: Saved mapGroups from save:", savedGroups);
+          const currentMaxGroup = game.rooms.length
+            ? game.rooms[game.rooms.length - 1].mapGroup
+            : -1;
+          console.log("🧭 LOAD: currentMaxGroup:", currentMaxGroup);
+          const targetMaxGroup = savedGroups.length
+            ? Math.max(...savedGroups)
+            : currentMaxGroup;
+          console.log("🧭 LOAD: targetMaxGroup:", targetMaxGroup);
+          for (let g = currentMaxGroup + 1; g <= targetMaxGroup; g++) {
+            console.log("🧭 LOAD: Generating missing sidepath group:", g);
+            await game.levelgen.generate(
+              game,
+              gameState.level.depth,
+              true,
+              () => {},
+              gameState.level.envType,
+              !newWorld,
+            );
+            try {
+              const groupCountsAfter: Record<number, number> = {} as any;
+              for (const r of game.rooms) {
+                groupCountsAfter[r.mapGroup] =
+                  (groupCountsAfter[r.mapGroup] || 0) + 1;
+              }
+              console.log(
+                "🧭 LOAD: Group distribution after sidepath gen:",
+                groupCountsAfter,
+              );
+            } catch {}
+          }
+
+          // Merge any currently generated sidepath rooms into the active level's rooms
+          const activeLevel = game.levels[gameState.level.depth];
+          if (activeLevel) {
+            const existingGids = new Set(
+              activeLevel.rooms.map((r) => r.globalId),
+            );
+            const sideRooms = game.rooms.filter(
+              (r) => !existingGids.has(r.globalId),
+            );
+            let merged = 0;
+            let startId = activeLevel.rooms.length;
+            for (const r of sideRooms) {
+              r.id = startId + merged;
+              activeLevel.rooms.push(r);
+              merged++;
+            }
+            console.log("🧭 LOAD: Merged sidepath rooms into level.rooms", {
+              merged,
+              newLevelRoomsLen: activeLevel.rooms.length,
+            });
+            // Make game.rooms reflect the canonical level.rooms
+            game.rooms = activeLevel.rooms;
+            game.roomsById = new Map(game.rooms.map((r) => [r.globalId, r]));
+          }
+        } catch (e) {
+          console.warn(
+            "⚠️ LOAD: Failed to pre-generate sidepath groups; proceeding with fallback room resolution",
+            e,
+          );
+        }
 
         if (!newWorld) {
           console.log("🔄 LOAD: Loading existing world state");
@@ -1492,6 +1651,11 @@ export const loadGameState = (
             for (const roomState of gameState.rooms) {
               const room =
                 (roomState.roomGID && game.getRoomById(roomState.roomGID)) ||
+                game.rooms.find(
+                  (r) =>
+                    r.mapGroup === roomState.mapGroup &&
+                    r.id === roomState.roomID,
+                ) ||
                 game.rooms.find((r) => r.id === roomState.roomID);
               if (room) {
                 console.log(
@@ -1525,20 +1689,77 @@ export const loadGameState = (
                 levelID: localPlayer.levelID,
               });
 
-              if (localPlayer.levelID < game.rooms.length) {
-                // Resolve via roomGID first, else spatial, else index
+              if (game.rooms.length > 0) {
+                // Resolve via roomGID (stable), else by saved mapGroup+roomID where available (sidepaths),
+                // else spatial by coordinates, else fallback by index or first room
                 const savedLocal = gameState.players[game.localPlayerID];
                 const gidRoom = savedLocal?.roomGID
                   ? game.getRoomById(savedLocal.roomGID)
                   : undefined;
+                // Prefer sidepath grouping + relative order if present
+                let groupAndIdRoom: Room | undefined = undefined;
+                if (savedLocal?.mapGroup !== undefined) {
+                  const groupRooms = game.rooms
+                    .filter((r) => r.mapGroup === savedLocal.mapGroup)
+                    .sort((a, b) => a.id - b.id);
+                  console.log(
+                    "🧭 LOAD: Candidate group rooms for local player:",
+                    {
+                      mapGroup: savedLocal.mapGroup,
+                      count: groupRooms.length,
+                    },
+                  );
+                  if (groupRooms.length) {
+                    if (
+                      savedLocal?.roomIndexInGroup !== undefined &&
+                      savedLocal.roomIndexInGroup < groupRooms.length
+                    ) {
+                      groupAndIdRoom = groupRooms[savedLocal.roomIndexInGroup];
+                      console.log("🧭 LOAD: Resolved by roomIndexInGroup");
+                    } else if (savedLocal?.roomID !== undefined) {
+                      groupAndIdRoom =
+                        groupRooms.find((r) => r.id === savedLocal.roomID) ||
+                        groupRooms[0];
+                      console.log(
+                        "🧭 LOAD: Resolved by id within group or fallback to first of group",
+                      );
+                    }
+                  }
+                }
                 const coordRoom = game.rooms.find((r) =>
                   r.tileInside(localPlayer.x, localPlayer.y),
                 );
+                if (!gidRoom && !groupAndIdRoom && coordRoom) {
+                  console.log("🧭 LOAD: Resolved by spatial coordinates");
+                }
+                const indexRoom =
+                  localPlayer.levelID < game.rooms.length
+                    ? game.rooms[localPlayer.levelID]
+                    : undefined;
                 const resolvedRoom =
-                  gidRoom || coordRoom || game.rooms[localPlayer.levelID];
+                  gidRoom ||
+                  groupAndIdRoom ||
+                  coordRoom ||
+                  indexRoom ||
+                  game.rooms[0];
 
                 game.room = resolvedRoom;
                 localPlayer.levelID = game.rooms.indexOf(resolvedRoom);
+                console.log("🧭 LOAD: Resolved room flags & membership", {
+                  entered: resolvedRoom.entered,
+                  active: resolvedRoom.active,
+                  onScreen: resolvedRoom.onScreen,
+                  inLevelRooms: !!game.level?.rooms?.find(
+                    (rr) => rr.globalId === resolvedRoom.globalId,
+                  ),
+                  levelRoomsLen: game.level?.rooms?.length,
+                });
+                console.log("🧭 LOAD: Final resolved room", {
+                  id: resolvedRoom.id,
+                  gid: resolvedRoom.globalId,
+                  mapGroup: resolvedRoom.mapGroup,
+                  levelID: localPlayer.levelID,
+                });
                 // Force-correct depth/level mapping on load
                 game.updateLevel(game.room);
                 game.currentDepth = game.level.depth;
@@ -1680,6 +1901,10 @@ export class TileState {
       this.properties.lockType = (tile as any).lockable?.lockType;
     } else if (tile instanceof UpLadder) {
       this.type = TileType.UP_LADDER;
+      // Persist rope state and explicit link to target room by GID for reliability
+      this.properties.isRope = (tile as any).isRope || false;
+      const linkedRoom: Room | null = (tile as any).linkedRoom || null;
+      this.properties.linkedRoomGID = linkedRoom ? linkedRoom.globalId : null;
     } else if (tile instanceof Pool) {
       this.type = TileType.POOL;
       // Reconstruct edge information from tileX, tileY values
@@ -1758,6 +1983,11 @@ let loadTile = (ts: TileState, room: Room, game: Game): Tile => {
       break;
     case TileType.UP_LADDER:
       tile = new UpLadder(room, game, ts.x, ts.y);
+      (tile as any).isRope = !!ts.properties.isRope;
+      if (ts.properties.linkedRoomGID) {
+        const linked = game.roomsById?.get(ts.properties.linkedRoomGID);
+        if (linked) (tile as any).linkedRoom = linked;
+      }
       break;
     case TileType.POOL:
       tile = new Pool(
@@ -1808,6 +2038,7 @@ let loadTile = (ts: TileState, room: Room, game: Game): Tile => {
       tile = new Floor(room, ts.x, ts.y);
       break;
   }
+  tile.skin = room.skin;
 
   return tile;
 };

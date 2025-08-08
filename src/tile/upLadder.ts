@@ -62,7 +62,41 @@ export class UpLadder extends Passageway {
   };
 
   linkRoom = () => {
-    this.linkedRoom = this.game.levels[this.depth - 1].exitRoom;
+    // For sidepaths (rope), link back to the room that contains the DownLadder
+    if (this.isRope && !this.linkedRoom) {
+      const level = this.game.levels[this.depth];
+      if (level) {
+        // Prefer any room in an earlier mapGroup that contains a sidepath DownLadder
+        for (const candidate of level.rooms) {
+          if (candidate.mapGroup < this.room.mapGroup) {
+            for (
+              let x = candidate.roomX;
+              x < candidate.roomX + candidate.width;
+              x++
+            ) {
+              for (
+                let y = candidate.roomY;
+                y < candidate.roomY + candidate.height;
+                y++
+              ) {
+                const t = candidate.roomArray[x]?.[y];
+                if (t instanceof DownLadder && t.isSidePath) {
+                  this.linkedRoom = candidate;
+                  return;
+                }
+              }
+            }
+          }
+        }
+        // Fallback: link to level start if not found
+        this.linkedRoom = level.startRoom || level.rooms[0];
+        return;
+      }
+    }
+    // Main path: link to previous depth exit
+    if (this.depth - 1 >= 0 && this.game.levels[this.depth - 1]) {
+      this.linkedRoom = this.game.levels[this.depth - 1].exitRoom;
+    }
   };
 
   draw = (delta: number) => {
