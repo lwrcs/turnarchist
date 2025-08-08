@@ -14396,6 +14396,7 @@ const spiketrap_1 = __webpack_require__(/*! ../tile/spiketrap */ "./src/tile/spi
 const spike_1 = __webpack_require__(/*! ../tile/spike */ "./src/tile/spike.ts");
 const trapdoor_1 = __webpack_require__(/*! ../tile/trapdoor */ "./src/tile/trapdoor.ts");
 const bones_1 = __webpack_require__(/*! ../tile/bones */ "./src/tile/bones.ts");
+const IdGenerator_1 = __webpack_require__(/*! ../globalStateManager/IdGenerator */ "./src/globalStateManager/IdGenerator.ts");
 class HitWarningState {
     constructor(hw) {
         this.x = hw.x;
@@ -14925,7 +14926,14 @@ class RoomState {
     }
     // Helper method to determine which tiles should be saved
     shouldSaveTile(tile) {
-        return (tile instanceof chasm_1.Chasm || tile instanceof pool_1.Pool || tile instanceof wall_1.Wall);
+        return (tile instanceof chasm_1.Chasm ||
+            tile instanceof pool_1.Pool ||
+            tile instanceof wall_1.Wall ||
+            tile instanceof downLadder_1.DownLadder ||
+            tile instanceof upLadder_1.UpLadder ||
+            tile instanceof floor_1.Floor ||
+            tile instanceof wallTorch_1.WallTorch ||
+            tile instanceof spawnfloor_1.SpawnFloor);
     }
 }
 exports.RoomState = RoomState;
@@ -14944,12 +14952,41 @@ let loadRoom = (room, roomState, game) => {
             for (let y = room.roomY - 1; y < room.roomY + room.height + 1; y++) {
                 const tileState = roomState.tiles[x]?.[y];
                 if (tileState) {
-                    // Only overwrite if we have a saved tile (chasms, pools, walls)
-                    room.roomArray[x][y] = loadTile(tileState, room, game);
+                    // Only overwrite if we have a saved tile; defer door linking until after grid load
+                    const loadedTile = loadTile(tileState, room, game);
+                    room.roomArray[x][y] = loadedTile;
                 }
                 // If no saved tile state, keep the generated tile as-is
             }
         }
+        // Second pass: link doors by saved linkedDoorGID
+        try {
+            const gidToDoor = new Map();
+            for (let x = room.roomX - 1; x < room.roomX + room.width + 1; x++) {
+                for (let y = room.roomY - 1; y < room.roomY + room.height + 1; y++) {
+                    const ts = roomState.tiles[x]?.[y];
+                    const t = room.roomArray[x]?.[y];
+                    if (ts && ts.type === TileType.DOOR && t instanceof door_1.Door) {
+                        const gid = ts.properties.globalId;
+                        if (gid)
+                            gidToDoor.set(gid, t);
+                    }
+                }
+            }
+            for (let x = room.roomX - 1; x < room.roomX + room.width + 1; x++) {
+                for (let y = room.roomY - 1; y < room.roomY + room.height + 1; y++) {
+                    const ts = roomState.tiles[x]?.[y];
+                    const t = room.roomArray[x]?.[y];
+                    if (ts && ts.type === TileType.DOOR && t instanceof door_1.Door) {
+                        const linkedGid = ts.properties.linkedDoorGID;
+                        if (linkedGid && gidToDoor.has(linkedGid)) {
+                            t.link(gidToDoor.get(linkedGid));
+                        }
+                    }
+                }
+            }
+        }
+        catch { }
     }
     room.entities = [];
     room.items = [];
@@ -15986,12 +16023,17 @@ class TileState {
             this.properties.isOpen = tile.isOpen;
             this.properties.doorDir = tile.doorDir;
             this.properties.tunnelDoor = tile.tunnelDoor;
+            this.properties.globalId = tile.globalId;
+            this.properties.linkedDoorGID =
+                tile.linkedDoor?.globalId || null;
         }
         else if (tile instanceof downLadder_1.DownLadder) {
             this.type = TileType.DOWN_LADDER;
             this.properties.isSidePath = tile.isSidePath;
             this.properties.environment = tile.environment;
             this.properties.lockType = tile.lockable?.lockType;
+            const linkedRoom = tile.linkedRoom || null;
+            this.properties.linkedRoomGID = linkedRoom ? linkedRoom.globalId : null;
         }
         else if (tile instanceof upLadder_1.UpLadder) {
             this.type = TileType.UP_LADDER;
@@ -16060,9 +16102,22 @@ let loadTile = (ts, room, game) => {
         case TileType.DOOR:
             tile = new door_1.Door(room, game, ts.x, ts.y, ts.properties.doorDir, ts.properties.doorType);
             tile.isOpen = ts.properties.isOpen || false;
+            // Restore globalId for determinism across save/load
+            if (ts.properties.globalId) {
+                try {
+                    IdGenerator_1.IdGenerator.reserve(ts.properties.globalId);
+                    tile.globalId = ts.properties.globalId;
+                }
+                catch { }
+            }
             break;
         case TileType.DOWN_LADDER:
             tile = new downLadder_1.DownLadder(room, game, ts.x, ts.y, ts.properties.isSidePath || false, ts.properties.environment, ts.properties.lockType);
+            if (ts.properties.linkedRoomGID) {
+                const linked = game.roomsById?.get(ts.properties.linkedRoomGID);
+                if (linked)
+                    tile.linkedRoom = linked;
+            }
             break;
         case TileType.UP_LADDER:
             tile = new upLadder_1.UpLadder(room, game, ts.x, ts.y);
@@ -27360,6 +27415,10 @@ class Player extends drawable_1.Drawable {
         this.drawMoveQueue = [];
         this.seenEnemies = new Set();
         this.bestiary = null;
+        this.getRoom = () => {
+            const byId = this.game.getRoomById?.(this.roomGID);
+            return byId || this.game.levels[this.depth].rooms[this.levelID];
+        };
         this.setHitXY = (newX, newY, distance = 0.5) => {
             this.renderer.hitX = distance * (this.x - newX);
             this.renderer.hitY = distance * (this.y - newY);
@@ -27974,6 +28033,7 @@ class Player extends drawable_1.Drawable {
         this.globalId = IdGenerator_1.IdGenerator.generate("P");
         this.game = game;
         this.levelID = 0;
+        this.roomGID = undefined;
         this.x = x;
         this.y = y;
         this.w = 1;
@@ -35142,6 +35202,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Door = exports.DoorType = exports.DoorDir = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
+const IdGenerator_1 = __webpack_require__(/*! ../globalStateManager/IdGenerator */ "./src/globalStateManager/IdGenerator.ts");
 const key_1 = __webpack_require__(/*! ../item/key */ "./src/item/key.ts");
 const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts");
 const lightSource_1 = __webpack_require__(/*! ../lighting/lightSource */ "./src/lighting/lightSource.ts");
@@ -35353,6 +35414,7 @@ class Door extends passageway_1.Passageway {
             }
             game_1.Game.ctx.globalAlpha = 1;
         };
+        this.globalId = IdGenerator_1.IdGenerator.generate("D");
         this.opened = false;
         this.doorDir = doorDir;
         this.locked = false;

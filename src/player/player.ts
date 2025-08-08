@@ -52,7 +52,8 @@ export class Player extends Drawable {
   direction: Direction;
   lastDirection: Direction;
   game: Game;
-  levelID: number; // which room we're in (level[levelID])
+  levelID: number; // which room we're in (legacy index; avoid using directly)
+  roomGID?: string;
   health: number;
   maxHealth: number;
   healthBar: HealthBar;
@@ -109,6 +110,7 @@ export class Player extends Drawable {
     this.game = game;
 
     this.levelID = 0;
+    this.roomGID = undefined;
 
     this.x = x;
     this.y = y;
@@ -160,6 +162,11 @@ export class Player extends Drawable {
 
     this.cooldownRemaining = 0;
   }
+
+  getRoom = () => {
+    const byId = (this.game as any).getRoomById?.(this.roomGID);
+    return byId || this.game.levels[this.depth].rooms[this.levelID];
+  };
 
   get hitX() {
     return this.renderer?.drawX ?? 0;

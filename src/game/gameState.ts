@@ -141,6 +141,7 @@ import { CoffinTile } from "../tile/coffinTile";
 import { Bones } from "../tile/bones";
 import { Puddle } from "../tile/decorations/puddle";
 import { Decoration } from "../tile/decorations/decoration";
+import { IdGenerator } from "../globalStateManager/IdGenerator";
 
 export class HitWarningState {
   x: number;
@@ -737,7 +738,14 @@ export class RoomState {
   // Helper method to determine which tiles should be saved
   private shouldSaveTile(tile: Tile): boolean {
     return (
-      tile instanceof Chasm || tile instanceof Pool || tile instanceof Wall
+      tile instanceof Chasm ||
+      tile instanceof Pool ||
+      tile instanceof Wall ||
+      tile instanceof DownLadder ||
+      tile instanceof UpLadder ||
+      tile instanceof Floor ||
+      tile instanceof WallTorch ||
+      tile instanceof SpawnFloor
     );
   }
 }
@@ -758,12 +766,40 @@ let loadRoom = (room: Room, roomState: RoomState, game: Game) => {
       for (let y = room.roomY - 1; y < room.roomY + room.height + 1; y++) {
         const tileState = roomState.tiles[x]?.[y];
         if (tileState) {
-          // Only overwrite if we have a saved tile (chasms, pools, walls)
-          room.roomArray[x][y] = loadTile(tileState, room, game);
+          // Only overwrite if we have a saved tile; defer door linking until after grid load
+          const loadedTile = loadTile(tileState, room, game);
+          room.roomArray[x][y] = loadedTile;
         }
         // If no saved tile state, keep the generated tile as-is
       }
     }
+
+    // Second pass: link doors by saved linkedDoorGID
+    try {
+      const gidToDoor = new Map<string, Door>();
+      for (let x = room.roomX - 1; x < room.roomX + room.width + 1; x++) {
+        for (let y = room.roomY - 1; y < room.roomY + room.height + 1; y++) {
+          const ts = roomState.tiles[x]?.[y];
+          const t = room.roomArray[x]?.[y];
+          if (ts && ts.type === TileType.DOOR && t instanceof Door) {
+            const gid = ts.properties.globalId as string | undefined;
+            if (gid) gidToDoor.set(gid, t);
+          }
+        }
+      }
+      for (let x = room.roomX - 1; x < room.roomX + room.width + 1; x++) {
+        for (let y = room.roomY - 1; y < room.roomY + room.height + 1; y++) {
+          const ts = roomState.tiles[x]?.[y];
+          const t = room.roomArray[x]?.[y];
+          if (ts && ts.type === TileType.DOOR && t instanceof Door) {
+            const linkedGid = ts.properties.linkedDoorGID as string | null;
+            if (linkedGid && gidToDoor.has(linkedGid)) {
+              t.link(gidToDoor.get(linkedGid));
+            }
+          }
+        }
+      }
+    } catch {}
   }
 
   room.entities = [];
@@ -1894,11 +1930,16 @@ export class TileState {
       this.properties.isOpen = (tile as any).isOpen;
       this.properties.doorDir = (tile as any).doorDir;
       this.properties.tunnelDoor = (tile as any).tunnelDoor;
+      this.properties.globalId = (tile as any).globalId;
+      this.properties.linkedDoorGID =
+        (tile as any).linkedDoor?.globalId || null;
     } else if (tile instanceof DownLadder) {
       this.type = TileType.DOWN_LADDER;
       this.properties.isSidePath = (tile as any).isSidePath;
       this.properties.environment = (tile as any).environment;
       this.properties.lockType = (tile as any).lockable?.lockType;
+      const linkedRoom: Room | null = (tile as any).linkedRoom || null;
+      this.properties.linkedRoomGID = linkedRoom ? linkedRoom.globalId : null;
     } else if (tile instanceof UpLadder) {
       this.type = TileType.UP_LADDER;
       // Persist rope state and explicit link to target room by GID for reliability
@@ -1969,6 +2010,13 @@ let loadTile = (ts: TileState, room: Room, game: Game): Tile => {
         ts.properties.doorType,
       );
       (tile as any).isOpen = ts.properties.isOpen || false;
+      // Restore globalId for determinism across save/load
+      if (ts.properties.globalId) {
+        try {
+          IdGenerator.reserve(ts.properties.globalId);
+          (tile as any).globalId = ts.properties.globalId;
+        } catch {}
+      }
       break;
     case TileType.DOWN_LADDER:
       tile = new DownLadder(
@@ -1980,6 +2028,10 @@ let loadTile = (ts: TileState, room: Room, game: Game): Tile => {
         ts.properties.environment,
         ts.properties.lockType,
       );
+      if (ts.properties.linkedRoomGID) {
+        const linked = game.roomsById?.get(ts.properties.linkedRoomGID);
+        if (linked) (tile as any).linkedRoom = linked;
+      }
       break;
     case TileType.UP_LADDER:
       tile = new UpLadder(room, game, ts.x, ts.y);

@@ -3,6 +3,7 @@ import { Direction, Game } from "../game";
 import { Room } from "../room/room";
 import { GameConstants } from "../game/gameConstants";
 import { SkinType, Tile } from "./tile";
+import { IdGenerator } from "../globalStateManager/IdGenerator";
 import { EntityType } from "../entity/entity";
 import { Key } from "../item/key";
 import { Sound } from "../sound/sound";
@@ -25,6 +26,7 @@ export enum DoorType {
 }
 
 export class Door extends Passageway {
+  globalId: string;
   linkedDoor: Door;
   opened: boolean;
   doorDir: Direction;
@@ -50,6 +52,7 @@ export class Door extends Passageway {
     doorType: DoorType,
   ) {
     super(room, game, x, y);
+    this.globalId = IdGenerator.generate("D");
     this.opened = false;
     this.doorDir = doorDir;
     this.locked = false;
