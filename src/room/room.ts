@@ -1077,14 +1077,13 @@ export class Room {
     Game.text_rendering_canvases = {};
 
     for (let door of this.doors) {
-      if (
-        door.linkedDoor.lightSource !== null &&
-        !door.linkedDoor.room.active &&
-        door.linkedDoor.room.entered
-      ) {
-        door.linkedDoor.lightSource.b = 0;
-        door.linkedDoor.lightSource.r = 0;
-
+      if (!door || !door.linkedDoor) continue;
+      const ld = door.linkedDoor;
+      if (!ld.lightSource) continue;
+      if (!ld.room) continue;
+      if (!ld.room.active && ld.room.entered) {
+        ld.lightSource.b = 0;
+        ld.lightSource.r = 0;
         door.room.updateLighting();
       }
     }
@@ -1276,7 +1275,7 @@ export class Room {
         p.dead = true;
       for (const i in this.game.players) {
         if (
-          this.level.rooms[this.game.players[i].levelID] === this &&
+          (this.game.players[i] as any).getRoom?.() === this &&
           p.x === this.game.players[i].x &&
           p.y === this.game.players[i].y
         ) {
@@ -1408,8 +1407,9 @@ export class Room {
 
   resetDoorLightSources = () => {
     this.doors.forEach((d) => {
-      d.lightSource.r = 0;
-      d.linkedDoor.lightSource.r = 0;
+      if (d && d.lightSource) d.lightSource.r = 0;
+      if (d && d.linkedDoor && d.linkedDoor.lightSource)
+        d.linkedDoor.lightSource.r = 0;
     });
   };
 
@@ -1499,6 +1499,14 @@ export class Room {
 
     // Start timing the processing of light sources
     //console.time("updateLighting: Process LightSources");
+    // Prune orphaned light sources referencing cleared tiles
+    try {
+      this.lightSources = this.lightSources.filter((ls) => {
+        const lx = Math.floor(ls.x);
+        const ly = Math.floor(ls.y);
+        return !!this.roomArray[lx]?.[ly];
+      });
+    } catch {}
 
     for (const l of this.lightSources) {
       if (l.shouldUpdate()) {
@@ -1512,7 +1520,7 @@ export class Room {
 
     for (const p in this.game.players) {
       let player = this.game.players[p];
-      if (this === this.level.rooms[player.levelID]) {
+      if ((player as any).getRoom?.() === this) {
         //console.log(`i: ${player.angle}`);
         for (let i = 0; i < 360; i += lightingAngleStep) {
           let lightColor = LevelConstants.AMBIENT_LIGHT_COLOR;
@@ -2432,7 +2440,7 @@ export class Room {
     );
 
     for (const i in this.game.players) {
-      if (this.game.rooms[this.game.players[i].levelID] === this) {
+      if ((this.game.players[i] as any).getRoom?.() === this) {
         if (
           !(
             skipLocalPlayer &&
@@ -3479,7 +3487,7 @@ export class Room {
 
   readonly getPlayer = () => {
     for (const i in this.game.players) {
-      if (this.game.rooms[this.game.players[i].levelID] === this) {
+      if ((this.game.players[i] as any).getRoom?.() === this) {
         return this.game.players[i];
       }
     }

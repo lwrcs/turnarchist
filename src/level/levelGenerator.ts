@@ -283,25 +283,8 @@ export class LevelGenerator {
     // Keep game.level in sync for convenience lookups
     this.game.level = this.game.levels[depth] || this.game.level;
 
-    // Generate the rope hole if it exists
-    for (let room of rooms) {
-      if (room.type === RoomType.ROPEHOLE) {
-        for (let x = room.roomX; x < room.roomX + room.width; x++) {
-          for (let y = room.roomY; y < room.roomY + room.height; y++) {
-            let tile = room.roomArray[x][y];
-            if (tile instanceof DownLadder && tile.isSidePath) {
-              tile.generate();
-
-              callback(
-                isSidePath
-                  ? rooms.find((r) => r.type === RoomType.ROPECAVE)
-                  : rooms.find((r) => r.type === RoomType.START),
-              );
-            }
-          }
-        }
-      }
-    }
+    // Do NOT auto-generate sidepath caves here.
+    // Sidepaths are generated on-demand when the player interacts with a DownLadder.
 
     // Return the start room or the rope cave room
     callback(

@@ -26,6 +26,14 @@ export class PlayerInputHandler {
   }
 
   setupListeners() {
+    // Prevent duplicate handler registrations after save/load by resetting arrays
+    // These arrays are only used for player input routing
+    try {
+      (Input.mouseDownListeners as any).length = 0;
+      (Input.mouseRightClickListeners as any).length = 0;
+      (Input.mouseLeftClickListeners as any).length = 0;
+    } catch {}
+
     Input.leftSwipeListener = () => this.handleInput(InputEnum.LEFT);
     Input.rightSwipeListener = () => this.handleInput(InputEnum.RIGHT);
     Input.upSwipeListener = () => this.handleInput(InputEnum.UP);

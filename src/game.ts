@@ -569,6 +569,7 @@ export class Game {
 
     if (this.players[this.localPlayerID] === player) {
       player.levelID = newRoom.id;
+      (player as any).roomGID = newRoom.globalId;
 
       // Immediately deactivate the old room like door transitions do
       this.prevLevel = this.room;
@@ -588,6 +589,7 @@ export class Game {
   changeLevelThroughDoor = (player: Player, door: Door, side?: number) => {
     door.linkedDoor.room.entered = true;
     player.levelID = door.room.id;
+    (player as any).roomGID = door.room.globalId;
 
     if (this.players[this.localPlayerID] === player) {
       this.levelState = LevelState.TRANSITIONING;

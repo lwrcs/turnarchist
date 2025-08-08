@@ -594,7 +594,7 @@ export class Player extends Drawable {
     )
       return;
     // TODO don't move if hit by enemy
-    this.game.levels[this.depth].rooms[this.levelID].catchUp();
+    this.getRoom().catchUp();
     //this.game.room.catchUp();
     if (!this.game.room) {
       console.warn("oi bruv, game.room isn't even there!");
@@ -615,7 +615,7 @@ export class Player extends Drawable {
       this.game.pushMessage("No weapon equipped.");
     }
 
-    for (let e of this.game.levels[this.depth].rooms[this.levelID].entities) {
+    for (let e of this.getRoom().entities) {
       e.lastX = e.x;
       e.lastY = e.y;
       //console.log(`e.lastX, e.lastY: ${e.lastX}, ${e.lastY}`);
@@ -632,8 +632,7 @@ export class Player extends Drawable {
           let pushedEnemies = [];
           while (true) {
             foundEnd = true;
-            for (const f of this.game.levels[this.depth].rooms[this.levelID]
-              .entities) {
+            for (const f of this.getRoom().entities) {
               f.lastX = f.x;
               f.lastY = f.y;
               if (f.pointIn(nextX, nextY)) {
@@ -657,32 +656,21 @@ export class Player extends Drawable {
 
           if (
             pushedEnemies.length === 0 &&
-            (this.game.levels[this.depth].rooms[this.levelID].roomArray[nextX][
-              nextY
-            ].canCrushEnemy() ||
-              enemyEnd)
+            (this.getRoom().roomArray[nextX][nextY].canCrushEnemy() || enemyEnd)
           ) {
             if (e.destroyable) {
               //fallback if no weapon equipped
               e.hurt(this, e.health, "none");
-              if (
-                this.game.levels[this.depth].rooms[this.levelID] ===
-                this.game.room
-              )
-                Sound.hit();
+              if (this.getRoom() === this.game.room) Sound.hit();
 
               this.shakeScreen(this.x, this.y, e.x, e.y);
               this.hitShake(this.x, this.y, e.x, e.y);
 
-              this.game.levels[this.depth].rooms[this.levelID].tick(this);
+              this.getRoom().tick(this);
               return;
             }
           } else {
-            if (
-              this.game.levels[this.depth].rooms[this.levelID] ===
-              this.game.room
-            )
-              Sound.push();
+            if (this.getRoom() === this.game.room) Sound.push();
             // here pushedEnemies may still be []
 
             for (const f of pushedEnemies) {
@@ -695,9 +683,7 @@ export class Player extends Drawable {
               f.skipNextTurns = 1; // skip next turn, so they don't move while we're pushing them
             }
             if (
-              this.game.levels[this.depth].rooms[this.levelID].roomArray[nextX][
-                nextY
-              ].canCrushEnemy() ||
+              this.getRoom().roomArray[nextX][nextY].canCrushEnemy() ||
               enemyEnd
             ) {
               const pushedEnemy = pushedEnemies[pushedEnemies.length - 1];
@@ -705,11 +691,7 @@ export class Player extends Drawable {
               if (pushedEnemy.isEnemy) {
                 Sound.playSquish();
               }
-              if (
-                this.game.levels[this.depth].rooms[this.levelID] ===
-                this.game.room
-              )
-                Sound.hit();
+              if (this.getRoom() === this.game.room) Sound.hit();
             }
 
             e.x += dx;
@@ -718,7 +700,7 @@ export class Player extends Drawable {
             e.drawY = dy;
             this.move(x, y);
             this.moveDistance++;
-            this.game.levels[this.depth].rooms[this.levelID].tick(this);
+            this.getRoom().tick(this);
             return;
           }
         } else {
@@ -732,17 +714,16 @@ export class Player extends Drawable {
         }
       }
     }
-    let other =
-      this.game.levels[this.depth].rooms[this.levelID]?.roomArray?.[x]?.[y];
+    let other = this.getRoom()?.roomArray?.[x]?.[y];
     if (!other) {
       console.warn("oi bruv, tile to check for collision isn't even there!");
       return;
     }
-    if (!this.game.levels[this.depth].rooms[this.levelID]) {
+    if (!this.getRoom()) {
       console.warn("oi bruv, room to check for collision isn't even there!");
       return;
     }
-    if (!this.game.levels[this.depth].rooms[this.levelID].roomArray) {
+    if (!this.getRoom().roomArray) {
       console.warn("oi bruv, level to check for collision isn't even there!");
       return;
     }
@@ -772,7 +753,7 @@ export class Player extends Drawable {
           other instanceof DownLadder
         )
       )
-        this.game.levels[this.depth].rooms[this.levelID].tick(this);
+        this.getRoom().tick(this);
     } else {
       if (other instanceof Door) {
         this.shakeScreen(this.x, this.y, x, y);
@@ -793,7 +774,7 @@ export class Player extends Drawable {
 
   hurt = (damage: number, enemy: string) => {
     // Play hurt sound if in current room
-    if (this.game.levels[this.depth].rooms[this.levelID] === this.game.room) {
+    if (this.getRoom() === this.game.room) {
       Sound.hurt();
       Sound.playGrunt();
     }
@@ -840,7 +821,7 @@ export class Player extends Drawable {
     this.updateLastPosition(this.x, this.y);
 
     //this.actionTab.setState(ActionState.MOVE);
-    if (this.game.levels[this.depth].rooms[this.levelID] === this.game.room)
+    if (this.getRoom() === this.game.room)
       Sound.playerStoneFootstep(this.game.room.envType);
 
     if (this.openVendingMachine) this.openVendingMachine.close();
@@ -861,7 +842,7 @@ export class Player extends Drawable {
     this.x = x;
     this.y = y;
 
-    for (let i of this.game.levels[this.depth].rooms[this.levelID].items) {
+    for (let i of this.getRoom().items) {
       if (i.x === x && i.y === y) {
         i.onPickup(this);
       }

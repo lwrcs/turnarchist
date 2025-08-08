@@ -82,6 +82,7 @@ export class UpLadder extends Passageway {
                 const t = candidate.roomArray[x]?.[y];
                 if (t instanceof DownLadder && t.isSidePath) {
                   this.linkedRoom = candidate;
+                  t.linkedRoom = this.room;
                   return;
                 }
               }

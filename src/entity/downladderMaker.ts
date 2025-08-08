@@ -18,9 +18,6 @@ export class DownladderMaker extends Entity {
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
     this.room = room;
-
-    if (this.room.level.environment.type === EnvType.DUNGEON)
-      this.createDownladder();
     this.name = "DownladderMaker";
     this.dead = true;
   }

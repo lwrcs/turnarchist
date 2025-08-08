@@ -745,7 +745,9 @@ export class RoomState {
       tile instanceof UpLadder ||
       tile instanceof Floor ||
       tile instanceof WallTorch ||
-      tile instanceof SpawnFloor
+      tile instanceof SpawnFloor ||
+      tile instanceof Door ||
+      tile instanceof SpikeTrap
     );
   }
 }
@@ -762,6 +764,10 @@ let loadRoom = (room: Room, roomState: RoomState, game: Game) => {
 
   // Load only saved tiles (chasms, pools, walls), overwriting generated tiles
   if (roomState.tiles) {
+    // Reset lights before reconstructing tiles that add their own light sources
+    try {
+      (room as any).lightSources = [];
+    } catch {}
     for (let x = room.roomX - 1; x < room.roomX + room.width + 1; x++) {
       for (let y = room.roomY - 1; y < room.roomY + room.height + 1; y++) {
         const tileState = roomState.tiles[x]?.[y];
@@ -785,6 +791,14 @@ let loadRoom = (room: Room, roomState: RoomState, game: Game) => {
             const gid = ts.properties.globalId as string | undefined;
             if (gid) gidToDoor.set(gid, t);
           }
+          // Re-add light sources for tiles that carry lights
+          if (
+            t &&
+            (t as any).lightSource &&
+            !(room as any).lightSources?.includes((t as any).lightSource)
+          ) {
+            (room as any).lightSources.push((t as any).lightSource);
+          }
         }
       }
       for (let x = room.roomX - 1; x < room.roomX + room.width + 1; x++) {
@@ -799,6 +813,18 @@ let loadRoom = (room: Room, roomState: RoomState, game: Game) => {
           }
         }
       }
+    } catch {}
+
+    // Rebuild room.doors array from reconstructed tiles to support door-light propagation
+    try {
+      const doorsInRoom: Door[] = [];
+      for (let x = room.roomX - 1; x < room.roomX + room.width + 1; x++) {
+        for (let y = room.roomY - 1; y < room.roomY + room.height + 1; y++) {
+          const t = room.roomArray[x]?.[y];
+          if (t instanceof Door) doorsInRoom.push(t);
+        }
+      }
+      (room as any).doors = doorsInRoom;
     } catch {}
   }
 
@@ -1157,6 +1183,9 @@ export class PlayerState {
   openVendingMachineID: number;
   openVendingMachineGID?: string;
   sightRadius: number;
+  lightEquipped?: boolean;
+  lightColor?: [number, number, number];
+  lightBrightness?: number;
 
   constructor(player: Player, game: Game) {
     this.x = player.x;
@@ -1191,6 +1220,10 @@ export class PlayerState {
       this.openVendingMachineGID = (player.openVendingMachine as any).globalId;
     }
     this.sightRadius = player.sightRadius;
+    // Persist player light settings used by room.updateLighting()
+    this.lightEquipped = (player as any).lightEquipped;
+    this.lightColor = (player as any).lightColor;
+    this.lightBrightness = (player as any).lightBrightness;
   }
 }
 
@@ -1274,6 +1307,13 @@ let loadPlayer = (id: string, p: PlayerState, game: Game): Player => {
       : (vmRoom.entities[p.openVendingMachineID] as VendingMachine);
   }
   player.sightRadius = p.sightRadius;
+  // Restore player light settings (used by room.updateLighting)
+  if (typeof p.lightEquipped === "boolean")
+    (player as any).lightEquipped = p.lightEquipped;
+  if (Array.isArray(p.lightColor))
+    (player as any).lightColor = p.lightColor as any;
+  if (typeof p.lightBrightness === "number")
+    (player as any).lightBrightness = p.lightBrightness as any;
 
   // Set the player's room reference (this might be needed by some player methods)
   // Note: This will be set properly when the game.room is assigned in loadGameState
@@ -1500,6 +1540,15 @@ export const loadGameState = (
     game.roomsById = new Map();
     game.levels = [];
     game.levelsById = new Map();
+    // Also reset input listener arrays to avoid duplicate mouse handlers after load
+    try {
+      const InputMod = require("./input");
+      (InputMod.Input.mouseDownListeners as any).length = 0;
+      (InputMod.Input.mouseRightClickListeners as any).length = 0;
+      (InputMod.Input.mouseLeftClickListeners as any).length = 0;
+      (InputMod.Input.mouseMoveListeners as any).length = 0;
+      (InputMod.Input.mouseUpListeners as any).length = 0;
+    } catch {}
 
     // Initialize level generator
     console.log("🔄 LOAD: Initializing level generator");
@@ -1707,6 +1756,53 @@ export const loadGameState = (
                 );
               }
             }
+            // Global post-pass to link doors across rooms by GID
+            try {
+              const allDoorsByGid = new Map<string, Door>();
+              const pending: Array<Door> = [];
+              const byCoord = new Map<string, Door[]>();
+              for (const r of game.rooms) {
+                for (let x = r.roomX - 1; x < r.roomX + r.width + 1; x++) {
+                  for (let y = r.roomY - 1; y < r.roomY + r.height + 1; y++) {
+                    const t = r.roomArray[x]?.[y];
+                    if (t instanceof Door) {
+                      const gid = (t as any).globalId as string | undefined;
+                      if (gid) allDoorsByGid.set(gid, t);
+                      if ((t as any)._pendingLinkedDoorGID) pending.push(t);
+                      const key = `${x},${y}`;
+                      const arr = byCoord.get(key) || [];
+                      arr.push(t);
+                      byCoord.set(key, arr);
+                    }
+                  }
+                }
+              }
+              // Link by explicit GID first
+              for (const d of pending) {
+                const targetGid = (d as any)._pendingLinkedDoorGID as
+                  | string
+                  | null;
+                if (targetGid && allDoorsByGid.has(targetGid)) {
+                  d.link(allDoorsByGid.get(targetGid));
+                }
+                (d as any)._pendingLinkedDoorGID = null;
+              }
+              // Fallback: link doors sharing the same world coordinate
+              for (const [key, doors] of byCoord.entries()) {
+                if (doors.length === 2) {
+                  const [a, b] = doors;
+                  if (!(a as any).linkedDoor) a.link(b as Door);
+                  if (!(b as any).linkedDoor) b.link(a as Door);
+                }
+              }
+              console.log(
+                "🧭 LOAD: Global door linking completed",
+                allDoorsByGid.size,
+                "doors",
+              );
+            } catch (e) {
+              console.warn("⚠️ LOAD: Global door linking failed", e);
+            }
             console.log("✅ LOAD: All room states loaded successfully");
           } catch (error) {
             console.error("❌ LOAD: Error loading room states:", error);
@@ -1809,6 +1905,10 @@ export const loadGameState = (
                   y: localPlayer.y,
                 });
                 localPlayer.map.updateSeenTiles();
+                // Refresh lighting to include player's equipped light source immediately after placement
+                try {
+                  game.room.updateLighting();
+                } catch {}
                 console.log(
                   "🔄 LOAD: Set current room and updated player map:",
                   {
@@ -1926,8 +2026,16 @@ export class TileState {
       this.type = TileType.WALL;
     } else if (tile instanceof Door) {
       this.type = TileType.DOOR;
-      this.properties.doorType = (tile as any).doorType;
+      // Persist the canonical door type. Door class uses `type`, not `doorType`.
+      this.properties.doorType = (tile as any).type;
+      this.properties.type = (tile as any).type; // compatibility alias
+      // Persist both legacy isOpen and canonical opened/locked flags
       this.properties.isOpen = (tile as any).isOpen;
+      this.properties.opened = (tile as any).opened;
+      this.properties.locked = (tile as any).locked;
+      // Persist lockable module details if present
+      this.properties.lockType = (tile as any).lockable?.lockType;
+      this.properties.keyID = (tile as any).lockable?.keyID;
       this.properties.doorDir = (tile as any).doorDir;
       this.properties.tunnelDoor = (tile as any).tunnelDoor;
       this.properties.globalId = (tile as any).globalId;
@@ -2001,15 +2109,26 @@ let loadTile = (ts: TileState, room: Room, game: Game): Tile => {
       (tile as any).frame = ts.properties.frame || 0;
       break;
     case TileType.DOOR:
-      tile = new Door(
-        room,
-        game,
-        ts.x,
-        ts.y,
-        ts.properties.doorDir,
-        ts.properties.doorType,
-      );
+      // Prefer `doorType`, fallback to `type` if older saves
+      const _doorType =
+        (ts.properties.doorType as DoorType | undefined) ??
+        (ts.properties.type as DoorType | undefined) ??
+        DoorType.DOOR;
+      tile = new Door(room, game, ts.x, ts.y, ts.properties.doorDir, _doorType);
       (tile as any).isOpen = ts.properties.isOpen || false;
+      if (typeof ts.properties.opened === "boolean")
+        (tile as any).opened = ts.properties.opened;
+      if (typeof ts.properties.locked === "boolean")
+        (tile as any).locked = ts.properties.locked;
+      // Restore lockable details if present
+      try {
+        if ((tile as any).lockable && ts.properties.lockType !== undefined) {
+          (tile as any).lockable.lockType = ts.properties.lockType;
+          (tile as any).lockable.keyID = ts.properties.keyID;
+        }
+      } catch {}
+      // Stash pending link target for global post-load linking
+      (tile as any)._pendingLinkedDoorGID = ts.properties.linkedDoorGID || null;
       // Restore globalId for determinism across save/load
       if (ts.properties.globalId) {
         try {

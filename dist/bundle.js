@@ -3587,8 +3587,6 @@ class DownladderMaker extends entity_1.Entity {
         this.draw = (delta) => { };
         this.drawTopLayer = (delta) => { };
         this.room = room;
-        if (this.room.level.environment.type === environmentTypes_1.EnvType.DUNGEON)
-            this.createDownladder();
         this.name = "DownladderMaker";
         this.dead = true;
     }
@@ -12405,6 +12403,7 @@ class Game {
             const newRoom = ladder.linkedRoom;
             if (this.players[this.localPlayerID] === player) {
                 player.levelID = newRoom.id;
+                player.roomGID = newRoom.globalId;
                 // Immediately deactivate the old room like door transitions do
                 this.prevLevel = this.room;
                 this.prevLevel.exitLevel();
@@ -12421,6 +12420,7 @@ class Game {
         this.changeLevelThroughDoor = (player, door, side) => {
             door.linkedDoor.room.entered = true;
             player.levelID = door.room.id;
+            player.roomGID = door.room.globalId;
             if (this.players[this.localPlayerID] === player) {
                 this.levelState = LevelState.TRANSITIONING;
                 this.transitionStartTime = Date.now();
@@ -14317,6 +14317,7 @@ const spear_1 = __webpack_require__(/*! ../item/weapon/spear */ "./src/item/weap
 const weapon_1 = __webpack_require__(/*! ../item/weapon/weapon */ "./src/item/weapon/weapon.ts");
 const pickaxe_1 = __webpack_require__(/*! ../item/tool/pickaxe */ "./src/item/tool/pickaxe.ts");
 const backpack_1 = __webpack_require__(/*! ../item/backpack */ "./src/item/backpack.ts");
+const door_1 = __webpack_require__(/*! ../tile/door */ "./src/tile/door.ts");
 const mushrooms_1 = __webpack_require__(/*! ../entity/object/mushrooms */ "./src/entity/object/mushrooms.ts");
 const pumpkin_1 = __webpack_require__(/*! ../entity/object/pumpkin */ "./src/entity/object/pumpkin.ts");
 const block_1 = __webpack_require__(/*! ../entity/object/block */ "./src/entity/object/block.ts");
@@ -14386,7 +14387,7 @@ const environmentTypes_1 = __webpack_require__(/*! ../constants/environmentTypes
 const floor_1 = __webpack_require__(/*! ../tile/floor */ "./src/tile/floor.ts");
 const wall_1 = __webpack_require__(/*! ../tile/wall */ "./src/tile/wall.ts");
 const wallTorch_1 = __webpack_require__(/*! ../tile/wallTorch */ "./src/tile/wallTorch.ts");
-const door_1 = __webpack_require__(/*! ../tile/door */ "./src/tile/door.ts");
+const door_2 = __webpack_require__(/*! ../tile/door */ "./src/tile/door.ts");
 const downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/downLadder.ts");
 const upLadder_1 = __webpack_require__(/*! ../tile/upLadder */ "./src/tile/upLadder.ts");
 const pool_1 = __webpack_require__(/*! ../tile/pool */ "./src/tile/pool.ts");
@@ -14933,7 +14934,9 @@ class RoomState {
             tile instanceof upLadder_1.UpLadder ||
             tile instanceof floor_1.Floor ||
             tile instanceof wallTorch_1.WallTorch ||
-            tile instanceof spawnfloor_1.SpawnFloor);
+            tile instanceof spawnfloor_1.SpawnFloor ||
+            tile instanceof door_2.Door ||
+            tile instanceof spiketrap_1.SpikeTrap);
     }
 }
 exports.RoomState = RoomState;
@@ -14948,6 +14951,11 @@ let loadRoom = (room, roomState, game) => {
     room.skin = roomState.skin;
     // Load only saved tiles (chasms, pools, walls), overwriting generated tiles
     if (roomState.tiles) {
+        // Reset lights before reconstructing tiles that add their own light sources
+        try {
+            room.lightSources = [];
+        }
+        catch { }
         for (let x = room.roomX - 1; x < room.roomX + room.width + 1; x++) {
             for (let y = room.roomY - 1; y < room.roomY + room.height + 1; y++) {
                 const tileState = roomState.tiles[x]?.[y];
@@ -14966,10 +14974,16 @@ let loadRoom = (room, roomState, game) => {
                 for (let y = room.roomY - 1; y < room.roomY + room.height + 1; y++) {
                     const ts = roomState.tiles[x]?.[y];
                     const t = room.roomArray[x]?.[y];
-                    if (ts && ts.type === TileType.DOOR && t instanceof door_1.Door) {
+                    if (ts && ts.type === TileType.DOOR && t instanceof door_2.Door) {
                         const gid = ts.properties.globalId;
                         if (gid)
                             gidToDoor.set(gid, t);
+                    }
+                    // Re-add light sources for tiles that carry lights
+                    if (t &&
+                        t.lightSource &&
+                        !room.lightSources?.includes(t.lightSource)) {
+                        room.lightSources.push(t.lightSource);
                     }
                 }
             }
@@ -14977,7 +14991,7 @@ let loadRoom = (room, roomState, game) => {
                 for (let y = room.roomY - 1; y < room.roomY + room.height + 1; y++) {
                     const ts = roomState.tiles[x]?.[y];
                     const t = room.roomArray[x]?.[y];
-                    if (ts && ts.type === TileType.DOOR && t instanceof door_1.Door) {
+                    if (ts && ts.type === TileType.DOOR && t instanceof door_2.Door) {
                         const linkedGid = ts.properties.linkedDoorGID;
                         if (linkedGid && gidToDoor.has(linkedGid)) {
                             t.link(gidToDoor.get(linkedGid));
@@ -14985,6 +14999,19 @@ let loadRoom = (room, roomState, game) => {
                     }
                 }
             }
+        }
+        catch { }
+        // Rebuild room.doors array from reconstructed tiles to support door-light propagation
+        try {
+            const doorsInRoom = [];
+            for (let x = room.roomX - 1; x < room.roomX + room.width + 1; x++) {
+                for (let y = room.roomY - 1; y < room.roomY + room.height + 1; y++) {
+                    const t = room.roomArray[x]?.[y];
+                    if (t instanceof door_2.Door)
+                        doorsInRoom.push(t);
+                }
+            }
+            room.doors = doorsInRoom;
         }
         catch { }
     }
@@ -15413,6 +15440,10 @@ class PlayerState {
             this.openVendingMachineGID = player.openVendingMachine.globalId;
         }
         this.sightRadius = player.sightRadius;
+        // Persist player light settings used by room.updateLighting()
+        this.lightEquipped = player.lightEquipped;
+        this.lightColor = player.lightColor;
+        this.lightBrightness = player.lightBrightness;
     }
 }
 exports.PlayerState = PlayerState;
@@ -15489,6 +15520,13 @@ let loadPlayer = (id, p, game) => {
             : vmRoom.entities[p.openVendingMachineID];
     }
     player.sightRadius = p.sightRadius;
+    // Restore player light settings (used by room.updateLighting)
+    if (typeof p.lightEquipped === "boolean")
+        player.lightEquipped = p.lightEquipped;
+    if (Array.isArray(p.lightColor))
+        player.lightColor = p.lightColor;
+    if (typeof p.lightBrightness === "number")
+        player.lightBrightness = p.lightBrightness;
     // Set the player's room reference (this might be needed by some player methods)
     // Note: This will be set properly when the game.room is assigned in loadGameState
     // but we can set it here for consistency
@@ -15684,6 +15722,16 @@ const loadGameState = (game, activeUsernames, gameState, newWorld) => {
         game.roomsById = new Map();
         game.levels = [];
         game.levelsById = new Map();
+        // Also reset input listener arrays to avoid duplicate mouse handlers after load
+        try {
+            const InputMod = __webpack_require__(/*! ./input */ "./src/game/input.ts");
+            InputMod.Input.mouseDownListeners.length = 0;
+            InputMod.Input.mouseRightClickListeners.length = 0;
+            InputMod.Input.mouseLeftClickListeners.length = 0;
+            InputMod.Input.mouseMoveListeners.length = 0;
+            InputMod.Input.mouseUpListeners.length = 0;
+        }
+        catch { }
         // Initialize level generator
         console.log("🔄 LOAD: Initializing level generator");
         game.levelgen = new levelGenerator_1.LevelGenerator();
@@ -15833,6 +15881,52 @@ const loadGameState = (game, activeUsernames, gameState, newWorld) => {
                             console.warn(`🔄 LOAD: Room ${roomState.roomGID ?? roomState.roomID} not found in generated rooms`);
                         }
                     }
+                    // Global post-pass to link doors across rooms by GID
+                    try {
+                        const allDoorsByGid = new Map();
+                        const pending = [];
+                        const byCoord = new Map();
+                        for (const r of game.rooms) {
+                            for (let x = r.roomX - 1; x < r.roomX + r.width + 1; x++) {
+                                for (let y = r.roomY - 1; y < r.roomY + r.height + 1; y++) {
+                                    const t = r.roomArray[x]?.[y];
+                                    if (t instanceof door_2.Door) {
+                                        const gid = t.globalId;
+                                        if (gid)
+                                            allDoorsByGid.set(gid, t);
+                                        if (t._pendingLinkedDoorGID)
+                                            pending.push(t);
+                                        const key = `${x},${y}`;
+                                        const arr = byCoord.get(key) || [];
+                                        arr.push(t);
+                                        byCoord.set(key, arr);
+                                    }
+                                }
+                            }
+                        }
+                        // Link by explicit GID first
+                        for (const d of pending) {
+                            const targetGid = d._pendingLinkedDoorGID;
+                            if (targetGid && allDoorsByGid.has(targetGid)) {
+                                d.link(allDoorsByGid.get(targetGid));
+                            }
+                            d._pendingLinkedDoorGID = null;
+                        }
+                        // Fallback: link doors sharing the same world coordinate
+                        for (const [key, doors] of byCoord.entries()) {
+                            if (doors.length === 2) {
+                                const [a, b] = doors;
+                                if (!a.linkedDoor)
+                                    a.link(b);
+                                if (!b.linkedDoor)
+                                    b.link(a);
+                            }
+                        }
+                        console.log("🧭 LOAD: Global door linking completed", allDoorsByGid.size, "doors");
+                    }
+                    catch (e) {
+                        console.warn("⚠️ LOAD: Global door linking failed", e);
+                    }
                     console.log("✅ LOAD: All room states loaded successfully");
                 }
                 catch (error) {
@@ -15921,6 +16015,11 @@ const loadGameState = (game, activeUsernames, gameState, newWorld) => {
                                 y: localPlayer.y,
                             });
                             localPlayer.map.updateSeenTiles();
+                            // Refresh lighting to include player's equipped light source immediately after placement
+                            try {
+                                game.room.updateLighting();
+                            }
+                            catch { }
                             console.log("🔄 LOAD: Set current room and updated player map:", {
                                 roomID: game.room.id,
                                 roomType: game.room.type,
@@ -16017,10 +16116,18 @@ class TileState {
         else if (tile instanceof wall_1.Wall) {
             this.type = TileType.WALL;
         }
-        else if (tile instanceof door_1.Door) {
+        else if (tile instanceof door_2.Door) {
             this.type = TileType.DOOR;
-            this.properties.doorType = tile.doorType;
+            // Persist the canonical door type. Door class uses `type`, not `doorType`.
+            this.properties.doorType = tile.type;
+            this.properties.type = tile.type; // compatibility alias
+            // Persist both legacy isOpen and canonical opened/locked flags
             this.properties.isOpen = tile.isOpen;
+            this.properties.opened = tile.opened;
+            this.properties.locked = tile.locked;
+            // Persist lockable module details if present
+            this.properties.lockType = tile.lockable?.lockType;
+            this.properties.keyID = tile.lockable?.keyID;
             this.properties.doorDir = tile.doorDir;
             this.properties.tunnelDoor = tile.tunnelDoor;
             this.properties.globalId = tile.globalId;
@@ -16100,8 +16207,26 @@ let loadTile = (ts, room, game) => {
             tile.frame = ts.properties.frame || 0;
             break;
         case TileType.DOOR:
-            tile = new door_1.Door(room, game, ts.x, ts.y, ts.properties.doorDir, ts.properties.doorType);
+            // Prefer `doorType`, fallback to `type` if older saves
+            const _doorType = ts.properties.doorType ??
+                ts.properties.type ??
+                door_1.DoorType.DOOR;
+            tile = new door_2.Door(room, game, ts.x, ts.y, ts.properties.doorDir, _doorType);
             tile.isOpen = ts.properties.isOpen || false;
+            if (typeof ts.properties.opened === "boolean")
+                tile.opened = ts.properties.opened;
+            if (typeof ts.properties.locked === "boolean")
+                tile.locked = ts.properties.locked;
+            // Restore lockable details if present
+            try {
+                if (tile.lockable && ts.properties.lockType !== undefined) {
+                    tile.lockable.lockType = ts.properties.lockType;
+                    tile.lockable.keyID = ts.properties.keyID;
+                }
+            }
+            catch { }
+            // Stash pending link target for global post-load linking
+            tile._pendingLinkedDoorGID = ts.properties.linkedDoorGID || null;
             // Restore globalId for determinism across save/load
             if (ts.properties.globalId) {
                 try {
@@ -24210,7 +24335,6 @@ exports.LevelGenerator = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const room_1 = __webpack_require__(/*! ../room/room */ "./src/room/room.ts");
 const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
-const downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/downLadder.ts");
 const levelParametersGenerator_1 = __webpack_require__(/*! ./levelParametersGenerator */ "./src/level/levelParametersGenerator.ts");
 const level_1 = __webpack_require__(/*! ./level */ "./src/level/level.ts");
 const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
@@ -24359,22 +24483,8 @@ class LevelGenerator {
             this.game.registerRooms(rooms);
             // Keep game.level in sync for convenience lookups
             this.game.level = this.game.levels[depth] || this.game.level;
-            // Generate the rope hole if it exists
-            for (let room of rooms) {
-                if (room.type === room_1.RoomType.ROPEHOLE) {
-                    for (let x = room.roomX; x < room.roomX + room.width; x++) {
-                        for (let y = room.roomY; y < room.roomY + room.height; y++) {
-                            let tile = room.roomArray[x][y];
-                            if (tile instanceof downLadder_1.DownLadder && tile.isSidePath) {
-                                tile.generate();
-                                callback(isSidePath
-                                    ? rooms.find((r) => r.type === room_1.RoomType.ROPECAVE)
-                                    : rooms.find((r) => r.type === room_1.RoomType.START));
-                            }
-                        }
-                    }
-                }
-            }
+            // Do NOT auto-generate sidepath caves here.
+            // Sidepaths are generated on-demand when the player interacts with a DownLadder.
             // Return the start room or the rope cave room
             callback(isSidePath
                 ? rooms.find((r) => r.type === room_1.RoomType.ROPECAVE)
@@ -27729,7 +27839,7 @@ class Player extends drawable_1.Drawable {
                 this.game.levelState === game_1.LevelState.TRANSITIONING_LADDER)
                 return;
             // TODO don't move if hit by enemy
-            this.game.levels[this.depth].rooms[this.levelID].catchUp();
+            this.getRoom().catchUp();
             //this.game.room.catchUp();
             if (!this.game.room) {
                 console.warn("oi bruv, game.room isn't even there!");
@@ -27748,7 +27858,7 @@ class Player extends drawable_1.Drawable {
             else if (!this.inventory.hasWeapon()) {
                 this.game.pushMessage("No weapon equipped.");
             }
-            for (let e of this.game.levels[this.depth].rooms[this.levelID].entities) {
+            for (let e of this.getRoom().entities) {
                 e.lastX = e.x;
                 e.lastY = e.y;
                 //console.log(`e.lastX, e.lastY: ${e.lastX}, ${e.lastY}`);
@@ -27764,8 +27874,7 @@ class Player extends drawable_1.Drawable {
                         let pushedEnemies = [];
                         while (true) {
                             foundEnd = true;
-                            for (const f of this.game.levels[this.depth].rooms[this.levelID]
-                                .entities) {
+                            for (const f of this.getRoom().entities) {
                                 f.lastX = f.x;
                                 f.lastY = f.y;
                                 if (f.pointIn(nextX, nextY)) {
@@ -27788,23 +27897,20 @@ class Player extends drawable_1.Drawable {
                         otherwise, push everything, killing last enemy if there is a wall */
                         // here, (nextX, nextY) is the position immediately after the end of the train
                         if (pushedEnemies.length === 0 &&
-                            (this.game.levels[this.depth].rooms[this.levelID].roomArray[nextX][nextY].canCrushEnemy() ||
-                                enemyEnd)) {
+                            (this.getRoom().roomArray[nextX][nextY].canCrushEnemy() || enemyEnd)) {
                             if (e.destroyable) {
                                 //fallback if no weapon equipped
                                 e.hurt(this, e.health, "none");
-                                if (this.game.levels[this.depth].rooms[this.levelID] ===
-                                    this.game.room)
+                                if (this.getRoom() === this.game.room)
                                     sound_1.Sound.hit();
                                 this.shakeScreen(this.x, this.y, e.x, e.y);
                                 this.hitShake(this.x, this.y, e.x, e.y);
-                                this.game.levels[this.depth].rooms[this.levelID].tick(this);
+                                this.getRoom().tick(this);
                                 return;
                             }
                         }
                         else {
-                            if (this.game.levels[this.depth].rooms[this.levelID] ===
-                                this.game.room)
+                            if (this.getRoom() === this.game.room)
                                 sound_1.Sound.push();
                             // here pushedEnemies may still be []
                             for (const f of pushedEnemies) {
@@ -27816,15 +27922,14 @@ class Player extends drawable_1.Drawable {
                                 f.drawY = dy;
                                 f.skipNextTurns = 1; // skip next turn, so they don't move while we're pushing them
                             }
-                            if (this.game.levels[this.depth].rooms[this.levelID].roomArray[nextX][nextY].canCrushEnemy() ||
+                            if (this.getRoom().roomArray[nextX][nextY].canCrushEnemy() ||
                                 enemyEnd) {
                                 const pushedEnemy = pushedEnemies[pushedEnemies.length - 1];
                                 pushedEnemy.crush();
                                 if (pushedEnemy.isEnemy) {
                                     sound_1.Sound.playSquish();
                                 }
-                                if (this.game.levels[this.depth].rooms[this.levelID] ===
-                                    this.game.room)
+                                if (this.getRoom() === this.game.room)
                                     sound_1.Sound.hit();
                             }
                             e.x += dx;
@@ -27833,7 +27938,7 @@ class Player extends drawable_1.Drawable {
                             e.drawY = dy;
                             this.move(x, y);
                             this.moveDistance++;
-                            this.game.levels[this.depth].rooms[this.levelID].tick(this);
+                            this.getRoom().tick(this);
                             return;
                         }
                     }
@@ -27849,16 +27954,16 @@ class Player extends drawable_1.Drawable {
                     }
                 }
             }
-            let other = this.game.levels[this.depth].rooms[this.levelID]?.roomArray?.[x]?.[y];
+            let other = this.getRoom()?.roomArray?.[x]?.[y];
             if (!other) {
                 console.warn("oi bruv, tile to check for collision isn't even there!");
                 return;
             }
-            if (!this.game.levels[this.depth].rooms[this.levelID]) {
+            if (!this.getRoom()) {
                 console.warn("oi bruv, room to check for collision isn't even there!");
                 return;
             }
-            if (!this.game.levels[this.depth].rooms[this.levelID].roomArray) {
+            if (!this.getRoom().roomArray) {
                 console.warn("oi bruv, level to check for collision isn't even there!");
                 return;
             }
@@ -27884,7 +27989,7 @@ class Player extends drawable_1.Drawable {
                     other instanceof trapdoor_1.Trapdoor ||
                     other instanceof upLadder_1.UpLadder ||
                     other instanceof downLadder_1.DownLadder))
-                    this.game.levels[this.depth].rooms[this.levelID].tick(this);
+                    this.getRoom().tick(this);
             }
             else {
                 if (other instanceof door_1.Door) {
@@ -27904,7 +28009,7 @@ class Player extends drawable_1.Drawable {
         };
         this.hurt = (damage, enemy) => {
             // Play hurt sound if in current room
-            if (this.game.levels[this.depth].rooms[this.levelID] === this.game.room) {
+            if (this.getRoom() === this.game.room) {
                 sound_1.Sound.hurt();
                 sound_1.Sound.playGrunt();
             }
@@ -27942,7 +28047,7 @@ class Player extends drawable_1.Drawable {
         this.move = (x, y) => {
             this.updateLastPosition(this.x, this.y);
             //this.actionTab.setState(ActionState.MOVE);
-            if (this.game.levels[this.depth].rooms[this.levelID] === this.game.room)
+            if (this.getRoom() === this.game.room)
                 sound_1.Sound.playerStoneFootstep(this.game.room.envType);
             if (this.openVendingMachine)
                 this.openVendingMachine.close();
@@ -27959,7 +28064,7 @@ class Player extends drawable_1.Drawable {
             */
             this.x = x;
             this.y = y;
-            for (let i of this.game.levels[this.depth].rooms[this.levelID].items) {
+            for (let i of this.getRoom().items) {
                 if (i.x === x && i.y === y) {
                     i.onPickup(this);
                 }
@@ -28238,6 +28343,14 @@ class PlayerInputHandler {
         }
     }
     setupListeners() {
+        // Prevent duplicate handler registrations after save/load by resetting arrays
+        // These arrays are only used for player input routing
+        try {
+            input_1.Input.mouseDownListeners.length = 0;
+            input_1.Input.mouseRightClickListeners.length = 0;
+            input_1.Input.mouseLeftClickListeners.length = 0;
+        }
+        catch { }
         input_1.Input.leftSwipeListener = () => this.handleInput(input_1.InputEnum.LEFT);
         input_1.Input.rightSwipeListener = () => this.handleInput(input_1.InputEnum.RIGHT);
         input_1.Input.upSwipeListener = () => this.handleInput(input_1.InputEnum.UP);
@@ -30577,11 +30690,16 @@ class Room {
             game_1.Game.shade_canvases = {};
             game_1.Game.text_rendering_canvases = {};
             for (let door of this.doors) {
-                if (door.linkedDoor.lightSource !== null &&
-                    !door.linkedDoor.room.active &&
-                    door.linkedDoor.room.entered) {
-                    door.linkedDoor.lightSource.b = 0;
-                    door.linkedDoor.lightSource.r = 0;
+                if (!door || !door.linkedDoor)
+                    continue;
+                const ld = door.linkedDoor;
+                if (!ld.lightSource)
+                    continue;
+                if (!ld.room)
+                    continue;
+                if (!ld.room.active && ld.room.entered) {
+                    ld.lightSource.b = 0;
+                    ld.lightSource.r = 0;
                     door.room.updateLighting();
                 }
             }
@@ -30737,7 +30855,7 @@ class Room {
                     this.roomArray[p.x][p.y].isSolid())
                     p.dead = true;
                 for (const i in this.game.players) {
-                    if (this.level.rooms[this.game.players[i].levelID] === this &&
+                    if (this.game.players[i].getRoom?.() === this &&
                         p.x === this.game.players[i].x &&
                         p.y === this.game.players[i].y) {
                         p.hitPlayer(this.game.players[i]);
@@ -30850,8 +30968,10 @@ class Room {
         };
         this.resetDoorLightSources = () => {
             this.doors.forEach((d) => {
-                d.lightSource.r = 0;
-                d.linkedDoor.lightSource.r = 0;
+                if (d && d.lightSource)
+                    d.lightSource.r = 0;
+                if (d && d.linkedDoor && d.linkedDoor.lightSource)
+                    d.linkedDoor.lightSource.r = 0;
             });
         };
         this.tileValuesToLightSource = (x, y, room) => {
@@ -30925,6 +31045,15 @@ class Room {
             //console.timeEnd("updateLighting: Initial Setup");
             // Start timing the processing of light sources
             //console.time("updateLighting: Process LightSources");
+            // Prune orphaned light sources referencing cleared tiles
+            try {
+                this.lightSources = this.lightSources.filter((ls) => {
+                    const lx = Math.floor(ls.x);
+                    const ly = Math.floor(ls.y);
+                    return !!this.roomArray[lx]?.[ly];
+                });
+            }
+            catch { }
             for (const l of this.lightSources) {
                 if (l.shouldUpdate()) {
                     for (let i = 0; i < 360; i += levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP) {
@@ -30935,7 +31064,7 @@ class Room {
             let lightingAngleStep = levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP;
             for (const p in this.game.players) {
                 let player = this.game.players[p];
-                if (this === this.level.rooms[player.levelID]) {
+                if (player.getRoom?.() === this) {
                     //console.log(`i: ${player.angle}`);
                     for (let i = 0; i < 360; i += lightingAngleStep) {
                         let lightColor = levelConstants_1.LevelConstants.AMBIENT_LIGHT_COLOR;
@@ -31554,7 +31683,7 @@ class Room {
             entities = entities.concat(this.entities, this.deadEntities);
             drawables = drawables.concat(tiles, this.decorations, entities, this.hitwarnings, this.projectiles, this.particles, this.items);
             for (const i in this.game.players) {
-                if (this.game.rooms[this.game.players[i].levelID] === this) {
+                if (this.game.players[i].getRoom?.() === this) {
                     if (!(skipLocalPlayer &&
                         this.game.players[i] === this.game.players[this.game.localPlayerID]))
                         drawables.push(this.game.players[i]);
@@ -32141,7 +32270,7 @@ class Room {
         };
         this.getPlayer = () => {
             for (const i in this.game.players) {
-                if (this.game.rooms[this.game.players[i].levelID] === this) {
+                if (this.game.players[i].getRoom?.() === this) {
                     return this.game.players[i];
                 }
             }
@@ -33080,12 +33209,13 @@ const crate_1 = __webpack_require__(/*! ../entity/object/crate */ "./src/entity/
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const gameplaySettings_1 = __webpack_require__(/*! ../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
 const environment_1 = __webpack_require__(/*! ../level/environment */ "./src/level/environment.ts");
+const downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/downLadder.ts");
 const environmentTypes_1 = __webpack_require__(/*! ../constants/environmentTypes */ "./src/constants/environmentTypes.ts");
+const lockable_1 = __webpack_require__(/*! ../tile/lockable */ "./src/tile/lockable.ts");
 const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
 const utils_1 = __webpack_require__(/*! ../utility/utils */ "./src/utility/utils.ts");
 const propClusterer_1 = __webpack_require__(/*! ./propClusterer */ "./src/room/propClusterer.ts");
 const room_1 = __webpack_require__(/*! ./room */ "./src/room/room.ts");
-const downladderMaker_1 = __webpack_require__(/*! ../entity/downladderMaker */ "./src/entity/downladderMaker.ts");
 const game_2 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const wallTorch_1 = __webpack_require__(/*! ../tile/wallTorch */ "./src/tile/wallTorch.ts");
 const wall_1 = __webpack_require__(/*! ../tile/wall */ "./src/tile/wall.ts");
@@ -33106,7 +33236,7 @@ const fountainTile_1 = __webpack_require__(/*! ../tile/fountainTile */ "./src/ti
 const insideLevelDoor_1 = __webpack_require__(/*! ../tile/insideLevelDoor */ "./src/tile/insideLevelDoor.ts");
 const button_1 = __webpack_require__(/*! ../tile/button */ "./src/tile/button.ts");
 const upLadder_1 = __webpack_require__(/*! ../tile/upLadder */ "./src/tile/upLadder.ts");
-const downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/downLadder.ts");
+// (keep single import)
 const itemGroup_1 = __webpack_require__(/*! ../item/itemGroup */ "./src/item/itemGroup.ts");
 const warhammer_1 = __webpack_require__(/*! ../item/weapon/warhammer */ "./src/item/weapon/warhammer.ts");
 const sword_1 = __webpack_require__(/*! ../item/weapon/sword */ "./src/item/weapon/sword.ts");
@@ -33187,8 +33317,20 @@ class Populator {
                 position.y === undefined)
                 return;
             console.log(`Placing downladder at position (${position.x}, ${position.y})`);
-            const downLadder = new downladderMaker_1.DownladderMaker(downLadderRoom, this.level.game, position.x, position.y);
-            downLadderRoom.entities.push(downLadder);
+            // Place a DownLadder tile directly; avoid entity side-effects post-load
+            const env = downLadderRoom.depth < 1
+                ? environmentTypes_1.EnvType.FOREST
+                : downLadderRoom.depth > 1
+                    ? random_1.Random.rand() < 0.5
+                        ? environmentTypes_1.EnvType.FOREST
+                        : environmentTypes_1.EnvType.CAVE
+                    : environmentTypes_1.EnvType.CAVE;
+            const dl = new downLadder_1.DownLadder(downLadderRoom, this.level.game, position.x, position.y, true, env, lockable_1.LockType.NONE);
+            if (dl.lockable.isLocked()) {
+                console.log("adding key to downladder");
+                this.level.distributeKey(dl);
+            }
+            downLadderRoom.roomArray[position.x][position.y] = dl;
         };
         this.populateByType = (room) => { };
         // #endregion
@@ -36314,6 +36456,7 @@ class UpLadder extends passageway_1.Passageway {
                                     const t = candidate.roomArray[x]?.[y];
                                     if (t instanceof downLadder_1.DownLadder && t.isSidePath) {
                                         this.linkedRoom = candidate;
+                                        t.linkedRoom = this.room;
                                         return;
                                     }
                                 }

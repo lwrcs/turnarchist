@@ -11,7 +11,9 @@ import {
   enemyMinimumDepth,
   EnemyInfo,
 } from "../level/environment";
+import { DownLadder } from "../tile/downLadder";
 import { EnvType } from "../constants/environmentTypes";
+import { LockType } from "../tile/lockable";
 import { Level } from "../level/level";
 import { Random } from "../utility/random";
 import { Utils } from "../utility/utils";
@@ -41,7 +43,7 @@ import { FountainTile } from "../tile/fountainTile";
 import { InsideLevelDoor } from "../tile/insideLevelDoor";
 import { Button } from "../tile/button";
 import { UpLadder } from "../tile/upLadder";
-import { DownLadder } from "../tile/downLadder";
+// (keep single import)
 import { ItemGroup } from "../item/itemGroup";
 import { Warhammer } from "../item/weapon/warhammer";
 import { Sword } from "../item/weapon/sword";
@@ -176,13 +178,29 @@ export class Populator {
       `Placing downladder at position (${position.x}, ${position.y})`,
     );
 
-    const downLadder = new DownladderMaker(
+    // Place a DownLadder tile directly; avoid entity side-effects post-load
+    const env =
+      downLadderRoom.depth < 1
+        ? EnvType.FOREST
+        : downLadderRoom.depth > 1
+          ? Random.rand() < 0.5
+            ? EnvType.FOREST
+            : EnvType.CAVE
+          : EnvType.CAVE;
+    const dl = new DownLadder(
       downLadderRoom,
       this.level.game,
       position.x,
       position.y,
+      true,
+      env,
+      LockType.NONE,
     );
-    downLadderRoom.entities.push(downLadder);
+    if (dl.lockable.isLocked()) {
+      console.log("adding key to downladder");
+      this.level.distributeKey(dl);
+    }
+    downLadderRoom.roomArray[position.x][position.y] = dl;
   };
 
   populateByType = (room: Room) => {};
