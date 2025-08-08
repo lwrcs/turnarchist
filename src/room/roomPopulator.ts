@@ -414,7 +414,12 @@ export class Populator {
         // add a floor border
         if (xx === x - 1 || xx === x + w || yy === y - 1 || yy === y + h) {
           const tile = room.roomArray[xx][yy];
-          if (!(tile instanceof SpawnFloor && !tile.isSolid()))
+          if (
+            !(tile instanceof SpawnFloor && !tile.isSolid()) &&
+            !(tile instanceof Wall) &&
+            !(tile instanceof Pool) &&
+            !(tile instanceof Chasm)
+          )
             room.roomArray[xx][yy] = new Floor(room, xx, yy);
         } else
           room.roomArray[xx][yy] = new TileClass(

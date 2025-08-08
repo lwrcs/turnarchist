@@ -994,13 +994,22 @@ let loadItem = (
     item = new Coal(room, i.x, i.y);
   }
 
-  // ✅ FIX: For inventory items (room is null), set game reference manually
-  if (!room && item instanceof Weapon) {
+  // Ensure game reference always exists
+  if (item && !(item as any).game) {
     (item as any).game = game;
+  }
+  // Ensure level reference exists for inventory-only items
+  if (!room && item && !item.level) {
+    const fallbackRoom = game.rooms[game.players[game.localPlayerID].levelID];
+    item.level = fallbackRoom;
   }
 
   if (i.equipped) item.equipped = true;
   if (item instanceof Equippable) item.setWielder(player);
+  // Ensure all items have a valid game reference
+  if (item && !(item as any).game) {
+    (item as any).game = game;
+  }
   item.stackCount = i.stackCount;
   item.pickedUp = i.pickedUp;
   return item;
@@ -1049,6 +1058,14 @@ let loadInventory = (inventory: Inventory, i: InventoryState, game: Game) => {
     const itemState = i.items[idx];
     if (itemState) {
       const loadedItem = loadItem(itemState, game, inventory.player);
+      // Ensure inventory items reference the player's current room and game
+      if (!loadedItem.level) {
+        const playerRoom = game.rooms[inventory.player.levelID];
+        loadedItem.level = playerRoom;
+      }
+      if (!(loadedItem as any).game) {
+        (loadedItem as any).game = game;
+      }
       inventory.items[idx] = loadedItem;
       if (loadedItem instanceof Weapon && inventory.weapon === null) {
         loadedItem.toggleEquip();
@@ -1128,17 +1145,17 @@ let loadPlayer = (id: string, p: PlayerState, game: Game): Player => {
     const room = game.roomsById.get(p.roomGID);
     player.levelID = game.rooms.indexOf(room);
   } else {
-    player.levelID = p.roomID;
+    // Fall back to spatial resolution by saved coordinates to avoid index drift
+    const coordRoom = game.rooms.find((r) => r.tileInside(p.x, p.y));
+    if (coordRoom) {
+      player.levelID = game.rooms.indexOf(coordRoom);
+    } else {
+      player.levelID = p.roomID;
+    }
   }
-  if (player.levelID < game.levelgen.currentFloorFirstLevelID) {
-    // catch up to the current level
-    player.levelID = game.levelgen.currentFloorFirstLevelID;
-    player.x =
-      game.rooms[player.levelID].roomX +
-      Math.floor(game.rooms[player.levelID].width / 2);
-    player.y =
-      game.rooms[player.levelID].roomY +
-      Math.floor(game.rooms[player.levelID].height / 2);
+  // Ensure player depth matches the currently generated level depth
+  if (game.level) {
+    player.depth = game.level.depth;
   }
   player.direction = p.direction;
   player.health = p.health;
@@ -1509,8 +1526,31 @@ export const loadGameState = (
               });
 
               if (localPlayer.levelID < game.rooms.length) {
-                game.room = game.rooms[localPlayer.levelID];
-                game.room.enterLevel(localPlayer);
+                // Resolve via roomGID first, else spatial, else index
+                const savedLocal = gameState.players[game.localPlayerID];
+                const gidRoom = savedLocal?.roomGID
+                  ? game.getRoomById(savedLocal.roomGID)
+                  : undefined;
+                const coordRoom = game.rooms.find((r) =>
+                  r.tileInside(localPlayer.x, localPlayer.y),
+                );
+                const resolvedRoom =
+                  gidRoom || coordRoom || game.rooms[localPlayer.levelID];
+
+                game.room = resolvedRoom;
+                localPlayer.levelID = game.rooms.indexOf(resolvedRoom);
+                // Force-correct depth/level mapping on load
+                game.updateLevel(game.room);
+                game.currentDepth = game.level.depth;
+                localPlayer.depth = game.level.depth;
+                if (!resolvedRoom.tileInside(localPlayer.x, localPlayer.y)) {
+                  const center = resolvedRoom.getRoomCenter();
+                  localPlayer.moveSnap(center.x, center.y);
+                }
+                game.room.enterLevel(localPlayer, {
+                  x: localPlayer.x,
+                  y: localPlayer.y,
+                });
                 localPlayer.map.updateSeenTiles();
                 console.log(
                   "🔄 LOAD: Set current room and updated player map:",

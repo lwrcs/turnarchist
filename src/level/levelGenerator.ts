@@ -312,39 +312,17 @@ export class LevelGenerator {
   };
 
   generateFirstNFloors = async (game, numFloors, skipPopulation = false) => {
-    await this.generate(
-      game,
-      0,
-      false,
-      () => {},
-      EnvType.DUNGEON,
-      skipPopulation,
-    );
-    for (let i = 0; i < numFloors; i++) {
-      let foundRoom = game.rooms
-        .slice()
-        .reverse()
-        .find((room) => room.type === RoomType.DOWNLADDER);
-
-      if (foundRoom) {
-        for (
-          let x = foundRoom.roomX;
-          x < foundRoom.roomX + foundRoom.width;
-          x++
-        ) {
-          for (
-            let y = foundRoom.roomY;
-            y < foundRoom.roomY + foundRoom.height;
-            y++
-          ) {
-            let tile = foundRoom.roomArray[x][y];
-            if (tile instanceof DownLadder) {
-              tile.generate();
-              break;
-            }
-          }
-        }
-      }
+    // Deterministically generate each main path depth from 0..numFloors
+    for (let depth = 0; depth <= numFloors; depth++) {
+      await this.generate(
+        game,
+        depth,
+        false,
+        () => {},
+        EnvType.DUNGEON,
+        skipPopulation,
+      );
+      // generate() updates game.rooms to this depth's rooms
     }
   };
 

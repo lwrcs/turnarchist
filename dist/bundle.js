@@ -15254,14 +15254,23 @@ let loadItem = (i, game, player, targetRoom) => {
         console.error("Unknown item type:", i.type, "ItemType enum value:", ItemType[i.type], "Falling back to coal");
         item = new coal_1.Coal(room, i.x, i.y);
     }
-    // ✅ FIX: For inventory items (room is null), set game reference manually
-    if (!room && item instanceof weapon_1.Weapon) {
+    // Ensure game reference always exists
+    if (item && !item.game) {
         item.game = game;
+    }
+    // Ensure level reference exists for inventory-only items
+    if (!room && item && !item.level) {
+        const fallbackRoom = game.rooms[game.players[game.localPlayerID].levelID];
+        item.level = fallbackRoom;
     }
     if (i.equipped)
         item.equipped = true;
     if (item instanceof equippable_1.Equippable)
         item.setWielder(player);
+    // Ensure all items have a valid game reference
+    if (item && !item.game) {
+        item.game = game;
+    }
     item.stackCount = i.stackCount;
     item.pickedUp = i.pickedUp;
     return item;
@@ -15298,6 +15307,14 @@ let loadInventory = (inventory, i, game) => {
         const itemState = i.items[idx];
         if (itemState) {
             const loadedItem = loadItem(itemState, game, inventory.player);
+            // Ensure inventory items reference the player's current room and game
+            if (!loadedItem.level) {
+                const playerRoom = game.rooms[inventory.player.levelID];
+                loadedItem.level = playerRoom;
+            }
+            if (!loadedItem.game) {
+                loadedItem.game = game;
+            }
             inventory.items[idx] = loadedItem;
             if (loadedItem instanceof weapon_1.Weapon && inventory.weapon === null) {
                 loadedItem.toggleEquip();
@@ -15354,17 +15371,18 @@ let loadPlayer = (id, p, game) => {
         player.levelID = game.rooms.indexOf(room);
     }
     else {
-        player.levelID = p.roomID;
+        // Fall back to spatial resolution by saved coordinates to avoid index drift
+        const coordRoom = game.rooms.find((r) => r.tileInside(p.x, p.y));
+        if (coordRoom) {
+            player.levelID = game.rooms.indexOf(coordRoom);
+        }
+        else {
+            player.levelID = p.roomID;
+        }
     }
-    if (player.levelID < game.levelgen.currentFloorFirstLevelID) {
-        // catch up to the current level
-        player.levelID = game.levelgen.currentFloorFirstLevelID;
-        player.x =
-            game.rooms[player.levelID].roomX +
-                Math.floor(game.rooms[player.levelID].width / 2);
-        player.y =
-            game.rooms[player.levelID].roomY +
-                Math.floor(game.rooms[player.levelID].height / 2);
+    // Ensure player depth matches the currently generated level depth
+    if (game.level) {
+        player.depth = game.level.depth;
     }
     player.direction = p.direction;
     player.health = p.health;
@@ -15665,8 +15683,27 @@ const loadGameState = (game, activeUsernames, gameState, newWorld) => {
                             levelID: localPlayer.levelID,
                         });
                         if (localPlayer.levelID < game.rooms.length) {
-                            game.room = game.rooms[localPlayer.levelID];
-                            game.room.enterLevel(localPlayer);
+                            // Resolve via roomGID first, else spatial, else index
+                            const savedLocal = gameState.players[game.localPlayerID];
+                            const gidRoom = savedLocal?.roomGID
+                                ? game.getRoomById(savedLocal.roomGID)
+                                : undefined;
+                            const coordRoom = game.rooms.find((r) => r.tileInside(localPlayer.x, localPlayer.y));
+                            const resolvedRoom = gidRoom || coordRoom || game.rooms[localPlayer.levelID];
+                            game.room = resolvedRoom;
+                            localPlayer.levelID = game.rooms.indexOf(resolvedRoom);
+                            // Force-correct depth/level mapping on load
+                            game.updateLevel(game.room);
+                            game.currentDepth = game.level.depth;
+                            localPlayer.depth = game.level.depth;
+                            if (!resolvedRoom.tileInside(localPlayer.x, localPlayer.y)) {
+                                const center = resolvedRoom.getRoomCenter();
+                                localPlayer.moveSnap(center.x, center.y);
+                            }
+                            game.room.enterLevel(localPlayer, {
+                                x: localPlayer.x,
+                                y: localPlayer.y,
+                            });
                             localPlayer.map.updateSeenTiles();
                             console.log("🔄 LOAD: Set current room and updated player map:", {
                                 roomID: game.room.id,
@@ -19940,21 +19977,20 @@ class GodStone extends usable_1.Usable {
             this.teleportToExit(player);
         };
         this.teleportToExit = (player) => {
-            let downLadders = this.room.game.rooms.filter((room) => room.type === room_1.RoomType.DOWNLADDER);
+            let downLadders = this.level.game.rooms.filter((room) => room.type === room_1.RoomType.DOWNLADDER);
             console.log("downLadders", downLadders);
-            const room = downLadders[downLadders.length - 1];
-            this.room.game.rooms.forEach((room) => {
-                room.entered = true;
-                room.calculateWallInfo();
+            const targetRoom = downLadders[downLadders.length - 1];
+            this.level.game.rooms.forEach((r) => {
+                r.entered = true;
+                r.calculateWallInfo();
             });
-            room.game.changeLevelThroughDoor(player, room.doors[0], 1);
-            player.x = room.roomX + 2;
-            player.y = room.roomY + 3;
+            targetRoom.game.changeLevelThroughDoor(player, targetRoom.doors[0], 1);
+            player.x = targetRoom.roomX + 2;
+            player.y = targetRoom.roomY + 3;
         };
         this.getDescription = () => {
             return "YOU SHOULD NOT HAVE THIS";
         };
-        this.room = level;
         this.count = 0;
         this.tileX = 31;
         this.tileY = 0;
@@ -24100,23 +24136,10 @@ class LevelGenerator {
                 : rooms.find((r) => r.type === room_1.RoomType.START));
         };
         this.generateFirstNFloors = async (game, numFloors, skipPopulation = false) => {
-            await this.generate(game, 0, false, () => { }, environmentTypes_1.EnvType.DUNGEON, skipPopulation);
-            for (let i = 0; i < numFloors; i++) {
-                let foundRoom = game.rooms
-                    .slice()
-                    .reverse()
-                    .find((room) => room.type === room_1.RoomType.DOWNLADDER);
-                if (foundRoom) {
-                    for (let x = foundRoom.roomX; x < foundRoom.roomX + foundRoom.width; x++) {
-                        for (let y = foundRoom.roomY; y < foundRoom.roomY + foundRoom.height; y++) {
-                            let tile = foundRoom.roomArray[x][y];
-                            if (tile instanceof downLadder_1.DownLadder) {
-                                tile.generate();
-                                break;
-                            }
-                        }
-                    }
-                }
+            // Deterministically generate each main path depth from 0..numFloors
+            for (let depth = 0; depth <= numFloors; depth++) {
+                await this.generate(game, depth, false, () => { }, environmentTypes_1.EnvType.DUNGEON, skipPopulation);
+                // generate() updates game.rooms to this depth's rooms
             }
         };
         this.draw = (delta) => {
@@ -30354,21 +30377,23 @@ class Room {
             this.invalidateBlurCache(); // Invalidate cache when room becomes active
             this.updateLighting();
         };
-        this.enterLevel = (player) => {
+        this.enterLevel = (player, position) => {
             this.game.updateLevel(this);
-            let roomCenter = this.getRoomCenter();
+            let roomCenter = position || this.getRoomCenter();
             if (this.roomArray[roomCenter.x][roomCenter.y].isSolid()) {
                 roomCenter = this.getRandomEmptyPosition(this.getEmptyTiles());
             }
             let x = roomCenter.x;
             let y = roomCenter.y;
             // Use different variable names to avoid shadowing
-            for (let i = this.roomX; i < this.roomX + this.width; i++) {
-                for (let j = this.roomY; j < this.roomY + this.height; j++) {
-                    const tile = this.roomArray[i]?.[j];
-                    if (tile instanceof downLadder_1.DownLadder) {
-                        x = tile.x;
-                        y = tile.y;
+            if (!position) {
+                for (let i = this.roomX; i < this.roomX + this.width; i++) {
+                    for (let j = this.roomY; j < this.roomY + this.height; j++) {
+                        const tile = this.roomArray[i]?.[j];
+                        if (tile instanceof downLadder_1.DownLadder) {
+                            x = tile.x;
+                            y = tile.y;
+                        }
                     }
                 }
             }
@@ -33383,7 +33408,10 @@ class Populator {
                 // add a floor border
                 if (xx === x - 1 || xx === x + w || yy === y - 1 || yy === y + h) {
                     const tile = room.roomArray[xx][yy];
-                    if (!(tile instanceof spawnfloor_1.SpawnFloor && !tile.isSolid()))
+                    if (!(tile instanceof spawnfloor_1.SpawnFloor && !tile.isSolid()) &&
+                        !(tile instanceof wall_1.Wall) &&
+                        !(tile instanceof pool_1.Pool) &&
+                        !(tile instanceof chasm_1.Chasm))
                         room.roomArray[xx][yy] = new floor_1.Floor(room, xx, yy);
                 }
                 else

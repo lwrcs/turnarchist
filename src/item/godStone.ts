@@ -8,11 +8,9 @@ import { Usable } from "./usable/usable";
 import { DownLadder } from "../tile/downLadder";
 
 export class GodStone extends Usable {
-  room: Room;
   count: number;
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
-    this.room = level;
     this.count = 0;
     this.tileX = 31;
     this.tileY = 0;
@@ -24,18 +22,18 @@ export class GodStone extends Usable {
     this.teleportToExit(player);
   };
   teleportToExit = (player: Player): void => {
-    let downLadders = this.room.game.rooms.filter(
+    let downLadders = this.level.game.rooms.filter(
       (room) => room.type === RoomType.DOWNLADDER,
     );
     console.log("downLadders", downLadders);
-    const room = downLadders[downLadders.length - 1];
-    this.room.game.rooms.forEach((room) => {
-      room.entered = true;
-      room.calculateWallInfo();
+    const targetRoom = downLadders[downLadders.length - 1];
+    this.level.game.rooms.forEach((r) => {
+      r.entered = true;
+      r.calculateWallInfo();
     });
-    room.game.changeLevelThroughDoor(player, room.doors[0], 1);
-    player.x = room.roomX + 2;
-    player.y = room.roomY + 3;
+    targetRoom.game.changeLevelThroughDoor(player, targetRoom.doors[0], 1);
+    player.x = targetRoom.roomX + 2;
+    player.y = targetRoom.roomY + 3;
   };
   getDescription = (): string => {
     return "YOU SHOULD NOT HAVE THIS";
