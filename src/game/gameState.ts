@@ -171,9 +171,11 @@ export class ProjectileState {
   y: number;
   dead: boolean;
   roomID: number;
+  roomGID?: string;
   enemySpawn: EnemyState;
   wizardState: number;
   wizardParentID: number;
+  wizardParentGID?: string;
 
   constructor(projectile: Projectile, game: Game) {
     this.x = projectile.x;
@@ -182,31 +184,39 @@ export class ProjectileState {
     if (projectile instanceof EnemySpawnAnimation) {
       this.type = ProjectileType.SPAWN;
       this.roomID = game.rooms.indexOf(projectile.room);
+      this.roomGID = projectile.room?.globalId;
       this.enemySpawn = new EnemyState(projectile.enemy, game);
     }
     if (projectile instanceof WizardFireball) {
       this.type = ProjectileType.WIZARD;
       this.wizardState = projectile.state;
       this.roomID = game.rooms.indexOf(projectile.parent.room);
+      this.roomGID = projectile.parent.room?.globalId;
       this.wizardParentID = projectile.parent.room.entities.indexOf(
         projectile.parent,
       );
+      this.wizardParentGID = (projectile.parent as any).globalId;
     }
   }
 }
 
 let loadProjectile = (ps: ProjectileState, game: Game): Projectile => {
   if (ps.type === ProjectileType.SPAWN) {
-    let room = game.rooms[ps.roomID];
+    let room =
+      (ps.roomGID && game.roomsById?.get(ps.roomGID)) || game.rooms[ps.roomID];
     let enemy = loadEnemy(ps.enemySpawn, game);
     let p = new EnemySpawnAnimation(room, enemy, ps.x, ps.y);
     p.dead = ps.dead;
     return p;
   }
   if (ps.type === ProjectileType.WIZARD) {
-    let wizard = game.rooms[ps.roomID].entities[
-      ps.wizardParentID
-    ] as EnergyWizardEnemy;
+    let wizardRoom =
+      (ps.roomGID && game.roomsById?.get(ps.roomGID)) || game.rooms[ps.roomID];
+    let wizard = ps.wizardParentGID
+      ? (wizardRoom.entities.find(
+          (e) => (e as any).globalId === ps.wizardParentGID,
+        ) as EnergyWizardEnemy)
+      : (wizardRoom.entities[ps.wizardParentID] as EnergyWizardEnemy);
     let p = new WizardFireball(wizard, ps.x, ps.y);
     p.state = ps.wizardState;
     return p;
@@ -264,6 +274,7 @@ export enum EnemyType {
 export class EnemyState {
   type: EnemyType;
   roomID: number;
+  roomGID?: string;
   x: number;
   y: number;
   health: number;
@@ -299,6 +310,7 @@ export class EnemyState {
 
   constructor(enemy: Entity, game: Game) {
     this.roomID = game.rooms.indexOf(enemy.room);
+    this.roomGID = enemy.room?.globalId;
     this.x = enemy.x;
     this.y = enemy.y;
     this.health = enemy.health;
@@ -483,7 +495,8 @@ export class EnemyState {
 
 let loadEnemy = (es: EnemyState, game: Game): Entity => {
   let enemy;
-  let room = game.rooms[es.roomID];
+  let room =
+    (es.roomGID && game.roomsById?.get(es.roomGID)) || game.rooms[es.roomID];
   if (es.type === EnemyType.BARREL) enemy = new Barrel(room, game, es.x, es.y);
   if (es.type === EnemyType.BIGSKULL) {
     enemy = new BigSkullEnemy(room, game, es.x, es.y);
@@ -666,6 +679,7 @@ let loadEnemy = (es: EnemyState, game: Game): Entity => {
 
 export class RoomState {
   roomID: number;
+  roomGID?: string;
   entered: boolean;
   enemies: Array<EnemyState>;
   items: Array<ItemState>;
@@ -678,6 +692,7 @@ export class RoomState {
 
   constructor(room: Room, game: Game) {
     this.roomID = game.rooms.indexOf(room);
+    this.roomGID = room.globalId;
     this.entered = room.entered;
     this.active = room.active;
     this.onScreen = room.onScreen;
@@ -748,7 +763,7 @@ let loadRoom = (room: Room, roomState: RoomState, game: Game) => {
     room.entities.push(loadEnemy(enemy, game));
   for (const item of roomState.items) {
     if (item) {
-      room.items.push(loadItem(item, game));
+      room.items.push(loadItem(item, game, undefined, room));
     }
   }
   for (const projectile of roomState.projectiles)
@@ -821,6 +836,7 @@ export class ItemState {
   x: number;
   y: number;
   roomID: number;
+  roomGID?: string;
   stackCount: number;
   pickedUp: boolean;
   equipped: boolean;
@@ -889,13 +905,22 @@ export class ItemState {
     this.x = item.x;
     this.y = item.y;
     this.roomID = game.rooms.indexOf(item.level);
+    this.roomGID = item.level?.globalId;
     this.stackCount = item.stackCount;
     this.pickedUp = item.pickedUp;
   }
 }
 
-let loadItem = (i: ItemState, game: Game, player?: Player): Item => {
-  let room = i.roomID !== -1 ? game.rooms[i.roomID] : null;
+let loadItem = (
+  i: ItemState,
+  game: Game,
+  player?: Player,
+  targetRoom?: Room,
+): Item => {
+  let room =
+    targetRoom ||
+    (i.roomGID && game.roomsById?.get(i.roomGID)) ||
+    (i.roomID !== -1 ? game.rooms[i.roomID] : null);
   let item;
   if (i.type === ItemType.ARMOR) item = new Armor(room, i.x, i.y);
   if (i.type === ItemType.BLUEGEM) item = new BlueGem(room, i.x, i.y);
@@ -1053,6 +1078,7 @@ export class PlayerState {
   y: number;
   dead: boolean;
   roomID: number;
+  roomGID?: string;
   direction: Direction;
   health: number;
   maxHealth: number;
@@ -1060,7 +1086,9 @@ export class PlayerState {
   inventory: InventoryState;
   hasOpenVendingMachine: boolean;
   openVendingMachineRoomID: number;
+  openVendingMachineRoomGID?: string;
   openVendingMachineID: number;
+  openVendingMachineGID?: string;
   sightRadius: number;
 
   constructor(player: Player, game: Game) {
@@ -1068,6 +1096,7 @@ export class PlayerState {
     this.y = player.y;
     this.dead = player.dead;
     this.roomID = player.levelID;
+    this.roomGID = game.rooms[player.levelID]?.globalId;
     this.direction = player.direction;
     this.health = player.health;
     this.maxHealth = player.maxHealth;
@@ -1079,10 +1108,12 @@ export class PlayerState {
       this.openVendingMachineRoomID = game.rooms.indexOf(
         player.openVendingMachine.room,
       );
+      this.openVendingMachineRoomGID = player.openVendingMachine.room?.globalId;
       this.openVendingMachineID =
         player.openVendingMachine.room.entities.indexOf(
           player.openVendingMachine,
         );
+      this.openVendingMachineGID = (player.openVendingMachine as any).globalId;
     }
     this.sightRadius = player.sightRadius;
   }
@@ -1092,7 +1123,13 @@ let loadPlayer = (id: string, p: PlayerState, game: Game): Player => {
   let player = new Player(game, p.x, p.y, id === game.localPlayerID);
   player.dead = p.dead;
 
-  player.levelID = p.roomID;
+  // Prefer GID if available
+  if (p.roomGID && game.roomsById?.has(p.roomGID)) {
+    const room = game.roomsById.get(p.roomGID);
+    player.levelID = game.rooms.indexOf(room);
+  } else {
+    player.levelID = p.roomID;
+  }
   if (player.levelID < game.levelgen.currentFloorFirstLevelID) {
     // catch up to the current level
     player.levelID = game.levelgen.currentFloorFirstLevelID;
@@ -1109,9 +1146,15 @@ let loadPlayer = (id: string, p: PlayerState, game: Game): Player => {
   player.lastTickHealth = p.lastTickHealth;
   loadInventory(player.inventory, p.inventory, game);
   if (p.hasOpenVendingMachine) {
-    player.openVendingMachine = game.rooms[p.openVendingMachineRoomID].entities[
-      p.openVendingMachineID
-    ] as VendingMachine;
+    const vmRoom =
+      (p.openVendingMachineRoomGID &&
+        game.roomsById?.get(p.openVendingMachineRoomGID)) ||
+      game.rooms[p.openVendingMachineRoomID];
+    player.openVendingMachine = p.openVendingMachineGID
+      ? (vmRoom.entities.find(
+          (e) => (e as any).globalId === p.openVendingMachineGID,
+        ) as VendingMachine)
+      : (vmRoom.entities[p.openVendingMachineID] as VendingMachine);
   }
   player.sightRadius = p.sightRadius;
 
@@ -1130,6 +1173,7 @@ export class LevelState {
   isMainPath: boolean;
   mapGroup: number;
   envType: EnvType;
+  levelGID?: string;
 
   constructor(level: Level) {
     this.depth = level.depth;
@@ -1138,6 +1182,7 @@ export class LevelState {
     this.isMainPath = level.isMainPath;
     this.mapGroup = level.mapGroup;
     this.envType = level.environment.type;
+    this.levelGID = (level as any).globalId;
   }
 }
 
@@ -1158,6 +1203,8 @@ export class GameState {
   offlinePlayers: Record<string, PlayerState>;
   level: LevelState;
   rooms: Array<RoomState>;
+  levelGID?: string;
+  roomGIDs?: string[];
 
   constructor() {
     this.seed = 0;
@@ -1196,6 +1243,7 @@ export const createGameState = (game: Game): GameState => {
     // Save level state
     if (game.level) {
       gs.level = new LevelState(game.level);
+      gs.levelGID = (game.level as any).globalId;
       console.log("🔄 SAVE: Created LevelState:", {
         depth: gs.level.depth,
         width: gs.level.width,
@@ -1262,6 +1310,7 @@ export const createGameState = (game: Game): GameState => {
         room.catchUp();
         const roomState = new RoomState(room, game);
         gs.rooms.push(roomState);
+        (gs.roomGIDs ||= []).push(room.globalId);
 
         console.log(`✅ SAVE: Successfully saved room ${roomIndex}`, {
           enemiesCount: roomState.enemies.length,
@@ -1317,7 +1366,9 @@ export const loadGameState = (
     // Clear existing rooms
     console.log("🔄 LOAD: Clearing existing rooms");
     game.rooms = []; // Use standard array syntax
+    game.roomsById = new Map();
     game.levels = [];
+    game.levelsById = new Map();
 
     // Initialize level generator
     console.log("🔄 LOAD: Initializing level generator");
@@ -1422,18 +1473,20 @@ export const loadGameState = (
           console.log("🔄 LOAD: Loading room states...");
           try {
             for (const roomState of gameState.rooms) {
-              const room = game.rooms.find((r) => r.id === roomState.roomID);
+              const room =
+                (roomState.roomGID && game.getRoomById(roomState.roomGID)) ||
+                game.rooms.find((r) => r.id === roomState.roomID);
               if (room) {
                 console.log(
-                  `🔄 LOAD: Loading state for room ${roomState.roomID}`,
+                  `🔄 LOAD: Loading state for room ${roomState.roomGID ?? roomState.roomID}`,
                 );
                 loadRoom(room, roomState, game);
                 console.log(
-                  `✅ LOAD: Successfully loaded room ${roomState.roomID}`,
+                  `✅ LOAD: Successfully loaded room ${roomState.roomGID ?? roomState.roomID}`,
                 );
               } else {
                 console.warn(
-                  `🔄 LOAD: Room ${roomState.roomID} not found in generated rooms`,
+                  `🔄 LOAD: Room ${roomState.roomGID ?? roomState.roomID} not found in generated rooms`,
                 );
               }
             }

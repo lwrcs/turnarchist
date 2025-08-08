@@ -233,17 +233,6 @@ export abstract class Weapon extends Equippable {
   // returns true if nothing was hit, false if the player should move
 
   protected getEntitiesAt(x: number, y: number): Entity[] {
-    console.log("🔫 WEAPON: getEntitiesAt called", {
-      gameExists: !!this.game,
-      levelsExists: !!this.game?.levels,
-      levelsLength: this.game?.levels?.length,
-      wielderExists: !!this.wielder,
-      wielderDepth: this.wielder?.depth,
-      wielderLevelID: this.wielder?.levelID,
-      roomsExists: !!this.game?.rooms,
-      roomsLength: this.game?.rooms?.length,
-    });
-
     if (!this.game) {
       console.error("🔫 WEAPON: this.game is undefined");
       return [];

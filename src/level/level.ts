@@ -14,6 +14,7 @@ import { DownLadder } from "../tile/downLadder";
 import { Key } from "../item/key";
 import { Lockable } from "../tile/lockable";
 import { Random } from "../utility/random";
+import { IdGenerator } from "../globalStateManager/IdGenerator";
 
 export interface EnemyParameters {
   enemyTables: Record<number, number[]>;
@@ -61,12 +62,14 @@ interface entitySpawnData {
 */
 
 export class Level {
+  globalId: string;
   depth: number;
   levelArray: (Tile | null)[][];
   width: number;
   height: number;
   game: Game;
   rooms: Room[];
+  roomsById: Map<string, Room>;
   environment: Environment;
   exitRoom: Room;
   startRoom: Room;
@@ -87,10 +90,12 @@ export class Level {
     skipPopulation: boolean = false,
   ) {
     this.game = game;
+    this.globalId = IdGenerator.generate("L");
     this.depth = depth;
     this.width = width;
     this.height = height;
     this.rooms = [];
+    this.roomsById = new Map();
     this.isMainPath = isMainPath;
     this.initializeLevelArray();
     this.mapGroup = mapGroup;
@@ -199,9 +204,16 @@ export class Level {
     this.rooms = rooms;
     this.setExitRoom();
     this.setStartRoom();
+    this.roomsById.clear();
     rooms.forEach((room) => {
       room.id = this.rooms.indexOf(room);
+      this.roomsById.set(room.globalId, room);
     });
+    this.game.roomsById = new Map(rooms.map((r) => [r.globalId, r]));
+  }
+
+  getRoomById(id: string): Room | undefined {
+    return this.roomsById.get(id);
   }
 
   initializeLevelArray = () => {

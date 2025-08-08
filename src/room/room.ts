@@ -796,7 +796,7 @@ export class Room {
       this.addSpawners(spawnerAmount, rand);
     }
     let occultistAmounts = [
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     ];
     if (this.depth > 1) {
       let occultistAmount = Game.randTable(occultistAmounts, rand);
@@ -1459,9 +1459,12 @@ export class Room {
         .filter((r) => r), // Ensure room exists
     );
 
-    for (const r of Array.from(connectedRooms)) {
-      if (r.entered) r.updateLighting();
-    }
+    // Avoid recursive lighting updates across linked rooms
+    // Neighbor rooms will update their lighting during their own draw/update cycles
+    // based on their active/onScreen states.
+    // for (const r of Array.from(connectedRooms)) {
+    //   if (r.entered) r.updateLighting();
+    // }
   };
 
   updateLighting = () => {
@@ -2157,7 +2160,7 @@ export class Room {
                 fillWidth = 0.5;
                 break;
               case Direction.RIGHT:
-                fillX = x + 0;
+                fillX = x + 0.5;
                 fillWidth = 0.5;
                 break;
               case Direction.DOWN_LEFT:

@@ -259,6 +259,7 @@ export class LevelGenerator {
       // DO NOT push to game.levels
     } else {
       this.game.levels.push(newLevel);
+      this.game.registerLevel(newLevel);
     }
 
     let rooms = this.getRooms(partitions, depth, mapGroup, envType);
@@ -278,7 +279,9 @@ export class LevelGenerator {
     if (!isSidePath) this.currentFloorFirstLevelID = this.game.rooms.length;
 
     // Add the new levels to the game rooms
-    this.game.rooms = rooms;
+    this.game.registerRooms(rooms);
+    // Keep game.level in sync for convenience lookups
+    this.game.level = this.game.levels[depth] || this.game.level;
 
     // Generate the rope hole if it exists
     for (let room of rooms) {

@@ -96,11 +96,11 @@ export class Populator {
   }
 
   populateRooms = () => {
+    if (this.skipPopulation) return;
+
     this.level.rooms.forEach((room) => {
       this.addEnvironmentalFeatures(room, Random.rand);
     });
-
-    if (this.skipPopulation) return;
 
     for (let room of this.level.rooms) {
       this.populate(room, Random.rand);

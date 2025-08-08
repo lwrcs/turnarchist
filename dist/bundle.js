@@ -12305,8 +12305,31 @@ class Game {
             if (room && room.level) {
                 this.level = room.level;
             }
-            if (this.level.rooms.length > 0)
+            if (this.level.rooms.length > 0) {
                 this.rooms = this.level.rooms;
+                this.roomsById = new Map(this.rooms.map((r) => [r.globalId, r]));
+            }
+        };
+        this.getRoomById = (id) => {
+            return this.roomsById?.get(id);
+        };
+        this.getLevelById = (id) => {
+            return this.levelsById?.get(id);
+        };
+        this.registerLevel = (level) => {
+            this.levelsById.set(level.globalId, level);
+        };
+        this.registerRooms = (rooms) => {
+            this.rooms = rooms;
+            this.roomsById = new Map(rooms.map((r) => [r.globalId, r]));
+        };
+        this.setCurrentRoomById = (id) => {
+            const room = this.roomsById.get(id);
+            if (room) {
+                this.room = room;
+                this.updateLevel(room);
+            }
+            return room;
         };
         this.setPlayer = () => {
             this.player = this.players[this.localPlayerID];
@@ -12924,20 +12947,20 @@ class Game {
         };
         this.drawRooms = (delta, skipLocalPlayer = false) => {
             if (!gameConstants_1.GameConstants.drawOtherRooms) {
+                // Ensure current room is drawn even if flags are stale
                 this.room.draw(delta);
                 this.room.drawEntities(delta, true);
             }
             else if (gameConstants_1.GameConstants.drawOtherRooms) {
                 // Create a sorted copy of the rooms array based on roomY + height
-                const sortedRooms = this.levels[this.currentDepth].rooms
-                    .slice()
-                    .sort((a, b) => {
+                const sortedRooms = this.rooms.slice().sort((a, b) => {
                     const aPosition = a.roomY + a.height;
                     const bPosition = b.roomY + b.height;
                     return aPosition - bPosition; // Ascending order
                 });
                 for (const room of sortedRooms) {
-                    if (room.active || (room.entered && room.onScreen)) {
+                    const shouldDraw = room === this.room || room.active || (room.entered && room.onScreen);
+                    if (shouldDraw) {
                         room.draw(delta);
                         room.drawEntities(delta, skipLocalPlayer);
                         //room.drawShade(delta); // this used to come after the color layer
@@ -12946,15 +12969,17 @@ class Game {
             }
         };
         this.drawRoomShadeAndColor = (delta) => {
-            for (const room of this.levels[this.currentDepth].rooms) {
-                if (room.active || room.entered) {
+            for (const room of this.rooms) {
+                const shouldDraw = room === this.room || room.active || room.entered;
+                if (shouldDraw) {
                     room.drawShadeLayer();
                     room.drawColorLayer();
                     room.drawBloomLayer(delta);
                 }
             }
-            for (const room of this.levels[this.currentDepth].rooms) {
-                if (room.active && room.entered) {
+            for (const room of this.rooms) {
+                const shouldDrawOver = room === this.room || (room.active && room.entered);
+                if (shouldDrawOver) {
                     room.drawOverShade(delta);
                 }
             }
@@ -13399,6 +13424,8 @@ class Game {
             }
         };
         this.globalId = IdGenerator_1.IdGenerator.generate("G");
+        this.roomsById = new Map();
+        this.levelsById = new Map();
         window.addEventListener("load", () => {
             let canvas = document.getElementById("gameCanvas");
             Game.ctx = canvas.getContext("2d", {
@@ -14395,27 +14422,33 @@ class ProjectileState {
         if (projectile instanceof enemySpawnAnimation_1.EnemySpawnAnimation) {
             this.type = ProjectileType.SPAWN;
             this.roomID = game.rooms.indexOf(projectile.room);
+            this.roomGID = projectile.room?.globalId;
             this.enemySpawn = new EnemyState(projectile.enemy, game);
         }
         if (projectile instanceof wizardFireball_1.WizardFireball) {
             this.type = ProjectileType.WIZARD;
             this.wizardState = projectile.state;
             this.roomID = game.rooms.indexOf(projectile.parent.room);
+            this.roomGID = projectile.parent.room?.globalId;
             this.wizardParentID = projectile.parent.room.entities.indexOf(projectile.parent);
+            this.wizardParentGID = projectile.parent.globalId;
         }
     }
 }
 exports.ProjectileState = ProjectileState;
 let loadProjectile = (ps, game) => {
     if (ps.type === ProjectileType.SPAWN) {
-        let room = game.rooms[ps.roomID];
+        let room = (ps.roomGID && game.roomsById?.get(ps.roomGID)) || game.rooms[ps.roomID];
         let enemy = loadEnemy(ps.enemySpawn, game);
         let p = new enemySpawnAnimation_1.EnemySpawnAnimation(room, enemy, ps.x, ps.y);
         p.dead = ps.dead;
         return p;
     }
     if (ps.type === ProjectileType.WIZARD) {
-        let wizard = game.rooms[ps.roomID].entities[ps.wizardParentID];
+        let wizardRoom = (ps.roomGID && game.roomsById?.get(ps.roomGID)) || game.rooms[ps.roomID];
+        let wizard = ps.wizardParentGID
+            ? wizardRoom.entities.find((e) => e.globalId === ps.wizardParentGID)
+            : wizardRoom.entities[ps.wizardParentID];
         let p = new wizardFireball_1.WizardFireball(wizard, ps.x, ps.y);
         p.state = ps.wizardState;
         return p;
@@ -14472,6 +14505,7 @@ var EnemyType;
 class EnemyState {
     constructor(enemy, game) {
         this.roomID = game.rooms.indexOf(enemy.room);
+        this.roomGID = enemy.room?.globalId;
         this.x = enemy.x;
         this.y = enemy.y;
         this.health = enemy.health;
@@ -14666,7 +14700,7 @@ class EnemyState {
 exports.EnemyState = EnemyState;
 let loadEnemy = (es, game) => {
     let enemy;
-    let room = game.rooms[es.roomID];
+    let room = (es.roomGID && game.roomsById?.get(es.roomGID)) || game.rooms[es.roomID];
     if (es.type === EnemyType.BARREL)
         enemy = new barrel_1.Barrel(room, game, es.x, es.y);
     if (es.type === EnemyType.BIGSKULL) {
@@ -14852,6 +14886,7 @@ let loadEnemy = (es, game) => {
 class RoomState {
     constructor(room, game) {
         this.roomID = game.rooms.indexOf(room);
+        this.roomGID = room.globalId;
         this.entered = room.entered;
         this.active = room.active;
         this.onScreen = room.onScreen;
@@ -14916,7 +14951,7 @@ let loadRoom = (room, roomState, game) => {
         room.entities.push(loadEnemy(enemy, game));
     for (const item of roomState.items) {
         if (item) {
-            room.items.push(loadItem(item, game));
+            room.items.push(loadItem(item, game, undefined, room));
         }
     }
     for (const projectile of roomState.projectiles)
@@ -15097,13 +15132,16 @@ class ItemState {
         this.x = item.x;
         this.y = item.y;
         this.roomID = game.rooms.indexOf(item.level);
+        this.roomGID = item.level?.globalId;
         this.stackCount = item.stackCount;
         this.pickedUp = item.pickedUp;
     }
 }
 exports.ItemState = ItemState;
-let loadItem = (i, game, player) => {
-    let room = i.roomID !== -1 ? game.rooms[i.roomID] : null;
+let loadItem = (i, game, player, targetRoom) => {
+    let room = targetRoom ||
+        (i.roomGID && game.roomsById?.get(i.roomGID)) ||
+        (i.roomID !== -1 ? game.rooms[i.roomID] : null);
     let item;
     if (i.type === ItemType.ARMOR)
         item = new armor_1.Armor(room, i.x, i.y);
@@ -15288,6 +15326,7 @@ class PlayerState {
         this.y = player.y;
         this.dead = player.dead;
         this.roomID = player.levelID;
+        this.roomGID = game.rooms[player.levelID]?.globalId;
         this.direction = player.direction;
         this.health = player.health;
         this.maxHealth = player.maxHealth;
@@ -15297,8 +15336,10 @@ class PlayerState {
         if (player.openVendingMachine) {
             this.hasOpenVendingMachine = true;
             this.openVendingMachineRoomID = game.rooms.indexOf(player.openVendingMachine.room);
+            this.openVendingMachineRoomGID = player.openVendingMachine.room?.globalId;
             this.openVendingMachineID =
                 player.openVendingMachine.room.entities.indexOf(player.openVendingMachine);
+            this.openVendingMachineGID = player.openVendingMachine.globalId;
         }
         this.sightRadius = player.sightRadius;
     }
@@ -15307,7 +15348,14 @@ exports.PlayerState = PlayerState;
 let loadPlayer = (id, p, game) => {
     let player = new player_1.Player(game, p.x, p.y, id === game.localPlayerID);
     player.dead = p.dead;
-    player.levelID = p.roomID;
+    // Prefer GID if available
+    if (p.roomGID && game.roomsById?.has(p.roomGID)) {
+        const room = game.roomsById.get(p.roomGID);
+        player.levelID = game.rooms.indexOf(room);
+    }
+    else {
+        player.levelID = p.roomID;
+    }
     if (player.levelID < game.levelgen.currentFloorFirstLevelID) {
         // catch up to the current level
         player.levelID = game.levelgen.currentFloorFirstLevelID;
@@ -15324,7 +15372,12 @@ let loadPlayer = (id, p, game) => {
     player.lastTickHealth = p.lastTickHealth;
     loadInventory(player.inventory, p.inventory, game);
     if (p.hasOpenVendingMachine) {
-        player.openVendingMachine = game.rooms[p.openVendingMachineRoomID].entities[p.openVendingMachineID];
+        const vmRoom = (p.openVendingMachineRoomGID &&
+            game.roomsById?.get(p.openVendingMachineRoomGID)) ||
+            game.rooms[p.openVendingMachineRoomID];
+        player.openVendingMachine = p.openVendingMachineGID
+            ? vmRoom.entities.find((e) => e.globalId === p.openVendingMachineGID)
+            : vmRoom.entities[p.openVendingMachineID];
     }
     player.sightRadius = p.sightRadius;
     // Set the player's room reference (this might be needed by some player methods)
@@ -15341,6 +15394,7 @@ class LevelState {
         this.isMainPath = level.isMainPath;
         this.mapGroup = level.mapGroup;
         this.envType = level.environment.type;
+        this.levelGID = level.globalId;
     }
 }
 exports.LevelState = LevelState;
@@ -15388,6 +15442,7 @@ const createGameState = (game) => {
         // Save level state
         if (game.level) {
             gs.level = new LevelState(game.level);
+            gs.levelGID = game.level.globalId;
             console.log("🔄 SAVE: Created LevelState:", {
                 depth: gs.level.depth,
                 width: gs.level.width,
@@ -15453,6 +15508,7 @@ const createGameState = (game) => {
                 room.catchUp();
                 const roomState = new RoomState(room, game);
                 gs.rooms.push(roomState);
+                (gs.roomGIDs || (gs.roomGIDs = [])).push(room.globalId);
                 console.log(`✅ SAVE: Successfully saved room ${roomIndex}`, {
                     enemiesCount: roomState.enemies.length,
                     itemsCount: roomState.items.length,
@@ -15501,7 +15557,9 @@ const loadGameState = (game, activeUsernames, gameState, newWorld) => {
         // Clear existing rooms
         console.log("🔄 LOAD: Clearing existing rooms");
         game.rooms = []; // Use standard array syntax
+        game.roomsById = new Map();
         game.levels = [];
+        game.levelsById = new Map();
         // Initialize level generator
         console.log("🔄 LOAD: Initializing level generator");
         game.levelgen = new levelGenerator_1.LevelGenerator();
@@ -15578,14 +15636,15 @@ const loadGameState = (game, activeUsernames, gameState, newWorld) => {
                 console.log("🔄 LOAD: Loading room states...");
                 try {
                     for (const roomState of gameState.rooms) {
-                        const room = game.rooms.find((r) => r.id === roomState.roomID);
+                        const room = (roomState.roomGID && game.getRoomById(roomState.roomGID)) ||
+                            game.rooms.find((r) => r.id === roomState.roomID);
                         if (room) {
-                            console.log(`🔄 LOAD: Loading state for room ${roomState.roomID}`);
+                            console.log(`🔄 LOAD: Loading state for room ${roomState.roomGID ?? roomState.roomID}`);
                             loadRoom(room, roomState, game);
-                            console.log(`✅ LOAD: Successfully loaded room ${roomState.roomID}`);
+                            console.log(`✅ LOAD: Successfully loaded room ${roomState.roomGID ?? roomState.roomID}`);
                         }
                         else {
-                            console.warn(`🔄 LOAD: Room ${roomState.roomID} not found in generated rooms`);
+                            console.warn(`🔄 LOAD: Room ${roomState.roomGID ?? roomState.roomID} not found in generated rooms`);
                         }
                     }
                     console.log("✅ LOAD: All room states loaded successfully");
@@ -22923,16 +22982,6 @@ class Weapon extends equippable_1.Equippable {
     }
     // returns true if nothing was hit, false if the player should move
     getEntitiesAt(x, y) {
-        console.log("🔫 WEAPON: getEntitiesAt called", {
-            gameExists: !!this.game,
-            levelsExists: !!this.game?.levels,
-            levelsLength: this.game?.levels?.length,
-            wielderExists: !!this.wielder,
-            wielderDepth: this.wielder?.depth,
-            wielderLevelID: this.wielder?.levelID,
-            roomsExists: !!this.game?.rooms,
-            roomsLength: this.game?.rooms?.length,
-        });
         if (!this.game) {
             console.error("🔫 WEAPON: this.game is undefined");
             return [];
@@ -23636,6 +23685,7 @@ const roomPopulator_1 = __webpack_require__(/*! ../room/roomPopulator */ "./src/
 const downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/downLadder.ts");
 const key_1 = __webpack_require__(/*! ../item/key */ "./src/item/key.ts");
 const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
+const IdGenerator_1 = __webpack_require__(/*! ../globalStateManager/IdGenerator */ "./src/globalStateManager/IdGenerator.ts");
 exports.enemyMinimumDepth = {
     1: 0,
     2: 1,
@@ -23710,10 +23760,12 @@ class Level {
             }
         };
         this.game = game;
+        this.globalId = IdGenerator_1.IdGenerator.generate("L");
         this.depth = depth;
         this.width = width;
         this.height = height;
         this.rooms = [];
+        this.roomsById = new Map();
         this.isMainPath = isMainPath;
         this.initializeLevelArray();
         this.mapGroup = mapGroup;
@@ -23795,9 +23847,15 @@ class Level {
         this.rooms = rooms;
         this.setExitRoom();
         this.setStartRoom();
+        this.roomsById.clear();
         rooms.forEach((room) => {
             room.id = this.rooms.indexOf(room);
+            this.roomsById.set(room.globalId, room);
         });
+        this.game.roomsById = new Map(rooms.map((r) => [r.globalId, r]));
+    }
+    getRoomById(id) {
+        return this.roomsById.get(id);
     }
     /**
      * Generates enemy parameters based on the current depth.
@@ -24002,6 +24060,7 @@ class LevelGenerator {
             }
             else {
                 this.game.levels.push(newLevel);
+                this.game.registerLevel(newLevel);
             }
             let rooms = this.getRooms(partitions, depth, mapGroup, envType);
             newLevel.setRooms(rooms);
@@ -24016,7 +24075,9 @@ class LevelGenerator {
             if (!isSidePath)
                 this.currentFloorFirstLevelID = this.game.rooms.length;
             // Add the new levels to the game rooms
-            this.game.rooms = rooms;
+            this.game.registerRooms(rooms);
+            // Keep game.level in sync for convenience lookups
+            this.game.level = this.game.levels[depth] || this.game.level;
             // Generate the rope hole if it exists
             for (let room of rooms) {
                 if (room.type === room_1.RoomType.ROPEHOLE) {
@@ -30488,10 +30549,12 @@ class Room {
                 .filter((d) => d && d.linkedDoor) // Ensure door and linkedDoor exist
                 .map((d) => d.linkedDoor.room)
                 .filter((r) => r));
-            for (const r of Array.from(connectedRooms)) {
-                if (r.entered)
-                    r.updateLighting();
-            }
+            // Avoid recursive lighting updates across linked rooms
+            // Neighbor rooms will update their lighting during their own draw/update cycles
+            // based on their active/onScreen states.
+            // for (const r of Array.from(connectedRooms)) {
+            //   if (r.entered) r.updateLighting();
+            // }
         };
         this.updateLighting = () => {
             if (!this.onScreen)
@@ -30967,7 +31030,7 @@ class Room {
                                     fillWidth = 0.5;
                                     break;
                                 case game_1.Direction.RIGHT:
-                                    fillX = x + 0;
+                                    fillX = x + 0.5;
                                     fillWidth = 0.5;
                                     break;
                                 case game_1.Direction.DOWN_LEFT:
@@ -32112,7 +32175,7 @@ class Room {
             this.addSpawners(spawnerAmount, rand);
         }
         let occultistAmounts = [
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         ];
         if (this.depth > 1) {
             let occultistAmount = game_1.Game.randTable(occultistAmounts, rand);
@@ -32724,11 +32787,11 @@ class Populator {
         this.addedDownladder = false;
         this.skipPopulation = false;
         this.populateRooms = () => {
+            if (this.skipPopulation)
+                return;
             this.level.rooms.forEach((room) => {
                 this.addEnvironmentalFeatures(room, random_1.Random.rand);
             });
-            if (this.skipPopulation)
-                return;
             for (let room of this.level.rooms) {
                 this.populate(room, random_1.Random.rand);
             }

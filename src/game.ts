@@ -144,6 +144,8 @@ export class Game {
   rooms: Array<Room>;
   level: Level;
   levels: Array<Level>;
+  roomsById: Map<string, Room>;
+  levelsById: Map<string, Level>;
   levelgen: LevelGenerator;
   readonly localPlayerID = "localplayer";
   players: Record<string, Player>;
@@ -239,6 +241,8 @@ export class Game {
 
   constructor() {
     this.globalId = IdGenerator.generate("G");
+    this.roomsById = new Map();
+    this.levelsById = new Map();
 
     window.addEventListener("load", () => {
       let canvas = document.getElementById("gameCanvas");
@@ -445,7 +449,36 @@ export class Game {
     if (room && room.level) {
       this.level = room.level;
     }
-    if (this.level.rooms.length > 0) this.rooms = this.level.rooms;
+    if (this.level.rooms.length > 0) {
+      this.rooms = this.level.rooms;
+      this.roomsById = new Map(this.rooms.map((r) => [r.globalId, r]));
+    }
+  };
+
+  getRoomById = (id: string): Room | undefined => {
+    return this.roomsById?.get(id);
+  };
+
+  getLevelById = (id: string): Level | undefined => {
+    return this.levelsById?.get(id);
+  };
+
+  registerLevel = (level: Level) => {
+    this.levelsById.set(level.globalId, level);
+  };
+
+  registerRooms = (rooms: Room[]) => {
+    this.rooms = rooms;
+    this.roomsById = new Map(rooms.map((r) => [r.globalId, r]));
+  };
+
+  setCurrentRoomById = (id: string): Room | undefined => {
+    const room = this.roomsById.get(id);
+    if (room) {
+      this.room = room;
+      this.updateLevel(room);
+    }
+    return room;
   };
 
   setPlayer = () => {
@@ -1258,20 +1291,21 @@ export class Game {
 
   drawRooms = (delta: number, skipLocalPlayer: boolean = false) => {
     if (!GameConstants.drawOtherRooms) {
+      // Ensure current room is drawn even if flags are stale
       this.room.draw(delta);
       this.room.drawEntities(delta, true);
     } else if (GameConstants.drawOtherRooms) {
       // Create a sorted copy of the rooms array based on roomY + height
-      const sortedRooms = this.levels[this.currentDepth].rooms
-        .slice()
-        .sort((a, b) => {
-          const aPosition = a.roomY + a.height;
-          const bPosition = b.roomY + b.height;
-          return aPosition - bPosition; // Ascending order
-        });
+      const sortedRooms = this.rooms.slice().sort((a, b) => {
+        const aPosition = a.roomY + a.height;
+        const bPosition = b.roomY + b.height;
+        return aPosition - bPosition; // Ascending order
+      });
 
       for (const room of sortedRooms) {
-        if (room.active || (room.entered && room.onScreen)) {
+        const shouldDraw =
+          room === this.room || room.active || (room.entered && room.onScreen);
+        if (shouldDraw) {
           room.draw(delta);
 
           room.drawEntities(delta, skipLocalPlayer);
@@ -1282,15 +1316,18 @@ export class Game {
   };
 
   drawRoomShadeAndColor = (delta: number) => {
-    for (const room of this.levels[this.currentDepth].rooms) {
-      if (room.active || room.entered) {
+    for (const room of this.rooms) {
+      const shouldDraw = room === this.room || room.active || room.entered;
+      if (shouldDraw) {
         room.drawShadeLayer();
         room.drawColorLayer();
         room.drawBloomLayer(delta);
       }
     }
-    for (const room of this.levels[this.currentDepth].rooms) {
-      if (room.active && room.entered) {
+    for (const room of this.rooms) {
+      const shouldDrawOver =
+        room === this.room || (room.active && room.entered);
+      if (shouldDrawOver) {
         room.drawOverShade(delta);
       }
     }
