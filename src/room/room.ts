@@ -316,6 +316,7 @@ export class Room {
     isValid: false,
     lastLightingUpdate: 0,
   };
+  private isUpdatingLighting: boolean = false;
 
   constructor(
     game: Game,
@@ -1459,16 +1460,16 @@ export class Room {
         .filter((r) => r), // Ensure room exists
     );
 
-    // Avoid recursive lighting updates across linked rooms
-    // Neighbor rooms will update their lighting during their own draw/update cycles
-    // based on their active/onScreen states.
-    // for (const r of Array.from(connectedRooms)) {
-    //   if (r.entered) r.updateLighting();
-    // }
+    // Update connected rooms once to propagate door light without infinite recursion
+    for (const r of Array.from(connectedRooms)) {
+      if (r.entered && !r.isUpdatingLighting) r.updateLighting();
+    }
   };
 
   updateLighting = () => {
     if (!this.onScreen) return;
+    if (this.isUpdatingLighting) return;
+    this.isUpdatingLighting = true;
 
     // Invalidate cache when lighting is updated
     this.invalidateBlurCache();
@@ -1582,6 +1583,7 @@ export class Room {
     // End timing the conversion to luminance
     //console.timeEnd("updateLighting: Convert to Luminance");
     this.updateDoorLightSources();
+    this.isUpdatingLighting = false;
   };
 
   updateLightSources = (lightSource?: LightSource, remove?: boolean) => {

@@ -67,35 +67,35 @@ export class PngPartitionGenerator {
     depth: number,
     isSidePath: boolean = false, // Add this parameter
   ): Promise<Partition[]> {
-    console.log("=== PNG PARTITION GENERATION START ===");
-    console.log(`Processing image: ${imageUrl}`);
-    console.log(`Game depth: ${depth}`);
-    console.log(`Is side path: ${isSidePath}`);
+    //console.log("=== PNG PARTITION GENERATION START ===");
+    //console.log(`Processing image: ${imageUrl}`);
+    //console.log(`Game depth: ${depth}`);
+    //console.log(`Is side path: ${isSidePath}`);
 
     try {
-      console.log("Step 1: Loading image data...");
+      //console.log("Step 1: Loading image data...");
       const imageData = await this.loadImageData(imageUrl);
-      console.log(
-        `✓ Image loaded: ${imageData.width}x${imageData.height} pixels`,
-      );
+      //console.log(
+      //  `✓ Image loaded: ${imageData.width}x${imageData.height} pixels`,
+      //);
 
-      console.log("Step 2: Finding rectangles...");
+      //console.log("Step 2: Finding rectangles...");
       const rectangles = this.findRectangles(imageData);
-      console.log(`✓ Found ${rectangles.length} rectangles:`, rectangles);
+      //console.log(`✓ Found ${rectangles.length} rectangles:`, rectangles);
 
-      console.log("Step 3: Creating partitions from rectangles...");
+      //console.log("Step 3: Creating partitions from rectangles...");
       const rawPartitions = this.createPartitionsFromRectangles(
         rectangles,
         isSidePath,
       );
-      console.log(`✓ Created ${rawPartitions.length} raw partitions`);
+      //console.log(`✓ Created ${rawPartitions.length} raw partitions`);
 
       if (rawPartitions.length === 0) {
         console.error("❌ No partitions created from image!");
         return [];
       }
 
-      console.log("Step 4: Processing partitions for gameplay...");
+      //console.log("Step 4: Processing partitions for gameplay...");
       const partialLevel = new PartialLevel();
       partialLevel.partitions = rawPartitions;
 
@@ -104,7 +104,7 @@ export class PngPartitionGenerator {
         `✓ Final processed partitions: ${partialLevel.partitions.length}`,
       );
 
-      console.log("=== PNG PARTITION GENERATION COMPLETE ===");
+      //console.log("=== PNG PARTITION GENERATION COMPLETE ===");
       return partialLevel.partitions;
     } catch (error) {
       console.error("❌ Error in PNG partition generation:", error);
@@ -114,15 +114,15 @@ export class PngPartitionGenerator {
   }
 
   private loadImageData(imageUrl: string): Promise<ImageData> {
-    console.log(`  Loading image from: ${imageUrl}`);
+    //console.log(`  Loading image from: ${imageUrl}`);
     return new Promise((resolve, reject) => {
       const image = new Image();
       image.crossOrigin = "Anonymous";
 
       image.onload = () => {
-        console.log(
-          `  ✓ Image loaded successfully: ${image.width}x${image.height}`,
-        );
+        //console.log(
+        //  `  ✓ Image loaded successfully: ${image.width}x${image.height}`,
+        //);
         try {
           const canvas = document.createElement("canvas");
           canvas.width = image.width;
@@ -135,9 +135,9 @@ export class PngPartitionGenerator {
 
           ctx.drawImage(image, 0, 0);
           const imageData = ctx.getImageData(0, 0, image.width, image.height);
-          console.log(
-            `  ✓ Image data extracted: ${imageData.data.length} bytes`,
-          );
+          //    console.log(
+          //  `  ✓ Image data extracted: ${imageData.data.length} bytes`,
+          //);
           resolve(imageData);
         } catch (error) {
           console.error("  ❌ Error processing image:", error);
@@ -151,17 +151,17 @@ export class PngPartitionGenerator {
       };
 
       image.src = imageUrl;
-      console.log("  Image loading initiated...");
+      //console.log("  Image loading initiated...");
     });
   }
 
   private findRectangles(imageData: ImageData): Rectangle[] {
-    console.log("  Finding rectangles in image...");
+    //console.log("  Finding rectangles in image...");
     const { width, height, data } = imageData;
     const visited = new Array(width * height).fill(false);
     const rectangles: Rectangle[] = [];
 
-    console.log(`  Scanning ${width}x${height} pixels (${data.length} bytes)`);
+    //console.log(`  Scanning ${width}x${height} pixels (${data.length} bytes)`);
 
     let transparentPixels = 0;
     let processedPixels = 0;
@@ -187,9 +187,9 @@ export class PngPartitionGenerator {
         const b = data[pixelIndex + 2];
         const color = `rgb(${r}, ${g}, ${b})`;
 
-        console.log(
-          `  Processing pixel at (${x}, ${y}): color ${color}, alpha ${alpha}`,
-        );
+        //console.log(
+        //  `  Processing pixel at (${x}, ${y}): color ${color}, alpha ${alpha}`,
+        //);
 
         let rectW = 1;
         while (
@@ -232,16 +232,16 @@ export class PngPartitionGenerator {
 
         const rectangle = { x, y, w: rectW, h: rectH, color };
         rectangles.push(rectangle);
-        console.log(
-          `  ✓ Found rectangle: ${rectW}x${rectH} at (${x}, ${y}) with color ${color}`,
-        );
+        //console.log(
+        //  `  ✓ Found rectangle: ${rectW}x${rectH} at (${x}, ${y}) with color ${color}`,
+        //);
       }
     }
 
-    console.log(`  ✓ Rectangle finding complete:`);
-    console.log(`    - Transparent pixels: ${transparentPixels}`);
-    console.log(`    - Processed pixels: ${processedPixels}`);
-    console.log(`    - Total rectangles found: ${rectangles.length}`);
+    //console.log(`  ✓ Rectangle finding complete:`);
+    //console.log(`    - Transparent pixels: ${transparentPixels}`);
+    //console.log(`    - Processed pixels: ${processedPixels}`);
+    //console.log(`    - Total rectangles found: ${rectangles.length}`);
 
     return rectangles;
   }
@@ -263,8 +263,8 @@ export class PngPartitionGenerator {
     rectangles: Rectangle[],
     isSidePath: boolean,
   ): Partition[] {
-    console.log("  Creating partitions from rectangles...");
-    console.log(`  Side path mode: ${isSidePath}`);
+    //console.log("  Creating partitions from rectangles...");
+    //console.log(`  Side path mode: ${isSidePath}`);
 
     if (rectangles.length === 0) {
       console.warn("  ⚠️  No rectangles to create partitions from!");
@@ -272,10 +272,10 @@ export class PngPartitionGenerator {
     }
 
     const partitions = rectangles.map((rect, index) => {
-      console.log(`  Processing rectangle ${index + 1}/${rectangles.length}:`);
-      console.log(`    Position: (${rect.x}, ${rect.y})`);
-      console.log(`    Size: ${rect.w}x${rect.h}`);
-      console.log(`    Color: ${rect.color}`);
+      //console.log(`  Processing rectangle ${index + 1}/${rectangles.length}:`);
+      //console.log(`    Position: (${rect.x}, ${rect.y})`);
+      //console.log(`    Size: ${rect.w}x${rect.h}`);
+      //console.log(`    Color: ${rect.color}`);
 
       const partition = new Partition(
         rect.x,
@@ -289,26 +289,26 @@ export class PngPartitionGenerator {
         // For side paths, use cave-appropriate color mappings
         const caveRoomType = this.getCaveRoomTypeFromColor(rect.color);
         partition.type = caveRoomType;
-        console.log(`    ✓ Cave room type assigned: ${caveRoomType}`);
+        //console.log(`    ✓ Cave room type assigned: ${caveRoomType}`);
       } else {
         // For main paths, use the existing color mapping
         const roomType = COLOR_TO_ROOM_TYPE[rect.color];
         if (roomType) {
           partition.type = roomType;
-          console.log(`    ✓ Main path room type assigned: ${roomType}`);
+          //console.log(`    ✓ Main path room type assigned: ${roomType}`);
         } else {
           partition.type = RoomType.DUNGEON;
-          console.log(
-            `    ⚠️  Unknown color, defaulted to: ${RoomType.DUNGEON}`,
-          );
+          //  console.log(
+          //  `    ⚠️  Unknown color, defaulted to: ${RoomType.DUNGEON}`,
+          //);
         }
       }
 
-      console.log(`    ✓ Partition created with area: ${partition.area()}`);
+      //console.log(`    ✓ Partition created with area: ${partition.area()}`);
       return partition;
     });
 
-    console.log(`  ✓ Created ${partitions.length} partitions`);
+    //console.log(`  ✓ Created ${partitions.length} partitions`);
     return partitions;
   }
 
@@ -333,17 +333,17 @@ export class PngPartitionGenerator {
     game: Game,
     isSidePath: boolean,
   ): Promise<void> {
-    console.log("  === GAMEPLAY PROCESSING START ===");
-    console.log(`  Side path mode: ${isSidePath}`);
+    //console.log("  === GAMEPLAY PROCESSING START ===");
+    //console.log(`  Side path mode: ${isSidePath}`);
 
     if (partialLevel.partitions.length === 0) {
       console.error("  ❌ No partitions to process!");
       return;
     }
 
-    console.log(
-      `  Processing ${partialLevel.partitions.length} partitions for gameplay`,
-    );
+    //console.log(
+    //  `  Processing ${partialLevel.partitions.length} partitions for gameplay`,
+    //);
 
     if (isSidePath) {
       await this.processCavePartitions(partialLevel, game);
@@ -351,18 +351,18 @@ export class PngPartitionGenerator {
       await this.processMainPathPartitions(partialLevel, game);
     }
 
-    console.log("  === GAMEPLAY PROCESSING COMPLETE ===");
+    //console.log("  === GAMEPLAY PROCESSING COMPLETE ===");
   }
 
   private async processCavePartitions(partialLevel: PartialLevel, game: Game) {
-    console.log("  Processing as CAVE system...");
+    //console.log("  Processing as CAVE system...");
 
     // Log all room types found
     const roomTypeCounts: { [key: string]: number } = {};
     partialLevel.partitions.forEach((p) => {
       roomTypeCounts[p.type] = (roomTypeCounts[p.type] || 0) + 1;
     });
-    console.log("  Cave room type distribution:", roomTypeCounts);
+    //console.log("  Cave room type distribution:", roomTypeCounts);
 
     // Find or assign ROPECAVE room
     let spawn = partialLevel.partitions.find(
@@ -370,60 +370,60 @@ export class PngPartitionGenerator {
     );
 
     if (!spawn && partialLevel.partitions.length > 0) {
-      console.log(
-        "  No ROPECAVE room specified, assigning to smallest room...",
-      );
+      //console.log(
+      //  "  No ROPECAVE room specified, assigning to smallest room...",
+      //);
       partialLevel.partitions.sort((a, b) => a.area() - b.area());
       spawn = partialLevel.partitions[0];
       spawn.type = RoomType.ROPECAVE;
       spawn.fillStyle = "rgb(0, 255, 0)";
-      console.log(`  ✓ Assigned ROPECAVE to room at (${spawn.x}, ${spawn.y})`);
+      //console.log(`  ✓ Assigned ROPECAVE to room at (${spawn.x}, ${spawn.y})`);
     }
 
     // Make sure all other rooms are CAVE type (unless they're special rooms like TREASURE)
     partialLevel.partitions.forEach((p) => {
       if (p !== spawn && p.type === RoomType.DUNGEON) {
         p.type = RoomType.CAVE;
-        console.log(`  Converted DUNGEON to CAVE at (${p.x}, ${p.y})`);
+        //console.log(`  Converted DUNGEON to CAVE at (${p.x}, ${p.y})`);
       }
     });
 
-    console.log("  Updating visual styles...");
+    //console.log("  Updating visual styles...");
     this.updatePartitionVisualStyles(partialLevel.partitions);
 
     // CRITICAL: Move ROPECAVE room to index 0 for proper spawning
     if (spawn) {
       const startIndex = partialLevel.partitions.indexOf(spawn);
       if (startIndex > 0) {
-        console.log(
-          `  Moving ROPECAVE room from index ${startIndex} to index 0`,
-        );
+        //  console.log(
+        //  `  Moving ROPECAVE room from index ${startIndex} to index 0`,
+        //);
         partialLevel.partitions.splice(startIndex, 1);
         partialLevel.partitions.unshift(spawn);
-        console.log(`  ✓ ROPECAVE room is now at index 0`);
+        //console.log(`  ✓ ROPECAVE room is now at index 0`);
       } else {
-        console.log(`  ✓ ROPECAVE room already at index 0`);
+        //console.log(`  ✓ ROPECAVE room already at index 0`);
       }
     }
 
     // Connect partitions using cave logic
     if (spawn) {
-      console.log("  Connecting cave partitions...");
+      //console.log("  Connecting cave partitions...");
       await this.connectCavePartitions(partialLevel, spawn);
-      console.log(
-        `  ✓ Cave connection complete. Remaining partitions: ${partialLevel.partitions.length}`,
-      );
+      //console.log(
+      //  `  ✓ Cave connection complete. Remaining partitions: ${partialLevel.partitions.length}`,
+      //);
     }
 
     // Add cave loops
     if (partialLevel.partitions.length > 0) {
-      console.log("  Adding cave loop connections...");
+      //console.log("  Adding cave loop connections...");
       await this.addLoopConnections(partialLevel);
     }
 
     // Calculate distances (no stair room for caves)
     if (partialLevel.partitions.length > 0 && spawn) {
-      console.log("  Calculating cave distances...");
+      //console.log("  Calculating cave distances...");
       await this.calculateDistances(partialLevel, spawn);
       await this.addSpecialRooms(partialLevel);
     }
@@ -433,124 +433,124 @@ export class PngPartitionGenerator {
     partialLevel: PartialLevel,
     game: Game,
   ) {
-    console.log("  Processing as MAIN PATH...");
+    //console.log("  Processing as MAIN PATH...");
 
     // Log all room types found
     const roomTypeCounts: { [key: string]: number } = {};
     partialLevel.partitions.forEach((p) => {
       roomTypeCounts[p.type] = (roomTypeCounts[p.type] || 0) + 1;
     });
-    console.log("  Room type distribution:", roomTypeCounts);
+    //console.log("  Room type distribution:", roomTypeCounts);
 
     // Find START and BOSS rooms from color assignments
     let spawn = partialLevel.partitions.find((p) => p.type === RoomType.START);
     let boss = partialLevel.partitions.find((p) => p.type === RoomType.BOSS);
 
-    console.log(`  Found START room: ${spawn ? "YES" : "NO"}`);
-    console.log(`  Found BOSS room: ${boss ? "YES" : "NO"}`);
+    //console.log(`  Found START room: ${spawn ? "YES" : "NO"}`);
+    //console.log(`  Found BOSS room: ${boss ? "YES" : "NO"}`);
 
     // If no START room was specified by color, assign the smallest room
     if (!spawn && partialLevel.partitions.length > 0) {
-      console.log("  No START room specified, finding smallest room...");
+      //console.log("  No START room specified, finding smallest room...");
       partialLevel.partitions.sort((a, b) => a.area() - b.area());
       spawn = partialLevel.partitions[0];
       spawn.type = RoomType.START;
       spawn.fillStyle = "rgb(0, 255, 0)";
-      console.log(
-        `  ✓ Assigned START to smallest room at (${spawn.x}, ${spawn.y}) with area ${spawn.area()}`,
-      );
+      //console.log(
+      //  `  ✓ Assigned START to smallest room at (${spawn.x}, ${spawn.y}) with area ${spawn.area()}`,
+      //);
     }
 
     // If no BOSS room was specified by color, assign the largest room
     if (!boss && partialLevel.partitions.length > 1) {
-      console.log("  No BOSS room specified, finding largest room...");
+      //console.log("  No BOSS room specified, finding largest room...");
       partialLevel.partitions.sort((a, b) => a.area() - b.area());
       boss = partialLevel.partitions[partialLevel.partitions.length - 1];
       if (boss.type === RoomType.DUNGEON) {
         boss.type = RoomType.BOSS;
         boss.fillStyle = "red";
-        console.log(
-          `  ✓ Assigned BOSS to largest room at (${boss.x}, ${boss.y}) with area ${boss.area()}`,
-        );
+        //console.log(
+        //  `  ✓ Assigned BOSS to largest room at (${boss.x}, ${boss.y}) with area ${boss.area()}`,
+        //);
       } else {
-        console.log(
-          `  ⚠️  Largest room is already ${boss.type}, not assigning BOSS`,
-        );
+        //  console.log(
+        //  `  ⚠️  Largest room is already ${boss.type}, not assigning BOSS`,
+        //);
         boss = null;
       }
     }
 
-    console.log("  Updating visual styles...");
+    //console.log("  Updating visual styles...");
     this.updatePartitionVisualStyles(partialLevel.partitions);
 
     // CRITICAL: Move START room to index 0 for proper spawning
     if (spawn) {
       const startIndex = partialLevel.partitions.indexOf(spawn);
       if (startIndex > 0) {
-        console.log(`  Moving START room from index ${startIndex} to index 0`);
+        //console.log(`  Moving START room from index ${startIndex} to index 0`);
         // Remove START room from current position
         partialLevel.partitions.splice(startIndex, 1);
         // Insert at beginning
         partialLevel.partitions.unshift(spawn);
-        console.log(`  ✓ START room is now at index 0`);
+        //console.log(`  ✓ START room is now at index 0`);
       } else {
-        console.log(`  ✓ START room already at index 0`);
+        //console.log(`  ✓ START room already at index 0`);
       }
     }
 
     // Connect partitions
     if (spawn) {
-      console.log("  Connecting partitions...");
+      //console.log("  Connecting partitions...");
       await this.connectPartitions(partialLevel, spawn);
-      console.log(
-        `  ✓ Connection phase complete. Remaining partitions: ${partialLevel.partitions.length}`,
-      );
+      //console.log(
+      //  `  ✓ Connection phase complete. Remaining partitions: ${partialLevel.partitions.length}`,
+      //);
     } else {
       console.error("  ❌ No spawn room found, cannot connect partitions!");
     }
 
     // Add loop connections
     if (partialLevel.partitions.length > 0) {
-      console.log("  Adding loop connections...");
+      //console.log("  Adding loop connections...");
       await this.addLoopConnections(partialLevel);
-      console.log("  ✓ Loop connections added");
+      //console.log("  ✓ Loop connections added");
     }
 
     // Add stair room
     const hasStairRoom = partialLevel.partitions.some(
       (p) => p.type === RoomType.DOWNLADDER,
     );
-    console.log(`  Existing stair room: ${hasStairRoom ? "YES" : "NO"}`);
+    //console.log(`  Existing stair room: ${hasStairRoom ? "YES" : "NO"}`);
 
     if (!hasStairRoom && partialLevel.partitions.length > 0) {
-      console.log("  Adding automatic stair room...");
+      //console.log("  Adding automatic stair room...");
       await this.addStairRoom(partialLevel, game);
-      console.log(
-        `  ✓ Stair room processing complete. Final partitions: ${partialLevel.partitions.length}`,
-      );
+      //console.log(
+      //  `  ✓ Stair room processing complete. Final partitions: ${partialLevel.partitions.length}`,
+      //);
     }
 
     // Calculate distances
     if (partialLevel.partitions.length > 0 && spawn) {
-      console.log("  Calculating distances...");
+      //  console.log("  Calculating distances...");
       await this.calculateDistances(partialLevel, spawn);
 
-      console.log("  Adding special rooms...");
+      //console.log("  Adding special rooms...");
       await this.addSpecialRooms(partialLevel);
 
-      console.log("  ✓ Distance calculation complete");
+      //console.log("  ✓ Distance calculation complete");
 
       // Log final distances
       partialLevel.partitions.forEach((p) => {
-        console.log(
-          `    ${p.type} at (${p.x}, ${p.y}): distance ${p.distance}`,
-        );
+        //console.log(
+        //  `    ${p.type} at (${p.x}, ${p.y}): distance ${p.distance}`,
+        //);
       });
     }
   }
 
   private updatePartitionVisualStyles(partitions: Partition[]) {
-    console.log("    Updating visual styles...");
+    //console.log("    Updating visual styles...");
     for (const partition of partitions) {
       const oldStyle = partition.fillStyle;
       switch (partition.type) {
@@ -583,9 +583,9 @@ export class PngPartitionGenerator {
       }
 
       if (oldStyle !== partition.fillStyle) {
-        console.log(
-          `      Updated ${partition.type} style: ${oldStyle} -> ${partition.fillStyle}`,
-        );
+        //console.log(
+        //  `      Updated ${partition.type} style: ${oldStyle} -> ${partition.fillStyle}`,
+        //);
       }
     }
   }
@@ -594,7 +594,7 @@ export class PngPartitionGenerator {
     partialLevel: PartialLevel,
     spawn: Partition,
   ) {
-    console.log("    === PNG CONNECTION WITH DEAD ENDS ===");
+    //console.log("    === PNG CONNECTION WITH DEAD ENDS ===");
 
     let connected = [spawn];
     let frontier = [spawn];
@@ -604,7 +604,7 @@ export class PngPartitionGenerator {
       let room = frontier[0];
       frontier.splice(0, 1);
 
-      console.log(`    Processing ${room.type} at (${room.x}, ${room.y})`);
+      //console.log(`    Processing ${room.type} at (${room.x}, ${room.y})`);
 
       // Find all unconnected rooms that are adjacent to this room
       const adjacentRooms = partialLevel.partitions.filter((p) => {
@@ -615,9 +615,9 @@ export class PngPartitionGenerator {
         );
       });
 
-      console.log(
-        `      Found ${adjacentRooms.length} adjacent unconnected rooms`,
-      );
+      //console.log(
+      //  `      Found ${adjacentRooms.length} adjacent unconnected rooms`,
+      //);
 
       // AGGRESSIVE: Connect to ALL adjacent rooms, not just 1-2
       for (let i = 0; i < adjacentRooms.length; i++) {
@@ -627,9 +627,9 @@ export class PngPartitionGenerator {
         if (adjacencyInfo) {
           const connectionPoint = adjacencyInfo.connectionPoint;
 
-          console.log(
-            `      ✓ Connecting to ${target.type} at (${connectionPoint.x}, ${connectionPoint.y})`,
-          );
+          //console.log(
+          //  `      ✓ Connecting to ${target.type} at (${connectionPoint.x}, ${connectionPoint.y})`,
+          //);
 
           // Create bidirectional connections
           room.connections.push(
@@ -661,14 +661,14 @@ export class PngPartitionGenerator {
         }
       }
 
-      console.log(
-        `      Room completed with ${room.connections.length} total connections`,
-      );
+      //console.log(
+      //  `      Room completed with ${room.connections.length} total connections`,
+      //);
     }
 
-    console.log(
-      `    ✓ Connected ${connected.length}/${partialLevel.partitions.length} rooms`,
-    );
+    //console.log(
+    //  `    ✓ Connected ${connected.length}/${partialLevel.partitions.length} rooms`,
+    //);
 
     // PRESERVE UNCONNECTED ROOMS: Don't remove them, just log them
     const unconnected = partialLevel.partitions.filter(
@@ -676,13 +676,13 @@ export class PngPartitionGenerator {
     );
 
     if (unconnected.length > 0) {
-      console.log(
-        `    📍 Found ${unconnected.length} isolated rooms (keeping as dead ends):`,
-      );
+      //  console.log(
+      //  `    📍 Found ${unconnected.length} isolated rooms (keeping as dead ends):`,
+      //);
       unconnected.forEach((partition) => {
-        console.log(
-          `      - ${partition.type} at (${partition.x}, ${partition.y})`,
-        );
+        //console.log(
+        //  `      - ${partition.type} at (${partition.x}, ${partition.y})`,
+        //);
         // Make them accessible by connecting to the nearest connected room
         this.connectIsolatedRoom(
           partition,
@@ -691,9 +691,9 @@ export class PngPartitionGenerator {
       });
     }
 
-    console.log(
-      `    Final result: ${partialLevel.partitions.length} total rooms preserved`,
-    );
+    //console.log(
+    //  `    Final result: ${partialLevel.partitions.length} total rooms preserved`,
+    //);
   }
 
   private connectIsolatedRoom(
@@ -718,9 +718,9 @@ export class PngPartitionGenerator {
       const connectionX = Math.floor((isolatedRoom.x + closestRoom.x) / 2);
       const connectionY = Math.floor((isolatedRoom.y + closestRoom.y) / 2);
 
-      console.log(
-        `      ✓ Linking isolated ${isolatedRoom.type} to ${closestRoom.type} via (${connectionX}, ${connectionY})`,
-      );
+      //console.log(
+      //  `      ✓ Linking isolated ${isolatedRoom.type} to ${closestRoom.type} via (${connectionX}, ${connectionY})`,
+      //);
 
       isolatedRoom.connections.push(
         new PartitionConnection(connectionX, connectionY, closestRoom),
@@ -735,7 +735,7 @@ export class PngPartitionGenerator {
     partialLevel: PartialLevel,
     spawn: Partition,
   ) {
-    console.log("    Connecting cave partitions...");
+    //console.log("    Connecting cave partitions...");
     let connected = [spawn];
     let frontier = [spawn];
     const maxRooms = partialLevel.partitions.length; // Connect all available rooms
@@ -744,9 +744,9 @@ export class PngPartitionGenerator {
       let room = frontier[0];
       frontier.splice(0, 1);
 
-      console.log(
-        `    Processing cave room ${room.type} at (${room.x}, ${room.y})`,
-      );
+      //console.log(
+      //  `    Processing cave room ${room.type} at (${room.x}, ${room.y})`,
+      //);
 
       // Find adjacent unconnected rooms
       const adjacentRooms = partialLevel.partitions.filter((p) => {
@@ -782,7 +782,7 @@ export class PngPartitionGenerator {
 
           frontier.push(target);
           connected.push(target);
-          console.log(`    ✓ Cave connection: ${room.type} <-> ${target.type}`);
+          //console.log(`    ✓ Cave connection: ${room.type} <-> ${target.type}`);
         }
       }
     }
@@ -791,9 +791,9 @@ export class PngPartitionGenerator {
     partialLevel.partitions = partialLevel.partitions.filter(
       (p) => p.connections.length > 0,
     );
-    console.log(
-      `    ✓ Cave connection complete: ${connected.length} rooms connected`,
-    );
+    //  console.log(
+    //  `    ✓ Cave connection complete: ${connected.length} rooms connected`,
+    //);
   }
 
   /**
@@ -869,7 +869,7 @@ export class PngPartitionGenerator {
    * Enhanced loop connections that work better with PNG layouts
    */
   private async addLoopConnections(partialLevel: PartialLevel) {
-    console.log("    Adding PNG-optimized loop connections...");
+    //console.log("    Adding PNG-optimized loop connections...");
     if (partialLevel.partitions.length === 0) {
       return;
     }
@@ -890,7 +890,7 @@ export class PngPartitionGenerator {
       Math.floor(partialLevel.partitions.length / 2),
     );
 
-    console.log(`    Attempting up to ${maxLoops} loop connections`);
+    //console.log(`    Attempting up to ${maxLoops} loop connections`);
 
     for (let i = 0; i < maxLoops; i++) {
       // Pick a random room
@@ -938,18 +938,18 @@ export class PngPartitionGenerator {
           );
 
           loopsAdded++;
-          console.log(
-            `    ✓ Loop ${loopsAdded}: ${room.type} <-> ${target.type}`,
-          );
+          //console.log(
+          //  `    ✓ Loop ${loopsAdded}: ${room.type} <-> ${target.type}`,
+          //);
         }
       }
     }
 
-    console.log(`    ✓ Added ${loopsAdded} loop connections`);
+    //console.log(`    ✓ Added ${loopsAdded} loop connections`);
   }
 
   private async addStairRoom(partialLevel: PartialLevel, game: Game) {
-    console.log("    Adding stair room...");
+    //  console.log("    Adding stair room...");
 
     const hasBoss = partialLevel.partitions.some(
       (p) => p.type === RoomType.BOSS,
@@ -958,16 +958,16 @@ export class PngPartitionGenerator {
       (p) => p.type === RoomType.DOWNLADDER,
     );
 
-    console.log(`    Has boss room: ${hasBoss}`);
-    console.log(`    Has existing stairs: ${hasStairs}`);
+    //console.log(`    Has boss room: ${hasBoss}`);
+    //console.log(`    Has existing stairs: ${hasStairs}`);
 
     if (!hasBoss || hasStairs) {
-      console.log("    Skipping stair room addition");
+      //console.log("    Skipping stair room addition");
       return;
     }
 
     let boss = partialLevel.partitions.find((p) => p.type === RoomType.BOSS);
-    console.log(`    Boss room at (${boss.x}, ${boss.y})`);
+    //console.log(`    Boss room at (${boss.x}, ${boss.y})`);
 
     let found_stair = false;
     const max_stair_tries = 5;
@@ -978,9 +978,9 @@ export class PngPartitionGenerator {
       const stairX = Game.rand(boss.x - 1, boss.x + boss.w - 2, Random.rand);
       const stairY = boss.y - stairRoomHeight - 1;
 
-      console.log(
-        `    Stair attempt ${stair_tries + 1}: trying position (${stairX}, ${stairY})`,
-      );
+      //console.log(
+      //  `    Stair attempt ${stair_tries + 1}: trying position (${stairX}, ${stairY})`,
+      //);
 
       let stair = new Partition(
         stairX,
@@ -993,7 +993,7 @@ export class PngPartitionGenerator {
       stair.fillStyle = "blue";
 
       const overlaps = partialLevel.partitions.some((p) => p.overlaps(stair));
-      console.log(`    Overlap check: ${overlaps ? "OVERLAPS" : "CLEAR"}`);
+      //console.log(`    Overlap check: ${overlaps ? "OVERLAPS" : "CLEAR"}`);
 
       if (!overlaps) {
         found_stair = true;
@@ -1016,15 +1016,15 @@ export class PngPartitionGenerator {
           new PartitionConnection(connectionX, connectionY, stair),
         );
 
-        console.log(
-          `    ✓ Stair room added at (${stairX}, ${stairY}) connected to boss`,
-        );
+        //console.log(
+        //  `    ✓ Stair room added at (${stairX}, ${stairY}) connected to boss`,
+        //);
         break;
       }
     }
 
     if (!found_stair) {
-      console.log("    ❌ Could not place stair room after all attempts");
+      //console.log("    ❌ Could not place stair room after all attempts");
     }
   }
 
@@ -1032,7 +1032,7 @@ export class PngPartitionGenerator {
     partialLevel: PartialLevel,
     spawn: Partition,
   ) {
-    console.log("    Calculating distances from spawn...");
+    //console.log("    Calculating distances from spawn...");
     let frontier = [spawn];
     let seen = [];
     spawn.distance = 0;
@@ -1045,16 +1045,16 @@ export class PngPartitionGenerator {
       seen.push(room);
       processedRooms++;
 
-      console.log(
-        `    Processing room ${processedRooms}: ${room.type} at distance ${room.distance}`,
-      );
+      //console.log(
+      //  `    Processing room ${processedRooms}: ${room.type} at distance ${room.distance}`,
+      //);
 
       for (let c of room.connections) {
         let other = c.other;
         const newDistance = room.distance + 1;
         if (newDistance < other.distance) {
           other.distance = newDistance;
-          console.log(`    Updated ${other.type} distance to ${newDistance}`);
+          //console.log(`    Updated ${other.type} distance to ${newDistance}`);
         }
         if (seen.indexOf(other) === -1) {
           frontier.push(other);
@@ -1062,13 +1062,13 @@ export class PngPartitionGenerator {
       }
     }
 
-    console.log(
-      `    ✓ Distance calculation complete for ${processedRooms} rooms`,
-    );
+    //console.log(
+    //  `    ✓ Distance calculation complete for ${processedRooms} rooms`,
+    //);
   }
 
   private async addSpecialRooms(partialLevel: PartialLevel) {
-    console.log("    Adding special rooms...");
+    //  console.log("    Adding special rooms...");
     let specialRoomsAdded = 0;
 
     for (const p of partialLevel.partitions) {
@@ -1076,14 +1076,14 @@ export class PngPartitionGenerator {
         if (p.distance > 4 && p.area() <= 30 && Random.rand() < 0.1) {
           p.type = RoomType.TREASURE;
           specialRoomsAdded++;
-          console.log(
-            `    ✓ Converted DUNGEON to TREASURE at (${p.x}, ${p.y}), distance ${p.distance}`,
-          );
+          //console.log(
+          //  `    ✓ Converted DUNGEON to TREASURE at (${p.x}, ${p.y}), distance ${p.distance}`,
+          //);
         }
       }
     }
 
-    console.log(`    ✓ Added ${specialRoomsAdded} special rooms`);
+    //  console.log(`    ✓ Added ${specialRoomsAdded} special rooms`);
   }
 
   // Utility method to get color mapping documentation
