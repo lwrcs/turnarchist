@@ -26,6 +26,8 @@ import { Tips } from "./tips";
 import { GameplaySettings } from "./game/gameplaySettings";
 import { Random } from "./utility/random";
 import { IdGenerator } from "./globalStateManager/IdGenerator";
+import { ReplayManager } from "./game/replayManager";
+import { PlayerAction } from "./player/playerAction";
 
 export enum LevelState {
   IN_LEVEL,
@@ -136,6 +138,12 @@ const times = [];
 let fps = 60;
 
 export class Game {
+  // Replay manager singleton
+  private static _replayManager: ReplayManager | null = null;
+  get replayManager(): ReplayManager {
+    if (!Game._replayManager) Game._replayManager = new ReplayManager();
+    return Game._replayManager;
+  }
   globalId: string;
   static ctx: CanvasRenderingContext2D;
   static shade_canvases: Record<string, HTMLCanvasElement>;
@@ -505,6 +513,8 @@ export class Game {
     loadGameState(this, [this.localPlayerID], gs, true);
 
     this.levelState = LevelState.LEVEL_GENERATION;
+    // Begin replay recording with this seed and capture a base state when ready
+    this.replayManager.beginRecording(gs.seed, this);
   };
 
   keyDownListener = (key: string) => {
@@ -698,37 +708,41 @@ export class Game {
     this.refreshDimensions();
     Input.checkIsTapHold();
 
-    // Existing key repeat
-    if (
-      Input.lastPressTime !== 0 &&
-      Date.now() - Input.lastPressTime > GameConstants.KEY_REPEAT_TIME
-    ) {
-      Input.onKeydown({
-        repeat: false,
-        key: Input.lastPressKey,
-      } as KeyboardEvent);
+    // Existing key repeat (disabled during replay)
+    if (!this.replayManager.isReplaying()) {
+      if (
+        Input.lastPressTime !== 0 &&
+        Date.now() - Input.lastPressTime > GameConstants.KEY_REPEAT_TIME
+      ) {
+        Input.onKeydown({
+          repeat: false,
+          key: Input.lastPressKey,
+        } as KeyboardEvent);
+      }
     }
 
-    // Add mouse repeat for movement
-    if (
-      Input.mouseDown &&
-      Input.mouseDownHandled &&
-      Input.lastMouseDownTime !== 0 &&
-      Date.now() - Input.lastMouseDownTime > GameConstants.KEY_REPEAT_TIME
-    ) {
-      // Re-trigger mouse movement
-      const player = this.players[this.localPlayerID];
+    // Add mouse repeat for movement (disabled during replay)
+    if (!this.replayManager.isReplaying()) {
       if (
-        player &&
-        player.game.levelState === LevelState.IN_LEVEL &&
-        !player.dead &&
-        !player.menu.open &&
-        !player.busyAnimating &&
-        !player.game.cameraAnimation.active
+        Input.mouseDown &&
+        Input.mouseDownHandled &&
+        Input.lastMouseDownTime !== 0 &&
+        Date.now() - Input.lastMouseDownTime > GameConstants.KEY_REPEAT_TIME
       ) {
-        // Update mouse position and trigger movement
-        player.moveWithMouse();
-        Input.lastMouseDownTime = Date.now(); // Reset timer for next repeat
+        // Re-trigger mouse movement
+        const player = this.players[this.localPlayerID];
+        if (
+          player &&
+          player.game.levelState === LevelState.IN_LEVEL &&
+          !player.dead &&
+          !player.menu.open &&
+          !player.busyAnimating &&
+          !player.game.cameraAnimation.active
+        ) {
+          // Update mouse position and trigger movement
+          player.moveWithMouse();
+          Input.lastMouseDownTime = Date.now(); // Reset timer for next repeat
+        }
       }
     }
 
@@ -833,7 +847,6 @@ export class Game {
   };
 
   commandHandler = (command: string): void => {
-    const player = this.room.game.players[0];
     command = command.toLowerCase();
     let enabled = "";
 
@@ -853,6 +866,23 @@ export class Game {
     }
 
     switch (command) {
+      case "replay":
+        this.pushMessage("Starting replay...");
+        this.replayManager.replay(this);
+        break;
+      case "replayinfo": {
+        const s = (this.replayManager as any).getStats?.();
+        this.pushMessage(
+          s
+            ? `Replay stats: actions=${s.count}, seed=${s.seed}, recording=${s.recording}, replaying=${s.replaying}`
+            : "No replay stats available.",
+        );
+        break;
+      }
+      case "replayclear":
+        (this.replayManager as any).clearRecording?.();
+        this.pushMessage("Replay buffer cleared.");
+        break;
       case "devmode":
         GameConstants.DEVELOPER_MODE = !GameConstants.DEVELOPER_MODE;
         console.log(`Developer mode is now ${GameConstants.DEVELOPER_MODE}`);
@@ -936,9 +966,13 @@ export class Game {
         break;
       case "save":
         try {
-          this.savedGameState = createGameState(this);
-          this.pushMessage("Game state saved successfully!");
-          console.log("Saved game state:", this.savedGameState);
+          if (this.replayManager.isReplaying()) {
+            this.pushMessage("Cannot save during replay.");
+          } else {
+            this.savedGameState = createGameState(this);
+            this.pushMessage("Game state saved successfully!");
+            console.log("Saved game state:", this.savedGameState);
+          }
         } catch (error) {
           this.pushMessage("Error saving game state: " + error.message);
           console.error("Save error:", error);
@@ -990,6 +1024,10 @@ export class Game {
       case "testsave":
         // Save current state, make some changes, then load to verify
         try {
+          if (this.replayManager.isReplaying()) {
+            this.pushMessage("Cannot save during replay.");
+            break;
+          }
           this.savedGameState = createGameState(this);
           const originalHealth = this.players[this.localPlayerID].health;
           const originalX = this.players[this.localPlayerID].x;

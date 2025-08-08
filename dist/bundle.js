@@ -12189,6 +12189,7 @@ const tips_1 = __webpack_require__(/*! ./tips */ "./src/tips.ts");
 const gameplaySettings_1 = __webpack_require__(/*! ./game/gameplaySettings */ "./src/game/gameplaySettings.ts");
 const random_1 = __webpack_require__(/*! ./utility/random */ "./src/utility/random.ts");
 const IdGenerator_1 = __webpack_require__(/*! ./globalStateManager/IdGenerator */ "./src/globalStateManager/IdGenerator.ts");
+const replayManager_1 = __webpack_require__(/*! ./game/replayManager */ "./src/game/replayManager.ts");
 var LevelState;
 (function (LevelState) {
     LevelState[LevelState["IN_LEVEL"] = 0] = "IN_LEVEL";
@@ -12277,6 +12278,11 @@ let getShadeCanvasKey = (set, sX, sY, sW, sH, opacity, shadeColor) => {
 const times = [];
 let fps = 60;
 class Game {
+    get replayManager() {
+        if (!Game._replayManager)
+            Game._replayManager = new replayManager_1.ReplayManager();
+        return Game._replayManager;
+    }
     constructor() {
         this.localPlayerID = "localplayer";
         this.loginMessage = "";
@@ -12350,6 +12356,8 @@ class Game {
             exports.gs.randomState = exports.gs.seed;
             (0, gameState_1.loadGameState)(this, [this.localPlayerID], exports.gs, true);
             this.levelState = LevelState.LEVEL_GENERATION;
+            // Begin replay recording with this seed and capture a base state when ready
+            this.replayManager.beginRecording(exports.gs.seed, this);
         };
         this.keyDownListener = (key) => {
             Game.inputReceived = true;
@@ -12506,30 +12514,34 @@ class Game {
         this.update = () => {
             this.refreshDimensions();
             input_1.Input.checkIsTapHold();
-            // Existing key repeat
-            if (input_1.Input.lastPressTime !== 0 &&
-                Date.now() - input_1.Input.lastPressTime > gameConstants_1.GameConstants.KEY_REPEAT_TIME) {
-                input_1.Input.onKeydown({
-                    repeat: false,
-                    key: input_1.Input.lastPressKey,
-                });
+            // Existing key repeat (disabled during replay)
+            if (!this.replayManager.isReplaying()) {
+                if (input_1.Input.lastPressTime !== 0 &&
+                    Date.now() - input_1.Input.lastPressTime > gameConstants_1.GameConstants.KEY_REPEAT_TIME) {
+                    input_1.Input.onKeydown({
+                        repeat: false,
+                        key: input_1.Input.lastPressKey,
+                    });
+                }
             }
-            // Add mouse repeat for movement
-            if (input_1.Input.mouseDown &&
-                input_1.Input.mouseDownHandled &&
-                input_1.Input.lastMouseDownTime !== 0 &&
-                Date.now() - input_1.Input.lastMouseDownTime > gameConstants_1.GameConstants.KEY_REPEAT_TIME) {
-                // Re-trigger mouse movement
-                const player = this.players[this.localPlayerID];
-                if (player &&
-                    player.game.levelState === LevelState.IN_LEVEL &&
-                    !player.dead &&
-                    !player.menu.open &&
-                    !player.busyAnimating &&
-                    !player.game.cameraAnimation.active) {
-                    // Update mouse position and trigger movement
-                    player.moveWithMouse();
-                    input_1.Input.lastMouseDownTime = Date.now(); // Reset timer for next repeat
+            // Add mouse repeat for movement (disabled during replay)
+            if (!this.replayManager.isReplaying()) {
+                if (input_1.Input.mouseDown &&
+                    input_1.Input.mouseDownHandled &&
+                    input_1.Input.lastMouseDownTime !== 0 &&
+                    Date.now() - input_1.Input.lastMouseDownTime > gameConstants_1.GameConstants.KEY_REPEAT_TIME) {
+                    // Re-trigger mouse movement
+                    const player = this.players[this.localPlayerID];
+                    if (player &&
+                        player.game.levelState === LevelState.IN_LEVEL &&
+                        !player.dead &&
+                        !player.menu.open &&
+                        !player.busyAnimating &&
+                        !player.game.cameraAnimation.active) {
+                        // Update mouse position and trigger movement
+                        player.moveWithMouse();
+                        input_1.Input.lastMouseDownTime = Date.now(); // Reset timer for next repeat
+                    }
                 }
             }
             // Swipe hold repeat with initial delay
@@ -12616,7 +12628,6 @@ class Game {
             return Math.abs(hash);
         };
         this.commandHandler = (command) => {
-            const player = this.room.game.players[0];
             command = command.toLowerCase();
             let enabled = "";
             // Handle "new" command with optional seed parameter
@@ -12633,6 +12644,21 @@ class Game {
                 return;
             }
             switch (command) {
+                case "replay":
+                    this.pushMessage("Starting replay...");
+                    this.replayManager.replay(this);
+                    break;
+                case "replayinfo": {
+                    const s = this.replayManager.getStats?.();
+                    this.pushMessage(s
+                        ? `Replay stats: actions=${s.count}, seed=${s.seed}, recording=${s.recording}, replaying=${s.replaying}`
+                        : "No replay stats available.");
+                    break;
+                }
+                case "replayclear":
+                    this.replayManager.clearRecording?.();
+                    this.pushMessage("Replay buffer cleared.");
+                    break;
                 case "devmode":
                     gameConstants_1.GameConstants.DEVELOPER_MODE = !gameConstants_1.GameConstants.DEVELOPER_MODE;
                     console.log(`Developer mode is now ${gameConstants_1.GameConstants.DEVELOPER_MODE}`);
@@ -12716,9 +12742,14 @@ class Game {
                     break;
                 case "save":
                     try {
-                        this.savedGameState = (0, gameState_1.createGameState)(this);
-                        this.pushMessage("Game state saved successfully!");
-                        console.log("Saved game state:", this.savedGameState);
+                        if (this.replayManager.isReplaying()) {
+                            this.pushMessage("Cannot save during replay.");
+                        }
+                        else {
+                            this.savedGameState = (0, gameState_1.createGameState)(this);
+                            this.pushMessage("Game state saved successfully!");
+                            console.log("Saved game state:", this.savedGameState);
+                        }
                     }
                     catch (error) {
                         this.pushMessage("Error saving game state: " + error.message);
@@ -12762,6 +12793,10 @@ class Game {
                 case "testsave":
                     // Save current state, make some changes, then load to verify
                     try {
+                        if (this.replayManager.isReplaying()) {
+                            this.pushMessage("Cannot save during replay.");
+                            break;
+                        }
                         this.savedGameState = (0, gameState_1.createGameState)(this);
                         const originalHealth = this.players[this.localPlayerID].health;
                         const originalX = this.players[this.localPlayerID].x;
@@ -13639,6 +13674,8 @@ class Game {
     }
 }
 exports.Game = Game;
+// Replay manager singleton
+Game._replayManager = null;
 Game.inputReceived = false;
 Game.letters = "abcdefghijklmnopqrstuvwxyz1234567890,.!?:'()[]%-/";
 Game.letter_widths = [
@@ -14076,6 +14113,9 @@ GameConstants.SLOW_INPUTS_NEAR_ENEMIES = false;
 GameConstants.CHAT_APPEAR_TIME = 2500;
 GameConstants.CHAT_FADE_TIME = 500;
 GameConstants.ANIMATION_SPEED = 1;
+GameConstants.REPLAY_STEP_MS = 10; // base time between replayed inputs
+GameConstants.REPLAY_COMPUTER_TURN_DELAY = 10; // extra wait after computer turn completes during replay
+GameConstants.REPLAY_DEBUG = false; // enable verbose replay logging
 GameConstants.DEFAULTWIDTH = GameConstants.TILESIZE;
 GameConstants.DEFAULTHEIGHT = GameConstants.TILESIZE;
 GameConstants.WIDTH = levelConstants_1.LevelConstants.SCREEN_W * GameConstants.TILESIZE;
@@ -15566,6 +15606,14 @@ class GameState {
 }
 exports.GameState = GameState;
 const createGameState = (game) => {
+    // Prevent saving while replaying to avoid corrupting baseState or user saves
+    try {
+        if (game.replayManager?.isReplaying?.()) {
+            console.warn("🔄 SAVE: Skipped createGameState during replay");
+            return null;
+        }
+    }
+    catch { }
     console.log("🔄 SAVE: Starting createGameState");
     console.log("🔄 SAVE: Game object:", {
         localPlayerID: game.localPlayerID,
@@ -15767,6 +15815,16 @@ const loadGameState = (game, activeUsernames, gameState, newWorld) => {
             .generateFirstNFloors(game, gameState.level.depth, !newWorld)
             .then(async () => {
             console.log("✅ LOAD: Level generation completed");
+            // Ensure seed and Random.state remain as in the save
+            try {
+                game.levelgen.setSeed(gameState.seed);
+                random_1.Random.setState(gameState.randomState);
+                console.log("🔄 LOAD: Reapplied seed/state after generation", {
+                    seed: game.levelgen.seed,
+                    randomState: random_1.Random.state,
+                });
+            }
+            catch { }
             console.log("🔄 LOAD: Generated rooms count:", game.rooms.length);
             eventBus_1.globalEventBus.emit(events_1.EVENTS.LEVEL_GENERATION_COMPLETED, {});
             // Ensure sidepath groups from save exist before hydrating state
@@ -16826,6 +16884,246 @@ window.document
   .getElementById("gameCanvas")
   .addEventListener("touchend", (event) => Input.handleTouchEnd(event), false);
   */
+
+
+/***/ }),
+
+/***/ "./src/game/replayManager.ts":
+/*!***********************************!*\
+  !*** ./src/game/replayManager.ts ***!
+  \***********************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ReplayManager = void 0;
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/game/gameConstants.ts");
+const eventBus_1 = __webpack_require__(/*! ../event/eventBus */ "./src/event/eventBus.ts");
+const events_1 = __webpack_require__(/*! ../event/events */ "./src/event/events.ts");
+const gameState_1 = __webpack_require__(/*! ./gameState */ "./src/game/gameState.ts");
+const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
+class ReplayManager {
+    constructor() {
+        this.actions = [];
+        this.startMs = 0;
+        this.recording = false;
+        this.replaying = false;
+        this.seed = undefined;
+        this.timer = null;
+        this.baseState = null;
+    }
+    beginRecording(seed, game) {
+        this.actions = [];
+        this.startMs = Date.now();
+        this.recording = true;
+        this.replaying = false;
+        this.seed = seed;
+        if (game) {
+            // Capture after the game is actually ready (entered level and player exists)
+            const tryCapture = () => {
+                try {
+                    const local = game.players?.[game.localPlayerID];
+                    const ready = !!local &&
+                        !!game.room &&
+                        game.levelState === game_1.LevelState.IN_LEVEL &&
+                        Array.isArray(game.rooms) &&
+                        game.rooms.length > 0;
+                    if (ready) {
+                        if (!this.baseState)
+                            this.baseState = (0, gameState_1.createGameState)(game);
+                        return; // stop polling
+                    }
+                }
+                catch { }
+                setTimeout(tryCapture, 16);
+            };
+            setTimeout(tryCapture, 0);
+        }
+    }
+    getStats() {
+        return {
+            count: this.actions.length,
+            seed: this.seed,
+            recording: this.recording,
+            replaying: this.replaying,
+        };
+    }
+    isReplaying() {
+        return this.replaying;
+    }
+    isRecording() {
+        return this.recording;
+    }
+    clearRecording() {
+        this.actions = [];
+        this.seed = undefined;
+        this.startMs = 0;
+        this.recording = false;
+        this.replaying = false;
+    }
+    stopRecording() {
+        this.recording = false;
+    }
+    recordAction(action) {
+        if (!this.recording || this.replaying)
+            return;
+        this.actions.push({ t: Date.now() - this.startMs, action });
+    }
+    replay(game, stepMs = gameConstants_1.GameConstants.REPLAY_STEP_MS) {
+        if (this.replaying)
+            return;
+        this.replaying = true;
+        this.recording = false;
+        // Snapshot actions and seed before restarting the game
+        const actions = this.actions.slice();
+        const seed = this.seed;
+        if (actions.length === 0 || seed === undefined) {
+            game.pushMessage("No actions recorded; replay aborted.");
+            this.replaying = false;
+            return;
+        }
+        game.pushMessage(`Replay starting with ${actions.length} actions...`);
+        const startPlayback = () => {
+            const local = game.players?.[game.localPlayerID];
+            if (!local) {
+                // Try again next frame until player is ready
+                setTimeout(startPlayback, 16);
+                return;
+            }
+            // Do not mark the player as busy; that suppresses movement and actions
+            let i = 0;
+            const step = () => {
+                if (i >= actions.length) {
+                    this.replaying = false;
+                    this.recording = false;
+                    game.pushMessage("Replay finished.");
+                    return;
+                }
+                try {
+                    const action = actions[i].action;
+                    const beforeX = local.x;
+                    const beforeY = local.y;
+                    let canMoveNow = undefined;
+                    try {
+                        canMoveNow = local.movement?.canMove?.();
+                    }
+                    catch { }
+                    const room = local.getRoom?.();
+                    const turn = room?.turn;
+                    console.log("[replay] step begin", {
+                        index: i + 1,
+                        total: actions.length,
+                        type: action.type,
+                        before: { x: beforeX, y: beforeY },
+                        turn,
+                        canMove: canMoveNow,
+                    });
+                    local.menu.open = false;
+                    local.dead = false;
+                    local.inventory.close();
+                    local.actionProcessor.process(action);
+                    const afterX = local.x;
+                    const afterY = local.y;
+                    const moved = beforeX !== afterX || beforeY !== afterY;
+                    console.log("[replay] step end", {
+                        index: i + 1,
+                        type: action.type,
+                        after: { x: afterX, y: afterY },
+                        moved,
+                    });
+                }
+                catch (e) {
+                    // Swallow errors during replay to avoid interrupting
+                }
+                // Compute delay to next action using recorded timestamps
+                const minDelay = Math.max(gameConstants_1.GameConstants.MOVEMENT_COOLDOWN + 5, stepMs);
+                const recordedDelay = minDelay;
+                i < actions.length - 1
+                    ? Math.max(1, actions[i + 1].t - actions[i].t)
+                    : stepMs;
+                let nextDelay = Math.max(recordedDelay, minDelay);
+                // If computer turn is active, wait extra to allow it to complete
+                try {
+                    const room = local.getRoom?.();
+                    if (room && room.turn !== undefined) {
+                        // TurnState.computerTurn is 1 in current enum ordering
+                        const isComputerTurn = room.turn === 1;
+                        if (isComputerTurn)
+                            nextDelay += gameConstants_1.GameConstants.REPLAY_COMPUTER_TURN_DELAY;
+                    }
+                }
+                catch { }
+                console.log("[replay] schedule next", {
+                    index: i + 1,
+                    recordedDelay,
+                    minDelay,
+                    nextDelay,
+                });
+                i++;
+                if (this.timer)
+                    window.clearTimeout(this.timer);
+                this.timer = window.setTimeout(step, nextDelay);
+            };
+            step();
+        };
+        // Restore to captured base state instead of starting a new run
+        if (this.baseState) {
+            try {
+                const snapshot = JSON.parse(JSON.stringify(this.baseState));
+                const activeUsernames = Object.keys(game.players);
+                (0, gameState_1.loadGameState)(game, activeUsernames, snapshot, false)
+                    .then(() => {
+                    game.started = true;
+                    game.startedFadeOut = false;
+                    this.recording = false;
+                    try {
+                        console.log("[replay] seed/state after load", {
+                            seed: game.levelgen?.seed,
+                            expectedSeed: snapshot.seed,
+                            randomState: random_1.Random.state,
+                            expectedRandom: snapshot.randomState,
+                        });
+                    }
+                    catch { }
+                    startPlayback();
+                })
+                    .catch(() => {
+                    // Fallback to seed restart on failure
+                    game.newGame(seed);
+                    game.started = true;
+                    game.startedFadeOut = false;
+                    this.recording = false;
+                    const onReady = () => {
+                        if (game.levelState !== game_1.LevelState.IN_LEVEL)
+                            return;
+                        eventBus_1.globalEventBus.off(events_1.EVENTS.LEVEL_GENERATION_COMPLETED, onReady);
+                        startPlayback();
+                    };
+                    eventBus_1.globalEventBus.on(events_1.EVENTS.LEVEL_GENERATION_COMPLETED, onReady);
+                    setTimeout(onReady, 0);
+                });
+                return; // handled via promise
+            }
+            catch { }
+        }
+        // No base snapshot: use seed restart and wait for generation
+        game.newGame(seed);
+        game.started = true;
+        game.startedFadeOut = false;
+        this.recording = false;
+        const onReady = () => {
+            if (game.levelState !== game_1.LevelState.IN_LEVEL)
+                return;
+            eventBus_1.globalEventBus.off(events_1.EVENTS.LEVEL_GENERATION_COMPLETED, onReady);
+            startPlayback();
+        };
+        eventBus_1.globalEventBus.on(events_1.EVENTS.LEVEL_GENERATION_COMPLETED, onReady);
+        setTimeout(onReady, 0);
+    }
+}
+exports.ReplayManager = ReplayManager;
 
 
 /***/ }),
@@ -19636,6 +19934,17 @@ class Inventory {
                 }
                 this.items[targetSlot] = this.grabbedItem;
             }
+            // Record move for replay
+            try {
+                const fromIdx = this._dragStartSlot ?? targetSlot;
+                const toIdx = targetSlot;
+                this.game.replayManager?.recordAction({
+                    type: "InventoryMove",
+                    fromIndex: fromIdx,
+                    toIndex: toIdx,
+                });
+            }
+            catch { }
             this.grabbedItem = null;
         };
         this.globalId = IdGenerator_1.IdGenerator.generate("INV");
@@ -28214,6 +28523,11 @@ class PlayerActionProcessor {
         this.player = player;
     }
     process(action) {
+        // Record the action for replay
+        try {
+            this.player.game.replayManager?.recordAction(action);
+        }
+        catch { }
         switch (action.type) {
             case "Move":
                 this.player.movement.move(action.direction, action.targetX, action.targetY);
@@ -28227,6 +28541,41 @@ class PlayerActionProcessor {
             case "CloseInventory":
                 this.player.inventory.close();
                 break;
+            case "InventoryLeft":
+                this.player.inventory.leftQuickbar();
+                break;
+            case "InventoryRight":
+                this.player.inventory.rightQuickbar();
+                break;
+            case "InventoryUse":
+                this.player.inventory.spaceQuickbar();
+                break;
+            case "InventoryDrop":
+                this.player.inventory.drop();
+                break;
+            case "InventorySelect":
+                // Map quickbar selection 0..4 to selX and trigger use
+                this.player.inventory.selX = Math.max(0, Math.min(action.index, this.player.inventory.cols - 1));
+                this.player.inventory.selY = 0;
+                this.player.inventory.spaceQuickbar();
+                break;
+            case "InventoryMove": {
+                const from = Math.max(0, Math.min(action.fromIndex, this.player.inventory.cols *
+                    (this.player.inventory.rows +
+                        this.player.inventory.expansion) -
+                    1));
+                const to = Math.max(0, Math.min(action.toIndex, this.player.inventory.cols *
+                    (this.player.inventory.rows +
+                        this.player.inventory.expansion) -
+                    1));
+                const item = this.player.inventory.items[from];
+                if (item) {
+                    const existing = this.player.inventory.items[to];
+                    this.player.inventory.items[from] = existing;
+                    this.player.inventory.items[to] = item;
+                }
+                break;
+            }
             case "Restart":
                 this.player.restart();
                 break;
@@ -28270,9 +28619,10 @@ class PlayerInputHandler {
                 return;
             this.setMostRecentInput("keyboard");
             if (num <= 5) {
-                this.player.inventory.selX = Math.max(0, Math.min(num - 1, this.player.inventory.cols - 1));
-                this.player.inventory.selY = 0;
-                this.player.inventory.itemUse();
+                this.player.actionProcessor.process({
+                    type: "InventorySelect",
+                    index: num - 1,
+                });
             }
             else {
                 if (gameConstants_1.GameConstants.DEVELOPER_MODE) {
@@ -28385,11 +28735,15 @@ class PlayerInputHandler {
             return;
         }
         switch (input) {
-            case input_1.InputEnum.I:
-                this.player.inventory.toggleOpen();
+            case input_1.InputEnum.I: {
+                const inv = this.player.inventory;
+                this.player.actionProcessor.process({
+                    type: inv.isOpen ? "CloseInventory" : "OpenInventory",
+                });
                 break;
+            }
             case input_1.InputEnum.Q:
-                this.player.inventory.drop();
+                this.player.actionProcessor.process({ type: "InventoryDrop" });
                 break;
             case input_1.InputEnum.F:
                 //this.player.game.newGame();
@@ -28448,16 +28802,16 @@ class PlayerInputHandler {
                 if (player.inventory.isOpen ||
                     player.game.levelState === game_1.LevelState.IN_LEVEL) {
                     this.setMostRecentInput("keyboard");
-                    player.inventory.itemUse();
+                    this.player.actionProcessor.process({ type: "InventoryUse" });
                 }
                 break;
             case input_1.InputEnum.COMMA:
                 this.setMostRecentInput("keyboard");
-                this.player.inventory.left();
+                this.player.actionProcessor.process({ type: "InventoryLeft" });
                 break;
             case input_1.InputEnum.PERIOD:
                 this.setMostRecentInput("keyboard");
-                this.player.inventory.right();
+                this.player.actionProcessor.process({ type: "InventoryRight" });
                 break;
             case input_1.InputEnum.LEFT_CLICK:
                 this.handleMouseLeftClick();
@@ -30881,8 +31235,10 @@ class Room {
         };
         this.update = () => {
             if (this.turn == TurnState.computerTurn) {
-                if (Date.now() - this.playerTurnTime >=
-                    levelConstants_1.LevelConstants.COMPUTER_TURN_DELAY) {
+                const delay = this.game.replayManager?.isReplaying?.()
+                    ? gameConstants_1.GameConstants.REPLAY_COMPUTER_TURN_DELAY
+                    : levelConstants_1.LevelConstants.COMPUTER_TURN_DELAY;
+                if (Date.now() - this.playerTurnTime >= delay) {
                     this.computerTurn();
                 }
             }

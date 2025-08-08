@@ -74,6 +74,9 @@ export class GameConstants {
   static readonly CHAT_APPEAR_TIME = 2500;
   static readonly CHAT_FADE_TIME = 500;
   static ANIMATION_SPEED = 1;
+  static readonly REPLAY_STEP_MS = 10; // base time between replayed inputs
+  static readonly REPLAY_COMPUTER_TURN_DELAY = 10; // extra wait after computer turn completes during replay
+  static REPLAY_DEBUG = false; // enable verbose replay logging
 
   static readonly DEFAULTWIDTH = GameConstants.TILESIZE;
   static readonly DEFAULTHEIGHT = GameConstants.TILESIZE;

@@ -1308,10 +1308,10 @@ export class Room {
 
   update = () => {
     if (this.turn == TurnState.computerTurn) {
-      if (
-        Date.now() - this.playerTurnTime >=
-        LevelConstants.COMPUTER_TURN_DELAY
-      ) {
+      const delay = (this.game as any).replayManager?.isReplaying?.()
+        ? GameConstants.REPLAY_COMPUTER_TURN_DELAY
+        : LevelConstants.COMPUTER_TURN_DELAY;
+      if (Date.now() - this.playerTurnTime >= delay) {
         this.computerTurn();
       }
     }

@@ -80,11 +80,15 @@ export class PlayerInputHandler {
     }
 
     switch (input) {
-      case InputEnum.I:
-        this.player.inventory.toggleOpen();
+      case InputEnum.I: {
+        const inv = this.player.inventory;
+        this.player.actionProcessor.process({
+          type: inv.isOpen ? "CloseInventory" : "OpenInventory",
+        });
         break;
+      }
       case InputEnum.Q:
-        this.player.inventory.drop();
+        this.player.actionProcessor.process({ type: "InventoryDrop" });
         break;
       case InputEnum.F:
         //this.player.game.newGame();
@@ -153,17 +157,16 @@ export class PlayerInputHandler {
           player.game.levelState === LevelState.IN_LEVEL
         ) {
           this.setMostRecentInput("keyboard");
-
-          player.inventory.itemUse();
+          this.player.actionProcessor.process({ type: "InventoryUse" });
         }
         break;
       case InputEnum.COMMA:
         this.setMostRecentInput("keyboard");
-        this.player.inventory.left();
+        this.player.actionProcessor.process({ type: "InventoryLeft" });
         break;
       case InputEnum.PERIOD:
         this.setMostRecentInput("keyboard");
-        this.player.inventory.right();
+        this.player.actionProcessor.process({ type: "InventoryRight" });
         break;
       case InputEnum.LEFT_CLICK:
         this.handleMouseLeftClick();
@@ -238,12 +241,10 @@ export class PlayerInputHandler {
     if (this.player.menu.open) return;
     this.setMostRecentInput("keyboard");
     if (num <= 5) {
-      this.player.inventory.selX = Math.max(
-        0,
-        Math.min(num - 1, this.player.inventory.cols - 1),
-      );
-      this.player.inventory.selY = 0;
-      this.player.inventory.itemUse();
+      this.player.actionProcessor.process({
+        type: "InventorySelect",
+        index: num - 1,
+      });
     } else {
       if (GameConstants.DEVELOPER_MODE) {
         switch (num) {

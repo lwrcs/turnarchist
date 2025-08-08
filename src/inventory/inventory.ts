@@ -1372,6 +1372,17 @@ export class Inventory {
       this.items[targetSlot] = this.grabbedItem;
     }
 
+    // Record move for replay
+    try {
+      const fromIdx = this._dragStartSlot ?? targetSlot;
+      const toIdx = targetSlot;
+      (this.game as any).replayManager?.recordAction({
+        type: "InventoryMove",
+        fromIndex: fromIdx,
+        toIndex: toIdx,
+      });
+    } catch {}
+
     this.grabbedItem = null;
   };
 

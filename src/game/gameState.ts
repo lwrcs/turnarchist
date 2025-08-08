@@ -1374,6 +1374,13 @@ export class GameState {
 }
 
 export const createGameState = (game: Game): GameState => {
+  // Prevent saving while replaying to avoid corrupting baseState or user saves
+  try {
+    if ((game as any).replayManager?.isReplaying?.()) {
+      console.warn("🔄 SAVE: Skipped createGameState during replay");
+      return null as any;
+    }
+  } catch {}
   console.log("🔄 SAVE: Starting createGameState");
   console.log("🔄 SAVE: Game object:", {
     localPlayerID: game.localPlayerID,
@@ -1593,6 +1600,15 @@ export const loadGameState = (
       .generateFirstNFloors(game, gameState.level.depth, !newWorld)
       .then(async () => {
         console.log("✅ LOAD: Level generation completed");
+        // Ensure seed and Random.state remain as in the save
+        try {
+          game.levelgen.setSeed(gameState.seed);
+          Random.setState(gameState.randomState);
+          console.log("🔄 LOAD: Reapplied seed/state after generation", {
+            seed: game.levelgen.seed,
+            randomState: Random.state,
+          });
+        } catch {}
         console.log("🔄 LOAD: Generated rooms count:", game.rooms.length);
         globalEventBus.emit(EVENTS.LEVEL_GENERATION_COMPLETED, {});
 

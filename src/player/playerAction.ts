@@ -13,4 +13,10 @@ export type PlayerAction =
   | { type: "Attack"; target: Entity } //handled by Interact for the time being
   | { type: "OpenInventory" }
   | { type: "CloseInventory" }
+  | { type: "InventoryLeft" }
+  | { type: "InventoryRight" }
+  | { type: "InventoryUse" }
+  | { type: "InventoryDrop" }
+  | { type: "InventorySelect"; index: number }
+  | { type: "InventoryMove"; fromIndex: number; toIndex: number }
   | { type: "Restart" };
