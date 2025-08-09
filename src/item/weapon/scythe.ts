@@ -79,16 +79,18 @@ export class Scythe extends Weapon {
     if (hitSomething) {
       if (positions.length > 0) {
         for (const pos of positions) {
-          if (
-            !this.game.rooms[this.wielder.levelID].roomArray[pos.x][
-              pos.y
-            ].isSolid()
-          ) {
+          const room = (this.wielder as any)?.getRoom
+            ? (this.wielder as any).getRoom()
+            : this.game.rooms[this.wielder.levelID];
+          if (!room.roomArray[pos.x][pos.y].isSolid()) {
             this.hitEntitiesAt(pos.x, pos.y, 1);
           }
         }
       }
-      this.game.rooms[this.wielder.levelID].tick(this.wielder);
+      const room = (this.wielder as any)?.getRoom
+        ? (this.wielder as any).getRoom()
+        : this.game.rooms[this.wielder.levelID];
+      room.tick(this.wielder);
     }
 
     return !hitSomething;

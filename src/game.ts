@@ -2055,11 +2055,12 @@ export class Game {
     Game.ctx.save(); // Save the current canvas state
 
     // Snap to nearest shading increment
-    let divisor = entity ? 10 : 1;
+    const shadeLevel = entity
+      ? GameConstants.ENTITY_SHADE_LEVELS
+      : GameConstants.SHADE_LEVELS;
     shadeOpacity =
-      Math.round(
-        shadeOpacity * Math.max(GameConstants.SHADE_LEVELS / divisor, 12),
-      ) / Math.max(GameConstants.SHADE_LEVELS / divisor, 12);
+      Math.round(shadeOpacity * Math.max(shadeLevel, 12)) /
+      Math.max(shadeLevel, 12);
 
     // Include shadeColor in the cache key
     let key = getShadeCanvasKey(set, sX, sY, sW, sH, shadeOpacity, shadeColor);

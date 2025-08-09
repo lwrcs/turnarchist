@@ -28,7 +28,10 @@ export abstract class Light extends Equippable {
   }
 
   updateLighting = () => {
-    this.wielder.game.rooms[this.wielder.levelID].updateLighting();
+    const room = (this.wielder as any)?.getRoom
+      ? (this.wielder as any).getRoom()
+      : this.wielder.game.rooms[this.wielder.levelID];
+    room?.updateLighting();
   };
 
   get fuelPercentage() {
@@ -96,8 +99,10 @@ export abstract class Light extends Equippable {
   burn = () => {
     // Handle active burning, don't burn fuel in empty rooms
     if (this.isIgnited()) {
-      const roomCleared =
-        this.wielder.game.rooms[this.wielder.levelID].roomCleared();
+      const room = (this.wielder as any)?.getRoom
+        ? (this.wielder as any).getRoom()
+        : this.wielder.game.rooms[this.wielder.levelID];
+      const roomCleared = room.roomCleared();
       if (!roomCleared) this.fuel--;
       else this.fuel -= 0.2;
 

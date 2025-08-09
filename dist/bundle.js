@@ -13769,9 +13769,12 @@ Game.fillTextOutline = (text, x, y, outlineColor, fillColor) => {
 Game.drawHelper = (set, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0, entity = false) => {
     Game.ctx.save(); // Save the current canvas state
     // Snap to nearest shading increment
-    let divisor = entity ? 10 : 1;
+    const shadeLevel = entity
+        ? gameConstants_1.GameConstants.ENTITY_SHADE_LEVELS
+        : gameConstants_1.GameConstants.SHADE_LEVELS;
     shadeOpacity =
-        Math.round(shadeOpacity * Math.max(gameConstants_1.GameConstants.SHADE_LEVELS / divisor, 12)) / Math.max(gameConstants_1.GameConstants.SHADE_LEVELS / divisor, 12);
+        Math.round(shadeOpacity * Math.max(shadeLevel, 12)) /
+            Math.max(shadeLevel, 12);
     // Include shadeColor in the cache key
     let key = getShadeCanvasKey(set, sX, sY, sW, sH, shadeOpacity, shadeColor);
     if (!Game.shade_canvases[key]) {
@@ -21343,7 +21346,10 @@ class Light extends equippable_1.Equippable {
         super(level, x, y);
         this.canRefuel = false;
         this.updateLighting = () => {
-            this.wielder.game.rooms[this.wielder.levelID].updateLighting();
+            const room = this.wielder?.getRoom
+                ? this.wielder.getRoom()
+                : this.wielder.game.rooms[this.wielder.levelID];
+            room?.updateLighting();
         };
         this.isIgnited = () => {
             if (this.fuel > 0 && this.equipped) {
@@ -21397,7 +21403,10 @@ class Light extends equippable_1.Equippable {
         this.burn = () => {
             // Handle active burning, don't burn fuel in empty rooms
             if (this.isIgnited()) {
-                const roomCleared = this.wielder.game.rooms[this.wielder.levelID].roomCleared();
+                const room = this.wielder?.getRoom
+                    ? this.wielder.getRoom()
+                    : this.wielder.game.rooms[this.wielder.levelID];
+                const roomCleared = room.roomCleared();
                 if (!roomCleared)
                     this.fuel--;
                 else
@@ -21907,7 +21916,10 @@ class Hammer extends usable_1.Usable {
         super(level, x, y);
         this.onUse = (player) => {
             player.health = Math.min(player.maxHealth, player.health + 1);
-            if (this.level.game.rooms[player.levelID] === this.level.game.room)
+            const room = player?.getRoom
+                ? player.getRoom()
+                : this.level.game.rooms[player.levelID];
+            if (room === this.level.game.room)
                 sound_1.Sound.heal();
             //this.level.items = this.level.items.filter((x) => x !== this); // removes itself from the level
         };
@@ -22283,7 +22295,10 @@ class SpellbookPage extends usable_1.Usable {
         super(level, x, y);
         this.onUse = (player) => {
             player.health = Math.min(player.maxHealth, player.health + 1);
-            if (this.level.game.rooms[player.levelID] === this.level.game.room)
+            const room = player?.getRoom
+                ? player.getRoom()
+                : this.level.game.rooms[player.levelID];
+            if (room === this.level.game.room)
                 sound_1.Sound.heal();
             player.inventory.removeItem(this);
             //this.level.items = this.level.items.filter((x) => x !== this); // removes itself from the level
@@ -22404,7 +22419,10 @@ class WeaponFragments extends usable_1.Usable {
         super(level, x, y);
         this.onUse = (player) => {
             player.health = Math.min(player.maxHealth, player.health + 1);
-            if (this.level.game.rooms[player.levelID] === this.level.game.room)
+            const room = player?.getRoom
+                ? player.getRoom()
+                : this.level.game.rooms[player.levelID];
+            if (room === this.level.game.room)
                 sound_1.Sound.heal();
             player.inventory.removeItem(this);
             //this.level.items = this.level.items.filter((x) => x !== this); // removes itself from the level
@@ -22730,12 +22748,18 @@ class Scythe extends weapon_1.Weapon {
             if (hitSomething) {
                 if (positions.length > 0) {
                     for (const pos of positions) {
-                        if (!this.game.rooms[this.wielder.levelID].roomArray[pos.x][pos.y].isSolid()) {
+                        const room = this.wielder?.getRoom
+                            ? this.wielder.getRoom()
+                            : this.game.rooms[this.wielder.levelID];
+                        if (!room.roomArray[pos.x][pos.y].isSolid()) {
                             this.hitEntitiesAt(pos.x, pos.y, 1);
                         }
                     }
                 }
-                this.game.rooms[this.wielder.levelID].tick(this.wielder);
+                const room = this.wielder?.getRoom
+                    ? this.wielder.getRoom()
+                    : this.game.rooms[this.wielder.levelID];
+                room.tick(this.wielder);
             }
             return !hitSomething;
         };
@@ -22807,7 +22831,10 @@ class ScytheBlade extends usable_1.Usable {
                 player.inventory.removeItem(this);
                 player.inventory.removeItem(other);
                 player.game.pushMessage("You combine the scythe blade and handle.");
-                const scythe = new scythe_1.Scythe(player.game.rooms[player.levelID], player.x, player.y);
+                const room = player?.getRoom
+                    ? player.getRoom()
+                    : player.game.rooms[player.levelID];
+                const scythe = new scythe_1.Scythe(room, player.x, player.y);
                 player.inventory.addItem(scythe);
             }
         };
@@ -22856,7 +22883,10 @@ class ScytheHandle extends usable_1.Usable {
                 player.inventory.removeItem(this);
                 player.inventory.removeItem(other);
                 player.game.pushMessage("You combine the scythe blade and handle.");
-                const scythe = new scythe_1.Scythe(player.game.rooms[player.levelID], player.x, player.y);
+                const room = player?.getRoom
+                    ? player.getRoom()
+                    : player.game.rooms[player.levelID];
+                const scythe = new scythe_1.Scythe(room, player.x, player.y);
                 player.inventory.addItem(scythe);
             }
         };
@@ -23242,7 +23272,10 @@ class Spellbook extends weapon_1.Weapon {
         super(level, x, y);
         this.getTargets = () => {
             this.targets = [];
-            let entities = this.game.rooms[this.wielder.levelID].entities;
+            const room = this.wielder?.getRoom
+                ? this.wielder.getRoom()
+                : this.game.rooms[this.wielder.levelID];
+            let entities = room.entities;
             this.targets = entities.filter((e) => !e.pushable &&
                 utils_1.Utils.distance(this.wielder.x, this.wielder.y, e.x, e.y) <=
                     this.range &&
@@ -23300,9 +23333,12 @@ class Spellbook extends weapon_1.Weapon {
             // Store only the targets that actually get hit
             const actuallyHitTargets = [];
             for (let e of targets) {
-                if (!this.game.rooms[this.wielder.levelID].roomArray[e.x][e.y].isSolid()) {
+                const room = this.wielder?.getRoom
+                    ? this.wielder.getRoom()
+                    : this.game.rooms[this.wielder.levelID];
+                if (!room.roomArray[e.x][e.y].isSolid()) {
                     e.hurt(this.wielder, 1);
-                    this.game.rooms[this.wielder.levelID].projectiles.push(new playerFireball_1.PlayerFireball(this.wielder, e.x, e.y));
+                    room.projectiles.push(new playerFireball_1.PlayerFireball(this.wielder, e.x, e.y));
                     // Add to the list of actually hit targets
                     actuallyHitTargets.push(e);
                     flag = true;
@@ -23313,7 +23349,10 @@ class Spellbook extends weapon_1.Weapon {
             if (flag) {
                 this.hitSound();
                 this.wielder.setHitXY(newX, newY);
-                this.game.rooms[this.wielder.levelID].tick(this.wielder);
+                const room = this.wielder?.getRoom
+                    ? this.wielder.getRoom()
+                    : this.game.rooms[this.wielder.levelID];
+                room.tick(this.wielder);
                 this.shakeScreen(newX, newY);
                 sound_1.Sound.playMagic();
                 //this.degrade();
@@ -23326,13 +23365,16 @@ class Spellbook extends weapon_1.Weapon {
         };
         this.drawBeams = (playerDrawX, playerDrawY, delta) => {
             // Clear existing beam effects each frame
-            this.game.rooms[this.wielder.levelID].beamEffects = [];
+            const room = this.wielder?.getRoom
+                ? this.wielder.getRoom()
+                : this.game.rooms[this.wielder.levelID];
+            room.beamEffects = [];
             if (this.isTargeting) {
                 for (let target of this.targets) {
                     // Create a new beam effect from the player to the enemy
-                    this.game.rooms[this.wielder.levelID].addBeamEffect(playerDrawX, playerDrawY, target.x - target.drawX, target.y - target.drawY, target);
+                    room.addBeamEffect(playerDrawX, playerDrawY, target.x - target.drawX, target.y - target.drawY, target);
                     // Retrieve the newly added beam effect
-                    const beam = this.game.rooms[this.wielder.levelID].beamEffects[this.game.rooms[this.wielder.levelID].beamEffects.length - 1];
+                    const beam = room.beamEffects[room.beamEffects.length - 1];
                     // Render the beam
                     beam.render(playerDrawX, playerDrawY, target.x - target.drawX, target.y - target.drawY, "cyan", 2, delta);
                 }
@@ -23616,18 +23658,20 @@ class Weapon extends equippable_1.Equippable {
         };
         this.attackAnimation = (newX, newY) => {
             this.wielder.setHitXY(newX, newY);
-            if (!this.game?.rooms?.[this.wielder.levelID]) {
-                console.error("🔫 WEAPON: Cannot add particle - invalid room state", {
-                    levelID: this.wielder.levelID,
-                    roomsLength: this.game?.rooms?.length,
-                });
+            const room = this.wielder?.getRoom
+                ? this.wielder.getRoom()
+                : this.game?.rooms?.[this.wielder.levelID];
+            if (!room) {
+                console.error("🔫 WEAPON: Cannot add particle - invalid room state");
+                return;
             }
-            else {
-                this.game.rooms[this.wielder.levelID].particles.push(new attackAnimation_1.AttackAnimation(newX, newY, this.name, this.wielder.direction));
-            }
+            room.particles.push(new attackAnimation_1.AttackAnimation(newX, newY, this.name, this.wielder.direction));
         };
         this.shakeScreen = (eX, eY) => {
-            if (this.wielder.game.rooms[this.wielder.levelID] === this.wielder.game.room)
+            const wielderRoom = this.wielder?.getRoom
+                ? this.wielder.getRoom()
+                : this.wielder.game.rooms[this.wielder.levelID];
+            if (wielderRoom === this.wielder.game.room)
                 this.wielder.shakeScreen(this.wielder.x, this.wielder.y, eX, eY);
         };
         this.hitSound = () => {
@@ -23708,29 +23752,18 @@ class Weapon extends equippable_1.Equippable {
             console.error("🔫 WEAPON: this.game is undefined");
             return [];
         }
-        if (!this.game.rooms) {
-            console.error("🔫 WEAPON: this.game.rooms is undefined");
-            return [];
-        }
         if (!this.wielder) {
             console.error("🔫 WEAPON: this.wielder is undefined");
             return [];
         }
-        if (this.wielder.levelID >= this.game.rooms.length) {
-            console.error("🔫 WEAPON: wielder.levelID out of bounds", {
-                levelID: this.wielder.levelID,
-                roomsLength: this.game.rooms.length,
-            });
+        const room = this.wielder?.getRoom
+            ? this.wielder.getRoom()
+            : this.game?.rooms?.[this.wielder.levelID];
+        if (!room) {
+            console.error("🔫 WEAPON: current room is undefined");
             return [];
         }
-        if (!this.game.rooms[this.wielder.levelID]) {
-            console.error("🔫 WEAPON: room at levelID is undefined", {
-                levelID: this.wielder.levelID,
-                room: this.game.rooms[this.wielder.levelID],
-            });
-            return [];
-        }
-        return this.game.rooms[this.wielder.levelID].entities.filter((e) => e.destroyable && e.pointIn(x, y));
+        return room.entities.filter((e) => e.destroyable && e.pointIn(x, y));
     }
     hitEntitiesAt(x, y, damage) {
         const entities = this.getEntitiesAt(x, y).filter((e) => !e.pushable);
@@ -23759,13 +23792,14 @@ class Weapon extends equippable_1.Equippable {
                 behindX += 1;
                 break;
         }
-        if (!this.game?.rooms?.[this.wielder.levelID]) {
-            console.error("🔫 WEAPON: Cannot check pushables - invalid room state");
+        const room = this.wielder?.getRoom
+            ? this.wielder.getRoom()
+            : this.game?.rooms?.[this.wielder.levelID];
+        if (!room)
             return false;
-        }
         const unpushables = this.getEntitiesAt(behindX, behindY).filter((e) => !e.pushable);
         const hasUnpushablesBehind = unpushables.length > 0;
-        const behindTile = this.game.rooms[this.wielder.levelID].roomArray[behindX]?.[behindY];
+        const behindTile = room.roomArray[behindX]?.[behindY];
         const isSolidBehind = !behindTile || behindTile.isSolid();
         const pushables = this.getEntitiesAt(x, y).filter((e) => e.pushable);
         const hasSpaceToPush = !isSolidBehind && !hasUnpushablesBehind;
@@ -23781,12 +23815,11 @@ class Weapon extends equippable_1.Equippable {
             if (animated)
                 this.attackAnimation(targetX, targetY);
             if (shouldTick) {
-                if (!this.game?.rooms?.[this.wielder.levelID]) {
-                    console.error("🔫 WEAPON: Cannot tick room - invalid room state");
-                }
-                else if (shouldTick) {
-                    this.game.rooms[this.wielder.levelID].tick(this.wielder);
-                }
+                const room = this.wielder?.getRoom
+                    ? this.wielder.getRoom()
+                    : this.game?.rooms?.[this.wielder.levelID];
+                if (room)
+                    room.tick(this.wielder);
             }
             if (shakeScreen)
                 this.shakeScreen(targetX, targetY);
@@ -36059,9 +36092,11 @@ class DownLadder extends passageway_1.Passageway {
         this.onCollide = (player) => {
             let allPlayersHere = true;
             for (const i in this.game.players) {
-                if (this.game.levels[this.game.players[i].depth].rooms[this.game.players[i].levelID] !== this.room ||
-                    this.game.players[i].x !== this.x ||
-                    this.game.players[i].y !== this.y) {
+                const pl = this.game.players[i];
+                const plRoom = pl.getRoom
+                    ? pl.getRoom()
+                    : this.game.levels[pl.depth].rooms[pl.levelID];
+                if (plRoom !== this.room || pl.x !== this.x || pl.y !== this.y) {
                     allPlayersHere = false;
                 }
             }
@@ -36837,7 +36872,11 @@ class UpLadder extends passageway_1.Passageway {
                         }
                     }
                     // Fallback: link to level start if not found
-                    this.linkedRoom = level.startRoom || level.rooms[0];
+                    // Prefer stable map lookup when available
+                    const anyRoom = level.roomsById
+                        ? level.roomsById.values().next().value
+                        : level.rooms[0];
+                    this.linkedRoom = level.startRoom || anyRoom;
                     return;
                 }
             }

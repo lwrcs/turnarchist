@@ -145,22 +145,23 @@ export abstract class Weapon extends Equippable {
   attackAnimation = (newX: number, newY: number) => {
     this.wielder.setHitXY(newX, newY);
 
-    if (!this.game?.rooms?.[this.wielder.levelID]) {
-      console.error("🔫 WEAPON: Cannot add particle - invalid room state", {
-        levelID: this.wielder.levelID,
-        roomsLength: this.game?.rooms?.length,
-      });
-    } else {
-      this.game.rooms[this.wielder.levelID].particles.push(
-        new AttackAnimation(newX, newY, this.name, this.wielder.direction),
-      );
+    const room = (this.wielder as any)?.getRoom
+      ? (this.wielder as any).getRoom()
+      : this.game?.rooms?.[this.wielder.levelID];
+    if (!room) {
+      console.error("🔫 WEAPON: Cannot add particle - invalid room state");
+      return;
     }
+    room.particles.push(
+      new AttackAnimation(newX, newY, this.name, this.wielder.direction),
+    );
   };
 
   shakeScreen = (eX: number, eY: number) => {
-    if (
-      this.wielder.game.rooms[this.wielder.levelID] === this.wielder.game.room
-    )
+    const wielderRoom = (this.wielder as any)?.getRoom
+      ? (this.wielder as any).getRoom()
+      : this.wielder.game.rooms[this.wielder.levelID];
+    if (wielderRoom === this.wielder.game.room)
       this.wielder.shakeScreen(this.wielder.x, this.wielder.y, eX, eY);
   };
 
@@ -238,35 +239,20 @@ export abstract class Weapon extends Equippable {
       return [];
     }
 
-    if (!this.game.rooms) {
-      console.error("🔫 WEAPON: this.game.rooms is undefined");
-      return [];
-    }
-
     if (!this.wielder) {
       console.error("🔫 WEAPON: this.wielder is undefined");
       return [];
     }
 
-    if (this.wielder.levelID >= this.game.rooms.length) {
-      console.error("🔫 WEAPON: wielder.levelID out of bounds", {
-        levelID: this.wielder.levelID,
-        roomsLength: this.game.rooms.length,
-      });
+    const room = (this.wielder as any)?.getRoom
+      ? (this.wielder as any).getRoom()
+      : this.game?.rooms?.[this.wielder.levelID];
+    if (!room) {
+      console.error("🔫 WEAPON: current room is undefined");
       return [];
     }
 
-    if (!this.game.rooms[this.wielder.levelID]) {
-      console.error("🔫 WEAPON: room at levelID is undefined", {
-        levelID: this.wielder.levelID,
-        room: this.game.rooms[this.wielder.levelID],
-      });
-      return [];
-    }
-
-    return this.game.rooms[this.wielder.levelID].entities.filter(
-      (e) => e.destroyable && e.pointIn(x, y),
-    );
+    return room.entities.filter((e) => e.destroyable && e.pointIn(x, y));
   }
 
   protected hitEntitiesAt(x: number, y: number, damage?: number): boolean {
@@ -300,18 +286,17 @@ export abstract class Weapon extends Equippable {
         break;
     }
 
-    if (!this.game?.rooms?.[this.wielder.levelID]) {
-      console.error("🔫 WEAPON: Cannot check pushables - invalid room state");
-      return false;
-    }
+    const room = (this.wielder as any)?.getRoom
+      ? (this.wielder as any).getRoom()
+      : this.game?.rooms?.[this.wielder.levelID];
+    if (!room) return false;
 
     const unpushables = this.getEntitiesAt(behindX, behindY).filter(
       (e) => !e.pushable,
     );
     const hasUnpushablesBehind = unpushables.length > 0;
 
-    const behindTile =
-      this.game.rooms[this.wielder.levelID].roomArray[behindX]?.[behindY];
+    const behindTile = room.roomArray[behindX]?.[behindY];
     const isSolidBehind = !behindTile || behindTile.isSolid();
 
     const pushables = this.getEntitiesAt(x, y).filter((e) => e.pushable);
@@ -348,11 +333,10 @@ export abstract class Weapon extends Equippable {
       this.wielder.setHitXY(targetX, targetY);
       if (animated) this.attackAnimation(targetX, targetY);
       if (shouldTick) {
-        if (!this.game?.rooms?.[this.wielder.levelID]) {
-          console.error("🔫 WEAPON: Cannot tick room - invalid room state");
-        } else if (shouldTick) {
-          this.game.rooms[this.wielder.levelID].tick(this.wielder);
-        }
+        const room = (this.wielder as any)?.getRoom
+          ? (this.wielder as any).getRoom()
+          : this.game?.rooms?.[this.wielder.levelID];
+        if (room) room.tick(this.wielder);
       }
       if (shakeScreen) this.shakeScreen(targetX, targetY);
       if (mainAttack) this.degrade();

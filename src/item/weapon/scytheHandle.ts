@@ -38,11 +38,10 @@ export class ScytheHandle extends Usable {
       player.inventory.removeItem(this);
       player.inventory.removeItem(other);
       player.game.pushMessage("You combine the scythe blade and handle.");
-      const scythe = new Scythe(
-        player.game.rooms[player.levelID],
-        player.x,
-        player.y,
-      );
+      const room = (player as any)?.getRoom
+        ? (player as any).getRoom()
+        : player.game.rooms[player.levelID];
+      const scythe = new Scythe(room, player.x, player.y);
       player.inventory.addItem(scythe);
     }
   };

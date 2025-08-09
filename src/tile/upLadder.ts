@@ -90,7 +90,11 @@ export class UpLadder extends Passageway {
           }
         }
         // Fallback: link to level start if not found
-        this.linkedRoom = level.startRoom || level.rooms[0];
+        // Prefer stable map lookup when available
+        const anyRoom = (level as any).roomsById
+          ? (level as any).roomsById.values().next().value
+          : level.rooms[0];
+        this.linkedRoom = level.startRoom || anyRoom;
         return;
       }
     }

@@ -123,13 +123,11 @@ export class DownLadder extends Passageway {
   onCollide = (player: Player) => {
     let allPlayersHere = true;
     for (const i in this.game.players) {
-      if (
-        this.game.levels[this.game.players[i].depth].rooms[
-          this.game.players[i].levelID
-        ] !== this.room ||
-        this.game.players[i].x !== this.x ||
-        this.game.players[i].y !== this.y
-      ) {
+      const pl = this.game.players[i];
+      const plRoom = (pl as any).getRoom
+        ? (pl as any).getRoom()
+        : this.game.levels[pl.depth].rooms[pl.levelID];
+      if (plRoom !== this.room || pl.x !== this.x || pl.y !== this.y) {
         allPlayersHere = false;
       }
     }

@@ -26,8 +26,10 @@ export class Hammer extends Usable {
 
   onUse = (player: Player) => {
     player.health = Math.min(player.maxHealth, player.health + 1);
-    if (this.level.game.rooms[player.levelID] === this.level.game.room)
-      Sound.heal();
+    const room = (player as any)?.getRoom
+      ? (player as any).getRoom()
+      : this.level.game.rooms[player.levelID];
+    if (room === this.level.game.room) Sound.heal();
 
     //this.level.items = this.level.items.filter((x) => x !== this); // removes itself from the level
   };

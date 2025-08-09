@@ -28,7 +28,10 @@ export class Spellbook extends Weapon {
 
   getTargets = () => {
     this.targets = [];
-    let entities = this.game.rooms[this.wielder.levelID].entities;
+    const room = (this.wielder as any)?.getRoom
+      ? (this.wielder as any).getRoom()
+      : this.game.rooms[this.wielder.levelID];
+    let entities = room.entities;
     this.targets = entities.filter(
       (e) =>
         !e.pushable &&
@@ -99,14 +102,13 @@ export class Spellbook extends Weapon {
     const actuallyHitTargets: Entity[] = [];
 
     for (let e of targets) {
-      if (
-        !this.game.rooms[this.wielder.levelID].roomArray[e.x][e.y].isSolid()
-      ) {
+      const room = (this.wielder as any)?.getRoom
+        ? (this.wielder as any).getRoom()
+        : this.game.rooms[this.wielder.levelID];
+      if (!room.roomArray[e.x][e.y].isSolid()) {
         e.hurt(this.wielder, 1);
 
-        this.game.rooms[this.wielder.levelID].projectiles.push(
-          new PlayerFireball(this.wielder, e.x, e.y),
-        );
+        room.projectiles.push(new PlayerFireball(this.wielder, e.x, e.y));
 
         // Add to the list of actually hit targets
         actuallyHitTargets.push(e);
@@ -121,7 +123,10 @@ export class Spellbook extends Weapon {
       this.hitSound();
       this.wielder.setHitXY(newX, newY);
 
-      this.game.rooms[this.wielder.levelID].tick(this.wielder);
+      const room = (this.wielder as any)?.getRoom
+        ? (this.wielder as any).getRoom()
+        : this.game.rooms[this.wielder.levelID];
+      room.tick(this.wielder);
       this.shakeScreen(newX, newY);
       Sound.playMagic();
       //this.degrade();
@@ -136,12 +141,15 @@ export class Spellbook extends Weapon {
 
   drawBeams = (playerDrawX: number, playerDrawY: number, delta: number) => {
     // Clear existing beam effects each frame
-    this.game.rooms[this.wielder.levelID].beamEffects = [];
+    const room = (this.wielder as any)?.getRoom
+      ? (this.wielder as any).getRoom()
+      : this.game.rooms[this.wielder.levelID];
+    room.beamEffects = [];
 
     if (this.isTargeting) {
       for (let target of this.targets) {
         // Create a new beam effect from the player to the enemy
-        this.game.rooms[this.wielder.levelID].addBeamEffect(
+        room.addBeamEffect(
           playerDrawX,
           playerDrawY,
           target.x - (target as any).drawX,
@@ -150,10 +158,7 @@ export class Spellbook extends Weapon {
         );
 
         // Retrieve the newly added beam effect
-        const beam =
-          this.game.rooms[this.wielder.levelID].beamEffects[
-            this.game.rooms[this.wielder.levelID].beamEffects.length - 1
-          ];
+        const beam = room.beamEffects[room.beamEffects.length - 1];
 
         // Render the beam
         beam.render(
