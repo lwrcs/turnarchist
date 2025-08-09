@@ -12427,8 +12427,15 @@ class Game {
         };
         this.changeLevelThroughDoor = (player, door, side) => {
             door.linkedDoor.room.entered = true;
-            player.levelID = door.room.id;
+            // Prefer stable roomGID; maintain legacy levelID for compatibility
             player.roomGID = door.room.globalId;
+            try {
+                // Compute index defensively instead of trusting door.room.id
+                const idx = this.rooms?.indexOf(door.room);
+                if (idx !== undefined && idx >= 0)
+                    player.levelID = idx;
+            }
+            catch { }
             if (this.players[this.localPlayerID] === player) {
                 this.levelState = LevelState.TRANSITIONING;
                 this.transitionStartTime = Date.now();
@@ -15380,7 +15387,10 @@ let loadItem = (i, game, player, targetRoom) => {
     }
     // Ensure level reference exists for inventory-only items
     if (!room && item && !item.level) {
-        const fallbackRoom = game.rooms[game.players[game.localPlayerID].levelID];
+        const savedLocal = game.players?.[game.localPlayerID];
+        const fallbackRoom = savedLocal?.getRoom
+            ? savedLocal.getRoom()
+            : game.rooms[game.players[game.localPlayerID].levelID];
         item.level = fallbackRoom;
     }
     if (i.equipped)
@@ -15462,10 +15472,15 @@ class PlayerState {
         this.x = player.x;
         this.y = player.y;
         this.dead = player.dead;
-        this.roomID = player.levelID;
-        this.roomGID = game.rooms[player.levelID]?.globalId;
-        this.mapGroup = game.rooms[player.levelID]?.mapGroup;
-        const playerRoom = game.rooms[player.levelID];
+        const resolvedRoom = player?.getRoom
+            ? player.getRoom()
+            : game.rooms[player.levelID];
+        this.roomGID = resolvedRoom?.globalId;
+        this.roomID = resolvedRoom
+            ? game.rooms.indexOf(resolvedRoom)
+            : player.levelID;
+        this.mapGroup = resolvedRoom?.mapGroup;
+        const playerRoom = resolvedRoom;
         if (playerRoom) {
             const groupRooms = game.rooms
                 .filter((r) => r.mapGroup === playerRoom.mapGroup)
@@ -15500,6 +15515,7 @@ let loadPlayer = (id, p, game) => {
     // Prefer GID if available
     if (p.roomGID && game.roomsById?.has(p.roomGID)) {
         const room = game.roomsById.get(p.roomGID);
+        player.roomGID = p.roomGID;
         player.levelID = game.rooms.indexOf(room);
         console.log("🧭 LOAD: Player resolved by roomGID", {
             id,
@@ -15543,6 +15559,7 @@ let loadPlayer = (id, p, game) => {
             resolvedRoom = game.rooms[p.roomID];
             console.log("🧭 LOAD: Player resolved by index", { id });
         }
+        player.roomGID = resolvedRoom?.globalId;
         player.levelID = resolvedRoom ? game.rooms.indexOf(resolvedRoom) : 0;
         console.log("🧭 LOAD: Player final levelID", {
             id,
@@ -20673,9 +20690,16 @@ class GodStone extends usable_1.Usable {
                 r.entered = true;
                 r.calculateWallInfo();
             });
+            // Use door transition which sets player.roomGID; prefer first door
             targetRoom.game.changeLevelThroughDoor(player, targetRoom.doors[0], 1);
             player.x = targetRoom.roomX + 2;
             player.y = targetRoom.roomY + 3;
+            // Ensure player's map reflects the new room immediately
+            try {
+                player.map.updateSeenTiles();
+                player.map.saveMapData();
+            }
+            catch { }
         };
         this.getDescription = () => {
             return "YOU SHOULD NOT HAVE THIS";
@@ -33685,6 +33709,8 @@ class Populator {
                 this.populateByEnvironment(room);
             });
             // Centralized torch, spike, and pool addition
+            this.addDownladder();
+            this.addDownladder();
             this.addDownladder();
             //this.level.distributeKeys();
         };

@@ -598,8 +598,13 @@ export class Game {
 
   changeLevelThroughDoor = (player: Player, door: Door, side?: number) => {
     door.linkedDoor.room.entered = true;
-    player.levelID = door.room.id;
+    // Prefer stable roomGID; maintain legacy levelID for compatibility
     (player as any).roomGID = door.room.globalId;
+    try {
+      // Compute index defensively instead of trusting door.room.id
+      const idx = this.rooms?.indexOf(door.room);
+      if (idx !== undefined && idx >= 0) player.levelID = idx;
+    } catch {}
 
     if (this.players[this.localPlayerID] === player) {
       this.levelState = LevelState.TRANSITIONING;

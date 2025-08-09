@@ -1074,7 +1074,10 @@ let loadItem = (
   }
   // Ensure level reference exists for inventory-only items
   if (!room && item && !item.level) {
-    const fallbackRoom = game.rooms[game.players[game.localPlayerID].levelID];
+    const savedLocal = game.players?.[game.localPlayerID];
+    const fallbackRoom = (savedLocal as any)?.getRoom
+      ? (savedLocal as any).getRoom()
+      : game.rooms[game.players[game.localPlayerID].levelID];
     item.level = fallbackRoom;
   }
 
@@ -1191,10 +1194,15 @@ export class PlayerState {
     this.x = player.x;
     this.y = player.y;
     this.dead = player.dead;
-    this.roomID = player.levelID;
-    this.roomGID = game.rooms[player.levelID]?.globalId;
-    this.mapGroup = game.rooms[player.levelID]?.mapGroup;
-    const playerRoom = game.rooms[player.levelID];
+    const resolvedRoom = (player as any)?.getRoom
+      ? (player as any).getRoom()
+      : game.rooms[player.levelID];
+    this.roomGID = resolvedRoom?.globalId;
+    this.roomID = resolvedRoom
+      ? game.rooms.indexOf(resolvedRoom)
+      : player.levelID;
+    this.mapGroup = resolvedRoom?.mapGroup;
+    const playerRoom = resolvedRoom;
     if (playerRoom) {
       const groupRooms = game.rooms
         .filter((r) => r.mapGroup === playerRoom.mapGroup)
@@ -1234,6 +1242,7 @@ let loadPlayer = (id: string, p: PlayerState, game: Game): Player => {
   // Prefer GID if available
   if (p.roomGID && game.roomsById?.has(p.roomGID)) {
     const room = game.roomsById.get(p.roomGID);
+    (player as any).roomGID = p.roomGID;
     player.levelID = game.rooms.indexOf(room);
     console.log("🧭 LOAD: Player resolved by roomGID", {
       id,
@@ -1280,6 +1289,7 @@ let loadPlayer = (id: string, p: PlayerState, game: Game): Player => {
       resolvedRoom = game.rooms[p.roomID];
       console.log("🧭 LOAD: Player resolved by index", { id });
     }
+    (player as any).roomGID = resolvedRoom?.globalId;
     player.levelID = resolvedRoom ? game.rooms.indexOf(resolvedRoom) : 0;
     console.log("🧭 LOAD: Player final levelID", {
       id,

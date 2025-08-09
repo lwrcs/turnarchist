@@ -31,9 +31,15 @@ export class GodStone extends Usable {
       r.entered = true;
       r.calculateWallInfo();
     });
+    // Use door transition which sets player.roomGID; prefer first door
     targetRoom.game.changeLevelThroughDoor(player, targetRoom.doors[0], 1);
     player.x = targetRoom.roomX + 2;
     player.y = targetRoom.roomY + 3;
+    // Ensure player's map reflects the new room immediately
+    try {
+      player.map.updateSeenTiles();
+      player.map.saveMapData();
+    } catch {}
   };
   getDescription = (): string => {
     return "YOU SHOULD NOT HAVE THIS";
