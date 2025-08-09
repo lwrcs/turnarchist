@@ -28696,7 +28696,6 @@ class PlayerInputHandler {
         // Prevent duplicate handler registrations after save/load by resetting arrays
         // These arrays are only used for player input routing
         try {
-            input_1.Input.mouseDownListeners.length = 0;
             input_1.Input.mouseRightClickListeners.length = 0;
             input_1.Input.mouseLeftClickListeners.length = 0;
         }
