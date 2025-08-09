@@ -2507,10 +2507,11 @@ export class Room {
     for (const p in this.game.players) {
       Game.ctx.globalCompositeOperation = "source-over"; // "soft-light";
       Game.ctx.globalAlpha = 1;
-      if (
-        this.level.rooms[this.game.players[p].levelID] === this &&
-        this.game.players[p].defaultSightRadius > bestSightRadius
-      ) {
+      const player = this.game.players[p];
+      const playerRoom = (player as any).getRoom
+        ? (player as any).getRoom()
+        : this.level.rooms[player.levelID];
+      if (playerRoom === this && player.defaultSightRadius > bestSightRadius) {
         bestSightRadius = this.game.players[p].defaultSightRadius;
       }
     }

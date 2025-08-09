@@ -12595,7 +12595,11 @@ class Game {
                     // Don't update rooms during level transitions
                     if (this.levelState !== LevelState.TRANSITIONING &&
                         this.levelState !== LevelState.TRANSITIONING_LADDER) {
-                        this.levels[this.players[i].depth].rooms[this.players[i].levelID].update();
+                        const player = this.players[i];
+                        const room = player.getRoom
+                            ? player.getRoom()
+                            : this.levels[player.depth].rooms[player.levelID];
+                        room.update();
                     }
                     if (this.players[i].dead) {
                         for (const j in this.players) {
@@ -19163,7 +19167,10 @@ class Inventory {
             this.dropItem(item, index);
         };
         this.dropItem = (item, index) => {
-            item.level = this.game.levels[this.player.depth].rooms[this.player.levelID];
+            const room = this.player.getRoom
+                ? this.player.getRoom()
+                : this.game.levels[this.player.depth].rooms[this.player.levelID];
+            item.level = room;
             item.x = this.player.x;
             item.y = this.player.y;
             item.alpha = 1;
@@ -19171,7 +19178,7 @@ class Inventory {
             item.dropFromInventory();
             this.equipAnimAmount[index] = 0;
             item.drawableY = this.player.y;
-            this.game.levels[this.player.depth].rooms[this.player.levelID].items.push(item);
+            room.items.push(item);
             this.items[index] = null;
         };
         this.dropFromInventory = () => {
@@ -29544,7 +29551,10 @@ class PlayerRenderer {
                 return "black";
             }
             else {
-                return utils_1.Utils.rgbToHex(player.game.levels[player.depth].rooms[player.levelID].col[player.x][player.y][0], player.game.levels[player.depth].rooms[player.levelID].col[player.x][player.y][1], player.game.levels[player.depth].rooms[player.levelID].col[player.x][player.y][2]);
+                const room = this.player.getRoom
+                    ? this.player.getRoom()
+                    : this.player.game.levels[this.player.depth].rooms[this.player.levelID];
+                return utils_1.Utils.rgbToHex(room.col[player.x][player.y][0], room.col[player.x][player.y][1], room.col[player.x][player.y][2]);
             }
         };
         this.drawTopLayer = (delta) => {
@@ -29569,8 +29579,8 @@ class PlayerRenderer {
             gameConstants_1.GameConstants.ANIMATION_SPEED = this.motionSpeed;
         };
         this.updateHitXY = (delta) => {
-            const hitX = this.hitX - this.hitX * 0.3;
-            const hitY = this.hitY - this.hitY * 0.3;
+            const hitX = this.hitX - this.hitX * 0.3 * delta;
+            const hitY = this.hitY - this.hitY * 0.3 * delta;
             this.hitX = Math.min(Math.max(hitX, -1), 1);
             this.hitY = Math.min(Math.max(hitY, -1), 1);
             if (Math.abs(hitX) < 0.01)
@@ -29660,7 +29670,9 @@ class PlayerRenderer {
                     armor.drawGUI(delta, this.player.maxHealth, quickbarStartX);
                 if (!transitioning)
                     this.player.inventory.draw(delta);
-                hoverText_1.HoverText.draw(delta, this.player.x, this.player.y, this.player.game.levels[this.player.depth].rooms[this.player.levelID], this.player);
+                hoverText_1.HoverText.draw(delta, this.player.x, this.player.y, (this.player.getRoom
+                    ? this.player.getRoom()
+                    : this.player.game.levels[this.player.depth].rooms[this.player.levelID]), this.player);
             }
             else {
                 game_1.Game.ctx.fillStyle = levelConstants_1.LevelConstants.LEVEL_TEXT_COLOR;
@@ -29679,7 +29691,10 @@ class PlayerRenderer {
                 else {
                     lines.push("Game Over");
                 }
-                lines.push(`Depth reached: ${this.player.game.levels[this.player.depth].rooms[this.player.levelID].depth}`);
+                const diedInRoom = this.player.getRoom
+                    ? this.player.getRoom()
+                    : this.player.game.levels[this.player.depth].rooms[this.player.levelID];
+                lines.push(`Depth reached: ${diedInRoom.depth}`);
                 // Line 2: Enemies killed
                 lines.push(`${Object.values(enemyCounts).reduce((a, b) => a + b, 0)} enemies killed in total:`);
                 // Subsequent lines: Each enemy count
@@ -32107,8 +32122,11 @@ class Room {
             for (const p in this.game.players) {
                 game_1.Game.ctx.globalCompositeOperation = "source-over"; // "soft-light";
                 game_1.Game.ctx.globalAlpha = 1;
-                if (this.level.rooms[this.game.players[p].levelID] === this &&
-                    this.game.players[p].defaultSightRadius > bestSightRadius) {
+                const player = this.game.players[p];
+                const playerRoom = player.getRoom
+                    ? player.getRoom()
+                    : this.level.rooms[player.levelID];
+                if (playerRoom === this && player.defaultSightRadius > bestSightRadius) {
                     bestSightRadius = this.game.players[p].defaultSightRadius;
                 }
             }

@@ -805,9 +805,11 @@ export class Game {
           this.levelState !== LevelState.TRANSITIONING &&
           this.levelState !== LevelState.TRANSITIONING_LADDER
         ) {
-          this.levels[this.players[i].depth].rooms[
-            this.players[i].levelID
-          ].update();
+          const player = this.players[i];
+          const room = (player as any).getRoom
+            ? (player as any).getRoom()
+            : this.levels[player.depth].rooms[player.levelID];
+          room.update();
         }
 
         if (this.players[i].dead) {

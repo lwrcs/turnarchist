@@ -327,16 +327,13 @@ export class PlayerRenderer {
     if (!GameConstants.CUSTOM_SHADER_COLOR_ENABLED) {
       return "black";
     } else {
+      const room = (this.player as any).getRoom
+        ? (this.player as any).getRoom()
+        : this.player.game.levels[this.player.depth].rooms[this.player.levelID];
       return Utils.rgbToHex(
-        player.game.levels[player.depth].rooms[player.levelID].col[player.x][
-          player.y
-        ][0],
-        player.game.levels[player.depth].rooms[player.levelID].col[player.x][
-          player.y
-        ][1],
-        player.game.levels[player.depth].rooms[player.levelID].col[player.x][
-          player.y
-        ][2],
+        room.col[player.x][player.y][0],
+        room.col[player.x][player.y][1],
+        room.col[player.x][player.y][2],
       );
     }
   };
@@ -376,8 +373,8 @@ export class PlayerRenderer {
   };
 
   updateHitXY = (delta: number) => {
-    const hitX = this.hitX - this.hitX * 0.3;
-    const hitY = this.hitY - this.hitY * 0.3;
+    const hitX = this.hitX - this.hitX * 0.3 * delta;
+    const hitY = this.hitY - this.hitY * 0.3 * delta;
     this.hitX = Math.min(Math.max(hitX, -1), 1);
     this.hitY = Math.min(Math.max(hitY, -1), 1);
     if (Math.abs(hitX) < 0.01) this.hitX = 0;
@@ -504,7 +501,11 @@ export class PlayerRenderer {
         delta,
         this.player.x,
         this.player.y,
-        this.player.game.levels[this.player.depth].rooms[this.player.levelID],
+        ((this.player as any).getRoom
+          ? (this.player as any).getRoom()
+          : this.player.game.levels[this.player.depth].rooms[
+              this.player.levelID
+            ]) as any,
         this.player,
       );
     } else {
@@ -529,9 +530,10 @@ export class PlayerRenderer {
         lines.push("Game Over");
       }
 
-      lines.push(
-        `Depth reached: ${this.player.game.levels[this.player.depth].rooms[this.player.levelID].depth}`,
-      );
+      const diedInRoom = (this.player as any).getRoom
+        ? (this.player as any).getRoom()
+        : this.player.game.levels[this.player.depth].rooms[this.player.levelID];
+      lines.push(`Depth reached: ${diedInRoom.depth}`);
 
       // Line 2: Enemies killed
       lines.push(
