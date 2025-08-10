@@ -123,8 +123,6 @@ export class Populator {
     // Centralized torch, spike, and pool addition
 
     this.addDownladder();
-    this.addDownladder();
-    this.addDownladder();
 
     //this.level.distributeKeys();
   };
