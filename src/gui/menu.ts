@@ -89,6 +89,26 @@ export class Menu {
     );
     muteButton.onClick = muteButton.toggleMuteText;
     this.addButton(muteButton);
+    const smoothButton = new guiButton(
+      0,
+      0,
+      0,
+      0,
+      "Smooth Lighting",
+      () => {
+        // Mirror the "/smooth" command behavior
+        GameConstants.SMOOTH_LIGHTING = !GameConstants.SMOOTH_LIGHTING;
+        const enabled = GameConstants.SMOOTH_LIGHTING ? "enabled" : "disabled";
+        this.player.game.pushMessage(`Smooth lighting is now ${enabled}`);
+        try {
+          const { saveSettings } = require("../game/settingsPersistence");
+          saveSettings(this.player.game);
+        } catch {}
+      },
+      false,
+      this,
+    );
+    this.addButton(smoothButton);
     //this.addButton(new guiButton(0, 0, 0, 0, "Exit", this.exitGame));
     this.positionButtons();
   }

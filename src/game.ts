@@ -515,6 +515,11 @@ export class Game {
     gs.seed = seed ?? (Math.random() * 4294967296) >>> 0;
     gs.randomState = gs.seed;
     loadGameState(this, [this.localPlayerID], gs, true);
+    // Load settings from cookies after basic init
+    try {
+      const { loadSettings } = require("./game/settingsPersistence");
+      loadSettings(this);
+    } catch {}
 
     this.levelState = LevelState.LEVEL_GENERATION;
     // Begin replay recording with this seed and capture a base state when ready
@@ -877,6 +882,30 @@ export class Game {
     }
 
     switch (command) {
+      case "savec": {
+        try {
+          const { saveToCookies } = require("./game/savePersistence");
+          saveToCookies(this);
+          this.pushMessage(
+            "Attempted cookie save (cookies/localStorage fallback).",
+          );
+        } catch (e) {
+          this.pushMessage("Cookie save failed.");
+        }
+        break;
+      }
+      case "loadc": {
+        try {
+          const { loadFromCookies } = require("./game/savePersistence");
+          loadFromCookies(this);
+          this.pushMessage(
+            "Attempted cookie load (cookies/localStorage fallback).",
+          );
+        } catch (e) {
+          this.pushMessage("Cookie load failed.");
+        }
+        break;
+      }
       case "replay":
         this.pushMessage("Starting replay...");
         this.replayManager.replay(this);
@@ -937,6 +966,10 @@ export class Game {
         GameConstants.SMOOTH_LIGHTING = !GameConstants.SMOOTH_LIGHTING;
         enabled = GameConstants.SMOOTH_LIGHTING ? "enabled" : "disabled";
         this.pushMessage(`Smooth lighting is now ${enabled}`);
+        try {
+          const { saveSettings } = require("./game/settingsPersistence");
+          saveSettings(this);
+        } catch {}
         break;
       case "rooms":
         GameConstants.drawOtherRooms = !GameConstants.drawOtherRooms;

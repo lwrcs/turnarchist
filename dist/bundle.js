@@ -12359,6 +12359,12 @@ class Game {
             exports.gs.seed = seed ?? (Math.random() * 4294967296) >>> 0;
             exports.gs.randomState = exports.gs.seed;
             (0, gameState_1.loadGameState)(this, [this.localPlayerID], exports.gs, true);
+            // Load settings from cookies after basic init
+            try {
+                const { loadSettings } = __webpack_require__(/*! ./game/settingsPersistence */ "./src/game/settingsPersistence.ts");
+                loadSettings(this);
+            }
+            catch { }
             this.levelState = LevelState.LEVEL_GENERATION;
             // Begin replay recording with this seed and capture a base state when ready
             this.replayManager.beginRecording(exports.gs.seed, this);
@@ -12659,6 +12665,28 @@ class Game {
                 return;
             }
             switch (command) {
+                case "savec": {
+                    try {
+                        const { saveToCookies } = __webpack_require__(/*! ./game/savePersistence */ "./src/game/savePersistence.ts");
+                        saveToCookies(this);
+                        this.pushMessage("Attempted cookie save (cookies/localStorage fallback).");
+                    }
+                    catch (e) {
+                        this.pushMessage("Cookie save failed.");
+                    }
+                    break;
+                }
+                case "loadc": {
+                    try {
+                        const { loadFromCookies } = __webpack_require__(/*! ./game/savePersistence */ "./src/game/savePersistence.ts");
+                        loadFromCookies(this);
+                        this.pushMessage("Attempted cookie load (cookies/localStorage fallback).");
+                    }
+                    catch (e) {
+                        this.pushMessage("Cookie load failed.");
+                    }
+                    break;
+                }
                 case "replay":
                     this.pushMessage("Starting replay...");
                     this.replayManager.replay(this);
@@ -12717,6 +12745,11 @@ class Game {
                     gameConstants_1.GameConstants.SMOOTH_LIGHTING = !gameConstants_1.GameConstants.SMOOTH_LIGHTING;
                     enabled = gameConstants_1.GameConstants.SMOOTH_LIGHTING ? "enabled" : "disabled";
                     this.pushMessage(`Smooth lighting is now ${enabled}`);
+                    try {
+                        const { saveSettings } = __webpack_require__(/*! ./game/settingsPersistence */ "./src/game/settingsPersistence.ts");
+                        saveSettings(this);
+                    }
+                    catch { }
                     break;
                 case "rooms":
                     gameConstants_1.GameConstants.drawOtherRooms = !gameConstants_1.GameConstants.drawOtherRooms;
@@ -17305,6 +17338,119 @@ exports.ReplayManager = ReplayManager;
 
 /***/ }),
 
+/***/ "./src/game/savePersistence.ts":
+/*!*************************************!*\
+  !*** ./src/game/savePersistence.ts ***!
+  \*************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.clearCookieSave = exports.loadFromCookies = exports.saveToCookies = void 0;
+const gameState_1 = __webpack_require__(/*! ./gameState */ "./src/game/gameState.ts");
+const cookies_1 = __webpack_require__(/*! ../utility/cookies */ "./src/utility/cookies.ts");
+const SAVE_PREFIX = "wr_save";
+const saveToCookies = (game) => {
+    const state = (0, gameState_1.createGameState)(game);
+    const json = JSON.stringify(state);
+    // For now, skip compression to avoid adding deps; chunk directly
+    (0, cookies_1.setCookieChunks)(SAVE_PREFIX, json, 30);
+    game.pushMessage?.("Saved to cookies.");
+};
+exports.saveToCookies = saveToCookies;
+const loadFromCookies = async (game) => {
+    const json = (0, cookies_1.getCookieChunks)(SAVE_PREFIX);
+    if (!json) {
+        game.pushMessage?.("No cookie save found.");
+        return;
+    }
+    try {
+        const state = JSON.parse(json);
+        const activeUsernames = Object.keys(game.players || {});
+        await (0, gameState_1.loadGameState)(game, activeUsernames, state, false);
+        game.pushMessage?.("Loaded from cookies.");
+    }
+    catch (e) {
+        console.error("Cookie load failed", e);
+        game.pushMessage?.("Cookie load failed.");
+    }
+};
+exports.loadFromCookies = loadFromCookies;
+const clearCookieSave = () => {
+    // Remove chunks
+    let idx = 0;
+    // Iterate until no more chunk cookie exists
+    // Note: access document.cookie via helpers to probe
+    while (true) {
+        const name = `${SAVE_PREFIX}_${idx}`;
+        const exists = (0, cookies_1.getCookieChunks)(name); // misuse to probe would load all; better to try getCookie directly
+        // Implement a light probe by reading document.cookie; omitted to avoid dependency here
+        (0, cookies_1.deleteCookie)(name);
+        if (idx > 20)
+            break; // safety bound
+        idx++;
+    }
+    (0, cookies_1.deleteCookie)(`${SAVE_PREFIX}_meta`);
+};
+exports.clearCookieSave = clearCookieSave;
+
+
+/***/ }),
+
+/***/ "./src/game/settingsPersistence.ts":
+/*!*****************************************!*\
+  !*** ./src/game/settingsPersistence.ts ***!
+  \*****************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.loadSettings = exports.saveSettings = void 0;
+const cookies_1 = __webpack_require__(/*! ../utility/cookies */ "./src/utility/cookies.ts");
+const gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/game/gameConstants.ts");
+const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts");
+const SETTINGS_KEY = "wr_settings";
+const saveSettings = (game) => {
+    const s = {
+        muted: sound_1.Sound.audioMuted ?? false,
+        softScale: gameConstants_1.GameConstants.SOFT_SCALE ?? gameConstants_1.GameConstants.SCALE,
+        shade: gameConstants_1.GameConstants.SHADE_ENABLED,
+        smoothLighting: gameConstants_1.GameConstants.SMOOTH_LIGHTING,
+    };
+    (0, cookies_1.setCookie)(SETTINGS_KEY, JSON.stringify(s), 180);
+};
+exports.saveSettings = saveSettings;
+const loadSettings = (game) => {
+    const raw = (0, cookies_1.getCookie)(SETTINGS_KEY);
+    if (!raw)
+        return;
+    try {
+        const s = JSON.parse(raw);
+        if (typeof s.muted === "boolean") {
+            if (s.muted && !sound_1.Sound.audioMuted)
+                sound_1.Sound.toggleMute();
+            if (!s.muted && sound_1.Sound.audioMuted)
+                sound_1.Sound.toggleMute();
+        }
+        if (typeof s.softScale === "number") {
+            gameConstants_1.GameConstants.SOFT_SCALE = s.softScale;
+        }
+        if (typeof s.shade === "boolean")
+            gameConstants_1.GameConstants.SHADE_ENABLED = s.shade;
+        if (typeof s.smoothLighting === "boolean")
+            gameConstants_1.GameConstants.SMOOTH_LIGHTING = s.smoothLighting;
+    }
+    catch (e) {
+        console.warn("Failed to parse settings cookie", e);
+    }
+};
+exports.loadSettings = loadSettings;
+
+
+/***/ }),
+
 /***/ "./src/game/stats.ts":
 /*!***************************!*\
   !*** ./src/game/stats.ts ***!
@@ -18150,6 +18296,18 @@ class Menu {
         const muteButton = new guiButton_1.guiButton(0, 0, 0, 0, "Mute Sound", () => { }, false, this);
         muteButton.onClick = muteButton.toggleMuteText;
         this.addButton(muteButton);
+        const smoothButton = new guiButton_1.guiButton(0, 0, 0, 0, "Smooth Lighting", () => {
+            // Mirror the "/smooth" command behavior
+            gameConstants_1.GameConstants.SMOOTH_LIGHTING = !gameConstants_1.GameConstants.SMOOTH_LIGHTING;
+            const enabled = gameConstants_1.GameConstants.SMOOTH_LIGHTING ? "enabled" : "disabled";
+            this.player.game.pushMessage(`Smooth lighting is now ${enabled}`);
+            try {
+                const { saveSettings } = __webpack_require__(/*! ../game/settingsPersistence */ "./src/game/settingsPersistence.ts");
+                saveSettings(this.player.game);
+            }
+            catch { }
+        }, false, this);
+        this.addButton(smoothButton);
         //this.addButton(new guiButton(0, 0, 0, 0, "Exit", this.exitGame));
         this.positionButtons();
     }
@@ -37862,6 +38020,112 @@ var astar;
     AStar.NO_CHECK_START_POINT = false;
     astar_1.AStar = AStar;
 })(astar = exports.astar || (exports.astar = {}));
+
+
+/***/ }),
+
+/***/ "./src/utility/cookies.ts":
+/*!********************************!*\
+  !*** ./src/utility/cookies.ts ***!
+  \********************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+// Minimal cookie helpers with chunking for larger payloads
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getCookieChunks = exports.setCookieChunks = exports.deleteCookie = exports.getCookie = exports.setCookie = void 0;
+const toK = (name) => encodeURIComponent(name);
+const toV = (value) => encodeURIComponent(value);
+const setCookie = (name, value, maxAgeDays = 180) => {
+    try {
+        const maxAge = maxAgeDays * 24 * 60 * 60;
+        document.cookie = `${toK(name)}=${toV(value)}; path=/; max-age=${maxAge}`;
+        // Verify round-trip; if it failed (file:// or blocked), fallback to localStorage
+        const rt = (0, exports.getCookie)(name);
+        if (rt === null) {
+            localStorage.setItem(name, value);
+        }
+    }
+    catch {
+        try {
+            localStorage.setItem(name, value);
+        }
+        catch { }
+    }
+};
+exports.setCookie = setCookie;
+const getCookie = (name) => {
+    try {
+        const key = toK(name) + "=";
+        const parts = document.cookie.split(/;\s*/);
+        for (const part of parts) {
+            if (part.startsWith(key)) {
+                return decodeURIComponent(part.substring(key.length));
+            }
+        }
+    }
+    catch { }
+    // Fallback to localStorage
+    try {
+        const v = localStorage.getItem(name);
+        return v === null ? null : v;
+    }
+    catch {
+        return null;
+    }
+};
+exports.getCookie = getCookie;
+const deleteCookie = (name) => {
+    try {
+        document.cookie = `${toK(name)}=; path=/; max-age=0`;
+    }
+    catch { }
+    try {
+        localStorage.removeItem(name);
+    }
+    catch { }
+};
+exports.deleteCookie = deleteCookie;
+// Chunk large strings across multiple cookies
+const CHUNK_SIZE = 3000; // stay well under 4KB after key/attrs
+const setCookieChunks = (prefix, value, maxAgeDays = 30) => {
+    // Clear existing chunks first
+    const meta = (0, exports.getCookie)(`${prefix}_meta`);
+    if (meta) {
+        const total = parseInt(meta, 10);
+        if (Number.isFinite(total)) {
+            for (let i = 0; i < total; i++)
+                (0, exports.deleteCookie)(`${prefix}_${i}`);
+        }
+        (0, exports.deleteCookie)(`${prefix}_meta`);
+    }
+    // Write new chunks
+    const total = Math.ceil(value.length / CHUNK_SIZE) || 1;
+    for (let i = 0; i < total; i++) {
+        const slice = value.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+        (0, exports.setCookie)(`${prefix}_${i}`, slice, maxAgeDays);
+    }
+    (0, exports.setCookie)(`${prefix}_meta`, String(total), maxAgeDays);
+};
+exports.setCookieChunks = setCookieChunks;
+const getCookieChunks = (prefix) => {
+    const meta = (0, exports.getCookie)(`${prefix}_meta`);
+    if (!meta)
+        return null;
+    const total = parseInt(meta, 10);
+    if (!Number.isFinite(total) || total <= 0)
+        return null;
+    let out = "";
+    for (let i = 0; i < total; i++) {
+        const chunk = (0, exports.getCookie)(`${prefix}_${i}`);
+        if (chunk === null)
+            return null;
+        out += chunk;
+    }
+    return out;
+};
+exports.getCookieChunks = getCookieChunks;
 
 
 /***/ }),
