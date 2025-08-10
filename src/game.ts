@@ -509,6 +509,8 @@ export class Game {
     this.currentDepth = 0;
     this.encounteredEnemies = [];
     this.levels = [];
+    // Reset path context to main for a fresh world
+    (this as any).currentPathId = "main";
     //gs = new GameState();
     gs.seed = seed ?? (Math.random() * 4294967296) >>> 0;
     gs.randomState = gs.seed;
