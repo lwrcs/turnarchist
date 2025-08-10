@@ -24,7 +24,8 @@ export const loadFromCookies = async (game: Game) => {
   }
   try {
     const state = JSON.parse(json);
-    const activeUsernames = Object.keys(game.players || {});
+    // Ensure local player is considered active so loadGameState selects and sets current room
+    const activeUsernames = [game.localPlayerID];
     await loadGameState(game, activeUsernames, state, false);
     game.pushMessage?.("Loaded from cookies.");
   } catch (e) {

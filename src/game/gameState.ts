@@ -1925,7 +1925,14 @@ export const loadGameState = (
                 // Ensure pathId is restored
                 if ((roomState as any).pathId)
                   (roomRef as any).pathId = (roomState as any).pathId;
-                loadRoom(roomRef, roomState, game);
+                // Temporarily set context so any loaders that reference game.room are safe
+                const prevRoom = game.room;
+                try {
+                  game.room = roomRef;
+                  loadRoom(roomRef, roomState, game);
+                } finally {
+                  game.room = prevRoom;
+                }
                 console.log(
                   `✅ LOAD: Successfully loaded room ${roomState.roomGID ?? roomState.roomID}`,
                 );
@@ -2141,9 +2148,11 @@ export const loadGameState = (
           console.log("✅ LOAD: New world created");
         }
 
-        // Update lighting
-        console.log("🔄 LOAD: Updating room lighting");
-        game.room.updateLighting();
+        // Update lighting (guard nulls)
+        try {
+          console.log("🔄 LOAD: Updating room lighting");
+          game.room?.updateLighting?.();
+        } catch {}
 
         // Clear chat
         game.chat = [];

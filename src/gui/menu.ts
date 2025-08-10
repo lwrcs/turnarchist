@@ -109,6 +109,44 @@ export class Menu {
       this,
     );
     this.addButton(smoothButton);
+
+    const saveBtn = new guiButton(
+      0,
+      0,
+      0,
+      0,
+      "Save Game",
+      () => {
+        try {
+          const { saveToCookies } = require("../game/savePersistence");
+          saveToCookies(this.player.game);
+        } catch (e) {
+          this.player.game.pushMessage("Save failed.");
+        }
+      },
+      false,
+      this,
+    );
+    this.addButton(saveBtn);
+
+    const loadBtn = new guiButton(
+      0,
+      0,
+      0,
+      0,
+      "Load Game",
+      () => {
+        try {
+          const { loadFromCookies } = require("../game/savePersistence");
+          loadFromCookies(this.player.game);
+        } catch (e) {
+          this.player.game.pushMessage("Load failed.");
+        }
+      },
+      false,
+      this,
+    );
+    this.addButton(loadBtn);
     //this.addButton(new guiButton(0, 0, 0, 0, "Exit", this.exitGame));
     this.positionButtons();
   }

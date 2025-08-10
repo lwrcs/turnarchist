@@ -511,6 +511,26 @@ export class Game {
     this.levels = [];
     // Reset path context to main for a fresh world
     (this as any).currentPathId = "main";
+    // Attempt auto-load from cookies/localStorage if a save exists
+    try {
+      const { getCookie } = require("./utility/cookies");
+      const hasSave = !!getCookie("wr_save_meta");
+      if (hasSave) {
+        this.pushMessage?.("Auto-loading saved game...");
+        const { loadFromCookies } = require("./game/savePersistence");
+        loadFromCookies(this).then(() => {
+          try {
+            const { loadSettings } = require("./game/settingsPersistence");
+            loadSettings(this);
+          } catch {}
+          // Start replay recording using the loaded seed
+          this.replayManager.beginRecording(this.levelgen.seed, this);
+        });
+        return;
+      }
+    } catch {}
+
+    // No cookie save found: start a fresh world
     //gs = new GameState();
     gs.seed = seed ?? (Math.random() * 4294967296) >>> 0;
     gs.randomState = gs.seed;
@@ -1109,6 +1129,30 @@ export class Game {
   private setupEventListeners(): void {
     //console.log("Setting up event listeners");
     globalEventBus.on("ChatCommand", this.commandHandler.bind(this));
+    try {
+      // Save on tab close/refresh and when page becomes hidden
+      const saveOnExit = () => {
+        try {
+          const { saveToCookies } = require("./game/savePersistence");
+          // Avoid heavy work in beforeunload; keep it minimal
+          saveToCookies(this);
+        } catch {}
+      };
+      window.addEventListener("beforeunload", saveOnExit);
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "hidden") saveOnExit();
+      });
+      window.addEventListener("pagehide", saveOnExit);
+      window.addEventListener("unload", () => {
+        try {
+          const { Sound } = require("./sound/sound");
+          Sound.cleanup?.();
+        } catch {}
+      });
+      // Save on back/forward navigation
+      window.addEventListener("popstate", saveOnExit);
+      window.addEventListener("hashchange", saveOnExit);
+    } catch {}
   }
 
   private generateAndShowRoomLayout(): void {

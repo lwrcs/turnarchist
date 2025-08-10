@@ -12355,6 +12355,27 @@ class Game {
             this.levels = [];
             // Reset path context to main for a fresh world
             this.currentPathId = "main";
+            // Attempt auto-load from cookies/localStorage if a save exists
+            try {
+                const { getCookie } = __webpack_require__(/*! ./utility/cookies */ "./src/utility/cookies.ts");
+                const hasSave = !!getCookie("wr_save_meta");
+                if (hasSave) {
+                    this.pushMessage?.("Auto-loading saved game...");
+                    const { loadFromCookies } = __webpack_require__(/*! ./game/savePersistence */ "./src/game/savePersistence.ts");
+                    loadFromCookies(this).then(() => {
+                        try {
+                            const { loadSettings } = __webpack_require__(/*! ./game/settingsPersistence */ "./src/game/settingsPersistence.ts");
+                            loadSettings(this);
+                        }
+                        catch { }
+                        // Start replay recording using the loaded seed
+                        this.replayManager.beginRecording(this.levelgen.seed, this);
+                    });
+                    return;
+                }
+            }
+            catch { }
+            // No cookie save found: start a fresh world
             //gs = new GameState();
             exports.gs.seed = seed ?? (Math.random() * 4294967296) >>> 0;
             exports.gs.randomState = exports.gs.seed;
@@ -13679,6 +13700,34 @@ class Game {
     setupEventListeners() {
         //console.log("Setting up event listeners");
         eventBus_1.globalEventBus.on("ChatCommand", this.commandHandler.bind(this));
+        try {
+            // Save on tab close/refresh and when page becomes hidden
+            const saveOnExit = () => {
+                try {
+                    const { saveToCookies } = __webpack_require__(/*! ./game/savePersistence */ "./src/game/savePersistence.ts");
+                    // Avoid heavy work in beforeunload; keep it minimal
+                    saveToCookies(this);
+                }
+                catch { }
+            };
+            window.addEventListener("beforeunload", saveOnExit);
+            document.addEventListener("visibilitychange", () => {
+                if (document.visibilityState === "hidden")
+                    saveOnExit();
+            });
+            window.addEventListener("pagehide", saveOnExit);
+            window.addEventListener("unload", () => {
+                try {
+                    const { Sound } = __webpack_require__(/*! ./sound/sound */ "./src/sound/sound.ts");
+                    Sound.cleanup?.();
+                }
+                catch { }
+            });
+            // Save on back/forward navigation
+            window.addEventListener("popstate", saveOnExit);
+            window.addEventListener("hashchange", saveOnExit);
+        }
+        catch { }
     }
     generateAndShowRoomLayout() {
         // Generate different patterns
@@ -16134,7 +16183,15 @@ const loadGameState = (game, activeUsernames, gameState, newWorld) => {
                             // Ensure pathId is restored
                             if (roomState.pathId)
                                 roomRef.pathId = roomState.pathId;
-                            loadRoom(roomRef, roomState, game);
+                            // Temporarily set context so any loaders that reference game.room are safe
+                            const prevRoom = game.room;
+                            try {
+                                game.room = roomRef;
+                                loadRoom(roomRef, roomState, game);
+                            }
+                            finally {
+                                game.room = prevRoom;
+                            }
                             console.log(`✅ LOAD: Successfully loaded room ${roomState.roomGID ?? roomState.roomID}`);
                         }
                         else {
@@ -16321,9 +16378,12 @@ const loadGameState = (game, activeUsernames, gameState, newWorld) => {
                 game.players[game.localPlayerID].map.saveMapData();
                 console.log("✅ LOAD: New world created");
             }
-            // Update lighting
-            console.log("🔄 LOAD: Updating room lighting");
-            game.room.updateLighting();
+            // Update lighting (guard nulls)
+            try {
+                console.log("🔄 LOAD: Updating room lighting");
+                game.room?.updateLighting?.();
+            }
+            catch { }
             // Clear chat
             game.chat = [];
             console.log("🔄 LOAD: Cleared chat");
@@ -17367,7 +17427,8 @@ const loadFromCookies = async (game) => {
     }
     try {
         const state = JSON.parse(json);
-        const activeUsernames = Object.keys(game.players || {});
+        // Ensure local player is considered active so loadGameState selects and sets current room
+        const activeUsernames = [game.localPlayerID];
         await (0, gameState_1.loadGameState)(game, activeUsernames, state, false);
         game.pushMessage?.("Loaded from cookies.");
     }
@@ -18308,6 +18369,26 @@ class Menu {
             catch { }
         }, false, this);
         this.addButton(smoothButton);
+        const saveBtn = new guiButton_1.guiButton(0, 0, 0, 0, "Save Game", () => {
+            try {
+                const { saveToCookies } = __webpack_require__(/*! ../game/savePersistence */ "./src/game/savePersistence.ts");
+                saveToCookies(this.player.game);
+            }
+            catch (e) {
+                this.player.game.pushMessage("Save failed.");
+            }
+        }, false, this);
+        this.addButton(saveBtn);
+        const loadBtn = new guiButton_1.guiButton(0, 0, 0, 0, "Load Game", () => {
+            try {
+                const { loadFromCookies } = __webpack_require__(/*! ../game/savePersistence */ "./src/game/savePersistence.ts");
+                loadFromCookies(this.player.game);
+            }
+            catch (e) {
+                this.player.game.pushMessage("Load failed.");
+            }
+        }, false, this);
+        this.addButton(loadBtn);
         //this.addButton(new guiButton(0, 0, 0, 0, "Exit", this.exitGame));
         this.positionButtons();
     }
