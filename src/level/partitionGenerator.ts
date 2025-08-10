@@ -266,9 +266,9 @@ export class PartitionGenerator {
   async generateCavePartitions(
     mapWidth: number,
     mapHeight: number,
+    numberOfRooms: number = 8,
   ): Promise<Partition[]> {
     const partialLevel = new PartialLevel();
-    const numberOfRooms = 8;
     let validationResult: ValidationResult;
     let attempts = 0;
 

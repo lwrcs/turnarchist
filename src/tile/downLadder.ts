@@ -20,6 +20,7 @@ export class DownLadder extends Passageway {
   depth: number;
   environment: EnvType;
   lockable: Lockable;
+  opts?: { caveRooms?: number; mapWidth?: number; mapHeight?: number };
 
   constructor(
     room: Room,
@@ -29,12 +30,14 @@ export class DownLadder extends Passageway {
     isSidePath: boolean = false,
     environment: EnvType = EnvType.DUNGEON,
     lockType: LockType = LockType.NONE,
+    opts?: { caveRooms?: number; mapWidth?: number; mapHeight?: number },
   ) {
     super(room, game, x, y);
     this.linkedRoom = null;
     this.depth = room.depth;
     this.isSidePath = isSidePath;
     this.environment = environment;
+    this.opts = opts;
     const lock =
       isSidePath && !GameConstants.DEVELOPER_MODE
         ? LockType.LOCKED
@@ -56,11 +59,17 @@ export class DownLadder extends Passageway {
   generate = async () => {
     if (!this.linkedRoom) {
       const targetDepth = this.room.depth + (this.isSidePath ? 0 : 1);
-      // Assign a unique pathId for this sidepath based on this ladder's GID
-      const ladderGid: string =
+      // Assign a deterministic pathId for this sidepath based on coordinates (stable across runs)
+      // Include parent path to allow nested sidepaths to be unique
+      const parentPid: string = (this.game as any).currentPathId || "main";
+      const roomAnchor = `${this.room.depth}:${this.room.roomX},${this.room.roomY}`;
+      const tileAnchor = `${this.x},${this.y}`;
+      const coordPid = `sp:${parentPid}:${roomAnchor}:${tileAnchor}`;
+      const legacyGid: string =
         ((this as any).globalId as string) ||
         `${(this.room as any).globalId}:${this.x},${this.y}`;
-      const pathId = this.isSidePath ? `sp:${ladderGid}` : "main";
+      // Prefer coordinate-based pid; fall back to legacy GID-based for old saves
+      const pathId = this.isSidePath ? coordPid : "main";
       await this.game.levelgen.generate(
         this.game,
         targetDepth,
@@ -69,6 +78,8 @@ export class DownLadder extends Passageway {
         this.environment,
         false,
         pathId,
+        // Optionally make some caves smaller; tweak or randomize as desired
+        this.opts,
       );
     } else {
       console.log("LinkedRoom already exists:", this.linkedRoom);

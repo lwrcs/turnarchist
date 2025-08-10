@@ -15774,6 +15774,19 @@ const createGameState = (game) => {
                 throw error;
             }
         }
+        // Save sidepath metadata: count rooms per non-main pathId
+        try {
+            const byPid = new Map();
+            for (const rs of gs.rooms) {
+                const pid = rs.pathId || "main";
+                if (pid === "main")
+                    continue;
+                byPid.set(pid, (byPid.get(pid) || 0) + 1);
+            }
+            gs.sidepathMeta = Array.from(byPid.entries()).map(([pathId, rooms]) => ({ pathId, rooms }));
+            console.log("🧭 SAVE: sidepathMeta", gs.sidepathMeta);
+        }
+        catch { }
         console.log("✅ SAVE: GameState creation completed successfully");
         console.log("🔄 SAVE: Final GameState summary:", {
             seed: gs.seed,
@@ -15898,7 +15911,13 @@ const loadGameState = (game, activeUsernames, gameState, newWorld) => {
                         continue;
                     const beforeCount = game.rooms.length;
                     console.log("🧭 LOAD: Generating sidepath for pathId:", sp.pid, "rooms before:", beforeCount);
-                    await game.levelgen.generate(game, gameState.level.depth, true, () => { }, gameState.level.envType, !newWorld, sp.pid);
+                    await game.levelgen.generate(game, gameState.level.depth, true, () => { }, gameState.level.envType, !newWorld, sp.pid, 
+                    // Use saved sidepath room count if available for determinism
+                    gameState.sidepathMeta
+                        ? {
+                            caveRooms: gameState.sidepathMeta.find((m) => m.pathId === sp.pid)?.rooms ?? undefined,
+                        }
+                        : undefined);
                     const afterCount = game.rooms.length;
                     const added = game.rooms.filter((r) => r.pathId === sp.pid);
                     // Stash now because subsequent generate() calls will overwrite game.rooms
@@ -24919,7 +24938,7 @@ class LevelGenerator {
             this.seed = seed;
         };
         this.generate = async (game, depth, isSidePath = false, callback, environment = environmentTypes_1.EnvType.DUNGEON, skipPopulation = false, // Add this parameter
-        pathId) => {
+        pathId, opts) => {
             // Initialize components with game instance
             if (!this.partitionGenerator) {
                 this.partitionGenerator = new partitionGenerator_1.PartitionGenerator(game);
@@ -24969,7 +24988,10 @@ class LevelGenerator {
             else {
                 // Use procedural generation for side paths OR when PNG is disabled
                 if (isSidePath) {
-                    partitions = await this.partitionGenerator.generateCavePartitions(50, 50);
+                    const mw = opts?.mapWidth ?? 50;
+                    const mh = opts?.mapHeight ?? 50;
+                    const caveRooms = opts?.caveRooms ?? 8;
+                    partitions = await this.partitionGenerator.generateCavePartitions(mw, mh, caveRooms);
                 }
                 else {
                     partitions = await this.partitionGenerator.generateDungeonPartitions(game, this.levelParams.mapWidth, this.levelParams.mapHeight, depth, this.levelParams);
@@ -26107,9 +26129,8 @@ class PartitionGenerator {
         console.log("finished generation");
         return partialLevel.partitions;
     }
-    async generateCavePartitions(mapWidth, mapHeight) {
+    async generateCavePartitions(mapWidth, mapHeight, numberOfRooms = 8) {
         const partialLevel = new PartialLevel();
-        const numberOfRooms = 8;
         let validationResult;
         let attempts = 0;
         this.visualizer.updateProgress("Starting cave generation", 0);
@@ -33865,9 +33886,7 @@ class Populator {
                 this.populateByEnvironment(room);
             });
             // Centralized torch, spike, and pool addition
-            this.addDownladder();
-            this.addDownladder();
-            this.addDownladder();
+            this.addDownladder({ caveRooms: 2 });
             //this.level.distributeKeys();
         };
         this.populateByEnvironment = (room) => {
@@ -33883,7 +33902,7 @@ class Populator {
                     break;
             }
         };
-        this.addDownladder = () => {
+        this.addDownladder = (opts) => {
             if (this.level.environment.type !== environmentTypes_1.EnvType.DUNGEON)
                 return;
             const rooms = this.level.rooms.filter((room) => room.type !== room_1.RoomType.START &&
@@ -33913,7 +33932,7 @@ class Populator {
                         ? environmentTypes_1.EnvType.FOREST
                         : environmentTypes_1.EnvType.CAVE
                     : environmentTypes_1.EnvType.CAVE;
-            const dl = new downLadder_1.DownLadder(downLadderRoom, this.level.game, position.x, position.y, true, env, lockable_1.LockType.NONE);
+            const dl = new downLadder_1.DownLadder(downLadderRoom, this.level.game, position.x, position.y, true, env, lockable_1.LockType.NONE, opts);
             if (dl.lockable.isLocked()) {
                 console.log("adding key to downladder");
                 this.level.distributeKey(dl);
@@ -36220,7 +36239,7 @@ const environmentTypes_1 = __webpack_require__(/*! ../constants/environmentTypes
 const lockable_1 = __webpack_require__(/*! ./lockable */ "./src/tile/lockable.ts");
 const passageway_1 = __webpack_require__(/*! ./passageway */ "./src/tile/passageway.ts");
 class DownLadder extends passageway_1.Passageway {
-    constructor(room, game, x, y, isSidePath = false, environment = environmentTypes_1.EnvType.DUNGEON, lockType = lockable_1.LockType.NONE) {
+    constructor(room, game, x, y, isSidePath = false, environment = environmentTypes_1.EnvType.DUNGEON, lockType = lockable_1.LockType.NONE, opts) {
         super(room, game, x, y);
         this.isSidePath = false;
         this.getName = () => {
@@ -36229,11 +36248,19 @@ class DownLadder extends passageway_1.Passageway {
         this.generate = async () => {
             if (!this.linkedRoom) {
                 const targetDepth = this.room.depth + (this.isSidePath ? 0 : 1);
-                // Assign a unique pathId for this sidepath based on this ladder's GID
-                const ladderGid = this.globalId ||
+                // Assign a deterministic pathId for this sidepath based on coordinates (stable across runs)
+                // Include parent path to allow nested sidepaths to be unique
+                const parentPid = this.game.currentPathId || "main";
+                const roomAnchor = `${this.room.depth}:${this.room.roomX},${this.room.roomY}`;
+                const tileAnchor = `${this.x},${this.y}`;
+                const coordPid = `sp:${parentPid}:${roomAnchor}:${tileAnchor}`;
+                const legacyGid = this.globalId ||
                     `${this.room.globalId}:${this.x},${this.y}`;
-                const pathId = this.isSidePath ? `sp:${ladderGid}` : "main";
-                await this.game.levelgen.generate(this.game, targetDepth, this.isSidePath, this.handleLinkedRoom, this.environment, false, pathId);
+                // Prefer coordinate-based pid; fall back to legacy GID-based for old saves
+                const pathId = this.isSidePath ? coordPid : "main";
+                await this.game.levelgen.generate(this.game, targetDepth, this.isSidePath, this.handleLinkedRoom, this.environment, false, pathId, 
+                // Optionally make some caves smaller; tweak or randomize as desired
+                this.opts);
             }
             else {
                 console.log("LinkedRoom already exists:", this.linkedRoom);
@@ -36331,6 +36358,7 @@ class DownLadder extends passageway_1.Passageway {
         this.depth = room.depth;
         this.isSidePath = isSidePath;
         this.environment = environment;
+        this.opts = opts;
         const lock = isSidePath && !gameConstants_1.GameConstants.DEVELOPER_MODE
             ? lockable_1.LockType.LOCKED
             : lockable_1.LockType.NONE;

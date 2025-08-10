@@ -1376,6 +1376,7 @@ export class GameState {
   levelGID?: string;
   roomGIDs?: string[];
   currentPathId?: string;
+  sidepathMeta?: Array<{ pathId: string; rooms: number }>;
 
   constructor() {
     this.seed = 0;
@@ -1520,6 +1521,20 @@ export const createGameState = (game: Game): GameState => {
         throw error;
       }
     }
+
+    // Save sidepath metadata: count rooms per non-main pathId
+    try {
+      const byPid = new Map<string, number>();
+      for (const rs of gs.rooms) {
+        const pid = ((rs as any).pathId as string) || "main";
+        if (pid === "main") continue;
+        byPid.set(pid, (byPid.get(pid) || 0) + 1);
+      }
+      (gs as any).sidepathMeta = Array.from(byPid.entries()).map(
+        ([pathId, rooms]) => ({ pathId, rooms }),
+      );
+      console.log("🧭 SAVE: sidepathMeta", (gs as any).sidepathMeta);
+    } catch {}
 
     console.log("✅ SAVE: GameState creation completed successfully");
     console.log("🔄 SAVE: Final GameState summary:", {
@@ -1675,6 +1690,15 @@ export const loadGameState = (
               gameState.level.envType,
               !newWorld,
               sp.pid,
+              // Use saved sidepath room count if available for determinism
+              (gameState as any).sidepathMeta
+                ? {
+                    caveRooms:
+                      (gameState as any).sidepathMeta.find(
+                        (m) => m.pathId === sp.pid,
+                      )?.rooms ?? undefined,
+                  }
+                : undefined,
             );
             const afterCount = game.rooms.length;
             const added = game.rooms.filter(

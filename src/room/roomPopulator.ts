@@ -122,9 +122,7 @@ export class Populator {
 
     // Centralized torch, spike, and pool addition
 
-    this.addDownladder();
-    this.addDownladder();
-    this.addDownladder();
+    this.addDownladder({ caveRooms: 2 });
 
     //this.level.distributeKeys();
   };
@@ -143,7 +141,11 @@ export class Populator {
     }
   };
 
-  addDownladder = () => {
+  addDownladder = (opts?: {
+    caveRooms?: number;
+    mapWidth?: number;
+    mapHeight?: number;
+  }) => {
     if (this.level.environment.type !== EnvType.DUNGEON) return;
     const rooms = this.level.rooms.filter(
       (room) =>
@@ -197,6 +199,7 @@ export class Populator {
       true,
       env,
       LockType.NONE,
+      opts,
     );
     if (dl.lockable.isLocked()) {
       console.log("adding key to downladder");

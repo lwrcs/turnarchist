@@ -151,6 +151,7 @@ export class LevelGenerator {
     environment: EnvType = EnvType.DUNGEON,
     skipPopulation = false, // Add this parameter
     pathId?: string,
+    opts?: { caveRooms?: number; mapWidth?: number; mapHeight?: number },
   ) => {
     // Initialize components with game instance
     if (!this.partitionGenerator) {
@@ -223,9 +224,13 @@ export class LevelGenerator {
     } else {
       // Use procedural generation for side paths OR when PNG is disabled
       if (isSidePath) {
+        const mw = opts?.mapWidth ?? 50;
+        const mh = opts?.mapHeight ?? 50;
+        const caveRooms = opts?.caveRooms ?? 8;
         partitions = await this.partitionGenerator.generateCavePartitions(
-          50,
-          50,
+          mw,
+          mh,
+          caveRooms,
         );
       } else {
         partitions = await this.partitionGenerator.generateDungeonPartitions(
