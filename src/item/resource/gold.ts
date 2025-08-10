@@ -20,6 +20,12 @@ export class Gold extends Item {
   }
 
   smelt = (player: Player) => {
+    if (player.inventory.isFull()) {
+      this.level.game.pushMessage(
+        `You don't have enough space in your inventory to smelt the gold ore.`,
+      );
+      return;
+    }
     if (this.stackCount >= 3) {
       player.inventory.subtractItem(this, 3);
       player.inventory.addItem(new GoldBar(this.level, this.x, this.y));
