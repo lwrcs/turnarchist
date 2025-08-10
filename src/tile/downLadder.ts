@@ -56,12 +56,19 @@ export class DownLadder extends Passageway {
   generate = async () => {
     if (!this.linkedRoom) {
       const targetDepth = this.room.depth + (this.isSidePath ? 0 : 1);
+      // Assign a unique pathId for this sidepath based on this ladder's GID
+      const ladderGid: string =
+        ((this as any).globalId as string) ||
+        `${(this.room as any).globalId}:${this.x},${this.y}`;
+      const pathId = this.isSidePath ? `sp:${ladderGid}` : "main";
       await this.game.levelgen.generate(
         this.game,
         targetDepth,
         this.isSidePath,
         this.handleLinkedRoom,
         this.environment,
+        false,
+        pathId,
       );
     } else {
       console.log("LinkedRoom already exists:", this.linkedRoom);
@@ -135,6 +142,13 @@ export class DownLadder extends Passageway {
       globalEventBus.emit(EVENTS.LEVEL_GENERATION_STARTED, {});
       this.generate().then(() => {
         globalEventBus.emit(EVENTS.LEVEL_GENERATION_COMPLETED, {});
+        // Switch active path to this ladder's sidepath before transitioning
+        if (this.isSidePath && this.linkedRoom) {
+          (this.game as any).currentPathId =
+            this.linkedRoom.pathId ||
+            (this.game as any).currentPathId ||
+            "main";
+        }
         for (const i in this.game.players) {
           this.game.changeLevelThroughLadder(this.game.players[i], this);
         }

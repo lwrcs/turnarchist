@@ -70,6 +70,9 @@ export class Level {
   game: Game;
   rooms: Room[];
   roomsById: Map<string, Room>;
+  // Group rooms by path identifier
+  paths: Map<string, Room[]> = new Map();
+  pathsById: Map<string, Map<string, Room>> = new Map();
   environment: Environment;
   exitRoom: Room;
   startRoom: Room;
@@ -205,9 +208,16 @@ export class Level {
     this.setExitRoom();
     this.setStartRoom();
     this.roomsById.clear();
+    this.paths.clear();
+    this.pathsById.clear();
     rooms.forEach((room) => {
       room.id = this.rooms.indexOf(room);
       this.roomsById.set(room.globalId, room);
+      const pid = room.pathId || "main";
+      if (!this.paths.has(pid)) this.paths.set(pid, []);
+      if (!this.pathsById.has(pid)) this.pathsById.set(pid, new Map());
+      this.paths.get(pid)!.push(room);
+      this.pathsById.get(pid)!.set(room.globalId, room);
     });
     this.game.roomsById = new Map(rooms.map((r) => [r.globalId, r]));
   }

@@ -12284,6 +12284,8 @@ class Game {
         return Game._replayManager;
     }
     constructor() {
+        // Active path identifier for filtering draw/update
+        this.currentPathId = "main";
         this.localPlayerID = "localplayer";
         this.loginMessage = "";
         this.startScreenAlpha = 1;
@@ -12994,12 +12996,17 @@ class Game {
         this.drawRooms = (delta, skipLocalPlayer = false) => {
             if (!gameConstants_1.GameConstants.drawOtherRooms) {
                 // Ensure current room is drawn even if flags are stale
+                if (!this.room || this.room.pathId !== this.currentPathId)
+                    return;
                 this.room.draw(delta);
                 this.room.drawEntities(delta, true);
             }
             else if (gameConstants_1.GameConstants.drawOtherRooms) {
                 // Create a sorted copy of the rooms array based on roomY + height
-                const sortedRooms = this.rooms.slice().sort((a, b) => {
+                const sortedRooms = this.rooms
+                    .filter((r) => r.pathId === this.currentPathId)
+                    .slice()
+                    .sort((a, b) => {
                     const aPosition = a.roomY + a.height;
                     const bPosition = b.roomY + b.height;
                     return aPosition - bPosition; // Ascending order
@@ -13016,6 +13023,8 @@ class Game {
         };
         this.drawRoomShadeAndColor = (delta) => {
             for (const room of this.rooms) {
+                if (room.pathId !== this.currentPathId)
+                    continue;
                 const shouldDraw = room === this.room || room.active || room.entered;
                 if (shouldDraw) {
                     room.drawShadeLayer();
@@ -13024,6 +13033,8 @@ class Game {
                 }
             }
             for (const room of this.rooms) {
+                if (room.pathId !== this.currentPathId)
+                    continue;
                 const shouldDrawOver = room === this.room || (room.active && room.entered);
                 if (shouldDrawOver) {
                     room.drawOverShade(delta);
@@ -14943,6 +14954,7 @@ class RoomState {
     constructor(room, game) {
         this.roomID = game.rooms.indexOf(room);
         this.roomGID = room.globalId;
+        this.pathId = room.pathId || "main";
         this.entered = room.entered;
         this.envType = room.envType;
         this.skin = room.skin;
@@ -14995,6 +15007,8 @@ class RoomState {
 }
 exports.RoomState = RoomState;
 let loadRoom = (room, roomState, game) => {
+    if (roomState.pathId)
+        room.pathId = roomState.pathId;
     room.entered = roomState.entered;
     if (roomState.envType !== undefined) {
         room.envType = roomState.envType;
@@ -15715,6 +15729,11 @@ const createGameState = (game) => {
                 throw error;
             }
         }
+        // Persist current path
+        try {
+            gs.currentPathId = game.currentPathId || "main";
+        }
+        catch { }
         // Save rooms
         console.log("🔄 SAVE: Processing rooms...");
         try {
@@ -15851,67 +15870,118 @@ const loadGameState = (game, activeUsernames, gameState, newWorld) => {
             catch { }
             console.log("🔄 LOAD: Generated rooms count:", game.rooms.length);
             eventBus_1.globalEventBus.emit(events_1.EVENTS.LEVEL_GENERATION_COMPLETED, {});
-            // Ensure sidepath groups from save exist before hydrating state
+            // Pre-generate sidepaths deterministically by saved pathIds (avoids coordinate mismatch)
             try {
-                // Log current group distribution before any sidepath gen
-                try {
-                    const groupCounts = {};
-                    for (const r of game.rooms) {
-                        groupCounts[r.mapGroup] = (groupCounts[r.mapGroup] || 0) + 1;
-                    }
-                    console.log("🧭 LOAD: Current group distribution:", groupCounts);
+                const roomStates = gameState.rooms || [];
+                // Collect unique non-main pathIds and their smallest saved mapGroup to preserve ordering
+                const pathIdToMinGroup = new Map();
+                for (const rs of roomStates) {
+                    const pid = rs.pathId;
+                    if (!pid || pid === "main")
+                        continue;
+                    const mg = rs.mapGroup;
+                    if (typeof mg !== "number")
+                        continue;
+                    const prev = pathIdToMinGroup.get(pid);
+                    if (prev === undefined || mg < prev)
+                        pathIdToMinGroup.set(pid, mg);
                 }
-                catch { }
-                const savedGroups = Array.from(new Set((gameState.rooms || [])
-                    .map((rs) => rs.mapGroup)
-                    .filter((g) => typeof g === "number")));
-                console.log("🧭 LOAD: Saved mapGroups from save:", savedGroups);
-                const currentMaxGroup = game.rooms.length
-                    ? game.rooms[game.rooms.length - 1].mapGroup
-                    : -1;
-                console.log("🧭 LOAD: currentMaxGroup:", currentMaxGroup);
-                const targetMaxGroup = savedGroups.length
-                    ? Math.max(...savedGroups)
-                    : currentMaxGroup;
-                console.log("🧭 LOAD: targetMaxGroup:", targetMaxGroup);
-                for (let g = currentMaxGroup + 1; g <= targetMaxGroup; g++) {
-                    console.log("🧭 LOAD: Generating missing sidepath group:", g);
-                    await game.levelgen.generate(game, gameState.level.depth, true, () => { }, gameState.level.envType, !newWorld);
-                    try {
-                        const groupCountsAfter = {};
-                        for (const r of game.rooms) {
-                            groupCountsAfter[r.mapGroup] =
-                                (groupCountsAfter[r.mapGroup] || 0) + 1;
-                        }
-                        console.log("🧭 LOAD: Group distribution after sidepath gen:", groupCountsAfter);
-                    }
-                    catch { }
+                const sidepaths = Array.from(pathIdToMinGroup.entries())
+                    .map(([pid, mg]) => ({ pid, mg }))
+                    .sort((a, b) => a.mg - b.mg);
+                console.log("🧭 LOAD: Sidepaths to generate by pathId (sorted by min mapGroup):", sidepaths);
+                // Collect rooms for all generated sidepaths, since generate() replaces game.rooms each time
+                const collectedSideRooms = [];
+                for (const sp of sidepaths) {
+                    const alreadyExists = game.rooms.some((r) => r.pathId === sp.pid);
+                    if (alreadyExists)
+                        continue;
+                    const beforeCount = game.rooms.length;
+                    console.log("🧭 LOAD: Generating sidepath for pathId:", sp.pid, "rooms before:", beforeCount);
+                    await game.levelgen.generate(game, gameState.level.depth, true, () => { }, gameState.level.envType, !newWorld, sp.pid);
+                    const afterCount = game.rooms.length;
+                    const added = game.rooms.filter((r) => r.pathId === sp.pid);
+                    // Stash now because subsequent generate() calls will overwrite game.rooms
+                    for (const r of added)
+                        collectedSideRooms.push(r);
+                    console.log("🧭 LOAD: Generated sidepath", sp.pid, "rooms after:", afterCount, "added rooms for path:", added.length, added.map((r) => ({
+                        gid: r.globalId,
+                        mg: r.mapGroup,
+                        id: r.id,
+                        type: r.type,
+                    })));
                 }
-                // Merge any currently generated sidepath rooms into the active level's rooms
+                // Merge any newly generated rooms into the active level
                 const activeLevel = game.levels[gameState.level.depth];
                 if (activeLevel) {
                     const existingGids = new Set(activeLevel.rooms.map((r) => r.globalId));
-                    const sideRooms = game.rooms.filter((r) => !existingGids.has(r.globalId));
+                    const newRooms = collectedSideRooms
+                        .filter((r) => !existingGids.has(r.globalId))
+                        // Preserve path grouping order from save: sort by (pathId, mapGroup, id)
+                        .sort((a, b) => {
+                        const pa = a.pathId || "main";
+                        const pb = b.pathId || "main";
+                        if (pa !== pb)
+                            return pa < pb ? -1 : 1;
+                        if (a.mapGroup !== b.mapGroup)
+                            return a.mapGroup - b.mapGroup;
+                        return a.id - b.id;
+                    });
                     let merged = 0;
                     let startId = activeLevel.rooms.length;
-                    for (const r of sideRooms) {
+                    for (const r of newRooms) {
                         r.id = startId + merged;
                         activeLevel.rooms.push(r);
                         merged++;
                     }
-                    console.log("🧭 LOAD: Merged sidepath rooms into level.rooms", {
-                        merged,
-                        newLevelRoomsLen: activeLevel.rooms.length,
-                    });
-                    // Make game.rooms reflect the canonical level.rooms
                     game.rooms = activeLevel.rooms;
                     game.roomsById = new Map(game.rooms.map((r) => [r.globalId, r]));
+                    console.log("🧭 LOAD: Merged", merged, "rooms from sidepaths by pathId");
+                    try {
+                        const byPath = {};
+                        const byGroup = {};
+                        for (const r of game.rooms) {
+                            const pid = r.pathId || "main";
+                            byPath[pid] = (byPath[pid] || 0) + 1;
+                            byGroup[r.mapGroup] = (byGroup[r.mapGroup] || 0) + 1;
+                        }
+                        console.log("🧭 LOAD: Post-merge distribution", {
+                            byPath,
+                            byGroup,
+                        });
+                    }
+                    catch { }
                 }
             }
             catch (e) {
-                console.warn("⚠️ LOAD: Failed to pre-generate sidepath groups; proceeding with fallback room resolution", e);
+                console.warn("⚠️ LOAD: Sidepath generation by pathId failed", e);
             }
             if (!newWorld) {
+                // Pre-pass: align generated room GIDs with saved roomGIDs so GID-based linking works
+                try {
+                    const newRoomsByGid = new Map();
+                    for (const rs of gameState.rooms) {
+                        if (!rs?.roomGID)
+                            continue;
+                        // Try to find the intended generated room using the same resolution we use later
+                        let candidate = (rs.roomGID && game.getRoomById(rs.roomGID)) ||
+                            game.rooms.find((r) => r.mapGroup === rs.mapGroup &&
+                                r.pathId === (rs.pathId || "main") &&
+                                r.id === rs.roomID) ||
+                            game.rooms.find((r) => r.mapGroup === rs.mapGroup && r.id === rs.roomID) ||
+                            game.rooms.find((r) => r.id === rs.roomID);
+                        if (candidate && candidate.globalId !== rs.roomGID) {
+                            try {
+                                IdGenerator_1.IdGenerator.reserve(rs.roomGID);
+                                candidate.globalId = rs.roomGID;
+                            }
+                            catch { }
+                        }
+                    }
+                    // Rebuild roomsById map with possibly updated GIDs
+                    game.roomsById = new Map(game.rooms.map((r) => [r.globalId, r]));
+                }
+                catch { }
                 console.log("🔄 LOAD: Loading existing world state");
                 // Load players
                 console.log("🔄 LOAD: Loading players...");
@@ -15950,13 +16020,67 @@ const loadGameState = (game, activeUsernames, gameState, newWorld) => {
                 console.log("🔄 LOAD: Loading room states...");
                 try {
                     for (const roomState of gameState.rooms) {
-                        const room = (roomState.roomGID && game.getRoomById(roomState.roomGID)) ||
-                            game.rooms.find((r) => r.mapGroup === roomState.mapGroup &&
-                                r.id === roomState.roomID) ||
-                            game.rooms.find((r) => r.id === roomState.roomID);
-                        if (room) {
+                        let resolvedBy = "";
+                        let room = undefined;
+                        const wantedPid = roomState.pathId || "main";
+                        if (roomState.roomGID) {
+                            const r0 = game.getRoomById(roomState.roomGID);
+                            if (r0) {
+                                room = r0;
+                                resolvedBy = "gid";
+                            }
+                        }
+                        if (!room) {
+                            const r1 = game.rooms.find((r) => r.mapGroup === roomState.mapGroup &&
+                                r.pathId === wantedPid &&
+                                r.id === roomState.roomID);
+                            if (r1) {
+                                room = r1;
+                                resolvedBy = "group+path+id";
+                            }
+                        }
+                        if (!room) {
+                            const r2 = game.rooms.find((r) => r.mapGroup === roomState.mapGroup &&
+                                r.id === roomState.roomID);
+                            if (r2) {
+                                room = r2;
+                                resolvedBy = "group+id";
+                            }
+                        }
+                        if (!room) {
+                            const r3 = game.rooms.find((r) => r.id === roomState.roomID);
+                            if (r3) {
+                                room = r3;
+                                resolvedBy = "id";
+                            }
+                        }
+                        console.log("🧭 LOAD: Room hydrate resolve", {
+                            saved: {
+                                gid: roomState.roomGID,
+                                mapGroup: roomState.mapGroup,
+                                roomID: roomState.roomID,
+                                pathId: wantedPid,
+                            },
+                            resolvedBy,
+                            candidate: room
+                                ? {
+                                    gid: room.globalId,
+                                    mapGroup: room.mapGroup,
+                                    roomID: room.id,
+                                    pathId: room.pathId,
+                                }
+                                : null,
+                        });
+                        const roomCandidate = room;
+                        // use the resolved candidate
+                        const roomFinal = roomCandidate;
+                        const roomRef = roomFinal;
+                        if (roomRef) {
                             console.log(`🔄 LOAD: Loading state for room ${roomState.roomGID ?? roomState.roomID}`);
-                            loadRoom(room, roomState, game);
+                            // Ensure pathId is restored
+                            if (roomState.pathId)
+                                roomRef.pathId = roomState.pathId;
+                            loadRoom(roomRef, roomState, game);
                             console.log(`✅ LOAD: Successfully loaded room ${roomState.roomGID ?? roomState.roomID}`);
                         }
                         else {
@@ -16071,6 +16195,14 @@ const loadGameState = (game, activeUsernames, gameState, newWorld) => {
                                 game.rooms[0];
                             game.room = resolvedRoom;
                             localPlayer.levelID = game.rooms.indexOf(resolvedRoom);
+                            // Restore active path
+                            try {
+                                game.currentPathId =
+                                    gameState.currentPathId ||
+                                        resolvedRoom.pathId ||
+                                        "main";
+                            }
+                            catch { }
                             console.log("🧭 LOAD: Resolved room flags & membership", {
                                 entered: resolvedRoom.entered,
                                 active: resolvedRoom.active,
@@ -24509,6 +24641,9 @@ interface entitySpawnData {
 */
 class Level {
     constructor(game, depth, width, height, isMainPath = true, mapGroup, env, skipPopulation = false) {
+        // Group rooms by path identifier
+        this.paths = new Map();
+        this.pathsById = new Map();
         this.isMainPath = true;
         this.skipPopulation = false;
         this.initializeLevelArray = () => {
@@ -24631,9 +24766,18 @@ class Level {
         this.setExitRoom();
         this.setStartRoom();
         this.roomsById.clear();
+        this.paths.clear();
+        this.pathsById.clear();
         rooms.forEach((room) => {
             room.id = this.rooms.indexOf(room);
             this.roomsById.set(room.globalId, room);
+            const pid = room.pathId || "main";
+            if (!this.paths.has(pid))
+                this.paths.set(pid, []);
+            if (!this.pathsById.has(pid))
+                this.pathsById.set(pid, new Map());
+            this.paths.get(pid).push(room);
+            this.pathsById.get(pid).set(room.globalId, room);
         });
         this.game.roomsById = new Map(rooms.map((r) => [r.globalId, r]));
     }
@@ -24749,11 +24893,12 @@ class LevelGenerator {
             let newLevel = new level_1.Level(this.game, depth, 100, 100, isMainPath, mapGroup, envType, skipPopulation);
             return newLevel;
         };
-        this.getRooms = (partitions, depth, mapGroup, envType) => {
+        this.getRooms = (partitions, depth, mapGroup, envType, pathId) => {
             let rooms = [];
             for (let i = 0; i < partitions.length; i++) {
                 let partition = partitions[i];
                 let room = new room_1.Room(this.game, partition.x - 1, partition.y - 1, partition.w + 2, partition.h + 2, partition.type, depth, mapGroup, this.game.levels[depth], random_1.Random.rand, envType);
+                room.pathId = pathId || "main";
                 rooms.push(room);
             }
             let doors_added = [];
@@ -24773,7 +24918,8 @@ class LevelGenerator {
         this.setSeed = (seed) => {
             this.seed = seed;
         };
-        this.generate = async (game, depth, isSidePath = false, callback, environment = environmentTypes_1.EnvType.DUNGEON, skipPopulation = false) => {
+        this.generate = async (game, depth, isSidePath = false, callback, environment = environmentTypes_1.EnvType.DUNGEON, skipPopulation = false, // Add this parameter
+        pathId) => {
             // Initialize components with game instance
             if (!this.partitionGenerator) {
                 this.partitionGenerator = new partitionGenerator_1.PartitionGenerator(game);
@@ -24786,8 +24932,13 @@ class LevelGenerator {
             }
             this.levelParams = levelParametersGenerator_1.LevelParameterGenerator.getParameters(depth);
             this.depthReached = depth;
-            // Set the random state based on the seed and depth
-            random_1.Random.setState(this.seed + depth);
+            // Set the random state based on the seed, depth, and pathId (for unique sidepaths)
+            const pid = pathId ?? (isSidePath ? "side" : "main");
+            let pathHash = 0 >>> 0;
+            for (let i = 0; i < pid.length; i++) {
+                pathHash = ((pathHash * 131) ^ pid.charCodeAt(i)) >>> 0;
+            }
+            random_1.Random.setState(((this.seed + depth) ^ pathHash) >>> 0);
             this.game = game;
             // Determine the map group
             let mapGroup = this.game.rooms.length > 0
@@ -24844,7 +24995,7 @@ class LevelGenerator {
                 this.game.levels.push(newLevel);
                 this.game.registerLevel(newLevel);
             }
-            let rooms = this.getRooms(partitions, depth, mapGroup, envType);
+            let rooms = this.getRooms(partitions, depth, mapGroup, envType, pid);
             newLevel.setRooms(rooms);
             newLevel.populator.populateRooms();
             newLevel.setRoomSkins();
@@ -32726,6 +32877,7 @@ class Room {
             }
         };
         this.globalId = IdGenerator_1.IdGenerator.generate("R");
+        this.pathId = "main";
         this.game = game;
         this.roomX = x; //Math.floor(- this.width / 2);
         this.roomY = y; //Math.floor(- this.height / 2);
@@ -33713,6 +33865,8 @@ class Populator {
                 this.populateByEnvironment(room);
             });
             // Centralized torch, spike, and pool addition
+            this.addDownladder();
+            this.addDownladder();
             this.addDownladder();
             //this.level.distributeKeys();
         };
@@ -36075,7 +36229,11 @@ class DownLadder extends passageway_1.Passageway {
         this.generate = async () => {
             if (!this.linkedRoom) {
                 const targetDepth = this.room.depth + (this.isSidePath ? 0 : 1);
-                await this.game.levelgen.generate(this.game, targetDepth, this.isSidePath, this.handleLinkedRoom, this.environment);
+                // Assign a unique pathId for this sidepath based on this ladder's GID
+                const ladderGid = this.globalId ||
+                    `${this.room.globalId}:${this.x},${this.y}`;
+                const pathId = this.isSidePath ? `sp:${ladderGid}` : "main";
+                await this.game.levelgen.generate(this.game, targetDepth, this.isSidePath, this.handleLinkedRoom, this.environment, false, pathId);
             }
             else {
                 console.log("LinkedRoom already exists:", this.linkedRoom);
@@ -36132,6 +36290,13 @@ class DownLadder extends passageway_1.Passageway {
                 eventBus_1.globalEventBus.emit(events_1.EVENTS.LEVEL_GENERATION_STARTED, {});
                 this.generate().then(() => {
                     eventBus_1.globalEventBus.emit(events_1.EVENTS.LEVEL_GENERATION_COMPLETED, {});
+                    // Switch active path to this ladder's sidepath before transitioning
+                    if (this.isSidePath && this.linkedRoom) {
+                        this.game.currentPathId =
+                            this.linkedRoom.pathId ||
+                                this.game.currentPathId ||
+                                "main";
+                    }
                     for (const i in this.game.players) {
                         this.game.changeLevelThroughLadder(this.game.players[i], this);
                     }
@@ -36867,6 +37032,10 @@ class UpLadder extends passageway_1.Passageway {
             try {
                 if (!this.linkedRoom) {
                     this.linkRoom();
+                }
+                // If this is a rope (sidepath) exit, switch active path back to the linked room's path
+                if (this.isRope && this.linkedRoom) {
+                    this.game.currentPathId = this.linkedRoom.pathId || "main";
                 }
                 this.game.changeLevelThroughLadder(player, this);
                 sound_1.Sound.forestMusic.pause();

@@ -49,6 +49,10 @@ export class UpLadder extends Passageway {
       if (!this.linkedRoom) {
         this.linkRoom();
       }
+      // If this is a rope (sidepath) exit, switch active path back to the linked room's path
+      if (this.isRope && this.linkedRoom) {
+        (this.game as any).currentPathId = this.linkedRoom.pathId || "main";
+      }
       this.game.changeLevelThroughLadder(player, this);
       Sound.forestMusic.pause();
       Sound.caveMusic.pause();

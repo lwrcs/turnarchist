@@ -96,6 +96,7 @@ export class LevelGenerator {
     depth: number,
     mapGroup: number,
     envType: EnvType,
+    pathId: string,
   ): Array<Room> => {
     let rooms: Array<Room> = [];
 
@@ -115,6 +116,7 @@ export class LevelGenerator {
         Random.rand,
         envType,
       );
+      room.pathId = pathId || "main";
       rooms.push(room);
     }
 
@@ -148,6 +150,7 @@ export class LevelGenerator {
     callback: (linkedRoom: Room) => void,
     environment: EnvType = EnvType.DUNGEON,
     skipPopulation = false, // Add this parameter
+    pathId?: string,
   ) => {
     // Initialize components with game instance
     if (!this.partitionGenerator) {
@@ -163,8 +166,13 @@ export class LevelGenerator {
     this.levelParams = LevelParameterGenerator.getParameters(depth);
     this.depthReached = depth;
 
-    // Set the random state based on the seed and depth
-    Random.setState(this.seed + depth);
+    // Set the random state based on the seed, depth, and pathId (for unique sidepaths)
+    const pid = pathId ?? (isSidePath ? "side" : "main");
+    let pathHash = 0 >>> 0;
+    for (let i = 0; i < pid.length; i++) {
+      pathHash = ((pathHash * 131) ^ pid.charCodeAt(i)) >>> 0;
+    }
+    Random.setState(((this.seed + depth) ^ pathHash) >>> 0);
 
     this.game = game;
 
@@ -262,7 +270,7 @@ export class LevelGenerator {
       this.game.registerLevel(newLevel);
     }
 
-    let rooms = this.getRooms(partitions, depth, mapGroup, envType);
+    let rooms = this.getRooms(partitions, depth, mapGroup, envType, pid);
 
     newLevel.setRooms(rooms);
     newLevel.populator.populateRooms();

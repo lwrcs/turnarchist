@@ -236,6 +236,8 @@ interface BlurCache {
 
 export class Room {
   globalId: string;
+  // Path identifier to group rooms that belong to the same path/sidepath
+  pathId: string;
   roomArray: Tile[][];
 
   softVis: number[][]; // this is the one we use for drawing (includes smoothing)
@@ -332,6 +334,7 @@ export class Room {
     envType: EnvType,
   ) {
     this.globalId = IdGenerator.generate("R");
+    this.pathId = "main";
     this.game = game;
     this.roomX = x; //Math.floor(- this.width / 2);
     this.roomY = y; //Math.floor(- this.height / 2);

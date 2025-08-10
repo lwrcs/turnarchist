@@ -681,6 +681,7 @@ let loadEnemy = (es: EnemyState, game: Game): Entity => {
 export class RoomState {
   roomID: number;
   roomGID?: string;
+  pathId?: string;
   entered: boolean;
   envType?: EnvType;
   skin?: SkinType;
@@ -697,6 +698,7 @@ export class RoomState {
   constructor(room: Room, game: Game) {
     this.roomID = game.rooms.indexOf(room);
     this.roomGID = room.globalId;
+    this.pathId = (room as any).pathId || "main";
     this.entered = room.entered;
     this.envType = room.envType;
     this.skin = room.skin;
@@ -753,6 +755,7 @@ export class RoomState {
 }
 
 let loadRoom = (room: Room, roomState: RoomState, game: Game) => {
+  if (roomState.pathId) (room as any).pathId = roomState.pathId;
   room.entered = roomState.entered;
   if (roomState.envType !== undefined) {
     room.envType = roomState.envType as EnvType;
@@ -1372,6 +1375,7 @@ export class GameState {
   rooms: Array<RoomState>;
   levelGID?: string;
   roomGIDs?: string[];
+  currentPathId?: string;
 
   constructor() {
     this.seed = 0;
@@ -1470,6 +1474,11 @@ export const createGameState = (game: Game): GameState => {
         throw error;
       }
     }
+
+    // Persist current path
+    try {
+      (gs as any).currentPathId = (game as any).currentPathId || "main";
+    } catch {}
 
     // Save rooms
     console.log("🔄 SAVE: Processing rooms...");
@@ -1622,35 +1631,42 @@ export const loadGameState = (
         console.log("🔄 LOAD: Generated rooms count:", game.rooms.length);
         globalEventBus.emit(EVENTS.LEVEL_GENERATION_COMPLETED, {});
 
-        // Ensure sidepath groups from save exist before hydrating state
+        // Pre-generate sidepaths deterministically by saved pathIds (avoids coordinate mismatch)
         try {
-          // Log current group distribution before any sidepath gen
-          try {
-            const groupCounts: Record<number, number> = {} as any;
-            for (const r of game.rooms) {
-              groupCounts[r.mapGroup] = (groupCounts[r.mapGroup] || 0) + 1;
-            }
-            console.log("🧭 LOAD: Current group distribution:", groupCounts);
-          } catch {}
+          const roomStates = gameState.rooms || [];
+          // Collect unique non-main pathIds and their smallest saved mapGroup to preserve ordering
+          const pathIdToMinGroup = new Map<string, number>();
+          for (const rs of roomStates) {
+            const pid = (rs as any).pathId as string | undefined;
+            if (!pid || pid === "main") continue;
+            const mg = (rs as any).mapGroup as number | undefined;
+            if (typeof mg !== "number") continue;
+            const prev = pathIdToMinGroup.get(pid);
+            if (prev === undefined || mg < prev) pathIdToMinGroup.set(pid, mg);
+          }
+          const sidepaths = Array.from(pathIdToMinGroup.entries())
+            .map(([pid, mg]) => ({ pid, mg }))
+            .sort((a, b) => a.mg - b.mg);
 
-          const savedGroups: number[] = Array.from(
-            new Set(
-              (gameState.rooms || [])
-                .map((rs) => (rs as any).mapGroup)
-                .filter((g) => typeof g === "number"),
-            ),
-          ) as number[];
-          console.log("🧭 LOAD: Saved mapGroups from save:", savedGroups);
-          const currentMaxGroup = game.rooms.length
-            ? game.rooms[game.rooms.length - 1].mapGroup
-            : -1;
-          console.log("🧭 LOAD: currentMaxGroup:", currentMaxGroup);
-          const targetMaxGroup = savedGroups.length
-            ? Math.max(...savedGroups)
-            : currentMaxGroup;
-          console.log("🧭 LOAD: targetMaxGroup:", targetMaxGroup);
-          for (let g = currentMaxGroup + 1; g <= targetMaxGroup; g++) {
-            console.log("🧭 LOAD: Generating missing sidepath group:", g);
+          console.log(
+            "🧭 LOAD: Sidepaths to generate by pathId (sorted by min mapGroup):",
+            sidepaths,
+          );
+          // Collect rooms for all generated sidepaths, since generate() replaces game.rooms each time
+          const collectedSideRooms: Room[] = [];
+
+          for (const sp of sidepaths) {
+            const alreadyExists = game.rooms.some(
+              (r) => (r as any).pathId === sp.pid,
+            );
+            if (alreadyExists) continue;
+            const beforeCount = game.rooms.length;
+            console.log(
+              "🧭 LOAD: Generating sidepath for pathId:",
+              sp.pid,
+              "rooms before:",
+              beforeCount,
+            );
             await game.levelgen.generate(
               game,
               gameState.level.depth,
@@ -1658,52 +1674,109 @@ export const loadGameState = (
               () => {},
               gameState.level.envType,
               !newWorld,
+              sp.pid,
             );
-            try {
-              const groupCountsAfter: Record<number, number> = {} as any;
-              for (const r of game.rooms) {
-                groupCountsAfter[r.mapGroup] =
-                  (groupCountsAfter[r.mapGroup] || 0) + 1;
-              }
-              console.log(
-                "🧭 LOAD: Group distribution after sidepath gen:",
-                groupCountsAfter,
-              );
-            } catch {}
+            const afterCount = game.rooms.length;
+            const added = game.rooms.filter(
+              (r) => (r as any).pathId === sp.pid,
+            );
+            // Stash now because subsequent generate() calls will overwrite game.rooms
+            for (const r of added) collectedSideRooms.push(r);
+            console.log(
+              "🧭 LOAD: Generated sidepath",
+              sp.pid,
+              "rooms after:",
+              afterCount,
+              "added rooms for path:",
+              added.length,
+              added.map((r) => ({
+                gid: r.globalId,
+                mg: r.mapGroup,
+                id: r.id,
+                type: r.type,
+              })),
+            );
           }
 
-          // Merge any currently generated sidepath rooms into the active level's rooms
+          // Merge any newly generated rooms into the active level
           const activeLevel = game.levels[gameState.level.depth];
           if (activeLevel) {
             const existingGids = new Set(
               activeLevel.rooms.map((r) => r.globalId),
             );
-            const sideRooms = game.rooms.filter(
-              (r) => !existingGids.has(r.globalId),
-            );
+            const newRooms = collectedSideRooms
+              .filter((r) => !existingGids.has(r.globalId))
+              // Preserve path grouping order from save: sort by (pathId, mapGroup, id)
+              .sort((a, b) => {
+                const pa = (a as any).pathId || "main";
+                const pb = (b as any).pathId || "main";
+                if (pa !== pb) return pa < pb ? -1 : 1;
+                if (a.mapGroup !== b.mapGroup) return a.mapGroup - b.mapGroup;
+                return a.id - b.id;
+              });
             let merged = 0;
             let startId = activeLevel.rooms.length;
-            for (const r of sideRooms) {
+            for (const r of newRooms) {
               r.id = startId + merged;
               activeLevel.rooms.push(r);
               merged++;
             }
-            console.log("🧭 LOAD: Merged sidepath rooms into level.rooms", {
-              merged,
-              newLevelRoomsLen: activeLevel.rooms.length,
-            });
-            // Make game.rooms reflect the canonical level.rooms
             game.rooms = activeLevel.rooms;
             game.roomsById = new Map(game.rooms.map((r) => [r.globalId, r]));
+            console.log(
+              "🧭 LOAD: Merged",
+              merged,
+              "rooms from sidepaths by pathId",
+            );
+            try {
+              const byPath: Record<string, number> = {} as any;
+              const byGroup: Record<number, number> = {} as any;
+              for (const r of game.rooms) {
+                const pid = (r as any).pathId || "main";
+                byPath[pid] = (byPath[pid] || 0) + 1;
+                byGroup[r.mapGroup] = (byGroup[r.mapGroup] || 0) + 1;
+              }
+              console.log("🧭 LOAD: Post-merge distribution", {
+                byPath,
+                byGroup,
+              });
+            } catch {}
           }
         } catch (e) {
-          console.warn(
-            "⚠️ LOAD: Failed to pre-generate sidepath groups; proceeding with fallback room resolution",
-            e,
-          );
+          console.warn("⚠️ LOAD: Sidepath generation by pathId failed", e);
         }
 
         if (!newWorld) {
+          // Pre-pass: align generated room GIDs with saved roomGIDs so GID-based linking works
+          try {
+            const newRoomsByGid = new Map<string, Room>();
+            for (const rs of gameState.rooms) {
+              if (!rs?.roomGID) continue;
+              // Try to find the intended generated room using the same resolution we use later
+              let candidate =
+                (rs.roomGID && game.getRoomById(rs.roomGID)) ||
+                game.rooms.find(
+                  (r) =>
+                    r.mapGroup === (rs as any).mapGroup &&
+                    (r as any).pathId === ((rs as any).pathId || "main") &&
+                    r.id === rs.roomID,
+                ) ||
+                game.rooms.find(
+                  (r) =>
+                    r.mapGroup === (rs as any).mapGroup && r.id === rs.roomID,
+                ) ||
+                game.rooms.find((r) => r.id === rs.roomID);
+              if (candidate && (candidate as any).globalId !== rs.roomGID) {
+                try {
+                  IdGenerator.reserve(rs.roomGID);
+                  (candidate as any).globalId = rs.roomGID;
+                } catch {}
+              }
+            }
+            // Rebuild roomsById map with possibly updated GIDs
+            game.roomsById = new Map(game.rooms.map((r) => [r.globalId, r]));
+          } catch {}
+
           console.log("🔄 LOAD: Loading existing world state");
 
           // Load players
@@ -1760,19 +1833,75 @@ export const loadGameState = (
           console.log("🔄 LOAD: Loading room states...");
           try {
             for (const roomState of gameState.rooms) {
-              const room =
-                (roomState.roomGID && game.getRoomById(roomState.roomGID)) ||
-                game.rooms.find(
+              let resolvedBy = "";
+              let room: Room | undefined = undefined;
+              const wantedPid = (roomState as any).pathId || "main";
+              if (roomState.roomGID) {
+                const r0 = game.getRoomById(roomState.roomGID);
+                if (r0) {
+                  room = r0;
+                  resolvedBy = "gid";
+                }
+              }
+              if (!room) {
+                const r1 = game.rooms.find(
+                  (r) =>
+                    r.mapGroup === roomState.mapGroup &&
+                    (r as any).pathId === wantedPid &&
+                    r.id === roomState.roomID,
+                );
+                if (r1) {
+                  room = r1;
+                  resolvedBy = "group+path+id";
+                }
+              }
+              if (!room) {
+                const r2 = game.rooms.find(
                   (r) =>
                     r.mapGroup === roomState.mapGroup &&
                     r.id === roomState.roomID,
-                ) ||
-                game.rooms.find((r) => r.id === roomState.roomID);
-              if (room) {
+                );
+                if (r2) {
+                  room = r2;
+                  resolvedBy = "group+id";
+                }
+              }
+              if (!room) {
+                const r3 = game.rooms.find((r) => r.id === roomState.roomID);
+                if (r3) {
+                  room = r3;
+                  resolvedBy = "id";
+                }
+              }
+              console.log("🧭 LOAD: Room hydrate resolve", {
+                saved: {
+                  gid: roomState.roomGID,
+                  mapGroup: roomState.mapGroup,
+                  roomID: roomState.roomID,
+                  pathId: wantedPid,
+                },
+                resolvedBy,
+                candidate: room
+                  ? {
+                      gid: room.globalId,
+                      mapGroup: room.mapGroup,
+                      roomID: room.id,
+                      pathId: (room as any).pathId,
+                    }
+                  : null,
+              });
+              const roomCandidate = room;
+              // use the resolved candidate
+              const roomFinal = roomCandidate;
+              const roomRef = roomFinal;
+              if (roomRef) {
                 console.log(
                   `🔄 LOAD: Loading state for room ${roomState.roomGID ?? roomState.roomID}`,
                 );
-                loadRoom(room, roomState, game);
+                // Ensure pathId is restored
+                if ((roomState as any).pathId)
+                  (roomRef as any).pathId = (roomState as any).pathId;
+                loadRoom(roomRef, roomState, game);
                 console.log(
                   `✅ LOAD: Successfully loaded room ${roomState.roomGID ?? roomState.roomID}`,
                 );
@@ -1903,6 +2032,13 @@ export const loadGameState = (
 
                 game.room = resolvedRoom;
                 localPlayer.levelID = game.rooms.indexOf(resolvedRoom);
+                // Restore active path
+                try {
+                  (game as any).currentPathId =
+                    (gameState as any).currentPathId ||
+                    resolvedRoom.pathId ||
+                    "main";
+                } catch {}
                 console.log("🧭 LOAD: Resolved room flags & membership", {
                   entered: resolvedRoom.entered,
                   active: resolvedRoom.active,

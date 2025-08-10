@@ -154,6 +154,8 @@ export class Game {
   levels: Array<Level>;
   roomsById: Map<string, Room>;
   levelsById: Map<string, Level>;
+  // Active path identifier for filtering draw/update
+  currentPathId: string = "main";
   levelgen: LevelGenerator;
   readonly localPlayerID = "localplayer";
   players: Record<string, Player>;
@@ -1339,15 +1341,19 @@ export class Game {
   drawRooms = (delta: number, skipLocalPlayer: boolean = false) => {
     if (!GameConstants.drawOtherRooms) {
       // Ensure current room is drawn even if flags are stale
+      if (!this.room || this.room.pathId !== this.currentPathId) return;
       this.room.draw(delta);
       this.room.drawEntities(delta, true);
     } else if (GameConstants.drawOtherRooms) {
       // Create a sorted copy of the rooms array based on roomY + height
-      const sortedRooms = this.rooms.slice().sort((a, b) => {
-        const aPosition = a.roomY + a.height;
-        const bPosition = b.roomY + b.height;
-        return aPosition - bPosition; // Ascending order
-      });
+      const sortedRooms = this.rooms
+        .filter((r) => r.pathId === this.currentPathId)
+        .slice()
+        .sort((a, b) => {
+          const aPosition = a.roomY + a.height;
+          const bPosition = b.roomY + b.height;
+          return aPosition - bPosition; // Ascending order
+        });
 
       for (const room of sortedRooms) {
         const shouldDraw =
@@ -1364,6 +1370,7 @@ export class Game {
 
   drawRoomShadeAndColor = (delta: number) => {
     for (const room of this.rooms) {
+      if (room.pathId !== this.currentPathId) continue;
       const shouldDraw = room === this.room || room.active || room.entered;
       if (shouldDraw) {
         room.drawShadeLayer();
@@ -1372,6 +1379,7 @@ export class Game {
       }
     }
     for (const room of this.rooms) {
+      if (room.pathId !== this.currentPathId) continue;
       const shouldDrawOver =
         room === this.room || (room.active && room.entered);
       if (shouldDrawOver) {
