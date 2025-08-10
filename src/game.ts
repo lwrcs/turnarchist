@@ -512,29 +512,10 @@ export class Game {
     // Reset path context to main for a fresh world
     (this as any).currentPathId = "main";
     // Attempt auto-load from cookies/localStorage if a save exists
-    try {
-      const { getCookie } = require("./utility/cookies");
-      const hasSave = !!getCookie("wr_save_meta");
-      if (hasSave) {
-        this.pushMessage?.("Auto-loading saved game...");
-        const { loadFromCookies } = require("./game/savePersistence");
-        loadFromCookies(this).then(() => {
-          try {
-            const { loadSettings } = require("./game/settingsPersistence");
-            loadSettings(this);
-          } catch {}
-          // Start replay recording using the loaded seed
-          this.replayManager.beginRecording(this.levelgen.seed, this);
-        });
-        return;
-      }
-    } catch {}
+    // Auto-load disabled
 
     // No cookie save found: start a fresh world
-    //gs = new GameState();
-    gs.seed = seed ?? (Math.random() * 4294967296) >>> 0;
-    gs.randomState = gs.seed;
-    loadGameState(this, [this.localPlayerID], gs, true);
+    this.startFreshWorld(seed);
     // Load settings from cookies after basic init
     try {
       const { loadSettings } = require("./game/settingsPersistence");
@@ -545,6 +526,19 @@ export class Game {
     // Begin replay recording with this seed and capture a base state when ready
     this.replayManager.beginRecording(gs.seed, this);
   };
+
+  private startFreshWorld(seed?: number) {
+    //gs = new GameState();
+    gs.seed = seed ?? (Math.random() * 4294967296) >>> 0;
+    gs.randomState = gs.seed;
+    loadGameState(this, [this.localPlayerID], gs, true);
+    try {
+      const { loadSettings } = require("./game/settingsPersistence");
+      loadSettings(this);
+    } catch {}
+    this.levelState = LevelState.LEVEL_GENERATION;
+    this.replayManager.beginRecording(gs.seed, this);
+  }
 
   keyDownListener = (key: string) => {
     Game.inputReceived = true;

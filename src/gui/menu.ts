@@ -147,6 +147,44 @@ export class Menu {
       this,
     );
     this.addButton(loadBtn);
+
+    const newGameBtn = new guiButton(
+      0,
+      0,
+      0,
+      0,
+      "New Game",
+      () => {
+        try {
+          this.player.game.newGame();
+        } catch (e) {
+          this.player.game.pushMessage("New Game failed.");
+        }
+      },
+      false,
+      this,
+    );
+    this.addButton(newGameBtn);
+
+    const clearBtn = new guiButton(
+      0,
+      0,
+      0,
+      0,
+      "Clear Save",
+      () => {
+        try {
+          const { clearCookieSave } = require("../game/savePersistence");
+          clearCookieSave();
+          this.player.game.pushMessage("Cleared cookie/localStorage save.");
+        } catch (e) {
+          this.player.game.pushMessage("Clear Save failed.");
+        }
+      },
+      false,
+      this,
+    );
+    this.addButton(clearBtn);
     //this.addButton(new guiButton(0, 0, 0, 0, "Exit", this.exitGame));
     this.positionButtons();
   }

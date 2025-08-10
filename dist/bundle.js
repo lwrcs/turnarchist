@@ -12356,30 +12356,9 @@ class Game {
             // Reset path context to main for a fresh world
             this.currentPathId = "main";
             // Attempt auto-load from cookies/localStorage if a save exists
-            try {
-                const { getCookie } = __webpack_require__(/*! ./utility/cookies */ "./src/utility/cookies.ts");
-                const hasSave = !!getCookie("wr_save_meta");
-                if (hasSave) {
-                    this.pushMessage?.("Auto-loading saved game...");
-                    const { loadFromCookies } = __webpack_require__(/*! ./game/savePersistence */ "./src/game/savePersistence.ts");
-                    loadFromCookies(this).then(() => {
-                        try {
-                            const { loadSettings } = __webpack_require__(/*! ./game/settingsPersistence */ "./src/game/settingsPersistence.ts");
-                            loadSettings(this);
-                        }
-                        catch { }
-                        // Start replay recording using the loaded seed
-                        this.replayManager.beginRecording(this.levelgen.seed, this);
-                    });
-                    return;
-                }
-            }
-            catch { }
+            // Auto-load disabled
             // No cookie save found: start a fresh world
-            //gs = new GameState();
-            exports.gs.seed = seed ?? (Math.random() * 4294967296) >>> 0;
-            exports.gs.randomState = exports.gs.seed;
-            (0, gameState_1.loadGameState)(this, [this.localPlayerID], exports.gs, true);
+            this.startFreshWorld(seed);
             // Load settings from cookies after basic init
             try {
                 const { loadSettings } = __webpack_require__(/*! ./game/settingsPersistence */ "./src/game/settingsPersistence.ts");
@@ -13696,6 +13675,19 @@ class Game {
         // Add focus/blur event listeners
         //window.addEventListener("blur", this.handleWindowBlur);
         //window.addEventListener("focus", this.handleWindowFocus);
+    }
+    startFreshWorld(seed) {
+        //gs = new GameState();
+        exports.gs.seed = seed ?? (Math.random() * 4294967296) >>> 0;
+        exports.gs.randomState = exports.gs.seed;
+        (0, gameState_1.loadGameState)(this, [this.localPlayerID], exports.gs, true);
+        try {
+            const { loadSettings } = __webpack_require__(/*! ./game/settingsPersistence */ "./src/game/settingsPersistence.ts");
+            loadSettings(this);
+        }
+        catch { }
+        this.levelState = LevelState.LEVEL_GENERATION;
+        this.replayManager.beginRecording(exports.gs.seed, this);
     }
     setupEventListeners() {
         //console.log("Setting up event listeners");
@@ -17423,7 +17415,7 @@ const loadFromCookies = async (game) => {
     const json = (0, cookies_1.getCookieChunks)(SAVE_PREFIX);
     if (!json) {
         game.pushMessage?.("No cookie save found.");
-        return;
+        return false;
     }
     try {
         const state = JSON.parse(json);
@@ -17431,27 +17423,30 @@ const loadFromCookies = async (game) => {
         const activeUsernames = [game.localPlayerID];
         await (0, gameState_1.loadGameState)(game, activeUsernames, state, false);
         game.pushMessage?.("Loaded from cookies.");
+        return true;
     }
     catch (e) {
         console.error("Cookie load failed", e);
         game.pushMessage?.("Cookie load failed.");
+        return false;
     }
 };
 exports.loadFromCookies = loadFromCookies;
 const clearCookieSave = () => {
-    // Remove chunks
-    let idx = 0;
-    // Iterate until no more chunk cookie exists
-    // Note: access document.cookie via helpers to probe
-    while (true) {
-        const name = `${SAVE_PREFIX}_${idx}`;
-        const exists = (0, cookies_1.getCookieChunks)(name); // misuse to probe would load all; better to try getCookie directly
-        // Implement a light probe by reading document.cookie; omitted to avoid dependency here
-        (0, cookies_1.deleteCookie)(name);
-        if (idx > 20)
-            break; // safety bound
-        idx++;
+    try {
+        const meta = (0, cookies_1.getCookie)(`${SAVE_PREFIX}_meta`);
+        const total = meta ? parseInt(meta, 10) : NaN;
+        if (Number.isFinite(total) && total > 0) {
+            for (let i = 0; i < total; i++)
+                (0, cookies_1.deleteCookie)(`${SAVE_PREFIX}_${i}`);
+        }
+        else {
+            // Try a conservative cleanup of first few chunks if meta is corrupt
+            for (let i = 0; i < 32; i++)
+                (0, cookies_1.deleteCookie)(`${SAVE_PREFIX}_${i}`);
+        }
     }
+    catch { }
     (0, cookies_1.deleteCookie)(`${SAVE_PREFIX}_meta`);
 };
 exports.clearCookieSave = clearCookieSave;
@@ -18389,6 +18384,26 @@ class Menu {
             }
         }, false, this);
         this.addButton(loadBtn);
+        const newGameBtn = new guiButton_1.guiButton(0, 0, 0, 0, "New Game", () => {
+            try {
+                this.player.game.newGame();
+            }
+            catch (e) {
+                this.player.game.pushMessage("New Game failed.");
+            }
+        }, false, this);
+        this.addButton(newGameBtn);
+        const clearBtn = new guiButton_1.guiButton(0, 0, 0, 0, "Clear Save", () => {
+            try {
+                const { clearCookieSave } = __webpack_require__(/*! ../game/savePersistence */ "./src/game/savePersistence.ts");
+                clearCookieSave();
+                this.player.game.pushMessage("Cleared cookie/localStorage save.");
+            }
+            catch (e) {
+                this.player.game.pushMessage("Clear Save failed.");
+            }
+        }, false, this);
+        this.addButton(clearBtn);
         //this.addButton(new guiButton(0, 0, 0, 0, "Exit", this.exitGame));
         this.positionButtons();
     }
