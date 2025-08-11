@@ -21416,6 +21416,7 @@ const drawable_1 = __webpack_require__(/*! ../drawable/drawable */ "./src/drawab
 const utils_1 = __webpack_require__(/*! ../utility/utils */ "./src/utility/utils.ts");
 const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
 const IdGenerator_1 = __webpack_require__(/*! ../globalStateManager/IdGenerator */ "./src/globalStateManager/IdGenerator.ts");
+const shadow_1 = __webpack_require__(/*! ../drawable/shadow */ "./src/drawable/shadow.ts");
 // Item class extends Drawable class and represents an item in the game
 class Item extends drawable_1.Drawable {
     // Constructor for the Item class
@@ -21527,7 +21528,8 @@ class Item extends drawable_1.Drawable {
                 }
                 const scale = 1 / (this.scaleFactor + 1);
                 game_1.Game.ctx.imageSmoothingEnabled = false;
-                game_1.Game.drawItem(0, 0, 1, 1, this.x, this.y, 1, 1);
+                shadow_1.Shadow.draw(this.x, this.y, 1, 1);
+                //Game.drawItem(0, 0, 1, 1, this.x, this.y, 1, 1);
                 this.frame += (delta * (Math.PI * 2)) / 60;
                 game_1.Game.drawItem(this.tileX, this.tileY, 1, 2, this.x + this.w * (scale * -0.5 + 0.5) + this.drawOffset, this.y +
                     this.sineAnimateFactor * Math.sin(this.frame) * 0.07 -
@@ -30094,6 +30096,7 @@ const stats_1 = __webpack_require__(/*! ../game/stats */ "./src/game/stats.ts");
 const utils_1 = __webpack_require__(/*! ../utility/utils */ "./src/utility/utils.ts");
 const spellbook_1 = __webpack_require__(/*! ../item/weapon/spellbook */ "./src/item/weapon/spellbook.ts");
 const hoverText_1 = __webpack_require__(/*! ../gui/hoverText */ "./src/gui/hoverText.ts");
+const shadow_1 = __webpack_require__(/*! ../drawable/shadow */ "./src/drawable/shadow.ts");
 class PlayerRenderer {
     constructor(player) {
         this.hurt = () => {
@@ -30291,7 +30294,7 @@ class PlayerRenderer {
             player.drawableY = player.y;
             this.flashingFrame += (delta * 12) / gameConstants_1.GameConstants.FPS;
             if (!player.dead) {
-                game_1.Game.drawMob(0, 0, 1, 1, player.x - this.drawX, player.y - this.drawY, 1, 1);
+                shadow_1.Shadow.draw(player.x - this.drawX, player.y - this.drawY, 1, 1);
                 //this.drawTileCursor(delta);
                 if (!this.flashing || Math.floor(this.flashingFrame) % 2 === 0) {
                     this.drawPlayerSprite(delta);

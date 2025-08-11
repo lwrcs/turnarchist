@@ -8,6 +8,7 @@ import { Utils } from "../utility/utils";
 import { ItemGroup } from "./itemGroup";
 import { Random } from "../utility/random";
 import { IdGenerator } from "../globalStateManager/IdGenerator";
+import { Shadow } from "../drawable/shadow";
 
 // Item class extends Drawable class and represents an item in the game
 export class Item extends Drawable {
@@ -219,8 +220,8 @@ export class Item extends Drawable {
       }
       const scale = 1 / (this.scaleFactor + 1);
       Game.ctx.imageSmoothingEnabled = false;
-
-      Game.drawItem(0, 0, 1, 1, this.x, this.y, 1, 1);
+      Shadow.draw(this.x, this.y, 1, 1);
+      //Game.drawItem(0, 0, 1, 1, this.x, this.y, 1, 1);
       this.frame += (delta * (Math.PI * 2)) / 60;
       Game.drawItem(
         this.tileX,

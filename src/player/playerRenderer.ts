@@ -9,6 +9,7 @@ import { Utils } from "../utility/utils";
 import { Spellbook } from "../item/weapon/spellbook";
 import { Player } from "./player";
 import { HoverText } from "../gui/hoverText";
+import { Shadow } from "../drawable/shadow";
 
 export class PlayerRenderer {
   private player: Player;
@@ -286,16 +287,7 @@ export class PlayerRenderer {
     player.drawableY = player.y;
     this.flashingFrame += (delta * 12) / GameConstants.FPS;
     if (!player.dead) {
-      Game.drawMob(
-        0,
-        0,
-        1,
-        1,
-        player.x - this.drawX,
-        player.y - this.drawY,
-        1,
-        1,
-      );
+      Shadow.draw(player.x - this.drawX, player.y - this.drawY, 1, 1);
       //this.drawTileCursor(delta);
 
       if (!this.flashing || Math.floor(this.flashingFrame) % 2 === 0) {
