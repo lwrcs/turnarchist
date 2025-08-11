@@ -66,7 +66,7 @@ export class Item extends Drawable {
     this.pickedUp = false;
     this.alpha = 1;
     this.scaleFactor = 5;
-    this.offsetY = -0.25;
+    this.offsetY = -0.5;
     this.name = "item";
     this.startY = y;
     this.randomOffset = Random.rand();

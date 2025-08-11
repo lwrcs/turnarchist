@@ -99,7 +99,7 @@ export class WallTorch extends Wall {
         1,
         1,
         this.room.shadeColor,
-        this.shadeAmount(),
+        1,
       );
     }
   };

@@ -1,7 +1,6 @@
 import { Barrel } from "../entity/object/barrel";
 import { BigSkullEnemy } from "../entity/enemy/bigSkullEnemy";
 import { ChargeEnemy, ChargeEnemyState } from "../entity/enemy/chargeEnemy";
-import { Chest } from "../entity/object/chest";
 import { CoalResource } from "../entity/resource/coalResource";
 import { Crate } from "../entity/object/crate";
 import { EmeraldResource } from "../entity/resource/emeraldResource";
@@ -118,6 +117,7 @@ import { Hammer } from "../item/tool/hammer";
 import { EnvType } from "../constants/environmentTypes";
 import { SkinType } from "../tile/tile";
 import { Enemy } from "../entity/enemy/enemy";
+import { Chest } from "../entity/object/chest";
 
 // Add tile imports
 import { Tile } from "../tile/tile";
@@ -284,6 +284,7 @@ export class EnemyState {
   direction: Direction;
   dead: boolean;
   skipNextTurns: number;
+  destroyable: boolean;
   hasDrop: boolean;
   drop: ItemState;
   alertTicks: number;
@@ -308,6 +309,8 @@ export class EnemyState {
   isInf: boolean;
   quantity: number;
   wizardState: WizardState;
+  // Persist explicit opened state for chests for clarity/forward-compatibility
+  chestOpened?: boolean;
 
   constructor(enemy: Entity, game: Game) {
     this.roomID = game.rooms.indexOf(enemy.room);
@@ -320,6 +323,7 @@ export class EnemyState {
     this.direction = enemy.direction;
     this.dead = enemy.dead;
     this.skipNextTurns = enemy.skipNextTurns;
+    this.destroyable = enemy.destroyable;
     this.hasDrop = false;
     if (enemy.drop) {
       this.hasDrop = true;
@@ -360,6 +364,10 @@ export class EnemyState {
       this.visualTargetY = enemy.visualTargetY;
     }
     if (enemy instanceof Chest) this.type = EnemyType.CHEST;
+    // Explicitly persist whether a chest has been opened (derived from health)
+    if (enemy instanceof Chest) {
+      this.chestOpened = enemy.health <= 2;
+    }
     if (enemy instanceof CoalResource) this.type = EnemyType.COAL;
     if (enemy instanceof Crate) this.type = EnemyType.CRATE;
     if (enemy instanceof EmeraldResource) this.type = EnemyType.EMERALD;
@@ -528,6 +536,15 @@ let loadEnemy = (es: EnemyState, game: Game): Entity => {
     enemy.visualTargetY = es.visualTargetY;
   }
   if (es.type === EnemyType.CHEST) enemy = new Chest(room, game, es.x, es.y);
+  // Restore chest open visuals based on saved health only; do not regenerate loot
+  if (enemy instanceof Chest) {
+    const shouldBeOpen = es.health <= 2;
+    if (shouldBeOpen) {
+      (enemy as any).tileX = 6; // final opened frame
+      (enemy as any).tileY = 2;
+      (enemy as any).opening = false;
+    }
+  }
   if (es.type === EnemyType.COAL)
     enemy = new CoalResource(room, game, es.x, es.y);
   if (es.type === EnemyType.CRATE) enemy = new Crate(room, game, es.x, es.y);
@@ -672,6 +689,10 @@ let loadEnemy = (es: EnemyState, game: Game): Entity => {
   enemy.direction = es.direction;
   enemy.dead = es.dead;
   enemy.skipNextTurns = es.skipNextTurns;
+  // Restore destroyable so chests can be broken after opened
+  if (typeof (es as any).destroyable === "boolean") {
+    enemy.destroyable = (es as any).destroyable;
+  }
   if (es.hasDrop) enemy.drop = loadItem(es.drop, game);
   enemy.alertTicks = es.alertTicks;
 
@@ -842,6 +863,35 @@ let loadRoom = (room: Room, roomState: RoomState, game: Game) => {
       room.items.push(loadItem(item, game, undefined, room));
     }
   }
+  // Link chest drop references to existing room items for opened chests
+  try {
+    // First pass: group items by potential chest source tag if present
+    const byChestKey = new Map<string, Item[]>();
+    for (const it of room.items) {
+      const sx = (it as any)?.sourceChestX as number | undefined;
+      const sy = (it as any)?.sourceChestY as number | undefined;
+      if (sx !== undefined && sy !== undefined) {
+        const key = `${sx},${sy}`;
+        const arr = byChestKey.get(key) || [];
+        arr.push(it);
+        byChestKey.set(key, arr);
+      }
+    }
+    for (const e of room.entities) {
+      if (e instanceof Chest && e.health <= 2) {
+        const key = `${e.x},${e.y}`;
+        const tagged = byChestKey.get(key);
+        if (tagged && tagged.length) {
+          (e as any).drops = tagged.slice();
+          continue;
+        }
+        // Fallback: associate items sitting on the chest tile
+        (e as any).drops = room.items.filter(
+          (it) => it && it.x === e.x && it.y === e.y,
+        );
+      }
+    }
+  } catch {}
   for (const projectile of roomState.projectiles)
     room.projectiles.push(loadProjectile(projectile, game));
   for (const hw of roomState.hitwarnings)
@@ -916,6 +966,9 @@ export class ItemState {
   roomGID?: string;
   stackCount: number;
   pickedUp: boolean;
+  // Optional metadata to support chest-drop persistence
+  sourceChestX?: number;
+  sourceChestY?: number;
   equipped: boolean;
 
   constructor(item: Item, game: Game) {
@@ -985,6 +1038,21 @@ export class ItemState {
     this.roomGID = item.level?.globalId;
     this.stackCount = item.stackCount;
     this.pickedUp = item.pickedUp;
+    try {
+      // Tag items spawned by an opened chest to allow re-association on load
+      const levelRoom = item.level;
+      const candidateChest = levelRoom?.entities?.find(
+        (e) =>
+          e instanceof Chest &&
+          e.health <= 2 &&
+          e.x === item.x &&
+          e.y === item.y,
+      ) as any;
+      if (candidateChest) {
+        this.sourceChestX = candidateChest.x;
+        this.sourceChestY = candidateChest.y;
+      }
+    } catch {}
   }
 }
 

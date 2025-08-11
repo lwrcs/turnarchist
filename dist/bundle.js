@@ -3575,6 +3575,7 @@ class Shadow {
      */
     static draw(x, y, width = 1, height = 1) {
         const tileSize = gameConstants_1.GameConstants.TILESIZE;
+        game_1.Game.ctx.save();
         game_1.Game.ctx.globalAlpha = 0.5;
         if (width > 1 || height > 1) {
             game_1.Game.drawFX(30, 3, 2, 2, x, y + 0.5, 2, 2, "black");
@@ -3582,7 +3583,7 @@ class Shadow {
         else {
             game_1.Game.drawFX(30, 1, 2, 2, x - 0.5, y - 0.5, 2, 2, "black");
         }
-        game_1.Game.ctx.globalAlpha = 1;
+        game_1.Game.ctx.restore();
     }
 }
 exports.Shadow = Shadow;
@@ -14533,7 +14534,6 @@ exports.TileState = exports.TileType = exports.loadGameState = exports.createGam
 const barrel_1 = __webpack_require__(/*! ../entity/object/barrel */ "./src/entity/object/barrel.ts");
 const bigSkullEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigSkullEnemy */ "./src/entity/enemy/bigSkullEnemy.ts");
 const chargeEnemy_1 = __webpack_require__(/*! ../entity/enemy/chargeEnemy */ "./src/entity/enemy/chargeEnemy.ts");
-const chest_1 = __webpack_require__(/*! ../entity/object/chest */ "./src/entity/object/chest.ts");
 const coalResource_1 = __webpack_require__(/*! ../entity/resource/coalResource */ "./src/entity/resource/coalResource.ts");
 const crate_1 = __webpack_require__(/*! ../entity/object/crate */ "./src/entity/object/crate.ts");
 const emeraldResource_1 = __webpack_require__(/*! ../entity/resource/emeraldResource */ "./src/entity/resource/emeraldResource.ts");
@@ -14641,6 +14641,7 @@ const downladderMaker_1 = __webpack_require__(/*! ../entity/downladderMaker */ "
 const rockResource_1 = __webpack_require__(/*! ../entity/resource/rockResource */ "./src/entity/resource/rockResource.ts");
 const hammer_1 = __webpack_require__(/*! ../item/tool/hammer */ "./src/item/tool/hammer.ts");
 const environmentTypes_1 = __webpack_require__(/*! ../constants/environmentTypes */ "./src/constants/environmentTypes.ts");
+const chest_1 = __webpack_require__(/*! ../entity/object/chest */ "./src/entity/object/chest.ts");
 const floor_1 = __webpack_require__(/*! ../tile/floor */ "./src/tile/floor.ts");
 const wall_1 = __webpack_require__(/*! ../tile/wall */ "./src/tile/wall.ts");
 const wallTorch_1 = __webpack_require__(/*! ../tile/wallTorch */ "./src/tile/wallTorch.ts");
@@ -14773,6 +14774,7 @@ class EnemyState {
         this.direction = enemy.direction;
         this.dead = enemy.dead;
         this.skipNextTurns = enemy.skipNextTurns;
+        this.destroyable = enemy.destroyable;
         this.hasDrop = false;
         if (enemy.drop) {
             this.hasDrop = true;
@@ -14811,6 +14813,10 @@ class EnemyState {
         }
         if (enemy instanceof chest_1.Chest)
             this.type = EnemyType.CHEST;
+        // Explicitly persist whether a chest has been opened (derived from health)
+        if (enemy instanceof chest_1.Chest) {
+            this.chestOpened = enemy.health <= 2;
+        }
         if (enemy instanceof coalResource_1.CoalResource)
             this.type = EnemyType.COAL;
         if (enemy instanceof crate_1.Crate)
@@ -14992,6 +14998,15 @@ let loadEnemy = (es, game) => {
     }
     if (es.type === EnemyType.CHEST)
         enemy = new chest_1.Chest(room, game, es.x, es.y);
+    // Restore chest open visuals based on saved health only; do not regenerate loot
+    if (enemy instanceof chest_1.Chest) {
+        const shouldBeOpen = es.health <= 2;
+        if (shouldBeOpen) {
+            enemy.tileX = 6; // final opened frame
+            enemy.tileY = 2;
+            enemy.opening = false;
+        }
+    }
     if (es.type === EnemyType.COAL)
         enemy = new coalResource_1.CoalResource(room, game, es.x, es.y);
     if (es.type === EnemyType.CRATE)
@@ -15137,6 +15152,10 @@ let loadEnemy = (es, game) => {
     enemy.direction = es.direction;
     enemy.dead = es.dead;
     enemy.skipNextTurns = es.skipNextTurns;
+    // Restore destroyable so chests can be broken after opened
+    if (typeof es.destroyable === "boolean") {
+        enemy.destroyable = es.destroyable;
+    }
     if (es.hasDrop)
         enemy.drop = loadItem(es.drop, game);
     enemy.alertTicks = es.alertTicks;
@@ -15286,6 +15305,34 @@ let loadRoom = (room, roomState, game) => {
             room.items.push(loadItem(item, game, undefined, room));
         }
     }
+    // Link chest drop references to existing room items for opened chests
+    try {
+        // First pass: group items by potential chest source tag if present
+        const byChestKey = new Map();
+        for (const it of room.items) {
+            const sx = it?.sourceChestX;
+            const sy = it?.sourceChestY;
+            if (sx !== undefined && sy !== undefined) {
+                const key = `${sx},${sy}`;
+                const arr = byChestKey.get(key) || [];
+                arr.push(it);
+                byChestKey.set(key, arr);
+            }
+        }
+        for (const e of room.entities) {
+            if (e instanceof chest_1.Chest && e.health <= 2) {
+                const key = `${e.x},${e.y}`;
+                const tagged = byChestKey.get(key);
+                if (tagged && tagged.length) {
+                    e.drops = tagged.slice();
+                    continue;
+                }
+                // Fallback: associate items sitting on the chest tile
+                e.drops = room.items.filter((it) => it && it.x === e.x && it.y === e.y);
+            }
+        }
+    }
+    catch { }
     for (const projectile of roomState.projectiles)
         room.projectiles.push(loadProjectile(projectile, game));
     for (const hw of roomState.hitwarnings)
@@ -15468,6 +15515,19 @@ class ItemState {
         this.roomGID = item.level?.globalId;
         this.stackCount = item.stackCount;
         this.pickedUp = item.pickedUp;
+        try {
+            // Tag items spawned by an opened chest to allow re-association on load
+            const levelRoom = item.level;
+            const candidateChest = levelRoom?.entities?.find((e) => e instanceof chest_1.Chest &&
+                e.health <= 2 &&
+                e.x === item.x &&
+                e.y === item.y);
+            if (candidateChest) {
+                this.sourceChestX = candidateChest.x;
+                this.sourceChestY = candidateChest.y;
+            }
+        }
+        catch { }
     }
 }
 exports.ItemState = ItemState;
@@ -21590,7 +21650,7 @@ class Item extends drawable_1.Drawable {
         this.pickedUp = false;
         this.alpha = 1;
         this.scaleFactor = 5;
-        this.offsetY = -0.25;
+        this.offsetY = -0.5;
         this.name = "item";
         this.startY = y;
         this.randomOffset = random_1.Random.rand();
@@ -37849,7 +37909,7 @@ class WallTorch extends wall_1.Wall {
             }
             game_1.Game.drawFX(Math.floor(this.frame), 32, 1, 2, this.x, this.y - 1 - this.torchOffset, 1, 2);
             if (this.isBottomWall) {
-                game_1.Game.drawTile(0, this.skin, 1, 1, this.x, this.y - 0.6, 1, 1, this.room.shadeColor, this.shadeAmount());
+                game_1.Game.drawTile(0, this.skin, 1, 1, this.x, this.y - 0.6, 1, 1, this.room.shadeColor, 1);
             }
         };
         this.isBottomWall = isBottomWall;
