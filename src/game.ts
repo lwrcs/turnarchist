@@ -618,6 +618,14 @@ export class Game {
     if (ladder instanceof DownLadder && !ladder.linkedRoom) ladder.generate();
 
     const newRoom = ladder.linkedRoom;
+    // If downladder provided an entry up-ladder position, pass it through transition
+    let entryPosition: { x: number; y: number } | undefined = undefined;
+    if ((ladder as any).entryUpLadderPos) {
+      entryPosition = { ...(ladder as any).entryUpLadderPos };
+      console.log(
+        `changeLevelThroughLadder: captured entryPosition (${entryPosition.x}, ${entryPosition.y}) for newRoom gid=${(newRoom as any)?.globalId}`,
+      );
+    }
 
     if (this.players[this.localPlayerID] === player) {
       player.levelID = newRoom.id;
@@ -636,6 +644,17 @@ export class Game {
     this.levelState = LevelState.TRANSITIONING_LADDER;
     this.transitionStartTime = Date.now();
     this.transitioningLadder = ladder;
+    // Attach desired entry position onto the target room so enterLevel can read it
+    if (entryPosition) {
+      (newRoom as any).__entryPositionFromLadder = entryPosition;
+      console.log(
+        `changeLevelThroughLadder: wrote __entryPositionFromLadder to room gid=${(newRoom as any)?.globalId}`,
+      );
+    } else {
+      console.log(
+        `changeLevelThroughLadder: no entryPosition available for room gid=${(newRoom as any)?.globalId}`,
+      );
+    }
   };
 
   changeLevelThroughDoor = (player: Player, door: Door, side?: number) => {

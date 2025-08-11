@@ -1145,7 +1145,14 @@ export class Room {
 
   enterLevel = (player: Player, position?: { x: number; y: number }) => {
     this.game.updateLevel(this);
-    let roomCenter = position || this.getRoomCenter();
+    // Prefer explicit entry position from ladder transition, then provided arg, then center
+    let ladderEntry = (this as any).__entryPositionFromLadder as
+      | { x: number; y: number }
+      | undefined;
+    if (ladderEntry) {
+      delete (this as any).__entryPositionFromLadder;
+    }
+    let roomCenter = ladderEntry || position || this.getRoomCenter();
 
     if (this.roomArray[roomCenter.x][roomCenter.y].isSolid()) {
       roomCenter = this.getRandomEmptyPosition(this.getEmptyTiles());
@@ -1154,8 +1161,8 @@ export class Room {
     let x = roomCenter.x;
     let y = roomCenter.y;
 
-    // Use different variable names to avoid shadowing
-    if (!position) {
+    // If no explicit position given, try to position on a DownLadder tile if presentz
+    if (!position && !ladderEntry) {
       for (let i = this.roomX; i < this.roomX + this.width; i++) {
         for (let j = this.roomY; j < this.roomY + this.height; j++) {
           const tile = this.roomArray[i]?.[j];

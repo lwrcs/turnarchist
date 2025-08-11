@@ -21,6 +21,7 @@ export class DownLadder extends Passageway {
   environment: EnvType;
   lockable: Lockable;
   opts?: { caveRooms?: number; mapWidth?: number; mapHeight?: number };
+  entryUpLadderPos?: { x: number; y: number };
 
   constructor(
     room: Room,
@@ -110,21 +111,54 @@ export class DownLadder extends Passageway {
   };
 
   private linkUpLadder = () => {
-    for (
-      let x = this.linkedRoom.roomX;
-      x < this.linkedRoom.roomX + this.linkedRoom.width;
-      x++
-    ) {
+    if (!this.linkedRoom) return;
+    if (this.isSidePath) {
+      // For sidepaths, ensure ALL up ladders in this sidepath mapGroup link back to the correct parent room
+      const level = this.linkedRoom.level;
+      const groupId = this.linkedRoom.mapGroup;
+      const groupRooms = level.rooms.filter((r) => r.mapGroup === groupId);
+      console.log(
+        `DownLadder.linkUpLadder: sidepath linking. linkedRoom gid=${(this.linkedRoom as any)?.globalId}, pathId=${(this.linkedRoom as any)?.pathId}, mapGroup=${groupId}, groupRooms=${groupRooms.length}`,
+      );
+      for (const room of groupRooms) {
+        for (let x = room.roomX; x < room.roomX + room.width; x++) {
+          for (let y = room.roomY; y < room.roomY + room.height; y++) {
+            const tile = room.roomArray[x]?.[y];
+            if (tile instanceof UpLadder) {
+              this.setUpLadderLink(tile as UpLadder);
+              if (!this.entryUpLadderPos && room === this.linkedRoom) {
+                this.entryUpLadderPos = {
+                  x: (tile as any).x,
+                  y: (tile as any).y,
+                };
+                console.log(
+                  `DownLadder.linkUpLadder: entryUpLadderPos set to (${this.entryUpLadderPos.x}, ${this.entryUpLadderPos.y}) in linkedRoom gid=${(this.linkedRoom as any)?.globalId}`,
+                );
+              }
+            }
+          }
+        }
+      }
+    } else {
+      // Non-sidepath: link the first up ladder in the generated room (unchanged behavior)
       for (
-        let y = this.linkedRoom.roomY;
-        y < this.linkedRoom.roomY + this.linkedRoom.height;
-        y++
+        let x = this.linkedRoom.roomX;
+        x < this.linkedRoom.roomX + this.linkedRoom.width;
+        x++
       ) {
-        let tile = this.linkedRoom.roomArray[x][y];
-
-        if (tile instanceof UpLadder) {
-          this.setUpLadderLink(tile);
-          return; // Exit both loops
+        for (
+          let y = this.linkedRoom.roomY;
+          y < this.linkedRoom.roomY + this.linkedRoom.height;
+          y++
+        ) {
+          const tile = this.linkedRoom.roomArray[x]?.[y];
+          if (tile instanceof UpLadder) {
+            this.setUpLadderLink(tile as UpLadder);
+            console.log(
+              `DownLadder.linkUpLadder: non-sidepath linked first UpLadder at (${(tile as any).x}, ${(tile as any).y}) for room gid=${(this.linkedRoom as any)?.globalId}`,
+            );
+            return;
+          }
         }
       }
     }
@@ -133,6 +167,14 @@ export class DownLadder extends Passageway {
   private setUpLadderLink = (upLadder: UpLadder) => {
     if (this.isSidePath) {
       upLadder.linkedRoom = this.room;
+      (upLadder as any).isRope = true;
+      // Record the exact parent down-ladder tile to spawn on when going back up
+      (upLadder as any).exitDownLadderPos = { x: this.x, y: this.y };
+      try {
+        console.log(
+          `DownLadder.setUpLadderLink: set exitDownLadderPos (${this.x}, ${this.y}) on UpLadder for parent room gid=${(this.room as any)?.globalId}`,
+        );
+      } catch {}
     } else {
       upLadder.linkedRoom = this.game.levels[this.room.depth].exitRoom;
     }

@@ -49,11 +49,23 @@ export class UpLadder extends Passageway {
       if (!this.linkedRoom) {
         this.linkRoom();
       }
+      // If we have an exact parent down-ladder coordinate recorded, stash it on the target room
+      const exitPos = (this as any).exitDownLadderPos as
+        | { x: number; y: number }
+        | undefined;
       // If this is a rope (sidepath) exit, switch active path back to the linked room's path
       if (this.isRope && this.linkedRoom) {
         (this.game as any).currentPathId = this.linkedRoom.pathId || "main";
       }
       this.game.changeLevelThroughLadder(player, this);
+      if (exitPos && this.linkedRoom) {
+        (this.linkedRoom as any).__entryPositionFromLadder = exitPos;
+        try {
+          console.log(
+            `UpLadder.onCollide: wrote __entryPositionFromLadder (${exitPos.x}, ${exitPos.y}) onto parent room gid=${(this.linkedRoom as any)?.globalId}`,
+          );
+        } catch {}
+      }
       Sound.forestMusic.pause();
       Sound.caveMusic.pause();
     } catch (error) {

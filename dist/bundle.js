@@ -12426,6 +12426,12 @@ class Game {
             if (ladder instanceof downLadder_1.DownLadder && !ladder.linkedRoom)
                 ladder.generate();
             const newRoom = ladder.linkedRoom;
+            // If downladder provided an entry up-ladder position, pass it through transition
+            let entryPosition = undefined;
+            if (ladder.entryUpLadderPos) {
+                entryPosition = { ...ladder.entryUpLadderPos };
+                console.log(`changeLevelThroughLadder: captured entryPosition (${entryPosition.x}, ${entryPosition.y}) for newRoom gid=${newRoom?.globalId}`);
+            }
             if (this.players[this.localPlayerID] === player) {
                 player.levelID = newRoom.id;
                 player.roomGID = newRoom.globalId;
@@ -12441,6 +12447,14 @@ class Game {
             this.levelState = LevelState.TRANSITIONING_LADDER;
             this.transitionStartTime = Date.now();
             this.transitioningLadder = ladder;
+            // Attach desired entry position onto the target room so enterLevel can read it
+            if (entryPosition) {
+                newRoom.__entryPositionFromLadder = entryPosition;
+                console.log(`changeLevelThroughLadder: wrote __entryPositionFromLadder to room gid=${newRoom?.globalId}`);
+            }
+            else {
+                console.log(`changeLevelThroughLadder: no entryPosition available for room gid=${newRoom?.globalId}`);
+            }
         };
         this.changeLevelThroughDoor = (player, door, side) => {
             door.linkedDoor.room.entered = true;
@@ -31737,14 +31751,19 @@ class Room {
         };
         this.enterLevel = (player, position) => {
             this.game.updateLevel(this);
-            let roomCenter = position || this.getRoomCenter();
+            // Prefer explicit entry position from ladder transition, then provided arg, then center
+            let ladderEntry = this.__entryPositionFromLadder;
+            if (ladderEntry) {
+                delete this.__entryPositionFromLadder;
+            }
+            let roomCenter = ladderEntry || position || this.getRoomCenter();
             if (this.roomArray[roomCenter.x][roomCenter.y].isSolid()) {
                 roomCenter = this.getRandomEmptyPosition(this.getEmptyTiles());
             }
             let x = roomCenter.x;
             let y = roomCenter.y;
-            // Use different variable names to avoid shadowing
-            if (!position) {
+            // If no explicit position given, try to position on a DownLadder tile if presentz
+            if (!position && !ladderEntry) {
                 for (let i = this.roomX; i < this.roomX + this.width; i++) {
                     for (let j = this.roomY; j < this.roomY + this.height; j++) {
                         const tile = this.roomArray[i]?.[j];
@@ -36673,12 +36692,42 @@ class DownLadder extends passageway_1.Passageway {
             });
         };
         this.linkUpLadder = () => {
-            for (let x = this.linkedRoom.roomX; x < this.linkedRoom.roomX + this.linkedRoom.width; x++) {
-                for (let y = this.linkedRoom.roomY; y < this.linkedRoom.roomY + this.linkedRoom.height; y++) {
-                    let tile = this.linkedRoom.roomArray[x][y];
-                    if (tile instanceof upLadder_1.UpLadder) {
-                        this.setUpLadderLink(tile);
-                        return; // Exit both loops
+            if (!this.linkedRoom)
+                return;
+            if (this.isSidePath) {
+                // For sidepaths, ensure ALL up ladders in this sidepath mapGroup link back to the correct parent room
+                const level = this.linkedRoom.level;
+                const groupId = this.linkedRoom.mapGroup;
+                const groupRooms = level.rooms.filter((r) => r.mapGroup === groupId);
+                console.log(`DownLadder.linkUpLadder: sidepath linking. linkedRoom gid=${this.linkedRoom?.globalId}, pathId=${this.linkedRoom?.pathId}, mapGroup=${groupId}, groupRooms=${groupRooms.length}`);
+                for (const room of groupRooms) {
+                    for (let x = room.roomX; x < room.roomX + room.width; x++) {
+                        for (let y = room.roomY; y < room.roomY + room.height; y++) {
+                            const tile = room.roomArray[x]?.[y];
+                            if (tile instanceof upLadder_1.UpLadder) {
+                                this.setUpLadderLink(tile);
+                                if (!this.entryUpLadderPos && room === this.linkedRoom) {
+                                    this.entryUpLadderPos = {
+                                        x: tile.x,
+                                        y: tile.y,
+                                    };
+                                    console.log(`DownLadder.linkUpLadder: entryUpLadderPos set to (${this.entryUpLadderPos.x}, ${this.entryUpLadderPos.y}) in linkedRoom gid=${this.linkedRoom?.globalId}`);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            else {
+                // Non-sidepath: link the first up ladder in the generated room (unchanged behavior)
+                for (let x = this.linkedRoom.roomX; x < this.linkedRoom.roomX + this.linkedRoom.width; x++) {
+                    for (let y = this.linkedRoom.roomY; y < this.linkedRoom.roomY + this.linkedRoom.height; y++) {
+                        const tile = this.linkedRoom.roomArray[x]?.[y];
+                        if (tile instanceof upLadder_1.UpLadder) {
+                            this.setUpLadderLink(tile);
+                            console.log(`DownLadder.linkUpLadder: non-sidepath linked first UpLadder at (${tile.x}, ${tile.y}) for room gid=${this.linkedRoom?.globalId}`);
+                            return;
+                        }
                     }
                 }
             }
@@ -36686,6 +36735,13 @@ class DownLadder extends passageway_1.Passageway {
         this.setUpLadderLink = (upLadder) => {
             if (this.isSidePath) {
                 upLadder.linkedRoom = this.room;
+                upLadder.isRope = true;
+                // Record the exact parent down-ladder tile to spawn on when going back up
+                upLadder.exitDownLadderPos = { x: this.x, y: this.y };
+                try {
+                    console.log(`DownLadder.setUpLadderLink: set exitDownLadderPos (${this.x}, ${this.y}) on UpLadder for parent room gid=${this.room?.globalId}`);
+                }
+                catch { }
             }
             else {
                 upLadder.linkedRoom = this.game.levels[this.room.depth].exitRoom;
@@ -37450,11 +37506,20 @@ class UpLadder extends passageway_1.Passageway {
                 if (!this.linkedRoom) {
                     this.linkRoom();
                 }
+                // If we have an exact parent down-ladder coordinate recorded, stash it on the target room
+                const exitPos = this.exitDownLadderPos;
                 // If this is a rope (sidepath) exit, switch active path back to the linked room's path
                 if (this.isRope && this.linkedRoom) {
                     this.game.currentPathId = this.linkedRoom.pathId || "main";
                 }
                 this.game.changeLevelThroughLadder(player, this);
+                if (exitPos && this.linkedRoom) {
+                    this.linkedRoom.__entryPositionFromLadder = exitPos;
+                    try {
+                        console.log(`UpLadder.onCollide: wrote __entryPositionFromLadder (${exitPos.x}, ${exitPos.y}) onto parent room gid=${this.linkedRoom?.globalId}`);
+                    }
+                    catch { }
+                }
                 sound_1.Sound.forestMusic.pause();
                 sound_1.Sound.caveMusic.pause();
             }
