@@ -9,23 +9,37 @@ import { Player } from "../player/player";
 
 export class Menu {
   buttons: guiButton[];
-  closeButton: guiButton;
+  closeButton: guiButton | null;
   open: boolean;
   selectedButton: number;
-  player: Player;
+  game: Game;
+  player?: Player;
+  private showCloseButton: boolean = true;
   selectionTimeoutId: ReturnType<typeof setTimeout> | null = null;
   // Add debouncing properties
   private lastButtonClickTime: number = 0;
   private lastButtonClickIndex: number = -1;
   private readonly BUTTON_CLICK_DEBOUNCE_TIME = 150; // milliseconds
 
-  constructor(player: Player) {
+  constructor(
+    arg: Player | { game: Game; player?: Player; showCloseButton?: boolean },
+  ) {
     this.buttons = [];
     this.open = false;
     this.selectedButton = 0;
-    this.initializeCloseButton();
-    this.initializeMainMenu();
-    this.player = player;
+    if (arg instanceof Player) {
+      this.game = arg.game;
+      this.player = arg;
+      this.showCloseButton = true;
+      this.initializeCloseButton();
+      this.initializeMainMenu();
+    } else {
+      this.game = arg.game;
+      this.player = arg.player;
+      this.showCloseButton = arg.showCloseButton !== false;
+      if (this.showCloseButton) this.initializeCloseButton();
+      // Do not auto-build buttons; caller decides what to add
+    }
   }
 
   static drawOpenMenuButton() {
@@ -99,10 +113,10 @@ export class Menu {
         // Mirror the "/smooth" command behavior
         GameConstants.SMOOTH_LIGHTING = !GameConstants.SMOOTH_LIGHTING;
         const enabled = GameConstants.SMOOTH_LIGHTING ? "enabled" : "disabled";
-        this.player.game.pushMessage(`Smooth lighting is now ${enabled}`);
+        this.game.pushMessage(`Smooth lighting is now ${enabled}`);
         try {
           const { saveSettings } = require("../game/settingsPersistence");
-          saveSettings(this.player.game);
+          saveSettings(this.game);
         } catch {}
       },
       false,
@@ -119,9 +133,9 @@ export class Menu {
       () => {
         try {
           const { saveToCookies } = require("../game/savePersistence");
-          saveToCookies(this.player.game);
+          saveToCookies(this.game);
         } catch (e) {
-          this.player.game.pushMessage("Save failed.");
+          this.game.pushMessage("Save failed.");
         }
       },
       false,
@@ -138,9 +152,9 @@ export class Menu {
       () => {
         try {
           const { loadFromCookies } = require("../game/savePersistence");
-          loadFromCookies(this.player.game);
+          loadFromCookies(this.game);
         } catch (e) {
-          this.player.game.pushMessage("Load failed.");
+          this.game.pushMessage("Load failed.");
         }
       },
       false,
@@ -156,9 +170,9 @@ export class Menu {
       "New Game",
       () => {
         try {
-          this.player.game.newGame();
+          this.game.newGame();
         } catch (e) {
-          this.player.game.pushMessage("New Game failed.");
+          this.game.pushMessage("New Game failed.");
         }
       },
       false,
@@ -176,9 +190,9 @@ export class Menu {
         try {
           const { clearCookieSave } = require("../game/savePersistence");
           clearCookieSave();
-          this.player.game.pushMessage("Cleared cookie/localStorage save.");
+          this.game.pushMessage("Cleared cookie/localStorage save.");
         } catch (e) {
-          this.player.game.pushMessage("Clear Save failed.");
+          this.game.pushMessage("Clear Save failed.");
         }
       },
       false,
@@ -189,6 +203,66 @@ export class Menu {
     this.positionButtons();
   }
 
+  buildStartMenu() {
+    this.buttons = [];
+    const header = new guiButton(
+      0,
+      0,
+      0,
+      0,
+      "Welcome to Turnarchist",
+      () => {},
+      false,
+      this,
+    );
+    header.noFill = true;
+    header.textColor = "rgb(255, 255, 0)"; // yellow text
+    this.addButton(header);
+    const continueBtn = new guiButton(
+      0,
+      0,
+      0,
+      0,
+      "Continue",
+      () => {
+        try {
+          const { loadFromCookies } = require("../game/savePersistence");
+          loadFromCookies(this.game).then((ok: boolean) => {
+            if (ok) {
+              this.game.pushMessage("Loaded save.");
+              this.close();
+              (this.game as any).startedFadeOut = true;
+              (this.game as any).startMenuActive = false;
+            } else {
+              this.game.pushMessage("Load failed.");
+            }
+          });
+        } catch (e) {
+          this.game.pushMessage("Load failed.");
+        }
+      },
+      false,
+      this,
+    );
+    const newBtn = new guiButton(
+      0,
+      0,
+      0,
+      0,
+      "New Game",
+      () => {
+        this.close();
+        (this.game as any).startedFadeOut = true;
+        (this.game as any).startMenuActive = false;
+      },
+      false,
+      this,
+    );
+    this.addButton(continueBtn);
+    this.addButton(newBtn);
+    this.positionButtons();
+  }
+
   addButton(button: guiButton) {
     this.buttons.push(button);
   }
@@ -196,7 +270,7 @@ export class Menu {
   draw() {
     if (this.open) {
       Game.ctx.save();
-      Game.ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+      Game.ctx.fillStyle = "rgba(0, 0, 0, 0)";
       Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
 
       // Draw main menu buttons
@@ -205,7 +279,7 @@ export class Menu {
       });
 
       // Draw close button
-      this.drawCloseButton();
+      if (this.showCloseButton && this.closeButton) this.drawCloseButton();
 
       Game.ctx.restore();
     }
@@ -219,20 +293,25 @@ export class Menu {
     Game.ctx.strokeStyle = "transparent";
     Game.ctx.lineWidth = 0;
 
-    Game.ctx.fillStyle =
-      this.selectedButton === this.buttons.indexOf(button)
-        ? "rgba(75, 75, 75, 1)"
-        : "rgba(100, 100, 100, 1)";
+    // Optional no-fill for header-like buttons
+    if (!button.noFill) {
+      Game.ctx.fillStyle =
+        this.selectedButton === this.buttons.indexOf(button)
+          ? "rgba(75, 75, 75, 0.5)"
+          : "rgba(100, 100, 100, 0.5)";
 
-    // Round coordinates to prevent anti-aliasing outlines
-    Game.ctx.fillRect(
-      Math.round(button.x),
-      Math.round(button.y),
-      Math.round(button.width),
-      Math.round(button.height),
-    );
+      // Round coordinates to prevent anti-aliasing outlines
+      Game.ctx.fillRect(
+        Math.round(button.x),
+        Math.round(button.y),
+        Math.round(button.width),
+        Math.round(button.height),
+      );
+    }
 
-    Game.ctx.fillStyle = "rgba(0, 0, 0, 1)";
+    // Default text color: yellow (overridden by per-button textColor if provided)
+    Game.ctx.fillStyle = "rgba(255, 255, 0, 1)";
+    if (button.textColor) Game.ctx.fillStyle = button.textColor;
 
     const textWidth = Game.measureText(button.text).width;
     const textX = button.x + (button.width - textWidth) / 2;
@@ -260,12 +339,13 @@ export class Menu {
     // Border for the close button
     Game.ctx.strokeStyle = "rgba(0, 0, 0, 1)";
     Game.ctx.lineWidth = 1;
-    Game.ctx.strokeRect(
-      this.closeButton.x,
-      this.closeButton.y,
-      this.closeButton.width,
-      this.closeButton.height,
-    );
+    if (this.closeButton)
+      Game.ctx.strokeRect(
+        this.closeButton.x,
+        this.closeButton.y,
+        this.closeButton.width,
+        this.closeButton.height,
+      );
 
     // Draw X text
     Game.ctx.fillStyle = "rgba(255, 255, 255, 1)"; // White X
@@ -314,7 +394,7 @@ export class Menu {
     }
 
     // Check close button first
-    if (this.isPointInCloseButton(x, y)) {
+    if (this.showCloseButton && this.isPointInCloseButton(x, y)) {
       // Add debouncing for close button too
       const currentTime = Date.now();
       if (
@@ -417,12 +497,12 @@ export class Menu {
   };
 
   scaleUp = () => {
-    this.player.game.increaseScale();
+    this.game.increaseScale();
     // Add scale up functionality here
   };
 
   scaleDown = () => {
-    this.player.game.decreaseScale();
+    this.game.decreaseScale();
     // Add scale down functionality here
   };
 
@@ -432,60 +512,91 @@ export class Menu {
     const buttonCount = this.buttons.length;
 
     // Position close button to match menu button position
-    this.closeButton.x = 1;
-    this.closeButton.y = GameConstants.TILESIZE / 2;
+    if (this.showCloseButton && this.closeButton) {
+      this.closeButton.x = 1;
+      this.closeButton.y = GameConstants.TILESIZE / 2;
+    }
 
-    // Button sizing - make them responsive to screen size
-    const maxButtonWidth = Math.min(200, screenWidth * 0.6); // Max 60% of screen width
+    // Layout parameters: tighter margins and smaller spacing
+    const maxButtonWidth = Math.min(260, Math.floor(screenWidth * 0.8));
+    const verticalMargin = 8; // smaller top/bottom margin
+    const spacing = 6; // smaller space between buttons
+    const horizontalGap = 8; // gap between side-by-side buttons
+    const paddingX = 16; // left+right padding for text
 
-    // Calculate available space
-    const horizontalMargin = (screenWidth - maxButtonWidth) / 2;
-    const verticalMargin = 20; // Top and bottom margin
-    const availableHeight = screenHeight - verticalMargin * 2;
-
-    // Calculate button slots (scale buttons share one slot)
+    // Rows count (scale +/- share one row)
     const scaleButtonIndices = this.getScaleButtonIndices();
-    const buttonSlots = buttonCount - (scaleButtonIndices.length > 0 ? 1 : 0); // Scale buttons share one slot
-    const heightPerButtonSlot = availableHeight / buttonSlots;
-
-    // Make each button take up ~80% of its slot, leaving 20% for spacing
-    // Add maximum height constraint - reduce by 40% from what could be very tall buttons
-    const maxButtonHeight = 30; // Maximum button height in pixels
-    const calculatedHeight = Math.floor(heightPerButtonSlot * 0.8);
-    const buttonHeight = Math.min(calculatedHeight, maxButtonHeight);
+    const rows = buttonCount - (scaleButtonIndices.length > 0 ? 1 : 0);
+    const totalSpacing = spacing * Math.max(0, rows - 1);
+    const availableHeight = Math.max(
+      0,
+      screenHeight - verticalMargin * 2 - totalSpacing,
+    );
+    const maxButtonHeight = 22; // shorter max height
+    const computedHeight =
+      rows > 0 ? Math.floor(availableHeight / rows) : maxButtonHeight;
+    const buttonHeight = Math.min(
+      maxButtonHeight,
+      Math.max(12, computedHeight), // shorter minimum height
+    );
 
     // Update button dimensions and positions
-    let currentSlot = 0;
+    if (rows <= 0) return;
+    const totalButtonsHeight = rows * buttonHeight + totalSpacing;
+    const availableRectTop = verticalMargin;
+    const availableRectHeight = screenHeight - verticalMargin * 2;
+    let currentY =
+      availableRectTop +
+      Math.floor((availableRectHeight - totalButtonsHeight) / 2);
     for (let i = 0; i < this.buttons.length; i++) {
       const button = this.buttons[i];
 
       if (button.text === "- Scale" || button.text === "+ Scale") {
-        // Handle scale buttons specially - they share one slot side by side
-        const isMinusButton = button.text === "- Scale";
-        const buttonWidth = Math.floor(maxButtonWidth / 2) - 2; // Split width with small gap
+        // Handle the scale pair together
+        const minusBtn =
+          this.buttons[i].text === "- Scale" ? this.buttons[i] : null;
+        const plusIdx = this.buttons[i].text === "- Scale" ? i + 1 : i - 1;
+        const plusBtn = this.buttons[plusIdx];
 
-        button.x = horizontalMargin + (isMinusButton ? 0 : buttonWidth + 4);
-        button.y =
-          verticalMargin +
-          currentSlot * heightPerButtonSlot +
-          (heightPerButtonSlot - buttonHeight) / 2;
-        button.width = buttonWidth;
-        button.height = buttonHeight;
+        // Measure widths based on text
+        const minusTextW = Game.measureText("- Scale").width;
+        const plusTextW = Game.measureText("+ Scale").width;
+        const minusW = Math.min(maxButtonWidth, minusTextW + paddingX);
+        const plusW = Math.min(maxButtonWidth, plusTextW + paddingX);
+        const pairWidth = minusW + horizontalGap + plusW;
+        const startX = Math.floor((screenWidth - pairWidth) / 2);
+        const y = currentY;
 
-        // Only advance slot after both scale buttons are positioned
-        if (button.text === "+ Scale") {
-          currentSlot++;
+        // Place minus
+        const minus =
+          this.buttons[i].text === "- Scale"
+            ? this.buttons[i]
+            : this.buttons[plusIdx];
+        minus.x = startX;
+        minus.y = y;
+        minus.width = minusW;
+        minus.height = buttonHeight;
+
+        // Place plus
+        const plus = plusBtn;
+        plus.x = startX + minusW + horizontalGap;
+        plus.y = y;
+        plus.width = plusW;
+        plus.height = buttonHeight;
+
+        // Skip next index if we placed both in this iteration
+        if (this.buttons[i].text === "- Scale") {
+          i = Math.max(i, plusIdx);
         }
+        currentY += buttonHeight + spacing;
       } else {
-        // Regular button positioning
-        button.x = horizontalMargin;
-        button.y =
-          verticalMargin +
-          currentSlot * heightPerButtonSlot +
-          (heightPerButtonSlot - buttonHeight) / 2;
-        button.width = maxButtonWidth;
+        const textW = Game.measureText(button.text).width;
+        const width = Math.min(maxButtonWidth, textW + paddingX);
+        button.width = width;
+        button.x = Math.floor((screenWidth - width) / 2);
+        button.y = currentY;
         button.height = buttonHeight;
-        currentSlot++;
+        currentY += buttonHeight + spacing;
       }
     }
   }
@@ -525,6 +636,7 @@ export class Menu {
 
   isPointInCloseButton(x: number, y: number): boolean {
     return (
+      !!this.closeButton &&
       x >= this.closeButton.x &&
       x <= this.closeButton.x + this.closeButton.width &&
       y >= this.closeButton.y &&

@@ -12,6 +12,9 @@ export class guiButton {
   text: string;
   parent: Menu;
   onClick: () => void;
+  // Optional styling
+  noFill?: boolean;
+  textColor?: string;
   constructor(
     x: number,
     y: number,
@@ -31,6 +34,8 @@ export class guiButton {
     this.text = text;
     this.onClick = onClick;
     this.parent = parent;
+    this.noFill = false;
+    this.textColor = undefined;
   }
 
   // Add a method to update the button's own text based on mute state
@@ -39,6 +44,6 @@ export class guiButton {
     MuteButton.toggleMute();
 
     this.text = Sound.audioMuted ? "Sound Muted" : "Sound Unmuted";
-    this.parent.player.game.pushMessage(this.text);
+    this.parent.game.pushMessage(this.text);
   };
 }

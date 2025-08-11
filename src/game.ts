@@ -248,6 +248,9 @@ export class Game {
 
   private lastChatWidth: number = 0;
   private savedGameState: GameState | null = null;
+  // Start screen menu (optional)
+  startMenu: any = null;
+  startMenuActive: boolean = false;
 
   constructor() {
     this.globalId = IdGenerator.generate("G");
@@ -424,6 +427,18 @@ export class Game {
           this.levels = [];
           this.encounteredEnemies = [];
           this.newGame();
+          // If a save exists, build a start-screen menu to choose Continue/New
+          try {
+            const { getCookie } = require("./utility/cookies");
+            const hasSave = !!getCookie("wr_save_meta");
+            if (hasSave) {
+              const { Menu } = require("./gui/menu");
+              this.startMenu = new Menu({ game: this, showCloseButton: false });
+              this.startMenu.buildStartMenu();
+              this.startMenu.openMenu();
+              this.startMenuActive = true;
+            }
+          } catch {}
         }
       };
       checkResourcesLoaded();
@@ -544,6 +559,10 @@ export class Game {
     Game.inputReceived = true;
 
     if (!this.started) {
+      // If a start menu is active, ignore the default start behavior
+      if (this.startMenuActive) {
+        return;
+      }
       this.startedFadeOut = true;
       return;
     }
@@ -1572,18 +1591,24 @@ export class Game {
     Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
     Game.ctx.fillStyle = LevelConstants.LEVEL_TEXT_COLOR;
 
-    Game.fillText(
-      startString,
-      GameConstants.WIDTH / 2 - Game.measureText(startString).width / 2,
-      GameConstants.HEIGHT / 2 - Game.letter_height + 2,
-    );
-    let restartButton = "Press space or click to start";
-    if (this.isMobile) restartButton = "Tap to start";
-    Game.fillText(
-      restartButton,
-      GameConstants.WIDTH / 2 - Game.measureText(restartButton).width / 2,
-      GameConstants.HEIGHT / 2 + Game.letter_height + 5,
-    );
+    // Draw CTA or menu buttons depending on startMenuActive
+    if (!this.startMenuActive && !this.startedFadeOut) {
+      Game.fillText(
+        startString,
+        GameConstants.WIDTH / 2 - Game.measureText(startString).width / 2,
+        GameConstants.HEIGHT / 2 - Game.letter_height + 2,
+      );
+      let restartButton = "Press space or click to start";
+      if (this.isMobile) restartButton = "Tap to start";
+      Game.fillText(
+        restartButton,
+        GameConstants.WIDTH / 2 - Game.measureText(restartButton).width / 2,
+        GameConstants.HEIGHT / 2 + Game.letter_height + 5,
+      );
+    } else {
+      // Draw the start screen menu buttons (Continue/New Game)
+      this.startMenu?.draw();
+    }
 
     Game.ctx.globalAlpha = 1;
   };

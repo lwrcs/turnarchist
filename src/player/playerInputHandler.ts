@@ -74,6 +74,10 @@ export class PlayerInputHandler {
     }
 
     if (!this.player.game.started && input !== InputEnum.MOUSE_MOVE) {
+      // If start screen menu is active, do not auto-start; let the menu handle clicks
+      if ((this.player.game as any).startMenuActive) {
+        return;
+      }
       this.player.game.startedFadeOut = true;
       return;
     }
@@ -274,6 +278,15 @@ export class PlayerInputHandler {
     const player = this.player;
 
     if (player.game.levelState !== LevelState.IN_LEVEL) {
+      // Route clicks to start menu if active
+      if (
+        !(player.game as any).started &&
+        (player.game as any).startMenuActive
+      ) {
+        (player.game as any).startMenu?.mouseInputHandler(x, y);
+        Input.mouseDownHandled = true;
+        return;
+      }
       Input.mouseDownHandled = false;
       return;
     }
@@ -289,7 +302,11 @@ export class PlayerInputHandler {
 
     // Handle game not started
     if (!player.game.started) {
-      player.game.startedFadeOut = true;
+      if ((player.game as any).startMenuActive) {
+        (player.game as any).startMenu?.mouseInputHandler(x, y);
+      } else {
+        player.game.startedFadeOut = true;
+      }
       Input.mouseDownHandled = true;
       return;
     }
@@ -372,6 +389,12 @@ export class PlayerInputHandler {
     const { x, y } = cursor.getPosition();
 
     if (player.game.levelState !== LevelState.IN_LEVEL) {
+      if (
+        !(player.game as any).started &&
+        (player.game as any).startMenuActive
+      ) {
+        (player.game as any).startMenu?.mouseInputHandler(x, y);
+      }
       return;
     }
 
@@ -456,7 +479,14 @@ export class PlayerInputHandler {
       this.player.restart();
       return;
     } else if (!this.player.game.started) {
-      this.player.game.startedFadeOut = true;
+      if ((this.player.game as any).startMenuActive) {
+        (this.player.game as any).startMenu?.mouseInputHandler(
+          Input.mouseX,
+          Input.mouseY,
+        );
+      } else {
+        this.player.game.startedFadeOut = true;
+      }
       return;
     }
 
