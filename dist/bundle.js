@@ -3573,68 +3573,16 @@ class Shadow {
      * - width, height: footprint size in tiles; default 1x1. Larger values scale the shadow ellipse.
      * - radiusPx: optional blur radius in pixels; defaults to current behavior (~3px).
      */
-    static draw(x, y, width = 1, height = 1, radiusPx) {
+    static draw(x, y, width = 1, height = 1) {
         const tileSize = gameConstants_1.GameConstants.TILESIZE;
-        const blurRadius = radiusPx ?? 3; // default matches prior behavior
-        // Lazily create shared offscreen canvas
-        if (!Shadow._canvas) {
-            Shadow._canvas = document.createElement("canvas");
-            Shadow._ctx = Shadow._canvas.getContext("2d");
-        }
-        const canvas = Shadow._canvas;
-        const ctx = Shadow._ctx;
-        // Pad for blur falloff; scale slightly with tile size
-        const pad = Math.floor(tileSize * 0.25);
-        // Size offscreen buffer to the entity footprint so the ellipse can scale
-        const offW = Math.max(1, Math.ceil(width * tileSize)) + pad * 2;
-        const offH = Math.max(1, Math.ceil(height * tileSize)) + pad * 2;
-        if (canvas.width !== offW || canvas.height !== offH) {
-            canvas.width = offW;
-            canvas.height = offH;
-        }
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.save();
-        // Draw ellipse centered under the footprint; scale radii with width/height
-        const cx = Math.floor(canvas.width / 2);
-        const cy = Math.floor(canvas.height / 2) + Math.floor(tileSize * 0.15 * height);
-        const rx = tileSize * 0.35 * width;
-        const ry = tileSize * 0.2 * height;
-        ctx.fillStyle = "rgba(0,0,0,0.75)";
-        ctx.beginPath();
-        ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-        // Compute on-screen position (top-left of the footprint) in pixels
-        const screenX = Math.round(x * tileSize) - pad;
-        const screenY = Math.round((y - 0.25) * tileSize) - pad;
-        // Composite below sprites with multiply
-        game_1.Game.ctx.save();
-        game_1.Game.ctx.globalCompositeOperation = "multiply";
-        game_1.Game.ctx.globalAlpha = 1;
-        if (gameConstants_1.GameConstants.USE_WEBGL_BLUR) {
-            try {
-                const { WebGLBlurRenderer } = __webpack_require__(/*! ../gui/webglBlurRenderer */ "./src/gui/webglBlurRenderer.ts");
-                if (!Shadow._blurRenderer) {
-                    Shadow._blurRenderer = new WebGLBlurRenderer(game_1.Game.ctx.canvas);
-                }
-                const renderer = Shadow._blurRenderer;
-                const blurred = renderer.blur(canvas, blurRadius, 1);
-                game_1.Game.ctx.drawImage(blurred, screenX, screenY);
-            }
-            catch {
-                if (gameConstants_1.GameConstants.ctxBlurEnabled)
-                    game_1.Game.ctx.filter = `blur(${blurRadius}px)`;
-                game_1.Game.ctx.drawImage(canvas, screenX, screenY);
-                game_1.Game.ctx.filter = "none";
-            }
+        game_1.Game.ctx.globalAlpha = 0.5;
+        if (width > 1 || height > 1) {
+            game_1.Game.drawFX(30, 3, 2, 2, x, y + 0.5, 2, 2, "black");
         }
         else {
-            if (gameConstants_1.GameConstants.ctxBlurEnabled)
-                game_1.Game.ctx.filter = `blur(${blurRadius}px)`;
-            game_1.Game.ctx.drawImage(canvas, screenX, screenY);
-            game_1.Game.ctx.filter = "none";
+            game_1.Game.drawFX(30, 1, 2, 2, x - 0.5, y - 0.5, 2, 2, "black");
         }
-        game_1.Game.ctx.restore();
+        game_1.Game.ctx.globalAlpha = 1;
     }
 }
 exports.Shadow = Shadow;
