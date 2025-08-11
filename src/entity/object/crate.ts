@@ -18,7 +18,7 @@ export class Crate extends Entity {
     this.maxHealth = 1;
     this.tileX = 0;
     this.tileY = 0;
-    this.hasShadow = false;
+    this.hasShadow = true;
     this.pushable = true;
     this.name = "crate";
     this.imageParticleX = 3;
@@ -39,6 +39,8 @@ export class Crate extends Entity {
     Game.ctx.save();
     Game.ctx.globalAlpha = this.alpha;
     if (!this.dead) {
+      if (this.hasShadow) this.drawShadow(delta);
+
       this.updateDrawXY(delta);
       Game.drawObj(
         this.tileX,

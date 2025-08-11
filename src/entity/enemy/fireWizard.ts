@@ -189,19 +189,7 @@ export class FireWizardEnemy extends WizardEnemy {
     if (this.frame >= 4) this.frame = 0;
     if (!this.dead) {
       this.updateDrawXY(delta);
-      if (this.hasShadow)
-        Game.drawMob(
-          0,
-          0,
-          1,
-          1,
-          this.x - this.drawX,
-          this.y - this.drawY,
-          1,
-          1,
-          this.room.shadeColor,
-          this.shadeAmount(),
-        );
+      if (this.hasShadow) this.drawShadow(delta);
       if (this.frame >= 0) {
         Game.drawMob(
           this.tileX + Math.floor(this.frame),

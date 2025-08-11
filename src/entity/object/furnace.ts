@@ -20,7 +20,7 @@ export class Furnace extends Entity {
     this.health = 1;
     this.tileX = 2;
     this.tileY = 4;
-    this.hasShadow = false;
+    this.hasShadow = true;
     this.chainPushable = false;
     this.name = "furnace";
     this.drops.push(new Torch(this.room, this.x, this.y));
@@ -49,6 +49,8 @@ export class Furnace extends Entity {
     Game.ctx.save();
     Game.ctx.globalAlpha = this.alpha;
     if (!this.dead) {
+      if (this.hasShadow) this.drawShadow(delta);
+
       this.updateDrawXY(delta);
       Game.drawObj(
         this.tileX,

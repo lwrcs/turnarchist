@@ -221,19 +221,7 @@ export class ArmoredzombieEnemy extends Enemy {
       this.frame += 0.1 * delta;
       if (this.frame >= 4) this.frame = 0;
 
-      if (this.hasShadow)
-        Game.drawMob(
-          0,
-          0,
-          1,
-          1,
-          this.x - this.drawX,
-          this.y - this.drawY,
-          1,
-          1,
-          this.room.shadeColor,
-          this.shadeAmount(),
-        );
+      if (this.hasShadow) this.drawShadow(delta);
       Game.drawMob(
         this.tileX + (this.tileX === 5 ? Math.floor(this.frame) : 0),
         this.tileY + this.direction * 2,

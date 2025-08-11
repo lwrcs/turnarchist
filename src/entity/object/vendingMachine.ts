@@ -266,6 +266,8 @@ export class VendingMachine extends Entity {
   draw = (delta: number) => {
     let tileX = 19;
     if (!this.isInf && this.quantity === 0) tileX = 20;
+    if (this.hasShadow) this.drawShadow(delta);
+
     Game.drawObj(
       tileX,
       0,

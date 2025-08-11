@@ -13,7 +13,7 @@ export class DecoBlock extends Entity {
     this.health = 1;
     this.tileX = 1;
     this.tileY = 4;
-    this.hasShadow = false;
+    this.hasShadow = true;
     this.pushable = true;
     this.name = "deco block";
     this.imageParticleX = 3;
@@ -29,6 +29,8 @@ export class DecoBlock extends Entity {
     Game.ctx.save();
     Game.ctx.globalAlpha = this.alpha;
     if (!this.dead) {
+      if (this.hasShadow) this.drawShadow(delta);
+
       this.updateDrawXY(delta);
       Game.drawObj(
         this.tileX,

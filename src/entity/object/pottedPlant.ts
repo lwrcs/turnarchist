@@ -19,7 +19,7 @@ export class PottedPlant extends Entity {
     this.health = 2;
     this.tileX = 3;
     this.tileY = 0;
-    this.hasShadow = false;
+    this.hasShadow = true;
     this.chainPushable = false;
     this.name = "plant";
     this.imageParticleX = 0;
@@ -46,6 +46,8 @@ export class PottedPlant extends Entity {
     Game.ctx.save();
     Game.ctx.globalAlpha = this.alpha;
     if (!this.dead) {
+      if (this.hasShadow) this.drawShadow(delta);
+
       this.updateDrawXY(delta);
       if (this.health <= 1 || this.dying) this.tileX = 2;
       Game.drawObj(

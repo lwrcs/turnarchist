@@ -232,19 +232,7 @@ export class ChargeEnemy extends Enemy {
         if (this.trailAlpha <= 0) this.trailAlpha = 1;
       }
 
-      if (this.hasShadow)
-        Game.drawMob(
-          0,
-          0,
-          1,
-          1,
-          this.x - this.drawX,
-          this.y - this.drawY,
-          1,
-          1,
-          this.room.shadeColor,
-          this.shadeAmount(),
-        );
+      if (this.hasShadow) this.drawShadow(delta);
       Game.drawMob(
         this.tileX + Math.floor(this.frame),
         this.tileY + this.direction * 2,

@@ -43,19 +43,7 @@ export class EnergyWizardEnemy extends WizardEnemy {
       if (this.state === WizardState.attack) this.tileX = 7;
       else this.tileX = 6;
 
-      if (this.hasShadow)
-        Game.drawMob(
-          0,
-          0,
-          1,
-          1,
-          this.x - this.drawX,
-          this.y - this.drawY,
-          1,
-          1,
-          this.room.shadeColor,
-          this.shadeAmount(),
-        );
+      if (this.hasShadow) this.drawShadow(delta);
       if (this.frame >= 0) {
         Game.drawMob(
           Math.floor(this.frame) + 6,

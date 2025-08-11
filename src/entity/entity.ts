@@ -19,6 +19,7 @@ import { Door } from "../tile/door";
 import { Wall } from "../tile/wall";
 import { Lighting } from "../lighting/lighting";
 import { IdGenerator } from "../globalStateManager/IdGenerator";
+import { Shadow } from "../drawable/shadow";
 
 import { DropTable } from "../item/dropTable";
 import { Weapon } from "../item/weapon/weapon";
@@ -146,6 +147,7 @@ export class Entity extends Drawable {
   armored: boolean = false;
   justHurt: boolean = false;
   stunned: boolean = false;
+  // Shadow rendering resources moved to Shadow class
 
   private _imageParticleTiles: { x: number; y: number };
   hitSound: () => void;
@@ -175,7 +177,7 @@ export class Entity extends Drawable {
     this.maxHealth = 1;
     this.tileX = 0;
     this.tileY = 0;
-    this.hasShadow = false;
+    this.hasShadow = true;
     this.skipNextTurns = 0;
     this.direction = Direction.DOWN;
     this.destroyable = true;
@@ -750,10 +752,9 @@ export class Entity extends Drawable {
     if (GameConstants.SMOOTH_LIGHTING) return 0;
     if (!this.room.softVis[this.x]) return 0;
     let softVis = this.room.softVis[this.x][this.y] * 1;
-
     if (this.shadeMultiplier > 1)
       return Math.min(1, softVis * this.shadeMultiplier);
-    return this.room.softVis[this.x][this.y];
+    return softVis;
   };
 
   updateShadeColor = (delta: number) => {
@@ -955,18 +956,7 @@ export class Entity extends Drawable {
     Game.ctx.globalAlpha = this.alpha;
     this.updateDrawXY(delta);
     if (this.hasShadow) {
-      Game.drawFX(
-        0,
-        0,
-        1,
-        1,
-        this.x - this.drawX,
-        this.y - this.drawY,
-        1,
-        1,
-        this.shadeColor,
-        this.shadeAmount(),
-      );
+      this.drawShadow(delta);
     }
     /*
     Game.drawMob(
@@ -999,6 +989,12 @@ export class Entity extends Drawable {
       this.crushAnim(delta);
     }*/
     Game.ctx.globalAlpha = 1;
+  };
+
+  // Draw a soft blurred shadow under the entity using the shared Shadow utility
+  drawShadow = (delta: number) => {
+    if (this.cloned) return;
+    Shadow.draw(this.x - this.drawX, this.y - this.drawY, this.w, this.h);
   };
 
   tick = () => {

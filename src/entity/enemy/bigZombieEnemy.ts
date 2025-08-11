@@ -318,19 +318,7 @@ export class BigZombieEnemy extends Enemy {
     this.updateDrawXY(delta);
     this.frame += 0.1 * delta;
     if (this.frame >= 4) this.frame = 0;
-    if (this.hasShadow)
-      Game.drawMob(
-        0,
-        0,
-        2,
-        2,
-        this.x - this.drawX,
-        this.y - this.drawY,
-        2,
-        2,
-        this.shadeColor,
-        this.shadeAmount(),
-      );
+    if (this.hasShadow) this.drawShadow(delta);
     Game.drawMob(
       this.tileX, // + Math.floor(this.frame),
       this.tileY + this.direction * 3,

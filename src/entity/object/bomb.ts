@@ -31,7 +31,7 @@ export class Bomb extends Entity {
     this.health = 1;
     this.tileX = 15;
     this.tileY = 4;
-    this.hasShadow = false;
+    this.hasShadow = true;
     this.chainPushable = false;
     this.name = "bomb";
     this.frame = 0;
@@ -153,6 +153,8 @@ export class Bomb extends Entity {
     Game.ctx.save();
     Game.ctx.globalAlpha = this.alpha;
     if (!this.dead) {
+      if (this.hasShadow) this.drawShadow(delta);
+
       this.updateDrawXY(delta);
       if (this.lit) {
         Game.drawObj(

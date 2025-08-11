@@ -252,19 +252,7 @@ export class SpiderEnemy extends Enemy {
       let rumbleY = this.rumble(this.rumbling, this.frame, this.direction).y;
       this.frame += 0.1 * delta;
       if (this.frame >= 4) this.frame = 0;
-      if (this.hasShadow)
-        Game.drawMob(
-          0,
-          0,
-          1,
-          1,
-          this.x - this.drawX,
-          this.y - 0.25 - this.drawY,
-          1,
-          1,
-          this.room.shadeColor,
-          this.shadeAmount(),
-        );
+      if (this.hasShadow) this.drawShadow(delta);
       if (this.state === SpiderState.VISIBLE) {
         //only draw when visible
         Game.drawMob(

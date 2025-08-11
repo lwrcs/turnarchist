@@ -123,6 +123,8 @@ export class Chest extends Entity {
 
     if (!this.dead) {
       this.updateDrawXY(delta);
+      if (this.hasShadow) this.drawShadow(delta);
+
       Game.drawObj(
         Math.floor(this.tileX),
         Math.floor(this.tileY),

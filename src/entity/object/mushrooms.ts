@@ -15,7 +15,7 @@ export class Mushrooms extends Entity {
     this.health = 1;
     this.tileX = 9;
     this.tileY = 2;
-    this.hasShadow = false;
+    this.hasShadow = true;
     this.chainPushable = false;
     this.name = "mushrooms";
     this.imageParticleX = 0;
@@ -33,6 +33,8 @@ export class Mushrooms extends Entity {
 
     Game.ctx.globalAlpha = this.alpha;
     if (!this.dead) {
+      if (this.hasShadow) this.drawShadow(delta);
+
       this.updateDrawXY(delta);
       Game.drawObj(
         this.tileX,

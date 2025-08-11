@@ -20,7 +20,7 @@ export class Tree extends Entity {
 
     this.tileX = 14;
     this.tileY = 6;
-    this.hasShadow = false;
+    this.hasShadow = true;
     this.chainPushable = false;
     this.name = "tree";
     this.imageParticleX = 0;
@@ -48,6 +48,8 @@ export class Tree extends Entity {
     Game.ctx.save();
     Game.ctx.globalAlpha = this.alpha;
     if (!this.dead) {
+      if (this.hasShadow) this.drawShadow(delta);
+
       this.updateDrawXY(delta);
       Game.drawObj(
         this.tileX,

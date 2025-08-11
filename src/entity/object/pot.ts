@@ -18,7 +18,7 @@ export class Pot extends Entity {
     this.health = 1;
     this.tileX = 11;
     this.tileY = 0;
-    this.hasShadow = false;
+    this.hasShadow = true;
     this.chainPushable = false;
     this.name = "pot";
 
@@ -40,6 +40,8 @@ export class Pot extends Entity {
     Game.ctx.save();
     Game.ctx.globalAlpha = this.alpha;
     if (!this.dead) {
+      if (this.hasShadow) this.drawShadow(delta);
+
       this.updateDrawXY(delta);
       Game.drawObj(
         this.tileX,

@@ -2154,7 +2154,7 @@ export class Room {
         )
           continue;
         let factor = !GameConstants.SMOOTH_LIGHTING ? 2 : 2;
-        let smoothFactor = !GameConstants.SMOOTH_LIGHTING ? 0 : 2;
+        let smoothFactor = !GameConstants.SMOOTH_LIGHTING ? 0 : 1;
         let computedAlpha = alpha ** factor * smoothFactor;
 
         let fillX = x;
@@ -2182,7 +2182,7 @@ export class Room {
                 fillWidth = 0.5;
                 break;
               case Direction.RIGHT:
-                fillX = x + 0.5;
+                fillX = x;
                 fillWidth = 0.5;
                 break;
               case Direction.DOWN_LEFT:
@@ -2212,8 +2212,9 @@ export class Room {
             }
           }
         }
+        const alphaMultiplier = !GameConstants.SMOOTH_LIGHTING ? 0.5 : 1.25;
 
-        const fillStyle = `rgba(0, 0, 0, ${computedAlpha * 0.5})`;
+        const fillStyle = `rgba(0, 0, 0, ${computedAlpha * alphaMultiplier})`;
 
         if (fillStyle !== lastFillStyle) {
           this.shadeOffscreenCtx.fillStyle = fillStyle;
@@ -2266,8 +2267,10 @@ export class Room {
       // Use Canvas2D blur (fallback) - matching original settings
       Game.ctx.globalAlpha = 1;
 
+      const blurAmount = !GameConstants.SMOOTH_LIGHTING ? 5 : 5;
+
       if (GameConstants.ctxBlurEnabled) {
-        Game.ctx.filter = "blur(5px)";
+        Game.ctx.filter = `blur(${blurAmount}px)`;
       }
 
       Game.ctx.drawImage(

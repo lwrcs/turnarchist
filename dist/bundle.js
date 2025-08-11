@@ -3554,6 +3554,94 @@ HitWarning.updateFrame = (delta) => {
 
 /***/ }),
 
+/***/ "./src/drawable/shadow.ts":
+/*!********************************!*\
+  !*** ./src/drawable/shadow.ts ***!
+  \********************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Shadow = void 0;
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
+class Shadow {
+    /**
+     * Draw a soft blurred shadow at the given tile-space coordinates.
+     * - x, y: world coordinates in tiles (e.g., entity.x - entity.drawX)
+     * - width, height: footprint size in tiles; default 1x1. Larger values scale the shadow ellipse.
+     * - radiusPx: optional blur radius in pixels; defaults to current behavior (~3px).
+     */
+    static draw(x, y, width = 1, height = 1, radiusPx) {
+        const tileSize = gameConstants_1.GameConstants.TILESIZE;
+        const blurRadius = radiusPx ?? 3; // default matches prior behavior
+        // Lazily create shared offscreen canvas
+        if (!Shadow._canvas) {
+            Shadow._canvas = document.createElement("canvas");
+            Shadow._ctx = Shadow._canvas.getContext("2d");
+        }
+        const canvas = Shadow._canvas;
+        const ctx = Shadow._ctx;
+        // Pad for blur falloff; scale slightly with tile size
+        const pad = Math.floor(tileSize * 0.25);
+        // Size offscreen buffer to the entity footprint so the ellipse can scale
+        const offW = Math.max(1, Math.ceil(width * tileSize)) + pad * 2;
+        const offH = Math.max(1, Math.ceil(height * tileSize)) + pad * 2;
+        if (canvas.width !== offW || canvas.height !== offH) {
+            canvas.width = offW;
+            canvas.height = offH;
+        }
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.save();
+        // Draw ellipse centered under the footprint; scale radii with width/height
+        const cx = Math.floor(canvas.width / 2);
+        const cy = Math.floor(canvas.height / 2) + Math.floor(tileSize * 0.15 * height);
+        const rx = tileSize * 0.35 * width;
+        const ry = tileSize * 0.2 * height;
+        ctx.fillStyle = "rgba(0,0,0,0.75)";
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        // Compute on-screen position (top-left of the footprint) in pixels
+        const screenX = Math.round(x * tileSize) - pad;
+        const screenY = Math.round((y - 0.25) * tileSize) - pad;
+        // Composite below sprites with multiply
+        game_1.Game.ctx.save();
+        game_1.Game.ctx.globalCompositeOperation = "multiply";
+        game_1.Game.ctx.globalAlpha = 1;
+        if (gameConstants_1.GameConstants.USE_WEBGL_BLUR) {
+            try {
+                const { WebGLBlurRenderer } = __webpack_require__(/*! ../gui/webglBlurRenderer */ "./src/gui/webglBlurRenderer.ts");
+                if (!Shadow._blurRenderer) {
+                    Shadow._blurRenderer = new WebGLBlurRenderer(game_1.Game.ctx.canvas);
+                }
+                const renderer = Shadow._blurRenderer;
+                const blurred = renderer.blur(canvas, blurRadius, 1);
+                game_1.Game.ctx.drawImage(blurred, screenX, screenY);
+            }
+            catch {
+                if (gameConstants_1.GameConstants.ctxBlurEnabled)
+                    game_1.Game.ctx.filter = `blur(${blurRadius}px)`;
+                game_1.Game.ctx.drawImage(canvas, screenX, screenY);
+                game_1.Game.ctx.filter = "none";
+            }
+        }
+        else {
+            if (gameConstants_1.GameConstants.ctxBlurEnabled)
+                game_1.Game.ctx.filter = `blur(${blurRadius}px)`;
+            game_1.Game.ctx.drawImage(canvas, screenX, screenY);
+            game_1.Game.ctx.filter = "none";
+        }
+        game_1.Game.ctx.restore();
+    }
+}
+exports.Shadow = Shadow;
+
+
+/***/ }),
+
 /***/ "./src/entity/downladderMaker.ts":
 /*!***************************************!*\
   !*** ./src/entity/downladderMaker.ts ***!
@@ -3844,7 +3932,7 @@ class ArmoredSkullEnemy extends enemy_1.Enemy {
                 if (this.frame >= 4)
                     this.frame = 0;
                 if (this.hasShadow)
-                    game_1.Game.drawMob(0, 0, 1, 1, this.x - this.drawX, this.y - this.drawY, 1, 1, this.room.shadeColor, this.shadeAmount());
+                    this.drawShadow(delta);
                 game_1.Game.drawMob(this.tileX +
                     (this.tileX % 5 && !this.unconscious && !this.dying
                         ? Math.floor(this.frame)
@@ -4076,7 +4164,7 @@ class ArmoredzombieEnemy extends enemy_1.Enemy {
                 if (this.frame >= 4)
                     this.frame = 0;
                 if (this.hasShadow)
-                    game_1.Game.drawMob(0, 0, 1, 1, this.x - this.drawX, this.y - this.drawY, 1, 1, this.room.shadeColor, this.shadeAmount());
+                    this.drawShadow(delta);
                 game_1.Game.drawMob(this.tileX + (this.tileX === 5 ? Math.floor(this.frame) : 0), this.tileY + this.direction * 2, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.softShadeColor, this.shadeAmount());
             }
             if (!this.cloned) {
@@ -4287,7 +4375,7 @@ class BigKnightEnemy extends enemy_1.Enemy {
                 if (this.frame >= 4)
                     this.frame = 0;
                 if (this.hasShadow)
-                    game_1.Game.drawMob(18, 0, 2, 2, this.x - this.drawX, this.y - this.drawY, 2, 2, this.room.shadeColor, this.shadeAmount());
+                    this.drawShadow(delta);
                 game_1.Game.drawMob(2 * Math.floor((this.tileX + this.frame) / 2) + 1, this.tileY, 2, 4, this.x - this.drawX, this.y - 2.5 - this.drawY, 2, 4, this.softShadeColor, this.shadeAmount());
                 if (!this.cloned) {
                     if (!this.seenPlayer) {
@@ -4649,7 +4737,7 @@ class BigSkullEnemy extends enemy_1.Enemy {
                 if (this.frame >= 4)
                     this.frame = 0;
                 if (this.hasShadow)
-                    game_1.Game.drawMob(18, 0, 2, 2, this.x - this.drawX, this.y - this.drawY, 2, 2, this.room.shadeColor, this.shadeAmount());
+                    this.drawShadow(delta);
                 game_1.Game.drawMob(this.tileX + (this.tileX === 20 ? Math.floor(this.frame) * 2 : 0), this.tileY, 2, 4, this.x - this.drawX, this.y - 2.5 - this.drawY, 2, 4, this.softShadeColor, this.shadeAmount());
                 if (!this.cloned) {
                     if (!this.seenPlayer) {
@@ -4962,7 +5050,7 @@ class BigZombieEnemy extends enemy_1.Enemy {
             if (this.frame >= 4)
                 this.frame = 0;
             if (this.hasShadow)
-                game_1.Game.drawMob(0, 0, 2, 2, this.x - this.drawX, this.y - this.drawY, 2, 2, this.shadeColor, this.shadeAmount());
+                this.drawShadow(delta);
             game_1.Game.drawMob(this.tileX, // + Math.floor(this.frame),
             this.tileY + this.direction * 3, 2, 3, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 2, 3, this.softShadeColor, this.shadeAmount());
             if (!this.cloned) {
@@ -5192,7 +5280,7 @@ class BishopEnemy extends enemy_1.Enemy {
                 if (this.frame >= 4)
                     this.frame = 0;
                 if (this.hasShadow)
-                    game_1.Game.drawMob(0, 0, 1, 1, this.x - this.drawX, this.y - this.drawY, 1, 1, this.room.shadeColor, this.shadeAmount());
+                    this.drawShadow(delta);
                 game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY + offsetTileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount() * (1 + this.jumpY / 3));
             }
             if (!this.cloned) {
@@ -5414,7 +5502,7 @@ class ChargeEnemy extends enemy_1.Enemy {
                         this.trailAlpha = 1;
                 }
                 if (this.hasShadow)
-                    game_1.Game.drawMob(0, 0, 1, 1, this.x - this.drawX, this.y - this.drawY, 1, 1, this.room.shadeColor, this.shadeAmount());
+                    this.drawShadow(delta);
                 game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY + this.direction * 2, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.softShadeColor, this.shadeAmount());
                 if (!this.cloned) {
                     if (this.state === ChargeEnemyState.IDLE) {
@@ -5685,7 +5773,7 @@ class CrabEnemy extends enemy_1.Enemy {
                 if (this.frame >= 4)
                     this.frame = 0;
                 if (this.hasShadow)
-                    game_1.Game.drawMob(0, 0, 1, 1, this.x - this.drawX, this.y - 0.25 - this.drawY, 1, 1, this.room.shadeColor, this.shadeAmount());
+                    this.drawShadow(delta);
                 game_1.Game.drawMob(this.tileX, this.tileY + this.direction, 1, 1, this.x - this.drawX + rumbleX, this.y - this.drawYOffset - this.drawY + rumbleY, 1 * this.crushX, 1 * this.crushY, this.softShadeColor, this.shadeAmount());
                 if (this.crushed) {
                     this.crushAnim(delta);
@@ -6265,7 +6353,7 @@ class Enemy extends entity_1.Entity {
                 if (this.frame >= 4)
                     this.frame = 0;
                 if (this.hasShadow)
-                    game_1.Game.drawMob(0, 0, 1, 1, this.x - this.drawX, this.y - this.drawY, 1, 1, this.room.shadeColor, this.shadeAmount());
+                    this.drawShadow(delta);
                 game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY + this.direction * 2, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount());
             }
             if (!this.dying) {
@@ -6359,7 +6447,7 @@ class EnergyWizardEnemy extends wizardEnemy_1.WizardEnemy {
                 else
                     this.tileX = 6;
                 if (this.hasShadow)
-                    game_1.Game.drawMob(0, 0, 1, 1, this.x - this.drawX, this.y - this.drawY, 1, 1, this.room.shadeColor, this.shadeAmount());
+                    this.drawShadow(delta);
                 if (this.frame >= 0) {
                     game_1.Game.drawMob(Math.floor(this.frame) + 6, 2, 1, 2, this.x, this.y - 1.5, 1, 2, this.softShadeColor, this.shadeAmount());
                     this.frame += 0.4 * delta;
@@ -6549,7 +6637,7 @@ class FireWizardEnemy extends wizardEnemy_1.WizardEnemy {
             if (!this.dead) {
                 this.updateDrawXY(delta);
                 if (this.hasShadow)
-                    game_1.Game.drawMob(0, 0, 1, 1, this.x - this.drawX, this.y - this.drawY, 1, 1, this.room.shadeColor, this.shadeAmount());
+                    this.drawShadow(delta);
                 if (this.frame >= 0) {
                     game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY, 1, 2, this.x - this.drawX, this.y - 1.3 - this.drawY, 1, 2, this.softShadeColor, this.shadeAmount());
                 }
@@ -6865,7 +6953,7 @@ class FrogEnemy extends enemy_1.Enemy {
                     this.animationSpeed = 0.1;
                 }
                 if (this.hasShadow)
-                    game_1.Game.drawMob(0, 0, 1, 1, this.x - this.drawX, this.y - this.drawY, 1, 1, this.room.shadeColor, this.shadeAmount());
+                    this.drawShadow(delta);
                 game_1.Game.drawMob(this.tileX +
                     (this.tileX !== 12 && !this.rumbling ? Math.floor(this.frame) : 0), this.tileY /*+ this.direction * 2,*/, 1, 2, this.x + rumbleX - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount());
             }
@@ -6963,7 +7051,7 @@ class GlowBugEnemy extends entity_1.Entity {
                     this.frame = 0;
                 this.tileX = 8 + this.frame;
                 if (this.hasShadow)
-                    game_1.Game.drawMob(0, 0, 1, 1, this.x - this.drawX, this.y - this.drawY, 1, 1, this.room.shadeColor, this.shadeAmount());
+                    this.drawShadow(delta);
                 game_1.Game.drawMob(Math.floor(this.tileX), this.tileY, 1, 1, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 1, this.softShadeColor, this.shadeAmount());
                 if (this.crushed) {
                     this.crushAnim(delta);
@@ -7176,7 +7264,7 @@ class KnightEnemy extends enemy_1.Enemy {
                 if (this.frame >= 4)
                     this.frame = 0;
                 if (this.hasShadow)
-                    game_1.Game.drawMob(0, 0, 1, 1, this.x - this.drawX, this.y - this.drawY, 1, 1, this.room.shadeColor, this.shadeAmount());
+                    this.drawShadow(delta);
                 game_1.Game.drawMob(this.tileX + (this.tileX === 4 ? 0 : Math.floor(this.frame)), this.tileY + this.direction * 2, 1, 2, this.x - this.drawX + rumbleX, this.y -
                     this.drawYOffset -
                     this.drawY +
@@ -7426,7 +7514,7 @@ class MummyEnemy extends enemy_1.Enemy {
             if (this.frame >= 4)
                 this.frame = 0;
             if (this.hasShadow)
-                game_1.Game.drawMob(0, 0, 1, 1, this.x - this.drawX, this.y - this.drawY, 1, 1, this.shadeColor, this.shadeAmount());
+                this.drawShadow(delta);
             game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY + this.direction * 2, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount());
             if (!this.cloned) {
                 if (!this.seenPlayer) {
@@ -7630,7 +7718,7 @@ class OccultistEnemy extends enemy_1.Enemy {
                 if (this.frame >= 4)
                     this.frame = 0;
                 if (this.hasShadow)
-                    game_1.Game.drawMob(0, 0, 1, 1, this.x - this.drawX, this.y - this.drawY, 1, 1, this.room.shadeColor, this.shadeAmount());
+                    this.drawShadow(delta);
                 game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.softShadeColor, this.shadeAmount());
             }
             game_1.Game.ctx.restore();
@@ -7823,7 +7911,7 @@ class QueenEnemy extends enemy_1.Enemy {
                 if (this.frame >= 4)
                     this.frame = 0;
                 if (this.hasShadow)
-                    game_1.Game.drawMob(0, 0, 1, 1, this.x - this.drawX, this.y - this.drawY, 1, 1, this.room.shadeColor, this.shadeAmount());
+                    this.drawShadow(delta);
                 game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY + offsetTileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount() * (1 + this.jumpY / 3));
             }
             if (!this.cloned) {
@@ -8001,7 +8089,7 @@ class RookEnemy extends enemy_1.Enemy {
                 if (this.frame >= 4)
                     this.frame = 0;
                 if (this.hasShadow)
-                    game_1.Game.drawMob(0, 0, 1, 1, this.x - this.drawX, this.y - this.drawY, 1, 1, this.room.shadeColor, this.shadeAmount());
+                    this.drawShadow(delta);
                 game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY + offsetTileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount());
             }
             if (!this.cloned) {
@@ -8279,7 +8367,7 @@ class SkullEnemy extends enemy_1.Enemy {
                 if (this.frame >= 4)
                     this.frame = 0;
                 if (this.hasShadow)
-                    game_1.Game.drawMob(0, 0, 1, 1, this.x - this.drawX, this.y - this.drawY, 1, 1, this.room.shadeColor, this.shadeAmount());
+                    this.drawShadow(delta);
                 game_1.Game.drawMob(this.tileX + (this.tileX === 5 ? Math.floor(this.frame) : 0), this.tileY + this.direction * 2, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount());
             }
             if (!this.cloned) {
@@ -8490,7 +8578,7 @@ class Spawner extends enemy_1.Enemy {
                 if (this.frame >= 4)
                     this.frame = 0;
                 if (this.hasShadow)
-                    game_1.Game.drawMob(0, 0, 1, 1, this.x - this.drawX, this.y - this.drawY, 1, 1, this.room.shadeColor, this.shadeAmount());
+                    this.drawShadow(delta);
                 game_1.Game.drawMob(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.softShadeColor, this.shadeAmount());
             }
             if (!this.dying) {
@@ -8778,7 +8866,7 @@ class SpiderEnemy extends enemy_1.Enemy {
                 if (this.frame >= 4)
                     this.frame = 0;
                 if (this.hasShadow)
-                    game_1.Game.drawMob(0, 0, 1, 1, this.x - this.drawX, this.y - 0.25 - this.drawY, 1, 1, this.room.shadeColor, this.shadeAmount());
+                    this.drawShadow(delta);
                 if (this.state === SpiderState.VISIBLE) {
                     //only draw when visible
                     game_1.Game.drawMob(this.tileX, this.tileY, // + this.direction,
@@ -8982,7 +9070,7 @@ class WizardEnemy extends enemy_1.Enemy {
                 else
                     this.tileX = 6;
                 if (this.hasShadow)
-                    game_1.Game.drawMob(0, 0, 1, 1, this.x - this.drawX, this.y - this.drawY, 1, 1, this.room.shadeColor, this.shadeAmount());
+                    this.drawShadow(delta);
                 if (this.frame >= 0) {
                     game_1.Game.drawMob(Math.floor(this.frame) + 6, 2, 1, 2, this.x, this.y - 1.5, 1, 2, this.softShadeColor, this.shadeAmount());
                     this.frame += 0.2 * delta;
@@ -9222,7 +9310,7 @@ class ZombieEnemy extends enemy_1.Enemy {
             if (this.frame >= 4)
                 this.frame = 0;
             if (this.hasShadow)
-                game_1.Game.drawMob(0, 0, 1, 1, this.x - this.drawX, this.y - this.drawY, 1, 1, this.shadeColor, this.shadeAmount());
+                this.drawShadow(delta);
             game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY + this.direction * 2, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount());
             if (!this.cloned) {
                 if (!this.seenPlayer) {
@@ -9282,6 +9370,7 @@ const downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/d
 const door_1 = __webpack_require__(/*! ../tile/door */ "./src/tile/door.ts");
 const wall_1 = __webpack_require__(/*! ../tile/wall */ "./src/tile/wall.ts");
 const IdGenerator_1 = __webpack_require__(/*! ../globalStateManager/IdGenerator */ "./src/globalStateManager/IdGenerator.ts");
+const shadow_1 = __webpack_require__(/*! ../drawable/shadow */ "./src/drawable/shadow.ts");
 const dropTable_1 = __webpack_require__(/*! ../item/dropTable */ "./src/item/dropTable.ts");
 const weapon_1 = __webpack_require__(/*! ../item/weapon/weapon */ "./src/item/weapon/weapon.ts");
 const enemyShield_1 = __webpack_require__(/*! ../projectile/enemyShield */ "./src/projectile/enemyShield.ts");
@@ -9696,7 +9785,7 @@ class Entity extends drawable_1.Drawable {
             let softVis = this.room.softVis[this.x][this.y] * 1;
             if (this.shadeMultiplier > 1)
                 return Math.min(1, softVis * this.shadeMultiplier);
-            return this.room.softVis[this.x][this.y];
+            return softVis;
         };
         this.updateShadeColor = (delta) => {
             if (this.shadeMultiplier > 1)
@@ -9887,7 +9976,7 @@ class Entity extends drawable_1.Drawable {
             game_1.Game.ctx.globalAlpha = this.alpha;
             this.updateDrawXY(delta);
             if (this.hasShadow) {
-                game_1.Game.drawFX(0, 0, 1, 1, this.x - this.drawX, this.y - this.drawY, 1, 1, this.shadeColor, this.shadeAmount());
+                this.drawShadow(delta);
             }
             /*
             Game.drawMob(
@@ -9908,6 +9997,12 @@ class Entity extends drawable_1.Drawable {
               this.crushAnim(delta);
             }*/
             game_1.Game.ctx.globalAlpha = 1;
+        };
+        // Draw a soft blurred shadow under the entity using the shared Shadow utility
+        this.drawShadow = (delta) => {
+            if (this.cloned)
+                return;
+            shadow_1.Shadow.draw(this.x - this.drawX, this.y - this.drawY, this.w, this.h);
         };
         this.tick = () => {
             this.behavior();
@@ -10197,7 +10292,7 @@ class Entity extends drawable_1.Drawable {
         this.maxHealth = 1;
         this.tileX = 0;
         this.tileY = 0;
-        this.hasShadow = false;
+        this.hasShadow = true;
         this.skipNextTurns = 0;
         this.direction = game_1.Direction.DOWN;
         this.destroyable = true;
@@ -10355,6 +10450,8 @@ class Barrel extends entity_1.Entity {
             game_1.Game.ctx.save();
             game_1.Game.ctx.globalAlpha = this.alpha;
             if (!this.dead) {
+                if (this.hasShadow)
+                    this.drawShadow(delta);
                 this.updateDrawXY(delta);
                 game_1.Game.drawObj(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
             }
@@ -10367,7 +10464,7 @@ class Barrel extends entity_1.Entity {
         this.health = 1;
         this.tileX = 1;
         this.tileY = 0;
-        this.hasShadow = false;
+        this.hasShadow = true;
         this.pushable = true;
         this.name = "barrel";
         this.imageParticleX = 3;
@@ -10418,6 +10515,8 @@ class Block extends entity_1.Entity {
             game_1.Game.ctx.save();
             game_1.Game.ctx.globalAlpha = this.alpha;
             if (!this.dead) {
+                if (this.hasShadow)
+                    this.drawShadow(delta);
                 this.updateDrawXY(delta);
                 game_1.Game.drawObj(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
             }
@@ -10430,7 +10529,7 @@ class Block extends entity_1.Entity {
         this.health = 1;
         this.tileX = 10;
         this.tileY = 2;
-        this.hasShadow = false;
+        this.hasShadow = true;
         this.chainPushable = false;
         //this.pushable = true;
         this.name = "block";
@@ -10545,6 +10644,8 @@ class Bomb extends entity_1.Entity {
             game_1.Game.ctx.save();
             game_1.Game.ctx.globalAlpha = this.alpha;
             if (!this.dead) {
+                if (this.hasShadow)
+                    this.drawShadow(delta);
                 this.updateDrawXY(delta);
                 if (this.lit) {
                     game_1.Game.drawObj(this.tileX +
@@ -10565,7 +10666,7 @@ class Bomb extends entity_1.Entity {
         this.health = 1;
         this.tileX = 15;
         this.tileY = 4;
-        this.hasShadow = false;
+        this.hasShadow = true;
         this.chainPushable = false;
         this.name = "bomb";
         this.frame = 0;
@@ -10616,6 +10717,8 @@ class Bush extends entity_1.Entity {
             game_1.Game.ctx.globalAlpha = this.alpha;
             if (!this.dead) {
                 this.updateDrawXY(delta);
+                if (this.hasShadow)
+                    this.drawShadow(delta);
                 game_1.Game.drawObj(this.tileX, this.tileY, 2, 2, this.x - this.drawX - 0.5, this.y - this.drawYOffset - this.drawY, 2, 2, this.room.shadeColor, this.shadeAmount());
             }
             game_1.Game.ctx.restore();
@@ -10627,7 +10730,7 @@ class Bush extends entity_1.Entity {
         this.health = 1;
         this.tileX = 19;
         this.tileY = 2;
-        this.hasShadow = false;
+        this.hasShadow = true;
         this.chainPushable = false;
         this.name = "bush";
         this.imageParticleX = 0;
@@ -10725,6 +10828,8 @@ class Chest extends entity_1.Entity {
             }
             if (!this.dead) {
                 this.updateDrawXY(delta);
+                if (this.hasShadow)
+                    this.drawShadow(delta);
                 game_1.Game.drawObj(Math.floor(this.tileX), Math.floor(this.tileY), 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
             }
             game_1.Game.ctx.restore();
@@ -10831,6 +10936,8 @@ class Crate extends entity_1.Entity {
             game_1.Game.ctx.save();
             game_1.Game.ctx.globalAlpha = this.alpha;
             if (!this.dead) {
+                if (this.hasShadow)
+                    this.drawShadow(delta);
                 this.updateDrawXY(delta);
                 game_1.Game.drawObj(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
             }
@@ -10844,7 +10951,7 @@ class Crate extends entity_1.Entity {
         this.maxHealth = 1;
         this.tileX = 0;
         this.tileY = 0;
-        this.hasShadow = false;
+        this.hasShadow = true;
         this.pushable = true;
         this.name = "crate";
         this.imageParticleX = 3;
@@ -10887,6 +10994,8 @@ class DecoBlock extends entity_1.Entity {
             game_1.Game.ctx.save();
             game_1.Game.ctx.globalAlpha = this.alpha;
             if (!this.dead) {
+                if (this.hasShadow)
+                    this.drawShadow(delta);
                 this.updateDrawXY(delta);
                 game_1.Game.drawObj(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
             }
@@ -10899,7 +11008,7 @@ class DecoBlock extends entity_1.Entity {
         this.health = 1;
         this.tileX = 1;
         this.tileY = 4;
-        this.hasShadow = false;
+        this.hasShadow = true;
         this.pushable = true;
         this.name = "deco block";
         this.imageParticleX = 3;
@@ -11054,6 +11163,8 @@ class Furnace extends entity_1.Entity {
             game_1.Game.ctx.save();
             game_1.Game.ctx.globalAlpha = this.alpha;
             if (!this.dead) {
+                if (this.hasShadow)
+                    this.drawShadow(delta);
                 this.updateDrawXY(delta);
                 game_1.Game.drawObj(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
             }
@@ -11066,7 +11177,7 @@ class Furnace extends entity_1.Entity {
         this.health = 1;
         this.tileX = 2;
         this.tileY = 4;
-        this.hasShadow = false;
+        this.hasShadow = true;
         this.chainPushable = false;
         this.name = "furnace";
         this.drops.push(new torch_1.Torch(this.room, this.x, this.y));
@@ -11111,6 +11222,8 @@ class Mushrooms extends entity_1.Entity {
             game_1.Game.ctx.save();
             game_1.Game.ctx.globalAlpha = this.alpha;
             if (!this.dead) {
+                if (this.hasShadow)
+                    this.drawShadow(delta);
                 this.updateDrawXY(delta);
                 game_1.Game.drawObj(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
             }
@@ -11123,7 +11236,7 @@ class Mushrooms extends entity_1.Entity {
         this.health = 1;
         this.tileX = 9;
         this.tileY = 2;
-        this.hasShadow = false;
+        this.hasShadow = true;
         this.chainPushable = false;
         this.name = "mushrooms";
         this.imageParticleX = 0;
@@ -11165,6 +11278,8 @@ class Pot extends entity_1.Entity {
             game_1.Game.ctx.save();
             game_1.Game.ctx.globalAlpha = this.alpha;
             if (!this.dead) {
+                if (this.hasShadow)
+                    this.drawShadow(delta);
                 this.updateDrawXY(delta);
                 game_1.Game.drawObj(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
             }
@@ -11177,7 +11292,7 @@ class Pot extends entity_1.Entity {
         this.health = 1;
         this.tileX = 11;
         this.tileY = 0;
-        this.hasShadow = false;
+        this.hasShadow = true;
         this.chainPushable = false;
         this.name = "pot";
         this.hitSound = sound_1.Sound.potSmash;
@@ -11226,6 +11341,8 @@ class PottedPlant extends entity_1.Entity {
             game_1.Game.ctx.save();
             game_1.Game.ctx.globalAlpha = this.alpha;
             if (!this.dead) {
+                if (this.hasShadow)
+                    this.drawShadow(delta);
                 this.updateDrawXY(delta);
                 if (this.health <= 1 || this.dying)
                     this.tileX = 2;
@@ -11240,7 +11357,7 @@ class PottedPlant extends entity_1.Entity {
         this.health = 2;
         this.tileX = 3;
         this.tileY = 0;
-        this.hasShadow = false;
+        this.hasShadow = true;
         this.chainPushable = false;
         this.name = "plant";
         this.imageParticleX = 0;
@@ -11288,6 +11405,8 @@ class Pumpkin extends entity_1.Entity {
             game_1.Game.ctx.save();
             game_1.Game.ctx.globalAlpha = this.alpha;
             if (!this.dead) {
+                if (this.hasShadow)
+                    this.drawShadow(delta);
                 this.updateDrawXY(delta);
                 game_1.Game.drawObj(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
             }
@@ -11300,7 +11419,7 @@ class Pumpkin extends entity_1.Entity {
         this.health = 1;
         this.tileX = 15;
         this.tileY = 2;
-        this.hasShadow = false;
+        this.hasShadow = true;
         this.chainPushable = false;
         this.name = "pumpkin";
         this.drops.push(new candle_1.Candle(this.room, this.x, this.y));
@@ -11345,7 +11464,7 @@ class Sprout extends entity_1.Entity {
             game_1.Game.ctx.globalAlpha = this.alpha;
             if (!this.dead) {
                 if (this.hasShadow)
-                    game_1.Game.drawMob(0, 0, 1, 1, this.x - this.drawX, this.y - this.drawY, 1, 1, this.room.shadeColor, this.shadeAmount());
+                    this.drawShadow(delta);
                 this.updateDrawXY(delta);
                 game_1.Game.drawObj(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
             }
@@ -11426,6 +11545,8 @@ class TombStone extends entity_1.Entity {
             if (this.dead)
                 return;
             this.updateDrawXY(delta);
+            if (this.hasShadow)
+                this.drawShadow(delta);
             game_1.Game.ctx.save();
             game_1.Game.ctx.globalAlpha = this.alpha;
             //if (!this.dead || !this.cloned) {{}
@@ -11441,7 +11562,7 @@ class TombStone extends entity_1.Entity {
         //this.maxHealth = 2;
         this.tileX = 11 + this.skinType;
         this.tileY = 2;
-        this.hasShadow = false;
+        this.hasShadow = true;
         //this.pushable = false;
         //this.destroyable = true;
         //this.skinType = skinType;
@@ -11501,6 +11622,8 @@ class Tree extends entity_1.Entity {
             game_1.Game.ctx.save();
             game_1.Game.ctx.globalAlpha = this.alpha;
             if (!this.dead) {
+                if (this.hasShadow)
+                    this.drawShadow(delta);
                 this.updateDrawXY(delta);
                 game_1.Game.drawObj(this.tileX, this.tileY, 2, 3, this.x - this.drawX - 0.5, this.y - this.drawYOffset - this.drawY - 1, 2, 3, this.room.shadeColor, this.shadeAmount());
             }
@@ -11514,7 +11637,7 @@ class Tree extends entity_1.Entity {
         this.maxHealth = 2;
         this.tileX = 14;
         this.tileY = 6;
-        this.hasShadow = false;
+        this.hasShadow = true;
         this.chainPushable = false;
         this.name = "tree";
         this.imageParticleX = 0;
@@ -11687,6 +11810,8 @@ class VendingMachine extends entity_1.Entity {
             let tileX = 19;
             if (!this.isInf && this.quantity === 0)
                 tileX = 20;
+            if (this.hasShadow)
+                this.drawShadow(delta);
             game_1.Game.drawObj(tileX, 0, 1, 2, this.x, this.y - 1, 1, 2, this.room.shadeColor, this.shadeAmount());
         };
         this.drawTopLayer = (delta) => {
@@ -11983,6 +12108,8 @@ class Resource extends entity_1.Entity {
             game_1.Game.ctx.save();
             game_1.Game.ctx.globalAlpha = this.alpha;
             if (!this.dead) {
+                if (this.hasShadow)
+                    this.drawShadow(delta);
                 this.updateDrawXY(delta);
                 game_1.Game.drawObj(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - 1.25 - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
             }
@@ -32490,7 +32617,7 @@ class Room {
                         this.roomArray[x][y] instanceof wallTorch_1.WallTorch)
                         continue;
                     let factor = !gameConstants_1.GameConstants.SMOOTH_LIGHTING ? 2 : 2;
-                    let smoothFactor = !gameConstants_1.GameConstants.SMOOTH_LIGHTING ? 0 : 2;
+                    let smoothFactor = !gameConstants_1.GameConstants.SMOOTH_LIGHTING ? 0 : 1;
                     let computedAlpha = alpha ** factor * smoothFactor;
                     let fillX = x;
                     let fillY = y;
@@ -32515,7 +32642,7 @@ class Room {
                                     fillWidth = 0.5;
                                     break;
                                 case game_1.Direction.RIGHT:
-                                    fillX = x + 0.5;
+                                    fillX = x;
                                     fillWidth = 0.5;
                                     break;
                                 case game_1.Direction.DOWN_LEFT:
@@ -32545,7 +32672,8 @@ class Room {
                             }
                         }
                     }
-                    const fillStyle = `rgba(0, 0, 0, ${computedAlpha * 0.5})`;
+                    const alphaMultiplier = !gameConstants_1.GameConstants.SMOOTH_LIGHTING ? 0.5 : 1.25;
+                    const fillStyle = `rgba(0, 0, 0, ${computedAlpha * alphaMultiplier})`;
                     if (fillStyle !== lastFillStyle) {
                         this.shadeOffscreenCtx.fillStyle = fillStyle;
                         lastFillStyle = fillStyle;
@@ -32580,8 +32708,9 @@ class Room {
             else {
                 // Use Canvas2D blur (fallback) - matching original settings
                 game_1.Game.ctx.globalAlpha = 1;
+                const blurAmount = !gameConstants_1.GameConstants.SMOOTH_LIGHTING ? 5 : 5;
                 if (gameConstants_1.GameConstants.ctxBlurEnabled) {
-                    game_1.Game.ctx.filter = "blur(5px)";
+                    game_1.Game.ctx.filter = `blur(${blurAmount}px)`;
                 }
                 game_1.Game.ctx.drawImage(this.shadeOffscreenCanvas, (this.roomX - offsetX - 1) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY - 1) * gameConstants_1.GameConstants.TILESIZE);
                 game_1.Game.ctx.filter = "none";

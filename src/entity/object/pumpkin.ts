@@ -19,7 +19,7 @@ export class Pumpkin extends Entity {
     this.health = 1;
     this.tileX = 15;
     this.tileY = 2;
-    this.hasShadow = false;
+    this.hasShadow = true;
     this.chainPushable = false;
     this.name = "pumpkin";
     this.drops.push(new Candle(this.room, this.x, this.y));
@@ -47,7 +47,10 @@ export class Pumpkin extends Entity {
     if (this.dead) return;
     Game.ctx.save();
     Game.ctx.globalAlpha = this.alpha;
+
     if (!this.dead) {
+      if (this.hasShadow) this.drawShadow(delta);
+
       this.updateDrawXY(delta);
       Game.drawObj(
         this.tileX,

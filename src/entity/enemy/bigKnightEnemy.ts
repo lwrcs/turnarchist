@@ -225,19 +225,7 @@ export class BigKnightEnemy extends Enemy {
       this.frame += 0.1 * delta;
       if (this.frame >= 4) this.frame = 0;
 
-      if (this.hasShadow)
-        Game.drawMob(
-          18,
-          0,
-          2,
-          2,
-          this.x - this.drawX,
-          this.y - this.drawY,
-          2,
-          2,
-          this.room.shadeColor,
-          this.shadeAmount(),
-        );
+      if (this.hasShadow) this.drawShadow(delta);
       Game.drawMob(
         2 * Math.floor((this.tileX + this.frame) / 2) + 1,
         this.tileY,

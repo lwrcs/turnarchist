@@ -352,19 +352,7 @@ export class FrogEnemy extends Enemy {
         this.frameLength = 3;
         this.animationSpeed = 0.1;
       }
-      if (this.hasShadow)
-        Game.drawMob(
-          0,
-          0,
-          1,
-          1,
-          this.x - this.drawX,
-          this.y - this.drawY,
-          1,
-          1,
-          this.room.shadeColor,
-          this.shadeAmount(),
-        );
+      if (this.hasShadow) this.drawShadow(delta);
       Game.drawMob(
         this.tileX +
           (this.tileX !== 12 && !this.rumbling ? Math.floor(this.frame) : 0),

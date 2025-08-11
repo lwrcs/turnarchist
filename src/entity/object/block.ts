@@ -16,7 +16,7 @@ export class Block extends Entity {
     this.health = 1;
     this.tileX = 10;
     this.tileY = 2;
-    this.hasShadow = false;
+    this.hasShadow = true;
     this.chainPushable = false;
     //this.pushable = true;
     this.name = "block";
@@ -42,6 +42,8 @@ export class Block extends Entity {
     Game.ctx.save();
     Game.ctx.globalAlpha = this.alpha;
     if (!this.dead) {
+      if (this.hasShadow) this.drawShadow(delta);
+
       this.updateDrawXY(delta);
       Game.drawObj(
         this.tileX,

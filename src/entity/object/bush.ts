@@ -16,7 +16,7 @@ export class Bush extends Entity {
     this.health = 1;
     this.tileX = 19;
     this.tileY = 2;
-    this.hasShadow = false;
+    this.hasShadow = true;
     this.chainPushable = false;
     this.name = "bush";
     this.imageParticleX = 0;
@@ -36,6 +36,8 @@ export class Bush extends Entity {
     Game.ctx.globalAlpha = this.alpha;
     if (!this.dead) {
       this.updateDrawXY(delta);
+      if (this.hasShadow) this.drawShadow(delta);
+
       Game.drawObj(
         this.tileX,
         this.tileY,

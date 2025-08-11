@@ -33,7 +33,7 @@ export class TombStone extends Entity {
     //this.maxHealth = 2;
     this.tileX = 11 + this.skinType;
     this.tileY = 2;
-    this.hasShadow = false;
+    this.hasShadow = true;
     //this.pushable = false;
     //this.destroyable = true;
     //this.skinType = skinType;
@@ -99,6 +99,7 @@ export class TombStone extends Entity {
   draw = (delta: number) => {
     if (this.dead) return;
     this.updateDrawXY(delta);
+    if (this.hasShadow) this.drawShadow(delta);
 
     Game.ctx.save();
     Game.ctx.globalAlpha = this.alpha;
