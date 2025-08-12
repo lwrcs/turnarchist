@@ -9922,6 +9922,7 @@ class Entity extends drawable_1.Drawable {
         this.draw = (delta) => {
             if (this.dead)
                 return;
+            game_1.Game.ctx.save();
             game_1.Game.ctx.globalAlpha = this.alpha;
             this.updateDrawXY(delta);
             if (this.hasShadow) {
@@ -12870,6 +12871,7 @@ class Game {
                     this.pushMessage(`Equipping an item takes a turn is now ${enabled}`);
                     break;
                 case "webgl":
+                    gameConstants_1.GameConstants.USE_WEBGL_BLUR = !gameConstants_1.GameConstants.USE_WEBGL_BLUR;
                 case "hq":
                     gameConstants_1.GameConstants.TOGGLE_HIGH_QUALITY_BLUR();
                     break;
@@ -16635,6 +16637,7 @@ class TileState {
             this.properties.isSidePath = tile.isSidePath;
             this.properties.environment = tile.environment;
             this.properties.lockType = tile.lockable?.lockType;
+            this.properties.keyID = tile.lockable?.keyID;
             const linkedRoom = tile.linkedRoom || null;
             this.properties.linkedRoomGID = linkedRoom ? linkedRoom.globalId : null;
         }
@@ -16733,7 +16736,9 @@ let loadTile = (ts, room, game) => {
             }
             break;
         case TileType.DOWN_LADDER:
-            tile = new downLadder_1.DownLadder(room, game, ts.x, ts.y, ts.properties.isSidePath || false, ts.properties.environment, ts.properties.lockType);
+            tile = new downLadder_1.DownLadder(room, game, ts.x, ts.y, ts.properties.isSidePath || false, ts.properties.environment, ts.properties.lockType, undefined, 
+            // lockStateOverride ensures saved lockType/keyID are restored exactly
+            { lockType: ts.properties.lockType, keyID: ts.properties.keyID });
             if (ts.properties.linkedRoomGID) {
                 const linked = game.roomsById?.get(ts.properties.linkedRoomGID);
                 if (linked)
@@ -24176,7 +24181,7 @@ class Sword extends weapon_1.Weapon {
         //this.hitDelay = 150;
         this.degradeable = false;
         this.useCost = 2;
-        this.offsetY = 0;
+        this.offsetY = -0.5;
         //this.iconOffset = 0.2;
     }
 }
@@ -27884,6 +27889,147 @@ class PngPartitionGenerator {
     }
 }
 exports.PngPartitionGenerator = PngPartitionGenerator;
+
+
+/***/ }),
+
+/***/ "./src/level/sidePathManager.ts":
+/*!**************************************!*\
+  !*** ./src/level/sidePathManager.ts ***!
+  \**************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SidePathManager = void 0;
+const upLadder_1 = __webpack_require__(/*! ../tile/upLadder */ "./src/tile/upLadder.ts");
+/**
+ * Centralized manager for creating and wiring up sidepaths (rope caves).
+ *
+ * Responsibilities:
+ * - Deterministic pathId creation per down-ladder coordinate
+ * - Invoke level generation for sidepaths and receive the linked room
+ * - Merge newly generated sidepath rooms into the level
+ * - Link all up-ladders in the sidepath back to the correct parent room/ladder
+ * - Provide helpers to switch current active path before transitioning
+ */
+class SidePathManager {
+    constructor(game) {
+        this.game = game;
+    }
+    /**
+     * Generate the sidepath for a given `DownLadder` if it doesn't already exist.
+     * Populates `downLadder.linkedRoom` and links up-ladders appropriately.
+     */
+    async generateFor(downLadder) {
+        if (downLadder.linkedRoom)
+            return;
+        const targetDepth = downLadder.room.depth + (downLadder.isSidePath ? 0 : 1);
+        const pathId = this.getDeterministicPathId(downLadder);
+        await this.game.levelgen.generate(this.game, targetDepth, downLadder.isSidePath, (linkedRoom) => this.handleLinkedRoom(downLadder, linkedRoom), downLadder.environment, false, pathId, downLadder.opts);
+    }
+    /**
+     * Switches the active path to the sidepath associated with this down ladder
+     * (to ensure subsequent transitions and spawns align with the right path).
+     */
+    switchToPathBeforeTransition(downLadder) {
+        if (downLadder.isSidePath && downLadder.linkedRoom) {
+            this.game.currentPathId =
+                downLadder.linkedRoom.pathId ||
+                    this.game.currentPathId ||
+                    "main";
+        }
+    }
+    getDeterministicPathId(d) {
+        if (!d.isSidePath)
+            return "main";
+        const parentPid = this.game.currentPathId || "main";
+        const roomAnchor = `${d.room.depth}:${d.room.roomX},${d.room.roomY}`;
+        const tileAnchor = `${d.x},${d.y}`;
+        const coordPid = `sp:${parentPid}:${roomAnchor}:${tileAnchor}`;
+        const legacyGid = d.globalId ||
+            `${d.room.globalId}:${d.x},${d.y}`;
+        // Prefer coordinate-based pid; fall back to legacy GID-based for old saves
+        return coordPid || legacyGid || "main";
+    }
+    handleLinkedRoom(downLadder, linkedRoom) {
+        if (downLadder.isSidePath) {
+            this.handleSidePathRooms(linkedRoom);
+        }
+        downLadder.linkedRoom = linkedRoom;
+        this.linkUpLadders(downLadder);
+    }
+    /**
+     * Merge rooms belonging to the newly created sidepath's mapGroup into the generated level.
+     */
+    handleSidePathRooms(linkedRoom) {
+        const level = linkedRoom.level;
+        const sidePathRooms = this.game.rooms.filter((room) => room.mapGroup === linkedRoom.mapGroup);
+        const startingId = level.rooms.length;
+        sidePathRooms.forEach((room, index) => {
+            room.id = startingId + index;
+            level.rooms.push(room);
+        });
+    }
+    /**
+     * For sidepaths, ensure ALL up ladders in this sidepath mapGroup link back to the correct parent room.
+     * For main path, link the first up ladder in the generated room.
+     */
+    linkUpLadders(downLadder) {
+        if (!downLadder.linkedRoom)
+            return;
+        if (downLadder.isSidePath) {
+            const level = downLadder.linkedRoom.level;
+            const groupId = downLadder.linkedRoom.mapGroup;
+            const groupRooms = level.rooms.filter((r) => r.mapGroup === groupId);
+            for (const room of groupRooms) {
+                for (let x = room.roomX; x < room.roomX + room.width; x++) {
+                    for (let y = room.roomY; y < room.roomY + room.height; y++) {
+                        const tile = room.roomArray[x]?.[y];
+                        if (tile instanceof upLadder_1.UpLadder) {
+                            this.setUpLadderLink(downLadder, tile);
+                            if (!downLadder.entryUpLadderPos &&
+                                room === downLadder.linkedRoom) {
+                                downLadder.entryUpLadderPos = {
+                                    x: tile.x,
+                                    y: tile.y,
+                                };
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        else {
+            // Non-sidepath: link the first up ladder in the generated room
+            for (let x = downLadder.linkedRoom.roomX; x < downLadder.linkedRoom.roomX + downLadder.linkedRoom.width; x++) {
+                for (let y = downLadder.linkedRoom.roomY; y < downLadder.linkedRoom.roomY + downLadder.linkedRoom.height; y++) {
+                    const tile = downLadder.linkedRoom.roomArray[x]?.[y];
+                    if (tile instanceof upLadder_1.UpLadder) {
+                        this.setUpLadderLink(downLadder, tile);
+                        return;
+                    }
+                }
+            }
+        }
+    }
+    setUpLadderLink(downLadder, upLadder) {
+        if (downLadder.isSidePath) {
+            upLadder.linkedRoom = downLadder.room;
+            upLadder.isRope = true;
+            // Record the exact parent down-ladder tile to spawn on when going back up
+            upLadder.exitDownLadderPos = {
+                x: downLadder.x,
+                y: downLadder.y,
+            };
+        }
+        else {
+            upLadder.linkedRoom = this.game.levels[downLadder.room.depth].exitRoom;
+        }
+    }
+}
+exports.SidePathManager = SidePathManager;
 
 
 /***/ }),
@@ -36780,14 +36926,14 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DownLadder = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
-const upLadder_1 = __webpack_require__(/*! ./upLadder */ "./src/tile/upLadder.ts");
 const events_1 = __webpack_require__(/*! ../event/events */ "./src/event/events.ts");
 const eventBus_1 = __webpack_require__(/*! ../event/eventBus */ "./src/event/eventBus.ts");
 const environmentTypes_1 = __webpack_require__(/*! ../constants/environmentTypes */ "./src/constants/environmentTypes.ts");
 const lockable_1 = __webpack_require__(/*! ./lockable */ "./src/tile/lockable.ts");
 const passageway_1 = __webpack_require__(/*! ./passageway */ "./src/tile/passageway.ts");
+const sidePathManager_1 = __webpack_require__(/*! ../level/sidePathManager */ "./src/level/sidePathManager.ts");
 class DownLadder extends passageway_1.Passageway {
-    constructor(room, game, x, y, isSidePath = false, environment = environmentTypes_1.EnvType.DUNGEON, lockType = lockable_1.LockType.NONE, opts) {
+    constructor(room, game, x, y, isSidePath = false, environment = environmentTypes_1.EnvType.DUNGEON, lockType = lockable_1.LockType.NONE, opts, lockStateOverride) {
         super(room, game, x, y);
         this.isSidePath = false;
         this.getName = () => {
@@ -36795,98 +36941,13 @@ class DownLadder extends passageway_1.Passageway {
         };
         this.generate = async () => {
             if (!this.linkedRoom) {
-                const targetDepth = this.room.depth + (this.isSidePath ? 0 : 1);
-                // Assign a deterministic pathId for this sidepath based on coordinates (stable across runs)
-                // Include parent path to allow nested sidepaths to be unique
-                const parentPid = this.game.currentPathId || "main";
-                const roomAnchor = `${this.room.depth}:${this.room.roomX},${this.room.roomY}`;
-                const tileAnchor = `${this.x},${this.y}`;
-                const coordPid = `sp:${parentPid}:${roomAnchor}:${tileAnchor}`;
-                const legacyGid = this.globalId ||
-                    `${this.room.globalId}:${this.x},${this.y}`;
-                // Prefer coordinate-based pid; fall back to legacy GID-based for old saves
-                const pathId = this.isSidePath ? coordPid : "main";
-                await this.game.levelgen.generate(this.game, targetDepth, this.isSidePath, this.handleLinkedRoom, this.environment, false, pathId, 
-                // Optionally make some caves smaller; tweak or randomize as desired
-                this.opts);
+                await this.sidePathManager.generateFor(this);
             }
             else {
                 console.log("LinkedRoom already exists:", this.linkedRoom);
             }
         };
-        this.handleLinkedRoom = (linkedRoom) => {
-            if (this.isSidePath) {
-                this.handleSidePathRooms(linkedRoom);
-            }
-            this.linkedRoom = linkedRoom;
-            this.linkUpLadder();
-        };
-        this.handleSidePathRooms = (linkedRoom) => {
-            const targetDepth = this.room.depth;
-            const level = linkedRoom.level;
-            const sidePathRooms = this.game.rooms.filter((room) => room.mapGroup === linkedRoom.mapGroup);
-            const startingId = level.rooms.length;
-            sidePathRooms.forEach((room, index) => {
-                room.id = startingId + index;
-                level.rooms.push(room);
-            });
-        };
-        this.linkUpLadder = () => {
-            if (!this.linkedRoom)
-                return;
-            if (this.isSidePath) {
-                // For sidepaths, ensure ALL up ladders in this sidepath mapGroup link back to the correct parent room
-                const level = this.linkedRoom.level;
-                const groupId = this.linkedRoom.mapGroup;
-                const groupRooms = level.rooms.filter((r) => r.mapGroup === groupId);
-                console.log(`DownLadder.linkUpLadder: sidepath linking. linkedRoom gid=${this.linkedRoom?.globalId}, pathId=${this.linkedRoom?.pathId}, mapGroup=${groupId}, groupRooms=${groupRooms.length}`);
-                for (const room of groupRooms) {
-                    for (let x = room.roomX; x < room.roomX + room.width; x++) {
-                        for (let y = room.roomY; y < room.roomY + room.height; y++) {
-                            const tile = room.roomArray[x]?.[y];
-                            if (tile instanceof upLadder_1.UpLadder) {
-                                this.setUpLadderLink(tile);
-                                if (!this.entryUpLadderPos && room === this.linkedRoom) {
-                                    this.entryUpLadderPos = {
-                                        x: tile.x,
-                                        y: tile.y,
-                                    };
-                                    console.log(`DownLadder.linkUpLadder: entryUpLadderPos set to (${this.entryUpLadderPos.x}, ${this.entryUpLadderPos.y}) in linkedRoom gid=${this.linkedRoom?.globalId}`);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            else {
-                // Non-sidepath: link the first up ladder in the generated room (unchanged behavior)
-                for (let x = this.linkedRoom.roomX; x < this.linkedRoom.roomX + this.linkedRoom.width; x++) {
-                    for (let y = this.linkedRoom.roomY; y < this.linkedRoom.roomY + this.linkedRoom.height; y++) {
-                        const tile = this.linkedRoom.roomArray[x]?.[y];
-                        if (tile instanceof upLadder_1.UpLadder) {
-                            this.setUpLadderLink(tile);
-                            console.log(`DownLadder.linkUpLadder: non-sidepath linked first UpLadder at (${tile.x}, ${tile.y}) for room gid=${this.linkedRoom?.globalId}`);
-                            return;
-                        }
-                    }
-                }
-            }
-        };
-        this.setUpLadderLink = (upLadder) => {
-            if (this.isSidePath) {
-                upLadder.linkedRoom = this.room;
-                upLadder.isRope = true;
-                // Record the exact parent down-ladder tile to spawn on when going back up
-                upLadder.exitDownLadderPos = { x: this.x, y: this.y };
-                try {
-                    console.log(`DownLadder.setUpLadderLink: set exitDownLadderPos (${this.x}, ${this.y}) on UpLadder for parent room gid=${this.room?.globalId}`);
-                }
-                catch { }
-            }
-            else {
-                upLadder.linkedRoom = this.game.levels[this.room.depth].exitRoom;
-            }
-        };
+        // Linking logic is handled by SidePathManager
         this.onCollide = (player) => {
             let allPlayersHere = true;
             for (const i in this.game.players) {
@@ -36903,12 +36964,7 @@ class DownLadder extends passageway_1.Passageway {
                 this.generate().then(() => {
                     eventBus_1.globalEventBus.emit(events_1.EVENTS.LEVEL_GENERATION_COMPLETED, {});
                     // Switch active path to this ladder's sidepath before transitioning
-                    if (this.isSidePath && this.linkedRoom) {
-                        this.game.currentPathId =
-                            this.linkedRoom.pathId ||
-                                this.game.currentPathId ||
-                                "main";
-                    }
+                    this.sidePathManager.switchToPathBeforeTransition(this);
                     for (const i in this.game.players) {
                         this.game.changeLevelThroughLadder(this.game.players[i], this);
                     }
@@ -36944,12 +37000,17 @@ class DownLadder extends passageway_1.Passageway {
         this.isSidePath = isSidePath;
         this.environment = environment;
         this.opts = opts;
-        const lock = isSidePath && !gameConstants_1.GameConstants.DEVELOPER_MODE
-            ? lockable_1.LockType.LOCKED
-            : lockable_1.LockType.NONE;
-        // Initialize lockable with the passed lockType
+        this.sidePathManager = new sidePathManager_1.SidePathManager(game);
+        // Determine effective lock based on save override, generator intent, or explicit param
+        const effectiveLockType = lockStateOverride
+            ? lockStateOverride.lockType
+            : isSidePath && !gameConstants_1.GameConstants.DEVELOPER_MODE
+                ? lockable_1.LockType.LOCKED
+                : lockType;
+        // Initialize lockable using effective state (include saved keyID if provided)
         this.lockable = new lockable_1.Lockable(game, {
-            lockType: lock,
+            lockType: effectiveLockType,
+            keyID: lockStateOverride?.keyID,
             isTopDoor: false,
         });
         this.addLightSource();

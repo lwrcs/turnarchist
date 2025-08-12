@@ -2309,6 +2309,7 @@ export class TileState {
       this.properties.isSidePath = (tile as any).isSidePath;
       this.properties.environment = (tile as any).environment;
       this.properties.lockType = (tile as any).lockable?.lockType;
+      this.properties.keyID = (tile as any).lockable?.keyID;
       const linkedRoom: Room | null = (tile as any).linkedRoom || null;
       this.properties.linkedRoomGID = linkedRoom ? linkedRoom.globalId : null;
     } else if (tile instanceof UpLadder) {
@@ -2409,6 +2410,9 @@ let loadTile = (ts: TileState, room: Room, game: Game): Tile => {
         ts.properties.isSidePath || false,
         ts.properties.environment,
         ts.properties.lockType,
+        undefined,
+        // lockStateOverride ensures saved lockType/keyID are restored exactly
+        { lockType: ts.properties.lockType, keyID: ts.properties.keyID },
       );
       if (ts.properties.linkedRoomGID) {
         const linked = game.roomsById?.get(ts.properties.linkedRoomGID);

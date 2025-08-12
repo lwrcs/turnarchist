@@ -1045,6 +1045,7 @@ export class Game {
         this.pushMessage(`Equipping an item takes a turn is now ${enabled}`);
         break;
       case "webgl":
+        GameConstants.USE_WEBGL_BLUR = !GameConstants.USE_WEBGL_BLUR;
       case "hq":
         GameConstants.TOGGLE_HIGH_QUALITY_BLUR();
         break;

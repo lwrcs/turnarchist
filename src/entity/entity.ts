@@ -953,6 +953,7 @@ export class Entity extends Drawable {
 
   draw = (delta: number) => {
     if (this.dead) return;
+    Game.ctx.save();
     Game.ctx.globalAlpha = this.alpha;
     this.updateDrawXY(delta);
     if (this.hasShadow) {

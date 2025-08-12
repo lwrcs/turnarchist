@@ -16,7 +16,7 @@ export class Sword extends Weapon {
     //this.hitDelay = 150;
     this.degradeable = false;
     this.useCost = 2;
-    this.offsetY = 0;
+    this.offsetY = -0.5;
     //this.iconOffset = 0.2;
   }
 
