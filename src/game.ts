@@ -1485,7 +1485,11 @@ export class Game {
       if (room.pathId !== this.currentPathId) continue;
       const shouldDraw = room === this.room || room.active || room.entered;
       if (shouldDraw) {
-        if (!GameConstants.DRAW_SHADE_BELOW_TILES) room.drawShadeLayer();
+        if (
+          GameConstants.SMOOTH_LIGHTING &&
+          !GameConstants.DRAW_SHADE_BELOW_TILES
+        )
+          room.drawShadeLayer();
         room.drawColorLayer();
         room.drawBloomLayer(delta);
       }

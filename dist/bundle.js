@@ -13392,7 +13392,8 @@ class Game {
                     continue;
                 const shouldDraw = room === this.room || room.active || room.entered;
                 if (shouldDraw) {
-                    if (!gameConstants_1.GameConstants.DRAW_SHADE_BELOW_TILES)
+                    if (gameConstants_1.GameConstants.SMOOTH_LIGHTING &&
+                        !gameConstants_1.GameConstants.DRAW_SHADE_BELOW_TILES)
                         room.drawShadeLayer();
                     room.drawColorLayer();
                     room.drawBloomLayer(delta);
@@ -14587,7 +14588,7 @@ GameConstants.HEALTH_BUFF_COLOR = "#d77bba";
 GameConstants.MISS_COLOR = "#639bff";
 GameConstants.CUSTOM_SHADER_COLOR_ENABLED = false;
 GameConstants.SHADE_ENABLED = true;
-GameConstants.DRAW_SHADE_BELOW_TILES = true;
+GameConstants.DRAW_SHADE_BELOW_TILES = false;
 GameConstants.COLOR_LAYER_COMPOSITE_OPERATION = "soft-light"; //"soft-light";
 GameConstants.SHADE_LAYER_COMPOSITE_OPERATION = "source-over"; //"soft-light";
 GameConstants.USE_OPTIMIZED_SHADING = false;
@@ -24173,7 +24174,7 @@ class Spear extends weapon_1.Weapon {
         this.description =
             "Hits enemies in front of you within a range of 2 tiles.";
         this.iconOffset = 0.1; //default 0
-        this.offsetY = 0; //default -0.25
+        this.offsetY = -0.25; //default -0.25
         this.useCost = 1;
         this.degradeable = false;
     }
@@ -33007,10 +33008,10 @@ class Room {
             // Draw all shade rectangles without any filters
             for (let x = this.roomX - 2; x < this.roomX + this.width + 4; x++) {
                 for (let y = this.roomY - 2; y < this.roomY + this.height + 4; y++) {
+                    const tile = this.roomArray[x]?.[y];
+                    //if (!tile) return;
                     let alpha = this.softVis[x] && this.softVis[x][y] ? this.softVis[x][y] : 0;
-                    if (this.roomArray[x] &&
-                        this.roomArray[x][y] &&
-                        this.roomArray[x][y] instanceof wallTorch_1.WallTorch)
+                    if (tile instanceof wallTorch_1.WallTorch)
                         continue;
                     let factor = !gameConstants_1.GameConstants.SMOOTH_LIGHTING ? 2 : 2;
                     let smoothFactor = !gameConstants_1.GameConstants.SMOOTH_LIGHTING ? 0 : 1;
@@ -33019,10 +33020,8 @@ class Room {
                     let fillY = y;
                     let fillWidth = 1;
                     let fillHeight = 1;
-                    if (this.roomArray[x] &&
-                        this.roomArray[x][y] &&
-                        this.roomArray[x][y] instanceof wall_1.Wall) {
-                        const wall = this.roomArray[x][y];
+                    if (tile instanceof wall_1.Wall) {
+                        const wall = tile;
                         if (!this.innerWalls.includes(wall)) {
                             switch (wall.direction) {
                                 case game_1.Direction.UP:
@@ -33034,38 +33033,65 @@ class Room {
                                     fillHeight = 1.5;
                                     break;
                                 case game_1.Direction.LEFT:
-                                    fillX = x + 0.5;
-                                    fillWidth = 0.5;
+                                    fillX = x + 0.25;
+                                    fillWidth = 0.75;
                                     break;
                                 case game_1.Direction.RIGHT:
                                     fillX = x;
-                                    fillWidth = 0.5;
+                                    fillWidth = 0.75;
                                     break;
                                 case game_1.Direction.DOWN_LEFT:
-                                    fillX = x + 0.5;
+                                    fillX = x + 0.25;
                                     fillY = y - 0.5;
-                                    fillWidth = 0.5;
+                                    fillWidth = 0.75;
                                     fillHeight = 1.5;
                                     break;
                                 case game_1.Direction.DOWN_RIGHT:
                                     fillX = x;
                                     fillY = y - 0.5;
-                                    fillWidth = 0.5;
+                                    fillWidth = 0.75;
                                     fillHeight = 1.5;
                                     break;
                                 case game_1.Direction.UP_LEFT:
-                                    fillX = x + 0.5;
+                                    fillX = x + 0.25;
                                     fillY = y - 0.5;
-                                    fillWidth = 0.5;
+                                    fillWidth = 0.75;
                                     fillHeight = 0.5;
                                     break;
                                 case game_1.Direction.UP_RIGHT:
                                     fillX = x - 0.5;
                                     fillY = y - 0.5;
-                                    fillWidth = 0.5;
+                                    fillWidth = 0.75;
                                     fillHeight = 0.5;
                                     break;
                             }
+                        }
+                    }
+                    else if (tile instanceof door_1.Door) {
+                        const door = tile;
+                        if (door.opened === true)
+                            computedAlpha = computedAlpha / 2;
+                        switch (door.doorDir) {
+                            case game_1.Direction.UP:
+                                fillY = y - 0.5;
+                                fillHeight = 1.5;
+                                break;
+                            case game_1.Direction.DOWN:
+                                fillY = y - 0.5;
+                                fillHeight = 1.5;
+                                break;
+                            case game_1.Direction.RIGHT:
+                                fillX = x - 0.5;
+                                fillY = y - 1.25;
+                                fillWidth = 1.5;
+                                fillHeight = 2;
+                                break;
+                            case game_1.Direction.LEFT:
+                                fillX = x;
+                                fillY = y - 1.25;
+                                fillWidth = 1.5;
+                                fillHeight = 2;
+                                break;
                         }
                     }
                     const alphaMultiplier = !gameConstants_1.GameConstants.SMOOTH_LIGHTING ? 0.5 : 1.25;
