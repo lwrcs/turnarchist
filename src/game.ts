@@ -1487,7 +1487,7 @@ export class Game {
       if (shouldDraw) {
         if (
           GameConstants.SMOOTH_LIGHTING &&
-          !GameConstants.DRAW_SHADE_BELOW_TILES
+          !GameConstants.SHADE_INLINE_IN_ENTITY_LAYER
         )
           room.drawShadeLayer();
         room.drawColorLayer();

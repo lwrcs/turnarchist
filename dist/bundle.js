@@ -9958,7 +9958,8 @@ class Entity extends drawable_1.Drawable {
             }
         };
         this.shadeAmount = () => {
-            if (gameConstants_1.GameConstants.SMOOTH_LIGHTING && !gameConstants_1.GameConstants.DRAW_SHADE_BELOW_TILES)
+            if (gameConstants_1.GameConstants.SMOOTH_LIGHTING &&
+                !gameConstants_1.GameConstants.SHADE_INLINE_IN_ENTITY_LAYER)
                 return 0;
             if (!this.room.softVis[this.x])
                 return 0;
@@ -13393,7 +13394,7 @@ class Game {
                 const shouldDraw = room === this.room || room.active || room.entered;
                 if (shouldDraw) {
                     if (gameConstants_1.GameConstants.SMOOTH_LIGHTING &&
-                        !gameConstants_1.GameConstants.DRAW_SHADE_BELOW_TILES)
+                        !gameConstants_1.GameConstants.SHADE_INLINE_IN_ENTITY_LAYER)
                         room.drawShadeLayer();
                     room.drawColorLayer();
                     room.drawBloomLayer(delta);
@@ -14591,6 +14592,8 @@ GameConstants.SHADE_ENABLED = true;
 GameConstants.DRAW_SHADE_BELOW_TILES = false;
 GameConstants.COLOR_LAYER_COMPOSITE_OPERATION = "soft-light"; //"soft-light";
 GameConstants.SHADE_LAYER_COMPOSITE_OPERATION = "source-over"; //"soft-light";
+// When true, draw shade as sliced tiles inline within drawEntities instead of a single layer
+GameConstants.SHADE_INLINE_IN_ENTITY_LAYER = true;
 GameConstants.USE_OPTIMIZED_SHADING = false;
 GameConstants.SMOOTH_LIGHTING = false;
 GameConstants.ctxBlurEnabled = true;
@@ -21743,7 +21746,8 @@ class Item extends drawable_1.Drawable {
         };
         // Function to get the amount of shade at the item's location
         this.shadeAmount = () => {
-            if (gameConstants_1.GameConstants.SMOOTH_LIGHTING && !gameConstants_1.GameConstants.DRAW_SHADE_BELOW_TILES)
+            if (gameConstants_1.GameConstants.SMOOTH_LIGHTING &&
+                !gameConstants_1.GameConstants.SHADE_INLINE_IN_ENTITY_LAYER)
                 return 0;
             return this.level.softVis[this.x][this.y];
         };
@@ -28867,7 +28871,8 @@ class Particle extends drawable_1.Drawable {
         super(...arguments);
         this.drawTopLayer = (delta) => { };
         this.shadeAmount = () => {
-            if (gameConstants_1.GameConstants.SMOOTH_LIGHTING && !gameConstants_1.GameConstants.DRAW_SHADE_BELOW_TILES)
+            if (gameConstants_1.GameConstants.SMOOTH_LIGHTING &&
+                !gameConstants_1.GameConstants.SHADE_INLINE_IN_ENTITY_LAYER)
                 return 0;
             const x = Math.floor(this.x);
             const y = Math.floor(this.y);
@@ -31917,6 +31922,7 @@ const levelConstants_1 = __webpack_require__(/*! ../level/levelConstants */ "./s
 const floor_1 = __webpack_require__(/*! ../tile/floor */ "./src/tile/floor.ts");
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const door_1 = __webpack_require__(/*! ../tile/door */ "./src/tile/door.ts");
+const tile_1 = __webpack_require__(/*! ../tile/tile */ "./src/tile/tile.ts");
 const knightEnemy_1 = __webpack_require__(/*! ../entity/enemy/knightEnemy */ "./src/entity/enemy/knightEnemy.ts");
 const entity_1 = __webpack_require__(/*! ../entity/entity */ "./src/entity/entity.ts");
 const chest_1 = __webpack_require__(/*! ../entity/object/chest */ "./src/entity/object/chest.ts");
@@ -32995,6 +33001,8 @@ class Room {
         this.drawShadeLayer = () => {
             if (gameConstants_1.GameConstants.isIOS || !gameConstants_1.GameConstants.SHADE_ENABLED)
                 return;
+            if (gameConstants_1.GameConstants.SHADE_INLINE_IN_ENTITY_LAYER)
+                return; // handled inline in drawEntities
             if (!this.onScreen)
                 return;
             game_1.Game.ctx.save();
@@ -33139,6 +33147,162 @@ class Room {
             }
             game_1.Game.ctx.restore();
         };
+        // Build the unblurred shade offscreen using the exact logic as drawShadeLayer's fill pass
+        this.buildShadeOffscreenForSlicing = () => {
+            // Clear the offscreen shade canvas
+            this.shadeOffscreenCtx.clearRect(0, 0, this.shadeOffscreenCanvas.width, this.shadeOffscreenCanvas.height);
+            const offsetX = this.blurOffsetX;
+            const offsetY = this.blurOffsetY;
+            let lastFillStyle = "";
+            for (let x = this.roomX - 2; x < this.roomX + this.width + 4; x++) {
+                for (let y = this.roomY - 2; y < this.roomY + this.height + 4; y++) {
+                    const tile = this.roomArray[x]?.[y];
+                    let alpha = this.softVis[x] && this.softVis[x][y] ? this.softVis[x][y] : 0;
+                    if (tile instanceof wallTorch_1.WallTorch)
+                        continue;
+                    let factor = !gameConstants_1.GameConstants.SMOOTH_LIGHTING ? 2 : 2;
+                    let smoothFactor = !gameConstants_1.GameConstants.SMOOTH_LIGHTING ? 0 : 1;
+                    let computedAlpha = alpha ** factor * smoothFactor;
+                    let fillX = x;
+                    let fillY = y;
+                    let fillWidth = 1;
+                    let fillHeight = 1;
+                    if (tile instanceof wall_1.Wall) {
+                        const wall = tile;
+                        if (!this.innerWalls.includes(wall)) {
+                            switch (wall.direction) {
+                                case game_1.Direction.UP:
+                                    fillY = y - 0.5;
+                                    fillHeight = 0.5;
+                                    break;
+                                case game_1.Direction.DOWN:
+                                    fillY = y - 0.5;
+                                    fillHeight = 1.5;
+                                    break;
+                                case game_1.Direction.LEFT:
+                                    fillX = x + 0.25;
+                                    fillWidth = 0.75;
+                                    break;
+                                case game_1.Direction.RIGHT:
+                                    fillX = x;
+                                    fillWidth = 0.75;
+                                    break;
+                                case game_1.Direction.DOWN_LEFT:
+                                    fillX = x + 0.25;
+                                    fillY = y - 0.5;
+                                    fillWidth = 0.75;
+                                    fillHeight = 1.5;
+                                    break;
+                                case game_1.Direction.DOWN_RIGHT:
+                                    fillX = x;
+                                    fillY = y - 0.5;
+                                    fillWidth = 0.75;
+                                    fillHeight = 1.5;
+                                    break;
+                                case game_1.Direction.UP_LEFT:
+                                    fillX = x + 0.25;
+                                    fillY = y - 0.5;
+                                    fillWidth = 0.75;
+                                    fillHeight = 0.5;
+                                    break;
+                                case game_1.Direction.UP_RIGHT:
+                                    fillX = x - 0.5;
+                                    fillY = y - 0.5;
+                                    fillWidth = 0.75;
+                                    fillHeight = 0.5;
+                                    break;
+                            }
+                        }
+                    }
+                    else if (tile instanceof door_1.Door) {
+                        const door = tile;
+                        if (door.opened === true)
+                            computedAlpha = computedAlpha / 2;
+                        switch (door.doorDir) {
+                            case game_1.Direction.UP:
+                                fillY = y - 0.5;
+                                fillHeight = 1.5;
+                                break;
+                            case game_1.Direction.DOWN:
+                                fillY = y - 0.5;
+                                fillHeight = 1.5;
+                                break;
+                            case game_1.Direction.RIGHT:
+                                fillX = x - 0.5;
+                                fillY = y - 1.25;
+                                fillWidth = 1.5;
+                                fillHeight = 2;
+                                break;
+                            case game_1.Direction.LEFT:
+                                fillX = x;
+                                fillY = y - 1.25;
+                                fillWidth = 1.5;
+                                fillHeight = 2;
+                                break;
+                        }
+                    }
+                    const alphaMultiplier = !gameConstants_1.GameConstants.SMOOTH_LIGHTING ? 0.5 : 1;
+                    const fillStyle = `rgba(0, 0, 0, ${computedAlpha * alphaMultiplier})`;
+                    if (fillStyle !== lastFillStyle) {
+                        this.shadeOffscreenCtx.fillStyle = fillStyle;
+                        lastFillStyle = fillStyle;
+                    }
+                    fillY += 1;
+                    fillX += 1;
+                    this.shadeOffscreenCtx.fillRect((fillX - this.roomX + offsetX) * gameConstants_1.GameConstants.TILESIZE, (fillY - this.roomY + offsetY) * gameConstants_1.GameConstants.TILESIZE, fillWidth * gameConstants_1.GameConstants.TILESIZE, fillHeight * gameConstants_1.GameConstants.TILESIZE);
+                }
+            }
+        };
+        // Returns a blurred shade canvas to sample slices from, reusing the WebGL blur/cache when possible
+        this.getBlurredShadeSourceForSlicing = () => {
+            const offsetX = this.blurOffsetX;
+            const offsetY = this.blurOffsetY;
+            if (gameConstants_1.GameConstants.USE_WEBGL_BLUR) {
+                const blurRenderer = webglBlurRenderer_1.WebGLBlurRenderer.getInstance();
+                if (this.shouldUseBlurCache() && this.blurCache.shade5px) {
+                    return this.blurCache.shade5px;
+                }
+                else {
+                    const blurred5px = blurRenderer.applyBlur(this.shadeOffscreenCanvas, 5);
+                    if (!this.active)
+                        this.cacheBlurResult("shade5px", blurred5px);
+                    return blurred5px;
+                }
+            }
+            else {
+                // Canvas2D blur path: we cannot use ctx.filter during main slicing draws.
+                // So we pre-blur into a temporary canvas once.
+                if (!this.shadeBlurTempCanvas) {
+                    this.shadeBlurTempCanvas = document.createElement("canvas");
+                    this.shadeBlurTempCanvas.width = this.shadeOffscreenCanvas.width;
+                    this.shadeBlurTempCanvas.height = this.shadeOffscreenCanvas.height;
+                    this.shadeBlurTempCtx = this.shadeBlurTempCanvas.getContext("2d");
+                }
+                const tctx = this.shadeBlurTempCtx;
+                tctx.clearRect(0, 0, this.shadeBlurTempCanvas.width, this.shadeBlurTempCanvas.height);
+                if (gameConstants_1.GameConstants.ctxBlurEnabled) {
+                    tctx.filter = `blur(5px)`;
+                }
+                else {
+                    tctx.filter = "none";
+                }
+                tctx.drawImage(this.shadeOffscreenCanvas, 0, 0);
+                tctx.filter = "none";
+                return this.shadeBlurTempCanvas;
+            }
+        };
+        // Draw shade slices directly above a given tile
+        this.drawShadeSliceForTile = (shadeSrc, tileX, tileY) => {
+            const ts = gameConstants_1.GameConstants.TILESIZE;
+            const offsetX = this.blurOffsetX;
+            const offsetY = this.blurOffsetY;
+            // Source position in the blurred offscreen (note the +1 padding used during fill)
+            const sx = (tileX + 1 - this.roomX + offsetX) * ts;
+            const sy = (tileY + 1 - this.roomY + offsetY) * ts;
+            const dx = tileX * ts;
+            const dy = tileY * ts;
+            game_1.Game.ctx.drawImage(shadeSrc, sx, sy, ts, ts, dx, dy, ts, ts);
+        };
         this.drawBloomLayer = (delta) => {
             if (gameConstants_1.GameConstants.isIOS || !this.onScreen)
                 return;
@@ -33233,11 +33397,20 @@ class Room {
             if (!this.onScreen)
                 return;
             game_1.Game.ctx.save();
+            // If using inline sliced shade, prepare the blurred shade source once
+            let useInlineShade = gameConstants_1.GameConstants.SHADE_ENABLED && gameConstants_1.GameConstants.SHADE_INLINE_IN_ENTITY_LAYER;
+            let shadeSrc = null;
+            if (useInlineShade) {
+                // Build unblurred shade and get blurred source
+                this.buildShadeOffscreenForSlicing();
+                shadeSrc = this.getBlurredShadeSourceForSlicing();
+            }
             let tiles = [];
             for (let x = this.roomX; x < this.roomX + this.width; x++) {
                 for (let y = this.roomY; y < this.roomY + this.height; y++) {
-                    this.roomArray[x][y].drawUnderPlayer(delta);
-                    tiles.push(this.roomArray[x][y]);
+                    const tile = this.roomArray[x][y];
+                    tile.drawUnderPlayer(delta);
+                    tiles.push(tile);
                 }
             }
             let drawables = new Array();
@@ -33292,6 +33465,28 @@ class Room {
             });
             for (const d of drawables) {
                 d.draw(delta);
+                if (useInlineShade && shadeSrc && d instanceof tile_1.Tile) {
+                    const tx = d.x;
+                    const ty = d.y;
+                    const sv = this.softVis[tx] && this.softVis[tx][ty] ? this.softVis[tx][ty] : 0;
+                    if (sv > 0) {
+                        const prevOp = game_1.Game.ctx
+                            .globalCompositeOperation;
+                        if (prevOp !==
+                            gameConstants_1.GameConstants.SHADE_LAYER_COMPOSITE_OPERATION) {
+                            game_1.Game.ctx.globalCompositeOperation =
+                                gameConstants_1.GameConstants.SHADE_LAYER_COMPOSITE_OPERATION;
+                        }
+                        const prevAlpha = game_1.Game.ctx.globalAlpha;
+                        game_1.Game.ctx.globalAlpha = 1;
+                        this.drawShadeSliceForTile(shadeSrc, tx, ty);
+                        game_1.Game.ctx.globalAlpha = prevAlpha;
+                        if (prevOp !==
+                            gameConstants_1.GameConstants.SHADE_LAYER_COMPOSITE_OPERATION) {
+                            game_1.Game.ctx.globalCompositeOperation = prevOp;
+                        }
+                    }
+                }
             }
             this.drawAbovePlayer(delta);
             for (const i of this.items) {

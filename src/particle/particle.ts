@@ -11,7 +11,10 @@ export class Particle extends Drawable {
   room: Room;
   drawTopLayer = (delta) => {};
   shadeAmount = () => {
-    if (GameConstants.SMOOTH_LIGHTING && !GameConstants.DRAW_SHADE_BELOW_TILES)
+    if (
+      GameConstants.SMOOTH_LIGHTING &&
+      !GameConstants.SHADE_INLINE_IN_ENTITY_LAYER
+    )
       return 0;
     const x = Math.floor(this.x);
     const y = Math.floor(this.y);

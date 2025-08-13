@@ -103,6 +103,8 @@ export class GameConstants {
   static DRAW_SHADE_BELOW_TILES = false;
   static COLOR_LAYER_COMPOSITE_OPERATION = "soft-light"; //"soft-light";
   static SHADE_LAYER_COMPOSITE_OPERATION = "source-over"; //"soft-light";
+  // When true, draw shade as sliced tiles inline within drawEntities instead of a single layer
+  static SHADE_INLINE_IN_ENTITY_LAYER = true;
   static USE_OPTIMIZED_SHADING = false;
   static SMOOTH_LIGHTING = false;
   static ctxBlurEnabled = true;

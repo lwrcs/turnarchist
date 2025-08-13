@@ -260,6 +260,9 @@ export class Room {
 
   private shadeOffscreenCanvas: HTMLCanvasElement;
   private shadeOffscreenCtx: CanvasRenderingContext2D;
+  // Temporary canvas used when Canvas2D filter blur is required for sliced drawing
+  private shadeBlurTempCanvas?: HTMLCanvasElement;
+  private shadeBlurTempCtx?: CanvasRenderingContext2D;
   private bloomOffscreenCanvas: HTMLCanvasElement;
   private bloomOffscreenCtx: CanvasRenderingContext2D;
 
@@ -2122,6 +2125,7 @@ export class Room {
 
   drawShadeLayer = () => {
     if (GameConstants.isIOS || !GameConstants.SHADE_ENABLED) return;
+    if (GameConstants.SHADE_INLINE_IN_ENTITY_LAYER) return; // handled inline in drawEntities
     if (!this.onScreen) return;
 
     Game.ctx.save();
@@ -2304,6 +2308,185 @@ export class Room {
     Game.ctx.restore();
   };
 
+  // Build the unblurred shade offscreen using the exact logic as drawShadeLayer's fill pass
+  private buildShadeOffscreenForSlicing = () => {
+    // Clear the offscreen shade canvas
+    this.shadeOffscreenCtx.clearRect(
+      0,
+      0,
+      this.shadeOffscreenCanvas.width,
+      this.shadeOffscreenCanvas.height,
+    );
+
+    const offsetX = this.blurOffsetX;
+    const offsetY = this.blurOffsetY;
+
+    let lastFillStyle = "";
+
+    for (let x = this.roomX - 2; x < this.roomX + this.width + 4; x++) {
+      for (let y = this.roomY - 2; y < this.roomY + this.height + 4; y++) {
+        const tile = this.roomArray[x]?.[y];
+        let alpha =
+          this.softVis[x] && this.softVis[x][y] ? this.softVis[x][y] : 0;
+        if (tile instanceof WallTorch) continue;
+        let factor = !GameConstants.SMOOTH_LIGHTING ? 2 : 2;
+        let smoothFactor = !GameConstants.SMOOTH_LIGHTING ? 0 : 1;
+        let computedAlpha = alpha ** factor * smoothFactor;
+
+        let fillX = x;
+        let fillY = y;
+        let fillWidth = 1;
+        let fillHeight = 1;
+        if (tile instanceof Wall) {
+          const wall = tile as Wall;
+          if (!this.innerWalls.includes(wall)) {
+            switch (wall.direction) {
+              case Direction.UP:
+                fillY = y - 0.5;
+                fillHeight = 0.5;
+                break;
+              case Direction.DOWN:
+                fillY = y - 0.5;
+                fillHeight = 1.5;
+                break;
+              case Direction.LEFT:
+                fillX = x + 0.25;
+                fillWidth = 0.75;
+                break;
+              case Direction.RIGHT:
+                fillX = x;
+                fillWidth = 0.75;
+                break;
+              case Direction.DOWN_LEFT:
+                fillX = x + 0.25;
+                fillY = y - 0.5;
+                fillWidth = 0.75;
+                fillHeight = 1.5;
+                break;
+              case Direction.DOWN_RIGHT:
+                fillX = x;
+                fillY = y - 0.5;
+                fillWidth = 0.75;
+                fillHeight = 1.5;
+                break;
+              case Direction.UP_LEFT:
+                fillX = x + 0.25;
+                fillY = y - 0.5;
+                fillWidth = 0.75;
+                fillHeight = 0.5;
+                break;
+              case Direction.UP_RIGHT:
+                fillX = x - 0.5;
+                fillY = y - 0.5;
+                fillWidth = 0.75;
+                fillHeight = 0.5;
+                break;
+            }
+          }
+        } else if (tile instanceof Door) {
+          const door = tile as Door;
+          if (door.opened === true) computedAlpha = computedAlpha / 2;
+          switch (door.doorDir) {
+            case Direction.UP:
+              fillY = y - 0.5;
+              fillHeight = 1.5;
+              break;
+            case Direction.DOWN:
+              fillY = y - 0.5;
+              fillHeight = 1.5;
+              break;
+            case Direction.RIGHT:
+              fillX = x - 0.5;
+              fillY = y - 1.25;
+              fillWidth = 1.5;
+              fillHeight = 2;
+              break;
+            case Direction.LEFT:
+              fillX = x;
+              fillY = y - 1.25;
+              fillWidth = 1.5;
+              fillHeight = 2;
+              break;
+          }
+        }
+        const alphaMultiplier = !GameConstants.SMOOTH_LIGHTING ? 0.5 : 1;
+        const fillStyle = `rgba(0, 0, 0, ${computedAlpha * alphaMultiplier})`;
+        if (fillStyle !== lastFillStyle) {
+          this.shadeOffscreenCtx.fillStyle = fillStyle;
+          lastFillStyle = fillStyle;
+        }
+        fillY += 1;
+        fillX += 1;
+        this.shadeOffscreenCtx.fillRect(
+          (fillX - this.roomX + offsetX) * GameConstants.TILESIZE,
+          (fillY - this.roomY + offsetY) * GameConstants.TILESIZE,
+          fillWidth * GameConstants.TILESIZE,
+          fillHeight * GameConstants.TILESIZE,
+        );
+      }
+    }
+  };
+
+  // Returns a blurred shade canvas to sample slices from, reusing the WebGL blur/cache when possible
+  private getBlurredShadeSourceForSlicing = (): HTMLCanvasElement => {
+    const offsetX = this.blurOffsetX;
+    const offsetY = this.blurOffsetY;
+
+    if (GameConstants.USE_WEBGL_BLUR) {
+      const blurRenderer = WebGLBlurRenderer.getInstance();
+      if (this.shouldUseBlurCache() && this.blurCache.shade5px) {
+        return this.blurCache.shade5px as HTMLCanvasElement;
+      } else {
+        const blurred5px = blurRenderer.applyBlur(this.shadeOffscreenCanvas, 5);
+        if (!this.active) this.cacheBlurResult("shade5px", blurred5px);
+        return blurred5px;
+      }
+    } else {
+      // Canvas2D blur path: we cannot use ctx.filter during main slicing draws.
+      // So we pre-blur into a temporary canvas once.
+      if (!this.shadeBlurTempCanvas) {
+        this.shadeBlurTempCanvas = document.createElement("canvas");
+        this.shadeBlurTempCanvas.width = this.shadeOffscreenCanvas.width;
+        this.shadeBlurTempCanvas.height = this.shadeOffscreenCanvas.height;
+        this.shadeBlurTempCtx = this.shadeBlurTempCanvas.getContext(
+          "2d",
+        ) as CanvasRenderingContext2D;
+      }
+      const tctx = this.shadeBlurTempCtx as CanvasRenderingContext2D;
+      tctx.clearRect(
+        0,
+        0,
+        this.shadeBlurTempCanvas!.width,
+        this.shadeBlurTempCanvas!.height,
+      );
+      if (GameConstants.ctxBlurEnabled) {
+        tctx.filter = `blur(5px)`;
+      } else {
+        tctx.filter = "none";
+      }
+      tctx.drawImage(this.shadeOffscreenCanvas, 0, 0);
+      tctx.filter = "none";
+      return this.shadeBlurTempCanvas as HTMLCanvasElement;
+    }
+  };
+
+  // Draw shade slices directly above a given tile
+  private drawShadeSliceForTile = (
+    shadeSrc: HTMLCanvasElement,
+    tileX: number,
+    tileY: number,
+  ) => {
+    const ts = GameConstants.TILESIZE;
+    const offsetX = this.blurOffsetX;
+    const offsetY = this.blurOffsetY;
+    // Source position in the blurred offscreen (note the +1 padding used during fill)
+    const sx = (tileX + 1 - this.roomX + offsetX) * ts;
+    const sy = (tileY + 1 - this.roomY + offsetY) * ts;
+    const dx = tileX * ts;
+    const dy = tileY * ts;
+    Game.ctx.drawImage(shadeSrc, sx, sy, ts, ts, dx, dy, ts, ts);
+  };
+
   drawBloomLayer = (delta: number) => {
     if (GameConstants.isIOS || !this.onScreen) return;
 
@@ -2449,11 +2632,21 @@ export class Room {
     if (!this.onScreen) return;
 
     Game.ctx.save();
+    // If using inline sliced shade, prepare the blurred shade source once
+    let useInlineShade =
+      GameConstants.SHADE_ENABLED && GameConstants.SHADE_INLINE_IN_ENTITY_LAYER;
+    let shadeSrc: HTMLCanvasElement | null = null;
+    if (useInlineShade) {
+      // Build unblurred shade and get blurred source
+      this.buildShadeOffscreenForSlicing();
+      shadeSrc = this.getBlurredShadeSourceForSlicing();
+    }
     let tiles = [];
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
-        this.roomArray[x][y].drawUnderPlayer(delta);
-        tiles.push(this.roomArray[x][y]);
+        const tile = this.roomArray[x][y];
+        tile.drawUnderPlayer(delta);
+        tiles.push(tile);
       }
     }
 
@@ -2514,6 +2707,33 @@ export class Room {
 
     for (const d of drawables) {
       d.draw(delta);
+      if (useInlineShade && shadeSrc && d instanceof Tile) {
+        const tx = (d as Tile).x;
+        const ty = (d as Tile).y;
+        const sv =
+          this.softVis[tx] && this.softVis[tx][ty] ? this.softVis[tx][ty] : 0;
+        if (sv > 0) {
+          const prevOp = Game.ctx
+            .globalCompositeOperation as GlobalCompositeOperation;
+          if (
+            prevOp !==
+            (GameConstants.SHADE_LAYER_COMPOSITE_OPERATION as GlobalCompositeOperation)
+          ) {
+            Game.ctx.globalCompositeOperation =
+              GameConstants.SHADE_LAYER_COMPOSITE_OPERATION as GlobalCompositeOperation;
+          }
+          const prevAlpha = Game.ctx.globalAlpha;
+          Game.ctx.globalAlpha = 1;
+          this.drawShadeSliceForTile(shadeSrc, tx, ty);
+          Game.ctx.globalAlpha = prevAlpha;
+          if (
+            prevOp !==
+            (GameConstants.SHADE_LAYER_COMPOSITE_OPERATION as GlobalCompositeOperation)
+          ) {
+            Game.ctx.globalCompositeOperation = prevOp;
+          }
+        }
+      }
     }
 
     this.drawAbovePlayer(delta);
