@@ -1148,8 +1148,8 @@ export class Game {
         }
         break;
       default:
-        if (command.startsWith("new ")) {
-          this.room.addNewEnemy(command.slice(4) as EnemyType);
+        if (command.startsWith("spawn ")) {
+          this.room.addNewEnemy(command.slice(6) as EnemyType);
         } else if (command.startsWith("fill")) {
           while (this.room.getEmptyTiles().length > 0) {
             this.room.addNewEnemy(command.slice(5) as EnemyType);
@@ -1485,7 +1485,7 @@ export class Game {
       if (room.pathId !== this.currentPathId) continue;
       const shouldDraw = room === this.room || room.active || room.entered;
       if (shouldDraw) {
-        room.drawShadeLayer();
+        if (!GameConstants.DRAW_SHADE_BELOW_TILES) room.drawShadeLayer();
         room.drawColorLayer();
         room.drawBloomLayer(delta);
       }

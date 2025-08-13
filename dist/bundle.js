@@ -7282,7 +7282,16 @@ class MummyEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
         this.hit = () => {
-            return 1;
+            return 0.5;
+        };
+        // Immunities
+        this.poison = () => {
+            // immune to poison
+            return;
+        };
+        this.bleed = () => {
+            // immune to bleed
+            return;
         };
         this.behavior = () => {
             // Store the current position
@@ -7477,8 +7486,8 @@ class MummyEnemy extends enemy_1.Enemy {
         };
         this.ticks = 0;
         this.frame = 0;
-        this.health = 1;
-        this.maxHealth = 1;
+        this.health = 2;
+        this.maxHealth = 2;
         this.tileX = 17;
         this.tileY = 16;
         this.seenPlayer = false;
@@ -7487,6 +7496,7 @@ class MummyEnemy extends enemy_1.Enemy {
         this.name = "mummy";
         this.forwardOnlyAttack = true;
         this.jumpHeight = 0.35;
+        this.alertRange = 2; // very small alert range
         if (drop)
             this.drop = drop;
         this.getDrop(["consumable", "tool", "coin"]);
@@ -8388,6 +8398,8 @@ const rookEnemy_1 = __webpack_require__(/*! ./rookEnemy */ "./src/entity/enemy/r
 const room_1 = __webpack_require__(/*! ../../room/room */ "./src/room/room.ts");
 const armoredSkullEnemy_1 = __webpack_require__(/*! ./armoredSkullEnemy */ "./src/entity/enemy/armoredSkullEnemy.ts");
 const gameplaySettings_1 = __webpack_require__(/*! ../../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
+const spiderEnemy_1 = __webpack_require__(/*! ./spiderEnemy */ "./src/entity/enemy/spiderEnemy.ts");
+const mummyEnemy_1 = __webpack_require__(/*! ./mummyEnemy */ "./src/entity/enemy/mummyEnemy.ts");
 class Spawner extends enemy_1.Enemy {
     constructor(room, game, x, y, enemyTable = [0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14, 16]) {
         super(room, game, x, y);
@@ -8503,6 +8515,12 @@ class Spawner extends enemy_1.Enemy {
                                 break;
                             case 16:
                                 spawned = new armoredSkullEnemy_1.ArmoredSkullEnemy(this.room, this.game, position.x, position.y);
+                                break;
+                            case 17:
+                                spawned = new spiderEnemy_1.SpiderEnemy(this.room, this.game, position.x, position.y);
+                                break;
+                            case 18:
+                                spawned = new mummyEnemy_1.MummyEnemy(this.room, this.game, position.x, position.y);
                                 break;
                         }
                         this.setSpawnFrequency(spawned.maxHealth);
@@ -8631,6 +8649,8 @@ const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const gameConstants_1 = __webpack_require__(/*! ../../game/gameConstants */ "./src/game/gameConstants.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
+const utils_1 = __webpack_require__(/*! ../../utility/utils */ "./src/utility/utils.ts");
+const hitWarning_1 = __webpack_require__(/*! ../../drawable/hitWarning */ "./src/drawable/hitWarning.ts");
 var SpiderState;
 (function (SpiderState) {
     SpiderState[SpiderState["VISIBLE"] = 0] = "VISIBLE";
@@ -8648,6 +8668,105 @@ class SpiderEnemy extends enemy_1.Enemy {
             if (this.state === SpiderState.HIDDEN && ticksSince > 8)
                 this.state = SpiderState.HIDING;
             this.revealTick = this.ticks;
+        };
+        this.jump = (delta) => {
+            //console.log(`this.drawX, this.drawY: ${this.drawX}, ${this.drawY}`);
+            let j = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
+            if (j > 1) {
+                this.jumpDistance = 2;
+            }
+            this.jumpY = Math.sin((j / this.jumpDistance) * Math.PI) * this.jumpHeight;
+            if (this.jumpY < 0.01 && this.jumpY > -0.01) {
+                this.jumpY = 0;
+                this.jumpDistance = 1;
+            }
+            if (this.jumpY > this.jumpHeight)
+                this.jumpY = this.jumpHeight;
+        };
+        // Helpers to keep movement logic concise
+        this.isTileFree = (x, y) => {
+            if (!this.room.roomArray[x] || !this.room.roomArray[x][y])
+                return false;
+            const t = this.room.roomArray[x][y];
+            if (t.isSolid())
+                return false;
+            if (t instanceof spiketrap_1.SpikeTrap && t.on)
+                return false;
+            for (const e of this.room.entities) {
+                if (e !== this && e.x === x && e.y === y)
+                    return false;
+            }
+            return true;
+        };
+        this.getTwoTileCandidates = (startX, startY) => {
+            const directions = [
+                { dx: 1, dy: 0, axis: "x" },
+                { dx: -1, dy: 0, axis: "x" },
+                { dx: 0, dy: 1, axis: "y" },
+                { dx: 0, dy: -1, axis: "y" },
+            ];
+            const candidates = [];
+            for (const d of directions) {
+                const midX = startX + d.dx;
+                const midY = startY + d.dy;
+                const endX = startX + 2 * d.dx;
+                const endY = startY + 2 * d.dy;
+                if (this.isTileFree(midX, midY) && this.isTileFree(endX, endY)) {
+                    candidates.push({ endX, endY, axis: d.axis, dx: d.dx, dy: d.dy });
+                }
+            }
+            return candidates;
+        };
+        this.pickBestCandidate = (candidates, targetX, targetY, preferXAxis, dxToTarget, dyToTarget) => {
+            const signX = dxToTarget === 0 ? 0 : dxToTarget > 0 ? 1 : -1;
+            const signY = dyToTarget === 0 ? 0 : dyToTarget > 0 ? 1 : -1;
+            candidates.sort((a, b) => {
+                const da = Math.abs(a.endX - targetX) + Math.abs(a.endY - targetY);
+                const db = Math.abs(b.endX - targetX) + Math.abs(b.endY - targetY);
+                if (da !== db)
+                    return da - db;
+                if (preferXAxis) {
+                    if (a.axis !== b.axis)
+                        return a.axis === "x" ? -1 : 1;
+                }
+                else {
+                    if (a.axis !== b.axis)
+                        return a.axis === "y" ? -1 : 1;
+                }
+                const aTowards = (a.dx !== 0 ? a.dx === signX : a.dy === signY) ? -1 : 1;
+                const bTowards = (b.dx !== 0 ? b.dx === signX : b.dy === signY) ? -1 : 1;
+                if (aTowards !== bTowards)
+                    return aTowards - bTowards;
+                return 0;
+            });
+            return candidates[0];
+        };
+        this.attackOrMoveTo = (destX, destY, oldX, oldY) => {
+            let hitPlayer = false;
+            for (const i in this.game.players) {
+                if (this.game.rooms[this.game.players[i].levelID] === this.room &&
+                    this.game.players[i].x === destX &&
+                    this.game.players[i].y === destY) {
+                    this.game.players[i].hurt(this.hit(), this.name);
+                    this.drawX = 0.5 * (this.x - this.game.players[i].x);
+                    this.drawY = 0.5 * (this.y - this.game.players[i].y);
+                    if (this.game.players[i] === this.game.players[this.game.localPlayerID])
+                        this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                    hitPlayer = true;
+                }
+            }
+            if (!hitPlayer) {
+                this.tryMove(destX, destY);
+                this.setDrawXY(oldX, oldY);
+                if (this.x > oldX)
+                    this.direction = game_1.Direction.RIGHT;
+                else if (this.x < oldX)
+                    this.direction = game_1.Direction.LEFT;
+                else if (this.y > oldY)
+                    this.direction = game_1.Direction.DOWN;
+                else if (this.y < oldY)
+                    this.direction = game_1.Direction.UP;
+            }
         };
         this.behavior = () => {
             this.lastX = this.x;
@@ -8693,37 +8812,82 @@ class SpiderEnemy extends enemy_1.Enemy {
                                 }
                             }
                             this.target =
-                                this.getAverageLuminance() > 0 // 0.8
+                                this.getAverageLuminance() > 0
                                     ? this.targetPlayer
                                     : this.room.getExtremeLuminanceFromPoint(this.x, this.y)
                                         .darkest;
-                            let moves = astarclass_1.astar.AStar.search(grid, this, this.target, disablePositions, undefined, undefined, undefined, undefined, undefined, undefined, this.lastPlayerPos);
-                            if (moves.length > 0) {
-                                let hitPlayer = false;
-                                for (const i in this.game.players) {
-                                    if (this.game.rooms[this.game.players[i].levelID] === this.room &&
-                                        this.game.players[i].x === moves[0].pos.x &&
-                                        this.game.players[i].y === moves[0].pos.y) {
-                                        this.game.players[i].hurt(this.hit(), this.name);
-                                        this.drawX = 0.5 * (this.x - this.game.players[i].x);
-                                        this.drawY = 0.5 * (this.y - this.game.players[i].y);
-                                        if (this.game.players[i] ===
-                                            this.game.players[this.game.localPlayerID])
-                                            this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
-                                        hitPlayer = true;
+                            // Frog-like jump movement (no diagonals): attempt to jump 2 orthogonal tiles toward target
+                            let targetPosition = {
+                                x: this.targetPlayer.x,
+                                y: this.targetPlayer.y,
+                            };
+                            if (this.target === this.targetPlayer) {
+                                let dx = this.targetPlayer.x - this.x;
+                                let dy = this.targetPlayer.y - this.y;
+                                // constrain to orthogonal intent
+                                if (dx !== 0 && dy !== 0) {
+                                    if (Math.abs(dx) >= Math.abs(dy))
+                                        dy = 0;
+                                    else
+                                        dx = 0;
+                                }
+                                if ((dx === 0 && Math.abs(dy) <= 1) ||
+                                    (dy === 0 && Math.abs(dx) <= 1)) {
+                                    const jumpOverX = this.targetPlayer.x + Math.sign(dx);
+                                    const jumpOverY = this.targetPlayer.y + Math.sign(dy);
+                                    if (this.room.roomArray[jumpOverX] &&
+                                        this.room.roomArray[jumpOverX][jumpOverY] &&
+                                        !this.room.roomArray[jumpOverX][jumpOverY].isSolid()) {
+                                        targetPosition = { x: jumpOverX, y: jumpOverY };
                                     }
                                 }
-                                if (!hitPlayer) {
-                                    this.tryMove(moves[0].pos.x, moves[0].pos.y);
-                                    this.setDrawXY(oldX, oldY);
-                                    if (this.x > oldX)
-                                        this.direction = game_1.Direction.RIGHT;
-                                    else if (this.x < oldX)
-                                        this.direction = game_1.Direction.LEFT;
-                                    else if (this.y > oldY)
-                                        this.direction = game_1.Direction.DOWN;
-                                    else if (this.y < oldY)
-                                        this.direction = game_1.Direction.UP;
+                            }
+                            else {
+                                targetPosition = { x: this.target.x, y: this.target.y };
+                            }
+                            // Compute 2-tile jump plans
+                            const dxToTarget = targetPosition.x - oldX;
+                            const dyToTarget = targetPosition.y - oldY;
+                            const preferXAxis = Math.abs(dxToTarget) >= Math.abs(dyToTarget);
+                            // First, try to use A* first/second step and extend to length 2 if possible
+                            let finalX = this.x;
+                            let finalY = this.y;
+                            const moves = astarclass_1.astar.AStar.search(grid, this, targetPosition, disablePositions, false, false, false, undefined, undefined, false, this.lastPlayerPos);
+                            if (moves.length > 0) {
+                                let step = moves[0];
+                                const candidate2 = moves[1];
+                                if (candidate2) {
+                                    const preservesLine = candidate2.pos.x === oldX || candidate2.pos.y === oldY;
+                                    const alignsAxis = preferXAxis
+                                        ? candidate2.pos.y === oldY
+                                        : candidate2.pos.x === oldX;
+                                    if (preservesLine && alignsAxis)
+                                        step = candidate2;
+                                }
+                                finalX = step.pos.x;
+                                finalY = step.pos.y;
+                                const manhattanFromStart = Math.abs(finalX - oldX) + Math.abs(finalY - oldY);
+                                if (manhattanFromStart === 1) {
+                                    const dirX = finalX - oldX;
+                                    const dirY = finalY - oldY;
+                                    const extX = finalX + (dirX !== 0 ? Math.sign(dirX) : 0);
+                                    const extY = finalY + (dirY !== 0 ? Math.sign(dirY) : 0);
+                                    if (this.isTileFree(extX, extY)) {
+                                        finalX = extX;
+                                        finalY = extY;
+                                    }
+                                }
+                            }
+                            // If we have a valid 2-length plan, execute it; otherwise evaluate all alternatives
+                            const finalDist = Math.abs(finalX - oldX) + Math.abs(finalY - oldY);
+                            if (finalDist === 2) {
+                                this.attackOrMoveTo(finalX, finalY, oldX, oldY);
+                            }
+                            else {
+                                const candidates = this.getTwoTileCandidates(oldX, oldY);
+                                if (candidates.length > 0) {
+                                    const best = this.pickBestCandidate(candidates, targetPosition.x, targetPosition.y, preferXAxis, dxToTarget, dyToTarget);
+                                    this.attackOrMoveTo(best.endX, best.endY, oldX, oldY);
                                 }
                             }
                             this.rumbling = false;
@@ -8782,6 +8946,70 @@ class SpiderEnemy extends enemy_1.Enemy {
                 }
             }
         };
+        this.makeHitWarnings = () => {
+            const cullFactor = 0.25;
+            const player = this.getPlayer();
+            const orthogonal = this.orthogonalAttack;
+            const diagonal = this.diagonalAttack;
+            const forwardOnly = this.forwardOnlyAttack;
+            const direction = this.direction;
+            const orthoRange = this.attackRange;
+            const diagRange = this.diagonalAttackRange;
+            const generateOffsets = (isOrthogonal, range) => {
+                const baseOffsets = isOrthogonal
+                    ? [
+                        [-2, 0],
+                        [2, 0],
+                        [0, -2],
+                        [0, 2],
+                    ]
+                    : [
+                        [-1, -1],
+                        [1, 1],
+                        [1, -1],
+                        [-1, 1],
+                    ];
+                return baseOffsets.flatMap(([dx, dy]) => Array.from({ length: range }, (_, i) => [(i + 1) * dx, (i + 1) * dy]));
+            };
+            const directionOffsets = {
+                [game_1.Direction.LEFT]: [-1, 0],
+                [game_1.Direction.RIGHT]: [1, 0],
+                [game_1.Direction.UP]: [0, -1],
+                [game_1.Direction.DOWN]: [0, 1],
+            };
+            let offsets = [];
+            if (forwardOnly) {
+                const [dx, dy] = directionOffsets[direction];
+                offsets = Array.from({ length: orthoRange }, (_, i) => [
+                    (i + 1) * dx,
+                    (i + 1) * dy,
+                ]);
+            }
+            else {
+                if (orthogonal)
+                    offsets.push(...generateOffsets(true, orthoRange));
+                if (diagonal)
+                    offsets.push(...generateOffsets(false, diagRange));
+            }
+            const warningCoordinates = offsets
+                .map(([dx, dy]) => ({
+                x: dx,
+                y: dy,
+                distance: utils_1.Utils.distance(dx, dy, player.x - this.x, player.y - this.y),
+            }))
+                .sort((a, b) => a.distance - b.distance);
+            const keepCount = Math.ceil(warningCoordinates.length * (1 - cullFactor));
+            const culledWarnings = warningCoordinates.slice(0, keepCount);
+            culledWarnings.forEach(({ x, y }) => {
+                const targetX = this.x + x;
+                const targetY = this.y + y;
+                if (this.isWithinRoomBounds(targetX, targetY)) {
+                    const hitWarning = new hitWarning_1.HitWarning(this.game, targetX, targetY, this.x, this.y, true, false, this);
+                    this.room.hitwarnings.push(hitWarning);
+                    //this.hitWarnings.push(hitWarning);
+                }
+            });
+        };
         this.draw = (delta) => {
             if (this.dead)
                 return;
@@ -8819,7 +9047,7 @@ class SpiderEnemy extends enemy_1.Enemy {
                 if (this.state === SpiderState.VISIBLE) {
                     //only draw when visible
                     game_1.Game.drawMob(this.tileX, this.tileY, // + this.direction,
-                    2, 2, this.x - this.drawX + rumbleX - 0.5, this.y - this.drawYOffset - this.drawY + rumbleY, 2 * this.crushX, 2 * this.crushY, this.softShadeColor, this.shadeAmount());
+                    2, 2, this.x - this.drawX + rumbleX - 0.5, this.y - this.drawYOffset - this.drawY + rumbleY - this.jumpY, 2 * this.crushX, 2 * this.crushY, this.softShadeColor, this.shadeAmount());
                 }
                 if (this.crushed) {
                     this.crushAnim(delta);
@@ -8845,6 +9073,7 @@ class SpiderEnemy extends enemy_1.Enemy {
         this.aggro = false;
         this.name = "spider";
         this.orthogonalAttack = true;
+        this.diagonalAttack = false;
         this.imageParticleX = 3;
         this.imageParticleY = 24;
         this.state = SpiderState.VISIBLE;
@@ -8852,6 +9081,8 @@ class SpiderEnemy extends enemy_1.Enemy {
         this.drawYOffset = 1.2;
         this.revealTick = 0;
         this.hasShadow = true;
+        this.jumpHeight = 1;
+        this.jumpDistance = 1;
         this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
     }
     get alertText() {
@@ -9727,7 +9958,7 @@ class Entity extends drawable_1.Drawable {
             }
         };
         this.shadeAmount = () => {
-            if (gameConstants_1.GameConstants.SMOOTH_LIGHTING)
+            if (gameConstants_1.GameConstants.SMOOTH_LIGHTING && !gameConstants_1.GameConstants.DRAW_SHADE_BELOW_TILES)
                 return 0;
             if (!this.room.softVis[this.x])
                 return 0;
@@ -12961,8 +13192,8 @@ class Game {
                     }
                     break;
                 default:
-                    if (command.startsWith("new ")) {
-                        this.room.addNewEnemy(command.slice(4));
+                    if (command.startsWith("spawn ")) {
+                        this.room.addNewEnemy(command.slice(6));
                     }
                     else if (command.startsWith("fill")) {
                         while (this.room.getEmptyTiles().length > 0) {
@@ -13161,7 +13392,8 @@ class Game {
                     continue;
                 const shouldDraw = room === this.room || room.active || room.entered;
                 if (shouldDraw) {
-                    room.drawShadeLayer();
+                    if (!gameConstants_1.GameConstants.DRAW_SHADE_BELOW_TILES)
+                        room.drawShadeLayer();
                     room.drawColorLayer();
                     room.drawBloomLayer(delta);
                 }
@@ -14287,12 +14519,13 @@ exports.GameConstants = void 0;
 const armor_1 = __webpack_require__(/*! ../item/armor */ "./src/item/armor.ts");
 const backpack_1 = __webpack_require__(/*! ../item/backpack */ "./src/item/backpack.ts");
 const candle_1 = __webpack_require__(/*! ../item/light/candle */ "./src/item/light/candle.ts");
-const coal_1 = __webpack_require__(/*! ../item/resource/coal */ "./src/item/resource/coal.ts");
 const godStone_1 = __webpack_require__(/*! ../item/godStone */ "./src/item/godStone.ts");
-const lantern_1 = __webpack_require__(/*! ../item/light/lantern */ "./src/item/light/lantern.ts");
+const torch_1 = __webpack_require__(/*! ../item/light/torch */ "./src/item/light/torch.ts");
 const levelConstants_1 = __webpack_require__(/*! ../level/levelConstants */ "./src/level/levelConstants.ts");
 const dagger_1 = __webpack_require__(/*! ../item/weapon/dagger */ "./src/item/weapon/dagger.ts");
+const spear_1 = __webpack_require__(/*! ../item/weapon/spear */ "./src/item/weapon/spear.ts");
 const spellbook_1 = __webpack_require__(/*! ../item/weapon/spellbook */ "./src/item/weapon/spellbook.ts");
+const warhammer_1 = __webpack_require__(/*! ../item/weapon/warhammer */ "./src/item/weapon/warhammer.ts");
 const hammer_1 = __webpack_require__(/*! ../item/tool/hammer */ "./src/item/tool/hammer.ts");
 const bluegem_1 = __webpack_require__(/*! ../item/resource/bluegem */ "./src/item/resource/bluegem.ts");
 const redgem_1 = __webpack_require__(/*! ../item/resource/redgem */ "./src/item/resource/redgem.ts");
@@ -14300,9 +14533,9 @@ const greengem_1 = __webpack_require__(/*! ../item/resource/greengem */ "./src/i
 const pickaxe_1 = __webpack_require__(/*! ../item/tool/pickaxe */ "./src/item/tool/pickaxe.ts");
 const scythe_1 = __webpack_require__(/*! ../item/weapon/scythe */ "./src/item/weapon/scythe.ts");
 const gold_1 = __webpack_require__(/*! ../item/resource/gold */ "./src/item/resource/gold.ts");
+const sword_1 = __webpack_require__(/*! ../item/weapon/sword */ "./src/item/weapon/sword.ts");
 const orangegem_1 = __webpack_require__(/*! ../item/resource/orangegem */ "./src/item/resource/orangegem.ts");
 const goldRing_1 = __webpack_require__(/*! ../item/jewelry/goldRing */ "./src/item/jewelry/goldRing.ts");
-const fishingRod_1 = __webpack_require__(/*! ../item/tool/fishingRod */ "./src/item/tool/fishingRod.ts");
 class GameConstants {
 }
 exports.GameConstants = GameConstants;
@@ -14354,6 +14587,7 @@ GameConstants.HEALTH_BUFF_COLOR = "#d77bba";
 GameConstants.MISS_COLOR = "#639bff";
 GameConstants.CUSTOM_SHADER_COLOR_ENABLED = false;
 GameConstants.SHADE_ENABLED = true;
+GameConstants.DRAW_SHADE_BELOW_TILES = true;
 GameConstants.COLOR_LAYER_COMPOSITE_OPERATION = "soft-light"; //"soft-light";
 GameConstants.SHADE_LAYER_COMPOSITE_OPERATION = "source-over"; //"soft-light";
 GameConstants.USE_OPTIMIZED_SHADING = false;
@@ -14490,9 +14724,9 @@ GameConstants.FIND_SCALE = (isMobile) => {
 GameConstants.STARTING_INVENTORY = [dagger_1.Dagger, candle_1.Candle];
 GameConstants.STARTING_DEV_INVENTORY = [
     dagger_1.Dagger,
-    candle_1.Candle,
-    fishingRod_1.FishingRod,
-    lantern_1.Lantern,
+    warhammer_1.Warhammer,
+    sword_1.Sword,
+    spear_1.Spear,
     godStone_1.GodStone,
     spellbook_1.Spellbook,
     scythe_1.Scythe,
@@ -14500,7 +14734,7 @@ GameConstants.STARTING_DEV_INVENTORY = [
     backpack_1.Backpack,
     hammer_1.Hammer,
     pickaxe_1.Pickaxe,
-    coal_1.Coal,
+    torch_1.Torch,
     bluegem_1.BlueGem,
     orangegem_1.OrangeGem,
     redgem_1.RedGem,
@@ -21508,7 +21742,7 @@ class Item extends drawable_1.Drawable {
         };
         // Function to get the amount of shade at the item's location
         this.shadeAmount = () => {
-            if (gameConstants_1.GameConstants.SMOOTH_LIGHTING)
+            if (gameConstants_1.GameConstants.SMOOTH_LIGHTING && !gameConstants_1.GameConstants.DRAW_SHADE_BELOW_TILES)
                 return 0;
             return this.level.softVis[this.x][this.y];
         };
@@ -24635,8 +24869,8 @@ const environmentData = {
             { class: crabEnemy_1.CrabEnemy, weight: 1.0, minDepth: 0 },
             { class: zombieEnemy_1.ZombieEnemy, weight: 1.2, minDepth: 0 },
             { class: skullEnemy_1.SkullEnemy, weight: 1.0, minDepth: 0 },
-            { class: spiderEnemy_1.SpiderEnemy, weight: 1.0, minDepth: 0 },
-            { class: mummyEnemy_1.MummyEnemy, weight: 1.0, minDepth: 0 },
+            { class: spiderEnemy_1.SpiderEnemy, weight: 1.0, minDepth: 2 },
+            { class: mummyEnemy_1.MummyEnemy, weight: 1.0, minDepth: 1 },
             // Mid game enemies (depth 1+)
             { class: energyWizard_1.EnergyWizardEnemy, weight: 0.1, minDepth: 1 },
             { class: rookEnemy_1.RookEnemy, weight: 0.6, minDepth: 1 },
@@ -25155,7 +25389,9 @@ exports.enemyMinimumDepth = {
     12: 1,
     13: 2,
     14: 2,
-    15: 2, // ArmoredSkullEnemy  16: 2, // ArmoredKnightEnemy
+    15: 2,
+    16: 0,
+    17: 0, // MummyEnemy
 };
 /*
 interface enemySpawnPoolData {
@@ -25369,7 +25605,7 @@ LevelConstants.LEVEL_TRANSITION_TIME_LADDER = 1000; // milliseconds
 LevelConstants.ROOM_COUNT = 50;
 LevelConstants.HEALTH_BAR_FADEIN = 100;
 LevelConstants.HEALTH_BAR_FADEOUT = 350;
-LevelConstants.HEALTH_BAR_TOTALTIME = 1000;
+LevelConstants.HEALTH_BAR_TOTALTIME = 2000;
 LevelConstants.SHADED_TILE_CUTOFF = 1;
 LevelConstants.MIN_VISIBILITY = 0; // visibility level of places you've already seen
 LevelConstants.LIGHTING_ANGLE_STEP = 2; // how many degrees between each ray, previously 5
@@ -28624,11 +28860,14 @@ ImageParticle.spawnCluster = (level, cx, cy, tileX, tileY) => {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Particle = void 0;
 const drawable_1 = __webpack_require__(/*! ../drawable/drawable */ "./src/drawable/drawable.ts");
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
 class Particle extends drawable_1.Drawable {
     constructor() {
         super(...arguments);
         this.drawTopLayer = (delta) => { };
         this.shadeAmount = () => {
+            if (gameConstants_1.GameConstants.SMOOTH_LIGHTING && !gameConstants_1.GameConstants.DRAW_SHADE_BELOW_TILES)
+                return 0;
             const x = Math.floor(this.x);
             const y = Math.floor(this.y);
             if (!this.room.softVis[x])
@@ -34580,7 +34819,12 @@ class Populator {
                 this.populateByEnvironment(room);
             });
             // Centralized torch, spike, and pool addition
-            this.addDownladder({ caveRooms: 2 });
+            this.addDownladder({
+                caveRooms: 40,
+                mapWidth: 100,
+                mapHeight: 100,
+                locked: true,
+            });
             //this.level.distributeKeys();
         };
         this.populateByEnvironment = (room) => {
@@ -34626,7 +34870,10 @@ class Populator {
                         ? environmentTypes_1.EnvType.FOREST
                         : environmentTypes_1.EnvType.CAVE
                     : environmentTypes_1.EnvType.CAVE;
-            const dl = new downLadder_1.DownLadder(downLadderRoom, this.level.game, position.x, position.y, true, env, lockable_1.LockType.NONE, opts);
+            const lockOverride = opts && typeof opts.locked === "boolean"
+                ? { lockType: opts.locked ? lockable_1.LockType.LOCKED : lockable_1.LockType.NONE }
+                : undefined;
+            const dl = new downLadder_1.DownLadder(downLadderRoom, this.level.game, position.x, position.y, true, env, lockable_1.LockType.NONE, opts, lockOverride);
             if (dl.lockable.isLocked()) {
                 console.log("adding key to downladder");
                 this.level.distributeKey(dl);
@@ -37872,18 +38119,17 @@ class Wall extends tile_1.Tile {
         };
         this.drawTopLayer = (delta) => {
             const wallInfo = this.room.wallInfo.get(`${this.x},${this.y}`);
-            if (!wallInfo)
+            const room = this.room;
+            if (!wallInfo || !room)
                 return;
-            if (wallInfo.isBottomWall ||
-                wallInfo.isBelowDoorWall ||
-                wallInfo.isAboveDoorWall) {
+            if (wallInfo.isBottomWall && room.active)
                 game_1.Game.drawTile(2 + this.tileXOffset, this.skin, 1, 1, this.x, this.y - 1, 1, 1, this.room.shadeColor, this.shadeAmount());
-            }
         };
         this.isDoor = false;
         this.tileXOffset = 6;
         this.wallDirections = wallDirections || [];
         this.opacity = 1;
+        this.room = room;
     }
     get direction() {
         let directions = [];

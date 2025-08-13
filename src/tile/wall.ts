@@ -7,6 +7,7 @@ import { WallInfo } from "../room/room";
 export class Wall extends Tile {
   private tileXOffset: number;
   wallDirections: Array<WallDirection>;
+  room: Room;
 
   constructor(
     room: Room,
@@ -19,6 +20,7 @@ export class Wall extends Tile {
     this.tileXOffset = 6;
     this.wallDirections = wallDirections || [];
     this.opacity = 1;
+    this.room = room;
   }
 
   isSolid = (): boolean => {
@@ -132,12 +134,9 @@ export class Wall extends Tile {
 
   drawTopLayer = (delta: number) => {
     const wallInfo = this.room.wallInfo.get(`${this.x},${this.y}`);
-    if (!wallInfo) return;
-    if (
-      wallInfo.isBottomWall ||
-      wallInfo.isBelowDoorWall ||
-      wallInfo.isAboveDoorWall
-    ) {
+    const room = this.room;
+    if (!wallInfo || !room) return;
+    if (wallInfo.isBottomWall && room.active)
       Game.drawTile(
         2 + this.tileXOffset,
         this.skin,
@@ -150,6 +149,5 @@ export class Wall extends Tile {
         this.room.shadeColor,
         this.shadeAmount(), //this.room.softVis[this.x][this.y + 1],
       );
-    }
   };
 }

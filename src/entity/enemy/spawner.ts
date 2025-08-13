@@ -22,6 +22,8 @@ import { RookEnemy } from "./rookEnemy";
 import { RoomType } from "../../room/room";
 import { ArmoredSkullEnemy } from "./armoredSkullEnemy";
 import { GameplaySettings } from "../../game/gameplaySettings";
+import { SpiderEnemy } from "./spiderEnemy";
+import { MummyEnemy } from "./mummyEnemy";
 
 export class Spawner extends Enemy {
   ticks: number;
@@ -317,6 +319,22 @@ export class Spawner extends Enemy {
               break;
             case 16:
               spawned = new ArmoredSkullEnemy(
+                this.room,
+                this.game,
+                position.x,
+                position.y,
+              );
+              break;
+            case 17:
+              spawned = new SpiderEnemy(
+                this.room,
+                this.game,
+                position.x,
+                position.y,
+              );
+              break;
+            case 18:
+              spawned = new MummyEnemy(
                 this.room,
                 this.game,
                 position.x,

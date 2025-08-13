@@ -100,6 +100,7 @@ export class GameConstants {
 
   static CUSTOM_SHADER_COLOR_ENABLED = false;
   static SHADE_ENABLED = true;
+  static DRAW_SHADE_BELOW_TILES = true;
   static COLOR_LAYER_COMPOSITE_OPERATION = "soft-light"; //"soft-light";
   static SHADE_LAYER_COMPOSITE_OPERATION = "source-over"; //"soft-light";
   static USE_OPTIMIZED_SHADING = false;
@@ -274,9 +275,9 @@ export class GameConstants {
   static readonly STARTING_INVENTORY = [Dagger, Candle];
   static readonly STARTING_DEV_INVENTORY = [
     Dagger,
-    Candle,
-    FishingRod,
-    Lantern,
+    Warhammer,
+    Sword,
+    Spear,
     GodStone,
     Spellbook,
     Scythe,
@@ -284,7 +285,7 @@ export class GameConstants {
     Backpack,
     Hammer,
     Pickaxe,
-    Coal,
+    Torch,
     BlueGem,
     OrangeGem,
     RedGem,

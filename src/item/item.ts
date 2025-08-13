@@ -172,7 +172,8 @@ export class Item extends Drawable {
 
   // Function to get the amount of shade at the item's location
   shadeAmount = () => {
-    if (GameConstants.SMOOTH_LIGHTING) return 0;
+    if (GameConstants.SMOOTH_LIGHTING && !GameConstants.DRAW_SHADE_BELOW_TILES)
+      return 0;
     return this.level.softVis[this.x][this.y];
   };
 

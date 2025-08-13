@@ -32,8 +32,8 @@ export class MummyEnemy extends Enemy {
     super(room, game, x, y);
     this.ticks = 0;
     this.frame = 0;
-    this.health = 1;
-    this.maxHealth = 1;
+    this.health = 2;
+    this.maxHealth = 2;
     this.tileX = 17;
     this.tileY = 16;
     this.seenPlayer = false;
@@ -42,13 +42,25 @@ export class MummyEnemy extends Enemy {
     this.name = "mummy";
     this.forwardOnlyAttack = true;
     this.jumpHeight = 0.35;
+    this.alertRange = 2; // very small alert range
 
     if (drop) this.drop = drop;
     this.getDrop(["consumable", "tool", "coin"]);
   }
 
   hit = (): number => {
-    return 1;
+    return 0.5;
+  };
+
+  // Immunities
+  poison = () => {
+    // immune to poison
+    return;
+  };
+
+  bleed = () => {
+    // immune to bleed
+    return;
   };
 
   behavior = () => {

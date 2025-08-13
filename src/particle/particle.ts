@@ -1,5 +1,6 @@
 import { Drawable } from "../drawable/drawable";
 import { Entity } from "../entity/entity";
+import { GameConstants } from "../game/gameConstants";
 import { Player } from "../player/player";
 import { Room } from "../room/room";
 
@@ -10,6 +11,8 @@ export class Particle extends Drawable {
   room: Room;
   drawTopLayer = (delta) => {};
   shadeAmount = () => {
+    if (GameConstants.SMOOTH_LIGHTING && !GameConstants.DRAW_SHADE_BELOW_TILES)
+      return 0;
     const x = Math.floor(this.x);
     const y = Math.floor(this.y);
 
