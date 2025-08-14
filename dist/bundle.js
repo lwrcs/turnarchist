@@ -32096,6 +32096,8 @@ var WallDirection;
 })(WallDirection = exports.WallDirection || (exports.WallDirection = {}));
 class Room {
     constructor(game, x, y, w, h, type, depth, mapGroup, level, rand = random_1.Random.rand, envType) {
+        // Border tiles around shade content for sliced shading (ensures blur has room to spill)
+        this.shadeSliceBorderTiles = 1;
         this.name = "";
         this.shadeColor = "#000000";
         this.wallInfo = new Map();
@@ -32923,6 +32925,7 @@ class Room {
             // Clear the offscreen color canvas
             this.colorOffscreenCtx.clearRect(0, 0, this.colorOffscreenCanvas.width, this.colorOffscreenCanvas.height);
             let lastFillStyle = "";
+            // Match original shade layer positioning using the blur offsets
             const offsetX = this.blurOffsetX;
             const offsetY = this.blurOffsetY;
             // Draw all color rectangles without any filters
@@ -33010,8 +33013,8 @@ class Room {
                 gameConstants_1.GameConstants.SHADE_LAYER_COMPOSITE_OPERATION;
             // Clear the offscreen shade canvas
             this.shadeOffscreenCtx.clearRect(0, 0, this.shadeOffscreenCanvas.width, this.shadeOffscreenCanvas.height);
-            const offsetX = this.blurOffsetX;
-            const offsetY = this.blurOffsetY;
+            const offsetX = this.shadeSliceBorderTiles;
+            const offsetY = this.shadeSliceBorderTiles;
             let lastFillStyle = "";
             // Draw all shade rectangles without any filters
             for (let x = this.roomX - 2; x < this.roomX + this.width + 4; x++) {
@@ -33108,8 +33111,6 @@ class Room {
                         this.shadeOffscreenCtx.fillStyle = fillStyle;
                         lastFillStyle = fillStyle;
                     }
-                    fillY += 1;
-                    fillX += 1;
                     this.shadeOffscreenCtx.fillRect((fillX - this.roomX + offsetX) * gameConstants_1.GameConstants.TILESIZE, (fillY - this.roomY + offsetY) * gameConstants_1.GameConstants.TILESIZE, fillWidth * gameConstants_1.GameConstants.TILESIZE, fillHeight * gameConstants_1.GameConstants.TILESIZE);
                 }
             }
@@ -33255,14 +33256,13 @@ class Room {
         };
         // Returns a blurred shade canvas to sample slices from, reusing the WebGL blur/cache when possible
         this.getBlurredShadeSourceForSlicing = () => {
-            const offsetX = this.blurOffsetX;
-            const offsetY = this.blurOffsetY;
             if (gameConstants_1.GameConstants.USE_WEBGL_BLUR) {
                 const blurRenderer = webglBlurRenderer_1.WebGLBlurRenderer.getInstance();
                 if (this.shouldUseBlurCache() && this.blurCache.shade5px) {
                     return this.blurCache.shade5px;
                 }
                 else {
+                    // Blur radius should match layer draw
                     const blurred5px = blurRenderer.applyBlur(this.shadeOffscreenCanvas, 5);
                     if (!this.active)
                         this.cacheBlurResult("shade5px", blurred5px);
@@ -33286,6 +33286,7 @@ class Room {
                 else {
                     tctx.filter = "none";
                 }
+                // Draw offscreen into temp at 0,0 (coordinates already include internal padding)
                 tctx.drawImage(this.shadeOffscreenCanvas, 0, 0);
                 tctx.filter = "none";
                 return this.shadeBlurTempCanvas;
@@ -33294,11 +33295,9 @@ class Room {
         // Draw shade slices directly above a given tile
         this.drawShadeSliceForTile = (shadeSrc, tileX, tileY) => {
             const ts = gameConstants_1.GameConstants.TILESIZE;
-            const offsetX = this.blurOffsetX;
-            const offsetY = this.blurOffsetY;
-            // Source position in the blurred offscreen (note the +1 padding used during fill)
-            const sx = (tileX + 1 - this.roomX + offsetX) * ts;
-            const sy = (tileY + 1 - this.roomY + offsetY) * ts;
+            // Source position in the blurred offscreen matches drawShadeLayer mapping
+            const sx = (tileX + 1 - this.roomX + this.blurOffsetX) * ts;
+            const sy = (tileY + 1 - this.roomY + this.blurOffsetY) * ts;
             const dx = tileX * ts;
             const dy = tileY * ts;
             game_1.Game.ctx.drawImage(shadeSrc, sx, sy, ts, ts, dx, dy, ts, ts);
@@ -37281,7 +37280,7 @@ class Door extends passageway_1.Passageway {
                 else
                     game_1.Game.drawTile(3 + this.tileXOffset + this.openTunnelXOffset(), this.skin, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
             }
-            if (this.doorDir !== game_1.Direction.UP)
+            if (this.doorDir !== game_1.Direction.UP && this.doorDir !== game_1.Direction.LEFT)
                 //if not top door
                 game_1.Game.drawTile(1, this.skin, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
             //the following used to be in the drawaboveplayer function

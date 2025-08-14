@@ -302,7 +302,7 @@ export class Door extends Passageway {
           this.shadeAmount(),
         );
     }
-    if (this.doorDir !== Direction.UP)
+    if (this.doorDir !== Direction.UP && this.doorDir !== Direction.LEFT)
       //if not top door
       Game.drawTile(
         1,

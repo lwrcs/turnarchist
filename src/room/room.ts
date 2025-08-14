@@ -263,6 +263,8 @@ export class Room {
   // Temporary canvas used when Canvas2D filter blur is required for sliced drawing
   private shadeBlurTempCanvas?: HTMLCanvasElement;
   private shadeBlurTempCtx?: CanvasRenderingContext2D;
+  // Border tiles around shade content for sliced shading (ensures blur has room to spill)
+  private shadeSliceBorderTiles: number = 1;
   private bloomOffscreenCanvas: HTMLCanvasElement;
   private bloomOffscreenCtx: CanvasRenderingContext2D;
 
@@ -1991,6 +1993,7 @@ export class Room {
     );
 
     let lastFillStyle = "";
+    // Match original shade layer positioning using the blur offsets
     const offsetX = this.blurOffsetX;
     const offsetY = this.blurOffsetY;
 
@@ -2141,8 +2144,8 @@ export class Room {
       this.shadeOffscreenCanvas.height,
     );
 
-    const offsetX = this.blurOffsetX;
-    const offsetY = this.blurOffsetY;
+    const offsetX = this.shadeSliceBorderTiles;
+    const offsetY = this.shadeSliceBorderTiles;
 
     let lastFillStyle = "";
 
@@ -2244,8 +2247,6 @@ export class Room {
           lastFillStyle = fillStyle;
         }
 
-        fillY += 1;
-        fillX += 1;
         this.shadeOffscreenCtx.fillRect(
           (fillX - this.roomX + offsetX) * GameConstants.TILESIZE,
           (fillY - this.roomY + offsetY) * GameConstants.TILESIZE,
@@ -2429,14 +2430,12 @@ export class Room {
 
   // Returns a blurred shade canvas to sample slices from, reusing the WebGL blur/cache when possible
   private getBlurredShadeSourceForSlicing = (): HTMLCanvasElement => {
-    const offsetX = this.blurOffsetX;
-    const offsetY = this.blurOffsetY;
-
     if (GameConstants.USE_WEBGL_BLUR) {
       const blurRenderer = WebGLBlurRenderer.getInstance();
       if (this.shouldUseBlurCache() && this.blurCache.shade5px) {
         return this.blurCache.shade5px as HTMLCanvasElement;
       } else {
+        // Blur radius should match layer draw
         const blurred5px = blurRenderer.applyBlur(this.shadeOffscreenCanvas, 5);
         if (!this.active) this.cacheBlurResult("shade5px", blurred5px);
         return blurred5px;
@@ -2464,6 +2463,7 @@ export class Room {
       } else {
         tctx.filter = "none";
       }
+      // Draw offscreen into temp at 0,0 (coordinates already include internal padding)
       tctx.drawImage(this.shadeOffscreenCanvas, 0, 0);
       tctx.filter = "none";
       return this.shadeBlurTempCanvas as HTMLCanvasElement;
@@ -2477,11 +2477,9 @@ export class Room {
     tileY: number,
   ) => {
     const ts = GameConstants.TILESIZE;
-    const offsetX = this.blurOffsetX;
-    const offsetY = this.blurOffsetY;
-    // Source position in the blurred offscreen (note the +1 padding used during fill)
-    const sx = (tileX + 1 - this.roomX + offsetX) * ts;
-    const sy = (tileY + 1 - this.roomY + offsetY) * ts;
+    // Source position in the blurred offscreen matches drawShadeLayer mapping
+    const sx = (tileX + 1 - this.roomX + this.blurOffsetX) * ts;
+    const sy = (tileY + 1 - this.roomY + this.blurOffsetY) * ts;
     const dx = tileX * ts;
     const dy = tileY * ts;
     Game.ctx.drawImage(shadeSrc, sx, sy, ts, ts, dx, dy, ts, ts);
