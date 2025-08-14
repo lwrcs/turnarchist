@@ -105,8 +105,12 @@ export class Door extends Passageway {
     }
   }
 
-  shadeAmount = (offsetX: number = 0, offsetY: number = 0) => {
-    if (GameConstants.SMOOTH_LIGHTING) return 0;
+  shadeAmount = (
+    offsetX: number = 0,
+    offsetY: number = 0,
+    disable: boolean = true,
+  ) => {
+    if (GameConstants.SMOOTH_LIGHTING && disable) return 0;
     const vis = this.room.softVis[this.x + offsetX][this.y + offsetY];
     if (this.opened) return vis / 2;
     else return vis;
@@ -302,7 +306,7 @@ export class Door extends Passageway {
           this.shadeAmount(),
         );
     }
-    if (this.doorDir !== Direction.UP && this.doorDir !== Direction.LEFT)
+    if (this.doorDir !== Direction.UP)
       //if not top door
       Game.drawTile(
         1,
@@ -331,7 +335,7 @@ export class Door extends Passageway {
           1,
           1,
           this.room.shadeColor,
-          this.shadeAmount(0, 1),
+          this.shadeAmount(0, 1, false),
         );
       else
         Game.drawTile(
@@ -344,7 +348,7 @@ export class Door extends Passageway {
           1,
           1,
           this.room.shadeColor,
-          this.shadeAmount(0, 1),
+          this.shadeAmount(0, 1, false),
         );
     }
     Game.ctx.restore();

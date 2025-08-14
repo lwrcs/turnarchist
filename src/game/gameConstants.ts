@@ -100,7 +100,6 @@ export class GameConstants {
 
   static CUSTOM_SHADER_COLOR_ENABLED = false;
   static SHADE_ENABLED = true;
-  static DRAW_SHADE_BELOW_TILES = false;
   static COLOR_LAYER_COMPOSITE_OPERATION = "soft-light"; //"soft-light";
   static SHADE_LAYER_COMPOSITE_OPERATION = "source-over"; //"soft-light";
   // When true, draw shade as sliced tiles inline within drawEntities instead of a single layer

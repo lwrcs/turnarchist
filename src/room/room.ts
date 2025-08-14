@@ -2386,28 +2386,55 @@ export class Room {
           }
         } else if (tile instanceof Door) {
           const door = tile as Door;
-          if (door.opened === true) computedAlpha = computedAlpha / 2;
-          switch (door.doorDir) {
-            case Direction.UP:
-              fillY = y - 0.5;
-              fillHeight = 1.5;
-              break;
-            case Direction.DOWN:
-              fillY = y - 0.5;
-              fillHeight = 1.5;
-              break;
-            case Direction.RIGHT:
-              fillX = x - 0.5;
-              fillY = y - 1.25;
-              fillWidth = 1.5;
-              fillHeight = 2;
-              break;
-            case Direction.LEFT:
-              fillX = x;
-              fillY = y - 1.25;
-              fillWidth = 1.5;
-              fillHeight = 2;
-              break;
+          if (door.opened === true) {
+            computedAlpha = computedAlpha / 2;
+            switch (door.doorDir) {
+              case Direction.UP:
+                fillY = y - 0.5;
+                fillHeight = 1.5;
+                break;
+              case Direction.DOWN:
+                fillY = y - 0.5;
+                fillHeight = 1.5;
+                break;
+              case Direction.RIGHT:
+                fillX = x - 2;
+                fillY = y - 2;
+                fillWidth = 3;
+                fillHeight = 3;
+                break;
+              case Direction.LEFT:
+                fillX = x;
+                fillY = y - 2;
+                fillWidth = 3;
+                fillHeight = 3;
+                break;
+            }
+          } else {
+            switch (door.doorDir) {
+              case Direction.UP:
+                fillY = y - 0.5;
+                fillHeight = 1.5;
+                break;
+              case Direction.DOWN:
+                fillY = y - 1;
+                fillHeight = 3;
+                fillWidth = 3;
+                fillX = x - 0.5;
+                break;
+              case Direction.RIGHT:
+                fillX = x - 2;
+                fillY = y - 2;
+                fillWidth = 3;
+                fillHeight = 3;
+                break;
+              case Direction.LEFT:
+                fillX = x;
+                fillY = y - 2;
+                fillWidth = 3;
+                fillHeight = 3;
+                break;
+            }
           }
         }
         const alphaMultiplier = !GameConstants.SMOOTH_LIGHTING ? 0.5 : 1;

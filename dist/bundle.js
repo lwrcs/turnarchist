@@ -14589,7 +14589,6 @@ GameConstants.HEALTH_BUFF_COLOR = "#d77bba";
 GameConstants.MISS_COLOR = "#639bff";
 GameConstants.CUSTOM_SHADER_COLOR_ENABLED = false;
 GameConstants.SHADE_ENABLED = true;
-GameConstants.DRAW_SHADE_BELOW_TILES = false;
 GameConstants.COLOR_LAYER_COMPOSITE_OPERATION = "soft-light"; //"soft-light";
 GameConstants.SHADE_LAYER_COMPOSITE_OPERATION = "source-over"; //"soft-light";
 // When true, draw shade as sliced tiles inline within drawEntities instead of a single layer
@@ -33217,29 +33216,56 @@ class Room {
                     }
                     else if (tile instanceof door_1.Door) {
                         const door = tile;
-                        if (door.opened === true)
+                        if (door.opened === true) {
                             computedAlpha = computedAlpha / 2;
-                        switch (door.doorDir) {
-                            case game_1.Direction.UP:
-                                fillY = y - 0.5;
-                                fillHeight = 1.5;
-                                break;
-                            case game_1.Direction.DOWN:
-                                fillY = y - 0.5;
-                                fillHeight = 1.5;
-                                break;
-                            case game_1.Direction.RIGHT:
-                                fillX = x - 0.5;
-                                fillY = y - 1.25;
-                                fillWidth = 1.5;
-                                fillHeight = 2;
-                                break;
-                            case game_1.Direction.LEFT:
-                                fillX = x;
-                                fillY = y - 1.25;
-                                fillWidth = 1.5;
-                                fillHeight = 2;
-                                break;
+                            switch (door.doorDir) {
+                                case game_1.Direction.UP:
+                                    fillY = y - 0.5;
+                                    fillHeight = 1.5;
+                                    break;
+                                case game_1.Direction.DOWN:
+                                    fillY = y - 0.5;
+                                    fillHeight = 1.5;
+                                    break;
+                                case game_1.Direction.RIGHT:
+                                    fillX = x - 2;
+                                    fillY = y - 2;
+                                    fillWidth = 3;
+                                    fillHeight = 3;
+                                    break;
+                                case game_1.Direction.LEFT:
+                                    fillX = x;
+                                    fillY = y - 2;
+                                    fillWidth = 3;
+                                    fillHeight = 3;
+                                    break;
+                            }
+                        }
+                        else {
+                            switch (door.doorDir) {
+                                case game_1.Direction.UP:
+                                    fillY = y - 0.5;
+                                    fillHeight = 1.5;
+                                    break;
+                                case game_1.Direction.DOWN:
+                                    fillY = y - 1;
+                                    fillHeight = 3;
+                                    fillWidth = 3;
+                                    fillX = x - 0.5;
+                                    break;
+                                case game_1.Direction.RIGHT:
+                                    fillX = x - 2;
+                                    fillY = y - 2;
+                                    fillWidth = 3;
+                                    fillHeight = 3;
+                                    break;
+                                case game_1.Direction.LEFT:
+                                    fillX = x;
+                                    fillY = y - 2;
+                                    fillWidth = 3;
+                                    fillHeight = 3;
+                                    break;
+                            }
                         }
                     }
                     const alphaMultiplier = !gameConstants_1.GameConstants.SMOOTH_LIGHTING ? 0.5 : 1;
@@ -37135,8 +37161,8 @@ var DoorType;
 class Door extends passageway_1.Passageway {
     constructor(room, game, x, y, doorDir, doorType) {
         super(room, game, x, y);
-        this.shadeAmount = (offsetX = 0, offsetY = 0) => {
-            if (gameConstants_1.GameConstants.SMOOTH_LIGHTING)
+        this.shadeAmount = (offsetX = 0, offsetY = 0, disable = true) => {
+            if (gameConstants_1.GameConstants.SMOOTH_LIGHTING && disable)
                 return 0;
             const vis = this.room.softVis[this.x + offsetX][this.y + offsetY];
             if (this.opened)
@@ -37280,7 +37306,7 @@ class Door extends passageway_1.Passageway {
                 else
                     game_1.Game.drawTile(3 + this.tileXOffset + this.openTunnelXOffset(), this.skin, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
             }
-            if (this.doorDir !== game_1.Direction.UP && this.doorDir !== game_1.Direction.LEFT)
+            if (this.doorDir !== game_1.Direction.UP)
                 //if not top door
                 game_1.Game.drawTile(1, this.skin, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
             //the following used to be in the drawaboveplayer function
@@ -37289,9 +37315,9 @@ class Door extends passageway_1.Passageway {
                 if (!this.drawTopOf)
                     return;
                 if (!this.opened)
-                    game_1.Game.drawTile(13, 0, 1, 1, this.x, this.y - 1, 1, 1, this.room.shadeColor, this.shadeAmount(0, 1));
+                    game_1.Game.drawTile(13, 0, 1, 1, this.x, this.y - 1, 1, 1, this.room.shadeColor, this.shadeAmount(0, 1, false));
                 else
-                    game_1.Game.drawTile(14, 0, 1, 1, this.x, this.y - 1, 1, 1, this.room.shadeColor, this.shadeAmount(0, 1));
+                    game_1.Game.drawTile(14, 0, 1, 1, this.x, this.y - 1, 1, 1, this.room.shadeColor, this.shadeAmount(0, 1, false));
             }
             game_1.Game.ctx.restore();
         };
@@ -38241,7 +38267,7 @@ class UpLadder extends passageway_1.Passageway {
             }
             game_1.Game.drawTile(1, this.skin, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
             if (!this.isRope) {
-                game_1.Game.drawTile(xx, yy, 1, 1, this.x, this.y - 1, 1, 1, this.room.shadeColor, this.shadeAmount());
+                game_1.Game.drawTile(xx, yy, 1, 1, this.x, this.y - 1, 1, 1, this.room.shadeColor, this.shadeAmount(0, 0));
             }
             else {
                 game_1.Game.drawTile(xx, yy + 0, 1, 2, this.x, this.y - 1, 1, 2, this.room.shadeColor, this.shadeAmount());

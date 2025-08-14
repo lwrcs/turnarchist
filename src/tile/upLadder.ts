@@ -151,7 +151,7 @@ export class UpLadder extends Passageway {
         1,
         1,
         this.room.shadeColor,
-        this.shadeAmount(),
+        this.shadeAmount(0, 0),
       );
     } else {
       Game.drawTile(
