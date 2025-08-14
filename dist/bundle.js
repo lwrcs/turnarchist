@@ -3576,7 +3576,7 @@ class Shadow {
     static draw(x, y, width = 1, height = 1) {
         const tileSize = gameConstants_1.GameConstants.TILESIZE;
         game_1.Game.ctx.save();
-        game_1.Game.ctx.globalAlpha = 0.5;
+        game_1.Game.ctx.globalAlpha = 0.3;
         if (width > 1 || height > 1) {
             game_1.Game.drawFX(30, 3, 2, 2, x, y + 0.5, 2, 2, "black");
         }
@@ -32533,8 +32533,8 @@ class Room {
             const directionOffsets = {
                 [game_1.Direction.UP]: { x: 0, y: -1 },
                 [game_1.Direction.DOWN]: { x: 0, y: 1 },
-                [game_1.Direction.LEFT]: { x: -1, y: 0 },
-                [game_1.Direction.RIGHT]: { x: 1, y: 0 },
+                [game_1.Direction.LEFT]: { x: 1, y: 0 },
+                [game_1.Direction.RIGHT]: { x: -1, y: 0 },
             };
             let linkedDoors = [];
             this.doors.forEach((d) => {
@@ -32545,9 +32545,19 @@ class Room {
                 d.lightSource.b = 0.1;
             });
             for (const d of linkedDoors) {
-                d.lightSource.c = this.tileValuesToLightSource(d.linkedDoor.x, d.linkedDoor.y, this).color;
-                d.lightSource.b = this.tileValuesToLightSource(d.linkedDoor.x, d.linkedDoor.y, this).brightness;
-                d.lightSource.r = levelConstants_1.LevelConstants.LIGHTING_MAX_DISTANCE;
+                const srcDoor = d.linkedDoor; // door on this room's side
+                const dirOff = directionOffsets[srcDoor.doorDir] || { x: 0, y: 0 };
+                // Sample one tile inside this room from the door, i.e., opposite of door facing
+                const sampleX = srcDoor.x - dirOff.x;
+                const sampleY = srcDoor.y - dirOff.y;
+                let vals = this.tileValuesToLightSource(sampleX, sampleY, this);
+                if (!vals)
+                    vals = this.tileValuesToLightSource(srcDoor.x, srcDoor.y, this);
+                if (vals) {
+                    d.lightSource.c = vals.color;
+                    d.lightSource.b = vals.brightness;
+                    d.lightSource.r = levelConstants_1.LevelConstants.LIGHTING_MAX_DISTANCE;
+                }
             }
             let connectedRooms = new Set(this.doors
                 .filter((d) => d && d.linkedDoor) // Ensure door and linkedDoor exist
@@ -38099,8 +38109,8 @@ class Tile extends drawable_1.Drawable {
             else
                 return false;
         };
-        this.shadeAmount = (offsetX = 0, offsetY = 0) => {
-            if (gameConstants_1.GameConstants.SMOOTH_LIGHTING)
+        this.shadeAmount = (offsetX = 0, offsetY = 0, disable = true) => {
+            if (gameConstants_1.GameConstants.SMOOTH_LIGHTING && disable)
                 return 0;
             return this.room.softVis[this.x + offsetX][this.y + offsetY];
         };
@@ -38267,7 +38277,7 @@ class UpLadder extends passageway_1.Passageway {
             }
             game_1.Game.drawTile(1, this.skin, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
             if (!this.isRope) {
-                game_1.Game.drawTile(xx, yy, 1, 1, this.x, this.y - 1, 1, 1, this.room.shadeColor, this.shadeAmount(0, 0));
+                game_1.Game.drawTile(xx, yy, 1, 1, this.x, this.y - 1, 1, 1, this.room.shadeColor, this.shadeAmount(0, -1, false));
             }
             else {
                 game_1.Game.drawTile(xx, yy + 0, 1, 2, this.x, this.y - 1, 1, 2, this.room.shadeColor, this.shadeAmount());

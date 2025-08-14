@@ -1444,8 +1444,8 @@ export class Room {
     const directionOffsets = {
       [Direction.UP]: { x: 0, y: -1 },
       [Direction.DOWN]: { x: 0, y: 1 },
-      [Direction.LEFT]: { x: -1, y: 0 },
-      [Direction.RIGHT]: { x: 1, y: 0 },
+      [Direction.LEFT]: { x: 1, y: 0 },
+      [Direction.RIGHT]: { x: -1, y: 0 },
     };
     let linkedDoors: Door[] = [];
     this.doors.forEach((d) => {
@@ -1457,17 +1457,20 @@ export class Room {
     });
 
     for (const d of linkedDoors) {
-      d.lightSource.c = this.tileValuesToLightSource(
-        d.linkedDoor.x,
-        d.linkedDoor.y,
-        this,
-      ).color;
-      d.lightSource.b = this.tileValuesToLightSource(
-        d.linkedDoor.x,
-        d.linkedDoor.y,
-        this,
-      ).brightness;
-      d.lightSource.r = LevelConstants.LIGHTING_MAX_DISTANCE;
+      const srcDoor = d.linkedDoor; // door on this room's side
+      const dirOff = directionOffsets[srcDoor.doorDir] || { x: 0, y: 0 };
+      // Sample one tile inside this room from the door, i.e., opposite of door facing
+      const sampleX = srcDoor.x - dirOff.x;
+      const sampleY = srcDoor.y - dirOff.y;
+
+      let vals = this.tileValuesToLightSource(sampleX, sampleY, this);
+      if (!vals)
+        vals = this.tileValuesToLightSource(srcDoor.x, srcDoor.y, this);
+      if (vals) {
+        d.lightSource.c = vals.color;
+        d.lightSource.b = vals.brightness;
+        d.lightSource.r = LevelConstants.LIGHTING_MAX_DISTANCE;
+      }
     }
 
     let connectedRooms: Set<Room> = new Set(

@@ -45,8 +45,12 @@ export abstract class Tile extends Drawable {
     else return false;
   };
 
-  shadeAmount = (offsetX: number = 0, offsetY: number = 0) => {
-    if (GameConstants.SMOOTH_LIGHTING) return 0;
+  shadeAmount = (
+    offsetX: number = 0,
+    offsetY: number = 0,
+    disable: boolean = true,
+  ) => {
+    if (GameConstants.SMOOTH_LIGHTING && disable) return 0;
     return this.room.softVis[this.x + offsetX][this.y + offsetY];
   };
 

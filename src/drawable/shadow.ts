@@ -16,7 +16,7 @@ export class Shadow {
   static draw(x: number, y: number, width: number = 1, height: number = 1) {
     const tileSize = GameConstants.TILESIZE;
     Game.ctx.save();
-    Game.ctx.globalAlpha = 0.5;
+    Game.ctx.globalAlpha = 0.3;
     if (width > 1 || height > 1) {
       Game.drawFX(30, 3, 2, 2, x, y + 0.5, 2, 2, "black");
     } else {
