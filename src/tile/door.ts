@@ -343,6 +343,7 @@ export class Door extends Passageway {
           this.shadeAmount(),
         );
     }
+
     if (
       this.doorDir !== Direction.UP &&
       (this.isDrawnFirst() || !this.opened)

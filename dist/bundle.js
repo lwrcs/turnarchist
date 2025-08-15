@@ -33274,12 +33274,16 @@ class Room {
                             computedAlpha = computedAlpha / 2;
                             switch (door.doorDir) {
                                 case game_1.Direction.UP:
-                                    fillY = y - 0.5;
+                                    fillY = y - 1.5;
                                     fillHeight = 1.5;
+                                    fillWidth = 2;
+                                    fillX = x - 0.5;
                                     break;
                                 case game_1.Direction.DOWN:
                                     fillY = y - 0.5;
                                     fillHeight = 1.5;
+                                    fillWidth = 2;
+                                    fillX = x - 0.5;
                                     break;
                                 case game_1.Direction.RIGHT:
                                     fillX = x - 2;
@@ -33613,11 +33617,24 @@ class Room {
                                     fade = "right";
                                     break;
                                 case game_1.Direction.UP:
-                                    fade = "up";
+                                    fade = undefined;
                                     break;
                                 case game_1.Direction.DOWN:
+                                    // No gradient mask for down doors
                                     fade = "down";
                                     break;
+                            }
+                        }
+                        else if (d instanceof wall_1.Wall) {
+                            const info = this.wallInfo.get(`${tx},${ty}`);
+                            if (info && info.isBelowDoorWall) {
+                                const below = this.roomArray[tx]?.[ty + 1];
+                                if (below instanceof door_1.Door && below.opened) {
+                                    if (below.doorDir === game_1.Direction.LEFT)
+                                        fade = "left";
+                                    else if (below.doorDir === game_1.Direction.RIGHT)
+                                        fade = "right";
+                                }
                             }
                         }
                         this.drawShadeSliceForTile(shadeSrc, tx, ty, fade);
@@ -38466,7 +38483,9 @@ exports.UpLadder = UpLadder;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Wall = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const door_1 = __webpack_require__(/*! ./door */ "./src/tile/door.ts");
 const tile_1 = __webpack_require__(/*! ./tile */ "./src/tile/tile.ts");
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
 class Wall extends tile_1.Tile {
     constructor(room, x, y, wallDirections) {
         super(room, x, y);
@@ -38491,6 +38510,15 @@ class Wall extends tile_1.Tile {
         this.wallInfo = () => {
             return this.room.wallInfo.get(`${this.x},${this.y}`);
         };
+        // Returns the door tile directly below this wall if present.
+        // Early returns undefined if this wall is not marked as below a door wall.
+        this.getDoor = () => {
+            const info = this.wallInfo();
+            if (!info || !info.isBelowDoorWall)
+                return undefined;
+            const below = this.room.roomArray[this.x]?.[this.y + 1];
+            return below instanceof door_1.Door ? below : undefined;
+        };
         this.draw = (delta) => {
             this.drawWall(delta);
         };
@@ -38505,11 +38533,17 @@ class Wall extends tile_1.Tile {
                     ? 0
                     : 26;
             // Only draw the bottom part of the wall if it's not at the bottom edge of the room
+            const isDrawnFirst = this.getDoor()?.isDrawnFirst();
             if (wallInfo.isDoorWall ||
                 wallInfo.isBelowDoorWall ||
                 (wallInfo.isTopWall && !wallInfo.isLeftWall && !wallInfo.isRightWall) ||
-                wallInfo.isInnerWall)
+                wallInfo.isInnerWall) {
+                if (wallInfo.isBelowDoorWall &&
+                    !isDrawnFirst &&
+                    gameConstants_1.GameConstants.SMOOTH_LIGHTING)
+                    return;
                 game_1.Game.drawTile(0, this.skin, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
+            }
             game_1.Game.drawTile(2 + this.tileXOffset, this.skin, 1, 1, this.x, this.y - 1, 1, 1, this.room.shadeColor, this.shadeAmount());
         };
         this.drawTopLayer = (delta) => {

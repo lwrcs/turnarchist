@@ -2396,12 +2396,16 @@ export class Room {
             computedAlpha = computedAlpha / 2;
             switch (door.doorDir) {
               case Direction.UP:
-                fillY = y - 0.5;
+                fillY = y - 1.5;
                 fillHeight = 1.5;
+                fillWidth = 2;
+                fillX = x - 0.5;
                 break;
               case Direction.DOWN:
                 fillY = y - 0.5;
                 fillHeight = 1.5;
+                fillWidth = 2;
+                fillX = x - 0.5;
                 break;
               case Direction.RIGHT:
                 fillX = x - 2;
@@ -2812,11 +2816,21 @@ export class Room {
                 fade = "right";
                 break;
               case Direction.UP:
-                fade = "up";
+                fade = undefined;
                 break;
               case Direction.DOWN:
+                // No gradient mask for down doors
                 fade = "down";
                 break;
+            }
+          } else if (d instanceof Wall) {
+            const info = this.wallInfo.get(`${tx},${ty}`);
+            if (info && (info as any).isBelowDoorWall) {
+              const below = this.roomArray[tx]?.[ty + 1];
+              if (below instanceof Door && below.opened) {
+                if (below.doorDir === Direction.LEFT) fade = "left";
+                else if (below.doorDir === Direction.RIGHT) fade = "right";
+              }
             }
           }
           this.drawShadeSliceForTile(shadeSrc, tx, ty, fade);

@@ -3,6 +3,7 @@ import { Room, WallDirection } from "../room/room";
 import { Door, DoorDir } from "./door";
 import { Tile } from "./tile";
 import { WallInfo } from "../room/room";
+import { GameConstants } from "../game/gameConstants";
 
 export class Wall extends Tile {
   private tileXOffset: number;
@@ -83,6 +84,15 @@ export class Wall extends Tile {
     return this.room.wallInfo.get(`${this.x},${this.y}`);
   };
 
+  // Returns the door tile directly below this wall if present.
+  // Early returns undefined if this wall is not marked as below a door wall.
+  getDoor = (): Door | undefined => {
+    const info = this.wallInfo();
+    if (!info || !info.isBelowDoorWall) return undefined;
+    const below = this.room.roomArray[this.x]?.[this.y + 1];
+    return below instanceof Door ? (below as Door) : undefined;
+  };
+
   draw = (delta: number) => {
     this.drawWall(delta);
   };
@@ -99,12 +109,19 @@ export class Wall extends Tile {
         : 26;
 
     // Only draw the bottom part of the wall if it's not at the bottom edge of the room
+    const isDrawnFirst = this.getDoor()?.isDrawnFirst();
     if (
       wallInfo.isDoorWall ||
       wallInfo.isBelowDoorWall ||
       (wallInfo.isTopWall && !wallInfo.isLeftWall && !wallInfo.isRightWall) ||
       wallInfo.isInnerWall
-    )
+    ) {
+      if (
+        wallInfo.isBelowDoorWall &&
+        !isDrawnFirst &&
+        GameConstants.SMOOTH_LIGHTING
+      )
+        return;
       Game.drawTile(
         0,
         this.skin,
@@ -117,6 +134,7 @@ export class Wall extends Tile {
         this.room.shadeColor,
         this.shadeAmount(), //this.room.softVis[this.x][this.y + 1],
       );
+    }
 
     Game.drawTile(
       2 + this.tileXOffset,
