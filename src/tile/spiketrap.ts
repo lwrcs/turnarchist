@@ -93,16 +93,29 @@ export class SpikeTrap extends Tile {
     }
     Game.drawObj(
       f,
-      0,
       1,
-      2,
+      1,
+      1,
       this.x + rumbleOffsetX,
-      this.y - 1,
+      this.y,
       1,
-      2,
+      1,
       this.room.shadeColor,
       this.shadeAmount(),
     );
+    Game.drawObj(
+      f,
+      0,
+      1,
+      1,
+      this.x + rumbleOffsetX,
+      this.y - 1,
+      1,
+      1,
+      this.room.shadeColor,
+      this.shadeAmount(0, 0, false),
+    );
+
     if (this.on && this.frame < frames.length - 1) {
       if (frames[Math.floor(this.frame)] < 3) this.frame += 0.4 * delta;
       else this.frame += 0.2 * delta;

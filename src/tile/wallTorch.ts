@@ -11,21 +11,21 @@ export class WallTorch extends Wall {
   private tileYOffset: number;
   private isBottomWall: boolean;
   private torchOffset: number;
+  lightSource: LightSource;
 
   constructor(room: Room, x: number, y: number, isBottomWall?: boolean) {
     super(room, x, y);
 
     this.isBottomWall = isBottomWall;
     this.torchOffset = isBottomWall ? 1 : 0;
-    this.room.lightSources.push(
-      new LightSource(
-        this.x + 0.5,
-        this.y + 0.5 - this.torchOffset,
-        5,
-        LevelConstants.TORCH_LIGHT_COLOR,
-        1.5,
-      ),
+    this.lightSource = new LightSource(
+      this.x + 0.5,
+      this.y + 0.5 - this.torchOffset,
+      5,
+      LevelConstants.TORCH_LIGHT_COLOR,
+      1.5,
     );
+    this.room.lightSources.push(this.lightSource);
     this.frame = Random.rand() * 12;
     this.tileYOffset = 6;
     this.hasBloom = true;

@@ -1520,12 +1520,29 @@ export class Room {
 
     // Start timing the processing of light sources
     //console.time("updateLighting: Process LightSources");
-    // Prune orphaned light sources referencing cleared tiles
+    // Prune orphaned light sources. Allow a small neighborhood check so
+    // lights slightly offset from their owning tile (e.g., bottom-wall torches)
+    // are not removed incorrectly.
     try {
       this.lightSources = this.lightSources.filter((ls) => {
         const lx = Math.floor(ls.x);
         const ly = Math.floor(ls.y);
-        return !!this.roomArray[lx]?.[ly];
+        // quick in-bounds check
+        if (
+          lx < this.roomX - 1 ||
+          lx > this.roomX + this.width ||
+          ly < this.roomY - 1 ||
+          ly > this.roomY + this.height
+        )
+          return false;
+
+        // keep if any nearby tile exists
+        for (let dx = -1; dx <= 1; dx++) {
+          for (let dy = -1; dy <= 1; dy++) {
+            if (this.roomArray[lx + dx]?.[ly + dy]) return true;
+          }
+        }
+        return false;
       });
     } catch {}
 
@@ -2473,7 +2490,7 @@ export class Room {
         return this.blurCache.shade5px as HTMLCanvasElement;
       } else {
         // Blur radius should match layer draw
-        const blurred5px = blurRenderer.applyBlur(this.shadeOffscreenCanvas, 5);
+        const blurred5px = blurRenderer.applyBlur(this.shadeOffscreenCanvas, 8);
         if (!this.active) this.cacheBlurResult("shade5px", blurred5px);
         return blurred5px;
       }
@@ -2568,7 +2585,7 @@ export class Room {
   };
 
   drawBloomLayer = (delta: number) => {
-    if (GameConstants.isIOS || !this.onScreen) return;
+    if (!this.onScreen) return;
 
     Game.ctx.save();
     // Clear the offscreen shade canvas
@@ -2721,6 +2738,7 @@ export class Room {
       this.buildShadeOffscreenForSlicing();
       shadeSrc = this.getBlurredShadeSourceForSlicing();
     }
+
     let tiles = [];
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
@@ -2803,6 +2821,7 @@ export class Room {
             Game.ctx.globalCompositeOperation =
               GameConstants.SHADE_LAYER_COMPOSITE_OPERATION as GlobalCompositeOperation;
           }
+
           const prevAlpha = Game.ctx.globalAlpha;
           Game.ctx.globalAlpha = 1;
 
@@ -2833,6 +2852,7 @@ export class Room {
               }
             }
           }
+
           this.drawShadeSliceForTile(shadeSrc, tx, ty, fade);
           Game.ctx.globalAlpha = prevAlpha;
           if (

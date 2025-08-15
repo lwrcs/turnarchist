@@ -32641,12 +32641,27 @@ class Room {
             //console.timeEnd("updateLighting: Initial Setup");
             // Start timing the processing of light sources
             //console.time("updateLighting: Process LightSources");
-            // Prune orphaned light sources referencing cleared tiles
+            // Prune orphaned light sources. Allow a small neighborhood check so
+            // lights slightly offset from their owning tile (e.g., bottom-wall torches)
+            // are not removed incorrectly.
             try {
                 this.lightSources = this.lightSources.filter((ls) => {
                     const lx = Math.floor(ls.x);
                     const ly = Math.floor(ls.y);
-                    return !!this.roomArray[lx]?.[ly];
+                    // quick in-bounds check
+                    if (lx < this.roomX - 1 ||
+                        lx > this.roomX + this.width ||
+                        ly < this.roomY - 1 ||
+                        ly > this.roomY + this.height)
+                        return false;
+                    // keep if any nearby tile exists
+                    for (let dx = -1; dx <= 1; dx++) {
+                        for (let dy = -1; dy <= 1; dy++) {
+                            if (this.roomArray[lx + dx]?.[ly + dy])
+                                return true;
+                        }
+                    }
+                    return false;
                 });
             }
             catch { }
@@ -33347,7 +33362,7 @@ class Room {
                 }
                 else {
                     // Blur radius should match layer draw
-                    const blurred5px = blurRenderer.applyBlur(this.shadeOffscreenCanvas, 5);
+                    const blurred5px = blurRenderer.applyBlur(this.shadeOffscreenCanvas, 8);
                     if (!this.active)
                         this.cacheBlurResult("shade5px", blurred5px);
                     return blurred5px;
@@ -33431,7 +33446,7 @@ class Room {
             game_1.Game.ctx.drawImage(this.shadeSliceTempCanvas, dx, dy);
         };
         this.drawBloomLayer = (delta) => {
-            if (gameConstants_1.GameConstants.isIOS || !this.onScreen)
+            if (!this.onScreen)
                 return;
             game_1.Game.ctx.save();
             // Clear the offscreen shade canvas
@@ -37506,6 +37521,8 @@ class Door extends passageway_1.Passageway {
                     this.iconYOffset, 1, 1);
             }
             else {
+                if (this.doorDir === game_1.Direction.LEFT || this.doorDir === game_1.Direction.RIGHT)
+                    this.iconYOffset = -0.5;
                 game_1.Game.drawFX(this.iconTileX, 2, 1, 1, this.x + this.iconXOffset, this.y -
                     1.25 +
                     multiplier * Math.sin((this.frame * Math.PI) / 50) +
@@ -38203,7 +38220,8 @@ class SpikeTrap extends tile_1.Tile {
                 (this.tickCount === 0 && frames[Math.floor(this.frame)] === 0)) {
                 f = 5;
             }
-            game_1.Game.drawObj(f, 0, 1, 2, this.x + rumbleOffsetX, this.y - 1, 1, 2, this.room.shadeColor, this.shadeAmount());
+            game_1.Game.drawObj(f, 1, 1, 1, this.x + rumbleOffsetX, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
+            game_1.Game.drawObj(f, 0, 1, 1, this.x + rumbleOffsetX, this.y - 1, 1, 1, this.room.shadeColor, this.shadeAmount(0, 0, false));
             if (this.on && this.frame < frames.length - 1) {
                 if (frames[Math.floor(this.frame)] < 3)
                     this.frame += 0.4 * delta;
@@ -38648,7 +38666,8 @@ class WallTorch extends wall_1.Wall {
         };
         this.isBottomWall = isBottomWall;
         this.torchOffset = isBottomWall ? 1 : 0;
-        this.room.lightSources.push(new lightSource_1.LightSource(this.x + 0.5, this.y + 0.5 - this.torchOffset, 5, levelConstants_1.LevelConstants.TORCH_LIGHT_COLOR, 1.5));
+        this.lightSource = new lightSource_1.LightSource(this.x + 0.5, this.y + 0.5 - this.torchOffset, 5, levelConstants_1.LevelConstants.TORCH_LIGHT_COLOR, 1.5);
+        this.room.lightSources.push(this.lightSource);
         this.frame = random_1.Random.rand() * 12;
         this.tileYOffset = 6;
         this.hasBloom = true;

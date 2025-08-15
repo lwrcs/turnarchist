@@ -427,6 +427,8 @@ export class Door extends Passageway {
         1,
       );
     } else {
+      if (this.doorDir === Direction.LEFT || this.doorDir === Direction.RIGHT)
+        this.iconYOffset = -0.5;
       Game.drawFX(
         this.iconTileX,
         2,
