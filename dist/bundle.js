@@ -9965,7 +9965,7 @@ class Entity extends drawable_1.Drawable {
                 return 0;
             let softVis = this.room.softVis[this.x][this.y] * 1;
             if (this.shadeMultiplier > 1)
-                return Math.min(1, softVis * this.shadeMultiplier);
+                return Math.min(1, softVis);
             return softVis;
         };
         this.updateShadeColor = (delta) => {
@@ -12568,7 +12568,7 @@ class ChatMessage {
     }
 }
 exports.ChatMessage = ChatMessage;
-let getShadeCanvasKey = (set, sX, sY, sW, sH, opacity, shadeColor) => {
+let getShadeCanvasKey = (set, sX, sY, sW, sH, opacity, shadeColor, fadeDir) => {
     return (set.src +
         "," +
         sX +
@@ -12581,7 +12581,9 @@ let getShadeCanvasKey = (set, sX, sY, sW, sH, opacity, shadeColor) => {
         "," +
         opacity +
         "," +
-        shadeColor);
+        shadeColor +
+        ",fade=" +
+        (fadeDir || "none"));
 };
 // fps counter
 const times = [];
@@ -13101,6 +13103,14 @@ class Game {
                     gameplaySettings_1.GameplaySettings.EQUIP_USES_TURN = !gameplaySettings_1.GameplaySettings.EQUIP_USES_TURN;
                     enabled = gameplaySettings_1.GameplaySettings.EQUIP_USES_TURN ? "enabled" : "disabled";
                     this.pushMessage(`Equipping an item takes a turn is now ${enabled}`);
+                    break;
+                case "inline":
+                    gameConstants_1.GameConstants.SHADE_INLINE_IN_ENTITY_LAYER =
+                        !gameConstants_1.GameConstants.SHADE_INLINE_IN_ENTITY_LAYER;
+                    enabled = gameConstants_1.GameConstants.SHADE_INLINE_IN_ENTITY_LAYER
+                        ? "enabled"
+                        : "disabled";
+                    this.pushMessage(`Inline tile shading ${enabled}`);
                     break;
                 case "webgl":
                     gameConstants_1.GameConstants.USE_WEBGL_BLUR = !gameConstants_1.GameConstants.USE_WEBGL_BLUR;
@@ -14213,7 +14223,7 @@ Game.fillTextOutline = (text, x, y, outlineColor, fillColor) => {
     Game.ctx.fillStyle = fillColor;
     Game.fillText(text, x, y);
 };
-Game.drawHelper = (set, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0, entity = false) => {
+Game.drawHelper = (set, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0, entity = false, fadeDir) => {
     Game.ctx.save(); // Save the current canvas state
     // Snap to nearest shading increment
     const shadeLevel = entity
@@ -14222,8 +14232,8 @@ Game.drawHelper = (set, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", sh
     shadeOpacity =
         Math.round(shadeOpacity * Math.max(shadeLevel, 12)) /
             Math.max(shadeLevel, 12);
-    // Include shadeColor in the cache key
-    let key = getShadeCanvasKey(set, sX, sY, sW, sH, shadeOpacity, shadeColor);
+    // Include shadeColor and fadeDir in the cache key
+    let key = getShadeCanvasKey(set, sX, sY, sW, sH, shadeOpacity, shadeColor, fadeDir);
     if (!Game.shade_canvases[key]) {
         Game.shade_canvases[key] = document.createElement("canvas");
         Game.shade_canvases[key].width = Math.round(sW * gameConstants_1.GameConstants.TILESIZE);
@@ -14237,25 +14247,59 @@ Game.drawHelper = (set, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", sh
         shCtx.fillRect(0, 0, Game.shade_canvases[key].width, Game.shade_canvases[key].height);
         shCtx.globalAlpha = 1.0;
         shCtx.globalCompositeOperation = "destination-in";
+        // Base alpha mask from sprite bounds
         shCtx.drawImage(set, Math.round(sX * gameConstants_1.GameConstants.TILESIZE), Math.round(sY * gameConstants_1.GameConstants.TILESIZE), Math.round(sW * gameConstants_1.GameConstants.TILESIZE), Math.round(sH * gameConstants_1.GameConstants.TILESIZE), 0, 0, Math.round(sW * gameConstants_1.GameConstants.TILESIZE), Math.round(sH * gameConstants_1.GameConstants.TILESIZE));
+        // Optional gradient fade mask (1->0 in specified direction)
+        if (fadeDir) {
+            const w = Math.round(sW * gameConstants_1.GameConstants.TILESIZE);
+            const h = Math.round(sH * gameConstants_1.GameConstants.TILESIZE);
+            let grad = null;
+            switch (fadeDir) {
+                case "left":
+                    grad = shCtx.createLinearGradient(0, 0, w, 0);
+                    grad.addColorStop(0, "rgba(0,0,0,0)");
+                    grad.addColorStop(1, "rgba(0,0,0,1)");
+                    break;
+                case "right":
+                    grad = shCtx.createLinearGradient(0, 0, w, 0);
+                    grad.addColorStop(0, "rgba(0,0,0,1)");
+                    grad.addColorStop(1, "rgba(0,0,0,0)");
+                    break;
+                case "up":
+                    grad = shCtx.createLinearGradient(0, 0, 0, h);
+                    grad.addColorStop(0, "rgba(0,0,0,0)");
+                    grad.addColorStop(1, "rgba(0,0,0,1)");
+                    break;
+                case "down":
+                    grad = shCtx.createLinearGradient(0, 0, 0, h);
+                    grad.addColorStop(0, "rgba(0,0,0,1)");
+                    grad.addColorStop(1, "rgba(0,0,0,0)");
+                    break;
+            }
+            if (grad) {
+                shCtx.globalCompositeOperation = "destination-in";
+                shCtx.fillStyle = grad;
+                shCtx.fillRect(0, 0, w, h);
+            }
+        }
     }
     Game.ctx.drawImage(Game.shade_canvases[key], Math.round(dX * gameConstants_1.GameConstants.TILESIZE), Math.round(dY * gameConstants_1.GameConstants.TILESIZE), Math.round(dW * gameConstants_1.GameConstants.TILESIZE), Math.round(dH * gameConstants_1.GameConstants.TILESIZE));
     Game.ctx.restore(); // Restore the canvas state
 };
-Game.drawTile = (sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0) => {
-    Game.drawHelper(Game.tileset, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity);
+Game.drawTile = (sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0, fadeDir) => {
+    Game.drawHelper(Game.tileset, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity, false, fadeDir);
 };
-Game.drawObj = (sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0) => {
-    Game.drawHelper(Game.objset, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity, true);
+Game.drawObj = (sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0, fadeDir) => {
+    Game.drawHelper(Game.objset, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity, true, fadeDir);
 };
-Game.drawMob = (sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0) => {
-    Game.drawHelper(Game.mobset, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity, true);
+Game.drawMob = (sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0, fadeDir) => {
+    Game.drawHelper(Game.mobset, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity, true, fadeDir);
 };
-Game.drawItem = (sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0) => {
-    Game.drawHelper(Game.itemset, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity, true);
+Game.drawItem = (sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0, fadeDir) => {
+    Game.drawHelper(Game.itemset, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity, true, fadeDir);
 };
-Game.drawFX = (sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0) => {
-    Game.drawHelper(Game.fxset, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity, true);
+Game.drawFX = (sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0, fadeDir) => {
+    Game.drawHelper(Game.fxset, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity, true, fadeDir);
 };
 exports.game = new Game();
 exports.gs = new gameState_1.GameState();
@@ -33131,14 +33175,14 @@ class Room {
                 if (this.shouldUseBlurCache() && this.blurCache.shade5px) {
                     // Use cached blurred result
                     game_1.Game.ctx.globalAlpha = 1;
-                    game_1.Game.ctx.drawImage(this.blurCache.shade5px, (this.roomX - offsetX - 1) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY - 1) * gameConstants_1.GameConstants.TILESIZE);
+                    game_1.Game.ctx.drawImage(this.blurCache.shade5px, (this.roomX - offsetX) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY) * gameConstants_1.GameConstants.TILESIZE);
                 }
                 else {
                     // Generate new blur and cache if inactive
                     game_1.Game.ctx.globalAlpha = 1;
                     // Apply 5px blur using WebGL
                     const blurred5px = blurRenderer.applyBlur(this.shadeOffscreenCanvas, 5);
-                    game_1.Game.ctx.drawImage(blurred5px, (this.roomX - offsetX - 1) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY - 1) * gameConstants_1.GameConstants.TILESIZE);
+                    game_1.Game.ctx.drawImage(blurred5px, (this.roomX - offsetX) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY) * gameConstants_1.GameConstants.TILESIZE);
                     // Cache the result if room is inactive
                     if (!this.active) {
                         this.cacheBlurResult("shade5px", blurred5px);
@@ -33152,7 +33196,7 @@ class Room {
                 if (gameConstants_1.GameConstants.ctxBlurEnabled) {
                     game_1.Game.ctx.filter = `blur(${blurAmount}px)`;
                 }
-                game_1.Game.ctx.drawImage(this.shadeOffscreenCanvas, (this.roomX - offsetX - 1) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY - 1) * gameConstants_1.GameConstants.TILESIZE);
+                game_1.Game.ctx.drawImage(this.shadeOffscreenCanvas, (this.roomX - offsetX) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY) * gameConstants_1.GameConstants.TILESIZE);
                 game_1.Game.ctx.filter = "none";
             }
             game_1.Game.ctx.restore();
@@ -33170,7 +33214,7 @@ class Room {
                     let alpha = this.softVis[x] && this.softVis[x][y] ? this.softVis[x][y] : 0;
                     if (tile instanceof wallTorch_1.WallTorch)
                         continue;
-                    let factor = !gameConstants_1.GameConstants.SMOOTH_LIGHTING ? 2 : 2;
+                    let factor = !gameConstants_1.GameConstants.SMOOTH_LIGHTING ? 2 : 1;
                     let smoothFactor = !gameConstants_1.GameConstants.SMOOTH_LIGHTING ? 0 : 1;
                     let computedAlpha = alpha ** factor * smoothFactor;
                     let fillX = x;
@@ -33329,14 +33373,58 @@ class Room {
             }
         };
         // Draw shade slices directly above a given tile
-        this.drawShadeSliceForTile = (shadeSrc, tileX, tileY) => {
+        this.drawShadeSliceForTile = (shadeSrc, tileX, tileY, fadeDir) => {
             const ts = gameConstants_1.GameConstants.TILESIZE;
             // Source position in the blurred offscreen matches drawShadeLayer mapping
             const sx = (tileX + 1 - this.roomX + this.blurOffsetX) * ts;
             const sy = (tileY + 1 - this.roomY + this.blurOffsetY) * ts;
             const dx = tileX * ts;
             const dy = tileY * ts;
-            game_1.Game.ctx.drawImage(shadeSrc, sx, sy, ts, ts, dx, dy, ts, ts);
+            if (!fadeDir) {
+                game_1.Game.ctx.drawImage(shadeSrc, sx, sy, ts, ts, dx, dy, ts, ts);
+                return;
+            }
+            // Lazy init temp slice canvas
+            if (!this.shadeSliceTempCanvas) {
+                this.shadeSliceTempCanvas = document.createElement("canvas");
+                this.shadeSliceTempCanvas.width = ts;
+                this.shadeSliceTempCanvas.height = ts;
+                this.shadeSliceTempCtx = this.shadeSliceTempCanvas.getContext("2d");
+            }
+            const tctx = this.shadeSliceTempCtx;
+            tctx.clearRect(0, 0, ts, ts);
+            // Copy slice into temp
+            tctx.globalCompositeOperation = "source-over";
+            tctx.drawImage(shadeSrc, sx, sy, ts, ts, 0, 0, ts, ts);
+            // Apply gradient alpha mask (destination-in)
+            let grad = null;
+            if (fadeDir === "right") {
+                grad = tctx.createLinearGradient(0, 0, ts, 0);
+                grad.addColorStop(0, "rgba(0,0,0,0)");
+                grad.addColorStop(1, "rgba(0,0,0,1)");
+            }
+            else if (fadeDir === "left") {
+                grad = tctx.createLinearGradient(0, 0, ts, 0);
+                grad.addColorStop(0, "rgba(0,0,0,1)");
+                grad.addColorStop(1, "rgba(0,0,0,0)");
+            }
+            else if (fadeDir === "up") {
+                grad = tctx.createLinearGradient(0, 0, 0, ts);
+                grad.addColorStop(0, "rgba(0,0,0,0)");
+                grad.addColorStop(1, "rgba(0,0,0,1)");
+            }
+            else if (fadeDir === "down") {
+                grad = tctx.createLinearGradient(0, 0, 0, ts);
+                grad.addColorStop(0, "rgba(0,0,0,1)");
+                grad.addColorStop(1, "rgba(0,0,0,0)");
+            }
+            if (grad) {
+                tctx.globalCompositeOperation = "destination-in";
+                tctx.fillStyle = grad;
+                tctx.fillRect(0, 0, ts, ts);
+            }
+            // Blit to main ctx
+            game_1.Game.ctx.drawImage(this.shadeSliceTempCanvas, dx, dy);
         };
         this.drawBloomLayer = (delta) => {
             if (gameConstants_1.GameConstants.isIOS || !this.onScreen)
@@ -33498,6 +33586,7 @@ class Room {
                     return a.drawableY - b.drawableY;
                 }
             });
+            // Draw in sorted order; apply inline tile shade immediately after each tile
             for (const d of drawables) {
                 d.draw(delta);
                 if (useInlineShade && shadeSrc && d instanceof tile_1.Tile) {
@@ -33514,7 +33603,24 @@ class Room {
                         }
                         const prevAlpha = game_1.Game.ctx.globalAlpha;
                         game_1.Game.ctx.globalAlpha = 1;
-                        this.drawShadeSliceForTile(shadeSrc, tx, ty);
+                        let fade;
+                        if (d instanceof door_1.Door && d.opened) {
+                            switch (d.doorDir) {
+                                case game_1.Direction.LEFT:
+                                    fade = "left";
+                                    break;
+                                case game_1.Direction.RIGHT:
+                                    fade = "right";
+                                    break;
+                                case game_1.Direction.UP:
+                                    fade = "up";
+                                    break;
+                                case game_1.Direction.DOWN:
+                                    fade = "down";
+                                    break;
+                            }
+                        }
+                        this.drawShadeSliceForTile(shadeSrc, tx, ty, fade);
                         game_1.Game.ctx.globalAlpha = prevAlpha;
                         if (prevOp !==
                             gameConstants_1.GameConstants.SHADE_LAYER_COMPOSITE_OPERATION) {
@@ -37279,6 +37385,27 @@ class Door extends passageway_1.Passageway {
         this.link = (other) => {
             this.linkedDoor = other;
         };
+        // Returns true if this door's room would be drawn before its linked door's room
+        // based on Game.drawRooms sorting (ascending by roomY + height)
+        this.isDrawnFirst = () => {
+            if (!this.linkedDoor || !this.linkedDoor.room)
+                return false;
+            try {
+                const currentPathId = this.game.currentPathId;
+                const roomsInPath = this.game.rooms.filter((r) => r.pathId === currentPathId);
+                const sorted = roomsInPath
+                    .slice()
+                    .sort((a, b) => a.roomY + a.height - (b.roomY + b.height));
+                const thisIdx = sorted.indexOf(this.room);
+                const otherIdx = sorted.indexOf(this.linkedDoor.room);
+                if (thisIdx === -1 || otherIdx === -1)
+                    return false;
+                return thisIdx < otherIdx;
+            }
+            catch {
+                return false;
+            }
+        };
         this.isSolid = () => {
             if (this.locked) {
                 return true;
@@ -37292,6 +37419,14 @@ class Door extends passageway_1.Passageway {
         this.onCollide = (player) => {
             if (!this.opened) {
                 sound_1.Sound.doorOpen();
+                if (this.doorDir === game_1.Direction.LEFT) {
+                    this.enteredFrom = game_1.Direction.LEFT;
+                    this.linkedDoor.enteredFrom = game_1.Direction.LEFT;
+                }
+                if (this.doorDir === game_1.Direction.RIGHT) {
+                    this.enteredFrom = game_1.Direction.RIGHT;
+                    this.linkedDoor.enteredFrom = game_1.Direction.RIGHT;
+                }
             }
             this.opened = true;
             this.linkedDoor.opened = true;
@@ -37316,7 +37451,10 @@ class Door extends passageway_1.Passageway {
                 else
                     game_1.Game.drawTile(3 + this.tileXOffset + this.openTunnelXOffset(), this.skin, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
             }
-            if (this.doorDir !== game_1.Direction.UP)
+            if (this.doorDir !== game_1.Direction.UP &&
+                (this.isDrawnFirst() || !this.opened)
+            //!(this.opened && this.doorDir === Direction.RIGHT)
+            )
                 //if not top door
                 game_1.Game.drawTile(1, this.skin, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
             //the following used to be in the drawaboveplayer function
@@ -37377,6 +37515,7 @@ class Door extends passageway_1.Passageway {
         let lightOffsetX = 0;
         let lightOffsetY = 0;
         this.alpha = 1;
+        this.enteredFrom = null;
         switch (this.doorDir) {
             case game_1.Direction.UP:
                 lightOffsetY = -0.5;

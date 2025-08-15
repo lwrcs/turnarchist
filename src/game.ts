@@ -115,6 +115,7 @@ let getShadeCanvasKey = (
   sH: number,
   opacity: number,
   shadeColor: string,
+  fadeDir?: "left" | "right" | "up" | "down",
 ): string => {
   return (
     set.src +
@@ -129,7 +130,9 @@ let getShadeCanvasKey = (
     "," +
     opacity +
     "," +
-    shadeColor
+    shadeColor +
+    ",fade=" +
+    (fadeDir || "none")
   );
 };
 
@@ -1044,6 +1047,15 @@ export class Game {
         enabled = GameplaySettings.EQUIP_USES_TURN ? "enabled" : "disabled";
         this.pushMessage(`Equipping an item takes a turn is now ${enabled}`);
         break;
+      case "inline":
+        GameConstants.SHADE_INLINE_IN_ENTITY_LAYER =
+          !GameConstants.SHADE_INLINE_IN_ENTITY_LAYER;
+        enabled = GameConstants.SHADE_INLINE_IN_ENTITY_LAYER
+          ? "enabled"
+          : "disabled";
+        this.pushMessage(`Inline tile shading ${enabled}`);
+        break;
+
       case "webgl":
         GameConstants.USE_WEBGL_BLUR = !GameConstants.USE_WEBGL_BLUR;
       case "hq":
@@ -2186,6 +2198,7 @@ export class Game {
     shadeColor = "black",
     shadeOpacity = 0,
     entity: boolean = false,
+    fadeDir?: "left" | "right" | "up" | "down",
   ) => {
     Game.ctx.save(); // Save the current canvas state
 
@@ -2197,8 +2210,17 @@ export class Game {
       Math.round(shadeOpacity * Math.max(shadeLevel, 12)) /
       Math.max(shadeLevel, 12);
 
-    // Include shadeColor in the cache key
-    let key = getShadeCanvasKey(set, sX, sY, sW, sH, shadeOpacity, shadeColor);
+    // Include shadeColor and fadeDir in the cache key
+    let key = getShadeCanvasKey(
+      set,
+      sX,
+      sY,
+      sW,
+      sH,
+      shadeOpacity,
+      shadeColor,
+      fadeDir,
+    );
 
     if (!Game.shade_canvases[key]) {
       Game.shade_canvases[key] = document.createElement("canvas");
@@ -2237,6 +2259,7 @@ export class Game {
       shCtx.globalAlpha = 1.0;
 
       shCtx.globalCompositeOperation = "destination-in";
+      // Base alpha mask from sprite bounds
       shCtx.drawImage(
         set,
         Math.round(sX * GameConstants.TILESIZE),
@@ -2248,6 +2271,40 @@ export class Game {
         Math.round(sW * GameConstants.TILESIZE),
         Math.round(sH * GameConstants.TILESIZE),
       );
+
+      // Optional gradient fade mask (1->0 in specified direction)
+      if (fadeDir) {
+        const w = Math.round(sW * GameConstants.TILESIZE);
+        const h = Math.round(sH * GameConstants.TILESIZE);
+        let grad: CanvasGradient | null = null;
+        switch (fadeDir) {
+          case "left":
+            grad = shCtx.createLinearGradient(0, 0, w, 0);
+            grad.addColorStop(0, "rgba(0,0,0,0)");
+            grad.addColorStop(1, "rgba(0,0,0,1)");
+            break;
+          case "right":
+            grad = shCtx.createLinearGradient(0, 0, w, 0);
+            grad.addColorStop(0, "rgba(0,0,0,1)");
+            grad.addColorStop(1, "rgba(0,0,0,0)");
+            break;
+          case "up":
+            grad = shCtx.createLinearGradient(0, 0, 0, h);
+            grad.addColorStop(0, "rgba(0,0,0,0)");
+            grad.addColorStop(1, "rgba(0,0,0,1)");
+            break;
+          case "down":
+            grad = shCtx.createLinearGradient(0, 0, 0, h);
+            grad.addColorStop(0, "rgba(0,0,0,1)");
+            grad.addColorStop(1, "rgba(0,0,0,0)");
+            break;
+        }
+        if (grad) {
+          shCtx.globalCompositeOperation = "destination-in";
+          shCtx.fillStyle = grad;
+          shCtx.fillRect(0, 0, w, h);
+        }
+      }
     }
 
     Game.ctx.drawImage(
@@ -2272,6 +2329,7 @@ export class Game {
     dH: number,
     shadeColor = "black",
     shadeOpacity = 0,
+    fadeDir?: "left" | "right" | "up" | "down",
   ) => {
     Game.drawHelper(
       Game.tileset,
@@ -2285,6 +2343,8 @@ export class Game {
       dH,
       shadeColor,
       shadeOpacity,
+      false,
+      fadeDir,
     );
   };
 
@@ -2299,6 +2359,7 @@ export class Game {
     dH: number,
     shadeColor = "black",
     shadeOpacity = 0,
+    fadeDir?: "left" | "right" | "up" | "down",
   ) => {
     Game.drawHelper(
       Game.objset,
@@ -2313,6 +2374,7 @@ export class Game {
       shadeColor,
       shadeOpacity,
       true,
+      fadeDir,
     );
   };
 
@@ -2327,6 +2389,7 @@ export class Game {
     dH: number,
     shadeColor = "black",
     shadeOpacity = 0,
+    fadeDir?: "left" | "right" | "up" | "down",
   ) => {
     Game.drawHelper(
       Game.mobset,
@@ -2341,6 +2404,7 @@ export class Game {
       shadeColor,
       shadeOpacity,
       true,
+      fadeDir,
     );
   };
 
@@ -2355,6 +2419,7 @@ export class Game {
     dH: number,
     shadeColor = "black",
     shadeOpacity = 0,
+    fadeDir?: "left" | "right" | "up" | "down",
   ) => {
     Game.drawHelper(
       Game.itemset,
@@ -2369,6 +2434,7 @@ export class Game {
       shadeColor,
       shadeOpacity,
       true,
+      fadeDir,
     );
   };
 
@@ -2383,6 +2449,7 @@ export class Game {
     dH: number,
     shadeColor = "black",
     shadeOpacity = 0,
+    fadeDir?: "left" | "right" | "up" | "down",
   ) => {
     Game.drawHelper(
       Game.fxset,
@@ -2397,6 +2464,7 @@ export class Game {
       shadeColor,
       shadeOpacity,
       true,
+      fadeDir,
     );
   };
 

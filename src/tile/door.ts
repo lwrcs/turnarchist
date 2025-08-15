@@ -43,6 +43,13 @@ export class Door extends Passageway {
   drawTopOf: boolean;
   alpha: number;
 
+  enteredFrom:
+    | Direction.LEFT
+    | Direction.RIGHT
+    | Direction.DOWN
+    | Direction.UP
+    | null;
+
   constructor(
     room: Room,
     game: Game,
@@ -69,6 +76,7 @@ export class Door extends Passageway {
     let lightOffsetX = 0;
     let lightOffsetY = 0;
     this.alpha = 1;
+    this.enteredFrom = null;
 
     switch (this.doorDir) {
       case Direction.UP:
@@ -228,6 +236,27 @@ export class Door extends Passageway {
     this.linkedDoor = other;
   };
 
+  // Returns true if this door's room would be drawn before its linked door's room
+  // based on Game.drawRooms sorting (ascending by roomY + height)
+  isDrawnFirst = (): boolean => {
+    if (!this.linkedDoor || !this.linkedDoor.room) return false;
+    try {
+      const currentPathId = (this.game as any).currentPathId;
+      const roomsInPath = this.game.rooms.filter(
+        (r) => (r as any).pathId === currentPathId,
+      );
+      const sorted = roomsInPath
+        .slice()
+        .sort((a: any, b: any) => a.roomY + a.height - (b.roomY + b.height));
+      const thisIdx = sorted.indexOf(this.room as any);
+      const otherIdx = sorted.indexOf(this.linkedDoor.room as any);
+      if (thisIdx === -1 || otherIdx === -1) return false;
+      return thisIdx < otherIdx;
+    } catch {
+      return false;
+    }
+  };
+
   isSolid = (): boolean => {
     if (this.locked) {
       return true;
@@ -241,6 +270,14 @@ export class Door extends Passageway {
   onCollide = (player: Player) => {
     if (!this.opened) {
       Sound.doorOpen();
+      if (this.doorDir === Direction.LEFT) {
+        this.enteredFrom = Direction.LEFT;
+        this.linkedDoor.enteredFrom = Direction.LEFT;
+      }
+      if (this.doorDir === Direction.RIGHT) {
+        this.enteredFrom = Direction.RIGHT;
+        this.linkedDoor.enteredFrom = Direction.RIGHT;
+      }
     }
     this.opened = true;
 
@@ -306,7 +343,11 @@ export class Door extends Passageway {
           this.shadeAmount(),
         );
     }
-    if (this.doorDir !== Direction.UP)
+    if (
+      this.doorDir !== Direction.UP &&
+      (this.isDrawnFirst() || !this.opened)
+      //!(this.opened && this.doorDir === Direction.RIGHT)
+    )
       //if not top door
       Game.drawTile(
         1,

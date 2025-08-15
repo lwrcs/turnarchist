@@ -263,6 +263,9 @@ export class Room {
   // Temporary canvas used when Canvas2D filter blur is required for sliced drawing
   private shadeBlurTempCanvas?: HTMLCanvasElement;
   private shadeBlurTempCtx?: CanvasRenderingContext2D;
+  // Temporary canvas to apply per-slice gradient masking (post-blur) efficiently
+  private shadeSliceTempCanvas?: HTMLCanvasElement;
+  private shadeSliceTempCtx?: CanvasRenderingContext2D;
   // Border tiles around shade content for sliced shading (ensures blur has room to spill)
   private shadeSliceBorderTiles: number = 1;
   private bloomOffscreenCanvas: HTMLCanvasElement;
@@ -2270,8 +2273,8 @@ export class Room {
         Game.ctx.globalAlpha = 1;
         Game.ctx.drawImage(
           this.blurCache.shade5px,
-          (this.roomX - offsetX - 1) * GameConstants.TILESIZE,
-          (this.roomY - offsetY - 1) * GameConstants.TILESIZE,
+          (this.roomX - offsetX) * GameConstants.TILESIZE,
+          (this.roomY - offsetY) * GameConstants.TILESIZE,
         );
       } else {
         // Generate new blur and cache if inactive
@@ -2281,8 +2284,8 @@ export class Room {
         const blurred5px = blurRenderer.applyBlur(this.shadeOffscreenCanvas, 5);
         Game.ctx.drawImage(
           blurred5px,
-          (this.roomX - offsetX - 1) * GameConstants.TILESIZE,
-          (this.roomY - offsetY - 1) * GameConstants.TILESIZE,
+          (this.roomX - offsetX) * GameConstants.TILESIZE,
+          (this.roomY - offsetY) * GameConstants.TILESIZE,
         );
 
         // Cache the result if room is inactive
@@ -2302,8 +2305,8 @@ export class Room {
 
       Game.ctx.drawImage(
         this.shadeOffscreenCanvas,
-        (this.roomX - offsetX - 1) * GameConstants.TILESIZE,
-        (this.roomY - offsetY - 1) * GameConstants.TILESIZE,
+        (this.roomX - offsetX) * GameConstants.TILESIZE,
+        (this.roomY - offsetY) * GameConstants.TILESIZE,
       );
 
       Game.ctx.filter = "none";
@@ -2333,7 +2336,7 @@ export class Room {
         let alpha =
           this.softVis[x] && this.softVis[x][y] ? this.softVis[x][y] : 0;
         if (tile instanceof WallTorch) continue;
-        let factor = !GameConstants.SMOOTH_LIGHTING ? 2 : 2;
+        let factor = !GameConstants.SMOOTH_LIGHTING ? 2 : 1;
         let smoothFactor = !GameConstants.SMOOTH_LIGHTING ? 0 : 1;
         let computedAlpha = alpha ** factor * smoothFactor;
 
@@ -2505,6 +2508,7 @@ export class Room {
     shadeSrc: HTMLCanvasElement,
     tileX: number,
     tileY: number,
+    fadeDir?: "left" | "right" | "up" | "down",
   ) => {
     const ts = GameConstants.TILESIZE;
     // Source position in the blurred offscreen matches drawShadeLayer mapping
@@ -2512,7 +2516,51 @@ export class Room {
     const sy = (tileY + 1 - this.roomY + this.blurOffsetY) * ts;
     const dx = tileX * ts;
     const dy = tileY * ts;
-    Game.ctx.drawImage(shadeSrc, sx, sy, ts, ts, dx, dy, ts, ts);
+    if (!fadeDir) {
+      Game.ctx.drawImage(shadeSrc, sx, sy, ts, ts, dx, dy, ts, ts);
+      return;
+    }
+
+    // Lazy init temp slice canvas
+    if (!this.shadeSliceTempCanvas) {
+      this.shadeSliceTempCanvas = document.createElement("canvas");
+      this.shadeSliceTempCanvas.width = ts;
+      this.shadeSliceTempCanvas.height = ts;
+      this.shadeSliceTempCtx = this.shadeSliceTempCanvas.getContext(
+        "2d",
+      ) as CanvasRenderingContext2D;
+    }
+    const tctx = this.shadeSliceTempCtx as CanvasRenderingContext2D;
+    tctx.clearRect(0, 0, ts, ts);
+    // Copy slice into temp
+    tctx.globalCompositeOperation = "source-over";
+    tctx.drawImage(shadeSrc, sx, sy, ts, ts, 0, 0, ts, ts);
+    // Apply gradient alpha mask (destination-in)
+    let grad: CanvasGradient | null = null;
+    if (fadeDir === "right") {
+      grad = tctx.createLinearGradient(0, 0, ts, 0);
+      grad.addColorStop(0, "rgba(0,0,0,0)");
+      grad.addColorStop(1, "rgba(0,0,0,1)");
+    } else if (fadeDir === "left") {
+      grad = tctx.createLinearGradient(0, 0, ts, 0);
+      grad.addColorStop(0, "rgba(0,0,0,1)");
+      grad.addColorStop(1, "rgba(0,0,0,0)");
+    } else if (fadeDir === "up") {
+      grad = tctx.createLinearGradient(0, 0, 0, ts);
+      grad.addColorStop(0, "rgba(0,0,0,0)");
+      grad.addColorStop(1, "rgba(0,0,0,1)");
+    } else if (fadeDir === "down") {
+      grad = tctx.createLinearGradient(0, 0, 0, ts);
+      grad.addColorStop(0, "rgba(0,0,0,1)");
+      grad.addColorStop(1, "rgba(0,0,0,0)");
+    }
+    if (grad) {
+      tctx.globalCompositeOperation = "destination-in";
+      tctx.fillStyle = grad;
+      tctx.fillRect(0, 0, ts, ts);
+    }
+    // Blit to main ctx
+    Game.ctx.drawImage(this.shadeSliceTempCanvas as HTMLCanvasElement, dx, dy);
   };
 
   drawBloomLayer = (delta: number) => {
@@ -2733,6 +2781,7 @@ export class Room {
       }
     });
 
+    // Draw in sorted order; apply inline tile shade immediately after each tile
     for (const d of drawables) {
       d.draw(delta);
       if (useInlineShade && shadeSrc && d instanceof Tile) {
@@ -2752,7 +2801,25 @@ export class Room {
           }
           const prevAlpha = Game.ctx.globalAlpha;
           Game.ctx.globalAlpha = 1;
-          this.drawShadeSliceForTile(shadeSrc, tx, ty);
+
+          let fade: "left" | "right" | "up" | "down" | undefined;
+          if (d instanceof Door && d.opened) {
+            switch (d.doorDir) {
+              case Direction.LEFT:
+                fade = "left";
+                break;
+              case Direction.RIGHT:
+                fade = "right";
+                break;
+              case Direction.UP:
+                fade = "up";
+                break;
+              case Direction.DOWN:
+                fade = "down";
+                break;
+            }
+          }
+          this.drawShadeSliceForTile(shadeSrc, tx, ty, fade);
           Game.ctx.globalAlpha = prevAlpha;
           if (
             prevOp !==
