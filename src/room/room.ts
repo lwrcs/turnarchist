@@ -94,6 +94,7 @@ import { WebGLBlurRenderer } from "../gui/webglBlurRenderer";
 import { Utils } from "../utility/utils";
 import { Tree } from "../entity/object/tree";
 import { IdGenerator } from "../globalStateManager/IdGenerator";
+import { WardenEnemy } from "../entity/enemy/wardenEnemy";
 
 // #endregion
 
@@ -126,6 +127,7 @@ export enum EnemyType {
   glowbug = "glowbug",
   tree = "tree",
   tombStone = "tombstone",
+  warden = "warden",
   // Add other enemy types here
 }
 
@@ -157,6 +159,7 @@ export const EnemyTypeMap: { [key in EnemyType]: EnemyStatic } = {
   [EnemyType.glowbug]: GlowBugEnemy,
   [EnemyType.tree]: Tree,
   [EnemyType.tombStone]: TombStone,
+  [EnemyType.warden]: WardenEnemy,
   // Add other enemy mappings here
 };
 

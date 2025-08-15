@@ -142,6 +142,7 @@ import { Bones } from "../tile/bones";
 import { Puddle } from "../tile/decorations/puddle";
 import { Decoration } from "../tile/decorations/decoration";
 import { IdGenerator } from "../globalStateManager/IdGenerator";
+import { WardenEnemy } from "../entity/enemy/wardenEnemy";
 
 export class HitWarningState {
   x: number;
@@ -270,6 +271,7 @@ export enum EnemyType {
   DOWNLADDER_MAKER,
   ROCK,
   MUSHROOMS,
+  WARDEN,
 }
 
 export class EnemyState {
@@ -499,6 +501,7 @@ export class EnemyState {
       this.type = EnemyType.DOWNLADDER_MAKER;
     if (enemy instanceof Rock) this.type = EnemyType.ROCK;
     if (enemy instanceof Mushrooms) this.type = EnemyType.MUSHROOMS;
+    if (enemy instanceof WardenEnemy) this.type = EnemyType.WARDEN;
   }
 }
 
@@ -642,6 +645,9 @@ let loadEnemy = (es: EnemyState, game: Game): Entity => {
     enemy = new MummyEnemy(room, game, es.x, es.y);
   if (es.type === EnemyType.OCCULTIST)
     enemy = new OccultistEnemy(room, game, es.x, es.y);
+  if (es.type === EnemyType.WARDEN)
+    enemy = new WardenEnemy(room, game, es.x, es.y);
+
   if (es.type === EnemyType.QUEEN)
     enemy = new QueenEnemy(room, game, es.x, es.y);
   if (es.type === EnemyType.ROOK) enemy = new RookEnemy(room, game, es.x, es.y);

@@ -9100,6 +9100,235 @@ SpiderEnemy.tileY = 4;
 
 /***/ }),
 
+/***/ "./src/entity/enemy/wardenEnemy.ts":
+/*!*****************************************!*\
+  !*** ./src/entity/enemy/wardenEnemy.ts ***!
+  \*****************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.WardenEnemy = void 0;
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
+const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
+const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
+const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
+class WardenEnemy extends enemy_1.Enemy {
+    constructor(room, game, x, y, drop) {
+        super(room, game, x, y);
+        this.hit = () => {
+            return 2;
+        };
+        this.behavior = () => {
+            this.lastX = this.x;
+            this.lastY = this.y;
+            if (!this.dead) {
+                if (this.skipNextTurns > 0) {
+                    this.skipNextTurns--;
+                    return;
+                }
+                if (!this.seenPlayer)
+                    this.lookForPlayer();
+                else if (this.seenPlayer) {
+                    if (this.room.playerTicked === this.targetPlayer) {
+                        this.alertTicks = Math.max(0, this.alertTicks - 1);
+                        this.ticks++;
+                        if (this.ticks % 2 === 1) {
+                            this.rumbling = true;
+                            let oldX = this.x;
+                            let oldY = this.y;
+                            let disablePositions = Array();
+                            for (const e of this.room.entities) {
+                                if (e !== this) {
+                                    disablePositions.push({ x: e.x, y: e.y });
+                                }
+                            }
+                            for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
+                                for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
+                                    if (this.room.roomArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
+                                        this.room.roomArray[xx][yy].on) {
+                                        // don't walk on active spiketraps
+                                        disablePositions.push({ x: xx, y: yy });
+                                    }
+                                }
+                            }
+                            let grid = [];
+                            for (let x = 0; x < this.room.roomX + this.room.width; x++) {
+                                grid[x] = [];
+                                for (let y = 0; y < this.room.roomY + this.room.height; y++) {
+                                    if (this.room.roomArray[x] && this.room.roomArray[x][y])
+                                        grid[x][y] = this.room.roomArray[x][y];
+                                    else
+                                        grid[x][y] = false;
+                                }
+                            }
+                            this.target =
+                                this.getAverageLuminance() > 0 // 0.8
+                                    ? this.targetPlayer
+                                    : this.room.getExtremeLuminanceFromPoint(this.x, this.y)
+                                        .darkest;
+                            let moves = astarclass_1.astar.AStar.search(grid, this, this.target, disablePositions, undefined, undefined, undefined, undefined, undefined, undefined, this.lastPlayerPos);
+                            if (moves.length > 0) {
+                                let hitPlayer = false;
+                                for (const i in this.game.players) {
+                                    if (this.game.rooms[this.game.players[i].levelID] === this.room &&
+                                        this.game.players[i].x === moves[0].pos.x &&
+                                        this.game.players[i].y === moves[0].pos.y) {
+                                        this.game.players[i].hurt(this.hit(), this.name);
+                                        this.drawX = 0.5 * (this.x - this.game.players[i].x);
+                                        this.drawY = 0.5 * (this.y - this.game.players[i].y);
+                                        if (this.game.players[i] ===
+                                            this.game.players[this.game.localPlayerID])
+                                            this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                                        hitPlayer = true;
+                                    }
+                                }
+                                if (!hitPlayer) {
+                                    this.tryMove(moves[0].pos.x, moves[0].pos.y);
+                                    this.setDrawXY(oldX, oldY);
+                                    if (this.x > oldX)
+                                        this.direction = game_1.Direction.RIGHT;
+                                    else if (this.x < oldX)
+                                        this.direction = game_1.Direction.LEFT;
+                                    else if (this.y > oldY)
+                                        this.direction = game_1.Direction.DOWN;
+                                    else if (this.y < oldY)
+                                        this.direction = game_1.Direction.UP;
+                                }
+                            }
+                            this.rumbling = false;
+                        }
+                        else {
+                            this.rumbling = true;
+                            /*
+                            if (
+                              (this.target.x === this.targetPlayer.x &&
+                                this.target.y === this.targetPlayer.y) ||
+                              Utils.distance(
+                                this.targetPlayer.x,
+                                this.targetPlayer.y,
+                                this.x,
+                                this.y,
+                              ) <= 2
+                            )
+                              */ {
+                                this.makeHitWarnings();
+                            }
+                        }
+                    }
+                    let targetPlayerOffline = Object.values(this.game.offlinePlayers).indexOf(this.targetPlayer) !==
+                        -1;
+                    if (!this.aggro || targetPlayerOffline) {
+                        let p = this.nearestPlayer();
+                        if (p !== false) {
+                            let [distance, player] = p;
+                            if (distance <= 4 &&
+                                (targetPlayerOffline ||
+                                    distance < this.playerDistance(this.targetPlayer))) {
+                                if (player !== this.targetPlayer) {
+                                    this.targetPlayer = player;
+                                    this.facePlayer(player);
+                                    if (player === this.game.players[this.game.localPlayerID])
+                                        this.alertTicks = 1;
+                                    if (this.ticks % 2 === 0) {
+                                        /*
+                                        if (
+                                          (this.target.x === this.targetPlayer.x &&
+                                            this.target.y === this.targetPlayer.y) ||
+                                          Utils.distance(
+                                            this.targetPlayer.x,
+                                            this.targetPlayer.y,
+                                            this.x,
+                                            this.y,
+                                          ) <= 2
+                                        ) */ {
+                                            this.makeHitWarnings();
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        };
+        this.drawTopLayer = (delta) => {
+            this.drawableY = this.y;
+            this.healthBar.draw(delta, this.health, this.maxHealth, this.x, this.y, true);
+        };
+        this.dropLoot = () => {
+            let dropOffsets = [
+                { x: 0, y: 0 },
+                { x: 1, y: 0 },
+                { x: 0, y: 1 },
+                { x: 1, y: 1 },
+            ];
+            for (let i = 0; i < this.drops.length; i++) {
+                this.drops[i].level = this.room;
+                this.drops[i].x = this.x + dropOffsets[i].x;
+                this.drops[i].y = this.y + dropOffsets[i].y;
+                this.room.items.push(this.drops[i]);
+            }
+        };
+        this.draw = (delta) => {
+            if (this.dead)
+                return;
+            //this.updateShadeColor(delta);
+            game_1.Game.ctx.globalAlpha = this.alpha;
+            this.updateDrawXY(delta);
+            this.frame += 0.1 * delta;
+            if (this.frame >= 4)
+                this.frame = 0;
+            if (this.hasShadow)
+                this.drawShadow(delta);
+            game_1.Game.drawMob(this.tileX + 2 * Math.floor(this.frame), this.tileY, 2, 2, this.x - this.drawX - 0.5, this.y - this.drawYOffset - this.drawY - this.jumpY, 2, 2, this.softShadeColor, this.shadeAmount());
+            if (!this.cloned) {
+                if (!this.seenPlayer) {
+                    this.drawSleepingZs(delta);
+                }
+                if (this.alertTicks > 0) {
+                    this.drawExclamation(delta);
+                }
+            }
+            game_1.Game.ctx.globalAlpha = 1;
+        };
+        this.w = 1;
+        this.h = 1;
+        this.ticks = 0;
+        this.frame = 0;
+        this.health = 4;
+        this.maxHealth = 4;
+        this.tileX = 43;
+        this.tileY = 10;
+        this.seenPlayer = false;
+        this.aggro = false;
+        this.dir = game_1.Direction.DOWN;
+        this.name = "warden";
+        this.chainPushable = false;
+        this.forwardOnlyAttack = false;
+        this.drawMoveSpeed = 0.9;
+        this.jumpHeight = 0.35;
+        this.drawYOffset = 1.5;
+        this.alertRange = 10;
+        this.orthogonalAttack = true;
+        if (drop)
+            this.drop = drop;
+        const dropAmount = Math.floor(random_1.Random.rand() * 3) + 2;
+        while (this.drops.length < dropAmount && !this.cloned) {
+            this.getDrop();
+        }
+    }
+}
+exports.WardenEnemy = WardenEnemy;
+WardenEnemy.difficulty = 2;
+WardenEnemy.tileX = 21;
+WardenEnemy.tileY = 0;
+
+
+/***/ }),
+
 /***/ "./src/entity/enemy/wizardEnemy.ts":
 /*!*****************************************!*\
   !*** ./src/entity/enemy/wizardEnemy.ts ***!
@@ -14939,6 +15168,7 @@ const spike_1 = __webpack_require__(/*! ../tile/spike */ "./src/tile/spike.ts");
 const trapdoor_1 = __webpack_require__(/*! ../tile/trapdoor */ "./src/tile/trapdoor.ts");
 const bones_1 = __webpack_require__(/*! ../tile/bones */ "./src/tile/bones.ts");
 const IdGenerator_1 = __webpack_require__(/*! ../globalStateManager/IdGenerator */ "./src/globalStateManager/IdGenerator.ts");
+const wardenEnemy_1 = __webpack_require__(/*! ../entity/enemy/wardenEnemy */ "./src/entity/enemy/wardenEnemy.ts");
 class HitWarningState {
     constructor(hw) {
         this.x = hw.x;
@@ -15044,6 +15274,7 @@ var EnemyType;
     EnemyType[EnemyType["DOWNLADDER_MAKER"] = 42] = "DOWNLADDER_MAKER";
     EnemyType[EnemyType["ROCK"] = 43] = "ROCK";
     EnemyType[EnemyType["MUSHROOMS"] = 44] = "MUSHROOMS";
+    EnemyType[EnemyType["WARDEN"] = 45] = "WARDEN";
 })(EnemyType = exports.EnemyType || (exports.EnemyType = {}));
 class EnemyState {
     constructor(enemy, game) {
@@ -15243,6 +15474,8 @@ class EnemyState {
             this.type = EnemyType.ROCK;
         if (enemy instanceof mushrooms_1.Mushrooms)
             this.type = EnemyType.MUSHROOMS;
+        if (enemy instanceof wardenEnemy_1.WardenEnemy)
+            this.type = EnemyType.WARDEN;
     }
 }
 exports.EnemyState = EnemyState;
@@ -15389,6 +15622,8 @@ let loadEnemy = (es, game) => {
         enemy = new mummyEnemy_1.MummyEnemy(room, game, es.x, es.y);
     if (es.type === EnemyType.OCCULTIST)
         enemy = new occultistEnemy_1.OccultistEnemy(room, game, es.x, es.y);
+    if (es.type === EnemyType.WARDEN)
+        enemy = new wardenEnemy_1.WardenEnemy(room, game, es.x, es.y);
     if (es.type === EnemyType.QUEEN)
         enemy = new queenEnemy_1.QueenEnemy(room, game, es.x, es.y);
     if (es.type === EnemyType.ROOK)
@@ -25439,7 +25674,8 @@ exports.enemyMinimumDepth = {
     14: 2,
     15: 2,
     16: 0,
-    17: 0, // MummyEnemy
+    17: 0,
+    18: 3, // WardenEnemy
 };
 /*
 interface enemySpawnPoolData {
@@ -32029,6 +32265,7 @@ const webglBlurRenderer_1 = __webpack_require__(/*! ../gui/webglBlurRenderer */ 
 const utils_1 = __webpack_require__(/*! ../utility/utils */ "./src/utility/utils.ts");
 const tree_1 = __webpack_require__(/*! ../entity/object/tree */ "./src/entity/object/tree.ts");
 const IdGenerator_1 = __webpack_require__(/*! ../globalStateManager/IdGenerator */ "./src/globalStateManager/IdGenerator.ts");
+const wardenEnemy_1 = __webpack_require__(/*! ../entity/enemy/wardenEnemy */ "./src/entity/enemy/wardenEnemy.ts");
 // #endregion
 // #region Enums & Interfaces
 /**
@@ -32060,6 +32297,7 @@ var EnemyType;
     EnemyType["glowbug"] = "glowbug";
     EnemyType["tree"] = "tree";
     EnemyType["tombStone"] = "tombstone";
+    EnemyType["warden"] = "warden";
     // Add other enemy types here
 })(EnemyType = exports.EnemyType || (exports.EnemyType = {}));
 /**
@@ -32090,6 +32328,7 @@ exports.EnemyTypeMap = {
     [EnemyType.glowbug]: glowBugEnemy_1.GlowBugEnemy,
     [EnemyType.tree]: tree_1.Tree,
     [EnemyType.tombStone]: tombStone_1.TombStone,
+    [EnemyType.warden]: wardenEnemy_1.WardenEnemy,
     // Add other enemy mappings here
 };
 var RoomType;
