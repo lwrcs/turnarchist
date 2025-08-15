@@ -123,9 +123,7 @@ export class Populator {
     // Centralized torch, spike, and pool addition
 
     this.addDownladder({
-      caveRooms: 40,
-      mapWidth: 100,
-      mapHeight: 100,
+      caveRooms: 3,
       locked: true,
     });
 

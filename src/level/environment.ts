@@ -119,8 +119,8 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: CrabEnemy, weight: 1.0, minDepth: 0 },
       { class: ZombieEnemy, weight: 1.2, minDepth: 0 },
       { class: SkullEnemy, weight: 1.0, minDepth: 0 },
-      { class: SpiderEnemy, weight: 1.0, minDepth: 2 },
-      { class: MummyEnemy, weight: 1.0, minDepth: 1 },
+      //{ class: SpiderEnemy, weight: 1.0, minDepth: 2 },
+      { class: MummyEnemy, weight: 1.0, minDepth: 2 },
 
       // Mid game enemies (depth 1+)
       { class: EnergyWizardEnemy, weight: 0.1, minDepth: 1 },
@@ -164,7 +164,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
     enemies: [
       // Cave-dwelling creatures
       { class: CrabEnemy, weight: 1.5, minDepth: 0 }, // Crabs like caves
-      { class: SpiderEnemy, weight: 1.2, minDepth: 0 }, // Cave spiders
+      { class: SpiderEnemy, weight: 1.2, minDepth: 1 }, // Cave spiders
       { class: SkullEnemy, weight: 0.8, minDepth: 0 }, // Ancient cave remains
 
       // Mid depth cave enemies
@@ -201,7 +201,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       // Nature creatures (higher weights)
       { class: GlowBugEnemy, weight: 1.5, minDepth: 0 },
       { class: FrogEnemy, weight: 0.25, minDepth: 0 }, // Frogs love forests
-      { class: SpiderEnemy, weight: 0.25, minDepth: 0 }, // Forest spiders
+      //{ class: SpiderEnemy, weight: 0.25, minDepth: 0 }, // Forest spiders
 
       // Less common forest enemies
       { class: CrabEnemy, weight: 0.3, minDepth: 0 }, // Rare in forest

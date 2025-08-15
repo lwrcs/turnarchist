@@ -9027,14 +9027,14 @@ class SpiderEnemy extends enemy_1.Enemy {
                 }
                 switch (this.direction) {
                     case game_1.Direction.UP:
-                        this.tileX = 13;
+                        //this.tileX = 13;
                         break;
                     case game_1.Direction.LEFT:
-                        this.tileX = 13;
-                        this.tileY = 6;
+                        //this.tileX = 13;
+                        //this.tileY = 6;
                         break;
                     case game_1.Direction.RIGHT:
-                        this.tileY = 6;
+                        //this.tileY = 6;
                         break;
                 }
                 let rumbleX = this.rumble(this.rumbling, this.frame, this.direction).x;
@@ -24917,8 +24917,8 @@ const environmentData = {
             { class: crabEnemy_1.CrabEnemy, weight: 1.0, minDepth: 0 },
             { class: zombieEnemy_1.ZombieEnemy, weight: 1.2, minDepth: 0 },
             { class: skullEnemy_1.SkullEnemy, weight: 1.0, minDepth: 0 },
-            { class: spiderEnemy_1.SpiderEnemy, weight: 1.0, minDepth: 2 },
-            { class: mummyEnemy_1.MummyEnemy, weight: 1.0, minDepth: 1 },
+            //{ class: SpiderEnemy, weight: 1.0, minDepth: 2 },
+            { class: mummyEnemy_1.MummyEnemy, weight: 1.0, minDepth: 2 },
             // Mid game enemies (depth 1+)
             { class: energyWizard_1.EnergyWizardEnemy, weight: 0.1, minDepth: 1 },
             { class: rookEnemy_1.RookEnemy, weight: 0.6, minDepth: 1 },
@@ -24960,7 +24960,7 @@ const environmentData = {
         enemies: [
             // Cave-dwelling creatures
             { class: crabEnemy_1.CrabEnemy, weight: 1.5, minDepth: 0 },
-            { class: spiderEnemy_1.SpiderEnemy, weight: 1.2, minDepth: 0 },
+            { class: spiderEnemy_1.SpiderEnemy, weight: 1.2, minDepth: 1 },
             { class: skullEnemy_1.SkullEnemy, weight: 0.8, minDepth: 0 },
             // Mid depth cave enemies
             { class: chargeEnemy_1.ChargeEnemy, weight: 1.0, minDepth: 2 },
@@ -24995,7 +24995,7 @@ const environmentData = {
             // Nature creatures (higher weights)
             { class: glowBugEnemy_1.GlowBugEnemy, weight: 1.5, minDepth: 0 },
             { class: frogEnemy_1.FrogEnemy, weight: 0.25, minDepth: 0 },
-            { class: spiderEnemy_1.SpiderEnemy, weight: 0.25, minDepth: 0 },
+            //{ class: SpiderEnemy, weight: 0.25, minDepth: 0 }, // Forest spiders
             // Less common forest enemies
             { class: crabEnemy_1.CrabEnemy, weight: 0.3, minDepth: 0 },
             { class: zombieEnemy_1.ZombieEnemy, weight: 0.2, minDepth: 0 },
@@ -35199,9 +35199,7 @@ class Populator {
             });
             // Centralized torch, spike, and pool addition
             this.addDownladder({
-                caveRooms: 40,
-                mapWidth: 100,
-                mapHeight: 100,
+                caveRooms: 3,
                 locked: true,
             });
             //this.level.distributeKeys();
@@ -38562,13 +38560,13 @@ class Wall extends tile_1.Tile {
     }
     get direction() {
         let directions = [];
-        if (this.room.roomArray[this.x - 1][this.y] == null)
+        if (this.room.roomArray[this.x - 1][this.y] === null)
             directions.push(game_1.Direction.LEFT);
-        if (this.room.roomArray[this.x + 1][this.y] == null)
+        if (this.room.roomArray[this.x + 1][this.y] === null)
             directions.push(game_1.Direction.RIGHT);
-        if (this.room.roomArray[this.x][this.y - 1] == null)
+        if (this.room.roomArray[this.x][this.y - 1] === null)
             directions.push(game_1.Direction.DOWN);
-        if (this.room.roomArray[this.x][this.y + 1] == null)
+        if (this.room.roomArray[this.x][this.y + 1] === null)
             directions.push(game_1.Direction.UP);
         if (directions.length == 1)
             return directions[0];

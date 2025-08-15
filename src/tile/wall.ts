@@ -47,13 +47,13 @@ export class Wall extends Tile {
 
   get direction() {
     let directions = [];
-    if (this.room.roomArray[this.x - 1][this.y] == null)
+    if (this.room.roomArray[this.x - 1][this.y] === null)
       directions.push(Direction.LEFT);
-    if (this.room.roomArray[this.x + 1][this.y] == null)
+    if (this.room.roomArray[this.x + 1][this.y] === null)
       directions.push(Direction.RIGHT);
-    if (this.room.roomArray[this.x][this.y - 1] == null)
+    if (this.room.roomArray[this.x][this.y - 1] === null)
       directions.push(Direction.DOWN);
-    if (this.room.roomArray[this.x][this.y + 1] == null)
+    if (this.room.roomArray[this.x][this.y + 1] === null)
       directions.push(Direction.UP);
     if (directions.length == 1) return directions[0];
     if (

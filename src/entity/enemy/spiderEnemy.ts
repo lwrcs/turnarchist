@@ -505,14 +505,14 @@ export class SpiderEnemy extends Enemy {
       }
       switch (this.direction) {
         case Direction.UP:
-          this.tileX = 13;
+          //this.tileX = 13;
           break;
         case Direction.LEFT:
-          this.tileX = 13;
-          this.tileY = 6;
+          //this.tileX = 13;
+          //this.tileY = 6;
           break;
         case Direction.RIGHT:
-          this.tileY = 6;
+          //this.tileY = 6;
           break;
       }
       let rumbleX = this.rumble(this.rumbling, this.frame, this.direction).x;
