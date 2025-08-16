@@ -13226,6 +13226,16 @@ class Game {
                 return;
             }
             switch (command) {
+                case "lightup":
+                    levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP += 1;
+                    this.pushMessage(`Lighting angle step is now ${levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP}`);
+                    break;
+                case "lightdown":
+                    if (levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP > 1) {
+                        levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP -= 1;
+                    }
+                    this.pushMessage(`Lighting angle step is now ${levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP}`);
+                    break;
                 case "savec": {
                     try {
                         const { saveToCookies } = __webpack_require__(/*! ./game/savePersistence */ "./src/game/savePersistence.ts");
@@ -13532,7 +13542,7 @@ class Game {
                     console.log("Mobile detected");
                 gameConstants_1.GameConstants.SHADE_LEVELS = 35;
                 gameConstants_1.GameConstants.isMobile = true;
-                levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP = 2;
+                levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP = 8;
                 levelConstants_1.LevelConstants.LIGHTING_MAX_DISTANCE = 7;
                 gameConstants_1.GameConstants.USE_WEBGL_BLUR = true;
                 // Use smaller scale for mobile devices based on screen size
@@ -25665,6 +25675,9 @@ exports.Level = Level;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.LevelConstants = void 0;
 class LevelConstants {
+    static get LIGHTING_ANGLE_BRIGHTNESS_COMPENSATION() {
+        return LevelConstants.LIGHTING_ANGLE_STEP / 2;
+    }
 }
 exports.LevelConstants = LevelConstants;
 LevelConstants.SCREEN_W = 1;
@@ -32694,7 +32707,7 @@ class Room {
             for (const l of this.lightSources) {
                 if (l.shouldUpdate()) {
                     for (let i = 0; i < 360; i += levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP) {
-                        this.castTintAtAngle(i, l.x, l.y, l.r, l.c, l.b); // RGB color in sRGB
+                        this.castTintAtAngle(i, l.x, l.y, l.r, l.c, l.b * levelConstants_1.LevelConstants.LIGHTING_ANGLE_BRIGHTNESS_COMPENSATION); // RGB color in sRGB
                     }
                 }
             }
@@ -32736,7 +32749,8 @@ class Room {
                         ),
                         */
                         levelConstants_1.LevelConstants.LIGHTING_MAX_DISTANCE, lightColor, // RGB color in sRGB
-                        lightBrightness);
+                        lightBrightness *
+                            levelConstants_1.LevelConstants.LIGHTING_ANGLE_BRIGHTNESS_COMPENSATION);
                     }
                 }
             }
@@ -32776,10 +32790,12 @@ class Room {
             if (lightSource) {
                 for (let i = 0; i < 360; i += levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP) {
                     if (!remove) {
-                        this.castTintAtAngle(i, lightSource.x, lightSource.y, lightSource.r, lightSource.c, lightSource.b); // RGB color in sRGB
+                        this.castTintAtAngle(i, lightSource.x, lightSource.y, lightSource.r, lightSource.c, lightSource.b *
+                            levelConstants_1.LevelConstants.LIGHTING_ANGLE_BRIGHTNESS_COMPENSATION); // RGB color in sRGB
                     }
                     else {
-                        this.unCastTintAtAngle(i, lightSource.x, lightSource.y, lightSource.r, lightSource.c, lightSource.b);
+                        this.unCastTintAtAngle(i, lightSource.x, lightSource.y, lightSource.r, lightSource.c, lightSource.b *
+                            levelConstants_1.LevelConstants.LIGHTING_ANGLE_BRIGHTNESS_COMPENSATION);
                     }
                 }
             }

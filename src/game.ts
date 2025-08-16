@@ -922,6 +922,7 @@ export class Game {
     let enabled = "";
 
     // Handle "new" command with optional seed parameter
+
     if (command.startsWith("new")) {
       if (command.startsWith("new ")) {
         const seedInput = command.slice(4).trim();
@@ -937,6 +938,20 @@ export class Game {
     }
 
     switch (command) {
+      case "lightup":
+        LevelConstants.LIGHTING_ANGLE_STEP += 1;
+        this.pushMessage(
+          `Lighting angle step is now ${LevelConstants.LIGHTING_ANGLE_STEP}`,
+        );
+        break;
+      case "lightdown":
+        if (LevelConstants.LIGHTING_ANGLE_STEP > 1) {
+          LevelConstants.LIGHTING_ANGLE_STEP -= 1;
+        }
+        this.pushMessage(
+          `Lighting angle step is now ${LevelConstants.LIGHTING_ANGLE_STEP}`,
+        );
+        break;
       case "savec": {
         try {
           const { saveToCookies } = require("./game/savePersistence");
@@ -1376,7 +1391,7 @@ export class Game {
       if (this.isMobile) console.log("Mobile detected");
       GameConstants.SHADE_LEVELS = 35;
       GameConstants.isMobile = true;
-      LevelConstants.LIGHTING_ANGLE_STEP = 2;
+      LevelConstants.LIGHTING_ANGLE_STEP = 8;
       LevelConstants.LIGHTING_MAX_DISTANCE = 7;
       GameConstants.USE_WEBGL_BLUR = true;
 

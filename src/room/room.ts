@@ -1552,7 +1552,14 @@ export class Room {
     for (const l of this.lightSources) {
       if (l.shouldUpdate()) {
         for (let i = 0; i < 360; i += LevelConstants.LIGHTING_ANGLE_STEP) {
-          this.castTintAtAngle(i, l.x, l.y, l.r, l.c, l.b); // RGB color in sRGB
+          this.castTintAtAngle(
+            i,
+            l.x,
+            l.y,
+            l.r,
+            l.c,
+            l.b * LevelConstants.LIGHTING_ANGLE_BRIGHTNESS_COMPENSATION,
+          ); // RGB color in sRGB
         }
       }
     }
@@ -1600,7 +1607,8 @@ export class Room {
             */
             LevelConstants.LIGHTING_MAX_DISTANCE,
             lightColor, // RGB color in sRGB
-            lightBrightness, // intensity
+            lightBrightness *
+              LevelConstants.LIGHTING_ANGLE_BRIGHTNESS_COMPENSATION, // intensity
           );
         }
       }
@@ -1651,7 +1659,8 @@ export class Room {
             lightSource.y,
             lightSource.r,
             lightSource.c,
-            lightSource.b,
+            lightSource.b *
+              LevelConstants.LIGHTING_ANGLE_BRIGHTNESS_COMPENSATION,
           ); // RGB color in sRGB
         } else {
           this.unCastTintAtAngle(
@@ -1660,7 +1669,8 @@ export class Room {
             lightSource.y,
             lightSource.r,
             lightSource.c,
-            lightSource.b,
+            lightSource.b *
+              LevelConstants.LIGHTING_ANGLE_BRIGHTNESS_COMPENSATION,
           );
         }
       }
