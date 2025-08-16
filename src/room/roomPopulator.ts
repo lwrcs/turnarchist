@@ -343,12 +343,14 @@ export class Populator {
       const leftOpen = leftWallInfo?.isLeftWall === false;
       const rightOpen = rightWallInfo?.isRightWall === false;
 
+      const bottomWall = doorDir === Direction.DOWN ? true : false;
+
       if (leftOpen) {
-        room.roomArray[x - 1][y] = new WallTorch(room, x - 1, y);
+        room.roomArray[x - 1][y] = new WallTorch(room, x - 1, y, bottomWall);
       }
 
       if (rightOpen) {
-        room.roomArray[x + 1][y] = new WallTorch(room, x + 1, y);
+        room.roomArray[x + 1][y] = new WallTorch(room, x + 1, y, bottomWall);
       }
     }
   }

@@ -1354,6 +1354,7 @@ export class Game {
       /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
     if (isSafari) {
       GameConstants.USE_WEBGL_BLUR = true;
+      GameConstants.SMOOTH_LIGHTING = false;
     }
 
     // Define scale adjustment based on device pixel ratio

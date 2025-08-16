@@ -13516,6 +13516,7 @@ class Game {
             const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
             if (isSafari) {
                 gameConstants_1.GameConstants.USE_WEBGL_BLUR = true;
+                gameConstants_1.GameConstants.SMOOTH_LIGHTING = false;
             }
             // Define scale adjustment based on device pixel ratio
             if (gameConstants_1.GameConstants.SCALE === null) {
@@ -14867,7 +14868,7 @@ GameConstants.SHADE_LAYER_COMPOSITE_OPERATION = "source-over"; //"soft-light";
 // When true, draw shade as sliced tiles inline within drawEntities instead of a single layer
 GameConstants.SHADE_INLINE_IN_ENTITY_LAYER = true;
 GameConstants.USE_OPTIMIZED_SHADING = false;
-GameConstants.SMOOTH_LIGHTING = false;
+GameConstants.SMOOTH_LIGHTING = true;
 GameConstants.ctxBlurEnabled = true;
 GameConstants.BLUR_ENABLED = true;
 GameConstants.USE_WEBGL_BLUR = false;
@@ -35691,11 +35692,12 @@ class Populator {
             const rightTile = room.roomArray[x + 1]?.[y];
             const leftOpen = leftWallInfo?.isLeftWall === false;
             const rightOpen = rightWallInfo?.isRightWall === false;
+            const bottomWall = doorDir === game_2.Direction.DOWN ? true : false;
             if (leftOpen) {
-                room.roomArray[x - 1][y] = new wallTorch_1.WallTorch(room, x - 1, y);
+                room.roomArray[x - 1][y] = new wallTorch_1.WallTorch(room, x - 1, y, bottomWall);
             }
             if (rightOpen) {
-                room.roomArray[x + 1][y] = new wallTorch_1.WallTorch(room, x + 1, y);
+                room.roomArray[x + 1][y] = new wallTorch_1.WallTorch(room, x + 1, y, bottomWall);
             }
         }
     }
