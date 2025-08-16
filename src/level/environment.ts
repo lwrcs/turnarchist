@@ -119,7 +119,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: CrabEnemy, weight: 1.0, minDepth: 0 },
       { class: ZombieEnemy, weight: 1.2, minDepth: 0 },
       { class: SkullEnemy, weight: 1.0, minDepth: 0 },
-      //{ class: SpiderEnemy, weight: 1.0, minDepth: 2 },
+      { class: SpiderEnemy, weight: 1.0, minDepth: 2 },
       { class: MummyEnemy, weight: 1.0, minDepth: 2 },
 
       // Mid game enemies (depth 1+)

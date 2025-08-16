@@ -442,6 +442,26 @@ export class Populator {
     let x = Game.rand(xmin, xmax, rand);
     let y = Game.rand(ymin, ymax, rand);
 
+    let clear = true;
+
+    for (let xx = x - 1; xx < x + w + 1; xx++) {
+      for (let yy = y - 1; yy < y + h + 1; yy++) {
+        const tile = room.roomArray[xx][yy];
+        if (
+          (tile instanceof SpawnFloor && !tile.isSolid()) ||
+          //tile instanceof Wall ||
+          tile instanceof Pool ||
+          tile instanceof Chasm
+        )
+          clear = false;
+      }
+    }
+    if (!clear) {
+      console.warn("no space for " + TileClass.name);
+    } else {
+      console.log("space for " + TileClass.name);
+    }
+    if (!clear) return;
     for (let xx = x - 1; xx < x + w + 1; xx++) {
       for (let yy = y - 1; yy < y + h + 1; yy++) {
         // add a floor border
@@ -1357,8 +1377,8 @@ export class Populator {
       case RoomType.DUNGEON:
         if (factor < 20) room.builder.addWallBlocks(rand);
 
-        if (factor % 4 === 0) this.addChasms(room, rand);
-        if (factor % 3 === 0) this.addPools(room, rand);
+        if (factor < 12) this.addChasms(room, rand);
+        if (factor < 16) this.addPools(room, rand);
 
         this.addTorchesByArea(room);
         if (factor > 15)

@@ -38,8 +38,8 @@ export const enemyMinimumDepth: Record<number, number> = {
   13: 2, // BigKnightEnemy
   14: 2, // FireWizardEnemy
   15: 2, // ArmoredSkullEnemy  16: 2, // ArmoredKnightEnemy
-  16: 0, // SpiderEnemy
-  17: 0, // MummyEnemy
+  16: 2, // SpiderEnemy
+  17: 2, // MummyEnemy
   18: 3, // WardenEnemy
 };
 /*
