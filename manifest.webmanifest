@@ -8,16 +8,18 @@
   "orientation": "landscape",
   "background_color": "#000000",
   "theme_color": "#000000",
+  "id": "com.example.turnarchist",
+  "launch_handler": {
+    "client_mode": "navigate-new"
+  },
+  "title_bar": {
+    "color": "#000000",
+    "style": "default"
+  },
   "icons": [
     {
       "src": "/res/favicon.png",
       "sizes": "64x64",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/apple_touch_icon.png",
-      "sizes": "180x180",
       "type": "image/png",
       "purpose": "any"
     },
@@ -27,6 +29,14 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    },
+
+    {
+      "src": "/res/favicon_hd_2.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
     }
-  ]
+  ],
+  "display_override": ["standalone", "minimal-ui"]
 }
