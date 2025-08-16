@@ -12,10 +12,7 @@
   "launch_handler": {
     "client_mode": "navigate-new"
   },
-  "title_bar": {
-    "color": "#000000",
-    "style": "default"
-  },
+
   "icons": [
     {
       "src": "/res/favicon.png",
@@ -25,18 +22,18 @@
     },
 
     {
-      "src": "/res/favicon_hd_2.png",
+      "src": "/res/favicon_maskable.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
     },
 
     {
-      "src": "/res/favicon_hd_2.png",
+      "src": "/res/favicon_scaled.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     }
   ],
-  "display_override": ["standalone", "minimal-ui"]
+  "display_override": ["window-controls-overlay", "standalone", "browser"]
 }
