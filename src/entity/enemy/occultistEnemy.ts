@@ -173,12 +173,13 @@ export class OccultistEnemy extends Enemy {
         let beam = new BeamEffect(enemy.x, enemy.y, this.x, this.y, enemy);
         beam.compositeOperation = "source-over";
         beam.color = "#2E0854";
-        beam.turbulence = 0.5;
+        // Match runtime beam settings from applyShieldTo so loaded beams look identical
+        beam.turbulence = 0.4;
         beam.gravity = 0.1;
         beam.iterations = 1;
-        beam.segments = 30;
-        beam.angleChange = 0.01;
-        beam.springDamping = 0.1;
+        beam.segments = 100;
+        beam.angleChange = 0.001;
+        beam.springDamping = 0.01;
         beam.drawableY = enemy.drawableY;
         this.room.projectiles.push(beam);
       }

@@ -7647,12 +7647,13 @@ class OccultistEnemy extends enemy_1.Enemy {
                     let beam = new beamEffect_1.BeamEffect(enemy.x, enemy.y, this.x, this.y, enemy);
                     beam.compositeOperation = "source-over";
                     beam.color = "#2E0854";
-                    beam.turbulence = 0.5;
+                    // Match runtime beam settings from applyShieldTo so loaded beams look identical
+                    beam.turbulence = 0.4;
                     beam.gravity = 0.1;
                     beam.iterations = 1;
-                    beam.segments = 30;
-                    beam.angleChange = 0.01;
-                    beam.springDamping = 0.1;
+                    beam.segments = 100;
+                    beam.angleChange = 0.001;
+                    beam.springDamping = 0.01;
                     beam.drawableY = enemy.drawableY;
                     this.room.projectiles.push(beam);
                 }
@@ -9858,8 +9859,10 @@ class Entity extends drawable_1.Drawable {
                 this.shield = new enemyShield_1.EnemyShield(this, this.x, this.y, shieldHealth);
                 this.shielded = true;
                 this.shieldedBefore = true;
-                this.health += shieldHealth;
-                this.maxHealth = this.defaultMaxHealth + shieldHealth;
+                if (!loading) {
+                    this.health += shieldHealth;
+                    this.maxHealth = this.defaultMaxHealth + shieldHealth;
+                }
                 this.shadeColor = "purple";
                 this.shadeMultiplier = 0.5;
                 this.hasBloom = true;
@@ -10019,7 +10022,7 @@ class Entity extends drawable_1.Drawable {
             if (this.armored && this.health === this.defaultMaxHealth)
                 sound_1.Sound.playParry();
             this.health -= damage;
-            this.maxHealth -= shieldHealth;
+            //this.maxHealth -= shieldHealth;
             this.onHurt(damage, type);
             this.startHurting();
             if (this.hasDamageNumbers)
@@ -15252,9 +15255,9 @@ var ProjectileType;
 (function (ProjectileType) {
     ProjectileType[ProjectileType["SPAWN"] = 0] = "SPAWN";
     ProjectileType[ProjectileType["WIZARD"] = 1] = "WIZARD";
-    ProjectileType[ProjectileType["ENEMY_SHIELD"] = 2] = "ENEMY_SHIELD";
 })(ProjectileType = exports.ProjectileType || (exports.ProjectileType = {}));
 class ProjectileState {
+    // enemy shields are not persisted anymore
     constructor(projectile, game) {
         this.x = projectile.x;
         this.y = projectile.y;
@@ -15272,14 +15275,6 @@ class ProjectileState {
             this.roomGID = projectile.parent.room?.globalId;
             this.wizardParentID = projectile.parent.room.entities.indexOf(projectile.parent);
             this.wizardParentGID = projectile.parent.globalId;
-        }
-        if (projectile instanceof enemyShield_1.EnemyShield) {
-            this.type = ProjectileType.ENEMY_SHIELD;
-            this.roomID = game.rooms.indexOf(projectile.parent.room);
-            this.roomGID = projectile.parent.room?.globalId;
-            this.enemyShieldParentID = projectile.parent.room.entities.indexOf(projectile.parent);
-            this.enemyShieldParentGID = projectile.parent.globalId;
-            this.enemyShieldHealth = projectile.health;
         }
     }
 }
@@ -15299,20 +15294,6 @@ let loadProjectile = (ps, game) => {
             : wizardRoom.entities[ps.wizardParentID];
         let p = new wizardFireball_1.WizardFireball(wizard, ps.x, ps.y);
         p.state = ps.wizardState;
-        return p;
-    }
-    if (ps.type === ProjectileType.ENEMY_SHIELD) {
-        let enemyShieldRoom = (ps.roomGID && game.roomsById?.get(ps.roomGID)) || game.rooms[ps.roomID];
-        let enemyShield = ps.enemyShieldParentGID
-            ? enemyShieldRoom.entities.find((e) => e.globalId === ps.enemyShieldParentGID)
-            : enemyShieldRoom.entities[ps.enemyShieldParentID];
-        // Guard parent resolution; skip if not found (occultist may recreate later)
-        if (!enemyShield) {
-            return null;
-        }
-        let p = new enemyShield_1.EnemyShield(enemyShield, ps.x, ps.y, typeof ps.enemyShieldHealth === "number" ? ps.enemyShieldHealth : 1, false);
-        if (p)
-            p.dead = ps.dead;
         return p;
     }
 };
@@ -15373,6 +15354,13 @@ class EnemyState {
         this.y = enemy.y;
         this.health = enemy.health;
         this.maxHealth = enemy.maxHealth;
+        // Persist shield state on the enemy rather than saving EnemyShield projectile
+        try {
+            this.isShielded = enemy.shielded === true;
+            this.shieldHealth = enemy.shield?.health ?? undefined;
+        }
+        catch { }
+        this.shieldedBefore = enemy.shieldedBefore;
         this.unconscious = enemy.unconscious;
         this.direction = enemy.direction;
         this.dead = enemy.dead;
@@ -15757,6 +15745,17 @@ let loadEnemy = (es, game) => {
     enemy.y = es.y;
     enemy.health = es.health;
     enemy.maxHealth = es.maxHealth;
+    enemy.shieldedBefore = es.shieldedBefore;
+    // Rebuild shields if needed
+    try {
+        if (es.isShielded) {
+            const sh = es.shieldHealth ?? 1;
+            if (!enemy.shielded) {
+                enemy.applyShield(sh, true);
+            }
+        }
+    }
+    catch { }
     enemy.unconscious = es.unconscious;
     enemy.direction = es.direction;
     enemy.dead = es.dead;
@@ -15806,8 +15805,11 @@ class RoomState {
                 this.items.push(new ItemState(item, game));
             }
         }
-        for (const projectile of room.projectiles)
+        for (const projectile of room.projectiles) {
+            if (projectile instanceof enemyShield_1.EnemyShield)
+                continue; // do not save shields
             this.projectiles.push(new ProjectileState(projectile, game));
+        }
         for (const hw of room.hitwarnings)
             this.hitwarnings.push(new HitWarningState(hw));
     }
@@ -15955,16 +15957,38 @@ let loadRoom = (room, roomState, game) => {
     }
     for (const hw of roomState.hitwarnings)
         room.hitwarnings.push(loadHitWarning(hw, game));
-    // After entities and projectiles are in place, let occultists recreate beams for shielded allies
+    // After entities and projectiles are in place, recreate occultist beams without duplicates/self-beams
     try {
-        const roomOccultists = room.entities.filter((e) => e instanceof occultistEnemy_1.OccultistEnemy);
-        for (const oc of roomOccultists) {
-            const shieldedAllies = room.entities.filter((e) => e instanceof enemy_1.Enemy && e.shielded && !e.dead);
-            // Track internally for color/shade changes
-            oc.shieldedEnemies = shieldedAllies.slice();
-            // Recreate visual beams only (EnemyShield already loaded handled parent flags/lights)
-            if (oc.createBeam) {
-                oc.createBeam(shieldedAllies);
+        const occultists = room.entities.filter((e) => e instanceof occultistEnemy_1.OccultistEnemy);
+        const shielded = room.entities.filter((e) => e instanceof enemy_1.Enemy && e.shielded && !e.dead);
+        // Clear prior lists
+        for (const oc of occultists)
+            oc.shieldedEnemies = [];
+        // Assign each shielded enemy to its nearest other occultist (if any)
+        const assignments = new Map();
+        for (const s of shielded) {
+            let nearest = null;
+            let best = Number.POSITIVE_INFINITY;
+            for (const oc of occultists) {
+                if (oc === s)
+                    continue; // no self-beam
+                const dist = Math.max(Math.abs(oc.x - s.x), Math.abs(oc.y - s.y));
+                if (dist < best) {
+                    best = dist;
+                    nearest = oc;
+                }
+            }
+            if (nearest) {
+                const arr = assignments.get(nearest) || [];
+                arr.push(s);
+                assignments.set(nearest, arr);
+            }
+        }
+        // Create beams per occultist for its assigned shielded allies, and set shieldedEnemies
+        for (const [oc, allies] of assignments.entries()) {
+            oc.shieldedEnemies = allies.slice();
+            if (oc.createBeam && allies.length) {
+                oc.createBeam(allies);
             }
         }
     }

@@ -324,8 +324,10 @@ export class Entity extends Drawable {
       this.shield = new EnemyShield(this, this.x, this.y, shieldHealth);
       this.shielded = true;
       this.shieldedBefore = true;
-      this.health += shieldHealth;
-      this.maxHealth = this.defaultMaxHealth + shieldHealth;
+      if (!loading) {
+        this.health += shieldHealth;
+        this.maxHealth = this.defaultMaxHealth + shieldHealth;
+      }
 
       this.shadeColor = "purple";
       this.shadeMultiplier = 0.5;
@@ -526,7 +528,7 @@ export class Entity extends Drawable {
       Sound.playParry();
 
     this.health -= damage;
-    this.maxHealth -= shieldHealth;
+    //this.maxHealth -= shieldHealth;
     this.onHurt(damage, type);
 
     this.startHurting();

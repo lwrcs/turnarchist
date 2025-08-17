@@ -166,7 +166,6 @@ let loadHitWarning = (hws: HitWarningState, game: Game): HitWarning => {
 export enum ProjectileType {
   SPAWN,
   WIZARD,
-  ENEMY_SHIELD,
 }
 
 export class ProjectileState {
@@ -180,9 +179,7 @@ export class ProjectileState {
   wizardState: number;
   wizardParentID: number;
   wizardParentGID?: string;
-  enemyShieldParentID: number;
-  enemyShieldParentGID?: string;
-  enemyShieldHealth?: number;
+  // enemy shields are not persisted anymore
 
   constructor(projectile: Projectile, game: Game) {
     this.x = projectile.x;
@@ -203,16 +200,6 @@ export class ProjectileState {
         projectile.parent,
       );
       this.wizardParentGID = (projectile.parent as any).globalId;
-    }
-    if (projectile instanceof EnemyShield) {
-      this.type = ProjectileType.ENEMY_SHIELD;
-      this.roomID = game.rooms.indexOf(projectile.parent.room);
-      this.roomGID = projectile.parent.room?.globalId;
-      this.enemyShieldParentID = projectile.parent.room.entities.indexOf(
-        projectile.parent,
-      );
-      this.enemyShieldParentGID = (projectile.parent as any).globalId;
-      this.enemyShieldHealth = (projectile as any).health;
     }
   }
 }
@@ -236,28 +223,6 @@ let loadProjectile = (ps: ProjectileState, game: Game): Projectile => {
       : (wizardRoom.entities[ps.wizardParentID] as EnergyWizardEnemy);
     let p = new WizardFireball(wizard, ps.x, ps.y);
     p.state = ps.wizardState;
-    return p;
-  }
-  if (ps.type === ProjectileType.ENEMY_SHIELD) {
-    let enemyShieldRoom =
-      (ps.roomGID && game.roomsById?.get(ps.roomGID)) || game.rooms[ps.roomID];
-    let enemyShield = ps.enemyShieldParentGID
-      ? (enemyShieldRoom.entities.find(
-          (e) => (e as any).globalId === ps.enemyShieldParentGID,
-        ) as Enemy)
-      : (enemyShieldRoom.entities[ps.enemyShieldParentID] as Enemy);
-    // Guard parent resolution; skip if not found (occultist may recreate later)
-    if (!enemyShield) {
-      return null as any;
-    }
-    let p = new EnemyShield(
-      enemyShield,
-      ps.x,
-      ps.y,
-      typeof ps.enemyShieldHealth === "number" ? ps.enemyShieldHealth : 1,
-      false,
-    );
-    if (p) p.dead = ps.dead;
     return p;
   }
 };
@@ -319,6 +284,9 @@ export class EnemyState {
   y: number;
   health: number;
   maxHealth: number;
+  isShielded?: boolean;
+  shieldHealth?: number;
+  shieldedBefore?: boolean;
   unconscious: boolean;
   direction: Direction;
   dead: boolean;
@@ -358,6 +326,12 @@ export class EnemyState {
     this.y = enemy.y;
     this.health = enemy.health;
     this.maxHealth = enemy.maxHealth;
+    // Persist shield state on the enemy rather than saving EnemyShield projectile
+    try {
+      this.isShielded = (enemy as any).shielded === true;
+      this.shieldHealth = (enemy as any).shield?.health ?? undefined;
+    } catch {}
+    this.shieldedBefore = (enemy as any).shieldedBefore;
     this.unconscious = (enemy as Enemy).unconscious;
     this.direction = enemy.direction;
     this.dead = enemy.dead;
@@ -731,6 +705,16 @@ let loadEnemy = (es: EnemyState, game: Game): Entity => {
   enemy.y = es.y;
   enemy.health = es.health;
   enemy.maxHealth = es.maxHealth;
+  (enemy as any).shieldedBefore = es.shieldedBefore;
+  // Rebuild shields if needed
+  try {
+    if ((es as any).isShielded) {
+      const sh = (es as any).shieldHealth ?? 1;
+      if (!(enemy as any).shielded) {
+        (enemy as any).applyShield(sh, true);
+      }
+    }
+  } catch {}
   (enemy as Enemy).unconscious = es.unconscious;
   enemy.direction = es.direction;
   enemy.dead = es.dead;
@@ -798,8 +782,10 @@ export class RoomState {
         this.items.push(new ItemState(item, game));
       }
     }
-    for (const projectile of room.projectiles)
+    for (const projectile of room.projectiles) {
+      if (projectile instanceof EnemyShield) continue; // do not save shields
       this.projectiles.push(new ProjectileState(projectile, game));
+    }
     for (const hw of room.hitwarnings)
       this.hitwarnings.push(new HitWarningState(hw));
   }
@@ -954,20 +940,43 @@ let loadRoom = (room: Room, roomState: RoomState, game: Game) => {
   for (const hw of roomState.hitwarnings)
     room.hitwarnings.push(loadHitWarning(hw, game));
 
-  // After entities and projectiles are in place, let occultists recreate beams for shielded allies
+  // After entities and projectiles are in place, recreate occultist beams without duplicates/self-beams
   try {
-    const roomOccultists = room.entities.filter(
+    const occultists = room.entities.filter(
       (e) => e instanceof OccultistEnemy,
     ) as OccultistEnemy[];
-    for (const oc of roomOccultists) {
-      const shieldedAllies = room.entities.filter(
-        (e) => e instanceof Enemy && (e as Enemy).shielded && !e.dead,
-      ) as Enemy[];
-      // Track internally for color/shade changes
-      (oc as any).shieldedEnemies = shieldedAllies.slice();
-      // Recreate visual beams only (EnemyShield already loaded handled parent flags/lights)
-      if ((oc as any).createBeam) {
-        (oc as any).createBeam(shieldedAllies);
+    const shielded = room.entities.filter(
+      (e) => e instanceof Enemy && (e as Enemy).shielded && !e.dead,
+    ) as Enemy[];
+
+    // Clear prior lists
+    for (const oc of occultists) (oc as any).shieldedEnemies = [];
+
+    // Assign each shielded enemy to its nearest other occultist (if any)
+    const assignments = new Map<OccultistEnemy, Enemy[]>();
+    for (const s of shielded) {
+      let nearest: OccultistEnemy | null = null;
+      let best = Number.POSITIVE_INFINITY;
+      for (const oc of occultists) {
+        if (oc === (s as any)) continue; // no self-beam
+        const dist = Math.max(Math.abs(oc.x - s.x), Math.abs(oc.y - s.y));
+        if (dist < best) {
+          best = dist;
+          nearest = oc;
+        }
+      }
+      if (nearest) {
+        const arr = assignments.get(nearest) || [];
+        arr.push(s);
+        assignments.set(nearest, arr);
+      }
+    }
+
+    // Create beams per occultist for its assigned shielded allies, and set shieldedEnemies
+    for (const [oc, allies] of assignments.entries()) {
+      (oc as any).shieldedEnemies = allies.slice();
+      if ((oc as any).createBeam && allies.length) {
+        (oc as any).createBeam(allies);
       }
     }
   } catch {}
