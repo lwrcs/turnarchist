@@ -1566,5 +1566,7 @@ export class Populator {
 
     // Create and add the VendingMachine
     this.addVendingMachine(room, Random.rand, x, y, item);
+
+    room.roomArray[x][y] = selectedWall;
   }
 }

@@ -1459,7 +1459,7 @@ export class Room {
     });
 
     this.doors.forEach((d) => {
-      d.lightSource.b = 0.1;
+      d.lightSource.b = 0;
     });
 
     for (const d of linkedDoors) {

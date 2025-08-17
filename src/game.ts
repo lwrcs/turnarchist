@@ -1025,9 +1025,9 @@ export class Game {
         this.onResize();
         break;
       case "shd":
-        GameConstants.SHADE_ENABLED = !GameConstants.SHADE_ENABLED;
-        enabled = GameConstants.SHADE_ENABLED ? "enabled" : "disabled";
-        this.pushMessage(`Shade is now ${enabled}`);
+        //GameConstants.SHADE_ENABLED = !GameConstants.SHADE_ENABLED;
+        //enabled = GameConstants.SHADE_ENABLED ? "enabled" : "disabled";
+        //this.pushMessage(`Shade is now ${enabled}`);
         break;
       case "shdop":
         GameConstants.SET_SHADE_LAYER_COMPOSITE_OPERATION(false);

@@ -51,7 +51,7 @@ export class GameConstants {
   static readonly FPS = 120;
   static readonly ALPHA_ENABLED = true;
   static SHADE_LEVELS = 50; //25
-  static ENTITY_SHADE_LEVELS = 25; //10
+  static ENTITY_SHADE_LEVELS = 40; //10
 
   static readonly TILESIZE = 16;
   static SCALE = null;
@@ -99,7 +99,9 @@ export class GameConstants {
   static readonly MISS_COLOR = "#639bff";
 
   static CUSTOM_SHADER_COLOR_ENABLED = false;
-  static SHADE_ENABLED = true;
+  static get SHADE_ENABLED() {
+    return GameConstants.SMOOTH_LIGHTING;
+  }
   static COLOR_LAYER_COMPOSITE_OPERATION = "soft-light"; //"soft-light";
   static SHADE_LAYER_COMPOSITE_OPERATION = "source-over"; //"soft-light";
   // When true, draw shade as sliced tiles inline within drawEntities instead of a single layer

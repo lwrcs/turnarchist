@@ -34,7 +34,7 @@ export const loadSettings = (game: Game) => {
     if (typeof s.softScale === "number") {
       (GameConstants as any).SOFT_SCALE = s.softScale;
     }
-    if (typeof s.shade === "boolean") GameConstants.SHADE_ENABLED = s.shade;
+    //if (typeof s.shade === "boolean") GameConstants.SHADE_ENABLED = s.shade;
     if (typeof s.smoothLighting === "boolean")
       GameConstants.SMOOTH_LIGHTING = s.smoothLighting;
   } catch (e) {

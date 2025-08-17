@@ -13305,9 +13305,9 @@ class Game {
                     this.onResize();
                     break;
                 case "shd":
-                    gameConstants_1.GameConstants.SHADE_ENABLED = !gameConstants_1.GameConstants.SHADE_ENABLED;
-                    enabled = gameConstants_1.GameConstants.SHADE_ENABLED ? "enabled" : "disabled";
-                    this.pushMessage(`Shade is now ${enabled}`);
+                    //GameConstants.SHADE_ENABLED = !GameConstants.SHADE_ENABLED;
+                    //enabled = GameConstants.SHADE_ENABLED ? "enabled" : "disabled";
+                    //this.pushMessage(`Shade is now ${enabled}`);
                     break;
                 case "shdop":
                     gameConstants_1.GameConstants.SET_SHADE_LAYER_COMPOSITE_OPERATION(false);
@@ -14823,6 +14823,9 @@ const sword_1 = __webpack_require__(/*! ../item/weapon/sword */ "./src/item/weap
 const orangegem_1 = __webpack_require__(/*! ../item/resource/orangegem */ "./src/item/resource/orangegem.ts");
 const goldRing_1 = __webpack_require__(/*! ../item/jewelry/goldRing */ "./src/item/jewelry/goldRing.ts");
 class GameConstants {
+    static get SHADE_ENABLED() {
+        return GameConstants.SMOOTH_LIGHTING;
+    }
 }
 exports.GameConstants = GameConstants;
 GameConstants.VERSION = "v1.1.0"; //"v0.6.3";
@@ -14833,7 +14836,7 @@ GameConstants.CAMERA_SPEED = 1; // 1 is instant 0.1 is slow
 GameConstants.FPS = 120;
 GameConstants.ALPHA_ENABLED = true;
 GameConstants.SHADE_LEVELS = 50; //25
-GameConstants.ENTITY_SHADE_LEVELS = 25; //10
+GameConstants.ENTITY_SHADE_LEVELS = 40; //10
 GameConstants.TILESIZE = 16;
 GameConstants.SCALE = null;
 GameConstants.SOFT_SCALE = 6;
@@ -14872,7 +14875,6 @@ GameConstants.HIT_ENEMY_TEXT_COLOR = "#76428a";
 GameConstants.HEALTH_BUFF_COLOR = "#d77bba";
 GameConstants.MISS_COLOR = "#639bff";
 GameConstants.CUSTOM_SHADER_COLOR_ENABLED = false;
-GameConstants.SHADE_ENABLED = true;
 GameConstants.COLOR_LAYER_COMPOSITE_OPERATION = "soft-light"; //"soft-light";
 GameConstants.SHADE_LAYER_COMPOSITE_OPERATION = "source-over"; //"soft-light";
 // When true, draw shade as sliced tiles inline within drawEntities instead of a single layer
@@ -17987,8 +17989,7 @@ const loadSettings = (game) => {
         if (typeof s.softScale === "number") {
             gameConstants_1.GameConstants.SOFT_SCALE = s.softScale;
         }
-        if (typeof s.shade === "boolean")
-            gameConstants_1.GameConstants.SHADE_ENABLED = s.shade;
+        //if (typeof s.shade === "boolean") GameConstants.SHADE_ENABLED = s.shade;
         if (typeof s.smoothLighting === "boolean")
             gameConstants_1.GameConstants.SMOOTH_LIGHTING = s.smoothLighting;
     }
@@ -32625,7 +32626,7 @@ class Room {
                     linkedDoors.push(d.linkedDoor);
             });
             this.doors.forEach((d) => {
-                d.lightSource.b = 0.1;
+                d.lightSource.b = 0;
             });
             for (const d of linkedDoors) {
                 const srcDoor = d.linkedDoor; // door on this room's side
@@ -36362,6 +36363,7 @@ class Populator {
         const { x, y } = removedWallInfo;
         // Create and add the VendingMachine
         this.addVendingMachine(room, random_1.Random.rand, x, y, item);
+        room.roomArray[x][y] = selectedWall;
     }
 }
 exports.Populator = Populator;
