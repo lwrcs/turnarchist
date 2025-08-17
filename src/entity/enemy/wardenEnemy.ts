@@ -38,6 +38,7 @@ export class WardenEnemy extends Enemy {
     this.frame = 0;
     this.health = 4;
     this.maxHealth = 4;
+    this.defaultMaxHealth = 4;
     this.tileX = 43;
     this.tileY = 10;
     this.seenPlayer = false;

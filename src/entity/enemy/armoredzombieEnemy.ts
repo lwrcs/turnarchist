@@ -25,6 +25,7 @@ export class ArmoredzombieEnemy extends Enemy {
     this.frame = 0;
     this.health = 2;
     this.maxHealth = 2;
+    this.defaultMaxHealth = 2;
     this.tileX = 17;
     this.tileY = 8;
     this.seenPlayer = false;

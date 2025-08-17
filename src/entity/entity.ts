@@ -76,6 +76,7 @@ export class Entity extends Drawable {
   game: Game;
   health: number;
   maxHealth: number;
+  defaultMaxHealth: number;
   protected tileX: number;
   protected tileY: number;
   protected hasShadow: boolean;
@@ -175,6 +176,7 @@ export class Entity extends Drawable {
     this.drawY = 0;
     this.health = 1;
     this.maxHealth = 1;
+    this.defaultMaxHealth = 1;
     this.tileX = 0;
     this.tileY = 0;
     this.hasShadow = true;
@@ -317,13 +319,14 @@ export class Entity extends Drawable {
     return this._imageParticleTiles;
   }
 
-  applyShield = (shieldHealth: number = 1) => {
-    if (!this.shieldedBefore) {
+  applyShield = (shieldHealth: number = 1, loading: boolean = false) => {
+    if (!this.shieldedBefore || loading) {
       this.shield = new EnemyShield(this, this.x, this.y, shieldHealth);
       this.shielded = true;
       this.shieldedBefore = true;
       this.health += shieldHealth;
-      this.maxHealth += shieldHealth;
+      this.maxHealth = this.defaultMaxHealth + shieldHealth;
+
       this.shadeColor = "purple";
       this.shadeMultiplier = 0.5;
       this.hasBloom = true;
@@ -519,7 +522,8 @@ export class Entity extends Drawable {
     }, 100);
     */
 
-    if (this.armored && this.health === this.maxHealth) Sound.playParry();
+    if (this.armored && this.health === this.defaultMaxHealth)
+      Sound.playParry();
 
     this.health -= damage;
     this.maxHealth -= shieldHealth;

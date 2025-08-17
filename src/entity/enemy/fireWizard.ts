@@ -26,6 +26,8 @@ export class FireWizardEnemy extends WizardEnemy {
     super(room, game, x, y);
     this.ticks = 0;
     this.health = 1;
+    this.maxHealth = 1;
+    this.defaultMaxHealth = 1;
     this.tileX = 35;
     this.tileY = 8;
     this.frame = 0;

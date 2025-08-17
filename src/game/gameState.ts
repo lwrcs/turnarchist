@@ -143,6 +143,7 @@ import { Puddle } from "../tile/decorations/puddle";
 import { Decoration } from "../tile/decorations/decoration";
 import { IdGenerator } from "../globalStateManager/IdGenerator";
 import { WardenEnemy } from "../entity/enemy/wardenEnemy";
+import { EnemyShield } from "../projectile/enemyShield";
 
 export class HitWarningState {
   x: number;
@@ -165,6 +166,7 @@ let loadHitWarning = (hws: HitWarningState, game: Game): HitWarning => {
 export enum ProjectileType {
   SPAWN,
   WIZARD,
+  ENEMY_SHIELD,
 }
 
 export class ProjectileState {
@@ -178,6 +180,9 @@ export class ProjectileState {
   wizardState: number;
   wizardParentID: number;
   wizardParentGID?: string;
+  enemyShieldParentID: number;
+  enemyShieldParentGID?: string;
+  enemyShieldHealth?: number;
 
   constructor(projectile: Projectile, game: Game) {
     this.x = projectile.x;
@@ -198,6 +203,16 @@ export class ProjectileState {
         projectile.parent,
       );
       this.wizardParentGID = (projectile.parent as any).globalId;
+    }
+    if (projectile instanceof EnemyShield) {
+      this.type = ProjectileType.ENEMY_SHIELD;
+      this.roomID = game.rooms.indexOf(projectile.parent.room);
+      this.roomGID = projectile.parent.room?.globalId;
+      this.enemyShieldParentID = projectile.parent.room.entities.indexOf(
+        projectile.parent,
+      );
+      this.enemyShieldParentGID = (projectile.parent as any).globalId;
+      this.enemyShieldHealth = (projectile as any).health;
     }
   }
 }
@@ -221,6 +236,28 @@ let loadProjectile = (ps: ProjectileState, game: Game): Projectile => {
       : (wizardRoom.entities[ps.wizardParentID] as EnergyWizardEnemy);
     let p = new WizardFireball(wizard, ps.x, ps.y);
     p.state = ps.wizardState;
+    return p;
+  }
+  if (ps.type === ProjectileType.ENEMY_SHIELD) {
+    let enemyShieldRoom =
+      (ps.roomGID && game.roomsById?.get(ps.roomGID)) || game.rooms[ps.roomID];
+    let enemyShield = ps.enemyShieldParentGID
+      ? (enemyShieldRoom.entities.find(
+          (e) => (e as any).globalId === ps.enemyShieldParentGID,
+        ) as Enemy)
+      : (enemyShieldRoom.entities[ps.enemyShieldParentID] as Enemy);
+    // Guard parent resolution; skip if not found (occultist may recreate later)
+    if (!enemyShield) {
+      return null as any;
+    }
+    let p = new EnemyShield(
+      enemyShield,
+      ps.x,
+      ps.y,
+      typeof ps.enemyShieldHealth === "number" ? ps.enemyShieldHealth : 1,
+      false,
+    );
+    if (p) p.dead = ps.dead;
     return p;
   }
 };
@@ -484,6 +521,7 @@ export class EnemyState {
     if (enemy instanceof MummyEnemy) this.type = EnemyType.MUMMY;
     if (enemy instanceof OccultistEnemy) {
       this.type = EnemyType.OCCULTIST;
+      // No extra data needed; beams/shields handled at projectile level
     }
     if (enemy instanceof QueenEnemy) this.type = EnemyType.QUEEN;
     if (enemy instanceof RookEnemy) this.type = EnemyType.ROOK;
@@ -864,8 +902,15 @@ let loadRoom = (room: Room, roomState: RoomState, game: Game) => {
   room.items = [];
   room.projectiles = [];
   room.hitwarnings = [];
-  for (const enemy of roomState.enemies)
-    room.entities.push(loadEnemy(enemy, game));
+  // Defer Occultist loading until after other entities so shields can reattach reliably
+  const nonOccultists = roomState.enemies.filter(
+    (es) => es.type !== EnemyType.OCCULTIST,
+  );
+  const occultists = roomState.enemies.filter(
+    (es) => es.type === EnemyType.OCCULTIST,
+  );
+  for (const enemy of nonOccultists) room.entities.push(loadEnemy(enemy, game));
+  for (const enemy of occultists) room.entities.push(loadEnemy(enemy, game));
   for (const item of roomState.items) {
     if (item) {
       room.items.push(loadItem(item, game, undefined, room));
@@ -900,10 +945,32 @@ let loadRoom = (room: Room, roomState: RoomState, game: Game) => {
       }
     }
   } catch {}
-  for (const projectile of roomState.projectiles)
-    room.projectiles.push(loadProjectile(projectile, game));
+  for (const projectile of roomState.projectiles) {
+    const loaded = loadProjectile(projectile, game);
+    if (loaded && !(loaded as any).dead) {
+      room.projectiles.push(loaded);
+    }
+  }
   for (const hw of roomState.hitwarnings)
     room.hitwarnings.push(loadHitWarning(hw, game));
+
+  // After entities and projectiles are in place, let occultists recreate beams for shielded allies
+  try {
+    const roomOccultists = room.entities.filter(
+      (e) => e instanceof OccultistEnemy,
+    ) as OccultistEnemy[];
+    for (const oc of roomOccultists) {
+      const shieldedAllies = room.entities.filter(
+        (e) => e instanceof Enemy && (e as Enemy).shielded && !e.dead,
+      ) as Enemy[];
+      // Track internally for color/shade changes
+      (oc as any).shieldedEnemies = shieldedAllies.slice();
+      // Recreate visual beams only (EnemyShield already loaded handled parent flags/lights)
+      if ((oc as any).createBeam) {
+        (oc as any).createBeam(shieldedAllies);
+      }
+    }
+  } catch {}
 
   // Reset lighting state to prevent recursion issues
   room.calculateWallInfo();

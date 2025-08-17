@@ -1343,12 +1343,12 @@ export class Room {
   };
 
   clearDeadStuff = () => {
-    this.deadEntities = this.deadEntities.filter((e) => !e.dead);
-    this.entities = this.entities.filter((e) => !e.dead);
-    this.projectiles = this.projectiles.filter((p) => !p.dead);
-    this.lightSources = this.lightSources.filter((ls) => !ls.dead);
-    this.hitwarnings = this.hitwarnings.filter((h) => !h.dead);
-    this.particles = this.particles.filter((p) => !p.dead);
+    this.deadEntities = this.deadEntities.filter((e) => e && !e.dead);
+    this.entities = this.entities.filter((e) => e && !e.dead);
+    this.projectiles = this.projectiles.filter((p) => p && !p.dead);
+    this.lightSources = this.lightSources.filter((ls) => ls && !ls.dead);
+    this.hitwarnings = this.hitwarnings.filter((h) => h && !h.dead);
+    this.particles = this.particles.filter((p) => p && !p.dead);
   };
 
   catchUp = () => {
@@ -1505,7 +1505,7 @@ export class Room {
     this.invalidateBlurCache();
 
     // Start timing the initial setup
-    console.time("updateLighting: Initial Setup");
+    //console.time("updateLighting: Initial Setup");
     this.updateDoorLightSources();
 
     let oldVis = [];

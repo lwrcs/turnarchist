@@ -35,6 +35,7 @@ export class ZombieEnemy extends Enemy {
     this.frame = 0;
     this.health = 1;
     this.maxHealth = 1;
+    this.defaultMaxHealth = 1;
     this.tileX = 17;
     this.tileY = 8;
     this.seenPlayer = false;

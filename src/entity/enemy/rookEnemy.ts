@@ -24,6 +24,7 @@ export class RookEnemy extends Enemy {
     this.frame = 0;
     this.health = 2;
     this.maxHealth = 2;
+    this.defaultMaxHealth = 2;
     this.tileX = 23 + 28;
     this.tileY = 8;
     this.seenPlayer = false;

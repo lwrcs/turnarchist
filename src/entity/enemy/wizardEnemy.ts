@@ -32,6 +32,8 @@ export abstract class WizardEnemy extends Enemy {
     super(room, game, x, y);
     this.ticks = 0;
     this.health = 1;
+    this.maxHealth = 1;
+    this.defaultMaxHealth = 1;
     this.tileX = 6;
     this.tileY = 0;
     this.frame = 0;

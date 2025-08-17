@@ -28,6 +28,7 @@ export class GlowBugEnemy extends Entity {
     this.frame = 0;
     this.health = 1;
     this.maxHealth = 1;
+    this.defaultMaxHealth = 1;
     this.tileX = 8;
     this.tileY = 0;
     this.seenPlayer = false;

@@ -188,11 +188,12 @@ export class OccultistEnemy extends Enemy {
   updateBeam = (delta: number) => {
     for (let beam of this.room.projectiles) {
       if (beam instanceof BeamEffect) {
+        if (!beam.parent) continue;
         beam.setTarget(
           this.x - this.drawX,
           this.y - this.drawY,
-          beam.parent.x - beam.parent.drawX,
-          beam.parent.y - beam.parent.drawY,
+          (beam.parent as any).x - (beam.parent as any).drawX,
+          (beam.parent as any).y - (beam.parent as any).drawY,
         );
         beam.drawableY = beam.parent.drawableY;
 

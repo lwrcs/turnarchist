@@ -37,6 +37,7 @@ export class ChargeEnemy extends Enemy {
     this.frame = 0;
     this.health = 1;
     this.maxHealth = 1;
+    this.defaultMaxHealth = 1;
     this.tileX = 13;
     this.tileY = 8;
     this.trailFrame = 0;

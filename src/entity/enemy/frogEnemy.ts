@@ -33,6 +33,7 @@ export class FrogEnemy extends Enemy {
     this.frame = 0;
     this.health = 1;
     this.maxHealth = 1;
+    this.defaultMaxHealth = 1;
     this.tileX = 12;
     this.tileY = 16;
     this.seenPlayer = false;

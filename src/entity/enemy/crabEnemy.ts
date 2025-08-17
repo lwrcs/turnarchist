@@ -25,6 +25,7 @@ export class CrabEnemy extends Enemy {
     this.frame = 0;
     this.health = 1;
     this.maxHealth = 1;
+    this.defaultMaxHealth = 1;
     this.tileX = 8;
     this.tileY = 4;
     this.seenPlayer = false;

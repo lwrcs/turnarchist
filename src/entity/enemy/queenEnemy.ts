@@ -23,6 +23,7 @@ export class QueenEnemy extends Enemy {
     this.frame = 0;
     this.health = 2;
     this.maxHealth = 2;
+    this.defaultMaxHealth = 2;
     this.tileX = 23;
     this.tileY = 10;
     this.seenPlayer = false;

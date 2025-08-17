@@ -29,6 +29,7 @@ export class ArmoredSkullEnemy extends Enemy {
     this.frame = 0;
     this.health = 3;
     this.maxHealth = 3;
+    this.defaultMaxHealth = 3;
     this.tileX = 17;
     this.tileY = 16;
     this.seenPlayer = false;

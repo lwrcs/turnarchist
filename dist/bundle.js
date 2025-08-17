@@ -3903,6 +3903,7 @@ class ArmoredSkullEnemy extends enemy_1.Enemy {
         this.frame = 0;
         this.health = 3;
         this.maxHealth = 3;
+        this.defaultMaxHealth = 3;
         this.tileX = 17;
         this.tileY = 16;
         this.seenPlayer = false;
@@ -4130,6 +4131,7 @@ class ArmoredzombieEnemy extends enemy_1.Enemy {
         this.frame = 0;
         this.health = 2;
         this.maxHealth = 2;
+        this.defaultMaxHealth = 2;
         this.tileX = 17;
         this.tileY = 8;
         this.seenPlayer = false;
@@ -4361,6 +4363,7 @@ class BigKnightEnemy extends enemy_1.Enemy {
         this.frame = 0;
         this.health = 4;
         this.maxHealth = 4;
+        this.defaultMaxHealth = 4;
         this.tileX = 29;
         this.tileY = 0;
         this.seenPlayer = false;
@@ -4723,6 +4726,7 @@ class BigSkullEnemy extends enemy_1.Enemy {
         this.frame = 0;
         this.health = 4;
         this.maxHealth = 4;
+        this.defaultMaxHealth = 4;
         this.tileX = 21;
         this.tileY = 0;
         this.seenPlayer = false;
@@ -5018,6 +5022,7 @@ class BigZombieEnemy extends enemy_1.Enemy {
         this.frame = 0;
         this.health = 4;
         this.maxHealth = 4;
+        this.defaultMaxHealth = 4;
         this.tileX = 31;
         this.tileY = 12;
         this.seenPlayer = false;
@@ -5246,6 +5251,7 @@ class BishopEnemy extends enemy_1.Enemy {
         this.frame = 0;
         this.health = 2;
         this.maxHealth = 2;
+        this.defaultMaxHealth = 2;
         this.tileX = 31;
         this.tileY = 8;
         this.seenPlayer = false;
@@ -5525,6 +5531,7 @@ class ChargeEnemy extends enemy_1.Enemy {
         this.frame = 0;
         this.health = 1;
         this.maxHealth = 1;
+        this.defaultMaxHealth = 1;
         this.tileX = 13;
         this.tileY = 8;
         this.trailFrame = 0;
@@ -5742,6 +5749,7 @@ class CrabEnemy extends enemy_1.Enemy {
         this.frame = 0;
         this.health = 1;
         this.maxHealth = 1;
+        this.defaultMaxHealth = 1;
         this.tileX = 8;
         this.tileY = 4;
         this.seenPlayer = false;
@@ -6419,6 +6427,8 @@ class EnergyWizardEnemy extends wizardEnemy_1.WizardEnemy {
         };
         this.ticks = 0;
         this.health = 1;
+        this.maxHealth = 1;
+        this.defaultMaxHealth = 1;
         this.tileX = 6;
         this.tileY = 0;
         this.frame = 0;
@@ -6604,6 +6614,8 @@ class FireWizardEnemy extends wizardEnemy_1.WizardEnemy {
         };
         this.ticks = 0;
         this.health = 1;
+        this.maxHealth = 1;
+        this.defaultMaxHealth = 1;
         this.tileX = 35;
         this.tileY = 8;
         this.frame = 0;
@@ -6920,6 +6932,7 @@ class FrogEnemy extends enemy_1.Enemy {
         this.frame = 0;
         this.health = 1;
         this.maxHealth = 1;
+        this.defaultMaxHealth = 1;
         this.tileX = 12;
         this.tileY = 16;
         this.seenPlayer = false;
@@ -7020,6 +7033,7 @@ class GlowBugEnemy extends entity_1.Entity {
         this.frame = 0;
         this.health = 1;
         this.maxHealth = 1;
+        this.defaultMaxHealth = 1;
         this.tileX = 8;
         this.tileY = 0;
         this.seenPlayer = false;
@@ -7233,6 +7247,7 @@ class KnightEnemy extends enemy_1.Enemy {
         this.frame = 0;
         this.health = 2;
         this.maxHealth = 2;
+        this.defaultMaxHealth = 2;
         this.tileX = 9;
         this.tileY = 8;
         this.seenPlayer = false;
@@ -7488,6 +7503,7 @@ class MummyEnemy extends enemy_1.Enemy {
         this.frame = 0;
         this.health = 2;
         this.maxHealth = 2;
+        this.defaultMaxHealth = 2;
         this.tileX = 17;
         this.tileY = 16;
         this.seenPlayer = false;
@@ -7645,6 +7661,8 @@ class OccultistEnemy extends enemy_1.Enemy {
         this.updateBeam = (delta) => {
             for (let beam of this.room.projectiles) {
                 if (beam instanceof beamEffect_1.BeamEffect) {
+                    if (!beam.parent)
+                        continue;
                     beam.setTarget(this.x - this.drawX, this.y - this.drawY, beam.parent.x - beam.parent.drawX, beam.parent.y - beam.parent.drawY);
                     beam.drawableY = beam.parent.drawableY;
                     switch (Math.floor(this.frame)) {
@@ -7887,6 +7905,7 @@ class QueenEnemy extends enemy_1.Enemy {
         this.frame = 0;
         this.health = 2;
         this.maxHealth = 2;
+        this.defaultMaxHealth = 2;
         this.tileX = 23;
         this.tileY = 10;
         this.seenPlayer = false;
@@ -8065,6 +8084,7 @@ class RookEnemy extends enemy_1.Enemy {
         this.frame = 0;
         this.health = 2;
         this.maxHealth = 2;
+        this.defaultMaxHealth = 2;
         this.tileX = 23 + 28;
         this.tileY = 8;
         this.seenPlayer = false;
@@ -8343,6 +8363,7 @@ class SkullEnemy extends enemy_1.Enemy {
         this.frame = 0;
         this.health = 2;
         this.maxHealth = 2;
+        this.defaultMaxHealth = 2;
         this.tileX = 5;
         this.tileY = 8;
         this.seenPlayer = false;
@@ -8561,6 +8582,7 @@ class Spawner extends enemy_1.Enemy {
         this.ticks = 0;
         this.health = 4;
         this.maxHealth = 4;
+        this.defaultMaxHealth = 4;
         this.tileX = 6;
         this.tileY = 4;
         this.seenPlayer = true;
@@ -9067,6 +9089,7 @@ class SpiderEnemy extends enemy_1.Enemy {
         this.frame = 0;
         this.health = 1;
         this.maxHealth = 1;
+        this.defaultMaxHealth = 1;
         this.tileX = 11;
         this.tileY = 4;
         this.seenPlayer = false;
@@ -9300,6 +9323,7 @@ class WardenEnemy extends enemy_1.Enemy {
         this.frame = 0;
         this.health = 4;
         this.maxHealth = 4;
+        this.defaultMaxHealth = 4;
         this.tileX = 43;
         this.tileY = 10;
         this.seenPlayer = false;
@@ -9500,6 +9524,8 @@ class WizardEnemy extends enemy_1.Enemy {
         };
         this.ticks = 0;
         this.health = 1;
+        this.maxHealth = 1;
+        this.defaultMaxHealth = 1;
         this.tileX = 6;
         this.tileY = 0;
         this.frame = 0;
@@ -9735,6 +9761,7 @@ class ZombieEnemy extends enemy_1.Enemy {
         this.frame = 0;
         this.health = 1;
         this.maxHealth = 1;
+        this.defaultMaxHealth = 1;
         this.tileX = 17;
         this.tileY = 8;
         this.seenPlayer = false;
@@ -9826,13 +9853,13 @@ class Entity extends drawable_1.Drawable {
         this.hoverText = () => {
             return this.name;
         };
-        this.applyShield = (shieldHealth = 1) => {
-            if (!this.shieldedBefore) {
+        this.applyShield = (shieldHealth = 1, loading = false) => {
+            if (!this.shieldedBefore || loading) {
                 this.shield = new enemyShield_1.EnemyShield(this, this.x, this.y, shieldHealth);
                 this.shielded = true;
                 this.shieldedBefore = true;
                 this.health += shieldHealth;
-                this.maxHealth += shieldHealth;
+                this.maxHealth = this.defaultMaxHealth + shieldHealth;
                 this.shadeColor = "purple";
                 this.shadeMultiplier = 0.5;
                 this.hasBloom = true;
@@ -9989,7 +10016,7 @@ class Entity extends drawable_1.Drawable {
               this.shadeColor = this.room.shadeColor;
             }, 100);
             */
-            if (this.armored && this.health === this.maxHealth)
+            if (this.armored && this.health === this.defaultMaxHealth)
                 sound_1.Sound.playParry();
             this.health -= damage;
             this.maxHealth -= shieldHealth;
@@ -10701,6 +10728,7 @@ class Entity extends drawable_1.Drawable {
         this.drawY = 0;
         this.health = 1;
         this.maxHealth = 1;
+        this.defaultMaxHealth = 1;
         this.tileX = 0;
         this.tileY = 0;
         this.hasShadow = true;
@@ -15189,6 +15217,7 @@ const downladderMaker_1 = __webpack_require__(/*! ../entity/downladderMaker */ "
 const rockResource_1 = __webpack_require__(/*! ../entity/resource/rockResource */ "./src/entity/resource/rockResource.ts");
 const hammer_1 = __webpack_require__(/*! ../item/tool/hammer */ "./src/item/tool/hammer.ts");
 const environmentTypes_1 = __webpack_require__(/*! ../constants/environmentTypes */ "./src/constants/environmentTypes.ts");
+const enemy_1 = __webpack_require__(/*! ../entity/enemy/enemy */ "./src/entity/enemy/enemy.ts");
 const chest_1 = __webpack_require__(/*! ../entity/object/chest */ "./src/entity/object/chest.ts");
 const floor_1 = __webpack_require__(/*! ../tile/floor */ "./src/tile/floor.ts");
 const wall_1 = __webpack_require__(/*! ../tile/wall */ "./src/tile/wall.ts");
@@ -15205,6 +15234,7 @@ const trapdoor_1 = __webpack_require__(/*! ../tile/trapdoor */ "./src/tile/trapd
 const bones_1 = __webpack_require__(/*! ../tile/bones */ "./src/tile/bones.ts");
 const IdGenerator_1 = __webpack_require__(/*! ../globalStateManager/IdGenerator */ "./src/globalStateManager/IdGenerator.ts");
 const wardenEnemy_1 = __webpack_require__(/*! ../entity/enemy/wardenEnemy */ "./src/entity/enemy/wardenEnemy.ts");
+const enemyShield_1 = __webpack_require__(/*! ../projectile/enemyShield */ "./src/projectile/enemyShield.ts");
 class HitWarningState {
     constructor(hw) {
         this.x = hw.x;
@@ -15222,6 +15252,7 @@ var ProjectileType;
 (function (ProjectileType) {
     ProjectileType[ProjectileType["SPAWN"] = 0] = "SPAWN";
     ProjectileType[ProjectileType["WIZARD"] = 1] = "WIZARD";
+    ProjectileType[ProjectileType["ENEMY_SHIELD"] = 2] = "ENEMY_SHIELD";
 })(ProjectileType = exports.ProjectileType || (exports.ProjectileType = {}));
 class ProjectileState {
     constructor(projectile, game) {
@@ -15242,6 +15273,14 @@ class ProjectileState {
             this.wizardParentID = projectile.parent.room.entities.indexOf(projectile.parent);
             this.wizardParentGID = projectile.parent.globalId;
         }
+        if (projectile instanceof enemyShield_1.EnemyShield) {
+            this.type = ProjectileType.ENEMY_SHIELD;
+            this.roomID = game.rooms.indexOf(projectile.parent.room);
+            this.roomGID = projectile.parent.room?.globalId;
+            this.enemyShieldParentID = projectile.parent.room.entities.indexOf(projectile.parent);
+            this.enemyShieldParentGID = projectile.parent.globalId;
+            this.enemyShieldHealth = projectile.health;
+        }
     }
 }
 exports.ProjectileState = ProjectileState;
@@ -15260,6 +15299,20 @@ let loadProjectile = (ps, game) => {
             : wizardRoom.entities[ps.wizardParentID];
         let p = new wizardFireball_1.WizardFireball(wizard, ps.x, ps.y);
         p.state = ps.wizardState;
+        return p;
+    }
+    if (ps.type === ProjectileType.ENEMY_SHIELD) {
+        let enemyShieldRoom = (ps.roomGID && game.roomsById?.get(ps.roomGID)) || game.rooms[ps.roomID];
+        let enemyShield = ps.enemyShieldParentGID
+            ? enemyShieldRoom.entities.find((e) => e.globalId === ps.enemyShieldParentGID)
+            : enemyShieldRoom.entities[ps.enemyShieldParentID];
+        // Guard parent resolution; skip if not found (occultist may recreate later)
+        if (!enemyShield) {
+            return null;
+        }
+        let p = new enemyShield_1.EnemyShield(enemyShield, ps.x, ps.y, typeof ps.enemyShieldHealth === "number" ? ps.enemyShieldHealth : 1, false);
+        if (p)
+            p.dead = ps.dead;
         return p;
     }
 };
@@ -15476,6 +15529,7 @@ class EnemyState {
             this.type = EnemyType.MUMMY;
         if (enemy instanceof occultistEnemy_1.OccultistEnemy) {
             this.type = EnemyType.OCCULTIST;
+            // No extra data needed; beams/shields handled at projectile level
         }
         if (enemy instanceof queenEnemy_1.QueenEnemy)
             this.type = EnemyType.QUEEN;
@@ -15853,7 +15907,12 @@ let loadRoom = (room, roomState, game) => {
     room.items = [];
     room.projectiles = [];
     room.hitwarnings = [];
-    for (const enemy of roomState.enemies)
+    // Defer Occultist loading until after other entities so shields can reattach reliably
+    const nonOccultists = roomState.enemies.filter((es) => es.type !== EnemyType.OCCULTIST);
+    const occultists = roomState.enemies.filter((es) => es.type === EnemyType.OCCULTIST);
+    for (const enemy of nonOccultists)
+        room.entities.push(loadEnemy(enemy, game));
+    for (const enemy of occultists)
         room.entities.push(loadEnemy(enemy, game));
     for (const item of roomState.items) {
         if (item) {
@@ -15888,10 +15947,28 @@ let loadRoom = (room, roomState, game) => {
         }
     }
     catch { }
-    for (const projectile of roomState.projectiles)
-        room.projectiles.push(loadProjectile(projectile, game));
+    for (const projectile of roomState.projectiles) {
+        const loaded = loadProjectile(projectile, game);
+        if (loaded && !loaded.dead) {
+            room.projectiles.push(loaded);
+        }
+    }
     for (const hw of roomState.hitwarnings)
         room.hitwarnings.push(loadHitWarning(hw, game));
+    // After entities and projectiles are in place, let occultists recreate beams for shielded allies
+    try {
+        const roomOccultists = room.entities.filter((e) => e instanceof occultistEnemy_1.OccultistEnemy);
+        for (const oc of roomOccultists) {
+            const shieldedAllies = room.entities.filter((e) => e instanceof enemy_1.Enemy && e.shielded && !e.dead);
+            // Track internally for color/shade changes
+            oc.shieldedEnemies = shieldedAllies.slice();
+            // Recreate visual beams only (EnemyShield already loaded handled parent flags/lights)
+            if (oc.createBeam) {
+                oc.createBeam(shieldedAllies);
+            }
+        }
+    }
+    catch { }
     // Reset lighting state to prevent recursion issues
     room.calculateWallInfo();
     room.updateLighting();
@@ -31426,7 +31503,7 @@ const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const lighting_1 = __webpack_require__(/*! ../lighting/lighting */ "./src/lighting/lighting.ts");
 const beamEffect_1 = __webpack_require__(/*! ./beamEffect */ "./src/projectile/beamEffect.ts");
 class EnemyShield extends projectile_1.Projectile {
-    constructor(parent, x, y, health = 1) {
+    constructor(parent, x, y, health = 1, autoRegister = true) {
         super(parent, x, y);
         this.remove = () => {
             this.parent.shielded = false;
@@ -31451,6 +31528,7 @@ class EnemyShield extends projectile_1.Projectile {
         this.hurt = (damage) => {
             const damageOverShield = Math.max(0, damage - this.health);
             this.health -= damage;
+            this.parent.maxHealth -= damage;
             /*
             GenericParticle.spawnCluster(
               this.parent.room,
@@ -31465,11 +31543,17 @@ class EnemyShield extends projectile_1.Projectile {
             return damageOverShield;
         };
         this.tick = () => {
-            if (this.parent.dead) {
+            if (!this.parent || !this.parent.room) {
+                this.dead = true;
+                return;
+            }
+            if (this.parent?.dead) {
                 this.remove();
             }
             if (this.dead) {
-                this.parent.room.projectiles = this.parent.room.projectiles.filter((projectile) => projectile !== this);
+                if (this.parent && this.parent.room) {
+                    this.parent.room.projectiles = this.parent.room.projectiles.filter((projectile) => projectile !== this);
+                }
             }
         };
         this.draw = (delta) => {
@@ -31490,10 +31574,19 @@ class EnemyShield extends projectile_1.Projectile {
         this.parent = parent;
         this.frame = 0;
         this.health = health;
+        this.autoRegistered = false;
+        // Gracefully handle missing parent during load; mark as dead so caller can skip
+        if (!this.parent || !this.parent.room) {
+            this.dead = true;
+            return;
+        }
         this.parent.shielded = true;
         this.lightSource = lighting_1.Lighting.newLightSource(this.x + 0.5, this.y + 0.5, [20, 0, 40], 3.5, 20);
         this.parent.addLightSource(this.lightSource);
-        this.parent.room.projectiles.push(this);
+        if (autoRegister) {
+            this.parent.room.projectiles.push(this);
+            this.autoRegistered = true;
+        }
         this.parent.room.updateLighting();
     }
 }
@@ -32539,12 +32632,12 @@ class Room {
             }
         };
         this.clearDeadStuff = () => {
-            this.deadEntities = this.deadEntities.filter((e) => !e.dead);
-            this.entities = this.entities.filter((e) => !e.dead);
-            this.projectiles = this.projectiles.filter((p) => !p.dead);
-            this.lightSources = this.lightSources.filter((ls) => !ls.dead);
-            this.hitwarnings = this.hitwarnings.filter((h) => !h.dead);
-            this.particles = this.particles.filter((p) => !p.dead);
+            this.deadEntities = this.deadEntities.filter((e) => e && !e.dead);
+            this.entities = this.entities.filter((e) => e && !e.dead);
+            this.projectiles = this.projectiles.filter((p) => p && !p.dead);
+            this.lightSources = this.lightSources.filter((ls) => ls && !ls.dead);
+            this.hitwarnings = this.hitwarnings.filter((h) => h && !h.dead);
+            this.particles = this.particles.filter((p) => p && !p.dead);
         };
         this.catchUp = () => {
             if (this.turn === TurnState.computerTurn)
@@ -32687,7 +32780,7 @@ class Room {
             // Invalidate cache when lighting is updated
             this.invalidateBlurCache();
             // Start timing the initial setup
-            console.time("updateLighting: Initial Setup");
+            //console.time("updateLighting: Initial Setup");
             this.updateDoorLightSources();
             let oldVis = [];
             let oldCol = [];

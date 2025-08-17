@@ -17,12 +17,27 @@ export class EnemyShield extends Projectile {
   tileX: number;
   tileY: number;
   health: number;
+  private autoRegistered?: boolean;
 
-  constructor(parent: Entity, x: number, y: number, health: number = 1) {
-    super(parent, x, y);
-    this.parent = parent;
+  constructor(
+    parent: Entity | null,
+    x: number,
+    y: number,
+    health: number = 1,
+    autoRegister: boolean = true,
+  ) {
+    super(parent as any, x, y);
+    this.parent = parent as any;
     this.frame = 0;
     this.health = health;
+    this.autoRegistered = false;
+
+    // Gracefully handle missing parent during load; mark as dead so caller can skip
+    if (!this.parent || !(this.parent as any).room) {
+      this.dead = true;
+      return;
+    }
+
     this.parent.shielded = true;
     this.lightSource = Lighting.newLightSource(
       this.x + 0.5,
@@ -32,7 +47,10 @@ export class EnemyShield extends Projectile {
       20,
     );
     this.parent.addLightSource(this.lightSource);
-    this.parent.room.projectiles.push(this);
+    if (autoRegister) {
+      this.parent.room.projectiles.push(this);
+      this.autoRegistered = true;
+    }
     this.parent.room.updateLighting();
   }
 
@@ -66,6 +84,7 @@ export class EnemyShield extends Projectile {
   hurt = (damage: number) => {
     const damageOverShield = Math.max(0, damage - this.health);
     this.health -= damage;
+    this.parent.maxHealth -= damage;
     /*
     GenericParticle.spawnCluster(
       this.parent.room,
@@ -82,13 +101,19 @@ export class EnemyShield extends Projectile {
   };
 
   tick = () => {
-    if (this.parent.dead) {
+    if (!this.parent || !(this.parent as any).room) {
+      this.dead = true;
+      return;
+    }
+    if (this.parent?.dead) {
       this.remove();
     }
     if (this.dead) {
-      this.parent.room.projectiles = this.parent.room.projectiles.filter(
-        (projectile) => projectile !== this,
-      );
+      if (this.parent && (this.parent as any).room) {
+        this.parent.room.projectiles = this.parent.room.projectiles.filter(
+          (projectile) => projectile !== this,
+        );
+      }
     }
   };
 
