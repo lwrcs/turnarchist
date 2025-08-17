@@ -1071,8 +1071,30 @@ export class Game {
         this.pushMessage(`Inline tile shading ${enabled}`);
         break;
 
-      case "webgl":
-        GameConstants.USE_WEBGL_BLUR = !GameConstants.USE_WEBGL_BLUR;
+      case "webgl": {
+        // Toggle WebGL blur and initialize renderer if enabling
+        GameConstants.TOGGLE_USE_WEBGL_BLUR();
+        if (GameConstants.USE_WEBGL_BLUR) {
+          try {
+            const { WebGLBlurRenderer } = require("./gui/webglBlurRenderer");
+            WebGLBlurRenderer.getInstance();
+            this.pushMessage("WebGL blur enabled and initialized.");
+          } catch (e) {
+            this.pushMessage(
+              "Failed to initialize WebGL blur. Falling back to Canvas blur.",
+            );
+            GameConstants.USE_WEBGL_BLUR = false;
+          }
+        } else {
+          // Optional: clear any cached results when disabling
+          try {
+            const { WebGLBlurRenderer } = require("./gui/webglBlurRenderer");
+            WebGLBlurRenderer.getInstance().clearCache?.();
+          } catch {}
+          this.pushMessage("WebGL blur disabled.");
+        }
+        break;
+      }
       case "hq":
         GameConstants.TOGGLE_HIGH_QUALITY_BLUR();
         break;

@@ -107,7 +107,7 @@ export class GameConstants {
   // When true, draw shade as sliced tiles inline within drawEntities instead of a single layer
   static SHADE_INLINE_IN_ENTITY_LAYER = true;
   static USE_OPTIMIZED_SHADING = false;
-  static SMOOTH_LIGHTING = true;
+  static SMOOTH_LIGHTING = false;
   static ctxBlurEnabled = true;
   static BLUR_ENABLED = true;
   static USE_WEBGL_BLUR = false;

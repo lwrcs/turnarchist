@@ -13351,8 +13351,31 @@ class Game {
                         : "disabled";
                     this.pushMessage(`Inline tile shading ${enabled}`);
                     break;
-                case "webgl":
-                    gameConstants_1.GameConstants.USE_WEBGL_BLUR = !gameConstants_1.GameConstants.USE_WEBGL_BLUR;
+                case "webgl": {
+                    // Toggle WebGL blur and initialize renderer if enabling
+                    gameConstants_1.GameConstants.TOGGLE_USE_WEBGL_BLUR();
+                    if (gameConstants_1.GameConstants.USE_WEBGL_BLUR) {
+                        try {
+                            const { WebGLBlurRenderer } = __webpack_require__(/*! ./gui/webglBlurRenderer */ "./src/gui/webglBlurRenderer.ts");
+                            WebGLBlurRenderer.getInstance();
+                            this.pushMessage("WebGL blur enabled and initialized.");
+                        }
+                        catch (e) {
+                            this.pushMessage("Failed to initialize WebGL blur. Falling back to Canvas blur.");
+                            gameConstants_1.GameConstants.USE_WEBGL_BLUR = false;
+                        }
+                    }
+                    else {
+                        // Optional: clear any cached results when disabling
+                        try {
+                            const { WebGLBlurRenderer } = __webpack_require__(/*! ./gui/webglBlurRenderer */ "./src/gui/webglBlurRenderer.ts");
+                            WebGLBlurRenderer.getInstance().clearCache?.();
+                        }
+                        catch { }
+                        this.pushMessage("WebGL blur disabled.");
+                    }
+                    break;
+                }
                 case "hq":
                     gameConstants_1.GameConstants.TOGGLE_HIGH_QUALITY_BLUR();
                     break;
@@ -14880,7 +14903,7 @@ GameConstants.SHADE_LAYER_COMPOSITE_OPERATION = "source-over"; //"soft-light";
 // When true, draw shade as sliced tiles inline within drawEntities instead of a single layer
 GameConstants.SHADE_INLINE_IN_ENTITY_LAYER = true;
 GameConstants.USE_OPTIMIZED_SHADING = false;
-GameConstants.SMOOTH_LIGHTING = true;
+GameConstants.SMOOTH_LIGHTING = false;
 GameConstants.ctxBlurEnabled = true;
 GameConstants.BLUR_ENABLED = true;
 GameConstants.USE_WEBGL_BLUR = false;
@@ -32200,6 +32223,7 @@ class Room {
             color12px: null,
             shade5px: null,
             bloom8px: null,
+            color8px: null,
             isValid: false,
             lastLightingUpdate: 0,
         };
@@ -32319,7 +32343,8 @@ class Room {
                 if (!ld.room.active && ld.room.entered) {
                     ld.lightSource.b = 0;
                     ld.lightSource.r = 0;
-                    door.room.updateLighting();
+                    // Update the linked room's lighting since we changed its door light
+                    ld.room.updateLighting();
                 }
             }
             this.active = false;
@@ -32361,7 +32386,7 @@ class Room {
             player.map.saveMapData();
             this.setReverb();
             this.active = true;
-            this.invalidateBlurCache(); // Invalidate cache when room becomes active
+            //this.invalidateBlurCache(); // Invalidate cache when room becomes active
             this.updateLighting();
         };
         this.enterLevel = (player, position) => {
@@ -32626,7 +32651,7 @@ class Room {
                     linkedDoors.push(d.linkedDoor);
             });
             this.doors.forEach((d) => {
-                d.lightSource.b = 0;
+                d.lightSource.b = 0.1;
             });
             for (const d of linkedDoors) {
                 const srcDoor = d.linkedDoor; // door on this room's side
@@ -32662,7 +32687,7 @@ class Room {
             // Invalidate cache when lighting is updated
             this.invalidateBlurCache();
             // Start timing the initial setup
-            //console.time("updateLighting: Initial Setup");
+            console.time("updateLighting: Initial Setup");
             this.updateDoorLightSources();
             let oldVis = [];
             let oldCol = [];
@@ -32712,6 +32737,8 @@ class Room {
                     }
                 }
             }
+            //console.timeEnd("updateLighting: Process LightSources");
+            //console.time("updateLighting: Process Players");
             let lightingAngleStep = levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP;
             for (const p in this.game.players) {
                 let player = this.game.players[p];
@@ -32781,6 +32808,8 @@ class Room {
             // End timing the conversion to luminance
             //console.timeEnd("updateLighting: Convert to Luminance");
             this.updateDoorLightSources();
+            // Bump lighting update version so blur cache can detect changes
+            this.lastLightingUpdate++;
             this.isUpdatingLighting = false;
         };
         this.updateLightSources = (lightSource, remove) => {
@@ -33074,11 +33103,11 @@ class Room {
                     game_1.Game.ctx.globalCompositeOperation = "soft-light";
                     game_1.Game.ctx.globalAlpha = 0.6;
                     // Apply 6px blur using WebGL
-                    const blurred6px = blurRenderer.applyBlur(this.colorOffscreenCanvas, 6);
-                    game_1.Game.ctx.drawImage(blurred6px, (this.roomX - offsetX) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY) * gameConstants_1.GameConstants.TILESIZE);
+                    const blurred8px = blurRenderer.applyBlur(this.colorOffscreenCanvas, 8);
+                    game_1.Game.ctx.drawImage(blurred8px, (this.roomX - offsetX) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY) * gameConstants_1.GameConstants.TILESIZE);
                     // Cache the result if room is inactive
                     if (!this.active) {
-                        this.cacheBlurResult("color6px", blurred6px);
+                        this.cacheBlurResult("color8px", blurred8px);
                     }
                     game_1.Game.ctx.globalCompositeOperation = "lighten";
                     game_1.Game.ctx.globalAlpha = 0.05;

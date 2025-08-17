@@ -233,6 +233,7 @@ interface BlurCache {
   color12px: HTMLCanvasElement | null;
   shade5px: HTMLCanvasElement | null;
   bloom8px: HTMLCanvasElement | null;
+  color8px: HTMLCanvasElement | null;
   isValid: boolean;
   lastLightingUpdate: number;
 }
@@ -326,6 +327,7 @@ export class Room {
     color12px: null,
     shade5px: null,
     bloom8px: null,
+    color8px: null,
     isValid: false,
     lastLightingUpdate: 0,
   };
@@ -1098,10 +1100,12 @@ export class Room {
       if (!ld.room.active && ld.room.entered) {
         ld.lightSource.b = 0;
         ld.lightSource.r = 0;
-        door.room.updateLighting();
+        // Update the linked room's lighting since we changed its door light
+        ld.room.updateLighting();
       }
     }
     this.active = false;
+
     this.updateLighting();
 
     this.particles.splice(0, this.particles.length);
@@ -1149,7 +1153,7 @@ export class Room {
     player.map.saveMapData();
     this.setReverb();
     this.active = true;
-    this.invalidateBlurCache(); // Invalidate cache when room becomes active
+    //this.invalidateBlurCache(); // Invalidate cache when room becomes active
 
     this.updateLighting();
   };
@@ -1459,7 +1463,7 @@ export class Room {
     });
 
     this.doors.forEach((d) => {
-      d.lightSource.b = 0;
+      d.lightSource.b = 0.1;
     });
 
     for (const d of linkedDoors) {
@@ -1501,7 +1505,7 @@ export class Room {
     this.invalidateBlurCache();
 
     // Start timing the initial setup
-    //console.time("updateLighting: Initial Setup");
+    console.time("updateLighting: Initial Setup");
     this.updateDoorLightSources();
 
     let oldVis = [];
@@ -1563,6 +1567,8 @@ export class Room {
         }
       }
     }
+    //console.timeEnd("updateLighting: Process LightSources");
+    //console.time("updateLighting: Process Players");
 
     let lightingAngleStep = LevelConstants.LIGHTING_ANGLE_STEP;
 
@@ -1642,6 +1648,8 @@ export class Room {
     // End timing the conversion to luminance
     //console.timeEnd("updateLighting: Convert to Luminance");
     this.updateDoorLightSources();
+    // Bump lighting update version so blur cache can detect changes
+    this.lastLightingUpdate++;
     this.isUpdatingLighting = false;
   };
 
@@ -2088,16 +2096,16 @@ export class Room {
         Game.ctx.globalAlpha = 0.6;
 
         // Apply 6px blur using WebGL
-        const blurred6px = blurRenderer.applyBlur(this.colorOffscreenCanvas, 6);
+        const blurred8px = blurRenderer.applyBlur(this.colorOffscreenCanvas, 8);
         Game.ctx.drawImage(
-          blurred6px,
+          blurred8px,
           (this.roomX - offsetX) * GameConstants.TILESIZE,
           (this.roomY - offsetY) * GameConstants.TILESIZE,
         );
 
         // Cache the result if room is inactive
         if (!this.active) {
-          this.cacheBlurResult("color6px", blurred6px);
+          this.cacheBlurResult("color8px", blurred8px);
         }
 
         Game.ctx.globalCompositeOperation = "lighten";
@@ -3890,7 +3898,7 @@ export class Room {
   };
 
   private cacheBlurResult = (
-    type: "color6px" | "color12px" | "shade5px" | "bloom8px",
+    type: "color6px" | "color12px" | "shade5px" | "bloom8px" | "color8px",
     canvas: HTMLCanvasElement,
   ) => {
     if (!this.active) {
